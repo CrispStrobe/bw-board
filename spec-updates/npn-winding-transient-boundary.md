@@ -5,6 +5,18 @@ Baseline source: `ac7595b609daa75717c696830982f59940c97e8b`.
 
 ## Current readback prerequisite repair
 
+The isolated prerequisite is now on upstream master at
+`4e4cf9c45b7083efec4b94bc44d20fcbea92f319`, after
+[CI37901045984](https://github.com/CrispStrobe/bw-board/actions/runs/37901045984)
+and [Harris37901045960](https://github.com/CrispStrobe/bw-board/actions/runs/37901045960)
+both passed. All four enabled CI jobs passed; `vectors-full` was intentionally
+skipped by workflow policy. The full test job reports8436 passes, zero failures
+and302 skips. Nine standalone caller tests plus adjacent suites pass55/55
+locally; three isolated reader-restoration mutants independently fail.
+This does not qualify the startup integration or downstream package adoption.
+The startup branch incorporates the landed prerequisite; its combined focused
+suites still report14 passes and the same2 desired startup failures.
+
 The lane now includes a bounded current-readback correction, not a startup
 integration repair. The PWL companion stamps an off conductance of1 nS, but
 the old extraction returned zero below its knee. On the reverse-biased motor
@@ -126,6 +138,43 @@ completes10033 points to1 ms. Its winding endpoint is18.28460 mA. That is
 and completion alone does not qualify its voltage waveform or the engine.
 
 ## Required next repair proof
+
+### Stiff active-mode reference for the reduced fixed-clamp circuit
+
+There is a second quantitative reason not to keep trying short trapezoidal
+restarts. In the admitted active/off-flyback region of the reduced circuit,
+let `g=1e-9 S` be the flyback diode's existing off conductance, `R=10 ohms`,
+`L=.005 H`, and `J=beta*Ib`. Collector KCL and the winding law give:
+
+```text
+I + g*(5 - Vcollector) = J
+Vcollector = 5 - R*I - L*dI/dt
+g*L*dI/dt + (1+g*R)*I = J
+Isteady = J/(1+g*R)
+tau = g*L/(1+g*R)
+```
+
+This stage is an affine one-pole system with an independent exponential
+solution. Here `tau=4.99999995e-12 s`: the existing10 ns controller floor
+spans2000 time constants. The independent steady current is
+18.992153104533 mA and collector voltage4.810078468955 V, matching the
+earlier controlled-backward-Euler plateau. These are consequences of the
+existing numerical model, **not measured physical transistor characteristics**.
+
+For the fixed clamp's0.1-ohm series slope, including the same off conductance
+gives switching current18.992148496353 mA and independent crossing time
+20.189645864570 us. The no-leakage estimate above differs by about5.2 ps,
+which is material to the stiffness diagnosis but not a license to alter the
+profile. This derivation covers the fixed-clamp reduction only; it does not
+establish the default drive-dependent clamp trajectory or motor mechanics.
+
+An exact propagator for an explicitly admitted affine post-event system is a
+bounded hypothesis worth testing, not an implemented repair. It needs verified
+topology/model-region/source authority, event location/current continuity,
+complete observable reconstruction and ordinary solver fallback/refusal when
+that authority does not hold. It must not project arbitrary storage to a DC
+equilibrium, ignore flyback conduction, or treat a region label alone as a
+certificate. The default pre-event failure remains a separate required proof.
 
 ### Fixed-clamp boundary established independently
 

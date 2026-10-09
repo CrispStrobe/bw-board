@@ -76,6 +76,13 @@ cover motor flyback KCL and off-state BJT base/controlled-collector currents;
 restore-zero mutation fails both. Adjacent13/13 pass. Expanded lane suite is
 5 pass/2 still-failing startup regressions/0 skip. Branch checkpoint only;
 no complete startup qualification, master landing or Lite adoption.
+Readback prerequisite separately qualified and landed at4e4cf9c45b7083efec4b94bc44d20fcbea92f319
+after CI37901045984 and Harris37901045960 passed. This startup lane resumes
+on that ancestry; current combined focused suites14 pass/2 startup fail.
+The reduced active/off-flyback equations establish a5 ps affine decay mode,
+2000 times shorter than the unchanged10 ns floor. Exact admitted post-event
+propagation is a hypothesis, not a repair or arbitrary equilibrium projection.
+Both startup failures and the held Lite adoption remain unresolved.
 
 2026-10-08 scope reset capture epoch — DONE candidate, Codex bwcx.
 Branch lane/scope-reset-capture-epoch-20261008, isolated worktree, exact base
