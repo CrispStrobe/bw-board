@@ -882,6 +882,44 @@ test('task excursion source commit is separate from strict frame refusal', () =>
   assert.equal(strict.returned, null);
 });
 
+test('task excursion candidate is invalidated by reset before consumption', () => {
+  const f = openedMixedExcursion();
+  const originalTr = { ...f.cpu.tr };
+  let switched = false;
+  f.cpu._taskSwitchCore = function () {
+    if (!switched) {
+      switched = true;
+      this.tr = { selector: 0x38, base: 0x700, limit: 0x67,
+        present: true, type: 11 };
+      this.cs = 0x08; this.ss = 0x10; this.eip = 0x1234;
+      this.esp = 0x400; this.cr3 = 0x1000;
+    } else {
+      this.tr = { ...originalTr };
+      this.cs = 0x0b; this.ss = 0x23; this.eip = 0x100;
+      this.esp = 0x7f4; this.cr3 = 0;
+      this.segmentCaches[1] = { ...this.segmentCaches[1] };
+      this.segmentCaches[2] = { ...this.segmentCaches[2] };
+      this.segmentCaches[1].access |= 1;
+      this.segmentCaches[2].access |= 1;
+    }
+    return 7;
+  };
+  f.cpu._stepInstruction = function () {
+    this._taskSwitch(switched ? 0x30 : 0x38, 'jmp');
+    return 1;
+  };
+  assert.equal(f.cpu.step(), 1);
+  assert.equal(f.cpu.step(), 1);
+  assert.equal(f.cpu.owned0501TaskExcursionStatus(f.excursionToken).phase,
+    'candidate');
+  f.cpu.reset();
+  const result = f.cpu.takeOwned0501TaskExcursionObservation(f.excursionToken);
+  assert.equal(result.phase, 'invalid');
+  assert.equal(result.firstFailure, 'cpu-reset');
+  assert.equal(result.resumeCandidate.savedContinuation, true);
+  assert.equal(result.frameReturnQualified, false);
+});
+
 test('failed task core retains an uncommitted attempt and original fault', () => {
   const f = openedMixedExcursion();
   const fault = new I80386Fault(13, 0x38, 'synthetic task fault');
