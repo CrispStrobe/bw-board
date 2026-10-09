@@ -228,8 +228,37 @@ failures preserve the first failure and available records; only a completed
 census claims the final source recheck. Reports retain the 1 MiB per-file /
 2 MiB total closed inventory bounds.
 
-Hosted checks and the first census actual remain pending. Review every enabled
-exact-head check before one distinct labeled original, then audit its retained
-packet independently. Do not retry the frozen preflight or infer compiler
-execution, first build, profiler support, allocation costs or a speedup from
-this source-only checkpoint.
+All ten enabled exact-head checks passed, with only the two declared optional
+skips, before the single [report-only run37945340430](https://github.com/CrispStrobe/bw-board/actions/runs/37945340430)
+was launched. Its [independently audited original failure](receipts/2026-10-09-direct-v8-tool-census-failure/README.md)
+retains cc1plus identity with explicit unavailable version, then refuses
+collect2 split stdout/stderr. Independent as/ld roles and final rechecks
+remain unreached. Review the separately named complete-tool-roster and
+explicit split-output observation profile defined in that receipt before
+its own original audit and the separate first build. Do not retry the frozen preflight or infer a compiler build, profiler support,
+allocation costs or a speedup from these report-only observations.
+
+
+## Separate full tool roster source checkpoint
+
+[Draft PR482](https://github.com/CrispStrobe/bw-board/pull/482), reviewed source
+`174767b449b1be4b3e76f41c6e44ffd46ba2edfd`, adds eight new paths under
+`scripts/xv6-js-rollback-direct-v8-tool-roster/` and its dedicated workflow,
+stacked on frozen PR479. Root and independent source/syntax review and three
+CPU-free mock/file controls passed: 42 admitted source roles, all 34 held roles
+unchanged, including the ordinary strict probe.
+
+All five compiler-tool locators and executable identities are retained before
+any compiler-tool version probe. Only the exact silent cc1plus result records
+an unavailable version. Collect2's reviewed split output is explicitly
+`SPLIT_OUTPUT_DELEGATION_UNVERIFIED`; its two stderr lines must advertise the
+already located ld target. Pre/post hashes of that named target and equality
+with a separate direct ld stdout receipt establish output consistency only.
+They do not authenticate a delegated subprocess or validate a collect2 version.
+Per-probe and final tool/source rechecks, preserved first failures and partial
+records, and the closed 1 MiB/file, 2 MiB total report inventory remain required.
+
+Hosted exact-head checks and the first original report are pending. Complete
+all enabled checks and independently audit that original before admitting a
+separately named first-build profile. No addon build/load, support case,
+profiler, guest, allocation cost share or speedup follows from this checkpoint.
