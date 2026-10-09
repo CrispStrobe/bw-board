@@ -144,11 +144,46 @@ guest CPU fault.
 Next implement a **separately named bounded mode-crossing diagnostic** in an
 isolated source lane. Keep this protected-only profile and the original strict
 owner unchanged. Record committed before/after mode facts across PE and VM86
-changes, including CR0, flags, effective mode/CPL, CS context and task identity;
-retain separately any uncommitted attempt. Preserve owner/reentry/exception,
+changes, including CR0, flags, effective mode/CPL, CS context, task identity
+and the explicit CPU operation/source hook that attributes the change;
+retain separately any uncommitted attempt. Refuse unattributed mode changes
+rather than infer an instruction from the final CR0 value. Preserve owner/reentry/exception,
 transition/delivery/output and step/wall bounds. A candidate must still match
 the original task, saved continuation and protected handler context; real mode
 or VM86 alone cannot qualify it. Review adversarial controls and affected hosted
 CPU/xv6 regressions before one separately labeled original diagnostic. That
 original, independently audited result is the next gate before any later
 ownership profile or application-completion claim.
+
+
+## Separate mode-recorder CPU source checkpoint
+
+[Draft PR476](https://github.com/CrispStrobe/bw-board/pull/476), source
+`e8bed46bd472a9307ba16a0fac48a710fa6f24fa`, stacked on PR474,
+publishes exactly three paths: the CPU, its existing journal test and
+`scripts/i80386-cwsdpmi-0501-task-mode/README.md`. Root and a separate Sol
+reviewer passed source/syntax review. The journal now contains 85 authored
+named cases: 71 inherited and 14 new. **Hosted CPU/xv6 checks are pending;
+this recorder has no connected guest driver or actual qualification.**
+
+The distinct `armOwned0501TaskMode`, `owned0501TaskModeStatus`,
+`abortOwned0501TaskMode` and `takeOwned0501TaskModeObservation` APIs use private
+admission and a separate report schema. The new recorder credits mode facts
+only with a committing decoded MOV CR0 ticket or co-occurring task-core return.
+It validates bounded primitives, copied descriptor roles and final admission
+reentry after reflection. Absent protected descriptor fields in a VM86-shaped
+cache are explicit nulls; unattributed changes still refuse. It records
+`postOutgoingSteps`, preserves uncommitted fault facts, and always reports
+`frameReturnQualified:false`. The old protected-only observer remains intact.
+
+Refresh PR476's exact head and every enabled check first. Once affected CPU and
+finite xv6 regressions pass and their originals are independently audited,
+implement a separately named adapter/driver/source admission/closed inventory
+and hosted workflow using these new APIs. Bind the unchanged owned client,
+wrapper, compiler, BIOS/VGA, FreeDOS/CWSDPMI and media inputs. Retain the original
+strict frame report, then use ordinary steps under the existing wall/step caps;
+do not substitute a CPU callback or widen frame acceptance. After source review
+and all enabled checks pass, launch one distinct labeled actual and audit its
+first original, including committed mode attribution, task transitions,
+uncommitted refusals and any original-task protected-handler candidate. A later
+CS reload or other unhooked operation remains an explicit refusal boundary.
