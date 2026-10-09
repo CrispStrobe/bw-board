@@ -127,7 +127,7 @@ recorded pre-retrieval window. No guest ran. The
 explain JSWeakRef strong traversal during minor GC and Inspector's forced-GC
 retrieval. Preserve this failure; more pump blocks do not repair the proof.
 Both flags are present in the pinned implementation, so do not report an
-unsupported protocol from this fixture. The next lane is a separate reviewed
+unsupported protocol from this fixture. The next lane is the [direct V8 source contract](I80386-XV6-JS-ROLLBACK-DIRECT-V8-PLAN.md): a separately reviewed
 no-forced-GC sampler and native lifetime witness, with complete event windows
 and unchanged guest workload. It remains a proposed diagnostic, not a measured
 hotspot or performance candidate.
