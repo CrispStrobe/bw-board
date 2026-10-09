@@ -1,0 +1,66 @@
+name: direct V8 authority preflight (report only)
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xv6-js-rollback-direct-v8-preflight-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  authority-preflight:
+    if: >-
+      github.event.label.name == 'xv6-js-rollback-direct-v8-preflight' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      GIT_NO_REPLACE_OBJECTS: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Admit exact report-only source and pure controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/direct-v8-preflight-evidence"
+          mkdir -m 700 "$evidence"
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          test -z "$(git --no-replace-objects status --porcelain=v1 -uall)"
+          timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8/preflight-source-control.py > "$evidence/control.stdout" 2> "$evidence/control.stderr"
+          timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8/preflight-control.py >> "$evidence/control.stdout" 2>> "$evidence/control.stderr"
+          timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8/preflight-source.py "$evidence/source.json" > "$evidence/source.stdout" 2> "$evidence/source.stderr"
+      - name: Record hosted Node, header and tool authority only
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/direct-v8-preflight-evidence"
+          timeout 9m python3 -B scripts/xv6-js-rollback-direct-v8/preflight.py "$RUNNER_TEMP/direct-v8-preflight-work" "$evidence" > "$evidence/run.stdout" 2> "$evidence/run.stderr"
+          python3 -B -c 'import json,sys; r=json.load(open(sys.argv[1])); assert r["status"] == "IDENTITIES_RECORDED_UNQUALIFIED" and r["firstFailure"] is None' "$evidence/preflight.json"
+      - name: Admit closed report-only evidence inventory
+        id: inventory
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8/preflight_inventory.py "$RUNNER_TEMP/direct-v8-preflight-evidence"
+      - name: Upload bounded original preflight evidence
+        if: always() && steps.inventory.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: direct-v8-preflight-${{ github.run_id }}
+          path: ${{ runner.temp }}/direct-v8-preflight-evidence/
+          if-no-files-found: error
+          retention-days: 7
