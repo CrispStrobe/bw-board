@@ -162,11 +162,69 @@ earlier controlled-backward-Euler plateau. These are consequences of the
 existing numerical model, **not measured physical transistor characteristics**.
 
 For the fixed clamp's0.1-ohm series slope, including the same off conductance
-gives switching current18.992148496353 mA and independent crossing time
-20.189645864570 us. The no-leakage estimate above differs by about5.2 ps,
+gives switching current18.992148496353 mA. Including leakage in the
+saturated clamp drop as well gives independent crossing time
+20.189645866630 us. The preceding checkpoint's20.189645864570 us value
+included leakage in the crossing current but omitted it from the saturated
+RL trajectory. The no-leakage estimate differs by about5.2 ps,
 which is material to the stiffness diagnosis but not a license to alter the
 profile. This derivation covers the fixed-clamp reduction only; it does not
 establish the default drive-dependent clamp trajectory or motor mechanics.
+
+The complete saturated reduction is:
+
+```text
+rc = .1 ohm; vsat = .2 V; supply = 5 V
+Vcollector = (vsat + rc*I + rc*g*supply)/(1+rc*g)
+Isaturated = (supply-vsat)/(R+rc+R*rc*g)
+tauSaturated = L*(1+rc*g)/(R+rc+R*rc*g)
+Ievent = (J-g*(supply-vsat))/(1-g*rc)
+tevent = -tauSaturated*log(1-Ievent/Isaturated)
+```
+
+**Correction to the earlier jump diagnosis:** at the finite-leakage
+equation-matching boundary, both region equations give0.201899215329 V. Current and collector
+voltage are continuous. The4.608179254 V rise takes place in the active
+region with the5 ps time constant; only the zero-leakage limiting model has
+an instantaneous algebraic voltage jump. A discontinuity exemption would
+therefore be unjustified for the existing stamped model. The new independent
+controls check boundary continuity, collector KCL and the winding voltage law,
+including the nonzero derivative at the boundary. A scalar trapezoidal
+full/half-step control at10 ns also fails the unchanged voltage norm: this
+is real stiffness, not permission to ignore the estimator. This matched
+boundary is not yet a certificate of the runtime region selector: its active
+entry checks Vce against the clamp offset and its saturated exit retains a
+0.95 current margin. Those predicates must be checked separately before
+the reference can authorize a production propagation path.
+
+An independent ngspice42 linear control isolates the existing active-region
+equation, with winding initial current set to the calculated event current:
+
+```spice
+Independent fixed-clamp post-event affine control
+VCC supply 0 5
+ILIMIT collector 0 0.01899215329445417
+RLEAK collector supply 1e9
+LW supply winding 5m IC=0.018992148496353382
+RW winding collector 10
+.options method=gear maxord=2 reltol=1e-9 abstol=1e-15 vntol=1e-10
+.tran .01p 50p 0 .01p uic
+.meas tran v05 FIND V(collector) AT=.5p
+.meas tran v5 FIND V(collector) AT=5p
+.meas tran v25 FIND V(collector) AT=25p
+.meas tran i5 FIND I(LW) AT=5p
+.end
+```
+
+The5011-point run gives0.6404256,3.114827 and4.779030 V at0.5,5 and25 ps.
+The exact exponential gives0.640425455,3.114824077 and4.779028803 V,
+respectively, within5 microvolts. This is a linear post-event oracle, not a
+full transistor/motor oracle, production-path admission proof or successful
+BoardImpl startup. Both desired actual startup regressions remain red.
+Halving the reference maximum step to0.005 ps gives10011 points and
+0.6404256,3.114825,4.779030 V; all remain within5 microvolts of the exact
+solution. The combined native suite has17 passes and2 genuine startup
+failures, with no skips. Runtime source bytes remain unchanged.
 
 An exact propagator for an explicitly admitted affine post-event system is a
 bounded hypothesis worth testing, not an implemented repair. It needs verified
@@ -182,14 +240,16 @@ The independent PWL base-network limit is18.992153294 mA. Before the
 fixed-clamp transition, the winding follows the RL law above. Solving
 `I(t)=beta*Ib` gives20.189651071 microseconds, agreeing with the observed
 20.190-microsecond failure. Current remains continuous, but the specified
-ideal model switches collector voltage from0.201899215 V to4.810078467 V:
-a4.608179252 V algebraic jump. The new actual19-microsecond control agrees
+zero-leakage limiting model switches collector voltage from0.201899215 V
+to4.810078467 V. This approximation suggested an algebraic jump, but the
+leakage-inclusive analysis above supersedes that diagnosis for the actual
+stamped model. The actual19-microsecond control agrees
 with the independent current within2 microamps and voltage within0.1 mV.
 
-The node-voltage full-step/half-step comparison assumes a smooth interval;
-an interval straddling this discontinuity violates that assumption. This
-establishes the fixed-clamp case, not every cause in the drive-dependent
-default model. A physically justified event repair must locate the switching
+The node-voltage full-step/half-step comparison must resolve the very stiff
+continuous rise; accepting a supposed discontinuity is not a repair. This
+establishes the fixed-clamp reduction, not every cause in the drive-dependent
+default model. A justified propagation repair must locate the switching
 boundary, retain continuous winding current, and establish consistent
 post-event algebraic voltage/derivative before resuming ordinary error control.
 It must not merely accept a floor error or discard a failed history.

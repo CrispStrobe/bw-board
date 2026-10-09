@@ -71,9 +71,9 @@ test('weak-drive fixed-clamp startup agrees with independent RL before its calcu
   const limit = 100*u*u;
   const crossing = -.005/10.1*Math.log(1-limit/(4.8/10.1));
   assert.ok(crossing > 20.18e-6 && crossing < 20.20e-6);
-  // Current is continuous at this ideal-model boundary, but collector voltage
-  // jumps by >4.6 V: saturated clamp -> ideal beta*Ib current source. Comparing
-  // node-voltage LTE across that event is not a smooth-ODE error estimate.
+  // This no-leakage approximation establishes the limiting voltage excursion,
+  // not a jump in the actual model. Its existing flyback off conductance makes
+  // the rise continuous with a roughly 5 ps decay time; see the control below.
   const before = .2+.1*limit;
   const after = 5-10*limit;
   assert.ok(after-before > 4.6);
@@ -83,6 +83,72 @@ test('weak-drive fixed-clamp startup agrees with independent RL before its calcu
   const want = 4.8/10.1*(1-Math.exp(-10.1*19e-6/.005));
   assert.ok(Math.abs(b.inductorCurrents.get('L')-want)<2e-6);
   assert.ok(Math.abs(b.nodeVoltage('collector')-(.2+.1*want))<1e-4);
+});
+
+// Independent reduction, not a production solver or an admission certificate.
+// Include the existing off conductance in BOTH regions, including clamp drop.
+function fixedClampReference() {
+  const supply = 5, clamp = .2, rc = .1, r = 10, l = .005, g = 1e-9;
+  const u = (Math.sqrt(1+4*22700*4.325)-1)/(2*22700);
+  const j = 100*u*u;
+  const eventCurrent = (j-g*(supply-clamp))/(1-g*rc);
+  const saturatedLimit = (supply-clamp)/(r+rc+r*rc*g);
+  const saturatedTau = l*(1+rc*g)/(r+rc+r*rc*g);
+  const eventTime = -saturatedTau*Math.log1p(-eventCurrent/saturatedLimit);
+  const eventVoltage = (clamp+rc*eventCurrent+rc*g*supply)/(1+rc*g);
+  const steadyCurrent = j/(1+g*r);
+  const steadyVoltage = supply-r*steadyCurrent;
+  const tau = g*l/(1+g*r);
+  const at = time => {
+    const rise = -Math.expm1(-time/tau);
+    return {
+      current:eventCurrent+(steadyCurrent-eventCurrent)*rise,
+      voltage:eventVoltage+(steadyVoltage-eventVoltage)*rise,
+      derivative:(steadyCurrent-eventCurrent)/tau*Math.exp(-time/tau),
+    };
+  };
+  return {supply, clamp, rc, r, l, g, j, eventCurrent, eventVoltage,
+    eventTime, steadyCurrent, steadyVoltage, tau, at};
+}
+
+test('leakage-inclusive fixed-clamp reference preserves event continuity and both electrical laws', () => {
+  const q = fixedClampReference();
+  assert.ok(Math.abs(q.eventTime-20.1896458666303e-6)<1e-18);
+  assert.equal(q.at(0).current,q.eventCurrent);
+  assert.equal(q.at(0).voltage,q.eventVoltage);
+  assert.ok(Math.abs(q.eventVoltage-(q.clamp+q.rc*q.j))<1e-14,
+    'both region stamps give the same collector voltage at the boundary');
+  for (const t of [0, .5e-12, 5e-12, 25e-12, 1e-8]) {
+    const {current,voltage,derivative} = q.at(t);
+    assert.ok(Math.abs(current+q.g*(q.supply-voltage)-q.j)<1e-16,'collector KCL');
+    assert.ok(Math.abs(q.supply-q.r*current-q.l*derivative-voltage)<1e-8,
+      'winding voltage law, including the nonzero initial derivative');
+  }
+});
+
+test('independent ngspice linear post-event control resolves the 5 ps collector rise', () => {
+  // Complete reproducible deck/settings and model boundary in the specification.
+  // These are recorded external oracle values, not BoardImpl success claims.
+  const q = fixedClampReference();
+  for (const [time,voltage] of [[.5e-12,.6404256],[5e-12,3.114827],[25e-12,4.779030]]) {
+    assert.ok(Math.abs(q.at(time).voltage-voltage)<5e-6,`oracle voltage at ${time} s`);
+  }
+  assert.ok(q.tau<5.01e-12 && q.tau>4.99e-12);
+  assert.ok(q.at(0).voltage<.203);
+  assert.ok(q.at(1e-8).voltage>4.81);
+});
+
+test('trapezoidal full/half disagreement is real on the admitted stiff affine equation', () => {
+  const q = fixedClampReference();
+  const z = 1e-8/q.tau;
+  const trap = z => (1-z/2)/(1+z/2);
+  const residual = q.eventVoltage-q.steadyVoltage;
+  const full = q.steadyVoltage+residual*trap(z);
+  const half = q.steadyVoltage+residual*trap(z/2)**2;
+  const norm = Math.abs(full-half)/(1e-6+1e-4*Math.max(Math.abs(full),Math.abs(half)));
+  assert.ok(norm>1000,'unchanged voltage tolerance correctly rejects the numerical disagreement');
+  assert.ok(Math.abs(full-q.at(1e-8).voltage)>4,
+    'a full trapezoidal step does not reproduce the exact stable endpoint');
 });
 
 test('explicit finite-Early-voltage control matches independent ngspice startup samples', () => {

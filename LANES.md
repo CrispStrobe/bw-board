@@ -83,6 +83,15 @@ The reduced active/off-flyback equations establish a5 ps affine decay mode,
 2000 times shorter than the unchanged10 ns floor. Exact admitted post-event
 propagation is a hypothesis, not a repair or arbitrary equilibrium projection.
 Both startup failures and the held Lite adoption remain unresolved.
+Leakage-inclusive reference correction: collector voltage is continuous at
+the fixed-clamp event, then rises by4.608 V with the5 ps decay time; the
+earlier instantaneous-jump diagnosis applies only to the zero-leakage limit.
+Including leakage in the saturated trajectory corrects the crossing time to
+20.189645866630 us. Three additional independent controls prove boundary
+continuity/KCL/winding law, match a5011-point ngspice42 linear post-event
+oracle within5 microvolts, and reproduce genuine trapezoidal full/half norm
+failure. These are reference controls, not a production repair or permission
+to exempt voltage errors. No runtime source or consumer pin changes.
 
 2026-10-08 scope reset capture epoch — DONE candidate, Codex bwcx.
 Branch lane/scope-reset-capture-epoch-20261008, isolated worktree, exact base
