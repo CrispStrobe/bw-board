@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """CPU-free exact 64 MiB aggregate and retained header parser adversaries."""
 import io
+import importlib.util
+import json
+from pathlib import Path
+import tempfile
 
 import build
 import preflight
-from header_budget import HEADER_TOTAL_LIMIT, within_header_budget
+from header_budget import (HEADER_REPORT_LIMIT, HEADER_TOTAL_LIMIT,
+                           within_header_budget, within_header_report)
 
 
 assert HEADER_TOTAL_LIMIT == 67_108_864
@@ -15,6 +20,11 @@ assert not within_header_budget(HEADER_TOTAL_LIMIT + 1)
 assert not within_header_budget(-1)
 assert not within_header_budget(True)
 assert preflight.MAX_MEMBERS == 20_000 and build.MAX_MEMBERS == 4096
+assert preflight.HEADER_REPORT_LIMIT == build.HEADER_REPORT_LIMIT == \
+    HEADER_REPORT_LIMIT == 1_048_576
+assert within_header_report(b"x" * HEADER_REPORT_LIMIT)
+assert not within_header_report(b"x" * (HEADER_REPORT_LIMIT + 1))
+assert not within_header_report(bytearray(b"x"))
 
 
 class Member:
@@ -64,5 +74,46 @@ try:
     refuse([Member(prefix + "node.h", 0)])  # required v8-profiler.h
 finally:
     preflight.tarfile.open = original_open
+
+inventory_path = Path(__file__).with_name("preflight-64m-inventory.py")
+spec = importlib.util.spec_from_file_location("preflight_64m_inventory", inventory_path)
+inventory_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(inventory_module)
+assert inventory_module.MAX_FILE == HEADER_REPORT_LIMIT
+assert inventory_module.MAX_TOTAL == 2 * HEADER_REPORT_LIMIT
+synthetic_members = {
+    f"node-v20.20.2/include/node/archs/synthetic-platform-{i:04d}/include/node.h":
+        {"bytes": 100, "sha256": "0" * 64}
+    for i in range(2365)}
+report = {"headersArchive": {"members": synthetic_members}}
+encoded = json.dumps(report, sort_keys=True, separators=(",", ":")).encode()
+assert 250_000 < len(encoded) < HEADER_REPORT_LIMIT
+with tempfile.TemporaryDirectory(prefix="direct-v8-header-budget-pure-") as temp:
+    root = Path(temp)
+    preflight.write_receipt(root / "preflight.json", report)
+    assert (root / "preflight.json").read_bytes() == encoded
+    assert set(inventory_module.inventory(root)["files"]) == {"preflight.json"}
+    padding = {"pad": "x" * (HEADER_REPORT_LIMIT - len(b'{"pad":""}'))}
+    preflight.write_receipt(root / "preflight.json", padding)
+    assert (root / "preflight.json").stat().st_size == HEADER_REPORT_LIMIT
+    padding["pad"] += "x"
+    try: preflight.write_receipt(root / "preflight.json", padding)
+    except ValueError: pass
+    else: raise AssertionError("oversized serialized receipt accepted")
+    assert (root / "preflight.json").stat().st_size == HEADER_REPORT_LIMIT
+    (root / "preflight.json").write_bytes(b"x" * (HEADER_REPORT_LIMIT + 1))
+    try: inventory_module.inventory(root)
+    except ValueError: pass
+    else: raise AssertionError("oversized artifact accepted")
+    (root / "preflight.json").unlink()
+    (root / "addon.node").write_bytes(b"binary")
+    try: inventory_module.inventory(root)
+    except ValueError: pass
+    else: raise AssertionError("binary artifact accepted")
+    (root / "addon.node").unlink()
+    (root / "run.stdout").symlink_to(inventory_path)
+    try: inventory_module.inventory(root)
+    except ValueError: pass
+    else: raise AssertionError("symlink artifact accepted")
 
 print("direct V8 64 MiB header budget controls PASS")

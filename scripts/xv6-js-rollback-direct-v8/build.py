@@ -17,7 +17,8 @@ import sys
 import tarfile
 import time
 
-from header_budget import HEADER_TOTAL_LIMIT, within_header_budget
+from header_budget import (HEADER_REPORT_LIMIT, HEADER_TOTAL_LIMIT,
+                           within_header_budget, within_header_report)
 
 HEADER_SHA = "46573741c48c20c6bcfc71450e2fc56b4d1156d72c3d6cc9917fa8b1cbc6e836"
 HEADER_NAME = "node-v20.20.2-headers.tar.xz"
@@ -217,7 +218,7 @@ def main():
         "addonBytes": len(binary) if binary is not None else None,
     }
     encoded = json.dumps(receipt, sort_keys=True, separators=(",", ":")).encode()
-    if len(encoded) > 200_000:
+    if not within_header_report(encoded):
         raise ValueError("build receipt exceeded bound")
     with report.open("xb") as out:
         out.write(encoded)

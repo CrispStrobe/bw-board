@@ -15,7 +15,8 @@ import tarfile
 import urllib.request
 
 from build import ARGS, run_bounded
-from header_budget import HEADER_TOTAL_LIMIT, within_header_budget
+from header_budget import (HEADER_REPORT_LIMIT, HEADER_TOTAL_LIMIT,
+                           within_header_budget, within_header_report)
 
 NODE_NAME = "node-v20.20.2-linux-x64.tar.xz"
 NODE_SHA = "df770b2a6f130ed8627c9782c988fda9669fa23898329a61a871e32f965e007d"
@@ -218,7 +219,7 @@ def recheck_tools(tools):
 
 def write_receipt(path, data):
     encoded = json.dumps(data, sort_keys=True, separators=(",", ":")).encode()
-    if len(encoded) > 250_000:
+    if not within_header_report(encoded):
         raise ValueError("preflight receipt bound")
     pending = path.with_name("preflight.pending.json")
     with pending.open("wb") as out:
