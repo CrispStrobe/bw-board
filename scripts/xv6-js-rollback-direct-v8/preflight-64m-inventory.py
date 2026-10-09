@@ -28,9 +28,13 @@ def inventory(root):
         info = path.lstat()
         if not stat.S_ISREG(info.st_mode) or not 0 <= info.st_size <= MAX_FILE:
             raise ValueError("nonordinary or oversized artifact role")
-        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
         try:
             before = os.fstat(fd)
+            if not stat.S_ISREG(before.st_mode) or \
+                    (before.st_dev, before.st_ino, before.st_size) != \
+                    (info.st_dev, info.st_ino, info.st_size):
+                raise ValueError("artifact role replaced before read")
             digest = hashlib.sha256()
             count = 0
             while count <= MAX_FILE:

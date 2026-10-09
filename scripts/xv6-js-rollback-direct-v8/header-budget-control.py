@@ -3,6 +3,7 @@
 import io
 import importlib.util
 import json
+import os
 from pathlib import Path
 import tempfile
 
@@ -115,5 +116,24 @@ with tempfile.TemporaryDirectory(prefix="direct-v8-header-budget-pure-") as temp
     try: inventory_module.inventory(root)
     except ValueError: pass
     else: raise AssertionError("symlink artifact accepted")
+    (root / "run.stdout").unlink()
+    (root / "run.stdout").write_bytes(b"ordinary")
+    original_os_open = inventory_module.os.open
+    replaced = False
+    def swap_to_fifo(path, flags, *args, **kwargs):
+        global replaced
+        if Path(path).name == "run.stdout" and not replaced:
+            replaced = True
+            Path(path).unlink()
+            os.mkfifo(path)
+        return original_os_open(path, flags, *args, **kwargs)
+    try:
+        inventory_module.os.open = swap_to_fifo
+        try: inventory_module.inventory(root)
+        except ValueError: pass
+        else: raise AssertionError("replacement FIFO accepted")
+        assert replaced
+    finally:
+        inventory_module.os.open = original_os_open
 
 print("direct V8 64 MiB header budget controls PASS")

@@ -43,8 +43,8 @@ class ProbeFailure(ValueError):
 
 
 def source_identity():
-    path = Path(__file__).with_name("preflight-source.py")
-    spec = importlib.util.spec_from_file_location("direct_v8_authority_source", path)
+    path = Path(__file__).with_name("preflight-64m-source.py")
+    spec = importlib.util.spec_from_file_location("direct_v8_authority_64m_source", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.identity()
@@ -239,7 +239,7 @@ def main():
     report_path = evidence / "preflight.json"
     if report_path.exists() or (evidence / "preflight.pending.json").exists():
         raise ValueError("preflight receipt already exists")
-    report = {"schema": "bw.direct-v8.authority-preflight.v1",
+    report = {"schema": "bw.direct-v8.authority-preflight-64m.v1",
               "status": "INCOMPLETE_UNQUALIFIED", "firstFailure": None,
               "nodeArchive": None, "headersArchive": None, "nodeExecutable": None,
               "nodeProbes": None, "tools": {}, "sourceReceiptSha256": None,
@@ -256,9 +256,9 @@ def main():
         source_raw = read_bounded(evidence / "source.json", 32_000)
         source = json.loads(source_raw)
         if (type(source) is not dict or
-                source.get("schema") != "bw.direct-v8.authority-preflight-source.v1" or
+                source.get("schema") != "bw.direct-v8.authority-preflight-64m-source.v1" or
                 source.get("head") != os.environ.get("BW_EXPECTED_HEAD") or
-                source.get("qualification") != "REPORT_ONLY_NO_BUILD_OR_NATIVE_CONTROL"):
+                source.get("qualification") != "REPORT_ONLY_64M_NO_BUILD_OR_NATIVE_CONTROL"):
             raise ValueError("source admission receipt mismatch")
         if source != source_identity():
             raise ValueError("source receipt differs from independently recomputed Git identity")
