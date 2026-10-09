@@ -34,8 +34,194 @@ const REG_NAMES = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"];
 // The controller supplies a candidate range; only the decoded CPU instruction
 // and committed frame below can create an observation.
 const owned0501Sessions = new WeakMap();
+const owned0501Excursions = new WeakMap();
 const OWNED_0501_MAX_STEPS = 1_000_000;
 const OWNED_0501_MIXED_PROFILE = "gate14-code16-stack32-same-cpl3.v1";
+const OWNED_0501_EXCURSION_STEPS = 100_000;
+const OWNED_0501_EXCURSION_TRANSITIONS = 16;
+const OWNED_0501_EXCURSION_DELIVERIES = 32;
+const OWNED_0501_CODE_FIELDS = Object.freeze([
+  "base", "limit", "default32", "present", "code", "readable", "writable",
+  "dpl", "conforming", "access", "address",
+]);
+const OWNED_0501_STACK_FIELDS = Object.freeze([
+  "base", "limit", "default32", "present", "code", "expandDown",
+  "readable", "writable", "access", "address",
+]);
+
+function owned0501ExcursionDescriptor(source, fields) {
+  const copy = {};
+  for (const name of fields) {
+    const value = owned0501Option(source, name);
+    if (typeof value !== "number" && typeof value !== "boolean")
+      throw new TypeError("invalid source-owned task descriptor scalar");
+    copy[name] = value;
+  }
+  return owned0501Frozen(copy);
+}
+
+function owned0501ExcursionDescriptorMatches(source, expected, fields) {
+  for (const name of fields)
+    if (owned0501Option(source, name) !== expected[name]) return false;
+  return true;
+}
+
+function owned0501ExcursionOptionalBoolean(source, key) {
+  const field = Object.getOwnPropertyDescriptor(source, key);
+  if (!field) return false;
+  if (!Object.hasOwn(field, "value") || typeof field.value !== "boolean")
+    throw new TypeError("invalid source-owned task delivery flag");
+  return field.value;
+}
+
+function owned0501ExcursionHandlerCandidate(cpu, session) {
+  const saved = session.handlerDescriptors;
+  const caches = owned0501Option(cpu, "segmentCaches");
+  const code = owned0501Option(caches, SEG_CS);
+  const stack = owned0501Option(caches, SEG_SS);
+  return owned0501ExcursionDescriptorMatches(saved.codeRef, saved.code,
+      OWNED_0501_CODE_FIELDS) &&
+    owned0501ExcursionDescriptorMatches(saved.stackRef, saved.stack,
+      OWNED_0501_STACK_FIELDS) &&
+    owned0501ExcursionDescriptorMatches(code, saved.code,
+      OWNED_0501_CODE_FIELDS) &&
+    owned0501ExcursionDescriptorMatches(stack, saved.stack,
+      OWNED_0501_STACK_FIELDS);
+}
+
+function owned0501ExcursionFail(session, reason) {
+  if (!session || session.phase !== "observing") return;
+  session.phase = "invalid";
+  session.firstFailure = reason;
+  if (session.pendingTask) {
+    try {
+      if (session.transitions.length + session.uncommittedTransitions.length <
+          OWNED_0501_EXCURSION_TRANSITIONS)
+        session.uncommittedTransitions.push(owned0501Frozen({
+          step: session.pendingTask.step,
+          kind: session.pendingTask.kind,
+          selector: session.pendingTask.selector,
+          source: session.pendingTask.source,
+          outcome: session.pendingTask.outcome ?? "not-observed",
+          enclosingStepCommitted: false,
+        }));
+      else session.truncated = true;
+    } catch { session.truncated = true; }
+  }
+  for (const delivery of session.pendingDeliveries) {
+    if (session.deliveries.length >= OWNED_0501_EXCURSION_DELIVERIES) {
+      session.truncated = true;
+      break;
+    }
+    session.deliveries.push(owned0501Frozen({ ...delivery,
+      enclosingStepCommitted: false }));
+  }
+  session.pendingTask = null;
+  session.pendingDeliveries.length = 0;
+}
+
+function owned0501ExcursionContext(cpu) {
+  const cs = owned0501Option(cpu, "cs"),
+    eip = owned0501Option(cpu, "eip"),
+    ss = owned0501Option(cpu, "ss"),
+    esp = owned0501Option(cpu, "esp"),
+    flags = owned0501Option(cpu, "eflags"),
+    cr0 = owned0501Option(cpu, "cr0"),
+    cr3 = owned0501Option(cpu, "cr3"),
+    retainedRealCs = owned0501Option(cpu, "_retainedRealCs"),
+    tr = owned0501Option(cpu, "tr"),
+    trSelector = owned0501Option(tr, "selector"),
+    trType = owned0501Option(tr, "type"),
+    trBase = owned0501Option(tr, "base"),
+    trLimit = owned0501Option(tr, "limit"),
+    trPresent = owned0501Option(tr, "present");
+  if (![cs, ss, trSelector].every(v => Number.isInteger(v) && v >= 0 && v <= 0xffff) ||
+      ![eip, esp, cr3].every(v => Number.isInteger(v) && v >= 0 && v <= 0xffffffff) ||
+      ![trBase, trLimit].every(v => Number.isInteger(v) && v >= 0 && v <= 0xffffffff) ||
+      ![flags, cr0].every(v => Number.isInteger(v) && v >= -0x80000000 && v <= 0xffffffff) ||
+      !Number.isInteger(trType) || trType < 0 || trType > 15 ||
+      typeof retainedRealCs !== "boolean" || typeof trPresent !== "boolean")
+    throw new TypeError("invalid source-owned task excursion context");
+  const vm86 = !!((cr0 & 1) && (flags & 0x20000));
+  return owned0501Frozen({ cs, eip, ss, esp, cr3: cr3 >>> 0,
+    trSelector, trType, trBase: trBase >>> 0,
+    trLimit: trLimit >>> 0, trPresent, vm86,
+    cpl: vm86 ? 3 : (!(cr0 & 1) || retainedRealCs ? 0 : cs & 3),
+    nt: !!(flags & NT), protectedMode: !!(cr0 & 1) });
+}
+
+function owned0501ExcursionCommit(cpu, session, result, traced) {
+  if (!session || session.phase !== "observing") return;
+  if (result <= 0 || traced) {
+    owned0501ExcursionFail(session, traced ? "post-instruction-trace" : "uncommitted-step");
+    return;
+  }
+  let reachedCandidate = false;
+  if (session.pendingTask) {
+    if (session.transitions.length + session.uncommittedTransitions.length >=
+        OWNED_0501_EXCURSION_TRANSITIONS) {
+      owned0501ExcursionFail(session, "task-transition-cap");
+      return;
+    }
+    const pending = session.pendingTask;
+    if (pending.outcome !== "core-return") {
+      owned0501ExcursionFail(session, "task-transition-not-core-return");
+      return;
+    }
+    const post = owned0501ExcursionContext(cpu);
+    const event = owned0501Frozen({ step: session.activeSteps,
+      kind: pending.kind, selector: pending.selector,
+      source: pending.source, outcome: pending.outcome,
+      post, enclosingStepCommitted: true });
+    session.transitions.push(event);
+    session.pendingTask = null;
+    if (session.transitions.length === 1) {
+      session.outgoing = event;
+    } else if (post.trSelector === session.cookie.trSelector) {
+      const source = session.outgoing.source;
+      const candidate = owned0501Frozen({
+        step: session.activeSteps, transition: session.transitions.length,
+        originalTr: true,
+        savedContinuation: post.cs === source.cs &&
+          post.eip === source.eip && post.ss === source.ss &&
+          post.esp === source.esp && post.cr3 === source.cr3,
+        handlerContext: post.cs === session.cookie.entry.handlerCs &&
+          post.ss === session.cookie.entry.handlerSs && post.cpl === 3 &&
+          post.protectedMode && !post.vm86 &&
+          owned0501ExcursionHandlerCandidate(cpu, session),
+        taskContext: post.trType === session.cookie.trType &&
+          post.trBase === session.cookie.trBase &&
+          post.trLimit === session.cookie.trLimit && post.trPresent,
+      });
+      session.resumeCandidate = candidate;
+      reachedCandidate = candidate.savedContinuation &&
+        candidate.handlerContext && candidate.taskContext;
+    }
+  }
+  for (const delivery of session.pendingDeliveries) {
+    if (session.deliveries.length >= OWNED_0501_EXCURSION_DELIVERIES) {
+      owned0501ExcursionFail(session, "delivery-record-cap");
+      return;
+    }
+    session.deliveries.push(owned0501Frozen({ ...delivery,
+      step: session.activeSteps, enclosingStepCommitted: true }));
+  }
+  session.pendingDeliveries.length = 0;
+  const cr0 = owned0501Option(cpu, "cr0"),
+    flags = owned0501Option(cpu, "eflags");
+  if (!Number.isInteger(cr0) || !Number.isInteger(flags) ||
+      !(cr0 & 1) || flags & 0x20000) {
+    owned0501ExcursionFail(session, "unsupported-task-excursion-mode");
+    return;
+  }
+  if (reachedCandidate) session.phase = "candidate";
+  if (session.outgoing && session.phase === "observing") {
+    session.postOutgoingSteps++;
+    if (session.postOutgoingSteps > OWNED_0501_EXCURSION_STEPS)
+      owned0501ExcursionFail(session, "post-switch-step-cap");
+  } else if (!session.outgoing && session.activeSteps > OWNED_0501_EXCURSION_STEPS)
+    owned0501ExcursionFail(session, "pre-switch-step-cap");
+}
 
 function owned0501MixedReferencesMatch(session) {
   const expected = session.handlerContext;
@@ -202,6 +388,9 @@ export class ExperimentalI80386 {
   #owned0501ExecutionDepth = 0;
   #owned0501AdmissionBusy = false;
   #owned0501AdmissionReentered = false;
+  #owned0501ExcursionActive = false;
+  #owned0501ExcursionAdmissionBusy = false;
+  #owned0501ExcursionAdmissionReentered = false;
 
   constructor(bus = {}, options = {}) {
     this.cpuProfile = options.cpuProfile ?? "compatibility";
@@ -258,6 +447,9 @@ export class ExperimentalI80386 {
   }
 
   reset() {
+    const excursion = owned0501Excursions.get(this);
+    owned0501ExcursionFail(excursion, "cpu-reset");
+    this.#owned0501ExcursionActive = false;
     const owned0501 = owned0501Sessions.get(this);
     if (owned0501) {
       owned0501.pendingRejectedDelivery = null;
@@ -404,6 +596,107 @@ export class ExperimentalI80386 {
       ...(session.profile ? { profile: session.profile } : {}) });
     owned0501Sessions.delete(this);
     this.#owned0501JournalActive = false;
+    return result;
+  }
+
+  armOwned0501TaskExcursion(frameToken) {
+    const frame = owned0501Sessions.get(this);
+    const prior = owned0501Excursions.get(this);
+    if (this.#owned0501ExecutionDepth || this.#owned0501AdmissionBusy ||
+        this.#owned0501ExcursionAdmissionBusy || frame?.busyDepth ||
+        prior?.busyDepth) {
+      owned0501ExcursionFail(prior, "observer-reentry");
+      if (this.#owned0501ExcursionAdmissionBusy)
+        this.#owned0501ExcursionAdmissionReentered = true;
+      this.#owned0501ExcursionActive = false;
+      return null;
+    }
+    if (prior) throw new Error("consume prior task excursion first");
+    if (!frame || frame.token !== frameToken || frame.phase !== "open" ||
+        !frame.entry || frame.profile !== OWNED_0501_MIXED_PROFILE)
+      throw new Error("committed mixed-profile owned entry required");
+    this.#owned0501ExcursionAdmissionBusy = true;
+    this.#owned0501ExcursionAdmissionReentered = false;
+    try {
+      const context = owned0501ExcursionContext(this);
+      if (!context.protectedMode || context.vm86 || context.cpl !== 3 ||
+          context.cs !== frame.entry.handlerCs ||
+          context.ss !== frame.entry.handlerSs ||
+          !owned0501MixedHandlerMatches(this, frame) ||
+          frame.entry.frameBytes !== 12 ||
+          this.#owned0501ExcursionAdmissionReentered)
+        throw new Error("owned task excursion admission refused");
+      const token = Object.freeze({});
+      const cookie = owned0501Frozen({
+        entry: frame.entry, trSelector: context.trSelector,
+        trType: context.trType, trBase: context.trBase,
+        trLimit: context.trLimit, cr3: context.cr3,
+      });
+      const handlerDescriptors = {
+        codeRef: frame.handlerContext.codeRef,
+        stackRef: frame.handlerContext.stackRef,
+        code: owned0501ExcursionDescriptor(frame.handlerContext.codeRef,
+          OWNED_0501_CODE_FIELDS),
+        stack: owned0501ExcursionDescriptor(frame.handlerContext.stackRef,
+          OWNED_0501_STACK_FIELDS),
+      };
+      owned0501Excursions.set(this, {
+        token, frameToken, cookie, handlerDescriptors,
+        phase: "observing", firstFailure: null,
+        activeSteps: 0, postOutgoingSteps: 0, busyDepth: 0,
+        pendingTask: null, pendingDeliveries: [],
+        transitions: [], uncommittedTransitions: [], deliveries: [],
+        truncated: false, outgoing: null,
+        resumeCandidate: null,
+      });
+      this.#owned0501ExcursionActive = true;
+      return token;
+    } finally {
+      this.#owned0501ExcursionAdmissionBusy = false;
+      this.#owned0501ExcursionAdmissionReentered = false;
+    }
+  }
+
+  owned0501TaskExcursionStatus(token) {
+    const session = owned0501Excursions.get(this);
+    if (this.#owned0501ExecutionDepth || session?.busyDepth) {
+      owned0501ExcursionFail(session, "observer-reentry");
+      this.#owned0501ExcursionActive = false;
+      return { phase: "invalid", firstFailure: "observer-reentry" };
+    }
+    if (!session || session.token !== token)
+      throw new Error("stale task excursion token");
+    return owned0501Frozen({ phase: session.phase,
+      firstFailure: session.firstFailure, activeSteps: session.activeSteps,
+      transitions: session.transitions.length,
+      deliveries: session.deliveries.length });
+  }
+
+  takeOwned0501TaskExcursionObservation(token) {
+    const session = owned0501Excursions.get(this);
+    if (this.#owned0501ExecutionDepth || session?.busyDepth) {
+      owned0501ExcursionFail(session, "observer-reentry");
+      this.#owned0501ExcursionActive = false;
+      return null;
+    }
+    if (!session || session.token !== token)
+      throw new Error("stale task excursion token");
+    if (session.phase === "observing") return null;
+    const result = owned0501Frozen({
+      schema: "bw.i80386-owned-0501.task-excursion-diagnostic.v1",
+      phase: session.phase, firstFailure: session.firstFailure,
+      activeSteps: session.activeSteps,
+      postOutgoingSteps: session.postOutgoingSteps,
+      cookie: session.cookie,
+      transitions: Object.freeze([...session.transitions]),
+      uncommittedTransitions: Object.freeze([...session.uncommittedTransitions]),
+      deliveries: Object.freeze([...session.deliveries]),
+      resumeCandidate: session.resumeCandidate,
+      truncated: session.truncated,
+      frameReturnQualified: false,
+    });
+    owned0501Excursions.delete(this);
+    this.#owned0501ExcursionActive = false;
     return result;
   }
 
@@ -1755,6 +2048,21 @@ export class ExperimentalI80386 {
   }
 
   _taskSwitch(selector, kind, options = {}) {
+    const excursion = this.#owned0501ExcursionActive
+      ? owned0501Excursions.get(this) : null;
+    if (excursion?.phase === "observing") {
+      try {
+        if (this.#owned0501ExecutionDepth !== 1 || excursion.pendingTask ||
+            !Number.isInteger(selector) || selector < 0 || selector > 0xffff ||
+            !["call", "jmp", "iret"].includes(kind))
+          owned0501ExcursionFail(excursion, "task-helper-reentry-or-stale-stage");
+        else excursion.pendingTask = {
+          step: excursion.activeSteps + 1,
+          kind, selector, source: owned0501ExcursionContext(this),
+          outcome: null,
+        };
+      } catch { owned0501ExcursionFail(excursion, "task-attempt-observer-failure"); }
+    }
     const owned0501 = this.#owned0501JournalActive
       ? owned0501Sessions.get(this) : null;
     const priorTicket = owned0501?.taskSwitchAttempt ?? null;
@@ -1765,10 +2073,24 @@ export class ExperimentalI80386 {
     }
     try {
       const result = this._taskSwitchCore(selector, kind, options);
+      if (excursion?.phase === "observing" && excursion.pendingTask) {
+        try { excursion.pendingTask.outcome = "core-return"; }
+        catch { owned0501ExcursionFail(excursion, "task-outcome-observer-failure"); }
+      }
       try { owned0501TaskSwitchOutcome(this, owned0501, priorTicket, true, null); }
       catch { /* A refused observation cannot change the guest result. */ }
       return result;
     } catch (error) {
+      if (excursion?.phase === "observing" && excursion.pendingTask)
+        try {
+          if (error instanceof I80386Fault || error instanceof UnsupportedI80386) {
+            const mark = Object.getOwnPropertyDescriptor(error, "taskCommitted");
+            excursion.pendingTask.outcome = mark && !Object.hasOwn(mark, "value")
+              ? "marker-accessor-refused" : mark?.value === true
+                ? "fault-with-taskCommitted" : "fault-without-taskCommitted";
+          } else excursion.pendingTask.outcome = "unclassified-throw";
+        } catch { excursion.pendingTask.outcome = "outcome-observer-failure"; }
+      owned0501ExcursionFail(excursion, "task-core-exception");
       if (options.external && error instanceof I80386Fault &&
           [10, 11, 12, 13].includes(error.vector))
         error.errorCode = ((error.errorCode ?? 0) | 1) >>> 0;
@@ -2845,6 +3167,8 @@ export class ExperimentalI80386 {
   }
 
   _deliver(vector, returnEip, errorCode = null, options = {}) {
+    const excursion = this.#owned0501ExcursionActive
+      ? owned0501Excursions.get(this) : null;
     const owned0501 = this.#owned0501JournalActive
       ? owned0501Sessions.get(this) : null;
     if (owned0501) {
@@ -2858,6 +3182,18 @@ export class ExperimentalI80386 {
         this._deliverProtected(vector, returnEip, errorCode, options);
       else this._deliverReal(vector, returnEip);
       this.halted = false;
+      if (excursion?.phase === "observing") try {
+        if (this.#owned0501ExecutionDepth !== 1 ||
+            excursion.pendingDeliveries.length >= OWNED_0501_EXCURSION_DELIVERIES)
+          owned0501ExcursionFail(excursion, "delivery-observer-boundary");
+        else excursion.pendingDeliveries.push(owned0501Frozen({
+          step: excursion.activeSteps + 1,
+          vector, returnEip: returnEip >>> 0,
+          software: owned0501ExcursionOptionalBoolean(options, "software"),
+          external: owned0501ExcursionOptionalBoolean(options, "external"),
+          errorCodePresent: errorCode !== null,
+        }));
+      } catch { owned0501ExcursionFail(excursion, "delivery-observer-failure"); }
     } finally {
       if (owned0501) owned0501.delivering--;
     }
@@ -3230,7 +3566,18 @@ export class ExperimentalI80386 {
   step() {
     if (this.#owned0501AdmissionBusy)
       this.#owned0501AdmissionReentered = true;
+    if (this.#owned0501ExcursionAdmissionBusy) {
+      this.#owned0501ExcursionAdmissionReentered = true;
+      return 0;
+    }
     this.#owned0501ExecutionDepth++;
+    const excursion = this.#owned0501ExcursionActive
+      ? owned0501Excursions.get(this) : null;
+    if (excursion) {
+      if (excursion.busyDepth)
+        owned0501ExcursionFail(excursion, "cpu-step-reentry");
+      excursion.busyDepth++;
+    }
     const owned0501 = this.#owned0501JournalActive
       ? owned0501Sessions.get(this) : null;
     if (owned0501) {
@@ -3244,6 +3591,7 @@ export class ExperimentalI80386 {
     try {
       if (this.halted || this.shutdown) {
         if (owned0501) owned0501Invalidate(owned0501, "cpu-not-running");
+        owned0501ExcursionFail(excursion, "cpu-not-running");
         return 0;
       }
       if (owned0501?.phase === "open" &&
@@ -3292,8 +3640,31 @@ export class ExperimentalI80386 {
           if (owned0501.phase === "complete" || owned0501.phase === "invalid")
             this.#owned0501JournalActive = false;
         }
+        if (excursion?.phase === "observing") try {
+          excursion.activeSteps++;
+          owned0501ExcursionCommit(this, excursion, result, traced);
+        } catch {
+          owned0501ExcursionFail(excursion, "observer-step-record-failure");
+        }
+        if (excursion && excursion.phase !== "observing")
+          this.#owned0501ExcursionActive = false;
         return result;
       } catch (error) {
+        if (excursion?.phase === "observing") try {
+          if (excursion.deliveries.length < OWNED_0501_EXCURSION_DELIVERIES)
+            excursion.deliveries.push(owned0501Frozen({
+              kind: error instanceof I80386Fault ? "cpu-fault" :
+                error instanceof UnsupportedI80386 ? "unsupported-cpu" :
+                  "unclassified-throw",
+              ...(error instanceof I80386Fault
+                ? { vector: error.vector,
+                    errorCodePresent: error.errorCode !== null } : {}),
+              step: excursion.activeSteps + 1,
+              enclosingStepCommitted: false,
+            }));
+        } catch { /* The original guest exception takes priority. */ }
+        owned0501ExcursionFail(excursion, "step-failure");
+        this.#owned0501ExcursionActive = false;
         if (owned0501) {
           owned0501.pendingRejectedDelivery = null;
           owned0501.rejectionPermit = false;
@@ -3321,6 +3692,8 @@ export class ExperimentalI80386 {
         return 0;
       }
     } catch (error) {
+      owned0501ExcursionFail(excursion, "step-exception");
+      this.#owned0501ExcursionActive = false;
       if (owned0501) {
         owned0501.pendingRejectedDelivery = null;
         owned0501.rejectionPermit = false;
@@ -3330,6 +3703,7 @@ export class ExperimentalI80386 {
       throw error;
     } finally {
       if (owned0501) owned0501.busyDepth--;
+      if (excursion) excursion.busyDepth--;
       this.#owned0501ExecutionDepth--;
     }
   }
