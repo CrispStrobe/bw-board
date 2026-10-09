@@ -14,6 +14,19 @@ reference sensitivity. No full-waveform qualification or physical scope claim.
 No production equation/profile/work-limit, GUI, package/pin, CPU, workflow or
 deployment changes. Canonical remote claim before repository implementation;
 one exact CI/Harris qualification before guarded landing of this evidence.
+Expanded 2026-10-09 after branch-only diagnostic56c32063: additionally owns
+src/board.js advanceToLive scheduling-span selection only and
+test/live-device-clock-quantum.test.mjs affected live-span coverage. The
+probe-loaded direct1.1-to3.1 ms live request exhausts20,000 integration attempts;
+intermediate endpoints complete. Reactive MNA live scheduling may tighten its
+existing1 ms span to the already authored public transient maximum-step bound.
+This is a temporal scheduling repair, NOT actual-work bounded continuation or
+permission to renew finite-analysis authority. Keep idle1 ms behavior, event
+barriers, state publication, budgets, tolerances, profiles and failure latches
+unchanged. Prove resumed actual clocks, ordinary matching partitions, closed-
+form RC and direct winding restart; restoring old span must red real callers.
+The expanded remote claim precedes any scheduler edit. Late-ring global
+accuracy and finite precision failure remain separately open.
 
 2026-10-09 PWL off-current readback — DONE candidate, Codex bwcx.
 Branch lane/pwl-off-current-readback-20261009, isolated worktree, exact base
