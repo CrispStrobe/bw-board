@@ -112,6 +112,20 @@ Earlier100 ps failure did not prove all finer floors fail. Combined suite
 also failed and was removed. Shipping the successful route needs an explicit
 revision of the current floor-preservation contract and broader qualification;
 no public profile/default, package, browser or deployment change is made here.
+User approved the precision-policy revision after the working subfloor
+control. Implementation envelope expands only to the original five paths plus
+test/transient-analysis-profile.test.mjs (named-policy/default compatibility),
+test/adp7118-current-limited-startup.test.mjs (factual default-policy assertion)
+and spec-updates/adaptive-transient.md (current public policy). Reviewed default
+interactive-v2 permits1 fs refinement with the same error scales, seed,
+maximum step and attempt ceiling; explicit interactive-v1 and precision-v1
+remain unchanged. Live work accepts only the two reviewed interactive IDs;
+finite/precision reuse and genuine failure refusals remain authoritative.
+No device/model equation, source corner, instrument load, workflow, CPU,
+CUI/Lite source/pin or deployment change. Fresh remote master is exact
+4e4cf9c45b7083efec4b94bc44d20fcbea92f319. Publish this expanded claim before
+the policy implementation, then focused/budget/source/instrument/mutation
+checks and one exact hosted CI/Harris qualification before guarded landing.
 
 2026-10-08 scope reset capture epoch — DONE candidate, Codex bwcx.
 Branch lane/scope-reset-capture-epoch-20261008, isolated worktree, exact base
