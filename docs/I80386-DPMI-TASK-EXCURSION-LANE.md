@@ -122,7 +122,9 @@ source, syntax and pure mock controls; source admission binds 205 Git roles
 and 64 JavaScript modules. All 12 enabled exact-head checks passed, with
 only the two declared `vectors-full` skips. The dedicated label was then
 applied once; [original run37907258126](https://github.com/CrispStrobe/bw-board/actions/runs/37907258126)
-is queued. **Its guest diagnostic result remains pending.**
+completed with official failure. The [original result](receipts/2026-10-09-task-excursion-at/README.md)
+records two committed task transfers, then the protected-only observer
+refuses after PE clears; it records no original-task resume candidate.
 
 The driver retains the original strict frame refusal and partial finite-client
 report. Before any continuation step it requires a source-committed outgoing
@@ -132,10 +134,21 @@ private diagnostic recorder and retain its partial facts. The abort method
 does not reset the guest or change the strict frame. Candidates remain
 diagnostic observations; `frameReturnQualified` remains false.
 
-Next refresh the status of that original run; do not remove/reapply its
-`x86-cwsdpmi-0501-task-excursion` label or launch a second actual. Once it
-completes, independently audit the original report-only packet, including source-before/after, unchanged wrapper/media
-admission, the committed outgoing event, every intervening transition/delivery
-and the final candidate or refusal. Preserve the first run even if failed;
-never reapply an old frame label or replace an original with a replay. Only
-that evidence can motivate a later, separately reviewed ownership profile.
+The original packet and its first failure are preserved; do not remove/reapply
+its label or launch a second actual at this source. The strict frame remains
+invalid with `returned:null`, and `frameReturnQualified` remains false. The
+final machine is not shut down; this report establishes the observer's mode
+boundary, without identifying the exact PE-clearing instruction or proving a
+guest CPU fault.
+
+Next implement a **separately named bounded mode-crossing diagnostic** in an
+isolated source lane. Keep this protected-only profile and the original strict
+owner unchanged. Record committed before/after mode facts across PE and VM86
+changes, including CR0, flags, effective mode/CPL, CS context and task identity;
+retain separately any uncommitted attempt. Preserve owner/reentry/exception,
+transition/delivery/output and step/wall bounds. A candidate must still match
+the original task, saved continuation and protected handler context; real mode
+or VM86 alone cannot qualify it. Review adversarial controls and affected hosted
+CPU/xv6 regressions before one separately labeled original diagnostic. That
+original, independently audited result is the next gate before any later
+ownership profile or application-completion claim.

@@ -1,0 +1,66 @@
+{
+  "schema": "bw.task-excursion-at-public-receipt.v1",
+  "source": "89eadb8c2449ff769b157ee6a4b78ccb833c3610",
+  "sourcePullRequest": "https://github.com/CrispStrobe/bw-board/pull/474",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37907258126",
+  "officialConclusion": "failure",
+  "attempt": 1,
+  "checksBeforeLaunch": {
+    "enabledSuccess": 12,
+    "declaredOptionalVectorsFullSkipped": 2
+  },
+  "originalArtifact": {
+    "run": 37907258126,
+    "artifact": 11605002880,
+    "bytes": 142712,
+    "sha256": "5b8f0d5aa6c3f6a1fea893c2a6143a4676efd5ba979e52f953aa9cbc6bc7d97e"
+  },
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11605002880",
+  "rawLog": {
+    "bytes": 213211,
+    "sha256": "aa880459975c5d3dde9b1f481c5319621167b6ec73c559a939dda558d5be8bf9"
+  },
+  "packetMembers": 114,
+  "sourceRoles": 205,
+  "recursiveJsNodes": 64,
+  "stage": "diagnostic-complete",
+  "strictFailure": "task-switch-during-owned-frame",
+  "strictReturned": null,
+  "diagnosticFailure": "unsupported-task-excursion-mode",
+  "activeSteps": 47,
+  "postOutgoingSteps": 35,
+  "committedTaskTransitions": 2,
+  "taskSelectors": [
+    96,
+    112,
+    104
+  ],
+  "deliveries": 0,
+  "resumeCandidate": null,
+  "frameReturnQualified": false,
+  "finalCr0": 0,
+  "shutdown": false,
+  "priorOriginalInputWrapperEntryAttemptOutcomeEqual": true,
+  "boundary": "Observer refused after PE cleared; exact clearing instruction/context unrecorded. No original-task resumption, guest CPU fault, owned frame return or performance result established.",
+  "next": "separately named bounded mode-crossing diagnostic; preserve protected-only original and unchanged strict owner",
+  "auditors": [
+    {
+      "role": "root original packet/source/input identity audit",
+      "bytes": 9451,
+      "sha256": "51dd6053f8290b67e3143f06321400e30d3594ad18119493447090fdb536061c",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    },
+    {
+      "role": "root original semantic and prior-original comparison audit",
+      "bytes": 720,
+      "sha256": "47679e2c76c8e75b157d60e11b029f7ba0e6e20271a31dd4a02fdbdd298f9c6b",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    },
+    {
+      "role": "separate Sol original packet/source/log audit",
+      "bytes": 1976,
+      "sha256": "ebb83a5899f7560bd1696a6e4e0854de65c4c84e374800add5853128d399190f",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    }
+  ]
+}
