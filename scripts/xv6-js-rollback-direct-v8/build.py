@@ -51,6 +51,7 @@ def run_bounded(argv, cwd, timeout):
     deadline = time.monotonic() + timeout
     timed_out = False
     output_bound = False
+    pipes_complete = False
     try:
         while selector.get_map():
             remaining = deadline - time.monotonic()
@@ -70,6 +71,7 @@ def run_bounded(argv, cwd, timeout):
                     break
             if output_bound:
                 break
+        pipes_complete = not selector.get_map()
         if not timed_out and not output_bound:
             try:
                 process.wait(timeout=max(0.001, deadline - time.monotonic()))
@@ -77,11 +79,19 @@ def run_bounded(argv, cwd, timeout):
                 timed_out = True
     finally:
         selector.close()
-        if process.poll() is None:
+        # The leader may have exited while descendants still hold the pipes.
+        # The process group is task-owned because Popen created a new session.
+        if timed_out or output_bound:
             try:
                 os.killpg(process.pid, signal.SIGTERM)
             except ProcessLookupError:
                 pass
+            time.sleep(0.1)
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        if process.poll() is None:
             try:
                 process.wait(timeout=2)
             except subprocess.TimeoutExpired:
@@ -96,6 +106,7 @@ def run_bounded(argv, cwd, timeout):
         process.stderr.close()
     return {"exitCode": process.returncode, "timedOut": timed_out,
             "outputBound": output_bound,
+            "complete": pipes_complete and not timed_out and not output_bound,
             "stdout": bytes(collected["stdout"]),
             "stderr": bytes(collected["stderr"])}
 
@@ -160,7 +171,7 @@ def main():
                if version_ok else None)
     result = (run_bounded([compiler, *ARGS], work, 90) if version_ok else
               {"exitCode": None, "timedOut": False, "outputBound": False,
-               "stdout": b"", "stderr": b""})
+               "complete": False, "stdout": b"", "stderr": b""})
     passed = (version_ok and result["exitCode"] == 0 and
               not result["timedOut"] and not result["outputBound"] and
               not result["stderr"])
@@ -195,11 +206,11 @@ def main():
                          "timedOut": version_result["timedOut"],
                          "outputBound": version_result["outputBound"],
                          "stdout": diagnostic(version_result["stdout"],
-                             not version_result["outputBound"]),
+                             version_result["complete"]),
                          "stderr": diagnostic(version_result["stderr"],
-                             not version_result["outputBound"])},
-        "stdout": diagnostic(result["stdout"], not result["outputBound"]),
-        "stderr": diagnostic(result["stderr"], not result["outputBound"]),
+                             version_result["complete"])},
+        "stdout": diagnostic(result["stdout"], result["complete"]),
+        "stderr": diagnostic(result["stderr"], result["complete"]),
         "addonSha256": sha(binary) if binary is not None else None,
         "addonBytes": len(binary) if binary is not None else None,
     }
