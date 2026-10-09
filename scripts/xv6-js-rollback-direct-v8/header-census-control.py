@@ -54,13 +54,18 @@ def tar_xz(entries):
     return out.getvalue()
 
 
-def inspect(raw, checkpoint=None):
-    before_sha, before_len = census.ARCHIVE_SHA, census.ARCHIVE_BYTES
+def inspect(raw, checkpoint=None, max_result=None):
+    before_sha, before_len, before_max = (census.ARCHIVE_SHA,
+                                         census.ARCHIVE_BYTES,
+                                         census.MAX_RESULT)
     census.ARCHIVE_SHA, census.ARCHIVE_BYTES = census.sha(raw), len(raw)
+    if max_result is not None:
+        census.MAX_RESULT = max_result
     try:
         return census.census(raw, checkpoint)
     finally:
-        census.ARCHIVE_SHA, census.ARCHIVE_BYTES = before_sha, before_len
+        census.ARCHIVE_SHA, census.ARCHIVE_BYTES, census.MAX_RESULT = (
+            before_sha, before_len, before_max)
 
 
 ordinary = inspect(tar_xz([(name, b"first")]))
@@ -86,8 +91,18 @@ oversize = inspect(tar_xz([(name, b"x" * 2_000_001)]))
 assert oversize["status"] == "PARTIAL_DATA_ONLY" and \
     oversize["firstLegacyRefusal"]["predicate"] == "member-type-or-size" and \
     oversize["firstFailure"] is not None
+escaped_name = "node-v20.20.2/" + "é" * 450
+scaled_cap = 200_000
+escaped = inspect(tar_xz([(escaped_name, b"")] * 60),
+                  max_result=scaled_cap)
+assert escaped["status"] == "PARTIAL_DATA_ONLY" and \
+    escaped["firstFailure"]["reason"] == "data-only report byte ceiling" and \
+    escaped["duplicateCount"] > 0
 with tempfile.TemporaryDirectory(prefix="header-census-pure-") as root:
     root = Path(root)
+    census.write_json(root / "census.json", escaped, scaled_cap)
+    assert (root / "census.json").stat().st_size <= scaled_cap
+    (root / "census.json").unlink()
     (root / "census-progress.json").write_text("{}")
     assert set(inventory.inventory(root)["files"]) == {"census-progress.json"}
     (root / "headers.tar.xz").write_bytes(b"forbidden")
