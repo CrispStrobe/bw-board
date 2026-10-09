@@ -34,6 +34,11 @@ bad('minor-baseline', c => { c.pre.nodes[1].script = 'other.mjs'; }, /bounded fa
 bad('minor-baseline', c => { c.pre.nodes[1].line = 18; }, /bounded facts/);
 bad('minor-baseline', c => { c.finalFacts.closed = false; }, /bounded facts/);
 bad('minor-baseline', c => { c.finalFacts.overflow = true; }, /bounded facts/);
+bad('minor-baseline', c => {
+  c.beforeRelease.gcCount = 1; c.afterRelease.gcCount = 1;
+  c.finalFacts.gc.unshift({ type: 4, flags: 0, ended: true });
+  c.finalFacts.weak.fill(1);
+}, /major collection before minor witness/);
 const rootZero = valid('minor-baseline');
 rootZero.pre.nodes[0].id = 0;
 rootZero.pre.nodes[1].parent = 0;

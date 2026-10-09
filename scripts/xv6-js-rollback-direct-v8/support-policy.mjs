@@ -73,6 +73,8 @@ export function gradeCase({ kind, flags, pre, post, beforeRelease, afterRelease,
       e.ended !== true) throw Error('GC event');
   const designated = afterRelease.gcCount;
   if (events[designated].type !== spec.type) throw Error('wrong designated GC');
+  if (spec.type === 1 && events.some(e => (e.type & 4) !== 0))
+    throw Error('major collection before minor witness');
   for (const index of finalFacts.weak) if (index !== designated) throw Error('weak callback attribution');
   if (events.length !== designated + 1) throw Error('post-witness GC');
   for (const id of preIds) {
