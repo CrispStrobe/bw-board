@@ -28,10 +28,17 @@ function first(report,message){
   else (report.secondaryFailures??=[]).push(message);
 }
 function exact(path,limit,pin=null){
-  const fd=fs.openSync(path,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW);
+  const namedBefore=fs.lstatSync(path);
+  if(!namedBefore.isFile()||namedBefore.isSymbolicLink()||
+     namedBefore.size<1||namedBefore.size>limit)
+    throw new Error('private input shape');
+  const fd=fs.openSync(path,fs.constants.O_RDONLY|fs.constants.O_NONBLOCK|
+    fs.constants.O_NOFOLLOW);
   try{
     const before=fs.fstatSync(fd);
-    if(!before.isFile()||before.size<1||before.size>limit)
+    if(!before.isFile()||before.size!==namedBefore.size||
+       before.dev!==namedBefore.dev||before.ino!==namedBefore.ino||
+       before.mtimeMs!==namedBefore.mtimeMs)
       throw new Error('private input shape');
     const raw=Buffer.alloc(before.size+1);
     let count=0;
@@ -44,7 +51,8 @@ function exact(path,limit,pin=null){
     if(!named.isFile()||named.isSymbolicLink()||count!==before.size||
        before.dev!==after.dev||before.ino!==after.ino||
        before.size!==after.size||before.mtimeMs!==after.mtimeMs||
-       named.dev!==after.dev||named.ino!==after.ino)
+       named.dev!==after.dev||named.ino!==after.ino||
+       named.size!==after.size||named.mtimeMs!==after.mtimeMs)
       throw new Error('private input changed during read');
     const result=raw.subarray(0,count);
     if(pin&&(result.length!==pin.bytes||sha(result)!==pin.sha256))

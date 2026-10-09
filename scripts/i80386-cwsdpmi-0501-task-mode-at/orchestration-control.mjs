@@ -1,4 +1,9 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {createHash} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
 import {createTaskModeOrchestration} from './orchestration.mjs';
 
 function fixture(failure='task-switch-during-owned-frame',onProgress=null,
@@ -158,6 +163,38 @@ assert.equal(missingAbortReceipt.committedOutgoing,false);
 assert.equal(missingAbortFault.observer.terminal().modeResult,missingAbortReceipt);
 assert.equal(missingAbortFault.stepCalls,2);
 
+const contradictory=fixture('task-switch-during-owned-frame',null,false,false);
+contradictory.observer.ports.bind();contradictory.observer.ports.step();
+assert.throws(()=>contradictory.observer.ports.step(),
+  /task-switch-during-owned-frame/);
+contradictory.machine.cpu.takeOwned0501TaskModeObservation=()=>({
+  phase:'invalid',transitions:[{step:2,enclosingStepCommitted:true}]});
+const contradictoryReceipt=contradictory.observer.continue(contradictory.machine);
+assert.equal(contradictoryReceipt.committedOutgoing,false);
+assert.equal(contradictory.stepCalls,2);
+
+const badStart=fixture();
+badStart.observer.ports.bind();badStart.observer.ports.step();
+assert.throws(()=>badStart.observer.ports.step(),/task-switch-during-owned-frame/);
+badStart.machine.cpu.abortOwned0501TaskMode=()=>{
+  throw new Error('synthetic abort refusal');
+};
+const badStartReceipt=badStart.observer.continue(badStart.machine,{now:()=>-1});
+assert.equal(badStartReceipt.firstFailure,'observer-wall-bound');
+assert.equal(badStartReceipt.status.phase,'observing');
+assert.equal(badStart.stepCalls,2);
+
+const badStartNoop=fixture();
+badStartNoop.observer.ports.bind();badStartNoop.observer.ports.step();
+assert.throws(()=>badStartNoop.observer.ports.step(),
+  /task-switch-during-owned-frame/);
+badStartNoop.machine.cpu.abortOwned0501TaskMode=()=>({phase:'observing'});
+const badStartNoopReceipt=badStartNoop.observer.continue(badStartNoop.machine,
+  {now:()=>Number.NaN});
+assert.equal(badStartNoopReceipt.firstFailure,'observer-wall-bound');
+assert.equal(badStartNoopReceipt.status.phase,'observing');
+assert.equal(badStartNoop.stepCalls,2);
+
 const timed=fixture();
 timed.observer.ports.bind();timed.observer.ports.step();
 assert.throws(()=>timed.observer.ports.step(),/task-switch-during-owned-frame/);
@@ -270,5 +307,60 @@ assert.throws(()=>noRetry.observer.ports.step(),/task-switch-during-owned-frame/
 noRetry.observer.continue(noRetry.machine,{maxSteps:0});
 assert.throws(()=>noRetry.observer.continue(noRetry.machine),/already consumed/);
 assert.equal(noRetry.stepCalls,2);
+
+// Extract this pure admission function from the actual adapter source. Do not
+// import the adapter: its static imports load the emulator and guest helpers.
+const adapterSource=fs.readFileSync(new URL('./adapter.mjs',import.meta.url),'utf8');
+const exactStart=adapterSource.indexOf('function exact(');
+const exactEnd=adapterSource.indexOf('\nconst json=',exactStart);
+assert.ok(exactStart>=0&&exactEnd>exactStart);
+const exactBody=adapterSource.slice(exactStart,exactEnd);
+const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
+const exactWith=io=>new Function('fs','sha',`${exactBody}\nreturn exact;`)(io,sha);
+const temp=fs.mkdtempSync(path.join(process.env.TMPDIR??os.tmpdir(),
+  'owned-task-mode-input-'));
+try{
+  const file=path.join(temp,'input'),replacement=path.join(temp,'replacement');
+  const bytes=Buffer.from('owned input');
+  fs.writeFileSync(file,bytes);
+  assert.deepEqual(exactWith(fs)(file,100,
+    {bytes:bytes.length,sha256:sha(bytes)}),bytes);
+  const link=path.join(temp,'link');fs.symlinkSync(file,link);
+  assert.throws(()=>exactWith(fs)(link,100),/private input shape/);
+  const fifo=path.join(temp,'fifo');
+  execFileSync('mkfifo',[fifo],{timeout:1000});
+  assert.throws(()=>exactWith(fs)(fifo,100),/private input shape/);
+  fs.writeFileSync(replacement,bytes);
+  const beforeOpen=new Proxy(fs,{get(target,key){
+    if(key==='openSync')return (name,flags)=>{
+      fs.renameSync(replacement,name);return fs.openSync(name,flags);
+    };
+    return target[key];
+  }});
+  assert.throws(()=>exactWith(beforeOpen)(file,100),/private input shape/);
+  fs.writeFileSync(replacement,bytes);
+  let changed=false;
+  const afterRead=new Proxy(fs,{get(target,key){
+    if(key==='readSync')return (...args)=>{
+      const count=fs.readSync(...args);
+      if(!changed){changed=true;fs.renameSync(replacement,file);}
+      return count;
+    };
+    return target[key];
+  }});
+  assert.throws(()=>exactWith(afterRead)(file,100),
+    /private input changed during read/);
+  changed=false;
+  const growAfterRead=new Proxy(fs,{get(target,key){
+    if(key==='readSync')return (...args)=>{
+      const count=fs.readSync(...args);
+      if(!changed){changed=true;fs.appendFileSync(file,'x');}
+      return count;
+    };
+    return target[key];
+  }});
+  assert.throws(()=>exactWith(growAfterRead)(file,100),
+    /private input changed during read/);
+}finally{fs.rmSync(temp,{recursive:true,force:true});}
 
 process.stdout.write('task mode orchestration controls PASS\n');

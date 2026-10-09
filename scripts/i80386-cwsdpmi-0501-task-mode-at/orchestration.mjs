@@ -92,6 +92,7 @@ export function createTaskModeOrchestration(ports,{cpu,opportunity,progress}) {
           throw new Error('task mode continuation requires strict refusal');
         continued=true;
         let status=null,lastPolledStatus=null,observation=null,n=0;
+        let preflightPassed=false;
         const poll=()=>{
           try{status=cpu.owned0501TaskModeStatus(taskToken);
             lastPolledStatus=status;return true;}
@@ -110,7 +111,8 @@ export function createTaskModeOrchestration(ports,{cpu,opportunity,progress}) {
         const finish=()=>{
           drain();
           const outgoing=observation?.transitions?.[0];
-          const committedOutgoing=outgoing?.enclosingStepCommitted===true &&
+          const committedOutgoing=preflightPassed &&
+            outgoing?.enclosingStepCommitted===true &&
             Number.isInteger(outgoing.step)&&outgoing.step>=1;
           if(!committedOutgoing)
             diagnosticLatch('committed outgoing task transition absent');
@@ -140,10 +142,13 @@ export function createTaskModeOrchestration(ports,{cpu,opportunity,progress}) {
           abort('observer-preflight-refused');
           return finish();
         }
+        preflightPassed=true;
         try{
           const start=now();ensure();
-          if(!Number.isSafeInteger(start)||start<0)
+          if(!Number.isSafeInteger(start)||start<0){
             abort('observer-wall-bound');
+            return finish();
+          }
           for(;n<maxSteps&&status?.phase==='observing';){
             const elapsed=now()-start;ensure();
             if(!Number.isSafeInteger(elapsed)||elapsed<0||elapsed>wallMs){
