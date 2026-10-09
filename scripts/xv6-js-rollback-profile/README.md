@@ -2,9 +2,11 @@
 
 This source checkpoint contains an exact reversible heap-sampling derivative of
 the held stock probe, a bounded sampling-heap parser, and a dedicated hosted
-runner and label-only workflow. **The hosted gate has not run.** No xv6 child,
-profiler support control, guest comparison, allocation result, or performance
-result has been observed for this branch.
+runner and label-only workflow. The [first hosted attempt](https://github.com/CrispStrobe/bw-board/actions/runs/37888206087)
+stopped in the support control before any xv6 child: its minor baseline retained
+4,096 targets, 3,328 dead targets, 46 minor and 3 major GC events. It did not
+qualify collected-object sampling or a guest result. This follow-up's corrected
+support schedule is source-only and unrun.
 
 The derivative admits only the held probe SHA-256
 `0f283611891e0afbee5359e51b246a2572637257c297815f7ae2c6917ddfc93a`.
@@ -13,10 +15,17 @@ requests both collected-by-minor-GC and collected-by-major-GC flags at a
 predeclared 128 KiB sampling interval, limits the raw profile to 8 MiB,
 preserves the original guest exception before a profiling failure, and
 verifies that removing the three exact edits reproduces the held probe bytes.
-A hosted control checks minor and major collection separately. The minor case
-allocates small batches, crosses an event-loop turn after each WeakRef
-creation, then induces nursery pressure; it requires dead targets, observed
-minor collection and no major collection. Each single-flag case must retain
+A hosted control checks minor and major collection separately. The corrected
+minor case uses two fixed 64-target cohorts, holds each cohort strongly across
+an event-loop turn after WeakRef creation, then releases it and crosses another
+turn before up to eight 128-array pressure blocks. It refuses any GC between
+release and pressure, and requires every target in each cohort to die after an
+observed minor collection, with no major collection anywhere in the case. The support-only
+child uses a pinned Node 20.20.2 anti-inlining flag to keep the allocation
+factory visible in sampled stacks; it checks the actual V8 option list and
+records its Node/V8 versions and process arguments in each retained case fact,
+including a failed first case. This flag does not alter the
+qualified guest probe. Each single-flag case must retain
 samples of short-lived arrays after the matching observed GC kind, while a
 no-flags baseline does not. Ambiguous GC behavior refuses qualification. The
 major case keeps its targets strongly reachable
@@ -54,8 +63,9 @@ PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/xv6-js-rollback-profile/run-control
 PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/xv6-js-rollback-profile/inventory-control.py
 ```
 
-The first hosted run must establish whether Node 20.20.2 actually samples
-collected short-lived objects with both requested flags. Unsupported behavior,
+The next hosted run must establish whether Node 20.20.2 actually samples
+collected short-lived objects with both requested flags under this corrected
+support-only schedule. Unsupported behavior,
 missing samples, malformed profiles or a semantic difference refuse
 qualification and retain bounded original reports. This experiment does not
 time a performance candidate or establish a speedup.
