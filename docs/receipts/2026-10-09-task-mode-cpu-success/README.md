@@ -18,5 +18,6 @@ The correction changes one test fixture; CPU code and strict frame rules are
 unchanged. This evidence qualifies the CPU prerequisite within those finite
 boundaries. The new task-mode guest diagnostic remains unconnected and
 unqualified. It establishes no native/profile execution, physical 386DX RTx,
-original-task resumption or owned-frame return. Wait for all enabled exact-head
-checks before the next separately named guest-diagnostic source checkpoint.
+original-task resumption or owned-frame return. All twelve enabled exact-head checks subsequently passed, with only the two
+declared optional `vectors-full` skips. The next source task is the separately
+named guest diagnostic; its source and actual need their own qualification.

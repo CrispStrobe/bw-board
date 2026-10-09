@@ -77,5 +77,10 @@
       "scriptSha256": "2978b798e850f3b81d6e829064f5346a9a942a8221c194fd4baa1b9475731ef4"
     }
   ],
-  "qualificationBoundary": "hosted CPU controls and existing finite xv6 compatibility regressions only; new task-mode guest diagnostic unconnected/unqualified; no strict physical 386DX, native, profiler or performance qualification"
+  "qualificationBoundary": "hosted CPU controls and existing finite xv6 compatibility regressions only; new task-mode guest diagnostic unconnected/unqualified; no strict physical 386DX, native, profiler or performance qualification",
+  "enabledExactHeadChecks": {
+    "success": 12,
+    "optionalVectorsFullSkipped": 2,
+    "source": "44087e8f1d19b1f74c6f2742ebca31594f6e7208"
+  }
 }

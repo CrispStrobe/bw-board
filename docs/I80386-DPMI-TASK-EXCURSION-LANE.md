@@ -169,8 +169,8 @@ records the out-of-range increment and test-only correction
 `44087e8f1d19b1f74c6f2742ebca31594f6e7208`. CPU source is unchanged.
 The [corrected original hosted CPU/xv6 result](receipts/2026-10-09-task-mode-cpu-success/README.md)
 passes root and independent audit: 114 focused controls and three finite xv6
-scenarios, with executed/reviewed tree equality. Remaining enabled exact-head
-checks are pending. **This recorder has no connected guest driver or actual
+scenarios, with executed/reviewed tree equality. All twelve enabled exact-head checks passed, with only the two declared
+optional `vectors-full` skips. **This recorder has no connected guest driver or actual
 task-mode qualification.**
 
 The distinct `armOwned0501TaskMode`, `owned0501TaskModeStatus`,
@@ -183,11 +183,10 @@ cache are explicit nulls; unattributed changes still refuse. It records
 `postOutgoingSteps`, preserves uncommitted fault facts, and always reports
 `frameReturnQualified:false`. The old protected-only observer remains intact.
 
-Refresh PR476's corrected `44087e8f1d19b1f74c6f2742ebca31594f6e7208`
-head and every enabled check first. Once affected CPU and
-finite xv6 regressions pass and their originals are independently audited,
-implement a separately named adapter/driver/source admission/closed inventory
-and hosted workflow using these new APIs. Bind the unchanged owned client,
+PR476's corrected `44087e8f1d19b1f74c6f2742ebca31594f6e7208`
+head passed every enabled check and independently audited CPU/finite xv6
+regressions. The separate adapter/driver/source admission/closed inventory
+and hosted workflow checkpoint below uses these new APIs. Bind the unchanged owned client,
 wrapper, compiler, BIOS/VGA, FreeDOS/CWSDPMI and media inputs. Retain the original
 strict frame report, then use ordinary steps under the existing wall/step caps;
 do not substitute a CPU callback or widen frame acceptance. After source review
@@ -195,3 +194,39 @@ and all enabled checks pass, launch one distinct labeled actual and audit its
 first original, including committed mode attribution, task transitions,
 uncommitted refusals and any original-task protected-handler candidate. A later
 CS reload or other unhooked operation remains an explicit refusal boundary.
+
+
+## Separate task-mode AT diagnostic source checkpoint
+
+[Draft PR478](https://github.com/CrispStrobe/bw-board/pull/478), reviewed head
+`f2fb33f921bf99b23d1e88ee889512d5d4ee6318`, publishes nine files under
+`scripts/i80386-cwsdpmi-0501-task-mode-at/` and
+`.github/workflows/i80386-cwsdpmi-0501-task-mode.yml`, stacked on PR476.
+Root and an independent reviewer verified the ten-path delta, 215 source roles
+and 64-node recursive import graph. CPU and inherited PR474 implementation,
+compiler/media/helper pins and strict frame rules remain unchanged. Source,
+inventory and CPU-free controller/input-admission controls passed; hosted
+checks are pending and no task-mode guest actual has run.
+
+The derivative adapter arms the new mode API after committed strict entry,
+requires the original task-switch refusal and outgoing transition before
+continuing, and retains `passed:false`, strict `returned:null` and
+`frameReturnQualified:false`. The one-shot controller permits at most 100,000
+ordinary machine-step calls and 120 seconds. Preflight or initial-clock
+refusal stops locally even if CPU abort throws or returns observing. Terminal
+records are drained where possible, while status/abort/take/progress failures
+remain visible. Progress mode counts are distinct from full terminal mode
+records; a killed process does not establish complete history. Pure controls
+cover zero-extra-step refusals, callback reentry, bounds, failed drains, and
+FIFO/symlink/inode/size input races without importing the emulator.
+
+Next wait for all ten enabled exact-head checks, with only the two declared
+optional `vectors-full` skips, then launch the distinct
+`x86-cwsdpmi-0501-task-mode-at` label once. The unchanged CPU did not trigger
+an additional xv6 job for this ten-file derivative. Audit the first official
+original packet independently: source/input closure, preserved strict refusal,
+committed mode-operation attribution, task/delivery/mode bounds, partial
+failures and any protected-handler candidate. A candidate still does not
+qualify an IRET, original owned-frame return, physical memory placement or
+broader OS/application compatibility. Preserve the earlier diagnostic and
+failed controls; do not relabel or replay them as this profile.

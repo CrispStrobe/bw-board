@@ -99,7 +99,8 @@ GC export windows, one-shot sampler reuse, source-factory attribution, prior
 major-GC exclusion in minor cases, and cleanup of an exited compiler leader's
 remaining owned process group. Those controls do not establish native behavior.
 
-Next implement a separately identified report-only hosted authority preflight.
+The separately identified report-only hosted authority preflight below
+implements the first prerequisite from this source checkpoint.
 Bind the exact official Node executable/header archives, installed compiler
 and linker executable hashes/versions/arguments, source and runner identity.
 Retain original refusal records and a closed report-only inventory, then stop
@@ -118,15 +119,16 @@ actuals; do not relabel them as the direct sampler.
 the six-path hosted authority-preflight slice. Root and a separate Sol reviewer
 checked exact source, syntax and synthetic controls. The [first original hosted preflight](receipts/2026-10-09-direct-v8-preflight/README.md)
 failed its header closure check before Node/compiler probes. Node, compiler
-and addon runtime support remain unqualified.
+and addon runtime support were unqualified at this failed checkpoint; the
+single corrected preflight below is launched; its original result is pending.
 
 The dedicated workflow authenticates the exact source before and after, fetches
 only the pinned official Node/header archives, hashes tool executable targets
 around identity probes, retains bounded original failure output, and uploads
 a closed report-only inventory. It stops before compilation, addon loading,
 support sampling or guests. The first dedicated preflight completed with the retained refusal below.
-Preserve its frozen source and original packet; finish the separate header
-census before proposing a corrected preflight. Any new gate needs every
+Preserve its frozen source and original packet. The completed separate header
+census and proposed corrected preflight are recorded below. Any new gate needs every
 enabled exact-head check to succeed (with only declared optional vectors-full
 skips), a single launch and an independent original-packet audit. Complete
 observed build authorities remain a prerequisite for the first build/support
@@ -134,10 +136,10 @@ workflow.
 
 The first preflight was launched once after all ten enabled checks passed,
 with only two declared optional skips. Its original packet and raw log are
-independently audited and preserved; the duplicate-versus-expansion cause
-remains unresolved. Next inspect the exact official header archive with a
-separately named bounded data-only census. Do not relax `build.py` or invoke
-the addon from this partial receipt.
+independently audited and preserved. That packet alone did not distinguish
+the duplicate-name predicate from the aggregate expansion predicate; the
+separate census below resolves the first refusal. Do not invoke the addon
+from this partial receipt.
 
 
 ## Data-only header census source checkpoint
@@ -172,8 +174,13 @@ qualifying revised admission or any native execution.
 [Draft PR477](https://github.com/CrispStrobe/bw-board/pull/477), reviewed head
 `61fa4800434301843a648f9ad851067366b5525e`, publishes a separately named
 **64 MiB authority preflight** with eight changed paths and 26 source roles.
-Source and pure synthetic controls passed root and independent review; hosted
-checks are pending and the dedicated actual has not run. It uses one shared
+Source and pure synthetic controls passed root and independent review. All
+ten enabled exact-head checks passed, with only two declared optional skips,
+before the single [report-only run37919948310](https://github.com/CrispStrobe/bw-board/actions/runs/37919948310)
+was launched; its original result is pending. The [official release
+checksum-text comparison](receipts/2026-10-09-node-release-pins/README.md)
+independently matches both archive pins, without raw archive or signature
+verification. It uses one shared
 aggregate budget in preflight and build, retaining exact archive identities,
 individual member, count, safe-path, type, duplicate and required-header guards.
 Keep build's stricter 4,096-member/depth-12 limits. The full member-hash map also

@@ -1,0 +1,17 @@
+{
+  "url": "https://nodejs.org/dist/v20.20.2/SHASUMS256.txt",
+  "bytes": 3777,
+  "sha256": "c6f74825d6ddf350ef06600c67fec6ea2f7996cf438a78c3cb2a89b29d4320ed",
+  "pins": {
+    "node-v20.20.2-linux-x64.tar.xz": "df770b2a6f130ed8627c9782c988fda9669fa23898329a61a871e32f965e007d",
+    "node-v20.20.2-headers.tar.xz": "46573741c48c20c6bcfc71450e2fc56b4d1156d72c3d6cc9917fa8b1cbc6e836"
+  },
+  "review": "MATCH official release checksum text; not independent raw archive or signature verification",
+  "schema": "bw.node-release-pins-text-summary.v1",
+  "source": "61fa4800434301843a648f9ad851067366b5525e",
+  "reviewers": [
+    "root",
+    "independent peer"
+  ],
+  "qualification": "Official checksum text matches source pins; no signature, raw archive, runtime, build or profiler qualification."
+}

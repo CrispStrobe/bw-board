@@ -29,7 +29,7 @@
   "correctionSource": "44087e8f1d19b1f74c6f2742ebca31594f6e7208",
   "correctionPaths": 1,
   "cpuSourceChangedByCorrection": false,
-  "correctedHostedQualification": "CPU controls and three finite xv6 regressions passed in original37914446180; remaining exact-head checks pending; new task-mode guest diagnostic unqualified",
+  "correctedHostedQualification": "CPU controls and three finite xv6 regressions passed in original37914446180; all twelve enabled exact-head checks passed with two declared optional skips; new task-mode guest diagnostic unqualified",
   "boundary": "current CPU control failed before xv6 acquisition/build/guest; no mode profile or finite xv6 qualification",
   "auditors": [
     {

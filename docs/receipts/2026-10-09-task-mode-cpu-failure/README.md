@@ -18,7 +18,7 @@ an out-of-range value, correctly refused before identity comparison.
 Correction `44087e8f1d19b1f74c6f2742ebca31594f6e7208` changes only that
 authored test to decrement the limit within uint32 range and check the retained
 before/after values accordingly. It changes no CPU, guard, README or acceptance
-rule. Syntax/source review passed. The subsequent [corrected original hosted result](../2026-10-09-task-mode-cpu-success/README.md) passed CPU controls and three finite xv6 regressions; remaining exact-head checks and new task-mode guest qualification are separate gates.
+rule. Syntax/source review passed. The subsequent [corrected original hosted result](../2026-10-09-task-mode-cpu-success/README.md) passed CPU controls and three finite xv6 regressions; all twelve enabled exact-head checks subsequently passed. New task-mode guest qualification remains a separate gate.
 Preserve the original failure, and await every enabled exact-head check and
 independent original xv6 audit before connecting the separate guest driver.
 The [task-mode contract](../../I80386-DPMI-TASK-EXCURSION-LANE.md) retains the
