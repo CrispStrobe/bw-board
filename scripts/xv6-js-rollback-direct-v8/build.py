@@ -17,10 +17,12 @@ import sys
 import tarfile
 import time
 
+from header_budget import HEADER_TOTAL_LIMIT, within_header_budget
+
 HEADER_SHA = "46573741c48c20c6bcfc71450e2fc56b4d1156d72c3d6cc9917fa8b1cbc6e836"
 HEADER_NAME = "node-v20.20.2-headers.tar.xz"
 MAX_ARCHIVE = 1_000_000
-MAX_UNPACKED = 32_000_000
+MAX_UNPACKED = HEADER_TOTAL_LIMIT
 MAX_MEMBERS = 4096
 MAX_OUTPUT = 32768
 ARGS = ["-std=c++17", "-shared", "-fPIC", "-O2", "-Wall", "-Wextra",
@@ -143,7 +145,7 @@ def main():
             if member.isdir():
                 continue
             total += member.size
-            if total > MAX_UNPACKED or member.size > 2_000_000 or \
+            if not within_header_budget(total) or member.size > 2_000_000 or \
                     member.name in members:
                 raise ValueError("header archive bounds refused")
             data = tar.extractfile(member).read(member.size + 1)

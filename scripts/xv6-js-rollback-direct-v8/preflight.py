@@ -15,6 +15,7 @@ import tarfile
 import urllib.request
 
 from build import ARGS, run_bounded
+from header_budget import HEADER_TOTAL_LIMIT, within_header_budget
 
 NODE_NAME = "node-v20.20.2-linux-x64.tar.xz"
 NODE_SHA = "df770b2a6f130ed8627c9782c988fda9669fa23898329a61a871e32f965e007d"
@@ -24,7 +25,7 @@ ORIGIN = "https://nodejs.org/dist/v20.20.2/"
 MAX_NODE_ARCHIVE = 32 * 1024 * 1024
 MAX_NODE_BINARY = 110 * 1024 * 1024
 MAX_HEADERS_ARCHIVE = 1_000_000
-MAX_HEADER_TOTAL = 32_000_000
+MAX_HEADER_TOTAL = HEADER_TOTAL_LIMIT
 MAX_MEMBERS = 20_000
 MAX_TOOL = 100 * 1024 * 1024
 TOOLS = ("g++", "cc1plus", "collect2", "as", "ld")
@@ -105,7 +106,7 @@ def archive_records(raw, expected_sha, role):
                 if not member.isfile() or member.size < 0 or member.size > 2_000_000:
                     raise ValueError("header member type or size refused")
                 total += member.size
-                if total > MAX_HEADER_TOTAL or member.name in members:
+                if not within_header_budget(total) or member.name in members:
                     raise ValueError("header closure refused")
                 data = archive.extractfile(member).read(member.size + 1)
                 if len(data) != member.size:
