@@ -532,9 +532,80 @@ test('a task-switch attempt while a selected frame is open invalidates it', () =
   const f = fixture();
   const token = f.arm();
   f.cpu.step();
-  assert.throws(() => f.cpu._taskSwitch(0, 'jmp'));
-  assert.equal(f.cpu.takeOwned0501FrameObservation(token).failure,
-    'task-switch-during-owned-frame');
+  const before = f.cpu._snapshotInstruction();
+  assert.throws(() => f.cpu._taskSwitch(0, 'jmp'), I80386Fault);
+  assert.deepEqual(f.cpu._snapshotInstruction(), before);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.entry.source, 'decoded-software-int31');
+  assert.equal(result.returned, null);
+  assert.deepEqual(result.taskSwitchAttempt, {
+    schema: 'bw.i80386-owned-0501.task-switch-attempt.v1',
+    kind: 'jmp', selector: 0, sourceCs: 8, attemptEip: 0x100,
+    sourceCpl: 0, nt: false, trSelector: 0x30, trType: 11,
+    activeSteps: 1,
+  });
+  assert.equal(Object.isFrozen(result.taskSwitchAttempt), true);
+});
+
+test('mixed same-CPL handler retains one attempted-task fact without return credit', () => {
+  const f = fixture();
+  f.memory.set(0x208 + 5, 0xfa);
+  f.memory.set(0x208 + 6, 0x8f);
+  f.put(0x300 + 0x31 * 8, [0, 1, 0x0b, 0, 0, 0xee, 0, 0]);
+  const token = f.arm({ profile: MIXED_PROFILE });
+  assert.equal(f.cpu.step(), 1);
+  assert.throws(() => f.cpu._taskSwitch(0, 'call'), I80386Fault);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.phase, 'invalid');
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.returned, null);
+  assert.deepEqual([result.taskSwitchAttempt.kind,
+    result.taskSwitchAttempt.selector, result.taskSwitchAttempt.sourceCs,
+    result.taskSwitchAttempt.attemptEip, result.taskSwitchAttempt.sourceCpl,
+    result.taskSwitchAttempt.profile],
+    ['call', 0, 0x0b, 0x100, 3, MIXED_PROFILE]);
+});
+
+test('task-switch diagnostic never invokes an accessor or changes first refusal', () => {
+  const f = fixture();
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  let reads = 0;
+  Object.defineProperty(f.cpu.tr, 'type', {
+    configurable: true,
+    get() { reads++; throw new Error('diagnostic getter'); },
+  });
+  assert.throws(() => f.cpu._taskSwitch(0, 'jmp'), I80386Fault);
+  assert.equal(reads, 0);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.taskSwitchAttempt, undefined);
+  assert.equal(result.entry.source, 'decoded-software-int31');
+});
+
+test('NT task-return attempt keeps the original TSS fault and first refusal', () => {
+  const f = fixture();
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  f.cpu.eflags |= 0x4000;
+  assert.throws(() => f.cpu._taskSwitch(0, 'iret'), error =>
+    error instanceof I80386Fault && error.vector === 10);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.phase, 'invalid');
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.returned, null);
+  assert.deepEqual([result.taskSwitchAttempt.kind,
+    result.taskSwitchAttempt.selector, result.taskSwitchAttempt.nt,
+    result.taskSwitchAttempt.trSelector, result.taskSwitchAttempt.activeSteps],
+    ['iret', 0, true, 0x30, 1]);
+});
+
+test('disabled journal leaves original invalid task-switch fault untouched', () => {
+  const f = fixture();
+  assert.throws(() => f.cpu._taskSwitch(0, 'jmp'), error =>
+    error instanceof I80386Fault && error.vector === 13);
+  assert.equal(Object.hasOwn(f.cpu, 'taskSwitchAttempt'), false);
 });
 
 test('refused hardware interrupt leaves the pair open; accepted delivery invalidates it', () => {
