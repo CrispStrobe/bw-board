@@ -40,8 +40,9 @@ then continue **ordinary machine steps** only under a separate bound: at most
 fault records. Record attempted selector/kind/source context, original-core
 result or exception, and post-step committed CS:EIP/CPL/VM86/NT/TR/CR3 for
 each transition. Distinguish a task-switch attempt, a normal `_taskSwitchCore`
-return, a fault after task-state writes, and an enclosing instruction that
-actually commits. A local core return alone cannot advance the accepted
+return, recognized faults with or without the core's own `taskCommitted`
+marker, and an enclosing instruction that actually commits. An absent marker
+does not prove that earlier task-state writes were absent. A local core return alone cannot advance the accepted
 frame phase. Retain partial records and the first failure if a bound, fault,
 reentry, reset, unsupported mode or observer error stops the run. Keep raw
 RAM, TSS images, executable and disk bytes out of the report artifact.
@@ -71,8 +72,8 @@ its step so an independent reader can check ordering and the still separate
 finite client result.
 
 Passing such a gate would qualify this one owned AX=0501h transaction in the
-free, pinned QEMU fixture. It would not establish arbitrary task switching,
+free, pinned AT fixture with its separately identified QEMU control. It would not establish arbitrary task switching,
 all INT 31h calls, physical frame stability, a complete 386DX machine,
-Windows, games or performance. Source-only and synthetic controls cannot
+general applications, games or performance. Source-only and synthetic controls cannot
 replace one exact-head hosted guest run with an independently audited original
 packet.

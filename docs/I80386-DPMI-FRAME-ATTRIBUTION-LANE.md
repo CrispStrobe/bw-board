@@ -402,7 +402,7 @@ binds the executed PR merge tree to reviewed `f3b8b31d`. Root and a separate Sol
 reader audited original packet/log/Git roles. Other required checks and the
 actual attempted-task ticket diagnostic remain pending at this checkpoint.
 
-## Task-attempt actual reached; outcome remains unknown
+## Historical task-attempt checkpoint
 
 PR468's reviewed `f3b8b31d` cleared all 12 enabled checks, then actual
 [run37893093332](https://github.com/CrispStrobe/bw-board/actions/runs/37893093332)
@@ -428,3 +428,17 @@ remain pending. After all 12 enabled checks pass with only the two declared
 optional skips, apply the existing diagnostic label once at that exact head
 and independently audit its original report. Do not infer task completion
 from the preceding attempt ticket or relax frame ownership at this stage.
+
+## Task-core outcome reached; original task resumption pending
+
+The exact outcome head passed all 12 enabled checks and was labelled once.
+Its [original actual outcome and finite xv6 receipt](receipts/2026-10-09-0501-task-outcome/README.md)
+records a normal task-core return into CPL0, CS `0x18`, EIP `0x3ee9`,
+TR `0x70`, with VM86 and NT clear. Root and a separate Sol reader checked the
+original packet/source/input bindings. The first frame guard remains failed
+and its return field stays null; the finite client did not complete in this
+diagnostic. The preceding pending-check notes are historical.
+
+Next follow the [bounded task-excursion contract](I80386-DPMI-TASK-EXCURSION-LANE.md)
+to identify resumption of the exact original task/frame with a separate diagnostic. Do not infer an IRETD pair
+from this core return or broaden the current ownership rule without evidence.

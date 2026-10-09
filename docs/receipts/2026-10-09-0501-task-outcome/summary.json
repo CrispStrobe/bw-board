@@ -1,0 +1,95 @@
+{
+  "schema": "bw.x86-task-outcome-public-receipt.v1",
+  "source": "15afcd6ba9dd1b494c343c6af6307bcf324b0ebd",
+  "sourcePullRequest": "https://github.com/CrispStrobe/bw-board/pull/470",
+  "checks": {
+    "enabledSuccess": 12,
+    "declaredOptionalVectorsFullSkipped": 2
+  },
+  "xv6": {
+    "run": 37895727469,
+    "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37895727469",
+    "originalArtifact": {
+      "run": 37895727469,
+      "artifact": 11600572180,
+      "bytes": 21030,
+      "sha256": "2fcd37142bf2ef8375195fed8ad932692cf69c17c18c5fe465dc145d4d5864fd"
+    },
+    "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11600572180",
+    "executedMerge": "03dabf73ca40f8b45ef5ce9d175185ebe22ebca3",
+    "reviewedTreeEqual": true,
+    "finiteScenarios": 3,
+    "focusedNames": 81,
+    "currentTests": 1656,
+    "currentPass": 1645,
+    "currentFail": 0,
+    "currentSkip": 11,
+    "historicalTests": 288,
+    "historicalPass": 288,
+    "profileBoundary": "existing PSE/APIC compatibility profile, not strict physical 386DX"
+  },
+  "taskActual": {
+    "run": 37897547815,
+    "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37897547815",
+    "officialConclusion": "failure",
+    "originalArtifact": {
+      "run": 37897547815,
+      "artifact": 11601315951,
+      "bytes": 141757,
+      "sha256": "db7ab2bbb7317e14da1a9937d1321106c314d6f83686af6750711883b1c5f4a3"
+    },
+    "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11601315951",
+    "samePriorEntryAttemptWrapperInputHashes": true,
+    "taskAttempt": {
+      "schema": "bw.i80386-owned-0501.task-switch-attempt.v1",
+      "kind": "jmp",
+      "selector": 112,
+      "sourceCs": 43,
+      "attemptEip": 15928,
+      "sourceCpl": 3,
+      "nt": false,
+      "trSelector": 96,
+      "trType": 11,
+      "activeSteps": 20,
+      "profile": "gate14-code16-stack32-same-cpl3.v1"
+    },
+    "taskOutcome": {
+      "schema": "bw.i80386-owned-0501.task-switch-outcome.v1",
+      "status": "core-return",
+      "postCs": 24,
+      "postEip": 16105,
+      "postCpl": 0,
+      "postVm86": false,
+      "postNt": false,
+      "postTrSelector": 112,
+      "postTrType": 11,
+      "activeSteps": 20
+    },
+    "firstFailure": "task-switch-during-owned-frame",
+    "returned": null,
+    "qualifiedFramePair": false,
+    "finiteClientCompletion": false
+  },
+  "auditBoundary": "root and separate Sol stdlib readers check original packet/log/source/input bindings; no producer imports or replay; core-return is a source observation, not independent task-state replay",
+  "next": "separate bounded task-excursion/resumption diagnostic contract; preserve current frame refusal until qualification",
+  "auditors": [
+    {
+      "role": "root finite outcome/source consistency",
+      "bytes": 1089,
+      "sha256": "c8dabb032a127597f491985e86f40626ef35b7de7993fd2b012b747d281ee202",
+      "origin": "independent reader output for the official source/Actions originals linked above; raw operational records remain private"
+    },
+    {
+      "role": "separate Sol original task packet/source/input audit",
+      "bytes": 755,
+      "sha256": "6e460e63cd718480b8d9733c1a1b919911d134993468df594f0d74c54abd06ee",
+      "origin": "independent reader output for the official source/Actions originals linked above; raw operational records remain private"
+    },
+    {
+      "role": "separate Sol original xv6 packet/log/source audit",
+      "bytes": 2277,
+      "sha256": "0795c438a195ef749e7088432d1295d0cabe8845efe2af3696999aa2169474e7",
+      "origin": "independent reader output for the official source/Actions originals linked above; raw operational records remain private"
+    }
+  ]
+}
