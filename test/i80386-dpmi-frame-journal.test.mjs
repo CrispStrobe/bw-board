@@ -980,6 +980,46 @@ test('task excursion admission refuses swallowed descriptor-trap reentry', () =>
   assert.equal(f.cpu.owned0501FrameStatus(frameToken).phase,'open');
 });
 
+test('task excursion checks the reentry latch after final descriptor reflection', () => {
+  const f=fixture();
+  f.memory.set(0x208+5,0xfa);f.memory.set(0x208+6,0x8f);
+  f.put(0x300+0x31*8,[0,1,0x0b,0,0,0xee,0,0]);
+  const frameToken=f.arm({profile:MIXED_PROFILE});
+  assert.equal(f.cpu.step(),1);
+  const code=f.cpu.segmentCaches[1],original=Object.getOwnPropertyDescriptor;
+  let reflected=0,nested=0;
+  Object.getOwnPropertyDescriptor=function(object,key){
+    if(object===code&&key==='access'&&++reflected===2){
+      nested++;
+      const execute=f.cpu._stepInstruction;
+      f.cpu._stepInstruction=()=>1;
+      try{assert.equal(f.cpu.step(),1);}finally{f.cpu._stepInstruction=execute;}
+    }
+    return original.call(Object,object,key);
+  };
+  try{assert.throws(()=>f.cpu.armOwned0501TaskExcursion(frameToken),/admission/);}
+  finally{Object.getOwnPropertyDescriptor=original;}
+  assert.equal(nested,1);
+  assert.equal(f.cpu.owned0501FrameStatus(frameToken).phase,'open');
+});
+
+test('task fault accessors are not invoked by excursion records', () => {
+  const f=openedMixedExcursion();
+  const fault=new I80386Fault(13,0x38,'synthetic task fault');
+  let reads=0;
+  for(const name of ['vector','errorCode'])
+    Object.defineProperty(fault,name,{configurable:true,
+      get(){reads++;throw new Error('observer accessor');}});
+  f.cpu._taskSwitchCore=()=>{throw fault;};
+  f.cpu._stepInstruction=function(){this._taskSwitch(0x38,'jmp');return 1;};
+  assert.throws(()=>f.cpu.step(),error=>error===fault);
+  const result=f.cpu.takeOwned0501TaskExcursionObservation(f.excursionToken);
+  assert.equal(reads,0);
+  assert.equal(result.firstFailure,'task-core-exception');
+  assert.equal(result.uncommittedTransitions[0].fault.available,false);
+  assert.equal(result.frameReturnQualified,false);
+});
+
 test('task excursion pre-switch cap is exact at 100000 committed steps', () => {
   const f=openedMixedExcursion();
   f.cpu._stepInstruction=()=>1;

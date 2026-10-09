@@ -677,6 +677,8 @@ export class ExperimentalI80386 {
         stack: owned0501ExcursionDescriptor(frame.handlerContext.stackRef,
           OWNED_0501_STACK_FIELDS),
       };
+      const handlerCandidate = owned0501ExcursionHandlerCandidate(this,
+        { handlerDescriptors });
       const after = owned0501ExcursionContext(this);
       if (this.#owned0501ExcursionAdmissionReentered ||
           this.#owned0501ExecutionDepth || frame.busyDepth ||
@@ -684,7 +686,7 @@ export class ExperimentalI80386 {
           frame.phase !== "open" || frame.entry !== cookie.entry ||
           owned0501ExcursionUsedEntries.has(frame.entry) ||
           Object.keys(context).some(key => context[key] !== after[key]) ||
-          !owned0501ExcursionHandlerCandidate(this, {handlerDescriptors}))
+          !handlerCandidate)
         throw new Error("owned task excursion changed during admission");
       owned0501ExcursionUsedEntries.add(frame.entry);
       owned0501Excursions.set(this, {
@@ -3702,17 +3704,17 @@ export class ExperimentalI80386 {
         return result;
       } catch (error) {
         if (excursion?.phase === "observing") try {
-          if (excursion.deliveries.length < OWNED_0501_EXCURSION_DELIVERIES)
+          if (excursion.deliveries.length < OWNED_0501_EXCURSION_DELIVERIES) {
+            const fault = owned0501ExcursionFaultFacts(error);
             excursion.deliveries.push(owned0501Frozen({
               kind: error instanceof I80386Fault ? "cpu-fault" :
                 error instanceof UnsupportedI80386 ? "unsupported-cpu" :
                   "unclassified-throw",
-              ...(error instanceof I80386Fault
-                ? { vector: error.vector,
-                    errorCodePresent: error.errorCode !== null } : {}),
+              ...(fault ? { fault } : {}),
               step: excursion.activeSteps + 1,
               enclosingStepCommitted: false,
             }));
+          }
         } catch { /* The original guest exception takes priority. */ }
         owned0501ExcursionFail(excursion, "step-failure");
         this.#owned0501ExcursionActive = false;
