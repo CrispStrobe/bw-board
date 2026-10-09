@@ -53,6 +53,14 @@ to the existing ngspice gates list. Seven-path final envelope; no new debt
 exemption, detector weakening, workflow, solver or numerical change. Publish
 this canonical expansion before the forward evidence repair, then qualify
 the exact replacement once. The original hosted failure remains preserved.
+Canonical expansion6d4cae0d landed before registration. The forward repair
+adds only this test to the existing ngspice row; the original five solver,
+caller-test and specification blobs remain identical to6398c733. Focused
+census/row-identity/winding checks pass19/19 with zero skips. Hosted original
+test job recorded8762 tests:8459 pass,1 census failure,302 skips. Its vectors,
+vectors186, corpus and separate Harris jobs passed; no unchanged failure
+rerun is used as replacement qualification. Fresh exact-head CI/Harris is
+required for the corrected candidate. No consumer adoption is included.
 
 2026-10-09 PWL off-current readback — DONE candidate, Codex bwcx.
 Branch lane/pwl-off-current-readback-20261009, isolated worktree, exact base
