@@ -27,6 +27,7 @@ struct State {
   HeapProfiler* profiler = nullptr;
   bool begun = false;
   bool started = false;
+  bool closed = false;
   bool adopted = false;
   bool busy = false;
   bool poison = false;
@@ -192,7 +193,8 @@ void Snapshot(const FunctionCallbackInfo<Value>& args) {
   }
   if (s->poison || s->overflow || s->gc_count != before ||
       !Put(s->isolate, cx, result, "nodes", nodes) ||
-      !Put(s->isolate, cx, result, "samples", samples)) {
+      !Put(s->isolate, cx, result, "samples", samples) ||
+      s->gc_count != before || s->poison || s->overflow) {
     s->poison = true; Refuse(s->isolate, "snapshot mutation"); return;
   }
   args.GetReturnValue().Set(result);
@@ -200,10 +202,10 @@ void Snapshot(const FunctionCallbackInfo<Value>& args) {
 void Facts(const FunctionCallbackInfo<Value>& args) {
   State* s = Owner(args, true); if (!s) return; Busy guard{s};
   if (args.Length()) { Refuse(s->isolate, "facts arguments"); return; }
+  const unsigned before = s->gc_count;
   Local<Context> cx = s->isolate->GetCurrentContext();
   Local<Object> result = Object::New(s->isolate);
   Local<Array> gc = Array::New(s->isolate), weak = Array::New(s->isolate);
-  const unsigned before = s->gc_count;
   for (unsigned i = 0; i < before; ++i) {
     Local<Object> e = Object::New(s->isolate);
     if (!Put(s->isolate, cx, e, "type", Num(s->isolate, s->gc[i].type)) ||
@@ -221,6 +223,7 @@ void Facts(const FunctionCallbackInfo<Value>& args) {
       !Put(s->isolate, cx, result, "weak", weak) ||
       !Put(s->isolate, cx, result, "overflow", Boolean::New(s->isolate, s->overflow)) ||
       !Put(s->isolate, cx, result, "poison", Boolean::New(s->isolate, s->poison)) ||
+      !Put(s->isolate, cx, result, "closed", Boolean::New(s->isolate, s->closed)) ||
       s->gc_count != before) {
     s->poison = true; Refuse(s->isolate, "facts GC window changed"); return;
   }
@@ -229,11 +232,13 @@ void Facts(const FunctionCallbackInfo<Value>& args) {
 void Stop(State* s) {
   if (s->started) {
     s->profiler->StopSamplingHeapProfiler();
+    for (auto& slot : s->slots) slot.handle.Reset();
+    if (s->active_gc != -1) s->overflow = true;
     s->isolate->RemoveGCPrologueCallback(GcStart, s);
     s->isolate->RemoveGCEpilogueCallback(GcEnd, s);
     s->started = false;
+    s->closed = true;
   }
-  for (auto& slot : s->slots) slot.handle.Reset();
 }
 void StopJs(const FunctionCallbackInfo<Value>& args) {
   State* s = Owner(args, true); if (!s) return; Busy guard{s};

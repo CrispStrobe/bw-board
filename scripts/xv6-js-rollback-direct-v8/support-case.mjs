@@ -2,7 +2,6 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
 import { gradeCase } from './support-policy.mjs';
 
 const KINDS = Object.freeze({
@@ -73,9 +72,7 @@ async function main() {
     try { record.finalFacts = addon.facts(); save('facts.json', record.finalFacts, 65536); }
     catch (error) { record.firstFailure ??= `facts: ${String(error).slice(0, 160)}`; }
     if (!record.firstFailure) {
-      try { record.grade = gradeCase({ ...record, flags: KINDS[kind],
-        factoryScripts: [import.meta.url, fileURLToPath(import.meta.url)],
-        factoryLine: 17 }); }
+      try { record.grade = gradeCase({ ...record, flags: KINDS[kind] }); }
       catch (error) { record.firstFailure = String(error?.message ?? error).slice(0, 200); }
     }
     save('result.json', { ...record, pre: undefined, post: undefined }, 65536);

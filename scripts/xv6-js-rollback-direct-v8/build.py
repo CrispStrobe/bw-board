@@ -18,7 +18,7 @@ MAX_ARCHIVE = 1_000_000
 MAX_UNPACKED = 32_000_000
 MAX_MEMBERS = 4096
 ARGS = ["-std=c++17", "-shared", "-fPIC", "-O2", "-Wall", "-Wextra",
-        "-Werror", "-DNODE_GYP_MODULE_NAME=rollback_sampler", "-I", "include/node",
+        "-Werror", "-DNODE_GYP_MODULE_NAME=rollback_sampler", "-isystem", "include/node",
         "addon.cc", "-o", "rollback_sampler.node"]
 
 

@@ -7,8 +7,10 @@ const CASES = Object.freeze({
 });
 const uint = (v, max = Number.MAX_SAFE_INTEGER) =>
   Number.isSafeInteger(v) && v >= 0 && v <= max;
+const FACTORY_SCRIPT = '/scripts/xv6-js-rollback-direct-v8/support-case.mjs';
+const FACTORY_LINE = 16;
 
-function profileIds(profile, factoryScripts, factoryLine) {
+function profileIds(profile) {
   if (!profile || !Array.isArray(profile.nodes) || !Array.isArray(profile.samples) ||
       profile.nodes.length > 4096 || profile.samples.length > 65536) throw Error('profile shape');
   const nodes = new Map();
@@ -41,9 +43,9 @@ function profileIds(profile, factoryScripts, factoryLine) {
     ids.add(s.id);
     let n = nodes.get(s.node), depth = 0, found = false;
     while (n) {
-      if (n.name === 'allocateCohort' && factoryScripts.includes(n.script) &&
-          n.line === factoryLine) found = true;
-      if (n.parent === 0) break;
+      if (n.name === 'allocateCohort' && n.script.endsWith(FACTORY_SCRIPT) &&
+          n.line === FACTORY_LINE) found = true;
+      if (n.depth === 0) break;
       n = nodes.get(n.parent);
       if (++depth > 64) throw Error('node ancestry');
     }
@@ -54,18 +56,15 @@ function profileIds(profile, factoryScripts, factoryLine) {
 }
 
 export function gradeCase({ kind, flags, pre, post, beforeRelease, afterRelease,
-                            finalFacts, factoryScripts, factoryLine }) {
+                            finalFacts }) {
   const spec = CASES[kind];
-  if (!spec || flags !== spec.flag || !Array.isArray(factoryScripts) ||
-      factoryScripts.length !== 2 || factoryScripts.some(s =>
-        typeof s !== 'string' || s.length > 2048) || factoryLine !== 17)
-    throw Error('case authority');
-  const preIds = profileIds(pre, factoryScripts, factoryLine);
-  const postIds = profileIds(post, factoryScripts, factoryLine);
+  if (!spec || flags !== spec.flag) throw Error('case authority');
+  const preIds = profileIds(pre), postIds = profileIds(post);
   if (!preIds.size || !beforeRelease || !afterRelease || !finalFacts ||
       !Array.isArray(finalFacts.gc) || finalFacts.gc.length > 256 ||
       !Array.isArray(finalFacts.weak) || finalFacts.weak.length !== 64 ||
-      finalFacts.overflow !== false || finalFacts.poison !== false) throw Error('bounded facts');
+      finalFacts.overflow !== false || finalFacts.poison !== false ||
+      finalFacts.closed !== true) throw Error('bounded facts');
   if (!uint(beforeRelease.gcCount, 256) || !uint(afterRelease.gcCount, 256) ||
       afterRelease.gcCount !== beforeRelease.gcCount ||
       finalFacts.gc.length <= afterRelease.gcCount) throw Error('release gap');
