@@ -322,3 +322,31 @@ fault attempt. Neither may relax this frozen exact-two result or strict frame
 guard. Do not reuse frozen PR478 for the changed CPU or infer its old refused
 opcode. No completed DPMI frame, broader OS/application result, speedup or
 adoption follows.
+
+
+## Separate page-fault delivery outcome source
+
+[Draft PR486](https://github.com/CrispStrobe/bw-board/pull/486), reviewed source
+`33d53542aa4375f9eb4c3c508ecf9bc8b1bba0d9`, is stacked on frozen PR483.
+It changes only the experimental CPU,
+`test/i80386-0501-fault-outcome.test.mjs`, and the new diagnostic
+`scripts/i80386-cwsdpmi-0501-pf-outcome/README.md`. The separate default-off
+recorder copies numeric fault/context facts, the actual rollback choice, and
+whether delivery returned, threw or was disabled. Post-context includes
+shutdown. Returned delivery alone is not fault service or a completed frame.
+
+Root and independent static review passed after correcting absent-marker
+normalization, falsey throws, method/argument evaluation order and noncallable
+setup credit. Twenty focused tests are authored but have not been executed
+locally. Hosted CPU checks and the existing finite free xv6 gate are pending.
+The default-off delivery expression and the strict frame guard stay unchanged;
+the opt-in malformed noncallable-hook TypeError wording limit is documented.
+
+After exact-head hosted qualification, implement a separately named driver,
+source admission and workflow that bind this CPU/session to the owned client,
+entry and same-machine execution. Preserve the earlier original failure and
+strict frame refusal; retain numeric fault-time, pre-delivery and post-delivery facts without
+RAM, TSS or handler inspection. Review the prospective result reader and
+closed artifact inventory before one connected actual. Do not run the frozen
+PR483 workflow against this changed CPU or claim a completed DPMI frame from
+the unconnected source checkpoint.

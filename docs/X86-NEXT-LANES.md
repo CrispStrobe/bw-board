@@ -117,3 +117,11 @@ These are the same EPYC 9V45/four-logical-CPU, Node 20.20.2 GitHub measurements;
 ## Suggested dispatch
 
 The lane 1 cold native performance decision is reached and fails adoption; lane 3 finite paged IRQ is reached. Assign one worker to measured functional-JS application costs and the free/owned extender suite, and one to direct GUI input and live CLI acceptance; a coordinator reviews exact source, invariants and original evidence. The [lane 2 clock-authority draft](https://github.com/CrispStrobe/bw-board/pull/423) remains an unconnected source-only model, with no performance integration authorized by the failed native gate. Frontend workers can take lanes 4–5 with explicit file ownership. Each accepted guest in lane 6 supplies a concrete regression workload. Stop each change at its own completion gate, publish the result and refresh this handoff rather than letting a long-running branch's SHAs become implicit authority.
+
+
+The DPMI fault-outcome prerequisite is now [draft PR486](https://github.com/CrispStrobe/bw-board/pull/486)
+at reviewed `33d53542aa4375f9eb4c3c508ecf9bc8b1bba0d9`: a separate default-off
+recorder, twenty authored tests and a diagnostic README, with root/independent
+static review passed and hosted qualification pending. Its next worker must
+follow the [fault-outcome connection contract](I80386-DPMI-TASK-EXCURSION-LANE.md#separate-page-fault-delivery-outcome-source)
+after the exact-head checks pass. No connected run or frame-return result exists.
