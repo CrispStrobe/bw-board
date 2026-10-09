@@ -963,6 +963,18 @@ test('mode profile reports VM86 as CPL3 but refuses unattributed entry', () => {
   assert.equal(observed.frameReturnQualified, false);
 });
 
+test('mode status wrong-token reentry is latched before token rejection', () => {
+  const f = openedMixedMode();
+  f.cpu._stepInstruction = function () {
+    assert.throws(() => this.owned0501TaskModeStatus({}), /stale/);
+    return 1;
+  };
+  assert.equal(f.cpu.step(), 1);
+  const observed = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(observed.firstFailure, 'observer-reentry');
+  assert.equal(observed.modeChanges.length, 0);
+});
+
 test('protected-only excursion still rejects PE clear', () => {
   const f = openedMixedExcursion();
   f.cpu._stepInstruction = function () { this.cr0 = 0; return 1; };

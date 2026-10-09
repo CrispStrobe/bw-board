@@ -240,6 +240,7 @@ function owned0501ModeChanged(a, b) {
 
 function owned0501ModeRecordUncommitted(cpu, session) {
   const post = owned0501ModeFacts(cpu);
+  if (session.phase !== "observing") return;
   if (session.pendingModeOperation || owned0501ModeChanged(session.modeBefore, post))
     session.uncommittedModes.push(owned0501Frozen({
       step: session.activeSteps + 1, before: session.modeBefore, after: post,
@@ -250,6 +251,7 @@ function owned0501ModeRecordUncommitted(cpu, session) {
 function owned0501ModeSettle(cpu, session, result, traced) {
   if (session.phase !== "observing") return;
   const post = owned0501ModeFacts(cpu);
+  if (session.phase !== "observing") return;
   if (result <= 0 || traced) {
     if (session.pendingModeOperation || owned0501ModeChanged(session.modeBefore, post))
       session.uncommittedModes.push(owned0501Frozen({
@@ -3901,7 +3903,9 @@ export class ExperimentalI80386 {
       if (excursion.profile === OWNED_0501_MODE_PROFILE &&
           excursion.phase === "observing") try {
         const before = owned0501ModeFacts(this);
-        if (!owned0501ModeSame(excursion.modeLast, before)) {
+        if (excursion.phase !== "observing") {
+          // A nested step during descriptor reflection already latched failure.
+        } else if (!owned0501ModeSame(excursion.modeLast, before)) {
           excursion.modeRefusal = owned0501Frozen({
             step: excursion.activeSteps + 1,
             before: excursion.modeLast, after: before,
