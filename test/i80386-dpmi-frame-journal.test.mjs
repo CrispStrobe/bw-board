@@ -873,6 +873,27 @@ test('separate mode profile records committed decoded MOV CR0, not frame return'
   assert.equal(f.cpu.owned0501FrameStatus(f.frameToken).phase, 'invalid');
 });
 
+test('mode ticket must match final source-owned CR0 in the same step', () => {
+  const f = openedMixedMode();
+  f.cpu._stepInstruction = function () {
+    this.cs = 0x18; this.eip = 0x120; return 1;
+  };
+  assert.equal(f.cpu.step(), 1);
+  f.cpu.eax = 0;
+  f.cpu._fetch8 = (() => { const bytes = [0x22, 0xc0];
+    return () => bytes.shift(); })();
+  f.cpu._stepInstruction = function () {
+    this._step0f(false, null, 32);
+    this.cr0 = 2; // A distinct source change after the decoded write.
+    return 1;
+  };
+  assert.equal(f.cpu.step(), 1);
+  const observed = f.cpu.takeOwned0501TaskModeObservation(f.modeToken);
+  assert.equal(observed.firstFailure, 'mode-operation-context-mismatch');
+  assert.equal(observed.modeChanges.length, 0);
+  assert.equal(f.cpu.cr0, 2);
+});
+
 test('mode profile refuses unattributed changes while preserving guest step', () => {
   const f = openedMixedMode();
   f.cpu._stepInstruction = function () { this.cr0 = 0; return 1; };

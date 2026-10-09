@@ -264,6 +264,13 @@ function owned0501ModeSettle(cpu, session, result, traced) {
     const operation = session.pendingModeOperation ??
       (session.pendingTask?.outcome === "core-return"
         ? owned0501Frozen({ kind: "task-core-return" }) : null);
+    if (operation?.kind === "decoded-mov-cr0" &&
+        (operation.instructionStart !== session.modeBefore.eip ||
+         operation.beforeCr0 !== session.modeBefore.rawCr0 ||
+         operation.afterCr0 !== post.rawCr0)) {
+      owned0501ExcursionFail(session, "mode-operation-context-mismatch");
+      return;
+    }
     if (!operation) {
       session.modeRefusal = owned0501Frozen({
         step: session.activeSteps, before: session.modeBefore, after: post,
@@ -4945,6 +4952,10 @@ export class ExperimentalI80386 {
             ? owned0501Excursions.get(this) : null;
           if (mode?.profile === OWNED_0501_MODE_PROFILE &&
               mode.phase === "observing") try {
+            const afterCr0 = owned0501Option(this, "cr0");
+            if (!Number.isInteger(afterCr0) || afterCr0 < -0x80000000 ||
+                afterCr0 > 0xffffffff)
+              throw new TypeError("invalid source-owned CR0 after MOV CR0");
             if (this.#owned0501ExecutionDepth !== 1 || mode.busyDepth !== 1 ||
                 mode.pendingModeOperation)
               owned0501ExcursionFail(mode, "mode-operation-reentry");
@@ -4952,7 +4963,7 @@ export class ExperimentalI80386 {
               kind: "decoded-mov-cr0", source: "0f-22-cr0",
               instructionStart: mode.modeBefore.eip,
               beforeCr0: mode.modeBefore.rawCr0,
-              afterCr0: this.cr0 >>> 0,
+              afterCr0: afterCr0 >>> 0,
             });
           } catch { owned0501ExcursionFail(mode, "mode-operation-observer-failure"); }
         }
