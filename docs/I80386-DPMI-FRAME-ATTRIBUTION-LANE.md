@@ -395,3 +395,9 @@ syntax and CPU-free source controls pass; hosted CPU/guest qualification is
 pending. Require all 12 enabled checks successful and only the two declared
 optional skips, then apply the dedicated label once on that unchanged head.
 Audit original source/packet and attempted-task facts before changing ownership.
+
+PR468's first hosted xv6 run now passes all three finite scenarios and 73
+focused names; [original receipt](receipts/2026-10-09-0501-task-attempt-xv6/README.md)
+binds the executed PR merge tree to reviewed `f3b8b31d`. Root and a separate Sol
+reader audited original packet/log/Git roles. Other required checks and the
+actual attempted-task ticket diagnostic remain pending at this checkpoint.

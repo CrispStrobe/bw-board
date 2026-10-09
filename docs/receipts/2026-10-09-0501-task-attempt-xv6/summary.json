@@ -1,0 +1,36 @@
+{
+  "schema": "bw.0501-task-attempt.xv6.v1",
+  "source": "f3b8b31d6e403020089f1dee31eaece45c06ac25",
+  "executedRevision": "6775404610eddd4454b38fc1d9fe350e7b1df7d0",
+  "tree": "8d69b3304d9cfa3ebeecf61c770cf0b2241f77ce",
+  "reviewedTreeEqual": true,
+  "run": 37888849044,
+  "attempt": 1,
+  "artifact": 11597982186,
+  "zipBytes": 21033,
+  "zipSha256": "916431d9210a0ec7c4f86bf5fba04a7a7075bce6b5775a3b9d6285b418cba92b",
+  "rawLogBytes": 1580506,
+  "rawLogSha256": "24a8b382e03ba834d30f49bfa18036b227feabc5aed273f81ac2f3163e444f3d",
+  "scenarios": [
+    "4 MiB filesystem roundtrip",
+    "14 MiB boot",
+    "4 MiB forktest"
+  ],
+  "scenarioSourceRoles": 70,
+  "uniqueGitRolesVerified": 71,
+  "focusedTests": 73,
+  "current": {
+    "tests": 1648,
+    "pass": 1637,
+    "fail": 0,
+    "skip": 11
+  },
+  "historical": {
+    "tests": 288,
+    "pass": 288,
+    "fail": 0,
+    "skip": 0
+  },
+  "scope": "finite hosted xv6 PSE/APIC compatibility profile; not strict physical386DX or actual DPMI task-attempt qualification",
+  "audits": "root and separate Sol original packet/log/Git audits; no replay or producer imports"
+}
