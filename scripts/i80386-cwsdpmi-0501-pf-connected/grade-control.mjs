@@ -71,6 +71,21 @@ negative('malformed PF numeric',r=>{r.pfOutcome.observation.fault.errorCode=2.5;
 negative('not PF',r=>{r.pfOutcome.observation.fault.vector=13;});
 negative('missing delivery',r=>{r.pfOutcome.observation.delivery=null;});
 negative('no call credit',r=>{r.pfOutcome.observation.delivery.attempted=false;});
+{
+  const report=fixture();
+  const delivery=report.pfOutcome.observation.delivery;
+  delivery.attempted=false;
+  delivery.outcome='disabled';
+  delivery.returnEip=null;
+  delivery.stepResult=null;
+  const before=structuredClone(report.pfOutcome.observation);
+  const grade=gradePfOutcome(report);
+  assert.equal(grade.pfCallConsistent,false,'complete disabled delivery has no call credit');
+  assert.equal(grade.firstFailure,'PF delivery call not attempted');
+  assert.deepEqual(report.pfOutcome.observation,before,'source facts remain retained');
+  assert.equal(report.strict.strict.failure,'task-switch-during-owned-frame');
+  assert.equal(report.strict.strict.returned,null);
+}
 negative('returned shutdown context drift',r=>{r.pfOutcome.observation.delivery.post.shutdown=1;});
 negative('mode fault absent',r=>{r.taskMode.observation.deliveries=[];});
 negative('unwitnessed board step',r=>{r.pfOutcome.stepMonitor.oneToOne=false;});

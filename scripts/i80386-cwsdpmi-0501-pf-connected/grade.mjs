@@ -118,6 +118,9 @@ export function gradePfOutcome({finiteClient,strict,taskMode,pfOutcome}){
     } else if(delivery.attempted!==false||delivery.outcome!=='disabled'||
               delivery.returnEip!==null||delivery.stepResult!==null)
       return fail('disabled delivery source continuity');
+    // A complete disabled diagnostic retains its facts, but no source call ran.
+    if(delivery.attempted!==true)
+      return fail('PF delivery call not attempted');
     return Object.freeze({schema:'bw.cwsdpmi-0501-pf-connected.grade.v1',
       pfCallConsistent:true,firstFailure:null,
       outcome:delivery.outcome,attemptedSteps:observation.attemptedSteps,
