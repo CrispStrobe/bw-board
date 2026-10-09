@@ -41,6 +41,12 @@ const OWNED_0501_MIXED_PROFILE = "gate14-code16-stack32-same-cpl3.v1";
 const OWNED_0501_EXCURSION_STEPS = 100_000;
 const OWNED_0501_EXCURSION_TRANSITIONS = 16;
 const OWNED_0501_EXCURSION_DELIVERIES = 32;
+const OWNED_0501_EXCURSION_ABORT_REASONS = Object.freeze([
+  "observer-wall-bound", "observer-step-bound",
+  "observer-machine-step-exception", "observer-owner-change",
+  "observer-port-reentry", "observer-progress-failure",
+  "observer-preflight-refused",
+]);
 const OWNED_0501_CODE_FIELDS = Object.freeze([
   "base", "limit", "default32", "present", "code", "readable", "writable",
   "dpl", "conforming", "access", "address",
@@ -123,7 +129,8 @@ function owned0501ExcursionFail(session, reason) {
   if (!session || (session.phase !== "observing" &&
       !(session.phase === "candidate" &&
         (reason === "cpu-reset" || reason === "observer-reentry" ||
-          reason === "post-candidate-step")))) return;
+          reason === "post-candidate-step" ||
+          OWNED_0501_EXCURSION_ABORT_REASONS.includes(reason))))) return;
   session.phase = "invalid";
   session.firstFailure = reason;
   if (session.pendingTask) {
@@ -720,6 +727,34 @@ export class ExperimentalI80386 {
       firstFailure: session.firstFailure, activeSteps: session.activeSteps,
       transitions: session.transitions.length,
       deliveries: session.deliveries.length });
+  }
+
+  // A synchronous owner may end only its own pending diagnostic between CPU
+  // steps. This neither executes a guest instruction nor changes the strict
+  // AX=0501 frame journal or guest state. The first diagnostic failure wins.
+  abortOwned0501TaskExcursion(token, reason) {
+    const session = owned0501Excursions.get(this);
+    if (!session || session.token !== token) {
+      if (this.#owned0501ExcursionAdmissionBusy)
+        this.#owned0501ExcursionAdmissionReentered = true;
+      throw new Error("stale task excursion token");
+    }
+    if (this.#owned0501ExecutionDepth || this.#owned0501ExcursionAdmissionBusy ||
+        session?.busyDepth) {
+      if (this.#owned0501ExcursionAdmissionBusy)
+        this.#owned0501ExcursionAdmissionReentered = true;
+      owned0501ExcursionFail(session, "observer-reentry");
+      this.#owned0501ExcursionActive = false;
+      throw new Error("task excursion abort outside owner pause");
+    }
+    if (typeof reason !== "string" ||
+        !OWNED_0501_EXCURSION_ABORT_REASONS.includes(reason))
+      throw new Error("unreviewed task excursion abort reason");
+    owned0501ExcursionFail(session, reason);
+    if (session.phase === "invalid") this.#owned0501ExcursionActive = false;
+    return owned0501Frozen({phase:session.phase,
+      firstFailure:session.firstFailure,
+      activeSteps:session.activeSteps});
   }
 
   takeOwned0501TaskExcursionObservation(token) {
