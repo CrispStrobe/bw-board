@@ -1,5 +1,31 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-09 PWL off-current readback — DONE candidate, Codex bwcx.
+Branch lane/pwl-off-current-readback-20261009, isolated worktree, exact base
+d268109214f0d23ff9197b0ce737c5dc233b7759. Three-path envelope: this ledger,
+src/mna.js current extraction only, new test/pwl-off-current-readback.test.mjs.
+Split the independently reproduced readback prerequisite from the unresolved
+NPN winding startup lane. That lane is frozen at839f6250160056a27d55fdd09c06d07c91f2aa31
+while this bounded prerequisite qualifies; no concurrent solver implementation.
+Off PWL junctions stamp1 nS but report zero current. Preserve numerical stamps,
+model equations, region classification, profiles/floors, failure latches and
+all consumer pins. Prove signed diode leakage/collector KCL and off BJT base
+and controlled-collector readback, plus restoration-of-zero mutations and
+adjacent BJT/junction tests. One exact CI/Harris qualification, then guarded
+normal fast-forward. No startup fix, model upgrade, GUI/adoption, workflow,
+performance or deployment claim. Existing desired startup failures remain
+intact in the separate frozen diagnostic lane, not reclassified as successes.
+Remote claimf97676da preceded this isolated implementation. Nine new actual
+caller tests cover signed diode/LED reverse/zero/sub-knee currents, motor
+flyback collector KCL and both NPN/PNP off-state base and beta-scaled collector
+currents. New and adjacent suites pass22/22, zero skips. Independently restoring
+the diode/LED, NPN or PNP reader to the original knee-only function makes
+respectively5,1,1 caller assertions fail; each restored and final suite green.
+Only extraction uses the new off-companion reader. The numerical stamp and
+original knee function used by region classification remain byte-identical.
+The commit containing this row is the candidate identity; one automatic
+exact-head CI/Harris set remains required before guarded landing.
+
 2026-10-08 NPN winding transient boundary — CLAIM, Codex bwcx.
 Branch lane/npn-winding-transient-boundary-20261008, isolated worktree, exact
 base ac7595b609daa75717c696830982f59940c97e8b. Five-path envelope:
