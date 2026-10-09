@@ -4,6 +4,7 @@
 No download is performed here. A caller must independently admit the matching
 Node executable and retain this script's report before loading the .node file.
 """
+import base64
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
@@ -82,22 +83,36 @@ def main():
     version = subprocess.run([compiler, "--version"], check=True, timeout=10,
                              capture_output=True, text=True).stdout.splitlines()[0]
     result = subprocess.run([compiler, *ARGS], cwd=work, timeout=90,
-                            capture_output=True, text=True)
-    if result.returncode or result.stderr:
-        raise RuntimeError("compiler refused source or emitted diagnostics")
-    binary = read_bounded(work / "rollback_sampler.node", 2_000_000)
+                            capture_output=True)
+    passed = result.returncode == 0 and not result.stderr
+    binary = None
+    if passed:
+        try:
+            binary = read_bounded(work / "rollback_sampler.node", 2_000_000)
+        except (FileNotFoundError, ValueError):
+            passed = False
+    def diagnostic(raw):
+        return {"sha256": sha(raw), "bytes": len(raw),
+                "first16384Base64": base64.b64encode(raw[:16384]).decode("ascii"),
+                "truncated": len(raw) > 16384}
     receipt = {
         "schema": "bw.direct-v8.build.v1", "nodeVersion": "20.20.2",
         "headersArchiveSha256": HEADER_SHA, "headers": members,
         "sourceSha256": sha(source_bytes), "compiler": Path(compiler).name,
-        "compilerVersion": version, "arguments": ARGS,
-        "addonSha256": sha(binary), "addonBytes": len(binary),
+        "compilerVersion": version, "arguments": ARGS, "passed": passed,
+        "firstFailure": None if passed else "compiler-or-output-refusal",
+        "exitCode": result.returncode,
+        "stdout": diagnostic(result.stdout), "stderr": diagnostic(result.stderr),
+        "addonSha256": sha(binary) if binary is not None else None,
+        "addonBytes": len(binary) if binary is not None else None,
     }
     encoded = json.dumps(receipt, sort_keys=True, separators=(",", ":")).encode()
     if len(encoded) > 200_000:
         raise ValueError("build receipt exceeded bound")
     with report.open("xb") as out:
         out.write(encoded)
+    if not passed:
+        raise RuntimeError("compiler-or-output-refusal; retained bounded build receipt")
 
 
 if __name__ == "__main__":

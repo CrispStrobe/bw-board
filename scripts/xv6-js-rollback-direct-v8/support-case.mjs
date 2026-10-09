@@ -31,7 +31,8 @@ async function main() {
   const record = { schema: 'bw.direct-v8.support-case.v1', kind,
     runtime: { node: process.version, v8: process.versions.v8,
       execArgv: process.execArgv }, firstFailure: null, pre: null, post: null,
-    beforeRelease: null, afterRelease: null, finalFacts: null, grade: null };
+    beforeRelease: null, afterRelease: null, finalFacts: null, grade: null,
+    secondaryFailures: [] };
   const save = (name, value, max = 8 * 1024 * 1024) => {
     const raw = JSON.stringify(value);
     if (Buffer.byteLength(raw) > max) throw Error(`${name} exceeds bound`);
@@ -68,9 +69,17 @@ async function main() {
     record.firstFailure = String(error?.message ?? error).slice(0, 200);
   } finally {
     try { addon.stop(); }
-    catch (error) { record.firstFailure ??= `stop: ${String(error).slice(0, 160)}`; }
+    catch (error) {
+      const reason = `stop: ${String(error).slice(0, 160)}`;
+      if (record.firstFailure) record.secondaryFailures.push(reason);
+      else record.firstFailure = reason;
+    }
     try { record.finalFacts = addon.facts(); save('facts.json', record.finalFacts, 65536); }
-    catch (error) { record.firstFailure ??= `facts: ${String(error).slice(0, 160)}`; }
+    catch (error) {
+      const reason = `facts: ${String(error).slice(0, 160)}`;
+      if (record.firstFailure) record.secondaryFailures.push(reason);
+      else record.firstFailure = reason;
+    }
     if (!record.firstFailure) {
       try { record.grade = gradeCase({ ...record, flags: KINDS[kind] }); }
       catch (error) { record.firstFailure = String(error?.message ?? error).slice(0, 200); }
