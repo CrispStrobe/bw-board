@@ -43,7 +43,9 @@ def task_context(tr):
 
 def fixture():
     entry = {"source": "decoded-software-int31", "vector": 0x31,
-             "profile": "gate14-code16-stack32-same-cpl3.v1", "width": 32,
+             "profile": "gate14-code16-stack32-same-cpl3.v1",
+             "gateType": 14, "width": 32, "oldCpl": 3, "newCpl": 3,
+             "handlerCodeDefault32": False, "handlerStackDefault32": True,
              "frameBytes": 12, "entryAx": 0x0501,
              "handlerCs": 0x28, "handlerSs": 0x10}
     first_before = context(eip=0x120)
@@ -98,6 +100,12 @@ def fixture():
             "taskMode": {"frameReturnQualified": False,
                          "committedOutgoing": True,
                          "observation": mode}}
+
+
+def change_both_after_caches(task, key, value):
+    selected = task["taskMode"]["observation"]["modeChanges"][2]
+    selected["after"]["codeCache"][key] = value
+    selected["operation"]["after"]["codeCache"][key] = value
 
 
 class GradeControl(unittest.TestCase):
@@ -159,10 +167,17 @@ class GradeControl(unittest.TestCase):
         for mutation in (
             lambda task: task.update(passed=True),
             lambda task: task["taskMode"]["observation"]["cookie"].update(trSelector=0x40),
+            lambda task: task["taskMode"]["observation"]["cookie"].update(trType=11.0),
+            lambda task: task["taskMode"]["observation"]["cookie"].update(cr3=False),
             lambda task: task["taskMode"]["observation"]["cookie"]["entry"].update(frameBytes=16),
+            lambda task: task["taskMode"]["observation"]["cookie"]["entry"].update(width=32.0),
+            lambda task: task["taskMode"]["observation"]["cookie"]["entry"].update(entryAx=1281.0),
             lambda task: task["taskMode"]["observation"]["modeChanges"][2]["before"].update(rawCr0=0),
             lambda task: task["taskMode"]["observation"]["modeChanges"][2]["before"].update(nt=True),
             lambda task: task["taskMode"]["observation"]["modeChanges"][2]["before"]["codeCache"].update(base=1.5),
+            lambda task: change_both_after_caches(task, "present", False),
+            lambda task: change_both_after_caches(task, "dpl", 3),
+            lambda task: change_both_after_caches(task, "limit", 0x100),
             lambda task: task["taskMode"]["observation"]["transitions"].pop(),
             lambda task: task["taskMode"]["observation"]["transitions"][1]["source"].update(eip=0x121),
             lambda task: task["taskMode"]["observation"]["modeChanges"][2].update(step=444),

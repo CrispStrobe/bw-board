@@ -175,10 +175,15 @@ def grade(task):
     required(entry == frame["entry"] and
              entry.get("source") == "decoded-software-int31" and
              entry.get("profile") == "gate14-code16-stack32-same-cpl3.v1" and
-             entry.get("vector") == 0x31 and
-             entry.get("width") == 32 and
-             entry.get("frameBytes") == 12 and
-             entry.get("entryAx") == 0x0501 and
+             integer(entry.get("vector"), 0x31, 0x31) and
+             integer(entry.get("gateType"), 14, 14) and
+             integer(entry.get("width"), 32, 32) and
+             integer(entry.get("frameBytes"), 12, 12) and
+             integer(entry.get("entryAx"), 0x0501, 0x0501) and
+             integer(entry.get("oldCpl"), 3, 3) and
+             integer(entry.get("newCpl"), 3, 3) and
+             entry.get("handlerCodeDefault32") is False and
+             entry.get("handlerStackDefault32") is True and
              integer(entry.get("handlerCs"), 0, 0xffff) and
              integer(entry.get("handlerSs"), 0, 0xffff),
              "same committed AX=0501 entry")
@@ -189,11 +194,16 @@ def grade(task):
              "bounded transition and mode tape")
     outgoing = record(transitions[0], "outgoing task transition")
     outgoing_source = task_context(outgoing.get("source"), "outgoing source")
-    required(cookie.get("trSelector") == outgoing_source["trSelector"] and
-             cookie.get("trType") == outgoing_source["trType"] and
-             cookie.get("trBase") == outgoing_source["trBase"] and
-             cookie.get("trLimit") == outgoing_source["trLimit"] and
-             cookie.get("cr3") == outgoing_source["cr3"] and
+    required(integer(cookie.get("trSelector"), 0, 0xffff) and
+             integer(cookie.get("trType"), 0, 15) and
+             integer(cookie.get("trBase"), 0, 0xffffffff) and
+             integer(cookie.get("trLimit"), 0, 0xffffffff) and
+             integer(cookie.get("cr3"), 0, 0xffffffff) and
+             cookie["trSelector"] == outgoing_source["trSelector"] and
+             cookie["trType"] == outgoing_source["trType"] and
+             cookie["trBase"] == outgoing_source["trBase"] and
+             cookie["trLimit"] == outgoing_source["trLimit"] and
+             cookie["cr3"] == outgoing_source["cr3"] and
              entry["handlerCs"] == outgoing_source["cs"] and
              entry["handlerSs"] == outgoing_source["ss"] and
              outgoing_source["protectedMode"] is True and
@@ -283,6 +293,11 @@ def grade(task):
              before["retainedRealCs"] is True and
              after["retainedRealCs"] is False and
              before["cpl"] == after["cpl"] == 0 and
+             after["codeCache"]["present"] is True and
+             after["codeCache"]["code"] is True and
+             after["codeCache"]["null"] is not True and
+             after["codeCache"]["dpl"] == after["cpl"] and
+             target <= after["codeCache"]["limit"] and
              all(before[key] == after[key] for key in
                  ("rawCr0", "rawFlags", "ss", "esp", "cr3", "trSelector",
                   "trType", "trBase", "trLimit", "trPresent", "stackCache")),
