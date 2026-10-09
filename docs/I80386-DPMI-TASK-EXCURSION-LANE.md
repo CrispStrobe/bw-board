@@ -163,8 +163,15 @@ ownership profile or application-completion claim.
 publishes exactly three paths: the CPU, its existing journal test and
 `scripts/i80386-cwsdpmi-0501-task-mode/README.md`. Root and a separate Sol
 reviewer passed source/syntax review. The journal now contains 85 authored
-named cases: 71 inherited and 14 new. **Hosted CPU/xv6 checks are pending;
-this recorder has no connected guest driver or actual qualification.**
+named cases: 71 inherited and 14 new. The first hosted CPU/xv6 checks failed on a descriptor-mutation fixture before
+xv6 acquisition/build/guest. The [preserved original failure](receipts/2026-10-09-task-mode-cpu-failure/README.md)
+records the out-of-range increment and test-only correction
+`44087e8f1d19b1f74c6f2742ebca31594f6e7208`. CPU source is unchanged.
+The [corrected original hosted CPU/xv6 result](receipts/2026-10-09-task-mode-cpu-success/README.md)
+passes root and independent audit: 114 focused controls and three finite xv6
+scenarios, with executed/reviewed tree equality. Remaining enabled exact-head
+checks are pending. **This recorder has no connected guest driver or actual
+task-mode qualification.**
 
 The distinct `armOwned0501TaskMode`, `owned0501TaskModeStatus`,
 `abortOwned0501TaskMode` and `takeOwned0501TaskModeObservation` APIs use private
@@ -176,7 +183,8 @@ cache are explicit nulls; unattributed changes still refuse. It records
 `postOutgoingSteps`, preserves uncommitted fault facts, and always reports
 `frameReturnQualified:false`. The old protected-only observer remains intact.
 
-Refresh PR476's exact head and every enabled check first. Once affected CPU and
+Refresh PR476's corrected `44087e8f1d19b1f74c6f2742ebca31594f6e7208`
+head and every enabled check first. Once affected CPU and
 finite xv6 regressions pass and their originals are independently audited,
 implement a separately named adapter/driver/source admission/closed inventory
 and hosted workflow using these new APIs. Bind the unchanged owned client,

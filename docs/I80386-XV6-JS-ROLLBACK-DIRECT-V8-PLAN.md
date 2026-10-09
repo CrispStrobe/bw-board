@@ -150,7 +150,10 @@ pure controls, including a reproduced escaped-name report-limit failure and
 its retained-partial-record fix. All ten enabled exact-head checks passed,
 with only the two declared `vectors-full` skips. The label was applied once;
 [original census run37911209291](https://github.com/CrispStrobe/bw-board/actions/runs/37911209291)
-is queued. **Its data result remains pending.**
+completed successfully. The [original data-only result](receipts/2026-10-09-direct-v8-header-census/README.md)
+identifies the aggregate limit as the first frozen refusal: member index 1,916
+raises the regular total to 32,019,993 bytes. Complete reported coverage is
+2,908 members and 49,002,796 regular bytes, with no duplicate regular names.
 
 The source downloads only the same pinned 512,152-byte official header archive
 on the hosted runner. It records source-order names, types, sizes and hashes
@@ -160,10 +163,29 @@ ceiling, 8 MiB JSON ceiling and 16 MiB artifact ceiling. It writes no extracted
 headers and executes no Node/compiler/addon/guest. The original 32,000,000-byte
 admission limit and `build.py` remain unchanged.
 
-Next refresh that original run; do not remove/reapply the
-`xv6-js-rollback-direct-v8-header-census` label or launch a second actual.
-Once complete, independently audit its original closed packet and distinguish the first legacy refusal from complete data-census
-coverage. A complete census can support a reviewed admission correction; it
-cannot establish build/runtime support. A corrected authority preflight,
-separate first build and four support children remain required before xv6
-allocation sampling.
+The frozen census has been independently audited; do not remove/reapply its
+label or launch a second actual. Its packet contains report facts rather than
+raw archive/member bytes, so coverage and member hashes remain source-bound
+observations. This resolves the original preflight's ambiguous refusal without
+qualifying revised admission or any native execution.
+
+[Draft PR477](https://github.com/CrispStrobe/bw-board/pull/477), reviewed head
+`61fa4800434301843a648f9ad851067366b5525e`, publishes a separately named
+**64 MiB authority preflight** with eight changed paths and 26 source roles.
+Source and pure synthetic controls passed root and independent review; hosted
+checks are pending and the dedicated actual has not run. It uses one shared
+aggregate budget in preflight and build, retaining exact archive identities,
+individual member, count, safe-path, type, duplicate and required-header guards.
+Keep build's stricter 4,096-member/depth-12 limits. The full member-hash map also
+exceeds the old receipt bound. The revised source supplies a coherent bounded
+receipt and closed report-only inventory policy, preserving all original
+records and uploading no archives, extracted headers, executable or addon.
+
+The corrected profile has separate source admission, schema, dedicated
+label/workflow and pure boundary/adversarial controls. Its shared receipt cap
+is 1 MiB; the closed report-only inventory caps each file at 1 MiB and its
+total at 2 MiB. Review the final exact
+source and every enabled check before one original report-only preflight, then
+independently audit its tool/runtime authority facts. A separate first build
+and four fresh support children remain later gates before xv6 allocation
+sampling; no allocation hotspot or speedup is established by the census.
