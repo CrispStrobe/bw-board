@@ -60,9 +60,15 @@ function owned0501ExcursionDescriptor(source, fields) {
   return owned0501Frozen(copy);
 }
 
-function owned0501ExcursionDescriptorMatches(source, expected, fields) {
-  for (const name of fields)
-    if (owned0501Option(source, name) !== expected[name]) return false;
+function owned0501ExcursionDescriptorMatches(source, expected, fields,
+    allowAccessedBit = false) {
+  for (const name of fields) {
+    const value = owned0501Option(source, name);
+    if (name === "access" && allowAccessedBit) {
+      if (!Number.isInteger(value) || (value & ~1) !== (expected[name] & ~1))
+        return false;
+    } else if (value !== expected[name]) return false;
+  }
   return true;
 }
 
@@ -72,6 +78,16 @@ function owned0501ExcursionOptionalBoolean(source, key) {
   if (!Object.hasOwn(field, "value") || typeof field.value !== "boolean")
     throw new TypeError("invalid source-owned task delivery flag");
   return field.value;
+}
+
+function owned0501ExcursionSaveEip(options, fallback) {
+  const field = Object.getOwnPropertyDescriptor(options, "saveEip");
+  if (!field) return fallback;
+  if (!Object.hasOwn(field, "value") ||
+      !Number.isInteger(field.value) || field.value < 0 ||
+      field.value > 0xffffffff)
+    throw new TypeError("invalid source-owned task saveEip");
+  return field.value >>> 0;
 }
 
 function owned0501ExcursionHandlerCandidate(cpu, session) {
@@ -84,9 +100,9 @@ function owned0501ExcursionHandlerCandidate(cpu, session) {
     owned0501ExcursionDescriptorMatches(saved.stackRef, saved.stack,
       OWNED_0501_STACK_FIELDS) &&
     owned0501ExcursionDescriptorMatches(code, saved.code,
-      OWNED_0501_CODE_FIELDS) &&
+      OWNED_0501_CODE_FIELDS, true) &&
     owned0501ExcursionDescriptorMatches(stack, saved.stack,
-      OWNED_0501_STACK_FIELDS);
+      OWNED_0501_STACK_FIELDS, true);
 }
 
 function owned0501ExcursionFail(session, reason) {
@@ -183,7 +199,7 @@ function owned0501ExcursionCommit(cpu, session, result, traced) {
         step: session.activeSteps, transition: session.transitions.length,
         originalTr: true,
         savedContinuation: post.cs === source.cs &&
-          post.eip === source.eip && post.ss === source.ss &&
+          post.eip === source.savedEip && post.ss === source.ss &&
           post.esp === source.esp && post.cr3 === source.cr3,
         handlerContext: post.cs === session.cookie.entry.handlerCs &&
           post.ss === session.cookie.entry.handlerSs && post.cpl === 3 &&
@@ -215,7 +231,8 @@ function owned0501ExcursionCommit(cpu, session, result, traced) {
     return;
   }
   if (reachedCandidate) session.phase = "candidate";
-  if (session.outgoing && session.phase === "observing") {
+  if (session.outgoing && session.phase === "observing" &&
+      session.activeSteps > session.outgoing.step) {
     session.postOutgoingSteps++;
     if (session.postOutgoingSteps > OWNED_0501_EXCURSION_STEPS)
       owned0501ExcursionFail(session, "post-switch-step-cap");
@@ -2056,11 +2073,16 @@ export class ExperimentalI80386 {
             !Number.isInteger(selector) || selector < 0 || selector > 0xffff ||
             !["call", "jmp", "iret"].includes(kind))
           owned0501ExcursionFail(excursion, "task-helper-reentry-or-stale-stage");
-        else excursion.pendingTask = {
-          step: excursion.activeSteps + 1,
-          kind, selector, source: owned0501ExcursionContext(this),
-          outcome: null,
-        };
+        else {
+          const source = owned0501ExcursionContext(this);
+          excursion.pendingTask = {
+            step: excursion.activeSteps + 1,
+            kind, selector,
+            source: owned0501Frozen({ ...source,
+              savedEip: owned0501ExcursionSaveEip(options, source.eip) }),
+            outcome: null,
+          };
+        }
       } catch { owned0501ExcursionFail(excursion, "task-attempt-observer-failure"); }
     }
     const owned0501 = this.#owned0501JournalActive

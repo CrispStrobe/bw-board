@@ -848,6 +848,8 @@ test('task excursion source commit is separate from strict frame refusal', () =>
       // object identity, are the diagnostic candidate comparison.
       this.segmentCaches[1] = { ...this.segmentCaches[1] };
       this.segmentCaches[2] = { ...this.segmentCaches[2] };
+      this.segmentCaches[1].access |= 1; // descriptor Accessed set on reload
+      this.segmentCaches[2].access |= 1;
     }
     return 7;
   };
