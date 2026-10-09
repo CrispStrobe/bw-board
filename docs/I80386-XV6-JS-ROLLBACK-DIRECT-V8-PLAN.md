@@ -205,3 +205,31 @@ Review its exact source and all enabled checks before one distinct actual, then
 independently audit original tool/runtime facts. A separate first build
 and four fresh support children remain later gates before xv6 allocation
 sampling; no allocation hotspot or speedup is established by the census.
+
+
+## Separate tool census source checkpoint
+
+[Draft PR479](https://github.com/CrispStrobe/bw-board/pull/479), source
+`8ffca01b8ca675fcd2a3980ffd0697665b080771`, publishes eight new paths
+under `scripts/xv6-js-rollback-direct-v8-tool-census/` and its dedicated
+workflow, stacked on frozen PR477. Root and independent review passed the
+34-role source closure and pure controls. An initial locator-retention gap
+was corrected before publication: the pending role, locator receipt and
+selected path now survive later target-identity or compiler-mutation refusal.
+The inherited strict probe and all 26 held source roles remain unchanged.
+
+The census records each executable identity before its version probe, rehashes
+the target and compiler afterward, and rechecks the complete tool set. Only
+the observed complete exit-zero, empty-stdout/stderr `cc1plus` result reports
+`VERSION_UNAVAILABLE_EMPTY`; other empty or failed probes refuse. A completed
+report is explicitly `TOOL_IDENTITIES_OBSERVED_VERSION_UNAVAILABLE_UNQUALIFIED`,
+without validating that component's version or any addon support. Partial
+failures preserve the first failure and available records; only a completed
+census claims the final source recheck. Reports retain the 1 MiB per-file /
+2 MiB total closed inventory bounds.
+
+Hosted checks and the first census actual remain pending. Review every enabled
+exact-head check before one distinct labeled original, then audit its retained
+packet independently. Do not retry the frozen preflight or infer compiler
+execution, first build, profiler support, allocation costs or a speedup from
+this source-only checkpoint.
