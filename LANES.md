@@ -28,6 +28,15 @@ identical to the base. The scoped specification records the native reduction,
 rejected experiments, limited independent SPICE control and remaining proof.
 Only the lane branch receives this deliberately red checkpoint; no production
 implementation or consumer adoption is released by it.
+Forward diagnosis adds two passing controls without changing runtime bytes:
+the fixed-clamp independent RL crossing is20.189651071 us with a4.608179252 V
+collector jump and continuous18.992153294 mA winding current; the actual
+19 us pre-boundary state agrees with RL. A separate explicitly authored
+shockley/VAF100 control matches five independently measured ngspice42
+startup samples within1 microamp/1 mV at unchanged accuracy settings.
+The generic2N2222 card contains no VAF, so this is not a silent lesson-model
+replacement. Suite remains deliberately red3 pass/2 fail/0 skip; event
+location and consistent post-event state remain the required repair.
 
 2026-10-08 scope reset capture epoch — DONE candidate, Codex bwcx.
 Branch lane/scope-reset-capture-epoch-20261008, isolated worktree, exact base

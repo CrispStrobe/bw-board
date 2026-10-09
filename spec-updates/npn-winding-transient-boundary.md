@@ -62,6 +62,94 @@ and completion alone does not qualify its voltage waveform or the engine.
 
 ## Required next repair proof
 
+### Fixed-clamp boundary established independently
+
+The independent PWL base-network limit is18.992153294 mA. Before the
+fixed-clamp transition, the winding follows the RL law above. Solving
+`I(t)=beta*Ib` gives20.189651071 microseconds, agreeing with the observed
+20.190-microsecond failure. Current remains continuous, but the specified
+ideal model switches collector voltage from0.201899215 V to4.810078467 V:
+a4.608179252 V algebraic jump. The new actual19-microsecond control agrees
+with the independent current within2 microamps and voltage within0.1 mV.
+
+The node-voltage full-step/half-step comparison assumes a smooth interval;
+an interval straddling this discontinuity violates that assumption. This
+establishes the fixed-clamp case, not every cause in the drive-dependent
+default model. A physically justified event repair must locate the switching
+boundary, retain continuous winding current, and establish consistent
+post-event algebraic voltage/derivative before resuming ordinary error control.
+It must not merely accept a floor error or discard a failed history.
+
+### Separate finite-Early-voltage control
+
+Explicit `model:'shockley', vaf:100`, with the existing generic
+`IS=1e-14 BF=100 BR=1`, completes the same1 ms startup at unchanged
+`interactive-v1` accuracy settings. `model:'shockley'` alone still fails;
+`model:'ebers-moll'` is not a supported selector and cannot enable this path.
+The existing2N2222 library card does **not** specify VAF. Therefore this
+control is not a justified silent lesson/card replacement, generic repair,
+or certification of a particular transistor.
+
+Independent ngspice42 deck, using Gear2 with1 ns maximum steps and
+matching the engine's fixed25.85 mV junction thermal voltage through equal
+TEMP/TNOM26.825849 C:
+
+```spice
+Explicit finite-Early-voltage NPN winding control
+VCC supply 0 5
+VDRIVE drive 0 PULSE(0 5 0 1n 1n 2m 4m)
+RPULL drive pin 21700
+RBASE pin base 1000
+QSW collector base 0 SWITCH
+LW supply winding 5m
+RW winding collector 10
+DFLY collector supply FLY
+.model SWITCH NPN(IS=1e-14 BF=100 BR=1 VAF=100)
+.model FLY D(IS=1e-12 N=1 RS=.568)
+.options method=gear maxord=2 tnom=26.825849
+.temp 26.825849
+.tran 1n 1m 0 1n uic
+.meas tran i10 FIND I(LW) AT=10u
+.meas tran v10 FIND V(collector) AT=10u
+.meas tran i20 FIND I(LW) AT=20u
+.meas tran v20 FIND V(collector) AT=20u
+.meas tran i50 FIND I(LW) AT=50u
+.meas tran v50 FIND V(collector) AT=50u
+.meas tran i100 FIND I(LW) AT=100u
+.meas tran v100 FIND V(collector) AT=100u
+.meas tran i1000 FIND I(LW) AT=1m
+.meas tran v1000 FIND V(collector) AT=1m
+.end
+```
+
+| Time | ngspice winding A | Engine winding A | ngspice collector V | Engine collector V |
+| --- | ---: | ---: | ---: | ---: |
+| 10 us | .009724297 | .009724504 | .1218993 | .121900877 |
+| 20 us | .01903418 | .019034050 | 1.933247 | 1.932660677 |
+| 50 us | .01957415 | .019574142 | 4.804258 | 4.804258576 |
+| 100 us | .01957415 | .019574142 | 4.804258 | 4.804258576 |
+| 1000 us | .01957415 | .019574142 | 4.804258 | 4.804258572 |
+
+Each engine sample uses a fresh board to avoid imposing extra advancement
+boundaries. All five actual completions retain `accuracyMet:true` and satisfy
+1 microamp/1 mV comparison bounds. These bounds are independent comparison
+criteria, not a modification to solver accuracy. The reference has a1 ns
+source ramp rather than the engine's instantaneous pin change, a reverse-biased
+exponential flyback diode rather than the PWL diode, and Gear integration
+rather than trapezoidal integration. This establishes sampled **turn-on**
+agreement only; it does not qualify flyback turn-off, mechanics, arbitrary
+cards or complete continuous-waveform agreement. The earlier27 C/10 ns
+reference also completed; thermal matching and refinement reduce the20 us
+voltage discrepancy from about6 mV to0.59 mV.
+
+The expanded native suite currently has3 passing controls and2 still-failing
+desired-behavior regressions, with no skips. Runtime source is unchanged;
+no package adoption or deployment is released by these controls.
+An isolated source mutation ignoring declared VAF (`vaf=Infinity` in the
+parameter reader) makes the new finite-Early control fail through the real
+live-clock caller. Restoring the original reader makes all three controls
+pass again. Both original desired-behavior regressions remain intact and red.
+
 The current hypothesis is a nonlinear switching/constraint-consistency
 problem, not simply insufficient generic step refinement. Establish the
 consistent winding state and algebraic voltage through the active-region
