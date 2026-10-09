@@ -46,6 +46,13 @@ bounded integration or global late-ring accuracy. The original deliberately
 red checkpoint56c32063 is preserved. Candidate identity is the commit holding
 this row; one exact hosted CI/Harris set remains required before guarded
 landing. No consumer pin or deployment change in this upstream lane.
+Hosted CI37966959459 attempt2 rejected the candidate for one census omission:
+the new winding-turnoff-oracle test probes ngspice but is not registered.
+Expand this existing lane by scripts/oracle-census.mjs only, adding the test
+to the existing ngspice gates list. Seven-path final envelope; no new debt
+exemption, detector weakening, workflow, solver or numerical change. Publish
+this canonical expansion before the forward evidence repair, then qualify
+the exact replacement once. The original hosted failure remains preserved.
 
 2026-10-09 PWL off-current readback — DONE candidate, Codex bwcx.
 Branch lane/pwl-off-current-readback-20261009, isolated worktree, exact base
