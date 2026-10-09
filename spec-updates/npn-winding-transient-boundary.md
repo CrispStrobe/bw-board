@@ -1,9 +1,34 @@
 # NPN winding startup: bounded interactive refinement
 
-Status: repair candidate; local qualification complete, hosted qualification pending.
+Status: repaired upstream, adopted and qualified in the built consumer GUI.
 Diagnostic baseline: `ac7595b609daa75717c696830982f59940c97e8b`.
 
-## Current repair candidate
+## Qualified repair
+
+Upstream source `09c0f027eb906310f0f09dc524d6fdf17058439b` landed after
+[CI37918681671](https://github.com/CrispStrobe/bw-board/actions/runs/37918681671)
+and [Harris37918681729](https://github.com/CrispStrobe/bw-board/actions/runs/37918681729)
+passed. The full upstream suite reports8456 passes, zero failures and302
+unchanged skips; all four enabled CI jobs passed, with optional `vectors-full`
+skipped by workflow policy.
+
+[Lite PR753](https://github.com/CrispStrobe/brickwright-lite/pull/753) adopted
+that exact Board source and CUI5f336b24447351ce80742c0e71078cdd23e7912b,
+landing at `8e8c4deb219ce0050c35f3f1c4ca3767297fc118`. Its tested candidate
+was `5b0c46373b2b4ef169db0206416a614c7db43b30`; the merge differs only by
+an intervening lane-ledger update, not executable or package bytes.
+[Build37939576073](https://github.com/CrispStrobe/brickwright-lite/actions/runs/37939576073)
+passed:6396 unit passes, zero failures,21 skips, both browser shards, corpus
+and FPGA. All12 enabled PR checks passed. The installed motor continuation
+test ran successfully. Actual browser scope reset retained the channel,
+cleared its old ring and captured5000 first-epoch envelopes; the original
+motor journey completed all six consecutive green-flag runs with retained
+first write, advancing clock, lit LED and no simulation alerts.
+
+This closes the demonstrated startup and reset/adoption failures. Deployment
+is separately observed and is not claimed here. Nor does this qualify arbitrary
+transistor cards, motor mechanics, physical bandwidth or complete waveform
+agreement with a different SPICE transistor model.
 
 After explicit approval of the precision-policy revision, `interactive-v2`
 becomes the default and permits refinement down to1 fs. Accuracy scales,
@@ -28,7 +53,8 @@ and10 ms continuation using the default public policy and shared
 `armBoardForRun`, with candidate-engine injection through `Circuit.fromJSON`.
 No fixture, installed package or consumer source was changed. This native
 consumer-model check is not an installed-browser, adoption or deployment claim.
-Hosted CI/Harris and then a separately qualified consumer refresh are required.
+That native check is supplemented by the independent hosted and actual
+consumer qualification above; it is not the basis for a deployment claim.
 
 ## Qualified readback prerequisite and historical checkpoints
 
@@ -169,7 +195,7 @@ completes10033 points to1 ms. Its winding endpoint is18.28460 mA. That is
 **not** an exact numerical oracle for the engine's different PWL transistor,
 and completion alone does not qualify its voltage waveform or the engine.
 
-## Required next repair proof
+## Historical repair proof and independent reference
 
 ### Stiff active-mode reference for the reduced fixed-clamp circuit
 
