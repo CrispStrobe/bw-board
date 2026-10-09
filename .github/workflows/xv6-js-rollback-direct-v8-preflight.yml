@@ -27,6 +27,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 8
           persist-credentials: false
       - name: Admit exact report-only source and pure controls
         shell: bash
@@ -36,6 +37,8 @@ jobs:
           evidence="$RUNNER_TEMP/direct-v8-preflight-evidence"
           mkdir -m 700 "$evidence"
           test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          timeout 120s git --no-replace-objects fetch --no-tags --depth 1 https://github.com/CrispStrobe/bw-board.git ff2b916e1899d6042f9b1a3e2701ea1ec4f708d7
+          git --no-replace-objects cat-file -e ff2b916e1899d6042f9b1a3e2701ea1ec4f708d7^{commit}
           test -z "$(git --no-replace-objects status --porcelain=v1 -uall)"
           timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8/preflight-source-control.py > "$evidence/control.stdout" 2> "$evidence/control.stderr"
           timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8/preflight-control.py >> "$evidence/control.stdout" 2>> "$evidence/control.stderr"

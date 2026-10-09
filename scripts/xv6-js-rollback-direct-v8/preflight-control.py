@@ -6,6 +6,7 @@ from pathlib import Path
 import tarfile
 import tempfile
 
+import preflight as preflight_module
 from preflight import (NODE_NAME, archive_records, bounded_download,
                        pinned_file, read_bounded, sha, write_receipt)
 from preflight_inventory import inventory
@@ -65,6 +66,22 @@ refuse(lambda: bounded_download(NODE_NAME, 1,
        lambda *_args, **_kw: Response(url, b"oversize")))
 refuse(lambda: bounded_download("unreviewed.tar.xz", 50,
        lambda *_args, **_kw: Response(url, b"ok")))
+original_run = preflight_module.run_bounded
+try:
+    preflight_module.run_bounded = lambda *_args: {
+        "exitCode": 7, "timedOut": False, "outputBound": False,
+        "complete": True, "stdout": b"original-out\n", "stderr": b"original-err\n"}
+    try:
+        preflight_module.probe(["synthetic", "--version"], ".")
+    except preflight_module.ProbeFailure as error:
+        assert error.receipt["exitCode"] == 7
+        assert error.receipt["stdout"]["sha256"] == sha(b"original-out\n")
+        assert error.receipt["stderr"]["sha256"] == sha(b"original-err\n")
+        assert error.receipt["stdout"]["base64"] == "b3JpZ2luYWwtb3V0Cg=="
+    else:
+        raise AssertionError("failed probe lost its original bounded output")
+finally:
+    preflight_module.run_bounded = original_run
 with tempfile.TemporaryDirectory(prefix="direct-v8-preflight-pure-") as name:
     root = Path(name)
     executable = root / "ordinary"

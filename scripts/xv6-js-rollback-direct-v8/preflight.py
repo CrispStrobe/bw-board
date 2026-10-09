@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Hosted report-only authority preflight. Never builds, loads, or runs a guest."""
 import hashlib
+import base64
+import importlib.util
 import io
 import json
 import os
@@ -30,6 +32,20 @@ TOOLS = ("g++", "cc1plus", "collect2", "as", "ld")
 
 def sha(data):
     return hashlib.sha256(data).hexdigest()
+
+
+class ProbeFailure(ValueError):
+    def __init__(self, reason, receipt):
+        super().__init__(reason)
+        self.receipt = receipt
+
+
+def source_identity():
+    path = Path(__file__).with_name("preflight-source.py")
+    spec = importlib.util.spec_from_file_location("direct_v8_authority_source", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.identity()
 
 
 def read_bounded(path, limit):
@@ -143,16 +159,27 @@ def pinned_file(path, limit=MAX_TOOL):
             "device": before.st_dev, "inode": before.st_ino}
 
 
-def probe(argv, cwd, timeout=10):
+def probe(argv, cwd, timeout=10, display_argv=None):
     result = run_bounded(argv, cwd, timeout)
+    raw = result["stdout"]
+    receipt = {"argv": display_argv if display_argv is not None else argv,
+               "exitCode": result["exitCode"], "timedOut": result["timedOut"],
+               "outputBound": result["outputBound"], "complete": result["complete"],
+               "stdout": {"bytes": len(raw), "sha256": sha(raw),
+                          "base64": base64.b64encode(raw).decode("ascii")},
+               "stderr": {"bytes": len(result["stderr"]),
+                          "sha256": sha(result["stderr"]),
+                          "base64": base64.b64encode(result["stderr"]).decode("ascii")}}
     if (result["exitCode"] != 0 or result["timedOut"] or
             result["outputBound"] or not result["complete"] or result["stderr"]):
-        raise ValueError("bounded tool probe refused")
-    raw = result["stdout"]
+        raise ProbeFailure("bounded tool probe refused", receipt)
     if not raw or len(raw) > 4096 or b"\0" in raw:
-        raise ValueError("tool probe output refused")
-    return {"argv": argv, "exitCode": 0, "stdoutSha256": sha(raw),
-            "stdoutBytes": len(raw), "stdout": raw.decode("utf-8", "strict")}
+        raise ProbeFailure("tool probe output refused", receipt)
+    try:
+        receipt["stdoutText"] = raw.decode("utf-8", "strict")
+    except UnicodeDecodeError as error:
+        raise ProbeFailure("tool probe UTF-8 refused", receipt) from error
+    return receipt
 
 
 def resolved_tool(name, compiler, work):
@@ -161,7 +188,7 @@ def resolved_tool(name, compiler, work):
         locator = None
     else:
         locator = probe([compiler, "-print-prog-name=" + name], work)
-        value = locator["stdout"].strip()
+        value = locator["stdoutText"].strip()
         if not value or "\n" in value or "\r" in value:
             raise ValueError("compiler subtool path refused")
         path = value if os.path.isabs(value) else shutil.which(value)
@@ -201,6 +228,7 @@ def main():
               "status": "INCOMPLETE_UNQUALIFIED", "firstFailure": None,
               "nodeArchive": None, "headersArchive": None, "nodeExecutable": None,
               "nodeProbes": None, "tools": {}, "sourceReceiptSha256": None,
+              "failedProbe": None,
               "plannedBuildArguments": ARGS,
               "host": {"imageOS": os.environ.get("ImageOS"),
                        "imageVersion": os.environ.get("ImageVersion"),
@@ -217,6 +245,8 @@ def main():
                 source.get("head") != os.environ.get("BW_EXPECTED_HEAD") or
                 source.get("qualification") != "REPORT_ONLY_NO_BUILD_OR_NATIVE_CONTROL"):
             raise ValueError("source admission receipt mismatch")
+        if source != source_identity():
+            raise ValueError("source receipt differs from independently recomputed Git identity")
         report["sourceReceiptSha256"] = sha(source_raw)
         write_receipt(report_path, report)
         if report["host"]["imageOS"] != "ubuntu24" or not report["host"]["imageVersion"]:
@@ -231,7 +261,10 @@ def main():
         with node_path.open("xb") as out:
             out.write(node_bytes)
         node_path.chmod(0o500)
-        report["nodeExecutable"] = pinned_file(node_path, MAX_NODE_BINARY)
+        node_identity = pinned_file(node_path, MAX_NODE_BINARY)
+        report["nodeExecutable"] = {"role": "owned-work/node",
+                                    "sha256": node_identity["sha256"],
+                                    "bytes": node_identity["bytes"]}
         write_receipt(report_path, report)
         headers_raw = bounded_download(HEADER_NAME, MAX_HEADERS_ARCHIVE)
         report["headersArchive"] = {"name": HEADER_NAME,
@@ -244,13 +277,20 @@ def main():
         report["headersArchive"]["name"] = HEADER_NAME
         report["headersArchive"]["url"] = ORIGIN + HEADER_NAME
         write_receipt(report_path, report)
-        report["nodeProbes"] = [probe([str(node_path), "--version"], work),
-                                probe([str(node_path), "-p", "process.versions.v8"], work)]
-        if report["nodeProbes"][0]["stdout"].strip() != "v20.20.2":
+        report["nodeProbes"] = []
+        report["nodeProbes"].append(probe(
+            [str(node_path), "--version"], work,
+            display_argv=["owned-work/node", "--version"]))
+        write_receipt(report_path, report)
+        report["nodeProbes"].append(probe(
+            [str(node_path), "-p", "process.versions.v8"], work,
+            display_argv=["owned-work/node", "-p", "process.versions.v8"]))
+        write_receipt(report_path, report)
+        if report["nodeProbes"][0]["stdoutText"].strip() != "v20.20.2":
             raise ValueError("Node executable version mismatch")
-        if not report["nodeProbes"][1]["stdout"].strip():
+        if not report["nodeProbes"][1]["stdoutText"].strip():
             raise ValueError("V8 version unavailable")
-        if pinned_file(node_path, MAX_NODE_BINARY) != report["nodeExecutable"]:
+        if pinned_file(node_path, MAX_NODE_BINARY) != node_identity:
             raise ValueError("Node executable changed across probes")
         compiler = shutil.which("g++")
         if not compiler:
@@ -260,8 +300,12 @@ def main():
             write_receipt(report_path, report)
         if sha(read_bounded(evidence / "source.json", 32_000)) != report["sourceReceiptSha256"]:
             raise ValueError("source receipt changed during preflight")
+        if source != source_identity():
+            raise ValueError("reviewed Git source changed during preflight")
         report["status"] = "IDENTITIES_RECORDED_UNQUALIFIED"
     except BaseException as error:
+        if isinstance(error, ProbeFailure):
+            report["failedProbe"] = error.receipt
         report["firstFailure"] = {"type": type(error).__name__,
                                   "reason": str(error)[:200]}
         write_receipt(report_path, report)
