@@ -42,6 +42,14 @@ not the default-model regression. The latter has a measured pre-event
 saturated voltage accuracy failure, not a saturated-to-active event. Draft
 removed; production source remains baseline-identical. No broader event
 exemption, latch clearing, profile change or consumer release authorized.
+Readback prerequisite repair stays in the existing mna/test/spec envelope:
+PWL off-junction extraction now includes the exact conductance already stamped.
+The numerical stamp, knee current used for region classification, equations,
+profiles and failure latches are unchanged. Two actual caller regressions
+cover motor flyback KCL and off-state BJT base/controlled-collector currents;
+restore-zero mutation fails both. Adjacent13/13 pass. Expanded lane suite is
+5 pass/2 still-failing startup regressions/0 skip. Branch checkpoint only;
+no complete startup qualification, master landing or Lite adoption.
 
 2026-10-08 scope reset capture epoch — DONE candidate, Codex bwcx.
 Branch lane/scope-reset-capture-epoch-20261008, isolated worktree, exact base

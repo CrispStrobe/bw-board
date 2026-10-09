@@ -105,3 +105,42 @@ test('explicit finite-Early-voltage control matches independent ngspice startup 
     assert.ok(Math.abs(b.nodeVoltage('collector')-volts)<.001, `voltage at ${ns} ns`);
   }
 });
+
+test('motor flyback current readback satisfies collector KCL before switching', () => {
+  const b = winding({vceSat:null});
+  b.advanceToLive(19000n,{maxSteps:16});
+  assert.equal(b.transientAnalysisStatus().accuracyMet,true);
+  const r = b._mnaCache;
+  const volts = b.nodeVoltage('collector')-5;
+  assert.ok(volts < -4, 'flyback diode is actually reverse biased');
+  const diode = r.branchCurrents.get('D');
+  assert.ok(Math.abs(diode.get('anode') + 1e-9*volts)<1e-15,
+    'out-of-part anode current matches the existing reverse conductance');
+  assert.equal(diode.get('anode')+diode.get('cathode'),0);
+  const residual = r.branchCurrents.get('Q').get('collector')
+    +r.branchCurrents.get('RW').get('b')+diode.get('anode');
+  assert.ok(Math.abs(residual)<1e-10,`collector KCL residual ${residual} A`);
+});
+
+test('off-state BJT base and controlled collector readback match their stamps', () => {
+  const b = new BoardImpl(5);
+  b.setNetlist([
+    {id:'V',kind:'vcc',params:{},terminals:['vcc']},
+    {id:'G',kind:'gnd',params:{},terminals:['gnd']},
+    {id:'RB',kind:'resistor',params:{ohms:1e10},terminals:['a','b']},
+    {id:'RC',kind:'resistor',params:{ohms:1000},terminals:['a','b']},
+    {id:'Q',kind:'npn',params:{},terminals:['base','collector','emitter']},
+  ],[
+    net('supply',['V','vcc'],['RB','a'],['RC','a']),
+    net('base',['RB','b'],['Q','base']),
+    net('collector',['RC','b'],['Q','collector']),
+    net('zero',['G','gnd'],['Q','emitter']),
+  ]);
+  b.advanceTo(1n);
+  const vb = b.nodeVoltage('base');
+  assert.ok(vb > .1 && vb < .65,'base is below the PWL knee, but not at zero');
+  const currents = b._mnaCache.branchCurrents.get('Q');
+  assert.ok(Math.abs(currents.get('base')+1e-9*vb)<1e-15);
+  assert.ok(Math.abs(currents.get('collector')+100e-9*vb)<1e-15);
+  assert.ok(Math.abs([...currents.values()].reduce((sum,i)=>sum+i,0))<1e-15);
+});

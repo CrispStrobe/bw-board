@@ -3,6 +3,40 @@
 Status: reproducer checkpoint, **not a repair or qualified implementation**.
 Baseline source: `ac7595b609daa75717c696830982f59940c97e8b`.
 
+## Current readback prerequisite repair
+
+The lane now includes a bounded current-readback correction, not a startup
+integration repair. The PWL companion stamps an off conductance of1 nS, but
+the old extraction returned zero below its knee. On the reverse-biased motor
+flyback diode this hides about4.63 nA at the failing interval and makes the
+reported collector KCL disagree with the solved network. It also affects
+off-state BJT base current and its controlled collector-current readback.
+
+`pwlStampedCurrent` reads the off companion's actual `gEq*v+iEq`; existing
+forward/knee extraction is retained. The original `pwlKneeCurrent` remains
+unchanged for region classification. No stamp, transistor/diode equation,
+profile, step floor, switching decision or failure latch is changed.
+The actual pre-switch motor case now agrees with diode leakage and collector
+KCL within0.1 nA. An independent high-impedance base-drive circuit proves
+nonzero off-state base current and its beta-scaled collector current agree
+with the stamps, including terminal-current conservation.
+
+Both new assertions fail with the old zero-current extraction and pass after
+repair. A restore-zero source mutant also fails both real caller tests;
+restoration is verified. Adjacent BJT-region, junction-knee and junction-GMIN
+suites pass13/13. The complete lane suite is5 passing controls and2 remaining
+desired startup failures, zero skips. The branch is therefore not qualified
+for master or consumer adoption. Earlier baseline-identical statements below
+describe the earlier diagnostic checkpoints, not this current readback change.
+
+This correction does not explain away the voltage accuracy error: substituting
+the **actual collector branch current**, rather than winding current alone,
+into the clamp law accounts for the hidden diode conductance. Remaining
+clamp-consistency residual is on the microvolt scale, versus the approximately
+238-microvolt full/half endpoint difference. Independent continuation must
+therefore use the actual solved branch currents and preserve that unresolved
+voltage-accuracy refusal.
+
 ## Observed consumer failure
 
 Lite Build [37833383585](https://github.com/CrispStrobe/brickwright-lite/actions/runs/37833383585)
