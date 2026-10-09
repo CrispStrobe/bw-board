@@ -261,7 +261,7 @@ const KNEE_EPS_ALPHA = 0.5;
 const kneeEps = rd =>
   Math.min(PWL_KNEE_EPS, KNEE_EPS_ALPHA * JUNCTION_I_RATED * Math.max(rd, 1e-9));
 
-/** PWL knee current with the C1 blend — extraction must match the stamp. */
+/** PWL knee current with the C1 blend, excluding off-state regularization. */
 function pwlKneeCurrent(v, vf, rd) {
   // Same kneeEps as diodeCompanion. If these two ever disagree, a current read
   // off the extraction describes a different device than the one the stamp
@@ -271,6 +271,15 @@ function pwlKneeCurrent(v, vf, rd) {
   if (v > vf + eps) return (v - vf) / rd;
   const u = v - vf + eps;
   return (u * u) / (4 * eps * rd);
+}
+
+/** Readback includes the off conductance; region classification stays unchanged. */
+function pwlStampedCurrent(v, vf, rd) {
+  if (v < vf-kneeEps(rd)) {
+    const {gEq,iEq} = diodeCompanion(v,vf,rd);
+    return gEq*v+iEq;
+  }
+  return pwlKneeCurrent(v,vf,rd);
 }
 
 /**
@@ -1126,7 +1135,7 @@ function junctionCurrent(part, vAcross, vf, rd) {
   const opts = junctionOpts(part);
   if (!opts) {
     // Must match what was stamped, which now feeds the knee, not the datasheet vf.
-    return pwlKneeCurrent(vAcross, kneeFromVf(vf, rd), rd);
+    return pwlStampedCurrent(vAcross, kneeFromVf(vf, rd), rd);
   }
   const VT = 0.02585;
   // Total-voltage evaluation of the composite: recover the junction
@@ -3233,10 +3242,10 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       let ib, ic;
       // Same C1 knee the stamp uses — extraction and stamp must agree.
       if (part.kind === 'npn') {
-        ib = pwlKneeCurrent(vB - vE, vbeThresh, rd);
+        ib = pwlStampedCurrent(vB - vE, vbeThresh, rd);
         ic = beta * ib;
       } else {
-        ib = pwlKneeCurrent(vE - vB, vbeThresh, rd);
+        ib = pwlStampedCurrent(vE - vB, vbeThresh, rd);
         ic = beta * ib;
       }
       // SATURATED: beta*Ib is what the VCCS would DEMAND, not what the
