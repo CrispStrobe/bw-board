@@ -118,6 +118,10 @@ def context(value, name):
     for key in ("protectedMode", "vm86", "retainedRealCs", "trPresent"):
         required(type(value.get(key)) is bool, name + " " + key)
     required(type(value.get("nt")) is bool and
+             value["nt"] == bool(value["rawFlags"] & 0x4000) and
+             value["protectedMode"] == bool(value["rawCr0"] & 1) and
+             value["vm86"] == bool((value["rawCr0"] & 1) and
+                                     (value["rawFlags"] & 0x20000)) and
              value.get("mode") == ("pe-clear" if not value["protectedMode"] else
                                    "vm86" if value["vm86"] else "protected") and
              value["cpl"] == (3 if value["vm86"] else
@@ -158,6 +162,8 @@ def grade(task):
              "original strict frame refusal")
     mode = record(task.get("taskMode"), "task mode result")
     observation = record(mode.get("observation"), "CPU mode observation")
+    cookie = record(observation.get("cookie"), "source-owned session cookie")
+    entry = record(cookie.get("entry"), "committed owned entry")
     required(mode.get("frameReturnQualified") is False and
              mode.get("committedOutgoing") is True and
              observation.get("schema") == MODE_SCHEMA and
@@ -166,12 +172,31 @@ def grade(task):
              type(observation.get("truncated")) is bool and
              observation["truncated"] is False,
              "task mode diagnostic boundary")
+    required(entry == frame["entry"] and
+             entry.get("source") == "decoded-software-int31" and
+             entry.get("vector") == 0x31 and
+             entry.get("frameBytes") == 12 and
+             entry.get("entryAx") == 0x0501 and
+             integer(entry.get("handlerCs"), 0, 0xffff) and
+             integer(entry.get("handlerSs"), 0, 0xffff),
+             "same committed AX=0501 entry")
     transitions = observation.get("transitions")
     changes = observation.get("modeChanges")
-    required(type(transitions) is list and 1 <= len(transitions) <= 32 and
+    required(type(transitions) is list and 2 <= len(transitions) <= 32 and
              type(changes) is list and 3 <= len(changes) <= MAX_CHANGES,
              "bounded transition and mode tape")
     outgoing = record(transitions[0], "outgoing task transition")
+    outgoing_source = task_context(outgoing.get("source"), "outgoing source")
+    required(cookie.get("trSelector") == outgoing_source["trSelector"] and
+             cookie.get("trType") == outgoing_source["trType"] and
+             cookie.get("trBase") == outgoing_source["trBase"] and
+             cookie.get("trLimit") == outgoing_source["trLimit"] and
+             cookie.get("cr3") == outgoing_source["cr3"] and
+             entry["handlerCs"] == outgoing_source["cs"] and
+             entry["handlerSs"] == outgoing_source["ss"] and
+             outgoing_source["protectedMode"] is True and
+             outgoing_source["vm86"] is False,
+             "outgoing source bound to owned entry/cookie")
     prior_transition_step = 0
     for transition in transitions:
         transition = record(transition, "task transition")
@@ -188,7 +213,9 @@ def grade(task):
                  "committed task transition source")
         prior_transition_step = step
     active = observation.get("activeSteps")
-    required(integer(active, 3, 1_000_000), "mode active-step bound")
+    required(integer(active, 3, 1_000_000) and
+             integer(observation.get("postOutgoingSteps"), 1, active),
+             "mode active/post-outgoing step bounds")
     steps = []
     for change in changes:
         change = record(change, "mode change")

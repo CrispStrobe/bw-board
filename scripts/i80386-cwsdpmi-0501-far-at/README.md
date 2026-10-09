@@ -12,7 +12,11 @@ source-issued `decoded-direct-far-cs-reload` ticket. The ticket identifies the
 actual EA immediate or FF /5 indirect decoder path, operand width, instruction
 start, selector, target, and post-transfer context. The before and after
 contexts must retain the same task register, CR3, stack, and raw control/flags
-values while the real-CS retention state clears. Missing, duplicate,
+values while the real-CS retention state clears. This first gate recognizes
+that exact three-record prefix: the far reload must be in the step immediately
+after the second MOV CR0, starting from its complete post-step context. The
+report's committed AX=0501 entry and task-session cookie bind the first two
+task JMP transitions before that prefix. Missing, duplicate,
 uncommitted, reordered, or inconsistent records refuse attribution.
 
 A qualified `attributionQualified` result means only that these source-owned

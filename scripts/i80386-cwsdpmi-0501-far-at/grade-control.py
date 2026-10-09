@@ -42,6 +42,9 @@ def task_context(tr):
 
 
 def fixture():
+    entry = {"source": "decoded-software-int31", "vector": 0x31,
+             "frameBytes": 12, "entryAx": 0x0501,
+             "handlerCs": 0x28, "handlerSs": 0x10}
     first_before = context(eip=0x120)
     first_after = context(pe=False, eip=0x120)
     second_before = context(pe=False, eip=0x136)
@@ -67,7 +70,11 @@ def fixture():
     ]
     mode = {"schema": grade.MODE_SCHEMA, "phase": "invalid",
             "frameReturnQualified": False, "activeSteps": 450,
+            "postOutgoingSteps": 430,
             "truncated": False,
+            "cookie": {"entry": copy.deepcopy(entry), "trSelector": 0x30,
+                       "trType": 11, "trBase": 0x700,
+                       "trLimit": 0x67, "cr3": 0},
             "transitions": [
                 {"step": 20, "kind": "jmp", "selector": 0x34,
                  "source": {**task_context(0x30), "savedEip": 0x190},
@@ -85,7 +92,7 @@ def fixture():
                             "modeArmed": True,
                             "strict": {"phase": "invalid",
                                        "failure": "task-switch-during-owned-frame",
-                                       "entry": {"vector": 0x31},
+                                       "entry": entry,
                                        "returned": None}},
             "taskMode": {"frameReturnQualified": False,
                          "committedOutgoing": True,
@@ -150,6 +157,12 @@ class GradeControl(unittest.TestCase):
                     grade.grade(task)
         for mutation in (
             lambda task: task.update(passed=True),
+            lambda task: task["taskMode"]["observation"]["cookie"].update(trSelector=0x40),
+            lambda task: task["taskMode"]["observation"]["cookie"]["entry"].update(frameBytes=16),
+            lambda task: task["taskMode"]["observation"]["modeChanges"][2]["before"].update(rawCr0=0),
+            lambda task: task["taskMode"]["observation"]["modeChanges"][2]["before"].update(nt=True),
+            lambda task: task["taskMode"]["observation"]["modeChanges"][2]["before"]["codeCache"].update(base=1.5),
+            lambda task: task["taskMode"]["observation"]["transitions"].pop(),
             lambda task: task["taskMode"]["observation"]["modeChanges"][2].update(step=444),
             lambda task: task["taskMode"]["observation"]["modeChanges"][2]["before"].update(eip=0x141),
             lambda task: task["taskMode"]["observation"]["modeChanges"][1]["after"].update(cr3=0x1000),
