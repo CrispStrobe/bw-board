@@ -100,6 +100,52 @@ function owned0501Frozen(record) {
   return Object.freeze({ ...record });
 }
 
+function owned0501TaskSwitchOutcome(cpu, session, priorTicket, completed, error) {
+  if (!session || priorTicket || !session.taskSwitchAttempt ||
+      session.taskSwitchOutcome || session.taskSwitchReentered ||
+      session.taskSwitchDepth !== 1 || owned0501Sessions.get(cpu) !== session)
+    return;
+  let status = "core-return";
+  if (!completed) {
+    if (error instanceof I80386Fault || error instanceof UnsupportedI80386) {
+      // An absent marker is not a claim that earlier task-state writes did not
+      // occur.  Read only the core's own data marker; never invoke a getter.
+      const mark = Object.getOwnPropertyDescriptor(error, "taskCommitted");
+      if (mark && !Object.hasOwn(mark, "value")) return;
+      status = mark?.value === true ? "fault-with-taskCommitted" :
+        "fault-without-taskCommitted";
+    } else status = "unclassified-throw";
+  }
+  const cs = owned0501Option(cpu, "cs");
+  const eip = owned0501Option(cpu, "eip");
+  const flags = owned0501Option(cpu, "eflags");
+  const cr0 = owned0501Option(cpu, "cr0");
+  const retainedRealCs = owned0501Option(cpu, "_retainedRealCs");
+  const task = owned0501Option(cpu, "tr");
+  const trSelector = owned0501Option(task, "selector");
+  const trType = owned0501Option(task, "type");
+  if (!Number.isInteger(cs) || cs < 0 || cs > 0xffff ||
+      !Number.isInteger(eip) || eip < 0 || eip > 0xffffffff ||
+      !Number.isInteger(flags) || flags < -0x80000000 ||
+      flags > 0xffffffff || !Number.isInteger(cr0) ||
+      cr0 < -0x80000000 || cr0 > 0xffffffff ||
+      typeof retainedRealCs !== "boolean" ||
+      !Number.isInteger(trSelector) ||
+      trSelector < 0 || trSelector > 0xffff || !Number.isInteger(trType) ||
+      trType < 0 || trType > 15) return;
+  if (session.taskSwitchReentered || session.taskSwitchOutcome ||
+      owned0501Sessions.get(cpu) !== session) return;
+  const postVm86 = !!((cr0 & 1) && (flags & 0x20000));
+  const postCpl = postVm86 ? 3 :
+    (!(cr0 & 1) || retainedRealCs ? 0 : cs & 3);
+  session.taskSwitchOutcome = owned0501Frozen({
+    schema: "bw.i80386-owned-0501.task-switch-outcome.v1",
+    status, postCs: cs, postEip: eip, postCpl, postVm86,
+    postNt: !!(flags & NT), postTrSelector: trSelector,
+    postTrType: trType, activeSteps: session.activeSteps,
+  });
+}
+
 function owned0501FinishStep(session, result, traced) {
   if (!session) return;
   if (session.phase === "invalid") {
@@ -312,6 +358,8 @@ export class ExperimentalI80386 {
         entry: null, returned: null, pendingRejectedDelivery: null,
         rejectionPermit: false, profile, handlerContext: null,
         rejectedDelivery: null, taskSwitchAttempt: null,
+        taskSwitchOutcome: null, taskSwitchDepth: 0,
+        taskSwitchReentered: false,
       });
       this.#owned0501JournalActive = true;
       return token;
@@ -351,6 +399,8 @@ export class ExperimentalI80386 {
       rejectedDelivery: session.rejectedDelivery,
       ...(session.taskSwitchAttempt
         ? { taskSwitchAttempt: session.taskSwitchAttempt } : {}),
+      ...(session.taskSwitchOutcome
+        ? { taskSwitchOutcome: session.taskSwitchOutcome } : {}),
       ...(session.profile ? { profile: session.profile } : {}) });
     owned0501Sessions.delete(this);
     this.#owned0501JournalActive = false;
@@ -1705,13 +1755,28 @@ export class ExperimentalI80386 {
   }
 
   _taskSwitch(selector, kind, options = {}) {
+    const owned0501 = this.#owned0501JournalActive
+      ? owned0501Sessions.get(this) : null;
+    const priorTicket = owned0501?.taskSwitchAttempt ?? null;
+    if (owned0501) {
+      owned0501.taskSwitchDepth++;
+      if (owned0501.taskSwitchDepth > 1)
+        owned0501.taskSwitchReentered = true;
+    }
     try {
-      return this._taskSwitchCore(selector, kind, options);
+      const result = this._taskSwitchCore(selector, kind, options);
+      try { owned0501TaskSwitchOutcome(this, owned0501, priorTicket, true, null); }
+      catch { /* A refused observation cannot change the guest result. */ }
+      return result;
     } catch (error) {
       if (options.external && error instanceof I80386Fault &&
           [10, 11, 12, 13].includes(error.vector))
         error.errorCode = ((error.errorCode ?? 0) | 1) >>> 0;
+      try { owned0501TaskSwitchOutcome(this, owned0501, priorTicket, false, error); }
+      catch { /* Keep the original task fault and first journal refusal. */ }
       throw error;
+    } finally {
+      if (owned0501) owned0501.taskSwitchDepth--;
     }
   }
 

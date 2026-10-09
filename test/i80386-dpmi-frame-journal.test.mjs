@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import I80386, { I80386Fault } from '../src/experimental/i80386.js';
+import I80386, { I80386Fault, UnsupportedI80386 } from '../src/experimental/i80386.js';
 
 const START = 0x20;
 const CODE = 0x140000;
@@ -546,6 +546,13 @@ test('a task-switch attempt while a selected frame is open invalidates it', () =
     activeSteps: 1,
   });
   assert.equal(Object.isFrozen(result.taskSwitchAttempt), true);
+  assert.deepEqual(result.taskSwitchOutcome, {
+    schema: 'bw.i80386-owned-0501.task-switch-outcome.v1',
+    status: 'fault-without-taskCommitted', postCs: 8, postEip: 0x100,
+    postCpl: 0, postVm86: false, postNt: false, postTrSelector: 0x30,
+    postTrType: 11, activeSteps: 1,
+  });
+  assert.equal(Object.isFrozen(result.taskSwitchOutcome), true);
 });
 
 test('mixed same-CPL handler retains one attempted-task fact without return credit', () => {
@@ -565,6 +572,7 @@ test('mixed same-CPL handler retains one attempted-task fact without return cred
     result.taskSwitchAttempt.attemptEip, result.taskSwitchAttempt.sourceCpl,
     result.taskSwitchAttempt.profile],
     ['call', 0, 0x0b, 0x100, 3, MIXED_PROFILE]);
+  assert.equal(result.taskSwitchOutcome.status, 'fault-without-taskCommitted');
 });
 
 test('task-switch diagnostic never invokes an accessor or changes first refusal', () => {
@@ -581,6 +589,7 @@ test('task-switch diagnostic never invokes an accessor or changes first refusal'
   const result = f.cpu.takeOwned0501FrameObservation(token);
   assert.equal(result.failure, 'task-switch-during-owned-frame');
   assert.equal(result.taskSwitchAttempt, undefined);
+  assert.equal(result.taskSwitchOutcome, undefined);
   assert.equal(result.entry.source, 'decoded-software-int31');
 });
 
@@ -599,6 +608,184 @@ test('NT task-return attempt keeps the original TSS fault and first refusal', ()
     result.taskSwitchAttempt.selector, result.taskSwitchAttempt.nt,
     result.taskSwitchAttempt.trSelector, result.taskSwitchAttempt.activeSteps],
     ['iret', 0, true, 0x30, 1]);
+  assert.equal(result.taskSwitchOutcome.status, 'fault-without-taskCommitted');
+});
+
+test('external task fault keeps original error mutation and records no marker', () => {
+  const f = fixture();
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  assert.throws(() => f.cpu._taskSwitch(0, 'jmp', { external: true }), error =>
+    error instanceof I80386Fault && error.vector === 13 &&
+    error.errorCode === 1);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.taskSwitchOutcome.status, 'fault-without-taskCommitted');
+  assert.equal(result.returned, null);
+});
+
+test('synthetic core return records post-task primitives without frame credit', () => {
+  const f = fixture();
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  const core = f.cpu._taskSwitchCore;
+  f.cpu._taskSwitchCore = function (selector, kind, options) {
+    assert.throws(() => core.call(this, selector, kind, options), I80386Fault);
+    this.cs = 0x23;
+    this.eip = 0x1234;
+    this.eflags |= 0x4000;
+    this.tr = { selector: 0x48, type: 11 };
+    return 7;
+  };
+  assert.equal(f.cpu._taskSwitch(0, 'jmp'), 7);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.deepEqual(result.taskSwitchOutcome, {
+    schema: 'bw.i80386-owned-0501.task-switch-outcome.v1',
+    status: 'core-return', postCs: 0x23, postEip: 0x1234,
+    postCpl: 3, postVm86: false, postNt: true, postTrSelector: 0x48,
+    postTrType: 11, activeSteps: 1,
+  });
+  assert.equal(result.returned, null);
+});
+
+test('synthetic taskCommitted fault remains the same thrown object', () => {
+  const f = fixture();
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  const core = f.cpu._taskSwitchCore;
+  const fault = new I80386Fault(10, 0x48, 'synthetic post-marker fault');
+  fault.taskCommitted = true;
+  f.cpu._taskSwitchCore = function (selector, kind, options) {
+    assert.throws(() => core.call(this, selector, kind, options), I80386Fault);
+    this.tr = { selector: 0x48, type: 11 };
+    throw fault;
+  };
+  assert.throws(() => f.cpu._taskSwitch(0, 'jmp'), error => error === fault);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.taskSwitchOutcome.status, 'fault-with-taskCommitted');
+  assert.equal(result.taskSwitchOutcome.postTrSelector, 0x48);
+  assert.equal(result.returned, null);
+});
+
+test('synthetic VM86 core return reports CPL3 even with ring-zero CS bits', () => {
+  const f = fixture();
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  const core = f.cpu._taskSwitchCore;
+  f.cpu._taskSwitchCore = function (selector, kind, options) {
+    assert.throws(() => core.call(this, selector, kind, options), I80386Fault);
+    this.cs = 0x20;
+    this.eip = 0x4321;
+    this.eflags |= 0x20000;
+    return 5;
+  };
+  assert.equal(f.cpu._taskSwitch(0, 'jmp'), 5);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.taskSwitchOutcome.status, 'core-return');
+  assert.deepEqual([result.taskSwitchOutcome.postCs,
+    result.taskSwitchOutcome.postVm86, result.taskSwitchOutcome.postCpl],
+    [0x20, true, 3]);
+  assert.equal(result.returned, null);
+});
+
+test('task outcome refuses mode accessors without changing the guest fault', () => {
+  const f = fixture();
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  const core = f.cpu._taskSwitchCore;
+  let reads = 0;
+  f.cpu._taskSwitchCore = function (selector, kind, options) {
+    try { return core.call(this, selector, kind, options); }
+    catch (error) {
+      Object.defineProperty(this, '_retainedRealCs', {
+        configurable: true,
+        get() { reads++; throw new Error('mode accessor'); },
+      });
+      throw error;
+    }
+  };
+  assert.throws(() => f.cpu._taskSwitch(0, 'jmp'), I80386Fault);
+  assert.equal(reads, 0);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.taskSwitchOutcome, undefined);
+});
+
+test('unsupported task fault with an own marker is distinguished from completion', () => {
+  const f = fixture();
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  const core = f.cpu._taskSwitchCore;
+  const fault = new UnsupportedI80386('synthetic marked task refusal');
+  fault.taskCommitted = true;
+  f.cpu._taskSwitchCore = function (selector, kind, options) {
+    assert.throws(() => core.call(this, selector, kind, options), I80386Fault);
+    throw fault;
+  };
+  assert.throws(() => f.cpu._taskSwitch(0, 'jmp'), error => error === fault);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.taskSwitchOutcome.status, 'fault-with-taskCommitted');
+  assert.equal(result.returned, null);
+});
+
+test('unclassified null throw cannot be mistaken for a normal core return', () => {
+  const f = fixture();
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  const core = f.cpu._taskSwitchCore;
+  f.cpu._taskSwitchCore = function (selector, kind, options) {
+    assert.throws(() => core.call(this, selector, kind, options), I80386Fault);
+    throw null;
+  };
+  let caught = Symbol('not thrown');
+  try { f.cpu._taskSwitch(0, 'jmp'); } catch (error) { caught = error; }
+  assert.equal(caught, null);
+  const result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.taskSwitchOutcome.status, 'unclassified-throw');
+  assert.equal(result.returned, null);
+});
+
+test('task outcome refuses an accessor marker and swallowed nested wrapper', () => {
+  const f = fixture();
+  const token = f.arm();
+  assert.equal(f.cpu.step(), 1);
+  const core = f.cpu._taskSwitchCore;
+  let reads = 0;
+  const fault = new I80386Fault(10, 0x48, 'synthetic accessor fault');
+  Object.defineProperty(fault, 'taskCommitted', {
+    get() { reads++; throw new Error('marker getter'); },
+  });
+  f.cpu._taskSwitchCore = function (selector, kind, options) {
+    assert.throws(() => core.call(this, selector, kind, options), I80386Fault);
+    throw fault;
+  };
+  assert.throws(() => f.cpu._taskSwitch(0, 'jmp'), error => error === fault);
+  assert.equal(reads, 0);
+  let result = f.cpu.takeOwned0501FrameObservation(token);
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.taskSwitchOutcome, undefined);
+
+  const nested = fixture();
+  const nestedToken = nested.arm();
+  assert.equal(nested.cpu.step(), 1);
+  const nestedCore = nested.cpu._taskSwitchCore;
+  let entered = false;
+  nested.cpu._taskSwitchCore = function (selector, kind, options) {
+    if (!entered) {
+      entered = true;
+      assert.throws(() => this._taskSwitch(0, 'jmp'), I80386Fault);
+    }
+    return nestedCore.call(this, selector, kind, options);
+  };
+  assert.throws(() => nested.cpu._taskSwitch(0, 'jmp'), I80386Fault);
+  result = nested.cpu.takeOwned0501FrameObservation(nestedToken);
+  assert.equal(result.failure, 'task-switch-during-owned-frame');
+  assert.equal(result.taskSwitchOutcome, undefined);
 });
 
 test('disabled journal leaves original invalid task-switch fault untouched', () => {
@@ -606,6 +793,7 @@ test('disabled journal leaves original invalid task-switch fault untouched', () 
   assert.throws(() => f.cpu._taskSwitch(0, 'jmp'), error =>
     error instanceof I80386Fault && error.vector === 13);
   assert.equal(Object.hasOwn(f.cpu, 'taskSwitchAttempt'), false);
+  assert.equal(Object.hasOwn(f.cpu, 'taskSwitchOutcome'), false);
 });
 
 test('refused hardware interrupt leaves the pair open; accepted delivery invalidates it', () => {
