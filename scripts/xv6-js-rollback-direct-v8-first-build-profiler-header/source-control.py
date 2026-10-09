@@ -13,6 +13,18 @@ spec.loader.exec_module(module)
 assert module.BASE == "77fd5fbbc132d48622eb0790c0b2d66a6e66a5a4"
 assert len(module.HELD) == 51 and len(module.NEW) == 9
 assert len(module.HELD | module.NEW) == 60
+held = (path.parent.parent / "xv6-js-rollback-direct-v8/addon.cc").read_bytes()
+derived = path.with_name("addon.cc").read_bytes()
+module.validate_derivative(held, derived)
+for bad in (held, derived.replace(b"#include <v8-profiler.h>\n", b"", 1),
+            derived + b"// unrelated change\n"):
+    try: module.validate_derivative(held, bad)
+    except ValueError: pass
+    else: raise AssertionError("unreviewed addon derivative admitted")
+try: module.validate_derivative(held.replace(b"#include <v8.h>\n", b"", 1),
+                                derived)
+except ValueError: pass
+else: raise AssertionError("missing held include admitted")
 accepted = sorted(module.NEW)
 module.validate_changed(accepted)
 for changed in (module.NEW | {"src/experimental/i80386.js"},

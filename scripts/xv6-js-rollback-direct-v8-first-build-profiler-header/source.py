@@ -43,6 +43,8 @@ NEW = frozenset("scripts/xv6-js-rollback-direct-v8-first-build-profiler-header/"
                              "inventory-control.py")) | {
     ".github/workflows/xv6-js-rollback-direct-v8-first-build-profiler-header.yml"}
 MAX_ROLE = 256_000
+HELD_ADDON = "scripts/xv6-js-rollback-direct-v8/addon.cc"
+DERIVED_ADDON = "scripts/xv6-js-rollback-direct-v8-first-build-profiler-header/addon.cc"
 
 
 def git(*args):
@@ -56,6 +58,14 @@ def validate_changed(paths):
         raise ValueError("profiler-header first-build source delta changed")
     if any(path.endswith((".node", ".o", ".a", ".tar.xz")) for path in paths):
         raise ValueError("binary/archive source role refused")
+
+
+def validate_derivative(held, candidate):
+    needle = b"#include <v8.h>\n"
+    if type(held) is not bytes or type(candidate) is not bytes or \
+            held.count(needle) != 1 or candidate != held.replace(
+                needle, needle + b"#include <v8-profiler.h>\n", 1):
+        raise ValueError("profiler header addon differs beyond one include")
 
 
 def committed_and_live(root, head, role):
@@ -104,11 +114,15 @@ def identity():
     if git("status", "--porcelain=v1", "-uall"):
         raise ValueError("dirty source checkout")
     roles = {}
+    addon_bytes = {}
     for role in sorted(HELD | NEW):
         raw = committed_and_live(root, head, role)
         if role in HELD and raw != git("show", f"{BASE}:{role}"):
             raise ValueError("held source role changed")
         roles[role] = hashlib.sha256(raw).hexdigest()
+        if role in (HELD_ADDON, DERIVED_ADDON):
+            addon_bytes[role] = raw
+    validate_derivative(addon_bytes[HELD_ADDON], addon_bytes[DERIVED_ADDON])
     return {"schema": "bw.direct-v8.first-build-profiler-header-source.v1",
             "base": BASE, "head": head, "roles": roles,
             "qualification": "PROFILER_HEADER_FIRST_BUILD_SOURCE_ONLY_UNRUN"}
