@@ -16,8 +16,8 @@ WORKFLOW = ".github/workflows/i80386-cwsdpmi-0501-task-excursion.yml"
 POLICY_TEST = "test/i80386-0501-frame-policy.test.mjs"
 ORCHESTRATION_TEST = "test/i80386-0501-frame-orchestration.test.mjs"
 JOURNAL_TEST = "test/i80386-dpmi-frame-journal.test.mjs"
-CPU_SHA = "9c7ca346a56d838d49d3cf67ace58cce286cf6bb87ea611f13a7db0130817e37"
-JOURNAL_TEST_SHA = "757315c13ee5bbf1ff2443671a67ae874d2598c24dae61b92ab51f085a3c442d"
+CPU_SHA = "f51317ef7bfae8424e87a43548314d06b5cde6809f240ab1c456086a93377117"
+JOURNAL_TEST_SHA = "8ab9c059df8a46ec5c0748059e0966032b1a2e4d24232db2f6dfbcf863177793"
 PINNED_CHANGED = {
     "src/experimental/i80386.js": CPU_SHA,
     JOURNAL_TEST: JOURNAL_TEST_SHA,

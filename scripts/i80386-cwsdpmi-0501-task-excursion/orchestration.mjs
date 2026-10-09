@@ -12,13 +12,14 @@ export function createTaskOrchestration(ports,{cpu,opportunity,progress}) {
   const ensure=()=>{
     if(poisoned)throw new Error(latch('task port reentry'));
   };
-  const exclusive=fn=>{
+  const exclusive=(fn,{allowPoisonedResult=false}={})=>{
     if(busy){poisoned=true;throw new Error(latch('task port reentry'));}
     if(poisoned)throw new Error(latch('task port reentry'));
     busy=true;
     try{
       const value=fn();
-      if(poisoned)throw new Error(latch('task port reentry'));
+      if(poisoned&&!allowPoisonedResult)
+        throw new Error(latch('task port reentry'));
       return value;
     }finally{busy=false;}
   };
@@ -137,6 +138,6 @@ export function createTaskOrchestration(ports,{cpu,opportunity,progress}) {
         catch {diagnosticLatch('observer-progress-failure');}
         return {status,observation,committedOutgoing,
           firstFailure:diagnosticFailure};
-      });
+      },{allowPoisonedResult:true});
     }});
 }

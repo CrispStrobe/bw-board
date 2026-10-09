@@ -882,7 +882,7 @@ test('task excursion source commit is separate from strict frame refusal', () =>
   assert.equal(strict.returned, null);
 });
 
-test('task excursion candidate is invalidated by reset before consumption', () => {
+function candidateMixedExcursion() {
   const f = openedMixedExcursion();
   const originalTr = { ...f.cpu.tr };
   let switched = false;
@@ -912,12 +912,33 @@ test('task excursion candidate is invalidated by reset before consumption', () =
   assert.equal(f.cpu.step(), 1);
   assert.equal(f.cpu.owned0501TaskExcursionStatus(f.excursionToken).phase,
     'candidate');
+  return f;
+}
+
+test('task excursion candidate is invalidated by reset before consumption', () => {
+  const f=candidateMixedExcursion();
   f.cpu.reset();
   const result = f.cpu.takeOwned0501TaskExcursionObservation(f.excursionToken);
   assert.equal(result.phase, 'invalid');
   assert.equal(result.firstFailure, 'cpu-reset');
   assert.equal(result.resumeCandidate.savedContinuation, true);
   assert.equal(result.frameReturnQualified, false);
+});
+
+test('task excursion owner abort preserves candidate facts without promotion', () => {
+  const f=candidateMixedExcursion();
+  const before={eip:f.cpu.eip,cs:f.cpu.cs,ss:f.cpu.ss,cycles:f.cpu.cycles};
+  const status=f.cpu.abortOwned0501TaskExcursion(f.excursionToken,
+    'observer-progress-failure');
+  assert.equal(status.phase,'invalid');
+  assert.equal(status.firstFailure,'observer-progress-failure');
+  assert.deepEqual({eip:f.cpu.eip,cs:f.cpu.cs,ss:f.cpu.ss,cycles:f.cpu.cycles},
+    before);
+  const result=f.cpu.takeOwned0501TaskExcursionObservation(f.excursionToken);
+  assert.equal(result.phase,'invalid');
+  assert.equal(result.firstFailure,'observer-progress-failure');
+  assert.equal(result.resumeCandidate.savedContinuation,true);
+  assert.equal(result.frameReturnQualified,false);
 });
 
 test('task excursion owner abort is bounded, token-bound and guest-neutral', () => {
@@ -928,6 +949,11 @@ test('task excursion owner abort is bounded, token-bound and guest-neutral', () 
     'observer-step-bound'),/stale/);
   assert.throws(() => f.cpu.abortOwned0501TaskExcursion(f.excursionToken,
     'unreviewed-reason'),/unreviewed/);
+  let getterCalls=0;
+  const hostile={get toString(){getterCalls++;return ()=>'observer-step-bound';}};
+  assert.throws(() => f.cpu.abortOwned0501TaskExcursion(f.excursionToken,
+    hostile),/unreviewed/);
+  assert.equal(getterCalls,0);
   const status=f.cpu.abortOwned0501TaskExcursion(f.excursionToken,
     'observer-step-bound');
   assert.equal(status.phase,'invalid');
@@ -945,6 +971,41 @@ test('task excursion owner abort is bounded, token-bound and guest-neutral', () 
   const disabled=fixture();
   assert.throws(() => disabled.cpu.abortOwned0501TaskExcursion({},
     'observer-step-bound'),/stale/);
+});
+
+test('wrong-token abort during a CPU step leaves live task observer armed', () => {
+  const f=openedMixedExcursion();
+  f.cpu._stepInstruction=function(){
+    assert.throws(()=>this.abortOwned0501TaskExcursion({},
+      'observer-step-bound'),/stale/);
+    this.eip=(this.eip+1)>>>0;
+    return 1;
+  };
+  assert.equal(f.cpu.step(),1);
+  assert.equal(f.cpu.owned0501TaskExcursionStatus(f.excursionToken).phase,
+    'observing');
+});
+
+test('swallowed abort during admission cannot mint an excursion token', () => {
+  const f=fixture();
+  f.memory.set(0x208+5,0xfa);f.memory.set(0x208+6,0x8f);
+  f.put(0x300+0x31*8,[0,1,0x0b,0,0,0xee,0,0]);
+  f.put(HANDLER+0x100,[0x66,0xcf]);
+  const frameToken=f.arm({profile:MIXED_PROFILE});
+  assert.equal(f.cpu.step(),1);
+  const originalTr=f.cpu.tr;
+  let trapped=false;
+  f.cpu.tr=new Proxy(originalTr,{getOwnPropertyDescriptor(target,key){
+    if(!trapped){
+      trapped=true;
+      assert.throws(()=>f.cpu.abortOwned0501TaskExcursion({},
+        'observer-step-bound'),/stale/);
+    }
+    return Reflect.getOwnPropertyDescriptor(target,key);
+  }});
+  assert.throws(()=>f.cpu.armOwned0501TaskExcursion(frameToken),
+    /admission refused|changed during admission/);
+  assert.equal(trapped,true);
 });
 
 test('task excursion abort during CPU execution invalidates only observer', () => {

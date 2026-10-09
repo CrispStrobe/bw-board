@@ -9,8 +9,8 @@ spec.loader.exec_module(source)
 assert source.BASE == "d1ca2763ce30dc91df0c29e888590ab1d8135256"
 assert source.NEW == "scripts/i80386-cwsdpmi-0501-task-excursion/"
 assert source.WORKFLOW == ".github/workflows/i80386-cwsdpmi-0501-task-excursion.yml"
-assert source.CPU_SHA == "9c7ca346a56d838d49d3cf67ace58cce286cf6bb87ea611f13a7db0130817e37"
-assert source.JOURNAL_TEST_SHA == "757315c13ee5bbf1ff2443671a67ae874d2598c24dae61b92ab51f085a3c442d"
+assert source.CPU_SHA == "f51317ef7bfae8424e87a43548314d06b5cde6809f240ab1c456086a93377117"
+assert source.JOURNAL_TEST_SHA == "8ab9c059df8a46ec5c0748059e0966032b1a2e4d24232db2f6dfbcf863177793"
 assert source.PINNED_CHANGED == {"src/experimental/i80386.js":source.CPU_SHA,
                                  source.JOURNAL_TEST: source.JOURNAL_TEST_SHA}
 assert "scripts/i80386-cwsdpmi-0501-frame-at/" in source.INHERITED_PREFIXES

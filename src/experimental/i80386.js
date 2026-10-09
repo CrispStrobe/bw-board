@@ -734,14 +734,19 @@ export class ExperimentalI80386 {
   // AX=0501 frame journal or guest state. The first diagnostic failure wins.
   abortOwned0501TaskExcursion(token, reason) {
     const session = owned0501Excursions.get(this);
+    if (!session || session.token !== token) {
+      if (this.#owned0501ExcursionAdmissionBusy)
+        this.#owned0501ExcursionAdmissionReentered = true;
+      throw new Error("stale task excursion token");
+    }
     if (this.#owned0501ExecutionDepth || this.#owned0501ExcursionAdmissionBusy ||
         session?.busyDepth) {
+      if (this.#owned0501ExcursionAdmissionBusy)
+        this.#owned0501ExcursionAdmissionReentered = true;
       owned0501ExcursionFail(session, "observer-reentry");
       this.#owned0501ExcursionActive = false;
       throw new Error("task excursion abort outside owner pause");
     }
-    if (!session || session.token !== token)
-      throw new Error("stale task excursion token");
     if (typeof reason !== "string" ||
         !OWNED_0501_EXCURSION_ABORT_REASONS.includes(reason))
       throw new Error("unreviewed task excursion abort reason");
