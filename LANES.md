@@ -32,6 +32,13 @@ must resume its existing sampled-scope caller at reported actual times. Its
 old single-call completion assumption no longer applies to100 kHz sample-grid
 quanta; retain all100 samples, waveform/meter assertions and genuine failures.
 No numerical expectation or tolerance is weakened. Final envelope: six paths.
+Hosted CI37966959459 attempt2 rejected the candidate for one census omission:
+the new winding-turnoff-oracle test probes ngspice but is not registered.
+Expand this existing lane by scripts/oracle-census.mjs only, adding the test
+to the existing ngspice gates list. Seven-path final envelope; no new debt
+exemption, detector weakening, workflow, solver or numerical change. Publish
+this canonical expansion before the forward evidence repair, then qualify
+the exact replacement once. The original hosted failure remains preserved.
 
 2026-10-09 PWL off-current readback — DONE candidate, Codex bwcx.
 Branch lane/pwl-off-current-readback-20261009, isolated worktree, exact base
