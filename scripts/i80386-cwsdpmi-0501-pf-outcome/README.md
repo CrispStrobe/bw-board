@@ -18,6 +18,11 @@ An observer failure retains the first refusal and any earlier copied facts;
 the guest fault, rollback choice, delivery order, result and thrown object keep
 their original behavior. The existing strict owned 0501 journal remains
 separate and its invalid frame/null return are not upgraded by this recorder.
+The opt-in call resolves `_deliverFault` before argument selection and retains
+the CPU receiver. A noncallable override still evaluates the argument and
+raises `TypeError` without call credit; its generated error wording may differ
+from a native member-call `TypeError`. The disabled path uses the original
+member-call expression unchanged.
 
 Returned `_deliverFault` means only that the CPU call returned. It does not
 prove the original page fault was serviced, that a handler completed, that a

@@ -47,6 +47,7 @@ const OWNED_0501_MODE_PROFILE = "task-mode-crossing-diagnostic.v1";
 const OWNED_0501_FAULT_OUTCOME_STEPS = 100_000;
 const OWNED_0501_FAULT_OUTCOME_SCHEMA =
   "bw.i80386-owned-0501.pf-delivery-outcome.v1";
+const owned0501FaultApply = Reflect.apply;
 // Decoder call sites alone possess these tags. A direct public call to the
 // transfer helper cannot claim that an opcode was decoded.
 const OWNED_0501_FAR_EA = Symbol("decoded EA far jump");
@@ -4428,7 +4429,8 @@ export class ExperimentalI80386 {
           this._deliverFault(error, error.taskCommitted ? this.eip : restartEip);
           return 0;
         }
-        let deliveryReturnEip = null, deliveryArgumentEvaluated = false;
+        let deliveryReturnEip = null, deliveryArgumentEvaluated = false,
+          deliveryMethodResolved = false, deliveryMethodCallable = false;
         const selectDeliveryReturn = () => {
           // This is the original second argument, evaluated after the method
           // lookup. Observer work cannot throw into the guest call.
@@ -4456,9 +4458,18 @@ export class ExperimentalI80386 {
           return selected;
         };
         try {
-          this._deliverFault(error, selectDeliveryReturn());
+          // Resolve once before arguments, as native member-call evaluation
+          // does. Reflect.apply retains the CPU receiver without reading a
+          // mutable method .call/.apply property. A noncallable still sees its
+          // argument evaluated, then throws without earning call credit.
+          const deliveryMethod = this._deliverFault;
+          deliveryMethodResolved = true;
+          deliveryMethodCallable = typeof deliveryMethod === "function";
+          const selected = selectDeliveryReturn();
+          owned0501FaultApply(deliveryMethod, this, [error, selected]);
         } catch (deliveryError) {
-          if (!deliveryArgumentEvaluated) {
+          if (!deliveryMethodResolved || !deliveryArgumentEvaluated ||
+              !deliveryMethodCallable) {
             owned0501FaultOutcomeFail(faultOutcome,
               "delivery-call-setup-threw");
             this.#owned0501FaultOutcomeActive = false;

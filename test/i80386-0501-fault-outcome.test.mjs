@@ -171,6 +171,46 @@ test('argument getter throw also retains partial fault without call credit', () 
   assert.equal(result.delivery, null);
 });
 
+test('noncallable own delivery value retains fault without call credit', () => {
+  const { cpu } = fixture();
+  const token = cpu.armOwned0501FaultOutcome({ maxActiveSteps: 1 });
+  const fault = new I80386Fault(14, 2);
+  cpu._stepInstruction = () => { throw fault; };
+  cpu._deliverFault = 0;
+  assert.throws(() => cpu.step(), TypeError);
+  const result = cpu.takeOwned0501FaultOutcome(token);
+  assert.equal(result.phase, 'invalid');
+  assert.equal(result.firstFailure, 'delivery-call-setup-threw');
+  assert.equal(result.fault.vector, 14);
+  assert.equal(result.delivery, null);
+});
+
+test('noncallable delivery getter is read once before argument selection', () => {
+  const { cpu } = fixture();
+  const token = cpu.armOwned0501FaultOutcome({ maxActiveSteps: 1 });
+  const fault = new I80386Fault(14, 2);
+  fault.taskCommitted = true;
+  let lookups = 0, markerReads = 0;
+  cpu._stepInstruction = () => { cpu.eip = 0x456; throw fault; };
+  Object.defineProperty(cpu, '_deliverFault', {
+    get() {
+      lookups++;
+      cpu.eip = 0x567;
+      Object.defineProperty(fault, 'taskCommitted', {
+        get() { markerReads++; return true; },
+      });
+      return 0;
+    },
+  });
+  assert.throws(() => cpu.step(), TypeError);
+  assert.equal(lookups, 1);
+  assert.equal(markerReads, 1);
+  const result = cpu.takeOwned0501FaultOutcome(token);
+  assert.equal(result.phase, 'invalid');
+  assert.equal(result.firstFailure, 'delivery-call-setup-threw');
+  assert.equal(result.delivery, null);
+});
+
 test('delivery throw is retained without replacing its original object', () => {
   const { cpu } = fixture();
   const thrown = new Error('delivery callback failure');
