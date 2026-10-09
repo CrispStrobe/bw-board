@@ -229,8 +229,8 @@ has no operation ticket and refuses `unattributed-mode-change` at active step
 443. The packet records no original-task resume candidate. Its official failure
 and finite observer boundary do not identify a CPU fault or terminal opcode.
 
-Next implement the separately reviewed bounded CS-transfer attribution slice
-defined in that receipt. Explicit decode tickets must match source-owned
+The separately reviewed bounded CS-transfer attribution slice defined in
+that receipt is implemented in the source checkpoint below. Explicit decode tickets must match source-owned
 before/after context and a committed direct non-call code-descriptor transfer.
 Gate/task/call/return and competing or uncommitted paths stay refused. Keep
 strict frame rules and the protected-only observer unchanged; run affected
@@ -254,8 +254,8 @@ test-only correction `6191a70650142ea46552c2d417eb7eb62aa08e38`
 establishes explicit synthetic ring-0 task context before MOV CR0 and fixes
 a code16 competing jump. Production CPU bytes are unchanged. The [first corrected original CPU/xv6 run](receipts/2026-10-09-far-attribution-cpu-success/README.md)
 passes root and independent audit: 131 focused controls, three finite
-compatibility-profile xv6 scenarios and 71 Git roles. Remaining enabled
-exact-head standard checks still precede the new connection source work.
+compatibility-profile xv6 scenarios and 71 Git roles. All twelve enabled exact-head checks passed, with only the two declared
+optional skips, before the separate connection source was opened.
 
 Only the active mode profile enters private direct-transfer and group-5
 decoder paths. Public helper wrappers cannot expose or replay the private
@@ -269,11 +269,37 @@ paths, precommit faults, competing transfers, mutation and disabled behavior.
 Initial source-review defects in marker exposure and target-fixture privilege
 were corrected before publication; syntax review is not control execution.
 
-Keep the original strict frame and protected-only observer unchanged. Finish
-every enabled exact-head check and audit the first original affected CPU/xv6
-result before a separately named adapter/workflow/source-inventory profile
-connects these tickets. The existing frozen PR478 admission is not a runner
+Keep the original strict frame and protected-only observer unchanged. The CPU prerequisite checks and original audit have passed. Use a separately
+named adapter/workflow/source-inventory profile to connect these tickets. The existing frozen PR478 admission is not a runner
 for this changed CPU source. Review that new connection and all enabled checks
 before one distinct guest actual. Do not infer the opcode of the old refused
 step or claim frame return, compatibility, adoption or speedup from this
-source-only checkpoint.
+bounded CPU controls.
+
+
+## Separate connected far-reload attribution source
+
+[Draft PR483](https://github.com/CrispStrobe/bw-board/pull/483), reviewed source
+`72d0b32e8bd7d658447745129119e2300ad6bec1`, adds eight new paths in
+`scripts/i80386-cwsdpmi-0501-far-at/` and its dedicated workflow, stacked on
+frozen PR480. Root and independent source/syntax/workflow/inventory review and
+three CPU-free control suites passed. Its new admission derives 224 source
+roles / 64 recursive JS nodes and binds the reviewed CPU/test/README while
+retaining the old guest runner, media, helpers and strict frame rules.
+
+The separately run grader reads retained `task-mode.json` without replaying
+instructions. It requires exactly two committed task JMPs bound to the original
+AX=0501 entry/cookie and full task-context chain, then decoded MOV CR0 PE clear
+and set followed by a source-issued EA or FF /5 reload in the immediately next
+step, with the full predecessor post-context equal to the far ticket's before
+context. Typed mode/cache facts, selector/width/target and TR/CR3/stack continuity
+must agree. Missing, uncommitted, duplicate, reordered or inconsistent records
+refuse; the original report and first failure remain visible. The separate
+`attributionQualified` predicate is report consistency only. Strict `passed`
+and `frameReturnQualified` stay false, with a null frame return.
+
+Hosted checks and the first connected guest original are pending. Finish every
+enabled exact-head check, then run the dedicated profile once and independently
+audit its retained original before choosing the next task-resume/frame boundary.
+Do not reuse frozen PR478 for the changed CPU or infer its refused opcode. No
+completed DPMI frame, broader OS/application result, speedup or adoption follows.

@@ -1,0 +1,94 @@
+{
+  "schema": "bw.direct-v8.tool-roster-public-summary.v1",
+  "source": "174767b449b1be4b3e76f41c6e44ffd46ba2edfd",
+  "base": "8ffca01b8ca675fcd2a3980ffd0697665b080771",
+  "pullRequest": "https://github.com/CrispStrobe/bw-board/pull/482",
+  "officialRun": {
+    "id": 37953289876,
+    "attempt": 1,
+    "conclusion": "success",
+    "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37953289876"
+  },
+  "officialArtifact": {
+    "id": 11627515236,
+    "bytes": 39593,
+    "sha256": "904edda464bac50ee144c2e4b087b38c86586ae53072cd259cb1e0f744f6ddfb",
+    "apiUrl": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11627515236"
+  },
+  "rawLog": {
+    "bytes": 35920,
+    "sha256": "7d0f6b48be7e5c94980e5e5f0c0386d6d6213cfc21a2129a8c386f9de0184397",
+    "origin": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/37953289876/logs"
+  },
+  "reportSha256": "2a077a2e5ccb3faf13e2205fe63b0d1dd603a7e832afe4a80f8b3d5faf27c033",
+  "closedMembers": 9,
+  "sourceRoles": 42,
+  "heldRoles": 34,
+  "newPaths": 8,
+  "firstFailure": null,
+  "reportedStatus": "TOOL_ROSTER_SPLIT_OUTPUT_UNQUALIFIED",
+  "identityRosterComplete": true,
+  "headerMemberCount": 2365,
+  "headerRegularBytes": 49002796,
+  "retainedHeaderMapComparison": "EXACT",
+  "tools": {
+    "as": {
+      "bytes": 745768,
+      "sha256": "21aff249b692b5c31a44007491f922dcb49f41323e362c57d2ada3f52eddb7f0",
+      "versionStatus": "VERSION_OBSERVED",
+      "ownPostIdentityEqual": true
+    },
+    "cc1plus": {
+      "bytes": 32675168,
+      "sha256": "840b332fb62ec6f694ac77d91fe69ef7f80b0d69512ed89374af0ee7a506255d",
+      "versionStatus": "VERSION_UNAVAILABLE_EMPTY",
+      "ownPostIdentityEqual": true
+    },
+    "collect2": {
+      "bytes": 336056,
+      "sha256": "4d1f341ae5b763b513258ee2812422a45e063c30a2f1924a0cf63d3699f3a158",
+      "versionStatus": "SPLIT_OUTPUT_DELEGATION_UNVERIFIED",
+      "ownPostIdentityEqual": true
+    },
+    "g++": {
+      "bytes": 1027128,
+      "sha256": "1353e9bdd29a7295c7226bf6c63abccce056d8cac31f112e5cdbecc3f28c2769",
+      "versionStatus": "VERSION_OBSERVED",
+      "ownPostIdentityEqual": true
+    },
+    "ld": {
+      "bytes": 1359128,
+      "sha256": "e9ceb054c12207970f2726dfc07e9a66b411602748628baf27399f02a9bbb31b",
+      "versionStatus": "VERSION_OBSERVED",
+      "ownPostIdentityEqual": true
+    }
+  },
+  "collect2": {
+    "namedLdPrePostEqual": true,
+    "stdoutEqualsDirectLd": true,
+    "delegationProvenance": "UNVERIFIED"
+  },
+  "audits": {
+    "root": {
+      "result": "PASS_WITHIN_REPORT_ONLY_BOUNDARY",
+      "readerSha256": "692d188e32ab018da775105121579469c9c6ba97981dd35b04f8fbb43313872e",
+      "attribution": "root independent retained-original consistency audit"
+    },
+    "independent": {
+      "result": "PASS_WITHIN_REPORT_ONLY_BOUNDARY",
+      "readerSha256": "ef089b4905dbb1d271a69aa4859cd2b37b21b48c0cf49926ffcf74e7c183dacd",
+      "attribution": "independent peer retained-original consistency audit"
+    }
+  },
+  "notQualified": [
+    "independent raw archive or executable verification",
+    "independent probe-order timestamps",
+    "delegated subprocess provenance",
+    "collect2 component version",
+    "addon build or load",
+    "profiler support",
+    "guest behavior",
+    "allocation CPU cost share",
+    "speedup or calibrated RTx"
+  ]
+}

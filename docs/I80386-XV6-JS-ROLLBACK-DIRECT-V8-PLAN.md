@@ -233,9 +233,9 @@ skips, before the single [report-only run37945340430](https://github.com/CrispSt
 was launched. Its [independently audited original failure](receipts/2026-10-09-direct-v8-tool-census-failure/README.md)
 retains cc1plus identity with explicit unavailable version, then refuses
 collect2 split stdout/stderr. Independent as/ld roles and final rechecks
-remain unreached. Review the separately named complete-tool-roster and
-explicit split-output observation profile defined in that receipt before
-its own original audit and the separate first build. Do not retry the frozen preflight or infer a compiler build, profiler support,
+remain unreached in that frozen census. The separately named complete-tool-
+roster and split-output profile below now has an audited original; advance
+its separately admitted first-build gate. Do not retry the frozen preflight or infer a compiler build, profiler support,
 allocation costs or a speedup from these report-only observations.
 
 
@@ -258,7 +258,38 @@ They do not authenticate a delegated subprocess or validate a collect2 version.
 Per-probe and final tool/source rechecks, preserved first failures and partial
 records, and the closed 1 MiB/file, 2 MiB total report inventory remain required.
 
-Hosted exact-head checks and the first original report are pending. Complete
-all enabled checks and independently audit that original before admitting a
-separately named first-build profile. No addon build/load, support case,
-profiler, guest, allocation cost share or speedup follows from this checkpoint.
+All ten enabled exact-head checks passed, with only the two declared optional
+skips, before the single [original run37953289876](receipts/2026-10-09-direct-v8-tool-roster/README.md).
+Root and independent retained-original audits passed: nine closed members,
+42 source roles, exact retained header-map agreement and five tool identity
+reports. Silent cc1plus remains version unavailable; collect2's named-ld
+pre/post and direct stdout consistency remain delegation-unverified. This is
+a completed report-only observation, not a build or profiler qualification.
+
+
+## Separate pinned first-build source
+
+[Draft PR484](https://github.com/CrispStrobe/bw-board/pull/484), reviewed source
+`77fd5fbbc132d48622eb0790c0b2d66a6e66a5a4`, adds nine new paths under
+`scripts/xv6-js-rollback-direct-v8-first-build/` and its dedicated workflow,
+stacked on frozen PR482. Root and independent authority/source/syntax/workflow/
+inventory review and three CPU-free controls passed: 51 admitted roles, all
+42 held roles unchanged. Authority pins the audited original run/artifact/
+source/report, Node identities, full canonical header-member-map digest and
+five compiler-tool hashes/sizes/locators. Device/inode stay same-run facts.
+
+The new runner re-resolves and hashes all five tools on its own runner, admits
+the pinned official archives and frozen addon source/arguments, and executes
+the explicitly pinned compiler target under a closed environment. It does not
+invoke the old unbound `build.py` main path. One compiler child is bounded at
+90 seconds / 32 KiB output. All five post-compile observations run even after
+compile refusal; the compile failure stays primary and tool errors are retained
+separately. Positive output requires matching tools/source and an ordinary
+bounded unloaded addon hash/size. Binaries, raw archives, headers, media and
+profiles are excluded from the artifact. The only successful status is
+`BUILT_UNLOADED_UNQUALIFIED`; no addon load or tool-subprocess provenance follows.
+
+Hosted exact-head checks and the first build are pending. Complete every
+enabled check before one hosted original, independently audit its diagnostics
+and unloaded output boundary, then qualify fresh addon-load/profiler support
+cases before guest sampling. No allocation CPU share or new speedup is measured.
