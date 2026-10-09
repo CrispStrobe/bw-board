@@ -8,7 +8,11 @@ not identify an opcode or prove a far transfer.
 This opt-in CPU slice gives the separate task-mode recorder a private ticket
 only when the source decoder takes a direct non-call protected far transfer
 through immediate `EA` or indirect `FF /5`, and the direct code-descriptor
-branch commits the CS/cache/EIP reload. The ticket names the actual decoder
+branch commits the CS/cache/EIP reload. These two decoder paths use a private
+transfer entry only while this opt-in profile is active. The `FF /5` path also
+uses a private group-5 entry, so neither public helper can expose or replay a
+source marker. Other profiles retain the existing public-helper dispatch.
+The ticket names the actual decoder
 path, operand width, selector and target. The recorder compares its copied
 post-transfer scalar context with the committed enclosing step, requires the
 expected retained-real-CS transition, and refuses concurrent task, flag, CR0,

@@ -2264,6 +2264,10 @@ export class ExperimentalI80386 {
   }
 
   _group5(op, width, address32, override) {
+    return this.#group5(op, width, address32, override, false);
+  }
+
+  #group5(op, width, address32, override, decoded) {
     const operandWidth = op === 0xfe ? 8 : width;
     const ea = this._decodeEA(address32, override);
     if (ea.reg === 0 || ea.reg === 1) {
@@ -2287,9 +2291,13 @@ export class ExperimentalI80386 {
       const address = this._linear(ea.seg, ea.off, bytes + 2);
       const target = this._readLinear(address, bytes);
       const selector = this._readLinear((address + bytes) >>> 0, 2);
-      if (this.protectedMode && !this.virtual8086)
-        this._protectedFarTransfer(selector, target, width, ea.reg === 3,
-          ea.reg === 5 ? OWNED_0501_FAR_FF5 : null);
+      if (this.protectedMode && !this.virtual8086) {
+        if (ea.reg === 5 && decoded && this.#owned0501ExcursionActive &&
+            owned0501Excursions.get(this)?.profile === OWNED_0501_MODE_PROFILE)
+          this.#protectedFarTransfer(selector, target, width, false,
+            OWNED_0501_FAR_FF5);
+        else this._protectedFarTransfer(selector, target, width, ea.reg === 3);
+      }
       else this._farRealTransfer(selector, target, width, ea.reg === 3);
       return;
     }
@@ -2668,8 +2676,12 @@ export class ExperimentalI80386 {
     }
   }
 
-  _protectedFarTransfer(selector, offset, operandWidth, call,
-      decodedSource = null) {
+  _protectedFarTransfer(selector, offset, operandWidth, call) {
+    return this.#protectedFarTransfer(selector, offset, operandWidth, call, null);
+  }
+
+  #protectedFarTransfer(selector, offset, operandWidth, call,
+      decodedSource) {
     const cpl = this.currentPrivilegeLevel,
       errorCode = selector & 0xfffc;
     if (!errorCode) throw new I80386Fault(13, 0, "null far selector");
@@ -2696,9 +2708,10 @@ export class ExperimentalI80386 {
       this._retainedRealCs = false;
       this.segmentCaches[SEG_CS] = descriptor;
       this.eip = target;
-      // Only the two source-owned decoder call sites hold these symbols. The
-      // guest transfer above has already committed; an observer failure cannot
-      // change its result. No raw instruction, TSS, or guest memory is read.
+      // The decoded EA and FF /5 paths enter this private implementation. A
+      // public helper override cannot capture or replay the source marker.
+      // The guest transfer above has already committed; observer failure
+      // cannot change its result. No extra guest memory or TSS is read.
       if (!call && this.#owned0501ExcursionActive &&
           (decodedSource === OWNED_0501_FAR_EA ||
            decodedSource === OWNED_0501_FAR_FF5)) {
@@ -4461,7 +4474,10 @@ export class ExperimentalI80386 {
       if (ea.reg !== 0) throw new UnsupportedI80386("C7 extension");
       this._operandWrite(ea, width, this._fetchN(width >>> 3));
     } else if (op === 0xfe || op === 0xff) {
-      this._group5(op, width, address32, override);
+      if (this.#owned0501ExcursionActive &&
+          owned0501Excursions.get(this)?.profile === OWNED_0501_MODE_PROFILE)
+        this.#group5(op, width, address32, override, true);
+      else this._group5(op, width, address32, override);
     } else if (op === 0xf6 || op === 0xf7) {
       this._group3(op, width, address32, override);
     } else if (op === 0x80 || op === 0x81 || op === 0x82 || op === 0x83) {
@@ -4721,7 +4737,11 @@ export class ExperimentalI80386 {
         off = width === 32 ? raw : raw & 0xffff,
         sel = this._fetchN(2);
       if (this.protectedMode && !this.virtual8086) {
-        this._protectedFarTransfer(sel, off, width, false, OWNED_0501_FAR_EA);
+        if (this.#owned0501ExcursionActive &&
+            owned0501Excursions.get(this)?.profile === OWNED_0501_MODE_PROFILE)
+          this.#protectedFarTransfer(sel, off, width, false,
+            OWNED_0501_FAR_EA);
+        else this._protectedFarTransfer(sel, off, width, false);
       } else {
         if (off > 0xffff)
           throw new UnsupportedI80386("real-mode far target exceeds CS limit");
