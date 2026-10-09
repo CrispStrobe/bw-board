@@ -1,0 +1,116 @@
+{
+  "schema": "bw.far-attribution-source-prefix-consistency-public-receipt.v1",
+  "source": "72d0b32e8bd7d658447745129119e2300ad6bec1",
+  "sourcePullRequest": "https://github.com/CrispStrobe/bw-board/pull/483",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37963673934",
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11633835578",
+  "officialConclusion": "failure",
+  "originalArtifact": {
+    "artifactId": 11633835578,
+    "conclusion": "failure",
+    "runId": 37963673934,
+    "zipBytes": 149927,
+    "zipSha256": "db951cd86caf6c0846d22867eea3bcf54f34c486564f548a8874e87bd77eb576"
+  },
+  "packetMembers": 119,
+  "sourceRoles": 224,
+  "recursiveJsNodes": 64,
+  "reportSha256": "91f7b8e073f87a84094e4e8d07c68d9829dfff7f33e6844ff3ef9264e7a22a2b",
+  "farReceiptSha256": "93e7a2ce16a20ee5ef691e2169600bdcd50227c0aa6c02f8653218440ed18f56",
+  "classification": "PREFIX_TICKET_CONSISTENT_WITH_LATER_FAILURE",
+  "sourceRecordConsistencyOnly": true,
+  "taskTransfers": 15,
+  "committedModeRecords": 15,
+  "consistentTripletPrefix": 5,
+  "firstUnmatchedTriplet": null,
+  "triplets": [
+    {
+      "clearSha256": "b77753e53a14b40a37822077f6389c0a17ec9bf3248d332fd7addd478266b6d7",
+      "clearStep": 47,
+      "enableSha256": "4a82ec195201b9388d43d3ee5bb78c8be3e4bc9b0196d4b172a7baac2217ee3f",
+      "enableStep": 442,
+      "farSelector": 24,
+      "farSha256": "ca8ffad5c4cde5237992a288f894fb7cd33dda45d46c52c6493341f22de8f57a",
+      "farSource": "ea-immediate",
+      "farStep": 443,
+      "farTarget": 10969,
+      "farWidth": 16,
+      "taskStep": 37
+    },
+    {
+      "clearSha256": "fa500fac3b466efa8ff265aae8709e3c9d980070866004c6c4df9f371d962254",
+      "clearStep": 563,
+      "enableSha256": "7461848ecbb8ea93708a6cc82b26643c67cf6f6842f457f13215772b39ed8750",
+      "enableStep": 886,
+      "farSelector": 24,
+      "farSha256": "58014e3fb14995312e4a10c88ace0f8fdcba2494c12a375af9ff52db538e0542",
+      "farSource": "ea-immediate",
+      "farStep": 887,
+      "farTarget": 10969,
+      "farWidth": 16,
+      "taskStep": 553
+    },
+    {
+      "clearSha256": "0c34ab778208c1b16a02889ababe1d054cdb3baf8396000419a85e115f8d1279",
+      "clearStep": 995,
+      "enableSha256": "4b3a57602465a98529dd0505d04531ac6ee0c8f352a11ad4d451908f50d5cd07",
+      "enableStep": 1183,
+      "farSelector": 24,
+      "farSha256": "6dced7ee389c414b225785d243dab3fd8a0a9418cb9b2c64ba157e315084457a",
+      "farSource": "ea-immediate",
+      "farStep": 1184,
+      "farTarget": 10969,
+      "farWidth": 16,
+      "taskStep": 985
+    },
+    {
+      "clearSha256": "15a411a3b4a72b4ef44e15efab23ac20035b4f5deb304352cd6115bb035bea26",
+      "clearStep": 1294,
+      "enableSha256": "d37eeaf9c2dc5fce2d0a9b962eaadf12f458a35c4618b056e1186ce6b1f92c70",
+      "enableStep": 1487,
+      "farSelector": 24,
+      "farSha256": "2182ec1c6b1dbd0be054290edda355b96659b3caf5eb0bfb808ffbe8740b8206",
+      "farSource": "ea-immediate",
+      "farStep": 1488,
+      "farTarget": 10969,
+      "farWidth": 16,
+      "taskStep": 1284
+    },
+    {
+      "clearSha256": "a5589085b85f42f5c62ce58d1619f69c804decf47a3bd2eea1625c86b284a2fa",
+      "clearStep": 1596,
+      "enableSha256": "10ba0edca632590736197da31046be290a362fe2a77f2f19bd1f1a50569f63af",
+      "enableStep": 1780,
+      "farSelector": 24,
+      "farSha256": "b8014b4d4da850b560cec404920a3f63801610fc972217d77ff3a3231952a7c7",
+      "farSource": "ea-immediate",
+      "farStep": 1781,
+      "farTarget": 10969,
+      "farWidth": 16,
+      "taskStep": 1586
+    }
+  ],
+  "frozenExactTwoAttributionQualified": false,
+  "strictFrameQualified": false,
+  "frameReturnQualified": false,
+  "strictReturned": null,
+  "strictFirstFailure": "task-switch-during-owned-frame",
+  "modeObserverFirstFailure": "step-failure",
+  "laterUncommittedFault": {
+    "step": 1859,
+    "vector": 14,
+    "errorCodeValueReported": false,
+    "deliveryOutcomeReported": false
+  },
+  "boundary": "Five source-recorded triplets are internally consistent; this does not prove independent instruction causality, a completed task return, fault service, client success or performance. The original failure and frozen exact-two refusal are unchanged.",
+  "auditors": [
+    {
+      "role": "root retained-original source-record consistency audit",
+      "scriptSha256": "dd4b33f00eb53a1b102c195bbec63622ae7a41caaffe1ff35f548bc3d09dd8c7"
+    },
+    {
+      "role": "independent retained-original source-record consistency audit",
+      "scriptSha256": "be1af5e98f60bf125d56dc0b2f6f2cf6588eaa8e75c3b0969fb81cf50d02d4f9"
+    }
+  ]
+}

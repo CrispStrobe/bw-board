@@ -26,7 +26,23 @@ continuation and handler-context agreement. No owned frame return, completed
 DPMI service, broader OS/application result, physical placement, calibrated
 RTx or speedup is qualified.
 
-Next, a separately named immutable full-tape prefix audit may describe the
-observed repeated sequence without changing this exact-two result. A distinct
-source-owned fault-outcome diagnostic would be needed before claiming how the
-step-1859 fault was handled. Preserve the original and strict failure.
+A separate retained-original audit now checks the full bounded mode tape as
+**source-record consistency only**; [prefix-consistency.json](prefix-consistency.json)
+records its original bindings and five triplets. The CR0-clear/enable/far steps
+are 47/442/443, 563/886/887, 995/1183/1184, 1294/1487/1488 and
+1596/1780/1781. Each enable post-context equals the immediately next far
+pre-context in full recorded fields; the preceding task/control context agrees,
+with no recorded task transfer inside the triplet. All fifteen task rows have
+typed committed steps and selector/post-TR agreement; only the first two have
+the separately checked outgoing source-chain predicate. This is not an
+independent instruction oracle or qualification of every task return.
+
+The separate reader passed root and independent source review and one positive
+plus sixteen negative CPU-free controls before reading the retained original.
+Root and independent retained-original audits agree on the five triplets and
+preserved failure boundary. The original failed conclusion, frozen exact-two refusal, strict false/null
+frame result and later step-1859 fault remain unchanged. Next, qualify the
+[separate recorder source](https://github.com/CrispStrobe/bw-board/pull/486),
+then connect it through a separately reviewed driver/admission/workflow to
+observe fault-time, pre-delivery and post-delivery facts. Returned delivery
+alone will not prove handler execution, fault service or a completed frame.

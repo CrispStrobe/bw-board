@@ -315,10 +315,13 @@ The observer's first later refusal is `step-failure`. A step-1859 CPU fault
 fact reports vector 14 and error-code presence, without an error-code value
 or committed enclosing step. The original does not establish fault servicing,
 its cause or a CPU defect. A step-1820 original-TR candidate lacks saved
-continuation and handler-context agreement. Next, a separately named bounded
-full-tape prefix audit can describe the repeated sequence, and a distinct
-source-owned fault-outcome diagnostic can establish what happened after the
-fault attempt. Neither may relax this frozen exact-two result or strict frame
+continuation and handler-context agreement. The separate
+[retained full-tape prefix audit](receipts/2026-10-09-far-attribution-at-failure/README.md)
+now confirms five source-record-consistent triplets, with the original failure
+and exact-two refusal intact; it does not qualify the whole task-return chain.
+Next, a distinct source-owned fault-outcome diagnostic can establish what
+happened during the fault-delivery attempt. Neither audit nor diagnostic may
+relax this frozen exact-two result or strict frame
 guard. Do not reuse frozen PR478 for the changed CPU or infer its old refused
 opcode. No completed DPMI frame, broader OS/application result, speedup or
 adoption follows.
