@@ -141,6 +141,13 @@ completes start/off/restart/10 ms. Native consumer-model evidence only;
 installed GUI/package adoption remains held. The commit containing this
 row is the frozen candidate identity. One automatic exact-head CI/Harris
 qualification and guarded normal fast-forward remain required for landing.
+Closeout: exact upstream09c0f027 landed after CI37918681671 and
+Harris37918681729 passed; full suite8456 pass/0 fail/302 unchanged skips.
+Lite PR753 adopted that source and reviewed CUI5f336b244, landing8e8c4deb2
+after all12 enabled checks passed. Build37939576073 reports6396 pass/0 fail/21
+skips; actual scope-reset capture and all six motor green-flag runs pass.
+The qualified package and GUI repair closes this lane. Deployment, physical
+fidelity and arbitrary-model/continuous-waveform claims remain separate.
 
 2026-10-08 scope reset capture epoch — DONE candidate, Codex bwcx.
 Branch lane/scope-reset-capture-epoch-20261008, isolated worktree, exact base
