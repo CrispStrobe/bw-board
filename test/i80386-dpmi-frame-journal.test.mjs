@@ -950,6 +950,67 @@ test('task excursion reentry from a guest read latches observer failure', () => 
   const result=f.cpu.takeOwned0501TaskExcursionObservation(excursionToken);
   assert.equal(result.firstFailure,'observer-reentry');
   assert.equal(result.frameReturnQualified,false);
+  assert.equal(f.cpu.owned0501FrameStatus(frameToken).phase,'open');
+  assert.throws(() => f.cpu.armOwned0501TaskExcursion(frameToken), /already used/);
+});
+
+test('task excursion admission refuses swallowed descriptor-trap reentry', () => {
+  const f=fixture();
+  f.memory.set(0x208+5,0xfa);f.memory.set(0x208+6,0x8f);
+  f.put(0x300+0x31*8,[0,1,0x0b,0,0,0xee,0,0]);
+  const frameToken=f.arm({profile:MIXED_PROFILE});
+  assert.equal(f.cpu.step(),1);
+  const original=f.cpu.tr;
+  let nested=0;
+  f.cpu.tr=new Proxy(original,{getOwnPropertyDescriptor(target,key){
+    if(key==='base' && !nested){
+      nested++;
+      const execute=f.cpu._stepInstruction;
+      f.cpu._stepInstruction=()=>1;
+      try{assert.equal(f.cpu.step(),1);}finally{f.cpu._stepInstruction=execute;}
+    }
+    return Reflect.getOwnPropertyDescriptor(target,key);
+  }});
+  assert.throws(() => f.cpu.armOwned0501TaskExcursion(frameToken), /admission/);
+  assert.equal(nested,1);
+  assert.equal(f.cpu.owned0501FrameStatus(frameToken).phase,'open');
+});
+
+test('task excursion pre-switch cap is exact at 100000 committed steps', () => {
+  const f=openedMixedExcursion();
+  f.cpu._stepInstruction=()=>1;
+  for(let i=0;i<99999;i++)assert.equal(f.cpu.step(),1);
+  assert.equal(f.cpu.owned0501TaskExcursionStatus(f.excursionToken).phase,'observing');
+  assert.equal(f.cpu.step(),1);
+  const result=f.cpu.takeOwned0501TaskExcursionObservation(f.excursionToken);
+  assert.equal(result.firstFailure,'pre-switch-step-cap');
+  assert.equal(result.activeSteps,100000);
+  assert.equal(result.frameReturnQualified,false);
+});
+
+test('task excursion post-switch cap counts only subsequent committed steps', () => {
+  const f=openedMixedExcursion();
+  const originalCore=f.cpu._taskSwitchCore;
+  f.cpu._taskSwitchCore=function(_selector,kind,options){
+    assert.throws(()=>originalCore.call(this,0,kind,options),I80386Fault);
+    this.tr={selector:0x38,base:0x700,limit:0x67,present:true,type:11};
+    this.cs=0x08;this.ss=0x10;this.eip=0x1234;this.esp=0x400;
+    return 1;
+  };
+  let departed=false;
+  f.cpu._stepInstruction=function(){
+    if(!departed){departed=true;this._taskSwitch(0x38,'jmp');}
+    return 1;
+  };
+  assert.equal(f.cpu.step(),1);
+  assert.equal(f.cpu.owned0501TaskExcursionStatus(f.excursionToken).phase,'observing');
+  for(let i=0;i<99999;i++)assert.equal(f.cpu.step(),1);
+  assert.equal(f.cpu.owned0501TaskExcursionStatus(f.excursionToken).phase,'observing');
+  assert.equal(f.cpu.step(),1);
+  const result=f.cpu.takeOwned0501TaskExcursionObservation(f.excursionToken);
+  assert.equal(result.firstFailure,'post-switch-step-cap');
+  assert.equal(result.postOutgoingSteps,100000);
+  assert.equal(result.transitions.length,1);
 });
 
 test('refused hardware interrupt leaves the pair open; accepted delivery invalidates it', () => {

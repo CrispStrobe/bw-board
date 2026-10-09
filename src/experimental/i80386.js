@@ -35,6 +35,7 @@ const REG_NAMES = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"];
 // and committed frame below can create an observation.
 const owned0501Sessions = new WeakMap();
 const owned0501Excursions = new WeakMap();
+const owned0501ExcursionUsedEntries = new WeakSet();
 const OWNED_0501_MAX_STEPS = 1_000_000;
 const OWNED_0501_MIXED_PROFILE = "gate14-code16-stack32-same-cpl3.v1";
 const OWNED_0501_EXCURSION_STEPS = 100_000;
@@ -90,6 +91,19 @@ function owned0501ExcursionSaveEip(options, fallback) {
   return field.value >>> 0;
 }
 
+function owned0501ExcursionFaultFacts(error) {
+  if (!(error instanceof I80386Fault)) return null;
+  const vector = Object.getOwnPropertyDescriptor(error, "vector");
+  const errorCode = Object.getOwnPropertyDescriptor(error, "errorCode");
+  if (!vector || !Object.hasOwn(vector, "value") ||
+      !Number.isInteger(vector.value) || vector.value < 0 ||
+      vector.value > 255 || !errorCode ||
+      !Object.hasOwn(errorCode, "value"))
+    return owned0501Frozen({ available: false });
+  return owned0501Frozen({ available: true, vector: vector.value,
+    errorCodePresent: errorCode.value !== null });
+}
+
 function owned0501ExcursionHandlerCandidate(cpu, session) {
   const saved = session.handlerDescriptors;
   const caches = owned0501Option(cpu, "segmentCaches");
@@ -119,6 +133,8 @@ function owned0501ExcursionFail(session, reason) {
           selector: session.pendingTask.selector,
           source: session.pendingTask.source,
           outcome: session.pendingTask.outcome ?? "not-observed",
+          ...(session.pendingTask.fault
+            ? { fault: session.pendingTask.fault } : {}),
           enclosingStepCommitted: false,
         }));
       else session.truncated = true;
@@ -231,12 +247,12 @@ function owned0501ExcursionCommit(cpu, session, result, traced) {
     return;
   }
   if (reachedCandidate) session.phase = "candidate";
-  if (session.outgoing && session.phase === "observing" &&
+    if (session.outgoing && session.phase === "observing" &&
       session.activeSteps > session.outgoing.step) {
     session.postOutgoingSteps++;
-    if (session.postOutgoingSteps > OWNED_0501_EXCURSION_STEPS)
+    if (session.postOutgoingSteps >= OWNED_0501_EXCURSION_STEPS)
       owned0501ExcursionFail(session, "post-switch-step-cap");
-  } else if (!session.outgoing && session.activeSteps > OWNED_0501_EXCURSION_STEPS)
+  } else if (!session.outgoing && session.activeSteps >= OWNED_0501_EXCURSION_STEPS)
     owned0501ExcursionFail(session, "pre-switch-step-cap");
 }
 
@@ -632,6 +648,8 @@ export class ExperimentalI80386 {
     if (!frame || frame.token !== frameToken || frame.phase !== "open" ||
         !frame.entry || frame.profile !== OWNED_0501_MIXED_PROFILE)
       throw new Error("committed mixed-profile owned entry required");
+    if (owned0501ExcursionUsedEntries.has(frame.entry))
+      throw new Error("owned task entry already used for excursion");
     this.#owned0501ExcursionAdmissionBusy = true;
     this.#owned0501ExcursionAdmissionReentered = false;
     try {
@@ -657,6 +675,16 @@ export class ExperimentalI80386 {
         stack: owned0501ExcursionDescriptor(frame.handlerContext.stackRef,
           OWNED_0501_STACK_FIELDS),
       };
+      const after = owned0501ExcursionContext(this);
+      if (this.#owned0501ExcursionAdmissionReentered ||
+          this.#owned0501ExecutionDepth || frame.busyDepth ||
+          owned0501Sessions.get(this) !== frame || frame.token !== frameToken ||
+          frame.phase !== "open" || frame.entry !== cookie.entry ||
+          owned0501ExcursionUsedEntries.has(frame.entry) ||
+          Object.keys(context).some(key => context[key] !== after[key]) ||
+          !owned0501ExcursionHandlerCandidate(this, {handlerDescriptors}))
+        throw new Error("owned task excursion changed during admission");
+      owned0501ExcursionUsedEntries.add(frame.entry);
       owned0501Excursions.set(this, {
         token, frameToken, cookie, handlerDescriptors,
         phase: "observing", firstFailure: null,
@@ -2105,6 +2133,7 @@ export class ExperimentalI80386 {
     } catch (error) {
       if (excursion?.phase === "observing" && excursion.pendingTask)
         try {
+          excursion.pendingTask.fault = owned0501ExcursionFaultFacts(error);
           if (error instanceof I80386Fault || error instanceof UnsupportedI80386) {
             const mark = Object.getOwnPropertyDescriptor(error, "taskCommitted");
             excursion.pendingTask.outcome = mark && !Object.hasOwn(mark, "value")
@@ -3588,10 +3617,8 @@ export class ExperimentalI80386 {
   step() {
     if (this.#owned0501AdmissionBusy)
       this.#owned0501AdmissionReentered = true;
-    if (this.#owned0501ExcursionAdmissionBusy) {
+    if (this.#owned0501ExcursionAdmissionBusy)
       this.#owned0501ExcursionAdmissionReentered = true;
-      return 0;
-    }
     this.#owned0501ExecutionDepth++;
     const excursion = this.#owned0501ExcursionActive
       ? owned0501Excursions.get(this) : null;
