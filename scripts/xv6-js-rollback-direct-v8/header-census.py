@@ -111,6 +111,7 @@ def census(raw, checkpoint=None):
               "limits": {"legacyRegularTotalDecimal": LEGACY_TOTAL,
                          "legacyMemberDecimal": LEGACY_MEMBER,
                          "memberCount": MAX_MEMBERS,
+                         "dataOnlyMemberBytes": LEGACY_MEMBER,
                          "dataOnlyTotalBytes": DATA_TOTAL,
                          "resultBytes": MAX_RESULT},
               "memberCount": 0, "regularBytes": 0,
@@ -131,6 +132,13 @@ def census(raw, checkpoint=None):
                                                     "predicate": prior,
                                                     "regularBytesBefore": total,
                                                     "declaredBytes": member.size}
+                    if checkpoint is not None:
+                        # Persist the first frozen-rule refusal before hashing
+                        # this member or waiting for a periodic checkpoint.
+                        result["memberCount"] = count
+                        checkpoint({key: result[key] for key in (
+                            "schema", "status", "memberCount", "regularBytes",
+                            "firstLegacyRefusal")})
                 if len(member.name) > MAX_NAME:
                     raise ValueError("data-only member name ceiling")
                 record = {"index": index, "rawName": member.name,
@@ -142,9 +150,10 @@ def census(raw, checkpoint=None):
                     if member.name in regular_seen:
                         result["duplicateCount"] += 1
                         if len(result["duplicates"]) < 128:
-                            result["duplicates"].append({"index": index,
-                                                         "rawName": member.name})
-                            estimated_json_bytes += len(member.name) + 50
+                            duplicate = {"index": index, "rawName": member.name}
+                            result["duplicates"].append(duplicate)
+                            estimated_json_bytes += len(json.dumps(
+                                duplicate, separators=(",", ":"))) + 2
                         else:
                             result["duplicatesTruncated"] = True
                     regular_seen.add(member.name)

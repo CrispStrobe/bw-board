@@ -54,11 +54,11 @@ def tar_xz(entries):
     return out.getvalue()
 
 
-def inspect(raw):
+def inspect(raw, checkpoint=None):
     before_sha, before_len = census.ARCHIVE_SHA, census.ARCHIVE_BYTES
     census.ARCHIVE_SHA, census.ARCHIVE_BYTES = census.sha(raw), len(raw)
     try:
-        return census.census(raw)
+        return census.census(raw, checkpoint)
     finally:
         census.ARCHIVE_SHA, census.ARCHIVE_BYTES = before_sha, before_len
 
@@ -73,10 +73,15 @@ assert required["status"] == "COMPLETE_DATA_ONLY" and \
 unicode_member = inspect(tar_xz([(name.replace("example", "exämple"), b"x")]))
 assert unicode_member["status"] == "COMPLETE_DATA_ONLY" and \
     unicode_member["members"][0]["rawName"].endswith("exämple.h")
-duplicate = inspect(tar_xz([(name, b"first"), (name, b"second")]))
+progress = []
+duplicate = inspect(tar_xz([(name, b"first"), (name, b"second")]),
+                    progress.append)
 assert duplicate["status"] == "COMPLETE_DATA_ONLY" and \
     duplicate["firstLegacyRefusal"]["predicate"] == \
     "duplicate-regular-raw-name" and duplicate["duplicateCount"] == 1
+assert progress[0]["firstLegacyRefusal"]["predicate"] == \
+    "duplicate-regular-raw-name" and progress[0]["memberCount"] == 2
+assert duplicate["limits"]["dataOnlyMemberBytes"] == 2_000_000
 oversize = inspect(tar_xz([(name, b"x" * 2_000_001)]))
 assert oversize["status"] == "PARTIAL_DATA_ONLY" and \
     oversize["firstLegacyRefusal"]["predicate"] == "member-type-or-size" and \
