@@ -43,6 +43,7 @@ def task_context(tr):
 
 def fixture():
     entry = {"source": "decoded-software-int31", "vector": 0x31,
+             "profile": "gate14-code16-stack32-same-cpl3.v1", "width": 32,
              "frameBytes": 12, "entryAx": 0x0501,
              "handlerCs": 0x28, "handlerSs": 0x10}
     first_before = context(eip=0x120)
@@ -163,6 +164,7 @@ class GradeControl(unittest.TestCase):
             lambda task: task["taskMode"]["observation"]["modeChanges"][2]["before"].update(nt=True),
             lambda task: task["taskMode"]["observation"]["modeChanges"][2]["before"]["codeCache"].update(base=1.5),
             lambda task: task["taskMode"]["observation"]["transitions"].pop(),
+            lambda task: task["taskMode"]["observation"]["transitions"][1]["source"].update(eip=0x121),
             lambda task: task["taskMode"]["observation"]["modeChanges"][2].update(step=444),
             lambda task: task["taskMode"]["observation"]["modeChanges"][2]["before"].update(eip=0x141),
             lambda task: task["taskMode"]["observation"]["modeChanges"][1]["after"].update(cr3=0x1000),

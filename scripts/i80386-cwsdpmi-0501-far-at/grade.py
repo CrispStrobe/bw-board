@@ -174,7 +174,9 @@ def grade(task):
              "task mode diagnostic boundary")
     required(entry == frame["entry"] and
              entry.get("source") == "decoded-software-int31" and
+             entry.get("profile") == "gate14-code16-stack32-same-cpl3.v1" and
              entry.get("vector") == 0x31 and
+             entry.get("width") == 32 and
              entry.get("frameBytes") == 12 and
              entry.get("entryAx") == 0x0501 and
              integer(entry.get("handlerCs"), 0, 0xffff) and
@@ -182,7 +184,7 @@ def grade(task):
              "same committed AX=0501 entry")
     transitions = observation.get("transitions")
     changes = observation.get("modeChanges")
-    required(type(transitions) is list and 2 <= len(transitions) <= 32 and
+    required(type(transitions) is list and len(transitions) == 2 and
              type(changes) is list and 3 <= len(changes) <= MAX_CHANGES,
              "bounded transition and mode tape")
     outgoing = record(transitions[0], "outgoing task transition")
@@ -212,6 +214,10 @@ def grade(task):
                  source["trSelector"] != post["trSelector"],
                  "committed task transition source")
         prior_transition_step = step
+    first_post = task_context(transitions[0]["post"], "first task post")
+    second_source = task_context(transitions[1]["source"], "second task source")
+    required(all(first_post[key] == second_source[key] for key in first_post),
+             "committed task source-chain continuity")
     active = observation.get("activeSteps")
     required(integer(active, 3, 1_000_000) and
              integer(observation.get("postOutgoingSteps"), 1, active),
