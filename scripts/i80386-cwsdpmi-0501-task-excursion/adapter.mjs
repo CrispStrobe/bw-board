@@ -165,6 +165,8 @@ export function run(inputPath,outputPath,progressPath){
     report.finiteClient=result.finiteClient;
     report.strictFrame=result.strict;
     report.taskExcursion=result.excursion;
+    if(result.continuationFailure)
+      (report.secondaryFailures??=[]).push(result.continuationFailure);
     report.firstFailure??=result.strict.firstFailure??
       result.finiteClient.firstFailure??null;
     report.stage='diagnostic-complete';

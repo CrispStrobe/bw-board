@@ -920,6 +920,49 @@ test('task excursion candidate is invalidated by reset before consumption', () =
   assert.equal(result.frameReturnQualified, false);
 });
 
+test('task excursion owner abort is bounded, token-bound and guest-neutral', () => {
+  const f = openedMixedExcursion();
+  const before={eip:f.cpu.eip,cs:f.cpu.cs,ss:f.cpu.ss,
+    cycles:f.cpu.cycles,frame:f.cpu.owned0501FrameStatus(f.frameToken)};
+  assert.throws(() => f.cpu.abortOwned0501TaskExcursion({},
+    'observer-step-bound'),/stale/);
+  assert.throws(() => f.cpu.abortOwned0501TaskExcursion(f.excursionToken,
+    'unreviewed-reason'),/unreviewed/);
+  const status=f.cpu.abortOwned0501TaskExcursion(f.excursionToken,
+    'observer-step-bound');
+  assert.equal(status.phase,'invalid');
+  assert.equal(status.firstFailure,'observer-step-bound');
+  assert.deepEqual({eip:f.cpu.eip,cs:f.cpu.cs,ss:f.cpu.ss,
+    cycles:f.cpu.cycles,frame:f.cpu.owned0501FrameStatus(f.frameToken)},before);
+  const again=f.cpu.abortOwned0501TaskExcursion(f.excursionToken,
+    'observer-wall-bound');
+  assert.equal(again.firstFailure,'observer-step-bound');
+  const result=f.cpu.takeOwned0501TaskExcursionObservation(f.excursionToken);
+  assert.equal(result.firstFailure,'observer-step-bound');
+  assert.equal(result.frameReturnQualified,false);
+  assert.throws(() => f.cpu.abortOwned0501TaskExcursion(f.excursionToken,
+    'observer-step-bound'),/stale/);
+  const disabled=fixture();
+  assert.throws(() => disabled.cpu.abortOwned0501TaskExcursion({},
+    'observer-step-bound'),/stale/);
+});
+
+test('task excursion abort during CPU execution invalidates only observer', () => {
+  const f=openedMixedExcursion();
+  f.cpu._stepInstruction=function(){
+    assert.throws(()=>this.abortOwned0501TaskExcursion(f.excursionToken,
+      'observer-step-bound'),/outside owner pause/);
+    this.eip=(this.eip+1)>>>0;
+    return 1;
+  };
+  const before=f.cpu.eip;
+  assert.equal(f.cpu.step(),1);
+  assert.equal(f.cpu.eip,(before+1)>>>0);
+  const result=f.cpu.takeOwned0501TaskExcursionObservation(f.excursionToken);
+  assert.equal(result.firstFailure,'observer-reentry');
+  assert.equal(result.frameReturnQualified,false);
+});
+
 test('failed task core retains an uncommitted attempt and original fault', () => {
   const f = openedMixedExcursion();
   const fault = new I80386Fault(13, 0x38, 'synthetic task fault');

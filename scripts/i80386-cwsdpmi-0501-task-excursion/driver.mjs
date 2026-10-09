@@ -68,8 +68,9 @@ export function runTaskScenario(ports,{machine,layout,token}) {
       progress:ports.taskProgress});
   const finiteClient=runScenario(wrapped.ports);
   const strict=wrapped.terminal();
-  let excursion=null;
+  let excursion=null,continuationFailure=null;
   if(strict.taskArmed&&strict.strict?.phase==='invalid')
-    excursion=wrapped.continue(machine,{now:ports.now});
-  return {finiteClient,strict,excursion};
+    try {excursion=wrapped.continue(machine,{now:ports.now});}
+    catch {continuationFailure='task continuation observer exception';}
+  return {finiteClient,strict,excursion,continuationFailure};
 }

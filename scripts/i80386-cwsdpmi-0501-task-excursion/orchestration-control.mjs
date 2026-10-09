@@ -22,7 +22,14 @@ function fixture(failure='task-switch-during-owned-frame') {
       return {phase:'invalid',failure,entry:{vector:49},returned:null};
     },
     owned0501TaskExcursionStatus(token){
-      assert.equal(token,taskToken);return {phase:task,activeSteps:stepCalls-1};
+      assert.equal(token,taskToken);
+      return {phase:task,activeSteps:stepCalls-1,transitions:1};
+    },
+    abortOwned0501TaskExcursion(token,reason){
+      assert.equal(token,taskToken);assert.match(reason,/^observer-/);
+      task='invalid';
+      return {phase:task,activeSteps:stepCalls-1,transitions:1,
+        firstFailure:reason};
     },
     takeOwned0501TaskExcursionObservation(token){
       assert.equal(token,taskToken);
@@ -63,5 +70,15 @@ assert.equal(other.stepCalls,2);
 const missing=fixture();
 assert.throws(()=>missing.observer.continue(missing.machine),/strict refusal/);
 assert.equal(missing.stepCalls,0);
+
+const bounded=fixture();
+bounded.observer.ports.bind();bounded.observer.ports.step();
+assert.throws(()=>bounded.observer.ports.step(),/task-switch-during-owned-frame/);
+const expired=bounded.observer.continue(bounded.machine,
+  {now:()=>1,wallMs:0,maxSteps:0});
+assert.equal(expired.status.phase,'invalid');
+assert.equal(expired.firstFailure,'observer-step-bound');
+assert.equal(expired.observation.transitions[0].enclosingStepCommitted,true);
+assert.equal(bounded.stepCalls,2);
 
 process.stdout.write('task orchestration controls PASS\n');
