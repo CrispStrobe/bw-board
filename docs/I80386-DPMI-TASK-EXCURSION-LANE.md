@@ -119,8 +119,10 @@ inventory and dedicated workflow under
 the narrow CPU diagnostic-abort method and focused journal controls, including
 the missing candidate-reset case. Root and a separate Sol reviewer checked
 source, syntax and pure mock controls; source admission binds 205 Git roles
-and 64 JavaScript modules. **New CPU controls and the guest diagnostic are
-pending hosted execution.**
+and 64 JavaScript modules. All 12 enabled exact-head checks passed, with
+only the two declared `vectors-full` skips. The dedicated label was then
+applied once; [original run37907258126](https://github.com/CrispStrobe/bw-board/actions/runs/37907258126)
+is queued. **Its guest diagnostic result remains pending.**
 
 The driver retains the original strict frame refusal and partial finite-client
 report. Before any continuation step it requires a source-committed outgoing
@@ -130,10 +132,9 @@ private diagnostic recorder and retain its partial facts. The abort method
 does not reset the guest or change the strict frame. Candidates remain
 diagnostic observations; `frameReturnQualified` remains false.
 
-Next refresh the exact PR474 head and every enabled check. After hosted CPU
-and finite regressions pass, apply the distinct
-`x86-cwsdpmi-0501-task-excursion` label once. Independently audit the original
-report-only packet, including source-before/after, unchanged wrapper/media
+Next refresh the status of that original run; do not remove/reapply its
+`x86-cwsdpmi-0501-task-excursion` label or launch a second actual. Once it
+completes, independently audit the original report-only packet, including source-before/after, unchanged wrapper/media
 admission, the committed outgoing event, every intervening transition/delivery
 and the final candidate or refusal. Preserve the first run even if failed;
 never reapply an old frame label or replace an original with a replay. Only
