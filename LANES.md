@@ -92,6 +92,15 @@ continuity/KCL/winding law, match a5011-point ngspice42 linear post-event
 oracle within5 microvolts, and reproduce genuine trapezoidal full/half norm
 failure. These are reference controls, not a production repair or permission
 to exempt voltage errors. No runtime source or consumer pin changes.
+Forward runtime audit adds only opt-in detached BJT region/clamp diagnostics
+in the existing mna envelope. Flag-absent solved results are preserved; a
+real default19.853 us snapshot produces a10 ns full/half voltage norm5.48786
+while all three converged trials remain saturated. Two executable caller
+tests preserve that distinction and reject falsified always-active labels.
+Second-order L-stable SDIRK prototype also fails both desired startup cases
+and is removed; board integrator source remains unchanged. Combined suite
+19 pass/2 unresolved startup failures/0 skip; adjacent suites16/16 green.
+No event exemption, model upgrade, successful repair, adoption or landing.
 
 2026-10-08 scope reset capture epoch — DONE candidate, Codex bwcx.
 Branch lane/scope-reset-capture-epoch-20261008, isolated worktree, exact base

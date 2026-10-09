@@ -1279,6 +1279,8 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
  * @param {number} [opts.testCurrent] - test current magnitude (default 0.001 A)
  * @param {number} [opts.tSeconds] - simulation time, for time-varying sources (default 0)
  * @param {boolean} [opts.dcSources] - use each waveform source's explicit dcValue
+ * @param {boolean} [opts.inspectBjtRegions] - return detached final region diagnostics;
+ *   not an event/admission certificate and never used to change the solve.
  * @param {Map<string, number>} [opts.capVoltages] - part id → present capacitor voltage.
  *   When given (and not in transient mode), each capacitor is stamped as a voltage
  *   source holding its stored voltage — which is what a capacitor IS at an instant.
@@ -1293,6 +1295,7 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
  *             indeterminateBranchCurrents: Set<string>,
  *             railCurrents: Map<string, number>,
  *             capVoltagesNext?: Map<string, number>, inductorCurrentsNext?: Map<string, number>,
+ *             bjtRegionDiagnostics?: Map<string, Readonly<{region: string, saturationVoltage: number|null}>>,
  *             converged?: boolean }}
  */
 export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
@@ -3612,6 +3615,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // Transient next-state: what the caller stores for the next step. The
   // trapezoidal companions need the element's own current (cap) and voltage
   // (inductor) history too, so both are returned alongside the classic pair.
+  const regionDiagnostics = opts.inspectBjtRegions === true ? {
+    bjtRegionDiagnostics: new Map([...bjtRegions].map(([id, region]) => [id,
+      Object.freeze({region: bjtVbc.has(id) ? 'ebers-moll' : region,
+        saturationVoltage: bjtVbc.has(id) ? null
+          : parts.find(part => part.id === id)?.params?.vceSat ?? bjtVceSat.get(id) ?? .2})])),
+  } : {};
   if (transient) {
     const capVoltagesNext = new Map();
     const capCurrentsNext = new Map();
@@ -3653,11 +3662,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     return { nodeVoltages, branchCurrents, indeterminateBranchCurrents, railCurrents,
       capVoltagesNext, capCurrentsNext,
       inductorCurrentsNext, inductorVoltagesNext, converged, opampRegions, deviceStamps,
+      ...regionDiagnostics,
       railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
   }
 
   return { nodeVoltages, branchCurrents, indeterminateBranchCurrents, railCurrents,
-    converged, opampRegions, deviceStamps,
+    converged, opampRegions, deviceStamps, ...regionDiagnostics,
     railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
 }
 

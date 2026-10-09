@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {BoardImpl} from '../src/board.js';
+import {solveMNA} from '../src/mna.js';
 
 const net = (id, ...terminals) => ({id,
   terminals: terminals.map(([part, terminal]) => ({part, terminal}))});
@@ -110,6 +111,58 @@ function fixedClampReference() {
   return {supply, clamp, rc, r, l, g, j, eventCurrent, eventVoltage,
     eventTime, steadyCurrent, steadyVoltage, tau, at};
 }
+
+test('opt-in final BJT diagnostics preserve actual transient solves and do not alias solver state', () => {
+  for (const params of [{vceSat:.2},{},{model:'shockley',vaf:100}]) {
+    const b = winding({transistorParams:params});
+    b.advanceToLive(19000n,{maxSteps:16});
+    const opts = {tSeconds:19.01e-6,transient:{dtSec:1e-8,method:'trap',
+      capVoltages:b.capVoltages,capCurrents:b.capCurrents,
+      inductorCurrents:b.inductorCurrents,inductorVoltages:b.inductorVoltages}};
+    const solve = inspect => solveMNA(b._solveParts,b._solveNets,b._pinSources(),
+      b.controls,5,{...opts,...(inspect === undefined ? {} : {inspectBjtRegions:inspect})});
+    const normal = solve(), inspected = solve(true);
+    assert.equal(normal.converged,true);
+    assert.equal('bjtRegionDiagnostics' in normal,false,'ordinary result shape is unchanged');
+    const {bjtRegionDiagnostics,...values} = inspected;
+    assert.deepEqual(values,normal,'inspection changes no solved observable or stored state');
+    const q = bjtRegionDiagnostics.get('Q');
+    assert.equal(q.region,params.model === 'shockley' ? 'ebers-moll' : 'saturated');
+    if (params.model) assert.equal(q.saturationVoltage,null,'junction model has no clamp authority');
+    else {
+      const current = -inspected.branchCurrents.get('Q').get('collector');
+      assert.ok(Math.abs(q.saturationVoltage+.1*current
+        -inspected.nodeVoltages.get('collector'))<1e-12,'diagnostic names the clamp actually stamped');
+      if (params.vceSat !== undefined) assert.equal(q.saturationVoltage,params.vceSat);
+    }
+    assert.equal(Object.isFrozen(q),true);
+    bjtRegionDiagnostics.clear();
+    assert.equal(solve(true).bjtRegionDiagnostics.size,1,'caller cannot mutate retained solver regions');
+  }
+});
+
+test('default floor-scale voltage disagreement precedes any BJT region change', () => {
+  const b = winding({vceSat:null});
+  b.advanceToLive(19853n,{maxSteps:16});
+  assert.equal(b.transientAnalysisStatus().accuracyMet,true);
+  const solve = (endNs,stepSec,previous={}) => solveMNA(b._solveParts,b._solveNets,
+    b._pinSources(),b.controls,5,{inspectBjtRegions:true,tSeconds:endNs*1e-9,
+      transient:{dtSec:stepSec,method:'trap',
+        capVoltages:previous.capVoltagesNext ?? b.capVoltages,
+        capCurrents:previous.capCurrentsNext ?? b.capCurrents,
+        inductorCurrents:previous.inductorCurrentsNext ?? b.inductorCurrents,
+        inductorVoltages:previous.inductorVoltagesNext ?? b.inductorVoltages}});
+  const full = solve(19863,1e-8),first = solve(19858,5e-9),half = solve(19863,5e-9,first);
+  for (const result of [full,first,half]) {
+    assert.equal(result.converged,true);
+    assert.equal(result.bjtRegionDiagnostics.get('Q').region,'saturated');
+  }
+  const vf = full.nodeVoltages.get('collector'),vh = half.nodeVoltages.get('collector');
+  const scale = 1e-6+1e-4*Math.max(Math.abs(vf),Math.abs(vh));
+  assert.ok(Math.abs(vf-vh)/scale>1,'genuine voltage disagreement, not an event exemption');
+  assert.equal(b.transientAnalysisStatus().accuracyMet,true,
+    'isolated trial solves do not mutate or clear the board history');
+});
 
 test('leakage-inclusive fixed-clamp reference preserves event continuity and both electrical laws', () => {
   const q = fixedClampReference();

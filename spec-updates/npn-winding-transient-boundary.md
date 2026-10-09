@@ -234,6 +234,37 @@ that authority does not hold. It must not project arbitrary storage to a DC
 equilibrium, ignore flyback conduction, or treat a region label alone as a
 certificate. The default pre-event failure remains a separate required proof.
 
+### Runtime-region audit and second-order damping experiment
+
+Opt-in `solveMNA(...,{inspectBjtRegions:true})` now returns detached, frozen
+per-BJT region/clamp diagnostics. With the flag omitted the result has no
+extra field; the diagnostic path does not change stamps, iteration or error
+control. Actual19 us winding trial solves compare all ordinary return values
+deeply against the flag-absent path for fixed-clamp, default and explicit
+finite-Early models. The junction-model case reports `ebers-moll` and no
+clamp voltage, not its unused FSM region. These are final iteration labels,
+not an admission certificate; `converged` and equation/source/topology
+authority remain independent requirements.
+
+A fresh default board advanced successfully to19.853 us. An actual10 ns
+trapezoidal trial and its two5 ns trials all converge and all remain
+`saturated`, yet the collector-voltage full/half norm is5.487855926 at
+unchanged1 microvolt/1e-4 scales. A new native test preserves this proof.
+Falsifying the diagnostic by reporting every PWL BJT as active makes both
+new caller tests fail; restoring the actual region makes both pass. Thus the
+pre-event failure cannot be reclassified as a region-crossing exemption.
+
+A local second-order L-stable SDIRK experiment used
+`gamma=1-1/sqrt(2)`, first-stage BE duration `gamma*h`, and second-stage
+BE with combined history `state0+(1-gamma)/gamma*(state1-state0)` at the
+actual endpoint. Full/half error control still compared all node and
+storage observables. It retained both startup failures: fixed clamp at
+20.204035222 us with norm571.652954, default at19.905295643 us with
+norm1443.490878, both at10 ns. The prototype was removed completely;
+`src/board.js` remains unchanged. Blanket damping-method substitution is
+not a justified repair. Adjacent BJT/readback suites pass16/16; the combined
+startup/readback suite remains19 pass/2 genuine startup fail/0 skip.
+
 ### Fixed-clamp boundary established independently
 
 The independent PWL base-network limit is18.992153294 mA. Before the
