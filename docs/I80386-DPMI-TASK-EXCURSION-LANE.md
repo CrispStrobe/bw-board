@@ -83,7 +83,8 @@ packet.
 [Draft PR472](https://github.com/CrispStrobe/bw-board/pull/472) at
 `d1ca2763ce30dc91df0c29e888590ab1d8135256`, stacked on PR470, contains only
 the CPU observer and focused journal controls. Root and a separate Sol reviewer
-checked source and syntax; **CPU tests are pending hosted execution**. There
+checked source and syntax. The original [hosted xv6 regression](receipts/2026-10-09-task-excursion-cpu/README.md)
+passed the focused CPU controls and three finite scenarios. There
 is no runnable excursion driver, source-admission packet or actual return
 receipt at this checkpoint. The original frame refusal is unchanged.
 
@@ -96,8 +97,8 @@ steps and records. A later step or reset makes an unconsumed candidate stale
 while retaining historical facts. This is an observation candidate, never
 an accepted owned frame return.
 
-After exact-source hosted CPU checks pass, implement the separate driver and
-admission/workflow slice. The inherited frame policy hides its token and stops
+The hosted CPU prerequisite passed; implement the separate driver and
+admission/workflow slice, then qualify its new exact source. The inherited frame policy hides its token and stops
 on the first strict refusal; wrapping its exported runner is insufficient.
 Use a reviewed derivative with unchanged media/machine/owned-wrapper admission,
 arm against its private committed entry, retain the old terminal frame report,
