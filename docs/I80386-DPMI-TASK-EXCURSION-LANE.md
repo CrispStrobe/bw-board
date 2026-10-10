@@ -393,3 +393,17 @@ mock-only gate that arms valid fixtures before introducing transition loss or
 contradiction. Keep production admission unchanged and preserve the original.
 A further connected guest attempt needs a new admitted source/workflow profile
 and prospective audit, rather than rerunning or relabeling this attempt.
+
+The separately named [draft PR492 connected profile](https://github.com/CrispStrobe/bw-board/pull/492)
+is published at `e321e000e6a6bc44e626bbef119febbcac27e73d`: four new files,
+243 Git roles and the same 71-node import graph. Git-only source admission
+reconstructs the original 238-role receipt and its exact hash, accepts only
+the reviewed mock correction, and leaves all other CPU/driver/adapter/media
+bytes unchanged. Coordinator and independent source review, Python controls
+and full live/Git/hash admission pass. The corrected mocks separately passed
+hosted run38024107151 and two original audits. The standalone prospective
+reader passed both reviews and five positive / 57 negative synthetic cases.
+The one-shot guard also passed both reviews and binds the exact prior mock
+audit receipts. All enabled exact-head checks must pass before its distinct
+label is applied once.
+No connected guest has run under this new profile.

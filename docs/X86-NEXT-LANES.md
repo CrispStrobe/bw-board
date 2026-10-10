@@ -143,3 +143,5 @@ within that refusal boundary. First qualify corrected arm/continuation mock
 ordering in a separately named hosted control-only gate, then develop a new
 source-admitted connected profile. Do not rerun or relabel the original. No PF
 report or frame-return result exists.
+
+The next admitted profiles are [PR492](https://github.com/CrispStrobe/bw-board/pull/492) (PF mock-corrected, four new files / 243 roles / 71 import nodes) and [PR491](https://github.com/CrispStrobe/bw-board/pull/491) (target-site support, ten new files / 84 roles, 74 held). Both pass coordinator/independent source review and CPU-free controls. The PF mocks have separate hosted control-only qualification; both profiles have independently reviewed prospective readers and one-shot guards. The PF guard also binds the prior hosted-mock audit receipts. Require all enabled exact-head checks before their distinct labels are applied once. Neither new profile has an actual result; preserve the failed originals and their unqualified boundaries.

@@ -21,5 +21,24 @@
   "rootOriginalAudit": "PASS within refusal boundary",
   "independentOriginalAudit": "PASS within refusal boundary",
   "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/38023601004",
-  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11659730727"
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11659730727",
+  "followupMockQualification": {
+    "run": 38024107151,
+    "source": "2fc9d71fd9cbd0585ea50f1b81133f18c150c78c",
+    "artifact": 11660121561,
+    "zipBytes": 1281,
+    "zipSha256": "0fceae141b1476494f69ba8861c7c94b8f4a4be155db54b79d70e3bb45536708",
+    "officialConclusion": "success",
+    "runAttempt": 1,
+    "classification": "HOSTED_MOCK_CONTROLS_ONLY",
+    "inventoryMembers": 5,
+    "node": "v22.23.3",
+    "rootOriginalAudit": "PASS",
+    "independentOriginalAudit": "PASS",
+    "productionOrchestrationUnchanged": true,
+    "guestExecuted": false,
+    "pfServiceQualified": false,
+    "frameReturnQualified": false,
+    "performanceQualified": false
+  }
 }

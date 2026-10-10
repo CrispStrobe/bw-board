@@ -365,3 +365,15 @@ guest ran, and no support, allocation hotspot or speedup follows. Develop a
 separately named fixture with a dedicated target allocation site, preserving
 all lifetime, raw-identity and four-case requirements. Do not exclude the
 observed survivor after the fact or rerun/relabel the original.
+
+The separately named [draft PR491 target-site support profile](https://github.com/CrispStrobe/bw-board/pull/491)
+is published at `989bdf5ffdcb155aef27e426ce0af91aaaff7082`: ten new files,
+84 Git roles with 74 held unchanged. It selects the [PR489 fixture](https://github.com/CrispStrobe/bw-board/pull/489)
+through exact source admission, preserves the pinned same-run Node/addon and
+pre-child/final leases, independently grades the four ordered raw cases, and
+retains first failures in a closed binary-free inventory. Coordinator and
+independent source review and four CPU-free controls pass. Its workflow also
+runs the fixture's authored JavaScript policy controls before the build.
+The standalone prospective reader and one-shot launch guard passed both
+reviews and synthetic controls. All enabled exact-head checks must pass
+before its label is applied once; no support actual has launched.
