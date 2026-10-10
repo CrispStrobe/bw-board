@@ -407,3 +407,41 @@ The one-shot guard also passed both reviews and binds the exact prior mock
 audit receipts. All enabled exact-head checks must pass before its distinct
 label is applied once.
 No connected guest has run under this new profile.
+
+
+## Next implementation gate after the connected PF result
+
+Audit the first PR492 original before choosing the next source change. If it
+stops before guest execution, correct only the first failing control or
+admission seam in a new profile; retain the failed original and production
+CPU/frame rules. A control-only correction must qualify its hosted controls
+before a separately admitted connected guest attempt.
+
+If it reaches the terminal PF, independently require the same committed
+outgoing task session, arm-time counters, one CPU attempt per board call,
+the unique final uncommitted PF14 event and a complete recorder with
+`delivery.attempted:true`. The finite client and strict frame must retain
+their failure, null return and original task-switch refusal. Disabled, thrown
+or incomplete delivery selects a narrow investigation of that first boundary;
+returned delivery alone does not establish servicing of the fault.
+
+Only a source-consistent delivery with `outcome:returned`,
+`postShutdown:false` and retained same-session facts opens a proposed
+**post-PF continuation observer** lane. First add a default-off CPU/session handoff and focused
+adversarial controls, then qualify affected hosted CPU/xv6 regressions. Connect
+it through a separately named driver, adapter, source admission, closed
+inventory and workflow. The current `runPfConnectedScenario` drains its private
+task token before returning: stepping from its returned report would lack
+authority. The derivative must own the same-machine handoff before that drain,
+with a one-shot private token bound to the completed PF session.
+
+Bound continuation to 100,000 ordinary steps and 120 seconds. Retain attempted
+and committed task, CS-transfer, IRET, IRQ and fault facts, including the first
+refusal and partial records. A resumption candidate must match original TR,
+CR3, saved continuation and handler context. Preserve strict frame refusal
+and null return throughout this observer. Review source, disabled behavior,
+stale/replayed token and reentry controls, prospective original reader and
+all enabled exact-head checks before one distinct guest actual. No ownership
+acceptance follows until an actual matching CPU IRET over the owned linear
+frame is observed and separately qualified. This lane is proposed, with no
+implementation or guest result yet.

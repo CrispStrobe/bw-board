@@ -1,6 +1,6 @@
 # x86 checkpoint and next lanes
 
-Updated 2026-10-09. This is the handoff for the x86 lane, not a claim of complete PC compatibility. Read this file, [current lane evidence](X86-LANE.md), [loading guide](X86-LOADING-GUIDE.md), [compatibility roadmap](X86-COMPATIBILITY-ROADMAP.md), and [oracle strategy](X86-ORACLE-STRATEGY.md) before implementing a task. Refresh the repository's default branch first: historical tested SHAs identify evidence, while a new change needs its own source and artifact identities.
+Updated 2026-10-10. This is the handoff for the x86 lane, not a claim of complete PC compatibility. Read this file, [current lane evidence](X86-LANE.md), [loading guide](X86-LOADING-GUIDE.md), [compatibility roadmap](X86-COMPATIBILITY-ROADMAP.md), and [oracle strategy](X86-ORACLE-STRATEGY.md) before implementing a task. Refresh the repository's default branch first: historical tested SHAs identify evidence, while a new change needs its own source and artifact identities.
 
 ## Reached checkpoint
 
@@ -145,3 +145,5 @@ source-admitted connected profile. Do not rerun or relabel the original. No PF
 report or frame-return result exists.
 
 The next admitted profiles are [PR492](https://github.com/CrispStrobe/bw-board/pull/492) (PF mock-corrected, four new files / 243 roles / 71 import nodes) and [PR491](https://github.com/CrispStrobe/bw-board/pull/491) (target-site support, ten new files / 84 roles, 74 held). Both pass coordinator/independent source review and CPU-free controls. The PF mocks have separate hosted control-only qualification; both profiles have independently reviewed prospective readers and one-shot guards. The PF guard also binds the prior hosted-mock audit receipts. Require all enabled exact-head checks before their distinct labels are applied once. Neither new profile has an actual result; preserve the failed originals and their unqualified boundaries.
+
+The next DPMI worker must follow the [conditional post-PF implementation gate](I80386-DPMI-TASK-EXCURSION-LANE.md#next-implementation-gate-after-the-connected-pf-result): correct a pre-guest failure narrowly, or audit the same-session PF call before developing a separately qualified post-PF continuation observer. The existing runner drains its private token; a returned report cannot authorize extra guest steps. This is a proposed task, not a completed continuation or frame return.
