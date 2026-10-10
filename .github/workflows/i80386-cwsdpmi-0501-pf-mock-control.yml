@@ -1,0 +1,137 @@
+name: 386 owned CWSDPMI PF orchestration mock control
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - scripts/i80386-cwsdpmi-0501-pf-connected/orchestration-control.mjs
+      - .github/workflows/i80386-cwsdpmi-0501-pf-mock-control.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x86-cwsdpmi-0501-pf-mock-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  mock-control:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      GIT_NO_REPLACE_OBJECTS: '1'
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Admit exact two-path correction and run CPU-free mock
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          ulimit -f 256
+          e="$RUNNER_TEMP/cwsdpmi-0501-pf-mock-evidence"
+          mkdir "$e"
+          phase=source-admission
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$e/status.txt"' EXIT
+          base=6c342303f619035b5037426cef335d059628e3dc
+          control=scripts/i80386-cwsdpmi-0501-pf-connected/orchestration-control.mjs
+          production=scripts/i80386-cwsdpmi-0501-pf-connected/orchestration.mjs
+          workflow=.github/workflows/i80386-cwsdpmi-0501-pf-mock-control.yml
+          production_sha=10f406264e8fb828259a3e7af008f777d68564010a965dc83c551a0cec9dfa7b
+          node_bin="$(command -v node)"
+          {
+            printf 'schema=bw.cwsdpmi-0501-pf-mock-control.source.v1\n'
+            printf 'expected_head=%s\nbase=%s\n' "$BW_EXPECTED_HEAD" "$base"
+            printf 'observed_head=%s\n' "$(git --no-replace-objects rev-parse HEAD)"
+            printf 'production_sha256=%s\n' "$(sha256sum "$production" | cut -d' ' -f1)"
+            printf 'control_sha256=%s\n' "$(sha256sum "$control" | cut -d' ' -f1)"
+            printf 'workflow_sha256=%s\n' "$(sha256sum "$workflow" | cut -d' ' -f1)"
+            printf 'node_version=%s\n' "$("$node_bin" --version)"
+          } > "$e/source.txt"
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          test -z "$(git --no-replace-objects status --porcelain)"
+          test "$(git --no-replace-objects cat-file -t "$base")" = commit
+          git --no-replace-objects merge-base --is-ancestor "$base" HEAD
+          actual="$(git --no-replace-objects diff --name-only --no-renames "$base" HEAD)"
+          expected="$(printf '%s\n' "$workflow" "$control")"
+          test "$actual" = "$expected"
+          test "$(git --no-replace-objects show "$base:$production" | sha256sum | cut -d' ' -f1)" = "$production_sha"
+          test "$(sha256sum "$production" | cut -d' ' -f1)" = "$production_sha"
+          phase=mock-control
+          timeout --signal=TERM --kill-after=5s 30s env -i \
+            PATH=/usr/bin:/bin TMPDIR="$RUNNER_TEMP" \
+            LANG=C LC_ALL=C TZ=UTC GIT_NO_REPLACE_OBJECTS=1 \
+            NODE_OPTIONS= NODE_PATH= LD_PRELOAD= LD_AUDIT= \
+            "$node_bin" "$control" > "$e/mock.stdout" 2> "$e/mock.stderr"
+          test -z "$(git --no-replace-objects status --porcelain)"
+          test "$(sha256sum "$production" | cut -d' ' -f1)" = "$production_sha"
+          phase=complete
+      - name: Inventory bounded report-only evidence
+        id: inventory
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          e="$RUNNER_TEMP/cwsdpmi-0501-pf-mock-evidence"
+          mkdir -p "$e"
+          python3 -B - "$e" <<'PY'
+          import hashlib,json,os,pathlib,stat,sys
+          root=pathlib.Path(sys.argv[1])
+          allowed={'source.txt','mock.stdout','mock.stderr','status.txt'}
+          files={}
+          for path in root.iterdir():
+              before=path.lstat()
+              if path.name not in allowed or not stat.S_ISREG(before.st_mode) or \
+                 before.st_nlink!=1 or before.st_size>131072:
+                  raise ValueError('unreviewed mock artifact role')
+              fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+              try:
+                  opened=os.fstat(fd)
+                  if (opened.st_dev,opened.st_ino,opened.st_size,opened.st_mtime_ns)!= \
+                     (before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns) or \
+                     not stat.S_ISREG(opened.st_mode):
+                      raise ValueError('mock artifact changed before read')
+                  chunks=[];remaining=131073
+                  while remaining:
+                      chunk=os.read(fd,remaining)
+                      if not chunk:break
+                      chunks.append(chunk);remaining-=len(chunk)
+                  raw=b''.join(chunks)
+                  after=os.fstat(fd)
+              finally:
+                  os.close(fd)
+              current=path.lstat()
+              identity=lambda row:(row.st_dev,row.st_ino,row.st_size,row.st_mtime_ns)
+              if len(raw)!=before.st_size or identity(before)!=identity(after) or \
+                 identity(before)!=identity(current):
+                  raise ValueError('mock artifact changed during read')
+              if b'\0' in raw:raise ValueError('binary mock artifact')
+              files[path.name]={'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
+          if not files or sum(item['bytes'] for item in files.values())>524288:
+              raise ValueError('mock artifact aggregate cap')
+          with (root/'artifact-inventory.json').open('x') as stream:
+              json.dump({'schema':'bw.cwsdpmi-0501-pf-mock-control.inventory.v1',
+                         'files':files},stream,sort_keys=True,indent=2)
+              stream.write('\n')
+          PY
+      - name: Retain mock transcript and source metadata
+        if: always() && steps.inventory.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-cwsdpmi-0501-pf-mock-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cwsdpmi-0501-pf-mock-evidence/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

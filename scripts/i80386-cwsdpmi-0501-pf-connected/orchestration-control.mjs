@@ -38,6 +38,7 @@ function fixture(failure='task-switch-during-owned-frame',onProgress=null,
   const frameToken=Object.freeze({}),taskToken=Object.freeze({});
   const faultToken=Object.freeze({});
   let frame='armed',task='observing',stepCalls=0,taskArmCalls=0;
+  let transitionPresent=hasTransition;
   let pfArmCalls=0,pfPhase='armed';
   const updates=[];
   const cpu={
@@ -61,13 +62,13 @@ function fixture(failure='task-switch-during-owned-frame',onProgress=null,
     owned0501TaskModeStatus(token){
       assert.equal(token,taskToken);
       return {phase:task,activeSteps:stepCalls-1,postOutgoingSteps:Math.max(0,stepCalls-2),
-        transitions:hasTransition?1:0,modeChanges:stepCalls>2?1:0};
+        transitions:transitionPresent?1:0,modeChanges:stepCalls>2?1:0};
     },
     abortOwned0501TaskMode(token,reason){
       assert.equal(token,taskToken);assert.match(reason,/^observer-/);
       task='invalid';
       return {phase:task,activeSteps:stepCalls-1,postOutgoingSteps:Math.max(0,stepCalls-2),
-        transitions:hasTransition?1:0,
+        transitions:transitionPresent?1:0,
         firstFailure:reason};
     },
     takeOwned0501TaskModeObservation(token){
@@ -76,7 +77,7 @@ function fixture(failure='task-switch-during-owned-frame',onProgress=null,
       return {phase:task,frameReturnQualified:false,
         activeSteps:stepCalls-1,postOutgoingSteps:Math.max(0,stepCalls-2),
         modeChanges:stepCalls>2?[{step:stepCalls-1,operation:'mov-cr0'}]:[],
-        transitions:hasTransition?[{step:2,enclosingStepCommitted:true}]:[]};
+        transitions:transitionPresent?[{step:2,enclosingStepCommitted:true}]:[]};
     },
     armOwned0501FaultOutcome(options){
       assert.equal(options.maxActiveSteps,100_000);
@@ -106,6 +107,7 @@ function fixture(failure='task-switch-during-owned-frame',onProgress=null,
   return {observer,machine,updates,get stepCalls(){return stepCalls;},
     get taskArmCalls(){return taskArmCalls;},
     get pfArmCalls(){return pfArmCalls;},
+    setTransitionPresent(value){transitionPresent=value;},
     setPfPhase(value){pfPhase=value;}};
 }
 
@@ -301,23 +303,27 @@ assert.equal(aborted.firstFailure,'observer-machine-step-exception');
 assert.equal(aborted.observation.phase,'invalid');
 assert.equal(thrownOpen.stepCalls,3);
 
-const missingTransition=fixture('task-switch-during-owned-frame',null,false,false);
+const missingTransition=fixture();
 missingTransition.observer.ports.bind();missingTransition.observer.ports.step();
 assert.throws(()=>missingTransition.observer.ports.step(),
   /task-switch-during-owned-frame/);
-const refused=continueArmed(missingTransition);
+missingTransition.observer.armFaultAtStrictTerminal();
+missingTransition.setTransitionPresent(false);
+const refused=missingTransition.observer.continue(missingTransition.machine);
 assert.equal(refused.committedOutgoing,false);
 assert.equal(refused.firstFailure,'committed outgoing task transition absent');
 assert.equal(missingTransition.stepCalls,2);
 
-const missingAbortFault=fixture('task-switch-during-owned-frame',null,false,false);
+const missingAbortFault=fixture();
 missingAbortFault.observer.ports.bind();missingAbortFault.observer.ports.step();
 assert.throws(()=>missingAbortFault.observer.ports.step(),
   /task-switch-during-owned-frame/);
+missingAbortFault.observer.armFaultAtStrictTerminal();
+missingAbortFault.setTransitionPresent(false);
 missingAbortFault.machine.cpu.abortOwned0501TaskMode=()=>{
   throw new Error('synthetic abort refusal');
 };
-const missingAbortReceipt=continueArmed(missingAbortFault);
+const missingAbortReceipt=missingAbortFault.observer.continue(missingAbortFault.machine);
 assert.equal(missingAbortReceipt.firstFailure,
   'committed outgoing task transition absent');
 assert.equal(missingAbortReceipt.status.phase,'observing');
@@ -326,13 +332,15 @@ assert.equal(missingAbortReceipt.committedOutgoing,false);
 assert.equal(missingAbortFault.observer.terminal().modeResult,missingAbortReceipt);
 assert.equal(missingAbortFault.stepCalls,2);
 
-const contradictory=fixture('task-switch-during-owned-frame',null,false,false);
+const contradictory=fixture();
 contradictory.observer.ports.bind();contradictory.observer.ports.step();
 assert.throws(()=>contradictory.observer.ports.step(),
   /task-switch-during-owned-frame/);
+contradictory.observer.armFaultAtStrictTerminal();
+contradictory.setTransitionPresent(false);
 contradictory.machine.cpu.takeOwned0501TaskModeObservation=()=>({
   phase:'invalid',transitions:[{step:2,enclosingStepCommitted:true}]});
-const contradictoryReceipt=continueArmed(contradictory);
+const contradictoryReceipt=contradictory.observer.continue(contradictory.machine);
 assert.equal(contradictoryReceipt.committedOutgoing,false);
 assert.equal(contradictory.stepCalls,2);
 
