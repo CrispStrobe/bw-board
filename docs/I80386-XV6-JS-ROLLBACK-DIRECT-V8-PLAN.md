@@ -354,5 +354,14 @@ grades the four support cases; missing build materialization or added callback
 identities cannot receive support credit. The guard rejects a dedicated run on
 any earlier branch head, changed source or reader, an existing label and
 incomplete checks. All ten enabled exact-head checks must pass, with only the
-two declared optional skips, before the label is applied once. No support child or guest
-has run at this checkpoint, and no allocation hotspot or speedup follows.
+two declared optional skips, before the label is applied once. The source gates subsequently passed and the label was applied once. The
+[original support run38023609973](receipts/2026-10-10-direct-v8-support-failure/README.md)
+failed in the first minor-baseline child after a complete successful build. Both
+retained-original audits pass within that failure boundary. The raw sample
+predicate failed: one of 31 factory-ancestry samples survived despite all 64
+weak callbacks in the designated minor-GC event. Broad call-stack attribution
+does not identify the adopted object behind each sample. No later child or
+guest ran, and no support, allocation hotspot or speedup follows. Develop a
+separately named fixture with a dedicated target allocation site, preserving
+all lifetime, raw-identity and four-case requirements. Do not exclude the
+observed survivor after the fact or rerun/relabel the original.

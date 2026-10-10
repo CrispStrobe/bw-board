@@ -380,7 +380,16 @@ failure. The standalone prospective reader passed coordinator and independent
 review with five positive and 47 negative synthetic cases. The one-shot launch
 guard also passed both reviews; it rejects any earlier dedicated run on this
 branch, changed source or reader, an existing label and incomplete checks.
-The dedicated workflow has produced no diagnostic evidence. All ten enabled
-exact-head checks must pass, with only the two declared optional skips, before
-the label is applied once. Independently audit that retained original result.
-No connected actual has been launched; the strict frame remains unqualified.
+At that source checkpoint, the dedicated workflow had produced no diagnostic
+evidence. All ten enabled exact-head checks were required, with only the two
+declared optional skips, before the label could be applied once.
+All ten enabled exact-head checks subsequently passed, with only the two
+declared optional skips. The label was applied once. The [original connected
+run38023601004](receipts/2026-10-10-pf-connected-control-failure/README.md)
+failed in the PF orchestration mock controls before guest execution. Both
+retained-original audits pass within that refusal boundary; no PF report or
+frame-return qualification exists. The next step is a separately named hosted
+mock-only gate that arms valid fixtures before introducing transition loss or
+contradiction. Keep production admission unchanged and preserve the original.
+A further connected guest attempt needs a new admitted source/workflow profile
+and prospective audit, rather than rerunning or relabeling this attempt.
