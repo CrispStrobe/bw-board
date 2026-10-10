@@ -1,4 +1,4 @@
-name: 386 owned CWSDPMI AX=0501 PF delivery-outcome AT diagnostic
+name: 386 owned CWSDPMI AX=0501 PF mock-corrected AT diagnostic
 
 on:
   pull_request:
