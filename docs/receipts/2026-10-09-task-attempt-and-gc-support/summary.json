@@ -1,0 +1,62 @@
+{
+  "schema": "bw.x86.task-attempt-and-gc-support.v1",
+  "task": {
+    "source": "f3b8b31d6e403020089f1dee31eaece45c06ac25",
+    "run": 37893093332,
+    "artifact": 11598672750,
+    "zipBytes": 141541,
+    "zipSha256": "9eac8d79027aee0f378bc303dff50478a40b249898ecc5262fd400294b25e995",
+    "rawLogBytes": 212303,
+    "rawLogSha256": "56504331ea18debb665a42c6f37c92dee22ec744cde8800dafd804d5b830d226",
+    "enabledChecksPassed": 12,
+    "optionalSkips": 2,
+    "packetIntegrity": "PASS",
+    "sourceRoles": 196,
+    "jsNodes": 62,
+    "activeSteps": 20,
+    "firstFailure": "task-switch-during-owned-frame",
+    "taskAttempt": {
+      "kind": "jmp",
+      "selector": 112,
+      "sourceCs": 43,
+      "attemptEip": 15928,
+      "sourceCpl": 3,
+      "nt": false,
+      "trSelector": 96,
+      "trType": 11
+    },
+    "returned": null,
+    "committedTaskOutcome": "NOT_OBSERVED"
+  },
+  "allocation": {
+    "source": "f2971d8ae7bd67a30f13baa45b63956790d9b975",
+    "run": 37893388067,
+    "artifact": 11599252623,
+    "zipBytes": 3137,
+    "zipSha256": "de9b0ee7dffe9b682677219767cc3b210780fe887b0b3bc92094d650fcd52b0d",
+    "rawLogBytes": 40898,
+    "rawLogSha256": "644fd8c58c6bce640bee973270bcb967def0c89a3d45bc17a0df9109c55325e4",
+    "enabledChecksPassed": 10,
+    "optionalSkips": 2,
+    "packetIntegrity": "PASS",
+    "sourceRoles": 18,
+    "jsEdges": 2,
+    "runtime": {
+      "node": "v20.20.2",
+      "v8": "11.3.244.8-node.38"
+    },
+    "allocatedTargets": 64,
+    "unreachableTargets": 0,
+    "minorGcEventsBeforeProfileRetrieval": 6,
+    "majorGcEventsBeforeProfileRetrieval": 0,
+    "pumpBlocks": 8,
+    "liveFactorySamples": 2,
+    "liveSampledBytes": 264192,
+    "guestChildren": 0,
+    "firstFailure": "all-target collection assertion: 0 != 64",
+    "supportQualified": false,
+    "allocationHotspotQualified": false
+  },
+  "audit": "root and separate Sol readers: original packet/log/Git/failure facts, no replay or producer imports",
+  "scope": "failed finite diagnostics, not task/frame completion, performance or adoption"
+}

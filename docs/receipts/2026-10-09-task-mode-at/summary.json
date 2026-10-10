@@ -1,0 +1,85 @@
+{
+  "schema": "bw.task-mode-at-public-receipt.v1",
+  "source": "f2fb33f921bf99b23d1e88ee889512d5d4ee6318",
+  "sourcePullRequest": "https://github.com/CrispStrobe/bw-board/pull/478",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37938657230",
+  "officialConclusion": "failure",
+  "attempt": 1,
+  "checksBeforeLaunch": {
+    "enabledSuccess": 10,
+    "declaredOptionalVectorsFullSkipped": 2
+  },
+  "originalArtifact": {
+    "run": 37938657230,
+    "artifact": 11619142369,
+    "bytes": 145107,
+    "sha256": "09195d595d41c62efab499e9967b211cbffa6b64f5e8adfa4d969bcf26ca7c06"
+  },
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11619142369",
+  "rawLog": {
+    "bytes": 216468,
+    "sha256": "4a6bf1ca8dd24855cbd5e27029116577a70c78e99f969f3880c7c886be86f9a8"
+  },
+  "packetMembers": 114,
+  "sourceRoles": 215,
+  "recursiveJsNodes": 64,
+  "stage": "diagnostic-complete",
+  "strictFailure": "task-switch-during-owned-frame",
+  "strictReturned": null,
+  "diagnosticFailure": "unattributed-mode-change",
+  "activeSteps": 443,
+  "postOutgoingSteps": 431,
+  "committedTaskTransitions": 2,
+  "taskSelectors": [
+    96,
+    112,
+    104
+  ],
+  "deliveries": 0,
+  "committedModeChanges": [
+    {
+      "step": 47,
+      "source": "0f-22-cr0",
+      "instructionStart": 11210,
+      "beforeCr0": 2147483657,
+      "afterCr0": 0
+    },
+    {
+      "step": 442,
+      "source": "0f-22-cr0",
+      "instructionStart": 10961,
+      "beforeCr0": 0,
+      "afterCr0": 1
+    }
+  ],
+  "uncommittedModes": 0,
+  "refusedChange": {
+    "step": 443,
+    "beforeCs": 9980,
+    "beforeEip": 10964,
+    "afterCs": 24,
+    "afterEip": 10969,
+    "beforeRetainedRealCs": true,
+    "afterRetainedRealCs": false,
+    "operation": null,
+    "enclosingStepCommitted": true
+  },
+  "resumeCandidate": null,
+  "frameReturnQualified": false,
+  "boundary": "Two source-attributed MOV CR0 changes observed. Committed CS/context reload remains unattributed; opcode not recorded. No original-task resumption, guest CPU fault, owned frame return or speedup established.",
+  "next": "Separate bounded CS/context-transfer attribution source and affected CPU regressions before any new diagnostic actual; preserve original strict owner and all frozen results.",
+  "auditors": [
+    {
+      "role": "root frozen stdlib original reader",
+      "scriptBytes": 34358,
+      "scriptSha256": "3e39bbe478cce17af2a475e03dd4bab43456306e0782e650ef0e34b6c00eb0c8",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    },
+    {
+      "role": "separate Sol original packet/source/log audit",
+      "scriptBytes": 8249,
+      "scriptSha256": "39df2d78d340257905409fa0c1a0a36c89246859ae249a82f86584cbb22eb74c",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    }
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "schema": "bw.i80386.journal-xv6-checkpoint.v1",
+  "source": "13d82f3116107a1c4d8dff421db747eaa1bfef23",
+  "run": 37792187626,
+  "attempt": 1,
+  "event": "push",
+  "conclusion": "success",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37792187626",
+  "officialArtifactMetadata": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11557473754",
+  "originalLog": {
+    "bytes": 1545135,
+    "sha256": "bade4f32260a36cd3cbba2698093f2d99a4794ecbf74747939bcca7de1d33d76"
+  },
+  "originalZip": {
+    "bytes": 21029,
+    "sha256": "82155a43229ede9ff3754fd0b23f9a5abd4557b2b5f517a545825fcab190b15d",
+    "jsonMembers": 5
+  },
+  "currentCohort": {
+    "tests": 1604,
+    "pass": 1593,
+    "fail": 0,
+    "skip": 11
+  },
+  "historicalCohort": {
+    "tests": 288,
+    "pass": 288,
+    "fail": 0,
+    "skip": 0
+  },
+  "cohortExits": [
+    {
+      "name": "current",
+      "code": 0,
+      "signal": null,
+      "forwarded": null
+    },
+    {
+      "name": "historical",
+      "code": 0,
+      "signal": null,
+      "forwarded": null
+    }
+  ],
+  "focusedJournalControls": 29,
+  "guestScenarios": [
+    {
+      "member": "xv6-stock-free-bios-boot.json",
+      "profile": "4m",
+      "steps": 14643086,
+      "sourceRoles": 70,
+      "userModeEntries": 16,
+      "serialResponse": "BW_XV6_FREE_BIOS_FS_OK",
+      "cr4": 16,
+      "profileBoundary": "existing compatibility profile; not strict physical 386DX qualification"
+    },
+    {
+      "member": "xv6-stock-14m-free-bios-boot.json",
+      "profile": "14m",
+      "steps": 10962834,
+      "sourceRoles": 70,
+      "userModeEntries": 16,
+      "serialResponse": "BW_XV6_14M_FREE_OK",
+      "cr4": 16,
+      "profileBoundary": "existing compatibility profile; not strict physical 386DX qualification"
+    },
+    {
+      "member": "xv6-stock-free-bios-forktest.json",
+      "profile": "4m",
+      "steps": 24338279,
+      "sourceRoles": 70,
+      "userModeEntries": 16,
+      "serialResponse": "fork test OK",
+      "cr4": 16,
+      "profileBoundary": "existing compatibility profile; not strict physical 386DX qualification"
+    }
+  ],
+  "audit": {
+    "root": "original log/ZIP and exact Git, stdlib only; listed source roles and serial/build/probe consistency",
+    "peer": "separate original log/ZIP and exact Git review; 70 reported source roles per guest, 29 exact test titles",
+    "replay": false,
+    "producerHelperImports": false
+  },
+  "limits": [
+    "existing compatibility profile; not full strict 386DX qualification",
+    "no allocation-frame guest result",
+    "no independent compiler/source-to-binary reconstruction",
+    "no performance or consumer adoption result"
+  ],
+  "fullCi": {
+    "run": 37792187810,
+    "attempt": 1,
+    "event": "push",
+    "source": "13d82f3116107a1c4d8dff421db747eaa1bfef23",
+    "conclusion": "success",
+    "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37792187810",
+    "originalLog": {
+      "bytes": 4861357,
+      "sha256": "dd690b083ba067657ad4e9b38f82958952fbb979032344e3379df293076c227e"
+    },
+    "currentCohort": {
+      "tests": 8448,
+      "pass": 8146,
+      "fail": 0,
+      "skip": 302
+    },
+    "historicalCohort": {
+      "tests": 288,
+      "pass": 288,
+      "fail": 0,
+      "skip": 0
+    },
+    "audit": "root read-only original log and official metadata; no producer imports or replay"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "verdict": "PRESERVED_UNSUPPORTED_DELIVERY_OBSERVER_FAILURE",
+  "source": "4c22a574ec50a515fe4954a3fda0ff6a947a5068",
+  "run": 37818842928,
+  "attempt": 1,
+  "zipBytes": 140260,
+  "zipSha256": "49111cd11d37341b6ccfa8f0a391b593a0a19d21710031b38b5390a9d77f5bfc",
+  "members": 112,
+  "sourceRoles": 195,
+  "recursiveJsNodes": 62,
+  "stage": "waiting-batch",
+  "mainCutStep": 44609970,
+  "wrapperStep": 44609991,
+  "stopStep": 44610000,
+  "firstFailure": "unsupported-owned-delivery",
+  "journalPhase": "invalid",
+  "activeSteps": 9,
+  "entry": null,
+  "returned": null,
+  "wrapperReferenceEqual": true,
+  "wrapperBeforeAfterEqual": true,
+  "finiteClientPassed": false,
+  "boundary": "Wrapper verified and journal armed; compound delivery guard invalidated observation before committed entry; exact failed predicate not retained. No completed INT31/IRET pair, finite client completion, physical mapping or performance result",
+  "schema": "bw.i80386.frame-reference-fix-at-failure.v1",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37818842928",
+  "officialArtifactMetadata": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11568599228",
+  "originalLog": {
+    "bytes": 208375,
+    "sha256": "096b63d1d11960c878af67238dbccd540d27cc857782e8976d97c64e69297ebf"
+  },
+  "audit": {
+    "root": "original packet, official metadata, immutable Git and source/compiler/media/notice bindings",
+    "peer": "independent original packet/Git review, wrapper admission and compound-guard failure boundary",
+    "producerHelperImports": false,
+    "guestReplay": false
+  }
+}

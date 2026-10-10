@@ -1,0 +1,63 @@
+{
+  "schema": "bw.direct-v8-header-census-public-receipt.v1",
+  "source": "90c4de590325f59c8d164cefc37fa036740f189a",
+  "sourcePullRequest": "https://github.com/CrispStrobe/bw-board/pull/475",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37911209291",
+  "officialConclusion": "success",
+  "attempt": 1,
+  "checksBeforeLaunch": {
+    "enabledSuccess": 10,
+    "declaredOptionalVectorsFullSkipped": 2
+  },
+  "originalArtifact": {
+    "run": 37911209291,
+    "artifact": 11606758479,
+    "bytes": 69384,
+    "sha256": "43ddd6cecae118f186c76d784f6beea57757edabb26000aca1b4335cae4e668f"
+  },
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11606758479",
+  "rawLog": {
+    "bytes": 34544,
+    "sha256": "3ffe08ca71aea651d7bb5a80076330b350ae5ded52e48a50d4b3de32f7e4902e"
+  },
+  "packetMembers": 10,
+  "sourceRoles": 20,
+  "status": "COMPLETE_DATA_ONLY",
+  "firstFailure": null,
+  "memberCount": 2908,
+  "regularBytes": 49002796,
+  "regularMembers": 2365,
+  "directoryMembers": 543,
+  "duplicateCount": 0,
+  "firstLegacyRefusal": {
+    "declaredBytes": 109792,
+    "index": 1916,
+    "predicate": "regular-total-decimal-32000000",
+    "rawName": "node-v20.20.2/include/node/openssl/archs/linux-ppc64le/no-asm/include/openssl/ssl.h",
+    "regularBytesBefore": 31910201
+  },
+  "firstRefusedRegularTotal": 32019993,
+  "largestReportedMemberBytes": 228292,
+  "maximumReportedPathDepth": 12,
+  "reportedArchive": {
+    "bytes": 512152,
+    "sha256": "46573741c48c20c6bcfc71450e2fc56b4d1156d72c3d6cc9917fa8b1cbc6e836"
+  },
+  "rawArchiveIndependentlyHashed": false,
+  "boundary": "source-bound complete data-only report; archive/member bytes absent from original packet; no revised admission, compiler, addon, support, guest or performance qualification",
+  "next": "separate 64 MiB authority preflight with coherent bounded receipt inventory; build/support remain later gates",
+  "auditors": [
+    {
+      "role": "root independent frozen stdlib census audit",
+      "bytes": 382,
+      "sha256": "f49b1efd6ea83a352b083507bf911d9706428a94743e8fe3732739840a2ed64f",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    },
+    {
+      "role": "separate Sol original packet/source/log audit",
+      "bytes": 1055,
+      "sha256": "fbb485d73157df578e4fcc596152fa3eaf554888c6a2b5f099dcf6dfc5368b5d",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    }
+  ]
+}

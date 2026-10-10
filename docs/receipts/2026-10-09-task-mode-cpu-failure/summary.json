@@ -1,0 +1,49 @@
+{
+  "schema": "bw.task-mode-cpu-failure-public-receipt.v1",
+  "source": "e8bed46bd472a9307ba16a0fac48a710fa6f24fa",
+  "sourcePullRequest": "https://github.com/CrispStrobe/bw-board/pull/476",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37910940230",
+  "officialConclusion": "failure",
+  "attempt": 1,
+  "rawLog": {
+    "bytes": 1512490,
+    "sha256": "cd5dae94ef4cf6b14074c117eaaf1ee7edf975b1022daa98fb69276847acc870"
+  },
+  "artifactCount": 0,
+  "artifactListApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/37910940230/artifacts",
+  "failedTest": "mode profile refuses mutated between-step descriptor scalars",
+  "actual": "mode-before-observer-failure",
+  "expected": "unattributed-between-step-change",
+  "currentCohort": {
+    "tests": 1689,
+    "passed": 1677,
+    "failed": 1,
+    "skipped": 11
+  },
+  "historicalCohort": {
+    "tests": 288,
+    "passed": 288,
+    "failed": 0,
+    "skipped": 0
+  },
+  "correctionSource": "44087e8f1d19b1f74c6f2742ebca31594f6e7208",
+  "correctionPaths": 1,
+  "cpuSourceChangedByCorrection": false,
+  "correctedHostedQualification": "CPU controls and three finite xv6 regressions passed in original37914446180; all twelve enabled exact-head checks passed with two declared optional skips; new task-mode guest diagnostic unqualified",
+  "boundary": "current CPU control failed before xv6 acquisition/build/guest; no mode profile or finite xv6 qualification",
+  "auditors": [
+    {
+      "role": "root original log and in-range fixture correction audit",
+      "bytes": 972,
+      "sha256": "4beba1bdf02f1c4cdc85311c47fa9bdd887162dd476a4ddac44785eb8c9e9f7b",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    },
+    {
+      "role": "separate Sol original log/source correction audit",
+      "bytes": 641,
+      "sha256": "2c9d6a56c372d66dbdf57c918f3ec38372965a1e8474ad9dfc7a956cc6106de6",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    }
+  ],
+  "correctedResult": "../2026-10-09-task-mode-cpu-success/summary.json"
+}

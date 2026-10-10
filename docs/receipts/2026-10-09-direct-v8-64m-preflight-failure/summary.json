@@ -1,0 +1,46 @@
+{
+  "run": 37919948310,
+  "head": "61fa4800434301843a648f9ad851067366b5525e",
+  "classification": "UNQUALIFIED_OFFICIAL_RUN_FAILURE",
+  "firstFailure": {
+    "reason": "tool probe output refused",
+    "type": "ProbeFailure"
+  },
+  "failedRole": "cc1plus",
+  "failedProbeExit": 0,
+  "failedProbeStdoutBytes": 0,
+  "failedProbeStderrBytes": 0,
+  "failedProbeComplete": true,
+  "failedProbeTimeout": false,
+  "failedProbeOutputBound": false,
+  "headerReportedExactCensusMapMatch": true,
+  "headerMembers": 2365,
+  "headerBytes": 49002796,
+  "nodeVersion": "v20.20.2",
+  "v8Version": "11.3.244.8-node.38",
+  "completeReportedToolRoles": [
+    "g++"
+  ],
+  "preflightReceiptBytes": 420335,
+  "preflightReceiptSha256": "6cf6b7c00492b29356f79570068417c062efb7827060c039f69c2e4357760808",
+  "remainingToolAuthority": "cc1plus identity/locator was not retained as a completed tool role; collect2/as/ld not reached; final rechecks/build/addon/support/guest not reached",
+  "boundary": "reported header facts match retained source-bound census, not independent raw archive/member/executable rehash",
+  "schema": "bw.direct-v8-64m-preflight-failure-summary.v1",
+  "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37919948310",
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11612605752",
+  "originalZip": {
+    "bytes": 37656,
+    "sha256": "76d2eee7b2771d89612ec3a6e727684b649570aa1235d7249e7c8d3701375150"
+  },
+  "originalLog": {
+    "bytes": 38143,
+    "sha256": "5436ef879f39fc4e9e41882f09c0a3ca4d69297e5c9f95d290cd650317b7b3ad"
+  },
+  "sourceRoles": 26,
+  "zipMembers": 9,
+  "reviewers": [
+    "root",
+    "independent peer"
+  ],
+  "independentPeerScriptSha256": "36d6d8d7fe31a99369da6ba4dbab17e8ca7b6259f8980ddb1871064271accc3d"
+}

@@ -1,0 +1,56 @@
+{
+  "verdict": "ORIGINAL_TEST_EXPECTATION_FAILURE_PRESERVED",
+  "failedSource": "94ecaacbdc0ba84c422062c4e7995539a714ec12",
+  "correctionSource": "1ecb987b86217c7c549fffc1d3b7ff498898b9dd",
+  "cpuChanged": false,
+  "runs": [
+    {
+      "run": 37833022645,
+      "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37833022645",
+      "attempt": 1,
+      "conclusion": "failure",
+      "rawLogBytes": 5269129,
+      "rawLogSha256": "8d566904d01370abb20fa941279799e65e02bcdd58cf9a079f924df58186a286",
+      "currentTests": {
+        "tests": 8488,
+        "passed": 8185,
+        "failed": 1,
+        "skipped": 302
+      },
+      "historicalTests": {
+        "tests": 288,
+        "passed": 288,
+        "failed": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "run": 37833022318,
+      "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37833022318",
+      "attempt": 1,
+      "conclusion": "failure",
+      "rawLogBytes": 1039051,
+      "rawLogSha256": "e415a7bae58ff97245c7679700f3420026cdfab02da1481825bce3a2d55ace22",
+      "currentTests": {
+        "tests": 1644,
+        "passed": 1632,
+        "failed": 1,
+        "skipped": 11
+      },
+      "historicalTests": {
+        "tests": 288,
+        "passed": 288,
+        "failed": 0,
+        "skipped": 0
+      }
+    }
+  ],
+  "failure": {
+    "test": "mixed profile refuses a 16-bit IRET without changing its guest effect",
+    "error": "IRET return privilege",
+    "vector": 13,
+    "classification": "Unhandled original guest fault in new test"
+  },
+  "review": "Root and independent peer read retained original logs and source delta; no guest replay",
+  "qualification": "Correction source reviewed; hosted qualification pending. No new guest pair or speed result."
+}

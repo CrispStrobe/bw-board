@@ -1,0 +1,61 @@
+{
+  "schema": "bw.direct-v8-preflight-public-receipt.v1",
+  "source": "869c3c72cb40b66c135621f297eb66638166b69d",
+  "sourcePullRequest": "https://github.com/CrispStrobe/bw-board/pull/473",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37904505940",
+  "officialConclusion": "failure",
+  "attempt": 1,
+  "checksBeforeLaunch": {
+    "enabledSuccess": 10,
+    "declaredOptionalVectorsFullSkipped": 2
+  },
+  "originalArtifact": {
+    "run": 37904505940,
+    "artifact": 11603693897,
+    "bytes": 3410,
+    "sha256": "021bb074fd03f9558d454082dd7b86ff852e709e8a4dd4781995ec306f61b751"
+  },
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11603693897",
+  "rawLog": {
+    "bytes": 34492,
+    "sha256": "7046346c80cc347cf5f816b55c8ee69824afa3ae29114e122eb4d44bb492da05"
+  },
+  "packetMembers": 9,
+  "inventoriedOriginalFiles": 8,
+  "sourceRoles": 14,
+  "status": "INCOMPLETE_UNQUALIFIED",
+  "firstFailure": {
+    "type": "ValueError",
+    "reason": "header closure refused"
+  },
+  "reportedNodeArchive": {
+    "bytes": 26169540,
+    "sha256": "df770b2a6f130ed8627c9782c988fda9669fa23898329a61a871e32f965e007d"
+  },
+  "reportedNodeExecutable": {
+    "bytes": 98932688,
+    "sha256": "6295488653f0d93b0a157841746fef7e72cc4328cfb60c4bbe0ca2668a836ffd"
+  },
+  "reportedHeadersArchive": {
+    "bytes": 512152,
+    "sha256": "46573741c48c20c6bcfc71450e2fc56b4d1156d72c3d6cc9917fa8b1cbc6e836"
+  },
+  "nodeProbes": null,
+  "tools": {},
+  "boundary": "original source/report consistency only; raw archives/executable absent; exact cause total>32000000 or duplicate unknown; no compiler/addon/support/guest/performance qualification",
+  "next": "separately named bounded data-only header census before any admission-cap or build change",
+  "auditors": [
+    {
+      "role": "root original report-only authority audit",
+      "bytes": 753,
+      "sha256": "962ecabe8a45e90ff62e94de67fcf67650dcd12016482ee3784a175a33538e91",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    },
+    {
+      "role": "separate Sol original packet/source/log audit",
+      "bytes": 1744,
+      "sha256": "4d77015e23d3f800424d6a806e944a117b4c8a0dc6192a475501a09ae26353d9",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    }
+  ]
+}

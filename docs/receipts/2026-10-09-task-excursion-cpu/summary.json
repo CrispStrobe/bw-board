@@ -1,0 +1,57 @@
+{
+  "schema": "bw.x86-task-excursion-cpu-public-receipt.v1",
+  "source": "d1ca2763ce30dc91df0c29e888590ab1d8135256",
+  "sourcePullRequest": "https://github.com/CrispStrobe/bw-board/pull/472",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37900463221",
+  "officialConclusion": "success",
+  "originalArtifact": {
+    "run": 37900463221,
+    "artifact": 11602063578,
+    "bytes": 21038,
+    "sha256": "e5f452126c492b1de82c87d95a12013f001c251ee8005a1f5e178d471651405a"
+  },
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11602063578",
+  "originalRawLog": {
+    "bytes": 1592102,
+    "sha256": "566419875d39eb84c485bba4cb23bb837676e7963a940c349c7c46fdf6ea237f"
+  },
+  "executedMerge": "fd4df7c1911cd5d1d06649ad069eac8f3dc11b18",
+  "reviewedTreeEqual": true,
+  "listedGitRolesVerified": 71,
+  "finiteScenarios": 3,
+  "focusedNames": 94,
+  "current": {
+    "tests": 1669,
+    "pass": 1658,
+    "fail": 0,
+    "skip": 11
+  },
+  "historical": {
+    "tests": 288,
+    "pass": 288,
+    "fail": 0,
+    "skip": 0
+  },
+  "boundary": "Existing xv6 PSE/APIC compatibility profile and source-owned synthetic observer controls; no task-excursion guest/driver/frame return or strict physical 386DX qualification",
+  "allOrdinaryEnabledChecks": "still pending at receipt publication; refresh exact head before any dedicated diagnostic or adoption",
+  "auditors": [
+    {
+      "role": "root original packet/source audit",
+      "bytes": 1594,
+      "sha256": "b7c6a8094cf91a356de33cf7b79dd4a3eb30a6e768c33c6e73410ec469e2687d",
+      "origin": "independent read-only audit of the official Actions originals linked in this receipt; operational records remain private"
+    },
+    {
+      "role": "root original focused TAP audit",
+      "bytes": 8600,
+      "sha256": "431cf04a97948e678ec2eba85fd785eb9238401ecd6e82443ecb287c62235375",
+      "origin": "independent read-only audit of the official Actions originals linked in this receipt; operational records remain private"
+    },
+    {
+      "role": "separate Sol original packet/source/log audit",
+      "bytes": 1660,
+      "sha256": "18bbae3d085daed797361e257c0a9226239dcc14cb7e13f6bc0f148eea253ce5",
+      "origin": "independent read-only audit of the official Actions originals linked in this receipt; operational records remain private"
+    }
+  ]
+}

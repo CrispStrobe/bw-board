@@ -1,0 +1,47 @@
+{
+  "schema": "bw.i80386-highmem-qemu.selected-receipt.v1",
+  "source": "6ec767b50008beb53b012dafcf55361de3ffb146",
+  "run": {
+    "id": 37764261886,
+    "attempt": 1,
+    "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37764261886",
+    "conclusion": "success"
+  },
+  "artifact": {
+    "id": 11547296011,
+    "api": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11547296011",
+    "bytes": 122048,
+    "sha256": "bae276294a7574fd6d337367203de5d49114457e47cdca3d74b32cbaac1961e3"
+  },
+  "audit": "Root and peer independent stdlib/Git original report audits PASS_QEMU_FINITE_BOUNDARY_ONLY",
+  "diagnostics": {
+    "address": 4849664,
+    "checksum": 4225408,
+    "delta": 1,
+    "first": 732237,
+    "last": 732238,
+    "polls": 1035,
+    "requested": 4096,
+    "selector_base": 4849664,
+    "selector_limit": 4095
+  },
+  "profile": "QEMU TCG pc/486, 4 MiB, SeaBIOS/std VGA, FreeDOS 1.4",
+  "oracleWallSeconds": 8.081,
+  "clientScreenSamples": [
+    9,
+    10
+  ],
+  "preVerifySample": 11,
+  "returnScreenSamples": [
+    14,
+    15
+  ],
+  "sourceRoles": 105,
+  "zipMembers": 107,
+  "inventoryFiles": 106,
+  "limits": [
+    "Report-only evidence; no retained executable or raw terminal HDD",
+    "High linear address is not physical placement",
+    "No AT new-client, interrupt-frame, calibrated RTx or general compatibility claim"
+  ]
+}
