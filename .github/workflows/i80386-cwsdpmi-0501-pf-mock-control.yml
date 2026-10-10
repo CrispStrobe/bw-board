@@ -71,7 +71,7 @@ jobs:
           test "$(sha256sum "$production" | cut -d' ' -f1)" = "$production_sha"
           phase=mock-control
           timeout --signal=TERM --kill-after=5s 30s env -i \
-            PATH=/usr/bin:/bin HOME="$RUNNER_TEMP" TMPDIR="$RUNNER_TEMP" \
+            PATH=/usr/bin:/bin TMPDIR="$RUNNER_TEMP" \
             LANG=C LC_ALL=C TZ=UTC GIT_NO_REPLACE_OBJECTS=1 \
             NODE_OPTIONS= NODE_PATH= LD_PRELOAD= LD_AUDIT= \
             "$node_bin" "$control" > "$e/mock.stdout" 2> "$e/mock.stderr"
