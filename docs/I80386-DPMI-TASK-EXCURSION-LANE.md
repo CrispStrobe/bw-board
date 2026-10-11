@@ -647,8 +647,9 @@ Then independently validate those new receipts and integrate the reader.
 The unconnected nine-role receipt source is now published in
 [draft PR502](https://github.com/CrispStrobe/bw-board/pull/502), exact
 `f04f4e8dd9d30cc0439e78ed801fb26c3027adf3`. Fifteen manufactured filesystem
-controls and three independent adversaries pass; hosted exact-source controls
-are pending. Its fixed-role observations and once-only diagnostic writes do
+controls and three independent adversaries pass; the original hosted
+15-test result now passes root and independent report audits in the
+[source-unit receipt](receipts/2026-10-11-source-unit-controls/README.md). Its fixed-role observations and once-only diagnostic writes do
 not establish a connected compiler result, final input identity or live-session
 authority. Follow the [new source-unit task contracts](X86-NEXT-LANES.md#unconnected-source-units-and-concrete-next-work)
 for canonical-root admission, compiler failure retention, bounded input

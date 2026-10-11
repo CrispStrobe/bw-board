@@ -1,0 +1,34 @@
+{
+  "cohort": {
+    "run": "https://github.com/CrispStrobe/bw-board/actions/runs/38161363012",
+    "runMetadata": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/38161363012",
+    "jobsMetadata": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/38161363012/attempts/1/jobs",
+    "artifactMetadata": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11712225453",
+    "artifactDownload": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11712225453/zip",
+    "artifactId": 11712225453,
+    "zipSize": 2083,
+    "zipSha256": "071ebe04c1522fb6d02f0e6f9039779615afab4b4b353cf54845fcb59105fcb2",
+    "members": {
+      "source.json": "858a58544f8f3114229fdabeffea160e71b2cc86fed7ddd6baa2bbfc4518ec33",
+      "control.stdout": "1c50e75c6d59c1afd3e60618218388439dfd470cb0a95b2ad02b5690d2dde0fa",
+      "control.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status.txt": "7dc11536e21b081c9d422af26f288a9555fab4957060e605b1cd860f8867c896"
+    }
+  },
+  "tool": {
+    "run": "https://github.com/CrispStrobe/bw-board/actions/runs/38161385871",
+    "runMetadata": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/38161385871",
+    "jobsMetadata": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/38161385871/attempts/1/jobs",
+    "artifactMetadata": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11711946140",
+    "artifactDownload": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11711946140/zip",
+    "artifactId": 11711946140,
+    "zipSize": 1110,
+    "zipSha256": "198f722c8b23541ec7a2c1ea8d8204c07e61513b4b693b95bedc8a1bc0cd767e",
+    "members": {
+      "source.json": "504329cf5104e0608a490fa989046ed49409d379be35286f62d7bc7b7abd6681",
+      "control.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "control.stderr": "070c29fedbec4b426d04b07b872fb3cf5f73c1cf93e7129df03b8d3053400363",
+      "status.txt": "7dc11536e21b081c9d422af26f288a9555fab4957060e605b1cd860f8867c896"
+    }
+  }
+}

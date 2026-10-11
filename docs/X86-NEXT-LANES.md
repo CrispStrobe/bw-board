@@ -330,8 +330,11 @@ held producer, controller, default execution path or GUI dependency pin.
 The prerequisite pure-control runs
 [38161363012](https://github.com/CrispStrobe/bw-board/actions/runs/38161363012) and
 [38161385871](https://github.com/CrispStrobe/bw-board/actions/runs/38161385871)
-were still queued with no executed steps at this checkpoint; no duplicate run
-was launched. Hosted results must be refreshed before qualification or merge.
+subsequently passed at their original attempt-1 heads. The
+[retained source-control originals](receipts/2026-10-11-source-unit-controls/README.md)
+record 18 cohort and 15 tool-boundary tests. No duplicate run was launched.
+These finite synthetic results do not qualify PR503–PR506 or a later connection;
+refresh all enabled exact-head checks before any merge.
 
 The next bounded work is:
 
@@ -345,8 +348,9 @@ The next bounded work is:
    controller to admitted turn/pressure ports. Retain designated-GC, root-lifetime,
    sample ancestry, full parity and resource acceptance; helper mechanics alone
    cannot grant those facts.
-3. **Original-result reader:** acquire each completed prerequisite artifact once,
-   validate its original run/head/roles and independently read its finite result.
+3. **Original-result reader:** the two prerequisite artifacts are retained once
+   and their finite original reports pass root and independent admission. Use
+   separately frozen admission for later source heads.
    Preserve failures and the earlier sampler support boundary. Do not replay
    the sampler or grant post-PF frame return from workflow success.
 
