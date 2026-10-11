@@ -47,7 +47,8 @@ jobs:
           phase=source-admission
           trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$evidence/status.txt"' EXIT
           test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
-          timeout 120s git --no-replace-objects fetch --no-tags --depth 1 https://github.com/CrispStrobe/bw-board.git 79f1f13b6037265785e18342ca06b04eec2ab475
+          git --no-replace-objects cat-file -e 79f1f13b6037265785e18342ca06b04eec2ab475^{commit}
+          git --no-replace-objects merge-base --is-ancestor 79f1f13b6037265785e18342ca06b04eec2ab475 HEAD
           timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8-nursery-support/source.py "$evidence/source.json" > "$evidence/source.stdout" 2> "$evidence/source.stderr"
           phase=mock-controls
           for script in source-control.py grade-control.py control.py inventory-control.py; do
@@ -98,8 +99,8 @@ jobs:
           evidence="$RUNNER_TEMP/direct-v8-nursery-support-evidence"
           mkdir -m 700 "$evidence"
           test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
-          timeout 120s git --no-replace-objects fetch --no-tags --depth 1 https://github.com/CrispStrobe/bw-board.git 79f1f13b6037265785e18342ca06b04eec2ab475
           git --no-replace-objects cat-file -e 79f1f13b6037265785e18342ca06b04eec2ab475^{commit}
+          git --no-replace-objects merge-base --is-ancestor 79f1f13b6037265785e18342ca06b04eec2ab475 HEAD
           test -z "$(git --no-replace-objects status --porcelain=v1 -uall)"
           timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8-nursery-support/source-control.py > "$evidence/control.stdout" 2> "$evidence/control.stderr"
           timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8-nursery-support/grade-control.py >> "$evidence/control.stdout" 2>> "$evidence/control.stderr"
