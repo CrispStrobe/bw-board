@@ -377,3 +377,8 @@ runs the fixture's authored JavaScript policy controls before the build.
 The standalone prospective reader and one-shot launch guard passed both
 reviews and synthetic controls. All enabled exact-head checks must pass
 before its label is applied once; no support actual has launched.
+
+
+## Target-site support original: lifetime premise still open
+
+The single [PR491 original38120597738](receipts/2026-10-11-target-site-support-failure/README.md) fails its first minor-baseline child with `weak callback attribution`. All64 weak slots remain initial -1; three completed minor collections occur, with release counters2/2. Both retained-original audits pass within this unqualified boundary. A separately named zero-prior-GC fixture is the next source slice; keep full callback, source-site and sample-ID acceptance unchanged. No four-case support, guest or speed qualification follows, and this original must not be rerun or relabeled.

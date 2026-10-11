@@ -406,7 +406,7 @@ reader passed both reviews and five positive / 57 negative synthetic cases.
 The one-shot guard also passed both reviews and binds the exact prior mock
 audit receipts. All enabled exact-head checks must pass before its distinct
 label is applied once.
-No connected guest has run under this new profile.
+At that prepared-source checkpoint, no connected guest had run under this profile.
 
 
 ## Next implementation gate after the connected PF result
@@ -445,3 +445,8 @@ all enabled exact-head checks before one distinct guest actual. No ownership
 acceptance follows until an actual matching CPU IRET over the owned linear
 frame is observed and separately qualified. This lane is proposed, with no
 implementation or guest result yet.
+
+
+## Connected PF original: next handoff gate reached
+
+The single [PR492 original38120601803](receipts/2026-10-11-pf-mock-fixed-call/README.md) has official failure, but both original-byte audits pass its finite `SOURCE_CONSISTENT_PF_CALL_ONLY` result: PF14/error6, 1,848 matched board/CPU attempts, returned delivery into ring0 and no shutdown. The strict refusal, null frame return and incomplete client remain. This opens the proposed default-off same-session post-PF handoff source prerequisite above, followed by hosted CPU/xv6 qualification and a separately named connected observer. It does not qualify fault service or frame return. Never rerun or relabel this original.
