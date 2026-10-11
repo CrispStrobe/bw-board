@@ -382,3 +382,25 @@ before its label is applied once; no support actual has launched.
 ## Target-site support original: lifetime premise still open
 
 The single [PR491 original38120597738](receipts/2026-10-11-target-site-support-failure/README.md) fails its first minor-baseline child with `weak callback attribution`. All64 weak slots remain initial -1; three completed minor collections occur, with release counters2/2. Both retained-original audits pass within this unqualified boundary. A separately named zero-prior-GC fixture is the next source slice; keep full callback, source-site and sample-ID acceptance unchanged. No four-case support, guest or speed qualification follows, and this original must not be rerun or relabeled.
+
+
+## Zero-prior-GC fixture source checkpoint
+
+[Draft PR493](https://github.com/CrispStrobe/bw-board/pull/493), source
+`79f1f13b6037265785e18342ca06b04eec2ab475`, adds exactly six new paths
+on frozen PR491. The new fixture admits exactly `--expose-gc`, records one
+full-GC invocation before arming, and requires zero observed collections
+through the release cuts. Its private single-use admission is poisoned by
+swallowed reentry; read-only diagnostic status preserves completed invocation
+facts if begin or facts later fails. Full callback, ancestry and exact sample-ID
+predicates stay unchanged, with an explicit new callsite authority.
+
+Coordinator and independent static source/workflow reviews pass. The PR-only
+hosted synthetic-control job is queued; no local Node/compiler/guest execution
+or actual fixture result exists. This job admits only the six-path change,
+checks the unchanged addon hash, runs bounded mock controls and retains closed
+text evidence. It does not compile/load the addon or run the GC fixture.
+After mock qualification, implement a separately admitted four-case support
+runner, independent raw-result grader and original reader. Do not connect the
+fixture implicitly to the old runner or claim object generation, cause of the
+prior failure, application hotspots or performance from these source changes.
