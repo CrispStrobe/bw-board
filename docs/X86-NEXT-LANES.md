@@ -436,3 +436,48 @@ Next implement the separately reviewed connection, with these entry points:
 PR506's separately audited hosted synthetic runtime controls passed at their own
 source. They do not qualify this workspace connection or a live guest driver.
 No new guest completion, post-PF frame return, default adoption or RTx is claimed.
+
+### Hosted four-unit control profile
+
+[Draft PR509](https://github.com/CrispStrobe/bw-board/pull/509), exact
+`0c3b43c1e99403d87622748a2171a23824fad5ce`, adds
+`scripts/i80386-workspace-source-controls/` and
+`.github/workflows/i80386-workspace-source-controls.yml`, stacked on PR508.
+Root and independent review pass. Seven manufactured admission methods and an
+independent file-replacement adversary pass; no hosted result is claimed yet.
+The automatic [source-control run38173075353](https://github.com/CrispStrobe/bw-board/actions/runs/38173075353)
+was queued at this checkpoint. No manual dispatch, duplicate run or replay was
+used.
+
+The job admits thirteen immutable unit paths and three profile paths, then runs
+phase9, route13, writer16 and creator15 methods in isolated Python. Pinned
+actions, Ubuntu24.04, bounded Git/file reads, per-stage timeouts, core/file limits
+and ten fixed text artifact roles preserve complete or failed phases. It does
+not compile a client, import the disabled compiler, copy tools, launch a guest
+or grant parent/workspace/source authority. Refresh the original run outcome;
+acquire its completed artifact once and independently audit the exact original
+source, job, inventory and full four-suite reports before connection work.
+
+The next handoff should privately compose the exact creator, route and writer
+revisions rather than reopening paths:
+
+- Admit the parent context separately. Bound parent paths to30 components and
+  4046 UTF-8 bytes before creation; the generated session/evidence suffix must
+  still fit the existing route owner's32-component/4096-byte limit.
+- Retain the creator's parent/session/tool/evidence rows. Seed the fresh private
+  route owner's two chains with those rows, sharing ancestors but retaining one
+  unique descriptor ownership ledger. Prove that the before phase opens no
+  replacement route descriptors.
+- Prepare and validate every chain copy and private state binding before
+  transferring ownership once. Test interrupted transfer, allocation failures,
+  stale/repeated use and unique cleanup; never let both owners close the same FD.
+  Return no creator, route, writer, caller FD, path or source ticket.
+- Poison the active inner owner immediately on outer reentry, so swallowed
+  status/close callbacks cannot allow further mkdir/stat/write/read calls.
+  Test this during creation, route checks and writer readback.
+- Keep the first-observation replacement limit and all parent/source authority
+  refusals. Preserve partial creation/output; write before terminal route cleanup.
+  Pair/input/reader and reviewed launch gates follow separately.
+
+This composition is a reviewed design, not implemented or qualified handoff.
+Production compilation remains disabled; no guest or speed claim follows.
