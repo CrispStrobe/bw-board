@@ -182,7 +182,8 @@ negative-fixture mutation](receipts/2026-10-11-post-pf-corrected-mock/README.md)
 Preserve both originals. The one-assignment mutable manufactured replacement
 is now [draft PR500](https://github.com/CrispStrobe/bw-board/pull/500), exact
 `e1f44e70bd21e4f3b146d0c0e00da141eb045182`; both static reviews pass. Its
-automatic mock and source checks remain pending. Actual observer execution stays disabled until
+[automatic mock passed its synthetic controls](receipts/2026-10-11-post-pf-mutability-corrected-mock/README.md);
+source checks remain pending. Actual observer execution stays disabled until
 the independent reader, source freeze and one-shot guard qualify.
 
 

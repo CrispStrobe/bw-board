@@ -552,6 +552,8 @@ Only one assignment changes: the adversary supplies a mutable replacement for
 `pfGrade` instead of writing into the production grader's frozen result.
 Coordinator and independent static reviews passed; production grader, CPU,
 driver and workflow are unchanged. Its sole [automatic mock38155545945](https://github.com/CrispStrobe/bw-board/actions/runs/38155545945)
-and enabled source checks are pending. The actual observer job is skipped;
-preserve both earlier failures and audit this new original before reader/guard
-qualification. No connected diagnostic label has been applied.
+passed source, orchestration, grader and inventory controls. The
+[original mock receipt](receipts/2026-10-11-post-pf-mutability-corrected-mock/README.md)
+preserves its exact source/artifact identities. Enabled source checks remain
+pending; the actual observer job skipped. Preserve both earlier failures and
+finish independent reader/guard qualification before any actual diagnostic. No connected diagnostic label has been applied.
