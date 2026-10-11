@@ -3452,3 +3452,15 @@ Astra coordinated one Sol coder and one independent auditor. Qualified source `1
 ### 2026-10-01: combined native paging/RAM/REP actual-board checkpoint
 
 Measured source `809c3fba86a81501a08b0d1e81d4e1d23e241d41` authenticates63 inputs. All four budgets and a fresh root repeat pass192 successfulQ/194N/1156functional clocks, eight RAM witnesses, two page faults, five successfulREP elements and actualPIT/PIC delivery. All62 actual-report tests (61 specific coherent corruption cases) and eight host tests pass with zero skips; 24 native guards, 22 transport rejections and 11 API witnesses pass with actual failure phases checked. Root authenticates251 artifacts and whole backing per capture; independent raw checks4705 each verify aliases, pagewalk/A-D and exact budget-one resume cuts. Raw native streams, allCPU/chips/bus/RPC match between captures; completeJSON retains differing paths. Prior six inventories300 inputs remain unchanged. [Notes and receipts](docs/I80386-NATIVE-COMBINED-PAGING-RAM-ACTUAL-BOARD.md) disclose reset/ordered-bus/cache-policy differences and retained unqualified diagnostics. Next direct callbacks/optional capture for the same bounded guest, then measured speed and broader backend qualification. No fullAT/broader guest/broader game/RTx claim.
+
+2026-10-11 guest rollback snapshot cohort seam — CLAIM, Codex independent PF auditor.
+Branch lane/386-guest-snapshot-cohort-seam-20261011, exact source base
+3a0e595c7b813a753fd79c436bfafe2c20cea690. Own this ledger row and only new
+scripts/xv6-js-rollback-direct-v8-guest-site-cohort/{cohort.mjs,README.md}
+and test/xv6-guest-snapshot-cohort.test.mjs. Instance-only transparent first64
+rollback-root capture seam, private once-only extraction, closed primitive
+status and refusal/cleanup controls. Source unit only: UNCONNECTED and unrun.
+No CPU, board, probe, addon, runner, workflow, media, pin or default change.
+Outer exact-source/live-instance authority and four connected guest cases,
+ancestry/sample-ID/weak lifetime, semantics and resources remain future gates.
+Preserve failed originals and the separately audited finite nursery fixture.
