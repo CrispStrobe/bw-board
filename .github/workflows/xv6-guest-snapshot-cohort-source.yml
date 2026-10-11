@@ -1,0 +1,75 @@
+name: 386 guest snapshot cohort source controls
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - scripts/xv6-js-rollback-direct-v8-guest-site-cohort/cohort.mjs
+      - scripts/xv6-js-rollback-direct-v8-guest-site-cohort/README.md
+      - test/xv6-guest-snapshot-cohort.test.mjs
+      - .github/workflows/xv6-guest-snapshot-cohort-source.yml
+permissions:
+  contents: read
+concurrency:
+  group: xv6-guest-snapshot-cohort-source-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+jobs:
+  source-controls:
+    if: github.run_attempt == 1 && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 32
+          persist-credentials: false
+      - name: Admit exact finite source and run isolated controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          ulimit -f 2048
+          e="$RUNNER_TEMP/xv6-guest-snapshot-cohort-source-evidence"
+          mkdir "$e"
+          phase=source-admission
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$e/status.txt"' EXIT
+          python3 -B - "$e/source.json" <<'PY'
+          import hashlib,json,os,pathlib,subprocess,sys
+          head=os.environ['EXPECTED_HEAD']
+          base='3a0e595c7b813a753fd79c436bfafe2c20cea690'
+          paths=['scripts/xv6-js-rollback-direct-v8-guest-site-cohort/cohort.mjs', 'scripts/xv6-js-rollback-direct-v8-guest-site-cohort/README.md', 'test/xv6-guest-snapshot-cohort.test.mjs', '.github/workflows/xv6-guest-snapshot-cohort-source.yml', 'LANES.md']
+          held={'src/experimental/i80386.js': '6fba681208e1443cc9eff00ae6aba444903d23e5feafe62527b25428e72d60ed', 'scripts/probe-xv6-stock.mjs': '0f283611891e0afbee5359e51b246a2572637257c297815f7ae2c6917ddfc93a'}
+          def git(*args):return subprocess.check_output(['git','--no-replace-objects',*args])
+          if git('rev-parse','HEAD').decode().strip()!=head:raise ValueError('exact source head')
+          subprocess.run(['git','--no-replace-objects','merge-base','--is-ancestor',base,'HEAD'],check=True)
+          changed=git('diff','--name-only',base,'HEAD').decode().splitlines()
+          if not set(changed)<=set(paths):raise ValueError('declared source envelope')
+          roles={}
+          for name in paths:
+           raw=git('show','HEAD:'+name)
+           if pathlib.Path(name).read_bytes()!=raw:raise ValueError('worktree source differs')
+           roles[name]=hashlib.sha256(raw).hexdigest()
+          for name,digest in held.items():
+           raw=git('show','HEAD:'+name)
+           if hashlib.sha256(raw).hexdigest()!=digest or pathlib.Path(name).read_bytes()!=raw:raise ValueError('held source changed')
+           roles[name]=digest
+          pathlib.Path(sys.argv[1]).write_text(json.dumps({'schema':'bw.x86-finite-source-controls.v1','head':head,'base':base,'roles':roles,'qualification':'SOURCE_CONTROLS_ONLY_NO_COMPILER_CPU_GUEST_OR_PERFORMANCE'},sort_keys=True)+'\n')
+          PY
+          phase=pure-controls
+          timeout --signal=TERM --kill-after=5s 60s node --test test/xv6-guest-snapshot-cohort.test.mjs > "$e/control.stdout" 2> "$e/control.stderr"
+          phase=complete
+      - name: Retain finite source and control diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: xv6-guest-snapshot-cohort-source-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/xv6-guest-snapshot-cohort-source-evidence
+          if-no-files-found: error
+          retention-days: 14
