@@ -321,7 +321,9 @@ Two further unconnected draft units are published:
   `2275fc5eb9d0c27a197a5256239cbbefa8d8cabe`, adds
   `scripts/xv6-js-rollback-direct-v8-guest-site-runtime/` and
   `test/xv6-guest-site-runtime.test.mjs`. Root and independent static review pass;
-  sixteen authored tests remain locally unrun. Captured turn and private pressure
+  sixteen authored tests remain locally unrun, but now pass in the independently
+  audited [original hosted CI report](receipts/2026-10-11-runtime-source-controls/README.md).
+  Captured turn and private pressure
   mechanics reject injection and preserve original scheduling failures. Runtime,
   source-instance and guest qualification remain false.
 
@@ -344,8 +346,8 @@ The next bounded work is:
    route/writer observations cannot grant those facts.
    Connect pair validation and final input observations only after those controls
    pass. Keep the production compiler's unconditional disable.
-2. **Runtime controls and driver admission:** qualify the authored runtime tests,
-   then build the exact-source machine/reset/callback factory and connect the
+2. **Runtime controls and driver admission:** hosted synthetic runtime controls
+   now pass. Build the exact-source machine/reset/callback factory and connect the
    controller to admitted turn/pressure ports. Retain designated-GC, root-lifetime,
    sample ancestry, full parity and resource acceptance; helper mechanics alone
    cannot grant those facts.
