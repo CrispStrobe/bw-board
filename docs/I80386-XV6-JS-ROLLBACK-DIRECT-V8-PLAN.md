@@ -533,8 +533,13 @@ membership references from the admitted run's immutable source/proof identity.
 Two distinct authenticated, complete captures then passed the reviewed one-shot
 guard. Its exclusive ticket was consumed before applying the opt-in label once.
 [Actual run38158179633](https://github.com/CrispStrobe/bw-board/actions/runs/38158179633)
-is attempt1 at the same exact head; the actual support job is queued and mock
-controls skipped. This is launch provenance only. Next acquire its original
-artifact once after completion and audit it independently against the frozen
-reader. No support, speed or OS qualification follows from the queued launch.
+completed successfully on attempt1 at the same exact head; mock controls
+skipped. Its [sole original artifact and both independent audits](receipts/2026-10-11-nursery-staging-actual-support/README.md)
+qualify `FOUR_CASE_NURSERY_SUPPORT_ONLY`. Minor baseline53->0 and enabled53->53,
+major baseline53->0 and enabled55->55, each with64 weak callbacks and one
+completed requested GC. This establishes the finite sampler fixture only;
+no guest, speed, OS or default-adoption qualification follows. Next bind a
+separately reviewed profile to the actual guest allocation site, preserving
+raw baseline/enabled records and source/tool/input/final leases, before a
+paired workload measurement. Do not rerun or relabel this diagnostic.
 The original failed diagnostic and earlier consumed guard state remain unchanged.
