@@ -3340,3 +3340,8 @@ Measured source `809c3fba86a81501a08b0d1e81d4e1d23e241d41` authenticates63 input
 ### 386 compile tool boundary source preparation — 2026-10-11
 
 Claimed: `scripts/i80386-cwsdpmi-compile-tool-boundary/{compile.py,boundary-owner.py,boundary-owner-control.py,README.md}` on `lane/386-compile-tool-boundary-source-20261011`. Derive the held compiler helper and fixed-role receipts in a new namespace; prepare phase ownership and injected controls only. Held sources remain unchanged. PR502 hosted source controls, independent reader/input closure and a separate reviewed launch gate remain prerequisites; no compiler or guest execution, default or consumer adoption is claimed.
+
+
+### 386 compile root routes source preparation — 2026-10-11
+
+Claimed `scripts/i80386-cwsdpmi-compile-root-routes/{root-routes.py,root-routes-control.py,README.md}` on `lane/386-compile-root-routes-source-20261011`. Standalone bounded descriptor route observations for fixed tool/evidence roots and ancestor identity separation; manufactured filesystem controls only. PR503 compiler disable and held sources remain unchanged. Route observations cannot authenticate source-owned workspace creation or continuous identity; no compiler, guest, runtime, defaults or launch qualification.
