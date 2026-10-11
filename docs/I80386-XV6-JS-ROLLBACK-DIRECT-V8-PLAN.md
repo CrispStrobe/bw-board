@@ -403,3 +403,35 @@ After mock qualification, implement a separately admitted four-case support
 runner, independent raw-result grader and original reader. Do not connect the
 fixture implicitly to the old runner or claim object generation, cause of the
 prior failure, application hotspots or performance from these source changes.
+
+
+## Nursery support runner source checkpoint
+
+[Draft PR495](https://github.com/CrispStrobe/bw-board/pull/495), source
+`52f418a9b82e8355a12de053e3498adcc0bc00c1`, adds ten paths on frozen
+PR493: nine namespace files and one dedicated workflow. Its
+[source contract](https://github.com/CrispStrobe/bw-board/blob/52f418a9b82e8355a12de053e3498adcc0bc00c1/scripts/xv6-js-rollback-direct-v8-nursery-support/README.md)
+holds 90 prior source roles unchanged, for 100 total admitted roles. Coordinator
+and independent core/workflow static reviews pass; four Python synthetic
+control suites pass. No local Node, native compilation, fixture GC or guest
+execution occurred. Hosted mock controls and all enabled source checks are
+still pending. No support diagnostic label has been applied.
+
+The runner preserves pinned Node20.20.2, headers, compiler/tool authority and
+one same-run build. It seals admission/case/policy and executable/addon bytes
+before four fresh children with exactly `--expose-gc`. Independent raw grading
+requires successful admitted status, full-GC completion, zero prior/release
+counts, exactly one designated event, all 64 callbacks, full new-callsite
+ancestry and exact canonical sample-ID sets. First failures and partial raw
+reports remain failures. Automatic PR mock controls are separate from the
+label-only diagnostic.
+
+Next qualify the sole hosted mock original and all enabled exact-head checks.
+Finish and independently review the prospective original reader and its
+synthetic positive, partial-failure, source/metadata/inventory rejection
+controls; freeze its final source manifest and review a one-shot launch guard.
+Only then may one separately named bounded support actual be launched. The
+reader remains unqualified WIP at this checkpoint, so no actual launch is
+permitted. Preserve earlier originals. Even a later finite support pass would
+not establish object generation, the cause of the old failure, application
+hotspots, guest semantics or speed.
