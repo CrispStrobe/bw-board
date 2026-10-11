@@ -3464,3 +3464,8 @@ No CPU, board, probe, addon, runner, workflow, media, pin or default change.
 Outer exact-source/live-instance authority and four connected guest cases,
 ancestry/sample-ID/weak lifetime, semantics and resources remain future gates.
 Preserve failed originals and the separately audited finite nursery fixture.
+
+
+### 386 guest-site controller source preparation — 2026-10-11
+
+Claimed: `scripts/xv6-js-rollback-direct-v8-guest-site-controller/{controller.mjs,README.md}` and `test/xv6-guest-site-controller.test.mjs` on `lane/386-guest-site-controller-source-20261011`. Prepare synthetic lifecycle ports and controls for a private 64-root handoff; no caller reports establish live CPU/source/reset authority. Held sources remain unchanged. PR501 hosted source controls, full source-owned adapter admission, guest outcome parity and separate reader/launch gates remain prerequisites. No CPU/guest/Node execution, native loading, resource adoption, performance or default claim.
