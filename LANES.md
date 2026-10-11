@@ -1,5 +1,23 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-11 transient floor-step ringing and reset controller — CLAIMED, Claude Code.
+Branch fix/reset-transient-controller-20261011, base current master. Cause of
+Lite's intermittent green-flag failure on the 54-motor-driver bench: after a
+short first advance (9.536 us) the trapezoidal inductor history no longer fits
+the motor's back-EMF stamp; full and half steps then disagree by 0.92 mV at the
+winding node at every step size down to 1e-15 s (normalized error 42.7), the
+controller forces floor steps and advanceToLive refuses the run. Separately,
+reset() keeps the step seed, trapezoidal history, failure latch and the motor's
+speed/current, so a restart inherits them. Envelope: src/board.js (interactive-v2
+opt-in profile flag floorHistoryRestart: one damped BE history restart before
+accepting a floor step; reset() reseeds controller state and latch), src/devices.js
+(optional device `reset` hook), src/devices/dc-motor.js (reset to rest), new
+test/reset-transient-controller.test.mjs, and the profile-record assertions in
+test/transient-analysis-profile.test.mjs and test/npn-winding-transient-boundary.test.mjs
+(new field only). Legacy interactive-v1 and precision-v1 keep their recorded
+behaviour; no tolerance, minimum step or attempt ceiling changes. Exact hosted CI
+before guarded landing; Lite pin adoption is a separate Lite lane.
+
 2026-10-09 RLC instrument oracle — DONE candidate, Codex bwcx.
 Branch lane/rlc-instrument-oracle-20261009, fresh exact base
 f9da7cbe29d6cc79f308e6d71c5bd231f76c5376. Four-path evidence-only envelope:
