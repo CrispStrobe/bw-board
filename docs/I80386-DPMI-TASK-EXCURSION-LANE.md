@@ -544,3 +544,14 @@ pre-guest failure. The actual job was skipped. Next supply a mutable manufacture
 replacement for this adversary while preserving the production grader, then
 qualify a new exact-source mock before the connected reader/guard gate.
 No connected diagnostic label has been applied.
+
+
+The manufactured negative-fixture repair is published as [draft PR500](https://github.com/CrispStrobe/bw-board/pull/500),
+exact `e1f44e70bd21e4f3b146d0c0e00da141eb045182`, stacked on PR498.
+Only one assignment changes: the adversary supplies a mutable replacement for
+`pfGrade` instead of writing into the production grader's frozen result.
+Coordinator and independent static reviews passed; production grader, CPU,
+driver and workflow are unchanged. Its sole [automatic mock38155545945](https://github.com/CrispStrobe/bw-board/actions/runs/38155545945)
+and enabled source checks are pending. The actual observer job is skipped;
+preserve both earlier failures and audit this new original before reader/guard
+qualification. No connected diagnostic label has been applied.

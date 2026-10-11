@@ -179,15 +179,20 @@ The fixture-only repair is now [draft PR498](https://github.com/CrispStrobe/bw-b
 exact `79dfbd223a579bd9aba43be39e8ebdbb046eea5c`, with coordinator and
 independent static reviews passed. Its [corrected mock failed at a frozen-result
 negative-fixture mutation](receipts/2026-10-11-post-pf-corrected-mock/README.md).
-Preserve both originals; next supply a mutable manufactured replacement and
-qualify a new exact-source mock. Actual observer execution stays disabled until
+Preserve both originals. The one-assignment mutable manufactured replacement
+is now [draft PR500](https://github.com/CrispStrobe/bw-board/pull/500), exact
+`e1f44e70bd21e4f3b146d0c0e00da141eb045182`; both static reviews pass. Its
+automatic mock and source checks remain pending. Actual observer execution stays disabled until
 the independent reader, source freeze and one-shot guard qualify.
 
 
 The scoped sampler staging repair is now [draft PR499](https://github.com/CrispStrobe/bw-board/pull/499),
 exact `3a0e595c7b813a753fd79c436bfafe2c20cea690`: three reviewed paths,
 finite executable-only soft-limit change and unchanged raw-result acceptance.
-Automatic mock/source checks are pending; actual support is skipped. Follow
+The [corrected mock original passed both audits](receipts/2026-10-11-nursery-staging-corrected-mock/README.md);
+source checks are pending and actual support is skipped. The reader is frozen;
+the new guard draft passed both reviews and ten manufactured controls, but
+original proof/audit binding, fresh complete census and final seal remain gates. Follow
 the [staging correction acceptance contract](I80386-XV6-JS-ROLLBACK-DIRECT-V8-PLAN.md#nursery-support-original-binary-staging-cap-mismatch)
 for the new source freeze, reader and one-shot guard. Verify the opt-in label
 exists before consuming launch authority; do not alter the original failed

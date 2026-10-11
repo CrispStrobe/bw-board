@@ -494,3 +494,14 @@ label-existence preflight. Distinguish source base `79f1f13b` from PR499's paren
 `21eef8f7` when checking ancestry. The original
 PR495 reader/state and failed packet remain immutable. No support or speed
 qualification follows from the source correction.
+
+
+The new staging guard draft passed coordinator and independent review and all
+ten manufactured stdlib controls. It fixes source base versus PR parent,
+11 enabled/3 declared skipped check identities, distinct label and fresh state.
+Repository-label existence is checked before reservation creation and consumption;
+failed label setup preserves an existing reserved ticket. Later refresh refusal
+consumes the ticket. Reviewed original mock and NONLABELED proof records are
+available; the latter establishes no specific PR event action. Final bindings,
+fresh authenticated complete census and the operational seal remain unavailable.
+No reservation, label application or actual diagnostic follows from draft review.
