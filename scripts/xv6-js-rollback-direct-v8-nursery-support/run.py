@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import resource
 import stat
 import subprocess
 import sys
@@ -23,6 +24,8 @@ PROFILE_LIMIT = 8 * 1024 * 1024
 FACT_LIMIT = 65536
 REPORT_LIMIT = 1 * 1024 * 1024
 CHILD_LIMIT = 45
+TEXT_FILE_LIMIT = 16 * 1024 * 1024
+NODE_STAGE_HARD_LIMIT = 96614 * 1024
 BASE = "79f1f13b6037265785e18342ca06b04eec2ab475"
 SOURCE_ROLE = "scripts/xv6-js-rollback-direct-v8-nursery-support/source.py"
 HEX40 = re.compile(r"[0-9a-f]{40}\Z")
@@ -30,6 +33,41 @@ HEX40 = re.compile(r"[0-9a-f]{40}\Z")
 
 def sha(raw):
     return hashlib.sha256(raw).hexdigest()
+
+
+def stage_node(path, raw, expected_sha, expected_size):
+    """Write only admitted Node bytes under an exact, temporary soft limit.
+
+    The finite hard limit is set by the hosted build step. No compiler or child
+    runs while this local binary-write allowance is active.
+    """
+    if type(raw) is not bytes or type(expected_size) is not int or \
+            not 0 < expected_size <= NODE_STAGE_HARD_LIMIT or \
+            len(raw) != expected_size or sha(raw) != expected_sha:
+        raise ValueError("Node staging byte identity refused")
+    previous = resource.getrlimit(resource.RLIMIT_FSIZE)
+    if previous != (TEXT_FILE_LIMIT, NODE_STAGE_HARD_LIMIT):
+        raise ValueError("Node staging file-limit contract refused")
+    original = None
+    try:
+        resource.setrlimit(resource.RLIMIT_FSIZE,
+                           (expected_size, NODE_STAGE_HARD_LIMIT))
+        with path.open("xb") as output:
+            if output.write(raw) != expected_size:
+                raise ValueError("Node staging short write")
+    except Exception as error:
+        original = error
+        raise
+    finally:
+        try:
+            resource.setrlimit(resource.RLIMIT_FSIZE, previous)
+        except Exception as restoration_error:
+            # A failed cleanup cannot replace the original binary-write failure.
+            if original is not None:
+                raise original from restoration_error
+            raise
+    if resource.getrlimit(resource.RLIMIT_FSIZE) != previous:
+        raise ValueError("Node staging text limit not restored")
 
 
 def git(*args):
@@ -271,8 +309,9 @@ def main():
                 authority["nodeExecutable"]["bytes"]):
             raise ValueError("Node executable differs")
         node_path = work / "node"
-        with node_path.open("xb") as output:
-            output.write(node_bytes)
+        stage_node(node_path, node_bytes,
+                   authority["nodeExecutable"]["sha256"],
+                   authority["nodeExecutable"]["bytes"])
         node_path.chmod(0o700)
         del node_bytes, node_archive
         report["build"]["node"] = {

@@ -4,6 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+from unittest.mock import patch
 
 path = Path(__file__).with_name("run.py")
 spec = importlib.util.spec_from_file_location("direct_v8_support_runner", path)
@@ -11,6 +12,65 @@ module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 assert module.FIRST.name == "xv6-js-rollback-direct-v8-first-build-profiler-header"
 assert module.AUTHORITY.parent.name == "xv6-js-rollback-direct-v8-first-build"
+
+# Manufactured bytes and mocked limit syscalls only: no real limit changes or
+# Node executable/runtime. The binary allowance cannot survive a failed write.
+class SyntheticWriter:
+    def __init__(self, error=None, short=False): self.error=error; self.short=short
+    def __enter__(self): return self
+    def __exit__(self, *_args): return False
+    def write(self, raw):
+        if self.error: raise self.error
+        return len(raw)-1 if self.short else len(raw)
+class SyntheticPath:
+    def __init__(self, writer): self.writer=writer
+    def open(self, mode):
+        assert mode=='xb';return self.writer
+raw=b'synthetic admitted executable bytes'
+original=(module.TEXT_FILE_LIMIT,module.NODE_STAGE_HARD_LIMIT)
+for error,short in [(None,False),(OSError(27,'synthetic file-too-large'),False),(None,True)]:
+    limits=[original];calls=[]
+    def change_limit(_role,value): calls.append(value);limits[0]=value
+    with patch.object(module.resource,'getrlimit',side_effect=lambda _role:limits[0]), \
+         patch.object(module.resource,'setrlimit',side_effect=change_limit):
+        try:module.stage_node(SyntheticPath(SyntheticWriter(error,short)),raw,module.sha(raw),len(raw))
+        except (OSError,ValueError):assert error or short
+        else:assert error is None and not short
+    assert calls==[(len(raw),module.NODE_STAGE_HARD_LIMIT),original]
+    assert limits[0]==original
+for limits_value in [(module.TEXT_FILE_LIMIT,module.TEXT_FILE_LIMIT),
+                     (module.TEXT_FILE_LIMIT,module.resource.RLIM_INFINITY),
+                     (module.NODE_STAGE_HARD_LIMIT,module.NODE_STAGE_HARD_LIMIT)]:
+    with patch.object(module.resource,'getrlimit',return_value=limits_value), \
+         patch.object(module.resource,'setrlimit') as setter:
+        try:module.stage_node(SyntheticPath(SyntheticWriter()),raw,module.sha(raw),len(raw))
+        except ValueError:pass
+        else:raise AssertionError('unscoped staging limits admitted')
+        setter.assert_not_called()
+with patch.object(module.resource,'setrlimit') as setter:
+    try:module.stage_node(SyntheticPath(SyntheticWriter()),raw,module.sha(raw+b'x'),len(raw))
+    except ValueError:pass
+    else:raise AssertionError('staging byte mutation admitted')
+    setter.assert_not_called()
+
+original_error=OSError(27,'synthetic original write failure')
+restore_error=RuntimeError('synthetic restoration refused')
+with patch.object(module.resource,'getrlimit',return_value=original), \
+     patch.object(module.resource,'setrlimit',side_effect=[None,restore_error]):
+    try:module.stage_node(SyntheticPath(SyntheticWriter(original_error)),raw,module.sha(raw),len(raw))
+    except OSError as error:
+        assert error is original_error and error.__cause__ is restore_error
+    else:raise AssertionError('write first failure lost during restoration')
+with patch.object(module.resource,'getrlimit',return_value=original), \
+     patch.object(module.resource,'setrlimit',side_effect=[None,restore_error]):
+    try:module.stage_node(SyntheticPath(SyntheticWriter()),raw,module.sha(raw),len(raw))
+    except RuntimeError as error:assert error is restore_error
+    else:raise AssertionError('unrestored limit reached later stages')
+workflow=(module.ROOT/'.github/workflows/xv6-js-rollback-direct-v8-nursery-support.yml').read_text()
+build=workflow.split('      - name: Build and run four fresh support cases',1)[1].split('      - name:',1)[0]
+assert 'ulimit -S -f 16384' in build and 'ulimit -H -f 96614' in build
+assert 'ulimit -f unlimited' not in workflow
+assert "github.event.label.name == 'xv6-js-v8-nursery-support-staging-correction'" in workflow
 
 with tempfile.TemporaryDirectory(prefix="direct-v8-support-pure-") as name:
     root = Path(name)

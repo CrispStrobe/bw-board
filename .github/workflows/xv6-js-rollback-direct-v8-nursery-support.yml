@@ -1,4 +1,4 @@
-name: direct V8 nursery four-case support
+name: direct V8 nursery four-case support staging correction
 
 on:
   pull_request:
@@ -75,7 +75,7 @@ jobs:
   nursery-support:
     if: >-
       github.event.action == 'labeled' &&
-      github.event.label.name == 'xv6-js-v8-nursery-support' &&
+      github.event.label.name == 'xv6-js-v8-nursery-support-staging-correction' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.run_attempt == 1
     runs-on: ubuntu-24.04
@@ -115,7 +115,10 @@ jobs:
         run: |
           set -euo pipefail
           ulimit -c 0
-          ulimit -f 16384
+          # Restore the text/child soft cap after the sole admitted Node write.
+          # Finite hard cap: ceil(98932688 pinned executable bytes / 1024).
+          ulimit -S -f 16384
+          ulimit -H -f 96614
           evidence="$RUNNER_TEMP/direct-v8-nursery-support-evidence"
           timeout 23m python3 -B scripts/xv6-js-rollback-direct-v8-nursery-support/run.py "$RUNNER_TEMP/direct-v8-nursery-support-work" "$evidence" > "$evidence/run.stdout" 2> "$evidence/run.stderr"
           python3 -B -c 'import json,sys; r=json.load(open(sys.argv[1])); assert r["schema"] == "bw.direct-v8.nursery-support.v1" and r["status"] == "FOUR_CASE_NURSERY_SUPPORT_ONLY" and r["firstFailure"] is None and r["support"]["supported"] is True and len(r["cases"]) == 4' "$evidence/nursery-support.json"
