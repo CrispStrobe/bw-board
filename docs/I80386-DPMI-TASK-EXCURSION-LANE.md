@@ -459,8 +459,7 @@ The single [PR492 original38120601803](receipts/2026-10-11-pf-mock-fixed-call/RE
 [new focused controls](https://github.com/CrispStrobe/bw-board/blob/b9fe9370ff61472a310587fc311bf6004a0a5742/test/i80386-0501-post-pf-continuation.test.mjs) and
 [prerequisite README](https://github.com/CrispStrobe/bw-board/blob/b9fe9370ff61472a310587fc311bf6004a0a5742/scripts/i80386-cwsdpmi-0501-post-pf-continuation/README.md)
 on frozen PR492. Coordinator and independent static reviews pass. The
-existing automatic exact-head push CPU/xv6 and standard checks are queued; no
-execution qualification, connected driver or default adoption exists yet.
+first [exact-source hosted prerequisite run](receipts/2026-10-11-post-pf-cpu-first-failure/README.md) failed six IRQ fixture controls before any xv6 build/boot. The test-only incoming-task IF repair `3bd7b09cc01f02bd99f2c3b4d72b982d1f511f77` is published in PR494 and awaits normal exact-source hosted qualification. No connected driver or default adoption exists yet.
 
 The opt-in `postPfHandoff:true` preserves the old PF profile's snapshot behavior.
 Admission uses retained private same-CPU tokens, the original cookie/outgoing

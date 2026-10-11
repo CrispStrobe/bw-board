@@ -396,7 +396,7 @@ facts if begin or facts later fails. Full callback, ancestry and exact sample-ID
 predicates stay unchanged, with an explicit new callsite authority.
 
 Coordinator and independent static source/workflow reviews pass. The PR-only
-hosted synthetic-control original [38121297221](receipts/2026-10-11-nursery-mock-controls/README.md) passes, with coordinator and independent original-byte audits. Other enabled source checks remain pending. No actual fixture result exists. This job admits only the six-path change,
+hosted synthetic-control original [38121297221](receipts/2026-10-11-nursery-mock-controls/README.md) passes, with coordinator and independent original-byte audits. All eleven enabled source checks pass, with only the two declared optional skips. No actual fixture result exists. This job admits only the six-path change,
 checks the unchanged addon hash, runs bounded mock controls and retains closed
 text evidence. It does not compile/load the addon or run the GC fixture.
 After mock qualification, implement a separately admitted four-case support
