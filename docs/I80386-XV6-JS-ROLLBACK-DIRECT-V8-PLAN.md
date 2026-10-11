@@ -414,7 +414,7 @@ PR493: nine namespace files and one dedicated workflow. Its
 holds 90 prior source roles unchanged, for 100 total admitted roles. Coordinator
 and independent core/workflow static reviews pass; four Python synthetic
 control suites pass. No local Node, native compilation, fixture GC or guest
-execution occurred. The [first hosted mock original38146147828](receipts/2026-10-11-nursery-support-mock-first-failure/README.md) failed a redundant Git transfer before any source receipt or controls. The workflow-only correction `21eef8f700132f2df90564fbf3661467a2275b64` replaces it with explicit local base/ancestor admission; The [sole corrected hosted mock original38147244263](receipts/2026-10-11-nursery-support-corrected-mock/README.md) and both original-byte audits now pass its finite synthetic controls; remaining enabled source checks are pending. No support diagnostic label has been applied.
+execution occurred. The [first hosted mock original38146147828](receipts/2026-10-11-nursery-support-mock-first-failure/README.md) failed a redundant Git transfer before any source receipt or controls. The workflow-only correction `21eef8f700132f2df90564fbf3661467a2275b64` replaces it with explicit local base/ancestor admission. The [sole corrected hosted mock original38147244263](receipts/2026-10-11-nursery-support-corrected-mock/README.md) and both original-byte audits now pass its finite synthetic controls; all eleven enabled exact-head source checks pass, with three declared skips (the two optional vectors and the label-only actual job). The first successful label application is now verified; its separately bounded [original38151633427](https://github.com/CrispStrobe/bw-board/actions/runs/38151633427) is queued, with no runtime result yet.
 
 The runner preserves pinned Node20.20.2, headers, compiler/tool authority and
 one same-run build. It seals admission/case/policy and executable/addon bytes
@@ -433,14 +433,21 @@ failure packets, exact role partition, strict primitive types, official job
 identity, closed inventory and ordinary input refusal. This is reader
 readiness, not runtime evidence.
 
-The private one-shot guard passes coordinator and independent preparation
-review plus five stdlib synthetic test groups. It still refuses operational
-admission: final audited mock bindings, a reviewed complete official census
-and the final guard seal remain required. Exact event actions must not be
-invented from a generic pull-request run event.
+The separately reviewed one-shot guard now binds the corrected original mock,
+frozen source and reader, and complete official check/workflow census. Its
+NONLABELED proof uses exact workflow bytes and terminal mock job facts; the
+specific opened, synchronize or reopened action remains unknown. Source and
+synthetic reviews pass for the guard, event proof and census normalizer.
 
-Next finish all enabled exact-head checks and final one-shot launch admission. Only then may one separately
-named bounded support actual be launched. No actual launch is permitted at
-this checkpoint. Preserve earlier originals. Even a later finite support pass would
-not establish object generation, the cause of the old failure, application
-hotspots, guest semantics or speed.
+The first label command refused because the repository label was absent; no
+workflow launched from that command. The failed reservation stays consumed.
+A separately reviewed, single-use recovery created a new reservation after the
+label existed, rechecked all 100 source roles and fresh complete official
+metadata, and verified the first successful application. Its single
+[original38151633427](https://github.com/CrispStrobe/bw-board/actions/runs/38151633427)
+is queued at exact source `21eef8f700132f2df90564fbf3661467a2275b64`.
+Do not rerun or relabel it. Next retain and independently audit its first
+original packet, including any failure. No fixture support or performance
+result exists yet. Even a later finite support pass would not establish object
+generation, the cause of the old failure, application hotspots, guest semantics
+or speed.

@@ -469,11 +469,10 @@ and candidate-IRQ refusal remain explicit. Decoded IRET intent is not core
 return or frame consumption; unrelated instruction or IRQ mode changes refuse.
 Every result retains `frameReturnQualified:false`.
 
-Next audit the original exact-source hosted CPU/xv6 result and all enabled
-checks. If controls fail, preserve that original and correct the narrow first
-seam before any connection. Only after prerequisite qualification may a new
-derivative driver retain the historical tokens, arm this observer before
-draining them, bind the same machine and counters, and apply the 120-second
+The prerequisite qualification gate is reached; retain its original and do
+not rerun unchanged guest regressions. Next publish a separately reviewed
+derivative driver that retains the historical tokens, arms this observer before
+draining them, binds the same machine and counters, and applies the 120-second
 wall bound. Prepare its separate source admission, grader, closed inventory
 and original reader before one guest diagnostic. Neither this source nor
 synthetic controls qualify PF service, repair/retry, owned frame return,
