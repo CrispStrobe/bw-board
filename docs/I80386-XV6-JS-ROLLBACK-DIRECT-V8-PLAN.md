@@ -414,8 +414,7 @@ PR493: nine namespace files and one dedicated workflow. Its
 holds 90 prior source roles unchanged, for 100 total admitted roles. Coordinator
 and independent core/workflow static reviews pass; four Python synthetic
 control suites pass. No local Node, native compilation, fixture GC or guest
-execution occurred. Hosted mock controls and all enabled source checks are
-still pending. No support diagnostic label has been applied.
+execution occurred. The [first hosted mock original38146147828](receipts/2026-10-11-nursery-support-mock-first-failure/README.md) failed a redundant Git transfer before any source receipt or controls. The workflow-only correction `21eef8f700132f2df90564fbf3661467a2275b64` replaces it with explicit local base/ancestor admission; corrected hosted mocks and all enabled source checks are pending. No support diagnostic label has been applied.
 
 The runner preserves pinned Node20.20.2, headers, compiler/tool authority and
 one same-run build. It seals admission/case/policy and executable/addon bytes

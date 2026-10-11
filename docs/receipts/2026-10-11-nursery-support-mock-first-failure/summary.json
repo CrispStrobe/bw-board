@@ -1,0 +1,20 @@
+{
+  "schema": "bw.public.x86.nursery-support-mock-failure.v1",
+  "run": 38146147828,
+  "source": "52f418a9b82e8355a12de053e3498adcc0bc00c1",
+  "artifact": 11704398679,
+  "zipBytes": 444,
+  "zipSha256": "3b20811d8a0f25d5c38af1f35ab94041083ce1756e4fc3c7451525bdeb41ba21",
+  "classification": "PRE_CONTROL_SOURCE_ADMISSION_FAILURE",
+  "members": 2,
+  "phase": "source-admission",
+  "exitCode": 128,
+  "firstFatal": "fetch-pack: invalid index-pack output",
+  "sourceReceiptCreated": false,
+  "controlsExecuted": false,
+  "actualSupportExecuted": false,
+  "independentAuditSha256": "7ef1ea68eeb5e839f7a02aab27728c1fd77dfc0d3262a841c444b9eb09ad283e",
+  "workflowOnlyFix": "21eef8f700132f2df90564fbf3661467a2275b64",
+  "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/38146147828",
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11704398679"
+}
