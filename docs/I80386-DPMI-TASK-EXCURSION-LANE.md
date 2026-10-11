@@ -537,6 +537,10 @@ exact `79dfbd223a579bd9aba43be39e8ebdbb046eea5c`, stacked on PR497.
 Coordinator and independent static reviews pass; only the positive fixture's
 missing false ownership fact changes. The grader, CPU, driver and workflow
 remain unchanged. Its [automatic corrected mock38153915225](https://github.com/CrispStrobe/bw-board/actions/runs/38153915225)
-and all enabled source checks are pending; the actual job is skipped. Retain
-and independently audit that single original when it completes before the
-connected reader/guard gate. No connected diagnostic label has been applied.
+failed at the third negative fixture mutation: `pfGrade.postShutdown` was
+assigned on the immutable grader result. [Coordinator and independent original
+audits](receipts/2026-10-11-post-pf-corrected-mock/README.md) preserve this second
+pre-guest failure. The actual job was skipped. Next supply a mutable manufactured
+replacement for this adversary while preserving the production grader, then
+qualify a new exact-source mock before the connected reader/guard gate.
+No connected diagnostic label has been applied.

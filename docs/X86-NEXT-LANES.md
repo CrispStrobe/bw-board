@@ -177,9 +177,11 @@ completion, frame acceptance or a speed measurement.
 
 The fixture-only repair is now [draft PR498](https://github.com/CrispStrobe/bw-board/pull/498),
 exact `79dfbd223a579bd9aba43be39e8ebdbb046eea5c`, with coordinator and
-independent static reviews passed. Its new automatic mock and enabled checks
-remain pending; actual observer execution stays disabled until the independent
-reader, source freeze and one-shot guard qualify.
+independent static reviews passed. Its [corrected mock failed at a frozen-result
+negative-fixture mutation](receipts/2026-10-11-post-pf-corrected-mock/README.md).
+Preserve both originals; next supply a mutable manufactured replacement and
+qualify a new exact-source mock. Actual observer execution stays disabled until
+the independent reader, source freeze and one-shot guard qualify.
 
 
 The scoped sampler staging repair is now [draft PR499](https://github.com/CrispStrobe/bw-board/pull/499),
