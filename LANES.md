@@ -3355,3 +3355,8 @@ Claimed `scripts/i80386-cwsdpmi-evidence-descriptor-writer/{evidence-owner.py,ev
 ### 386 workspace creator source preparation — 2026-10-11
 
 Claimed `scripts/i80386-cwsdpmi-workspace-creator/{workspace.py,workspace-control.py,README.md}` on `lane/386-workspace-creator-source-20261011`. Standalone bounded parent-route observations and one source-created session with fixed tool/evidence siblings; manufactured filesystem controls only. Preserve partial creation and uncertain cleanup, without public descriptors or caller-selected names. Parent trust, source admission, later private writer handoff and production compiler qualification remain external; held helpers and compiler disable unchanged.
+
+
+### 386 workspace unit hosted controls — 2026-10-11
+
+Claimed `scripts/i80386-workspace-source-controls/{admit.py,README.md}` and `.github/workflows/i80386-workspace-source-controls.yml` on `lane/386-workspace-source-controls-20261011`. Exact-source admission and one automatic PR-only hosted control job for the frozen phase, route, writer and creator units. Manufactured Python controls only; preserve original reports and failures. No compiler/client, guest, runtime, workspace-parent authority, private media or production enable. Existing unit sources remain unchanged.
