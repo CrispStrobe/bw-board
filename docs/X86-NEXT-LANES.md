@@ -378,7 +378,8 @@ alias admission, continuous identity and compilation remain unqualified. The
 production compiler stays unconditionally disabled. Hosted controls for this
 new unit and every enabled final-head check remain required before integration.
 
-The next source-only task is a separately named workspace creator:
+The workspace creator described here is now prepared in PR508 below. These
+were its source-only acceptance requirements:
 
 - Own the parent route internally after separate parent-context admission;
   choose one private session name and create exactly a session directory plus
@@ -396,3 +397,42 @@ The next source-only task is a separately named workspace creator:
 After creation controls qualify, connect workspace, route and writer ownership
 in a separate profile, then close pair/input observations and the independent
 reader. No new guest, frame-return or performance claim follows from PR507.
+
+### Workspace creator checkpoint and connection work
+
+[Draft PR508](https://github.com/CrispStrobe/bw-board/pull/508), exact
+`a3f4e0c2e6b5132bc91adb161365dcdc49213c5a`, adds only
+`scripts/i80386-cwsdpmi-workspace-creator/` and its lane claim, stacked on PR507.
+Root and independent source review pass; fifteen manufactured filesystem methods
+and two additional independent adversaries pass. The creator generates one
+private session name, consumes at most three descriptor-relative directory
+attempts, checks bounded parent/created routes, and preserves partial artifacts
+and uncertain cleanup. It implements no deletion, rollback or writer handoff.
+
+Post-mkdir identities are named/held observations. Because mkdir returns no
+inode or descriptor, replacement before the first observation can be
+indistinguishable; those identities do not prove which inode the call created.
+The authored control preserves this boundary. Parent trust, source ownership,
+continuous identity and compiler qualification remain false. Hosted pure
+controls for the new Python units are still owed; ordinary CI success alone
+must not be described as executing these standalone Python methods.
+
+Next implement the separately reviewed connection, with these entry points:
+
+1. Freeze exact source roles for the creator, route owner, evidence writer and
+   compiler phase owner; qualify their standalone controls on the hosted runner
+   without compiling a client or launching a guest.
+2. Admit the parent/source context in the owning profile. Join the creator's
+   retained private directory context to the exact route/writer composition
+   once, without caller-supplied FDs, paths, callbacks or manufactured authority.
+   Keep creation observations distinct from parent/context trust.
+3. Test stale/repeated handoff, creation/route replacement, observer reentry,
+   original-error retention and ownership/close ordering. Preserve every partial
+   output; the writer must finish before terminal route cleanup closes its FD.
+4. Only then connect pair and final input observations, the independent reader,
+   format/archive/environment/media gates and the separately reviewed launch.
+   Keep the production compiler disabled until all required gates close.
+
+PR506's separately audited hosted synthetic runtime controls passed at their own
+source. They do not qualify this workspace connection or a live guest driver.
+No new guest completion, post-PF frame return, default adoption or RTx is claimed.

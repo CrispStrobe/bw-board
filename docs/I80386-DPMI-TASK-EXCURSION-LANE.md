@@ -683,3 +683,14 @@ workspace creation remain external. Next implement the
 [workspace creation contract](X86-NEXT-LANES.md#retained-descriptor-writer-checkpoint),
 then connect ownership and pair/input closure. The held producer and production
 compiler disable remain unchanged.
+
+
+The standalone creator is prepared in [draft PR508](https://github.com/CrispStrobe/bw-board/pull/508),
+exact `a3f4e0c2e6b5132bc91adb161365dcdc49213c5a`, with fifteen manufactured
+filesystem methods and two independent adversaries passing. No handoff,
+parent-context admission or compiler connection is implemented. Post-mkdir
+observations cannot prove created inode ownership. Follow the
+[next connection contract](X86-NEXT-LANES.md#workspace-creator-checkpoint-and-connection-work):
+freeze/qualify all four source units, admit the parent context, join internal
+ownership once, then complete pair/input/reader and reviewed launch gates.
+Production compilation remains disabled.
