@@ -154,3 +154,12 @@ The separately named sampler fixture is now [draft PR493](https://github.com/Cri
 
 
 The separately named nursery support runner is now [draft PR495](https://github.com/CrispStrobe/bw-board/pull/495), source `52f418a9b82e8355a12de053e3498adcc0bc00c1`: ten new paths, 90 held/100 total roles, static source review and four Python synthetic suites passed. The [first hosted mock](receipts/2026-10-11-nursery-support-mock-first-failure/README.md) failed a redundant Git transfer before controls; workflow-only fix `21eef8f700132f2df90564fbf3661467a2275b64` is pushed; the [corrected mock original38147244263](receipts/2026-10-11-nursery-support-corrected-mock/README.md) passes both original-byte audits. All eleven enabled exact-head source checks pass, with only the three declared optional/label-only skips. The prospective reader now passes coordinator and independent review plus 13 stdlib synthetic controls, and its exact-source manifest is frozen; the separately reviewed one-shot guard is now sealed after complete official census and exact-source verification. After the missing-label refusal and independently reviewed single-use recovery, the first successful application launched [original38151633427](https://github.com/CrispStrobe/bw-board/actions/runs/38151633427), currently queued. Follow the [support source checkpoint](I80386-XV6-JS-ROLLBACK-DIRECT-V8-PLAN.md#nursery-support-runner-source-checkpoint); retain and independently audit its single original packet; do not rerun or relabel it. No actual fixture result or performance gain exists.
+
+
+The post-PF connection is now published as [draft PR497](https://github.com/CrispStrobe/bw-board/pull/497),
+exact `b3abd80ba462f4319c9a635088604a6b9f8421c9`: twelve new paths,
+278 unchanged/290 total roles and 181 JavaScript graph nodes. Static reviews
+and Python controls pass; its hosted mock and all enabled source checks are
+pending. Follow the [connected observer next-worker contract](I80386-DPMI-TASK-EXCURSION-LANE.md#post-pf-connected-observer-source-checkpoint)
+for the standalone original reader, failure controls and one-shot launch guard.
+No connected guest run, frame return, new OS result or speed claim exists yet.

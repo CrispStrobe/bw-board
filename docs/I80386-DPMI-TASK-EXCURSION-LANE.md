@@ -477,3 +477,40 @@ wall bound. Prepare its separate source admission, grader, closed inventory
 and original reader before one guest diagnostic. Neither this source nor
 synthetic controls qualify PF service, repair/retry, owned frame return,
 client completion, full OS compatibility or speed.
+
+
+## Post-PF connected observer source checkpoint
+
+[Draft PR497](https://github.com/CrispStrobe/bw-board/pull/497), exact source
+`b3abd80ba462f4319c9a635088604a6b9f8421c9`, publishes twelve new paths
+on the qualified PR494 prerequisite. The [profile contract](https://github.com/CrispStrobe/bw-board/blob/b3abd80ba462f4319c9a635088604a6b9f8421c9/scripts/i80386-cwsdpmi-0501-post-pf-connected/README.md)
+authenticates 278 unchanged source roles plus twelve new roles, with 181
+JavaScript graph nodes. Coordinator and independent static reviews pass;
+Python source and inventory controls pass. JavaScript controls are authored
+and await the [automatic hosted mock38151969796](https://github.com/CrispStrobe/bw-board/actions/runs/38151969796).
+All enabled exact-head source checks remain pending. The actual job is
+skipped; no connected diagnostic label has been applied.
+
+The derivative retains both private historical tokens and mints the post-PF
+continuation before either historical drain or terminal callback. Same-machine
+CPU, callback, descriptor and partial-REP identities remain fenced. It charges
+board calls and CPU attempts separately under the 100,000-call and 120-second
+bounds, retains raw counter deltas on observer refusal, and reports an explicit
+pending extent when a post-step source read is unavailable. Committed records
+use committed-step bounds; decoded intents and IRQ records retain their distinct
+attempt ordinals. Partial decoded intents do not become mode snapshots or
+IRET authority. The strict frame remains invalid with null return, the finite
+client remains unsuccessful, and every result retains `frameReturnQualified:false`.
+
+**Next worker contract:** preserve this exact source while its hosted controls
+and enabled checks complete. Retain and independently audit the single mock
+original; correct any first failure narrowly without replaying it. Prepare a
+standalone original-packet reader with immutable 278/12 source partition,
+official run/job/attempt and event identities, closed inventory and raw
+historical PF/task joins. Exercise genuine partial decoded-intent and pending
+step failures, separate attempt/commit bounds, candidate context mismatches,
+IRQ invalidation and preserved strict refusal. Source-consistent observation
+credit must never become fault service, retry, client completion or frame-return
+credit. Review and freeze the reader plus a fresh-census one-shot launch guard
+before one separately named connected diagnostic. No default, GUI package pin,
+OS compatibility or performance adoption follows from this source checkpoint.
