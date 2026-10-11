@@ -183,7 +183,7 @@ Preserve both originals. The one-assignment mutable manufactured replacement
 is now [draft PR500](https://github.com/CrispStrobe/bw-board/pull/500), exact
 `e1f44e70bd21e4f3b146d0c0e00da141eb045182`; both static reviews pass. Its
 [automatic mock passed its synthetic controls](receipts/2026-10-11-post-pf-mutability-corrected-mock/README.md);
-source checks remain pending. Actual observer execution stays disabled until
+all eleven enabled source checks now pass, with three declared skips. Actual observer execution stays disabled until
 the independent reader, source freeze and one-shot guard qualify.
 
 
@@ -201,3 +201,12 @@ the [staging correction acceptance contract](I80386-XV6-JS-ROLLBACK-DIRECT-V8-PL
 for the new source freeze, reader and one-shot guard. Verify the opt-in label
 exists before consuming launch authority; do not alter the original failed
 packet or reuse its consumed state.
+
+
+The next reader checkpoint has a finite independently recomputed held PF
+predicate draft: ten manufactured control methods and six coordinator
+adversaries pass. Complete peer review and the remaining compile/input,
+post-PF raw-record and failure-stage contracts in the
+[reader implementation checkpoint](I80386-DPMI-TASK-EXCURSION-LANE.md#reader-implementation-checkpoint).
+Initial receipts cannot substitute for absent final leases. This does not
+qualify a connected guest run, frame return, an OS or a speed increase.

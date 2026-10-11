@@ -554,8 +554,8 @@ Coordinator and independent static reviews passed; production grader, CPU,
 driver and workflow are unchanged. Its sole [automatic mock38155545945](https://github.com/CrispStrobe/bw-board/actions/runs/38155545945)
 passed source, orchestration, grader and inventory controls. The
 [original mock receipt](receipts/2026-10-11-post-pf-mutability-corrected-mock/README.md)
-preserves its exact source/artifact identities. Enabled source checks remain
-pending; the actual observer job skipped. Preserve both earlier failures and
+preserves its exact source/artifact identities. All eleven enabled exact-head
+source checks now pass, with three declared skips; the actual observer job skipped. Preserve both earlier failures and
 finish independent reader/guard qualification before any actual diagnostic. No connected diagnostic label has been applied.
 
 
@@ -590,3 +590,55 @@ Finish these concrete contracts before the actual observer:
    against reviewed runner/source evidence, retain failures, then independently
    review/freeze the complete reader and a fresh one-shot guard. No actual run
    may substitute for these manufactured validator controls.
+
+
+### Reader implementation checkpoint
+
+The held PF predicate module now passes ten manufactured control methods and
+six additional coordinator adversaries. Static review maps the strict entry,
+arm/counters, original task transition, terminal PF row, context/restore and
+returned/thrown/disabled predicates to
+`scripts/i80386-cwsdpmi-0501-pf-connected/grade.mjs`. It independently recomputes
+the supplied grade and separates a consistent diagnostic from a returned,
+non-shutdown delivery. Frame qualification remains false.
+
+This is a finite typed-report validator draft, not a connected guest result.
+Serialized entry content cannot prove JavaScript object identity or private
+session authority; its strict JSON admission also refuses integer/Boolean
+aliases and integral floats. Held-PF peer review now passes. Complete compile/input closure,
+failure-stage controls and reader integration remain unfinished. If required final tool/input leases are absent from the
+producer reports, add and qualify those receipts before freezing an acceptance
+contract; initial hashes must not stand in for final rechecks. No connected
+observer label has been applied.
+
+
+The adapter deliberately keeps `passed:false` and exits with code1 after
+retaining the original strict frame refusal. A completed, internally consistent
+post-PF diagnostic can therefore belong to a failed Actions job with guest-step
+phase `AT-owned-0501-post-pf-observer`. The failure-stage reader must distinguish
+that bounded diagnostic from an input, compile, control or adapter failure by
+checking raw records and complete role/status joins. Neither workflow success
+nor a producer grade alone proves continuation consistency or frame return.
+
+
+The separate post-PF predicate draft passes seven manufactured control methods,
+six coordinator adversaries and independent review. It covers closed contexts,
+caches, source interrupt/decoded-intent records, committed/uncommitted records,
+bounded Q<=N counters, historical joins and candidate/status consistency.
+An invalid source observation can be a consistent diagnostic; a candidate is
+still not proof of frame return. Typed content joins ignore object key order,
+whereas the held JavaScript comparison uses `JSON.stringify`; integration must
+preserve this explicit report-consistency boundary.
+
+The compile/input draft passes nine manufactured control groups and independent
+review for its declared partial slice: pinned tool/header observations, twelve
+command argument/output receipts, source/client/map/media joins, retained notice
+bytes and final source equality. Full qualification remains false. Deep format,
+implicit-role/environment, archive/member, FreeDOS/FAT layout, partial-failure
+and final tool/input filesystem checks remain unfinished. Source review confirms
+that initial archive/tool observations and final hashes of retained input
+Buffers cannot establish final filesystem identity. The next producer task is
+a separately named receipt profile with bounded before/after tool and input
+identity/hash observations, including failure retention; preserve the held
+profile and avoid claims of uninterrupted identity or source-to-binary proof.
+Then independently validate those new receipts and integrate the reader.
