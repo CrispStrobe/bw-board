@@ -425,12 +425,17 @@ ancestry and exact canonical sample-ID sets. First failures and partial raw
 reports remain failures. Automatic PR mock controls are separate from the
 label-only diagnostic.
 
-Next qualify the sole hosted mock original and all enabled exact-head checks.
-Finish and independently review the prospective original reader and its
-synthetic positive, partial-failure, source/metadata/inventory rejection
-controls; freeze its final source manifest and review a one-shot launch guard.
-Only then may one separately named bounded support actual be launched. The
-reader remains unqualified WIP at this checkpoint, so no actual launch is
-permitted. Preserve earlier originals. Even a later finite support pass would
+The prospective independent reader now passes coordinator and independent
+source review plus 13 stdlib synthetic controls. Its reviewed source manifest
+is frozen to `21eef8f700132f2df90564fbf3661467a2275b64`; all 90 held and
+10 new roles match the committed bytes. Controls cover positive and partial
+failure packets, exact role partition, strict primitive types, official job
+identity, closed inventory and ordinary input refusal. This is reader
+readiness, not runtime evidence.
+
+Next qualify the sole corrected hosted mock original and all enabled exact-head
+checks, then review the one-shot launch guard. Only then may one separately
+named bounded support actual be launched. No actual launch is permitted at
+this checkpoint. Preserve earlier originals. Even a later finite support pass would
 not establish object generation, the cause of the old failure, application
 hotspots, guest semantics or speed.
