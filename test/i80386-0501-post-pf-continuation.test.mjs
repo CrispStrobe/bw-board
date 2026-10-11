@@ -70,7 +70,7 @@ function openedMixedMode() {
 }
 
 // Synthetic controls exercise CPU authority and event accounting, not guest service.
-function terminal({ deliver = 'returned', handoff = true } = {}) {
+function terminal({ deliver = 'returned', handoff = true, irqEnabled = false } = {}) {
   const f = openedMixedMode();
   f.cpu.deliverFaults = deliver !== 'disabled';
   f.originalTr = { ...f.cpu.tr };
@@ -81,6 +81,9 @@ function terminal({ deliver = 'returned', handoff = true } = {}) {
     assert.throws(() => core.call(this, 0, kind, options), I80386Fault);
     this.tr = { selector: 0x38, base: 0x700, limit: 0x67, present: true, type: 11 };
     this.cs = 8; this.ss = 0x10; this.esp = 0x400; this.eip = 0x1234;
+    // The authored incoming task EFLAGS must admit the IRQ before PF/anchor
+    // capture. The real owned INT gate cleared IF; never alter a live anchor.
+    if (irqEnabled) this.eflags |= 0x200;
     this.segmentCaches[1] = { ...f.originalCode, dpl: 0 };
     this.segmentCaches[2] = { ...f.originalStack };
     return 1;
@@ -102,6 +105,8 @@ function terminal({ deliver = 'returned', handoff = true } = {}) {
   if (deliver === 'disabled') assert.throws(() => f.cpu.step(), I80386Fault);
   else if (deliver === 'threw') assert.throws(() => f.cpu.step(), /delivery refusal/);
   else assert.equal(f.cpu.step(), 0);
+  assert.equal(!!(f.cpu.eflags & 0x200), irqEnabled);
+  assert.equal(f.cpu._interruptShadow, 0);
   f.armPost = (cap = 4) => f.cpu.armOwned0501PostPfContinuation(
     f.pfToken, f.modeToken, { maxActiveSteps: cap });
   return f;
@@ -292,7 +297,7 @@ test('decoded IRET attempt is retained uncommitted when its core throws', () => 
 });
 
 test('source IRQ boundary has separate credit and no ordinary instruction count', () => {
-  const f = terminal(), token = f.armPost();
+  const f = terminal({ irqEnabled: true }), token = f.armPost();
   f.cpu._deliverProtected = function () { this.eip++; };
   assert.equal(f.cpu.interrupt(8), true);
   const result = end(f, token);
@@ -382,8 +387,8 @@ test('decoded IRET intent does not authorize an overridden-core mode delta', () 
   assert.equal(result.modeChanges.length, 0);
 });
 
-function candidatePostPf() {
-  const f = terminal(), token = f.armPost();
+function candidatePostPf({ irqEnabled = false } = {}) {
+  const f = terminal({ irqEnabled }), token = f.armPost();
   f.cpu._taskSwitchCore = function () {
     this.tr = { ...f.originalTr };
     this.cs = 0x0b; this.ss = 0x23; this.eip = 0x100;
@@ -400,8 +405,7 @@ function candidatePostPf() {
 
 for (const accepted of [true, false])
   test(`candidate IRQ invalidation precedes ordinary accepted=${accepted} result`, () => {
-    const f = candidatePostPf();
-    if (!accepted) f.cpu.eflags &= ~0x200;
+    const f = candidatePostPf({ irqEnabled: accepted });
     let calls = 0;
     f.cpu._deliverProtected = function () { calls++; this.eip++; };
     assert.equal(f.cpu.interrupt(8), accepted);
@@ -414,7 +418,7 @@ for (const accepted of [true, false])
   });
 
 test('candidate IRQ exception preserves original thrown identity', () => {
-  const f = candidatePostPf(), thrown = new Error('original IRQ exception');
+  const f = candidatePostPf({ irqEnabled: true }), thrown = new Error('original IRQ exception');
   f.cpu._deliverProtected = () => { throw thrown; };
   assert.throws(() => f.cpu.interrupt(8), error => error === thrown);
   const result = f.cpu.takeOwned0501PostPfContinuationObservation(f.postToken);
@@ -442,7 +446,7 @@ test('drained PF authority cannot mint another anchor after ordinary steps', () 
 
 for (const change of ['cr0', 'vm86', 'retained-real-cs'])
   test(`IRQ return cannot absorb unqualified ${change} mode mutation`, () => {
-    const f = terminal(), token = f.armPost();
+    const f = terminal({ irqEnabled: true }), token = f.armPost();
     f.cpu._deliverProtected = function () {
       if (change === 'cr0') this.cr0 ^= 0x80000000;
       else if (change === 'vm86') this.eflags |= 0x20000;
