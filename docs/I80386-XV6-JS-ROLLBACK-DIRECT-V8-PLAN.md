@@ -483,12 +483,13 @@ ceiling is 98,932,736 bytes; the temporary soft ceiling equals the admitted
 
 The workflow uses the distinct `xv6-js-v8-nursery-support-staging-correction`
 label. Its [automatic mock38154220002](https://github.com/CrispStrobe/bw-board/actions/runs/38154220002)
-and enabled source checks are pending; actual support is skipped and no label
-has been applied. The separately frozen prospective reader passed coordinator
+passed its controls; [coordinator and independent original-byte audits](receipts/2026-10-11-nursery-staging-corrected-mock/README.md)
+verify its seven-member inventory and all 100 source bindings. Enabled source
+checks are still pending; actual support is skipped and no label has been applied. The separately frozen prospective reader passed coordinator
 and independent review: all 100 Git role hashes match, the 90 unchanged/10 new
 role partition and acceptance predicates are preserved, and all 13 manufactured
-controls pass. This qualifies reader preparation only. Next audit that single
-mock original and review a new one-shot guard with fresh complete metadata and
+controls pass. This qualifies reader preparation only. Next finish the enabled source checks
+and review a new one-shot guard with fresh complete metadata and
 label-existence preflight. Distinguish source base `79f1f13b` from PR499's parent
 `21eef8f7` when checking ancestry. The original
 PR495 reader/state and failed packet remain immutable. No support or speed

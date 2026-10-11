@@ -1,0 +1,23 @@
+{
+  "artifact": 11707977526,
+  "artifactApiUrl": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11707977526",
+  "classification": "FINITE_MOCK_CONTROLS_ONLY",
+  "gcOrNativeOrGuestRun": false,
+  "head": "3a0e595c7b813a753fd79c436bfafe2c20cea690",
+  "heldRoles": 90,
+  "independentAudit": "PASS_MOCK_ONLY",
+  "independentAuditSha256": "261a7e3e76250a34b6e5017e5116d04afdb47e0c7d44fe14411e8ccf01e876a0",
+  "members": 7,
+  "newRoles": 10,
+  "officialActualJob": "SKIPPED",
+  "officialMockJob": "SUCCESS",
+  "rootAudit": "PASS",
+  "run": 38154220002,
+  "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/38154220002",
+  "runtimeSupportQualified": false,
+  "schema": "bw.public.nursery-staging-corrected-mock-summary.v1",
+  "sourceRoles": 100,
+  "sourceUrl": "https://github.com/CrispStrobe/bw-board/tree/3a0e595c7b813a753fd79c436bfafe2c20cea690",
+  "zipBytes": 5845,
+  "zipSha256": "edad894594a6e223c0dbd24091fdff5239ec7ddbf5acf16a80a286905ac960ba"
+}
