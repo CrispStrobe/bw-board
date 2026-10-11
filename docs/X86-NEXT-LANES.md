@@ -284,9 +284,9 @@ enabling production or adopting either prerequisite source unit:
   final source passes its AST/control checks. Secondary diagnostic failures
   cannot replace the original error, and illegal order forbids later callbacks.
   The compiler raises unconditionally before loading helpers or making output.
-  Next implement a descriptor owner for the canonical ancestor route and prove
-  evidence destinations outside the extracted tree; then connect pair validation
-  and bounded input observations. Existing diagnostic reads are partial, not
+  The descriptor-route owner is now prepared in PR505 below. Next admit its
+  caller-supplied workspace roots and exclusive output files, then connect pair
+  validation and bounded input observations. Existing diagnostic reads are partial, not
   complete filesystem admission. Do not remove the production disable until
   source, input, reader and reviewed launch gates close.
 - [Draft PR504](https://github.com/CrispStrobe/bw-board/pull/504), exact
@@ -305,3 +305,49 @@ claim and new preparation paths. Normal hosted checks and prerequisite pure
 controls remain pending. Preserve the original sampler support result; do not
 replay it to qualify these new sources. No new guest, frame-return, RTx, default
 or GUI package result follows from this preparation checkpoint.
+
+### Root-route and runtime-port source checkpoint
+
+Two further unconnected draft units are published:
+
+- [PR505](https://github.com/CrispStrobe/bw-board/pull/505), exact
+  `6f6f1babc5f19a043bb0fe12dc079b3e75830fc5`, adds
+  `scripts/i80386-cwsdpmi-compile-root-routes/`. Thirteen manufactured
+  filesystem methods pass with independent review. Bounded no-follow ancestor
+  observations retain descriptors, reject evidence routes inside the tool tree,
+  preserve the first refusal and report uncertain cleanup. They do not certify
+  caller root ownership, continuous identity or output-file admission.
+- [PR506](https://github.com/CrispStrobe/bw-board/pull/506), exact
+  `2275fc5eb9d0c27a197a5256239cbbefa8d8cabe`, adds
+  `scripts/xv6-js-rollback-direct-v8-guest-site-runtime/` and
+  `test/xv6-guest-site-runtime.test.mjs`. Root and independent static review pass;
+  sixteen authored tests remain locally unrun. Captured turn and private pressure
+  mechanics reject injection and preserve original scheduling failures. Runtime,
+  source-instance and guest qualification remain false.
+
+PR505 is stacked on PR503; PR506 is stacked on PR504. They do not change the
+held producer, controller, default execution path or GUI dependency pin.
+The prerequisite pure-control runs
+[38161363012](https://github.com/CrispStrobe/bw-board/actions/runs/38161363012) and
+[38161385871](https://github.com/CrispStrobe/bw-board/actions/runs/38161385871)
+were still queued with no executed steps at this checkpoint; no duplicate run
+was launched. Hosted results must be refreshed before qualification or merge.
+
+The next bounded work is:
+
+1. **Compiler workspace and writer admission:** in a separately named profile,
+   establish source-owned tool/evidence roots, pass retained evidence descriptors
+   to an exclusive writer, reject output aliases, and test refusal/cleanup paths.
+   Connect pair validation and final input observations only after those controls
+   pass. Keep the production compiler's unconditional disable.
+2. **Runtime controls and driver admission:** qualify the authored runtime tests,
+   then build the exact-source machine/reset/callback factory and connect the
+   controller to admitted turn/pressure ports. Retain designated-GC, root-lifetime,
+   sample ancestry, full parity and resource acceptance; helper mechanics alone
+   cannot grant those facts.
+3. **Original-result reader:** acquire each completed prerequisite artifact once,
+   validate its original run/head/roles and independently read its finite result.
+   Preserve failures and the earlier sampler support boundary. Do not replay
+   the sampler or grant post-PF frame return from workflow success.
+
+No new guest completion, frame return or measured RTx follows from these units.

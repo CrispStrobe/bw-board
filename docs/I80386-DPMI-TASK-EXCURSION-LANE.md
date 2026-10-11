@@ -663,3 +663,12 @@ methods and three independent adversaries. Production is unconditionally
 disabled before helper loading. Complete ancestor/output admission, pair and
 input closure, independent reader and launch gates before removing that disable;
 follow the [connection preparation contract](X86-NEXT-LANES.md#connection-preparation-checkpoint).
+
+
+The ancestor-route preparation is now [draft PR505](https://github.com/CrispStrobe/bw-board/pull/505),
+exact `6f6f1babc5f19a043bb0fe12dc079b3e75830fc5`: thirteen manufactured
+filesystem methods and independent review pass. No-follow retained route
+observations do not authenticate caller workspace ownership, continuous identity
+or output files. Next admit source-owned roots and an exclusive descriptor-based
+writer, then pair/input closure. Production compilation remains disabled;
+see the [updated bounded task contracts](X86-NEXT-LANES.md#root-route-and-runtime-port-source-checkpoint).
