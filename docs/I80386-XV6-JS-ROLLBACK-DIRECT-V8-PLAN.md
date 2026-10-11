@@ -414,7 +414,7 @@ PR493: nine namespace files and one dedicated workflow. Its
 holds 90 prior source roles unchanged, for 100 total admitted roles. Coordinator
 and independent core/workflow static reviews pass; four Python synthetic
 control suites pass. No local Node, native compilation, fixture GC or guest
-execution occurred. The [first hosted mock original38146147828](receipts/2026-10-11-nursery-support-mock-first-failure/README.md) failed a redundant Git transfer before any source receipt or controls. The workflow-only correction `21eef8f700132f2df90564fbf3661467a2275b64` replaces it with explicit local base/ancestor admission. The [sole corrected hosted mock original38147244263](receipts/2026-10-11-nursery-support-corrected-mock/README.md) and both original-byte audits now pass its finite synthetic controls; all eleven enabled exact-head source checks pass, with three declared skips (the two optional vectors and the label-only actual job). The first successful label application is now verified; its separately bounded [original38151633427](https://github.com/CrispStrobe/bw-board/actions/runs/38151633427) is queued, with no runtime result yet.
+execution occurred. The [first hosted mock original38146147828](receipts/2026-10-11-nursery-support-mock-first-failure/README.md) failed a redundant Git transfer before any source receipt or controls. The workflow-only correction `21eef8f700132f2df90564fbf3661467a2275b64` replaces it with explicit local base/ancestor admission. The [sole corrected hosted mock original38147244263](receipts/2026-10-11-nursery-support-corrected-mock/README.md) and both original-byte audits now pass its finite synthetic controls; all eleven enabled exact-head source checks pass, with three declared skips (the two optional vectors and the label-only actual job). The first successful label application is now verified; its separately bounded [original38151633427](https://github.com/CrispStrobe/bw-board/actions/runs/38151633427) has completed with official failure before compilation or support cases; its preserved result is recorded below.
 
 The runner preserves pinned Node20.20.2, headers, compiler/tool authority and
 one same-run build. It seals admission/case/policy and executable/addon bytes
@@ -445,9 +445,47 @@ A separately reviewed, single-use recovery created a new reservation after the
 label existed, rechecked all 100 source roles and fresh complete official
 metadata, and verified the first successful application. Its single
 [original38151633427](https://github.com/CrispStrobe/bw-board/actions/runs/38151633427)
-is queued at exact source `21eef8f700132f2df90564fbf3661467a2275b64`.
-Do not rerun or relabel it. Next retain and independently audit its first
-original packet, including any failure. No fixture support or performance
+completed at exact source `21eef8f700132f2df90564fbf3661467a2275b64` with a pre-build staging failure.
+Do not rerun or relabel it. Both retained-original audits now pass the failure boundary. No fixture support or performance
 result exists yet. Even a later finite support pass would not establish object
 generation, the cause of the old failure, application hotspots, guest semantics
 or speed.
+
+
+## Nursery support original: binary staging cap mismatch
+
+The [single original38151633427](receipts/2026-10-11-nursery-support-first-actual/README.md)
+failed while writing the pinned 98,932,688-byte Node executable under the
+workflow's 16 MiB file-size cap. Source admission and synthetic controls
+passed; build fields remain empty and zero support cases completed. Both
+original-byte audits pass this preserved pre-build failure boundary.
+
+Next qualify a separately named staging correction with a finite hard ceiling
+large enough for the pinned executable, and a temporary soft-limit increase
+only around its exclusive write. Restore the original ceiling in `finally`
+before subsequent compilation and children; restoration failure refuses
+continuation, while bounded failure reporting remains allowed. Exercise success, write failure,
+insufficient hard limit and restoration controls without changing pinned
+bytes, leases, callback/site/sample-ID predicates or artifact caps. Then
+prepare a new exact-source reader and one-shot guard before a new diagnostic.
+The prior original stays failed and must not be rerun or relabeled. No sampler
+support, hotspot, guest or speed result exists.
+
+
+The scoped staging correction is published in [draft PR499](https://github.com/CrispStrobe/bw-board/pull/499),
+exact `3a0e595c7b813a753fd79c436bfafe2c20cea690`, stacked on frozen PR495.
+Only the runner, manufactured controls and workflow change. Coordinator and
+independent static reviews pass; all four Python control suites pass without
+changing local resource limits or executing a native fixture. The finite hard
+ceiling is 98,932,736 bytes; the temporary soft ceiling equals the admitted
+98,932,688-byte executable, and normal continuation requires restoration to
+16 MiB. Failure refuses compilation/children while allowing bounded diagnostics.
+
+The workflow uses the distinct `xv6-js-v8-nursery-support-staging-correction`
+label. Its [automatic mock38154220002](https://github.com/CrispStrobe/bw-board/actions/runs/38154220002)
+and enabled source checks are pending; actual support is skipped and no label
+has been applied. Next audit that single mock original, freeze the reader to
+this source's 90 unchanged/10 new role partition, and review a new one-shot
+guard with fresh complete metadata and label-existence preflight. The original
+PR495 reader/state and failed packet remain immutable. No support or speed
+qualification follows from the source correction.

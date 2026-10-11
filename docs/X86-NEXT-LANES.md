@@ -153,13 +153,40 @@ The prepared originals have now completed: [PR492 PF call](receipts/2026-10-11-p
 The separately named sampler fixture is now [draft PR493](https://github.com/CrispStrobe/bw-board/pull/493), exact `79f1f13b6037265785e18342ca06b04eec2ab475`, with six new paths and reviewed PR-only hosted mock controls. Its [single hosted mock original38121297221](receipts/2026-10-11-nursery-mock-controls/README.md) and both original-byte audits pass; all eleven enabled source checks have passed, with only the two declared optional skips. No actual GC fixture/support result exists. Follow its [source checkpoint contract](I80386-XV6-JS-ROLLBACK-DIRECT-V8-PLAN.md#zero-prior-gc-fixture-source-checkpoint) before developing a new connected support profile.
 
 
-The separately named nursery support runner is now [draft PR495](https://github.com/CrispStrobe/bw-board/pull/495), source `52f418a9b82e8355a12de053e3498adcc0bc00c1`: ten new paths, 90 held/100 total roles, static source review and four Python synthetic suites passed. The [first hosted mock](receipts/2026-10-11-nursery-support-mock-first-failure/README.md) failed a redundant Git transfer before controls; workflow-only fix `21eef8f700132f2df90564fbf3661467a2275b64` is pushed; the [corrected mock original38147244263](receipts/2026-10-11-nursery-support-corrected-mock/README.md) passes both original-byte audits. All eleven enabled exact-head source checks pass, with only the three declared optional/label-only skips. The prospective reader now passes coordinator and independent review plus 13 stdlib synthetic controls, and its exact-source manifest is frozen; the separately reviewed one-shot guard is now sealed after complete official census and exact-source verification. After the missing-label refusal and independently reviewed single-use recovery, the first successful application launched [original38151633427](https://github.com/CrispStrobe/bw-board/actions/runs/38151633427), currently queued. Follow the [support source checkpoint](I80386-XV6-JS-ROLLBACK-DIRECT-V8-PLAN.md#nursery-support-runner-source-checkpoint); retain and independently audit its single original packet; do not rerun or relabel it. No actual fixture result or performance gain exists.
+The separately named nursery support runner is now [draft PR495](https://github.com/CrispStrobe/bw-board/pull/495), source `52f418a9b82e8355a12de053e3498adcc0bc00c1`: ten new paths, 90 held/100 total roles, static source review and four Python synthetic suites passed. The [first hosted mock](receipts/2026-10-11-nursery-support-mock-first-failure/README.md) failed a redundant Git transfer before controls; workflow-only fix `21eef8f700132f2df90564fbf3661467a2275b64` is pushed; the [corrected mock original38147244263](receipts/2026-10-11-nursery-support-corrected-mock/README.md) passes both original-byte audits. All eleven enabled exact-head source checks pass, with only the three declared optional/label-only skips. The prospective reader now passes coordinator and independent review plus 13 stdlib synthetic controls, and its exact-source manifest is frozen; the separately reviewed one-shot guard is now sealed after complete official census and exact-source verification. After the missing-label refusal and independently reviewed single-use recovery, the first successful application launched [original38151633427](https://github.com/CrispStrobe/bw-board/actions/runs/38151633427), now failed before compilation or support cases. Follow the [support source checkpoint](I80386-XV6-JS-ROLLBACK-DIRECT-V8-PLAN.md#nursery-support-runner-source-checkpoint); retain and independently audit its single original packet; do not rerun or relabel it. No actual fixture result or performance gain exists.
 
 
 The post-PF connection is now published as [draft PR497](https://github.com/CrispStrobe/bw-board/pull/497),
 exact `b3abd80ba462f4319c9a635088604a6b9f8421c9`: twelve new paths,
 278 unchanged/290 total roles and 181 JavaScript graph nodes. Static reviews
-and Python controls pass; its hosted mock and all enabled source checks are
-pending. Follow the [connected observer next-worker contract](I80386-DPMI-TASK-EXCURSION-LANE.md#post-pf-connected-observer-source-checkpoint)
+and Python controls pass; its first hosted mock failed in the positive grader fixture, and remaining
+source checks are pending. Follow the [connected observer next-worker contract](I80386-DPMI-TASK-EXCURSION-LANE.md#post-pf-connected-observer-source-checkpoint)
 for the standalone original reader, failure controls and one-shot launch guard.
 No connected guest run, frame return, new OS result or speed claim exists yet.
+
+
+The first originals are preserved: [sampler staging38151633427](receipts/2026-10-11-nursery-support-first-actual/README.md)
+failed at the executable file-size cap before build/cases; [post-PF mock38151969796](receipts/2026-10-11-post-pf-connected-first-mock/README.md)
+passed source/orchestration controls before its positive fixture omitted a
+required false ownership fact. Both original-byte audits pass within these
+failure boundaries. Next qualify the scoped staging-cap correction and the
+one-line fixture repair at new exact sources, then prepare the independent
+readers and one-shot guards. Preserve both originals; neither supplies guest
+completion, frame acceptance or a speed measurement.
+
+
+The fixture-only repair is now [draft PR498](https://github.com/CrispStrobe/bw-board/pull/498),
+exact `79dfbd223a579bd9aba43be39e8ebdbb046eea5c`, with coordinator and
+independent static reviews passed. Its new automatic mock and enabled checks
+remain pending; actual observer execution stays disabled until the independent
+reader, source freeze and one-shot guard qualify.
+
+
+The scoped sampler staging repair is now [draft PR499](https://github.com/CrispStrobe/bw-board/pull/499),
+exact `3a0e595c7b813a753fd79c436bfafe2c20cea690`: three reviewed paths,
+finite executable-only soft-limit change and unchanged raw-result acceptance.
+Automatic mock/source checks are pending; actual support is skipped. Follow
+the [staging correction acceptance contract](I80386-XV6-JS-ROLLBACK-DIRECT-V8-PLAN.md#nursery-support-original-binary-staging-cap-mismatch)
+for the new source freeze, reader and one-shot guard. Verify the opt-in label
+exists before consuming launch authority; do not alter the original failed
+packet or reuse its consumed state.

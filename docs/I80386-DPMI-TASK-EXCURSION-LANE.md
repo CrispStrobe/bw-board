@@ -486,9 +486,9 @@ client completion, full OS compatibility or speed.
 on the qualified PR494 prerequisite. The [profile contract](https://github.com/CrispStrobe/bw-board/blob/b3abd80ba462f4319c9a635088604a6b9f8421c9/scripts/i80386-cwsdpmi-0501-post-pf-connected/README.md)
 authenticates 278 unchanged source roles plus twelve new roles, with 181
 JavaScript graph nodes. Coordinator and independent static reviews pass;
-Python source and inventory controls pass. JavaScript controls are authored
-and await the [automatic hosted mock38151969796](https://github.com/CrispStrobe/bw-board/actions/runs/38151969796).
-All enabled exact-head source checks remain pending. The actual job is
+Python source and inventory controls pass. The [first automatic hosted mock38151969796](https://github.com/CrispStrobe/bw-board/actions/runs/38151969796)
+passed orchestration controls and failed grader controls, as recorded below.
+The first mock has failed in its positive grader fixture, as preserved below; other enabled exact-head checks remain pending. The actual job is
 skipped; no connected diagnostic label has been applied.
 
 The derivative retains both private historical tokens and mints the post-PF
@@ -514,3 +514,29 @@ credit must never become fault service, retry, client completion or frame-return
 credit. Review and freeze the reader plus a fresh-census one-shot launch guard
 before one separately named connected diagnostic. No default, GUI package pin,
 OS compatibility or performance adoption follows from this source checkpoint.
+
+
+## Post-PF connected first mock: narrow fixture correction
+
+The [single original38151969796](receipts/2026-10-11-post-pf-connected-first-mock/README.md)
+passed source admission and orchestration controls, then failed its first
+positive grader assertion. The manufactured PF outcome omitted the required
+top-level `frameReturnQualified:false` fact. Both original-byte audits pass
+its source, closed inventory, retained event identity and pre-guest failure
+boundary. The actual observer job was skipped.
+
+Next qualify a new exact-source, fixture-only correction retaining the grader,
+CPU, runner and strict frame predicates. Do not replay this failed original.
+After the corrected hosted controls and all enabled checks pass, continue the
+standalone original-reader and one-shot guard contract above. No connected
+continuation, fault service, frame return or performance result follows.
+
+
+The one-line fixture correction is published in [draft PR498](https://github.com/CrispStrobe/bw-board/pull/498),
+exact `79dfbd223a579bd9aba43be39e8ebdbb046eea5c`, stacked on PR497.
+Coordinator and independent static reviews pass; only the positive fixture's
+missing false ownership fact changes. The grader, CPU, driver and workflow
+remain unchanged. Its [automatic corrected mock38153915225](https://github.com/CrispStrobe/bw-board/actions/runs/38153915225)
+and all enabled source checks are pending; the actual job is skipped. Retain
+and independently audit that single original when it completes before the
+connected reader/guard gate. No connected diagnostic label has been applied.
