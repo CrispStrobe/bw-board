@@ -3345,3 +3345,8 @@ Claimed: `scripts/i80386-cwsdpmi-compile-tool-boundary/{compile.py,boundary-owne
 ### 386 compile root routes source preparation — 2026-10-11
 
 Claimed `scripts/i80386-cwsdpmi-compile-root-routes/{root-routes.py,root-routes-control.py,README.md}` on `lane/386-compile-root-routes-source-20261011`. Standalone bounded descriptor route observations for fixed tool/evidence roots and ancestor identity separation; manufactured filesystem controls only. PR503 compiler disable and held sources remain unchanged. Route observations cannot authenticate source-owned workspace creation or continuous identity; no compiler, guest, runtime, defaults or launch qualification.
+
+
+### 386 evidence descriptor writer preparation — 2026-10-11
+
+Claimed `scripts/i80386-cwsdpmi-evidence-descriptor-writer/{evidence-owner.py,evidence-owner-control.py,README.md}` on `lane/386-evidence-descriptor-writer-source-20261011`. A version-bound private composition with retained root-route descriptors prepares fixed exclusive diagnostic writes and bounded failure controls. No caller descriptor or output path admission; source-owned workspace creation and full tool/input identity remain external. Held sources and the unconditional production compiler disable remain unchanged; no compiler, guest or runtime qualification.
