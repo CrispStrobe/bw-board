@@ -1,5 +1,8 @@
 # bw-board — handover
 
+The active x86 source-unit checkpoint and next implementation contracts are in
+[docs/X86-NEXT-LANES.md](docs/X86-NEXT-LANES.md#unconnected-source-units-and-concrete-next-work).
+
 ## Status
 
 **Complete for the circuit-parity campaign.** 98 part kinds, 1159 tests, 0 dependencies.

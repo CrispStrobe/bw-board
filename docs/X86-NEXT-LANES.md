@@ -213,3 +213,59 @@ post-PF raw-record and failure-stage contracts in the
 [reader implementation checkpoint](I80386-DPMI-TASK-EXCURSION-LANE.md#reader-implementation-checkpoint).
 Initial receipts cannot substitute for absent final leases. This does not
 qualify a connected guest run, frame return, an OS or a speed increase.
+
+
+## Unconnected source units and concrete next work
+
+Two separately reviewed source units are published as drafts, stacked on their
+held prerequisite branches. Neither changes the CPU, guest runner, GUI package
+pin or default behavior. Hosted controls are pending; do not treat the drafts
+as integrated compatibility or performance improvements.
+
+- [PR501](https://github.com/CrispStrobe/bw-board/pull/501), source
+  `6a546e19350e013d69f7f5b236a7a64c08115a39`, adds the
+  [guest snapshot cohort seam](https://github.com/CrispStrobe/bw-board/blob/6a546e19350e013d69f7f5b236a7a64c08115a39/scripts/xv6-js-rollback-direct-v8-guest-site-cohort/README.md).
+  It preserves the original method call and privately captures at most64 roots,
+  with descriptor ownership, reentry and once-only extraction fences. Eighteen
+  synthetic tests are authored; independent static source and final-test review
+  passed. The new PR workflow runs only synthetic objects, not a CPU or guest.
+- [PR502](https://github.com/CrispStrobe/bw-board/pull/502), source
+  `f04f4e8dd9d30cc0439e78ed801fb26c3027adf3`, adds
+  [fixed tool boundary receipts](https://github.com/CrispStrobe/bw-board/blob/f04f4e8dd9d30cc0439e78ed801fb26c3027adf3/scripts/i80386-cwsdpmi-0501-boundary-receipts/README.md).
+  Fifteen manufactured filesystem controls and three independent adversaries
+  passed. The unit observes nine fixed roles and preserves bounded partial
+  diagnostics; it neither executes nor modifies the held compiler helper.
+  Serialized pair consistency is not live-session or continuous-identity proof.
+
+Work these tasks in order within each lane:
+
+1. **Qualify each source unit.** Audit its one automatic hosted control artifact
+   against the exact source and declared file envelope. Preserve failures; a
+   correction needs a new source result. Require every enabled exact-head check
+   before any merge, and retain the draft's held prerequisite and attribution.
+2. **Compiler receipt connection.** Derive a separately named profile from PR500
+   and PR502. Admit the canonical supplied root before tool observations, place
+   receipts outside it, connect before-probe and after-link/failure observations,
+   and retain the original compiler failure when diagnostic writing fails.
+   Sanitize writer errors into fixed codes. Add independent typed validation,
+   bounded input observations and failure controls before freezing the reader.
+   Final tool observations alone do not close final input filesystem identity.
+3. **Guest-site connection.** Derive a separate profile from PR499 and PR501.
+   Authenticate exact CPU/source/live instance before installing the seam, then
+   capture actual rollback roots while preserving callback/reset fences. Retain
+   unarmed nursery admission, all64 weak callbacks and exact sample-lifetime
+   predicates in four fresh guest children. Compare the complete reported
+   CPU/RAM/disk/serial/input/IRQ/device outcomes against a fresh ordinary free
+   xv6 reference. No connected launch is authorized by a synthetic seam result.
+4. **Measure only after parity.** Run paired unchanged-workload timing after the
+   connected sampler qualifies; distinguish nested snapshot allocations from
+   returned root objects. Report sampling overhead and configured-clock RTx
+   with actual host/runtime information. No new RTx is available at this point.
+
+The post-PF reader remains a finite, unintegrated diagnostic validator. Its
+held-PF, post-PF, partial compile/input and failure-stage controls have separate
+reviews. A further finite reported MZ/COFF extent check passes seven manufactured
+methods and eight peer adversaries; this does not inspect binary bytes or close
+archive, implicit-input, environment or final filesystem admission. Keep full
+compile/input, frame-return and launch qualification false until those gates
+actually close. These tasks precede broader protected-mode application claims.
