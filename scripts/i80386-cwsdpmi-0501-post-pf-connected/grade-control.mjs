@@ -42,7 +42,7 @@ function fixture(){
           errorCodePresent:true,errorCode:2,taskCommitted:false,source:ctx},
         delivery:{attempted:true,outcome:'returned',restored:true,
           returnEip:100,pre:ctx,post:ctx,stepResult:0}},
-      firstFailure:null}};
+      firstFailure:null,frameReturnQualified:false}};
 }
 function sourceContext(extra={}){
  return {cs:24,eip:100,ss:32,esp:4096,cr3:229376,trSelector:112,trType:11,
