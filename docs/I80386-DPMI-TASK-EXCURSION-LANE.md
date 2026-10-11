@@ -557,3 +557,36 @@ passed source, orchestration, grader and inventory controls. The
 preserves its exact source/artifact identities. Enabled source checks remain
 pending; the actual observer job skipped. Preserve both earlier failures and
 finish independent reader/guard qualification before any actual diagnostic. No connected diagnostic label has been applied.
+
+
+## Independent reader preparation and remaining implementation
+
+The refusal-only reader draft passed coordinator and independent review with
+23 manufactured stdlib controls. It binds the exact290 source roles/181 import
+graph, fixed draft authority, ordinary-file identity/race limits, closed job
+steps, event identity, and source-bound control transcripts. An independent
+source check covers17 stdout literals and13 held policy test names; three
+initially wrong transcript expectations were corrected before qualification.
+It always returns unqualified. Actual-job step ordinals remain prospective,
+and no semantic acceptance, final freeze or diagnostic launch follows.
+
+Finish these concrete contracts before the actual observer:
+
+1. Independently validate compile/tool/input/media receipts and their final
+   leases against the constants and joins in
+   `scripts/i80386-cwsdpmi-0501-post-pf-connected/adapter.mjs`; close every used
+   artifact role rather than accepting presence alone.
+2. Independently recompute the held PF premises in
+   `scripts/i80386-cwsdpmi-0501-pf-connected/grade.mjs` from raw records. Preserve
+   the strict task-switch refusal, null return and false frame qualification;
+   verify counters, task cookie, original transition and returned fault delivery.
+3. Port the closed raw-record predicates from
+   `scripts/i80386-cwsdpmi-0501-post-pf-connected/grade.mjs`: contexts, caches,
+   IRQ/intent events, committed/uncommitted ordinals, pending effects and resume
+   candidate. Enforce committed Q<=attempted N, exact receipt/status joins and
+   original task/handler/continuation identity. Producer booleans are not proof.
+4. Cover every source/control/input/compile/media/adapter/final-source/inventory
+   failure stage and malformed partial report. Resolve actual step numbering
+   against reviewed runner/source evidence, retain failures, then independently
+   review/freeze the complete reader and a fresh one-shot guard. No actual run
+   may substitute for these manufactured validator controls.

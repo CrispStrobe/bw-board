@@ -505,3 +505,16 @@ consumes the ticket. Reviewed original mock and NONLABELED proof records are
 available; the latter establishes no specific PR event action. Final bindings,
 fresh authenticated complete census and the operational seal remain unavailable.
 No reservation, label application or actual diagnostic follows from draft review.
+
+
+The staging census normalizer passed coordinator and separate coding-agent
+review with eight manufactured control groups. It requires `filter=all` for
+all14 checks, complete workflow-history pagination and explicit PR membership
+across every historical head, plus complete repository-label pagination. A
+boolean history-attempt admission found during review was corrected with strict
+primitive checks and target/excluded-run adversaries. Original-bound mock/proof
+configuration and the constant-only guard candidate passed both reviews and
+ten manufactured controls. Their source and bindings are frozen; every enabled
+source check and a fresh authenticated complete census remain launch gates. The repository label definition now
+exists, but it has not been applied to PR499. No launch state or actual diagnostic
+has been created by this preparation.
