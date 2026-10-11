@@ -443,10 +443,39 @@ and null return throughout this observer. Review source, disabled behavior,
 stale/replayed token and reentry controls, prospective original reader and
 all enabled exact-head checks before one distinct guest actual. No ownership
 acceptance follows until an actual matching CPU IRET over the owned linear
-frame is observed and separately qualified. This lane is proposed, with no
-implementation or guest result yet.
+frame is observed and separately qualified. The connected lane remains proposed, with no guest result yet; the CPU-only
+source prerequisite is published below.
 
 
 ## Connected PF original: next handoff gate reached
 
 The single [PR492 original38120601803](receipts/2026-10-11-pf-mock-fixed-call/README.md) has official failure, but both original-byte audits pass its finite `SOURCE_CONSISTENT_PF_CALL_ONLY` result: PF14/error6, 1,848 matched board/CPU attempts, returned delivery into ring0 and no shutdown. The strict refusal, null frame return and incomplete client remain. This opens the proposed default-off same-session post-PF handoff source prerequisite above, followed by hosted CPU/xv6 qualification and a separately named connected observer. It does not qualify fault service or frame return. Never rerun or relabel this original.
+
+
+## Post-PF CPU source prerequisite checkpoint
+
+[Draft PR494](https://github.com/CrispStrobe/bw-board/pull/494), source
+`b9fe9370ff61472a310587fc311bf6004a0a5742`, changes exactly the CPU,
+[new focused controls](../test/i80386-0501-post-pf-continuation.test.mjs) and
+[prerequisite README](../scripts/i80386-cwsdpmi-0501-post-pf-continuation/README.md)
+on frozen PR492. Coordinator and independent static reviews pass. The
+existing automatic exact-head push CPU/xv6 and standard checks are queued; no
+execution qualification, connected driver or default adoption exists yet.
+
+The opt-in `postPfHandoff:true` preserves the old PF profile's snapshot behavior.
+Admission uses retained private same-CPU tokens, the original cookie/outgoing
+continuation, unique uncommitted PF join and unchanged terminal CPU scalars,
+callback and descriptor identities. Bounds and single-use, reentry, staleness
+and candidate-IRQ refusal remain explicit. Decoded IRET intent is not core
+return or frame consumption; unrelated instruction or IRQ mode changes refuse.
+Every result retains `frameReturnQualified:false`.
+
+Next audit the original exact-source hosted CPU/xv6 result and all enabled
+checks. If controls fail, preserve that original and correct the narrow first
+seam before any connection. Only after prerequisite qualification may a new
+derivative driver retain the historical tokens, arm this observer before
+draining them, bind the same machine and counters, and apply the 120-second
+wall bound. Prepare its separate source admission, grader, closed inventory
+and original reader before one guest diagnostic. Neither this source nor
+synthetic controls qualify PF service, repair/retry, owned frame return,
+client completion, full OS compatibility or speed.
