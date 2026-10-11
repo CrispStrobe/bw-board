@@ -339,8 +339,9 @@ refresh all enabled exact-head checks before any merge.
 The next bounded work is:
 
 1. **Compiler workspace and writer admission:** in a separately named profile,
-   establish source-owned tool/evidence roots, pass retained evidence descriptors
-   to an exclusive writer, reject output aliases, and test refusal/cleanup paths.
+   establish source-owned tool/evidence roots and connect the prepared PR507
+   writer below. Admit parent context and complete input-alias checks; existing
+   route/writer observations cannot grant those facts.
    Connect pair validation and final input observations only after those controls
    pass. Keep the production compiler's unconditional disable.
 2. **Runtime controls and driver admission:** qualify the authored runtime tests,
@@ -355,3 +356,41 @@ The next bounded work is:
    the sampler or grant post-PF frame return from workflow success.
 
 No new guest completion, frame return or measured RTx follows from these units.
+
+### Retained-descriptor writer checkpoint
+
+[Draft PR507](https://github.com/CrispStrobe/bw-board/pull/507), exact
+`26c50cd43a28a8d357206bc9ab2b4ad2b421f00b`, adds only
+`scripts/i80386-cwsdpmi-evidence-descriptor-writer/` and its lane claim, stacked
+on PR505. Root and independent review pass; sixteen manufactured filesystem
+methods and two additional independent boundary adversaries pass. The unit
+privately composes the exact root-route source and writes fixed diagnostic
+names through its retained evidence-directory descriptor. Exclusive no-follow
+creation, bounded short writes/readback, named identity/extent and route checks
+refuse collisions, aliases, content tampering and reentry. The original write
+failure is latched before cleanup; close uncertainty remains recorded.
+
+This prepares diagnostic output mechanics only. Payloads are reported bytes,
+not admitted compiler receipts. Source-owned workspace creation, complete input
+alias admission, continuous identity and compilation remain unqualified. The
+production compiler stays unconditionally disabled. Hosted controls for this
+new unit and every enabled final-head check remain required before integration.
+
+The next source-only task is a separately named workspace creator:
+
+- Own the parent route internally after separate parent-context admission;
+  choose one private session name and create exactly a session directory plus
+  `tool` and `evidence` siblings using descriptor-relative operations.
+- Bound creation to three directory attempts with no alternate-parent or name
+  retry; retain partial creation and identity facts on refusal. Keep handoff to
+  the route/writer internal, without accepting or returning public raw FDs.
+- Test parent replacement/symlinks, collisions, reentry, second-child failure,
+  sibling identity aliases, close uncertainty and repeated/stale handoff.
+  Cleanup must preserve foreign, replaced and nonempty directories.
+- Record finite source actions separately from parent trust, OS/mount integrity
+  and runtime/source admission. Do not copy tools, extract archives, compile
+  clients or enable production merely to exercise the creation controls.
+
+After creation controls qualify, connect workspace, route and writer ownership
+in a separate profile, then close pair/input observations and the independent
+reader. No new guest, frame-return or performance claim follows from PR507.

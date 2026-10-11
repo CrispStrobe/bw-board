@@ -25,6 +25,6 @@ report consistency only.
 It does not certify continuous filesystem identity, runtime source ownership,
 full guest parity, root lifetime, a connected compiler or measured RTx.
 
-Further source units PR503–PR506 require their own exact-source qualification.
+Further source units PR503–PR507 require their own exact-source qualification.
 Preserve the prior sampler's separate support boundary; these originals do not
 qualify a replay, post-PF frame return or later driver connection.

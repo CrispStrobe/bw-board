@@ -673,3 +673,13 @@ observations do not authenticate caller workspace ownership, continuous identity
 or output files. Next admit source-owned roots and an exclusive descriptor-based
 writer, then pair/input closure. Production compilation remains disabled;
 see the [updated bounded task contracts](X86-NEXT-LANES.md#root-route-and-runtime-port-source-checkpoint).
+
+
+The fixed retained-descriptor writer is prepared in [draft PR507](https://github.com/CrispStrobe/bw-board/pull/507),
+exact `26c50cd43a28a8d357206bc9ab2b4ad2b421f00b`. Sixteen manufactured
+filesystem methods and two independent boundary adversaries pass. This writes
+bounded diagnostic bytes only; complete tool/input aliases and source-owned
+workspace creation remain external. Next implement the
+[workspace creation contract](X86-NEXT-LANES.md#retained-descriptor-writer-checkpoint),
+then connect ownership and pair/input closure. The held producer and production
+compiler disable remain unchanged.
