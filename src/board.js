@@ -27,7 +27,7 @@ import {
 import { resolveParams, classDefaults } from './parts-library.js';
 import { acSweep } from './ac.js';
 import { validateNetlist } from './validate.js';
-import { getDevice, initDeviceState } from './devices.js';
+import { getDevice, initDeviceState, resetDeviceState } from './devices.js';
 import { servoCalibration } from './devices/servo.js';
 import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
@@ -206,6 +206,9 @@ const TRANSIENT_ANALYSIS_PROFILES = Object.freeze({
     absoluteVoltage: 1e-6, absoluteCurrent: 1e-9,
     minStepSec: 1e-15, seedStepSec: 1e-9,
     maxStepSec: 1e-4, maxAttempts: 20000,
+    // Restart the trapezoidal history once before accepting a floor step
+    // whose error did not shrink with the step (see _integrateTransientMNA).
+    floorHistoryRestart: true,
   }),
   'interactive-v1': Object.freeze({
     id: 'interactive-v1', relativeTolerance: 1e-4,
@@ -4887,6 +4890,21 @@ export class BoardImpl {
     this.nodeVoltages.clear();
     this.ledCurrents.clear();
     this.inductorCurrents.clear();
+    // A reset starts a new transient history at t=0. The adaptive step seed,
+    // the trapezoidal history and the failed-history latch belong to the old
+    // history: seed them as a fresh board does, or the restarted run begins
+    // from the last step size of the previous run.
+    this.capCurrents = new Map();
+    this.inductorVoltages = new Map();
+    this._trapValid = false;
+    this._transH = 1e-4;
+    this._transientAttemptOverflow = false;
+    this._transientAccuracyUnmet = null;
+    // Device models that integrate over time (a motor's speed and winding
+    // current) start from rest too; a spinning motor at t = 0 meets a
+    // stopped drive and a fresh integrator, a stiff edge the controller
+    // cannot resolve.
+    for (const part of this.parts) resetDeviceState(part, this._deviceStates.get(part.id));
 
     // Clock reset starts a new capture epoch on the SAME configured handles.
     // Keep failure latches: clearing a ring cannot reconstruct refused history.
@@ -5990,6 +6008,8 @@ export class BoardImpl {
     let h = Math.min(Math.max(this._transH, H_MIN), hMax, dtSec);
     let attempts = 0;
     let res = null;
+    // Time of the last floor-step history restart (see the reject branch).
+    let floorRestartAt = null;
 
     const publish = (r, atSec) => {
       this.nodeVoltages = new Map(r.nodeVoltages);
@@ -6103,7 +6123,25 @@ export class BoardImpl {
         err = Math.max(err, Math.abs(iF - iH) / sc);
       }
 
-      const forcedAtFloor = hEff <= H_MIN * 1.000001 && err > 1;
+      const atFloor = hEff <= H_MIN * 1.000001 && err > 1;
+      // An error that does not shrink with the step is not truncation error:
+      // the full step and the two half steps disagree by the same amount at
+      // every h. That is the trapezoidal rule's undamped ringing on a history
+      // that no longer fits the circuit -- an inductor voltage stored before a
+      // device model moved its stamp (a motor's back-EMF follows its speed
+      // between solves). Trapezoidal integration never damps that alternation
+      // out, so refining further cannot help. Restart the history once at this
+      // time with a damped BE seed, as at a discontinuity, before accepting a
+      // floor step the controller knows to be inaccurate. Only the profiles
+      // that opt in: the legacy policies keep their recorded behaviour.
+      if (profile.floorHistoryRestart && atFloor && Number.isFinite(err)
+        && floorRestartAt !== t) {
+        floorRestartAt = t;
+        trapReady = false;
+        h = H_SEED;
+        continue;
+      }
+      const forcedAtFloor = atFloor;
       const nonFiniteError = !Number.isFinite(err);
       if (err <= 1 || nonFiniteError || forcedAtFloor) {
         // Non-finite means a solve bailed (singular mid-step) — accept the

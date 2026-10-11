@@ -68,7 +68,7 @@ describe('bounded transient numerical-analysis profile', () => {
     assert.deepEqual(board.transientAnalysisStatus().profile,{
       id:'interactive-v2',relativeTolerance:1e-4,absoluteVoltage:1e-6,
       absoluteCurrent:1e-9,minStepSec:1e-15,seedStepSec:1e-9,
-      maxStepSec:1e-4,maxAttempts:20000,
+      maxStepSec:1e-4,maxAttempts:20000,floorHistoryRestart:true,
     });
     assert.equal(board.transientAnalysisStatus().accuracyMet, null,
       'an untouched board has no measured accuracy result');
