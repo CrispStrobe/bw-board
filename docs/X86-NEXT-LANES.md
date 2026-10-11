@@ -191,9 +191,12 @@ The scoped sampler staging repair is now [draft PR499](https://github.com/CrispS
 exact `3a0e595c7b813a753fd79c436bfafe2c20cea690`: three reviewed paths,
 finite executable-only soft-limit change and unchanged raw-result acceptance.
 The [corrected mock original passed both audits](receipts/2026-10-11-nursery-staging-corrected-mock/README.md);
-source checks are pending and actual support is skipped. The reader is frozen;
-the new guard draft passed both reviews and ten manufactured controls, but
-original proof/audit binding, fresh complete census and final seal remain gates. Follow
+all11 enabled source checks passed. The reader and constant-only guard bindings
+are frozen after both reviews; revised metadata normalization passed nine groups.
+Two fresh complete authenticated captures admitted the one-shot handoff.
+[Actual run38158179633](https://github.com/CrispStrobe/bw-board/actions/runs/38158179633)
+is queued at the same source, attempt1. Next acquire its original once and
+independently audit it; launch is no runtime or speed qualification. Follow
 the [staging correction acceptance contract](I80386-XV6-JS-ROLLBACK-DIRECT-V8-PLAN.md#nursery-support-original-binary-staging-cap-mismatch)
 for the new source freeze, reader and one-shot guard. Verify the opt-in label
 exists before consuming launch authority; do not alter the original failed

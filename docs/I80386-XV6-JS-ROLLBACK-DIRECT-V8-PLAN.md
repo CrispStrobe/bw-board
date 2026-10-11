@@ -518,3 +518,23 @@ ten manufactured controls. Their source and bindings are frozen; every enabled
 source check and a fresh authenticated complete census remain launch gates. The repository label definition now
 exists, but it has not been applied to PR499. No launch state or actual diagnostic
 has been created by this preparation.
+
+
+## Staging-correction actual diagnostic launched once
+
+All11 enabled exact-source checks passed at
+`3a0e595c7b813a753fd79c436bfafe2c20cea690`, with only the three declared
+pre-launch skips. The fresh metadata check initially refused before reservation:
+an older immutable workflow run retained its original head while its associated
+PR reference named that PR's current head. The refusal is preserved. The revised
+normalizer passed both reviews and nine manufactured groups, separating own-PR
+membership references from the admitted run's immutable source/proof identity.
+
+Two distinct authenticated, complete captures then passed the reviewed one-shot
+guard. Its exclusive ticket was consumed before applying the opt-in label once.
+[Actual run38158179633](https://github.com/CrispStrobe/bw-board/actions/runs/38158179633)
+is attempt1 at the same exact head; the actual support job is queued and mock
+controls skipped. This is launch provenance only. Next acquire its original
+artifact once after completion and audit it independently against the frozen
+reader. No support, speed or OS qualification follows from the queued launch.
+The original failed diagnostic and earlier consumed guard state remain unchanged.
