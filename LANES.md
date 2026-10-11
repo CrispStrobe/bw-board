@@ -3350,3 +3350,8 @@ Claimed `scripts/i80386-cwsdpmi-compile-root-routes/{root-routes.py,root-routes-
 ### 386 evidence descriptor writer preparation — 2026-10-11
 
 Claimed `scripts/i80386-cwsdpmi-evidence-descriptor-writer/{evidence-owner.py,evidence-owner-control.py,README.md}` on `lane/386-evidence-descriptor-writer-source-20261011`. A version-bound private composition with retained root-route descriptors prepares fixed exclusive diagnostic writes and bounded failure controls. No caller descriptor or output path admission; source-owned workspace creation and full tool/input identity remain external. Held sources and the unconditional production compiler disable remain unchanged; no compiler, guest or runtime qualification.
+
+
+### 386 workspace creator source preparation — 2026-10-11
+
+Claimed `scripts/i80386-cwsdpmi-workspace-creator/{workspace.py,workspace-control.py,README.md}` on `lane/386-workspace-creator-source-20261011`. Standalone bounded parent-route observations and one source-created session with fixed tool/evidence siblings; manufactured filesystem controls only. Preserve partial creation and uncertain cleanup, without public descriptors or caller-selected names. Parent trust, source admission, later private writer handoff and production compiler qualification remain external; held helpers and compiler disable unchanged.
