@@ -3469,3 +3469,8 @@ Preserve failed originals and the separately audited finite nursery fixture.
 ### 386 guest-site controller source preparation — 2026-10-11
 
 Claimed: `scripts/xv6-js-rollback-direct-v8-guest-site-controller/{controller.mjs,README.md}` and `test/xv6-guest-site-controller.test.mjs` on `lane/386-guest-site-controller-source-20261011`. Prepare synthetic lifecycle ports and controls for a private 64-root handoff; no caller reports establish live CPU/source/reset authority. Held sources remain unchanged. PR501 hosted source controls, full source-owned adapter admission, guest outcome parity and separate reader/launch gates remain prerequisites. No CPU/guest/Node execution, native loading, resource adoption, performance or default claim.
+
+
+### 386 guest-site runtime helper source preparation — 2026-10-11
+
+Claimed `scripts/xv6-js-rollback-direct-v8-guest-site-runtime/{runtime-ports.mjs,README.md}` and `test/xv6-guest-site-runtime.test.mjs` on `lane/386-guest-site-runtime-source-20261011`. Prepare a source-owned Node event-loop turn and fixed bounded pressure helpers; authored synthetic tests locally unrun. No caller ports or reports establish runtime/GC/source identity. Held sources and PR504 controller remain unchanged. Full runtime/driver admission, guest parity, sample predicates and launch qualification remain future gates; no local Node/CPU/guest/native/compiler execution or performance claim.
