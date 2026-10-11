@@ -269,3 +269,39 @@ methods and eight peer adversaries; this does not inspect binary bytes or close
 archive, implicit-input, environment or final filesystem admission. Keep full
 compile/input, frame-return and launch qualification false until those gates
 actually close. These tasks precede broader protected-mode application claims.
+
+
+### Connection preparation checkpoint
+
+Preparation for the next connections is now published separately, without
+enabling production or adopting either prerequisite source unit:
+
+- [Draft PR503](https://github.com/CrispStrobe/bw-board/pull/503), exact
+  `4badb1905033d58d14e9e2f19fc589b708259a10`, contains the
+  [disabled compiler phase preparation](https://github.com/CrispStrobe/bw-board/blob/4badb1905033d58d14e9e2f19fc589b708259a10/scripts/i80386-cwsdpmi-compile-tool-boundary/README.md).
+  Nine manufactured phase methods and three independent adversaries pass at
+  final source. Root review caught a malformed intermediate edit; the corrected
+  final source passes its AST/control checks. Secondary diagnostic failures
+  cannot replace the original error, and illegal order forbids later callbacks.
+  The compiler raises unconditionally before loading helpers or making output.
+  Next implement a descriptor owner for the canonical ancestor route and prove
+  evidence destinations outside the extracted tree; then connect pair validation
+  and bounded input observations. Existing diagnostic reads are partial, not
+  complete filesystem admission. Do not remove the production disable until
+  source, input, reader and reviewed launch gates close.
+- [Draft PR504](https://github.com/CrispStrobe/bw-board/pull/504), exact
+  `98d4d16a161bf8bf587d45eeed793997b4806fc4`, contains the
+  [synthetic guest-site controller](https://github.com/CrispStrobe/bw-board/blob/98d4d16a161bf8bf587d45eeed793997b4806fc4/scripts/xv6-js-rollback-direct-v8-guest-site-controller/README.md).
+  Nineteen tests are authored and locally unrun; independent static source/test
+  review passes. Closed own-key/descriptor fences, private cohort cleanup and
+  board/stop invocation accounting address the review findings. No Node or
+  guest has executed for this slice. Next qualify the synthetic controls, then
+  provide an exact-source-owned machine/reset/callback factory and genuine
+  event-loop/pressure ports in a separately admitted driver. Full guest outcomes,
+  weak sample predicates and resource limits still need independent acceptance.
+
+PR503 is stacked on PR502; PR504 is stacked on PR501. Each adds only its lane
+claim and new preparation paths. Normal hosted checks and prerequisite pure
+controls remain pending. Preserve the original sampler support result; do not
+replay it to qualify these new sources. No new guest, frame-return, RTx, default
+or GUI package result follows from this preparation checkpoint.

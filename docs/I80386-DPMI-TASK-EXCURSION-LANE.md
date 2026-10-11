@@ -654,3 +654,12 @@ authority. Follow the [new source-unit task contracts](X86-NEXT-LANES.md#unconne
 for canonical-root admission, compiler failure retention, bounded input
 observations and independent reader integration. No actual post-PF label has
 been applied.
+
+
+The [disabled compiler phase preparation in draft PR503](https://github.com/CrispStrobe/bw-board/pull/503)
+is a further source checkpoint, not a connected compile: final
+`4badb1905033d58d14e9e2f19fc589b708259a10` passes nine manufactured owner
+methods and three independent adversaries. Production is unconditionally
+disabled before helper loading. Complete ancestor/output admission, pair and
+input closure, independent reader and launch gates before removing that disable;
+follow the [connection preparation contract](X86-NEXT-LANES.md#connection-preparation-checkpoint).
