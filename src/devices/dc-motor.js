@@ -53,6 +53,16 @@ export function registerDCMotor() {
       };
     },
 
+    // A board reset is a new run from rest: the rotor stops and the
+    // integrator's clock restarts with the board's.
+    reset(part, state) {
+      state.velocity = 0;
+      state.omega = 0;
+      state.direction = 'stopped';
+      state.current = 0;
+      state._lastTNs = 0n;
+    },
+
     stamp(ctx, part, state) {
       const R = getR(part);
       const kV = part.params?.kV ?? classDefaults('dc_motor').kV;

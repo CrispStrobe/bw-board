@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-11 transient floor-step ringing and reset controller — CLAIMED, Claude Code.
+2026-10-11 transient floor-step ringing and reset controller — DONE candidate, Claude Code.
 Branch fix/reset-transient-controller-20261011, base current master. Cause of
 Lite's intermittent green-flag failure on the 54-motor-driver bench: after a
 short first advance (9.536 us) the trapezoidal inductor history no longer fits
@@ -17,6 +17,13 @@ test/transient-analysis-profile.test.mjs and test/npn-winding-transient-boundary
 (new field only). Legacy interactive-v1 and precision-v1 keep their recorded
 behaviour; no tolerance, minimum step or attempt ceiling changes. Exact hosted CI
 before guarded landing; Lite pin adoption is a separate Lite lane.
+Canonical claim14e92442 preceded the branch push. Four new tests in
+test/reset-transient-controller.test.mjs pass and all four fail on the
+unpatched engine. Local affected set (179 transient/inductor/motor/reset files)
+1876/1878 pass; the two failures are the emu8051 checkpoint subtests, which fail
+identically on the unpatched base. 280 randomized advance/reset trials of the
+bench through the circuit UI's armBoardForRun pass; on current master 6 of 120
+fail. Legacy interactive-v1 startup refusals still red as recorded.
 
 2026-10-09 RLC instrument oracle — DONE candidate, Codex bwcx.
 Branch lane/rlc-instrument-oracle-20261009, fresh exact base

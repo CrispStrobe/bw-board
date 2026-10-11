@@ -76,7 +76,8 @@ for (const vceSat of [.2,null]) {
     const status = b.transientAnalysisStatus();
     assert.equal(status.accuracyMet,true);
     assert.equal(status.failure,null);
-    assert.deepEqual(status.profile,{...ordinary,id:'interactive-v2',minStepSec:1e-15});
+    assert.deepEqual(status.profile,{...ordinary,id:'interactive-v2',minStepSec:1e-15,
+      floorHistoryRestart:true});
     assert.ok(status.work.attempts<ordinary.maxAttempts,'unchanged attempt ceiling');
     const u = (Math.sqrt(1+4*22700*4.325)-1)/(2*22700);
     const steady = 100*u*u/(1+1e-9*10);

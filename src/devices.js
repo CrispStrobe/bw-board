@@ -35,6 +35,9 @@
  *   fallback and may yield to an explicit ideal `vcc` rail. Omitted by
  *   default: physical sources, ground, and GPIO must retain their currents.
  * @property {(part: import('./types.js').Part) => object} [init]
+ * @property {(part: import('./types.js').Part, state: object) => void} [reset]
+ *   Return the model's time-integrated state to its t = 0 values when the board
+ *   clock resets (BoardImpl.reset()). A model without the hook keeps its state.
  *   Create per-part persistent state. Default: `{ drives: {} }`.
  *   `state.drives` maps terminal → {vTh, rTh} | null (null = high-Z).
  * @property {boolean} [transientUpdateContext]
@@ -180,6 +183,17 @@ export function registeredKinds() {
 /** @param {string} kind */
 export function unregisterDevice(kind) {
   REGISTRY.delete(kind);
+}
+
+/**
+ * Clock reset for one part's state: the model's `reset` hook, if it has one.
+ * @returns {boolean} whether the model reset anything
+ */
+export function resetDeviceState(part, state) {
+  const model = REGISTRY.get(part.kind);
+  if (!model || !model.reset || !state) return false;
+  model.reset(part, state);
+  return true;
 }
 
 /** Create a part's initial state via the model (or the default shape). */
