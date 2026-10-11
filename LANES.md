@@ -1,3 +1,16 @@
+2026-10-11 bounded compiler tool boundary receipts — CLAIM, Codex.
+Branch lane/386-tool-boundary-receipts-20261011, exact base
+`e1f44e70bd21e4f3b146d0c0e00da141eb045182`. Owns this row and only new
+`scripts/i80386-cwsdpmi-0501-boundary-receipts/{tool-boundary.py,tool-boundary-control.py,README.md}`.
+Prepare a separate CPU-free receipt unit for the nine held canonical extracted
+tool/header roles: bounded ordinary-file identity and hash observations before
+probes, after link and on failure. Hold all inherited source, compiler commands,
+profiles and defaults unchanged. Remote claim precedes source edits. Pure
+manufactured filesystem/metadata controls only; unconnected to compiler,
+runtime or guest execution. Boundary observations do not prove continuous
+identity, process identity or source-to-binary correspondence. No workflow,
+actual label, integration, default adoption or merge is included in this claim.
+
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
 2026-10-07 incomplete device advancement measurement refusal — CLAIM, Codex bwcx.
