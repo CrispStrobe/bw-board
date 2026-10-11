@@ -456,8 +456,8 @@ The single [PR492 original38120601803](receipts/2026-10-11-pf-mock-fixed-call/RE
 
 [Draft PR494](https://github.com/CrispStrobe/bw-board/pull/494), source
 `b9fe9370ff61472a310587fc311bf6004a0a5742`, changes exactly the CPU,
-[new focused controls](../test/i80386-0501-post-pf-continuation.test.mjs) and
-[prerequisite README](../scripts/i80386-cwsdpmi-0501-post-pf-continuation/README.md)
+[new focused controls](https://github.com/CrispStrobe/bw-board/blob/b9fe9370ff61472a310587fc311bf6004a0a5742/test/i80386-0501-post-pf-continuation.test.mjs) and
+[prerequisite README](https://github.com/CrispStrobe/bw-board/blob/b9fe9370ff61472a310587fc311bf6004a0a5742/scripts/i80386-cwsdpmi-0501-post-pf-continuation/README.md)
 on frozen PR492. Coordinator and independent static reviews pass. The
 existing automatic exact-head push CPU/xv6 and standard checks are queued; no
 execution qualification, connected driver or default adoption exists yet.
