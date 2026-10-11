@@ -36,6 +36,7 @@ const REG_NAMES = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"];
 const owned0501Sessions = new WeakMap();
 const owned0501Excursions = new WeakMap();
 const owned0501FaultOutcomes = new WeakMap();
+const owned0501PostPfSessions = new WeakMap();
 const owned0501ExcursionUsedEntries = new WeakSet();
 const OWNED_0501_MAX_STEPS = 1_000_000;
 const OWNED_0501_MIXED_PROFILE = "gate14-code16-stack32-same-cpl3.v1";
@@ -69,6 +70,112 @@ const OWNED_0501_STACK_FIELDS = Object.freeze([
 const OWNED_0501_MODE_CACHE_FIELDS = Object.freeze([...new Set([
   ...OWNED_0501_CODE_FIELDS, ...OWNED_0501_STACK_FIELDS, "null",
 ])]);
+
+// Closed CPU primitives only. No guest memory, device state or bus snapshot.
+function owned0501PostPfAnchor(cpu) {
+  const mode = owned0501ModeFacts(cpu), values = {};
+  for (const key of [...REG_NAMES, "eip", "eflags", "cs", "ss", "ds", "es",
+      "fs", "gs", "cr0", "cr2", "cr3", "cr4", "cycles", "_interruptShadow",
+      "_nmiShadow", "_debugShadow"]) {
+    const value = owned0501Option(cpu, key);
+    if (!Number.isSafeInteger(value) || value < -0x80000000)
+      throw new TypeError("post-PF numeric anchor refused");
+    values[key] = value;
+  }
+  for (const key of ["halted", "shutdown", "_retainedRealCs", "_nmiActive"]) {
+    const value = owned0501Option(cpu, key);
+    if (typeof value !== "boolean") throw new TypeError("post-PF boolean anchor refused");
+    values[key] = value;
+  }
+  const caches = owned0501Option(cpu, "segmentCaches");
+  const descriptors = [], descriptorRefs = [];
+  for (let i = 0; i < 6; i++) {
+    const descriptor = owned0501Option(caches, i);
+    descriptorRefs.push(descriptor);
+    descriptors.push(owned0501ModeCache(descriptor));
+  }
+  for (const [name, keys] of [["gdtr", ["base", "limit"]],
+      ["idtr", ["base", "limit"]], ["ldtr", ["selector", "base", "limit", "present"]],
+      ["tr", ["selector", "type", "base", "limit", "present"]]]) {
+    const object = owned0501Option(cpu, name), record = {};
+    descriptorRefs.push(object);
+    for (const key of keys) {
+      const value = owned0501Option(object, key);
+      if (key === "present" ? typeof value !== "boolean" :
+          !Number.isInteger(value) || value < 0 || value > 0xffffffff)
+        throw new TypeError("post-PF descriptor anchor refused");
+      record[key] = value;
+    }
+    descriptors.push(owned0501Frozen(record));
+  }
+  const callbacks = {};
+  for (const key of ["read", "read32", "fetch", "fetchRam32", "_rawWrite",
+      "write", "inPort", "outPort"]) {
+    const value = owned0501Option(cpu, key);
+    if (value !== null && typeof value !== "function")
+      throw new TypeError("post-PF callback identity refused");
+    callbacks[key] = value;
+  }
+  return owned0501Frozen({ mode, values: owned0501Frozen(values),
+    descriptors: Object.freeze(descriptors),
+    descriptorRefs: Object.freeze(descriptorRefs), callbacks: Object.freeze(callbacks) });
+}
+function owned0501PostPfJoined(pf, mode) {
+  const finalFault = mode?.deliveries.at(-1);
+  return pf.postPfSourceMode === mode && pf.postPfSourceCookie === mode.cookie &&
+    pf.postPfSourceOutgoing === mode.outgoing &&
+    Number.isInteger(pf.postPfSourceSteps) &&
+    mode.activeSteps - pf.postPfSourceSteps === pf.attemptedSteps - 1 &&
+    finalFault?.kind === "cpu-fault" && finalFault.enclosingStepCommitted === false &&
+    finalFault.step === mode.activeSteps + 1 && finalFault.fault?.available === true &&
+    finalFault.fault.vector === 14 && finalFault.fault.errorCodePresent === true &&
+    mode.deliveries.filter(event => event.enclosingStepCommitted === false).length === 1;
+}
+function owned0501PostPfSame(a, b) {
+  return owned0501ModeSame(a.mode, b.mode) &&
+    Object.keys(a.values).every(key => a.values[key] === b.values[key]) &&
+    a.descriptorRefs.every((value, i) => value === b.descriptorRefs[i]) &&
+    Object.keys(a.callbacks).every(key => a.callbacks[key] === b.callbacks[key]) &&
+    a.descriptors.length === b.descriptors.length &&
+    a.descriptors.every((value, i) => Object.keys(value).every(key =>
+      value[key] === b.descriptors[i][key]));
+}
+function owned0501PostPfEvent(session, kind, extra = {}) {
+  if (!session || session.phase !== "observing") return;
+  if (session.events.length + session.pendingEvents.length >= 64) {
+    session.truncated = true;
+    owned0501ExcursionFail(session, "post-pf-event-cap");
+    return;
+  }
+  session.pendingEvents.push(owned0501Frozen({ kind,
+    step: session.attemptedSteps, source: session.modeBefore, ...extra }));
+}
+function owned0501PostPfSettle(cpu, session, result, traced) {
+  if (session.phase !== "observing") return;
+  const after = owned0501ModeFacts(cpu);
+  const committed = result > 0 && !traced;
+  for (const event of session.pendingEvents)
+    session.events.push(owned0501Frozen({ ...event, before: session.modeBefore,
+      after, enclosingStepCommitted: committed }));
+  session.pendingEvents.length = 0;
+  if (!committed) {
+    owned0501ExcursionFail(session, traced ? "post-instruction-trace" : "uncommitted-step");
+    return;
+  }
+  session.committedSteps++;
+  if (session.modeBefore.cs !== after.cs && !session.pendingTask &&
+      !session.pendingDeliveries.length &&
+      !session.events.some(event => event.step === session.attemptedSteps &&
+        ["decoded-iret-intent", "decoded-far-cs-transfer"].includes(event.kind))) {
+    session.modeRefusal = owned0501Frozen({ step: session.activeSteps,
+      before: session.modeBefore, after, operation: null, enclosingStepCommitted: true });
+    owned0501ExcursionFail(session, "unattributed-cs-transfer");
+    return;
+  }
+  // Reuse the existing closed MOV-CR0/far-source/task-return predicates.
+  // A decoded IRET intent or delivery-array entry supplies no mode authority.
+  owned0501ModeSettle(cpu, session, result, traced);
+}
 
 function owned0501FaultOutcomeFail(session, reason) {
   if (!session || session.phase === "invalid" ||
@@ -490,13 +597,16 @@ function owned0501ModeSettle(cpu, session, result, traced) {
 function owned0501ExcursionCommit(cpu, session, result, traced) {
   if (!session || session.phase !== "observing") return;
   if (result <= 0 || traced) {
-    if (session.profile === OWNED_0501_MODE_PROFILE)
-      owned0501ModeSettle(cpu, session, result, traced);
+    if (session.profile === OWNED_0501_MODE_PROFILE) {
+      if (session.postPf) owned0501PostPfSettle(cpu, session, result, traced);
+      else owned0501ModeSettle(cpu, session, result, traced);
+    }
     owned0501ExcursionFail(session, traced ? "post-instruction-trace" : "uncommitted-step");
     return;
   }
   if (session.profile === OWNED_0501_MODE_PROFILE) {
-    owned0501ModeSettle(cpu, session, result, traced);
+    if (session.postPf) owned0501PostPfSettle(cpu, session, result, traced);
+    else owned0501ModeSettle(cpu, session, result, traced);
     if (session.phase !== "observing") return;
   }
   let reachedCandidate = false;
@@ -518,7 +628,7 @@ function owned0501ExcursionCommit(cpu, session, result, traced) {
       post, enclosingStepCommitted: true });
     session.transitions.push(event);
     session.pendingTask = null;
-    if (session.transitions.length === 1) {
+    if (!session.postPf && session.transitions.length === 1) {
       session.outgoing = event;
     } else if (post.trSelector === session.cookie.trSelector) {
       const source = session.outgoing.source;
@@ -729,6 +839,12 @@ function maskFor(width) {
 }
 
 export class ExperimentalI80386 {
+  #owned0501PostPfActive = false;
+  #owned0501PostPfAdmissionBusy = false;
+  #owned0501PostPfAdmissionReentered = false;
+  #owned0501PostPfAnchorBusy = false;
+  #owned0501PostPfGeneration = 0;
+  #owned0501PostPfAnchorPending = false;
   #owned0501JournalActive = false;
   #owned0501ExecutionDepth = 0;
   #owned0501AdmissionBusy = false;
@@ -795,6 +911,12 @@ export class ExperimentalI80386 {
   }
 
   reset() {
+    this.#owned0501PostPfGeneration++;
+    this.#owned0501PostPfAnchorPending = false;
+    if (this.#owned0501PostPfAdmissionBusy || this.#owned0501PostPfAnchorBusy)
+      this.#owned0501PostPfAdmissionReentered = true;
+    owned0501ExcursionFail(owned0501PostPfSessions.get(this), "cpu-reset");
+    this.#owned0501PostPfActive = false;
     const faultOutcome = owned0501FaultOutcomes.get(this);
     if (faultOutcome?.phase === "complete") {
       faultOutcome.phase = "invalid";
@@ -955,6 +1077,129 @@ export class ExperimentalI80386 {
 
   // Separate, default-off diagnostic. The caller must later bind this CPU to
   // its admitted owned client/session; this API alone grants no frame credit.
+  #owned0501DiagnosticSession() {
+    if (this.#owned0501PostPfActive) {
+      const post = owned0501PostPfSessions.get(this);
+      if (this.#owned0501ExcursionActive) {
+        owned0501ExcursionFail(post, "simultaneous-diagnostic-profiles");
+        this.#owned0501PostPfActive = false;
+        return null;
+      }
+      return post;
+    }
+    return this.#owned0501ExcursionActive ? owned0501Excursions.get(this) : null;
+  }
+
+  armOwned0501PostPfContinuation(pfToken, modeToken, options) {
+    const pf = owned0501FaultOutcomes.get(this), mode = owned0501Excursions.get(this);
+    const prior = owned0501PostPfSessions.get(this);
+    if (this.#owned0501ExecutionDepth || this.#owned0501PostPfAdmissionBusy ||
+        this.#owned0501PostPfAnchorBusy || pf?.busyDepth || mode?.busyDepth) {
+      this.#owned0501PostPfAdmissionReentered = true;
+      owned0501ExcursionFail(prior, "observer-reentry");
+      this.#owned0501PostPfActive = false;
+      return null;
+    }
+    if (prior) throw new Error("consume previous post-PF diagnostic first");
+    if (!pf || pf.token !== pfToken || !mode || mode.token !== modeToken ||
+        pf.postPfUsed || !pf.postPfAnchor || pf.postPfGeneration !== this.#owned0501PostPfGeneration ||
+        pf.postPfMode !== mode || mode.profile !== OWNED_0501_MODE_PROFILE ||
+        mode.phase !== "invalid" || mode.firstFailure !== "step-failure" ||
+        !mode.cookie || !mode.outgoing || !owned0501PostPfJoined(pf, mode) ||
+        pf.phase !== "complete" || pf.firstFailure ||
+        pf.fault?.vector !== 14 || !pf.delivery?.attempted ||
+        pf.delivery.outcome !== "returned" || pf.delivery.post.shutdown ||
+        this.#owned0501ExcursionActive || this.#owned0501FaultOutcomeActive)
+      throw new Error("retained same-session returned PF handoff required");
+    this.#owned0501PostPfAdmissionBusy = true;
+    this.#owned0501PostPfAdmissionReentered = false;
+    try {
+      const maxActiveSteps = owned0501Option(options, "maxActiveSteps");
+      if (!Number.isInteger(maxActiveSteps) || maxActiveSteps < 1 || maxActiveSteps > 100_000)
+        throw new RangeError("post-PF step cap refused");
+      const anchor = owned0501PostPfAnchor(this);
+      const finalAnchor = owned0501PostPfAnchor(this);
+      if (this.#owned0501PostPfAdmissionReentered || this.#owned0501ExecutionDepth ||
+          this.#owned0501ExcursionActive || this.#owned0501FaultOutcomeActive ||
+          pf.postPfGeneration !== this.#owned0501PostPfGeneration ||
+          owned0501FaultOutcomes.get(this) !== pf || owned0501Excursions.get(this) !== mode ||
+          pf.phase !== "complete" || mode.phase !== "invalid" || pf.postPfUsed ||
+          !owned0501PostPfJoined(pf, mode) ||
+          !owned0501PostPfSame(pf.postPfAnchor, anchor) ||
+          !owned0501PostPfSame(anchor, finalAnchor))
+        throw new Error("post-PF terminal anchor changed during admission");
+      const token = Object.freeze({});
+      const session = { token, postPf: true, profile: OWNED_0501_MODE_PROFILE,
+        cookie: mode.cookie, handlerDescriptors: mode.handlerDescriptors,
+        originalOutgoing: mode.outgoing, outgoing: mode.outgoing,
+        terminalAnchor: pf.postPfAnchor, initialFault: pf.fault,
+        phase: "observing", firstFailure: null, maxActiveSteps,
+        attemptedSteps: 0, committedSteps: 0, activeSteps: 0, postOutgoingSteps: 0,
+        busyDepth: 0, pendingTask: null, pendingDeliveries: [], pendingEvents: [],
+        transitions: [], uncommittedTransitions: [], deliveries: [], events: [],
+        modeLast: anchor.mode, modeBefore: anchor.mode, modeChanges: [], uncommittedModes: [],
+        pendingModeOperation: null, modeRefusal: null, resumeCandidate: null, truncated: false };
+      pf.postPfUsed = true;
+      this.#owned0501PostPfAnchorPending = false;
+      owned0501PostPfSessions.set(this, session);
+      this.#owned0501PostPfActive = true;
+      return token;
+    } finally {
+      this.#owned0501PostPfAdmissionBusy = false;
+      this.#owned0501PostPfAdmissionReentered = false;
+    }
+  }
+
+  #owned0501PostPfSession(token) {
+    const session = owned0501PostPfSessions.get(this);
+    if (this.#owned0501PostPfAdmissionBusy || this.#owned0501PostPfAnchorBusy)
+      this.#owned0501PostPfAdmissionReentered = true;
+    if (this.#owned0501ExecutionDepth || this.#owned0501PostPfAdmissionBusy ||
+        this.#owned0501PostPfAnchorBusy || session?.busyDepth) {
+      owned0501ExcursionFail(session, "observer-reentry");
+      this.#owned0501PostPfActive = false;
+    }
+    if (!session || session.token !== token) throw new Error("stale post-PF token");
+    return session;
+  }
+
+  owned0501PostPfContinuationStatus(token) {
+    const session = this.#owned0501PostPfSession(token);
+    return owned0501Frozen({ phase: session.phase, firstFailure: session.firstFailure,
+      attemptedSteps: session.attemptedSteps, committedSteps: session.committedSteps });
+  }
+
+  abortOwned0501PostPfContinuation(token, reason) {
+    const session = this.#owned0501PostPfSession(token);
+    if (this.#owned0501ExecutionDepth || session.busyDepth ||
+        this.#owned0501PostPfAdmissionBusy || this.#owned0501PostPfAnchorBusy)
+      throw new Error("post-PF abort outside owner pause");
+    if (!OWNED_0501_EXCURSION_ABORT_REASONS.includes(reason))
+      throw new Error("unreviewed post-PF abort reason");
+    owned0501ExcursionFail(session, reason);
+    this.#owned0501PostPfActive = false;
+  }
+
+  takeOwned0501PostPfContinuationObservation(token) {
+    const session = this.#owned0501PostPfSession(token);
+    if (this.#owned0501ExecutionDepth || session.busyDepth ||
+        this.#owned0501PostPfAdmissionBusy || this.#owned0501PostPfAnchorBusy) return null;
+    if (session.phase === "observing") return null;
+    const result = owned0501Frozen({ schema: "bw.i80386-owned-0501.post-pf-continuation.v1",
+      phase: session.phase, firstFailure: session.firstFailure,
+      attemptedSteps: session.attemptedSteps, committedSteps: session.committedSteps,
+      cookie: session.cookie, originalOutgoing: session.originalOutgoing,
+      initialFault: session.initialFault, transitions: Object.freeze([...session.transitions]),
+      uncommittedTransitions: Object.freeze([...session.uncommittedTransitions]),
+      deliveries: Object.freeze([...session.deliveries]), events: Object.freeze([...session.events]),
+      modeChanges: Object.freeze([...session.modeChanges]), uncommittedModes: Object.freeze([...session.uncommittedModes]),
+      modeRefusal: session.modeRefusal, resumeCandidate: session.resumeCandidate,
+      truncated: session.truncated, frameReturnQualified: false });
+    owned0501PostPfSessions.delete(this);
+    this.#owned0501PostPfActive = false;
+    return result;
+  }
+
   armOwned0501FaultOutcome(options) {
     const prior = owned0501FaultOutcomes.get(this);
     if (this.#owned0501ExecutionDepth ||
@@ -965,6 +1210,7 @@ export class ExperimentalI80386 {
       this.#owned0501FaultOutcomeActive = false;
       return null;
     }
+    if (this.#owned0501PostPfActive) throw new Error("post-PF diagnostic active");
     if (prior) throw new Error("consume previous PF outcome first");
     this.#owned0501FaultOutcomeAdmissionBusy = true;
     this.#owned0501FaultOutcomeAdmissionReentered = false;
@@ -972,17 +1218,33 @@ export class ExperimentalI80386 {
       if (!options || typeof options !== "object")
         throw new TypeError("PF outcome options must be an object");
       const maxActiveSteps = owned0501Option(options, "maxActiveSteps");
+      const handoffField = Object.getOwnPropertyDescriptor(options, "postPfHandoff");
+      if (handoffField && (!Object.hasOwn(handoffField, "value") ||
+          typeof handoffField.value !== "boolean"))
+        throw new TypeError("postPfHandoff must be an own data boolean");
+      const postPfHandoff = handoffField?.value === true;
       if (!Number.isInteger(maxActiveSteps) || maxActiveSteps < 1 ||
           maxActiveSteps > OWNED_0501_FAULT_OUTCOME_STEPS ||
           this.#owned0501FaultOutcomeAdmissionReentered ||
           this.#owned0501ExecutionDepth)
         throw new RangeError("PF outcome step cap or admission invalid");
       const token = Object.freeze({});
+      const retainedMode = postPfHandoff ? owned0501Excursions.get(this) : null;
+      const sourceMode = retainedMode?.profile === OWNED_0501_MODE_PROFILE &&
+        retainedMode.phase === "observing" && retainedMode.outgoing ? retainedMode : null;
+      if (postPfHandoff && (!sourceMode || this.#owned0501FaultOutcomeAdmissionReentered ||
+          this.#owned0501ExecutionDepth))
+        throw new Error("post-PF handoff requires retained observing task-mode source");
       owned0501FaultOutcomes.set(this, {
+        postPfHandoff, postPfSourceMode: sourceMode,
+        postPfSourceCookie: sourceMode?.cookie ?? null,
+        postPfSourceOutgoing: sourceMode?.outgoing ?? null,
+        postPfSourceSteps: sourceMode?.activeSteps ?? null,
         token, phase: "armed", firstFailure: null, maxActiveSteps,
         attemptedSteps: 0, busyDepth: 0, fault: null,
         preDelivery: null, delivery: null,
       });
+      this.#owned0501PostPfAnchorPending = postPfHandoff;
       this.#owned0501FaultOutcomeActive = true;
       return token;
     } finally {
@@ -1028,6 +1290,7 @@ export class ExperimentalI80386 {
       frameReturnQualified: false,
     });
     owned0501FaultOutcomes.delete(this);
+    this.#owned0501PostPfAnchorPending = false;
     this.#owned0501FaultOutcomeActive = false;
     return result;
   }
@@ -1044,6 +1307,7 @@ export class ExperimentalI80386 {
       this.#owned0501ExcursionActive = false;
       return null;
     }
+    if (this.#owned0501PostPfActive) throw new Error("post-PF diagnostic active");
     if (prior) throw new Error("consume prior task excursion first");
     if (!frame || frame.token !== frameToken || frame.phase !== "open" ||
         !frame.entry || frame.profile !== OWNED_0501_MIXED_PROFILE)
@@ -2493,8 +2757,8 @@ export class ExperimentalI80386 {
       const target = this._readLinear(address, bytes);
       const selector = this._readLinear((address + bytes) >>> 0, 2);
       if (this.protectedMode && !this.virtual8086) {
-        if (ea.reg === 5 && decoded && this.#owned0501ExcursionActive &&
-            owned0501Excursions.get(this)?.profile === OWNED_0501_MODE_PROFILE)
+        if (ea.reg === 5 && decoded && (this.#owned0501ExcursionActive || this.#owned0501PostPfActive) &&
+            this.#owned0501DiagnosticSession()?.profile === OWNED_0501_MODE_PROFILE)
           this.#protectedFarTransfer(selector, target, width, false,
             OWNED_0501_FAR_FF5);
         else this._protectedFarTransfer(selector, target, width, ea.reg === 3);
@@ -2659,8 +2923,7 @@ export class ExperimentalI80386 {
   }
 
   _taskSwitch(selector, kind, options = {}) {
-    const excursion = this.#owned0501ExcursionActive
-      ? owned0501Excursions.get(this) : null;
+    const excursion = this.#owned0501DiagnosticSession();
     if (excursion?.phase === "observing") {
       try {
         if (this.#owned0501ExecutionDepth !== 1 || excursion.pendingTask ||
@@ -2909,14 +3172,19 @@ export class ExperimentalI80386 {
       this._retainedRealCs = false;
       this.segmentCaches[SEG_CS] = descriptor;
       this.eip = target;
+      const postPf = this.#owned0501PostPfActive ? owned0501PostPfSessions.get(this) : null;
+      if (postPf?.phase === "observing" &&
+          (decodedSource === OWNED_0501_FAR_EA || decodedSource === OWNED_0501_FAR_FF5))
+        owned0501PostPfEvent(postPf, "decoded-far-cs-transfer", {
+          selector: selector & 0xffff, target, operandWidth });
       // The decoded EA and FF /5 paths enter this private implementation. A
       // public helper override cannot capture or replay the source marker.
       // The guest transfer above has already committed; observer failure
       // cannot change its result. No extra guest memory or TSS is read.
-      if (!call && this.#owned0501ExcursionActive &&
+      if (!call && (this.#owned0501ExcursionActive || this.#owned0501PostPfActive) &&
           (decodedSource === OWNED_0501_FAR_EA ||
            decodedSource === OWNED_0501_FAR_FF5)) {
-        const mode = owned0501Excursions.get(this);
+        const mode = this.#owned0501DiagnosticSession();
         if (mode?.profile === OWNED_0501_MODE_PROFILE &&
             mode.phase === "observing" && mode.modeBefore.retainedRealCs) {
           try {
@@ -3823,8 +4091,7 @@ export class ExperimentalI80386 {
   }
 
   _deliver(vector, returnEip, errorCode = null, options = {}) {
-    const excursion = this.#owned0501ExcursionActive
-      ? owned0501Excursions.get(this) : null;
+    const excursion = this.#owned0501DiagnosticSession();
     const owned0501 = this.#owned0501JournalActive
       ? owned0501Sessions.get(this) : null;
     if (owned0501) {
@@ -3886,6 +4153,16 @@ export class ExperimentalI80386 {
   }
 
   interrupt(vector, { nmi = false } = {}) {
+    if (this.#owned0501PostPfAdmissionBusy || this.#owned0501PostPfAnchorBusy)
+      this.#owned0501PostPfAdmissionReentered = true;
+    // Any interrupt call after terminal PF invalidates undrained handoff authority.
+    if (this.#owned0501PostPfAnchorPending) this.#owned0501PostPfGeneration++;
+    const postPfCandidate = this.#owned0501PostPfActive
+      ? owned0501PostPfSessions.get(this) : null;
+    if (postPfCandidate?.phase === "candidate") {
+      owned0501ExcursionFail(postPfCandidate, "observer-reentry");
+      this.#owned0501PostPfActive = false;
+    }
     if (
       this.shutdown ||
       (nmi
@@ -3895,12 +4172,26 @@ export class ExperimentalI80386 {
       return false;
     if (this.#owned0501AdmissionBusy)
       this.#owned0501AdmissionReentered = true;
+    const postPf = this.#owned0501PostPfActive ? owned0501PostPfSessions.get(this) : null;
+    let irqReturned = false;
+    if (postPf) {
+      if (this.#owned0501ExecutionDepth || postPf.busyDepth)
+        owned0501ExcursionFail(postPf, "interrupt-observer-reentry");
+      postPf.busyDepth++;
+      if (postPf.phase === "observing") try {
+        const anchor = owned0501PostPfAnchor(this);
+        if (!owned0501PostPfSame(postPf.lastAnchor ?? postPf.terminalAnchor, anchor))
+          owned0501ExcursionFail(postPf, "post-pf-between-step-change");
+        else postPf.modeBefore = anchor.mode;
+      } catch { owned0501ExcursionFail(postPf, "interrupt-anchor-unavailable"); }
+    }
     this.#owned0501ExecutionDepth++;
     try {
     if (nmi) this._nmiActive = true;
     this._repeatContext = null;
     try {
       this._deliver(vector & 255, this.eip, null, { external: true });
+      irqReturned = true;
       return true;
     } catch (error) {
       if (!(error instanceof I80386Fault)) {
@@ -3908,10 +4199,43 @@ export class ExperimentalI80386 {
         throw error;
       }
       this._deliverFault(error, this.eip, { external: true });
+      irqReturned = !this.shutdown;
       return !this.shutdown;
     }
     } finally {
       this.#owned0501ExecutionDepth--;
+      if (postPf) {
+        postPf.busyDepth--;
+        if (postPf.phase === "observing") try {
+          const after = owned0501PostPfAnchor(this);
+          if (postPf.events.length >= 64 || postPf.deliveries.length +
+              postPf.pendingDeliveries.length > OWNED_0501_EXCURSION_DELIVERIES) {
+            postPf.truncated = true;
+            owned0501ExcursionFail(postPf, "interrupt-record-cap");
+          } else {
+            postPf.events.push(owned0501Frozen({ kind: "source-interrupt",
+              step: postPf.attemptedSteps, vector: vector & 255, nmi: !!nmi,
+              before: postPf.modeBefore, after: after.mode,
+              sourceOperationReturned: irqReturned, enclosingStepCommitted: false }));
+            for (const delivery of postPf.pendingDeliveries)
+              postPf.deliveries.push(owned0501Frozen({ ...delivery,
+                sourceOperationReturned: irqReturned, enclosingStepCommitted: false }));
+            postPf.pendingDeliveries.length = 0;
+            if (owned0501ModeChanged(postPf.modeBefore, after.mode) ||
+                postPf.modeBefore.rawCr0 !== after.mode.rawCr0) {
+              postPf.modeRefusal = owned0501Frozen({ step: postPf.attemptedSteps,
+                before: postPf.modeBefore, after: after.mode, operation: null,
+                enclosingStepCommitted: false });
+              owned0501ExcursionFail(postPf, "unattributed-interrupt-mode-change");
+            } else {
+              postPf.modeLast = after.mode;
+              postPf.lastAnchor = after;
+              if (!irqReturned) owned0501ExcursionFail(postPf, "interrupt-operation-failure");
+            }
+          }
+        } catch { owned0501ExcursionFail(postPf, "interrupt-record-failure"); }
+        if (postPf.phase !== "observing") this.#owned0501PostPfActive = false;
+      }
     }
   }
 
@@ -4220,6 +4544,9 @@ export class ExperimentalI80386 {
   }
 
   step() {
+    if (this.#owned0501PostPfAdmissionBusy || this.#owned0501PostPfAnchorBusy)
+      this.#owned0501PostPfAdmissionReentered = true;
+    if (this.#owned0501PostPfAnchorPending) this.#owned0501PostPfGeneration++;
     if (this.#owned0501AdmissionBusy)
       this.#owned0501AdmissionReentered = true;
     if (this.#owned0501ExcursionAdmissionBusy)
@@ -4239,14 +4566,23 @@ export class ExperimentalI80386 {
       if (faultOutcome.phase === "invalid")
         this.#owned0501FaultOutcomeActive = false;
     }
-    const excursion = this.#owned0501ExcursionActive
-      ? owned0501Excursions.get(this) : null;
+    const excursion = this.#owned0501DiagnosticSession();
     if (excursion) {
       if (excursion.phase === "candidate")
         owned0501ExcursionFail(excursion, "post-candidate-step");
       if (excursion.busyDepth)
         owned0501ExcursionFail(excursion, "cpu-step-reentry");
       excursion.busyDepth++;
+      if (excursion.postPf && excursion.phase === "observing") try {
+        const current = owned0501PostPfAnchor(this);
+        if (!owned0501PostPfSame(excursion.lastAnchor ?? excursion.terminalAnchor, current))
+          owned0501ExcursionFail(excursion, "post-pf-between-step-change");
+      } catch { owned0501ExcursionFail(excursion, "post-pf-anchor-unavailable"); }
+      if (excursion.postPf && excursion.phase === "observing") {
+        excursion.attemptedSteps++;
+        if (excursion.attemptedSteps > excursion.maxActiveSteps)
+          owned0501ExcursionFail(excursion, "post-pf-step-cap");
+      }
       if (excursion.profile === OWNED_0501_MODE_PROFILE &&
           excursion.phase === "observing") try {
         const before = owned0501ModeFacts(this);
@@ -4364,6 +4700,10 @@ export class ExperimentalI80386 {
         if (faultOutcome?.phase === "invalid")
           this.#owned0501FaultOutcomeActive = false;
         if (excursion?.phase === "observing") try {
+          if (excursion.postPf && excursion.deliveries.length >= OWNED_0501_EXCURSION_DELIVERIES) {
+            excursion.truncated = true;
+            owned0501ExcursionFail(excursion, "delivery-record-cap");
+          }
           if (excursion.deliveries.length < OWNED_0501_EXCURSION_DELIVERIES) {
             const fault = owned0501ExcursionFaultFacts(error);
             excursion.deliveries.push(owned0501Frozen({
@@ -4380,6 +4720,11 @@ export class ExperimentalI80386 {
             excursion.phase === "observing") try {
           owned0501ModeRecordUncommitted(this, excursion);
         } catch { /* Preserve the original guest exception and fault facts. */ }
+        if (excursion?.postPf) {
+          for (const event of excursion.pendingEvents)
+            excursion.events.push(owned0501Frozen({ ...event, enclosingStepCommitted: false }));
+          excursion.pendingEvents.length = 0;
+        }
         owned0501ExcursionFail(excursion, "step-failure");
         this.#owned0501ExcursionActive = false;
         if (owned0501) {
@@ -4511,6 +4856,48 @@ export class ExperimentalI80386 {
       if (excursion) excursion.busyDepth--;
       if (faultOutcome) faultOutcome.busyDepth--;
       this.#owned0501ExecutionDepth--;
+      if (excursion?.postPf) {
+        if (excursion.phase === "observing") try {
+          excursion.lastAnchor = owned0501PostPfAnchor(this);
+          if (excursion.attemptedSteps >= excursion.maxActiveSteps)
+            owned0501ExcursionFail(excursion, "post-pf-step-cap");
+        } catch { owned0501ExcursionFail(excursion, "post-pf-anchor-unavailable"); }
+        if (excursion.phase !== "observing" && excursion.pendingEvents.length) {
+          for (const event of excursion.pendingEvents)
+            excursion.events.push(owned0501Frozen({ ...event, enclosingStepCommitted: false }));
+          excursion.pendingEvents.length = 0;
+        }
+      }
+      if (excursion?.postPf && excursion.phase !== "observing" && excursion.phase !== "candidate")
+        this.#owned0501PostPfActive = false;
+      if (faultOutcome?.postPfHandoff && faultOutcome.phase === "complete" && !faultOutcome.postPfAnchor &&
+          faultOutcome.delivery?.attempted && faultOutcome.delivery.outcome === "returned" &&
+          !faultOutcome.delivery.post.shutdown && !this.#owned0501ExecutionDepth) {
+        const mode = owned0501Excursions.get(this);
+        if (mode?.profile === OWNED_0501_MODE_PROFILE && mode.phase === "invalid" &&
+            mode.firstFailure === "step-failure" && mode.cookie && mode.outgoing &&
+            owned0501PostPfJoined(faultOutcome, mode)) {
+          this.#owned0501PostPfAnchorBusy = true;
+          this.#owned0501PostPfAdmissionReentered = false;
+          const generation = this.#owned0501PostPfGeneration;
+          try {
+            const anchor = owned0501PostPfAnchor(this), after = owned0501PostPfAnchor(this);
+            if (this.#owned0501PostPfAdmissionReentered || this.#owned0501ExecutionDepth ||
+                generation !== this.#owned0501PostPfGeneration ||
+                owned0501FaultOutcomes.get(this) !== faultOutcome ||
+                owned0501Excursions.get(this) !== mode || faultOutcome.phase !== "complete" ||
+                !owned0501PostPfSame(anchor, after)) throw new Error("terminal anchor changed");
+            faultOutcome.postPfAnchor = anchor;
+            faultOutcome.postPfGeneration = generation;
+            faultOutcome.postPfMode = mode;
+            this.#owned0501PostPfAnchorPending = true;
+          } catch { /* No handoff authority; preserve the original PF observation. */ }
+          finally {
+            this.#owned0501PostPfAnchorBusy = false;
+            this.#owned0501PostPfAdmissionReentered = false;
+          }
+        }
+      }
     }
   }
 
@@ -4805,8 +5192,8 @@ export class ExperimentalI80386 {
       if (ea.reg !== 0) throw new UnsupportedI80386("C7 extension");
       this._operandWrite(ea, width, this._fetchN(width >>> 3));
     } else if (op === 0xfe || op === 0xff) {
-      if (this.#owned0501ExcursionActive &&
-          owned0501Excursions.get(this)?.profile === OWNED_0501_MODE_PROFILE)
+      if ((this.#owned0501ExcursionActive || this.#owned0501PostPfActive) &&
+          this.#owned0501DiagnosticSession()?.profile === OWNED_0501_MODE_PROFILE)
         this.#group5(op, width, address32, override, true);
       else this._group5(op, width, address32, override);
     } else if (op === 0xf6 || op === 0xf7) {
@@ -5018,6 +5405,12 @@ export class ExperimentalI80386 {
         } catch {
           owned0501Invalidate(owned0501, "observer-iret-intent-failure");
         }
+      const postPf = this.#owned0501PostPfActive ? owned0501PostPfSessions.get(this) : null;
+      if (postPf?.phase === "observing") {
+        if (this.#owned0501ExecutionDepth !== 1 || postPf.busyDepth !== 1)
+          owned0501ExcursionFail(postPf, "iret-observer-reentry");
+        else owned0501PostPfEvent(postPf, "decoded-iret-intent", { instructionStart, width });
+      }
       this._iret(width);
     }
     else if (op === 0xfa) {
@@ -5068,8 +5461,8 @@ export class ExperimentalI80386 {
         off = width === 32 ? raw : raw & 0xffff,
         sel = this._fetchN(2);
       if (this.protectedMode && !this.virtual8086) {
-        if (this.#owned0501ExcursionActive &&
-            owned0501Excursions.get(this)?.profile === OWNED_0501_MODE_PROFILE)
+        if ((this.#owned0501ExcursionActive || this.#owned0501PostPfActive) &&
+            this.#owned0501DiagnosticSession()?.profile === OWNED_0501_MODE_PROFILE)
           this.#protectedFarTransfer(sel, off, width, false,
             OWNED_0501_FAR_EA);
         else this._protectedFarTransfer(sel, off, width, false);
@@ -5422,8 +5815,7 @@ export class ExperimentalI80386 {
         if (control === 0) {
           if (!wasProtected && this.protectedMode) this._retainedRealCs = true;
           else if (!this.protectedMode) this._retainedRealCs = false;
-          const mode = this.#owned0501ExcursionActive
-            ? owned0501Excursions.get(this) : null;
+          const mode = this.#owned0501DiagnosticSession();
           if (mode?.profile === OWNED_0501_MODE_PROFILE &&
               mode.phase === "observing") try {
             const afterCr0 = owned0501Option(this, "cr0");
