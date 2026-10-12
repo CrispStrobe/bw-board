@@ -1,0 +1,93 @@
+{
+  "schema": "bw.far-attribution-cpu-success-public.v1",
+  "source": "6191a70650142ea46552c2d417eb7eb62aa08e38",
+  "sourcePullRequest": "https://github.com/CrispStrobe/bw-board/pull/480",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37942619141",
+  "officialConclusion": "success",
+  "event": "push",
+  "attempt": 1,
+  "executionRevision": "6191a70650142ea46552c2d417eb7eb62aa08e38",
+  "reviewedExecutedRevisionEqual": true,
+  "originalArtifact": {
+    "run": 37942619141,
+    "artifact": 11622018933,
+    "bytes": 21031,
+    "sha256": "c384bd1b86b55fedc16848e9bca4aa886f21850e1f6df1a051029ca79de2a2d1"
+  },
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11622018933",
+  "rawLog": {
+    "bytes": 1603956,
+    "sha256": "e5d00b2264950a1596688ec62702200e5a48b79758d6e736f1641f63e41862f1"
+  },
+  "focusedControls": 131,
+  "journalNamedCases": 102,
+  "newJournalCases": 17,
+  "currentTests": {
+    "total": 1706,
+    "pass": 1695,
+    "fail": 0,
+    "skip": 11
+  },
+  "historicalTests": {
+    "total": 288,
+    "pass": 288,
+    "fail": 0,
+    "skip": 0
+  },
+  "sourceRoles": 71,
+  "mappedSourceRoles": 70,
+  "separatelyCheckedBiosRoles": 1,
+  "finiteScenarios": [
+    {
+      "member": "xv6-stock-free-bios-boot.json",
+      "profile": "4m",
+      "steps": 14643086,
+      "sourceRoles": 70,
+      "userModeEntries": 16,
+      "serialResponse": "BW_XV6_FREE_BIOS_FS_OK",
+      "cr4": 16,
+      "profileBoundary": "existing compatibility profile; not strict physical 386DX qualification"
+    },
+    {
+      "member": "xv6-stock-14m-free-bios-boot.json",
+      "profile": "14m",
+      "steps": 10962834,
+      "sourceRoles": 70,
+      "userModeEntries": 16,
+      "serialResponse": "BW_XV6_14M_FREE_OK",
+      "cr4": 16,
+      "profileBoundary": "existing compatibility profile; not strict physical 386DX qualification"
+    },
+    {
+      "member": "xv6-stock-free-bios-forktest.json",
+      "profile": "4m",
+      "steps": 24338279,
+      "sourceRoles": 70,
+      "userModeEntries": 16,
+      "serialResponse": "fork test OK",
+      "cr4": 16,
+      "profileBoundary": "existing compatibility profile; not strict physical 386DX qualification"
+    }
+  ],
+  "boundary": "Finite xv6 compatibility-profile CPU regressions and focused controls only; new far-attribution guest diagnostic remains unconnected and unqualified. Remaining enabled exact-head standard checks precede connection source work.",
+  "auditors": [
+    {
+      "role": "root original packet/Git identity",
+      "scriptBytes": 3380,
+      "scriptSha256": "335723b2152f12b7a204152555d9873fd1eea8b02b0c9cf61a630fffa10a37e1",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    },
+    {
+      "role": "root actual TAP/Git title identity",
+      "scriptBytes": 2321,
+      "scriptSha256": "d6be650f87f33f666aeb988aa13bedad061fbc5b79b324c88b8b531bbb55e457",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    },
+    {
+      "role": "independent peer original/source/TAP audit",
+      "scriptBytes": 6027,
+      "scriptSha256": "a04ec9e83f8cd10a8514f7c923b63798cba58e34f68caa30effc37cbd7efa815",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    }
+  ]
+}

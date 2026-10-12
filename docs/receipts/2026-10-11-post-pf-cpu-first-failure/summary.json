@@ -1,0 +1,29 @@
+{
+  "schema": "bw.public.x86.cpu-prerequisite-failure.v1",
+  "run": 38122000618,
+  "source": "b9fe9370ff61472a310587fc311bf6004a0a5742",
+  "event": "push",
+  "runAttempt": 1,
+  "officialConclusion": "failure",
+  "logCaptureBytes": 1103040,
+  "logCaptureSha256": "f1bb47db1d8536a2cd10df45afa3579d3011d8574c5627e9f0f5bb043997a08c",
+  "currentTests": 1773,
+  "currentPass": 1756,
+  "currentFail": 6,
+  "currentSkip": 11,
+  "historicalTests": 288,
+  "historicalPass": 288,
+  "failedControls": [
+    "source IRQ boundary accepted",
+    "candidate IRQ accepted=true",
+    "candidate IRQ thrown identity",
+    "IRQ CR0 mutation",
+    "IRQ VM86 mutation",
+    "IRQ retained-CS mutation"
+  ],
+  "xv6Built": false,
+  "xv6Booted": false,
+  "cpuQualification": false,
+  "independentAuditSha256": "4badfdbcd3525c74be52a90f839cbec645d6a574e53a451fb14acb516d047323",
+  "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/38122000618"
+}
