@@ -707,9 +707,23 @@ The ordered follow-up tasks are:
    original errors survive cleanup failures. An absent report remains absent.
    Inputs stay private in memory, with no archive staging or upload. The
    observed deadlines and byte limits are not hard process-memory/time guarantees.
-   No actual acquisition or materialization has run. A separately reviewed
-   hosted profile, frozen independent reader and one-shot launch reservation
-   must precede the real test; compiler/tool/guest execution remains outside it.
+   No actual acquisition or materialization has run. [PR522](https://github.com/CrispStrobe/bw-board/pull/522),
+   exact source `b281e779266f6d225d91a88750c85a36e858042e`, prepares the hosted
+   profile in `scripts/i80386-fixed-archive-materialization-hosted/` and
+   `.github/workflows/i80386-fixed-archive-materialization.yml`. Coordinator and
+   independent review passed 20 manufactured admission/controller controls.
+   Admission binds 28 unchanged inherited paths and four profile paths. An
+   automatic job runs the adapter's 20 manufactured controls; a separate actual
+   job admits only the applied `x86-fixed-archive-materialization` label and
+   remains **unarmed**. Hosted source checks are pending. Review corrected a
+   missing final report retaining completion and a file limit too small for
+   selected tools. The actual job permits 16 MiB file writes and retains smaller
+   independent JSON caps; its prospective reader admits at most 512 KiB of ZIP
+   evidence. These are distinct bounds. Nine sanitized text roles describe a
+   completed actual attempt, with no input archives or tools uploaded. Every
+   enabled exact-head source check, a frozen independent original reader and
+   one-shot launch reservation must precede the real test; compiler/tool/guest
+   execution remains outside it.
    A source policy about read-only modes or omitted alias outputs is
    distinct from a final namespace/mode census; this first test need not claim
    the latter. Record actual member topology, selected output hashes,
