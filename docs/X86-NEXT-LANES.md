@@ -677,7 +677,24 @@ The ordered follow-up tasks are:
    retained original inventories where available; new qualification must bind its
    own source and inputs. Prepare a bounded runner that retains the two raw
    nine-role observations and materialize/close statuses from the same private
-   instance. A source policy about read-only modes or omitted alias outputs is
+   instance. [PR519](https://github.com/CrispStrobe/bw-board/pull/519), exact source
+   `91cc44717820e0b02efd7a31b4384d98b1025590`, supplies this source preparation
+   in `scripts/i80386-cwsdpmi-fixed-archive-materialization/`. Root and independent
+   review passed all 22 manufactured controls, with additional Boolean-count and
+   swallowed-reentry refusals. It consumes one materialization/capture/close
+   attempt, requires two valid complete nine-role reports before completion,
+   and preserves the original error through secondary observation/cleanup failures.
+   Reports are source-reserialized content, not original writer bytes. The
+   disabled compiler is inspected by source hash/AST only; there is no fetch,
+   CLI, subprocess or tool launch. [PR520](https://github.com/CrispStrobe/bw-board/pull/520),
+   exact head `bdd2f33545f12e9b9ce8551af42d44a8e7b3ce5d`, supplies the separate
+   `scripts/i80386-materialization-runner-source-controls/` hosted profile:
+   twenty-five fixed unit/compiler-source paths plus three profile paths, running
+   only the 22 manufactured controls. Nine admission controls and independent
+   review passed; its sole automatic hosted result remains pending. The real
+   acquisition adapter and independent original reader/launch gates remain
+   unfinished.
+   A source policy about read-only modes or omitted alias outputs is
    distinct from a final namespace/mode census; this first test need not claim
    the latter. Record actual member topology, selected output hashes,
    source joins, omitted notices and cleanup. Preserve any refusal; change the
