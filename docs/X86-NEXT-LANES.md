@@ -652,6 +652,14 @@ The ordered follow-up tasks are:
    freeze the original-result reader before acquisition. Accept only the original
    complete transcript, exact Git/live role hashes, closed text artifact and
    successful official job steps. Preserve earlier observer receipts unchanged.
+   The derivative's separate hosted profile is now published in
+   [PR518](https://github.com/CrispStrobe/bw-board/pull/518), exact head
+   `5d05e17d6c11cf6a901fce85bf880f13e7eb55ac`, under
+   `scripts/i80386-fixed-alias-source-controls/` and its matching workflow.
+   Twenty-one immutable unit roles plus three profile roles bind the 42-control
+   suite. Nine manufactured admission controls and independent review passed;
+   the sole automatic hosted result remains pending. Freeze and independently
+   audit that original before crediting hosted derivative qualification.
 2. **Actual archive materialization only.** First close the known alias blocker:
    the [retained acquisition inventory](receipts/2026-10-12-tool-archive-alias-inventory/README.md)
    reports thirteen hard-link aliases, rejected by the current strict parser.
