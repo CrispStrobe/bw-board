@@ -1,0 +1,71 @@
+{
+  "schema": "bw.i80386-highmem-at.selected-receipt.v1",
+  "source": "41db7ba4a0c96076aa6a5e5c74cd70be2a0ad0d7",
+  "run": {
+    "id": 37776895780,
+    "attempt": 1,
+    "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37776895780",
+    "conclusion": "success"
+  },
+  "artifact": {
+    "id": 11551082091,
+    "api": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11551082091",
+    "bytes": 138904,
+    "sha256": "1d0e8ed9ea62a328a54fe36736ff1400b6f5192a89b3e4012cc59ee7ba9eb307"
+  },
+  "audit": "Root and peer independent stdlib/Git original report audits PASS_FINITE_AT_BOUNDARY_ONLY",
+  "diagnostics": {
+    "address": 4849664,
+    "requested": 4096,
+    "selector_base": 4849664,
+    "selector_limit": 4095,
+    "first": 880,
+    "last": 881,
+    "polls": 19,
+    "delta": 1,
+    "checksum": 4225408
+  },
+  "boundStep": 44609970,
+  "steps": 48609971,
+  "strictWholeText": "FAIL",
+  "ownedCodeRegions": 10,
+  "strictChangedBytes": 13,
+  "strictFirstOffset": 23760,
+  "batchSteps": [
+    45609970,
+    46609970
+  ],
+  "preVerifyStep": 46609971,
+  "returnSteps": [
+    47609971,
+    48609971
+  ],
+  "sourceRoles": 184,
+  "reachableJs": 53,
+  "zipMembers": 108,
+  "inventoryFiles": 107,
+  "execution": {
+    "wallMs": 25243,
+    "processCpuMicros": 28448523,
+    "processUserMicros": 28294701,
+    "processSystemMicros": 153822,
+    "machineCycleDelta": 314912445,
+    "cpuCycleDelta": 48605737,
+    "scope": "synchronous post-reset scenario including observations and grading; excludes input acquisition, media build, and machine construction; not adoption timing"
+  },
+  "host": {
+    "schema": "bw.cwsdpmi-owned.host-hardware.v1",
+    "cpuModel": "AMD EPYC 7763 64-Core Processor",
+    "logicalCpus": 4,
+    "availableParallelism": 4,
+    "node": "22.23.3",
+    "v8": "12.4.254.21-node.57",
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "limits": [
+    "Reported snapshot/file hashes; no retained EXE/HDD/rawRAM reread",
+    "Linear address is not physical placement",
+    "No INT31 frame/IRET, calibrated RTx, broad compatibility or consumer adoption claim"
+  ]
+}

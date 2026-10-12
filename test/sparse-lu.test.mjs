@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import { Matrix, solve } from '../src/mna.js';
 import { CooMatrix, SparseLU, toCSC } from '../src/sparse.js';
 import { BoardImpl } from '../src/board.js';
+import { readFileSync } from 'node:fs';
 
 /** Deterministic LCG so failures reproduce. */
 function lcg(seed) {
@@ -53,6 +54,46 @@ function denseSolve(A, b) {
 }
 
 describe('SparseLU vs dense reference', () => {
+  it('rejects an obsolete pivot before inaccurate reuse and preserves safe reuse', async () => {
+    const matrix = (a, c) => {
+      const A = new CooMatrix(2);
+      A.set(0, 0, a); A.set(0, 1, 1);
+      A.set(1, 0, c); A.set(1, 1, 1);
+      return A;
+    };
+    const initial = toCSC(matrix(1, 0));
+    const changed = matrix(1e-10, 1);
+    const csc = toCSC(changed);
+    const b = Float64Array.of(1 + 1e-10, 2);
+    const lu = new SparseLU();
+    lu.factor(initial);
+    assert.equal(lu.refactor(initial), true, 'unchanged safe pivot retains reuse');
+    const safe = matrix(2, .5);
+    assert.equal(lu.refactor(toCSC(safe)), true, 'changed values with stable pivots retain numeric reuse');
+    const safeX = lu.solve(Float64Array.of(3, 1.5));
+    assert.ok(safeX.every(value => Math.abs(value - 1) < 1e-14));
+    lu.factor(initial);
+    assert.equal(lu.refactor(csc), false, 'nonzero but obsolete pivot refuses numeric reuse');
+    lu.factor(csc); // exact production fallback after partially written factors
+    const x = lu.solve(b);
+    const residual = values => Math.max(
+      Math.abs(1e-10 * values[0] + values[1] - b[0]),
+      Math.abs(values[0] + values[1] - b[1]));
+    assert.ok(residual(x) < 1e-14);
+    assert.ok(Math.max(...x.map(value => Math.abs(value - 1))) < 1e-14,
+      'independently authored exact solution is [1,1]');
+    // Execute the actual kernel with only the new admission clause removed.
+    const source = readFileSync(new URL('../src/sparse.js', import.meta.url), 'utf8');
+    const anchor = ' || Math.abs(pivotVal) < remainingMax';
+    assert.equal(source.split(anchor).length, 2, 'single reviewed mutant anchor');
+    const mutant = await import(`data:text/javascript;base64,${Buffer.from(source.replace(anchor, '')).toString('base64')}`);
+    const unsafe = new mutant.SparseLU();
+    unsafe.factor(initial);
+    assert.equal(unsafe.refactor(csc), true, 'old absolute-only guard admits the obsolete pivot');
+    assert.ok(residual(unsafe.solve(b)) > 1e-8,
+      'guard-removal mutant violates actual independent equation residual');
+  });
+
   it('agrees on 20 random MNA-shaped systems', () => {
     const rnd = lcg(0xC1C0);
     for (let trial = 0; trial < 20; trial++) {
@@ -78,7 +119,9 @@ describe('SparseLU vs dense reference', () => {
     // Perturb every value mildly (same pattern), as an NR iteration does.
     for (let i = 0; i < A.v.length; i++) A.v[i] *= 1 + (rnd() - 0.5) * 0.2;
     const csc2 = toCSC(A);
-    assert.ok(lu.refactor(csc2), 'refactor must accept the same pattern');
+    // Same pattern is necessary, not sufficient: changed values may require
+    // a different partial pivot. Exercise the production fallback contract.
+    if (!lu.refactor(csc2)) lu.factor(csc2);
     const xs = lu.solve(b);
     const xd = denseSolve(A, b);
     for (let i = 0; i < A.n; i++) {
@@ -118,7 +161,7 @@ describe('SparseLU vs dense reference', () => {
     const active = matrix(true);
     const reused = new SparseLU();
     reused.factor(toCSC(initial.A));
-    assert.equal(reused.refactor(toCSC(active.A)), true);
+    if (!reused.refactor(toCSC(active.A))) reused.factor(toCSC(active.A));
     const actual = reused.solve(active.b);
     const expected = denseSolve(active.A, active.b);
     for (let i = 0; i < actual.length; i++) {

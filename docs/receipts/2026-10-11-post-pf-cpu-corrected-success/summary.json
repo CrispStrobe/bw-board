@@ -1,0 +1,66 @@
+{
+  "classification": "FINITE_CPU_CONTROLS_AND_FREE_XV6_REGRESSION_PASS",
+  "run": 38145633988,
+  "source": "3bd7b09cc01f02bd99f2c3b4d72b982d1f511f77",
+  "artifact": 11704732037,
+  "zipBytes": 21034,
+  "zipSha256": "8f141ea10644e5f38019ea1486d65d25006db4bc4b30f52326a99e97fdea00fa",
+  "members": 5,
+  "sourceRoles": 70,
+  "currentTests": 1773,
+  "currentPass": 1762,
+  "currentFail": 0,
+  "currentSkip": 11,
+  "historicalPass": 288,
+  "scenarios": {
+    "xv6-stock-free-bios-boot.json": {
+      "profile": "4m",
+      "steps": 14643086,
+      "budget": 30000000,
+      "markerPresent": true,
+      "userModeEntries": 16,
+      "exec": true,
+      "syscall": {
+        "count": 137,
+        "first": 2993908,
+        "last": 14635049
+      }
+    },
+    "xv6-stock-14m-free-bios-boot.json": {
+      "profile": "14m",
+      "steps": 10962834,
+      "budget": 30000000,
+      "markerPresent": true,
+      "userModeEntries": 16,
+      "exec": true,
+      "syscall": {
+        "count": 81,
+        "first": 5911081,
+        "last": 10954797
+      }
+    },
+    "xv6-stock-free-bios-forktest.json": {
+      "profile": "4m",
+      "steps": 24338279,
+      "budget": 40000000,
+      "markerPresent": true,
+      "userModeEntries": 16,
+      "exec": true,
+      "syscall": {
+        "count": 189,
+        "first": 2993908,
+        "last": 24330242
+      }
+    }
+  },
+  "postPfGuestContinuationQualified": false,
+  "ownedFrameReturnQualified": false,
+  "performanceQualified": false,
+  "schema": "bw.public.x86.cpu-prerequisite-success.v1",
+  "independentAuditSha256": "174283ec32c44df92ac8a225c6295f297057f2cb31b5e1034f4e0415d9b252a4",
+  "rootOriginalAudit": "PASS within finite regression boundary",
+  "independentOriginalAudit": "PASS within finite regression boundary",
+  "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/38145633988",
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11704732037",
+  "allEnabledChecks": "pending at this checkpoint; guest result alone does not authorize connection"
+}

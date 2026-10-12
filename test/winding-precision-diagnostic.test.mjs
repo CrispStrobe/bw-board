@@ -27,28 +27,27 @@ const summarize = report => diagnosticJson({scenario: report.scenario, initialSt
     completed: report.completed, committedIntegrationWork: report.status.work, failure: report.status.failure,
     receipt: report.receipt, observations: report.rows.length});
 
-test('fresh zero-storage precision run preserves its actual failure and provisional observations', t => {
+test('zero-storage precision waveform completes after guarded factor reuse without policy changes', t => {
     const run = spawnSync(process.execPath,
         [fileURLToPath(new URL('../scripts/diagnose-winding-transient.mjs', import.meta.url))],
         {encoding: 'utf8', timeout: 60000, maxBuffer: 1024 * 1024});
     assert.equal(run.error, undefined, String(run.error));
-    assert.equal(run.status, 1, run.stderr || run.stdout);
+    assert.equal(run.status, 0, run.stderr || run.stdout);
     const report = JSON.parse(run.stdout);
     t.diagnostic(summarize(report));
     assert.equal(report.profile, 'precision-v1');
     assert.deepEqual(report.initialStorage, {capacitorVoltage: 0, inductorCurrent: 0});
     assert.equal(report.initialization, null);
-    assert.equal(report.completed, false, 'known failing diagnostic, NOT a successful waveform regression');
-    assert.equal(diagnosticExitCode(report), 1);
-    assert.equal(report.status.accuracyMet, false);
-    assert.equal(report.status.failure?.code, 'minimum-step-accuracy-unmet');
-    assert.ok(report.status.failure.timeSec >= .001001 && report.status.failure.timeSec <= .001003);
-    assert.equal(report.status.failure.stepSec, report.status.profile.minStepSec);
-    assert.ok(report.status.failure.normalizedError > 1);
-    assert.ok(report.receipt && !report.receipt.completed);
-    assert.equal(report.receipt.failure, 'whole-advance-budget-exceeded');
-    assert.equal(report.receipt.work.attempts, WINDING_LIMITS.maxAttempts);
-    assert.ok(report.rows.length > 0 && report.rows.every(row => row.qualified === false));
+    assert.equal(report.completed, true);
+    assert.equal(diagnosticExitCode(report), 0);
+    assert.equal(report.status.accuracyMet, true);
+    assert.equal(report.status.failure, null);
+    assert.ok(report.receipt?.completed);
+    assert.equal(report.receipt.failure, null);
+    assert.ok(report.receipt.work.attempts < WINDING_LIMITS.maxAttempts);
+    assert.equal(report.rows.at(-1).timeNs, report.requestedTimeNs);
+    // Completing the requested integration does not confer oracle agreement.
+    assert.ok(report.rows.length === 51 && report.rows.every(row => row.qualified === false));
     assert.equal(report.oracleAgreement, 'not-tested');
     for (const [key, bound] of Object.entries(WINDING_LIMITS)) {
         const counter = key.slice(3).toLowerCase();

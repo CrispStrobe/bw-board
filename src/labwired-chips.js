@@ -16,6 +16,8 @@
  * @module
  */
 
+import { LABWIRED_CATALOG } from './labwired-catalog.js';
+
 /**
  * STM32F0 (F030-class), as the oracle and the browser tier both see it.
  *
@@ -1026,6 +1028,37 @@ export const PYBADGE = {
   boardKinds: ['pybadge'],
 };
 
+/**
+ * Classic ESP32 DevKit (ESP32-WROOM-32): the header's GPIOs, by pad number.
+ * GPIO6..11 carry the module's flash and are not on the header; GPIO34..39 are
+ * input-only (`SOC_GPIO_VALID_OUTPUT_GPIO_MASK`), GPIO37/38 are not bonded.
+ */
+export const ESP32_DEVKIT_LABWIRED_PINS = Object.fromEntries(
+  [0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33, 34, 35, 36, 39]
+    .map((n) => [`gpio${n}`, { peripheral: 'gpio', pin: n }]));
+
+/**
+ * Classic ESP32 (dual-core Xtensa LX6, 240 MHz). The engine builds this
+ * machine in code (`configure_xtensa_esp32`), so the descriptor is the
+ * catalog's copy of `configs/chips/esp32.yaml` at the wasm PIN — no second
+ * fixture. Firmware is an Arduino-ESP32 ELF; `arduinoEsp32` has the adapter
+ * install the engine's Arduino boot thunks. Every output pad can carry an
+ * LEDC channel through the GPIO matrix (`analogWrite` / `ledcWrite`), whose
+ * edges reach the circuit exactly like a GPIO write.
+ */
+export const ESP32_DEVKIT = {
+  chipYaml: LABWIRED_CATALOG.esp32.chipYaml,
+  pins: ESP32_DEVKIT_LABWIRED_PINS,
+  adcChannels: {},
+  pwmPins: Object.keys(ESP32_DEVKIT_LABWIRED_PINS).filter((n) => Number(n.slice(4)) < 34),
+  clockHz: 240_000_000,
+  // Flash XIP (I-cache) window; an ELF carries its own load addresses.
+  flashOrigin: 0x400D0000,
+  name: 'bw-esp32-devkit',
+  boardKinds: ['esp32_devkit'],
+  arduinoEsp32: true,
+};
+
 /** Board-part kind → heavy-tier chip. The one place a new chip gets added. */
 export const LABWIRED_CHIPS = {
   stm32f030: STM32F0,
@@ -1033,4 +1066,5 @@ export const LABWIRED_CHIPS = {
   microbit_v2: MICROBIT_V2,
   microbit: MICROBIT_V2,
   pybadge: PYBADGE,
+  esp32_devkit: ESP32_DEVKIT,
 };

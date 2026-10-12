@@ -1,0 +1,37 @@
+{
+  "actualSupportJob": "SKIPPED",
+  "allEnabledSourceChecksQualified": false,
+  "artifact": {
+    "bytes": 5841,
+    "id": 11705762301,
+    "sha256": "ff0a0b7f89538ba115595dd81ad36f60e16ff0a07a9aa24fac45b6e6abd250c3",
+    "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11705762301/zip"
+  },
+  "classification": "FINITE_MOCK_CONTROLS_ONLY",
+  "controlStdout": {
+    "bytes": 236,
+    "sha256": "3aa5d7b7a7498c5823a677b5749f0a9463bf2f09d03c14941ffb06dd3fe7f102"
+  },
+  "coordinatorAudit": "PASS",
+  "guestQualified": false,
+  "heldRoles": 90,
+  "independentAudit": {
+    "conclusion": "PASS",
+    "sha256": "9d026a1b3435d1382f43a47a57bdae314c259eff77eac2e404b0911ba1102c47"
+  },
+  "members": 7,
+  "mockSteps": "SUCCESS",
+  "newRoles": 10,
+  "officialConclusion": "success",
+  "performanceMeasured": false,
+  "run": 38147244263,
+  "runAttempt": 1,
+  "runtimeSupportQualified": false,
+  "schema": "bw.direct-v8.nursery-support-corrected-mock.receipt.v1",
+  "sourceHead": "21eef8f700132f2df90564fbf3661467a2275b64",
+  "sourceReceipt": {
+    "bytes": 13391,
+    "sha256": "3151fcbac9fc7df0919e6da04beb34f9b785205c1cf467c36e469a80cf41fec2"
+  },
+  "sourceRoles": 100
+}

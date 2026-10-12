@@ -1,0 +1,107 @@
+{
+  "schema": "bw.i80386.frame-gate-xv6-checkpoint.v1",
+  "source": "c968428d4d478ae115b8e9cb1065f8a349b7ccbe",
+  "run": 37798349010,
+  "attempt": 1,
+  "event": "push",
+  "conclusion": "success",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37798349010",
+  "officialArtifactMetadata": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11561145843",
+  "originalLog": {
+    "bytes": 1548618,
+    "sha256": "269a0ce146ff3d1e9af9997031bf56c70ce843c1ff771ff35427b139e55cde04"
+  },
+  "originalZip": {
+    "bytes": 21030,
+    "sha256": "3ad11a99d4086e4dc9a83127003d453a084de3b58067d3232e52bf6b266947ca",
+    "jsonMembers": 5
+  },
+  "currentCohort": {
+    "tests": 1624,
+    "pass": 1613,
+    "fail": 0,
+    "skip": 11
+  },
+  "historicalCohort": {
+    "tests": 288,
+    "pass": 288,
+    "fail": 0,
+    "skip": 0
+  },
+  "focusedControls": {
+    "cpuJournal": 29,
+    "cpuFreePolicyAndOrchestration": 20
+  },
+  "guestScenarios": [
+    {
+      "member": "xv6-stock-free-bios-boot.json",
+      "profile": "4m",
+      "steps": 14643086,
+      "sourceRoles": 70,
+      "userModeEntries": 16,
+      "serialResponse": "BW_XV6_FREE_BIOS_FS_OK",
+      "cr4": 16,
+      "profileBoundary": "existing compatibility profile; not strict physical 386DX qualification"
+    },
+    {
+      "member": "xv6-stock-14m-free-bios-boot.json",
+      "profile": "14m",
+      "steps": 10962834,
+      "sourceRoles": 70,
+      "userModeEntries": 16,
+      "serialResponse": "BW_XV6_14M_FREE_OK",
+      "cr4": 16,
+      "profileBoundary": "existing compatibility profile; not strict physical 386DX qualification"
+    },
+    {
+      "member": "xv6-stock-free-bios-forktest.json",
+      "profile": "4m",
+      "steps": 24338279,
+      "sourceRoles": 70,
+      "userModeEntries": 16,
+      "serialResponse": "fork test OK",
+      "cr4": 16,
+      "profileBoundary": "existing compatibility profile; not strict physical 386DX qualification"
+    }
+  ],
+  "audit": {
+    "root": "original log/ZIP, official metadata and immutable Git; no producer imports or replay",
+    "peer": "independent original log/ZIP/official metadata and immutable Git; 49 exact focused test names, source/build/image bindings and ordered guest command bytes; no producer imports or replay"
+  },
+  "limits": [
+    "existing compatibility profile; not strict physical 386DX qualification",
+    "no allocation-frame guest result",
+    "no performance or consumer adoption result"
+  ],
+  "fullCi": {
+    "run": 37798358085,
+    "attempt": 1,
+    "event": "pull_request",
+    "source": "c968428d4d478ae115b8e9cb1065f8a349b7ccbe",
+    "conclusion": "success",
+    "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37798358085",
+    "originalLog": {
+      "bytes": 4881959,
+      "sha256": "6a0907f698680bbf17af22fc5ce72516c3240578ca4235638fa8fafc517a8b71"
+    },
+    "vectorAdmission": {
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "skip": 0
+    },
+    "currentCohort": {
+      "tests": 8468,
+      "pass": 8166,
+      "fail": 0,
+      "skip": 302
+    },
+    "historicalCohort": {
+      "tests": 288,
+      "pass": 288,
+      "fail": 0,
+      "skip": 0
+    },
+    "audit": "root and independent peer original log/official metadata/immutable Git-name review, no helper imports or replay"
+  }
+}

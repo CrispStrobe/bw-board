@@ -1,6 +1,104 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-12 winding UIC reference — DONE candidate, Codex bwcx.
+2026-10-12 standalone full-tree provisioning preparation — CLAIM, Codex x86.
+Branch lane/386-full-tree-provisioner-20261012, exact base
+c1f34017b8088bf2376dcf52bb98990b625f9172. Owns this row,
+scripts/i80386-full-tree-provisioner/{provision.py,controls.py,manifest.json,
+README.md,provenance.json} and
+.github/workflows/i80386-full-tree-provisioner.yml only. Publish an isolated
+reported-inventory writer and bounded manufactured controls without the historical
+CPU/source stack. Fixed paths, types, extents and hashes; exclusive nofollow
+outputs; thirteen physical aliases against eleven canonical targets; final
+hash/extent/identity/link-count observations; five selected notice roles with
+literal formfeed and greater-than-32-KiB tests. Preserve original mutation
+failures and require exact builtin container/key checks before iteration/lookup.
+The reported inventory is not a minimal C closure; the five notices are not
+complete notice coverage. Content bounds do not qualify RAM/disk/time sufficiency.
+No actual archive acquisition, parser connection, compiler, guest, performance,
+consumer pin, physical hardware or unrelated source changes. A bounded hosted
+manufactured profile and independent review must precede integration; actual
+full-tree/parser/notice inputs remain a separate lane.
+
+
+2026-10-12 ESP32 DevKit on the labwired tier; LEDC duty reaches the circuit — DONE candidate, Claude (Lite task B9).
+Worktree `/mnt/volume1/code/wt/b9-esp32-ledc-board`, branch `feat/esp32-labwired-bench`.
+Session `df930874-a977-40f8-996f-8689b428942c`. Owns this row, the `ESP32_DEVKIT`
+entry in `src/labwired-chips.js` (board kind `esp32_devkit`, descriptor = the
+catalog's `esp32` at the wasm PIN), the `arduinoEsp32` pass-through in
+`src/labwired-bridge.js` + `src/labwired-adapter.js` (installs the engine's
+Arduino-ESP32 boot thunks), `test/labwired-esp32-ledc.test.mjs` + its fixture
+`test/fixtures/labwired/esp32-ledc-bench/`, the labwired-wasm PIN/catalog bump,
+its suite-list/floor line in `labwired-wasm.yml`, and the oracle-census gate
+entry. Engine side: labwired-core fork #206 (ESP32/C3/S3 LEDC → GPIO matrix
+pad edges). Measured with a real Arduino-ESP32 2.0.17 image, 220 Ω + red LED
+per pad: full on 6.099 mA; analogWrite(64) 1.525 mA = 25.00 %; ledcWrite(768
+of 1024) 4.574 mA = 75.00 %; analogWrite(0) 0 mA. On the previous engine
+(labwired-wasm-31b6f8aa) the two PWM LEDs read 0.000 mA. Also repaired two tests stricter than
+their gates: `test/fastpath-census-evidence.test.mjs` now hashes the receipt's
+files at the archiving commit 4c468e24 (fetched in ci.yml), not the live tree,
+and `test/labwired-word-workflow.test.mjs` accepts a labwired-wasm floor >= 108.
+
+2026-10-12 sparse refactor pivot admission — DONE, Codex bwcx.
+Branch fix/sparse-refactor-pivot-admission-20261012, exact base
+2508b53d. Eight paths: LANES.md, src/sparse.js, test/sparse-lu.test.mjs,
+test/winding-precision-diagnostic.test.mjs,
+test/winding-linear-solver-sensitivity.test.mjs,
+test/winding-newton-sensitivity.test.mjs,
+test/winding-error-components.test.mjs and
+spec-updates/winding-precision-diagnostic.md. Admit numeric reuse only while
+the retained pivot still satisfies full factorization's largest-remaining
+partial-pivot rule; otherwise use the existing full-factor fallback.
+Hosted exact-kernel adversary/residual and executable guard-removal mutant,
+stable-pivot positive control, broad sparse/solver tests and unchanged-policy
+zero-storage waveform completion required. Update live diagnostic assertions
+to current-source behavior while preserving earlier failed receipts in prose.
+No device/assembly/profile/budget changes, blanket cache disabling, waveform
+oracle claim, dependency pin, workflow or unrelated production edit.
+Actual engine execution hosted only. Numeric cause/guard efficacy and
+performance remain to be measured; the matrix adversary is not a guest result.
+Canonical240f2b16 preceded implementation. Candidate adds exact two-row
+independent solution/residual proof, stable changed-value reuse control and
+actual guard-removal kernel mutant. Historical same-pattern tests now exercise
+the existing full-factor fallback when changed values require repivoting.
+Current live winding tests require completion and no floor witness, while
+the earlier failed-source evidence remains intact. Syntax/diff checks pass;
+all numerical tests and broad qualification are hosted and remain pending.
+Exactca168e03 passes CI38284904347 and Harris38284904465:
+8485 passed,zero failed,302 skipped. The actual obsolete-pivot residual/
+guard-removal mutant passes; guarded current-source waveform completes1.01ms
+with3432 attempts/10288 solves/51 observations and no floor witness.
+Remote masterc1f34017 introduced ESP32 integration during qualification.
+Merged it for combined qualification; sparse implementation and all five
+affected test files remain byte-identical to the testedca168e03 versions.
+No independent SPICE agreement or performance ratio is established.
+Exact combined19e12bda passes CI38293714144 and Harris38293714293:
+8486 passed,zero failed,302 skipped; zero-storage completion remains
+3432 attempts/10288 solves/51 observations. New masterc9bfff9f advances only
+Markdown/docs receipts fromc1f34017; preserve that publication without another
+unchanged engine qualification. Final ledger correction counts five affected
+test files accurately; tested executable/workflow/test bytes stay unchanged.
+
+2026-10-12 winding linear solver sensitivity — DONE, Codex bwcx.
+Branch lane/winding-linear-solver-sensitivity-20261012, exact base
+d96d4ceb. Four evidence-only paths: LANES.md,
+scripts/diagnose-winding-linear-solver.mjs,
+test/winding-linear-solver-sensitivity.test.mjs and
+spec-updates/winding-precision-diagnostic.md. Three isolated module arms:
+original cached sparse LU, fresh sparse factorization and original dense
+partial-pivot solver. Preserve assembled equations, Newton threshold,
+zero-storage caller, histories, precision policy and work authority.
+Original module hashes and exact selector controls required; runtime hosted.
+No production solver change, performance claim, pin or workflow edits.
+Canonical2247d985 preceded implementation. Two local pure selector controls
+pass, including executable cache-reuse negative; no numerical capture local.
+Exact8961915887 passes CI38277473063 and Harris38277473010:
+8484 passed, zero failed, 302 skipped. Original cached sparse LU reproduces
+the floor refusal and exhausts20000 attempts/59992 solves; both fresh sparse
+and dense arms complete1.01ms with3432 attempts/10288 solves and51 observations.
+This isolates factor reuse as causal for this fixture, not its precise numeric
+mechanism or independent waveform agreement. No production change adopted.
+
+2026-10-12 winding UIC reference — DONE, Codex bwcx.
 Branch lane/winding-uic-reference-20261012, exact base
 e6b9bc868c648684c8481aa50510d93990d26273. Five evidence-only paths:
 LANES.md, scripts/diagnose-winding-uic-reference.mjs,
@@ -54,8 +152,16 @@ Forward deck distinguishes paired1/.5/.25ns startup/print increments from
 unchanged100/50/25ns maximum integration steps. The near-quadratic startup
 dependence motivates this test; causal confirmation and stable refinement
 remain hosted requirements. Exact controls assert both sets of deck values.
+Exactc689cc46 passes CI38304881907 and Harris38304881996:
+8482 passed,zero failed,302 skipped. All ten sample-time voltage/current
+comparisons now meet unchanged10uV/1nA adjacent-refinement bounds: maximum
+voltage difference0.530275uV,current0.200133nA. Raw three-waveform hashes and
+bracketing rows retained. Normal-OP startup is4.999995V versus UIC0.026017V.
+This qualifies the finite independent reference, NOT engine agreement.
+Integration preserves exact qualified reference script/test bytes and all
+current master changes; ngspice census combines both independent gate entries.
 
-2026-10-12 winding error components — CLAIM, Codex bwcx.
+2026-10-12 winding error components — DONE, Codex bwcx.
 Branch lane/winding-error-components-20261012, exact base
 f5be8c2566333f2213eb1b718db47dd80eccb8c3. Four evidence-only paths:
 LANES.md, scripts/diagnose-winding-error-components.mjs,
@@ -68,6 +174,20 @@ zero storage, source/device equations, precision profile and work authority.
 No production changes, tolerance/budget changes, pin or workflow edits.
 Hosted numerical execution only; genuine original-source routing and
 missing/duplicate-anchor negatives required before qualification.
+Canonical claim e6b9bc86 preceded implementation. Two local pure controls
+pass, including exact original-line preservation, history snapshot/floor-stop
+and executable wrong-normalization mutant. No local numerical capture ran.
+Actual hosted caller must preserve original failure, 50 provisional rows and
+20000 attempts while reproducing its dominant component/error exactly.
+Exact source80411f08 passes CI38265472136 and Harris38265472103:
+8481 pass/0 fail/302 skips. At the first floor, all three solves report
+convergence; winding full/half voltages differ by 6.96452251425228e-7 V,
+normalized error11.950940967672846, while inductor currents differ by
+2.42861286636753e-17 A. Refined source rejects shift the dominant component
+from collector to winding as h shrinks. This narrows the next investigation
+to linear residual/conditioning and history, not a claimed solver repair.
+Integration preserves the newer UIC claim; every non-ledger byte matches
+the exact qualified80411f08 source.
 
 2026-10-12 winding Newton sensitivity — DONE candidate, Codex bwcx.
 Branch lane/winding-newton-sensitivity-20261012, exact base
@@ -88,7 +208,11 @@ controls pass, including exact embedded MNA-selector/source-byte proofs and
 an executable original-module-routing mutant. The unchanged baseline source
 is byte-identical before import rebinding. Both arms retain original source
 hashes, and runtime checks reject any changed on-disk source. No local transient
-capture ran. Hosted fixed-arm receipts, CI/Harris and landing remain pending.
+capture ran. Exact f5be8c25 landed after CI38251375347 and Harris38251375321
+passed: 8478 pass/0 fail/302 skips. Both arms exhaust the same work authority;
+the tighter arm records an earlier nonconverged solve, not a successful repair.
+Production tolerance remains unchanged. Raw results and caveats are recorded
+in the diagnostic specification.
 
 2026-10-12 finite winding precision diagnostic — DONE, Codex bwcx.
 Branch lane/winding-precision-diagnostic-20261012, exact refreshed base

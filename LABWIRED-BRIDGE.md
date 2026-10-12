@@ -518,6 +518,20 @@ no accessor reports it. Both are named in §6.
    materialized with erased (`0xff`) gaps from address zero. ELF remains the
    lossless path and ignores `firmwareAddress`.
 
+   **Classic ESP32 DevKit (`esp32_devkit`, Lite task B9)** is the fifth: its
+   descriptor is the catalog's `esp32` entry (the engine builds the classic
+   machine in code, so there is one copy, at the wasm PIN), the header map is
+   `gpioN` → pad N, and the firmware is an Arduino-ESP32 ELF booted on the
+   engine's Arduino-ESP32 thunks (`arduinoEsp32` → the adapter calls
+   `install_arduino_esp32_quirks`). LEDC duty (`analogWrite` / `ledcWrite`)
+   reaches the circuit as pad edges through the GPIO matrix:
+   `test/labwired-esp32-ledc.test.mjs` measures 25.00 % / 75.00 % / 0 % of the
+   full-on LED. Known gaps: circuit inputs reach GPIO0..31 only (the classic
+   GPIO model's `set_gpio_input` covers bank 0; GPIO32..39 log the adapter's
+   one-time "cannot be driven" warning), and the browser's Arduino-ESP32 boot
+   thunks `delay()` to a no-op, so a sketch's timing between duty changes is
+   not real time (steady duty is unaffected).
+
    These entries are **MCU/edge-header support, not yet complete board
    emulation**. The nRF52833 model runs the committed micro:bit-v2 UART smoke
    and has GPIO, UARTE, timers, EasyDMA, SPI/I2C and other Nordic blocks, but

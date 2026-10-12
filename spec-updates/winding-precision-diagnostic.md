@@ -150,4 +150,126 @@ and adds actual nontrivial-value negatives against seven-digit rounding,
 not merely a decimal-length assertion. Fresh hosted qualification is required.
 An actual normal-OP negative control must differ from the zero-storage early
 collector voltage. Neither reference completion nor reference refinement alone
-constitutes engine agreement. Hosted numerical results are still pending.
+constitutes engine agreement.
+
+Exact `c689cc465a86a7371e366889b9c491b8230e8579` passed
+[CI38304881907](https://github.com/CrispStrobe/bw-board/actions/runs/38304881907)
+and [Harris38304881996](https://github.com/CrispStrobe/bw-board/actions/runs/38304881996)
+(8482 passed,zero failed,302 skipped). All ten observation times meet both
+adjacent-refinement bounds. Maximum voltage/current differences are
+0.5302743444346447uV and0.20013306983868162nA, below the unchanged10uV/1nA
+bounds. The three actual tables contain16854,26666 and46378 rows; original
+table hashes and each measurement's raw bracketing rows are retained in the
+hosted receipt. Normal-OP startup is4.999994999217743V versus UIC approximately
+0.0260174V. This establishes this finite reference's refinement stability,
+not whole-waveform error bounds, physical fidelity or engine agreement.
+
+### Observed sensitivity result
+
+[CI38251375347](https://github.com/CrispStrobe/bw-board/actions/runs/38251375347)
+and [Harris38251375321](https://github.com/CrispStrobe/bw-board/actions/runs/38251375321)
+passed at `f5be8c2566333f2213eb1b718db47dd80eccb8c3`.
+The full suite reports 8478 passed, zero failed and 302 skipped. Both arms
+remain incomplete, each exhausting 20000 attempts / 59992 solves / 51 advances
+with 50 provisional observations. The unchanged arm reproduces the 1 ps
+minimum-step refusal and normalized error 11.950940967672846. The 1e-10 arm
+instead retains its first trapezoidal solve-convergence failure at
+0.00001941114800327344 s. That earlier failure latch is not the final reached
+time: the bounded capture continues and ultimately exhausts its work authority.
+The simple tighter-Newton hypothesis supplies no successful waveform and is
+not adopted as a production repair. Original Board/caller/MNA hashes match
+across arms; only the isolated experimental MNA hash differs.
+
+### Endpoint-error component diagnostic
+
+```sh
+node scripts/diagnose-winding-error-components.mjs
+```
+
+This separately isolated Board module observes, without altering acceptance,
+the same controller's full-step versus two-half-step endpoint comparison.
+It retains the last eight rejected comparisons and the first floor witness,
+including signed values, normalization scale, dominant node/storage component,
+each solve's convergence flag and copied incoming capacitor/inductor histories.
+The original caller, production files, zero storage, model, precision policy,
+sample partition and bounded work authority remain unchanged. Exact single
+instrumentation/import anchors are mandatory. This is a bounded diagnostic,
+not a new simulation mode, repair, physical measurement or oracle qualification.
+Numerical execution and the recorded component outcome await hosted checks.
+
+### Observed endpoint-error result and linear-solver isolation
+
+Exact `80411f08858f2a02e1e01872ef92e96c2adb0952` passed
+[CI38265472136](https://github.com/CrispStrobe/bw-board/actions/runs/38265472136)
+and [Harris38265472103](https://github.com/CrispStrobe/bw-board/actions/runs/38265472103)
+(8481 passed, zero failed, 302 skipped). At the first floor witness, all
+three solves report convergence. The winding node dominates: full/half values
+5.8175934364425625 / 5.817592739990311 V differ by 0.696452251425228 uV,
+while winding currents differ by only 2.42861286636753e-17 A. Collector voltage
+error alone is below the normalized acceptance bound at that witness. The
+non-monotonic voltage error under refinement motivates a linear-solve check;
+it does not yet establish a cache or conditioning defect.
+
+```sh
+node scripts/diagnose-winding-linear-solver.mjs
+```
+
+This evidence-only diagnostic compares original cached sparse LU, fresh
+sparse factorization and the existing dense partial-pivot implementation on
+the same stamped systems. Original files remain untouched; both Board solver
+imports and the same zero-storage caller select each isolated arm explicitly.
+Newton tolerances, integration histories, policies, physical parameters and
+work authority are unchanged. Actual outcomes await hosted qualification.
+Neither an alternative solver completing nor a green method test alone
+constitutes a production repair or independent waveform agreement.
+
+Exact `8961915887ea4ea34079bc8f3e2311a40bf00a6d` passed
+[CI38277473063](https://github.com/CrispStrobe/bw-board/actions/runs/38277473063)
+and [Harris38277473010](https://github.com/CrispStrobe/bw-board/actions/runs/38277473010)
+(8484 passed, zero failed, 302 skipped). The original cached sparse arm
+reproduces the normalized11.950940967672846 floor refusal and exhausts20000
+attempts/59992 solves with50 provisional observations. Fresh sparse and dense
+arms both complete the requested1.01ms with3432 attempts/10288 solves and51
+observations under identical authority. Disabling factor reuse alone removes
+this failure: reuse is causal for this fixture. This does not yet establish
+the exact numerical mechanism, safe reuse admission rule, physical fidelity
+or SPICE agreement. A bounded production repair needs actual sparse pivot/
+residual adversaries, unchanged-policy waveform regression and broad solver
+checks; globally disabling reuse is not the selected production fix.
+
+### Bounded numeric-reuse admission candidate
+
+The candidate makes numeric refactor refuse when its retained pivot is smaller
+than another structurally reachable unpivoted candidate. This restores full
+factorization's existing largest-remaining partial-pivot invariant rather than
+introducing an arbitrary relative threshold. The caller already discards a
+refused partial factor and performs full factorization. Identical-value
+substitution and changed-value reuse with stable pivots remain available.
+
+An independently authored two-row system changes from `[[1,1],[0,1]]` to
+`[[1e-10,1],[1,1]]` with exact solution `[1,1]` and right-hand side
+`[1+1e-10,2]`. The executable old-guard mutant must admit its obsolete pivot
+and exceed1e-8 equation residual; guarded refusal plus full factorization
+must recover below1e-14. Separate unchanged and changed stable-pivot controls
+protect retained reuse. Actual kernel, broad solver and unchanged-policy
+zero-storage completion tests run hosted. This is a candidate until those
+results pass, and it does not replace the pending independent SPICE reference.
+
+The exact candidate `ca168e03e549a0960f22161d5e30fa147f0a4dba` passed
+[CI38284904347](https://github.com/CrispStrobe/bw-board/actions/runs/38284904347)
+and [Harris38284904465](https://github.com/CrispStrobe/bw-board/actions/runs/38284904465):
+8485 passed,zero failed,302 skipped. The actual obsolete-pivot refusal,
+independent residual, executable guard-removal mutant and stable reuse controls
+pass. The real zero-storage caller completes1.01ms using3432 attempts/10288
+solves/51 observations, without a floor witness and without changed accuracy
+or work bounds. Earlier failed-source receipts remain preserved above. This
+proves this fixture's completion repair, not independent waveform agreement
+or a measured general speedup. A concurrent ESP32 integration is merged for
+fresh combined qualification, preserving the tested solver and affected tests.
+
+Combined `19e12bdadbc20cc1782ff7587f8ff220b5f51018` passed
+[CI38293714144](https://github.com/CrispStrobe/bw-board/actions/runs/38293714144)
+and [Harris38293714293](https://github.com/CrispStrobe/bw-board/actions/runs/38293714293):
+8486 passed,zero failed,302 skipped. The requested waveform still completes
+with3432 attempts/10288 solves/51 observations. The later documentation-only
+publication is integrated with these tested executable bytes preserved.

@@ -1,0 +1,22 @@
+{
+  "artifact": 11707919261,
+  "artifactApiUrl": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11707919261",
+  "controls": "SOURCE_ORCHESTRATION_GRADE_INVENTORY_PASS",
+  "frameReturnQualified": false,
+  "graphNodes": 181,
+  "guestExecuted": false,
+  "head": "e1f44e70bd21e4f3b146d0c0e00da141eb045182",
+  "independentAudit": "PASS_FINITE_MOCK_ONLY",
+  "independentAuditSha256": "098192ce9f1b95cd15510223acd7eb174e4846895240114be91c4770d6c7fb61",
+  "members": 12,
+  "officialActualJob": "SKIPPED",
+  "performanceQualified": false,
+  "run": 38155545945,
+  "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/38155545945",
+  "schema": "bw.public.post-pf-mutability-corrected-mock-summary.v1",
+  "sourceRoles": 290,
+  "sourceUrl": "https://github.com/CrispStrobe/bw-board/tree/e1f44e70bd21e4f3b146d0c0e00da141eb045182",
+  "verdict": "PASS_MOCK_ONLY",
+  "zipBytes": 18945,
+  "zipSha256": "b5f994d24a6fed8ca2f5995f8af3032229360c0301b000cb874f15cc75ba3eef"
+}
