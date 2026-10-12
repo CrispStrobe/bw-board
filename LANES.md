@@ -1,5 +1,23 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-12 winding engine/reference comparison — CLAIM, Codex bwcx.
+Branch lane/winding-engine-reference-comparison-20261012, exact base
+23f1e69ccf584738965e9e5fb36582d1a7a792b7. Five evidence-only paths:
+LANES.md, scripts/compare-winding-reference.mjs,
+test/winding-reference-comparison.test.mjs, scripts/oracle-census.mjs and
+spec-updates/winding-precision-diagnostic.md. Compare the existing completed
+zero-storage precision-v1 capture at its three exact shared times (500000,
+1000000,1010000 ns), without repartitioning or new probes. Require completed
+single-authority work receipt and zero initial storage, independent reference
+refinement first, then fixed 100uV/1uA agreement bounds matching the existing
+authored winding oracle's engineering envelope. Those bounds are not the
+precision profile's local error guarantee. CLI retains actual errors and fails
+on disagreement; hosted live test emits evidence before asserting. Pure
+controls reject incomplete, nonfinite, duplicate, shifted, OP-substituted and
+unstable evidence. No production, workflow, pin, load, budget or profile change.
+All engine/SPICE execution hosted; finite three-point agreement cannot qualify
+the unsampled falling edge or realistic instrument behavior.
+
 2026-10-12 standalone full-tree provisioning preparation — CLAIM, Codex x86.
 Branch lane/386-full-tree-provisioner-20261012, exact base
 c1f34017b8088bf2376dcf52bb98990b625f9172. Owns this row,
