@@ -1,0 +1,38 @@
+{
+  "archiveInputAuthenticationImplemented": false,
+  "compilerEnabled": false,
+  "completeNoticeRetentionQualified": false,
+  "inventory": {
+    "member": "acquisition.json",
+    "memberSha256": "83766cf66299adbf77feadb22295420f74834c66450674ea4851825da630e265",
+    "originalZipSha256": "d04c1687840ce256c3a1dc652be3cc6ab3cab02bf677a9038fdecd3ca061ff05",
+    "run": "https://github.com/CrispStrobe/bw-board/actions/runs/37680741407"
+  },
+  "noticeBytesRetained": false,
+  "qualification": "REPORTED_METADATA_PINS_ONLY_NO_NOTICE_BYTES_OR_ARCHIVE_INPUT_AUTHORITY",
+  "schema": "bw.full-tree-prototype-provenance.v1",
+  "selectedNoticeSubset": {
+    "djgpp": {
+      "archive": "djcrx205.zip",
+      "paths": [
+        "copying",
+        "copying.dj",
+        "copying.lib"
+      ],
+      "reportMember": "audit/official-source-candidates.json",
+      "reportSha256": "c32cccb199a99ef87373d14e6edda2685e85295fb8a45f4390853d7f061a7466",
+      "run": "https://github.com/CrispStrobe/bw-board/actions/runs/37682399616"
+    },
+    "gccAndCopyingLibMetadata": {
+      "gccSource": "https://github.com/gcc-mirror/gcc/tree/2ee5e4300186a92ad73f1a1a64cb918dc76c8d67",
+      "paths": [
+        "COPYING.LIB",
+        "COPYING.RUNTIME",
+        "COPYING3"
+      ],
+      "receipt": "https://github.com/CrispStrobe/bw-board/blob/c9a22a1b173aa5f2fc41f8edf4a97a8fbfab5cc2/docs/receipts/2026-10-07-cwsdpmi-notice-completion.json",
+      "receiptSha256": "cb3692f4e509de49737e5ab03386825f2c28b9d8afb407ae4e5f1dfd8d32938f",
+      "run": "https://github.com/CrispStrobe/bw-board/actions/runs/37684000070"
+    }
+  }
+}
