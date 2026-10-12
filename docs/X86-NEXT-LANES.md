@@ -792,12 +792,18 @@ The ordered follow-up tasks are:
    has now passed its 46-test suite; its six control-job steps succeeded and actual
    job stayed skipped. Coordinator frozen-reader and independent raw-original/Git
    audits passed the [five-report original](receipts/2026-10-12-gnu-longname-materializer-controls/README.md).
-   Other enabled source checks remain pending; final launch bindings remain unset.
-   Next: finish every enabled check, authenticate complete official history, then
-   fill and independently review exact guard bindings before reserving a fresh
-   actual attempt. Do not launch while checks or final binding review are pending.
-   The new actual label remains unapplied. Preserve both predecessor negative
-   originals and consumed launch states. No actual compatibility is qualified yet. Review corrected a missing final report retaining completion
+   All 11 enabled exact-head source checks now succeeded, with three declared
+   skips. Final coordinator and independent binding reviews passed after complete
+   official checks, label and workflow-history admission. The one-shot reservation
+   for this source head is consumed: the sole
+   [actual run38287531384](https://github.com/CrispStrobe/bw-board/actions/runs/38287531384),
+   attempt 1, was launched and is queued. No artifact body or actual result has
+   been acquired. Do not rerun, relabel or dispatch this head, or reacquire either
+   predecessor original. Next: retain terminal official run/job/artifact metadata,
+   independently review the artifact seal before the sole body acquisition, then
+   audit that original with the frozen reader. Preserve both predecessor negative
+   originals and consumed launch states. No actual compatibility is qualified yet.
+   Review corrected a missing final report retaining completion
    and a file limit too small for
    selected tools. The actual job permits 16 MiB file writes and retains smaller
    independent JSON caps; its prospective reader admits at most 512 KiB of ZIP
