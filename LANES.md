@@ -3370,3 +3370,8 @@ Claimed `scripts/i80386-cwsdpmi-owned-workspace-evidence/{owner.py,owner-control
 ### 386 retained composition hosted controls — 2026-10-12
 
 Claimed `scripts/i80386-owned-workspace-source-controls/{admit.py,README.md}` and `.github/workflows/i80386-owned-workspace-source-controls.yml` on `lane/386-owned-workspace-controls-20261012`. Exact-source admission and one automatic PR-only hosted manufactured control job for the frozen retained workspace/evidence composition and its creator/route/writer dependencies. Keep the earlier four-unit original frozen and all inherited executable bytes unchanged. No compiler, client, guest, runtime, authority, media, performance or production enable. Preserve the original complete or failed text report; do not dispatch duplicate diagnostics.
+
+
+### 386 retained fixed-role tool observer — 2026-10-12
+
+Claimed `scripts/i80386-cwsdpmi-retained-tool-observer/{observer.py,observer-control.py,README.md}` on `lane/386-retained-tool-observer-20261012`. Parent-only source-bound factory observes the nine fixed tool roles through the private retained workspace tool descriptor and writes bounded internally issued complete or partial receipts. No root pathname reopening, caller descriptor/pin/receipt/provision callback, tool execution or compiler enable. Manufactured filesystem controls only; reserve per-role and aggregate byte budgets before content reads, preserve original failures and uncertain cleanup, distinguish ordinary diagnostic refusal from reentry cleanup-only, and retain all authority/guest/performance refusals. Existing units and original hosted receipts remain unchanged.
