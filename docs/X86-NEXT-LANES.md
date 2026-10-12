@@ -600,3 +600,49 @@ Next proceed to the input/archive,
 implicit environment, compiler process, output formats, media, full reader and
 launch integration gates. The production compiler remains disabled; no new
 actual-tool, guest, performance or default-adoption result is claimed.
+
+### Selected-role materialization and the next integration gates
+
+[PR515](https://github.com/CrispStrobe/bw-board/pull/515), exact source
+`a5fd036bda8b34ed8c50551713b4f0ecca219d20`, adds
+`scripts/i80386-cwsdpmi-retained-tool-materializer/`. Its parent-only owner
+authenticates four fixed immutable archive byte inputs before parsing or workspace
+preparation, inventories a bounded strict TAR/ZIP subset, joins four runtime
+roles to their source archive and writes only the nine selected files through
+retained directory handles. All 31 manufactured controls passed with independent
+review; actual archives and hosted exact-source controls remain unqualified.
+
+The parser rejects unsafe or conflicting names, unsupported members, truncated
+or concatenated streams and inventory-count drift. Selected extents are reserved
+before content reads; the aggregate decoded budget includes headers, padding,
+tails and ZIP envelopes. Cleanup uncertainty includes nested directory and
+evidence-output ownership. Closing prevents later authentication or parsing.
+Notice facts are bounded counts/hashes with explicit omissions, not retained
+notices or redistribution clearance. Immutable input bytes are not filesystem
+leases; nine selected files are not a complete toolchain. Production compilation
+remains disabled, and this source checkpoint changes no defaults or consumer pins.
+
+The ordered follow-up tasks are:
+
+1. **Hosted materializer controls.** Add a separate bounded own-repository,
+   exact-head, attempt-one source-control profile. Freeze the eighteen unit paths
+   (creator, routes, writer, workspace composition, observer and materializer)
+   plus the new profile paths; run only the 31 manufactured controls. Independently
+   freeze the original-result reader before acquisition. Accept only the original
+   complete transcript, exact Git/live role hashes, closed text artifact and
+   successful official job steps. Preserve earlier observer receipts unchanged.
+2. **Actual archive materialization only.** Qualify the strict parser against the
+   four pinned public tool/source archives without invoking any executable. Reuse
+   retained original inventories where available; new qualification must bind its
+   own source and inputs. Record actual member topology, selected output hashes,
+   source joins, omitted notices and cleanup. Preserve any refusal; change the
+   parser only through a separately reviewed source revision. This task does not
+   authorize a compiler connection or a binary bundle.
+3. **Complete compiler provisioning.** Use the observed archive topology and
+   historical compile-only implicit-role evidence to define a complete retained
+   tool tree, including executable helpers, headers/runtime inputs and admitted
+   aliases. Resolve remaining input leases, source/environment/process delegation,
+   output formats, media and independent reader/launch gates before enabling a
+   separately named compiler profile. Then compile the owned free DPMI client and
+   qualify its observable service result in an independent oracle and the AT guest.
+   Compilation alone does not qualify DPMI execution, games, Windows or RTx.
