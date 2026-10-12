@@ -569,9 +569,9 @@ read/open/close/writer reentry, interrupted local ownership and uncertain cleanu
 Positive test fixtures use explicitly synthetic files/pins through private test
 access; they do not qualify actual tool bytes or archive materialization.
 Source review must preserve the disabled compiler and all held helper bytes.
-Hosted exact-source controls and original evidence audit for PR512 remain
-pending; the earlier 23-method original qualifies the workspace composition
-only, without this new observer.
+The [original PR514 observer result](receipts/2026-10-12-retained-tool-controls/README.md)
+now qualifies all 28 synthetic controls with independent packet review. The
+earlier 23-method original qualifies only the workspace composition.
 Parent/source ownership, implicit compiler inputs, archives, environment, binary
 formats, media, reader and actual launch remain external gates; there is no
 compiler, guest, default-adoption or performance qualification in this unit.
@@ -588,11 +588,15 @@ The bounded own-repository, exact-head, attempt-one PR job runs only the
 28 observer controls and retains four text reports. It has no manual-dispatch
 entry and changes no inherited profile, helper, compiler or consumer pin.
 
-Publication and local controls do not establish a hosted pass. Preserve and
-independently audit the sole original run/job/artifact packet against a frozen
-reader and all 18 source roles before crediting this observer. Missing/skipped
-tests, wrong hashes, incomplete phases or metadata drift must refuse. All enabled
-exact-head checks must also pass before merge. Then proceed to the input/archive,
+The sole attempt-one [run38207264678](https://github.com/CrispStrobe/bw-board/actions/runs/38207264678)
+passed all 28 controls. Frozen reader/job admission and a separate original-byte
+review verified the four-member artifact, exact source report and all 18 Git
+roles. [The public receipt](receipts/2026-10-12-retained-tool-controls/README.md)
+retains original reports and official origins. All eleven enabled exact-head
+checks passed, with only two declared optional vectors-full skips. This finite
+synthetic result qualifies neither actual tools nor later integration. Preserve
+the sole original; do not replay or reacquire it to read the evidence.
+Next proceed to the input/archive,
 implicit environment, compiler process, output formats, media, full reader and
 launch integration gates. The production compiler remains disabled; no new
 actual-tool, guest, performance or default-adoption result is claimed.
