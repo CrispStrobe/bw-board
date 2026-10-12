@@ -63,3 +63,102 @@ unsupported assumption with independent series KVL: current equals the
 5 V supply minus collector bias, divided by the 10 ohm winding resistance.
 No capture, source or device equation is changed to make that assertion pass.
 Fresh exact-head qualification remains required.
+
+## Isolated Newton sensitivity hypothesis
+
+The forward diagnostic explores one possible source of the step-independent
+full/half disagreement: nonlinear Newton convergence uses a fixed 1e-6 threshold,
+whereas the precision controller applies tighter endpoint voltage/error scales.
+This is a hypothesis, not an established cause.
+
+```sh
+node scripts/diagnose-winding-newton-sensitivity.mjs
+```
+
+Two isolated in-memory module arms use the same zero-storage precision caller:
+the unchanged 1e-6 Newton threshold and one experimental 1e-10 threshold.
+Actual source files are never written; original source hashes and the edited
+MNA hash accompany each public capture. Both Board solver imports must bind to
+the same isolated MNA arm. All other modules, equations, integration policy,
+sample partition, initialization and whole-capture limits remain unchanged.
+Missing or duplicated anchors refuse the experiment. There is no arbitrary
+user-selectable tolerance knob and no production policy change.
+
+Hosted method checks accept either actual completion or an honestly preserved
+refusal for the experimental arm. A green method test is **not** evidence of
+improvement. The CLI remains nonzero while either capture fails. Completion,
+if observed, still requires independently refined waveform/residual agreement
+and broader qualification before any solver repair is proposed.
+
+### Observed sensitivity result
+
+[CI38251375347](https://github.com/CrispStrobe/bw-board/actions/runs/38251375347)
+and [Harris38251375321](https://github.com/CrispStrobe/bw-board/actions/runs/38251375321)
+passed at `f5be8c2566333f2213eb1b718db47dd80eccb8c3`.
+The full suite reports 8478 passed, zero failed and 302 skipped. Both arms
+remain incomplete, each exhausting 20000 attempts / 59992 solves / 51 advances
+with 50 provisional observations. The unchanged arm reproduces the 1 ps
+minimum-step refusal and normalized error 11.950940967672846. The 1e-10 arm
+instead retains its first trapezoidal solve-convergence failure at
+0.00001941114800327344 s. That earlier failure latch is not the final reached
+time: the bounded capture continues and ultimately exhausts its work authority.
+The simple tighter-Newton hypothesis supplies no successful waveform and is
+not adopted as a production repair. Original Board/caller/MNA hashes match
+across arms; only the isolated experimental MNA hash differs.
+
+### Endpoint-error component diagnostic
+
+```sh
+node scripts/diagnose-winding-error-components.mjs
+```
+
+This separately isolated Board module observes, without altering acceptance,
+the same controller's full-step versus two-half-step endpoint comparison.
+It retains the last eight rejected comparisons and the first floor witness,
+including signed values, normalization scale, dominant node/storage component,
+each solve's convergence flag and copied incoming capacitor/inductor histories.
+The original caller, production files, zero storage, model, precision policy,
+sample partition and bounded work authority remain unchanged. Exact single
+instrumentation/import anchors are mandatory. This is a bounded diagnostic,
+not a new simulation mode, repair, physical measurement or oracle qualification.
+Numerical execution and the recorded component outcome await hosted checks.
+
+### Observed endpoint-error result and linear-solver isolation
+
+Exact `80411f08858f2a02e1e01872ef92e96c2adb0952` passed
+[CI38265472136](https://github.com/CrispStrobe/bw-board/actions/runs/38265472136)
+and [Harris38265472103](https://github.com/CrispStrobe/bw-board/actions/runs/38265472103)
+(8481 passed, zero failed, 302 skipped). At the first floor witness, all
+three solves report convergence. The winding node dominates: full/half values
+5.8175934364425625 / 5.817592739990311 V differ by 0.696452251425228 uV,
+while winding currents differ by only 2.42861286636753e-17 A. Collector voltage
+error alone is below the normalized acceptance bound at that witness. The
+non-monotonic voltage error under refinement motivates a linear-solve check;
+it does not yet establish a cache or conditioning defect.
+
+```sh
+node scripts/diagnose-winding-linear-solver.mjs
+```
+
+This evidence-only diagnostic compares original cached sparse LU, fresh
+sparse factorization and the existing dense partial-pivot implementation on
+the same stamped systems. Original files remain untouched; both Board solver
+imports and the same zero-storage caller select each isolated arm explicitly.
+Newton tolerances, integration histories, policies, physical parameters and
+work authority are unchanged. Actual outcomes await hosted qualification.
+Neither an alternative solver completing nor a green method test alone
+constitutes a production repair or independent waveform agreement.
+
+Exact `8961915887ea4ea34079bc8f3e2311a40bf00a6d` passed
+[CI38277473063](https://github.com/CrispStrobe/bw-board/actions/runs/38277473063)
+and [Harris38277473010](https://github.com/CrispStrobe/bw-board/actions/runs/38277473010)
+(8484 passed, zero failed, 302 skipped). The original cached sparse arm
+reproduces the normalized11.950940967672846 floor refusal and exhausts20000
+attempts/59992 solves with50 provisional observations. Fresh sparse and dense
+arms both complete the requested1.01ms with3432 attempts/10288 solves and51
+observations under identical authority. Disabling factor reuse alone removes
+this failure: reuse is causal for this fixture. This does not yet establish
+the exact numerical mechanism, safe reuse admission rule, physical fidelity
+or SPICE agreement. A bounded production repair needs actual sparse pivot/
+residual adversaries, unchanged-policy waveform regression and broad solver
+checks; globally disabling reuse is not the selected production fix.
