@@ -47,18 +47,15 @@ test('component oracle, incoming history snapshot and fixed floor-stop are load-
     assert.notEqual(mutated[0].dominant.normalizedError, 5);
 });
 
-test('hosted real caller retains original failure and records its dominant floor component', async t => {
+test('hosted real caller completes with guarded reuse and no floor witness', async t => {
     const report = await captureWindingErrorComponents();
-    assert.equal(report.capture.completed, false);
-    assert.equal(report.capture.status.failure.code, 'minimum-step-accuracy-unmet');
+    assert.equal(report.capture.completed, true);
+    assert.equal(report.capture.status.failure, null);
     assert.ok(report.witnesses.length > 0 && report.witnesses.length <= 9);
-    const floor = report.witnesses.at(-1);
-    assert.equal(floor.atFloor, true);
-    assert.equal(floor.stepSec, 1e-12);
-    assert.ok(Math.abs(floor.error - floor.dominant.normalizedError) < 1e-12);
-    assert.ok(Math.abs(floor.error - report.capture.status.failure.normalizedError) < 1e-12);
-    assert.equal(report.capture.receipt.work.attempts, 20000);
-    assert.equal(report.capture.rows.length, 50);
+    assert.ok(report.witnesses.every(witness => !witness.atFloor));
+    assert.equal(report.capture.receipt.completed, true);
+    assert.ok(report.capture.receipt.work.attempts < 20000);
+    assert.equal(report.capture.rows.length, 51);
     assert.notEqual(report.sourceHashes.board, report.sourceHashes.instrumentedBoard);
     t.diagnostic(diagnosticJson({sourceHashes: report.sourceHashes, witnesses: report.witnesses,
         failure: report.capture.status.failure, boundedReceipt: report.capture.receipt}));

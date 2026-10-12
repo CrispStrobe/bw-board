@@ -35,9 +35,9 @@ test('hosted three real linear-solver arms retain finite authority and honest fa
     assert.equal(new Set(report.arms.map(arm => arm.selectedMnaHash)).size, 3);
     assert.equal(report.arms[0].selectedMnaHash, report.sourceHashes.mna);
     const baseline = report.arms[0].capture;
-    assert.equal(baseline.completed, false);
-    assert.equal(baseline.status.failure.code, 'minimum-step-accuracy-unmet');
-    assert.equal(baseline.status.failure.normalizedError, 11.950940967672846);
+    assert.equal(baseline.completed, true, 'guarded production reuse completes unchanged-policy waveform');
+    assert.equal(baseline.status.failure, null);
+    for (const {capture} of report.arms) assert.equal(capture.completed, true);
     for (const {arm, capture} of report.arms) {
         assert.deepEqual(capture.initialStorage, {capacitorVoltage: 0, inductorCurrent: 0});
         assert.equal(capture.initialization, null);
