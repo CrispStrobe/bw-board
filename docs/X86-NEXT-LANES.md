@@ -856,6 +856,31 @@ The ordered follow-up tasks are:
    lands, refresh and retarget the connection, then check its resulting exact head.
    Do not adopt the older broad source stack to integrate these small modules.
 
+   The next provisioning checkpoint needs a separate bounded hosted profile and
+   independent reader. Complete these tasks before acquiring its actual inputs:
+
+   - Admit the runner, workflow, source table and artifact writer alongside all
+     inherited parser/writer sources. Bind the exact reviewed head and observe
+     those bytes before and after the attempt; inherited source hashes alone do
+     not admit the new execution path.
+   - Define a closed event receipt, exact exit/phase status and bounded control
+     and execution logs. Preserve first failures and partial results. Assemble
+     the nine text roles once: `source-before.json`, `source-after.json`,
+     `event.json`, `report.json`, `control.stdout`, `control.stderr`,
+     `run.stdout`, `run.stderr` and `status.txt`. Set explicit per-role and total
+     limits before execution.
+   - Review the reader without importing producer helpers. Require exact nested
+     schemas, input order/pins, manifest-derived counts, cleanup joins and false
+     qualification flags; reject inconsistent positive reports.
+   - Bind the sole actual run, attempt, named jobs/steps and terminal artifact
+     metadata before reading its original artifact body. Join event, source,
+     status, logs and report semantics; a consistent report alone cannot qualify
+     an official execution.
+
+   Keep this profile limited to provisioning and selected-notice consistency.
+   A successful result does not establish full compiler closure, complete notice
+   coverage, guest compatibility or improved RTx.
+
    Continue by validating the closed DJGPP ZIP source joins and the three
    selected notice bodies, then authenticate the two separately sourced GCC
    notice bodies. A reported hash table or caller-supplied matching bytes does
