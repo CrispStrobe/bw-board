@@ -273,3 +273,21 @@ and [Harris38293714293](https://github.com/CrispStrobe/bw-board/actions/runs/382
 8486 passed,zero failed,302 skipped. The requested waveform still completes
 with3432 attempts/10288 solves/51 observations. The later documentation-only
 publication is integrated with these tested executable bytes preserved.
+
+## Completed capture versus independent reference
+
+`node scripts/compare-winding-reference.mjs` compares the unmodified
+zero-storage precision capture at 500000, 1000000 and 1010000 ns against the
+finest independently refined UIC reference. It retains the full engine work
+receipt and three reference arms. Incomplete captures, OP substitution, altered
+budgets, missing/shifted observations and insufficient reference refinement
+refuse comparison. Fixed agreement bounds are 100 microvolts and 1 microampere,
+the existing authored winding oracle's engineering envelope, not a claim about
+local truncation error. CLI exits nonzero on disagreement and emits actual
+signed errors; the hosted gate preserves evidence before its assertion.
+
+This first comparison adds no observation partitions, probe loads or instrument
+models. Three shared times do not qualify the intervening one-microsecond edge,
+the entire waveform, physical hardware, scope traces or meter integrations.
+Actual agreement is pending hosted execution; reference stability and engine
+completion alone are not substitutes for it.
