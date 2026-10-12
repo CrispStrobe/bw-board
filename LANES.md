@@ -3365,3 +3365,8 @@ Claimed `scripts/i80386-workspace-source-controls/{admit.py,README.md}` and `.gi
 ### 386 retained workspace evidence composition — 2026-10-12
 
 Claimed `scripts/i80386-cwsdpmi-owned-workspace-evidence/{owner.py,owner-control.py,README.md}` on `lane/386-owned-workspace-evidence-20261012`. Exact-source private creator/route/writer composition with retained descriptors, seeded chains and once-only close ownership; manufactured filesystem controls only after the finite four-unit original gate. No public caller FD/path handoff, compiler enable or parent/source authority. Held helpers remain unchanged; partial failures and cleanup uncertainty must survive.
+
+
+### 386 retained composition hosted controls — 2026-10-12
+
+Claimed `scripts/i80386-owned-workspace-source-controls/{admit.py,README.md}` and `.github/workflows/i80386-owned-workspace-source-controls.yml` on `lane/386-owned-workspace-controls-20261012`. Exact-source admission and one automatic PR-only hosted manufactured control job for the frozen retained workspace/evidence composition and its creator/route/writer dependencies. Keep the earlier four-unit original frozen and all inherited executable bytes unchanged. No compiler, client, guest, runtime, authority, media, performance or production enable. Preserve the original complete or failed text report; do not dispatch duplicate diagnostics.
