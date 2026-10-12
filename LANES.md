@@ -1,5 +1,17 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-12 winding linear solver sensitivity — CLAIM, Codex bwcx.
+Branch lane/winding-linear-solver-sensitivity-20261012, exact base
+d96d4ceb. Four evidence-only paths: LANES.md,
+scripts/diagnose-winding-linear-solver.mjs,
+test/winding-linear-solver-sensitivity.test.mjs and
+spec-updates/winding-precision-diagnostic.md. Three isolated module arms:
+original cached sparse LU, fresh sparse factorization and original dense
+partial-pivot solver. Preserve assembled equations, Newton threshold,
+zero-storage caller, histories, precision policy and work authority.
+Original module hashes and exact selector controls required; runtime hosted.
+No production solver change, performance claim, pin or workflow edits.
+
 2026-10-12 winding UIC reference — CLAIM, Codex bwcx.
 Branch lane/winding-uic-reference-20261012, exact base
 e6b9bc868c648684c8481aa50510d93990d26273. Five evidence-only paths:
