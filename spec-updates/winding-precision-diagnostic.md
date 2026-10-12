@@ -89,3 +89,21 @@ refusal for the experimental arm. A green method test is **not** evidence of
 improvement. The CLI remains nonzero while either capture fails. Completion,
 if observed, still requires independently refined waveform/residual agreement
 and broader qualification before any solver repair is proposed.
+
+## Independent zero-storage reference preparation
+
+```sh
+node scripts/diagnose-winding-uic-reference.mjs
+```
+
+The independent authored ngspice deck has explicit capacitor/inductor IC=0
+and UIC, the same stated thermal voltage, device parameters, physical 12pF /
+10Mohm load and finite PULSE corners. It does not import the engine or exporter.
+Three fixed maximum steps (100, 50 and 25 ns) characterize ten aligned voltage
+and winding-current measurements through 1.01 ms. Both adjacent refinement
+differences must remain within 10 uV and 1 nA for a stable-reference result.
+Unstable results remain evidence, not qualified goldens; the CLI exits 1.
+Full decks, hashes, solver version and original measurement output are retained.
+An actual normal-OP negative control must differ from the zero-storage early
+collector voltage. Neither reference completion nor reference refinement alone
+constitutes engine agreement. Hosted numerical results are still pending.

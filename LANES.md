@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-12 winding UIC reference — CLAIM, Codex bwcx.
+2026-10-12 winding UIC reference — DONE candidate, Codex bwcx.
 Branch lane/winding-uic-reference-20261012, exact base
 e6b9bc868c648684c8481aa50510d93990d26273. Five evidence-only paths:
 LANES.md, scripts/diagnose-winding-uic-reference.mjs,
@@ -12,6 +12,11 @@ control. CLI reports per-time refinement deltas and fails if predefined
 reference bounds are unmet; method validity is not engine agreement.
 No engine/exporter dependency, production/pin/workflow edits or local SPICE
 execution. Runtime qualification hosted; preserve unstable reference results.
+Canonical claim d31369f0 preceded implementation. Pure parser/alignment/
+refinement controls reject missing, duplicate, failed and shifted reference
+evidence. Live reference is registered in the mandatory ngspice census.
+Numerical outcome and qualification remain pending; unstable-reference method
+results do not count as waveform agreement or a corrected engine.
 
 2026-10-12 winding error components — CLAIM, Codex bwcx.
 Branch lane/winding-error-components-20261012, exact base
