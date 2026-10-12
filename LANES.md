@@ -3455,3 +3455,14 @@ exact extents/hashes and pass immutable bytes once to the pinned materialization
 runner. Preserve bounded original refusal/cleanup evidence. Manufactured controls
 prepare hosted acquisition; no local real archive, tool/compiler/guest launch,
 namespace/mode witness, default or consumer pin change.
+
+### Hosted actual four-archive materialization — 2026-10-12
+
+Claimed: `scripts/i80386-fixed-archive-materialization-hosted/`
+`{admit.py,execute.py,README.md}` and
+`.github/workflows/i80386-fixed-archive-materialization.yml`.
+Freeze twenty-eight inherited source roles plus four profile roles. Automatic
+own-PR manufactured controls prepare a separately labeled one-shot actual job;
+actual acquisition remains unarmed until exact-source checks, frozen reader and
+external launch reservation pass. Retain bounded text evidence only. No tool,
+compiler or guest invocation, namespace/mode census, default or consumer pin change.
