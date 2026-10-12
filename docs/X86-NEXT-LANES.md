@@ -856,6 +856,14 @@ The ordered follow-up tasks are:
    lands, refresh and retarget the connection, then check its resulting exact head.
    Do not adopt the older broad source stack to integrate these small modules.
 
+   The [bounded packet writer PR530](https://github.com/CrispStrobe/bw-board/pull/530)
+   prepares nine-role text serialization and declared failure-stage role sets.
+   Its source includes 25 manufactured controls for caps, immutable admission,
+   exclusive outputs, readback, partial retention and cleanup refusal. Exact-head
+   hosted checks remain pending. This serializer cannot authenticate an event or
+   job; complete profile-source admission, raw trap/log provenance and independent
+   original-artifact integration remain separate unfinished tasks.
+
    The next provisioning checkpoint needs a separate bounded hosted profile and
    independent reader. Complete these tasks before acquiring its actual inputs:
 
