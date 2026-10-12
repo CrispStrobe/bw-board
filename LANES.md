@@ -15,7 +15,22 @@ per pad: full on 6.099 mA; analogWrite(64) 1.525 mA = 25.00 %; ledcWrite(768
 of 1024) 4.574 mA = 75.00 %; analogWrite(0) 0 mA. On the previous engine
 (labwired-wasm-31b6f8aa) the two PWM LEDs read 0.000 mA.
 
-2026-10-12 finite winding precision diagnostic — CLAIMED, Codex bwcx.
+2026-10-12 winding Newton sensitivity — CLAIMED, Codex bwcx.
+Branch lane/winding-newton-sensitivity-20261012, exact base
+fda6d33af77fdf48f9edb60d14c8ad826dd0bc2d. Four evidence-only paths: this
+ledger, scripts/diagnose-winding-newton-sensitivity.mjs,
+test/winding-newton-sensitivity.test.mjs and
+spec-updates/winding-precision-diagnostic.md. Test the unproved fixed-Newton-
+tolerance hypothesis with isolated in-memory modules: unchanged1e-6 baseline
+and a single1e-10 diagnostic arm, preserving the exact winding CLI caller,
+zero storage, precision profile, error scales, source/device model and one
+20000/60001/200 authority per fresh capture. No production source edits,
+arbitrary tolerance knob, default/profile/pin/workflow change or gain claim.
+Preserve raw source hashes and originals; fail on changed/missing anchors.
+Method tests report actual completion or refusal without requiring improvement.
+Hosted runtime only; a successful sensitivity method is not solver qualification.
+
+2026-10-12 finite winding precision diagnostic — DONE, Codex bwcx.
 Branch lane/winding-precision-diagnostic-20261012, exact refreshed base
 86f585f32c1d75e3ea35e19e87f488a26be89f4f. Four evidence-only paths: this
 ledger, scripts/diagnose-winding-transient.mjs,
@@ -29,6 +44,26 @@ Preserve 20000/60001/200 whole-capture ceilings, precision-v1, device equations,
 source corners, probe load and original zero-storage initialization. No solver,
 workflow, CPU, consumer pin, GUI, deployment or oracle-agreement claim.
 Canonical remote claim precedes implementation; runtime diagnosis stays hosted.
+Claim8d3218af preceded implementation. CLI emits public status/receipt/storage
+and provisional samples, with an actual nonzero process exit for failed capture.
+Hosted regressions exercise that real CLI and both separately labeled OP controls;
+their TAP diagnostics retain measured counters and failures. Two local pure
+argument/serialization/exit-mutation controls pass, syntax/whitespace checks pass.
+No transient capture or numerical oracle ran locally. Exact source diagnosis,
+CI/Harris qualification and landing remain pending; a green failure-preservation
+test must not be credited as successful zero-storage winding simulation.
+First CI38221691144 reproduces the original zero-storage refusal exactly;
+Harris38221691185 passes. CI is red only on this lane's unjustified DC-current
+assumption (>100mA vs actual19.575mA). Forward test repair uses independent
+series KVL, not a lowered arbitrary current threshold. Whole-capture budget
+checks now read the bounded receipt; partial committed integration counters
+are retained separately. Both actual OP controls complete, but neither is a
+zero-storage repair or SPICE-agreement claim. Source35848f27 and its red remain
+preserved; fresh replacement qualification is required.
+Replacement fda6d33a landed after CI38235616256 and Harris38235616215 passed.
+Full suite8474 pass/0 fail/302 unchanged skips. The fresh failure and both
+distinct completion controls match the first receipt; the KVL/budget repairs
+pass. This closes the diagnostic lane, not the underlying precision failure.
 
 2026-10-11 transient floor-step ringing and reset controller — DONE candidate, Claude Code.
 Branch fix/reset-transient-controller-20261011, base current master. Cause of

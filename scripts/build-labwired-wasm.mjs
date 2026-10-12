@@ -83,7 +83,7 @@ import { brotliCompressSync, constants as zlibConstants } from 'node:zlib';
 const REPO = 'https://github.com/CrispStrobe/labwired-core.git';
 /** The fork's tested main, including the guarded Cortex-M, RISC-V and Xtensa
  * hot-loop paths. The fleet builds from this immutable source commit. */
-const PIN = 'a7c7cbdfac7988ffc11a1d3fa1f5af2ecce57e18';
+const PIN = 'ae91f9ad90db4fd49f85a076611906df16b70d43';
 
 const arg = (name, dflt) => {
     const i = process.argv.indexOf(`--${name}`);
