@@ -3425,3 +3425,13 @@ run only the 42 manufactured fixed-alias controls in a bounded own-PR exact-head
 attempt-one job. Preserve the original for independent audit. Actual archives,
 complete toolchain, compiler, guest and performance qualification remain separate;
 held profiles, production compiler disable, defaults and consumer pins stay fixed.
+
+### Fixed-archive materialization runner preparation — 2026-10-12
+
+Claimed: `scripts/i80386-cwsdpmi-fixed-archive-materialization/`
+`{run.py,run-control.py,README.md}`. Privately compose the fixed-alias owner;
+admit four pinned immutable archive inputs, run materialization once, retain
+bounded raw before/failure-final observations and close status. Manufactured
+controls prepare actual hosted archive qualification; no acquisition, executable
+launch, full namespace census, final mode proof, compiler or guest authority.
+Held source, compiler disable, defaults and consumer pins stay unchanged.
