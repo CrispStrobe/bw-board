@@ -482,8 +482,49 @@ revisions rather than reopening paths:
   refusals. Preserve partial creation/output; write before terminal route cleanup.
   Pair/input/reader and reviewed launch gates follow separately.
 
-The retained-descriptor source unit is claimed under
-`scripts/i80386-cwsdpmi-owned-workspace-evidence/`. Implementation is in progress;
-no composition control or hosted result is claimed yet. These acceptance items
-remain the review contract for the new unit.
+The retained-descriptor source unit is published as
+[draft PR510](https://github.com/CrispStrobe/bw-board/pull/510) at exact source
+`ffb413624f4814f906d22129b7e0aa85ca145a5b`, under
+`scripts/i80386-cwsdpmi-owned-workspace-evidence/`. Coordinator and independent
+source review pass, together with all 23 manufactured filesystem methods and
+three independent registration/cleanup/transfer adversaries. These are local
+finite controls; no hosted composition result is claimed yet. The acceptance
+items above remain the contract for later integration.
 Production compilation remains disabled; no guest or speed claim follows.
+
+
+### Retained composition checkpoint and next qualification
+
+The parent-only `OwnedWorkspaceEvidence(parent)` API first calls `prepare()`,
+then `before(bytes)` and exactly one `terminal('after-link' | 'failure-final',
+bytes)`. It returns bounded status facts, without transferring raw descriptors,
+paths, callbacks or inner owners. Both seeded route chains retain the creator's
+directory handles. One canonical ledger owns at most 34 unique directory handles;
+writer output close accounting stays separate. Terminal writing precedes route
+release, and cleanup preserves the first operation failure and uncertain close
+outcomes. Partial directories and files remain present.
+
+Controls include a real 30-component / 4,046-byte parent with all 34 retained
+handles and both writes, valid 31-component / 4,047-byte refusal, session
+replacement before output, exclusive-file preservation, and reentry during
+mkdir/open/route checks/write/readback/terminal cleanup. Interrupted registration,
+creator append, preparation and transfer recovery are tested at specific points;
+this does not establish safety at every Python bytecode or authenticate parent,
+loader, mount or runtime source authority. The post-mkdir first-observation
+substitution limitation remains. All authority/compiler/guest/performance flags
+remain false; no product path or dependency pin adopts this unit.
+
+[Draft PR511](https://github.com/CrispStrobe/bw-board/pull/511), exact source
+`2e185b4b8732957783958500183e3863c8047216`, publishes
+`scripts/i80386-owned-workspace-source-controls/` and its dedicated workflow.
+Coordinator and independent source review and seven manufactured admission
+methods pass. Twelve fixed creator/route/writer/composition roles and three
+profile roles bind the exact own PR head. One automatic attempt-1 job runs only
+the 23 composition methods, with bounded isolated Python and four fixed text
+artifact roles. Its sole [run38199386713](https://github.com/CrispStrobe/bw-board/actions/runs/38199386713)
+is queued at this checkpoint; no hosted composition outcome is claimed. No
+manual dispatch, duplicate or replay was used. Keep run38173075353 frozen:
+it qualified the earlier four standalone units, not this composition. Independently audit the new original source/job,
+closed report inventory and all 23 outcomes before connecting the owning
+profile's source/input/pair/reader/format/archive/environment/media and launch
+gates. Production compilation stays disabled throughout this source checkpoint.
