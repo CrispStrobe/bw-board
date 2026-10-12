@@ -715,7 +715,13 @@ The ordered follow-up tasks are:
    Admission binds 28 unchanged inherited paths and four profile paths. An
    automatic job runs the adapter's 20 manufactured controls; a separate actual
    job admits only the applied `x86-fixed-archive-materialization` label and
-   remains **unarmed**. Hosted source checks are pending. Review corrected a
+   remains **unarmed**. All eleven enabled exact-head checks passed, with two
+   declared optional vectors-full skips and the unarmed actual job skipped. Its
+   sole attempt-one [run38237893493](https://github.com/CrispStrobe/bw-board/actions/runs/38237893493)
+   passed all 20 synthetic controls. The [original receipt](receipts/2026-10-12-fixed-archive-acquisition-controls/README.md)
+   retains five byte-exact text reports. Coordinator frozen-reader, separate
+   official-job and independent raw-original/Git audits passed, binding all
+   32 source roles. Actual acquisition remains unqualified. Review corrected a
    missing final report retaining completion and a file limit too small for
    selected tools. The actual job permits 16 MiB file writes and retains smaller
    independent JSON caps; its prospective reader admits at most 512 KiB of ZIP
