@@ -13,7 +13,10 @@ entry. Engine side: labwired-core fork #206 (ESP32/C3/S3 LEDC → GPIO matrix
 pad edges). Measured with a real Arduino-ESP32 2.0.17 image, 220 Ω + red LED
 per pad: full on 6.099 mA; analogWrite(64) 1.525 mA = 25.00 %; ledcWrite(768
 of 1024) 4.574 mA = 75.00 %; analogWrite(0) 0 mA. On the previous engine
-(labwired-wasm-31b6f8aa) the two PWM LEDs read 0.000 mA.
+(labwired-wasm-31b6f8aa) the two PWM LEDs read 0.000 mA. Also repaired two tests stricter than
+their gates: `test/fastpath-census-evidence.test.mjs` now hashes the receipt's
+files at the archiving commit 4c468e24 (fetched in ci.yml), not the live tree,
+and `test/labwired-word-workflow.test.mjs` accepts a labwired-wasm floor >= 108.
 
 2026-10-12 winding Newton sensitivity — CLAIMED, Codex bwcx.
 Branch lane/winding-newton-sensitivity-20261012, exact base
