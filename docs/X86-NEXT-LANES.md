@@ -575,3 +575,24 @@ only, without this new observer.
 Parent/source ownership, implicit compiler inputs, archives, environment, binary
 formats, media, reader and actual launch remain external gates; there is no
 compiler, guest, default-adoption or performance qualification in this unit.
+
+### Hosted retained-observer source-control profile
+
+[PR514](https://github.com/CrispStrobe/bw-board/pull/514), exact source
+`3dd5092128996733f3f71c0ec640f2126010dea8`, supplies the next hosted
+qualification step under `scripts/i80386-retained-tool-source-controls/` and
+`.github/workflows/i80386-retained-tool-source-controls.yml`. Fifteen fixed
+dependency and observer paths plus three profile paths bind exact Git/live
+bytes. Nine manufactured admission controls and independent review passed.
+The bounded own-repository, exact-head, attempt-one PR job runs only the
+28 observer controls and retains four text reports. It has no manual-dispatch
+entry and changes no inherited profile, helper, compiler or consumer pin.
+
+Publication and local controls do not establish a hosted pass. Preserve and
+independently audit the sole original run/job/artifact packet against a frozen
+reader and all 18 source roles before crediting this observer. Missing/skipped
+tests, wrong hashes, incomplete phases or metadata drift must refuse. All enabled
+exact-head checks must also pass before merge. Then proceed to the input/archive,
+implicit environment, compiler process, output formats, media, full reader and
+launch integration gates. The production compiler remains disabled; no new
+actual-tool, guest, performance or default-adoption result is claimed.
