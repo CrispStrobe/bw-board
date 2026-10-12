@@ -162,3 +162,40 @@ the exact numerical mechanism, safe reuse admission rule, physical fidelity
 or SPICE agreement. A bounded production repair needs actual sparse pivot/
 residual adversaries, unchanged-policy waveform regression and broad solver
 checks; globally disabling reuse is not the selected production fix.
+
+### Bounded numeric-reuse admission candidate
+
+The candidate makes numeric refactor refuse when its retained pivot is smaller
+than another structurally reachable unpivoted candidate. This restores full
+factorization's existing largest-remaining partial-pivot invariant rather than
+introducing an arbitrary relative threshold. The caller already discards a
+refused partial factor and performs full factorization. Identical-value
+substitution and changed-value reuse with stable pivots remain available.
+
+An independently authored two-row system changes from `[[1,1],[0,1]]` to
+`[[1e-10,1],[1,1]]` with exact solution `[1,1]` and right-hand side
+`[1+1e-10,2]`. The executable old-guard mutant must admit its obsolete pivot
+and exceed1e-8 equation residual; guarded refusal plus full factorization
+must recover below1e-14. Separate unchanged and changed stable-pivot controls
+protect retained reuse. Actual kernel, broad solver and unchanged-policy
+zero-storage completion tests run hosted. This is a candidate until those
+results pass, and it does not replace the pending independent SPICE reference.
+
+The exact candidate `ca168e03e549a0960f22161d5e30fa147f0a4dba` passed
+[CI38284904347](https://github.com/CrispStrobe/bw-board/actions/runs/38284904347)
+and [Harris38284904465](https://github.com/CrispStrobe/bw-board/actions/runs/38284904465):
+8485 passed,zero failed,302 skipped. The actual obsolete-pivot refusal,
+independent residual, executable guard-removal mutant and stable reuse controls
+pass. The real zero-storage caller completes1.01ms using3432 attempts/10288
+solves/51 observations, without a floor witness and without changed accuracy
+or work bounds. Earlier failed-source receipts remain preserved above. This
+proves this fixture's completion repair, not independent waveform agreement
+or a measured general speedup. A concurrent ESP32 integration is merged for
+fresh combined qualification, preserving the tested solver and affected tests.
+
+Combined `19e12bdadbc20cc1782ff7587f8ff220b5f51018` passed
+[CI38293714144](https://github.com/CrispStrobe/bw-board/actions/runs/38293714144)
+and [Harris38293714293](https://github.com/CrispStrobe/bw-board/actions/runs/38293714293):
+8486 passed,zero failed,302 skipped. The requested waveform still completes
+with3432 attempts/10288 solves/51 observations. The later documentation-only
+publication is integrated with these tested executable bytes preserved.

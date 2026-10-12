@@ -286,9 +286,10 @@ export class SparseLU {
 
   /**
    * Numeric-only refactorization: same pattern, same pivot ORDER, no DFS.
-   * Returns false when a fixed pivot has collapsed (values moved enough
-   * that the stored pivot choice is no longer safe) — the caller then runs
-   * a full factor().
+   * Returns false when a fixed pivot has collapsed or no longer satisfies
+   * factor()'s largest-remaining partial-pivot rule. An absolute nonzero
+   * pivot alone does not control elimination growth after values change.
+   * The caller discards partial factors and runs a full factor().
    *
    * @param {{n: number, colPtr: Int32Array, rowIdx: Int32Array, values: Float64Array}} csc
    * @returns {boolean}
@@ -317,7 +318,13 @@ export class SparseLU {
         }
       }
       const pivotVal = w[j];
-      if (!(Math.abs(pivotVal) >= 1e-13)) {
+      let remainingMax = Math.abs(pivotVal);
+      // L's structural pattern retains every reachable unpivoted row,
+      // including numeric zeros. Compare the same candidates as factor().
+      for (let k = Lp[j]; k < Lp[j + 1]; k++) {
+        remainingMax = Math.max(remainingMax, Math.abs(w[Li[k]]));
+      }
+      if (!(Math.abs(pivotVal) >= 1e-13) || Math.abs(pivotVal) < remainingMax) {
         // Clear workspace before handing back.
         w.fill(0);
         return false;

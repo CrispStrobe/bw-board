@@ -1,5 +1,25 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-12 standalone full-tree provisioning preparation — CLAIM, Codex x86.
+Branch lane/386-full-tree-provisioner-20261012, exact base
+c1f34017b8088bf2376dcf52bb98990b625f9172. Owns this row,
+scripts/i80386-full-tree-provisioner/{provision.py,controls.py,manifest.json,
+README.md,provenance.json} and
+.github/workflows/i80386-full-tree-provisioner.yml only. Publish an isolated
+reported-inventory writer and bounded manufactured controls without the historical
+CPU/source stack. Fixed paths, types, extents and hashes; exclusive nofollow
+outputs; thirteen physical aliases against eleven canonical targets; final
+hash/extent/identity/link-count observations; five selected notice roles with
+literal formfeed and greater-than-32-KiB tests. Preserve original mutation
+failures and require exact builtin container/key checks before iteration/lookup.
+The reported inventory is not a minimal C closure; the five notices are not
+complete notice coverage. Content bounds do not qualify RAM/disk/time sufficiency.
+No actual archive acquisition, parser connection, compiler, guest, performance,
+consumer pin, physical hardware or unrelated source changes. A bounded hosted
+manufactured profile and independent review must precede integration; actual
+full-tree/parser/notice inputs remain a separate lane.
+
+
 2026-10-12 ESP32 DevKit on the labwired tier; LEDC duty reaches the circuit — DONE candidate, Claude (Lite task B9).
 Worktree `/mnt/volume1/code/wt/b9-esp32-ledc-board`, branch `feat/esp32-labwired-bench`.
 Session `df930874-a977-40f8-996f-8689b428942c`. Owns this row, the `ESP32_DEVKIT`
@@ -18,7 +38,7 @@ their gates: `test/fastpath-census-evidence.test.mjs` now hashes the receipt's
 files at the archiving commit 4c468e24 (fetched in ci.yml), not the live tree,
 and `test/labwired-word-workflow.test.mjs` accepts a labwired-wasm floor >= 108.
 
-2026-10-12 sparse refactor pivot admission — CLAIM, Codex bwcx.
+2026-10-12 sparse refactor pivot admission — DONE, Codex bwcx.
 Branch fix/sparse-refactor-pivot-admission-20261012, exact base
 2508b53d. Eight paths: LANES.md, src/sparse.js, test/sparse-lu.test.mjs,
 test/winding-precision-diagnostic.test.mjs,
@@ -36,6 +56,27 @@ No device/assembly/profile/budget changes, blanket cache disabling, waveform
 oracle claim, dependency pin, workflow or unrelated production edit.
 Actual engine execution hosted only. Numeric cause/guard efficacy and
 performance remain to be measured; the matrix adversary is not a guest result.
+Canonical240f2b16 preceded implementation. Candidate adds exact two-row
+independent solution/residual proof, stable changed-value reuse control and
+actual guard-removal kernel mutant. Historical same-pattern tests now exercise
+the existing full-factor fallback when changed values require repivoting.
+Current live winding tests require completion and no floor witness, while
+the earlier failed-source evidence remains intact. Syntax/diff checks pass;
+all numerical tests and broad qualification are hosted and remain pending.
+Exactca168e03 passes CI38284904347 and Harris38284904465:
+8485 passed,zero failed,302 skipped. The actual obsolete-pivot residual/
+guard-removal mutant passes; guarded current-source waveform completes1.01ms
+with3432 attempts/10288 solves/51 observations and no floor witness.
+Remote masterc1f34017 introduced ESP32 integration during qualification.
+Merged it for combined qualification; sparse implementation and all five
+affected test files remain byte-identical to the testedca168e03 versions.
+No independent SPICE agreement or performance ratio is established.
+Exact combined19e12bda passes CI38293714144 and Harris38293714293:
+8486 passed,zero failed,302 skipped; zero-storage completion remains
+3432 attempts/10288 solves/51 observations. New masterc9bfff9f advances only
+Markdown/docs receipts fromc1f34017; preserve that publication without another
+unchanged engine qualification. Final ledger correction counts five affected
+test files accurately; tested executable/workflow/test bytes stay unchanged.
 
 2026-10-12 winding linear solver sensitivity — DONE, Codex bwcx.
 Branch lane/winding-linear-solver-sensitivity-20261012, exact base
