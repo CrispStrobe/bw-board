@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-12 winding linear solver sensitivity — DONE candidate, Codex bwcx.
+2026-10-12 winding linear solver sensitivity — DONE, Codex bwcx.
 Branch lane/winding-linear-solver-sensitivity-20261012, exact base
 d96d4ceb. Four evidence-only paths: LANES.md,
 scripts/diagnose-winding-linear-solver.mjs,
@@ -13,7 +13,12 @@ Original module hashes and exact selector controls required; runtime hosted.
 No production solver change, performance claim, pin or workflow edits.
 Canonical2247d985 preceded implementation. Two local pure selector controls
 pass, including executable cache-reuse negative; no numerical capture local.
-Actual three-arm outcome, hosted CI/Harris and landing remain pending.
+Exact8961915887 passes CI38277473063 and Harris38277473010:
+8484 passed, zero failed, 302 skipped. Original cached sparse LU reproduces
+the floor refusal and exhausts20000 attempts/59992 solves; both fresh sparse
+and dense arms complete1.01ms with3432 attempts/10288 solves and51 observations.
+This isolates factor reuse as causal for this fixture, not its precise numeric
+mechanism or independent waveform agreement. No production change adopted.
 
 2026-10-12 winding UIC reference — CLAIM, Codex bwcx.
 Branch lane/winding-uic-reference-20261012, exact base

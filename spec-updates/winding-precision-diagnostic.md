@@ -148,3 +148,17 @@ Newton tolerances, integration histories, policies, physical parameters and
 work authority are unchanged. Actual outcomes await hosted qualification.
 Neither an alternative solver completing nor a green method test alone
 constitutes a production repair or independent waveform agreement.
+
+Exact `8961915887ea4ea34079bc8f3e2311a40bf00a6d` passed
+[CI38277473063](https://github.com/CrispStrobe/bw-board/actions/runs/38277473063)
+and [Harris38277473010](https://github.com/CrispStrobe/bw-board/actions/runs/38277473010)
+(8484 passed, zero failed, 302 skipped). The original cached sparse arm
+reproduces the normalized11.950940967672846 floor refusal and exhausts20000
+attempts/59992 solves with50 provisional observations. Fresh sparse and dense
+arms both complete the requested1.01ms with3432 attempts/10288 solves and51
+observations under identical authority. Disabling factor reuse alone removes
+this failure: reuse is causal for this fixture. This does not yet establish
+the exact numerical mechanism, safe reuse admission rule, physical fidelity
+or SPICE agreement. A bounded production repair needs actual sparse pivot/
+residual adversaries, unchanged-policy waveform regression and broad solver
+checks; globally disabling reuse is not the selected production fix.
