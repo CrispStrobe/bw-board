@@ -488,8 +488,9 @@ The retained-descriptor source unit is published as
 `scripts/i80386-cwsdpmi-owned-workspace-evidence/`. Coordinator and independent
 source review pass, together with all 23 manufactured filesystem methods and
 three independent registration/cleanup/transfer adversaries. These are local
-finite controls; no hosted composition result is claimed yet. The acceptance
-items above remain the contract for later integration.
+finite controls. The [original hosted composition controls](receipts/2026-10-12-owned-workspace-controls/README.md)
+now pass at their pinned source, with coordinator and independent original-byte
+audits. The acceptance items above remain the contract for later integration.
 Production compilation remains disabled; no guest or speed claim follows.
 
 
@@ -522,9 +523,11 @@ methods pass. Twelve fixed creator/route/writer/composition roles and three
 profile roles bind the exact own PR head. One automatic attempt-1 job runs only
 the 23 composition methods, with bounded isolated Python and four fixed text
 artifact roles. Its sole [run38199386713](https://github.com/CrispStrobe/bw-board/actions/runs/38199386713)
-is queued at this checkpoint; no hosted composition outcome is claimed. No
-manual dispatch, duplicate or replay was used. Keep run38173075353 frozen:
-it qualified the earlier four standalone units, not this composition. Independently audit the new original source/job,
-closed report inventory and all 23 outcomes before connecting the owning
-profile's source/input/pair/reader/format/archive/environment/media and launch
-gates. Production compilation stays disabled throughout this source checkpoint.
+passed all 23 methods and six job steps. All eleven enabled exact-head checks
+passed, with only two declared optional vectors-full skips. Coordinator and
+independent audits pass for the [original four-member receipt](receipts/2026-10-12-owned-workspace-controls/README.md).
+No manual dispatch, duplicate or replay was used. Preserve both this composition
+original and the earlier standalone run38173075353; later integration needs
+its own exact-source qualification. Next close the owning profile's
+source/input/pair/reader/format/archive/environment/media and launch gates.
+Production compilation stays disabled throughout this source checkpoint.
