@@ -465,6 +465,7 @@ export function buildLabwiredSystem (opts = {}) {
     boardVariant,
     onBoardDisplays: onBoard?.displays ?? [],
     onBoardMatrix: onBoard?.matrix ?? null,
+    arduinoEsp32: chip.arduinoEsp32 === true,
   };
 }
 
@@ -512,6 +513,9 @@ export function labwiredAdapterOptionsFor (opts = {}) {
     onBoardDisplays: built.onBoardDisplays,
     onBoardMatrix: built.onBoardMatrix,
     boardVariant: built.boardVariant,
+    // A classic-ESP32 Arduino image boots on the engine's Arduino-ESP32 boot
+    // thunks (`install_arduino_esp32_quirks`), installed by the adapter.
+    arduinoEsp32: built.arduinoEsp32,
   };
 }
 

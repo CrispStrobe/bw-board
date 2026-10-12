@@ -1,5 +1,20 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-12 ESP32 DevKit on the labwired tier; LEDC duty reaches the circuit — DONE candidate, Claude (Lite task B9).
+Worktree `/mnt/volume1/code/wt/b9-esp32-ledc-board`, branch `feat/esp32-labwired-bench`.
+Session `df930874-a977-40f8-996f-8689b428942c`. Owns this row, the `ESP32_DEVKIT`
+entry in `src/labwired-chips.js` (board kind `esp32_devkit`, descriptor = the
+catalog's `esp32` at the wasm PIN), the `arduinoEsp32` pass-through in
+`src/labwired-bridge.js` + `src/labwired-adapter.js` (installs the engine's
+Arduino-ESP32 boot thunks), `test/labwired-esp32-ledc.test.mjs` + its fixture
+`test/fixtures/labwired/esp32-ledc-bench/`, the labwired-wasm PIN/catalog bump,
+its suite-list/floor line in `labwired-wasm.yml`, and the oracle-census gate
+entry. Engine side: labwired-core fork #206 (ESP32/C3/S3 LEDC → GPIO matrix
+pad edges). Measured with a real Arduino-ESP32 2.0.17 image, 220 Ω + red LED
+per pad: full on 6.099 mA; analogWrite(64) 1.525 mA = 25.00 %; ledcWrite(768
+of 1024) 4.574 mA = 75.00 %; analogWrite(0) 0 mA. On the previous engine
+(labwired-wasm-31b6f8aa) the two PWM LEDs read 0.000 mA.
+
 2026-10-12 finite winding precision diagnostic — CLAIMED, Codex bwcx.
 Branch lane/winding-precision-diagnostic-20261012, exact refreshed base
 86f585f32c1d75e3ea35e19e87f488a26be89f4f. Four evidence-only paths: this
