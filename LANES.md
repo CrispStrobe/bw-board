@@ -1,5 +1,25 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-12 standalone full-tree provisioning preparation — CLAIM, Codex x86.
+Branch lane/386-full-tree-provisioner-20261012, exact base
+c1f34017b8088bf2376dcf52bb98990b625f9172. Owns this row,
+scripts/i80386-full-tree-provisioner/{provision.py,controls.py,manifest.json,
+README.md,provenance.json} and
+.github/workflows/i80386-full-tree-provisioner.yml only. Publish an isolated
+reported-inventory writer and bounded manufactured controls without the historical
+CPU/source stack. Fixed paths, types, extents and hashes; exclusive nofollow
+outputs; thirteen physical aliases against eleven canonical targets; final
+hash/extent/identity/link-count observations; five selected notice roles with
+literal formfeed and greater-than-32-KiB tests. Preserve original mutation
+failures and require exact builtin container/key checks before iteration/lookup.
+The reported inventory is not a minimal C closure; the five notices are not
+complete notice coverage. Content bounds do not qualify RAM/disk/time sufficiency.
+No actual archive acquisition, parser connection, compiler, guest, performance,
+consumer pin, physical hardware or unrelated source changes. A bounded hosted
+manufactured profile and independent review must precede integration; actual
+full-tree/parser/notice inputs remain a separate lane.
+
+
 2026-10-12 ESP32 DevKit on the labwired tier; LEDC duty reaches the circuit — DONE candidate, Claude (Lite task B9).
 Worktree `/mnt/volume1/code/wt/b9-esp32-ledc-board`, branch `feat/esp32-labwired-bench`.
 Session `df930874-a977-40f8-996f-8689b428942c`. Owns this row, the `ESP32_DEVKIT`
