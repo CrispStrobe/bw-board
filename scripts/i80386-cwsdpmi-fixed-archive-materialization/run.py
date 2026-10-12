@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import types
 
-ALIAS_SHA = '3a1feaca963805bc58b1a5f32c54c5d973c95e770db909c1c135dd5a35330628'
+ALIAS_SHA = 'd7783001104ac7d32b35e1ad8b1da181ee3dcf6be61b06e7b70ab4aa18e6fb4d'
 DISABLED_COMPILE_SHA = '2a1a3e84a4244100a8f0fe5c8d806d46721425970e4b65b516fdf58fed67b31a'
 MAX_SECTION = 32768
 MAX_PACKET = 147456
@@ -27,7 +27,7 @@ def _source(relative, digest):
     return path, raw
 
 def _load_alias():
-    path, raw = _source('i80386-cwsdpmi-archive-refusal-diagnostic/materialize.py', ALIAS_SHA)
+    path, raw = _source('i80386-cwsdpmi-gnu-longname-materializer/materialize.py', ALIAS_SHA)
     module = types.ModuleType('private_materialization_runner')
     module.__file__ = str(path)
     exec(compile(raw, '<fixed-alias-materializer>', 'exec'), module.__dict__)
@@ -95,7 +95,7 @@ def _copy(value):
     need(len(raw) <= MAX_SECTION)
     return copied
 
-STATUS_KEYS = frozenset(('archiveRefusalDiagnostic', 'aliasInventoryProvenance', 'authenticatedArchives', 'cleanupQualified', 'closeAttempted', 'closeRefused', 'closed', 'compilerQualified', 'firstFailure', 'fullToolchainReady', 'guestQualified', 'inputFilesystemLeaseQualified', 'licenseQualified', 'noticeBytes', 'noticeCount', 'noticeHashes', 'noticeOmitted', 'observer', 'parentTrustQualified', 'performanceQualified', 'phase', 'physicalAliasesMaterialized', 'rawArchiveCompatibilityQualified', 'reentered', 'runtimeOriginJoins', 'secondary', 'selectedNineMaterialized', 'sourceOwnedQualified', 'validatedAliasCount', 'validatedAliasTargetCount', 'writtenRoles'))
+STATUS_KEYS = frozenset(('gnuLongNameHeaders','gnuLongNameNamesApplied','gnuLongNamePending','archiveRefusalDiagnostic', 'aliasInventoryProvenance', 'authenticatedArchives', 'cleanupQualified', 'closeAttempted', 'closeRefused', 'closed', 'compilerQualified', 'firstFailure', 'fullToolchainReady', 'guestQualified', 'inputFilesystemLeaseQualified', 'licenseQualified', 'noticeBytes', 'noticeCount', 'noticeHashes', 'noticeOmitted', 'observer', 'parentTrustQualified', 'performanceQualified', 'phase', 'physicalAliasesMaterialized', 'rawArchiveCompatibilityQualified', 'reentered', 'runtimeOriginJoins', 'secondary', 'selectedNineMaterialized', 'sourceOwnedQualified', 'validatedAliasCount', 'validatedAliasTargetCount', 'writtenRoles'))
 FALSE_FLAGS = ('fullToolchainReady','inputFilesystemLeaseQualified','sourceOwnedQualified',
                'parentTrustQualified','licenseQualified','compilerQualified','guestQualified',
                'performanceQualified','physicalAliasesMaterialized','rawArchiveCompatibilityQualified')
@@ -194,10 +194,10 @@ class MaterializationRunner:
     def _make_packet(self):
         status = self._status()
         status['hasPacket'] = True
-        facts = {'schema': 'bw.fixed-archive-materialization-observation.v2',
+        facts = {'schema': 'bw.fixed-archive-materialization-observation.v3',
                  'boundary': 'MATERIALIZATION_ONLY_OBSERVATIONS_UNQUALIFIED',
                  'wrapper': status,
-                 'sources': {'diagnosticMaterializerSha256': ALIAS_SHA, 'fixedAliasSha256': alias.ALIAS_SHA, 'selectedMaterializerSha256': alias.BASE_SHA,
+                 'sources': {'gnuLongnameMaterializerSha256': ALIAS_SHA, 'diagnosticMaterializerSha256': alias.DIAGNOSTIC_SHA, 'fixedAliasSha256': alias.ALIAS_SHA, 'selectedMaterializerSha256': alias.BASE_SHA,
                              'observerSha256': alias.base.OBSERVER_SHA, 'disabledCompile': dict(self._compile),
                              'externalSourceAdmissionRequired': True},
                  'materializeStatus': self._materialize_status,

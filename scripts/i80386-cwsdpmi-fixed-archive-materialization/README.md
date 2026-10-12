@@ -75,6 +75,13 @@ is run. Exact-source hosted controls, independent original audit and a separatel
 reviewed acquisition adapter, frozen reader and launch guard remain later gates.
 
 This revision preserves the failed original and carries bounded first-rule TAR
-diagnostics in copied materializer statuses. Packet schema is v2. Acceptance and
-compiler refusal remain unchanged; diagnostic facts are source-issued serialized
+diagnostics in copied materializer statuses. Packet schema is v3. Compiler refusal remains unchanged; only the documented GNU `L` filename
+extension acceptance is new; diagnostic facts are source-issued serialized
 content rather than original emitted writer bytes or raw archive header proof.
+
+The new pinned GNU long-name derivative permits only bounded `L` filename
+metadata under its documented strict subset. Copied status includes validated
+metadata count, consumed-name count and pending boolean. No metadata output or
+physical alias is written; compiler execution remains disabled. Older parser
+modules and failed originals are unchanged. No GNU archive compatibility is
+claimed from synthetic controls.

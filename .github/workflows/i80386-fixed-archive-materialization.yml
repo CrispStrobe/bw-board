@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/i80386-fixed-archive-materialization-hosted/**'
       - 'scripts/i80386-cwsdpmi-archive-refusal-diagnostic/**'
+      - 'scripts/i80386-cwsdpmi-gnu-longname-materializer/**'
       - 'scripts/i80386-cwsdpmi-fixed-archive-materialization/**'
       - 'scripts/i80386-fixed-archive-acquisition/**'
       - '.github/workflows/i80386-fixed-archive-materialization.yml'
@@ -45,7 +46,7 @@ jobs:
           : > fixed-archive-materialization/control.stderr
           timeout --signal=KILL 90s python3 -I -B scripts/i80386-fixed-archive-materialization-hosted/admit.py controls
           phase=manufactured-controls
-          timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-archive-refusal-diagnostic/materialize-control.py > fixed-archive-materialization/control.stdout 2> fixed-archive-materialization/control.stderr
+          timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-gnu-longname-materializer/materialize-control.py > fixed-archive-materialization/control.stdout 2> fixed-archive-materialization/control.stderr
           phase=complete
       - name: Retain bounded control text
         if: always()
@@ -61,7 +62,7 @@ jobs:
             fixed-archive-materialization/control.stderr
             fixed-archive-materialization/status.txt
   fixed-archive-materialization:
-    if: github.event.action == 'labeled' && github.event.label.name == 'x86-fixed-archive-refusal-diagnostic' && github.event.pull_request.head.repo.full_name == github.repository && github.repository == 'CrispStrobe/bw-board' && github.run_attempt == 1
+    if: github.event.action == 'labeled' && github.event.label.name == 'x86-fixed-archive-gnu-longname' && github.event.pull_request.head.repo.full_name == github.repository && github.repository == 'CrispStrobe/bw-board' && github.run_attempt == 1
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -94,7 +95,7 @@ jobs:
           : > fixed-archive-materialization/run.stderr
           timeout --signal=KILL 90s python3 -I -B scripts/i80386-fixed-archive-materialization-hosted/admit.py actual-before
           phase=manufactured-controls
-          timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-archive-refusal-diagnostic/materialize-control.py > fixed-archive-materialization/control.stdout 2> fixed-archive-materialization/control.stderr
+          timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-gnu-longname-materializer/materialize-control.py > fixed-archive-materialization/control.stdout 2> fixed-archive-materialization/control.stderr
           phase=materialization
           set +e
           timeout --signal=KILL 600s python3 -I -B scripts/i80386-fixed-archive-materialization-hosted/execute.py > fixed-archive-materialization/run.stdout 2> fixed-archive-materialization/run.stderr

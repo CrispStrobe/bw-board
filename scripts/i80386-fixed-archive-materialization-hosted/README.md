@@ -1,20 +1,20 @@
 # Fixed archive materialization hosted profile
 
 This profile is source-prepared and **UNARMED**. Publication automatically runs
-only the 30 manufactured controls (10 diagnostic and 20 acquisition) on opened, synchronize or reopened
+only the 46 manufactured controls (16 GNU and 30 inherited diagnostic/acquisition) on opened, synchronize or reopened
 own-repository PR events at attempt one. The separate actual job admits only a
-labeled event whose applied label is `x86-fixed-archive-refusal-diagnostic`.
+labeled event whose applied label is `x86-fixed-archive-gnu-longname`.
 There is no workflow dispatch or replay option. The label must remain unapplied
 until every enabled exact-head source check, the frozen original reader and an
 external reviewed once-only guard qualify it. The workflow itself is not a
 repository-history census or once-only launch authority.
 
-Admission freezes 31 fixed paths: the eight three-file units, runner three,
+Admission freezes 34 fixed paths: the nine three-file units, runner three,
 disabled compiler one and acquisition adapter three. Their fixed SHA-256 values
-bind the reviewed unit bytes; the change envelope uses base `b281e779266f6d225d91a88750c85a36e858042e`. Four profile paths bind exact
-Git/live bytes, for 35 roles. Git uses `--no-replace-objects`, a ten-second bound
+bind the reviewed unit bytes; the change envelope uses base `e5cbd37186aa9bf834be9fa1a6b4a9011e1acc69`. Four profile paths bind exact
+Git/live bytes, for 38 roles. Git uses `--no-replace-objects`, a ten-second bound
 and a 1 MiB output cap. Each live source must be ordinary, single-link, nofollow,
-metadata-fenced and at most 64 KiB. The change envelope admits these four profile paths, the three new diagnostic
+metadata-fenced and at most 64 KiB. The change envelope admits these four profile paths, the three new GNU long-name
 unit paths, runner `run.py` and its README, acquisition `acquire.py` and its
 README, and the nonexecuted LANES claim. Exact head, own PR repositories, PR event and
 attempt one are required. Source admission does not prove uninterrupted process
@@ -26,14 +26,14 @@ nonfinite numbers refused. Only typed action, PR number, head, own repositories,
 run, attempt and the applied label enter the bounded sanitized event record.
 No raw event payload, PR body, signed URL or host path is uploaded. Controls admit
 only opened/synchronize/reopened; actual-before and actual-after admit only the
-exact label event. Actual-after repeats all 35 source checks and requires the
+exact label event. Actual-after repeats all 38 source checks and requires the
 saved before-source role hashes and event to match. Successful admission writes
 exclusive bounded JSON files; failure may leave only partial text roles.
 
 Pinned checkout/upload actions run on Ubuntu 24.04 with Python `-I -B`, empty
 Python and loader injection variables, and core dumps disabled. The controls job
 has a five-minute bound, 90-second source admission and 30-second synthetic suite.
-The actual job has fifteen minutes, repeats the same 30 synthetic controls
+The actual job has fifteen minutes, repeats the same 46 synthetic controls
 before any fetch, then one execution with a 600-second process limit and a
 1 GiB virtual-memory limit. Its process per-file limit is 16 MiB, supporting the selected materializer
 file cap; this limit applies to tool writes as well as text. Controls-only uses
@@ -74,7 +74,7 @@ acquisition packet separately retains its original refusal.
 
 An official successful run alone is insufficient. The prospective original
 reader must bind exact original API/run/job/head/attempt/artifact identities,
-all nine roles, source-before/after and event, the full 30-method transcript,
+all nine roles, source-before/after and event, the full 46-method transcript,
 four input hashes/extents, nine ordered observed identities/hashes, four source
 joins, thirteen reported aliases and eleven targets, two joined observations,
 first refusals, cleanup uncertainty and budgets. Its strongest possible boundary
@@ -86,6 +86,12 @@ original evidence and qualified ownership/input gates.
 
 The diagnostic revision carries a fixed first-refused TAR rule and bounded header
 ordinal/offset/type/magic classification through source-reserialized statuses.
-It does not accept extension headers or establish the prior original header type.
+Only the separately documented GNU `L` name subset is accepted; other extension
+headers remain refused. The prior diagnostic source did not admit `L`.
 The failed original and its reservation remain preserved; any future diagnostic
 requires a new exact-head reviewed reader and once-only launch authorization.
+
+The v3 derivative admits only bounded GNU `L` metadata under its explicit strict
+placeholder and canonical-name subset. It adds counts and a pending boolean to
+copied statuses; no metadata file is written. The old base, fixed-alias and
+diagnostic modules remain unchanged. Both failed actual originals stay preserved.
