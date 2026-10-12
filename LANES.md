@@ -3445,3 +3445,13 @@ run only the 22 manufactured runner controls in a bounded own-PR exact-head
 attempt-one job. Compiler source is admitted but never executed. Preserve the
 sole original for independent audit; actual acquisition/materialization remains
 a separate profile. Held source, defaults and consumer pins remain unchanged.
+
+### Fixed public archive acquisition adapter — 2026-10-12
+
+Claimed: `scripts/i80386-fixed-archive-acquisition/`
+`{acquire.py,acquire-control.py,README.md}`. Fetch only the four fixed public
+archive URLs under per-input and aggregate byte/time bounds, authenticate their
+exact extents/hashes and pass immutable bytes once to the pinned materialization
+runner. Preserve bounded original refusal/cleanup evidence. Manufactured controls
+prepare hosted acquisition; no local real archive, tool/compiler/guest launch,
+namespace/mode witness, default or consumer pin change.
