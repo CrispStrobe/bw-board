@@ -691,9 +691,25 @@ The ordered follow-up tasks are:
    `scripts/i80386-materialization-runner-source-controls/` hosted profile:
    twenty-five fixed unit/compiler-source paths plus three profile paths, running
    only the 22 manufactured controls. Nine admission controls and independent
-   review passed; its sole automatic hosted result remains pending. The real
-   acquisition adapter and independent original reader/launch gates remain
-   unfinished.
+   review passed. Its sole attempt-one [run38222745175](https://github.com/CrispStrobe/bw-board/actions/runs/38222745175)
+   passed all 22 controls, and all eleven enabled exact-head checks passed with
+   two declared optional vectors-full skips. The [original receipt](receipts/2026-10-12-materialization-runner-controls/README.md)
+   retains four byte-exact reports and official origins. Frozen-reader, separate
+   job admission and independent raw-original/Git audits passed, binding all
+   twenty-eight source roles. The real acquisition adapter and independent
+   original reader/launch gates remain unfinished. [PR521](https://github.com/CrispStrobe/bw-board/pull/521),
+   exact source `9329da5b683563d85c6548f848a5f1f7141d5a6f`, prepares the acquisition
+   adapter in `scripts/i80386-fixed-archive-acquisition/`. Root and independent
+   reviews passed all 20 manufactured controls plus two independent HTTP-error
+   reentry/absent-report adversaries. Four fixed public URLs, extents and hashes
+   total 86,048,982 bytes; all authenticate before runner construction. Reads
+   are bounded, redirects use a closed HTTPS policy, responses close once and
+   original errors survive cleanup failures. An absent report remains absent.
+   Inputs stay private in memory, with no archive staging or upload. The
+   observed deadlines and byte limits are not hard process-memory/time guarantees.
+   No actual acquisition or materialization has run. A separately reviewed
+   hosted profile, frozen independent reader and one-shot launch reservation
+   must precede the real test; compiler/tool/guest execution remains outside it.
    A source policy about read-only modes or omitted alias outputs is
    distinct from a final namespace/mode census; this first test need not claim
    the latter. Record actual member topology, selected output hashes,
