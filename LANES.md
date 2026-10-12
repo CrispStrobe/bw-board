@@ -46,6 +46,14 @@ not a qualified reference. Forward reference-only controls tighten reltol,
 abstol,vntol and trtol while retaining models, zero IC/UIC, sample times,
 100/50/25ns refinements and acceptance bounds. Actual stability is now a
 mandatory hosted assertion; raw evidence is emitted before any refusal.
+Exactc24f97d0 CI38290291832 fails only startup refinement (8481 pass,1 fail,
+302 skipped):31.005/7.927uV adjacent startup deltas; all falling-edge voltage
+and current deltas meet the unchanged bounds. Harris passes. This is an
+insufficient reference, not an engine failure or permission to widen bounds.
+Forward deck distinguishes paired1/.5/.25ns startup/print increments from
+unchanged100/50/25ns maximum integration steps. The near-quadratic startup
+dependence motivates this test; causal confirmation and stable refinement
+remain hosted requirements. Exact controls assert both sets of deck values.
 
 2026-10-12 winding error components — CLAIM, Codex bwcx.
 Branch lane/winding-error-components-20261012, exact base

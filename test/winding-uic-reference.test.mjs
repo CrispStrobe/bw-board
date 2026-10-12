@@ -10,7 +10,9 @@ test('reference model cards, zero IC and UIC are independent explicit authoritie
     const deck = windingReferenceDeck(25);
     assert.match(deck, /LW supply winding 5m IC=0/);
     assert.match(deck, /CP collector 0 12p IC=0/);
-    assert.match(deck, /tran 25n 1.011m 0 25n uic/);
+    assert.match(deck, /tran 0\.25n 1.011m 0 25n uic/);
+    assert.match(windingReferenceDeck(100), /tran 1n 1.011m 0 100n uic/);
+    assert.match(windingReferenceDeck(50), /tran 0\.5n 1.011m 0 50n uic/);
     assert.match(deck, /method=gear maxord=2 reltol=1e-9 abstol=1e-14 vntol=1e-11 trtol=1/);
     assert.match(deck, /set numdgt=15/);
     assert.match(deck, /let ref_voltage = v\(collector\)/);
@@ -85,6 +87,7 @@ test('hosted live zero-storage reference meets fixed refinement bounds and rejec
     assert.equal(report.arms.length, 3);
     for (const arm of report.arms) {
         assert.equal(arm.zeroStorage, true);
+        assert.equal(arm.startupStepNs, arm.maxStepNs / 100);
         assert.ok(Math.abs(arm.measurements[0].voltage) < .1, 'zero-storage early collector control');
         assert.ok(arm.waveformRows > 2);
         // Padding a rounded FIND result cannot satisfy these actual-value

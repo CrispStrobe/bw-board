@@ -126,6 +126,18 @@ Forward reference-only settings use reltol1e-9,abstol1e-14,vntol1e-11,trtol1
 to reduce integration/interpolation error, preserving both bounds, model,
 initial state and100/50/25ns maximum-step refinements. Hosted stability is now
 mandatory; numerical evidence is retained before any failing assertion.
+
+Exact `c24f97d0b93f868207bb78e785a898edd486149b` failed
+[CI38290291832](https://github.com/CrispStrobe/bw-board/actions/runs/38290291832)
+only on startup refinement (8481 passed,one failed,302 skipped); Harris passed.
+The25ns startup voltage differs by31.005 and7.927uV across adjacent arms.
+All falling-edge voltage/current differences meet the unchanged bounds. This
+nearly quadratic startup dependence motivates independently refining the
+transient startup/print increment:1/.5/.25ns, paired with the unchanged
+100/50/25ns maximum integration steps. Each deck and receipt names both
+authorities; no initial state, model, observation time or acceptance bound is
+changed. The next actual run must confirm reference stability; it is not yet
+an oracle-qualified waveform.
 CI38268219098 at f14713d2 stopped correctly on insufficient v0 precision;
 Harris38268219115 passed. This is a reference-harness failure, not measured
 reference instability or an engine fix. Its scalar-vector successor4d22bb12

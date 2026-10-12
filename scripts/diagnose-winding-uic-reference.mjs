@@ -10,6 +10,9 @@ import {join} from 'node:path';
 export const REFERENCE_TIMES_NS = Object.freeze([25, 500000, 1000000, 1001200,
     1002000, 1002100, 1002500, 1003000, 1005000, 1010000]);
 export const REFERENCE_STEPS_NS = Object.freeze([100, 50, 25]);
+// Refine the transient startup/print increment too, without forcing a
+// sub-nanosecond maximum integration step across the whole millisecond.
+export const STARTUP_STEP_DIVISOR = 100;
 export const REFINEMENT_BOUNDS = Object.freeze({voltage: 1e-5, current: 1e-9});
 export const MEASUREMENT_PRECISION = 15;
 
@@ -34,7 +37,7 @@ export function windingReferenceDeck (maxStepNs, zeroStorage = true) {
         '.model QM NPN(IS=1e-14 BF=100 BR=1 VAF=100)',
         '.model DM D(IS=1e-12 N=1 RS=.568)',
         '.control', 'set numdgt=15',
-        `tran ${maxStepNs}n 1.011m 0 ${maxStepNs}n${zeroStorage ? ' uic' : ''}`,
+        `tran ${maxStepNs / STARTUP_STEP_DIVISOR}n 1.011m 0 ${maxStepNs}n${zeroStorage ? ' uic' : ''}`,
         'let ref_voltage = v(collector)', 'let ref_current = i(LW)',
         'set wr_singlescale', 'set wr_vecnames',
         'wrdata reference.dat ref_voltage ref_current',
@@ -107,7 +110,8 @@ export function runWindingUicReference (executable = process.env.NGSPICE || 'ngs
             if (child.error || child.status !== 0) throw new Error(`Reference process failed: ${child.error || child.stderr}`);
             const table = readFileSync(join(directory, 'reference.dat'), 'utf8');
             const rows = parseReferenceWaveform(table, child.stdout, child.stderr);
-            return {maxStepNs, zeroStorage, deck, deckSha256: createHash('sha256').update(deck).digest('hex'),
+            return {maxStepNs, startupStepNs: maxStepNs / STARTUP_STEP_DIVISOR, zeroStorage,
+                deck, deckSha256: createHash('sha256').update(deck).digest('hex'),
                 waveformSha256: createHash('sha256').update(table).digest('hex'), waveformRows: rows.length,
                 measurements: sampleReferenceWaveform(rows), stdout: child.stdout, stderr: child.stderr};
         } finally {
