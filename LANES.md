@@ -3415,3 +3415,13 @@ with fixed extents/hashes. Create no links or alias outputs; retain the nine
 selected single-link outputs. Preserve all archive/input/lifecycle bounds and
 source provenance. Actual raw header compatibility, full toolchain provisioning,
 compiler, guest and performance results remain unqualified.
+
+### Hosted fixed-alias materializer controls — 2026-10-12
+
+Claimed: `scripts/i80386-fixed-alias-source-controls/{admit.py,README.md}`
+and `.github/workflows/i80386-fixed-alias-source-controls.yml`.
+Freeze twenty-one dependency/materializer source roles and three profile roles;
+run only the 42 manufactured fixed-alias controls in a bounded own-PR exact-head
+attempt-one job. Preserve the original for independent audit. Actual archives,
+complete toolchain, compiler, guest and performance qualification remain separate;
+held profiles, production compiler disable, defaults and consumer pins stay fixed.
