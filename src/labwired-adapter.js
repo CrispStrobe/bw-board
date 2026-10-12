@@ -206,6 +206,15 @@ export function createLabwiredAdapter (opts) {
     // An nRF51 S110 application (micro:bit V1 / Calliope mini) needs the
     // emulated SoftDevice attached before it runs -- on every build, so a
     // reset (which rebuilds) keeps it.
+    // A classic-ESP32 Arduino image (arduino-esp32 + FreeRTOS) needs the
+    // engine's Arduino boot thunks before it runs — on every build, so a reset
+    // keeps them. Symbol-driven: they come from this ELF's own symbol table.
+    if (opts.arduinoEsp32) {
+      if (typeof instance.install_arduino_esp32_quirks !== 'function') {
+        throw new Error('labwired-adapter: this labwired-wasm build cannot boot an Arduino-ESP32 image');
+      }
+      instance.install_arduino_esp32_quirks(firmware);
+    }
     if (opts.softdeviceS110) {
       if (typeof instance.attach_softdevice_s110 !== 'function') {
         throw new Error('labwired-adapter: this labwired-wasm build cannot emulate the S110 SoftDevice');

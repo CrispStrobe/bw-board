@@ -430,7 +430,7 @@ export const INPUTS = [
             'test/pad-drive-parity.test.mjs', 'test/labwired-firmware-only.test.mjs',
             'test/labwired-microbit-matrix.test.mjs', 'test/labwired-microbit-motion.test.mjs',
             'test/labwired-f0-timing.test.mjs', 'test/labwired-f0-gpio-profile.test.mjs',
-            'test/labwired-f0-gpio-window-profile.test.mjs'],
+            'test/labwired-f0-gpio-window-profile.test.mjs', 'test/labwired-esp32-ledc.test.mjs'],
         // Motion additionally requires arm-none-eabi-gcc and an engine with
         // LSM303AGR. labwired-wasm.yml's opt-in motion job installs the compiler
         // and makes absent artifacts/tools, skipped tests and sub-1x windows fail.

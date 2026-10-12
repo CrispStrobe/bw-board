@@ -180,3 +180,15 @@ must recover below1e-14. Separate unchanged and changed stable-pivot controls
 protect retained reuse. Actual kernel, broad solver and unchanged-policy
 zero-storage completion tests run hosted. This is a candidate until those
 results pass, and it does not replace the pending independent SPICE reference.
+
+The exact candidate `ca168e03e549a0960f22161d5e30fa147f0a4dba` passed
+[CI38284904347](https://github.com/CrispStrobe/bw-board/actions/runs/38284904347)
+and [Harris38284904465](https://github.com/CrispStrobe/bw-board/actions/runs/38284904465):
+8485 passed,zero failed,302 skipped. The actual obsolete-pivot refusal,
+independent residual, executable guard-removal mutant and stable reuse controls
+pass. The real zero-storage caller completes1.01ms using3432 attempts/10288
+solves/51 observations, without a floor witness and without changed accuracy
+or work bounds. Earlier failed-source receipts remain preserved above. This
+proves this fixture's completion repair, not independent waveform agreement
+or a measured general speedup. A concurrent ESP32 integration is merged for
+fresh combined qualification, preserving the tested solver and affected tests.

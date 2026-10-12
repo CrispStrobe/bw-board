@@ -18,7 +18,9 @@ import {
     STM32F0_CHIP_YAML, STM32F0_LABWIRED_PINS, STM32F0,
     NRF52833_CHIP_YAML, MICROBIT_V2_LABWIRED_PINS, MICROBIT_V2,
     ATSAMD51_CHIP_YAML, PYBADGE_LABWIRED_PINS, PYBADGE,
+    ESP32_DEVKIT, ESP32_DEVKIT_LABWIRED_PINS, LABWIRED_CHIPS,
 } from '../src/labwired-chips.js';
+import { LABWIRED_CATALOG } from '../src/labwired-catalog.js';
 import { STM32F0_PINS } from '../src/stm32-adapter.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -94,5 +96,24 @@ describe('labwired chip descriptors', () => {
         assert.deepEqual(PYBADGE_LABWIRED_PINS.a0, { peripheral: 'porta', pin: 2 });
         assert.deepEqual(PYBADGE_LABWIRED_PINS.d2, { peripheral: 'portb', pin: 3 });
         assert.deepEqual(PYBADGE_LABWIRED_PINS.stemma_sda, PYBADGE_LABWIRED_PINS.sda);
+    });
+
+    it('the classic ESP32 DevKit reuses the catalog descriptor at the wasm PIN', () => {
+        // ONE copy of configs/chips/esp32.yaml: the catalog's, regenerated at
+        // the build PIN. A second fixture would be a second drawing of it.
+        assert.equal(LABWIRED_CHIPS.esp32_devkit, ESP32_DEVKIT);
+        assert.equal(ESP32_DEVKIT.chipYaml, LABWIRED_CATALOG.esp32.chipYaml);
+        assert.match(ESP32_DEVKIT.chipYaml, /arch: "xtensa-lx6"/);
+        assert.equal(ESP32_DEVKIT.clockHz, LABWIRED_CATALOG.esp32.clockHz);
+        assert.equal(ESP32_DEVKIT.arduinoEsp32, true);
+        // Pad numbers, one GPIO block; no flash pads (6..11), no unbonded 37/38.
+        assert.deepEqual(ESP32_DEVKIT_LABWIRED_PINS.gpio2, { peripheral: 'gpio', pin: 2 });
+        assert.deepEqual(ESP32_DEVKIT_LABWIRED_PINS.gpio39, { peripheral: 'gpio', pin: 39 });
+        for (const n of [6, 7, 8, 9, 10, 11, 37, 38]) {
+            assert.equal(ESP32_DEVKIT_LABWIRED_PINS[`gpio${n}`], undefined, `gpio${n} is not on the header`);
+        }
+        // Input-only pads cannot carry an LEDC channel.
+        assert.ok(!ESP32_DEVKIT.pwmPins.includes('gpio34'));
+        assert.ok(ESP32_DEVKIT.pwmPins.includes('gpio33'));
     });
 });
