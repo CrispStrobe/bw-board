@@ -18,7 +18,7 @@ their gates: `test/fastpath-census-evidence.test.mjs` now hashes the receipt's
 files at the archiving commit 4c468e24 (fetched in ci.yml), not the live tree,
 and `test/labwired-word-workflow.test.mjs` accepts a labwired-wasm floor >= 108.
 
-2026-10-12 sparse refactor pivot admission — DONE candidate, Codex bwcx.
+2026-10-12 sparse refactor pivot admission — DONE, Codex bwcx.
 Branch fix/sparse-refactor-pivot-admission-20261012, exact base
 2508b53d. Eight paths: LANES.md, src/sparse.js, test/sparse-lu.test.mjs,
 test/winding-precision-diagnostic.test.mjs,
@@ -48,9 +48,15 @@ Exactca168e03 passes CI38284904347 and Harris38284904465:
 guard-removal mutant passes; guarded current-source waveform completes1.01ms
 with3432 attempts/10288 solves/51 observations and no floor witness.
 Remote masterc1f34017 introduced ESP32 integration during qualification.
-Merged it for combined qualification; sparse implementation and all six
+Merged it for combined qualification; sparse implementation and all five
 affected test files remain byte-identical to the testedca168e03 versions.
 No independent SPICE agreement or performance ratio is established.
+Exact combined19e12bda passes CI38293714144 and Harris38293714293:
+8486 passed,zero failed,302 skipped; zero-storage completion remains
+3432 attempts/10288 solves/51 observations. New masterc9bfff9f advances only
+Markdown/docs receipts fromc1f34017; preserve that publication without another
+unchanged engine qualification. Final ledger correction counts five affected
+test files accurately; tested executable/workflow/test bytes stay unchanged.
 
 2026-10-12 winding linear solver sensitivity — DONE, Codex bwcx.
 Branch lane/winding-linear-solver-sensitivity-20261012, exact base

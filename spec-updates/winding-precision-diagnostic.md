@@ -192,3 +192,10 @@ or work bounds. Earlier failed-source receipts remain preserved above. This
 proves this fixture's completion repair, not independent waveform agreement
 or a measured general speedup. A concurrent ESP32 integration is merged for
 fresh combined qualification, preserving the tested solver and affected tests.
+
+Combined `19e12bdadbc20cc1782ff7587f8ff220b5f51018` passed
+[CI38293714144](https://github.com/CrispStrobe/bw-board/actions/runs/38293714144)
+and [Harris38293714293](https://github.com/CrispStrobe/bw-board/actions/runs/38293714293):
+8486 passed,zero failed,302 skipped. The requested waveform still completes
+with3432 attempts/10288 solves/51 observations. The later documentation-only
+publication is integrated with these tested executable bytes preserved.
