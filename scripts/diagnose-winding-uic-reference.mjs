@@ -3,6 +3,9 @@
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
+import {mkdtempSync, readFileSync, rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 
 export const REFERENCE_TIMES_NS = Object.freeze([25, 500000, 1000000, 1001200,
     1002000, 1002100, 1002500, 1003000, 1005000, 1010000]);
@@ -13,7 +16,7 @@ export const MEASUREMENT_PRECISION = 15;
 export function referenceProcessOptions (deck) {
     return {input: deck, encoding: 'utf8', timeout: 120000, maxBuffer: 1048576,
         // Supplemental batch measurement setting. Interactive FIND also has
-        // a hard-coded short print path; authoritative values use scalar print.
+        // a hard-coded short print/store path; authoritative values use wrdata.
         env: {...process.env, NGSPICE_MEAS_PRECISION: String(MEASUREMENT_PRECISION)}};
 }
 
@@ -32,29 +35,51 @@ export function windingReferenceDeck (maxStepNs, zeroStorage = true) {
         '.model DM D(IS=1e-12 N=1 RS=.568)',
         '.control', 'set numdgt=15',
         `tran ${maxStepNs}n 1.011m 0 ${maxStepNs}n${zeroStorage ? ' uic' : ''}`,
-        ...REFERENCE_TIMES_NS.flatMap((ns, i) => [
-            `meas tran raw_v${i} FIND v(collector) AT=${ns * 1e-9}`,
-            `let v${i} = raw_v${i}`, `print v${i}`,
-            `meas tran raw_i${i} FIND i(LW) AT=${ns * 1e-9}`,
-            `let i${i} = raw_i${i}`, `print i${i}`]),
+        'let ref_voltage = v(collector)', 'let ref_current = i(LW)',
+        'set wr_singlescale', 'set wr_vecnames',
+        'wrdata reference.dat ref_voltage ref_current',
         '.endc', '.end', ''].join('\n');
 }
 
-export function parseReferenceMeasurements (stdout, stderr = '') {
+export function parseReferenceWaveform (table, stdout = '', stderr = '') {
     if (/Error:|timestep too small|out of interval|failed|fatal/i.test(stdout + stderr)) {
         throw new Error(`Reference solve/measurement refused: ${stdout}\n${stderr}`);
     }
-    const scalar = name => {
-        const matches = [...stdout.matchAll(new RegExp(`^${name}\\s*=\\s*([-+\\deE.]+)\\s*$`, 'gm'))];
-        if (matches.length !== 1 || !Number.isFinite(Number(matches[0][1]))) {
-            throw new Error(`Expected one finite reference measurement ${name}`);
+    if (Buffer.byteLength(table) > 8 * 1048576) throw new Error('Reference table exceeds finite authority');
+    const lines = table.trim().split(/\r?\n/);
+    if (lines.shift().trim().replace(/\s+/g, ' ') !== 'time ref_voltage ref_current') {
+        throw new Error('Unexpected reference vector/time authority');
+    }
+    const rows = lines.map(line => {
+        const tokens = line.trim().split(/\s+/);
+        if (tokens.length !== 3 || tokens.some(token => !/^[+-]?\d+\.\d{12,}[eE][+-]?\d+$/.test(token))) {
+            throw new Error('Reference waveform needs three full-precision columns');
         }
-        if (!/^[+-]?\d+\.\d{12,}[eE][+-]?\d+$/.test(matches[0][1])) {
-            throw new Error(`Insufficient printed measurement precision for ${name}: ${matches[0][1]}`);
+        const values = tokens.map(Number);
+        if (!values.every(Number.isFinite)) throw new Error('Nonfinite reference waveform');
+        return {timeSec: values[0], voltage: values[1], current: values[2], raw: line};
+    });
+    if (rows.length < 2 || rows.some((row, i) => i && row.timeSec <= rows[i - 1].timeSec)) {
+        throw new Error('Reference waveform must contain strictly ordered time rows');
+    }
+    return rows;
+}
+
+export function sampleReferenceWaveform (rows) {
+    return REFERENCE_TIMES_NS.map(timeNs => {
+        const at = timeNs * 1e-9;
+        if (at < rows[0].timeSec || at > rows.at(-1).timeSec) throw new Error('Reference measurement outside waveform');
+        let low = 0, high = rows.length - 1;
+        while (high - low > 1) {
+            const mid = Math.floor((low + high) / 2);
+            if (rows[mid].timeSec <= at) low = mid; else high = mid;
         }
-        return Number(matches[0][1]);
-    };
-    return REFERENCE_TIMES_NS.map((timeNs, i) => ({timeNs, voltage: scalar(`v${i}`), current: scalar(`i${i}`)}));
+        const left = rows[low], right = rows[high];
+        const fraction = (at - left.timeSec) / (right.timeSec - left.timeSec);
+        const voltage = left.voltage + fraction * (right.voltage - left.voltage);
+        const current = left.current + fraction * (right.current - left.current);
+        return {timeNs, voltage, current, bracket: {left, right, fraction}};
+    });
 }
 
 export function refinementReport (captures) {
@@ -76,11 +101,19 @@ export function runWindingUicReference (executable = process.env.NGSPICE || 'ngs
     if (version.error || version.status !== 0) throw new Error('Independent ngspice executable unavailable');
     const run = (maxStepNs, zeroStorage) => {
         const deck = windingReferenceDeck(maxStepNs, zeroStorage);
-        const process = spawnSync(executable, ['-n', '-b'], referenceProcessOptions(deck));
-        if (process.error || process.status !== 0) throw new Error(`Reference process failed: ${process.error || process.stderr}`);
-        return {maxStepNs, zeroStorage, deck, deckSha256: createHash('sha256').update(deck).digest('hex'),
-            measurements: parseReferenceMeasurements(process.stdout, process.stderr),
-            stdout: process.stdout, stderr: process.stderr};
+        const directory = mkdtempSync(join(tmpdir(), 'winding-reference-'));
+        try {
+            const child = spawnSync(executable, ['-n', '-b'], {...referenceProcessOptions(deck), cwd: directory});
+            if (child.error || child.status !== 0) throw new Error(`Reference process failed: ${child.error || child.stderr}`);
+            const table = readFileSync(join(directory, 'reference.dat'), 'utf8');
+            const rows = parseReferenceWaveform(table, child.stdout, child.stderr);
+            return {maxStepNs, zeroStorage, deck, deckSha256: createHash('sha256').update(deck).digest('hex'),
+                waveformSha256: createHash('sha256').update(table).digest('hex'), waveformRows: rows.length,
+                measurements: sampleReferenceWaveform(rows), stdout: child.stdout, stderr: child.stderr};
+        } finally {
+            // Only the freshly created, task-owned solver directory is removed.
+            rmSync(directory, {recursive: true, force: true});
+        }
     };
     const arms = REFERENCE_STEPS_NS.map(step => run(step, true));
     const normalOp = run(25, false);

@@ -104,19 +104,26 @@ and winding-current measurements through 1.01 ms. Both adjacent refinement
 differences must remain within 10 uV and 1 nA for a stable-reference result.
 Unstable results remain evidence, not qualified goldens; the CLI exits 1.
 Full decks, hashes, solver version and original measurement output are retained.
-The child environment binds `NGSPICE_MEAS_PRECISION=15` as a supplemental
-batch setting, but interactive FIND can print through a hard-coded short
-format even with that setting. The authoritative values therefore come from
-the stored measurement vectors, copied to distinct scalar names and explicitly
-printed with `numdgt=15`. The parser selects only these names and requires at
-least twelve fractional scientific-notation digits. Raw short FIND output
-remains in the receipt but cannot silently pass the refinement comparison.
-See ngspice's [measurement implementation](https://github.com/ngspice/ngspice/blob/master/src/frontend/com_measure2.c)
-and [scalar printing implementation](https://github.com/ngspice/ngspice/blob/master/src/frontend/postcoms.c).
+The authoritative measurements bypass FIND entirely: direct transient voltage
+and current vectors are exported through `wrdata`, with one time scale,
+explicit vector names and `numdgt=15`. The parser requires three finite
+full-precision columns and strictly increasing times. A separately tested
+linear interpolation retains both original bracketing rows for each requested
+time, together with the original waveform hash and row count. No extrapolation,
+missing/duplicate time row, wrong vector authority or low-precision table is
+accepted. Solver output remains in the receipt. Each solver uses a fresh owned
+temporary directory, removed on every success/failure path.
+See ngspice's [wrdata command](https://nmg.gitlab.io/ngspice-manual/interactiveinterpreter/commands/wrdata_writesimpledata.html).
 CI38268219098 at f14713d2 stopped correctly on insufficient v0 precision;
 Harris38268219115 passed. This is a reference-harness failure, not measured
-reference instability or an engine fix. The forward scalar-vector repair
-requires fresh hosted qualification.
+reference instability or an engine fix. Its scalar-vector successor4d22bb12
+passed the numerical method job in CI38277122271, but independent raw audit
+found rounded FIND results were also stored rounded: e.g. raw1.957462e-02
+became printed1.957462000000000e-02. The decimal-length gate therefore had a
+false-positive padding hole. Those results are not qualified reference
+precision or instability evidence. The direct-vector repair removes FIND
+and adds actual nontrivial-value negatives against seven-digit rounding,
+not merely a decimal-length assertion. Fresh hosted qualification is required.
 An actual normal-OP negative control must differ from the zero-storage early
 collector voltage. Neither reference completion nor reference refinement alone
 constitutes engine agreement. Hosted numerical results are still pending.

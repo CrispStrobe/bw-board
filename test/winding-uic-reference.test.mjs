@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
-import {REFERENCE_TIMES_NS, windingReferenceDeck, parseReferenceMeasurements,
+import {REFERENCE_TIMES_NS, windingReferenceDeck, parseReferenceWaveform, sampleReferenceWaveform,
     refinementReport, runWindingUicReference, referenceProcessOptions,
     MEASUREMENT_PRECISION} from '../scripts/diagnose-winding-uic-reference.mjs';
 
@@ -12,8 +12,10 @@ test('reference model cards, zero IC and UIC are independent explicit authoritie
     assert.match(deck, /CP collector 0 12p IC=0/);
     assert.match(deck, /tran 25n 1.011m 0 25n uic/);
     assert.match(deck, /set numdgt=15/);
-    assert.match(deck, /meas tran raw_v0 FIND v\(collector\).*\nlet v0 = raw_v0\nprint v0/);
-    assert.match(deck, /meas tran raw_i0 FIND i\(LW\).*\nlet i0 = raw_i0\nprint i0/);
+    assert.match(deck, /let ref_voltage = v\(collector\)/);
+    assert.match(deck, /let ref_current = i\(LW\)/);
+    assert.match(deck, /set wr_singlescale\nset wr_vecnames\nwrdata reference.dat ref_voltage ref_current/);
+    assert.doesNotMatch(deck, /meas | FIND |raw_v|raw_i/);
     assert.match(deck, /\.model QM NPN\(IS=1e-14 BF=100 BR=1 VAF=100\)/);
     assert.match(deck, /\.model DM D\(IS=1e-12 N=1 RS=\.568\)/);
     assert.doesNotMatch(windingReferenceDeck(25, false), /IC=0| uic/);
@@ -21,18 +23,22 @@ test('reference model cards, zero IC and UIC are independent explicit authoritie
 });
 
 test('missing, duplicate, failed and unstable reference evidence cannot pass', () => {
-    const output = REFERENCE_TIMES_NS.map((_, i) =>
-        `v${i} = 1.000000000000000e+00\ni${i} = 2.000000000000000e-02`).join('\n');
-    const rows = parseReferenceMeasurements(output);
+    const header = 'time ref_voltage ref_current\n';
+    const zero = '0.000000000000000e+00 1.000000000000000e+00 2.000000000000000e-02';
+    const end = '2.000000000000000e-03 3.000000000000000e+00 4.000000000000000e-02';
+    const output = header + zero + '\n' + end;
+    const waveform = parseReferenceWaveform(output);
+    const rows = sampleReferenceWaveform(waveform);
     assert.equal(rows.length, 10);
-    assert.throws(() => parseReferenceMeasurements(output.replace(/^v0.*\n/, '')), /v0/);
-    assert.throws(() => parseReferenceMeasurements(output + '\nv0 = 1.000000000000000e+00'), /v0/);
-    assert.throws(() => parseReferenceMeasurements(output.replace('1.000000000000000e+00', '1.000000e+00')), /precision/);
-    // Raw FIND output remains in the receipt but cannot masquerade as the
-    // high-precision printed scalar selected by the parser.
-    assert.equal(parseReferenceMeasurements('raw_v0 = 1.000000e+00\n' + output).length, 10);
-    assert.throws(() => parseReferenceMeasurements(output.replace(/^v0.*\n/, 'raw_v0 = 1.000000e+00\n')), /v0/);
-    assert.throws(() => parseReferenceMeasurements(output, 'timestep too small'), /refused/);
+    assert.ok(Math.abs(rows[0].voltage - (1 + 1000 * 25e-9)) < 1e-15);
+    assert.equal(rows[0].bracket.left.raw, zero);
+    assert.equal(rows[0].bracket.right.raw, end);
+    assert.throws(() => parseReferenceWaveform(header + zero), /ordered/);
+    assert.throws(() => parseReferenceWaveform(output + '\n' + end), /ordered/);
+    assert.throws(() => parseReferenceWaveform(output.replace('1.000000000000000e+00', '1.000000e+00')), /precision/);
+    assert.throws(() => parseReferenceWaveform(output.replace('ref_current', 'ref_voltage')), /authority/);
+    assert.throws(() => parseReferenceWaveform(output, '', 'timestep too small'), /refused/);
+    assert.throws(() => sampleReferenceWaveform([{timeSec: 1}, {timeSec: 2}]), /outside/);
     assert.equal(refinementReport([rows, rows, rows]).stable, true);
     const shifted = rows.map(row => ({...row, voltage: row.voltage + .001}));
     assert.equal(refinementReport([rows, rows, shifted]).stable, false);
@@ -72,6 +78,13 @@ test('hosted live zero-storage reference characterizes refinement and rejects OP
     for (const arm of report.arms) {
         assert.equal(arm.zeroStorage, true);
         assert.ok(Math.abs(arm.measurements[0].voltage) < .1, 'zero-storage early collector control');
+        assert.ok(arm.waveformRows > 2);
+        // Padding a rounded FIND result cannot satisfy these actual-value
+        // negatives: this circuit's nontrivial values retain further digits.
+        const first = arm.measurements[0].voltage;
+        const biasCurrent = arm.measurements[1].current;
+        assert.notEqual(first, Number(first.toPrecision(7)), 'startup voltage is not padded seven-digit FIND');
+        assert.notEqual(biasCurrent, Number(biasCurrent.toPrecision(7)), 'bias current is not padded seven-digit FIND');
     }
     assert.ok(report.normalOp.measurements[0].voltage > 4.9, 'normal OP is a different initial capacitor state');
     assert.notEqual(report.arms[2].deckSha256, report.normalOp.deckSha256);

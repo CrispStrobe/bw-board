@@ -27,6 +27,14 @@ a hard-coded short output path. Forward deck repair prints distinct stored
 measurement scalars with numdgt=15; only those names are authoritative and
 raw short FIND lines are preserved but excluded. Precision bounds unchanged.
 Fresh qualification pending; do not classify this red as reference instability.
+Independent raw audit of numerical-green4d22bb12 found FIND stores rounded
+values too: scalar printing padded zeros and passed the length gate falsely.
+Those reference values are disowned. Forward direct-waveform wrdata repair
+removes FIND entirely, validates time/vector authority, retains original
+bracketing rows/hash and independently interpolates each requested time.
+Actual seven-digit-rounding negatives supplement syntax checks. Temporary
+solver directories are task-owned and restored/removed on every path.
+Three local pure controls pass; fresh actual qualification remains required.
 
 2026-10-12 winding error components — CLAIM, Codex bwcx.
 Branch lane/winding-error-components-20261012, exact base
