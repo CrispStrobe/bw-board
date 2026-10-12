@@ -3384,3 +3384,14 @@ exact-source, own-repository PR-only manufactured controls for the retained
 nine-role observer. Fixed dependencies and the disabled compiler remain
 unchanged. No actual tools, compiler, CPU, guest or performance execution;
 original hosted evidence and independent audit are required before credit.
+
+### Retained selected-role archive materialization — 2026-10-12
+
+Claimed: `scripts/i80386-cwsdpmi-retained-tool-materializer/`
+`{materialize.py,materialize-control.py,README.md}`. Privately compose the
+pinned observer; authenticate four fixed immutable archive byte inputs before
+bounded inventory parsing and exclusive retained-root writes. Materialize only
+the nine fixed roles with archive/source provenance joins. Synthetic controls
+are preparation only: full toolchain, implicit inputs, actual archive layout,
+compiler launch and guest/performance qualification remain separate gates.
+Held sources, production compiler disable, defaults and consumer pins stay fixed.
