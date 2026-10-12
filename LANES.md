@@ -1,5 +1,19 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-12 winding error components — CLAIM, Codex bwcx.
+Branch lane/winding-error-components-20261012, exact base
+f5be8c2566333f2213eb1b718db47dd80eccb8c3. Four evidence-only paths:
+LANES.md, scripts/diagnose-winding-error-components.mjs,
+test/winding-error-components.test.mjs and
+spec-updates/winding-precision-diagnostic.md. Isolated in-memory Board
+instrumentation records the dominant normalized endpoint-error component,
+signed full/half values and incoming storage history at the first floor
+failure, plus a bounded preceding rejection window. Preserve original caller,
+zero storage, source/device equations, precision profile and work authority.
+No production changes, tolerance/budget changes, pin or workflow edits.
+Hosted numerical execution only; genuine original-source routing and
+missing/duplicate-anchor negatives required before qualification.
+
 2026-10-12 winding Newton sensitivity — DONE candidate, Codex bwcx.
 Branch lane/winding-newton-sensitivity-20261012, exact base
 fda6d33af77fdf48f9edb60d14c8ad826dd0bc2d. Four evidence-only paths: this
