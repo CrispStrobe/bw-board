@@ -1,5 +1,20 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-12 finite winding precision diagnostic — CLAIMED, Codex bwcx.
+Branch lane/winding-precision-diagnostic-20261012, exact refreshed base
+86f585f32c1d75e3ea35e19e87f488a26be89f4f. Four evidence-only paths: this
+ledger, scripts/diagnose-winding-transient.mjs,
+test/winding-precision-diagnostic.test.mjs and
+spec-updates/winding-precision-diagnostic.md. Fresh hosted reproduction of the
+zero-storage precision falling-edge failure, compared with separately labeled
+public time-zero operating-point and DC turn-off controls. CLI retains initial
+storage, exact public bounded receipts, work counts, failure latches and
+provisional observations; failed captures exit nonzero, not qualified waveforms.
+Preserve 20000/60001/200 whole-capture ceilings, precision-v1, device equations,
+source corners, probe load and original zero-storage initialization. No solver,
+workflow, CPU, consumer pin, GUI, deployment or oracle-agreement claim.
+Canonical remote claim precedes implementation; runtime diagnosis stays hosted.
+
 2026-10-11 transient floor-step ringing and reset controller — DONE candidate, Claude Code.
 Branch fix/reset-transient-controller-20261011, base current master. Cause of
 Lite's intermittent green-flag failure on the 54-motor-driver bench: after a
