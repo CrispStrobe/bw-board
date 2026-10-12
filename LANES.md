@@ -3375,3 +3375,12 @@ Claimed `scripts/i80386-owned-workspace-source-controls/{admit.py,README.md}` an
 ### 386 retained fixed-role tool observer — 2026-10-12
 
 Claimed `scripts/i80386-cwsdpmi-retained-tool-observer/{observer.py,observer-control.py,README.md}` on `lane/386-retained-tool-observer-20261012`. Parent-only source-bound factory observes the nine fixed tool roles through the private retained workspace tool descriptor and writes bounded internally issued complete or partial receipts. No root pathname reopening, caller descriptor/pin/receipt/provision callback, tool execution or compiler enable. Manufactured filesystem controls only; reserve per-role and aggregate byte budgets before content reads, preserve original failures and uncertain cleanup, distinguish ordinary diagnostic refusal from reentry cleanup-only, and retain all authority/guest/performance refusals. Existing units and original hosted receipts remain unchanged.
+
+### Retained tool observer hosted source controls — 2026-10-12
+
+Claimed: `scripts/i80386-retained-tool-source-controls/{admit.py,README.md}`
+and `.github/workflows/i80386-retained-tool-source-controls.yml`. Prepare
+exact-source, own-repository PR-only manufactured controls for the retained
+nine-role observer. Fixed dependencies and the disabled compiler remain
+unchanged. No actual tools, compiler, CPU, guest or performance execution;
+original hosted evidence and independent audit are required before credit.
