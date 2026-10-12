@@ -820,3 +820,34 @@ The ordered follow-up tasks are:
    separately named compiler profile. Then compile the owned free DPMI client and
    qualify its observable service result in an independent oracle and the AT guest.
    Compilation alone does not qualify DPMI execution, applications or RTx.
+
+   The next source slice should provision a fixed required tool tree without
+   enabling compilation. Historical inventory and compiler plans identify `cc1`
+   and `collect2` beyond the selected nine. The reported `cc1` extent is
+   32,316,120 bytes, exceeding the current 16 MiB per-file and actual-process
+   write limits. This requires a separately versioned resource profile, not a
+   change to the selected-nine limits. The reported full inventory contains
+   1,196 files, 78 directories and 13 hard-link aliases; that inventory does not
+   establish that every file is needed by the owned C client.
+
+   A fresh implementation must satisfy these acceptance criteria:
+
+   - Freeze exact required paths, kinds, extents and hashes, including executable
+     helpers and transitive header/runtime inputs. Planning prefixes are not an
+     open admission rule. Authenticate all four fixed archives before parsing;
+     normalized inventory does not prove raw GNU-header compatibility.
+   - Define alias identity explicitly. The historical compiler resolver uses
+     `samefile`; omitted or copied aliases cannot qualify that relationship.
+     Any physical-link policy must account for changed link counts and preserve
+     the existing canonical nine-file observation profile.
+   - Calculate maximum file, aggregate retained-tree, memory and write budgets
+     from the fixed required manifest. Test missing/extra members, ancestor
+     conflicts, wrong hashes/extents, over-budget writes and partial cleanup.
+   - Retain required notices byte-for-byte, including formfeeds and notices
+     larger than the current 32 KiB notice cap. Omitted/hash-only notice records
+     do not establish complete notice retention or redistribution permission.
+   - Keep the compiler disabled in this provisioning slice. A later separately
+     reviewed compiler profile needs input/source leases, closed environment and
+     helper/host-loader delegation, raw output-format and media joins, independent
+     readers and launch gates. Qualify the free client in an independent DPMI
+     oracle and the AT guest after compilation; report those outcomes separately.
