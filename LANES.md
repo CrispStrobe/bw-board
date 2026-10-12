@@ -1,5 +1,19 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-12 bounded full-tree packet source preparation — CLAIM, Codex x86.
+Branch lane/386-full-tree-packet-source-20261012, exact base
+d16f0dd4fd84a210d59a2a55c87c235ef40c2af2. Owns this row,
+scripts/i80386-full-tree-actual-packet/ and
+.github/workflows/i80386-full-tree-actual-packet.yml only. Prepare a bounded,
+one-shot text packet writer and manufactured controls, with declared stage-specific
+partial role sets, immutable admitted payloads, exclusive outputs and first-failure
+retention. Event/source/report/status/log consistency cannot authenticate an
+actual job, admit the future complete source graph, or qualify a compiler/guest.
+No actual acquisitions, provisioning, runtime execution, performance measurement,
+consumer pins or unrelated lane changes. Independent source review and bounded
+synthetic hosted checks precede integration; actual executor/resource/source/job
+admission remains separate and disabled.
+
 2026-10-12 winding engine/reference comparison — CLAIM, Codex bwcx.
 Branch lane/winding-engine-reference-comparison-20261012, exact base
 23f1e69ccf584738965e9e5fb36582d1a7a792b7. Five evidence-only paths:
