@@ -3479,3 +3479,16 @@ using bounded fixed reason, header ordinal/offset/type and magic class; no membe
 names, raw headers or bodies. Retain parser acceptance, four input pins, alias
 inventory, compiler refusal, defaults and consumer pins. No retry or relabel of
 the failed head; any future actual attempt needs separate source qualification.
+
+### Bounded GNU long-name materialization — 2026-10-12
+
+Claimed: new `scripts/i80386-cwsdpmi-gnu-longname-materializer/` and scoped
+runner/acquisition/hosted propagation plus its existing workflow. Actual
+run38276900168 reported GNU type L at header102/decoded offset5634048; preserve
+that failed original and never retry its head. Add bounded one-shot GNU long-name
+metadata for the immediately following ordinary member, retaining path policy,
+checksums, budgets, authenticated input pins, selected hashes and thirteen fixed
+hard-link mappings. Do not admit GNU K, PAX, symbolic links or general extraction.
+Hold prior modules unchanged and retain disabled compiler/defaults/consumer pins.
+Manufactured positive/adversarial controls and independent review precede any
+separately qualified actual materialization.
