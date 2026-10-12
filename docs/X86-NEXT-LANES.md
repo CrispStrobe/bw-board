@@ -843,14 +843,17 @@ The ordered follow-up tasks are:
    1,196 files, 78 directories and 13 hard-link aliases; that inventory does not
    establish that every file is needed by the owned C client.
 
-   Source preparation is now split into two focused draft PRs:
-   [standalone writer PR526](https://github.com/CrispStrobe/bw-board/pull/526)
-   and [authenticated TAR bridge PR527](https://github.com/CrispStrobe/bw-board/pull/527).
+   Source preparation is split into focused PRs:
+   [standalone writer PR526](https://github.com/CrispStrobe/bw-board/pull/526),
+   [authenticated TAR bridge PR527](https://github.com/CrispStrobe/bw-board/pull/527),
+   and [selected-notice connection PR529](https://github.com/CrispStrobe/bw-board/pull/529).
    The writer's [20 manufactured controls passed on GitHub](https://github.com/CrispStrobe/bw-board/actions/runs/38298598139);
-   the bridge passed 25 manufactured controls locally and awaits hosted checks.
-   These prepare source policies only: neither has provisioned the actual full
-   tree or enabled compilation. PR527 is stacked on PR526; after the parent
-   lands, refresh and retarget the bridge, then check its resulting exact head.
+   the bridge's [25 manufactured controls passed on GitHub](https://github.com/CrispStrobe/bw-board/actions/runs/38299860676),
+   as did the notice connection's [20 extractor and 15 coordinator controls](https://github.com/CrispStrobe/bw-board/actions/runs/38306188271).
+   These prepare source policies only: none has provisioned the actual full
+   tree or enabled compilation. PR526 has landed; PR527 was refreshed onto main
+   and needs its new exact-head checks. PR529 follows the bridge; after that parent
+   lands, refresh and retarget the connection, then check its resulting exact head.
    Do not adopt the older broad source stack to integrate these small modules.
 
    Continue by validating the closed DJGPP ZIP source joins and the three
