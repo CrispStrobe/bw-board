@@ -17,6 +17,10 @@ refinement controls reject missing, duplicate, failed and shifted reference
 evidence. Live reference is registered in the mandatory ngspice census.
 Numerical outcome and qualification remain pending; unstable-reference method
 results do not count as waveform agreement or a corrected engine.
+Forward source review found `numdgt` does not own measurement formatting.
+Explicit child NGSPICE_MEAS_PRECISION=15 and low-precision-output refusal now
+protect refinement from rounded values; pure ambient-override/truncation
+controls pass. Earlier 46709459 receipts are superseded, not qualification.
 
 2026-10-12 winding error components — CLAIM, Codex bwcx.
 Branch lane/winding-error-components-20261012, exact base

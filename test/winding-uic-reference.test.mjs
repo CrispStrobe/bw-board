@@ -3,7 +3,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {REFERENCE_TIMES_NS, windingReferenceDeck, parseReferenceMeasurements,
-    refinementReport, runWindingUicReference} from '../scripts/diagnose-winding-uic-reference.mjs';
+    refinementReport, runWindingUicReference, referenceProcessOptions,
+    MEASUREMENT_PRECISION} from '../scripts/diagnose-winding-uic-reference.mjs';
 
 test('reference model cards, zero IC and UIC are independent explicit authorities', () => {
     const deck = windingReferenceDeck(25);
@@ -17,11 +18,13 @@ test('reference model cards, zero IC and UIC are independent explicit authoritie
 });
 
 test('missing, duplicate, failed and unstable reference evidence cannot pass', () => {
-    const output = REFERENCE_TIMES_NS.map((_, i) => `v${i} = 1\ni${i} = 0.02`).join('\n');
+    const output = REFERENCE_TIMES_NS.map((_, i) =>
+        `v${i} = 1.000000000000000e+00\ni${i} = 2.000000000000000e-02`).join('\n');
     const rows = parseReferenceMeasurements(output);
     assert.equal(rows.length, 10);
-    assert.throws(() => parseReferenceMeasurements(output.replace('v0 = 1', '')), /v0/);
-    assert.throws(() => parseReferenceMeasurements(output + '\nv0 = 1'), /v0/);
+    assert.throws(() => parseReferenceMeasurements(output.replace(/^v0.*\n/, '')), /v0/);
+    assert.throws(() => parseReferenceMeasurements(output + '\nv0 = 1.000000000000000e+00'), /v0/);
+    assert.throws(() => parseReferenceMeasurements(output.replace('1.000000000000000e+00', '1.000000e+00')), /precision/);
     assert.throws(() => parseReferenceMeasurements(output, 'timestep too small'), /refused/);
     assert.equal(refinementReport([rows, rows, rows]).stable, true);
     const shifted = rows.map(row => ({...row, voltage: row.voltage + .001}));
@@ -29,6 +32,23 @@ test('missing, duplicate, failed and unstable reference evidence cannot pass', (
     assert.throws(() => refinementReport([rows, rows]), /three complete/);
     const misaligned = rows.map(row => ({...row, timeNs: row.timeNs + 1}));
     assert.throws(() => refinementReport([rows, rows, misaligned]), /aligned/);
+});
+
+test('measurement precision is bound to the actual child process, not table formatting', () => {
+    const previous = process.env.NGSPICE_MEAS_PRECISION;
+    try {
+        process.env.NGSPICE_MEAS_PRECISION = '5';
+        const options = referenceProcessOptions('independent deck');
+        assert.equal(options.env.NGSPICE_MEAS_PRECISION, '15');
+        assert.equal(options.input, 'independent deck');
+        assert.equal(MEASUREMENT_PRECISION, 15);
+        // An ambient-precision mutant must fail this bound authority oracle.
+        assert.notEqual({...options, env: {...process.env}}.env.NGSPICE_MEAS_PRECISION, '15');
+        assert.equal(process.env.NGSPICE_MEAS_PRECISION, '5');
+    } finally {
+        if (previous === undefined) delete process.env.NGSPICE_MEAS_PRECISION;
+        else process.env.NGSPICE_MEAS_PRECISION = previous;
+    }
 });
 
 const ngspice = process.env.NGSPICE || 'ngspice';
@@ -39,6 +59,7 @@ test('hosted live zero-storage reference characterizes refinement and rejects OP
         return;
     }
     const report = runWindingUicReference(ngspice);
+    assert.equal(report.measurementPrecision, 15);
     assert.equal(report.engineAgreement, 'not-tested');
     assert.equal(report.arms.length, 3);
     for (const arm of report.arms) {

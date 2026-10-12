@@ -8,6 +8,13 @@ export const REFERENCE_TIMES_NS = Object.freeze([25, 500000, 1000000, 1001200,
     1002000, 1002100, 1002500, 1003000, 1005000, 1010000]);
 export const REFERENCE_STEPS_NS = Object.freeze([100, 50, 25]);
 export const REFINEMENT_BOUNDS = Object.freeze({voltage: 1e-5, current: 1e-9});
+export const MEASUREMENT_PRECISION = 15;
+
+export function referenceProcessOptions (deck) {
+    return {input: deck, encoding: 'utf8', timeout: 120000, maxBuffer: 1048576,
+        // `numdgt` controls tables, not `meas`: force its separate authority.
+        env: {...process.env, NGSPICE_MEAS_PRECISION: String(MEASUREMENT_PRECISION)}};
+}
 
 export function windingReferenceDeck (maxStepNs, zeroStorage = true) {
     if (!REFERENCE_STEPS_NS.includes(maxStepNs)) throw new Error('Unreviewed reference step');
@@ -39,6 +46,9 @@ export function parseReferenceMeasurements (stdout, stderr = '') {
         if (matches.length !== 1 || !Number.isFinite(Number(matches[0][1]))) {
             throw new Error(`Expected one finite reference measurement ${name}`);
         }
+        if (!/^[+-]?\d+\.\d{12,}[eE][+-]?\d+$/.test(matches[0][1])) {
+            throw new Error(`Insufficient printed measurement precision for ${name}`);
+        }
         return Number(matches[0][1]);
     };
     return REFERENCE_TIMES_NS.map((timeNs, i) => ({timeNs, voltage: scalar(`v${i}`), current: scalar(`i${i}`)}));
@@ -63,8 +73,7 @@ export function runWindingUicReference (executable = process.env.NGSPICE || 'ngs
     if (version.error || version.status !== 0) throw new Error('Independent ngspice executable unavailable');
     const run = (maxStepNs, zeroStorage) => {
         const deck = windingReferenceDeck(maxStepNs, zeroStorage);
-        const process = spawnSync(executable, ['-n', '-b'], {input: deck, encoding: 'utf8',
-            timeout: 120000, maxBuffer: 1048576});
+        const process = spawnSync(executable, ['-n', '-b'], referenceProcessOptions(deck));
         if (process.error || process.status !== 0) throw new Error(`Reference process failed: ${process.error || process.stderr}`);
         return {maxStepNs, zeroStorage, deck, deckSha256: createHash('sha256').update(deck).digest('hex'),
             measurements: parseReferenceMeasurements(process.stdout, process.stderr),
@@ -73,7 +82,8 @@ export function runWindingUicReference (executable = process.env.NGSPICE || 'ngs
     const arms = REFERENCE_STEPS_NS.map(step => run(step, true));
     const normalOp = run(25, false);
     return {schema: 'winding-uic-reference-v1', independentReferenceOnly: true,
-        engineAgreement: 'not-tested', version: version.stdout + version.stderr,
+        engineAgreement: 'not-tested', measurementPrecision: MEASUREMENT_PRECISION,
+        version: version.stdout + version.stderr,
         refinement: refinementReport(arms.map(arm => arm.measurements)), arms, normalOp};
 }
 

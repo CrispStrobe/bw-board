@@ -104,6 +104,11 @@ and winding-current measurements through 1.01 ms. Both adjacent refinement
 differences must remain within 10 uV and 1 nA for a stable-reference result.
 Unstable results remain evidence, not qualified goldens; the CLI exits 1.
 Full decks, hashes, solver version and original measurement output are retained.
+The child environment explicitly binds `NGSPICE_MEAS_PRECISION=15`; `numdgt`
+alone only controls table printing. Every parsed measurement must retain at
+least twelve fractional scientific-notation digits, so rounded scalar output
+cannot silently pass the tight refinement comparison. This follows ngspice's
+[measurement precision implementation](https://github.com/ngspice/ngspice/blob/master/src/frontend/com_measure2.c).
 An actual normal-OP negative control must differ from the zero-storage early
 collector voltage. Neither reference completion nor reference refinement alone
 constitutes engine agreement. Hosted numerical results are still pending.
