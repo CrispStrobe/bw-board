@@ -707,7 +707,7 @@ The ordered follow-up tasks are:
    original errors survive cleanup failures. An absent report remains absent.
    Inputs stay private in memory, with no archive staging or upload. The
    observed deadlines and byte limits are not hard process-memory/time guarantees.
-   The first actual attempt failed before materialization. [PR522](https://github.com/CrispStrobe/bw-board/pull/522),
+   The first actual attempt failed before workspace creation or selected writes. [PR522](https://github.com/CrispStrobe/bw-board/pull/522),
    exact source `b281e779266f6d225d91a88750c85a36e858042e`, prepares the hosted
    profile in `scripts/i80386-fixed-archive-materialization-hosted/` and
    `.github/workflows/i80386-fixed-archive-materialization.yml`. Coordinator and
@@ -738,7 +738,18 @@ The ordered follow-up tasks are:
    ordinal, decoded offset, type byte and magic class without member names or
    archive bodies, preserving all acceptance rules and input pins. A future
    actual attempt requires separate reviewed source, frozen reader and one-shot
-   launch state. Review corrected a missing final report retaining completion
+   launch state. [PR524](https://github.com/CrispStrobe/bw-board/pull/524), source
+   `e5cbd37186aa9bf834be9fa1a6b4a9011e1acc69`, now prepares that diagnostic in
+   `scripts/i80386-cwsdpmi-archive-refusal-diagnostic/` with v2 propagation and
+   35-role source admission. Coordinator and independent source reviews passed
+   30 combined manufactured controls, 22 runner controls and 20 admission/executor
+   controls. TAR logic matches the held parser after removing diagnostic
+   bookkeeping. Inherited name/canonical/BZ2 refusals remain unannotated. Exact-head
+   hosted qualification and original-artifact audit are pending; the distinct
+   `x86-fixed-archive-refusal-diagnostic` label remains unapplied. Next: audit the
+   automatic 30-control original, freeze a new reader and one-shot guard for this
+   source and event, then admit one bounded actual diagnostic. Preserve any refusal
+   before proposing a separate parser compatibility change. Review corrected a missing final report retaining completion
    and a file limit too small for
    selected tools. The actual job permits 16 MiB file writes and retains smaller
    independent JSON caps; its prospective reader admits at most 512 KiB of ZIP
