@@ -745,10 +745,18 @@ The ordered follow-up tasks are:
    30 combined manufactured controls, 22 runner controls and 20 admission/executor
    controls. TAR logic matches the held parser after removing diagnostic
    bookkeeping. Inherited name/canonical/BZ2 refusals remain unannotated. Exact-head
-   hosted qualification and original-artifact audit are pending; the distinct
-   `x86-fixed-archive-refusal-diagnostic` label remains unapplied. Next: audit the
-   automatic 30-control original, freeze a new reader and one-shot guard for this
-   source and event, then admit one bounded actual diagnostic. Preserve any refusal
+   hosted checks are still pending. The automatic
+   [run38266000394](https://github.com/CrispStrobe/bw-board/actions/runs/38266000394)
+   passed its 30 controls; coordinator frozen-reader, official-job and independent
+   raw-original/Git audits passed the
+   [five-report original](receipts/2026-10-12-archive-refusal-diagnostic-controls/README.md),
+   binding all 35 source roles. The actual job stayed skipped and unarmed.
+   New control/actual readers and a separate one-shot guard passed manufactured
+   review; their final launch bindings remain unsealed pending all enabled
+   exact-head checks. The distinct `x86-fixed-archive-refusal-diagnostic` label
+   remains unapplied. Next: complete those checks, seal the independently reviewed
+   bindings, refresh source and complete official state, then admit one bounded
+   actual diagnostic. Preserve any refusal
    before proposing a separate parser compatibility change. Review corrected a missing final report retaining completion
    and a file limit too small for
    selected tools. The actual job permits 16 MiB file writes and retains smaller
