@@ -610,7 +610,8 @@ authenticates four fixed immutable archive byte inputs before parsing or workspa
 preparation, inventories a bounded strict TAR/ZIP subset, joins four runtime
 roles to their source archive and writes only the nine selected files through
 retained directory handles. All 31 manufactured controls passed with independent
-review; actual archives and hosted exact-source controls remain unqualified.
+review. The original hosted controls also passed; actual archives remain
+unqualified.
 
 The parser rejects unsafe or conflicting names, unsupported members, truncated
 or concatenated streams and inventory-count drift. Selected extents are reserved
@@ -622,16 +623,44 @@ notices or redistribution clearance. Immutable input bytes are not filesystem
 leases; nine selected files are not a complete toolchain. Production compilation
 remains disabled, and this source checkpoint changes no defaults or consumer pins.
 
+[PR517](https://github.com/CrispStrobe/bw-board/pull/517), exact source
+`7fcfec51cc4fd25ee5959e54ae4c99a4c3480a7e`, adds the separate
+`scripts/i80386-cwsdpmi-fixed-alias-materializer/` derivative. Its fixed table
+admits exactly thirteen reported alias headers only after eleven ordinary
+file targets match pinned extents/hashes. No physical links or alias files are
+created. Root and independent reviews passed all 42 manufactured controls,
+including per-alias omissions, duplicates and changed targets; independent
+alias-parent and self-target adversaries also refused before preparation.
+The original report supplies normalized inventory facts, with no raw archive
+body or proof of header spelling. Actual archive compatibility, hosted controls
+for this derivative and complete toolchain provisioning remain unqualified.
+
 The ordered follow-up tasks are:
 
-1. **Hosted materializer controls.** Add a separate bounded own-repository,
-   exact-head, attempt-one source-control profile. Freeze the eighteen unit paths
+1. **Hosted materializer controls.** The profile is published in
+   [PR516](https://github.com/CrispStrobe/bw-board/pull/516), exact head
+   `5b670bee8a8f2da149f8ab30e825c13370d56762`, under
+   `scripts/i80386-retained-materializer-source-controls/` and its matching
+   workflow. Nine manufactured admission controls and independent review passed;
+   the sole attempt-one [run38215450971](https://github.com/CrispStrobe/bw-board/actions/runs/38215450971)
+   passed all 31 controls. The [original receipt](receipts/2026-10-12-retained-materializer-controls/README.md)
+   retains four byte-exact reports and official origins; frozen reader and job
+   admission and independent original-byte review passed. It supplies a bounded own-repository,
+   exact-head, attempt-one source-control profile. It freezes the eighteen unit paths
    (creator, routes, writer, workspace composition, observer and materializer)
-   plus the new profile paths; run only the 31 manufactured controls. Independently
+   plus three profile paths; it runs only the 31 manufactured controls. Independently
    freeze the original-result reader before acquisition. Accept only the original
    complete transcript, exact Git/live role hashes, closed text artifact and
    successful official job steps. Preserve earlier observer receipts unchanged.
-2. **Actual archive materialization only.** Qualify the strict parser against the
+2. **Actual archive materialization only.** First close the known alias blocker:
+   the [retained acquisition inventory](receipts/2026-10-12-tool-archive-alias-inventory/README.md)
+   reports thirteen hard-link aliases, rejected by the current strict parser.
+   PR517 supplies the fixed-alias source revision. Its acceptance must be qualified
+   against actual inputs before it can admit exactly those metadata rows and
+   their already observed ordinary targets with pinned extents/hashes, create
+   no links or alias outputs, and preserve all nine selected files as single-link
+   files. Reject unexpected, missing, repeated or changed alias/target rows.
+   Then qualify the revised parser against the
    four pinned public tool/source archives without invoking any executable. Reuse
    retained original inventories where available; new qualification must bind its
    own source and inputs. Record actual member topology, selected output hashes,
@@ -645,4 +674,4 @@ The ordered follow-up tasks are:
    output formats, media and independent reader/launch gates before enabling a
    separately named compiler profile. Then compile the owned free DPMI client and
    qualify its observable service result in an independent oracle and the AT guest.
-   Compilation alone does not qualify DPMI execution, games, Windows or RTx.
+   Compilation alone does not qualify DPMI execution, applications or RTx.
