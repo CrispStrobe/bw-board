@@ -63,3 +63,29 @@ unsupported assumption with independent series KVL: current equals the
 5 V supply minus collector bias, divided by the 10 ohm winding resistance.
 No capture, source or device equation is changed to make that assertion pass.
 Fresh exact-head qualification remains required.
+
+## Isolated Newton sensitivity hypothesis
+
+The forward diagnostic explores one possible source of the step-independent
+full/half disagreement: nonlinear Newton convergence uses a fixed 1e-6 threshold,
+whereas the precision controller applies tighter endpoint voltage/error scales.
+This is a hypothesis, not an established cause.
+
+```sh
+node scripts/diagnose-winding-newton-sensitivity.mjs
+```
+
+Two isolated in-memory module arms use the same zero-storage precision caller:
+the unchanged 1e-6 Newton threshold and one experimental 1e-10 threshold.
+Actual source files are never written; original source hashes and the edited
+MNA hash accompany each public capture. Both Board solver imports must bind to
+the same isolated MNA arm. All other modules, equations, integration policy,
+sample partition, initialization and whole-capture limits remain unchanged.
+Missing or duplicated anchors refuse the experiment. There is no arbitrary
+user-selectable tolerance knob and no production policy change.
+
+Hosted method checks accept either actual completion or an honestly preserved
+refusal for the experimental arm. A green method test is **not** evidence of
+improvement. The CLI remains nonzero while either capture fails. Completion,
+if observed, still requires independently refined waveform/residual agreement
+and broader qualification before any solver repair is proposed.

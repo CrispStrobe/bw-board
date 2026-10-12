@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-12 winding Newton sensitivity — CLAIMED, Codex bwcx.
+2026-10-12 winding Newton sensitivity — DONE candidate, Codex bwcx.
 Branch lane/winding-newton-sensitivity-20261012, exact base
 fda6d33af77fdf48f9edb60d14c8ad826dd0bc2d. Four evidence-only paths: this
 ledger, scripts/diagnose-winding-newton-sensitivity.mjs,
@@ -14,6 +14,12 @@ arbitrary tolerance knob, default/profile/pin/workflow change or gain claim.
 Preserve raw source hashes and originals; fail on changed/missing anchors.
 Method tests report actual completion or refusal without requiring improvement.
 Hosted runtime only; a successful sensitivity method is not solver qualification.
+Canonical claim4e1f2572 preceded implementation. Three local pure preparation
+controls pass, including exact embedded MNA-selector/source-byte proofs and
+an executable original-module-routing mutant. The unchanged baseline source
+is byte-identical before import rebinding. Both arms retain original source
+hashes, and runtime checks reject any changed on-disk source. No local transient
+capture ran. Hosted fixed-arm receipts, CI/Harris and landing remain pending.
 
 2026-10-12 finite winding precision diagnostic — DONE, Codex bwcx.
 Branch lane/winding-precision-diagnostic-20261012, exact refreshed base
