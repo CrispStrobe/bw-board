@@ -3115,6 +3115,15 @@ was still wrong by two symlinks. The byte total is what caught it.
   1,348 files modified in 7 days; it was cloned on the 3rd, so *every* file is
   recent. Cloning is not editing.
 
+## OPERATIONAL — never shallow-fetch in a bw-board worktree (2026-10-12)
+
+Every bw-board worktree shares ONE `.git` (`/mnt/volume1/code/bw-board`). A `git fetch --depth …` /
+`--deepen` / `--shallow-*` run in ANY worktree writes `.git/shallow` for ALL of them: the cut commits
+look like root commits, ahead/behind counts go wrong (4222/129 on 2026-10-12) and merges across the cut
+fail with false add/add conflicts. Use a plain `git fetch origin`; shallow only in a separate clone.
+On the shared VPS an hourly job (`~/bin/repair-shallow.sh`, log `~/.cache/repair-shallow.log`) repairs
+a shared repo with `git fetch --unshallow`; Lite carries the same note (Lite LANES.md, #686).
+
 ## OPERATIONAL — the box, 2026-09-05
 
 **Written here because cross-session sends are FAILING.** Three warnings to
