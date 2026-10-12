@@ -3404,3 +3404,14 @@ Freeze eighteen dependency/observer/materializer source roles and the three
 profile roles; run only the 31 manufactured controls in a bounded own-PR
 exact-head attempt-one job. Preserve original artifacts for independent audit.
 No actual archives, tools, compiler, guest, defaults or consumer pin changes.
+
+### Fixed metadata-alias materialization revision — 2026-10-12
+
+Claimed: `scripts/i80386-cwsdpmi-fixed-alias-materializer/`
+`{materialize.py,materialize-control.py,README.md}`. Privately load the frozen
+selected-role materializer and admit only the thirteen reported tool-archive
+hard-link metadata aliases against eleven already observed ordinary targets
+with fixed extents/hashes. Create no links or alias outputs; retain the nine
+selected single-link outputs. Preserve all archive/input/lifecycle bounds and
+source provenance. Actual raw header compatibility, full toolchain provisioning,
+compiler, guest and performance results remain unqualified.
