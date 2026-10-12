@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-12 finite winding precision diagnostic — CLAIMED, Codex bwcx.
+2026-10-12 finite winding precision diagnostic — DONE candidate, Codex bwcx.
 Branch lane/winding-precision-diagnostic-20261012, exact refreshed base
 86f585f32c1d75e3ea35e19e87f488a26be89f4f. Four evidence-only paths: this
 ledger, scripts/diagnose-winding-transient.mjs,
@@ -14,6 +14,14 @@ Preserve 20000/60001/200 whole-capture ceilings, precision-v1, device equations,
 source corners, probe load and original zero-storage initialization. No solver,
 workflow, CPU, consumer pin, GUI, deployment or oracle-agreement claim.
 Canonical remote claim precedes implementation; runtime diagnosis stays hosted.
+Claim8d3218af preceded implementation. CLI emits public status/receipt/storage
+and provisional samples, with an actual nonzero process exit for failed capture.
+Hosted regressions exercise that real CLI and both separately labeled OP controls;
+their TAP diagnostics retain measured counters and failures. Two local pure
+argument/serialization/exit-mutation controls pass, syntax/whitespace checks pass.
+No transient capture or numerical oracle ran locally. Exact source diagnosis,
+CI/Harris qualification and landing remain pending; a green failure-preservation
+test must not be credited as successful zero-storage winding simulation.
 
 2026-10-11 transient floor-step ringing and reset controller — DONE candidate, Claude Code.
 Branch fix/reset-transient-controller-20261011, base current master. Cause of
