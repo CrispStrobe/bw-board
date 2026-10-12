@@ -1,5 +1,18 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-12 winding UIC reference — CLAIM, Codex bwcx.
+Branch lane/winding-uic-reference-20261012, exact base
+e6b9bc868c648684c8481aa50510d93990d26273. Five evidence-only paths:
+LANES.md, scripts/diagnose-winding-uic-reference.mjs,
+test/winding-uic-reference.test.mjs, scripts/oracle-census.mjs and
+spec-updates/winding-precision-diagnostic.md. Independent authored SPICE
+deck with explicit zero IC/UIC, matched thermal/device/load parameters,
+fixed 100/50/25 ns refinements through 1.01 ms and actual normal-OP negative
+control. CLI reports per-time refinement deltas and fails if predefined
+reference bounds are unmet; method validity is not engine agreement.
+No engine/exporter dependency, production/pin/workflow edits or local SPICE
+execution. Runtime qualification hosted; preserve unstable reference results.
+
 2026-10-12 winding error components — CLAIM, Codex bwcx.
 Branch lane/winding-error-components-20261012, exact base
 f5be8c2566333f2213eb1b718db47dd80eccb8c3. Four evidence-only paths:
