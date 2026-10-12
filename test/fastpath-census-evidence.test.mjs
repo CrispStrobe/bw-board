@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
-import {resolve} from 'node:path';
+import {execFileSync} from 'node:child_process';
 import {validateCensus} from '../scripts/lib/fastpath-census-receipt.mjs';
 
 const archive = new URL('../docs/receipts/2026-10-02-wasm-fastpath-census/', import.meta.url);
@@ -12,6 +12,17 @@ const bytes = path => readFileSync(new URL(path, archive));
 const json = path => JSON.parse(bytes(path));
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const source = '16c501c0506d4bde312a04fc4f9d4ae5f8e4b2ec';
+/**
+ * The bw-board commit that archived this receipt (4c468e24). The receipt's
+ * `files` are the tool and adapter sources AS THEY WERE when it was measured,
+ * so they are checked against that commit, not the working tree: hashing the
+ * live tree made every later edit of src/labwired-{adapter,bridge,chips}.js
+ * red here, freezing the labwired tier to keep a 2026-10-02 receipt green.
+ * ci.yml fetches this commit (depth 1) so the check runs on CI.
+ */
+const archivedAt = '4c468e24833d59bebeae2486593df887289f29a9';
+const archivedBytes = path => execFileSync('git', ['show', `${archivedAt}:${path}`],
+    {cwd: repo, maxBuffer: 64 << 20});
 
 test('census archive preserves all manifest files and reversible originals', () => {
     const manifest = json('manifest.json');
@@ -48,7 +59,7 @@ test('all twelve actual windows have exact accounting and repeat identically', (
         assert.equal(run.warmupCycles, 200_000);
         assert.equal(run.windowCycles, 2_000_000);
         for (const [path, declared] of Object.entries(run.files)) {
-            assert.equal(hash(readFileSync(resolve(repo, path))), declared, path);
+            assert.equal(hash(archivedBytes(path)), declared, `${path} at ${archivedAt}`);
         }
         assert.deepEqual(Object.keys(run.workloads).sort(), ['gpio', 'ram']);
         for (const [name, result] of Object.entries(run.workloads)) {
