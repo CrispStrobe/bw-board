@@ -763,14 +763,23 @@ The ordered follow-up tasks are:
    decoded offset 5,634,048; its type is rejected independently of mode. Input
    archive bodies were not retained, so this is not an independent header rehash.
    No workspace, selected write or observation was reported. Do not relabel,
-   rerun or dispatch this consumed head. Next: implement and review a bounded
-   GNU `L` long-name metadata parser in
-   `scripts/i80386-cwsdpmi-gnu-longname-materializer/`, then qualify a separately
-   admitted source revision. Preserve the four input pins, selected nine roles,
-   fixed thirteen hard-link mappings, path rules and archive budgets. Reject
-   orphan/repeated metadata, unsafe names, GNU `K`, PAX and symlinks; add
-   manufactured boundary and refusal controls before a new frozen-reader and
-   one-shot launch review. No actual compatibility is qualified yet. Review corrected a missing final report retaining completion
+   rerun or dispatch this consumed head. The bounded GNU `L` derivative is now
+   published in [PR525](https://github.com/CrispStrobe/bw-board/pull/525), source
+   `c9a22a1b173aa5f2fc41f8edf4a97a8fbfab5cc2`, in
+   `scripts/i80386-cwsdpmi-gnu-longname-materializer/`. Coordinator and independent
+   reviews passed 46 combined manufactured controls, 22 runner controls and 20
+   admission/executor controls, plus two independent counter/pending adversaries.
+   All 34 fixed hashes matched; v3 source admission binds 38 roles. Input pins,
+   selected nine roles, fixed thirteen hard-link mappings and held parsers remain
+   unchanged. The subset requires an empty following prefix and short field equal
+   to the pending name's first 100 bytes; this is a deliberate stricter admission
+   rule, not a general GNU requirement or an observation of the next real header.
+   Orphan/repeated metadata, unsafe names, GNU `K`, PAX and symlinks still refuse.
+   Next: finish every enabled exact-head hosted check; freeze new v3 control and
+   actual original readers and review their manufactured adversaries; bind complete
+   official history and a separate one-shot launch guard before any real attempt.
+   The new actual label remains unapplied. Preserve both predecessor negative
+   originals and consumed launch states. No actual compatibility is qualified yet. Review corrected a missing final report retaining completion
    and a file limit too small for
    selected tools. The actual job permits 16 MiB file writes and retains smaller
    independent JSON caps; its prospective reader admits at most 512 KiB of ZIP
