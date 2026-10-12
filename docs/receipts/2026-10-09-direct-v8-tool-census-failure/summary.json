@@ -1,0 +1,67 @@
+{
+  "schema": "bw.direct-v8-tool-census-failure-public.v1",
+  "source": "8ffca01b8ca675fcd2a3980ffd0697665b080771",
+  "sourcePullRequest": "https://github.com/CrispStrobe/bw-board/pull/479",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37945340430",
+  "officialConclusion": "failure",
+  "attempt": 1,
+  "checksBeforeLaunch": {
+    "enabledSuccess": 10,
+    "declaredOptionalVectorsFullSkipped": 2
+  },
+  "originalArtifact": {
+    "run": 37945340430,
+    "artifact": 11623510924,
+    "bytes": 39385,
+    "sha256": "28633bf6fa0d705b108b7a81878057ca97cf9fed9f0fd5ec23553c61f5815da9"
+  },
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11623510924",
+  "rawLog": {
+    "bytes": 33295,
+    "sha256": "5da01381574b5e746f08d3ded290a4fb1c109304a3f3b460579c3a3e78202304"
+  },
+  "sourceRoles": 34,
+  "packetMembers": 9,
+  "headerReportedExactCensusMapMatch": true,
+  "headerMembers": 2365,
+  "headerBytes": 49002796,
+  "retainedIdentityRoles": [
+    "g++",
+    "cc1plus",
+    "collect2"
+  ],
+  "retainedPostProbeIdentitiesEqual": true,
+  "cc1plusVersionStatus": "VERSION_UNAVAILABLE_EMPTY",
+  "firstFailure": {
+    "reason": "bounded tool probe refused",
+    "type": "ProbeFailure"
+  },
+  "failedRole": "collect2",
+  "failedProbe": {
+    "exitCode": 0,
+    "complete": true,
+    "timedOut": false,
+    "outputBound": false,
+    "stdoutBytes": 281,
+    "stdoutSha256": "cbb0374a4d23f91537f8588348c460085a38ba5af336bed511060b72a1e76bf7",
+    "stderrBytes": 46,
+    "stderrSha256": "7fe090ad225657e507ea226309b3c7a16d7d9d161b90ab48767d73d979ee2b86"
+  },
+  "remainingAuthority": "as/ld independent identity/version and final tool/source rechecks not reached",
+  "boundary": "Collect2 reports a banner and ld version command with linker stdout; text does not authenticate a delegated subprocess. No build/addon/support/guest/performance qualification.",
+  "next": "separately named all-tool-roster-before-version profile; narrow collect2 split-output observation, direct pinned ld output consistency only, preserve strict generic probes and frozen failure",
+  "auditors": [
+    {
+      "role": "root frozen stdlib packet reader",
+      "scriptBytes": 47098,
+      "scriptSha256": "3874b13961579ce91868429a81234c8922a96730876e4e2fb1e76fd5d83e6d7c",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    },
+    {
+      "role": "independent peer original/source/probe audit",
+      "scriptBytes": 6226,
+      "scriptSha256": "1cc36aeeb3257ee61b5f962e6e5a0bec10fe0af8a00a4ec295815aaf616aadcf",
+      "origin": "independent read-only audit of official Actions originals linked in this receipt; operational records remain private"
+    }
+  ]
+}

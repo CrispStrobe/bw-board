@@ -1,0 +1,306 @@
+{
+  "schema": "bw.curated-gnu-longname-materialization.v1",
+  "qualification": "FINITE_REPORTED_NINE_ROLE_MATERIALIZATION_CONSISTENT_ONLY",
+  "run": 38287531384,
+  "head": "c9a22a1b173aa5f2fc41f8edf4a97a8fbfab5cc2",
+  "attempt": 1,
+  "officialConclusion": "success",
+  "artifact": 11765361098,
+  "zipBytes": 11166,
+  "zipSha256": "be95bd23cb40359241f9dafd872c7b0654e26cb945f215d4fa04fc5028a582df",
+  "sourceSchema": "bw.fixed-archive-hosted-source.v3",
+  "sourceRoles": 38,
+  "fixedRoles": 34,
+  "sourceBeforeAfterMatched": true,
+  "closedTextMembers": {
+    "source-before.json": {
+      "bytes": 5537,
+      "sha256": "52c7d3e4356c524da5817692aa6db3824400a7ad35811e16a9e8a1045c3eb7ad"
+    },
+    "source-after.json": {
+      "bytes": 5536,
+      "sha256": "7e1f8b94e6c612711265c8e0de6e79288e0c9b657d81b6ff94bb4a896661523c"
+    },
+    "event.json": {
+      "bytes": 304,
+      "sha256": "2b5581f7eb81b4d797f90b783b5ff9b543d3d884793f811c2f76f1a3479e7001"
+    },
+    "acquisition.json": {
+      "bytes": 32113,
+      "sha256": "b055706334ed6ac5060222cc284cb376628004b5e485fdba8bb0586df68895fa"
+    },
+    "control.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "control.stderr": {
+      "bytes": 145,
+      "sha256": "9e9c18b3d644d7e1954e413eb31d3a1dd0f895356561db3f61168edd3b33f2c4"
+    },
+    "run.stdout": {
+      "bytes": 43,
+      "sha256": "73210ac79d32e582bf955bbb32b0742f93a6002c69055a7605308af8590a27b1"
+    },
+    "run.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "status.txt": {
+      "bytes": 22,
+      "sha256": "7dc11536e21b081c9d422af26f288a9555fab4957060e605b1cd860f8867c896"
+    }
+  },
+  "officialActualJob": 114939371017,
+  "officialActualSteps": {
+    "count": 6,
+    "allCompletedSuccess": true
+  },
+  "controlsJob": "SKIPPED_LABELED_EVENT",
+  "manufacturedControlMethodsInActualJob": 46,
+  "status": {
+    "phase": "complete",
+    "exit": 0
+  },
+  "selectedRoles": [
+    {
+      "role": "compiler",
+      "bytes": 1260336,
+      "sha256": "afd20f428ccb032b21f00832587219d236efde25344c8067f820b1e677d0799f",
+      "reportedLinks": 1,
+      "beforeTerminalReportedIdentityMatch": true
+    },
+    {
+      "role": "assembler",
+      "bytes": 7226672,
+      "sha256": "41dda143ed208ffeb62722e0963193b0a2450bdd0aa00c5bd394115e3b2eef24",
+      "reportedLinks": 1,
+      "beforeTerminalReportedIdentityMatch": true
+    },
+    {
+      "role": "linker",
+      "bytes": 5344728,
+      "sha256": "99f2e74294e340136f3345982f6c95f59431a75abbc01734552e63a84b9cfc65",
+      "reportedLinks": 1,
+      "beforeTerminalReportedIdentityMatch": true
+    },
+    {
+      "role": "stubify",
+      "bytes": 22144,
+      "sha256": "e0f233de37256389434894ce38158c9e68c57c46f7cbe332021ad64577751a09",
+      "reportedLinks": 1,
+      "beforeTerminalReportedIdentityMatch": true
+    },
+    {
+      "role": "dpmi.h",
+      "bytes": 16512,
+      "sha256": "cf73c8314e4ae364d6160913bae31be5d9f5800c1d333af1291e4e49f61627b3",
+      "reportedLinks": 1,
+      "beforeTerminalReportedIdentityMatch": true
+    },
+    {
+      "role": "farptr.h",
+      "bytes": 7159,
+      "sha256": "b38414509d8e1e59de9402188ed003ab7e2cde3bd50786318aedb0232329547d",
+      "reportedLinks": 1,
+      "beforeTerminalReportedIdentityMatch": true
+    },
+    {
+      "role": "crt0.o",
+      "bytes": 4516,
+      "sha256": "ee1b0b2cf7b2645708ce35bff4c4c18322aa7e29f89eed5769c4a138cf4acfae",
+      "reportedLinks": 1,
+      "beforeTerminalReportedIdentityMatch": true
+    },
+    {
+      "role": "libc.a",
+      "bytes": 999320,
+      "sha256": "f59d5106cc668a67c3334c33be2c273df7c69dce93e4e53ef8a52c07a9fbda78",
+      "reportedLinks": 1,
+      "beforeTerminalReportedIdentityMatch": true
+    },
+    {
+      "role": "libgcc.a",
+      "bytes": 1039060,
+      "sha256": "e9d6ad2b2c679617b4d305b655039403514ba8f140805f2b75044ffcf16bc4b7",
+      "reportedLinks": 1,
+      "beforeTerminalReportedIdentityMatch": true
+    }
+  ],
+  "selectedReportedBytesPerObservation": 15920447,
+  "observer": {
+    "reportedAttempts": 2,
+    "phases": [
+      "before-probes",
+      "failure-final"
+    ],
+    "sameSourceIssuedSessionReported": true,
+    "allNineBeforeTerminalReportedIdentitiesAndHashesMatch": true,
+    "pairStatus": "not-evaluated",
+    "compilerPhasePairQualified": false
+  },
+  "inputReports": [
+    {
+      "role": "toolchain",
+      "bytes": 80596981,
+      "expectedBytes": 80596981,
+      "sha256": "8464f17017d6ab1b2bb2df4ed82357b5bf692e6e2b7fee37e315638f3d505f00",
+      "authenticatedReported": true
+    },
+    {
+      "role": "djcrx",
+      "bytes": 895256,
+      "expectedBytes": 895256,
+      "sha256": "22274ed8d5ee57cf7ccf161f5e1684fd1c0192068724a7d34e1bde168041ca60",
+      "authenticatedReported": true
+    },
+    {
+      "role": "djdev",
+      "bytes": 2509574,
+      "expectedBytes": 2509574,
+      "sha256": "4557dfb6c161d326680ae5fa71f0098ac49425a1b11b90a020b83162eb705dda",
+      "authenticatedReported": true
+    },
+    {
+      "role": "djlsr",
+      "bytes": 2047171,
+      "expectedBytes": 2047171,
+      "sha256": "80690b6e44ff8bc6c6081fca1f4faeba1591c4490b76ef0ec8b35847baa5deea",
+      "authenticatedReported": true
+    }
+  ],
+  "inputReportedBytesTotal": 86048982,
+  "gnuLongnames": {
+    "headers": 157,
+    "namesApplied": 157,
+    "pending": false,
+    "firstRefusal": null
+  },
+  "aliases": {
+    "validatedMappingsReported": 13,
+    "ordinaryTargetsReported": 11,
+    "physicalAliasesMaterialized": false
+  },
+  "runtimeSourceOriginJoinsReported": 4,
+  "notices": {
+    "processedHashRecordsReported": 11,
+    "processedBytesReported": 142595,
+    "omittedReported": 0,
+    "records": [
+      {
+        "bytes": 18092,
+        "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+      },
+      {
+        "bytes": 2089,
+        "sha256": "f7b76a85cfe1407ea99a933699f1b9e79e74b7689cf6db9dc7c406f3c02dc884"
+      },
+      {
+        "bytes": 26530,
+        "sha256": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551"
+      },
+      {
+        "bytes": 18092,
+        "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+      },
+      {
+        "bytes": 2089,
+        "sha256": "f7b76a85cfe1407ea99a933699f1b9e79e74b7689cf6db9dc7c406f3c02dc884"
+      },
+      {
+        "bytes": 26530,
+        "sha256": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551"
+      },
+      {
+        "bytes": 18092,
+        "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+      },
+      {
+        "bytes": 2089,
+        "sha256": "f7b76a85cfe1407ea99a933699f1b9e79e74b7689cf6db9dc7c406f3c02dc884"
+      },
+      {
+        "bytes": 26530,
+        "sha256": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551"
+      },
+      {
+        "bytes": 1506,
+        "sha256": "9965e02528de633ec7a3084b53cd3703627bbac62710e71f735a6eec0f9fb974"
+      },
+      {
+        "bytes": 956,
+        "sha256": "66994e75c03e014b084b4f4fdca49f37882bb3da8b0736b237c074c33d4b212a"
+      }
+    ],
+    "noticeBodiesInReceipt": false,
+    "completeNoticeRetentionQualified": false,
+    "licenseQualified": false
+  },
+  "cleanupReported": {
+    "inputResponsesReportedCloseAttempts": 5,
+    "inputCloseRefused": 0,
+    "materializerCloseAttempts": 38,
+    "materializerCloseRefused": 0,
+    "observerLocalCloseAttempts": 76,
+    "observerLocalCloseRefused": 0,
+    "directoryLedger": {
+      "closeAttempted": 6,
+      "closeRefused": 0,
+      "liveDirectories": 0,
+      "registeredDirectories": 6,
+      "uncertainDirectories": 0
+    },
+    "writerOutputCloseAttempts": 2,
+    "writerOutputCloseRefused": 0
+  },
+  "auditAttribution": [
+    {
+      "role": "coordinator",
+      "verdict": "PASS_FINITE_REPORTED_NINE_ROLE_CONSISTENCY_ONLY"
+    },
+    {
+      "role": "coder",
+      "verdict": "PASS_FINITE_REPORTED_NINE_ROLE_CONSISTENCY_ONLY"
+    },
+    {
+      "role": "independent reviewer",
+      "verdict": "PASS_FINITE_REPORTED_NINE_ROLE_CONSISTENCY_ONLY"
+    }
+  ],
+  "origins": {
+    "sourcePR": "https://github.com/CrispStrobe/bw-board/pull/525",
+    "source": "https://github.com/CrispStrobe/bw-board/blob/c9a22a1b173aa5f2fc41f8edf4a97a8fbfab5cc2/scripts/i80386-cwsdpmi-gnu-longname-materializer/materialize.py",
+    "run": "https://github.com/CrispStrobe/bw-board/actions/runs/38287531384",
+    "runApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/38287531384",
+    "jobsApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/38287531384/jobs",
+    "artifact": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11765361098",
+    "artifactZip": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11765361098/zip"
+  },
+  "preservedPredecessors": [
+    {
+      "run": 38253971654,
+      "conclusion": "failure",
+      "receipt": "../2026-10-12-fixed-archive-materialization-failure/README.md"
+    },
+    {
+      "run": 38276900168,
+      "conclusion": "failure",
+      "receipt": "../2026-10-12-archive-refusal-diagnostic-failure/README.md"
+    }
+  ],
+  "oneShot": "CONSUMED_NO_RERUN_RELABEL_DISPATCH_OR_REACQUISITION",
+  "limits": [
+    "Reported input authentication and copied observations; audit did not retain or independently rehash input archive bodies",
+    "No complete physical namespace or read-only mode census; physical aliases remain omitted",
+    "Selected nine exclude historical required cc1 and collect2; no complete tool tree or minimal C closure",
+    "Processed notice hashes and reported omitted0 do not mean all notices or notice bodies retained",
+    "No filesystem input lease, continuous source ownership, host-loader/environment/child-process delegation",
+    "Disabled compiler unchanged; no compiler, DPMI oracle, AT guest, application or performance execution"
+  ],
+  "actualInputLeaseQualified": false,
+  "sourceOwnedQualified": false,
+  "namespaceModeQualified": false,
+  "fullToolchainReady": false,
+  "compilerQualified": false,
+  "guestQualified": false,
+  "performanceQualified": false
+}

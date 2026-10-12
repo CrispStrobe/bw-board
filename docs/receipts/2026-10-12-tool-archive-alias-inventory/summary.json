@@ -1,0 +1,103 @@
+{
+  "qualification": "ORIGINAL_HOSTED_INVENTORY_ONLY_NO_RAW_ARCHIVE_REHASH_OR_MATERIALIZATION",
+  "originalRun": 37680741407,
+  "originalArtifact": 11508283922,
+  "originalZipSha256": "d04c1687840ce256c3a1dc652be3cc6ab3cab02bf677a9038fdecd3ca061ff05",
+  "acquisitionMemberSha256": "83766cf66299adbf77feadb22295420f74834c66450674ea4851825da630e265",
+  "toolBytes": 80596981,
+  "toolSha256": "8464f17017d6ab1b2bb2df4ed82357b5bf692e6e2b7fee37e315638f3d505f00",
+  "memberCount": 1287,
+  "memberTypes": {
+    "directory": 78,
+    "file": 1196,
+    "hardlink": 13
+  },
+  "aliases": [
+    {
+      "path": "djgpp/i586-pc-msdosdjgpp/bin/ld.bfd",
+      "target": "djgpp/i586-pc-msdosdjgpp/bin/ld",
+      "targetBytes": 5344728,
+      "targetSha256": "99f2e74294e340136f3345982f6c95f59431a75abbc01734552e63a84b9cfc65"
+    },
+    {
+      "path": "djgpp/bin/i586-pc-msdosdjgpp-ar",
+      "target": "djgpp/i586-pc-msdosdjgpp/bin/ar",
+      "targetBytes": 4237168,
+      "targetSha256": "e1df63d1b2c6af55c02a2376381ea9c83e0e86c3990fdfa4f9b9b3a9a7b417df"
+    },
+    {
+      "path": "djgpp/bin/i586-pc-msdosdjgpp-ld.bfd",
+      "target": "djgpp/i586-pc-msdosdjgpp/bin/ld",
+      "targetBytes": 5344728,
+      "targetSha256": "99f2e74294e340136f3345982f6c95f59431a75abbc01734552e63a84b9cfc65"
+    },
+    {
+      "path": "djgpp/bin/i586-pc-msdosdjgpp-as",
+      "target": "djgpp/i586-pc-msdosdjgpp/bin/as",
+      "targetBytes": 7226672,
+      "targetSha256": "41dda143ed208ffeb62722e0963193b0a2450bdd0aa00c5bd394115e3b2eef24"
+    },
+    {
+      "path": "djgpp/bin/i586-pc-msdosdjgpp-objdump",
+      "target": "djgpp/i586-pc-msdosdjgpp/bin/objdump",
+      "targetBytes": 7243584,
+      "targetSha256": "347da6d6fac6115a2d15fc7340a5e745fa0b5dc34e7d404f09d25f3d793956ec"
+    },
+    {
+      "path": "djgpp/bin/i586-pc-msdosdjgpp-strip",
+      "target": "djgpp/i586-pc-msdosdjgpp/bin/strip",
+      "targetBytes": 5190944,
+      "targetSha256": "3650a1785d86f5002b8f862bd636e910b2c687ec84a5656eee4abfbf622377fb"
+    },
+    {
+      "path": "djgpp/bin/i586-pc-msdosdjgpp-objcopy",
+      "target": "djgpp/i586-pc-msdosdjgpp/bin/objcopy",
+      "targetBytes": 5190952,
+      "targetSha256": "0cbbbeb17a0bf0b959fc7c8d1c86b184071885f685af78f2fc510689f500df46"
+    },
+    {
+      "path": "djgpp/bin/i586-pc-msdosdjgpp-readelf",
+      "target": "djgpp/i586-pc-msdosdjgpp/bin/readelf",
+      "targetBytes": 2008248,
+      "targetSha256": "f070eb276d4b035dba538bb270e6b5abb6b806698a4446fc451239ced70e32d2"
+    },
+    {
+      "path": "djgpp/bin/i586-pc-msdosdjgpp-nm",
+      "target": "djgpp/i586-pc-msdosdjgpp/bin/nm",
+      "targetBytes": 4052728,
+      "targetSha256": "aec57757080e5a7ae127f7da83d2b7b57de2187cb49acefe11e82da1a8095097"
+    },
+    {
+      "path": "djgpp/bin/i586-pc-msdosdjgpp-c++",
+      "target": "djgpp/bin/i586-pc-msdosdjgpp-g++",
+      "targetBytes": 1264432,
+      "targetSha256": "43447434c2bdd5070333c669057cf01a3cdc6ba779ef15a9c932b5c9eb7044c4"
+    },
+    {
+      "path": "djgpp/bin/i586-pc-msdosdjgpp-ranlib",
+      "target": "djgpp/i586-pc-msdosdjgpp/bin/ranlib",
+      "targetBytes": 4237200,
+      "targetSha256": "7cc8dfbe975c0d931a9e2300d032fcd10a495097eaf57d3601cb9ca16fee5e4f"
+    },
+    {
+      "path": "djgpp/bin/i586-pc-msdosdjgpp-ld",
+      "target": "djgpp/i586-pc-msdosdjgpp/bin/ld",
+      "targetBytes": 5344728,
+      "targetSha256": "99f2e74294e340136f3345982f6c95f59431a75abbc01734552e63a84b9cfc65"
+    },
+    {
+      "path": "djgpp/bin/i586-pc-msdosdjgpp-gcc-12.2.0",
+      "target": "djgpp/bin/i586-pc-msdosdjgpp-gcc",
+      "targetBytes": 1260336,
+      "targetSha256": "afd20f428ccb032b21f00832587219d236efde25344c8067f820b1e677d0799f"
+    }
+  ],
+  "rawArchivePresent": false,
+  "compilerQualified": false,
+  "guestQualified": false,
+  "performanceQualified": false,
+  "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37680741407",
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11508283922",
+  "artifactDownload": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11508283922/zip",
+  "auditAttribution": "Read-only derivation from the retained original acquisition report, without producer import, archive replay or reacquisition."
+}

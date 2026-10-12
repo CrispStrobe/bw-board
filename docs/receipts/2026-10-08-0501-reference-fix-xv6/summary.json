@@ -1,0 +1,40 @@
+{
+  "schema": "bw.i80386.reference-fix-xv6.v1",
+  "reviewedHead": "4c22a574ec50a515fe4954a3fda0ff6a947a5068",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37815899847",
+  "attempt": 1,
+  "event": "pull_request",
+  "executedRevision": "21efb8c49c34eed4f3ec36a0a21266886e9471bd",
+  "executedTree": "15b64ac32fb866fdfae659ed540ad9c391b81513",
+  "reviewedTreeEqual": true,
+  "artifactMetadata": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11567736746",
+  "zip": {
+    "bytes": 21028,
+    "sha256": "11ae924a6002faaeed756996e5e6ec9a540e4b4e60df46e51840171f4358075f"
+  },
+  "log": {
+    "bytes": 1563702,
+    "sha256": "c23a6c9b2e84d4c7caceff691ff75c92c69a0253b0ed56a711a8baa430e9038e"
+  },
+  "scenarios": 3,
+  "listedSourceRolesPerGuest": 70,
+  "currentTests": {
+    "total": 1627,
+    "pass": 1616,
+    "fail": 0,
+    "skip": 11
+  },
+  "historicalTests": {
+    "total": 288,
+    "pass": 288,
+    "fail": 0
+  },
+  "focusedPassingNames": 52,
+  "audit": {
+    "root": "original packet, official metadata, immutable Git and exact-name log rows",
+    "peer": "independent original packet, official commit metadata, Git roles and log review",
+    "producerHelperImports": false,
+    "guestReplay": false
+  },
+  "boundary": "Finite xv6 regressions under existing CR4=0x10 compatibility profile; no strict physical 386DX, corrected AT allocation-frame or performance qualification"
+}

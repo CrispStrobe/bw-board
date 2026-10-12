@@ -1,0 +1,86 @@
+{
+  "schema": "bw.task-mode-cpu-success-summary.v1",
+  "source": "44087e8f1d19b1f74c6f2742ebca31594f6e7208",
+  "executionRevision": "627bf7d7cb77ca3f00944ba104702cc79746112c",
+  "reviewedTreeEqual": true,
+  "run": 37914446180,
+  "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37914446180",
+  "artifactApi": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11609657260",
+  "originalZip": {
+    "bytes": 21028,
+    "sha256": "d658ad65c7680f6dd4f7ba592690a43d369e60c573e06d760dcdd806170e3117"
+  },
+  "originalLog": {
+    "bytes": 1605026,
+    "sha256": "14980f405d649f0c7438714086f94a43c57bee4091b5a3bb9fe9c0a623c3a351"
+  },
+  "listedGitRolesVerified": 71,
+  "finiteXv6Scenarios": [
+    {
+      "member": "xv6-stock-free-bios-boot.json",
+      "profile": "4m",
+      "steps": 14643086,
+      "sourceRoles": 70,
+      "userModeEntries": 16,
+      "serialResponse": "BW_XV6_FREE_BIOS_FS_OK",
+      "cr4": 16,
+      "profileBoundary": "existing compatibility profile; not strict physical 386DX qualification"
+    },
+    {
+      "member": "xv6-stock-14m-free-bios-boot.json",
+      "profile": "14m",
+      "steps": 10962834,
+      "sourceRoles": 70,
+      "userModeEntries": 16,
+      "serialResponse": "BW_XV6_14M_FREE_OK",
+      "cr4": 16,
+      "profileBoundary": "existing compatibility profile; not strict physical 386DX qualification"
+    },
+    {
+      "member": "xv6-stock-free-bios-forktest.json",
+      "profile": "4m",
+      "steps": 24338279,
+      "sourceRoles": 70,
+      "userModeEntries": 16,
+      "serialResponse": "fork test OK",
+      "cr4": 16,
+      "profileBoundary": "existing compatibility profile; not strict physical 386DX qualification"
+    }
+  ],
+  "focusedControlCount": 114,
+  "current": {
+    "tests": 1689,
+    "pass": 1678,
+    "fail": 0,
+    "skip": 11
+  },
+  "historical": {
+    "tests": 288,
+    "pass": 288,
+    "fail": 0,
+    "skip": 0
+  },
+  "audits": [
+    {
+      "role": "root-packet",
+      "method": "independent stdlib raw evidence/Git audit without producer imports or replay",
+      "scriptSha256": "87313245f606c1ec253f9589a9c0dcaf3448057f1987af2619e94e8a2987b826"
+    },
+    {
+      "role": "root-log",
+      "method": "independent stdlib raw evidence/Git audit without producer imports or replay",
+      "scriptSha256": "3356e0998a2a60785d3e6281a7aff8c1e5ef58d131301337b2f402f8dd018064"
+    },
+    {
+      "role": "independent-peer",
+      "method": "independent stdlib raw evidence/Git audit without producer imports or replay",
+      "scriptSha256": "2978b798e850f3b81d6e829064f5346a9a942a8221c194fd4baa1b9475731ef4"
+    }
+  ],
+  "qualificationBoundary": "hosted CPU controls and existing finite xv6 compatibility regressions only; new task-mode guest diagnostic unconnected/unqualified; no strict physical 386DX, native, profiler or performance qualification",
+  "enabledExactHeadChecks": {
+    "success": 12,
+    "optionalVectorsFullSkipped": 2,
+    "source": "44087e8f1d19b1f74c6f2742ebca31594f6e7208"
+  }
+}
