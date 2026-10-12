@@ -531,3 +531,47 @@ original and the earlier standalone run38173075353; later integration needs
 its own exact-source qualification. Next close the owning profile's
 source/input/pair/reader/format/archive/environment/media and launch gates.
 Production compilation stays disabled throughout this source checkpoint.
+
+
+### Retained fixed-role tool observation
+
+The source-only preparation is published in
+[PR512](https://github.com/CrispStrobe/bw-board/pull/512), exact head
+`473b90ea27529e576775ae5864a7fd2a4f3f9237`, under
+`scripts/i80386-cwsdpmi-retained-tool-observer/`. The earlier fixed-tool observer
+reopens its supplied root by pathname; the qualified workspace composition
+retains directory handles but writes supplied bytes. The new observer supplies that missing retained-root observation seam.
+
+The unit supplies a parent-only factory that privately creates the pinned
+workspace owner, then observes the nine fixed tool roles through its retained tool handle.
+Expose no caller descriptor, root, pin, receipt or provisioning callback. Walk
+only fixed relative paths with no-follow directory/file checks, bounded reads,
+exact hashes and before/opened/after/named metadata fences. Reserve each known
+file extent before opening or reading content: at most 16 MiB per role and
+64 MiB per observation. Recheck the full retained route around observations;
+temporary handles have separate bounded close-once ownership, and the borrowed
+root is never closed by the observer.
+
+Write only internally issued, closed complete or partial receipts, at most
+32 KiB, through the existing evidence owner. Validate a complete pair from
+private same-session, same-source, correctly ordered nine-role observations,
+without accepting caller dictionaries. An empty new tool directory must refuse
+the first missing role. Preserve that original exception and partial prefix;
+healthy routes may permit fixed before/failure diagnostics without a second
+tool observation. Fresh reentry immediately poisons active inner owners and
+permits cleanup only. Secondary diagnostics or cleanup never replace the
+original failure, retry a consumed output or credit a complete pair.
+
+All 28 manufactured controls passed locally, with independent source review
+and two additional independent adversaries. They cover retained-root use, hash/extent/
+aggregate limits, swaps and aliases, changed pairs, strict schemas/phases,
+read/open/close/writer reentry, interrupted local ownership and uncertain cleanup.
+Positive test fixtures use explicitly synthetic files/pins through private test
+access; they do not qualify actual tool bytes or archive materialization.
+Source review must preserve the disabled compiler and all held helper bytes.
+Hosted exact-source controls and original evidence audit for PR512 remain
+pending; the earlier 23-method original qualifies the workspace composition
+only, without this new observer.
+Parent/source ownership, implicit compiler inputs, archives, environment, binary
+formats, media, reader and actual launch remain external gates; there is no
+compiler, guest, default-adoption or performance qualification in this unit.
