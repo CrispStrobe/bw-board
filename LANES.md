@@ -21,6 +21,12 @@ Forward source review found `numdgt` does not own measurement formatting.
 Explicit child NGSPICE_MEAS_PRECISION=15 and low-precision-output refusal now
 protect refinement from rounded values; pure ambient-override/truncation
 controls pass. Earlier 46709459 receipts are superseded, not qualification.
+CI38268219098 at f14713d2 reds on insufficient v0 precision; Harris passes.
+Source review confirms interactive FIND can bypass environment precision via
+a hard-coded short output path. Forward deck repair prints distinct stored
+measurement scalars with numdgt=15; only those names are authoritative and
+raw short FIND lines are preserved but excluded. Precision bounds unchanged.
+Fresh qualification pending; do not classify this red as reference instability.
 
 2026-10-12 winding error components — CLAIM, Codex bwcx.
 Branch lane/winding-error-components-20261012, exact base

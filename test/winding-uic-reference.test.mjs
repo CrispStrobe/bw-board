@@ -11,6 +11,9 @@ test('reference model cards, zero IC and UIC are independent explicit authoritie
     assert.match(deck, /LW supply winding 5m IC=0/);
     assert.match(deck, /CP collector 0 12p IC=0/);
     assert.match(deck, /tran 25n 1.011m 0 25n uic/);
+    assert.match(deck, /set numdgt=15/);
+    assert.match(deck, /meas tran raw_v0 FIND v\(collector\).*\nlet v0 = raw_v0\nprint v0/);
+    assert.match(deck, /meas tran raw_i0 FIND i\(LW\).*\nlet i0 = raw_i0\nprint i0/);
     assert.match(deck, /\.model QM NPN\(IS=1e-14 BF=100 BR=1 VAF=100\)/);
     assert.match(deck, /\.model DM D\(IS=1e-12 N=1 RS=\.568\)/);
     assert.doesNotMatch(windingReferenceDeck(25, false), /IC=0| uic/);
@@ -25,6 +28,10 @@ test('missing, duplicate, failed and unstable reference evidence cannot pass', (
     assert.throws(() => parseReferenceMeasurements(output.replace(/^v0.*\n/, '')), /v0/);
     assert.throws(() => parseReferenceMeasurements(output + '\nv0 = 1.000000000000000e+00'), /v0/);
     assert.throws(() => parseReferenceMeasurements(output.replace('1.000000000000000e+00', '1.000000e+00')), /precision/);
+    // Raw FIND output remains in the receipt but cannot masquerade as the
+    // high-precision printed scalar selected by the parser.
+    assert.equal(parseReferenceMeasurements('raw_v0 = 1.000000e+00\n' + output).length, 10);
+    assert.throws(() => parseReferenceMeasurements(output.replace(/^v0.*\n/, 'raw_v0 = 1.000000e+00\n')), /v0/);
     assert.throws(() => parseReferenceMeasurements(output, 'timestep too small'), /refused/);
     assert.equal(refinementReport([rows, rows, rows]).stable, true);
     const shifted = rows.map(row => ({...row, voltage: row.voltage + .001}));

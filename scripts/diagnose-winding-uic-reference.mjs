@@ -12,7 +12,8 @@ export const MEASUREMENT_PRECISION = 15;
 
 export function referenceProcessOptions (deck) {
     return {input: deck, encoding: 'utf8', timeout: 120000, maxBuffer: 1048576,
-        // `numdgt` controls tables, not `meas`: force its separate authority.
+        // Supplemental batch measurement setting. Interactive FIND also has
+        // a hard-coded short print path; authoritative values use scalar print.
         env: {...process.env, NGSPICE_MEAS_PRECISION: String(MEASUREMENT_PRECISION)}};
 }
 
@@ -32,8 +33,10 @@ export function windingReferenceDeck (maxStepNs, zeroStorage = true) {
         '.control', 'set numdgt=15',
         `tran ${maxStepNs}n 1.011m 0 ${maxStepNs}n${zeroStorage ? ' uic' : ''}`,
         ...REFERENCE_TIMES_NS.flatMap((ns, i) => [
-            `meas tran v${i} FIND v(collector) AT=${ns * 1e-9}`,
-            `meas tran i${i} FIND i(LW) AT=${ns * 1e-9}`]),
+            `meas tran raw_v${i} FIND v(collector) AT=${ns * 1e-9}`,
+            `let v${i} = raw_v${i}`, `print v${i}`,
+            `meas tran raw_i${i} FIND i(LW) AT=${ns * 1e-9}`,
+            `let i${i} = raw_i${i}`, `print i${i}`]),
         '.endc', '.end', ''].join('\n');
 }
 
@@ -47,7 +50,7 @@ export function parseReferenceMeasurements (stdout, stderr = '') {
             throw new Error(`Expected one finite reference measurement ${name}`);
         }
         if (!/^[+-]?\d+\.\d{12,}[eE][+-]?\d+$/.test(matches[0][1])) {
-            throw new Error(`Insufficient printed measurement precision for ${name}`);
+            throw new Error(`Insufficient printed measurement precision for ${name}: ${matches[0][1]}`);
         }
         return Number(matches[0][1]);
     };

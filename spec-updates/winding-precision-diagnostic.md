@@ -104,11 +104,19 @@ and winding-current measurements through 1.01 ms. Both adjacent refinement
 differences must remain within 10 uV and 1 nA for a stable-reference result.
 Unstable results remain evidence, not qualified goldens; the CLI exits 1.
 Full decks, hashes, solver version and original measurement output are retained.
-The child environment explicitly binds `NGSPICE_MEAS_PRECISION=15`; `numdgt`
-alone only controls table printing. Every parsed measurement must retain at
-least twelve fractional scientific-notation digits, so rounded scalar output
-cannot silently pass the tight refinement comparison. This follows ngspice's
-[measurement precision implementation](https://github.com/ngspice/ngspice/blob/master/src/frontend/com_measure2.c).
+The child environment binds `NGSPICE_MEAS_PRECISION=15` as a supplemental
+batch setting, but interactive FIND can print through a hard-coded short
+format even with that setting. The authoritative values therefore come from
+the stored measurement vectors, copied to distinct scalar names and explicitly
+printed with `numdgt=15`. The parser selects only these names and requires at
+least twelve fractional scientific-notation digits. Raw short FIND output
+remains in the receipt but cannot silently pass the refinement comparison.
+See ngspice's [measurement implementation](https://github.com/ngspice/ngspice/blob/master/src/frontend/com_measure2.c)
+and [scalar printing implementation](https://github.com/ngspice/ngspice/blob/master/src/frontend/postcoms.c).
+CI38268219098 at f14713d2 stopped correctly on insufficient v0 precision;
+Harris38268219115 passed. This is a reference-harness failure, not measured
+reference instability or an engine fix. The forward scalar-vector repair
+requires fresh hosted qualification.
 An actual normal-OP negative control must differ from the zero-storage early
 collector voltage. Neither reference completion nor reference refinement alone
 constitutes engine agreement. Hosted numerical results are still pending.
