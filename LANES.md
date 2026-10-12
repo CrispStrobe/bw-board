@@ -35,6 +35,9 @@ bracketing rows/hash and independently interpolates each requested time.
 Actual seven-digit-rounding negatives supplement syntax checks. Temporary
 solver directories are task-owned and restored/removed on every path.
 Three local pure controls pass; fresh actual qualification remains required.
+Forward audit binds the padded-value negatives to the original bracketing
+waveform rows, not interpolated results: interpolation can itself introduce
+extra digits. A rounded-input pure control demonstrates that distinction.
 
 2026-10-12 winding error components — CLAIM, Codex bwcx.
 Branch lane/winding-error-components-20261012, exact base

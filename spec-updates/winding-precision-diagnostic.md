@@ -113,7 +113,7 @@ time, together with the original waveform hash and row count. No extrapolation,
 missing/duplicate time row, wrong vector authority or low-precision table is
 accepted. Solver output remains in the receipt. Each solver uses a fresh owned
 temporary directory, removed on every success/failure path.
-See ngspice's [wrdata command](https://nmg.gitlab.io/ngspice-manual/interactiveinterpreter/commands/wrdata_writesimpledata.html).
+See ngspice's [wrdata command](https://nmg.gitlab.io/ngspice-manual/interactiveinterpreter/commands/wrdata_writedatatoafile_simpletable.html).
 CI38268219098 at f14713d2 stopped correctly on insufficient v0 precision;
 Harris38268219115 passed. This is a reference-harness failure, not measured
 reference instability or an engine fix. Its scalar-vector successor4d22bb12

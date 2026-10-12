@@ -33,6 +33,13 @@ test('missing, duplicate, failed and unstable reference evidence cannot pass', (
     assert.ok(Math.abs(rows[0].voltage - (1 + 1000 * 25e-9)) < 1e-15);
     assert.equal(rows[0].bracket.left.raw, zero);
     assert.equal(rows[0].bracket.right.raw, end);
+    // Interpolation itself creates extra digits from rounded inputs. It must
+    // not be mistaken for evidence that the stored waveform retained them.
+    const roundedRows = sampleReferenceWaveform(parseReferenceWaveform(
+        output.replace('2.000000000000000e-03', '2.003000000000000e-03')));
+    assert.notEqual(roundedRows[0].voltage, Number(roundedRows[0].voltage.toPrecision(7)));
+    assert.equal(roundedRows[0].bracket.left.voltage, Number(roundedRows[0].bracket.left.voltage.toPrecision(7)));
+    assert.equal(roundedRows[0].bracket.right.voltage, Number(roundedRows[0].bracket.right.voltage.toPrecision(7)));
     assert.throws(() => parseReferenceWaveform(header + zero), /ordered/);
     assert.throws(() => parseReferenceWaveform(output + '\n' + end), /ordered/);
     assert.throws(() => parseReferenceWaveform(output.replace('1.000000000000000e+00', '1.000000e+00')), /precision/);
@@ -81,10 +88,12 @@ test('hosted live zero-storage reference characterizes refinement and rejects OP
         assert.ok(arm.waveformRows > 2);
         // Padding a rounded FIND result cannot satisfy these actual-value
         // negatives: this circuit's nontrivial values retain further digits.
-        const first = arm.measurements[0].voltage;
-        const biasCurrent = arm.measurements[1].current;
-        assert.notEqual(first, Number(first.toPrecision(7)), 'startup voltage is not padded seven-digit FIND');
-        assert.notEqual(biasCurrent, Number(biasCurrent.toPrecision(7)), 'bias current is not padded seven-digit FIND');
+        const retainsDigits = (measurement, key) => ['left', 'right'].some(side => {
+            const stored = measurement.bracket[side][key];
+            return stored !== Number(stored.toPrecision(7));
+        });
+        assert.ok(retainsDigits(arm.measurements[0], 'voltage'), 'stored startup voltage is not padded seven-digit FIND');
+        assert.ok(retainsDigits(arm.measurements[1], 'current'), 'stored bias current is not padded seven-digit FIND');
     }
     assert.ok(report.normalOp.measurements[0].voltage > 4.9, 'normal OP is a different initial capacitor state');
     assert.notEqual(report.arms[2].deckSha256, report.normalOp.deckSha256);
