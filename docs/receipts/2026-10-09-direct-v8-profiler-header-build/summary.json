@@ -1,0 +1,70 @@
+{
+  "run": 37979252708,
+  "head": "b8ce3eb36d6022eb82415c80fdbcf9b37e23284f",
+  "job": 113985274640,
+  "official": "success",
+  "allSteps": "success",
+  "zipBytes": 6413,
+  "zipSha256": "e83344df993d2843fc83ee4938ad1a584b33eb8301fdd6a5ed9ccb4346347c22",
+  "classification": "BUILT_UNLOADED_UNQUALIFIED",
+  "artifactId": 11641771367,
+  "attempt": 1,
+  "origin": {
+    "run": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/37979252708",
+    "artifact": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11641771367/zip",
+    "logs": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/37979252708/logs"
+  },
+  "sourceRoles": 60,
+  "heldRoles": 51,
+  "newRoles": 9,
+  "compile": {
+    "argv": [
+      "pinned-g++",
+      "-std=c++17",
+      "-shared",
+      "-fPIC",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-DNODE_GYP_MODULE_NAME=rollback_sampler",
+      "-isystem",
+      "include/node",
+      "addon.cc",
+      "-o",
+      "rollback_sampler.node"
+    ],
+    "complete": true,
+    "exitCode": 0,
+    "outputBound": false,
+    "stderr": {
+      "base64": "",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "base64": "",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timedOut": false
+  },
+  "addonReported": {
+    "artifactUploaded": false,
+    "bytes": 33896,
+    "loaded": false,
+    "sha256": "0174d1057a8baffae7d9fa36297d1d5c6322f436b659aec43631f385c33d08d1"
+  },
+  "postToolIdentitiesMatched": 5,
+  "postToolFailures": [],
+  "secondaryFailures": [],
+  "sourceEndRecheck": true,
+  "audits": {
+    "coordinator": "PASS",
+    "independent": "PASS"
+  },
+  "scope": "Bounded unloaded-build consistency only; no load, sampler support, subprocess derivation, guest or performance qualification.",
+  "retainedLogStdoutBytes": 36233,
+  "retainedLogStdoutSha256": "7a0f6ae71143069fd10cb51c95c9f1e8a8695bf6a122ac047369d6f0b49bce3e",
+  "logRepresentation": "Captured gh run view --log stdout, hashed as uncompressed text; not the bytes of the official API log archive."
+}

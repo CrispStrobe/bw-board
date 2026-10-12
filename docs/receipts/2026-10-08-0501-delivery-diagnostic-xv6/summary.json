@@ -1,0 +1,70 @@
+{
+  "schema": "bw.i80386.delivery-diagnostic-xv6.v1",
+  "reviewedHead": "0714159c9875ac17bf5ef5a8e5418f5815fa1608",
+  "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37822545418",
+  "attempt": 1,
+  "event": "pull_request",
+  "executedRevision": "f2616b9c2f01da0a63a52d9efd98980b44f2940b",
+  "executedTree": "a078c8ee0fd55293fd7ea92c08f9b9974414c13b",
+  "reviewedTreeEqual": true,
+  "artifactMetadata": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11570737167",
+  "zip": {
+    "bytes": 21035,
+    "sha256": "13b8801fa2b688d35fce7155975e97a909a7a609706c594452a6270cd6361c67"
+  },
+  "log": {
+    "bytes": 1569832,
+    "sha256": "44bcecd9e0c4f056b5a23899d00611484cd0f66d7089993c71d24d60887283b7"
+  },
+  "scenarios": 3,
+  "listedSourceRolesPerGuest": 70,
+  "currentTests": {
+    "total": 1635,
+    "pass": 1624,
+    "fail": 0,
+    "skip": 11
+  },
+  "historicalTests": {
+    "total": 288,
+    "pass": 288,
+    "fail": 0
+  },
+  "focusedPassingNames": 60,
+  "boundary": "Finite xv6 regression and focused tests under existing CR4=0x10 compatibility profile; not actual rejected-delivery diagnostic, strict physical 386DX or performance qualification",
+  "audit": {
+    "root": "original packet, official execution-commit metadata, immutable Git and exact focused TAP names",
+    "peer": "independent original packet/log/Git and source/build/image/input review",
+    "producerHelperImports": false,
+    "guestReplay": false
+  },
+  "fullCI": {
+    "officialRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37822517504",
+    "event": "push",
+    "attempt": 1,
+    "source": "0714159c9875ac17bf5ef5a8e5418f5815fa1608",
+    "originalLog": {
+      "bytes": 4882054,
+      "sha256": "e70d5e929554516d55c5f3ec1b776266cdb7219167572cd0c44c151ffafaf6d0"
+    },
+    "current": {
+      "tests": 8479,
+      "pass": 8177,
+      "fail": 0,
+      "skip": 302
+    },
+    "historical": {
+      "tests": 288,
+      "pass": 288,
+      "fail": 0,
+      "skip": 0
+    },
+    "precedingVectorAdmission": {
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "skip": 0
+    },
+    "focusedPassingNames": 60,
+    "audit": "root and independent peer original-log/official-metadata/immutable-Git review; no replay or helper imports"
+  }
+}
