@@ -16,6 +16,23 @@ controls run; no real archive acquisition, compiler, guest, performance, consume
 pin or historical CPU-stack integration. Independent source review and bounded
 hosted controls precede any separately gated actual full-tree scenario.
 
+2026-10-12 winding engine/reference comparison — CLAIM, Codex bwcx.
+Branch lane/winding-engine-reference-comparison-20261012, exact base
+23f1e69ccf584738965e9e5fb36582d1a7a792b7. Five evidence-only paths:
+LANES.md, scripts/compare-winding-reference.mjs,
+test/winding-reference-comparison.test.mjs, scripts/oracle-census.mjs and
+spec-updates/winding-precision-diagnostic.md. Compare the existing completed
+zero-storage precision-v1 capture at its three exact shared times (500000,
+1000000,1010000 ns), without repartitioning or new probes. Require completed
+single-authority work receipt and zero initial storage, independent reference
+refinement first, then fixed 100uV/1uA agreement bounds matching the existing
+authored winding oracle's engineering envelope. Those bounds are not the
+precision profile's local error guarantee. CLI retains actual errors and fails
+on disagreement; hosted live test emits evidence before asserting. Pure
+controls reject incomplete, nonfinite, duplicate, shifted, OP-substituted and
+unstable evidence. No production, workflow, pin, load, budget or profile change.
+All engine/SPICE execution hosted; finite three-point agreement cannot qualify
+the unsampled falling edge or realistic instrument behavior.
 
 2026-10-12 standalone full-tree provisioning preparation — CLAIM, Codex x86.
 Branch lane/386-full-tree-provisioner-20261012, exact base
@@ -55,7 +72,7 @@ their gates: `test/fastpath-census-evidence.test.mjs` now hashes the receipt's
 files at the archiving commit 4c468e24 (fetched in ci.yml), not the live tree,
 and `test/labwired-word-workflow.test.mjs` accepts a labwired-wasm floor >= 108.
 
-2026-10-12 sparse refactor pivot admission — CLAIM, Codex bwcx.
+2026-10-12 sparse refactor pivot admission — DONE, Codex bwcx.
 Branch fix/sparse-refactor-pivot-admission-20261012, exact base
 2508b53d. Eight paths: LANES.md, src/sparse.js, test/sparse-lu.test.mjs,
 test/winding-precision-diagnostic.test.mjs,
@@ -73,6 +90,27 @@ No device/assembly/profile/budget changes, blanket cache disabling, waveform
 oracle claim, dependency pin, workflow or unrelated production edit.
 Actual engine execution hosted only. Numeric cause/guard efficacy and
 performance remain to be measured; the matrix adversary is not a guest result.
+Canonical240f2b16 preceded implementation. Candidate adds exact two-row
+independent solution/residual proof, stable changed-value reuse control and
+actual guard-removal kernel mutant. Historical same-pattern tests now exercise
+the existing full-factor fallback when changed values require repivoting.
+Current live winding tests require completion and no floor witness, while
+the earlier failed-source evidence remains intact. Syntax/diff checks pass;
+all numerical tests and broad qualification are hosted and remain pending.
+Exactca168e03 passes CI38284904347 and Harris38284904465:
+8485 passed,zero failed,302 skipped. The actual obsolete-pivot residual/
+guard-removal mutant passes; guarded current-source waveform completes1.01ms
+with3432 attempts/10288 solves/51 observations and no floor witness.
+Remote masterc1f34017 introduced ESP32 integration during qualification.
+Merged it for combined qualification; sparse implementation and all five
+affected test files remain byte-identical to the testedca168e03 versions.
+No independent SPICE agreement or performance ratio is established.
+Exact combined19e12bda passes CI38293714144 and Harris38293714293:
+8486 passed,zero failed,302 skipped; zero-storage completion remains
+3432 attempts/10288 solves/51 observations. New masterc9bfff9f advances only
+Markdown/docs receipts fromc1f34017; preserve that publication without another
+unchanged engine qualification. Final ledger correction counts five affected
+test files accurately; tested executable/workflow/test bytes stay unchanged.
 
 2026-10-12 winding linear solver sensitivity — DONE, Codex bwcx.
 Branch lane/winding-linear-solver-sensitivity-20261012, exact base
@@ -94,7 +132,7 @@ and dense arms complete1.01ms with3432 attempts/10288 solves and51 observations.
 This isolates factor reuse as causal for this fixture, not its precise numeric
 mechanism or independent waveform agreement. No production change adopted.
 
-2026-10-12 winding UIC reference — CLAIM, Codex bwcx.
+2026-10-12 winding UIC reference — DONE, Codex bwcx.
 Branch lane/winding-uic-reference-20261012, exact base
 e6b9bc868c648684c8481aa50510d93990d26273. Five evidence-only paths:
 LANES.md, scripts/diagnose-winding-uic-reference.mjs,
@@ -106,6 +144,56 @@ control. CLI reports per-time refinement deltas and fails if predefined
 reference bounds are unmet; method validity is not engine agreement.
 No engine/exporter dependency, production/pin/workflow edits or local SPICE
 execution. Runtime qualification hosted; preserve unstable reference results.
+Canonical claim d31369f0 preceded implementation. Pure parser/alignment/
+refinement controls reject missing, duplicate, failed and shifted reference
+evidence. Live reference is registered in the mandatory ngspice census.
+Numerical outcome and qualification remain pending; unstable-reference method
+results do not count as waveform agreement or a corrected engine.
+Forward source review found `numdgt` does not own measurement formatting.
+Explicit child NGSPICE_MEAS_PRECISION=15 and low-precision-output refusal now
+protect refinement from rounded values; pure ambient-override/truncation
+controls pass. Earlier 46709459 receipts are superseded, not qualification.
+CI38268219098 at f14713d2 reds on insufficient v0 precision; Harris passes.
+Source review confirms interactive FIND can bypass environment precision via
+a hard-coded short output path. Forward deck repair prints distinct stored
+measurement scalars with numdgt=15; only those names are authoritative and
+raw short FIND lines are preserved but excluded. Precision bounds unchanged.
+Fresh qualification pending; do not classify this red as reference instability.
+Independent raw audit of numerical-green4d22bb12 found FIND stores rounded
+values too: scalar printing padded zeros and passed the length gate falsely.
+Those reference values are disowned. Forward direct-waveform wrdata repair
+removes FIND entirely, validates time/vector authority, retains original
+bracketing rows/hash and independently interpolates each requested time.
+Actual seven-digit-rounding negatives supplement syntax checks. Temporary
+solver directories are task-owned and restored/removed on every path.
+Three local pure controls pass; fresh actual qualification remains required.
+Forward audit binds the padded-value negatives to the original bracketing
+waveform rows, not interpolated results: interpolation can itself introduce
+extra digits. A rounded-input pure control demonstrates that distinction.
+Exact0fefc421 passes CI38283788303 and Harris38283788593 (8482 passed,
+zero failed,302 skipped), but actual refinement is UNSTABLE: startup voltage
+deltas54.979/49.884uV and post-edge current deltas up to6.193nA exceed
+unchanged10uV/1nA bounds. Full-precision values are valid characterization,
+not a qualified reference. Forward reference-only controls tighten reltol,
+abstol,vntol and trtol while retaining models, zero IC/UIC, sample times,
+100/50/25ns refinements and acceptance bounds. Actual stability is now a
+mandatory hosted assertion; raw evidence is emitted before any refusal.
+Exactc24f97d0 CI38290291832 fails only startup refinement (8481 pass,1 fail,
+302 skipped):31.005/7.927uV adjacent startup deltas; all falling-edge voltage
+and current deltas meet the unchanged bounds. Harris passes. This is an
+insufficient reference, not an engine failure or permission to widen bounds.
+Forward deck distinguishes paired1/.5/.25ns startup/print increments from
+unchanged100/50/25ns maximum integration steps. The near-quadratic startup
+dependence motivates this test; causal confirmation and stable refinement
+remain hosted requirements. Exact controls assert both sets of deck values.
+Exactc689cc46 passes CI38304881907 and Harris38304881996:
+8482 passed,zero failed,302 skipped. All ten sample-time voltage/current
+comparisons now meet unchanged10uV/1nA adjacent-refinement bounds: maximum
+voltage difference0.530275uV,current0.200133nA. Raw three-waveform hashes and
+bracketing rows retained. Normal-OP startup is4.999995V versus UIC0.026017V.
+This qualifies the finite independent reference, NOT engine agreement.
+Integration preserves exact qualified reference script/test bytes and all
+current master changes; ngspice census combines both independent gate entries.
 
 2026-10-12 winding error components — DONE, Codex bwcx.
 Branch lane/winding-error-components-20261012, exact base

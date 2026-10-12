@@ -61,8 +61,8 @@ test('actual fixed-arm Newton sensitivity retains zero storage and finite author
     assert.notEqual(report.arms[0].editedMnaHash, report.arms[1].editedMnaHash);
     assert.deepEqual(report.arms[0].capture.status.profile, report.arms[1].capture.status.profile);
     const baseline = report.arms[0].capture;
-    assert.equal(baseline.completed, false, 'diagnostic baseline must preserve the original refusal');
-    assert.equal(baseline.status.failure?.code, 'minimum-step-accuracy-unmet');
+    assert.equal(baseline.completed, true, 'current guarded-reuse baseline completes');
+    assert.equal(baseline.status.failure, null);
     for (const arm of report.arms) {
         const capture = arm.capture;
         assert.deepEqual(capture.initialStorage, {capacitorVoltage: 0, inductorCurrent: 0});
