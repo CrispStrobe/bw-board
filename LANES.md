@@ -1,5 +1,24 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-12 sparse refactor pivot admission — CLAIM, Codex bwcx.
+Branch fix/sparse-refactor-pivot-admission-20261012, exact base
+2508b53d. Eight paths: LANES.md, src/sparse.js, test/sparse-lu.test.mjs,
+test/winding-precision-diagnostic.test.mjs,
+test/winding-linear-solver-sensitivity.test.mjs,
+test/winding-newton-sensitivity.test.mjs,
+test/winding-error-components.test.mjs and
+spec-updates/winding-precision-diagnostic.md. Admit numeric reuse only while
+the retained pivot still satisfies full factorization's largest-remaining
+partial-pivot rule; otherwise use the existing full-factor fallback.
+Hosted exact-kernel adversary/residual and executable guard-removal mutant,
+stable-pivot positive control, broad sparse/solver tests and unchanged-policy
+zero-storage waveform completion required. Update live diagnostic assertions
+to current-source behavior while preserving earlier failed receipts in prose.
+No device/assembly/profile/budget changes, blanket cache disabling, waveform
+oracle claim, dependency pin, workflow or unrelated production edit.
+Actual engine execution hosted only. Numeric cause/guard efficacy and
+performance remain to be measured; the matrix adversary is not a guest result.
+
 2026-10-12 winding linear solver sensitivity — DONE, Codex bwcx.
 Branch lane/winding-linear-solver-sensitivity-20261012, exact base
 d96d4ceb. Four evidence-only paths: LANES.md,
