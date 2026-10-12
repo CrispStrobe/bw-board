@@ -24,7 +24,7 @@ test('winding CLI refuses unknown, duplicate and incomplete options', () => {
 });
 
 const summarize = report => diagnosticJson({scenario: report.scenario, initialStorage: report.initialStorage,
-    completed: report.completed, work: report.status.work, failure: report.status.failure,
+    completed: report.completed, committedIntegrationWork: report.status.work, failure: report.status.failure,
     receipt: report.receipt, observations: report.rows.length});
 
 test('fresh zero-storage precision run preserves its actual failure and provisional observations', t => {
@@ -46,11 +46,13 @@ test('fresh zero-storage precision run preserves its actual failure and provisio
     assert.equal(report.status.failure.stepSec, report.status.profile.minStepSec);
     assert.ok(report.status.failure.normalizedError > 1);
     assert.ok(report.receipt && !report.receipt.completed);
+    assert.equal(report.receipt.failure, 'whole-advance-budget-exceeded');
+    assert.equal(report.receipt.work.attempts, WINDING_LIMITS.maxAttempts);
     assert.ok(report.rows.length > 0 && report.rows.every(row => row.qualified === false));
     assert.equal(report.oracleAgreement, 'not-tested');
     for (const [key, bound] of Object.entries(WINDING_LIMITS)) {
         const counter = key.slice(3).toLowerCase();
-        assert.ok(report.status.work[counter] <= bound, `${counter} retains the whole-capture ceiling`);
+        assert.ok(report.receipt.work[counter] <= bound, `${counter} retains the whole-capture ceiling`);
     }
     // CI preserves actual observations, rather than publishing invented failure magnitudes.
     assert.doesNotThrow(() => JSON.parse(diagnosticJson(report)));
@@ -79,7 +81,13 @@ test('DC-initialized falling edge completes without changing precision policy or
     assert.equal(report.rows.length, 200);
     assert.equal(report.rows.at(-1).timeNs, '20000');
     assert.equal(diagnosticExitCode(report), 0);
-    assert.ok(report.initialStorage.inductorCurrent > .1);
+    const {capacitorVoltage, inductorCurrent} = report.initialStorage;
+    assert.ok(Number.isFinite(inductorCurrent) && inductorCurrent > 0);
+    assert.ok(Number.isFinite(capacitorVoltage) && capacitorVoltage > 0 && capacitorVoltage < 5);
+    // Independent series KVL: the DC inductor is a short, and the 10 ohm
+    // winding resistor drops 5 V minus the collector/probe-capacitor bias.
+    // Do not assume saturation (0.5 A); the 22.7 kohm base drive limits Q.
+    assert.ok(Math.abs(inductorCurrent - (5 - capacitorVoltage) / 10) < 1e-10);
 });
 
 test('diagnostic CLI failure status is executable and cannot be replaced by successful exit', async () => {

@@ -35,6 +35,31 @@ OP initial storage, increasing work/error bounds or clearing the failure latch.
 Reference comparisons must explicitly match initialization and physical load.
 
 Runtime diagnosis is hosted. No current measurements or new reference agreement
-are asserted by the source-only preparation of this tool. Late nonlinear ringing
+were asserted by the source-only preparation of this tool. Late nonlinear ringing
 and unloaded turn-off remain separate from the existing bounded sample and
 passive RLC instrument qualifications.
+
+## First exact hosted receipt
+
+[CI38221691144](https://github.com/CrispStrobe/bw-board/actions/runs/38221691144)
+at source `35848f2797add30b06b09c669a09e8a34a3b80de` reproduces the original
+zero-storage precision refusal at 0.0010020000019999998 s, with a 1 ps step
+and normalized error 11.950940967672846. Its whole-capture receipt reaches
+20000 attempts / 59992 solves / 51 advances and retains only 50 provisional
+observations. The ordinary status work record includes only the previously
+completed integration intervals (3135 / 9401 / 50); use the bounded receipt,
+not those partial counters, to audit the whole-capture authority.
+
+The same pulse with public OP initialization completes at 1.01 ms within
+3736 attempts / 11200 solves / 51 advances, but starts with capacitor voltage
+4.999994999954797 V and winding current 0.5000045202874226 uA, not zero storage.
+The separate DC falling-edge control completes within 551 / 1647 / 200 and
+starts at 4.804253778974755 V / 19.574622102524475 mA. These are observed
+engine values, not a newly qualified SPICE reference.
+
+That first CI is **red** because the diagnostic test incorrectly assumed the
+DC control current exceeded 100 mA. The forward evidence repair replaces that
+unsupported assumption with independent series KVL: current equals the
+5 V supply minus collector bias, divided by the 10 ohm winding resistance.
+No capture, source or device equation is changed to make that assertion pass.
+Fresh exact-head qualification remains required.

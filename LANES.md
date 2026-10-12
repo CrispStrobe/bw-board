@@ -22,6 +22,14 @@ argument/serialization/exit-mutation controls pass, syntax/whitespace checks pas
 No transient capture or numerical oracle ran locally. Exact source diagnosis,
 CI/Harris qualification and landing remain pending; a green failure-preservation
 test must not be credited as successful zero-storage winding simulation.
+First CI38221691144 reproduces the original zero-storage refusal exactly;
+Harris38221691185 passes. CI is red only on this lane's unjustified DC-current
+assumption (>100mA vs actual19.575mA). Forward test repair uses independent
+series KVL, not a lowered arbitrary current threshold. Whole-capture budget
+checks now read the bounded receipt; partial committed integration counters
+are retained separately. Both actual OP controls complete, but neither is a
+zero-storage repair or SPICE-agreement claim. Source35848f27 and its red remain
+preserved; fresh replacement qualification is required.
 
 2026-10-11 transient floor-step ringing and reset controller — DONE candidate, Claude Code.
 Branch fix/reset-transient-controller-20261011, base current master. Cause of
