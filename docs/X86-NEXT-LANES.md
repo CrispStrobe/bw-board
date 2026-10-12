@@ -778,6 +778,24 @@ The ordered follow-up tasks are:
    Next: finish every enabled exact-head hosted check; freeze new v3 control and
    actual original readers and review their manufactured adversaries; bind complete
    official history and a separate one-shot launch guard before any real attempt.
+   The new control and actual original-reader algorithms have now passed
+   coordinator and independent manufactured review: 11 control-reader tests plus
+   three independent refusal cases, and 14 actual-reader tests plus three cases.
+   The separate launch guard passed 11 tests and four independent history cases.
+   Readers bind v3, 38 source roles and the 46-test transcript; successful actual
+   reports additionally require bounded equal GNU header/consumed-name counts and
+   no pending name, alongside all existing input, nine-role, session and cleanup
+   joins. Negative copied facts remain unqualified. Guard preparation includes all
+   five known workflow runs, preserving both failed predecessors. These are
+   preparatory algorithm results. The automatic
+   [control run38279833708](https://github.com/CrispStrobe/bw-board/actions/runs/38279833708)
+   has now passed its 46-test suite; its six control-job steps succeeded and actual
+   job stayed skipped. Coordinator frozen-reader and independent raw-original/Git
+   audits passed the [five-report original](receipts/2026-10-12-gnu-longname-materializer-controls/README.md).
+   Other enabled source checks remain pending; final launch bindings remain unset.
+   Next: finish every enabled check, authenticate complete official history, then
+   fill and independently review exact guard bindings before reserving a fresh
+   actual attempt. Do not launch while checks or final binding review are pending.
    The new actual label remains unapplied. Preserve both predecessor negative
    originals and consumed launch states. No actual compatibility is qualified yet. Review corrected a missing final report retaining completion
    and a file limit too small for
