@@ -73,3 +73,8 @@ and cleanup uncertainty with temporary filesystem and synthetic archive inputs.
 Use Python `-I -B run-control.py`. No actual archive, tool, compiler, Node or guest
 is run. Exact-source hosted controls, independent original audit and a separately
 reviewed acquisition adapter, frozen reader and launch guard remain later gates.
+
+This revision preserves the failed original and carries bounded first-rule TAR
+diagnostics in copied materializer statuses. Packet schema is v2. Acceptance and
+compiler refusal remain unchanged; diagnostic facts are source-issued serialized
+content rather than original emitted writer bytes or raw archive header proof.

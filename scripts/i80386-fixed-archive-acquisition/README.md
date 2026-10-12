@@ -64,3 +64,8 @@ adapter does not provide extraction completeness, license closure, raw archive
 compatibility, continuous identity, hard runtime/resource qualification or a
 launch authority. Hosted acquisition and materialization require a separately
 reviewed exact-source profile, original reader and one-shot gate.
+
+This revision preserves the failed original and carries bounded first-rule TAR
+diagnostics in copied materializer statuses. Packet schema is v2. Acceptance and
+compiler refusal remain unchanged; diagnostic facts are source-issued serialized
+content rather than original emitted writer bytes or raw archive header proof.

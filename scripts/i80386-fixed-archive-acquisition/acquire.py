@@ -8,7 +8,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-RUNNER_SHA = 'c686e8255cab401bc6b7d67ebf0878b1b2f2084111fae78fbc5b2d2b8cf2b978'
+RUNNER_SHA = '84b845505f4ed28324c89c840dfa889ffdef31b95219584aeaa8d05860807c5e'
 INPUTS = (
  ('toolchain', 'https://github.com/andrewwutw/build-djgpp/releases/download/v3.4/djgpp-linux64-gcc1220.tar.bz2', 80596981, '8464f17017d6ab1b2bb2df4ed82357b5bf692e6e2b7fee37e315638f3d505f00'),
  ('djcrx', 'https://www.delorie.com/pub/djgpp/current/v2/djcrx205.zip', 895256, '22274ed8d5ee57cf7ccf161f5e1684fd1c0192068724a7d34e1bde168041ca60'),
@@ -189,7 +189,7 @@ class FixedArchiveAcquisition:
         return self._status()
     def report(self):
         if self._busy:self._enter()
-        return {'schema':'bw.fixed-archive-acquisition.v1','runnerSha256':RUNNER_SHA,'acquisition':self._status(),'materialization':None if self._packet is None else json.loads(self._packet)}
+        return {'schema':'bw.fixed-archive-acquisition.v2','runnerSha256':RUNNER_SHA,'acquisition':self._status(),'materialization':None if self._packet is None else json.loads(self._packet)}
     def close(self):
         self._enter()
         try:
