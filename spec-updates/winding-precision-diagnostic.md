@@ -114,6 +114,18 @@ missing/duplicate time row, wrong vector authority or low-precision table is
 accepted. Solver output remains in the receipt. Each solver uses a fresh owned
 temporary directory, removed on every success/failure path.
 See ngspice's [wrdata command](https://nmg.gitlab.io/ngspice-manual/interactiveinterpreter/commands/wrdata_writedatatoafile_simpletable.html).
+
+Actual full-precision source `0fefc421248706320fef4a8a903fa0fe7e9b5f69`
+passed [CI38283788303](https://github.com/CrispStrobe/bw-board/actions/runs/38283788303)
+and [Harris38283788593](https://github.com/CrispStrobe/bw-board/actions/runs/38283788593)
+(8482 passed, zero failed,302 skipped), but its reference is **not stable**.
+Adjacent startup voltage differences are54.979 and49.884uV; post-edge current
+differences reach6.193nA. These exceed the predefined10uV/1nA bounds.
+The method's green status is not reference qualification or engine agreement.
+Forward reference-only settings use reltol1e-9,abstol1e-14,vntol1e-11,trtol1
+to reduce integration/interpolation error, preserving both bounds, model,
+initial state and100/50/25ns maximum-step refinements. Hosted stability is now
+mandatory; numerical evidence is retained before any failing assertion.
 CI38268219098 at f14713d2 stopped correctly on insufficient v0 precision;
 Harris38268219115 passed. This is a reference-harness failure, not measured
 reference instability or an engine fix. Its scalar-vector successor4d22bb12

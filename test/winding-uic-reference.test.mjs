@@ -11,6 +11,7 @@ test('reference model cards, zero IC and UIC are independent explicit authoritie
     assert.match(deck, /LW supply winding 5m IC=0/);
     assert.match(deck, /CP collector 0 12p IC=0/);
     assert.match(deck, /tran 25n 1.011m 0 25n uic/);
+    assert.match(deck, /method=gear maxord=2 reltol=1e-9 abstol=1e-14 vntol=1e-11 trtol=1/);
     assert.match(deck, /set numdgt=15/);
     assert.match(deck, /let ref_voltage = v\(collector\)/);
     assert.match(deck, /let ref_current = i\(LW\)/);
@@ -73,7 +74,7 @@ test('measurement precision is bound to the actual child process, not table form
 
 const ngspice = process.env.NGSPICE || 'ngspice';
 // No availability probe or numerical child runs when selecting pure controls.
-test('hosted live zero-storage reference characterizes refinement and rejects OP substitution', t => {
+test('hosted live zero-storage reference meets fixed refinement bounds and rejects OP substitution', t => {
     if (spawnSync(ngspice, ['--version'], {encoding: 'utf8', timeout: 5000}).status !== 0) {
         t.skip('ngspice unavailable; CI oracle census requires the executable');
         return;
@@ -97,7 +98,8 @@ test('hosted live zero-storage reference characterizes refinement and rejects OP
     }
     assert.ok(report.normalOp.measurements[0].voltage > 4.9, 'normal OP is a different initial capacitor state');
     assert.notEqual(report.arms[2].deckSha256, report.normalOp.deckSha256);
-    // An unstable reference is recorded as such, not forced into a golden.
-    assert.equal(typeof report.refinement.stable, 'boolean');
     t.diagnostic(JSON.stringify(report));
+    // Preserve actual evidence before refusing an insufficiently refined
+    // reference. The acceptance bounds themselves have not been relaxed.
+    assert.equal(report.refinement.stable, true, JSON.stringify(report.refinement));
 });

@@ -38,6 +38,14 @@ Three local pure controls pass; fresh actual qualification remains required.
 Forward audit binds the padded-value negatives to the original bracketing
 waveform rows, not interpolated results: interpolation can itself introduce
 extra digits. A rounded-input pure control demonstrates that distinction.
+Exact0fefc421 passes CI38283788303 and Harris38283788593 (8482 passed,
+zero failed,302 skipped), but actual refinement is UNSTABLE: startup voltage
+deltas54.979/49.884uV and post-edge current deltas up to6.193nA exceed
+unchanged10uV/1nA bounds. Full-precision values are valid characterization,
+not a qualified reference. Forward reference-only controls tighten reltol,
+abstol,vntol and trtol while retaining models, zero IC/UIC, sample times,
+100/50/25ns refinements and acceptance bounds. Actual stability is now a
+mandatory hosted assertion; raw evidence is emitted before any refusal.
 
 2026-10-12 winding error components — CLAIM, Codex bwcx.
 Branch lane/winding-error-components-20261012, exact base

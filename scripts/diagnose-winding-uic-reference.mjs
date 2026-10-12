@@ -25,7 +25,7 @@ export function windingReferenceDeck (maxStepNs, zeroStorage = true) {
     if (typeof zeroStorage !== 'boolean') throw new Error('Initialization must be explicit');
     const temp = .02585 * 1.602176634e-19 / 1.380649e-23 - 273.15;
     return ['Independent zero-storage winding reference',
-        `.options temp=${temp.toPrecision(12)} tnom=${temp.toPrecision(12)} method=gear maxord=2 reltol=1e-7 abstol=1e-12 vntol=1e-9`,
+        `.options temp=${temp.toPrecision(12)} tnom=${temp.toPrecision(12)} method=gear maxord=2 reltol=1e-9 abstol=1e-14 vntol=1e-11 trtol=1`,
         'VCC supply 0 5', 'VP drive 0 PULSE(0 5 0 1u 1u 1m 3m)',
         'RB drive base 22700', 'Q1 collector base 0 QM',
         `LW supply winding 5m${zeroStorage ? ' IC=0' : ''}`,
