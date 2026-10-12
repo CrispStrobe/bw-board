@@ -162,3 +162,21 @@ the exact numerical mechanism, safe reuse admission rule, physical fidelity
 or SPICE agreement. A bounded production repair needs actual sparse pivot/
 residual adversaries, unchanged-policy waveform regression and broad solver
 checks; globally disabling reuse is not the selected production fix.
+
+### Bounded numeric-reuse admission candidate
+
+The candidate makes numeric refactor refuse when its retained pivot is smaller
+than another structurally reachable unpivoted candidate. This restores full
+factorization's existing largest-remaining partial-pivot invariant rather than
+introducing an arbitrary relative threshold. The caller already discards a
+refused partial factor and performs full factorization. Identical-value
+substitution and changed-value reuse with stable pivots remain available.
+
+An independently authored two-row system changes from `[[1,1],[0,1]]` to
+`[[1e-10,1],[1,1]]` with exact solution `[1,1]` and right-hand side
+`[1+1e-10,2]`. The executable old-guard mutant must admit its obsolete pivot
+and exceed1e-8 equation residual; guarded refusal plus full factorization
+must recover below1e-14. Separate unchanged and changed stable-pivot controls
+protect retained reuse. Actual kernel, broad solver and unchanged-policy
+zero-storage completion tests run hosted. This is a candidate until those
+results pass, and it does not replace the pending independent SPICE reference.
