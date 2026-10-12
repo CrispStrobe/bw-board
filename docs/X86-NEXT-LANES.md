@@ -756,15 +756,21 @@ The ordered follow-up tasks are:
    review. Independent filled-bindings review and fresh source/complete official
    state checks admitted one diagnostic label application. The sole
    [actual run38276900168](https://github.com/CrispStrobe/bw-board/actions/runs/38276900168)
-   is queued at the same source; its run and job identities were sealed before
-   original body acquisition. The first final freshness check refused before any
-   label request; a new read-only census and immediate label call completed without
-   repeating reservation or consumption. Do not relabel, rerun or dispatch this
-   head. Next: wait for this sole attempt, authenticate its complete official
-   metadata and sole original artifact, then perform frozen-reader and independent
-   raw-original audits before interpreting any reported diagnostic. No actual
-   diagnostic result or archive compatibility is qualified yet. Preserve any refusal
-   before proposing a separate parser compatibility change. Review corrected a missing final report retaining completion
+   failed at materialization. Its sole original passed frozen-reader and independent
+   raw-original/Git preservation audits; the
+   [negative receipt](receipts/2026-10-12-archive-refusal-diagnostic-failure/README.md)
+   retains all nine text reports. The source reports GNU `L` at header 102,
+   decoded offset 5,634,048; its type is rejected independently of mode. Input
+   archive bodies were not retained, so this is not an independent header rehash.
+   No workspace, selected write or observation was reported. Do not relabel,
+   rerun or dispatch this consumed head. Next: implement and review a bounded
+   GNU `L` long-name metadata parser in
+   `scripts/i80386-cwsdpmi-gnu-longname-materializer/`, then qualify a separately
+   admitted source revision. Preserve the four input pins, selected nine roles,
+   fixed thirteen hard-link mappings, path rules and archive budgets. Reject
+   orphan/repeated metadata, unsafe names, GNU `K`, PAX and symlinks; add
+   manufactured boundary and refusal controls before a new frozen-reader and
+   one-shot launch review. No actual compatibility is qualified yet. Review corrected a missing final report retaining completion
    and a file limit too small for
    selected tools. The actual job permits 16 MiB file writes and retains smaller
    independent JSON caps; its prospective reader admits at most 512 KiB of ZIP
