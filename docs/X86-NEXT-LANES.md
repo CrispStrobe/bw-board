@@ -707,7 +707,7 @@ The ordered follow-up tasks are:
    original errors survive cleanup failures. An absent report remains absent.
    Inputs stay private in memory, with no archive staging or upload. The
    observed deadlines and byte limits are not hard process-memory/time guarantees.
-   No actual acquisition or materialization has run. [PR522](https://github.com/CrispStrobe/bw-board/pull/522),
+   The first actual attempt failed before materialization. [PR522](https://github.com/CrispStrobe/bw-board/pull/522),
    exact source `b281e779266f6d225d91a88750c85a36e858042e`, prepares the hosted
    profile in `scripts/i80386-fixed-archive-materialization-hosted/` and
    `.github/workflows/i80386-fixed-archive-materialization.yml`. Coordinator and
@@ -724,12 +724,22 @@ The ordered follow-up tasks are:
    32 source roles. After independent reader and one-shot guard reviews, a fresh
    source and complete official-state census admitted one label application.
    The sole [actual run38253971654](https://github.com/CrispStrobe/bw-board/actions/runs/38253971654)
-   is queued at the same exact head; its actual job is enabled and its synthetic
-   job skipped. The run identity was bound before any original body acquisition.
-   This is a submitted attempt, with no archive materialization result yet. Do
-   not dispatch, relabel or rerun this head. Actual acquisition remains
-   unqualified pending original reports and independent audit. Review corrected a
-   missing final report retaining completion and a file limit too small for
+   **failed** at the same exact head; its actual job ran and its synthetic
+   job skipped. The run identity was bound before original body acquisition.
+   The [preserved failure receipt](receipts/2026-10-12-fixed-archive-materialization-failure/README.md)
+   contains nine byte-exact text reports. Coordinator frozen-reader, official-job
+   and independent raw-original/Git audits confirmed preservation of this
+   unqualified result. All four input extents/hashes were reported authenticated
+   before `archive-type`; zero workspace creation, selected writes or observations
+   were reported. The precise refusing header/rule is absent from the report.
+   GNU/PAX explanations remain hypotheses. Do not dispatch, relabel or rerun
+   this head. Actual materialization, compiler, guest and performance remain
+   unqualified. The next source revision must report bounded fixed reason/header
+   ordinal, decoded offset, type byte and magic class without member names or
+   archive bodies, preserving all acceptance rules and input pins. A future
+   actual attempt requires separate reviewed source, frozen reader and one-shot
+   launch state. Review corrected a missing final report retaining completion
+   and a file limit too small for
    selected tools. The actual job permits 16 MiB file writes and retains smaller
    independent JSON caps; its prospective reader admits at most 512 KiB of ZIP
    evidence. These are distinct bounds. Nine sanitized text roles describe a
