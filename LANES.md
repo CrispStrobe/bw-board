@@ -3395,3 +3395,12 @@ the nine fixed roles with archive/source provenance joins. Synthetic controls
 are preparation only: full toolchain, implicit inputs, actual archive layout,
 compiler launch and guest/performance qualification remain separate gates.
 Held sources, production compiler disable, defaults and consumer pins stay fixed.
+
+### Hosted selected-role materializer controls — 2026-10-12
+
+Claimed: `scripts/i80386-retained-materializer-source-controls/{admit.py,README.md}`
+and `.github/workflows/i80386-retained-materializer-source-controls.yml`.
+Freeze eighteen dependency/observer/materializer source roles and the three
+profile roles; run only the 31 manufactured controls in a bounded own-PR
+exact-head attempt-one job. Preserve original artifacts for independent audit.
+No actual archives, tools, compiler, guest, defaults or consumer pin changes.
