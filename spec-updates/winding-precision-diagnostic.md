@@ -89,3 +89,36 @@ refusal for the experimental arm. A green method test is **not** evidence of
 improvement. The CLI remains nonzero while either capture fails. Completion,
 if observed, still requires independently refined waveform/residual agreement
 and broader qualification before any solver repair is proposed.
+
+### Observed sensitivity result
+
+[CI38251375347](https://github.com/CrispStrobe/bw-board/actions/runs/38251375347)
+and [Harris38251375321](https://github.com/CrispStrobe/bw-board/actions/runs/38251375321)
+passed at `f5be8c2566333f2213eb1b718db47dd80eccb8c3`.
+The full suite reports 8478 passed, zero failed and 302 skipped. Both arms
+remain incomplete, each exhausting 20000 attempts / 59992 solves / 51 advances
+with 50 provisional observations. The unchanged arm reproduces the 1 ps
+minimum-step refusal and normalized error 11.950940967672846. The 1e-10 arm
+instead retains its first trapezoidal solve-convergence failure at
+0.00001941114800327344 s. That earlier failure latch is not the final reached
+time: the bounded capture continues and ultimately exhausts its work authority.
+The simple tighter-Newton hypothesis supplies no successful waveform and is
+not adopted as a production repair. Original Board/caller/MNA hashes match
+across arms; only the isolated experimental MNA hash differs.
+
+### Endpoint-error component diagnostic
+
+```sh
+node scripts/diagnose-winding-error-components.mjs
+```
+
+This separately isolated Board module observes, without altering acceptance,
+the same controller's full-step versus two-half-step endpoint comparison.
+It retains the last eight rejected comparisons and the first floor witness,
+including signed values, normalization scale, dominant node/storage component,
+each solve's convergence flag and copied incoming capacitor/inductor histories.
+The original caller, production files, zero storage, model, precision policy,
+sample partition and bounded work authority remain unchanged. Exact single
+instrumentation/import anchors are mandatory. This is a bounded diagnostic,
+not a new simulation mode, repair, physical measurement or oracle qualification.
+Numerical execution and the recorded component outcome await hosted checks.

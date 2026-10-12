@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-12 winding error components — CLAIM, Codex bwcx.
+2026-10-12 winding error components — DONE candidate, Codex bwcx.
 Branch lane/winding-error-components-20261012, exact base
 f5be8c2566333f2213eb1b718db47dd80eccb8c3. Four evidence-only paths:
 LANES.md, scripts/diagnose-winding-error-components.mjs,
@@ -13,6 +13,12 @@ zero storage, source/device equations, precision profile and work authority.
 No production changes, tolerance/budget changes, pin or workflow edits.
 Hosted numerical execution only; genuine original-source routing and
 missing/duplicate-anchor negatives required before qualification.
+Canonical claim e6b9bc86 preceded implementation. Two local pure controls
+pass, including exact original-line preservation, history snapshot/floor-stop
+and executable wrong-normalization mutant. No local numerical capture ran.
+Actual hosted caller must preserve original failure, 50 provisional rows and
+20000 attempts while reproducing its dominant component/error exactly.
+Frozen candidate qualification and landing remain pending.
 
 2026-10-12 winding Newton sensitivity — DONE candidate, Codex bwcx.
 Branch lane/winding-newton-sensitivity-20261012, exact base
@@ -33,7 +39,11 @@ controls pass, including exact embedded MNA-selector/source-byte proofs and
 an executable original-module-routing mutant. The unchanged baseline source
 is byte-identical before import rebinding. Both arms retain original source
 hashes, and runtime checks reject any changed on-disk source. No local transient
-capture ran. Hosted fixed-arm receipts, CI/Harris and landing remain pending.
+capture ran. Exact f5be8c25 landed after CI38251375347 and Harris38251375321
+passed: 8478 pass/0 fail/302 skips. Both arms exhaust the same work authority;
+the tighter arm records an earlier nonconverged solve, not a successful repair.
+Production tolerance remains unchanged. Raw results and caveats are recorded
+in the diagnostic specification.
 
 2026-10-12 finite winding precision diagnostic — DONE, Codex bwcx.
 Branch lane/winding-precision-diagnostic-20261012, exact refreshed base
