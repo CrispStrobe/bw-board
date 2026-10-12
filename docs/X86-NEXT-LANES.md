@@ -632,8 +632,8 @@ created. Root and independent reviews passed all 42 manufactured controls,
 including per-alias omissions, duplicates and changed targets; independent
 alias-parent and self-target adversaries also refused before preparation.
 The original report supplies normalized inventory facts, with no raw archive
-body or proof of header spelling. Actual archive compatibility, hosted controls
-for this derivative and complete toolchain provisioning remain unqualified.
+body or proof of header spelling. Hosted derivative controls also passed, as recorded below. Actual archive
+compatibility and complete toolchain provisioning remain unqualified.
 
 The ordered follow-up tasks are:
 
@@ -658,8 +658,12 @@ The ordered follow-up tasks are:
    `scripts/i80386-fixed-alias-source-controls/` and its matching workflow.
    Twenty-one immutable unit roles plus three profile roles bind the 42-control
    suite. Nine manufactured admission controls and independent review passed;
-   the sole automatic hosted result remains pending. Freeze and independently
-   audit that original before crediting hosted derivative qualification.
+   the sole attempt-one [run38217466511](https://github.com/CrispStrobe/bw-board/actions/runs/38217466511)
+   passed all 42 controls. The [original receipt](receipts/2026-10-12-fixed-alias-controls/README.md)
+   preserves four byte-exact reports and official origins. Frozen-reader,
+   separate job admission and independent raw-original audits passed, binding
+   all twenty-four source roles. General CI checks remain a separate integration
+   gate; the finite synthetic result does not qualify actual archives.
 2. **Actual archive materialization only.** First close the known alias blocker:
    the [retained acquisition inventory](receipts/2026-10-12-tool-archive-alias-inventory/README.md)
    reports thirteen hard-link aliases, rejected by the current strict parser.
@@ -671,7 +675,11 @@ The ordered follow-up tasks are:
    Then qualify the revised parser against the
    four pinned public tool/source archives without invoking any executable. Reuse
    retained original inventories where available; new qualification must bind its
-   own source and inputs. Record actual member topology, selected output hashes,
+   own source and inputs. Prepare a bounded runner that retains the two raw
+   nine-role observations and materialize/close statuses from the same private
+   instance. A source policy about read-only modes or omitted alias outputs is
+   distinct from a final namespace/mode census; this first test need not claim
+   the latter. Record actual member topology, selected output hashes,
    source joins, omitted notices and cleanup. Preserve any refusal; change the
    parser only through a separately reviewed source revision. This task does not
    authorize a compiler connection or a binary bundle.
