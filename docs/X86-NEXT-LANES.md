@@ -413,9 +413,10 @@ Post-mkdir identities are named/held observations. Because mkdir returns no
 inode or descriptor, replacement before the first observation can be
 indistinguishable; those identities do not prove which inode the call created.
 The authored control preserves this boundary. Parent trust, source ownership,
-continuous identity and compiler qualification remain false. Hosted pure
-controls for the new Python units are still owed; ordinary CI success alone
-must not be described as executing these standalone Python methods.
+continuous identity and compiler qualification remain false. The
+[original hosted four-unit controls](receipts/2026-10-12-workspace-source-controls/README.md)
+now pass at their pinned source; ordinary CI success alone must not be described
+as executing other standalone Python methods.
 
 Next implement the separately reviewed connection, with these entry points:
 
@@ -444,19 +445,21 @@ No new guest completion, post-PF frame return, default adoption or RTx is claime
 `scripts/i80386-workspace-source-controls/` and
 `.github/workflows/i80386-workspace-source-controls.yml`, stacked on PR508.
 Root and independent review pass. Seven manufactured admission methods and an
-independent file-replacement adversary pass; no hosted result is claimed yet.
-The automatic [source-control run38173075353](https://github.com/CrispStrobe/bw-board/actions/runs/38173075353)
-was queued at this checkpoint. No manual dispatch, duplicate run or replay was
-used.
+independent file-replacement adversary pass. The sole automatic attempt-1
+[source-control run38173075353](https://github.com/CrispStrobe/bw-board/actions/runs/38173075353)
+passed all 53 methods and six job steps. Coordinator and independent original-byte
+audits pass; see the
+[closed original receipt](receipts/2026-10-12-workspace-source-controls/README.md).
+No manual dispatch, duplicate run or replay was used.
 
 The job admits thirteen immutable unit paths and three profile paths, then runs
 phase9, route13, writer16 and creator15 methods in isolated Python. Pinned
 actions, Ubuntu24.04, bounded Git/file reads, per-stage timeouts, core/file limits
 and ten fixed text artifact roles preserve complete or failed phases. It does
 not compile a client, import the disabled compiler, copy tools, launch a guest
-or grant parent/workspace/source authority. Refresh the original run outcome;
-acquire its completed artifact once and independently audit the exact original
-source, job, inventory and full four-suite reports before connection work.
+or grant parent/workspace/source authority. The original source, job, inventory
+and full four-suite reports are now independently audited. Preserve that
+standalone result; later composition needs its own exact-source qualification.
 
 The next handoff should privately compose the exact creator, route and writer
 revisions rather than reopening paths:
@@ -479,5 +482,8 @@ revisions rather than reopening paths:
   refusals. Preserve partial creation/output; write before terminal route cleanup.
   Pair/input/reader and reviewed launch gates follow separately.
 
-This composition is a reviewed design, not implemented or qualified handoff.
+The retained-descriptor source unit is claimed under
+`scripts/i80386-cwsdpmi-owned-workspace-evidence/`. Implementation is in progress;
+no composition control or hosted result is claimed yet. These acceptance items
+remain the review contract for the new unit.
 Production compilation remains disabled; no guest or speed claim follows.
