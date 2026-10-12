@@ -3360,3 +3360,8 @@ Claimed `scripts/i80386-cwsdpmi-workspace-creator/{workspace.py,workspace-contro
 ### 386 workspace unit hosted controls — 2026-10-11
 
 Claimed `scripts/i80386-workspace-source-controls/{admit.py,README.md}` and `.github/workflows/i80386-workspace-source-controls.yml` on `lane/386-workspace-source-controls-20261011`. Exact-source admission and one automatic PR-only hosted control job for the frozen phase, route, writer and creator units. Manufactured Python controls only; preserve original reports and failures. No compiler/client, guest, runtime, workspace-parent authority, private media or production enable. Existing unit sources remain unchanged.
+
+
+### 386 retained workspace evidence composition — 2026-10-12
+
+Claimed `scripts/i80386-cwsdpmi-owned-workspace-evidence/{owner.py,owner-control.py,README.md}` on `lane/386-owned-workspace-evidence-20261012`. Exact-source private creator/route/writer composition with retained descriptors, seeded chains and once-only close ownership; manufactured filesystem controls only after the finite four-unit original gate. No public caller FD/path handoff, compiler enable or parent/source authority. Held helpers remain unchanged; partial failures and cleanup uncertainty must survive.
