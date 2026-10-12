@@ -797,25 +797,32 @@ The ordered follow-up tasks are:
    official checks, label and workflow-history admission. The one-shot reservation
    for this source head is consumed: the sole
    [actual run38287531384](https://github.com/CrispStrobe/bw-board/actions/runs/38287531384),
-   attempt 1, was launched and is queued. No artifact body or actual result has
-   been acquired. Do not rerun, relabel or dispatch this head, or reacquire either
-   predecessor original. Next: retain terminal official run/job/artifact metadata,
-   independently review the artifact seal before the sole body acquisition, then
-   audit that original with the frozen reader. Preserve both predecessor negative
-   originals and consumed launch states. No actual compatibility is qualified yet.
+   attempt 1, completed successfully. Coordinator frozen-reader, coder and
+   independent original-byte/Git audits passed the
+   [nine-text-member original](receipts/2026-10-12-gnu-longname-materialization/README.md)
+   for finite reported nine-role materialization consistency. All six actual-job
+   steps succeeded and its 46 controls passed. The report records all four input
+   pins, 157 GNU name substitutions with no pending name, nine selected writes,
+   13 validated aliases against 11 targets, four source-origin joins and zero
+   reported close refusals. Its 11 processed notice hashes cover 142,595 bytes,
+   with reported omissions zero; this does not mean all notices or notice bodies
+   were retained. Physical aliases remain omitted. Do not rerun, relabel or
+   dispatch this head, or reacquire either predecessor or this original. Preserve
+   both predecessor negative originals and consumed launch states. Continue with
+   the full-tree provisioning acceptance in lane 3; filesystem leases, namespace,
+   complete toolchain, compiler, guest and performance remain unqualified.
    Review corrected a missing final report retaining completion
    and a file limit too small for
    selected tools. The actual job permits 16 MiB file writes and retains smaller
    independent JSON caps; its prospective reader admits at most 512 KiB of ZIP
    evidence. These are distinct bounds. Nine sanitized text roles describe a
    completed actual attempt, with no input archives or tools uploaded. Every
-   enabled exact-head source check, a frozen independent original reader and
-   one-shot launch reservation must precede the real test; compiler/tool/guest
-   execution remains outside it.
+   enabled exact-head source check, frozen original reader and one-shot launch
+   reservation preceded this test; compiler/tool/guest execution remained outside it.
    A source policy about read-only modes or omitted alias outputs is
-   distinct from a final namespace/mode census; this first test need not claim
-   the latter. Record actual member topology, selected output hashes,
-   source joins, omitted notices and cleanup. Preserve any refusal; change the
+   distinct from a final namespace/mode census; this finite result does not claim
+   the latter. The receipt records member topology, selected reported output hashes,
+   source joins, notice observations and cleanup. Preserve any refusal; change the
    parser only through a separately reviewed source revision. This task does not
    authorize a compiler connection or a binary bundle.
 3. **Complete compiler provisioning.** Use the observed archive topology and
