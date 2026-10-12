@@ -1,6 +1,21 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-12 finite winding precision diagnostic — DONE candidate, Codex bwcx.
+2026-10-12 winding Newton sensitivity — CLAIMED, Codex bwcx.
+Branch lane/winding-newton-sensitivity-20261012, exact base
+fda6d33af77fdf48f9edb60d14c8ad826dd0bc2d. Four evidence-only paths: this
+ledger, scripts/diagnose-winding-newton-sensitivity.mjs,
+test/winding-newton-sensitivity.test.mjs and
+spec-updates/winding-precision-diagnostic.md. Test the unproved fixed-Newton-
+tolerance hypothesis with isolated in-memory modules: unchanged1e-6 baseline
+and a single1e-10 diagnostic arm, preserving the exact winding CLI caller,
+zero storage, precision profile, error scales, source/device model and one
+20000/60001/200 authority per fresh capture. No production source edits,
+arbitrary tolerance knob, default/profile/pin/workflow change or gain claim.
+Preserve raw source hashes and originals; fail on changed/missing anchors.
+Method tests report actual completion or refusal without requiring improvement.
+Hosted runtime only; a successful sensitivity method is not solver qualification.
+
+2026-10-12 finite winding precision diagnostic — DONE, Codex bwcx.
 Branch lane/winding-precision-diagnostic-20261012, exact refreshed base
 86f585f32c1d75e3ea35e19e87f488a26be89f4f. Four evidence-only paths: this
 ledger, scripts/diagnose-winding-transient.mjs,
@@ -30,6 +45,10 @@ checks now read the bounded receipt; partial committed integration counters
 are retained separately. Both actual OP controls complete, but neither is a
 zero-storage repair or SPICE-agreement claim. Source35848f27 and its red remain
 preserved; fresh replacement qualification is required.
+Replacement fda6d33a landed after CI38235616256 and Harris38235616215 passed.
+Full suite8474 pass/0 fail/302 unchanged skips. The fresh failure and both
+distinct completion controls match the first receipt; the KVL/budget repairs
+pass. This closes the diagnostic lane, not the underlying precision failure.
 
 2026-10-11 transient floor-step ringing and reset controller — DONE candidate, Claude Code.
 Branch fix/reset-transient-controller-20261011, base current master. Cause of
