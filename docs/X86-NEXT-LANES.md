@@ -715,13 +715,20 @@ The ordered follow-up tasks are:
    Admission binds 28 unchanged inherited paths and four profile paths. An
    automatic job runs the adapter's 20 manufactured controls; a separate actual
    job admits only the applied `x86-fixed-archive-materialization` label and
-   remains **unarmed**. All eleven enabled exact-head checks passed, with two
+   was initially **unarmed**. All eleven enabled exact-head source checks passed, with two
    declared optional vectors-full skips and the unarmed actual job skipped. Its
    sole attempt-one [run38237893493](https://github.com/CrispStrobe/bw-board/actions/runs/38237893493)
    passed all 20 synthetic controls. The [original receipt](receipts/2026-10-12-fixed-archive-acquisition-controls/README.md)
    retains five byte-exact text reports. Coordinator frozen-reader, separate
    official-job and independent raw-original/Git audits passed, binding all
-   32 source roles. Actual acquisition remains unqualified. Review corrected a
+   32 source roles. After independent reader and one-shot guard reviews, a fresh
+   source and complete official-state census admitted one label application.
+   The sole [actual run38253971654](https://github.com/CrispStrobe/bw-board/actions/runs/38253971654)
+   is queued at the same exact head; its actual job is enabled and its synthetic
+   job skipped. The run identity was bound before any original body acquisition.
+   This is a submitted attempt, with no archive materialization result yet. Do
+   not dispatch, relabel or rerun this head. Actual acquisition remains
+   unqualified pending original reports and independent audit. Review corrected a
    missing final report retaining completion and a file limit too small for
    selected tools. The actual job permits 16 MiB file writes and retains smaller
    independent JSON caps; its prospective reader admits at most 512 KiB of ZIP
