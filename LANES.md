@@ -3466,3 +3466,16 @@ own-PR manufactured controls prepare a separately labeled one-shot actual job;
 actual acquisition remains unarmed until exact-source checks, frozen reader and
 external launch reservation pass. Retain bounded text evidence only. No tool,
 compiler or guest invocation, namespace/mode census, default or consumer pin change.
+
+
+### Actual archive refusal diagnostics — 2026-10-12
+
+Claimed: `scripts/i80386-cwsdpmi-archive-refusal-diagnostic/` and bounded
+propagation in `scripts/i80386-cwsdpmi-fixed-archive-materialization/`,
+`scripts/i80386-fixed-archive-acquisition/`,
+`scripts/i80386-fixed-archive-materialization-hosted/` and its workflow.
+Preserve failed original run38253971654. Identify the exact first refused rule
+using bounded fixed reason, header ordinal/offset/type and magic class; no member
+names, raw headers or bodies. Retain parser acceptance, four input pins, alias
+inventory, compiler refusal, defaults and consumer pins. No retry or relabel of
+the failed head; any future actual attempt needs separate source qualification.
