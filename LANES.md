@@ -3435,3 +3435,13 @@ bounded raw before/failure-final observations and close status. Manufactured
 controls prepare actual hosted archive qualification; no acquisition, executable
 launch, full namespace census, final mode proof, compiler or guest authority.
 Held source, compiler disable, defaults and consumer pins stay unchanged.
+
+### Hosted materialization-runner controls — 2026-10-12
+
+Claimed: `scripts/i80386-materialization-runner-source-controls/{admit.py,README.md}`
+and `.github/workflows/i80386-materialization-runner-source-controls.yml`.
+Freeze twenty-five inherited unit/compiler-source roles plus three profile roles;
+run only the 22 manufactured runner controls in a bounded own-PR exact-head
+attempt-one job. Compiler source is admitted but never executed. Preserve the
+sole original for independent audit; actual acquisition/materialization remains
+a separate profile. Held source, defaults and consumer pins remain unchanged.
