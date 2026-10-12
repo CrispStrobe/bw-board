@@ -1,6 +1,19 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-12 winding error components — DONE candidate, Codex bwcx.
+2026-10-12 winding UIC reference — CLAIM, Codex bwcx.
+Branch lane/winding-uic-reference-20261012, exact base
+e6b9bc868c648684c8481aa50510d93990d26273. Five evidence-only paths:
+LANES.md, scripts/diagnose-winding-uic-reference.mjs,
+test/winding-uic-reference.test.mjs, scripts/oracle-census.mjs and
+spec-updates/winding-precision-diagnostic.md. Independent authored SPICE
+deck with explicit zero IC/UIC, matched thermal/device/load parameters,
+fixed 100/50/25 ns refinements through 1.01 ms and actual normal-OP negative
+control. CLI reports per-time refinement deltas and fails if predefined
+reference bounds are unmet; method validity is not engine agreement.
+No engine/exporter dependency, production/pin/workflow edits or local SPICE
+execution. Runtime qualification hosted; preserve unstable reference results.
+
+2026-10-12 winding error components — DONE, Codex bwcx.
 Branch lane/winding-error-components-20261012, exact base
 f5be8c2566333f2213eb1b718db47dd80eccb8c3. Four evidence-only paths:
 LANES.md, scripts/diagnose-winding-error-components.mjs,
@@ -18,7 +31,15 @@ pass, including exact original-line preservation, history snapshot/floor-stop
 and executable wrong-normalization mutant. No local numerical capture ran.
 Actual hosted caller must preserve original failure, 50 provisional rows and
 20000 attempts while reproducing its dominant component/error exactly.
-Frozen candidate qualification and landing remain pending.
+Exact source80411f08 passes CI38265472136 and Harris38265472103:
+8481 pass/0 fail/302 skips. At the first floor, all three solves report
+convergence; winding full/half voltages differ by 6.96452251425228e-7 V,
+normalized error11.950940967672846, while inductor currents differ by
+2.42861286636753e-17 A. Refined source rejects shift the dominant component
+from collector to winding as h shrinks. This narrows the next investigation
+to linear residual/conditioning and history, not a claimed solver repair.
+Integration preserves the newer UIC claim; every non-ledger byte matches
+the exact qualified80411f08 source.
 
 2026-10-12 winding Newton sensitivity — DONE candidate, Codex bwcx.
 Branch lane/winding-newton-sensitivity-20261012, exact base
