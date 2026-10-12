@@ -122,3 +122,29 @@ sample partition and bounded work authority remain unchanged. Exact single
 instrumentation/import anchors are mandatory. This is a bounded diagnostic,
 not a new simulation mode, repair, physical measurement or oracle qualification.
 Numerical execution and the recorded component outcome await hosted checks.
+
+### Observed endpoint-error result and linear-solver isolation
+
+Exact `80411f08858f2a02e1e01872ef92e96c2adb0952` passed
+[CI38265472136](https://github.com/CrispStrobe/bw-board/actions/runs/38265472136)
+and [Harris38265472103](https://github.com/CrispStrobe/bw-board/actions/runs/38265472103)
+(8481 passed, zero failed, 302 skipped). At the first floor witness, all
+three solves report convergence. The winding node dominates: full/half values
+5.8175934364425625 / 5.817592739990311 V differ by 0.696452251425228 uV,
+while winding currents differ by only 2.42861286636753e-17 A. Collector voltage
+error alone is below the normalized acceptance bound at that witness. The
+non-monotonic voltage error under refinement motivates a linear-solve check;
+it does not yet establish a cache or conditioning defect.
+
+```sh
+node scripts/diagnose-winding-linear-solver.mjs
+```
+
+This evidence-only diagnostic compares original cached sparse LU, fresh
+sparse factorization and the existing dense partial-pivot implementation on
+the same stamped systems. Original files remain untouched; both Board solver
+imports and the same zero-storage caller select each isolated arm explicitly.
+Newton tolerances, integration histories, policies, physical parameters and
+work authority are unchanged. Actual outcomes await hosted qualification.
+Neither an alternative solver completing nor a green method test alone
+constitutes a production repair or independent waveform agreement.
