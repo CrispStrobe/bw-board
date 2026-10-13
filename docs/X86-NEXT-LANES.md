@@ -851,9 +851,9 @@ The ordered follow-up tasks are:
    the bridge's [25 manufactured controls passed on GitHub](https://github.com/CrispStrobe/bw-board/actions/runs/38299860676),
    as did the notice connection's [20 extractor and 15 coordinator controls](https://github.com/CrispStrobe/bw-board/actions/runs/38306188271).
    These prepare source policies only: none has provisioned the actual full
-   tree or enabled compilation. PR526 has landed; PR527 was refreshed onto main
-   and needs its new exact-head checks. PR529 follows the bridge; after that parent
-   lands, refresh and retarget the connection, then check its resulting exact head.
+   tree or enabled compilation. PR526, PR527 and PR529 are merged after their
+   enabled exact-head checks passed. The reviewed merge trees were verified.
+   Their source composition remains distinct from actual full-tree qualification.
    Do not adopt the older broad source stack to integrate these small modules.
 
    The [bounded packet writer PR530](https://github.com/CrispStrobe/bw-board/pull/530)
@@ -863,6 +863,30 @@ The ordered follow-up tasks are:
    hosted checks remain pending. This serializer cannot authenticate an event or
    job; complete profile-source admission, raw trap/log provenance and independent
    original-artifact integration remain separate unfinished tasks.
+
+   [Source-position and Git-plumbing PR531](https://github.com/CrispStrobe/bw-board/pull/531)
+   prepares a separately versioned descriptor/table/snapshot gate, independent
+   reader and unconnected bounded Git adapter. Its source includes 21 gate,
+   16 reader and 23 temporary-repository adapter controls. Hosted checks on the
+   expanded source head remain pending. The gate seal is unset and its production
+   Git stub refuses; adapter tests do not enable source admission or provisioning.
+   The adapter checks the index and explicit admitted files. Unrelated worktree
+   and untracked cleanliness remain outside that boundary.
+
+   Continue with the remaining integration tasks:
+
+   - Bind an externally approved source head and descriptor through a reviewed
+     supervisor outside the commit. Embedding a digest of a descriptor containing
+     the same commit's head creates a circular dependency.
+   - Enumerate and review the complete transitive runner/executor/workflow graph.
+     Join the bounded Git adapter to the separately versioned gate; role kinds
+     and matching hashes alone cannot prove that every runtime dependency is listed.
+   - Enforce process, memory, output and storage budgets in the actual executor.
+     Preserve raw trap and failure logs; the packet's conservative fact-log grammar
+     is insufficient for original stderr provenance.
+   - Finish the independent official event/job/step/terminal-artifact reader and
+     sole-run launch guard before any actual provisioning attempt. Keep compiler
+     execution disabled through this provisioning checkpoint.
 
    The next provisioning checkpoint needs a separate bounded hosted profile and
    independent reader. Complete these tasks before acquiring its actual inputs:
