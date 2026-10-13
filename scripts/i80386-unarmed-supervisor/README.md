@@ -18,3 +18,40 @@ Raw stdout and stderr are preserved separately from conservative fact logs. Over
 No archive acquisition, notice extraction, compiler execution, CPU emulation, guest execution or application integration is included. Source ownership, leases, full toolchain readiness, compiler, guest and performance qualification remain false. This work builds on the repository's [provisioner](../i80386-full-tree-provisioner/README.md), [archive bridge](../i80386-full-tree-archive-bridge/README.md) and [notice connection](../i80386-full-tree-notice-connection/README.md) contracts. The controls observe those source files as metadata and do not execute them. Synthetic results do not qualify actual compatibility or legal clearance.
 
 The fixed child program digest, interpreter path and complete command tuple are admitted before observation hooks. Later global mutation cannot substitute child code or resource policy; this does not authenticate the host interpreter.
+
+
+## Independent lifecycle reader and two-case connection
+
+`reader.py` independently validates the closed external approval, fixed five
+component digests, descriptor/table and complete source positions, observed child
+limits, raw captured and stored byte hashes, derived inherited projection, and
+honest acquisition-refused packet. It imports no producer. `inherited-roles.json`
+contains the fourteen fixed source paths, sizes and digests only. The reader's
+operational approval and source seals remain unset; reported consistency supplies
+no official job, context, source ownership, lease or actual acquisition authority.
+
+Run the additional Linux source controls from the repository root:
+
+```sh
+python -I -B scripts/i80386-unarmed-supervisor/reader-controls.py
+python -I -B scripts/i80386-unarmed-supervisor/integration-controls.py
+```
+
+The twenty-one pure reader controls manufacture JSON reports with the genuine
+fourteen inherited pins and metadata hashes of the public component files. They
+never import a producer or query Git, and their resource observations are synthetic.
+No private fixture or acquisition record is packaged. Mutations exercise closed
+schemas, types, source joins, raw logs, policy limits, cleanup and false success.
+
+Only `integration-controls.py` imports the existing producer control fixture. Its
+two cases create their own tiny Git repositories and run the fixed manufactured
+child, then feed actual bounded raw logs and packet bytes to the independent
+reader. The success case remains an offline control; the midstage case preserves
+its raw refusal. Both acquisition packets stay negative with no authenticated
+inputs or coordinator outcome. Their temporary repositories and output files are
+removed by the owning fixture's cleanup. A third control checks partial setup
+cleanup and preservation of its original exception without Git or child execution.
+These tests do not import or execute the
+fourteen inherited programs, acquire archives, extract notices, or run a compiler,
+CPU emulator or guest. Whole-supervisor startup/filesystem bounds and official
+original-artifact and single-run launch qualification remain separate work.

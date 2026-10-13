@@ -6,7 +6,8 @@ Branch lane/386-unarmed-supervisor-reader-20261013, exact parent
 ca6825b1190b6969a165902e2f09fa7bd05dae3a. Owns this row,
 scripts/i80386-unarmed-supervisor/{reader.py,reader-controls.py,
 inherited-roles.json,integration-controls.py}, namespace README.md and the
-dedicated synthetic workflow steps only. Project the separately reviewed
+dedicated synthetic workflow steps and root-coordinated docs/X86-NEXT-LANES.md
+checkpoint only. Project the separately reviewed
 independent reader without producer imports; manufacture portable JSON refusal
 controls and two bounded tiny-repository whole-path cases. Keep raw logs distinct
 from fact packets and complete source observations distinct from inherited

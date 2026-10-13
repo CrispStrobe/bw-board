@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   source-controls:
-    if: github.repository == 'CrispStrobe/bw-board' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'lane/386-unarmed-supervisor-source-20261013' && github.run_attempt == 1
+    if: github.repository == 'CrispStrobe/bw-board' && github.event.pull_request.head.repo.full_name == github.repository && (github.head_ref == 'lane/386-unarmed-supervisor-source-20261013' || github.head_ref == 'lane/386-unarmed-supervisor-reader-20261013') && github.run_attempt == 1
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -42,3 +42,33 @@ jobs:
           ulimit -c 0
           timeout 45s python -I -B scripts/i80386-unarmed-supervisor/controls.py
           timeout 45s python -I -B scripts/i80386-unarmed-supervisor/gate-controls.py
+      - name: Independent pure lifecycle reader controls
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          PYTHONPATH: ''
+          LD_PRELOAD: ''
+          LD_AUDIT: ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -t 30
+          ulimit -v 524288
+          ulimit -f 1024
+          ulimit -n 256
+          ulimit -c 0
+          timeout 45s python -I -B scripts/i80386-unarmed-supervisor/reader-controls.py
+      - name: Two owned offline cases joined to independent reader
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          PYTHONPATH: ''
+          LD_PRELOAD: ''
+          LD_AUDIT: ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -t 30
+          ulimit -v 524288
+          ulimit -f 1024
+          ulimit -n 256
+          ulimit -c 0
+          timeout 45s python -I -B scripts/i80386-unarmed-supervisor/integration-controls.py
