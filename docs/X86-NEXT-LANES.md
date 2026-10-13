@@ -1225,3 +1225,48 @@ single-run consumption before any operational connection. Qualify the enclosing
 timeout and owned namespace behavior with explicit hosted evidence. Keep actual
 acquisition, compiler activation, guest compatibility and RTx claims behind
 their own observed checkpoints.
+
+### Independent observation-envelope reader
+
+The [observation envelope](../scripts/i80386-provisioning-observation-envelope/README.md)
+defines a separate staged wire contract. Its assembler accepts exact member bytes
+and emits a fixed-order STORED ZIP; it returns no validation verdict. The standalone
+reader accepts original ZIP bytes through `audit(raw_zip_bytes,
+declared_sha256=None)`. It imports no producer validators and performs no source
+execution, Git operations, downloads, process operations or guest replay. A
+declared digest checks byte consistency only; it is not an official artifact seal.
+
+The nine permitted roles contain the envelope, original stdout/stderr prefixes,
+projected status, reported source-before/source-after snapshots, descriptor, role
+table and resource packet. Framing, extents, CRCs, member hashes, closed types and
+stage dependencies must agree. Prefixes retain original bytes, including binary
+output; stored length, observed length and EOF are separate facts. Missing
+handshakes and source-after snapshots remain absent in partial diagnostics.
+
+The reader checks the reported full source table, its genuine inherited fourteen
+pins, a separately derived fourteen-role projection and four checked component
+pins. This is reported metadata consistency, not proof that the actual transitive
+executable/data graph was consumed. It checks resource, admission and lifetime
+joins without importing their implementation. Original failure codes, signed
+launcher exits and diagnostic limit readbacks remain visible. Historical admission
+and an ACK that may have escaped do not grant usable handle authority after close.
+
+`diagnosticValid` means the supplied diagnostic packet is internally valid.
+`completeReportedConsistency` additionally requires the complete set of joined
+source, resource and clean terminal observations. Both results keep every
+approval, official binding, source ownership, namespace lease, hard deadline,
+resource sufficiency, actual acquisition, compiler, guest and performance
+qualification flag false. Manufactured byte controls cannot qualify an actual
+host or guest.
+
+Thirty-seven manufactured controls passed under the workflow's interpreter and
+resource bounds. Independent standard-ZIP packets also checked binary prefixes,
+hidden framing, regular-file modes and refusal before hashing oversized input.
+These checks establish the finite reader boundary only.
+
+Next, independently audit the frozen reader and malformed-input controls. Admit
+the complete operational bootstrap/tool/source graph and externally approved
+launch separately. Bind one consumed official event, head, attempt, job, steps
+and terminal artifact; audit the original packet without replay. Actual
+provisioning must pass those gates before enabling the compiler or making new
+guest compatibility or speed claims.

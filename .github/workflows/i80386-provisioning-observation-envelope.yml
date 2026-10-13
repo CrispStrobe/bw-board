@@ -1,0 +1,39 @@
+name: i80386 provisioning observation envelope byte controls
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'scripts/i80386-provisioning-observation-envelope/**'
+      - '.github/workflows/i80386-provisioning-observation-envelope.yml'
+permissions:
+  contents: read
+concurrency:
+  group: provisioning-observation-envelope-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+jobs:
+  pure-controls:
+    if: github.repository == 'CrispStrobe/bw-board' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'lane/386-provisioning-observation-envelope-20261013' && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/i80386-provisioning-observation-envelope
+      - name: Pure manufactured observation byte packets
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          PYTHONPATH: ''
+          LD_PRELOAD: ''
+          LD_AUDIT: ''
+        run: |
+          set -euo pipefail
+          ulimit -t 30
+          ulimit -v 524288
+          ulimit -f 1024
+          ulimit -n 256
+          ulimit -c 0
+          /usr/bin/timeout 45s /usr/bin/python3 -I -B scripts/i80386-provisioning-observation-envelope/controls.py
