@@ -46,7 +46,7 @@ export const DECODABLE_DISPLAY = /(ssd1306|sh1107|pcd8544|ili9341|st7789|st7735|
  * (crates/nrf-softdevice-hle): offered as boards whatever their display, with
  * `softdevice` set so the factory keeps only the application region of a .hex.
  */
-export const SOFTDEVICE_BOARDS = { 'microbit-v1': 's110' };
+export const SOFTDEVICE_BOARDS = { 'microbit-v1': 's110', 'calliope-mini-v1': 's110' };
 
 /** `external_devices` rows of a system manifest: [{id, type}]. Strict and flat, like the files. */
 export function externalDevices(systemYaml) {

@@ -4419,3 +4419,18 @@ synthetic authority, compiler activation or guest/performance claim. Hosted
 affected-path qualification and independent original-report audit precede the
 separately consumed actual provisioning attempt. Other CPU, UI, FPGA, schematic
 and target lanes remain outside this claim.
+
+
+## Sixteen-bit effective-address allocation — 2026-10-13
+
+Owned branch `lane/386-decodeea16-allocation-20261013`: only the sixteen-bit
+memory address branch of `src/experimental/i80386.js`, new
+`test/i80386-decodeea16-allocation.test.mjs`,
+[acceptance guide](docs/I80386-DECODEEA16-ALLOCATION.md) and this entry.
+Propose scalar ModRM base/segment selection to remove temporary arrays while
+preserving fetch order, displacement wrapping, overrides and fault rollback.
+Keep register/thirty-two-bit addressing, snapshots, caches, bus semantics,
+other backends and consumer pins unchanged. Freely authored correctness tests
+and unchanged-workload alternating paired measurements are mandatory; no
+measured gain means no performance-only adoption. This is a documentation-only
+claim: implementation waits for its merge and refreshed ownership review.

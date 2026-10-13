@@ -79,7 +79,10 @@ describe('labwired boards with a display', () => {
         }
     });
     it('the factory builds a board on its own chip and refuses a mismatch', async () => {
-        const board = Object.values(LABWIRED_BOARDS)[0];
+        // A board that needs no SoftDevice: this stand-in engine has none to
+        // attach, and the first catalog entry is now an S110 board.
+        const board = Object.values(LABWIRED_BOARDS).find(b => !b.softdevice);
+        assert.ok(board, 'the catalog has a board without a SoftDevice');
         const built = [];
         const wasm = { WasmSimulator: { new_from_config: (sys, chip) => { built.push({ sys, chip }); return { get_pc: () => 0 }; } } };
         const elf = Uint8Array.from([0x7f, 0x45, 0x4c, 0x46, 1, 1, 1, ...new Array(45).fill(0)]);
