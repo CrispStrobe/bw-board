@@ -52,9 +52,15 @@ share one wire with host-side nodes; (2) a host-side IPv4 node written from
 the RFCs (ARP 826, IPv4 791, ICMP echo 792, UDP 768, DHCP server 2131, DNS
 1035; TCP 793 and an HTTP endpoint as a later step) that tests and
 applications use to be "the network" a guest talks to; (3) package exports
-for the new files and census entries they require. Simulated peers only: no
-bridge to a real network (src/ne2000.js states that as a deliberate product
-decision and this does not change it). No change to src/ne2000.js, the CPU
+for the new files and census entries they require; (4) by owner decision of
+2026-10-13, a bridge to a real network as an explicit user setting: an
+egress policy (off by default; loopback, multicast and broadcast always
+refused; private, link-local and carrier-NAT ranges refused unless separately
+allowed; a plain-language list of what switching it on means) and a gateway
+node that applies it. bw-board opens no connection itself: the transports
+(fetch, a relay, native sockets) are handed in by the embedding application,
+outbound only, and every decision is reported to it. The NE2000's own links
+stay offline. No change to src/ne2000.js, the CPU
 cores, labwired, x86 provisioning or consumer pins. v86 stays oracle-only:
 its network code is not read. No radio, timing or loss model, and the nRF
 radio air stays a separate medium.
