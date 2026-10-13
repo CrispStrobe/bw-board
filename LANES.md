@@ -1,5 +1,15 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 labwired shared radio air — CLAIM, VPS Claude (opus).
+Branch feat/labwired-shared-air-20261013, exact base b7f9a973b244fed8401dc9e4d079085d1a719e58.
+Owns this row plus the `labAir` option only: src/labwired-adapter.js (option,
+attach after the S110 SoftDevice on every build), the one pass-through line in
+src/debug-target-factory.js, and a new describe block in
+test/labwired-firmware-only.test.mjs. Host tests with a stand-in engine only;
+no engine pin, catalog, wasm release, workflow, CPU, x86 or consumer-pin change,
+and no radio-accuracy or timing claim. A Calliope mini board entry needs a
+labwired-core system manifest first and is a separate claim.
+
 2026-10-13 full-profile source-position preparation — CLAIM, Codex x86.
 Branch lane/386-full-tree-source-position-20261013, exact base e77f34bdf2a9bcac6636b0aeb7d0320f83ff47ff.
 Owns this row, scripts/i80386-full-tree-profile-source/ and
