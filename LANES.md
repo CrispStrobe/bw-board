@@ -4275,3 +4275,20 @@ controls establish no hard timeout, continuous ownership lease, official source
 or host authority, actual provisioning, compiler, guest or performance result.
 Complete source graph, actual envelope/independent reader, external approval and
 official one-run admission remain separate gates. Parent PR544 must qualify.
+
+
+## Fixed enclosing launch preparation — 2026-10-13
+
+Owned branch `lane/386-provisioning-enclosing-supervisor-20261013`: new
+`scripts/i80386-provisioning-enclosing-supervisor/` namespace, dedicated mocked
+control workflow and this entry. Prepare the literal contained/external timeout
+command graph and single-owner socket/pipe handoff to held lifetime source.
+The child bootstrap is explicitly unarmed and refuses; actual entry and private
+creation/launch route remain unconnected. Capture owned returned resources before
+post-hook checks, preserve partial failure and close uncertainty, and never infer
+pre-admission PID/process-group cancellation authority. No caller command, FD,
+factory, policy or arming API. All local process, socket, pipe and descriptor
+operations are mocked. These controls qualify no installed tools, privilege
+transition, external hard timeout, complete source graph, actual provisioning,
+compiler, guest or speed. Approved bootstrap/graph, independent original envelope
+reader and official one-run joins remain separate gates. Parent PR545 must qualify.

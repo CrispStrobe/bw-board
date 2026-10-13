@@ -1186,3 +1186,42 @@ that checks originals without importing producer validators or replaying guests.
 Bind externally reviewed approval to the consumed official event, exact head,
 attempt, job, steps and terminal artifact before a single actual provisioning
 run. Keep compiler activation and guest tests behind that qualified checkpoint.
+
+### Fixed enclosing launch preparation
+
+The [launch preparation unit](../scripts/i80386-provisioning-enclosing-supervisor/README.md)
+prepares the fixed command graph and socket/pipe handoff around the held lifetime
+source. Its contained bootstrap is explicitly unarmed: it does not provide an
+operational entry CLI, resource handshake or controller approval. Actual entry
+and the private creation/launch route remain unconnected. Twenty-eight mocked
+controls passed under the workflow interpreter and bounds, with two independent
+refusal checks. Local controls mock all kernel, socket, pipe, descriptor,
+credential and process operations.
+
+Preparation observes Linux root-credential eligibility before source loading or
+descriptor creation. Privilege acquisition must happen in an enclosing bootstrap
+before those descriptors exist; the contained command starts directly with the
+proposed 480-second timeout and namespace creation. A separate 488-second timeout before observer
+bootstrap remains a future integration; this unit does not construct or run that
+observer bootstrap or enclosing timer. Timer, interpreter, bootstrap, argument,
+environment and descriptor identities must be admitted together. Command
+preparation does not qualify installed tools, privilege behavior or a working
+hard timeout. If the outer timer kills the observer, final cleanup and census
+observations remain unknown.
+
+Created endpoints and pipe ends have one close owner. Every returned resource
+must be retained before post-hook refusal, with null stdin, only the child channel
+explicitly inherited, standard output/error mapped to descriptors 1/2, and
+close-once transfer to the held lifetime. Before namespace admission, launch
+or descriptor facts cannot invent PID or process-group cancellation authority.
+Original errors, partial returns and closure uncertainty remain visible; no
+provisioning completion can be inferred from an unarmed bootstrap's refusal.
+
+Next, qualify this source and its parents independently. Freeze the complete
+bootstrap/tool/source graph and implement the separate raw-output/resource/full-
+source envelope with an independent original-artifact reader. Bind external
+approval and official event, head, attempt, job, steps, terminal artifact and
+single-run consumption before any operational connection. Qualify the enclosing
+timeout and owned namespace behavior with explicit hosted evidence. Keep actual
+acquisition, compiler activation, guest compatibility and RTx claims behind
+their own observed checkpoints.
