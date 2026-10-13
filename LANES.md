@@ -1,18 +1,26 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-12 bounded full-tree packet source preparation — CLAIM, Codex x86.
-Branch lane/386-full-tree-packet-source-20261012, exact base
-d16f0dd4fd84a210d59a2a55c87c235ef40c2af2. Owns this row,
-scripts/i80386-full-tree-actual-packet/ and
-.github/workflows/i80386-full-tree-actual-packet.yml only. Prepare a bounded,
-one-shot text packet writer and manufactured controls, with declared stage-specific
-partial role sets, immutable admitted payloads, exclusive outputs and first-failure
-retention. Event/source/report/status/log consistency cannot authenticate an
-actual job, admit the future complete source graph, or qualify a compiler/guest.
-No actual acquisitions, provisioning, runtime execution, performance measurement,
-consumer pins or unrelated lane changes. Independent source review and bounded
-synthetic hosted checks precede integration; actual executor/resource/source/job
-admission remains separate and disabled.
+2026-10-13 winding edge instruments — CLAIM, Codex bwcx.
+Branch lane/winding-edge-instruments-20261013, exact base e2c1a507.
+Seven evidence-only paths: LANES.md, scripts/diagnose-winding-uic-reference.mjs,
+test/winding-uic-reference.test.mjs, scripts/compare-winding-edge-instruments.mjs,
+test/winding-edge-instruments.test.mjs, scripts/oracle-census.mjs and
+spec-updates/winding-precision-diagnostic.md. Within the original single bounded
+zero-storage capture, attach ideal differential voltage
+sample channel at1ms; compare400 actual25ns voltage samples and10us voltage/current
+meter means against all three independently refined raw SPICE waveforms.
+Preserve authored12pF/10Mohm load and whole-capture20000/60001/200 ceilings.
+Require fixed10uV/1nA reference refinement and100uV/1uA engine agreement bounds
+for every sample and interval mean before qualification. Explicit current
+polarity, exact grid/capture metadata, clipped raw-waveform integrals, refusal
+controls and load-bearing mutants required. New scope barriers are a distinct
+observed numerical experiment, not unchanged capture bytes or physical scope
+fidelity. Default reference API must remain compatible. Engine/SPICE execution
+hosted only; no production, pin, workflow, unrelated source or deployment edit.
+Forward design correction: source trace confirms current scope channels are
+display-loop sampled, not sim-time sampled. This lane does not claim400 current
+scope samples. Signed current meter mean remains required; current scope
+sim-time acquisition is a separate future engine lane.
 
 2026-10-12 full-tree authenticated TAR bridge preparation — CLAIM, Codex x86.
 Branch lane/386-full-tree-archive-bridge-20261012, exact base
@@ -4010,3 +4018,17 @@ Astra coordinated one Sol coder and one independent auditor. Qualified source `1
 ### 2026-10-01: combined native paging/RAM/REP actual-board checkpoint
 
 Measured source `809c3fba86a81501a08b0d1e81d4e1d23e241d41` authenticates63 inputs. All four budgets and a fresh root repeat pass192 successfulQ/194N/1156functional clocks, eight RAM witnesses, two page faults, five successfulREP elements and actualPIT/PIC delivery. All62 actual-report tests (61 specific coherent corruption cases) and eight host tests pass with zero skips; 24 native guards, 22 transport rejections and 11 API witnesses pass with actual failure phases checked. Root authenticates251 artifacts and whole backing per capture; independent raw checks4705 each verify aliases, pagewalk/A-D and exact budget-one resume cuts. Raw native streams, allCPU/chips/bus/RPC match between captures; completeJSON retains differing paths. Prior six inventories300 inputs remain unchanged. [Notes and receipts](docs/I80386-NATIVE-COMBINED-PAGING-RAM-ACTUAL-BOARD.md) disclose reset/ordered-bus/cache-policy differences and retained unqualified diagnostics. Next direct callbacks/optional capture for the same bounded guest, then measured speed and broader backend qualification. No fullAT/broader guest/broader game/RTx claim.
+
+2026-10-12 bounded full-tree packet source preparation — CLAIM, Codex x86.
+Branch lane/386-full-tree-packet-source-20261012, exact base
+d16f0dd4fd84a210d59a2a55c87c235ef40c2af2. Owns this row,
+scripts/i80386-full-tree-actual-packet/ and
+.github/workflows/i80386-full-tree-actual-packet.yml only. Prepare a bounded,
+one-shot text packet writer and manufactured controls, with declared stage-specific
+partial role sets, immutable admitted payloads, exclusive outputs and first-failure
+retention. Event/source/report/status/log consistency cannot authenticate an
+actual job, admit the future complete source graph, or qualify a compiler/guest.
+No actual acquisitions, provisioning, runtime execution, performance measurement,
+consumer pins or unrelated lane changes. Independent source review and bounded
+synthetic hosted checks precede integration; actual executor/resource/source/job
+admission remains separate and disabled.
