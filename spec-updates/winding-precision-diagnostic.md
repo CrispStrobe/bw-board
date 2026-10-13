@@ -297,3 +297,28 @@ comparisons pass. Maximum voltage error is 0.202776916 microvolts; maximum
 current error is 1.245506507 nanoamperes. Engine work remains 3432 attempts,
 10288 solves and 51 observations. Independent reference refinement passed
 before agreement. Dense falling-edge and instrument integrations remain pending.
+
+## Dense edge instrument qualification
+
+`node scripts/compare-winding-edge-instruments.mjs` attaches an ideal voltage
+sample channel and voltage/signed-current meter watches at 1 ms within the
+original single bounded zero-storage capture. It requests 400 voltage samples
+at 25 ns spacing through 1.01 ms, plus meter means over that watched 10 µs
+interval. The authored 12 pF / 10 MΩ load remains unchanged; no second probe
+load is stamped. Scope sample barriers change later numerical partitions, so
+this is a distinct observed experiment, not the earlier capture byte-for-byte.
+
+All three raw independent SPICE waveforms are evaluated at every requested time.
+Interval means integrate their clipped raw waveform segments, not the final
+sample or the earlier ten diagnostic observations. Every voltage/current
+reference sample and both means must refine within 10 µV / 1 nA before engine
+comparison; fixed engine agreement bounds remain 100 µV / 1 µA. Terminal
+current leaves the engine part; SPICE inductor current enters its first terminal,
+so the signed current mean is compared with the negative SPICE mean.
+
+Current scope acquisition is still display-loop driven: it does not publish
+simulation-time current samples. A separate engine lane should implement and
+qualify that capability, preserving legacy display behavior and exact timing,
+sign, budget and failure contracts. This diagnostic does not claim it exists.
+Dense voltage/mean numerical results are pending hosted qualification; neither
+this authored fixture nor an ideal channel proves physical scope fidelity.

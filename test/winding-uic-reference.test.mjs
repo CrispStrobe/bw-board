@@ -2,9 +2,36 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
+import {readFileSync} from 'node:fs';
 import {REFERENCE_TIMES_NS, windingReferenceDeck, parseReferenceWaveform, sampleReferenceWaveform,
     refinementReport, runWindingUicReference, referenceProcessOptions,
-    MEASUREMENT_PRECISION} from '../scripts/diagnose-winding-uic-reference.mjs';
+    MEASUREMENT_PRECISION, referenceIntervalMean} from '../scripts/diagnose-winding-uic-reference.mjs';
+
+test('pure clipped raw-waveform mean integrates interior rows rather than held endpoints', () => {
+    const rows = [{timeSec: 0, voltage: 0, current: 0},
+        {timeSec: 1e-6, voltage: 2, current: 4}, {timeSec: 2e-6, voltage: 0, current: 0}];
+    const mean = referenceIntervalMean(rows, 500, 1500);
+    assert.ok(Math.abs(mean.voltage - 1.5) < 1e-14);
+    assert.ok(Math.abs(mean.current - 3) < 1e-14);
+    assert.throws(() => referenceIntervalMean(rows, 500, 500), /ordered/);
+    assert.throws(() => referenceIntervalMean(rows, 500, 2500), /outside/);
+    for (const times of [[1, 1], [2, 1], [1, NaN], [1, 1.5], Array(402).fill(1)]) {
+        assert.throws(() => sampleReferenceWaveform(rows, times), /ordered/);
+    }
+});
+
+test('pure held-endpoint reference integral mutant fails the clipped triangular caller', async () => {
+    const original = readFileSync(new URL('../scripts/diagnose-winding-uic-reference.mjs', import.meta.url), 'utf8');
+    const anchor = 'mean[key] /= to - from';
+    assert.equal(original.split(anchor).length - 1, 1);
+    const source = original.replace(anchor, 'mean[key] = end[key]');
+    const module = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+    const rows = [{timeSec: 0, voltage: 0, current: 0},
+        {timeSec: 1e-6, voltage: 2, current: 4}, {timeSec: 2e-6, voltage: 0, current: 0}];
+    assert.throws(() => assert.ok(Math.abs(module.referenceIntervalMean(rows, 500, 1500).voltage - 1.5) < 1e-14),
+        assert.AssertionError);
+    assert.equal(readFileSync(new URL('../scripts/diagnose-winding-uic-reference.mjs', import.meta.url), 'utf8'), original);
+});
 
 test('reference model cards, zero IC and UIC are independent explicit authorities', () => {
     const deck = windingReferenceDeck(25);
