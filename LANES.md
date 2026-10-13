@@ -1,5 +1,20 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+
+2026-10-13 unarmed supervisor independent lifecycle reader — CLAIM, Codex x86.
+Branch lane/386-unarmed-supervisor-reader-20261013, exact parent
+ca6825b1190b6969a165902e2f09fa7bd05dae3a. Owns this row,
+scripts/i80386-unarmed-supervisor/{reader.py,reader-controls.py,
+inherited-roles.json,integration-controls.py}, namespace README.md and the
+dedicated synthetic workflow steps only. Project the separately reviewed
+independent reader without producer imports; manufacture portable JSON refusal
+controls and two bounded tiny-repository whole-path cases. Keep raw logs distinct
+from fact packets and complete source observations distinct from inherited
+projections. External seals and all acquisition/source/lease/compiler/guest
+qualifications remain unset or false. No parent producer change, archive/network
+input, product execution, dependency adoption or actual launch. Source review
+precedes publication; root coordinates parent merges and checkpoint docs.
+
 2026-10-13 simulation-time current scope — CLAIM, Codex bwcx.
 Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.
 Six paths: LANES.md, src/board.js (explicit currentClock option, accepted-solve
