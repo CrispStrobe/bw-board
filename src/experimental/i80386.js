@@ -853,20 +853,20 @@ export class ExperimentalI80386 {
       if (mod === 1) off = (off + ((this._fetch8() << 24) >> 24)) >>> 0;
       if (mod === 2) off = (off + this._fetchN(4)) >>> 0;
     } else {
-      const bases = [
-        [this.bx + this.si, SEG_DS],
-        [this.bx + this.di, SEG_DS],
-        [this.bp + this.si, SEG_SS],
-        [this.bp + this.di, SEG_SS],
-        [this.si, SEG_DS],
-        [this.di, SEG_DS],
-        [this.bp, SEG_SS],
-        [this.bx, SEG_DS],
-      ];
       if (mod === 0 && rm === 6) {
         off = this._fetchN(2);
-        seg = SEG_DS;
-      } else [off, seg] = bases[rm];
+      } else {
+        switch (rm) {
+          case 0: off = this.bx + this.si; break;
+          case 1: off = this.bx + this.di; break;
+          case 2: off = this.bp + this.si; seg = SEG_SS; break;
+          case 3: off = this.bp + this.di; seg = SEG_SS; break;
+          case 4: off = this.si; break;
+          case 5: off = this.di; break;
+          case 6: off = this.bp; seg = SEG_SS; break;
+          case 7: off = this.bx; break;
+        }
+      }
       if (mod === 1) off += (this._fetch8() << 24) >> 24;
       if (mod === 2) off += this._fetchN(2);
       off &= 0xffff;

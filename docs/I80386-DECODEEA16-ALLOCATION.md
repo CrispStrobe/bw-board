@@ -1,13 +1,13 @@
 # Sixteen-bit effective-address allocation task
 
-This is an ownership claim and proposed acceptance contract. No optimization or
-performance result is implemented by this documentation change. Implementation
-starts only after this claim merges and the source head and ownership are refreshed.
+The ownership claim has merged. A scalar source candidate replaces the temporary
+arrays in the sixteen-bit memory branch; actual semantic and paired performance
+qualification remains pending. No measured gain or adoption is claimed.
 
 ## Owned scope
 
-Branch `lane/386-decodeea16-allocation-20261013` owns the sixteen-bit memory
-address branch of `_decodeEA` in `src/experimental/i80386.js`, a new focused
+Branch `lane/386-decodeea16-allocation-implementation-20261013` owns the
+sixteen-bit memory address branch of `_decodeEA` in `src/experimental/i80386.js`, a new focused
 `test/i80386-decodeea16-allocation.test.mjs`, this guide and its `LANES.md` entry.
 Coordinate any overlapping CPU claim before implementation.
 
@@ -47,14 +47,17 @@ Separate source identity and timing metadata from the architectural comparison;
 require matching CPU/device/output observations and no new refusal. Keep
 restricted input details and raw private records outside this repository.
 
-Exclude two warm-up runs per arm and measure at least five alternating baseline
-and candidate pairs, varying AB/BA order. Disable sampling instrumentation for
-timing and record CPU and wall observations separately with resource limits and
+Exclude two warm-up runs per arm and measure seven baseline and candidate
+pairs in the predeclared AB, BA, AB, BA, BA, AB, BA order. Disable sampling
+instrumentation for timing and record CPU and wall observations separately with resource limits and
 failures. The proposed gate is paired median CPU speedup of at least 1.03, a
 predeclared lower confidence bound above 1.00 and no median wall regression over
-2 percent. Freeze the statistical method before the first measured pair; do not
-adjust it after seeing results. Missing, timed-out or semantically unequal runs
-cannot qualify a gain.
+2 percent. The predeclared lower bound is the minimum paired CPU ratio, a
+conservative
+one-sided 99.21875-percent order-statistic bound for the population median under
+independent, identically distributed continuous pair effects. Shared-host noise
+and dependence remain limitations. Do not adjust this method after seeing
+results. Missing, timed-out or semantically unequal runs cannot qualify a gain.
 
 If the gain is absent or unresolved, preserve the results and do not adopt the
 performance-only change. Sample weights are workload-specific observations,
