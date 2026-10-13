@@ -1,0 +1,40 @@
+name: Full-tree archive bridge synthetic controls
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - scripts/i80386-full-tree-archive-bridge/**
+      - .github/workflows/i80386-full-tree-archive-bridge.yml
+permissions:
+  contents: read
+concurrency:
+  group: full-tree-archive-bridge-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  full-tree-archive-bridge-controls:
+    if: github.repository == 'CrispStrobe/bw-board' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'lane/386-full-tree-archive-bridge-20261012'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Checkout exact source head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/i80386-full-tree-archive-bridge
+            scripts/i80386-full-tree-provisioner
+          sparse-checkout-cone-mode: true
+      - name: Manufactured filesystem controls only
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          PYTHONNOUSERSITE: '1'
+        run: |
+          set -euo pipefail
+          ulimit -t 30
+          ulimit -v 524288
+          ulimit -f 256
+          ulimit -n 256
+          timeout --signal=TERM --kill-after=5s 45s python3 -I -B scripts/i80386-full-tree-archive-bridge/controls.py
