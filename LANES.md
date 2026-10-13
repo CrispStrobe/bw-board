@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-13 LM741 solver-native linear pole — DONE implementation candidate, Codex bwcx.
+2026-10-13 LM741 solver-native linear pole — DONE, Codex bwcx.
 Branch lane/lm741-linear-pole-20261013, exact basec5078499ebcde97ce615689667244b37c76eb22f.
 Eight paths only: this ledger, src/board.js (LM741 solver-view expansion),
 src/devices/analog-amps.js (shared nominal card and explicit-mode admission),
@@ -27,6 +27,13 @@ mutations, unchanged legacy initialization and absent-mode solver-view identity.
 The two actual engine tests were deliberately excluded locally and must run
 hosted with existing LM741/other op-amp regressions. Six-case reference/grid/
 bounds/work authority unchanged; no waveform success or main landing yet.
+Sourcea5aa2b5f qualifies in CI38457137645 (8550 pass/0 fail/302 unchanged
+skips, all enabled jobs green) and Harris38457137856. Independent raw audit
+accepts six cases,2400 scalar readings/12 means/1200 provisional records:
+point maximum3.781350 nV/.378135 pA; all captures complete with200 charged
+advances, maximum741 attempts/2217 solves. Actual amplitude mutant completes
+and disagrees. No legacy-default/nonlinear/physical/GUI/adoption claim.
+Documentation-only closeout preserves the exact tested executable bytes.
 
 2026-10-13 LM741 step-phase waveform audit — DONE diagnostic candidate, Codex bwcx.
 Branch lane/lm741-step-phase-20261013, exact base73130a1e.

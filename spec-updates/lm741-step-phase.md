@@ -1,6 +1,6 @@
 # LM741 phase-varied waveform audit
 
-## Scope (repair candidate, not qualified)
+## Scope (qualified linear-pole slice)
 
 Six loaded followers: positive/negative 10 mV input changes at 10 µs plus
 0, 33 or 67 ns. Supplies are ±15 V, offset is explicitly zero and load is
@@ -43,6 +43,34 @@ must complete and disagree; refusal does not satisfy that proof. If baseline
 cases disagree, the mutation is not reached and qualification is withheld.
 
 ## Limits and follow-ons
+
+### Hosted qualification
+
+Exact source `a5aa2b5ff2be9ea75ff6c25725c697e975fc757e` passes
+[CI 38457137645](https://github.com/CrispStrobe/bw-board/actions/runs/38457137645)
+and [Harris 38457137856](https://github.com/CrispStrobe/bw-board/actions/runs/38457137856).
+The numerical suite reports 8,550 passed, zero failed and 302 unchanged
+documented skips. Every enabled job passes; only the declared optional
+full-vector job skips. Actual hidden history/reset, continuous 100 ns response,
+package-output KCL and changed-supply/input refusals pass alongside existing
+LM741 and other op-amp regressions.
+
+An independent piecewise-reference/raw-log audit accepts all six cases:
+1,200 paired voltage/current observations (2,400 scalar readings), 12 watched
+means and 1,200 provisional timing records. Maximum point errors are
+3.781350 nV and 0.378135 pA; maximum mean errors are 0.249721 pV and
+0.024973 fA. These are agreement with the stated nominal continuous model,
+not physical LM741 accuracy. Inputs match their authored grid values, sampled
+scope voltages match the published solver voltages, and valid resistor-current
+observations obey the independent load relationship. No scheduled wake or
+learned-feedback controller is active.
+
+All six experiments complete with exactly 200 charged integration advances,
+including the four previously refused phases. Maximum actual work is
+741 attempts and 2,217 solves, below the unchanged 20,000/60,001 ceilings.
+The actual 20% input-amplitude mutant also completes and fails the unchanged
+reference comparison. No accuracy tolerance, reference, grid or accounting
+rule was relaxed. Earlier diagnostic failures remain recorded below.
 
 ### Explicit solver-native repair candidate
 
@@ -140,8 +168,9 @@ explicit supply, offset, input loading, clipping and unsupported-domain
 contracts; substituting a generic ideal op-amp is not a repair. Any such work
 requires a fresh bounded claim and affected regression qualification.
 
-No production, default model, GUI, package or deployment change is made by this
-audit. No physical noise, bias spread, temperature, nonlinear slew, current
+The initial audit made no production change; the qualified repair changes only
+the explicit LM741 linear-pole mode. The legacy default, GUI, package pins and
+deployment remain unchanged. No physical noise, bias spread, temperature, nonlinear slew, current
 limiting, clipping or arbitrary feedback network is qualified. Those require
 separate bounded cases. Existing tick-aligned or settled LM741 tests are not
 dense continuous-waveform proof. A source repair needs an expanded canonical
