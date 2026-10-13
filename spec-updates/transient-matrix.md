@@ -47,9 +47,11 @@ diagnosis; it cannot select different budgets or loosen bounds. Runtime is
 hosted. Successful arms, waveform hashes/brackets and numerical refusals remain
 reported; failed cases are never silently dropped from the denominator.
 
-Preparation depends on the simulation-clock current lane. No matrix dispatch,
-landing, pin or deployment is authorized by a passing pure parser/control test.
-Qualification remains pending. Full raw solver tables are temporary; reports
+Preparation depended on the simulation-clock current lane, now landed at
+`c31c7402d0662cec79738c99da34143d3f15ffa9` after combined qualification.
+The matrix preserves that engine source and is released for its first hosted
+numerical run. Pure parser/control tests alone do not authorize landing, pins
+or deployment. Qualification remains pending. Full raw solver tables are temporary; reports
 retain their hashes, sample bracketing rows and clipped-interval means.
 An isolated actual-circuit resistor perturbation must complete yet disagree
 with its unchanged SPICE reference. A process error or incomplete mutant does

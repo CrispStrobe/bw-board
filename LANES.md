@@ -15,7 +15,7 @@ product/compiler/guest execution, source ownership/lease or RTx qualification.
 Future Git adapter integration, complete transitive graph/supervisor/event/job admission and
 actual hosted execution remain separate. No consumer pins or unrelated lanes.
 
-2026-10-13 transient qualification matrix preparation — CLAIM, Codex bwcx.
+2026-10-13 transient qualification matrix preparation — DONE candidate, Codex bwcx.
 Branch lane/transient-matrix-prepare-20261013, exact base4c5fe57c.
 Five evidence paths: LANES.md, scripts/qualify-transient-matrix.mjs,
 test/transient-matrix.test.mjs, scripts/oracle-census.mjs and
@@ -40,6 +40,11 @@ Integrated combined current/motor candidate0f57d034 locally; every production
 and workflow byte remains identical to that candidate. Both current and matrix
 oracle census gates are preserved. Three pure controls remain green. Numerical
 qualification still held until the current-scope combined head lands.
+Prerequisite now landedc31c7402 with combinedCI8521/0/302 andHarris green.
+Matrix contains its exact engine/workflow bytes. Release first hosted numerical
+qualification now; three pure controls and two comparator mutants pass locally,
+while twelve actual cases, physical-resistor mutant and unavailable-provider
+CLI test remain hosted requirements. No matrix agreement has been claimed yet.
 
 2026-10-13 simulation-time current scope — DONE, Codex bwcx.
 Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.
