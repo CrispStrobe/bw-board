@@ -173,13 +173,62 @@ test('a host without raw TCP carries port 80 as HTTP requests, and cannot carry 
     assert.equal(w.decisions[1].reason, 'This application has no way to open that kind of connection.');
 });
 
-test('UDP beyond the simulated network is reported as not carried', () => {
+test('UDP: a flow is decided once, carried both ways as the far address, listed, and closed by the setting', () => {
     const transport = fakeTransport();
+    const flows = [];
+    transport.udp = (destination, events) => {
+        const far = {destination, events, sent: [], closed: false};
+        flows.push(far);
+        return {send: b => far.sent.push(Array.from(b)), close: () => { far.closed = true; }};
+    };
     const w = world({transport, settings: {mode: 'all'}});
+    const got = [];
+    w.guest.udpBind(4000, (payload, from) => got.push([Array.from(payload), from.ip, from.port]));
     w.guest.udpSend('8.8.8.8', 53, 4000, [1, 2, 3]);
-    assert.equal(w.gateway.counters.notCarried, 1);
-    assert.deepEqual([w.decisions[0].allow, w.decisions[0].protocol, w.decisions[0].reason],
-        [false, 'udp', 'UDP beyond the simulated network is not carried yet.']);
+    w.guest.udpSend('8.8.8.8', 53, 4000, [4]);
+    assert.equal(flows.length, 1, 'one flow for the two datagrams');
+    assert.deepEqual([flows[0].destination, flows[0].sent], [{address: '8.8.8.8', port: 53}, [[1, 2, 3], [4]]]);
+    assert.equal(w.decisions.length, 1, 'decided once');
+    assert.deepEqual([w.decisions[0].allow, w.decisions[0].protocol, w.decisions[0].via], [true, 'udp', 'udp']);
+    flows[0].events.message([9, 8, 7]);
+    assert.deepEqual(got, [[[9, 8, 7], '8.8.8.8', 53]], 'the answer comes from the far address and port');
+    assert.deepEqual(w.gateway.connections, [{id: 1, guest: '10.0.0.50', address: '8.8.8.8', port: 53, via: 'udp', bytesUp: 4, bytesDown: 3}]);
+    w.guest.udpSend('8.8.8.8', 123, 4000, [5]);
+    assert.equal(flows.length, 2, 'another port is another flow');
+    w.gateway.setSettings({mode: 'web'});
+    assert.deepEqual([flows[0].closed, flows[1].closed, w.gateway.connections.length], [true, true, 0], 'web mode carries no UDP');
+    flows[0].events.message([1]);
+    assert.equal(got.length, 1, 'a late answer to a closed flow goes nowhere');
+    w.guest.udpSend('8.8.8.8', 53, 4000, [6]);
+    assert.equal(flows.length, 2, 'and the guest\'s next datagram is refused');
+    assert.match(w.decisions[w.decisions.length - 1].reason, /web only/);
+});
+
+test('UDP: the policy and a missing transport refuse a flow before anything is sent', () => {
+    const none = world({transport: fakeTransport(), settings: {mode: 'all'}});
+    none.guest.udpSend('8.8.8.8', 53, 4000, [1]);
+    assert.deepEqual([none.decisions[0].allow, none.decisions[0].reason], [false, 'This application has no way to open that kind of connection.']);
+    const transport = fakeTransport();
+    let opened = 0;
+    transport.udp = () => { opened++; return {send () {}, close () {}}; };
+    const w = world({transport, settings: {mode: 'all'}});
+    for (const [address, why] of [['192.168.1.1', /your own network/], ['127.0.0.1', /this computer itself/], ['224.0.0.251', /many machines at once/]]) {
+        w.guest.udpSend(address, 5353, 4000, [1]);
+        assert.match(w.decisions[w.decisions.length - 1].reason, why);
+    }
+    assert.equal(opened, 0);
+    w.guest.sendIpv4(ip('8.8.8.8'), 47, [0, 0, 0, 0]);
+    assert.deepEqual([w.gateway.counters.notCarried, w.decisions[w.decisions.length - 1].protocol,
+        w.decisions[w.decisions.length - 1].reason], [1, 'ip-protocol-47', 'Only TCP and UDP are carried beyond the simulated network.']);
+});
+
+test('UDP: only 64 flows are kept, and the oldest is closed to make room', () => {
+    const transport = fakeTransport();
+    const flows = [];
+    transport.udp = destination => { const far = {port: destination.port, closed: false}; flows.push(far); return {send () {}, close: () => { far.closed = true; }}; };
+    const w = world({transport, settings: {mode: 'all'}});
+    for (let i = 0; i < 65; i++) w.guest.udpSend('8.8.8.8', 1000 + i, 4000, [1]);
+    assert.deepEqual([flows.length, flows[0].closed, flows[1].closed, w.gateway.connections.length], [65, true, false, 64]);
 });
 
 test('only what a guest sends to the gateway\'s own card is routed: a broadcast frame for a far address is not', () => {
@@ -187,7 +236,7 @@ test('only what a guest sends to the gateway\'s own card is routed: a broadcast 
     const w = world({transport, settings: {mode: 'all'}});
     const before = w.router.counters.notForMe;
     w.guest.sendIpv4(ip('8.8.8.8'), 17, [0, 1, 0, 2, 0, 8, 0, 0], {dstMac: [0xff, 0xff, 0xff, 0xff, 0xff, 0xff]});
-    assert.deepEqual([w.gateway.counters.notCarried, w.decisions.length, w.router.counters.notForMe - before], [0, 0, 1]);
+    assert.deepEqual([w.gateway.counters.allowed, w.decisions.length, w.router.counters.notForMe - before], [0, 0, 1]);
 });
 
 test('the HTTP server: a simulated service answers, and broken requests get their own refusals', () => {
