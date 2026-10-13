@@ -1037,3 +1037,27 @@ Define the separate full-source/raw-output envelope and its independent reader,
 then bind the official event, jobs, steps, terminal artifact and single-run gate.
 The compiler remains disabled through this provisioning slice. No new RTx or
 broader protected-mode compatibility result is claimed.
+
+### Provisioning source-admission connection
+
+The [unarmed controller](../scripts/i80386-full-tree-provisioning-launcher/CONTROLLER.md)
+connects the held Gate and bounded Git adapter to the fixed transport and notice
+coordinator. Bootstrap checks every declared executable and data component before
+loading modules. A complete source-before position precedes transport admission;
+all six inputs must authenticate before one coordinator call. Source-after and
+cleanup observations determine the controller's finite completion result.
+
+Full-profile source snapshots remain separate from the derived inherited fourteen
+rows. The source-control fixtures use tiny repositories, mocked HTTP bodies and
+an explicitly separate tiny completion predicate. They establish orchestration
+consistency, not actual archive or compiler compatibility. Default approval is
+unset and execution refuses before filesystem, Git or network work.
+
+Qualify the transport parent and this controller's published controls separately.
+Then implement the fixed contained resource entry, with limits installed and
+observed in PID1 before bootstrap. Bind externally reviewed approval bytes to the
+consumed launch record; mutable configuration values alone are not authority.
+Finish the separately versioned full-source/raw-output envelope, independent
+original reader and official event/job/step/artifact/single-run joins before the
+first actual provisioning attempt. Compilation and guest testing remain later
+gates; this connection adds no RTx or operating-system qualification.

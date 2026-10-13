@@ -41,7 +41,7 @@ and workflow byte remains identical to that candidate. Both current and matrix
 oracle census gates are preserved. Three pure controls remain green. Numerical
 qualification still held until the current-scope combined head lands.
 
-2026-10-13 simulation-time current scope — DONE candidate, Codex bwcx.
+2026-10-13 simulation-time current scope — DONE, Codex bwcx.
 Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.
 Six paths: LANES.md, src/board.js (explicit currentClock option, accepted-solve
 current acquisition, sample barriers and display-write exclusion only),
@@ -92,6 +92,12 @@ actual method mutants andall400 current samples pass. Independent raw grid/pair
 audit confirms maximum current error1.547073nA and3833/11491/51 capturework,
 withzero voltagechannels. Current main's motor-model source changes are merged
 for fresh combined qualification; no matrix or consumer adoption yet.
+Exact combined0f57d034 passes CI38384253011/Harris38384252976:8521 passed,
+zero failed,302 skipped. Independent raw400-point audit remains1.547073nA
+maximum error with3833/11491/51 work andzero voltagechannels. Latermainb7f9a973
+adds isolated x86 source-admission tooling only; qualified engine/test/general
+workflow bytes are preserved. Matrix qualification and consumer adoption remain
+separate pending stages; original failures are not erased.
 
 2026-10-13 winding edge instruments — DONE, Codex bwcx.
 Branch lane/winding-edge-instruments-20261013, exact base e2c1a507.
@@ -4197,3 +4203,18 @@ caller URLs, pins, factories or command execution. Production remains disabled.
 Root owns admission/resource/official-run integration; existing reviewed source,
 reader, containment, archive and compiler profiles remain unchanged. No actual
 network acquisition, namespace replay, compilation, guest or performance claim.
+
+
+## Provisioning source-admission connection — 2026-10-13
+
+Owned branch `lane/386-provisioning-admission-connect-20261013`: new controller,
+controller controls and CONTROLLER.md within the provisioning-launcher namespace,
+a dedicated synthetic workflow and this entry. Reuse the held source Gate/Git
+adapter and fixed six-input transport; authenticate a complete explicit source
+graph before source-owned wiring, observe before/after, preserve failures and
+cleanup, and connect the fixed coordinator only after all inputs authenticate.
+External approval remains unset; local fixtures use tiny manufactured source and
+HTTP bodies only. No actual acquisition, namespace replay, compiler or guest.
+Held source/transport/reader/containment algorithms remain unchanged. Parent
+transport source qualification and independently reviewed actual resources,
+envelope, original reader and official one-run guard remain separate gates.
