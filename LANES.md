@@ -4193,3 +4193,17 @@ mocked; actual entry remains unsealed. Pending parent PR540/541 qualification,
 external observer/approval/envelope/reader/one-run integration remain separate.
 No arbitrary programme/policy/factory API, actual namespaces, acquisition,
 compiler, guest or performance claim; held profiles remain unchanged.
+
+
+## Resource-handshake observer admission — 2026-10-13
+
+Owned branch `lane/386-provisioning-observer-admission-20261013`: new
+`scripts/i80386-provisioning-observer/` namespace, dedicated pure-control workflow
+and this entry. Independently decode the fixed resource packet, reuse held typed
+namespace/PID1 credential admission, and read back literal process limits before
+ACK. Retain owned handles and conservative failure facts. All local kernel/FD/
+socket/resource operations are mocked; no real limits, namespaces or signals.
+Actual entry and channel remain unconnected. Pending parent source qualification,
+full observer lifetime/timeout/output, independent official envelope/reader and
+externally reviewed single-run approval remain separate. No caller policy,
+factory or programme API and no acquisition/compiler/guest/RTx claim.
