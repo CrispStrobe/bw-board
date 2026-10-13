@@ -4380,8 +4380,8 @@ one-run integration remains separate. Root owns documentation and actual gates.
 
 Branch `lane/386-provisioning-operational-profile-20261013`, Codex x86.
 Own `scripts/i80386-provisioning-operational-profile/`, its dedicated workflow,
-`docs/X86-PROVISIONING-OPERATIONAL.md` and this row. This publication is docs only;
-implementation starts after this claim and PR550 merge. Follow the
+`docs/X86-PROVISIONING-OPERATIONAL.md` and this row. The merged claim authorizes connected smoke source preparation;
+actual provisioning remains separately gated. Follow the
 [connected integration contract](docs/X86-PROVISIONING-OPERATIONAL.md): complete
 approved source graph, privileged enclosing bootstrap, validated child context,
 real contained entry/limits/ACK/controller/lifetime, and bounded original

@@ -1,0 +1,139 @@
+name: Provisioning operational smoke
+on:
+  pull_request:
+    types: [opened]
+    paths:
+      - scripts/i80386-provisioning-operational-profile/**
+      - .github/workflows/i80386-provisioning-operational-profile.yml
+permissions:
+  contents: read
+concurrency:
+  group: provisioning-operational-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+jobs:
+  source-controls:
+    if: github.repository == 'CrispStrobe/bw-board' && github.event_name == 'pull_request' && github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'lane/386-provisioning-operational-profile-20261013' && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Manufactured controls only
+        shell: bash
+        run: |
+          ulimit -t 30
+          ulimit -v 524288
+          ulimit -f 1024
+          ulimit -n 256
+          ulimit -c 0
+          timeout 45s /usr/bin/python3 -I -B scripts/i80386-provisioning-operational-profile/controls.py
+  operational-smoke:
+    needs: source-controls
+    if: github.repository == 'CrispStrobe/bw-board' && github.event_name == 'pull_request' && github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == 'CrispStrobe' && github.actor == 'CrispStrobe' && github.event.pull_request.head.ref == 'lane/386-provisioning-operational-profile-20261013' && github.run_attempt == 1 && contains(github.event.pull_request.body, 'bw-provisioning-operational-review-sha256:')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Fixed reviewed privileged smoke
+        env:
+          BW_PR_BODY: ${{ github.event.pull_request.body }}
+          BW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BW_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          BW_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BW_PR_NUMBER: ${{ github.event.pull_request.number }}
+          BW_PR_ACTION: ${{ github.event.action }}
+        shell: bash
+        run: |
+          # Timer starts before root checkout ownership and driver bootstrap.
+          sudo -n --preserve-env=BW_PR_BODY,BW_HEAD_SHA,BW_HEAD_REPOSITORY,BW_BASE_SHA,BW_PR_NUMBER,BW_PR_ACTION,GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_RUN_ATTEMPT,GITHUB_RUN_ID,GITHUB_SHA,GITHUB_EVENT_NAME,GITHUB_WORKSPACE,RUNNER_TEMP /usr/bin/timeout --signal=KILL 500s /usr/bin/python3 -I -B - <<'PY'
+          import hashlib,json,os,pathlib,re,stat,subprocess,types
+          body=os.environ['BW_PR_BODY']
+          markers=re.findall(r'<!-- bw-provisioning-operational-review-sha256: ([0-9a-f]{64}) -->',body)
+          blocks=re.findall(r'```bw-provisioning-operational-review\n([\s\S]*?\n)```',body)
+          if len(markers)!=1 or len(blocks)!=1:raise ValueError('missing-unique-external-review')
+          raw=blocks[0].encode();seal=markers[0]
+          if len(raw)>65536 or hashlib.sha256(raw).hexdigest()!=seal:raise ValueError('external-review-digest')
+          def pairs(items):
+              result={}
+              for key,value in items:
+                  if key in result:raise ValueError('duplicate-review')
+                  result[key]=value
+              return result
+          def bad(_):raise ValueError('review-number')
+          review=json.loads(raw,object_pairs_hook=pairs,parse_float=bad,parse_constant=bad)
+          if type(review)is not dict or set(review)!={'schema','repository','head','mode','roles','graphSha256'}or review['schema']!='bw.provisioning-operational-approval.v1':raise ValueError('review-shape')
+          if review['head']!=os.environ['BW_HEAD_SHA']or review['repository']!='CrispStrobe/bw-board'or review['mode']!='limits-ack-approval-refusal':raise ValueError('external-review-context')
+          workspace=pathlib.Path(os.environ['GITHUB_WORKSPACE']);checkout=workspace/'source'
+          if not stat.S_ISDIR(os.lstat(checkout).st_mode)or not stat.S_ISDIR(os.lstat(checkout/'.git').st_mode):raise ValueError('fresh-checkout-shape')
+          if (checkout/'.git/shallow').exists()or (checkout/'.git/objects/info/alternates').exists():raise ValueError('checkout-history')
+          # Only the fresh Actions-owned task checkout; do not follow symlinks.
+          for parent,dirs,files in os.walk(checkout,followlinks=False):
+              os.chown(parent,0,0,follow_symlinks=False)
+              for name in dirs+files:os.chown(pathlib.Path(parent)/name,0,0,follow_symlinks=False)
+          cleanenv={'PATH':'/usr/bin:/bin','GIT_CONFIG_NOSYSTEM':'1','GIT_CONFIG_GLOBAL':'/dev/null','GIT_CONFIG_SYSTEM':'/dev/null','GIT_NO_LAZY_FETCH':'1','GIT_TERMINAL_PROMPT':'0'}
+          head=subprocess.check_output(('/usr/bin/git','--no-replace-objects','-C',str(checkout),'rev-parse','HEAD'),env=cleanenv,timeout=5).decode().strip()
+          if head!=review['head']:raise ValueError('checkout-head')
+          output=pathlib.Path(os.environ['RUNNER_TEMP'])/'bw-provisioning-operational'
+          output.mkdir(mode=0o700,exist_ok=False)
+          with (output/'approval.json').open('xb')as f:f.write(raw)
+          os.chmod(output/'approval.json',0o400)
+          relative='scripts/i80386-provisioning-operational-profile/driver.py'
+          def read_source(path,cap):
+              fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK);primary=None;data=None
+              try:
+                  first=os.fstat(fd)
+                  if not stat.S_ISREG(first.st_mode)or first.st_nlink!=1 or first.st_uid!=0 or first.st_size>cap:raise ValueError('source-shape')
+                  chunks=[];count=0
+                  while True:
+                      part=os.read(fd,min(65536,cap+1-count));count+=len(part)
+                      if count>cap:raise ValueError('source-cap')
+                      if not part:break
+                      chunks.append(part)
+                  end=os.fstat(fd);named=os.stat(path,follow_symlinks=False)
+                  if count!=first.st_size or not stat.S_ISREG(named.st_mode)or end.st_nlink!=1 or named.st_nlink!=1 or(first.st_dev,first.st_ino,first.st_size,first.st_mtime_ns)!=(end.st_dev,end.st_ino,end.st_size,end.st_mtime_ns)or(first.st_dev,first.st_ino,first.st_size,first.st_mtime_ns)!=(named.st_dev,named.st_ino,named.st_size,named.st_mtime_ns):raise ValueError('source-changed')
+                  data=b''.join(chunks)
+              except BaseException as error:primary=error
+              finally:
+                  try:os.close(fd)
+                  except BaseException as error:
+                      if primary is None:primary=error
+              if primary is not None:raise primary
+              return data
+          verified={}
+          if type(review['roles'])is not dict or not 1<=len(review['roles'])<=100:raise ValueError('review-role-count')
+          for name,row in review['roles'].items():
+              if type(name)is not str or name.startswith('/')or len(name)>240 or any(x in ('','.','..')for x in name.split('/'))or type(row)is not dict or set(row)!={'bytes','sha256'}or type(row['bytes'])is not int or not 0<row['bytes']<=524288:raise ValueError('review-row')
+              data=read_source(checkout/name,524288)
+              if len(data)!=row['bytes']or hashlib.sha256(data).hexdigest()!=row['sha256']:raise ValueError('review-source')
+              verified[name]=data
+          graph_path='scripts/i80386-provisioning-operational-profile/fixed-graph.json'
+          if graph_path not in verified or hashlib.sha256(verified[graph_path]).hexdigest()!=review['graphSha256']:raise ValueError('review-graph')
+          graph=json.loads(verified[graph_path])
+          if set(graph['roles'])!=set(verified):raise ValueError('review-closure')
+          for name,row in graph['held'].items():
+              if review['roles'].get(name)!=row:raise ValueError('held-source-changed')
+          source=verified[relative];row=review['roles'][relative]
+          if len(source)!=row['bytes']or hashlib.sha256(source).hexdigest()!=row['sha256']:raise ValueError('reviewed-driver-changed')
+          module=types.ModuleType('reviewed_fixed_driver');module.__file__=str(checkout/relative)
+          exec(compile(source,'<externally-reviewed-driver>','exec'),module.__dict__)
+          module.EXTERNAL_APPROVAL_SHA256=seal
+          raise SystemExit(module.main())
+          PY
+      - name: Retain original companion and bounded staging diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: provisioning-operational-smoke
+          path: |
+            ${{ runner.temp }}/bw-provisioning-operational/companion.zip
+            ${{ runner.temp }}/bw-provisioning-operational/*.json
+            ${{ runner.temp }}/bw-provisioning-operational/*.bin
+          if-no-files-found: warn
+          retention-days: 7

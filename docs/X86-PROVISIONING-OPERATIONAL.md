@@ -80,3 +80,32 @@ consumed successful attempt merely to read it. Record exact tested source,
 enabled checks, reviewed head and landed tree. Enable compilation only in a
 later lane after the provisioned root, full-tree result and required compiler
 components pass their own checks.
+
+## Connected smoke source checkpoint
+
+The first connected source profile is
+[`scripts/i80386-provisioning-operational-profile/`](../scripts/i80386-provisioning-operational-profile/README.md).
+It composes unchanged Entry, Limits, Observer, Lifetime and Controller. Genuine
+hosted qualification must reach the resource/handle handshake and five readonly
+receiver readbacks before the deliberately unapproved Controller refuses. It
+performs no archive acquisition and enables no compiler. Its 27 source controls
+are manufactured and mock all kernel/process/resource edges; they do not replace
+the hosted wire qualification.
+
+The launch owner supplies a reviewed, outside-commit source graph blob in the
+owning PR body after source and control audits. Runtime context and tool hashes
+are recorded separately, and the driver seal binds the original reviewed bytes.
+Ordinary pushes use existing repository checks; this dedicated profile runs
+only on the owning PR initial opened event. The fixed PR workflow preserves the actual PR
+event, starts its enclosing timer before preparation of the fresh root-owned
+checkout and never changes a shared checkout or held Git trust configuration.
+The actual provisioning entry and full official once gate remain unarmed.
+
+The companion now declares an eleventh 64 KiB role for original outer observer
+diagnostics, distinct from child stdout/stderr. Its role maxima sum to 1,130,496
+bytes within 1.5 MiB decoded / 2 MiB raw caps. The transport artifact additionally
+retains bounded staging copies with a separately admitted outer inventory;
+it must not be mistaken for the inner eleven-role ZIP. Early resource facts
+remain retainable even without child source-before; no nine-role observation
+packet is fabricated to fill that missing group. A finite expected-refusal smoke
+result is neither full-tree materialization nor source/host/lease authority.
