@@ -23,6 +23,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
           sparse-checkout: |
+            .github/workflows
             scripts/i80386-full-tree-provisioning-launcher
             scripts/i80386-unarmed-supervisor
             scripts/i80386-full-tree-profile-source
