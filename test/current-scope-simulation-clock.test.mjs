@@ -131,7 +131,8 @@ test('hosted missing/nonfinite snapshots and redundant ideal-source currents fai
     assert.throws(() => singular.getScopeData(singularLoad), /solve failed/);
     const b = await rig(false, 'rail'), alias = attach(b, {partId: 'V', terminal: 'vcc'}), load = attach(b);
     b.advanceTo(2000n);
-    assert.equal(b._mnaCache.converged, true, 'supported redundant rails still solve the determinate load');
+    assert.ok(Math.abs(b.branchCurrent('R', 'a') + .005) < 1e-12,
+        'validated public load current remains determinate; cache persistence is not a contract');
     assert.throws(() => b.getScopeData(alias), /indeterminate/);
     assert.equal(b.getScopeData(load).count, 2);
     assert.ok(Math.abs(b.getScopeData(load).samples[0] + .005) < 1e-12);

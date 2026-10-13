@@ -28,6 +28,11 @@ rows are singular, not the supported redundant-vcc alias case. Forward test
 repair distinguishes both physical cases: singular source/load readings refuse;
 duplicate rail aliases solve the load but refuse nonunique source current.
 Production and numerical bounds unchanged. Fresh qualification required.
+Exact88cdd9fb CI38356419036 fails the private-cache persistence assertion
+(8510 pass,1 fail,302 skipped); Harris38356419022 passes. The cache is legitimately
+cleared after advance. Forward evidence repair uses validated public load current
+plus actual accepted-sample checks instead; no cache-lifetime requirement or
+production change. Fresh exact-head qualification remains required.
 
 2026-10-13 winding edge instruments — DONE, Codex bwcx.
 Branch lane/winding-edge-instruments-20261013, exact base e2c1a507.
