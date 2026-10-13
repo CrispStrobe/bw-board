@@ -4375,3 +4375,19 @@ consistency never grant source ownership, approval, official host/namespace,
 actual acquisition, compiler, guest, hard-deadline or performance authority.
 Held parent source/schema bytes remain unchanged; actual graph/approval/official
 one-run integration remains separate. Root owns documentation and actual gates.
+
+## Operational provisioning integration — CLAIM, 2026-10-13
+
+Branch `lane/386-provisioning-operational-profile-20261013`, Codex x86.
+Own `scripts/i80386-provisioning-operational-profile/`, its dedicated workflow,
+`docs/X86-PROVISIONING-OPERATIONAL.md` and this row. This publication is docs only;
+implementation starts after this claim and PR550 merge. Follow the
+[connected integration contract](docs/X86-PROVISIONING-OPERATIONAL.md): complete
+approved source graph, privileged enclosing bootstrap, validated child context,
+real contained entry/limits/ACK/controller/lifetime, and bounded original
+controller/coordinator report collection. Retain the observation packet contract
+and parent default refusals. No alternate test predicate in an operational route,
+synthetic authority, compiler activation or guest/performance claim. Hosted
+affected-path qualification and independent original-report audit precede the
+separately consumed actual provisioning attempt. Other CPU, UI, FPGA, schematic
+and target lanes remain outside this claim.
