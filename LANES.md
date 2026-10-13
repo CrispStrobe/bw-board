@@ -28,6 +28,9 @@ output/current and controller drive/update/wake records to existing callbacks,
 retaining partial failed captures. Same four paths; no source/model, reference,
 limit, grid or accounting change. Fresh diagnostic qualification, no unchanged
 rerun, production repair, waveform success or landing authorized by this head.
+Forward observer review removes getter-triggered solves: direct published
+maps with null/missing/convergence/dirty markers only. No observer-created
+solution or invented zero. Supersede7a155197 before actual diagnostic use.
 
 2026-10-13 transistor instrument qualification — DONE, Codex bwcx.
 Branch lane/transistor-instruments-20261013, exact base5f4dc246.
