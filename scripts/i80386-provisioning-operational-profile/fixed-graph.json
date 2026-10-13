@@ -122,6 +122,7 @@
     "scripts/i80386-provisioning-operational-profile/controls.py",
     "scripts/i80386-provisioning-operational-profile/driver.py",
     "scripts/i80386-provisioning-operational-profile/fixed-graph.json",
+    "scripts/i80386-provisioning-operational-profile/handoff.py",
     "scripts/i80386-provisioning-operational-profile/observer-main.py",
     "scripts/i80386-provisioning-operational-profile/report-reader.py",
     "scripts/i80386-provisioning-pid1/limits.py",

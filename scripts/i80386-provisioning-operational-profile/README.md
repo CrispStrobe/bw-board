@@ -75,7 +75,7 @@ Run source-only controls on Linux system Python:
 /usr/bin/python3 -I -B scripts/i80386-provisioning-operational-profile/controls.py
 ```
 
-The 27 controls use tiny authored report bytes and ordinary owned temporary files.
+The 38 controls use tiny authored report bytes and ordinary owned temporary files.
 All process, namespace, socket, PID/credential and resource-installation edges
 are mocked; no real provisioning PID1 policy or namespace is altered locally.
 They include unchanged Entry/Limits/Controller composition with mocked kernel
@@ -96,3 +96,31 @@ The proposed outer upload admission is at most fourteen fixed filenames:
 `child-capture.json`. Apply independent 4 MiB raw and 4 MiB decoded wrapper caps;
 these wrapper caps do not relax the inner 2 MiB / 1.5 MiB limits. Missing staging
 files are genuine absence, and duplicate inner/raw copies must be byte-equal.
+
+## Post-execution artifact read access
+
+The first hosted refusal smoke completed its privileged step, but its artifact
+upload failed when the job user could not read the root-owned output directory.
+That failed run has no official artifact; it is preserved without a retry or a
+packet reconstructed from its console.
+
+The handoff revision keeps root ownership and mode 0700 throughout execution.
+Within the same enclosing timer, the source-issued final capture index must
+record a returned observer and no outer capture, overflow or cleanup uncertainty.
+The verified helper borrows the retained directory descriptor and its original
+identity. It reads only the fourteen fixed possible filenames under their exact
+caps, requiring root-owned ordinary files with link count one, bounded content
+and matching held/named identities. It changes no source or checkout ownership.
+
+Only after the full inventory is checked does it set each file to mode 0444,
+observe that mode, and close its owned file descriptors once. Mode 0555 on the
+same directory is last, after file cleanup succeeds. The parent checks the named
+directory against the retained identity again and closes its own descriptor.
+There is no recursive permission change, chown, deletion or arbitrary path API.
+Partial permission changes remain visible on refusal; rollback is not claimed.
+
+Unknown freeze or cleanup refuses handoff. A known terminal semantic refusal can
+retain bounded diagnostic bytes, while its original driver error stays primary
+if handoff also fails. Read access is not materialization, source ownership,
+continuous identity, host or official-artifact qualification. A fresh reviewed
+head and initial PR-opened event are required; earlier runs are not replayed.

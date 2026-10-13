@@ -254,4 +254,117 @@ class Controls(unittest.TestCase):
                 with self.assertRaises(OSError)as caught:d.main()
             self.assertIs(caught.exception,first);self.assertEqual(closed.count('selector'),1);self.assertEqual(closed.count('pipe'),1);self.assertTrue((output/'observer-diagnostic.bin').exists())
 
+    def handoff_case(self, mutate=None):
+        import stat,types
+        h=module('handoff');owner=h._Handoff(900,(5,6),True)
+        state={'names':['stdout.bin','stderr.bin'],'bodies':{'stdout.bin':b'abc','stderr.bin':b''},'fds':{},'offsets':{},'modes':{},'closed':[],'chmod':[],'reads':[],'opens':[],'file_uid':0,'nlink':1,'directory_checks':0}
+        def facts(fd):
+            if fd==900:
+                state['directory_checks']+=1
+                return types.SimpleNamespace(st_mode=stat.S_IFDIR|state['modes'].get(fd,0o700),st_uid=0,st_gid=0,st_nlink=2,st_dev=5,st_ino=6,st_size=0,st_mtime_ns=1)
+            name=state['fds'][fd]
+            return types.SimpleNamespace(st_mode=stat.S_IFREG|state['modes'].get(fd,0o600),st_uid=state['file_uid'],st_gid=0,st_nlink=state['nlink'],st_dev=5,st_ino=fd,st_size=len(state['bodies'][name]),st_mtime_ns=1)
+        def opened(name,flags,dir_fd):
+            self.assertEqual(dir_fd,900);self.assertTrue(flags&os.O_NOFOLLOW)
+            fd=100+len(state['fds']);state['fds'][fd]=name;state['opens'].append(fd);return fd
+        def read(fd,n):
+            state['reads'].append(fd);body=state['bodies'][state['fds'][fd]];off=state['offsets'].get(fd,0);part=body[off:off+n];state['offsets'][fd]=off+len(part);return part
+        def named(name,dir_fd,follow_symlinks):
+            self.assertEqual(dir_fd,900);self.assertIs(follow_symlinks,False)
+            return facts(next(fd for fd,value in state['fds'].items()if value==name))
+        def closed(fd):state['closed'].append(fd)
+        def chmod(fd,mode):state['chmod'].append((fd,mode));state['modes'][fd]=mode
+        ops={'fstat':facts,'open':opened,'read':read,'stat':named,'close':closed,'fchmod':chmod,'listdir':lambda fd:list(state['names'])}
+        if mutate is not None:mutate(h,owner,state,ops)
+        from contextlib import ExitStack
+        with ExitStack()as stack:
+            for name,fn in ops.items():stack.enter_context(patch.object(h.os,name,new=fn))
+            try:result=owner.run();error=None
+            except BaseException as caught:result=None;error=caught
+        return owner,state,result,error
+
+    def test_handoff_readonly_files_then_directory_last(self):
+        owner,state,result,error=self.handoff_case()
+        self.assertIsNone(error);self.assertTrue(result['directoryReadable']);self.assertFalse(result['ownershipTransferred'])
+        self.assertEqual(state['chmod'],[(100,0o444),(101,0o444),(900,0o555)])
+        self.assertEqual(state['closed'],[101,100]);self.assertNotIn(900,state['closed'])
+
+    def test_handoff_unknown_name_before_any_open_or_chmod(self):
+        owner,state,result,error=self.handoff_case(lambda h,o,s,ops:s['names'].append('foreign.bin'))
+        self.assertEqual(str(error),'inventory-names');self.assertEqual(state['opens'],[]);self.assertEqual(state['chmod'],[])
+
+    def test_handoff_root_owner_and_link_count_required(self):
+        for key,value in [('file_uid',1000),('nlink',2)]:
+            owner,state,result,error=self.handoff_case(lambda h,o,s,ops:s.update({key:value}))
+            self.assertEqual(str(error),'file-shape');self.assertEqual(state['chmod'],[]);self.assertEqual(len(state['closed']),1)
+
+    def test_handoff_primary_read_error_survives_refused_close(self):
+        first=OSError('primary-read')
+        def mutate(h,o,s,ops):
+            def read(*args):raise first
+            def close(fd):s['closed'].append(fd);raise OSError('secondary-close')
+            ops.update(read=read,close=close)
+        owner,state,result,error=self.handoff_case(mutate)
+        self.assertIs(error,first);self.assertEqual(owner.close_attempted,1);self.assertEqual(owner.close_refused,1);self.assertEqual(state['chmod'],[])
+
+    def test_handoff_open_reentry_retains_returned_fd_cleanup(self):
+        def mutate(h,o,s,ops):
+            original=ops['open']
+            def opened(*args,**kwargs):
+                fd=original(*args,**kwargs)
+                try:o.status()
+                except h.Refusal:pass
+                return fd
+            ops['open']=opened
+        owner,state,result,error=self.handoff_case(mutate)
+        self.assertEqual(str(error),'handoff-reentry');self.assertEqual(state['reads'],[]);self.assertEqual(state['closed'],[100]);self.assertEqual(state['chmod'],[])
+
+    def test_handoff_final_directory_drift_no_directory_chmod(self):
+        def mutate(h,o,s,ops):
+            original=ops['fstat']
+            def facts(fd):
+                value=original(fd)
+                if fd==900 and s['directory_checks']>1:value.st_ino=7
+                return value
+            ops['fstat']=facts
+        owner,state,result,error=self.handoff_case(mutate)
+        self.assertEqual(str(error),'final-directory-changed');self.assertNotIn((900,0o555),state['chmod'])
+
+    def test_handoff_permission_readback_must_match(self):
+        owner,state,result,error=self.handoff_case(lambda h,o,s,ops:ops.update(fchmod=lambda fd,mode:s['chmod'].append((fd,mode))))
+        self.assertEqual(str(error),'file-mode-readback');self.assertNotIn((900,0o555),state['chmod'])
+
+    def test_handoff_unknown_freeze_no_os_operations(self):
+        owner,state,result,error=self.handoff_case(lambda h,o,s,ops:setattr(o,'frozen',False))
+        self.assertEqual(str(error),'capture-freeze-unconfirmed');self.assertEqual(state['directory_checks'],0);self.assertEqual(state['opens'],[]);self.assertEqual(state['chmod'],[])
+
+    def test_handoff_already_exposed_directory_refused(self):
+        owner,state,result,error=self.handoff_case(lambda h,o,s,ops:s['modes'].update({900:0o755}))
+        self.assertEqual(str(error),'directory-identity');self.assertEqual(state['opens'],[]);self.assertEqual(state['chmod'],[])
+
+    def test_handoff_captured_directory_and_hash_bindings(self):
+        entered=[]
+        def mutate(h,o,s,ops):
+            original=ops['listdir'];realhash=h.hashlib.sha256
+            def badhash(*args):entered.append('rebound-hash');raise AssertionError('hash rebound')
+            def listing(fd):
+                o.fd=777;o.identity=(9,9);o.frozen=False;h.hashlib.sha256=badhash
+                return original(fd)
+            ops['listdir']=listing;s['restore_hash']=lambda:setattr(h.hashlib,'sha256',realhash)
+        owner,state,result,error=self.handoff_case(mutate)
+        state['restore_hash']()
+        self.assertIsNone(error);self.assertEqual(entered,[]);self.assertEqual(state['chmod'][-1],(900,0o555));self.assertNotIn(777,state['closed'])
+
+    def test_handoff_hash_constructor_reentry_stops_later_work(self):
+        def mutate(h,o,s,ops):
+            original=h.hashlib.sha256
+            def constructor():
+                try:o.status()
+                except h.Refusal:pass
+                return original()
+            h.hashlib.sha256=constructor;s['restore_hash']=lambda:setattr(h.hashlib,'sha256',original)
+        owner,state,result,error=self.handoff_case(mutate)
+        state['restore_hash']()
+        self.assertEqual(str(error),'handoff-reentry');self.assertEqual(state['reads'],[]);self.assertEqual(state['chmod'],[]);self.assertEqual(state['closed'],[100])
+
 if __name__=='__main__':unittest.main()

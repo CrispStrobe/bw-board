@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   source-controls:
-    if: github.repository == 'CrispStrobe/bw-board' && github.event_name == 'pull_request' && github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'lane/386-provisioning-operational-profile-20261013' && github.run_attempt == 1
+    if: github.repository == 'CrispStrobe/bw-board' && github.event_name == 'pull_request' && github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'lane/386-provisioning-operational-handoff-20261013' && github.run_attempt == 1
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
@@ -31,7 +31,7 @@ jobs:
           timeout 45s /usr/bin/python3 -I -B scripts/i80386-provisioning-operational-profile/controls.py
   operational-smoke:
     needs: source-controls
-    if: github.repository == 'CrispStrobe/bw-board' && github.event_name == 'pull_request' && github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == 'CrispStrobe' && github.actor == 'CrispStrobe' && github.event.pull_request.head.ref == 'lane/386-provisioning-operational-profile-20261013' && github.run_attempt == 1 && contains(github.event.pull_request.body, 'bw-provisioning-operational-review-sha256:')
+    if: github.repository == 'CrispStrobe/bw-board' && github.event_name == 'pull_request' && github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == 'CrispStrobe' && github.actor == 'CrispStrobe' && github.event.pull_request.head.ref == 'lane/386-provisioning-operational-handoff-20261013' && github.run_attempt == 1 && contains(github.event.pull_request.body, 'bw-provisioning-operational-review-sha256:')
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
@@ -124,7 +124,43 @@ jobs:
           module=types.ModuleType('reviewed_fixed_driver');module.__file__=str(checkout/relative)
           exec(compile(source,'<externally-reviewed-driver>','exec'),module.__dict__)
           module.EXTERNAL_APPROVAL_SHA256=seal
-          raise SystemExit(module.main())
+          helper_path='scripts/i80386-provisioning-operational-profile/handoff.py'
+          helper=types.ModuleType('reviewed_artifact_handoff');helper.__file__=str(checkout/helper_path)
+          exec(compile(verified[helper_path],'<externally-reviewed-handoff>','exec'),helper.__dict__)
+          directory_fd=os.open(output,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+          original=None;result=None
+          try:
+              directory=os.fstat(directory_fd)
+              named=os.stat(output,follow_symlinks=False)
+              if not stat.S_ISDIR(directory.st_mode)or not stat.S_ISDIR(named.st_mode)or directory.st_uid!=0 or directory.st_gid!=0 or stat.S_IMODE(directory.st_mode)!=0o700 or(directory.st_dev,directory.st_ino)!=(named.st_dev,named.st_ino):raise ValueError('output-directory-owner')
+              identity=(directory.st_dev,directory.st_ino)
+              try:result=module.main()
+              except BaseException as error:original=error
+              # A source-issued final index, not main's return value, proves
+              # the observer returned without outer capture/cleanup uncertainty.
+              frozen=False
+              try:
+                  index=json.loads(read_source(output/'capture-index.json',16384),object_pairs_hook=pairs,parse_float=bad,parse_constant=bad)
+                  if type(index)is not dict or not all(key in index for key in ('schema','observerExit','outerCaptureError','outerDiagnosticOverflow','outerCleanupRefused')):raise ValueError('freeze-index-shape')
+                  frozen=(type(index)is dict and index.get('schema')=='bw.provisioning-operational-capture.v1'and type(index.get('observerExit'))is int and -255<=index['observerExit']<=255 and index.get('outerCaptureError')is None and index.get('outerDiagnosticOverflow')is False and type(index.get('outerCleanupRefused'))is int and index['outerCleanupRefused']==0)
+              except BaseException as error:
+                  if original is None:original=error
+              try:
+                  current=os.stat(output,follow_symlinks=False)
+                  if not stat.S_ISDIR(current.st_mode)or(current.st_dev,current.st_ino)!=identity:raise ValueError('output-directory-changed')
+                  helper._Handoff(directory_fd,identity,frozen).run()
+                  current=os.stat(output,follow_symlinks=False);held=os.fstat(directory_fd)
+                  if not stat.S_ISDIR(current.st_mode)or(current.st_dev,current.st_ino)!=(held.st_dev,held.st_ino)or(current.st_dev,current.st_ino)!=identity or current.st_uid!=0 or current.st_gid!=0 or stat.S_IMODE(current.st_mode)!=0o555:raise ValueError('output-directory-changed')
+              except BaseException as error:
+                  if original is None:original=error
+          except BaseException as error:
+              if original is None:original=error
+          finally:
+              try:os.close(directory_fd)
+              except BaseException as error:
+                  if original is None:original=error
+          if original is not None:raise original
+          raise SystemExit(result)
           PY
       - name: Retain original companion and bounded staging diagnostics
         if: always()

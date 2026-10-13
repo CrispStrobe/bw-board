@@ -1,5 +1,15 @@
 # Operational provisioning integration task
 
+The post-execution artifact handoff revision addresses a preserved upload
+failure after the first privileged refusal smoke. It retains root ownership
+during execution, then validates the retained output directory and fourteen
+fixed bounded filenames before granting read access to the upload job. File
+modes become 0444 and directory mode 0555 is last, after owned file cleanup.
+Unknown capture freeze or close uncertainty refuses this handoff. The driver
+error remains primary; no packet is reconstructed from the earlier console.
+The revision needs a new reviewed source head and first-opened PR smoke. It
+does not enable acquisition, compilation or guest execution.
+
 This is an implementation contract, not a completed run. Start after the
 observation reader in [PR550](https://github.com/CrispStrobe/bw-board/pull/550)
 and this lane claim have merged. Refresh source heads and enabled checks first.
