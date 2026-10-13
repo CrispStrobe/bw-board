@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-13 transistor instrument qualification — DONE candidate, Codex bwcx.
+2026-10-13 transistor instrument qualification — DONE, Codex bwcx.
 Branch lane/transistor-instruments-20261013, exact base5f4dc246.
 Five evidence paths: this ledger, scripts/qualify-transistor-instruments.mjs,
 test/transistor-instrument-oracle.test.mjs, scripts/oracle-census.mjs and
@@ -20,6 +20,13 @@ executable polarity/final-point mutants, and unavailable-provider CLI preserving
 all four cases with no engine acquisition. No actual transistor waveform run
 yet. Exact-head hosted four-case comparison and completed wrong-resistor
 control remain the landing gate; no numerical success is inferred from mocks.
+Sourcee848e18f qualifies in CI38430984626 (8541 pass/0 fail/302 documented
+skips, every enabled job green) and Harris38430984662. Four actual cases,
+1600 scalar observations and8 means pass. Independent raw-bracket/deck/card/
+work audit: maximum point4.679718 µV/46.797176 nA, reported mean0.387760 µV/
+1.087597 nA; Ohm's law independently holds for points and means within10 pA.
+The actual base-resistor mutant completes and disagrees26.974599 mV.
+Documentation-only closeout preserves every tested executable byte.
 
 2026-10-13 Calliope mini 1.x on the labwired tier — CLAIM, VPS Claude (opus).
 Branch lane/labwired-calliope-mini-v1-20261013, exact base 9c834916331f04eb0325679b137801f963b274d8.

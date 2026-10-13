@@ -1,6 +1,6 @@
 # Transistor instrument qualification
 
-## Bounded first batch (prepared, not numerically qualified)
+## Bounded first batch (qualified)
 
 Four independently authored NPN collector circuits extend the qualified
 passive/diode instrument matrix. They deliberately request an explicit
@@ -56,6 +56,29 @@ an isolated 20% change to the actual base resistor in npn-3: that mutant must
 complete and disagree with the unchanged reference. Refusal or process failure
 does not count as an electrical negative control. No local numerical engine or
 SPICE execution is used as qualification.
+
+### Hosted results
+
+Source `e848e18f9e2e2a933e3b9b41a18e2524d373337b` passed
+[CI 38430984626](https://github.com/CrispStrobe/bw-board/actions/runs/38430984626)
+(8,541 passed, zero failed, 302 documented skips) and
+[Harris 38430984662](https://github.com/CrispStrobe/bw-board/actions/runs/38430984662).
+All enabled jobs passed; optional full vectors did not run. All four circuits
+completed within the original whole-capture budgets, comparing 1,600 scalar
+observations and eight watched means.
+
+The independent streamed audit reconstructed reference samples from retained
+raw brackets and checked deck hashes, card, initial state, profile and work
+authority. Maximum point differences were 4.679718 µV / 46.797176 nA;
+reference-refinement maxima were 2.380142 µV / 23.801425 nA. Reported mean
+differences were 0.387760 µV / 1.087597 nA. Each engine/reference point and mean
+also obeyed the collector resistor's independent Ohm's-law identity within
+10 pA. This does not reconstruct the unretained full mean-integration tables.
+The 20% actual-base-resistor perturbation completed and disagreed by
+26.974599 mV; a process refusal was not accepted as that proof. The unavailable
+provider test preserved all four failed reports without acquiring the engine.
+The documentation-only closeout preserves these executable bytes. No physical
+device, arbitrary-card, consumer adoption or deployment success is implied.
 
 ## Limits and next work
 
