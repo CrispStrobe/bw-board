@@ -5,6 +5,7 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { stepMotorVelocity, motorDirectionOf } from './dc-motor.js';
 
 const R_OUT = 50;
 // Input pins draw nothing here, on purpose. These models used to declare
@@ -134,18 +135,26 @@ export function registerTier1Parts() {
 
   // ─── Gearmotor ───────────────────────────────────────────────────
   // DC motor with gear ratio: output speed = motor speed / ratio.
+  // SIGNED like dc_motor (Lite task B14): `velocity` is the rotor's signed
+  // angular velocity, + forward (current a -> b), - reverse, stepped by the
+  // dc_motor's own stepMotorVelocity; `omega` and `outputRpm` stay speeds
+  // (magnitudes), `direction` is what the `direction of motor` reporter reads.
+  // Until 2026-10 omega was clamped at 0, so a gearmotor driven backwards
+  // (an L293D in reverse) sat still.
   registerDevice('gearmotor', {
     terminals: ['a', 'b'],
-    init() { return { drives: {}, omega: 0, outputRpm: 0, _lastTNs: 0n }; },
+    init() {
+      return { drives: {}, velocity: 0, omega: 0, outputRpm: 0, direction: 'stopped', _lastTNs: 0n };
+    },
     stamp(ctx, part, state) {
       const R = part.params?.windingR ?? 10;
       const kV = part.params?.kV ?? 0.01;
-      ctx.conductance('a', 'b', 1 / R);
-      const backEMF = kV * state.omega;
-      if (Math.abs(backEMF) > 1e-12) {
-        ctx.current('a', -backEMF / R);
-        ctx.current('b', backEMF / R);
-      }
+      // dc_motor's stamp: back-EMF (kV x signed velocity, + at a) behind the
+      // winding resistance. This model's own Norton pair had the EMF INVERTED
+      // (the bug dc_motor shed earlier, test/referenced-drives.test.mjs): an
+      // open-circuit motor braked itself, a driven one ran at ~40 % of V/kV,
+      // and once signed, a coasting rotor that reached 0 crept into reverse.
+      ctx.theveninBetween('a', 'b', kV * state.velocity, R);
     },
     update(part, state, read, tNs) {
       const R = part.params?.windingR ?? 10;
@@ -157,12 +166,14 @@ export function registerTier1Parts() {
       const dtSec = Number(tNs - state._lastTNs) / 1e9;
       state._lastTNs = tNs;
       if (dtSec <= 0) return false;
-      const current = (read('a') - read('b') - kV * state.omega) / R;
-      const torque = kT * current;
-      const oldOmega = state.omega;
-      state.omega = Math.max(0, state.omega + (torque / J) * dtSec);
+      const v0 = state.velocity;
+      const current = (read('a') - read('b') - kV * v0) / R;
+      const v1 = stepMotorVelocity(v0, kT * current, 0, J, dtSec);
+      state.velocity = v1;
+      state.omega = Math.abs(v1);
+      state.direction = motorDirectionOf(v1);
       state.outputRpm = (state.omega * 60 / (2 * Math.PI)) / ratio;
-      return Math.abs(state.omega - oldOmega) > 0.1;
+      return Math.abs(v1 - v0) > 0.1;
     },
   });
 

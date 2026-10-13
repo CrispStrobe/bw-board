@@ -58,6 +58,14 @@ redundant source refusal and whole-capture exhaustion. Three isolated actual
 method mutants must fail snapshot, display-write and sample-barrier caller
 contracts; a separate executable CLI mutant must fail unsuccessful exit.
 All actual engine/oracle execution is hosted. Syntax/pure controls are not
-numerical qualification. Source qualification and measured errors are pending.
+numerical qualification. Exact `a45524ad9e342f4b3d88e44d5c9b57f3d2f32ef6` passes
+[CI38375224631](https://github.com/CrispStrobe/bw-board/actions/runs/38375224631)
+and [Harris38375224622](https://github.com/CrispStrobe/bw-board/actions/runs/38375224622):
+8513 passed, zero failed, 302 skipped. Static-source priming, alias refusal,
+one-solve budget accounting, actual method mutants and all 400 current samples
+pass. Independent raw grid/pair audit finds maximum current error 1.547072997 nA;
+work is 3833 attempts / 11491 solves / 51 advances, with zero voltage channels.
+Concurrent motor-model main changes require combined-source qualification
+before final landing. These finite fixtures are not universal part qualification.
 
 Package adoption, GUI selection and deployment are separate consumer work.

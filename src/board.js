@@ -182,6 +182,14 @@ const BRIGHTNESS_WINDOW_NS = 20_000_000n; // 20 ms
  */
 /** The verbs `set motor direction` takes (the devices blocks' dirMenu). */
 const MOTOR_DIRECTIONS = new Set(['forward', 'reverse', 'brake', 'coast']);
+/**
+ * The two-lead DC-motor models `set motor speed` / `set motor direction`
+ * drive, all through the same pin and H-bridge routes and all signed
+ * (src/devices/dc-motor.js stepMotorVelocity). gearmotor and
+ * dc_motor_encoder joined in Lite task B14; before, both verbs were refused
+ * on them as "no simulator action".
+ */
+const DRIVEN_MOTOR_KINDS = new Set(['dc_motor', 'gearmotor', 'dc_motor_encoder']);
 /** An h_bridge's two channels: EN, the two IN pins, the outputs they drive. */
 const H_BRIDGE_CHANNELS = [
   { en: 'en1', ins: ['in1', 'in2'], outs: ['out1', 'out2'] },
@@ -3019,8 +3027,8 @@ export class BoardImpl {
     // board switches (setPwm) — one mechanism with analogWrite and the
     // emulated timers, which every consumer already reads (spec-updates/
     // set-pwm.md, "Actuator intent").
-    if (part.kind === 'dc_motor' && verb === 'speed') return this._motorSpeed(part, value);
-    if (part.kind === 'dc_motor' && verb === 'direction') return this._motorDirection(part, value);
+    if (DRIVEN_MOTOR_KINDS.has(part.kind) && verb === 'speed') return this._motorSpeed(part, value);
+    if (DRIVEN_MOTOR_KINDS.has(part.kind) && verb === 'direction') return this._motorDirection(part, value);
     const model = getDevice(part.kind);
     const state = this._deviceStates.get(partId);
     if (part.kind === 'servo' && verb === 'angle' && state) this._servoPulse(part, state, value);
