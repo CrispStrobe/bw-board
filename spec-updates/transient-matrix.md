@@ -31,6 +31,9 @@ Preparation depends on the simulation-clock current lane. No matrix dispatch,
 landing, pin or deployment is authorized by a passing pure parser/control test.
 Qualification remains pending. Full raw solver tables are temporary; reports
 retain their hashes, sample bracketing rows and clipped-interval means.
+An isolated actual-circuit resistor perturbation must complete yet disagree
+with its unchanged SPICE reference. A process error or incomplete mutant does
+not count as a successful electrical negative control.
 
 ## Subsequent batches, in the approved roadmap order
 

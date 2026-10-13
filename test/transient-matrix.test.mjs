@@ -99,4 +99,23 @@ test('hosted twelve-case transient matrix preserves every refusal and compares i
         if (!report.agreement) failures.push({id, failure: report.failure || 'engine-disagreement'});
     }
     assert.deepEqual(failures, [], 'all reviewed cases must qualify; refusals do not count as passes');
+    // Perturb the actual circuit, not the expected numbers. This must complete
+    // yet disagree with its unchanged independent reference; a process/refusal
+    // error is not evidence that the electrical oracle is load-bearing.
+    const original = readFileSync(new URL('../scripts/qualify-transient-matrix.mjs', import.meta.url), 'utf8');
+    const anchor = 'params: {ohms: row.r}';
+    assert.equal(original.split(anchor).length - 1, 1);
+    const source = original.replace(anchor, 'params: {ohms: row.r * 1.2}')
+        .replaceAll("'./diagnose-winding-uic-reference.mjs'",
+            JSON.stringify(new URL('../scripts/diagnose-winding-uic-reference.mjs', import.meta.url).href))
+        .replaceAll("'../src/board.js'", JSON.stringify(new URL('../src/board.js', import.meta.url).href));
+    const mutant = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+    const changedCircuit = await mutant.runMatrixCase('rc-2');
+    assert.equal(changedCircuit.failure, undefined, 'model mutant must be a completed comparison, not refusal');
+    assert.equal(changedCircuit.engine.receipt.completed, true);
+    assert.equal(changedCircuit.agreement, false, 'wrong actual resistor must disagree with unchanged SPICE');
+    t.diagnostic(json({record: 'matrix-physical-resistor-mutant', id: 'rc-2',
+        completed: changedCircuit.engine.receipt.completed, agreement: changedCircuit.agreement,
+        maxVoltageError: Math.max(...changedCircuit.comparisons.map(row => row.voltage.absoluteError))}));
+    assert.equal(readFileSync(new URL('../scripts/qualify-transient-matrix.mjs', import.meta.url), 'utf8'), original);
 });
