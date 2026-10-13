@@ -32,6 +32,7 @@ jobs:
           ulimit -c 0
           /usr/bin/timeout 45s /usr/bin/python3 -I -B scripts/i80386-supervisor-outer-boundary/controls.py
       - name: Fixed hosted namespace fixtures
+        if: github.event.pull_request.head.sha == '80a19c789b350be3a10bf3443f14a3fb34e948b3'
         shell: bash
         run: |
           set -euo pipefail
@@ -42,7 +43,7 @@ jobs:
           ulimit -c 0
           sudo -n /usr/bin/env -i PATH=/usr/bin:/bin GITHUB_ACTIONS=true /usr/bin/timeout --signal=KILL 45s /usr/bin/python3 -I -B scripts/i80386-supervisor-outer-boundary/hosted-controls.py
       - name: Retain bounded original synthetic output
-        if: always()
+        if: always() && github.event.pull_request.head.sha == '80a19c789b350be3a10bf3443f14a3fb34e948b3'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: supervisor-outer-boundary-${{ github.run_id }}-${{ github.run_attempt }}
