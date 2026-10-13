@@ -7,10 +7,12 @@ Owns this row, scripts/i80386-full-tree-profile-source/ and
 external descriptor/table and separately versioned before/after source positions;
 all fourteen inherited source rows plus explicit new profile kinds; exact advertised
 workflow identity, no self-row table hash cycle, finite Git/live byte joins and
-first-error cleanup. Independent reader and manufactured controls only. External
-seal stays unset and production Git interface refuses; no actual input acquisition,
+first-error cleanup. Independent reader and manufactured controls, including a separate fixed Git
+plumbing adapter tested only on owned temporary repositories. The adapter stays
+unconnected; its clean scope is the index plus explicit admitted files. External
+seal stays unset and the gate production Git interface refuses; no actual input acquisition,
 product/compiler/guest execution, source ownership/lease or RTx qualification.
-Future Git adapter, complete transitive graph/supervisor/event/job admission and
+Future Git adapter integration, complete transitive graph/supervisor/event/job admission and
 actual hosted execution remain separate. No consumer pins or unrelated lanes.
 
 2026-10-13 winding edge instruments — CLAIM, Codex bwcx.
