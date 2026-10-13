@@ -20,7 +20,14 @@ async function rig (rc = false, redundant = false) {
         parts.push({id: 'C', kind: 'capacitor', params: {farads: 1e-6}, terminals: ['a', 'b']});
         nets.push(net('out', ['R', 'b'], ['C', 'a'])); nets[1].terminals.push({part: 'C', terminal: 'b'});
     } else nets[1].terminals.push({part: 'R', terminal: 'b'});
-    if (redundant) {
+    if (redundant === 'rail') {
+        assert.equal(rc, false);
+        parts[0] = {id: 'V', kind: 'vcc', params: {volts: 5}, terminals: ['vcc']};
+        nets[0].terminals[0].terminal = 'vcc';
+        nets[1].terminals = nets[1].terminals.filter(pin => pin.part !== 'V');
+        parts.push({id: 'V2', kind: 'vcc', params: {volts: 5}, terminals: ['vcc']});
+        nets[0].terminals.push({part: 'V2', terminal: 'vcc'});
+    } else if (redundant) {
         parts.push({id: 'V2', kind: 'vsource', params: {volts: 5}, terminals: ['pos', 'neg']});
         nets[0].terminals.push({part: 'V2', terminal: 'pos'}); nets[1].terminals.push({part: 'V2', terminal: 'neg'});
     }
@@ -115,8 +122,16 @@ test('hosted missing/nonfinite snapshots and redundant ideal-source currents fai
     failed._updateScopeChannels(1000n, 1e-6, {...snapshot(-.005), converged: false});
     assert.throws(() => failed.getScopeData(refused), /failed/);
     assert.equal(failed._scopeChannels.get(refused).count, 0);
-    const b = await rig(false, true), alias = attach(b, {partId: 'V', terminal: 'pos'}), load = attach(b);
+    // Generic duplicate ideal-source rows are singular, not a supported rail
+    // alias. Preserve that distinct physical failure rather than accepting
+    // its error text as evidence of determinate-load/nonunique-source handling.
+    const singular = await rig(false, true), singularSource = attach(singular, {partId: 'V', terminal: 'pos'});
+    const singularLoad = attach(singular); singular.advanceTo(2000n);
+    assert.throws(() => singular.getScopeData(singularSource), /solve failed/);
+    assert.throws(() => singular.getScopeData(singularLoad), /solve failed/);
+    const b = await rig(false, 'rail'), alias = attach(b, {partId: 'V', terminal: 'vcc'}), load = attach(b);
     b.advanceTo(2000n);
+    assert.equal(b._mnaCache.converged, true, 'supported redundant rails still solve the determinate load');
     assert.throws(() => b.getScopeData(alias), /indeterminate/);
     assert.equal(b.getScopeData(load).count, 2);
     assert.ok(Math.abs(b.getScopeData(load).samples[0] + .005) < 1e-12);

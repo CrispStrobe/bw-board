@@ -22,6 +22,12 @@ the existing MNA route; legacy display and voltage modes retain their selectors.
 Two pure comparator/exit controls and source syntax checks pass. Actual
 RC/default/reset/refusal/fractional/snapshot contracts, three actual method
 mutants and400-point independent current comparison await hosted qualification.
+Exact35190036 CI38349264289 fails one fixture assertion (8510 pass,1 fail,
+302 skipped), while Harris38349264153 passes. Generic duplicate ideal vsource
+rows are singular, not the supported redundant-vcc alias case. Forward test
+repair distinguishes both physical cases: singular source/load readings refuse;
+duplicate rail aliases solve the load but refuse nonunique source current.
+Production and numerical bounds unchanged. Fresh qualification required.
 
 2026-10-13 winding edge instruments — DONE, Codex bwcx.
 Branch lane/winding-edge-instruments-20261013, exact base e2c1a507.
