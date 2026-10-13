@@ -1089,3 +1089,28 @@ original output prefixes and conservative partial failures. Bind the containment
 observer, externally reviewed approval and official single-run record before
 acquiring inputs. Compilation, protected-mode application tests and RTx remain
 later gates; no operating-system compatibility result is added here.
+
+### Fixed contained-entry source checkpoint
+
+The [unconnected entry](../scripts/i80386-provisioning-contained/README.md)
+connects the fixed limits source to a versioned resource handshake and delayed
+controller loading. Twenty-one mock controls and two independent refusal checks
+passed with the workflow's Linux system Python. Its source-control environment
+requires `os.pidfd_open`; these tests mock it and establish no real handle or
+namespace behavior.
+
+The entry admits literal parent component pins, verifies all resource facts,
+freezes the bounded packet before opening handles, and requires exact send and
+ACK before reading or executing controller source. Duplicate or partial handles,
+negative controller results, reentry and close uncertainty remain refusals with
+preserved partial facts and first errors. Actual entry, channel and external
+metadata remain unsealed or unconnected. Parent controller and limits sources
+must qualify separately; composing their branches is not adoption evidence.
+
+Next, integrate the external observer with this new resource-packet protocol;
+the older fixture observer cannot automatically admit it. Bind namespace/PID1
+identity, exact resources, source, timeout and original-output caps before ACK.
+Finish the separate actual envelope and independent original reader, then the
+externally reviewed approval and official single-run gate. Keep the compiler
+disabled until actual provisioning is independently qualified. No real limits,
+namespace/socket probe, archive, guest or RTx result is added by this checkpoint.
