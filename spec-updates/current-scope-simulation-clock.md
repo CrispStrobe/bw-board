@@ -65,7 +65,12 @@ and [Harris38375224622](https://github.com/CrispStrobe/bw-board/actions/runs/383
 one-solve budget accounting, actual method mutants and all 400 current samples
 pass. Independent raw grid/pair audit finds maximum current error 1.547072997 nA;
 work is 3833 attempts / 11491 solves / 51 advances, with zero voltage channels.
-Concurrent motor-model main changes require combined-source qualification
-before final landing. These finite fixtures are not universal part qualification.
+Combined `0f57d03423a89ac38008ae008f8c4d9904393292`, including newer motor-model
+main changes, passes [CI38384253011](https://github.com/CrispStrobe/bw-board/actions/runs/38384253011)
+and [Harris38384252976](https://github.com/CrispStrobe/bw-board/actions/runs/38384252976):
+8521 passed, zero failed, 302 skipped. Independent raw audit confirms all 400
+current pairs and unchanged 1.547072997 nA maximum error. These finite fixtures
+are not universal part qualification. Subsequent isolated x86 tooling integration
+preserves the qualified engine and test bytes.
 
 Package adoption, GUI selection and deployment are separate consumer work.

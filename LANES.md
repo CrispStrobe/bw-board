@@ -31,7 +31,7 @@ edits or local engine/oracle execution. LOCAL preparation only until current
 scope lane88cdd9fb qualifies and lands; no qualification dispatch or matrix
 landing before that prerequisite. Other target/source lanes excluded.
 
-2026-10-13 simulation-time current scope — DONE candidate, Codex bwcx.
+2026-10-13 simulation-time current scope — DONE, Codex bwcx.
 Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.
 Six paths: LANES.md, src/board.js (explicit currentClock option, accepted-solve
 current acquisition, sample barriers and display-write exclusion only),
@@ -82,6 +82,12 @@ actual method mutants andall400 current samples pass. Independent raw grid/pair
 audit confirms maximum current error1.547073nA and3833/11491/51 capturework,
 withzero voltagechannels. Current main's motor-model source changes are merged
 for fresh combined qualification; no matrix or consumer adoption yet.
+Exact combined0f57d034 passes CI38384253011/Harris38384252976:8521 passed,
+zero failed,302 skipped. Independent raw400-point audit remains1.547073nA
+maximum error with3833/11491/51 work andzero voltagechannels. Latermainb7f9a973
+adds isolated x86 source-admission tooling only; qualified engine/test/general
+workflow bytes are preserved. Matrix qualification and consumer adoption remain
+separate pending stages; original failures are not erased.
 
 2026-10-13 winding edge instruments — DONE, Codex bwcx.
 Branch lane/winding-edge-instruments-20261013, exact base e2c1a507.
