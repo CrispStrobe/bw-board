@@ -181,6 +181,7 @@ jobs:
                       test/labwired-firmware-only.test.mjs \
                       test/labwired-microbit-matrix.test.mjs \
                       test/labwired-esp32-ledc.test.mjs \
+                      test/labwired-radio-pair.test.mjs \
                       test/labwired-input-boundary.test.mjs \
                       test/labwired-word-admission.test.mjs 2>&1 | tee out.txt
           # A suite that does not RUN is not a suite that passes, and these skip
@@ -202,9 +203,10 @@ jobs:
           echo "tests=${tests:-?} fail=${fails:-?} skipped=${skips:-?}"
           # The prior suite executed 101 tests; seven actual-WASM same-PC word
           # dispatch cases raise the count floor to 108, and the five ESP32
-          # LEDC bench cases (labwired-esp32-ledc, Lite B9) to 113. None may
-          # silently skip.
-          [ "${tests:-0}" -ge 113 ] || { echo "::error::only ${tests:-0} tests ran — LABWIRED_WASM or arm-none-eabi-gcc did not reach the suites"; exit 1; }
+          # LEDC bench cases (labwired-esp32-ledc, Lite B9) to 113; the radio
+          # pair (labwired-radio-pair: one catalog case, two engine cases) to
+          # 116. None may silently skip.
+          [ "${tests:-0}" -ge 116 ] || { echo "::error::only ${tests:-0} tests ran — LABWIRED_WASM or arm-none-eabi-gcc did not reach the suites"; exit 1; }
           [ "${fails:-1}" = 0 ]    || { echo "::error::${fails} labwired tests failed"; exit 1; }
           [ "${skips:-1}" = 0 ]    || { echo "::error::${skips} labwired tests skipped"; exit 1; }
 
