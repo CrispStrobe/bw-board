@@ -1,5 +1,23 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 winding edge instruments — CLAIM, Codex bwcx.
+Branch lane/winding-edge-instruments-20261013, exact base e2c1a507.
+Seven evidence-only paths: LANES.md, scripts/diagnose-winding-uic-reference.mjs,
+test/winding-uic-reference.test.mjs, scripts/compare-winding-edge-instruments.mjs,
+test/winding-edge-instruments.test.mjs, scripts/oracle-census.mjs and
+spec-updates/winding-precision-diagnostic.md. Within the original single bounded
+zero-storage capture, attach ideal differential voltage and signed current
+sample channels at1ms; compare400 actual25ns samples and10us voltage/current
+meter means against all three independently refined raw SPICE waveforms.
+Preserve authored12pF/10Mohm load and whole-capture20000/60001/200 ceilings.
+Require fixed10uV/1nA reference refinement and100uV/1uA engine agreement bounds
+for every sample and interval mean before qualification. Explicit current
+polarity, exact grid/capture metadata, clipped raw-waveform integrals, refusal
+controls and load-bearing mutants required. New scope barriers are a distinct
+observed numerical experiment, not unchanged capture bytes or physical scope
+fidelity. Default reference API must remain compatible. Engine/SPICE execution
+hosted only; no production, pin, workflow, unrelated source or deployment edit.
+
 2026-10-12 full-tree authenticated TAR bridge preparation — CLAIM, Codex x86.
 Branch lane/386-full-tree-archive-bridge-20261012, exact base
 0fa4278b011930483328dff36fe2c111902e7d88 from the standalone writer PR526.
