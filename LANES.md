@@ -4092,3 +4092,12 @@ reentry refusal propagated to active delegates, preserved first errors and copie
 primitive diagnostics. Report manufactured controls and hosted checks separately;
 actual archive compatibility, source/input/filesystem leases, full notice coverage,
 compiler, applications and RTx remain unqualified. No restricted media is involved.
+
+## Unarmed supervisor source controls — 2026-10-13
+
+Owned branch `lane/386-unarmed-supervisor-source-20261013`: only
+`scripts/i80386-unarmed-supervisor/`, its dedicated synthetic workflow, this
+registry entry and the coordinated `docs/X86-NEXT-LANES.md` checkpoint.
+Acceptance: fifteen offline supervisor and twenty-one manufactured admission
+controls, fixed bootstrap bindings, preserved raw refusals and source observations.
+No actual acquisition, compiler, guest, consumer pin or operational seal changes.
