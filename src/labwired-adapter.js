@@ -148,6 +148,12 @@ export function chipArch (chipYaml) {
  *   device state as `matrix: {width, height, brightness, levels}` — the shape
  *   bw-circuit-ui's matrix faces read (`brightness` 0..1, `levels` 0..9).
  * @param {Record<string,Uint8Array>} [opts.blobs] images for image_env regions, by name
+ * @param {string} [opts.softdeviceS110] emulate the S110 SoftDevice under this
+ *   node name (micro:bit V1 / Calliope mini applications)
+ * @param {object} [opts.labAir] a labwired-wasm `AirBus` this machine's radio
+ *   joins, as the node `opts.softdeviceS110`. Machines given the SAME bus hear
+ *   each other; one given none keeps a private air. The caller owns the bus and
+ *   gives every machine on it a different node name.
  * @param {string} [opts.name]
  * @returns {object} boundary-A adapter
  */
@@ -189,6 +195,11 @@ export function createLabwiredAdapter (opts) {
     throw new Error('labwired-adapter: opts.pins is required');
   }
 
+  if (opts.labAir && !opts.softdeviceS110) {
+    throw new Error('labwired-adapter: opts.labAir needs opts.softdeviceS110 (the radio that joins the air ' +
+      'is the emulated SoftDevice\'s, under its node name)');
+  }
+
   const clockHz = opts.clockHz ?? 48_000_000;
   const clockHzBig = BigInt(clockHz);
   const names = Object.keys(pins);
@@ -220,6 +231,14 @@ export function createLabwiredAdapter (opts) {
         throw new Error('labwired-adapter: this labwired-wasm build cannot emulate the S110 SoftDevice');
       }
       instance.attach_softdevice_s110(String(opts.softdeviceS110));
+    }
+    // A shared radio air: joined on every build, after the SoftDevice it
+    // belongs to, so a reset (which rebuilds) stays on the same air.
+    if (opts.labAir) {
+      if (typeof instance.attach_lab_air !== 'function') {
+        throw new Error('labwired-adapter: this labwired-wasm build cannot join a shared radio air');
+      }
+      instance.attach_lab_air(String(opts.softdeviceS110), opts.labAir);
     }
     // LabWired knows which buses are fully event-scheduled and which still
     // require a peripheral service pass after every instruction.  Use that
