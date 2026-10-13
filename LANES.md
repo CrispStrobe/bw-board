@@ -4477,3 +4477,18 @@ other backends and consumer pins unchanged. Freely authored correctness tests
 and unchanged-workload alternating paired measurements are mandatory; no
 measured gain means no performance-only adoption. This is a documentation-only
 claim: implementation waits for its merge and refreshed ownership review.
+
+## Historical 80386 source contexts — 2026-10-13
+
+Owned branch `lane/386-historical-source-contexts-20261013`: the ten test
+harnesses listed in [the task guide](docs/I80386-HISTORICAL-SOURCE-CONTEXTS.md),
+a reviewed fixed helper/manifest namespace `scripts/i80386-historical-source-contexts/`,
+limited historical/current execution wiring in `.github/workflows/x86-xv6.yml`,
+this guide and this registry entry. Isolate four historical report fixtures,
+five fixed-oracle groups and the compiled PIC111 context using exact admitted
+public Git transitive sources. Preserve held CPU/CR0/native pins and raw reports;
+no skips, blind pin updates or current-CPU credit from historical execution.
+Current CPU regressions and actual hosted xv6 qualification remain separate.
+Production loaders/validators and CPU source are not owned for changes here;
+review any required scope extension before code. This is a documentation-only
+claim; implementation waits for its merge and source-context design review.
