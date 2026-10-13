@@ -6,8 +6,8 @@ Seven evidence-only paths: LANES.md, scripts/diagnose-winding-uic-reference.mjs,
 test/winding-uic-reference.test.mjs, scripts/compare-winding-edge-instruments.mjs,
 test/winding-edge-instruments.test.mjs, scripts/oracle-census.mjs and
 spec-updates/winding-precision-diagnostic.md. Within the original single bounded
-zero-storage capture, attach ideal differential voltage and signed current
-sample channels at1ms; compare400 actual25ns samples and10us voltage/current
+zero-storage capture, attach ideal differential voltage
+sample channel at1ms; compare400 actual25ns voltage samples and10us voltage/current
 meter means against all three independently refined raw SPICE waveforms.
 Preserve authored12pF/10Mohm load and whole-capture20000/60001/200 ceilings.
 Require fixed10uV/1nA reference refinement and100uV/1uA engine agreement bounds
@@ -17,6 +17,10 @@ controls and load-bearing mutants required. New scope barriers are a distinct
 observed numerical experiment, not unchanged capture bytes or physical scope
 fidelity. Default reference API must remain compatible. Engine/SPICE execution
 hosted only; no production, pin, workflow, unrelated source or deployment edit.
+Forward design correction: source trace confirms current scope channels are
+display-loop sampled, not sim-time sampled. This lane does not claim400 current
+scope samples. Signed current meter mean remains required; current scope
+sim-time acquisition is a separate future engine lane.
 
 2026-10-12 full-tree authenticated TAR bridge preparation — CLAIM, Codex x86.
 Branch lane/386-full-tree-archive-bridge-20261012, exact base
