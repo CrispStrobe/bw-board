@@ -4153,3 +4153,16 @@ caller URLs, pins, factories or command execution. Production remains disabled.
 Root owns admission/resource/official-run integration; existing reviewed source,
 reader, containment, archive and compiler profiles remain unchanged. No actual
 network acquisition, namespace replay, compilation, guest or performance claim.
+
+
+## Provisioning PID1 resource preparation — 2026-10-13
+
+Owned branch `lane/386-provisioning-pid1-limits-20261013`: new
+`scripts/i80386-provisioning-pid1/` namespace, dedicated pure-control workflow and
+this registry entry. Install and observe a literal process resource policy in
+owned Linux PID1 before product-component bootstrap. Local controls mock all
+PID, privilege and resource operations; no real limits or namespaces are changed.
+Actual entry remains unsealed and refuses; controller/bootstrap, containment,
+official envelope/reader and single-run approval remain separate integration.
+No caller policy, delegate or programme API; held profiles stay unchanged.
+No archive acquisition, toolchain execution, compiler, guest or RTx result.
