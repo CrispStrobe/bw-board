@@ -359,7 +359,8 @@ export const INPUTS = [
             'test/pwm-duty-ngspice.test.mjs', 'test/scope-fractional-time.test.mjs',
             'test/meter-waveform-integration.test.mjs', 'test/inductor-meter-integral.test.mjs',
             'test/winding-turnoff-oracle.test.mjs', 'test/rlc-instrument-oracle.test.mjs',
-            'test/winding-uic-reference.test.mjs', 'test/winding-reference-comparison.test.mjs'],
+            'test/winding-uic-reference.test.mjs', 'test/winding-reference-comparison.test.mjs',
+            'test/winding-edge-instruments.test.mjs'],
         obtain: 'apt install ngspice   (44 here; decks need `.options temp=X tnom=X` '
             + 'to match VT_25C, and `.model D` silently clamps IS at 1e-28 -- use a '
             + 'behavioural source above ~2.86 V, see test/measurements/repro/bsource-oracle.mjs)',

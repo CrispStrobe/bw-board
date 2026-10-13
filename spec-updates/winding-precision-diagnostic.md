@@ -297,3 +297,38 @@ comparisons pass. Maximum voltage error is 0.202776916 microvolts; maximum
 current error is 1.245506507 nanoamperes. Engine work remains 3432 attempts,
 10288 solves and 51 observations. Independent reference refinement passed
 before agreement. Dense falling-edge and instrument integrations remain pending.
+
+## Dense edge instrument qualification
+
+`node scripts/compare-winding-edge-instruments.mjs` attaches an ideal voltage
+sample channel and voltage/signed-current meter watches at 1 ms within the
+original single bounded zero-storage capture. It requests 400 voltage samples
+at 25 ns spacing through 1.01 ms, plus meter means over that watched 10 µs
+interval. The authored 12 pF / 10 MΩ load remains unchanged; no second probe
+load is stamped. Scope sample barriers change later numerical partitions, so
+this is a distinct observed experiment, not the earlier capture byte-for-byte.
+
+All three raw independent SPICE waveforms are evaluated at every requested time.
+Interval means integrate their clipped raw waveform segments, not the final
+sample or the earlier ten diagnostic observations. Every voltage/current
+reference sample and both means must refine within 10 µV / 1 nA before engine
+comparison; fixed engine agreement bounds remain 100 µV / 1 µA. Terminal
+current leaves the engine part; SPICE inductor current enters its first terminal,
+so the signed current mean is compared with the negative SPICE mean.
+
+Current scope acquisition is still display-loop driven: it does not publish
+simulation-time current samples. A separate engine lane should implement and
+qualify that capability, preserving legacy display behavior and exact timing,
+sign, budget and failure contracts. This diagnostic does not claim it exists.
+Exact `b29ada8f72f41806f4c371fcbb3026d54504d997` passes
+[CI38342434122](https://github.com/CrispStrobe/bw-board/actions/runs/38342434122)
+and [Harris38342434165](https://github.com/CrispStrobe/bw-board/actions/runs/38342434165):
+8500 passed, zero failed, 302 skipped. Independent raw audit checks all 400
+exact grid points, equal sample pairs, SPICE brackets and current polarity.
+Maximum voltage-sample error is 1.793190482 µV; voltage/current mean errors are
+0.099997344 µV / 1.344901138 nA. Actual watched means are 5.536411394 V and
+−18.922746433 mA, over the specified 10 µs interval, not instantaneous readings.
+Reference sample refinements reach at most 1.017215955 µV / 0.381058633 nA;
+both interval means also satisfy the fixed reference bounds. Work is 3833
+attempts / 11491 solves / 51 advances within original limits. Neither this
+authored fixture nor an ideal channel proves physical scope fidelity.

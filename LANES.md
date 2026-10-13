@@ -15,7 +15,25 @@ product/compiler/guest execution, source ownership/lease or RTx qualification.
 Future Git adapter integration, complete transitive graph/supervisor/event/job admission and
 actual hosted execution remain separate. No consumer pins or unrelated lanes.
 
-2026-10-13 winding edge instruments — CLAIM, Codex bwcx.
+2026-10-13 simulation-time current scope — CLAIM, Codex bwcx.
+Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.
+Six paths: LANES.md, src/board.js (explicit currentClock option, accepted-solve
+current acquisition, sample barriers and display-write exclusion only),
+scripts/compare-winding-current-scope.mjs,
+test/current-scope-simulation-clock.test.mjs, scripts/oracle-census.mjs and
+spec-updates/current-scope-simulation-clock.md. Opt-in currentClock=simulation
+records exact simulation-time sample pairs from accepted branch-current maps;
+default display-loop acquisition remains unchanged. Refuse unknown target,
+nonfinite/missing current, failed solve and indeterminate source alias without
+inventing zero. Preserve signed OUT current, reset/late attach/wrap/fractional
+readiness, discontinuity history and one whole-capture budget. Standalone current
+channel must impose its own sample grid. CLI proves400 winding current samples
+against independently refined UIC SPICE with original fixed1uA agreement and
+1nA refinement bounds; no voltage channel may conceal missing current barriers.
+Affected engine tests and all actual numerical acquisition hosted only.
+No solver/device/model/tolerance/budget/pin/workflow/other-target changes.
+
+2026-10-13 winding edge instruments — DONE, Codex bwcx.
 Branch lane/winding-edge-instruments-20261013, exact base e2c1a507.
 Seven evidence-only paths: LANES.md, scripts/diagnose-winding-uic-reference.mjs,
 test/winding-uic-reference.test.mjs, scripts/compare-winding-edge-instruments.mjs,
@@ -35,7 +53,18 @@ hosted only; no production, pin, workflow, unrelated source or deployment edit.
 Forward design correction: source trace confirms current scope channels are
 display-loop sampled, not sim-time sampled. This lane does not claim400 current
 scope samples. Signed current meter mean remains required; current scope
-sim-time acquisition is a separate future engine lane.
+sim-time acquisition is a separate future engine lane. Claims32bee9a2/e77f34bd
+preceded implementation. Eleven pure controls pass; four isolated executable
+mutants (polarity, final sample omission, success exit and held-endpoint raw
+integral) fail caller assertions with original source restored. Default
+reference method controls remain green. Actual dense refinement, observed
+completion and instrument agreement were pending at implementation.
+Exactb29ada8f passes CI38342434122/Harris38342434165:8500 passed,zero failed,
+302 skipped. All400 voltage samples and both signed instrument means pass.
+Independent raw audit verifies every grid point, pair, bracket and polarity.
+Maximum sample error1.793191uV; mean errors0.099997uV/1.344902nA. Work remains
+3833 attempts/11491 solves/51 advances. Reference maxima1.017216uV/0.381059nA
+meet unchanged refinement bounds. No physical or current-scope claim.
 
 2026-10-12 full-tree authenticated TAR bridge preparation — CLAIM, Codex x86.
 Branch lane/386-full-tree-archive-bridge-20261012, exact base

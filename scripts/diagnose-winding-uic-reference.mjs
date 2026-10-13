@@ -15,6 +15,8 @@ export const REFERENCE_STEPS_NS = Object.freeze([100, 50, 25]);
 export const STARTUP_STEP_DIVISOR = 100;
 export const REFINEMENT_BOUNDS = Object.freeze({voltage: 1e-5, current: 1e-9});
 export const MEASUREMENT_PRECISION = 15;
+export const EDGE_TIMES_NS = Object.freeze(Array.from({length: 400}, (_, i) => 1000000 + (i + 1) * 25));
+export const EDGE_WINDOW_NS = Object.freeze([1000000, 1010000]);
 
 export function referenceProcessOptions (deck) {
     return {input: deck, encoding: 'utf8', timeout: 120000, maxBuffer: 1048576,
@@ -68,8 +70,12 @@ export function parseReferenceWaveform (table, stdout = '', stderr = '') {
     return rows;
 }
 
-export function sampleReferenceWaveform (rows) {
-    return REFERENCE_TIMES_NS.map(timeNs => {
+export function sampleReferenceWaveform (rows, times = REFERENCE_TIMES_NS) {
+    if (!Array.isArray(times) || times.length < 2 || times.length > 401 || times.some((time, i) =>
+        !Number.isSafeInteger(time) || time < 0 || (i && time <= times[i - 1]))) {
+        throw new Error('Reference times require bounded strictly ordered integer nanoseconds');
+    }
+    return times.map(timeNs => {
         const at = timeNs * 1e-9;
         if (at < rows[0].timeSec || at > rows.at(-1).timeSec) throw new Error('Reference measurement outside waveform');
         let low = 0, high = rows.length - 1;
@@ -85,13 +91,13 @@ export function sampleReferenceWaveform (rows) {
     });
 }
 
-export function refinementReport (captures) {
-    if (captures.length !== 3 || captures.some((rows, arm) => rows.length !== REFERENCE_TIMES_NS.length ||
-        rows.some((row, i) => row.timeNs !== REFERENCE_TIMES_NS[i] ||
+export function refinementReport (captures, times = REFERENCE_TIMES_NS) {
+    if (captures.length !== 3 || captures.some(rows => rows.length !== times.length ||
+        rows.some((row, i) => row.timeNs !== times[i] ||
             !Number.isFinite(row.voltage) || !Number.isFinite(row.current)))) {
         throw new Error('Reference refinement requires all three complete aligned finite captures');
     }
-    const differences = REFERENCE_TIMES_NS.map((timeNs, i) => ({timeNs,
+    const differences = times.map((timeNs, i) => ({timeNs,
         voltage: captures.slice(1).map((rows, arm) => Math.abs(rows[i].voltage - captures[arm][i].voltage)),
         current: captures.slice(1).map((rows, arm) => Math.abs(rows[i].current - captures[arm][i].current))}));
     const stable = differences.every(row => ['voltage', 'current'].every(key =>
@@ -99,7 +105,21 @@ export function refinementReport (captures) {
     return {stable, bounds: REFINEMENT_BOUNDS, differences};
 }
 
-export function runWindingUicReference (executable = process.env.NGSPICE || 'ngspice') {
+export function referenceIntervalMean (rows, startNs, endNs) {
+    const [start, end] = sampleReferenceWaveform(rows, [startNs, endNs]);
+    const from = startNs * 1e-9, to = endNs * 1e-9;
+    const points = [{timeSec: from, ...start},
+        ...rows.filter(row => row.timeSec > from && row.timeSec < to), {timeSec: to, ...end}];
+    const mean = {voltage: 0, current: 0};
+    for (let i = 1; i < points.length; i++) {
+        const a = points[i - 1], b = points[i];
+        for (const key of Object.keys(mean)) mean[key] += (a[key] + b[key]) / 2 * (b.timeSec - a.timeSec);
+    }
+    for (const key of Object.keys(mean)) mean[key] /= to - from;
+    return {startNs, endNs, ...mean};
+}
+
+function runReference (executable, times, window) {
     const version = spawnSync(executable, ['--version'], {encoding: 'utf8', timeout: 5000});
     if (version.error || version.status !== 0) throw new Error('Independent ngspice executable unavailable');
     const run = (maxStepNs, zeroStorage) => {
@@ -113,7 +133,9 @@ export function runWindingUicReference (executable = process.env.NGSPICE || 'ngs
             return {maxStepNs, startupStepNs: maxStepNs / STARTUP_STEP_DIVISOR, zeroStorage,
                 deck, deckSha256: createHash('sha256').update(deck).digest('hex'),
                 waveformSha256: createHash('sha256').update(table).digest('hex'), waveformRows: rows.length,
-                measurements: sampleReferenceWaveform(rows), stdout: child.stdout, stderr: child.stderr};
+                measurements: sampleReferenceWaveform(rows, times),
+                ...(window ? {mean: referenceIntervalMean(rows, ...window)} : {}),
+                stdout: child.stdout, stderr: child.stderr};
         } finally {
             // Only the freshly created, task-owned solver directory is removed.
             rmSync(directory, {recursive: true, force: true});
@@ -121,10 +143,21 @@ export function runWindingUicReference (executable = process.env.NGSPICE || 'ngs
     };
     const arms = REFERENCE_STEPS_NS.map(step => run(step, true));
     const normalOp = run(25, false);
+    const meanRefinement = window ? refinementReport(arms.map(arm => [
+        {timeNs: window[0], voltage: arm.mean.voltage, current: arm.mean.current}]), [window[0]]) : null;
     return {schema: 'winding-uic-reference-v1', independentReferenceOnly: true,
         engineAgreement: 'not-tested', measurementPrecision: MEASUREMENT_PRECISION,
         version: version.stdout + version.stderr,
-        refinement: refinementReport(arms.map(arm => arm.measurements)), arms, normalOp};
+        refinement: refinementReport(arms.map(arm => arm.measurements), times), arms, normalOp,
+        ...(window ? {meanRefinement} : {})};
+}
+
+export function runWindingUicReference (executable = process.env.NGSPICE || 'ngspice') {
+    return runReference(executable, REFERENCE_TIMES_NS, null);
+}
+
+export function runWindingEdgeReference (executable = process.env.NGSPICE || 'ngspice') {
+    return runReference(executable, EDGE_TIMES_NS, EDGE_WINDOW_NS);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
