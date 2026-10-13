@@ -1061,3 +1061,31 @@ Finish the separately versioned full-source/raw-output envelope, independent
 original reader and official event/job/step/artifact/single-run joins before the
 first actual provisioning attempt. Compilation and guest testing remain later
 gates; this connection adds no RTx or operating-system qualification.
+
+### PID1 process-limit preparation
+
+Transport [PR539](https://github.com/CrispStrobe/bw-board/pull/539) is merged.
+Controller [PR540](https://github.com/CrispStrobe/bw-board/pull/540) is merged
+after the corrected source controls and all enabled checks passed. Its first hosted fixture failed because checkout omitted the
+workflow file read by that fixture; the checkout input was corrected without
+changing the controller algorithm or limits. The original failure is preserved.
+
+The new [PID1 limits unit](../scripts/i80386-provisioning-pid1/README.md) prepares
+the literal process policy: CPU 180 seconds, address space 2 GiB, per-file size
+64 MiB, 256 descriptors and no core dump. Eighteen local mock controls and two
+independent refusal checks passed. Each installation has an immediate readback,
+followed by a final recheck of all five limits. Partial installation and first
+errors remain explicit; there is no rollback or sufficiency claim.
+
+The actual entry remains unsealed. Tests mock the resource operations and do not
+alter real provisioning limits or create namespaces. Linux/PID1/root/GitHub
+context observations alone do not prove owned namespace or official host identity.
+Process limits are not aggregate namespace budgets or disk quotas.
+
+Next, qualify this source and the controller separately, then connect the fixed
+limits entry before product bootstrap inside the admitted namespace. Extend the
+explicit source graph and independent actual envelope to retain resource facts,
+original output prefixes and conservative partial failures. Bind the containment
+observer, externally reviewed approval and official single-run record before
+acquiring inputs. Compilation, protected-mode application tests and RTx remain
+later gates; no operating-system compatibility result is added here.

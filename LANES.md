@@ -4208,3 +4208,15 @@ HTTP bodies only. No actual acquisition, namespace replay, compiler or guest.
 Held source/transport/reader/containment algorithms remain unchanged. Parent
 transport source qualification and independently reviewed actual resources,
 envelope, original reader and official one-run guard remain separate gates.
+
+## Provisioning PID1 resource preparation — 2026-10-13
+
+Owned branch `lane/386-provisioning-pid1-limits-20261013`: new
+`scripts/i80386-provisioning-pid1/` namespace, dedicated pure-control workflow and
+this registry entry. Install and observe a literal process resource policy in
+owned Linux PID1 before product-component bootstrap. Local controls mock all
+PID, privilege and resource operations; no real limits or namespaces are changed.
+Actual entry remains unsealed and refuses; controller/bootstrap, containment,
+official envelope/reader and single-run approval remain separate integration.
+No caller policy, delegate or programme API; held profiles stay unchanged.
+No archive acquisition, toolchain execution, compiler, guest or RTx result.
