@@ -4141,3 +4141,15 @@ and this registry entry. Acceptance: fixed Linux PID-namespace startup, detached
 session and bounded partial-output containment controls; local pure mocks only,
 privileged namespace observations on hosted Linux only after source review.
 No archive acquisition, compiler, guest, application integration or operational seal.
+
+## Full-tree provisioning launcher transport — 2026-10-13
+
+Owned branch `lane/386-provisioning-launcher-20261013`: new
+`scripts/i80386-full-tree-provisioning-launcher/` namespace, dedicated pure
+transport-control workflow and this registry entry. First slice ports the fixed
+six-input bounded transport with exact order, redirects/status/extent/hash and
+primary-preserving close behavior; manufactured inputs only in controls. No
+caller URLs, pins, factories or command execution. Production remains disabled.
+Root owns admission/resource/official-run integration; existing reviewed source,
+reader, containment, archive and compiler profiles remain unchanged. No actual
+network acquisition, namespace replay, compilation, guest or performance claim.
