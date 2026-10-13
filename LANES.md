@@ -4032,3 +4032,19 @@ No actual acquisitions, provisioning, runtime execution, performance measurement
 consumer pins or unrelated lane changes. Independent source review and bounded
 synthetic hosted checks precede integration; actual executor/resource/source/job
 admission remains separate and disabled.
+
+
+### 2026-10-12: selected notice source composition preparation
+
+Status: CLAIMED, source-only manufactured controls; no actual input or compiler profile.
+Ownership: Astra coordination, one Sol coder and one independent Sol reviewer.
+Branch: `lane/386-full-tree-notice-connection-20261012`, stacked on the focused
+authenticated TAR bridge branch. Owned paths: `scripts/i80386-djgpp-notice-extractor/`,
+`scripts/i80386-full-tree-notice-connection/` and the dedicated notice controls
+workflow. Existing writer, TAR bridge, CPU, guest fixtures and consumer pins are
+outside this edit. Acceptance: exact fixed six-input admission before delegates,
+strict bounded whole ZIP validation, internally shaped three-plus-two notices,
+reentry refusal propagated to active delegates, preserved first errors and copied
+primitive diagnostics. Report manufactured controls and hosted checks separately;
+actual archive compatibility, source/input/filesystem leases, full notice coverage,
+compiler, applications and RTx remain unqualified. No restricted media is involved.
