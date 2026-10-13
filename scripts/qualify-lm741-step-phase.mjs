@@ -86,7 +86,8 @@ async function capture (id) {
         {id: 'VIN', kind: 'vsource', params: {wave: 'spice-pulse', v1: 0, v2: row.amplitude,
             td: (10000 + row.phaseNs) * 1e-9, tr: 1e-9, tf: 1e-9, pw: 20e-6, per: 100e-6}, terminals: ['pos', 'neg']},
         {id: 'G', kind: 'gnd', params: {}, terminals: ['gnd']},
-        {id: 'U', kind: 'lm741', params: {inputOffsetV: 0},
+        {id: 'U', kind: 'lm741', params: {inputOffsetV: 0, transientModel: 'linear-pole',
+            supplyPositiveV: 15, supplyNegativeV: -15},
             terminals: ['offset_1', 'inn', 'inp', 'vneg', 'offset_5', 'out', 'vpos', 'nc']},
         {id: 'RL', kind: 'resistor', params: {ohms: 10000}, terminals: ['a', 'b']}
     ], [net('zero', ['VP', 'neg'], ['VN', 'pos'], ['VIN', 'neg'], ['G', 'gnd'], ['RL', 'b']),
@@ -111,7 +112,8 @@ async function capture (id) {
                 current: snapshot?.branchCurrents?.get('RL')?.get('a') ?? null,
                 snapshot: {present: Boolean(snapshot), converged: snapshot?.converged ?? null,
                     dirty: board._solveDirty === true},
-                drive: {voltage: state.drives.out.vTh, resistance: state.drives.out.rTh},
+                drive: {voltage: board.nodeVoltages.get('@lm741:U:pole') ?? null,
+                    resistance: state._spec.rOut, model: 'linear-pole'},
                 lastUpdateNs: state._lastUpdateNs === null ? null : String(state._lastUpdateNs),
                 wakeNs: state._wakeNs === null ? null : String(state._wakeNs), beta: state._beta});
         }});
@@ -132,7 +134,8 @@ async function capture (id) {
     result.status = board.transientAnalysisStatus(); result.receipt ||= result.status.boundedAdvance;
     const state = board.getDeviceState('U');
     result.modelState = {powered: state.powered, inputCommonMode: state.inputCommonMode,
-        updateTickNs: String(state._spec.tickNs)};
+        transientModel: state.transientModel, updateTickNs: null,
+        scheduledWakeNs: state._wakeNs === null ? null : String(state._wakeNs)};
     return result;
 }
 export async function runStepCase (id) {

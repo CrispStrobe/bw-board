@@ -1,6 +1,6 @@
 # LM741 phase-varied waveform audit
 
-## Scope (implemented diagnostics, not qualified)
+## Scope (repair candidate, not qualified)
 
 Six loaded followers: positive/negative 10 mV input changes at 10 µs plus
 0, 33 or 67 ns. Supplies are ±15 V, offset is explicitly zero and load is
@@ -43,6 +43,46 @@ must complete and disagree; refusal does not satisfy that proof. If baseline
 cases disagree, the mutation is not reached and qualification is withheld.
 
 ## Limits and follow-ons
+
+### Explicit solver-native repair candidate
+
+The runner now requests `transientModel: 'linear-pole'` on the physical `lm741`
+package, with `inputOffsetV: 0`, `supplyPositiveV: 15` and
+`supplyNegativeV: -15`. The absent-mode legacy controller is unchanged.
+The shared nominal card supplies gain, bandwidth and impedances to both
+implementations. A solver-only current source, capacitor and pole resistor
+implement `du/dt = 2π*GBW*(Vin+ - Vin- - u/A0)`; a unity buffer and 600 Ω
+output resistor drive the real output net. The original package remains for
+its differential input resistance, admission and instrument-current mapping.
+Hidden parts/nets are not added to the public drawn topology. The internal
+30 pF realization choice is not an external LM741 capacitance claim: its
+transconductance and pole resistance preserve GBW and A0 independently.
+
+This first continuous mode admits one explicit ground reference, connected
+signal/supply leads, open trim/NC pins and declared 10–36 V supply span.
+Each supply must be a single ideal DC source connected to that reference;
+waveforms, controls, extra pin sources, current limiting and nonzero source
+resistance refuse. Declared values are checked against the actual physical
+converged solution, not used in place of a solved supply. Explicit zero offset
+is required; unknown parameters/modes and hidden identity collisions refuse.
+The initialized mode and output-drive authority cannot change silently.
+
+Final physical solutions must remain within the nominal common-mode/output
+headroom, below the nominal slew bound, and below a conservative 1 mA output
+load admission ceiling. These are named refusals, not clipping or an invented
+current-limit model. This is cold-start linear dynamics, not supply startup,
+large-signal saturation recovery, noise, input bias or physical supply-current
+simulation. The package output-current reading is mapped from its exact
+hidden output resistor; quiescent/dynamic supply currents remain unmodelled.
+
+Six pure controls pass locally: expansion/card/default identity and caller
+nonmutation; parameter/topology/solved-domain refusals; executable wrong-pole
+and removed-slew-admission mutants; and the three existing phase/reference
+controls. Hosted tests additionally check actual hidden charge/reset, the
+100 ns response, no scheduled wake, output-port KCL and changed-source/input
+refusals. All six dense phase captures and the completed amplitude mutation
+remain mandatory with unchanged reference, grid, tolerances and whole work
+budget. Local pure checks do not qualify this candidate's waveforms.
 
 ### Initial hosted failure and forward diagnostics
 
