@@ -18,6 +18,10 @@ acquisition: all legacy current channels already use that label.
 
 Simulation-clock channels force the existing MNA path for accepted branch-current
 authority. They own sample-grid barriers even without voltage channels and use
+For a healthy powered passive DC board previously using the closed-form walker,
+attachment first acquires an existing-MNA static snapshot. Reactive/device
+histories are not replaced by a DC solve to supply a missing sample.
+They own sample-grid barriers even without voltage channels and use
 the shared fractional-time readiness, sample-pair and ring-label rules. Returned
 data identifies `currentClock: 'simulation'`. Display polling neither writes nor
 returns these channels. Currents remain amperes **leaving** the selected terminal

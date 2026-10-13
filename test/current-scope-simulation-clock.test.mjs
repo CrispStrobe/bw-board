@@ -20,13 +20,15 @@ async function rig (rc = false, redundant = false) {
         parts.push({id: 'C', kind: 'capacitor', params: {farads: 1e-6}, terminals: ['a', 'b']});
         nets.push(net('out', ['R', 'b'], ['C', 'a'])); nets[1].terminals.push({part: 'C', terminal: 'b'});
     } else nets[1].terminals.push({part: 'R', terminal: 'b'});
-    if (redundant === 'rail') {
+    if (redundant === 'rail' || redundant === 'single-rail') {
         assert.equal(rc, false);
         parts[0] = {id: 'V', kind: 'vcc', params: {volts: 5}, terminals: ['vcc']};
         nets[0].terminals[0].terminal = 'vcc';
         nets[1].terminals = nets[1].terminals.filter(pin => pin.part !== 'V');
-        parts.push({id: 'V2', kind: 'vcc', params: {volts: 5}, terminals: ['vcc']});
-        nets[0].terminals.push({part: 'V2', terminal: 'vcc'});
+        if (redundant === 'rail') {
+            parts.push({id: 'V2', kind: 'vcc', params: {volts: 5}, terminals: ['vcc']});
+            nets[0].terminals.push({part: 'V2', terminal: 'vcc'});
+        }
     } else if (redundant) {
         parts.push({id: 'V2', kind: 'vsource', params: {volts: 5}, terminals: ['pos', 'neg']});
         nets[0].terminals.push({part: 'V2', terminal: 'pos'}); nets[1].terminals.push({part: 'V2', terminal: 'neg'});
@@ -67,6 +69,16 @@ test('hosted default display acquisition remains unchanged beside opt-in simulat
     }
     assert.equal(b.getScopeData(display).count, 3);
     assert.equal(b.getScopeData(sim).count, 10);
+});
+
+test('hosted previously closed-form passive DC current scope acquires without display or getter priming', async () => {
+    const b = await rig(false, 'single-rail');
+    assert.equal(b._mnaCache, null, 'baseline walker does not supply MNA branch currents');
+    const handle = attach(b); b.advanceTo(2000n);
+    const data = b.getScopeData(handle);
+    assert.equal(data.count, 2); assert.equal(data.startTNs, 1000n);
+    assert.ok(Math.abs(data.samples[0] + .005) < 1e-12);
+    assert.ok(Math.abs(data.samples[2] + .005) < 1e-12);
 });
 
 test('hosted RC current standalone grid preserves analytical sign, wrap, reset and late attach', async () => {

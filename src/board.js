@@ -2332,6 +2332,15 @@ export class BoardImpl {
     };
 
     this._scopeChannels.set(handle, ch);
+    // A passive DC board may have used the closed-form walker before this
+    // observer selected MNA. Acquire its static snapshot once at attachment,
+    // not by flushing a later endpoint into a transient sample. Reactive and
+    // device histories must keep their actual accepted-step authority.
+    if (ch.currentClock === 'simulation' && this.powered && !this._mnaCache
+      && !this._hasReactive() && this._deviceStates.size === 0 && this._shiftRegisters.size === 0
+      && !this._liveSolveError && !this._deviceSubstepOverflow && !this._transientAccuracyUnmet) {
+      this._adoptSolution(this._solveMNA(false));
+    }
     if (loadsCircuit) {
       this._rebuildScopeLoadView();
       this._solve();

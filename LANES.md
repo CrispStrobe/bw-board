@@ -33,6 +33,13 @@ Exact88cdd9fb CI38356419036 fails the private-cache persistence assertion
 cleared after advance. Forward evidence repair uses validated public load current
 plus actual accepted-sample checks instead; no cache-lifetime requirement or
 production change. Fresh exact-head qualification remains required.
+Exactd219dd03 CI38360976179 reveals missing static MNA authority: an initially
+closed-form passive DC board has no current snapshot when the new observer is
+attached, so alias acquisition reports unavailable rather than indeterminate.
+Forward production repair primes existing MNA only at simulation-clock attach
+for healthy powered nonreactive/no-device networks; transient sampling never
+flushes a later endpoint. Add standalone single-rail DC capture without display
+or getter priming, preserving all earlier failures and fixed numerical bounds.
 
 2026-10-13 winding edge instruments — DONE, Codex bwcx.
 Branch lane/winding-edge-instruments-20261013, exact base e2c1a507.
