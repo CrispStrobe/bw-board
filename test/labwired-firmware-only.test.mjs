@@ -18,7 +18,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
 
-import { LABWIRED_CATALOG, LABWIRED_CATALOG_PIN } from '../src/labwired-catalog.js';
+import { LABWIRED_CATALOG, LABWIRED_CATALOG_PIN, LABWIRED_BOARDS } from '../src/labwired-catalog.js';
 import { CATALOG_CHIPS, buildScriptPin } from '../scripts/gen-labwired-catalog.mjs';
 import { createDebugTarget } from '../src/debug-target-factory.js';
 import { createLabwiredAdapter, chipArch } from '../src/labwired-adapter.js';
@@ -107,6 +107,71 @@ function makeUf2(blocks, family = UF2_FAMILY_RP2040) {
     return out;
 }
 const fill = (n, v) => new Uint8Array(n).fill(v);
+
+describe('a shared radio air (no engine)', () => {
+    /** A WasmSimulator stand-in that records what was attached, per machine. */
+    function airWasm(methods = ['attach_softdevice_s110', 'attach_lab_air']) {
+        const sims = [];
+        const make = () => {
+            const calls = [];
+            const sim = {
+                calls,
+                get_pc: () => 0x100, step_single: () => {}, step_batch: () => {},
+                read_logic_edges: () => ({ cursor: 0, dropped: 0, nowCycle: 0, edges: [] }),
+                watch_logic_signals: () => [], get_register_names: () => [],
+            };
+            if (methods.includes('attach_softdevice_s110')) sim.attach_softdevice_s110 = (node) => calls.push(['softdevice', node]);
+            if (methods.includes('attach_lab_air')) sim.attach_lab_air = (node, air) => calls.push(['air', node, air]);
+            sims.push(sim);
+            return sim;
+        };
+        return { sims, wasm: { WasmSimulator: { new_from_config: make } } };
+    }
+    const board = LABWIRED_BOARDS['microbit-v1'];
+    const chip = LABWIRED_CATALOG[board.chip];
+
+    it('two boards given one bus join it under their own names, after their SoftDevice', async () => {
+        const { wasm, sims } = airWasm();
+        const air = { bus: 1 };
+        await createDebugTarget('labwired', { wasm, chip, labwiredBoard: board, firmware: ELF_MAGIC, name: 'remote', labAir: air });
+        await createDebugTarget('labwired', { wasm, chip, labwiredBoard: board, firmware: ELF_MAGIC, name: 'car', labAir: air });
+        assert.deepEqual(sims.map(s => s.calls), [
+            [['softdevice', 'remote'], ['air', 'remote', air]],
+            [['softdevice', 'car'], ['air', 'car', air]],
+        ]);
+        assert.equal(sims[0].calls[1][2], sims[1].calls[1][2], 'the same bus object, not a copy');
+    });
+
+    it('a board given no bus is not put on one', async () => {
+        const { wasm, sims } = airWasm();
+        await createDebugTarget('labwired', { wasm, chip, labwiredBoard: board, firmware: ELF_MAGIC });
+        assert.deepEqual(sims[0].calls, [['softdevice', board.name]]);
+    });
+
+    it('a reset rebuilds the machine onto the same air', async () => {
+        const { wasm, sims } = airWasm();
+        const air = { bus: 1 };
+        const { adapter } = await createDebugTarget('labwired',
+            { wasm, chip, labwiredBoard: board, firmware: ELF_MAGIC, name: 'car', labAir: air });
+        adapter.resetToProgram();
+        assert.equal(sims.length, 2, 'reset built a second machine');
+        assert.deepEqual(sims[1].calls, [['softdevice', 'car'], ['air', 'car', air]]);
+    });
+
+    it('an engine without the air is refused, not run on a private one', async () => {
+        const { wasm } = airWasm(['attach_softdevice_s110']);
+        await assert.rejects(
+            createDebugTarget('labwired', { wasm, chip, labwiredBoard: board, firmware: ELF_MAGIC, labAir: {} }),
+            /cannot join a shared radio air/);
+    });
+
+    it('a machine with no SoftDevice has no radio to put on the air', () => {
+        const { wasm } = airWasm();
+        assert.throws(() => createLabwiredAdapter({
+            wasm, chipYaml: LABWIRED_CATALOG.nrf52840.chipYaml, firmware: ELF_MAGIC, firmwareOnly: true, pins: {}, labAir: {},
+        }), /opts\.labAir needs opts\.softdeviceS110/);
+    });
+});
 
 describe('UF2 → ELF', () => {
     it('merges contiguous blocks, keeps a gap as a second segment, skips non-flash blocks', () => {
