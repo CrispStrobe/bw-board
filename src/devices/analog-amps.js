@@ -47,6 +47,7 @@
  */
 
 import { registerDevice } from '../devices.js';
+import {LM741_CARD, lm741LinearParameters, assertLm741LinearTopology, assertLm741LinearSolution} from '../lm741-linear-pole.js';
 
 const R_OUT = 100;          // LM358 output stage, modest drive
 const R_SINK = 50;
@@ -73,19 +74,7 @@ const U_TOL = 1e-9;         // volts of output movement below which nothing chan
 // Keeping LM741's prior values in the card is intentional: the extraction is
 // a refactor, not permission to alter an already shipped device.
 const PRECISION_OP_AMPS = Object.freeze({
-    lm741: Object.freeze({
-        a0: 200000,             // TI SNOSC25D: 200 V/mV typical
-        gbwHz: 1e6,
-        slewVPerUs: 0.5,
-        inputR: 2e6,
-        rOut: 600,              // gives ~10 V into 2 kOhm at +/-15 V
-        tickNs: 300n,
-        settledV: 1e-6,
-        minSupply: 10,
-        commonHeadroom: 3,
-        outputHeadroom: 2,
-        defaultOffsetV: 0.001,
-    }),
+    lm741: LM741_CARD, // TI SNOSC25D nominal card; legacy numbers unchanged.
     // Analog Devices LT1001 data sheet, electrical characteristics at
     // VS=+/-15 V.  This is a bounded behavioural card, not ADI's transistor
     // macromodel: the static limits and dominant-pole/slew response are kept;
@@ -451,8 +440,10 @@ function registerPrecisionOpAmp(kind, specOrResolver, terminalsOverride = null) 
 
         init(part) {
             const spec = resolveSpec(part);
+            const linear = lm741LinearParameters(part);
             return {
-                drives: { out: { vTh: 0, rTh: R_OFF } },
+                drives: { out: linear ? null : { vTh: 0, rTh: R_OFF } },
+                ...(linear ? {transientModel: 'linear-pole'} : {}),
                 _spec: spec,
                 powered: false,
                 inputCommonMode: 'unknown',
@@ -471,13 +462,39 @@ function registerPrecisionOpAmp(kind, specOrResolver, terminalsOverride = null) 
 
         stamp(ctx, part, state) {
             const spec = state._spec;
+            const linear = lm741LinearParameters(part);
+            if (Boolean(linear) !== (state.transientModel === 'linear-pole')
+                || (linear && state.drives.out !== null)) {
+                throw new Error(`LM741 ${part.id} linear-pole: initialized mode/drive authority changed`);
+            }
+            if (linear) assertLm741LinearTopology(part, ctx);
             // This is differential input resistance. Stamping it between the
             // pins avoids inventing either input as ground.
             if (Number.isFinite(spec.inputR)) ctx.conductance('inp', 'inn', 1 / spec.inputR);
         },
 
+        validateSolution(part, _state, read) {
+            assertLm741LinearSolution(part, read);
+        },
+
+        branchCurrents(part, _state, read) {
+            if (!lm741LinearParameters(part)) return new Map();
+            // Map the solver-only output resistor back to the actual package
+            // output lead. Supply quiescent/dynamic current is not modelled.
+            return new Map([['out', (read('__linear_pole')-read('out'))/LM741_CARD.rOut]]);
+        },
+
         update(part, state, read, tNs) {
             const spec = state._spec;
+            if (lm741LinearParameters(part)) {
+                // The hidden MNA capacitor owns all time history. No drive,
+                // controller feedback learning or scheduled wake is active.
+                state.powered = true;
+                state.inputCommonMode = 'valid';
+                state._wakeNs = null;
+                state._lastUpdateNs = tNs;
+                return false;
+            }
             const vpos = read('vpos');
             const vneg = read('vneg');
             const powered = Number.isFinite(vpos) && Number.isFinite(vneg)

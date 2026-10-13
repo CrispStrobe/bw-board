@@ -1,5 +1,32 @@
 # Operational provisioning integration task
 
+
+## Reached bounded checkpoint
+
+The first guarded-handoff [run38458453225](https://github.com/CrispStrobe/bw-board/actions/runs/38458453225)
+passed its controls, privileged smoke and artifact upload at tested source
+`9d4980fcbd4cccf43bdbca5f7939c1eccf53b0b9`. Root and independent byte-only audits
+of the official original support the finite limits/ACK/unarmed-controller
+refusal fixture: five limit installations, ten contained readbacks, five
+observer readbacks, ACK, expected `approval-unarmed` refusal and terminal cleanup
+with two zero censuses. The original capture index remains
+`finiteFixturePass: false` and `materializationComplete: false`; the scoped audit
+conclusion does not rewrite those source observations or grant broader authority.
+
+Official artifact11844449668 is11706 bytes, SHA256
+`63857b3e90ed5b84fe31a03b68b5e7948ca2e7404bed94ddfb4ac96b421e8d46`.
+Its thirteen outer files contain ten inner companion roles with matching raw
+copies. The preceding controls failure and upload-permission failure are
+preserved in their original runs. No artifact was reconstructed or successful
+operation repeated. This checkpoint does not qualify full materialization,
+acquisition, namespace ownership, continuous lease, compiler, guest or performance.
+
+A later documentation/main reconciliation preserves all33 admitted source roles
+byte-for-byte. The tested source head above remains distinct from that final
+documentation head; original event, artifact and outside-review identities stay
+unchanged. Every enabled check on the final head is still required before merge.
+
+
 The post-execution artifact handoff revision addresses a preserved upload
 failure after the first privileged refusal smoke. It retains root ownership
 during execution, then validates the retained output directory and fourteen

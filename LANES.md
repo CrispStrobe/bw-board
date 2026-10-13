@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-13 LM741 solver-native linear pole — CLAIM, Codex bwcx.
+2026-10-13 LM741 solver-native linear pole — DONE, Codex bwcx.
 Branch lane/lm741-linear-pole-20261013, exact basec5078499ebcde97ce615689667244b37c76eb22f.
 Eight paths only: this ledger, src/board.js (LM741 solver-view expansion),
 src/devices/analog-amps.js (shared nominal card and explicit-mode admission),
@@ -20,8 +20,22 @@ and mutated dynamics hosted. Preserve c637/bb0200 failures and actual work.
 No MNA kernel, other op-amp kinds, waveform/source primitives, workflow, pins,
 GUI, default behavior or deployment change. Landing requires exact affected
 hosted qualification; no physical LM741 or nonlinear qualification claim.
+Canonical claimd725cbc1 landed before implementation. Explicit linear pole,
+topology/physical-solution refusals and package output-current mapping are
+implemented. Six pure controls pass, including real wrong-pole/removed-slew
+mutations, unchanged legacy initialization and absent-mode solver-view identity.
+The two actual engine tests were deliberately excluded locally and must run
+hosted with existing LM741/other op-amp regressions. Six-case reference/grid/
+bounds/work authority unchanged; no waveform success or main landing yet.
+Sourcea5aa2b5f qualifies in CI38457137645 (8550 pass/0 fail/302 unchanged
+skips, all enabled jobs green) and Harris38457137856. Independent raw audit
+accepts six cases,2400 scalar readings/12 means/1200 provisional records:
+point maximum3.781350 nV/.378135 pA; all captures complete with200 charged
+advances, maximum741 attempts/2217 solves. Actual amplitude mutant completes
+and disagrees. No legacy-default/nonlinear/physical/GUI/adoption claim.
+Documentation-only closeout preserves the exact tested executable bytes.
 
-2026-10-13 LM741 step-phase waveform audit — CLAIM, Codex bwcx.
+2026-10-13 LM741 step-phase waveform audit — DONE diagnostic candidate, Codex bwcx.
 Branch lane/lm741-step-phase-20261013, exact base73130a1e.
 Four evidence paths: this ledger, scripts/qualify-lm741-step-phase.mjs,
 test/lm741-step-phase.test.mjs and spec-updates/lm741-step-phase.md.
@@ -35,6 +49,32 @@ actual engine observations hosted. Preserve mismatches as failed diagnostics,
 not qualification or permission to weaken bounds. No production/model/pin/
 GUI/workflow/deployment edits. Any required model repair needs a separately
 published scope expansion after the actual waveform failure is diagnosed.
+Canonical claim22a8fea0 preceded implementation. Six-case runner and analytic
+ramp/mean reference implemented; three local pure controls and genuine
+wrong-pole/final-observation mutations pass, including sparse-sample refusal
+and independent quadrature of analytic means. This is an unqualified
+diagnostic, not a source/model fix or permission to land a failing gate.
+Hosted c6373251 numericalCI38443238986 failed: two aligned cases completed
+but differ8.302436 mV; four offset-phase cases refuse at19.4 µs/193 callbacks
+after200 actual integration advances. Attempts/solves remain bounded. Actual
+amplitude mutant not reached. Independent piecewise-reference audit confirms
+the completed cases' mismatch. Forward evidence adds provisional actual input,
+output/current and controller drive/update/wake records to existing callbacks,
+retaining partial failed captures. Same four paths; no source/model, reference,
+limit, grid or accounting change. Fresh diagnostic qualification, no unchanged
+rerun, production repair, waveform success or landing authorized by this head.
+Forward observer review removes getter-triggered solves: direct published
+maps with null/missing/convergence/dirty markers only. No observer-created
+solution or invented zero. Supersede7a155197 before actual diagnostic use.
+Actualbb0200f2 CI38448865246 remains red; Harris38448865183 green cannot
+rescue waveform qualification. Independent1,172-observation audit finds no
+input deviations or completed scope/published-output discrepancy. Drive holds
+zero until input+300 ns; at that update the published solution still uses the
+old drive, with the new output visible at the following observation. Offset
+wakes split capture intervals and preserve the actual200-advance refusal.
+Work/zero-phase waveform receipts match the initial diagnostic. No tolerance,
+accounting, default/source fix or landing change; continuous solver-native
+pole adaptation is only a proposed separately claimed repair.
 
 2026-10-13 transistor instrument qualification — DONE, Codex bwcx.
 Branch lane/transistor-instruments-20261013, exact base5f4dc246.
@@ -4490,3 +4530,19 @@ root ownership and retained identity; file mode 0444 precedes directory mode
 delegation. Retain the failed upload and require a new exact reviewed head and
 initial PR-opened smoke. Artifact read access grants no provisioning, compiler,
 guest, continuous lease or official-authentication qualification.
+
+
+## Historical 80386 source contexts — 2026-10-13
+
+Owned branch `lane/386-historical-source-contexts-20261013`: the ten test
+harnesses listed in [the task guide](docs/I80386-HISTORICAL-SOURCE-CONTEXTS.md),
+a reviewed fixed helper/manifest namespace `scripts/i80386-historical-source-contexts/`,
+limited historical/current execution wiring in `.github/workflows/x86-xv6.yml`,
+this guide and this registry entry. Isolate four historical report fixtures,
+five fixed-oracle groups and the compiled PIC111 context using exact admitted
+public Git transitive sources. Preserve held CPU/CR0/native pins and raw reports;
+no skips, blind pin updates or current-CPU credit from historical execution.
+Current CPU regressions and actual hosted xv6 qualification remain separate.
+Production loaders/validators and CPU source are not owned for changes here;
+review any required scope extension before code. This is a documentation-only
+claim; implementation waits for its merge and source-context design review.
