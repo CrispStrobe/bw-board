@@ -1,5 +1,21 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 Calliope mini 1.x on the labwired tier — CLAIM, VPS Claude (opus).
+Branch lane/labwired-calliope-mini-v1-20261013, exact base 9c834916331f04eb0325679b137801f963b274d8.
+Owns this row plus: the labwired-wasm PIN in scripts/build-labwired-wasm.mjs
+(ae91f9ad -> labwired-core d523df44, the first commit carrying
+configs/systems/calliope-mini-v1.yaml), a hosted labwired-wasm release at that
+ref, the `calliope-mini-v1: s110` entry in scripts/gen-labwired-catalog.mjs,
+the regenerated src/labwired-catalog.js, a new real-engine test
+test/labwired-radio-pair.test.mjs with its fixture directory
+test/fixtures/labwired/radio-pair/ (a micro:bit V1 sender and a Calliope
+receiver on one shared air), its suite-list and count-floor line in
+.github/workflows/labwired-wasm.yml, and census entries those additions
+require. The test observes GPIO edges on the motor driver lines only: no motor,
+radio-accuracy, timing, RTx or hardware claim. No adapter, CPU, x86 or
+consumer-pin change; tests whose expectations move with the engine are
+reported, not relaxed.
+
 2026-10-13 labwired shared radio air — CLAIM, VPS Claude (opus).
 Branch feat/labwired-shared-air-20261013, exact base b7f9a973b244fed8401dc9e4d079085d1a719e58.
 Owns this row plus the `labAir` option only: src/labwired-adapter.js (option,
