@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-13 winding edge instruments — DONE candidate, Codex bwcx.
+2026-10-13 winding edge instruments — DONE, Codex bwcx.
 Branch lane/winding-edge-instruments-20261013, exact base e2c1a507.
 Seven evidence-only paths: LANES.md, scripts/diagnose-winding-uic-reference.mjs,
 test/winding-uic-reference.test.mjs, scripts/compare-winding-edge-instruments.mjs,
@@ -25,7 +25,13 @@ preceded implementation. Eleven pure controls pass; four isolated executable
 mutants (polarity, final sample omission, success exit and held-endpoint raw
 integral) fail caller assertions with original source restored. Default
 reference method controls remain green. Actual dense refinement, observed
-completion and instrument agreement remain pending hosted qualification.
+completion and instrument agreement were pending at implementation.
+Exactb29ada8f passes CI38342434122/Harris38342434165:8500 passed,zero failed,
+302 skipped. All400 voltage samples and both signed instrument means pass.
+Independent raw audit verifies every grid point, pair, bracket and polarity.
+Maximum sample error1.793191uV; mean errors0.099997uV/1.344902nA. Work remains
+3833 attempts/11491 solves/51 advances. Reference maxima1.017216uV/0.381059nA
+meet unchanged refinement bounds. No physical or current-scope claim.
 
 2026-10-12 full-tree authenticated TAR bridge preparation — CLAIM, Codex x86.
 Branch lane/386-full-tree-archive-bridge-20261012, exact base

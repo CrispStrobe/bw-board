@@ -320,5 +320,15 @@ Current scope acquisition is still display-loop driven: it does not publish
 simulation-time current samples. A separate engine lane should implement and
 qualify that capability, preserving legacy display behavior and exact timing,
 sign, budget and failure contracts. This diagnostic does not claim it exists.
-Dense voltage/mean numerical results are pending hosted qualification; neither
-this authored fixture nor an ideal channel proves physical scope fidelity.
+Exact `b29ada8f72f41806f4c371fcbb3026d54504d997` passes
+[CI38342434122](https://github.com/CrispStrobe/bw-board/actions/runs/38342434122)
+and [Harris38342434165](https://github.com/CrispStrobe/bw-board/actions/runs/38342434165):
+8500 passed, zero failed, 302 skipped. Independent raw audit checks all 400
+exact grid points, equal sample pairs, SPICE brackets and current polarity.
+Maximum voltage-sample error is 1.793190482 µV; voltage/current mean errors are
+0.099997344 µV / 1.344901138 nA. Actual watched means are 5.536411394 V and
+−18.922746433 mA, over the specified 10 µs interval, not instantaneous readings.
+Reference sample refinements reach at most 1.017215955 µV / 0.381058633 nA;
+both interval means also satisfy the fixed reference bounds. Work is 3833
+attempts / 11491 solves / 51 advances within original limits. Neither this
+authored fixture nor an ideal channel proves physical scope fidelity.
