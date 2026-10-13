@@ -34,7 +34,7 @@ through 20 µs. Currents leave the selected engine terminal; the independent
 SPICE reference measures entering current with a zero-volt series sense source.
 
 Independent decks declare zero capacitor/inductor ICs and UIC, matched thermal
-constants and explicit diode cards. Raw SPICE refinements use 1 ns and 0.5 ns
+constants and explicit diode cards. Raw SPICE refinements use 0.5 ns and 0.25 ns
 maximum steps, with correspondingly refined startup increments. Reference
 voltage/current samples and means must agree within 10 µV / 100 nA before engine
 comparison. Engine bounds are fixed beforehand at 100 µV / 1 µA. Reference
@@ -49,8 +49,13 @@ reported; failed cases are never silently dropped from the denominator.
 
 Preparation depended on the simulation-clock current lane, now landed at
 `c31c7402d0662cec79738c99da34143d3f15ffa9` after combined qualification.
-The matrix preserves that engine source and is released for its first hosted
-numerical run. Pure parser/control tests alone do not authorize landing, pins
+The matrix preserves that engine source. First hosted CI `38391653313` at
+`f306526152317035f561c6631ea3344021e3911f` withheld RLC-3 engine acquisition:
+the original 1 ns / 0.5 ns reference differed by 12.124181 µV at 19.6 µs,
+over the unchanged 10 µV refinement bound. The other eleven cases agreed.
+The forward repair halves both reference steps for all twelve cases without
+changing circuit parameters, engine budgets or agreement/refinement bounds.
+Fresh hosted qualification is required. Pure parser/control tests do not authorize landing, pins
 or deployment. Qualification remains pending. Full raw solver tables are temporary; reports
 retain their hashes, sample bracketing rows and clipped-interval means.
 An isolated actual-circuit resistor perturbation must complete yet disagree

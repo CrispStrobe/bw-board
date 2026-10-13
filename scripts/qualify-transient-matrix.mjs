@@ -29,7 +29,7 @@ export function matrixCase (id) {
 
 export function matrixDeck (id, maxStepNs) {
     const row = matrixCase(id);
-    if (![1, .5].includes(maxStepNs)) throw new Error('Unreviewed matrix refinement');
+    if (![.5, .25].includes(maxStepNs)) throw new Error('Unreviewed matrix refinement');
     const temp = .02585 * 1.602176634e-19 / 1.380649e-23 - 273.15;
     const diode = row.family === 'diode';
     const input = diode ? '-1 2' : '0 5';
@@ -53,7 +53,7 @@ export function matrixRefinement (coarse, fine) {
         row.timeNs === MATRIX_TIMES_NS[i] && Number.isFinite(row.voltage) && Number.isFinite(row.current)) &&
         arm.mean?.startNs === 100 && arm.mean?.endNs === 20000 &&
         Number.isFinite(arm.mean.voltage) && Number.isFinite(arm.mean.current);
-    if (coarse?.maxStepNs !== 1 || fine?.maxStepNs !== .5 || !complete(coarse) || !complete(fine)) {
+    if (coarse?.maxStepNs !== .5 || fine?.maxStepNs !== .25 || !complete(coarse) || !complete(fine)) {
         throw new Error('Complete aligned finite matrix reference required');
     }
     const differences = coarse.measurements.map((row, i) => ({timeNs: row.timeNs,
@@ -172,7 +172,7 @@ export async function runMatrixCase (id, executable = process.env.NGSPICE || 'ng
         const version = spawnSync(executable, ['--version'], {encoding: 'utf8', timeout: 5000});
         if (version.error || version.status !== 0) throw new Error('Independent SPICE executable unavailable');
         reference.version = version.stdout + version.stderr;
-        for (const step of [1, .5]) reference.arms.push(runReference(id, step, executable));
+        for (const step of [.5, .25]) reference.arms.push(runReference(id, step, executable));
     } catch (error) { return {...report, failure: 'reference-process', error: error.message}; }
     if (!matrixRefinement(...reference.arms).stable) return {...report, failure: 'reference-refinement'};
     report.engine = await captureEngine(id);

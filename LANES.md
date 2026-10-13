@@ -45,6 +45,11 @@ Matrix contains its exact engine/workflow bytes. Release first hosted numerical
 qualification now; three pure controls and two comparator mutants pass locally,
 while twelve actual cases, physical-resistor mutant and unavailable-provider
 CLI test remain hosted requirements. No matrix agreement has been claimed yet.
+First CI38391653313 atf3065261 failed RLC-3 reference refinement (12.124181 µV
+versus fixed10 µV), before its engine acquisition; eleven other cases agreed.
+Forward evidence repair halves both SPICE steps to0.5/0.25 ns uniformly,
+preserving all circuit/model/work/bounds. Three pure controls pass; fresh
+hosted qualification required, no unchanged rerun or landing.
 
 2026-10-13 simulation-time current scope — DONE, Codex bwcx.
 Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.

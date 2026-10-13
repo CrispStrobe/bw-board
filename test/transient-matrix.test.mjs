@@ -8,7 +8,7 @@ import {MATRIX_CASES, MATRIX_TIMES_NS, matrixDeck, matrixCase, parseMatrixArgume
     matrixRefinement, compareMatrixCase, runMatrixCase} from '../scripts/qualify-transient-matrix.mjs';
 
 function fixture () {
-    const reference = {caseId: 'rc-2', arms: [1, .5].map(maxStepNs => ({maxStepNs,
+    const reference = {caseId: 'rc-2', arms: [.5, .25].map(maxStepNs => ({maxStepNs,
         measurements: MATRIX_TIMES_NS.map(timeNs => ({timeNs, voltage: 2, current: .01})),
         mean: {startNs: 100, endNs: 20000, voltage: 2, current: .01}}))};
     const engine = {caseId: 'rc-2', initialStorage: {capacitorVoltage: 0, inductorCurrent: null},
@@ -26,10 +26,10 @@ test('pure reviewed matrix/decks have twelve unique immutable cases, explicit IC
     assert.ok(Object.isFrozen(MATRIX_CASES) && MATRIX_CASES.every(Object.isFrozen));
     assert.deepEqual(parseMatrixArguments([]), MATRIX_CASES.map(row => row.id));
     for (const row of MATRIX_CASES) {
-        const deck = matrixDeck(row.id, .5);
+        const deck = matrixDeck(row.id, .25);
         assert.match(deck, /C1 out 0 .* IC=0/); assert.match(deck, / uic\n/);
         assert.match(deck, /VSENSE input feed 0/); assert.match(deck, /let ref_current = i\(VSENSE\)/);
-        assert.match(deck, /tran 0.005n 20.1u 0 0.5n uic/);
+        assert.match(deck, /tran 0.0025n 20.1u 0 0.25n uic/);
         if (row.family === 'rlc') assert.match(deck, /L1 feed winding .* IC=0/);
         if (row.family === 'diode') assert.match(deck, /\.model DM D\(IS=1e-12 N=1 RS=.568\)/);
         assert.equal(matrixCase(row.id), row);
