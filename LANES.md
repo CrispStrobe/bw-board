@@ -4180,3 +4180,17 @@ Actual entry remains unsealed and refuses; controller/bootstrap, containment,
 official envelope/reader and single-run approval remain separate integration.
 No caller policy, delegate or programme API; held profiles stay unchanged.
 No archive acquisition, toolchain execution, compiler, guest or RTx result.
+
+
+## Fixed contained provisioning entry preparation — 2026-10-13
+
+Owned branch `lane/386-provisioning-contained-entry-20261013`: new
+`scripts/i80386-provisioning-contained/` namespace, dedicated pure-control
+workflow and this entry. Compose exact held resource and controller sources;
+install/read back process limits before product bootstrap, hand off owned
+namespace/PID1 handles and bounded resource facts, wait for observer ACK, then
+load the fixed controller. All local process/resource/socket operations are
+mocked; actual entry remains unsealed. Pending parent PR540/541 qualification,
+external observer/approval/envelope/reader/one-run integration remain separate.
+No arbitrary programme/policy/factory API, actual namespaces, acquisition,
+compiler, guest or performance claim; held profiles remain unchanged.
