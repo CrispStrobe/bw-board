@@ -44,6 +44,28 @@ cases disagree, the mutation is not reached and qualification is withheld.
 
 ## Limits and follow-ons
 
+### Initial hosted failure and forward diagnostics
+
+Source `c63732511caf21b1654dfe545bf46029f969406f`, numerical job in
+[CI 38443238986](https://github.com/CrispStrobe/bw-board/actions/runs/38443238986),
+failed the actual six-case gate: 8,544 passed, one failed, 302 documented skips.
+The two zero-phase cases completed but disagreed by up to 8.302436 mV;
+at 10.1 µs the positive case reported 2.829388 µV versus 4.456190 mV expected.
+Reported mean error was 101.967930 µV. Four 33/67 ns cases exhausted the
+200-advance limit at 19.4 µs after 193 observer callbacks. Actual attempts and
+solves remained within their separate budgets. The amplitude mutation was not
+reached; no negative-control completion or waveform qualification is claimed.
+
+The independent audit rederived the reference using a different piecewise ramp
+solution and checked the two completed cases' samples, means and resistor-current
+identity. Forward diagnostics add actual input/output/current and controller
+drive/wake/update observations to each existing callback, explicitly provisional
+until the final whole-capture receipt. They retain the partial observations on
+budget refusal without grading them as complete. No production code, reference,
+accuracy bound, work ceiling or sample grid is changed. A fresh changed-head run
+is required to distinguish input timing, controller timing and integration-call
+accounting before choosing a repair; the failed source is not rerun unchanged.
+
 No production, default model, GUI, package or deployment change is made by this
 audit. No physical noise, bias spread, temperature, nonlinear slew, current
 limiting, clipping or arbitrary feedback network is qualified. Those require

@@ -97,10 +97,19 @@ async function capture (id) {
         capture: 'sample', sampleRateHz: 1e7, depth: 202});
     const iId = board.addScopeChannel({type: 'current', partId: 'RL', terminal: 'a',
         currentClock: 'simulation', sampleRateHz: 1e7, depth: 202});
-    const result = {caseId: id};
+    const result = {caseId: id, observations: []};
     try {
         result.receipt = board.advanceToBoundedStream(20000n, LIMITS, {stepNs: 100n, onStep: ({timeNs}) => {
             if (timeNs === 100n) {board.meterVoltage('out', 'zero'); board.meterCurrent('RL', 'a');}
+            const state = board.getDeviceState('U');
+            // Provisional diagnostics survive a later whole-capture refusal.
+            // These are never used to manufacture expected values or a pass.
+            result.observations.push({timeNs: Number(timeNs), qualified: false,
+                input: board.nodeVoltage('input'), output: board.nodeVoltage('out'),
+                current: board.branchCurrent('RL', 'a'),
+                drive: {voltage: state.drives.out.vTh, resistance: state.drives.out.rTh},
+                lastUpdateNs: state._lastUpdateNs === null ? null : String(state._lastUpdateNs),
+                wakeNs: state._wakeNs === null ? null : String(state._wakeNs), beta: state._beta});
         }});
         const v = board.getScopeData(vId), c = board.getScopeData(iId);
         if ([v, c].some(data => data.count !== 200 || data.writeIndex !== 200 || data.startTNs !== 100n ||

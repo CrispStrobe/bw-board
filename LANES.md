@@ -40,6 +40,15 @@ ramp/mean reference implemented; three local pure controls and genuine
 wrong-pole/final-observation mutations pass, including sparse-sample refusal
 and independent quadrature of analytic means. This is an unqualified
 diagnostic, not a source/model fix or permission to land a failing gate.
+Hosted c6373251 numericalCI38443238986 failed: two aligned cases completed
+but differ8.302436 mV; four offset-phase cases refuse at19.4 µs/193 callbacks
+after200 actual integration advances. Attempts/solves remain bounded. Actual
+amplitude mutant not reached. Independent piecewise-reference audit confirms
+the completed cases' mismatch. Forward evidence adds provisional actual input,
+output/current and controller drive/update/wake records to existing callbacks,
+retaining partial failed captures. Same four paths; no source/model, reference,
+limit, grid or accounting change. Fresh diagnostic qualification, no unchanged
+rerun, production repair, waveform success or landing authorized by this head.
 
 2026-10-13 transistor instrument qualification — DONE, Codex bwcx.
 Branch lane/transistor-instruments-20261013, exact base5f4dc246.

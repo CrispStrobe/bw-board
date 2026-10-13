@@ -65,7 +65,11 @@ test('hosted LM741 dense phase waveforms agree with the continuous linear refere
     const failures = [];
     for (const {id} of STEP_CASES) {
         const report = await runStepCase(id), {engine, comparisons, ...summary} = report;
-        t.diagnostic(json({record: 'lm741-step-summary', ...summary, engine: engine && {...engine, samples: undefined}}));
+        t.diagnostic(json({record: 'lm741-step-summary', ...summary,
+            engine: engine && {...engine, samples: undefined, observations: undefined}}));
+        for (const row of engine?.observations || []) {
+            t.diagnostic(json({record: 'lm741-step-observation', id, ...row}));
+        }
         for (const row of comparisons || []) t.diagnostic(json({record: 'lm741-step-comparison', id, ...row}));
         if (!report.agreement) failures.push({id, failure: report.failure || 'continuous-model-disagreement'});
     }
