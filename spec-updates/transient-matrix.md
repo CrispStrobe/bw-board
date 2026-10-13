@@ -7,6 +7,26 @@ Shockley-diode reservoir/filter cases. Parameter corners vary time constant,
 damping, inductance, capacitance and series resistance. This is not twelve
 schematic-corpus imports or full coverage of every circuit family.
 
+| Case | Series R | L | Storage C | Additional load |
+| --- | ---: | ---: | ---: | --- |
+| rc-1 | 100 Ω | — | 1 nF | — |
+| rc-2 | 1 kΩ | — | 1 nF | — |
+| rc-3 | 1 kΩ | — | 10 nF | — |
+| rc-4 | 10 kΩ | — | 10 nF | — |
+| rlc-1 | 100 Ω | 100 µH | 1 nF | 10 MΩ |
+| rlc-2 | 200 Ω | 100 µH | 1 nF | 10 MΩ |
+| rlc-3 | 100 Ω | 1 mH | 1 nF | 10 MΩ |
+| rlc-4 | 1 kΩ | 1 mH | 10 nF | 10 MΩ |
+| diode-1 | 100 Ω | — | 1 nF | diode + 10 kΩ |
+| diode-2 | 1 kΩ | — | 1 nF | diode + 10 kΩ |
+| diode-3 | 100 Ω | — | 10 nF | diode + 10 kΩ |
+| diode-4 | 1 kΩ | — | 10 nF | diode + 10 kΩ |
+
+The diode is in series before the reservoir node; the listed 10 kΩ is a shunt
+load. RC/RLC input swings from 0 to 5 V; diode input swings from −1 to 2 V.
+All pulses have a 1 µs delay, 2 µs rising/falling ramps, 8 µs width and 20 µs
+period. This explicitly exercises diode off/on/off rather than a DC endpoint.
+
 Each case requests 200 simultaneous ideal voltage/current samples at 100 ns
 spacing across a 20 µs pulse experiment. Meter watches begin at the first
 100 ns observation, so their means cover **100 ns through 20 µs**, not zero
