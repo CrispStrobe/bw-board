@@ -4511,8 +4511,8 @@ one-run integration remains separate. Root owns documentation and actual gates.
 
 Branch `lane/386-provisioning-operational-profile-20261013`, Codex x86.
 Own `scripts/i80386-provisioning-operational-profile/`, its dedicated workflow,
-`docs/X86-PROVISIONING-OPERATIONAL.md` and this row. This publication is docs only;
-implementation starts after this claim and PR550 merge. Follow the
+`docs/X86-PROVISIONING-OPERATIONAL.md` and this row. The merged claim authorizes connected smoke source preparation;
+actual provisioning remains separately gated. Follow the
 [connected integration contract](docs/X86-PROVISIONING-OPERATIONAL.md): complete
 approved source graph, privileged enclosing bootstrap, validated child context,
 real contained entry/limits/ACK/controller/lifetime, and bounded original
@@ -4537,6 +4537,20 @@ other backends and consumer pins unchanged. Freely authored correctness tests
 and unchanged-workload alternating paired measurements are mandatory; no
 measured gain means no performance-only adoption. This is a documentation-only
 claim: implementation waits for its merge and refreshed ownership review.
+## Operational post-execution artifact handoff — 2026-10-13
+
+Owned branch `lane/386-provisioning-operational-handoff-20261013` adds only the
+fixed artifact-read helper and mocked controls in
+`scripts/i80386-provisioning-operational-profile/`, its graph/workflow and
+associated guide/registry text. Preserve root ownership and held producer
+source throughout execution. After a known returned observer with no outer
+capture/cleanup uncertainty, validate fixed names, bounded ordinary content,
+root ownership and retained identity; file mode 0444 precedes directory mode
+0555. No recursive walk, chown, deletion, source gate relaxation or caller path
+delegation. Retain the failed upload and require a new exact reviewed head and
+initial PR-opened smoke. Artifact read access grants no provisioning, compiler,
+guest, continuous lease or official-authentication qualification.
+
 
 ## Historical 80386 source contexts — 2026-10-13
 

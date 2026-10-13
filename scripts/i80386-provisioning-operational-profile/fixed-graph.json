@@ -1,0 +1,132 @@
+{
+  "held": {
+    "scripts/i80386-djgpp-notice-extractor/README.md": {
+      "bytes": 5233,
+      "sha256": "0d3aa04e84ef72d6ee99a6e69ebaa8c12cf15823486561daee9eb4366566f769"
+    },
+    "scripts/i80386-djgpp-notice-extractor/controls.py": {
+      "bytes": 10369,
+      "sha256": "c0bb4b39195b62b9befa7eb96ab90281f091c704f4d9e754e26388110d85551f"
+    },
+    "scripts/i80386-djgpp-notice-extractor/extractor.py": {
+      "bytes": 8801,
+      "sha256": "bde66cf5de7fc0d02508d88176e51b47a3acf208770bbd8904afa87c9eb3d501"
+    },
+    "scripts/i80386-full-tree-archive-bridge/README.md": {
+      "bytes": 5899,
+      "sha256": "5990fe67175c4c2a5b7abfa62485ce8bf9f1fdaa122ccc078ca088c49a6f3eb8"
+    },
+    "scripts/i80386-full-tree-archive-bridge/bridge.py": {
+      "bytes": 9562,
+      "sha256": "f9c408854dc983274787c266f1a32be50f364e313a281603117a972d292a33d0"
+    },
+    "scripts/i80386-full-tree-archive-bridge/controls.py": {
+      "bytes": 12528,
+      "sha256": "a65ade6ec2b7ad03bcdaafb80dc2cdcd415980b1a317d76de87fd39abdf44170"
+    },
+    "scripts/i80386-full-tree-notice-connection/README.md": {
+      "bytes": 5260,
+      "sha256": "efc7fe41b267eeb27d887cdfa0b98ea53a4f22df8ac99cf5b5c59e112e07fa5e"
+    },
+    "scripts/i80386-full-tree-notice-connection/controls.py": {
+      "bytes": 10312,
+      "sha256": "51bfcc82d5805f3951395415cd007b32b9182088a9024b0fe884a713df29a5e8"
+    },
+    "scripts/i80386-full-tree-notice-connection/coordinator.py": {
+      "bytes": 7975,
+      "sha256": "0db65c2067c6e9e3945b5b3ce6c73ded47052c827ae07e876bd9d545016265e7"
+    },
+    "scripts/i80386-full-tree-profile-source/admission.py": {
+      "bytes": 15672,
+      "sha256": "0901f69f1d2ef8870e1716fd7418da247efee00021a8acf3a348cdb0a445ae1f"
+    },
+    "scripts/i80386-full-tree-profile-source/git-adapter.py": {
+      "bytes": 15351,
+      "sha256": "2583a603c356e853c2de3b26f42df65b670143463223b7ff073e31ebb33391d2"
+    },
+    "scripts/i80386-full-tree-provisioner/README.md": {
+      "bytes": 6256,
+      "sha256": "ec09d6db103bfe6464c805e8c08abc94620bb3b254874a3634c29e48e2d2bae9"
+    },
+    "scripts/i80386-full-tree-provisioner/controls.py": {
+      "bytes": 12294,
+      "sha256": "68514bbc1ef4610259d21ebb445b0e72ca0fbb1f2d1d3bf3c586660f9a004a6a"
+    },
+    "scripts/i80386-full-tree-provisioner/manifest.json": {
+      "bytes": 289038,
+      "sha256": "39955b4c493fe7468d86bf7936a2b427af49fbb938fe0790e92c1881d0bb90b9"
+    },
+    "scripts/i80386-full-tree-provisioner/provenance.json": {
+      "bytes": 1598,
+      "sha256": "8a7a991dbab3b981602168201d66a1e6d7e79582386f307b854cd573232ef453"
+    },
+    "scripts/i80386-full-tree-provisioner/provision.py": {
+      "bytes": 15126,
+      "sha256": "e0a844ce3445b344a02e09ebee02ce8eca4a9ef7afc5a26d741b00902db561a2"
+    },
+    "scripts/i80386-full-tree-provisioning-launcher/controller.py": {
+      "bytes": 19661,
+      "sha256": "9cb7cb6411694b65a9fe18a318967e04b3e24f5d9f86d4f59e48797fd19a43dd"
+    },
+    "scripts/i80386-full-tree-provisioning-launcher/transport.py": {
+      "bytes": 8986,
+      "sha256": "ef29e27fc03d8311f3d2ca354b30fbd0d628de94ee123f061432d2cbaa300842"
+    },
+    "scripts/i80386-provisioning-contained/entry.py": {
+      "bytes": 13579,
+      "sha256": "aa25ba6fe52e4f6aefc4647983f22eb6f451725bf57c8202182032f2d420b32a"
+    },
+    "scripts/i80386-provisioning-observer-lifetime/lifetime.py": {
+      "bytes": 12941,
+      "sha256": "a1fd301279a3d01728f68a90fc6315f99421365699ac4080c3a17594623ec840"
+    },
+    "scripts/i80386-provisioning-observer/observer.py": {
+      "bytes": 14445,
+      "sha256": "3ad37c746bae7035d7897ce5678919b59c98b4bdb510fc48996613d6677bb9e8"
+    },
+    "scripts/i80386-provisioning-pid1/limits.py": {
+      "bytes": 5805,
+      "sha256": "829872fee3f1565ec8a67c57e74a7caba8c202b027ea6260f184425e888455d4"
+    },
+    "scripts/i80386-supervisor-outer-boundary/boundary.py": {
+      "bytes": 11573,
+      "sha256": "7ed023b41570cece9eae95430ec2ce10bae0aa074245502eb99208728e39e37e"
+    }
+  },
+  "roles": [
+    ".github/workflows/i80386-provisioning-operational-profile.yml",
+    "scripts/i80386-djgpp-notice-extractor/README.md",
+    "scripts/i80386-djgpp-notice-extractor/controls.py",
+    "scripts/i80386-djgpp-notice-extractor/extractor.py",
+    "scripts/i80386-full-tree-archive-bridge/README.md",
+    "scripts/i80386-full-tree-archive-bridge/bridge.py",
+    "scripts/i80386-full-tree-archive-bridge/controls.py",
+    "scripts/i80386-full-tree-notice-connection/README.md",
+    "scripts/i80386-full-tree-notice-connection/controls.py",
+    "scripts/i80386-full-tree-notice-connection/coordinator.py",
+    "scripts/i80386-full-tree-profile-source/admission.py",
+    "scripts/i80386-full-tree-profile-source/git-adapter.py",
+    "scripts/i80386-full-tree-provisioner/README.md",
+    "scripts/i80386-full-tree-provisioner/controls.py",
+    "scripts/i80386-full-tree-provisioner/manifest.json",
+    "scripts/i80386-full-tree-provisioner/provenance.json",
+    "scripts/i80386-full-tree-provisioner/provision.py",
+    "scripts/i80386-full-tree-provisioning-launcher/controller.py",
+    "scripts/i80386-full-tree-provisioning-launcher/transport.py",
+    "scripts/i80386-provisioning-contained/entry.py",
+    "scripts/i80386-provisioning-observer-lifetime/lifetime.py",
+    "scripts/i80386-provisioning-observer/observer.py",
+    "scripts/i80386-provisioning-operational-profile/README.md",
+    "scripts/i80386-provisioning-operational-profile/collect.py",
+    "scripts/i80386-provisioning-operational-profile/contained-bootstrap.py",
+    "scripts/i80386-provisioning-operational-profile/controls.py",
+    "scripts/i80386-provisioning-operational-profile/driver.py",
+    "scripts/i80386-provisioning-operational-profile/fixed-graph.json",
+    "scripts/i80386-provisioning-operational-profile/handoff.py",
+    "scripts/i80386-provisioning-operational-profile/observer-main.py",
+    "scripts/i80386-provisioning-operational-profile/report-reader.py",
+    "scripts/i80386-provisioning-pid1/limits.py",
+    "scripts/i80386-supervisor-outer-boundary/boundary.py"
+  ],
+  "schema": "bw.provisioning-operational-graph.v1"
+}
