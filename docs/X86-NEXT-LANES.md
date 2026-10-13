@@ -1,5 +1,10 @@
 # x86 checkpoint and next lanes
 
+The next connected compiler-provisioning task is the
+[operational integration contract](X86-PROVISIONING-OPERATIONAL.md). It specifies
+the missing launch, source-approval, child-context and original-report joins;
+implementation begins after its lane claim and the observation reader merge.
+
 Updated 2026-10-13. This is the handoff for the x86 lane, not a claim of complete PC compatibility. Read this file, [current lane evidence](X86-LANE.md), [loading guide](X86-LOADING-GUIDE.md), [compatibility roadmap](X86-COMPATIBILITY-ROADMAP.md), and [oracle strategy](X86-ORACLE-STRATEGY.md) before implementing a task. Refresh the repository's default branch first: historical tested SHAs identify evidence, while a new change needs its own source and artifact identities.
 
 ## Reached checkpoint
@@ -1186,3 +1191,87 @@ that checks originals without importing producer validators or replaying guests.
 Bind externally reviewed approval to the consumed official event, exact head,
 attempt, job, steps and terminal artifact before a single actual provisioning
 run. Keep compiler activation and guest tests behind that qualified checkpoint.
+
+### Fixed enclosing launch preparation
+
+The [launch preparation unit](../scripts/i80386-provisioning-enclosing-supervisor/README.md)
+prepares the fixed command graph and socket/pipe handoff around the held lifetime
+source. Its contained bootstrap is explicitly unarmed: it does not provide an
+operational entry CLI, resource handshake or controller approval. Actual entry
+and the private creation/launch route remain unconnected. Twenty-eight mocked
+controls passed under the workflow interpreter and bounds, with two independent
+refusal checks. Local controls mock all kernel, socket, pipe, descriptor,
+credential and process operations.
+
+Preparation observes Linux root-credential eligibility before source loading or
+descriptor creation. Privilege acquisition must happen in an enclosing bootstrap
+before those descriptors exist; the contained command starts directly with the
+proposed 480-second timeout and namespace creation. A separate 488-second timeout before observer
+bootstrap remains a future integration; this unit does not construct or run that
+observer bootstrap or enclosing timer. Timer, interpreter, bootstrap, argument,
+environment and descriptor identities must be admitted together. Command
+preparation does not qualify installed tools, privilege behavior or a working
+hard timeout. If the outer timer kills the observer, final cleanup and census
+observations remain unknown.
+
+Created endpoints and pipe ends have one close owner. Every returned resource
+must be retained before post-hook refusal, with null stdin, only the child channel
+explicitly inherited, standard output/error mapped to descriptors 1/2, and
+close-once transfer to the held lifetime. Before namespace admission, launch
+or descriptor facts cannot invent PID or process-group cancellation authority.
+Original errors, partial returns and closure uncertainty remain visible; no
+provisioning completion can be inferred from an unarmed bootstrap's refusal.
+
+Next, qualify this source and its parents independently. Freeze the complete
+bootstrap/tool/source graph and implement the separate raw-output/resource/full-
+source envelope with an independent original-artifact reader. Bind external
+approval and official event, head, attempt, job, steps, terminal artifact and
+single-run consumption before any operational connection. Qualify the enclosing
+timeout and owned namespace behavior with explicit hosted evidence. Keep actual
+acquisition, compiler activation, guest compatibility and RTx claims behind
+their own observed checkpoints.
+
+### Independent observation-envelope reader
+
+The [observation envelope](../scripts/i80386-provisioning-observation-envelope/README.md)
+defines a separate staged wire contract. Its assembler accepts exact member bytes
+and emits a fixed-order STORED ZIP; it returns no validation verdict. The standalone
+reader accepts original ZIP bytes through `audit(raw_zip_bytes,
+declared_sha256=None)`. It imports no producer validators and performs no source
+execution, Git operations, downloads, process operations or guest replay. A
+declared digest checks byte consistency only; it is not an official artifact seal.
+
+The nine permitted roles contain the envelope, original stdout/stderr prefixes,
+projected status, reported source-before/source-after snapshots, descriptor, role
+table and resource packet. Framing, extents, CRCs, member hashes, closed types and
+stage dependencies must agree. Prefixes retain original bytes, including binary
+output; stored length, observed length and EOF are separate facts. Missing
+handshakes and source-after snapshots remain absent in partial diagnostics.
+
+The reader checks the reported full source table, its genuine inherited fourteen
+pins, a separately derived fourteen-role projection and four checked component
+pins. This is reported metadata consistency, not proof that the actual transitive
+executable/data graph was consumed. It checks resource, admission and lifetime
+joins without importing their implementation. Original failure codes, signed
+launcher exits and diagnostic limit readbacks remain visible. Historical admission
+and an ACK that may have escaped do not grant usable handle authority after close.
+
+`diagnosticValid` means the supplied diagnostic packet is internally valid.
+`completeReportedConsistency` additionally requires the complete set of joined
+source, resource and clean terminal observations. Both results keep every
+approval, official binding, source ownership, namespace lease, hard deadline,
+resource sufficiency, actual acquisition, compiler, guest and performance
+qualification flag false. Manufactured byte controls cannot qualify an actual
+host or guest.
+
+Thirty-seven manufactured controls passed under the workflow's interpreter and
+resource bounds. Independent standard-ZIP packets also checked binary prefixes,
+hidden framing, regular-file modes and refusal before hashing oversized input.
+These checks establish the finite reader boundary only.
+
+Next, independently audit the frozen reader and malformed-input controls. Admit
+the complete operational bootstrap/tool/source graph and externally approved
+launch separately. Bind one consumed official event, head, attempt, job, steps
+and terminal artifact; audit the original packet without replay. Actual
+provisioning must pass those gates before enabling the compiler or making new
+guest compatibility or speed claims.

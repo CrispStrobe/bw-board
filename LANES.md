@@ -1,5 +1,48 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 LM741 step-phase waveform audit — CLAIM, Codex bwcx.
+Branch lane/lm741-step-phase-20261013, exact base73130a1e.
+Four evidence paths: this ledger, scripts/qualify-lm741-step-phase.mjs,
+test/lm741-step-phase.test.mjs and spec-updates/lm741-step-phase.md.
+Six small-signal follower experiments, positive/negative10 mV and three
+input-event phases, dense voltage/current samples and watched means.
+Independent continuous finite-gain/one-pole reference includes output/input
+resistance and load; no controller beta/ticks or engine traces as oracle inputs.
+Explicit reference-model boundary, fixed100 µV/10 nA agreement and single
+whole20000/60001/200 budget including warm-up. Local pure math/control tests;
+actual engine observations hosted. Preserve mismatches as failed diagnostics,
+not qualification or permission to weaken bounds. No production/model/pin/
+GUI/workflow/deployment edits. Any required model repair needs a separately
+published scope expansion after the actual waveform failure is diagnosed.
+
+2026-10-13 transistor instrument qualification — DONE, Codex bwcx.
+Branch lane/transistor-instruments-20261013, exact base5f4dc246.
+Five evidence paths: this ledger, scripts/qualify-transistor-instruments.mjs,
+test/transistor-instrument-oracle.test.mjs, scripts/oracle-census.mjs and
+spec-updates/transistor-instrument-qualification.md. Four independently
+authored NPN collector circuits; explicit exponential IS/BF/BR/N card with
+zero junction/storage parameters, matched thermal constants and cold load
+capacitor. Measure200 voltage/current observations and two watched means;
+independent0.5/0.25 ns SPICE refinements, fixed10 µV/100 nA reference and
+100 µV/1 µA agreement bounds, one whole20000/60001/200 capture budget.
+Preserve case denominator and refusals; actual resistor mutation must complete
+and disagree. Pure controls locally, actual engine/SPICE qualification hosted.
+No production/model/default/GUI/pin/workflow/deployment edits, vendor-device
+or physical switching-time claim. Op-amp/regulator batches remain subsequent.
+Canonical claim0d306c5c preceded implementation. Four pure controls pass:
+immutable explicit-card fixtures, work/grid/card/reference/mean refusals,
+executable polarity/final-point mutants, and unavailable-provider CLI preserving
+all four cases with no engine acquisition. No actual transistor waveform run
+yet. Exact-head hosted four-case comparison and completed wrong-resistor
+control remain the landing gate; no numerical success is inferred from mocks.
+Sourcee848e18f qualifies in CI38430984626 (8541 pass/0 fail/302 documented
+skips, every enabled job green) and Harris38430984662. Four actual cases,
+1600 scalar observations and8 means pass. Independent raw-bracket/deck/card/
+work audit: maximum point4.679718 µV/46.797176 nA, reported mean0.387760 µV/
+1.087597 nA; Ohm's law independently holds for points and means within10 pA.
+The actual base-resistor mutant completes and disagrees26.974599 mV.
+Documentation-only closeout preserves every tested executable byte.
+
 2026-10-13 Calliope mini 1.x on the labwired tier — CLAIM, VPS Claude (opus).
 Branch lane/labwired-calliope-mini-v1-20261013, exact base 9c834916331f04eb0325679b137801f963b274d8.
 Owns this row plus: the labwired-wasm PIN in scripts/build-labwired-wasm.mjs
@@ -41,7 +84,7 @@ product/compiler/guest execution, source ownership/lease or RTx qualification.
 Future Git adapter integration, complete transitive graph/supervisor/event/job admission and
 actual hosted execution remain separate. No consumer pins or unrelated lanes.
 
-2026-10-13 transient qualification matrix preparation — CLAIM, Codex bwcx.
+2026-10-13 transient qualification matrix — DONE, Codex bwcx.
 Branch lane/transient-matrix-prepare-20261013, exact base4c5fe57c.
 Five evidence paths: LANES.md, scripts/qualify-transient-matrix.mjs,
 test/transient-matrix.test.mjs, scripts/oracle-census.mjs and
@@ -54,8 +97,41 @@ First batch is not all-family/physical/corpus qualification. Opamp, regulator
 and transistor families remain subsequent batches, with actual model-domain
 review before choosing independent references. No production/model/pin/workflow
 edits or local engine/oracle execution. LOCAL preparation only until current
-scope lane88cdd9fb qualifies and lands; no qualification dispatch or matrix
+scope lane's final forward head qualifies and lands; no qualification dispatch or matrix
 landing before that prerequisite. Other target/source lanes excluded.
+Historical preparation checkpoints: Canonical25b6763d preceded preparation. Twelve cases implemented; three
+pure controls pass, including invalid CLI/model/refinement/grid/work/mean
+adversaries and isolated real final-point/polarity comparator mutants. No
+numerical execution or branch push performed; engine integration/qualification
+is deliberately held behind the current-scope prerequisite. Remaining families
+and later roadmap stages are explicit in spec-updates/transient-matrix.md.
+Integrated combined current/motor candidate0f57d034 locally; every production
+and workflow byte remains identical to that candidate. Both current and matrix
+oracle census gates are preserved. Three pure controls remain green. Numerical
+qualification still held until the current-scope combined head lands.
+Prerequisite now landedc31c7402 with combinedCI8521/0/302 andHarris green.
+Matrix contains its exact engine/workflow bytes. Release first hosted numerical
+qualification now; three pure controls and two comparator mutants pass locally,
+while twelve actual cases, physical-resistor mutant and unavailable-provider
+CLI test remain hosted requirements. No matrix agreement has been claimed yet.
+First CI38391653313 atf3065261 failed RLC-3 reference refinement (12.124181 µV
+versus fixed10 µV), before its engine acquisition; eleven other cases agreed.
+Forward evidence repair halves both SPICE steps to0.5/0.25 ns uniformly,
+preserving all circuit/model/work/bounds. Three pure controls pass; fresh
+hosted qualification required, no unchanged rerun or landing.
+Replacement03503ed0 qualified all twelve cases in CI38397645192
+(8526 pass/0 fail/302 documented skips) and Harris38397645169.
+Independent raw-bracket audit: maximum point14.929572 µV/14.343681 nA;
+reported mean agreement0.344975 µV/0.636373 nA. Physical20% resistor
+mutant completed and disagreed0.294583 V; unavailable-provider CLI refused.
+Integrated separate current-main LabWired/x86 changes for final combined
+qualification. Circuit/model/oracle bytes remain identical to03503ed0.
+No physical/corpus-wide claim, consumer pin movement or deployment.
+Final circuit-plus-LabWired/display integration4b23dcd1 qualified in
+CI38418024812 (8536 pass/0 fail/302 documented skips) and Harris38418024893.
+Independent raw audit again accepts all twelve cases and electrical mutant.
+Latest isolated x86 tooling merges preserve every tested circuit/oracle byte;
+focused pure controls pass. Normal guarded master integration closes this lane.
 
 2026-10-13 simulation-time current scope — DONE, Codex bwcx.
 Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.
@@ -4291,3 +4367,55 @@ controls establish no hard timeout, continuous ownership lease, official source
 or host authority, actual provisioning, compiler, guest or performance result.
 Complete source graph, actual envelope/independent reader, external approval and
 official one-run admission remain separate gates. Parent PR544 must qualify.
+
+
+## Fixed enclosing launch preparation — 2026-10-13
+
+Owned branch `lane/386-provisioning-enclosing-supervisor-20261013`: new
+`scripts/i80386-provisioning-enclosing-supervisor/` namespace, dedicated mocked
+control workflow and this entry. Prepare the literal contained/external timeout
+command graph and single-owner socket/pipe handoff to held lifetime source.
+The child bootstrap is explicitly unarmed and refuses; actual entry and private
+creation/launch route remain unconnected. Capture owned returned resources before
+post-hook checks, preserve partial failure and close uncertainty, and never infer
+pre-admission PID/process-group cancellation authority. No caller command, FD,
+factory, policy or arming API. All local process, socket, pipe and descriptor
+operations are mocked. These controls qualify no installed tools, privilege
+transition, external hard timeout, complete source graph, actual provisioning,
+compiler, guest or speed. Approved bootstrap/graph, independent original envelope
+reader and official one-run joins remain separate gates. Parent PR545 must qualify.
+
+
+## Independent provisioning observation envelope — 2026-10-13
+
+Owned branch `lane/386-provisioning-observation-envelope-20261013`: new
+`scripts/i80386-provisioning-observation-envelope/` namespace, dedicated pure
+byte-control workflow and this row. Define a separately versioned closed staged
+envelope for full reported source positions, literal resource/admission facts,
+lifetime failures and byte-exact bounded stdout/stderr prefixes. Independently
+read original fixed-role bytes without producer imports, source execution, Git,
+network, downloads or guest replay. Reject missing-after promotion, unknown
+cleanup, authority from historical consumed handles, and raw-prefix/count/EOF
+contradictions. Small assembler and reader do not validate through each other.
+Controls use manufactured stored ZIPs only; keep framing, role/cap/hash/CRC and
+typed stage joins closed. Valid partial diagnostics and reported completion
+consistency never grant source ownership, approval, official host/namespace,
+actual acquisition, compiler, guest, hard-deadline or performance authority.
+Held parent source/schema bytes remain unchanged; actual graph/approval/official
+one-run integration remains separate. Root owns documentation and actual gates.
+
+## Operational provisioning integration — CLAIM, 2026-10-13
+
+Branch `lane/386-provisioning-operational-profile-20261013`, Codex x86.
+Own `scripts/i80386-provisioning-operational-profile/`, its dedicated workflow,
+`docs/X86-PROVISIONING-OPERATIONAL.md` and this row. This publication is docs only;
+implementation starts after this claim and PR550 merge. Follow the
+[connected integration contract](docs/X86-PROVISIONING-OPERATIONAL.md): complete
+approved source graph, privileged enclosing bootstrap, validated child context,
+real contained entry/limits/ACK/controller/lifetime, and bounded original
+controller/coordinator report collection. Retain the observation packet contract
+and parent default refusals. No alternate test predicate in an operational route,
+synthetic authority, compiler activation or guest/performance claim. Hosted
+affected-path qualification and independent original-report audit precede the
+separately consumed actual provisioning attempt. Other CPU, UI, FPGA, schematic
+and target lanes remain outside this claim.
