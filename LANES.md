@@ -4257,3 +4257,21 @@ Actual entry and channel remain unconnected. Pending parent source qualification
 full observer lifetime/timeout/output, independent official envelope/reader and
 externally reviewed single-run approval remain separate. No caller policy,
 factory or programme API and no acquisition/compiler/guest/RTx claim.
+
+
+## Provisioning observer lifetime preparation — 2026-10-13
+
+Owned branch `lane/386-provisioning-observer-lifetime-20261013`: new
+`scripts/i80386-provisioning-observer-lifetime/` namespace, dedicated pure-control
+workflow and this entry. Reuse exact held admission and namespace helpers; retain
+original bounded stdout/stderr prefixes, observe cooperative startup/execution
+deadlines, terminal admitted PID1, owned launcher reaping and two complete empty
+censuses. Borrow admission handles with one close owner. Failure cleanup may
+signal only the admitted held PID1 handle; preserve first errors and uncertain
+output, termination and closure. All local kernel, process, descriptor, socket
+and time operations are mocked. Actual entry and private launch/channel route
+stay unconnected; no caller command, FD, factory or policy API. These finite
+controls establish no hard timeout, continuous ownership lease, official source
+or host authority, actual provisioning, compiler, guest or performance result.
+Complete source graph, actual envelope/independent reader, external approval and
+official one-run admission remain separate gates. Parent PR544 must qualify.

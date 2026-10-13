@@ -1146,3 +1146,43 @@ separate actual envelope and independent original-artifact reader. Bind external
 approval to the official event, job, step, artifact and single-run record before
 an actual attempt. Keep the compiler disabled until provisioning passes those
 independent gates.
+
+### Observer lifetime and original-output preparation
+
+PID1 resource preparation [PR541](https://github.com/CrispStrobe/bw-board/pull/541)
+is merged after all enabled exact-head checks passed. Its actual resource and
+namespace operations remain unqualified.
+
+The [lifetime unit](../scripts/i80386-provisioning-observer-lifetime/README.md)
+is a separate unconnected source slice around the held resource admission. Its
+39 mocked controls passed under the workflow interpreter and bounds, including
+the exact admission unit's positive and ACK-failure connections. Controls use a
+private manufactured launch/channel route, with kernel, process, socket,
+descriptor and clock operations mocked. The source captures original
+stdout/stderr prefixes of at most 64 KiB each; overflow preserves the prefix and
+refuses completion. Original bytes, observed counts and EOF facts stay separate
+from process return status.
+
+The proposed startup, execution and total observation budgets are eight, 480 and
+488 seconds respectively. They constrain cooperative observations; synchronous
+setup, launch or kernel work still needs an enclosing supervisor for a hard
+timeout. Source-only checks do not establish that these budgets are sufficient
+for actual provisioning.
+
+A positive finite observation requires both pipe EOFs, terminal admitted PID1,
+owned launcher reaping and two complete empty namespace censuses while handles
+remain retained. The admission unit is the sole close owner of those handles.
+Failure cleanup may signal only a retained, unconsumed admitted PID1 handle.
+Historical admission or an escaped ACK cannot authorize reuse of a closed
+descriptor; enumerated PIDs never become signal targets. Missing or uncertain observations, expired cleanup
+budgets, reentry and close failures retain the first error and refuse completion.
+Actual launch and channel remain unconnected. No namespace lease, official host
+authority, actual acquisition, compilation, guest or RTx result is added.
+
+Next, qualify this unit and its parent source separately. Bind the complete
+executable/data graph and enclosing timeout before actual integration. Define
+the separate full-source/resource/raw-output envelope and an independent reader
+that checks originals without importing producer validators or replaying guests.
+Bind externally reviewed approval to the consumed official event, exact head,
+attempt, job, steps and terminal artifact before a single actual provisioning
+run. Keep compiler activation and guest tests behind that qualified checkpoint.
