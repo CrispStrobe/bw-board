@@ -4117,3 +4117,18 @@ registry entry and the coordinated `docs/X86-NEXT-LANES.md` checkpoint.
 Acceptance: fifteen offline supervisor and twenty-one manufactured admission
 controls, fixed bootstrap bindings, preserved raw refusals and source observations.
 No actual acquisition, compiler, guest, consumer pin or operational seal changes.
+
+2026-10-13 unarmed supervisor independent lifecycle reader — CLAIM, Codex x86.
+Branch lane/386-unarmed-supervisor-reader-20261013, exact parent
+ca6825b1190b6969a165902e2f09fa7bd05dae3a. Owns this row,
+scripts/i80386-unarmed-supervisor/{reader.py,reader-controls.py,
+inherited-roles.json,integration-controls.py}, namespace README.md and the
+dedicated synthetic workflow steps and root-coordinated docs/X86-NEXT-LANES.md
+checkpoint only. Project the separately reviewed
+independent reader without producer imports; manufacture portable JSON refusal
+controls and two bounded tiny-repository whole-path cases. Keep raw logs distinct
+from fact packets and complete source observations distinct from inherited
+projections. External seals and all acquisition/source/lease/compiler/guest
+qualifications remain unset or false. No parent producer change, archive/network
+input, product execution, dependency adoption or actual launch. Source review
+precedes publication; root coordinates parent merges and checkpoint docs.
