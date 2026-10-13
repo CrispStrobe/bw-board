@@ -4242,3 +4242,22 @@ operations are mocked. These controls qualify no installed tools, privilege
 transition, external hard timeout, complete source graph, actual provisioning,
 compiler, guest or speed. Approved bootstrap/graph, independent original envelope
 reader and official one-run joins remain separate gates. Parent PR545 must qualify.
+
+
+## Independent provisioning observation envelope — 2026-10-13
+
+Owned branch `lane/386-provisioning-observation-envelope-20261013`: new
+`scripts/i80386-provisioning-observation-envelope/` namespace, dedicated pure
+byte-control workflow and this row. Define a separately versioned closed staged
+envelope for full reported source positions, literal resource/admission facts,
+lifetime failures and byte-exact bounded stdout/stderr prefixes. Independently
+read original fixed-role bytes without producer imports, source execution, Git,
+network, downloads or guest replay. Reject missing-after promotion, unknown
+cleanup, authority from historical consumed handles, and raw-prefix/count/EOF
+contradictions. Small assembler and reader do not validate through each other.
+Controls use manufactured stored ZIPs only; keep framing, role/cap/hash/CRC and
+typed stage joins closed. Valid partial diagnostics and reported completion
+consistency never grant source ownership, approval, official host/namespace,
+actual acquisition, compiler, guest, hard-deadline or performance authority.
+Held parent source/schema bytes remain unchanged; actual graph/approval/official
+one-run integration remains separate. Root owns documentation and actual gates.
