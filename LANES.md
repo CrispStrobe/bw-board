@@ -4155,6 +4155,20 @@ reader, containment, archive and compiler profiles remain unchanged. No actual
 network acquisition, namespace replay, compilation, guest or performance claim.
 
 
+## Provisioning source-admission connection — 2026-10-13
+
+Owned branch `lane/386-provisioning-admission-connect-20261013`: new controller,
+controller controls and CONTROLLER.md within the provisioning-launcher namespace,
+a dedicated synthetic workflow and this entry. Reuse the held source Gate/Git
+adapter and fixed six-input transport; authenticate a complete explicit source
+graph before source-owned wiring, observe before/after, preserve failures and
+cleanup, and connect the fixed coordinator only after all inputs authenticate.
+External approval remains unset; local fixtures use tiny manufactured source and
+HTTP bodies only. No actual acquisition, namespace replay, compiler or guest.
+Held source/transport/reader/containment algorithms remain unchanged. Parent
+transport source qualification and independently reviewed actual resources,
+envelope, original reader and official one-run guard remain separate gates.
+
 ## Provisioning PID1 resource preparation — 2026-10-13
 
 Owned branch `lane/386-provisioning-pid1-limits-20261013`: new
