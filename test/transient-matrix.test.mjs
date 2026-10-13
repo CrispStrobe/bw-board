@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import {MATRIX_CASES, MATRIX_TIMES_NS, matrixDeck, matrixCase, parseMatrixArguments,
     matrixRefinement, compareMatrixCase, runMatrixCase} from '../scripts/qualify-transient-matrix.mjs';
 
@@ -122,4 +123,17 @@ test('hosted twelve-case transient matrix preserves every refusal and compares i
         completed: changedCircuit.engine.receipt.completed, agreement: changedCircuit.agreement,
         maxVoltageError: Math.max(...changedCircuit.comparisons.map(row => row.voltage.absoluteError))}));
     assert.equal(readFileSync(new URL('../scripts/qualify-transient-matrix.mjs', import.meta.url), 'utf8'), original);
+});
+
+test('hosted unavailable-provider CLI refuses with a nonzero exit and no engine acquisition', () => {
+    const child = spawnSync(process.execPath,
+        [fileURLToPath(new URL('../scripts/qualify-transient-matrix.mjs', import.meta.url)), '--case', 'rc-2'],
+        {encoding: 'utf8', timeout: 10000, maxBuffer: 1048576,
+            env: {...process.env, NGSPICE: 'brickwright-intentionally-unavailable-spice'}});
+    assert.equal(child.error, undefined); assert.equal(child.status, 1, child.stderr);
+    const report = JSON.parse(child.stdout.trim());
+    assert.equal(report.definition.id, 'rc-2'); assert.equal(report.agreement, false);
+    assert.equal(report.failure, 'reference-process'); assert.equal(report.engine, null);
+    assert.deepEqual(report.reference.arms, []);
+    assert.match(report.error, /executable unavailable/);
 });

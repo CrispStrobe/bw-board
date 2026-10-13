@@ -54,6 +54,9 @@ retain their hashes, sample bracketing rows and clipped-interval means.
 An isolated actual-circuit resistor perturbation must complete yet disagree
 with its unchanged SPICE reference. A process error or incomplete mutant does
 not count as a successful electrical negative control.
+A hosted unavailable-provider CLI check must emit a selected-case refusal,
+perform no engine acquisition, and exit nonzero. Absence of the oracle cannot
+produce an empty or successful qualification result.
 
 ## Subsequent batches, in the approved roadmap order
 
