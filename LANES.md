@@ -1,5 +1,18 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 full-profile source-position preparation — CLAIM, Codex x86.
+Branch lane/386-full-tree-source-position-20261013, exact base e77f34bdf2a9bcac6636b0aeb7d0320f83ff47ff.
+Owns this row, scripts/i80386-full-tree-profile-source/ and
+.github/workflows/i80386-full-tree-profile-source.yml only. Bounded closed
+external descriptor/table and separately versioned before/after source positions;
+all fourteen inherited source rows plus explicit new profile kinds; exact advertised
+workflow identity, no self-row table hash cycle, finite Git/live byte joins and
+first-error cleanup. Independent reader and manufactured controls only. External
+seal stays unset and production Git interface refuses; no actual input acquisition,
+product/compiler/guest execution, source ownership/lease or RTx qualification.
+Future Git adapter, complete transitive graph/supervisor/event/job admission and
+actual hosted execution remain separate. No consumer pins or unrelated lanes.
+
 2026-10-13 winding edge instruments — CLAIM, Codex bwcx.
 Branch lane/winding-edge-instruments-20261013, exact base e2c1a507.
 Seven evidence-only paths: LANES.md, scripts/diagnose-winding-uic-reference.mjs,
