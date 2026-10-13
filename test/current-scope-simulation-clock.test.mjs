@@ -81,6 +81,16 @@ test('hosted previously closed-form passive DC current scope acquires without di
     assert.ok(Math.abs(data.samples[2] + .005) < 1e-12);
 });
 
+test('hosted static snapshot acquired inside an observer charges the shared solve budget', async () => {
+    const b = await rig(false, 'single-rail'); let handle;
+    const receipt = b.advanceToBoundedStream(2000n, {...limits, maxSolves: 1}, {stepNs: 1000n, onStep: row => {
+        if (row.timeNs === 1000n) handle = attach(b);
+    }});
+    assert.equal(receipt.completed, true); assert.equal(receipt.work.solves, 1);
+    assert.equal(b.getScopeData(handle).count, 1);
+    assert.ok(Math.abs(b.getScopeData(handle).samples[0] + .005) < 1e-12);
+});
+
 test('hosted RC current standalone grid preserves analytical sign, wrap, reset and late attach', async () => {
     const b = await rig(true), handle = attach(b);
     b.advanceTo(12000n);

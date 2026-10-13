@@ -2339,6 +2339,7 @@ export class BoardImpl {
     if (ch.currentClock === 'simulation' && this.powered && !this._mnaCache
       && !this._hasReactive() && this._deviceStates.size === 0 && this._shiftRegisters.size === 0
       && !this._liveSolveError && !this._deviceSubstepOverflow && !this._transientAccuracyUnmet) {
+      this._chargeBoundedAdvanceWork('solves'); // Setup inside an observer still consumes its one whole-capture authority.
       this._adoptSolution(this._solveMNA(false));
     }
     if (loadsCircuit) {

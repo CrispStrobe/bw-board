@@ -17,10 +17,11 @@ unchanged. `capture: 'sample'` alone never selects simulation-clock current
 acquisition: all legacy current channels already use that label.
 
 Simulation-clock channels force the existing MNA path for accepted branch-current
-authority. They own sample-grid barriers even without voltage channels and use
+authority.
 For a healthy powered passive DC board previously using the closed-form walker,
 attachment first acquires an existing-MNA static snapshot. Reactive/device
 histories are not replaced by a DC solve to supply a missing sample.
+Attachment inside a bounded observer charges this solve to the shared budget.
 They own sample-grid barriers even without voltage channels and use
 the shared fractional-time readiness, sample-pair and ring-label rules. Returned
 data identifies `currentClock: 'simulation'`. Display polling neither writes nor
