@@ -1,5 +1,21 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 Calliope mini 1.x on the labwired tier — CLAIM, VPS Claude (opus).
+Branch lane/labwired-calliope-mini-v1-20261013, exact base 9c834916331f04eb0325679b137801f963b274d8.
+Owns this row plus: the labwired-wasm PIN in scripts/build-labwired-wasm.mjs
+(ae91f9ad -> labwired-core d523df44, the first commit carrying
+configs/systems/calliope-mini-v1.yaml), a hosted labwired-wasm release at that
+ref, the `calliope-mini-v1: s110` entry in scripts/gen-labwired-catalog.mjs,
+the regenerated src/labwired-catalog.js, a new real-engine test
+test/labwired-radio-pair.test.mjs with its fixture directory
+test/fixtures/labwired/radio-pair/ (a micro:bit V1 sender and a Calliope
+receiver on one shared air), its suite-list and count-floor line in
+.github/workflows/labwired-wasm.yml, and census entries those additions
+require. The test observes GPIO edges on the motor driver lines only: no motor,
+radio-accuracy, timing, RTx or hardware claim. No adapter, CPU, x86 or
+consumer-pin change; tests whose expectations move with the engine are
+reported, not relaxed.
+
 2026-10-13 labwired shared radio air — CLAIM, VPS Claude (opus).
 Branch feat/labwired-shared-air-20261013, exact base b7f9a973b244fed8401dc9e4d079085d1a719e58.
 Owns this row plus the `labAir` option only: src/labwired-adapter.js (option,
@@ -4303,3 +4319,39 @@ controls establish no hard timeout, continuous ownership lease, official source
 or host authority, actual provisioning, compiler, guest or performance result.
 Complete source graph, actual envelope/independent reader, external approval and
 official one-run admission remain separate gates. Parent PR544 must qualify.
+
+
+## Fixed enclosing launch preparation — 2026-10-13
+
+Owned branch `lane/386-provisioning-enclosing-supervisor-20261013`: new
+`scripts/i80386-provisioning-enclosing-supervisor/` namespace, dedicated mocked
+control workflow and this entry. Prepare the literal contained/external timeout
+command graph and single-owner socket/pipe handoff to held lifetime source.
+The child bootstrap is explicitly unarmed and refuses; actual entry and private
+creation/launch route remain unconnected. Capture owned returned resources before
+post-hook checks, preserve partial failure and close uncertainty, and never infer
+pre-admission PID/process-group cancellation authority. No caller command, FD,
+factory, policy or arming API. All local process, socket, pipe and descriptor
+operations are mocked. These controls qualify no installed tools, privilege
+transition, external hard timeout, complete source graph, actual provisioning,
+compiler, guest or speed. Approved bootstrap/graph, independent original envelope
+reader and official one-run joins remain separate gates. Parent PR545 must qualify.
+
+
+## Independent provisioning observation envelope — 2026-10-13
+
+Owned branch `lane/386-provisioning-observation-envelope-20261013`: new
+`scripts/i80386-provisioning-observation-envelope/` namespace, dedicated pure
+byte-control workflow and this row. Define a separately versioned closed staged
+envelope for full reported source positions, literal resource/admission facts,
+lifetime failures and byte-exact bounded stdout/stderr prefixes. Independently
+read original fixed-role bytes without producer imports, source execution, Git,
+network, downloads or guest replay. Reject missing-after promotion, unknown
+cleanup, authority from historical consumed handles, and raw-prefix/count/EOF
+contradictions. Small assembler and reader do not validate through each other.
+Controls use manufactured stored ZIPs only; keep framing, role/cap/hash/CRC and
+typed stage joins closed. Valid partial diagnostics and reported completion
+consistency never grant source ownership, approval, official host/namespace,
+actual acquisition, compiler, guest, hard-deadline or performance authority.
+Held parent source/schema bytes remain unchanged; actual graph/approval/official
+one-run integration remains separate. Root owns documentation and actual gates.
