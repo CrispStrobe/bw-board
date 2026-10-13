@@ -944,3 +944,23 @@ The ordered follow-up tasks are:
      helper/host-loader delegation, raw output-format and media joins, independent
      readers and launch gates. Qualify the free client in an independent DPMI
      oracle and the AT guest after compilation; report those outcomes separately.
+
+
+### Unarmed offline supervisor checkpoint
+
+The [offline supervisor](../scripts/i80386-unarmed-supervisor/README.md) joins
+verified bootstrap components, real Git observations in tiny manufactured
+repositories, separate full-profile source positions, a fixed bounded child,
+raw output storage and an acquisition-refused fact packet. Its fifteen supervisor
+and twenty-one admission controls pass locally. The controls copy the fourteen
+inherited source files as metadata; they do not execute those programs.
+
+This checkpoint does not enable provisioning or compilation. External approval
+remains unset. The child deadline covers drain and wait after launch returns;
+whole-supervisor startup and filesystem bounds remain a separate requirement.
+Next, qualify the published source controls, finish the independent lifecycle
+reader and its exact source bindings, then prepare the externally bounded,
+source-admitted actual profile and its official event/job/artifact and single-run
+gates. Preserve prior failures and require that launch review before acquiring
+inputs. Compiler closure and free protected-mode application tests follow the
+actual provisioning result; no new compatibility or performance result is claimed.
