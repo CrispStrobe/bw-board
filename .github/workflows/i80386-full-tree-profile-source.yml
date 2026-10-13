@@ -39,4 +39,3 @@ jobs:
             python3 -I -B scripts/i80386-full-tree-profile-source/controls.py
             python3 -I -B scripts/i80386-full-tree-profile-source/reader-controls.py
           '
-
