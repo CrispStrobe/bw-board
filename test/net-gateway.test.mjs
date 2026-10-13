@@ -204,6 +204,20 @@ test('UDP: a flow is decided once, carried both ways as the far address, listed,
     assert.match(w.decisions[w.decisions.length - 1].reason, /web only/);
 });
 
+test('UDP: a flow to port 443 is closed when the setting becomes web only, though TCP to that port would stay', () => {
+    const transport = fakeTransport();
+    const flows = [];
+    transport.udp = () => { const far = {closed: false}; flows.push(far); return {send () {}, close: () => { far.closed = true; }}; };
+    const w = world({transport, settings: {mode: 'all'}});
+    w.guest.udpSend('8.8.8.8', 443, 4000, [1]);
+    const tcp = w.dial('8.8.8.8', 443);
+    transport.opened[0].events.open();
+    w.gateway.setSettings({mode: 'web'});
+    assert.equal(flows[0].closed, true, 'web mode is TCP only');
+    assert.deepEqual([transport.opened[0].destroyed, tcp.log], [false, ['open']], 'the TCP connection to the same port stays');
+    assert.deepEqual(w.gateway.connections.map(c => c.via), ['tcp']);
+});
+
 test('UDP: the policy and a missing transport refuse a flow before anything is sent', () => {
     const none = world({transport: fakeTransport(), settings: {mode: 'all'}});
     none.guest.udpSend('8.8.8.8', 53, 4000, [1]);
