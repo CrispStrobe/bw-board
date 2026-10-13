@@ -1,6 +1,6 @@
 # Broader transient instrument qualification
 
-## First batch (qualified source, publication pending)
+## First batch (qualified)
 
 Twelve independently authored circuits: four RC, four series RLC, and four
 Shockley-diode reservoir/filter cases. Parameter corners vary time constant,
@@ -81,8 +81,14 @@ integration of those tables. Every case completed within the original budget.
 The actual 20% resistor perturbation completed and disagreed by 0.294583 V;
 the unavailable-provider CLI refused without acquiring the engine. Both negative
 controls were reached and passed on the replacement, unlike the first failed run.
-Current-main integration and the documentation closeout preserve these circuit
-and oracle bytes; publication requires the final combined branch checks.
+Final integration `4b23dcd1d660c6954b69b1a197d6574b66ca07f7` also passed
+[CI 38418024812](https://github.com/CrispStrobe/bw-board/actions/runs/38418024812)
+(8,536 passed, zero failed, 302 documented skips) and
+[Harris 38418024893](https://github.com/CrispStrobe/bw-board/actions/runs/38418024893).
+The independent raw audit again accepted all cases and the completed electrical
+negative control. Later isolated x86 tooling merges and this documentation
+closeout preserve every tested circuit and oracle byte. No consumer adoption
+or deployment is claimed.
 
 ## Subsequent batches, in the approved roadmap order
 

@@ -41,7 +41,7 @@ product/compiler/guest execution, source ownership/lease or RTx qualification.
 Future Git adapter integration, complete transitive graph/supervisor/event/job admission and
 actual hosted execution remain separate. No consumer pins or unrelated lanes.
 
-2026-10-13 transient qualification matrix — DONE source, publication pending, Codex bwcx.
+2026-10-13 transient qualification matrix — DONE, Codex bwcx.
 Branch lane/transient-matrix-prepare-20261013, exact base4c5fe57c.
 Five evidence paths: LANES.md, scripts/qualify-transient-matrix.mjs,
 test/transient-matrix.test.mjs, scripts/oracle-census.mjs and
@@ -84,6 +84,11 @@ mutant completed and disagreed0.294583 V; unavailable-provider CLI refused.
 Integrated separate current-main LabWired/x86 changes for final combined
 qualification. Circuit/model/oracle bytes remain identical to03503ed0.
 No physical/corpus-wide claim, consumer pin movement or deployment.
+Final circuit-plus-LabWired/display integration4b23dcd1 qualified in
+CI38418024812 (8536 pass/0 fail/302 documented skips) and Harris38418024893.
+Independent raw audit again accepts all twelve cases and electrical mutant.
+Latest isolated x86 tooling merges preserve every tested circuit/oracle byte;
+focused pure controls pass. Normal guarded master integration closes this lane.
 
 2026-10-13 simulation-time current scope — DONE, Codex bwcx.
 Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.
