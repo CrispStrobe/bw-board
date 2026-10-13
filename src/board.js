@@ -2217,9 +2217,29 @@ export class BoardImpl {
    *   reference. Requires referenceNetId.
    * @param {number} [opts.inputFarads] - Finite parallel capacitance stamped
    *   from tip to reference. Requires referenceNetId; zero is allowed.
+   * @param {'display'|'simulation'} [opts.currentClock='display'] - Current
+   *   channels only. Simulation mode records accepted-solve current at exact
+   *   sample times; display mode preserves sampleCurrentChannels acquisition.
    * @returns {number} Channel handle
    */
   addScopeChannel(opts) {
+    if (opts.currentClock !== undefined && (opts.type !== 'current'
+      || !['display', 'simulation'].includes(opts.currentClock))) {
+      throw new Error('scope currentClock requires current type and display or simulation');
+    }
+    if (opts.currentClock === 'simulation' &&
+      (!this.parts.some(part => part.id === opts.partId)
+        || this._netForTerminal(opts.partId, opts.terminal) === undefined)) {
+      throw new Error('simulation current scope requires a connected part terminal');
+    }
+    if (opts.currentClock === 'simulation' &&
+      (!(Number.isFinite(opts.sampleRateHz ?? 100000) && (opts.sampleRateHz ?? 100000) > 0
+          && (opts.sampleRateHz ?? 100000) <= 1e9)
+        || !Number.isSafeInteger(opts.depth ?? 8192) || (opts.depth ?? 8192) < 1
+        || (opts.depth ?? 8192) > 1000000
+        || (opts.capture !== undefined && opts.capture !== 'sample'))) {
+      throw new Error('simulation current scope requires finite cadence, bounded depth and sample capture');
+    }
     const referenceNetId = opts.referenceNetId ?? null;
     const hasInputResistance = opts.inputOhms !== undefined;
     const hasInputCapacitance = opts.inputFarads !== undefined;
@@ -2284,13 +2304,13 @@ export class BoardImpl {
     // the solution at the FIRST solve point at or after the sample instant — a
     // zero-order hold from above, within one solve step of the sample time, and
     // with E4.1 every source edge is already a solve point.
-    // A current channel is written only by sampleCurrentChannels(), which
-    // stores one instantaneous reading into both slots — so it has always BEEN
-    // a sample series and now says so.
+    // Legacy current channels are display sampled. The explicit simulation
+    // clock instead records accepted-solve samples through the shared grid.
     const capture = opts.capture === 'sample' || opts.type === 'current' ? 'sample' : 'envelope';
 
     const ch = {
       type: opts.type,
+      ...(opts.currentClock === 'simulation' ? {currentClock: 'simulation'} : {}),
       netId: opts.netId ?? null,
       referenceNetId,
       inputOhms: hasInputResistance ? opts.inputOhms : null,
@@ -2320,6 +2340,16 @@ export class BoardImpl {
     };
 
     this._scopeChannels.set(handle, ch);
+    // A passive DC board may have used the closed-form walker before this
+    // observer selected MNA. Acquire its static snapshot once at attachment,
+    // not by flushing a later endpoint into a transient sample. Reactive and
+    // device histories must keep their actual accepted-step authority.
+    if (ch.currentClock === 'simulation' && this.powered && !this._mnaCache
+      && !this._hasReactive() && this._deviceStates.size === 0 && this._shiftRegisters.size === 0
+      && !this._liveSolveError && !this._deviceSubstepOverflow && !this._transientAccuracyUnmet) {
+      // _solveMNA's existing wrapper owns the shared-budget charge exactly once.
+      this._adoptSolution(this._solveMNA(false));
+    }
     if (loadsCircuit) {
       this._rebuildScopeLoadView();
       this._solve();
@@ -2387,11 +2417,13 @@ export class BoardImpl {
       // Which of the two things the pairs are. A consumer that transforms the
       // buffer must be able to ASK, rather than assume — assuming was D24.
       capture: ch.capture ?? 'envelope',
+      ...(ch.currentClock === 'simulation' ? {currentClock: 'simulation'} : {}),
     };
   }
 
   /**
-   * Sample all current-type scope channels once (call from display loop, ~60 Hz).
+   * Sample display-clock current channels once (call from display loop, ~60 Hz).
+   * Simulation-clock channels are acquired independently and are excluded.
    * Returns a Map of handle → instantaneous current.
    * @returns {Map<number, number>}
    */
@@ -2399,6 +2431,7 @@ export class BoardImpl {
     const results = new Map();
     for (const [handle, ch] of this._scopeChannels) {
       if (ch.type !== 'current') continue;
+      if (ch.currentClock === 'simulation') continue; // Never add display-time samples to a clocked ring.
       const current = this.branchCurrent(ch.partId, ch.terminal);
       // Write into ring buffer as a single (min=max=current) pair
       const idx = ch.writeIndex * 2;
@@ -2430,9 +2463,10 @@ export class BoardImpl {
   _feedScopeVoltages() {
     for (const [, ch] of this._scopeChannels) {
       if (ch.type === 'digital') { this._feedDigital(ch, this.timeNs); continue; }
-      if (ch.type !== 'voltage') continue;
+      if (ch.type !== 'voltage' && ch.currentClock !== 'simulation') continue;
       if (this._scopeMeasurementFailed(ch)) continue;
-      const val = this._scopeVoltage(ch);
+      const val = ch.currentClock === 'simulation' ? this._scopeCurrentSample(ch, this._mnaCache) : this._scopeVoltage(ch);
+      if (val === null) continue;
       if (val < ch._bucketMin) ch._bucketMin = val;
       if (val > ch._bucketMax) ch._bucketMax = val;
       // A setPin/setControl edge is a DISCONTINUITY at this instant, not a
@@ -2460,7 +2494,7 @@ export class BoardImpl {
   }
 
   /**
-   * Feed the current voltage into scope voltage channels. MNA may supply its
+   * Feed accepted analog values into voltage and simulation-current channels. MNA may supply its
    * actual fractional solve time; the integer label alone is not sample readiness.
    * Called from advanceTo when time crosses sample boundaries.
    * @private
@@ -2468,11 +2502,12 @@ export class BoardImpl {
   _updateScopeChannels(tNs, exactTimeSec = null, solution = this._mnaCache) {
     for (const [, ch] of this._scopeChannels) {
       if (ch.type === 'digital') { this._feedDigital(ch, tNs); continue; }
-      if (ch.type !== 'voltage') continue;
+      if (ch.type !== 'voltage' && ch.currentClock !== 'simulation') continue;
       if (this._scopeMeasurementFailed(ch, solution)) continue;
 
-      // Get current voltage
-      const val = this._scopeVoltage(ch);
+      // Accepted analog value, with OUT-of-terminal polarity for currents.
+      const val = ch.currentClock === 'simulation' ? this._scopeCurrentSample(ch, solution) : this._scopeVoltage(ch);
+      if (val === null) continue;
 
       // Track running min/max for this bucket
       if (val < ch._bucketMin) ch._bucketMin = val;
@@ -2522,6 +2557,27 @@ export class BoardImpl {
       if (ch.capture === 'sample') {
         ch._prevTNs = tNs; ch._prevExactTimeSec = exactTimeSec; ch._prevVal = val;
       }
+    }
+  }
+
+  /** Accepted-solve snapshot only: do not flush a later endpoint into a sample. */
+  _scopeCurrentSample(ch, solution) {
+    try {
+      this._assertMeasurementSolution(solution);
+      if (!this.powered) return 0;
+      this._assertDeterminateCurrent(solution, ch.partId, ch.terminal);
+      const current = solution?.branchCurrents?.get(ch.partId)?.get(ch.terminal);
+      if (!Number.isFinite(current)) {
+        const error = new Error(`simulation current sample unavailable: ${ch.partId}.${ch.terminal}`);
+        error.code = 'SIM_SCOPE_CURRENT_UNAVAILABLE';
+        throw error;
+      }
+      return current;
+    } catch (error) {
+      if (!['SOLVE_FAILED_MEASUREMENT', 'INDETERMINATE_BRANCH_CURRENT',
+        'SIM_SCOPE_CURRENT_UNAVAILABLE'].includes(error.code)) throw error;
+      ch.failure ||= error.message;
+      return null;
     }
   }
 
@@ -5380,6 +5436,7 @@ export class BoardImpl {
     // real storage. The closed-form walker knows neither; answering from it
     // would display an unloaded voltage while the scope claims a loaded one.
     for (const [, ch] of this._scopeChannels) {
+      if (ch.currentClock === 'simulation') return true; // Accepted branch-current authority, never a walker guess.
       if (ch.type === 'voltage' && ch.referenceNetId !== null
           && (ch.inputOhms !== null || ch.inputFarads !== null)) return true;
     }
@@ -5658,7 +5715,7 @@ export class BoardImpl {
       basis.push('authored-analysis-maximum');
     }
     for (const [, ch] of this._scopeChannels) {
-      if (ch.capture === 'sample' && ch.type === 'voltage') {
+      if (ch.capture === 'sample' && (ch.type === 'voltage' || ch.currentClock === 'simulation')) {
         maxStepSec = Math.min(maxStepSec, Number(ch.intervalNs) / 1e9);
         basis.push('scope-sample-grid');
       }
@@ -6245,7 +6302,8 @@ export class BoardImpl {
    * solves either side. Unlike a source edge this is not a discontinuity: the
    * caller truncates the step and does NOT restart backward Euler.
    *
-   * Only channels that asked for `capture: 'sample'` are considered, so an
+   * Voltage channels requesting `capture: 'sample'` and explicit simulation-
+   * clock current channels are considered, so an
    * envelope channel — which is every channel any existing bench opens — adds
    * no barriers and costs nothing.
    *
@@ -6256,7 +6314,7 @@ export class BoardImpl {
     if (this._scopeChannels.size === 0) return null;
     let next = null;
     for (const [, ch] of this._scopeChannels) {
-      if (ch.capture !== 'sample' || ch.type !== 'voltage') continue;
+      if (ch.capture !== 'sample' || (ch.type !== 'voltage' && ch.currentClock !== 'simulation')) continue;
       const at = Number(ch._nextSampleNs) / 1e9;
       if (at > tSec + 1e-15 && (next === null || at < next)) next = at;
     }
