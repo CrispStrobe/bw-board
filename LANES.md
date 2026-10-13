@@ -1,5 +1,25 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 ADP7118 native instrument current startup — CLAIM, Codex bwcx.
+Branch lane/adp7118-native-instruments-20261013, exact basefe7e515961e4ab0398ce39ad76aaf272517434ec.
+Four evidence paths only: this ledger, scripts/qualify-adp7118-instruments.mjs,
+test/adp7118-native-instruments.test.mjs and spec-updates/adp7118-native-instruments.md.
+Six explicit RC cases (linear, temporary inrush limit, sustained overload,
+each with ideal/4-ohm VIN supply) for existing current-limited-envelope mode.
+Independent continuous piecewise RC/current and IQ integrals; no sampled
+engine output or device state as oracle input. Native200 samples at6 us on
+VOUT, package output-current and source input-current channels, currentClock
+simulation; watched means15 us..1.2 ms.80 provisional observer callbacks at
+15 us leave room for existing10 us device wakes under one whole20000/60001/200
+work budget. Warm-up included, actual integration charges retained; refusal
+cannot count as completion. Fixed0.5 uV/10 uA/11 uA waveform and1 uV/1 uA
+mean bounds; output-current bound follows the voltage bound/.05 ohm and
+input-current includes the stated IQ slope. Completed wrong-capacitance
+electrical mutation required; pure reference/refusal/mutation controls locally,
+actual engine and existing regressions hosted. Preserve all six reports on red.
+No power/Board/MNA/profile/default model, GUI, pin, workflow, deployment or
+physical ADP7118 qualification change; any required repair needs a fresh claim.
+
 2026-10-13 LM741 solver-native linear pole — DONE, Codex bwcx.
 Branch lane/lm741-linear-pole-20261013, exact basec5078499ebcde97ce615689667244b37c76eb22f.
 Eight paths only: this ledger, src/board.js (LM741 solver-view expansion),
