@@ -1,5 +1,15 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 labwired shared radio air — CLAIM, VPS Claude (opus).
+Branch feat/labwired-shared-air-20261013, exact base b7f9a973b244fed8401dc9e4d079085d1a719e58.
+Owns this row plus the `labAir` option only: src/labwired-adapter.js (option,
+attach after the S110 SoftDevice on every build), the one pass-through line in
+src/debug-target-factory.js, and a new describe block in
+test/labwired-firmware-only.test.mjs. Host tests with a stand-in engine only;
+no engine pin, catalog, wasm release, workflow, CPU, x86 or consumer-pin change,
+and no radio-accuracy or timing claim. A Calliope mini board entry needs a
+labwired-core system manifest first and is a separate claim.
+
 2026-10-13 full-profile source-position preparation — CLAIM, Codex x86.
 Branch lane/386-full-tree-source-position-20261013, exact base e77f34bdf2a9bcac6636b0aeb7d0320f83ff47ff.
 Owns this row, scripts/i80386-full-tree-profile-source/ and
@@ -4228,3 +4238,60 @@ HTTP bodies only. No actual acquisition, namespace replay, compiler or guest.
 Held source/transport/reader/containment algorithms remain unchanged. Parent
 transport source qualification and independently reviewed actual resources,
 envelope, original reader and official one-run guard remain separate gates.
+
+## Provisioning PID1 resource preparation — 2026-10-13
+
+Owned branch `lane/386-provisioning-pid1-limits-20261013`: new
+`scripts/i80386-provisioning-pid1/` namespace, dedicated pure-control workflow and
+this registry entry. Install and observe a literal process resource policy in
+owned Linux PID1 before product-component bootstrap. Local controls mock all
+PID, privilege and resource operations; no real limits or namespaces are changed.
+Actual entry remains unsealed and refuses; controller/bootstrap, containment,
+official envelope/reader and single-run approval remain separate integration.
+No caller policy, delegate or programme API; held profiles stay unchanged.
+No archive acquisition, toolchain execution, compiler, guest or RTx result.
+
+## Fixed contained provisioning entry preparation — 2026-10-13
+
+Owned branch `lane/386-provisioning-contained-entry-20261013`: new
+`scripts/i80386-provisioning-contained/` namespace, dedicated pure-control
+workflow and this entry. Compose exact held resource and controller sources;
+install/read back process limits before product bootstrap, hand off owned
+namespace/PID1 handles and bounded resource facts, wait for observer ACK, then
+load the fixed controller. All local process/resource/socket operations are
+mocked; actual entry remains unsealed. Pending parent PR540/541 qualification,
+external observer/approval/envelope/reader/one-run integration remain separate.
+No arbitrary programme/policy/factory API, actual namespaces, acquisition,
+compiler, guest or performance claim; held profiles remain unchanged.
+
+
+## Resource-handshake observer admission — 2026-10-13
+
+Owned branch `lane/386-provisioning-observer-admission-20261013`: new
+`scripts/i80386-provisioning-observer/` namespace, dedicated pure-control workflow
+and this entry. Independently decode the fixed resource packet, reuse held typed
+namespace/PID1 credential admission, and read back literal process limits before
+ACK. Retain owned handles and conservative failure facts. All local kernel/FD/
+socket/resource operations are mocked; no real limits, namespaces or signals.
+Actual entry and channel remain unconnected. Pending parent source qualification,
+full observer lifetime/timeout/output, independent official envelope/reader and
+externally reviewed single-run approval remain separate. No caller policy,
+factory or programme API and no acquisition/compiler/guest/RTx claim.
+
+
+## Provisioning observer lifetime preparation — 2026-10-13
+
+Owned branch `lane/386-provisioning-observer-lifetime-20261013`: new
+`scripts/i80386-provisioning-observer-lifetime/` namespace, dedicated pure-control
+workflow and this entry. Reuse exact held admission and namespace helpers; retain
+original bounded stdout/stderr prefixes, observe cooperative startup/execution
+deadlines, terminal admitted PID1, owned launcher reaping and two complete empty
+censuses. Borrow admission handles with one close owner. Failure cleanup may
+signal only the admitted held PID1 handle; preserve first errors and uncertain
+output, termination and closure. All local kernel, process, descriptor, socket
+and time operations are mocked. Actual entry and private launch/channel route
+stay unconnected; no caller command, FD, factory or policy API. These finite
+controls establish no hard timeout, continuous ownership lease, official source
+or host authority, actual provisioning, compiler, guest or performance result.
+Complete source graph, actual envelope/independent reader, external approval and
+official one-run admission remain separate gates. Parent PR544 must qualify.

@@ -163,6 +163,9 @@ async function createRiscV32Target(opts = {}) {
  * @param {Record<string,{peripheral:string,pin:number}>} [opts.pins] header map
  * @param {number} [opts.clockHz]
  * @param {string} [opts.systemYaml] override the generated manifest
+ * @param {object} [opts.labAir] a labwired-wasm `AirBus` to put an S110
+ *   board's radio on (firmware-only, `opts.labwiredBoard` with a SoftDevice);
+ *   boards given the same bus hear each other. Give each a different `name`.
  */
 async function createLabwiredTarget(opts) {
   const { wasm, board, firmware, name } = opts;
@@ -201,6 +204,7 @@ async function createLabwiredTarget(opts) {
     const adapter = createLabwiredAdapter({
       wasm, chipYaml: chip.chipYaml, firmware: image, firmwareOnly: true, blobs,
       softdeviceS110: s110 ? (name ?? labBoard.name) : undefined,
+      labAir: opts.labAir,
       clockHz: opts.clockHz ?? chip.clockHz, name: name ?? `bw-${chip.name}`,
       systemYaml: labBoard ? labBoard.systemYaml : undefined,
     });

@@ -1061,3 +1061,128 @@ Finish the separately versioned full-source/raw-output envelope, independent
 original reader and official event/job/step/artifact/single-run joins before the
 first actual provisioning attempt. Compilation and guest testing remain later
 gates; this connection adds no RTx or operating-system qualification.
+
+### PID1 process-limit preparation
+
+Transport [PR539](https://github.com/CrispStrobe/bw-board/pull/539) is merged.
+Controller [PR540](https://github.com/CrispStrobe/bw-board/pull/540) is merged
+after the corrected source controls and all enabled checks passed. Its first hosted fixture failed because checkout omitted the
+workflow file read by that fixture; the checkout input was corrected without
+changing the controller algorithm or limits. The original failure is preserved.
+
+The new [PID1 limits unit](../scripts/i80386-provisioning-pid1/README.md) prepares
+the literal process policy: CPU 180 seconds, address space 2 GiB, per-file size
+64 MiB, 256 descriptors and no core dump. Eighteen local mock controls and two
+independent refusal checks passed. Each installation has an immediate readback,
+followed by a final recheck of all five limits. Partial installation and first
+errors remain explicit; there is no rollback or sufficiency claim.
+
+The actual entry remains unsealed. Tests mock the resource operations and do not
+alter real provisioning limits or create namespaces. Linux/PID1/root/GitHub
+context observations alone do not prove owned namespace or official host identity.
+Process limits are not aggregate namespace budgets or disk quotas.
+
+Next, qualify this source and the controller separately, then connect the fixed
+limits entry before product bootstrap inside the admitted namespace. Extend the
+explicit source graph and independent actual envelope to retain resource facts,
+original output prefixes and conservative partial failures. Bind the containment
+observer, externally reviewed approval and official single-run record before
+acquiring inputs. Compilation, protected-mode application tests and RTx remain
+later gates; no operating-system compatibility result is added here.
+
+### Fixed contained-entry source checkpoint
+
+The [unconnected entry](../scripts/i80386-provisioning-contained/README.md)
+connects the fixed limits source to a versioned resource handshake and delayed
+controller loading. Twenty-one mock controls and two independent refusal checks
+passed with the workflow's Linux system Python. Its source-control environment
+requires `os.pidfd_open`; these tests mock it and establish no real handle or
+namespace behavior.
+
+The entry admits literal parent component pins, verifies all resource facts,
+freezes the bounded packet before opening handles, and requires exact send and
+ACK before reading or executing controller source. Duplicate or partial handles,
+negative controller results, reentry and close uncertainty remain refusals with
+preserved partial facts and first errors. Actual entry, channel and external
+metadata remain unsealed or unconnected. Parent controller and limits sources
+must qualify separately; composing their branches is not adoption evidence.
+
+Next, integrate the external observer with this new resource-packet protocol;
+the older fixture observer cannot automatically admit it. Bind namespace/PID1
+identity, exact resources, source, timeout and original-output caps before ACK.
+Finish the separate actual envelope and independent original reader, then the
+externally reviewed approval and official single-run gate. Keep the compiler
+disabled until actual provisioning is independently qualified. No real limits,
+namespace/socket probe, archive, guest or RTx result is added by this checkpoint.
+
+### Resource-handshake observer admission
+
+The [observer admission unit](../scripts/i80386-provisioning-observer/README.md)
+independently decodes the contained entry's bounded resource packet. It reuses
+the exact held namespace/PID1 admission code, joins kernel sender credentials
+to the received handles, and reads each literal process limit using the
+read-only, two-argument `prlimit` operation. PID1 terminal checks surround those
+reads; namespace identity is checked again before ACK.
+
+Successful admission retains its received namespace and PID1 handles until
+explicit close. Packet, ancillary-descriptor, resource, identity, reentry and
+cleanup failures refuse admission and preserve partial observations. An ACK
+attempt may escape even when sending subsequently fails; that uncertainty
+cannot be rolled back or used to claim the contained controller stayed blocked.
+
+The actual entry and channel remain unconnected. Twenty-eight mocked controls passed under the
+workflow interpreter and bounds, including the exact held helper connection.
+Local controls mock kernel, resource, descriptor and socket operations. These are
+finite observations, not
+a continuous PID ownership lease, resource-sufficiency result or official host
+qualification. Per-process limits do not establish aggregate budgets or disk
+quotas. No actual provisioning, compilation, guest or RTx result is added.
+
+Next, qualify this source and its parent entry separately. Integrate retained
+handles with the full observer lifetime, bounded startup and execution time,
+original stdout/stderr caps, PID1 terminal observation and conservative census
+cleanup. Freeze the complete executable/data source graph, then implement the
+separate actual envelope and independent original-artifact reader. Bind external
+approval to the official event, job, step, artifact and single-run record before
+an actual attempt. Keep the compiler disabled until provisioning passes those
+independent gates.
+
+### Observer lifetime and original-output preparation
+
+PID1 resource preparation [PR541](https://github.com/CrispStrobe/bw-board/pull/541)
+is merged after all enabled exact-head checks passed. Its actual resource and
+namespace operations remain unqualified.
+
+The [lifetime unit](../scripts/i80386-provisioning-observer-lifetime/README.md)
+is a separate unconnected source slice around the held resource admission. Its
+39 mocked controls passed under the workflow interpreter and bounds, including
+the exact admission unit's positive and ACK-failure connections. Controls use a
+private manufactured launch/channel route, with kernel, process, socket,
+descriptor and clock operations mocked. The source captures original
+stdout/stderr prefixes of at most 64 KiB each; overflow preserves the prefix and
+refuses completion. Original bytes, observed counts and EOF facts stay separate
+from process return status.
+
+The proposed startup, execution and total observation budgets are eight, 480 and
+488 seconds respectively. They constrain cooperative observations; synchronous
+setup, launch or kernel work still needs an enclosing supervisor for a hard
+timeout. Source-only checks do not establish that these budgets are sufficient
+for actual provisioning.
+
+A positive finite observation requires both pipe EOFs, terminal admitted PID1,
+owned launcher reaping and two complete empty namespace censuses while handles
+remain retained. The admission unit is the sole close owner of those handles.
+Failure cleanup may signal only a retained, unconsumed admitted PID1 handle.
+Historical admission or an escaped ACK cannot authorize reuse of a closed
+descriptor; enumerated PIDs never become signal targets. Missing or uncertain observations, expired cleanup
+budgets, reentry and close failures retain the first error and refuse completion.
+Actual launch and channel remain unconnected. No namespace lease, official host
+authority, actual acquisition, compilation, guest or RTx result is added.
+
+Next, qualify this unit and its parent source separately. Bind the complete
+executable/data graph and enclosing timeout before actual integration. Define
+the separate full-source/resource/raw-output envelope and an independent reader
+that checks originals without importing producer validators or replaying guests.
+Bind externally reviewed approval to the consumed official event, exact head,
+attempt, job, steps and terminal artifact before a single actual provisioning
+run. Keep compiler activation and guest tests behind that qualified checkpoint.
