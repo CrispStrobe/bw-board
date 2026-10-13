@@ -843,6 +843,62 @@ The ordered follow-up tasks are:
    1,196 files, 78 directories and 13 hard-link aliases; that inventory does not
    establish that every file is needed by the owned C client.
 
+   Source preparation is split into focused PRs:
+   [standalone writer PR526](https://github.com/CrispStrobe/bw-board/pull/526),
+   [authenticated TAR bridge PR527](https://github.com/CrispStrobe/bw-board/pull/527),
+   and [selected-notice connection PR529](https://github.com/CrispStrobe/bw-board/pull/529).
+   The writer's [20 manufactured controls passed on GitHub](https://github.com/CrispStrobe/bw-board/actions/runs/38298598139);
+   the bridge's [25 manufactured controls passed on GitHub](https://github.com/CrispStrobe/bw-board/actions/runs/38299860676),
+   as did the notice connection's [20 extractor and 15 coordinator controls](https://github.com/CrispStrobe/bw-board/actions/runs/38306188271).
+   These prepare source policies only: none has provisioned the actual full
+   tree or enabled compilation. PR526 has landed; PR527 was refreshed onto main
+   and needs its new exact-head checks. PR529 follows the bridge; after that parent
+   lands, refresh and retarget the connection, then check its resulting exact head.
+   Do not adopt the older broad source stack to integrate these small modules.
+
+   The [bounded packet writer PR530](https://github.com/CrispStrobe/bw-board/pull/530)
+   prepares nine-role text serialization and declared failure-stage role sets.
+   Its source includes 25 manufactured controls for caps, immutable admission,
+   exclusive outputs, readback, partial retention and cleanup refusal. Exact-head
+   hosted checks remain pending. This serializer cannot authenticate an event or
+   job; complete profile-source admission, raw trap/log provenance and independent
+   original-artifact integration remain separate unfinished tasks.
+
+   The next provisioning checkpoint needs a separate bounded hosted profile and
+   independent reader. Complete these tasks before acquiring its actual inputs:
+
+   - Admit the runner, workflow, source table and artifact writer alongside all
+     inherited parser/writer sources. Bind the exact reviewed head and observe
+     those bytes before and after the attempt; inherited source hashes alone do
+     not admit the new execution path.
+   - Define a closed event receipt, exact exit/phase status and bounded control
+     and execution logs. Preserve first failures and partial results. Assemble
+     the nine text roles once: `source-before.json`, `source-after.json`,
+     `event.json`, `report.json`, `control.stdout`, `control.stderr`,
+     `run.stdout`, `run.stderr` and `status.txt`. Set explicit per-role and total
+     limits before execution.
+   - Review the reader without importing producer helpers. Require exact nested
+     schemas, input order/pins, manifest-derived counts, cleanup joins and false
+     qualification flags; reject inconsistent positive reports.
+   - Bind the sole actual run, attempt, named jobs/steps and terminal artifact
+     metadata before reading its original artifact body. Join event, source,
+     status, logs and report semantics; a consistent report alone cannot qualify
+     an official execution.
+
+   Keep this profile limited to provisioning and selected-notice consistency.
+   A successful result does not establish full compiler closure, complete notice
+   coverage, guest compatibility or improved RTx.
+
+   Continue by validating the closed DJGPP ZIP source joins and the three
+   selected notice bodies, then authenticate the two separately sourced GCC
+   notice bodies. A reported hash table or caller-supplied matching bytes does
+   not establish an extractor-issued handoff. Require all four archive pins
+   before parsing, full bounded ZIP structure/body closure, and rejection of
+   reentry before later processing or retention. Preserve raw notice bytes;
+   these five selected notices remain incomplete coverage. Only after the
+   reviewed parser, writer, notice inputs and resource profile are connected
+   and independently qualified should a new compiler profile be considered.
+
    A fresh implementation must satisfy these acceptance criteria:
 
    - Freeze exact required paths, kinds, extents and hashes, including executable
