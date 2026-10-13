@@ -4533,3 +4533,10 @@ Production loaders/validators and CPU source are not owned for changes here;
 review any required scope extension before code. The claim and source design are reviewed. The first fixed metadata/context
 helper has mocked controls; actual materialization/import and ten-harness wiring
 remain unconnected. No historical/current CPU qualification is claimed.
+
+### Historical fixed materializer adapter — 2026-10-13
+
+- Branch: `lane/386-historical-materializer-20261013`.
+- Owned paths: `scripts/i80386-historical-source-contexts/materializer.py`, `materializer-controls.py`, `MATERIALIZER.md`, this registry entry and `docs/I80386-HISTORICAL-SOURCE-CONTEXTS.md`.
+- Scope: fixed provider and original-object admission, owned detached sparse 186-file context, bounded Git transport, nofollow byte readback and owned cleanup. Existing consistency model and metadata remain unchanged.
+- Validation: manufactured boundary controls only. No real materialization, historical Node import, assembly, guest, current CPU or performance qualification. Node bridge, ten harnesses and workflow wiring require a separately reviewed next patch.

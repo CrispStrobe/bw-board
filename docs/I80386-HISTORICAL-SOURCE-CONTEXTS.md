@@ -115,3 +115,7 @@ The [fixed helper](../scripts/i80386-historical-source-contexts/README.md) retai
 selectors. Seventeen tiny controls exercise mocked joins and refusals. Production
 loaders, current CPU and historical pins are unchanged. Actual materialization,
 harness/workflow wiring and affected hosted qualification remain future work.
+
+## Fixed materializer source slice
+
+The separate [materializer source contract](../scripts/i80386-historical-source-contexts/MATERIALIZER.md) adds a bounded detached sparse-context adapter using the held 186-row admission and original proofs. Its 41 manufactured controls mock all Git, process and materialization boundaries. The published consistency model and held pins remain unchanged. Real hosted materialization, the fixed Node import bridge and ten-harness wiring remain pending; this source slice does not qualify historical runtime or the current CPU candidate.
