@@ -1,20 +1,35 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 full-profile source-position preparation — CLAIM, Codex x86.
+Branch lane/386-full-tree-source-position-20261013, exact base e77f34bdf2a9bcac6636b0aeb7d0320f83ff47ff.
+Owns this row, scripts/i80386-full-tree-profile-source/ and
+.github/workflows/i80386-full-tree-profile-source.yml only. Bounded closed
+external descriptor/table and separately versioned before/after source positions;
+all fourteen inherited source rows plus explicit new profile kinds; exact advertised
+workflow identity, no self-row table hash cycle, finite Git/live byte joins and
+first-error cleanup. Independent reader and manufactured controls, including a separate fixed Git
+plumbing adapter tested only on owned temporary repositories. The adapter stays
+unconnected; its clean scope is the index plus explicit admitted files. External
+seal stays unset and the gate production Git interface refuses; no actual input acquisition,
+product/compiler/guest execution, source ownership/lease or RTx qualification.
+Future Git adapter integration, complete transitive graph/supervisor/event/job admission and
+actual hosted execution remain separate. No consumer pins or unrelated lanes.
 
-2026-10-13 unarmed supervisor independent lifecycle reader — CLAIM, Codex x86.
-Branch lane/386-unarmed-supervisor-reader-20261013, exact parent
-ca6825b1190b6969a165902e2f09fa7bd05dae3a. Owns this row,
-scripts/i80386-unarmed-supervisor/{reader.py,reader-controls.py,
-inherited-roles.json,integration-controls.py}, namespace README.md and the
-dedicated synthetic workflow steps and root-coordinated docs/X86-NEXT-LANES.md
-checkpoint only. Project the separately reviewed
-independent reader without producer imports; manufacture portable JSON refusal
-controls and two bounded tiny-repository whole-path cases. Keep raw logs distinct
-from fact packets and complete source observations distinct from inherited
-projections. External seals and all acquisition/source/lease/compiler/guest
-qualifications remain unset or false. No parent producer change, archive/network
-input, product execution, dependency adoption or actual launch. Source review
-precedes publication; root coordinates parent merges and checkpoint docs.
+2026-10-13 transient qualification matrix preparation — CLAIM, Codex bwcx.
+Branch lane/transient-matrix-prepare-20261013, exact base4c5fe57c.
+Five evidence paths: LANES.md, scripts/qualify-transient-matrix.mjs,
+test/transient-matrix.test.mjs, scripts/oracle-census.mjs and
+spec-updates/transient-matrix.md. Prepare the first twelve independently authored
+RC/RLC/diode transient cases,200 voltage/current samples and two meter means per
+case, using two raw SPICE refinements and predeclared bounds. Explicit zero IC,
+matched thermal constants/model cards, sign/load/time and single whole-capture
+work authority; retain unavailable/refused cases and numerical mismatches.
+First batch is not all-family/physical/corpus qualification. Opamp, regulator
+and transistor families remain subsequent batches, with actual model-domain
+review before choosing independent references. No production/model/pin/workflow
+edits or local engine/oracle execution. LOCAL preparation only until current
+scope lane88cdd9fb qualifies and lands; no qualification dispatch or matrix
+landing before that prerequisite. Other target/source lanes excluded.
 
 2026-10-13 simulation-time current scope — CLAIM, Codex bwcx.
 Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.
@@ -4064,6 +4079,20 @@ Astra coordinated one Sol coder and one independent auditor. Qualified source `1
 
 Measured source `809c3fba86a81501a08b0d1e81d4e1d23e241d41` authenticates63 inputs. All four budgets and a fresh root repeat pass192 successfulQ/194N/1156functional clocks, eight RAM witnesses, two page faults, five successfulREP elements and actualPIT/PIC delivery. All62 actual-report tests (61 specific coherent corruption cases) and eight host tests pass with zero skips; 24 native guards, 22 transport rejections and 11 API witnesses pass with actual failure phases checked. Root authenticates251 artifacts and whole backing per capture; independent raw checks4705 each verify aliases, pagewalk/A-D and exact budget-one resume cuts. Raw native streams, allCPU/chips/bus/RPC match between captures; completeJSON retains differing paths. Prior six inventories300 inputs remain unchanged. [Notes and receipts](docs/I80386-NATIVE-COMBINED-PAGING-RAM-ACTUAL-BOARD.md) disclose reset/ordered-bus/cache-policy differences and retained unqualified diagnostics. Next direct callbacks/optional capture for the same bounded guest, then measured speed and broader backend qualification. No fullAT/broader guest/broader game/RTx claim.
 
+2026-10-12 bounded full-tree packet source preparation — CLAIM, Codex x86.
+Branch lane/386-full-tree-packet-source-20261012, exact base
+d16f0dd4fd84a210d59a2a55c87c235ef40c2af2. Owns this row,
+scripts/i80386-full-tree-actual-packet/ and
+.github/workflows/i80386-full-tree-actual-packet.yml only. Prepare a bounded,
+one-shot text packet writer and manufactured controls, with declared stage-specific
+partial role sets, immutable admitted payloads, exclusive outputs and first-failure
+retention. Event/source/report/status/log consistency cannot authenticate an
+actual job, admit the future complete source graph, or qualify a compiler/guest.
+No actual acquisitions, provisioning, runtime execution, performance measurement,
+consumer pins or unrelated lane changes. Independent source review and bounded
+synthetic hosted checks precede integration; actual executor/resource/source/job
+admission remains separate and disabled.
+
 
 ### 2026-10-12: selected notice source composition preparation
 
@@ -4088,3 +4117,18 @@ registry entry and the coordinated `docs/X86-NEXT-LANES.md` checkpoint.
 Acceptance: fifteen offline supervisor and twenty-one manufactured admission
 controls, fixed bootstrap bindings, preserved raw refusals and source observations.
 No actual acquisition, compiler, guest, consumer pin or operational seal changes.
+
+2026-10-13 unarmed supervisor independent lifecycle reader — CLAIM, Codex x86.
+Branch lane/386-unarmed-supervisor-reader-20261013, exact parent
+ca6825b1190b6969a165902e2f09fa7bd05dae3a. Owns this row,
+scripts/i80386-unarmed-supervisor/{reader.py,reader-controls.py,
+inherited-roles.json,integration-controls.py}, namespace README.md and the
+dedicated synthetic workflow steps and root-coordinated docs/X86-NEXT-LANES.md
+checkpoint only. Project the separately reviewed
+independent reader without producer imports; manufacture portable JSON refusal
+controls and two bounded tiny-repository whole-path cases. Keep raw logs distinct
+from fact packets and complete source observations distinct from inherited
+projections. External seals and all acquisition/source/lease/compiler/guest
+qualifications remain unset or false. No parent producer change, archive/network
+input, product execution, dependency adoption or actual launch. Source review
+precedes publication; root coordinates parent merges and checkpoint docs.
