@@ -25,7 +25,7 @@ product/compiler/guest execution, source ownership/lease or RTx qualification.
 Future Git adapter integration, complete transitive graph/supervisor/event/job admission and
 actual hosted execution remain separate. No consumer pins or unrelated lanes.
 
-2026-10-13 transient qualification matrix preparation — DONE candidate, Codex bwcx.
+2026-10-13 transient qualification matrix — DONE source, publication pending, Codex bwcx.
 Branch lane/transient-matrix-prepare-20261013, exact base4c5fe57c.
 Five evidence paths: LANES.md, scripts/qualify-transient-matrix.mjs,
 test/transient-matrix.test.mjs, scripts/oracle-census.mjs and
@@ -40,7 +40,7 @@ review before choosing independent references. No production/model/pin/workflow
 edits or local engine/oracle execution. LOCAL preparation only until current
 scope lane's final forward head qualifies and lands; no qualification dispatch or matrix
 landing before that prerequisite. Other target/source lanes excluded.
-Canonical25b6763d preceded preparation. Twelve cases now implemented; three
+Historical preparation checkpoints: Canonical25b6763d preceded preparation. Twelve cases implemented; three
 pure controls pass, including invalid CLI/model/refinement/grid/work/mean
 adversaries and isolated real final-point/polarity comparator mutants. No
 numerical execution or branch push performed; engine integration/qualification
@@ -60,6 +60,14 @@ versus fixed10 µV), before its engine acquisition; eleven other cases agreed.
 Forward evidence repair halves both SPICE steps to0.5/0.25 ns uniformly,
 preserving all circuit/model/work/bounds. Three pure controls pass; fresh
 hosted qualification required, no unchanged rerun or landing.
+Replacement03503ed0 qualified all twelve cases in CI38397645192
+(8526 pass/0 fail/302 documented skips) and Harris38397645169.
+Independent raw-bracket audit: maximum point14.929572 µV/14.343681 nA;
+reported mean agreement0.344975 µV/0.636373 nA. Physical20% resistor
+mutant completed and disagreed0.294583 V; unavailable-provider CLI refused.
+Integrated separate current-main LabWired/x86 changes for final combined
+qualification. Circuit/model/oracle bytes remain identical to03503ed0.
+No physical/corpus-wide claim, consumer pin movement or deployment.
 
 2026-10-13 simulation-time current scope — DONE, Codex bwcx.
 Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.

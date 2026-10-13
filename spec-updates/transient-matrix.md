@@ -1,6 +1,6 @@
 # Broader transient instrument qualification
 
-## First batch (prepared, not qualified)
+## First batch (qualified source, publication pending)
 
 Twelve independently authored circuits: four RC, four series RLC, and four
 Shockley-diode reservoir/filter cases. Parameter corners vary time constant,
@@ -55,8 +55,14 @@ the original 1 ns / 0.5 ns reference differed by 12.124181 µV at 19.6 µs,
 over the unchanged 10 µV refinement bound. The other eleven cases agreed.
 The forward repair halves both reference steps for all twelve cases without
 changing circuit parameters, engine budgets or agreement/refinement bounds.
-Fresh hosted qualification is required. Pure parser/control tests do not authorize landing, pins
-or deployment. Qualification remains pending. Full raw solver tables are temporary; reports
+The replacement source `03503ed0e46de7f26aacb57c096ba556d6a83aa5`
+qualified in [CI 38397645192](https://github.com/CrispStrobe/bw-board/actions/runs/38397645192)
+and [Harris 38397645169](https://github.com/CrispStrobe/bw-board/actions/runs/38397645169).
+All twelve cases agree: 2,400 simultaneous voltage/current observations (4,800
+scalar comparisons) and 24 watched means. The full numerical suite reported
+8,526 passed, zero failed and 302 documented skips; optional full vectors did
+not run. These source results do not imply consumer adoption or deployment.
+Full raw solver tables are temporary; reports
 retain their hashes, sample bracketing rows and clipped-interval means.
 An isolated actual-circuit resistor perturbation must complete yet disagree
 with its unchanged SPICE reference. A process error or incomplete mutant does
@@ -64,6 +70,19 @@ not count as a successful electrical negative control.
 A hosted unavailable-provider CLI check must emit a selected-case refusal,
 perform no engine acquisition, and exit nonzero. Absence of the oracle cannot
 produce an empty or successful qualification result.
+
+An independent streamed audit reconstructed all reference samples from retained
+raw bracketing rows without importing the comparison helpers. Maximum point
+errors were 14.929572 µV and 14.343681 nA; reported mean differences were
+0.344975 µV and 0.636373 nA. Reference point refinement maxima were
+3.093779 µV and 3.681924 nA. The full raw integration tables were not retained,
+so this independent audit checks reported mean agreement, not a second complete
+integration of those tables. Every case completed within the original budget.
+The actual 20% resistor perturbation completed and disagreed by 0.294583 V;
+the unavailable-provider CLI refused without acquiring the engine. Both negative
+controls were reached and passed on the replacement, unlike the first failed run.
+Current-main integration and the documentation closeout preserve these circuit
+and oracle bytes; publication requires the final combined branch checks.
 
 ## Subsequent batches, in the approved roadmap order
 
