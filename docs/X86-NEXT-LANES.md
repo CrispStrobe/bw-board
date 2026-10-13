@@ -1065,8 +1065,8 @@ gates; this connection adds no RTx or operating-system qualification.
 ### PID1 process-limit preparation
 
 Transport [PR539](https://github.com/CrispStrobe/bw-board/pull/539) is merged.
-Controller [PR540](https://github.com/CrispStrobe/bw-board/pull/540) remains pending
-qualification. Its first hosted fixture failed because checkout omitted the
+Controller [PR540](https://github.com/CrispStrobe/bw-board/pull/540) is merged
+after the corrected source controls and all enabled checks passed. Its first hosted fixture failed because checkout omitted the
 workflow file read by that fixture; the checkout input was corrected without
 changing the controller algorithm or limits. The original failure is preserved.
 

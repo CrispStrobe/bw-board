@@ -4181,7 +4181,6 @@ official envelope/reader and single-run approval remain separate integration.
 No caller policy, delegate or programme API; held profiles stay unchanged.
 No archive acquisition, toolchain execution, compiler, guest or RTx result.
 
-
 ## Fixed contained provisioning entry preparation — 2026-10-13
 
 Owned branch `lane/386-provisioning-contained-entry-20261013`: new
