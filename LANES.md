@@ -4132,3 +4132,12 @@ projections. External seals and all acquisition/source/lease/compiler/guest
 qualifications remain unset or false. No parent producer change, archive/network
 input, product execution, dependency adoption or actual launch. Source review
 precedes publication; root coordinates parent merges and checkpoint docs.
+
+## Supervisor outer boundary synthetic controls — 2026-10-13
+
+Owned branch `lane/386-supervisor-outer-boundary-20261013`: only
+`scripts/i80386-supervisor-outer-boundary/`, its dedicated PR synthetic workflow
+and this registry entry. Acceptance: fixed Linux PID-namespace startup, detached
+session and bounded partial-output containment controls; local pure mocks only,
+privileged namespace observations on hosted Linux only after source review.
+No archive acquisition, compiler, guest, application integration or operational seal.

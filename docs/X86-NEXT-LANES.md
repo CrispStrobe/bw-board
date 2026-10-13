@@ -984,3 +984,30 @@ owned process remains; uncertain cleanup must refuse and must not affect unrelat
 processes. Bind the containment/tool identities, limits and exact source to the
 external approval. This is an unfinished implementation contract, not evidence
 that containment, storage quotas or an actual provisioning run already work.
+
+### Outer supervisor containment controls
+
+The [fixed outer-boundary profile](../scripts/i80386-supervisor-outer-boundary/README.md)
+adds nineteen pure mock controls and five fixed hosted Linux fixtures. Source
+review and local mock controls passed. All five fixed hosted observations passed
+in [original run 38361521769](https://github.com/CrispStrobe/bw-board/actions/runs/38361521769)
+on tested source `80a19c789b350be3a10bf3443f14a3fb34e948b3`; the durable result
+record is published separately in [PR538](https://github.com/CrispStrobe/bw-board/pull/538). The dedicated PR workflow tests normal completion, startup stall,
+detached-session stall, original binary stderr followed by a stall, and setup
+refusal. It retains original bounded output and tool/source hash observations.
+Production remains unsealed, and no archive, compiler or guest is launched.
+
+The fixture timer starts before namespace creation and Python bootstrap. Passing
+containment requires admitted namespace/PID1 handles, terminal PID1, reaped owned
+launcher, pipe EOF and two complete bounded namespace censuses. Observer startup
+and source admission have separate hosted bounds; this is not a universal hard
+deadline or a security sandbox for arbitrary root programs.
+
+Continue in order: inspect the original exact-head hosted artifact and every
+enabled check; resolve any failure while retaining the first diagnostic; integrate
+the independently reviewed lifecycle reader; then bind the actual provisioning
+profile to its official event, jobs, steps, artifact and single-run gate. Keep
+compilation disabled until that provisioning result is independently qualified.
+After compiler closure, test a freely licensed protected-mode client against an
+independent DPMI oracle and the AT guest. This preparatory checkpoint adds no RTx
+measurement or broader 386/operating-system compatibility claim.
