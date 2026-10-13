@@ -65,6 +65,10 @@ budget refusal without grading them as complete. No production code, reference,
 accuracy bound, work ceiling or sample grid is changed. A fresh changed-head run
 is required to distinguish input timing, controller timing and integration-call
 accounting before choosing a repair; the failed source is not rerun unchanged.
+Observers read already-published voltage/current maps directly, not public
+getters that may refresh a solve. Missing currents remain null and snapshot
+presence/convergence/dirty markers are retained. These observations are
+provisional evidence, never a replacement for completed instrument captures.
 
 No production, default model, GUI, package or deployment change is made by this
 audit. No physical noise, bias spread, temperature, nonlinear slew, current

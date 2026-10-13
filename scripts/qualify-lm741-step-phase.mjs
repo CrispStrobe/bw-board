@@ -102,11 +102,15 @@ async function capture (id) {
         result.receipt = board.advanceToBoundedStream(20000n, LIMITS, {stepNs: 100n, onStep: ({timeNs}) => {
             if (timeNs === 100n) {board.meterVoltage('out', 'zero'); board.meterCurrent('RL', 'a');}
             const state = board.getDeviceState('U');
+            const snapshot = board._mnaCache;
             // Provisional diagnostics survive a later whole-capture refusal.
             // These are never used to manufacture expected values or a pass.
             result.observations.push({timeNs: Number(timeNs), qualified: false,
-                input: board.nodeVoltage('input'), output: board.nodeVoltage('out'),
-                current: board.branchCurrent('RL', 'a'),
+                input: board.nodeVoltages.get('input') ?? null,
+                output: board.nodeVoltages.get('out') ?? null,
+                current: snapshot?.branchCurrents?.get('RL')?.get('a') ?? null,
+                snapshot: {present: Boolean(snapshot), converged: snapshot?.converged ?? null,
+                    dirty: board._solveDirty === true},
                 drive: {voltage: state.drives.out.vTh, resistance: state.drives.out.rTh},
                 lastUpdateNs: state._lastUpdateNs === null ? null : String(state._lastUpdateNs),
                 wakeNs: state._wakeNs === null ? null : String(state._wakeNs), beta: state._beta});
