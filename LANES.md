@@ -40,6 +40,11 @@ Forward production repair primes existing MNA only at simulation-clock attach
 for healthy powered nonreactive/no-device networks; transient sampling never
 flushes a later endpoint. Add standalone single-rail DC capture without display
 or getter priming, preserving all earlier failures and fixed numerical bounds.
+Exacta96afb96 CI38368554383 fails only the exact-one-solve observer test:
+the explicit new setup charge duplicated the charge already owned by
+_solveMNA/_solveLiveMNA. Remove the redundant charge, not the test or ceiling.
+Static/alias cases now pass; Harris38368554410 passes. Forward exact-head
+qualification still required; earlier full-run failures remain preserved.
 
 2026-10-13 winding edge instruments — DONE, Codex bwcx.
 Branch lane/winding-edge-instruments-20261013, exact base e2c1a507.
