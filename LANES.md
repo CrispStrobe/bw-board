@@ -1,5 +1,21 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+## Operational provisioning integration — CLAIM, 2026-10-13
+
+Branch `lane/386-provisioning-operational-profile-20261013`, Codex x86.
+Own `scripts/i80386-provisioning-operational-profile/`, its dedicated workflow,
+`docs/X86-PROVISIONING-OPERATIONAL.md` and this row. This publication is docs only;
+implementation starts after this claim and PR550 merge. Follow the
+[connected integration contract](docs/X86-PROVISIONING-OPERATIONAL.md): complete
+approved source graph, privileged enclosing bootstrap, validated child context,
+real contained entry/limits/ACK/controller/lifetime, and bounded original
+controller/coordinator report collection. Retain the observation packet contract
+and parent default refusals. No alternate test predicate in an operational route,
+synthetic authority, compiler activation or guest/performance claim. Hosted
+affected-path qualification and independent original-report audit precede the
+separately consumed actual provisioning attempt. Other CPU, UI, FPGA, schematic
+and target lanes remain outside this claim.
+
 2026-10-13 full-profile source-position preparation — CLAIM, Codex x86.
 Branch lane/386-full-tree-source-position-20261013, exact base e77f34bdf2a9bcac6636b0aeb7d0320f83ff47ff.
 Owns this row, scripts/i80386-full-tree-profile-source/ and

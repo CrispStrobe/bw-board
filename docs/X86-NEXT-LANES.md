@@ -1,5 +1,10 @@
 # x86 checkpoint and next lanes
 
+The next connected compiler-provisioning task is the
+[operational integration contract](X86-PROVISIONING-OPERATIONAL.md). It specifies
+the missing launch, source-approval, child-context and original-report joins;
+implementation begins after its lane claim and the observation reader merge.
+
 Updated 2026-10-13. This is the handoff for the x86 lane, not a claim of complete PC compatibility. Read this file, [current lane evidence](X86-LANE.md), [loading guide](X86-LOADING-GUIDE.md), [compatibility roadmap](X86-COMPATIBILITY-ROADMAP.md), and [oracle strategy](X86-ORACLE-STRATEGY.md) before implementing a task. Refresh the repository's default branch first: historical tested SHAs identify evidence, while a new change needs its own source and artifact identities.
 
 ## Reached checkpoint
