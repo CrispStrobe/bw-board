@@ -12,6 +12,7 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { stepMotorVelocity, motorDirectionOf } from './dc-motor.js';
 
 const R_INPUT = 1e6;
 const R_OUT = 50;
@@ -24,6 +25,15 @@ export function registerMiscParts() {
   // ─── DC motor with quadrature encoder ─────────────────────────────
   // Same as dc_motor but additionally outputs quadrature signals (A, B)
   // based on angular position. Pulses per revolution configurable.
+  //
+  // SIGNED like dc_motor (Lite task B14): `velocity` is the rotor's signed
+  // angular velocity (+ forward, current a -> b), stepped by dc_motor's own
+  // stepMotorVelocity; `angle` integrates it, so in reverse it falls and the
+  // quadrature phases run backwards (B leads A), as a real encoder's do;
+  // `count` is the signed quadrature edge count a decoder would hold (4 per
+  // pulse); `omega` stays the speed, `direction` what the `direction of
+  // motor` reporter reads. Until 2026-10 omega was clamped at 0, so driven
+  // backwards the motor sat still and the encoder never moved.
   registerDevice('dc_motor_encoder', {
     terminals: ['a', 'b', 'enc_a', 'enc_b'],
 
@@ -33,8 +43,11 @@ export function registerMiscParts() {
           enc_a: { vTh: 0, rTh: R_OUT },
           enc_b: { vTh: 0, rTh: R_OUT },
         },
+        velocity: 0,
         omega: 0,
-        angle: 0,      // cumulative angle in radians
+        direction: 'stopped',
+        angle: 0,      // cumulative SIGNED angle in radians
+        count: 0,      // signed quadrature edge count
         _lastTNs: 0n,
         _lastSlot: 0,
       };
@@ -43,13 +56,12 @@ export function registerMiscParts() {
     stamp(ctx, part, state) {
       const R = part.params?.windingR ?? 10;
       const kV = part.params?.kV ?? 0.01;
-      ctx.conductance('a', 'b', 1 / R);
-      // Back-EMF
-      const backEMF = kV * state.omega;
-      if (Math.abs(backEMF) > 1e-12) {
-        ctx.current('a', -backEMF / R);
-        ctx.current('b', backEMF / R);
-      }
+      // dc_motor's stamp: back-EMF (kV x signed velocity, + at a) behind the
+      // winding resistance. This model's own Norton pair had the EMF INVERTED
+      // (the bug dc_motor shed earlier, test/referenced-drives.test.mjs): an
+      // open-circuit motor braked itself, a driven one ran at ~40 % of V/kV,
+      // and once signed, a coasting rotor that reached 0 crept into reverse.
+      ctx.theveninBetween('a', 'b', kV * state.velocity, R);
     },
 
     update(part, state, read, tNs) {
@@ -68,14 +80,20 @@ export function registerMiscParts() {
       // Motor dynamics
       const vA = read('a');
       const vB = read('b');
-      const current = (vA - vB - kV * state.omega) / R;
-      const torque = kT * current;
-      state.omega = Math.max(0, state.omega + (torque / J) * dtSec);
-      state.angle += state.omega * dtSec;
+      const v0 = state.velocity;
+      const current = (vA - vB - kV * v0) / R;
+      const v1 = stepMotorVelocity(v0, kT * current, 0, J, dtSec);
+      state.velocity = v1;
+      state.omega = Math.abs(v1);
+      state.direction = motorDirectionOf(v1);
+      state.angle += v1 * dtSec;
 
-      // Quadrature encoder: divide rotation into slots
+      // Quadrature encoder: divide rotation into slots. The edge index is
+      // signed (floor of a negative angle), its slot wraps into 0..n-1.
       const slotsPerRev = ppr * 4; // 4 edges per pulse (quadrature)
-      const slot = Math.floor((state.angle / (2 * Math.PI)) * slotsPerRev) % slotsPerRev;
+      const edge = Math.floor((state.angle / (2 * Math.PI)) * slotsPerRev);
+      state.count = edge;
+      const slot = ((edge % slotsPerRev) + slotsPerRev) % slotsPerRev;
 
       if (slot === state._lastSlot) return false;
       state._lastSlot = slot;
