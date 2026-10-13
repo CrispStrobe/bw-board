@@ -15,6 +15,22 @@ product/compiler/guest execution, source ownership/lease or RTx qualification.
 Future Git adapter integration, complete transitive graph/supervisor/event/job admission and
 actual hosted execution remain separate. No consumer pins or unrelated lanes.
 
+2026-10-13 transient qualification matrix preparation — CLAIM, Codex bwcx.
+Branch lane/transient-matrix-prepare-20261013, exact base4c5fe57c.
+Five evidence paths: LANES.md, scripts/qualify-transient-matrix.mjs,
+test/transient-matrix.test.mjs, scripts/oracle-census.mjs and
+spec-updates/transient-matrix.md. Prepare the first twelve independently authored
+RC/RLC/diode transient cases,200 voltage/current samples and two meter means per
+case, using two raw SPICE refinements and predeclared bounds. Explicit zero IC,
+matched thermal constants/model cards, sign/load/time and single whole-capture
+work authority; retain unavailable/refused cases and numerical mismatches.
+First batch is not all-family/physical/corpus qualification. Opamp, regulator
+and transistor families remain subsequent batches, with actual model-domain
+review before choosing independent references. No production/model/pin/workflow
+edits or local engine/oracle execution. LOCAL preparation only until current
+scope lane88cdd9fb qualifies and lands; no qualification dispatch or matrix
+landing before that prerequisite. Other target/source lanes excluded.
+
 2026-10-13 simulation-time current scope — CLAIM, Codex bwcx.
 Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.
 Six paths: LANES.md, src/board.js (explicit currentClock option, accepted-solve
