@@ -18,7 +18,8 @@
  *   DHCP       RFC 2131  server: DISCOVER/OFFER, REQUEST/ACK|NAK, RELEASE;
  *                        one address per client for as long as the node lives
  *   DNS        RFC 1035  server: A records from a table, NXDOMAIN otherwise
- * TCP is not here yet. There is no routing: the node talks to its own subnet.
+ *   TCP        RFC 793   in tcp.js, with its own statement of limits
+ * There is no routing: the node talks to its own subnet.
  *
  * NOTHING HERE TOUCHES A REAL NETWORK, and time does not pass: there are no
  * retransmissions, lease timers or cache expiry.
@@ -26,8 +27,11 @@
  * @module
  */
 
+import {checksum, be16, be32, put16, put32} from './bytes.js';
+import {Tcp} from './tcp.js';
+
 const ETH_ARP = 0x0806, ETH_IPV4 = 0x0800;
-const PROTO_ICMP = 1, PROTO_UDP = 17;
+const PROTO_ICMP = 1, PROTO_TCP = 6, PROTO_UDP = 17;
 const BROADCAST_MAC = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
 
 /** "10.0.0.1" -> 0x0a000001 (unsigned). Throws on anything else. */
@@ -52,18 +56,7 @@ export function mac (value) {
 
 export const macText = bytes => Array.from(bytes).slice(0, 6).map(b => b.toString(16).padStart(2, '0')).join(':');
 
-/** The Internet checksum (RFC 1071) of `bytes`, optionally continuing from `sum`. */
-export function checksum (bytes, sum = 0) {
-    for (let i = 0; i + 1 < bytes.length; i += 2) sum += (bytes[i] << 8) | bytes[i + 1];
-    if (bytes.length & 1) sum += bytes[bytes.length - 1] << 8;
-    while (sum >>> 16) sum = (sum & 0xffff) + (sum >>> 16);
-    return (~sum) & 0xffff;
-}
-
-const be16 = (b, at) => (b[at] << 8) | b[at + 1];
-const be32 = (b, at) => ((b[at] << 24) | (b[at + 1] << 16) | (b[at + 2] << 8) | b[at + 3]) >>> 0;
-const put16 = v => [(v >>> 8) & 0xff, v & 0xff];
-const put32 = v => [(v >>> 24) & 0xff, (v >>> 16) & 0xff, (v >>> 8) & 0xff, v & 0xff];
+export {checksum};
 
 export class Ipv4Node {
     /**
@@ -89,6 +82,10 @@ export class Ipv4Node {
             badChecksum: 0, fragments: 0, notForMe: 0, unhandled: 0};
         this.dhcp = null;
         this.dns = null;
+        this.handling = false;
+        this.inbox = [];
+        /** TCP on this node: `tcp.listen(port, onConnection)`, `tcp.connect(address, port)` (tcp.js). */
+        this.tcp = new Tcp(this);
     }
 
     get broadcast () { return ((this.ip & this.netmask) | ~this.netmask) >>> 0; }
@@ -103,8 +100,38 @@ export class Ipv4Node {
         this.link.send(Uint8Array.from([...dstMac, ...this.mac, ...put16(etherType), ...payload]), this);
     }
 
-    /** A frame from the LAN. The node is its own address filter, as a card is. */
+    /**
+     * A frame from the LAN.
+     *
+     * ONE FRAME AT A TIME. The LAN delivers before `send` returns, so a peer's
+     * answer can arrive while this node is still in the middle of handling
+     * the frame that caused it, with its own state half updated. Frames that
+     * arrive meanwhile wait their turn and are handled in order afterwards.
+     */
     deliver (frame) {
+        if (this.handling) { this.inbox.push(frame); return; }
+        this.run(() => this.handle(frame));
+    }
+
+    /**
+     * Do `work` (which may transmit) with arriving frames held back, then
+     * handle those in order. Calls into the node from an application that
+     * transmit go through here too, for the same reason `deliver` does.
+     */
+    run (work) {
+        if (this.handling) return work();
+        this.handling = true;
+        try {
+            const result = work();
+            while (this.inbox.length) this.handle(this.inbox.shift());
+            return result;
+        } finally {
+            this.handling = false;
+        }
+    }
+
+    /** One frame. The node is its own address filter, as a card is. */
+    handle (frame) {
         if (frame.length < 14) return;
         const mine = this.mac.every((b, i) => frame[i] === b);
         const group = (frame[0] & 1) === 1;
@@ -178,6 +205,7 @@ export class Ipv4Node {
         const body = p.subarray(headerLength, total);
         if (p[9] === PROTO_ICMP) this.receiveIcmp(body, src);
         else if (p[9] === PROTO_UDP) this.receiveUdp(body, src, dst, fromMac);
+        else if (p[9] === PROTO_TCP && dst === this.ip) this.tcp.receive(body, src);
         else this.counters.unhandled++;
     }
 
