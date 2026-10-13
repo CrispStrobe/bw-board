@@ -1114,3 +1114,35 @@ Finish the separate actual envelope and independent original reader, then the
 externally reviewed approval and official single-run gate. Keep the compiler
 disabled until actual provisioning is independently qualified. No real limits,
 namespace/socket probe, archive, guest or RTx result is added by this checkpoint.
+
+### Resource-handshake observer admission
+
+The [observer admission unit](../scripts/i80386-provisioning-observer/README.md)
+independently decodes the contained entry's bounded resource packet. It reuses
+the exact held namespace/PID1 admission code, joins kernel sender credentials
+to the received handles, and reads each literal process limit using the
+read-only, two-argument `prlimit` operation. PID1 terminal checks surround those
+reads; namespace identity is checked again before ACK.
+
+Successful admission retains its received namespace and PID1 handles until
+explicit close. Packet, ancillary-descriptor, resource, identity, reentry and
+cleanup failures refuse admission and preserve partial observations. An ACK
+attempt may escape even when sending subsequently fails; that uncertainty
+cannot be rolled back or used to claim the contained controller stayed blocked.
+
+The actual entry and channel remain unconnected. Twenty-eight mocked controls passed under the
+workflow interpreter and bounds, including the exact held helper connection.
+Local controls mock kernel, resource, descriptor and socket operations. These are
+finite observations, not
+a continuous PID ownership lease, resource-sufficiency result or official host
+qualification. Per-process limits do not establish aggregate budgets or disk
+quotas. No actual provisioning, compilation, guest or RTx result is added.
+
+Next, qualify this source and its parent entry separately. Integrate retained
+handles with the full observer lifetime, bounded startup and execution time,
+original stdout/stderr caps, PID1 terminal observation and conservative census
+cleanup. Freeze the complete executable/data source graph, then implement the
+separate actual envelope and independent original-artifact reader. Bind external
+approval to the official event, job, step, artifact and single-run record before
+an actual attempt. Keep the compiler disabled until provisioning passes those
+independent gates.
