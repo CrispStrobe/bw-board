@@ -1,5 +1,20 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 full-profile source-position preparation — CLAIM, Codex x86.
+Branch lane/386-full-tree-source-position-20261013, exact base e77f34bdf2a9bcac6636b0aeb7d0320f83ff47ff.
+Owns this row, scripts/i80386-full-tree-profile-source/ and
+.github/workflows/i80386-full-tree-profile-source.yml only. Bounded closed
+external descriptor/table and separately versioned before/after source positions;
+all fourteen inherited source rows plus explicit new profile kinds; exact advertised
+workflow identity, no self-row table hash cycle, finite Git/live byte joins and
+first-error cleanup. Independent reader and manufactured controls, including a separate fixed Git
+plumbing adapter tested only on owned temporary repositories. The adapter stays
+unconnected; its clean scope is the index plus explicit admitted files. External
+seal stays unset and the gate production Git interface refuses; no actual input acquisition,
+product/compiler/guest execution, source ownership/lease or RTx qualification.
+Future Git adapter integration, complete transitive graph/supervisor/event/job admission and
+actual hosted execution remain separate. No consumer pins or unrelated lanes.
+
 2026-10-13 simulation-time current scope — CLAIM, Codex bwcx.
 Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.
 Six paths: LANES.md, src/board.js (explicit currentClock option, accepted-solve

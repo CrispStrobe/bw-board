@@ -1,0 +1,16 @@
+{
+  "scripts/i80386-djgpp-notice-extractor/README.md": "bf6c36ac0e6ec1a79551895e088ba6d9ad2345de",
+  "scripts/i80386-djgpp-notice-extractor/controls.py": "29c76a09ac9e50bda7558dee18c3a9ea548f05a6",
+  "scripts/i80386-djgpp-notice-extractor/extractor.py": "a2414e18eaf2e1f6c1464f04afe6d0c103150a01",
+  "scripts/i80386-full-tree-archive-bridge/README.md": "6cbdde0ea93a9a8a51dfa4748a268eda306c5a2a",
+  "scripts/i80386-full-tree-archive-bridge/bridge.py": "b3f342cb11831b616880ccca15d8099202bf6807",
+  "scripts/i80386-full-tree-archive-bridge/controls.py": "47426d44214d4991bc96427588adc0eef4ad78ed",
+  "scripts/i80386-full-tree-notice-connection/README.md": "8adb1949d663de44be1a569a5aa5c8eb68131a92",
+  "scripts/i80386-full-tree-notice-connection/controls.py": "8ecccd485eefd70b649e73542d23085db1923a0b",
+  "scripts/i80386-full-tree-notice-connection/coordinator.py": "08c47105a5a786a5430a78d0b20b9dc684704349",
+  "scripts/i80386-full-tree-provisioner/README.md": "3c8bcc4366d1ba0e7b407531caf1e27768ed271d",
+  "scripts/i80386-full-tree-provisioner/controls.py": "fb9ada9482555bc91deb3a46d30444e3173712ce",
+  "scripts/i80386-full-tree-provisioner/manifest.json": "06807fd9952c5cd518e59cef5eff6721dd301a4d",
+  "scripts/i80386-full-tree-provisioner/provenance.json": "b923493f0d06e163cbdbd67d5f57a77b2fcd0d36",
+  "scripts/i80386-full-tree-provisioner/provision.py": "b11d4ee2e5f64c7d402eabf1f5151fc077d18a5a"
+}
