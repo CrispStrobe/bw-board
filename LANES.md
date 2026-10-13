@@ -1,5 +1,21 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-12 full-tree authenticated TAR bridge preparation — CLAIM, Codex x86.
+Branch lane/386-full-tree-archive-bridge-20261012, exact base
+0fa4278b011930483328dff36fe2c111902e7d88 from the standalone writer PR526.
+Owns this row, scripts/i80386-full-tree-archive-bridge/{bridge.py,controls.py,
+README.md} and .github/workflows/i80386-full-tree-archive-bridge.yml only.
+Authenticate four fixed builtin byte inputs before decoder or writer creation;
+parse only the toolchain TAR.BZ2 against the exact reported inventory and bounded
+GNU L subset; reserve content/chunk/decoded bounds and require complete closure
+before filesystem writes. Three ZIPs remain opaque in this slice. Five selected
+notice inputs are separately untrusted and incomplete; they are not supplied or
+authenticated by the four archive inputs alone. Enforce authenticated once-only
+parser entry and poison delegated writer work on reentry. Only manufactured
+controls run; no real archive acquisition, compiler, guest, performance, consumer
+pin or historical CPU-stack integration. Independent source review and bounded
+hosted controls precede any separately gated actual full-tree scenario.
+
 2026-10-12 winding engine/reference comparison — CLAIM, Codex bwcx.
 Branch lane/winding-engine-reference-comparison-20261012, exact base
 23f1e69ccf584738965e9e5fb36582d1a7a792b7. Five evidence-only paths:
