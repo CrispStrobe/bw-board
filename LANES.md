@@ -1,5 +1,15 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 labwired shared radio air — CLAIM, VPS Claude (opus).
+Branch feat/labwired-shared-air-20261013, exact base b7f9a973b244fed8401dc9e4d079085d1a719e58.
+Owns this row plus the `labAir` option only: src/labwired-adapter.js (option,
+attach after the S110 SoftDevice on every build), the one pass-through line in
+src/debug-target-factory.js, and a new describe block in
+test/labwired-firmware-only.test.mjs. Host tests with a stand-in engine only;
+no engine pin, catalog, wasm release, workflow, CPU, x86 or consumer-pin change,
+and no radio-accuracy or timing claim. A Calliope mini board entry needs a
+labwired-core system manifest first and is a separate claim.
+
 2026-10-13 full-profile source-position preparation — CLAIM, Codex x86.
 Branch lane/386-full-tree-source-position-20261013, exact base e77f34bdf2a9bcac6636b0aeb7d0320f83ff47ff.
 Owns this row, scripts/i80386-full-tree-profile-source/ and
@@ -31,7 +41,7 @@ edits or local engine/oracle execution. LOCAL preparation only until current
 scope lane88cdd9fb qualifies and lands; no qualification dispatch or matrix
 landing before that prerequisite. Other target/source lanes excluded.
 
-2026-10-13 simulation-time current scope — CLAIM, Codex bwcx.
+2026-10-13 simulation-time current scope — DONE, Codex bwcx.
 Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.
 Six paths: LANES.md, src/board.js (explicit currentClock option, accepted-solve
 current acquisition, sample barriers and display-write exclusion only),
@@ -48,6 +58,46 @@ against independently refined UIC SPICE with original fixed1uA agreement and
 1nA refinement bounds; no voltage channel may conceal missing current barriers.
 Affected engine tests and all actual numerical acquisition hosted only.
 No solver/device/model/tolerance/budget/pin/workflow/other-target changes.
+Canonical995821fa preceded implementation. Explicit simulation mode selects
+the existing MNA route; legacy display and voltage modes retain their selectors.
+Two pure comparator/exit controls and source syntax checks pass. Actual
+RC/default/reset/refusal/fractional/snapshot contracts, three actual method
+mutants and400-point independent current comparison await hosted qualification.
+Exact35190036 CI38349264289 fails one fixture assertion (8510 pass,1 fail,
+302 skipped), while Harris38349264153 passes. Generic duplicate ideal vsource
+rows are singular, not the supported redundant-vcc alias case. Forward test
+repair distinguishes both physical cases: singular source/load readings refuse;
+duplicate rail aliases solve the load but refuse nonunique source current.
+Production and numerical bounds unchanged. Fresh qualification required.
+Exact88cdd9fb CI38356419036 fails the private-cache persistence assertion
+(8510 pass,1 fail,302 skipped); Harris38356419022 passes. The cache is legitimately
+cleared after advance. Forward evidence repair uses validated public load current
+plus actual accepted-sample checks instead; no cache-lifetime requirement or
+production change. Fresh exact-head qualification remains required.
+Exactd219dd03 CI38360976179 reveals missing static MNA authority: an initially
+closed-form passive DC board has no current snapshot when the new observer is
+attached, so alias acquisition reports unavailable rather than indeterminate.
+Forward production repair primes existing MNA only at simulation-clock attach
+for healthy powered nonreactive/no-device networks; transient sampling never
+flushes a later endpoint. Add standalone single-rail DC capture without display
+or getter priming, preserving all earlier failures and fixed numerical bounds.
+Exacta96afb96 CI38368554383 fails only the exact-one-solve observer test:
+the explicit new setup charge duplicated the charge already owned by
+_solveMNA/_solveLiveMNA. Remove the redundant charge, not the test or ceiling.
+Static/alias cases now pass; Harris38368554410 passes. Forward exact-head
+qualification still required; earlier full-run failures remain preserved.
+Exacta45524ad passes CI38375224631/Harris38375224622:8513 passed,zero failed,
+302 skipped. Static priming, source aliases, exact-one solve accounting, three
+actual method mutants andall400 current samples pass. Independent raw grid/pair
+audit confirms maximum current error1.547073nA and3833/11491/51 capturework,
+withzero voltagechannels. Current main's motor-model source changes are merged
+for fresh combined qualification; no matrix or consumer adoption yet.
+Exact combined0f57d034 passes CI38384253011/Harris38384252976:8521 passed,
+zero failed,302 skipped. Independent raw400-point audit remains1.547073nA
+maximum error with3833/11491/51 work andzero voltagechannels. Latermainb7f9a973
+adds isolated x86 source-admission tooling only; qualified engine/test/general
+workflow bytes are preserved. Matrix qualification and consumer adoption remain
+separate pending stages; original failures are not erased.
 
 2026-10-13 winding edge instruments — DONE, Codex bwcx.
 Branch lane/winding-edge-instruments-20261013, exact base e2c1a507.
@@ -4168,3 +4218,28 @@ HTTP bodies only. No actual acquisition, namespace replay, compiler or guest.
 Held source/transport/reader/containment algorithms remain unchanged. Parent
 transport source qualification and independently reviewed actual resources,
 envelope, original reader and official one-run guard remain separate gates.
+
+## Provisioning PID1 resource preparation — 2026-10-13
+
+Owned branch `lane/386-provisioning-pid1-limits-20261013`: new
+`scripts/i80386-provisioning-pid1/` namespace, dedicated pure-control workflow and
+this registry entry. Install and observe a literal process resource policy in
+owned Linux PID1 before product-component bootstrap. Local controls mock all
+PID, privilege and resource operations; no real limits or namespaces are changed.
+Actual entry remains unsealed and refuses; controller/bootstrap, containment,
+official envelope/reader and single-run approval remain separate integration.
+No caller policy, delegate or programme API; held profiles stay unchanged.
+No archive acquisition, toolchain execution, compiler, guest or RTx result.
+
+## Fixed contained provisioning entry preparation — 2026-10-13
+
+Owned branch `lane/386-provisioning-contained-entry-20261013`: new
+`scripts/i80386-provisioning-contained/` namespace, dedicated pure-control
+workflow and this entry. Compose exact held resource and controller sources;
+install/read back process limits before product bootstrap, hand off owned
+namespace/PID1 handles and bounded resource facts, wait for observer ACK, then
+load the fixed controller. All local process/resource/socket operations are
+mocked; actual entry remains unsealed. Pending parent PR540/541 qualification,
+external observer/approval/envelope/reader/one-run integration remain separate.
+No arbitrary programme/policy/factory API, actual namespaces, acquisition,
+compiler, guest or performance claim; held profiles remain unchanged.
