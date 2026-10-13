@@ -7,10 +7,11 @@ import {MATRIX_CASES, MATRIX_TIMES_NS, matrixDeck, matrixCase, parseMatrixArgume
     matrixRefinement, compareMatrixCase, runMatrixCase} from '../scripts/qualify-transient-matrix.mjs';
 
 function fixture () {
-    const reference = {arms: [1, .5].map(maxStepNs => ({maxStepNs,
+    const reference = {caseId: 'rc-2', arms: [1, .5].map(maxStepNs => ({maxStepNs,
         measurements: MATRIX_TIMES_NS.map(timeNs => ({timeNs, voltage: 2, current: .01})),
         mean: {startNs: 100, endNs: 20000, voltage: 2, current: .01}}))};
-    const engine = {status: {accuracyMet: true, failure: null},
+    const engine = {caseId: 'rc-2', initialStorage: {capacitorVoltage: 0, inductorCurrent: null},
+        status: {profile: {id: 'precision-v1'}, accuracyMet: true, failure: null},
         receipt: {completed: true, failure: null, requestedTimeNs: '20000',
             limits: {maxAttempts: 20000, maxSolves: 60001, maxAdvances: 200},
             work: {attempts: 200, solves: 600, advances: 200}},
@@ -41,6 +42,9 @@ test('pure reviewed matrix/decks have twelve unique immutable cases, explicit IC
 test('pure matrix comparator requires stable reference, complete work/grid and exact watched means', () => {
     const pair = fixture(); assert.equal(compareMatrixCase(pair.engine, pair.reference).agreement, true);
     for (const edit of [
+        ({engine}) => {engine.caseId = 'rc-1';},
+        ({engine}) => {engine.initialStorage.capacitorVoltage = 2;},
+        ({engine}) => {engine.status.profile.id = 'interactive-v2';},
         ({engine}) => {engine.receipt.completed = false;},
         ({engine}) => {engine.receipt.work.attempts = 20001;},
         ({engine}) => {engine.samples.pop();},

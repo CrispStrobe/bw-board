@@ -66,6 +66,12 @@ export function matrixRefinement (coarse, fine) {
 }
 
 export function compareMatrixCase (engine, reference) {
+    const definition = matrixCase(reference?.caseId);
+    if (engine?.caseId !== definition.id || engine.initialStorage?.capacitorVoltage !== 0 ||
+        engine.initialStorage?.inductorCurrent !== (definition.family === 'rlc' ? 0 : null) ||
+        engine.status?.profile?.id !== 'precision-v1') {
+        throw new Error('Matched case and zero-storage precision initialization required');
+    }
     if (reference?.arms?.length !== 2) throw new Error('Exactly two ordered reference arms required');
     const refinement = matrixRefinement(...reference.arms);
     if (!refinement.stable) throw new Error('Matrix reference refinement failed before engine comparison');
@@ -136,7 +142,8 @@ async function captureEngine (id) {
         capture: 'sample', sampleRateHz: 1e7, depth: 202});
     const current = board.addScopeChannel({type: 'current', partId: currentPart, terminal: 'a',
         currentClock: 'simulation', sampleRateHz: 1e7, depth: 202});
-    const result = {};
+    const result = {caseId: id, initialStorage: {capacitorVoltage: board.capVoltages.get('C'),
+        inductorCurrent: row.family === 'rlc' ? board.inductorCurrents.get('L') ?? 0 : null}};
     try {
         result.receipt = board.advanceToBoundedStream(20000n, LIMITS, {stepNs: 100n, onStep: ({timeNs}) => {
             if (timeNs === 100n) {board.meterVoltage('out', 'zero'); board.meterCurrent(currentPart, 'a');}
@@ -159,7 +166,7 @@ async function captureEngine (id) {
 }
 
 export async function runMatrixCase (id, executable = process.env.NGSPICE || 'ngspice') {
-    const definition = matrixCase(id), reference = {arms: []};
+    const definition = matrixCase(id), reference = {caseId: id, arms: []};
     const report = {schema: 'transient-matrix-case-v1', definition, agreement: false, reference, engine: null};
     try {
         const version = spawnSync(executable, ['--version'], {encoding: 'utf8', timeout: 5000});
