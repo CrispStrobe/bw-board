@@ -240,6 +240,7 @@ class Controls(unittest.TestCase):
             def close(self):closed.append('selector');raise OSError('secondary-selector-close')
         class RootStat:st_uid=0;st_mode=stat.S_IFDIR
         with tempfile.TemporaryDirectory()as tmp:
+            checkout=Path(tmp,'synthetic-checkout');(checkout/'.git/objects/info').mkdir(parents=True)
             output=Path(tmp,'bw-provisioning-operational');output.mkdir();members=fixture()
             for name,body in members.items():
                 if name not in ('capture-index.json','official-event.json','observer-diagnostic.bin'):(output/name).write_bytes(body)
@@ -249,7 +250,7 @@ class Controls(unittest.TestCase):
                 if fd==111:raise first
                 return realread(fd,n)
             bodies={'scripts/i80386-provisioning-operational-profile/report-reader.py':(HERE/'report-reader.py').read_bytes()}
-            with patch.object(d,'EXTERNAL_APPROVAL_SHA256','c'*64),patch.dict(os.environ,env),patch.object(d,'_load',return_value=c),patch.object(c,'admit',return_value=({'head':'a'*40},bodies)),patch.object(c,'regular',new=lambda path,cap:realregular(path,cap)if str(path).startswith(str(output))else b'tool'),patch.object(os,'getuid',return_value=0),patch.object(os,'geteuid',return_value=0),patch.object(os,'getgid',return_value=0),patch.object(os,'getegid',return_value=0),patch.object(os,'lstat',new=lambda path,*a,**k:RootStat()if Path(path)in(ROOT,ROOT/'.git')else reallstat(path,*a,**k)),patch.object(d.subprocess,'Popen',return_value=Process()),patch.object(d.selectors,'DefaultSelector',return_value=Selector()),patch.object(os,'set_blocking',return_value=None),patch.object(os,'read',new=read),patch.object(d.time,'monotonic',return_value=100.0):
+            with patch.object(d,'ROOT',checkout),patch.object(d,'EXTERNAL_APPROVAL_SHA256','c'*64),patch.dict(os.environ,env),patch.object(d,'_load',return_value=c),patch.object(c,'admit',return_value=({'head':'a'*40},bodies)),patch.object(c,'regular',new=lambda path,cap:realregular(path,cap)if str(path).startswith(str(output))else b'tool'),patch.object(os,'getuid',return_value=0),patch.object(os,'geteuid',return_value=0),patch.object(os,'getgid',return_value=0),patch.object(os,'getegid',return_value=0),patch.object(os,'lstat',new=lambda path,*a,**k:RootStat()if Path(path)in(checkout,checkout/'.git')else reallstat(path,*a,**k)),patch.object(d.subprocess,'Popen',return_value=Process()),patch.object(d.selectors,'DefaultSelector',return_value=Selector()),patch.object(os,'set_blocking',return_value=None),patch.object(os,'read',new=read),patch.object(d.time,'monotonic',return_value=100.0):
                 with self.assertRaises(OSError)as caught:d.main()
             self.assertIs(caught.exception,first);self.assertEqual(closed.count('selector'),1);self.assertEqual(closed.count('pipe'),1);self.assertTrue((output/'observer-diagnostic.bin').exists())
 
