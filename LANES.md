@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-13 ADP7118 native instrument current startup — CLAIM, Codex bwcx.
+2026-10-13 ADP7118 native instrument current startup — DONE evidence candidate, Codex bwcx.
 Branch lane/adp7118-native-instruments-20261013, exact basefe7e515961e4ab0398ce39ad76aaf272517434ec.
 Four evidence paths only: this ledger, scripts/qualify-adp7118-instruments.mjs,
 test/adp7118-native-instruments.test.mjs and spec-updates/adp7118-native-instruments.md.
@@ -19,6 +19,14 @@ electrical mutation required; pure reference/refusal/mutation controls locally,
 actual engine and existing regressions hosted. Preserve all six reports on red.
 No power/Board/MNA/profile/default model, GUI, pin, workflow, deployment or
 physical ADP7118 qualification change; any required repair needs a fresh claim.
+Canonical claim7c0c304a preceded implementation. Three pure controls pass:
+independent25 ns quadrature checks of voltage/output/input means, exact region
+anchors and ideal/resistive supply identity; malformed/sparse grid/observer/
+clock/work/current refusals; executable changed-IQ and omitted-last-current
+mutants. Actual published observations must satisfy simultaneous port/load/
+supply KCL and IQ/drop checks. Engine test excluded locally by name; hosted
+six-case completion and completed capacitance mutation remain landing gates.
+No actual native current-waveform agreement or main landing claimed yet.
 
 2026-10-13 LM741 solver-native linear pole — DONE, Codex bwcx.
 Branch lane/lm741-linear-pole-20261013, exact basec5078499ebcde97ce615689667244b37c76eb22f.
