@@ -1,5 +1,26 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 LM741 solver-native linear pole — CLAIM, Codex bwcx.
+Branch lane/lm741-linear-pole-20261013, exact basec5078499ebcde97ce615689667244b37c76eb22f.
+Eight paths only: this ledger, src/board.js (LM741 solver-view expansion),
+src/devices/analog-amps.js (shared nominal card and explicit-mode admission),
+src/lm741-linear-pole.js, test/lm741-linear-pole.test.mjs,
+scripts/qualify-lm741-step-phase.mjs, test/lm741-step-phase.test.mjs and
+spec-updates/lm741-step-phase.md. Continues the failed evidence-only diagnostic;
+no duplicate owner or adoption of a failed gate. Opt-in transientModel=linear-pole
+uses a hidden MNA capacitor/controlled-source pole, not scheduled device wakes.
+First envelope: declared fixed supplies checked against actual solved rails,
+explicit zero offset, connected package signal/supply leads, open trim/NC,
+linear common-mode/output/slew domain; unsupported parameters/domains refuse
+by name rather than clipping or inventing dynamics. Legacy mode unchanged.
+Same six sign/phase fixtures, independent continuous reference, dense scopes/
+means and whole20000/60001/200 budget, completed amplitude mutant required.
+Pure expansion/admission controls locally; actual engine/legacy regression
+and mutated dynamics hosted. Preserve c637/bb0200 failures and actual work.
+No MNA kernel, other op-amp kinds, waveform/source primitives, workflow, pins,
+GUI, default behavior or deployment change. Landing requires exact affected
+hosted qualification; no physical LM741 or nonlinear qualification claim.
+
 2026-10-13 LM741 step-phase waveform audit — CLAIM, Codex bwcx.
 Branch lane/lm741-step-phase-20261013, exact base73130a1e.
 Four evidence paths: this ledger, scripts/qualify-lm741-step-phase.mjs,
@@ -4441,3 +4462,18 @@ synthetic authority, compiler activation or guest/performance claim. Hosted
 affected-path qualification and independent original-report audit precede the
 separately consumed actual provisioning attempt. Other CPU, UI, FPGA, schematic
 and target lanes remain outside this claim.
+
+
+## Sixteen-bit effective-address allocation — 2026-10-13
+
+Owned branch `lane/386-decodeea16-allocation-20261013`: only the sixteen-bit
+memory address branch of `src/experimental/i80386.js`, new
+`test/i80386-decodeea16-allocation.test.mjs`,
+[acceptance guide](docs/I80386-DECODEEA16-ALLOCATION.md) and this entry.
+Propose scalar ModRM base/segment selection to remove temporary arrays while
+preserving fetch order, displacement wrapping, overrides and fault rollback.
+Keep register/thirty-two-bit addressing, snapshots, caches, bus semantics,
+other backends and consumer pins unchanged. Freely authored correctness tests
+and unchanged-workload alternating paired measurements are mandatory; no
+measured gain means no performance-only adoption. This is a documentation-only
+claim: implementation waits for its merge and refreshed ownership review.
