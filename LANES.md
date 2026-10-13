@@ -1,5 +1,23 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 simulation-time current scope — CLAIM, Codex bwcx.
+Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.
+Six paths: LANES.md, src/board.js (explicit currentClock option, accepted-solve
+current acquisition, sample barriers and display-write exclusion only),
+scripts/compare-winding-current-scope.mjs,
+test/current-scope-simulation-clock.test.mjs, scripts/oracle-census.mjs and
+spec-updates/current-scope-simulation-clock.md. Opt-in currentClock=simulation
+records exact simulation-time sample pairs from accepted branch-current maps;
+default display-loop acquisition remains unchanged. Refuse unknown target,
+nonfinite/missing current, failed solve and indeterminate source alias without
+inventing zero. Preserve signed OUT current, reset/late attach/wrap/fractional
+readiness, discontinuity history and one whole-capture budget. Standalone current
+channel must impose its own sample grid. CLI proves400 winding current samples
+against independently refined UIC SPICE with original fixed1uA agreement and
+1nA refinement bounds; no voltage channel may conceal missing current barriers.
+Affected engine tests and all actual numerical acquisition hosted only.
+No solver/device/model/tolerance/budget/pin/workflow/other-target changes.
+
 2026-10-13 winding edge instruments — DONE, Codex bwcx.
 Branch lane/winding-edge-instruments-20261013, exact base e2c1a507.
 Seven evidence-only paths: LANES.md, scripts/diagnose-winding-uic-reference.mjs,
