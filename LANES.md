@@ -4132,3 +4132,16 @@ projections. External seals and all acquisition/source/lease/compiler/guest
 qualifications remain unset or false. No parent producer change, archive/network
 input, product execution, dependency adoption or actual launch. Source review
 precedes publication; root coordinates parent merges and checkpoint docs.
+
+
+## Full-tree provisioning launcher transport — 2026-10-13
+
+Owned branch `lane/386-provisioning-launcher-20261013`: new
+`scripts/i80386-full-tree-provisioning-launcher/` namespace, dedicated pure
+transport-control workflow and this registry entry. First slice ports the fixed
+six-input bounded transport with exact order, redirects/status/extent/hash and
+primary-preserving close behavior; manufactured inputs only in controls. No
+caller URLs, pins, factories or command execution. Production remains disabled.
+Root owns admission/resource/official-run integration; existing reviewed source,
+reader, containment, archive and compiler profiles remain unchanged. No actual
+network acquisition, namespace replay, compilation, guest or performance claim.
