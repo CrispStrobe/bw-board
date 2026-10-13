@@ -1,5 +1,20 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 transistor instrument qualification — CLAIM, Codex bwcx.
+Branch lane/transistor-instruments-20261013, exact base5f4dc246.
+Five evidence paths: this ledger, scripts/qualify-transistor-instruments.mjs,
+test/transistor-instrument-oracle.test.mjs, scripts/oracle-census.mjs and
+spec-updates/transistor-instrument-qualification.md. Four independently
+authored NPN collector circuits; explicit exponential IS/BF/BR/N card with
+zero junction/storage parameters, matched thermal constants and cold load
+capacitor. Measure200 voltage/current observations and two watched means;
+independent0.5/0.25 ns SPICE refinements, fixed10 µV/100 nA reference and
+100 µV/1 µA agreement bounds, one whole20000/60001/200 capture budget.
+Preserve case denominator and refusals; actual resistor mutation must complete
+and disagree. Pure controls locally, actual engine/SPICE qualification hosted.
+No production/model/default/GUI/pin/workflow/deployment edits, vendor-device
+or physical switching-time claim. Op-amp/regulator batches remain subsequent.
+
 2026-10-13 Calliope mini 1.x on the labwired tier — CLAIM, VPS Claude (opus).
 Branch lane/labwired-calliope-mini-v1-20261013, exact base 9c834916331f04eb0325679b137801f963b274d8.
 Owns this row plus: the labwired-wasm PIN in scripts/build-labwired-wasm.mjs
