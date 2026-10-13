@@ -1,6 +1,21 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-13 transistor instrument qualification — CLAIM, Codex bwcx.
+2026-10-13 LM741 step-phase waveform audit — CLAIM, Codex bwcx.
+Branch lane/lm741-step-phase-20261013, exact base73130a1e.
+Four evidence paths: this ledger, scripts/qualify-lm741-step-phase.mjs,
+test/lm741-step-phase.test.mjs and spec-updates/lm741-step-phase.md.
+Six small-signal follower experiments, positive/negative10 mV and three
+input-event phases, dense voltage/current samples and watched means.
+Independent continuous finite-gain/one-pole reference includes output/input
+resistance and load; no controller beta/ticks or engine traces as oracle inputs.
+Explicit reference-model boundary, fixed100 µV/10 nA agreement and single
+whole20000/60001/200 budget including warm-up. Local pure math/control tests;
+actual engine observations hosted. Preserve mismatches as failed diagnostics,
+not qualification or permission to weaken bounds. No production/model/pin/
+GUI/workflow/deployment edits. Any required model repair needs a separately
+published scope expansion after the actual waveform failure is diagnosed.
+
+2026-10-13 transistor instrument qualification — DONE, Codex bwcx.
 Branch lane/transistor-instruments-20261013, exact base5f4dc246.
 Five evidence paths: this ledger, scripts/qualify-transistor-instruments.mjs,
 test/transistor-instrument-oracle.test.mjs, scripts/oracle-census.mjs and
@@ -14,6 +29,19 @@ Preserve case denominator and refusals; actual resistor mutation must complete
 and disagree. Pure controls locally, actual engine/SPICE qualification hosted.
 No production/model/default/GUI/pin/workflow/deployment edits, vendor-device
 or physical switching-time claim. Op-amp/regulator batches remain subsequent.
+Canonical claim0d306c5c preceded implementation. Four pure controls pass:
+immutable explicit-card fixtures, work/grid/card/reference/mean refusals,
+executable polarity/final-point mutants, and unavailable-provider CLI preserving
+all four cases with no engine acquisition. No actual transistor waveform run
+yet. Exact-head hosted four-case comparison and completed wrong-resistor
+control remain the landing gate; no numerical success is inferred from mocks.
+Sourcee848e18f qualifies in CI38430984626 (8541 pass/0 fail/302 documented
+skips, every enabled job green) and Harris38430984662. Four actual cases,
+1600 scalar observations and8 means pass. Independent raw-bracket/deck/card/
+work audit: maximum point4.679718 µV/46.797176 nA, reported mean0.387760 µV/
+1.087597 nA; Ohm's law independently holds for points and means within10 pA.
+The actual base-resistor mutant completes and disagrees26.974599 mV.
+Documentation-only closeout preserves every tested executable byte.
 
 2026-10-13 Calliope mini 1.x on the labwired tier — CLAIM, VPS Claude (opus).
 Branch lane/labwired-calliope-mini-v1-20261013, exact base 9c834916331f04eb0325679b137801f963b274d8.
@@ -4375,6 +4403,22 @@ consistency never grant source ownership, approval, official host/namespace,
 actual acquisition, compiler, guest, hard-deadline or performance authority.
 Held parent source/schema bytes remain unchanged; actual graph/approval/official
 one-run integration remains separate. Root owns documentation and actual gates.
+
+## Operational provisioning integration — CLAIM, 2026-10-13
+
+Branch `lane/386-provisioning-operational-profile-20261013`, Codex x86.
+Own `scripts/i80386-provisioning-operational-profile/`, its dedicated workflow,
+`docs/X86-PROVISIONING-OPERATIONAL.md` and this row. This publication is docs only;
+implementation starts after this claim and PR550 merge. Follow the
+[connected integration contract](docs/X86-PROVISIONING-OPERATIONAL.md): complete
+approved source graph, privileged enclosing bootstrap, validated child context,
+real contained entry/limits/ACK/controller/lifetime, and bounded original
+controller/coordinator report collection. Retain the observation packet contract
+and parent default refusals. No alternate test predicate in an operational route,
+synthetic authority, compiler activation or guest/performance claim. Hosted
+affected-path qualification and independent original-report audit precede the
+separately consumed actual provisioning attempt. Other CPU, UI, FPGA, schematic
+and target lanes remain outside this claim.
 
 
 ## Sixteen-bit effective-address allocation — 2026-10-13
