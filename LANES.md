@@ -28,7 +28,7 @@ First batch is not all-family/physical/corpus qualification. Opamp, regulator
 and transistor families remain subsequent batches, with actual model-domain
 review before choosing independent references. No production/model/pin/workflow
 edits or local engine/oracle execution. LOCAL preparation only until current
-scope lane88cdd9fb qualifies and lands; no qualification dispatch or matrix
+scope lane's final forward head qualifies and lands; no qualification dispatch or matrix
 landing before that prerequisite. Other target/source lanes excluded.
 Canonical25b6763d preceded preparation. Twelve cases now implemented; three
 pure controls pass, including invalid CLI/model/refinement/grid/work/mean
@@ -36,6 +36,10 @@ adversaries and isolated real final-point/polarity comparator mutants. No
 numerical execution or branch push performed; engine integration/qualification
 is deliberately held behind the current-scope prerequisite. Remaining families
 and later roadmap stages are explicit in spec-updates/transient-matrix.md.
+Integrated combined current/motor candidate0f57d034 locally; every production
+and workflow byte remains identical to that candidate. Both current and matrix
+oracle census gates are preserved. Three pure controls remain green. Numerical
+qualification still held until the current-scope combined head lands.
 
 2026-10-13 simulation-time current scope — DONE candidate, Codex bwcx.
 Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.
