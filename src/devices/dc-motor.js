@@ -23,6 +23,48 @@ import { classDefaults } from '../parts-library.js';
 /** Below this speed (rad/s, about 0.1 rpm) the motor reports 'stopped'. */
 const STOPPED_RAD_S = 0.01;
 
+/**
+ * One explicit step of a motor's SIGNED rotor velocity (rad/s) — the shared
+ * mechanics of every DC-motor model (dc_motor, gearmotor, dc_motor_encoder),
+ * so a motor driven backwards turns backwards whichever model it is.
+ *
+ * `drive` is the electrical torque kT·i (signed). The load torque opposes the
+ * motion, whichever way it turns (at rest it opposes the drive; it cannot
+ * start one). A step that would carry the rotor THROUGH zero stops it at
+ * zero: an explicit step longer than the motor's electrical-mechanical time
+ * constant overshoots, and the old clamp at 0 was what stopped that. From
+ * rest the next step's torque decides the direction, so forward motion is
+ * exactly what it was under the clamp (`Math.max(0, v + drive/J·dt)`), and
+ * reverse is new.
+ *
+ * @param {number} v0 signed velocity before the step
+ * @param {number} drive signed electrical torque
+ * @param {number} loadTorque magnitude of the opposing load torque
+ * @param {number} J rotor inertia
+ * @param {number} dtSec step length
+ * @returns {number} signed velocity after the step
+ */
+export function stepMotorVelocity(v0, drive, loadTorque, J, dtSec) {
+  const sense = v0 !== 0 ? Math.sign(v0) : Math.sign(drive);
+  const torque = drive - sense * loadTorque;
+  const alpha = torque / J;
+  let v1 = v0 + alpha * dtSec;
+  if ((v0 > 0 && v1 < 0) || (v0 < 0 && v1 > 0)) v1 = 0;
+  // Load torque cannot start a motor turning the other way.
+  if (v0 === 0 && Math.abs(drive) <= loadTorque) v1 = 0;
+  return v1;
+}
+
+/**
+ * The `direction` a motor reports for a signed velocity — what the devices
+ * blocks' `direction of motor` reporter reads, for every motor model.
+ * @param {number} v signed velocity (rad/s)
+ * @returns {'forward'|'reverse'|'stopped'}
+ */
+export function motorDirectionOf(v) {
+  return v > STOPPED_RAD_S ? 'forward' : v < -STOPPED_RAD_S ? 'reverse' : 'stopped';
+}
+
 /** Read winding resistance: accept R as alias for windingR */
 function getR(part) {
   return part.params?.windingR ?? part.params?.R ?? classDefaults('dc_motor').ohms;
@@ -129,25 +171,11 @@ export function registerDCMotor() {
       const current = (vA - vB - kV * v0) / R;
       state.current = current;
 
-      // Mechanical dynamics. The load torque opposes the motion, whichever
-      // way it turns (at rest it opposes the drive; it cannot start one).
-      const drive = kT * current;
-      const sense = v0 !== 0 ? Math.sign(v0) : Math.sign(drive);
-      const torque = drive - sense * loadTorque;
-      const alpha = torque / J;
-      let v1 = v0 + alpha * dtSec;
-      // A step that would carry it THROUGH zero stops it at zero: an
-      // explicit step longer than the motor's electrical-mechanical time
-      // constant overshoots, and the old clamp at 0 was what stopped that.
-      // From rest the next step's torque decides the direction, so forward
-      // motion is exactly what it was under the clamp, and reverse is new.
-      if ((v0 > 0 && v1 < 0) || (v0 < 0 && v1 > 0)) v1 = 0;
-      // Load torque cannot start a motor turning the other way.
-      if (v0 === 0 && Math.abs(drive) <= loadTorque) v1 = 0;
+      // Mechanical dynamics (signed; see stepMotorVelocity).
+      const v1 = stepMotorVelocity(v0, kT * current, loadTorque, J, dtSec);
       state.velocity = v1;
       state.omega = Math.abs(v1);
-      state.direction = v1 > STOPPED_RAD_S ? 'forward'
-        : v1 < -STOPPED_RAD_S ? 'reverse' : 'stopped';
+      state.direction = motorDirectionOf(v1);
 
       // Re-solve if omega changed significantly (affects back-EMF stamp)
       if (Math.abs(v1 - v0) > 0.1) {

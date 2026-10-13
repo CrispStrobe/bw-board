@@ -1,6 +1,6 @@
 # x86 checkpoint and next lanes
 
-Updated 2026-10-11. This is the handoff for the x86 lane, not a claim of complete PC compatibility. Read this file, [current lane evidence](X86-LANE.md), [loading guide](X86-LOADING-GUIDE.md), [compatibility roadmap](X86-COMPATIBILITY-ROADMAP.md), and [oracle strategy](X86-ORACLE-STRATEGY.md) before implementing a task. Refresh the repository's default branch first: historical tested SHAs identify evidence, while a new change needs its own source and artifact identities.
+Updated 2026-10-13. This is the handoff for the x86 lane, not a claim of complete PC compatibility. Read this file, [current lane evidence](X86-LANE.md), [loading guide](X86-LOADING-GUIDE.md), [compatibility roadmap](X86-COMPATIBILITY-ROADMAP.md), and [oracle strategy](X86-ORACLE-STRATEGY.md) before implementing a task. Refresh the repository's default branch first: historical tested SHAs identify evidence, while a new change needs its own source and artifact identities.
 
 ## Reached checkpoint
 
@@ -860,7 +860,7 @@ The ordered follow-up tasks are:
    prepares nine-role text serialization and declared failure-stage role sets.
    Its source includes 25 manufactured controls for caps, immutable admission,
    exclusive outputs, readback, partial retention and cleanup refusal. Exact-head
-   hosted checks remain pending. This serializer cannot authenticate an event or
+   hosted checks passed and PR530 is merged with its merge tree verified. This serializer cannot authenticate an event or
    job; complete profile-source admission, raw trap/log provenance and independent
    original-artifact integration remain separate unfinished tasks.
 
@@ -868,7 +868,7 @@ The ordered follow-up tasks are:
    prepares a separately versioned descriptor/table/snapshot gate, independent
    reader and unconnected bounded Git adapter. Its source includes 21 gate,
    16 reader and 23 temporary-repository adapter controls. Hosted checks on the
-   expanded source head remain pending. The gate seal is unset and its production
+   expanded source head passed and PR531 is merged with its merge tree verified. The standalone gate seal is unset and its production
    Git stub refuses; adapter tests do not enable source admission or provisioning.
    The adapter checks the index and explicit admitted files. Unrelated worktree
    and untracked cleanliness remain outside that boundary.
@@ -948,6 +948,8 @@ The ordered follow-up tasks are:
 
 ### Unarmed offline supervisor checkpoint
 
+[PR534](https://github.com/CrispStrobe/bw-board/pull/534) is merged after all
+eleven enabled checks passed; its reviewed merge composition was verified.
 The [offline supervisor](../scripts/i80386-unarmed-supervisor/README.md) joins
 verified bootstrap components, real Git observations in tiny manufactured
 repositories, separate full-profile source positions, a fixed bounded child,
@@ -958,9 +960,80 @@ inherited source files as metadata; they do not execute those programs.
 This checkpoint does not enable provisioning or compilation. External approval
 remains unset. The child deadline covers drain and wait after launch returns;
 whole-supervisor startup and filesystem bounds remain a separate requirement.
-Next, qualify the published source controls, finish the independent lifecycle
-reader and its exact source bindings, then prepare the externally bounded,
+The independent reader integration adds manufactured consistency controls and
+two whole-path fixture cases; these must qualify their own published source.
+Next, qualify the reader and its exact source bindings, then prepare the externally bounded,
 source-admitted actual profile and its official event/job/artifact and single-run
 gates. Preserve prior failures and require that launch review before acquiring
 inputs. Compiler closure and free protected-mode application tests follow the
 actual provisioning result; no new compatibility or performance result is claimed.
+
+
+### Actual-run outer boundary acceptance
+
+The actual profile needs an externally owned deadline and containment that covers
+all its processes, including new sessions created by Git or the fixed child.
+Killing only the supervisor process group cannot establish that boundary.
+Start the deadline before bootstrap and retain the original bounded output
+prefixes, external exit/timeout facts and cleanup outcome. An interrupted inner
+report or missing source-after observation must remain a refusal.
+
+Before an actual launch, prove timeout during startup, a child that starts a new
+session, and a partial-output failure inside owned containment. Verify that no
+owned process remains; uncertain cleanup must refuse and must not affect unrelated
+processes. Bind the containment/tool identities, limits and exact source to the
+external approval. This is an unfinished implementation contract, not evidence
+that containment, storage quotas or an actual provisioning run already work.
+
+### Outer supervisor containment controls
+
+The [fixed outer-boundary profile](../scripts/i80386-supervisor-outer-boundary/README.md)
+adds nineteen pure mock controls and five fixed hosted Linux fixtures. Source
+review and local mock controls passed. All five fixed hosted observations passed
+in [original run 38361521769](https://github.com/CrispStrobe/bw-board/actions/runs/38361521769)
+on tested source `80a19c789b350be3a10bf3443f14a3fb34e948b3`; the durable result
+record is published separately in [PR538](https://github.com/CrispStrobe/bw-board/pull/538). The dedicated PR workflow tests normal completion, startup stall,
+detached-session stall, original binary stderr followed by a stall, and setup
+refusal. It retains original bounded output and tool/source hash observations.
+Production remains unsealed, and no archive, compiler or guest is launched.
+
+The fixture timer starts before namespace creation and Python bootstrap. Passing
+containment requires admitted namespace/PID1 handles, terminal PID1, reaped owned
+launcher, pipe EOF and two complete bounded namespace censuses. Observer startup
+and source admission have separate hosted bounds; this is not a universal hard
+deadline or a security sandbox for arbitrary root programs.
+
+Continue in order: inspect the original exact-head hosted artifact and every
+enabled check; resolve any failure while retaining the first diagnostic; integrate
+the independently reviewed lifecycle reader; then bind the actual provisioning
+profile to its official event, jobs, steps, artifact and single-run gate. Keep
+compilation disabled until that provisioning result is independently qualified.
+After compiler closure, test a freely licensed protected-mode client against an
+independent DPMI oracle and the AT guest. This preparatory checkpoint adds no RTx
+measurement or broader 386/operating-system compatibility claim.
+
+### Fixed provisioning transport checkpoint
+
+Reader [PR536](https://github.com/CrispStrobe/bw-board/pull/536), containment
+[PR537](https://github.com/CrispStrobe/bw-board/pull/537), and original hosted
+results [PR538](https://github.com/CrispStrobe/bw-board/pull/538) are merged.
+The [durable result record](X86-OUTER-BOUNDARY-RESULTS.md) preserves the tested
+source and finite fixture boundary.
+
+The new [transport slice](../scripts/i80386-full-tree-provisioning-launcher/README.md)
+ports the fixed six public input bindings into a portable module. Twenty-nine
+manufactured controls passed locally, including failure at each input, response
+cleanup, redirects, deadlines and reentry. An independent request-construction
+reentry finding was corrected and retained. Hosted source controls still need
+qualification. Both public acquisition entries refuse before network opener or
+clock work; no real inputs, archive parser, compiler or guest run is added.
+
+Continue by qualifying this published source, then connect the existing admission
+and Git adapter to the fixed downloader and coordinator. Freeze the complete
+source graph, externally reviewed approval bytes and exact contained resource
+policy before enabling the actual path. Install and observe limits inside PID1
+before bootstrap; shell limits before privilege changes are insufficient evidence.
+Define the separate full-source/raw-output envelope and its independent reader,
+then bind the official event, jobs, steps, terminal artifact and single-run gate.
+The compiler remains disabled through this provisioning slice. No new RTx or
+broader protected-mode compatibility result is claimed.

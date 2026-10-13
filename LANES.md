@@ -37,7 +37,7 @@ numerical execution or branch push performed; engine integration/qualification
 is deliberately held behind the current-scope prerequisite. Remaining families
 and later roadmap stages are explicit in spec-updates/transient-matrix.md.
 
-2026-10-13 simulation-time current scope — CLAIM, Codex bwcx.
+2026-10-13 simulation-time current scope — DONE candidate, Codex bwcx.
 Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.
 Six paths: LANES.md, src/board.js (explicit currentClock option, accepted-solve
 current acquisition, sample barriers and display-write exclusion only),
@@ -54,6 +54,40 @@ against independently refined UIC SPICE with original fixed1uA agreement and
 1nA refinement bounds; no voltage channel may conceal missing current barriers.
 Affected engine tests and all actual numerical acquisition hosted only.
 No solver/device/model/tolerance/budget/pin/workflow/other-target changes.
+Canonical995821fa preceded implementation. Explicit simulation mode selects
+the existing MNA route; legacy display and voltage modes retain their selectors.
+Two pure comparator/exit controls and source syntax checks pass. Actual
+RC/default/reset/refusal/fractional/snapshot contracts, three actual method
+mutants and400-point independent current comparison await hosted qualification.
+Exact35190036 CI38349264289 fails one fixture assertion (8510 pass,1 fail,
+302 skipped), while Harris38349264153 passes. Generic duplicate ideal vsource
+rows are singular, not the supported redundant-vcc alias case. Forward test
+repair distinguishes both physical cases: singular source/load readings refuse;
+duplicate rail aliases solve the load but refuse nonunique source current.
+Production and numerical bounds unchanged. Fresh qualification required.
+Exact88cdd9fb CI38356419036 fails the private-cache persistence assertion
+(8510 pass,1 fail,302 skipped); Harris38356419022 passes. The cache is legitimately
+cleared after advance. Forward evidence repair uses validated public load current
+plus actual accepted-sample checks instead; no cache-lifetime requirement or
+production change. Fresh exact-head qualification remains required.
+Exactd219dd03 CI38360976179 reveals missing static MNA authority: an initially
+closed-form passive DC board has no current snapshot when the new observer is
+attached, so alias acquisition reports unavailable rather than indeterminate.
+Forward production repair primes existing MNA only at simulation-clock attach
+for healthy powered nonreactive/no-device networks; transient sampling never
+flushes a later endpoint. Add standalone single-rail DC capture without display
+or getter priming, preserving all earlier failures and fixed numerical bounds.
+Exacta96afb96 CI38368554383 fails only the exact-one-solve observer test:
+the explicit new setup charge duplicated the charge already owned by
+_solveMNA/_solveLiveMNA. Remove the redundant charge, not the test or ceiling.
+Static/alias cases now pass; Harris38368554410 passes. Forward exact-head
+qualification still required; earlier full-run failures remain preserved.
+Exacta45524ad passes CI38375224631/Harris38375224622:8513 passed,zero failed,
+302 skipped. Static priming, source aliases, exact-one solve accounting, three
+actual method mutants andall400 current samples pass. Independent raw grid/pair
+audit confirms maximum current error1.547073nA and3833/11491/51 capturework,
+withzero voltagechannels. Current main's motor-model source changes are merged
+for fresh combined qualification; no matrix or consumer adoption yet.
 
 2026-10-13 winding edge instruments — DONE, Codex bwcx.
 Branch lane/winding-edge-instruments-20261013, exact base e2c1a507.
@@ -4123,3 +4157,39 @@ registry entry and the coordinated `docs/X86-NEXT-LANES.md` checkpoint.
 Acceptance: fifteen offline supervisor and twenty-one manufactured admission
 controls, fixed bootstrap bindings, preserved raw refusals and source observations.
 No actual acquisition, compiler, guest, consumer pin or operational seal changes.
+
+2026-10-13 unarmed supervisor independent lifecycle reader — CLAIM, Codex x86.
+Branch lane/386-unarmed-supervisor-reader-20261013, exact parent
+ca6825b1190b6969a165902e2f09fa7bd05dae3a. Owns this row,
+scripts/i80386-unarmed-supervisor/{reader.py,reader-controls.py,
+inherited-roles.json,integration-controls.py}, namespace README.md and the
+dedicated synthetic workflow steps and root-coordinated docs/X86-NEXT-LANES.md
+checkpoint only. Project the separately reviewed
+independent reader without producer imports; manufacture portable JSON refusal
+controls and two bounded tiny-repository whole-path cases. Keep raw logs distinct
+from fact packets and complete source observations distinct from inherited
+projections. External seals and all acquisition/source/lease/compiler/guest
+qualifications remain unset or false. No parent producer change, archive/network
+input, product execution, dependency adoption or actual launch. Source review
+precedes publication; root coordinates parent merges and checkpoint docs.
+
+## Supervisor outer boundary synthetic controls — 2026-10-13
+
+Owned branch `lane/386-supervisor-outer-boundary-20261013`: only
+`scripts/i80386-supervisor-outer-boundary/`, its dedicated PR synthetic workflow
+and this registry entry. Acceptance: fixed Linux PID-namespace startup, detached
+session and bounded partial-output containment controls; local pure mocks only,
+privileged namespace observations on hosted Linux only after source review.
+No archive acquisition, compiler, guest, application integration or operational seal.
+
+## Full-tree provisioning launcher transport — 2026-10-13
+
+Owned branch `lane/386-provisioning-launcher-20261013`: new
+`scripts/i80386-full-tree-provisioning-launcher/` namespace, dedicated pure
+transport-control workflow and this registry entry. First slice ports the fixed
+six-input bounded transport with exact order, redirects/status/extent/hash and
+primary-preserving close behavior; manufactured inputs only in controls. No
+caller URLs, pins, factories or command execution. Production remains disabled.
+Root owns admission/resource/official-run integration; existing reviewed source,
+reader, containment, archive and compiler profiles remain unchanged. No actual
+network acquisition, namespace replay, compilation, guest or performance claim.
