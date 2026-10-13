@@ -4018,3 +4018,19 @@ Astra coordinated one Sol coder and one independent auditor. Qualified source `1
 ### 2026-10-01: combined native paging/RAM/REP actual-board checkpoint
 
 Measured source `809c3fba86a81501a08b0d1e81d4e1d23e241d41` authenticates63 inputs. All four budgets and a fresh root repeat pass192 successfulQ/194N/1156functional clocks, eight RAM witnesses, two page faults, five successfulREP elements and actualPIT/PIC delivery. All62 actual-report tests (61 specific coherent corruption cases) and eight host tests pass with zero skips; 24 native guards, 22 transport rejections and 11 API witnesses pass with actual failure phases checked. Root authenticates251 artifacts and whole backing per capture; independent raw checks4705 each verify aliases, pagewalk/A-D and exact budget-one resume cuts. Raw native streams, allCPU/chips/bus/RPC match between captures; completeJSON retains differing paths. Prior six inventories300 inputs remain unchanged. [Notes and receipts](docs/I80386-NATIVE-COMBINED-PAGING-RAM-ACTUAL-BOARD.md) disclose reset/ordered-bus/cache-policy differences and retained unqualified diagnostics. Next direct callbacks/optional capture for the same bounded guest, then measured speed and broader backend qualification. No fullAT/broader guest/broader game/RTx claim.
+
+
+### 2026-10-12: selected notice source composition preparation
+
+Status: CLAIMED, source-only manufactured controls; no actual input or compiler profile.
+Ownership: Astra coordination, one Sol coder and one independent Sol reviewer.
+Branch: `lane/386-full-tree-notice-connection-20261012`, stacked on the focused
+authenticated TAR bridge branch. Owned paths: `scripts/i80386-djgpp-notice-extractor/`,
+`scripts/i80386-full-tree-notice-connection/` and the dedicated notice controls
+workflow. Existing writer, TAR bridge, CPU, guest fixtures and consumer pins are
+outside this edit. Acceptance: exact fixed six-input admission before delegates,
+strict bounded whole ZIP validation, internally shaped three-plus-two notices,
+reentry refusal propagated to active delegates, preserved first errors and copied
+primitive diagnostics. Report manufactured controls and hosted checks separately;
+actual archive compatibility, source/input/filesystem leases, full notice coverage,
+compiler, applications and RTx remain unqualified. No restricted media is involved.
