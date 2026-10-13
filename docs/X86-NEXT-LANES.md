@@ -1011,3 +1011,29 @@ compilation disabled until that provisioning result is independently qualified.
 After compiler closure, test a freely licensed protected-mode client against an
 independent DPMI oracle and the AT guest. This preparatory checkpoint adds no RTx
 measurement or broader 386/operating-system compatibility claim.
+
+### Fixed provisioning transport checkpoint
+
+Reader [PR536](https://github.com/CrispStrobe/bw-board/pull/536), containment
+[PR537](https://github.com/CrispStrobe/bw-board/pull/537), and original hosted
+results [PR538](https://github.com/CrispStrobe/bw-board/pull/538) are merged.
+The [durable result record](X86-OUTER-BOUNDARY-RESULTS.md) preserves the tested
+source and finite fixture boundary.
+
+The new [transport slice](../scripts/i80386-full-tree-provisioning-launcher/README.md)
+ports the fixed six public input bindings into a portable module. Twenty-nine
+manufactured controls passed locally, including failure at each input, response
+cleanup, redirects, deadlines and reentry. An independent request-construction
+reentry finding was corrected and retained. Hosted source controls still need
+qualification. Both public acquisition entries refuse before network opener or
+clock work; no real inputs, archive parser, compiler or guest run is added.
+
+Continue by qualifying this published source, then connect the existing admission
+and Git adapter to the fixed downloader and coordinator. Freeze the complete
+source graph, externally reviewed approval bytes and exact contained resource
+policy before enabling the actual path. Install and observe limits inside PID1
+before bootstrap; shell limits before privilege changes are insufficient evidence.
+Define the separate full-source/raw-output envelope and its independent reader,
+then bind the official event, jobs, steps, terminal artifact and single-run gate.
+The compiler remains disabled through this provisioning slice. No new RTx or
+broader protected-mode compatibility result is claimed.
