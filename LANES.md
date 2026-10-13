@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-13 simulation-time current scope — CLAIM, Codex bwcx.
+2026-10-13 simulation-time current scope — DONE candidate, Codex bwcx.
 Branch lane/current-scope-simulation-clock-20261013, exact base a7f4d02d.
 Six paths: LANES.md, src/board.js (explicit currentClock option, accepted-solve
 current acquisition, sample barriers and display-write exclusion only),
@@ -17,6 +17,11 @@ against independently refined UIC SPICE with original fixed1uA agreement and
 1nA refinement bounds; no voltage channel may conceal missing current barriers.
 Affected engine tests and all actual numerical acquisition hosted only.
 No solver/device/model/tolerance/budget/pin/workflow/other-target changes.
+Canonical995821fa preceded implementation. Explicit simulation mode selects
+the existing MNA route; legacy display and voltage modes retain their selectors.
+Two pure comparator/exit controls and source syntax checks pass. Actual
+RC/default/reset/refusal/fractional/snapshot contracts, three actual method
+mutants and400-point independent current comparison await hosted qualification.
 
 2026-10-13 winding edge instruments — DONE, Codex bwcx.
 Branch lane/winding-edge-instruments-20261013, exact base e2c1a507.
