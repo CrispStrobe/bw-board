@@ -1,5 +1,26 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 LM741 solver-native linear pole — CLAIM, Codex bwcx.
+Branch lane/lm741-linear-pole-20261013, exact basec5078499ebcde97ce615689667244b37c76eb22f.
+Eight paths only: this ledger, src/board.js (LM741 solver-view expansion),
+src/devices/analog-amps.js (shared nominal card and explicit-mode admission),
+src/lm741-linear-pole.js, test/lm741-linear-pole.test.mjs,
+scripts/qualify-lm741-step-phase.mjs, test/lm741-step-phase.test.mjs and
+spec-updates/lm741-step-phase.md. Continues the failed evidence-only diagnostic;
+no duplicate owner or adoption of a failed gate. Opt-in transientModel=linear-pole
+uses a hidden MNA capacitor/controlled-source pole, not scheduled device wakes.
+First envelope: declared fixed supplies checked against actual solved rails,
+explicit zero offset, connected package signal/supply leads, open trim/NC,
+linear common-mode/output/slew domain; unsupported parameters/domains refuse
+by name rather than clipping or inventing dynamics. Legacy mode unchanged.
+Same six sign/phase fixtures, independent continuous reference, dense scopes/
+means and whole20000/60001/200 budget, completed amplitude mutant required.
+Pure expansion/admission controls locally; actual engine/legacy regression
+and mutated dynamics hosted. Preserve c637/bb0200 failures and actual work.
+No MNA kernel, other op-amp kinds, waveform/source primitives, workflow, pins,
+GUI, default behavior or deployment change. Landing requires exact affected
+hosted qualification; no physical LM741 or nonlinear qualification claim.
+
 2026-10-13 LM741 step-phase waveform audit — CLAIM, Codex bwcx.
 Branch lane/lm741-step-phase-20261013, exact base73130a1e.
 Four evidence paths: this ledger, scripts/qualify-lm741-step-phase.mjs,
@@ -42,6 +63,28 @@ work audit: maximum point4.679718 µV/46.797176 nA, reported mean0.387760 µV/
 1.087597 nA; Ohm's law independently holds for points and means within10 pA.
 The actual base-resistor mutant completes and disagrees26.974599 mV.
 Documentation-only closeout preserves every tested executable byte.
+
+2026-10-13 shared LAN world for the emulated machines — CLAIM, VPS Claude (opus).
+Branch lane/shared-lan-world-20261013, exact base 22a8fea07273e9ad8aa3011c0d57cb6dc7445854.
+Owns this row plus a new directory src/net/ and its tests test/net-*.test.mjs:
+(1) a LAN medium that is a drop-in for the NE2000's link (send(frame, from) /
+deliver(frame)), so 8086 machines, and later other backends' network devices,
+share one wire with host-side nodes; (2) a host-side IPv4 node written from
+the RFCs (ARP 826, IPv4 791, ICMP echo 792, UDP 768, DHCP server 2131, DNS
+1035; TCP 793 and an HTTP endpoint as a later step) that tests and
+applications use to be "the network" a guest talks to; (3) package exports
+for the new files and census entries they require; (4) by owner decision of
+2026-10-13, a bridge to a real network as an explicit user setting: an
+egress policy (off by default; loopback, multicast and broadcast always
+refused; private, link-local and carrier-NAT ranges refused unless separately
+allowed; a plain-language list of what switching it on means) and a gateway
+node that applies it. bw-board opens no connection itself: the transports
+(fetch, a relay, native sockets) are handed in by the embedding application,
+outbound only, and every decision is reported to it. The NE2000's own links
+stay offline. No change to src/ne2000.js, the CPU
+cores, labwired, x86 provisioning or consumer pins. v86 stays oracle-only:
+its network code is not read. No radio, timing or loss model, and the nRF
+radio air stays a separate medium.
 
 2026-10-13 Calliope mini 1.x on the labwired tier — CLAIM, VPS Claude (opus).
 Branch lane/labwired-calliope-mini-v1-20261013, exact base 9c834916331f04eb0325679b137801f963b274d8.
