@@ -1,5 +1,20 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-13 LM741 step-phase waveform audit — CLAIM, Codex bwcx.
+Branch lane/lm741-step-phase-20261013, exact base73130a1e.
+Four evidence paths: this ledger, scripts/qualify-lm741-step-phase.mjs,
+test/lm741-step-phase.test.mjs and spec-updates/lm741-step-phase.md.
+Six small-signal follower experiments, positive/negative10 mV and three
+input-event phases, dense voltage/current samples and watched means.
+Independent continuous finite-gain/one-pole reference includes output/input
+resistance and load; no controller beta/ticks or engine traces as oracle inputs.
+Explicit reference-model boundary, fixed100 µV/10 nA agreement and single
+whole20000/60001/200 budget including warm-up. Local pure math/control tests;
+actual engine observations hosted. Preserve mismatches as failed diagnostics,
+not qualification or permission to weaken bounds. No production/model/pin/
+GUI/workflow/deployment edits. Any required model repair needs a separately
+published scope expansion after the actual waveform failure is diagnosed.
+
 2026-10-13 transistor instrument qualification — DONE, Codex bwcx.
 Branch lane/transistor-instruments-20261013, exact base5f4dc246.
 Five evidence paths: this ledger, scripts/qualify-transistor-instruments.mjs,
