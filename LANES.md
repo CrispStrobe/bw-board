@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-12 winding engine/reference comparison — DONE candidate, Codex bwcx.
+2026-10-12 winding engine/reference comparison — DONE, Codex bwcx.
 Branch lane/winding-engine-reference-comparison-20261012, exact base
 23f1e69ccf584738965e9e5fb36582d1a7a792b7. Five evidence-only paths:
 LANES.md, scripts/compare-winding-reference.mjs,
@@ -20,7 +20,12 @@ the unsampled falling edge or realistic instrument behavior. Canonical claim
 d16f0dd4 preceded implementation. Three pure controls pass, including fourteen
 refusal adversaries and two isolated executable agreement/exit mutants that
 fail the caller oracle. Actual engine/reference agreement and hosted
-qualification remain pending; this is not a completed numerical result.
+qualification were pending at implementation. Exact c161adf4 passes
+CI38311529436 and Harris38311529416:8494 passed,zero failed,302 skipped.
+Actual three-point comparison passes; maximum voltage error0.202777uV and
+current1.245507nA, with3432 attempts/10288 solves/51 observations. Independent
+reference refinement passes first. This does not qualify unsampled edges,
+instrument integrations, physical fidelity or consumer package adoption.
 
 2026-10-12 standalone full-tree provisioning preparation — CLAIM, Codex x86.
 Branch lane/386-full-tree-provisioner-20261012, exact base

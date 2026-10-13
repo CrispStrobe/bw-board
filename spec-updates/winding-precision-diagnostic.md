@@ -289,5 +289,11 @@ signed errors; the hosted gate preserves evidence before its assertion.
 This first comparison adds no observation partitions, probe loads or instrument
 models. Three shared times do not qualify the intervening one-microsecond edge,
 the entire waveform, physical hardware, scope traces or meter integrations.
-Actual agreement is pending hosted execution; reference stability and engine
-completion alone are not substitutes for it.
+Exact `c161adf4090d484b4f17fd9741e66b211687d702` passes
+[CI38311529436](https://github.com/CrispStrobe/bw-board/actions/runs/38311529436)
+and [Harris38311529416](https://github.com/CrispStrobe/bw-board/actions/runs/38311529416):
+8494 passed, zero failed, 302 skipped. All six actual shared-time voltage/current
+comparisons pass. Maximum voltage error is 0.202776916 microvolts; maximum
+current error is 1.245506507 nanoamperes. Engine work remains 3432 attempts,
+10288 solves and 51 observations. Independent reference refinement passed
+before agreement. Dense falling-edge and instrument integrations remain pending.
