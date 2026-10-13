@@ -70,6 +70,36 @@ getters that may refresh a solve. Missing currents remain null and snapshot
 presence/convergence/dirty markers are retained. These observations are
 provisional evidence, never a replacement for completed instrument captures.
 
+### Actual timing diagnostic
+
+Source `bb0200f29c0063498eb3903417ead073b1317d5a` in
+[CI 38448865246](https://github.com/CrispStrobe/bw-board/actions/runs/38448865246)
+preserves the same six-case failure. Independent inspection of all 1,172
+provisional observations finds no input-grid deviations; completed scope
+voltages equal the already-published output voltages. The valid published
+resistor currents also obey the output/load relationship. The observer does
+not change the baseline work counts or the two completed waveforms.
+
+For the positive zero-phase case, input is 10 mV at 10.1 µs while the internal
+output drive remains zero until 10.3 µs. The output is only the differential
+input-resistance feedthrough, 2.829388 µV, at 10.1–10.3 µs. At 10.3 µs the
+drive becomes 8.479242 mV, but the published solution still uses the preceding
+drive; the 10.4 µs observation shows the resulting 7.999851 mV output.
+Subsequent drive updates occur at 10.6, 10.9 and 11.2 µs. Negative cases are
+sign-symmetric. Offset phases shift those actual wake times to 10.333 or
+10.367 µs and split observer intervals, consuming integration advances.
+
+This identifies a discrete controller/publication delay, not a wrong authored
+input or a scope-only rendering defect. It does not establish the correctness
+of a replacement controller. The numerical gate remains red, the amplitude
+mutation remains unreached, and this diagnostic source is not landable.
+A continuous solver-native pole is a repair candidate: the existing generic
+op-amp macromodel already integrates its hidden capacitor through MNA rather
+than scheduled controller ticks. Adapting that route to a physical LM741 needs
+explicit supply, offset, input loading, clipping and unsupported-domain
+contracts; substituting a generic ideal op-amp is not a repair. Any such work
+requires a fresh bounded claim and affected regression qualification.
+
 No production, default model, GUI, package or deployment change is made by this
 audit. No physical noise, bias spread, temperature, nonlinear slew, current
 limiting, clipping or arbitrary feedback network is qualified. Those require

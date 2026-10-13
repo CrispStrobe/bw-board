@@ -52,6 +52,15 @@ rerun, production repair, waveform success or landing authorized by this head.
 Forward observer review removes getter-triggered solves: direct published
 maps with null/missing/convergence/dirty markers only. No observer-created
 solution or invented zero. Supersede7a155197 before actual diagnostic use.
+Actualbb0200f2 CI38448865246 remains red; Harris38448865183 green cannot
+rescue waveform qualification. Independent1,172-observation audit finds no
+input deviations or completed scope/published-output discrepancy. Drive holds
+zero until input+300 ns; at that update the published solution still uses the
+old drive, with the new output visible at the following observation. Offset
+wakes split capture intervals and preserve the actual200-advance refusal.
+Work/zero-phase waveform receipts match the initial diagnostic. No tolerance,
+accounting, default/source fix or landing change; continuous solver-native
+pole adaptation is only a proposed separately claimed repair.
 
 2026-10-13 transistor instrument qualification — DONE, Codex bwcx.
 Branch lane/transistor-instruments-20261013, exact base5f4dc246.
