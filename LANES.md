@@ -43,6 +43,22 @@ work audit: maximum point4.679718 µV/46.797176 nA, reported mean0.387760 µV/
 The actual base-resistor mutant completes and disagrees26.974599 mV.
 Documentation-only closeout preserves every tested executable byte.
 
+2026-10-13 shared LAN world for the emulated machines — CLAIM, VPS Claude (opus).
+Branch lane/shared-lan-world-20261013, exact base 22a8fea07273e9ad8aa3011c0d57cb6dc7445854.
+Owns this row plus a new directory src/net/ and its tests test/net-*.test.mjs:
+(1) a LAN medium that is a drop-in for the NE2000's link (send(frame, from) /
+deliver(frame)), so 8086 machines, and later other backends' network devices,
+share one wire with host-side nodes; (2) a host-side IPv4 node written from
+the RFCs (ARP 826, IPv4 791, ICMP echo 792, UDP 768, DHCP server 2131, DNS
+1035; TCP 793 and an HTTP endpoint as a later step) that tests and
+applications use to be "the network" a guest talks to; (3) package exports
+for the new files and census entries they require. Simulated peers only: no
+bridge to a real network (src/ne2000.js states that as a deliberate product
+decision and this does not change it). No change to src/ne2000.js, the CPU
+cores, labwired, x86 provisioning or consumer pins. v86 stays oracle-only:
+its network code is not read. No radio, timing or loss model, and the nRF
+radio air stays a separate medium.
+
 2026-10-13 Calliope mini 1.x on the labwired tier — CLAIM, VPS Claude (opus).
 Branch lane/labwired-calliope-mini-v1-20261013, exact base 9c834916331f04eb0325679b137801f963b274d8.
 Owns this row plus: the labwired-wasm PIN in scripts/build-labwired-wasm.mjs
