@@ -65,12 +65,14 @@ export class Ipv4Node {
      * @param {string} opts.ip        this node's address
      * @param {string} [opts.netmask] default 255.255.255.0
      * @param {string} [opts.name]    for traces
+     * @param {string} [opts.via]     the router this node sends through for addresses beyond its subnet
      */
     constructor (opts) {
         this.mac = mac(opts.mac);
         this.ip = ip(opts.ip);
         this.netmask = ip(opts.netmask || '255.255.255.0');
         this.name = opts.name || ipText(this.ip);
+        this.via = opts.via ? ip(opts.via) : null;
         this.link = null;
         /** IPv4 address -> MAC, learned from ARP. */
         this.arp = new Map();
@@ -84,6 +86,8 @@ export class Ipv4Node {
         this.dns = null;
         this.handling = false;
         this.inbox = [];
+        /** Set by a gateway (gateway.js) when this node routes for its LAN. */
+        this.router = null;
         /** TCP on this node: `tcp.listen(port, onConnection)`, `tcp.connect(address, port)` (tcp.js). */
         this.tcp = new Tcp(this);
     }
@@ -139,7 +143,7 @@ export class Ipv4Node {
         const type = be16(frame, 12);
         const payload = frame.subarray(14);
         if (type === ETH_ARP) this.receiveArp(payload);
-        else if (type === ETH_IPV4) this.receiveIpv4(payload, Array.from(frame.subarray(6, 12)));
+        else if (type === ETH_IPV4) this.receiveIpv4(payload, Array.from(frame.subarray(6, 12)), mine);
         else this.counters.unhandled++;
     }
 
@@ -182,17 +186,22 @@ export class Ipv4Node {
         const packet = [...header, ...payload];
         if (opts.dstMac) return this.transmit(opts.dstMac, ETH_IPV4, packet);
         if (dst === 0xffffffff || dst === this.broadcast) return this.transmit(BROADCAST_MAC, ETH_IPV4, packet);
-        if (!this.onLink(dst)) throw new Error(`${this.name}: ${ipText(dst)} is not on this subnet, and there is no router`);
-        const known = this.arp.get(dst);
+        // The next hop: the destination itself on this subnet, the router beyond it.
+        let hop = dst;
+        if (!this.onLink(dst)) {
+            if (this.via == null) throw new Error(`${this.name}: ${ipText(dst)} is not on this subnet, and there is no router`);
+            hop = this.via;
+        }
+        const known = this.arp.get(hop);
         if (known) return this.transmit(known, ETH_IPV4, packet);
-        if (!this.waiting.has(dst)) this.waiting.set(dst, []);
-        this.waiting.get(dst).push(packet);
+        if (!this.waiting.has(hop)) this.waiting.set(hop, []);
+        this.waiting.get(hop).push(packet);
         this.counters.arpRequests++;
         return this.transmit(BROADCAST_MAC, ETH_ARP, [0, 1, 8, 0, 6, 4, 0, 1,
-            ...this.mac, ...put32(this.ip), 0, 0, 0, 0, 0, 0, ...put32(dst)]);
+            ...this.mac, ...put32(this.ip), 0, 0, 0, 0, 0, 0, ...put32(hop)]);
     }
 
-    receiveIpv4 (p, fromMac) {
+    receiveIpv4 (p, fromMac, toMyMac = false) {
         if (p.length < 20 || (p[0] >> 4) !== 4) return;
         const headerLength = (p[0] & 15) * 4;
         const total = be16(p, 2);
@@ -201,8 +210,17 @@ export class Ipv4Node {
         // More-fragments flag or a fragment offset: a piece of something bigger.
         if ((be16(p, 6) & 0x3fff) !== 0) { this.counters.fragments++; return; }
         const src = be32(p, 12), dst = be32(p, 16);
-        if (dst !== this.ip && dst !== 0xffffffff && dst !== this.broadcast) { this.counters.notForMe++; return; }
         const body = p.subarray(headerLength, total);
+        if (dst !== this.ip && dst !== 0xffffffff && dst !== this.broadcast) {
+            // Sent to this node's card for an address beyond the LAN: a guest using it as its router.
+            if (toMyMac && this.router && !this.onLink(dst)) {
+                if (!this.arp.has(src) && this.onLink(src)) this.arp.set(src, fromMac);
+                if (p[9] === PROTO_TCP) return this.tcp.receive(body, src, dst);
+                return this.router.other(p[9], body, src, dst);
+            }
+            this.counters.notForMe++;
+            return;
+        }
         if (p[9] === PROTO_ICMP) this.receiveIcmp(body, src);
         else if (p[9] === PROTO_UDP) this.receiveUdp(body, src, dst, fromMac);
         else if (p[9] === PROTO_TCP && dst === this.ip) this.tcp.receive(body, src);
@@ -343,8 +361,12 @@ export class Ipv4Node {
 
     // ── DNS server ──────────────────────────────────────────────────────────
 
-    /** Answer A queries from `records` ({name: "10.0.0.5"}); names are case-insensitive. */
-    serveDns (records) {
+    /**
+     * Answer A queries from `records` ({name: "10.0.0.5"}); names are case-insensitive.
+     * `opts.resolve(name, answer)` is asked for a name not in the table and
+     * calls `answer(addressText | null)` when it knows, which may be later.
+     */
+    serveDns (records, opts = {}) {
         this.dns = new Map(Object.entries(records).map(([name, address]) => [name.toLowerCase().replace(/\.$/, ''), ip(address)]));
         this.udpBind(53, (q, from, reply) => {
             // One question, a query (QR = 0), standard opcode.
@@ -359,13 +381,23 @@ export class Ipv4Node {
             if (at + 5 > q.length) return;
             const question = q.subarray(12, at + 5);
             const qtype = be16(q, at + 1), qclass = be16(q, at + 3);
-            const address = this.dns.get(labels.join('.').toLowerCase());
-            const known = address !== undefined;
-            const answers = known && qtype === 1 && qclass === 1 ?
-                [0xc0, 12, 0, 1, 0, 1, 0, 0, 0, 60, 0, 4, ...put32(address)] : [];
-            // Response, recursion desired copied, recursion available; NXDOMAIN (3) for a name not in the table.
-            reply([q[0], q[1], 0x84 | (q[2] & 1), 0x80 | (known ? 0 : 3), 0, 1, 0, answers.length ? 1 : 0, 0, 0, 0, 0,
-                ...question, ...answers]);
+            const name = labels.join('.').toLowerCase();
+            const head = [q[0], q[1]], rd = q[2] & 1;
+            const respond = address => {
+                const known = address !== undefined && address !== null;
+                const answers = known && qtype === 1 && qclass === 1 ?
+                    [0xc0, 12, 0, 1, 0, 1, 0, 0, 0, 60, 0, 4, ...put32(address)] : [];
+                // Response, recursion desired copied, recursion available; NXDOMAIN (3) for a name nobody knows.
+                reply([...head, 0x84 | rd, 0x80 | (known ? 0 : 3), 0, 1, 0, answers.length ? 1 : 0, 0, 0, 0, 0,
+                    ...question, ...answers]);
+            };
+            if (this.dns.has(name) || !opts.resolve || qtype !== 1 || qclass !== 1) return respond(this.dns.get(name));
+            let answered = false;
+            return opts.resolve(name, text => {
+                if (answered) return;
+                answered = true;
+                this.run(() => respond(text ? ip(text) : null));
+            });
         });
     }
 }

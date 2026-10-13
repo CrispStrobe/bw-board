@@ -36,11 +36,13 @@ const add = (a, b) => (a + b) >>> 0;
 const before = (a, b) => ((a - b) | 0) < 0;
 
 export class TcpConnection {
-    constructor (tcp, remoteIp, remotePort, localPort) {
+    constructor (tcp, remoteIp, remotePort, localPort, localIp = tcp.node.ip) {
         this.tcp = tcp;
         this.remoteIp = remoteIp;
         this.remotePort = remotePort;
         this.localPort = localPort;
+        /** The address this end answers as: the node's own, or the one a gateway stands in for. */
+        this.localIp = localIp;
         /** LISTEN is the port's, not a connection's; a connection starts in SYN-SENT or SYN-RECEIVED. */
         this.state = 'CLOSED';
         this.sndUna = 0; this.sndNxt = 0; this.sndWnd = 0;
@@ -87,7 +89,7 @@ export class TcpConnection {
         if (this.state === 'CLOSED') return;
         this.state = 'CLOSED';
         this.outcome = outcome;
-        this.tcp.connections.delete(this.tcp.key(this.remoteIp, this.remotePort, this.localPort));
+        this.tcp.connections.delete(this.tcp.key(this.remoteIp, this.remotePort, this.localPort, this.localIp));
         this.emit('close', outcome);
     }
 
@@ -121,9 +123,11 @@ export class Tcp {
         this.nextIss = 0x1000;
         this.nextPort = 49152;
         this.counters = {badChecksum: 0, resetsSent: 0, duplicates: 0, outOfOrder: 0};
+        /** Set by a gateway: `(dstIp, dstPort, srcIp) => onConnection | null` for addresses beyond the LAN. */
+        this.intercept = null;
     }
 
-    key (remoteIp, remotePort, localPort) { return `${remoteIp}:${remotePort}:${localPort}`; }
+    key (remoteIp, remotePort, localPort, localIp = this.node.ip) { return `${remoteIp}:${remotePort}:${localIp}:${localPort}`; }
 
     /** Accept connections on `port`: `onConnection(connection)` is called once each is established. */
     listen (port, onConnection) {
@@ -156,33 +160,37 @@ export class Tcp {
 
     /** Build and send one segment of a connection. */
     send (c, flags, seq, data, withMss = false) {
-        this.segment(c.remoteIp, c.localPort, c.remotePort, seq, (flags & ACK) ? c.rcvNxt : 0, flags, data, withMss);
+        this.segment(c.remoteIp, c.localPort, c.remotePort, seq, (flags & ACK) ? c.rcvNxt : 0, flags, data, withMss, c.localIp);
     }
 
-    segment (dstIp, srcPort, dstPort, seq, ack, flags, data, withMss = false) {
+    segment (dstIp, srcPort, dstPort, seq, ack, flags, data, withMss = false, srcIp = this.node.ip) {
         const options = withMss ? [2, 4, ...put16(MSS)] : [];
         const header = [...put16(srcPort), ...put16(dstPort), ...put32(seq), ...put32(ack),
             ((20 + options.length) / 4) << 4, flags, ...put16(WINDOW), 0, 0, 0, 0, ...options];
         const seg = [...header, ...data];
-        const sum = checksum([...put32(this.node.ip), ...put32(dstIp), 0, PROTO_TCP, ...put16(seg.length), ...seg]);
+        const sum = checksum([...put32(srcIp), ...put32(dstIp), 0, PROTO_TCP, ...put16(seg.length), ...seg]);
         seg[16] = sum >>> 8; seg[17] = sum & 0xff;
-        this.node.sendIpv4(dstIp, PROTO_TCP, seg);
+        this.node.sendIpv4(dstIp, PROTO_TCP, seg, {src: srcIp});
     }
 
     /** RFC 793, "Reset Generation": answer a segment that belongs to nothing. */
-    refuse (srcIp, srcPort, dstPort, seq, ack, flags, length) {
+    refuse (srcIp, srcPort, dstPort, seq, ack, flags, length, localIp = this.node.ip) {
         if (flags & RST) return;
         this.counters.resetsSent++;
-        if (flags & ACK) this.segment(srcIp, dstPort, srcPort, ack, 0, RST, []);
-        else this.segment(srcIp, dstPort, srcPort, 0, add(seq, length), RST | ACK, []);
+        if (flags & ACK) this.segment(srcIp, dstPort, srcPort, ack, 0, RST, [], false, localIp);
+        else this.segment(srcIp, dstPort, srcPort, 0, add(seq, length), RST | ACK, [], false, localIp);
     }
 
-    /** A TCP segment addressed to this node. */
-    receive (p, srcIp) {
+    /**
+     * A TCP segment for `dstIp`: this node's own address, or, when the node
+     * routes for its LAN (gateway.js), an address beyond it that this end
+     * then answers as.
+     */
+    receive (p, srcIp, dstIp = this.node.ip) {
         if (p.length < 20) return;
         const offset = (p[12] >> 4) * 4;
         if (offset < 20 || offset > p.length) return;
-        if (checksum([...put32(srcIp), ...put32(this.node.ip), 0, PROTO_TCP, ...put16(p.length), ...p]) !== 0) {
+        if (checksum([...put32(srcIp), ...put32(dstIp), 0, PROTO_TCP, ...put16(p.length), ...p]) !== 0) {
             this.counters.badChecksum++;
             return;
         }
@@ -198,16 +206,19 @@ export class Tcp {
             if (p[i + 1] < 2) break;
             i += p[i + 1];
         }
-        const key = this.key(srcIp, srcPort, dstPort);
+        const key = this.key(srcIp, srcPort, dstPort, dstIp);
         const c = this.connections.get(key);
 
         if (!c) {
-            const onConnection = this.listeners.get(dstPort);
+            const bareSyn = (flags & (SYN | ACK | RST)) === SYN;
+            // For an address beyond the LAN the gateway decides, once per connection attempt.
+            const onConnection = dstIp === this.node.ip ? this.listeners.get(dstPort) :
+                (bareSyn && this.intercept ? this.intercept(dstIp, dstPort, srcIp) : null);
             // Only a bare SYN opens a connection; anything else to a listening or closed port is refused.
-            if (!onConnection || (flags & (SYN | ACK | RST)) !== SYN) {
-                return this.refuse(srcIp, srcPort, dstPort, seq, ack, flags, length);
+            if (!onConnection || !bareSyn) {
+                return this.refuse(srcIp, srcPort, dstPort, seq, ack, flags, length, dstIp);
             }
-            const n = new TcpConnection(this, srcIp, srcPort, dstPort);
+            const n = new TcpConnection(this, srcIp, srcPort, dstPort, dstIp);
             n.onConnection = onConnection;
             n.rcvNxt = add(seq, 1);
             n.sndUna = this.nextIss; n.sndNxt = add(this.nextIss, 1);
@@ -220,7 +231,7 @@ export class Tcp {
         }
 
         if (c.state === 'SYN-SENT') {
-            if ((flags & ACK) && ack !== c.sndNxt) return (flags & RST) ? undefined : this.segment(srcIp, dstPort, srcPort, ack, 0, RST, []);
+            if ((flags & ACK) && ack !== c.sndNxt) return (flags & RST) ? undefined : this.segment(srcIp, dstPort, srcPort, ack, 0, RST, [], false, dstIp);
             if (flags & RST) return (flags & ACK) ? c.close('refused') : undefined;
             if ((flags & (SYN | ACK)) !== (SYN | ACK)) return undefined;
             c.rcvNxt = add(seq, 1);
@@ -240,11 +251,11 @@ export class Tcp {
             return this.send(c, ACK, c.sndNxt, []);
         }
         if (flags & RST) return c.close('reset');
-        if (flags & SYN) { this.segment(srcIp, dstPort, srcPort, c.sndNxt, 0, RST, []); return c.close('reset'); }
+        if (flags & SYN) { this.segment(srcIp, dstPort, srcPort, c.sndNxt, 0, RST, [], false, dstIp); return c.close('reset'); }
         if (!(flags & ACK)) return undefined;
 
         if (c.state === 'SYN-RECEIVED') {
-            if (ack !== c.sndNxt) return this.segment(srcIp, dstPort, srcPort, ack, 0, RST, []);
+            if (ack !== c.sndNxt) return this.segment(srcIp, dstPort, srcPort, ack, 0, RST, [], false, dstIp);
             c.state = 'ESTABLISHED';
             c.sndUna = ack;
             c.sndWnd = window;
