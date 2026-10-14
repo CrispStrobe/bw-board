@@ -1551,3 +1551,11 @@ or credited to a combined candidate; the scope limitations above remain.
 The adopted fetch change measured approximately 12.6% higher whole-Node CPU
 throughput in this authored mix only. Lite pin/installed GUI adoption is separate;
 PR557 and its original gate remain unchanged.
+
+
+The latest [media-free platform diagnostic](X86-RTX-PLATFORMS.md#hosted-ordinary-js-diagnostic--2026-10-14)
+records current-source timed-loop core/machine rates separately from this
+whole-Node paired gate. Next work is coordinated Lite pin/installed-consumer
+qualification and a separately scoped AT-platform profiling hypothesis;
+the core/AT gap is not an established CPU cost share. Neither next task is
+implemented or qualified by this diagnostic.

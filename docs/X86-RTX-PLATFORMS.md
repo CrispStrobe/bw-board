@@ -37,14 +37,14 @@ assumed from the image name.
 For Kaggle, first make a source dataset from an exact committed revision:
 
 ```sh
-mkdir -p /mnt/volume1/x86-kaggle-bundle
-mkdir -p /mnt/volume1/x86-kaggle-bundle/source
+mkdir -p x86-kaggle-bundle
+mkdir -p x86-kaggle-bundle/source
 git archive --format=tar HEAD package.json src scripts/bench-x86-platforms.mjs \
-  | tar -xf - -C /mnt/volume1/x86-kaggle-bundle/source
-git rev-parse HEAD > /mnt/volume1/x86-kaggle-bundle/source/source-revision.txt
-tar -C /mnt/volume1/x86-kaggle-bundle/source -czf \
-  /mnt/volume1/x86-kaggle-bundle/bw-board-x86-bench.tar.gz .
-sha256sum /mnt/volume1/x86-kaggle-bundle/bw-board-x86-bench.tar.gz
+  | tar -xf - -C x86-kaggle-bundle/source
+git rev-parse HEAD > x86-kaggle-bundle/source/source-revision.txt
+tar -C x86-kaggle-bundle/source -czf \
+  x86-kaggle-bundle/bw-board-x86-bench.tar.gz .
+sha256sum x86-kaggle-bundle/bw-board-x86-bench.tar.gz
 ```
 
 Upload the directory as a Kaggle dataset with its usual `dataset-metadata.json`,
@@ -77,3 +77,42 @@ The GPU column measures its CPU host. On this loop, 8086 XT factors were
 29.12×/16.06× on the Kaggle CPU host (core/machine) and 34.11×/19.05× on the
 GPU host. The 386 configured virtual-time factors were 0.165×/0.556× and
 0.200×/0.692×, respectively, under the synthetic one/six-cycle charges.
+
+
+## Hosted ordinary-JS diagnostic — 2026-10-14
+
+[Run38628917093](https://github.com/CrispStrobe/bw-board/actions/runs/38628917093)
+passed root and independent original-packet consistency audits at
+[source c2f0936d](https://github.com/CrispStrobe/bw-board/blob/c2f0936d5fcc22e3757531eeaa30828413a6ede7/scripts/bench-x86-platforms.mjs).
+The media-free five-operation real-mode loop used one million steps, three
+measured passes and an excluded warmup. All four paths reached AX65534,
+BX65535, IP0 and memory word65535. This covers functional core/machine paths,
+not all 8086 variants, 32-bit/protected-mode execution or an operating system.
+
+| Path | Million instructions/s | Configured model factor |
+|---|---:|---:|
+| 8086 core | 28.608730 | 58.743263 |
+| 8086 machine | 19.016350 | 39.046907 |
+| 386 core | 7.262239 | 0.453889958 |
+| 386 AT machine | 3.863230 | 1.448711336 |
+
+The allocated EPYC9V74 runner had four logical CPUs and Node22.23.3; this
+run had no enforced one-CPU cgroup quota. These timed-loop rates exclude
+startup/setup. The 386 core charges one synthetic unit per instruction;
+the AT scheduler charges six. Their factors against the declared 16 MHz
+profile therefore are not physical clock throughput or comparable speed-target
+measurements. The core-versus-AT gap does not establish a CPU cost share.
+
+The sole [original artifact11925262354](https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11925262354)
+is 2245 bytes, SHA256 `7f5124e6aefaea6fe082e1cc30ce1b4ca519e33f74a830ce9a6a8bc2d87c1da6`.
+This current-source diagnostic is GitHub-only; the historical VPS and Kaggle
+receipts above retain their own source/runtime/workload scope.
+The separate [guarded-fetch paired result](X86-NEXT-LANES.md#guarded-word-fetch-public-paired-measurement)
+used EPYC7763, Node20.20.2, enforced one-CPU resources and whole-Node timing
+for another authored workload. Its approximately 12.6% isolated gain cannot
+be inferred from or combined with these absolute loop rates.
+
+Next: coordinate Lite pin adoption with the shared package-path owner and
+qualify the installed consumer separately. An AT-platform profiling hypothesis
+is proposed only; a separate merged scope is required before implementing or
+running it. No additional profile, benchmark or GUI adoption is reported here.
