@@ -1,5 +1,24 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-14 CI tiers (fast / thorough / docs-only) — CLAIM, VPS Claude (opus), by owner decision of 2026-10-14 ("make the normal CI faster, reserve more thorough CI").
+Branch lane/ci-tiers-20261014, stacked on feat/ci-once-per-commit-20261014 (PR #567, must land first); claim base f5d8473c2e037bfd4f18ff7ed1b3a99a6f39c4b1.
+Owns this row; the `on:`, `concurrency:` and job-level `if:` lines of .github/workflows/ci.yml,
+harris-native.yml and x86-xv6.yml; a new .github/workflows/ci-tier-gate.yml (one PR job
+"full CI requested"); the repository label `ci:full`; the trigger assertion in
+test/harris-native-ci-workflow.test.mjs; and the `ciCadence` values in
+scripts/oracle-census.mjs for inputs whose ci.yml job moves to the thorough tier (that
+value is derived from the job's event gate by test/oracle-census.test.mjs).
+FAST: ci.yml `test` on every push of every branch. THOROUGH: ci.yml vectors, corpus,
+vectors186, harris-native qualify and x86-xv6 — on push to master, schedule,
+workflow_dispatch and on a pull request labelled ci:full; vectors-full keeps its
+nightly/on-demand cadence plus ci:full PRs (not master pushes). The census `ci:` texts
+of the moved inputs are corrected to that cadence. DOCS-ONLY (LANES.md, docs/,
+spec-updates/, *.md): those workflows are path-ignored; only the gate runs. The gate passes
+a docs-only PR or one labelled ci:full and fails otherwise, so a code PR cannot show all
+checks green without the thorough tier on its head. Concurrency per workflow, event and
+ref; superseded runs cancelled except on master. No job step, version, pinned action,
+threshold or receipt changes; lane-branch and path-scoped workflows untouched.
+
 2026-10-14 current paged-PF static source inventory — CLAIM, Codex x86.
 Branch lane/386-historical-materializer-20261013; refreshed main base
 `d71c4f19119c7f054a49ed5df8b355b1106f1628`.
