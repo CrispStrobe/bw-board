@@ -1,11 +1,17 @@
 # Fixed historical source context helper
 
-This first slice implements bounded metadata and context-consistency checks.
-Actual materialization, Git/readback operations, context release and JavaScript
-import routes are unconnected source-owned stubs. `actual()` and the default
-`Context()._prepare()` refuse before metadata, filesystem or Git work. No external
-seal, caller root, commit, code, module, command, environment or factory parameter
-arms these routes. The ten existing test harnesses and workflow remain unwired.
+The fixed materializer, retained Python owner and Node bridge are now connected
+as source. The ten current harnesses select held support modules and fixture
+reads through one issued context; they never import the historical test modules.
+The owner remains alive until each harness's after hook requests CLOSE and verifies
+observed readback/release plus the owned child's exit. Runtime sources, original
+report pins and current CPU remain distinct.
+
+The default `Context()._prepare()`, its `_import` stub and the `actual()` entry
+points still refuse. The bridge uses the fixed source-owned owner process, not a
+caller root, command, environment or factory. This connected source has passed
+only manufactured controls and syntax checks locally. Real materialization,
+historical imports, assembly and affected hosted guests are not yet qualified.
 
 The immutable table contains186 relative source/data roles at public commit
 c3ada315e9dfc51cd70ac6403d9e1ab18a0faf5c, each with Git blob, extent and SHA256.
@@ -41,7 +47,7 @@ capability is not a source ownership proof.
 Preparation/import consistency flags in tests are not actual materialization,
 historical runtime, current CPU or native qualification. Modern Node/binutils
 revalidation is a separate hosted observation. Existing held same-engine replay,
-when later wired, requires those exact sources and public history objects.
+requires those exact sources and public history objects.
 No new binary, guest, compiler, performance or licence clearance follows.
 
 Controls: `/usr/bin/python3 -I -B scripts/i80386-historical-source-contexts/controls.py`.
@@ -50,5 +56,29 @@ metadata seals and mocked materialization/Git/readback/import/release. They neve
 create a real worktree, invoke Git or binutils, import held JavaScript, or run a
 guest. The first control fixture stopped earlier at a contradictory native blob
 row than its cleanup expectation; it was corrected without changing admission.
-Source preparation remains gated on independent review. Production loaders,
+The model and materializer retain 17 and 41 mock controls. Owner protocol controls
+add 6 cases and the bridge adds 7 byte/mock-process cases, including owner failure
+after READY and rejection of a pending import after poison. These controls do not
+invoke the real materializer or any held support modules. Hosted qualification
+remains pending exact-source review and CI. Production loaders,
 current CPU, original receipts and historical pins are unchanged.
+
+## Hosted observation boundary
+
+The owned xv6 workflow runs the bounded 17/41/6 Python and 7 Node controls before
+historical cases, records modern Python/Git/Node/binutils versions, and executes
+all ten historical groups serially. Its separate current-test selection is a
+checked disjoint union with the historical selection; no original test is removed.
+Current xv6 build and guest steps keep their original commands and assertions.
+Generic CI retains its existing serial runner; its exact compatible-context fetch
+requires the separately claimed workflow extension.
+
+A successful historical test process must finish its after hook, which checks the
+owner's explicit final readback/release facts, cleanup certainty and actual child
+exit. EOF or stderr silence alone cannot establish release. Source and release
+observations are finite and do not certify the original historical runtime or a
+continuous source lease. Raw owner protocol roots are internal handoff data, not
+public provenance. Hosted summaries must retain only the fixed context commit,
+186-row census, metadata digests, modern runtime versions and observed release
+facts; do not publish temporary paths or the internal token. Any failure's bounded
+original protocol/stderr remains diagnostic evidence, never a successful receipt.

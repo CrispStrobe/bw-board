@@ -1,5 +1,14 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-14 current paged-PF static source inventory — CLAIM, Codex x86.
+Branch lane/386-historical-materializer-20261013; refreshed main base
+`d71c4f19119c7f054a49ed5df8b355b1106f1628`.
+Own a narrow correction to `scripts/bochs-cpu3-native-paged-pagefault/build-controls.mjs`, `test/i80386-paged-pagefault-build-source.test.mjs`, and an explicit versioned `scripts/bochs-cpu3-native-paged-pagefault/current-source-inventory.json` declaration if required, plus this registry entry and the historical-context task guide. No native builder, production admission/loader, CPU, guest, binary, raw receipt or original pin changes are included.
+
+The current static source closure now reaches `scripts/i80386-historical-source-contexts/bridge.mjs` through current source-test imports. Authenticate the original 243-path census using the unchanged public driver-build binding and its exact compiled source commit, then require a separately versioned current 244-path set equal to those paths plus only that named bridge. Every current row must join current Git and live bytes. This is current metadata-control coverage, not substitution of old test execution or qualification of the current CPU by an old oracle.
+
+Acceptance: independently authenticate the original compiled path/hash map and public Git objects; preserve original 243 native proof/pins unchanged; prove the current path-set equality and the bridge's exact admitted digest; reject missing, duplicate, extra, foreign and wrong-bridge rows with authored controls; retain all six nested PF controls and current harness assertions. Require affected exact-head hosted CI and the existing xv6 build/guest acceptance steps to pass. No blind numeric count update, hidden path exclusion, skipped test or new performance/native result is authorized. Implementation begins only after the matched documentation claim has merged.
+
 2026-10-14 precision accepted-step meter quadrature — DONE implementation candidate, Codex bwcx.
 Branch lane/adp7118-meter-quadrature-20261014, exact basec1f6adba33be83a8a98aa80c2826e274d1b2d378.
 Seven paths only: this ledger, src/board.js (precision meter accepted-step
@@ -168,6 +177,32 @@ work audit: maximum point4.679718 µV/46.797176 nA, reported mean0.387760 µV/
 1.087597 nA; Ohm's law independently holds for points and means within10 pA.
 The actual base-resistor mutant completes and disagrees26.974599 mV.
 Documentation-only closeout preserves every tested executable byte.
+
+2026-10-14 CI once per commit — CLAIM, VPS Claude (opus), by owner decision of 2026-10-14 ("ci once is sufficient").
+Branch lane/ci-once-per-commit-20261014, exact base f99007eec9073d5754f884d3e6f35202f388d985.
+Owns this row and the trigger blocks (only the `on:` sections) of
+.github/workflows/ci.yml, harris-native.yml and x86-xv6.yml, which run on both
+push and pull_request so that every pushed commit of a branch with an open PR
+is built twice, and the one trigger assertion in
+test/harris-native-ci-workflow.test.mjs that requires pull_request. The push
+trigger stays (on every branch, as ci.yml explains); the pull_request trigger
+goes, so each commit is built once and its checks still show on the PR. No
+job, step, threshold or other workflow changes.
+
+2026-10-14 ESP8266 simulator kind (blob-free firmware) — CLAIM, VPS Claude (opus).
+Branch lane/esp8266-adapter-20261014, exact base c9cdee6c8b684e67c66bf61ab618c91279f52235.
+Owns this row plus: a new dependency on our fork CrispStrobe/esp8266js
+(MIT, pinned by commit, as avr8js is), src/esp8266js-adapter.js (boundary-A
+adapter: attachBoard, boot a flash image without the ROM, advanceNs/timeNs,
+serial both ways, pins both ways), its kind entry in src/target-kinds.js and
+branch in src/debug-target-factory.js, a board kind for a NodeMCU-style board
+if the factory needs one, test/esp8266js-*.test.mjs, and a small fixture
+directory test/fixtures/esp8266/ holding images built from the fork's own
+blob-free firmware (sources and hashes named in its README). Only firmware
+that contains no Espressif SDK code is run or committed (the SDK's licence
+limits it to the chip itself). No change to other engines, the CPU cores,
+labwired, x86 provisioning or consumer pins; a debug target (breakpoints,
+memory) is a later, separate claim.
 
 2026-10-13 shared LAN world for the emulated machines — CLAIM, VPS Claude (opus).
 Branch lane/shared-lan-world-20261013, exact base 22a8fea07273e9ad8aa3011c0d57cb6dc7445854.
@@ -4610,5 +4645,26 @@ no skips, blind pin updates or current-CPU credit from historical execution.
 Current CPU regressions and actual hosted xv6 qualification remain separate.
 Production loaders/validators and CPU source are not owned for changes here;
 review any required scope extension before code. The claim and source design are reviewed. The first fixed metadata/context
-helper has mocked controls; actual materialization/import and ten-harness wiring
-remain unconnected. No historical/current CPU qualification is claimed.
+helper retains mocked controls; the separate materializer and owner/Node bridge
+connect the ten current harnesses as source, with actual hosted qualification pending. No historical/current CPU qualification is claimed.
+
+### Historical fixed materializer adapter — 2026-10-13
+
+- Branch: `lane/386-historical-materializer-20261013`.
+- Owned paths: the fixed helper/owner/bridge and control namespace `scripts/i80386-historical-source-contexts/`, the ten current harnesses in the task guide, limited historical/current wiring in `.github/workflows/x86-xv6.yml`, this registry entry and `docs/I80386-HISTORICAL-SOURCE-CONTEXTS.md`.
+- Scope: fixed provider and original-object admission, owned detached sparse 186-file context, bounded Git transport, nofollow byte readback and owned cleanup. Existing consistency model and metadata remain unchanged.
+- Validation: manufactured boundary controls only. No real materialization, historical Node import, assembly, guest, current CPU or performance qualification. Owner/Node bridge and ten-harness/workflow wiring are source-connected with 6/7 mock controls; hosted actual qualification remains pending. Default model/import/actual stubs remain unsealed.
+
+## Historical 80386 shared CI qualification — 2026-10-14
+
+Extend the historical-context lane on `lane/386-historical-materializer-20261013`
+to the existing historical x86 source-fetch and test-execution steps in
+`.github/workflows/ci.yml`. The ten retained harnesses also run there, so this
+provider must receive the exact compatible public commit before materialization.
+Run those ten suites serially and preserve the entire remaining current-test
+inventory with an explicit disjoint-union census. No assertion, fixture, pin,
+threshold, optional skip, unrelated job or workflow trigger changes are owned.
+The Node bridge and `.github/workflows/x86-xv6.yml` remain in the existing claim.
+The shared CI scope extension is merged. Implementation is limited to the
+exact compatible-commit fetch; the existing generic serial runner is unchanged. Current CPU and xv6 guest acceptance remain separate from historical
+fixture execution.

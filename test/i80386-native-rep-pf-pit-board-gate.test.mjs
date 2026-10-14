@@ -1,17 +1,22 @@
+import {historicalContext} from '../scripts/i80386-historical-source-contexts/bridge.mjs';
+const held=await historicalContext(import.meta.url);
+after(()=>held.close());
+const {assertNativeRepPfPitProof,parseRepNativeLog}=await held.module('scripts/i80386-native-rep-pf-pit-board-gate.mjs');
+const {assembleRepPfPitRom}=await held.module('scripts/i80386-rep-pf-pit-oracle.mjs');
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {gunzipSync} from 'node:zlib';
-import test from 'node:test';
-import {assertNativeRepPfPitProof,parseRepNativeLog} from '../scripts/i80386-native-rep-pf-pit-board-gate.mjs';
-import {assembleRepPfPitRom} from '../scripts/i80386-rep-pf-pit-oracle.mjs';
+import test,{after} from 'node:test';
+
+
 
 // Lossless, actual first passing four-arm capture. Final qualification uses a
 // fresh source freeze after these tests; no failed diagnostic capture is used.
 const actualSha='9516ac2e3e38a42c52d41c6490f0b90e696afdd3c20137aede753ffc5a406a01';
 const actualRevision='59b528bf0a0dbc5dc7bbc0416c9ade035fca78d5';
 const sha=v=>createHash('sha256').update(v).digest('hex');
-let bytes=gunzipSync(readFileSync(new URL('./fixtures/i80386-native-rep-pf-pit-board-gate-capture.json.gz',import.meta.url)));
+let bytes=gunzipSync(readFileSync(held.file('test/fixtures/i80386-native-rep-pf-pit-board-gate-capture.json.gz')));
 assert.equal(sha(bytes),actualSha);
 const capture=JSON.parse(bytes);bytes=null;
 const {rom}=assembleRepPfPitRom(),names=['continuous','budget1','budget2','budget257'];

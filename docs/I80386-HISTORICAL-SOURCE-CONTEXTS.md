@@ -113,5 +113,25 @@ new guest compatibility.
 The [fixed helper](../scripts/i80386-historical-source-contexts/README.md) retains
 186 source/data rows, original report/source descriptors and closed support-module
 selectors. Seventeen tiny controls exercise mocked joins and refusals. Production
-loaders, current CPU and historical pins are unchanged. Actual materialization,
-harness/workflow wiring and affected hosted qualification remain future work.
+loaders, current CPU and historical pins are unchanged. The source-owned materializer, owner/Node bridge and ten current harnesses are now
+connected as source; real materialization and affected hosted qualification remain
+pending. Default model/import/actual stubs remain unsealed.
+
+## Fixed materializer source slice
+
+The separate [materializer source contract](../scripts/i80386-historical-source-contexts/MATERIALIZER.md) adds a bounded detached sparse-context adapter using the held 186-row admission and original proofs. Its 41 manufactured controls mock all Git, process and materialization boundaries. The published consistency model and held pins remain unchanged. The fixed owner/Node bridge and ten-harness wiring are connected as source, with 6 owner and 7 bridge mock controls; real hosted materialization and historical qualification remain pending; this source slice does not qualify historical runtime or the current CPU candidate.
+
+## Shared CI provider
+
+The generic `.github/workflows/ci.yml` also runs these ten historical harnesses.
+Its existing historical-source steps must fetch the exact compatible commit and
+execute those suites serially. Its existing serial runner retains the complete
+original package test command. The xv6 workflow separately verifies that its
+historical and current selections are disjoint and their union is complete. No skips, assertion changes or hash waivers are allowed.
+The ownership extension has merged; only the fixed-commit fetch changes in
+generic CI, with its existing serial runner preserved. Actual historical imports and current CPU/xv6 acceptance still need
+separate hosted observations.
+
+### Separately versioned current PF build-control census
+
+The current PF build-control fixture follows current Git and live source bytes. Its source-test imports now add the historical-context bridge to the independently authenticated pre-bridge 243-path census. The narrow inventory lane owns the PF `build-controls.mjs`, its `i80386-paged-pagefault-build-source.test.mjs` harness and an explicit current inventory declaration. Require exactly the original paths plus the named bridge, full current Git/live joins, and missing/extra/wrong-bridge controls. Original native compiled-source proof, its 243 rows, held pins and raw receipts remain unchanged. All six existing nested controls and affected xv6 build/guest gates must run; this correction grants no new native, current guest or performance qualification by itself.
