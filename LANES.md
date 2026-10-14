@@ -4726,8 +4726,9 @@ the task contract for its original run and artifact.
 
 ## Ordinary code16 V8 profile diagnostic — 2026-10-14
 
-Documentation claim on `docs/386-code16-profile-claim-20261014`; implementation
-waits for this claim to merge. Own only new
+The claim is merged. [Draft PR576](https://github.com/CrispStrobe/bw-board/pull/576)
+has a first independently audited two-profile capture; full CI remains pending.
+Own only new
 `.github/workflows/i80386-code16-profile.yml`,
 `scripts/i80386-code16-profile/{profile.py,README.md}` and this registry/task
 text. Coding belongs on `lane/386-code16-profile-20261014`. Existing CPU,
@@ -4737,3 +4738,19 @@ The goal is one separately named hosted CPU profile per frozen A/B arm, with
 original semantics, source/resource/cleanup evidence and bounded raw profiles.
 Profiled timing and approximate sample weights cannot enter the seven paired
 measurements, replace the original adoption gate or establish physical RTx.
+
+
+## Guarded two-byte instruction-fetch specialization — 2026-10-14
+
+Documentation claim on `docs/386-profile-result-fetch-claim-20261014`;
+implementation waits for merge. Own only `_fetchN` in
+`src/experimental/i80386.js`, new
+`test/i80386-fetchn-specialization.test.mjs` and this registry/task text.
+Coding branch: `lane/386-fetchn-specialization-20261014`. All other CPU methods,
+existing tests, workloads, policies, workflows and pins remain outside scope.
+The [contract](docs/X86-NEXT-LANES.md#guarded-two-byte-instruction-fetch-specialization)
+binds a fresh ordinary master baseline, byte-observer/fault parity, affected
+hosted guest checks and a separately scoped new unprofiled admission/gate.
+The two audited profiles suggest investigating guarded word fetch; they do
+not prove a gain. No historical evidence is rewritten and no CPU adoption,
+original-gate replacement or physical/whole-AT speed claim is authorized.
