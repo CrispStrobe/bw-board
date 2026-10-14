@@ -1,5 +1,24 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-14 CI tiers (fast / thorough / docs-only) — CLAIM, VPS Claude (opus), by owner decision of 2026-10-14 ("make the normal CI faster, reserve more thorough CI").
+Branch lane/ci-tiers-20261014, stacked on feat/ci-once-per-commit-20261014 (PR #567, must land first); claim base f5d8473c2e037bfd4f18ff7ed1b3a99a6f39c4b1.
+Owns this row; the `on:`, `concurrency:` and job-level `if:` lines of .github/workflows/ci.yml,
+harris-native.yml and x86-xv6.yml; a new .github/workflows/ci-tier-gate.yml (one PR job
+"full CI requested"); the repository label `ci:full`; the trigger assertion in
+test/harris-native-ci-workflow.test.mjs; and the `ciCadence` values in
+scripts/oracle-census.mjs for inputs whose ci.yml job moves to the thorough tier (that
+value is derived from the job's event gate by test/oracle-census.test.mjs).
+FAST: ci.yml `test` on every push of every branch. THOROUGH: ci.yml vectors, corpus,
+vectors186, harris-native qualify and x86-xv6 — on push to master, schedule,
+workflow_dispatch and on a pull request labelled ci:full; vectors-full keeps its
+nightly/on-demand cadence plus ci:full PRs (not master pushes). The census `ci:` texts
+of the moved inputs are corrected to that cadence. DOCS-ONLY (LANES.md, docs/,
+spec-updates/, *.md): those workflows are path-ignored; only the gate runs. The gate passes
+a docs-only PR or one labelled ci:full and fails otherwise, so a code PR cannot show all
+checks green without the thorough tier on its head. Concurrency per workflow, event and
+ref; superseded runs cancelled except on master. No job step, version, pinned action,
+threshold or receipt changes; lane-branch and path-scoped workflows untouched.
+
 2026-10-14 current paged-PF static source inventory — DONE (finite hosted qualification), Codex x86.
 Branch lane/386-historical-materializer-20261013; refreshed main base
 `d71c4f19119c7f054a49ed5df8b355b1106f1628`.
@@ -9,7 +28,7 @@ The current static source closure now reaches `scripts/i80386-historical-source-
 
 Acceptance: independently authenticate the original compiled path/hash map and public Git objects; preserve original 243 native proof/pins unchanged; prove the current path-set equality and the bridge's exact admitted digest; reject missing, duplicate, extra, foreign and wrong-bridge rows with authored controls; retain all six nested PF controls and current harness assertions. Require affected exact-head hosted CI and the existing xv6 build/guest acceptance steps to pass. No blind numeric count update, hidden path exclusion, skipped test or new performance/native result is authorized. The matched claim merged before implementation. Run 38524496473 passed the exact current inventory controls and affected xv6 scenarios; merge 85182a296c6056ee6dba301767103c9818274ec5 followed all 12 enabled checks and two declared optional skips. Original failed runs 38517413953 and 38517414012 remain preserved.
 
-2026-10-14 precision accepted-step meter quadrature — CLAIM, Codex bwcx.
+2026-10-14 precision accepted-step meter quadrature — DONE qualified, Codex bwcx.
 Branch lane/adp7118-meter-quadrature-20261014, exact basec1f6adba33be83a8a98aa80c2826e274d1b2d378.
 Seven paths only: this ledger, src/board.js (precision meter accepted-step
 descriptors/read integration only), src/meter-quadrature.js,
@@ -28,8 +47,30 @@ Pure polynomial/clipping/refusal controls locally; actual six-case mean/current
 and existing meter/model regressions hosted. Completed wrong-capacitance and
 quadrature-omission mutations required. No power/MNA kernel/device/default,
 scope sampling, other workflow, package pin, GUI or deployment edits.
+Canonical claim0dffd596 preceded implementation. Precision accepted-pair
+quadratic descriptors and clipped integration implemented without new solves
+or state updates; seven pure controls pass, including actual recorder method
+with mocked maps, legacy/failed-history refusals and midpoint-omission mutant.
+Source stays unqualified until all6 actual captures, completed capacitance/
+quadrature-omission mutants and affected meter/model regressions pass hosted.
+Exact36fa345b actual6-case/2-mutant raw audit passes, but CI38515595322 is
+red (8600 pass/4 RLC mean-refusal regressions/302 skips). Harris green does
+not rescue. Forward guard preserves the actual earlier start timestamp over
+the existing <=1 fs integrator completion gap; larger/future gaps still fail.
+No clock/tolerance/stop-rule/work change. Seven pure controls including actual
+recorder gap/unknown-gap/future adversaries pass; fresh qualification required.
+Exact sourcef7212733 qualifies in CI38526574704: 8604 pass/0 fail/302
+documented skips; all four existing RLC regressions pass. Harris38526574700
+and xv638526574737 pass; every enabled exact-head check succeeds, with only
+the declared optional vectors-full skipped. Independent raw-log audit accepts
+all6 cases (3600 scalar readings/18 means), simultaneous KCL and both completed
+negative controls. Maximum voltage mean error34.772398 nV, output/input current
+means68.993334/69.034496 nA; waveform/work receipts unchanged from baseline.
+No physical/device-default/GUI/package/deployment qualification. This durable
+failure/repair closeout changes documentation only; tested executable bytes
+remain identical to f7212733.
 
-2026-10-13 ADP7118 native instrument current startup — CLAIM, Codex bwcx.
+2026-10-13 ADP7118 native instrument current startup — CLOSED failed diagnostic, Codex bwcx.
 Branch lane/adp7118-native-instruments-20261013, exact basefe7e515961e4ab0398ce39ad76aaf272517434ec.
 Four evidence paths only: this ledger, scripts/qualify-adp7118-instruments.mjs,
 test/adp7118-native-instruments.test.mjs and spec-updates/adp7118-native-instruments.md.
@@ -48,6 +89,19 @@ electrical mutation required; pure reference/refusal/mutation controls locally,
 actual engine and existing regressions hosted. Preserve all six reports on red.
 No power/Board/MNA/profile/default model, GUI, pin, workflow, deployment or
 physical ADP7118 qualification change; any required repair needs a fresh claim.
+Canonical claim7c0c304a preceded implementation. Three pure controls pass:
+independent25 ns quadrature checks of voltage/output/input means, exact region
+anchors and ideal/resistive supply identity; malformed/sparse grid/observer/
+clock/work/current refusals; executable changed-IQ and omitted-last-current
+mutants. Actual published observations must satisfy simultaneous port/load/
+supply KCL and IQ/drop checks. Engine test excluded locally by name; hosted
+six-case completion and completed capacitance mutation remain landing gates.
+No actual native current-waveform agreement or main landing claimed yet.
+Exact28bb88ef CI38468813289 fails one mean (8553 pass/1 fail/302 skips),
+Harris38468813412 green. All6 captures/point checks/current means complete;
+linear-r0 voltage mean1.438662 uV misses fixed1 uV. All6 actualadvances156,
+maximum2072 attempts/6212 solves. Capacitance mutant not reached. Preserved
+failed diagnostic, not merged success; repair continues in the claim above.
 
 2026-10-13 LM741 solver-native linear pole — DONE, Codex bwcx.
 Branch lane/lm741-linear-pole-20261013, exact basec5078499ebcde97ce615689667244b37c76eb22f.
