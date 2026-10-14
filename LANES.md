@@ -1,5 +1,19 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-14 esp8266 factory kind + debug target — CLAIM, VPS Claude (opus).
+Branch lane/esp8266-factory-20261014, exact base c847c0470cfaf4ad3c781ce7a83a35b939497533; worktree [local path omitted].
+Owns this row plus: the `esp8266` entry in src/target-kinds.js and
+src/devices/board-kinds.js (GPIO 0-5 and 12-15 as the existing adapter exposes
+them, plus serial), its branch in src/debug-target-factory.js that lazily loads
+the pinned esp8266js fork through the existing loadEsp8266js and boots a flash
+image (base64 or bytes, 0xE9 header) with the existing createEsp8266jsAdapter,
+and tests: a factory test booting the existing blink/button fixtures (blink
+toggles GPIO2 as time advances; button reacts to input), plus added entries in
+the board-kinds and factory/dependency census tests. Census tests are updated
+only by adding entries, never by weakening. No change to the adapter's
+behaviour beyond what the factory needs, no new dependency or pin bump, no
+other engine, CPU core, labwired or x86 change.
+
 2026-10-14 CI tiers (fast / thorough / docs-only) — CLAIM, VPS Claude (opus), by owner decision of 2026-10-14 ("make the normal CI faster, reserve more thorough CI").
 Branch lane/ci-tiers-20261014, stacked on feat/ci-once-per-commit-20261014 (PR #567, must land first); claim base f5d8473c2e037bfd4f18ff7ed1b3a99a6f39c4b1.
 Owns this row; the `on:`, `concurrency:` and job-level `if:` lines of .github/workflows/ci.yml,
