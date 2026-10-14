@@ -173,7 +173,7 @@ describe('getTargetKinds', () => {
     // for the 8086, 66691e1). This count is the reason the test exists -- a kind
     // added without a row here is a target the factory can build and the picker
     // never offers -- so it is updated with the assertion below, not loosened.
-    assert.equal(kinds.length, 15);
+    assert.equal(kinds.length, 16);
     assert.ok(kinds.find(k => k.kind === 'esp8266'));
     assert.ok(kinds.find(k => k.kind === 'riscv32'));
     assert.ok(kinds.find(k => k.kind === 'i8086'));
@@ -186,6 +186,7 @@ describe('getTargetKinds', () => {
     assert.ok(kinds.find(k => k.kind === 'eater6502'));
     assert.ok(kinds.find(k => k.kind === 'rp2040js'));
     assert.ok(kinds.find(k => k.kind === 'stm32f0'));
+    assert.ok(kinds.find(k => k.kind === 'stm32g0'));
     assert.ok(kinds.find(k => k.kind === 'serial'));
   });
 

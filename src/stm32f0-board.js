@@ -21,9 +21,11 @@ export class Stm32Rcc {
   constructor () {
     this.base = 0x40021000;
     this.size = 0x400;
-    this.ahbenr = 0;   // 0x14: GPIOA bit17, GPIOB 18, GPIOC 19
-    this.apb1enr = 0;  // 0x1C: TIM3 bit1, TIM14 bit8
-    this.apb2enr = 0;  // 0x18: USART1 bit14
+    this.ahbenr = 0;   // 0x14: GPIOA bit17, GPIOB 18, GPIOC 19 (F0)
+    this.apb1enr = 0;  // 0x1C: TIM3 bit1, TIM14 bit8 (F0)
+    this.apb2enr = 0;  // 0x18: USART1 bit14 (F0)
+    this.iopenr = 0;   // 0x34: GPIOA bit0, GPIOB 1, GPIOC 2 (G0)
+    this.apbenr1 = 0;  // 0x3C: TIM3 bit1 (G0)
     /** accesses to peripherals whose clock was off — the teaching signal */
     this.gatedAccesses = [];
   }
@@ -36,6 +38,8 @@ export class Stm32Rcc {
       case 0x14: return this.ahbenr;
       case 0x18: return this.apb2enr;
       case 0x1c: return this.apb1enr;
+      case 0x34: return this.iopenr;
+      case 0x3c: return this.apbenr1;
       default: return 0;
     }
   }
@@ -44,11 +48,17 @@ export class Stm32Rcc {
     if (off === 0x14) this.ahbenr = v >>> 0;
     else if (off === 0x18) this.apb2enr = v >>> 0;
     else if (off === 0x1c) this.apb1enr = v >>> 0;
+    else if (off === 0x34) this.iopenr = v >>> 0;
+    else if (off === 0x3c) this.apbenr1 = v >>> 0;
     // CR/CFGR writes accepted (PLL config is a no-op at this fidelity)
   }
 
-  gpioEnabled (portIndex) { return (this.ahbenr >>> (17 + portIndex)) & 1; }
-  tim3Enabled () { return (this.apb1enr >>> 1) & 1; }
+  gpioEnabled (portIndex) {
+    return ((this.ahbenr >>> (17 + portIndex)) & 1) === 1 || ((this.iopenr >>> portIndex) & 1) === 1;
+  }
+  tim3Enabled () {
+    return ((this.apb1enr >>> 1) & 1) === 1 || ((this.apbenr1 >>> 1) & 1) === 1;
+  }
   tim14Enabled () { return (this.apb1enr >>> 8) & 1; }
   usart1Enabled () { return (this.apb2enr >>> 14) & 1; }
   adcEnabled () { return (this.apb2enr >>> 9) & 1; }
@@ -533,12 +543,15 @@ export function attachStm32F0 (machine, { onPinChange, onSerialByte, onAnalogRea
   const rcc = new Stm32Rcc();
   const gpioA = new Stm32Gpio({ base: 0x48000000, portIndex: 0, portLetter: 'A', rcc, onPinChange, onInputRead });
   const gpioB = new Stm32Gpio({ base: 0x48000400, portIndex: 1, portLetter: 'B', rcc, onPinChange, onInputRead });
+  const gpioC = new Stm32Gpio({ base: 0x48000800, portIndex: 2, portLetter: 'C', rcc, onPinChange, onInputRead });
   // TIM3's compare channels drive pads directly (a pin in AF mode is
   // owned by its peripheral) — same publish stream as the GPIO's.
   const tim3 = new Stm32Tim3({ rcc, clockHz: machine.clockHz, onPinChange });
   const tim14 = new Stm32Tim14({ rcc, clockHz: machine.clockHz });
   const adc = new Stm32Adc({ rcc, onAnalogRead, onTemperature });
   const usart1 = new Stm32Usart1({ rcc, onByte: onSerialByte });
-  for (const p of [rcc, gpioA, gpioB, tim3, tim14, adc, usart1]) machine.addPeripheral(p);
-  return { rcc, gpioA, gpioB, tim3, tim14, adc, usart1 };
+  for (const p of [rcc, gpioA, gpioB, gpioC, tim3, tim14, adc, usart1]) machine.addPeripheral(p);
+  return { rcc, gpioA, gpioB, gpioC, tim3, tim14, adc, usart1 };
 }
+
+export const attachStm32G0 = attachStm32F0;

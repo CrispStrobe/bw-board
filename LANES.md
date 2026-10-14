@@ -1,5 +1,13 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-14 stm32g0 target kind, adapter and board contract — CLAIM, VPS Claude.
+Branch lane/arm-stm32-g030-f103, exact base 3b03d226cb1e7ecfcbbd28bc42fe492f8d2b6cf1; worktree [local path omitted].
+Owns this row plus: 'stm32g0' in src/target-kinds.js, createStm32G0Target in
+src/debug-target-factory.js, STM32G0_PINS and createStm32G0Adapter in
+src/stm32-adapter.js, RCC_IOPENR / RCC_APBENR1 and GPIOC in src/stm32f0-board.js,
+test/stm32g0-board.test.mjs, and census updates in test/debug-factory.test.js
+and test/m6502-factory.test.mjs.
+
 2026-10-14 esp8266 factory kind + debug target — CLAIM, VPS Claude (opus).
 Branch lane/esp8266-factory-20261014, exact base c847c0470cfaf4ad3c781ce7a83a35b939497533; worktree [local path omitted].
 Owns this row plus: the `esp8266` entry in src/target-kinds.js and

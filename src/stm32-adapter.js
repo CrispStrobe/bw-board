@@ -32,28 +32,37 @@ export const STM32F0_PINS = (() => {
   return defs;
 })();
 
-/**
- * @param {object} [opts]
- * @param {Uint8Array} [opts.program] flash image (vectors first)
- * @param {number} [opts.clockHz] default 48 MHz
- * @returns {object} boundary-A adapter + debug-target facade
- */
-export function createStm32F0Adapter (opts = {}) {
-  const clockHz = opts.clockHz ?? 48_000_000;
-  const machine = new CortexM0Machine({ clockHz, sramBytes: 4096, flashBytes: 16 * 1024 });
+/** The G030 header pins (PA0-PA15, PB0-PB9, PC14-PC15). */
+export const STM32G0_PINS = (() => {
+  const defs = {};
+  for (let bit = 0; bit <= 15; bit++) defs[`PA${bit}`] = { port: 0, bit };
+  for (let bit = 0; bit <= 9; bit++) defs[`PB${bit}`] = { port: 1, bit };
+  defs.PC14 = { port: 2, bit: 14 };
+  defs.PC15 = { port: 2, bit: 15 };
+  return defs;
+})();
+
+function createStm32AdapterInternal ({
+  clockHz = 48_000_000,
+  sramBytes = 4096,
+  flashBytes = 16 * 1024,
+  pinDefs = STM32F0_PINS,
+  program = null,
+} = {}) {
+  const machine = new CortexM0Machine({ clockHz, sramBytes, flashBytes });
 
   let board = null;
   let serialListener = null;
   let inInputSync = false;
   const stats = { pinChangeCount: 0, advanceToCount: 0 };
 
-  // Last published (mode, high) per pin: the F0 GPIO republishes the
+  // Last published (mode, high) per pin: the F0/G0 GPIO republishes the
   // whole port on every BSRR write, so the adapter dedups — the board
   // sees edges, not repetition (MNA churn and stub-board noise both).
   const published = new Map();
 
   const publish = (pin, mode, driveHigh) => {
-    if (!board || !(pin in STM32F0_PINS)) return;
+    if (!board || !(pin in pinDefs)) return;
     const prev = published.get(pin);
     if (prev && prev.mode === mode && prev.high === driveHigh) return;
     published.set(pin, { mode, high: driveHigh });
@@ -92,8 +101,9 @@ export function createStm32F0Adapter (opts = {}) {
     if (!board || !board.readPin) return;
     inInputSync = true;
     try {
-      for (const [name, def] of Object.entries(STM32F0_PINS)) {
-        const gpio = def.port === 0 ? peripherals.gpioA : peripherals.gpioB;
+      for (const [name, def] of Object.entries(pinDefs)) {
+        const gpio = def.port === 0 ? peripherals.gpioA : def.port === 1 ? peripherals.gpioB : peripherals.gpioC;
+        if (!gpio) continue;
         const mode = (gpio.moder >>> (2 * def.bit)) & 3;
         if (mode !== 0) continue; // MCU-driven or AF: not an input pad
         gpio.setInput(def.bit, board.readPin(name) === 1);
@@ -103,12 +113,12 @@ export function createStm32F0Adapter (opts = {}) {
     }
   }
 
-  const program = opts.program ?? null;
+  const initialProgram = program;
   function resetToProgram () {
     machine.sram.fill(0);
-    if (program) machine.loadFirmware(program);
+    if (initialProgram) machine.loadFirmware(initialProgram);
   }
-  if (program) machine.loadFirmware(program);
+  if (initialProgram) machine.loadFirmware(initialProgram);
 
   // The clock facade the shared debug target's execute loop drives.
   // nanosToNextAlarm is a DELTA, same semantics as rp2040js's clock;
@@ -138,6 +148,7 @@ export function createStm32F0Adapter (opts = {}) {
       // Seat every header pin's CURRENT state, not just future changes.
       peripherals.gpioA._publishAll();
       peripherals.gpioB._publishAll();
+      if (peripherals.gpioC) peripherals.gpioC._publishAll();
       // Reset-state MODER is all-zeros = plain input: _publishAll covers
       // every header pin, so nothing stays unseated.
       syncInputs();
@@ -163,6 +174,28 @@ export function createStm32F0Adapter (opts = {}) {
     },
     stats,
   };
+}
+
+export function createStm32F0Adapter (opts = {}) {
+  const clockHz = opts.clockHz ?? 48_000_000;
+  return createStm32AdapterInternal({
+    ...opts,
+    clockHz,
+    sramBytes: 4096,
+    flashBytes: 16 * 1024,
+    pinDefs: STM32F0_PINS,
+  });
+}
+
+export function createStm32G0Adapter (opts = {}) {
+  const clockHz = opts.clockHz ?? 64_000_000;
+  return createStm32AdapterInternal({
+    ...opts,
+    clockHz,
+    sramBytes: 8192,
+    flashBytes: 64 * 1024,
+    pinDefs: STM32G0_PINS,
+  });
 }
 
 export default createStm32F0Adapter;

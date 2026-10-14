@@ -107,6 +107,9 @@ export async function createDebugTarget(kind, opts) {
   if (kind === 'stm32f0') {
     return createStm32F0Target(opts);
   }
+  if (kind === 'stm32g0') {
+    return createStm32G0Target(opts);
+  }
   if (kind === 'labwired') {
     return createLabwiredTarget(opts);
   }
@@ -117,7 +120,7 @@ export async function createDebugTarget(kind, opts) {
     return createSerialTarget(opts);
   }
   throw new Error(
-    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'i8086', 'i80286', 'z80', 'riscv32', 'rp2040js', 'stm32f0', 'labwired', 'esp8266', or 'serial'.`
+    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'i8086', 'i80286', 'z80', 'riscv32', 'rp2040js', 'stm32f0', 'stm32g0', 'labwired', 'esp8266', or 'serial'.`
   );
 }
 
@@ -608,6 +611,26 @@ async function createStm32F0Target(opts) {
 
   // The debug target is the rp2040js one, unchanged: the adapter's
   // facade (bus + sram + clock) is the whole surface it consumes.
+  const { createRp2040jsDebugTarget } = await import('./rp2040js-debug.js');
+  const target = createRp2040jsDebugTarget(adapter, { symbols });
+
+  return { target, adapter };
+}
+
+// ─── STM32G030 target (hand-rolled light tier) ──────────────────────────
+
+async function createStm32G0Target(opts) {
+  const {
+    board, program, symbols,
+    clockHz = 64_000_000,
+  } = opts;
+
+  if (!board) throw new Error('stm32g0 target requires opts.board');
+
+  const { createStm32G0Adapter } = await import('./stm32-adapter.js');
+  const adapter = createStm32G0Adapter({ clockHz, program });
+  adapter.attachBoard(board);
+
   const { createRp2040jsDebugTarget } = await import('./rp2040js-debug.js');
   const target = createRp2040jsDebugTarget(adapter, { symbols });
 
