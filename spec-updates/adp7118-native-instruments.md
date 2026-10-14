@@ -1,7 +1,8 @@
 # ADP7118 native instrument-current startup qualification
 
-Status: precision-meter repair candidate, not qualified. No device-model or
-legacy-profile/default change.
+Status: hosted numerical qualification passed on source
+`f7212733a6fadced276aa0d68f733ef28f2f80ae`. No device-model or
+legacy-profile/default change; this is not GUI/package or physical qualification.
 
 The existing [current-limited startup model](adp7118-current-limited-startup.md)
 already has voltage and caller-sampled current proofs. This batch adds simultaneous
@@ -129,3 +130,37 @@ than moving its value to the integer clock. Future observations and larger
 unknown gaps still refuse. Pure controls explicitly cover all three cases.
 No integrator stop rule, profile accuracy, work ceiling, reference or measurement
 bound changes. Fresh hosted RLC/regulator/full-suite qualification is required.
+
+## Qualified repair
+
+The corrected source `f7212733a6fadced276aa0d68f733ef28f2f80ae` passes
+[CI 38526574704](https://github.com/CrispStrobe/bw-board/actions/runs/38526574704):
+8,604 passed, zero failed and 302 documented skips. All four existing RLC
+instrument regressions now pass, including wrong inductance/phase, wiring and
+polarity controls. [Harris 38526574700](https://github.com/CrispStrobe/bw-board/actions/runs/38526574700)
+and [xv6 38526574737](https://github.com/CrispStrobe/bw-board/actions/runs/38526574737)
+also pass. All six enabled checks succeed; only the declared optional
+`vectors-full` job skips.
+
+An independent raw-log reader, without importing engine or producer helpers,
+accepts all six captures: 3,600 scalar readings, 18 means and 480 provisional
+simultaneous KCL observations. Maximum point errors are 0.396473 µV voltage
+and 2.619543 µA output/input current. Maximum mean errors are 34.772398 nV
+voltage and 68.993334/69.034496 nA output/input current. The previously failed
+linear ideal-supply voltage mean now differs by 1.265835 nV. Every case uses
+156 charged advances; maximum attempts/solves remain 2,072/6,212. Point and
+work results are unchanged from the original diagnostic.
+
+Both actual negative controls complete and disagree with the unchanged
+reference. The capacitance control increases C by 50%. Disabling the new
+quadrature reproduces the original 1.438662 µV mean error; the hosted caller
+asserts that its waveform-point checks still pass. The independent reader
+checks that mutant's reported completion, mean failure and bounded work, not
+an independently archived full mutant waveform. Neither acquisition refusal
+nor a fabricated trace supplies the negative proof.
+
+The closeout changes only documentation and preserves every executable byte
+of the qualified source. This establishes bounded agreement with the authored
+startup law and repaired precision meter integration, not a vendor/physical
+certificate or universal regulator fidelity. Consumer pin adoption and actual
+CLI/GUI integration qualification remain separate.

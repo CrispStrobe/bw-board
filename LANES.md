@@ -9,7 +9,7 @@ The current static source closure now reaches `scripts/i80386-historical-source-
 
 Acceptance: independently authenticate the original compiled path/hash map and public Git objects; preserve original 243 native proof/pins unchanged; prove the current path-set equality and the bridge's exact admitted digest; reject missing, duplicate, extra, foreign and wrong-bridge rows with authored controls; retain all six nested PF controls and current harness assertions. Require affected exact-head hosted CI and the existing xv6 build/guest acceptance steps to pass. No blind numeric count update, hidden path exclusion, skipped test or new performance/native result is authorized. Implementation begins only after the matched documentation claim has merged.
 
-2026-10-14 precision accepted-step meter quadrature — DONE implementation candidate, Codex bwcx.
+2026-10-14 precision accepted-step meter quadrature — DONE qualified, Codex bwcx.
 Branch lane/adp7118-meter-quadrature-20261014, exact basec1f6adba33be83a8a98aa80c2826e274d1b2d378.
 Seven paths only: this ledger, src/board.js (precision meter accepted-step
 descriptors/read integration only), src/meter-quadrature.js,
@@ -40,6 +40,16 @@ not rescue. Forward guard preserves the actual earlier start timestamp over
 the existing <=1 fs integrator completion gap; larger/future gaps still fail.
 No clock/tolerance/stop-rule/work change. Seven pure controls including actual
 recorder gap/unknown-gap/future adversaries pass; fresh qualification required.
+Exact sourcef7212733 qualifies in CI38526574704: 8604 pass/0 fail/302
+documented skips; all four existing RLC regressions pass. Harris38526574700
+and xv638526574737 pass; every enabled exact-head check succeeds, with only
+the declared optional vectors-full skipped. Independent raw-log audit accepts
+all6 cases (3600 scalar readings/18 means), simultaneous KCL and both completed
+negative controls. Maximum voltage mean error34.772398 nV, output/input current
+means68.993334/69.034496 nA; waveform/work receipts unchanged from baseline.
+No physical/device-default/GUI/package/deployment qualification. This durable
+failure/repair closeout changes documentation only; tested executable bytes
+remain identical to f7212733.
 
 2026-10-13 ADP7118 native instrument current startup — CLOSED failed diagnostic, Codex bwcx.
 Branch lane/adp7118-native-instruments-20261013, exact basefe7e515961e4ab0398ce39ad76aaf272517434ec.
