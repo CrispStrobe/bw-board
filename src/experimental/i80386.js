@@ -551,6 +551,15 @@ export class ExperimentalI80386 {
             return fast >>> 0;
           }
         }
+        if (size === 2) {
+          const low = this.fetch(physical >>> 0) & 255;
+          this._instructionBytes = (this._instructionBytes ?? 0) + 1;
+          this.eip += 1;
+          const high = this.fetch((physical + 1) >>> 0) & 255;
+          this._instructionBytes = (this._instructionBytes ?? 0) + 1;
+          this.eip += 1;
+          return (low | (high << 8)) >>> 0;
+        }
         let value = 0;
         for (let i = 0; i < size; i++) {
           value += (this.fetch((physical + i) >>> 0) & 255) * 2 ** (8 * i);
