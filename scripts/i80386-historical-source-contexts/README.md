@@ -59,8 +59,14 @@ row than its cleanup expectation; it was corrected without changing admission.
 The model and materializer retain 17 and 41 mock controls. Owner protocol controls
 add 6 cases and the bridge adds 7 byte/mock-process cases, including owner failure
 after READY and rejection of a pending import after poison. These controls do not
-invoke the real materializer or any held support modules. Hosted qualification
-remains pending exact-source review and CI. Production loaders,
+invoke the real materializer or any held support modules. Hosted run [38524496473](https://github.com/CrispStrobe/bw-board/actions/runs/38524496473)
+passed real materialization/import and all 288 historical cases in the observed
+modern runtime. Separate current tests passed 1,556 cases with zero failures and
+11 skips, including the exact 244-path census and separate 245th metadata role.
+Actual 4 MiB filesystem, 14 MiB boot and forktest xv6 scenarios also passed; see
+the [checkpoint](../../docs/I80386-HISTORICAL-SOURCE-CONTEXTS.md). Default model
+and actual stubs remain unsealed; original historical-runtime identity, continuous
+ownership and performance remain unqualified. Production loaders,
 current CPU, original receipts and historical pins are unchanged.
 
 ## Hosted observation boundary
@@ -70,8 +76,8 @@ historical cases, records modern Python/Git/Node/binutils versions, and executes
 all ten historical groups serially. Its separate current-test selection is a
 checked disjoint union with the historical selection; no original test is removed.
 Current xv6 build and guest steps keep their original commands and assertions.
-Generic CI retains its existing serial runner; its exact compatible-context fetch
-requires the separately claimed workflow extension.
+Generic CI retains its existing serial runner and now includes the exact
+compatible-context fetch through the merged workflow extension.
 
 A successful historical test process must finish its after hook, which checks the
 owner's explicit final readback/release facts, cleanup certainty and actual child
