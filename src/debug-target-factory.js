@@ -110,11 +110,14 @@ export async function createDebugTarget(kind, opts) {
   if (kind === 'labwired') {
     return createLabwiredTarget(opts);
   }
+  if (kind === 'esp8266') {
+    return createEsp8266Target(opts);
+  }
   if (kind === 'serial') {
     return createSerialTarget(opts);
   }
   throw new Error(
-    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'i8086', 'i80286', 'z80', 'riscv32', 'rp2040js', 'stm32f0', 'labwired', or 'serial'.`
+    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'i8086', 'i80286', 'z80', 'riscv32', 'rp2040js', 'stm32f0', 'labwired', 'esp8266', or 'serial'.`
   );
 }
 
@@ -609,6 +612,46 @@ async function createStm32F0Target(opts) {
   const target = createRp2040jsDebugTarget(adapter, { symbols });
 
   return { target, adapter };
+}
+
+// ─── ESP8266 target (esp8266js, our fork) ───────────────────────────────
+
+/**
+ * The image is what the compiler's esp8266 target returns: a flash image
+ * (0xE9 header), as bytes or as base64 text. The engine is loaded lazily
+ * through loadEsp8266js, so no other kind pays for it; `opts.esp8266js` may
+ * hand in a module the caller already has. Only firmware without Espressif
+ * SDK code is offered (see esp8266js-adapter.js). A board is optional: the
+ * serial port alone is a usable surface.
+ *
+ * @param {object} opts
+ * @param {Uint8Array|string} opts.image  flash image, bytes or base64
+ * @param {object} [opts.board]
+ * @param {object} [opts.esp8266js]
+ */
+async function createEsp8266Target(opts = {}) {
+  const image = esp8266ImageBytes(opts.image ?? opts.program);
+  const [{ createEsp8266jsAdapter, loadEsp8266js }, { createEsp8266jsDebugTarget }] = await Promise.all([
+    import('./esp8266js-adapter.js'), import('./esp8266js-debug.js'),
+  ]);
+  const esp8266js = opts.esp8266js || await loadEsp8266js();
+  const adapter = createEsp8266jsAdapter({ esp8266js, image });
+  adapter.attachBoard(opts.board || { advanceTo() {}, setPin() {} });
+  return { target: createEsp8266jsDebugTarget(adapter), adapter };
+}
+
+/** Bytes from a Uint8Array or base64 text; anything else is refused by name. */
+function esp8266ImageBytes(image) {
+  if (image instanceof Uint8Array) return image;
+  if (typeof image === 'string') {
+    const text = image.replace(/\s+/g, '');
+    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(text) || text.length % 4 !== 0) {
+      throw new Error('esp8266 target: opts.image text is not base64');
+    }
+    if (typeof Buffer !== 'undefined') return new Uint8Array(Buffer.from(text, 'base64'));
+    return Uint8Array.from(atob(text), c => c.charCodeAt(0));
+  }
+  throw new Error('esp8266 target requires opts.image (a flash image: Uint8Array or base64)');
 }
 
 // ─── Serial target ───────────────────────────────────────────────────────

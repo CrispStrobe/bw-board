@@ -116,6 +116,11 @@ export function getTargetKinds() {
       description: 'ARM Cortex-M0 emulation. STM32F030 (16K flash / 4K SRAM) programs.',
     },
     {
+      kind: 'esp8266',
+      label: 'Simulated (ESP8266)',
+      description: 'Xtensa LX106 emulation via esp8266js. Firmware without Espressif SDK code only; GPIO and serial.',
+    },
+    {
       kind: 'serial',
       label: 'Live board (USB)',
       description: 'Real hardware over serial. Block stepping and yield breakpoints only.',
