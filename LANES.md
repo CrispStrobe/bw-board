@@ -9,8 +9,10 @@ test/harris-native-ci-workflow.test.mjs; and the `ciCadence` values in
 scripts/oracle-census.mjs for inputs whose ci.yml job moves to the thorough tier (that
 value is derived from the job's event gate by test/oracle-census.test.mjs).
 FAST: ci.yml `test` on every push of every branch. THOROUGH: ci.yml vectors, corpus,
-vectors186, vectors-full, harris-native qualify and x86-xv6 — on push to master, schedule,
-workflow_dispatch and on a pull request labelled ci:full. DOCS-ONLY (LANES.md, docs/,
+vectors186, harris-native qualify and x86-xv6 — on push to master, schedule,
+workflow_dispatch and on a pull request labelled ci:full; vectors-full keeps its
+nightly/on-demand cadence plus ci:full PRs (not master pushes). The census `ci:` texts
+of the moved inputs are corrected to that cadence. DOCS-ONLY (LANES.md, docs/,
 spec-updates/, *.md): those workflows are path-ignored; only the gate runs. The gate passes
 a docs-only PR or one labelled ci:full and fails otherwise, so a code PR cannot show all
 checks green without the thorough tier on its head. Concurrency per workflow, event and
