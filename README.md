@@ -6,6 +6,10 @@ behaviour, updates device models, and exposes readings for a circuit editor or
 command-line instruments. It runs in the browser and in Node.js as an ES-module
 package.
 
+The [historical x86 checkpoint](docs/I80386-HISTORICAL-SOURCE-CONTEXTS.md)
+records qualified historical source isolation, current inventory controls and finite
+xv6 filesystem/boot/fork scenarios. Performance adoption remains a separate gate.
+
 The user interface lives in
 [bw-circuit-ui](https://github.com/CrispStrobe/bw-circuit-ui); this repository
 owns the shared engine behaviour, the component models, and the

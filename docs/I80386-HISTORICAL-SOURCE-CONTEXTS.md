@@ -1,18 +1,58 @@
 # Historical 80386 source qualification contexts
 
-This documentation-only ownership claim proposes isolation of retained historical
-qualification fixtures from the current ordinary CPU. The claim has merged and its source-context design was reviewed. A first helper
-slice now validates fixed metadata and manufactured context joins; actual
-materialization/import routes and the ten harnesses remain unconnected. No new
-qualification result is claimed.
+The fixed historical source contexts and current inventory correction have passed
+finite hosted qualification. The ten historical harnesses use the admitted public
+186-row context; current CPU tests and xv6 guests run separately. Original native
+pins and captures remain unchanged.
+
+## Reached hosted checkpoint — 2026-10-14
+
+[Run 38524496473](https://github.com/CrispStrobe/bw-board/actions/runs/38524496473)
+passed 288 historical tests and 1,556 current tests, with zero failures and 11
+reported skips. The six nested PF build controls passed. Their current static
+inventory is exactly the original 243 paths plus the admitted bridge; the sealed
+metadata sidecar is a separate 245th fixture file.
+
+The event head was `e54bee3f85ecd10d2de15427ee8895b931f9c866`; actual execution used
+PR merge source `fe66037e2c1efba68b32fe68f5e40614466414c9`. Its tree
+`7cf51dc1` matched the reviewed head and landed merge
+`85182a296c6056ee6dba301767103c9818274ec5`. All 12 enabled final checks passed;
+two declared optional checks skipped before merge.
+
+The MIT xv6 source `eeb7b415dbcb12cc362d0783e41c3d1f44066b17` built in 4 MiB
+and 14 MiB profiles with the unchanged redistributable Bochs BIOS/VGA pins.
+Actual reports contain the filesystem marker, 14 MiB boot marker and `fork test OK`,
+with protected paging, ring3, exec, syscall and IDE14 observations. These are finite
+guest scenarios, not physical CPU timing or complete software compatibility.
+The [official receipt artifact](https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11875079753)
+is 21,032 bytes, SHA256
+`764b4fda9231cae055e97f6f7058c8a0d96dff236ccff8bf05bb5dd118dde467`.
+Original job logs remain available through the run; no local origins are evidence links.
+
+The first [xv6 diagnostic](https://github.com/CrispStrobe/bw-board/actions/runs/38517413953)
+and [generic CI diagnostic](https://github.com/CrispStrobe/bw-board/actions/runs/38517414012)
+failed the obsolete 243-versus-244 inventory assertion at event head `79ebb0d7`.
+Historical tests passed there; the current gate failed before guest execution.
+Those failures are preserved and do not establish an ISA or guest defect.
+
+## Next bounded work
+
+Keep the [decodeEA16 allocation candidate](https://github.com/CrispStrobe/bw-board/pull/557)
+performance-unqualified until its frozen paired benchmark passes. Prepare authentic
+43-row source projections for the fixed baseline and candidate, a separately
+accounted genuine Git object view, admitted runtime/timer dependencies and original
+capture issuance. Preserve the predeclared 18-run order and independent statistical
+reader; retain every failed or partial capture without selective retries. Run only
+after source preparation and actual launch gates are reviewed. Any newer candidate
+needs its own exact source census and affected current guest qualification.
 
 ## Problem and boundary
 
-Retained report tests currently compare an original historical source inventory
-with the live CPU inventory. Fixed model-profile tests also load the live CPU
-while requiring an exact older source hash. A forward CPU change therefore fails
-historical source admission before it can establish an architectural difference.
-The correct response is to authenticate and execute the intended held context,
+Before isolation, retained report tests compared an original historical source
+inventory with the live CPU inventory. Fixed model-profile tests loaded the live
+CPU while requiring an exact older source hash. A forward CPU change therefore
+failed historical source admission before establishing an architectural difference.
+The fixed contexts now authenticate and execute the intended held sources,
 while qualifying the current CPU independently. Neither context substitutes for
 the other.
 
@@ -25,7 +65,7 @@ These are finite authored mechanism qualifiers, not broader OS compatibility.
 
 ## Owned implementation scope
 
-Branch `lane/386-historical-source-contexts-20261013` owns this guide, its
+The landed historical-context lane implemented this guide, its
 `LANES.md` entry and the following ten test harnesses for context selection:
 
 - `test/i80386-native-cold-reset-report.test.mjs`
@@ -39,11 +79,12 @@ Branch `lane/386-historical-source-contexts-20261013` owns this guide, its
 - `test/i80386-protected-ram-source.test.mjs`
 - `test/i80386-protected-stack-source.test.mjs`
 
-A small fixed source-context helper and manifest namespace, if needed, is limited
-to `scripts/i80386-historical-source-contexts/`. Coordinate its exact file list
-and any changes to `.github/workflows/x86-xv6.yml` before implementation. Workflow
-changes are limited to explicit context preparation and separate execution of
-historical and current suites; all existing acceptance steps remain enabled.
+The fixed helper, manifest, materializer and owner/Node bridge live in
+`scripts/i80386-historical-source-contexts/`. The owned workflow changes prepare
+the explicit context and execute historical and current suites separately; all
+existing acceptance steps remain enabled. The generic CI extension adds the
+exact compatible-context fetch while retaining its existing serial runner.
+Future changes outside these paths require a reviewed scope extension.
 Existing production CPU, native/model-profile loaders and validators are not
 owned for modification by this claim. A required change there needs a reviewed
 scope extension first.
@@ -113,5 +154,23 @@ new guest compatibility.
 The [fixed helper](../scripts/i80386-historical-source-contexts/README.md) retains
 186 source/data rows, original report/source descriptors and closed support-module
 selectors. Seventeen tiny controls exercise mocked joins and refusals. Production
-loaders, current CPU and historical pins are unchanged. Actual materialization,
-harness/workflow wiring and affected hosted qualification remain future work.
+loaders, current CPU and historical pins are unchanged. The source-owned materializer, owner/Node bridge and ten current harnesses are now
+connected as source; real hosted materialization and affected xv6 qualification passed within the checkpoint above. Default model/import/actual stubs remain unsealed.
+
+## Fixed materializer source slice
+
+The separate [materializer source contract](../scripts/i80386-historical-source-contexts/MATERIALIZER.md) adds a bounded detached sparse-context adapter using the held 186-row admission and original proofs. Its 41 manufactured controls mock all Git, process and materialization boundaries. The published consistency model and held pins remain unchanged. The fixed owner/Node bridge and ten-harness wiring are connected as source, with 6 owner and 7 bridge mock controls; real hosted materialization and historical harness qualification passed in the finite modern runtime boundary above; this does not certify the original historical runtime or a performance gain.
+
+## Shared CI provider
+
+The generic `.github/workflows/ci.yml` also runs these ten historical harnesses.
+Its existing historical-source steps must fetch the exact compatible commit and
+execute those suites serially. Its existing serial runner retains the complete
+original package test command. The xv6 workflow separately verifies that its
+historical and current selections are disjoint and their union is complete. No test exclusions, assertion waivers or hash waivers are allowed.
+The ownership extension has merged; only the fixed-commit fetch changes in
+generic CI, with its existing serial runner preserved. The separate hosted observations are recorded above; future source changes need their own affected qualification.
+
+### Separately versioned current PF build-control census
+
+The current PF build-control fixture follows current Git and live source bytes. Its source-test imports now add the historical-context bridge to the independently authenticated pre-bridge 243-path census. The narrow inventory lane owns the PF `build-controls.mjs`, its `i80386-paged-pagefault-build-source.test.mjs` harness and an explicit current inventory declaration. Require exactly the original paths plus the named bridge, full current Git/live joins, and missing/extra/wrong-bridge controls. Original native compiled-source proof, its 243 rows, held pins and raw receipts remain unchanged. All six existing nested controls and affected xv6 build/guest gates must run; this correction grants no new native, current guest or performance qualification by itself.

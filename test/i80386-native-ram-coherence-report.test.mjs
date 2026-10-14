@@ -1,10 +1,15 @@
+import {historicalContext} from '../scripts/i80386-historical-source-contexts/bridge.mjs';
+const held=await historicalContext(import.meta.url);
+after(()=>held.close());
+const {assertNativeRamCoherenceProof,parseRamNativeLog}=await held.module('scripts/bochs-cpu3-native-ram-coherence-compare.mjs');
+const {assembleRamCoherenceRom}=await held.module('scripts/i80386-ram-coherence-oracle.mjs');
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {gunzipSync} from 'node:zlib';
-import test from 'node:test';
-import {assertNativeRamCoherenceProof,parseRamNativeLog} from '../scripts/bochs-cpu3-native-ram-coherence-compare.mjs';
-import {assembleRamCoherenceRom} from '../scripts/i80386-ram-coherence-oracle.mjs';
+import test,{after} from 'node:test';
+
+
 
 // Exact actual, qualified initial four-arm capture. This historical mutation
 // fixture precedes these tests; final qualification requires a fresh source
@@ -12,7 +17,7 @@ import {assembleRamCoherenceRom} from '../scripts/i80386-ram-coherence-oracle.mj
 const actualSha256='9df97fdd36d087bc576d3ee03e7a0bea0765fbae12028295dcba1017124d3793';
 const actualRevision='ef2a73594948dffde48df000f5c6a6bf70662755';
 const sha=value=>createHash('sha256').update(value).digest('hex');
-const bytes=gunzipSync(readFileSync(new URL('./fixtures/i80386-native-ram-coherence-capture.json.gz',import.meta.url)));
+const bytes=gunzipSync(readFileSync(held.file('test/fixtures/i80386-native-ram-coherence-capture.json.gz')));
 assert.equal(sha(bytes),actualSha256);
 const capture=JSON.parse(bytes),{rom}=assembleRamCoherenceRom();
 const names=['continuous','budget1','budget2','budget257'];

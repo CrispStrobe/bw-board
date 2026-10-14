@@ -37,6 +37,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Fetch fixed compatible historical source context
+        run: git fetch --no-tags --depth=1 origin c3ada315e9dfc51cd70ac6403d9e1ab18a0faf5c
       - name: Fetch exact compiled source of fixed PIC IMR profile
         run: git fetch --no-tags --depth=1 origin a6f605280f778b2bc409ef97ac3b40e15874530c
       - name: Fetch fixed native dispatch baseline for source reconstruction controls
@@ -70,6 +72,21 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: Bounded historical helper and owner controls
+        run: |
+          timeout --signal=KILL 45s /usr/bin/python3 -I -B scripts/i80386-historical-source-contexts/controls.py
+          timeout --signal=KILL 45s /usr/bin/python3 -I -B scripts/i80386-historical-source-contexts/materializer-controls.py
+          timeout --signal=KILL 45s /usr/bin/python3 -I -B scripts/i80386-historical-source-contexts/owner-controls.py
+          timeout --signal=KILL 45s node --test scripts/i80386-historical-source-contexts/bridge-controls.mjs
+      - name: Modern historical-context runtime observations
+        run: |
+          /usr/bin/python3 --version
+          git --version
+          node --version
+          as --version
+          ld --version
+          objcopy --version
+          nm --version
       - name: Fetch pinned MIT xv6 source
         run: |
           git init /tmp/xv6-public
@@ -77,7 +94,36 @@ jobs:
           git -C /tmp/xv6-public fetch --depth 1 origin eeb7b415dbcb12cc362d0783e41c3d1f44066b17
           git -C /tmp/xv6-public checkout --detach FETCH_HEAD
           test "$(git -C /tmp/xv6-public rev-parse HEAD)" = eeb7b415dbcb12cc362d0783e41c3d1f44066b17
-      - run: node --test test/i80386*.test.mjs
+      - name: Historical contexts and separate current CPU tests
+        run: |
+          node --input-type=module <<'JS'
+          import {readdirSync} from 'node:fs';
+          import {spawnSync} from 'node:child_process';
+          import assert from 'node:assert/strict';
+          const historical=[
+            'i80386-native-cold-reset-report.test.mjs',
+            'i80386-native-combined-paging-ram-board-gate.test.mjs',
+            'i80386-native-owned-pic-imr-profile.test.mjs',
+            'i80386-native-ram-coherence-report.test.mjs',
+            'i80386-native-rep-pf-pit-board-gate.test.mjs',
+            'i80386-nonidentity-paging-source.test.mjs',
+            'i80386-paged-int-iret-source.test.mjs',
+            'i80386-paged-pagefault-source.test.mjs',
+            'i80386-protected-ram-source.test.mjs',
+            'i80386-protected-stack-source.test.mjs'];
+          const inventory=readdirSync('test').filter(name=>/^i80386.*\.test\.mjs$/.test(name)).sort();
+          assert.equal(new Set(historical).size,10);
+          for(const file of historical)assert.ok(inventory.includes(file));
+          const current=inventory.filter(name=>!historical.includes(name));
+          assert.deepEqual([...historical,...current].sort(),inventory);
+          console.log(JSON.stringify({scope:'separate historical/current source tests',historical,current,node:process.version}));
+          for(const [kind,files] of [['historical',historical],['current',current]]){
+            const env=kind==='historical'?{...process.env,GIT_CONFIG_GLOBAL:'/dev/null',GIT_CONFIG_SYSTEM:'/dev/null',GIT_CONFIG_NOSYSTEM:'1',GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0'}:process.env;
+            const result=spawnSync(process.execPath,['--max-old-space-size=1024','--test','--test-concurrency=1',...files.map(file=>'test/'+file)],{stdio:'inherit',env});
+            if(result.error)throw result.error;
+            assert.equal(result.signal,null);assert.equal(result.status,0,kind+' source tests');
+          }
+          JS
       - run: node scripts/build-xv6-stock-4m.mjs
         env:
           XV6_SRC: /tmp/xv6-public

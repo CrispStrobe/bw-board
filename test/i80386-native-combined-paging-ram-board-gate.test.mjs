@@ -1,17 +1,22 @@
+import {historicalContext} from '../scripts/i80386-historical-source-contexts/bridge.mjs';
+const held=await historicalContext(import.meta.url);
+after(()=>held.close());
+const {assembleCombinedPagingRamRom}=await held.module('scripts/i80386-combined-paging-ram-oracle.mjs');
+const {assertNativeCombinedPagingRamProof,parseCombinedNativeLog}=await held.module('scripts/i80386-native-combined-paging-ram-board-gate.mjs');
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {gunzipSync} from 'node:zlib';
-import test from 'node:test';
-import {assertNativeCombinedPagingRamProof,parseCombinedNativeLog} from '../scripts/i80386-native-combined-paging-ram-board-gate.mjs';
-import {assembleCombinedPagingRamRom} from '../scripts/i80386-combined-paging-ram-oracle.mjs';
+import test,{after} from 'node:test';
+
+
 
 // Lossless, actual first passing four-arm capture. Final qualification uses a
 // fresh source freeze after these tests; no failed diagnostic capture is used.
 const actualSha='3c926e4decb51179698bd8129b14abaebc66edcf77d888b79c3c3ff00c9a9e0a';
 const actualRevision='57548693306523025b43787b50337451cd0c6079';
 const sha=v=>createHash('sha256').update(v).digest('hex');
-let bytes=gunzipSync(readFileSync(new URL('./fixtures/i80386-native-combined-paging-ram-board-gate-capture.json.gz',import.meta.url)));
+let bytes=gunzipSync(readFileSync(held.file('test/fixtures/i80386-native-combined-paging-ram-board-gate-capture.json.gz')));
 assert.equal(sha(bytes),actualSha);
 const capture=JSON.parse(bytes);bytes=null;
 const {rom}=assembleCombinedPagingRamRom(),names=['continuous','budget1','budget2','budget257'];
