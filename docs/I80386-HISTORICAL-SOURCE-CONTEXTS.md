@@ -131,3 +131,7 @@ historical and current selections are disjoint and their union is complete. No s
 The ownership extension has merged; only the fixed-commit fetch changes in
 generic CI, with its existing serial runner preserved. Actual historical imports and current CPU/xv6 acceptance still need
 separate hosted observations.
+
+### Separately versioned current PF build-control census
+
+The current PF build-control fixture follows current Git and live source bytes. Its source-test imports now add the historical-context bridge to the independently authenticated pre-bridge 243-path census. The narrow inventory lane owns the PF `build-controls.mjs`, its `i80386-paged-pagefault-build-source.test.mjs` harness and an explicit current inventory declaration. Require exactly the original paths plus the named bridge, full current Git/live joins, and missing/extra/wrong-bridge controls. Original native compiled-source proof, its 243 rows, held pins and raw receipts remain unchanged. All six existing nested controls and affected xv6 build/guest gates must run; this correction grants no new native, current guest or performance qualification by itself.
