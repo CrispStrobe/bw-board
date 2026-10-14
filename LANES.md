@@ -144,6 +144,21 @@ work audit: maximum point4.679718 µV/46.797176 nA, reported mean0.387760 µV/
 The actual base-resistor mutant completes and disagrees26.974599 mV.
 Documentation-only closeout preserves every tested executable byte.
 
+2026-10-14 ESP8266 simulator kind (blob-free firmware) — CLAIM, VPS Claude (opus).
+Branch lane/esp8266-adapter-20261014, exact base c9cdee6c8b684e67c66bf61ab618c91279f52235.
+Owns this row plus: a new dependency on our fork CrispStrobe/esp8266js
+(MIT, pinned by commit, as avr8js is), src/esp8266js-adapter.js (boundary-A
+adapter: attachBoard, boot a flash image without the ROM, advanceNs/timeNs,
+serial both ways, pins both ways), its kind entry in src/target-kinds.js and
+branch in src/debug-target-factory.js, a board kind for a NodeMCU-style board
+if the factory needs one, test/esp8266js-*.test.mjs, and a small fixture
+directory test/fixtures/esp8266/ holding images built from the fork's own
+blob-free firmware (sources and hashes named in its README). Only firmware
+that contains no Espressif SDK code is run or committed (the SDK's licence
+limits it to the chip itself). No change to other engines, the CPU cores,
+labwired, x86 provisioning or consumer pins; a debug target (breakpoints,
+memory) is a later, separate claim.
+
 2026-10-13 shared LAN world for the emulated machines — CLAIM, VPS Claude (opus).
 Branch lane/shared-lan-world-20261013, exact base 22a8fea07273e9ad8aa3011c0d57cb6dc7445854.
 Owns this row plus a new directory src/net/ and its tests test/net-*.test.mjs:
