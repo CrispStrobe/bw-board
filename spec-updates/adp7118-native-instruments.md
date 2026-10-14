@@ -1,6 +1,7 @@
 # ADP7118 native instrument-current startup qualification
 
-Status: implemented evidence candidate, not qualified. No model/default change.
+Status: precision-meter repair candidate, not qualified. No device-model or
+legacy-profile/default change.
 
 The existing [current-limited startup model](adp7118-current-limited-startup.md)
 already has voltage and caller-sampled current proofs. This batch adds simultaneous
@@ -53,3 +54,53 @@ a reviewed instrument qualification CLI, not yet a general imported-deck probe
 interface. GUI/package adoption, dynamic enable/headroom, shutdown/restart,
 prebias, dropout, adjustable/external-SS operation and physical-model validation
 remain separate work.
+
+## Preserved initial failure
+
+Source `28bb88ef13f3d473e0b1e2086f4b94e5c24d0bba` in
+[CI 38468813289](https://github.com/CrispStrobe/bw-board/actions/runs/38468813289)
+failed one numerical test: 8,553 passed, one failed and 302 documented skips.
+Harris passed; it does not rescue this measurement failure. All six actual
+captures complete with 156 charged integration advances, at most 2,072
+attempts and 6,212 solves. All waveform-point comparisons pass. Their maximum
+errors are 0.396473 µV voltage, 2.619543 µA output current and 2.619543 µA
+input current. All current means pass, including simultaneous published
+output/load/supply KCL and IQ controls.
+
+Only `adp-linear-r0` fails: watched voltage is 4.209589434184045 V versus
+4.209590872846499 V expected, an error of 1.438662453 µV against the fixed
+1 µV bound. Its waveform point error is only 3.816427 nV. Independent
+piecewise/differential-current and numerical-integral checks reproduce this
+failure. The other five voltage means pass. The capacitance mutation is not
+reached, and no whole-batch qualification or landing is inferred.
+
+## Precision accepted-step quadrature candidate
+
+The existing adaptive solver publishes its accepted midpoint and endpoint,
+but meters integrate straight-line segments between those values. Accurate
+solution points therefore do not alone guarantee an equally accurate integral.
+The repair gives `precision-v1` meters a quadratic descriptor through the
+already-observed start value and those same two accepted solutions. It adds no
+MNA solve, device update, scope point or work exemption. Rejected or failed
+steps cannot supply a descriptor. A missing start observation or indeterminate
+current retains a named meter refusal rather than inventing a value.
+
+Each half-interval retains the same descriptor, allowing exact integration of
+its fitted polynomial over the actual clipped window. Same-time updates still
+change only the right-hand value; the preceding interval keeps its original
+left-limit endpoint. The existing analytic-source integral path takes
+precedence. Constant segments retain exact flat means and compaction.
+Interactive/legacy profiles keep their previous linear meter integration.
+This is numerical quadrature through observed solutions, not an analytic
+substitution of the ADP device law or a universal waveform guarantee.
+
+Seven pure controls pass: the original three instrument controls plus the real
+Board recorder with mocked solution maps (precision/legacy/failed/start/current
+authority), polynomial and clipped-window/time-origin integrals, invalid or
+extrapolated descriptors, and a midpoint-omission mutation. Actual engine
+tests remain hosted. The complete six-case test additionally disables the new
+quadrature on a real Board caller: that mutation must complete with passing
+waveform points but fail the original voltage-mean gate. The capacitance
+mutation must also complete and disagree. Reference, acquisition grid, whole
+budget and all accuracy bounds remain unchanged; existing meter/model
+regressions are required before landing.

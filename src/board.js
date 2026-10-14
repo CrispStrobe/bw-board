@@ -30,6 +30,7 @@ import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState, resetDeviceState } from './devices.js';
 import { servoCalibration } from './devices/servo.js';
 import { expandLm741LinearPoles } from './lm741-linear-pole.js';
+import { meterQuadraticSegment, meterQuadraticIntegral } from './meter-quadrature.js';
 import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
 import { junctionModelOf } from './mna.js';
@@ -2028,6 +2029,21 @@ export class BoardImpl {
         flat=false;
         continue;
       }
+      if (b?.quadratic) {
+        let area;
+        try { area=meterQuadraticIntegral(b.quadratic,t0,t1); }
+        catch (error) {
+          w.failure=`invalid-quadratic-meter-integral: ${error.message}`;
+          throw new Error(`meter mean refused: ${w.failure}`);
+        }
+        if (!Number.isFinite(sum+area)) {
+          w.failure='non-finite-quadratic-meter-integral';
+          throw new Error(`meter mean refused: ${w.failure}`);
+        }
+        sum+=area;
+        flat=false;
+        continue;
+      }
       const slope=b && end>a.tSec ? (b.before-a.v)/(end-a.tSec) : 0;
       const v0=a.v+slope*(t0-a.tSec), v1=a.v+slope*(t1-a.tSec);
       if (constant===undefined) constant=v0;
@@ -2038,7 +2054,7 @@ export class BoardImpl {
   }
 
   /** Accepted continuous solves pass their exact instant and matching maps. */
-  _recordMeterSamples(atSec = Number(this.timeNs)/1e9, solution = null, analytic = null) {
+  _recordMeterSamples(atSec = Number(this.timeNs)/1e9, solution = null, analytic = null, quadratic = null) {
     // A final floating-point substep can overshoot the integer clock by an
     // ulp. Never let this numerical artifact publish a future meter point.
     atSec=Math.min(atSec,Number(this.timeNs)/1e9);
@@ -2068,7 +2084,7 @@ export class BoardImpl {
       if (last && last.tSec === atSec) { last.v = v; }
       else if (solution || !last || last.v !== v) {
         // Remove only a redundant middle point on an unchanged flat segment.
-        if (!analytic && !last?.analytic && last && h.length>1 && h[h.length-2].v===last.v
+        if (!analytic && !quadratic?.has(key) && !last?.analytic && !last?.quadratic && last && h.length>1 && h[h.length-2].v===last.v
             && last.before===last.v && last.v===v) h.pop();
         let segment;
         if (analytic) {
@@ -2090,9 +2106,41 @@ export class BoardImpl {
           h.pop();
         }
         if (h.length>=100000) { w.failure='meter-history-limit-exceeded'; continue; }
-        h.push({ tSec:atSec, before:solution?v:(last?.v ?? v), v, ...(segment ? {analytic:segment} : {}) });
+        h.push({ tSec:atSec, before:solution?v:(last?.v ?? v), v, ...(segment ? {analytic:segment} : {}),
+          ...(quadratic?.has(key) ? {quadratic:quadratic.get(key)} : {}) });
       }
     }
+  }
+
+  /** Precision meters may integrate only a fully accepted adaptive pair.
+   * The start value is already observed; midpoint/end maps are the same two
+   * half-step solutions selected by the unchanged LTE gate. No model update,
+   * scope publication or new solve is performed by this helper. */
+  _acceptedMeterQuadrature(startSec,midSec,endSec,midpoint,endpoint) {
+    if (this._transientAnalysisProfile.id !== 'precision-v1' || !this._meterWatches.size
+      || this._transientAccuracyUnmet) return null;
+    const segments=new Map();
+    for (const [key,w] of this._meterWatches) {
+      if (w.failure) continue;
+      const last=w.hist[w.hist.length-1];
+      const slack=4*Number.EPSILON*Math.max(Math.abs(startSec),1e-12);
+      if (!last || Math.abs(last.tSec-startSec)>slack) {
+        w.failure='meter-quadrature-start-not-observed';
+        continue;
+      }
+      let middle,end;
+      try { middle=this._meterValue(w,midpoint);end=this._meterValue(w,endpoint); }
+      catch (error) {
+        if (error.code !== 'INDETERMINATE_BRANCH_CURRENT' && error.code !== 'SOLVE_FAILED_MEASUREMENT') throw error;
+        w.failure=error.message;
+        continue;
+      }
+      // Constant segments preserve bit-identical flat means and the existing
+      // redundant-point compaction; no polynomial descriptor is needed.
+      if (last.v===middle && middle===end) continue;
+      segments.set(key,meterQuadraticSegment(last.tSec,midSec,endSec,last.v,middle,end));
+    }
+    return segments;
   }
 
   // ─── Oscilloscope probes ────────────────────────────────────────────────
@@ -6078,21 +6126,21 @@ export class BoardImpl {
     // Time of the last floor-step history restart (see the reject branch).
     let floorRestartAt = null;
 
-    const publish = (r, atSec) => {
+    const publish = (r, atSec,quadratic = null) => {
       this.nodeVoltages = new Map(r.nodeVoltages);
-      if (this._meterWatches.size > 0) this._recordMeterSamples(atSec,r);
+      if (this._meterWatches.size > 0) this._recordMeterSamples(atSec,r,null,quadratic);
       if (this._scopeChannels.size > 0) {
         const remNs = BigInt(Math.max(0, Math.round((tEnd - atSec) * 1e9)));
         this._updateScopeChannels(this.timeNs - remNs, atSec, r);
       }
     };
-    const accept = (r, atSec) => {
+    const accept = (r, atSec,quadratic = null) => {
       cv = r.capVoltagesNext ?? cv;
       il = r.inductorCurrentsNext ?? il;
       cc = r.capCurrentsNext ?? cc;
       lv = r.inductorVoltagesNext ?? lv;
       res = r;
-      publish(r, atSec);
+      publish(r, atSec,quadratic);
       // One device pass per accepted step, told the SUB-STEP time — the
       // chunk-end time made every scheduled event inside a long advance
       // fire never or late. A flip is a discontinuity — trapezoidal
@@ -6216,9 +6264,10 @@ export class BoardImpl {
         // at-floor step is accepted regardless of err: it cannot be
         // refined below H_MIN, and rejecting it would loop the controller
         // in place until MAX_ATTEMPTS.
-        publish(h1, t + hEff / 2);
+        const quadratic=err<=1 ? this._acceptedMeterQuadrature(t,t+hEff/2,t+hEff,h1,h2) : null;
+        publish(h1, t + hEff / 2,quadratic);
         t += hEff;
-        accept(h2, t);
+        accept(h2, t,quadratic);
         if ((forcedAtFloor || nonFiniteError) && !this._transientAccuracyUnmet) {
           this._transientAccuracyUnmet = {
             code: nonFiniteError ? 'non-finite-error-estimate' : 'minimum-step-accuracy-unmet',

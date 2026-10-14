@@ -87,4 +87,22 @@ test('hosted ADP native output/supply waveforms and means match the independent 
     assert.equal(changed.failure,undefined);assert.equal(changed.engine.receipt.completed,true);assert.equal(changed.agreement,false);
     t.diagnostic(json({record:'adp-native-capacitance-mutant',completed:true,agreement:false}));
     assert.equal(readFileSync(new URL('../scripts/qualify-adp7118-instruments.mjs',import.meta.url),'utf8'),original);
+    // Restore the old meter integration on a real Board caller, keeping
+    // device law, scope grid, solver profile and whole budget identical.
+    const boardURL=new URL('../src/board.js',import.meta.url),boardOriginal=readFileSync(boardURL,'utf8');
+    const quadAnchor="if (this._transientAnalysisProfile.id !== 'precision-v1' || !this._meterWatches.size";
+    assert.equal(boardOriginal.split(quadAnchor).length-1,1);
+    const boardMutant=boardOriginal.replace(quadAnchor,"if (true || this._transientAnalysisProfile.id !== 'precision-v1' || !this._meterWatches.size")
+        .replace(/(from\s*|import\(\s*)(['"])(\.\.?\/[^'"]+)\2/g,(_all,prefix,_quote,relative)=>prefix+JSON.stringify(new URL(relative,boardURL).href));
+    const boardURI=`data:text/javascript;base64,${Buffer.from(boardMutant).toString('base64')}`;
+    const runner=original.replace("'../src/board.js'",JSON.stringify(boardURI))
+        .replace("'../src/devices/power.js'",JSON.stringify(new URL('../src/devices/power.js',import.meta.url).href));
+    const oldQuadrature=await import(`data:text/javascript;base64,${Buffer.from(runner).toString('base64')}`);
+    const refusedMean=await oldQuadrature.runCase('adp-linear-r0');
+    assert.equal(refusedMean.failure,undefined);assert.equal(refusedMean.engine.receipt.completed,true);
+    assert.equal(refusedMean.agreement,false);assert.equal(refusedMean.means.voltage.passed,false);
+    assert.ok(refusedMean.comparisons.every(row=>keys.every(key=>row[key].passed)),'mutant fails the mean, not waveform acquisition');
+    t.diagnostic(json({record:'adp-native-quadrature-mutant',completed:true,agreement:false,
+        voltageMeanError:refusedMean.means.voltage.absoluteError,work:refusedMean.engine.receipt.work}));
+    assert.equal(readFileSync(boardURL,'utf8'),boardOriginal);
 });

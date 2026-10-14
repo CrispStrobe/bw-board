@@ -1,6 +1,6 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-14 precision accepted-step meter quadrature — CLAIM, Codex bwcx.
+2026-10-14 precision accepted-step meter quadrature — DONE implementation candidate, Codex bwcx.
 Branch lane/adp7118-meter-quadrature-20261014, exact basec1f6adba33be83a8a98aa80c2826e274d1b2d378.
 Seven paths only: this ledger, src/board.js (precision meter accepted-step
 descriptors/read integration only), src/meter-quadrature.js,
@@ -19,6 +19,12 @@ Pure polynomial/clipping/refusal controls locally; actual six-case mean/current
 and existing meter/model regressions hosted. Completed wrong-capacitance and
 quadrature-omission mutations required. No power/MNA kernel/device/default,
 scope sampling, other workflow, package pin, GUI or deployment edits.
+Canonical claim0dffd596 preceded implementation. Precision accepted-pair
+quadratic descriptors and clipped integration implemented without new solves
+or state updates; seven pure controls pass, including actual recorder method
+with mocked maps, legacy/failed-history refusals and midpoint-omission mutant.
+Source stays unqualified until all6 actual captures, completed capacitance/
+quadrature-omission mutants and affected meter/model regressions pass hosted.
 
 2026-10-13 ADP7118 native instrument current startup — CLOSED failed diagnostic, Codex bwcx.
 Branch lane/adp7118-native-instruments-20261013, exact basefe7e515961e4ab0398ce39ad76aaf272517434ec.
@@ -47,6 +53,11 @@ mutants. Actual published observations must satisfy simultaneous port/load/
 supply KCL and IQ/drop checks. Engine test excluded locally by name; hosted
 six-case completion and completed capacitance mutation remain landing gates.
 No actual native current-waveform agreement or main landing claimed yet.
+Exact28bb88ef CI38468813289 fails one mean (8553 pass/1 fail/302 skips),
+Harris38468813412 green. All6 captures/point checks/current means complete;
+linear-r0 voltage mean1.438662 uV misses fixed1 uV. All6 actualadvances156,
+maximum2072 attempts/6212 solves. Capacitance mutant not reached. Preserved
+failed diagnostic, not merged success; repair continues in the claim above.
 
 2026-10-13 LM741 solver-native linear pole — DONE, Codex bwcx.
 Branch lane/lm741-linear-pole-20261013, exact basec5078499ebcde97ce615689667244b37c76eb22f.
