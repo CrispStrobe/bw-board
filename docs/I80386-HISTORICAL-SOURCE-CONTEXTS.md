@@ -1,9 +1,10 @@
 # Historical 80386 source qualification contexts
 
 This documentation-only ownership claim proposes isolation of retained historical
-qualification fixtures from the current ordinary CPU. No context materializer,
-loader, test change or new qualification result is implemented here. Source work
-starts only after the claim merges and the materialization design is reviewed.
+qualification fixtures from the current ordinary CPU. The claim has merged and its source-context design was reviewed. A first helper
+slice now validates fixed metadata and manufactured context joins; actual
+materialization/import routes and the ten harnesses remain unconnected. No new
+qualification result is claimed.
 
 ## Problem and boundary
 
@@ -106,3 +107,11 @@ The effective-address performance lane remains separate. Its predeclared paired
 semantic and CPU/wall gate is still mandatory before performance-only adoption;
 this isolation work claims no measured gain, native adoption, physical timing or
 new guest compatibility.
+
+## First helper slice
+
+The [fixed helper](../scripts/i80386-historical-source-contexts/README.md) retains
+186 source/data rows, original report/source descriptors and closed support-module
+selectors. Seventeen tiny controls exercise mocked joins and refusals. Production
+loaders, current CPU and historical pins are unchanged. Actual materialization,
+harness/workflow wiring and affected hosted qualification remain future work.

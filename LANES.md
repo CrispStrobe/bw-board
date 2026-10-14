@@ -4554,7 +4554,7 @@ guest, continuous lease or official-authentication qualification.
 
 ## Historical 80386 source contexts — 2026-10-13
 
-Owned branch `lane/386-historical-source-contexts-20261013`: the ten test
+Owned branch `lane/386-historical-context-helper-20261013`: the ten test
 harnesses listed in [the task guide](docs/I80386-HISTORICAL-SOURCE-CONTEXTS.md),
 a reviewed fixed helper/manifest namespace `scripts/i80386-historical-source-contexts/`,
 limited historical/current execution wiring in `.github/workflows/x86-xv6.yml`,
@@ -4564,5 +4564,6 @@ public Git transitive sources. Preserve held CPU/CR0/native pins and raw reports
 no skips, blind pin updates or current-CPU credit from historical execution.
 Current CPU regressions and actual hosted xv6 qualification remain separate.
 Production loaders/validators and CPU source are not owned for changes here;
-review any required scope extension before code. This is a documentation-only
-claim; implementation waits for its merge and source-context design review.
+review any required scope extension before code. The claim and source design are reviewed. The first fixed metadata/context
+helper has mocked controls; actual materialization/import and ten-harness wiring
+remain unconnected. No historical/current CPU qualification is claimed.

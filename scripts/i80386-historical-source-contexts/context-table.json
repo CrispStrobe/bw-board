@@ -1,0 +1,1089 @@
+{
+  "authority": false,
+  "contextCommit": "c3ada315e9dfc51cd70ac6403d9e1ab18a0faf5c",
+  "historicalTestFilesHashOnly": [
+    "test/i80386-cold-reset-oracle.test.mjs",
+    "test/i80386-combined-paging-ram-oracle.test.mjs",
+    "test/i80386-native-cold-reset-report.test.mjs",
+    "test/i80386-native-combined-paging-ram-board-gate.test.mjs",
+    "test/i80386-native-direct-board.test.mjs",
+    "test/i80386-native-hot-direct.test.mjs",
+    "test/i80386-native-owned-clock-c-harness.test.mjs",
+    "test/i80386-native-owned-clock.test.mjs",
+    "test/i80386-native-owned-in8.test.mjs",
+    "test/i80386-native-owned-pic-imr-profile.test.mjs",
+    "test/i80386-native-owned-pic-imr.test.mjs",
+    "test/i80386-native-ram-coherence-report.test.mjs",
+    "test/i80386-native-rep-pf-pit-board-gate.test.mjs",
+    "test/i80386-nonidentity-paging-source.test.mjs",
+    "test/i80386-paged-int-iret-source.test.mjs",
+    "test/i80386-paged-pagefault-source.test.mjs",
+    "test/i80386-protected-ram-source.test.mjs",
+    "test/i80386-protected-stack-source.test.mjs",
+    "test/i80386-ram-coherence-oracle.test.mjs",
+    "test/i80386-rep-pf-pit-oracle.test.mjs"
+  ],
+  "repository": "CrispStrobe/bw-board",
+  "rows": {
+    ".github/workflows/i80386-native-owned-pic-imr-build.yml": {
+      "bytes": 3281,
+      "gitBlob": "3be2acaa37f80d67a21531785898d602a0988b96",
+      "sha256": "5d659d597958252ea81eab99bac2337b0ad679bf222d2ba2af5e10b2dcea0574"
+    },
+    "LICENSE": {
+      "bytes": 1068,
+      "gitBlob": "64556deb596b2bf990bd248108a0dce64eeb88bd",
+      "sha256": "e53c4e17a0971ca6cac5010a19876b77a896e3ce172b1f61d934dfd14c595d6d"
+    },
+    "docs/receipts/2026-10-01-i80386-js-cold-reset-oracle-capture.json": {
+      "bytes": 1208578,
+      "gitBlob": "75fb7b79792a34304c0051519f79b62ff1b5b848",
+      "sha256": "e35fdc788ed3d27020563b4c7dbb2c7ecbf6c91959e0abe2ebd043f0490d6703"
+    },
+    "docs/receipts/2026-10-01-i80386-js-combined-paging-ram-oracle-capture.json.gz": {
+      "bytes": 91478,
+      "gitBlob": "bc941524b2c190d8999c961d09cf4479648ec0e0",
+      "sha256": "93d02510df5d98c7db2b079bd2d316e56111162fc4d4d58ec685851e7b950bb1"
+    },
+    "docs/receipts/2026-10-01-i80386-js-ram-coherence-oracle-capture.json.gz": {
+      "bytes": 80545,
+      "gitBlob": "b844f7c2f2811e058d0a7c78178ef01f6da8a6b5",
+      "sha256": "b315d2b5a0fe1a8059bb7bd01a6e1575613b203b0a1510b2a505ccbf87c8bda6"
+    },
+    "docs/receipts/2026-10-01-i80386-js-rep-pf-pit-oracle-capture.json.gz": {
+      "bytes": 51014,
+      "gitBlob": "6cc326d6044c512b29b8758b25869ea5d07be02b",
+      "sha256": "b1cb5b61c736534b82ce6105a8c0f943c37b60921345f6e1dd78914ceb975f7b"
+    },
+    "package-lock.json": {
+      "bytes": 1146,
+      "gitBlob": "7c457897a38cdc8059ad337c2a76c68bb5b53991",
+      "sha256": "6e36a789429ba408d908ad9632d7f681674795183592eea2ddc099f15dd2ce0e"
+    },
+    "package.json": {
+      "bytes": 2879,
+      "gitBlob": "cd92fdc997de017e8eed3cf58098d1c49dc5942c",
+      "sha256": "ad3b4abb2d0c4ea8ee699c32210a0887ff812b822301ed31e804c14b3ece5c32"
+    },
+    "roms/free-at-bios/BIOS-bochs-legacy": {
+      "bytes": 65536,
+      "gitBlob": "979a6c5760ea0f87750dd539cd7fb2d682e17914",
+      "sha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac"
+    },
+    "roms/free-at-bios/LICENSE": {
+      "bytes": 26530,
+      "gitBlob": "4362b49151d7b34ef83b3067a8f9c9f877d72a0e",
+      "sha256": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551"
+    },
+    "roms/free-at-bios/vgabios-lgpl.bin": {
+      "bytes": 38400,
+      "gitBlob": "d5f80d68268a2e49733de9e14f0250c5b180a1c4",
+      "sha256": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1"
+    },
+    "scripts/audit-i80386-native-direct-board-adapter.mjs": {
+      "bytes": 20358,
+      "gitBlob": "411756cea37acc81e087b8f6823a75afaa2075f4",
+      "sha256": "6b905d485bac7f965beef4c10a6a33ee0f53bd7029690fbcc7677ac4b9241343"
+    },
+    "scripts/audit-i80386-native-direct-board-mode.mjs": {
+      "bytes": 1404,
+      "gitBlob": "406a848c250e82b6b42c6e0148365f17bb90f9fd",
+      "sha256": "a2c7e99adc031c8bae9718388a6ccd4d109410118549c3e49698a323c35b3b7f"
+    },
+    "scripts/bochs-cpu3-native-cold-bios/driver-auth.mjs": {
+      "bytes": 3525,
+      "gitBlob": "53c25ca2de90059780da7a9149007b290deea9ae",
+      "sha256": "b7245d8c88aa4b70bf845366026fe5e64e4aabfe3eda833975e6d7f88ef98eb6"
+    },
+    "scripts/bochs-cpu3-native-cold-reset-compare.mjs": {
+      "bytes": 42058,
+      "gitBlob": "c927852d53c352153410197d8c924d3dc989f2ff",
+      "sha256": "0cecc13aa0ef981464aada7023d869ea2ac49636ba81e0af03ebe393f74223fc"
+    },
+    "scripts/bochs-cpu3-native-cold-reset-host.mjs": {
+      "bytes": 13849,
+      "gitBlob": "9b1940b894fc50cb62469f1a2ba8447211599bdf",
+      "sha256": "857eb05077cec2bef85869cf8e409b9ff085b1ca999feacd96e2be80a0c387ff"
+    },
+    "scripts/bochs-cpu3-native-combined-paging-ram/host.mjs": {
+      "bytes": 18738,
+      "gitBlob": "4ea8142b35c9bce9f15e32a1cbb8bedf25f93205",
+      "sha256": "80b2022f5b460e4a5a423d47bc0a3d3f81c9f09b6a2654a7f9dd87e9086b0446"
+    },
+    "scripts/bochs-cpu3-native-combined-paging-ram/patch.mjs": {
+      "bytes": 1061,
+      "gitBlob": "4074f50e18725eeada75b486f5dc11fff424c527",
+      "sha256": "4c4d41c5248fd4610669fa192d625c944721058f00fbb5499d831b6d37eb4ada"
+    },
+    "scripts/bochs-cpu3-native-device-quanta/patch.mjs": {
+      "bytes": 1864,
+      "gitBlob": "da9a21f1fd69aec51a3e24cc5ad18547e1b4eddc",
+      "sha256": "c737fed6621e2cc79388c1f9af102f3a8e7eac8503f3ef836b69c898ccf5cb37"
+    },
+    "scripts/bochs-cpu3-native-direct-board-adapter/loader.mjs": {
+      "bytes": 1820,
+      "gitBlob": "03ed6e00d1d236cffe069d091bc88297269fd308",
+      "sha256": "31d15eba7ac5521f94db600a37877fce5befb5e97f581e037bb6d76b30e430fa"
+    },
+    "scripts/bochs-cpu3-native-direct-board-adapter/napi.cc": {
+      "bytes": 9569,
+      "gitBlob": "bf13d619d3fa47374dac3eef475507f37635f1d0",
+      "sha256": "a131583191a71a4a675c66339440d5ce6b4ae1332d5b14bef10d7a8d47e36c40"
+    },
+    "scripts/bochs-cpu3-native-direct-board/abi.h": {
+      "bytes": 6372,
+      "gitBlob": "fc5670f37f097267280a1da080999e041cc9f961",
+      "sha256": "04f7030ab482caaffa510bd83681f96a3cd3a2a0b900ff9304acefa8d1623a2d"
+    },
+    "scripts/bochs-cpu3-native-direct-board/addon.mk": {
+      "bytes": 912,
+      "gitBlob": "61b39e1dea4d42259a2f6d7575c9722dc6ae48f9",
+      "sha256": "b48992c8a80bdc6fa87b68123cff0c16684802f847f82b02a0fc4d8d40520405"
+    },
+    "scripts/bochs-cpu3-native-direct-board/board.mjs": {
+      "bytes": 7105,
+      "gitBlob": "ab9acc4059aa026cbd724545801ad7d3a24336f4",
+      "sha256": "02102c01ffce3d12310cffdeb2e16129d4419971d95ce0503d551b822078e2dc"
+    },
+    "scripts/bochs-cpu3-native-direct-board/patch.mjs": {
+      "bytes": 2574,
+      "gitBlob": "93c607f5c27cee298c611032094d1c4c04f77e5d",
+      "sha256": "4fd80b72490bd317fb1da9fa7acdd0860235c0df8b4ed0cc9114150de4065c7f"
+    },
+    "scripts/bochs-cpu3-native-direct-board/runtime.h": {
+      "bytes": 1583,
+      "gitBlob": "ebf8e4c619949fbfc90a5c24b2d4fdcb6084b139",
+      "sha256": "58cf1014f613c450654ec885e2dfc6b0da53581cc5d8883c4dd66aec914f9ea3"
+    },
+    "scripts/bochs-cpu3-native-direct-board/runtime.inc": {
+      "bytes": 47814,
+      "gitBlob": "23d0704c160cddd2c074f4edfb1e6b114a1e26df",
+      "sha256": "1c0e7b6f58016e875a4e8d53e4dc0427ef519f7b0c64797bdff750089bd8f9c4"
+    },
+    "scripts/bochs-cpu3-native-events/patch.mjs": {
+      "bytes": 3291,
+      "gitBlob": "27e3bd2756810e6fe79f0244a04e453d8afa4bd4",
+      "sha256": "cd2e4d1a357dce4d59420526cd8176e554ecd2e9acd12e797a6653201dd787c5"
+    },
+    "scripts/bochs-cpu3-native-hot-direct/board.mjs": {
+      "bytes": 2001,
+      "gitBlob": "4b5eccd20ab1d07d617e639aa5e1f1da8b0cab12",
+      "sha256": "95a268d026ee06ceac81e29e2f4c66151f497502bdf1f87483d2c3a0aefefe8b"
+    },
+    "scripts/bochs-cpu3-native-hot-direct/journal.mjs": {
+      "bytes": 515,
+      "gitBlob": "8d013e62ba9f03a065d59a357d6b2e907006e8f4",
+      "sha256": "e2b9b6f873703703b118ee783f547b521a8bbd3fb162c3a823c69190c8e6f264"
+    },
+    "scripts/bochs-cpu3-native-hot-direct/loader.mjs": {
+      "bytes": 490,
+      "gitBlob": "6095c5826efe5bcba4e3fc75cb2bbc536c9259b8",
+      "sha256": "32ba984e07c92a04d1980e34847e44a55038f7910072eab0aba8f5eb3b29e085"
+    },
+    "scripts/bochs-cpu3-native-hot-direct/profile.mjs": {
+      "bytes": 394,
+      "gitBlob": "187d096736b56265863b9951651330a903b694e2",
+      "sha256": "3f2c0b2773cc3e4e27a71ba1e5c0c154d37f2e2ae20005506f4c3da7f9499117"
+    },
+    "scripts/bochs-cpu3-native-hot-direct/runtime.mjs": {
+      "bytes": 1939,
+      "gitBlob": "224004dfa492c802526c386d9082052f74563e50",
+      "sha256": "e668548dbc56ae9835cc341a1efec6ef9acea4ef523ef1852f1d914885441264"
+    },
+    "scripts/bochs-cpu3-native-hot-packed-scalar/napi.mjs": {
+      "bytes": 2088,
+      "gitBlob": "477b68f3eb668d9f0d1b467bb8e0547dc5c1c787",
+      "sha256": "62ae4a4371e9446136dac60c8bcc63b2abf29d2eb9445e0092ac16e2d4621123"
+    },
+    "scripts/bochs-cpu3-native-memory-map/patch.mjs": {
+      "bytes": 1893,
+      "gitBlob": "0066ad4f8083587eacfe5480c5f815ffc4bf4086",
+      "sha256": "71d6cf78d93dd083b97af462b9df44d7688b66e81c9eb85d7a1af1a70cecfa66"
+    },
+    "scripts/bochs-cpu3-native-nonidentity-paging/SOURCE.md": {
+      "bytes": 3966,
+      "gitBlob": "f1a4eb4bf6acd33fc64a06d06a55f74904a17928",
+      "sha256": "9885cc753a03bf28ecefe58407d9f741a8472d04a3a33aa57cfda2faed20a805"
+    },
+    "scripts/bochs-cpu3-native-nonidentity-paging/profile.mjs": {
+      "bytes": 8654,
+      "gitBlob": "191a761b78dcabe56837c39fae2000dd72c4b57c",
+      "sha256": "6a7ee63fa924e9dbe46a82d0f1627c196eef7cdd0512b72a1658f442fd45899e"
+    },
+    "scripts/bochs-cpu3-native-nonidentity-paging/reference.mjs": {
+      "bytes": 7718,
+      "gitBlob": "9f0b7a6f9b1bf33c7726c841183f7cb141733f87",
+      "sha256": "1e617c2f4b8569a22448ced9e4ec0cdd69d1a7a7aa67f6af4ba9ba0347749517"
+    },
+    "scripts/bochs-cpu3-native-owned-8042-interface/profile.mjs": {
+      "bytes": 2621,
+      "gitBlob": "5de52c5879544112b60bab4538dc7734d4170b52",
+      "sha256": "d663126cf2a4cae6fb9fea1b816576237fd03482201fbefd954784a4edb53f0e"
+    },
+    "scripts/bochs-cpu3-native-owned-8042-interface/reference.mjs": {
+      "bytes": 12844,
+      "gitBlob": "9ec78609449ecd1776d78a2e028a92e34a6646a9",
+      "sha256": "381f1c233bddd27c73dc19cb144c3308d4b4b8fe5ae0b4bf952351fbc5945757"
+    },
+    "scripts/bochs-cpu3-native-owned-8042/profile.mjs": {
+      "bytes": 2430,
+      "gitBlob": "4e3875fcceed08434c75c140caecf165940b7eb3",
+      "sha256": "e7c3e0127f4363dc68b23f542132b5c388b4e78f198d733bc44c5f3e3a1aa546"
+    },
+    "scripts/bochs-cpu3-native-owned-clock/abi.h": {
+      "bytes": 7013,
+      "gitBlob": "5b5a8499a161f8f4d01207ff13ed1e84cf59af37",
+      "sha256": "8cb93c00c24ca088184f4201fcf97a97a9cf508b7c3a2048ca532848dba7a9bc"
+    },
+    "scripts/bochs-cpu3-native-owned-clock/clock.inc": {
+      "bytes": 3247,
+      "gitBlob": "4f81987531e46201a92ecb970b43ec707e979a2f",
+      "sha256": "861080333e8e656005d1919bc55191710f98d9af6ef375642ec50efebc0ff0ab"
+    },
+    "scripts/bochs-cpu3-native-owned-clock/contract.md": {
+      "bytes": 3572,
+      "gitBlob": "85731277dd44034d0bb63d6c43d40fcd057bd1f8",
+      "sha256": "cc844b41da68e3a2a9f3a7ae731dfba77eb6616cd072ff30666968c6604f62df"
+    },
+    "scripts/bochs-cpu3-native-owned-clock/derive.mjs": {
+      "bytes": 417,
+      "gitBlob": "ed79e080ac22088493f716ab6a35c2afb89753b9",
+      "sha256": "14413e740b13d0fb0b78aea26054578a652c59237aca4ecf807937f7e78459f6"
+    },
+    "scripts/bochs-cpu3-native-owned-clock/factory.mjs": {
+      "bytes": 4325,
+      "gitBlob": "d53bffd11b3afe2469bb6cea516a1203a78ea929",
+      "sha256": "2afd7b6434d037d7b568a4af6aeba410f68030ee024220f05ba5d3d68323a0e2"
+    },
+    "scripts/bochs-cpu3-native-owned-clock/identity.mjs": {
+      "bytes": 6213,
+      "gitBlob": "72cec115ed67e70514fddadaac82511eb33b4947",
+      "sha256": "8d867c0c3d05c72b6e3b89d7349a99ee2575008c8706d08ecb04db65b9523c71"
+    },
+    "scripts/bochs-cpu3-native-owned-clock/loader.mjs": {
+      "bytes": 1182,
+      "gitBlob": "df4aef45ae59612788f195ed3460752ef97ef5b5",
+      "sha256": "d0b8fa7790a6038150f82c3f932638156164005f08d1b4f4bfc37e9bd7dd7b59"
+    },
+    "scripts/bochs-cpu3-native-owned-clock/napi.mjs": {
+      "bytes": 4611,
+      "gitBlob": "b2d3883f9ff65aff5aa926c2f7eec94c7cd48c3e",
+      "sha256": "a415282d123066a896297388c1f44ee9fcec0d567d721b6ec5878883afa4b292"
+    },
+    "scripts/bochs-cpu3-native-owned-clock/provider.mjs": {
+      "bytes": 4808,
+      "gitBlob": "e9f9924be7d567af4800f04bbe2a48c7fa9a4e86",
+      "sha256": "635e6c9f27fb6a86018af987c50d7f958d85134f4475ab6b5ca5806b85b499f5"
+    },
+    "scripts/bochs-cpu3-native-owned-clock/runtime.mjs": {
+      "bytes": 4665,
+      "gitBlob": "092e97b629f30e246450ec3e36be6823c8a81d0a",
+      "sha256": "2a7865f992199397a16fc0989e1c6fb620f1e02c41b66b5e758095302f11af9f"
+    },
+    "scripts/bochs-cpu3-native-owned-clock/worker.mjs": {
+      "bytes": 3229,
+      "gitBlob": "5b810ff2b256e8a697a1b75834098d0738f7c18d",
+      "sha256": "b088b4557fb0540b61da29030a137916d61d4fe02152a0a3e65547ed15b66066"
+    },
+    "scripts/bochs-cpu3-native-owned-in8/abi.h": {
+      "bytes": 7038,
+      "gitBlob": "223695c0359d418e8cdd277da0dab54bd4c36880",
+      "sha256": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990"
+    },
+    "scripts/bochs-cpu3-native-owned-in8/admission.mjs": {
+      "bytes": 3650,
+      "gitBlob": "d554c7b722f2ce517d5ac2d7fd7694f789053f81",
+      "sha256": "f844e844d6460bac1c0fe00746f44243f75e0cf79eef79b1f7ef501685544bbb"
+    },
+    "scripts/bochs-cpu3-native-owned-in8/bootstrap.mjs": {
+      "bytes": 687,
+      "gitBlob": "6a5830bc470add49f4da292b1b4915904bbcdc9b",
+      "sha256": "13868ff311ae46e488047cca858e3c7fca14cd0d816edff0fee8c867d23b88fb"
+    },
+    "scripts/bochs-cpu3-native-owned-in8/contract.md": {
+      "bytes": 2050,
+      "gitBlob": "da35a8ccf6586a4cd8a03856f261bf258921f1d8",
+      "sha256": "a023a30740389553dced4da1a49f9e3ad4212a227c7f7691abf98e997e2183e3"
+    },
+    "scripts/bochs-cpu3-native-owned-in8/identity.mjs": {
+      "bytes": 6831,
+      "gitBlob": "64037cf8a52dc4b300d57efc0ca4d4891b6693f7",
+      "sha256": "a01eef0e61ec4947cc7de89b60005d9a73d3a4974ad491aef20aaccc61dff703"
+    },
+    "scripts/bochs-cpu3-native-owned-in8/napi.mjs": {
+      "bytes": 1133,
+      "gitBlob": "b0c3b54d0eb7fd4e45d57f1faefdfdb40cca570d",
+      "sha256": "0bde7031426c5dfcd1caf44938854edf687ada5e5cc69557afec9ea575f61741"
+    },
+    "scripts/bochs-cpu3-native-owned-in8/provider.mjs": {
+      "bytes": 6186,
+      "gitBlob": "e7c06de03b5b93afdaa423acb1fbcd68d9ea5be7",
+      "sha256": "fc2dda9353edd0f28d7bac26bb5336ee2f946a63b405be33d7ba14099ac8c1c0"
+    },
+    "scripts/bochs-cpu3-native-owned-in8/reset-witness.mjs": {
+      "bytes": 2320,
+      "gitBlob": "a1fe9a17a3d20d4c9587d3502fefde39546d68ce",
+      "sha256": "9013e108b8d8456cb01bcdcacd40d12bb7d08444b395f28d067ae36195c8bf03"
+    },
+    "scripts/bochs-cpu3-native-owned-in8/runtime.mjs": {
+      "bytes": 2057,
+      "gitBlob": "f337b69ecc5560b3084dcfe151874d69ed071828",
+      "sha256": "b20b0af4322cb3f71c97e7ce04297196bd316750b48ec1bb7213c4ce0f59af73"
+    },
+    "scripts/bochs-cpu3-native-owned-pic-imr-profile/admission.mjs": {
+      "bytes": 4011,
+      "gitBlob": "ce690326af5da8c0a3b7c757b38f801c17dfa832",
+      "sha256": "166806e287b4ac0854fb1cf52c457a401e02b9f605a8c24931abf6be8dc81d62"
+    },
+    "scripts/bochs-cpu3-native-owned-pic-imr-profile/contract.md": {
+      "bytes": 3437,
+      "gitBlob": "d5457aae5d8150477b119d3580c4c1ca0f01bbb3",
+      "sha256": "3be49e17bc3fc1a47bc2873b4780eb05f9b8a7b503b6f4619192d8712ddc76c7"
+    },
+    "scripts/bochs-cpu3-native-owned-pic-imr-profile/identity.mjs": {
+      "bytes": 8585,
+      "gitBlob": "037e0b8be0beab15dbd149007c643f2e4ea77759",
+      "sha256": "a1740a1617095ea8f0d158298afc71f1bf2972fa05a48a45a9ac1bca89a3006e"
+    },
+    "scripts/bochs-cpu3-native-owned-pic-imr-profile/reset-witness.mjs": {
+      "bytes": 2320,
+      "gitBlob": "edcc570975a34de21afbd60506613f7b1af79759",
+      "sha256": "b9d27e94b3ffab4851602a3b29e5086b9a0369131d5a76b2b17d580fa130ff21"
+    },
+    "scripts/bochs-cpu3-native-owned-pic-imr/contract.md": {
+      "bytes": 2783,
+      "gitBlob": "ac19ceea24d192428641ec0af336796f1270dde7",
+      "sha256": "b8bbd7936ae1087471d61860111d7217e34045beb1e7853c9deb5c1f451ccd45"
+    },
+    "scripts/bochs-cpu3-native-owned-pic-imr/identity.mjs": {
+      "bytes": 1293,
+      "gitBlob": "dd4f9e535318a82943f09b317360a607e775ccb4",
+      "sha256": "15bdf110a3a6e29e5127053817c4381a51d16eeb783139426a74a9956634fa0b"
+    },
+    "scripts/bochs-cpu3-native-owned-pic-imr/provider.mjs": {
+      "bytes": 6294,
+      "gitBlob": "fa0eefe5d7841f94db57a7aaa97bfb22167105c9",
+      "sha256": "c18e6782a1dfe64e73a648877b6ef6290128ed3c0e174b03bb7ed8122ac70ae7"
+    },
+    "scripts/bochs-cpu3-native-owned-pic-imr/runtime.mjs": {
+      "bytes": 919,
+      "gitBlob": "be3e894d85b09caec7510729c51934ecc07ae4f7",
+      "sha256": "5c338f99875c7beb460421245caa7767626d9f7196c35fd4d4c20d4a19e91abb"
+    },
+    "scripts/bochs-cpu3-native-paged-int-iret/SOURCE.md": {
+      "bytes": 7832,
+      "gitBlob": "362303dfd56baaa5c521a64a5ca96e416d4cb678",
+      "sha256": "6afce246a6b1bdf738c2e66a67ebf5960322ce6d5284e65306c3ff4fc12c7f5e"
+    },
+    "scripts/bochs-cpu3-native-paged-int-iret/profile.mjs": {
+      "bytes": 8867,
+      "gitBlob": "7f19f2d390ab10d698fe04afc0dbaa385ec849cd",
+      "sha256": "8fb1e69c475d4e4e5ce4d6d09481184280a000d7bf73565c821c464387b8690a"
+    },
+    "scripts/bochs-cpu3-native-paged-int-iret/reference.mjs": {
+      "bytes": 8177,
+      "gitBlob": "5027804efe4196a57968058551e29ff5c2526fe5",
+      "sha256": "8230aa965693c51508259b281d01ce4e110f439ff54e1c7c6c395fe6bb534dbb"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/SOURCE.md": {
+      "bytes": 8983,
+      "gitBlob": "93e87dce6f7043e554156a222eaf0c4ffda642b4",
+      "sha256": "5df62d78ea20890cc7f1085de9714f32831e08ad59ca59726ff4628cdcaa3aa4"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/profile.mjs": {
+      "bytes": 11384,
+      "gitBlob": "cfe3137bca079233aea3c4648af380f60d32ea0d",
+      "sha256": "c442a68bd76eccee912674de033ce44a3ca71d89cd06590fd468c2db03375df4"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/reference.mjs": {
+      "bytes": 11062,
+      "gitBlob": "4361a4c963baa5e4d50d7a7cb33a29f2cb864d7a",
+      "sha256": "9cb5b9a5d141d9ea416454f221551584a080c5aee0ac73625f05695bc29f92db"
+    },
+    "scripts/bochs-cpu3-native-protected-ram/cpu-profile.mjs": {
+      "bytes": 1979,
+      "gitBlob": "c6bd65981d5700f319c229fc4b6d720081ca2cf1",
+      "sha256": "a0020f6eb374df8872a1e9ab4b46e9b8c1dd648797bfe85e44c6dacf978c3aa6"
+    },
+    "scripts/bochs-cpu3-native-protected-ram/profile.mjs": {
+      "bytes": 4894,
+      "gitBlob": "84cf508e15d44dfa526347203968a927f84d8f6d",
+      "sha256": "802889b3a703697b0a66dd7c7fca44e5c53114af3b6da02894bc34d2280098b7"
+    },
+    "scripts/bochs-cpu3-native-protected-ram/reference.mjs": {
+      "bytes": 4831,
+      "gitBlob": "4b2ac8689f61b89215069ac65583cadd2ef2519c",
+      "sha256": "7440c572a60db64da7e6941a908e58a5f1a3830bf19bf9f2222566dedfb3946d"
+    },
+    "scripts/bochs-cpu3-native-protected-stack/driver-auth.mjs": {
+      "bytes": 6076,
+      "gitBlob": "03d6ce7faefa79b25b9fe6805937005af3d3c370",
+      "sha256": "c44f982eafbea6b9ba1efaaa07f68bcf5b9f4eb24b0dd796539e843a841682cd"
+    },
+    "scripts/bochs-cpu3-native-protected-stack/driver-build-binding.json": {
+      "bytes": 22139,
+      "gitBlob": "276b32e5456faf272fc721b7f77d76ac4a46c9db",
+      "sha256": "6bc1c627babb933538503e93c5f18d8c995ec91bb5cbbf23e81f808f7a4a1171"
+    },
+    "scripts/bochs-cpu3-native-protected-stack/profile.mjs": {
+      "bytes": 7424,
+      "gitBlob": "4470989dd240e89241ad163d066e4f0c2787c0f1",
+      "sha256": "0e5eee9921c2f6e3b87471aa67bfef303f7731583ea497581c04a378d7333fd3"
+    },
+    "scripts/bochs-cpu3-native-protected-stack/reference.mjs": {
+      "bytes": 4777,
+      "gitBlob": "a2d3cc0102f59c7c3f2b03d8012febc6b7867ae8",
+      "sha256": "1c5b72e0c992d7a37c46b6391f33f0e9381a2d72b1d6ce0a36cb61a04a7ab7e8"
+    },
+    "scripts/bochs-cpu3-native-ram-bootstrap/profile.mjs": {
+      "bytes": 4096,
+      "gitBlob": "b175230f6bbdd629c97737b80b90be4aac85b0b4",
+      "sha256": "f1e3656d06f9cc1690ff3020c2ba5f9de4d1c32b6ee1c8d038cf8c4ce411d39c"
+    },
+    "scripts/bochs-cpu3-native-ram-bootstrap/reference.mjs": {
+      "bytes": 3616,
+      "gitBlob": "838fe97eb2aa49fc3daa9959dad0fe50c7d152b0",
+      "sha256": "9a60956dfd694261beb63e17e70d5d1d7fc87411ce1f248cb38c1688643c4c1d"
+    },
+    "scripts/bochs-cpu3-native-ram-coherence-compare.mjs": {
+      "bytes": 56311,
+      "gitBlob": "3e237d20cb7a2c0e157b30ce1ead58480241b8f8",
+      "sha256": "9766ff7904bd99b36b0ff3d262c0eff6d082e1ebc52184be3ab80dadc816a9c8"
+    },
+    "scripts/bochs-cpu3-native-ram-coherence-host.mjs": {
+      "bytes": 15949,
+      "gitBlob": "aa23a01a573f308cb28eef6010d4458cb57e6264",
+      "sha256": "783c0c4087f5628b2766ef4a260c9e6c51afa53b70f66c24d6224416a1f66001"
+    },
+    "scripts/bochs-cpu3-native-ram-coherence/patch.mjs": {
+      "bytes": 2894,
+      "gitBlob": "ee67fd677c8a9f8cd9a7b9c96c88c05b6e4370e4",
+      "sha256": "88305e91af67102eb633fa7946a0d9941acd7b14bd69df57ddfb98815616e45f"
+    },
+    "scripts/bochs-cpu3-native-rep-pf-pit/host.mjs": {
+      "bytes": 16821,
+      "gitBlob": "1675df27f05d391540a42f5870574969cdc1a839",
+      "sha256": "eae4b81d8a6495d321fea7fe88139a08186c47688dbcbd50087a976a4ca20901"
+    },
+    "scripts/bochs-cpu3-native-rep-pf-pit/patch.mjs": {
+      "bytes": 563,
+      "gitBlob": "05ae9e6fea1b4014b83ed673c97506b2f2be00ce",
+      "sha256": "fd5ce0da16e6873a2c6dcc530e7e76dc66e597b74553de8febef9d32d620a013"
+    },
+    "scripts/bochs-cpu3-native-slice/patch.mjs": {
+      "bytes": 10305,
+      "gitBlob": "a0577b6bf34b1945e4a02c8e761a7c5728c2c7e9",
+      "sha256": "c68eed54f117d3285134af787d09242a257d428dc84e7bc29f8ab3ad7bb125b3"
+    },
+    "scripts/ci-build-i80386-native-owned-pic-imr.py": {
+      "bytes": 8029,
+      "gitBlob": "766bdbf495d3b87fac47367276cfb9b33e9e73f9",
+      "sha256": "e38320d0b68c95cb5af89c0b28517e985e7a8c9c5208a7e36c437d770d34cfb9"
+    },
+    "scripts/i80386-cold-reset-oracle.mjs": {
+      "bytes": 15446,
+      "gitBlob": "4987274f354f6c034ba1570612bafc99f305c77b",
+      "sha256": "8d331fd0d487974f6b6a1acb6054d4a619ad0c36995fc3de12322c1e55ddd9d3"
+    },
+    "scripts/i80386-combined-paging-ram-oracle.mjs": {
+      "bytes": 29357,
+      "gitBlob": "70f0ab65303395e1d77c56ac61fe2a7c47a197af",
+      "sha256": "e28c213af5e374a7680b82756dc64fb7a97956bbb36005c24aaefdeb4c98fceb"
+    },
+    "scripts/i80386-free-combined-hot.mjs": {
+      "bytes": 1898,
+      "gitBlob": "80708e5aaf4cd75be6d412ef4a2092b438e2a883",
+      "sha256": "3b9e78fa2383b83fbaec953765bab98da46fd452197586cb2e8b36e03b84be34"
+    },
+    "scripts/i80386-free-owned-in8.mjs": {
+      "bytes": 2048,
+      "gitBlob": "8f672ec8e3c9c3ad7a28ab45f5fa32eef3efade3",
+      "sha256": "49638e1f07a31f53eadc4ecf2c15e360bf232642c4e9f87effe6eb0bd05ce100"
+    },
+    "scripts/i80386-free-owned-pic-imr.mjs": {
+      "bytes": 2308,
+      "gitBlob": "d6b8a3b86f63191f29d652747ebde5e1fb4c6afa",
+      "sha256": "d638da039117668090dd41a502c43679490e1779a66ef659071db6d2944ae1ee"
+    },
+    "scripts/i80386-native-combined-paging-ram-board-gate.mjs": {
+      "bytes": 81770,
+      "gitBlob": "5c4fbe6d0afd5a02515c3e57a3af8d430674a16d",
+      "sha256": "7e0e799d56d004652f6971d8af1fbee385aec56e194741461b45d630a5027389"
+    },
+    "scripts/i80386-native-rep-pf-pit-board-gate.mjs": {
+      "bytes": 59108,
+      "gitBlob": "9ebb6350035e1979e0ab28ee99ddf17f9c18d9ff",
+      "sha256": "cbd5226d852dd19c0672ccc29bbd244dcad006aaa3d198a7ca63b43f57a74aea"
+    },
+    "scripts/i80386-ram-coherence-oracle.mjs": {
+      "bytes": 18648,
+      "gitBlob": "8df2732646cb274c434fe094939dbf3ab41756c9",
+      "sha256": "f27a4023eeb49fc56cf583f351956f634b9a143c68b2c4ddb9e268756a2e3e85"
+    },
+    "scripts/i80386-rep-pf-pit-oracle.mjs": {
+      "bytes": 19745,
+      "gitBlob": "1bbb9512bd7affd8fd8799d531da530745ff67f6",
+      "sha256": "f24ff77b7f243bd8f9e9e3e1e147f2f0514e7576bdd2ee7f7a668a66ba50f642"
+    },
+    "scripts/lib/i80386-source-inventory.mjs": {
+      "bytes": 1256,
+      "gitBlob": "8ed181aeccfe6f341d0f55cf51ce21d5211e9973",
+      "sha256": "96188430556fb724fbea8197e0fdfd280e7f52d9f63632c3371779fb3f740604"
+    },
+    "scripts/prepare-bochs-cpu3-native-direct-board.mjs": {
+      "bytes": 5210,
+      "gitBlob": "13da5185558c44e23622fc355affa0e350159ff4",
+      "sha256": "4d466140149cac91e3ae99422f190df3151b9d5277ae9c2110306faa47c7e572"
+    },
+    "scripts/prepare-bochs-cpu3-native-hot-direct.mjs": {
+      "bytes": 5933,
+      "gitBlob": "39574855e711ceea6b74703f7f400ce674febb1e",
+      "sha256": "6942a881c72151ad075cd757fe4ec39bef793675defebb250f41395dd05c24bb"
+    },
+    "scripts/prepare-bochs-cpu3-native-owned-clock.mjs": {
+      "bytes": 3053,
+      "gitBlob": "748216338e827f683be5f5c03a072c6b1e9bb283",
+      "sha256": "84dfb43c82fcbe10d3f8f32dda8b3da210bcdbe04d7b5bcb62b361b8f1c99dc4"
+    },
+    "scripts/prepare-bochs-cpu3-native-owned-in8.mjs": {
+      "bytes": 3104,
+      "gitBlob": "8c4c470b337bf306ee7c992d8d5ecf3d9f63a73a",
+      "sha256": "7bc6b3fb342ea2e90f8570d8b7f2d1bd4fef92ade8e224f46dbc873fa7760a2f"
+    },
+    "scripts/prepare-bochs-cpu3-native-owned-pic-imr.mjs": {
+      "bytes": 3580,
+      "gitBlob": "7402983e46f80197ab6d34478673330083b17a5e",
+      "sha256": "8dfa32020f1a86caf3341bc00f546715fd0b096eec19662720f4772856ce039e"
+    },
+    "scripts/probe-i80386-native-direct-board-adapter.mjs": {
+      "bytes": 5376,
+      "gitBlob": "01bcb7c4d68d2c48c2944f4c1c9f65bb9ca37343",
+      "sha256": "6842a2241a9a63a1a467a3cfe2d4c7462be71b4cba5957fdaf1050ed33026ca4"
+    },
+    "scripts/run-i80386-cold-reset-oracle.mjs": {
+      "bytes": 472,
+      "gitBlob": "490f19d4ba787db9b4509e136ec5fe9ebb821e67",
+      "sha256": "45d55510965421c566fa958ec0f444ca96447c6e0dd52a4e50373b292987b9a1"
+    },
+    "scripts/run-i80386-combined-paging-ram-oracle.mjs": {
+      "bytes": 536,
+      "gitBlob": "af11f2469ee5d652cfab31e03e71198b4e185938",
+      "sha256": "f739b50ffc7c5c772955e2053fa90efa50bf0d5121561a6b658e917222d08e8a"
+    },
+    "scripts/run-i80386-free-owned-in8.mjs": {
+      "bytes": 6255,
+      "gitBlob": "041fb6debb7336a92499d9a8b6d8053ed479d018",
+      "sha256": "258fe8a78c472f00750fec450d1920e441f424802620794268c6fd1adf3ed3e5"
+    },
+    "scripts/run-i80386-free-owned-pic-imr.mjs": {
+      "bytes": 6189,
+      "gitBlob": "b6dea9fb245d7773a957fc98b6416d580da1ce63",
+      "sha256": "bb06632fb5cc71304379d7ccc30d3fc62d0e5c1a7e6a567eb3cc7365ce924f86"
+    },
+    "scripts/run-i80386-native-owned-clock.mjs": {
+      "bytes": 4570,
+      "gitBlob": "806bae96e6fa469300862c04d0432c51b75c4c77",
+      "sha256": "d9a24d9ac044ae41117bd47bd02768a0b07abe549daf575977e1e58b8dbff0ff"
+    },
+    "scripts/run-i80386-native-owned-in8.mjs": {
+      "bytes": 7654,
+      "gitBlob": "b5d51b38ab5ef10a6799f0a080a8eac2c4a34047",
+      "sha256": "68f85005a471c2ccade1d4dcfbbf2794fb0161fc7536e9c4b9bcb1dc05c9578b"
+    },
+    "scripts/run-i80386-native-owned-pic-imr.mjs": {
+      "bytes": 7832,
+      "gitBlob": "27a723e5dbd0e0eb8305bdedf12efafea387ebb9",
+      "sha256": "9107ee3560c174e2c81bfd709f7a7bec738f53fdd2c3b9f1ff7cd3d0159541fa"
+    },
+    "scripts/run-i80386-ram-coherence-oracle.mjs": {
+      "bytes": 588,
+      "gitBlob": "f5124e2cbce74a37c8dc297247774eafdd6e7b7d",
+      "sha256": "0f701ee91d66c00fb7b70deffb315b66d5ea80d3b85d48f46ac712fb9c60e002"
+    },
+    "scripts/run-i80386-rep-pf-pit-oracle.mjs": {
+      "bytes": 544,
+      "gitBlob": "991776764f42f086dec565a04fbd447b9cb45ac2",
+      "sha256": "baee42906af576b137b266c7a172c99c0a143e64175311770bfe4761aa6a3f8f"
+    },
+    "src/adc0809.js": {
+      "bytes": 6267,
+      "gitBlob": "7f6535deb858a2642b89a39b5115a4a918bf6911",
+      "sha256": "92926d8bd4315fa837d6cce7bc3770148960d181802eb52ba5d9aa013e5f64af"
+    },
+    "src/at-8042-a20.js": {
+      "bytes": 19631,
+      "gitBlob": "f1c431b962131b8c3bc614e2b6912a45e05c411f",
+      "sha256": "c604c8a272034a9a80eeb30abe1c5d6ab09ebe6c816b3f3c778874f6b9a9f6b8"
+    },
+    "src/at-ps2-mouse.js": {
+      "bytes": 2891,
+      "gitBlob": "d2e9d04023bf865459125594e18daf25e18f51dc",
+      "sha256": "b75f93e3a4473e21568af438d658941e9a9703ab330147b8f444baba278281ea"
+    },
+    "src/at-system-control.js": {
+      "bytes": 2682,
+      "gitBlob": "8109e0224693d411b66643908dca3f7455ba570f",
+      "sha256": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7"
+    },
+    "src/audio-bus.js": {
+      "bytes": 10590,
+      "gitBlob": "93d9b0e72845228a1aba6cf5063d88cf609dc249",
+      "sha256": "95a263b2432f8309b76a64a0b6dcf0ddcc1dd61aeabb7a8727505f343e26ba08"
+    },
+    "src/cga-card.js": {
+      "bytes": 10416,
+      "gitBlob": "67e9228a66cce07b282030bb5458f046e6202ca4",
+      "sha256": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc"
+    },
+    "src/chip-ledger.js": {
+      "bytes": 6217,
+      "gitBlob": "9b4776a5d545fa8460391ebf81a82ffb97b21695",
+      "sha256": "b12b5d635086636f0f9f405e4a06816943b74c03c1b036fcbd3ffe813055ac3a"
+    },
+    "src/dac0832.js": {
+      "bytes": 5848,
+      "gitBlob": "47fb8bc837f485c381844d2009c04a1aa649c0f0",
+      "sha256": "81b24b9c8f461cbd2f4a9bcd1aceda3e366062841d1c530440eccdb8cbeae787"
+    },
+    "src/ega-card.js": {
+      "bytes": 6552,
+      "gitBlob": "3068e2caca9816ca56e504d110a59ec7044409dd",
+      "sha256": "5b93057ca256f7a43046b477127862278c80bb9849e062528c1cd603f7e3d2f5"
+    },
+    "src/experimental/ata16.js": {
+      "bytes": 13489,
+      "gitBlob": "d7e651f62f0810a083d94324ac600c8be38baceb",
+      "sha256": "bcf08d6e5e2316cfefe7e264c587e6d23e94b5a4f4e5099c8aace162164a88b7"
+    },
+    "src/experimental/i80286-protected.js": {
+      "bytes": 73806,
+      "gitBlob": "6f5d0d5d793ec7b9e300190fc6ffd3bd2f1c07bb",
+      "sha256": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70"
+    },
+    "src/experimental/i80386-at-machine.js": {
+      "bytes": 26851,
+      "gitBlob": "f229cb0bc0320b455f13873c9eb46b13cb0cbf3d",
+      "sha256": "6c5f12cc92ba7219ed4b53f6237622f6ce58269402ee14770791e04c68f93cb0"
+    },
+    "src/experimental/i80386.js": {
+      "bytes": 133968,
+      "gitBlob": "53270694f0a48e20150ee425e69bcadb68a98a45",
+      "sha256": "6fba681208e1443cc9eff00ae6aba444903d23e5feafe62527b25428e72d60ed"
+    },
+    "src/experimental/vga-memory.js": {
+      "bytes": 7229,
+      "gitBlob": "96bda6e85bbee9251bf5f4f3b8a988a06d353cb4",
+      "sha256": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a"
+    },
+    "src/hercules-card.js": {
+      "bytes": 4798,
+      "gitBlob": "ee0b9231e155d726b11ef7a8a1a42c5b259ec6eb",
+      "sha256": "6e3af9bce88edbc609b2f8a07dc464b8a1fb60ce5fd800a4d345dac61367752b"
+    },
+    "src/i8086-machine.js": {
+      "bytes": 128619,
+      "gitBlob": "36cba4322c5f05cde65acb42887110fe68f30437",
+      "sha256": "7cf7fdf4e6de451071809e32e128aa0ac663524eaf8b2e08581780b0ec4f167c"
+    },
+    "src/i8086-ram-words.js": {
+      "bytes": 1656,
+      "gitBlob": "3bb44a1e8089bc190b5a68ac5eb03d4934404d86",
+      "sha256": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5"
+    },
+    "src/i8086.js": {
+      "bytes": 107519,
+      "gitBlob": "d514b5e73aa2406128307cadb668ccff27695460",
+      "sha256": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a"
+    },
+    "src/i8088-cycles.js": {
+      "bytes": 974864,
+      "gitBlob": "b90226826e12920704d39166587f15754108b44c",
+      "sha256": "402d869be7c7ca79f1f6116d0861c85887112e46f1f1ba20f59d7e3031ce1477"
+    },
+    "src/i8088-timing.js": {
+      "bytes": 7947,
+      "gitBlob": "c062102e2e963a66a0e480a9c1e9fc2fa50015ac",
+      "sha256": "b1f85cab54484119016e57b954505dfb90821c0b47b5b7851a3d5d787977dc95"
+    },
+    "src/i8237.js": {
+      "bytes": 26099,
+      "gitBlob": "1971bd903c047ab6f65723bf8fa8520ae758367f",
+      "sha256": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad"
+    },
+    "src/i8251.js": {
+      "bytes": 9962,
+      "gitBlob": "60885612a7968e7d65810dfa7d3398fdd258c3a1",
+      "sha256": "45a2df29bc0920e7d57188a365e8c05addab0805efc1eb02d8df72a41d4dca2b"
+    },
+    "src/i8254.js": {
+      "bytes": 18502,
+      "gitBlob": "a45b12a22ee9f368fd879bea032d14cafea4bbc7",
+      "sha256": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30"
+    },
+    "src/i8255.js": {
+      "bytes": 8295,
+      "gitBlob": "f527759d21553bc02f93965c886123b8d89372c4",
+      "sha256": "3445ac6676005f225db542031be51b6d1561045d2be76be339e5853a50f6ff7f"
+    },
+    "src/i8259.js": {
+      "bytes": 19093,
+      "gitBlob": "968bd50e2539b3953c8a71a5c537a1caffb125bc",
+      "sha256": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278"
+    },
+    "src/machine-checkpoint.js": {
+      "bytes": 8280,
+      "gitBlob": "c05bc6fee8f73606e782163757cee64a89de6c4d",
+      "sha256": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139"
+    },
+    "src/mc146818.js": {
+      "bytes": 12655,
+      "gitBlob": "764c549b58929999b02bccc9b484a7c50bf30728",
+      "sha256": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c"
+    },
+    "src/mc6845.js": {
+      "bytes": 11052,
+      "gitBlob": "f2ff39f723af981bfcfaf2cc60f6e6539f46c069",
+      "sha256": "30c369c37fc4030162dde6d46bea388ce9acbf489141195ab166f3c0cab5c599"
+    },
+    "src/mc6850.js": {
+      "bytes": 2854,
+      "gitBlob": "8a0ef9b833cbc22e1712d884f61ff586e4bc3a40",
+      "sha256": "e987c5243a92a7b43533a99ff9bf2da29e0bd608a2417162c7b5dfeb1cb75889"
+    },
+    "src/ne2000.js": {
+      "bytes": 17462,
+      "gitBlob": "6d995156f2e018e968119bbba531d818356ebc20",
+      "sha256": "12a97f87807aaf74a94245d81acddfb10f43748c09a1d4633e0ba7959b7a1244"
+    },
+    "src/ns16c550.js": {
+      "bytes": 8784,
+      "gitBlob": "84a40ec468ff99b92a03f712b68397bf490afdf7",
+      "sha256": "34633ec3bec4d0826998fadde5e11bf88f20dfd32fc5a09144c6bad64461f41b"
+    },
+    "src/pc-speaker.js": {
+      "bytes": 6434,
+      "gitBlob": "8f1cc4bd88e655b6d4c2f79f5861b063cfe83eba",
+      "sha256": "50260dcd04eaedd84373e5c2b1e42faa2f1bc924833b6bdf0aa7d23a80ea9499"
+    },
+    "src/sb-dsp.js": {
+      "bytes": 13475,
+      "gitBlob": "e2a15ea46c4fdd0deb5c9f4477d98573ab3626a6",
+      "sha256": "901fc1d6536e19a552380d226b8e285ff4ab29f871a319d552701c2100044f71"
+    },
+    "src/upd765.js": {
+      "bytes": 53603,
+      "gitBlob": "9d3a8bb97defa2a8fd8dda72eeae36d3eda47651",
+      "sha256": "b5a066fd577ee358f40c13682015d28be490acbeb00a50d8c7199671523fcde4"
+    },
+    "src/vga-card.js": {
+      "bytes": 10652,
+      "gitBlob": "96265fb06c31592bbfe736f6cf97911b084f8f7a",
+      "sha256": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71"
+    },
+    "src/ym3812.js": {
+      "bytes": 15069,
+      "gitBlob": "7dd44772fff2c75208cb6c77177dd30dfc217c70",
+      "sha256": "c78833b8efb3048143e7fac898a7af5374ce3f00f1b9e5b55baa6d212a51df04"
+    },
+    "test/fixtures/i80386-free-cold-reset.S": {
+      "bytes": 1232,
+      "gitBlob": "b083948a86a969e4c21e2ee1efc257c221a4fb78",
+      "sha256": "aedf3c0262046d6aa219c11db97ccdb9eab1868a6a56d79413c621ec3c4c740f"
+    },
+    "test/fixtures/i80386-free-combined-hot.S": {
+      "bytes": 4513,
+      "gitBlob": "abc78d5db1034094bfcfd114b262f4907574a44b",
+      "sha256": "6250214b966fb43da511def64e74c34418b3faa1d128ed31d097872a7f6e2055"
+    },
+    "test/fixtures/i80386-free-combined-paging-ram.S": {
+      "bytes": 4057,
+      "gitBlob": "4c72f716279490d23f7bdd06376e8988867bf58d",
+      "sha256": "0be1a177c4f59649d90653bf524b8b88c561d00fbb0b05d6b7dd792f966d27ad"
+    },
+    "test/fixtures/i80386-free-owned-in8.S": {
+      "bytes": 4784,
+      "gitBlob": "48454e820c8c22474e68d21434636f7bb2f54308",
+      "sha256": "05c26591c4cdd11969307b00cb60bda741568dd6b0d75ffa448b1cb84b5b265e"
+    },
+    "test/fixtures/i80386-free-owned-pic-imr.S": {
+      "bytes": 5039,
+      "gitBlob": "b0407df2da81eeb76058daf66b60274c52fb1bd2",
+      "sha256": "ac58991d9211d0d88c3c4935982302ffc17da9f9f39c7a32b090654184564d65"
+    },
+    "test/fixtures/i80386-free-ram-coherence.S": {
+      "bytes": 1861,
+      "gitBlob": "c88cd8b36cdedf8630dda52eaa74ca110dec9c62",
+      "sha256": "638b09f289f015ec8bc3cd7b7a196fee3f7c7fe20ced441f06a57024d041cd79"
+    },
+    "test/fixtures/i80386-free-rep-pf-pit.S": {
+      "bytes": 2811,
+      "gitBlob": "2c1b992575c6d516f7ddec032d2c1c47667a3043",
+      "sha256": "d3ee700dd0da5b35c36b7a14c30bf7070a4d7a596ce0ff017985b1c2d6f17dd4"
+    },
+    "test/fixtures/i80386-native-cold-reset-capture.json.gz": {
+      "bytes": 334699,
+      "gitBlob": "c0e85376d3e4c262086ebd3db7686a7460be70e4",
+      "sha256": "563c20c20b33b613c6bd0d6c21a702a77388480d36e8685e23b37858275e23d4"
+    },
+    "test/fixtures/i80386-native-combined-paging-ram-board-gate-capture.json.gz": {
+      "bytes": 3064044,
+      "gitBlob": "ce248a628c80fe3f59803636dd328c1151bed757",
+      "sha256": "39945c6a11b52e77a3da6b9fc92c060a6df67bfac212a9e07a7363c33788a67a"
+    },
+    "test/fixtures/i80386-native-ram-coherence-capture.json.gz": {
+      "bytes": 1035139,
+      "gitBlob": "be5c3fee87b0cdd9003f99b1f03f3cc4a7f67a4a",
+      "sha256": "e431d0e6d962dccd9fc8e4d9f5b2ca2cdfce695b3fd1f7146879c0190176aa82"
+    },
+    "test/fixtures/i80386-native-rep-pf-pit-board-gate-capture.json.gz": {
+      "bytes": 2260970,
+      "gitBlob": "41921652cfe626c7b83a12eb9a502e09337aacda",
+      "sha256": "ae0cd710a942fbd750f6a0e0476fe4d3b033b6bf6016327bc15b22afd841d8f8"
+    },
+    "test/fixtures/i80386-owned-clock-harness.cc": {
+      "bytes": 4311,
+      "gitBlob": "2a69bc31f19f70b8e3fd9e02e3cffee088b87508",
+      "sha256": "88c06dbda169a87f929f02e57657fc020a8948ce04af8c46cb167d3b6a58825f"
+    },
+    "test/fixtures/i80386-owned-pic-imr-canonical-proof.json": {
+      "bytes": 838,
+      "gitBlob": "5dd65d006f1a07eb3840f4f1a9ef71696d96ab65",
+      "sha256": "1e88f8b2883bbc48367be6866152a34468ad7e4fa14bebcccea72ecc057f4e14"
+    },
+    "test/fixtures/i80386-owned-pic-imr-js-reference.json": {
+      "bytes": 210135,
+      "gitBlob": "3501c6abf7b13a38af014ed0b939613676a746a9",
+      "sha256": "fdca8f8fa92952cd9cd5f4447e66b194a5f691025bcf925f7ddd443290143346"
+    },
+    "test/i80386-cold-reset-oracle.test.mjs": {
+      "bytes": 3460,
+      "gitBlob": "448816ce6073f64421f4ee3279ea85352c9b2f39",
+      "sha256": "823a7f8a21d8577863c88bdb71c2a8cb85c04ba0c35dead521b8f3d1e00cd1f4"
+    },
+    "test/i80386-combined-paging-ram-oracle.test.mjs": {
+      "bytes": 7250,
+      "gitBlob": "95e8b2b5987826ca89e20a3d0ff1be1e57ccfaa7",
+      "sha256": "f027690a4b105c082f522bc5eeae507ed3d2d480ff45562963b63d436c684a3b"
+    },
+    "test/i80386-native-cold-reset-report.test.mjs": {
+      "bytes": 6323,
+      "gitBlob": "07b3ff5fdbcc721e4e02957c501391b16ad0988b",
+      "sha256": "3301e057f50a4c177a621ac79bf4381bc5f2007da5b629ea16103dc26a56d92a"
+    },
+    "test/i80386-native-combined-paging-ram-board-gate.test.mjs": {
+      "bytes": 17619,
+      "gitBlob": "c35cc40ac2c9015677a578d7ae9cf7f5f01a7459",
+      "sha256": "e2d4921b5b9ef5cd657bc9f6546cf2adf6cddf0d27021b451f51e758cbff8d75"
+    },
+    "test/i80386-native-direct-board.test.mjs": {
+      "bytes": 7653,
+      "gitBlob": "1d12f10320d32566c21a84eae8f9e8665b0b5a17",
+      "sha256": "794e3032c615a06353da57aba909ec5d95e73e30e71f376f5d2c51f4673f0681"
+    },
+    "test/i80386-native-hot-direct.test.mjs": {
+      "bytes": 4219,
+      "gitBlob": "9a396f8233a1fd097b62e68864e4b457476c4850",
+      "sha256": "3152f6ed5cc2bb7de5ad917e135736f9eb63d086c7015d8f03789cd086f0bded"
+    },
+    "test/i80386-native-owned-clock-c-harness.test.mjs": {
+      "bytes": 1831,
+      "gitBlob": "787b09dd10e83e0cc9cc8bb62267370e8b427887",
+      "sha256": "50d484bc15339ea70d9fbc6f2b7db54836cc8991f3a064d162266e16639e4ba2"
+    },
+    "test/i80386-native-owned-clock.test.mjs": {
+      "bytes": 8555,
+      "gitBlob": "6900032fd21f291b2fc9449023ea3dd5687060ea",
+      "sha256": "29cbb6fca8bbf1877eee26e29765c8891d08cc03609a228acce89c8e6654a755"
+    },
+    "test/i80386-native-owned-in8.test.mjs": {
+      "bytes": 10699,
+      "gitBlob": "fbfaa6a4cdc0e703441a71075e46b46bb6f28614",
+      "sha256": "06ef235f38b322a6e9a43aaec22f2d31a6df7cb1aa806fc4ed106ab74e4c45cc"
+    },
+    "test/i80386-native-owned-pic-imr-profile.test.mjs": {
+      "bytes": 9057,
+      "gitBlob": "84114e879adcd07b692a3578c9dddedb5c65d9df",
+      "sha256": "c454e0a7b65832a39004d360ad00be1ce8c2226b7fa85ddce50f49b879a1c96d"
+    },
+    "test/i80386-native-owned-pic-imr.test.mjs": {
+      "bytes": 6164,
+      "gitBlob": "0738340891d1f2f32cc08fe1785b461ad3247034",
+      "sha256": "4b713e3d6f5edad0e603cccd8eee62acc4ff9def91cce335989fb15348d4d7ed"
+    },
+    "test/i80386-native-ram-coherence-report.test.mjs": {
+      "bytes": 18368,
+      "gitBlob": "63b264b108f3a6dd3a6c893216e4d2eda8bfa492",
+      "sha256": "97754292cbaeedb12f69171e8550924dadf0717cab17b88b556ae66c1d49e4f8"
+    },
+    "test/i80386-native-rep-pf-pit-board-gate.test.mjs": {
+      "bytes": 13498,
+      "gitBlob": "0d19f22c671cbfe3536864ddf2df8bceae509378",
+      "sha256": "9b28525c3c58aab4bfb2dc7a0f9b5b55fefab3a9145bb8da054163aab2e4c606"
+    },
+    "test/i80386-nonidentity-paging-source.test.mjs": {
+      "bytes": 7881,
+      "gitBlob": "4f633efea5693197d82799ead199313626a17a3e",
+      "sha256": "8ba77e61e0f9e075922f127fb40601733debd2d671c1dadc4e00253af0cb39aa"
+    },
+    "test/i80386-paged-int-iret-source.test.mjs": {
+      "bytes": 9347,
+      "gitBlob": "b82e0a6a8e26487025bb659b9b712bda3307e7d9",
+      "sha256": "05dfbeae2c3354f6482db2803c0587af15f7cc2990deb49169066c372d8af259"
+    },
+    "test/i80386-paged-pagefault-source.test.mjs": {
+      "bytes": 10800,
+      "gitBlob": "12776bb024ed2748add58be6b3dadb31ff437ad1",
+      "sha256": "9e2a95562e1f59f1bd46e669f639434e6002779c7b7e1daa1910a54246651895"
+    },
+    "test/i80386-protected-ram-source.test.mjs": {
+      "bytes": 7403,
+      "gitBlob": "ec1aa76dd46b62d2a7789ec1c5bdc10ad07bc403",
+      "sha256": "c603ef493cb1c13a5e69041f0a0818925f55a27e4bbc69f61674041d15a2ca14"
+    },
+    "test/i80386-protected-stack-source.test.mjs": {
+      "bytes": 7478,
+      "gitBlob": "95cc8851f2a3c6d7e51c315628389f21348317ca",
+      "sha256": "96dc59593582c309749f3d004cac22cde4749b2bf2ba9d359a868b457281c8bd"
+    },
+    "test/i80386-ram-coherence-oracle.test.mjs": {
+      "bytes": 4626,
+      "gitBlob": "1b7084cd29e84a4a0b33ea294599048552cfffdf",
+      "sha256": "837bdf068a05c106ac1bfc3ec0a083ea7923436773791faa3ce0ec3b3d4b2e26"
+    },
+    "test/i80386-rep-pf-pit-oracle.test.mjs": {
+      "bytes": 7498,
+      "gitBlob": "668da9cfacc078c80277057337229a85f5601b0c",
+      "sha256": "f6ebeb96b938b62352708a8cf7117ef0db385621680f60d58cfa4cf0ef3c80e9"
+    }
+  },
+  "schema": "bw.i80386-historical-context-table.v1",
+  "selectors": {
+    "native-cold-reset-report": [
+      "scripts/bochs-cpu3-native-cold-reset-compare.mjs",
+      "scripts/i80386-cold-reset-oracle.mjs"
+    ],
+    "native-combined-paging-ram-board-gate": [
+      "scripts/i80386-combined-paging-ram-oracle.mjs",
+      "scripts/i80386-native-combined-paging-ram-board-gate.mjs"
+    ],
+    "native-owned-pic-imr-profile": [
+      "scripts/bochs-cpu3-native-owned-pic-imr-profile/admission.mjs",
+      "scripts/bochs-cpu3-native-owned-pic-imr-profile/identity.mjs",
+      "scripts/bochs-cpu3-native-owned-pic-imr-profile/reset-witness.mjs",
+      "scripts/bochs-cpu3-native-owned-pic-imr/identity.mjs",
+      "scripts/bochs-cpu3-native-owned-pic-imr/runtime.mjs"
+    ],
+    "native-ram-coherence-report": [
+      "scripts/bochs-cpu3-native-ram-coherence-compare.mjs",
+      "scripts/i80386-ram-coherence-oracle.mjs"
+    ],
+    "native-rep-pf-pit-board-gate": [
+      "scripts/i80386-native-rep-pf-pit-board-gate.mjs",
+      "scripts/i80386-rep-pf-pit-oracle.mjs"
+    ],
+    "nonidentity-paging-source": [
+      "scripts/bochs-cpu3-native-nonidentity-paging/profile.mjs",
+      "scripts/bochs-cpu3-native-nonidentity-paging/reference.mjs"
+    ],
+    "paged-int-iret-source": [
+      "scripts/bochs-cpu3-native-paged-int-iret/profile.mjs",
+      "scripts/bochs-cpu3-native-paged-int-iret/reference.mjs"
+    ],
+    "paged-pagefault-source": [
+      "scripts/bochs-cpu3-native-paged-pagefault/profile.mjs",
+      "scripts/bochs-cpu3-native-paged-pagefault/reference.mjs"
+    ],
+    "protected-ram-source": [
+      "scripts/bochs-cpu3-native-protected-ram/cpu-profile.mjs",
+      "scripts/bochs-cpu3-native-protected-ram/profile.mjs",
+      "scripts/bochs-cpu3-native-protected-ram/reference.mjs"
+    ],
+    "protected-stack-source": [
+      "scripts/bochs-cpu3-native-protected-stack/profile.mjs",
+      "scripts/bochs-cpu3-native-protected-stack/reference.mjs"
+    ]
+  },
+  "supportImportClosure": [
+    "scripts/bochs-cpu3-native-cold-bios/driver-auth.mjs",
+    "scripts/bochs-cpu3-native-cold-reset-compare.mjs",
+    "scripts/bochs-cpu3-native-cold-reset-host.mjs",
+    "scripts/bochs-cpu3-native-combined-paging-ram/host.mjs",
+    "scripts/bochs-cpu3-native-hot-direct/profile.mjs",
+    "scripts/bochs-cpu3-native-hot-direct/runtime.mjs",
+    "scripts/bochs-cpu3-native-hot-packed-scalar/napi.mjs",
+    "scripts/bochs-cpu3-native-nonidentity-paging/profile.mjs",
+    "scripts/bochs-cpu3-native-nonidentity-paging/reference.mjs",
+    "scripts/bochs-cpu3-native-owned-8042-interface/profile.mjs",
+    "scripts/bochs-cpu3-native-owned-8042-interface/reference.mjs",
+    "scripts/bochs-cpu3-native-owned-8042/profile.mjs",
+    "scripts/bochs-cpu3-native-owned-clock/derive.mjs",
+    "scripts/bochs-cpu3-native-owned-clock/napi.mjs",
+    "scripts/bochs-cpu3-native-owned-clock/runtime.mjs",
+    "scripts/bochs-cpu3-native-owned-in8/identity.mjs",
+    "scripts/bochs-cpu3-native-owned-in8/napi.mjs",
+    "scripts/bochs-cpu3-native-owned-in8/runtime.mjs",
+    "scripts/bochs-cpu3-native-owned-pic-imr-profile/admission.mjs",
+    "scripts/bochs-cpu3-native-owned-pic-imr-profile/identity.mjs",
+    "scripts/bochs-cpu3-native-owned-pic-imr-profile/reset-witness.mjs",
+    "scripts/bochs-cpu3-native-owned-pic-imr/identity.mjs",
+    "scripts/bochs-cpu3-native-owned-pic-imr/runtime.mjs",
+    "scripts/bochs-cpu3-native-paged-int-iret/profile.mjs",
+    "scripts/bochs-cpu3-native-paged-int-iret/reference.mjs",
+    "scripts/bochs-cpu3-native-paged-pagefault/profile.mjs",
+    "scripts/bochs-cpu3-native-paged-pagefault/reference.mjs",
+    "scripts/bochs-cpu3-native-protected-ram/cpu-profile.mjs",
+    "scripts/bochs-cpu3-native-protected-ram/profile.mjs",
+    "scripts/bochs-cpu3-native-protected-ram/reference.mjs",
+    "scripts/bochs-cpu3-native-protected-stack/driver-auth.mjs",
+    "scripts/bochs-cpu3-native-protected-stack/profile.mjs",
+    "scripts/bochs-cpu3-native-protected-stack/reference.mjs",
+    "scripts/bochs-cpu3-native-ram-bootstrap/profile.mjs",
+    "scripts/bochs-cpu3-native-ram-bootstrap/reference.mjs",
+    "scripts/bochs-cpu3-native-ram-coherence-compare.mjs",
+    "scripts/bochs-cpu3-native-ram-coherence-host.mjs",
+    "scripts/bochs-cpu3-native-rep-pf-pit/host.mjs",
+    "scripts/i80386-cold-reset-oracle.mjs",
+    "scripts/i80386-combined-paging-ram-oracle.mjs",
+    "scripts/i80386-native-combined-paging-ram-board-gate.mjs",
+    "scripts/i80386-native-rep-pf-pit-board-gate.mjs",
+    "scripts/i80386-ram-coherence-oracle.mjs",
+    "scripts/i80386-rep-pf-pit-oracle.mjs",
+    "scripts/lib/i80386-source-inventory.mjs",
+    "src/adc0809.js",
+    "src/at-8042-a20.js",
+    "src/at-ps2-mouse.js",
+    "src/at-system-control.js",
+    "src/audio-bus.js",
+    "src/cga-card.js",
+    "src/chip-ledger.js",
+    "src/dac0832.js",
+    "src/ega-card.js",
+    "src/experimental/ata16.js",
+    "src/experimental/i80286-protected.js",
+    "src/experimental/i80386-at-machine.js",
+    "src/experimental/i80386.js",
+    "src/experimental/vga-memory.js",
+    "src/hercules-card.js",
+    "src/i8086-machine.js",
+    "src/i8086-ram-words.js",
+    "src/i8086.js",
+    "src/i8088-cycles.js",
+    "src/i8088-timing.js",
+    "src/i8237.js",
+    "src/i8251.js",
+    "src/i8254.js",
+    "src/i8255.js",
+    "src/i8259.js",
+    "src/machine-checkpoint.js",
+    "src/mc146818.js",
+    "src/mc6845.js",
+    "src/mc6850.js",
+    "src/ne2000.js",
+    "src/ns16c550.js",
+    "src/pc-speaker.js",
+    "src/sb-dsp.js",
+    "src/upd765.js",
+    "src/vga-card.js",
+    "src/ym3812.js"
+  ]
+}
