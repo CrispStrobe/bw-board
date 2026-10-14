@@ -1360,6 +1360,16 @@ public fixture result is scoped to its authored instruction mix. The original
 benchmark inputs and gate remain separately pending, and no gain is claimed
 until the new original paired evidence passes an independent audit.
 
-The initial source controls pass seven tiny fixture tests and twenty-one policy/mock
-cases. This is not an actual paired result. The first exact-source hosted
-measurement and independent original-packet audit remain pending.
+The first [public run 38546501084](https://github.com/CrispStrobe/bw-board/actions/runs/38546501084)
+at [source 7803a634](https://github.com/CrispStrobe/bw-board/commit/7803a6341d319b30da2bcd4065e5c8005940687f)
+passes all 18 semantic checks and the seven-pair gate. Root and an independent
+peer verified the sole original packet. CPU A/B ratios (rounded) are
+1.207300, 1.213405, 1.176528, 1.253893, 1.279204, 1.234022, 1.254363:
+median 1.234022, minimum 1.176528, all 7 wins; median B/A wall 0.811306.
+Node 20.20.2 ran on EPYC 7763 with affinity CPU 0, one-CPU quota, 1 GiB and no swap;
+owned cleanup was observed. Original
+[artifact 11886116162](https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11886116162)
+SHA256 is `4e102fd18dca6f7dbc58ffb0b8b2b6bed121e07f4d80e524e1c69a2fcbb38cfd`.
+[PR573](https://github.com/CrispStrobe/bw-board/pull/573) is merged; ordinary
+CPU adoption is unchanged. This gain covers only the authored 24-form public
+mix, not the original benchmark gate, adoption, physical RTx or OS compatibility.

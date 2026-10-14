@@ -4700,8 +4700,9 @@ fixture execution.
 
 ## Ordinary code16 public paired measurement — 2026-10-14
 
-The documentation claim is merged; source implementation is on
-`lane/386-code16-public-paired-20261014`, awaiting review and hosted measurement. Own only the new dedicated
+The claim is merged. [Merged PR573](https://github.com/CrispStrobe/bw-board/pull/573)
+implements the dedicated source and hosted measurement; its first original run
+passes the scoped public gate. Ordinary CPU adoption is unchanged. Own only the new dedicated
 `.github/workflows/i80386-code16-paired.yml`,
 `scripts/i80386-code16-paired/{fixture.mjs,run.py,policy.py,controls.py,README.md}`,
 `test/i80386-code16-paired-fixture.test.mjs`, this registry entry and the
@@ -4720,5 +4721,5 @@ seven fixed measured pairs use whole-Node CPU and wall with semantic parity;
 CPU median at least 1.03, all seven CPU wins and wall median no worse than 1.02
 are mandatory. This separately named public measurement neither replaces the
 original benchmark contract nor grants performance-only adoption, RTx or OS
-compatibility. Seven tiny authored fixture tests and twenty-one policy/mock controls pass locally.
-No complete macro workload or paired measurement has run; no gain is claimed.
+compatibility. The actual result is limited to this authored public mix; see
+the task contract for its original run and artifact.
