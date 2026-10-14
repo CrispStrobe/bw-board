@@ -1,10 +1,16 @@
-import test from 'node:test';
+import {historicalContext} from '../scripts/i80386-historical-source-contexts/bridge.mjs';
+const held=await historicalContext(import.meta.url);
+after(()=>held.close());
+const {deriveProtectedCpu,cpuSourceSha256,bochsCr0Write}=await held.module('scripts/bochs-cpu3-native-protected-ram/cpu-profile.mjs');
+const {instructions,stores,descriptor,fixedProtectedRamRom,protectedRamProfile,expectedRamPage,expectedGdtPage,fetchDomain,validateStore,validateMilestone}=await held.module('scripts/bochs-cpu3-native-protected-ram/profile.mjs');
+const {createProtectedRamOracle}=await held.module('scripts/bochs-cpu3-native-protected-ram/reference.mjs');
+import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {instructions,stores,descriptor,fixedProtectedRamRom,protectedRamProfile,expectedRamPage,expectedGdtPage,fetchDomain,validateStore,validateMilestone} from '../scripts/bochs-cpu3-native-protected-ram/profile.mjs';
-import {deriveProtectedCpu,cpuSourceSha256,bochsCr0Write} from '../scripts/bochs-cpu3-native-protected-ram/cpu-profile.mjs';
-import {createProtectedRamOracle} from '../scripts/bochs-cpu3-native-protected-ram/reference.mjs';
+
+
+
 test('fixed ROM encodes exact contiguous LGDT/PE/far jump and ordinary RAM MOV',()=>{
  const rom=fixedProtectedRamRom();assert.equal(rom.length,65536);assert.deepEqual([...rom.subarray(0xfff0,0xfff5)],[0xea,0,1,0,0xf0]);
  let next=0x100;for(const i of instructions){assert.equal(i.ip,next);assert.deepEqual([...rom.subarray(i.ip,i.ip+i.bytes.length)],i.bytes);next+=i.bytes.length;}assert.equal(next,0x138);
@@ -28,7 +34,7 @@ test('only exact ROM-owned GDT/program initialization effects are admitted',()=>
  }assert.throws(()=>validateStore(0x7000,Uint8Array.of(0),4,0xf000,0x118));
 });
 test('CR0 profile is one exact authenticated source seam with byte-exact inverse',()=>{
- const b=readFileSync(new URL('../src/experimental/i80386.js',import.meta.url)),d=deriveProtectedCpu(b);assert.equal(d.edits.length,1);assert.equal(d.baseSha256,cpuSourceSha256);
+ const b=readFileSync(held.file('src/experimental/i80386.js')),d=deriveProtectedCpu(b);assert.equal(d.edits.length,1);assert.equal(d.baseSha256,cpuSourceSha256);
  const [{old,next}]=d.edits;assert.deepEqual(Buffer.from(d.bytes.toString().replace(next,old)),b);assert.throws(()=>deriveProtectedCpu(Buffer.concat([b,Buffer.from('\n')])));
  for(const value of [0,1,0x10,0x11,0x7ffffff1,0x80000001])assert.equal(bochsCr0Write(value),(value|0x7ffffff0)>>>0);assert.throws(()=>bochsCr0Write(-1));assert.throws(()=>bochsCr0Write(0x100000000));
 });

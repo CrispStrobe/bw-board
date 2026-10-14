@@ -8,7 +8,7 @@ Live reads open directory components and leaves without following symlinks, reta
 
 Git calls have bounded stdout/stderr and cooperative per-call waits. The startup budget is 120 seconds; later final checks do not inherit a lifetime-wide startup deadline. Cleanup signals only an unreaped original child process group. A reaped leader does not grant a descendant cleanup lease. These checks are finite source observations, not a hostile-process boundary, continuous ownership lease or externally enforced whole-session deadline.
 
-The default `Context`, import route and `actual()` remain unconnected or unsealed. No Node bridge, ten-harness wiring, assembly, emulator, guest or workflow integration is included in this slice. Adapter observations remain separate from the unchanged model flags. Historical runtime and current CPU qualification remain false.
+The default `Context`, import route and `actual()` remain unconnected or unsealed. A separate fixed owner/Node bridge now connects the ten current harnesses as source. It retains this adapter unchanged through the tests and close/readback observations. No local real materialization, historical import, assembly, emulator or guest qualification has run. Adapter observations remain separate from the unchanged model flags. Historical runtime and current CPU qualification remain false.
 
 Run the 41 manufactured boundary controls with Linux system Python:
 
@@ -16,4 +16,4 @@ Run the 41 manufactured boundary controls with Linux system Python:
 /usr/bin/python3 -I -B scripts/i80386-historical-source-contexts/materializer-controls.py
 ```
 
-The controls mock process, Git, temporary allocation and source-read boundaries. They do not create a historical worktree or invoke Git, assemblers, emulators or guests. Hosted real materialization, support-module import and historical fixture qualification are still required before test integration.
+The controls mock process, Git, temporary allocation and source-read boundaries. They do not create a historical worktree or invoke Git, assemblers, emulators or guests. Hosted real materialization, support-module import and historical fixture qualification are still required before acceptance of the connected test integration.

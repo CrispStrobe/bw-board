@@ -1,9 +1,14 @@
-import test from 'node:test';
+import {historicalContext} from '../scripts/i80386-historical-source-contexts/bridge.mjs';
+const held=await historicalContext(import.meta.url);
+after(()=>held.close());
+const {layout,entries,dword,wordAt,selector,dataSelector,terminalEip,ramInstructions,ramProgram,romInstructions,bootStores,dataStore,adTransitions,fixedPagingRom,pagingProfile,namedCuts,afterLgdt,afterCr3,afterPe,afterDs,afterPg,farJumpIp,pgWriteIp,expectedCr0,physicalFetch,validateBootStore,validateAdTransition,expectedPages,codeCache,dataCache,validateMilestone}=await held.module('scripts/bochs-cpu3-native-nonidentity-paging/profile.mjs');
+const {createNonidentityPagingOracle}=await held.module('scripts/bochs-cpu3-native-nonidentity-paging/reference.mjs');
+import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {writeFileSync} from 'node:fs';
-import {layout,entries,dword,wordAt,selector,dataSelector,terminalEip,ramInstructions,ramProgram,romInstructions,bootStores,dataStore,adTransitions,fixedPagingRom,pagingProfile,namedCuts,afterLgdt,afterCr3,afterPe,afterDs,afterPg,farJumpIp,pgWriteIp,expectedCr0,physicalFetch,validateBootStore,validateAdTransition,expectedPages,codeCache,dataCache,validateMilestone} from '../scripts/bochs-cpu3-native-nonidentity-paging/profile.mjs';
-import {createNonidentityPagingOracle} from '../scripts/bochs-cpu3-native-nonidentity-paging/reference.mjs';
+
+
 test('fixed ROM enables PG in identity ROM and encodes different physical code/data pages',()=>{
  const rom=fixedPagingRom();assert.throws(()=>fixedPagingRom({rom}));assert.equal(rom.length,65536);assert.deepEqual([...rom.subarray(0xfff0,0xfff5)],[0xea,0,1,0,0xf0]);let ip=0x100;
  for(const i of romInstructions){assert.equal(i.ip,ip);assert.deepEqual([...rom.subarray(ip,ip+i.bytes.length)],i.bytes);ip+=i.bytes.length;}assert.ok(ip<0x400);assert.deepEqual([...rom.subarray(0x400,0x406)],[31,0,0,6,0,0]);assert.ok(pgWriteIp<farJumpIp);assert.equal(afterPg,farJumpIp);
