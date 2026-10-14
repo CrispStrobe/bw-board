@@ -4602,3 +4602,17 @@ Production loaders/validators and CPU source are not owned for changes here;
 review any required scope extension before code. The claim and source design are reviewed. The first fixed metadata/context
 helper has mocked controls; actual materialization/import and ten-harness wiring
 remain unconnected. No historical/current CPU qualification is claimed.
+
+## Historical 80386 shared CI qualification — 2026-10-14
+
+Extend the historical-context lane on `lane/386-historical-materializer-20261013`
+to the existing historical x86 source-fetch and test-execution steps in
+`.github/workflows/ci.yml`. The ten retained harnesses also run there, so this
+provider must receive the exact compatible public commit before materialization.
+Run those ten suites serially and preserve the entire remaining current-test
+inventory with an explicit disjoint-union census. No assertion, fixture, pin,
+threshold, optional skip, unrelated job or workflow trigger changes are owned.
+The Node bridge and `.github/workflows/x86-xv6.yml` remain in the existing claim.
+This is a documentation-only scope extension; shared CI implementation waits for
+its merge. Current CPU and xv6 guest acceptance remain separate from historical
+fixture execution.
