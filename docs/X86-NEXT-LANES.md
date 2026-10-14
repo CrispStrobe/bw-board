@@ -1464,3 +1464,68 @@ harness requires a merged scope extension. Keep the CPU PR draft until the
 new performance gate and guest checks are satisfied. This claim does not
 adopt PR557 or replace its original benchmark gate, nor establish physical
 RTx, whole-AT speed or operating-system compatibility.
+
+## Guarded word-fetch public paired measurement
+
+Status: proposed ownership extension; implementation waits for this claim to
+merge. The isolated fetch candidate is [draft PR579](https://github.com/CrispStrobe/bw-board/pull/579).
+Its focused checks and source reviews do not establish a performance gain.
+
+Own only new `.github/workflows/i80386-fetchn-paired.yml`,
+`scripts/i80386-fetchn-paired/{fixture.mjs,run.py,policy.py,controls.py,README.md}`,
+`test/i80386-fetchn-paired-fixture.test.mjs` and the matching `LANES.md` entry.
+Use `lane/386-fetchn-public-paired-20261014`. Preserve every existing CPU,
+fixture, policy, source map, workflow, consumer pin and receipt unchanged.
+
+Freeze A at `c847c0470cfaf4ad3c781ce7a83a35b939497533`, CPU SHA256
+`6fba681208e1443cc9eff00ae6aba444903d23e5feafe62527b25428e72d60ed`,
+and B at `e2c537affb6e0e56194429723abeb356095a3607`, CPU SHA256
+`2303557f35ad56d8101eb96ffc8749fa4d64338425726027d70bd64a6b10d4ba`.
+Build fresh Git/live length-and-digest admissions for the same 43 selected
+engine paths; require all 42 non-CPU rows identical, including package resolver
+metadata. Any other difference blocks execution. The separately gated scalar
+address-decoder candidate is neither the baseline nor a combined candidate.
+
+Copy the authored 24-form workload algorithm and independent golden semantics
+from [PR573](https://github.com/CrispStrobe/bw-board/pull/573), changing only
+explicit admission, schema and experiment names. Use the named
+`FETCHN_TWO_BYTE_PUBLIC_CODE16_24_FORM_MACRO` and new child/result schemas.
+The original fixture embeds its old admissions and cannot accept these arms
+unchanged. Authenticate the new fixture, runner, policy, controls, README,
+fixture test, workflow and publication package metadata separately against
+one exact publication commit, identically for both arms. Any reused executable
+helper belongs in that frozen graph. Do not import an existing evaluator or
+runner for its execution side effects.
+
+Retain ordinary `I80386.step()` and the actual byte-memory bus, with all
+accelerators disabled. Run 100,000 passes of 24 instructions: 2,400,000 retired
+instructions, eight million fetched bytes, 4.8 million read bytes and no writes.
+The timed work includes identical setup, host EIP rewind, checks and hashing.
+Tiny fixture controls must prove the copied workload and independent oracle;
+policy controls must reject source drift, partial sequences and resource or
+cleanup uncertainty without running a full macro locally.
+
+Use Ubuntu 24.04 and Node 20.20.2 with authenticated executable bytes. Enforce
+one logical CPU/affinity, an owned wrapper-and-child cgroup-v2 CPU quota
+`100000 100000`, memory limit 1 GiB and no swap. Preserve membership, limits,
+affinity and pressure-event observations before/pre-exec/after each child.
+Measure whole-Node wait4 user-plus-system CPU and matching monotonic wall.
+No profiler is active. Preserve the existing bounded child/service deadlines,
+original stdout/stderr, exit/reap/EOF facts and explicit owned cleanup evidence.
+
+Four ABAB warmups precede seven measured pairs in AB, BA, AB, BA, BA, AB, BA
+order. Require all 18 independent golden semantic checks; median CPU A/B at
+least 1.03, every measured CPU ratio above one, and median wall B/A at most
+1.02. No dropping, replacing, retrying or selecting runs. Preserve every raw
+pair and the conditional minimum-ratio bound with its statistical assumptions.
+A speed rejection remains a failed result even if semantics and cleanup pass.
+
+Before the sole branch-push hosted actual, freeze the full graph and obtain
+root and independent source reviews plus affected exact-candidate CPU/xv6
+success. Do not duplicate measurement on pull requests or manual dispatch.
+After terminal metadata admission, acquire the original packet once and audit
+it independently without producer imports or replay. Record exact source,
+hardware/runtime, artifact digest, resource/cleanup and semantic/performance
+conclusions in public evidence. This gate qualifies only this authored public
+mix; it neither replaces the original benchmark gate nor grants CPU adoption,
+physical RTx, full AT or operating-system compatibility.
