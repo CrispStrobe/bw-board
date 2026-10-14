@@ -4609,8 +4609,15 @@ no skips, blind pin updates or current-CPU credit from historical execution.
 Current CPU regressions and actual hosted xv6 qualification remain separate.
 Production loaders/validators and CPU source are not owned for changes here;
 review any required scope extension before code. The claim and source design are reviewed. The first fixed metadata/context
-helper has mocked controls; actual materialization/import and ten-harness wiring
-remain unconnected. No historical/current CPU qualification is claimed.
+helper retains mocked controls; the separate materializer and owner/Node bridge
+connect the ten current harnesses as source, with actual hosted qualification pending. No historical/current CPU qualification is claimed.
+
+### Historical fixed materializer adapter — 2026-10-13
+
+- Branch: `lane/386-historical-materializer-20261013`.
+- Owned paths: the fixed helper/owner/bridge and control namespace `scripts/i80386-historical-source-contexts/`, the ten current harnesses in the task guide, limited historical/current wiring in `.github/workflows/x86-xv6.yml`, this registry entry and `docs/I80386-HISTORICAL-SOURCE-CONTEXTS.md`.
+- Scope: fixed provider and original-object admission, owned detached sparse 186-file context, bounded Git transport, nofollow byte readback and owned cleanup. Existing consistency model and metadata remain unchanged.
+- Validation: manufactured boundary controls only. No real materialization, historical Node import, assembly, guest, current CPU or performance qualification. Owner/Node bridge and ten-harness/workflow wiring are source-connected with 6/7 mock controls; hosted actual qualification remains pending. Default model/import/actual stubs remain unsealed.
 
 ## Historical 80386 shared CI qualification — 2026-10-14
 
@@ -4622,6 +4629,6 @@ Run those ten suites serially and preserve the entire remaining current-test
 inventory with an explicit disjoint-union census. No assertion, fixture, pin,
 threshold, optional skip, unrelated job or workflow trigger changes are owned.
 The Node bridge and `.github/workflows/x86-xv6.yml` remain in the existing claim.
-This is a documentation-only scope extension; shared CI implementation waits for
-its merge. Current CPU and xv6 guest acceptance remain separate from historical
+The shared CI scope extension is merged. Implementation is limited to the
+exact compatible-commit fetch; the existing generic serial runner is unchanged. Current CPU and xv6 guest acceptance remain separate from historical
 fixture execution.

@@ -1,16 +1,21 @@
+import {historicalContext} from '../scripts/i80386-historical-source-contexts/bridge.mjs';
+const held=await historicalContext(import.meta.url);
+after(()=>held.close());
+const {assertNativeColdResetProof,parseColdNativeLog}=await held.module('scripts/bochs-cpu3-native-cold-reset-compare.mjs');
+const {assembleColdResetRom}=await held.module('scripts/i80386-cold-reset-oracle.mjs');
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {gunzipSync} from 'node:zlib';
-import test from 'node:test';
-import {assertNativeColdResetProof,parseColdNativeLog} from '../scripts/bochs-cpu3-native-cold-reset-compare.mjs';
-import {assembleColdResetRom} from '../scripts/i80386-cold-reset-oracle.mjs';
+import test,{after} from 'node:test';
+
+
 
 // Actual initial source-bound four-arm capture, retained as historical mutation
 // input. Final qualification uses a fresh capture after these tests are committed.
 const actualSha256='5577869f34e00ecac0742d930321b94f0c0e33e9db3bc3a353b416c65a416683';
 const actualRevision='dbc638038482c47c0b1924b43e24ea49adddc447';
-const bytes=gunzipSync(readFileSync(new URL('./fixtures/i80386-native-cold-reset-capture.json.gz',import.meta.url)));
+const bytes=gunzipSync(readFileSync(held.file('test/fixtures/i80386-native-cold-reset-capture.json.gz')));
 assert.equal(createHash('sha256').update(bytes).digest('hex'),actualSha256);
 const capture=JSON.parse(bytes);
 const {rom}=assembleColdResetRom();

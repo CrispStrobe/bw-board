@@ -1,9 +1,14 @@
-import test from 'node:test';
+import {historicalContext} from '../scripts/i80386-historical-source-contexts/bridge.mjs';
+const held=await historicalContext(import.meta.url);
+after(()=>held.close());
+const {fixedProtectedStackRom,protectedStackProfile,romInstructions,ramInstructions,ramProgram,terminalEip,bootStores,stackStores,stores,expectedPages,codeDescriptor,dataDescriptor,expectedCache,namedCuts,validateStore,fetchDomain,validateMilestone,afterLgdt,cr0WriteIp,farJumpIp}=await held.module('scripts/bochs-cpu3-native-protected-stack/profile.mjs');
+const {createProtectedStackOracle}=await held.module('scripts/bochs-cpu3-native-protected-stack/reference.mjs');
+import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {writeFileSync} from 'node:fs';
-import {fixedProtectedStackRom,protectedStackProfile,romInstructions,ramInstructions,ramProgram,terminalEip,bootStores,stackStores,stores,expectedPages,codeDescriptor,dataDescriptor,expectedCache,namedCuts,validateStore,fetchDomain,validateMilestone,afterLgdt,cr0WriteIp,farJumpIp} from '../scripts/bochs-cpu3-native-protected-stack/profile.mjs';
-import {createProtectedStackOracle} from '../scripts/bochs-cpu3-native-protected-stack/reference.mjs';
+
+
 test('fixed ROM encodes nonoverlapping boot stores and the exact code16 call/return program',()=>{
  const rom=fixedProtectedStackRom();assert.equal(rom.length,65536);assert.throws(()=>fixedProtectedStackRom({rom}));assert.deepEqual([...rom.subarray(0xfff0,0xfff5)],[0xea,0,1,0,0xf0]);
  let next=0x100;for(const i of romInstructions){assert.equal(i.ip,next);assert.deepEqual([...rom.subarray(i.ip,i.ip+i.bytes.length)],i.bytes);next+=i.bytes.length;}assert.ok(next<0x180);
