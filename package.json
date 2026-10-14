@@ -47,6 +47,7 @@
   "author": "CrispStrobe <cze+github@mailbox.org>",
   "dependencies": {
     "avr8js": "github:CrispStrobe/avr8js#feea84c43e36e578841b5fce640202823b69b7f7",
+    "esp8266js": "github:CrispStrobe/esp8266js#a241f9555b4666baed200efd7a2b42fd598648af",
     "rp2040js": "^1.3.3"
   },
   "engines": {
