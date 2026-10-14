@@ -4723,3 +4723,17 @@ are mandatory. This separately named public measurement neither replaces the
 original benchmark contract nor grants performance-only adoption, RTx or OS
 compatibility. The actual result is limited to this authored public mix; see
 the task contract for its original run and artifact.
+
+## Ordinary code16 V8 profile diagnostic — 2026-10-14
+
+Documentation claim on `docs/386-code16-profile-claim-20261014`; implementation
+waits for this claim to merge. Own only new
+`.github/workflows/i80386-code16-profile.yml`,
+`scripts/i80386-code16-profile/{profile.py,README.md}` and this registry/task
+text. Coding belongs on `lane/386-code16-profile-20261014`. Existing CPU,
+fixture, paired runner/policy, tests, workflows and pins remain unchanged.
+See the [acceptance contract](docs/X86-NEXT-LANES.md#ordinary-code16-v8-profile-diagnostic).
+The goal is one separately named hosted CPU profile per frozen A/B arm, with
+original semantics, source/resource/cleanup evidence and bounded raw profiles.
+Profiled timing and approximate sample weights cannot enter the seven paired
+measurements, replace the original adoption gate or establish physical RTx.

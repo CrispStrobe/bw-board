@@ -1373,3 +1373,47 @@ SHA256 is `4e102fd18dca6f7dbc58ffb0b8b2b6bed121e07f4d80e524e1c69a2fcbb38cfd`.
 [PR573](https://github.com/CrispStrobe/bw-board/pull/573) is merged; ordinary
 CPU adoption is unchanged. This gain covers only the authored 24-form public
 mix, not the original benchmark gate, adoption, physical RTx or OS compatibility.
+
+## Ordinary code16 V8 profile diagnostic
+
+After the ownership claim merges, implement exactly three new files:
+`.github/workflows/i80386-code16-profile.yml` and
+`scripts/i80386-code16-profile/{profile.py,README.md}`. Freeze and independently
+review their source before the first implementation-branch push. The dedicated
+workflow accepts only that branch in this repository and attempt one; it must
+not duplicate a pull-request or dispatch run.
+
+Keep publication `7803a6341d319b30da2bcd4065e5c8005940687f`, baseline
+`0d306c5c67e4843e24a05d54da72d21cd56119e4`, candidate
+`fa296c62cf4fad8f25dc5d3e9ae532e0d94e1015`, all 43 selected rows per arm and
+eight common publication roles immutable. Authenticate Git/live source and Node
+identity before and after each child, plus the separate new diagnostic graph.
+Run one fresh Node 20.20.2 child A then B using the unchanged public fixture:
+2.4 million instructions, golden CPU/memory/bus checks, accelerators disabled,
+`--cpu-prof-interval=1000` and bounded per-arm profile output. These fresh
+processes are not JIT-warmed by earlier children. No replacement or retry.
+
+Use hosted Ubuntu 24.04 with one logical CPU/one-CPU quota, 1 GiB cgroup memory
+and no swap for wrapper and children. Observe actual membership, affinity,
+cpuset, limits and memory events before/pre-exec/after each child; reap each
+owned child once. Preserve its original stdout/stderr, usage, resource facts,
+profile bytes/digest and observed owned-service/cgroup cleanup. Enforce a
+60-second child deadline, at most 8 MiB profile, 256 KiB stdout and 8 KiB stderr;
+enforce the smaller stream caps during capture, refuse missing enforcement and
+preserve the first error. Do not modify the
+paired runner's smaller hard file limit to accommodate profiles.
+
+Bounded parsing must validate duplicate keys, finite/type/size constraints,
+node IDs, sample references and sample/delta cardinality. Report total samples
+and represented decoder/step/byte-callback/GC or compilation weights with source
+roles; unresolved frames remain explicit. Samples are approximate diagnostic
+observations, not exact CPU cost shares, allocation counts or physical clocks.
+The profile covers its recorded sampling interval in each fresh process,
+including represented startup, source checks, setup and final hashing.
+Whole-child wait4 timing is separate; no complete startup coverage is assumed.
+
+Acceptance is independent audit of one original two-child packet with both
+semantics and source/resource/cleanup checks passing. Preserve failed captures;
+never substitute profiled timings into the original seven-pair result. This
+locates costs only in the authored MOV workload. It grants no CPU adoption,
+original-gate replacement, physical RTx or operating-system compatibility.
