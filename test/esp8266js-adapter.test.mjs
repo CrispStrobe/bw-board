@@ -13,13 +13,13 @@ import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {createEsp8266jsAdapter, ESP8266_PINS} from '../src/esp8266js-adapter.js';
+import {createEsp8266jsAdapter, ESP8266_PINS, loadEsp8266js} from '../src/esp8266js-adapter.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const image = name => new Uint8Array(readFileSync(join(here, 'fixtures/esp8266', name)));
 let engine = null;
 try {
-    engine = process.env.BW_ESP8266JS ? createRequire(import.meta.url)(process.env.BW_ESP8266JS) : await import('esp8266js');
+    engine = process.env.BW_ESP8266JS ? createRequire(import.meta.url)(process.env.BW_ESP8266JS) : await loadEsp8266js();
 } catch {
     engine = null;
 }

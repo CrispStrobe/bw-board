@@ -26,6 +26,13 @@
  * @module
  */
 
+/**
+ * Load the engine: the esp8266js package (our fork, pinned in package.json).
+ * Separate from the adapter so a caller, or a test, can hand in a module it
+ * already has.
+ */
+export const loadEsp8266js = () => import('esp8266js');
+
 /** The fork's pin states (IOPinState in its src/peripherals/gpio.ts). */
 const LOW = 0, HIGH = 1, INPUT = 2, PULLUP = 3, PULLDOWN = 4;
 export const ESP8266_PINS = Array.from({ length: 16 }, (_, i) => `GPIO${i}`);
