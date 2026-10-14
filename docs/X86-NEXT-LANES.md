@@ -1390,7 +1390,8 @@ cpuset, limits and memory events before/pre-exec/after each child; reap each
 owned child once. Preserve its original stdout/stderr, usage, resource facts,
 profile bytes/digest and observed owned-service/cgroup cleanup. Enforce a
 60-second child deadline, at most 8 MiB profile, 256 KiB stdout and 8 KiB stderr;
-refuse missing enforcement and preserve the first error. Do not modify the
+enforce the smaller stream caps during capture, refuse missing enforcement and
+preserve the first error. Do not modify the
 paired runner's smaller hard file limit to accommodate profiles.
 
 Bounded parsing must validate duplicate keys, finite/type/size constraints,
@@ -1398,7 +1399,9 @@ node IDs, sample references and sample/delta cardinality. Report total samples
 and represented decoder/step/byte-callback/GC or compilation weights with source
 roles; unresolved frames remain explicit. Samples are approximate diagnostic
 observations, not exact CPU cost shares, allocation counts or physical clocks.
-The profile includes process startup, source checks, setup and final hashing.
+The profile covers its recorded sampling interval in each fresh process,
+including represented startup, source checks, setup and final hashing.
+Whole-child wait4 timing is separate; no complete startup coverage is assumed.
 
 Acceptance is independent audit of one original two-child packet with both
 semantics and source/resource/cleanup checks passing. Preserve failed captures;
