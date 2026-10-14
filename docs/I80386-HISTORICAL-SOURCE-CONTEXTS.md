@@ -115,3 +115,14 @@ The [fixed helper](../scripts/i80386-historical-source-contexts/README.md) retai
 selectors. Seventeen tiny controls exercise mocked joins and refusals. Production
 loaders, current CPU and historical pins are unchanged. Actual materialization,
 harness/workflow wiring and affected hosted qualification remain future work.
+
+## Shared CI provider
+
+The generic `.github/workflows/ci.yml` also runs these ten historical harnesses.
+Its existing historical-source steps must fetch the exact compatible commit and
+execute those suites serially. The remaining current-test selection must preserve
+the full original inventory; verify that the two selections are disjoint and
+their union is complete. No skips, assertion changes or hash waivers are allowed.
+This documentation-only ownership extension must merge before the shared CI
+steps change. Actual historical imports and current CPU/xv6 acceptance still need
+separate hosted observations.
