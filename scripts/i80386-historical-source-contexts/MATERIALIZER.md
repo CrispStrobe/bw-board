@@ -8,7 +8,7 @@ Live reads open directory components and leaves without following symlinks, reta
 
 Git calls have bounded stdout/stderr and cooperative per-call waits. The startup budget is 120 seconds; later final checks do not inherit a lifetime-wide startup deadline. Cleanup signals only an unreaped original child process group. A reaped leader does not grant a descendant cleanup lease. These checks are finite source observations, not a hostile-process boundary, continuous ownership lease or externally enforced whole-session deadline.
 
-The default `Context`, import route and `actual()` remain unconnected or unsealed. A separate fixed owner/Node bridge now connects the ten current harnesses as source. It retains this adapter unchanged through the tests and close/readback observations. No local real materialization, historical import, assembly, emulator or guest qualification has run. Adapter observations remain separate from the unchanged model flags. Historical runtime and current CPU qualification remain false.
+The default `Context`, import route and `actual()` remain unconnected or unsealed. A separate fixed owner/Node bridge now connects the ten current harnesses as source. It retains this adapter unchanged through the tests and close/readback observations. Hosted run [38524496473](https://github.com/CrispStrobe/bw-board/actions/runs/38524496473) observed real materialization, held imports and 288 passing historical tests in the modern runtime. Separate current tests passed 1,556 cases with zero failures and 11 skips; the current static census is 244 paths plus one separately authenticated metadata fixture. The 4 MiB filesystem, 14 MiB boot and forktest xv6 scenarios passed; the [checkpoint](../../docs/I80386-HISTORICAL-SOURCE-CONTEXTS.md) records the exact source boundary. Adapter model flags remain separate from these observations. Original historical-runtime identity, continuous ownership, hard lease and measured performance remain unqualified.
 
 Run the 41 manufactured boundary controls with Linux system Python:
 
@@ -16,4 +16,4 @@ Run the 41 manufactured boundary controls with Linux system Python:
 /usr/bin/python3 -I -B scripts/i80386-historical-source-contexts/materializer-controls.py
 ```
 
-The controls mock process, Git, temporary allocation and source-read boundaries. They do not create a historical worktree or invoke Git, assemblers, emulators or guests. Hosted real materialization, support-module import and historical fixture qualification are still required before acceptance of the connected test integration.
+The controls mock process, Git, temporary allocation and source-read boundaries. They do not create a historical worktree or invoke Git, assemblers, emulators or guests. Those mock results remain distinct from the finite hosted materialization/import and guest observations above; no complete CPU or software compatibility follows.

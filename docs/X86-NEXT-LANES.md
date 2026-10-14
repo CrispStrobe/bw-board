@@ -5,7 +5,17 @@ The next connected compiler-provisioning task is the
 the missing launch, source-approval, child-context and original-report joins;
 implementation begins after its lane claim and the observation reader merge.
 
-Updated 2026-10-13. This is the handoff for the x86 lane, not a claim of complete PC compatibility. Read this file, [current lane evidence](X86-LANE.md), [loading guide](X86-LOADING-GUIDE.md), [compatibility roadmap](X86-COMPATIBILITY-ROADMAP.md), and [oracle strategy](X86-ORACLE-STRATEGY.md) before implementing a task. Refresh the repository's default branch first: historical tested SHAs identify evidence, while a new change needs its own source and artifact identities.
+The [2026-10-14 historical/xv6 checkpoint](I80386-HISTORICAL-SOURCE-CONTEXTS.md)
+is complete within its finite boundary: 288 historical tests, 1,556 current passes,
+zero failures, 11 reported skips, and actual 4 MiB filesystem, 14 MiB boot and
+forktest scenarios. The exact 244-path current census and separate metadata fixture
+are permanent controls; original native 243-row proofs remain unchanged. Next,
+complete reviewed source projection and original-capture issuance for the frozen
+paired benchmark. The [allocation candidate](https://github.com/CrispStrobe/bw-board/pull/557)
+has no measured gain or performance adoption; keep current guest qualification
+separate and refresh its exact source before any newer experiment.
+
+Updated 2026-10-14. This is the handoff for the x86 lane, not a claim of complete PC compatibility. Read this file, [current lane evidence](X86-LANE.md), [loading guide](X86-LOADING-GUIDE.md), [compatibility roadmap](X86-COMPATIBILITY-ROADMAP.md), and [oracle strategy](X86-ORACLE-STRATEGY.md) before implementing a task. Refresh the repository's default branch first: historical tested SHAs identify evidence, while a new change needs its own source and artifact identities.
 
 ## Reached checkpoint
 
