@@ -5,7 +5,8 @@ import {readFileSync} from 'node:fs';
 const workflow = readFileSync(new URL('../.github/workflows/harris-native.yml', import.meta.url), 'utf8');
 function contract(source) {
     assert.match(source, /branches: \['\*\*'\]/);
-    assert.match(source, /  pull_request:/); assert.match(source, /  workflow_dispatch:/);
+    // Each commit is built once, by the push trigger on every branch (owner decision 2026-10-14).
+    assert.doesNotMatch(source, /\n  pull_request:/); assert.match(source, /  workflow_dispatch:/);
     assert.match(source, /node-version: 22/);
     for (const action of source.matchAll(/uses: [^@\s]+@([^\s]+)/g)) assert.match(action[1], /^[0-9a-f]{40}$/);
     assert.match(source, /mktemp -d "\$RUNNER_TEMP\/harris-native\.XXXXXX"/);

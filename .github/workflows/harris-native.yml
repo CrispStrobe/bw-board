@@ -3,7 +3,10 @@ name: Harris native qualification
 on:
   push:
     branches: ['**']
-  pull_request:
+  # No pull_request trigger: the push above already builds every commit of
+  # every branch, and its checks show on the commit's pull request. Both
+  # triggers built each commit of an open PR twice (owner decision 2026-10-14,
+  # LANES "CI once per commit").
   workflow_dispatch:
 
 permissions:
