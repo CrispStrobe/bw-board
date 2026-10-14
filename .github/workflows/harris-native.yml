@@ -3,21 +3,40 @@ name: Harris native qualification
 on:
   push:
     branches: ['**']
-  # No pull_request trigger: the push above already builds every commit of
-  # every branch, and its checks show on the commit's pull request. Both
-  # triggers built each commit of an open PR twice (owner decision 2026-10-14,
-  # LANES "CI once per commit").
+    paths-ignore:
+      - 'LANES.md'
+      - 'docs/**'
+      - 'spec-updates/**'
+      - '**/*.md'
+  # CI tiers (owner decision 2026-10-14, LANES "CI tiers"). The push above
+  # builds every commit once. This pull_request trigger exists ONLY for the
+  # thorough tier: its jobs run on a PR that carries the `ci:full` label and
+  # are skipped otherwise, while the fast jobs never run on pull_request, so
+  # no job builds one commit twice. ci-tier-gate.yml fails a code PR that
+  # lacks the label, so merge-on-all-green still requires the thorough tier.
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, ready_for_review]
+    paths-ignore:
+      - 'LANES.md'
+      - 'docs/**'
+      - 'spec-updates/**'
+      - '**/*.md'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: harris-native-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Per workflow, per event, per ref: a new push supersedes that branch's
+  # older run of THIS workflow only. Never cancelled on master.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
   qualify:
+    # THOROUGH tier: master push, on demand, or a PR labelled ci:full. A
+    # branch push records a skipped run so the absence is visible.
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ci:full') && (github.event.action != 'labeled' || github.event.label.name == 'ci:full')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
