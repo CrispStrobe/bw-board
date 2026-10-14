@@ -168,12 +168,13 @@ describe('createDebugTarget: missing options', () => {
 describe('getTargetKinds', () => {
   it('returns all target kinds', () => {
     const kinds = getTargetKinds();
-    // 14 SINCE THE RISC-V RV32IMA CONSOLE BENCH BECAME PICKABLE (was 13 when the
+    // 15 SINCE THE ESP8266 (esp8266js) TARGET BECAME PICKABLE; 14 since the RISC-V RV32IMA CONSOLE BENCH BECAME PICKABLE (was 13 when the
     // experimental 80386 AT target did, 12 for the 80286 real-mode variant, 11
     // for the 8086, 66691e1). This count is the reason the test exists -- a kind
     // added without a row here is a target the factory can build and the picker
     // never offers -- so it is updated with the assertion below, not loosened.
-    assert.equal(kinds.length, 14);
+    assert.equal(kinds.length, 15);
+    assert.ok(kinds.find(k => k.kind === 'esp8266'));
     assert.ok(kinds.find(k => k.kind === 'riscv32'));
     assert.ok(kinds.find(k => k.kind === 'i8086'));
     assert.ok(kinds.find(k => k.kind === 'i80286'));

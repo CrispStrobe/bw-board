@@ -384,6 +384,17 @@ const PYBADGE_TERMINALS = [
 // assumed present, and `EN` is the regulator enable — neither sources.
 const PYBADGE_ROLES = { usb: '5v', battery: 'ref', enable: 'ref' };
 
+// ESP8266 board (NodeMCU-style), as the esp8266js adapter publishes it: the
+// GPIOs by number — 0-5 and 12-15; 6-11 are the module's flash and GPIO16 is
+// not modelled — plus the 3.3 V rail, VIN (USB 5 V on these boards) and GND.
+// The adapter's 'GPIO2' joins `gpio2` (the board's pin join is case-blind).
+const ESP8266_TERMINALS = [
+  'gpio0', 'gpio1', 'gpio2', 'gpio3', 'gpio4', 'gpio5',
+  'gpio12', 'gpio13', 'gpio14', 'gpio15',
+  '3v3', 'vin', 'gnd',
+];
+const ESP8266_ROLES = { vin: '5v' };
+
 /**
  * Register board-kind device models.
  */
@@ -397,6 +408,7 @@ export function registerBoardKinds() {
     boardModel(MICROBIT_BREAKOUT_TERMINALS, 3.3, MICROBIT_BREAKOUT_ROLES));
   registerDevice('calliopemini', boardModel(CALLIOPE_MINI_TERMINALS, 3.3, CALLIOPE_MINI_ROLES));
   registerDevice('circuit_playground_express', boardModel(CPX_TERMINALS, 3.3, CPX_ROLES));
+  registerDevice('esp8266', boardModel(ESP8266_TERMINALS, 3.3, ESP8266_ROLES));
   registerDevice('pybadge', boardModel(PYBADGE_TERMINALS, 3.3, PYBADGE_ROLES));
   registerDevice('eater6502', boardModel(EATER6502_TERMINALS, 5.0));
   registerDevice('attiny88', bareChipModel(ATTINY88_TERMINALS, 5.0));
