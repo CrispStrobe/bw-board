@@ -4782,8 +4782,8 @@ Historical evidence remains unchanged; physical/whole-AT speed is unqualified.
 
 ## Guarded word-fetch public paired measurement — 2026-10-14
 
-Claim581 merged at `f1b669b3`; READY PR582 published the implementation and
-remains unmerged awaiting its latest transition checks.
+Claim581 merged at `f1b669b3`; [PR582](https://github.com/CrispStrobe/bw-board/pull/582)
+merged at `3a1285f9` after all nine latest enabled checks passed.
 Run38616216653 succeeded with both root and independent peer original-packet
 audits passed; PR579 merged at `c2f0936d`, adopting ordinary JS word-fetch
 in board master. Lite keeps its earlier pin; PR557 remains unchanged. Own only new `.github/workflows/i80386-fetchn-paired.yml`,
