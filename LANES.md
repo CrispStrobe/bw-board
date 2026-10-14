@@ -4756,8 +4756,10 @@ measurements, replace the original adoption gate or establish physical RTx.
 
 ## Guarded two-byte instruction-fetch specialization — 2026-10-14
 
-Documentation claim on `docs/386-profile-result-fetch-claim-20261014`;
-implementation waits for merge. Own only `_fetchN` in
+Claim577 merged; PR579 is READY at unchanged `e2c537af`, waiting for all
+latest CI before merge. Exact hosted guest checks and both original audits of
+the separately named public paired gate passed; adoption is not yet performed.
+Own only `_fetchN` in
 `src/experimental/i80386.js`, new
 `test/i80386-fetchn-specialization.test.mjs` and this registry/task text.
 Coding branch: `lane/386-fetchn-specialization-20261014`. All other CPU methods,
@@ -4765,14 +4767,15 @@ existing tests, workloads, policies, workflows and pins remain outside scope.
 The [contract](docs/X86-NEXT-LANES.md#guarded-two-byte-instruction-fetch-specialization)
 binds a fresh ordinary master baseline, byte-observer/fault parity, affected
 hosted guest checks and a separately scoped new unprofiled admission/gate.
-The two audited profiles suggest investigating guarded word fetch; they do
-not prove a gain. No historical evidence is rewritten and no CPU adoption,
-original-gate replacement or physical/whole-AT speed claim is authorized.
+The gain is limited to the authored public mix; it does not adopt PR557,
+replace its original gate or establish combined-candidate performance.
+Historical evidence remains unchanged; physical/whole-AT speed is unqualified.
 
 ## Guarded word-fetch public paired measurement — 2026-10-14
 
-Documentation claim on `docs/386-fetchn-paired-claim-20261014`; implementation
-waits for its merge. Own only new `.github/workflows/i80386-fetchn-paired.yml`,
+Claim581 merged at `f1b669b3`; draft PR582 published the implementation.
+Run38616216653 succeeded with both root and independent peer original-packet
+audits passed; PR579 is READY awaiting all latest CI, with adoption not yet performed. Own only new `.github/workflows/i80386-fetchn-paired.yml`,
 `scripts/i80386-fetchn-paired/{fixture.mjs,run.py,policy.py,controls.py,README.md}`,
 `test/i80386-fetchn-paired-fixture.test.mjs` and this registry/task text.
 Coding branch: `lane/386-fetchn-public-paired-20261014`. The
