@@ -4697,3 +4697,27 @@ The Node bridge and `.github/workflows/x86-xv6.yml` remain in the existing claim
 The shared CI scope extension is merged. Implementation is limited to the
 exact compatible-commit fetch; the existing generic serial runner is unchanged. Current CPU and xv6 guest acceptance remain separate from historical
 fixture execution.
+
+## Ordinary code16 public paired measurement — 2026-10-14
+
+Documentation-only ownership claim on `docs/386-code16-paired-claim-20261014`;
+implementation waits for this claim to merge. Own only the new dedicated
+`.github/workflows/i80386-code16-paired.yml`,
+`scripts/i80386-code16-paired/{fixture.mjs,run.py,policy.py,controls.py,README.md}`,
+`test/i80386-code16-paired-fixture.test.mjs`, this registry entry and the
+[task contract](docs/X86-NEXT-LANES.md#ordinary-code16-public-paired-measurement).
+Use a freely authored ordinary `I80386.step()` memory/bus workload covering all
+24 sixteen-bit memory ModRM forms, displacement/wrap, DS/SS and overrides.
+Freeze the complete workload/source/runtime/timing graph before execution,
+including identical new fixture/runner/wrapper roles outside the 43 engine rows.
+Disable every execution accelerator and require independently authored address,
+segment, bus/fetch/work and final CPU/memory checks.
+Preserve baseline `0d306c5c67e4843e24a05d54da72d21cd56119e4` and candidate
+`fa296c62cf4fad8f25dc5d3e9ae532e0d94e1015`, their exact 43 selected source rows
+and sole CPU-byte difference. No CPU, existing test fixture, CI/native workflow,
+consumer pin or historical receipt changes are owned. Four ABAB warmups and
+seven fixed measured pairs use whole-Node CPU and wall with semantic parity;
+CPU median at least 1.03, all seven CPU wins and wall median no worse than 1.02
+are mandatory. This separately named public measurement neither replaces the
+original benchmark contract nor grants performance-only adoption, RTx or OS
+compatibility. No measurement or implementation is claimed by this entry.

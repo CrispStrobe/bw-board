@@ -1275,3 +1275,76 @@ launch separately. Bind one consumed official event, head, attempt, job, steps
 and terminal artifact; audit the original packet without replay. Actual
 provisioning must pass those gates before enabling the compiler or making new
 guest compatibility or speed claims.
+
+### Ordinary code16 public paired measurement
+
+Prepare one separately named public measurement for the sixteen-bit effective-
+address allocation candidate. Use freely authored bytes and ordinary
+`I80386.step()` through real memory/bus callbacks; no native accelerator,
+restricted input, BIOS, disk, emulator image or OS workload is needed. This
+measurement does not replace the earlier benchmark contract, satisfy its
+acceptance gate or grant adoption of the performance-only CPU change.
+
+The [lane claim](../LANES.md#ordinary-code16-public-paired-measurement--2026-10-14)
+owns only `.github/workflows/i80386-code16-paired.yml`, the new
+`scripts/i80386-code16-paired/` fixture/runner/policy/controls/README files and
+`test/i80386-code16-paired-fixture.test.mjs`, plus these contract/registry texts.
+Implementation waits for the documentation claim to merge. Existing CPU code,
+correctness fixtures, CI/native workflows, dependency pins and original reports
+remain outside this ownership.
+
+Freeze two exact ordinary source contexts: baseline
+`0d306c5c67e4843e24a05d54da72d21cd56119e4` and candidate
+`fa296c62cf4fad8f25dc5d3e9ae532e0d94e1015`. Authenticate all 43 selected source
+rows from public Git objects and live bytes; the CPU file is the only allowed
+source difference. Admit the new common fixture and complete transitive runtime
+imports separately rather than silently expanding that historical census.
+Freeze identical new fixture, runner, policy and measurement-wrapper source
+roles separately from those 43 engine rows; none may differ between arms.
+The same fixture must run in both contexts, with every native, WASM, grouped,
+block or opt-in execution accelerator disabled. Fix Ubuntu 24.04, Node 20.20.2,
+ordinary JS, one CPU, at most 1 GiB, a 60-second per-child deadline and a
+30-minute job bound before any actual measurement. Enforce a single logical
+CPU affinity and an owned cgroup v2 with `cpu.max` of `100000 100000`,
+`memory.max` of `1073741824` bytes and `memory.swap.max` of `0`; the memory
+limit includes the measurement wrapper and its children. Preserve cgroup
+membership, effective affinity and limit readbacks before each child, together
+with runtime/tool identities. Refuse if these bounds cannot be enforced.
+
+The proposed fixed work unit is 100,000 complete passes of a 24-instruction
+memory-addressing sequence: exactly 2,400,000 retired memory instructions per
+child, with no early completion or variable-duration loop. Cover every mod/rm
+memory form, signed disp8 and disp16 arithmetic, direct mod0/rm6 addressing,
+sixteen-bit wrap, DS versus BP-based SS selection and all segment overrides.
+Choose destinations that preserve BX/BP/SI/DI address bases, or account for
+every base update in the independent oracle. Freeze the final instruction/fetch/work
+census and independently authored expected addresses, segment selections,
+reads/writes, fetches and final CPU/memory checks before running;
+no count is an actual observation until the source is qualified. Include
+correctness/fault and semantic-mismatch controls without timing their assertions.
+Do not substitute a direct `_decodeEA()` call loop for the whole ordinary step
+workload. Retain final CPU state, memory digests, exact work and observable bus
+counts without a per-instruction allocation-heavy trace in the timed path.
+
+Run four warmup children in A,B,A,B order, then exactly seven measured pairs in
+AB,BA,AB,BA,BA,AB,BA order on the same hosted runner. Measure each whole Node
+child with an independently reviewed `wait4` wrapper: user plus system CPU and
+wall for that same process interval. Keep timing separate from guest semantics;
+no Docker-client wall or inner JavaScript stopwatch may stand in for CPU time.
+Retain every original stdout/stderr/timer/source admission and exit/timeout/
+cleanup observation. Stop at the first failure; do not retry, replace, drop or
+reorder a child. Require exact semantic equality across arms and against the
+frozen authored work, excluding only authenticated arm source identities.
+
+The predeclared gate requires median baseline/candidate CPU ratio at least
+1.03, each of the seven ratios strictly greater than 1, and median candidate/
+baseline wall ratio at most 1.02. Report all ratios and the conditional
+99.21875% minimum-ratio bound with its independent, continuous and exchangeable
+pair assumptions. Reject missing, duplicate, wrong-order, nonfinite, zero,
+identity-mismatched, timed-out or semantically different records. No sampled
+profile, configured RTx or full-OS conclusion follows from this fixture.
+
+Root and independent source review precede one exact-source hosted run. A
+public fixture result is scoped to its authored instruction mix. The original
+benchmark inputs and gate remain separately pending, and no gain is claimed
+until the new original paired evidence passes an independent audit.
