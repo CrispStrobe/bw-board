@@ -1,5 +1,25 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-14 precision accepted-step meter quadrature — CLAIM, Codex bwcx.
+Branch lane/adp7118-meter-quadrature-20261014, exact basec1f6adba33be83a8a98aa80c2826e274d1b2d378.
+Seven paths only: this ledger, src/board.js (precision meter accepted-step
+descriptors/read integration only), src/meter-quadrature.js,
+test/meter-quadrature.test.mjs, scripts/qualify-adp7118-instruments.mjs,
+test/adp7118-native-instruments.test.mjs, spec-updates/adp7118-native-instruments.md.
+Continues the held28bb88ef diagnostic: all6 waveforms complete and pass, but
+linear/ideal-supply voltage mean errs1.438662 uV against fixed1 uV gate.
+Existing accepted midpoint/end solves are accurate; linear meter quadrature
+introduces an independent integration error. Precision-only quadratic
+segments use those actual accepted points, support clipped windows and retain
+left/right discontinuity values. No rejected/trial/future acquisition credit,
+extra solves, changed numerical accuracy/work gates or hidden warm-up.
+Legacy profiles and analytic-source integral path remain unchanged. Same6
+case denominator/reference/bounds/whole budget; no unchanged failure rerun.
+Pure polynomial/clipping/refusal controls locally; actual six-case mean/current
+and existing meter/model regressions hosted. Completed wrong-capacitance and
+quadrature-omission mutations required. No power/MNA kernel/device/default,
+scope sampling, other workflow, package pin, GUI or deployment edits.
+
 2026-10-13 ADP7118 native instrument current startup — CLAIM, Codex bwcx.
 Branch lane/adp7118-native-instruments-20261013, exact basefe7e515961e4ab0398ce39ad76aaf272517434ec.
 Four evidence paths only: this ledger, scripts/qualify-adp7118-instruments.mjs,
