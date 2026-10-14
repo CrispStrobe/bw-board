@@ -149,9 +149,11 @@ Branch lane/ci-once-per-commit-20261014, exact base f99007eec9073d5754f884d3e6f3
 Owns this row and the trigger blocks (only the `on:` sections) of
 .github/workflows/ci.yml, harris-native.yml and x86-xv6.yml, which run on both
 push and pull_request so that every pushed commit of a branch with an open PR
-is built twice. The push trigger stays (on every branch, as ci.yml explains);
-the pull_request trigger goes, so each commit is built once and its checks
-still show on the PR. No job, step, threshold or other workflow changes.
+is built twice, and the one trigger assertion in
+test/harris-native-ci-workflow.test.mjs that requires pull_request. The push
+trigger stays (on every branch, as ci.yml explains); the pull_request trigger
+goes, so each commit is built once and its checks still show on the PR. No
+job, step, threshold or other workflow changes.
 
 2026-10-14 ESP8266 simulator kind (blob-free firmware) — CLAIM, VPS Claude (opus).
 Branch lane/esp8266-adapter-20261014, exact base c9cdee6c8b684e67c66bf61ab618c91279f52235.
