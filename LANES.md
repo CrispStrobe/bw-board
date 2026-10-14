@@ -4700,7 +4700,7 @@ fixture execution.
 
 ## Ordinary code16 public paired measurement — 2026-10-14
 
-The claim is merged. [Draft PR573](https://github.com/CrispStrobe/bw-board/pull/573)
+The claim is merged. [Merged PR573](https://github.com/CrispStrobe/bw-board/pull/573)
 implements the dedicated source and hosted measurement; its first original run
 passes the scoped public gate. Ordinary CPU adoption is unchanged. Own only the new dedicated
 `.github/workflows/i80386-code16-paired.yml`,

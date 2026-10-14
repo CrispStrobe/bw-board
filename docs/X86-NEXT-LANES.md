@@ -1299,7 +1299,8 @@ The [lane claim](../LANES.md#ordinary-code16-public-paired-measurement--2026-10-
 owns only `.github/workflows/i80386-code16-paired.yml`, the new
 `scripts/i80386-code16-paired/` fixture/runner/policy/controls/README files and
 `test/i80386-code16-paired-fixture.test.mjs`, plus these contract/registry texts.
-Implementation waits for the documentation claim to merge. Existing CPU code,
+The documentation claim is merged; the dedicated implementation source is
+prepared for review. Existing CPU code,
 correctness fixtures, CI/native workflows, dependency pins and original reports
 remain outside this ownership.
 
@@ -1369,6 +1370,6 @@ Node 20.20.2 ran on EPYC 7763 with affinity CPU 0, one-CPU quota, 1 GiB and no s
 owned cleanup was observed. Original
 [artifact 11886116162](https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11886116162)
 SHA256 is `4e102fd18dca6f7dbc58ffb0b8b2b6bed121e07f4d80e524e1c69a2fcbb38cfd`.
-[PR573](https://github.com/CrispStrobe/bw-board/pull/573) remains draft; ordinary
+[PR573](https://github.com/CrispStrobe/bw-board/pull/573) is merged; ordinary
 CPU adoption is unchanged. This gain covers only the authored 24-form public
 mix, not the original benchmark gate, adoption, physical RTx or OS compatibility.
