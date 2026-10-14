@@ -1299,7 +1299,8 @@ The [lane claim](../LANES.md#ordinary-code16-public-paired-measurement--2026-10-
 owns only `.github/workflows/i80386-code16-paired.yml`, the new
 `scripts/i80386-code16-paired/` fixture/runner/policy/controls/README files and
 `test/i80386-code16-paired-fixture.test.mjs`, plus these contract/registry texts.
-Implementation waits for the documentation claim to merge. Existing CPU code,
+The documentation claim is merged; the dedicated implementation source is
+prepared for review. Existing CPU code,
 correctness fixtures, CI/native workflows, dependency pins and original reports
 remain outside this ownership.
 
@@ -1358,3 +1359,7 @@ Root and independent source review precede one exact-source hosted run. A
 public fixture result is scoped to its authored instruction mix. The original
 benchmark inputs and gate remain separately pending, and no gain is claimed
 until the new original paired evidence passes an independent audit.
+
+The initial source controls pass seven tiny fixture tests and twenty-one policy/mock
+cases. This is not an actual paired result. The first exact-source hosted
+measurement and independent original-packet audit remain pending.
