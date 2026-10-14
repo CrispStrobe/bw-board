@@ -1434,8 +1434,8 @@ weights, not exact CPU shares, allocation counts or a paired speed estimate.
 The unprofiled 1.234022 median speedup remains a separate EPYC 7763 result.
 Original [artifact 11913418970](https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11913418970)
 ZIP SHA256 is `0bbfb5ec839ead27ae7249a2dc83be0c55d5211cff0914d6f148637bbaf99f7e`.
-[PR576](https://github.com/CrispStrobe/bw-board/pull/576) remains draft pending
-full CI. No CPU adoption, original-gate replacement, physical RTx or OS claim
+[PR576](https://github.com/CrispStrobe/bw-board/pull/576) is merged after all
+eight current enabled gates passed. No CPU adoption, original-gate replacement, physical RTx or OS claim
 follows. No profile capture was repeated.
 
 ## Guarded two-byte instruction-fetch specialization

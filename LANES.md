@@ -4726,8 +4726,8 @@ the task contract for its original run and artifact.
 
 ## Ordinary code16 V8 profile diagnostic — 2026-10-14
 
-The claim is merged. [Draft PR576](https://github.com/CrispStrobe/bw-board/pull/576)
-has a first independently audited two-profile capture; full CI remains pending.
+The claim and [PR576](https://github.com/CrispStrobe/bw-board/pull/576) are merged.
+Its first two-profile capture passed independent audits and all enabled CI.
 Own only new
 `.github/workflows/i80386-code16-profile.yml`,
 `scripts/i80386-code16-profile/{profile.py,README.md}` and this registry/task
