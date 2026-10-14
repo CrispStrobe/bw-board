@@ -231,7 +231,7 @@ export const INPUTS = [
     {
         id: '8086-vectors', kind: 'oracle',
         repository: 'SingleStepTests/8086',
-        ciCadence: 'push',   // the `vectors` job
+        ciCadence: 'schedule', // the `vectors` job (thorough tier since 2026-10-14: nightly, master push, dispatch, ci:full PRs)
         what: 'SingleStepTests 8086 — 646,000 vectors from an Intel P80C86A-2. '
             + 'Grounds src/i8086.js and src/i8086-disasm.js on TEXT as well as state.',
         env: 'I8086_VECTORS',
@@ -240,12 +240,12 @@ export const INPUTS = [
             'scripts/grind-i8086.mjs', 'scripts/grind-i8086-disasm.mjs'],
         obtain: 'git clone --depth 1 https://github.com/SingleStepTests/8086 ~/code/8086-vectors',
         ciAvailable: true,
-        ci: 'yes — the `vectors` job checks out v1_binary and grinds all 646,000 per push',
+        ci: 'yes — the `vectors` job checks out v1_binary and grinds all 646,000 nightly, on master pushes and on PRs labelled ci:full',
     },
     {
         id: '80286-vectors', kind: 'oracle',
         repository: 'SingleStepTests/80286',
-        ciCadence: 'push',   // bounded fast sample; full qualification is separate
+        ciCadence: 'schedule', // bounded fast sample; full qualification is separate (thorough tier since 2026-10-14: nightly, master push, dispatch, ci:full PRs)
         what: 'SingleStepTests 80286 real-mode — blocking bounded coverage of the fast functional 286 '
             + "(src/i8086.js variant:'80286'), plus separate full semantic qualification of that core and "
             + 'the Harris test-only semantic-memory adapter; no timing or physical-board grading.',
@@ -254,7 +254,7 @@ export const INPUTS = [
         gates: ['scripts/grind-i8086-286.mjs', 'scripts/grind-i80286.mjs'],
         obtain: 'git clone --depth 1 https://github.com/SingleStepTests/80286 ~/code/80286-vectors',
         ciAvailable: true,
-        ci: 'yes — `vectors` blocks on 200 vectors from every opcode file; the dedicated 286 qualification runs the full pinned corpus and retains separate fast/Harris reports',
+        ci: 'yes — `vectors` blocks on 200 vectors from every opcode file; the dedicated 286 qualification runs the full pinned corpus and retains separate fast/Harris reports; `vectors` runs nightly, on master pushes and on PRs labelled ci:full',
     },
     {
         id: '80386ex-moo-vectors', kind: 'oracle',
@@ -275,7 +275,7 @@ export const INPUTS = [
     {
         id: '8088-vectors', kind: 'oracle',
         repository: 'SingleStepTests/v20',
-        ciCadence: 'push',   // the `vectors186` job
+        ciCadence: 'schedule', // the `vectors186` job (thorough tier since 2026-10-14: nightly, master push, dispatch, ci:full PRs)
         what: 'SingleStepTests 8088 v2 — per-CYCLE bus traces: m-cycle type, T-state, '
             + 'and the queue F/S/E operations with the byte read. The ONLY thing that can '
             + 'grade timing and access ORDER; the 8086 suite compares final state and is '
@@ -289,7 +289,7 @@ export const INPUTS = [
             + "&& cd ~/code/8088-vectors && git sparse-checkout set --no-cone '/v2/*.json.gz' "
             + '(2.0 GB whole; a sparse subset of opcode files is enough to move the score)',
         ciAvailable: true,
-        ci: 'yes — the `vectors186` job checks out SingleStepTests/v20 at a pinned ref. This row said "not yet" while that job already existed; the claim was about the SCORES still moving, which is a different question from whether CI has the input',
+        ci: 'yes — the `vectors186` job checks out SingleStepTests/v20 at a pinned ref. This row said "not yet" while that job already existed; the claim was about the SCORES still moving, which is a different question from whether CI has the input. The job runs nightly, on master pushes and on PRs labelled ci:full',
     },
     {
         id: 'z80-vectors', kind: 'oracle',
@@ -302,7 +302,7 @@ export const INPUTS = [
         gates: ['test/z80-disasm.test.mjs', 'scripts/grind-z80.mjs'],
         obtain: 'git clone --depth 1 --filter=blob:none https://github.com/SingleStepTests/z80 ~/code/z80-vectors',
         ciAvailable: true,
-        ci: 'yes — the `vectors-full` job, on a schedule rather than per push (1.6 GB unpacked)',
+        ci: 'yes — the `vectors-full` job, nightly, on demand and on PRs labelled ci:full rather than per push (1.6 GB unpacked)',
     },
     {
         id: '65c02-vectors', kind: 'oracle',
@@ -317,7 +317,7 @@ export const INPUTS = [
             + 'https://github.com/SingleStepTests/65x02 ~/code/65x02-vectors '
             + '&& cd ~/code/65x02-vectors && git sparse-checkout set wdc65c02/v1',
         ciAvailable: true,
-        ci: 'yes — the `vectors-full` job, on a schedule rather than per push',
+        ci: 'yes — the `vectors-full` job, nightly, on demand and on PRs labelled ci:full rather than per push',
     },
     {
         id: 'lcapy', kind: 'oracle',
@@ -517,7 +517,7 @@ export const INPUTS = [
     {
         id: 'amey-corpus', kind: 'fixture',
         repository: 'Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS',
-        ciCadence: 'push',   // the `corpus` job
+        ciCadence: 'schedule', // the `corpus` job (thorough tier since 2026-10-14: nightly, master push, dispatch, ci:full PRs)
         what: 'The Amey-Thakur corpus — 525 real DOS assembly programs '
             + '(github.com/Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS). The single '
             + 'largest evidence that src/i8086-asm.js handles real-world MASM/NASM '
@@ -537,7 +537,7 @@ export const INPUTS = [
             + '(default /tmp/amey/Source Code)',
         ciAvailable: true,
         ci: 'yes — the `corpus` job (ci.yml:287) checks out Amey-Thakur/…, asserts '
-            + 'all 525 are present (ci.yml:304), and assembles and runs each per push '
+            + 'all 525 are present (ci.yml:304), and assembles and runs each nightly, on master pushes and on PRs labelled ci:full '
             + 'on VERDICT COUNTS rather than a text diff. The unit test reads a local '
             + '/tmp/amey copy and its corpus subtests skip without it, but the claim '
             + 'is standing via that job.',

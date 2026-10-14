@@ -5,8 +5,14 @@ import {readFileSync} from 'node:fs';
 const workflow = readFileSync(new URL('../.github/workflows/harris-native.yml', import.meta.url), 'utf8');
 function contract(source) {
     assert.match(source, /branches: \['\*\*'\]/);
-    // Each commit is built once, by the push trigger on every branch (owner decision 2026-10-14).
-    assert.doesNotMatch(source, /\n  pull_request:/); assert.match(source, /  workflow_dispatch:/);
+    // Each commit is built once (owner decision 2026-10-14, "CI once per commit"), and this
+    // qualification is the THOROUGH tier ("CI tiers", same date): the push trigger stays on every
+    // branch, but the job runs only on master push, on demand, or on a PR labelled ci:full; the
+    // pull_request trigger exists only for that label, so no commit is qualified twice by this job.
+    assert.match(source, /\n  pull_request:\n    types: \[opened, synchronize, reopened, labeled, ready_for_review\]/);
+    assert.match(source, /  workflow_dispatch:/);
+    assert.match(source, /\n  qualify:\n(?:    #.*\n)*    if: \$\{\{ \(github\.event_name == 'push' && github\.ref == 'refs\/heads\/master'\)[^\n]*contains\(github\.event\.pull_request\.labels\.\*\.name, 'ci:full'\)/);
+    assert.match(source, /cancel-in-progress: \$\{\{ github\.ref != 'refs\/heads\/master' \}\}/);
     assert.match(source, /node-version: 22/);
     for (const action of source.matchAll(/uses: [^@\s]+@([^\s]+)/g)) assert.match(action[1], /^[0-9a-f]{40}$/);
     assert.match(source, /mktemp -d "\$RUNNER_TEMP\/harris-native\.XXXXXX"/);
