@@ -1,13 +1,13 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-14 current paged-PF static source inventory — CLAIM, Codex x86.
+2026-10-14 current paged-PF static source inventory — DONE (finite hosted qualification), Codex x86.
 Branch lane/386-historical-materializer-20261013; refreshed main base
 `d71c4f19119c7f054a49ed5df8b355b1106f1628`.
 Own a narrow correction to `scripts/bochs-cpu3-native-paged-pagefault/build-controls.mjs`, `test/i80386-paged-pagefault-build-source.test.mjs`, and an explicit versioned `scripts/bochs-cpu3-native-paged-pagefault/current-source-inventory.json` declaration if required, plus this registry entry and the historical-context task guide. No native builder, production admission/loader, CPU, guest, binary, raw receipt or original pin changes are included.
 
 The current static source closure now reaches `scripts/i80386-historical-source-contexts/bridge.mjs` through current source-test imports. Authenticate the original 243-path census using the unchanged public driver-build binding and its exact compiled source commit, then require a separately versioned current 244-path set equal to those paths plus only that named bridge. Every current row must join current Git and live bytes. This is current metadata-control coverage, not substitution of old test execution or qualification of the current CPU by an old oracle.
 
-Acceptance: independently authenticate the original compiled path/hash map and public Git objects; preserve original 243 native proof/pins unchanged; prove the current path-set equality and the bridge's exact admitted digest; reject missing, duplicate, extra, foreign and wrong-bridge rows with authored controls; retain all six nested PF controls and current harness assertions. Require affected exact-head hosted CI and the existing xv6 build/guest acceptance steps to pass. No blind numeric count update, hidden path exclusion, skipped test or new performance/native result is authorized. Implementation begins only after the matched documentation claim has merged.
+Acceptance: independently authenticate the original compiled path/hash map and public Git objects; preserve original 243 native proof/pins unchanged; prove the current path-set equality and the bridge's exact admitted digest; reject missing, duplicate, extra, foreign and wrong-bridge rows with authored controls; retain all six nested PF controls and current harness assertions. Require affected exact-head hosted CI and the existing xv6 build/guest acceptance steps to pass. No blind numeric count update, hidden path exclusion, skipped test or new performance/native result is authorized. The matched claim merged before implementation. Run 38524496473 passed the exact current inventory controls and affected xv6 scenarios; merge 85182a296c6056ee6dba301767103c9818274ec5 followed all 12 enabled checks and two declared optional skips. Original failed runs 38517413953 and 38517414012 remain preserved.
 
 2026-10-14 precision accepted-step meter quadrature — CLAIM, Codex bwcx.
 Branch lane/adp7118-meter-quadrature-20261014, exact basec1f6adba33be83a8a98aa80c2826e274d1b2d378.
@@ -4621,14 +4621,14 @@ Current CPU regressions and actual hosted xv6 qualification remain separate.
 Production loaders/validators and CPU source are not owned for changes here;
 review any required scope extension before code. The claim and source design are reviewed. The first fixed metadata/context
 helper retains mocked controls; the separate materializer and owner/Node bridge
-connect the ten current harnesses as source, with actual hosted qualification pending. No historical/current CPU qualification is claimed.
+connect the ten current harnesses. Hosted run 38524496473 passed all 288 historical cases and the separately run current/xv6 gates. This finite modern-runtime result does not certify the original historical runtime or measured performance.
 
 ### Historical fixed materializer adapter — 2026-10-13
 
 - Branch: `lane/386-historical-materializer-20261013`.
 - Owned paths: the fixed helper/owner/bridge and control namespace `scripts/i80386-historical-source-contexts/`, the ten current harnesses in the task guide, limited historical/current wiring in `.github/workflows/x86-xv6.yml`, this registry entry and `docs/I80386-HISTORICAL-SOURCE-CONTEXTS.md`.
 - Scope: fixed provider and original-object admission, owned detached sparse 186-file context, bounded Git transport, nofollow byte readback and owned cleanup. Existing consistency model and metadata remain unchanged.
-- Validation: manufactured boundary controls only. No real materialization, historical Node import, assembly, guest, current CPU or performance qualification. Owner/Node bridge and ten-harness/workflow wiring are source-connected with 6/7 mock controls; hosted actual qualification remains pending. Default model/import/actual stubs remain unsealed.
+- Validation: DONE within finite hosted scope. Controls retain 17 helper, 41 materializer, 6 owner and 7 bridge cases. Actual owner/materializer and ten historical groups passed in run 38524496473; separate current tests and three xv6 guest scenarios passed. No performance, original historical-runtime equivalence or complete CPU compatibility is claimed. Default model/import/actual stubs remain unsealed.
 
 ## Historical 80386 shared CI qualification — 2026-10-14
 
