@@ -1,5 +1,45 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-14 precision accepted-step meter quadrature — CLAIM, Codex bwcx.
+Branch lane/adp7118-meter-quadrature-20261014, exact basec1f6adba33be83a8a98aa80c2826e274d1b2d378.
+Seven paths only: this ledger, src/board.js (precision meter accepted-step
+descriptors/read integration only), src/meter-quadrature.js,
+test/meter-quadrature.test.mjs, scripts/qualify-adp7118-instruments.mjs,
+test/adp7118-native-instruments.test.mjs, spec-updates/adp7118-native-instruments.md.
+Continues the held28bb88ef diagnostic: all6 waveforms complete and pass, but
+linear/ideal-supply voltage mean errs1.438662 uV against fixed1 uV gate.
+Existing accepted midpoint/end solves are accurate; linear meter quadrature
+introduces an independent integration error. Precision-only quadratic
+segments use those actual accepted points, support clipped windows and retain
+left/right discontinuity values. No rejected/trial/future acquisition credit,
+extra solves, changed numerical accuracy/work gates or hidden warm-up.
+Legacy profiles and analytic-source integral path remain unchanged. Same6
+case denominator/reference/bounds/whole budget; no unchanged failure rerun.
+Pure polynomial/clipping/refusal controls locally; actual six-case mean/current
+and existing meter/model regressions hosted. Completed wrong-capacitance and
+quadrature-omission mutations required. No power/MNA kernel/device/default,
+scope sampling, other workflow, package pin, GUI or deployment edits.
+
+2026-10-13 ADP7118 native instrument current startup — CLAIM, Codex bwcx.
+Branch lane/adp7118-native-instruments-20261013, exact basefe7e515961e4ab0398ce39ad76aaf272517434ec.
+Four evidence paths only: this ledger, scripts/qualify-adp7118-instruments.mjs,
+test/adp7118-native-instruments.test.mjs and spec-updates/adp7118-native-instruments.md.
+Six explicit RC cases (linear, temporary inrush limit, sustained overload,
+each with ideal/4-ohm VIN supply) for existing current-limited-envelope mode.
+Independent continuous piecewise RC/current and IQ integrals; no sampled
+engine output or device state as oracle input. Native200 samples at6 us on
+VOUT, package output-current and source input-current channels, currentClock
+simulation; watched means15 us..1.2 ms.80 provisional observer callbacks at
+15 us leave room for existing10 us device wakes under one whole20000/60001/200
+work budget. Warm-up included, actual integration charges retained; refusal
+cannot count as completion. Fixed0.5 uV/10 uA/11 uA waveform and1 uV/1 uA
+mean bounds; output-current bound follows the voltage bound/.05 ohm and
+input-current includes the stated IQ slope. Completed wrong-capacitance
+electrical mutation required; pure reference/refusal/mutation controls locally,
+actual engine and existing regressions hosted. Preserve all six reports on red.
+No power/Board/MNA/profile/default model, GUI, pin, workflow, deployment or
+physical ADP7118 qualification change; any required repair needs a fresh claim.
+
 2026-10-13 LM741 solver-native linear pole — DONE, Codex bwcx.
 Branch lane/lm741-linear-pole-20261013, exact basec5078499ebcde97ce615689667244b37c76eb22f.
 Eight paths only: this ledger, src/board.js (LM741 solver-view expansion),
@@ -103,6 +143,21 @@ work audit: maximum point4.679718 µV/46.797176 nA, reported mean0.387760 µV/
 1.087597 nA; Ohm's law independently holds for points and means within10 pA.
 The actual base-resistor mutant completes and disagrees26.974599 mV.
 Documentation-only closeout preserves every tested executable byte.
+
+2026-10-14 ESP8266 simulator kind (blob-free firmware) — CLAIM, VPS Claude (opus).
+Branch lane/esp8266-adapter-20261014, exact base c9cdee6c8b684e67c66bf61ab618c91279f52235.
+Owns this row plus: a new dependency on our fork CrispStrobe/esp8266js
+(MIT, pinned by commit, as avr8js is), src/esp8266js-adapter.js (boundary-A
+adapter: attachBoard, boot a flash image without the ROM, advanceNs/timeNs,
+serial both ways, pins both ways), its kind entry in src/target-kinds.js and
+branch in src/debug-target-factory.js, a board kind for a NodeMCU-style board
+if the factory needs one, test/esp8266js-*.test.mjs, and a small fixture
+directory test/fixtures/esp8266/ holding images built from the fork's own
+blob-free firmware (sources and hashes named in its README). Only firmware
+that contains no Espressif SDK code is run or committed (the SDK's licence
+limits it to the chip itself). No change to other engines, the CPU cores,
+labwired, x86 provisioning or consumer pins; a debug target (breakpoints,
+memory) is a later, separate claim.
 
 2026-10-13 shared LAN world for the emulated machines — CLAIM, VPS Claude (opus).
 Branch lane/shared-lan-world-20261013, exact base 22a8fea07273e9ad8aa3011c0d57cb6dc7445854.
@@ -4491,8 +4546,8 @@ one-run integration remains separate. Root owns documentation and actual gates.
 
 Branch `lane/386-provisioning-operational-profile-20261013`, Codex x86.
 Own `scripts/i80386-provisioning-operational-profile/`, its dedicated workflow,
-`docs/X86-PROVISIONING-OPERATIONAL.md` and this row. This publication is docs only;
-implementation starts after this claim and PR550 merge. Follow the
+`docs/X86-PROVISIONING-OPERATIONAL.md` and this row. The merged claim authorizes connected smoke source preparation;
+actual provisioning remains separately gated. Follow the
 [connected integration contract](docs/X86-PROVISIONING-OPERATIONAL.md): complete
 approved source graph, privileged enclosing bootstrap, validated child context,
 real contained entry/limits/ACK/controller/lifetime, and bounded original
@@ -4517,6 +4572,20 @@ other backends and consumer pins unchanged. Freely authored correctness tests
 and unchanged-workload alternating paired measurements are mandatory; no
 measured gain means no performance-only adoption. This is a documentation-only
 claim: implementation waits for its merge and refreshed ownership review.
+## Operational post-execution artifact handoff — 2026-10-13
+
+Owned branch `lane/386-provisioning-operational-handoff-20261013` adds only the
+fixed artifact-read helper and mocked controls in
+`scripts/i80386-provisioning-operational-profile/`, its graph/workflow and
+associated guide/registry text. Preserve root ownership and held producer
+source throughout execution. After a known returned observer with no outer
+capture/cleanup uncertainty, validate fixed names, bounded ordinary content,
+root ownership and retained identity; file mode 0444 precedes directory mode
+0555. No recursive walk, chown, deletion, source gate relaxation or caller path
+delegation. Retain the failed upload and require a new exact reviewed head and
+initial PR-opened smoke. Artifact read access grants no provisioning, compiler,
+guest, continuous lease or official-authentication qualification.
+
 
 ## Historical 80386 source contexts — 2026-10-13
 
@@ -4540,3 +4609,17 @@ connect the ten current harnesses as source, with actual hosted qualification pe
 - Owned paths: the fixed helper/owner/bridge and control namespace `scripts/i80386-historical-source-contexts/`, the ten current harnesses in the task guide, limited historical/current wiring in `.github/workflows/x86-xv6.yml`, this registry entry and `docs/I80386-HISTORICAL-SOURCE-CONTEXTS.md`.
 - Scope: fixed provider and original-object admission, owned detached sparse 186-file context, bounded Git transport, nofollow byte readback and owned cleanup. Existing consistency model and metadata remain unchanged.
 - Validation: manufactured boundary controls only. No real materialization, historical Node import, assembly, guest, current CPU or performance qualification. Owner/Node bridge and ten-harness/workflow wiring are source-connected with 6/7 mock controls; hosted actual qualification remains pending. Default model/import/actual stubs remain unsealed.
+
+## Historical 80386 shared CI qualification — 2026-10-14
+
+Extend the historical-context lane on `lane/386-historical-materializer-20261013`
+to the existing historical x86 source-fetch and test-execution steps in
+`.github/workflows/ci.yml`. The ten retained harnesses also run there, so this
+provider must receive the exact compatible public commit before materialization.
+Run those ten suites serially and preserve the entire remaining current-test
+inventory with an explicit disjoint-union census. No assertion, fixture, pin,
+threshold, optional skip, unrelated job or workflow trigger changes are owned.
+The Node bridge and `.github/workflows/x86-xv6.yml` remain in the existing claim.
+The shared CI scope extension is merged. Implementation is limited to the
+exact compatible-commit fetch; the existing generic serial runner is unchanged. Current CPU and xv6 guest acceptance remain separate from historical
+fixture execution.
