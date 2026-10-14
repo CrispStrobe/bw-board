@@ -1417,3 +1417,50 @@ semantics and source/resource/cleanup checks passing. Preserve failed captures;
 never substitute profiled timings into the original seven-pair result. This
 locates costs only in the authored MOV workload. It grants no CPU adoption,
 original-gate replacement, physical RTx or operating-system compatibility.
+
+
+### First audited V8 profile result
+
+The first [capture 38599162864](https://github.com/CrispStrobe/bw-board/actions/runs/38599162864)
+at [source 52d31962](https://github.com/CrispStrobe/bw-board/commit/52d319621027db67d0be09006cd02ff0daff2def)
+passed root and independent peer original-only audits: both golden semantic
+reports, source identities, zero memory events and owned cleanup match.
+On EPYC 9V74, Node 20.20.2, CPU0/one-CPU quota and 1 GiB/no swap, A has 648
+samples and B 547. GC samples are 84 and 14 respectively. B's leading engine
+functions, aggregating leaf samples across call sites, are `_stepInstruction`
+(129), `_fetchN` (119), `_decodeEA` (68). Eight unresolved samples per arm remain
+accounted for. These fresh fixed-order profiles give approximate diagnostic
+weights, not exact CPU shares, allocation counts or a paired speed estimate.
+The unprofiled 1.234022 median speedup remains a separate EPYC 7763 result.
+Original [artifact 11913418970](https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11913418970)
+ZIP SHA256 is `0bbfb5ec839ead27ae7249a2dc83be0c55d5211cff0914d6f148637bbaf99f7e`.
+[PR576](https://github.com/CrispStrobe/bw-board/pull/576) is merged after all
+eight current enabled gates passed. No CPU adoption, original-gate replacement, physical RTx or OS claim
+follows. No profile capture was repeated.
+
+## Guarded two-byte instruction-fetch specialization
+
+Implementation waits for the matching ownership claim to merge. Own only
+`_fetchN` in `src/experimental/i80386.js`, new
+`test/i80386-fetchn-specialization.test.mjs` and this registry/task text.
+Use the refreshed ordinary master baseline; do not silently include the
+unadopted address-decoder candidate. The sampled MOV mix uses `_fetchN(2)`,
+so first test a specialization of the existing guarded two-byte loop that
+avoids its loop/exponent overhead. Leave four-byte/RAM32 admission and the
+existing bytewise fallback unchanged. There is no measured gain yet.
+
+Preserve per-byte fetch address/order/masking, EIP and instruction-byte updates,
+including the state visible inside callbacks. Preserve throws after either
+byte, segment/page crossings, the 15-byte limit, unsigned return value and
+instruction rollback. Do not cache callbacks, remove protection checks or
+change instruction/bus clocks, profile flags, helpers or dependency pins.
+Use focused event/state adversaries and existing opcode/fault regressions,
+then affected hosted guest qualification with exact source identities.
+
+Freeze the source candidate before introducing a separately scoped versioned
+unprofiled comparison. Historical source maps, fixture CLI and paired policy
+are immutable; do not rewrite them to admit the new candidate. Any new gate
+harness requires a merged scope extension. Keep the CPU PR draft until the
+new performance gate and guest checks are satisfied. This claim does not
+adopt PR557 or replace its original benchmark gate, nor establish physical
+RTx, whole-AT speed or operating-system compatibility.
