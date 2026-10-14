@@ -144,6 +144,15 @@ work audit: maximum point4.679718 µV/46.797176 nA, reported mean0.387760 µV/
 The actual base-resistor mutant completes and disagrees26.974599 mV.
 Documentation-only closeout preserves every tested executable byte.
 
+2026-10-14 CI once per commit — CLAIM, VPS Claude (opus), by owner decision of 2026-10-14 ("ci once is sufficient").
+Branch lane/ci-once-per-commit-20261014, exact base f99007eec9073d5754f884d3e6f35202f388d985.
+Owns this row and the trigger blocks (only the `on:` sections) of
+.github/workflows/ci.yml, harris-native.yml and x86-xv6.yml, which run on both
+push and pull_request so that every pushed commit of a branch with an open PR
+is built twice. The push trigger stays (on every branch, as ci.yml explains);
+the pull_request trigger goes, so each commit is built once and its checks
+still show on the PR. No job, step, threshold or other workflow changes.
+
 2026-10-14 ESP8266 simulator kind (blob-free firmware) — CLAIM, VPS Claude (opus).
 Branch lane/esp8266-adapter-20261014, exact base c9cdee6c8b684e67c66bf61ab618c91279f52235.
 Owns this row plus: a new dependency on our fork CrispStrobe/esp8266js
