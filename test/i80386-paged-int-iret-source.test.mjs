@@ -1,9 +1,14 @@
-import test from 'node:test';
+import {historicalContext} from '../scripts/i80386-historical-source-contexts/bridge.mjs';
+const held=await historicalContext(import.meta.url);
+after(()=>held.close());
+const {layout,entries,gate,selector,terminalEip,ramInstructions,ramProgram,romInstructions,bootStores,frameStores,adTransitions,fixedIntIretRom,intIretProfile,namedCuts,afterLgdt,afterLidt,afterCr3,afterPe,afterDs,afterSs,afterSp,afterPg,farJumpIp,lgdtIp,lidtIp,ssWriteIp,spWriteIp,expectedCr0,expectedShadow,expectedAx,physicalFetch,validateStore,validateAdTransition,expectedPages,wordAt,codeCache,dataCache,validateMilestone}=await held.module('scripts/bochs-cpu3-native-paged-int-iret/profile.mjs');
+const {createPagedIntIretOracle}=await held.module('scripts/bochs-cpu3-native-paged-int-iret/reference.mjs');
+import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {writeFileSync} from 'node:fs';
-import {layout,entries,gate,selector,terminalEip,ramInstructions,ramProgram,romInstructions,bootStores,frameStores,adTransitions,fixedIntIretRom,intIretProfile,namedCuts,afterLgdt,afterLidt,afterCr3,afterPe,afterDs,afterSs,afterSp,afterPg,farJumpIp,lgdtIp,lidtIp,ssWriteIp,spWriteIp,expectedCr0,expectedShadow,expectedAx,physicalFetch,validateStore,validateAdTransition,expectedPages,wordAt,codeCache,dataCache,validateMilestone} from '../scripts/bochs-cpu3-native-paged-int-iret/profile.mjs';
-import {createPagedIntIretOracle} from '../scripts/bochs-cpu3-native-paged-int-iret/reference.mjs';
+
+
 test('fixed ROM owns LGDT/LIDT pointers, MOVSS shadow successor, gate and exact code bytes',()=>{
  const rom=fixedIntIretRom();assert.throws(()=>fixedIntIretRom({rom}));assert.equal(rom.length,65536);assert.equal(createHash('sha256').update(rom).digest('hex'),intIretProfile.romSha256);assert.deepEqual([...rom.subarray(0xfff0,0xfff5)],[0xea,0,1,0,0xf0]);let ip=0x100;
  for(const i of romInstructions){assert.equal(i.ip,ip);assert.deepEqual([...rom.subarray(ip,ip+i.bytes.length)],i.bytes);ip+=i.bytes.length;}assert.ok(ip<0x400);assert.deepEqual([...rom.subarray(0x400,0x40c)],[31,0,0,6,0,0,0x87,1,0,0x30,0,0]);

@@ -1,9 +1,14 @@
-import test from 'node:test';
+import {historicalContext} from '../scripts/i80386-historical-source-contexts/bridge.mjs';
+const held=await historicalContext(import.meta.url);
+after(()=>held.close());
+const {layout,entries,gate,selector,faultEip,terminalEip,handlerEip,ramInstructions,ramProgram,romInstructions,bootStores,frameStores,repairStore,retryStore,ordinaryStores,adTransitions,fixedPageFaultRom,pageFaultProfile,namedCuts,afterSs,afterSp,afterPg,farJumpIp,lgdtIp,lidtIp,spWriteIp,physicalFetch,validateStore,validateAdTransition,expectedPages,wordAt,codeCache,dataCache,validateLedger,validateMilestone}=await held.module('scripts/bochs-cpu3-native-paged-pagefault/profile.mjs');
+const {createPagedPageFaultOracle}=await held.module('scripts/bochs-cpu3-native-paged-pagefault/reference.mjs');
+import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {writeFileSync} from 'node:fs';
-import {layout,entries,gate,selector,faultEip,terminalEip,handlerEip,ramInstructions,ramProgram,romInstructions,bootStores,frameStores,repairStore,retryStore,ordinaryStores,adTransitions,fixedPageFaultRom,pageFaultProfile,namedCuts,afterSs,afterSp,afterPg,farJumpIp,lgdtIp,lidtIp,spWriteIp,physicalFetch,validateStore,validateAdTransition,expectedPages,wordAt,codeCache,dataCache,validateLedger,validateMilestone} from '../scripts/bochs-cpu3-native-paged-pagefault/profile.mjs';
-import {createPagedPageFaultOracle} from '../scripts/bochs-cpu3-native-paged-pagefault/reference.mjs';
+
+
 test('fixed source ROM and RAM instructions prove vector14 gate, handler CR3 reload and error discard encodings',()=>{
  const rom=fixedPageFaultRom();assert.throws(()=>fixedPageFaultRom({rom}));assert.equal(rom.length,65536);assert.equal(createHash('sha256').update(rom).digest('hex'),pageFaultProfile.romSha256);let ip=0x100;
  for(const i of romInstructions){assert.equal(i.ip,ip);assert.deepEqual([...rom.subarray(ip,ip+i.bytes.length)],i.bytes);ip+=i.bytes.length;}assert.ok(ip<0x400);assert.deepEqual([...rom.subarray(0xfff0,0xfff5)],[0xea,0,1,0,0xf0]);assert.deepEqual([...rom.subarray(0x400,0x40c)],[31,0,0,6,0,0,0x77,0,0,0x30,0,0]);

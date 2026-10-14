@@ -29,6 +29,7 @@ import { acSweep } from './ac.js';
 import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState, resetDeviceState } from './devices.js';
 import { servoCalibration } from './devices/servo.js';
+import { expandLm741LinearPoles } from './lm741-linear-pole.js';
 import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
 import { junctionModelOf } from './mna.js';
@@ -854,7 +855,8 @@ export class BoardImpl {
     // not one hop into the motor's insides.
     const windingView = BoardImpl._expandMotorWindings(parts, nets);
     const solveView = BoardImpl._expandBridgeClampDiodes(windingView.parts, windingView.nets);
-    const macroView = BoardImpl._expandOpampMacros(solveView.parts, solveView.nets, this.vcc);
+    const linearView = expandLm741LinearPoles(solveView.parts, solveView.nets);
+    const macroView = BoardImpl._expandOpampMacros(linearView.parts, linearView.nets, this.vcc);
     this._solveParts = macroView.parts;
     this._solveNets = macroView.nets;
     this._macroFallbacks = macroView.notes;

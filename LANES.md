@@ -1,6 +1,90 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-13 LM741 step-phase waveform audit — CLAIM, Codex bwcx.
+2026-10-14 current paged-PF static source inventory — CLAIM, Codex x86.
+Branch lane/386-historical-materializer-20261013; refreshed main base
+`d71c4f19119c7f054a49ed5df8b355b1106f1628`.
+Own a narrow correction to `scripts/bochs-cpu3-native-paged-pagefault/build-controls.mjs`, `test/i80386-paged-pagefault-build-source.test.mjs`, and an explicit versioned `scripts/bochs-cpu3-native-paged-pagefault/current-source-inventory.json` declaration if required, plus this registry entry and the historical-context task guide. No native builder, production admission/loader, CPU, guest, binary, raw receipt or original pin changes are included.
+
+The current static source closure now reaches `scripts/i80386-historical-source-contexts/bridge.mjs` through current source-test imports. Authenticate the original 243-path census using the unchanged public driver-build binding and its exact compiled source commit, then require a separately versioned current 244-path set equal to those paths plus only that named bridge. Every current row must join current Git and live bytes. This is current metadata-control coverage, not substitution of old test execution or qualification of the current CPU by an old oracle.
+
+Acceptance: independently authenticate the original compiled path/hash map and public Git objects; preserve original 243 native proof/pins unchanged; prove the current path-set equality and the bridge's exact admitted digest; reject missing, duplicate, extra, foreign and wrong-bridge rows with authored controls; retain all six nested PF controls and current harness assertions. Require affected exact-head hosted CI and the existing xv6 build/guest acceptance steps to pass. No blind numeric count update, hidden path exclusion, skipped test or new performance/native result is authorized. Implementation begins only after the matched documentation claim has merged.
+
+2026-10-14 precision accepted-step meter quadrature — CLAIM, Codex bwcx.
+Branch lane/adp7118-meter-quadrature-20261014, exact basec1f6adba33be83a8a98aa80c2826e274d1b2d378.
+Seven paths only: this ledger, src/board.js (precision meter accepted-step
+descriptors/read integration only), src/meter-quadrature.js,
+test/meter-quadrature.test.mjs, scripts/qualify-adp7118-instruments.mjs,
+test/adp7118-native-instruments.test.mjs, spec-updates/adp7118-native-instruments.md.
+Continues the held28bb88ef diagnostic: all6 waveforms complete and pass, but
+linear/ideal-supply voltage mean errs1.438662 uV against fixed1 uV gate.
+Existing accepted midpoint/end solves are accurate; linear meter quadrature
+introduces an independent integration error. Precision-only quadratic
+segments use those actual accepted points, support clipped windows and retain
+left/right discontinuity values. No rejected/trial/future acquisition credit,
+extra solves, changed numerical accuracy/work gates or hidden warm-up.
+Legacy profiles and analytic-source integral path remain unchanged. Same6
+case denominator/reference/bounds/whole budget; no unchanged failure rerun.
+Pure polynomial/clipping/refusal controls locally; actual six-case mean/current
+and existing meter/model regressions hosted. Completed wrong-capacitance and
+quadrature-omission mutations required. No power/MNA kernel/device/default,
+scope sampling, other workflow, package pin, GUI or deployment edits.
+
+2026-10-13 ADP7118 native instrument current startup — CLAIM, Codex bwcx.
+Branch lane/adp7118-native-instruments-20261013, exact basefe7e515961e4ab0398ce39ad76aaf272517434ec.
+Four evidence paths only: this ledger, scripts/qualify-adp7118-instruments.mjs,
+test/adp7118-native-instruments.test.mjs and spec-updates/adp7118-native-instruments.md.
+Six explicit RC cases (linear, temporary inrush limit, sustained overload,
+each with ideal/4-ohm VIN supply) for existing current-limited-envelope mode.
+Independent continuous piecewise RC/current and IQ integrals; no sampled
+engine output or device state as oracle input. Native200 samples at6 us on
+VOUT, package output-current and source input-current channels, currentClock
+simulation; watched means15 us..1.2 ms.80 provisional observer callbacks at
+15 us leave room for existing10 us device wakes under one whole20000/60001/200
+work budget. Warm-up included, actual integration charges retained; refusal
+cannot count as completion. Fixed0.5 uV/10 uA/11 uA waveform and1 uV/1 uA
+mean bounds; output-current bound follows the voltage bound/.05 ohm and
+input-current includes the stated IQ slope. Completed wrong-capacitance
+electrical mutation required; pure reference/refusal/mutation controls locally,
+actual engine and existing regressions hosted. Preserve all six reports on red.
+No power/Board/MNA/profile/default model, GUI, pin, workflow, deployment or
+physical ADP7118 qualification change; any required repair needs a fresh claim.
+
+2026-10-13 LM741 solver-native linear pole — DONE, Codex bwcx.
+Branch lane/lm741-linear-pole-20261013, exact basec5078499ebcde97ce615689667244b37c76eb22f.
+Eight paths only: this ledger, src/board.js (LM741 solver-view expansion),
+src/devices/analog-amps.js (shared nominal card and explicit-mode admission),
+src/lm741-linear-pole.js, test/lm741-linear-pole.test.mjs,
+scripts/qualify-lm741-step-phase.mjs, test/lm741-step-phase.test.mjs and
+spec-updates/lm741-step-phase.md. Continues the failed evidence-only diagnostic;
+no duplicate owner or adoption of a failed gate. Opt-in transientModel=linear-pole
+uses a hidden MNA capacitor/controlled-source pole, not scheduled device wakes.
+First envelope: declared fixed supplies checked against actual solved rails,
+explicit zero offset, connected package signal/supply leads, open trim/NC,
+linear common-mode/output/slew domain; unsupported parameters/domains refuse
+by name rather than clipping or inventing dynamics. Legacy mode unchanged.
+Same six sign/phase fixtures, independent continuous reference, dense scopes/
+means and whole20000/60001/200 budget, completed amplitude mutant required.
+Pure expansion/admission controls locally; actual engine/legacy regression
+and mutated dynamics hosted. Preserve c637/bb0200 failures and actual work.
+No MNA kernel, other op-amp kinds, waveform/source primitives, workflow, pins,
+GUI, default behavior or deployment change. Landing requires exact affected
+hosted qualification; no physical LM741 or nonlinear qualification claim.
+Canonical claimd725cbc1 landed before implementation. Explicit linear pole,
+topology/physical-solution refusals and package output-current mapping are
+implemented. Six pure controls pass, including real wrong-pole/removed-slew
+mutations, unchanged legacy initialization and absent-mode solver-view identity.
+The two actual engine tests were deliberately excluded locally and must run
+hosted with existing LM741/other op-amp regressions. Six-case reference/grid/
+bounds/work authority unchanged; no waveform success or main landing yet.
+Sourcea5aa2b5f qualifies in CI38457137645 (8550 pass/0 fail/302 unchanged
+skips, all enabled jobs green) and Harris38457137856. Independent raw audit
+accepts six cases,2400 scalar readings/12 means/1200 provisional records:
+point maximum3.781350 nV/.378135 pA; all captures complete with200 charged
+advances, maximum741 attempts/2217 solves. Actual amplitude mutant completes
+and disagrees. No legacy-default/nonlinear/physical/GUI/adoption claim.
+Documentation-only closeout preserves the exact tested executable bytes.
+
+2026-10-13 LM741 step-phase waveform audit — DONE diagnostic candidate, Codex bwcx.
 Branch lane/lm741-step-phase-20261013, exact base73130a1e.
 Four evidence paths: this ledger, scripts/qualify-lm741-step-phase.mjs,
 test/lm741-step-phase.test.mjs and spec-updates/lm741-step-phase.md.
@@ -14,6 +98,32 @@ actual engine observations hosted. Preserve mismatches as failed diagnostics,
 not qualification or permission to weaken bounds. No production/model/pin/
 GUI/workflow/deployment edits. Any required model repair needs a separately
 published scope expansion after the actual waveform failure is diagnosed.
+Canonical claim22a8fea0 preceded implementation. Six-case runner and analytic
+ramp/mean reference implemented; three local pure controls and genuine
+wrong-pole/final-observation mutations pass, including sparse-sample refusal
+and independent quadrature of analytic means. This is an unqualified
+diagnostic, not a source/model fix or permission to land a failing gate.
+Hosted c6373251 numericalCI38443238986 failed: two aligned cases completed
+but differ8.302436 mV; four offset-phase cases refuse at19.4 µs/193 callbacks
+after200 actual integration advances. Attempts/solves remain bounded. Actual
+amplitude mutant not reached. Independent piecewise-reference audit confirms
+the completed cases' mismatch. Forward evidence adds provisional actual input,
+output/current and controller drive/update/wake records to existing callbacks,
+retaining partial failed captures. Same four paths; no source/model, reference,
+limit, grid or accounting change. Fresh diagnostic qualification, no unchanged
+rerun, production repair, waveform success or landing authorized by this head.
+Forward observer review removes getter-triggered solves: direct published
+maps with null/missing/convergence/dirty markers only. No observer-created
+solution or invented zero. Supersede7a155197 before actual diagnostic use.
+Actualbb0200f2 CI38448865246 remains red; Harris38448865183 green cannot
+rescue waveform qualification. Independent1,172-observation audit finds no
+input deviations or completed scope/published-output discrepancy. Drive holds
+zero until input+300 ns; at that update the published solution still uses the
+old drive, with the new output visible at the following observation. Offset
+wakes split capture intervals and preserve the actual200-advance refusal.
+Work/zero-phase waveform receipts match the initial diagnostic. No tolerance,
+accounting, default/source fix or landing change; continuous solver-native
+pole adaptation is only a proposed separately claimed repair.
 
 2026-10-13 transistor instrument qualification — DONE, Codex bwcx.
 Branch lane/transistor-instruments-20261013, exact base5f4dc246.
@@ -42,6 +152,43 @@ work audit: maximum point4.679718 µV/46.797176 nA, reported mean0.387760 µV/
 1.087597 nA; Ohm's law independently holds for points and means within10 pA.
 The actual base-resistor mutant completes and disagrees26.974599 mV.
 Documentation-only closeout preserves every tested executable byte.
+
+2026-10-14 ESP8266 simulator kind (blob-free firmware) — CLAIM, VPS Claude (opus).
+Branch lane/esp8266-adapter-20261014, exact base c9cdee6c8b684e67c66bf61ab618c91279f52235.
+Owns this row plus: a new dependency on our fork CrispStrobe/esp8266js
+(MIT, pinned by commit, as avr8js is), src/esp8266js-adapter.js (boundary-A
+adapter: attachBoard, boot a flash image without the ROM, advanceNs/timeNs,
+serial both ways, pins both ways), its kind entry in src/target-kinds.js and
+branch in src/debug-target-factory.js, a board kind for a NodeMCU-style board
+if the factory needs one, test/esp8266js-*.test.mjs, and a small fixture
+directory test/fixtures/esp8266/ holding images built from the fork's own
+blob-free firmware (sources and hashes named in its README). Only firmware
+that contains no Espressif SDK code is run or committed (the SDK's licence
+limits it to the chip itself). No change to other engines, the CPU cores,
+labwired, x86 provisioning or consumer pins; a debug target (breakpoints,
+memory) is a later, separate claim.
+
+2026-10-13 shared LAN world for the emulated machines — CLAIM, VPS Claude (opus).
+Branch lane/shared-lan-world-20261013, exact base 22a8fea07273e9ad8aa3011c0d57cb6dc7445854.
+Owns this row plus a new directory src/net/ and its tests test/net-*.test.mjs:
+(1) a LAN medium that is a drop-in for the NE2000's link (send(frame, from) /
+deliver(frame)), so 8086 machines, and later other backends' network devices,
+share one wire with host-side nodes; (2) a host-side IPv4 node written from
+the RFCs (ARP 826, IPv4 791, ICMP echo 792, UDP 768, DHCP server 2131, DNS
+1035; TCP 793 and an HTTP endpoint as a later step) that tests and
+applications use to be "the network" a guest talks to; (3) package exports
+for the new files and census entries they require; (4) by owner decision of
+2026-10-13, a bridge to a real network as an explicit user setting: an
+egress policy (off by default; loopback, multicast and broadcast always
+refused; private, link-local and carrier-NAT ranges refused unless separately
+allowed; a plain-language list of what switching it on means) and a gateway
+node that applies it. bw-board opens no connection itself: the transports
+(fetch, a relay, native sockets) are handed in by the embedding application,
+outbound only, and every decision is reported to it. The NE2000's own links
+stay offline. No change to src/ne2000.js, the CPU
+cores, labwired, x86 provisioning or consumer pins. v86 stays oracle-only:
+its network code is not read. No radio, timing or loss model, and the nRF
+radio air stays a separate medium.
 
 2026-10-13 Calliope mini 1.x on the labwired tier — CLAIM, VPS Claude (opus).
 Branch lane/labwired-calliope-mini-v1-20261013, exact base 9c834916331f04eb0325679b137801f963b274d8.
@@ -4408,8 +4555,8 @@ one-run integration remains separate. Root owns documentation and actual gates.
 
 Branch `lane/386-provisioning-operational-profile-20261013`, Codex x86.
 Own `scripts/i80386-provisioning-operational-profile/`, its dedicated workflow,
-`docs/X86-PROVISIONING-OPERATIONAL.md` and this row. This publication is docs only;
-implementation starts after this claim and PR550 merge. Follow the
+`docs/X86-PROVISIONING-OPERATIONAL.md` and this row. The merged claim authorizes connected smoke source preparation;
+actual provisioning remains separately gated. Follow the
 [connected integration contract](docs/X86-PROVISIONING-OPERATIONAL.md): complete
 approved source graph, privileged enclosing bootstrap, validated child context,
 real contained entry/limits/ACK/controller/lifetime, and bounded original
@@ -4435,3 +4582,55 @@ and unchanged-workload alternating paired measurements are mandatory; no
 measured gain means no performance-only adoption. The merged claim now has a
 scalar source candidate and authored address/fault controls. Actual semantic and paired performance qualification remains pending;
 no measured gain or adoption is claimed.
+
+## Operational post-execution artifact handoff — 2026-10-13
+
+Owned branch `lane/386-provisioning-operational-handoff-20261013` adds only the
+fixed artifact-read helper and mocked controls in
+`scripts/i80386-provisioning-operational-profile/`, its graph/workflow and
+associated guide/registry text. Preserve root ownership and held producer
+source throughout execution. After a known returned observer with no outer
+capture/cleanup uncertainty, validate fixed names, bounded ordinary content,
+root ownership and retained identity; file mode 0444 precedes directory mode
+0555. No recursive walk, chown, deletion, source gate relaxation or caller path
+delegation. Retain the failed upload and require a new exact reviewed head and
+initial PR-opened smoke. Artifact read access grants no provisioning, compiler,
+guest, continuous lease or official-authentication qualification.
+
+
+## Historical 80386 source contexts — 2026-10-13
+
+Owned branch `lane/386-historical-context-helper-20261013`: the ten test
+harnesses listed in [the task guide](docs/I80386-HISTORICAL-SOURCE-CONTEXTS.md),
+a reviewed fixed helper/manifest namespace `scripts/i80386-historical-source-contexts/`,
+limited historical/current execution wiring in `.github/workflows/x86-xv6.yml`,
+this guide and this registry entry. Isolate four historical report fixtures,
+five fixed-oracle groups and the compiled PIC111 context using exact admitted
+public Git transitive sources. Preserve held CPU/CR0/native pins and raw reports;
+no skips, blind pin updates or current-CPU credit from historical execution.
+Current CPU regressions and actual hosted xv6 qualification remain separate.
+Production loaders/validators and CPU source are not owned for changes here;
+review any required scope extension before code. The claim and source design are reviewed. The first fixed metadata/context
+helper retains mocked controls; the separate materializer and owner/Node bridge
+connect the ten current harnesses as source, with actual hosted qualification pending. No historical/current CPU qualification is claimed.
+
+### Historical fixed materializer adapter — 2026-10-13
+
+- Branch: `lane/386-historical-materializer-20261013`.
+- Owned paths: the fixed helper/owner/bridge and control namespace `scripts/i80386-historical-source-contexts/`, the ten current harnesses in the task guide, limited historical/current wiring in `.github/workflows/x86-xv6.yml`, this registry entry and `docs/I80386-HISTORICAL-SOURCE-CONTEXTS.md`.
+- Scope: fixed provider and original-object admission, owned detached sparse 186-file context, bounded Git transport, nofollow byte readback and owned cleanup. Existing consistency model and metadata remain unchanged.
+- Validation: manufactured boundary controls only. No real materialization, historical Node import, assembly, guest, current CPU or performance qualification. Owner/Node bridge and ten-harness/workflow wiring are source-connected with 6/7 mock controls; hosted actual qualification remains pending. Default model/import/actual stubs remain unsealed.
+
+## Historical 80386 shared CI qualification — 2026-10-14
+
+Extend the historical-context lane on `lane/386-historical-materializer-20261013`
+to the existing historical x86 source-fetch and test-execution steps in
+`.github/workflows/ci.yml`. The ten retained harnesses also run there, so this
+provider must receive the exact compatible public commit before materialization.
+Run those ten suites serially and preserve the entire remaining current-test
+inventory with an explicit disjoint-union census. No assertion, fixture, pin,
+threshold, optional skip, unrelated job or workflow trigger changes are owned.
+The Node bridge and `.github/workflows/x86-xv6.yml` remain in the existing claim.
+The shared CI scope extension is merged. Implementation is limited to the
+exact compatible-commit fetch; the existing generic serial runner is unchanged. Current CPU and xv6 guest acceptance remain separate from historical
+fixture execution.
