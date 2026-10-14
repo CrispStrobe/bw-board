@@ -1440,9 +1440,10 @@ follows. No profile capture was repeated.
 
 ## Guarded two-byte instruction-fetch specialization
 
-Claim577 merged; [PR579](https://github.com/CrispStrobe/bw-board/pull/579) is READY
-at unchanged `e2c537af`, waiting for all latest CI before merge. Adoption has
-not yet been performed. Own only
+Claim577 merged; [PR579](https://github.com/CrispStrobe/bw-board/pull/579) merged
+at `c2f0936d5fcc22e3757531eeaa30828413a6ede7` after all eight latest CI
+successors passed. The ordinary JS word-fetch change is adopted in board master;
+all 43 selected source rows match measured B. Own only
 `_fetchN` in `src/experimental/i80386.js`, new
 `test/i80386-fetchn-specialization.test.mjs` and this registry/task text.
 Use the refreshed ordinary master baseline; do not silently include the
@@ -1465,13 +1466,14 @@ Freeze the source candidate before introducing a separately scoped versioned
 unprofiled comparison. Historical source maps, fixture CLI and paired policy
 are immutable; do not rewrite them to admit the new candidate. Any new gate
 harness requires a merged scope extension. The new gate and guest checks passed;
-all latest READY-transition CI must succeed before matched-head merge. This claim does not
+matched-head merge is complete. Lite retains its earlier board pin, so no GUI
+adoption is implied. This claim does not
 adopt PR557 or replace its original benchmark gate, nor establish physical
 RTx, whole-AT speed or operating-system compatibility.
 
 ## Guarded word-fetch public paired measurement
 
-Status: claim581 merged at `f1b669b3`. [Draft PR582](https://github.com/CrispStrobe/bw-board/pull/582) published the harness; its first push measurement succeeded. Root and independent peer original-packet audits passed. [CPU PR579](https://github.com/CrispStrobe/bw-board/pull/579) is READY, waiting for all latest CI before merge; adoption has not yet been performed.
+Status: claim581 merged at `f1b669b3`. [READY PR582](https://github.com/CrispStrobe/bw-board/pull/582) published the harness; its first push measurement succeeded. Root and independent peer original-packet audits passed. [CPU PR579](https://github.com/CrispStrobe/bw-board/pull/579) merged at `c2f0936d`; ordinary JS word-fetch is adopted in board master. PR582 remains unmerged awaiting its latest READY-transition checks.
 
 Own only new `.github/workflows/i80386-fetchn-paired.yml`,
 `scripts/i80386-fetchn-paired/{fixture.mjs,run.py,policy.py,controls.py,README.md}`,
@@ -1529,7 +1531,7 @@ After terminal metadata admission, acquire the original packet once and audit
 it independently without producer imports or replay. Record exact source,
 hardware/runtime, artifact digest, resource/cleanup and semantic/performance
 conclusions in public evidence. This gate qualifies only this authored public
-mix; it neither replaces the original benchmark gate nor grants CPU adoption,
+mix; performance alone neither replaces the original benchmark gate nor grants CPU adoption,
 physical RTx, full AT or operating-system compatibility.
 
 
@@ -1545,3 +1547,7 @@ common eight roles, both 43-row admissions and owned cleanup passed.
 is 140770 bytes, SHA256 `fb01d418a37f4ed9b3455a378803a161874169cc2912e4021f45215187273ccc`.
 This isolated fetch result cannot be multiplied by the isolated scalar-EA result
 or credited to a combined candidate; the scope limitations above remain.
+
+The adopted fetch change measured approximately 12.6% higher whole-Node CPU
+throughput in this authored mix only. Lite pin/installed GUI adoption is separate;
+PR557 and its original gate remain unchanged.
