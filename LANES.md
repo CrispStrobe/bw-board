@@ -4768,3 +4768,17 @@ hosted guest checks and a separately scoped new unprofiled admission/gate.
 The two audited profiles suggest investigating guarded word fetch; they do
 not prove a gain. No historical evidence is rewritten and no CPU adoption,
 original-gate replacement or physical/whole-AT speed claim is authorized.
+
+## Guarded word-fetch public paired measurement — 2026-10-14
+
+Documentation claim on `docs/386-fetchn-paired-claim-20261014`; implementation
+waits for its merge. Own only new `.github/workflows/i80386-fetchn-paired.yml`,
+`scripts/i80386-fetchn-paired/{fixture.mjs,run.py,policy.py,controls.py,README.md}`,
+`test/i80386-fetchn-paired-fixture.test.mjs` and this registry/task text.
+Coding branch: `lane/386-fetchn-public-paired-20261014`. The
+[contract](docs/X86-NEXT-LANES.md#guarded-word-fetch-public-paired-measurement)
+compares the ordinary baseline with the isolated guarded-word-fetch candidate.
+All existing CPU, fixtures, policies, source maps, workflows and pins remain
+outside scope. New admission/schema names preserve the earlier experiment.
+One hosted measurement follows exact source review and affected guest success;
+a public macro result alone grants no CPU adoption or original-gate replacement.
