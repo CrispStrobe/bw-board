@@ -104,3 +104,28 @@ waveform points but fail the original voltage-mean gate. The capacitance
 mutation must also complete and disagree. Reference, acquisition grid, whole
 budget and all accuracy bounds remain unchanged; existing meter/model
 regressions are required before landing.
+
+### First repair run and continuation-boundary correction
+
+Source `36fa345bb715942656d9d291238132474f2de9d9` in
+[CI 38515595322](https://github.com/CrispStrobe/bw-board/actions/runs/38515595322)
+passes all six actual regulator captures and both completed negative controls.
+The independently checked ideal-supply linear voltage-mean error falls from
+1.438662 µV to 1.265835 nV. Maximum voltage-mean error across the batch is
+34.772398 nV; maximum output/input current-mean errors are 68.993334/69.034496 nA.
+Point readings and work receipts remain identical to the failed baseline.
+The quadrature-omission mutant reproduces the original mean failure while
+passing the waveform-point checks. This result is not a landing qualification:
+the full suite reports 8,600 passed, four failed and 302 documented skips.
+
+All four failures are existing RLC instrument tests, which report
+`meter-quadrature-start-not-observed`. The new start guard had demanded
+machine-rounding equality, but the unchanged integration loop permits stopping
+up to 1 fs before the integer-clock endpoint. A continuation therefore can
+have an actual preceding observation slightly before its nominal start.
+The forward guard admits only that existing 1 fs completion gap plus floating
+rounding, anchoring the polynomial to the **actual observed timestamp** rather
+than moving its value to the integer clock. Future observations and larger
+unknown gaps still refuse. Pure controls explicitly cover all three cases.
+No integrator stop rule, profile accuracy, work ceiling, reference or measurement
+bound changes. Fresh hosted RLC/regulator/full-suite qualification is required.

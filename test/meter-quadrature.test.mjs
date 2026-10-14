@@ -17,6 +17,14 @@ test('pure real Board quadrature recorder uses only supplied accepted maps and p
     const segments=record.call(mock,0,.5,1,mid,end);assert.equal(segments.size,1);
     assert.deepEqual(calls,[mid,end]);assert.equal(watch.hist.length,1,'no synthetic history publication');
     assert.ok(Math.abs(meterQuadraticIntegral(segments.get('v'),0,1)-F(1))<1e-13);
+    const continuation=record.call(mock,5e-16,.5,1,mid,end);
+    assert.equal(continuation.get('v').startSec,0,'legal endpoint gap retains actual earlier observation time');
+    assert.ok(Math.abs(meterQuadraticIntegral(continuation.get('v'),0,1)-F(1))<1e-13);
+    assert.equal(record.call(mock,2e-15,.5,1,mid,end).size,0,'larger unknown gap refuses');
+    assert.equal(watch.failure,'meter-quadrature-start-not-observed');watch.failure=null;
+    watch.hist[0].tSec=5e-16;
+    assert.equal(record.call(mock,0,.5,1,mid,end).size,0,'future observations cannot become starts');
+    assert.equal(watch.failure,'meter-quadrature-start-not-observed');watch.failure=null;watch.hist[0].tSec=0;
     calls.length=0;mock._transientAnalysisProfile.id='interactive-v2';
     assert.equal(record.call(mock,0,.5,1,mid,end),null);assert.deepEqual(calls,[]);
     mock._transientAnalysisProfile.id='precision-v1';mock._transientAccuracyUnmet={code:'failed'};

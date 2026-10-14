@@ -25,6 +25,12 @@ or state updates; seven pure controls pass, including actual recorder method
 with mocked maps, legacy/failed-history refusals and midpoint-omission mutant.
 Source stays unqualified until all6 actual captures, completed capacitance/
 quadrature-omission mutants and affected meter/model regressions pass hosted.
+Exact36fa345b actual6-case/2-mutant raw audit passes, but CI38515595322 is
+red (8600 pass/4 RLC mean-refusal regressions/302 skips). Harris green does
+not rescue. Forward guard preserves the actual earlier start timestamp over
+the existing <=1 fs integrator completion gap; larger/future gaps still fail.
+No clock/tolerance/stop-rule/work change. Seven pure controls including actual
+recorder gap/unknown-gap/future adversaries pass; fresh qualification required.
 
 2026-10-13 ADP7118 native instrument current startup — CLOSED failed diagnostic, Codex bwcx.
 Branch lane/adp7118-native-instruments-20261013, exact basefe7e515961e4ab0398ce39ad76aaf272517434ec.

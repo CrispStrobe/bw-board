@@ -2123,8 +2123,12 @@ export class BoardImpl {
     for (const [key,w] of this._meterWatches) {
       if (w.failure) continue;
       const last=w.hist[w.hist.length-1];
-      const slack=4*Number.EPSILON*Math.max(Math.abs(startSec),1e-12);
-      if (!last || Math.abs(last.tSec-startSec)>slack) {
+      const rounding=4*Number.EPSILON*Math.max(Math.abs(startSec),1e-12);
+      // The existing integration loop may finish <=1 fs before the integer
+      // endpoint. Use that actual observed timestamp as the polynomial origin;
+      // never move its value forward or extrapolate from a future observation.
+      const gap=last ? startSec-last.tSec : Infinity;
+      if (!last || gap < -rounding || gap > 1e-15+rounding) {
         w.failure='meter-quadrature-start-not-observed';
         continue;
       }
