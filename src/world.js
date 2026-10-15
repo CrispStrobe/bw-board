@@ -86,6 +86,8 @@ export class World {
     this._schedules = new Map();
     /** @type {Set<(key: string, value: number|null) => void>} */
     this._listeners = new Set();
+    /** @type {Map<string, WorldSource>} positioned sources (step 2) */
+    this._sources = new Map();
     if (init) this._load(init);
   }
 
@@ -162,7 +164,57 @@ export class World {
 
   /** True when nothing differs from the defaults (nothing to persist). */
   isDefault () {
-    return this._schedules.size === 0 && WORLD_KEYS.every(k => this._values[k] === WORLD_DEFAULTS[k]);
+    return this._schedules.size === 0 && this._sources.size === 0 &&
+      WORLD_KEYS.every(k => this._values[k] === WORLD_DEFAULTS[k]);
+  }
+
+  // ── Positioned sources (heater, fan, lamp, sound) ──────────────────────
+
+  /**
+   * Add or replace a source. Positions are bench coordinates (the circuit
+   * designer's layout units); `strength` is the source's effect at or inside
+   * the reference distance, in its key's unit (see SOURCE_KINDS).
+   * @param {{id: string, kind: string, x: number, y: number, strength?: number, on?: boolean, radius?: number}} src
+   */
+  setSource (src) {
+    const s = normaliseSource(src);
+    this._sources.set(s.id, s);
+    this._emit('sources', null);
+  }
+
+  /** @param {string} id */
+  removeSource (id) {
+    if (this._sources.delete(String(id))) this._emit('sources', null);
+  }
+
+  /** @returns {WorldSource[]} copies, in insertion order */
+  getSources () {
+    return [...this._sources.values()].map(s => ({ ...s }));
+  }
+
+  /**
+   * The value of `key` at bench position (x, y): the uniform value plus every
+   * source's contribution (see falloff()). Without sources this equals get().
+   * @param {WorldKey} key
+   * @param {number} x
+   * @param {number} y
+   * @param {number} [tSec]
+   * @returns {number|null}
+   */
+  getAt (key, x, y, tSec = 0) {
+    const base = this.get(key, tSec);
+    const mine = [...this._sources.values()].filter(s => s.on && SOURCE_KINDS[s.kind].key === key);
+    if (mine.length === 0 || !Number.isFinite(x) || !Number.isFinite(y)) return base;
+    if (key === 'soundDb') {
+      // Intensities add: L = 10·log10(Σ 10^(L_i/10)), each source attenuated
+      // by the same inverse-square factor (−20·log10(d/r) dB beyond r).
+      let energy = base === null ? 0 : 10 ** (base / 10);
+      for (const s of mine) energy += 10 ** (s.strength / 10) * falloff(Math.hypot(x - s.x, y - s.y), s.radius);
+      return energy > 0 ? clampKey(key, 10 * Math.log10(energy)) : base;
+    }
+    let v = base === null ? 0 : base;
+    for (const s of mine) v += SOURCE_KINDS[s.kind].sign * s.strength * falloff(Math.hypot(x - s.x, y - s.y), s.radius);
+    return clampKey(key, v);
   }
 
   /**
@@ -175,6 +227,7 @@ export class World {
       if (this._schedules.has(k)) (out.schedules ??= {})[k] = this.getSchedule(k);
       else if (this._values[k] !== WORLD_DEFAULTS[k]) out[k] = this._values[k];
     }
+    if (this._sources.size) out.sources = this.getSources();
     return out;
   }
 
@@ -182,6 +235,22 @@ export class World {
     for (const k of WORLD_KEYS) {
       if (obj[k] !== undefined) this.set(k, obj[k]);
       if (obj.schedules?.[k]) this.setSchedule(k, obj.schedules[k]);
+    }
+    if (Array.isArray(obj.sources)) for (const s of obj.sources) this.setSource(s);
+  }
+
+  /** Replace this world's whole state with `obj` (a toJSON() result). */
+  replaceWith (obj) {
+    const fresh = World.fromJSON(obj);
+    for (const k of WORLD_KEYS) {
+      const sched = fresh.getSchedule(k);
+      if (sched) this.setSchedule(k, sched);
+      else this.set(k, fresh.get(k));
+    }
+    for (const id of [...this._sources.keys()]) if (!fresh._sources.has(id)) this.removeSource(id);
+    for (const s of fresh.getSources()) {
+      const old = this._sources.get(s.id);
+      if (!old || JSON.stringify(old) !== JSON.stringify(s)) this.setSource(s);
     }
   }
 
@@ -192,6 +261,52 @@ export class World {
 }
 
 export function createWorld (init) { return new World(init); }
+
+// ─── Sources and falloff (step 2) ──────────────────────────────────────────
+
+/**
+ * Source kinds: which world key each perturbs and in which direction.
+ * `strength` is in the key's unit — °C for heater/fan, lx for a lamp, dB SPL
+ * for a sound source — and is the full effect at or inside `radius`.
+ */
+export const SOURCE_KINDS = Object.freeze({
+  heater: { key: 'temperatureC', sign: +1, defaultStrength: 10 },
+  fan: { key: 'temperatureC', sign: -1, defaultStrength: 3 },
+  lamp: { key: 'lightLux', sign: +1, defaultStrength: 500 },
+  sound: { key: 'soundDb', sign: +1, defaultStrength: 80 },
+});
+
+/** Reference distance in bench (designer layout) units: inside it a source
+ *  acts at full strength. 100 units ≈ one part's width in the designer. */
+export const REFERENCE_DISTANCE = 100;
+
+/**
+ * Inverse-square falloff, clamped: 1 at or inside `radius`, (radius/d)² beyond.
+ * Clamping keeps a sensor sitting on a source finite.
+ */
+export function falloff (d, radius = REFERENCE_DISTANCE) {
+  if (!(d > radius)) return 1;
+  return (radius / d) ** 2;
+}
+
+/**
+ * @typedef {{id: string, kind: 'heater'|'fan'|'lamp'|'sound', x: number, y: number,
+ *   strength: number, on: boolean, radius: number}} WorldSource
+ */
+function normaliseSource (src) {
+  if (!src || typeof src !== 'object') throw new Error('source must be an object');
+  const id = String(src.id ?? '');
+  if (!id) throw new Error('source needs an id');
+  const kind = SOURCE_KINDS[src.kind];
+  if (!kind) throw new Error(`unknown source kind: ${src.kind}`);
+  const x = Number(src.x), y = Number(src.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('source needs a finite x and y');
+  const strength = src.strength === undefined ? kind.defaultStrength : Number(src.strength);
+  if (!Number.isFinite(strength) || strength < 0) throw new Error('source strength must be finite and ≥ 0');
+  const radius = src.radius === undefined ? REFERENCE_DISTANCE : Number(src.radius);
+  if (!Number.isFinite(radius) || radius <= 0) throw new Error('source radius must be finite and > 0');
+  return { id, kind: src.kind, x, y, strength, on: src.on !== false, radius };
+}
 
 // ─── Sensor defaults ─────────────────────────────────────────────────────
 
@@ -245,7 +360,8 @@ export function worldDefault (part, param) {
   const world = host?.world;
   if (!world) return undefined;
   const tSec = typeof host.timeNs === 'bigint' ? Number(host.timeNs) / 1e9 : 0;
-  const v = world.get(b.key, tSec);
+  const pos = typeof host.partBenchPosition === 'function' ? host.partBenchPosition(part) : null;
+  const v = pos ? world.getAt(b.key, pos.x, pos.y, tSec) : world.get(b.key, tSec);
   if (v === null || v === undefined) return undefined;
   return b.convert ? b.convert(v) : v;
 }

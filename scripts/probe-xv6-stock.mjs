@@ -17,6 +17,9 @@ import {createI80386NativeSuccessorCensus} from
 import {createI80386CrossModePotentialTraceObserver} from
   '../src/experimental/i80386-cross-mode-potential-trace-observer.js';
 
+const debugGuestEnabled=process.env.XV6_DEBUG_GUEST==='1';
+if(process.env.XV6_DEBUG_GUEST!==undefined&&!['0','1'].includes(process.env.XV6_DEBUG_GUEST))throw Error('XV6_DEBUG_GUEST must be0or1');
+if(debugGuestEnabled&&!process.env.XV6_DEBUG_GUEST_OUTPUT)throw Error('debug observer output required');
 const firmware = process.env.XV6_FIRMWARE ?? 'ibm';
 if (!['ibm', 'bochs'].includes(firmware)) throw new Error('XV6_FIRMWARE must be ibm or bochs');
 const romPath = process.env.XV6_ROM ?? (firmware === 'bochs' ?
@@ -193,7 +196,11 @@ machine._read386 = address => {
     lapicIdReads.push({step: steps, address, value: read386(address)});
   return read386(address);
 };
+const debugGuest=debugGuestEnabled?(await import('./i80386-debug-guest/observer.mjs')).createDebugGuestObserver(machine):null;
+let debugGuestPrimary=null;
+try {
 for (; steps < stepsLimit; steps++) {
+  debugGuest?.before(steps);
   code16Coverage?.observe(machine);
   broadBlockCensus?.observe(machine);
   hotLoopLocator?.observe(machine);
@@ -261,7 +268,7 @@ for (; steps < stepsLimit; steps++) {
             result.reason === 'fault-boundary') nativeBlocks.delete(key);
       }
     }
-    if (advanced === 0) {machine.step();code16Coverage?.retired(machine);
+    if (advanced === 0) {machine.step();debugGuest?.retired(steps);code16Coverage?.retired(machine);
       broadBlockCensus?.retired(machine);hotLoopLocator?.retired(machine);
       expandedObserver?.retired(machine);
       advanced=1;}
@@ -278,6 +285,9 @@ for (; steps < stepsLimit; steps++) {
     throw error;
   }
   if (stopOnExpected && expectedObserved) { steps++; break; }
+}
+} catch(error) {debugGuestPrimary=error;throw error;} finally {
+  if(debugGuest){try{debugGuest.finish();fs.writeFileSync(process.env.XV6_DEBUG_GUEST_OUTPUT,debugGuest.report(),{flag:'wx'});}catch(error){if(debugGuestPrimary===null)throw error;}}
 }
 restoreCode16Interrupts?.();
 restoreBroadBlockFetch?.();
