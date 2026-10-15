@@ -1,5 +1,17 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-15 current circuit campaign documentation — CLAIM, Codex bwcx.
+Branch docs/circuit-instrument-campaign-20261015; exact base
+0f6f6b1f7d8fb790ce1f66c6c41db2342b3619b0. Documentation-only envelope:
+this ledger, README.md, PLAN.md and ROADMAP.md. Correct obsolete current-status
+counts and copy-era consumer architecture; mark the old roadmap index as a
+historical survey, not proof every item remains open. Link the ordered CUI
+circuit/instrument campaign and its model/consumer/evidence boundaries.
+Preserve historical results and all active x86/target/shared-world contracts.
+No source, test, workflow, dependency, pin, model/default or runtime change.
+Publish claim before documentation implementation; verify exact base from Git
+and qualify the final Markdown-only candidate before normal matched-head merge.
+
 2026-10-15 stm32g0 RCC_APBENR2 (offset 0x40) — CLAIM, VPS Claude (opus).
 Branch fix/g0-rcc-apbenr2-20261015, exact base 4023f77f; worktree [local path omitted].
 Owns this row plus: the Stm32Rcc class in src/stm32f0-board.js (APBENR2 read/write at 0x40;
