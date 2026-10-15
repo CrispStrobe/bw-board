@@ -1,3 +1,18 @@
+2026-10-15 labwired F030 clock tree (RCC/FLASH on the heavy tier) — CLAIM, VPS Claude (opus).
+Branch lane/labwired-f030-clock-20261015, base 3e9429f2. Root cause: the labwired-tier F030
+chip description maps RCC as a zero-reading `pythonperipheral` stub and has no FLASH controller,
+so generated `bw_clock_init` (FLASH_ACR = 0x11, PLL ×12 from HSI/2, wait PLLRDY, SW = PLL, wait
+SWS) faults on the unmapped FLASH_ACR store and could never see PLLRDY. Owns this row plus the
+`rcc` entry and a new `flash_ctrl` entry in STM32F0_CHIP_YAML (src/labwired-chips.js) and its
+byte-equal copy test/fixtures/labwired/stm32f0-chip.yaml, and a new focused real-engine test
+test/labwired-f0-clock.test.mjs (PLL bring-up then a PA0 toggle, assembled guest). FLASH uses
+the engine's `flash` model, `stm32f1` profile (RM0360 §3.5 FLASH map = RM0008: ACR LATENCY,
+PRFTBE → PRFTBS). RCC uses the engine's `rcc` model: `stm32f0` profile (labwired-core PR) once
+the engine PIN carries it; until then `stm32f1`, whose CR/CFGR/CIR/RSTR/BDCR/CSR map and
+ready/SWS gating are RM0360-identical but whose ENR masks drop F0 IOPxEN read-back and which has
+no CR2/CFGR3 — stated in the yaml, not hidden. No adapter, GPIO, UART, timer, PIN or workflow
+change; existing labwired suites unchanged; G0 has no labwired path here.
+
 2026-10-15 A10 nRF52 UARTE engine adoption — CLAIMED, Codex.
 Branch lane/a10-uarte-engine-adoption-20261015, base 54efdfc4.
 Successor to the published labwired-wasm-d523df44 engine: after the owning
