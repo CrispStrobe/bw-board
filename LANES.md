@@ -5080,6 +5080,20 @@ no host shell, arbitrary autoexec, CD/ISO or whole-DOSBox compatibility claim.
 See the [contract](docs/X86-NEXT-LANES.md#bounded-dos-package-admission).
 
 
+## Owned LE keyboard challenge/response — 2026-10-15
+
+Status: CLAIM — Codex x86; source implementation and actual qualification pending.
+
+Own only `scripts/i80386-dos32a-input/build.py`, `scripts/i80386-dos32a-input/controls.py`, `scripts/i80386-dos32a-input/source.py`, `scripts/i80386-dos32a-input/probe.mjs`, `scripts/i80386-dos32a-input/oracle.py`, `scripts/i80386-dos32a-input/reader.py`, `scripts/i80386-dos32a-input/README.md`, `test/i80386-dos32a-input.test.mjs`, `.github/workflows/i80386-dos32a-input.yml`. No CPU/device, old LE namespace, media pin or existing workflow changes.
+
+One new owned 32-bit LE client consumes a real keyboard key after an observed, completed, unredirected `BW-LE-INPUT-READY` boundary. Fixed inputs are lowercase `a` and `b`; compute unsigned `(key * 0x01010101) ^ 0x5A5A5A5A` and retain `RESULT.BIN` as key byte plus little-endian result: `613b3b3b3b` and `6238383838`. The file must be absent initially. Check DOS create/write-count/close failures and return nonzero on failure; require zero exit before a separate shell verification command and fresh return marker/current prompt. Do not redirect readiness, stuff DOS buffers, mutate guest memory, or credit key acceptance alone.
+
+Use four fresh serial executions: target/a, QEMU/a, target/b, QEMU/b, with identical newly authored client and initial media. Target evidence binds PE, CS.D and authenticated owned linear code at entry, consumption and response; do not demand an owned PC while DOS services are blocked. QEMU retains independent readiness VGA snapshots, QMP key events, disk result bytes and process outcomes; historical `pc`/`-cpu 486` is a 386-class compatibility oracle, not strict 386DX or matching architectural-state evidence. Compare exact result/exit/return files per input, not whole disks or clocks. Preserve ordinary target `machine.step` scheduling.
+
+Freeze current Git/live import and data closure, generator/client hashes, independent arithmetic/encoding goldens, Node/QEMU/runtime observations, fixed FreeDOS/DOS32A/firmware identities and notices before execution. Preserve DOS/32 Advanced custom-license acknowledgement and firmware obligations; no new media bundling or blanket redistribution clearance. Reuse immutable public helpers only through exact reviewed identities; historical LE pins and results stay unchanged. Require independent original-byte reader checks, including wrong/stale/pre-ready input, missing release/consume, wrong mode/code, reused or identical responses, preexisting files, nonzero exit, stale prompt, missing shell return, QEMU substitution, source/media drift, missing roles and cleanup failures. Semantic mutants must be rehashed rather than rejected only by stale hashes.
+
+Source preparation and tiny manufactured controls precede exact-source CI and independently reviewed reader/source admission. A later separately admitted hosted execution uses four serial children, each bounded to 600 seconds (target additionally 120 million ordinary step calls), one CPU and 1 GiB/no swap, with an enclosing 2500-second controller and 45-minute job. Freeze exact caps, interleaving, readiness/input policy and owned cleanup before launch; no retries selected for a passing outcome. No performance, mouse/IRQ fidelity, DPMI, full OS, physical timing or installed GUI qualification follows from this finite scenario.
+
 ## Explicit 386 physical-memory capability metadata — 2026-10-15
 
 CLAIM — Codex x86; docs-only ownership preparation. Implementation waits for
