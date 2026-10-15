@@ -413,7 +413,7 @@ def run_packet(session,expected_head,media_review):
  def retain(error):
   nonlocal first
   if first is None:first=error
-  else:secondary.append(str(error))
+  elif error is not first:secondary.append(str(error))
  try:
   need(source_after(source)==source,'source-preflight');before=runtime_inventory(session,provenance(expected_head));json_new('originals/runtime-before.json',before)
   resource_observation();json_new('originals/media-before.json',media_inventory('before'))
@@ -424,7 +424,15 @@ def run_packet(session,expected_head,media_review):
   for child in(1,2):
    need(time.monotonic()<deadline,'outer-wall-limit');need(runtime_inventory(session,before['provenance'])==before,'runtime-before-child-drift')
    argv=['runtime/bin/node','source/scripts/run-i80386-at-console.mjs','--hdd-image','inputs/initial.img'if child==1 else'outputs/first.img','--geometry','306,4,17','--floppy-image','inputs/floppy.img','--steps','120000000','--live','--hdd-output','outputs/first.img'if child==1 else'outputs/second.img']
-   captured=run_session(argv,session,child,deadline);save_child(captured,child)
+   captured=run_session(argv,session,child,deadline)
+   # Capture failure predates any artifact copy/admission failure. Retain it
+   # before fallible saves, and never launch a successor after uncertainty.
+   failure=captured['lifecycle']['primaryFailure']
+   if failure is not None:retain(Refusal(failure))
+   secondary.extend(captured['lifecycle']['secondaryFailures'])
+   try:save_child(captured,child)
+   except BaseException as error:retain(error)
+   if first is not None:raise first
    node=before['rows'][0];identity=captured['lifecycle']['ownedProcessIdentity'];need(identity is not None and identity['exeSha256']==node['sha256']and identity['exeByteLength']==node['byteLength']and identity['exeRealpath']==node['realpath'],'owned-runtime-join')
    report=strict_json(regular_bytes(f'originals/child{child}/report.json',4194304));validate_session(captured,report,source,mapping,child);passed[child-1]=True
    if child==1:json_new('originals/media-between.json',media_inventory('between'))

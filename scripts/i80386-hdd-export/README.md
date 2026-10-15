@@ -2,8 +2,9 @@
 
 This source prepares two fresh CLI sessions using the existing ordinary AT
 console. The first writes `bw-hdd-persist-ok` to `C:\BWKEEP.TXT`, reads it, and
-quits explicitly. The second boots the first detached export, reads the marker,
-and exports a second readback. Both use the fixed free boot floppy and an
+quits explicitly. The second starts a fresh process, boots the same free floppy, attaches the
+first export as its master HDD, reads the marker, and exports a second readback.
+This does not qualify booting from the HDD. Both use that fixed boot floppy and an
 independently authored 10,653,696-byte FAT16 master disk.
 
 The 120-million machine-step-call limit, 600-second child limits, and 1.5-million
