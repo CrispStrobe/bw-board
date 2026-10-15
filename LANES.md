@@ -5104,4 +5104,3 @@ execute the exact queue with a bounded slow receiver, not a BIOS timing model.
 New-source checks and a separately admitted corrected-source guest run are
 required before a persistence claim; do not rerun the failed immutable source
 or alter its results.
-

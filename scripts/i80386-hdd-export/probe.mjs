@@ -19,7 +19,7 @@ const git=(...a)=>execFileSync('/usr/bin/git',['-C',root,...a],{encoding:'utf8',
 need(git('rev-parse','HEAD')===expectedHead&&!git('status','--porcelain'),'exact clean source');
 const consolePath='scripts/run-i80386-at-console.mjs';
 const consoleSource=fs.readFileSync(path.join(root,consolePath),'utf8');
-need(sha(Buffer.from(consoleSource))==='2258a62e920ac5c74ced1991e5709b53507c241afd29c27751137309bc300d70','reviewed floppy console bytes');
+need(sha(Buffer.from(consoleSource))==='4133b304490b84efd13e85738e9e2c9b490446cde7a06e96e2624df07a399c65','reviewed floppy console bytes');
 const match=consoleSource.match(/const sourcePaths=\[([\s\S]*?)\];/);need(match,'console source seeds');
 const seeds=[...match[1].matchAll(/'([^']+)'/g)].map(m=>m[1]);
 need(match[1].replace(/'[^']+'/g,'').replace(/[\s,]/g,'')==='','literal source seed grammar');
