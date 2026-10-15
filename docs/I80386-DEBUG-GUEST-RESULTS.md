@@ -6,8 +6,9 @@ succeeded on `bc3d0d3514098b97290fccb54993d24587a491da`. Original artifact,
 metadata, source and finite event joins passed independent review. The
 [source debugger PR599](https://github.com/CrispStrobe/bw-board/pull/599) and
 [qualification harness PR607](https://github.com/CrispStrobe/bw-board/pull/607)
-remain Draft with CI pending. This is an observed fixture checkpoint, not runtime
-adoption or installed GUI qualification.
+are respectively READY for review and Draft. Fresh required READY-transition
+CI is pending for PR599; combined adoption review remains pending. This is an
+observed fixture checkpoint, not runtime adoption or installed GUI qualification.
 
 The unchanged pinned MIT xv6 4 MiB build and redistributable Bochs BIOS/VGA ran
 through ordinary `machine.step`, once as control and once with the dedicated

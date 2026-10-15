@@ -1918,7 +1918,8 @@ Observed checkpoint: the sole corrected-source [run38716662156](https://github.c
 passed original-byte review: byte-identical MIT xv6 control/subscribed reports,
 64 consecutive retirements including five actual protected 32-bit ring-3
 instructions, and 206 physical memory facts. See the [finite result](I80386-DEBUG-GUEST-RESULTS.md).
-PR599 and PR607 remain Draft with CI pending; this does not adopt the runtime or
+PR599 is READY and PR607 remains Draft; fresh required READY-transition CI and
+combined adoption review are pending. This does not adopt the runtime or
 qualify an installed GUI, actual IRQ-event window, checkpoint replay or timing.
 
 Status: ownership claim602 merged; source is published in Draft PR607. The
