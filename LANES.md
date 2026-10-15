@@ -31,6 +31,12 @@ suite and enabled final-head checks before canonical publication/integration.
 Keep the STM32 fidelity lane's fixed-clock option, CPU/peripheral behavior,
 RAM reset policy and unrelated owners intact. No threshold relaxation,
 source-pin substitution, repeat original dispatch or local engine/guest run.
+Prepared correction: all four freestanding guests now enter a BSS-clearing
+reset routine; serial guests configure PA9 AF1, BRR, UE/TE and wait for TXE.
+All board drivers and runtime assertions remain byte-identical. Ten admission
+controls, original metadata/file controls, guest compilation/vector checks and
+workflow lint pass. Actual fresh hosted full-suite qualification is pending;
+the original 121-pass/two-failure campaign is never relabelled successful.
 
 2026-10-15 A10 nRF52 UARTE engine adoption — CLAIMED, Codex.
 Branch lane/a10-uarte-engine-adoption-20261015, base 54efdfc4.
@@ -49,6 +55,23 @@ guest against the actual release engine, unchanged existing engine tests,
 independent BUILD-INFO/source/hash admission and enabled final-head checks.
 The core source and compiled native guest remain separately qualified; engine
 publication alone does not qualify the Lite consumer or physical timing.
+Preparation: the source/linker/ELF-bound guest and actual-engine UART/counter
+assertions are ready, with the existing release suite extended by two tests
+and its floor increased from 116 to 118. Fixture provenance passes; an altered
+ELF is refused. The real-engine case is explicitly skipped locally because
+no candidate engine is available. The original missing-dependency probe is
+retained; lazy factory loading isolates the independent provenance check.
+Core PR244 landed as `6a769a59694ec8920de559f9e3fffa2f5375ac6b` after all
+27 enabled checks passed, including feature-off and scheduler stack-reuse guests.
+The producer PIN and canonical catalog identity now select that exact source;
+all offered chip/board descriptor bytes are unchanged. The fixture source and
+linker match the landed source, but its separately compiled ELF must qualify
+against the rebuilt release engine. The original core policy/drift failures
+remain recorded; no thresholds, capture records or acknowledgement dates moved.
+The two-build release qualification and all enabled adoption checks are pending.
+No released-engine or consumer result is claimed yet.
+Adoption review: https://github.com/CrispStrobe/bw-board/pull/621. The producer
+source is the verified landed merge of https://github.com/CrispStrobe/labwired-core/pull/244.
 
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
