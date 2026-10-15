@@ -1,3 +1,21 @@
+2026-10-15 A10 interrupt-chain engine follow-up — CLAIMED, Codex.
+Branch lane/a10-uarte-irq-engine-20261015. The published first engine remains
+qualified for its 123-test suite, but Lite PR988's actual compiled V2 CLI and
+browser serial assertions failed. Core follow-up PR247 separates ENDTX from
+an unsolicited TXSTOPPED event; preserve the original release and failures.
+Own this row, the next explicit qualified core PIN in
+scripts/build-labwired-wasm.mjs, canonical generated catalog/chip source
+identities as needed, test/labwired-uarte-stack.test.mjs, and a separately
+source-bound original MIT IRQ-chain fixture under test/fixtures/labwired/uarte-irq/.
+The new engine test must require all ordered bytes, zero unsolicited stops,
+and the final explicitly requested stop. Keep all existing runtime assertions.
+Do not build or dispatch before the affected core guest qualifies and its exact
+source is admitted. Then two fresh independent builds, determinism, the full
+non-skipped release suite and all enabled producer checks precede publication.
+Do not reuse the first engine for changed core source or repeat any existing
+campaign. No adapter API, STM32 owner source, workflow, dependency or threshold
+change is included. The other owner's core5e replacement run remains untouched.
+
 2026-10-15 labwired F030 clock tree (RCC/FLASH on the heavy tier) — CLAIM, VPS Claude (opus).
 Branch lane/labwired-f030-clock-20261015, base 3e9429f2. Root cause: the labwired-tier F030
 chip description maps RCC as a zero-reading `pythonperipheral` stub and has no FLASH controller,
