@@ -2038,3 +2038,17 @@ validation. Partial or malformed explicit metadata fails closed rather than
 falling back to an editable 64 KiB window.
 The later installed free-guest journey must use the qualified supplier revision;
 this claim moves no app pin or lockfile and grants no GUI or full-OS qualification.
+
+## Adopted literal-mask operational throughput observation
+
+The sole [operational run38711737457](https://github.com/CrispStrobe/bw-board/actions/runs/38711737457)
+on merged `bfe99d562e9b57a819ec92025faafba271b8751c` passed original-byte review.
+Its [four-path checkpoint](X86-RTX-PLATFORMS.md#adopted-literal-mask-operational-checkpoint--2026-10-15)
+records Node 22.23.3 on EPYC 7763: 386 core 6.486167 million instructions/s and
+AT machine 2.662167 million instructions/s. Configured factors 0.405385423 and
+0.998312612 use synthetic one/six-cycle charges, not physical timing. Hardware
+differs from the older operational run; no gain/regression ratio follows.
+This does not replace the separate paired gate or qualify an installed app.
+Continue current source-owned debugger and media acceptance before consumer
+adoption; future optimization hypotheses require current evidence or a
+predeclared representative AT paired non-regression control.
