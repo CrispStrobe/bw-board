@@ -2004,7 +2004,7 @@ mode-aware disassembly, whole-OS compatibility, performance or physical RTx.
 
 ## Explicit raw HDD export and reload
 
-Reached source checkpoint: detached Buffer/subarray ownership
+Reached source and finite CLI checkpoint: detached Buffer/subarray ownership
 [PR612](https://github.com/CrispStrobe/bw-board/pull/612) merged at `3ab0ac59`,
 the synchronous master-only idle-copy helper
 [PR616](https://github.com/CrispStrobe/bw-board/pull/616) at `27f69c31`, and
@@ -2031,13 +2031,16 @@ and first errors, and reports input and stored-output identities separately.
 Retain existing/symlink/same-input refusal and partial-file failure behavior;
 no autosave or implicit writeback. A stopped budget or user quit plus a verified
 copy is not guest completion or filesystem-flush evidence. Existing historical
-write/readback receipts keep their original scope. Actual free-OS guest-write,
-close, export and fresh-CLI reload, and installed-GUI download/chooser reload,
-remain unfinished acceptance work under the existing ownership envelope.
+write/readback receipts keep their original scope. The separately admitted
+[run38806122785 result](I80386-HDD-PERSISTENCE-RESULTS.md) now qualifies the finite
+guest-write/close/export/fresh-CLI readback route. [PR625](https://github.com/CrispStrobe/bw-board/pull/625)
+merged at `cb5058e5` after all nine enabled checks passed, with all 87 tested
+source rows retained. Coordinated supplier adoption and genuine installed-GUI
+download/chooser reload remain the next consumer gates.
 
 Meaningful controls cover Buffer/subarray aliasing, absent/busy media, copy
 bounds, CHS mismatch, existing destination, symlink and same-input refusal.
-A new bounded hosted scenario uses unchanged freely licensed firmware/guest
+The qualified bounded hosted scenario uses unchanged freely licensed firmware/guest
 inputs and an authored marker: guest writes and closes a file, reaches a
 safe observable boundary, exports, then a fresh machine with that exact raw
 image and geometry reads the marker. Bind original input unchanged, exported
@@ -2058,10 +2061,11 @@ The ownership extension merged in [PR622](https://github.com/CrispStrobe/bw-boar
 before implementation. The new [helper guide](../scripts/i80386-hdd-export/README.md)
 describes the implemented runner, directory consistency mode, original-artifact
 admission mode and fixed free input policy. Local manufactured byte and mock-PTY
-controls pass; hosted helper qualification and the actual guest write/export/
-fresh-process reload remain pending.
+controls and hosted helper qualification passed. Root and independent original
+reviews admitted the sole corrected guest write/export/fresh-process reload;
+the first failed run and all raw flags remain preserved.
 
-Freeze two fresh ordinary CLI processes: an admitted free boot floppy plus
+Preserve the qualified two-process recipe: an admitted free boot floppy plus
 required authored master data disk, then that same floppy with the exact
 exported master. The first writes and closes a new marker, observes its contents
 and a later prompt, then creates an exclusive verified HDD output. The second
@@ -2121,6 +2125,18 @@ path plus firmware and guest support before a picker can promise it. An ISO
 extension or renamed raw HDD cannot supply that implementation. A future ISO
 lane needs separately merged ownership and authored/free acceptance fixtures.
 
+
+## Owned LE keyboard challenge/response
+
+Proposed finite successor to [the owned LE result](I80386-DOS32A-OWNED-LE-RESULTS.md), with new source ownership in `scripts/i80386-dos32a-input/`, `test/i80386-dos32a-input.test.mjs` and `.github/workflows/i80386-dos32a-input.yml`. Implementation waits for this claim to merge.
+
+One new owned 32-bit LE client consumes a real keyboard key after an observed, completed, unredirected `BW-LE-INPUT-READY` boundary. Fixed inputs are lowercase `a` and `b`; compute unsigned `(key * 0x01010101) ^ 0x5A5A5A5A` and retain `RESULT.BIN` as key byte plus little-endian result: `613b3b3b3b` and `6238383838`. The file must be absent initially. Check DOS create/write-count/close failures and return nonzero on failure; require zero exit before a separate shell verification command and fresh return marker/current prompt. Do not redirect readiness, stuff DOS buffers, mutate guest memory, or credit key acceptance alone.
+
+Use four fresh serial executions: target/a, QEMU/a, target/b, QEMU/b, with identical newly authored client and initial media. Target evidence binds PE, CS.D and authenticated owned linear code at entry, consumption and response; do not demand an owned PC while DOS services are blocked. QEMU retains independent readiness VGA snapshots, QMP key events, disk result bytes and process outcomes; historical `pc`/`-cpu 486` is a 386-class compatibility oracle, not strict 386DX or matching architectural-state evidence. Compare exact result/exit/return files per input, not whole disks or clocks. Preserve ordinary target `machine.step` scheduling.
+
+Freeze current Git/live import and data closure, generator/client hashes, independent arithmetic/encoding goldens, Node/QEMU/runtime observations, fixed FreeDOS/DOS32A/firmware identities and notices before execution. Preserve DOS/32 Advanced custom-license acknowledgement and firmware obligations; no new media bundling or blanket redistribution clearance. Reuse immutable public helpers only through exact reviewed identities; historical LE pins and results stay unchanged. Require independent original-byte reader checks, including wrong/stale/pre-ready input, missing release/consume, wrong mode/code, reused or identical responses, preexisting files, nonzero exit, stale prompt, missing shell return, QEMU substitution, source/media drift, missing roles and cleanup failures. Semantic mutants must be rehashed rather than rejected only by stale hashes.
+
+Source preparation and tiny manufactured controls precede exact-source CI and independently reviewed reader/source admission. A later separately admitted hosted execution uses four serial children, each bounded to 600 seconds (target additionally 120 million ordinary step calls), one CPU and 1 GiB/no swap, with an enclosing 2500-second controller and 45-minute job. Freeze exact caps, interleaving, readiness/input policy and owned cleanup before launch; no retries selected for a passing outcome. No performance, mouse/IRQ fidelity, DPMI, full OS, physical timing or installed GUI qualification follows from this finite scenario.
 
 ## Explicit 386 physical-memory capability metadata
 
@@ -2240,8 +2256,10 @@ input policy in the CLI step domain, not a physical keyboard timing calibration.
 Authored controls execute the actual input queue and demonstrate the old burst
 policy losing bytes with a bounded slow receiver, then the paced policy keeping
 all bytes in order. That receiver is not a BIOS model. The original guest
-failure remains authoritative; the cause is a pacing hypothesis until a new
-qualified-source run reaches the complete command, TYPE response, explicit quit,
-export and fresh-process readback. Preserve the same marker, geometry, input
+failure remains authoritative. The separately reviewed
+[corrected-source run38806122785](I80386-HDD-PERSISTENCE-RESULTS.md) reached the
+complete command, TYPE response, explicit quit, export and fresh-process readback.
+Its success does not prove the suspected BIOS/queue-overrun cause. Preserve
+the same marker, geometry, input
 hashes, resource limits, causal reader and step budget; do not weaken acceptance
 or claim a speedup from this change.
