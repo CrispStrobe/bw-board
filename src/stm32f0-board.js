@@ -890,6 +890,13 @@ export class Stm32G0Adc extends Stm32Adc {
   }
 
   write (off, v) {
+    if (off === 0x28) {
+      // CHSELR: the new channel configuration is applied, then CCRDY (ISR bit 13)
+      // reports it (RM0444 §15.5.1); firmware polls it before ADSTART.
+      super.write(off, v);
+      if (this.rcc.adcEnabled()) this.isr |= 1 << 13;
+      return;
+    }
     if (off !== 0x08) { super.write(off, v); return; }
     if (!this._enabled()) return;
     v >>>= 0;

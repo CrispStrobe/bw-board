@@ -274,6 +274,26 @@ describe('STM32G030 ADC (RM0444 §15.3)', () => {
     assert.equal(g.r(ADC + 0x00) & 1, 1, 'ADRDY after tADCVREG_STUP');
   });
 
+  it('CCRDY after a CHSELR write; ADCAL completes (self-clears, EOCAL) once the regulator settled', () => {
+    const g = adcOn();
+    g.w(ADC + 0x28, 1 << 3);
+    assert.ok(g.r(ADC + 0x00) & (1 << 13), 'CCRDY');
+    g.w(ADC + 0x00, 1 << 13);
+    assert.equal(g.r(ADC + 0x00) & (1 << 13), 0, 'CCRDY is rc_w1');
+    g.w(ADC + 0x08, 1 << 28); g.m.tickNs(25_000);
+    g.w(ADC + 0x08, (1 << 28) | (1 << 31));
+    assert.equal(g.r(ADC + 0x08) & (1 << 31), 0, 'ADCAL cleared');
+    assert.ok(g.r(ADC + 0x00) & (1 << 11), 'EOCAL');
+  });
+
+  it('FLASH_ACR reads back LATENCY (G0 poll) and F0 PRFTBS mirrors PRFTBE; mapped, not unmapped', () => {
+    const g = rig('g0'); g.w(FLASH_ACR, (g.r(FLASH_ACR) & ~7) | 2);
+    assert.equal(g.r(FLASH_ACR) & 7, 2);
+    const f = rig('f0'); f.w(FLASH_ACR, 0x11);
+    assert.equal(f.r(FLASH_ACR), 0x31);
+    assert.deepEqual([...g.m.unmapped, ...f.m.unmapped], []);
+  });
+
   it('no conversion without ADRDY', () => {
     const g = adcOn({ onAnalogRead: () => 3.3 });
     g.w(ADC + 0x28, 1);
