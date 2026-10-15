@@ -25,7 +25,7 @@ import {createI80386CrossModePotentialTraceObserver} from '../src/experimental/i
 import {createI80386HotLoopLocator} from '../src/experimental/i80386-hot-loop-locator.js';
 import {enableI80386Code16LoadExecution} from '../src/experimental/i80386-code16-load-exec.js';
 
-const options={hddOutput:null,conf:process.env.AT_DOSBOX_CONF??null,hdd:process.env.AT_HDD_IMAGE??null,
+const options={floppy:process.env.AT_FLOPPY_IMAGE??null,hddOutput:null,conf:process.env.AT_DOSBOX_CONF??null,hdd:process.env.AT_HDD_IMAGE??null,
   geometry:process.env.AT_HDD_GEOMETRY??null,live:process.env.AT_CONSOLE_LIVE==='1',
   nativeBlocks:process.env.AT_NATIVE_BLOCKS==='1',
   code16Loads:process.env.AT_CODE16_LOADS==='1',
@@ -34,7 +34,7 @@ const options={hddOutput:null,conf:process.env.AT_DOSBOX_CONF??null,hdd:process.
 for(let index=0;index<process.argv.length-2;index++) {
   const option=process.argv[index+2];
   if(option==='--help') {
-    process.stdout.write('usage: run-i80386-at-console.mjs [--dosbox-conf FILE] [--hdd-image FILE --geometry C,H,S] [--steps N] [--hdd-output FILE] [--live] [--native-blocks] [--code16-wasm]\n');
+    process.stdout.write('usage: run-i80386-at-console.mjs [--dosbox-conf FILE] [--hdd-image FILE --geometry C,H,S] [--steps N] [--hdd-output FILE] [--floppy-image FILE] [--live] [--native-blocks] [--code16-wasm]\n');
     process.exit(0);
   }
   if(option==='--live'){options.live=true;continue;}
@@ -47,6 +47,7 @@ for(let index=0;index<process.argv.length-2;index++) {
   else if(option==='--geometry')options.geometry=value;
   else if(option==='--steps')options.steps=value;
   else if(option==='--hdd-output')options.hddOutput=value;
+  else if(option==='--floppy-image')options.floppy=value;
   else throw new Error(`unknown option ${option}`);
 }
 if(options.hddOutput&&(options.nativeBlocks||options.code16Loads||options.code16Wasm))
@@ -65,6 +66,33 @@ const readPinned=(pathName,hashName,pathOverride=null)=>{
     throw new Error(`${pathName} does not match ${hashName}`);
   return {bytes,sha256:expected};
 };
+// Floppy admission is bounded before allocation; symlink input policy matches other pinned inputs.
+function readPinnedFloppy(path,expected) {
+  let fd=null,primary=null,result=null;
+  try {
+    if(typeof expected!=='string'||!/^[a-fA-F0-9]{64}$/.test(expected))
+      throw new Error('AT_FLOPPY_SHA256 is required and must be SHA-256');
+    fd=fs.openSync(path,fs.constants.O_RDONLY);
+    const initial=fs.fstatSync(fd),length=initial.size;
+    if(!initial.isFile()||![368640,1228800].includes(length))
+      throw new Error('floppy must be a 360 KiB or 1.2 MiB raw regular image');
+    const bytes=Buffer.alloc(length);let offset=0;
+    while(offset<length) {
+      const count=fs.readSync(fd,bytes,offset,length-offset,offset);
+      if(!Number.isInteger(count)||count<=0||count>length-offset)throw new Error('floppy input incomplete');
+      offset+=count;
+    }
+    const extra=Buffer.alloc(1);
+    if(fs.readSync(fd,extra,0,1,length)!==0||fs.fstatSync(fd).size!==length)
+      throw new Error('floppy input extent changed');
+    const digest=sha(bytes);
+    if(digest!==expected.toLowerCase())throw new Error('AT_FLOPPY_IMAGE does not match AT_FLOPPY_SHA256');
+    result={bytes,sha256:digest};
+  } catch(error){primary=error;}
+  finally{if(fd!==null){const owned=fd;fd=null;try{fs.closeSync(owned);}catch(error){if(primary===null)primary=error;}}}
+  if(primary!==null)throw primary;
+  return result;
+}
 // Exact raw-byte output, not atomic publication. Failed partial files remain.
 function writeHddOutput(path,captured) {
   let fd=null,primary=null,result=null;
@@ -102,6 +130,11 @@ function writeHddOutput(path,captured) {
 const bios=readPinned('AT_BIOS_ROM','AT_BIOS_SHA256');
 const vga=readPinned('VGA_BIOS_ROM','VGA_BIOS_SHA256');
 const hdd=readPinned('AT_HDD_IMAGE','AT_HDD_SHA256',options.hdd);
+const floppy=options.floppy?readPinnedFloppy(options.floppy,process.env.AT_FLOPPY_SHA256):null;
+const floppyGeometry=floppy?(floppy.bytes.length===368640?
+  {cylinders:40,heads:2,sectors:9,bytesPerSector:512}:
+  floppy.bytes.length===1228800?{cylinders:80,heads:2,sectors:15,bytesPerSector:512}:null):null;
+if(floppy&&!floppyGeometry)throw new Error('floppy must be a 360 KiB or 1.2 MiB raw image');
 if(bios.bytes.length!==0x10000||vga.bytes.length<0x4000||vga.bytes.length>0x10000)
   throw new Error('expected a 64 KiB AT BIOS and 16–64 KiB VGA ROM');
 const geometry=options.geometry.split(/[x,:]/).map(Number);
@@ -209,7 +242,7 @@ profile.regions=profile.regions.map(region=>region.kind==='rom'&&region.start===
 const rtc=profile.chips.find(chip=>chip.kind==='rtc');
 const cmos=new Uint8Array(0x40);
 for(const[index,value]of rtc.initialCmos)cmos[index]=value;
-cmos[0x10]=0x20; // one 1.2 MB floppy, required by the IBM Rev1 POST
+cmos[0x10]=floppyGeometry?.cylinders===40?0x10:0x20; // preserve the existing no-image 1.2 MB POST setting
 cmos[0x12]=cmosType===2?0x20:0xf0;
 // PC-compatible firmware/Windows probe CMOS equipment bit 2 for PS/2 mouse.
 // Without it Windows never invokes the BIOS mouse service, even with an aux device.
@@ -288,6 +321,7 @@ const code16WasmDispatcher=options.code16Wasm?
 machine.loadRom(bios.bytes,0xf0000);
 machine.loadRom(bios.bytes);
 machine.loadRom(vga.bytes,0xc0000);
+if(floppy)machine.chips.fdc1.insert(0,new Uint8Array(floppy.bytes),floppyGeometry);
 machine.reset();
 let profileWindowSteps=0,profileWindowMask=0,profileLastMode=-1;
 let profileWindowModeSteps=[0,0,0,0];
@@ -505,6 +539,8 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   ...(crossModeTraceObserver?{crossModeTraceObserver:crossModeTraceObserver.report()}:{}),
   ...(hotLoopLocator?{hotLoopLocator:hotLoopLocator.report()}:{}),
   inputs:{bios:bios.sha256,vga:vga.sha256,hdd:hdd.sha256,geometry,cmosType,
+    ...(floppy?{floppy:{sha256:floppy.sha256,byteLength:floppy.bytes.length,
+      geometry:floppyGeometry,drive:0,cmosDriveType:cmos[0x10],bootOrder:cmos[0x3d]}}:{}),
     expandedGroupedAdmission,registerStackAdmission,
     nativeBlocks:options.nativeBlocks,
     code16Loads:options.code16Loads,
