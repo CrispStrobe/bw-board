@@ -259,7 +259,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
      * argument.
      */
     const debugEvents = installInstructionDebugEvents({
-        cpu, machine, cpuId, timeDomain: 'i8086-cycles', port: true,
+        cpu, machine, cpuId, timeDomain: architecture?.timeDomain ?? 'i8086-cycles', port: true,
         // REVIEWED AND FLIPPED 2026-09-11. This core's `reset()` ADVANCES the clock
         // — the backward moves are `loadState` and the explicit bump in
         // `restoreCheckpoint` — so the epoch it opens is a REWIND, never a reset.
@@ -275,7 +275,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         // this one.
         //
         // avr8js is still `'reset'` and still unreviewed; that is its session's.
-        rewindLabel: 'rewind',
+        rewindLabel: architecture?.rewindLabel ?? 'rewind',
         addressMask: architecture?.addressMax ?? 0xfffff,
         unsignedMemoryAddresses: architecture?.unsignedMemoryAddresses ?? false,
         // A write fact that says only what the address BECAME cannot tell a
@@ -286,7 +286,9 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         // extra read per write for it, and only while somebody is listening.
         captureWriteBefore: architecture?.captureWriteBefore ?? true,
         pcOf: architecture?.pcOf ?? (c => c.pc & 0xfffff),
-        clock: () => machine.cycles,
+        clock: architecture?.eventClock ?? (() => machine.cycles),
+        timeHz: architecture?.timeHz ?? (() => machine.clockHz),
+        sourceClockEpoch: architecture?.sharedEventClock ?? false,
         captureRegisters: architecture?.captureRegisters ?? (() => machine._architecturalRegisters()),
         captureInstruction: architecture?.captureInstruction ?? (address => ({
             address,
@@ -406,6 +408,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
      * silently — a log shorter than the run, with nothing to show for it.
      */
     const ownClock = (ticks = machine.cycles) => {
+        if (architecture?.sharedEventClock) return debugEvents.observeTime();
         if (ticks < lastEventTicks) eventTimeEpoch++;
         lastEventTicks = ticks;
         return {
@@ -976,6 +979,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         },
 
         debugTime() {
+            if (architecture?.sharedEventClock) return debugEvents.observeTime();
             return {
                 ticks: machine.cycles,
                 domain: eventDomain(),

@@ -35,6 +35,12 @@ export function captureI80386Registers(machine) {
 export function createI80386DebugTarget(adapter) {
     const machine = adapter.machine;
     const target = createI8086DebugTarget(adapter, {cpuId: 'i80386', debugArchitecture: {
+        // Synthetic completed-instruction count, not AT board scheduling time.
+        timeDomain: 'i80386-completed-instructions',
+        rewindLabel: 'rewind',
+        eventClock: () => machine.cpu.cycles,
+        timeHz: () => null,
+        sharedEventClock: true,
         addressMax: 0xffffffff,
         unsignedMemoryAddresses: true,
         memoryAddress: address => address >>> 0,

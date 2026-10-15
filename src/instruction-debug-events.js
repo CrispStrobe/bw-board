@@ -141,7 +141,7 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
   captureRegisters, captureInstruction, idleCause = () => 'parked',
   accessors: accessorNames = {}, pcOf = c => c.pc & 0xffff, addressMask = 0xffff,
   captureWriteBefore = false, unsignedMemoryAddresses = false,
-  clock = () => machine.cycles, rewindLabel}) {
+  clock = () => machine.cycles, timeHz = () => machine.clockHz, sourceClockEpoch = false, rewindLabel}) {
   // REQUIRED, no default: the suffix stamped on a domain after a BACKWARD clock
   // move is a per-target FACT, not a module constant. Pass 'rewind' when the
   // core's reset() ADVANCES the clock (the backward moves are loadState /
@@ -199,12 +199,15 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
   };
   const time = ticks => {
     const value = BigInt(ticks);
-    if (lastTicks !== null && value < lastTicks) timeEpoch++;
-    lastTicks = value;
+    // Retrospective access stamps may precede a listener's live clock read.
+    // Only an actual source-clock regression starts a 386 rewind era.
+    const observed = sourceClockEpoch ? BigInt(clock()) : value;
+    if (lastTicks !== null && observed < lastTicks) timeEpoch++;
+    lastTicks = observed;
     return {
       ticks: value,
       domain: timeEpoch ? `${timeDomain}-${rewindLabel}-${timeEpoch}` : timeDomain,
-      hz: machine.clockHz
+      ...(timeHz() == null ? {} : {hz: timeHz()})
     };
   };
 
@@ -634,9 +637,11 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
         // an era nothing explains).
         ticks: BigInt(clock()),
         domain: timeEpoch ? `${timeDomain}-${rewindLabel}-${timeEpoch}` : timeDomain,
-        hz: machine.clockHz
+        ...(timeHz() == null ? {} : {hz: timeHz()})
       };
     },
+    // Opt-in consumers can share the emitter's advancing rewind detector.
+    observeTime() { return time(clock()); },
     openTimeEpoch() {
       timeEpoch++;
       lastTicks = null;
