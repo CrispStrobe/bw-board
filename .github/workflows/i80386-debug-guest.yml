@@ -1,0 +1,70 @@
+name: 386 subscribed free guest
+on:
+  push:
+    branches: [lane/386-debug-guest-20261015]
+permissions:
+  contents: read
+jobs:
+  guest:
+    if: github.repository == 'CrispStrobe/bw-board' && github.ref == 'refs/heads/lane/386-debug-guest-20261015' && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Source preload before Node imports
+        env:
+          BW_EXPECTED_HEAD: ${{ github.sha }}
+        run: |
+          mkdir debug-guest-originals
+          /usr/bin/python3 -I -B scripts/i80386-debug-guest/reader.py --source-preload debug-guest-originals/source-preload.json
+      - name: Tiny authored observer controls
+        run: |
+          /opt/hostedtoolcache/node/22.23.3/x64/bin/node --test test/i80386-debug-guest-observer.test.mjs
+          /usr/bin/python3 -I -B scripts/i80386-debug-guest/reader.py --controls
+      - name: Build unchanged pinned MIT guest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir /tmp/xv6-public
+          git -C /tmp/xv6-public init
+          git -C /tmp/xv6-public remote add origin https://github.com/mit-pdos/xv6-public.git
+          git -C /tmp/xv6-public fetch --depth=1 origin eeb7b415dbcb12cc362d0783e41c3d1f44066b17
+          git -C /tmp/xv6-public checkout --detach FETCH_HEAD
+          XV6_SRC=/tmp/xv6-public XV6_STOCK_4M_OUT=/tmp/xv6-stock-4m /opt/hostedtoolcache/node/22.23.3/x64/bin/node scripts/build-xv6-stock-4m.mjs
+      - name: Original control and subscribed execution
+        shell: bash
+        env:
+          BW_EXPECTED_HEAD: ${{ github.sha }}
+          XV6_FIRMWARE: bochs
+          XV6_PROFILE: 4m
+          XV6_STEPS: 30000000
+          XV6_STOP_ON_EXPECT: 1
+          XV6_COMMAND: "echo BW_XV6_FREE_BIOS_FS_OK > bwfile; cat bwfile; rm bwfile\r"
+          XV6_EXPECT_SERIAL: "\nBW_XV6_FREE_BIOS_FS_OK\n$ "
+        run: |
+          set -euo pipefail
+          /usr/bin/python3 -I -B scripts/i80386-debug-guest/reader.py --admit debug-guest-originals/before.json
+          status=0
+          /usr/bin/python3 -I -B scripts/i80386-debug-guest/reader.py --execute control || status=$?
+          if [ "$status" -eq 0 ]; then
+            /usr/bin/python3 -I -B scripts/i80386-debug-guest/reader.py --execute observed || status=$?
+          fi
+          /usr/bin/python3 -I -B scripts/i80386-debug-guest/reader.py --admit debug-guest-originals/after.json || { if [ "$status" -eq 0 ]; then status=1; fi; }
+          if [ "$status" -eq 0 ]; then
+            /usr/bin/python3 -I -B scripts/i80386-debug-guest/reader.py --packet debug-guest-originals || status=$?
+          fi
+          exit "$status"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: debug-guest-originals
+          path: |
+            debug-guest-originals/
+            /tmp/xv6-stock-4m/bw-xv6-stock-4m-receipt.json
+          if-no-files-found: error

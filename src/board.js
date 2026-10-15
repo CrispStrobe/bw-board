@@ -3508,6 +3508,51 @@ export class BoardImpl {
     }
   }
 
+  /**
+   * Bench positions for parts (step 2, docs/WORLD.md): the circuit
+   * designer's layout coordinates, handed over by the host because the
+   * engine netlist carries no layout. `positions` maps part id → {x, y};
+   * entries without finite numbers are dropped. Replaces the previous set.
+   * @param {Record<string, {x: number, y: number}>|Map<string, {x: number, y: number}>} positions
+   */
+  setPartPositions(positions) {
+    const next = new Map();
+    const entries = positions instanceof Map ? positions.entries() : Object.entries(positions || {});
+    for (const [id, p] of entries) {
+      const x = Number(p?.x), y = Number(p?.y);
+      if (Number.isFinite(x) && Number.isFinite(y)) next.set(String(id), { x, y });
+    }
+    this._partPositions = next;
+    this._solve();
+    this._notifyChange('world', { key: 'positions', value: null });
+  }
+
+  /**
+   * Where this board sits on the shared bench: added to every part position,
+   * so boards laid out side by side in one project share one coordinate frame.
+   */
+  setBenchOrigin(x, y) {
+    const ox = Number(x), oy = Number(y);
+    if (!Number.isFinite(ox) || !Number.isFinite(oy)) return;
+    this._benchOrigin = { x: ox, y: oy };
+    this._solve();
+    this._notifyChange('world', { key: 'origin', value: null });
+  }
+
+  /**
+   * A part's position on the shared bench, or null when it has none: a
+   * position from setPartPositions, else finite part.x / part.y from the
+   * netlist; plus the board's bench origin.
+   */
+  partBenchPosition(part) {
+    if (!part) return null;
+    const p = this._partPositions?.get(part.id) ??
+      (Number.isFinite(part.x) && Number.isFinite(part.y) ? { x: part.x, y: part.y } : null);
+    if (!p) return null;
+    const o = this._benchOrigin ?? { x: 0, y: 0 };
+    return { x: p.x + o.x, y: p.y + o.y };
+  }
+
   _onWorldChange(key, value) {
     this._solve();
     if (key === 'temperatureC') this._notifyChange('temperature', { celsius: this.temperatureC });

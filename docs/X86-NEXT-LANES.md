@@ -1914,7 +1914,19 @@ compatibility follows from this correction.
 
 ## Subscribed 386 free-guest debugger qualification
 
-Status: docs-only scope extension; implementation waits for merged ownership.
+Observed checkpoint: the sole corrected-source [run38716662156](https://github.com/CrispStrobe/bw-board/actions/runs/38716662156)
+passed original-byte review: byte-identical MIT xv6 control/subscribed reports,
+64 consecutive retirements including five actual protected 32-bit ring-3
+instructions, and 206 physical memory facts. See the [finite result](I80386-DEBUG-GUEST-RESULTS.md).
+PR599 and PR607 merged after all enabled checks passed. The debugger merge is
+`05123db4` and the harness merge is `efe62e46`; the final harness merge preserves
+all 88 reviewed source and qualification identities and the six tested harness
+files. Consumer pin adoption and installed-GUI qualification remain pending.
+This does not qualify an actual IRQ-event window, checkpoint replay or timing.
+
+Status: ownership claim602 and the source/harness changes are merged. The
+finite subscribed free-guest result above is observed; installed-consumer
+adoption remains separate.
 Own only new `scripts/i80386-debug-guest/{observer.mjs,reader.py,README.md}`,
 `test/i80386-debug-guest-observer.test.mjs`,
 `.github/workflows/i80386-debug-guest.yml`, the narrow opt-in integration in
@@ -2116,3 +2128,52 @@ This does not replace the separate paired gate or qualify an installed app.
 Continue current source-owned debugger and media acceptance before consumer
 adoption; future optimization hypotheses require current evidence or a
 predeclared representative AT paired non-regression control.
+
+
+## Optional floppy boot for master-HDD persistence
+
+The existing free DOS recipes boot a floppy and mount an authored master data
+disk; they do not establish a bootable HDD. Add optional `--floppy-image FILE`
+to `scripts/run-i80386-at-console.mjs`, keeping the pinned HDD and exact CHS
+mandatory. Admit the floppy with the existing `readPinned` pattern and an
+explicit expected SHA-256, record its extent/hash separately, and insert a
+detached copy into FDC drive 0. Support only the adapter's existing 360 KiB
+(40/2/9) and 1.2 MiB (80/2/15) geometries. With the option present, use the
+existing qualified Bochs recipe's CMOS boot-order byte `0x3d = 0x21`; preserve
+HDD CMOS geometry and all unrelated settings. Without it, preserve the current
+console path exactly. Do not add fetching, image conversion or a bootable-HDD
+claim.
+
+The [existing public receipt](receipts/2026-09-28-i80386-free-bios-freedos.json)
+records a 1,228,800-byte external FreeDOS 1.4 floppy (SHA-256
+`03df6088be016e57a6c44275f5bb9ab0244db71de1360957fd76ba83243b6a77`),
+Bochs BIOS and VGA firmware, and an authored 306/4/17 FAT16 master data disk.
+Use its public [source recipe](../scripts/run-i80386-free-bios-freedos.mjs) and
+[image builder](../scripts/lib/i80386-free-bios-fat16.mjs) as source evidence;
+leave them and their historical results unchanged. The old directory marker
+was prebuilt: it does not prove a guest write, exported image or fresh reload.
+The 360 KiB API case needs authored controls; this receipt qualifies only its
+specific 1.2 MiB input. Re-admit exact cached inputs and component obligations
+before hosted use. FreeDOS distribution components and LGPL firmware have
+separate notices/source obligations; no image or executable bundling is implied.
+
+Own new `test/i80386-at-console-floppy.test.mjs` for option parsing, required
+identity, exact geometry, independent floppy/HDD input preservation, boot-order
+selection and unchanged no-option behavior. Reject malformed or unpinned images
+without relaxing native/code16 exclusions, existing source inventories or output
+refusals. The coordinated new raw-HDD probe/reader/workflow must freeze its exact
+source/runtime/media graph, commands, keyboard schedule, bounds and independent
+original-byte acceptance before a hosted launch; no old probe ownership is
+inferred.
+
+Acceptance is two fresh ordinary CLI instances with the same admitted floppy.
+The first boots, writes and closes a new authored file on C:, observes its exact
+contents and shell prompt, then stops at a reviewed idle boundary and creates
+an exclusive verified `--hdd-output`. The second mounts those exact exported
+bytes and CHS, reads the marker and returns to the prompt without running its
+writer. Join output extent/hash to the second input, prove both original inputs
+unchanged, preserve failures and independently audit the original reports and
+bounded raw output. A stopped budget or user quit alone is not a guest flush.
+Keep guest execution hosted and bounded. No new media acquisition, OS
+completeness, installed GUI, ISO/CD, physical timing or durability beyond this
+finite acceptance is claimed.
