@@ -1833,3 +1833,80 @@ and memory inspection, resume and pane switching. This claim does not own
 Lite's shared package files or qualify its current installed package. No new
 media acquisition, licensed guest, performance gain, physical RTx or whole-OS
 compatibility follows from this correction.
+
+## Subscribed 386 free-guest debugger qualification
+
+Status: docs-only scope extension; implementation waits for merged ownership.
+Own only new `scripts/i80386-debug-guest/{observer.mjs,reader.py,README.md}`,
+`test/i80386-debug-guest-observer.test.mjs`,
+`.github/workflows/i80386-debug-guest.yml`, the narrow opt-in integration in
+`scripts/probe-xv6-stock.mjs`, this section and its registry entry. Use
+`lane/386-debug-guest-20261015`. The five runtime debugger files published in
+[PR599](https://github.com/CrispStrobe/bw-board/pull/599) remain unchanged;
+no product adapter, CPU/device/scheduler, package pin, existing workflow,
+MIT guest source, Bochs firmware or media changes are owned.
+
+Run one separately named hosted qualification pair: an unobserved control and
+an observed run on identical authenticated source, unchanged existing free
+xv6/Bochs inputs and one fixed established 4M marker or14M boot invocation.
+Select and freeze the exact invocation before execution, not whichever passes.
+Keep original guest code/bytes, command injection, stop conditions, wall/step/
+memory limits and native-block settings identical. Preserve their original
+reports plus a separate bounded observer receipt; do not modify guest success
+criteria or invent baseline evidence from a historical receipt. Existing
+completed diagnostics are not replayed just to read them.
+
+The source-owned observer composes the actual guest machine with
+`createI80386DebugTarget({machine})`. It must preserve and chain existing serial,
+port and interrupt hooks. Install the subscription at the first predeclared
+eligible boundary: PE true, VM false, cached CS default32, CPL3, not halted.
+The probe's normal `machine.step()` and its existing loop/budget accounting
+remain the execution authority. Do not substitute `target.step`, `runFor`, an
+extra CPU step or different tick budget; target construction/subscription and
+observation must not advance the guest.
+
+Count actual completed instruction events and validate their before-state
+mode; an interrupt between eligibility and CPU execution must not be relabeled
+as a ring3 retirement. Retain at most64 completed-instruction observations,
+1024 memory facts and a fixed1MiB observer-byte cap. Require at least one
+actual protected32 ring3 retirement; missing eligibility/window completion
+within the unchanged original bound refuses. Preserve mixed-mode events
+honestly if an interrupt occurs. Stop collection and unsubscribe after the
+ordinary machine-step boundary, not midway through event publication. Latch
+observer-cap/refusal facts without silently dropping them or changing guest
+execution to make a diagnostic pass; always attempt unsubscribe in finally.
+
+At the window boundaries, copy direct architectural/control/segment-cache,
+CR2, device clock/debt, VGA latch and translation-cache metadata scalars; avoid
+snapshot/I/O operations that flush clocks or walk pages. Compare captured
+full-width registers and linear PC with actual cached CS-base plus EIP. Check
+unsigned physical memory facts, without requiring this guest to access above
+2GiB naturally (tiny high-address controls cover that). A source-owned regs
+and safe known-RAM/VGA read observation must leave those fields/latches and
+memory unchanged. Do not claim arbitrary MMIO reads nonmutating or copy all
+RAM per instruction. Preserve original faults and source-defined partial
+state; forward capture grants no checkpoint/replay authority.
+
+The complete ordinary guest reports must agree control versus observed,
+including serial/input, milestones, CPU/control/cache snapshot, ATA/PIC/PIT/
+other device facts, screen, step counts and original success criteria. Freeze
+any necessary source-identity-only projection explicitly; no arbitrary field
+exclusions or regenerated successful reports. An independent byte-only reader
+imports no producer validators and joins original reports, observer prefix/
+count/digests, mode/address/register facts, source/runtime/media bindings and
+capture/unsubscribe/refusal state. Partial/capped/uncertain originals never
+promote qualification. Root and peer admit official metadata and audit the
+sole original packet without replay before conclusions.
+
+Freeze the exact complete transitive import/data/runtime source graph before
+Node loads the observer, including the newly fixed observer/target/helper
+roles and unchanged guest/build/firmware identities. Review consequences for
+existing fixed source inventories before coding; no blind count/pin update,
+source-row omission or old-proof waiver is allowed. Any needed changes outside
+the paths above require a separately reviewed ownership extension first.
+Meaningful tiny source-owned observer/reader controls run before hosted work;
+no full guest, resource setup or build locally. One attempt1 branch-push hosted
+pair after frozen source/reader reviews, no PR/dispatch duplicate or retry.
+All enabled exact-head CI and affected debugger/8086 regressions remain required.
+This is finite subscribed free-guest acceptance, not installed Lite GUI/CLI,
+mode-aware disassembly, whole-OS compatibility, performance or physical RTx.
