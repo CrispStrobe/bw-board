@@ -1,5 +1,12 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-15 stm32g0 RCC_APBENR2 (offset 0x40) — CLAIM, VPS Claude (opus).
+Branch fix/g0-rcc-apbenr2-20261015, exact base 4023f77f; worktree [local path omitted].
+Owns this row plus: the Stm32Rcc class in src/stm32f0-board.js (APBENR2 read/write at 0x40;
+usart1Enabled/adcEnabled/tim14Enabled also accept the RM0444 G0 bits 14/20/15) and a new
+focused test test/stm32g0-rcc-apbenr2.test.mjs (direct register pokes, no compiler).
+F0 gating behaviour and the noteGated ledger unchanged; no other peripheral change.
+
 2026-10-14 stm32g0 target kind, adapter and board contract — DONE (merged PR #584, 1a88622a8).
 
 2026-10-15 stm32 comprehensive unit and live tests — CLAIM, VPS Claude.
