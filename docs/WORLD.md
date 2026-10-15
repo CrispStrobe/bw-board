@@ -85,10 +85,54 @@ part actually reads (its own stimulus, else the world).
 world serialises to `{}`, so a host (Brickwright Lite) can omit it and leave
 existing project files byte-for-byte unchanged.
 
+## Positions and sources (step 2)
+
+**Positions.** A part's bench position is the circuit designer's own layout
+coordinate. The engine netlist carries no layout, so the host hands it over:
+`board.setPartPositions({id: {x, y}})`; a netlist part with finite `x`/`y` is
+used when the host gives nothing. `board.setBenchOrigin(x, y)` places a whole
+board on the shared bench, so several boards laid out side by side share one
+coordinate frame. A part with no position reads the uniform world, exactly as
+in step 1.
+
+**Sources** are world objects, not circuit parts (nothing to wire, and no
+designer change is needed):
+
+```js
+world.setSource({id: 'h1', kind: 'heater', x: 100, y: 40, strength: 10, radius: 100, on: true});
+world.removeSource('h1');
+world.getSources();
+world.getAt('temperatureC', x, y, tSec);
+```
+
+| kind | world key | effect | default strength |
+| --- | --- | --- | --- |
+| `heater` | temperatureC | + strength °C | 10 |
+| `fan` | temperatureC | − strength °C | 3 |
+| `lamp` | lightLux | + strength lx | 500 |
+| `sound` | soundDb | a source of strength dB SPL | 80 |
+
+**Falloff** (`falloff(d, radius)`): 1 at or inside `radius` (default
+`REFERENCE_DISTANCE` = 100 layout units, about one part's width), and
+`(radius/d)²` beyond — inverse-square, clamped so a sensor on top of a source
+stays finite. The value at a point is the uniform (ambient, possibly
+scheduled) value plus `sign · strength · falloff` for every switched-on source
+of that key; an unset light starts from 0 lx. Sound levels combine as
+intensities: `L = 10·log10(10^(L_amb/10) + Σ 10^(L_i/10) · falloff)`, i.e.
+−6 dB per doubling of distance beyond the radius and +3 dB for two equal
+sources. Results are clamped to the key's range. Everything is a pure function
+of positions, strengths and simulation time: deterministic.
+
+**Precedence** is unchanged: a part's own value wins; then the positioned
+world value; then the model's fallback. Sources persist in `toJSON()` as
+`sources: [...]`; a world without sources writes nothing extra.
+
 ## Limits
 
 - The basic `ldr` and `thermistor` parts are *controls* (a 0…1 slider in
   `board.controls`), not params; they do not follow the world yet.
-- The world is uniform in step 1: no position, no sources (see step 2).
+- Sources are a documented first-order model (no walls, no convection or
+  thermal time constant; a heater acts instantly). Chip die temperature
+  (`benchCelsius`) reads the uniform world, not the chip's position.
 - The light/sound normalisations are documented conventions, not calibrated
   sensor responses.
