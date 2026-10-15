@@ -1,5 +1,7 @@
-// Detached-copy prerequisite only, not a paused user-facing snapshot API.
+// Device copy and deferred ordinary-JS target snapshot controls.
 import test from 'node:test';
+import {createHash} from 'node:crypto';
+import {createI80386DebugTarget} from '../src/i80386-debug.js';
 import assert from 'node:assert/strict';
 import ATA from '../src/experimental/ata16.js';
 import {createI80386Adapter,captureI80386AtaMaster} from '../src/i80386-adapter.js';
@@ -126,4 +128,77 @@ test('public extent getters are never invoked for admitted typed-array storage',
  const ata=new ATA(new Uint8Array(1024),geometry);ata.image=image;
  const result=captureI80386AtaMaster({ata,cpu:{cycles:0},cycles:0});
  assert.equal(result.byteLength,1024);assert.equal(result.bytes.length,1024);assert.equal(result.bytes[1023],0x7b);assert.equal(calls,0);
+});
+
+function setup(){
+ const a=createI80386Adapter();a.attachAtaImage(new Uint8Array(4*17*512));
+ const rom=new Uint8Array(65536).fill(0x90);a.machine.loadRom(rom,0xffff0000);a.machine.reset();
+ return {a,m:a.machine,t:createI80386DebugTarget(a)};
+}
+async function cryptoStub(value,body){
+ const descriptor=Object.getOwnPropertyDescriptor(globalThis,'crypto');
+ Object.defineProperty(globalThis,'crypto',{configurable:true,value});
+ try{return await body();}finally{if(descriptor)Object.defineProperty(globalThis,'crypto',descriptor);else delete globalThis.crypto;}
+}
+const hashing={subtle:{digest:async(name,bytes)=>{assert.equal(name,'SHA-256');return Uint8Array.from(createHash('sha256').update(bytes).digest()).buffer;}}};
+test('callback request copies only after complete ordinary runFor stack returns',async()=>{
+ await cryptoStub(hashing,async()=>{
+  const {a,m,t}=setup();let returned=false,request=null;const capture=a.captureAtaMaster.bind(a);
+  a.captureAtaMaster=()=>{assert.equal(returned,true);return capture();};
+  t.onHalt(()=>{request=t.snapshotAtaMaster();});t.step('insn');t.runFor(10000);returned=true;
+  assert.notEqual(request,null);assert.equal(t.state(),'halted');assert.equal(m.cpu.cycles,1);
+  const r=await request;assert.equal(r.boundary.cpuCycles,1);assert.equal(r.boundary.machineCycles,m.cycles);assert.equal(r.sha256,createHash('sha256').update(r.bytes).digest('hex'));
+ });
+});
+test('instruction subscriber halt defers copy until post-board-charge stack tail',async()=>{
+ await cryptoStub(hashing,async()=>{
+  const {m,t}=setup();let request=null,tail=false;
+  t.onDebugEvent(e=>{if(e.kind==='instruction'){t.halt();request=t.snapshotAtaMaster();assert.equal(tail,false);}});
+  m.step();tail=true;const r=await request;assert.equal(r.boundary.machineCycles,m.cycles);assert.equal(r.boundary.cpuCycles,1);
+ });
+});
+test('running or resumed-before-copy request refuses; halted pending step is inert',async()=>{
+ await cryptoStub(hashing,async()=>{
+  const {m,t}=setup();t.run();assert.equal((await t.snapshotAtaMaster()).refused.code,'snapshot-running');
+  t.step('insn',2);t.halt();const cycles=m.cpu.cycles;const r=await t.snapshotAtaMaster();assert.equal(r.boundary.cpuCycles,cycles);
+  const pending=t.snapshotAtaMaster();t.run();assert.equal((await pending).refused.code,'snapshot-running');
+ });
+});
+test('native dispatcher, active ATA, unavailable and rejected hashing refuse',async()=>{
+ const {a,m,t}=setup();Object.defineProperty(a,'nativeDispatcher',{configurable:true,value:{}});
+ assert.equal((await t.snapshotAtaMaster()).refused.code,'snapshot-backend-unsupported');
+ Object.defineProperty(a,'nativeDispatcher',{configurable:true,value:null});
+ await cryptoStub(undefined,async()=>assert.equal((await t.snapshotAtaMaster()).refused.code,'snapshot-hash-unavailable'));
+ await cryptoStub(hashing,async()=>{m.ata.status=0x80;assert.equal((await t.snapshotAtaMaster()).refused.code,'snapshot-ata-busy');m.ata.reset();});
+ await cryptoStub({subtle:{digest:async()=>{throw Error('owned digest refusal');}}},async()=>assert.equal((await t.snapshotAtaMaster()).refused.code,'snapshot-hash-failed'));
+});
+test('detached bytes and recorded boundary survive later disk mutation during digest',async()=>{
+ let release;const gate=new Promise(r=>{release=r;});const {m,t}=setup();
+ await cryptoStub({subtle:{digest:async(name,bytes)=>{await gate;return Uint8Array.from(createHash('sha256').update(bytes).digest()).buffer;}}},async()=>{
+  const before=m.cycles,pending=t.snapshotAtaMaster();await Promise.resolve();m.ata.image[0]=0x5a;t.run();m.step();
+  assert.equal((await t.snapshotAtaMaster()).refused.code,'snapshot-busy');release();const r=await pending;
+  assert.equal(r.bytes[0],0);assert.equal(r.boundary.machineCycles,before);assert.equal(r.sha256,createHash('sha256').update(r.bytes).digest('hex'));
+  // It is an old point-in-time copy, NOT a live halted-state claim.
+  assert.equal(t.state(),'running');assert.notEqual(m.cycles,r.boundary.machineCycles);
+ });
+});
+
+
+test('a resume microtask queued before deferred copy prevents capture',async()=>{
+ await cryptoStub(hashing,async()=>{
+  const {a,t}=setup();let copies=0;const capture=a.captureAtaMaster.bind(a);
+  a.captureAtaMaster=()=>{copies++;return capture();};
+  const resume=Promise.resolve().then(()=>t.run());const pending=t.snapshotAtaMaster();
+  await resume;assert.equal((await pending).refused.code,'snapshot-running');assert.equal(copies,0);
+ });
+});
+test('insecure context refuses hashing; invalid digest and failure both release busy latch',async()=>{
+ const {t}=setup();const secure=Object.getOwnPropertyDescriptor(globalThis,'isSecureContext');
+ try{
+  Object.defineProperty(globalThis,'isSecureContext',{configurable:true,value:false});
+  await cryptoStub(hashing,async()=>assert.equal((await t.snapshotAtaMaster()).refused.code,'snapshot-hash-unavailable'));
+ }finally{if(secure)Object.defineProperty(globalThis,'isSecureContext',secure);else delete globalThis.isSecureContext;}
+ await cryptoStub({subtle:{digest:async()=>new ArrayBuffer(1)}},async()=>assert.equal((await t.snapshotAtaMaster()).refused.code,'snapshot-hash-failed'));
+ await cryptoStub({subtle:{digest:async()=>{throw Error('ownedfailure');}}},async()=>assert.equal((await t.snapshotAtaMaster()).refused.code,'snapshot-hash-failed'));
+ await cryptoStub(hashing,async()=>assert.equal((await t.snapshotAtaMaster()).refused,undefined));
 });
