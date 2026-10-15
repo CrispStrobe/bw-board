@@ -36,6 +36,8 @@ function parity8(v) {
   return ((0x6996 >>> (v & 15)) & 1) === 0;
 }
 function maskFor(width) {
+  if (width === 8) return 0xff;
+  if (width === 16) return 0xffff;
   return width === 32 ? 0xffffffff : 2 ** width - 1;
 }
 
