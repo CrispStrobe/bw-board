@@ -2041,6 +2041,36 @@ diagnostics just to read them. All enabled exact-head checks and affected guest
 qualification precede merge. Lite separately qualifies genuine browser download
 and chooser reload after coordinated supplier adoption.
 
+The finite raw-HDD acceptance may use new
+`scripts/i80386-hdd-export/probe.py` as a dependency-free standard-library PTY
+transport and orchestrator, with new `controls.py` for manufactured disk and
+mock-PTY controls. Preserve the already owned `probe.mjs`, independent
+`reader.py`, `README.md` and dedicated workflow roles. Existing PTY harnesses
+remain unchanged. Reuse their reviewed
+terminal lifecycle ideas transparently, not their old guest success as evidence.
+This ownership extension must merge before implementation.
+
+Freeze two fresh ordinary CLI processes: an admitted free boot floppy plus
+required authored master data disk, then that same floppy with the exact
+exported master. The first writes and closes a new marker, observes its contents
+and a later prompt, then creates an exclusive verified HDD output. The second
+only reads the marker and returns to a prompt. Require complete bounded PTY and
+stderr originals, input transcript, separate CLI reports, source/runtime/media
+identities, exact exit/reap/EOF and owned cleanup; EOF or timeout alone is not
+termination. Preserve both original inputs and all first failures. A strict
+independent disk proof must check initial marker absence, final directory/FAT
+chains/data and all permitted byte differences, not only file-name matches.
+A disk-byte consistency result is not full acceptance: terminal, process,
+source/runtime and official-original joins remain separate mandatory gates.
+
+Before the sole bounded hosted actual, qualify the optional-floppy CLI source
+and its parents, freeze the complete new transport/reader/workflow and executed
+source graph, independently review the original-byte reader and controls, and
+admit exact existing free media with component notices and license obligations.
+Do not acquire or bundle images implicitly. No local guest/build, CPU/device
+change, broader OS, installed GUI, physical timing or crash-durability claim is
+introduced by this transport scope.
+
 ## Bounded DOS package admission
 
 This follows disk export/reload and has its own source, tests and acceptance;

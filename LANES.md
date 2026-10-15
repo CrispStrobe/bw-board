@@ -4968,6 +4968,15 @@ The debugger file is not edited while PR599 owns its initial correction;
 sequence or separately hand off that file first. Preserve ATA command/timing
 semantics, frozen source inventories, original receipts and dependency pins.
 
+A narrow transport extension also owns new
+`scripts/i80386-hdd-export/{probe.py,controls.py}` alongside the existing
+`probe.mjs`, `reader.py`, `README.md` and workflow roles. `probe.py` is a
+standard-library-only Python PTY transport and orchestrator; `controls.py`
+owns manufactured disk and mock-PTY controls only. Do not edit existing PTY harnesses, CPU/device code, historical
+receipts or pins. Implementation requires this extension to merge and the
+serialized console handoff; actual acceptance waits for qualified optional
+floppy CLI source and parents, whole-graph review and one admitted hosted run.
+
 ## Bounded DOS package admission — 2026-10-15
 
 CLAIM — Codex x86, follows explicit raw-HDD export/reload. Own new
