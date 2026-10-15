@@ -13,13 +13,13 @@ ready/SWS gating are RM0360-identical but whose ENR masks drop F0 IOPxEN read-ba
 no CR2/CFGR3 — stated in the yaml, not hidden. No adapter, GPIO, UART, timer, PIN or workflow
 change; existing labwired suites unchanged; G0 has no labwired path here.
 
-2026-10-15 A10 retained-engine qualification and STM32 guest setup — CLAIMED, Codex.
+2026-10-15 A10 retained-engine qualification and STM32 guest setup — DONE, Codex.
 Branch lane/a10-uarte-engine-adoption-20261015. Original engine campaign
 38761081841 produced identical independent builds and passed the new UARTE
 stack-reuse guest, but its full suite failed two STM32 round-trip cases.
 Those guests enter main without clearing BSS and omit UART pin, baud and
 transmitter setup required by the current light-tier model. Preserve the
-failed campaign and every assertion; no qualified release exists.
+failed campaign and every assertion; that failed campaign published no release.
 Envelope: this row; test/labwired-roundtrip.test.mjs firmware/startup/linker
 setup only; .github/workflows/labwired-wasm.yml an explicit retained-build
 qualification mode; scripts/admit-labwired-retained-build.mjs and focused
@@ -35,10 +35,13 @@ Prepared correction: all four freestanding guests now enter a BSS-clearing
 reset routine; serial guests configure PA9 AF1, BRR, UE/TE and wait for TXE.
 All board drivers and runtime assertions remain byte-identical. Ten admission
 controls, original metadata/file controls, guest compilation/vector checks and
-workflow lint pass. Actual fresh hosted full-suite qualification is pending;
-the original 121-pass/two-failure campaign is never relabelled successful.
+workflow lint pass. Fresh hosted qualification `38777730874` passed all
+123 tests without skips, including the stack-reuse guest and both corrected
+STM32 cases. Independent readers checked original-byte lineage, deterministic
+payload equality and published asset digests. The original 121-pass/two-failure
+campaign is retained and is never relabelled successful.
 
-2026-10-15 A10 nRF52 UARTE engine adoption — CLAIMED, Codex.
+2026-10-15 A10 nRF52 UARTE engine adoption — DONE (producer), Codex.
 Branch lane/a10-uarte-engine-adoption-20261015, base 54efdfc4.
 Successor to the published labwired-wasm-d523df44 engine: after the owning
 LabWired source fix qualifies and lands, build that exact source once through
@@ -55,23 +58,26 @@ guest against the actual release engine, unchanged existing engine tests,
 independent BUILD-INFO/source/hash admission and enabled final-head checks.
 The core source and compiled native guest remain separately qualified; engine
 publication alone does not qualify the Lite consumer or physical timing.
-Preparation: the source/linker/ELF-bound guest and actual-engine UART/counter
-assertions are ready, with the existing release suite extended by two tests
-and its floor increased from 116 to 118. Fixture provenance passes; an altered
-ELF is refused. The real-engine case is explicitly skipped locally because
-no candidate engine is available. The original missing-dependency probe is
-retained; lazy factory loading isolates the independent provenance check.
-Core PR244 landed as `6a769a59694ec8920de559f9e3fffa2f5375ac6b` after all
-27 enabled checks passed, including feature-off and scheduler stack-reuse guests.
-The producer PIN and canonical catalog identity now select that exact source;
-all offered chip/board descriptor bytes are unchanged. The fixture source and
-linker match the landed source, but its separately compiled ELF must qualify
-against the rebuilt release engine. The original core policy/drift failures
-remain recorded; no thresholds, capture records or acknowledgement dates moved.
-The two-build release qualification and all enabled adoption checks are pending.
-No released-engine or consumer result is claimed yet.
-Adoption review: https://github.com/CrispStrobe/bw-board/pull/621. The producer
-source is the verified landed merge of https://github.com/CrispStrobe/labwired-core/pull/244.
+Qualified source: core [PR244](https://github.com/CrispStrobe/labwired-core/pull/244)
+landed as `6a769a59694ec8920de559f9e3fffa2f5375ac6b` after all 27 enabled
+checks passed, including feature-off and scheduler stack-reuse guests. The
+producer PIN and canonical catalog identity select that source; offered
+chip/board descriptor payloads are unchanged. The separately compiled release
+fixture passed its exact 19-byte UART and terminal/counter assertions.
+
+[PR621](https://github.com/CrispStrobe/bw-board/pull/621) merged as
+`f00f8ff51e705e3524bee38d3c6d8f077a870be1` after all 12 enabled final-head
+checks passed; eight event/optional checks were explicitly skipped. The actual
+tree and parents matched the reviewed merge prediction. Published immutable
+release [`labwired-wasm-6a769a59`](https://github.com/CrispStrobe/bw-board/releases/tag/labwired-wasm-6a769a59)
+uses the original two independent build payloads, with the 123-pass retained
+qualification above. Original build/test failures, release lineage and prior
+radio evidence remain preserved. No threshold, capture or ACK date changed.
+
+[Lite PR988](https://github.com/CrispStrobe/brickwright-lite/pull/988) adopts
+only the engine pin and serial consumer behavior; its actual CLI/browser
+qualification remains pending. Producer completion does not qualify that
+consumer or physical timing.
 
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
