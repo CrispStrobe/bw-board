@@ -140,7 +140,7 @@ export const logicalTimeDomain = domain => String(domain ?? '').replace(EPOCH_SU
 export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, port = false,
   captureRegisters, captureInstruction, idleCause = () => 'parked',
   accessors: accessorNames = {}, pcOf = c => c.pc & 0xffff, addressMask = 0xffff,
-  captureWriteBefore = false,
+  captureWriteBefore = false, unsignedMemoryAddresses = false,
   clock = () => machine.cycles, rewindLabel}) {
   // REQUIRED, no default: the suffix stamped on a domain after a BACKWARD clock
   // move is a per-target FACT, not a module constant. Pass 'rewind' when the
@@ -304,7 +304,7 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
     hooks.ours.read = address => {
       const value = hooks.read.call(cpu, address);
       if (accesses) accesses.push({kind: 'memory', memory: {
-        space: 'mem', address: address & addressMask, width: 1, direction: 'read', value: value & 0xff
+        space: 'mem', address: unsignedMemoryAddresses ? (address & addressMask) >>> 0 : address & addressMask, width: 1, direction: 'read', value: value & 0xff
       }});
       return value;
     };
@@ -326,7 +326,7 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
       // diffs asks for them and pays the extra read per write; one that does not
       // is byte-for-byte unaffected.
       if (accesses) accesses.push({kind: 'memory', memory: {
-        space: 'mem', address: address & addressMask, width: 1, direction: 'write',
+        space: 'mem', address: unsignedMemoryAddresses ? (address & addressMask) >>> 0 : address & addressMask, width: 1, direction: 'write',
         ...(captureWriteBefore ? {before: hooks.read.call(cpu, address) & 0xff} : {}),
         value: value & 0xff
       }});

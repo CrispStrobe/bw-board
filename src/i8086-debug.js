@@ -209,6 +209,10 @@ export function createI8086DebugTarget(adapter, opts = {}) {
     const machine = adapter.machine;
     const cpu = machine.cpu;
     const cpuId = opts.cpuId || 'i8086';
+    // Internal architecture seam; the ordinary 8086 defaults remain unchanged.
+    const architecture = opts.debugArchitecture;
+    const addressMax = architecture?.addressMax ?? 0xfffff;
+    const eventAddress = architecture?.memoryAddress ?? (address => address & 0xfffff);
     const readDebugMemory = address => {
         if (cpuId !== 'i80386') return machine._read(address & 0xfffff);
         const physical = address >>> 0;
@@ -272,21 +276,22 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         //
         // avr8js is still `'reset'` and still unreviewed; that is its session's.
         rewindLabel: 'rewind',
-        addressMask: 0xfffff,
+        addressMask: architecture?.addressMax ?? 0xfffff,
+        unsignedMemoryAddresses: architecture?.unsignedMemoryAddresses ?? false,
         // A write fact that says only what the address BECAME cannot tell a
         // no-op write from a real one, and 8086 code makes no-op writes
         // constantly through read-modify-write and masked register updates. The
         // module defaults this off because adding the field changes the fact
         // shape for every subscriber; this target wants the diff and pays the
         // extra read per write for it, and only while somebody is listening.
-        captureWriteBefore: true,
-        pcOf: c => c.pc & 0xfffff,
+        captureWriteBefore: architecture?.captureWriteBefore ?? true,
+        pcOf: architecture?.pcOf ?? (c => c.pc & 0xfffff),
         clock: () => machine.cycles,
-        captureRegisters: () => machine._architecturalRegisters(),
-        captureInstruction: address => ({
+        captureRegisters: architecture?.captureRegisters ?? (() => machine._architecturalRegisters()),
+        captureInstruction: architecture?.captureInstruction ?? (address => ({
             address,
             ...disasmI8086(a => machine._read(a & 0xfffff), address, {ip: cpu.ip})
-        })
+        }))
     });
 
     /** Last rendered frame and the key it was rendered for. See video(). */
@@ -622,7 +627,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         if (writeWatches.size && !origWrite) {
             origWrite = cpu.write;
             cpu.write = (a, v) => {
-                const aa = a & 0xfffff;
+                const aa = eventAddress(a);
                 for (const [id, w] of writeWatches) {
                     if (aa >= w.addr && aa < w.addr + w.len) watchHit = { bp: id, addr: aa, value: v & 0xff };
                 }
@@ -1241,7 +1246,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             if (spec.kind === 'write') {
                 const len = spec.len ?? 1;
                 if (!Number.isSafeInteger(spec.addr) || spec.addr < 0 ||
-                    !Number.isSafeInteger(len) || len < 1 || spec.addr + len > 0x100000) {
+                    !Number.isSafeInteger(len) || len < 1 || spec.addr + len > addressMax + 1) {
                     return { unsupported:
                         'write watchpoint range must be safe integers within 20-bit physical space' };
                 }
@@ -1318,7 +1323,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             if (spec.seg != null) {
                 addr = (((spec.seg & 0xffff) << 4) + (spec.addr & 0xffff)) & 0xfffff;
             } else {
-                if (!Number.isSafeInteger(spec.addr) || spec.addr < 0 || spec.addr > 0xfffff) {
+                if (!Number.isSafeInteger(spec.addr) || spec.addr < 0 || spec.addr > addressMax) {
                     return { unsupported:
                         'code breakpoint addr must be a safe integer within 20-bit physical space' };
                 }
