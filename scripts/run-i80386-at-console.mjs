@@ -5,6 +5,7 @@ import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import {resolve} from 'node:path';
 import {expandI80386SourceInventory} from './lib/i80386-source-inventory.mjs';
+import {captureI80386AtaMaster} from '../src/i80386-adapter.js';
 import Machine,{PCAT80386_EXPERIMENTAL_4M_HDD_FREEDOS_VGA} from
   '../src/experimental/i80386-at-machine.js';
 import {I80386Fault,UnsupportedI80386} from '../src/experimental/i80386.js';
@@ -24,7 +25,7 @@ import {createI80386CrossModePotentialTraceObserver} from '../src/experimental/i
 import {createI80386HotLoopLocator} from '../src/experimental/i80386-hot-loop-locator.js';
 import {enableI80386Code16LoadExecution} from '../src/experimental/i80386-code16-load-exec.js';
 
-const options={conf:process.env.AT_DOSBOX_CONF??null,hdd:process.env.AT_HDD_IMAGE??null,
+const options={hddOutput:null,conf:process.env.AT_DOSBOX_CONF??null,hdd:process.env.AT_HDD_IMAGE??null,
   geometry:process.env.AT_HDD_GEOMETRY??null,live:process.env.AT_CONSOLE_LIVE==='1',
   nativeBlocks:process.env.AT_NATIVE_BLOCKS==='1',
   code16Loads:process.env.AT_CODE16_LOADS==='1',
@@ -33,7 +34,7 @@ const options={conf:process.env.AT_DOSBOX_CONF??null,hdd:process.env.AT_HDD_IMAG
 for(let index=0;index<process.argv.length-2;index++) {
   const option=process.argv[index+2];
   if(option==='--help') {
-    process.stdout.write('usage: run-i80386-at-console.mjs [--dosbox-conf FILE] [--hdd-image FILE --geometry C,H,S] [--steps N] [--live] [--native-blocks] [--code16-wasm]\n');
+    process.stdout.write('usage: run-i80386-at-console.mjs [--dosbox-conf FILE] [--hdd-image FILE --geometry C,H,S] [--steps N] [--hdd-output FILE] [--live] [--native-blocks] [--code16-wasm]\n');
     process.exit(0);
   }
   if(option==='--live'){options.live=true;continue;}
@@ -45,8 +46,11 @@ for(let index=0;index<process.argv.length-2;index++) {
   else if(option==='--hdd-image')options.hdd=value;
   else if(option==='--geometry')options.geometry=value;
   else if(option==='--steps')options.steps=value;
+  else if(option==='--hdd-output')options.hddOutput=value;
   else throw new Error(`unknown option ${option}`);
 }
+if(options.hddOutput&&(options.nativeBlocks||options.code16Loads||options.code16Wasm))
+  throw new Error('--hdd-output requires ordinary JS execution without native/code16 modes');
 const dosbox=options.conf?parseDosboxAtConfig(fs.readFileSync(options.conf,'utf8'),resolve(options.conf)):null;
 if(!options.hdd)options.hdd=dosbox?.imagePath??null;
 if(!options.geometry)options.geometry=dosbox?.geometry.join(',')??null;
@@ -61,6 +65,40 @@ const readPinned=(pathName,hashName,pathOverride=null)=>{
     throw new Error(`${pathName} does not match ${hashName}`);
   return {bytes,sha256:expected};
 };
+// Exact raw-byte output, not atomic publication. Failed partial files remain.
+function writeHddOutput(path,captured) {
+  let fd=null,primary=null,result=null;
+  try {
+    fd=fs.openSync(path,fs.constants.O_RDWR|fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_NOFOLLOW,0o600);
+    const initial=fs.fstatSync(fd);
+    if(!initial.isFile()||initial.nlink!==1)throw new Error('HDD output must be a new regular file');
+    let offset=0;
+    while(offset<captured.byteLength) {
+      const written=fs.writeSync(fd,captured.bytes,offset,captured.byteLength-offset,offset);
+      if(!Number.isInteger(written)||written<=0||written>captured.byteLength-offset)
+        throw new Error('HDD output made invalid write progress');
+      offset+=written;
+    }
+    if(fs.fstatSync(fd).size!==captured.byteLength)throw new Error('HDD output extent mismatch');
+    const hash=createHash('sha256'),buffer=Buffer.alloc(65536);let position=0;
+    while(true) {
+      const read=fs.readSync(fd,buffer,0,Math.min(buffer.length,captured.byteLength-position+1),position);
+      if(!Number.isInteger(read)||read<0||read>Math.min(buffer.length,captured.byteLength-position+1))throw new Error('HDD output read extent');
+      if(read===0)break;
+      position+=read;if(position>captured.byteLength)throw new Error('HDD output grew during verification');
+      hash.update(buffer.subarray(0,read));
+    }
+    const digest=hash.digest('hex');
+    if(position!==captured.byteLength||digest!==sha(captured.bytes)||fs.fstatSync(fd).size!==captured.byteLength)
+      throw new Error('HDD output stored-byte verification failed');
+    result={byteLength:position,sha256:digest};
+  } catch(error) {primary=error;}
+  finally {
+    if(fd!==null){const owned=fd;fd=null;try{fs.closeSync(owned);}catch(error){if(primary===null)primary=error;}}
+  }
+  if(primary!==null)throw primary;
+  return result;
+}
 const bios=readPinned('AT_BIOS_ROM','AT_BIOS_SHA256');
 const vga=readPinned('VGA_BIOS_ROM','VGA_BIOS_SHA256');
 const hdd=readPinned('AT_HDD_IMAGE','AT_HDD_SHA256',options.hdd);
@@ -188,6 +226,7 @@ rtc.initialCmos=[...cmos.entries()].filter(([,value])=>value!==0);
 const sourcePaths=['../src/at-ps2-mouse.js','../src/at-8042-a20.js',
   '../src/i8086-machine.js','../src/experimental/i80386.js',
   '../src/experimental/i80386-at-machine.js','../src/experimental/ata16.js',
+  '../src/i80386-adapter.js',
   '../src/experimental/i80386-code16-load-exec.js',
   '../src/experimental/i80386-code16-wasm-block.js',
   '../src/experimental/i80386-code16-window.js',
@@ -230,7 +269,7 @@ const sourceSha256=Object.fromEntries(expandI80386SourceInventory(
   [path,sha(fs.readFileSync(new URL(path,import.meta.url)))]));
 const executionRevision=execFileSync('git',['rev-parse','HEAD'],{
   cwd:new URL('..',import.meta.url),encoding:'utf8'}).trim();
-let steps=0,eventIndex=0,stop='budget',refusal=null;
+let steps=0,eventIndex=0,stop='budget',refusal=null,guestFailure=null;
 const delivered=[],serial=[];
 const machine=new Machine(profile,{
   ataImage:hdd.bytes,ataGeometry:{cylinders,heads,sectors},
@@ -361,6 +400,7 @@ const runChunk=end=>{while(steps<end) {
       if(modeCpuProfile)recordModeStep(modeBeforeStep);}
   }
   catch(error) {
+    if(options.hddOutput&&guestFailure===null)guestFailure=error;
     broadBlockCensus?.aborted(machine);
     code16EventObserver?.aborted(machine);
     crossModeTraceObserver?.aborted(machine);
@@ -369,7 +409,7 @@ const runChunk=end=>{while(steps<end) {
         !error.message?.startsWith('AT 8042 '))throw error;
     stop=error instanceof UnsupportedI80386?'unsupported':
       error instanceof I80386Fault?'architectural-fault':'device-refusal';
-    refusal={name:error.name,message:error.message,step:steps};break;
+    guestFailure=error;refusal={name:error.name,message:error.message,step:steps};break;
   }
   if(machine.cpu.shutdown){stop='shutdown';break;}
 }};
@@ -394,14 +434,17 @@ const drawTerminal=()=>{
   const header=`386 AT  step ${steps}/${stepsLimit}  ${frame?'VGA':'text RAM'}  Ctrl-] quit  Ctrl-L redraw`;
   process.stdout.write(`\x1b[H\x1b[2J${header.slice(0,columns)}\n${body}\x1b[0m`);
 };
+let executionPrimary=null;
+try {
 if(options.live) {
   if(!process.stdin.isTTY||!process.stdout.isTTY)
     throw new Error('--live requires an interactive terminal for raw keyboard and display');
-  process.stdin.setRawMode(true);process.stdin.resume();
-  process.stdin.on('data',onTerminalData);
   const onSignal=()=>{quit=true;};
-  process.on('SIGINT',onSignal);process.on('SIGTERM',onSignal);
+  let livePrimary=null;
   try {
+    process.stdin.setRawMode(true);process.stdin.resume();
+    process.stdin.on('data',onTerminalData);
+    process.on('SIGINT',onSignal);process.on('SIGTERM',onSignal);
     process.stdout.write('\x1b[?1049h\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1004h');
     drawTerminal();
     while(steps<stepsLimit&&stop==='budget'&&!quit) {
@@ -410,20 +453,41 @@ if(options.live) {
       await new Promise(resolve=>setImmediate(resolve));
     }
     if(quit&&stop==='budget')stop='user-quit';
-  } finally {
-    process.off('SIGINT',onSignal);process.off('SIGTERM',onSignal);
-    process.stdin.removeListener('data',onTerminalData);
-    process.stdin.setRawMode(false);process.stdin.pause();
-    process.stdout.write('\x1b[?1003l\x1b[?1006l\x1b[?1004l\x1b[?25h\x1b[?1049l');
+  } catch(error) {livePrimary=options.hddOutput&&guestFailure!==null?guestFailure:error;} finally {
+    let cleanupError=null;
+    for(const cleanup of [()=>process.off('SIGINT',onSignal),()=>process.off('SIGTERM',onSignal),
+      ()=>process.stdin.removeListener('data',onTerminalData),()=>process.stdin.setRawMode(false),
+      ()=>process.stdin.pause(),()=>process.stdout.write('\x1b[?1003l\x1b[?1006l\x1b[?1004l\x1b[?25h\x1b[?1049l')]) {
+      try{cleanup();}catch(error){if(cleanupError===null)cleanupError=error;}
+    }
+    if(options.hddOutput&&guestFailure!==null)throw guestFailure;
+    if(livePrimary!==null)throw livePrimary;
+    if(cleanupError!==null)throw cleanupError;
   }
 } else runChunk(stepsLimit);
-flushModeCpuProfile();
-restoreCode16Interrupts?.();
-restoreNative32Fetch?.();
-restoreBroadBlockFetch?.();
-restoreCode16EventObserver?.();
-restoreCrossModeTraceObserver?.();
-restoreHotLoopFetch?.();
+} catch(error) {executionPrimary=options.hddOutput&&guestFailure!==null?guestFailure:error;}
+// Attempt each owned finalizer; preserve the first execution/finalization error.
+for(const finalize of [flushModeCpuProfile,()=>restoreCode16Interrupts?.(),
+  ()=>restoreNative32Fetch?.(),()=>restoreBroadBlockFetch?.(),
+  ()=>restoreCode16EventObserver?.(),()=>restoreCrossModeTraceObserver?.(),
+  ()=>restoreHotLoopFetch?.()]) {
+  try{finalize();}catch(error){if(executionPrimary===null)executionPrimary=options.hddOutput&&guestFailure!==null?guestFailure:error;}
+}
+if(executionPrimary!==null)throw executionPrimary;
+let hddOutput=null;
+if(options.hddOutput) {
+  if(guestFailure!==null)throw guestFailure;
+  if(refusal!==null||machine.cpu.shutdown||!['budget','user-quit'].includes(stop))
+    throw new Error('HDD output refused after guest failure or uncertain termination');
+  if(resolve(options.hddOutput)===resolve(options.hdd))throw new Error('HDD output must differ from its source input');
+  const captured=captureI80386AtaMaster(machine);
+  if(captured.refused)throw new Error(`${captured.refused.code}: ${captured.refused.reason}`);
+  const stored=writeHddOutput(options.hddOutput,captured);
+  hddOutput={schema:'bw.i80386-master-hdd-output.v1',drive:'master',
+    input:{sha256:hdd.sha256,byteLength:hdd.bytes.length,geometry:{cylinders,heads,sectors}},
+    output:{...stored,geometry:captured.geometry,boundary:captured.boundary},
+    complete:true,guestCompletionQualified:false};
+}
 const text=textRam();
 const planes=machine.vgaMemory.planes.map(plane=>Buffer.from(plane));
 const video=machine.chips.vga1.getVideoState();
@@ -463,6 +527,7 @@ const report={schema:'bw.i80386-at-console.v1',executionRevision,sourceSha256,
   ramSha256:sha(machine.mem),diskSha256:sha(machine.ata.mediaBytes()),
   textRam:text,vga:{registers:serializableVideo,planeSha256:planes.map(sha),
     snapshotPath:vgaOutput}};
+if(hddOutput)report.hddOutput=hddOutput;
 const output=JSON.stringify(report,null,2)+'\n';
 if(process.env.AT_CONSOLE_REPORT)fs.writeFileSync(process.env.AT_CONSOLE_REPORT,output,{flag:'wx'});
 else process.stdout.write(output);
