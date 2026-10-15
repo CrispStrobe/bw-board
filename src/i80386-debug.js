@@ -69,8 +69,10 @@ export function createI80386DebugTarget(adapter) {
     };
     target.step = (kind, count = 1) => kind === 'insn' && Number.isSafeInteger(count) && count > 0
         ? step(kind, count) : unsupported('step kind/count');
-    target.readMem = (space, address, length) => space === 'mem' && validRange(address, length)
-        ? readMem(space, address, length) : unsupported('physical memory read range');
+    target.readMem = (space, address, length) => space === 'io'
+        ? readMem(space, address, length)
+        : space === 'mem' && validRange(address, length)
+            ? readMem(space, address, length) : unsupported('physical memory read range');
     for (const name of ['setSymbols','symbolAt','disasm','nextCodeAddress','writeMem','loadFirmware'])
         target[name] = () => unsupported(name);
     target.captureCheckpoint = () => ({accepted: false, code: 'checkpoint-unsupported', reason: '386 architectural checkpoint is unsupported'});
