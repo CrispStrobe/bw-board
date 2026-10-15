@@ -1,5 +1,20 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-15 stm32 F0/G0 silicon fidelity — CLAIM, VPS Claude (opus).
+Branch lane/stm32-fidelity-20261015, base 0f6f6b1f; worktree [local path omitted].
+Owns this row plus: src/stm32f0-board.js, src/stm32-adapter.js, src/cortex-m0-machine.js,
+a minimal G0 temperature-sensor hook in src/chip-temperature.js, the per-instruction cycle cost
+in src/rp2040js-debug.js (read the adapter clock each step, since SYSCLK can change), the STM32
+branches of src/debug-target-factory.js, the test firmwares/assertions that drive the STM32 light
+tier (test/stm32*.test.mjs, cortex-m0-machine, adapter-contract, chip-temperature, and the
+labwired parity suites' explicit fixed-clock option) and new focused fidelity tests. G0 gets its own memory map (IOPORT GPIO
+at 0x50000000, RM0444 2.2), an RCC clock tree (HSI reset clock, PLL config/switch, ready bits)
+that drives the instruction rate and UART/timer time base, G0 TIM14EN only in APBENR2, G0 ADC
+ADVREGEN delay and channel-12 sensor, USART TX only with AF pin + baud set and timed by BRR, PWM
+only on an AF pin, and non-zero deterministic RAM at reset. F0 map unchanged. Existing tests that
+encode the lenient model (fast clock without PLL setup, F0 offsets on G0) are migrated to correct
+register programming, never weakened.
+
 2026-10-15 stm32g0 RCC_APBENR2 (offset 0x40) — CLAIM, VPS Claude (opus).
 Branch fix/g0-rcc-apbenr2-20261015, exact base 4023f77f; worktree [local path omitted].
 Owns this row plus: the Stm32Rcc class in src/stm32f0-board.js (APBENR2 read/write at 0x40;
@@ -4862,3 +4877,19 @@ Own this entry and the [contract](docs/X86-NEXT-LANES.md#386-debugger-capture-an
 No CPU/device source, supplier pin, workflow, other target or performance
 experiment edits. Fix a reproducible debug-subscriber exception and expose
 honest 386 state/address capabilities; unsupported mode decoding must refuse.
+
+## Subscribed 386 free-guest debugger qualification — 2026-10-15
+
+CLAIM — Codex x86, `lane/386-debug-guest-20261015`; implementation waits
+for merged claim. Own only new
+`scripts/i80386-debug-guest/{observer.mjs,reader.py,README.md}`,
+`test/i80386-debug-guest-observer.test.mjs`,
+`.github/workflows/i80386-debug-guest.yml`, a narrow optional fixed-observer
+integration in `scripts/probe-xv6-stock.mjs`, this entry and the
+[contract](docs/X86-NEXT-LANES.md#subscribed-386-free-guest-debugger-qualification).
+Observe the unchanged ordinary guest machine-step loop, at most64 completed
+instructions and1024 memory facts, with direct-state/nonmutation and full
+unobserved/observed semantic parity. Runtime debugger sources from PR599,
+CPU/device scheduling, existing workflows, guest/firmware/media and supplier
+pins are outside scope. No installed GUI, disassembler, reverse-execution,
+performance or broad OS acceptance follows from this finite diagnostic.
