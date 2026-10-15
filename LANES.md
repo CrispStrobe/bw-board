@@ -4994,3 +4994,19 @@ controls, precise inclusive bounds and read-only behavior before publication.
 Lengths are nonnegative safe integers; a zero-length read may use the one-past
 endpoint, never as an addressable byte or UI page start. Any new metadata field
 requires complete strict descriptor validation; partial metadata fails closed.
+
+
+## Optional floppy boot for explicit master-HDD persistence — 2026-10-15
+
+CLAIM — Codex x86, serialized after the reviewed raw-HDD console export source
+and its parent qualification/handoff. Extend only
+`scripts/run-i80386-at-console.mjs` with optional `--floppy-image FILE` and own
+new `test/i80386-at-console-floppy.test.mjs`; coordinate the existing raw-HDD
+lane's new `scripts/i80386-hdd-export/{probe.mjs,reader.py,README.md}` and
+`.github/workflows/i80386-hdd-export.yml` for one bounded export/reload acceptance.
+The HDD remains required. Preserve no-option behavior and all existing input
+hash, source, resource, ordinary-backend and failure gates. No old free-floppy
+probe, CPU/FDC/device, dependency pin or historical receipt changes. See the
+[contract](docs/X86-NEXT-LANES.md#optional-floppy-boot-for-master-hdd-persistence).
+Implementation waits for this claim to merge; the current export worker retains
+its console ownership until an explicit serialized handoff.
