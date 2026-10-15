@@ -1559,3 +1559,60 @@ whole-Node paired gate. Next work is coordinated Lite pin/installed-consumer
 qualification and a separately scoped AT-platform profiling hypothesis;
 the core/AT gap is not an established CPU cost share. Neither next task is
 implemented or qualified by this diagnostic.
+
+## Ordinary-JS 386 AT platform profiling
+
+Status: docs-only claim; implementation waits for this claim to merge. Own new
+`.github/workflows/i80386-at-profile.yml`,
+`scripts/i80386-at-profile/{fixture.mjs,profile.py,reader.py,README.md}` and
+`test/i80386-at-profile-fixture.test.mjs`, plus this section and its registry
+entry. Coding branch: `lane/386-at-platform-profile-20261015`. No existing CPU,
+device, scheduler, clock, benchmark, workflow, dependency pin or receipt edits.
+
+Diagnose the core-versus-AT paths using the freely authored media-free
+five-instruction loop described in [the platform record](X86-RTX-PLATFORMS.md).
+Do not rerun the completed throughput capture. Freeze one exact current source
+commit and complete executed import/package-data closure, identical workload
+bytes and Node20.20.2 executable identity before the new capture. Use ordinary
+`I80386.step()` versus `I80386ATMachine.step()`, with accelerators disabled;
+retain their existing one/six synthetic scheduling charges. One fresh profiled
+child per path runs one million instructions, core then AT. Record setup and
+the V8 sampling interval explicitly; whole-child metadata is separate. No BIOS, disk,
+network input, licensed media, native backend or OS boot is involved.
+
+Require the independently known five-operation final AX65534/BX65535/IP0/
+memory-word65535 oracle, exact retired work and core/AT charge totals. The AT
+fixture must additionally check actual elapsed device ticks, PIT channel state,
+PIC request/mask/in-service state and CPU interrupt eligibility against a
+source-derived golden expectation. Distinguish pending IRQs from delivered
+interrupts: this loop does not enable IF and cannot qualify interrupt delivery.
+A distinct authored IF-enabled IRQ/EOI fixture is a separately scoped next
+phase only if needed to select an optimization; it is not required for this
+first attribution diagnostic. Never infer IRQ delivery from device progress.
+Preserve observable device state rather
+than merely comparing the two arms or hardcoding zero events. Tiny semantic
+and negative controls precede hosted execution; no full workload locally.
+
+Use Ubuntu24.04, Node20.20.2, one observed logical-CPU affinity, an owned cgroup
+quota `100000 100000`, memory1GiB/swap0 for wrapper and children. Authenticate
+source/runtime bytes before and after each child, and resource membership,
+limits, affinity and pressure counters before/pre-exec/after. Reuse immutable
+reviewed capture/resource helpers only with explicit source hashes in the
+frozen graph; never invoke another experiment's main or evaluator. Bound each
+child to 60 seconds, profiles to 8MiB, streamed stdout to 256KiB and stderr to
+8KiB, with fixed service/job bounds and observed owned-unit/cgroup cleanup.
+Retain original prefixes, first failures, exit/reap and uncertain cleanup facts;
+client timeout or pipe EOF is not proof of child termination.
+
+An independent stdlib byte-only reader must validate original source/resource,
+semantic and profile joins without producer imports or replay. Bound duplicate-
+free profile JSON, node IDs/references, sample/timeDelta cardinality and finite
+recorded timestamps; retain unknown frames and unusual signed deltas explicitly.
+Report samples and recorded sampling-interval weights separately for CPU,
+AT scheduler/devices, GC and unknown frames, with raw originals. Samples are
+not exact CPU cost shares, causation, allocations or whole-process startup;
+whole-child wait4 CPU/wall metadata stays separately labeled. No profiling
+number enters either unprofiled paired gate or grants a gain, optimization,
+clock change, physical RTx, full-AT or OS claim. Completion requires exact-head
+hosted semantics/resource/cleanup success and root plus independent original-
+packet audits. One branch-push diagnostic only, no PR/dispatch duplicate.

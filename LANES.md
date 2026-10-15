@@ -4796,3 +4796,16 @@ All existing CPU, fixtures, policies, source maps, workflows and pins remain
 outside scope. New admission/schema names preserve the earlier experiment.
 One hosted measurement follows exact source review and affected guest success;
 a public macro result alone grants no CPU adoption or original-gate replacement.
+
+## Ordinary-JS 386 AT platform profiling — 2026-10-15
+
+CLAIM — Codex x86, `lane/386-at-platform-profile-20261015`; implementation
+waits for merged claim. Own only new `.github/workflows/i80386-at-profile.yml`,
+`scripts/i80386-at-profile/{fixture.mjs,profile.py,reader.py,README.md}`,
+`test/i80386-at-profile-fixture.test.mjs`, this registry entry and the
+[contract](docs/X86-NEXT-LANES.md#ordinary-js-386-at-platform-profiling).
+One source/runtime-bound media-free ordinary core/AT diagnostic, independent
+CPU/device/IRQ scope oracles, bounded originals and independent byte-only audit.
+No CPU/device/clock/pin/old-workflow changes, new optimization or cost-share,
+physical RTx, OS or consumer-adoption claim. Existing code16 profiles and
+throughput captures remain complete and are not repeated.
