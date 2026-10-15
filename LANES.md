@@ -1,16 +1,19 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
-2026-10-15 current circuit campaign documentation — CLAIM, Codex bwcx.
-Branch docs/circuit-instrument-campaign-20261015; exact base
-0f6f6b1f7d8fb790ce1f66c6c41db2342b3619b0. Documentation-only envelope:
-this ledger, README.md, PLAN.md and ROADMAP.md. Correct obsolete current-status
-counts and copy-era consumer architecture; mark the old roadmap index as a
-historical survey, not proof every item remains open. Link the ordered CUI
-circuit/instrument campaign and its model/consumer/evidence boundaries.
-Preserve historical results and all active x86/target/shared-world contracts.
-No source, test, workflow, dependency, pin, model/default or runtime change.
-Publish claim before documentation implementation; verify exact base from Git
-and qualify the final Markdown-only candidate before normal matched-head merge.
+2026-10-15 stm32 F0/G0 silicon fidelity — CLAIM, VPS Claude (opus).
+Branch lane/stm32-fidelity-20261015, base 0f6f6b1f; worktree [local path omitted].
+Owns this row plus: src/stm32f0-board.js, src/stm32-adapter.js, src/cortex-m0-machine.js,
+a minimal G0 temperature-sensor hook in src/chip-temperature.js, the per-instruction cycle cost
+in src/rp2040js-debug.js (read the adapter clock each step, since SYSCLK can change), the STM32
+branches of src/debug-target-factory.js, the test firmwares/assertions that drive the STM32 light
+tier (test/stm32*.test.mjs, cortex-m0-machine, adapter-contract, chip-temperature, and the
+labwired parity suites' explicit fixed-clock option) and new focused fidelity tests. G0 gets its own memory map (IOPORT GPIO
+at 0x50000000, RM0444 2.2), an RCC clock tree (HSI reset clock, PLL config/switch, ready bits)
+that drives the instruction rate and UART/timer time base, G0 TIM14EN only in APBENR2, G0 ADC
+ADVREGEN delay and channel-12 sensor, USART TX only with AF pin + baud set and timed by BRR, PWM
+only on an AF pin, and non-zero deterministic RAM at reset. F0 map unchanged. Existing tests that
+encode the lenient model (fast clock without PLL setup, F0 offsets on G0) are migrated to correct
+register programming, never weakened.
 
 2026-10-15 stm32g0 RCC_APBENR2 (offset 0x40) — CLAIM, VPS Claude (opus).
 Branch fix/g0-rcc-apbenr2-20261015, exact base 4023f77f; worktree [local path omitted].
@@ -4820,8 +4823,10 @@ a public macro result alone grants no CPU adoption or original-gate replacement.
 
 ## Ordinary-JS 386 AT platform profiling — 2026-10-15
 
-CLAIM — Codex x86, `lane/386-at-platform-profile-20261015`; implementation
-waits for merged claim. Own only new `.github/workflows/i80386-at-profile.yml`,
+DONE — [PR587](https://github.com/CrispStrobe/bw-board/pull/587) merged at
+`819b297ed00f63c03cf49091109236159a151de2` after all nine latest enabled
+checks passed. Sole capture 38676056750 passed root and independent original
+audits; this is finite diagnostic acceptance, not a speed or OS claim. Sources: `.github/workflows/i80386-at-profile.yml`,
 `scripts/i80386-at-profile/{fixture.mjs,profile.py,reader.py,README.md}`,
 `test/i80386-at-profile-fixture.test.mjs`, this registry entry and the
 [contract](docs/X86-NEXT-LANES.md#ordinary-js-386-at-platform-profiling).
@@ -4843,3 +4848,44 @@ width exactly. No dispatch rewrite, decoder allocation, device/clock/backend,
 workflow, pin or historical gate changes. Adoption requires independent
 width/exception semantics, affected hosted full-CI/guest checks and a separately
 scoped current-baseline unprofiled paired gate; no gain means no adoption.
+
+## Mixed-width ALU public paired measurement — 2026-10-15
+
+CLAIM — Codex x86, `lane/386-width-mask-public-paired-20261015`;
+implementation waits for this claim to merge. Own only new
+`.github/workflows/i80386-width-mask-paired.yml`,
+`scripts/i80386-width-mask-paired/{fixture.mjs,run.py,policy.py,reader.py,controls.py,README.md}`,
+`test/i80386-width-mask-paired-fixture.test.mjs`, this entry and the
+[contract](docs/X86-NEXT-LANES.md#mixed-width-alu-public-paired-measurement).
+Compare ordinary baseline CPU2303 with isolated literal-mask CPU8f92 using a
+new authored 24-instruction 8/16/32-bit ALU mix, independent goldens and original-
+only audit. No old fixture/policy/map, CPU/device/clock, pin or workflow edits.
+No actual until frozen source/reader review and affected exact-candidate hosted
+correctness pass; no gain or incomplete evidence means no adoption of PR594.
+
+
+## 386 debugger capture and capability correction — 2026-10-15
+
+CLAIM — Codex x86, `lane/386-debugger-capture-20261015`; implementation waits
+for this claim to merge. Own new `src/i80386-debug.js`, new
+`test/i80386-debug-capture.test.mjs`, only the 386 composition in
+`src/debug-target-factory.js`, and the narrow injectable capture/address/
+capability seams in `src/i8086-debug.js` needed to preserve its 8086 defaults.
+Also own only the unsigned 32-bit memory-address normalization seam in
+`src/instruction-debug-events.js`; preserve other targets and event formats.
+Own this entry and the [contract](docs/X86-NEXT-LANES.md#386-debugger-capture-and-capability-correction).
+No CPU/device source, supplier pin, workflow, other target or performance
+experiment edits. Fix a reproducible debug-subscriber exception and expose
+honest 386 state/address capabilities; unsupported mode decoding must refuse.
+
+2026-10-15 current circuit campaign documentation — CLAIM, Codex bwcx.
+Branch docs/circuit-instrument-campaign-20261015; exact base
+0f6f6b1f7d8fb790ce1f66c6c41db2342b3619b0. Documentation-only envelope:
+this ledger, README.md, PLAN.md and ROADMAP.md. Correct obsolete current-status
+counts and copy-era consumer architecture; mark the old roadmap index as a
+historical survey, not proof every item remains open. Link the ordered CUI
+circuit/instrument campaign and its model/consumer/evidence boundaries.
+Preserve historical results and all active x86/target/shared-world contracts.
+No source, test, workflow, dependency, pin, model/default or runtime change.
+Publish claim before documentation implementation; verify exact base from Git
+and qualify the final Markdown-only candidate before normal matched-head merge.

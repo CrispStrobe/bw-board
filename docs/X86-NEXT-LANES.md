@@ -1562,7 +1562,9 @@ implemented or qualified by this diagnostic.
 
 ## Ordinary-JS 386 AT platform profiling
 
-Status: docs-only claim; implementation waits for this claim to merge. Own new
+Status: finite capture and original audits passed; [PR587](https://github.com/CrispStrobe/bw-board/pull/587)
+merged at `819b297ed00f63c03cf49091109236159a151de2` after all nine latest
+enabled checks passed. The contract below records the admitted experiment. Sources:
 `.github/workflows/i80386-at-profile.yml`,
 `scripts/i80386-at-profile/{fixture.mjs,profile.py,reader.py,README.md}` and
 `test/i80386-at-profile-fixture.test.mjs`, plus this section and its registry
@@ -1619,6 +1621,40 @@ clock change, physical RTx, full-AT or OS claim. Completion requires exact-head
 hosted semantics/resource/cleanup success and root plus independent original-
 packet audits. One branch-push diagnostic only, no PR/dispatch duplicate.
 
+### First audited ordinary core/AT profile
+
+The sole [capture 38676056750](https://github.com/CrispStrobe/bw-board/actions/runs/38676056750)
+ran at diagnostic source `baf67b9f17e3db25c0346e06575b64e4bf4f112a`, with
+engine source `4d17e27c6bb1b3b329ccb53620d342c3b031e672`. Root and peer
+independently checked original source/runtime bindings, CPU/device goldens,
+resource limits, child CPU-time sums, raw service cleanup and profile accounting.
+Original [artifact 11945903631](https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11945903631)
+is 44,497 bytes, ZIP SHA256
+`07e1710a1730b0f0156f1d09163551919efaa29ad3c3342356ca5638386f7e46`.
+
+The host was EPYC 7763, Node 20.20.2, one-CPU affinity/quota and 1 GiB/no swap.
+All leaf samples remain accounted for, with no nonpositive deltas:
+
+| Sample role | Core | AT |
+|---|---:|---:|
+| CPU source | 298 | 190 |
+| AT scheduler/device source | 2 | 40 |
+| GC | 9 | 11 |
+| Node builtins | 58 | 47 |
+| Fixture | 17 | 20 |
+| Unresolved | 14 | 8 |
+| Total | 398 | 316 |
+
+Aggregating names across call sites, core leaders include `_stepInstruction`
+(120), `step` (48), `maskFor` (31) and `_decodeEA` (29); AT leaders include
+`_stepInstruction` (60), `maskFor` (31), `step` (22) and `_fetch8` (22).
+Recorded sampling intervals are 476,751/387,322 microseconds and include
+represented startup, source loading, setup and compilation. They are not a
+paired speed comparison, exact CPU cost shares or allocation counts. They also
+do not replace the distinct Node 22 timed-loop throughput record. No capture
+was repeated. The width-mask hypothesis below requires its own current-baseline
+unprofiled gate; it has no measured gain or adoption from these samples.
+
 ## Ordinary-JS width-mask literal specialization
 
 Status: docs-only claim; source implementation waits for merged ownership.
@@ -1665,3 +1701,135 @@ resource enforcement and explicit cleanup. Require median CPU ratio at least
 dropping or replacement. Old fixture CLIs/policies stay immutable. A failed or
 unmeasured gate means no adoption. No 10x target, exact cost share, physical
 RTx, OS, GUI/CLI consumer or original-private-gate qualification is claimed.
+
+## Mixed-width ALU public paired measurement
+
+Status: docs-only claim; implementation waits for merged ownership. Own only
+new `.github/workflows/i80386-width-mask-paired.yml`,
+`scripts/i80386-width-mask-paired/{fixture.mjs,run.py,policy.py,reader.py,controls.py,README.md}`,
+`test/i80386-width-mask-paired-fixture.test.mjs`, this section and its registry
+entry. Use `lane/386-width-mask-public-paired-20261015`. Do not edit any existing
+paired fixture, admission, policy, workflow, CPU, device, clock, pin or receipt.
+
+Freeze A at `3646417a959b5aa9f93ac446398ea9cacd5a6da5`, CPU SHA256
+`2303557f35ad56d8101eb96ffc8749fa4d64338425726027d70bd64a6b10d4ba`, and
+B at `f6863484d02b4c4b0ce56415054f2e6a0c154097`, CPU SHA256
+`8f92cc4f8117d2371b493a7ee5a49dbf0245d1367f050194680f68a1454a9846`.
+Authenticate fresh Git/live extent-and-SHA maps for the same 43 selected engine
+paths, including package resolver metadata; all 42 non-CPU rows must match.
+Also authenticate identical new fixture, runner, policy, independent reader,
+controls, README, test, workflow and package roles against one exact publication
+commit. Every reused executable helper needs an immutable pin in that graph;
+never invoke an old runner/evaluator main or change its admissions. PR557's
+unadopted scalar-EA candidate and original private gate remain separate.
+
+Name this `MIXED_ALU_WIDTH_PUBLIC_24_INSTRUCTION_MACRO`, with separately
+versioned child/result schemas. Ordinary `I80386.step()` runs actual authored
+code and byte-memory callbacks; no direct helper-call microbenchmark or native/
+block/cache opt-in. Per pass execute ADD/SUB accumulator pairs for widths8/16/32,
+ADD/SUB memory pairs at DS:2000 for each width, paired XOR sign-bit toggles for
+each accumulator width, then three width-specific CMP and three TEST operations.
+The proposed stream is 106 bytes/24 retired instructions, with explicit66
+operand-size overrides. Initialize EAX=`0x12345670`, DS=`0x0000`/CS=`0x1000`, and bytes
+`0x10/0x32/0x54/0x76` at `0x2000`. Independent expected end state restores EAX and memory,
+ends IP106/EFLAGS2, and leaves all other registers unchanged. Host rewind of
+IP is common timed work; 100000 passes means 2.4M actual instructions.
+
+Before fixture freeze, tiny authored per-instruction byte-bus controls must
+reconcile the proposed 106 fetched bytes, 14 operand-read bytes and 14 written
+bytes per pass, exact addresses/order, flags and register-half preservation.
+These counts are design expectations until independently checked, not results.
+Derive a full-memory digest and instruction/work/address sums from the authored
+initialization; both arms must match that independent oracle, not merely each
+other. Include width/override/read-write-fault/refusal controls without running
+the full macro locally. Preserve error identity and genuine partial effects.
+
+Use Ubuntu24.04/Node20.20.2 with executable bytes checked before/after children.
+The wrapper and children share an observed owned cgroup: one logical-CPU
+affinity, cpu.max `100000 100000`, memory.max `1073741824`, swap.max0;
+verify membership, affinity, limits and zero pressure events before/pre-exec/
+after each child. No 1GiB virtual-address-space limit. Reuse reviewed bounded
+wait4/stream/owned-cleanup mechanics transparently. Keep 60-second child and
+fixed service/job deadlines, original capped stdout/stderr and exact owned
+unit/cgroup cleanup facts; EOF/client timeout cannot establish termination.
+
+Four ABAB warmups precede seven fixed measured pairs AB,BA,AB,BA,BA,AB,BA.
+Whole-Node wait4 user+system CPU and matching monotonic wall include setup,
+rewind, checks and hashing. No profiler is active. Require all18 independent
+semantics, median CPU A/B at least1.03, every CPU ratio strictly above1 and
+median wall B/A at most1.02. Preserve all ratios and conditional99.21875%
+minimum-ratio assumptions; no retry, dropped/replaced rows or cherry-picking.
+The independent original-only reader imports no producer validators or replay
+code and rejects partial/source/resource/semantic/cleanup mismatches.
+
+The sole branch-push hosted actual waits for root/peer frozen-source and reader
+review, tiny controls and affected exact-candidate hosted CPU/guest correctness,
+including required full-CI and latest transition gates. No duplicate PR/manual
+measurement. Root/peer admit terminal metadata and audit the sole original
+packet before conclusions. A failed/unmeasured gate means no PR594 adoption.
+This named ALU mix cannot replace the original private gate, multiply isolated
+EA/fetch gains, establish a combined candidate, physical RTx, OS or consumer
+qualification, or support an unmeasured 10x claim.
+
+
+## 386 debugger capture and capability correction
+
+Status: docs-only ownership claim; implementation waits for merge. Coding
+branch: `lane/386-debugger-capture-20261015`. Own new `src/i80386-debug.js`,
+new `test/i80386-debug-capture.test.mjs`, the 386-only composition in
+`src/debug-target-factory.js` and narrow capture/address/capability seams in
+`src/i8086-debug.js`, preserving all 8086 defaults and other target behavior.
+Also own only the unsigned 32-bit memory-address normalization seam in
+`src/instruction-debug-events.js`, preserving all other target defaults and
+event formats. This section and the matching registry entry complete the scope. CPU execution,
+devices, clocks, supplier pins, workflows and performance experiments stay
+unchanged; the separately owned width-mask CPU work must not be included.
+
+The current factory composes the 386 adapter with the shared 8086 debugger.
+Its event capture calls the AT's deliberately unsupported legacy architectural
+register snapshot. A debug subscriber can consequently throw before a single
+instruction retires. The shared AX-style projection, 20-bit address masking and
+8086 disassembler/control-flow assumptions also do not define a complete
+protected-mode debugger. Visible controls are not evidence that this path works.
+
+First implement a read-only, source-owned 386 register snapshot and event
+capture that does not call the rejected legacy snapshot or mutate the machine.
+Expose full-width EAX–EDI/EIP/EFLAGS and relevant architectural mode/segment
+state with unambiguous linear versus physical/code-address meaning. Derive
+addresses from actual cached segment state and EIP; do not reconstruct them
+from visible selectors or truncate them to 20 bits. Publish only supported
+address ranges and operations. Preserve existing event ordering, breakpoint
+semantics, instruction clocks and original fault behavior. The shared event
+module currently uses bitwise address masking, which makes addresses above
+2 GiB signed when given a 32-bit mask. Normalize admitted 386 memory facts
+to unsigned 32-bit values at their source; do not repair already truncated
+facts with a post-hoc target wrapper.
+
+Mode-aware instruction disassembly and step-over/out must either be correct
+for the supported 386 mode or explicitly unavailable/refused. In this first
+phase, gating unsupported protected-mode/32-bit decoding is acceptable;
+feeding it to the 8086 decoder under a 386 label is not. No full disassembler
+rewrite or generic debugger framework is required. Keep 386 architectural
+checkpoint/restore/replay refused; forward capture does not grant reverse
+execution or a continuous machine-state lease.
+
+Tiny owned controls must map a 64 KiB NOP ROM at the real reset alias and
+prove subscriber/no-subscriber parity: one NOP retires once, EIP advances,
+faithful before/after events are emitted and no legacy capture exception
+occurs. Check high register halves, reset CS cached base, addresses above
+1 MiB/high EIP and memory facts above 2 GiB (including a signed-negative
+regression adversary), real/protected mode distinctions, explicit unsupported decoder
+and step-over/out refusals, and faults/partial state without invented rollback.
+Verify unchanged 8086 register/event/breakpoint/disassembly behavior and
+checkpoint admission. Preserve the original subscriber failure separately;
+never hide it by removing the listener or replacing actual CPU execution.
+
+Freeze the source and pass focused controls and existing affected debugger/
+opcode regressions before hosted affected free-guest qualification with exact
+source identities. All enabled exact-head CI must pass before normal matched
+merge. A later coordinated Lite supplier update and installed free-client
+journey must verify visible completion/input, pause/breakpoint/step, register
+and memory inspection, resume and pane switching. This claim does not own
+Lite's shared package files or qualify its current installed package. No new
+media acquisition, licensed guest, performance gain, physical RTx or whole-OS
+compatibility follows from this correction.
