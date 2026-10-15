@@ -597,8 +597,7 @@ async function createRp2040jsTarget(opts) {
 
 async function createStm32F0Target(opts) {
   const {
-    board, program, symbols,
-    clockHz = 48_000_000,
+    board, program, symbols, fixedClockHz, hseHz, ramAtReset,
   } = opts;
 
   if (!board) throw new Error('stm32f0 target requires opts.board');
@@ -606,7 +605,10 @@ async function createStm32F0Target(opts) {
   // The F0 image is a REAL flash image (vectors first, word 0 = SP,
   // word 1 = reset) — raw bytes, not the Pico's SRAM halfword trick.
   const { createStm32F0Adapter } = await import('./stm32-adapter.js');
-  const adapter = createStm32F0Adapter({ clockHz, program });
+  // The core clock follows the firmware's RCC setup; opts.clockHz is
+  // refused by the adapter rather than silently pinning a fast clock.
+  const adapter = createStm32F0Adapter({ program, fixedClockHz, hseHz, ramAtReset,
+    ...(opts.clockHz !== undefined ? { clockHz: opts.clockHz } : {}) });
   adapter.attachBoard(board);
 
   // The debug target is the rp2040js one, unchanged: the adapter's
@@ -621,14 +623,16 @@ async function createStm32F0Target(opts) {
 
 async function createStm32G0Target(opts) {
   const {
-    board, program, symbols,
-    clockHz = 64_000_000,
+    board, program, symbols, fixedClockHz, hseHz, ramAtReset,
   } = opts;
 
   if (!board) throw new Error('stm32g0 target requires opts.board');
 
   const { createStm32G0Adapter } = await import('./stm32-adapter.js');
-  const adapter = createStm32G0Adapter({ clockHz, program });
+  // The core clock follows the firmware's RCC setup; opts.clockHz is
+  // refused by the adapter rather than silently pinning a fast clock.
+  const adapter = createStm32G0Adapter({ program, fixedClockHz, hseHz, ramAtReset,
+    ...(opts.clockHz !== undefined ? { clockHz: opts.clockHz } : {}) });
   adapter.attachBoard(board);
 
   const { createRp2040jsDebugTarget } = await import('./rp2040js-debug.js');

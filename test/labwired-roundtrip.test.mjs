@@ -308,7 +308,7 @@ describe('labwired round trip: a gallery bench on both tiers', { skip }, () => {
         const netlist = benchNetlist(name);
 
         const light = benchBoard(netlist, 'pa0');
-        const lightAdapter = createStm32F0Adapter({ program: image.bin, clockHz: 48_000_000 });
+        const lightAdapter = createStm32F0Adapter({ program: image.bin, fixedClockHz: 48_000_000 });
         const lightUart = drive(lightAdapter, light.board, ms);
 
         const opts = labwiredAdapterOptionsFor({ netlist, firmware: image.elf, name: `bw-${name}` });
