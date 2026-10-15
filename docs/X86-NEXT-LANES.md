@@ -1833,3 +1833,82 @@ and memory inspection, resume and pane switching. This claim does not own
 Lite's shared package files or qualify its current installed package. No new
 media acquisition, licensed guest, performance gain, physical RTx or whole-OS
 compatibility follows from this correction.
+
+
+## Explicit raw HDD export and reload
+
+Proposed staged work; no new export capability or execution is claimed here.
+Use the ownership envelope in `LANES.md`. First fix detached byte ownership:
+`Buffer` is a `Uint8Array` subclass, but its `slice()` aliases memory. Admission
+and returned media copies must detach both Buffer and offset-subarray inputs;
+mutating a caller's input or returned bytes must not mutate the live disk.
+Retain CHS validation and ATA command/timing behavior. Existing historical
+write-to-disk/fresh-guest readback is evidence for that bounded mechanism,
+not evidence of a user-facing export action.
+
+After the initial debugger correction is qualified and its file handed off,
+expose an explicit read-only raw-HDD snapshot through the active target and
+adapter. Require present media, exact CHS/length and a safe paused boundary;
+refuse an unfinished BSY/DRQ transfer rather than label a partial transfer
+complete. Start with a declared 64 MiB copy limit checked before allocation.
+Return detached bytes and geometry/length/SHA metadata, without changing
+controller state, guest RAM or input media. This is a snapshot of emulated
+bytes, not a physical durability guarantee or an architectural checkpoint.
+
+Add an explicit CLI `--hdd-output` route. Create a new regular output exclusively;
+never overwrite an existing destination, follow an output symlink or replace
+the input image. Preserve the original guest error if export also fails, and
+report export failure without presenting a partial write as success. The
+metadata must identify source input and exported image separately. No autosave
+or implicit writeback is introduced.
+
+Meaningful controls cover Buffer/subarray aliasing, absent/busy media, copy
+bounds, CHS mismatch, existing destination, symlink and same-input refusal.
+A new bounded hosted scenario uses unchanged freely licensed firmware/guest
+inputs and an authored marker: guest writes and closes a file, reaches a
+safe observable boundary, exports, then a fresh machine with that exact raw
+image and geometry reads the marker. Bind original input unchanged, exported
+hash/length, both guest results and source/runtime/media identities. A byte-only
+independent reader audits the sole original packet; do not replay old successful
+diagnostics just to read them. All enabled exact-head checks and affected guest
+qualification precede merge. Lite separately qualifies genuine browser download
+and chooser reload after coordinated supplier adoption.
+
+## Bounded DOS package admission
+
+This follows disk export/reload and has its own source, tests and acceptance;
+it is not a present ZIP/JS-DOS loader. Implement a pure shared policy and a
+Node ZIP adapter without changing shared package dependencies. Select one
+explicit config, or one unambiguous supported default; never guess among
+multiple runnable configurations. Preserve full canonical archive paths and
+resolve media relative to the chosen config. Basename matching is insufficient.
+
+Initial routes are explicit: a DOS-service COM/MZ program with declared virtual
+files, or one raw HDD with exact CHS for the functional 386 AT. Freeze the exact
+supported declaration/option grammar before implementation. Reject unknown
+commands, command chaining, external host paths/URLs, ambiguous mounts or entry
+points and unsupported devices. Do not execute package JavaScript, scripts or
+arbitrary autoexec. A DOS-service route is not an extender-capable DOS boot.
+
+Preflight original ZIP local/central records before a decoder can sanitize or
+collapse names. Bound compressed input, entry count, decoded per-file and total
+bytes, expansion ratio, config size and extraction work; verify CRC and topology.
+Reject traversal, absolute/UNC paths, duplicate/case aliases, conflicting ancestor
+paths, links, encryption, unsupported ZIP64/multidisk/descriptors or malformed
+extents. Start with a deliberately documented STORED/deflate subset; use an
+immutable in-memory asset map, not filesystem extraction or network fallback.
+Browser and Node codecs must enforce the same policy; a decoder's final object
+map alone cannot establish original-name safety or memory bounds.
+
+Authored tiny archives exercise exact bytes, config-relative subdirectories,
+file lookup, collisions, truncation, CRC, caps, ambiguity and unsupported commands.
+Then qualify the same free/authored package through CLI and the actual installed
+GUI, with selected target/media identity, visible output/input and retained
+failure UI/session behavior. Integrate existing runners only through their
+reviewed interfaces; claim any additional runner changes before coding. Keep
+existing 8086 and wired routes distinct. No dependency pin change belongs here.
+
+ISO/CD-ROM is a later device lane: it requires an actual ATAPI command/data/IRQ
+path plus firmware and guest support before a picker can promise it. An ISO
+extension or renamed raw HDD cannot supply that implementation. A future ISO
+lane needs separately merged ownership and authored/free acceptance fixtures.
