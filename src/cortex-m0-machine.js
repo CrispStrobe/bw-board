@@ -111,6 +111,13 @@ export class CortexM0Machine {
 
   addPeripheral (p) { this.peripherals.push(p); }
 
+  /** The core clock (HCLK) a board's clock tree selects; the instruction
+   *  rate follows it from the next instruction on. */
+  setClockHz (hz) {
+    if (!(hz > 0)) throw new RangeError(`core clock must be positive, got ${hz}`);
+    this.clockHz = hz;
+  }
+
   _find (addr) {
     for (const p of this.peripherals) {
       if (addr >= p.base && addr < p.base + p.size) return p;
@@ -211,7 +218,6 @@ export class CortexM0Machine {
     // difference boundary A exists to erase.
     const target = this.timeNsInternal
       + (typeof deltaNs === 'bigint' ? deltaNs : BigInt(Math.round(deltaNs)));
-    const nsPerCycle = 1e9 / this.clockHz;
     while (this.timeNsInternal < target) {
       if (this.core.waiting) {
         // Level-triggered wake, the core's own top-of-executeInstruction
@@ -259,7 +265,9 @@ export class CortexM0Machine {
       }
       const cycles = this.core.executeInstruction();
       this.stats.instructions++;
-      const ns = BigInt(Math.max(1, Math.round(cycles * nsPerCycle)));
+      // Read the clock per instruction: firmware switching SYSCLK mid-slice
+      // changes the rate from the next instruction, as on silicon.
+      const ns = BigInt(Math.max(1, Math.round(cycles * 1e9 / this.clockHz)));
       this.timeNsInternal += ns; // time first — same rule as the park path
       this._advancePeripherals(ns);
     }

@@ -15,12 +15,27 @@ const TIM14 = 0x40002000;
 const ADC = 0x40012400;
 
 function board (attach) {
-  const m = new CortexM0Machine({ clockHz: 64_000_000, sramBytes: 8192, flashBytes: 64 * 1024 });
+  const m = new CortexM0Machine({ sramBytes: 8192, flashBytes: 64 * 1024 });
   const bytes = [];
   const b = attach(m, { onSerialByte: (x) => bytes.push(x) });
   const w = (a, v) => m._write(a, v, 4);
   const r = (a) => m._read(a, 4);
-  const sendHi = () => { w(USART1 + 0x00, 1 | (1 << 3)); w(USART1 + 0x28, 0x48); w(USART1 + 0x28, 0x69); };
+  // A byte reaches the wire only from PA9 in AF1 at a set baud, one frame
+  // time after TDR (the USART is timed now, not instant). PA9 is routed with
+  // the family's own GPIO clock and address, then each byte waits for TXE.
+  const g0 = attach === attachStm32G0;
+  const sendHi = () => {
+    if (g0) { w(RCC + 0x34, r(RCC + 0x34) | 1); w(0x50000000, 2 << 18); w(0x50000024, 1 << 4); } else {
+      w(RCC + 0x14, r(RCC + 0x14) | (1 << 17)); w(0x48000000, 2 << 18); w(0x48000024, 1 << 4);
+    }
+    w(USART1 + 0x0c, 69);                       // 8 MHz F0 PCLK; 16 MHz G0: 230400
+    w(USART1 + 0x00, 1 | (1 << 3));
+    for (const c of [0x48, 0x69]) {
+      for (let i = 0; i < 100 && !(r(USART1 + 0x1c) & 0x80); i++) m.tickNs(10_000);
+      w(USART1 + 0x28, c);
+    }
+    m.tickNs(1_000_000);
+  };
   return { m, b, bytes, w, r, sendHi };
 }
 

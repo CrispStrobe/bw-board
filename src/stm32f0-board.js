@@ -16,61 +16,397 @@
  * @module
  */
 
-// ── RCC (F0 subset): the clock-enable ledger ──────────────────────────
-export class Stm32Rcc {
-  constructor () {
-    this.base = 0x40021000;
-    this.size = 0x400;
-    this.ahbenr = 0;   // 0x14: GPIOA bit17, GPIOB 18, GPIOC 19 (F0)
-    this.apb1enr = 0;  // 0x1C: TIM3 bit1, TIM14 bit8 (F0)
-    this.apb2enr = 0;  // 0x18: USART1 bit14 (F0)
-    this.iopenr = 0;   // 0x34: GPIOA bit0, GPIOB 1, GPIOC 2 (G0)
-    this.apbenr1 = 0;  // 0x3C: TIM3 bit1 (G0)
-    this.apbenr2 = 0;  // 0x40: SYSCFG 0, TIM1 11, SPI1 12, USART1 14, TIM14 15,
-                       //       TIM16 17, TIM17 18, ADC 20 (G0, RM0444). The F0 has no
-                       //       register here; it reads 0 there unless firmware wrote it.
+import { stm32g0TemperatureVolts } from './chip-temperature.js';
+
+// ── Power-on SRAM ─────────────────────────────────────────────────────
+// SRAM is NOT zero at power-on: its cells settle to whatever each one
+// favours. A program that never zeroes .bss (no startup code) reads that
+// garbage on silicon; a simulator that hands it zeroes hides the bug. The
+// fill is a deterministic LCG with every byte non-zero, so a missing .bss
+// clear shows up the same way on every run.
+export function fillPowerOnRam (sram, seed = 0x5eed_1234) {
+  let x = seed >>> 0;
+  for (let i = 0; i < sram.length; i++) {
+    x = (Math.imul(x, 1664525) + 1013904223) >>> 0;
+    sram[i] = (x >>> 24) || 0xa5;
+  }
+  return sram;
+}
+
+const AHB_DIV = [1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 8, 16, 64, 128, 256, 512];
+const APB_DIV = [1, 1, 1, 1, 2, 4, 8, 16];
+
+// ── RCC clock tree, shared by both families ───────────────────────────
+// Ready flags follow their enables after the datasheet start-up time, the
+// system clock switch only completes onto a READY source (SWS follows SW
+// then), and every consumer — the core's instruction rate, the timers'
+// count rate, the USART's baud — asks this tree for its clock. A program
+// that never configures the PLL therefore runs at the reset oscillator,
+// exactly as on silicon.
+class Stm32ClockTree {
+  constructor ({ hseHz = 0, fixedClockHz = null } = {}) {
+    this.hseHz = hseHz;               // 0: no crystal fitted — HSERDY never sets
+    this.fixedClockHz = fixedClockHz; // legacy: every clock pinned (cross-sim parity only)
     /** accesses to peripherals whose clock was off — the teaching signal */
     this.gatedAccesses = [];
+    /** clock-tree misconfiguration notes (switch to an unready source, too few
+     *  flash wait states, PLL out of range) — a second teaching ledger */
+    this.clockNotes = [];
+    this.onClockChange = null;
+    this._pending = {};               // ready flag -> ns still to wait
+    this.sws = 0;                     // the source the switch actually selected
+  }
+
+  noteGated (what) { this.gatedAccesses.push(what); }
+  noteClock (what) { if (this.clockNotes.at(-1) !== what) this.clockNotes.push(what); }
+
+  _startReady (flag, ns) { this._pending[flag] = ns; this[flag] = false; }
+  _dropReady (flag) { delete this._pending[flag]; this[flag] = false; }
+
+  advanceNs (deltaNs) {
+    let changed = false;
+    for (const flag of Object.keys(this._pending)) {
+      this._pending[flag] -= Number(deltaNs);
+      if (this._pending[flag] <= 0) { delete this._pending[flag]; this[flag] = true; changed = true; }
+    }
+    if (changed) this._settle();
+  }
+
+  nextWakeNs () {
+    let h = Infinity;
+    for (const ns of Object.values(this._pending)) h = Math.min(h, Math.max(1, ns));
+    return h;
+  }
+
+  /** Complete a pending clock switch when its source is ready, then publish. */
+  _settle () {
+    const want = this._swRequested();
+    if (want !== this.sws && this._sourceReady(want)) this.sws = want;
+    else if (want !== this.sws) this.noteClock(`system clock switch to ${this._sourceName(want)} waits: source not ready`);
+    if (this.onClockChange) this.onClockChange();
+  }
+
+  hclkHz () {
+    if (this.fixedClockHz) return this.fixedClockHz;
+    return this.sysclkHz() / AHB_DIV[this._hpre()];
+  }
+  pclkHz () {
+    if (this.fixedClockHz) return this.fixedClockHz;
+    return this.hclkHz() / APB_DIV[this._ppre()];
+  }
+  /** Timers run at PCLK, doubled when the APB prescaler divides (RM0360 §6.2, RM0444 §5.2). */
+  timerClockHz () {
+    if (this.fixedClockHz) return this.fixedClockHz;
+    return APB_DIV[this._ppre()] === 1 ? this.pclkHz() : 2 * this.pclkHz();
+  }
+}
+
+// ── RCC, STM32F030 (RM0360 §6) ─────────────────────────────────────────
+// Reset: HSI 8 MHz is the system clock. The PLL takes HSI/2 or HSE/PREDIV,
+// multiplies by PLLMUL (2..16), and must be locked (PLLRDY) before SW=10
+// takes effect. FLASH_ACR needs one wait state above 24 MHz.
+export class Stm32Rcc extends Stm32ClockTree {
+  static HSI_HZ = 8_000_000;
+  static HSI_STARTUP_NS = 2_000;   // DS10235 tSU(HSI) max 2 µs
+  static PLL_LOCK_NS = 200_000;    // DS10235 tLOCK max 200 µs
+  static HSE_STARTUP_NS = 2_000_000;
+
+  constructor (opts = {}) {
+    super(opts);
+    this.base = 0x40021000;
+    this.size = 0x400;
+    this.family = 'f0';
+    this.cr = 0x80 | 1;  // HSITRIM=16, HSION; HSIRDY is the hsiRdy flag
+    this.hsiRdy = true; this.hseRdy = false; this.pllRdy = false;
+    this.cfgr = 0;       // 0x04
+    this.cfgr2 = 0;      // 0x2C: PREDIV
+    this.cfgr3 = 0;      // 0x30: USART1SW
+    this.ahbenr = 0x14;  // 0x14: SRAMEN|FLITFEN at reset; GPIOA bit17, GPIOB 18, GPIOC 19
+    this.apb1enr = 0;    // 0x1C: TIM3 bit1, TIM14 bit8
+    this.apb2enr = 0;    // 0x18: USART1 bit14, ADC bit9
+    this.other = new Map(); // registers stored without behaviour
+    this.flashLatency = () => 1;
   }
 
   read (off) {
     switch (off) {
-      // CR: report HSI+PLL ready so init loops terminate (bits 1, 25)
-      case 0x00: return 0x0200_0002 | 0x0100_0000;
-      case 0x04: return 0; // CFGR: reset state
+      case 0x00: return (this.cr & ~((1 << 1) | (1 << 17) | (1 << 25)))
+        | (this.hsiRdy ? 1 << 1 : 0) | (this.hseRdy ? 1 << 17 : 0) | (this.pllRdy ? 1 << 25 : 0);
+      case 0x04: return (this.cfgr & ~0xc) | (this.sws << 2);
       case 0x14: return this.ahbenr;
       case 0x18: return this.apb2enr;
       case 0x1c: return this.apb1enr;
-      case 0x34: return this.iopenr;
-      case 0x3c: return this.apbenr1;
-      case 0x40: return this.apbenr2;
-      default: return 0;
+      case 0x2c: return this.cfgr2;
+      case 0x30: return this.cfgr3;
+      default: return this.other.get(off) ?? 0;
     }
   }
 
   write (off, v) {
-    if (off === 0x14) this.ahbenr = v >>> 0;
-    else if (off === 0x18) this.apb2enr = v >>> 0;
-    else if (off === 0x1c) this.apb1enr = v >>> 0;
-    else if (off === 0x34) this.iopenr = v >>> 0;
-    else if (off === 0x3c) this.apbenr1 = v >>> 0;
-    else if (off === 0x40) this.apbenr2 = v >>> 0;
-    // CR/CFGR writes accepted (PLL config is a no-op at this fidelity)
+    v >>>= 0;
+    switch (off) {
+      case 0x00: this._writeCr(v); break;
+      case 0x04: {
+        // PLLSRC/PLLXTPRE/PLLMUL are frozen while the PLL runs (RM0360 §6.4.2)
+        const pllBits = 0x003f8000;
+        if (this.cr & (1 << 24)) v = (v & ~pllBits) | (this.cfgr & pllBits);
+        this.cfgr = v & ~0xc;
+        this._settle();
+        break;
+      }
+      case 0x14: this.ahbenr = v; break;
+      case 0x18: this.apb2enr = v; break;
+      case 0x1c: this.apb1enr = v; break;
+      case 0x2c: if (!(this.cr & (1 << 24))) this.cfgr2 = v & 0xf; break;
+      case 0x30: this.cfgr3 = v; break;
+      default: this.other.set(off, v); break;
+    }
   }
 
-  gpioEnabled (portIndex) {
-    return ((this.ahbenr >>> (17 + portIndex)) & 1) === 1 || ((this.iopenr >>> portIndex) & 1) === 1;
+  _writeCr (v) {
+    const was = this.cr;
+    // The running system clock source cannot be switched off.
+    if (this.sws === 0) v |= 1;
+    if (this.sws === 1) v |= 1 << 16;
+    if (this.sws === 2) v |= 1 << 24;
+    this.cr = v & ~((1 << 1) | (1 << 17) | (1 << 25));
+    const rose = (bit) => !(was & (1 << bit)) && (v & (1 << bit));
+    const fell = (bit) => (was & (1 << bit)) && !(v & (1 << bit));
+    if (rose(0)) this._startReady('hsiRdy', Stm32Rcc.HSI_STARTUP_NS);
+    if (fell(0)) this._dropReady('hsiRdy');
+    if (rose(16) && this.hseHz) this._startReady('hseRdy', Stm32Rcc.HSE_STARTUP_NS);
+    if (fell(16)) this._dropReady('hseRdy');
+    if (rose(24)) {
+      if (this._pllInputReady()) this._startReady('pllRdy', Stm32Rcc.PLL_LOCK_NS);
+      else this.noteClock('PLLON set while the PLL input oscillator is not ready');
+    }
+    if (fell(24)) this._dropReady('pllRdy');
+    this._settle();
   }
-  tim3Enabled () {
-    return ((this.apb1enr >>> 1) & 1) === 1 || ((this.apbenr1 >>> 1) & 1) === 1;
-  }
-  // One RCC instance serves both layouts (attachStm32G0 = attachStm32F0),
-  // so each gate accepts the F0 bit OR the G0 APBENR2 bit, like gpio/tim3.
-  tim14Enabled () { return ((this.apb1enr >>> 8) & 1) | ((this.apbenr2 >>> 15) & 1); }
-  usart1Enabled () { return ((this.apb2enr >>> 14) & 1) | ((this.apbenr2 >>> 14) & 1); }
-  adcEnabled () { return ((this.apb2enr >>> 9) & 1) | ((this.apbenr2 >>> 20) & 1); }
 
-  noteGated (what) { this.gatedAccesses.push(what); }
+  _pllFromHse () { return ((this.cfgr >>> 15) & 3) === 2; }
+  _pllInputReady () { return this._pllFromHse() ? this.hseRdy : this.hsiRdy; }
+  pllHz () {
+    const inHz = this._pllFromHse() ? this.hseHz / ((this.cfgr2 & 0xf) + 1) : Stm32Rcc.HSI_HZ / 2;
+    const mul = Math.min(16, ((this.cfgr >>> 18) & 0xf) + 2);
+    return inHz * mul;
+  }
+  _swRequested () { return this.cfgr & 3; }
+  _sourceReady (sw) { return sw === 0 ? this.hsiRdy : sw === 1 ? this.hseRdy : sw === 2 ? this.pllRdy : false; }
+  _sourceName (sw) { return ['HSI', 'HSE', 'PLL', 'HSI48'][sw]; }
+  _hpre () { return (this.cfgr >>> 4) & 0xf; }
+  _ppre () { return (this.cfgr >>> 8) & 7; }
+
+  sysclkHz () {
+    if (this.fixedClockHz) return this.fixedClockHz;
+    if (this.sws === 1) return this.hseHz;
+    if (this.sws === 2) {
+      const hz = this.pllHz();
+      if (hz > 48_000_000) this.noteClock(`PLL output ${hz / 1e6} MHz exceeds the F030's 48 MHz`);
+      return hz;
+    }
+    return Stm32Rcc.HSI_HZ;
+  }
+
+  /** USART1 kernel clock: CFGR3.USART1SW (RM0360 §6.4.13). LSE is not fitted. */
+  usart1ClockHz () {
+    if (this.fixedClockHz) return this.fixedClockHz;
+    switch (this.cfgr3 & 3) {
+      case 0: return this.pclkHz();
+      case 1: return this.sysclkHz();
+      case 3: return this.hsiRdy ? Stm32Rcc.HSI_HZ : 0;
+      default: return 0;
+    }
+  }
+
+  /** Wait states the flash needs at the current HCLK (RM0360 §3.5.1). */
+  requiredFlashLatency () { return this.hclkHz() > 24_000_000 ? 1 : 0; }
+
+  gpioEnabled (portIndex) { return ((this.ahbenr >>> (17 + portIndex)) & 1) === 1; }
+  tim3Enabled () { return ((this.apb1enr >>> 1) & 1) === 1; }
+  tim14Enabled () { return (this.apb1enr >>> 8) & 1; }
+  usart1Enabled () { return (this.apb2enr >>> 14) & 1; }
+  adcEnabled () { return (this.apb2enr >>> 9) & 1; }
+}
+
+// ── RCC, STM32G030 (RM0444 §5) ─────────────────────────────────────────
+// Reset: HSISYS = HSI16 / HSIDIV(1) = 16 MHz. The PLL takes HSI16 or HSE
+// (PLLSRC), divides by M, multiplies by N (VCO 64..344 MHz) and PLLRCLK =
+// VCO / R feeds the system clock (max 64 MHz). Enable bits live in IOPENR
+// (0x34), APBENR1 (0x3C) and APBENR2 (0x40); the F0's AHBENR/APB2ENR/APB1ENR
+// offsets are OTHER registers on this part (CRRCR, CIER, CIFR) and enable
+// nothing. FLASH_ACR needs 1 wait state above 24 MHz and 2 above 48 MHz.
+export class Stm32G0Rcc extends Stm32ClockTree {
+  static HSI_HZ = 16_000_000;
+  static HSI_STARTUP_NS = 2_000;   // DS12991 tSU(HSI16) max 2 µs (typ)
+  static PLL_LOCK_NS = 40_000;     // DS12991 tLOCK max 40 µs
+  static HSE_STARTUP_NS = 2_000_000;
+
+  constructor (opts = {}) {
+    super(opts);
+    this.base = 0x40021000;
+    this.size = 0x400;
+    this.family = 'g0';
+    this.cr = 1 << 8;        // HSION; HSIDIV=000
+    this.hsiRdy = true; this.hseRdy = false; this.pllRdy = false;
+    this.cfgr = 0;           // 0x08
+    this.pllcfgr = 0x1000;   // 0x0C: reset PLLN=16
+    this.ccipr = 0;          // 0x54: USART1SEL
+    this.iopenr = 0;         // 0x34: GPIOA bit0, GPIOB 1, GPIOC 2
+    this.ahbenr = 0x100;     // 0x38: FLASHEN at reset
+    this.apbenr1 = 0;        // 0x3C: TIM3 bit1
+    this.apbenr2 = 0;        // 0x40: SYSCFG 0, TIM1 11, SPI1 12, USART1 14, TIM14 15, TIM16 17, TIM17 18, ADC 20
+    this.other = new Map();
+  }
+
+  read (off) {
+    switch (off) {
+      case 0x00: return (this.cr & ~((1 << 10) | (1 << 17) | (1 << 25)))
+        | (this.hsiRdy ? 1 << 10 : 0) | (this.hseRdy ? 1 << 17 : 0) | (this.pllRdy ? 1 << 25 : 0);
+      case 0x08: return (this.cfgr & ~0x38) | (this.sws << 3);
+      case 0x0c: return this.pllcfgr;
+      case 0x34: return this.iopenr;
+      case 0x38: return this.ahbenr;
+      case 0x3c: return this.apbenr1;
+      case 0x40: return this.apbenr2;
+      case 0x54: return this.ccipr;
+      default: return this.other.get(off) ?? 0;
+    }
+  }
+
+  write (off, v) {
+    v >>>= 0;
+    switch (off) {
+      case 0x00: this._writeCr(v); break;
+      case 0x08: this.cfgr = v & ~0x38; this._settle(); break;
+      // PLLCFGR is written only while the PLL is off (RM0444 §5.4.4)
+      case 0x0c: if (!(this.cr & (1 << 24))) this.pllcfgr = v; else this.noteClock('PLLCFGR written while PLLON: ignored'); break;
+      case 0x34: this.iopenr = v; break;
+      case 0x38: this.ahbenr = v; break;
+      case 0x3c: this.apbenr1 = v; break;
+      case 0x40: this.apbenr2 = v; break;
+      case 0x54: this.ccipr = v; break;
+      default: this.other.set(off, v); break;
+    }
+  }
+
+  _writeCr (v) {
+    const was = this.cr;
+    if (this.sws === 0) v |= 1 << 8;
+    if (this.sws === 1) v |= 1 << 16;
+    if (this.sws === 2) v |= 1 << 24;
+    this.cr = v & ~((1 << 10) | (1 << 17) | (1 << 25));
+    const rose = (bit) => !(was & (1 << bit)) && (v & (1 << bit));
+    const fell = (bit) => (was & (1 << bit)) && !(v & (1 << bit));
+    if (rose(8)) this._startReady('hsiRdy', Stm32G0Rcc.HSI_STARTUP_NS);
+    if (fell(8)) this._dropReady('hsiRdy');
+    if (rose(16) && this.hseHz) this._startReady('hseRdy', Stm32G0Rcc.HSE_STARTUP_NS);
+    if (fell(16)) this._dropReady('hseRdy');
+    if (rose(24)) {
+      const src = this.pllcfgr & 3;
+      const ready = src === 2 ? this.hsiRdy : src === 3 ? this.hseRdy : false;
+      if (ready) this._startReady('pllRdy', Stm32G0Rcc.PLL_LOCK_NS);
+      else this.noteClock('PLLON set with no ready PLL source (PLLCFGR.PLLSRC)');
+    }
+    if (fell(24)) this._dropReady('pllRdy');
+    this._settle();
+  }
+
+  hsisysHz () { return Stm32G0Rcc.HSI_HZ / (1 << ((this.cr >>> 11) & 7)); }
+  pllVcoHz () {
+    const src = this.pllcfgr & 3;
+    const inHz = src === 2 ? Stm32G0Rcc.HSI_HZ : src === 3 ? this.hseHz : 0;
+    const m = ((this.pllcfgr >>> 4) & 7) + 1;
+    const n = (this.pllcfgr >>> 8) & 0x7f;
+    return inHz / m * n;
+  }
+  pllRHz () {
+    const r = ((this.pllcfgr >>> 29) & 7) + 1;
+    if (!((this.pllcfgr >>> 28) & 1)) return 0; // PLLREN off: no R output
+    return this.pllVcoHz() / r;
+  }
+  _swRequested () { return this.cfgr & 7; }
+  _sourceReady (sw) {
+    if (sw === 0) return this.hsiRdy;
+    if (sw === 1) return this.hseRdy;
+    if (sw === 2) return this.pllRdy && this.pllRHz() > 0;
+    return false; // LSI/LSE not modelled
+  }
+  _sourceName (sw) { return ['HSISYS', 'HSE', 'PLLRCLK', 'LSI', 'LSE'][sw] ?? `SW=${sw}`; }
+  _hpre () { return (this.cfgr >>> 8) & 0xf; }
+  _ppre () { return (this.cfgr >>> 12) & 7; }
+
+  sysclkHz () {
+    if (this.fixedClockHz) return this.fixedClockHz;
+    if (this.sws === 1) return this.hseHz;
+    if (this.sws === 2) {
+      const vco = this.pllVcoHz(); const hz = this.pllRHz();
+      if (vco < 64e6 || vco > 344e6) this.noteClock(`PLL VCO ${vco / 1e6} MHz outside 64..344 MHz`);
+      if (hz > 64e6) this.noteClock(`PLLRCLK ${hz / 1e6} MHz exceeds the G030's 64 MHz`);
+      return hz;
+    }
+    return this.hsisysHz();
+  }
+
+  /** USART1 kernel clock: CCIPR.USART1SEL (RM0444 §5.4.21). LSE is not fitted. */
+  usart1ClockHz () {
+    if (this.fixedClockHz) return this.fixedClockHz;
+    switch (this.ccipr & 3) {
+      case 0: return this.pclkHz();
+      case 1: return this.sysclkHz();
+      case 2: return this.hsiRdy ? Stm32G0Rcc.HSI_HZ : 0;
+      default: return 0;
+    }
+  }
+
+  /** Wait states the flash needs at the current HCLK (RM0444 §3.3.4, range 1). */
+  requiredFlashLatency () {
+    const h = this.hclkHz();
+    return h > 48_000_000 ? 2 : h > 24_000_000 ? 1 : 0;
+  }
+
+  gpioEnabled (portIndex) { return ((this.iopenr >>> portIndex) & 1) === 1; }
+  tim3Enabled () { return ((this.apbenr1 >>> 1) & 1) === 1; }
+  tim14Enabled () { return (this.apbenr2 >>> 15) & 1; }
+  usart1Enabled () { return (this.apbenr2 >>> 14) & 1; }
+  adcEnabled () { return (this.apbenr2 >>> 20) & 1; }
+}
+
+// ── FLASH interface: ACR wait states only ──────────────────────────────
+// Clock-raising firmware writes FLASH_ACR.LATENCY first; too few wait states
+// for HCLK reads garbage on silicon. That cannot be emulated faithfully, so it
+// is ledgered in rcc.clockNotes. Every other FLASH register lands in the
+// machine's unmapped ledger.
+export class Stm32Flash {
+  constructor ({ rcc, machine, family = 'f0' }) {
+    this.base = 0x40022000;
+    this.size = 0x400;
+    this.rcc = rcc;
+    this.machine = machine;
+    this.family = family;
+    this.acr = family === 'g0' ? 0x0004_0600 : 0x30;
+  }
+  latency () { return this.acr & 7; }
+  check () {
+    const need = this.rcc.requiredFlashLatency();
+    if (this.latency() < need) {
+      this.rcc.noteClock(`FLASH_ACR.LATENCY=${this.latency()} too low for HCLK ${this.rcc.hclkHz() / 1e6} MHz (needs ${need})`);
+    }
+  }
+  read (off) {
+    if (off === 0) return this.acr;
+    this.machine.unmapped.push({ rw: 'r', addr: this.base + off, size: 4, t: this.machine.timeNsInternal });
+    return 0;
+  }
+  write (off, v) {
+    if (off === 0) {
+      v >>>= 0;
+      // F0: PRFTBS (bit 5) mirrors PRFTBE (bit 4)
+      this.acr = this.family === 'f0' ? (v & ~0x20) | ((v & 0x10) << 1) : v;
+      return;
+    }
+    this.machine.unmapped.push({ rw: 'w', addr: this.base + off, size: 4, value: v, t: this.machine.timeNsInternal });
+  }
 }
 
 // ── GPIO v2 (MODER/IDR/ODR/BSRR/PUPDR), one instance per port ─────────
@@ -101,7 +437,18 @@ export class Stm32Gpio {
     this.driven = 0; // which pins something external actually drives —
                      // an undriven input reads its pull, like the pad does
     this.afrl = 0; this.afrh = 0;
+    /** peripherals that own AF pads re-check their routing on MODER/AFR writes */
+    this.onConfigChange = [];
   }
+
+  /** The pad is in alternate-function mode with exactly this AF number. */
+  routesAf (pin, af) {
+    if (((this.moder >>> (2 * pin)) & 3) !== 2) return false;
+    const afr = pin < 8 ? this.afrl : this.afrh;
+    return ((afr >>> (4 * (pin & 7))) & 0xf) === af;
+  }
+
+  _configChanged () { for (const f of this.onConfigChange) f(); }
 
   _enabled () {
     if (this.rcc.gpioEnabled(this.portIndex)) return true;
@@ -140,7 +487,7 @@ export class Stm32Gpio {
   write (off, v) {
     if (!this._enabled()) return;
     switch (off) {
-      case 0x00: this.moder = v >>> 0; this._publishAll(); break;
+      case 0x00: this.moder = v >>> 0; this._publishAll(); this._configChanged(); break;
       // OTYPER republishes: it changes the pad's DRIVE, not its level, so it
       // produces no edge of its own. Written BEFORE MODER (the usual idiom)
       // the following MODER write would republish anyway; written to a pin
@@ -155,8 +502,8 @@ export class Stm32Gpio {
         this._publishAll();
         break;
       }
-      case 0x20: this.afrl = v >>> 0; break;
-      case 0x24: this.afrh = v >>> 0; break;
+      case 0x20: this.afrl = v >>> 0; this._configChanged(); break;
+      case 0x24: this.afrh = v >>> 0; this._configChanged(); break;
       default: break;
     }
   }
@@ -222,13 +569,19 @@ export class Stm32Tim3 {
    *  CH1=PA6, CH2=PA7, CH4=PB1 (AF1) — the codegen's PWM vocabulary. */
   static PWM_PINS = { 1: 'PA6', 2: 'PA7', 4: 'PB1' };
 
-  /** @param {{rcc: Stm32Rcc, clockHz: number, irq?: number,
-   *           onPinChange?: (pin: string, mode: string, high: boolean) => void}} opts */
-  constructor ({ rcc, clockHz, irq = 16, onPinChange }) {
+  /** @param {{rcc: Stm32Rcc, clockHz: number|(() => number), irq?: number,
+   *           onPinChange?: (pin: string, mode: string, high: boolean) => void,
+   *           pinRouted?: (pin: string) => boolean}} opts
+   *  clockHz: a fixed count clock, or a function asking the RCC tree.
+   *  pinRouted: the board's AF check; a compare output reaches its pad only
+   *  while that pad is in AF mode with AF1. Absent (a bare unit), every
+   *  channel counts as routed. */
+  constructor ({ rcc, clockHz, irq = 16, onPinChange, pinRouted }) {
     this.base = 0x40000400;
     this.size = 0x400;
     this.rcc = rcc;
-    this.clockHz = clockHz;
+    this._clk = typeof clockHz === 'function' ? clockHz : () => clockHz;
+    this.pinRouted = pinRouted || (() => true);
     this.irq = irq;
     this.onPinChange = onPinChange || (() => {});
     this.cr1 = 0; this.dier = 0; this.sr = 0;
@@ -249,9 +602,14 @@ export class Stm32Tim3 {
     return mode === 6 && (ch in Stm32Tim3.PWM_PINS);
   }
 
+  get clockHz () { return this._clk(); }
+
   _publishPwm () {
     for (const ch of [1, 2, 4]) {
       if (!this._pwmActive(ch)) continue;
+      // Not AF1 on its pad: the compare runs but nothing leaves the chip.
+      // Forget the level so routing it later publishes the current one.
+      if (!this.pinRouted(Stm32Tim3.PWM_PINS[ch])) { delete this._pwmLevel[ch]; continue; }
       const level = this.cnt < this.ccr[ch];
       if (this._pwmLevel[ch] !== level) {
         this._pwmLevel[ch] = level;
@@ -357,12 +715,12 @@ export class Stm32Tim3 {
 // and raises NVIC line 19 while UIE is set. Counting is arithmetic (whole
 // periods per advance), so a 2 kHz tone costs nothing per count.
 export class Stm32Tim14 {
-  /** @param {{rcc: Stm32Rcc, clockHz: number, irq?: number}} opts */
+  /** @param {{rcc: Stm32Rcc, clockHz: number|(() => number), irq?: number}} opts */
   constructor ({ rcc, clockHz, irq = 19 }) {
     this.base = 0x40002000;
     this.size = 0x400;
     this.rcc = rcc;
-    this.clockHz = clockHz;
+    this._clk = typeof clockHz === 'function' ? clockHz : () => clockHz;
     this.irq = irq;
     this.cr1 = 0; this.dier = 0; this.sr = 0;
     this.psc = 0; this.arr = 0xffff; this.cnt = 0;
@@ -401,6 +759,8 @@ export class Stm32Tim14 {
       default: break;
     }
   }
+
+  get clockHz () { return this._clk(); }
 
   _running () { return (this.cr1 & 1) === 1 && this.rcc.tim14Enabled(); }
   _tickNs () { return 1e9 / (this.clockHz / (this.psc + 1)); }
@@ -454,6 +814,25 @@ export class Stm32Adc {
     return false;
   }
 
+  /** 16: the temperature sensor (0 V until TSEN powers it);
+   *  17/18 (VREFINT, VBAT) are not modelled and read 0. */
+  _channelVolts (ch) {
+    if (ch < 16) return this.onAnalogRead(ch);
+    return ch === 16 && (this.ccr & (1 << 23)) ? this.onTemperature() : 0;
+  }
+
+  _convert () {
+    let ch = -1;
+    for (let i = 0; i < 19; i++) if ((this.chselr >>> i) & 1) { ch = i; break; }
+    if (ch >= 0) {
+      const volts = this._channelVolts(ch);
+      const counts = Math.round((Math.max(0, Math.min(this.vref, volts)) / this.vref) * 4095);
+      this.dr = counts & 0xfff;
+      this.isr |= (1 << 2);               // EOC
+    }
+    this.cr &= ~(1 << 2);                 // conversion done
+  }
+
   read (off) {
     if (!this._enabled()) return 0;
     switch (off) {
@@ -476,20 +855,7 @@ export class Stm32Adc {
       case 0x08: {
         this.cr = v >>> 0;
         if (this.cr & 1) this.isr |= 1;         // ADEN -> ADRDY
-        if (this.cr & (1 << 2)) {               // ADSTART: convert now
-          let ch = -1;
-          for (let i = 0; i < 19; i++) if ((this.chselr >>> i) & 1) { ch = i; break; }
-          if (ch >= 0) {
-            // 16: the temperature sensor (0 V until TSEN powers it);
-            // 17/18 (VREFINT, VBAT) are not modelled and read 0.
-            const volts = ch < 16 ? this.onAnalogRead(ch)
-              : ch === 16 && (this.ccr & (1 << 23)) ? this.onTemperature() : 0;
-            const counts = Math.round((Math.max(0, Math.min(this.vref, volts)) / this.vref) * 4095);
-            this.dr = counts & 0xfff;
-            this.isr |= (1 << 2);               // EOC
-          }
-          this.cr &= ~(1 << 2);                 // conversion done
-        }
+        if (this.cr & (1 << 2)) this._convert(); // ADSTART: convert now
         break;
       }
       case 0x28: this.chselr = v >>> 0; break;
@@ -499,16 +865,90 @@ export class Stm32Adc {
   }
 }
 
-// ── USART1 (the F0's v2 peripheral: ISR/TDR/RDR) ──────────────────────
+// ── ADC, STM32G030 (RM0444 §15) ───────────────────────────────────────
+// Differs from the F0 where firmware notices: the ADC's internal voltage
+// regulator (CR.ADVREGEN, bit 28) must be on for tADCVREG_STUP (20 µs,
+// DS12991) before ADEN — ADEN written earlier does not take, and ADRDY never
+// sets, so an init that skips the regulator or the wait hangs on ADRDY just
+// as on silicon. Calibration (ADCAL) needs the regulator too and completes
+// on its own. A conversion needs ADEN with ADRDY. The temperature sensor is
+// channel 12 (VREFINT 13, VBAT 14 — not modelled, read 0).
+export class Stm32G0Adc extends Stm32Adc {
+  static VREG_STARTUP_NS = 20_000;
+
+  constructor (opts) {
+    super(opts);
+    if (!opts.onTemperature) this.onTemperature = () => stm32g0TemperatureVolts(25);
+    this.tempChannel = 12;
+    this._vregNs = 0;           // how long the regulator has been on
+  }
+
+  _vregReady () { return (this.cr & (1 << 28)) !== 0 && this._vregNs >= Stm32G0Adc.VREG_STARTUP_NS; }
+
+  advanceNs (deltaNs) {
+    if (this.cr & (1 << 28)) this._vregNs += Number(deltaNs);
+  }
+
+  write (off, v) {
+    if (off === 0x28) {
+      // CHSELR: the new channel configuration is applied, then CCRDY (ISR bit 13)
+      // reports it (RM0444 §15.5.1); firmware polls it before ADSTART.
+      super.write(off, v);
+      if (this.rcc.adcEnabled()) this.isr |= 1 << 13;
+      return;
+    }
+    if (off !== 0x08) { super.write(off, v); return; }
+    if (!this._enabled()) return;
+    v >>>= 0;
+    const keep = this.cr;
+    // ADVREGEN is writable only while ADEN=0; ADEN/ADSTART/ADCAL are set-only
+    if (keep & 1) v = (v & ~(1 << 28)) | (keep & (1 << 28));
+    if (!(v & (1 << 28))) this._vregNs = 0;
+    this.cr = (v & ~(1 | (1 << 2) | (1 << 31))) | (keep & 1);
+    if (v & (1 << 1)) { this.cr &= ~1; this.isr &= ~1; return; } // ADDIS
+    if (v & (1 << 31)) {
+      if (this._vregReady() && !(keep & 1)) this.isr |= 1 << 11; // EOCAL; ADCAL self-clears
+      else this.rcc.noteGated('ADC calibration requested without a settled ADVREGEN regulator (or with ADEN set)');
+    }
+    if ((v & 1) && !(keep & 1)) {
+      if (this._vregReady()) { this.cr |= 1; this.isr |= 1; }
+      else this.rcc.noteGated('ADC ADEN set before ADVREGEN had settled (RM0444 §15.3: wait tADCVREG_STUP)');
+    }
+    if ((v & (1 << 2)) && (this.cr & 1) && (this.isr & 1)) this._convert();
+  }
+
+  _channelVolts (ch) {
+    if (ch < 12) return this.onAnalogRead(ch);
+    if (ch === this.tempChannel) return (this.ccr & (1 << 23)) ? this.onTemperature() : 0;
+    return 0;
+  }
+}
+
+// ── USART1 (the v2 peripheral: ISR/TDR/RDR, F0 and G0 alike) ─────────
+// Transmission is timed: a byte moves TDR -> shift register and leaves
+// 1 start + 8 data + stop bits later at the baud BRR sets from the USART
+// kernel clock. Nothing shifts until UE and TE are set and BRR is valid
+// (>= 16); TXE/TC report the real state, so a program that does not wait
+// for TXE overwrites its own bytes, as on silicon. A frame reaches the wire
+// (onByte) only when a TX pad is in AF mode with the USART's AF number;
+// otherwise it shifts out into nothing and is counted in lostTx.
 export class Stm32Usart1 {
-  /** @param {{rcc: Stm32Rcc, onByte?: (b: number) => void}} opts */
-  constructor ({ rcc, onByte }) {
+  /** @param {{rcc: Stm32Rcc, onByte?: (b: number) => void,
+   *    txRouted?: () => boolean}} opts
+   *  txRouted: the board's AF check; absent (a bare unit) the pad counts as routed. */
+  constructor ({ rcc, onByte, txRouted }) {
     this.base = 0x40013800;
     this.size = 0x400;
     this.rcc = rcc;
     this.onByte = onByte || (() => {});
-    this.cr1 = 0; this.brr = 0;
+    this.txRouted = txRouted || (() => true);
+    this.cr1 = 0; this.cr2 = 0; this.brr = 0;
     this.rx = [];
+    this.tdr = null;     // byte waiting in TDR (TXE = tdr === null)
+    this.shift = null;   // byte in the shift register, or 'idle' for TE's idle frame
+    this.shiftNs = 0;    // time left on the frame in the shift register
+    this.tc = true;
+    this.lostTx = 0;
   }
 
   _enabled () {
@@ -517,13 +957,45 @@ export class Stm32Usart1 {
     return false;
   }
 
+  /** Baud from BRR and the kernel clock (RM0360 §23.5.4 / RM0444 §27.5.7). */
+  baud () {
+    const fck = this.rcc.usart1ClockHz ? this.rcc.usart1ClockHz() : 0;
+    if (!fck || this.brr < 16) return 0;
+    if (this.cr1 & (1 << 15)) { // OVER8
+      const div = (this.brr & 0xfff0) | ((this.brr & 7) << 1);
+      return div ? 2 * fck / div : 0;
+    }
+    return fck / this.brr;
+  }
+
+  frameNs () {
+    const baud = this.baud();
+    if (!baud) return Infinity;
+    const m = ((this.cr1 >>> 27) & 2) | ((this.cr1 >>> 12) & 1); // M1:M0
+    const data = m === 1 ? 9 : m === 2 ? 7 : 8;
+    const stop = ((this.cr2 >>> 12) & 3) === 2 ? 2 : 1;
+    return (1 + data + stop) * 1e9 / baud;
+  }
+
+  _canShift () { return (this.cr1 & 1) && (this.cr1 & (1 << 3)) && this.baud() > 0; }
+
+  _load () {
+    if (this.shift === null && this.tdr !== null) {
+      this.shift = this.tdr; this.tdr = null; this.shiftNs = this.frameNs(); this.tc = false;
+    }
+  }
+
   read (off) {
     if (!this._enabled()) return 0;
     switch (off) {
       case 0x00: return this.cr1;
+      case 0x04: return this.cr2;
       case 0x0c: return this.brr;
-      // ISR: TXE(7) + TC(6) always ready at this fidelity; RXNE(5) live
-      case 0x1c: return 0xc0 | (this.rx.length ? 0x20 : 0);
+      case 0x1c: {
+        const ue = this.cr1 & 1;
+        return (this.tdr === null ? 0x80 : 0) | (this.tc ? 0x40 : 0) | (this.rx.length ? 0x20 : 0)
+          | (ue && (this.cr1 & 8) ? 1 << 21 : 0) | (ue && (this.cr1 & 4) ? 1 << 22 : 0);
+      }
       case 0x24: return this.rx.length ? this.rx.shift() : 0;
       default: return 0;
     }
@@ -532,33 +1004,114 @@ export class Stm32Usart1 {
   write (off, v) {
     if (!this._enabled()) return;
     switch (off) {
-      case 0x00: this.cr1 = v >>> 0; break;
-      case 0x0c: this.brr = v >>> 0; break;
-      case 0x28: if (this.cr1 & 1) this.onByte(v & 0xff); break; // TDR, UE gate
+      case 0x00: {
+        const teRose = !(this.cr1 & 8) && (v & 8) && (v & 1);
+        this.cr1 = v >>> 0;
+        if (!(this.cr1 & 1)) { this.tdr = null; this.shift = null; this.tc = true; break; }
+        // Setting TE sends one idle frame before the first byte (RM0360 §23.5.2)
+        if (teRose && this.shift === null) { this.shift = 'idle'; this.shiftNs = this.frameNs(); this.tc = false; }
+        break;
+      }
+      case 0x04: this.cr2 = v >>> 0; break;
+      case 0x0c: this.brr = v & 0xffff; break;
+      case 0x20: if (v & (1 << 6)) this.tc = false; break; // ICR.TCCF
+      case 0x28: // TDR, UE gate
+        if (!(this.cr1 & 1)) break;
+        this.tdr = v & 0xff; this.tc = false;
+        if (this._canShift()) this._load();
+        break;
       default: break;
     }
+  }
+
+  advanceNs (deltaNs) {
+    let d = Number(deltaNs);
+    while (d > 0 && this._canShift()) {
+      this._load();
+      if (this.shift === null) break;
+      if (!Number.isFinite(this.shiftNs)) this.shiftNs = this.frameNs();
+      if (d < this.shiftNs) { this.shiftNs -= d; break; }
+      d -= this.shiftNs;
+      const b = this.shift;
+      this.shift = null;
+      if (b !== 'idle') {
+        if (this.txRouted()) this.onByte(b);
+        else { this.lostTx++; this.rcc.noteGated('USART1 TX frame sent with no TX pad in its AF mode'); }
+      }
+      this._load();
+      if (this.shift === null) this.tc = true;
+    }
+  }
+
+  nextWakeNs () {
+    if (this.shift === null || !this._canShift()) return Infinity;
+    return Math.max(1, Number.isFinite(this.shiftNs) ? this.shiftNs : this.frameNs());
   }
 
   feed (byte) { this.rx.push(byte & 0xff); }
 }
 
-/**
- * Assemble the F030 board onto a CortexM0Machine: RCC, GPIOA/B, TIM3,
- * TIM14, ADC, USART1. Returns the peripheral instances for adapters and tests.
- */
-export function attachStm32F0 (machine, { onPinChange, onSerialByte, onAnalogRead, onTemperature, onInputRead } = {}) {
-  const rcc = new Stm32Rcc();
-  const gpioA = new Stm32Gpio({ base: 0x48000000, portIndex: 0, portLetter: 'A', rcc, onPinChange, onInputRead });
-  const gpioB = new Stm32Gpio({ base: 0x48000400, portIndex: 1, portLetter: 'B', rcc, onPinChange, onInputRead });
-  const gpioC = new Stm32Gpio({ base: 0x48000800, portIndex: 2, portLetter: 'C', rcc, onPinChange, onInputRead });
-  // TIM3's compare channels drive pads directly (a pin in AF mode is
-  // owned by its peripheral) — same publish stream as the GPIO's.
-  const tim3 = new Stm32Tim3({ rcc, clockHz: machine.clockHz, onPinChange });
-  const tim14 = new Stm32Tim14({ rcc, clockHz: machine.clockHz });
-  const adc = new Stm32Adc({ rcc, onAnalogRead, onTemperature });
-  const usart1 = new Stm32Usart1({ rcc, onByte: onSerialByte });
-  for (const p of [rcc, gpioA, gpioB, gpioC, tim3, tim14, adc, usart1]) machine.addPeripheral(p);
-  return { rcc, gpioA, gpioB, gpioC, tim3, tim14, adc, usart1 };
+// Which pads carry what, per family (DS10235 Table 12 / DS12991 Table 13).
+const F0_LAYOUT = {
+  gpioBase: 0x48000000,
+  usartTx: [['A', 9, 1], ['A', 2, 1], ['B', 6, 0]],
+};
+const G0_LAYOUT = {
+  gpioBase: 0x50000000,   // IOPORT (RM0444 §2.2); 0x48000000 is reserved here
+  usartTx: [['A', 9, 1], ['B', 6, 0], ['C', 4, 1]],
+};
+
+function attachStm32 (machine, family, {
+  onPinChange, onSerialByte, onAnalogRead, onTemperature, onInputRead,
+  fixedClockHz = null, hseHz = 0, ramAtReset = 'pattern',
+} = {}) {
+  const layout = family === 'g0' ? G0_LAYOUT : F0_LAYOUT;
+  const rcc = family === 'g0' ? new Stm32G0Rcc({ fixedClockHz, hseHz }) : new Stm32Rcc({ fixedClockHz, hseHz });
+  const flash = new Stm32Flash({ rcc, machine, family });
+  const mk = (i, letter) => new Stm32Gpio({ base: layout.gpioBase + 0x400 * i, portIndex: i, portLetter: letter, rcc, onPinChange, onInputRead });
+  const gpioA = mk(0, 'A'); const gpioB = mk(1, 'B'); const gpioC = mk(2, 'C');
+  const ports = { A: gpioA, B: gpioB, C: gpioC };
+  const padRoutes = (name, af) => {
+    const port = ports[name[1]]; const pin = Number(name.slice(2));
+    return !!port && port.routesAf(pin, af);
+  };
+  // TIM3 CH1/CH2/CH4 are AF1 on PA6/PA7/PB1 on both families.
+  const tim3 = new Stm32Tim3({ rcc, clockHz: () => rcc.timerClockHz(), onPinChange, pinRouted: (pin) => padRoutes(pin, 1) });
+  const tim14 = new Stm32Tim14({ rcc, clockHz: () => rcc.timerClockHz() });
+  const adc = family === 'g0'
+    ? new Stm32G0Adc({ rcc, onAnalogRead, onTemperature })
+    : new Stm32Adc({ rcc, onAnalogRead, onTemperature });
+  const usart1 = new Stm32Usart1({
+    rcc, onByte: onSerialByte,
+    txRouted: () => layout.usartTx.some(([p, pin, af]) => padRoutes(`P${p}${pin}`, af)),
+  });
+  for (const g of [gpioA, gpioB, gpioC]) g.onConfigChange.push(() => tim3._publishPwm());
+
+  // The core runs at HCLK. Following it here is what makes a program that
+  // never configures the PLL run at 8 / 16 MHz, like silicon.
+  rcc.onClockChange = () => { machine.setClockHz(rcc.hclkHz()); flash.check(); };
+  rcc.onClockChange();
+
+  if (ramAtReset === 'pattern') fillPowerOnRam(machine.sram);
+  else if (ramAtReset === 'zero') machine.sram.fill(0);
+  else throw new TypeError(`ramAtReset must be 'pattern' or 'zero', got ${ramAtReset}`);
+
+  for (const p of [rcc, flash, gpioA, gpioB, gpioC, tim3, tim14, adc, usart1]) machine.addPeripheral(p);
+  return { rcc, flash, gpioA, gpioB, gpioC, tim3, tim14, adc, usart1 };
 }
 
-export const attachStm32G0 = attachStm32F0;
+/**
+ * Assemble the F030 board onto a CortexM0Machine: RCC clock tree, FLASH_ACR,
+ * GPIOA/B/C at 0x48000000, TIM3, TIM14, ADC, USART1. SRAM gets its power-on
+ * pattern (ramAtReset: 'zero' models a warm debugger reset instead).
+ * fixedClockHz pins every clock (legacy; only for cross-simulator parity with
+ * a model that has no clock tree). Returns the peripheral instances.
+ */
+export function attachStm32F0 (machine, opts = {}) { return attachStm32(machine, 'f0', opts); }
+
+/**
+ * The G030 is NOT an F030 at a different speed: its own RCC (IOPENR/APBENR1/
+ * APBENR2, HSI16, PLLCFGR), GPIO on the IOPORT bus at 0x50000000, and the
+ * G0 ADC (ADVREGEN, sensor on channel 12). Same options as attachStm32F0.
+ */
+export function attachStm32G0 (machine, opts = {}) { return attachStm32(machine, 'g0', opts); }
