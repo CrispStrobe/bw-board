@@ -22,6 +22,7 @@
  */
 
 import { STIMULUS_CATALOGUE, getStimulusParts } from './stimulus-catalogue.js';
+import { ambient, WORLD_KEYS } from './world.js';
 
 // ─── Translations ──────────────────────────────────────────────────────────
 
@@ -32,6 +33,13 @@ const translations = {
     'stim.get':        '[PARAM] of [PART]',
     'stim.noParts':    '(no parts)',
     'stim.noParams':   '(none)',
+    'stim.setWorld':   'set world [KEY] to [VALUE]',
+    'stim.getWorld':   'world [KEY]',
+    'stim.world.temperatureC': 'temperature (°C)',
+    'stim.world.humidityPct': 'humidity (%)',
+    'stim.world.pressureHpa': 'air pressure (hPa)',
+    'stim.world.lightLux': 'light (lx)',
+    'stim.world.soundDb': 'sound (dB)',
   },
   de: {
     'stim.name':       'Umgebung',
@@ -39,6 +47,13 @@ const translations = {
     'stim.get':        '[PARAM] von [PART]',
     'stim.noParts':    '(keine Teile)',
     'stim.noParams':   '(keine)',
+    'stim.setWorld':   'setze Welt-[KEY] auf [VALUE]',
+    'stim.getWorld':   'Welt-[KEY]',
+    'stim.world.temperatureC': 'Temperatur (°C)',
+    'stim.world.humidityPct': 'Luftfeuchte (%)',
+    'stim.world.pressureHpa': 'Luftdruck (hPa)',
+    'stim.world.lightLux': 'Licht (lx)',
+    'stim.world.soundDb': 'Schall (dB)',
   },
   fr: {
     'stim.name':       'Environnement',
@@ -46,6 +61,13 @@ const translations = {
     'stim.get':        '[PARAM] de [PART]',
     'stim.noParts':    '(pas de pièces)',
     'stim.noParams':   '(aucun)',
+    'stim.setWorld':   'mettre [KEY] du monde à [VALUE]',
+    'stim.getWorld':   '[KEY] du monde',
+    'stim.world.temperatureC': 'température (°C)',
+    'stim.world.humidityPct': 'humidité (%)',
+    'stim.world.pressureHpa': 'pression (hPa)',
+    'stim.world.lightLux': 'lumière (lx)',
+    'stim.world.soundDb': 'son (dB)',
   },
 };
 
@@ -140,8 +162,29 @@ export class StimulusExtension {
             PART: { type: Scratch.ArgumentType.STRING, menu: 'PARTS', defaultValue: '' },
           },
         },
+        {
+          opcode: 'setWorld',
+          blockType: Scratch.BlockType.COMMAND,
+          text: t('stim.setWorld'),
+          arguments: {
+            KEY: { type: Scratch.ArgumentType.STRING, menu: 'WORLD_KEYS', defaultValue: 'temperatureC' },
+            VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 25 },
+          },
+        },
+        {
+          opcode: 'getWorld',
+          blockType: Scratch.BlockType.REPORTER,
+          text: t('stim.getWorld'),
+          arguments: {
+            KEY: { type: Scratch.ArgumentType.STRING, menu: 'WORLD_KEYS', defaultValue: 'temperatureC' },
+          },
+        },
       ],
       menus: {
+        WORLD_KEYS: {
+          acceptReporters: false,
+          items: WORLD_KEYS.map(k => ({ text: t(`stim.world.${k}`), value: k })),
+        },
         PARTS: {
           acceptReporters: true,
           items: '_getPartsMenu',
@@ -236,8 +279,25 @@ export class StimulusExtension {
     if (paramDef.mechanism === 'control') {
       return b.controls.get(partId) ?? 0;
     } else {
-      return b.getPartParam(partId, paramName) ?? 0;
+      // The value the part reads: its own stimulus, else the world.
+      return ambient(part, paramName, 0) ?? 0;
     }
+  }
+
+  // ── World (src/world.js): one per project, shared by its boards ─────
+
+  setWorld({ KEY, VALUE }) {
+    const b = this.board;
+    const key = String(KEY);
+    if (!b?.world || !WORLD_KEYS.includes(key)) return;
+    b.world.set(key, Number(VALUE));
+  }
+
+  getWorld({ KEY }) {
+    const b = this.board;
+    const key = String(KEY);
+    if (!b?.world || !WORLD_KEYS.includes(key)) return 0;
+    return b.world.get(key, Number(b.timeNs ?? 0n) / 1e9) ?? 0;
   }
 }
 

@@ -3326,6 +3326,18 @@ This file is the canonical registry for `bw-board`; Brickwright Lite's
 repository by its path/package boundary rather than creating a rival global
 registry.
 
+2026-10-15 current circuit campaign documentation — CLAIM, Codex bwcx.
+Branch docs/circuit-instrument-campaign-20261015; exact base
+0f6f6b1f7d8fb790ce1f66c6c41db2342b3619b0. Documentation-only envelope:
+this ledger, README.md, PLAN.md and ROADMAP.md. Correct obsolete current-status
+counts and copy-era consumer architecture; mark the old roadmap index as a
+historical survey, not proof every item remains open. Link the ordered CUI
+circuit/instrument campaign and its model/consumer/evidence boundaries.
+Preserve historical results and all active x86/target/shared-world contracts.
+No source, test, workflow, dependency, pin, model/default or runtime change.
+Publish claim before documentation implementation; verify exact base from Git
+and qualify the final Markdown-only candidate before normal matched-head merge.
+
 ### Repository role — upstream first, independent of landing speed
 
 `bw-board` is the source-of-truth engine. Shared engine behavior lands here
@@ -4878,14 +4890,18 @@ No CPU/device source, supplier pin, workflow, other target or performance
 experiment edits. Fix a reproducible debug-subscriber exception and expose
 honest 386 state/address capabilities; unsupported mode decoding must refuse.
 
-2026-10-15 current circuit campaign documentation — CLAIM, Codex bwcx.
-Branch docs/circuit-instrument-campaign-20261015; exact base
-0f6f6b1f7d8fb790ce1f66c6c41db2342b3619b0. Documentation-only envelope:
-this ledger, README.md, PLAN.md and ROADMAP.md. Correct obsolete current-status
-counts and copy-era consumer architecture; mark the old roadmap index as a
-historical survey, not proof every item remains open. Link the ordered CUI
-circuit/instrument campaign and its model/consumer/evidence boundaries.
-Preserve historical results and all active x86/target/shared-world contracts.
-No source, test, workflow, dependency, pin, model/default or runtime change.
-Publish claim before documentation implementation; verify exact base from Git
-and qualify the final Markdown-only candidate before normal matched-head merge.
+## Subscribed 386 free-guest debugger qualification — 2026-10-15
+
+CLAIM — Codex x86, `lane/386-debug-guest-20261015`; implementation waits
+for merged claim. Own only new
+`scripts/i80386-debug-guest/{observer.mjs,reader.py,README.md}`,
+`test/i80386-debug-guest-observer.test.mjs`,
+`.github/workflows/i80386-debug-guest.yml`, a narrow optional fixed-observer
+integration in `scripts/probe-xv6-stock.mjs`, this entry and the
+[contract](docs/X86-NEXT-LANES.md#subscribed-386-free-guest-debugger-qualification).
+Observe the unchanged ordinary guest machine-step loop, at most64 completed
+instructions and1024 memory facts, with direct-state/nonmutation and full
+unobserved/observed semantic parity. Runtime debugger sources from PR599,
+CPU/device scheduling, existing workflows, guest/firmware/media and supplier
+pins are outside scope. No installed GUI, disassembler, reverse-execution,
+performance or broad OS acceptance follows from this finite diagnostic.

@@ -31,6 +31,7 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { ambient } from '../world.js';
 
 const R_OUT = 50;
 const R_INPUT = 1e6;
@@ -138,7 +139,7 @@ export function registerThirtySeven() {
         stamp() { },
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
-            const lvl = Math.max(0, Math.min(1, part.params?.level ?? 0));
+            const lvl = Math.max(0, Math.min(1, ambient(part, 'level', 0)));
             let changed = false;
             const ao = { vTh: lvl * vcc, rTh: R_OUT };
             if (!state.drives.ao || Math.abs(state.drives.ao.vTh - ao.vTh) > 0.005) {
