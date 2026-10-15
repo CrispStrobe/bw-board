@@ -2,10 +2,12 @@
 
 Updated 2026-10-15. The sole unprofiled [run38699840269](https://github.com/CrispStrobe/bw-board/actions/runs/38699840269)
 succeeded. Root and independent peer original-packet audits passed. [CPU PR594](https://github.com/CrispStrobe/bw-board/pull/594) is READY
-at unchanged `f6863484`, and measurement PR601 is READY. Mandatory READY-transition
-CI is pending; neither PR is merged and source adoption has not occurred.
-The affected hosted xv6 and original full-CI checks passed. This page records a measured candidate, not a
-merge or consumer-pin update.
+at unchanged `f6863484`, with mandatory READY-transition CI still pending.
+Measurement [PR601](https://github.com/CrispStrobe/bw-board/pull/601) merged as
+`503ab56359f4968ea59deaf77933102cd0bc7a41` after all nine enabled checks passed.
+CPU PR594 remains unmerged; source adoption has not occurred.
+The affected hosted xv6 and original full-CI checks passed. This page records a measured CPU candidate, not CPU adoption or a consumer-pin
+update.
 
 The [published measurement source](https://github.com/CrispStrobe/bw-board/tree/f88f366207a98ad7dc7bfde6047ed295760f482f/scripts/i80386-width-mask-paired)
 is `f88f366207a98ad7dc7bfde6047ed295760f482f` ([PR601](https://github.com/CrispStrobe/bw-board/pull/601)).
