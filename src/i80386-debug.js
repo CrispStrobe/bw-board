@@ -56,7 +56,11 @@ export function createI80386DebugTarget(adapter) {
     const readMem = target.readMem.bind(target);
     target.capabilities = () => ({...capabilities(), steps: ['insn'], symbols: false,
         runTo: [{kind: 'address', space: 'code', addressMin: 0, addressMax: 0xffffffff,
-            stopSides: ['before'], installation: 'sync'}], recording: []});
+            stopSides: ['before'], installation: 'sync'}], recording: [],
+        // Physical bus addressability, not a declaration of installed RAM.
+        spaces: {mem: {read: true, write: false, passiveRead: true,
+            addressSpace: 'physical', addressMin: 0, addressMax: 0xffffffff,
+            maxReadBytes: 1048576}}});
     target.regs = () => captureI80386Registers(machine);
     target.setBreakpoint = spec => {
         if (!spec || typeof spec !== 'object') return unsupported('breakpoint specification');
