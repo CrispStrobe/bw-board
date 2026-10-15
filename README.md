@@ -72,6 +72,11 @@ import/export and CLI measurement, use
 [bw-circuit-ui](https://github.com/CrispStrobe/bw-circuit-ui); the engine itself
 provides no file-format or UI layer.
 
+For reproducible instrument captures and their model, clock and work limits,
+see the [CLI instrument guide](https://github.com/CrispStrobe/bw-circuit-ui/blob/master/docs/CLI-INSTRUMENTS.md).
+Qualification applies to the recorded model and source identity, not every
+imported circuit or every behaviour of the corresponding physical component.
+
 ## Firmware and debugging
 
 Adapters and composable machines cover **8051, AVR, RP2040, Z80, 6502, RISC-V,

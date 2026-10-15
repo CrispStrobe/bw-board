@@ -18,8 +18,8 @@
  */
 
 import { CortexM0Machine } from './cortex-m0-machine.js';
-import { stm32f0TemperatureVolts, benchCelsius } from './chip-temperature.js';
-import { attachStm32F0 } from './stm32f0-board.js';
+import { stm32f0TemperatureVolts, stm32g0TemperatureVolts, benchCelsius } from './chip-temperature.js';
+import { attachStm32F0, attachStm32G0, fillPowerOnRam } from './stm32f0-board.js';
 
 /** The F030 header pins the codegen can name (armHw stm32 variant):
  *  PA0–PA7, PA9/PA10 (USART1 TX/RX when AF'd), PB1. */
@@ -43,13 +43,20 @@ export const STM32G0_PINS = (() => {
 })();
 
 function createStm32AdapterInternal ({
-  clockHz = 48_000_000,
-  sramBytes = 4096,
-  flashBytes = 16 * 1024,
-  pinDefs = STM32F0_PINS,
+  family,
+  fixedClockHz = null,
+  hseHz = 0,
+  ramAtReset = 'pattern',
+  sramBytes,
+  flashBytes,
+  pinDefs,
   program = null,
-} = {}) {
-  const machine = new CortexM0Machine({ clockHz, sramBytes, flashBytes });
+}) {
+  // The core clock is whatever the firmware's RCC setup selects (reset:
+  // HSI). The machine's construction value is overwritten by the attach.
+  const machine = new CortexM0Machine({ sramBytes, flashBytes });
+  const attach = family === 'g0' ? attachStm32G0 : attachStm32F0;
+  const sensorVolts = family === 'g0' ? stm32g0TemperatureVolts : stm32f0TemperatureVolts;
 
   let board = null;
   let serialListener = null;
@@ -74,7 +81,8 @@ function createStm32AdapterInternal ({
     if (!inInputSync) syncInputs();
   };
 
-  const peripherals = attachStm32F0(machine, {
+  const peripherals = attach(machine, {
+    fixedClockHz, hseHz, ramAtReset,
     onPinChange: publish,
     onSerialByte: (b) => { if (serialListener) serialListener(b); },
     // ADC channel n is the PA n pad: the board's solved node voltage.
@@ -93,8 +101,8 @@ function createStm32AdapterInternal ({
       const v = board.readAnalog(`PA${ch}`);
       return typeof v === 'number' && Number.isFinite(v) ? v : 0;
     },
-    // The on-die sensor (channel 16) sees the bench temperature.
-    onTemperature: () => stm32f0TemperatureVolts(benchCelsius(board)),
+    // The on-die sensor (F0 channel 16, G0 channel 12) sees the bench temperature.
+    onTemperature: () => sensorVolts(benchCelsius(board)),
   });
 
   function syncInputs () {
@@ -115,7 +123,9 @@ function createStm32AdapterInternal ({
 
   const initialProgram = program;
   function resetToProgram () {
-    machine.sram.fill(0);
+    // A reset is a power-on here: SRAM holds its pattern, not zeroes,
+    // unless the caller models a warm debugger reset (ramAtReset 'zero').
+    if (ramAtReset === 'zero') machine.sram.fill(0); else fillPowerOnRam(machine.sram);
     if (initialProgram) machine.loadFirmware(initialProgram);
   }
   if (initialProgram) machine.loadFirmware(initialProgram);
@@ -138,7 +148,8 @@ function createStm32AdapterInternal ({
     machine,
     peripherals,
     core: machine.core,
-    clockHz,
+    /** the CURRENT core clock (HCLK), following the firmware's RCC setup */
+    get clockHz () { return machine.clockHz; },
     // the debug target's `rp2040` facade: the bus object the core holds
     // (so write-watch wraps intercept), plus sram and the clock
     rp2040: Object.assign(machine.bus, { sram: machine.sram, clock }),
@@ -176,11 +187,28 @@ function createStm32AdapterInternal ({
   };
 }
 
+// `clockHz` used to pin the core at 48/64 MHz whatever the firmware did,
+// which hid the missing-PLL bug. Refuse it loudly instead of ignoring it.
+function refuseClockHz (opts) {
+  if (opts.clockHz !== undefined) {
+    throw new TypeError('STM32 adapters take their clock from the firmware\'s RCC setup; '
+      + '`clockHz` is no longer accepted. Pass `fixedClockHz` only to pin every clock '
+      + '(cross-simulator parity with a model that has no clock tree).');
+  }
+}
+
+/**
+ * @param {object} [opts]
+ * @param {Uint8Array} [opts.program] flash image (vectors first)
+ * @param {number} [opts.fixedClockHz] LEGACY: pin core/timer/USART clocks, bypassing RCC
+ * @param {number} [opts.hseHz] external crystal fitted (default none)
+ * @param {'pattern'|'zero'} [opts.ramAtReset] power-on SRAM (default pattern)
+ */
 export function createStm32F0Adapter (opts = {}) {
-  const clockHz = opts.clockHz ?? 48_000_000;
+  refuseClockHz(opts);
   return createStm32AdapterInternal({
     ...opts,
-    clockHz,
+    family: 'f0',
     sramBytes: 4096,
     flashBytes: 16 * 1024,
     pinDefs: STM32F0_PINS,
@@ -188,10 +216,10 @@ export function createStm32F0Adapter (opts = {}) {
 }
 
 export function createStm32G0Adapter (opts = {}) {
-  const clockHz = opts.clockHz ?? 64_000_000;
+  refuseClockHz(opts);
   return createStm32AdapterInternal({
     ...opts,
-    clockHz,
+    family: 'g0',
     sramBytes: 8192,
     flashBytes: 64 * 1024,
     pinDefs: STM32G0_PINS,

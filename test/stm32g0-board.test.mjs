@@ -4,12 +4,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { STARTUP_C, G0_CLOCK_64_C, usart1C, compileStm32 } from './helpers/stm32-firmware-kit.mjs';
 import { CortexM0Machine } from '../src/cortex-m0-machine.js';
 import {
   Stm32Rcc,
+  Stm32G0Rcc,
+  fillPowerOnRam,
   Stm32Gpio,
   Stm32Tim3,
   Stm32Tim14,
@@ -23,26 +23,17 @@ import { createStm32G0Adapter, STM32G0_PINS } from '../src/stm32-adapter.js';
 let hasGcc = false;
 try { execFileSync('arm-none-eabi-gcc', ['--version'], { stdio: 'pipe' }); hasGcc = true; } catch { /* skip */ }
 
-const LD = `ENTRY(main)
-MEMORY { FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 64K
-         RAM  (rwx): ORIGIN = 0x20000000, LENGTH = 8K }
-SECTIONS {
-  .text : { KEEP(*(.vectors)) *(.text*) *(.rodata*) } > FLASH
-  .bss  : { *(.bss*) *(COMMON) } > RAM
-}
-`;
+// Every image below brings the G030 up the way RM0444 requires: startup
+// code clears .bss (SRAM is not zero at power-on), the PLL makes the 64 MHz
+// the timer prescalers assume (reset is HSI16 = 16 MHz), GPIO is on IOPORT
+// at 0x50000000, USART1/ADC are enabled in RCC_APBENR2 (0x40), and USART1 TX
+// is PA9 in AF1 at a set baud. The images these tests first carried used the
+// F030 addresses and the F030 APB2ENR offset — they passed only because the
+// old model mapped the G0 as an F0.
+const G0_PRELUDE = STARTUP_C + G0_CLOCK_64_C + usart1C({ gpioBase: 0x50000000, pclkHz: 64_000_000 });
 
 function compileG0Firmware (cSource) {
-  const dir = mkdtempSync(join(tmpdir(), 'bw-g0fw-'));
-  writeFileSync(join(dir, 'main.c'), cSource);
-  writeFileSync(join(dir, 'link.ld'), LD);
-  execFileSync('arm-none-eabi-gcc', [
-    '-mcpu=cortex-m0plus', '-mthumb', '-Os', '-ffreestanding',
-    '-nostdlib', `-T${join(dir, 'link.ld')}`, '-o', join(dir, 'fw.elf'),
-    join(dir, 'main.c'), '-lgcc',
-  ], { stdio: 'pipe' });
-  execFileSync('arm-none-eabi-objcopy', ['-O', 'binary', join(dir, 'fw.elf'), join(dir, 'fw.bin')], { stdio: 'pipe' });
-  return readFileSync(join(dir, 'fw.bin'));
+  return compileStm32(G0_PRELUDE + cSource, { cpu: 'cortex-m0plus', flashK: 64, ramK: 8 });
 }
 
 const BLINK_FIRMWARE = `
@@ -50,13 +41,13 @@ const BLINK_FIRMWARE = `
 #define BW_MMIO(a) (*(volatile uint32_t *)(a))
 #define RCC_IOPENR   BW_MMIO(0x40021034u)
 #define RCC_APBENR1  BW_MMIO(0x4002103cu)
-#define RCC_APB2ENR  BW_MMIO(0x40021018u)
-#define GPIOA_MODER  BW_MMIO(0x48000000u)
-#define GPIOA_PUPDR  BW_MMIO(0x4800000cu)
-#define GPIOA_IDR    BW_MMIO(0x48000010u)
-#define GPIOA_BSRR   BW_MMIO(0x48000018u)
-#define GPIOC_MODER  BW_MMIO(0x48000800u)
-#define GPIOC_BSRR   BW_MMIO(0x48000818u)
+#define RCC_APBENR2  BW_MMIO(0x40021040u)
+#define GPIOA_MODER  BW_MMIO(0x50000000u)
+#define GPIOA_PUPDR  BW_MMIO(0x5000000cu)
+#define GPIOA_IDR    BW_MMIO(0x50000010u)
+#define GPIOA_BSRR   BW_MMIO(0x50000018u)
+#define GPIOC_MODER  BW_MMIO(0x50000800u)
+#define GPIOC_BSRR   BW_MMIO(0x50000818u)
 #define TIM3_CR1     BW_MMIO(0x40000400u)
 #define TIM3_DIER    BW_MMIO(0x4000040cu)
 #define TIM3_SR      BW_MMIO(0x40000410u)
@@ -71,9 +62,10 @@ void tim3_irq(void) { TIM3_SR = 0; bw_ms++; }
 
 int main(void)
 {
+    bw_clock_64mhz();
     RCC_IOPENR  = (1u << 0) | (1u << 2);   /* GPIOA + GPIOC clock */
     RCC_APBENR1 = (1u << 1);               /* TIM3 clock */
-    RCC_APB2ENR = (1u << 14);              /* USART1 clock */
+    RCC_APBENR2 = (1u << 14);              /* USART1 clock (RM0444: APBENR2) */
     GPIOA_MODER = (1u << 0);               /* PA0 output; PA1 input */
     GPIOA_PUPDR = (1u << 2);               /* PA1 pull-up */
     GPIOC_MODER = (1u << 28);              /* PC14 output */
@@ -82,8 +74,8 @@ int main(void)
     TIM3_DIER = 1u;                       /* UIE: interrupt enable */
     TIM3_CR1 = 1u;                        /* CEN */
     NVIC_ISER = (1u << 16);               /* TIM3 = IRQ16 on Cortex-M0+ */
-    USART1_CR1 = 1u;                      /* UE */
-    USART1_TDR = 'G'; USART1_TDR = '0';
+    bw_usart1_init();                     /* PA9 AF1, 115200, TE|RE|UE */
+    bw_putc('G'); bw_putc('0');
     uint32_t last = 0;
     for (;;) {
         if (bw_ms != last && (bw_ms % 500u) == 0u) {
@@ -95,7 +87,7 @@ int main(void)
                 GPIOA_BSRR = (1u << 16);          /* PA0 reset */
                 GPIOC_BSRR = (1u << (14 + 16));   /* PC14 reset */
             }
-            if (!(GPIOA_IDR & (1u << 1))) USART1_TDR = 'B';
+            if (!(GPIOA_IDR & (1u << 1))) bw_putc('B');
         }
         __asm__ volatile ("wfi");
     }
@@ -103,7 +95,7 @@ int main(void)
 __attribute__((section(".vectors"), used))
 const void *bw_vectors[48] = {
     (void *)0x20002000,                    /* SP = top of 8K SRAM */
-    (void *)main,
+    (void *)bw_reset,
     [16 + 16] = (void *)tim3_irq,          /* TIM3 = IRQ16 */
 };
 `;
@@ -117,7 +109,7 @@ function getBlinkBin () {
 describe('STM32G030 board live firmware execution', { skip: !hasGcc }, () => {
   it('blinks PA0 and PC14 on the 500 ms grid at 64 MHz, WFI-parked between ticks', () => {
     const bin = getBlinkBin();
-    const machine = new CortexM0Machine({ clockHz: 64_000_000, sramBytes: 8192, flashBytes: 64 * 1024 });
+    const machine = new CortexM0Machine({ sramBytes: 8192, flashBytes: 64 * 1024 });
     const pa0Edges = [];
     const pc14Edges = [];
     attachStm32G0(machine, {
@@ -153,7 +145,7 @@ describe('STM32G030 board live firmware execution', { skip: !hasGcc }, () => {
 
   it('serial says G0, and button stays quiet until pressed', () => {
     const bin = getBlinkBin();
-    const machine = new CortexM0Machine({ clockHz: 64_000_000, sramBytes: 8192, flashBytes: 64 * 1024 });
+    const machine = new CortexM0Machine({ sramBytes: 8192, flashBytes: 64 * 1024 });
     const serial = [];
     const { gpioA } = attachStm32G0(machine, {
       onSerialByte: (b) => serial.push(String.fromCharCode(b)),
@@ -172,7 +164,7 @@ describe('STM32G030 board live firmware execution', { skip: !hasGcc }, () => {
 
   it('the two honesty ledgers are empty for clean STM32G0 firmware', () => {
     const bin = getBlinkBin();
-    const machine = new CortexM0Machine({ clockHz: 64_000_000, sramBytes: 8192, flashBytes: 64 * 1024 });
+    const machine = new CortexM0Machine({ sramBytes: 8192, flashBytes: 64 * 1024 });
     const { rcc } = attachStm32G0(machine);
     machine.loadFirmware(bin);
     machine.advanceNs(100_000_000n);
@@ -184,7 +176,7 @@ describe('STM32G030 board live firmware execution', { skip: !hasGcc }, () => {
   it('the classroom bug is caught: without RCC_IOPENR, ledger records the violation', () => {
     const BAD_FIRMWARE = BLINK_FIRMWARE.replace('RCC_IOPENR  = (1u << 0) | (1u << 2);', '/* no clock */');
     const bin = compileG0Firmware(BAD_FIRMWARE);
-    const machine = new CortexM0Machine({ clockHz: 64_000_000, sramBytes: 8192, flashBytes: 64 * 1024 });
+    const machine = new CortexM0Machine({ sramBytes: 8192, flashBytes: 64 * 1024 });
     const { rcc } = attachStm32G0(machine);
     machine.loadFirmware(bin);
     machine.advanceNs(10_000_000n);
@@ -199,10 +191,10 @@ describe('STM32G030 board live firmware execution', { skip: !hasGcc }, () => {
 #define BW_MMIO(a) (*(volatile uint32_t *)(a))
 #define RCC_IOPENR   BW_MMIO(0x40021034u)
 #define RCC_APBENR1  BW_MMIO(0x4002103cu)
-#define GPIOA_MODER  BW_MMIO(0x48000000u)
-#define GPIOA_BSRR   BW_MMIO(0x48000018u)
-#define GPIOC_MODER  BW_MMIO(0x48000800u)
-#define GPIOC_BSRR   BW_MMIO(0x48000818u)
+#define GPIOA_MODER  BW_MMIO(0x50000000u)
+#define GPIOA_BSRR   BW_MMIO(0x50000018u)
+#define GPIOC_MODER  BW_MMIO(0x50000800u)
+#define GPIOC_BSRR   BW_MMIO(0x50000818u)
 #define TIM3_CR1     BW_MMIO(0x40000400u)
 #define TIM3_DIER    BW_MMIO(0x4000040cu)
 #define TIM3_SR      BW_MMIO(0x40000410u)
@@ -214,6 +206,7 @@ static volatile uint32_t step;
 void tim3_irq(void) { TIM3_SR = 0; step++; }
 
 int main(void) {
+    bw_clock_64mhz();
     RCC_IOPENR = (1u << 0) | (1u << 2); /* GPIOA + GPIOC */
     RCC_APBENR1 = (1u << 1);            /* TIM3 */
     /* PA0, PA1, PA4 as outputs: bits 0, 2, 8 */
@@ -244,12 +237,12 @@ int main(void) {
 __attribute__((section(".vectors"), used))
 const void *bw_vectors[48] = {
     (void *)0x20002000,
-    (void *)main,
+    (void *)bw_reset,
     [16 + 16] = (void *)tim3_irq,
 };
 `;
     const bin = compileG0Firmware(CHASE_SRC);
-    const machine = new CortexM0Machine({ clockHz: 64_000_000, sramBytes: 8192, flashBytes: 64 * 1024 });
+    const machine = new CortexM0Machine({ sramBytes: 8192, flashBytes: 64 * 1024 });
     const transitions = [];
     const lastLevels = {};
     attachStm32G0(machine, {
@@ -291,33 +284,34 @@ const void *bw_vectors[48] = {
     const ECHO_SRC = `
 #include <stdint.h>
 #define BW_MMIO(a) (*(volatile uint32_t *)(a))
-#define RCC_APB2ENR  BW_MMIO(0x40021018u)
+#define RCC_APBENR2  BW_MMIO(0x40021040u)
 #define USART1_CR1   BW_MMIO(0x40013800u)
 #define USART1_ISR   BW_MMIO(0x4001381cu)
 #define USART1_RDR   BW_MMIO(0x40013824u)
 #define USART1_TDR   BW_MMIO(0x40013828u)
 
 int main(void) {
-    RCC_APB2ENR = (1u << 14); /* USART1 clock */
-    USART1_CR1 = 1u;          /* UE: USART enable */
+    bw_clock_64mhz();
+    RCC_APBENR2 = (1u << 14); /* USART1 clock (RM0444: APBENR2) */
+    bw_usart1_init();         /* PA9 AF1, 115200, TE|RE|UE */
     for (;;) {
         /* Poll RXNE (bit 5) */
         if (USART1_ISR & (1u << 5)) {
             uint32_t b = USART1_RDR;
             /* Convert lowercase to uppercase */
             if (b >= 'a' && b <= 'z') b -= 32;
-            USART1_TDR = b;
+            bw_putc(b);
         }
     }
 }
 __attribute__((section(".vectors"), used))
 const void *bw_vectors[48] = {
     (void *)0x20002000,
-    (void *)main,
+    (void *)bw_reset,
 };
 `;
     const bin = compileG0Firmware(ECHO_SRC);
-    const machine = new CortexM0Machine({ clockHz: 64_000_000, sramBytes: 8192, flashBytes: 64 * 1024 });
+    const machine = new CortexM0Machine({ sramBytes: 8192, flashBytes: 64 * 1024 });
     const output = [];
     const { usart1 } = attachStm32G0(machine, {
       onSerialByte: (b) => output.push(String.fromCharCode(b)),
@@ -336,7 +330,7 @@ const void *bw_vectors[48] = {
     const FIB_SRC = `
 #include <stdint.h>
 #define BW_MMIO(a) (*(volatile uint32_t *)(a))
-#define RCC_APB2ENR  BW_MMIO(0x40021018u)
+#define RCC_APBENR2  BW_MMIO(0x40021040u)
 #define USART1_CR1   BW_MMIO(0x40013800u)
 #define USART1_TDR   BW_MMIO(0x40013828u)
 
@@ -347,21 +341,22 @@ static uint32_t fib(uint32_t n) {
 }
 
 int main(void) {
-    RCC_APB2ENR = (1u << 14); /* USART1 clock */
-    USART1_CR1 = 1u;          /* UE */
+    bw_clock_64mhz();
+    RCC_APBENR2 = (1u << 14); /* USART1 clock (RM0444: APBENR2) */
+    bw_usart1_init();         /* PA9 AF1, 115200, TE|RE|UE */
     /* fib(10) = 55. 55 is ASCII '7' */
     uint32_t result = fib(10);
-    USART1_TDR = (uint8_t)result;
+    bw_putc((uint8_t)result);
     for (;;) { __asm__ volatile ("wfi"); }
 }
 __attribute__((section(".vectors"), used))
 const void *bw_vectors[48] = {
     (void *)0x20002000,
-    (void *)main,
+    (void *)bw_reset,
 };
 `;
     const bin = compileG0Firmware(FIB_SRC);
-    const machine = new CortexM0Machine({ clockHz: 64_000_000, sramBytes: 8192, flashBytes: 64 * 1024 });
+    const machine = new CortexM0Machine({ sramBytes: 8192, flashBytes: 64 * 1024 });
     const serial = [];
     attachStm32G0(machine, {
       onSerialByte: (b) => serial.push(b),
@@ -379,7 +374,8 @@ const void *bw_vectors[48] = {
 #define BW_MMIO(a) (*(volatile uint32_t *)(a))
 #define RCC_IOPENR   BW_MMIO(0x40021034u)
 #define RCC_APBENR1  BW_MMIO(0x4002103cu)
-#define GPIOA_MODER  BW_MMIO(0x48000000u)
+#define GPIOA_MODER  BW_MMIO(0x50000000u)
+#define GPIOA_AFRL   BW_MMIO(0x50000020u)
 #define TIM3_CR1     BW_MMIO(0x40000400u)
 #define TIM3_PSC     BW_MMIO(0x40000428u)
 #define TIM3_ARR     BW_MMIO(0x4000042cu)
@@ -389,10 +385,12 @@ const void *bw_vectors[48] = {
 #define TIM3_CCR2    BW_MMIO(0x40000438u)
 
 int main(void) {
+    bw_clock_64mhz();
     RCC_IOPENR = (1u << 0);   /* GPIOA */
     RCC_APBENR1 = (1u << 1);  /* TIM3 */
     /* PA6 and PA7 in alternate function mode (AF): bits 13:12=10, 15:14=10 */
     GPIOA_MODER = (2u << 12) | (2u << 14);
+    GPIOA_AFRL = (1u << 24) | (1u << 28); /* PA6/PA7 AF1 = TIM3_CH1/CH2 */
     TIM3_PSC = 63u;           /* 1 MHz tick rate from 64 MHz */
     TIM3_ARR = 999u;          /* 1 kHz period (1000 µs) */
     /* PWM mode 1 on CH1 (bits 6:4 = 110b = 6) and CH2 (bits 14:12 = 110b = 6) */
@@ -406,11 +404,11 @@ int main(void) {
 __attribute__((section(".vectors"), used))
 const void *bw_vectors[48] = {
     (void *)0x20002000,
-    (void *)main,
+    (void *)bw_reset,
 };
 `;
     const bin = compileG0Firmware(PWM_SRC);
-    const machine = new CortexM0Machine({ clockHz: 64_000_000, sramBytes: 8192, flashBytes: 64 * 1024 });
+    const machine = new CortexM0Machine({ sramBytes: 8192, flashBytes: 64 * 1024 });
     const pa6Edges = [];
     const pa7Edges = [];
     attachStm32G0(machine, {
@@ -424,22 +422,26 @@ const void *bw_vectors[48] = {
 
     assert.ok(pa6Edges.length >= 4, `PA6 edges count: ${pa6Edges.length}`);
     assert.ok(pa7Edges.length >= 4, `PA7 edges count: ${pa7Edges.length}`);
-    // Check that PA6 drops low at ~250 µs and re-raises at ~1000 µs
-    const pa6Low = pa6Edges.find(e => !e.high && e.tUs >= 200 && e.tUs <= 300);
+    // The counter starts once the firmware has brought the PLL up (tens of
+    // µs after reset, as on silicon), so the edges are measured from the
+    // counter start: the first rise. PA6 drops ~250 µs after it, PA7 ~750.
+    const t0 = pa6Edges.find(e => e.high).tUs;
+    assert.ok(t0 > 0 && t0 < 200, `counter started after clock bring-up (${t0} us)`);
+    const pa6Low = pa6Edges.find(e => !e.high && e.tUs - t0 >= 200 && e.tUs - t0 <= 300);
     assert.ok(pa6Low, 'PA6 transitions low at ~250 us');
-    assert.ok(Math.abs((pa6Low.tUs % 1000) - 250) <= 2, `PA6 low at expected duty threshold (${pa6Low.tUs % 1000} us)`);
+    assert.ok(Math.abs(((pa6Low.tUs - t0) % 1000) - 250) <= 2, `PA6 low at expected duty threshold (${(pa6Low.tUs - t0) % 1000} us)`);
 
     // Check that PA7 drops low at ~750 µs
-    const pa7Low = pa7Edges.find(e => !e.high && e.tUs >= 700 && e.tUs <= 800);
+    const pa7Low = pa7Edges.find(e => !e.high && e.tUs - t0 >= 700 && e.tUs - t0 <= 800);
     assert.ok(pa7Low, 'PA7 transitions low at ~750 us');
-    assert.ok(Math.abs((pa7Low.tUs % 1000) - 750) <= 2, `PA7 low at expected duty threshold (${pa7Low.tUs % 1000} us)`);
+    assert.ok(Math.abs(((pa7Low.tUs - t0) % 1000) - 750) <= 2, `PA7 low at expected duty threshold (${(pa7Low.tUs - t0) % 1000} us)`);
   });
 
   it('ADC analog conversion with EOC polling and serial output', () => {
     const ADC_SRC = `
 #include <stdint.h>
 #define BW_MMIO(a) (*(volatile uint32_t *)(a))
-#define RCC_APB2ENR  BW_MMIO(0x40021018u)
+#define RCC_APBENR2  BW_MMIO(0x40021040u)
 #define USART1_CR1   BW_MMIO(0x40013800u)
 #define USART1_TDR   BW_MMIO(0x40013828u)
 #define ADC_ISR      BW_MMIO(0x40012400u)
@@ -448,27 +450,31 @@ const void *bw_vectors[48] = {
 #define ADC_DR       BW_MMIO(0x40012440u)
 
 int main(void) {
-    RCC_APB2ENR = (1u << 14) | (1u << 9); /* USART1 + ADC clock */
-    USART1_CR1 = 1u;                      /* UE */
-    ADC_CR = 1u;                          /* ADEN */
+    bw_clock_64mhz();
+    RCC_APBENR2 = (1u << 14) | (1u << 20); /* USART1 + ADC clock (APBENR2) */
+    bw_usart1_init();                     /* PA9 AF1, 115200, TE|RE|UE */
+    ADC_CR = (1u << 28);                  /* ADVREGEN (RM0444 15.3.2) */
+    for (volatile int i = 0; i < 400; i++); /* > tADCVREG_STUP 20 us */
+    ADC_CR = (1u << 28) | 1u;             /* ADEN */
+    while (!(ADC_ISR & 1u));              /* ADRDY */
     ADC_CHSELR = (1u << 0);               /* Channel 0 (PA0) */
     for (;;) {
         ADC_CR = (1u << 2);               /* ADSTART */
         while (!(ADC_ISR & (1u << 2)));  /* wait EOC */
         uint32_t val = ADC_DR;            /* clears EOC */
-        if (val >= 2048u) USART1_TDR = 'H';
-        else USART1_TDR = 'L';
+        if (val >= 2048u) bw_putc('H');
+        else bw_putc('L');
         for (volatile int i = 0; i < 5000; i++);
     }
 }
 __attribute__((section(".vectors"), used))
 const void *bw_vectors[48] = {
     (void *)0x20002000,
-    (void *)main,
+    (void *)bw_reset,
 };
 `;
     const bin = compileG0Firmware(ADC_SRC);
-    const machine = new CortexM0Machine({ clockHz: 64_000_000, sramBytes: 8192, flashBytes: 64 * 1024 });
+    const machine = new CortexM0Machine({ sramBytes: 8192, flashBytes: 64 * 1024 });
     const serial = [];
     let analogVolts = 3.0; // Initial 3.0V -> counts ~3723 >= 2048 -> 'H'
     attachStm32G0(machine, {
@@ -494,6 +500,7 @@ const void *bw_vectors[48] = {
 #include <stdint.h>
 #define BW_MMIO(a) (*(volatile uint32_t *)(a))
 int main(void) {
+    bw_clock_64mhz();
     /* Read unmapped flash at 0x08020000 (G030 has 64K flash ending at 0x0800ffff) */
     volatile uint32_t x = BW_MMIO(0x08020000u);
     /* Write unmapped SRAM at 0x20003000 (G030 has 8K SRAM ending at 0x20001fff) */
@@ -506,11 +513,11 @@ int main(void) {
 __attribute__((section(".vectors"), used))
 const void *bw_vectors[48] = {
     (void *)0x20002000,
-    (void *)main,
+    (void *)bw_reset,
 };
 `;
     const bin = compileG0Firmware(UNMAPPED_SRC);
-    const machine = new CortexM0Machine({ clockHz: 64_000_000, sramBytes: 8192, flashBytes: 64 * 1024 });
+    const machine = new CortexM0Machine({ sramBytes: 8192, flashBytes: 64 * 1024 });
     attachStm32G0(machine);
     machine.loadFirmware(bin);
     machine.advanceNs(1_000_000n);
@@ -524,12 +531,13 @@ const void *bw_vectors[48] = {
     const GATED_SRC = `
 #include <stdint.h>
 #define BW_MMIO(a) (*(volatile uint32_t *)(a))
-#define GPIOB_MODER BW_MMIO(0x48000400u)
-#define GPIOC_MODER BW_MMIO(0x48000800u)
+#define GPIOB_MODER BW_MMIO(0x50000400u)
+#define GPIOC_MODER BW_MMIO(0x50000800u)
 #define TIM3_CR1    BW_MMIO(0x40000400u)
 #define USART1_CR1  BW_MMIO(0x40013800u)
 
 int main(void) {
+    bw_clock_64mhz();
     /* Touch peripherals without setting RCC clocks */
     GPIOB_MODER = 1u;
     GPIOC_MODER = 1u;
@@ -540,11 +548,11 @@ int main(void) {
 __attribute__((section(".vectors"), used))
 const void *bw_vectors[48] = {
     (void *)0x20002000,
-    (void *)main,
+    (void *)bw_reset,
 };
 `;
     const bin = compileG0Firmware(GATED_SRC);
-    const machine = new CortexM0Machine({ clockHz: 64_000_000, sramBytes: 8192, flashBytes: 64 * 1024 });
+    const machine = new CortexM0Machine({ sramBytes: 8192, flashBytes: 64 * 1024 });
     const { rcc } = attachStm32G0(machine);
     machine.loadFirmware(bin);
     machine.advanceNs(1_000_000n);
@@ -557,10 +565,16 @@ const void *bw_vectors[48] = {
 });
 
 describe('STM32 peripheral unit tests', () => {
-  it('Stm32Rcc: register reads/writes and peripheral gating queries', () => {
-    const rcc = new Stm32Rcc();
-    assert.equal(rcc.read(0x00), 0x0200_0002 | 0x0100_0000, 'CR reports HSI+PLL ready');
-    assert.equal(rcc.read(0x04), 0, 'CFGR reset value 0');
+  // The G0 and F0 RCCs are separate models now (one instance used to serve
+  // both layouts and accept either family's bits, which let a G0 image that
+  // used F0 offsets pass). CR no longer reports a PLL that nobody started.
+  it('Stm32G0Rcc / Stm32Rcc: register reads/writes and peripheral gating queries', () => {
+    const rcc = new Stm32G0Rcc();
+    assert.equal(rcc.read(0x00), (1 << 8) | (1 << 10), 'G0 CR at reset: HSION+HSIRDY, no PLLRDY');
+    assert.equal(rcc.read(0x08), 0, 'G0 CFGR reset value 0 (SWS = HSISYS)');
+    const f0rcc = new Stm32Rcc();
+    assert.equal(f0rcc.read(0x00) & 0x0300_0003, 0x3, 'F0 CR at reset: HSION+HSIRDY, no PLLON/PLLRDY');
+    assert.equal(f0rcc.read(0x04), 0, 'F0 CFGR reset value 0');
 
     // Test G0 IOPENR (0x34) and APBENR1 (0x3C)
     assert.equal(rcc.gpioEnabled(0), false);
@@ -578,27 +592,32 @@ describe('STM32 peripheral unit tests', () => {
     assert.equal(rcc.read(0x3c), 2);
     assert.equal(rcc.tim3Enabled(), true);
 
-    // Test F0 compatibility: AHBENR (0x14) and APB1ENR (0x1C)
-    rcc.write(0x14, (1 << 18)); // GPIOB
-    assert.equal(rcc.gpioEnabled(1), true);
-
-    // APB2ENR (0x18): USART1 bit 14, ADC bit 9
+    // G0 APBENR2 (0x40): USART1 bit 14, ADC bit 20
     assert.equal(rcc.usart1Enabled(), 0);
     assert.equal(rcc.adcEnabled(), 0);
-    rcc.write(0x18, (1 << 14) | (1 << 9));
+    rcc.write(0x40, (1 << 14) | (1 << 20));
     assert.equal(rcc.usart1Enabled(), 1);
     assert.equal(rcc.adcEnabled(), 1);
+
+    // F0: AHBENR (0x14) and APB2ENR (0x18) on the F0 model
+    f0rcc.write(0x14, (1 << 18)); // GPIOB
+    assert.equal(f0rcc.gpioEnabled(1), true);
+    assert.equal(f0rcc.usart1Enabled(), 0);
+    assert.equal(f0rcc.adcEnabled(), 0);
+    f0rcc.write(0x18, (1 << 14) | (1 << 9));
+    assert.equal(f0rcc.usart1Enabled(), 1);
+    assert.equal(f0rcc.adcEnabled(), 1);
 
     rcc.noteGated('test violation');
     assert.deepEqual(rcc.gatedAccesses, ['test violation']);
   });
 
   it('Stm32Gpio: MODER, OTYPER, PUPDR, IDR, ODR, and BSRR atomic manipulation', () => {
-    const rcc = new Stm32Rcc();
+    const rcc = new Stm32G0Rcc();
     rcc.write(0x34, 1); // enable GPIOA
     const published = [];
     const gpio = new Stm32Gpio({
-      base: 0x48000000,
+      base: 0x50000000,
       portIndex: 0,
       portLetter: 'A',
       rcc,
@@ -662,7 +681,7 @@ describe('STM32 peripheral unit tests', () => {
   });
 
   it('Stm32Tim3: prescaler, auto-reload, UIF flag, and PWM calculation', () => {
-    const rcc = new Stm32Rcc();
+    const rcc = new Stm32G0Rcc();
     rcc.write(0x3c, 2); // enable TIM3 on APBENR1
     let irqRaised = false;
     const fakeMachine = {
@@ -759,9 +778,12 @@ describe('STM32 peripheral unit tests', () => {
     assert.equal(tempCounts, expectedTempCounts, 'TSEN=1 reads sensor volts');
   });
 
+  // The USART now shifts in real time: UE+TE and a baud (BRR from the RCC
+  // kernel clock, 16 MHz HSI16 at G0 reset) are required, and the byte is
+  // out one idle frame + one data frame later — no longer instantly on UE.
   it('Stm32Usart1: CR1.UE gating, TXE/TC/RXNE flags, and FIFO queueing', () => {
-    const rcc = new Stm32Rcc();
-    rcc.write(0x18, (1 << 14)); // enable USART1
+    const rcc = new Stm32G0Rcc();
+    rcc.write(0x40, (1 << 14)); // enable USART1 (APBENR2)
     const bytesOut = [];
     const usart = new Stm32Usart1({
       rcc,
@@ -772,10 +794,13 @@ describe('STM32 peripheral unit tests', () => {
     usart.write(0x28, 0x41);
     assert.equal(bytesOut.length, 0, 'TDR write dropped while UE=0');
 
-    // Enable UE (CR1 bit 0)
-    usart.write(0x00, 1);
+    // Enable UE (CR1 bit 0) + TE (bit 3) at 115200 baud from 16 MHz
+    usart.write(0x0c, 139);
+    usart.write(0x00, 1 | (1 << 3));
     usart.write(0x28, 0x42);
-    assert.deepEqual(bytesOut, [0x42], 'TDR byte dispatched when UE=1');
+    assert.deepEqual(bytesOut, [], 'not on the wire before its frame time');
+    usart.advanceNs(2 * 10 * 1e9 * 139 / 16e6 + 1000);
+    assert.deepEqual(bytesOut, [0x42], 'TDR byte dispatched when UE=1, after idle + data frame');
 
     // ISR flags: TXE (bit 7) and TC (bit 6) set; RXNE (bit 5) 0
     assert.equal(usart.read(0x1c) & 0xc0, 0xc0, 'TXE and TC set');
@@ -903,7 +928,7 @@ describe('STM32G0 boundary-A adapter unit tests', () => {
     adapter.onSerial((b) => received.push(b));
 
     // feedSerial pushes into USART1 RX queue
-    adapter.peripherals.rcc.write(0x18, 1 << 14); // USART1 clock
+    adapter.peripherals.rcc.write(0x40, 1 << 14); // USART1 clock (RM0444: APBENR2, not the F0 APB2ENR offset)
     adapter.peripherals.usart1.write(0x00, 1);     // UE
     adapter.feedSerial(0x43);
     assert.equal(adapter.peripherals.usart1.read(0x24), 0x43);
@@ -917,7 +942,9 @@ describe('STM32G0 boundary-A adapter unit tests', () => {
     assert.equal(adapter.peripherals.usart1.read(0x24), 0x46);
   });
 
-  it('resetToProgram reinitializes SRAM to zeroes and reloads firmware', () => {
+  // SRAM is not zero after a power-on reset: it comes back as the
+  // deterministic power-on pattern (so missing .bss init shows), not zeroes.
+  it('resetToProgram reinitializes SRAM to the power-on pattern and reloads firmware', () => {
     const adapter = createStm32G0Adapter({ program: new Uint8Array([0x00, 0x20, 0x00, 0x20, 0x05, 0x00, 0x00, 0x08]) });
     // Dirty SRAM
     adapter.machine.sram[10] = 0xaa;
@@ -925,8 +952,10 @@ describe('STM32G0 boundary-A adapter unit tests', () => {
     assert.equal(adapter.machine.sram[10], 0xaa);
 
     adapter.resetToProgram();
-    assert.equal(adapter.machine.sram[10], 0x00, 'SRAM cleared');
-    assert.equal(adapter.machine.sram[20], 0x00, 'SRAM cleared');
+    const powerOn = fillPowerOnRam(new Uint8Array(8192));
+    assert.equal(adapter.machine.sram[10], powerOn[10], 'SRAM back to its power-on pattern');
+    assert.equal(adapter.machine.sram[20], powerOn[20], 'SRAM back to its power-on pattern');
+    assert.notEqual(adapter.machine.sram[10], 0xaa, 'the dirty byte is gone');
     assert.equal(adapter.machine.flash[0], 0x00, 'flash restored');
     assert.equal(adapter.machine.flash[4], 0x05, 'flash restored');
   });

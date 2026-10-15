@@ -1,6 +1,25 @@
-# bw-board — engine roadmap (scoped 2026-08-23)
+# bw-board — engine roadmap
 
-Actionable, fully-scoped work items from the 2026-08-23 engine survey. Each item names
+## Current instrument-regression priority — 2026-10-15
+
+Follow the [current plan](PLAN.md#current-circuitinstrument-work--2026-10-15)
+and upstream [circuit/instrument acceptance contract](https://github.com/CrispStrobe/bw-circuit-ui/blob/master/docs/CIRCUIT-INSTRUMENT-NEXT.md).
+The order is qualified source → installed-consumer adoption → stratified
+instrument regression → causal repairs → bounded instrument-realism proof.
+The bounded upstream LM741 CLI proof is complete; it does not complete the
+consumer, a current corpus sweep, vendor-macromodel agreement or hardware
+qualification. Those require their own observed evidence.
+
+Implement an engine repair only after a demonstrated failure identifies that
+boundary. Preserve refusals and work budgets; do not fit tolerances or change
+defaults to improve a match count. Shared changes land here before consumers
+adopt one reviewed package SHA. Live ownership is in `LANES.md`; x86 and target
+contracts retain their independently recorded scopes.
+
+The opening index and early phases retain the 2026-08-23 engine survey. They
+are historical diagnoses and proposals, not a current list of unimplemented
+features: sparse/adaptive/AC and other paths have evolved since that survey.
+Recheck source and later dated evidence before choosing a lane. Each item names
 its files, its approach, its acceptance oracle, and whether it is gated. **Every item
 that touches `mna.js` requires a `spec-updates/` file plus hand-computed oracle tests
 in the same commit** (the standing gate); the load-bearing specs are already filed and
@@ -8,10 +27,10 @@ referenced below. Standing rules from `PLAN.md` apply, especially: no competitor
 in committed content; never return a plausible number when the answer is "not
 available"; non-convergence is reported, never hidden.
 
-Phases are ordered by dependency. E0 is shippable immediately; E1 is the prerequisite
-for E2–E4 being affordable.
+The original phase order expressed dependencies; it is not a fresh claim that
+E0 remains pending or immediately shippable, or that E1 is still absent.
 
-## Open tasks (scoped index — detail in the sections below; done/closed work in `HISTORY.md`)
+## Historical scoped index — recheck current source before claiming
 
 - E0.1 Battery double-stamp — `src/devices/power.js`
 - E0.2 Node-0-referenced drives — `src/mna.js` (GATED)

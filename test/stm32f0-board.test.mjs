@@ -9,17 +9,18 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 import { CortexM0Machine } from '../src/cortex-m0-machine.js';
 import { attachStm32F0 } from '../src/stm32f0-board.js';
+import { STARTUP_C, F0_CLOCK_48_C, usart1C, compileStm32 } from './helpers/stm32-firmware-kit.mjs';
 
 let hasGcc = false;
 try { execFileSync('arm-none-eabi-gcc', ['--version'], { stdio: 'pipe' }); hasGcc = true; } catch { /* skip */ }
 
-const FIRMWARE = `
-#include <stdint.h>
+// Silicon-correct bring-up: startup clears .bss, the PLL is switched to
+// 48 MHz before the 1 MHz timer prescaler assumes it, and USART1 TX is
+// PA9 in AF1 at a set baud (the old image assumed a 48 MHz reset clock,
+// zeroed RAM and an always-ready UART — none of which an F030 gives).
+const FIRMWARE = STARTUP_C + F0_CLOCK_48_C + usart1C({ gpioBase: 0x48000000, pclkHz: 48_000_000 }) + `
 #define BW_MMIO(a) (*(volatile uint32_t *)(a))
 #define RCC_AHBENR   BW_MMIO(0x40021014u)
 #define RCC_APB1ENR  BW_MMIO(0x4002101cu)
@@ -43,6 +44,7 @@ void tim3_irq(void) { TIM3_SR = 0; bw_ms++; }   /* rc_w0: write 0 clears UIF */
 
 int main(void)
 {
+    bw_clock_48mhz();
     RCC_AHBENR  = (1u << 17);          /* GPIOA clock */
     RCC_APB1ENR = (1u << 1);           /* TIM3 clock */
     RCC_APB2ENR = (1u << 14);          /* USART1 clock */
@@ -53,8 +55,8 @@ int main(void)
     TIM3_DIER = 1u;                    /* UIE: the WFI wake */
     TIM3_CR1 = 1u;                     /* CEN */
     NVIC_ISER = (1u << 16);            /* TIM3 = IRQ16 on the F0 */
-    USART1_CR1 = 1u;                   /* UE */
-    USART1_TDR = 'h'; USART1_TDR = 'i';
+    bw_usart1_init();                  /* PA9 AF1, 115200, TE|RE|UE */
+    bw_putc('h'); bw_putc('i');
     uint32_t last = 0;
     for (;;) {
         if (bw_ms != last && (bw_ms % 500u) == 0u) {
@@ -62,7 +64,7 @@ int main(void)
             if ((bw_ms / 500u) & 1u) GPIOA_BSRR = 1u;         /* PA0 set */
             else                     GPIOA_BSRR = (1u << 16); /* PA0 reset */
             /* the button honesty: PA1 pulled up, reported through IDR */
-            if (!(GPIOA_IDR & (1u << 1))) USART1_TDR = 'B';
+            if (!(GPIOA_IDR & (1u << 1))) bw_putc('B');
         }
         __asm__ volatile ("wfi");
     }
@@ -70,33 +72,16 @@ int main(void)
 __attribute__((section(".vectors"), used))
 const void *vectors[48] = {
     (void *)0x20003ff0,
-    (void *)main,
+    (void *)bw_reset,
     [16 + 16] = (void *)tim3_irq       /* exception 32 = IRQ16 */
 };
 `;
 
-const LD = `ENTRY(main)
-MEMORY { FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 64K
-         RAM  (rwx): ORIGIN = 0x20000000, LENGTH = 16K }
-SECTIONS {
-  .text : { KEEP(*(.vectors)) *(.text*) *(.rodata*) } > FLASH
-  .bss  : { *(.bss*) *(COMMON) } > RAM
-}
-`;
-
-const build = () => {
-    const dir = mkdtempSync(join(tmpdir(), 'bw-f0-'));
-    writeFileSync(join(dir, 'main.c'), FIRMWARE);
-    writeFileSync(join(dir, 'link.ld'), LD);
-    execFileSync('arm-none-eabi-gcc', ['-mcpu=cortex-m0', '-mthumb', '-Os', '-ffreestanding',
-        '-nostdlib', `-T${join(dir, 'link.ld')}`, '-o', join(dir, 'fw.elf'), join(dir, 'main.c'), '-lgcc'], { stdio: 'pipe' });
-    execFileSync('arm-none-eabi-objcopy', ['-O', 'binary', join(dir, 'fw.elf'), join(dir, 'fw.bin')], { stdio: 'pipe' });
-    return readFileSync(join(dir, 'fw.bin'));
-};
+const build = () => compileStm32(FIRMWARE, { cpu: 'cortex-m0', flashK: 64, ramK: 16 });
 
 describe('STM32F030 board', { skip: hasGcc ? false : 'arm-none-eabi-gcc not installed' }, () => {
     const boot = () => {
-        const m = new CortexM0Machine({ clockHz: 48_000_000, sramBytes: 16 * 1024 });
+        const m = new CortexM0Machine({ sramBytes: 16 * 1024 });
         const pins = new Map();
         const serial = [];
         const board = attachStm32F0(m, {
@@ -141,7 +126,7 @@ describe('STM32F030 board', { skip: hasGcc ? false : 'arm-none-eabi-gcc not inst
     });
 
     it('the classroom bug is caught: no RCC enable, no blink, and the ledger says why', () => {
-        const m = new CortexM0Machine({ clockHz: 48_000_000 });
+        const m = new CortexM0Machine();
         const board = attachStm32F0(m);
         // firmware minus the RCC lines: poke registers directly, gated
         m._write(0x48000000, 1, 4);       // GPIOA MODER with clock off

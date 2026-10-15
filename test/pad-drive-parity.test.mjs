@@ -803,7 +803,7 @@ describe('pad drive: heavy and light tier, same firmware, same bench', { skip },
 
         const light = tapped(make);
         const lightSamples = sample(
-            createStm32F0Adapter({ program: image.bin, clockHz: 48_000_000 }), light.board, ms);
+            createStm32F0Adapter({ program: image.bin, fixedClockHz: 48_000_000 }), light.board, ms);
 
         const opts = labwiredAdapterOptionsFor({
             netlist, firmware: image.elf, name: 'pad-drive-parity', chipKind: 'stm32f030',

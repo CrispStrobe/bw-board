@@ -62,7 +62,9 @@ function makeWhy(target, cause, hit) {
 export function createRp2040jsDebugTarget(adapter, opts = {}) {
   const { rp2040, core } = adapter;
   const clock = rp2040.clock;
-  const cycleNanos = 1e9 / adapter.clockHz;
+  // Read per instruction, not once: an STM32 adapter's clock follows the
+  // firmware's RCC configuration (PLL switch), so the cost of a cycle changes.
+  const cycleNanos = () => 1e9 / adapter.clockHz;
 
   let running = false;
   let detached = false;
@@ -227,7 +229,7 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
       }
 
       const cycles = core.executeInstruction();
-      clock.tick(cycles * cycleNanos);
+      clock.tick(cycles * cycleNanos());
       resumeGuard = null; // one instruction executed: breakpoints re-arm
 
       // Write watchpoint fired during the instruction

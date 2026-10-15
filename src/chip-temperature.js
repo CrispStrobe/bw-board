@@ -22,6 +22,8 @@
  *       (datasheet §4.9.5: T = 27 - (ADC_voltage - 0.706) / 0.001721)
  *   STM32F030 ADC channel 16 with ADC_CCR.TSEN: V30 = 1.43 V typical,
  *       Avg_Slope 4.3 mV/°C, voltage FALLING as the chip warms
+ *   STM32G030 ADC channel 12 with ADC_CCR.TSEN (DS12991): V30 = 0.76 V typical,
+ *       Avg_Slope 2.5 mV/°C, voltage RISING as the chip warms
  * The ATmega2560 and the STC 8051 parts have no sensor.
  */
 
@@ -65,6 +67,11 @@ export function rp2040TemperatureVolts (celsius) {
 /** STM32F030 temperature-sensor voltage (ADC channel 16) at `celsius`. */
 export function stm32f0TemperatureVolts (celsius) {
   return 1.43 - 0.0043 * (celsius - 30);
+}
+
+/** STM32G030 temperature-sensor voltage (ADC channel 12) at `celsius`. */
+export function stm32g0TemperatureVolts (celsius) {
+  return 0.76 + 0.0025 * (celsius - 30);
 }
 
 /** The bench temperature a board reports, 25 °C without a board. */

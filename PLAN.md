@@ -3,20 +3,53 @@
 The active x86 source-unit checkpoint and next implementation contracts are in
 [docs/X86-NEXT-LANES.md](docs/X86-NEXT-LANES.md#unconnected-source-units-and-concrete-next-work).
 
-## Status
+## Current circuit/instrument work — 2026-10-15
+
+This repository owns the shared numerical engine, component behaviour and
+engine-side instrument authority. Circuit import/export, CLI policy and GUI
+instruments belong in `bw-circuit-ui`; Brickwright Lite consumes both through
+exact Git-SHA npm packages, not tracked engine copies. Source qualification,
+consumer adoption and deployed-application evidence are separate claims.
+
+The ordered [circuit/instrument campaign](https://github.com/CrispStrobe/bw-circuit-ui/blob/master/docs/CIRCUIT-INSTRUMENT-NEXT.md)
+starts from the qualified bounded LM741 CLI source, then qualifies the actual
+installed consumer, runs a fresh stratified regression, repairs demonstrated
+causes, and proves a bounded instrument-realism improvement. The upstream
+six-case nominal-model result is complete; later stages must carry their own
+package identities, raw observations and acceptance results. Historical corpus
+totals are not a current-head resweep or physical-device certification.
+
+For the engine, the next implementation is driven by a minimal reproduced
+failure and an independent oracle, not a target match percentage. Preserve
+work limits, refusal reasons, current conventions and explicit model domains.
+Missing physics, unsupported models and unavailable independent inputs remain
+named gaps; never convert them to plausible readings or numerical passes.
+Changes to `mna.js` still require their specification and independent oracle
+tests in the same lane. `LANES.md` controls ownership and qualification.
+
+Read current inventory and dependency facts from `DEVICE-CENSUS.md`,
+`package.json` and the exact source's CI records. There is no blanket claim that
+the old circuit-parity inventory completes the current engine or all imports.
+
+## Historical circuit-parity snapshot
+
+The inventory, blockers and ownership lists below are retained from the early
+circuit-parity campaign. Their counts are historical, their session labels are
+not live assignments, and “vendored” describes the retired copy architecture.
+Recheck source and the current ledger before reopening any listed item.
 
 **Complete for the circuit-parity campaign.** 98 part kinds, 1159 tests, 0 dependencies.
 Vendored into brickwright-lite. All items from the target inventory implemented except
 power supply CC mode (blocked on mna.js, spec filed).
 
-**Next campaign is scoped: see `ROADMAP.md` (2026-08-23)** — engine correctness fixes,
+**Recorded next campaign: `ROADMAP.md` (2026-08-23)** — engine correctness fixes,
 sparse solver with factorization reuse, adaptive transient, true small-signal AC, model
 depth, scheduled device events. The mna.js items have their spec-updates filed
 (`referenced-device-drives`, `sparse-lu-factor-reuse`, `adaptive-transient`,
 `shockley-junction-limiting`, `ac-small-signal`). Licence rulings for solver work are
 in `ROADMAP.md` §"Backends and licence policy" — read them before importing anything.
 
-## What is done
+### What is done
 
 - **Core engine**: closed-form solver + MNA with Newton-Raphson. 70 ngspice oracles +
   55 Python oracles + RC/555 cross-validation (within 3-5% of analytic).
@@ -41,13 +74,13 @@ in `ROADMAP.md` §"Backends and licence policy" — read them before importing a
 - **Performance**: advanceTo 233K/s, setPin 184K/s, branchCurrent cached 7.6M/s.
   Meter cliff: 8.0K edges/sec = 1.1× real time. Display-rate sampling is load-bearing.
 
-## What is blocked
+### What is blocked
 
 See `BLOCKED.md`:
 - vsource current-limit (mna.js, coordinator)
 - Headless live E2E (Playwright, memory constraint)
 
-## What is NOT ours
+### What is NOT ours
 
 - mna.js internals (coordinator)
 - Cube name mismatch (bw-circuit-ui: rename `ledcube` → `led_cube`, remove filter)

@@ -1,3 +1,21 @@
+2026-10-15 A10 nRF52 UARTE engine adoption — CLAIMED, Codex.
+Branch lane/a10-uarte-engine-adoption-20261015, base 54efdfc4.
+Successor to the published labwired-wasm-d523df44 engine: after the owning
+LabWired source fix qualifies and lands, build that exact source once through
+the existing two-build deterministic release workflow and explicitly advance
+the producer PIN. Preserve the previous release and all prior radio evidence.
+Envelope: this ledger; scripts/build-labwired-wasm.mjs PIN only;
+new test/labwired-uarte-stack.test.mjs and original MIT guest fixtures under
+test/fixtures/labwired/uarte-stack/; the real-engine suite list and count floor
+in .github/workflows/labwired-wasm.yml; catalog regeneration only if the exact
+qualified source changes its inputs. No adapter, CPU, GPIO, circuit or solver
+implementation, dependency shortcut, optional motion dispatch or repeated
+successful original. Require exact serial bytes from the compiled stack-reuse
+guest against the actual release engine, unchanged existing engine tests,
+independent BUILD-INFO/source/hash admission and enabled final-head checks.
+The core source and compiled native guest remain separately qualified; engine
+publication alone does not qualify the Lite consumer or physical timing.
+
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
 2026-10-15 stm32 F0/G0 silicon fidelity — CLAIM, VPS Claude (opus).
@@ -3326,6 +3344,27 @@ This file is the canonical registry for `bw-board`; Brickwright Lite's
 repository by its path/package boundary rather than creating a rival global
 registry.
 
+2026-10-15 current circuit campaign documentation — DONE in this implementation
+commit, Codex bwcx. Claim merged in PR598 before these documentation edits.
+Implementation branch docs/circuit-instrument-status-20261015; no source delta.
+Branch docs/circuit-instrument-campaign-20261015; exact base
+0f6f6b1f7d8fb790ce1f66c6c41db2342b3619b0. Documentation-only envelope:
+this ledger, README.md, PLAN.md and ROADMAP.md. Correct obsolete current-status
+counts and copy-era consumer architecture; mark the old roadmap index as a
+historical survey, not proof every item remains open. Link the ordered CUI
+circuit/instrument campaign and its model/consumer/evidence boundaries.
+Preserve historical results and all active x86/target/shared-world contracts.
+No source, test, workflow, dependency, pin, model/default or runtime change.
+Publish claim before documentation implementation; verify exact base from Git
+and qualify the final Markdown-only candidate before normal matched-head merge.
+
+README links the qualified CLI's explicit model/clock/work boundaries. PLAN
+corrects the copy-era architecture and blanket completion claim, retaining old
+counts and role labels as history. ROADMAP distinguishes the current ordered
+measurement campaign from the early scoped index without changing later x86,
+target or shared-world contracts. Verification is documentation-only: tracked
+envelope, links, whitespace and public-path review, plus enabled hosted checks.
+
 ### Repository role — upstream first, independent of landing speed
 
 `bw-board` is the source-of-truth engine. Shared engine behavior lands here
@@ -3952,7 +3991,8 @@ rather than each against the master it branched from.
 
 | lane | owner/session | worktree | exact scope | base SHA | status |
 | --- | --- | --- | --- | --- | --- |
-| shared simulated world, step 1 (per-project world object) | Claude (labwired lane), 2026-10-15 | `[local path omitted]`, branch `feat/world-step1-20261015` | New `src/world.js` (world object: ambient temperatureC/humidityPct/lightLux/pressureHpa/soundDb, get/set/subscribe, deterministic piecewise-linear sim-time schedules); `src/board.js` (board.world, setWorld for sharing one world between boards, temperatureC/setTemperature backed by the world); world-facing defaults in sensor parts under `src/devices/` (an explicit per-part param or stimulus still wins); `src/stimulus-extension.js` world blocks; `src/chip-temperature.js` doc only; new focused `test/world*.test.mjs`; new `docs/WORLD.md`; this row. Steps 2 (positioned sensors/sources) and 3 (surface colour/distance) get their own claims. No change to existing test thresholds or legacy defaults. | `b4b4c87f` | CLAIMED |
+| shared simulated world, step 2 (positioned sensors and world sources) | Claude (labwired lane), 2026-10-15 | `[local path omitted]`, branch `feat/world-step2-20261015` | `src/world.js` (positioned sources heater/fan/lamp/sound, clamped inverse-square falloff, getAt, sources in toJSON/replaceWith); `src/board.js` (setPartPositions from the host layout, netlist x/y fallback, setBenchOrigin, partBenchPosition); new focused `test/world-sources.test.mjs`; `docs/WORLD.md` section; this row. Step 1 landed in #595. Precedence unchanged (per-part value wins). No existing test/threshold change. | `78a68830` | CLAIMED |
+| shared simulated world, step 1 (per-project world object) | Claude (labwired lane), 2026-10-15 | `[local path omitted]`, branch `feat/world-step1-20261015` | New `src/world.js` (world object: ambient temperatureC/humidityPct/lightLux/pressureHpa/soundDb, get/set/subscribe, deterministic piecewise-linear sim-time schedules); `src/board.js` (board.world, setWorld for sharing one world between boards, temperatureC/setTemperature backed by the world); world-facing defaults in sensor parts under `src/devices/` (an explicit per-part param or stimulus still wins); `src/stimulus-extension.js` world blocks; `src/chip-temperature.js` doc only; new focused `test/world*.test.mjs`; new `docs/WORLD.md`; this row. Steps 2 (positioned sensors/sources) and 3 (surface colour/distance) get their own claims. No change to existing test thresholds or legacy defaults. | `b4b4c87f` | DONE — landed in #595 (merge `78a68830`) |
 | ADP7118 startup duplicate-lead admission | Codex bwcx `/root` | `/mnt/volume1/code/lego/wt-board-startup-context-claim-20261002`, branch `lane/adp7118-startup-lead-admission-20261003` | `src/devices/power.js` opt-in ADP7118 stamp admission only, `test/adp7118-soft-start.test.mjs`, `spec-updates/adp7118-soft-start.md`, and this row. Refuse missing VIN7/VIN8/VOUT1/VOUT2 nets explicitly: actual caller measurement reports 3.799620 V with accuracyMet true when either VIN lead is absent, including zero supply current when VIN7 is absent. Prove four named refusals, unchanged fully bonded startup and unchanged default DC path, with an executable guard-removal mutant. No private die-node invention, nonlinear current limiter, solver/Board/other-device/CUI/Lite/package/pin/workflow change. | `4a6f837818c8294b3e67e34e39b8bf9fc0aee030` | **DONE candidate 2026-10-03.** Canonical claim `cb11401e` preceded edits. The missing-lead regression failed before repair; focused startup/DC surface passes 27/27 with zero failures/cancellations/skips. An additional exact-anchor guard-removal mutant reds the actual caller refusal, alongside all eleven earlier mutation proofs, restoring the registry and leaving production bytes unchanged. Fully bonded 120-sample waveform/mean and legacy DC cases remain green. Exact-head automatic CI/Harris qualification remains the landing gate; no consumer refresh yet. |
 | zero-width SPICE PULSE default-width semantics | Codex `/root` | `/mnt/volume1/code/wt/board-spice-pulse-zero-width`, branch `lane/spice-pulse-zero-width-default` | `src/source-waveforms.js`, `test/spice-pulse-source.test.mjs`, and this row only. Interpret an explicitly imported `PW=0` as ngspice's default-width case: hold V2 after the finite rise until the next period restart, preserve the restart as a discontinuity, and keep every positive-width waveform unchanged. Prove analytic values/corners, unchanged positive PW, the exact ADI row-5114 current-source RC topology under unchanged precision budgets, and off-edge agreement with ngspice. Immediate-fall and missing-restart mutations must independently red. No parser/importer, generic integrator, tolerance/work budget, CUI/corpus/package/pin/workflow/device/CPU change. | `6c02f2196b78bd4d165217467f5f74d3936e29dc` | **DONE candidate 2026-09-28.** Zero PW now holds V2 after its finite rise until the following-period restart; the exact restart solve point exposes the left limit and the far-side BE seed sees the new rise. The imported row-5114 topology completes two periods in 2,791 attempts under unchanged precision limits with no accuracy failure. Six off-edge observations across both periods agree with ngspice within 0.2 mV; exact-edge interpolation is deliberately not used as an oracle. Focused pulse/profile coverage passes 24/24. Restoring the old immediate fall and removing the following-period restart independently red the analytic, real-board, and ngspice consequences. Positive PW remains on its prior branch. |
 | source-aware no-scope transient waveform ceiling | Codex `/root` | `/mnt/volume1/code/wt/board-source-aware-step-v2`, branch `lane/source-aware-waveform-step-v2`, replayed onto exact `4beb3331a8e21ff1d8345c096ca92d30c7743471` | `src/board.js`, `test/transient-analysis-profile.test.mjs`, and this row. For precision analysis of time-varying sources without an oscilloscope channel, replace the universal 10 us ceiling only when a conservative ceiling derived from the source's period/time constant/point or PCM interval is looser. Keep the interactive default byte-for-behaviour, adaptive LTE/convergence, exact breakpoint barriers, authored `maxStepSec`, work budgets and every scope-channel ceiling unchanged. Prove slow 1 Hz/10 Hz SINE and multi-second PULSE no longer require 100k-1M accepted steps, a 16 kHz source remains honestly too expensive, authored TMAX still wins, and scope capture retains the old fidelity bound. Compare bounded self-authored waveforms with ngspice before adoption. No source semantics, tolerance/work-budget relaxation, CUI/corpus/package/pin/workflow/device/CPU change. | `6122b9ffbff572619f10c5dfc06c62037c24defe` | **DONE candidate 2026-09-28.** Slow 1 Hz/10 Hz RC analyses finish in 4,276/14,691 attempts under the unchanged 20,000 budget and agree with ngspice 42 at their final samples within 15 nV/194 nV. The multi-second PULSE witness falls from a theoretical million fixed-cap steps to 726 adaptive attempts; the 16 kHz corpus family still reaches the exact unchanged budget refusal. Scope, authored maximum, fast waveform and interactive-default behavior retain their prior ceilings. Focused plus adjacent waveform/scope/adaptive proof passes 41/41. Independently suppressing source derivation or using the pulse edge instead of its period reds the named caller consequence. The replay preserves the exact production/test patch (`33013b3e816c8579cbf73ad70c3a6efac74319810199da94594416c6a176cb62`) across a disjoint 386 receipt merge. Downstream corpus replay and package adoption remain separate. |
@@ -4849,6 +4889,24 @@ workflow, pin or historical gate changes. Adoption requires independent
 width/exception semantics, affected hosted full-CI/guest checks and a separately
 scoped current-baseline unprofiled paired gate; no gain means no adoption.
 
+## Ordinary-JS byte-register selection experiment — 2026-10-15
+
+CLAIM — Codex x86; docs-only ownership preparation. Implementation waits for
+this claim to merge and an independently reviewed all-eight-byte-register
+workload/golden freeze plus current adopted-CPU profile support or a predeclared
+representative ordinary-AT paired non-regression control. A byte-mix win alone
+does not justify whole-AT adoption. Own only `_reg8` and `_setReg8` in
+`src/experimental/i80386.js`, new
+`test/i80386-byte-register-specialization.test.mjs`, and this matching
+[contract](docs/X86-NEXT-LANES.md#ordinary-js-byte-register-selection-experiment).
+Separately version measurement in new
+`scripts/i80386-byte-register-paired/{fixture.mjs,run.py,policy.py,reader.py,controls.py,README.md}`,
+new `test/i80386-byte-register-paired-fixture.test.mjs` and
+`.github/workflows/i80386-byte-register-paired.yml`. No existing measurement,
+other CPU method, device, scheduler, dependency pin or scalar-EA candidate is
+owned here. Keep the candidate draft until regression, affected free-guest and
+new paired gates pass; no speedup, cost share or adoption is established.
+
 ## Mixed-width ALU public paired measurement — 2026-10-15
 
 CLAIM — Codex x86, `lane/386-width-mask-public-paired-20261015`;
@@ -4877,3 +4935,62 @@ Own this entry and the [contract](docs/X86-NEXT-LANES.md#386-debugger-capture-an
 No CPU/device source, supplier pin, workflow, other target or performance
 experiment edits. Fix a reproducible debug-subscriber exception and expose
 honest 386 state/address capabilities; unsupported mode decoding must refuse.
+
+## Subscribed 386 free-guest debugger qualification — 2026-10-15
+
+CLAIM — Codex x86, `lane/386-debug-guest-20261015`; implementation waits
+for merged claim. Own only new
+`scripts/i80386-debug-guest/{observer.mjs,reader.py,README.md}`,
+`test/i80386-debug-guest-observer.test.mjs`,
+`.github/workflows/i80386-debug-guest.yml`, a narrow optional fixed-observer
+integration in `scripts/probe-xv6-stock.mjs`, this entry and the
+[contract](docs/X86-NEXT-LANES.md#subscribed-386-free-guest-debugger-qualification).
+Observe the unchanged ordinary guest machine-step loop, at most64 completed
+instructions and1024 memory facts, with direct-state/nonmutation and full
+unobserved/observed semantic parity. Runtime debugger sources from PR599,
+CPU/device scheduling, existing workflows, guest/firmware/media and supplier
+pins are outside scope. No installed GUI, disassembler, reverse-execution,
+performance or broad OS acceptance follows from this finite diagnostic.
+
+
+## Raw HDD ownership and explicit export/reload — 2026-10-15
+
+CLAIM — Codex x86, staged after debugger qualification; implementation waits
+for merged ownership. Own `src/experimental/ata16.js` copy semantics,
+`src/i80386-adapter.js`, a later additive export method in `src/i80386-debug.js`,
+`scripts/run-i80386-at-console.mjs`, new
+`test/i80386-{hdd-export,at-console-export}.test.mjs`, and new
+`scripts/i80386-hdd-export/{probe.mjs,reader.py,README.md}` plus
+`.github/workflows/i80386-hdd-export.yml`. See the
+[contract](docs/X86-NEXT-LANES.md#explicit-raw-hdd-export-and-reload).
+The debugger file is not edited while PR599 owns its initial correction;
+sequence or separately hand off that file first. Preserve ATA command/timing
+semantics, frozen source inventories, original receipts and dependency pins.
+
+## Bounded DOS package admission — 2026-10-15
+
+CLAIM — Codex x86, follows explicit raw-HDD export/reload. Own new
+`src/dos-package-policy.js`, `scripts/lib/dos-package-zip.mjs`,
+`scripts/run-dos-package.mjs`, `test/dos-package-{policy,zip,cli}.test.mjs`,
+`scripts/dos-package-acceptance/{probe.mjs,reader.py,README.md}` and
+`.github/workflows/dos-package-acceptance.yml`; existing runners/parsers and
+package dependencies are not changed without a separate ownership extension.
+Use canonical relative asset mapping and a declared limited command grammar;
+no host shell, arbitrary autoexec, CD/ISO or whole-DOSBox compatibility claim.
+See the [contract](docs/X86-NEXT-LANES.md#bounded-dos-package-admission).
+
+
+## Explicit 386 physical-memory capability metadata — 2026-10-15
+
+CLAIM — Codex x86; docs-only ownership preparation. Implementation waits for
+PR599's existing target ownership to merge and an explicit handoff. Own only
+the optional memory descriptor in `src/i80386-debug.js`, new
+`test/i80386-debug-memory-capabilities.test.mjs`, and this matching
+[contract](docs/X86-NEXT-LANES.md#explicit-386-physical-memory-capability-metadata).
+Do not edit PR599's existing capture test, CPU/device code, shared 8086 defaults,
+consumer pins or unsupported debugger operations. The descriptor declares a
+physical bus domain, not installed or writable RAM. Require passive-observation
+controls, precise inclusive bounds and read-only behavior before publication.
+Lengths are nonnegative safe integers; a zero-length read may use the one-past
+endpoint, never as an addressable byte or UI page start. Any new metadata field
+requires complete strict descriptor validation; partial metadata fails closed.

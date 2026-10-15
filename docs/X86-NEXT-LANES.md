@@ -1657,8 +1657,13 @@ unprofiled gate; it has no measured gain or adoption from these samples.
 
 ## Ordinary-JS width-mask literal specialization
 
-Status: docs-only claim; source implementation waits for merged ownership.
-Own only `maskFor` in `src/experimental/i80386.js`, new
+Status: claim591 merged; [CPU PR594](https://github.com/CrispStrobe/bw-board/pull/594)
+merged as `bfe99d562e9b57a819ec92025faafba271b8751c` after all eight enabled
+checks passed, adopting only the isolated literal-mask change on `bw-board/master`.
+Its [new paired result](I80386-WIDTH-MASK-PAIRED-RESULTS.md) passed the named
+gate and both root/independent peer original audits. Measurement PR601 merged as
+`503ab56359f4968ea59deaf77933102cd0bc7a41` after all nine enabled checks passed;
+No installed consumer pin is updated or qualified. Own only `maskFor` in `src/experimental/i80386.js`, new
 `test/i80386-width-mask-specialization.test.mjs`, this section and its registry
 entry. Use `lane/386-width-mask-specialization-20261015`. All other CPU methods,
 decoders, device/scheduler/clock code, existing tests, benchmarks, policies,
@@ -1702,10 +1707,83 @@ dropping or replacement. Old fixture CLIs/policies stay immutable. A failed or
 unmeasured gate means no adoption. No 10x target, exact cost share, physical
 RTx, OS, GUI/CLI consumer or original-private-gate qualification is claimed.
 
+## Ordinary-JS byte-register selection experiment
+
+Docs-only claim. Merge ownership before coding. Freeze an independently reviewed
+ordinary-instruction workload and semantic goldens before CPU implementation.
+The baseline is the adopted literal-mask CPU, SHA256
+`8f92cc4f8117d2371b493a7ee5a49dbf0245d1367f050194680f68a1454a9846`;
+freeze the exact source revision and complete source map before execution rather
+than following later main changes silently. The retained AT profile predates
+this CPU and does not establish a current byte-register cost share or gain.
+
+Own only `_reg8` and `_setReg8` in `src/experimental/i80386.js` and new
+`test/i80386-byte-register-specialization.test.mjs`. Investigate explicit scalar
+selection only for strict literal numeric indices 0 through 7, covering
+AL/CL/DL/BL/AH/CH/DH/BH. Preserve the original
+fallback exactly: `_reg8(8)` reads the high byte of ESP, whereas `_setReg8(8, v)`
+writes AH in EAX. An `index & 7` rewrite is not equivalent. Keep string, boolean,
+fractional, NaN, BigInt, Symbol and object index behavior, including original
+errors and coercion side effects. Preserve upper register bits and unsigned
+storage. Preserve evaluation order: read the old register before `value & 255`;
+do not hoist value coercion or cache fields across observable coercion hooks.
+No other method, fetch/decoder/flags behavior, device or scheduler is included.
+
+Before CPU implementation, require either a current adopted-CPU scoped profile
+supporting this investigation, or a predeclared representative ordinary AT
+machine paired control alongside the byte mix. Freeze the control's unchanged
+workload, independent semantics, candidate comparison, resources and explicit
+no-material-regression acceptance bounds before implementation. Adoption must
+satisfy that AT non-regression requirement as well as the byte-mix gate; a
+selected byte-register mix alone cannot justify whole-AT speed claims. The
+pending unpaired operational AT run is not a paired candidate control and must
+not be duplicated for this purpose.
+
+Focused controls enumerate all eight byte registers, high-bit values and
+high/low aliasing; run the new tests against baseline and candidate. Add
+nonstandard index and value-coercion adversaries, including register mutation
+inside object coercion. Existing ALU/vector regressions, faults and an affected
+clean free-guest result remain mandatory. Host controls alone do not qualify
+CPU adoption.
+
+Own new `scripts/i80386-byte-register-paired/{fixture.mjs,run.py,policy.py,reader.py,controls.py,README.md}`,
+`test/i80386-byte-register-paired-fixture.test.mjs` and
+`.github/workflows/i80386-byte-register-paired.yml`. Independently freeze a
+balanced all-eight-byte-register ordinary `CPU.step` stream, including register
+and memory operands and meaningful unchanged 16/32-bit controls. Independently
+compute per-step registers/flags, callbacks, work counts and full-memory digest.
+Do not time direct helper loops, select a winning mix after seeing results or
+reuse previous benchmark bodies as new observations.
+
+Use separately named admissions/schema and fresh complete source maps with a
+CPU-only arm difference, common workload roles and a fixed runtime. Preserve
+ABAB warmups then seven fixed AB,BA,AB,BA,BA,AB,BA pairs, all 18 whole-child wait4
+CPU/wall records, owned one-CPU/1 GiB/no-swap resources, affinity and observed
+cleanup. Gate unchanged at median CPU A/B at least 1.03, every measured pair
+above 1, and median wall B/A at most 1.02. Preserve the first failure and all
+original captures; no selective retry. Actual workflow is push-only on the
+owned measurement branch, first attempt, after source review and affected guest
+success; no duplicate PR or manual measurement dispatch.
+
+Keep source and measurement candidates draft until their required gates pass.
+Any adoption is a separate combined admission of source, semantic, free-guest,
+latest enabled CI and this new performance gate. Do not edit old experiment
+maps/workflows or PR557's original gate, multiply earlier ratios, claim a
+composite candidate, move a consumer pin or infer physical RTx/full-OS support.
+
 ## Mixed-width ALU public paired measurement
 
-Status: docs-only claim; implementation waits for merged ownership. Own only
-new `.github/workflows/i80386-width-mask-paired.yml`,
+Status: claim597 merged; [PR601](https://github.com/CrispStrobe/bw-board/pull/601)
+published the separately versioned harness. The sole [original result](I80386-WIDTH-MASK-PAIRED-RESULTS.md)
+passed all 18 semantics and the CPU/wall gate (median 1.213153522442 CPU ratio,
+minimum 1.1923036855965443, wall median 0.8269209820340158). Root original audit
+and independent peer audits passed. PR601 merged as
+`503ab56359f4968ea59deaf77933102cd0bc7a41` after all nine enabled checks passed.
+CPU PR594 merged as `bfe99d562e9b57a819ec92025faafba271b8751c` after all eight
+enabled checks passed; adoption is limited to `bw-board/master`, not an installed
+consumer pin.
+Owned paths:
+`.github/workflows/i80386-width-mask-paired.yml`,
 `scripts/i80386-width-mask-paired/{fixture.mjs,run.py,policy.py,reader.py,controls.py,README.md}`,
 `test/i80386-width-mask-paired-fixture.test.mjs`, this section and its registry
 entry. Use `lane/386-width-mask-public-paired-20261015`. Do not edit any existing
@@ -1833,3 +1911,208 @@ and memory inspection, resume and pane switching. This claim does not own
 Lite's shared package files or qualify its current installed package. No new
 media acquisition, licensed guest, performance gain, physical RTx or whole-OS
 compatibility follows from this correction.
+
+## Subscribed 386 free-guest debugger qualification
+
+Status: docs-only scope extension; implementation waits for merged ownership.
+Own only new `scripts/i80386-debug-guest/{observer.mjs,reader.py,README.md}`,
+`test/i80386-debug-guest-observer.test.mjs`,
+`.github/workflows/i80386-debug-guest.yml`, the narrow opt-in integration in
+`scripts/probe-xv6-stock.mjs`, this section and its registry entry. Use
+`lane/386-debug-guest-20261015`. The five runtime debugger files published in
+[PR599](https://github.com/CrispStrobe/bw-board/pull/599) remain unchanged;
+no product adapter, CPU/device/scheduler, package pin, existing workflow,
+MIT guest source, Bochs firmware or media changes are owned.
+
+Run one separately named hosted qualification pair: an unobserved control and
+an observed run on identical authenticated source, unchanged existing free
+xv6/Bochs inputs and one fixed established 4M marker or14M boot invocation.
+Select and freeze the exact invocation before execution, not whichever passes.
+Keep original guest code/bytes, command injection, stop conditions, wall/step/
+memory limits and native-block settings identical. Preserve their original
+reports plus a separate bounded observer receipt; do not modify guest success
+criteria or invent baseline evidence from a historical receipt. Existing
+completed diagnostics are not replayed just to read them.
+
+The source-owned observer composes the actual guest machine with
+`createI80386DebugTarget({machine})`. It must preserve and chain existing serial,
+port and interrupt hooks. Install the subscription at the first predeclared
+eligible boundary: PE true, VM false, cached CS default32, CPL3, not halted.
+The probe's normal `machine.step()` and its existing loop/budget accounting
+remain the execution authority. Do not substitute `target.step`, `runFor`, an
+extra CPU step or different tick budget; target construction/subscription and
+observation must not advance the guest.
+
+Count actual completed instruction events and validate their before-state
+mode; an interrupt between eligibility and CPU execution must not be relabeled
+as a ring3 retirement. Retain at most64 completed-instruction observations,
+1024 memory facts and a fixed1MiB observer-byte cap. Require at least one
+actual protected32 ring3 retirement; missing eligibility/window completion
+within the unchanged original bound refuses. Preserve mixed-mode events
+honestly if an interrupt occurs. Stop collection and unsubscribe after the
+ordinary machine-step boundary, not midway through event publication. Latch
+observer-cap/refusal facts without silently dropping them or changing guest
+execution to make a diagnostic pass; always attempt unsubscribe in finally.
+
+At the window boundaries, copy direct architectural/control/segment-cache,
+CR2, device clock/debt, VGA latch and translation-cache metadata scalars; avoid
+snapshot/I/O operations that flush clocks or walk pages. Compare captured
+full-width registers and linear PC with actual cached CS-base plus EIP. Check
+unsigned physical memory facts, without requiring this guest to access above
+2GiB naturally (tiny high-address controls cover that). A source-owned regs
+and safe known-RAM/VGA read observation must leave those fields/latches and
+memory unchanged. Do not claim arbitrary MMIO reads nonmutating or copy all
+RAM per instruction. Preserve original faults and source-defined partial
+state; forward capture grants no checkpoint/replay authority.
+
+The complete ordinary guest reports must agree control versus observed,
+including serial/input, milestones, CPU/control/cache snapshot, ATA/PIC/PIT/
+other device facts, screen, step counts and original success criteria. Freeze
+any necessary source-identity-only projection explicitly; no arbitrary field
+exclusions or regenerated successful reports. An independent byte-only reader
+imports no producer validators and joins original reports, observer prefix/
+count/digests, mode/address/register facts, source/runtime/media bindings and
+capture/unsubscribe/refusal state. Partial/capped/uncertain originals never
+promote qualification. Root and peer admit official metadata and audit the
+sole original packet without replay before conclusions.
+
+Freeze the exact complete transitive import/data/runtime source graph before
+Node loads the observer, including the newly fixed observer/target/helper
+roles and unchanged guest/build/firmware identities. Review consequences for
+existing fixed source inventories before coding; no blind count/pin update,
+source-row omission or old-proof waiver is allowed. Any needed changes outside
+the paths above require a separately reviewed ownership extension first.
+Meaningful tiny source-owned observer/reader controls run before hosted work;
+no full guest, resource setup or build locally. One attempt1 branch-push hosted
+pair after frozen source/reader reviews, no PR/dispatch duplicate or retry.
+All enabled exact-head CI and affected debugger/8086 regressions remain required.
+This is finite subscribed free-guest acceptance, not installed Lite GUI/CLI,
+mode-aware disassembly, whole-OS compatibility, performance or physical RTx.
+
+
+## Explicit raw HDD export and reload
+
+Proposed staged work; no new export capability or execution is claimed here.
+Use the ownership envelope in `LANES.md`. First fix detached byte ownership:
+`Buffer` is a `Uint8Array` subclass, but its `slice()` aliases memory. Admission
+and returned media copies must detach both Buffer and offset-subarray inputs;
+mutating a caller's input or returned bytes must not mutate the live disk.
+Retain CHS validation and ATA command/timing behavior. Existing historical
+write-to-disk/fresh-guest readback is evidence for that bounded mechanism,
+not evidence of a user-facing export action.
+
+After the initial debugger correction is qualified and its file handed off,
+expose an explicit read-only raw-HDD snapshot through the active target and
+adapter. Require present media, exact CHS/length and a safe paused boundary;
+refuse an unfinished BSY/DRQ transfer rather than label a partial transfer
+complete. Start with a declared 64 MiB copy limit checked before allocation.
+Return detached bytes and geometry/length/SHA metadata, without changing
+controller state, guest RAM or input media. This is a snapshot of emulated
+bytes, not a physical durability guarantee or an architectural checkpoint.
+
+Add an explicit CLI `--hdd-output` route. Create a new regular output exclusively;
+never overwrite an existing destination, follow an output symlink or replace
+the input image. Preserve the original guest error if export also fails, and
+report export failure without presenting a partial write as success. The
+metadata must identify source input and exported image separately. No autosave
+or implicit writeback is introduced.
+
+Meaningful controls cover Buffer/subarray aliasing, absent/busy media, copy
+bounds, CHS mismatch, existing destination, symlink and same-input refusal.
+A new bounded hosted scenario uses unchanged freely licensed firmware/guest
+inputs and an authored marker: guest writes and closes a file, reaches a
+safe observable boundary, exports, then a fresh machine with that exact raw
+image and geometry reads the marker. Bind original input unchanged, exported
+hash/length, both guest results and source/runtime/media identities. A byte-only
+independent reader audits the sole original packet; do not replay old successful
+diagnostics just to read them. All enabled exact-head checks and affected guest
+qualification precede merge. Lite separately qualifies genuine browser download
+and chooser reload after coordinated supplier adoption.
+
+## Bounded DOS package admission
+
+This follows disk export/reload and has its own source, tests and acceptance;
+it is not a present ZIP/JS-DOS loader. Implement a pure shared policy and a
+Node ZIP adapter without changing shared package dependencies. Select one
+explicit config, or one unambiguous supported default; never guess among
+multiple runnable configurations. Preserve full canonical archive paths and
+resolve media relative to the chosen config. Basename matching is insufficient.
+
+Initial routes are explicit: a DOS-service COM/MZ program with declared virtual
+files, or one raw HDD with exact CHS for the functional 386 AT. Freeze the exact
+supported declaration/option grammar before implementation. Reject unknown
+commands, command chaining, external host paths/URLs, ambiguous mounts or entry
+points and unsupported devices. Do not execute package JavaScript, scripts or
+arbitrary autoexec. A DOS-service route is not an extender-capable DOS boot.
+
+Preflight original ZIP local/central records before a decoder can sanitize or
+collapse names. Bound compressed input, entry count, decoded per-file and total
+bytes, expansion ratio, config size and extraction work; verify CRC and topology.
+Reject traversal, absolute/UNC paths, duplicate/case aliases, conflicting ancestor
+paths, links, encryption, unsupported ZIP64/multidisk/descriptors or malformed
+extents. Start with a deliberately documented STORED/deflate subset; use an
+immutable in-memory asset map, not filesystem extraction or network fallback.
+Browser and Node codecs must enforce the same policy; a decoder's final object
+map alone cannot establish original-name safety or memory bounds.
+
+Authored tiny archives exercise exact bytes, config-relative subdirectories,
+file lookup, collisions, truncation, CRC, caps, ambiguity and unsupported commands.
+Then qualify the same free/authored package through CLI and the actual installed
+GUI, with selected target/media identity, visible output/input and retained
+failure UI/session behavior. Integrate existing runners only through their
+reviewed interfaces; claim any additional runner changes before coding. Keep
+existing 8086 and wired routes distinct. No dependency pin change belongs here.
+
+ISO/CD-ROM is a later device lane: it requires an actual ATAPI command/data/IRQ
+path plus firmware and guest support before a picker can promise it. An ISO
+extension or renamed raw HDD cannot supply that implementation. A future ISO
+lane needs separately merged ownership and authored/free acceptance fixtures.
+
+
+## Explicit 386 physical-memory capability metadata
+
+Docs-only claim, after PR599 merge and explicit target-owner handoff. Own the
+optional `spaces.mem` descriptor in `src/i80386-debug.js` and new
+`test/i80386-debug-memory-capabilities.test.mjs`; leave the existing capture
+test, CPU/devices and ordinary 8086 behavior unchanged. Coordinate the separately
+reviewed Lite capability-normalization extension before consumer adoption.
+
+Declare `read: true`, `write: false`, `passiveRead: true`,
+`addressSpace: 'physical'`, `addressMin: 0`, `addressMax: 0xffffffff` and
+`maxReadBytes: 1048576`. Inclusive byte bounds describe the physical bus domain,
+not mapped RAM, readable hardware at every address or write permission. Code
+run-to bounds are linear addresses and must not substitute for this descriptor.
+`write: false` is the single read-only authority; do not add contradictory flags.
+
+Reads require safe-integer addresses and nonnegative safe-integer lengths.
+Preserve the existing empty-read boundary: address may equal `addressMax + 1`
+only when length is zero. This endpoint is not an addressable byte; nonempty
+ranges must stay within the inclusive byte bounds. UI jumps and page starts
+must remain at or below `addressMax`.
+Before declaring passive reads, verify unchanged CR2/fault state, translation
+metadata, device state and VGA latches using owned controls. Test zero, high-bit
+and final-byte reads, zero-length reads including the one-past endpoint, final
+short pages, invalid/overflowing ranges and write
+refusal. Source tests do not qualify an installed consumer.
+
+Legacy targets with no new descriptor keep their current behavior. Consumers
+must distinguish absent optional metadata from malformed explicit metadata:
+the presence of any new metadata field selects complete strict descriptor
+validation. Partial or malformed explicit metadata fails closed rather than
+falling back to an editable 64 KiB window.
+The later installed free-guest journey must use the qualified supplier revision;
+this claim moves no app pin or lockfile and grants no GUI or full-OS qualification.
+
+## Adopted literal-mask operational throughput observation
+
+The sole [operational run38711737457](https://github.com/CrispStrobe/bw-board/actions/runs/38711737457)
+on merged `bfe99d562e9b57a819ec92025faafba271b8751c` passed original-byte review.
+Its [four-path checkpoint](X86-RTX-PLATFORMS.md#adopted-literal-mask-operational-checkpoint--2026-10-15)
+records Node 22.23.3 on EPYC 7763: 386 core 6.486167 million instructions/s and
+AT machine 2.662167 million instructions/s. Configured factors 0.405385423 and
+0.998312612 use synthetic one/six-cycle charges, not physical timing. Hardware
+differs from the older operational run; no gain/regression ratio follows.
+This does not replace the separate paired gate or qualify an installed app.
+Continue current source-owned debugger and media acceptance before consumer
+adoption; future optimization hypotheses require current evidence or a
+predeclared representative AT paired non-regression control.
