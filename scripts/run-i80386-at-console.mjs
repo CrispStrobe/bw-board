@@ -364,6 +364,10 @@ const textRam=()=>{
     .join('').trimEnd());
 };
 const liveState=makeTerminalInputState(),pendingScan=[],pendingMouse=[];
+// A controller enqueue is not a BIOS/line-editor acknowledgement. Pace pasted
+// scan bytes in guest machine-step calls, independently of mouse polling.
+const liveScanStepGap=65536;
+let nextLiveScan=0;
 let quit=false,lastDraw=0,lastInputAt=0,forceDraw=true;
 const onTerminalData=chunk=>{
   lastInputAt=Date.now();
@@ -380,9 +384,10 @@ const offerLiveInput=()=>{
   if((steps&1023)!==0)return;
   if(liveState.pending==='\x1b'&&Date.now()-lastInputAt>50)
     pendingScan.push(...flushTerminalEscape(liveState));
-  if(pendingScan.length) {
+  if(pendingScan.length&&steps>=nextLiveScan) {
     try {
       if(machine.keyIn(pendingScan[0])) {
+        nextLiveScan=steps+liveScanStepGap;
         delivered.push({step:steps,type:'live-key',code:pendingScan.shift(),accepted:true});
       }
     } catch(error) {

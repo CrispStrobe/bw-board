@@ -2219,3 +2219,29 @@ bounded raw output. A stopped budget or user quit alone is not a guest flush.
 Keep guest execution hosted and bounded. No new media acquisition, OS
 completeness, installed GUI, ISO/CD, physical timing or durability beyond this
 finite acceptance is claimed.
+
+
+## Live console keyboard pacing
+
+The first [FreeDOS persistence run](https://github.com/CrispStrobe/bw-board/actions/runs/38790214003)
+at source `50b5a3a75e7a856412b0dd54d1195526d6969b5a` failed before the readback
+session. It delivered all 84 recorded scan bytes, but the final guest screen
+showed a truncated ECHO command without its completing prompt. The exported
+master image matched the initial image. Cleanup completed without a timeout or
+OOM. This does not prove a disk-write fault or completed persistence.
+
+The follow-up spaces accepted live keyboard scan bytes by 65536 machine-step
+calls so a pasted command does not flood a slower consumer. Mouse polling and
+refused-byte retries retain their 1024-step service interval; a refused byte
+neither leaves the queue nor consumes the longer interval. Static scheduled
+input events and CPU/device timing remain unchanged. This interval is a host
+input policy in the CLI step domain, not a physical keyboard timing calibration.
+
+Authored controls execute the actual input queue and demonstrate the old burst
+policy losing bytes with a bounded slow receiver, then the paced policy keeping
+all bytes in order. That receiver is not a BIOS model. The original guest
+failure remains authoritative; the cause is a pacing hypothesis until a new
+qualified-source run reaches the complete command, TYPE response, explicit quit,
+export and fresh-process readback. Preserve the same marker, geometry, input
+hashes, resource limits, causal reader and step budget; do not weaken acceptance
+or claim a speedup from this change.

@@ -88,6 +88,8 @@ export class World {
     this._listeners = new Set();
     /** @type {Map<string, WorldSource>} positioned sources (step 2) */
     this._sources = new Map();
+    /** @type {WorldSurface|null} what colour/distance sensors face (step 3) */
+    this._surface = null;
     if (init) this._load(init);
   }
 
@@ -164,8 +166,26 @@ export class World {
 
   /** True when nothing differs from the defaults (nothing to persist). */
   isDefault () {
-    return this._schedules.size === 0 && this._sources.size === 0 &&
+    return this._schedules.size === 0 && this._sources.size === 0 && this._surface === null &&
       WORLD_KEYS.every(k => this._values[k] === WORLD_DEFAULTS[k]);
+  }
+
+  // ── Surface (step 3) ──────────────────────────────────────────────────
+
+  /**
+   * The surface under / in front of colour and distance sensors, for a
+   * project with no 3D scene: r, g, b reflectance 0…1 and distanceCm.
+   * Any field may be omitted; null clears the surface.
+   * @param {Partial<WorldSurface>|null} surface
+   */
+  setSurface (surface) {
+    this._surface = surface === null ? null : normaliseSurface(surface);
+    this._emit('surface', null);
+  }
+
+  /** @returns {WorldSurface|null} */
+  getSurface () {
+    return this._surface ? { ...this._surface } : null;
   }
 
   // ── Positioned sources (heater, fan, lamp, sound) ──────────────────────
@@ -228,6 +248,7 @@ export class World {
       else if (this._values[k] !== WORLD_DEFAULTS[k]) out[k] = this._values[k];
     }
     if (this._sources.size) out.sources = this.getSources();
+    if (this._surface) out.surface = this.getSurface();
     return out;
   }
 
@@ -237,6 +258,7 @@ export class World {
       if (obj.schedules?.[k]) this.setSchedule(k, obj.schedules[k]);
     }
     if (Array.isArray(obj.sources)) for (const s of obj.sources) this.setSource(s);
+    if (obj.surface && typeof obj.surface === 'object') this.setSurface(obj.surface);
   }
 
   /** Replace this world's whole state with `obj` (a toJSON() result). */
@@ -252,6 +274,7 @@ export class World {
       const old = this._sources.get(s.id);
       if (!old || JSON.stringify(old) !== JSON.stringify(s)) this.setSource(s);
     }
+    if (JSON.stringify(this._surface) !== JSON.stringify(fresh._surface)) this.setSurface(fresh.getSurface());
   }
 
   /** @param {object} obj - a toJSON() result (unknown keys ignored) */
@@ -378,4 +401,88 @@ export function ambient (part, param, fallback) {
   if (v !== undefined && v !== null) return v;
   const w = worldDefault(part, param);
   return w !== undefined ? w : fallback;
+}
+
+// ─── Surfaces: colour and distance sensors without a 3D scene (step 3) ─────
+
+/** @typedef {{r?: number, g?: number, b?: number, distanceCm?: number}} WorldSurface */
+
+const SURFACE_FIELDS = ['r', 'g', 'b', 'distanceCm'];
+
+function normaliseSurface (src) {
+  if (!src || typeof src !== 'object') throw new Error('surface must be an object or null');
+  const out = {};
+  for (const f of ['r', 'g', 'b']) {
+    if (src[f] === undefined || src[f] === null) continue;
+    const v = Number(src[f]);
+    if (!Number.isFinite(v)) throw new Error(`surface ${f} must be finite`);
+    out[f] = Math.max(0, Math.min(1, v));
+  }
+  if (src.distanceCm !== undefined && src.distanceCm !== null) {
+    const d = Number(src.distanceCm);
+    if (!Number.isFinite(d)) throw new Error('surface distanceCm must be finite');
+    out.distanceCm = Math.max(0, d);
+  }
+  return out;
+}
+
+/** Per-part surface params (override the world's surface field by field). */
+const PART_SURFACE_PARAMS = { r: 'surfaceR', g: 'surfaceG', b: 'surfaceB', distanceCm: 'surfaceDistanceCm' };
+
+/**
+ * The surface a sensor part faces: each field from the part's own
+ * surfaceR/G/B/surfaceDistanceCm param, else the world's surface, else
+ * absent. Returns null when no field is known at all.
+ * @param {object} part
+ * @returns {WorldSurface|null}
+ */
+export function surfaceFor (part) {
+  const world = PART_HOST.get(part)?.world;
+  const ws = world && typeof world.getSurface === 'function' ? world.getSurface() : null;
+  const out = {};
+  for (const f of SURFACE_FIELDS) {
+    const pv = part?.params?.[PART_SURFACE_PARAMS[f]];
+    const v = pv !== undefined && pv !== null ? Number(pv) : ws?.[f];
+    if (Number.isFinite(v)) out[f] = f === 'distanceCm' ? Math.max(0, v) : Math.max(0, Math.min(1, v));
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/** Illuminance a reflected-colour reading assumes when world light is unset (an indoor room). */
+export const DEFAULT_SURFACE_LUX = 300;
+/** Uncalibrated counts per (lux × reflectance) at the colour sensor's power-on setting. */
+export const COLOUR_COUNTS_PER_LUX = 1;
+
+/**
+ * What a colour sensor (TCS34725-style RGBC) reads. A channel the part sets
+ * explicitly (params.red/green/blue/clear — the existing stimulus) wins.
+ * Otherwise, when the sensor faces a surface with r/g/b reflectance, each
+ * channel is illuminance × reflectance × COLOUR_COUNTS_PER_LUX, where the
+ * illuminance is the world's light at the sensor (positioned, sources
+ * included) or DEFAULT_SURFACE_LUX while light is unset; clear = R+G+B.
+ * Without either, a channel reads 0 as before.
+ * @returns {{red: number, green: number, blue: number, clear: number}}
+ */
+export function colourCounts (part) {
+  const p = part?.params || {};
+  const surf = surfaceFor(part);
+  let lux = worldDefault(part, 'lux');
+  if (lux === undefined) lux = DEFAULT_SURFACE_LUX;
+  const ch = (param, f) => {
+    if (p[param] !== undefined && p[param] !== null) return Number(p[param]);
+    if (surf && surf[f] !== undefined) return Math.min(65535, Math.round(lux * surf[f] * COLOUR_COUNTS_PER_LUX));
+    return 0;
+  };
+  const red = ch('red', 'r'), green = ch('green', 'g'), blue = ch('blue', 'b');
+  const clear = p.clear !== undefined && p.clear !== null ? Number(p.clear) : red + green + blue;
+  return { red, green, blue, clear };
+}
+
+/**
+ * The distance a ranging sensor reads, in cm: its own param (in its own
+ * unit, converted by the caller) wins; else the surface distance (part or
+ * world); else undefined, and the caller keeps its legacy default.
+ */
+export function surfaceDistanceCm (part) {
+  return surfaceFor(part)?.distanceCm;
 }

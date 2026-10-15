@@ -1,3 +1,18 @@
+2026-10-15 labwired F030 clock tree (RCC/FLASH on the heavy tier) — CLAIM, VPS Claude (opus).
+Branch lane/labwired-f030-clock-20261015, base 3e9429f2. Root cause: the labwired-tier F030
+chip description maps RCC as a zero-reading `pythonperipheral` stub and has no FLASH controller,
+so generated `bw_clock_init` (FLASH_ACR = 0x11, PLL ×12 from HSI/2, wait PLLRDY, SW = PLL, wait
+SWS) faults on the unmapped FLASH_ACR store and could never see PLLRDY. Owns this row plus the
+`rcc` entry and a new `flash_ctrl` entry in STM32F0_CHIP_YAML (src/labwired-chips.js) and its
+byte-equal copy test/fixtures/labwired/stm32f0-chip.yaml, and a new focused real-engine test
+test/labwired-f0-clock.test.mjs (PLL bring-up then a PA0 toggle, assembled guest). FLASH uses
+the engine's `flash` model, `stm32f1` profile (RM0360 §3.5 FLASH map = RM0008: ACR LATENCY,
+PRFTBE → PRFTBS). RCC uses the engine's `rcc` model: `stm32f0` profile (labwired-core PR) once
+the engine PIN carries it; until then `stm32f1`, whose CR/CFGR/CIR/RSTR/BDCR/CSR map and
+ready/SWS gating are RM0360-identical but whose ENR masks drop F0 IOPxEN read-back and which has
+no CR2/CFGR3 — stated in the yaml, not hidden. No adapter, GPIO, UART, timer, PIN or workflow
+change; existing labwired suites unchanged; G0 has no labwired path here.
+
 2026-10-15 A10 retained-engine qualification and STM32 guest setup — CLAIMED, Codex.
 Branch lane/a10-uarte-engine-adoption-20261015. Original engine campaign
 38761081841 produced identical independent builds and passed the new UARTE
@@ -16,6 +31,12 @@ suite and enabled final-head checks before canonical publication/integration.
 Keep the STM32 fidelity lane's fixed-clock option, CPU/peripheral behavior,
 RAM reset policy and unrelated owners intact. No threshold relaxation,
 source-pin substitution, repeat original dispatch or local engine/guest run.
+Prepared correction: all four freestanding guests now enter a BSS-clearing
+reset routine; serial guests configure PA9 AF1, BRR, UE/TE and wait for TXE.
+All board drivers and runtime assertions remain byte-identical. Ten admission
+controls, original metadata/file controls, guest compilation/vector checks and
+workflow lint pass. Actual fresh hosted full-suite qualification is pending;
+the original 121-pass/two-failure campaign is never relabelled successful.
 
 2026-10-15 A10 nRF52 UARTE engine adoption — CLAIMED, Codex.
 Branch lane/a10-uarte-engine-adoption-20261015, base 54efdfc4.
@@ -34,6 +55,23 @@ guest against the actual release engine, unchanged existing engine tests,
 independent BUILD-INFO/source/hash admission and enabled final-head checks.
 The core source and compiled native guest remain separately qualified; engine
 publication alone does not qualify the Lite consumer or physical timing.
+Preparation: the source/linker/ELF-bound guest and actual-engine UART/counter
+assertions are ready, with the existing release suite extended by two tests
+and its floor increased from 116 to 118. Fixture provenance passes; an altered
+ELF is refused. The real-engine case is explicitly skipped locally because
+no candidate engine is available. The original missing-dependency probe is
+retained; lazy factory loading isolates the independent provenance check.
+Core PR244 landed as `6a769a59694ec8920de559f9e3fffa2f5375ac6b` after all
+27 enabled checks passed, including feature-off and scheduler stack-reuse guests.
+The producer PIN and canonical catalog identity now select that exact source;
+all offered chip/board descriptor bytes are unchanged. The fixture source and
+linker match the landed source, but its separately compiled ELF must qualify
+against the rebuilt release engine. The original core policy/drift failures
+remain recorded; no thresholds, capture records or acknowledgement dates moved.
+The two-build release qualification and all enabled adoption checks are pending.
+No released-engine or consumer result is claimed yet.
+Adoption review: https://github.com/CrispStrobe/bw-board/pull/621. The producer
+source is the verified landed merge of https://github.com/CrispStrobe/labwired-core/pull/244.
 
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
@@ -5045,3 +5083,25 @@ probe, CPU/FDC/device, dependency pin or historical receipt changes. See the
 [contract](docs/X86-NEXT-LANES.md#optional-floppy-boot-for-master-hdd-persistence).
 The handoff is complete. New raw-HDD helper qualification and the actual
 two-process marker test remain separate from this source-only completion.
+
+
+
+## Live console keyboard pacing follow-up — 2026-10-15
+
+CONTINUATION — Codex x86, within the existing raw-HDD console ownership.
+Limit source changes to `scripts/run-i80386-at-console.mjs` and existing
+`test/i80386-at-console-export.test.mjs`; update this entry and the matching
+[handoff](docs/X86-NEXT-LANES.md#live-console-keyboard-pacing).
+The first bounded persistence run did not reach command completion. Preserve
+its original failure and unchanged disk; do not treat controller acceptance of
+all scan bytes as proof that the guest consumed the complete command.
+
+Space successful live keyboard offers by 65536 guest machine-step calls.
+Keep the existing 1024-step polling, refusal/queue-full retries and mouse path;
+only acceptance consumes a keyboard interval. No CPU, device, firmware, static
+input-event, performance threshold or historical receipt changes. Tiny controls
+execute the exact queue with a bounded slow receiver, not a BIOS timing model.
+New-source checks and a separately admitted corrected-source guest run are
+required before a persistence claim; do not rerun the failed immutable source
+or alter its results.
+

@@ -27,7 +27,10 @@
 
 import { registerDevice } from '../devices.js';
 import { createI2CSlave, feedI2CSlave } from './i2c-slave.js';
-import { ambient } from '../world.js';
+import { ambient, colourCounts, surfaceDistanceCm } from '../world.js';
+
+/** A surface distance (world.js) in mm, or undefined. */
+const surfaceMm = part => { const cm = surfaceDistanceCm(part); return cm === undefined ? undefined : cm * 10; };
 
 const R_OUT = 50;
 const R_OFF = 1e9;
@@ -293,10 +296,13 @@ function registerTCS34725() {
 
         update(part, state, read) {
             // Refresh readable state from params
-            state.red = part.params?.red ?? 0;
-            state.green = part.params?.green ?? 0;
-            state.blue = part.params?.blue ?? 0;
-            state.clear = part.params?.clear ?? (state.red + state.green + state.blue);
+            // Explicit channels win; else the surface the sensor faces under
+            // the world's light (world.js colourCounts, docs/WORLD.md).
+            const cc = colourCounts(part);
+            state.red = cc.red;
+            state.green = cc.green;
+            state.blue = cc.blue;
+            state.clear = cc.clear;
             const intChanged = tcsInterrupt(state);
             return i2cUpdate(state, read, read('vcc')) || intChanged;
         },
@@ -359,26 +365,25 @@ function readTcsReg(part, state, reg) {
         // Clear
         case 0x14: case 0x15: {
             if (!enabled) return 0;
-            const c = Math.max(0, Math.min(65535, Math.round(part.params?.clear ??
-                ((part.params?.red ?? 0) + (part.params?.green ?? 0) + (part.params?.blue ?? 0)))));
+            const c = Math.max(0, Math.min(65535, Math.round(colourCounts(part).clear)));
             return reg === 0x14 ? c & 0xff : (c >> 8) & 0xff;
         }
         // Red
         case 0x16: case 0x17: {
             if (!enabled) return 0;
-            const r = Math.max(0, Math.min(65535, Math.round(part.params?.red ?? 0)));
+            const r = Math.max(0, Math.min(65535, Math.round(colourCounts(part).red)));
             return reg === 0x16 ? r & 0xff : (r >> 8) & 0xff;
         }
         // Green
         case 0x18: case 0x19: {
             if (!enabled) return 0;
-            const g = Math.max(0, Math.min(65535, Math.round(part.params?.green ?? 0)));
+            const g = Math.max(0, Math.min(65535, Math.round(colourCounts(part).green)));
             return reg === 0x18 ? g & 0xff : (g >> 8) & 0xff;
         }
         // Blue
         case 0x1a: case 0x1b: {
             if (!enabled) return 0;
-            const b = Math.max(0, Math.min(65535, Math.round(part.params?.blue ?? 0)));
+            const b = Math.max(0, Math.min(65535, Math.round(colourCounts(part).blue)));
             return reg === 0x1a ? b & 0xff : (b >> 8) & 0xff;
         }
         default: return state.regs[reg] ?? 0;
@@ -662,7 +667,7 @@ function registerVL53L0X() {
                 _ranging: false,
                 _shutdown: false,
                 // Readable state for faces
-                distance_mm: part.params?.distance_mm ?? 200,
+                distance_mm: part.params?.distance_mm ?? surfaceMm(part) ?? 200,
             };
 
             state._i2c = createI2CSlave({
@@ -708,7 +713,7 @@ function registerVL53L0X() {
         },
 
         update(part, state, read) {
-            state.distance_mm = part.params?.distance_mm ?? 200;
+            state.distance_mm = part.params?.distance_mm ?? surfaceMm(part) ?? 200;
             const vcc = read('vcc') || 3.3;
             const th = vcc * 0.5;
 
@@ -757,7 +762,7 @@ function registerVL53L0X() {
 }
 
 function readVl53Reg(part, state, reg) {
-    const dist = Math.max(0, Math.min(8190, Math.round(part.params?.distance_mm ?? 200)));
+    const dist = Math.max(0, Math.min(8190, Math.round(part.params?.distance_mm ?? surfaceMm(part) ?? 200)));
 
     switch (reg) {
         case 0xc0: return 0xee;                     // MODEL_ID
