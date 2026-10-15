@@ -165,3 +165,18 @@ test('live debugTime reads between retrospective memory facts never invent rewin
     assert.ok(events.every(e=>e.time.domain==='i80386-completed-instructions-rewind-1'));
     assert.equal(target.debugTime().ticks,1n);
 });
+
+test('386 IO inspection retains destructive-IN refusal without any bus read',()=>{
+    const {m,cpu,target}=fixture();let calls=0;
+    cpu.inPort=()=>{calls++;throw Error('unexpected port read');};
+    cpu.read=()=>{calls++;throw Error('unexpected memory read');};
+    m._read=()=>{calls++;throw Error('unexpected machine read');};
+    for(const [address,length] of [[0x60,1],[-1,1],[0x100000000,1],[NaN,-1],[Symbol('port'),{}]]){
+        const refusal=target.readMem('io',address,length);
+        assert.match(refusal.unsupported,/destructive/i);
+    }
+    assert.equal(calls,0);
+    assert.match(target.readMem('unknown',0,1).unsupported,/physical memory read range/);
+    assert.match(target.readMem('mem',-1,1).unsupported,/physical memory read range/);
+    assert.equal(calls,0);
+});
