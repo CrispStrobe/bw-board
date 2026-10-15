@@ -86,6 +86,31 @@ export function createI80386DebugTarget(adapter) {
     target.replayInputRefusal = () => ({code: 'replay-unsupported', reason: '386 replay is unsupported'});
     target.applyReplayInput = () => ({accepted: false, ...target.replayInputRefusal()});
     target.replayRefusalReasons = () => ['386 architectural checkpoint/replay is unsupported'];
+    // A deferred ordinary-JS stopped boundary, not a continuous live-disk lease.
+    let snapshotBusy = false;
+    target.snapshotAtaMaster = async () => {
+        const refuse = (code, reason) => ({refused: {code, reason}});
+        if (snapshotBusy) return refuse('snapshot-busy', 'A snapshot request is already pending');
+        snapshotBusy = true;
+        try {
+            // A halt/event listener may still be inside machine.step/runFor.
+            await Promise.resolve();
+            if (target.state() !== 'halted') return refuse('snapshot-running', 'Pause the target before copying its master disk');
+            if (adapter.nativeDispatcher) return refuse('snapshot-backend-unsupported', 'Native/background execution is not qualified for this boundary');
+            if (typeof adapter.captureAtaMaster !== 'function') return refuse('snapshot-backend-unsupported', 'The adapter has no qualified master-copy operation');
+            const subtle = globalThis.crypto?.subtle;
+            if (globalThis.isSecureContext === false || typeof subtle?.digest !== 'function')
+                return refuse('snapshot-hash-unavailable', 'WebCrypto SHA-256 is unavailable');
+            const digest = subtle.digest.bind(subtle);
+            const captured = adapter.captureAtaMaster();
+            if (captured.refused) return captured;
+            let hash;
+            try { hash = new Uint8Array(await digest('SHA-256', captured.bytes)); }
+            catch { return refuse('snapshot-hash-failed', 'SHA-256 could not hash the detached disk bytes'); }
+            if (hash.length !== 32) return refuse('snapshot-hash-failed', 'SHA-256 returned an invalid digest extent');
+            return {...captured, sha256: Array.from(hash, byte => byte.toString(16).padStart(2, '0')).join('')};
+        } finally { snapshotBusy = false; }
+    };
     return target;
 }
 
