@@ -1,5 +1,7 @@
 # Loading freely licensed software on x86 machines
 
+For a task-oriented route and debugger capability table, see [x86 user paths](X86-USER-PATHS.md).
+
 This guide separates the available loaders. Use your own fixtures or freely licensed software such as FreeDOS, ELKS or xv6, together with BIOS/media whose licenses permit your use. A DOSBox configuration is a partial import format here; importing it does not provide DOSBox compatibility. A CPU model, a board profile and a software loader are separate choices.
 
 ## Choose a path

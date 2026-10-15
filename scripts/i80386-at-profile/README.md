@@ -18,4 +18,4 @@ node --test test/i80386-at-profile-fixture.test.mjs
 /usr/bin/python3 -I -B scripts/i80386-at-profile/reader.py --controls
 ```
 
-No actual result exists yet. Source review and tiny controls do not qualify the full diagnostic, OS compatibility, consumer adoption or any paired performance gate. See the [contract](../../docs/X86-NEXT-LANES.md#ordinary-js-386-at-platform-profiling).
+The sole [actual capture 38676056750](https://github.com/CrispStrobe/bw-board/actions/runs/38676056750) passed root and independent original audits, including CPU/device goldens, source/runtime/resource bindings, child CPU-time sums and raw cleanup. [PR587](https://github.com/CrispStrobe/bw-board/pull/587) merged after all nine latest enabled checks passed. The missing-ci:full gate failure remains in the check history; the later required tier passed. This finite capture does not qualify OS compatibility, consumer adoption, physical RTx or a paired performance gain. The [recorded result](../../docs/X86-NEXT-LANES.md#first-audited-ordinary-coreat-profile) retains sample counts and limits. See the [contract](../../docs/X86-NEXT-LANES.md#ordinary-js-386-at-platform-profiling).
