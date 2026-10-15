@@ -108,6 +108,7 @@ export const STIMULUS_CATALOGUE = {
 
   ultrasonic: [
     { param: 'distance', label: 'Distance', min: 0, max: 400, step: 1, unit: 'cm', mechanism: 'param' },
+    { param: 'surfaceDistanceCm', label: 'Surface distance', min: 0, max: 400, step: 0.1, unit: 'cm', mechanism: 'param' },
   ],
   pir: [
     { param: 'motion', label: 'Motion detected', min: 0, max: 1, step: 1, unit: '', mechanism: 'param' },
@@ -166,6 +167,9 @@ export const STIMULUS_CATALOGUE = {
     { param: 'green', label: 'Green', min: 0, max: 65535, step: 1, unit: '', mechanism: 'param' },
     { param: 'blue', label: 'Blue', min: 0, max: 65535, step: 1, unit: '', mechanism: 'param' },
     { param: 'clear', label: 'Clear', min: 0, max: 65535, step: 1, unit: '', mechanism: 'param' },
+    { param: 'surfaceR', label: 'Surface red', min: 0, max: 1, step: 0.01, unit: '', mechanism: 'param' },
+    { param: 'surfaceG', label: 'Surface green', min: 0, max: 1, step: 0.01, unit: '', mechanism: 'param' },
+    { param: 'surfaceB', label: 'Surface blue', min: 0, max: 1, step: 0.01, unit: '', mechanism: 'param' },
   ],
   bh1750: [
     { param: 'lux', label: 'Illuminance', min: 0, max: 65535, step: 1, unit: 'lx', mechanism: 'param' },
@@ -178,6 +182,7 @@ export const STIMULUS_CATALOGUE = {
 
   vl53l0x: [
     { param: 'distance_mm', label: 'Distance', min: 0, max: 2000, step: 1, unit: 'mm', mechanism: 'param' },
+    { param: 'surfaceDistanceCm', label: 'Surface distance', min: 0, max: 400, step: 0.1, unit: 'cm', mechanism: 'param' },
   ],
 
   sgp30: [
