@@ -3,8 +3,11 @@ External licensed-guest notes and historical context are retained in the [privat
 2026-10-15 stm32 F0/G0 silicon fidelity — CLAIM, VPS Claude (opus).
 Branch lane/stm32-fidelity-20261015, base 0f6f6b1f; worktree [local path omitted].
 Owns this row plus: src/stm32f0-board.js, src/stm32-adapter.js, src/cortex-m0-machine.js,
-a minimal G0 temperature-sensor hook in src/chip-temperature.js, the STM32 tests
-(test/stm32*.test.mjs) and new focused fidelity tests. G0 gets its own memory map (IOPORT GPIO
+a minimal G0 temperature-sensor hook in src/chip-temperature.js, the per-instruction cycle cost
+in src/rp2040js-debug.js (read the adapter clock each step, since SYSCLK can change), the STM32
+branches of src/debug-target-factory.js, the test firmwares/assertions that drive the STM32 light
+tier (test/stm32*.test.mjs, cortex-m0-machine, adapter-contract, chip-temperature, and the
+labwired parity suites' explicit fixed-clock option) and new focused fidelity tests. G0 gets its own memory map (IOPORT GPIO
 at 0x50000000, RM0444 2.2), an RCC clock tree (HSI reset clock, PLL config/switch, ready bits)
 that drives the instruction rate and UART/timer time base, G0 TIM14EN only in APBENR2, G0 ADC
 ADVREGEN delay and channel-12 sensor, USART TX only with AF pin + baud set and timed by BRR, PWM
