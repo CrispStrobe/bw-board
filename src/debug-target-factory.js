@@ -443,14 +443,14 @@ async function createI8086Target(opts) {
 
 async function createI80386Target(opts) {
   const { createI80386Adapter } = await import('./i80386-adapter.js');
-  const { createI8086DebugTarget } = await import('./i8086-debug.js');
+  const { createI80386DebugTarget } = await import('./i80386-debug.js');
   const { renderI80386VgaFrame } = await import('./experimental/i80386-vga-frame.js');
   const adapter = createI80386Adapter(opts);
   if (opts.nativeBlocks) {
     await adapter.enableNativeBlocks(opts.nativeBlocks === true ? {} : opts.nativeBlocks);
   }
   adapter.attachBoard(opts.board);
-  const target = createI8086DebugTarget(adapter, { cpuId: 'i80386' });
+  const target = createI80386DebugTarget(adapter);
   const fallbackVideo = target.video.bind(target);
   let cachedKey = null, cachedFrame = null;
   target.video = () => {
