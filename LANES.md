@@ -4920,3 +4920,19 @@ package dependencies are not changed without a separate ownership extension.
 Use canonical relative asset mapping and a declared limited command grammar;
 no host shell, arbitrary autoexec, CD/ISO or whole-DOSBox compatibility claim.
 See the [contract](docs/X86-NEXT-LANES.md#bounded-dos-package-admission).
+
+
+## Explicit 386 physical-memory capability metadata — 2026-10-15
+
+CLAIM — Codex x86; docs-only ownership preparation. Implementation waits for
+PR599's existing target ownership to merge and an explicit handoff. Own only
+the optional memory descriptor in `src/i80386-debug.js`, new
+`test/i80386-debug-memory-capabilities.test.mjs`, and this matching
+[contract](docs/X86-NEXT-LANES.md#explicit-386-physical-memory-capability-metadata).
+Do not edit PR599's existing capture test, CPU/device code, shared 8086 defaults,
+consumer pins or unsupported debugger operations. The descriptor declares a
+physical bus domain, not installed or writable RAM. Require passive-observation
+controls, precise inclusive bounds and read-only behavior before publication.
+Lengths are nonnegative safe integers; a zero-length read may use the one-past
+endpoint, never as an addressable byte or UI page start. Any new metadata field
+requires complete strict descriptor validation; partial metadata fails closed.

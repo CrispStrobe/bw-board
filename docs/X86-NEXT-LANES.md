@@ -1989,3 +1989,38 @@ ISO/CD-ROM is a later device lane: it requires an actual ATAPI command/data/IRQ
 path plus firmware and guest support before a picker can promise it. An ISO
 extension or renamed raw HDD cannot supply that implementation. A future ISO
 lane needs separately merged ownership and authored/free acceptance fixtures.
+
+
+## Explicit 386 physical-memory capability metadata
+
+Docs-only claim, after PR599 merge and explicit target-owner handoff. Own the
+optional `spaces.mem` descriptor in `src/i80386-debug.js` and new
+`test/i80386-debug-memory-capabilities.test.mjs`; leave the existing capture
+test, CPU/devices and ordinary 8086 behavior unchanged. Coordinate the separately
+reviewed Lite capability-normalization extension before consumer adoption.
+
+Declare `read: true`, `write: false`, `passiveRead: true`,
+`addressSpace: 'physical'`, `addressMin: 0`, `addressMax: 0xffffffff` and
+`maxReadBytes: 1048576`. Inclusive byte bounds describe the physical bus domain,
+not mapped RAM, readable hardware at every address or write permission. Code
+run-to bounds are linear addresses and must not substitute for this descriptor.
+`write: false` is the single read-only authority; do not add contradictory flags.
+
+Reads require safe-integer addresses and nonnegative safe-integer lengths.
+Preserve the existing empty-read boundary: address may equal `addressMax + 1`
+only when length is zero. This endpoint is not an addressable byte; nonempty
+ranges must stay within the inclusive byte bounds. UI jumps and page starts
+must remain at or below `addressMax`.
+Before declaring passive reads, verify unchanged CR2/fault state, translation
+metadata, device state and VGA latches using owned controls. Test zero, high-bit
+and final-byte reads, zero-length reads including the one-past endpoint, final
+short pages, invalid/overflowing ranges and write
+refusal. Source tests do not qualify an installed consumer.
+
+Legacy targets with no new descriptor keep their current behavior. Consumers
+must distinguish absent optional metadata from malformed explicit metadata:
+the presence of any new metadata field selects complete strict descriptor
+validation. Partial or malformed explicit metadata fails closed rather than
+falling back to an editable 64 KiB window.
+The later installed free-guest journey must use the qualified supplier revision;
+this claim moves no app pin or lockfile and grants no GUI or full-OS qualification.
