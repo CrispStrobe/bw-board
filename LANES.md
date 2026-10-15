@@ -4893,3 +4893,30 @@ unobserved/observed semantic parity. Runtime debugger sources from PR599,
 CPU/device scheduling, existing workflows, guest/firmware/media and supplier
 pins are outside scope. No installed GUI, disassembler, reverse-execution,
 performance or broad OS acceptance follows from this finite diagnostic.
+
+
+## Raw HDD ownership and explicit export/reload — 2026-10-15
+
+CLAIM — Codex x86, staged after debugger qualification; implementation waits
+for merged ownership. Own `src/experimental/ata16.js` copy semantics,
+`src/i80386-adapter.js`, a later additive export method in `src/i80386-debug.js`,
+`scripts/run-i80386-at-console.mjs`, new
+`test/i80386-{hdd-export,at-console-export}.test.mjs`, and new
+`scripts/i80386-hdd-export/{probe.mjs,reader.py,README.md}` plus
+`.github/workflows/i80386-hdd-export.yml`. See the
+[contract](docs/X86-NEXT-LANES.md#explicit-raw-hdd-export-and-reload).
+The debugger file is not edited while PR599 owns its initial correction;
+sequence or separately hand off that file first. Preserve ATA command/timing
+semantics, frozen source inventories, original receipts and dependency pins.
+
+## Bounded DOS package admission — 2026-10-15
+
+CLAIM — Codex x86, follows explicit raw-HDD export/reload. Own new
+`src/dos-package-policy.js`, `scripts/lib/dos-package-zip.mjs`,
+`scripts/run-dos-package.mjs`, `test/dos-package-{policy,zip,cli}.test.mjs`,
+`scripts/dos-package-acceptance/{probe.mjs,reader.py,README.md}` and
+`.github/workflows/dos-package-acceptance.yml`; existing runners/parsers and
+package dependencies are not changed without a separate ownership extension.
+Use canonical relative asset mapping and a declared limited command grammar;
+no host shell, arbitrary autoexec, CD/ISO or whole-DOSBox compatibility claim.
+See the [contract](docs/X86-NEXT-LANES.md#bounded-dos-package-admission).
