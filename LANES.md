@@ -30,6 +30,8 @@ against the rebuilt release engine. The original core policy/drift failures
 remain recorded; no thresholds, capture records or acknowledgement dates moved.
 The two-build release qualification and all enabled adoption checks are pending.
 No released-engine or consumer result is claimed yet.
+Adoption review: https://github.com/CrispStrobe/bw-board/pull/621. The producer
+source is the verified landed merge of https://github.com/CrispStrobe/labwired-core/pull/244.
 
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
