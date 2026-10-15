@@ -13,7 +13,7 @@
  */
 
 import { registerDevice } from '../devices.js';
-import { ambient } from '../world.js';
+import { ambient, surfaceDistanceCm } from '../world.js';
 
 // Input pins draw nothing here, on purpose. These models used to declare
 // `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
@@ -60,7 +60,8 @@ export function registerSensors() {
 
       // Trigger FALLING edge → burst, then the echo (unless one is running).
       if (!trigHigh && state._trigHigh && !state._pending && !state._measuring) {
-        const distanceCm = part.params?.distance ?? 100; // default 1m
+        // Own param, else the surface in front (world.js), else 1 m.
+        const distanceCm = part.params?.distance ?? surfaceDistanceCm(part) ?? 100;
         state._echoStartNs = tNs + 200_000n;              // 8 cycles at 40 kHz
         state._echoEndNs = state._echoStartNs + BigInt(Math.round(distanceCm * 58 * 1000));
         state._pending = true;

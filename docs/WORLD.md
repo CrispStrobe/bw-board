@@ -127,6 +127,37 @@ of positions, strengths and simulation time: deterministic.
 world value; then the model's fallback. Sources persist in `toJSON()` as
 `sources: [...]`; a world without sources writes nothing extra.
 
+## Colour and distance sensors without a scene (step 3)
+
+Where a project has a 3D scene (Brickwright Lite's SPIKE Prime arena), its
+colour and distance sensors keep reading that scene; nothing here changes
+them. For circuit sensors on boards without a scene, the world carries the
+**surface under / in front of the sensor**:
+
+```js
+world.setSurface({r: 0.8, g: 0.2, b: 0.1, distanceCm: 12});   // project-wide
+board.setPartParam('tcs1', 'surfaceG', 0.5);                  // per sensor
+board.setPartParam('sonar', 'surfaceDistanceCm', 30);
+```
+
+`r`, `g`, `b` are reflectances 0…1, `distanceCm` ≥ 0; each field may be set
+alone. A sensor's own `surfaceR`/`surfaceG`/`surfaceB`/`surfaceDistanceCm`
+param overrides the world's field of the same name (`surfaceFor(part)`).
+These params are in the stimulus catalogue, so the Environment block and the
+controller panel can set them.
+
+**Colour (TCS34725, `colourCounts`).** A channel the part sets explicitly
+(`red`/`green`/`blue`/`clear`, the existing stimulus) wins. Otherwise each
+channel is `illuminance × reflectance × COLOUR_COUNTS_PER_LUX` (1 count per
+lux, uncalibrated, not scaled by ATIME/gain), with the illuminance taken from
+the world's light at the sensor (positioned, sources included) or
+`DEFAULT_SURFACE_LUX` = 300 lx while world light is unset; clear = R+G+B.
+With neither a surface nor channel params every channel reads 0, as before.
+
+**Distance.** The HC-SR04 `ultrasonic` reads `distance` (cm), else the
+surface distance, else 100 cm; the `vl53l0x` reads `distance_mm`, else the
+surface distance × 10, else 200 mm.
+
 ## Limits
 
 - The basic `ldr` and `thermistor` parts are *controls* (a 0…1 slider in
@@ -136,3 +167,6 @@ world value; then the model's fallback. Sources persist in `toJSON()` as
   (`benchCelsius`) reads the uniform world, not the chip's position.
 - The light/sound normalisations are documented conventions, not calibrated
   sensor responses.
+- Colour counts are a linear first-order model: no spectral response, IR
+  channel, ATIME/gain scaling or angle of incidence; distance sensors see one
+  flat surface, no beam width or multipath.
