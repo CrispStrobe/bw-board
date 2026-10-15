@@ -34,6 +34,7 @@
 
 import { registerDevice } from '../devices.js';
 import { createI2CSlave, feedI2CSlave } from './i2c-slave.js';
+import { ambient } from '../world.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;
@@ -200,7 +201,7 @@ function readMpuReg(part, state, reg) {
         // Temperature: 0x41-0x42
         case 0x41: case 0x42: {
             if (sleeping) return 0;
-            const temp = part.params?.temperature ?? 25;
+            const temp = ambient(part, 'temperature', 25);
             const raw = Math.round((temp + 36.53) * 340);
             const clamped = Math.max(-32768, Math.min(32767, raw));
             const u16 = clamped < 0 ? clamped + 65536 : clamped;

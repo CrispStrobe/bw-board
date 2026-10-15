@@ -6,6 +6,7 @@
 
 import { registerDevice } from '../devices.js';
 import { stepMotorVelocity, motorDirectionOf } from './dc-motor.js';
+import { ambient } from '../world.js';
 
 const R_OUT = 50;
 // Input pins draw nothing here, on purpose. These models used to declare
@@ -31,7 +32,7 @@ export function registerTier1Parts() {
       }
     },
     update(part, state) {
-      const light = part.params?.light ?? 0;
+      const light = ambient(part, 'light', 0);
       const iMax = part.params?.iMax ?? 0.001; // 1mA at full light
       const newCurrent = light * iMax;
       if (Math.abs(newCurrent - state._current) < 1e-7) return false;
@@ -115,7 +116,7 @@ export function registerTier1Parts() {
   registerDevice('solar_cell', {
     terminals: ['pos', 'neg'],
     init(part) {
-      const light = part.params?.light ?? 1.0;
+      const light = ambient(part, 'light', 1.0);
       const voc = (part.params?.voc ?? 0.6) * light;
       return { drives: { pos: { vTh: voc, rTh: part.params?.rInternal ?? 5 } }, _light: light };
     },
@@ -124,7 +125,7 @@ export function registerTier1Parts() {
     // rInternal — and read `light` past `update`'s 0.01 deadband, so the two
     // sources could disagree about the same cell.
     update(part, state) {
-      const light = part.params?.light ?? 1.0;
+      const light = ambient(part, 'light', 1.0);
       if (Math.abs(light - state._light) < 0.01) return false;
       const voc = (part.params?.voc ?? 0.6) * light;
       state._light = light;
