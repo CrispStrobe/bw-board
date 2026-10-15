@@ -1616,3 +1616,50 @@ number enters either unprofiled paired gate or grants a gain, optimization,
 clock change, physical RTx, full-AT or OS claim. Completion requires exact-head
 hosted semantics/resource/cleanup success and root plus independent original-
 packet audits. One branch-push diagnostic only, no PR/dispatch duplicate.
+
+## Ordinary-JS width-mask literal specialization
+
+Status: docs-only claim; source implementation waits for merged ownership.
+Own only `maskFor` in `src/experimental/i80386.js`, new
+`test/i80386-width-mask-specialization.test.mjs`, this section and its registry
+entry. Use `lane/386-width-mask-specialization-20261015`. All other CPU methods,
+decoders, device/scheduler/clock code, existing tests, benchmarks, policies,
+workflows, pins and historical receipts remain outside scope.
+
+The concrete hypothesis is to return literal `0xff`/`0xffff` for widths8/16
+instead of computing `2 ** width - 1`; retain the existing unsigned 32-bit mask
+`0xffffffff` and unchanged arithmetic fallback for every other width. Do not
+introduce a lookup allocation, widen accepted instructions, export the helper,
+cache callbacks or reorganize `_stepInstruction` dispatch. Existing sampled
+CPU/width-helper frames motivate inspection, not an exact cost or gain claim.
+This single helper feeds arithmetic, logic and shifts, so a small patch still
+requires independent architectural coverage.
+
+Freeze a fresh ordinary board-master baseline containing adopted word-fetch
+CPU SHA256 `2303557f35ad56d8101eb96ffc8749fa4d64338425726027d70bd64a6b10d4ba`,
+and authenticate the tested candidate separately. Do not include unadopted
+PR557 scalar-EA changes or use its `ce19` CPU as baseline. Preserve its original
+private gate and all old paired source admissions; no isolated gains are
+multiplied or credited to a combined candidate.
+
+Authored tests must independently calculate 8/16/32-bit unsigned results,
+carry/borrow, overflow, auxiliary carry, sign/zero/parity and high-bit masking.
+Cover ADD/ADC/SUB/SBB/CMP and logic/shift/rotate consumers, zero/masked counts,
+operand-size overrides and register/memory forms. Retain untouched register
+halves, exact read/write/fetch order and original exception identity. Include
+first/second-byte operand faults and memory-write refusal with source-defined
+rollback/partial effects; never invent an internal counter or memory rollback.
+Check fallback widths through existing internal consumers without exporting
+new test-only authority. Run affected existing width/flags/opcode/fault suites;
+full source CI requires `ci:full` and affected hosted xv6/guest acceptance with
+exact source bindings. Tiny authored tests only locally, no full guest/build.
+
+After source/semantic review, a separate merged measurement scope must freeze
+current baseline/candidate source maps and identical new workload/runner roles
+before one unprofiled hosted paired capture. Preserve ABAB warmups, seven
+fixed measured pairs, whole-child CPU/wall, original semantics, one-CPU/1GiB
+resource enforcement and explicit cleanup. Require median CPU ratio at least
+1.03, all seven ratios above one and wall median no worse than1.02; no retry,
+dropping or replacement. Old fixture CLIs/policies stay immutable. A failed or
+unmeasured gate means no adoption. No 10x target, exact cost share, physical
+RTx, OS, GUI/CLI consumer or original-private-gate qualification is claimed.
