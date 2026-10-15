@@ -116,3 +116,44 @@ Next: coordinate Lite pin adoption with the shared package-path owner and
 qualify the installed consumer separately. An AT-platform profiling hypothesis
 is proposed only; a separate merged scope is required before implementing or
 running it. No additional profile, benchmark or GUI adoption is reported here.
+
+## Adopted literal-mask operational checkpoint — 2026-10-15
+
+The sole [run38711737457](https://github.com/CrispStrobe/bw-board/actions/runs/38711737457)
+succeeded on merged source `bfe99d562e9b57a819ec92025faafba271b8751c`, after
+isolated literal-mask adoption. Original metadata, artifact, arithmetic and
+three source roles (benchmark, workflow and CPU) passed independent review.
+The CPU SHA256 is `8f92cc4f8117d2371b493a7ee5a49dbf0245d1367f050194680f68a1454a9846`.
+The benchmark and workflow bytes match the prior operational checkpoint.
+
+Node **22.23.3** ran on an AMD EPYC **7763** runner exposing four logical CPUs.
+Each row has one excluded warmup and three timed-loop-only passes of one million
+ordinary real-mode instructions. The five-operation loop is INC AX; store AX;
+load BX; ADD AX,BX; jump. All four rows ended AX=65534, BX=65535, IP=0 and
+stored word=65535. Medians and IPS were independently recomputed from originals.
+
+| Path | Median seconds | Instructions/s | Clock charge | Configured factor |
+|---|---:|---:|---:|---:|
+| 8086 core | 0.059013206 | 16,945,359.654 | 9,800,000 estimated cycles | 34.794473811 |
+| 8086 machine | 0.062821716 | 15,918,062.474 | 9,800,000 estimated cycles | 32.685090147 |
+| 386 core | 0.154174266 | 6,486,166.764 | 1,000,000 synthetic cycles | 0.405385423 |
+| 386 AT machine | 0.375633840 | 2,662,166.966 | 6,000,000 synthetic scheduling cycles | 0.998312612 |
+
+IPS is instructions divided by median loop seconds. Configured factors divide
+charged cycles by median seconds and configured clock: 4,772,727 Hz for 8086,
+16,000,000 Hz for 386. The 386 charges are one and six synthetic cycles per
+completed instruction; they are not measured physical 386 timing. This covers
+the four named paths, not every wired/functional 8086 variant, protected mode,
+a full OS, whole-process CPU cost or a calibrated physical RTx result. No quota,
+affinity or complete source-graph authentication is asserted by this workflow.
+
+The earlier operational run used EPYC 9V74 hardware. These independently
+observed checkpoints are not a paired experiment; do not infer a speedup or
+regression ratio between them. The separate authored paired gate retains its
+own workload and limits.
+
+The sole [artifact11963296391](https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11963296391)
+is 2173 bytes, ZIP SHA256
+`bdb9984286d5a8d480e9861ec432b67a27e72979159fe7771fe4f05779b24e3b`.
+No benchmark retry, guest replay or consumer pin update was needed for this
+original-byte checkpoint.
