@@ -42,3 +42,37 @@ test('the actual release engine retains ordered serial after every stack-slot re
     assert.equal(words.getUint32(8, true), Buffer.byteLength(provenance.expectedSerial), 'every transmitted slot was overwritten');
     assert.deepEqual(Buffer.from(bytes), Buffer.from(provenance.expectedSerial), 'exact ordered serial from the compiled guest');
 });
+
+const irqFixture = join(dirname(fileURLToPath(import.meta.url)), 'fixtures/labwired/uarte-irq');
+const irqProvenance = JSON.parse(readFileSync(join(irqFixture, 'provenance.json'), 'utf8'));
+
+test('the original MIT IRQ-chain guest binds its source, linker and compiled ELF', () => {
+    assert.equal(irqProvenance.repository, 'CrispStrobe/labwired-core');
+    assert.match(irqProvenance.sourceRef, /^[a-f0-9]{40}$/);
+    assert.equal(irqProvenance.license, 'MIT');
+    assert.deepEqual(Object.keys(irqProvenance.sha256).sort(), ['board-io.ld', 'firmware.elf', 'uarte-irq-chain.S']);
+    for (const [name, hash] of Object.entries(irqProvenance.sha256)) {
+        assert.equal(createHash('sha256').update(readFileSync(join(irqFixture, name))).digest('hex'), hash, name);
+    }
+    assert.equal(readFileSync(join(irqFixture, 'firmware.elf')).subarray(0, 4).toString(), '\x7fELF');
+});
+
+test('the actual release engine chains ENDTX bytes without an unsolicited stop', {skip}, async () => {
+    const {createDebugTarget} = await import('../src/debug-target-factory.js');
+    const wasm = createRequire(import.meta.url)(join(wasmDir, 'labwired_wasm.js'));
+    const {adapter, target} = await createDebugTarget('labwired', {
+        wasm, chip: LABWIRED_CATALOG.nrf52833, labwiredBoard: LABWIRED_BOARDS['microbit-v2'],
+        firmware: new Uint8Array(readFileSync(join(irqFixture, 'firmware.elf'))), name: 'uarte-irq-chain'
+    });
+    const bytes = [];
+    adapter.onSerial(byte => bytes.push(byte));
+    for (let i = 0; i < 5; i++) adapter.advanceNs(1_000_000n);
+    const state = target.readMem('sram', 0x20000100, 24);
+    assert.ok(state instanceof Uint8Array, JSON.stringify(state));
+    assert.equal(state.byteLength, 24);
+    const words = new DataView(state.buffer, state.byteOffset, state.byteLength);
+    const sent = Buffer.byteLength(irqProvenance.expectedSerial);
+    assert.deepEqual(Array.from({length: 6}, (_, i) => words.getUint32(i * 4, true)),
+        [1, sent, 0, 0, sent, 1], 'all bytes completed, no unsolicited stops, final explicit stop acknowledged');
+    assert.deepEqual(Buffer.from(bytes), Buffer.from(irqProvenance.expectedSerial), 'exact ordered IRQ serial');
+});

@@ -15,6 +15,10 @@ non-skipped release suite and all enabled producer checks precede publication.
 Do not reuse the first engine for changed core source or repeat any existing
 campaign. No adapter API, STM32 owner source, workflow, dependency or threshold
 change is included. The other owner's core5e replacement run remains untouched.
+The added source-bound IRQ fixture and release test are prepared; its ARM ELF
+is compiled and independently bound to core PR247 source/linker bytes. Pure
+identity checks pass. Runtime qualification, the new core PIN, fresh dual builds
+and publication remain pending; no existing campaign has been repeated.
 
 2026-10-15 labwired F030 clock tree (RCC/FLASH on the heavy tier) — CLAIM, VPS Claude (opus).
 Branch lane/labwired-f030-clock-20261015, base 3e9429f2. Root cause: the labwired-tier F030
