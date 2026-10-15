@@ -84,7 +84,7 @@ export function createI80386Adapter(opts = {}) {
       }
       const expected = machine.ata.geometry.cylinders * machine.ata.geometry.heads * machine.ata.geometry.sectors * 512;
       if (image.length !== expected) throw new Error(`ATA image is ${image.length} bytes; expected ${expected}`);
-      machine.ata.image = image.slice(); machine.ata.reset();
+      machine.ata.image = new Uint8Array(image); machine.ata.reset();
     },
     attachFloppyImage(bytes) {
       const image = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
