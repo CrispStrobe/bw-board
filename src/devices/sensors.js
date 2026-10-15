@@ -13,6 +13,7 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { ambient } from '../world.js';
 
 // Input pins draw nothing here, on purpose. These models used to declare
 // `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
@@ -197,7 +198,7 @@ export function registerSensors() {
     },
 
     update(part, state) {
-      const light = part.params?.light ?? 0;
+      const light = ambient(part, 'light', 0);
       const iMax = part.params?.iMax ?? 0.005; // 5mA at full light
       const newCurrent = light * iMax;
       if (Math.abs(newCurrent - state._current) < 1e-6) return false;

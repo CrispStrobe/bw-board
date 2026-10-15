@@ -180,7 +180,8 @@ describe('StimulusExtension: getInfo', () => {
       const info = ext.getInfo();
       assert.equal(info.id, 'environment');
       const opcodes = info.blocks.filter(b => typeof b === 'object').map(b => b.opcode);
-      assert.deepEqual(opcodes, ['setStimulus', 'getStimulus']);
+      assert.deepEqual(opcodes, ['setStimulus', 'getStimulus', 'setWorld', 'getWorld']);
+      assert.deepEqual(info.menus.WORLD_KEYS.items.map(i => i.value), ['temperatureC', 'humidityPct', 'pressureHpa', 'lightLux', 'soundDb']);
     } finally {
       globalThis.Scratch = origScratch;
     }
@@ -390,5 +391,24 @@ describe('StimulusExtension: board setPartParam/getPartParam', () => {
     assert.equal(paramEvent.detail.partId, 'dht1');
     assert.equal(paramEvent.detail.param, 'temperature');
     assert.equal(paramEvent.detail.value, 30);
+  });
+});
+
+describe('StimulusExtension: world blocks', () => {
+  it('set/get world, and a part reporter shows the world until the part is set', () => {
+    registerAllDevices();
+    const board = new BoardImpl(5.0);
+    board.setNetlist([{ id: 'dht1', kind: 'dht11', terminals: [], params: {} }], []);
+    const ext = new StimulusExtension();
+    ext.setBoard(board);
+    ext.setWorld({ KEY: 'temperatureC', VALUE: 30 });
+    assert.equal(ext.getWorld({ KEY: 'temperatureC' }), 30);
+    assert.equal(board.temperatureC, 30);
+    assert.equal(ext.getStimulus({ PARAM: 'temperature', PART: 'dht1' }), 30);
+    ext.setStimulus({ PARAM: 'temperature', PART: 'dht1', VALUE: 12 });
+    assert.equal(ext.getStimulus({ PARAM: 'temperature', PART: 'dht1' }), 12);
+    ext.setWorld({ KEY: 'bogus', VALUE: 1 });
+    assert.equal(ext.getWorld({ KEY: 'bogus' }), 0);
+    assert.equal(ext.getWorld({ KEY: 'lightLux' }), 0, 'unset light reads 0');
   });
 });

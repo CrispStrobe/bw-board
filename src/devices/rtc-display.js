@@ -29,6 +29,7 @@
 
 import { registerDevice } from '../devices.js';
 import { createI2CSlave, feedI2CSlave } from './i2c-slave.js';
+import { ambient } from '../world.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;
@@ -189,13 +190,13 @@ function readReg(part, state, reg) {
         case 0x06: return bcd(state.year);
         case 0x0f: return (state.osf ? 0x80 : 0) | (state.regs[0x0f] & 0x7f);
         case 0x11: {                                // temp MSB, two's complement
-            const t = part.params?.temperature ?? 25;
+            const t = ambient(part, 'temperature', 25);
             let i = Math.floor(t);
             if (i < 0) i += 256;
             return i & 0xff;
         }
         case 0x12: {                                // temp LSB: quarter degrees
-            const t = part.params?.temperature ?? 25;
+            const t = ambient(part, 'temperature', 25);
             return (Math.round((t - Math.floor(t)) * 4) & 0x03) << 6;
         }
         default: return state.regs[reg] ?? 0;
