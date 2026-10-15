@@ -1707,6 +1707,70 @@ dropping or replacement. Old fixture CLIs/policies stay immutable. A failed or
 unmeasured gate means no adoption. No 10x target, exact cost share, physical
 RTx, OS, GUI/CLI consumer or original-private-gate qualification is claimed.
 
+## Ordinary-JS byte-register selection experiment
+
+Docs-only claim. Merge ownership before coding. Freeze an independently reviewed
+ordinary-instruction workload and semantic goldens before CPU implementation.
+The baseline is the adopted literal-mask CPU, SHA256
+`8f92cc4f8117d2371b493a7ee5a49dbf0245d1367f050194680f68a1454a9846`;
+freeze the exact source revision and complete source map before execution rather
+than following later main changes silently. The retained AT profile predates
+this CPU and does not establish a current byte-register cost share or gain.
+
+Own only `_reg8` and `_setReg8` in `src/experimental/i80386.js` and new
+`test/i80386-byte-register-specialization.test.mjs`. Investigate explicit scalar
+selection only for strict literal numeric indices 0 through 7, covering
+AL/CL/DL/BL/AH/CH/DH/BH. Preserve the original
+fallback exactly: `_reg8(8)` reads the high byte of ESP, whereas `_setReg8(8, v)`
+writes AH in EAX. An `index & 7` rewrite is not equivalent. Keep string, boolean,
+fractional, NaN, BigInt, Symbol and object index behavior, including original
+errors and coercion side effects. Preserve upper register bits and unsigned
+storage. Preserve evaluation order: read the old register before `value & 255`;
+do not hoist value coercion or cache fields across observable coercion hooks.
+No other method, fetch/decoder/flags behavior, device or scheduler is included.
+
+Before CPU implementation, require either a current adopted-CPU scoped profile
+supporting this investigation, or a predeclared representative ordinary AT
+machine paired control alongside the byte mix. Freeze the control's unchanged
+workload, independent semantics, candidate comparison, resources and explicit
+no-material-regression acceptance bounds before implementation. Adoption must
+satisfy that AT non-regression requirement as well as the byte-mix gate; a
+selected byte-register mix alone cannot justify whole-AT speed claims. The
+pending unpaired operational AT run is not a paired candidate control and must
+not be duplicated for this purpose.
+
+Focused controls enumerate all eight byte registers, high-bit values and
+high/low aliasing; run the new tests against baseline and candidate. Add
+nonstandard index and value-coercion adversaries, including register mutation
+inside object coercion. Existing ALU/vector regressions, faults and an affected
+clean free-guest result remain mandatory. Host controls alone do not qualify
+CPU adoption.
+
+Own new `scripts/i80386-byte-register-paired/{fixture.mjs,run.py,policy.py,reader.py,controls.py,README.md}`,
+`test/i80386-byte-register-paired-fixture.test.mjs` and
+`.github/workflows/i80386-byte-register-paired.yml`. Independently freeze a
+balanced all-eight-byte-register ordinary `CPU.step` stream, including register
+and memory operands and meaningful unchanged 16/32-bit controls. Independently
+compute per-step registers/flags, callbacks, work counts and full-memory digest.
+Do not time direct helper loops, select a winning mix after seeing results or
+reuse previous benchmark bodies as new observations.
+
+Use separately named admissions/schema and fresh complete source maps with a
+CPU-only arm difference, common workload roles and a fixed runtime. Preserve
+ABAB warmups then seven fixed AB,BA,AB,BA,BA,AB,BA pairs, all 18 whole-child wait4
+CPU/wall records, owned one-CPU/1 GiB/no-swap resources, affinity and observed
+cleanup. Gate unchanged at median CPU A/B at least 1.03, every measured pair
+above 1, and median wall B/A at most 1.02. Preserve the first failure and all
+original captures; no selective retry. Actual workflow is push-only on the
+owned measurement branch, first attempt, after source review and affected guest
+success; no duplicate PR or manual measurement dispatch.
+
+Keep source and measurement candidates draft until their required gates pass.
+Any adoption is a separate combined admission of source, semantic, free-guest,
+latest enabled CI and this new performance gate. Do not edit old experiment
+maps/workflows or PR557's original gate, multiply earlier ratios, claim a
+composite candidate, move a consumer pin or infer physical RTx/full-OS support.
+
 ## Mixed-width ALU public paired measurement
 
 Status: claim597 merged; [PR601](https://github.com/CrispStrobe/bw-board/pull/601)
