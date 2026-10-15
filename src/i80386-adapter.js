@@ -23,6 +23,50 @@ function browserFreeDosVgaConfig() {
   })};
 }
 
+const typedArrayLength = Object.getOwnPropertyDescriptor(
+  Object.getPrototypeOf(Uint8Array.prototype), 'length').get;
+const typedArrayByteLength = Object.getOwnPropertyDescriptor(
+  Object.getPrototypeOf(Uint8Array.prototype), 'byteLength').get;
+
+/** Copy an idle ATA master only. This does not prove execution is paused. */
+export function captureI80386AtaMaster(machine) {
+  const refuse = (code, reason) => ({refused: {code, reason}});
+  const ata = machine?.ata;
+  if (!ata) return refuse('snapshot-no-master', 'No ATA master is attached');
+  const image = ata.image;
+  const geometry = ata.geometry;
+  if (!(image instanceof Uint8Array) || !ArrayBuffer.isView(image) || !geometry)
+    return refuse('snapshot-invalid-media', 'ATA master storage or geometry is invalid');
+  const {cylinders, heads, sectors} = geometry;
+  if (!Number.isInteger(cylinders) || cylinders < 1 || cylinders > 65536 ||
+      !Number.isInteger(heads) || heads < 1 || heads > 16 ||
+      !Number.isInteger(sectors) || sectors < 1 || sectors > 255)
+    return refuse('snapshot-invalid-media', 'ATA master CHS is not representable');
+  const byteLength = typedArrayLength.call(image);
+  const expected = cylinders * heads * sectors * 512;
+  if (!Number.isSafeInteger(byteLength) || byteLength !== expected ||
+      typedArrayByteLength.call(image) !== byteLength)
+    return refuse('snapshot-invalid-media', 'ATA master extent does not match CHS');
+  if (byteLength > 64 * 1024 * 1024)
+    return refuse('snapshot-too-large', 'ATA master exceeds the 64 MiB copy limit');
+  if (!Number.isInteger(ata.status) || ata.status < 0 || ata.status > 255 ||
+      !Number.isInteger(ata.control) || ata.control < 0 || ata.control > 255 ||
+      (ata.status & 0x88) || (ata.control & 0x04) || ata.buffer !== null ||
+      ata.direction !== null || ata._intersector !== null || ata._intersectorRemaining !== 0)
+    return refuse('snapshot-ata-busy', 'ATA master is not at an idle copy boundary');
+  const cpuCycles = machine.cpu?.cycles;
+  const machineCycles = machine.cycles;
+  if (!Number.isSafeInteger(cpuCycles) || cpuCycles < 0 ||
+      !Number.isSafeInteger(machineCycles) || machineCycles < 0)
+    return refuse('snapshot-invalid-media', 'Machine boundary counters are invalid');
+  const bytes = new Uint8Array(image);
+  if (typedArrayLength.call(bytes) !== byteLength || typedArrayByteLength.call(bytes) !== byteLength)
+    return refuse('snapshot-invalid-media', 'ATA copied extent is inconsistent');
+  return {schema: 'bw.i80386-master-hdd-copy.v1', drive: 'master', bytes,
+    geometry: {cylinders, heads, sectors}, byteLength,
+    boundary: {cpuCycles, machineCycles}};
+}
+
 export function createI80386Adapter(opts = {}) {
   if (opts.config && opts.profile) throw new Error('386 adapter accepts config or profile, not both');
   if (opts.profile && opts.profile !== 'freedos-vga')
@@ -54,6 +98,7 @@ export function createI80386Adapter(opts = {}) {
   return {
     machine, clockHz: config.clockHz, attachBoard, advanceNs, timeNs, stats,
     get nativeDispatcher() { return nativeDispatcher; },
+    captureAtaMaster() { return captureI80386AtaMaster(machine); },
     async enableNativeBlocks(options = {}) {
       if (nativeDispatcher) return nativeDispatcher;
       const { createI80386NativeDispatcher } = await import('./experimental/i80386-native-dispatch.js');

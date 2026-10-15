@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import ATA from '../src/experimental/ata16.js';
-import {createI80386Adapter} from '../src/i80386-adapter.js';
+import {createI80386Adapter,captureI80386AtaMaster} from '../src/i80386-adapter.js';
 const geometry={cylinders:1,heads:1,sectors:2};
 const kinds=['uint8','buffer','offset-uint8','offset-buffer'];
 function input(kind,length=1024){
@@ -50,4 +50,80 @@ test('null slave and existing type, CHS and length refusals remain',()=>{
  assert.throws(()=>new ATA(new Uint8Array(1024),geometry,{slaveImage:new Uint8Array(512)}));
  const a=createI80386Adapter();assert.throws(()=>a.attachAtaImage(new Uint8Array(1024)));a.attachAtaImage(new Uint8Array(4*17*512));const original=a.machine.ata.image;
  assert.throws(()=>a.attachAtaImage(new Uint8Array(512)));assert.equal(a.machine.ata.image,original);
+});
+
+
+test('synchronous master capture copies exact CHS and boundary without IO or state mutation',()=>{
+ const ata=new ATA(input('buffer').view,geometry);const machine={ata,cpu:{cycles:7},cycles:42};
+ // Completed PIO operations retain historical counters and an unacknowledged IRQ.
+ command(ata,0x30);for(let i=0;i<256;i++)ata.writeData16(0x6100|i);
+ ata.wordIndex=256;ata.sectorCount=1;
+ let calls=0;ata.readRegister=ata.readData16=ata.advance=()=>{calls++;throw Error('capture performed IO');};
+ const state=JSON.stringify(ata),original=ata.image.slice();
+ const r=captureI80386AtaMaster(machine);assert.equal(r.schema,'bw.i80386-master-hdd-copy.v1');assert.equal(r.drive,'master');
+ assert.deepEqual(r.geometry,geometry);assert.equal(r.byteLength,1024);assert.deepEqual(r.boundary,{cpuCycles:7,machineCycles:42});assert.deepEqual(r.bytes,original);
+ assert.equal(JSON.stringify(ata),state);assert.equal(calls,0);r.bytes[0]=0xff;r.geometry.heads=7;assert.equal(ata.image[0],0);assert.equal(ata.geometry.heads,1);
+ ata.image[1]=0xff;assert.equal(r.bytes[1],0x61);
+});
+test('master capture refuses every active ATA state without IO or media changes',()=>{
+ const ata=new ATA(new Uint8Array(1024),geometry),machine={ata,cpu:{cycles:0},cycles:0};
+ for(const [key,value] of [['status',0x80],['status',0x08],['control',4],['buffer',new Uint8Array(512)],['direction','read'],['_intersector','read'],['_intersectorRemaining',1],['status',NaN],['control',true]]){
+  ata.reset();ata[key]=value;const before=ata.image.slice();const result=captureI80386AtaMaster(machine);
+  assert.equal(result.refused.code,'snapshot-ata-busy',key);assert.deepEqual(ata.image,before);
+ }
+});
+test('master capture validates CHS, extent and cap before allocating returned bytes',()=>{
+ assert.equal(captureI80386AtaMaster({}).refused.code,'snapshot-no-master');
+ const ata=new ATA(new Uint8Array(1024),geometry),machine={ata,cpu:{cycles:0},cycles:0};
+ for(const g of [{cylinders:true,heads:1,sectors:2},{cylinders:1,heads:17,sectors:2},{cylinders:1,heads:1,sectors:256},{cylinders:1.5,heads:1,sectors:2}]){
+  ata.geometry=g;assert.equal(captureI80386AtaMaster(machine).refused.code,'snapshot-invalid-media');
+ }
+ ata.geometry=geometry;ata.image=new Uint8Array(512);assert.equal(captureI80386AtaMaster(machine).refused.code,'snapshot-invalid-media');
+ // A shadowed public length cannot manufacture an admitted extent.
+ ata.image=new Uint8Array(512);Object.defineProperty(ata.image,'length',{value:1024});
+ Object.defineProperty(ata.image,'byteLength',{value:1024});ata.geometry=geometry;
+ assert.equal(captureI80386AtaMaster(machine).refused.code,'snapshot-invalid-media');
+ ata.image=[];assert.equal(captureI80386AtaMaster(machine).refused.code,'snapshot-invalid-media');
+});
+test('adapter capture delegates its own machine and remains master-only with slave selected',()=>{
+ const a=createI80386Adapter(),view=input('offset-buffer',4*17*512).view;a.attachAtaImage(view);const ata=a.machine.ata;
+ ata.slaveImage=new Uint8Array(view.length).fill(0xaa);ata.slaveEnabled=true;ata.driveHead=0xb0;
+ const r=a.captureAtaMaster();assert.equal(r.drive,'master');assert.equal(r.bytes[0],0);assert.equal(r.bytes[1],1);
+ view[0]=0xee;assert.equal(r.bytes[0],0);assert.equal(ata.slaveImage[0],0xaa);
+});
+
+
+test('intrinsic media extent ignores shadowed public properties and rejects proxies',()=>{
+ const image=new Uint8Array(1024).fill(0x5a);
+ Object.defineProperty(image,'length',{value:1});Object.defineProperty(image,'byteLength',{value:999});
+ const ata=new ATA(new Uint8Array(1024),geometry);ata.image=image;
+ const machine={ata,cpu:{cycles:7},cycles:42};const r=captureI80386AtaMaster(machine);
+ assert.equal(r.byteLength,1024);assert.equal(r.bytes.length,1024);assert.equal(r.bytes.byteLength,1024);assert.ok(r.bytes.every(x=>x===0x5a));
+ const before=JSON.stringify(ata);
+ for(const counter of [NaN,-1,0.5,true,Infinity]){
+  machine.cpu.cycles=counter;assert.equal(captureI80386AtaMaster(machine).refused.code,'snapshot-invalid-media');
+ }
+ machine.cpu.cycles=7;machine.cycles=true;assert.equal(captureI80386AtaMaster(machine).refused.code,'snapshot-invalid-media');
+ assert.equal(JSON.stringify(ata),before);
+ machine.cycles=42;ata.image=new Proxy(image,{});assert.equal(captureI80386AtaMaster(machine).refused.code,'snapshot-invalid-media');
+ ata.image=new Uint16Array(512);assert.equal(captureI80386AtaMaster(machine).refused.code,'snapshot-invalid-media');
+ const detached=new Uint8Array(1024);structuredClone(detached.buffer,{transfer:[detached.buffer]});ata.image=detached;
+ assert.equal(captureI80386AtaMaster(machine).refused.code,'snapshot-invalid-media');
+});
+
+
+test('over-cap actual extent refuses before allocating a returned copy',()=>{
+ const ata=new ATA(new Uint8Array(1024),geometry);
+ // One unfilled owned 64MiB+512 allocation; CHS has exactly131073 sectors.
+ ata.image=new Uint8Array(64*1024*1024+512);ata.geometry={cylinders:43691,heads:3,sectors:1};
+ const result=captureI80386AtaMaster({ata,cpu:{cycles:0},cycles:0});
+ assert.equal(result.refused.code,'snapshot-too-large');assert.equal(result.bytes,undefined);
+ ata.image=null;
+});
+test('public extent getters are never invoked for admitted typed-array storage',()=>{
+ const image=new Uint8Array(1024).fill(0x7b);let calls=0;
+ for(const key of ['length','byteLength'])Object.defineProperty(image,key,{get(){calls++;throw Error('public extent getter invoked');}});
+ const ata=new ATA(new Uint8Array(1024),geometry);ata.image=image;
+ const result=captureI80386AtaMaster({ata,cpu:{cycles:0},cycles:0});
+ assert.equal(result.byteLength,1024);assert.equal(result.bytes.length,1024);assert.equal(result.bytes[1023],0x7b);assert.equal(calls,0);
 });
