@@ -4808,8 +4808,10 @@ a public macro result alone grants no CPU adoption or original-gate replacement.
 
 ## Ordinary-JS 386 AT platform profiling — 2026-10-15
 
-CLAIM — Codex x86, `lane/386-at-platform-profile-20261015`; implementation
-waits for merged claim. Own only new `.github/workflows/i80386-at-profile.yml`,
+DONE — [PR587](https://github.com/CrispStrobe/bw-board/pull/587) merged at
+`819b297ed00f63c03cf49091109236159a151de2` after all nine latest enabled
+checks passed. Sole capture 38676056750 passed root and independent original
+audits; this is finite diagnostic acceptance, not a speed or OS claim. Sources: `.github/workflows/i80386-at-profile.yml`,
 `scripts/i80386-at-profile/{fixture.mjs,profile.py,reader.py,README.md}`,
 `test/i80386-at-profile-fixture.test.mjs`, this registry entry and the
 [contract](docs/X86-NEXT-LANES.md#ordinary-js-386-at-platform-profiling).
@@ -4831,3 +4833,32 @@ width exactly. No dispatch rewrite, decoder allocation, device/clock/backend,
 workflow, pin or historical gate changes. Adoption requires independent
 width/exception semantics, affected hosted full-CI/guest checks and a separately
 scoped current-baseline unprofiled paired gate; no gain means no adoption.
+
+## Mixed-width ALU public paired measurement — 2026-10-15
+
+CLAIM — Codex x86, `lane/386-width-mask-public-paired-20261015`;
+implementation waits for this claim to merge. Own only new
+`.github/workflows/i80386-width-mask-paired.yml`,
+`scripts/i80386-width-mask-paired/{fixture.mjs,run.py,policy.py,reader.py,controls.py,README.md}`,
+`test/i80386-width-mask-paired-fixture.test.mjs`, this entry and the
+[contract](docs/X86-NEXT-LANES.md#mixed-width-alu-public-paired-measurement).
+Compare ordinary baseline CPU2303 with isolated literal-mask CPU8f92 using a
+new authored 24-instruction 8/16/32-bit ALU mix, independent goldens and original-
+only audit. No old fixture/policy/map, CPU/device/clock, pin or workflow edits.
+No actual until frozen source/reader review and affected exact-candidate hosted
+correctness pass; no gain or incomplete evidence means no adoption of PR594.
+
+
+## 386 debugger capture and capability correction — 2026-10-15
+
+CLAIM — Codex x86, `lane/386-debugger-capture-20261015`; implementation waits
+for this claim to merge. Own new `src/i80386-debug.js`, new
+`test/i80386-debug-capture.test.mjs`, only the 386 composition in
+`src/debug-target-factory.js`, and the narrow injectable capture/address/
+capability seams in `src/i8086-debug.js` needed to preserve its 8086 defaults.
+Also own only the unsigned 32-bit memory-address normalization seam in
+`src/instruction-debug-events.js`; preserve other targets and event formats.
+Own this entry and the [contract](docs/X86-NEXT-LANES.md#386-debugger-capture-and-capability-correction).
+No CPU/device source, supplier pin, workflow, other target or performance
+experiment edits. Fix a reproducible debug-subscriber exception and expose
+honest 386 state/address capabilities; unsupported mode decoding must refuse.
