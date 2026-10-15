@@ -1473,7 +1473,7 @@ RTx, whole-AT speed or operating-system compatibility.
 
 ## Guarded word-fetch public paired measurement
 
-Status: claim581 merged at `f1b669b3`. [READY PR582](https://github.com/CrispStrobe/bw-board/pull/582) published the harness; its first push measurement succeeded. Root and independent peer original-packet audits passed. [CPU PR579](https://github.com/CrispStrobe/bw-board/pull/579) merged at `c2f0936d`; ordinary JS word-fetch is adopted in board master. PR582 remains unmerged awaiting its latest READY-transition checks.
+Status: claim581 merged at `f1b669b3`. [Merged PR582](https://github.com/CrispStrobe/bw-board/pull/582) published the harness; its first push measurement succeeded. Root and independent peer original-packet audits passed. [CPU PR579](https://github.com/CrispStrobe/bw-board/pull/579) merged at `c2f0936d`; ordinary JS word-fetch is adopted in board master. PR582 merged at `3a1285f9160472d86fa061eda6f0e1053c12c4e8` after all nine latest enabled checks passed.
 
 Own only new `.github/workflows/i80386-fetchn-paired.yml`,
 `scripts/i80386-fetchn-paired/{fixture.mjs,run.py,policy.py,controls.py,README.md}`,
@@ -1551,3 +1551,11 @@ or credited to a combined candidate; the scope limitations above remain.
 The adopted fetch change measured approximately 12.6% higher whole-Node CPU
 throughput in this authored mix only. Lite pin/installed GUI adoption is separate;
 PR557 and its original gate remain unchanged.
+
+
+The latest [media-free platform diagnostic](X86-RTX-PLATFORMS.md#hosted-ordinary-js-diagnostic--2026-10-14)
+records current-source timed-loop core/machine rates separately from this
+whole-Node paired gate. Next work is coordinated Lite pin/installed-consumer
+qualification and a separately scoped AT-platform profiling hypothesis;
+the core/AT gap is not an established CPU cost share. Neither next task is
+implemented or qualified by this diagnostic.
