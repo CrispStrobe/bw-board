@@ -28,6 +28,7 @@
 
 import { registerDevice } from '../devices.js';
 import { createI2CSlave, feedI2CSlave } from './i2c-slave.js';
+import { ambient } from '../world.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;
@@ -296,7 +297,7 @@ function convert(part, cmd, read, vcc) {
         case 0b110: v = read('aux'); break;
         case 0b000:
         case 0b111: {
-            const t = part.params?.temperature ?? 25;
+            const t = ambient(part, 'temperature', 25);
             v = 0.6 - (t - 25) * 0.0021;               // diode, rough per datasheet
             break;
         }

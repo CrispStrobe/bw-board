@@ -33,6 +33,7 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { ambient } from '../world.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;           // released: practically not driving
@@ -438,7 +439,7 @@ function romBytes(part) {
 }
 
 function scratchpad(part, state) {
-    const t = part.params?.temperature ?? 25.0;
+    const t = ambient(part, 'temperature', 25.0);
     let raw = Math.round(t * 16);
     if (raw < 0) raw += 0x10000;
     const bytes = [raw & 0xff, (raw >> 8) & 0xff, state.th, state.tl, state.config, 0xff, 0x00, 0x10];
