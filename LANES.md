@@ -4861,6 +4861,24 @@ workflow, pin or historical gate changes. Adoption requires independent
 width/exception semantics, affected hosted full-CI/guest checks and a separately
 scoped current-baseline unprofiled paired gate; no gain means no adoption.
 
+## Ordinary-JS byte-register selection experiment — 2026-10-15
+
+CLAIM — Codex x86; docs-only ownership preparation. Implementation waits for
+this claim to merge and an independently reviewed all-eight-byte-register
+workload/golden freeze plus current adopted-CPU profile support or a predeclared
+representative ordinary-AT paired non-regression control. A byte-mix win alone
+does not justify whole-AT adoption. Own only `_reg8` and `_setReg8` in
+`src/experimental/i80386.js`, new
+`test/i80386-byte-register-specialization.test.mjs`, and this matching
+[contract](docs/X86-NEXT-LANES.md#ordinary-js-byte-register-selection-experiment).
+Separately version measurement in new
+`scripts/i80386-byte-register-paired/{fixture.mjs,run.py,policy.py,reader.py,controls.py,README.md}`,
+new `test/i80386-byte-register-paired-fixture.test.mjs` and
+`.github/workflows/i80386-byte-register-paired.yml`. No existing measurement,
+other CPU method, device, scheduler, dependency pin or scalar-EA candidate is
+owned here. Keep the candidate draft until regression, affected free-guest and
+new paired gates pass; no speedup, cost share or adoption is established.
+
 ## Mixed-width ALU public paired measurement — 2026-10-15
 
 CLAIM — Codex x86, `lane/386-width-mask-public-paired-20261015`;
