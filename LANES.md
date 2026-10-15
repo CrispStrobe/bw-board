@@ -1,3 +1,22 @@
+2026-10-15 A10 retained-engine qualification and STM32 guest setup — CLAIMED, Codex.
+Branch lane/a10-uarte-engine-adoption-20261015. Original engine campaign
+38761081841 produced identical independent builds and passed the new UARTE
+stack-reuse guest, but its full suite failed two STM32 round-trip cases.
+Those guests enter main without clearing BSS and omit UART pin, baud and
+transmitter setup required by the current light-tier model. Preserve the
+failed campaign and every assertion; no qualified release exists.
+Envelope: this row; test/labwired-roundtrip.test.mjs firmware/startup/linker
+setup only; .github/workflows/labwired-wasm.yml an explicit retained-build
+qualification mode; scripts/admit-labwired-retained-build.mjs and focused
+admission controls; test/fixtures/labwired/uarte-stack/retained-build.json
+public source, run, artifact and hash identities. Reuse the original pair
+without rebuilding or changing its executable bytes. Admit exact original
+metadata and hashes before hosted qualification; require the unchanged full
+suite and enabled final-head checks before canonical publication/integration.
+Keep the STM32 fidelity lane's fixed-clock option, CPU/peripheral behavior,
+RAM reset policy and unrelated owners intact. No threshold relaxation,
+source-pin substitution, repeat original dispatch or local engine/guest run.
+
 2026-10-15 A10 nRF52 UARTE engine adoption — CLAIMED, Codex.
 Branch lane/a10-uarte-engine-adoption-20261015, base 54efdfc4.
 Successor to the published labwired-wasm-d523df44 engine: after the owning
@@ -4985,6 +5004,15 @@ The debugger file is not edited while PR599 owns its initial correction;
 sequence or separately hand off that file first. Preserve ATA command/timing
 semantics, frozen source inventories, original receipts and dependency pins.
 
+A narrow transport extension also owns new
+`scripts/i80386-hdd-export/{probe.py,controls.py}` alongside the existing
+`probe.mjs`, `reader.py`, `README.md` and workflow roles. `probe.py` is a
+standard-library-only Python PTY transport and orchestrator; `controls.py`
+owns manufactured disk and mock-PTY controls only. Do not edit existing PTY harnesses, CPU/device code, historical
+receipts or pins. Implementation requires this extension to merge and the
+serialized console handoff; actual acceptance waits for qualified optional
+floppy CLI source and parents, whole-graph review and one admitted hosted run.
+
 ## Bounded DOS package admission — 2026-10-15
 
 CLAIM — Codex x86, follows explicit raw-HDD export/reload. Own new
@@ -5012,3 +5040,19 @@ controls, precise inclusive bounds and read-only behavior before publication.
 Lengths are nonnegative safe integers; a zero-length read may use the one-past
 endpoint, never as an addressable byte or UI page start. Any new metadata field
 requires complete strict descriptor validation; partial metadata fails closed.
+
+
+## Optional floppy boot for explicit master-HDD persistence — 2026-10-15
+
+CLAIM — Codex x86, serialized after the reviewed raw-HDD console export source
+and its parent qualification/handoff. Extend only
+`scripts/run-i80386-at-console.mjs` with optional `--floppy-image FILE` and own
+new `test/i80386-at-console-floppy.test.mjs`; coordinate the existing raw-HDD
+lane's new `scripts/i80386-hdd-export/{probe.mjs,reader.py,README.md}` and
+`.github/workflows/i80386-hdd-export.yml` for one bounded export/reload acceptance.
+The HDD remains required. Preserve no-option behavior and all existing input
+hash, source, resource, ordinary-backend and failure gates. No old free-floppy
+probe, CPU/FDC/device, dependency pin or historical receipt changes. See the
+[contract](docs/X86-NEXT-LANES.md#optional-floppy-boot-for-master-hdd-persistence).
+Implementation waits for this claim to merge; the current export worker retains
+its console ownership until an explicit serialized handoff.
