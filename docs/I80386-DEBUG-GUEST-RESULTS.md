@@ -6,9 +6,13 @@ succeeded on `bc3d0d3514098b97290fccb54993d24587a491da`. Original artifact,
 metadata, source and finite event joins passed independent review. The
 [source debugger PR599](https://github.com/CrispStrobe/bw-board/pull/599) and
 [qualification harness PR607](https://github.com/CrispStrobe/bw-board/pull/607)
-are both READY for review. Consult those PRs for current required CI and
-combined adoption review; neither is represented here as merged. This fixture
-passed before adoption and does not qualify an installed GUI.
+merged after all enabled checks passed: debugger merge
+[`05123db4`](https://github.com/CrispStrobe/bw-board/commit/05123db4bf14499191727bc9ed9edff9e7e0da1f)
+and harness merge
+[`efe62e46`](https://github.com/CrispStrobe/bw-board/commit/efe62e4620eda9875ed7b75199de03e3e5fc76f7).
+The final harness merge preserves all 88 reviewed source and qualification
+identities; its six harness files match the tested source. Concurrent lane
+notes were preserved. This fixture does not qualify an installed GUI.
 
 The unchanged pinned MIT xv6 4 MiB build and redistributable Bochs BIOS/VGA ran
 through ordinary `machine.step`, once as control and once with the dedicated
@@ -54,5 +58,5 @@ CPU defect.
 The sole [artifact11966015324](https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11966015324)
 is 63,587 bytes, ZIP SHA256
 `2e393918fa981b4eeddc8c91e532abd0cc30b9220a087b9751499b22451bbc9c`.
-Continue latest source CI and scoped adoption review before exposing these
-capabilities through an installed consumer; no dependency pin changes here.
+Consumer pin adoption and installed-application qualification remain separate
+work; no dependency pin changes here.

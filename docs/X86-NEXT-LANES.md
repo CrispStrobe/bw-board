@@ -1918,13 +1918,15 @@ Observed checkpoint: the sole corrected-source [run38716662156](https://github.c
 passed original-byte review: byte-identical MIT xv6 control/subscribed reports,
 64 consecutive retirements including five actual protected 32-bit ring-3
 instructions, and 206 physical memory facts. See the [finite result](I80386-DEBUG-GUEST-RESULTS.md).
-PR599 and PR607 are READY for review; their linked PRs track current required CI
-and combined adoption review. The fixture passed before adoption; this does not
-adopt the runtime or qualify an installed GUI, actual IRQ-event window, checkpoint replay or timing.
+PR599 and PR607 merged after all enabled checks passed. The debugger merge is
+`05123db4` and the harness merge is `efe62e46`; the final harness merge preserves
+all 88 reviewed source and qualification identities and the six tested harness
+files. Consumer pin adoption and installed-GUI qualification remain pending.
+This does not qualify an actual IRQ-event window, checkpoint replay or timing.
 
-Status: ownership claim602 merged; source is published in PR607. The
-finite subscribed free-guest result above is observed; latest CI and combined
-adoption review remain pending.
+Status: ownership claim602 and the source/harness changes are merged. The
+finite subscribed free-guest result above is observed; installed-consumer
+adoption remains separate.
 Own only new `scripts/i80386-debug-guest/{observer.mjs,reader.py,README.md}`,
 `test/i80386-debug-guest-observer.test.mjs`,
 `.github/workflows/i80386-debug-guest.yml`, the narrow opt-in integration in
