@@ -297,6 +297,7 @@ def resource_observation():
 
 def need_no_oom(before,after):
  need(all(before[k]==after[k]for k in['cgroupRole','cpuMax','memoryMaxBytes','swapMaxBytes','affinityCpus']),'resource-drift')
+ need(all(after['memoryEvents'][k]>=before['memoryEvents'][k]for k in before['memoryEvents']),'resource-counter-regression')
  need(all(after['memoryEvents'][k]==before['memoryEvents'][k]for k in['oom','oom_kill','oom_group_kill']),'oom-observed')
 
 def child_limits():
@@ -421,9 +422,11 @@ def run_packet(session,expected_head,media_review):
   need(len(console)==79 and set(common)==set(mapping['commonPaths']),'closed-source-map')
   admission={'schema':'bw.hdd-cli-admission.v1','sourceHead':source['head'],'sourceTree':source['tree'],'consoleMapSha256':sha(canonical(console)),'commonMapSha256':sha(canonical(common)),'runtimeIdentityPolicySha256':sha(canonical(RUNTIME_POLICY)),'mediaReviewSha256':media_review,'resourcePolicySha256':sha(canonical(RESOURCE_POLICY)),'protocolSha256':sha(canonical(PROTOCOL_POLICY)),'inputGeometry':{'cylinders':306,'heads':4,'sectors':17},'childGuestSteps':120000000,'stableStepCalls':1500000,'childWallSeconds':600,'outerWallSeconds':1250,'secondExportsReadback':True,'authority':'external-reviewed-inputs-required','runtimeProfile':'hosted-observed-runtime-identity.v1'}
   json_new('originals/admission.json',admission)
+  prior_resource=None
   for child in(1,2):
    need(time.monotonic()<deadline,'outer-wall-limit');need(runtime_inventory(session,before['provenance'])==before,'runtime-before-child-drift')
    argv=['runtime/bin/node','source/scripts/run-i80386-at-console.mjs','--hdd-image','inputs/initial.img'if child==1 else'outputs/first.img','--geometry','306,4,17','--floppy-image','inputs/floppy.img','--steps','120000000','--live','--hdd-output','outputs/first.img'if child==1 else'outputs/second.img']
+   if prior_resource is not None:need_no_oom(prior_resource,resource_observation())
    captured=run_session(argv,session,child,deadline)
    # Capture failure predates any artifact copy/admission failure. Retain it
    # before fallible saves, and never launch a successor after uncertainty.
@@ -434,7 +437,7 @@ def run_packet(session,expected_head,media_review):
    except BaseException as error:retain(error)
    if first is not None:raise first
    node=before['rows'][0];identity=captured['lifecycle']['ownedProcessIdentity'];need(identity is not None and identity['exeSha256']==node['sha256']and identity['exeByteLength']==node['byteLength']and identity['exeRealpath']==node['realpath'],'owned-runtime-join')
-   report=strict_json(regular_bytes(f'originals/child{child}/report.json',4194304));validate_session(captured,report,source,mapping,child);passed[child-1]=True
+   report=strict_json(regular_bytes(f'originals/child{child}/report.json',4194304));validate_session(captured,report,source,mapping,child);passed[child-1]=True;prior_resource=captured['lifecycle']['resourceAfter']
    if child==1:json_new('originals/media-between.json',media_inventory('between'))
   need(regular_bytes('outputs/first.img',SIZE,SIZE)==regular_bytes('outputs/second.img',SIZE,SIZE),'reader-export-changed')
   json_new('originals/media-after.json',media_inventory('after'))

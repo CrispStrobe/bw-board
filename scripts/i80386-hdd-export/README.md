@@ -47,3 +47,27 @@ using sorted-key compact ASCII JSON, with no final newline:
 ```json
 {"bios":{"bytes":65536,"notices":"roms/free-at-bios/README.md and roms/free-at-bios/LICENSE","path":"roms/free-at-bios/BIOS-bochs-legacy","sha256":"6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac"},"bootMediaInArtifact":false,"floppy":{"archiveBytes":23624258,"archiveSha256":"45b1fa7c52dd996c3bfa5e352ffcd410781b952a6ad629f15a4c9ec4bbaefc5a","bytes":1228800,"member":"120m/x86BOOT.img","notices":"Official archive README and FreeDOS component notices; floppy edition omits package sources and points to FreeDOS source releases.","sha256":"03df6088be016e57a6c44275f5bb9ab0244db71de1360957fd76ba83243b6a77","url":"https://download.freedos.org/1.4/FD14-FloppyEdition.zip"},"releaseRedistributionClearance":false,"schema":"bw.hdd-free-input-policy.v1","scope":"finite FreeDOS authored-master write/export/reload test","sourceBuildAuthenticityQualified":false,"vga":{"bytes":38400,"notices":"roms/free-at-bios/README.md and roms/free-at-bios/LICENSE","path":"roms/free-at-bios/vgabios-lgpl.bin","sha256":"76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1"}}
 ```
+
+From the repository root, directory mode checks reported consistency only:
+
+```sh
+python3 -B scripts/i80386-hdd-export/reader.py --packet originals
+```
+
+For the original official artifact, use the externally admitted mode:
+
+```sh
+python3 -B scripts/i80386-hdd-export/reader.py --artifact original-artifact.zip --external external-admission.json
+```
+
+The external JSON has `roleSha256`, `sourceInventory`, `runtimeInventory`,
+`consoleMap`, and `official` fields. An independent reviewer must bind these to
+original bytes, exact Git blobs, the fixed input/runtime policy, and terminal
+[official Actions metadata](https://docs.github.com/en/rest/actions/workflow-runs).
+The official record identifies the repository, head, run/attempt, job,
+workflow path/blob, artifact SHA/extent, successful job/run, and dedicated
+`pull_request` / `labeled` / `x86-hdd-export-actual` event. Successful official
+job completion must also cover the reviewed workflow's enclosing unit cleanup.
+Do not construct admission by copying the producer's assertions or accept an
+unreviewed workflow merely because its result booleans are positive. A finite
+persistence pass keeps the wider qualification limits above.
