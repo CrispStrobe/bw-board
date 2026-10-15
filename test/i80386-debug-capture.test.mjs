@@ -109,3 +109,59 @@ test('physical VGA observation preserves latches and guest-fault state',()=>{
     m.vgaMemory.latches.set([1,2,3,4]);const before=[...m.vgaMemory.latches];const cr2=m.cpu.cr2;
     target.readMem('mem',0xa0000,4);assert.deepEqual([...m.vgaMemory.latches],before);assert.equal(m.cpu.cr2,cr2);
 });
+
+test('386 completion clock distinguishes consecutive NOPs from AT scheduling time',()=>{
+    const {m,cpu,target}=fixture(),events=[];target.onDebugEvent(e=>events.push(e));
+    const board=m.cycles;assert.equal(m.step(),6);assert.equal(m.step(),6);
+    const retires=events.filter(e=>e.kind==='instruction'&&e.phase==='retire');
+    assert.deepEqual(retires.map(e=>e.time.ticks),[1n,2n]);
+    for(const e of retires){assert.equal(e.time.domain,'i80386-completed-instructions');assert.equal(Object.hasOwn(e.time,'hz'),false);}
+    assert.equal(m.cycles,board+12);assert.equal(cpu.cycles,2);
+    assert.equal(target.debugTime().ticks,2n);assert.equal(target.debugTime().domain,retires[1].time.domain);
+    assert.equal(Object.hasOwn(target.debugTime(),'hz'),false);
+});
+
+test('halted board horizons do not invent completed-instruction elapsed facts',()=>{
+    const {m,cpu,target}=fixture([0xf4]),events=[];target.onDebugEvent(e=>events.push(e));
+    m.step();const core=cpu.cycles,board=m.cycles;events.length=0;m.step();
+    assert.equal(cpu.cycles,core);assert.ok(m.cycles>board);
+    assert.equal(target.debugTime().ticks,BigInt(core));
+    assert.equal(events.some(e=>e.kind==='instruction'||e.kind==='idle'),false);
+});
+
+test('386 reset shares one rewind era across target input and interrupt stamps',()=>{
+    const {m,target}=fixture(),events=[],inputs=[];target.onDebugEvent(e=>events.push(e));target.onDebugInput(e=>inputs.push(e));
+    m.step();m.step();assert.equal(target.debugTime().ticks,2n);
+    m.reset();const reset=target.debugTime();assert.equal(reset.ticks,0n);
+    assert.equal(reset.domain,'i80386-completed-instructions-rewind-1');
+    target.nmi();assert.equal(inputs[0].time.domain,reset.domain);assert.equal(BigInt(inputs[0].time.ticks),0n);
+    // This invokes only the observer hook, not interrupt delivery or guest code.
+    m.hooks.onInterrupt({vector:2,source:'nmi'});
+    const irq=events.find(e=>e.kind==='interrupt');assert.ok(irq);assert.equal(irq.time.domain,reset.domain);assert.equal(irq.time.ticks,0n);
+    m.reset();m.step();const retire=events.filter(e=>e.kind==='instruction').at(-1);
+    assert.equal(retire.time.domain,reset.domain);assert.equal(retire.time.ticks,1n);
+});
+
+test('delivered zero-retirement operand fault leaves completion clock unchanged',()=>{
+    const {m,cpu,target}=fixture([0xa0,0,0]),events=[];
+    const fault=new I80386Fault(14,0,'owned delivered fault');let delivered=0;
+    cpu.deliverFaults=true;cpu.read=()=>{throw fault;};
+    cpu._deliverFault=e=>{assert.equal(e,fault);delivered++;};
+    target.onDebugEvent(e=>events.push(e));assert.equal(m.step(),0);
+    assert.equal(delivered,1);assert.equal(cpu.cycles,0);assert.equal(target.debugTime().ticks,0n);
+    assert.equal(events.some(e=>e.kind==='instruction'||e.kind==='idle'),false);
+});
+
+test('live debugTime reads between retrospective memory facts never invent rewind eras',()=>{
+    const {m,target}=fixture([0xa1,0,1]),events=[],live=[];
+    target.onDebugEvent(e=>{events.push(e);if(e.kind==='memory')live.push(target.debugTime());});
+    m.step();const memory=events.filter(e=>e.kind==='memory');
+    assert.ok(memory.length>=2);assert.ok(live.length>=2);
+    assert.ok(memory.every(e=>e.time.ticks===0n));
+    assert.ok(events.every(e=>e.time.domain==='i80386-completed-instructions'));
+    assert.ok(live.every(e=>e.ticks===1n&&e.domain==='i80386-completed-instructions'));
+    m.reset();assert.equal(target.debugTime().domain,'i80386-completed-instructions-rewind-1');
+    events.length=0;live.length=0;m.step();
+    assert.ok(events.every(e=>e.time.domain==='i80386-completed-instructions-rewind-1'));
+    assert.equal(target.debugTime().ticks,1n);
+});
