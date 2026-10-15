@@ -27,10 +27,10 @@ export class ExperimentalATA16 {
       throw new Error('ATA geometry exceeds the CHS task-file fields');
     if (image.length !== cylinders * heads * sectors * 512)
       throw new Error('ATA image size does not match geometry');
-    this.image = image.slice();
+    this.image = new Uint8Array(image);
     if (slaveImage !== null && (!(slaveImage instanceof Uint8Array) || slaveImage.length !== image.length))
       throw new Error('ATA slave image must match the master image size');
-    this.slaveImage = slaveImage?.slice() ?? null;
+    this.slaveImage = slaveImage === null ? null : new Uint8Array(slaveImage);
     this.slaveEnabled = false;
     this.geometry = {cylinders, heads, sectors};
     this.onIRQ = onIRQ;
@@ -352,7 +352,7 @@ export class ExperimentalATA16 {
     else if (register === 7) this.writeCommand(byte);
   }
 
-  mediaBytes() { return this.image.slice(); }
+  mediaBytes() { return new Uint8Array(this.image); }
 }
 
 export default ExperimentalATA16;
