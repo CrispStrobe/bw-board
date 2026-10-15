@@ -1658,12 +1658,12 @@ unprofiled gate; it has no measured gain or adoption from these samples.
 ## Ordinary-JS width-mask literal specialization
 
 Status: claim591 merged; [CPU PR594](https://github.com/CrispStrobe/bw-board/pull/594)
-is READY at unchanged `f6863484` after affected hosted guest/full-CI success.
+merged as `bfe99d562e9b57a819ec92025faafba271b8751c` after all eight enabled
+checks passed, adopting only the isolated literal-mask change on `bw-board/master`.
 Its [new paired result](I80386-WIDTH-MASK-PAIRED-RESULTS.md) passed the named
-gate and both root/independent peer original audits. Mandatory READY-transition
-CI is pending for PR594. Measurement PR601 merged as
+gate and both root/independent peer original audits. Measurement PR601 merged as
 `503ab56359f4968ea59deaf77933102cd0bc7a41` after all nine enabled checks passed;
-CPU PR594 remains unmerged and no source adoption has occurred. Own only `maskFor` in `src/experimental/i80386.js`, new
+No installed consumer pin is updated or qualified. Own only `maskFor` in `src/experimental/i80386.js`, new
 `test/i80386-width-mask-specialization.test.mjs`, this section and its registry
 entry. Use `lane/386-width-mask-specialization-20261015`. All other CPU methods,
 decoders, device/scheduler/clock code, existing tests, benchmarks, policies,
@@ -1715,7 +1715,9 @@ passed all 18 semantics and the CPU/wall gate (median 1.213153522442 CPU ratio,
 minimum 1.1923036855965443, wall median 0.8269209820340158). Root original audit
 and independent peer audits passed. PR601 merged as
 `503ab56359f4968ea59deaf77933102cd0bc7a41` after all nine enabled checks passed.
-CPU PR594 remains READY awaiting mandatory transition CI, unmerged and unadopted.
+CPU PR594 merged as `bfe99d562e9b57a819ec92025faafba271b8751c` after all eight
+enabled checks passed; adoption is limited to `bw-board/master`, not an installed
+consumer pin.
 Owned paths:
 `.github/workflows/i80386-width-mask-paired.yml`,
 `scripts/i80386-width-mask-paired/{fixture.mjs,run.py,policy.py,reader.py,controls.py,README.md}`,
