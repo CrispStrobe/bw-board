@@ -1,3 +1,21 @@
+2026-10-15 A10 nRF52 UARTE engine adoption — CLAIMED, Codex.
+Branch lane/a10-uarte-engine-adoption-20261015, base 54efdfc4.
+Successor to the published labwired-wasm-d523df44 engine: after the owning
+LabWired source fix qualifies and lands, build that exact source once through
+the existing two-build deterministic release workflow and explicitly advance
+the producer PIN. Preserve the previous release and all prior radio evidence.
+Envelope: this ledger; scripts/build-labwired-wasm.mjs PIN only;
+new test/labwired-uarte-stack.test.mjs and original MIT guest fixtures under
+test/fixtures/labwired/uarte-stack/; the real-engine suite list and count floor
+in .github/workflows/labwired-wasm.yml; catalog regeneration only if the exact
+qualified source changes its inputs. No adapter, CPU, GPIO, circuit or solver
+implementation, dependency shortcut, optional motion dispatch or repeated
+successful original. Require exact serial bytes from the compiled stack-reuse
+guest against the actual release engine, unchanged existing engine tests,
+independent BUILD-INFO/source/hash admission and enabled final-head checks.
+The core source and compiled native guest remain separately qualified; engine
+publication alone does not qualify the Lite consumer or physical timing.
+
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
 2026-10-15 stm32 F0/G0 silicon fidelity — CLAIM, VPS Claude (opus).
