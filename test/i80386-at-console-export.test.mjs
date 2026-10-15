@@ -63,3 +63,59 @@ test('without output a known guest refusal still reaches ordinary report collect
   const r=await lifecycle({setup(c,log,p){c.options.hddOutput=null;c.runChunk=()=>{c.guestFailure=p;c.refusal={name:p.name,message:p.message};c.steps=1;};}});
   assert.equal(r.error,r.secondary);assert.deepEqual(r.calls,['profile','restore','text']);
 });
+
+
+// Execute the production live-input queue only, not an emulator or guest.
+function liveKeyboardQueue(machine) {
+  const ctx={steps:0,delivered:[],machine,makeTerminalInputState:()=>({focused:true}),
+    decodeTerminalInput:(state,scan)=>({scan,mouse:[]}),flushTerminalEscape:()=>[]};
+  vm.createContext(ctx);
+  const start=source.indexOf('const liveState=makeTerminalInputState()');
+  const end=source.indexOf('const runChunk=',start);
+  assert.ok(start>=0&&end>start);
+  vm.runInContext(source.slice(start,end)+';this.inputQueue={offer:offerLiveInput,push:onTerminalData};',ctx);
+  return ctx;
+}
+test('live keyboard pacing protects a bounded slow receiver from a pasted scan burst',()=>{
+  // An authored downstream receiver: accepting a controller byte does not mean
+  // its finite queue has been consumed. This is not a BIOS timing model.
+  const scans=Array.from({length:84},(_,i)=>(i+1)&255),fifo=[],received=[];
+  let dropped=0;
+  const ctx=liveKeyboardQueue({keyIn(code){if(fifo.length===16)dropped++;else fifo.push(code);return true;},mouseIn(){return true;}});
+  ctx.inputQueue.push(scans);
+  for(let step=0;step<=84*65536;step+=1024){
+    ctx.steps=step;
+    if(step%16384===0&&fifo.length)received.push(fifo.shift());
+    ctx.inputQueue.offer();
+  }
+  received.push(...fifo);
+  assert.equal(dropped,0,'controller acceptance must not outrun the slow receiver');
+  assert.deepEqual(received,scans);
+  const keys=ctx.delivered.filter(x=>x.type==='live-key');
+  assert.equal(keys.length,scans.length);
+  for(let i=1;i<keys.length;i++)assert.ok(keys[i].step-keys[i-1].step>=65536);
+});
+test('live keyboard pacing retries refused bytes without consuming or delaying them',()=>{
+  let attempts=0;
+  const ctx=liveKeyboardQueue({keyIn(){attempts++;if(attempts===1)return false;if(attempts===2)throw Error('AT 8042 output queue full');return true;},mouseIn(){return true;}});
+  ctx.inputQueue.push([0x1c,0x9c]);
+  for(const step of [0,1024,2048,3072]){ctx.steps=step;ctx.inputQueue.offer();}
+  assert.equal(attempts,3);assert.equal(ctx.delivered.length,1);
+  assert.equal(ctx.delivered[0].code,0x1c);assert.equal(ctx.delivered[0].step,2048);
+  ctx.steps=2048+65536;ctx.inputQueue.offer();
+  assert.equal(ctx.delivered.length,2);assert.equal(ctx.delivered[1].code,0x9c);
+});
+test('live keyboard pacing keeps mouse service independent and preserves unexpected errors',()=>{
+  const mouse=[];let keyCalls=0;
+  const ctx=liveKeyboardQueue({keyIn(){keyCalls++;return true;},mouseIn(event){mouse.push(event);return true;}});
+  // Deliver mouse input through the real terminal callback with an authored decoder.
+  ctx.decodeTerminalInput=(state,scan)=>({scan,mouse:[{dx:1,dy:0,buttons:0}]});
+  ctx.inputQueue.push([0x1e,0x9e]);
+  ctx.steps=0;ctx.inputQueue.offer();
+  ctx.inputQueue.push([]);ctx.steps=1024;ctx.inputQueue.offer();
+  assert.equal(keyCalls,1);assert.equal(mouse.length,2);
+  const primary=new Error('unrelated keyboard failure');
+  const bad=liveKeyboardQueue({keyIn(){throw primary;},mouseIn(){return true;}});
+  bad.inputQueue.push([0x1c]);assert.throws(()=>bad.inputQueue.offer(),e=>e===primary);
+  assert.equal(bad.delivered.length,0);
+});
