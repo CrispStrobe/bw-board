@@ -68,7 +68,7 @@ fixture passed its exact 19-byte UART and terminal/counter assertions.
 [PR621](https://github.com/CrispStrobe/bw-board/pull/621) merged as
 `f00f8ff51e705e3524bee38d3c6d8f077a870be1` after all 12 enabled final-head
 checks passed; eight event/optional checks were explicitly skipped. The actual
-tree and parents matched the reviewed merge prediction. Published immutable
+tree and parents matched the reviewed merge prediction. Published
 release [`labwired-wasm-6a769a59`](https://github.com/CrispStrobe/bw-board/releases/tag/labwired-wasm-6a769a59)
 uses the original two independent build payloads, with the 123-pass retained
 qualification above. Original build/test failures, release lineage and prior
