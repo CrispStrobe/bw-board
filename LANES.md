@@ -1,3 +1,22 @@
+2026-10-15 A10 retained-engine qualification and STM32 guest setup — CLAIMED, Codex.
+Branch lane/a10-uarte-engine-adoption-20261015. Original engine campaign
+38761081841 produced identical independent builds and passed the new UARTE
+stack-reuse guest, but its full suite failed two STM32 round-trip cases.
+Those guests enter main without clearing BSS and omit UART pin, baud and
+transmitter setup required by the current light-tier model. Preserve the
+failed campaign and every assertion; no qualified release exists.
+Envelope: this row; test/labwired-roundtrip.test.mjs firmware/startup/linker
+setup only; .github/workflows/labwired-wasm.yml an explicit retained-build
+qualification mode; scripts/admit-labwired-retained-build.mjs and focused
+admission controls; test/fixtures/labwired/uarte-stack/retained-build.json
+public source, run, artifact and hash identities. Reuse the original pair
+without rebuilding or changing its executable bytes. Admit exact original
+metadata and hashes before hosted qualification; require the unchanged full
+suite and enabled final-head checks before canonical publication/integration.
+Keep the STM32 fidelity lane's fixed-clock option, CPU/peripheral behavior,
+RAM reset policy and unrelated owners intact. No threshold relaxation,
+source-pin substitution, repeat original dispatch or local engine/guest run.
+
 2026-10-15 A10 nRF52 UARTE engine adoption — CLAIMED, Codex.
 Branch lane/a10-uarte-engine-adoption-20261015, base 54efdfc4.
 Successor to the published labwired-wasm-d523df44 engine: after the owning
