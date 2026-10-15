@@ -1657,8 +1657,12 @@ unprofiled gate; it has no measured gain or adoption from these samples.
 
 ## Ordinary-JS width-mask literal specialization
 
-Status: docs-only claim; source implementation waits for merged ownership.
-Own only `maskFor` in `src/experimental/i80386.js`, new
+Status: claim591 merged; [CPU PR594](https://github.com/CrispStrobe/bw-board/pull/594)
+is READY at unchanged `f6863484` after affected hosted guest/full-CI success.
+Its [new paired result](I80386-WIDTH-MASK-PAIRED-RESULTS.md) passed the named
+gate and both root/independent peer original audits. Mandatory READY-transition
+CI is pending; neither PR594 nor PR601 is merged. No source adoption
+has occurred. Own only `maskFor` in `src/experimental/i80386.js`, new
 `test/i80386-width-mask-specialization.test.mjs`, this section and its registry
 entry. Use `lane/386-width-mask-specialization-20261015`. All other CPU methods,
 decoders, device/scheduler/clock code, existing tests, benchmarks, policies,
@@ -1704,8 +1708,13 @@ RTx, OS, GUI/CLI consumer or original-private-gate qualification is claimed.
 
 ## Mixed-width ALU public paired measurement
 
-Status: docs-only claim; implementation waits for merged ownership. Own only
-new `.github/workflows/i80386-width-mask-paired.yml`,
+Status: claim597 merged; [PR601](https://github.com/CrispStrobe/bw-board/pull/601)
+published the separately versioned harness. The sole [original result](I80386-WIDTH-MASK-PAIRED-RESULTS.md)
+passed all 18 semantics and the CPU/wall gate (median 1.213153522442 CPU ratio,
+minimum 1.1923036855965443, wall median 0.8269209820340158). Root original audit
+and independent peer audits passed; PR594 and PR601 are READY awaiting mandatory
+transition CI, neither merged/adopted. Owned paths:
+`.github/workflows/i80386-width-mask-paired.yml`,
 `scripts/i80386-width-mask-paired/{fixture.mjs,run.py,policy.py,reader.py,controls.py,README.md}`,
 `test/i80386-width-mask-paired-fixture.test.mjs`, this section and its registry
 entry. Use `lane/386-width-mask-public-paired-20261015`. Do not edit any existing
