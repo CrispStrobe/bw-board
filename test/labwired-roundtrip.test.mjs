@@ -102,15 +102,37 @@ const PROLOGUE = `
 #define GPIOA_PUPDR  BW_MMIO(0x4800000cu)
 #define GPIOA_IDR    BW_MMIO(0x48000010u)
 #define GPIOA_BSRR   BW_MMIO(0x48000018u)
+#define GPIOA_AFRH   BW_MMIO(0x48000024u)
 #define TIM3_CR1     BW_MMIO(0x40000400u)
 #define TIM3_DIER    BW_MMIO(0x4000040cu)
 #define TIM3_SR      BW_MMIO(0x40000410u)
 #define TIM3_PSC     BW_MMIO(0x40000428u)
 #define TIM3_ARR     BW_MMIO(0x4000042cu)
 #define USART1_CR1   BW_MMIO(0x40013800u)
+#define USART1_BRR   BW_MMIO(0x4001380cu)
+#define USART1_ISR   BW_MMIO(0x4001381cu)
 #define USART1_TDR   BW_MMIO(0x40013828u)
 #define NVIC_ISER    BW_MMIO(0xe000e100u)
 #define HALF ${HALF_MS}u
+/* No CRT is linked: reset must establish C's zero-initialized storage. */
+int main(void);
+void bw_reset(void) {
+    extern uint32_t __bss_start__, __bss_end__;
+    for (volatile uint32_t *p = &__bss_start__; p < &__bss_end__; ++p) *p = 0;
+    (void)main();
+    for (;;) __asm__ volatile ("wfi");
+}
+/* PA9 AF1, 115200 baud at the explicitly fixed 48 MHz, UE + TE. */
+static void bw_uart_init(void) {
+    GPIOA_MODER = (GPIOA_MODER & ~(3u << 18)) | (2u << 18);
+    GPIOA_AFRH = (GPIOA_AFRH & ~(15u << 4)) | (1u << 4);
+    USART1_BRR = 48000000u / 115200u;
+    USART1_CR1 = 1u | (1u << 3);
+}
+static void bw_putc(uint32_t byte) {
+    while (!(USART1_ISR & (1u << 7))) { } /* TXE: never overwrite a busy TDR. */
+    USART1_TDR = byte;
+}
 static void bw_clocks(void) {
     RCC_AHBENR  = (1u << 17);
     RCC_APB1ENR = (1u << 1);
@@ -123,7 +145,7 @@ static void bw_clocks(void) {
 const VECTORS_WITH_IRQ = `
 __attribute__((section(".vectors"), used))
 const void *vectors[48] = {
-    (void *)0x20000ff0, (void *)main, [16 + 16] = (void *)tim3_irq
+    (void *)0x20000ff0, (void *)bw_reset, [16 + 16] = (void *)tim3_irq
 };
 `;
 
@@ -138,8 +160,8 @@ int main(void)
     TIM3_DIER = 1u;
     TIM3_CR1 = 1u;
     NVIC_ISER = (1u << 16);            /* TIM3 = IRQ16 on the F0 */
-    USART1_CR1 = 1u;
-    USART1_TDR = 'h'; USART1_TDR = 'i';
+    bw_uart_init();
+    bw_putc('h'); bw_putc('i');
     uint32_t last = 0;
     for (;;) {
         if (bw_ms != last && (bw_ms % HALF) == 0u) {
@@ -164,8 +186,8 @@ int main(void)
     bw_clocks();
     GPIOA_MODER = (1u << 0);
     TIM3_CR1 = 1u;
-    USART1_CR1 = 1u;
-    USART1_TDR = 'h'; USART1_TDR = 'i';
+    bw_uart_init();
+    bw_putc('h'); bw_putc('i');
     uint32_t ms = 0;
     for (;;) {
         if (TIM3_SR & 1u) {
@@ -179,7 +201,7 @@ int main(void)
     }
 }
 __attribute__((section(".vectors"), used))
-const void *vectors[2] = { (void *)0x20000ff0, (void *)main };
+const void *vectors[2] = { (void *)0x20000ff0, (void *)bw_reset };
 `;
 
 /**
@@ -220,24 +242,26 @@ int main(void)
     TIM3_DIER = 1u;
     TIM3_CR1 = 1u;
     NVIC_ISER = (1u << 16);
-    USART1_CR1 = 1u;
+    bw_uart_init();
     uint32_t last = 0;
     for (;;) {
         if (bw_ms != last && (bw_ms % HALF) == 0u) {
             last = bw_ms;
-            if (!(GPIOA_IDR & (1u << 1))) USART1_TDR = 'B';
+            if (!(GPIOA_IDR & (1u << 1))) bw_putc('B');
         }
         __asm__ volatile ("wfi");
     }
 }
 ${VECTORS_WITH_IRQ}`;
 
-const LD = `ENTRY(main)
+const LD = `ENTRY(bw_reset)
 MEMORY { FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 16K
          RAM  (rwx): ORIGIN = 0x20000000, LENGTH = 4K }
 SECTIONS {
   .text : { KEEP(*(.vectors)) *(.text*) *(.rodata*) } > FLASH
-  .bss  : { *(.bss*) *(COMMON) } > RAM
+  .bss (NOLOAD) : { . = ALIGN(4); __bss_start__ = .;
+                    *(.bss*) *(COMMON)
+                    . = ALIGN(4); __bss_end__ = .; } > RAM
 }
 `;
 

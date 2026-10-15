@@ -16,6 +16,12 @@ suite and enabled final-head checks before canonical publication/integration.
 Keep the STM32 fidelity lane's fixed-clock option, CPU/peripheral behavior,
 RAM reset policy and unrelated owners intact. No threshold relaxation,
 source-pin substitution, repeat original dispatch or local engine/guest run.
+Prepared correction: all four freestanding guests now enter a BSS-clearing
+reset routine; serial guests configure PA9 AF1, BRR, UE/TE and wait for TXE.
+All board drivers and runtime assertions remain byte-identical. Ten admission
+controls, original metadata/file controls, guest compilation/vector checks and
+workflow lint pass. Actual fresh hosted full-suite qualification is pending;
+the original 121-pass/two-failure campaign is never relabelled successful.
 
 2026-10-15 A10 nRF52 UARTE engine adoption — CLAIMED, Codex.
 Branch lane/a10-uarte-engine-adoption-20261015, base 54efdfc4.
