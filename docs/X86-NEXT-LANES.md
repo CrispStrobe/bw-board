@@ -1914,7 +1914,16 @@ compatibility follows from this correction.
 
 ## Subscribed 386 free-guest debugger qualification
 
-Status: docs-only scope extension; implementation waits for merged ownership.
+Observed checkpoint: the sole corrected-source [run38716662156](https://github.com/CrispStrobe/bw-board/actions/runs/38716662156)
+passed original-byte review: byte-identical MIT xv6 control/subscribed reports,
+64 consecutive retirements including five actual protected 32-bit ring-3
+instructions, and 206 physical memory facts. See the [finite result](I80386-DEBUG-GUEST-RESULTS.md).
+PR599 and PR607 remain Draft with CI pending; this does not adopt the runtime or
+qualify an installed GUI, actual IRQ-event window, checkpoint replay or timing.
+
+Status: ownership claim602 merged; source is published in Draft PR607. The
+finite subscribed free-guest result above is observed; latest CI and combined
+adoption review remain pending.
 Own only new `scripts/i80386-debug-guest/{observer.mjs,reader.py,README.md}`,
 `test/i80386-debug-guest-observer.test.mjs`,
 `.github/workflows/i80386-debug-guest.yml`, the narrow opt-in integration in
