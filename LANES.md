@@ -4975,16 +4975,20 @@ performance or broad OS acceptance follows from this finite diagnostic.
 
 ## Raw HDD ownership and explicit export/reload — 2026-10-15
 
-CLAIM — Codex x86, staged after debugger qualification; implementation waits
-for merged ownership. Own `src/experimental/ata16.js` copy semantics,
+DONE (source implementation) — Codex x86. Ownership merged before implementation.
+The runtime copy/export APIs and optional floppy CLI are merged; this commit
+adds the bounded PTY runner, independent original-artifact verifier and authored
+controls. Hosted helper qualification and the first actual guest write/export/
+fresh-process reload remain pending. Source completion is not guest acceptance.
+The qualification envelope retains `src/experimental/ata16.js` copy semantics,
 `src/i80386-adapter.js`, a later additive export method in `src/i80386-debug.js`,
 `scripts/run-i80386-at-console.mjs`, new
 `test/i80386-{hdd-export,at-console-export}.test.mjs`, and new
 `scripts/i80386-hdd-export/{probe.mjs,reader.py,README.md}` plus
 `.github/workflows/i80386-hdd-export.yml`. See the
 [contract](docs/X86-NEXT-LANES.md#explicit-raw-hdd-export-and-reload).
-The debugger file is not edited while PR599 owns its initial correction;
-sequence or separately hand off that file first. Preserve ATA command/timing
+PR599's initial target correction landed before the serialized export handoff.
+Preserve ATA command/timing
 semantics, frozen source inventories, original receipts and dependency pins.
 
 A narrow transport extension also owns new
@@ -4992,9 +4996,10 @@ A narrow transport extension also owns new
 `probe.mjs`, `reader.py`, `README.md` and workflow roles. `probe.py` is a
 standard-library-only Python PTY transport and orchestrator; `controls.py`
 owns manufactured disk and mock-PTY controls only. Do not edit existing PTY harnesses, CPU/device code, historical
-receipts or pins. Implementation requires this extension to merge and the
-serialized console handoff; actual acceptance waits for qualified optional
-floppy CLI source and parents, whole-graph review and one admitted hosted run.
+receipts or pins. This extension merged in PR622 before implementation and
+the serialized handoff. Optional floppy CLI source qualified in PR620; actual
+acceptance still requires the final helper head, whole-graph review and one
+admitted hosted run.
 
 ## Bounded DOS package admission — 2026-10-15
 
@@ -5027,8 +5032,9 @@ requires complete strict descriptor validation; partial metadata fails closed.
 
 ## Optional floppy boot for explicit master-HDD persistence — 2026-10-15
 
-CLAIM — Codex x86, serialized after the reviewed raw-HDD console export source
-and its parent qualification/handoff. Extend only
+DONE — Codex x86, source PR620 merged at `6bbec520` after all eight enabled
+checks passed. The change followed the reviewed raw-HDD console export source
+and its parent qualification/handoff. The source envelope was limited to
 `scripts/run-i80386-at-console.mjs` with optional `--floppy-image FILE` and own
 new `test/i80386-at-console-floppy.test.mjs`; coordinate the existing raw-HDD
 lane's new `scripts/i80386-hdd-export/{probe.mjs,reader.py,README.md}` and
@@ -5037,5 +5043,5 @@ The HDD remains required. Preserve no-option behavior and all existing input
 hash, source, resource, ordinary-backend and failure gates. No old free-floppy
 probe, CPU/FDC/device, dependency pin or historical receipt changes. See the
 [contract](docs/X86-NEXT-LANES.md#optional-floppy-boot-for-master-hdd-persistence).
-Implementation waits for this claim to merge; the current export worker retains
-its console ownership until an explicit serialized handoff.
+The handoff is complete. New raw-HDD helper qualification and the actual
+two-process marker test remain separate from this source-only completion.

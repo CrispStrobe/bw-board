@@ -2016,10 +2016,11 @@ regressions. The helper is in
 These phases are completed; preserve their detached copies, exact CHS/extent,
 64 MiB preallocation cap, ATA-idle checks and unchanged command/timing behavior.
 
-The deferred paused-target snapshot API is tracked separately in
-[PR623](https://github.com/CrispStrobe/bw-board/pull/623); optional floppy boot in
-[PR620](https://github.com/CrispStrobe/bw-board/pull/620). Both remain pending
-qualification and adoption. A target snapshot must establish its stopped
+The deferred paused-target snapshot API qualified and merged in
+[PR623](https://github.com/CrispStrobe/bw-board/pull/623) at `48635add`; optional
+floppy boot qualified and merged in
+[PR620](https://github.com/CrispStrobe/bw-board/pull/620) at `6bbec520`. Consumer
+adoption and installed-GUI qualification remain pending. A target snapshot must establish its stopped
 ordinary-JS boundary, return detached bytes and copy-time counters, and keep
 later digest completion distinct from live state. Device quiescence alone does
 not prove the target is paused. No physical durability or architectural
@@ -2053,7 +2054,12 @@ mock-PTY controls. Preserve the already owned `probe.mjs`, independent
 `reader.py`, `README.md` and dedicated workflow roles. Existing PTY harnesses
 remain unchanged. Reuse their reviewed
 terminal lifecycle ideas transparently, not their old guest success as evidence.
-This ownership extension must merge before implementation.
+The ownership extension merged in [PR622](https://github.com/CrispStrobe/bw-board/pull/622)
+before implementation. The new [helper guide](../scripts/i80386-hdd-export/README.md)
+describes the implemented runner, directory consistency mode, original-artifact
+admission mode and fixed free input policy. Local manufactured byte and mock-PTY
+controls pass; hosted helper qualification and the actual guest write/export/
+fresh-process reload remain pending.
 
 Freeze two fresh ordinary CLI processes: an admitted free boot floppy plus
 required authored master data disk, then that same floppy with the exact
@@ -2167,9 +2173,10 @@ predeclared representative AT paired non-regression control.
 
 ## Optional floppy boot for master-HDD persistence
 
-The existing free DOS recipes boot a floppy and mount an authored master data
-disk; they do not establish a bootable HDD. Add optional `--floppy-image FILE`
-to `scripts/run-i80386-at-console.mjs`, keeping the pinned HDD and exact CHS
+Source [PR620](https://github.com/CrispStrobe/bw-board/pull/620) is qualified and
+merged. The existing free DOS recipes boot a floppy and mount an authored master
+data disk; they do not establish a bootable HDD. The optional `--floppy-image FILE`
+in `scripts/run-i80386-at-console.mjs` keeps the pinned HDD and exact CHS
 mandatory. Admit the floppy with the existing `readPinned` pattern and an
 explicit expected SHA-256, record its extent/hash separately, and insert a
 detached copy into FDC drive 0. Support only the adapter's existing 360 KiB
