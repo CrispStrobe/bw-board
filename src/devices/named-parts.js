@@ -9,6 +9,7 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { ambient } from '../world.js';
 
 const R_OUT = 50;
 const R_INPUT = 1e6;
@@ -188,12 +189,12 @@ export function registerNamedParts() {
   registerDevice('ambient_light', {
     terminals: ['vcc', 'out', 'gnd'],
     init(part) {
-      const light = part.params?.light ?? 0.5;
+      const light = ambient(part, 'light', 0.5);
       return { drives: { out: { vTh: 5.0 * light, rTh: R_OUT } }, _light: light };
     },
     stamp(ctx) { /* output driven by state.drives */ },
     update(part, state, read) {
-      const light = part.params?.light ?? 0.5;
+      const light = ambient(part, 'light', 0.5);
       if (Math.abs(light - state._light) < 0.01) return false;
       const vcc = read('vcc') || 5.0;
       state._light = light;

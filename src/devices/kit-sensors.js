@@ -23,6 +23,7 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { ambient } from '../world.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;
@@ -175,8 +176,8 @@ function buildFrame(part, t0) {
 
     if (isDHT22) {
         // DHT22: 16-bit ×10, -40..80 °C, 0..100 % RH
-        const h = Math.max(0, Math.min(100, part.params?.humidity ?? 50));
-        const t = Math.max(-40, Math.min(80, part.params?.temperature ?? 25));
+        const h = Math.max(0, Math.min(100, ambient(part, 'humidity', 50)));
+        const t = Math.max(-40, Math.min(80, ambient(part, 'temperature', 25)));
         const hRaw = Math.round(h * 10);
         const tRaw = Math.round(Math.abs(t) * 10);
         bytes = [
@@ -187,8 +188,8 @@ function buildFrame(part, t0) {
         ];
     } else {
         // DHT11: integer-only, 0..50 °C, 0..95 % RH
-        const h = Math.max(0, Math.min(95, Math.round(part.params?.humidity ?? 50)));
-        const t = Math.max(0, Math.min(50, Math.round(part.params?.temperature ?? 25)));
+        const h = Math.max(0, Math.min(95, Math.round(ambient(part, 'humidity', 50))));
+        const t = Math.max(0, Math.min(50, Math.round(ambient(part, 'temperature', 25))));
         bytes = [h, 0, t, 0];
     }
     bytes.push((bytes[0] + bytes[1] + bytes[2] + bytes[3]) & 0xff);

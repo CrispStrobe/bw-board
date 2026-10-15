@@ -33,6 +33,7 @@ import { expandLm741LinearPoles } from './lm741-linear-pole.js';
 import { meterQuadraticSegment, meterQuadraticIntegral } from './meter-quadrature.js';
 import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
+import { createWorld, bindPartsToHost } from './world.js';
 import { junctionModelOf } from './mna.js';
 import {
   nextSpiceExpCorner, nextSpicePulseCorner, nextSpicePwlCorner, nextSpiceSineCorner,
@@ -396,8 +397,12 @@ export class BoardImpl {
      * @type {Map<number, object>}
      */
     this._scopeChannels = new Map();
-    /** Bench temperature in °C (E2.2, spec-updates/bench-temperature.md). */
-    this.temperatureC = 25;
+    /** The project's world (ambient temperature, humidity, light …):
+     *  bench temperature in °C (E2.2) is its temperatureC. Shared between
+     *  boards with setWorld (src/world.js, docs/WORLD.md). */
+    this._world = null;
+    this._worldUnsubscribe = null;
+    this.setWorld(createWorld());
 
     /** Next scope channel handle. */
     this._nextScopeHandle = 1;
@@ -845,6 +850,7 @@ export class BoardImpl {
     }
 
     this.parts = parts;
+    bindPartsToHost(parts, this);
     this.nets = nets;
     this.partMap = new Map(parts.map(p => [p.id, p]));
     this.netMap = new Map(nets.map(n => [n.id, n]));
@@ -3464,9 +3470,48 @@ export class BoardImpl {
     const t = Number(celsius);
     if (!Number.isFinite(t)) return;
     if (t === this.temperatureC) return;
+    // The world notifies every board sharing it (this one included), which
+    // re-solves and emits 'temperature' (see setWorld).
     this.temperatureC = t;
+  }
+
+  /** Bench temperature in °C: the world's temperatureC at this board's sim time. */
+  get temperatureC() {
+    return this._world.get('temperatureC', Number(this.timeNs) / 1e9);
+  }
+
+  set temperatureC(celsius) {
+    this._world.set('temperatureC', celsius);
+  }
+
+  /** @returns {import('./world.js').World} */
+  get world() { return this._world; }
+
+  /**
+   * Make this board read `world` (src/world.js). Boards in one project share
+   * one world: every board sharing it re-solves and is notified when any of
+   * them (or the world itself) changes a value.
+   * @param {import('./world.js').World} world
+   */
+  setWorld(world) {
+    if (!world || typeof world.get !== 'function' || typeof world.subscribe !== 'function') {
+      throw new Error('setWorld needs a World (src/world.js)');
+    }
+    if (world === this._world) return;
+    const before = this._world ? this.temperatureC : null;
+    this._worldUnsubscribe?.();
+    this._world = world;
+    this._worldUnsubscribe = world.subscribe((key, value) => this._onWorldChange(key, value));
+    if (before !== null) {
+      this._solve();
+      this._notifyChange('world', { key: null, value: null });
+    }
+  }
+
+  _onWorldChange(key, value) {
     this._solve();
-    this._notifyChange('temperature', { celsius: t });
+    if (key === 'temperatureC') this._notifyChange('temperature', { celsius: this.temperatureC });
+    else this._notifyChange('world', { key, value });
   }
 
   setPower(on) {

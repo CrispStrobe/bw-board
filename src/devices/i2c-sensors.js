@@ -27,6 +27,7 @@
 
 import { registerDevice } from '../devices.js';
 import { createI2CSlave, feedI2CSlave } from './i2c-slave.js';
+import { ambient } from '../world.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;
@@ -115,8 +116,8 @@ function registerBMP280() {
                 ptr: 0,
                 _first: true,
                 // Readable state for faces
-                temperature: part.params?.temperature ?? 25,
-                pressure: part.params?.pressure ?? 101325,
+                temperature: ambient(part, 'temperature', 25),
+                pressure: ambient(part, 'pressure', 101325),
             };
 
             state._i2c = createI2CSlave({
@@ -151,8 +152,8 @@ function registerBMP280() {
 
         update(part, state, read) {
             // Refresh readable state from params
-            state.temperature = part.params?.temperature ?? 25;
-            state.pressure = part.params?.pressure ?? 101325;
+            state.temperature = ambient(part, 'temperature', 25);
+            state.pressure = ambient(part, 'pressure', 101325);
             // Sample the strap BEFORE the decoder runs: onAddress fires from
             // inside i2cUpdate and reads this, and it has no `read` of its own.
             const vcc = read('vcc') || 3.3;
@@ -172,7 +173,7 @@ function readBmpReg(part, state, reg) {
         // Temperature raw: adc_T = T * 5120, stored as 20-bit in 3 bytes
         case 0xfa: case 0xfb: case 0xfc: {
             if (!measuring) return 0x80;             // power-on reset value
-            const t = part.params?.temperature ?? 25;
+            const t = ambient(part, 'temperature', 25);
             const raw = Math.round(t * 5120);
             const r20 = Math.max(0, Math.min(0xfffff, raw)) << 4;
             if (reg === 0xfa) return (r20 >> 16) & 0xff;
@@ -183,7 +184,7 @@ function readBmpReg(part, state, reg) {
         // adc_P = Pa * 256 / 100 = Pa * 2.56, stored as 20-bit
         case 0xf7: case 0xf8: case 0xf9: {
             if (!measuring) return 0x80;
-            const p = part.params?.pressure ?? 101325;
+            const p = ambient(part, 'pressure', 101325);
             const raw = Math.round(p * 2.56);
             const r20 = Math.max(0, Math.min(0xfffff, raw)) << 4;
             if (reg === 0xf7) return (r20 >> 16) & 0xff;
@@ -421,7 +422,7 @@ function registerBH1750() {
                 _mode: 0,           // 0=none, 0x10/0x11/0x13/0x20/0x21/0x23
                 _readIdx: 0,
                 // Readable state for faces
-                lux: part.params?.lux ?? 0,
+                lux: ambient(part, 'lux', 0),
             };
 
             state._i2c = createI2CSlave({
@@ -436,7 +437,7 @@ function registerBH1750() {
                     return true;
                 },
                 onReadByte: () => {
-                    const lux = part.params?.lux ?? 0;
+                    const lux = ambient(part, 'lux', 0);
                     state.lux = lux;
                     // Mode2 has 0.5 lx resolution (divide by 0.6)
                     const isMode2 = state._mode === 0x11 || state._mode === 0x21;
@@ -451,7 +452,7 @@ function registerBH1750() {
         },
 
         update(part, state, read) {
-            state.lux = part.params?.lux ?? 0;
+            state.lux = ambient(part, 'lux', 0);
             return i2cUpdate(state, read, read('vcc'));
         },
     });
@@ -935,8 +936,8 @@ function registerVEML7700() {
                 _writeLow: 0,
                 _readLow: true,
                 // Readable state for faces
-                lux: part.params?.lux ?? 0,
-                white: part.params?.white ?? 0,
+                lux: ambient(part, 'lux', 0),
+                white: ambient(part, 'white', 0),
             };
 
             state._i2c = createI2CSlave({
@@ -980,8 +981,8 @@ function registerVEML7700() {
         },
 
         update(part, state, read) {
-            state.lux = part.params?.lux ?? 0;
-            state.white = part.params?.white ?? 0;
+            state.lux = ambient(part, 'lux', 0);
+            state.white = ambient(part, 'white', 0);
             return i2cUpdate(state, read, read('vcc'));
         },
     });
@@ -1008,12 +1009,12 @@ function readVeml7700Reg(part, state, reg) {
             return state.regs[reg];
         case 0x04: {                                 // ALS
             if (shutDown) return 0;
-            const lux = part.params?.lux ?? 0;
+            const lux = ambient(part, 'lux', 0);
             return Math.max(0, Math.min(65535, Math.round(lux / resolution)));
         }
         case 0x05: {                                 // WHITE
             if (shutDown) return 0;
-            const w = part.params?.white ?? (part.params?.lux ?? 0);
+            const w = part.params?.white ?? ambient(part, 'lux', 0);
             return Math.max(0, Math.min(65535, Math.round(w / resolution)));
         }
         default: return 0;
