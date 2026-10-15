@@ -15,6 +15,14 @@ guest against the actual release engine, unchanged existing engine tests,
 independent BUILD-INFO/source/hash admission and enabled final-head checks.
 The core source and compiled native guest remain separately qualified; engine
 publication alone does not qualify the Lite consumer or physical timing.
+Preparation: the source/linker/ELF-bound guest and actual-engine UART/counter
+assertions are ready, with the existing release suite extended by two tests
+and its floor increased from 116 to 118. Fixture provenance passes; an altered
+ELF is refused. The real-engine case is explicitly skipped locally because
+no candidate engine is available. The original missing-dependency probe is
+retained; lazy factory loading isolates the independent provenance check.
+No engine PIN, catalog or release has moved. Core PR244 qualification and its
+landed source identity are required before finalizing and publishing adoption.
 
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
