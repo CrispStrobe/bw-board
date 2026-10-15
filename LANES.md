@@ -1,5 +1,17 @@
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
+2026-10-15 stm32 F0/G0 silicon fidelity — CLAIM, VPS Claude (opus).
+Branch lane/stm32-fidelity-20261015, base 0f6f6b1f; worktree [local path omitted].
+Owns this row plus: src/stm32f0-board.js, src/stm32-adapter.js, src/cortex-m0-machine.js,
+a minimal G0 temperature-sensor hook in src/chip-temperature.js, the STM32 tests
+(test/stm32*.test.mjs) and new focused fidelity tests. G0 gets its own memory map (IOPORT GPIO
+at 0x50000000, RM0444 2.2), an RCC clock tree (HSI reset clock, PLL config/switch, ready bits)
+that drives the instruction rate and UART/timer time base, G0 TIM14EN only in APBENR2, G0 ADC
+ADVREGEN delay and channel-12 sensor, USART TX only with AF pin + baud set and timed by BRR, PWM
+only on an AF pin, and non-zero deterministic RAM at reset. F0 map unchanged. Existing tests that
+encode the lenient model (fast clock without PLL setup, F0 offsets on G0) are migrated to correct
+register programming, never weakened.
+
 2026-10-15 stm32g0 RCC_APBENR2 (offset 0x40) — CLAIM, VPS Claude (opus).
 Branch fix/g0-rcc-apbenr2-20261015, exact base 4023f77f; worktree [local path omitted].
 Owns this row plus: the Stm32Rcc class in src/stm32f0-board.js (APBENR2 read/write at 0x40;
