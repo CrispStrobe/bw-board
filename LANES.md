@@ -4817,3 +4817,15 @@ CPU/device/IRQ scope oracles, bounded originals and independent byte-only audit.
 No CPU/device/clock/pin/old-workflow changes, new optimization or cost-share,
 physical RTx, OS or consumer-adoption claim. Existing code16 profiles and
 throughput captures remain complete and are not repeated.
+
+## Ordinary-JS width-mask literal specialization — 2026-10-15
+
+CLAIM — Codex x86, `lane/386-width-mask-specialization-20261015`;
+implementation waits for merged claim. Own only `maskFor` in
+`src/experimental/i80386.js`, new `test/i80386-width-mask-specialization.test.mjs`,
+this entry and the [contract](docs/X86-NEXT-LANES.md#ordinary-js-width-mask-literal-specialization).
+Investigate literal 8/16-bit masks while preserving 32-bit and every fallback
+width exactly. No dispatch rewrite, decoder allocation, device/clock/backend,
+workflow, pin or historical gate changes. Adoption requires independent
+width/exception semantics, affected hosted full-CI/guest checks and a separately
+scoped current-baseline unprofiled paired gate; no gain means no adoption.
