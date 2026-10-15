@@ -3326,7 +3326,9 @@ This file is the canonical registry for `bw-board`; Brickwright Lite's
 repository by its path/package boundary rather than creating a rival global
 registry.
 
-2026-10-15 current circuit campaign documentation — CLAIM, Codex bwcx.
+2026-10-15 current circuit campaign documentation — DONE in this implementation
+commit, Codex bwcx. Claim merged in PR598 before these documentation edits.
+Implementation branch docs/circuit-instrument-status-20261015; no source delta.
 Branch docs/circuit-instrument-campaign-20261015; exact base
 0f6f6b1f7d8fb790ce1f66c6c41db2342b3619b0. Documentation-only envelope:
 this ledger, README.md, PLAN.md and ROADMAP.md. Correct obsolete current-status
@@ -3337,6 +3339,13 @@ Preserve historical results and all active x86/target/shared-world contracts.
 No source, test, workflow, dependency, pin, model/default or runtime change.
 Publish claim before documentation implementation; verify exact base from Git
 and qualify the final Markdown-only candidate before normal matched-head merge.
+
+README links the qualified CLI's explicit model/clock/work boundaries. PLAN
+corrects the copy-era architecture and blanket completion claim, retaining old
+counts and role labels as history. ROADMAP distinguishes the current ordered
+measurement campaign from the early scoped index without changing later x86,
+target or shared-world contracts. Verification is documentation-only: tracked
+envelope, links, whitespace and public-path review, plus enabled hosted checks.
 
 ### Repository role — upstream first, independent of landing speed
 
