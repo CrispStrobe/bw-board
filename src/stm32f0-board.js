@@ -26,6 +26,9 @@ export class Stm32Rcc {
     this.apb2enr = 0;  // 0x18: USART1 bit14 (F0)
     this.iopenr = 0;   // 0x34: GPIOA bit0, GPIOB 1, GPIOC 2 (G0)
     this.apbenr1 = 0;  // 0x3C: TIM3 bit1 (G0)
+    this.apbenr2 = 0;  // 0x40: SYSCFG 0, TIM1 11, SPI1 12, USART1 14, TIM14 15,
+                       //       TIM16 17, TIM17 18, ADC 20 (G0, RM0444). The F0 has no
+                       //       register here; it reads 0 there unless firmware wrote it.
     /** accesses to peripherals whose clock was off — the teaching signal */
     this.gatedAccesses = [];
   }
@@ -40,6 +43,7 @@ export class Stm32Rcc {
       case 0x1c: return this.apb1enr;
       case 0x34: return this.iopenr;
       case 0x3c: return this.apbenr1;
+      case 0x40: return this.apbenr2;
       default: return 0;
     }
   }
@@ -50,6 +54,7 @@ export class Stm32Rcc {
     else if (off === 0x1c) this.apb1enr = v >>> 0;
     else if (off === 0x34) this.iopenr = v >>> 0;
     else if (off === 0x3c) this.apbenr1 = v >>> 0;
+    else if (off === 0x40) this.apbenr2 = v >>> 0;
     // CR/CFGR writes accepted (PLL config is a no-op at this fidelity)
   }
 
@@ -59,9 +64,11 @@ export class Stm32Rcc {
   tim3Enabled () {
     return ((this.apb1enr >>> 1) & 1) === 1 || ((this.apbenr1 >>> 1) & 1) === 1;
   }
-  tim14Enabled () { return (this.apb1enr >>> 8) & 1; }
-  usart1Enabled () { return (this.apb2enr >>> 14) & 1; }
-  adcEnabled () { return (this.apb2enr >>> 9) & 1; }
+  // One RCC instance serves both layouts (attachStm32G0 = attachStm32F0),
+  // so each gate accepts the F0 bit OR the G0 APBENR2 bit, like gpio/tim3.
+  tim14Enabled () { return ((this.apb1enr >>> 8) & 1) | ((this.apbenr2 >>> 15) & 1); }
+  usart1Enabled () { return ((this.apb2enr >>> 14) & 1) | ((this.apbenr2 >>> 14) & 1); }
+  adcEnabled () { return ((this.apb2enr >>> 9) & 1) | ((this.apbenr2 >>> 20) & 1); }
 
   noteGated (what) { this.gatedAccesses.push(what); }
 }
