@@ -5019,11 +5019,15 @@ performance or broad OS acceptance follows from this finite diagnostic.
 
 ## Raw HDD ownership and explicit export/reload — 2026-10-15
 
-DONE (source implementation) — Codex x86. Ownership merged before implementation.
-The runtime copy/export APIs and optional floppy CLI are merged; this commit
-adds the bounded PTY runner, independent original-artifact verifier and authored
-controls. Hosted helper qualification and the first actual guest write/export/
-fresh-process reload remain pending. Source completion is not guest acceptance.
+DONE (finite CLI acceptance) — Codex x86. Ownership merged before implementation.
+The copy/export APIs, optional floppy CLI and bounded PTY/verifier helpers are
+qualified and merged. [PR625](https://github.com/CrispStrobe/bw-board/pull/625)
+landed at `cb5058e5` after all nine enabled checks passed; the corrected
+[actual result](docs/I80386-HDD-PERSISTENCE-RESULTS.md) passed root and independent
+original-byte review. This covers floppy boot plus master-data-disk guest write,
+close, export and fresh-process readback. Installed-GUI download/chooser reload
+and coordinated consumer adoption remain separate next gates; no flush/crash,
+HDD-boot, whole-OS, performance or release claim follows.
 The qualification envelope retains `src/experimental/ata16.js` copy semantics,
 `src/i80386-adapter.js`, a later additive export method in `src/i80386-debug.js`,
 `scripts/run-i80386-at-console.mjs`, new
@@ -5041,9 +5045,9 @@ A narrow transport extension also owns new
 standard-library-only Python PTY transport and orchestrator; `controls.py`
 owns manufactured disk and mock-PTY controls only. Do not edit existing PTY harnesses, CPU/device code, historical
 receipts or pins. This extension merged in PR622 before implementation and
-the serialized handoff. Optional floppy CLI source qualified in PR620; actual
-acceptance still requires the final helper head, whole-graph review and one
-admitted hosted run.
+the serialized handoff. Optional floppy CLI source qualified in PR620. The
+final helper graph and sole corrected hosted run38806122785 are now admitted;
+preserve those originals and the failed predecessor, without replay.
 
 ## Bounded DOS package admission — 2026-10-15
 
@@ -5087,14 +5091,16 @@ The HDD remains required. Preserve no-option behavior and all existing input
 hash, source, resource, ordinary-backend and failure gates. No old free-floppy
 probe, CPU/FDC/device, dependency pin or historical receipt changes. See the
 [contract](docs/X86-NEXT-LANES.md#optional-floppy-boot-for-master-hdd-persistence).
-The handoff is complete. New raw-HDD helper qualification and the actual
-two-process marker test remain separate from this source-only completion.
+The source handoff is complete. The separately reviewed raw-HDD helper and
+[finite two-process marker result](docs/I80386-HDD-PERSISTENCE-RESULTS.md) are
+qualified; consumer GUI adoption remains pending.
 
 
 
 ## Live console keyboard pacing follow-up — 2026-10-15
 
-CONTINUATION — Codex x86, within the existing raw-HDD console ownership.
+DONE (finite corrected-source acceptance) — Codex x86, within the existing
+raw-HDD console ownership.
 Limit source changes to `scripts/run-i80386-at-console.mjs` and existing
 `test/i80386-at-console-export.test.mjs`; update this entry and the matching
 [handoff](docs/X86-NEXT-LANES.md#live-console-keyboard-pacing).
@@ -5107,6 +5113,7 @@ Keep the existing 1024-step polling, refusal/queue-full retries and mouse path;
 only acceptance consumes a keyboard interval. No CPU, device, firmware, static
 input-event, performance threshold or historical receipt changes. Tiny controls
 execute the exact queue with a bounded slow receiver, not a BIOS timing model.
-New-source checks and a separately admitted corrected-source guest run are
-required before a persistence claim; do not rerun the failed immutable source
-or alter its results.
+New-source checks passed and corrected run38806122785 passed the
+[finite persistence gate](docs/I80386-HDD-PERSISTENCE-RESULTS.md). The pacing
+hypothesis is not a proven BIOS fault. Do not replay either original or alter
+its results; installed-GUI acceptance remains separate.
