@@ -21,8 +21,15 @@ and its floor increased from 116 to 118. Fixture provenance passes; an altered
 ELF is refused. The real-engine case is explicitly skipped locally because
 no candidate engine is available. The original missing-dependency probe is
 retained; lazy factory loading isolates the independent provenance check.
-No engine PIN, catalog or release has moved. Core PR244 qualification and its
-landed source identity are required before finalizing and publishing adoption.
+Core PR244 landed as `6a769a59694ec8920de559f9e3fffa2f5375ac6b` after all
+27 enabled checks passed, including feature-off and scheduler stack-reuse guests.
+The producer PIN and canonical catalog identity now select that exact source;
+all offered chip/board descriptor bytes are unchanged. The fixture source and
+linker match the landed source, but its separately compiled ELF must qualify
+against the rebuilt release engine. The original core policy/drift failures
+remain recorded; no thresholds, capture records or acknowledgement dates moved.
+The two-build release qualification and all enabled adoption checks are pending.
+No released-engine or consumer result is claimed yet.
 
 External licensed-guest notes and historical context are retained in the [private documentation archive](https://github.com/CrispStrobe/brickwright-firmware-private/tree/master/public-documentation-archive/2026-10-04). Public examples and instructions use freely licensed or freeware software.
 
