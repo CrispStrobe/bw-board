@@ -5077,3 +5077,23 @@ probe, CPU/FDC/device, dependency pin or historical receipt changes. See the
 [contract](docs/X86-NEXT-LANES.md#optional-floppy-boot-for-master-hdd-persistence).
 Implementation waits for this claim to merge; the current export worker retains
 its console ownership until an explicit serialized handoff.
+
+
+## Live console keyboard pacing follow-up — 2026-10-15
+
+CONTINUATION — Codex x86, within the existing raw-HDD console ownership.
+Limit source changes to `scripts/run-i80386-at-console.mjs` and existing
+`test/i80386-at-console-export.test.mjs`; update this entry and the matching
+[handoff](docs/X86-NEXT-LANES.md#live-console-keyboard-pacing).
+The first bounded persistence run did not reach command completion. Preserve
+its original failure and unchanged disk; do not treat controller acceptance of
+all scan bytes as proof that the guest consumed the complete command.
+
+Space successful live keyboard offers by 65536 guest machine-step calls.
+Keep the existing 1024-step polling, refusal/queue-full retries and mouse path;
+only acceptance consumes a keyboard interval. No CPU, device, firmware, static
+input-event, performance threshold or historical receipt changes. Tiny controls
+execute the exact queue with a bounded slow receiver, not a BIOS timing model.
+New-source checks and a separately admitted corrected-source guest run are
+required before a persistence claim; do not rerun the failed immutable source
+or alter its results.
