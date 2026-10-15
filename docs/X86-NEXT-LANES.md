@@ -1574,7 +1574,9 @@ five-instruction loop described in [the platform record](X86-RTX-PLATFORMS.md).
 Do not rerun the completed throughput capture. Freeze one exact current source
 commit and complete executed import/package-data closure, identical workload
 bytes and Node20.20.2 executable identity before the new capture. Use ordinary
-`I80386.step()` versus `I80386ATMachine.step()`, with accelerators disabled;
+`I80386.step()` versus `I80386ATMachine.step()`, with native/block accelerators
+disabled while preserving each original constructor's software translation-cache
+and fault-delivery defaults;
 retain their existing one/six synthetic scheduling charges. One fresh profiled
 child per path runs one million instructions, core then AT. Record setup and
 the V8 sampling interval explicitly; whole-child metadata is separate. No BIOS, disk,
