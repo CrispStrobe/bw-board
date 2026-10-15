@@ -4878,6 +4878,22 @@ No CPU/device source, supplier pin, workflow, other target or performance
 experiment edits. Fix a reproducible debug-subscriber exception and expose
 honest 386 state/address capabilities; unsupported mode decoding must refuse.
 
+## Subscribed 386 free-guest debugger qualification — 2026-10-15
+
+CLAIM — Codex x86, `lane/386-debug-guest-20261015`; implementation waits
+for merged claim. Own only new
+`scripts/i80386-debug-guest/{observer.mjs,reader.py,README.md}`,
+`test/i80386-debug-guest-observer.test.mjs`,
+`.github/workflows/i80386-debug-guest.yml`, a narrow optional fixed-observer
+integration in `scripts/probe-xv6-stock.mjs`, this entry and the
+[contract](docs/X86-NEXT-LANES.md#subscribed-386-free-guest-debugger-qualification).
+Observe the unchanged ordinary guest machine-step loop, at most64 completed
+instructions and1024 memory facts, with direct-state/nonmutation and full
+unobserved/observed semantic parity. Runtime debugger sources from PR599,
+CPU/device scheduling, existing workflows, guest/firmware/media and supplier
+pins are outside scope. No installed GUI, disassembler, reverse-execution,
+performance or broad OS acceptance follows from this finite diagnostic.
+
 
 ## Raw HDD ownership and explicit export/reload — 2026-10-15
 
