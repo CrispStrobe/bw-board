@@ -2004,30 +2004,35 @@ mode-aware disassembly, whole-OS compatibility, performance or physical RTx.
 
 ## Explicit raw HDD export and reload
 
-Proposed staged work; no new export capability or execution is claimed here.
-Use the ownership envelope in `LANES.md`. First fix detached byte ownership:
-`Buffer` is a `Uint8Array` subclass, but its `slice()` aliases memory. Admission
-and returned media copies must detach both Buffer and offset-subarray inputs;
-mutating a caller's input or returned bytes must not mutate the live disk.
-Retain CHS validation and ATA command/timing behavior. Existing historical
-write-to-disk/fresh-guest readback is evidence for that bounded mechanism,
-not evidence of a user-facing export action.
+Reached source checkpoint: detached Buffer/subarray ownership
+[PR612](https://github.com/CrispStrobe/bw-board/pull/612) merged at `3ab0ac59`,
+the synchronous master-only idle-copy helper
+[PR616](https://github.com/CrispStrobe/bw-board/pull/616) at `27f69c31`, and
+exclusive CLI `--hdd-output`
+[PR618](https://github.com/CrispStrobe/bw-board/pull/618) at `3e9429f2`, after all enabled CI checks, including the existing affected guest
+regressions. The helper is in
+[`src/i80386-adapter.js`](../src/i80386-adapter.js); the console route is in
+[`scripts/run-i80386-at-console.mjs`](../scripts/run-i80386-at-console.mjs).
+These phases are completed; preserve their detached copies, exact CHS/extent,
+64 MiB preallocation cap, ATA-idle checks and unchanged command/timing behavior.
 
-After the initial debugger correction is qualified and its file handed off,
-expose an explicit read-only raw-HDD snapshot through the active target and
-adapter. Require present media, exact CHS/length and a safe paused boundary;
-refuse an unfinished BSY/DRQ transfer rather than label a partial transfer
-complete. Start with a declared 64 MiB copy limit checked before allocation.
-Return detached bytes and geometry/length/SHA metadata, without changing
-controller state, guest RAM or input media. This is a snapshot of emulated
-bytes, not a physical durability guarantee or an architectural checkpoint.
+The deferred paused-target snapshot API is tracked separately in
+[PR623](https://github.com/CrispStrobe/bw-board/pull/623); optional floppy boot in
+[PR620](https://github.com/CrispStrobe/bw-board/pull/620). Both remain pending
+qualification and adoption. A target snapshot must establish its stopped
+ordinary-JS boundary, return detached bytes and copy-time counters, and keep
+later digest completion distinct from live state. Device quiescence alone does
+not prove the target is paused. No physical durability or architectural
+checkpoint claim follows.
 
-Add an explicit CLI `--hdd-output` route. Create a new regular output exclusively;
-never overwrite an existing destination, follow an output symlink or replace
-the input image. Preserve the original guest error if export also fails, and
-report export failure without presenting a partial write as success. The
-metadata must identify source input and exported image separately. No autosave
-or implicit writeback is introduced.
+The merged CLI creates an exclusive verified raw output, preserves input bytes
+and first errors, and reports input and stored-output identities separately.
+Retain existing/symlink/same-input refusal and partial-file failure behavior;
+no autosave or implicit writeback. A stopped budget or user quit plus a verified
+copy is not guest completion or filesystem-flush evidence. Existing historical
+write/readback receipts keep their original scope. Actual free-OS guest-write,
+close, export and fresh-CLI reload, and installed-GUI download/chooser reload,
+remain unfinished acceptance work under the existing ownership envelope.
 
 Meaningful controls cover Buffer/subarray aliasing, absent/busy media, copy
 bounds, CHS mismatch, existing destination, symlink and same-input refusal.
