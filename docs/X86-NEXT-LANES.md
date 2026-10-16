@@ -1990,8 +1990,13 @@ qualification, or support an unmeasured 10x claim.
 
 ## 386 debugger capture and capability correction
 
-Status: docs-only ownership claim; implementation waits for merge. Coding
-branch: `lane/386-debugger-capture-20261015`. Own new `src/i80386-debug.js`,
+Status: the correction merged in [PR599](https://github.com/CrispStrobe/bw-board/pull/599)
+at `05123db4`; the separate finite subscribed free-guest qualification below
+also passed. Consumer adoption and installed-GUI qualification remain pending.
+The following scope and requirements are the regression contract for that
+landed correction, not an unimplemented task.
+
+Historical branch: `lane/386-debugger-capture-20261015`. Scope: new `src/i80386-debug.js`,
 new `test/i80386-debug-capture.test.mjs`, the 386-only composition in
 `src/debug-target-factory.js` and narrow capture/address/capability seams in
 `src/i8086-debug.js`, preserving all 8086 defaults and other target behavior.
@@ -2001,23 +2006,23 @@ event formats. This section and the matching registry entry complete the scope. 
 devices, clocks, supplier pins, workflows and performance experiments stay
 unchanged; the separately owned width-mask CPU work must not be included.
 
-The current factory composes the 386 adapter with the shared 8086 debugger.
-Its event capture calls the AT's deliberately unsupported legacy architectural
-register snapshot. A debug subscriber can consequently throw before a single
-instruction retires. The shared AX-style projection, 20-bit address masking and
-8086 disassembler/control-flow assumptions also do not define a complete
-protected-mode debugger. Visible controls are not evidence that this path works.
+Before the correction, the factory composed the 386 adapter with the shared
+8086 debugger and its event capture called the AT's rejected legacy register
+snapshot. A subscriber could throw before an instruction retired. That original
+failure remains preserved. The dedicated 386 wrapper now supplies read-only
+forward capture and explicit capability limits; the former AX projection,
+20-bit addressing and 8086 decoder do not qualify protected-mode debugging.
 
-First implement a read-only, source-owned 386 register snapshot and event
-capture that does not call the rejected legacy snapshot or mutate the machine.
+Retain the read-only, source-owned 386 register snapshot and event capture
+without calling the rejected legacy snapshot or mutating the machine.
 Expose full-width EAX–EDI/EIP/EFLAGS and relevant architectural mode/segment
 state with unambiguous linear versus physical/code-address meaning. Derive
 addresses from actual cached segment state and EIP; do not reconstruct them
 from visible selectors or truncate them to 20 bits. Publish only supported
 address ranges and operations. Preserve existing event ordering, breakpoint
 semantics, instruction clocks and original fault behavior. The shared event
-module currently uses bitwise address masking, which makes addresses above
-2 GiB signed when given a 32-bit mask. Normalize admitted 386 memory facts
+module formerly used bitwise address masking, which made addresses above
+2 GiB signed when given a 32-bit mask. Keep admitted 386 memory facts normalized
 to unsigned 32-bit values at their source; do not repair already truncated
 facts with a post-hoc target wrapper.
 
@@ -2029,8 +2034,8 @@ rewrite or generic debugger framework is required. Keep 386 architectural
 checkpoint/restore/replay refused; forward capture does not grant reverse
 execution or a continuous machine-state lease.
 
-Tiny owned controls must map a 64 KiB NOP ROM at the real reset alias and
-prove subscriber/no-subscriber parity: one NOP retires once, EIP advances,
+Retain the owned controls mapping a 64 KiB NOP ROM at the real reset alias and
+proving subscriber/no-subscriber parity: one NOP retires once, EIP advances,
 faithful before/after events are emitted and no legacy capture exception
 occurs. Check high register halves, reset CS cached base, addresses above
 1 MiB/high EIP and memory facts above 2 GiB (including a signed-negative
@@ -2227,10 +2232,13 @@ introduced by this transport scope.
 ## Bounded DOS package admission
 
 This follows disk export/reload and has its own source, tests and acceptance.
-[Draft PR637](https://github.com/CrispStrobe/bw-board/pull/637), at
-`a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee`, publishes a separate pure policy,
+[Initial PR637](https://github.com/CrispStrobe/bw-board/pull/637), at
+`a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee`, introduced a separate pure policy,
 Node ZIP adapter, CLI and hosted acceptance candidate without changing shared
-package dependencies. It is not a merged or guest-qualified ZIP/JS-DOS loader.
+package dependencies. [PR646](https://github.com/CrispStrobe/bw-board/pull/646) integrates the
+manifest-ordering repair with main. Its fixed authored package passed the
+[hosted CLI acceptance](#dos-package-cli-hosted-pty-acceptance); broader packages
+and installed GUI use need their own qualification.
 Select one explicit config, or one unambiguous supported default; never guess among
 multiple runnable configurations. Preserve full canonical archive paths and
 resolve media relative to the chosen config. Basename matching is insufficient.
@@ -2265,21 +2273,54 @@ path plus firmware and guest support before a picker can promise it. An ISO
 extension or renamed raw HDD cannot supply that implementation. A future ISO
 lane needs separately merged ownership and authored/free acceptance fixtures.
 
-The next CLI-only qualification is the separately prepared
-[hosted PTY acceptance task](#dos-package-cli-hosted-pty-acceptance).
+The [hosted PTY acceptance](#dos-package-cli-hosted-pty-acceptance) below records
+the completed finite CLI result and its remaining limits.
 
 ## DOS package CLI hosted PTY acceptance
 
-Status: source candidate published, actual result pending. The
-[ownership extension PR638](https://github.com/CrispStrobe/bw-board/pull/638)
-merged before implementation. [Draft PR637](https://github.com/CrispStrobe/bw-board/pull/637)
-at `a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee` includes the CLI, finite hosted
-producer/workflow and independent original-only reader. Its 26 pure Node tests
-include inert producer controls and a manufactured complete packet with
-rehashed semantic refusals; none establishes actual boot, PTY behavior or an
-installed GUI result. All final-head checks and independent source/envelope
-admission precede the sole hosted actual. Refresh the head and detect completed
-work before acting; preserve frozen source and all original failures.
+Status: finite authored-package CLI acceptance REACHED at the source below.
+Integration still follows the live PR and all enabled exact-head checks.
+
+The [PR646 hosted run](https://github.com/CrispStrobe/bw-board/actions/runs/38937680307)
+at source `cbcfff7e3b143dc07af9c2807055d0ca5556ce9d` passed the unchanged
+standalone reader and a second independent original-byte audit. The sole
+23-role packet has SHA-256
+`68799e1dbc3e023c39829c1e2b24737644375c8f8bedee53ea9e4e1f6e453953`.
+The authored `a` and `b` sessions displayed their distinct predicted responses;
+their CLI processes exited with status zero after the fixed step budget.
+Malformed-package and focus-loss cases refused with status one. All four fresh
+serial cases ended with the original terminal settings; terminal groups were empty and no
+new OOM events were observed. The 57 source files and retained runtime identities
+matched before and after execution.
+
+This qualifies the fixed authored package and finite CLI behavior. It does not
+qualify guest completion, a DOS kernel, protected-mode software, general DOSBox
+packages, installed GUI behavior, listener enumeration or performance/RTx.
+The accepted actual is consumed: preserve it and all prior failed/refused events;
+never repeat its label, dispatch, run or artifact/log download. Refresh the
+[live PR646 integration status](https://github.com/CrispStrobe/bw-board/pull/646)
+and every enabled final-head check before a source merge.
+
+The [ownership extension PR638](https://github.com/CrispStrobe/bw-board/pull/638)
+merged before implementation. Initial PR637 failed before guests; PR640 reached
+one response but failed its terminal deadline; PR641 completed its cases but
+failed reader manifest ordering. PR644's sole label has no observed run and its
+integration conflict was confirmed. PR646 preserves those originals and uses
+a distinct admitted event, with the manifest repair and current main included.
+
+The [PR641 attempt-1 run](https://github.com/CrispStrobe/bw-board/actions/runs/38913512631)
+completed all four fresh cases: the authored `a` and `b` responses with natural
+zero exits, and the expected malformed-path and focus-loss refusals. All four
+ended with the original terminal settings; source/runtime identities matched
+before and after, with empty terminal groups and no observed OOM events.
+All 22 manifest rows had the expected bytes and hashes, but `Path` sorting put
+`inputs/authored.zip` and `inputs/malformed.zip` before `inputs.json`, contrary
+to the reader's lexical string order. Preserve that refusal and original packet.
+PR644 sorts the completed rows without changing file traversal, role hashes,
+reader assertions, fixtures or limits. Earlier PR637 and PR640 failures remain
+preserved. Source controls and official workflow success alone do not complete
+the original-reader acceptance gate.
+
 No other runner, policy, parser, dependency, pin or other-owner change belongs
 to this acceptance task. GUI adoption and its consumer prerequisites remain
 separate.
@@ -2293,7 +2334,8 @@ media or add a network fallback. The authored bootstrap provides no DOS kernel,
 protected-mode, whole-disk, full DOSBox, physical timing, installed GUI or RTx
 claim.
 
-Use four fresh, serial hosted cases through the actual unmodified new CLI:
+The completed protocol uses four fresh, serial hosted cases through the actual
+unmodified CLI:
 
 1. The admitted package with live keyboard `a`, actual observed readiness
    and a later distinct authored, key-dependent guest response.

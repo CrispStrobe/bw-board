@@ -1,0 +1,112 @@
+name: Bounded DOS package source and hosted PTY
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dos-package-${{ github.event.pull_request.head.sha }}-${{ github.event.action }}-${{ github.event.label.name }}
+  cancel-in-progress: false
+
+jobs:
+  pure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Authored parser and inert orchestration controls
+        run: node --test test/dos-package-{policy,zip,cli,acceptance}.test.mjs
+
+  actual:
+    needs: pure
+    if: >-
+      github.event.action == 'labeled' && github.event.label.name == 'x86-dos-package-actual' &&
+      github.event.pull_request.head.repo.full_name == github.repository && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Admit source and authored inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$(git -c gc.auto=0 -c maintenance.auto=false rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          test -z "$(git -c gc.auto=0 -c maintenance.auto=false status --porcelain)"
+          test "$(node --version)" = v22.23.3
+          node --test test/dos-package-{policy,zip,cli,acceptance}.test.mjs
+          mkdir -p build
+          node scripts/dos-package-acceptance/probe.mjs prepare
+          python3 -B scripts/dos-package-acceptance/producer.py --runtime before
+      - name: Create owned finite cgroups
+        shell: bash
+        run: |
+          set -euo pipefail
+          group="/sys/fs/cgroup/bw-dos-package-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          test ! -e "$group"
+          sudo mkdir "$group"
+          printf '%s\n' '100000 100000' | sudo tee "$group/cpu.max" >/dev/null
+          printf '%s\n' 1073741824 | sudo tee "$group/memory.max" >/dev/null
+          printf '%s\n' 0 | sudo tee "$group/memory.swap.max" >/dev/null
+          printf '%s\n' 64 | sudo tee "$group/pids.max" >/dev/null
+          printf '%s\n' '+cpu +memory +pids' | sudo tee "$group/cgroup.subtree_control" >/dev/null
+          for child in controller a b malformed focus-loss; do
+            sudo mkdir "$group/$child"
+            printf '%s\n' '100000 100000' | sudo tee "$group/$child/cpu.max" >/dev/null
+            printf '%s\n' 1073741824 | sudo tee "$group/$child/memory.max" >/dev/null
+            printf '%s\n' 0 | sudo tee "$group/$child/memory.swap.max" >/dev/null
+            printf '%s\n' 64 | sudo tee "$group/$child/pids.max" >/dev/null
+          done
+          sudo chown -R "$(id -u):$(id -g)" "$group"
+          python3 -B scripts/dos-package-acceptance/producer.py --admit-cgroup "$group"
+      - name: Bounded four fresh package cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          controller_python="$(python3 -c 'import os,sys; print(os.path.realpath(sys.executable))')"
+          timeout --signal=TERM --kill-after=4s 600s sudo -n \
+            --preserve-env=PATH,HOME,GITHUB_RUN_ID,GITHUB_RUN_ATTEMPT,BW_EXPECTED_HEAD \
+            "$controller_python" -I -B scripts/dos-package-acceptance/producer.py --bootstrap \
+            "/sys/fs/cgroup/bw-dos-package-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+      - name: Owned controller terminal and empty
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          group="/sys/fs/cgroup/bw-dos-package-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          python3 -B scripts/dos-package-acceptance/producer.py --finalize "$group"
+          python3 -B scripts/dos-package-acceptance/producer.py --runtime after
+          test "$(git -c gc.auto=0 -c maintenance.auto=false rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          test -z "$(git -c gc.auto=0 -c maintenance.auto=false status --porcelain)"
+      - name: Retain original evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dos-package-pty-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/dos-package-acceptance/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
