@@ -5094,6 +5094,47 @@ Freeze current Git/live import and data closure, generator/client hashes, indepe
 
 Source preparation and tiny manufactured controls precede exact-source CI and independently reviewed reader/source admission. A later separately admitted hosted execution uses four serial children, each bounded to 600 seconds (target additionally 120 million ordinary step calls), one CPU and 1 GiB/no swap, with an enclosing 2500-second controller and 45-minute job. Freeze exact caps, interleaving, readiness/input policy and owned cleanup before launch; no retries selected for a passing outcome. No performance, mouse/IRQ fidelity, DPMI, full OS, physical timing or installed GUI qualification follows from this finite scenario.
 
+## Owned LE file readback, seek and EOF — 2026-10-16
+
+Status: PROPOSED — Codex x86; merge this docs-only ownership claim before
+implementation. No new client or file-readback execution is qualified.
+Branch: `lane/386-file-readback-claim-20261016`.
+
+Own exactly these nine NEW implementation paths:
+
+- `scripts/i80386-dos32a-file-readback/build.py`
+- `scripts/i80386-dos32a-file-readback/controls.py`
+- `scripts/i80386-dos32a-file-readback/source.py`
+- `scripts/i80386-dos32a-file-readback/probe.mjs`
+- `scripts/i80386-dos32a-file-readback/oracle.py`
+- `scripts/i80386-dos32a-file-readback/reader.py`
+- `scripts/i80386-dos32a-file-readback/README.md`
+- `test/i80386-dos32a-file-readback.test.mjs`
+- `.github/workflows/i80386-dos32a-file-readback.yml`
+
+The [contract](docs/X86-NEXT-LANES.md#owned-le-file-readback-seek-and-eof)
+requires one authored LE32 client, distinct 17/31-byte payloads and four fresh
+serial target/QEMU cases. Require checked write-close-reopen, actual protected
+buffer reads, exact full/short/EOF counts, requested and returned seek position,
+unchanged guards/tails, checked closes, proof from actual buffers, zero exit and
+separate VERIFY/current prompt. Bind original service/handle operands on every
+read/seek/read-handle close to the successful reopen; final file bytes alone do
+not prove a protected-buffer read. Proof count bytes serialize saved actual
+DOS returns after complete ABI register checks and join immediate post-call
+witnesses; expected N/5/0 constants are not count provenance.
+
+Reuse immutable reviewed helpers without editing or repeating their successful
+guests. New selected-file extraction and independent reader must check every
+cut against frozen initial allocation before any selected data copy. CPU/devices,
+firmware, old namespaces/tests/workflows, dependency/media pins and consumers
+remain outside this claim. A missing shared feature needs separate ownership.
+Root/independent source and reader review, manufactured positives and rehashed
+negatives, exact-head CI and a separately frozen one-shot hosted actual precede
+qualification. Proposed bounds: 600 seconds/120M target steps, 1 CPU/1 GiB/no
+swap per child, 2500-second controller, 45-minute job; not yet qualified for this
+client. No whole-disk, strict-386DX, DPMI, full-OS, physical timing,
+performance/RTx or installed-GUI claim follows.
+
 ## Explicit 386 physical-memory capability metadata — 2026-10-15
 
 CLAIM — Codex x86; docs-only ownership preparation. Implementation waits for
