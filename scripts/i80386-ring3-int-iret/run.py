@@ -94,7 +94,7 @@ def close_owned(descriptor, first=None, phase='owned-descriptor-close'):
     return first
 
 
-def bounded_read(path, cap):
+def bounded_read(path, cap, *, with_mode=False):
     """Regular-file data only; no blocking FIFO or followed final symlink."""
     descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     first = None; data = bytearray()
@@ -110,10 +110,11 @@ def bounded_read(path, cap):
         need((info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns) ==
              (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns) and len(data) == info.st_size,
              'stable input identity and extent')
+        if with_mode: need(info.st_mode == after.st_mode, 'stable source mode')
     except Exception as error: first = error
     finally: first = close_owned(descriptor, first, 'input-descriptor-close')
     if first is not None: raise first
-    return bytes(data)
+    return (bytes(data),'100755' if info.st_mode & 0o111 else '100644') if with_mode else bytes(data)
 
 
 def write_new(path, data, cap):
@@ -142,7 +143,7 @@ def runtime_facts(template, read_file, read_alias, probe=None, stage='after-gues
     arbitrary executable or path CLI.
     """
     result = json.loads(json.dumps(template)); failure = FirstFailure()
-    package = result['qemuPackage']
+    package = result.get('qemuPackage',result)  # Failure-only partial discovery has no positive runtime schema.
     for path, old in package['files'].items():
         try:
             data = read_file(path, 268435456)
@@ -161,7 +162,7 @@ def runtime_facts(template, read_file, read_alias, probe=None, stage='after-gues
             except Exception as error:
                 failure.add(error, 'runtime-prelaunch-probe')
                 package['probes'][index] = {'role':original['role'],'firstFailure':row(error,'runtime-prelaunch-probe')}
-    for name, executable in result['executables'].items():
+    for name, executable in result.get('executables',{}).items():
         observed = package['files'][executable['path']]
         result['executables'][name] = {'path':executable['path'], **{k:observed.get(k) for k in ('bytes','sha256')}}
     if probe is None and result != template and failure.first is None:
@@ -1183,6 +1184,214 @@ def run_serial(roles, execute, retain, terminal, failure):
     return failure
 
 
+ROM_SHA = 'd1aa0e35a81c68bc61621309589c8f4afa12ce2e7369af43879c718d109e2529'
+FIXTURE_JSON_SHA = '5784090f18b0c114e5723ea9234173c040a0d290d94c0211b99b12b1161cd670'
+# Separately held launch descriptor. Production never imports the reader.
+JS_DRIVER = """import {writeFileSync as w} from 'node:fs';
+import {executeFixture} from './scripts/i80386-ring3-int-iret/probe.mjs';
+const r=await executeFixture(),p='build/i80386-ring3-int-iret/js/';
+for(const [n,v] of Object.entries({'report.json':r.report,'observations.json':r.observations,'writes.json':r.writes}))w(p+n,JSON.stringify(v)+'\\n',{flag:'wx'});
+w(p+'memory.before.bin',r.memoryBefore,{flag:'wx'});w(p+'memory.after.bin',r.memoryAfter,{flag:'wx'});
+process.stdout.write(r.stdout);process.exitCode=r.report.firstFailure?1:0;
+"""
+
+
+def guest_argv(role, runtime):
+    need(role in ('js','qemu'),'fixed serial guest descriptor')
+    if role == 'js':return [runtime['executables']['node']['path'],'--input-type=module','--eval',JS_DRIVER]
+    return [runtime['executables']['qemu']['path'], '-no-user-config', '-nodefaults', '-machine', 'pc', '-accel', 'tcg', '-cpu', '486',
+        '-m', '16M', '-bios', PACKET.as_posix()+'/inputs/fixture.rom', '-display', 'none', '-serial', 'none',
+        '-monitor', 'none', '-nic', 'none', '-vga', 'none', '-debugcon', 'stdio', '-global',
+        'isa-debugcon.iobase=0xe9', '-device', 'isa-debug-exit,iobase=0xf4,iosize=0x04', '-no-reboot', '-no-shutdown']
+
+
+def source_facts(template, read=None, *, stage='after'):
+    """All twelve actual files; HEAD/tree are prepared bindings, not fresh Git observations."""
+    need(stage in ('before','after'),'fixed live source stage')
+    read = (lambda path:bounded_read(path,4<<20,with_mode=True)) if read is None else read
+    result = {'schema':'bw.ring3.source.v1','head':template['head'],'tree':template['tree'],'files':{}}
+    failure = FirstFailure()
+    for path in sorted(SOURCE_PATHS):
+        try:
+            data,mode = read(path)
+            need(type(data) is bytes and len(data)<=4<<20 and mode in ('100644','100755'),'bounded actual source read')
+            result['files'][path] = {'bytes':len(data),'sha256':sha(data),'mode':mode,
+                'blob':hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()}
+        except Exception as error:
+            result['files'][path] = {'firstFailure':row(error,'source-'+stage+'-file')}
+            failure.add(error,'source-'+stage+'-file')
+    if result != template and failure.first is None:
+        failure.add(ValueError('actual source bytes or mode changed '+stage),'source-'+stage+'-drift')
+    return result,failure
+
+
+def input_facts(template=None, read=None):
+    read=bounded_read if read is None else read
+    originals = {}; failure = FirstFailure()
+    for name,cap in (('fixture.rom',65536),('fixture.json',JSON_CAP)):
+        try:
+            data=read(PACKET/'inputs'/name,cap);originals[name]=data
+            if name=='fixture.rom':need(len(data)==65536 and sha(data)==ROM_SHA,'frozen authored ROM input')
+            else:need(sha(encode(entry_json(data))[:-1])==FIXTURE_JSON_SHA,'frozen entire fixture metadata')
+        except Exception as error:failure.add(error,'input-'+name)
+    if template is not None and originals != template:
+        failure.add(ValueError('actual fixture input readback changed'),'input-drift')
+    return originals,failure
+
+
+class ControllerOps:
+    """Unprivileged serial source slice. Actual mode and final packet remain closed."""
+    JS_FILES = ('report.json','observations.json','writes.json','memory.before.bin','memory.after.bin')
+
+    def __init__(self,environ=None):
+        self.environ=dict(os.environ if environ is None else environ)
+        self.bootstrap=BootstrapOps(self.environ);self.groups=None;self.unprivileged=False;self.paths_admitted=False
+        self.source_before={'schema':'bw.ring3.source.v1','head':self.environ.get('BW_EXPECTED_HEAD'),
+                            'tree':self.environ.get('BW_EXPECTED_TREE'),'files':{}}
+        self.source_after=None;self.inputs_before={};self.inputs_after={}
+        self.plan=None;self.runtime_before=None;self.runtime_after=None
+        self.before=None;self.last_census={};self.barrier_facts={};self.raw_js={};self.processes={};self.streams={}
+        self.child_factory=LinuxChild
+
+    def admit(self):
+        uid,gid=os.getresuid()[0],os.getresgid()[0]
+        need(uid>0 and gid>0,'controller must be unprivileged');entry_ids(uid,gid)
+        self.unprivileged=True
+        root=expected_cgroup(self.environ);checkout=Path.cwd()
+        for directory in (checkout,checkout/'build',checkout/PACKET,*[checkout/PACKET/name for name in ('inputs','js','qemu')]):
+            info=directory.lstat()
+            need(directory.resolve(strict=True)==directory and stat.S_ISDIR(info.st_mode) and
+                 (info.st_uid,info.st_gid)==(uid,gid),'canonical controller preparation directories')
+        self.paths_admitted=True
+        owner=entry_json(bounded_read(ENTRY_FILE,JSON_CAP))
+        need(type(owner) is dict and set(owner)=={'schema','uid','gid','root','sourceSha256','python','cgroups'} and
+             owner['schema']=='bw.ring3.entry.v1' and type(owner['uid']) is int and type(owner['gid']) is int and
+             (owner['uid'],owner['gid'])==(uid,gid) and owner['root']==str(root),'controller prepared entry binding')
+        need(set(owner['cgroups'])=={'enclosing','controller','js','qemu'},'four prepared controller groups')
+        for value in owner['cgroups'].values():entry_snapshot(value)
+        self.bootstrap.owner=owner;self.bootstrap.invoker={'uid':uid,'gid':gid}
+        self.groups=self.bootstrap.groups=Cgroups(root,uid,self.environ)
+        self.bootstrap.entered()
+        raw=bounded_read(PACKET/'source.before.json',JSON_CAP);source=entry_json(raw)
+        need(type(source) is dict and set(source)=={'schema','head','tree','files'} and
+             source['schema']=='bw.ring3.source.v1' and sha(raw)==owner['sourceSha256'] and
+             source['head']==self.environ.get('BW_EXPECTED_HEAD') and source['tree']==self.environ.get('BW_EXPECTED_TREE') and
+             all(re.fullmatch('[0-9a-f]{40}',str(source[k])) for k in ('head','tree')) and
+             set(source['files'])==SOURCE_PATHS,'prepared source12 envelope binding')
+        self.source_before=source  # Existing source.before is never rewritten.
+        checked,failure=source_facts(source,stage='before');self.barrier_facts['admitSource']=checked
+        self.inputs_before,input_failure=input_facts();failure.adopt(input_failure.first,input_failure.secondary)
+        if failure.first is not None:raise ObservedFailure(failure.first,failure.secondary)
+
+    def discover(self):
+        self.plan=controller_runtime_discovery(self.groups)
+        self.runtime_before=self.plan.discover()  # Exactly one discovery; AFTER never reruns its probes.
+
+    def census(self):
+        result=self.last_census={};pid=os.getpid()
+        for role in ('enclosing','controller','js','qemu'):
+            value=self.groups.observe(role);result[role]=value
+            need(value['identity']==self.bootstrap.owner['cgroups'][role]['identity'],'controller cgroup identity drift')
+            active=role in ('enclosing','controller')
+            need(value['procs']==([pid] if role=='controller' else []) and value['raw']['pidsCurrent'].strip()==str(int(active)) and
+                 'populated '+str(int(active)) in value['raw']['cgroupEvents'].splitlines(),'controller-only BEFORE/serial census')
+        return result
+
+    def barrier(self):
+        failure=FirstFailure()
+        for name,observe in (
+            ('source',lambda:source_facts(self.source_before,stage='before')),
+            ('inputs',lambda:input_facts(self.inputs_before)),
+            ('runtime',lambda:runtime_facts(self.runtime_before,RuntimeFiles().read,RuntimeFiles().alias,stage='before-guests'))):
+            try:
+                value,found=observe();self.barrier_facts[name]=value;failure.adopt(found.first,found.secondary)
+            except Exception as error:failure.add(error,'barrier-'+name)
+        try:self.before=self.census()
+        except Exception as error:
+            self.before=self.last_census
+            failure.add(error,'barrier-census')
+        # Every BEFORE observation/retention finishes before any guest factory.
+        for path,value in ((PACKET/'runtime.before.json',self.runtime_before),
+                           (PACKET/'.controller.before.json',{'pid':os.getpid(),'before':self.before})):
+            try:write_new(path,encode(value),JSON_CAP)
+            except Exception as error:failure.add(error,'barrier-retention')
+        if failure.first is not None:raise ObservedFailure(failure.first,failure.secondary)
+
+    def execute_guest(self,role):
+        self.census()
+        argv=guest_argv(role,self.runtime_before)
+        return collect_child(self.child_factory(self.groups,role,argv),role,argv)
+
+    def retain_guest(self,role,process,streams):
+        self.processes[role]=process;self.streams[role]=streams
+        failure=FirstFailure()
+        for name,original,cap in (('process.json',process,JSON_CAP),('stdout',streams['stdout'],STREAM_CAP),('stderr',streams['stderr'],STREAM_CAP)):
+            try:
+                data=encode(original) if name=='process.json' else original
+                write_new(PACKET/role/name,data,cap)
+            except Exception as error:failure.add(error,role+'-retention')
+        if role=='js':
+            for name in self.JS_FILES:
+                try:
+                    cap=1<<20 if name.endswith('.bin') else JSON_CAP
+                    data=bounded_read(PACKET/'js'/name,cap);self.raw_js[name]=data
+                    need(len(data)==cap if name.endswith('.bin') else len(data)>0,'original JS role extent')
+                except Exception as error:failure.add(error,'js-original-'+name)
+            if 'report.json' in self.raw_js:
+                try:
+                    report=entry_json(self.raw_js['report.json'])
+                    need(type(report) is dict and report.get('schema')=='bw.ring3.js-probe.v1' and 'firstFailure' in report,'original JS report envelope')
+                    if report['firstFailure'] is not None:
+                        primary=report['firstFailure']
+                        need(type(primary) is dict and all(type(primary.get(k)) is str for k in ('phase','name','message')),'original JS error row')
+                        failure.adopt(primary,[])
+                except Exception as error:failure.add(error,'js-report-original')
+        else:
+            report={'schema':'bw.ring3.qemu.v1','fixtureSha256':ROM_SHA,'outputSha256':sha(streams['stdout']),
+                    'firstFailure':process['firstFailure'],'secondary':process['secondary']}
+            try:write_new(PACKET/'qemu/report.json',encode(report),JSON_CAP)
+            except Exception as error:failure.add(error,'qemu-report-retention')
+        if failure.first is not None:raise ObservedFailure(failure.first,failure.secondary)
+
+    def terminal_guest(self,role):self.census()  # This is not the final outside AFTER census.
+
+    def after_all(self,failure):
+        if not self.unprivileged or not self.paths_admitted:return
+        for name,observe in (
+            ('source',lambda:source_facts(self.source_before)),
+            ('inputs',lambda:input_facts(self.inputs_before)),
+            ('runtime',lambda:runtime_facts(self.runtime_before or self.plan.originals(),RuntimeFiles().read,RuntimeFiles().alias))):
+            try:
+                value,found=observe();setattr(self,name+'_after',value);failure.adopt(found.first,found.secondary)
+                if name!='inputs':write_new(PACKET/(name+'.after.json'),encode(value),JSON_CAP)
+            except Exception as error:failure.add(error,'controller-after-'+name)
+
+    def retain_control(self,failure):
+        if not self.unprivileged or not self.paths_admitted:return
+        def references(values):return {name:{'bytes':len(data),'sha256':sha(data)} for name,data in values.items()}
+        facts={'pid':os.getpid(),'before':self.before,'barrier':{key:value for key,value in self.barrier_facts.items() if key!='inputs'},
+               'inputsBefore':references(self.inputs_before),'inputsAfter':references(self.inputs_after),
+               'barrierInputs':references(self.barrier_facts.get('inputs',{})),
+               'lastCensus':self.last_census,'jsOriginals':references(self.raw_js),'processes':self.processes}
+        retain_failure(failure,lambda errors:write_new(PACKET/'.controller.json',encode(dict(facts,**errors)),JSON_CAP),
+                       lambda data:sys.stderr.buffer.write(data))
+
+
+def controller_execute(ops=None):
+    """Serial execution glue only; no actual CLI or packet finalization entry."""
+    ops=ControllerOps() if ops is None else ops;failure=FirstFailure()
+    try:
+        ops.admit();ops.discover();ops.barrier()
+        run_serial(('js','qemu'),ops.execute_guest,ops.retain_guest,ops.terminal_guest,failure)
+    except BaseException as error:failure.add(error,'controller-execution')
+    finally:
+        try:ops.after_all(failure)
+        except BaseException as error:failure.add(error,'controller-after-wrapper')
+        try:ops.retain_control(failure)
+        except BaseException as error:failure.add(error,'controller-retention-wrapper')
+    return ops,failure
+
+
 def controls():
     """Inert actual-function controls. Never opens a cgroup, forks or execs."""
     import unittest
@@ -1220,6 +1429,214 @@ def controls():
                 'rusage':{'userSeconds':0.1,'systemSeconds':0.01,'maxRssKiB':1024}}
 
     class Tests(unittest.TestCase):
+        @contextlib.contextmanager
+        def controller_edges(self,fail_probe=None):
+            with self.entry_edges() as (entry,state):
+                state.update(uids=(1001,)*3,gids=(1002,)*3,groups=[],migrated=True)
+                state['inputs']={'fixture.rom':b'R'*65536,'fixture.json':encode({'authored':'inert input'})}
+                state['rawJs']={'report.json':encode({'schema':'bw.ring3.js-probe.v1','firstFailure':None}),
+                    'observations.json':b'[]\n','writes.json':b'[]\n',
+                    'memory.before.bin':bytes(1<<20),'memory.after.bin':bytes(1<<20)}
+                state.update(writes=[],factories=[],mode={},readCalls=[])
+                files,probe,calls=self.discovery_edges(fail_role=fail_probe)
+                plan=RuntimeDiscovery(files,probe)
+                old_observe=Cgroups.observe
+                def observe(groups,role):
+                    value=old_observe(groups,role)
+                    if role=='enclosing':value['raw'].update(pidsCurrent='1\n',cgroupEvents='populated 1\nfrozen 0\n')
+                    return value
+                directories={'/checkout','/checkout/build','/checkout/build/i80386-ring3-int-iret',
+                    *('/checkout/build/i80386-ring3-int-iret/'+name for name in ('inputs','js','qemu'))}
+                def read(path,cap,*,with_mode=False):
+                    name=str(path);state['readCalls'].append((name,with_mode))
+                    if Path(path)==ENTRY_FILE:data=encode(state['owner'])
+                    elif Path(path)==PACKET/'source.before.json':data=encode(state['source'])
+                    elif name in state['sourceData']:data=state['sourceData'][name]
+                    elif Path(path).parent==PACKET/'inputs':data=state['inputs'][Path(path).name]
+                    elif Path(path).parent==PACKET/'js':data=state['rawJs'][Path(path).name]
+                    else:raise FileNotFoundError('inert missing role '+name)
+                    need(len(data)<=cap,'inert observed role cap')
+                    return (data,state['mode'].get(name,'100644')) if with_mode else data
+                def write(path,data,cap):
+                    need(len(data)<=cap,'actual retained encoding cap');state['writes'].append((str(path),data))
+                ops=ControllerOps(state['env'])
+                def factory(groups,role,argv):
+                    state['factories'].append(role)
+                    state['barrierWritesAtFactory']=[path for path,data in state['writes']]
+                    fake=Fake([[('stdout',role.encode()+b'-opaque')]],status(0 if role=='js' else 1));return fake
+                ops.child_factory=factory
+                with patch.object(Path,'lstat',lambda path:SimpleNamespace(st_mode=0o40755 if str(path) in directories else 0o100644,st_uid=1001,st_gid=1002)),\
+                     patch.object(Cgroups,'observe',observe),patch.dict(globals(),bounded_read=read,write_new=write,
+                        ROM_SHA=sha(state['inputs']['fixture.rom']),FIXTURE_JSON_SHA=sha(encode(entry_json(state['inputs']['fixture.json']))[:-1]),
+                        controller_runtime_discovery=lambda groups:plan),\
+                     patch.object(RuntimeFiles,'read',lambda self,path,cap:files.read(path,cap)),\
+                     patch.object(RuntimeFiles,'alias',lambda self,path:files.alias(path)),\
+                     patch.object(subprocess,'Popen',side_effect=AssertionError('no real process in inert controller controls')):
+                    yield ops,state,plan,files,calls
+
+        def test_controller_actual_serial_glue_barrier_and_raw_originals(self):
+            with self.controller_edges() as (ops,state,plan,files,calls):
+                original=dict(state['rawJs']);_,failure=controller_execute(ops)
+                self.assertIsNone(failure.first);self.assertEqual(state['factories'],['js','qemu']);self.assertEqual(len(calls),11)
+                self.assertEqual(state['rawJs'],original);self.assertEqual(ops.raw_js,original)
+                paths=[name for name,data in state['writes']]
+                self.assertNotIn(str(PACKET/'source.before.json'),paths)
+                self.assertFalse(any(str(PACKET/'js'/name) in paths for name in ControllerOps.JS_FILES))
+                self.assertIn(str(PACKET/'runtime.before.json'),state['barrierWritesAtFactory'])
+                self.assertIn(str(PACKET/'.controller.before.json'),state['barrierWritesAtFactory'])
+                self.assertIn(str(PACKET/'source.after.json'),paths);self.assertIn(str(PACKET/'runtime.after.json'),paths)
+                self.assertEqual(ops.before['controller']['procs'],[101]);self.assertEqual(ops.before['enclosing']['procs'],[])
+                self.assertEqual(set(path for path,mode in state['readCalls'] if mode),SOURCE_PATHS)
+                self.assertEqual(set(path for path,cap in files.reads[-len(plan.files):]),set(plan.files))
+                qreport=entry_json(dict(state['writes'])[str(PACKET/'qemu/report.json')])
+                self.assertEqual(qreport['outputSha256'],sha(b'qemu-opaque'));self.assertIsNone(qreport['firstFailure'])
+
+        def test_controller_descriptor_fixed_fields_and_unknown_role_refusal(self):
+            runtime={'executables':{'node':{'path':'/node'},'qemu':{'path':'/qemu'}}}
+            js=guest_argv('js',runtime);self.assertEqual(js,['/node','--input-type=module','--eval',JS_DRIVER])
+            self.assertIn("{flag:'wx'}",JS_DRIVER);self.assertNotIn('createCPU',JS_DRIVER)
+            qemu=guest_argv('qemu',runtime)
+            self.assertEqual(qemu[:11],['/qemu','-no-user-config','-nodefaults','-machine','pc','-accel','tcg','-cpu','486','-m','16M'])
+            self.assertIn('isa-debug-exit,iobase=0xf4,iosize=0x04',qemu);self.assertEqual(qemu[-2:],['-no-reboot','-no-shutdown'])
+            with self.assertRaises(ValueError):guest_argv('arbitrary',runtime)
+
+        def test_controller_barrier_failure_prevents_every_guest_factory_and_still_reads_after(self):
+            for fault in ('source','input','retention','census'):
+                with self.controller_edges() as (ops,state,plan,files,calls):
+                    ops.admit();ops.discover()
+                    if fault=='source':state['mode'][RUN_FILE]='100755'
+                    elif fault=='input':state['inputs']['fixture.rom']=b'X'*65536
+                    elif fault=='census':state['snapshots']['js']['procs']=[999]
+                    original_write=globals()['write_new']
+                    def write(path,data,cap):
+                        if fault=='retention' and path==PACKET/'runtime.before.json':raise OSError('BARRIER WRITE')
+                        original_write(path,data,cap)
+                    with patch.dict(globals(),write_new=write):
+                        with self.assertRaises(ObservedFailure):ops.barrier()
+                        failure=FirstFailure();failure.add(ValueError('FIRST'),'held');ops.after_all(failure)
+                    self.assertEqual(state['factories'],[]);self.assertEqual(failure.first['message'],'FIRST')
+                    self.assertEqual(set(ops.source_after['files']),SOURCE_PATHS);self.assertEqual(set(ops.inputs_after),{'fixture.rom','fixture.json'})
+                    self.assertEqual(set(ops.runtime_after['qemuPackage']['files']),set(plan.files))
+
+        def test_controller_js_process_failure_stops_qemu_but_all_after_reads_continue(self):
+            with self.controller_edges() as (ops,state,plan,files,calls):
+                def factory(groups,role,argv):
+                    state['factories'].append(role);return Fake([[('stdout',b'partial')]],status(1))
+                ops.child_factory=factory;_,failure=controller_execute(ops)
+                self.assertEqual(state['factories'],['js']);self.assertEqual(failure.first['phase'],'js-terminal')
+                self.assertEqual(ops.streams['js']['stdout'],b'partial');self.assertEqual(len(calls),11)
+                self.assertIsNotNone(ops.source_after);self.assertIsNotNone(ops.runtime_after);self.assertEqual(len(ops.inputs_after),2)
+
+        def test_controller_probe_failure_rereads_every_partial_runtime_key_without_reprobe(self):
+            with self.controller_edges(fail_probe='ldd-qemu') as (ops,state,plan,files,calls):
+                _,failure=controller_execute(ops)
+                self.assertEqual(failure.first['message'],'ORIGINAL_PROBE_FAILURE');self.assertEqual(state['factories'],[])
+                self.assertIsNone(ops.runtime_before);self.assertEqual(set(ops.runtime_after['files']),set(plan.files))
+                self.assertEqual([role for role,argv in calls].count('ldd-qemu'),1)
+                self.assertIsNotNone(ops.source_after);self.assertEqual(len(ops.inputs_after),2)
+
+        def test_controller_process_encoding_failure_still_attempts_both_streams_and_js_reads(self):
+            with self.controller_edges() as (ops,state,plan,files,calls):
+                process={'bad':object()}
+                with self.assertRaises(ObservedFailure) as caught:ops.retain_guest('js',process,{'stdout':b'RAW','stderr':b'ERR'})
+                self.assertEqual(caught.exception.firstFailure['name'],'TypeError')
+                saved=dict(state['writes']);self.assertEqual(saved[str(PACKET/'js/stdout')],b'RAW');self.assertEqual(saved[str(PACKET/'js/stderr')],b'ERR')
+                self.assertEqual(set(ops.raw_js),set(ControllerOps.JS_FILES))
+
+        def test_controller_original_report_refusal_stops_next_guest_without_synthetic_js_files(self):
+            with self.controller_edges() as (ops,state,plan,files,calls):
+                primary={'phase':'original-probe','name':'Fault','message':'ORIGINAL'}
+                state['rawJs']['report.json']=encode({'schema':'bw.ring3.js-probe.v1','firstFailure':primary})
+                _,failure=controller_execute(ops)
+                self.assertEqual(failure.first,primary);self.assertEqual(state['factories'],['js'])
+                self.assertEqual(ops.raw_js['report.json'],state['rawJs']['report.json'])
+
+        def test_controller_retention_failure_stops_qemu_and_after_failures_keep_exact_first(self):
+            with self.controller_edges() as (ops,state,plan,files,calls):
+                original=globals()['write_new']
+                def write(path,data,cap):
+                    if path==PACKET/'js/process.json':raise OSError('FIRST RETENTION')
+                    if path==PACKET/'source.after.json':raise OSError('AFTER RETENTION')
+                    original(path,data,cap)
+                with patch.dict(globals(),write_new=write):_,failure=controller_execute(ops)
+                self.assertEqual(failure.first['message'],'FIRST RETENTION');self.assertEqual(state['factories'],['js'])
+                self.assertIsNotNone(ops.source_after);self.assertIsNotNone(ops.runtime_after);self.assertEqual(len(ops.inputs_after),2)
+                self.assertIn('AFTER RETENTION',[x['message'] for x in failure.secondary])
+
+        def test_source_facts_all_twelve_reads_retain_mode_drift_and_individual_errors(self):
+            with self.controller_edges() as (ops,state,plan,files,calls):
+                seen=[]
+                def read(path):
+                    seen.append(path)
+                    if path==RUN_FILE:raise OSError('FIRST SOURCE')
+                    return state['sourceData'][path],'100755'
+                observed,failure=source_facts(state['source'],read)
+                self.assertEqual(set(seen),SOURCE_PATHS);self.assertEqual(len(seen),12)
+                self.assertEqual(failure.first['message'],'FIRST SOURCE');self.assertEqual(observed['files'][RUN_FILE]['firstFailure']['message'],'FIRST SOURCE')
+                self.assertTrue(all(row['mode']=='100755' for path,row in observed['files'].items() if path!=RUN_FILE))
+
+        def test_input_readback_attempts_both_and_retains_actual_drift(self):
+            with self.controller_edges() as (ops,state,plan,files,calls):
+                before,first=input_facts();self.assertIsNone(first.first);seen=[]
+                def read(path,cap):
+                    seen.append(Path(path).name)
+                    if Path(path).name=='fixture.rom':raise OSError('FIRST INPUT')
+                    return state['inputs'][Path(path).name]
+                after,failure=input_facts(before,read)
+                self.assertEqual(seen,['fixture.rom','fixture.json']);self.assertEqual(failure.first['message'],'FIRST INPUT')
+                self.assertEqual(after,{'fixture.json':state['inputs']['fixture.json']})
+
+        def test_controller_after_all_attempts_inputs_runtime_despite_source_file_faults(self):
+            with self.controller_edges() as (ops,state,plan,files,calls):
+                ops.admit();ops.discover();before=dict(state['inputs']);state['inputs']['fixture.json']=b'{}'
+                files_before=len(files.reads)
+                def read(path):raise OSError('SOURCE AFTER')
+                original_source=globals()['source_facts']
+                with patch.dict(globals(),source_facts=lambda template:original_source(template,read)):
+                    failure=FirstFailure();failure.add(ValueError('FIRST GUEST'),'guest');ops.after_all(failure)
+                self.assertEqual(failure.first['message'],'FIRST GUEST');self.assertEqual(ops.inputs_after['fixture.json'],b'{}')
+                self.assertEqual(set(path for path,cap in files.reads[files_before:]),set(plan.files))
+                self.assertEqual(set(ops.source_after['files']),SOURCE_PATHS)
+
+        def test_controller_wrapper_after_and_retention_faults_never_replace_execution_first(self):
+            ops=Mock();ops.admit.side_effect=ValueError('FIRST');ops.after_all.side_effect=OSError('AFTER');ops.retain_control.side_effect=OSError('RETAIN')
+            _,failure=controller_execute(ops)
+            self.assertEqual(failure.first['message'],'FIRST');self.assertEqual([x['message'] for x in failure.secondary],['AFTER','RETAIN'])
+            ops.after_all.assert_called_once();ops.retain_control.assert_called_once();ops.discover.assert_not_called()
+
+        def test_actual_source_fd_mode_readback_and_mode_change_refusal(self):
+            for mode in (0o100644,0o100755):
+                first=SimpleNamespace(st_mode=mode,st_dev=1,st_ino=2,st_size=3,st_mtime_ns=4)
+                for changed in (False,True):
+                    after=SimpleNamespace(**vars(first));after.st_mode=mode^0o111 if changed else mode
+                    with patch.object(os,'open',return_value=7),patch.object(os,'fstat',side_effect=[first,after]),\
+                         patch.object(os,'read',side_effect=[b'abc',b'']),patch.object(os,'close'):
+                        if changed:
+                            with self.assertRaisesRegex(ValueError,'stable source mode'):bounded_read('/fixed',3,with_mode=True)
+                        else:self.assertEqual(bounded_read('/fixed',3,with_mode=True),(b'abc','100755' if mode&0o111 else '100644'))
+
+        def test_controller_after_combined_source_input_alias_drift_retains_all_observations(self):
+            with self.controller_edges() as (ops,state,plan,files,calls):
+                ops.admit();ops.discover();ops.barrier()
+                state['mode'][RUN_FILE]='100755';state['inputs']['fixture.rom']=b'X'*65536
+                files.aliases['/lib']={'linkText':'wrong','target':'/changed'}
+                failure=FirstFailure();failure.add(ValueError('FIRST GUEST'),'guest');ops.after_all(failure)
+                self.assertEqual(failure.first['message'],'FIRST GUEST')
+                self.assertEqual(ops.source_after['files'][RUN_FILE]['mode'],'100755')
+                self.assertEqual(ops.inputs_after['fixture.rom'],b'X'*65536)
+                self.assertEqual(ops.runtime_after['qemuPackage']['aliases']['/lib']['target'],'/changed')
+                self.assertEqual(len(calls),11)
+
+        def test_controller_terminal_leaf_refusal_prevents_next_guest(self):
+            with self.controller_edges() as (ops,state,plan,files,calls):
+                def factory(groups,role,argv):
+                    state['factories'].append(role);fake=Fake(terminal=status())
+                    def reap():state['snapshots']['js']['procs']=[999];return status()
+                    fake.reap=reap;return fake
+                ops.child_factory=factory;_,failure=controller_execute(ops)
+                self.assertEqual(state['factories'],['js']);self.assertEqual(failure.first['phase'],'js-terminal-census')
+                self.assertEqual(ops.last_census['js']['procs'],[999]);self.assertIsNotNone(ops.source_after)
+
         @contextlib.contextmanager
         def outside_edges(self):
             ids={name:{'device':3,'inode':index+1} for index,name in enumerate(('enclosing','controller','js','qemu'))}

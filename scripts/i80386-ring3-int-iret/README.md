@@ -107,6 +107,26 @@ stream prefixes; it does not parse guest output, run probes or build archives.
 Genuine empty snapshots taken after controller exit can supply the final
 reader's terminal observations once packet assembly is connected.
 
+The unprivileged execution-glue functions now admit the prepared source and
+authored inputs, discover the named runtime once, and complete a BEFORE barrier
+before creating either guest. That barrier rereads all twelve source files,
+both inputs and every frozen runtime file and alias, records the four resource
+censuses, and completes its retention writes. The source readback observes
+actual file modes, bytes and blob hashes. Its head and tree remain prepared
+bindings; it does not run Git or claim a fresh Git observation. Independent
+unprivileged Git observations before and after execution still need wiring.
+
+The fixed launch descriptors run ordinary JS first and QEMU second. Process,
+retention or terminal-census failure prevents the next guest. The five JS
+output files remain untouched originals; the QEMU report joins only original
+process and output-digest facts. A finally path attempts all twelve source
+reads, both input reads and every frozen runtime file and alias readback even
+after guest or retention failure. Partial discovery retains and rereads its
+known graph without repeating probes. Changed facts and original stream
+prefixes remain available; they do not become a positive packet. The internal
+controller facts contain BEFORE observations, not a claim that its own cgroup
+is empty after exit. These paths have only run against inert mocked boundaries.
+
 Entry preparation, actual entry, packet finalization, the hosted actual job and
 results remain unconnected. Polling cannot preempt blocking kernel operations,
 process creation or identity reads. The 15-minute job backstop is not wired at
