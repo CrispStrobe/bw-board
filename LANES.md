@@ -5253,3 +5253,43 @@ New-source checks passed and corrected run38806122785 passed the
 [finite persistence gate](docs/I80386-HDD-PERSISTENCE-RESULTS.md). The pacing
 hypothesis is not a proven BIOS fault. Do not replay either original or alter
 its results; installed-GUI acceptance remains separate.
+
+
+## Ordinary-JS ring-changing INT/IRETD fixture — 2026-10-16
+
+PROPOSED CLAIM — Codex x86. Claim-only branch
+`docs/386-ring3-int-iret-claim-20261016`, inspected base
+`e2e44dd2e63cea8fac872efd0ea8b2aa765b1a49`. No implementation until this claim
+is merged. The existing same-CPL0 paged IRQ fixture and older 286 claims do
+not own this new software-interrupt fixture.
+
+Own only new `scripts/i80386-ring3-int-iret/{fixture.mjs,probe.mjs,run.py,reader.py,controls.py,README.md}`,
+`test/i80386-ring3-int-iret.test.mjs`,
+`.github/workflows/i80386-ring3-int-iret.yml` and
+`docs/I80386-RING3-INT-IRET-RESULTS.md`, plus this entry and its
+[qualification contract](docs/X86-NEXT-LANES.md#ordinary-js-ring-changing-intiretd-fixture).
+The fixture is self-authored MIT code and a 64 KiB reset ROM. It targets ordinary
+JavaScript `strict386` execution and one independently pinned QEMU TCG control.
+Reuse existing reviewed authored-ROM and QEMU input/runtime interfaces read-only;
+no compiler, disk, DOS/extender, new dependency or provisioning chain is needed.
+
+Grade one 32-bit software INT80 roundtrip: ring3/IOPL0 to ring0 through a DPL3
+interrupt gate and a 32-bit TSS stack, followed by IRETD to the original ring3
+SS:ESP. Retain the twenty-byte frame and grade its architecturally defined
+fields, IF clearing/restoration, selectors, registers, memory and stack guards
+against independent goldens; selector-slot padding is retained without an
+invented zero-value rule. A distinct one-way INT81 reporter reads original
+records copied before frame reuse and terminates; reviewed frozen ROM bytes
+and launch provenance bind that reporting path, since output bytes alone
+cannot prove their execution origin. It
+does not provide a second graded roundtrip. Mask external PIC sources.
+
+Freeze exact payload/ROM bytes, symbols, independent expectations, complete
+source/runtime graph, role/event schema and finite resource/output bounds
+before one separately reviewed hosted actual. Preserve failures and partial
+records; acquire each original once after metadata admission and audit without
+producer imports or guest replay. Source controls alone cannot qualify it.
+No CPU/device/parser/old runner/test/fixture, dependency pin, existing workflow,
+native backend, sampler/provisioner or consumer changes are included. A product
+repair requires a separate reviewed ownership extension. No hardware IRQ, IOPL
+isolation, paging, task switch, general DPMI, full386DX/OS or timing claim.
