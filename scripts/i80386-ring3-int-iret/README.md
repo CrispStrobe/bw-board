@@ -29,10 +29,31 @@ node --test test/i80386-ring3-int-iret.test.mjs
 These controls generate bytes and exercise manufactured validation inputs.
 They do not run the CPU or establish a successful privilege transition.
 
-The remaining implementation is the bounded hosted controller (`run.py`),
-independent original-only reader (`reader.py`), packet controls (`controls.py`),
-new hosted workflow and results document, all within the existing nine-path
-claim. Before any actual event, freeze the complete source/input/runtime graph,
+The independent original-only reader (`reader.py`), packet controls
+(`controls.py`) and a controls-only hosted controller (`run.py`) are now source
+checkpoints. Run their inert controls with:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/run.py --controls
+```
+
+The controller has named runtime-discovery functions for executable files,
+interpreters, libraries, the i386 TCG module, aliases and selected package data.
+The runtime observation policy requires named probes once before guests; later
+readback rehashes
+every retained file and rereads every retained alias. Package data is a selected
+superset, not proof of a complete host graph or continuous file identity.
+Process controls use mocked kernel and process edges. They do not run QEMU,
+the CPU or guests.
+
+Actual tool execution, privileged entry, the outer deadline and unconditional
+cleanup, packet finalization, the hosted actual job and results document are
+still unconnected. The 120-second polling loop does not bound a blocking process
+creation or identity read; an independently reviewed outer owner is still needed.
+The actual command refuses to run at this checkpoint. Remaining implementation
+stays within the existing nine-path claim. Before any actual event, freeze the
+complete source/input/runtime graph,
 independent expectations, finite resource and output bounds, original roles and
 separately observed QEMU binary/package identity. QEMU's version requirement
 alone does not identify the executable. Admit one hosted event only after its
