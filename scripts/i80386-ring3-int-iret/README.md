@@ -312,10 +312,14 @@ and the existing ROM/metadata goldens. It adopts the original process failure
 before output or identity-readback errors. It retains original process and
 stream prefixes, available output bytes/hashes and all attempted Node, fixture
 and runner identity observations before and after generation in result memory.
-The embedded writer has only static source checks here; mocked Python controls
-are not execution of that Node writer. A JavaScript close error does not replace
-an earlier JavaScript error in source, but complete serialization of JavaScript
-secondary errors is not guaranteed by uncaught stderr printing.
+The Python controls include static writer assertions. A separate seven-case
+inert VM audit executes the writer body with fake filesystem and fixture-builder
+interfaces: canonical outputs, partial writes, exclusive creation, ownership,
+parent redirection and primary/close errors. Two deliberately broken writer
+variants fail those controls. This does not execute the real fixture builder or
+real filesystem generation, or qualify the selected Node runtime. A JavaScript
+close error does not replace an earlier error in source, but complete
+serialization of secondary errors is not guaranteed by uncaught stderr printing.
 
 Those observations are not external source or executable pins. The later PRE
 Git capture cannot prove the source used earlier by generation. Generator

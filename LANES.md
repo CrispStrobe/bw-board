@@ -5309,11 +5309,14 @@ its results; installed-GUI acceptance remains separate.
 
 ## Ordinary-JS ring-changing INT/IRETD fixture — 2026-10-16
 
-PROPOSED CLAIM — Codex x86. Claim-only branch
-`docs/386-ring3-int-iret-claim-20261016`, inspected base
-`e2e44dd2e63cea8fac872efd0ea8b2aa765b1a49`. No implementation until this claim
-is merged. The existing same-CPL0 paged IRQ fixture and older 286 claims do
-not own this new software-interrupt fixture.
+CLAIM MERGED; IMPLEMENTATION DRAFT — Codex x86. The ownership claim landed in
+[PR643](https://github.com/CrispStrobe/bw-board/pull/643). Source candidate
+[PR645](https://github.com/CrispStrobe/bw-board/pull/645) remains draft, with no
+actual ring-changing guest result. Published checkpoint `9a817700` includes
+135 mocked runner controls; later source additions are described in the runner
+README. Source controls do not establish actual ownership or guest qualification.
+The existing same-CPL0 paged IRQ fixture and older 286 claims do not own this
+new software-interrupt fixture.
 
 Own only new `scripts/i80386-ring3-int-iret/{fixture.mjs,probe.mjs,run.py,reader.py,controls.py,README.md}`,
 `test/i80386-ring3-int-iret.test.mjs`,

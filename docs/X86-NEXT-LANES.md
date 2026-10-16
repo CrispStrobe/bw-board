@@ -73,10 +73,39 @@ Compare returned CPU/cache fields, complete selected pages and board state; inde
 
 ### Ordinary-JS ring-changing INT/IRETD fixture
 
-**Status:** proposed claim, no implementation or new guest result. This is the
-next software-interrupt mechanism fixture after the reached same-CPL0 paged
-IRQ/IRET result. It does not repeat that fixture or adopt a native backend.
-Implementation starts only after the matching `LANES.md` claim merges.
+**Status:** ownership claim [PR643](https://github.com/CrispStrobe/bw-board/pull/643)
+is merged; implementation [PR645](https://github.com/CrispStrobe/bw-board/pull/645)
+is draft. Published checkpoint `9a817700` has 135 mocked runner controls,
+including preparation ownership, transport, privilege handoff and immutable
+log provenance. The independent reader accepts manufactured originals and
+refuses rehashed counterexamples. No actual ring-changing guest, QEMU
+comparison, protected-application or performance result follows from these
+controls. The current source and remaining activation gaps are documented in
+[`scripts/i80386-ring3-int-iret/README.md`](../scripts/i80386-ring3-int-iret/README.md).
+
+Concrete remaining tasks, in order:
+
+1. Finish fixed authored-input staging inside the dropped preparation child.
+   Require exact preparation-group membership, an empty owned staging directory,
+   one bounded fixed Node invocation, exclusive writes and independent readback
+   against the frozen ROM and metadata goldens. Preserve partial files and first
+   errors. A separate callable and memory-only observations do not activate it.
+2. Retain generator process, raw streams, source/runtime observations and output
+   references in an original channel that reaches the outside audit. Freeze an
+   independent reader for that channel, with source and Node identity admitted
+   before generation. Later PRE Git observations alone do not prove this order.
+3. Wire fixed internal modes, resource-group creation/readback and the 15-minute
+   job backstop. Keep actual execution disabled until the whole source, input,
+   runtime, resource, output and event envelope passes separate review. Preserve
+   the existing twenty packet roles, reader, limits and unrelated workflows.
+4. After all enabled final-head checks succeed, separately admit one hosted
+   event. Acquire each official original once and perform independent audits
+   without producer imports or replay. Preserve refusals; a later candidate
+   requires its own source and admission, not a retry of a consumed attempt.
+
+This is the next software-interrupt mechanism fixture after the reached
+same-CPL0 paged IRQ/IRET result. It does not repeat that fixture or adopt a
+native backend.
 
 **Owned files:** new
 `scripts/i80386-ring3-int-iret/{fixture.mjs,probe.mjs,run.py,reader.py,controls.py,README.md}`,
