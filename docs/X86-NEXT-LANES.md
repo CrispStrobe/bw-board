@@ -2088,17 +2088,19 @@ introduced by this transport scope.
 
 ## Bounded DOS package admission
 
-This follows disk export/reload and has its own source, tests and acceptance;
-it is not a present ZIP/JS-DOS loader. Implement a pure shared policy and a
-Node ZIP adapter without changing shared package dependencies. Select one
-explicit config, or one unambiguous supported default; never guess among
+This follows disk export/reload and has its own source, tests and acceptance.
+[Draft PR637](https://github.com/CrispStrobe/bw-board/pull/637), at
+`a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee`, publishes a separate pure policy,
+Node ZIP adapter, CLI and hosted acceptance candidate without changing shared
+package dependencies. It is not a merged or guest-qualified ZIP/JS-DOS loader.
+Select one explicit config, or one unambiguous supported default; never guess among
 multiple runnable configurations. Preserve full canonical archive paths and
 resolve media relative to the chosen config. Basename matching is insufficient.
 
-Initial routes are explicit: a DOS-service COM/MZ program with declared virtual
-files, or one raw HDD with exact CHS for the functional 386 AT. Freeze the exact
-supported declaration/option grammar before implementation. Reject unknown
-commands, command chaining, external host paths/URLs, ambiguous mounts or entry
+The initial candidate admits only one raw HDD with exact CHS for the functional
+386 AT. DOS-service COM/MZ virtual files remain future work. Its exact closed
+command grammar is documented in the candidate; the existing runners keep
+their separate parsers and interfaces. Reject unknown commands, command chaining, external host paths/URLs, ambiguous mounts or entry
 points and unsupported devices. Do not execute package JavaScript, scripts or
 arbitrary autoexec. A DOS-service route is not an extender-capable DOS boot.
 
@@ -2107,8 +2109,8 @@ collapse names. Bound compressed input, entry count, decoded per-file and total
 bytes, expansion ratio, config size and extraction work; verify CRC and topology.
 Reject traversal, absolute/UNC paths, duplicate/case aliases, conflicting ancestor
 paths, links, encryption, unsupported ZIP64/multidisk/descriptors or malformed
-extents. Start with a deliberately documented STORED/deflate subset; use an
-immutable in-memory asset map, not filesystem extraction or network fallback.
+extents. The initial candidate is STORED-only; DEFLATE remains unsupported.
+Use an immutable in-memory asset map, not filesystem extraction or network fallback.
 Browser and Node codecs must enforce the same policy; a decoder's final object
 map alone cannot establish original-name safety or memory bounds.
 
@@ -2125,25 +2127,22 @@ path plus firmware and guest support before a picker can promise it. An ISO
 extension or renamed raw HDD cannot supply that implementation. A future ISO
 lane needs separately merged ownership and authored/free acceptance fixtures.
 
-The next CLI-only qualification is the separately proposed
+The next CLI-only qualification is the separately prepared
 [hosted PTY acceptance task](#dos-package-cli-hosted-pty-acceptance).
 
 ## DOS package CLI hosted PTY acceptance
 
-Status: PROPOSED, with no acceptance implementation or actual result. Merge
-the [ownership extension](../LANES.md#dos-package-cli-hosted-pty-acceptance--2026-10-16)
-after all enabled exact-head documentation checks before implementing this task.
-It adds only `scripts/dos-package-acceptance/producer.py` and
-`test/dos-package-acceptance.test.mjs` to the existing merged ownership of
-`probe.mjs`, `reader.py`, `README.md` and the new acceptance workflow.
-
-[PR637](https://github.com/CrispStrobe/bw-board/pull/637) prepares the bounded
-CLI source with 22 pure tests. Its injected machine tests do not establish
-actual execution, boot, PTY behavior or an installed GUI result. A fresh agent
-must refresh its head and every enabled check, preserve the seven frozen
-source/test/README blobs and all original failures, and detect work already
-completed before acting. Any reviewed source fix requires a new final freeze;
-no other runner, policy, parser, dependency, pin or other-owner change belongs
+Status: source candidate published, actual result pending. The
+[ownership extension PR638](https://github.com/CrispStrobe/bw-board/pull/638)
+merged before implementation. [Draft PR637](https://github.com/CrispStrobe/bw-board/pull/637)
+at `a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee` includes the CLI, finite hosted
+producer/workflow and independent original-only reader. Its 26 pure Node tests
+include inert producer controls and a manufactured complete packet with
+rehashed semantic refusals; none establishes actual boot, PTY behavior or an
+installed GUI result. All final-head checks and independent source/envelope
+admission precede the sole hosted actual. Refresh the head and detect completed
+work before acting; preserve frozen source and all original failures.
+No other runner, policy, parser, dependency, pin or other-owner change belongs
 to this acceptance task. GUI adoption and its consumer prerequisites remain
 separate.
 
@@ -2158,13 +2157,14 @@ claim.
 
 Use four fresh, serial hosted cases through the actual unmodified new CLI:
 
-1. The admitted package with live keyboard `a`, actual observed readiness,
-   actual consumption and a distinct authored guest response.
+1. The admitted package with live keyboard `a`, actual observed readiness
+   and a later distinct authored, key-dependent guest response.
 2. The same initial package with live keyboard `b` and its independently
    predicted different response. Initial terminal focus-in must remain a
    positive control, and accepted make/break chronology must be observable.
-3. A newly authored malformed ZIP with explicit visible package refusal before
-   machine import or guest execution; no fallback or quiet success.
+3. A newly authored malformed ZIP with explicit visible package refusal and
+   failure exit; source-order controls separately check pre-import admission.
+   The actual PTY does not trace runtime module imports.
 4. An admitted package followed by terminal focus loss, with explicit refusal,
    no resumed input session and restoration observations. This negative does
    not claim runtime modifier release or full focus-resume interaction.
@@ -2378,9 +2378,18 @@ timing, performance/RTx, installed-GUI or license-clearance claim follows.
 The next dependency gate is the existing Lite HDD/GUI handoff, including its
 unmerged [runner prerequisite PR986](https://github.com/CrispStrobe/brickwright-lite/pull/986),
 consumer-owned checks, explicit dependency adoption and fresh installed acceptance.
-An unrelated WeDo policy unit-check failure remains unresolved there. No consumer
-pin/notice change or repeated supplier guest follows from this result; general
-DOS error-path behavior also remains outside this finite qualification.
+The unrelated WeDo inventory policy failure was repaired on Lite main by
+[PR998](https://github.com/CrispStrobe/brickwright-lite/pull/998), merged as
+`d413bd2d`. The integrated PR986 and
+[PR989](https://github.com/CrispStrobe/brickwright-lite/pull/989) heads have all
+enabled checks successful as of 2026-10-16; those checks do not prove the
+supplier API was adopted or the optional GUI persistence scenario ran.
+[Proposed handoff PR1006](https://github.com/CrispStrobe/brickwright-lite/pull/1006)
+records the remaining coordinated supplier/lock ownership, exact qualified
+Board adoption and genuine installed download/chooser-reload gates. It transfers
+no implementation or pin ownership. No consumer pin/notice change or repeated
+supplier guest follows from this result; general DOS error-path behavior also
+remains outside this finite qualification.
 
 ## Explicit 386 physical-memory capability metadata
 
