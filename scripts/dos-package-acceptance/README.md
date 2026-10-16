@@ -137,3 +137,103 @@ node --test test/dos-package-policy.test.mjs test/dos-package-zip.test.mjs test/
 Any actual emulator/guest/browser qualification belongs to separately reviewed
 hosted CI acceptance with frozen source/input identities and independent
 original-byte readers. No such run is established by this README.
+
+## Hosted PTY acceptance source candidate
+
+The acceptance producer, fixture, standalone reader and workflow remain source
+candidates. No actual guest, PTY, installed GUI or resource qualification has
+occurred. Pure PR controls never create a PTY or import/execute a real machine.
+Only a separately reviewed owned PR label `x86-dos-package-actual`, attempt 1,
+can select the actual job after every final source check and independent
+source/reader/input/resource-envelope approval. Do not trigger it automatically.
+
+The new authored bootstrap is 197 bytes followed by zero padding through offset 509 and signature `55aa`,
+forming a 512-byte raw disk with CHS 1,1,1. It establishes real-mode segments/stack, selects
+text mode 3, prints `BW-PKG-READY`, then obtains a key using BIOS INT 16h/AH=0.
+For a/b it prints the returned character and computed XOR 5Ah as
+`BW-PKG-KEY=a;XOR5A=3B` or `BW-PKG-KEY=b;XOR5A=38`; after a fixed 65,536-iteration LOOP
+it prints `BW-PKG-DONE` and enters CLI/JMP-self. No DOS kernel, FAT or protected
+mode is supplied. The saved AL and owned instruction PC are not runtime
+observations exposed by the CLI. The finite claim requires real input followed
+by distinct visible guest output, joined to independently reviewed exact bytes.
+
+Independent golden identities:
+
+| Input | Bytes | SHA-256 |
+| --- | ---: | --- |
+| Boot image | 512 | `03564a6088a3ecc64833713ca1d406da354a3f6a16d60fdffa59ffbf5cfc5e50` |
+| Supported package | 2014 | `a3511f8daae0e5803ae050974e4a62ff75bf852ccff2681855f5bf1bfd7bdcc4` |
+| Traversal package | 2020 | `e783114b8d4874041e28db5603d309b53c2066a6961a1c0b1af86aa5869d7182` |
+
+The STORED archive has exactly `pkg/dosbox.conf`, `pkg/disks/boot.img` and
+`pkg/LICENSE.txt`, without directory records. The last member retains the
+repository MIT text. The malformed variant has valid CRCs/extents and changes
+the original config name to `pkg/../dosbox.conf`; it must fail original-name
+admission rather than a stale digest. External BIOS and VGA are the unchanged
+free bundled firmware with their exact source/notice/hash bindings, never a
+package override, new download or binary artifact. VGA extent is 38,400 bytes.
+
+Four real fresh PTY cases run serially in order a,b,malformed,focus-loss:
+
+1. a/b each observe a complete fresh READY-only frame and raw terminal before
+   writing initial-focus-IN plus the lowercase key (`1b5b4961`/`1b5b4962`).
+   A later complete exact key-dependent result and DONE frame are mandatory.
+2. Each positive ends at exactly 50 million ordinary `machine.step()` calls,
+   stop `budget`, exit 0, four input bytes, exactly its accepted make/break
+   scans spaced at least 65,536 calls on 1,024-call service boundaries, no pending scan bytes
+   and complete terminal restoration. No alternate stop, Ctrl-] or redraw
+   count gate is used in actual acceptance. Budget alone never proves action.
+3. Malformed sends nothing and requires explicit canonical-path refusal,
+   exit 1, no live-start sequence and no runner report. Pre-machine-import is
+   a source-order/mock-control conclusion, not a runtime absence observation.
+4. Focus-loss waits for completed READY, writes only `1b5b4f` and requires
+   three input bytes, no accepted scan/result, exact focus-loss refusal and exit 1. Initial
+   focus-IN is already positive in a/b. Mixed/split focus and Ctrl-] remain
+   pure controls; no modifier-release or resumed input is claimed.
+
+The busy guest loop allows console rendering while ordinary execution continues.
+This test does not measure guest speed, physical timing, RTx or retired instructions.
+The renderer emits 25 rows of 80 characters: pre-READY VGA may use two-byte UTF-8.
+Original output is parsed with the predeclared LF/CRLF branch selected by
+observed raw-phase OPOST/ONLCR, never normalized into a passing result. Complete
+frame/input offsets and monotone read/write/wait events establish chronology.
+Parent-held slave termios records before/raw/after and requires exact restoration;
+internal listener removal is self-report only.
+
+The proposed profile is one CPU of quota, 1 GiB memory, no swap and 64 tasks; each child has 120 s and 50 million calls,
+the controller has 600 s and the job has 15 min. These bounds remain UNQUALIFIED until resource
+admission and the sole actual. Each raw PTY has a 32 MiB cap, each events file has a 16 MiB cap and
+65,536 events, each report has a 256 KiB cap; the full expanded packet including audit has
+192 MiB. Maximum general UTF-8/CRLF frame is 4,083 bytes; 6,104 draws produce at most 24,922,632
+bytes, below the raw cap. Event accounting is incremental; retained JSON is
+separately capped. First execution errors survive all secondary cleanup and
+retention errors. Partial failure packets are retained without becoming success.
+
+Six owned cgroups (enclosing/controller/four cases) retain kernel identities,
+limits, raw counters, OOM deltas, wait4 status/rusage, reaping and empty-terminal
+observations. Child identity is recorded by a bounded own pre-exec pipe, avoiding
+a quick-exit procfs race without instrumenting Node or the loader. The outside
+finalizer observes enclosing state before any cleanup kill. If occupied it
+records failure first, kills only the independently admitted exact owned group,
+bounds cleanup and retains additional failure evidence; an empty post-kill
+group cannot turn that failure green. Missing controller evidence remains failure.
+Official job logs also retain before/after executable identities independently
+of the packet. Those are observations, not host attestation.
+
+A successful packet has exactly 23 regular-file roles: audit/source-before/
+source-after/runtime/resources/inputs JSON; two authored input ZIPs; process/PTY/
+events/report for a,b,focus-loss; process/PTY/events for malformed. Audit hashes
+the other 22 roles. Exact Git/live source closure, runtime, input/firmware,
+argv/environment, schema and official head/event/attempt/job/step/artifact joins
+need independent admission. The reader never imports producers, policy, ZIP
+adapter, CLI, emulator or an old reader, and never replays a guest. Metadata
+admission precedes sole original artifact/log acquisition; two original-byte
+audits and every final-head check precede matched-head source merge/tree proof.
+No retries select a passing actual. Installed GUI, full DOSBox, OS/DPMI,
+strict 386 compatibility and physical accuracy remain separate.
+
+Run all pure source controls locally without actual execution:
+
+```sh
+node --test test/dos-package-{policy,zip,cli,acceptance}.test.mjs
+```
