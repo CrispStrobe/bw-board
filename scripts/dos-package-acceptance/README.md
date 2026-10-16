@@ -237,3 +237,56 @@ Run all pure source controls locally without actual execution:
 ```sh
 node --test test/dos-package-{policy,zip,cli,acceptance}.test.mjs
 ```
+
+
+### Privileged entry candidate after the first failed hosted run
+
+The sole PR637 attempt-1 [run 38883122687](https://github.com/CrispStrobe/bw-board/actions/runs/38883122687)
+failed before the runtime/case loop. Its retained first controller error was
+`PermissionError` 13; source admission and cgroup setup succeeded, the controller
+before snapshot was absent, and no four-case guest PTY was launched. The
+finalizer retained that same primary. Its failure exit is not separate evidence
+of a cleanup operation failing. Preserve that original; never rerun or relabel it.
+
+The held source localizes the error to initial controller migration or the
+immediately following snapshot; the original has no syscall/path traceback.
+The kernel's [delegation containment rule](https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html#delegation-containment)
+requires nonroot migration permission at the source/destination common ancestor.
+This supports the bootstrap correction; the precise kernel permission facts of
+the failed original were not captured and remain unobserved.
+
+The new candidate uses the same producer file as a small privileged bootstrap.
+It admits only the exact owned run cgroup and controller leaf, their retained
+identities and unchanged limits, the closed 57-path source census and observed
+Python/Node executable bytes. It runs no Node/version subprocess while
+privileged. It enters only the controller leaf, clears supplementary groups,
+sets real/effective/saved GID and UID to the admitted nonroot sudo invoker, verifies
+zero effective/permitted capabilities, then execs the same observed Python and
+held `--run` path with Python isolated mode (`-I`) under a fixed environment. The controller refuses missing
+prior leaf entry or incomplete privilege drop. Its children inherit that leaf
+and move only to the existing sibling case leaves inside the delegated owned
+root. No ancestor is chowned and no guest runs as root.
+
+The workflow uses noninteractive `sudo -n` inside the existing 600-second outer
+timeout. Temporary `.owner.json` gains runner/environment/runtime/source and
+controller identity admission fields; the privileged phase and unprivileged
+controller stay in the same PID through exec. A structured bootstrap line in
+the original job log records the dropped identity. No successful artifact role
+or reader schema changes: 23 roles, all fixture goldens, markers, input
+chronology, reader predicates and CPU/memory/PID/time/step/output caps remain
+unchanged. Canonical positive `SUDO_UID`/`SUDO_GID` are captured before owner validation;
+owner IDs must match. A pre-owner refusal can still drop to this checked invoker
+and retain its original primary in existing controller evidence. If the invoker
+is unestablished, privilege drop fails or writing evidence fails, only bounded
+structured stderr may retain the earliest error; the packet alone then cannot
+claim earliest-error identity. No root packet writes or guest exec follow such
+refusals.
+
+Inert controls execute the actual validation, entry, UID/GID/group drop,
+controller membership, fixed exec/environment and error-retention methods with
+all OS/filesystem/process edges mocked. Source/runtime/identity drift, failed
+migration/drop and a mutation removing the drop call must refuse before exec.
+These controls are not privilege, kernel, PTY or guest qualification. This fixed
+source needs a distinct final-source CI/admission/hosted event; it cannot reuse
+PR637's failed actual, earlier successful source controls or an invented guest
+result. Existing first-error and external cleanup requirements remain mandatory.

@@ -32,6 +32,66 @@ CAPS = dict(cpuMax='100000 100000', memoryMax=1073741824, swapMax=0, pidsMax=64,
 ENV_POLICY = dict(NODE_OPTIONS=None, NODE_PATH=None, LD_PRELOAD=None, LD_AUDIT=None, backendFlags=[])
 BIOS_SHA = '6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac'
 VGA_SHA = '76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1'
+SOURCE_PATHS = frozenset('''
+.github/workflows/dos-package-acceptance.yml
+LICENSE
+package.json
+roms/free-at-bios/BIOS-bochs-legacy
+roms/free-at-bios/LICENSE
+roms/free-at-bios/README.md
+roms/free-at-bios/vgabios-lgpl.bin
+scripts/dos-package-acceptance/README.md
+scripts/dos-package-acceptance/probe.mjs
+scripts/dos-package-acceptance/producer.py
+scripts/dos-package-acceptance/reader.py
+scripts/lib/dos-package-zip.mjs
+scripts/lib/i80386-at-terminal.mjs
+scripts/lib/i80386-source-inventory.mjs
+scripts/run-dos-package.mjs
+src/adc0809.js
+src/at-8042-a20.js
+src/at-ps2-mouse.js
+src/at-system-control.js
+src/audio-bus.js
+src/cga-card.js
+src/chip-ledger.js
+src/dac0832.js
+src/dos-package-policy.js
+src/dosbox-config.js
+src/ega-card.js
+src/experimental/ata16.js
+src/experimental/i80286-protected.js
+src/experimental/i80386-at-machine.js
+src/experimental/i80386.js
+src/experimental/vga-memory.js
+src/hercules-card.js
+src/i8086-machine.js
+src/i8086-ram-words.js
+src/i8086.js
+src/i8088-cycles.js
+src/i8088-timing.js
+src/i8237.js
+src/i8251.js
+src/i8254.js
+src/i8255.js
+src/i8259.js
+src/machine-checkpoint.js
+src/mc146818.js
+src/mc6845.js
+src/mc6850.js
+src/ne2000.js
+src/ns16c550.js
+src/pc-speaker.js
+src/sb-dsp.js
+src/upd765.js
+src/vga-card.js
+src/ym3812.js
+test/dos-package-acceptance.test.mjs
+test/dos-package-cli.test.mjs
+test/dos-package-policy.test.mjs
+test/dos-package-zip.test.mjs
+'''.split())
+PRODUCER = 'scripts/dos-package-acceptance/producer.py'
 
 
 def require(condition, message):
@@ -171,7 +231,126 @@ def expected_cgroup(value):
 def admit_cgroup(value):
     root = expected_cgroup(value)
     snapshot = read_snapshot(root); snapshot_limits(snapshot); require(snapshot_empty(snapshot), 'owned cgroup not initially empty')
-    write_new(PACKET / '.owner.json', json_bytes(dict(path=str(root), snapshot=snapshot)))
+    node = str(Path(shutil.which('node')).resolve(strict=True))
+    require(os.getuid() > 0 and os.getgid() > 0, 'cgroup admission requires the unprivileged runner')
+    source = (PACKET / 'source.before.json').read_bytes()
+    owner = dict(path=str(root), snapshot=snapshot, bootstrap=dict(uid=os.getuid(), gid=os.getgid(),
+        environment={name: os.environ[name] for name in ('PATH', 'HOME')}, runtime=runtime(node),
+        controllerIdentity=read_snapshot(root / 'controller')['identity'], sourceSha256=digest(source)))
+    write_new(PACKET / '.owner.json', json_bytes(owner))
+
+
+def controller_entered(root, owner):
+    """No migration here: privileged bootstrap must already have dropped all IDs."""
+    identity = owner['bootstrap']; uid, gid = identity['uid'], identity['gid']
+    require(os.getresuid() == (uid, uid, uid) and os.getresgid() == (gid, gid, gid) and os.getgroups() == [],
+            'controller privilege drop incomplete')
+    require(Path('/proc/self/cgroup').read_text(encoding='ascii') == '0::/' + root.name + '/controller\n',
+            'controller was not bootstrapped into its owned leaf')
+    require(read_snapshot(root / 'controller')['procs'] == [os.getpid()], 'controller leaf process identity')
+
+
+class BootstrapOps:
+    """Hosted only. Root performs file checks and one migration, never a child launch."""
+    def __init__(self):
+        self.root = None; self.owner = None; self.invoker = None
+
+    def validate(self, value):
+        require(os.getresuid() == (0, 0, 0) and os.getresgid() == (0, 0, 0), 'bootstrap requires privileged entry')
+        ids = {name: os.environ.get('SUDO_' + name.upper(), '') for name in ('uid', 'gid')}
+        require(all(re.fullmatch(r'[1-9][0-9]*', value) and int(value) < 2**31 for value in ids.values()),
+                'trusted nonroot sudo invoker IDs unavailable')
+        self.invoker = {name: int(value) for name, value in ids.items()}
+        self.root = expected_cgroup(value)
+        file = PACKET / '.owner.json'
+        require(not file.is_symlink() and file.is_file() and file.stat().st_size <= 65536, 'bootstrap owner file')
+        owner = json.loads(file.read_bytes())
+        require(set(owner) == {'path', 'snapshot', 'bootstrap'} and owner['path'] == str(self.root), 'closed bootstrap owner')
+        b = owner['bootstrap']
+        require(set(b) == {'uid', 'gid', 'environment', 'runtime', 'controllerIdentity', 'sourceSha256'} and
+                all(type(b[name]) is int and 0 < b[name] < 2**31 for name in ('uid', 'gid')), 'unprivileged runner IDs')
+        require({name: b[name] for name in ('uid', 'gid')} == self.invoker, 'owner/invoker IDs differ')
+        require(file.stat().st_uid == b['uid'] and file.stat().st_gid == b['gid'], 'bootstrap owner UID/GID changed')
+        require(set(b['environment']) == {'PATH', 'HOME'} and all(isinstance(v, str) and 0 < len(v) <= 4096
+                for v in b['environment'].values()), 'closed runner environment')
+        self.owner = owner  # Retention may now drop to this checked file owner, even if later checks refuse.
+        snapshot = read_snapshot(self.root); snapshot_limits(snapshot)
+        require(snapshot['identity'] == owner['snapshot']['identity'] and snapshot_empty(snapshot), 'bootstrap root identity/empty boundary')
+        leaf = read_snapshot(self.root / 'controller'); snapshot_limits(leaf)
+        require(snapshot_empty(leaf) and leaf['identity'] == b['controllerIdentity'], 'controller leaf identity/empty boundary changed')
+        raw = (PACKET / 'source.before.json').read_bytes(); source = json.loads(raw)
+        require(digest(raw) == b['sourceSha256'] and source['schema'] == 'bw.dos-package-pty.source.v1' and
+                source['head'] == os.environ.get('BW_EXPECTED_HEAD') and set(source['files']) == SOURCE_PATHS,
+                'bootstrap exact source57 envelope')
+        for name, row in source['files'].items():
+            path = Path(name); stat = path.lstat()
+            require(path.resolve(strict=True) == Path.cwd() / name and path.is_file() and
+                    0 < row['bytes'] <= 8388608 and stat.st_size == row['bytes'], 'bootstrap source regular extent')
+            with path.open('rb') as handle:
+                data = handle.read(row['bytes'] + 1)
+            require(len(data) == row['bytes'] and digest(data) == row['sha256'], 'bootstrap source bytes changed')
+        require(Path(__file__).resolve(strict=True) == Path.cwd() / PRODUCER, 'held bootstrap source path')
+        observed = b['runtime']['executables']
+        require(set(observed) == {'node', 'python'} and observed['python'] == executable_row(sys.executable), 'bootstrap exact Python executable')
+        for row in observed.values():
+            require(set(row) == {'path', 'bytes', 'sha256'} and Path(row['path']).is_absolute() and
+                    executable_row(row['path']) == row and Path(row['path']).stat().st_mode & 0o6000 == 0,
+                    'bootstrap executable drift or privileged executable')
+        require(str(Path(shutil.which('node', path=b['environment']['PATH'])).resolve(strict=True)) == observed['node']['path'],
+                'bootstrap exact admitted Node selection')
+        return self.root, owner
+
+    def enter(self, root):
+        (root / 'controller' / 'cgroup.procs').write_text(str(os.getpid()), encoding='ascii')
+        snapshot = read_snapshot(root / 'controller'); snapshot_limits(snapshot)
+        require(snapshot['procs'] == [os.getpid()] and snapshot['identity'] == self.owner['bootstrap']['controllerIdentity'],
+                'privileged controller migration identity did not complete')
+
+    def drop(self, owner):
+        b = owner['bootstrap']; os.setgroups([])
+        os.setresgid(b['gid'], b['gid'], b['gid']); os.setresuid(b['uid'], b['uid'], b['uid'])
+        require(os.getresuid() == (b['uid'],) * 3 and os.getresgid() == (b['gid'],) * 3 and os.getgroups() == [],
+                'bootstrap saved/effective IDs were not all dropped')
+        status = Path('/proc/self/status').read_text(encoding='ascii')
+        require(all(re.search(r'^' + field + r':\s+0+$', status, re.M) for field in ('CapEff', 'CapPrm')),
+                'bootstrap retained effective/permitted capabilities')
+
+    def execute(self, root, owner):
+        controller_entered(root, owner)
+        b = owner['bootstrap']; python = b['runtime']['executables']['python']['path']
+        environment = dict(b['environment'], LANG='C.UTF-8', GITHUB_RUN_ID=os.environ['GITHUB_RUN_ID'],
+            GITHUB_RUN_ATTEMPT='1', BW_EXPECTED_HEAD=os.environ['BW_EXPECTED_HEAD'])
+        print('DOS_PACKAGE_BOOTSTRAP ' + json.dumps(dict(schema='bw.dos-package-pty.bootstrap.v1',
+            pid=os.getpid(), uid=b['uid'], gid=b['gid'], supplementaryGroups=[], privilegedGuest=False)), flush=True)
+        os.execve(python, [python, '-I', '-B', PRODUCER, '--run', str(root)], environment)
+
+    def retain(self, error):
+        primary = error_row(error, 'bootstrap'); secondary = []
+        try:
+            require(self.invoker is not None, 'checked sudo invoker unavailable for retention')
+            b = self.invoker
+            if os.getresuid() != (b['uid'],) * 3 or os.getresgid() != (b['gid'],) * 3 or os.getgroups():
+                self.drop(dict(bootstrap=b))
+            facts = dict(schema='bw.dos-package-pty.resources.v1', caps=CAPS,
+                controller=dict(pid=os.getpid(), before=None, after=None), cases={},
+                enclosing=dict(before=self.owner['snapshot'] if self.owner is not None else None, after=None),
+                controllerFailure=dict(firstFailure=primary, secondary=secondary))
+            write_new(PACKET / '.controller.json', json_bytes(facts))
+        except BaseException as capture:
+            retention_fallback(primary, secondary, capture, 'bootstrap-retention')
+
+
+def bootstrap(value, ops=None):
+    ops = BootstrapOps() if ops is None else ops
+    try:
+        root, owner = ops.validate(value)
+        ops.enter(root)
+        ops.drop(owner)
+        ops.execute(root, owner)
+        raise RuntimeError('bootstrap exec unexpectedly returned')
+    except BaseException as error:
+        ops.retain(error)
+        return 1
 
 
 def external_cleanup(ops, identity):
@@ -494,9 +673,11 @@ def run_all(cgroup):
         owner = json.loads((PACKET / '.owner.json').read_bytes())
         facts['enclosing']['before'] = read_snapshot(root); snapshot_limits(facts['enclosing']['before'])
         require(owner['path'] == str(root) and owner['snapshot']['identity'] == facts['enclosing']['before']['identity'], 'owned cgroup admission changed')
-        (root / 'controller' / 'cgroup.procs').write_text(str(os.getpid()), encoding='ascii')
+        controller_entered(root, owner)
         facts['controller']['before'] = read_snapshot(root / 'controller')
-        write_new(PACKET / 'runtime.json', json_bytes(runtime(node)))
+        observed_runtime = runtime(node)
+        require(observed_runtime == owner['bootstrap']['runtime'], 'bootstrap/controller runtime identity changed')
+        write_new(PACKET / 'runtime.json', json_bytes(observed_runtime))
         for case in CASES:
             require(time.monotonic_ns() < deadline, 'controller deadline exceeded')
             group = root / case; before = read_snapshot(group); snapshot_limits(before)
@@ -695,9 +876,11 @@ def controls():
                 if file.name == '.owner.json':
                     if owner_error:
                         raise ValueError('FIRST owner read')
-                    return json_bytes(dict(path=str(root), snapshot=snapshot))
+                    return json_bytes(dict(path=str(root), snapshot=snapshot, bootstrap=dict(runtime={})))
                 if file.name == '.controller.json':
-                    return json_bytes(controller)
+                    return saved.get('.controller.json', json_bytes(controller))
+                if file.name in ('source.before.json', 'source.after.json'):
+                    return json_bytes(dict(head='a' * 40, tree='b' * 40))
                 return b'{}'
 
             def write(file, data):
@@ -707,7 +890,7 @@ def controls():
 
             with ExitStack() as stack:
                 for name, value in (('expected_cgroup', lambda _: root), ('runtime', lambda _: {}),
-                    ('read_snapshot', lambda _: snapshot), ('write_new', write),
+                    ('read_snapshot', lambda _: snapshot), ('write_new', write), ('controller_entered', lambda *args: None),
                     ('RealCase', lambda *args: None),
                     ('run_case', lambda *args: (dict(firstFailure=child_primary, secondary=[]), {}, b'')),
                     ('external_cleanup', lambda *args: (snapshot, dict(firstFailure=None, secondary=[])))):
@@ -717,9 +900,169 @@ def controls():
                 stack.enter_context(patch.object(Path, 'resolve', return_value=Path('/inert/node')))
                 stack.enter_context(patch.object(Path, 'read_bytes', read))
                 stack.enter_context(patch.object(Path, 'write_text', return_value=1))
+                stack.enter_context(patch.object(Path, 'unlink'))
+                stack.enter_context(patch.object(Path, 'rglob', return_value=[]))
                 stack.enter_context(patch(__name__ + '.subprocess.run'))
                 stack.enter_context(patch(__name__ + '.sys.stderr', stderr))
                 yield saved, stderr
+
+        def test_bootstrap_sequence_faults_and_missing_drop_mutation(self):
+            import inspect
+            class Replaced(BaseException): pass
+            class Ops:
+                def __init__(self, fault=None): self.calls = []; self.fault = fault; self.entered = self.dropped = False
+                def validate(self, value):
+                    self.calls.append('validate'); require(self.fault != 'validate', 'source drift'); return Path('/inert/root'), {}
+                def enter(self, root):
+                    self.calls.append('enter'); require(self.fault != 'enter', 'migration failure'); self.entered = True
+                def drop(self, owner):
+                    self.calls.append('drop'); require(self.entered and self.fault != 'drop', 'privilege drop failure'); self.dropped = True
+                def execute(self, root, owner):
+                    require(self.entered and self.dropped, 'privileged exec refused'); self.calls.append('exec'); raise Replaced()
+                def retain(self, error):
+                    if isinstance(error, Replaced): raise error
+                    self.calls.append('retain'); self.first = error
+            positive = Ops()
+            with self.assertRaises(Replaced): bootstrap('inert', positive)
+            self.assertEqual(positive.calls, ['validate', 'enter', 'drop', 'exec'])
+            for fault in ('validate', 'enter', 'drop'):
+                ops = Ops(fault); self.assertEqual(bootstrap('inert', ops), 1); self.assertNotIn('exec', ops.calls)
+            # Execute the same orchestration body with precisely its drop call removed.
+            text = inspect.getsource(bootstrap).replace('        ops.drop(owner)', '        pass # mutation: missing privilege drop')
+            self.assertNotEqual(text, inspect.getsource(bootstrap)); namespace = dict(globals()); exec(text, namespace)
+            ops = Ops(); self.assertEqual(namespace['bootstrap']('inert', ops), 1)
+            self.assertIn('privileged exec refused', str(ops.first)); self.assertNotIn('exec', ops.calls)
+
+        def test_bootstrap_all_saved_ids_drop_before_exec_and_fail_closed(self):
+            state = dict(uid=(0, 0, 0), gid=(0, 0, 0), groups=[0]); calls = []
+            owner = dict(bootstrap=dict(uid=1001, gid=1002))
+            def groups(value): calls.append(('groups', value)); state['groups'] = value
+            def gid(*value): calls.append(('gid', value)); state['gid'] = value
+            def uid(*value): calls.append(('uid', value)); state['uid'] = value
+            with patch.object(os, 'setgroups', groups), patch.object(os, 'setresgid', gid), patch.object(os, 'setresuid', uid), \
+                 patch.object(os, 'getresuid', lambda: state['uid']), patch.object(os, 'getresgid', lambda: state['gid']), \
+                 patch.object(os, 'getgroups', lambda: state['groups']), patch.object(Path, 'read_text', return_value='CapEff:\t0000\nCapPrm:\t0000\n'):
+                BootstrapOps().drop(owner)
+                self.assertEqual(calls, [('groups', []), ('gid', (1002, 1002, 1002)), ('uid', (1001, 1001, 1001))])
+                for field in ('uid', 'gid', 'groups'):
+                    with patch.object(os, 'setresuid' if field == 'uid' else 'setresgid' if field == 'gid' else 'setgroups', side_effect=PermissionError('drop refused')):
+                        with self.assertRaises(PermissionError): BootstrapOps().drop(owner)
+                with patch.object(Path, 'read_text', return_value='CapEff:\t0001\nCapPrm:\t0000\n'):
+                    with self.assertRaisesRegex(ValueError, 'capabilities'): BootstrapOps().drop(owner)
+
+        def test_actual_controller_entry_and_already_entered_guard(self):
+            root = Path('/inert/bw-dos-package-7-1'); writes = []
+            snapshot = dict(identity=dict(device=1, inode=2), procs=[123], limits=dict(cpuMax='100000 100000', memoryMax='1073741824', swapMax='0', pidsMax='64'))
+            with patch.object(os, 'getpid', return_value=123), patch.object(Path, 'write_text', lambda path, text, **kw: writes.append((str(path), text))), \
+                 patch(__name__ + '.read_snapshot', return_value=snapshot):
+                ops = BootstrapOps(); ops.owner = dict(bootstrap=dict(controllerIdentity=dict(device=1, inode=2)))
+                ops.enter(root)
+                self.assertEqual(writes, [(str(root / 'controller/cgroup.procs'), '123')])
+                owner = dict(bootstrap=dict(uid=1001, gid=1002))
+                with patch.object(os, 'getresuid', return_value=(1001,) * 3), patch.object(os, 'getresgid', return_value=(1002,) * 3), \
+                     patch.object(os, 'getgroups', return_value=[]), patch.object(Path, 'read_text', return_value='0::/bw-dos-package-7-1/controller\n'):
+                    controller_entered(root, owner)
+                    with patch.object(os, 'getresuid', return_value=(0, 1001, 0)):
+                        with self.assertRaisesRegex(ValueError, 'privilege drop'): controller_entered(root, owner)
+                    with patch.object(Path, 'read_text', return_value='0::/outside\n'):
+                        with self.assertRaisesRegex(ValueError, 'owned leaf'): controller_entered(root, owner)
+                snapshot['procs'] = []
+                with self.assertRaisesRegex(ValueError, 'migration'): ops.enter(root)
+
+        def test_bootstrap_source_runtime_identity_admission_actual_body(self):
+            from types import SimpleNamespace
+            import copy
+            root = Path('/inert/cgroup'); cwd = Path('/inert/repo')
+            rows = {name: ('authored-' + name).encode() for name in SOURCE_PATHS}
+            source = dict(schema='bw.dos-package-pty.source.v1', head='a' * 40, tree='b' * 40,
+                          files={name: dict(bytes=len(data), sha256=digest(data)) for name, data in rows.items()})
+            rows['/inert/node'] = b'node'; rows['/inert/python'] = b'python'
+            exes = {name: dict(path='/inert/' + name, bytes=len(rows['/inert/' + name]), sha256=digest(rows['/inert/' + name])) for name in ('node', 'python')}
+            snap = dict(identity=dict(device=1, inode=2), procs=[], limits=dict(cpuMax='100000 100000', memoryMax='1073741824', swapMax='0', pidsMax='64'), raw=dict(cgroupEvents='populated 0\n', pidsCurrent='0\n'))
+            owner = dict(path=str(root), snapshot=copy.deepcopy(snap), bootstrap=dict(uid=1001, gid=1002,
+                environment=dict(PATH='/inert', HOME='/inert/home'), runtime=dict(executables=exes),
+                controllerIdentity=copy.deepcopy(snap['identity']), sourceSha256=digest(json_bytes(source))))
+            for cut in (None, 'source', 'runtime', 'identity', 'uid', 'pathset', 'leaf'):
+                current = copy.deepcopy(owner); manifest = copy.deepcopy(source); files = dict(rows); observed = copy.deepcopy(snap)
+                if cut == 'source': files[next(iter(SOURCE_PATHS))] += b'!'
+                if cut == 'runtime': current['bootstrap']['runtime']['executables']['node']['sha256'] = '0' * 64
+                if cut == 'identity': observed['identity']['inode'] += 1
+                if cut == 'leaf': current['bootstrap']['controllerIdentity']['inode'] += 1
+                if cut == 'uid': current['bootstrap']['uid'] = 0
+                if cut == 'pathset': manifest['files']['../foreign'] = manifest['files'].pop(next(iter(SOURCE_PATHS)))
+                raw = json_bytes(manifest); current['bootstrap']['sourceSha256'] = digest(raw)
+                files[str(PACKET / '.owner.json')] = json_bytes(current); files[str(PACKET / 'source.before.json')] = raw
+                def stat(path): return SimpleNamespace(st_size=len(files[str(path)]), st_uid=1001, st_gid=1002, st_mode=0o100755)
+                def resolve(path, **kw):
+                    if str(path) == __file__: return cwd / PRODUCER
+                    return path if path.is_absolute() else cwd / path
+                with ExitStack() as stack:
+                    for name, value in (('expected_cgroup', lambda _: root), ('read_snapshot', lambda _: observed)):
+                        stack.enter_context(patch(__name__ + '.' + name, value))
+                    stack.enter_context(patch.dict(os.environ, {'BW_EXPECTED_HEAD': 'a' * 40, 'SUDO_UID': '1001', 'SUDO_GID': '1002'}, clear=True))
+                    stack.enter_context(patch.object(os, 'getresuid', return_value=(0, 0, 0))); stack.enter_context(patch.object(os, 'getresgid', return_value=(0, 0, 0)))
+                    stack.enter_context(patch.object(Path, 'is_symlink', return_value=False)); stack.enter_context(patch.object(Path, 'is_file', return_value=True))
+                    stack.enter_context(patch.object(Path, 'stat', stat)); stack.enter_context(patch.object(Path, 'lstat', stat))
+                    stack.enter_context(patch.object(Path, 'resolve', resolve)); stack.enter_context(patch.object(Path, 'cwd', return_value=cwd))
+                    stack.enter_context(patch.object(Path, 'read_bytes', lambda path: files[str(path)])); stack.enter_context(patch.object(Path, 'open', lambda path, mode: io.BytesIO(files[str(path)])))
+                    stack.enter_context(patch.object(sys, 'executable', '/inert/python')); stack.enter_context(patch.object(shutil, 'which', return_value='/inert/node'))
+                    no_child = stack.enter_context(patch.object(subprocess, 'run', side_effect=AssertionError('privileged child forbidden')))
+                    no_version = stack.enter_context(patch.object(subprocess, 'check_output', side_effect=AssertionError('privileged child forbidden')))
+                    if cut is None: self.assertEqual(BootstrapOps().validate('inert')[0], root)
+                    else:
+                        with self.assertRaises(ValueError): BootstrapOps().validate('inert')
+                    no_child.assert_not_called(); no_version.assert_not_called()
+
+        def test_bootstrap_exact_unprivileged_exec_and_environment(self):
+            root = Path('/inert/root'); owner = dict(bootstrap=dict(uid=1001, gid=1002,
+                runtime=dict(executables=dict(python=dict(path='/inert/python'))), environment=dict(PATH='/inert', HOME='/inert/home')))
+            calls = []; stdout = io.StringIO()
+            with patch(__name__ + '.controller_entered', lambda *args: calls.append('unprivileged-and-owned')), \
+                 patch.dict(os.environ, dict(GITHUB_RUN_ID='7', GITHUB_RUN_ATTEMPT='1', BW_EXPECTED_HEAD='a'*40, LD_PRELOAD='forbidden'), clear=True), \
+                 patch.object(os, 'getpid', return_value=123), patch.object(os, 'execve', lambda *args: calls.append(args)), patch.object(sys, 'stdout', stdout):
+                BootstrapOps().execute(root, owner)
+            self.assertEqual(calls[0], 'unprivileged-and-owned')
+            self.assertEqual(calls[1], ('/inert/python', ['/inert/python', '-I', '-B', PRODUCER, '--run', str(root)],
+                dict(PATH='/inert', HOME='/inert/home', LANG='C.UTF-8', GITHUB_RUN_ID='7', GITHUB_RUN_ATTEMPT='1', BW_EXPECTED_HEAD='a'*40)))
+            self.assertFalse(json.loads(stdout.getvalue().split(' ', 1)[1])['privilegedGuest'])
+            with patch(__name__ + '.controller_entered', side_effect=PermissionError('not dropped')), patch.object(os, 'execve') as execute:
+                with self.assertRaises(PermissionError): BootstrapOps().execute(root, owner)
+                execute.assert_not_called()
+
+        def test_pre_owner_bootstrap_primary_survives_finalizer_and_invalid_invoker_refuses(self):
+            state = dict(uid=(0, 0, 0), gid=(0, 0, 0), groups=[0])
+            with self.wrapper_mocks(owner_error=True) as (saved, stderr), ExitStack() as stack:
+                stack.enter_context(patch.dict(os.environ, dict(SUDO_UID='1001', SUDO_GID='1002'), clear=True))
+                stack.enter_context(patch.object(os, 'getresuid', lambda: state['uid']))
+                stack.enter_context(patch.object(os, 'getresgid', lambda: state['gid']))
+                stack.enter_context(patch.object(os, 'getgroups', lambda: state['groups']))
+                stack.enter_context(patch.object(os, 'setresuid', lambda *v: state.update(uid=v)))
+                stack.enter_context(patch.object(os, 'setresgid', lambda *v: state.update(gid=v)))
+                stack.enter_context(patch.object(os, 'setgroups', lambda v: state.update(groups=v)))
+                stack.enter_context(patch.object(Path, 'read_text', return_value='CapEff:\t0000\nCapPrm:\t0000\n'))
+                with patch(__name__ + '.expected_cgroup', side_effect=ValueError('FIRST pre-owner path refusal')):
+                    self.assertEqual(bootstrap('inert'), 1)
+                original = json.loads(saved['.controller.json'])['controllerFailure']['firstFailure']
+                self.assertEqual(original, dict(phase='bootstrap', name='ValueError', message='FIRST pre-owner path refusal'))
+                self.assertEqual(finalize('inert'), 1)
+                self.assertEqual(json.loads(saved['audit.json'])['firstFailure'], original)
+                self.assertEqual(json.loads(saved['audit.json'])['secondary'][0]['phase'], 'external-cleanup')
+                self.assertIn('FIRST owner read', json.loads(saved['audit.json'])['secondary'][0]['message'])
+            with self.wrapper_mocks() as (saved, stderr), patch.dict(os.environ, dict(SUDO_UID='0', SUDO_GID='bad'), clear=True), \
+                 patch.object(os, 'getresuid', return_value=(0,) * 3), patch.object(os, 'getresgid', return_value=(0,) * 3), \
+                 patch.object(os, 'setgroups') as groups, patch.object(os, 'setresgid') as gid, patch.object(os, 'setresuid') as uid, patch.object(os, 'execve') as execute:
+                with self.assertRaises(PreservedFailure) as error: bootstrap('inert')
+                self.assertIn('sudo invoker', error.exception.firstFailure['message'])
+                self.assertNotIn('.controller.json', saved); groups.assert_not_called(); gid.assert_not_called(); uid.assert_not_called(); execute.assert_not_called()
+
+        def test_bootstrap_primary_survives_retention_failure(self):
+            ops = BootstrapOps(); ops.root = Path('/inert/root'); ops.owner = dict(snapshot={}, bootstrap=dict(uid=1001, gid=1002)); ops.invoker = dict(uid=1001, gid=1002)
+            first = PermissionError(13, 'migration denied'); stderr = io.StringIO()
+            with patch.object(os, 'getresuid', return_value=(1001,) * 3), patch.object(os, 'getresgid', return_value=(1002,) * 3), \
+                 patch.object(os, 'getgroups', return_value=[]), patch(__name__ + '.write_new', side_effect=OSError('SECONDARY retention')), patch.object(sys, 'stderr', stderr):
+                with self.assertRaises(PreservedFailure) as got: ops.retain(first)
+            self.assertEqual(got.exception.firstFailure, error_row(first, 'bootstrap'))
+            self.assertEqual(got.exception.secondary[0]['phase'], 'bootstrap-retention')
 
         def test_controller_wrapper_success_and_exact_child_primary(self):
             with self.wrapper_mocks() as (saved, _):
@@ -851,8 +1194,10 @@ if __name__ == '__main__':
         node = str(Path(shutil.which('node')).resolve(strict=True))
         print('DOS_PACKAGE_RUNTIME_' + sys.argv[2].upper() + ' ' + json.dumps(runtime(node), sort_keys=True))
         sys.exit(0)
-    if len(sys.argv) == 3 and sys.argv[1] in ('--run', '--finalize', '--admit-cgroup'):
+    if len(sys.argv) == 3 and sys.argv[1] in ('--run', '--finalize', '--admit-cgroup', '--bootstrap'):
+        if sys.argv[1] == '--bootstrap':
+            sys.exit(bootstrap(sys.argv[2]))
         if sys.argv[1] == '--admit-cgroup':
             admit_cgroup(sys.argv[2]); sys.exit(0)
         sys.exit(run_all(sys.argv[2]) if sys.argv[1] == '--run' else finalize(sys.argv[2]))
-    raise SystemExit('usage: producer.py --controls | --admit-cgroup CGROUP | --run CGROUP | --finalize CGROUP')
+    raise SystemExit('usage: producer.py --controls | --admit-cgroup CGROUP | --run CGROUP | --bootstrap CGROUP | --finalize CGROUP')

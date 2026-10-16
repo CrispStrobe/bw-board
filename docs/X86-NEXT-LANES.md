@@ -2132,7 +2132,8 @@ The next CLI-only qualification is the separately prepared
 
 ## DOS package CLI hosted PTY acceptance
 
-Status: source candidate published, actual result pending. The
+Status: first hosted actual failed before guest cases; corrected source pending
+qualification. The
 [ownership extension PR638](https://github.com/CrispStrobe/bw-board/pull/638)
 merged before implementation. [Draft PR637](https://github.com/CrispStrobe/bw-board/pull/637)
 at `a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee` includes the CLI, finite hosted
@@ -2142,6 +2143,25 @@ rehashed semantic refusals; none establishes actual boot, PTY behavior or an
 installed GUI result. All final-head checks and independent source/envelope
 admission precede the sole hosted actual. Refresh the head and detect completed
 work before acting; preserve frozen source and all original failures.
+
+The [sole run 38883122687](https://github.com/CrispStrobe/bw-board/actions/runs/38883122687)
+failed at initial controller cgroup admission, before the runtime/case loop.
+The retained primary is `PermissionError` 13; no four-case PTY guest launched.
+The finalizer propagated that same primary, with no recorded secondary error.
+The exact failing syscall and ancestor permissions were not captured. Two
+independent original-only audits verified the six-role partial packet, source
+census and empty retained terminal groups. This is no guest execution result.
+
+The next candidate uses a fixed privileged entry into the owned controller leaf,
+then drops real/effective/saved UID/GID and supplementary groups before execing
+the held unprivileged controller. Checked sudo invoker identity lets early
+bootstrap errors remain primary across finalization. Its 27 pure Node tests and
+18 inert producer controls do not qualify real migration or guests. Keep all
+fixtures, reader predicates, 23 success roles and resource limits unchanged.
+Review and freeze the complete new source, qualify its final-head checks, and
+admit a distinct official event before executing it. Never retry or relabel the
+failed original. See the [bootstrap source boundary](../scripts/dos-package-acceptance/README.md#privileged-entry-candidate-after-the-first-failed-hosted-run).
+
 No other runner, policy, parser, dependency, pin or other-owner change belongs
 to this acceptance task. GUI adoption and its consumer prerequisites remain
 separate.

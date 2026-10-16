@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {spawnSync} from 'node:child_process';
-import {authoredFixture, BOOT_HEX, CONFIG, BIOS, VGA, sha256, crc32} from '../scripts/dos-package-acceptance/probe.mjs';
+import {authoredFixture, BOOT_HEX, CONFIG, BIOS, VGA, sha256, crc32, sourceInventory} from '../scripts/dos-package-acceptance/probe.mjs';
 import {readDosPackageZip} from '../scripts/lib/dos-package-zip.mjs';
 import {selectDosPackage} from '../src/dos-package-policy.js';
 
@@ -51,4 +51,18 @@ test('independent original-only reader accepts full authored packet and rejects 
   assert.ok(result.fullyRehashedSemanticRefusals.every(row => row.result === 'REFUSED'));
   assert.equal(new Set(result.fullyRehashedSemanticRefusals.map(row => row.name)).size, 33);
   assert.equal(result.testOnly, true); assert.equal(result.guestOrPtyExecuted, false);
+});
+
+
+test('bootstrap remains in the same source57 graph and workflow drops privileges before the controller', () => {
+  const root = new URL('..', import.meta.url).pathname;
+  const producer = fs.readFileSync(new URL('../scripts/dos-package-acceptance/producer.py', import.meta.url), 'utf8');
+  const fixed = producer.match(/SOURCE_PATHS = frozenset\('''\n([\s\S]*?)\n'''\.split\(\)\)/);
+  assert.ok(fixed, 'closed privileged-bootstrap source path census');
+  assert.deepEqual(fixed[1].split('\n').sort(), Object.keys(sourceInventory(root).files).sort());
+  assert.equal(fixed[1].split('\n').length, 57);
+  const workflow = fs.readFileSync(new URL('../.github/workflows/dos-package-acceptance.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /timeout --signal=TERM --kill-after=4s 600s sudo -n/);
+  assert.match(workflow, /"\$controller_python" -I -B scripts\/dos-package-acceptance\/producer\.py --bootstrap/);
+  assert.doesNotMatch(workflow, /600s python3[^\n]*--run/);
 });

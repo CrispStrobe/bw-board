@@ -5100,21 +5100,28 @@ no host shell, arbitrary autoexec, CD/ISO or whole-DOSBox compatibility claim.
 See the [contract](docs/X86-NEXT-LANES.md#bounded-dos-package-admission).
 
 The separate [hosted PTY acceptance extension](#dos-package-cli-hosted-pty-acceptance--2026-10-16)
-is proposed below; it does not change this existing contract.
+is recorded below; it does not change this existing contract.
 
 ## DOS package CLI hosted PTY acceptance — 2026-10-16
 
-PROPOSED — Codex x86. Extend the existing bounded-package ownership with only
-new `scripts/dos-package-acceptance/producer.py` and
-`test/dos-package-acceptance.test.mjs`. The existing merged claim already covers
+MERGED OWNERSHIP — Codex x86, branch
+`lane/386-dos-package-cli-20261016`. The extension in
+[PR638](https://github.com/CrispStrobe/bw-board/pull/638) merged before
+implementation and covers `scripts/dos-package-acceptance/producer.py` and
+`test/dos-package-acceptance.test.mjs`. The existing merged claim also covers
 `scripts/dos-package-acceptance/{probe.mjs,reader.py,README.md}` and
-`.github/workflows/dos-package-acceptance.yml`. Do not implement this acceptance
-until the extension is merged after all enabled exact-head documentation checks.
+`.github/workflows/dos-package-acceptance.yml`.
 
-[PR637](https://github.com/CrispStrobe/bw-board/pull/637) supplies a source-only
-candidate: 22 pure tests and injected machine boundaries, with no actual guest,
-PTY or installed GUI qualification. Preserve its seven frozen source/test/README
-blobs, original failures and reviewed fixes. This extension owns no existing
+[PR637](https://github.com/CrispStrobe/bw-board/pull/637), frozen at
+`a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee`, passed eleven enabled source checks
+but its [sole hosted actual](https://github.com/CrispStrobe/bw-board/actions/runs/38883122687)
+failed at initial controller cgroup admission before any guest case. Preserve
+that failure, its once-acquired originals and independent audits; never relabel
+or retry that run. The next source candidate corrects privileged entry and
+unprivileged controller startup within the same owned files. Its 27 pure tests
+and 18 inert producer controls do not establish kernel, PTY or guest success.
+Preserve the six loader/test blobs and existing README prefix, fixtures, reader
+predicates and limits. This extension owns no existing
 runner, policy, parser, dependency, pin, workflow outside the named new workflow,
 or other owner's source. A required source repair needs separate review within
 its existing ownership before a new final source freeze.
