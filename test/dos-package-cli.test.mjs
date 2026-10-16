@@ -59,11 +59,15 @@ function mocks({failStep = null, rejectKeys = 0, failConstructor = false, failSn
     get instance() { return instance; }, get loads() { return loads; }};
 }
 class Terminal extends EventEmitter {
-  constructor() { super(); this.isTTY = true; this.isRaw = false; this.paused = true; this.output = ''; this.rawCalls = []; }
+  constructor(flowing = false) {
+    super(); this.isTTY = true; this.isRaw = false; this.readableFlowing = flowing;
+    this.paused = flowing === false; this.activeRead = flowing === true;
+    this.output = ''; this.rawCalls = []; this.pauseCalls = 0; this.resumeCalls = 0;
+  }
   setRawMode(value) { this.rawCalls.push(value); this.isRaw = value; }
   isPaused() { return this.paused; }
-  resume() { this.paused = false; }
-  pause() { this.paused = true; }
+  resume() { this.resumeCalls++; this.paused = false; this.readableFlowing = true; this.activeRead = true; }
+  pause() { this.pauseCalls++; this.paused = true; this.readableFlowing = false; this.activeRead = false; }
   write(value) { this.output += value; }
 }
 
@@ -183,6 +187,54 @@ test('live failure, interrupt and queue overflow restore terminal and preserve r
       assert.equal(input.isRaw, false); assert.equal(input.paused, true); assert.equal(input.listenerCount('data'), 0);
       assert.equal(signals.listenerCount('SIGTERM'), 0); assert.ok(output.output.endsWith('\x1b[?1049l'));
     }
+  } finally { f.cleanup(); }
+});
+
+test('cleanup releases its own fresh TTY read and preserves a preexisting flowing reader', async () => {
+  const f = fixture();
+  try {
+    const prepared = prepareDosPackage(parseDosPackageArguments(f.args));
+    for (const flowing of [null, false, true]) for (const exit of ['budget', 'error', 'interrupt']) {
+      const input = new Terminal(flowing), output = new Terminal(), signals = new EventEmitter();
+      const mock = mocks({failStep: exit === 'error' ? 3 : null});
+      let otherReads = 0; const otherReader = () => { otherReads++; };
+      if (flowing === true) input.on('data', otherReader);
+      // Fresh Node TTYs have no established flow, despite isPaused() being false.
+      assert.equal(input.isPaused(), flowing === false);
+      const report = await executeDosPackage(prepared, {steps: 16384, wallMs: 100, live: true}, {
+        loadMachine: mock.loadMachine, input, output, signals, now: () => 0,
+        yieldTurn: async () => { if (exit === 'interrupt') signals.emit('SIGINT'); }
+      });
+      assert.equal(report.stop, {budget: 'budget', error: 'refused', interrupt: 'interrupted'}[exit]);
+      assert.equal(report.refused?.message ?? null, exit === 'error' ? 'mock step refused' : null);
+      assert.equal(report.terminal.restorationComplete, true);
+      assert.equal(input.resumeCalls, 1);
+      assert.equal(input.pauseCalls, flowing === true ? 0 : 1, `${String(flowing)}/${exit}: release owned read`);
+      assert.equal(input.activeRead, flowing === true, `${String(flowing)}/${exit}: active stdin read remains`);
+      assert.equal(input.isPaused(), flowing !== true);
+      assert.equal(input.listenerCount('data'), flowing === true ? 1 : 0);
+      assert.equal(signals.listenerCount('SIGINT'), 0); assert.equal(signals.listenerCount('SIGTERM'), 0);
+      assert.equal(input.isRaw, false);
+      if (flowing === true) {
+        input.emit('data', Buffer.from('z')); assert.equal(otherReads, 1);
+        assert.equal(input.listeners('data')[0], otherReader);
+      }
+    }
+  } finally { f.cleanup(); }
+});
+
+test('fresh input pause failure remains secondary to guest failure while other terminal cleanup completes', async () => {
+  const f = fixture(), input = new Terminal(null), output = new Terminal();
+  try {
+    input.pause = () => { input.pauseCalls++; throw new Error('mock input pause refused'); };
+    const report = await executeDosPackage(prepareDosPackage(parseDosPackageArguments(f.args)),
+      {steps: 8192, wallMs: 100, live: true}, {loadMachine: mocks({failStep: 3}).loadMachine,
+        input, output, signals: new EventEmitter(), now: () => 0, yieldTurn: async () => {}});
+    assert.equal(report.refused.message, 'mock step refused');
+    assert.deepEqual(report.secondaryErrors, [{phase: 'terminal-cleanup', name: 'Error', message: 'mock input pause refused'}]);
+    assert.equal(report.terminal.restorationComplete, false); assert.equal(input.pauseCalls, 1);
+    assert.equal(input.isRaw, false); assert.equal(input.listenerCount('data'), 0);
+    assert.ok(output.output.endsWith('\x1b[?1004l\x1b[?25h\x1b[?1049l'));
   } finally { f.cleanup(); }
 });
 

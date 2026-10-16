@@ -2089,7 +2089,7 @@ introduced by this transport scope.
 ## Bounded DOS package admission
 
 This follows disk export/reload and has its own source, tests and acceptance.
-[Draft PR637](https://github.com/CrispStrobe/bw-board/pull/637), at
+[Initial PR637](https://github.com/CrispStrobe/bw-board/pull/637), at
 `a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee`, publishes a separate pure policy,
 Node ZIP adapter, CLI and hosted acceptance candidate without changing shared
 package dependencies. It is not a merged or guest-qualified ZIP/JS-DOS loader.
@@ -2132,10 +2132,9 @@ The next CLI-only qualification is the separately prepared
 
 ## DOS package CLI hosted PTY acceptance
 
-Status: first hosted actual failed before guest cases; corrected source pending
-qualification. The
+Status: two retained hosted failures; terminal-input repair pending qualification. The
 [ownership extension PR638](https://github.com/CrispStrobe/bw-board/pull/638)
-merged before implementation. [Draft PR637](https://github.com/CrispStrobe/bw-board/pull/637)
+merged before implementation. [Initial PR637](https://github.com/CrispStrobe/bw-board/pull/637)
 at `a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee` includes the CLI, finite hosted
 producer/workflow and independent original-only reader. Its 26 pure Node tests
 include inert producer controls and a manufactured complete packet with
@@ -2161,6 +2160,19 @@ fixtures, reader predicates, 23 success roles and resource limits unchanged.
 Review and freeze the complete new source, qualify its final-head checks, and
 admit a distinct official event before executing it. Never retry or relabel the
 failed original. See the [bootstrap source boundary](../scripts/dos-package-acceptance/README.md#privileged-entry-candidate-after-the-first-failed-hosted-run).
+
+The distinct PR640 [actual run 38906622594](https://github.com/CrispStrobe/bw-board/actions/runs/38906622594)
+reached case `a`: exact readiness, live `a`, the predicted `a/3B/DONE` output,
+a 50-million-step budget report and restored terminal settings. The process
+then stayed alive until its 120-second deadline. Later cases did not start.
+Two original-only audits verified that failure and retained empty groups with
+zero observed OOM events; no live-handle census identifies the remaining handle.
+The next candidate separately repairs CLI input ownership under the existing
+loader claim: release a read started from fresh or paused input while preserving
+an already-flowing caller. Its 29 pure tests and predicate mutations are source
+controls only. Require a new source freeze, final-head checks and distinct
+hosted event; never retry either failed original or relax the deadline.
+See the [input-lifetime boundary](../scripts/dos-package-acceptance/README.md#terminal-input-ownership-after-the-second-failed-hosted-run).
 
 No other runner, policy, parser, dependency, pin or other-owner change belongs
 to this acceptance task. GUI adoption and its consumer prerequisites remain

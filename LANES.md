@@ -5126,8 +5126,20 @@ runner, policy, parser, dependency, pin, workflow outside the named new workflow
 or other owner's source. A required source repair needs separate review within
 its existing ownership before a new final source freeze.
 
-The proposed next task is four fresh hosted cases through the real unmodified
-CLI: authored MIT bootable raw HDD/config/STORED ZIP with keyboard `a` and `b`,
+PR640's distinct [actual run 38906622594](https://github.com/CrispStrobe/bw-board/actions/runs/38906622594)
+reached the exact authored `a/3B/DONE` response, budget report and terminal
+restoration, then failed because the child remained alive until its deadline.
+The later three cases did not start. Preserve both failed originals and their
+independent audits; neither is a successful four-case qualification. The next
+candidate separately repairs `scripts/run-dos-package.mjs` under the existing
+bounded-package claim above: release its own fresh stdin read while preserving
+an already-flowing caller. Focused tri-state regressions and mutations plus
+all 29 pure tests pass; hosted qualification remains pending. This explicitly
+reviewed CLI repair changes no producer, workflow, fixture, reader, resource
+limit or dependency. It needs a new source freeze and distinct official event.
+
+The proposed next task is four fresh hosted cases through the fixed CLI:
+authored MIT bootable raw HDD/config/STORED ZIP with keyboard `a` and `b`,
 malformed ZIP refusal, and terminal focus-loss refusal. Initial focus-in remains
 a positive control. Freeze the finite input/readiness/action/quit protocol,
 independent original-only reader, exact roles/fieldsets/caps, source/runtime/input

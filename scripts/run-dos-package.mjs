@@ -121,7 +121,7 @@ export async function executeDosPackage(prepared, options, dependencies = {}) {
   const serial = [], delivered = [], queue = [], state = makeTerminalInputState();
   let machine = null, steps = 0, nextScan = 0, inputBytes = 0, quit = false, interrupted = false;
   let primary = null, stop = 'budget', lastDraw = -Infinity, lastInput = 0, terminalStarted = false;
-  let originalRaw = false, originalPaused = true, serialOverflow = false;
+  let originalRaw = false, pauseInputOnCleanup = true, serialOverflow = false;
   let primaryPhase = null, restorationComplete = null;
   const secondaryErrors = [];
   const recordFailure = (error, phase) => {
@@ -162,7 +162,10 @@ export async function executeDosPackage(prepared, options, dependencies = {}) {
       }});
     machine.loadRom(bios, 0xf0000); machine.loadRom(bios); machine.loadRom(vga, 0xc0000); machine.reset();
     if (options.live) {
-      originalRaw = input.isRaw === true; originalPaused = input.isPaused(); terminalStarted = true;
+      originalRaw = input.isRaw === true;
+      // A fresh TTY has readableFlowing=null while isPaused() is false.
+      // Release the read we start unless input was already flowing for its caller.
+      pauseInputOnCleanup = input.isPaused() || input.readableFlowing !== true; terminalStarted = true;
       input.setRawMode(true); input.on('data', onData); input.resume();
       signals.on('SIGINT', onInterrupt); signals.on('SIGTERM', onInterrupt);
       output.write('\x1b[?1049h\x1b[?25l\x1b[?1004h');
@@ -201,7 +204,7 @@ export async function executeDosPackage(prepared, options, dependencies = {}) {
       restorationComplete = true;
       for (const cleanup of [() => input.removeListener('data', onData),
         () => signals.removeListener('SIGINT', onInterrupt), () => signals.removeListener('SIGTERM', onInterrupt),
-        () => input.setRawMode(originalRaw), () => { if (originalPaused) input.pause(); },
+        () => input.setRawMode(originalRaw), () => { if (pauseInputOnCleanup) input.pause(); },
         () => output.write('\x1b[?1004l\x1b[?25h\x1b[?1049l')]) {
         try { cleanup(); } catch (error) { restorationComplete = false; recordFailure(error, 'terminal-cleanup'); }
       }

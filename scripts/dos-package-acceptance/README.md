@@ -290,3 +290,39 @@ These controls are not privilege, kernel, PTY or guest qualification. This fixed
 source needs a distinct final-source CI/admission/hosted event; it cannot reuse
 PR637's failed actual, earlier successful source controls or an invented guest
 result. Existing first-error and external cleanup requirements remain mandatory.
+
+
+### Terminal input ownership after the second failed hosted run
+
+The distinct PR640 [attempt-1 run 38906622594](https://github.com/CrispStrobe/bw-board/actions/runs/38906622594)
+used the reviewed privileged-entry candidate. Its retained bootstrap marker
+records nonroot UID/GID, empty supplementary groups and the same controller
+PID as the resource packet. Case `a` booted the authored image, displayed exact
+readiness, accepted the live key and displayed `BW-PKG-KEY=a;XOR5A=3B` followed
+by `BW-PKG-DONE`. The runner wrote its 50-million-step budget report and
+restored terminal settings. Nevertheless, the process remained alive until the
+120-second child deadline and was terminated. The other three cases never
+started. Finalization propagated the original deadline failure; the retained
+case and enclosing groups were empty with zero observed OOM events.
+
+Two original-only audits verified the eleven-role partial packet and original
+job log. This is evidence of the bounded first-key response, not a successful
+four-case acceptance. The originals contain no live-handle enumeration. Source
+review found a lifecycle gap: fresh Node input can have `readableFlowing=null`
+while `isPaused()` is false. Resuming it and later pausing only when it was
+initially paused can leave the CLI's own read active after its report.
+
+The next source candidate separately repairs the CLI within its existing
+package-loader ownership. Before adding its listener or resuming input, it
+records whether a read was already flowing. Cleanup releases its own fresh or
+paused read and preserves an already-flowing caller and its listeners. It does
+not destroy shared stdin or force process exit. Pause failures remain secondary
+to an existing execution error, and the remaining cleanup actions still run.
+
+The combined pure suites pass 29 tests. New actual-method inert controls cover
+fresh, paused and preexisting flowing input across budget, error and interrupt
+exits. Reverting the ownership predicate fails both regressions; always pausing
+fails the preexisting-reader control. These are source controls, not a new PTY
+or guest result. Freeze the new source, pass its own checks and admit a new
+distinct official event before another actual. Never retry or relabel either
+failed original, change the fixture, relax the reader or increase the deadline.
