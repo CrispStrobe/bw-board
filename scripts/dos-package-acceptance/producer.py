@@ -757,6 +757,7 @@ def finalize(cgroup):
             require(not file.is_symlink(), 'evidence symlink')
             if file.is_file() and file.name not in ('.controller.json', '.owner.json'):
                 data = file.read_bytes(); rows.append(dict(path=file.relative_to(PACKET).as_posix(), bytes=len(data), sha256=digest(data)))
+        rows.sort(key=lambda row: row['path'])
         try:
             source = json.loads((PACKET / 'source.before.json').read_bytes())
         except BaseException as error:

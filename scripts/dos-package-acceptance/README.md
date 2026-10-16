@@ -326,3 +326,27 @@ fails the preexisting-reader control. These are source controls, not a new PTY
 or guest result. Freeze the new source, pass its own checks and admit a new
 distinct official event before another actual. Never retry or relabel either
 failed original, change the fixture, relax the reader or increase the deadline.
+
+## Manifest ordering after the third hosted run
+
+PR641's distinct [attempt-1 run 38913512631](https://github.com/CrispStrobe/bw-board/actions/runs/38913512631)
+completed all four fresh cases. The authored `a` and `b` sessions produced their
+predicted input-dependent responses and exited naturally in about 4.6 and 4.9
+seconds. Malformed-path and focus-loss cases refused with exit status 1; all
+four ended with the original terminal settings. Retained case and enclosing groups were empty
+at the terminal observations, with no observed OOM events. The source and
+runtime identities matched before and after execution.
+
+The official workflow succeeded, but the unchanged standalone reader refused
+the retained manifest ordering. All 22 manifest rows had the expected bytes and
+hashes; the producer sorted `Path` objects, placing `inputs/authored.zip` and
+`inputs/malformed.zip` before `inputs.json`, while the reader requires relative
+path strings in lexical order. Preserve that refusal and the original packet.
+This is not a completed acceptance or source-merge qualification.
+
+The next candidate sorts the completed manifest rows by their relative POSIX
+path strings. It preserves file traversal, symlink admission, original error
+handling, role names and hashes, and the existing reader assertions. Exercise
+the actual producer finalizer with the file/directory prefix collision in pure
+controls, then freeze the new source and pass its own checks before a distinct
+hosted actual. Do not retry or rewrite PR641's original event or evidence.

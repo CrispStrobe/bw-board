@@ -41,6 +41,97 @@ test('exact producer orchestration executes inert success/fault controls, never 
   assert.match(run.stderr, /Ran \d+ tests/); assert.match(run.stderr, /\nOK\n/);
 });
 
+test('actual finalizer serializes all 22 role hashes in relative POSIX string order without changing reads', () => {
+  // Compile the held function body and its pure helpers, with every path/resource edge inert.
+  const control = String.raw`
+import ast, hashlib, json
+from pathlib import Path, PurePosixPath
+
+tree = ast.parse(Path('scripts/dos-package-acceptance/producer.py').read_text())
+names = {'finalize', 'require', 'digest', 'json_bytes', 'error_row'}
+nodes = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names]
+assert len(nodes) == len(names)
+nodes += [node for node in tree.body if isinstance(node, ast.Assign) and
+          any(isinstance(target, ast.Name) and target.id in {'CAPS', 'CASES'} for target in node.targets)]
+assert len(nodes) == len(names) + 2
+packet = PurePosixPath('packet')
+roles = '''a/events.json a/process.json a/pty.raw a/report.json
+b/events.json b/process.json b/pty.raw b/report.json
+focus-loss/events.json focus-loss/process.json focus-loss/pty.raw focus-loss/report.json
+inputs.json inputs/authored.zip inputs/malformed.zip
+malformed/events.json malformed/process.json malformed/pty.raw
+resources.json runtime.json source.after.json source.before.json'''.split()
+assert len(roles) == len(set(roles)) == 22
+encode = lambda value: (json.dumps(value, indent=2, allow_nan=False) + '\n').encode()
+snapshot = {'identity': {'inode': 19}, 'procs': []}
+facts = {'schema': 'bw.dos-package-pty.resources.v1', 'controller': {}, 'cases': {},
+         'enclosing': {'before': snapshot, 'after': None},
+         'controllerFailure': {'firstFailure': None, 'secondary': []}}
+data = {str(packet / name): ('owned role: ' + name).encode() for name in roles if name != 'resources.json'}
+data[str(packet / 'source.before.json')] = encode({'head': '1' * 40, 'tree': '2' * 40})
+data[str(packet / 'source.after.json')] = data[str(packet / 'source.before.json')]
+data[str(packet / '.controller.json')] = encode(facts)
+data[str(packet / '.owner.json')] = encode({'path': 'owned-cgroup', 'snapshot': snapshot})
+data['.github/workflows/dos-package-acceptance.yml'] = b'unchanged owned workflow'
+reads, removed = [], []
+
+class InertPath(PurePosixPath):
+    def read_bytes(self):
+        reads.append(str(self))
+        return data[str(self)]
+    def rglob(self, pattern):
+        assert self == packet and pattern == '*'
+        return [InertPath(name) for name in reversed(list(data)) if name.startswith('packet/')] + [self / 'inputs']
+    def is_symlink(self): return False
+    def is_file(self): return str(self) in data
+    def unlink(self, *, missing_ok):
+        assert missing_ok and self.name in ('.controller.json', '.owner.json')
+        removed.append(self.name)
+        del data[str(self)]
+
+def write_new(path, body):
+    assert str(path) not in data, 'exclusive retention'
+    data[str(path)] = body
+
+def unexpected_retention(*args):
+    raise AssertionError(('unexpected finalizer refusal', args))
+
+def expected_cgroup(value):
+    assert value == 'owned-cgroup'
+    return InertPath(value)
+
+def external_cleanup(ops, identity):
+    assert ops == InertPath('owned-cgroup') and identity == snapshot['identity']
+    return snapshot, {'firstFailure': None, 'secondary': []}
+
+env = dict(json=json, hashlib=hashlib, PACKET=InertPath(packet), Path=InertPath,
+           write_new=write_new, expected_cgroup=expected_cgroup, CleanupOps=lambda root: root,
+           external_cleanup=external_cleanup, retention_fallback=unexpected_retention)
+exec(compile(ast.Module(body=nodes, type_ignores=[]), '<actual producer finalizer>', 'exec'), env)
+assert env['finalize']('owned-cgroup') == 0
+audit = json.loads(data[str(packet / 'audit.json')])
+expected = [{'path': name, 'bytes': len(data[str(packet / name)]),
+             'sha256': hashlib.sha256(data[str(packet / name)]).hexdigest()} for name in sorted(roles)]
+assert audit['roles'] == expected, 'all closed role extents/hashes and canonical string order'
+assert [row['path'] for row in audit['roles'] if row['path'].startswith('inputs')] == [
+    'inputs.json', 'inputs/authored.zip', 'inputs/malformed.zip']
+# Path orders components, so this is deliberately different from serialized string order.
+path_order = [path.as_posix() for path in sorted(PurePosixPath(name) for name in roles)]
+assert path_order != sorted(roles)
+assert reads[2:24] == [str(packet / name) for name in path_order], 'existing traversal/read order retained'
+assert set(removed) == {'.controller.json', '.owner.json'}
+assert {str(path.relative_to(packet)) for path in map(PurePosixPath, data) if path.is_relative_to(packet)} == set(roles) | {'audit.json'}
+assert audit['firstFailure'] is None and audit['secondary'] == []
+assert audit['workflowSha256'] == hashlib.sha256(data['.github/workflows/dos-package-acceptance.yml']).hexdigest()
+assert len(data[str(packet / 'audit.json')]) + sum(row['bytes'] for row in expected) <= env['CAPS']['packetBytes']
+print(json.dumps({'actualFinalizer': True, 'closedRoleHashes': len(expected), 'guestOrPtyExecuted': False}))
+`;
+  const run = spawnSync('/usr/bin/python3', ['-B', '-c', control],
+    {cwd: new URL('..', import.meta.url), encoding: 'utf8', timeout: 10000, maxBuffer: 65536});
+  assert.equal(run.status, 0, run.stdout + run.stderr); assert.equal(run.signal, null); assert.equal(run.stderr, '');
+  assert.deepEqual(JSON.parse(run.stdout), {actualFinalizer: true, closedRoleHashes: 22, guestOrPtyExecuted: false});
+});
+
 test('independent original-only reader accepts full authored packet and rejects rehashed semantic negatives', () => {
   const run = spawnSync('/usr/bin/python3', ['-B', 'scripts/dos-package-acceptance/reader.py', '--controls'],
     {cwd: new URL('..', import.meta.url), encoding: 'utf8', timeout: 10000, maxBuffer: 65536});
