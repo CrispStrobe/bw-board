@@ -1,36 +1,37 @@
-2026-10-15 A10 interrupt-chain engine follow-up — CLAIMED, Codex.
-Branch lane/a10-uarte-irq-engine-20261015. The published first engine remains
-qualified for its 123-test suite, but Lite PR988's actual compiled V2 CLI and
-browser serial assertions failed. Core follow-up PR247 separates ENDTX from
-an unsolicited TXSTOPPED event; preserve the original release and failures.
-Own this row, the next explicit qualified core PIN in
-scripts/build-labwired-wasm.mjs, canonical generated catalog/chip source
-identities as needed, test/labwired-uarte-stack.test.mjs, and a separately
-source-bound original MIT IRQ-chain fixture under test/fixtures/labwired/uarte-irq/.
-The new engine test must require all ordered bytes, zero unsolicited stops,
-and the final explicitly requested stop. Keep all existing runtime assertions.
-Do not build or dispatch before the affected core guest qualifies and its exact
-source is admitted. Then two fresh independent builds, determinism, the full
-non-skipped release suite and all enabled producer checks precede publication.
-Do not reuse the first engine for changed core source or repeat any existing
-campaign. No adapter API, STM32 owner source, workflow, dependency or threshold
-change is included. The other owner's core5e replacement run remains untouched.
-The source-bound IRQ fixture and release test are prepared; its ARM ELF is
-compiled and independently bound to the reviewed core source/linker bytes.
-The explicit engine PIN is `de14721e4ae1d34a428f91d232e4520d50f1ceba`, the
-qualified PR247 head that a normal core merge will retain. All affected native,
-scheduler and Zephyr/CLI guest checks pass; its three workspace reports contain
-7,879 passed tests, zero failures and the 105 existing ignored tests. Core merge
-and every final enabled producer check remain prerequisites for engine dispatch.
+2026-10-16 A10 interrupt-chain engine follow-up — DONE (producer), Codex.
+Branch lane/a10-uarte-irq-engine-20261015. Core
+[PR247](https://github.com/CrispStrobe/labwired-core/pull/247) is merged,
+retaining qualified engine source `de14721e4ae1d34a428f91d232e4520d50f1ceba`.
+It snapshots the STARTTX buffer and separates ENDTX from an unsolicited
+TXSTOPPED event, with bounded local PPI/DPPI stop routing. Preserve the first
+published engine, its 123-test qualification and the original consumer failures.
+
+Producer [PR629](https://github.com/CrispStrobe/bw-board/pull/629) is merged
+at `a72acc06ac07fcbeb0c4760d0c3a41a7aa6ee8dd`, with reviewed parent
+`2506dd468772ffec6b0ce55314fc8b3c4270b862`. Its 13 enabled final-head checks
+passed, including all five fresh engine jobs; four conditional checks had
+declared skips. Both landed parents and the tree matched the reviewed merge.
+
+Distinct engine run
+[38855838615](https://github.com/CrispStrobe/bw-board/actions/runs/38855838615)
+passed two independent matching builds, determinism and all 125 release tests
+with zero failures or skips. The exact 19-byte stack-reuse and 17-byte IRQ-chain
+streams passed, including zero unsolicited stops and one final explicit stop.
+All four executable files match between builds, and the five published
+`labwired-wasm-de14721e` assets match the original qualified build bytes.
+No existing successful campaign was rerun or relabelled for changed source.
 
 The canonical catalog matches all 18 source chip descriptors and eight boards.
 Seventeen chip payloads and all board manifests are unchanged; the inherited
-STM32F103 descriptor now uses its qualified C8 64 KiB flash and clock gates.
-Preserve the other owner's separate F0 profile work. Two fixture identity
-controls and the canonical data audit pass locally; broader suites require the
-CI-installed npm dependencies. No engine or guest ran locally. Full 125-test,
-non-skipped actual release qualification, independent dual builds, determinism
-and publication remain pending; no existing campaign has been repeated.
+STM32F103 descriptor uses its qualified C8 64 KiB flash and clock gates.
+Preserve the separate F0 profile work. The IRQ fixture remains independently
+bound to its reviewed source/linker bytes. No engine or guest ran locally;
+no adapter API, package dependency, workflow, benchmark or threshold changed.
+
+Lite [PR988](https://github.com/CrispStrobe/brickwright-lite/pull/988) pins the
+new release but still needs complete actual CLI/browser serial qualification
+and every enabled final-head check before A10 consumer completion. This
+producer result does not claim hardware or full consumer qualification.
 
 2026-10-15 labwired F030 clock tree (RCC/FLASH on the heavy tier) — CLAIM, VPS Claude (opus).
 Branch lane/labwired-f030-clock-20261015, base 3e9429f2. Root cause: the labwired-tier F030
