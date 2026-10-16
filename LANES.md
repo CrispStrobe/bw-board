@@ -5082,7 +5082,7 @@ See the [contract](docs/X86-NEXT-LANES.md#bounded-dos-package-admission).
 
 ## Owned LE keyboard challenge/response — 2026-10-15
 
-Status: CLAIM — Codex x86; source implementation and actual qualification pending.
+Status: REACHED finite keyboard challenge/response at source `c65edcb2cbbd45f19d1150e2461877f130ff1847` in [run 38849884458](https://github.com/CrispStrobe/bw-board/actions/runs/38849884458). Four fresh target/QEMU cases produced exact key-dependent files, zero exit and separate shell return; see [results and limits](docs/I80386-DOS32A-KEYBOARD-RESULTS.md). This is selected-file evidence, not a whole-disk, strict-386DX, DPMI, full-OS, installed-GUI or performance qualification.
 
 Own only `scripts/i80386-dos32a-input/build.py`, `scripts/i80386-dos32a-input/controls.py`, `scripts/i80386-dos32a-input/source.py`, `scripts/i80386-dos32a-input/probe.mjs`, `scripts/i80386-dos32a-input/oracle.py`, `scripts/i80386-dos32a-input/reader.py`, `scripts/i80386-dos32a-input/README.md`, `test/i80386-dos32a-input.test.mjs`, `.github/workflows/i80386-dos32a-input.yml`. No CPU/device, old LE namespace, media pin or existing workflow changes.
 

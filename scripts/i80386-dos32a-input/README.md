@@ -1,6 +1,8 @@
 # Finite owned LE keyboard challenge
 
-This source-only gate has not executed a guest. It uses one authored 8192-byte
+The [four-case hosted result](../../docs/I80386-DOS32A-KEYBOARD-RESULTS.md)
+passed at source `c65edcb2cbbd45f19d1150e2461877f130ff1847`, with independent
+original-only audits and the standalone reader. It uses one authored 8192-byte
 LE32 client without an MZ stub or extender bytes. After unredirected
 `BW-LE-INPUT-READY`, actual hardware input supplies lowercase `a` or `b`.
 DOS AH08 consumes the key; unsigned multiplication by `01010101` followed by
@@ -86,5 +88,5 @@ original ZIP against independently supplied official run/attempt/job/artifact,
 workflow/head/label/terminal-step facts and externally admitted exact source,
 runtime and original role hashes. The external admission is trusted input from
 an original-only reviewer, not a producer-issued approval. Even finite keyboard
-application success would not qualify whole disks, physical timing, performance,
+application success does not qualify whole disks, physical timing, performance,
 DPMI, IRQ/mouse fidelity, full OS, installed GUI or release readiness.
