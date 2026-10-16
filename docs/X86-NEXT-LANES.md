@@ -2138,6 +2138,140 @@ Freeze current Git/live import and data closure, generator/client hashes, indepe
 
 The reached execution used four serial children, each bounded to 600 seconds (target additionally 120 million ordinary step calls), one CPU and 1 GiB/no swap, with an enclosing 2500-second controller and 45-minute job. The original ZIP contains 43 admitted roles and an unchanged 352-row source census; selected original FAT/root/file-cluster evidence and owned cleanup pass. Whole-disk byte proof remains false, and the raw FreeDOS acquisition archive/receipt was not retained. No performance, mouse/IRQ fidelity, DPMI, full OS, physical timing or installed GUI qualification follows. A next separately claimed owned LE32 fixture should check file reopen/read/seek/EOF, exact counts and buffer canaries; preserve existing arithmetic and CWSDPMI/high-linear gates.
 
+## Owned LE file readback, seek and EOF
+
+**Proposed, unqualified.** Merge this docs-only ownership claim before
+implementing the nine NEW paths in [LANES.md](../LANES.md). The reached
+[keyboard/write result](I80386-DOS32A-KEYBOARD-RESULTS.md) does not establish a
+DOS read into an owned protected buffer. This successor does not repeat the
+LE arithmetic, CWSDPMI allocation or timer gates.
+
+Generate one new 8192-byte LE32 client, without MZ stub or extender bytes. Use
+identical client/initial media in four fresh serial processes: target/a, QEMU/a,
+target/b, QEMU/b. After completed unredirected `BW-LE-FILE-READY`, offer case
+key `a` or `b` with make and release through the guest keyboard interface.
+No DOS-buffer stuffing, guest-memory injection or redirected readiness.
+
+| Case | N | Payload byte at zero-based i |
+| --- | ---: | --- |
+| `a` | 17 | `(37*i + 0x11) & 0xff` |
+| `b` | 31 | `(53*i + 0xa7) & 0xff` |
+
+Initially and at READY, `DATA.BIN`, `RESULT.BIN`, `KEYOK.TXT`, `KEYFAIL.TXT`
+and `RETURN.TXT` must be absent. Use explicit `C:` paths; the caller may remain
+on `A:`. Require this guest sequence:
+
+1. Create `C:\DATA.BIN`, write N payload bytes with checked carry/count, check
+   close and reopen the same file read-only. Preserve the returned live handle.
+2. Prefill a distinct 64-byte protected full-read buffer with `CC`; request N
+   bytes, require carry clear/count N and exact payload, and preserve bytes N
+   through 63 and both guards.
+3. Seek that handle with origin zero and actual offset N-5; check the returned
+   position. Prefill a separate 16-byte tail buffer with `CC`; request 8 bytes
+   and require carry clear/count 5, exact last five payload bytes, eleven
+   unchanged bytes and intact guards. This read crosses EOF.
+4. Prefill a third 16-byte EOF buffer with `CC`, request one byte and require
+   carry clear/count zero with the whole buffer/guards unchanged. Check close
+   of the reopened handle.
+5. Create `C:\RESULT.BIN` from actual returned buffers/guards, check its exact
+   155-byte write and close, then exit zero. Preserve the first failure through
+   secondary close/cleanup failures; errors must not produce success proofs.
+6. The batch checks zero error level and writes `KEYOK.TXT` as
+   `BW-FILE-EXIT-0\r\n`; require no failure marker and a current prompt. Only
+   then offer `C:\VERIFY.BAT`, writing `RETURN.TXT` as
+   `BW-FILE-SHELL-RETURN\r\n`, and require a fresh current prompt.
+
+Each buffer has prefix and suffix `A5 5A A5 5A 3C C3 3C C3` (8 bytes each)
+and must not alias another buffer, expected payload or proof. Serialize exactly:
+ASCII `BWFR1` (5 bytes); case key, N, full count N, tail count 5, EOF count 0,
+success byte `A5` (6 bytes); actual full/tail/EOF buffers (64/16/16 bytes); then
+actual full prefix/suffix, tail prefix/suffix, EOF prefix/suffix (48 bytes).
+The three count bytes must serialize saved ACTUAL DOS full/short/EOF returns,
+after complete ABI-defined return-register checks and before narrowing to bytes,
+joined to the immediate post-call witnesses. Their accepted values are N/5/0;
+hardcoded expected counts or truncated unchecked registers are not provenance.
+Freeze independent exact byte/opcode/branch goldens. The reader constructs exact
+bytes independently, not from producer hashes. Never replace returned buffers
+with golden data or serialize a static expected proof. Review/freeze the actual
+DOS/32A calling convention, carry/count/seek fields and pointer interpretation.
+
+Target preserves ordinary `machine.step`. Authenticate generated initial payload
+and client, PE/CS.D and owned linear-code witnesses at entry, write-close,
+reopen, read calls/returns, seek, closes and exit. Before every read retain the
+original DOS service, live handle, requested count, DS:EDX-derived owned linear
+destination, prefill and guards; after the real call returns capture original
+carry/count and buffer/guards before validation or later stores. Before seek
+retain original service, live handle, origin zero and ABI-frozen actual offset
+N-5; after return retain carry and returned position. Before read-handle close
+retain original service/handle and then its actual result. Join every such
+handle to the successful read-only reopen result; recording counts or seek
+results alone is insufficient. Bind segment identity, extents, nonaliasing and
+causal order; an owned PC or final file alone is insufficient. Do not require
+an owned PC while DOS is blocked.
+
+QEMU TCG `pc`/`486`, 4 MiB with independent BIOS/VGA remains a compatibility
+oracle. Retain actual QMP inputs, VGA boot/READY/response/final cuts, selected
+original files and process outcomes; do not invent target registers for QEMU
+or assert matching architectural state. At EVERY cut retain both FATs/root and
+only clusters for the five owned names. Validate all current root chains and
+admit EVERY selected cluster against copied immutable initial FAT before ANY
+selected data copy. Deleting an initial foreign root entry does not authorize
+its old clusters. The predecessor selector lacks `DATA.BIN`; new extractor and
+reader must close the complete set. Independently prove initial/READY absence,
+response data/proof/zero exit before VERIFY and final return. Exclude full disks,
+client/extender binaries and boot-media sectors. Observed whole-image hashes
+are not an independently rehashed whole-disk proof.
+
+Freeze held helper identities at merged predecessor
+`c0c880b6838ac118f36eac7eab7747d24535f9a8`: old
+`scripts/i80386-dos32a-owned/{oracle.py,media.mjs,keyboard.mjs,acquire.py}`,
+`scripts/lib/i80386-free-bios-fat16.mjs` and reviewed lifecycle/resource
+primitives in `scripts/i80386-dos32a-input/source.py`. Authenticate exact Git/live
+bytes before import. Do not use the old run/inventory/selector or reader to
+qualify the new namespace. Keep old helpers/pins/CPU/devices/gates unchanged;
+missing shared features need separate ownership. Freeze complete new Git/live
+engine/import/data closure before imports and after all cases; identify/review
+inherited main/model changes. Preserve fixed FreeDOS/DOS32A/firmware identities,
+DOS/32 Advanced custom license/acknowledgment and firmware notices. Observe
+runtime identities without complete dependency-authenticity claims. Do not
+claim raw acquisition-archive/member proof when archive/receipt was not retained.
+Previous successful guests/originals remain immutable references, never rerun
+or reacquired. Only a separately admitted new actual stages fixed inputs for
+this new client; no new binary bundle.
+
+Before launch require CPU-free authored controls, exact source functions with
+mocked boundaries, a complete manufactured packet/ZIP positive through a new
+standalone standard-library reader and fully rehashed semantic negatives. Cover
+omitted/reordered reopen/read/seek/close, wrong service/handle or seek request,
+wrong counts/seek result, static/stale/wrong-case proof, mode/code/pointer or
+buffer alias, changed canaries/untouched tails, nonzero EOF/modified EOF buffer,
+early input/VERIFY, preexisting files, missing release/return and wrong exit.
+Include a rehashed proof-header count versus immediate post-call count mismatch,
+and correct seek result paired with wrong origin/offset or handle requests.
+Also reject initially allocated foreign clusters at ANY screen/final cut before
+any selected copy, malformed FAT/JSON/ZIP, missing/extra/duplicate roles,
+source/media/runtime drift, engine substitution, official identity mismatches,
+quota/OOM and cleanup errors. Include valid full/short/EOF positives so disabling
+all reads cannot pass. Reader imports no producer/emulator; directory mode
+proves consistency only. Finite success needs independent official/source/
+runtime/original-role admission. Acquire each new original ZIP/log once after
+metadata admission and audit unchanged bytes without guest replay.
+
+Root/independent source/reader review and all enabled exact-head CI precede a
+separately frozen one-shot hosted actual. Proposed limits: four serial children,
+600 seconds each, one logical CPU/100% quota, 1 GiB RAM/zero swap; targets also
+120 million ordinary steps; 2500-second owned controller; 45-minute job. These
+limits are not yet qualified for this client. Preserve streams, wait4 status,
+first errors, before/after/between-case resources and empty owned process-group/
+cgroup proof; failed queries/reads reject cleanup and collected units require
+the known wait. Require attempt-one job/prelaunch guards and exact head/event/
+job/workflow/artifact/cleanup joins. No retry/relabel for a passing result.
+Local work is tiny source controls only; guest/QEMU/build/acquisition runs are
+hosted. Merge source only after original guest qualification and all enabled
+final-head checks, with matched head and actual tree/parents verified. No
+strict-386DX, DPMI/high-linear/timer, full-OS, whole-disk, mouse/IRQ, physical
+timing, performance/RTx, installed-GUI or license-clearance claim follows.
+
 ## Explicit 386 physical-memory capability metadata
 
 Docs-only claim, after PR599 merge and explicit target-owner handoff. Own the
