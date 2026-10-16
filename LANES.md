@@ -5113,11 +5113,13 @@ Source preparation and tiny manufactured controls precede exact-source CI and in
 
 ## Owned LE file readback, seek and EOF — 2026-10-16
 
-Status: PROPOSED — Codex x86; merge this docs-only ownership claim before
-implementation. No new client or file-readback execution is qualified.
-Branch: `lane/386-file-readback-claim-20261016`.
+Status: DONE — [source PR635](https://github.com/CrispStrobe/bw-board/pull/635)
+merged at `1fbb9e647e830c9dd5af3d6cecfe9cc021b24d8e`. The sole
+[four-case actual](https://github.com/CrispStrobe/bw-board/actions/runs/38860693983)
+and independent original-byte reviews passed at source `a6671819`.
+Branch: `lane/386-file-readback-source-20261016`.
 
-Own exactly these nine NEW implementation paths:
+The nine new implementation paths are:
 
 - `scripts/i80386-dos32a-file-readback/build.py`
 - `scripts/i80386-dos32a-file-readback/controls.py`
@@ -5129,28 +5131,29 @@ Own exactly these nine NEW implementation paths:
 - `test/i80386-dos32a-file-readback.test.mjs`
 - `.github/workflows/i80386-dos32a-file-readback.yml`
 
+The [results](docs/I80386-DOS32A-FILE-READBACK-RESULTS.md) record 17/31-byte full
+reads, seeks to 12/26, short requests of 8 returning 5, EOF requests of 1
+returning zero, actual protected buffers/guards and saved complete count returns
+in distinct 155-byte proofs. All 29 target witnesses join original services,
+reopened handles, pointer extents and seek operands/results. Both fresh engines
+per key reached checked zero exit and a later separate VERIFY/current prompt.
 The [contract](docs/X86-NEXT-LANES.md#owned-le-file-readback-seek-and-eof)
-requires one authored LE32 client, distinct 17/31-byte payloads and four fresh
-serial target/QEMU cases. Require checked write-close-reopen, actual protected
-buffer reads, exact full/short/EOF counts, requested and returned seek position,
-unchanged guards/tails, checked closes, proof from actual buffers, zero exit and
-separate VERIFY/current prompt. Bind original service/handle operands on every
-read/seek/read-handle close to the successful reopen; final file bytes alone do
-not prove a protected-buffer read. Proof count bytes serialize saved actual
-DOS returns after complete ABI register checks and join immediate post-call
-witnesses; expected N/5/0 constants are not count provenance.
+retains the evidence and refusal requirements.
 
-Reuse immutable reviewed helpers without editing or repeating their successful
-guests. New selected-file extraction and independent reader must check every
-cut against frozen initial allocation before any selected data copy. CPU/devices,
-firmware, old namespaces/tests/workflows, dependency/media pins and consumers
-remain outside this claim. A missing shared feature needs separate ownership.
-Root/independent source and reader review, manufactured positives and rehashed
-negatives, exact-head CI and a separately frozen one-shot hosted actual precede
-qualification. Proposed bounds: 600 seconds/120M target steps, 1 CPU/1 GiB/no
-swap per child, 2500-second controller, 45-minute job; not yet qualified for this
-client. No whole-disk, strict-386DX, DPMI, full-OS, physical timing,
-performance/RTx or installed-GUI claim follows.
+The tested source has 353 unchanged census rows and 43 original roles. The
+landed tree adds unrelated labwired work; all nine owned paths, six held helpers
+and the 40-module x86 runtime graph remain identical. Do not relabel the whole
+merged census as tested. The actual completed under 600-second/120M-target-step,
+1 CPU/1 GiB/no-swap child bounds, a 2500-second controller and 45-minute job.
+The x86 CPU/device code, firmware inputs, old helpers/pins and consumer
+dependencies retain their previous versions.
+
+Next is the existing consumer HDD/GUI dependency handoff and its own prerequisite
+checks, explicit pin adoption and installed acceptance; no consumer qualification
+or new ownership is created here. Never repeat this successful actual or
+reacquire its originals to read them. General DOS errors, whole-disk proof,
+strict 386DX, DPMI/full OS, physical timing, performance/RTx and installed GUI
+remain unqualified.
 
 ## Explicit 386 physical-memory capability metadata — 2026-10-15
 

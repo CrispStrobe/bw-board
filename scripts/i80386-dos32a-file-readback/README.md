@@ -1,8 +1,11 @@
-# Proposed finite owned LE32 file readback
+# Finite owned LE32 file readback
 
-This source candidate has not executed a guest. It generates one authored
-8192-byte LE32 client, without an MZ stub, compiler or extender bytes, and runs
-two distinct case payloads in four fresh serial processes: target/a, QEMU/a,
+The [sole hosted result](../../docs/I80386-DOS32A-FILE-READBACK-RESULTS.md)
+passed at source `a6671819`; source PR635 landed as `1fbb9e64` with the same
+owned code and x86 runtime closure. The tested 353-row snapshot is distinct from
+the landed composition's unrelated catalog change. This generator creates one
+authored 8192-byte LE32 client without an MZ stub, compiler or extender bytes.
+The qualifying run used four fresh serial processes: target/a, QEMU/a,
 target/b, QEMU/b. Case `a` has 17 bytes `(37*i+0x11)&255`; case `b` has 31 bytes
 `(53*i+0xa7)&255`.
 
@@ -57,9 +60,9 @@ archive/member provenance; staging-helper and extracted-image identity are
 the stated boundary. Runtime executable/firmware identities are observed,
 without complete dependency authenticity.
 
-Proposed limits are 600 seconds, one logical CPU/100% quota, 1 GiB RAM and zero
-swap per child; targets additionally have 120 million ordinary steps. The
-controller has 2500 seconds and the job 45 minutes. Retain first failures,
+The successful finite run used bounds of 600 seconds, one logical CPU/100%
+quota, 1 GiB RAM and zero swap per child; targets additionally had 120 million
+ordinary steps, with a 2500-second controller and 45-minute job. Retain first failures,
 stdout/stderr, wait4 status, before/after/between-case resources, no new OOM and
 empty owned groups/cgroup. Query/read errors reject cleanup; a collected unit
 requires its known wait. Job and both prelaunch boundaries require attempt one.
@@ -91,8 +94,11 @@ source, runtime and all original role identities. Acquire each new original once
 and audit unchanged bytes without guest replay. Never rerun or reacquire an old
 successful actual to read it.
 
-Source/reader review and enabled exact-head CI precede a separately frozen,
-separately admitted one-shot hosted `x86-dos32a-file-readback-actual` event. No
-label/dispatch/retry is authorized by these controls. No whole-disk, strict
-386DX, DPMI/high-linear/timer, full OS, physical timing, mouse/IRQ, performance/
-RTx, installed GUI or release qualification follows from this source candidate.
+Source/reader review, enabled exact-head CI and the separately admitted one-shot
+hosted `x86-dos32a-file-readback-actual` event completed; original-only review
+accepts all 43 roles and both engines' exact proofs. Both QEMU cases acknowledged
+quit. Never repeat this successful actual or reacquire its originals to read them.
+No label/dispatch/retry is authorized by these controls. Consumer dependency
+adoption and installed acceptance remain separate. No general DOS error-path,
+whole-disk, strict 386DX, DPMI/high-linear/timer, full OS, physical timing,
+mouse/IRQ, performance/RTx, installed GUI or release qualification follows.
