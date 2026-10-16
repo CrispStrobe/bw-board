@@ -164,17 +164,15 @@ peripherals:
 - id: rcc
   # RCC: the engine's RCC model, not a zero-reading stub. Generated F030
   # programs bring up HSI/2 -> PLL x12 = 48 MHz and spin on CR.PLLRDY and
-  # CFGR.SWS (RM0360 6.2.3); the stub answered 0 forever. Profile stm32f1:
-  # CR/CFGR/CIR/APB2RSTR/APB1RSTR/BDCR/CSR are RM0360 = RM0008 (same offsets,
-  # same ON->RDY pairs, same 2-bit SW/SWS gated on the source being ready).
-  # Known divergence until the engine pin carries the stm32f0 profile: the
-  # F103 ENR write masks drop F0-only enable bits on read-back (AHBENR
-  # IOPAEN..IOPFEN 17-22) and CR2 (HSI14) / CFGR3 are absent. No GPIO here is
-  # clock-gated, so the masks change read-back only.
+  # CFGR.SWS (RM0360 6.2.3); the stub answered 0 forever. Profile stm32f0
+  # (labwired-core #246, RM0360 6.4): the F1-shaped CR/CFGR map with the
+  # ON->RDY pairs and the source-ready SW/SWS gate, plus CFGR2/CFGR3 and CR2
+  # (HSI14ON -> HSI14RDY), with the F0 enable bits (AHBENR IOPAEN..IOPFEN
+  # 17-22) reading back.
   type: rcc
   base_address: 1073876992
   config:
-    profile: stm32f1
+    profile: stm32f0
 - id: flash_ctrl
   # FLASH interface (RM0360 3.5): ACR LATENCY / PRFTBE -> PRFTBS, KEYR, SR,
   # CR, AR, OBR, WRPR -- the RM0008 F1 map, so the engine's stm32f1 profile.

@@ -62,6 +62,7 @@ test('generated PLL bring-up completes and PA0 toggles on the real engine', {ski
     assert.equal((cfgr >> 2) & 3, 2, 'SWS = PLL');
     assert.equal((cfgr >> 18) & 0xF, 10, 'PLLMUL ×12 kept');
     assert.equal(word(0x40022000) & 0x17, 0x11, 'FLASH_ACR LATENCY 1 | PRFTBE read back');
+    assert.notEqual(word(0x40021014) & (1 << 17), 0, 'AHBENR IOPAEN reads back (RM0360 §6.4.6)');
     const odr = plain(adapter.sim.get_peripheral_snapshot('gpioPortA')).odr;
     assert.ok(Number.isInteger(odr), 'actual GPIO snapshot');
 });
