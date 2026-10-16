@@ -67,6 +67,25 @@ a continuous host guarantee. Unexpected descendants after the leader is reaped
 refuse acceptance and require the outside owner.
 These callback paths are covered by inert controls, not actual tool execution.
 
+The same-file privileged-entry functions are also a source checkpoint. They
+require trusted positive sudo invoker IDs before validating the fixed run's
+internal entry facts, the twelve held source paths, the actual Python bytes,
+and four distinct, empty cgroup identities with the fixed resource limits.
+The checkout and both packet directories must be canonical and owned by that
+invoker before facts are read. Duplicate or nonfinite JSON fields refuse entry;
+the two kernel observations use capped reads with first-error preservation.
+Root performs only bounded file observations and one self-migration into the
+controller leaf. It clears supplementary groups, drops all real, effective and
+saved group and user IDs, then requires zero CapInh, CapPrm, CapEff and CapAmb.
+Membership and dropped IDs are checked again before the fixed isolated Python
+exec. No Git command, runtime probe, archive operation or guest runs privileged.
+An early failure can be retained only after dropping to the checked sudo
+invoker; unknown invoker IDs, a failed drop or failed retention may leave only
+the bounded original-error diagnostic. Internal entry preparation and failure
+files are not additional packet roles. Actual-method controls mock every
+privilege, cgroup, process and file boundary; they do not perform a real drop or
+migration.
+
 Actual entry, privileged entry, the outer deadline and unconditional
 cleanup, packet finalization, the hosted actual job and results document are
 still unconnected. Neither polling profile bounds a blocking process

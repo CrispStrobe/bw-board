@@ -495,6 +495,205 @@ class Cgroups:
         return snapshots
 
 
+ENTRY_FILE = PACKET / '.entry.json'
+ENTRY_FAILURE = PACKET / '.entry-failure.json'
+RUN_FILE = 'scripts/i80386-ring3-int-iret/run.py'
+
+
+def entry_json(raw):
+    def pairs(values):
+        result = {}
+        for key, value in values:
+            need(key not in result, 'duplicate internal entry JSON key')
+            result[key] = value
+        return result
+    def reject(value):
+        raise ValueError('noninteger or nonfinite internal entry JSON number')
+    return json.loads(raw, object_pairs_hook=pairs, parse_constant=reject, parse_float=reject)
+
+
+def entry_proc(path):
+    need(path in ('/proc/self/status','/proc/self/cgroup'), 'fixed entry kernel observation path')
+    return Cgroups.text(None,Path(path))  # Existing 4096-byte NOFOLLOW/nonblocking read, first error retained.
+
+
+def entry_snapshot(snapshot):
+    need(type(snapshot) is dict and set(snapshot) == {'identity','limits','raw','procs'} and
+         type(snapshot['identity']) is dict and set(snapshot['identity']) == {'device','inode'} and
+         all(type(value) is int and value > 0 for value in snapshot['identity'].values()) and
+         snapshot['limits'] == LIMITS and type(snapshot['raw']) is dict and
+         set(snapshot['raw']) == {'memoryEvents','cpuStat','cgroupEvents','memoryCurrent','memoryPeak','pidsCurrent'} and
+         all(type(value) is str and len(value.encode('ascii')) <= 4096 for value in snapshot['raw'].values()),
+         'closed frozen entry snapshot')
+    entry_empty(snapshot)
+
+
+def entry_empty(snapshot):
+    need(snapshot['procs'] == [] and snapshot['raw']['pidsCurrent'].strip() == '0' and
+         'populated 0' in snapshot['raw']['cgroupEvents'].splitlines(), 'entry cgroup must be empty')
+
+
+def entry_ids(uid, gid):
+    need(os.getresuid() == (uid,)*3 and os.getresgid() == (gid,)*3 and os.getgroups() == [],
+         'all real/effective/saved IDs and supplementary groups must be dropped')
+    status = entry_proc('/proc/self/status')
+    for field in ('CapInh', 'CapPrm', 'CapEff', 'CapAmb'):
+        value = re.search(r'^'+field+r':\s*([0-9a-fA-F]+)\s*$', status, re.M)
+        need(value is not None and int(value[1], 16) == 0, 'nonzero or absent dropped capability '+field)
+
+
+class BootstrapOps:
+    """Closed same-file entry slice; not exposed by main or a hosted workflow.
+
+    Root only reads held files, moves itself once and drops privileges. Entry
+    facts are an internal bounded preparation file, never an extra packet role.
+    Runtime probes, Git commands, archive handling and guests are forbidden here.
+    """
+    def __init__(self, environ=None):
+        self.environ = dict(os.environ if environ is None else environ)
+        self.invoker = self.owner = self.groups = None
+
+    def validate(self):
+        need(os.getresuid() == (0,)*3 and os.getresgid() == (0,)*3, 'privileged bootstrap entry required')
+        # Establish the trusted sudo invoker before any fallible path/owner
+        # validation, so failures can be retained only after a safe UID drop.
+        ids = [self.environ.get('SUDO_'+name, '') for name in ('UID', 'GID')]
+        need(all(re.fullmatch('[1-9][0-9]{0,9}', value) and int(value) < 2**31 for value in ids),
+             'trusted positive sudo invoker unavailable')
+        self.invoker = dict(zip(('uid', 'gid'), map(int, ids)))
+        root = expected_cgroup(self.environ)
+        for key in ('BW_EXPECTED_HEAD', 'BW_EXPECTED_TREE'):
+            need(re.fullmatch('[0-9a-f]{40}', self.environ.get(key, '')), 'exact entry source binding')
+        checkout = Path.cwd()
+        for directory in (checkout, checkout/'build', checkout/PACKET):
+            info = directory.lstat()
+            need(directory.resolve(strict=True) == directory and stat.S_ISDIR(info.st_mode) and
+                 (info.st_uid,info.st_gid) == (self.invoker['uid'],self.invoker['gid']),
+                 'canonical invoker-owned checkout and packet directories')
+        need(ENTRY_FILE.resolve(strict=True) == checkout/ENTRY_FILE and
+             (PACKET/'source.before.json').resolve(strict=True) == checkout/PACKET/'source.before.json',
+             'canonical fixed entry facts paths')
+        info = ENTRY_FILE.lstat()
+        need(stat.S_ISREG(info.st_mode) and (info.st_uid, info.st_gid) ==
+             (self.invoker['uid'], self.invoker['gid']), 'invoker-owned regular entry facts')
+        owner = entry_json(bounded_read(ENTRY_FILE, JSON_CAP))
+        need(type(owner) is dict and set(owner) == {'schema','uid','gid','root','sourceSha256','python','cgroups'} and
+             owner['schema'] == 'bw.ring3.entry.v1' and
+             all(type(owner[k]) is int and owner[k] == self.invoker[k] for k in ('uid','gid')) and
+             owner['root'] == str(root), 'closed entry facts and invoker identity')
+        self.owner = owner
+        need(type(owner['cgroups']) is dict and set(owner['cgroups']) == {'enclosing','controller','js','qemu'},
+             'four fixed entry cgroups')
+        self.groups = Cgroups(root, owner['uid'], self.environ)
+        identities = set()
+        for role in ('enclosing','controller','js','qemu'):
+            snapshot = self.groups.observe(role); entry_empty(snapshot)
+            frozen = owner['cgroups'][role]
+            entry_snapshot(frozen)
+            need(snapshot['identity'] == frozen['identity'] and snapshot['limits'] == frozen['limits'] == LIMITS,
+                 'entry cgroup identity or limits drift')
+            entry_empty(frozen)
+            identity = tuple(snapshot['identity'][name] for name in ('device','inode'))
+            need(identity not in identities and self.groups.path(role).stat().st_gid == owner['gid'],
+                 'distinct invoker-owned entry cgroups')
+            identities.add(identity)
+        raw = bounded_read(PACKET/'source.before.json', JSON_CAP)
+        source = entry_json(raw)
+        need(sha(raw) == owner['sourceSha256'] and type(source) is dict and
+             set(source) == {'schema','head','tree','files'} and source['schema'] == 'bw.ring3.source.v1' and
+             source['head'] == self.environ['BW_EXPECTED_HEAD'] and source['tree'] == self.environ['BW_EXPECTED_TREE'] and
+             type(source['files']) is dict and set(source['files']) == SOURCE_PATHS, 'exact held entry source closure')
+        need(Path(__file__).resolve(strict=True) == checkout/RUN_FILE, 'held entry script location')
+        for name, frozen in source['files'].items():
+            need(type(frozen) is dict and set(frozen) == {'bytes','sha256','mode','blob'} and
+                 type(frozen['bytes']) is int and 0 < frozen['bytes'] <= 4 << 20 and frozen['mode'] == '100644' and
+                 re.fullmatch('[0-9a-f]{64}', frozen['sha256']) and re.fullmatch('[0-9a-f]{40}', frozen['blob']),
+                 'closed fixed source row')
+            path = Path(name)
+            need(path.resolve(strict=True) == checkout/name and stat.S_ISREG(path.lstat().st_mode),
+                 'canonical regular held source path')
+            data = bounded_read(path, 4 << 20)
+            need(len(data) == frozen['bytes'] and sha(data) == frozen['sha256'] and
+                 hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest() == frozen['blob'],
+                 'held entry source bytes drift')
+        python = owner['python']
+        need(type(python) is dict and set(python) == {'path','bytes','sha256'} and
+             type(python['bytes']) is int and 0 < python['bytes'] <= RUNTIME_CAPS['fileBytes'] and
+             re.fullmatch('[0-9a-f]{64}', python['sha256']), 'closed entry Python identity')
+        files = RuntimeFiles()
+        canonical, _ = files.resolve(RUNTIME_EXECUTABLES['python'])
+        need(python['path'] == canonical and files.resolve(sys.executable)[0] == canonical and
+             Path(canonical).stat().st_mode & 0o6000 == 0, 'exact non-setid entry Python selection')
+        data = files.read(canonical, RUNTIME_CAPS['fileBytes'])
+        need(len(data) == python['bytes'] and sha(data) == python['sha256'], 'entry Python bytes drift')
+        return owner
+
+    def entered(self):
+        need(entry_proc('/proc/self/cgroup') ==
+             '0::/'+self.groups.root.name+'/controller\n', 'entry controller membership path')
+        snapshot = self.groups.observe('controller')
+        need(snapshot['identity'] == self.owner['cgroups']['controller']['identity'] and
+             snapshot['procs'] == [os.getpid()] and snapshot['raw']['pidsCurrent'].strip() == '1' and
+             'populated 1' in snapshot['raw']['cgroupEvents'].splitlines(), 'entry sole controller PID and leaf identity')
+
+    def enter(self):
+        path = self.groups.path('controller')/'cgroup.procs'
+        descriptor = os.open(path, os.O_WRONLY | os.O_NOFOLLOW)
+        first = None
+        try:
+            data = str(os.getpid()).encode('ascii')
+            need(os.write(descriptor, data) == len(data), 'complete privileged self migration')
+        except Exception as error: first = error
+        finally: first = close_owned(descriptor, first, 'entry-migration-close')
+        if first is not None: raise first
+        self.entered()
+
+    def drop(self):
+        need(self.invoker is not None, 'trusted invoker required before drop')
+        uid, gid = self.invoker['uid'], self.invoker['gid']
+        os.setgroups([]); os.setresgid(gid,gid,gid); os.setresuid(uid,uid,uid)
+        entry_ids(uid,gid)
+
+    def execute(self):
+        entry_ids(self.invoker['uid'],self.invoker['gid']); self.entered()
+        python = self.owner['python']['path']
+        environment = dict(ENV, **{name:self.environ[name] for name in
+            ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')})
+        os.execve(python, [python,'-I','-B',RUN_FILE,'--controller'], environment)
+        raise RuntimeError('entry exec unexpectedly returned')
+
+    def retain(self, failure):
+        # Never write owned evidence as root, including failures before owner
+        # validation. Unknown invoker/failed drop means bounded stderr only.
+        try:
+            need(self.invoker is not None, 'trusted invoker unavailable for entry retention')
+            if os.getresuid() != (self.invoker['uid'],)*3 or os.getresgid() != (self.invoker['gid'],)*3 or os.getgroups():
+                self.drop()
+            entry_ids(self.invoker['uid'],self.invoker['gid'])
+            retain_failure(failure, lambda facts:write_new(ENTRY_FAILURE,encode(facts),JSON_CAP),
+                           lambda data:sys.stderr.buffer.write(data))
+        except BaseException as error:
+            failure.add(error,'entry-retention')
+            try:
+                data = encode({'firstFailure':failure.first,'secondary':failure.secondary})
+                need(len(data) <= 16384,'entry diagnostic cap'); sys.stderr.buffer.write(data)
+            except BaseException as secondary: failure.add(secondary,'entry-diagnostic')
+
+
+def controller_bootstrap(ops=None):
+    """Source/mock ordered entry only; main intentionally cannot invoke this."""
+    ops = BootstrapOps() if ops is None else ops
+    failure = FirstFailure()
+    try:
+        ops.validate(); ops.enter(); ops.drop(); ops.execute()
+        raise RuntimeError('entry execution unexpectedly returned')
+    except BaseException as error:
+        failure.add(error,'bootstrap')
+        try: ops.retain(failure)
+        except BaseException as secondary: failure.add(secondary,'entry-retention-wrapper')
+    return failure
+
+
 class LinuxChild:
     """OS edges for one fresh serial guest; controls replace every edge."""
     def __init__(self, groups, role, argv):
@@ -788,6 +987,9 @@ def run_serial(roles, execute, retain, terminal, failure):
 def controls():
     """Inert actual-function controls. Never opens a cgroup, forks or execs."""
     import unittest
+    import contextlib
+    import io
+    from types import SimpleNamespace
     from unittest.mock import patch, Mock
 
     class Fake:
@@ -819,6 +1021,230 @@ def controls():
                 'rusage':{'userSeconds':0.1,'systemSeconds':0.01,'maxRssKiB':1024}}
 
     class Tests(unittest.TestCase):
+        @contextlib.contextmanager
+        def entry_edges(self):
+            """All OS edges of the actual entry methods are inert here."""
+            env={'SUDO_UID':'1001','SUDO_GID':'1002','GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1',
+                 'BW_EXPECTED_HEAD':'a'*40,'BW_EXPECTED_TREE':'b'*40}
+            source_data={name:('authored '+name).encode() for name in SOURCE_PATHS}
+            source={'schema':'bw.ring3.source.v1','head':'a'*40,'tree':'b'*40,'files':{
+                name:{'bytes':len(data),'sha256':sha(data),'mode':'100644',
+                      'blob':hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()}
+                for name,data in source_data.items()}}
+            snapshots={role:{'identity':{'device':3,'inode':index+1},'limits':dict(LIMITS),
+                'procs':[],'raw':{'pidsCurrent':'0\n','cgroupEvents':'populated 0\nfrozen 0\n',
+                    'memoryEvents':'oom 0\n','cpuStat':'usage_usec 0\n','memoryCurrent':'0\n','memoryPeak':'0\n'}}
+                for index,role in enumerate(('enclosing','controller','js','qemu'))}
+            owner={'schema':'bw.ring3.entry.v1','uid':1001,'gid':1002,'root':'/sys/fs/cgroup/bw-ring3-123-1',
+                'sourceSha256':sha(encode(source)),'python':{'path':'/usr/bin/python3.12','bytes':6,'sha256':sha(b'python')},
+                'cgroups':json.loads(json.dumps(snapshots))}
+            state={'env':env,'source':source,'sourceData':source_data,'owner':owner,'snapshots':snapshots,
+                'uids':(0,0,0),'gids':(0,0,0),'groups':[0],'caps':{k:'0'*16 for k in ('CapInh','CapPrm','CapEff','CapAmb')},
+                'events':[],'reads':[],'retained':[],'migrated':False,'pythonMode':0o100755,'dirGid':1002,
+                'redirect':{},'directoryOwners':{}}
+            def read(path,cap):
+                state['reads'].append(str(path))
+                if Path(path)==ENTRY_FILE:return state.get('ownerRaw',encode(state['owner']))
+                if Path(path)==PACKET/'source.before.json':return state.get('sourceRaw',encode(state['source']))
+                return state['sourceData'][str(path)]
+            def resolve(path,strict=False):
+                if str(path) in state['redirect']:return Path(state['redirect'][str(path)])
+                if str(path)==__file__:return Path('/checkout')/RUN_FILE
+                return path if path.is_absolute() else Path('/checkout')/path
+            def lstat(path):
+                directory=str(path) in ('/checkout','/checkout/build','/checkout/build/i80386-ring3-int-iret')
+                uid,gid=state['directoryOwners'].get(str(path),(1001,1002))
+                return SimpleNamespace(st_mode=0o40755 if directory else 0o100644,st_uid=uid,st_gid=gid)
+            def observe(groups,role):
+                value=json.loads(json.dumps(state['snapshots'][role]))
+                if state['migrated'] and role=='controller':
+                    value['procs']=[101];value['raw'].update(pidsCurrent='1\n',cgroupEvents='populated 1\nfrozen 0\n')
+                return value
+            def proc(path,**kwargs):
+                if str(path)=='/proc/self/cgroup':return '0::/bw-ring3-123-1/controller\n'
+                self.assertEqual(str(path),'/proc/self/status')
+                return ''.join(k+':\t'+v+'\n' for k,v in state['caps'].items())
+            def migrate(fd,data):state['events'].append(('move',data));state['migrated']=True;return len(data)
+            def open_path(path,flags):state['kernelPath']=str(path);return 7
+            def setgroups(value):state['events'].append(('groups',value));state['groups']=value
+            def setgid(*value):state['events'].append(('gids',value));state['gids']=value
+            def setuid(*value):state['events'].append(('uids',value));state['uids']=value
+            with contextlib.ExitStack() as stack:
+                patches=[patch.object(os,'getresuid',side_effect=lambda:state['uids']),
+                    patch.object(os,'getresgid',side_effect=lambda:state['gids']),patch.object(os,'getgroups',side_effect=lambda:state['groups']),
+                    patch.object(os,'setgroups',side_effect=setgroups),patch.object(os,'setresgid',side_effect=setgid),
+                    patch.object(os,'setresuid',side_effect=setuid),patch.object(os,'getpid',return_value=101),
+                    patch.object(os,'open',side_effect=open_path),patch.object(os,'read',side_effect=lambda fd,cap:proc(Path(state['kernelPath'])).encode()),
+                    patch.object(os,'write',side_effect=migrate),patch.object(os,'close'),
+                    patch.object(os,'execve',side_effect=lambda *a:state['events'].append(('exec',a))),
+                    patch.object(Path,'cwd',return_value=Path('/checkout')),patch.object(Path,'resolve',resolve),
+                    patch.object(Path,'lstat',lstat),
+                    patch.object(Path,'stat',lambda path:SimpleNamespace(st_mode=state['pythonMode'],st_gid=state['dirGid'])),
+                    patch.object(Path,'read_text',proc),patch.object(Cgroups,'observe',observe),
+                    patch.object(Cgroups,'path',lambda groups,role:groups.root if role=='enclosing' else groups.root/role),
+                    patch.object(RuntimeFiles,'resolve',return_value=('/usr/bin/python3.12',{})),
+                    patch.object(RuntimeFiles,'read',return_value=b'python'),patch.dict(globals(),bounded_read=read),
+                    patch.dict(globals(),write_new=lambda path,data,cap:state['retained'].append((path,json.loads(data)))),
+                    patch.object(sys,'stderr',Mock(buffer=io.BytesIO()))]
+                for item in patches:stack.enter_context(item)
+                yield BootstrapOps(env),state
+
+        def test_entry_actual_methods_migrate_drop_and_fixed_exec_in_order(self):
+            with self.entry_edges() as (ops,state),patch.object(subprocess,'Popen') as child:
+                ops.validate();ops.enter();ops.drop()
+                with self.assertRaisesRegex(RuntimeError,'exec unexpectedly returned'):ops.execute()
+                child.assert_not_called()
+                self.assertEqual([x[0] for x in state['events']],['move','groups','gids','uids','exec'])
+                self.assertEqual(state['events'][0],('move',b'101'))
+                self.assertEqual(state['events'][2:4],[('gids',(1002,)*3),('uids',(1001,)*3)])
+                executable,argv,environment=state['events'][-1][1]
+                self.assertEqual(executable,'/usr/bin/python3.12')
+                self.assertEqual(argv,[executable,'-I','-B',RUN_FILE,'--controller'])
+                self.assertEqual(environment,dict(ENV,**{k:state['env'][k] for k in
+                    ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')}))
+                self.assertNotIn('SUDO_UID',environment)
+
+        def test_entry_validation_refuses_source_python_owner_and_leaf_drift(self):
+            mutations=(lambda s:s['env'].update(GITHUB_RUN_ATTEMPT='2'),
+                lambda s:s['owner'].update(uid=1003),lambda s:(s['source']['files'].pop(RUN_FILE),s['owner'].update(sourceSha256=sha(encode(s['source'])))),
+                lambda s:s['sourceData'].update({RUN_FILE:b'changed'}),
+                lambda s:s['owner']['python'].update(sha256='c'*64),lambda s:s.update(pythonMode=0o104755),
+                lambda s:s['snapshots']['controller']['identity'].update(inode=99),
+                lambda s:s['snapshots']['js']['limits'].update(pidsMax='65'),
+                lambda s:s['snapshots']['qemu'].update(procs=[999]),lambda s:s.update(dirGid=1003))
+            for mutate in mutations:
+                with self.entry_edges() as (ops,state):
+                    mutate(state)
+                    ops.environ=dict(state['env'])
+                    with self.assertRaises(ValueError):ops.validate()
+                    self.assertEqual(state['events'],[])
+
+        def test_entry_requires_root_and_trusted_invoker_before_owner_read(self):
+            for change in ('root','uid','gid'):
+                with self.entry_edges() as (ops,state):
+                    if change=='root':state['uids']=(1001,)*3
+                    else:state['env']['SUDO_'+change.upper()]='0';ops.environ=dict(state['env'])
+                    with self.assertRaises(ValueError):ops.validate()
+                    self.assertIsNone(ops.invoker);self.assertIsNone(ops.owner)
+
+        def test_entry_duplicate_and_nonfinite_json_refuse_before_migration(self):
+            for document in ('owner','source'):
+                for token in ('duplicate','NaN','1e999'):
+                    with self.entry_edges() as (ops,state):
+                        raw=encode(state[document]);key=b'"uid":1001' if document=='owner' else b'"head":"'+b'a'*40+b'"'
+                        replacement=key+b','+key if token=='duplicate' else key.split(b':')[0]+b':'+token.encode()
+                        raw=raw.replace(key,replacement,1);self.assertNotEqual(raw,encode(state[document]))
+                        state[document+'Raw']=raw
+                        if document=='source':state['owner']['sourceSha256']=sha(raw)
+                        with self.assertRaisesRegex(ValueError,'internal entry JSON'):ops.validate()
+                        self.assertEqual(state['events'],[])
+
+        def test_entry_directory_escape_or_wrong_owner_refuses_before_facts_read(self):
+            for directory in ('/checkout','/checkout/build','/checkout/build/i80386-ring3-int-iret'):
+                for fault in ('redirect','uid','gid'):
+                    with self.entry_edges() as (ops,state):
+                        if fault=='redirect':state['redirect'][directory]='/outside'
+                        else:state['directoryOwners'][directory]=(1003,1002) if fault=='uid' else (1001,1003)
+                        with self.assertRaisesRegex(ValueError,'checkout and packet directories'):ops.validate()
+                        self.assertEqual(state['reads'],[]);self.assertEqual(state['events'],[])
+
+        def test_entry_frozen_snapshot_extra_fields_refuse(self):
+            for place in ('outer','identity','raw'):
+                with self.entry_edges() as (ops,state):
+                    frozen=state['owner']['cgroups']['controller']
+                    (frozen if place=='outer' else frozen[place])['extra']=0
+                    with self.assertRaisesRegex(ValueError,'closed frozen entry snapshot'):ops.validate()
+                    self.assertEqual(state['events'],[])
+
+        def test_entry_kernel_reads_are_capped_and_preserve_read_error(self):
+            for path in ('/proc/self/status','/proc/self/cgroup'):
+                with patch.object(os,'open',return_value=7) as opened,patch.object(os,'read',return_value=b'x'*4097),patch.object(os,'close'):
+                    with self.assertRaisesRegex(ValueError,'kernel observation cap'):entry_proc(path)
+                    opened.assert_called_once_with(Path(path),os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+                first=OSError('READ')
+                with patch.object(os,'open',return_value=7),patch.object(os,'read',side_effect=first),patch.object(os,'close',side_effect=OSError('CLOSE')):
+                    with self.assertRaises(OSError) as caught:entry_proc(path)
+                    self.assertIs(caught.exception,first);self.assertEqual(first.ring3_secondary[-1]['message'],'CLOSE')
+
+        def test_entry_missing_or_nonzero_each_capability_prevents_exec(self):
+            for field in ('CapInh','CapPrm','CapEff','CapAmb'):
+                for value in (None,'0000000000000001'):
+                    with self.entry_edges() as (ops,state):
+                        ops.validate();ops.enter()
+                        if value is None:state['caps'].pop(field)
+                        else:state['caps'][field]=value
+                        with self.assertRaisesRegex(ValueError,'capability'):ops.drop()
+                        self.assertNotIn('exec',[x[0] for x in state['events']])
+
+        def test_entry_failed_drop_or_saved_id_readback_never_execs(self):
+            for edge in ('groups','gids','uids','saved'):
+                with self.entry_edges() as (ops,state):
+                    ops.validate();ops.enter()
+                    if edge=='saved':
+                        patcher=patch.object(os,'setresuid',side_effect=lambda *v:state.update(uids=(v[0],v[1],0)))
+                    else:patcher=patch.object(os,{'groups':'setgroups','gids':'setresgid','uids':'setresuid'}[edge],side_effect=OSError('DROP'))
+                    with patcher:
+                        with self.assertRaises((OSError,ValueError)):ops.drop()
+                    self.assertNotIn('exec',[x[0] for x in state['events']])
+
+        def test_entry_migration_first_error_survives_close_and_never_drops(self):
+            with self.entry_edges() as (ops,state):
+                ops.validate();first=PermissionError('MIGRATION')
+                with patch.object(os,'write',side_effect=first),patch.object(os,'close',side_effect=OSError('CLOSE')):
+                    with self.assertRaises(PermissionError) as caught:ops.enter()
+                    self.assertIs(caught.exception,first);self.assertEqual(first.ring3_secondary[0]['message'],'CLOSE')
+                self.assertEqual(state['events'],[])
+
+        def test_entry_leaf_drift_after_drop_prevents_exec(self):
+            with self.entry_edges() as (ops,state):
+                ops.validate();ops.enter();ops.drop()
+                state['snapshots']['controller']['identity']['inode']=99
+                with self.assertRaisesRegex(ValueError,'sole controller PID and leaf identity'):ops.execute()
+                self.assertNotIn('exec',[x[0] for x in state['events']])
+
+        def test_entry_preowner_failure_retained_only_after_trusted_drop(self):
+            with self.entry_edges() as (ops,state):
+                ops.environ['BW_EXPECTED_HEAD']='bad'
+                failure=controller_bootstrap(ops)
+                self.assertEqual(failure.first['message'],'exact entry source binding')
+                self.assertIsNone(ops.owner)
+                self.assertEqual([x[0] for x in state['events']],['groups','gids','uids'])
+                self.assertEqual(state['retained'][0][0],ENTRY_FAILURE)
+                self.assertEqual(state['retained'][0][1]['firstFailure'],failure.first)
+                self.assertEqual(state['uids'],(1001,)*3)
+
+        def test_entry_unknown_invoker_or_failed_retention_drop_never_writes(self):
+            for edge in ('invoker','drop'):
+                with self.entry_edges() as (ops,state):
+                    if edge=='invoker':ops.environ['SUDO_UID']='bad'
+                    else:ops.environ['BW_EXPECTED_HEAD']='bad'
+                    with patch.object(os,'setgroups',side_effect=OSError('DROP')):
+                        failure=controller_bootstrap(ops)
+                    self.assertEqual(state['retained'],[])
+                    self.assertIn('trusted positive' if edge=='invoker' else 'exact entry',failure.first['message'])
+                    self.assertTrue(failure.secondary)
+
+        def test_entry_retention_failure_stays_secondary_to_original(self):
+            with self.entry_edges() as (ops,state):
+                ops.environ['BW_EXPECTED_HEAD']='bad'
+                with patch.dict(globals(),write_new=Mock(side_effect=OSError('RETAIN'))):
+                    failure=controller_bootstrap(ops)
+                self.assertEqual(failure.first['message'],'exact entry source binding')
+                self.assertEqual(failure.secondary[0]['message'],'RETAIN')
+
+        def test_entry_wrapper_stops_at_each_failure_and_preserves_exact_first(self):
+            for phase in ('validate','enter','drop','execute'):
+                events=[];ops=Mock();first=ValueError('FIRST-'+phase)
+                for name in ('validate','enter','drop','execute'):
+                    def call(name=name):
+                        events.append(name)
+                        if name==phase:raise first
+                    getattr(ops,name).side_effect=call
+                ops.retain.side_effect=OSError('RETAIN')
+                failure=controller_bootstrap(ops)
+                self.assertEqual(events,list(('validate','enter','drop','execute')[:('validate','enter','drop','execute').index(phase)+1]))
+                self.assertEqual(failure.first,row(first,'bootstrap'));self.assertEqual(failure.secondary[0]['message'],'RETAIN')
+
         def test_natural_js_and_qemu_statuses(self):
             for role,code in (('js',0),('qemu',1)):
                 ops=Fake([[('stdout',b'original')]],status(code))
