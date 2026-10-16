@@ -426,6 +426,7 @@ class Cgroups:
     def __init__(self, root, uid, environ):
         need(Path(root) == expected_cgroup(environ) and type(uid) is int and uid > 0, 'fixed owned cgroup root')
         self.root, self.uid, self.identities = Path(root), uid, {}
+        self.last_discovery_census=None
 
     def path(self, role):
         need(role in ('enclosing', 'controller', 'js', 'qemu'), 'closed cgroup role')
@@ -473,6 +474,26 @@ class Cgroups:
         need(role in ('js', 'qemu'), 'only owned child cleanup')
         with (self.path(role)/'cgroup.kill').open('w') as stream: stream.write('1')
 
+    def discovery_member(self, parent, child):
+        need(child==os.getpid() and type(parent) is int and parent>0 and parent!=child,'fixed discovery parent/child identity')
+        controller=self.observe('controller')
+        need(controller['procs']==sorted((parent,child)) and
+             controller['raw']['pidsCurrent'].strip()=='2' and
+             'populated 1' in controller['raw']['cgroupEvents'].splitlines(),
+             'discovery child must inherit admitted controller membership')
+
+    def discovery_idle(self, parent):
+        need(type(parent) is int and parent==os.getpid(),'current discovery controller identity')
+        snapshots={};self.last_discovery_census=snapshots
+        for name in ('controller','js','qemu'):snapshots[name]=self.observe(name)
+        for name,snapshot in snapshots.items():
+            active=name=='controller'
+            need(snapshot['procs']==([parent] if active else []) and
+                 snapshot['raw']['pidsCurrent'].strip()==('1' if active else '0') and
+                 ('populated '+('1' if active else '0')) in snapshot['raw']['cgroupEvents'].splitlines(),
+                 'discovery requires parent-only controller and empty guest leaves: '+name)
+        return snapshots
+
 
 class LinuxChild:
     """OS edges for one fresh serial guest; controls replace every edge."""
@@ -482,8 +503,13 @@ class LinuxChild:
 
     def now(self): return time.monotonic_ns()
 
+    read_chunk_bytes=65536
+
     def preexec(self, identity_fd):
         self.groups.move_child(self.role, os.getpid())
+        self.limits_and_identity(identity_fd)
+
+    def limits_and_identity(self, identity_fd):
         resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
         resource.setrlimit(resource.RLIMIT_FSIZE, (JSON_CAP, JSON_CAP))
         resource.setrlimit(resource.RLIMIT_NOFILE, (64, 64))
@@ -533,7 +559,7 @@ class LinuxChild:
         chunks = []
         if self.selector is None: return chunks
         for key, _ in self.selector.select(timeout):
-            try: data = os.read(key.fileobj.fileno(), 65536)
+            try: data = os.read(key.fileobj.fileno(), self.read_chunk_bytes)
             except BlockingIOError: continue
             if data: chunks.append((key.data, data))
             else: self.selector.unregister(key.fileobj)
@@ -565,10 +591,48 @@ class LinuxChild:
         if failure: raise failure
 
 
-def collect_child(ops, role, argv):
+class LinuxTool(LinuxChild):
+    """Named discovery tools remain charged to the controller, never guests.
+
+    PID reservation requires the selected CPython default-wait reset and a sole
+    controller waiter. Reset before creation, retain it throughout the lifetime,
+    and refuse a nondefault Python disposition at kill time. That last check
+    alone cannot inspect SA_NOCLDWAIT. Once wait4 reaps the leader, cleanup of
+    unexpected descendants belongs to the outside owner.
+    """
+    read_chunk_bytes=16385
+
+    def __init__(self,groups,argv,parent):
+        super().__init__(groups,'discovery',argv)
+        self.parent=parent
+
+    def spawn(self):
+        # Unconditional: seeing SIG_DFL via getsignal would not exclude an
+        # inherited SA_NOCLDWAIT. The admitted CPython sigaction reset clears
+        # that flag. A non-main-thread/reset failure refuses before creation.
+        # Do not restore the previous disposition while/after this child lives.
+        signal.signal(signal.SIGCHLD,signal.SIG_DFL)
+        return super().spawn()
+
+    def preexec(self,identity_fd):
+        self.groups.discovery_member(self.parent,os.getpid())
+        self.limits_and_identity(identity_fd)
+
+    def kill(self):
+        if self.process is None:return
+        need(type(self.process.pid) is int and self.process.pid>0 and self.process.returncode is None,
+             'no discovery process-group signal after owned leader reap')
+        need(signal.getsignal(signal.SIGCHLD)==signal.SIG_DFL,
+             'default SIGCHLD wait policy required before discovery signal')
+        os.killpg(self.process.pid,signal.SIGKILL)
+
+
+def collect_child(ops, role, argv, *, profile='guest'):
     """Actual bounded orchestration, also called unmodified by inert controls."""
-    need(role in ('js', 'qemu'), 'two fixed guest roles')
-    failure = FirstFailure(); started = ops.now(); deadline = started+CHILD_NS
+    need(profile in ('guest','discovery'),'closed child profile')
+    need(role in ('js','qemu') if profile=='guest' else role=='discovery','fixed child role/profile')
+    wall_ns,stream_cap=(CHILD_NS,STREAM_CAP) if profile=='guest' else (10000000000,16384)
+    failure = FirstFailure(); started = ops.now(); deadline = started+wall_ns
     output = {'stdout': bytearray(), 'stderr': bytearray()}
     process = {'schema': 'bw.ring3.process.v1', 'role': role, 'argv': argv,
         'cwdRole': 'checkout', 'environment': dict(ENV), 'pid': None, 'pgid': None, 'parentPid': None,
@@ -579,7 +643,7 @@ def collect_child(ops, role, argv):
     def admit(chunks):
         for name, data in chunks:
             need(name in output and type(data) is bytes, 'closed original stream chunk')
-            remaining = STREAM_CAP-len(output[name])
+            remaining = stream_cap-len(output[name])
             output[name].extend(data[:remaining])  # preserve bounded original prefix, including on overflow
             need(len(data) <= remaining, 'original '+name+' byte cap')
 
@@ -614,7 +678,7 @@ def collect_child(ops, role, argv):
                 try: admit(chunks)
                 except Exception as error: failure.add(error, role+'-final-drain'); break
             else: failure.add(ValueError('post-reap drain bound'), role+'-final-drain')
-            wanted = 0 if role == 'js' else 1
+            wanted = 1 if profile=='guest' and role=='qemu' else 0
             if process['exitCode'] != wanted or process['signal'] is not None:
                 failure.add(ValueError('unexpected engine terminal status'), role+'-terminal')
     except Exception as error:
@@ -643,6 +707,68 @@ def collect_child(ops, role, argv):
         failure.add(ValueError('unreaped owned child'), role+'-reap')
     process['firstFailure'], process['secondary'] = failure.first, failure.secondary
     return process, {name: bytes(data) for name, data in output.items()}
+
+
+class RuntimeProbeCallback:
+    """Only the eleven fixed runtime observations; no arbitrary command API.
+
+    Transient process facts/partial streams stay available on this owner even
+    when the six-field runtime row refuses. No actual command calls this yet.
+    """
+    def __init__(self,groups,files,factory=None):
+        self.groups,self.files,self.parent=groups,files,os.getpid()
+        self.factory=factory if factory is not None else lambda argv:LinuxTool(groups,argv,self.parent)
+        self.last_process=None
+        self.last_census=None
+
+    def argv(self,role):
+        if role in ('node-version','python-version','qemu-version'):
+            name=role[:-8];path,_=self.files.resolve(RUNTIME_EXECUTABLES[name])
+            return [path,'--version']
+        if role in ('ldd-node','ldd-python','ldd-qemu'):
+            path,_=self.files.resolve(RUNTIME_EXECUTABLES[role[4:]])
+            return ['/usr/bin/ldd',path]
+        if role=='ldd-shell':return ['/usr/bin/ldd','/usr/bin/bash']
+        if role=='ldd-dpkg-query':return ['/usr/bin/ldd','/usr/bin/dpkg-query']
+        if role=='ldd-tcg':
+            path,_=self.files.resolve(TCG_MODULE)
+            return ['/usr/bin/ldd',path]
+        if role=='package-version':return ['/usr/bin/dpkg-query','-W','-f=${Package}\t${Version}\t${Architecture}\n',*PACKAGE_NAMES]
+        if role=='package-files':return ['/usr/bin/dpkg-query','-L',*PACKAGE_NAMES]
+        raise ValueError('unadmitted runtime observation role')
+
+    def __call__(self,role,argv):
+        failure=FirstFailure();attempted=False
+        original={'role':role,'argv':argv,'environment':dict(ENV),'exitCode':None,'stdout':'','stderr':''}
+        self.last_process=None;self.last_census=None
+        try:
+            need(type(argv) is list and argv==self.argv(role),'exact named runtime observation argv')
+            self.last_census=self.groups.discovery_idle(self.parent)
+            attempted=True
+            process,streams=collect_child(self.factory(argv),'discovery',argv,profile='discovery')
+            self.last_process=process
+            failure.adopt(process['firstFailure'],process['secondary'])
+            original['exitCode']=process['exitCode']  # None stays unknown, never fabricated as zero.
+            for name in ('stdout','stderr'):
+                try:original[name]=streams[name].decode('utf-8')
+                except UnicodeDecodeError as error:
+                    original[name]=streams[name].decode('utf-8','surrogateescape')
+                    failure.add(error,'runtime-probe-'+name+'-encoding')
+            if original['stderr']:failure.add(ValueError('unexpected runtime probe stderr'),'runtime-probe-stderr')
+        except Exception as error:failure.add(error,'runtime-probe-callback')
+        finally:
+            if attempted:
+                try:self.last_census=self.groups.discovery_idle(self.parent)
+                except Exception as error:
+                    self.last_census=getattr(self.groups,'last_discovery_census',None)
+                    failure.add(error,'runtime-probe-controller-census')
+        return original,failure
+
+
+def controller_runtime_discovery(groups):
+    """Real callback wiring, still behind the deliberately closed actual entry."""
+    files=RuntimeFiles()
+    return RuntimeDiscovery(files,RuntimeProbeCallback(groups,files))
 
 
 def run_serial(roles, execute, retain, terminal, failure):
@@ -994,6 +1120,139 @@ def controls():
             after,failure=runtime_facts(before,files.read,files.alias)
             self.assertEqual(failure.first['phase'],'runtime-after-drift')
             self.assertEqual(after['qemuPackage']['aliases']['/lib'],{'linkText':'wrong','target':'/wrong'})
+
+        def test_discovery_profile_caps_and_guest_profile_unchanged(self):
+            discovery=Fake([[('stdout',b'x'*16385)]],status())
+            process,streams=collect_child(discovery,'discovery',['owned'],profile='discovery')
+            self.assertEqual(len(streams['stdout']),16384)
+            self.assertEqual(process['firstFailure']['message'],'original stdout byte cap')
+            guest=Fake([[('stdout',b'x'*16385)]],status())
+            process,streams=collect_child(guest,'js',['owned'])
+            self.assertEqual(len(streams['stdout']),16385);self.assertIsNone(process['firstFailure'])
+            timed=Fake(now_step=10000000000)
+            process,_=collect_child(timed,'discovery',['owned'],profile='discovery')
+            self.assertTrue(process['timedOut']);self.assertEqual(timed.calls.count('kill'),1)
+            self.assertEqual(timed.polls,2)  # Ten-second probe profile, not the guest's 120 seconds.
+            untouched=Mock()
+            with self.assertRaises(ValueError):collect_child(untouched,'discovery',['owned'],profile='custom')
+            untouched.now.assert_not_called()
+
+        def test_tool_preexec_inherits_controller_without_guest_migration(self):
+            groups=Mock();events=[]
+            groups.discovery_member.side_effect=lambda parent,child:events.append(('member',parent,child))
+            fake_stat='101 (held) '+' '.join(['0']*19+['123'])
+            with patch.object(os,'getpid',return_value=101),patch.object(os,'getpgrp',return_value=101),\
+                 patch.object(Path,'read_text',return_value=fake_stat),\
+                 patch.object(resource,'setrlimit',side_effect=lambda *a:events.append(('limit',a))),\
+                 patch.object(os,'write',side_effect=lambda fd,b:events.append(('identity',b)) or len(b)),patch.object(os,'close'):
+                LinuxTool(groups,['owned'],100).preexec(7)
+            self.assertEqual(events[0],('member',100,101));groups.move_child.assert_not_called()
+            self.assertEqual(struct.unpack('<QQQ',events[-1][1]),(101,101,123))
+
+        def test_tool_group_kill_only_before_own_leader_reap(self):
+            tool=LinuxTool(Mock(),['owned'],100);tool.process=Mock(pid=101,returncode=None)
+            with patch.object(os,'killpg') as kill,patch.object(signal,'getsignal',return_value=signal.SIG_DFL):
+                tool.kill();kill.assert_called_once_with(101,signal.SIGKILL)
+                tool.process.returncode=0
+                with self.assertRaisesRegex(ValueError,'after owned leader reap'):tool.kill()
+                kill.assert_called_once()
+
+        def test_tool_resets_wait_policy_before_spawn_without_early_restore(self):
+            for previous in (signal.SIG_DFL,signal.SIG_IGN):
+                events=[];tool=LinuxTool(Mock(),['owned'],100)
+                def reset(number,handler):events.append(('reset',number,handler));return previous
+                def spawn():events.append(('spawn',));return {'pid':101}
+                with patch.object(signal,'signal',side_effect=reset) as install,\
+                     patch.object(signal,'getsignal') as inspect,\
+                     patch.object(LinuxChild,'spawn',side_effect=spawn),\
+                     patch.object(LinuxChild,'reap',return_value=status()):
+                    self.assertEqual(tool.spawn(),{'pid':101});tool.reap();tool.close()
+                    install.assert_called_once_with(signal.SIGCHLD,signal.SIG_DFL)
+                    inspect.assert_not_called()
+                self.assertEqual(events,[('reset',signal.SIGCHLD,signal.SIG_DFL),('spawn',)])
+
+        def test_tool_failed_wait_policy_reset_never_delegates_creation(self):
+            first=ValueError('signal reset requires main thread')
+            with patch.object(signal,'signal',side_effect=first),\
+                 patch.object(signal,'getsignal'),\
+                 patch.object(LinuxChild,'spawn') as create:
+                with self.assertRaises(ValueError) as caught:LinuxTool(Mock(),['owned'],100).spawn()
+                self.assertIs(caught.exception,first);create.assert_not_called()
+
+        def test_tool_changed_ignore_disposition_never_signals_group(self):
+            tool=LinuxTool(Mock(),['owned'],100);tool.process=Mock(pid=101,returncode=None)
+            with patch.object(signal,'getsignal',return_value=signal.SIG_IGN),patch.object(signal,'signal') as install,\
+                 patch.object(os,'killpg') as kill:
+                with self.assertRaisesRegex(ValueError,'default SIGCHLD'):tool.kill()
+                kill.assert_not_called();install.assert_not_called()
+
+        def test_actual_controller_census_and_failed_snapshot_retention(self):
+            groups=Cgroups.__new__(Cgroups)
+            def snapshot(procs):
+                return {'procs':procs,'raw':{'pidsCurrent':str(len(procs)),
+                    'cgroupEvents':'populated '+str(int(bool(procs)))+'\nfrozen 0\n'}}
+            groups.observe=lambda name:snapshot([100] if name=='controller' else [])
+            with patch.object(os,'getpid',return_value=100):groups.discovery_idle(100)
+            groups.observe=lambda name:snapshot([100,999] if name=='controller' else [])
+            with patch.object(os,'getpid',return_value=100):
+                with self.assertRaisesRegex(ValueError,'parent-only'):groups.discovery_idle(100)
+            self.assertEqual(groups.last_discovery_census['controller']['procs'],[100,999])
+            groups.observe=lambda name:snapshot([100,101])
+            with patch.object(os,'getpid',return_value=101):groups.discovery_member(100,101)
+            groups.observe=lambda name:snapshot([100])
+            with patch.object(os,'getpid',return_value=101):
+                with self.assertRaisesRegex(ValueError,'inherit'):groups.discovery_member(100,101)
+
+        def test_real_callback_exact_plan_through_bounded_helpers(self):
+            import importlib.util
+            spec=importlib.util.spec_from_file_location('callback_held_reader',Path(__file__).with_name('reader.py'))
+            reader=importlib.util.module_from_spec(spec);spec.loader.exec_module(reader)
+            files,expected_probe,expected_calls=self.discovery_edges();groups=Mock();created=[]
+            with patch.object(os,'getpid',return_value=100):
+                callback=RuntimeProbeCallback(groups,files)
+            roles=['node-version','python-version','qemu-version','ldd-node','ldd-python','ldd-qemu',
+                'ldd-shell','ldd-dpkg-query','ldd-tcg','package-version','package-files']
+            def factory(argv):
+                matching=[role for role in roles if callback.argv(role)==argv]
+                self.assertEqual(len(matching),1)
+                original,failure=expected_probe(matching[0],argv);self.assertIsNone(failure.first)
+                ops=Fake([[('stdout',original['stdout'].encode())]],status());created.append(ops);return ops
+            callback.factory=factory
+            runtime=RuntimeDiscovery(files,callback).discover();reader.runtime(runtime,runtime)
+            self.assertEqual(len(created),11);self.assertEqual(groups.discovery_idle.call_count,22)
+            self.assertEqual(callback.last_process['role'],'discovery')
+            self.assertTrue(all('kill' not in ops.calls for ops in created));groups.move_child.assert_not_called()
+
+        def test_callback_wrong_argv_has_no_process_or_cgroup_effect(self):
+            files,_,_=self.discovery_edges();groups=Mock();factory=Mock()
+            with patch.object(os,'getpid',return_value=100):callback=RuntimeProbeCallback(groups,files,factory)
+            for role,argv in [('node-version',['/arbitrary/node','--version']),('arbitrary',['/bin/sh']),
+                              ('ldd-tcg',['/usr/bin/ldd','/arbitrary.so'])]:
+                original,failure=callback(role,argv)
+                self.assertIsNotNone(failure.first);self.assertIsNone(original['exitCode'])
+            factory.assert_not_called();groups.discovery_idle.assert_not_called()
+
+        def test_callback_partial_failure_preserves_process_and_first_before_census(self):
+            files,_,_=self.discovery_edges();groups=Mock()
+            groups.discovery_idle.side_effect=[{},OSError('LEFT_DESCENDANT')]
+            ops=Fake([[('stdout',b'original partial')]],now_step=10000000000)
+            with patch.object(os,'getpid',return_value=100):callback=RuntimeProbeCallback(groups,files,lambda argv:ops)
+            original,failure=callback('node-version',callback.argv('node-version'))
+            self.assertEqual(original['stdout'],'original partial');self.assertIsNone(original['exitCode'])
+            self.assertEqual(failure.first,callback.last_process['firstFailure'])
+            self.assertEqual(failure.first['name'],'TimeoutError')
+            self.assertEqual(failure.secondary[-1]['message'],'LEFT_DESCENDANT')
+            self.assertEqual(ops.calls.count('kill'),1)
+
+        def test_callback_natural_nonzero_and_descendant_refusals_never_fabricate_exit(self):
+            files,_,_=self.discovery_edges()
+            for code in (0,7):
+                groups=Mock();groups.discovery_idle.side_effect=[{},OSError('DESCENDANT')]
+                ops=Fake([[('stdout',b'original')]],status(code))
+                with patch.object(os,'getpid',return_value=100):callback=RuntimeProbeCallback(groups,files,lambda argv:ops)
+                original,failure=callback('node-version',callback.argv('node-version'))
+                self.assertEqual(original['exitCode'],code);self.assertIsNotNone(failure.first)
+                self.assertNotIn('kill',ops.calls)
 
     result=unittest.TextTestRunner(stream=sys.stderr,verbosity=1).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
     need(result.wasSuccessful(),'inert controller controls failed')

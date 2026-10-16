@@ -47,9 +47,29 @@ superset, not proof of a complete host graph or continuous file identity.
 Process controls use mocked kernel and process edges. They do not run QEMU,
 the CPU or guests.
 
-Actual tool execution, privileged entry, the outer deadline and unconditional
+The fixed runtime callback connects the eleven named observations to the process
+helpers. Its discovery profile retains at most 16 KiB per stream, expects natural
+exit zero and polls against ten seconds. The guest profile remains 120 seconds
+and 128 KiB per stream, with the original JS/QEMU exit statuses. Discovery
+children inherit the admitted controller cgroup and never enter either guest
+leaf. Between probes, that cgroup must contain only the controller process and
+both guest leaves must be empty. A refused probe retains its partial process and stream facts;
+an unknown exit stays unknown. Tool creation unconditionally resets SIGCHLD to
+SIG_DFL before delegating process creation and keeps that disposition through the
+child lifetime. A failed reset refuses before creation, and cleanup refuses if
+the Python disposition has changed. The selected
+[CPython reset implementation](https://github.com/python/cpython/blob/v3.12.3/Python/pylifecycle.c#L2932)
+sets sigaction flags without SA_NOCLDWAIT; checking `getsignal` alone cannot
+establish that kernel flag. Signalling the fresh, unreaped tool session requires
+this reset and a sole controller waiter, with no competing wait or later native
+signal-policy changes. Those remain execution-admission conditions, rather than
+a continuous host guarantee. Unexpected descendants after the leader is reaped
+refuse acceptance and require the outside owner.
+These callback paths are covered by inert controls, not actual tool execution.
+
+Actual entry, privileged entry, the outer deadline and unconditional
 cleanup, packet finalization, the hosted actual job and results document are
-still unconnected. The 120-second polling loop does not bound a blocking process
+still unconnected. Neither polling profile bounds a blocking process
 creation or identity read; an independently reviewed outer owner is still needed.
 The actual command refuses to run at this checkpoint. Remaining implementation
 stays within the existing nine-path claim. Before any actual event, freeze the
