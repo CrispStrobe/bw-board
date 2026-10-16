@@ -2140,10 +2140,19 @@ The reached execution used four serial children, each bounded to 600 seconds (ta
 
 ## Owned LE file readback, seek and EOF
 
-**Proposed, unqualified.** Merge this docs-only ownership claim before
-implementing the nine NEW paths in [LANES.md](../LANES.md). The reached
-[keyboard/write result](I80386-DOS32A-KEYBOARD-RESULTS.md) does not establish a
-DOS read into an owned protected buffer. This successor does not repeat the
+**Reached, finite application boundary.** [Source PR635](https://github.com/CrispStrobe/bw-board/pull/635)
+landed at `1fbb9e64` after the sole
+[hosted actual](https://github.com/CrispStrobe/bw-board/actions/runs/38860693983)
+and independent original-byte reviews passed. The
+[results](I80386-DOS32A-FILE-READBACK-RESULTS.md) record full reads of 17/31,
+seeks to 12/26, short reads of 5 and EOF returns of zero, with actual protected
+buffers/guards/counts in 155-byte proofs. The tested source is `a6671819`, tree
+`078c09c4`; landed tree `3a3733d7` preserves the complete x86 runtime closure
+while adding unrelated labwired work. The tested 353-row snapshot is not a
+whole-merged-tree observation. The contract below describes this admitted gate;
+it does not authorize repeating the successful actual or creating new ownership.
+See [LANES.md](../LANES.md) for its nine paths. This successor extends the
+[keyboard/write result](I80386-DOS32A-KEYBOARD-RESULTS.md) without repeating
 LE arithmetic, CWSDPMI allocation or timer gates.
 
 Generate one new 8192-byte LE32 client, without MZ stub or extender bytes. Use
@@ -2257,11 +2266,12 @@ proves consistency only. Finite success needs independent official/source/
 runtime/original-role admission. Acquire each new original ZIP/log once after
 metadata admission and audit unchanged bytes without guest replay.
 
-Root/independent source/reader review and all enabled exact-head CI precede a
-separately frozen one-shot hosted actual. Proposed limits: four serial children,
-600 seconds each, one logical CPU/100% quota, 1 GiB RAM/zero swap; targets also
-120 million ordinary steps; 2500-second owned controller; 45-minute job. These
-limits are not yet qualified for this client. Preserve streams, wait4 status,
+Root/independent source/reader review, manufactured positives/rehashed negatives
+and all enabled exact-head CI preceded the sole hosted actual. It completed four
+serial children within 600 seconds each, one logical CPU/100% quota, 1 GiB
+RAM/zero swap; targets also had 120 million ordinary steps, with a 2500-second
+owned controller and 45-minute job. These bounds apply to this finite result,
+not arbitrary clients. Preserve streams, wait4 status,
 first errors, before/after/between-case resources and empty owned process-group/
 cgroup proof; failed queries/reads reject cleanup and collected units require
 the known wait. Require attempt-one job/prelaunch guards and exact head/event/
@@ -2271,6 +2281,13 @@ hosted. Merge source only after original guest qualification and all enabled
 final-head checks, with matched head and actual tree/parents verified. No
 strict-386DX, DPMI/high-linear/timer, full-OS, whole-disk, mouse/IRQ, physical
 timing, performance/RTx, installed-GUI or license-clearance claim follows.
+
+The next dependency gate is the existing Lite HDD/GUI handoff, including its
+unmerged [runner prerequisite PR986](https://github.com/CrispStrobe/brickwright-lite/pull/986),
+consumer-owned checks, explicit dependency adoption and fresh installed acceptance.
+An unrelated WeDo policy unit-check failure remains unresolved there. No consumer
+pin/notice change or repeated supplier guest follows from this result; general
+DOS error-path behavior also remains outside this finite qualification.
 
 ## Explicit 386 physical-memory capability metadata
 
