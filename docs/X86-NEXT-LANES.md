@@ -1852,8 +1852,13 @@ qualification, or support an unmeasured 10x claim.
 
 ## 386 debugger capture and capability correction
 
-Status: docs-only ownership claim; implementation waits for merge. Coding
-branch: `lane/386-debugger-capture-20261015`. Own new `src/i80386-debug.js`,
+Status: the correction merged in [PR599](https://github.com/CrispStrobe/bw-board/pull/599)
+at `05123db4`; the separate finite subscribed free-guest qualification below
+also passed. Consumer adoption and installed-GUI qualification remain pending.
+The following scope and requirements are the regression contract for that
+landed correction, not an unimplemented task.
+
+Historical branch: `lane/386-debugger-capture-20261015`. Scope: new `src/i80386-debug.js`,
 new `test/i80386-debug-capture.test.mjs`, the 386-only composition in
 `src/debug-target-factory.js` and narrow capture/address/capability seams in
 `src/i8086-debug.js`, preserving all 8086 defaults and other target behavior.
@@ -1863,23 +1868,23 @@ event formats. This section and the matching registry entry complete the scope. 
 devices, clocks, supplier pins, workflows and performance experiments stay
 unchanged; the separately owned width-mask CPU work must not be included.
 
-The current factory composes the 386 adapter with the shared 8086 debugger.
-Its event capture calls the AT's deliberately unsupported legacy architectural
-register snapshot. A debug subscriber can consequently throw before a single
-instruction retires. The shared AX-style projection, 20-bit address masking and
-8086 disassembler/control-flow assumptions also do not define a complete
-protected-mode debugger. Visible controls are not evidence that this path works.
+Before the correction, the factory composed the 386 adapter with the shared
+8086 debugger and its event capture called the AT's rejected legacy register
+snapshot. A subscriber could throw before an instruction retired. That original
+failure remains preserved. The dedicated 386 wrapper now supplies read-only
+forward capture and explicit capability limits; the former AX projection,
+20-bit addressing and 8086 decoder do not qualify protected-mode debugging.
 
-First implement a read-only, source-owned 386 register snapshot and event
-capture that does not call the rejected legacy snapshot or mutate the machine.
+Retain the read-only, source-owned 386 register snapshot and event capture
+without calling the rejected legacy snapshot or mutating the machine.
 Expose full-width EAX–EDI/EIP/EFLAGS and relevant architectural mode/segment
 state with unambiguous linear versus physical/code-address meaning. Derive
 addresses from actual cached segment state and EIP; do not reconstruct them
 from visible selectors or truncate them to 20 bits. Publish only supported
 address ranges and operations. Preserve existing event ordering, breakpoint
 semantics, instruction clocks and original fault behavior. The shared event
-module currently uses bitwise address masking, which makes addresses above
-2 GiB signed when given a 32-bit mask. Normalize admitted 386 memory facts
+module formerly used bitwise address masking, which made addresses above
+2 GiB signed when given a 32-bit mask. Keep admitted 386 memory facts normalized
 to unsigned 32-bit values at their source; do not repair already truncated
 facts with a post-hoc target wrapper.
 
@@ -1891,8 +1896,8 @@ rewrite or generic debugger framework is required. Keep 386 architectural
 checkpoint/restore/replay refused; forward capture does not grant reverse
 execution or a continuous machine-state lease.
 
-Tiny owned controls must map a 64 KiB NOP ROM at the real reset alias and
-prove subscriber/no-subscriber parity: one NOP retires once, EIP advances,
+Retain the owned controls mapping a 64 KiB NOP ROM at the real reset alias and
+proving subscriber/no-subscriber parity: one NOP retires once, EIP advances,
 faithful before/after events are emitted and no legacy capture exception
 occurs. Check high register halves, reset CS cached base, addresses above
 1 MiB/high EIP and memory facts above 2 GiB (including a signed-negative

@@ -1,6 +1,6 @@
 # x86 user paths: programs, disks and debugging
 
-Source checkpoint: [bw-board 52134cf6](https://github.com/CrispStrobe/bw-board/tree/52134cf62d7a780eaf551e7ede579cef0a571bb4), updated 2026-10-16. This guide describes implemented routes and existing finite evidence. It introduces no new execution, timing or installed-app qualification. Start with the [loading guide](X86-LOADING-GUIDE.md) for media geometry and options.
+Source checkpoint: [bw-board 2fad5879](https://github.com/CrispStrobe/bw-board/tree/2fad58795c3f7b1e574fc684e2c6bcad344f86c9), updated 2026-10-16. This guide describes implemented routes and existing finite evidence. It introduces no new execution, timing or installed-app qualification. Start with the [loading guide](X86-LOADING-GUIDE.md) for media geometry and options.
 
 ## Choose the execution path
 
@@ -36,7 +36,7 @@ HDD writes remain in emulated memory unless the console receives explicit `--hdd
 | `.COM` / MZ `.EXE` | Direct DOS-service loading; not arbitrary protected-mode executable compatibility. |
 | Raw floppy / HDD | Supported board slot and geometry; HDD byte size must match CHS. |
 | DOSBox `.conf` | Partial declarative translation. Direct DOS selects the first program and records mounts; the 386 console accepts one supported HDD `imgmount` and boot declaration. No host shell is executed. |
-| ZIP / JS-DOS package | The merged loaders do not unpack these. [Draft PR637](https://github.com/CrispStrobe/bw-board/pull/637) adds a separate bounded STORED-ZIP/raw-HDD CLI candidate; its hosted guest gate is pending. No arbitrary autoexec execution or broad DOSBox compatibility follows. |
+| ZIP / JS-DOS package | The merged loaders do not unpack these. [Draft PR641](https://github.com/CrispStrobe/bw-board/pull/641) is the current separate bounded STORED-ZIP/raw-HDD CLI candidate. Earlier failed checkpoints are preserved; fresh four-case hosted acceptance remains pending. No arbitrary autoexec execution or broad DOSBox compatibility follows. |
 | `.vhd` filename | The HDD slot expects raw bytes; the extension does not implement a VHD container decoder. |
 | ISO / CD-ROM | The reviewed loaders expose no CD/ATAPI, ISO-filesystem or El Torito boot route. Renaming an ISO cannot add that hardware or loader. |
 

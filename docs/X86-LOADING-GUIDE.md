@@ -108,12 +108,16 @@ Use `--dosbox-conf path/to/config.conf` instead of the direct image/geometry opt
 
 ## Bounded ZIP package CLI candidate
 
-[Draft PR637](https://github.com/CrispStrobe/bw-board/pull/637) publishes the
+[Draft PR641](https://github.com/CrispStrobe/bw-board/pull/641) publishes the
 separate `scripts/run-dos-package.mjs` candidate. It is not yet a merged loader
 or a guest-qualified route. Its initial scope is a bounded STORED ZIP with one
 supported config-relative raw HDD and exact CHS; COM/MZ virtual files, DEFLATE,
 ISO/CD, host mounts, arbitrary autoexec and network fallback are refused.
-Source controls do not substitute for the pending four-case hosted PTY gate.
+The preceding [PR640 actual](https://github.com/CrispStrobe/bw-board/actions/runs/38906622594)
+reached the authored keyboard response and budget report, then failed because
+the process remained alive until its deadline. The current source repairs input
+ownership; its fresh four-case hosted PTY gate remains pending. Source controls
+do not qualify process exit or the remaining cases.
 Use the [package lane](X86-NEXT-LANES.md#bounded-dos-package-admission) for the
 source/actual boundary; existing runners above retain their own grammars.
 
