@@ -698,6 +698,7 @@ class LinuxChild:
     """OS edges for one fresh serial guest; controls replace every edge."""
     def __init__(self, groups, role, argv):
         self.groups, self.role, self.argv = groups, role, argv
+        self.environment = dict(ENV)
         self.process, self.selector, self.descriptors = None, None, {}
 
     def now(self): return time.monotonic_ns()
@@ -727,7 +728,7 @@ class LinuxChild:
         read_fd, write_fd = os.pipe2(os.O_CLOEXEC)
         first = None; identity = None
         try:
-            self.process = subprocess.Popen(self.argv, cwd=Path.cwd(), env=ENV,
+            self.process = subprocess.Popen(self.argv, cwd=Path.cwd(), env=self.environment,
                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 start_new_session=True, close_fds=True, pass_fds=(write_fd,),
                 preexec_fn=lambda: self.preexec(write_fd))
@@ -826,15 +827,40 @@ class LinuxTool(LinuxChild):
         os.killpg(self.process.pid,signal.SIGKILL)
 
 
+class LinuxController(LinuxTool):
+    """The outside owner launches only the held same-Python entry descriptor."""
+    def __init__(self, bootstrap):
+        need(bootstrap.owner is not None and bootstrap.groups is not None and bootstrap.invoker is not None,
+             'admitted controller entry facts required')
+        python = bootstrap.owner['python']['path']
+        super().__init__(bootstrap.groups,[python,'-I','-B',RUN_FILE,'--bootstrap'],os.getpid())
+        self.role = 'controller'
+        self.environment = dict(ENV, **{name:bootstrap.environ[name] for name in
+            ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')},
+            SUDO_UID=str(bootstrap.invoker['uid']), SUDO_GID=str(bootstrap.invoker['gid']))
+
+    def preexec(self, identity_fd):
+        # Remain outside the manual subtree. Only the held entry child may
+        # migrate itself after validating the exact source/owner facts.
+        resource.setrlimit(resource.RLIMIT_CORE,(0,0))
+        resource.setrlimit(resource.RLIMIT_FSIZE,(JSON_CAP,JSON_CAP))
+        resource.setrlimit(resource.RLIMIT_NOFILE,(64,64))
+        fields = Cgroups.text(None,Path('/proc/self/stat')).rsplit(')',1)[1].split()
+        packet = struct.pack('<QQQ',os.getpid(),os.getpgrp(),int(fields[19]))
+        need(os.write(identity_fd,packet) == 24,'complete outside child identity packet')
+        os.close(identity_fd)
+
+
 def collect_child(ops, role, argv, *, profile='guest'):
     """Actual bounded orchestration, also called unmodified by inert controls."""
-    need(profile in ('guest','discovery'),'closed child profile')
-    need(role in ('js','qemu') if profile=='guest' else role=='discovery','fixed child role/profile')
-    wall_ns,stream_cap=(CHILD_NS,STREAM_CAP) if profile=='guest' else (10000000000,16384)
+    need(profile in ('guest','discovery','controller'),'closed child profile')
+    need(role in ('js','qemu') if profile=='guest' else role==profile,'fixed child role/profile')
+    wall_ns,stream_cap=(CHILD_NS,STREAM_CAP) if profile=='guest' else (
+        (10000000000,16384) if profile=='discovery' else (600000000000,16384))
     failure = FirstFailure(); started = ops.now(); deadline = started+wall_ns
     output = {'stdout': bytearray(), 'stderr': bytearray()}
     process = {'schema': 'bw.ring3.process.v1', 'role': role, 'argv': argv,
-        'cwdRole': 'checkout', 'environment': dict(ENV), 'pid': None, 'pgid': None, 'parentPid': None,
+        'cwdRole': 'checkout', 'environment': dict(getattr(ops,'environment',ENV)), 'pid': None, 'pgid': None, 'parentPid': None,
         'startTicks': None, 'spawnMonoNs': started, 'reapMonoNs': None, 'exitCode': None, 'signal': None,
         'waitStatus': None, 'timedOut': False, 'rusage': None, 'firstFailure': None, 'secondary': []}
     reaped = False; killed = False; cleanup_deadline = None
@@ -846,6 +872,15 @@ def collect_child(ops, role, argv, *, profile='guest'):
             output[name].extend(data[:remaining])  # preserve bounded original prefix, including on overflow
             need(len(data) <= remaining, 'original '+name+' byte cap')
 
+    def record_terminal(terminal):
+        nonlocal reaped
+        process.update(terminal); process['reapMonoNs'] = ops.now(); reaped = True
+        # A terminal result can already be late when first observed, including
+        # after blocking creation/identity. Never signal that reaped PID.
+        if process['reapMonoNs'] > deadline and not process['timedOut']:
+            process['timedOut'] = True
+            failure.add(TimeoutError('owned '+role+' child wall bound'),role+'-lifetime')
+
     try:
         process.update(ops.spawn())
         while not reaped:
@@ -853,7 +888,7 @@ def collect_child(ops, role, argv, *, profile='guest'):
                 admit(ops.read_available(0.02))
                 terminal = ops.reap()
                 if terminal is not None:
-                    process.update(terminal); process['reapMonoNs'] = ops.now(); reaped = True
+                    record_terminal(terminal)
                     break
                 now = ops.now()
                 if now >= deadline and not killed:
@@ -893,7 +928,7 @@ def collect_child(ops, role, argv, *, profile='guest'):
             try:
                 terminal = ops.reap()
                 if terminal is not None:
-                    process.update(terminal); process['reapMonoNs'] = ops.now(); reaped = True; break
+                    record_terminal(terminal); break
                 if ops.now() >= cleanup_end: break
                 admit(ops.read_available(0.02))
             except Exception as secondary:
@@ -906,6 +941,170 @@ def collect_child(ops, role, argv, *, profile='guest'):
         failure.add(ValueError('unreaped owned child'), role+'-reap')
     process['firstFailure'], process['secondary'] = failure.first, failure.secondary
     return process, {name: bytes(data) for name, data in output.items()}
+
+
+class OutsideOwner:
+    """Privileged observer; no probes, guest parsing or archive handling.
+
+    Internal observations are not positive packet roles. The actual command
+    remains closed, and a job backstop for blocking operations is not wired.
+    """
+    def __init__(self, bootstrap=None):
+        self.bootstrap = BootstrapOps() if bootstrap is None else bootstrap
+        self.child = None; self.admitted = False; self.partial = {}; self.last_finish = self.last_finish_failure = None
+
+    def outside(self):
+        text = entry_proc('/proc/self/cgroup')
+        need(text.startswith('0::/') and text.endswith('\n') and text.count('\n') == 1,
+             'outside unified cgroup membership')
+        membership = text[3:-1]
+        root = '/'+self.bootstrap.groups.root.name
+        need(membership != root and not membership.startswith(root+'/'), 'observer must remain outside owned subtree')
+        return text
+
+    def validate(self):
+        self.bootstrap.validate()  # Reads only; root parent never enters/drops here.
+        self.outside()
+        self.admitted = True
+
+    def create_child(self):
+        need(self.admitted, 'outside owner not admitted')
+        self.outside()
+        self.child = LinuxController(self.bootstrap)
+        return self.child
+
+    def census(self):
+        self.partial = {}
+        for role in ('enclosing','controller','js','qemu'):
+            value = self.bootstrap.groups.observe(role)
+            self.partial[role] = value  # Preserve original partial observations on refusal.
+            need(value['identity'] == self.bootstrap.owner['cgroups'][role]['identity'],
+                 'outside observed cgroup identity drift')
+        return self.partial
+
+    def kill_enclosing(self):
+        self.outside()
+        path = self.bootstrap.groups.path('enclosing')
+        need(self.bootstrap.groups.identities['enclosing'] == self.bootstrap.owner['cgroups']['enclosing']['identity'],
+             'owned enclosing identity required before cleanup')
+        directory = os.open(path,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK)
+        first = None; descriptor = None
+        try:
+            info = os.fstat(directory)
+            need(stat.S_ISDIR(info.st_mode) and {'device':info.st_dev,'inode':info.st_ino} ==
+                 self.bootstrap.owner['cgroups']['enclosing']['identity'] and
+                 (info.st_uid,info.st_gid) == (self.bootstrap.invoker['uid'],self.bootstrap.invoker['gid']),
+                 'held enclosing directory identity and owner required')
+            descriptor = os.open('cgroup.kill',os.O_WRONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=directory)
+            need(os.write(descriptor,b'1') == 1,'complete owned enclosing cleanup write')
+        except Exception as error: first = error
+        finally:
+            if descriptor is not None: first = close_owned(descriptor,first,'outside-cleanup-close')
+            first = close_owned(directory,first,'outside-directory-close')
+        if first is not None: raise first
+
+    def now(self): return time.monotonic_ns()
+    def pause(self): time.sleep(0.02)
+
+    def finish(self, process):
+        """Always attempted by the wrapper; successful cleanup never erases a defect."""
+        failure = FirstFailure()
+        facts = {'beforeCleanup':None,'afterCleanup':None,'sessionSignalAttempted':False,
+                 'cgroupKillAttempted':False,'cleanupTerminal':None,'polls':0}
+        self.last_finish = facts
+        self.last_finish_failure = failure
+        if not self.admitted:
+            failure.add(ValueError('outside ownership not established; cleanup unavailable'),'outside-ownership')
+            return facts,failure
+        outside_ok = False; before_empty = False
+        try: self.outside(); outside_ok = True
+        except Exception as error: failure.add(error,'outside-membership')
+        try:
+            facts['beforeCleanup'] = self.census()
+            for value in facts['beforeCleanup'].values(): entry_empty(value)
+            before_empty = True
+        except Exception as error:
+            facts['beforeCleanup'] = self.partial
+            failure.add(error,'outside-precleanup-census')
+        terminal_known = process is not None and process['waitStatus'] is not None
+        if not terminal_known:
+            failure.add(ValueError('controller terminal status unknown before cleanup'),'outside-terminal')
+        if not terminal_known and self.child is not None and self.child.process is not None and self.child.process.returncode is None:
+            facts['sessionSignalAttempted'] = True
+            try: self.child.kill()  # Guarded default-wait, fresh unreaped leader only.
+            except Exception as error: failure.add(error,'outside-session-kill')
+        if not before_empty and outside_ok:
+            facts['cgroupKillAttempted'] = True
+            try: self.kill_enclosing()
+            except Exception as error: failure.add(error,'outside-enclosing-kill')
+        deadline = self.now()+DRAIN_NS
+        for attempt in range(128):
+            facts['polls'] = attempt+1
+            if not terminal_known and self.child is not None and self.child.process is not None and self.child.process.returncode is None:
+                try:
+                    terminal = self.child.reap()
+                    if terminal is not None:
+                        facts['cleanupTerminal'] = dict(terminal,reapMonoNs=self.now()); terminal_known = True
+                except Exception as error: failure.add(error,'outside-cleanup-reap')
+            empty = False
+            try:
+                facts['afterCleanup'] = self.census()
+                for value in facts['afterCleanup'].values(): entry_empty(value)
+                empty = True
+            except Exception as error:
+                facts['afterCleanup'] = self.partial
+                failure.add(error,'outside-postcleanup-census')
+            if empty and terminal_known: break
+            if self.now() >= deadline: break
+            self.pause()
+        else: failure.add(TimeoutError('outside cleanup census iteration bound'),'outside-cleanup')
+        if not empty or not terminal_known:
+            failure.add(TimeoutError('outside cleanup emptiness or reap unestablished'),'outside-cleanup')
+        try: self.outside()
+        except Exception as error: failure.add(error,'outside-final-membership')
+        return facts,failure
+
+    def retain(self, failure, facts, streams):
+        try:
+            need(self.bootstrap.invoker is not None,'trusted invoker unavailable for outside retention')
+            self.bootstrap.drop()  # All observation/cleanup precedes this irreversible drop.
+            entry_ids(self.bootstrap.invoker['uid'],self.bootstrap.invoker['gid'])
+            def write(errors):
+                value = dict(facts,**errors,streamsHex={name:data.hex() for name,data in streams.items()})
+                write_new(PACKET/'.outside.json',encode(value),JSON_CAP)
+            retain_failure(failure,write,lambda data:sys.stderr.buffer.write(data))
+        except BaseException as error:
+            failure.add(error,'outside-retention')
+            try:
+                data=encode({'firstFailure':failure.first,'secondary':failure.secondary})
+                need(len(data)<=16384,'outside diagnostic cap');sys.stderr.buffer.write(data)
+            except BaseException as secondary: failure.add(secondary,'outside-diagnostic')
+
+
+def outside_controller(ops=None):
+    """Dedicated fixed observer slice; deliberately not reachable from main."""
+    ops = OutsideOwner() if ops is None else ops
+    failure = FirstFailure(); process = None; streams = {'stdout':b'','stderr':b''}
+    facts = {'process':None,'cleanup':None}
+    try:
+        ops.validate()
+        child = ops.create_child()
+        process,streams = collect_child(child,'controller',child.argv,profile='controller')
+        facts['process'] = process
+        failure.adopt(process['firstFailure'],process['secondary'])
+    except BaseException as error: failure.add(error,'outside-controller')
+    finally:
+        try:
+            facts['cleanup'],cleanup_failure = ops.finish(process)
+            failure.adopt(cleanup_failure.first,cleanup_failure.secondary)
+        except BaseException as error:
+            facts['cleanup'] = getattr(ops,'last_finish',None)
+            earlier = getattr(ops,'last_finish_failure',None)
+            if isinstance(earlier,FirstFailure): failure.adopt(earlier.first,earlier.secondary)
+            failure.add(error,'outside-finish')
+        try: ops.retain(failure,facts,streams)
+        except BaseException as error: failure.add(error,'outside-retention-wrapper')
+    return facts,failure
 
 
 class RuntimeProbeCallback:
@@ -1021,6 +1220,206 @@ def controls():
                 'rusage':{'userSeconds':0.1,'systemSeconds':0.01,'maxRssKiB':1024}}
 
     class Tests(unittest.TestCase):
+        @contextlib.contextmanager
+        def outside_edges(self):
+            ids={name:{'device':3,'inode':index+1} for index,name in enumerate(('enclosing','controller','js','qemu'))}
+            state={'empty':True,'events':[],'membership':'0::/actions/job\n','t':0,'saved':[],'drift':None}
+            bootstrap=Mock(invoker={'uid':1001,'gid':1002})
+            bootstrap.environ={'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1','BW_EXPECTED_HEAD':'a'*40,'BW_EXPECTED_TREE':'b'*40}
+            bootstrap.owner={'python':{'path':'/usr/bin/python3.12'},'cgroups':{k:{'identity':v} for k,v in ids.items()}}
+            bootstrap.groups.root=Path('/sys/fs/cgroup/bw-ring3-123-1');bootstrap.groups.identities=ids
+            bootstrap.groups.path.side_effect=lambda role:bootstrap.groups.root if role=='enclosing' else bootstrap.groups.root/role
+            def observe(role):
+                state['events'].append(('observe',role));populated=not state['empty'] and role in ('enclosing','controller')
+                identity=dict(ids[role])
+                if state['drift']==role:identity['inode']=99
+                return {'identity':identity,'limits':dict(LIMITS),'procs':[101] if populated and role=='controller' else [],
+                    'raw':{'pidsCurrent':str(int(populated)),'cgroupEvents':'populated '+str(int(populated))+'\nfrozen 0\n',
+                        'cpuStat':'usage_usec 0\n','memoryEvents':'oom 0\n','memoryCurrent':'0\n','memoryPeak':'0\n'}}
+            bootstrap.groups.observe.side_effect=observe
+            bootstrap.drop.side_effect=lambda:state['events'].append(('drop',))
+            owner=OutsideOwner(bootstrap);owner.admitted=True;owner.child=Mock(process=Mock(pid=101,returncode=0))
+            owner.child.reap.return_value=None
+            def clock():state['t']+=100000000;return state['t']
+            owner.now=clock;owner.pause=Mock()
+            def opened(path,flags,**kwargs):
+                state['events'].append(('open',str(path),kwargs));return 8 if 'dir_fd' in kwargs else 7
+            def write(fd,data):state['events'].append(('kill-write',fd,data));state['empty']=True;return len(data)
+            with contextlib.ExitStack() as stack:
+                patches=[patch.dict(globals(),entry_proc=lambda path:state['membership']),
+                    patch.dict(globals(),entry_ids=lambda *ids:state['events'].append(('ids',ids))),
+                    patch.dict(globals(),write_new=lambda path,data,cap:state['saved'].append((path,json.loads(data)))),
+                    patch.object(os,'getpid',return_value=100),patch.object(os,'open',side_effect=opened),
+                    patch.object(os,'write',side_effect=write),patch.object(os,'close'),
+                    patch.object(os,'fstat',return_value=SimpleNamespace(st_mode=0o40755,st_dev=3,st_ino=1,st_uid=1001,st_gid=1002)),
+                    patch.object(sys,'stderr',Mock(buffer=io.BytesIO()))]
+                for item in patches:stack.enter_context(item)
+                yield owner,state
+
+        def test_all_profiles_late_terminal_refuses_without_signalling_reaped_pid(self):
+            for profile,role,budget in (('guest','js',CHILD_NS),('discovery','discovery',10000000000),('controller','controller',600000000000)):
+                ops=Fake(terminal=status(),now_step=budget+1)
+                process,_=collect_child(ops,role,['owned'],profile=profile)
+                self.assertTrue(process['timedOut']);self.assertIn('wall bound',process['firstFailure']['message'])
+                self.assertEqual(process['exitCode'],0);self.assertEqual(process['waitStatus'],0)
+                self.assertNotIn('kill',ops.calls)
+                exact,_=collect_child(Fake(terminal=status(),now_step=budget),role,['owned'],profile=profile)
+                self.assertFalse(exact['timedOut']);self.assertIsNone(exact['firstFailure'])
+
+        def test_controller_profile_caps_timeout_and_unknowns(self):
+            ops=Fake([[('stderr',b'x'*16385)]],status())
+            process,streams=collect_child(ops,'controller',['owned'],profile='controller')
+            self.assertEqual(streams['stderr'],b'x'*16384);self.assertIn('stderr byte cap',process['firstFailure']['message'])
+            timed=Fake(now_step=600000000000)
+            process,_=collect_child(timed,'controller',['owned'],profile='controller')
+            self.assertTrue(process['timedOut']);self.assertIsNone(process['exitCode']);self.assertIsNone(process['waitStatus'])
+            self.assertEqual(timed.calls.count('kill'),1);self.assertLess(len(timed.calls),15)
+
+        def test_outside_fixed_child_descriptor_environment_and_no_migration_preexec(self):
+            with self.outside_edges() as (owner,state):
+                owner.validate();child=owner.create_child()
+                self.assertEqual(child.argv,['/usr/bin/python3.12','-I','-B',RUN_FILE,'--bootstrap'])
+                self.assertEqual(child.environment,dict(ENV,**owner.bootstrap.environ,SUDO_UID='1001',SUDO_GID='1002'))
+                stat_text='101 (held) '+' '.join(['0']*19+['123'])
+                with patch.object(Cgroups,'text',return_value=stat_text),patch.object(resource,'setrlimit') as limits,\
+                     patch.object(os,'getpid',return_value=101),patch.object(os,'getpgrp',return_value=101),\
+                     patch.object(os,'write',return_value=24) as write:
+                    child.preexec(9)
+                    self.assertEqual(struct.unpack('<QQQ',write.call_args.args[1]),(101,101,123));self.assertEqual(limits.call_count,3)
+                owner.bootstrap.groups.move_child.assert_not_called();owner.bootstrap.enter.assert_not_called()
+
+        def test_outside_actual_spawn_wait_policy_and_closed_environment(self):
+            with self.outside_edges() as (owner,state):
+                child=owner.create_child();events=[]
+                stdout,stderr,selector=Mock(),Mock(),Mock();stdout.fileno.return_value=10;stderr.fileno.return_value=11
+                process=Mock(pid=101,stdout=stdout,stderr=stderr)
+                def create(*args,**kwargs):events.append('spawn');return process
+                with patch.object(signal,'signal',side_effect=lambda *a:events.append('reset')) as reset,\
+                     patch.object(signal,'getsignal'),patch.object(subprocess,'Popen',side_effect=create) as popen,\
+                     patch.object(os,'pipe2',return_value=(7,8)),patch.object(os,'read',return_value=struct.pack('<QQQ',101,101,123)),\
+                     patch.object(os,'set_blocking'),patch.object(selectors,'DefaultSelector',return_value=selector):
+                    identity=child.spawn();child.close()
+                    self.assertEqual(identity,{'pid':101,'pgid':101,'parentPid':100,'startTicks':123})
+                    self.assertEqual(events,['reset','spawn']);reset.assert_called_once_with(signal.SIGCHLD,signal.SIG_DFL)
+                    self.assertEqual(popen.call_args.kwargs['env'],child.environment)
+                    self.assertTrue(popen.call_args.kwargs['start_new_session']);self.assertTrue(popen.call_args.kwargs['close_fds'])
+                with patch.object(signal,'signal',side_effect=ValueError('RESET')),patch.object(subprocess,'Popen') as popen:
+                    with self.assertRaisesRegex(ValueError,'RESET'):child.spawn()
+                    popen.assert_not_called()
+
+        def test_outside_natural_terminal_observations_then_drop_before_retention(self):
+            with self.outside_edges() as (owner,state):
+                facts,failure=owner.finish({'waitStatus':0})
+                self.assertIsNone(failure.first);self.assertFalse(facts['sessionSignalAttempted']);self.assertFalse(facts['cgroupKillAttempted'])
+                self.assertEqual(facts['polls'],1);owner.child.kill.assert_not_called();owner.child.reap.assert_not_called()
+                self.assertEqual(len([e for e in state['events'] if e[0]=='observe']),8)
+                owner.retain(failure,{'cleanup':facts},{'stdout':b'original','stderr':b''})
+                self.assertEqual(state['events'][-2:],[('drop',),('ids',(1001,1002))])
+                self.assertEqual(state['saved'][0][0],PACKET/'.outside.json')
+                self.assertEqual(state['saved'][0][1]['streamsHex']['stdout'],b'original'.hex())
+
+        def test_outside_precleanup_defect_survives_successful_empty_cleanup(self):
+            with self.outside_edges() as (owner,state):
+                state['empty']=False
+                facts,failure=owner.finish({'waitStatus':0})
+                self.assertEqual(failure.first['phase'],'outside-precleanup-census')
+                self.assertTrue(facts['cgroupKillAttempted']);self.assertFalse(facts['sessionSignalAttempted'])
+                self.assertEqual(facts['beforeCleanup']['controller']['procs'],[101])
+                self.assertEqual(facts['afterCleanup']['controller']['procs'],[])
+                owner.child.kill.assert_not_called()  # Reaped leader cannot be signalled even with descendants.
+
+        def test_outside_live_session_cleanup_preserves_unknown_terminal_failure(self):
+            with self.outside_edges() as (owner,state):
+                owner.child.process.returncode=None;owner.child.reap.return_value=status()
+                facts,failure=owner.finish({'waitStatus':None})
+                self.assertEqual(failure.first['phase'],'outside-terminal');owner.child.kill.assert_called_once()
+                self.assertTrue(facts['sessionSignalAttempted']);self.assertEqual(facts['cleanupTerminal']['waitStatus'],0)
+
+        def test_outside_recorded_reap_prevents_session_signal_even_with_stale_popen_field(self):
+            with self.outside_edges() as (owner,state):
+                owner.child.process.returncode=None
+                facts,failure=owner.finish({'waitStatus':0})
+                owner.child.kill.assert_not_called();owner.child.reap.assert_not_called()
+                self.assertFalse(facts['sessionSignalAttempted'])
+
+        def test_outside_membership_blocks_creation_and_enclosing_kill(self):
+            with self.outside_edges() as (owner,state):
+                state['membership']='0::/bw-ring3-123-1/controller\n'
+                with self.assertRaisesRegex(ValueError,'remain outside'):owner.create_child()
+                with patch.object(os,'open') as opened:
+                    with self.assertRaisesRegex(ValueError,'remain outside'):owner.kill_enclosing()
+                    opened.assert_not_called()
+
+        def test_outside_enclosing_write_anchors_held_directory_and_refuses_identity_drift(self):
+            with self.outside_edges() as (owner,state):
+                owner.kill_enclosing()
+                self.assertEqual(state['events'][-2:], [('open','cgroup.kill',{'dir_fd':7}),('kill-write',8,b'1')])
+                for info in (SimpleNamespace(st_mode=0o40755,st_dev=3,st_ino=99,st_uid=1001,st_gid=1002),
+                             SimpleNamespace(st_mode=0o40755,st_dev=3,st_ino=1,st_uid=999,st_gid=1002)):
+                    with patch.object(os,'fstat',return_value=info),patch.object(os,'write') as write:
+                        with self.assertRaisesRegex(ValueError,'held enclosing directory'):owner.kill_enclosing()
+                        write.assert_not_called()
+
+        def test_outside_enclosing_open_write_close_failures_preserve_original(self):
+            for edge in ('openat','write'):
+                with self.outside_edges() as (owner,state):
+                    first=OSError('FIRST-'+edge)
+                    def opened(path,flags,**kwargs):
+                        if kwargs and edge=='openat':raise first
+                        return 8 if kwargs else 7
+                    with patch.object(os,'open',side_effect=opened),patch.object(os,'write',side_effect=first),\
+                         patch.object(os,'close',side_effect=OSError('CLOSE')) as close:
+                        with self.assertRaises(OSError) as caught:owner.kill_enclosing()
+                        self.assertIs(caught.exception,first);self.assertTrue(first.ring3_secondary)
+                        self.assertEqual(close.call_count,1 if edge=='openat' else 2)
+
+        def test_outside_cleanup_clock_and_iteration_bounds_keep_uncertainty(self):
+            with self.outside_edges() as (owner,state):
+                state['empty']=False;owner.kill_enclosing=Mock(side_effect=OSError('KILL'))
+                owner.now=lambda:0
+                facts,failure=owner.finish({'waitStatus':None})
+                self.assertEqual(facts['polls'],128);self.assertIsNotNone(failure.first)
+                self.assertTrue(any(x['phase']=='outside-cleanup' for x in failure.secondary))
+
+        def test_outside_wrapper_preserves_collector_primary_through_finish_and_retention(self):
+            child=Fake(spawn_error=ValueError('FIRST'),terminal=status());child.argv=['owned']
+            ops=Mock();ops.create_child.return_value=child;ops.finish.side_effect=OSError('CENSUS');ops.retain.side_effect=OSError('RETAIN')
+            facts,failure=outside_controller(ops)
+            self.assertEqual(failure.first['message'],'FIRST')
+            self.assertEqual([x['message'] for x in failure.secondary],['CENSUS','RETAIN'])
+            ops.finish.assert_called_once();ops.retain.assert_called_once();self.assertEqual(facts['process']['waitStatus'],0)
+
+        def test_outside_wrapper_unconditionally_finishes_after_validation_failure(self):
+            with self.outside_edges() as (owner,state):
+                owner.admitted=False;owner.bootstrap.validate.side_effect=ValueError('FIRST')
+                facts,failure=outside_controller(owner)
+                self.assertEqual(failure.first['message'],'FIRST')
+                self.assertEqual(failure.secondary[0]['phase'],'outside-ownership')
+                owner.bootstrap.drop.assert_called_once();self.assertEqual(state['events'],[('drop',),('ids',(1001,1002))])
+
+        def test_outside_interrupted_finish_retains_earlier_defect_and_partial_facts(self):
+            with self.outside_edges() as (owner,state):
+                state['empty']=False
+                child=Fake(terminal=status());child.argv=['owned'];child.process=Mock(pid=101,returncode=0)
+                owner.create_child=Mock(return_value=child);owner.child=child
+                owner.now=Mock(side_effect=OSError('CLOCK'))
+                facts,failure=outside_controller(owner)
+                self.assertEqual(failure.first['phase'],'outside-precleanup-census')
+                self.assertEqual(failure.secondary[-1]['message'],'CLOCK')
+                self.assertEqual(facts['cleanup']['beforeCleanup']['controller']['procs'],[101])
+                self.assertTrue(facts['cleanup']['cgroupKillAttempted']);self.assertIsNone(facts['cleanup']['afterCleanup'])
+
+        def test_outside_drop_or_retention_failure_preserves_original_and_no_root_write(self):
+            for edge in ('drop','write'):
+                with self.outside_edges() as (owner,state):
+                    failure=FirstFailure();failure.add(ValueError('FIRST'),'controller')
+                    if edge=='drop':owner.bootstrap.drop.side_effect=OSError('DROP')
+                    with patch.dict(globals(),write_new=Mock(side_effect=OSError('WRITE'))) as scope:
+                        owner.retain(failure,{}, {'stdout':b'','stderr':b''})
+                        self.assertEqual(failure.first['message'],'FIRST')
+                        self.assertEqual(failure.secondary[0]['message'],'DROP' if edge=='drop' else 'WRITE')
+                        if edge=='drop':scope['write_new'].assert_not_called()
+
         @contextlib.contextmanager
         def entry_edges(self):
             """All OS edges of the actual entry methods are inert here."""

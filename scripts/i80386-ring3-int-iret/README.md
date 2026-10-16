@@ -86,10 +86,31 @@ files are not additional packet roles. Actual-method controls mock every
 privilege, cgroup, process and file boundary; they do not perform a real drop or
 migration.
 
-Actual entry, privileged entry, the outer deadline and unconditional
-cleanup, packet finalization, the hosted actual job and results document are
-still unconnected. Neither polling profile bounds a blocking process
-creation or identity read; an independently reviewed outer owner is still needed.
+The outside-owner functions are a further source/mock checkpoint. The root
+observer stays outside the manual subtree and launches only the held Python
+entry child. That internal controller profile retains at most 16 KiB per stream,
+expects natural exit zero and observes a 600-second total lifetime. An already
+reaped result observed after its budget refuses acceptance without signalling
+that PID. Guest and discovery budgets and stream caps are unchanged.
+
+The wrapper always attempts terminal observation and cleanup, including after
+controller errors. Original PRE-cleanup nonemptiness or observation failures
+remain failures even if cleanup later reaches emptiness. Only a held unreaped
+session may receive a process-group signal under the admitted wait policy.
+Enclosing cleanup opens a directory descriptor, checks its admitted identity
+and owner, then opens `cgroup.kill` relative to that held descriptor. Observation
+and reap polling use both a two-second deadline and a 128-iteration cap. Partial
+facts and unknown terminal status survive failures. These are bounded cleanup
+attempts, not a guarantee that every operation succeeds or returns promptly.
+The observer drops privileges before retaining its internal facts and opaque
+stream prefixes; it does not parse guest output, run probes or build archives.
+Genuine empty snapshots taken after controller exit can supply the final
+reader's terminal observations once packet assembly is connected.
+
+Entry preparation, actual entry, packet finalization, the hosted actual job and
+results remain unconnected. Polling cannot preempt blocking kernel operations,
+process creation or identity reads. The 15-minute job backstop is not wired at
+this checkpoint, and no real outside-owner lifecycle has been qualified.
 The actual command refuses to run at this checkpoint. Remaining implementation
 stays within the existing nine-path claim. Before any actual event, freeze the
 complete source/input/runtime graph,
