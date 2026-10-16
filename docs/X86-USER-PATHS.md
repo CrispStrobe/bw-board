@@ -36,7 +36,7 @@ HDD writes remain in emulated memory unless the console receives explicit `--hdd
 | `.COM` / MZ `.EXE` | Direct DOS-service loading; not arbitrary protected-mode executable compatibility. |
 | Raw floppy / HDD | Supported board slot and geometry; HDD byte size must match CHS. |
 | DOSBox `.conf` | Partial declarative translation. Direct DOS selects the first program and records mounts; the 386 console accepts one supported HDD `imgmount` and boot declaration. No host shell is executed. |
-| ZIP / JS-DOS package | The merged loaders do not unpack these. [Draft PR641](https://github.com/CrispStrobe/bw-board/pull/641) is the current separate bounded STORED-ZIP/raw-HDD CLI candidate. Earlier failed checkpoints are preserved; fresh four-case hosted acceptance remains pending. No arbitrary autoexec execution or broad DOSBox compatibility follows. |
+| ZIP / JS-DOS package | The merged loaders do not unpack these. [Draft PR644](https://github.com/CrispStrobe/bw-board/pull/644) is the current bounded STORED-ZIP/raw-HDD CLI candidate. PR641's workflow completed all four cases, but its frozen reader refused the manifest ordering; that result is not accepted. The canonical producer fix needs fresh qualification. No arbitrary autoexec execution or broad DOSBox compatibility follows. |
 | `.vhd` filename | The HDD slot expects raw bytes; the extension does not implement a VHD container decoder. |
 | ISO / CD-ROM | The reviewed loaders expose no CD/ATAPI, ISO-filesystem or El Torito boot route. Renaming an ISO cannot add that hardware or loader. |
 

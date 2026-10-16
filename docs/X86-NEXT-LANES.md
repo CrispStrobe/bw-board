@@ -2094,10 +2094,12 @@ introduced by this transport scope.
 ## Bounded DOS package admission
 
 This follows disk export/reload and has its own source, tests and acceptance.
-[Draft PR637](https://github.com/CrispStrobe/bw-board/pull/637), at
-`a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee`, publishes a separate pure policy,
+[Initial PR637](https://github.com/CrispStrobe/bw-board/pull/637), at
+`a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee`, introduced a separate pure policy,
 Node ZIP adapter, CLI and hosted acceptance candidate without changing shared
-package dependencies. It is not a merged or guest-qualified ZIP/JS-DOS loader.
+package dependencies. [Draft PR644](https://github.com/CrispStrobe/bw-board/pull/644)
+is the current source checkpoint; it is not a merged or guest-qualified
+ZIP/JS-DOS loader.
 Select one explicit config, or one unambiguous supported default; never guess among
 multiple runnable configurations. Preserve full canonical archive paths and
 resolve media relative to the chosen config. Basename matching is insufficient.
@@ -2137,9 +2139,12 @@ The next CLI-only qualification is the separately prepared
 
 ## DOS package CLI hosted PTY acceptance
 
-Status: source candidate published, actual result pending. The
+Status: PR641's official workflow succeeded, but its frozen original reader
+refused manifest ordering. That result is not accepted. The canonical producer
+repair is published in [draft PR644](https://github.com/CrispStrobe/bw-board/pull/644),
+with fresh source checks and a distinct hosted qualification pending. The
 [ownership extension PR638](https://github.com/CrispStrobe/bw-board/pull/638)
-merged before implementation. [Draft PR637](https://github.com/CrispStrobe/bw-board/pull/637)
+merged before implementation. [Initial PR637](https://github.com/CrispStrobe/bw-board/pull/637)
 at `a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee` includes the CLI, finite hosted
 producer/workflow and independent original-only reader. Its 26 pure Node tests
 include inert producer controls and a manufactured complete packet with
@@ -2147,6 +2152,20 @@ rehashed semantic refusals; none establishes actual boot, PTY behavior or an
 installed GUI result. All final-head checks and independent source/envelope
 admission precede the sole hosted actual. Refresh the head and detect completed
 work before acting; preserve frozen source and all original failures.
+
+The [PR641 attempt-1 run](https://github.com/CrispStrobe/bw-board/actions/runs/38913512631)
+completed all four fresh cases: the authored `a` and `b` responses with natural
+zero exits, and the expected malformed-path and focus-loss refusals. All four
+ended with the original terminal settings; source/runtime identities matched
+before and after, with empty terminal groups and no observed OOM events.
+All 22 manifest rows had the expected bytes and hashes, but `Path` sorting put
+`inputs/authored.zip` and `inputs/malformed.zip` before `inputs.json`, contrary
+to the reader's lexical string order. Preserve that refusal and original packet.
+PR644 sorts the completed rows without changing file traversal, role hashes,
+reader assertions, fixtures or limits. Earlier PR637 and PR640 failures remain
+preserved. Source controls and official workflow success alone do not complete
+the original-reader acceptance gate.
+
 No other runner, policy, parser, dependency, pin or other-owner change belongs
 to this acceptance task. GUI adoption and its consumer prerequisites remain
 separate.
