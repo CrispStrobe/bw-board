@@ -28,10 +28,13 @@ Preserve the separate F0 profile work. The IRQ fixture remains independently
 bound to its reviewed source/linker bytes. No engine or guest ran locally;
 no adapter API, package dependency, workflow, benchmark or threshold changed.
 
-Lite [PR988](https://github.com/CrispStrobe/brickwright-lite/pull/988) pins the
-new release but still needs complete actual CLI/browser serial qualification
-and every enabled final-head check before A10 consumer completion. This
-producer result does not claim hardware or full consumer qualification.
+Lite [PR988](https://github.com/CrispStrobe/brickwright-lite/pull/988) merged
+as `3753d3b4`, adopting the new release after all 12 enabled final-head checks
+passed (two declared conditional skips). Real compiled V2 JSON/text CLI proofs
+passed greeting/counter and matrix/fault/time bounds; a fresh browser V2 ELF
+reached Running and printed its complete unique Debug-console greeting.
+A10 is complete across core, rebuilt engine and consumer. The original failures
+remain retained; no hardware or broader physical accuracy claim is added.
 
 2026-10-15 labwired F030 clock tree (RCC/FLASH on the heavy tier) — CLAIM, VPS Claude (opus).
 Branch lane/labwired-f030-clock-20261015, base 3e9429f2. Root cause: the labwired-tier F030
