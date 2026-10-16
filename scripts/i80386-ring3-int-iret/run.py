@@ -1978,6 +1978,161 @@ STAGED_INPUTS = Path('build/i80386-ring3-int-iret-staged')
 
 
 
+STAGING_DRIVER = r"""import fs from 'node:fs';
+import path from 'node:path';
+import {buildFixture} from './scripts/i80386-ring3-int-iret/fixture.mjs';
+const uid=process.getuid(),gid=process.getgid(),root=process.cwd();
+const staged=path.resolve('build/i80386-ring3-int-iret-staged');
+function directory(name){const s=fs.lstatSync(name);if(!s.isDirectory()||s.uid!==uid||s.gid!==gid||(s.mode&0o022)||fs.realpathSync(name)!==name)throw Error('canonical owned staging directory');}
+function parents(){for(const name of [root,path.join(root,'build'),staged])directory(name);}
+parents();if(uid<=0||gid<=0)throw Error('unprivileged staging only');
+const directoryHandle=fs.opendirSync(staged);let directoryError=null;
+try{if(directoryHandle.readSync()!==null)throw Error('empty staging only');}catch(e){directoryError=e;}
+try{directoryHandle.closeSync();}catch(e){if(directoryError)directoryError.ring3Secondary=[String(e)];else directoryError=e;}
+if(directoryError)throw directoryError;
+const stable=v=>Array.isArray(v)?'['+v.map(stable).join(',')+']':v!==null&&typeof v==='object'?'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+stable(v[k])).join(',')+'}':JSON.stringify(v);
+const fixture=buildFixture();
+function write(name,data){
+  if(!['fixture.rom','fixture.json'].includes(name))throw Error('fixed staging output');
+  parents();const target=path.join(staged,name);
+  const fd=fs.openSync(target,fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_NOFOLLOW,0o600);let first=null;
+  try{const s=fs.fstatSync(fd);if(!s.isFile()||s.uid!==uid||s.gid!==gid||s.size!==0)throw Error('owned empty regular staging descriptor');
+    if(fs.writeSync(fd,data,0,data.length)!==data.length)throw Error('complete staging write');
+    if(fs.fstatSync(fd).size!==data.length)throw Error('staging descriptor extent');
+  }catch(e){first=e;}
+  try{fs.closeSync(fd);}catch(e){if(first)first.ring3Secondary=[String(e)];else first=e;}
+  if(first)throw first;
+}
+const rom=Buffer.from(fixture.rom),metadata=Buffer.from(stable(fixture.manifest)+'\n');
+if(rom.length!==65536||metadata.length>1048576)throw Error('bounded authored staging extent');
+write('fixture.rom',rom);write('fixture.json',metadata);
+"""
+
+
+class LinuxStaging(LinuxTool):
+    """Fixed pure builder, inherited preparation group; no controller migration."""
+    def __init__(self,owner):
+        self.owner=owner
+        super().__init__(None,[RUNTIME_EXECUTABLES['node'],'--input-type=module','--eval',STAGING_DRIVER],os.getpid())
+
+    def spawn(self):
+        self.owner.spawn_attempted=True
+        return super().spawn()
+
+    def preexec(self,identity_fd):
+        self.owner.member();LinuxController.preexec(self,identity_fd)
+
+
+class StagingOps:
+    """Separate dropped-child source interface. No actual invocation is wired."""
+    def __init__(self,environ=None):
+        self.environ=dict(os.environ if environ is None else environ)
+        self.uid=self.gid=None;self.admitted=False;self.spawn_attempted=False
+        self.directories={};self.facts={'before':{},'after':{},'outputs':{},'outputFacts':{}}
+
+    def member(self):
+        entry_ids(self.uid,self.gid)
+        root=expected_cgroup(self.environ)
+        need(entry_proc('/proc/self/cgroup')=='0::/'+root.name+'-preparation\n','staging requires dropped preparation sibling membership')
+
+    def directory(self,path,initial=False):
+        info=path.lstat()
+        need(path.resolve(strict=True)==path and stat.S_ISDIR(info.st_mode) and
+             (info.st_uid,info.st_gid)==(self.uid,self.gid) and info.st_mode&0o022==0,'canonical owned staging directory')
+        identity=(info.st_dev,info.st_ino,info.st_uid,info.st_gid)
+        if initial:self.directories[str(path)]=identity
+        else:need(self.directories.get(str(path))==identity,'staging directory identity readback')
+
+    def empty(self):
+        entries=os.scandir(Path.cwd()/STAGED_INPUTS);first=None
+        try:need(next(entries,None) is None,'staging directory must initially be empty')
+        except BaseException as error:first=error
+        try:entries.close()
+        except BaseException as error:
+            if first is None:first=error
+            else:first.ring3_secondary=getattr(first,'ring3_secondary',[])+[row(error,'staging-directory-close')]
+        if first is not None:raise first
+
+    def admit(self):
+        self.uid,self.gid=os.getresuid()[0],os.getresgid()[0]
+        need(type(self.uid) is int and type(self.gid) is int and self.uid>0 and self.gid>0,'unprivileged staging invoker')
+        self.member()
+        for path in (Path.cwd(),Path.cwd()/'build',Path.cwd()/STAGED_INPUTS):self.directory(path,True)
+        self.empty()
+        self.admitted=True
+
+    def observe(self,stage,failure):
+        for role in ('node','fixture','runner'):
+            try:
+                if role=='node':
+                    files=RuntimeFiles();path,_=files.resolve(RUNTIME_EXECUTABLES['node'])
+                    need(path==RUNTIME_EXECUTABLES['node'],'fixed canonical staging Node')
+                    info=Path(path).lstat()
+                    need(stat.S_ISREG(info.st_mode) and info.st_mode&0o6000==0,'ordinary canonical staging Node')
+                    data=files.read(path,RUNTIME_CAPS['fileBytes']);cap=RUNTIME_CAPS['fileBytes']
+                else:
+                    path='scripts/i80386-ring3-int-iret/'+('fixture.mjs' if role=='fixture' else 'run.py')
+                    target=Path.cwd()/path;info=target.lstat()
+                    need(target.resolve(strict=True)==target and stat.S_ISREG(info.st_mode) and
+                         (info.st_uid,info.st_gid)==(self.uid,self.gid),'canonical owned staging source')
+                    data=bounded_read(target,4<<20);cap=4<<20
+                need(type(data) is bytes and 0<len(data)<=cap,'bounded observed staging identity')
+                self.facts[stage][role]={'path':path,'bytes':len(data),'sha256':sha(data)}
+            except BaseException as error:failure.add(error,'staging-'+stage+'-'+role)
+        if stage=='after':
+            for role in ('node','fixture','runner'):
+                try:need(same_json(self.facts['before'][role],self.facts['after'][role]),'observed staging identity drift: '+role)
+                except BaseException as error:failure.add(error,'staging-identity-readback')
+
+    def create(self):
+        self.member()
+        for path in (Path.cwd(),Path.cwd()/'build',Path.cwd()/STAGED_INPUTS):self.directory(path)
+        self.empty()
+        return LinuxStaging(self)
+
+    def outputs(self,failure):
+        for name,cap in (('fixture.rom',65536),('fixture.json',JSON_CAP)):
+            try:
+                self.directory(Path.cwd()/STAGED_INPUTS)
+                path=Path.cwd()/STAGED_INPUTS/name;info=path.lstat()
+                need(path.resolve(strict=True)==path and stat.S_ISREG(info.st_mode) and
+                     (info.st_uid,info.st_gid)==(self.uid,self.gid) and type(info.st_size) is int and 0<=info.st_size<=cap,
+                     'canonical owned bounded staging output')
+                raw=bounded_read(path,cap);self.facts['outputs'][name]=raw
+                self.facts['outputFacts'][name]={'bytes':len(raw),'sha256':sha(raw)}
+            except BaseException as error:failure.add(error,'staging-output-'+name)
+        _,found=input_facts(read=lambda path,cap:self.facts['outputs'][Path(path).name])
+        failure.adopt(found.first,found.secondary)
+
+
+def stage_preparation_inputs(ops=None):
+    """Source-only generation callable, separate from preparation_child defaults.
+
+    Observed identities are not external pins; generation-original transport
+    and source/runtime-before-generation admission remain activation work.
+    """
+    ops=StagingOps() if ops is None else ops;failure=FirstFailure();process=None
+    streams={'stdout':b'','stderr':b''}
+    try:
+        ops.admit();ops.observe('before',failure)
+        if failure.first is not None:raise ObservedFailure(failure.first,failure.secondary)
+        child=ops.create();process,streams=collect_child(child,'discovery',child.argv,profile='discovery')
+        failure.adopt(process['firstFailure'],process['secondary'])  # Before any output/readback fault.
+        need(type(process['exitCode']) is int and process['exitCode']==0 and type(process['waitStatus']) is int and
+             process['waitStatus']==0 and process['signal'] is None and process['timedOut'] is False and
+             streams=={'stdout':b'','stderr':b''},'natural silent staging generator terminal')
+    except BaseException as error:failure.add(error,'staging-generation')
+    finally:
+        if ops.spawn_attempted:
+            try:ops.outputs(failure)
+            except BaseException as error:failure.add(error,'staging-output-retention')
+        if ops.admitted:
+            try:ops.observe('after',failure)
+            except BaseException as error:failure.add(error,'staging-after-retention')
+    return {'pass':failure.first is None and failure.secondary==[],'process':process,'streams':streams,
+            'spawnAttempted':ops.spawn_attempted,'facts':ops.facts},failure
+
+
 def preparation_frame(raw):
     need(type(raw) is bytes and 0<len(raw)<=GIT_TRACE_CAP,'original PRE frame body extent')
     return PREPARATION_MAGIC+struct.pack('>I',len(raw))+hashlib.sha256(raw).digest()+raw
@@ -2425,6 +2580,149 @@ def controls():
                 'rusage':{'userSeconds':0.1,'systemSeconds':0.01,'maxRssKiB':1024}}
 
     class Tests(unittest.TestCase):
+        @contextlib.contextmanager
+        def staging_edges(self):
+            env={'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1','BW_EXPECTED_HEAD':'a'*40,'BW_EXPECTED_TREE':'b'*40}
+            state={'uids':(1001,)*3,'gids':(1002,)*3,'groups':[],'member':'0::/bw-ring3-123-1-preparation\n',
+                'events':[],'entries':[],'dirMode':0o40700,'dirOwner':(1001,1002),'inode':90,'outputs':{},
+                'inputs':{'fixture.rom':b'Z'*65536,'fixture.json':b'{"schema":"mock"}\n'},
+                'node':b'observed mock Node','fixture':b'authored mock builder','runner':b'held mock runner',
+                'readFaults':{},'drift':{},'after':False,'code':0,'stderr':b'','stdout':b'',
+                'scanClose':None,'outputOwner':(1001,1002),'outputMode':0o100600,'outputExtent':None}
+            ops=StagingOps(env)
+            class Entries:
+                def __init__(self):self.first=True
+                def __iter__(self):return self
+                def __next__(self):
+                    state['events'].append('scan-next')
+                    if self.first and state['entries']:self.first=False;return object()
+                    raise StopIteration
+                def close(self):
+                    state['events'].append('scan-close')
+                    if state['scanClose']:raise state['scanClose']
+            def lstat(path):
+                name=str(path);uid,gid=1001,1002;mode=0o100644;size=0
+                if name in ('/checkout','/checkout/build','/checkout/'+str(STAGED_INPUTS)):
+                    uid,gid=state['dirOwner'];mode=state['dirMode']
+                elif name==RUNTIME_EXECUTABLES['node']:uid,gid=0,0;mode=0o100755
+                elif name.startswith('/checkout/'+str(STAGED_INPUTS)+'/'):
+                    key=Path(name).name
+                    if key not in state['outputs']:raise FileNotFoundError('partial '+key)
+                    uid,gid=state['outputOwner'];mode=state['outputMode'];size=len(state['outputs'][key]) if state['outputExtent'] is None else state['outputExtent']
+                return SimpleNamespace(st_mode=mode,st_uid=uid,st_gid=gid,st_dev=3,st_ino=state['inode'],st_size=size)
+            def source(role):
+                state['events'].append('read-'+role)
+                if role in state['readFaults']:raise state['readFaults'][role]
+                return state['drift'].get(role,state[role]) if state['after'] else state[role]
+            def read(path,cap,**kwargs):
+                name=str(path)
+                if name.endswith('/fixture.mjs'):return source('fixture')
+                if name.endswith('/run.py'):return source('runner')
+                key=Path(path).name;state['events'].append('output-'+key)
+                if key in state['readFaults']:raise state['readFaults'][key]
+                raw=state['outputs'][key];need(len(raw)<=cap,'mock bounded staging output');return raw
+            def factory(owner):
+                state['events'].append('factory')
+                child=Fake([[('stdout',state['stdout']),('stderr',state['stderr'])]],status(state['code']))
+                child.argv=[RUNTIME_EXECUTABLES['node'],'--input-type=module','--eval',STAGING_DRIVER]
+                child.environment=dict(ENV)
+                def spawn():
+                    state['events'].append('spawn');owner.spawn_attempted=True;state['after']=True
+                    state['outputs'].update(state['inputs']);state.get('onSpawn',lambda:None)()
+                    return {'pid':202,'pgid':202,'parentPid':101,'startTicks':234}
+                child.spawn=spawn;return child
+            with patch.object(Path,'cwd',return_value=Path('/checkout')),patch.object(Path,'resolve',lambda path,**kwargs:path),                 patch.object(Path,'lstat',lstat),patch.object(os,'scandir',side_effect=lambda path:Entries()),                 patch.object(os,'getresuid',side_effect=lambda:state['uids']),patch.object(os,'getresgid',side_effect=lambda:state['gids']),                 patch.object(os,'getgroups',side_effect=lambda:state['groups']),patch.object(RuntimeFiles,'resolve',side_effect=lambda path:(path,{})),                 patch.object(RuntimeFiles,'read',side_effect=lambda files,path,cap:source('node'),autospec=True),                 patch.dict(globals(),bounded_read=read,LinuxStaging=factory,ROM_SHA=sha(state['inputs']['fixture.rom']),                 FIXTURE_JSON_SHA=sha(encode(entry_json(state['inputs']['fixture.json']))[:-1]),                 entry_proc=lambda path:state['member'] if path.endswith('cgroup') else ''.join(k+':\t'+'0'*16+'\n' for k in ('CapInh','CapPrm','CapEff','CapAmb'))),                 patch.object(subprocess,'Popen',side_effect=AssertionError('no staging process in inert controls')):
+                yield ops,state
+
+        def test_staging_actual_callable_keeps_fixed_process_outputs_and_observed_readbacks(self):
+            with self.staging_edges() as (ops,state):
+                result,failure=stage_preparation_inputs(ops)
+                self.assertTrue(result['pass']);self.assertIsNone(failure.first)
+                self.assertEqual(result['process']['argv'],[RUNTIME_EXECUTABLES['node'],'--input-type=module','--eval',STAGING_DRIVER])
+                self.assertEqual(result['process']['environment'],ENV);self.assertEqual(result['streams'],{'stdout':b'','stderr':b''})
+                self.assertEqual(result['facts']['outputs'],state['inputs'])
+                self.assertEqual(result['facts']['before'],result['facts']['after'])
+                for name in ('node','fixture','runner'):self.assertEqual(state['events'].count('read-'+name),2)
+                self.assertLess(state['events'].index('read-runner'),state['events'].index('factory'))
+                self.assertLess(state['events'].index('spawn'),state['events'].index('output-fixture.rom'))
+
+        def test_staging_initial_privilege_membership_directory_and_scan_refusals_never_factory_or_read_outputs(self):
+            for fault in ('root','groups','membership','owner','permissions','nonempty','scan-close'):
+                with self.staging_edges() as (ops,state):
+                    if fault=='root':state['uids']=(0,)*3
+                    elif fault=='groups':state['groups']=[1001]
+                    elif fault=='membership':state['member']='0::/actions/job\n'
+                    elif fault=='owner':state['dirOwner']=(0,0)
+                    elif fault=='permissions':state['dirMode']=0o40777
+                    elif fault=='nonempty':state['entries']=['unknown'];state['scanClose']=OSError('SCAN_CLOSE_SECONDARY')
+                    else:state['scanClose']=OSError('SCAN_CLOSE_FIRST')
+                    result,failure=stage_preparation_inputs(ops)
+                    self.assertFalse(result['pass']);self.assertIsNotNone(failure.first);self.assertFalse(result['spawnAttempted'])
+                    self.assertNotIn('factory',state['events']);self.assertFalse(any(name.startswith('output-') for name in state['events']))
+                    if fault=='nonempty':self.assertIn('SCAN_CLOSE_SECONDARY',[row['message'] for row in failure.secondary])
+                    self.assertLessEqual(state['events'].count('scan-next'),1)
+
+        def test_staging_source_failure_or_late_directory_change_stops_factory_and_attempts_all_identity_reads(self):
+            with self.staging_edges() as (ops,state):
+                state['readFaults']['fixture']=OSError('FIRST_SOURCE')
+                result,failure=stage_preparation_inputs(ops)
+                self.assertFalse(result['pass']);self.assertEqual(failure.first['message'],'FIRST_SOURCE')
+                self.assertNotIn('factory',state['events']);self.assertEqual(state['events'].count('read-node'),2);self.assertEqual(state['events'].count('read-runner'),2)
+            with self.staging_edges() as (ops,state):
+                observe=ops.observe
+                def observed(stage,failure):
+                    observe(stage,failure)
+                    if stage=='before':state['inode']+=1
+                ops.observe=observed
+                result,failure=stage_preparation_inputs(ops)
+                self.assertFalse(result['pass']);self.assertNotIn('factory',state['events']);self.assertIn('identity readback',failure.first['message'])
+
+        def test_staging_process_first_failure_keeps_raw_streams_and_partial_outputs_despite_readback_faults(self):
+            with self.staging_edges() as (ops,state):
+                state['code']=1;state['stderr']=b'original WRITE/CLOSE error';state['onSpawn']=lambda:state['outputs'].pop('fixture.json')
+                state['drift']['node']=b'changed Node'
+                result,failure=stage_preparation_inputs(ops)
+                self.assertFalse(result['pass']);self.assertEqual(failure.first,result['process']['firstFailure'])
+                self.assertEqual(result['streams']['stderr'],b'original WRITE/CLOSE error');self.assertEqual(result['facts']['outputs']['fixture.rom'],state['inputs']['fixture.rom'])
+                self.assertTrue(any('fixture.json' in row['message'] for row in failure.secondary));self.assertTrue(any('identity drift' in row['message'] for row in failure.secondary))
+                self.assertEqual(state['events'].count('read-node'),2);self.assertEqual(state['events'].count('read-fixture'),2);self.assertEqual(state['events'].count('read-runner'),2)
+
+        def test_staging_output_owner_extent_hash_and_post_identity_refusals_keep_all_available_bytes(self):
+            for fault in ('owner','regular','extent','rom','metadata','read-close','identity','stderr'):
+                with self.staging_edges() as (ops,state):
+                    if fault=='owner':state['outputOwner']=(0,0)
+                    elif fault=='regular':state['outputMode']=0o120777
+                    elif fault=='extent':state['outputExtent']=JSON_CAP+1
+                    elif fault=='rom':state['onSpawn']=lambda:state['outputs'].__setitem__('fixture.rom',b'bad ROM')
+                    elif fault=='metadata':state['onSpawn']=lambda:state['outputs'].__setitem__('fixture.json',b'{"bad":true}\n')
+                    elif fault=='read-close':state['readFaults']['fixture.rom']=OSError('READ_CLOSE_FIRST')
+                    elif fault=='identity':state['drift']['fixture']=b'changed authored source'
+                    else:state['stderr']=b'unexpected generator stderr'
+                    result,failure=stage_preparation_inputs(ops)
+                    self.assertFalse(result['pass']);self.assertIsNotNone(failure.first)
+                    if fault=='read-close':self.assertIn('fixture.json',result['facts']['outputs'])
+                    if fault=='identity':self.assertNotEqual(result['facts']['before']['fixture'],result['facts']['after']['fixture'])
+
+        def test_staging_linux_descriptor_uses_inherited_group_and_existing_wait_reset(self):
+            owner=SimpleNamespace(spawn_attempted=False,member=Mock())
+            with patch.object(os,'getpid',return_value=101):child=LinuxStaging(owner)
+            with patch.object(signal,'signal') as reset,patch.object(LinuxChild,'spawn',return_value={'pid':202}) as spawn:
+                child.spawn();self.assertTrue(owner.spawn_attempted);reset.assert_called_once_with(signal.SIGCHLD,signal.SIG_DFL);spawn.assert_called_once()
+            with patch.object(LinuxController,'preexec') as enter:child.preexec(7)
+            owner.member.assert_called_once();enter.assert_called_once_with(child,7)
+            self.assertEqual(child.argv,[RUNTIME_EXECUTABLES['node'],'--input-type=module','--eval',STAGING_DRIVER]);self.assertEqual(child.environment,ENV)
+
+        def test_staging_embedded_driver_is_closed_pure_builder_with_exclusive_nofollow_checked_writes(self):
+            # Static literal contract only: no local Node/driver execution.
+            self.assertEqual(re.findall(r"from '([^']+)'",STAGING_DRIVER),['node:fs','node:path','./scripts/i80386-ring3-int-iret/fixture.mjs'])
+            self.assertIn('fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_NOFOLLOW',STAGING_DRIVER)
+            self.assertIn('fs.fstatSync(fd)',STAGING_DRIVER);self.assertIn('s.isFile()||s.uid!==uid||s.gid!==gid',STAGING_DRIVER)
+            self.assertIn('fs.writeSync(fd,data,0,data.length)!==data.length',STAGING_DRIVER)
+            self.assertIn('if(first)first.ring3Secondary=[String(e)];else first=e;',STAGING_DRIVER)
+            self.assertIn('directoryHandle.readSync()!==null',STAGING_DRIVER);self.assertNotIn('readdirSync',STAGING_DRIVER)
+            self.assertIn("write('fixture.rom',rom);write('fixture.json',metadata)",STAGING_DRIVER)
+            self.assertNotIn('executeFixture',STAGING_DRIVER);self.assertNotIn('child_process',STAGING_DRIVER)
+
         @contextlib.contextmanager
         def ownership_edges(self):
             env={'SUDO_UID':'1001','SUDO_GID':'1002','GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1',

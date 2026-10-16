@@ -286,6 +286,47 @@ before any actual event. Earlier V4 originals and their readers remain
 unchanged; new phase provenance, hosted setup and the job backstop still need
 admission. No actual launch was enabled by this log-only addition.
 
+A separate source-only `stage_preparation_inputs` callable can generate the
+free authored fixture inside an already dropped preparation child. It is not
+called by `preparation_child` or any actual command. It first checks all dropped
+IDs/groups/capabilities and exact sibling membership, then requires canonical
+invoker-owned checkout, build and precreated staging directories without group
+or world write permission. The bounded directory scan stops at its first entry;
+initial nonempty or ambiguous paths refuse before a child factory or output
+read. The two fixed output paths are
+`build/i80386-ring3-int-iret-staged/fixture.rom` and `fixture.json`.
+
+The fixed Node descriptor imports only the held `buildFixture` and Node's
+filesystem/path builtins. It uses numeric `O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW`,
+checks regular descriptor ownership and extents, checks complete writes and
+closes each file once. It writes the 65,536-byte ROM and canonical sorted
+metadata JSON with a final newline. No overwrite, deletion or retry repairs a
+partial output. The existing discovery profile supplies ten seconds and
+16 KiB per stream, with natural zero exit and empty streams required. The Node
+child inherits the preparation group even with a new session; the outside
+preparation owner remains responsible for terminal descendant observations.
+
+After an own spawn attempt, the Python callable attempts both bounded output
+readbacks independently, checking ownership, regular files, symlinks, extents
+and the existing ROM/metadata goldens. It adopts the original process failure
+before output or identity-readback errors. It retains original process and
+stream prefixes, available output bytes/hashes and all attempted Node, fixture
+and runner identity observations before and after generation in result memory.
+The embedded writer has only static source checks here; mocked Python controls
+are not execution of that Node writer. A JavaScript close error does not replace
+an earlier JavaScript error in source, but complete serialization of JavaScript
+secondary errors is not guaranteed by uncaught stderr printing.
+
+Those observations are not external source or executable pins. The later PRE
+Git capture cannot prove the source used earlier by generation. Generator
+process/stream provenance still has no admitted transport in the PRE-only frame
+or V5 log record, and V5 does not grade this in-memory result. Frozen external
+Node/source-before-generation admission, a retained generator-original channel,
+staging-directory setup and independent joins remain required before wiring
+this callable into preparation. The existing twenty packet roles, V5 record,
+limits and old preparation defaults stay unchanged. There is no filesystem
+lease, hard preemption of blocking calls or actual staging qualification.
+
 Preparation invocation, actual entry, finalizer integration, the hosted actual job and
 results remain unconnected. Polling cannot preempt blocking kernel operations,
 process creation or identity reads. The 15-minute job backstop is not wired at
