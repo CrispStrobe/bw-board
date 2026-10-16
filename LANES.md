@@ -5161,25 +5161,35 @@ the actual producer finalizer with the file/directory prefix collision in pure
 controls, then freeze the new source and pass its own checks before a distinct
 hosted actual. Do not retry or rewrite PR641's original event or evidence.
 
-The proposed next task is four fresh hosted cases through the fixed CLI:
-authored MIT bootable raw HDD/config/STORED ZIP with keyboard `a` and `b`,
-malformed ZIP refusal, and terminal focus-loss refusal. Initial focus-in remains
-a positive control. Freeze the finite input/readiness/action/quit protocol,
-independent original-only reader, exact roles/fieldsets/caps, source/runtime/input
-closure and attempt-1 official event envelope before launch. First qualify pure
-helpers and fully rehashed semantic mutants, then all final-head source checks
-and independent source/envelope review. Only then admit one hosted actual event,
-terminal metadata, sole original acquisition and two independent original-byte
-audits before any matched-head source merge. No failed-actual retry to select a
-passing result. See the [task contract](docs/X86-NEXT-LANES.md#dos-package-cli-hosted-pty-acceptance).
+Current status — 2026-10-16: finite CLI acceptance REACHED.
 
-Proposed resource bounds are one CPU, 1 GiB memory, no swap, 120 seconds and
-50 million ordinary step calls per child, a 600-second controller and a
-15-minute job. They remain UNQUALIFIED until the exact finite profile and
-resource/cleanup audit are admitted for this finite task.
-An authored bootstrap is not a DOS kernel, protected-mode, full DOSBox,
-installed GUI or RTx qualification. No local guest, PTY, emulator, QEMU,
-browser, build or installer execution belongs to this proposal.
+The [PR646 hosted run](https://github.com/CrispStrobe/bw-board/actions/runs/38937680307)
+at source `cbcfff7e3b143dc07af9c2807055d0ca5556ce9d` passed the unchanged
+standalone reader and a second independent original-byte audit. The sole
+23-role packet has SHA-256
+`68799e1dbc3e023c39829c1e2b24737644375c8f8bedee53ea9e4e1f6e453953`.
+The authored `a` and `b` sessions displayed their distinct predicted responses;
+their CLI processes exited with status zero after the fixed step budget.
+Malformed-package and focus-loss cases refused with status one. All four fresh
+serial cases ended with the original terminal settings; terminal groups were empty and no
+new OOM events were observed. The 57 source files and retained runtime identities
+matched before and after execution.
+
+This qualifies the fixed authored package and finite CLI behavior. It does not
+qualify guest completion, a DOS kernel, protected-mode software, general DOSBox
+packages, installed GUI behavior, listener enumeration or performance/RTx.
+The accepted actual is consumed: preserve it and all prior failed/refused events;
+never repeat its label, dispatch, run or artifact/log download. Refresh the
+[live PR646 integration status](https://github.com/CrispStrobe/bw-board/pull/646)
+and every enabled final-head check before a source merge.
+
+The admitted finite envelope is one CPU, 1 GiB memory, no swap, 120 seconds and
+50 million ordinary calls per child, a 600-second controller and a 15-minute
+job. Terminal resource and cleanup observations pass for these four cases;
+this establishes no general resource sufficiency or physical performance.
+Next: finish the live source merge gates, retain the successful original, and
+qualify installed GUI use separately after its supplier prerequisites. Preserve
+all source, reader, fixture and resource predicates for future work.
 
 
 ## Owned LE keyboard challenge/response — 2026-10-15

@@ -350,3 +350,31 @@ handling, role names and hashes, and the existing reader assertions. Exercise
 the actual producer finalizer with the file/directory prefix collision in pure
 controls, then freeze the new source and pass its own checks before a distinct
 hosted actual. Do not retry or rewrite PR641's original event or evidence.
+
+## Accepted finite hosted CLI result — 2026-10-16
+
+The [PR646 hosted run](https://github.com/CrispStrobe/bw-board/actions/runs/38937680307)
+at source `cbcfff7e3b143dc07af9c2807055d0ca5556ce9d` passed the unchanged
+standalone reader and a second independent original-byte audit. The sole
+23-role packet has SHA-256
+`68799e1dbc3e023c39829c1e2b24737644375c8f8bedee53ea9e4e1f6e453953`.
+The authored `a` and `b` sessions displayed their distinct predicted responses;
+their CLI processes exited with status zero after the fixed step budget.
+Malformed-package and focus-loss cases refused with status one. All four fresh
+serial cases ended with the original terminal settings; terminal groups were empty and no
+new OOM events were observed. The 57 source files and retained runtime identities
+matched before and after execution.
+
+This qualifies the fixed authored package and finite CLI behavior. It does not
+qualify guest completion, a DOS kernel, protected-mode software, general DOSBox
+packages, installed GUI behavior, listener enumeration or performance/RTx.
+The accepted actual is consumed: preserve it and all prior failed/refused events;
+never repeat its label, dispatch, run or artifact/log download. Refresh the
+[live PR646 integration status](https://github.com/CrispStrobe/bw-board/pull/646)
+and every enabled final-head check before a source merge.
+
+The declaration grammar, STORED-only ZIP profile and invocation above remain
+unchanged. Installed GUI package selection needs its own qualified supplier and
+actual consumer acceptance. Any broader command grammar, compression method,
+media type or guest application needs separately scoped implementation and
+free/authored acceptance inputs.
