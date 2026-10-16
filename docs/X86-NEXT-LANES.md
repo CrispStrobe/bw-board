@@ -71,6 +71,144 @@ Compare returned CPU/cache fields, complete selected pages and board state; inde
 
 **First deliverable:** one new source-bound fixture and independent expected trace. **Completion gate:** actual fault/delivery/restart evidence with negative adversaries and retained divergence receipts. Expand the admitted profile only after the added mechanism passes. PSE/APIC-enabled xv6 is a separate profile, not strict 386DX evidence.
 
+### Ordinary-JS ring-changing INT/IRETD fixture
+
+**Status:** proposed claim, no implementation or new guest result. This is the
+next software-interrupt mechanism fixture after the reached same-CPL0 paged
+IRQ/IRET result. It does not repeat that fixture or adopt a native backend.
+Implementation starts only after the matching `LANES.md` claim merges.
+
+**Owned files:** new
+`scripts/i80386-ring3-int-iret/{fixture.mjs,probe.mjs,run.py,reader.py,controls.py,README.md}`,
+`test/i80386-ring3-int-iret.test.mjs`,
+`.github/workflows/i80386-ring3-int-iret.yml` and
+`docs/I80386-RING3-INT-IRET-RESULTS.md`, with this subsection and its registry
+entry. Existing CPU/device code, runners, fixtures, tests, workflows, pins and
+other owners' surfaces remain outside scope. Stop and propose a separately
+reviewed ownership extension if the first mismatch requires a product repair.
+
+**Initial deliverable:** a small self-authored MIT 64 KiB reset ROM, emitted by
+a deterministic closed byte builder without an external assembler or compiler.
+Read the existing authored-ROM
+[`code32 REP/PF fixture`](../scripts/i80386-code32-rep-pf-oracle.mjs) and
+[QEMU boundary](../scripts/run-i80386-code32-rep-pf-qemu.mjs) as references; keep
+their source and accepted inputs unchanged. Freeze the final ROM, payload,
+relocations and symbols before execution. Use the same original ROM in both
+engines. No DOS, extender, filesystem, disk image or downloaded guest is needed.
+
+Run the ordinary `ExperimentalI80386` with `cpuProfile: "strict386"`, hardware
+reset and ordinary `step()` calls over a fixed owned memory bus. Paging stays
+off; CR4/PSE, APIC, native blocks and injected interrupt/state callbacks are
+not used. The reset payload initializes its own writable GDT, IDT and 32-bit
+TSS, masks external PIC sources and enters ring3 through guest instructions.
+This is a CPU/software-interrupt fixture, not a new whole-board acceptance.
+
+Use the original Intel 80386 Programmer's Reference Manual (1986), available
+in a public transcription: [section9.6](https://www.scs.stanford.edu/05au-cs240c/lab/i386/s09_06.htm)
+for interrupt-procedure frames and IF behavior,
+[INT](https://www.scs.stanford.edu/05au-cs240c/lab/i386/INT.htm) for the current-TSS
+inner-privilege stack and twenty-byte 32-bit frame,
+[IRET](https://www.scs.stanford.edu/05au-cs240c/lab/i386/IRET.htm) for the outer-level
+return, and [section7.1](https://www.scs.stanford.edu/05au-cs240c/lab/i386/s07_01.htm)
+for the TSS privilege-stack pointers. These define the architectural goldens;
+engine agreement alone does not define them. INT describes selector slots as
+padded, without specifying zero high words. Retain every raw frame byte but
+grade the defined low selector words separately from those padding bytes.
+
+Freeze one positive trajectory:
+
+1. Establish flat kernel CS/SS selectors `0x08`/`0x10`, user CS/SS selectors
+   `0x1b`/`0x23`, TSS selector `0x28`, kernel ESP0 `0x8000` and user ESP
+   `0x9000`. Enter 32-bit ring3 with EFLAGS `0x202` (IF set, IOPL0; NT, VM,
+   RF, TF and DF clear). Load independently chosen nontrivial general-register
+   values using guest instructions. Freeze their exact constants and symbol
+   addresses in the reviewed fixture contract.
+2. Execute the owned two-byte `INT 0x80` at ring3 through a present DPL3
+   32-bit interrupt gate targeting kernel CS. At actual handler entry require
+   CPL0, SS `0x10`, ESP `0x7fec`, IF clear and the original register values.
+   The twenty-byte frame has five four-byte slots, from low to high addresses:
+   return EIP, old CS, saved EFLAGS `0x202`, old ESP `0x9000` and old SS. Require
+   the low words of the CS/SS slots to equal `0x1b`/`0x23`; retain their high
+   words as raw padding observations without requiring zero, unchanged sentinel
+   bytes or cross-engine equality. Thus byte offsets6,7,18,19 from entry ESP are
+   outside the architectural value projection, with their positions fixed before
+   execution. There is no error-code dword for this software interrupt.
+3. Copy the actual frame and entry registers to a fixed guest evidence area
+   before handler pushes, reporting or later frame reuse. Preserve guards around
+   the admitted kernel/user stack windows. Apply one declared EAX response,
+   preserve all other general registers and execute actual IRETD over that same
+   five-dword frame. Do not synthesize an accepted return from a final marker.
+4. At the first returned ring3 instruction require the frozen continuation,
+   CPL3, CS/SS `0x1b`/`0x23`, ESP `0x9000`, restored IF and exact returned
+   register values. Guest instructions save those original returned values and
+   flags to distinct evidence slots before any reporting changes them.
+5. Only then execute a separately identified one-way `INT 0x81` reporter. Source
+   review must establish that its data reads serialize actual frame/register/
+   memory records copied before pushes, reporting changes or frame reuse, rather
+   than expected literals. Bind those reviewed ROM bytes to the launched input
+   and original evidence. The reporter uses the owned debug port and finishes
+   through the existing QEMU debug-exit interface. Its own frame is distinct;
+   only the first INT80/IRETD roundtrip is graded. No ring3 I/O privilege is
+   required. Output bytes alone cannot distinguish this execution from a
+   byte-identical literal replacement; execution-origin credit additionally
+   depends on the frozen source/ROM and launch-provenance joins.
+
+The JavaScript observer captures source-bound before-INT, handler-entry,
+pre-IRETD and first-returned-instruction CPU contexts, raw frame bytes and
+fixed memory ranges without editing CPU state or driving a callback in place
+of an instruction. The QEMU TCG `pc`/`486` control boots the same ROM and emits
+the original copied records. Use the existing reviewed QEMU8.2.2 acquisition
+and executable/package identity policy read-only, retaining notices. Its later
+CPU and different board are an independent compatibility oracle for the named
+386 instructions, not a strict386 implementation or complete state-parity claim.
+No new arbitrary executable, URL, command, loader or firmware fallback is exposed.
+
+**Independent expectations and refusal controls:** before guest execution,
+review/disassemble every authored instruction and freeze a separate declarative
+expected register set, exact frame layout/bytes, stack guard bytes, selected
+memory extents and expected guest writes. The independent stdlib reader must
+not import the byte builder, probe or producer grader. Recompute ordering and
+all raw fields; a producer `passed` value or emitted success string is insufficient.
+Manufactured controls must reject changed return EIP, swapped/missing defined
+frame fields, wrong saved SS/ESP or IF, wrong entry/return CPL, altered registers
+or guards, missing observation stages and malformed/truncated evidence. Cover
+reporter substitution through refusal of changed frozen ROM/source or missing
+launch-provenance joins, without claiming that identical output bytes reveal
+literal substitution. Verify the declared selector-padding projection separately
+from defined-field and guard mutations. Include a true positive and fully
+rehashed semantic negatives so failures cannot be explained only by stale hashes.
+No local emulator, QEMU or guest execution is needed for these pure controls.
+
+**Final hosted gate:** freeze the complete source/import/data graph, ROM/input
+bytes, observed runtime identities, closed role/event schema, independent
+reader and official one-shot admission before launch. Run the two fresh guest
+children serially, JavaScript then QEMU, under one logical CPU, 1 GiB RAM,
+zero swap and 64 PIDs per owned envelope. Each child has a 120-second wall
+limit; JavaScript additionally has a two-million ordinary-step-call limit.
+The controller has 600 seconds and the job 15 minutes. Bound stdout and stderr
+to 128 KiB each per child, optional QEMU diagnostic trace to 1 MiB, each JSON
+role to 1 MiB and the expanded packet to 16 MiB. Freeze the actual finite role
+count and worst-case sum before execution. Resource setup/readback, first-error
+retention, reaping and empty owned terminal censuses are acceptance conditions.
+A missing limit or observation refuses; these proposed bounds are unqualified
+until the reviewed finite profile and actual resource audit pass.
+
+Keep unexpected faults, unsupported instructions, shutdown, timeout, partial
+output, process/cleanup uncertainty and the earliest failure. Never reset,
+continue a refused session, substitute a second capture, widen goldens or
+weaken a bound to obtain success. Require all enabled final-source CI checks
+and enclosing workflows before one separately admitted hosted attempt. Acquire
+the official originals once after metadata admission, then perform two
+independent original-only audits without producer imports or guest replay.
+A failure selects the first narrow boundary for a new reviewed candidate; it
+never authorizes rerunning or relabelling the consumed actual.
+
+Success would establish this one CPL-changing software INT80/IRETD trajectory,
+its actual stack/frame/register/memory effects and finite process cleanup. It
+would not establish hardware IRQ delivery, IOPL isolation, paging/restart,
+VM86/task switching, general DPMI, strict whole386DX/AT, OS/game compatibility,
+physical timing, performance or an installed consumer.
+
 ### 4. CLI and GUI media/package handling
 
 **Repositories:** bw-board first for shared parsing/adapter behavior; brickwright-lite for UI and exact dependency-pin adoption. **Ready to start:** frontend work can proceed independently of native optimization.
