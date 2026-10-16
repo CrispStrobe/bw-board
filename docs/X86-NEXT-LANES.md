@@ -2235,9 +2235,9 @@ This follows disk export/reload and has its own source, tests and acceptance.
 [Initial PR637](https://github.com/CrispStrobe/bw-board/pull/637), at
 `a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee`, introduced a separate pure policy,
 Node ZIP adapter, CLI and hosted acceptance candidate without changing shared
-package dependencies. [Draft PR644](https://github.com/CrispStrobe/bw-board/pull/644)
-is the current source checkpoint; it is not a merged or guest-qualified
-ZIP/JS-DOS loader.
+package dependencies. The integrated successor to
+[PR644](https://github.com/CrispStrobe/bw-board/pull/644) is the current source
+checkpoint; it is not a merged or guest-qualified ZIP/JS-DOS loader.
 Select one explicit config, or one unambiguous supported default; never guess among
 multiple runnable configurations. Preserve full canonical archive paths and
 resolve media relative to the chosen config. Basename matching is insufficient.
@@ -2280,7 +2280,12 @@ The next CLI-only qualification is the separately prepared
 Status: PR641's official workflow succeeded, but its frozen original reader
 refused manifest ordering. That result is not accepted. The canonical producer
 repair is published in [draft PR644](https://github.com/CrispStrobe/bw-board/pull/644),
-with fresh source checks and a distinct hosted qualification pending. The
+with fresh source checks and a distinct hosted qualification pending. Its
+sole actual-label event has no observed workflow run. A guide conflict against
+current main was subsequently confirmed; the integrated successor preserves
+main documentation and the same repair source. Preserve the original event
+without retrying it. Recheck mergeability immediately before any new candidate
+qualification. The
 [ownership extension PR638](https://github.com/CrispStrobe/bw-board/pull/638)
 merged before implementation. [Initial PR637](https://github.com/CrispStrobe/bw-board/pull/637)
 at `a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee` includes the CLI, finite hosted

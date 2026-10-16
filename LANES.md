@@ -5100,27 +5100,69 @@ no host shell, arbitrary autoexec, CD/ISO or whole-DOSBox compatibility claim.
 See the [contract](docs/X86-NEXT-LANES.md#bounded-dos-package-admission).
 
 The separate [hosted PTY acceptance extension](#dos-package-cli-hosted-pty-acceptance--2026-10-16)
-is proposed below; it does not change this existing contract.
+is recorded below; it does not change this existing contract.
 
 ## DOS package CLI hosted PTY acceptance — 2026-10-16
 
-PROPOSED — Codex x86. Extend the existing bounded-package ownership with only
-new `scripts/dos-package-acceptance/producer.py` and
-`test/dos-package-acceptance.test.mjs`. The existing merged claim already covers
+MERGED OWNERSHIP — Codex x86, branch
+`lane/386-dos-package-cli-20261016`. The extension in
+[PR638](https://github.com/CrispStrobe/bw-board/pull/638) merged before
+implementation and covers `scripts/dos-package-acceptance/producer.py` and
+`test/dos-package-acceptance.test.mjs`. The existing merged claim also covers
 `scripts/dos-package-acceptance/{probe.mjs,reader.py,README.md}` and
-`.github/workflows/dos-package-acceptance.yml`. Do not implement this acceptance
-until the extension is merged after all enabled exact-head documentation checks.
+`.github/workflows/dos-package-acceptance.yml`.
 
-[PR637](https://github.com/CrispStrobe/bw-board/pull/637) supplies a source-only
-candidate: 22 pure tests and injected machine boundaries, with no actual guest,
-PTY or installed GUI qualification. Preserve its seven frozen source/test/README
-blobs, original failures and reviewed fixes. This extension owns no existing
+[PR637](https://github.com/CrispStrobe/bw-board/pull/637), frozen at
+`a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee`, passed eleven enabled source checks
+but its [sole hosted actual](https://github.com/CrispStrobe/bw-board/actions/runs/38883122687)
+failed at initial controller cgroup admission before any guest case. Preserve
+that failure, its once-acquired originals and independent audits; never relabel
+or retry that run. The next source candidate corrects privileged entry and
+unprivileged controller startup within the same owned files. Its 27 pure tests
+and 18 inert producer controls do not establish kernel, PTY or guest success.
+Preserve the six loader/test blobs and existing README prefix, fixtures, reader
+predicates and limits. This extension owns no existing
 runner, policy, parser, dependency, pin, workflow outside the named new workflow,
 or other owner's source. A required source repair needs separate review within
 its existing ownership before a new final source freeze.
 
-The proposed next task is four fresh hosted cases through the real unmodified
-CLI: authored MIT bootable raw HDD/config/STORED ZIP with keyboard `a` and `b`,
+PR640's distinct [actual run 38906622594](https://github.com/CrispStrobe/bw-board/actions/runs/38906622594)
+reached the exact authored `a/3B/DONE` response, budget report and terminal
+restoration, then failed because the child remained alive until its deadline.
+The later three cases did not start. Preserve both failed originals and their
+independent audits; neither is a successful four-case qualification. The next
+candidate separately repairs `scripts/run-dos-package.mjs` under the existing
+bounded-package claim above: release its own fresh stdin read while preserving
+an already-flowing caller. Focused tri-state regressions and mutations plus
+all 29 pure tests pass; hosted qualification remains pending. This explicitly
+reviewed CLI repair changes no producer, workflow, fixture, reader, resource
+limit or dependency. It needs a new source freeze and distinct official event.
+
+
+PR641's distinct [attempt-1 run 38913512631](https://github.com/CrispStrobe/bw-board/actions/runs/38913512631)
+completed all four fresh cases. The authored `a` and `b` sessions produced their
+predicted input-dependent responses and exited naturally in about 4.6 and 4.9
+seconds. Malformed-path and focus-loss cases refused with exit status 1; all
+four ended with the original terminal settings. Retained case and enclosing groups were empty
+at the terminal observations, with no observed OOM events. The source and
+runtime identities matched before and after execution.
+
+The official workflow succeeded, but the unchanged standalone reader refused
+the retained manifest ordering. All 22 manifest rows had the expected bytes and
+hashes; the producer sorted `Path` objects, placing `inputs/authored.zip` and
+`inputs/malformed.zip` before `inputs.json`, while the reader requires relative
+path strings in lexical order. Preserve that refusal and the original packet.
+This is not a completed acceptance or source-merge qualification.
+
+The next candidate sorts the completed manifest rows by their relative POSIX
+path strings. It preserves file traversal, symlink admission, original error
+handling, role names and hashes, and the existing reader assertions. Exercise
+the actual producer finalizer with the file/directory prefix collision in pure
+controls, then freeze the new source and pass its own checks before a distinct
+hosted actual. Do not retry or rewrite PR641's original event or evidence.
+
+The proposed next task is four fresh hosted cases through the fixed CLI:
+authored MIT bootable raw HDD/config/STORED ZIP with keyboard `a` and `b`,
 malformed ZIP refusal, and terminal focus-loss refusal. Initial focus-in remains
 a positive control. Freeze the finite input/readiness/action/quit protocol,
 independent original-only reader, exact roles/fieldsets/caps, source/runtime/input
