@@ -71,6 +71,144 @@ Compare returned CPU/cache fields, complete selected pages and board state; inde
 
 **First deliverable:** one new source-bound fixture and independent expected trace. **Completion gate:** actual fault/delivery/restart evidence with negative adversaries and retained divergence receipts. Expand the admitted profile only after the added mechanism passes. PSE/APIC-enabled xv6 is a separate profile, not strict 386DX evidence.
 
+### Ordinary-JS ring-changing INT/IRETD fixture
+
+**Status:** proposed claim, no implementation or new guest result. This is the
+next software-interrupt mechanism fixture after the reached same-CPL0 paged
+IRQ/IRET result. It does not repeat that fixture or adopt a native backend.
+Implementation starts only after the matching `LANES.md` claim merges.
+
+**Owned files:** new
+`scripts/i80386-ring3-int-iret/{fixture.mjs,probe.mjs,run.py,reader.py,controls.py,README.md}`,
+`test/i80386-ring3-int-iret.test.mjs`,
+`.github/workflows/i80386-ring3-int-iret.yml` and
+`docs/I80386-RING3-INT-IRET-RESULTS.md`, with this subsection and its registry
+entry. Existing CPU/device code, runners, fixtures, tests, workflows, pins and
+other owners' surfaces remain outside scope. Stop and propose a separately
+reviewed ownership extension if the first mismatch requires a product repair.
+
+**Initial deliverable:** a small self-authored MIT 64 KiB reset ROM, emitted by
+a deterministic closed byte builder without an external assembler or compiler.
+Read the existing authored-ROM
+[`code32 REP/PF fixture`](../scripts/i80386-code32-rep-pf-oracle.mjs) and
+[QEMU boundary](../scripts/run-i80386-code32-rep-pf-qemu.mjs) as references; keep
+their source and accepted inputs unchanged. Freeze the final ROM, payload,
+relocations and symbols before execution. Use the same original ROM in both
+engines. No DOS, extender, filesystem, disk image or downloaded guest is needed.
+
+Run the ordinary `ExperimentalI80386` with `cpuProfile: "strict386"`, hardware
+reset and ordinary `step()` calls over a fixed owned memory bus. Paging stays
+off; CR4/PSE, APIC, native blocks and injected interrupt/state callbacks are
+not used. The reset payload initializes its own writable GDT, IDT and 32-bit
+TSS, masks external PIC sources and enters ring3 through guest instructions.
+This is a CPU/software-interrupt fixture, not a new whole-board acceptance.
+
+Use the original Intel 80386 Programmer's Reference Manual (1986), available
+in a public transcription: [section9.6](https://www.scs.stanford.edu/05au-cs240c/lab/i386/s09_06.htm)
+for interrupt-procedure frames and IF behavior,
+[INT](https://www.scs.stanford.edu/05au-cs240c/lab/i386/INT.htm) for the current-TSS
+inner-privilege stack and twenty-byte 32-bit frame,
+[IRET](https://www.scs.stanford.edu/05au-cs240c/lab/i386/IRET.htm) for the outer-level
+return, and [section7.1](https://www.scs.stanford.edu/05au-cs240c/lab/i386/s07_01.htm)
+for the TSS privilege-stack pointers. These define the architectural goldens;
+engine agreement alone does not define them. INT describes selector slots as
+padded, without specifying zero high words. Retain every raw frame byte but
+grade the defined low selector words separately from those padding bytes.
+
+Freeze one positive trajectory:
+
+1. Establish flat kernel CS/SS selectors `0x08`/`0x10`, user CS/SS selectors
+   `0x1b`/`0x23`, TSS selector `0x28`, kernel ESP0 `0x8000` and user ESP
+   `0x9000`. Enter 32-bit ring3 with EFLAGS `0x202` (IF set, IOPL0; NT, VM,
+   RF, TF and DF clear). Load independently chosen nontrivial general-register
+   values using guest instructions. Freeze their exact constants and symbol
+   addresses in the reviewed fixture contract.
+2. Execute the owned two-byte `INT 0x80` at ring3 through a present DPL3
+   32-bit interrupt gate targeting kernel CS. At actual handler entry require
+   CPL0, SS `0x10`, ESP `0x7fec`, IF clear and the original register values.
+   The twenty-byte frame has five four-byte slots, from low to high addresses:
+   return EIP, old CS, saved EFLAGS `0x202`, old ESP `0x9000` and old SS. Require
+   the low words of the CS/SS slots to equal `0x1b`/`0x23`; retain their high
+   words as raw padding observations without requiring zero, unchanged sentinel
+   bytes or cross-engine equality. Thus byte offsets6,7,18,19 from entry ESP are
+   outside the architectural value projection, with their positions fixed before
+   execution. There is no error-code dword for this software interrupt.
+3. Copy the actual frame and entry registers to a fixed guest evidence area
+   before handler pushes, reporting or later frame reuse. Preserve guards around
+   the admitted kernel/user stack windows. Apply one declared EAX response,
+   preserve all other general registers and execute actual IRETD over that same
+   five-dword frame. Do not synthesize an accepted return from a final marker.
+4. At the first returned ring3 instruction require the frozen continuation,
+   CPL3, CS/SS `0x1b`/`0x23`, ESP `0x9000`, restored IF and exact returned
+   register values. Guest instructions save those original returned values and
+   flags to distinct evidence slots before any reporting changes them.
+5. Only then execute a separately identified one-way `INT 0x81` reporter. Source
+   review must establish that its data reads serialize actual frame/register/
+   memory records copied before pushes, reporting changes or frame reuse, rather
+   than expected literals. Bind those reviewed ROM bytes to the launched input
+   and original evidence. The reporter uses the owned debug port and finishes
+   through the existing QEMU debug-exit interface. Its own frame is distinct;
+   only the first INT80/IRETD roundtrip is graded. No ring3 I/O privilege is
+   required. Output bytes alone cannot distinguish this execution from a
+   byte-identical literal replacement; execution-origin credit additionally
+   depends on the frozen source/ROM and launch-provenance joins.
+
+The JavaScript observer captures source-bound before-INT, handler-entry,
+pre-IRETD and first-returned-instruction CPU contexts, raw frame bytes and
+fixed memory ranges without editing CPU state or driving a callback in place
+of an instruction. The QEMU TCG `pc`/`486` control boots the same ROM and emits
+the original copied records. Use the existing reviewed QEMU8.2.2 acquisition
+and executable/package identity policy read-only, retaining notices. Its later
+CPU and different board are an independent compatibility oracle for the named
+386 instructions, not a strict386 implementation or complete state-parity claim.
+No new arbitrary executable, URL, command, loader or firmware fallback is exposed.
+
+**Independent expectations and refusal controls:** before guest execution,
+review/disassemble every authored instruction and freeze a separate declarative
+expected register set, exact frame layout/bytes, stack guard bytes, selected
+memory extents and expected guest writes. The independent stdlib reader must
+not import the byte builder, probe or producer grader. Recompute ordering and
+all raw fields; a producer `passed` value or emitted success string is insufficient.
+Manufactured controls must reject changed return EIP, swapped/missing defined
+frame fields, wrong saved SS/ESP or IF, wrong entry/return CPL, altered registers
+or guards, missing observation stages and malformed/truncated evidence. Cover
+reporter substitution through refusal of changed frozen ROM/source or missing
+launch-provenance joins, without claiming that identical output bytes reveal
+literal substitution. Verify the declared selector-padding projection separately
+from defined-field and guard mutations. Include a true positive and fully
+rehashed semantic negatives so failures cannot be explained only by stale hashes.
+No local emulator, QEMU or guest execution is needed for these pure controls.
+
+**Final hosted gate:** freeze the complete source/import/data graph, ROM/input
+bytes, observed runtime identities, closed role/event schema, independent
+reader and official one-shot admission before launch. Run the two fresh guest
+children serially, JavaScript then QEMU, under one logical CPU, 1 GiB RAM,
+zero swap and 64 PIDs per owned envelope. Each child has a 120-second wall
+limit; JavaScript additionally has a two-million ordinary-step-call limit.
+The controller has 600 seconds and the job 15 minutes. Bound stdout and stderr
+to 128 KiB each per child, optional QEMU diagnostic trace to 1 MiB, each JSON
+role to 1 MiB and the expanded packet to 16 MiB. Freeze the actual finite role
+count and worst-case sum before execution. Resource setup/readback, first-error
+retention, reaping and empty owned terminal censuses are acceptance conditions.
+A missing limit or observation refuses; these proposed bounds are unqualified
+until the reviewed finite profile and actual resource audit pass.
+
+Keep unexpected faults, unsupported instructions, shutdown, timeout, partial
+output, process/cleanup uncertainty and the earliest failure. Never reset,
+continue a refused session, substitute a second capture, widen goldens or
+weaken a bound to obtain success. Require all enabled final-source CI checks
+and enclosing workflows before one separately admitted hosted attempt. Acquire
+the official originals once after metadata admission, then perform two
+independent original-only audits without producer imports or guest replay.
+A failure selects the first narrow boundary for a new reviewed candidate; it
+never authorizes rerunning or relabelling the consumed actual.
+
+Success would establish this one CPL-changing software INT80/IRETD trajectory,
+its actual stack/frame/register/memory effects and finite process cleanup. It
+would not establish hardware IRQ delivery, IOPL isolation, paging/restart,
+VM86/task switching, general DPMI, strict whole386DX/AT, OS/game compatibility,
+physical timing, performance or an installed consumer.
+
 ### 4. CLI and GUI media/package handling
 
 **Repositories:** bw-board first for shared parsing/adapter behavior; brickwright-lite for UI and exact dependency-pin adoption. **Ready to start:** frontend work can proceed independently of native optimization.
@@ -1852,8 +1990,13 @@ qualification, or support an unmeasured 10x claim.
 
 ## 386 debugger capture and capability correction
 
-Status: docs-only ownership claim; implementation waits for merge. Coding
-branch: `lane/386-debugger-capture-20261015`. Own new `src/i80386-debug.js`,
+Status: the correction merged in [PR599](https://github.com/CrispStrobe/bw-board/pull/599)
+at `05123db4`; the separate finite subscribed free-guest qualification below
+also passed. Consumer adoption and installed-GUI qualification remain pending.
+The following scope and requirements are the regression contract for that
+landed correction, not an unimplemented task.
+
+Historical branch: `lane/386-debugger-capture-20261015`. Scope: new `src/i80386-debug.js`,
 new `test/i80386-debug-capture.test.mjs`, the 386-only composition in
 `src/debug-target-factory.js` and narrow capture/address/capability seams in
 `src/i8086-debug.js`, preserving all 8086 defaults and other target behavior.
@@ -1863,23 +2006,23 @@ event formats. This section and the matching registry entry complete the scope. 
 devices, clocks, supplier pins, workflows and performance experiments stay
 unchanged; the separately owned width-mask CPU work must not be included.
 
-The current factory composes the 386 adapter with the shared 8086 debugger.
-Its event capture calls the AT's deliberately unsupported legacy architectural
-register snapshot. A debug subscriber can consequently throw before a single
-instruction retires. The shared AX-style projection, 20-bit address masking and
-8086 disassembler/control-flow assumptions also do not define a complete
-protected-mode debugger. Visible controls are not evidence that this path works.
+Before the correction, the factory composed the 386 adapter with the shared
+8086 debugger and its event capture called the AT's rejected legacy register
+snapshot. A subscriber could throw before an instruction retired. That original
+failure remains preserved. The dedicated 386 wrapper now supplies read-only
+forward capture and explicit capability limits; the former AX projection,
+20-bit addressing and 8086 decoder do not qualify protected-mode debugging.
 
-First implement a read-only, source-owned 386 register snapshot and event
-capture that does not call the rejected legacy snapshot or mutate the machine.
+Retain the read-only, source-owned 386 register snapshot and event capture
+without calling the rejected legacy snapshot or mutating the machine.
 Expose full-width EAX–EDI/EIP/EFLAGS and relevant architectural mode/segment
 state with unambiguous linear versus physical/code-address meaning. Derive
 addresses from actual cached segment state and EIP; do not reconstruct them
 from visible selectors or truncate them to 20 bits. Publish only supported
 address ranges and operations. Preserve existing event ordering, breakpoint
 semantics, instruction clocks and original fault behavior. The shared event
-module currently uses bitwise address masking, which makes addresses above
-2 GiB signed when given a 32-bit mask. Normalize admitted 386 memory facts
+module formerly used bitwise address masking, which made addresses above
+2 GiB signed when given a 32-bit mask. Keep admitted 386 memory facts normalized
 to unsigned 32-bit values at their source; do not repair already truncated
 facts with a post-hoc target wrapper.
 
@@ -1891,8 +2034,8 @@ rewrite or generic debugger framework is required. Keep 386 architectural
 checkpoint/restore/replay refused; forward capture does not grant reverse
 execution or a continuous machine-state lease.
 
-Tiny owned controls must map a 64 KiB NOP ROM at the real reset alias and
-prove subscriber/no-subscriber parity: one NOP retires once, EIP advances,
+Retain the owned controls mapping a 64 KiB NOP ROM at the real reset alias and
+proving subscriber/no-subscriber parity: one NOP retires once, EIP advances,
 faithful before/after events are emitted and no legacy capture exception
 occurs. Check high register halves, reset CS cached base, addresses above
 1 MiB/high EIP and memory facts above 2 GiB (including a signed-negative
@@ -2090,9 +2233,11 @@ introduced by this transport scope.
 
 This follows disk export/reload and has its own source, tests and acceptance.
 [Initial PR637](https://github.com/CrispStrobe/bw-board/pull/637), at
-`a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee`, publishes a separate pure policy,
+`a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee`, introduced a separate pure policy,
 Node ZIP adapter, CLI and hosted acceptance candidate without changing shared
-package dependencies. It is not a merged or guest-qualified ZIP/JS-DOS loader.
+package dependencies. The integrated successor to
+[PR644](https://github.com/CrispStrobe/bw-board/pull/644) is the current source
+checkpoint; it is not a merged or guest-qualified ZIP/JS-DOS loader.
 Select one explicit config, or one unambiguous supported default; never guess among
 multiple runnable configurations. Preserve full canonical archive paths and
 resolve media relative to the chosen config. Basename matching is insufficient.
@@ -2132,7 +2277,15 @@ The next CLI-only qualification is the separately prepared
 
 ## DOS package CLI hosted PTY acceptance
 
-Status: two retained hosted failures; terminal-input repair pending qualification. The
+Status: PR641's official workflow succeeded, but its frozen original reader
+refused manifest ordering. That result is not accepted. The canonical producer
+repair is published in [draft PR644](https://github.com/CrispStrobe/bw-board/pull/644),
+with fresh source checks and a distinct hosted qualification pending. Its
+sole actual-label event has no observed workflow run. A guide conflict against
+current main was subsequently confirmed; the integrated successor preserves
+main documentation and the same repair source. Preserve the original event
+without retrying it. Recheck mergeability immediately before any new candidate
+qualification. The
 [ownership extension PR638](https://github.com/CrispStrobe/bw-board/pull/638)
 merged before implementation. [Initial PR637](https://github.com/CrispStrobe/bw-board/pull/637)
 at `a4decd3e3a8e3efe9c2462defd09ef3a78e1e0ee` includes the CLI, finite hosted
@@ -2143,58 +2296,18 @@ installed GUI result. All final-head checks and independent source/envelope
 admission precede the sole hosted actual. Refresh the head and detect completed
 work before acting; preserve frozen source and all original failures.
 
-The [sole run 38883122687](https://github.com/CrispStrobe/bw-board/actions/runs/38883122687)
-failed at initial controller cgroup admission, before the runtime/case loop.
-The retained primary is `PermissionError` 13; no four-case PTY guest launched.
-The finalizer propagated that same primary, with no recorded secondary error.
-The exact failing syscall and ancestor permissions were not captured. Two
-independent original-only audits verified the six-role partial packet, source
-census and empty retained terminal groups. This is no guest execution result.
-
-The next candidate uses a fixed privileged entry into the owned controller leaf,
-then drops real/effective/saved UID/GID and supplementary groups before execing
-the held unprivileged controller. Checked sudo invoker identity lets early
-bootstrap errors remain primary across finalization. Its 27 pure Node tests and
-18 inert producer controls do not qualify real migration or guests. Keep all
-fixtures, reader predicates, 23 success roles and resource limits unchanged.
-Review and freeze the complete new source, qualify its final-head checks, and
-admit a distinct official event before executing it. Never retry or relabel the
-failed original. See the [bootstrap source boundary](../scripts/dos-package-acceptance/README.md#privileged-entry-candidate-after-the-first-failed-hosted-run).
-
-The distinct PR640 [actual run 38906622594](https://github.com/CrispStrobe/bw-board/actions/runs/38906622594)
-reached case `a`: exact readiness, live `a`, the predicted `a/3B/DONE` output,
-a 50-million-step budget report and restored terminal settings. The process
-then stayed alive until its 120-second deadline. Later cases did not start.
-Two original-only audits verified that failure and retained empty groups with
-zero observed OOM events; no live-handle census identifies the remaining handle.
-The next candidate separately repairs CLI input ownership under the existing
-loader claim: release a read started from fresh or paused input while preserving
-an already-flowing caller. Its 29 pure tests and predicate mutations are source
-controls only. Require a new source freeze, final-head checks and distinct
-hosted event; never retry either failed original or relax the deadline.
-See the [input-lifetime boundary](../scripts/dos-package-acceptance/README.md#terminal-input-ownership-after-the-second-failed-hosted-run).
-
-PR641's distinct [attempt-1 run 38913512631](https://github.com/CrispStrobe/bw-board/actions/runs/38913512631)
-completed all four fresh cases. The authored `a` and `b` sessions produced their
-predicted input-dependent responses and exited naturally in about 4.6 and 4.9
-seconds. Malformed-path and focus-loss cases refused with exit status 1; all
-four ended with the original terminal settings. Retained case and enclosing groups were empty
-at the terminal observations, with no observed OOM events. The source and
-runtime identities matched before and after execution.
-
-The official workflow succeeded, but the unchanged standalone reader refused
-the retained manifest ordering. All 22 manifest rows had the expected bytes and
-hashes; the producer sorted `Path` objects, placing `inputs/authored.zip` and
-`inputs/malformed.zip` before `inputs.json`, while the reader requires relative
-path strings in lexical order. Preserve that refusal and the original packet.
-This is not a completed acceptance or source-merge qualification.
-
-The next candidate sorts the completed manifest rows by their relative POSIX
-path strings. It preserves file traversal, symlink admission, original error
-handling, role names and hashes, and the existing reader assertions. Exercise
-the actual producer finalizer with the file/directory prefix collision in pure
-controls, then freeze the new source and pass its own checks before a distinct
-hosted actual. Do not retry or rewrite PR641's original event or evidence.
+The [PR641 attempt-1 run](https://github.com/CrispStrobe/bw-board/actions/runs/38913512631)
+completed all four fresh cases: the authored `a` and `b` responses with natural
+zero exits, and the expected malformed-path and focus-loss refusals. All four
+ended with the original terminal settings; source/runtime identities matched
+before and after, with empty terminal groups and no observed OOM events.
+All 22 manifest rows had the expected bytes and hashes, but `Path` sorting put
+`inputs/authored.zip` and `inputs/malformed.zip` before `inputs.json`, contrary
+to the reader's lexical string order. Preserve that refusal and original packet.
+PR644 sorts the completed rows without changing file traversal, role hashes,
+reader assertions, fixtures or limits. Earlier PR637 and PR640 failures remain
+preserved. Source controls and official workflow success alone do not complete
+the original-reader acceptance gate.
 
 No other runner, policy, parser, dependency, pin or other-owner change belongs
 to this acceptance task. GUI adoption and its consumer prerequisites remain
