@@ -88,6 +88,46 @@ verdict. The file checks and readbacks do not establish a continuous lease,
 external QEMU pin or resource sufficiency. Input generation, actual preparation
 invocation and the following launch remain separate unconnected work.
 
+The phase-composition source has a fixed preparation-child descriptor using the
+observed canonical Python, `-I -B`, this runner and `--prepare`. Its child first
+uses the reviewed group and ID drop, verifies the dropped IDs and capability
+fields, then reads only `build/i80386-ring3-int-iret-staged/fixture.rom` and
+`build/i80386-ring3-int-iret-staged/fixture.json`. The staging directories and
+files must be canonical and invoker-owned, and the two inputs must match the
+existing authored goldens. Their generation remains separate unconnected work.
+The root parent observes metadata and holds transport bytes; it does not read
+fixture bytes or parse PRE JSON.
+
+The new internal preparation profile polls against 120 seconds, expects natural
+exit zero and retains at most 262,188 stdout bytes and 16 KiB stderr. Existing
+guest, discovery and controller profiles and the twenty packet roles retain
+their limits. On successful preparation with no error, the dropped child writes
+an eight-byte `R3PREv1` plus NUL magic, a four-byte big-endian body length, a
+32-byte SHA-256 digest and the unchanged original PRE bytes. Body length is
+1 through 256 KiB; exact total length and digest forbid truncation or suffixes.
+The write and flush must both succeed. The parent validates only this fixed
+binary framing before considering the next phase; semantic PRE validation stays
+with the unprivileged finalizer and independent original auditor.
+
+The preparation-ownership and descendant-empty admission methods deliberately
+refuse by default. The first gate precedes even preparation factory construction;
+the second must succeed before the guest outside-owner phase. No boolean or
+string argument supplies this proof. A preparation session kill cannot establish
+that separately started Git sessions have ended. External preparation ownership,
+its backstop and original provenance therefore remain unresolved activation
+requirements; no containment or successful cleanup is inferred from these mocks.
+
+Only after those mocked phase boundaries does the source composition invoke the
+root outside owner. Its original failure object and original PRE bytes pass to
+the finalizer after verified invoker IDs and an observed controller terminal.
+A missing terminal or failed drop prevents finalizer and POST Git. Failed
+preparation prevents outside-owner launch. The original preparation process and
+framed stdout and stderr remain available in returned memory, including failure
+prefixes, without adding packet files or changing the closed internal-original
+allowlist. Publication and independent original auditing of that preparation
+phase still require separate admission before an actual event. All composition
+controls use inert boundaries. The actual command and workflow remain closed.
+
 The same-file privileged-entry functions are also a source checkpoint. They
 require trusted positive sudo invoker IDs before validating the fixed run's
 internal entry facts, the twelve held source paths, the actual Python bytes,

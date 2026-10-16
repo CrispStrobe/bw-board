@@ -28,6 +28,9 @@ ENV = {'LANG': 'C.UTF-8', 'HOME': '/nonexistent', 'PATH': '/usr/bin:/bin'}
 LIMITS = {'cpuMax': '100000 100000', 'memoryMax': '1073741824', 'swapMax': '0', 'pidsMax': '64'}
 CHILD_NS, DRAIN_NS = 120000000000, 2000000000
 STREAM_CAP, JSON_CAP, PACKET_CAP = 131072, 1048576, 16777216
+# Internal preparation transport only; existing guest/controller caps stay fixed.
+PREPARATION_STREAMS = {'stdout':(256<<10)+44,'stderr':16<<10}
+PREPARATION_MAGIC = b'R3PREv1\0'
 SOURCE_PATHS = frozenset(('LICENSE package.json src/experimental/i80386.js '
     '.github/workflows/i80386-ring3-int-iret.yml docs/I80386-RING3-INT-IRET-RESULTS.md '
     'test/i80386-ring3-int-iret.test.mjs').split() +
@@ -855,10 +858,11 @@ class LinuxController(LinuxTool):
 
 def collect_child(ops, role, argv, *, profile='guest'):
     """Actual bounded orchestration, also called unmodified by inert controls."""
-    need(profile in ('guest','discovery','controller'),'closed child profile')
+    need(profile in ('guest','discovery','controller','preparation'),'closed child profile')
     need(role in ('js','qemu') if profile=='guest' else role==profile,'fixed child role/profile')
     wall_ns,stream_cap=(CHILD_NS,STREAM_CAP) if profile=='guest' else (
-        (10000000000,16384) if profile=='discovery' else (600000000000,16384))
+        (10000000000,16384) if profile=='discovery' else (600000000000,16384) if profile=='controller' else (CHILD_NS,PREPARATION_STREAMS['stdout']))
+    stream_caps=PREPARATION_STREAMS if profile=='preparation' else {'stdout':stream_cap,'stderr':stream_cap}
     failure = FirstFailure(); started = ops.now(); deadline = started+wall_ns
     output = {'stdout': bytearray(), 'stderr': bytearray()}
     process = {'schema': 'bw.ring3.process.v1', 'role': role, 'argv': argv,
@@ -870,7 +874,7 @@ def collect_child(ops, role, argv, *, profile='guest'):
     def admit(chunks):
         for name, data in chunks:
             need(name in output and type(data) is bytes, 'closed original stream chunk')
-            remaining = stream_cap-len(output[name])
+            remaining = stream_caps[name]-len(output[name])
             output[name].extend(data[:remaining])  # preserve bounded original prefix, including on overflow
             need(len(data) <= remaining, 'original '+name+' byte cap')
 
@@ -1877,6 +1881,210 @@ def prepare_entry(ops):
     if failure.first is not None:ops.retain(failure)
     return {'preGit':ops.pre_git,'entry':ops.entry,'facts':ops.partial,'pass':complete and failure.first is None},failure
 
+
+STAGED_INPUTS = Path('build/i80386-ring3-int-iret-staged')
+
+
+
+def preparation_frame(raw):
+    need(type(raw) is bytes and 0<len(raw)<=GIT_TRACE_CAP,'original PRE frame body extent')
+    return PREPARATION_MAGIC+struct.pack('>I',len(raw))+hashlib.sha256(raw).digest()+raw
+
+
+def preparation_body(frame):
+    """Root parses only fixed transport metadata, never the opaque PRE JSON."""
+    need(type(frame) is bytes and 44<len(frame)<=PREPARATION_STREAMS['stdout'],'bounded PRE binary frame')
+    need(frame[:8]==PREPARATION_MAGIC,'fixed PRE binary frame version')
+    extent=struct.unpack('>I',frame[8:12])[0]
+    need(1<=extent<=GIT_TRACE_CAP and len(frame)==44+extent,'exact PRE frame extent and no suffix')
+    raw=frame[44:]
+    need(hashlib.sha256(raw).digest()==frame[12:44],'original PRE frame digest')
+    return raw
+
+def preparation_child(environ=None,*,observer=None,emit=None,flush=None):
+    """Dropped child only: two fixed staged inputs, no arbitrary input CLI.
+
+    Emission frames the raw original PRE bytes, never a success JSON reconstruction.
+    Escaped bytes after a short/failed write or flush are not success.
+    """
+    environ=dict(os.environ if environ is None else environ);failure=FirstFailure()
+    inputs={};ops=None;result=None;complete=False
+    emit=sys.stdout.buffer.write if emit is None else emit
+    flush=sys.stdout.buffer.flush if flush is None else flush
+    try:
+        uid,gid=os.getresuid()[0],os.getresgid()[0]
+        need(uid>0 and gid>0,'preparation child must already be unprivileged');entry_ids(uid,gid)
+        need(environ.get('SUDO_UID')==str(uid) and environ.get('SUDO_GID')==str(gid),'preparation child invoker binding')
+        expected_cgroup(environ)
+        for directory in (Path.cwd(),Path.cwd()/'build',Path.cwd()/STAGED_INPUTS):
+            info=directory.lstat()
+            need(directory.resolve(strict=True)==directory and stat.S_ISDIR(info.st_mode) and
+                 (info.st_uid,info.st_gid)==(uid,gid),'canonical owned staged preparation directory')
+        for name,cap in (('fixture.rom',65536),('fixture.json',JSON_CAP)):
+            try:
+                path=STAGED_INPUTS/name;info=path.lstat()
+                need(path.resolve(strict=True)==Path.cwd()/path and stat.S_ISREG(info.st_mode) and
+                     (info.st_uid,info.st_gid)==(uid,gid),'fixed owned staged preparation input')
+                inputs[name]=bounded_read(path,cap)
+            except Exception as error:failure.add(error,'preparation-staged-'+name)
+        if failure.first is not None:raise ObservedFailure(failure.first,failure.secondary)
+        ops=PreparationOps(inputs,environ,observer);result,found=prepare_entry(ops)
+        failure.adopt(found.first,found.secondary)
+        need(result['pass'] is True and failure.first is None and failure.secondary==[],
+             'preparation result and authoritative errors must both pass')
+        raw=result['preGit']
+        need(type(raw) is bytes and 0<len(raw)<=GIT_TRACE_CAP,'original PRE transport extent')
+        frame=preparation_frame(raw);written=emit(frame)
+        need(type(written) is int and written==len(frame),'complete original PRE frame write')
+        flush();complete=True
+    except BaseException as error:
+        # An ObservedFailure may already have been adopted from the child
+        # preparation function; do not replace it with a generic verdict.
+        if failure.first is None:failure.add(error,'preparation-child')
+        elif not isinstance(error,ObservedFailure):failure.add(error,'preparation-child')
+        try:
+            raw=encode({'firstFailure':failure.first,'secondary':failure.secondary})
+            need(len(raw)<=16384,'preparation child diagnostic cap');sys.stderr.buffer.write(raw)
+        except BaseException as secondary:failure.add(secondary,'preparation-child-diagnostic')
+    return {'pass':complete and failure.first is None and failure.secondary==[],
+            'preparation':result,'inputs':inputs},failure
+
+
+class LinuxPreparation(LinuxTool):
+    """Fresh same-Python child; no manual group membership or guest parsing."""
+    read_chunk_bytes=65536
+
+    def __init__(self,parent):
+        self.parent_owner=parent
+        super().__init__(None,[parent.python['path'],'-I','-B',RUN_FILE,'--prepare'],os.getpid())
+        self.role='preparation'
+        self.environment=dict(ENV,**{name:parent.environ[name] for name in
+            ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')},
+            SUDO_UID=str(parent.bootstrap.invoker['uid']),SUDO_GID=str(parent.bootstrap.invoker['gid']))
+
+    def spawn(self):
+        self.parent_owner.require_preparation_ownership()  # Default refuses before Popen.
+        return super().spawn()
+
+    def preexec(self,identity_fd):
+        self.parent_owner.bootstrap.drop()
+        invoker=self.parent_owner.bootstrap.invoker
+        entry_ids(invoker['uid'],invoker['gid'])
+        LinuxController.preexec(self,identity_fd)  # Fixed limits/identity, stays outside.
+
+
+class EntryComposition:
+    """Source-only composition; external preparation ownership is unconnected.
+
+    Root never reads fixture bytes or parses PRE JSON. Only the dropped child
+    performs preparation. The parent retains opaque transport originals.
+    """
+    def __init__(self,environ=None):
+        self.environ=dict(os.environ if environ is None else environ)
+        self.bootstrap=BootstrapOps(self.environ);self.python=None;self.preparation=None
+        self.pre_child=None;self.pre_started=False;self.outside_result=None
+        self.final=None;self.failure=None;self.pre_git=None
+
+    def validate(self):
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root outside composition parent required')
+        ids=[self.environ.get('SUDO_'+name,'') for name in ('UID','GID')]
+        need(all(re.fullmatch('[1-9][0-9]{0,9}',value) and int(value)<2**31 for value in ids),'trusted composition invoker')
+        self.bootstrap.invoker=dict(zip(('uid','gid'),map(int,ids)))
+        root=expected_cgroup(self.environ)
+        need(all(re.fullmatch('[0-9a-f]{40}',self.environ.get(key,'')) for key in ('BW_EXPECTED_HEAD','BW_EXPECTED_TREE')),
+             'fixed composition head/tree')
+        text=entry_proc('/proc/self/cgroup')
+        need(text.startswith('0::/') and text.endswith('\n') and text.count('\n')==1 and
+             text[3:-1]!='/'+root.name and not text[3:-1].startswith('/'+root.name+'/'),'composition parent outside owned subtree')
+        uid,gid=(self.bootstrap.invoker[key] for key in ('uid','gid'))
+        for directory in (Path.cwd(),Path.cwd()/'build',Path.cwd()/STAGED_INPUTS):
+            info=directory.lstat()
+            need(directory.resolve(strict=True)==directory and stat.S_ISDIR(info.st_mode) and
+                 (info.st_uid,info.st_gid)==(uid,gid),'canonical invoker-owned composition directory')
+        need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,'held composition source path')
+        files=RuntimeFiles();path,_=files.resolve(RUNTIME_EXECUTABLES['python'])
+        need(files.resolve(sys.executable)[0]==path and stat.S_ISREG(Path(path).stat().st_mode) and
+             Path(path).stat().st_mode & 0o6000==0,'observed non-setid composition Python')
+        data=files.read(path,RUNTIME_CAPS['fileBytes'])
+        need(type(data) is bytes and 0<len(data)<=RUNTIME_CAPS['fileBytes'],'observed bounded composition Python')
+        self.python={'path':path,'bytes':len(data),'sha256':sha(data)}
+
+    def require_preparation_ownership(self):
+        # No bool/string parameter is proof. A reviewed outside lifecycle and
+        # backstop must be connected here before ANY child factory or spawn.
+        raise ValueError('external preparation ownership/backstop not connected')
+
+    def finish_preparation_ownership(self,process):
+        raise ValueError('external preparation descendant-empty observation not connected')
+
+    def create_preparation(self):
+        self.require_preparation_ownership()
+        self.pre_child=LinuxPreparation(self)
+        return self.pre_child
+
+    def prepare(self,failure):
+        self.require_preparation_ownership()  # Before even factory construction.
+        process=None;streams={'stdout':b'','stderr':b''}
+        try:
+            child=self.create_preparation();self.pre_started=True
+            process,streams=collect_child(child,'preparation',child.argv,profile='preparation')
+            self.preparation={'process':process,'streams':streams}
+            failure.adopt(process['firstFailure'],process['secondary'])
+            need(type(process['exitCode']) is int and process['exitCode']==0 and type(process['waitStatus']) is int and
+                 process['waitStatus']==0 and process['signal'] is None and process['timedOut'] is False and
+                 streams['stderr']==b'' and type(streams['stdout']) is bytes and
+                 0<len(streams['stdout'])<=PREPARATION_STREAMS['stdout'],'successful bounded opaque PRE transport')
+            self.pre_git=preparation_body(streams['stdout'])  # Opaque until the unprivileged finalizer.
+        except BaseException as error:failure.add(error,'composition-preparation')
+        finally:
+            try:self.finish_preparation_ownership(process)
+            except BaseException as error:failure.add(error,'composition-preparation-ownership')
+        return failure
+
+    def outside(self):
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'composition root parent must retain privilege until outside observation')
+        return outside_controller(OutsideOwner(BootstrapOps(self.environ)))
+
+    def dropped(self):
+        need(self.bootstrap.invoker is not None,'trusted composition invoker required')
+        entry_ids(self.bootstrap.invoker['uid'],self.bootstrap.invoker['gid'])
+
+    def failure_only(self,failure):
+        # When no controller terminal is known, do not run POST Git/finalizer.
+        # Return opaque partial process/streams; publication/retention wiring is
+        # separately unconnected. A safe drop is required before owned writes.
+        try:
+            uid,gid=(self.bootstrap.invoker[key] for key in ('uid','gid'))
+            if os.getresuid()!=(uid,)*3 or os.getresgid()!=(gid,)*3 or os.getgroups():self.bootstrap.drop()
+            self.dropped()
+        except BaseException as error:failure.add(error,'composition-failure-drop')
+        return {'pass':False,'preparation':self.preparation,'outside':self.outside_result,'final':None}
+
+    def finalize(self,facts,failure):
+        self.dropped()
+        process=facts.get('process');cleanup=facts.get('cleanup') or {}
+        terminal=(process if type(process) is dict and type(process.get('waitStatus')) is int else cleanup.get('cleanupTerminal'))
+        need(type(terminal) is dict and type(terminal.get('waitStatus')) is int,'known outer terminal required before finalizer/POST Git')
+        return finalize_packet(facts,failure,self.pre_git,self.environ)
+
+
+def compose_entry(ops=None):
+    """No privilege regain: root waits for dropped prep child, then drops itself."""
+    ops=EntryComposition() if ops is None else ops;failure=FirstFailure();ops.failure=failure
+    try:
+        ops.validate();ops.prepare(failure)
+        if failure.first is not None or failure.secondary:return ops.failure_only(failure),failure
+        need(type(ops.pre_git) is bytes and 0<len(ops.pre_git)<=GIT_TRACE_CAP,'original preparation PRE bytes required')
+        facts,outside_failure=ops.outside();ops.outside_result=facts
+        need(isinstance(outside_failure,FirstFailure),'original outside failure owner required')
+        failure=outside_failure;ops.failure=failure  # Keep the SAME authoritative object.
+        ops.final,returned_failure=ops.finalize(facts,failure)
+        need(returned_failure is failure,'same authoritative outside failure through finalization')
+        return {'pass':ops.final['pass'] is True and failure.first is None and failure.secondary==[],
+                'preparation':ops.preparation,'outside':facts,'final':ops.final},failure
+    except BaseException as error:
+        failure.add(error,'composition');return ops.failure_only(failure),failure
+
 def controls():
     """Inert actual-function controls. Never opens a cgroup, forks or execs."""
     import unittest
@@ -1914,6 +2122,169 @@ def controls():
                 'rusage':{'userSeconds':0.1,'systemSeconds':0.01,'maxRssKiB':1024}}
 
     class Tests(unittest.TestCase):
+        @contextlib.contextmanager
+        def composition_edges(self):
+            with self.entry_edges() as (bootstrap,state):
+                state.update(phaseEvents=[],outsideFailure=FirstFailure(),outsideKnown=True,outsideDrop=True,
+                    preWire=preparation_frame(b'opaque PRE bytes\xff'),preStatus=0,ownershipError=None)
+                directory_names={'/checkout','/checkout/build','/checkout/'+str(STAGED_INPUTS)}
+                def lstat(path):
+                    name=str(path if path.is_absolute() else Path('/checkout')/path)
+                    return SimpleNamespace(st_mode=0o40755 if name in directory_names else 0o100644,st_uid=1001,st_gid=1002)
+                parent=EntryComposition(state['env'])
+                def require():state['phaseEvents'].append('admit-preparation')
+                def finish(process):
+                    state['phaseEvents'].append('preparation-descendants')
+                    if state['ownershipError']:raise state['ownershipError']
+                parent.require_preparation_ownership=Mock(side_effect=require)
+                parent.finish_preparation_ownership=Mock(side_effect=finish)
+                def factory():
+                    parent.require_preparation_ownership();state['phaseEvents'].append('factory')
+                    fake=Fake([[('stdout',state['preWire'])]],status(state['preStatus']))
+                    fake.argv=[parent.python['path'],'-I','-B',RUN_FILE,'--prepare']
+                    fake.environment=dict(ENV,**{k:state['env'][k] for k in ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')},SUDO_UID='1001',SUDO_GID='1002')
+                    def spawn():
+                        state['phaseEvents'].append('preparation-spawn')
+                        self.assertEqual(state['uids'],(0,)*3)
+                        return {'pid':201,'pgid':201,'parentPid':101,'startTicks':123}
+                    fake.spawn=spawn;parent.pre_child=fake;return fake
+                parent.create_preparation=factory
+                def outside(ops):
+                    state['phaseEvents'].append('outside')
+                    self.assertEqual(state['uids'],(0,)*3);self.assertEqual(parent.pre_git,b'opaque PRE bytes\xff')
+                    if state['outsideDrop']:parent.bootstrap.drop()
+                    return {'process':{'waitStatus':0 if state['outsideKnown'] else None},'cleanup':{}},state['outsideFailure']
+                def final(facts,failure,pre,environ):
+                    state['phaseEvents'].append('finalize')
+                    entry_ids(1001,1002);self.assertIs(failure,state['outsideFailure'])
+                    self.assertEqual(pre,b'opaque PRE bytes\xff')
+                    return {'pass':failure.first is None and failure.secondary==[]},failure
+                with patch.object(Path,'lstat',lstat),patch.dict(globals(),outside_controller=outside,finalize_packet=final,                    entry_proc=lambda path:'0::/actions/job\n' if path.endswith('cgroup') else ''.join(k+':\t'+v+'\n' for k,v in state['caps'].items())),                     patch.object(subprocess,'Popen',side_effect=AssertionError('no real process in composition controls')):
+                    yield parent,state
+
+        def test_composition_actual_phases_keep_opaque_pre_and_same_outside_failure(self):
+            with self.composition_edges() as (parent,state),patch.dict(globals(),final_json=Mock(side_effect=AssertionError('root must not parse PRE JSON'))):
+                result,failure=compose_entry(parent)
+                self.assertTrue(result['pass']);self.assertIs(failure,state['outsideFailure']);self.assertIs(parent.failure,failure)
+                self.assertEqual(state['phaseEvents'],['admit-preparation','admit-preparation','factory','preparation-spawn','preparation-descendants','outside','finalize'])
+                self.assertEqual(parent.preparation['streams']['stdout'],state['preWire'])
+                self.assertEqual(parent.preparation['process']['role'],'preparation');self.assertEqual(state['uids'],(1001,)*3)
+
+        def test_composition_default_ownership_gate_before_factory_and_spawn(self):
+            with self.composition_edges() as (unused,state):
+                parent=EntryComposition(state['env'])
+                with patch.dict(globals(),LinuxPreparation=Mock(side_effect=AssertionError('must refuse before factory'))) as values:
+                    result,failure=compose_entry(parent)
+                    values['LinuxPreparation'].assert_not_called()
+                self.assertFalse(result['pass']);self.assertIn('ownership/backstop',failure.first['message'])
+                self.assertEqual(state['phaseEvents'],[]);self.assertIsNone(parent.pre_child)
+                self.assertEqual(state['uids'],(1001,)*3)
+
+        def test_composition_preparation_refusal_keeps_wire_and_skips_outside(self):
+            for fault in ('status','status-type','frame','descendants','overflow','stderr'):
+                with self.composition_edges() as (parent,state):
+                    if fault=='status':state['preStatus']=1
+                    elif fault=='status-type':state['preStatus']=False
+                    elif fault=='frame':state['preWire']=state['preWire'][:-1]
+                    elif fault=='descendants':state['ownershipError']=OSError('DESCENDANTS_UNKNOWN')
+                    elif fault=='overflow':state['preWire']=b'X'*(PREPARATION_STREAMS['stdout']+1)
+                    else:
+                        original=parent.create_preparation
+                        def factory():
+                            child=original();child.chunks=[[('stdout',state['preWire']),('stderr',b'ORIGINAL STDERR')]];return child
+                        parent.create_preparation=factory
+                    result,failure=compose_entry(parent)
+                    self.assertFalse(result['pass']);self.assertNotIn('outside',state['phaseEvents']);self.assertNotIn('finalize',state['phaseEvents'])
+                    self.assertIsNotNone(failure.first);self.assertIn('preparation-descendants',state['phaseEvents'])
+                    self.assertIsNotNone(result['preparation']['process'])
+                    self.assertEqual(result['preparation']['streams']['stdout'],state['preWire'][:PREPARATION_STREAMS['stdout']])
+                    self.assertEqual(state['uids'],(1001,)*3)
+
+        def test_composition_failed_drop_or_unknown_outer_terminal_prevents_finalizer(self):
+            for fault in ('drop','terminal'):
+                with self.composition_edges() as (parent,state):
+                    if fault=='drop':state['outsideDrop']=False
+                    else:state['outsideKnown']=False
+                    result,failure=compose_entry(parent)
+                    self.assertFalse(result['pass']);self.assertIn('outside',state['phaseEvents']);self.assertNotIn('finalize',state['phaseEvents'])
+                    self.assertIsNotNone(failure.first);self.assertEqual(state['uids'],(1001,)*3)
+
+        def test_composition_authoritative_outside_first_and_identity_survive_finalizer_fault(self):
+            for fault in ('retention','replacement'):
+                with self.composition_edges() as (parent,state):
+                    first=state['outsideFailure'];first.add(ValueError('FIRST_OUTSIDE'),'outside')
+                    def final(facts,failure,pre,env):
+                        if fault=='retention':failure.add(OSError('SECONDARY_FINAL'),'retention');return {'pass':True},failure
+                        return {'pass':True},FirstFailure()
+                    with patch.dict(globals(),finalize_packet=final):result,failure=compose_entry(parent)
+                    self.assertFalse(result['pass']);self.assertIs(failure,first);self.assertEqual(failure.first['message'],'FIRST_OUTSIDE')
+                    self.assertTrue(failure.secondary)
+
+        def test_preparation_binary_frame_exact_body_and_all_corruption_cuts(self):
+            raw=b'original PRE JSON remains opaque';frame=preparation_frame(raw)
+            self.assertEqual(len(frame),44+len(raw));self.assertEqual(preparation_body(frame),raw)
+            maximum=preparation_frame(b'X'*GIT_TRACE_CAP);self.assertEqual(len(maximum),PREPARATION_STREAMS['stdout'])
+            self.assertEqual(preparation_body(maximum),b'X'*GIT_TRACE_CAP)
+            with self.assertRaises(ValueError):preparation_frame(b'')
+            variants=[b'',frame[:43],frame[:-1],frame+b'x',b'BADMAGIC'+frame[8:],
+                frame[:8]+struct.pack('>I',0)+frame[12:],frame[:8]+struct.pack('>I',GIT_TRACE_CAP+1)+frame[12:],
+                frame[:8]+struct.pack('>I',len(raw)-1)+frame[12:],frame[:12]+b'X'*32+frame[44:]]
+            for wrong in variants:
+                with self.assertRaises(ValueError):preparation_body(wrong)
+            self.assertEqual(PREPARATION_STREAMS,{'stdout':GIT_TRACE_CAP+44,'stderr':16384})
+
+        def test_internal_preparation_profile_caps_both_streams_and_natural_status(self):
+            for stream,cap in PREPARATION_STREAMS.items():
+                fake=Fake([[(stream,b'X'*(cap+1))]],status())
+                process,originals=collect_child(fake,'preparation',['fixed'],profile='preparation')
+                self.assertIsNotNone(process['firstFailure']);self.assertEqual(originals[stream],b'X'*cap)
+            process,_=collect_child(Fake(terminal=status(1)),'preparation',['fixed'],profile='preparation')
+            self.assertIsNotNone(process['firstFailure'])
+            process,_=collect_child(Fake(terminal=status(),now_step=CHILD_NS+1),'preparation',['fixed'],profile='preparation')
+            self.assertTrue(process['timedOut'])
+
+        def test_linux_preparation_actual_descriptor_drop_order_and_no_ungated_spawn(self):
+            with self.composition_edges() as (parent,state):
+                parent.validate();child=LinuxPreparation(parent)
+                self.assertEqual(child.argv,['/usr/bin/python3.12','-I','-B',RUN_FILE,'--prepare'])
+                self.assertEqual(child.environment,dict(ENV,**{k:state['env'][k] for k in
+                    ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')},SUDO_UID='1001',SUDO_GID='1002'))
+                def identity(ops,fd):entry_ids(1001,1002);state['events'].append(('identity',fd))
+                with patch.object(LinuxController,'preexec',identity):child.preexec(7)
+                self.assertEqual([name for name,value in state['events']],['groups','gids','uids','identity'])
+            with self.composition_edges() as (parent,state):
+                parent.validate();child=LinuxPreparation(parent)
+                with patch.object(os,'setgroups',side_effect=OSError('DROP')),patch.object(LinuxController,'preexec') as identity:
+                    with self.assertRaises(OSError):child.preexec(7)
+                    identity.assert_not_called()
+                parent.require_preparation_ownership=EntryComposition.require_preparation_ownership.__get__(parent)
+                with patch.object(LinuxTool,'spawn',side_effect=AssertionError('unowned fork')) as spawn:
+                    with self.assertRaisesRegex(ValueError,'ownership/backstop'):child.spawn()
+                    spawn.assert_not_called()
+
+        def test_preparation_child_actual_staged_reads_transport_and_flush_failure(self):
+            for fault in ('positive','root','owner','short','flush','prepare-error'):
+                with self.preparation_edges() as (ops,state,observer):
+                    state['prepDirs'].add('/checkout/'+str(STAGED_INPUTS))
+                    state['prepData'].update({str(STAGED_INPUTS/name):raw for name,raw in state['inputs'].items()})
+                    if fault=='root':state['uids']=(0,)*3
+                    elif fault=='owner':state['directoryOwners']['/checkout/'+str(STAGED_INPUTS)]=(1003,1002)
+                    elif fault=='prepare-error':state['writeFaults'][str(ENTRY_FILE)]=OSError('FIRST_MARKER_WRITE')
+                    emitted=[];flushed=[]
+                    def emit(raw):emitted.append(raw);return len(raw)-1 if fault=='short' else len(raw)
+                    def flush():
+                        flushed.append(True)
+                        if fault=='flush':raise OSError('FLUSH')
+                    result,failure=preparation_child(state['env'],observer=observer,emit=emit,flush=flush)
+                    if fault=='positive':
+                        self.assertTrue(result['pass']);self.assertIsNone(failure.first)
+                        self.assertEqual(preparation_body(emitted[0]),result['preparation']['preGit']);self.assertEqual(flushed,[True])
+                    else:
+                        self.assertFalse(result['pass']);self.assertIsNotNone(failure.first)
+                        if fault in ('root','owner'):self.assertEqual(emitted,[]);self.assertFalse(any(str(STAGED_INPUTS) in p for p in state['prepReads']))
+                        if fault=='flush':self.assertTrue(emitted);self.assertEqual(failure.first['message'],'FLUSH')
+                        if fault=='prepare-error':self.assertEqual(failure.first['message'],'FIRST_MARKER_WRITE');self.assertEqual(emitted,[])
+
         @contextlib.contextmanager
         def preparation_edges(self):
             with self.entry_edges() as (bootstrap,state):
