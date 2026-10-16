@@ -1,0 +1,12 @@
+{
+  "repository": "CrispStrobe/labwired-core",
+  "sourceRef": "beb5a14daec28ddeea954afb675452a947a6c692",
+  "sourcePath": "examples/microbit-v2/uarte-irq-chain.S",
+  "license": "MIT",
+  "expectedSerial": "A10 IRQ chain OK\n",
+  "sha256": {
+    "uarte-irq-chain.S": "6690eb59c5312f00ca1b2353d80c6206ad418fa235dc1b9daa56c60e15c8e527",
+    "board-io.ld": "a701c40b9718e311a1f3e26a541cd6f5860e35532f850413f60a39015a467073",
+    "firmware.elf": "f7c493b71b684c0890f1b53d6045de5e2905f256d9ba0cc157ecb1446c22c7cd"
+  }
+}

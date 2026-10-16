@@ -15,6 +15,22 @@ non-skipped release suite and all enabled producer checks precede publication.
 Do not reuse the first engine for changed core source or repeat any existing
 campaign. No adapter API, STM32 owner source, workflow, dependency or threshold
 change is included. The other owner's core5e replacement run remains untouched.
+The source-bound IRQ fixture and release test are prepared; its ARM ELF is
+compiled and independently bound to the reviewed core source/linker bytes.
+The explicit engine PIN is `de14721e4ae1d34a428f91d232e4520d50f1ceba`, the
+qualified PR247 head that a normal core merge will retain. All affected native,
+scheduler and Zephyr/CLI guest checks pass; its three workspace reports contain
+7,879 passed tests, zero failures and the 105 existing ignored tests. Core merge
+and every final enabled producer check remain prerequisites for engine dispatch.
+
+The canonical catalog matches all 18 source chip descriptors and eight boards.
+Seventeen chip payloads and all board manifests are unchanged; the inherited
+STM32F103 descriptor now uses its qualified C8 64 KiB flash and clock gates.
+Preserve the other owner's separate F0 profile work. Two fixture identity
+controls and the canonical data audit pass locally; broader suites require the
+CI-installed npm dependencies. No engine or guest ran locally. Full 125-test,
+non-skipped actual release qualification, independent dual builds, determinism
+and publication remain pending; no existing campaign has been repeated.
 
 2026-10-15 labwired F030 clock tree (RCC/FLASH on the heavy tier) — CLAIM, VPS Claude (opus).
 Branch lane/labwired-f030-clock-20261015, base 3e9429f2. Root cause: the labwired-tier F030
