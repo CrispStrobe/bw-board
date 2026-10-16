@@ -1442,11 +1442,11 @@ def emit_originals(originals, emit, failure, flush):
     progress={'items':0,'chunks':0,'encodedBytes':0,'complete':False}
     emitted_all=False;flushed=False
     try:
-        allowed=set(INTERNAL_NAMES)|{'git.before.json','git.after.json','preparation.phase.json'}
+        allowed=set(INTERNAL_NAMES)|{'git.before.json','git.after.json','preparation.phase.json','generation.phase.json'}
         need(set(originals)<=allowed,'closed log-original names')
         need(sum(len(data) for data in originals.values())<=5<<20,'aggregate raw log-original cap')
         for name in sorted(originals):
-            raw=originals[name];cap=GIT_TRACE_CAP if name.startswith('git.') else JSON_CAP
+            raw=originals[name];cap=GENERATION_CAP if name=='generation.phase.json' else GIT_TRACE_CAP if name.startswith('git.') else JSON_CAP
             need(type(raw) is bytes and len(raw)<=cap,'individual log-original cap')
             encoded=base64.b64encode(raw).decode('ascii');count=max(1,(len(encoded)+3071)//3072)
             need(count<=456,'finite original chunk count')
@@ -1670,6 +1670,140 @@ def check_preparation_original(raw,pre_git,outside_result,entry,environ):
     return value
 
 
+def check_generated_phase(raw,generation_raw,pre_git,outside_result,entry,environ):
+    """Unprivileged joins of frozen preparation originals; no expected oracle.
+
+    External source, runtime and sibling identity admission remains separate.
+    The root parent never uses this parser on the opaque PRE body.
+    """
+    need(type(raw) is bytes and 0<len(raw)<=JSON_CAP,'bounded frozen preparation original')
+    value=final_json(raw)
+    require_fields(value,'schema runId attempt head tree python invoker captureMonoNs process stdout stderr ownership preGit firstFailure secondary',
+                   'closed preparation original')
+    need(raw==encode(value) and value['schema']=='bw.ring3.preparation-original.v2' and
+         value['runId']==environ['GITHUB_RUN_ID'] and re.fullmatch('[1-9][0-9]*',value['runId']) is not None and
+         type(value['attempt']) is int and value['attempt']==1 and environ['GITHUB_RUN_ATTEMPT']=='1' and
+         value['head']==environ['BW_EXPECTED_HEAD'] and value['tree']==environ['BW_EXPECTED_TREE'] and
+         same_json(value['python'],entry['python']) and same_json(value['invoker'],{'uid':entry['uid'],'gid':entry['gid']}) and
+         value['firstFailure'] is None and value['secondary']==[], 'preparation source/invoker/error joins')
+    streams={}
+    for name in ('stdout','stderr'):
+        item=value[name];require_fields(item,'bytes sha256 base64','closed preparation stream original')
+        need(type(item['bytes']) is int and 0<=item['bytes']<=PREPARATION_STREAMS[name] and
+             type(item['base64']) is str,'bounded preparation stream encoding')
+        data=base64.b64decode(item['base64'],validate=True)
+        need(base64.b64encode(data).decode('ascii')==item['base64'] and len(data)==item['bytes'] and
+             sha(data)==item['sha256'],'preparation stream original extent/hash')
+        streams[name]=data
+    need(streams['stderr']==b'' and generation_parts(streams['stdout'])==(generation_raw,pre_git) and
+         same_json(value['preGit'],{'bytes':len(pre_git),'sha256':sha(pre_git)}),'original PRE framed-body join')
+    process=value['process'];outer=outside_result['process']
+    require_fields(process,'schema role argv cwdRole environment pid pgid parentPid startTicks spawnMonoNs reapMonoNs exitCode signal waitStatus timedOut rusage firstFailure secondary',
+                   'closed preparation process original')
+    need(process['schema']=='bw.ring3.process.v1' and process['role']=='preparation' and process['cwdRole']=='checkout' and
+         all(type(process[key]) is int and process[key]>0 for key in ('pid','pgid','parentPid','startTicks')) and
+         process['pid']==process['pgid'] and type(outer['parentPid']) is int and process['parentPid']==outer['parentPid'] and
+         same_json(process['argv'],[entry['python']['path'],'-I','-B',RUN_FILE,'--prepare-generated']) and
+         same_json(process['environment'],dict(ENV,**{name:environ[name] for name in
+            ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')},SUDO_UID=str(entry['uid']),SUDO_GID=str(entry['gid']))) and
+         process['timedOut'] is False and type(process['exitCode']) is int and process['exitCode']==0 and
+         type(process['waitStatus']) is int and process['waitStatus']==0 and process['signal'] is None and
+         process['firstFailure'] is None and process['secondary']==[],'natural preparation descriptor/parent terminal joins')
+    start,end,captured=process['spawnMonoNs'],process['reapMonoNs'],value['captureMonoNs']
+    need(all(type(item) is int for item in (start,end,captured,outer['spawnMonoNs'])) and
+         0<start<=end<=captured<=outer['spawnMonoNs'] and end-start<=120000000000,'preparation/capture/outside interval chain')
+    trace=final_json(pre_git)
+    need(type(trace.get('commands')) is list and len(trace['commands'])==3,'three original PRE Git children')
+    previous=start
+    for command in trace['commands']:
+        git=command['process'];begin,finish=git['spawnMonoNs'],git['reapMonoNs']
+        need(type(git['parentPid']) is int and git['parentPid']==process['pid'] and
+             type(begin) is int and type(finish) is int and previous<=begin<=finish<=end and
+             finish-begin<=10000000000,'serial PRE Git children contained by preparation lifetime')
+        previous=finish
+    ownership=value['ownership']
+    require_fields(ownership,'schema path identity owner before beforeCleanup afterCleanup spawnAttempted sessionSignalAttempted killAttempted cleanupTerminal polls closeAttempted closeSucceeded partial',
+                   'closed preparation ownership original')
+    need(ownership['schema']=='bw.ring3.preparation-ownership.v1' and
+         ownership['path']==str(expected_cgroup(environ))+'-preparation' and
+         same_json(ownership['owner'],{'uid':0,'gid':0}) and
+         type(ownership['identity']) is dict and set(ownership['identity'])=={'device','inode'} and
+         all(type(item) is int and item>0 for item in ownership['identity'].values()) and
+         ownership['spawnAttempted'] is True and ownership['sessionSignalAttempted'] is False and
+         ownership['killAttempted'] is False and ownership['cleanupTerminal'] is None and
+         type(ownership['polls']) is int and 1<=ownership['polls']<=128 and
+         ownership['closeAttempted'] is True and ownership['closeSucceeded'] is True and
+         same_json(ownership['partial'],ownership['afterCleanup']),'natural closed preparation ownership')
+    previous=None
+    for key in ('before','beforeCleanup','afterCleanup'):
+        snapshot=ownership[key]
+        require_fields(snapshot,'identity owner limits raw procs','closed preparation ownership census')
+        need(same_json(snapshot['identity'],ownership['identity']) and same_json(snapshot['owner'],ownership['owner']) and
+             same_json(snapshot['limits'],LIMITS) and type(snapshot['raw']) is dict and
+             set(snapshot['raw'])==set(PreparationOwnership.FILES) and
+             all(type(item) is str and len(item.encode('ascii'))<=4096 for item in snapshot['raw'].values()) and
+             snapshot['raw']['cgroupProcs']=='','original root-owned preparation census identity/cap join')
+        entry_empty(snapshot)
+        need(all(snapshot['raw'][key].strip()==item for key,item in LIMITS.items()),'original preparation raw caps')
+        counters={}
+        for line in snapshot['raw']['memoryEvents'].splitlines():
+            pair=line.split();need(len(pair)==2 and pair[0] not in counters and re.fullmatch('[0-9]+',pair[1]) is not None,
+                                   'original bounded preparation memory counter')
+            counters[pair[0]]=int(pair[1])
+        need({'oom','oom_kill'}<=set(counters) and len(counters)<=32,'original preparation OOM counter keys')
+        if previous is not None:
+            need(set(previous)==set(counters) and all(counters[key]>=previous[key] for key in previous) and
+                 all(counters[key]==previous[key] for key in previous if key in ('oom','oom_kill','oom_group_kill')),
+                 'original preparation OOM/counter drift')
+        previous=counters
+    return value
+
+
+def check_generated_originals(phase_raw,generation_raw,pre_git,outside_result,entry,originals,environ):
+    """Original-to-original joins only. External prelaunch pinning is not here."""
+    need(type(generation_raw) is bytes and 0<len(generation_raw)<=GENERATION_CAP,'bounded generator original')
+    phase=check_generated_phase(phase_raw,generation_raw,pre_git,outside_result,entry,environ)
+    value=final_json(generation_raw)
+    require_fields(value,'schema runId attempt head tree invoker captureMonoNs process stdout stderr before after outputs firstFailure secondary',
+                   'closed generator original')
+    need(generation_raw==encode(value) and value['schema']=='bw.ring3.generation-original.v1' and
+         value['runId']==environ['GITHUB_RUN_ID'] and type(value['attempt']) is int and value['attempt']==1 and
+         value['head']==environ['BW_EXPECTED_HEAD'] and value['tree']==environ['BW_EXPECTED_TREE'] and
+         same_json(value['invoker'],{'uid':entry['uid'],'gid':entry['gid']}) and
+         value['firstFailure'] is None and value['secondary']==[],'generator source/invoker/error joins')
+    for name in ('stdout','stderr'):
+        require_fields(value[name],'bytes sha256 base64','closed original generator stream')
+        need(same_json(value[name],{'bytes':0,'sha256':sha(b''),'base64':''}),'natural silent original generator streams')
+    source=final_json(originals['source.before.json']);runtime=final_json(originals['runtime.before.json'])
+    node_path=RUNTIME_EXECUTABLES['node'];node=runtime['qemuPackage']['files'][node_path]
+    files={'node':{'path':node_path,'bytes':node['bytes'],'sha256':node['sha256']}}
+    for role,name in (('fixture','fixture.mjs'),('runner','run.py')):
+        path='scripts/i80386-ring3-int-iret/'+name;row=source['files'][path]
+        files[role]={'path':path,'bytes':row['bytes'],'sha256':row['sha256']}
+    for name in ('before','after'):
+        require_fields(value[name],'monoNs files','closed timed generator identities')
+        need(type(value[name]['monoNs']) is int and value[name]['monoNs']>0 and same_json(value[name]['files'],files),
+             'generator observed Node/source original joins; external pins still required')
+    expected={name:{'bytes':len(originals['inputs/'+name]),'sha256':sha(originals['inputs/'+name])} for name in ('fixture.rom','fixture.json')}
+    need(same_json(value['outputs'],expected),'generator original output/packet-input joins')
+    process=value['process'];prep=phase['process']
+    require_fields(process,'schema role argv cwdRole environment pid pgid parentPid startTicks spawnMonoNs reapMonoNs exitCode signal waitStatus timedOut rusage firstFailure secondary',
+                   'closed original generator process')
+    need(process['schema']=='bw.ring3.process.v1' and process['role']=='discovery' and process['cwdRole']=='checkout' and
+         all(type(process[key]) is int and process[key]>0 for key in ('pid','pgid','parentPid','startTicks')) and
+         process['pid']==process['pgid'] and process['pid'] not in (prep['pid'],prep['parentPid']) and process['parentPid']==prep['pid'] and
+         same_json(process['argv'],[node_path,'--input-type=module','--eval',STAGING_DRIVER]) and same_json(process['environment'],ENV) and
+         process['firstFailure'] is None and process['secondary']==[] and process['timedOut'] is False and
+         type(process['exitCode']) is int and process['exitCode']==0 and type(process['waitStatus']) is int and
+         process['waitStatus']==0 and process['signal'] is None,'natural fixed original generator process')
+    before,after,captured=value['before']['monoNs'],value['after']['monoNs'],value['captureMonoNs']
+    start,end=process['spawnMonoNs'],process['reapMonoNs'];first_git=final_json(pre_git)['commands'][0]['process']['spawnMonoNs']
+    need(all(type(item) is int for item in (start,end,captured)) and
+         prep['spawnMonoNs']<=before<=start<=end<=after<=captured<=first_git and end-start<=10000000000,
+         'preparation/identity/generator/capture/PRE causal chain')
+    return value
+
+
 def join_final_resources(internal,originals,outside_result,environ):
     entry=internal['.entry.json'];before=internal['.controller.before.json'];controller=internal['.controller.json'];outer=internal['.outside.json']
     require_fields(entry,'schema uid gid root sourceSha256 python cgroups','closed final entry original')
@@ -1731,7 +1865,7 @@ def join_final_resources(internal,originals,outside_result,environ):
         'firstFailure':None,'secondary':[]}
 
 
-def finalize_packet(outside_result,outside_failure,pre_git,environ=None,*,post_observer=None,emit=None,flush=None,preparation_original=None):
+def finalize_packet(outside_result,outside_failure,pre_git,environ=None,*,post_observer=None,emit=None,flush=None,preparation_original=None,generation_original=None):
     """Unprivileged original assembly. No actual CLI/job or standalone-reader authority."""
     environ=dict(os.environ if environ is None else environ);failure=outside_failure
     need(isinstance(failure,FirstFailure),'authoritative in-memory outside failure required')
@@ -1764,7 +1898,9 @@ def finalize_packet(outside_result,outside_failure,pre_git,environ=None,*,post_o
         except Exception as error:failure.add(error,'finalizer-post-git')
         try:
             resources=join_final_resources(internal,originals,outside_result,environ)
-            if preparation_original is not None:
+            if generation_original is not None:
+                check_generated_originals(preparation_original,generation_original,pre_git,outside_result,internal['.entry.json'],originals,environ)
+            elif preparation_original is not None:
                 check_preparation_original(preparation_original,pre_git,outside_result,internal['.entry.json'],environ)
             for phase,raw in (('before',pre_git),('after',post_git)):
                 check_git_trace(raw,phase,final_json(originals['source.'+phase+'.json']),outside_result['process'])
@@ -1772,6 +1908,7 @@ def finalize_packet(outside_result,outside_failure,pre_git,environ=None,*,post_o
             originals['resources.json']=encode(resources)
         except Exception as error:failure.add(error,'finalizer-join')
         log_originals=dict(raw_internal)
+        if type(generation_original) is bytes:log_originals['generation.phase.json']=generation_original
         if type(preparation_original) is bytes:log_originals['preparation.phase.json']=preparation_original
         if type(pre_git) is bytes:log_originals['git.before.json']=pre_git
         if type(post_git) is bytes:log_originals['git.after.json']=post_git
@@ -2131,6 +2268,92 @@ def stage_preparation_inputs(ops=None):
             except BaseException as error:failure.add(error,'staging-after-retention')
     return {'pass':failure.first is None and failure.secondary==[],'process':process,'streams':streams,
             'spawnAttempted':ops.spawn_attempted,'facts':ops.facts},failure
+
+
+GENERATION_MAGIC=b'R3GENv1\0'
+GENERATION_CAP=128<<10
+
+
+def generation_frame(generation,pre_git):
+    need(type(generation) is bytes and 0<len(generation)<=GENERATION_CAP and
+         type(pre_git) is bytes and len(pre_git)<=GIT_TRACE_CAP,'bounded generation/PRE originals')
+    body=struct.pack('>II',len(generation),len(pre_git))+generation+pre_git
+    need(len(body)<=GIT_TRACE_CAP,'shared generation/PRE body cap')
+    return GENERATION_MAGIC+struct.pack('>I',len(body))+hashlib.sha256(body).digest()+body
+
+
+def generation_parts(frame):
+    """Root decodes framing only. Neither original JSON body is parsed here."""
+    need(type(frame) is bytes and 52<len(frame)<=PREPARATION_STREAMS['stdout'] and
+         frame[:8]==GENERATION_MAGIC,'fixed bounded generated-preparation frame')
+    size=struct.unpack('>I',frame[8:12])[0];body=frame[44:]
+    need(8<size<=GIT_TRACE_CAP and len(body)==size and hashlib.sha256(body).digest()==frame[12:44],
+         'exact generated-preparation frame extent/digest')
+    generation_size,pre_size=struct.unpack('>II',body[:8])
+    need(0<generation_size<=GENERATION_CAP and pre_size<=GIT_TRACE_CAP and len(body)==8+generation_size+pre_size,
+         'exact generated-preparation original parts')
+    return body[8:8+generation_size],body[8+generation_size:]
+
+
+class RecordingStagingOps(StagingOps):
+    """Observation completion clocks; the old staging interface stays unchanged."""
+    def __init__(self,environ=None):
+        super().__init__(environ);self.observation_times={'before':None,'after':None}
+
+    def observe(self,stage,failure):
+        try:super().observe(stage,failure)
+        except BaseException as error:failure.add(error,'recording-staging-'+stage)
+        try:
+            observed=time.monotonic_ns();need(type(observed) is int and observed>0,'generation identity observation clock')
+            self.observation_times[stage]=observed
+        except BaseException as error:failure.add(error,'recording-staging-clock')
+
+
+def generation_original(ops,result,failure):
+    def stream(name):
+        data=result['streams'][name]
+        need(type(data) is bytes and len(data)<=16384,'bounded original generator stream')
+        return {'bytes':len(data),'sha256':sha(data),'base64':base64.b64encode(data).decode('ascii')}
+    captured=time.monotonic_ns();need(type(captured) is int and captured>0,'generation capture clock')
+    value={'schema':'bw.ring3.generation-original.v1','runId':ops.environ['GITHUB_RUN_ID'],'attempt':1,
+        'head':ops.environ['BW_EXPECTED_HEAD'],'tree':ops.environ['BW_EXPECTED_TREE'],
+        'invoker':{'uid':ops.uid,'gid':ops.gid},'captureMonoNs':captured,'process':result['process'],
+        'stdout':stream('stdout'),'stderr':stream('stderr'),
+        'before':{'monoNs':ops.observation_times['before'],'files':result['facts']['before']},
+        'after':{'monoNs':ops.observation_times['after'],'files':result['facts']['after']},
+        'outputs':result['facts']['outputFacts'],'firstFailure':failure.first,'secondary':failure.secondary}
+    raw=encode(value);need(len(raw)<=GENERATION_CAP,'generation original encoding cap');return raw
+
+
+def generated_preparation_child(environ=None,*,staging_ops=None,observer=None,emit=None,flush=None):
+    """Unused adapter: immutable generator original precedes original PRE Git."""
+    environ=dict(os.environ if environ is None else environ);failure=FirstFailure()
+    ops=RecordingStagingOps(environ) if staging_ops is None else staging_ops
+    generation_result=None;generation_raw=None;pre_result=None;pre_git=b'';complete=False
+    emit=sys.stdout.buffer.write if emit is None else emit;flush=sys.stdout.buffer.flush if flush is None else flush
+    try:
+        generation_result,found=stage_preparation_inputs(ops);failure.adopt(found.first,found.secondary)
+        generation_raw=generation_original(ops,generation_result,failure)  # Immutable BEFORE any PRE Git.
+    except BaseException as error:failure.add(error,'generated-original-capture')
+    if generation_raw is not None:
+        if generation_result['pass'] is True and failure.first is None and failure.secondary==[]:
+            try:
+                frames=[]
+                pre_result,found=preparation_child(environ,observer=observer,
+                    emit=lambda frame:frames.append(frame) or len(frame),flush=lambda:None)
+                failure.adopt(found.first,found.secondary)
+                if frames:
+                    need(len(frames)==1,'one original preparation emission');pre_git=preparation_body(frames[0])
+                if pre_result['pass'] is not True or failure.first is not None or failure.secondary:
+                    if failure.first is None:failure.add(ValueError('generated preparation result/error joins'),'generated-preparation')
+            except BaseException as error:failure.add(error,'generated-preparation')
+        try:
+            frame=generation_frame(generation_raw,pre_git)
+            count=emit(frame);need(type(count) is int and count==len(frame),'complete generation/PRE frame write')
+            flush();complete=True
+        except BaseException as error:failure.add(error,'generated-channel-retention')
+    return {'pass':complete and failure.first is None and failure.secondary==[] and bool(pre_git),
+        'generation':generation_result,'generationOriginal':generation_raw,'preparation':pre_result,'preGit':pre_git},failure
 
 
 def preparation_frame(raw):
@@ -2525,6 +2748,82 @@ class EntryComposition:
         return finalize_packet(facts,failure,self.pre_git,self.environ,preparation_original=self._preparation_original)
 
 
+class LinuxGeneratedPreparation(LinuxPreparation):
+    def __init__(self,parent):
+        super().__init__(parent);self.argv=[parent.python['path'],'-I','-B',RUN_FILE,'--prepare-generated']
+
+
+class GeneratedEntryComposition(EntryComposition):
+    """Unused generated-input transport. Root handles opaque framed bytes only."""
+    def __init__(self,environ=None):
+        super().__init__(environ);self._generation_original=None
+
+    def create_preparation(self):
+        self.require_preparation_ownership();self.pre_child=LinuxGeneratedPreparation(self);return self.pre_child
+
+    def prepare(self,failure):
+        process=None;streams={'stdout':b'','stderr':b''}
+        try:
+            self.require_preparation_ownership();child=self.create_preparation();self.pre_started=True
+            process,streams=collect_child(child,'preparation',child.argv,profile='preparation')
+            self.preparation={'process':process,'streams':streams};failure.adopt(process['firstFailure'],process['secondary'])
+            self._generation_original,self.pre_git=generation_parts(streams['stdout'])
+            self.preparation['generationOriginal']=self._generation_original
+            need(type(process['exitCode']) is int and process['exitCode']==0 and type(process['waitStatus']) is int and
+                 process['waitStatus']==0 and process['signal'] is None and process['timedOut'] is False and
+                 streams['stderr']==b'' and len(self.pre_git)>0,'natural generated preparation with original PRE required')
+        except BaseException as error:failure.add(error,'generated-composition-preparation')
+        finally:
+            try:self.finish_preparation_ownership(process)
+            except BaseException as error:failure.add(error,'generated-composition-ownership')
+            try:self.freeze_preparation_original(failure)
+            except BaseException as error:failure.add(error,'generated-composition-original')
+        return failure
+
+    def freeze_preparation_original(self,failure):
+        """Capture only owned phase facts, never parse the opaque PRE body.
+
+        Bytes are immutable and precede OutsideOwner. Caller-visible mutable
+        dictionaries are not a replacement for this retained original.
+        """
+        need(self._preparation_original is None,'preparation original already frozen; no recapture')
+        value=self.preparation or {};streams=value.get('streams',{'stdout':b'','stderr':b''})
+        def stream(name):
+            raw=streams[name]
+            need(type(raw) is bytes and len(raw)<=PREPARATION_STREAMS[name],'bounded original preparation stream')
+            return {'bytes':len(raw),'sha256':sha(raw),'base64':base64.b64encode(raw).decode('ascii')}
+        captured=time.monotonic_ns();need(type(captured) is int and captured>0,'original preparation capture clock')
+        record={'schema':'bw.ring3.preparation-original.v2','runId':self.environ['GITHUB_RUN_ID'],'attempt':1,
+            'head':self.environ['BW_EXPECTED_HEAD'],'tree':self.environ['BW_EXPECTED_TREE'],
+            'python':self.python,'invoker':self.bootstrap.invoker,'captureMonoNs':captured,
+            'process':value.get('process'),'stdout':stream('stdout'),'stderr':stream('stderr'),
+            'ownership':value.get('ownership'),'preGit':None if self.pre_git is None else {'bytes':len(self.pre_git),'sha256':sha(self.pre_git)},
+            'firstFailure':failure.first,'secondary':failure.secondary}
+        raw=encode(record);need(len(raw)<=JSON_CAP,'preparation original encoding cap')
+        self._preparation_original=raw
+
+    def finalize(self,facts,failure):
+        self.dropped();process=facts.get('process');cleanup=facts.get('cleanup') or {}
+        terminal=process if type(process) is dict and type(process.get('waitStatus')) is int else cleanup.get('cleanupTerminal')
+        need(type(terminal) is dict and type(terminal.get('waitStatus')) is int,'known generated outer terminal required')
+        need(type(self._preparation_original) is bytes and type(self._generation_original) is bytes,
+             'own generated phase originals required')
+        return finalize_packet(facts,failure,self.pre_git,self.environ,preparation_original=self._preparation_original,
+                               generation_original=self._generation_original)
+
+    def failure_only(self,failure):
+        try:
+            uid,gid=(self.bootstrap.invoker[key] for key in ('uid','gid'))
+            if os.getresuid()!=(uid,)*3 or os.getresgid()!=(gid,)*3 or os.getgroups():self.bootstrap.drop()
+            self.dropped()  # Required even when the attempted drop did not work.
+            originals={}
+            if type(self._preparation_original) is bytes:originals['preparation.phase.json']=self._preparation_original
+            if type(self._generation_original) is bytes:originals['generation.phase.json']=self._generation_original
+            if originals:self._preparation_log=emit_originals(originals,sys.stdout.buffer.write,failure,sys.stdout.buffer.flush)
+        except BaseException as error:failure.add(error,'generated-composition-failure-drop')
+        return {'pass':False,'preparation':self.preparation,'outside':self.outside_result,'final':None}
+
+
 def compose_entry(ops=None):
     """No privilege regain: root waits for dropped prep child, then drops itself."""
     ops=EntryComposition() if ops is None else ops;failure=FirstFailure();ops.failure=failure
@@ -2580,6 +2879,179 @@ def controls():
                 'rusage':{'userSeconds':0.1,'systemSeconds':0.01,'maxRssKiB':1024}}
 
     class Tests(unittest.TestCase):
+        def test_generation_frame_preserves_original_bytes_and_refuses_all_extent_and_digest_cuts(self):
+            generation=b'{"original":"GEN"}\n';pre=b'original PRE bytes\xff'
+            frame=generation_frame(generation,pre)
+            with patch.dict(globals(),final_json=Mock(side_effect=AssertionError('no root JSON parser'))):
+                self.assertEqual(generation_parts(frame),(generation,pre))
+            cuts=[frame[:43],frame[:-1],frame+b'suffix',b'BADMAGIC'+frame[8:],frame[:12]+b'X'*32+frame[44:]]
+            for lengths in ((0,len(pre)),(GENERATION_CAP+1,len(pre)),(len(generation),GIT_TRACE_CAP+1)):
+                body=struct.pack('>II',*lengths)+generation+pre
+                cuts.append(GENERATION_MAGIC+struct.pack('>I',len(body))+hashlib.sha256(body).digest()+body)
+            for cut in cuts:
+                with self.assertRaises(ValueError):generation_parts(cut)
+            self.assertEqual(generation_parts(generation_frame(generation,b'')),(generation,b''))
+            with self.assertRaisesRegex(ValueError,'shared'):generation_frame(b'X'*GENERATION_CAP,b'Y'*GIT_TRACE_CAP)
+
+        @contextlib.contextmanager
+        def generated_child_edges(self):
+            with self.staging_edges() as (base,state):
+                ops=RecordingStagingOps(base.environ);original=ops.create
+                def create():
+                    child=original();child.t=20;return child
+                ops.create=create;frames=[];flushed=[];pre_calls=[];clock=iter((10,40,50))
+                def preparation(environ,**kwargs):
+                    pre_calls.append(True);state['events'].append('PRE-GIT')
+                    kwargs['emit'](preparation_frame(b'original PRE bytes\xff'));kwargs['flush']()
+                    return {'pass':True},FirstFailure()
+                with patch.object(time,'monotonic_ns',side_effect=lambda:next(clock)),patch.dict(globals(),preparation_child=preparation):
+                    yield ops,state,frames,flushed,pre_calls
+
+        def test_generated_child_records_after_all_reads_before_pre_and_emits_immutable_opaque_originals(self):
+            with self.generated_child_edges() as (ops,state,frames,flushed,pre_calls):
+                result,failure=generated_preparation_child(ops.environ,staging_ops=ops,emit=lambda raw:frames.append(raw) or len(raw),flush=lambda:flushed.append(True))
+                self.assertTrue(result['pass']);self.assertIsNone(failure.first);self.assertEqual(pre_calls,[True]);self.assertEqual(flushed,[True])
+                raw,pre=generation_parts(frames[0]);value=final_json(raw)
+                self.assertEqual(raw,result['generationOriginal']);self.assertEqual(pre,b'original PRE bytes\xff')
+                self.assertEqual(value['before']['monoNs'],10);self.assertEqual(value['after']['monoNs'],40);self.assertEqual(value['captureMonoNs'],50)
+                self.assertLessEqual(value['before']['monoNs'],value['process']['spawnMonoNs']);self.assertLessEqual(value['process']['reapMonoNs'],value['after']['monoNs'])
+                self.assertLess(state['events'].index('output-fixture.json'),state['events'].index('PRE-GIT'))
+                self.assertEqual(value['before']['files'],value['after']['files'])
+                ops.facts['before']['node']['sha256']='caller replacement';self.assertEqual(generation_parts(frames[0])[0],raw)
+
+        def test_generated_child_failure_transport_keeps_process_first_and_zero_pre_without_calling_pre_git(self):
+            with self.generated_child_edges() as (ops,state,frames,flushed,pre_calls):
+                state['code']=1;state['stderr']=b'original generator WRITE/CLOSE error'
+                state['onSpawn']=lambda:state['outputs'].pop('fixture.json')
+                result,failure=generated_preparation_child(ops.environ,staging_ops=ops,emit=lambda raw:frames.append(raw) or len(raw),flush=lambda:None)
+                self.assertFalse(result['pass']);self.assertEqual(pre_calls,[])
+                raw,pre=generation_parts(frames[0]);value=final_json(raw);self.assertEqual(pre,b'')
+                self.assertEqual(value['firstFailure'],result['generation']['process']['firstFailure']);self.assertEqual(failure.first,value['firstFailure'])
+                self.assertEqual(base64.b64decode(value['stderr']['base64']),state['stderr']);self.assertIn('fixture.rom',value['outputs']);self.assertNotIn('fixture.json',value['outputs'])
+
+        def test_generated_child_short_flush_or_shared_cap_failure_never_returns_success(self):
+            for fault in ('short','flush','shared','PRE-error'):
+                with self.generated_child_edges() as (ops,state,frames,flushed,pre_calls):
+                    def emit(raw):frames.append(raw[:-1] if fault=='short' else raw);return len(raw)-1 if fault=='short' else len(raw)
+                    def flush():
+                        if fault=='flush':raise OSError('GENERATED_FLUSH')
+                    def preparation(environ,**kwargs):
+                        if fault=='PRE-error':raise OSError('ORIGINAL_PRE_ERROR')
+                        kwargs['emit'](preparation_frame(b'X'*GIT_TRACE_CAP));return {'pass':True},FirstFailure()
+                    with patch.dict(globals(),**({'preparation_child':preparation} if fault in ('shared','PRE-error') else {})):
+                        result,failure=generated_preparation_child(ops.environ,staging_ops=ops,emit=emit,flush=flush)
+                    self.assertFalse(result['pass']);self.assertIsNotNone(failure.first);self.assertIsNotNone(result['generationOriginal'])
+                    self.assertEqual(result['generation']['streams'],{'stdout':b'','stderr':b''})
+                    if fault=='shared':self.assertEqual(frames,[]);self.assertEqual(len(result['preGit']),GIT_TRACE_CAP)
+                    elif fault=='PRE-error':self.assertEqual(failure.first['message'],'ORIGINAL_PRE_ERROR');self.assertEqual(generation_parts(frames[0])[1],b'')
+
+        @contextlib.contextmanager
+        def generated_original_edges(self):
+            with self.preparation_original_edges() as (old,outside,env,pre,post,state):
+                entry=final_json(state['data']['.entry.json']);phase=final_json(old._preparation_original)
+                source=final_json(state['data']['source.before.json']);runtime=final_json(state['data']['runtime.before.json'])
+                node=runtime['qemuPackage']['files'][RUNTIME_EXECUTABLES['node']]
+                files={'node':{'path':RUNTIME_EXECUTABLES['node'],'bytes':node['bytes'],'sha256':node['sha256']}}
+                for role,name in (('fixture','fixture.mjs'),('runner','run.py')):
+                    path='scripts/i80386-ring3-int-iret/'+name;item=source['files'][path];files[role]={'path':path,'bytes':item['bytes'],'sha256':item['sha256']}
+                process=json.loads(json.dumps(phase['process']));process.update(role='discovery',pid=402,pgid=402,parentPid=401,
+                    argv=[RUNTIME_EXECUTABLES['node'],'--input-type=module','--eval',STAGING_DRIVER],environment=dict(ENV),spawnMonoNs=60,reapMonoNs=70)
+                recording=RecordingStagingOps(env);recording.uid,recording.gid=entry['uid'],entry['gid'];recording.observation_times={'before':55,'after':75}
+                recording.facts['before']=json.loads(json.dumps(files));recording.facts['after']=json.loads(json.dumps(files))
+                recording.facts['outputFacts']={name:{'bytes':len(state['data']['inputs/'+name]),'sha256':sha(state['data']['inputs/'+name])} for name in ('fixture.rom','fixture.json')}
+                result={'process':process,'streams':{'stdout':b'','stderr':b''},'facts':recording.facts}
+                with patch.object(time,'monotonic_ns',return_value=80):generation=generation_original(recording,result,FirstFailure())
+                ops=GeneratedEntryComposition(env);ops.python=entry['python'];ops.bootstrap.invoker={'uid':entry['uid'],'gid':entry['gid']}
+                ops.pre_git=pre;ops._generation_original=generation;phase['process']['argv'][-1]='--prepare-generated'
+                ops.preparation={'process':phase['process'],'streams':{'stdout':generation_frame(generation,pre),'stderr':b''},'ownership':phase['ownership']}
+                with patch.object(time,'monotonic_ns',return_value=600):ops.freeze_preparation_original(FirstFailure())
+                yield ops,outside,env,pre,post,state
+
+        def test_generated_full_phase_actual_capture_finalizer_and_log_only_originals(self):
+            with self.generated_original_edges() as (ops,outside,env,pre,post,state):
+                raw=ops._generation_original
+                result,failure=finalize_packet(outside,FirstFailure(),pre,env,post_observer=post,preparation_original=ops._preparation_original,
+                    generation_original=raw,emit=lambda line:state['log'].append(line) or len(line),flush=lambda:None)
+                self.assertTrue(result['pass']);self.assertIsNone(failure.first);self.assertEqual(set(state['export']),PACKET_ROLES)
+                self.assertNotIn('generation.phase.json',state['export']);self.assertEqual(len(INTERNAL_NAMES),5)
+                rows=[final_json(line[len(b'RING3_ORIGINAL '):]) for line in state['log']]
+                self.assertEqual(len({row['name'] for row in rows}),8)
+                self.assertEqual(base64.b64decode(''.join(row['data'] for row in rows if row['name']=='generation.phase.json')),raw)
+
+        def test_generated_reencoded_typed_timing_identity_and_output_refusals(self):
+            for fault in ('before-float','before-late','after-early','capture-late','parent','self-parent','live-owner','argv','environment','node','source','output','stderr','error','phase-mode'):
+                with self.generated_original_edges() as (ops,outside,env,pre,post,state):
+                    value=final_json(ops._generation_original);phase=final_json(ops._preparation_original)
+                    if fault=='before-float':value['before']['monoNs']=55.0
+                    elif fault=='before-late':value['before']['monoNs']=61
+                    elif fault=='after-early':value['after']['monoNs']=69
+                    elif fault=='capture-late':value['captureMonoNs']=101
+                    elif fault=='parent':value['process']['parentPid']+=1
+                    elif fault=='self-parent':value['process']['pid']=value['process']['pgid']=phase['process']['pid']
+                    elif fault=='live-owner':value['process']['pid']=value['process']['pgid']=phase['process']['parentPid']
+                    elif fault=='argv':value['process']['argv'][-1]='arbitrary script'
+                    elif fault=='environment':value['process']['environment']['NODE_OPTIONS']='injected'
+                    elif fault=='node':value['before']['files']['node']['bytes']=float(value['before']['files']['node']['bytes'])
+                    elif fault=='source':value['before']['files']['fixture']['sha256']='a'*64
+                    elif fault=='output':value['outputs']['fixture.rom']['bytes']+=1
+                    elif fault=='stderr':value['stderr']={'bytes':1,'sha256':sha(b'X'),'base64':'WA=='}
+                    elif fault=='error':value['firstFailure']={'phase':'generation','name':'Error','message':'ORIGINAL FAILURE'}
+                    else:phase['process']['argv'][-1]='--prepare'
+                    generation=encode(value);wire=generation_frame(generation,pre)
+                    phase['stdout']={'bytes':len(wire),'sha256':sha(wire),'base64':base64.b64encode(wire).decode()}
+                    result,failure=finalize_packet(outside,FirstFailure(),pre,env,post_observer=post,preparation_original=encode(phase),
+                        generation_original=generation,emit=lambda line:len(line),flush=lambda:None)
+                    self.assertFalse(result['pass']);self.assertIsNotNone(failure.first);self.assertNotIn('resources.json',state['export'])
+
+        def test_generated_parent_opaque_decode_retains_failed_parts_and_zero_pre_blocks_outside(self):
+            for fault in ('none','failed','zero-pre','truncated'):
+                with self.composition_edges() as (old,state):
+                    ops=GeneratedEntryComposition(state['env']);ops.validate()
+                    with patch.object(os,'getpid',return_value=101):descriptor=LinuxGeneratedPreparation(ops)
+                    self.assertEqual(descriptor.argv,[ops.python['path'],'-I','-B',RUN_FILE,'--prepare-generated'])
+                    ops.require_preparation_ownership=old.require_preparation_ownership;ops.finish_preparation_ownership=old.finish_preparation_ownership
+                    frame=generation_frame(b'opaque GEN bytes\xff',b'' if fault=='zero-pre' else b'opaque PRE bytes\xff')
+                    if fault=='truncated':frame=frame[:-1]
+                    def create():
+                        child=Fake([[('stdout',frame)]],status(1 if fault=='failed' else 0));child.argv=[ops.python['path'],'-I','-B',RUN_FILE,'--prepare-generated']
+                        child.environment=dict(ENV);ops.pre_child=child;return child
+                    ops.create_preparation=create;failure=FirstFailure()
+                    with patch.dict(globals(),final_json=Mock(side_effect=AssertionError('root must not parse GEN/PRE JSON'))):ops.prepare(failure)
+                    if fault=='none':self.assertIsNone(failure.first)
+                    else:self.assertIsNotNone(failure.first)
+                    if fault!='truncated':self.assertEqual(ops._generation_original,b'opaque GEN bytes\xff')
+                    phase=final_json(ops._preparation_original);self.assertEqual(phase['schema'],'bw.ring3.preparation-original.v2')
+                    self.assertEqual(base64.b64decode(phase['stdout']['base64']),frame)
+
+        def test_generation_original_and_log_caps_refuse_without_replacing_primary_or_entering_pre(self):
+            with self.generated_child_edges() as (ops,state,frames,flushed,pre_calls):
+                old=ops.observe
+                def observed(stage,failure):
+                    old(stage,failure)
+                    if stage=='after':ops.facts['after']['node']['path']='X'*GENERATION_CAP
+                ops.observe=observed
+                result,failure=generated_preparation_child(ops.environ,staging_ops=ops,emit=lambda frame:frames.append(frame) or len(frame),flush=lambda:None)
+                self.assertFalse(result['pass']);self.assertEqual(pre_calls,[]);self.assertEqual(frames,[])
+                self.assertIsNone(result['generationOriginal']);self.assertIn('encoding cap',failure.first['message'])
+                self.assertIsNotNone(result['generation']['process']);self.assertIn('fixture.rom',result['generation']['facts']['outputs'])
+            failure=FirstFailure();failure.add(ValueError('FIRST_GENERATOR'),'generator');lines=[]
+            progress=emit_originals({'generation.phase.json':b'X'*(GENERATION_CAP+1)},lambda line:lines.append(line) or len(line),failure,lambda:None)
+            self.assertFalse(progress['complete']);self.assertEqual(lines,[]);self.assertEqual(failure.first['message'],'FIRST_GENERATOR');self.assertTrue(failure.secondary)
+
+        def test_generated_failure_log_requires_verified_drop_and_keeps_first_error(self):
+            for fault in ('none','drop','flush'):
+                with self.composition_edges() as (old,state):
+                    ops=GeneratedEntryComposition(state['env']);ops.validate();ops._preparation_original=b'original phase';ops._generation_original=b'original GEN'
+                    failure=FirstFailure();failure.add(ValueError('FIRST_GENERATOR'),'generator');attempts=[]
+                    if fault=='drop':ops.bootstrap.drop=Mock()
+                    def emit(raw):attempts.append(raw);entry_ids(1001,1002);return len(raw)
+                    def flush():
+                        if fault=='flush':raise OSError('GEN_LOG_FLUSH')
+                    with patch.object(sys,'stdout',SimpleNamespace(buffer=SimpleNamespace(write=emit,flush=flush))):result=ops.failure_only(failure)
+                    self.assertFalse(result['pass']);self.assertEqual(failure.first['message'],'FIRST_GENERATOR')
+                    if fault=='drop':self.assertEqual(attempts,[])
+                    else:self.assertTrue(attempts);self.assertEqual(ops._preparation_log['complete'],fault=='none')
+
         @contextlib.contextmanager
         def staging_edges(self):
             env={'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1','BW_EXPECTED_HEAD':'a'*40,'BW_EXPECTED_TREE':'b'*40}

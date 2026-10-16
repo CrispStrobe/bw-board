@@ -331,6 +331,63 @@ this callable into preparation. The existing twenty packet roles, V5 record,
 limits and old preparation defaults stay unchanged. There is no filesystem
 lease, hard preemption of blocking calls or actual staging qualification.
 
+An additional unused generated-preparation adapter now carries these facts as
+original bytes. The old preparation callable, PRE frame, phase-v1 record and
+V5 reader remain unchanged. The new descriptor is fixed to the same Python
+with `-I -B scripts/i80386-ring3-int-iret/run.py --prepare-generated`; no actual
+command dispatches it yet. Its root parent only validates binary framing and
+retains opaque bytes, never generator or PRE JSON.
+
+The new frame has eight-byte magic `R3GENv1\0`, a four-byte big-endian body
+extent and a 32-byte SHA-256. Its body contains two four-byte big-endian lengths,
+then the immutable generator record and unchanged original Git PRE bytes.
+The generator record is at most 128 KiB, PRE at most 256 KiB, and their combined
+body including both lengths is at most 256 KiB. Both maximums need not fit
+simultaneously: an oversized combination refuses. The existing 262,188-byte
+stdout, 16 KiB stderr and 120-second preparation profile are unchanged.
+Short writes, failed flushes, extra suffixes or extent/hash errors refuse.
+Failed generation can retain a complete generator record with zero PRE bytes;
+it cannot start the outside controller. Raw escaped prefixes and available
+in-memory originals remain retained, without reconstructing missing records or
+claiming that an over-cap or incomplete channel delivered every original.
+
+`bw.ring3.generation-original.v1` has the closed fields `schema`, `runId`,
+`attempt`, `head`, `tree`, `invoker`, `captureMonoNs`, `process`, `stdout`,
+`stderr`, `before`, `after`, `outputs`, `firstFailure` and `secondary`.
+Streams use the original extent, SHA-256 and base64 representation. `before`
+and `after` are closed `{monoNs, files}` objects; their clocks are taken after
+all respective identity reads. Files are exactly `node`, `fixture` and `runner`,
+with path, byte extent and SHA-256. Outputs are the two fixed fixture names
+with original extents and hashes; partial subsets are failure-only facts.
+The generator record freezes after staging output and identity readbacks,
+before PRE Git begins. The log-only name `generation.phase.json` carries those
+same bytes, never a packet file. The new preparation-v2 record keeps the same
+fifteen fields and binds the actual combined stdout. Its unprivileged joins
+require both original records; caller dictionaries cannot replace them.
+
+The positive time chain is preparation spawn, before-identity completion,
+generator spawn/reap, after-identity completion, generator capture, three serial
+PRE Git children, preparation reap, phase capture, then outside-controller spawn.
+All times are exact integers and equality is allowed. Generator and preparation
+limits remain ten and 120 seconds. Generator parent PID must be the live
+preparation PID; it cannot equal that parent or the known-live root owner PID.
+This does not require unique PIDs across separately reaped children.
+The finalizer joins original output references to retained packet inputs and
+Node/source observations to other retained originals. These are consistency
+joins, not independently expected prelaunch pins. A separate V6 original-only
+reader must receive independently admitted Node/source facts. The later PRE
+capture cannot establish what source was used earlier by generation.
+
+The new log name adds no artifact role or internal file: twenty packet roles
+and five internal names remain fixed. The 5 MiB raw, 8 MiB encoded and
+3,072-character chunk bounds also remain fixed. Failure-only emission requires
+verified dropped identity; an unsuccessful drop never authorizes it. The
+caller-owned failure remains authoritative, separate from generator error
+rows. Mocked source controls include full coherent freeze/frame/finalizer/log
+joins, but no actual generator, child, resource operation or guest has run.
+Trusted external source/runtime-before-generation admission, actual setup,
+retained-original audit admission and workflow/backstop wiring remain closed.
+
 Preparation invocation, actual entry, finalizer integration, the hosted actual job and
 results remain unconnected. Polling cannot preempt blocking kernel operations,
 process creation or identity reads. The 15-minute job backstop is not wired at
