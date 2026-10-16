@@ -72,9 +72,9 @@ observed, without complete dependency authenticity.
 This adds a finite keyboard-to-protected-code-to-file response to the earlier
 [owned LE arithmetic result](I80386-DOS32A-OWNED-LE-RESULTS.md). It does not
 qualify strict original 386DX behavior, DPMI, physical timing, mouse/IRQ fidelity,
-full OS compatibility or an installed GUI. A concrete next owned fixture is a
-separately claimed LE32 file readback/seek/EOF client: reopen a newly written
-file, check exact read counts and EOF, verify buffer canaries, and return a
-source-bound result after protected-mode observations on both fresh engines.
-That would exercise DOS file-input boundaries rather than repeat arithmetic,
-CWSDPMI allocation or high-linear-memory/timer gates.
+full OS compatibility or an installed GUI. The successor
+[protected file-readback, seek and EOF result](I80386-DOS32A-FILE-READBACK-RESULTS.md)
+has now reached its finite boundary: checked reopen, actual protected full/short/
+EOF buffers and counts, unchanged guards and a later separate shell return on
+both fresh engines. Its report records the remaining consumer dependency and
+qualification limits.
