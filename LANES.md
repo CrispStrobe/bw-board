@@ -5096,6 +5096,46 @@ Use canonical relative asset mapping and a declared limited command grammar;
 no host shell, arbitrary autoexec, CD/ISO or whole-DOSBox compatibility claim.
 See the [contract](docs/X86-NEXT-LANES.md#bounded-dos-package-admission).
 
+The separate [hosted PTY acceptance extension](#dos-package-cli-hosted-pty-acceptance--2026-10-16)
+is proposed below; it does not change this existing contract.
+
+## DOS package CLI hosted PTY acceptance — 2026-10-16
+
+PROPOSED — Codex x86. Extend the existing bounded-package ownership with only
+new `scripts/dos-package-acceptance/producer.py` and
+`test/dos-package-acceptance.test.mjs`. The existing merged claim already covers
+`scripts/dos-package-acceptance/{probe.mjs,reader.py,README.md}` and
+`.github/workflows/dos-package-acceptance.yml`. Do not implement this acceptance
+until the extension is merged after all enabled exact-head documentation checks.
+
+[PR637](https://github.com/CrispStrobe/bw-board/pull/637) supplies a source-only
+candidate: 22 pure tests and injected machine boundaries, with no actual guest,
+PTY or installed GUI qualification. Preserve its seven frozen source/test/README
+blobs, original failures and reviewed fixes. This extension owns no existing
+runner, policy, parser, dependency, pin, workflow outside the named new workflow,
+or other owner's source. A required source repair needs separate review within
+its existing ownership before a new final source freeze.
+
+The proposed next task is four fresh hosted cases through the real unmodified
+CLI: authored MIT bootable raw HDD/config/STORED ZIP with keyboard `a` and `b`,
+malformed ZIP refusal, and terminal focus-loss refusal. Initial focus-in remains
+a positive control. Freeze the finite input/readiness/action/quit protocol,
+independent original-only reader, exact roles/fieldsets/caps, source/runtime/input
+closure and attempt-1 official event envelope before launch. First qualify pure
+helpers and fully rehashed semantic mutants, then all final-head source checks
+and independent source/envelope review. Only then admit one hosted actual event,
+terminal metadata, sole original acquisition and two independent original-byte
+audits before any matched-head source merge. No failed-actual retry to select a
+passing result. See the [task contract](docs/X86-NEXT-LANES.md#dos-package-cli-hosted-pty-acceptance).
+
+Proposed resource bounds are one CPU, 1 GiB memory, no swap, 120 seconds and
+50 million ordinary step calls per child, a 600-second controller and a
+15-minute job. They remain UNQUALIFIED until the exact finite profile and
+resource/cleanup audit are admitted for this finite task.
+An authored bootstrap is not a DOS kernel, protected-mode, full DOSBox,
+installed GUI or RTx qualification. No local guest, PTY, emulator, QEMU,
+browser, build or installer execution belongs to this proposal.
+
 
 ## Owned LE keyboard challenge/response — 2026-10-15
 

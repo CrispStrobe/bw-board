@@ -2125,6 +2125,99 @@ path plus firmware and guest support before a picker can promise it. An ISO
 extension or renamed raw HDD cannot supply that implementation. A future ISO
 lane needs separately merged ownership and authored/free acceptance fixtures.
 
+The next CLI-only qualification is the separately proposed
+[hosted PTY acceptance task](#dos-package-cli-hosted-pty-acceptance).
+
+## DOS package CLI hosted PTY acceptance
+
+Status: PROPOSED, with no acceptance implementation or actual result. Merge
+the [ownership extension](../LANES.md#dos-package-cli-hosted-pty-acceptance--2026-10-16)
+after all enabled exact-head documentation checks before implementing this task.
+It adds only `scripts/dos-package-acceptance/producer.py` and
+`test/dos-package-acceptance.test.mjs` to the existing merged ownership of
+`probe.mjs`, `reader.py`, `README.md` and the new acceptance workflow.
+
+[PR637](https://github.com/CrispStrobe/bw-board/pull/637) prepares the bounded
+CLI source with 22 pure tests. Its injected machine tests do not establish
+actual execution, boot, PTY behavior or an installed GUI result. A fresh agent
+must refresh its head and every enabled check, preserve the seven frozen
+source/test/README blobs and all original failures, and detect work already
+completed before acting. Any reviewed source fix requires a new final freeze;
+no other runner, policy, parser, dependency, pin or other-owner change belongs
+to this acceptance task. GUI adoption and its consumer prerequisites remain
+separate.
+
+Freeze the exact finite protocol and artifacts before launch. Generate a tiny,
+deterministic MIT-authored bootable raw HDD, exact CHS, supported config,
+license text and STORED ZIP. Independently review the bootstrap bytes and
+expected visible/input-dependent actions. Admit fixed external BIOS/VGA hashes
+and lawful acquisition/publication limits separately; do not bundle restricted
+media or add a network fallback. The authored bootstrap provides no DOS kernel,
+protected-mode, whole-disk, full DOSBox, physical timing, installed GUI or RTx
+claim.
+
+Use four fresh, serial hosted cases through the actual unmodified new CLI:
+
+1. The admitted package with live keyboard `a`, actual observed readiness,
+   actual consumption and a distinct authored guest response.
+2. The same initial package with live keyboard `b` and its independently
+   predicted different response. Initial terminal focus-in must remain a
+   positive control, and accepted make/break chronology must be observable.
+3. A newly authored malformed ZIP with explicit visible package refusal before
+   machine import or guest execution; no fallback or quiet success.
+4. An admitted package followed by terminal focus loss, with explicit refusal,
+   no resumed input session and restoration observations. This negative does
+   not claim runtime modifier release or full focus-resume interaction.
+
+The Python producer must launch the real CLI through a hosted PTY, with fixed
+argv, firmware and original input bytes. Retain raw PTY input/output and input
+chronology, actual terminal modes, visible guest action, final report, first
+execution error and secondary capture/cleanup/retention errors. Retain actual
+executable/runtime observations, source before/after, exit/wait/reaping facts,
+process-group and cgroup cleanup, memory/CPU/output counters and OOM deltas.
+A manufactured report, accepted input alone or a controller budget stop cannot
+substitute for actual guest consumption and resulting visible action. Preserve
+ordinary machine scheduling and the approved scan pacing. Do not use sleeps
+or retries to select a passing guest.
+
+Before implementation is admitted for actual execution, freeze exact schemas,
+fieldsets, artifact roles, path sets, byte/count/output/PID caps, readiness and
+key/quit/cleanup rules. Freeze the full Git/live static and dynamic source/data
+closure, including the seven candidate blobs, canonical parser, terminal helper,
+functional machine/profile, controller, workflow and runtime/input identities.
+Freeze official event/head/tree, attempt 1, sole actual trigger, job/step/artifact
+joins and external approval/admission fields. Distinguish the tested checkout
+from any later integration tree. Proposed bounds are one CPU, 1 GiB memory,
+no swap, 120 seconds and 50 million total ordinary step calls from reset per
+child, a 600-second controller and a 15-minute job. These are UNQUALIFIED until
+the exact finite profile and resource/cleanup audit pass for this task.
+
+The separate standard-library-only reader must never import the producer,
+policy, ZIP adapter, CLI, emulator or an old acceptance reader, and must never
+replay the guest. Independently parse the retained original package topology,
+names/attributes/extents/CRC/caps, closed config, selected config-relative image,
+CHS and frozen bootstrap bytes. Join original source/runtime/input identities,
+raw PTY bytes, accepted scan spacing, terminal restoration, visible guest action,
+failure chronology, resources and official event/job/step/artifact metadata.
+Reject missing, extra or aliased roles and all source/input/runtime drift.
+
+First run authored pure helper controls and independently reviewed reader
+controls, including fully rehashed semantic mutations of commands, geometry,
+member/role/CRC/topology, source/runtime identities, key order/consumption/response,
+premature readiness, stop/refusal, restoration, official joins, OOM, status,
+reaping and cleanup. These controls run locally without starting a PTY,
+emulator, guest, QEMU, browser, compiler, build or installer. All enabled final
+source checks and independent source/reader/envelope approval must succeed
+before one hosted actual is authorized. Never repeat a failed actual merely
+to obtain a selected pass.
+
+After that sole actual ends, independently admit terminal run/job/step/artifact
+metadata before acquiring each original artifact and log once. Require two
+independent original-byte audits and every enabled exact-head check before
+normal `--match-head-commit` merge, then verify actual tree and ordered parents.
+Preserve first failures and uncertainty; no successful original is downloaded
+or replayed again just to read it.
+
 
 ## Owned LE keyboard challenge/response
 
