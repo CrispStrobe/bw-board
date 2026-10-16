@@ -109,15 +109,44 @@ The write and flush must both succeed. The parent validates only this fixed
 binary framing before considering the next phase; semantic PRE validation stays
 with the unprivileged finalizer and independent original auditor.
 
-The preparation-ownership and descendant-empty admission methods deliberately
-refuse by default. The first gate precedes even preparation factory construction;
-the second must succeed before the guest outside-owner phase. No boolean or
-string argument supplies this proof. A preparation session kill cannot establish
-that separately started Git sessions have ended. External preparation ownership,
-its backstop and original provenance therefore remain unresolved activation
-requirements; no containment or successful cleanup is inferred from these mocks.
+Preparation ownership now observes one fixed sibling of the manual subtree:
+`/sys/fs/cgroup/bw-ring3-RUN-1-preparation`, derived only from the official run
+and first attempt. The runner does not create it. Its directory and control
+files must be root-owned UID/GID zero with no group or world write permission,
+and its observed limits must equal the existing one CPU, 1 GiB memory, no swap
+and 64 PID profile. The existing four invoker-owned resource roles are unchanged.
+A missing, nonempty or mismatched initial object refuses before a child factory;
+there is no cleanup of preexisting, unadmitted work.
 
-Only after those mocked phase boundaries does the source composition invoke the
+The root parent holds a NOFOLLOW directory descriptor and keeps its trusted
+device, inode and owner binding separate from returned snapshots. Observations
+and cleanup open fixed names relative to that descriptor. Before dropping IDs,
+the fresh child independently reopens the fixed sibling, matches the captured
+binding, writes only its own PID through an anchored `cgroup.procs` descriptor,
+verifies sole membership and closes its own descriptor. This avoids assuming
+that Popen preserves the parent's descriptor. Git children then inherit the
+sibling even when they start separate sessions. The parent must stay outside
+both the manual subtree and preparation sibling.
+
+An observed preparation terminal must be followed by original empty hierarchical
+`pids.current` and `populated` observations as well as an empty local PID list.
+Unknown status, OOM or limit drift and remaining descendants preserve refusal.
+Only complete initial-empty admission followed by an own spawn attempt makes
+cleanup eligible. The parent can then attempt anchored `cgroup.kill` and bounded
+reap/census checks, at most two seconds and 128 iterations. Later cleaned
+emptiness never repairs the first failure. Reaped leaders are not signalled or
+waited again. The parent descriptor closes once after observation and cleanup;
+a close error prevents the next phase, and consumed ownership cannot reopen as
+a replacement proof. Partial observations and attempts remain in returned
+preparation memory, outside the twenty roles and closed log-original allowlist.
+
+These methods have only run against mocked edges. Separate hosted creation,
+original provenance and independent auditing of this internal phase, plus the
+15-minute job backstop, remain unresolved activation requirements. Polling
+cannot preempt blocking Popen or kernel operations. Neither snapshots nor held
+descriptors establish a continuous lease or complete host ownership proof.
+
+Only after those ownership checks does the source composition invoke the
 root outside owner. Its original failure object and original PRE bytes pass to
 the finalizer after verified invoker IDs and an observed controller terminal.
 A missing terminal or failed drop prevents finalizer and POST Git. Failed

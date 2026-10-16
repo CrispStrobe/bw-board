@@ -1950,6 +1950,182 @@ def preparation_child(environ=None,*,observer=None,emit=None,flush=None):
             'preparation':result,'inputs':inputs},failure
 
 
+
+class PreparationOwnership:
+    """One fixed root-owned sibling. No creation, delegation or path-only kill."""
+    FILES=dict(Cgroups.FILES,**{'memoryEvents':'memory.events','cpuStat':'cpu.stat','cgroupEvents':'cgroup.events',
+        'memoryCurrent':'memory.current','memoryPeak':'memory.peak','pidsCurrent':'pids.current','cgroupProcs':'cgroup.procs'})
+
+    def __init__(self,parent):
+        self.parent=parent;manual=expected_cgroup(parent.environ)
+        self.path=manual.with_name(manual.name+'-preparation');self.manual=manual
+        self.directory=None;self._binding=None;self._before=None
+        self.admitted=False;self.consumed=False;self._spawn_attempted=False
+        self.partial=None
+        self.facts={'schema':'bw.ring3.preparation-ownership.v1','path':str(self.path),'identity':None,
+            'owner':{'uid':0,'gid':0},'before':None,'beforeCleanup':None,'afterCleanup':None,
+            'spawnAttempted':False,'sessionSignalAttempted':False,'killAttempted':False,'cleanupTerminal':None,
+            'polls':0,'closeAttempted':False,'closeSucceeded':False,'partial':None}
+
+    def outside(self):
+        text=entry_proc('/proc/self/cgroup');names=('/'+self.manual.name,'/'+self.path.name)
+        need(text.startswith('0::/') and text.endswith('\n') and text.count('\n')==1 and
+             all(text[3:-1]!=name and not text[3:-1].startswith(name+'/') for name in names),
+             'preparation parent must remain outside both owned trees')
+
+    def check_directory(self,descriptor):
+        info=os.fstat(descriptor)
+        need(stat.S_ISDIR(info.st_mode) and info.st_uid==info.st_gid==0 and info.st_mode&0o022==0,
+             'root-owned non-writable preparation directory')
+        binding=(info.st_dev,info.st_ino,info.st_uid,info.st_gid)
+        need(type(info.st_dev) is int and type(info.st_ino) is int and info.st_ino>0 and
+             info.st_dev==Path('/sys/fs/cgroup').stat().st_dev and
+             (self._binding is None or binding==self._binding),'held preparation directory identity')
+        return binding
+
+    def text(self,descriptor,name):
+        need(name in self.FILES.values(),'fixed anchored preparation observation')
+        self.check_directory(descriptor)
+        fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=descriptor);first=None;data=None
+        try:
+            info=os.fstat(fd)
+            need(stat.S_ISREG(info.st_mode) and info.st_dev==self._binding[0] and
+                 info.st_uid==info.st_gid==0 and info.st_mode&0o022==0,'root-owned preparation control file')
+            data=os.read(fd,4097);need(len(data)<=4096,'preparation kernel observation cap');data=data.decode('ascii')
+        except Exception as error:first=error
+        finally:first=close_owned(fd,first,'preparation-observation-close')
+        if first is not None:raise first
+        return data
+
+    def snapshot(self,descriptor=None):
+        descriptor=self.directory if descriptor is None else descriptor
+        binding=self.check_directory(descriptor)
+        snap={'identity':{'device':binding[0],'inode':binding[1]},'owner':{'uid':binding[2],'gid':binding[3]},
+              'limits':{},'raw':{},'procs':[]};self.partial=snap;self.facts['partial']=snap
+        for key,name in self.FILES.items():snap['raw'][key]=self.text(descriptor,name)
+        snap['limits']={key:snap['raw'][key].strip() for key in LIMITS}
+        need(snap['limits']==LIMITS,'preparation fixed limits drift')
+        lines=snap['raw']['cgroupProcs'].splitlines()
+        need(len(lines)<=64 and all(re.fullmatch('[1-9][0-9]{0,9}',value) and int(value)<2**31 for value in lines) and
+             len(set(lines))==len(lines),'finite original preparation PID census')
+        snap['procs']=sorted(map(int,lines))
+        need(re.fullmatch('[0-9]+\n',snap['raw']['pidsCurrent']) is not None,'original hierarchical preparation PID count')
+        return snap
+
+    def admit(self):
+        need(not self.consumed,'preparation ownership already consumed; no reopen')
+        self.outside()
+        if self.directory is None:
+            self.directory=os.open(self.path,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK)
+            self._binding=self.check_directory(self.directory)
+            self.facts['identity']={'device':self._binding[0],'inode':self._binding[1]}
+        snap=self.snapshot();entry_empty(snap)
+        if self._before is None:
+            self._before=entry_json(encode(snap));self.facts['before']=entry_json(encode(snap))
+        self.counters(snap)
+        self.admitted=True
+
+    def begin_spawn(self):
+        need(self.admitted and not self.consumed and not self._spawn_attempted,'one admitted preparation spawn attempt')
+        self._spawn_attempted=True;self.facts['spawnAttempted']=True
+
+    def write(self,descriptor,name,data):
+        need(name in ('cgroup.procs','cgroup.kill'),'fixed preparation anchored write')
+        self.check_directory(descriptor)
+        fd=os.open(name,os.O_WRONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=descriptor);first=None
+        try:
+            info=os.fstat(fd)
+            need(stat.S_ISREG(info.st_mode) and info.st_dev==self._binding[0] and
+                 info.st_uid==info.st_gid==0 and info.st_mode&0o022==0,'root-owned preparation writable control')
+            need(os.write(fd,data)==len(data),'complete preparation anchored write')
+        except Exception as error:first=error
+        finally:first=close_owned(fd,first,'preparation-write-close')
+        if first is not None:raise first
+
+    def move_self(self):
+        need(self.admitted and not self.consumed and self._spawn_attempted,'admitted preparation migration')
+        # Fresh child reopen: do not assume Popen preserves the parent's dirFD.
+        fd=os.open(self.path,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK);first=None
+        try:
+            self.check_directory(fd);self.write(fd,'cgroup.procs',str(os.getpid()).encode('ascii'))
+            snap=self.snapshot(fd)
+            need(snap['procs']==[os.getpid()] and snap['raw']['pidsCurrent'].strip()=='1' and
+                 'populated 1' in snap['raw']['cgroupEvents'].splitlines(),'sole preparation child before privilege drop')
+        except Exception as error:first=error
+        finally:first=close_owned(fd,first,'preparation-child-directory-close')
+        if first is not None:raise first
+
+    def child_entered(self):
+        need(entry_proc('/proc/self/cgroup')=='0::/'+self.path.name+'\n','dropped preparation sibling membership')
+
+    def kill(self):
+        need(self.admitted and self._spawn_attempted and not self.consumed,'no cleanup of unadmitted preparation work')
+        self.outside();self.write(self.directory,'cgroup.kill',b'1')
+
+    def counters(self,after):
+        def parse(snapshot):
+            rows=[line.split() for line in snapshot['raw']['memoryEvents'].splitlines()]
+            need(len(rows)<=32 and all(len(row)==2 and re.fullmatch('[0-9]+',row[1]) for row in rows) and
+                 len({row[0] for row in rows})==len(rows),'bounded original preparation memory counters')
+            values={key:int(value) for key,value in rows};need({'oom','oom_kill'}<=set(values),'original preparation OOM counters')
+            return values
+        before,after=parse(self._before),parse(after)
+        need(set(before)==set(after) and all(after[key]>=before[key] for key in before) and
+             all(after[key]==before[key] for key in before if key in ('oom','oom_kill','oom_group_kill')),
+             'preparation memory counter or OOM drift')
+
+    def finish(self,process):
+        need(not self.consumed,'preparation ownership consumed; no finish retry')
+        failure=FirstFailure();terminal=type(process) is dict and type(process.get('waitStatus')) is int
+        try:
+            if not self.admitted:return self.facts,failure
+            self.outside();empty=False
+            try:
+                self.facts['beforeCleanup']=self.snapshot();entry_empty(self.facts['beforeCleanup'])
+                self.counters(self.facts['beforeCleanup']);empty=True
+            except Exception as error:
+                self.facts['beforeCleanup']=self.partial;failure.add(error,'preparation-precleanup')
+            if not self._spawn_attempted:
+                if not empty:failure.add(ValueError('no own spawn attempt; preparation cleanup unavailable'),'preparation-ownership')
+                return self.facts,failure
+            if not terminal:failure.add(ValueError('preparation terminal unknown before cleanup'),'preparation-terminal')
+            child=self.parent.pre_child
+            if not terminal and child is not None and child.process is not None and child.process.returncode is None:
+                self.facts['sessionSignalAttempted']=True
+                try:child.kill()
+                except Exception as error:failure.add(error,'preparation-session-kill')
+            if not empty:
+                self.facts['killAttempted']=True
+                try:self.kill()
+                except Exception as error:failure.add(error,'preparation-owned-kill')
+            deadline=time.monotonic_ns()+DRAIN_NS
+            for count in range(128):
+                self.facts['polls']=count+1
+                if not terminal and child is not None and child.process is not None and child.process.returncode is None:
+                    try:
+                        result=child.reap()
+                        if result is not None:self.facts['cleanupTerminal']=dict(result,reapMonoNs=time.monotonic_ns());terminal=True
+                    except Exception as error:failure.add(error,'preparation-cleanup-reap')
+                try:
+                    self.facts['afterCleanup']=self.snapshot();entry_empty(self.facts['afterCleanup']);self.counters(self.facts['afterCleanup']);empty=True
+                except Exception as error:
+                    self.facts['afterCleanup']=self.partial;failure.add(error,'preparation-postcleanup');empty=False
+                if empty and terminal:break
+                if time.monotonic_ns()>=deadline:break
+                time.sleep(0.02)
+            else:failure.add(TimeoutError('preparation cleanup census iteration bound'),'preparation-cleanup')
+            if not empty or not terminal:failure.add(TimeoutError('preparation cleanup emptiness or reap unknown'),'preparation-cleanup')
+            self.outside()
+        except BaseException as error:failure.add(error,'preparation-finish')
+        finally:
+            self.consumed=True
+            fd=self.directory;self.directory=None
+            if fd is not None:
+                self.facts['closeAttempted']=True
+                try:os.close(fd);self.facts['closeSucceeded']=True
+                except Exception as error:failure.add(error,'preparation-directory-close')
+        return self.facts,failure
+
 class LinuxPreparation(LinuxTool):
     """Fresh same-Python child; no manual group membership or guest parsing."""
     read_chunk_bytes=65536
@@ -1963,13 +2139,16 @@ class LinuxPreparation(LinuxTool):
             SUDO_UID=str(parent.bootstrap.invoker['uid']),SUDO_GID=str(parent.bootstrap.invoker['gid']))
 
     def spawn(self):
-        self.parent_owner.require_preparation_ownership()  # Default refuses before Popen.
+        self.parent_owner.require_preparation_ownership()
+        self.parent_owner.preparation_ownership.begin_spawn()
         return super().spawn()
 
     def preexec(self,identity_fd):
+        self.parent_owner.preparation_ownership.move_self()
         self.parent_owner.bootstrap.drop()
         invoker=self.parent_owner.bootstrap.invoker
         entry_ids(invoker['uid'],invoker['gid'])
+        self.parent_owner.preparation_ownership.child_entered()
         LinuxController.preexec(self,identity_fd)  # Fixed limits/identity, stays outside.
 
 
@@ -1983,7 +2162,7 @@ class EntryComposition:
         self.environ=dict(os.environ if environ is None else environ)
         self.bootstrap=BootstrapOps(self.environ);self.python=None;self.preparation=None
         self.pre_child=None;self.pre_started=False;self.outside_result=None
-        self.final=None;self.failure=None;self.pre_git=None
+        self.final=None;self.failure=None;self.pre_git=None;self.preparation_ownership=None
 
     def validate(self):
         need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root outside composition parent required')
@@ -2010,12 +2189,15 @@ class EntryComposition:
         self.python={'path':path,'bytes':len(data),'sha256':sha(data)}
 
     def require_preparation_ownership(self):
-        # No bool/string parameter is proof. A reviewed outside lifecycle and
-        # backstop must be connected here before ANY child factory or spawn.
-        raise ValueError('external preparation ownership/backstop not connected')
+        if self.preparation_ownership is None:self.preparation_ownership=PreparationOwnership(self)
+        self.preparation_ownership.admit()
 
     def finish_preparation_ownership(self,process):
-        raise ValueError('external preparation descendant-empty observation not connected')
+        if self.preparation_ownership is None:return
+        facts,failure=self.preparation_ownership.finish(process)
+        if self.preparation is None:self.preparation={'process':process,'streams':{'stdout':b'','stderr':b''}}
+        self.preparation['ownership']=facts
+        if failure.first is not None:raise ObservedFailure(failure.first,failure.secondary)
 
     def create_preparation(self):
         self.require_preparation_ownership()
@@ -2023,9 +2205,9 @@ class EntryComposition:
         return self.pre_child
 
     def prepare(self,failure):
-        self.require_preparation_ownership()  # Before even factory construction.
         process=None;streams={'stdout':b'','stderr':b''}
         try:
+            self.require_preparation_ownership()  # Before even factory construction.
             child=self.create_preparation();self.pre_started=True
             process,streams=collect_child(child,'preparation',child.argv,profile='preparation')
             self.preparation={'process':process,'streams':streams}
@@ -2123,6 +2305,179 @@ def controls():
 
     class Tests(unittest.TestCase):
         @contextlib.contextmanager
+        def ownership_edges(self):
+            env={'SUDO_UID':'1001','SUDO_GID':'1002','GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1',
+                 'BW_EXPECTED_HEAD':'a'*40,'BW_EXPECTED_TREE':'b'*40}
+            state={'binding':(3,99,0,0),'dirMode':0o40755,'fileMode':0o100644,'fileOwner':(0,0),
+                'fds':{},'next':100,'events':[],'member':'0::/actions/job\n','uids':(0,)*3,'gids':(0,)*3,'groups':[0],
+                'closeFaults':{},'readFaults':{},'writeFault':None,'shortWrite':False}
+            state['raw']={**{name:value+'\n' for key,value in LIMITS.items() for name in (Cgroups.FILES[key],)},
+                'memory.events':'low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n',
+                'cpu.stat':'usage_usec 0\nuser_usec 0\nsystem_usec 0\n','cgroup.events':'populated 0\nfrozen 0\n',
+                'memory.current':'0\n','memory.peak':'0\n','pids.current':'0\n','cgroup.procs':''}
+            parent=SimpleNamespace(environ=env,pre_child=None,python={'path':'/usr/bin/python3.12'},bootstrap=BootstrapOps(env))
+            parent.bootstrap.invoker={'uid':1001,'gid':1002}
+            owner=PreparationOwnership(parent);parent.preparation_ownership=owner
+            parent.require_preparation_ownership=owner.admit
+            def opened(path,flags,*args,**kwargs):
+                fd=state['next'];state['next']+=1
+                if 'dir_fd' in kwargs:
+                    directory=kwargs['dir_fd'];self.assertEqual(state['fds'][directory][0],'dir')
+                    name=str(path);self.assertIn(name,(*PreparationOwnership.FILES.values(),'cgroup.kill'))
+                    state['fds'][fd]=('file',name,state['fds'][directory][1],directory)
+                else:
+                    self.assertEqual(Path(path),owner.path);state['fds'][fd]=('dir',state['binding'])
+                state['events'].append(('open',fd,str(path),flags,dict(kwargs)));return fd
+            def fstat(fd):
+                info=state['fds'][fd]
+                if info[0]=='dir':dev,ino,uid,gid=info[1];mode=state['dirMode']
+                else:dev,ino,_,_=info[2];uid,gid=state['fileOwner'];mode=state['fileMode']
+                return SimpleNamespace(st_dev=dev,st_ino=ino,st_uid=uid,st_gid=gid,st_mode=mode)
+            def read(fd,cap):
+                name=state['fds'][fd][1];state['events'].append(('read',name,cap))
+                if name in state['readFaults']:raise state['readFaults'][name]
+                return state['raw'][name].encode()
+            def write(fd,data):
+                name=state['fds'][fd][1];state['events'].append(('write',name,data,state['fds'][fd][3]))
+                if state['writeFault']:raise state['writeFault']
+                if state['shortWrite']:return 0
+                if name=='cgroup.procs':
+                    self.assertEqual(data,b'101');state['raw'].update({'cgroup.procs':'101\n','pids.current':'1\n','cgroup.events':'populated 1\nfrozen 0\n'})
+                    state['member']='0::/'+owner.path.name+'\n'
+                else:state['raw'].update({'cgroup.procs':'','pids.current':'0\n','cgroup.events':'populated 0\nfrozen 0\n'})
+                return len(data)
+            def close(fd):
+                info=state['fds'].pop(fd);state['events'].append(('close',fd))
+                key='dir' if info[0]=='dir' else info[1]
+                if key in state['closeFaults']:raise state['closeFaults'][key]
+            def ids(key,value):state[key]=value;state['events'].append((key,value))
+            clock=[0]
+            def now():clock[0]+=100000000;return clock[0]
+            with patch.object(os,'open',side_effect=opened),patch.object(os,'fstat',side_effect=fstat),                 patch.object(os,'read',side_effect=read),patch.object(os,'write',side_effect=write),patch.object(os,'close',side_effect=close),                 patch.object(Path,'stat',return_value=SimpleNamespace(st_dev=3)),patch.object(os,'getpid',return_value=101),                 patch.object(os,'getresuid',side_effect=lambda:state['uids']),patch.object(os,'getresgid',side_effect=lambda:state['gids']),                 patch.object(os,'getgroups',side_effect=lambda:state['groups']),patch.object(os,'setgroups',side_effect=lambda value:ids('groups',value)),                 patch.object(os,'setresgid',side_effect=lambda *value:ids('gids',value)),patch.object(os,'setresuid',side_effect=lambda *value:ids('uids',value)),                 patch.object(time,'monotonic_ns',side_effect=now),patch.object(time,'sleep') as sleep,                 patch.dict(globals(),entry_proc=lambda path:state['member'] if path.endswith('cgroup') else ''.join(k+':\t'+'0'*16+'\n' for k in ('CapInh','CapPrm','CapEff','CapAmb'))):
+                state['sleep']=sleep;yield owner,parent,state
+
+        def test_ownership_fixed_sibling_anchor_and_child_migration_precedes_drop(self):
+            with self.ownership_edges() as (owner,parent,state):
+                owner.admit();parentfd=owner.directory;owner.begin_spawn();child=LinuxPreparation(parent)
+                def identity(ops,fd):entry_ids(1001,1002);state['events'].append(('identity',fd))
+                with patch.object(LinuxController,'preexec',identity):child.preexec(7)
+                self.assertEqual(owner.path,Path('/sys/fs/cgroup/bw-ring3-123-1-preparation'))
+                writes=[row for row in state['events'] if row[0]=='write'];self.assertEqual(writes[0][1:3],('cgroup.procs',b'101'))
+                self.assertNotEqual(writes[0][3],parentfd);self.assertIn(parentfd,state['fds'])
+                names=[row[0] for row in state['events']]
+                self.assertLess(names.index('write'),names.index('groups'));self.assertLess(names.index('groups'),names.index('identity'))
+                state['member']='0::/actions/job\n';state['raw'].update({'cgroup.procs':'','pids.current':'0\n','cgroup.events':'populated 0\nfrozen 0\n'})
+                facts,failure=owner.finish({'waitStatus':0})
+                self.assertIsNone(failure.first);self.assertTrue(facts['closeSucceeded']);self.assertEqual(state['fds'],{})
+                self.assertFalse(facts['killAttempted']);self.assertFalse(facts['sessionSignalAttempted'])
+
+        def test_ownership_initial_nonempty_or_untrusted_metadata_never_kills(self):
+            for fault in ('nonempty','nested','owner','permissions','fileowner','limits','oom-schema'):
+                with self.ownership_edges() as (owner,parent,state):
+                    if fault=='nonempty':state['raw'].update({'cgroup.procs':'777\n','pids.current':'1\n','cgroup.events':'populated 1\n'})
+                    elif fault=='nested':state['raw'].update({'pids.current':'1\n','cgroup.events':'populated 1\n'})
+                    elif fault=='owner':state['binding']=(3,99,1001,1002)
+                    elif fault=='permissions':state['dirMode']=0o40777
+                    elif fault=='fileowner':state['fileOwner']=(1001,1002)
+                    elif fault=='oom-schema':state['raw']['memory.events']='missing 0\n'
+                    else:state['raw']['pids.max']='65\n'
+                    with self.assertRaises(ValueError):owner.admit()
+                    facts,found=owner.finish(None)
+                    self.assertFalse(facts['killAttempted']);self.assertEqual(state['fds'],{})
+                    self.assertEqual([row for row in state['events'] if row[0]=='write'],[])
+                    with self.assertRaisesRegex(ValueError,'no reopen'):owner.admit()
+
+        def test_ownership_reaped_leader_with_separate_or_nested_descendants_stays_failure(self):
+            for nested in (False,True):
+                with self.ownership_edges() as (owner,parent,state):
+                    owner.admit();fd=owner.directory;owner.begin_spawn()
+                    parent.pre_child=SimpleNamespace(process=SimpleNamespace(returncode=0),kill=Mock(),reap=Mock())
+                    state['raw'].update({'cgroup.procs':'' if nested else '777\n','pids.current':'1\n','cgroup.events':'populated 1\n'})
+                    facts,failure=owner.finish({'waitStatus':0})
+                    self.assertIsNotNone(failure.first);self.assertTrue(facts['killAttempted'])
+                    self.assertEqual(facts['beforeCleanup']['raw']['pidsCurrent'],'1\n')
+                    self.assertEqual(facts['afterCleanup']['raw']['pidsCurrent'],'0\n')
+                    parent.pre_child.kill.assert_not_called();parent.pre_child.reap.assert_not_called()
+                    self.assertEqual([row[3] for row in state['events'] if row[0]=='write' and row[1]=='cgroup.kill'],[fd])
+                    self.assertTrue(facts['closeSucceeded'])
+
+        def test_ownership_no_own_spawn_never_kills_new_foreign_members(self):
+            with self.ownership_edges() as (owner,parent,state):
+                owner.admit();state['raw'].update({'cgroup.procs':'777\n','pids.current':'1\n','cgroup.events':'populated 1\n'})
+                facts,failure=owner.finish(None)
+                self.assertIsNotNone(failure.first);self.assertFalse(facts['killAttempted']);self.assertEqual(state['fds'],{})
+
+        def test_ownership_partial_spawn_unknown_terminal_preserves_failure_after_cleanup(self):
+            with self.ownership_edges() as (owner,parent,state):
+                owner.admit();owner.begin_spawn();process=SimpleNamespace(returncode=None)
+                def reap():process.returncode=0;return status()
+                parent.pre_child=SimpleNamespace(process=process,kill=Mock(),reap=Mock(side_effect=reap))
+                state['raw'].update({'cgroup.procs':'777\n','pids.current':'1\n','cgroup.events':'populated 1\n'})
+                facts,failure=owner.finish(None)
+                self.assertIsNotNone(failure.first);self.assertTrue(facts['sessionSignalAttempted']);self.assertTrue(facts['killAttempted'])
+                self.assertIsNotNone(facts['cleanupTerminal']);self.assertTrue(facts['closeSucceeded'])
+                parent.pre_child.kill.assert_called_once();parent.pre_child.reap.assert_called_once()
+
+        def test_ownership_reopen_identity_and_mutable_returned_facts_never_retarget(self):
+            with self.ownership_edges() as (owner,parent,state):
+                owner.admit();fd=owner.directory;binding=owner._binding;owner.begin_spawn()
+                owner.facts['identity']['inode']=1234;owner.facts['owner']['uid']=1001
+                state['binding']=(3,100,0,0)
+                with self.assertRaisesRegex(ValueError,'directory identity'):owner.move_self()
+                self.assertFalse(any(row[0]=='write' for row in state['events']))
+                self.assertEqual(owner._binding,binding);self.assertIn(fd,state['fds'])
+                owner.kill();self.assertEqual([row[3] for row in state['events'] if row[0]=='write'],[fd])
+                owner.finish({'waitStatus':0});self.assertEqual(state['fds'],{})
+
+        def test_ownership_oom_limits_and_close_faults_preserve_original_refusal(self):
+            for fault in ('oom','limits','write-close'):
+                with self.ownership_edges() as (owner,parent,state):
+                    owner.admit();owner.begin_spawn()
+                    if fault=='oom':
+                        state['raw']['memory.events']=state['raw']['memory.events'].replace('oom 0','oom 1')
+                        owner.facts['before']['raw']['memoryEvents']=state['raw']['memory.events']
+                    elif fault=='limits':state['raw']['cpu.max']='200000 100000\n'
+                    else:
+                        state['raw'].update({'cgroup.procs':'777\n','pids.current':'1\n','cgroup.events':'populated 1\n'})
+                        state['writeFault']=OSError('KILL_WRITE');state['closeFaults']['cgroup.kill']=OSError('KILL_CLOSE');state['closeFaults']['dir']=OSError('DIR_CLOSE')
+                    facts,failure=owner.finish({'waitStatus':0})
+                    self.assertIsNotNone(failure.first);self.assertTrue(facts['closeAttempted']);self.assertTrue(owner.consumed)
+                    if fault=='write-close':
+                        self.assertEqual(failure.first['message'],'entry cgroup must be empty')
+                        messages=[row['message'] for row in failure.secondary]
+                        self.assertIn('KILL_WRITE',messages);self.assertIn('KILL_CLOSE',messages);self.assertIn('DIR_CLOSE',messages)
+                        self.assertFalse(facts['closeSucceeded'])
+                    with self.assertRaisesRegex(ValueError,'no finish retry'):owner.finish({'waitStatus':0})
+                    self.assertEqual(state['fds'],{})
+
+        def test_ownership_kernel_read_error_survives_close_and_no_pathname_kill(self):
+            with self.ownership_edges() as (owner,parent,state):
+                owner.admit();state['readFaults']['cpu.stat']=OSError('FIRST_READ');state['closeFaults']['cpu.stat']=OSError('SECONDARY_CLOSE')
+                with self.assertRaises(OSError) as caught:owner.snapshot()
+                self.assertEqual(str(caught.exception),'FIRST_READ');self.assertEqual(caught.exception.ring3_secondary[0]['message'],'SECONDARY_CLOSE')
+                owner.begin_spawn();state['fds'][owner.directory]=('dir',(3,101,0,0))
+                with self.assertRaisesRegex(ValueError,'directory identity'):owner.kill()
+                self.assertFalse(any(row[0]=='write' for row in state['events']))
+                owner.finish({'waitStatus':0});self.assertEqual(state['fds'],{})
+
+        def test_ownership_parent_outside_both_and_close_failure_blocks_composition_handoff(self):
+            for membership in ('0::/bw-ring3-123-1/controller\n','0::/bw-ring3-123-1-preparation\n'):
+                with self.ownership_edges() as (owner,parent,state):
+                    state['member']=membership
+                    with self.assertRaisesRegex(ValueError,'outside both'):owner.admit()
+                    self.assertEqual(state['fds'],{})
+            with self.ownership_edges() as (owner,parent,state):
+                owner.admit();owner.begin_spawn();parent.preparation=None
+                state['closeFaults']['dir']=OSError('FIRST_DIRECTORY_CLOSE')
+                with self.assertRaises(ObservedFailure) as caught:
+                    EntryComposition.finish_preparation_ownership(parent,{'waitStatus':0})
+                self.assertEqual(caught.exception.firstFailure['message'],'FIRST_DIRECTORY_CLOSE')
+                self.assertFalse(parent.preparation['ownership']['closeSucceeded'])
+                self.assertTrue(parent.preparation['ownership']['closeAttempted'])
+                self.assertEqual(state['fds'],{})
+                with self.assertRaisesRegex(ValueError,'no reopen'):owner.admit()
+
+        @contextlib.contextmanager
         def composition_edges(self):
             with self.entry_edges() as (bootstrap,state):
                 state.update(phaseEvents=[],outsideFailure=FirstFailure(),outsideKnown=True,outsideDrop=True,
@@ -2132,6 +2487,13 @@ def controls():
                     name=str(path if path.is_absolute() else Path('/checkout')/path)
                     return SimpleNamespace(st_mode=0o40755 if name in directory_names else 0o100644,st_uid=1001,st_gid=1002)
                 parent=EntryComposition(state['env'])
+                parent.preparation_ownership=PreparationOwnership(parent)
+                parent.preparation_ownership.move_self=Mock();parent.preparation_ownership.child_entered=Mock()
+                old_open=os.open
+                def mocked_open(path,flags,*args,**kwargs):
+                    if str(path)==str(expected_cgroup(state['env']))+'-preparation':
+                        raise ValueError('external preparation ownership/backstop sibling absent in old inert fixture')
+                    return old_open(path,flags,*args,**kwargs)
                 def require():state['phaseEvents'].append('admit-preparation')
                 def finish(process):
                     state['phaseEvents'].append('preparation-descendants')
@@ -2159,7 +2521,7 @@ def controls():
                     entry_ids(1001,1002);self.assertIs(failure,state['outsideFailure'])
                     self.assertEqual(pre,b'opaque PRE bytes\xff')
                     return {'pass':failure.first is None and failure.secondary==[]},failure
-                with patch.object(Path,'lstat',lstat),patch.dict(globals(),outside_controller=outside,finalize_packet=final,                    entry_proc=lambda path:'0::/actions/job\n' if path.endswith('cgroup') else ''.join(k+':\t'+v+'\n' for k,v in state['caps'].items())),                     patch.object(subprocess,'Popen',side_effect=AssertionError('no real process in composition controls')):
+                with patch.object(Path,'lstat',lstat),patch.object(os,'open',side_effect=mocked_open),patch.dict(globals(),outside_controller=outside,finalize_packet=final,                    entry_proc=lambda path:'0::/actions/job\n' if path.endswith('cgroup') else ''.join(k+':\t'+v+'\n' for k,v in state['caps'].items())),                     patch.object(subprocess,'Popen',side_effect=AssertionError('no real process in composition controls')):
                     yield parent,state
 
         def test_composition_actual_phases_keep_opaque_pre_and_same_outside_failure(self):
