@@ -127,7 +127,43 @@ prefixes remain available; they do not become a positive packet. The internal
 controller facts contain BEFORE observations, not a claim that its own cgroup
 is empty after exit. These paths have only run against inert mocked boundaries.
 
-Entry preparation, actual entry, packet finalization, the hosted actual job and
+The unprivileged finalizer joins controller-alive BEFORE records with the
+outside observer's original `beforeCleanup` snapshots after the controller is
+reaped. A positive producer envelope requires natural controller exit zero
+within 600 seconds, both terminal censuses empty and no cleanup attempt or
+error. Later cleaned emptiness cannot replace a failed original observation.
+The caller's in-memory outside failure remains authoritative; entry and
+controller errors remain secondary originals, with uncertain cross-phase
+ordering stated explicitly. Missing originals or lost caller state refuse a
+positive envelope.
+Compound JSON joins retain number types; equal-valued integer and float fields
+cannot substitute for one another. Original guest intervals must be exact
+integers, serial, within 120 seconds each and contained by the original
+controller lifetime.
+
+Fresh PRE and POST Git observations remain separate from the controller's
+prepared head/tree bindings and its eleven runtime probes. The PRE trace must
+already originate before controller creation; the finalizer cannot reconstruct
+it afterward. The fixed outside Git adapter has three bounded local descriptors.
+The finalizer stages only the twenty fixed roles in a new exclusive directory,
+with nineteen string-sorted byte/hash rows in the audit. Existing originals are
+never rewritten. Failure leaves available bounded originals and a failure
+audit; missing guest results are never synthesized.
+
+Internal entry, controller and outside facts remain outside the twenty-role
+artifact. Their exact bytes and the two Git traces use `RING3_ORIGINAL` log
+records with base64 payloads of at most 3,072 ASCII characters. Each record binds
+the name, index, count, original extent and SHA-256. The five internal names are
+closed; entry-failure is optional. Internal files are capped at 1 MiB, each Git
+trace at 256 KiB, all raw originals together at 5 MiB, and emitted records
+including headers and newlines at 8 MiB. Failed or short emission and failed
+flush preserve failure and cannot claim completion. The internal files remain
+untouched. A separate original-only job-log auditor and its source/official
+joins must be frozen before any event: the packet reader does not grade these
+logs or the outer 600-second lifetime. Neither runtime equality nor these
+assembler controls externally pins QEMU or establishes a complete host graph.
+
+Entry preparation, actual entry, finalizer integration, the hosted actual job and
 results remain unconnected. Polling cannot preempt blocking kernel operations,
 process creation or identity reads. The 15-minute job backstop is not wired at
 this checkpoint, and no real outside-owner lifecycle has been qualified.

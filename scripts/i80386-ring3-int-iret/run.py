@@ -6,6 +6,7 @@ mock interface below. The actual entry remains closed until the runtime graph,
 privileged first-entry and workflow receive their separate source review.
 """
 import argparse
+import base64
 import hashlib
 import json
 import os
@@ -1392,6 +1393,318 @@ def controller_execute(ops=None):
     return ops,failure
 
 
+PACKET_ROLES = frozenset(('audit.json source.before.json source.after.json runtime.before.json '
+    'runtime.after.json inputs/fixture.rom inputs/fixture.json resources.json '
+    'js/report.json js/observations.json js/writes.json js/memory.before.bin '
+    'js/memory.after.bin js/stdout js/stderr js/process.json qemu/report.json '
+    'qemu/stdout qemu/stderr qemu/process.json').split())
+AUDIT_CAPS = {'packetBytes':16<<20,'jsonBytes':1<<20,'streamBytes':128<<10,'ramBytes':1<<20,
+    'romBytes':65536,'calls':2000000,'childMs':120000,'controllerMs':600000,'jobMinutes':15,'writes':4096}
+INTERNAL_NAMES = ('.entry.json','.controller.before.json','.controller.json','.outside.json','.entry-failure.json')
+EXPORT = Path('build/i80386-ring3-int-iret-export')
+GIT_TRACE_CAP = 256<<10
+
+
+def final_json(raw):
+    """Internal process facts include finite rusage floats; duplicates never pass."""
+    def pairs(values):
+        result={}
+        for key,value in values:
+            need(key not in result,'duplicate finalization JSON key');result[key]=value
+        return result
+    def number(token):
+        value=float(token);need(-float('inf')<value<float('inf'),'finite finalization number');return value
+    def reject(token):raise ValueError('nonfinite finalization JSON')
+    need(len(raw)<=JSON_CAP,'bounded finalization JSON')
+    return json.loads(raw,object_pairs_hook=pairs,parse_float=number,parse_constant=reject)
+
+
+def same_json(left,right):
+    """Canonical JSON joins preserve number types; bool/int/float aliases differ."""
+    return encode(left)==encode(right)
+
+
+def role_cap(name):
+    need(name in PACKET_ROLES,'closed original role name')
+    return JSON_CAP if name.endswith('.json') else 1<<20 if name.endswith('.bin') else 65536 if name.endswith('.rom') else STREAM_CAP
+
+
+def emit_originals(originals, emit, failure, flush):
+    """Exact raw originals in bounded official-log chunks, never a packet role.
+
+    Progress is retained on a short/failed emission. No retry/completion claim
+    is made after a partial line; original owned files remain untouched.
+    """
+    progress={'items':0,'chunks':0,'encodedBytes':0,'complete':False}
+    emitted_all=False;flushed=False
+    try:
+        allowed=set(INTERNAL_NAMES)|{'git.before.json','git.after.json'}
+        need(set(originals)<=allowed,'closed log-original names')
+        need(sum(len(data) for data in originals.values())<=5<<20,'aggregate raw log-original cap')
+        for name in sorted(originals):
+            raw=originals[name];cap=GIT_TRACE_CAP if name.startswith('git.') else JSON_CAP
+            need(type(raw) is bytes and len(raw)<=cap,'individual log-original cap')
+            encoded=base64.b64encode(raw).decode('ascii');count=max(1,(len(encoded)+3071)//3072)
+            need(count<=456,'finite original chunk count')
+            for index in range(count):
+                line=b'RING3_ORIGINAL '+encode({'name':name,'index':index,'count':count,'bytes':len(raw),
+                    'sha256':sha(raw),'data':encoded[index*3072:(index+1)*3072]})
+                need(progress['encodedBytes']+len(line)<=8<<20 and progress['chunks']<2600,'encoded log-original cap')
+                written=emit(line)
+                need(type(written) is int and written==len(line),'complete original log-line emission')
+                progress['encodedBytes']+=len(line);progress['chunks']+=1
+            progress['items']+=1
+        emitted_all=True
+    except BaseException as error:failure.add(error,'original-log-retention')
+    finally:
+        try:flush();flushed=True
+        except BaseException as error:failure.add(error,'original-log-flush')
+    progress['complete']=emitted_all and flushed
+    return progress
+
+
+def outside_unprivileged(environ):
+    uid,gid=os.getresuid()[0],os.getresgid()[0]
+    need(uid>0 and gid>0,'finalization requires an unprivileged invoker');entry_ids(uid,gid)
+    root=expected_cgroup(environ);text=entry_proc('/proc/self/cgroup')
+    need(text.startswith('0::/') and text.endswith('\n') and text.count('\n')==1 and
+         text[3:-1]!='/'+root.name and not text[3:-1].startswith('/'+root.name+'/'),
+         'unprivileged finalizer must be outside manual subtree')
+    checkout=Path.cwd()
+    for directory in (checkout,checkout/'build',checkout/PACKET):
+        info=directory.lstat()
+        need(directory.resolve(strict=True)==directory and stat.S_ISDIR(info.st_mode) and
+             (info.st_uid,info.st_gid)==(uid,gid),'canonical unprivileged finalizer directories')
+    return uid,gid
+
+
+class OutsideGit(LinuxTool):
+    """Only fixed local Git metadata; outside the guest runtime.v2 graph."""
+    def __init__(self,argv):
+        super().__init__(None,argv,os.getpid())
+    preexec=LinuxController.preexec  # Finite identity/limits, no manual-cgroup migration.
+
+
+class GitObservation:
+    def __init__(self,environ,phase,factory=None):
+        need(phase in ('before','after'),'fixed outside Git phase')
+        self.environ=dict(environ);self.phase=phase;self.factory=OutsideGit if factory is None else factory
+        git=['git','--no-replace-objects','-c','gc.auto=0','-c','maintenance.auto=false']
+        self.allowed=[git+['rev-parse','HEAD'],git+['rev-parse','HEAD^{tree}'],git+['ls-tree','-r','HEAD','--',*sorted(SOURCE_PATHS)]]
+        self.commands=[]
+
+    def command(self,argv,cap):
+        outside_unprivileged(self.environ)
+        need(argv in self.allowed and len(self.commands)<3,'three exact outside Git descriptors')
+        actual=['/usr/bin/git',*argv[1:]]
+        process,streams=collect_child(self.factory(actual),'discovery',actual,profile='discovery')
+        self.commands.append({'process':process,'stdoutHex':streams['stdout'].hex(),'stderrHex':streams['stderr'].hex()})
+        need(len(encode(self.commands))<=GIT_TRACE_CAP,'bounded outside Git trace')
+        if process['firstFailure'] is not None:raise ObservedFailure(process['firstFailure'],process['secondary'])
+        need(streams['stderr']==b'' and len(streams['stdout'])<=cap,'outside Git original output bounds')
+        return streams['stdout']
+
+    def capture(self,head):
+        failure=FirstFailure();source=None
+        try:source=capture_source(head,self.command,read=bounded_read)
+        except BaseException as error:failure.add(error,'outside-git-'+self.phase)
+        raw=encode({'schema':'bw.ring3.git.v1','phase':self.phase,'source':source,'commands':self.commands,
+                    'firstFailure':failure.first,'secondary':failure.secondary})
+        need(len(raw)<=GIT_TRACE_CAP,'complete outside Git trace cap')
+        return raw,failure
+
+
+def require_fields(value,names,message):
+    need(type(value) is dict and set(value)==set(names.split()),message)
+
+
+def finalizer_tree():
+    """Four fixed directories only; no recursive discovery or hidden-file fallback."""
+    allowed=set(PACKET_ROLES)|set(INTERNAL_NAMES)
+    for suffix in ('','inputs','js','qemu'):
+        directory=PACKET/suffix
+        count=0
+        for path in directory.iterdir():
+            count+=1;need(count<=32,'finite finalization directory census')
+            relative=path.relative_to(PACKET).as_posix();info=path.lstat()
+            if relative in ('inputs','js','qemu'):
+                need(stat.S_ISDIR(info.st_mode) and path.resolve(strict=True)==Path.cwd()/path,'fixed packet directory')
+            else:
+                need(relative not in ('audit.json','resources.json'),'stale derived finalization product')
+                need(relative in allowed and stat.S_ISREG(info.st_mode),'unknown or nonregular packet path')
+
+
+def read_final_original(name,cap):
+    need(name in PACKET_ROLES or name in INTERNAL_NAMES,'fixed original read allowlist')
+    path=PACKET/name
+    need(path.resolve(strict=True)==Path.cwd()/path and stat.S_ISREG(path.lstat().st_mode),'canonical regular finalization original')
+    return bounded_read(path,cap)
+
+
+def check_git_trace(raw,phase,source,outer):
+    need(type(raw) is bytes and len(raw)<=GIT_TRACE_CAP,'required bounded original Git trace')
+    trace=final_json(raw)
+    require_fields(trace,'schema phase source commands firstFailure secondary','closed original Git trace')
+    need(trace['schema']=='bw.ring3.git.v1' and trace['phase']==phase and same_json(trace['source'],source) and
+         trace['firstFailure'] is None and trace['secondary']==[] and type(trace['commands']) is list and len(trace['commands'])==3,
+         'fresh successful original Git observation')
+    descriptors=GitObservation({},phase).allowed
+    previous=0;outputs=[]
+    for command,argv in zip(trace['commands'],descriptors):
+        require_fields(command,'process stdoutHex stderrHex','closed Git command original')
+        process=command['process']
+        require_fields(process,'schema role argv cwdRole environment pid pgid parentPid startTicks spawnMonoNs reapMonoNs exitCode signal waitStatus timedOut rusage firstFailure secondary','closed original Git process')
+        need(process['schema']=='bw.ring3.process.v1' and process['cwdRole']=='checkout' and
+             all(type(process[key]) is int and process[key]>0 for key in ('pid','pgid','parentPid','startTicks')) and process['pid']==process['pgid'] and
+             same_json(process['argv'],['/usr/bin/git',*argv[1:]]) and same_json(process['environment'],ENV) and process['role']=='discovery' and
+             process['firstFailure'] is None and process['secondary']==[] and process['timedOut'] is False and
+             type(process['waitStatus']) is int and process['waitStatus']==0 and type(process['exitCode']) is int and process['exitCode']==0 and
+             process['signal'] is None,'original finite Git terminal facts')
+        start,end=process['spawnMonoNs'],process['reapMonoNs']
+        need(type(start) is int and type(end) is int and previous<=start<=end and end-start<=10000000000,'finite ordered Git originals')
+        previous=end
+        need(end<=outer['spawnMonoNs'] if phase=='before' else start>=outer['reapMonoNs'],'PRE/POST Git chronology')
+        need(type(command['stdoutHex']) is str and len(bytes.fromhex(command['stdoutHex']))<=16384 and command['stderrHex']=='','Git raw original extent')
+        outputs.append(bytes.fromhex(command['stdoutHex']))
+    need(outputs[0].strip().decode()==source['head'] and outputs[1].strip().decode()==source['tree'],'raw Git HEAD/tree source join')
+    listing={}
+    for line in outputs[2].decode().splitlines():
+        metadata,path=line.split('\t');mode,kind,blob=metadata.split()
+        need(path in SOURCE_PATHS and path not in listing and kind=='blob','closed original Git tree rows')
+        listing[path]=(mode,blob)
+    need(set(listing)==SOURCE_PATHS and all(listing[path]==(source['files'][path]['mode'],source['files'][path]['blob']) for path in listing),
+         'raw Git tree/source mode and blob joins')
+    return trace
+
+
+def join_final_resources(internal,originals,outside_result,environ):
+    entry=internal['.entry.json'];before=internal['.controller.before.json'];controller=internal['.controller.json'];outer=internal['.outside.json']
+    require_fields(entry,'schema uid gid root sourceSha256 python cgroups','closed final entry original')
+    require_fields(before,'pid before','closed controller BEFORE original')
+    require_fields(outer,'process cleanup firstFailure secondary streamsHex','closed outside original')
+    need(same_json(outer['process'],outside_result['process']) and same_json(outer['cleanup'],outside_result['cleanup']),'in-memory outside original join')
+    process=outer['process'];cleanup=outer['cleanup'];pid=process['pid']
+    require_fields(process,'schema role argv cwdRole environment pid pgid parentPid startTicks spawnMonoNs reapMonoNs exitCode signal waitStatus timedOut rusage firstFailure secondary','closed original outside process')
+    need(type(pid) is int and pid>0 and type(process['pgid']) is int and process['pgid']==pid and
+         process['role']=='controller' and process['firstFailure'] is None and process['secondary']==[] and
+         process['timedOut'] is False and type(process['exitCode']) is int and process['exitCode']==0 and
+         type(process['waitStatus']) is int and process['waitStatus']==0 and process['signal'] is None and
+         type(process['spawnMonoNs']) is int and type(process['reapMonoNs']) is int and
+         0<process['spawnMonoNs']<=process['reapMonoNs']<=process['spawnMonoNs']+600000000000,'natural finite original controller terminal')
+    need(same_json(process['argv'],[entry['python']['path'],'-I','-B',RUN_FILE,'--bootstrap']) and
+         entry['root']==str(expected_cgroup(environ)) and type(entry['uid']) is int and type(entry['gid']) is int and
+         entry['uid']>0 and entry['gid']>0 and same_json(process['environment'],dict(ENV,**{name:environ[name] for name in
+            ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')},SUDO_UID=str(entry['uid']),SUDO_GID=str(entry['gid']))),
+         'outside run/source/Python/invoker binding')
+    need(type(before['pid']) is int and type(controller['pid']) is int and before['pid']==controller['pid']==pid and same_json(before['before'],controller['before']) and
+         outer['firstFailure'] is None and outer['secondary']==[] and controller['firstFailure'] is None and controller['secondary']==[],
+         'controller and outside original error/PID joins')
+    require_fields(cleanup,'beforeCleanup afterCleanup sessionSignalAttempted cgroupKillAttempted cleanupTerminal polls','closed outside terminal observations')
+    need(cleanup['sessionSignalAttempted'] is False and cleanup['cgroupKillAttempted'] is False and cleanup['cleanupTerminal'] is None and
+         type(cleanup['polls']) is int and 1<=cleanup['polls']<=128,'no cleaned emptiness substituted for terminal evidence')
+    roles={'enclosing','controller','js','qemu'}
+    need(set(before['before'])==set(cleanup['beforeCleanup'])==set(cleanup['afterCleanup'])==set(entry['cgroups'])==roles,'four exact resource roles')
+    for role in roles:
+        for when in ('beforeCleanup','afterCleanup'):
+            snap=cleanup[when][role];entry_snapshot(snap)
+            need(same_json(snap['identity'],entry['cgroups'][role]['identity']),'stable outside terminal identity')
+        snap=before['before'][role]
+        need(same_json(snap['identity'],entry['cgroups'][role]['identity']) and same_json(snap['limits'],LIMITS) and
+             same_json(snap['procs'],[pid] if role=='controller' else []) and
+             snap['raw']['pidsCurrent'].strip()==('1' if role in ('enclosing','controller') else '0') and
+             'populated '+('1' if role in ('enclosing','controller') else '0') in snap['raw']['cgroupEvents'].splitlines(),
+             'controller-alive BEFORE census source')
+    source=final_json(originals['source.before.json'])
+    need(entry['sourceSha256']==sha(originals['source.before.json']) and source['head']==environ['BW_EXPECTED_HEAD'] and
+         source['tree']==environ['BW_EXPECTED_TREE'] and same_json(final_json(originals['source.after.json']),source),'source file-readback and prepared binding join')
+    need(same_json(final_json(originals['runtime.before.json']),final_json(originals['runtime.after.json'])),'runtime observed readback equality only')
+    for role in ('js','qemu'):
+        guest=final_json(originals[role+'/process.json'])
+        need(same_json(controller['processes'][role],guest) and type(guest['parentPid']) is int and type(guest['pid']) is int and guest['pid']>0 and guest['parentPid']==pid and guest['pid']!=pid,'original guest parent/controller joins')
+    need(controller['processes']['js']['pid']!=controller['processes']['qemu']['pid'],'fresh serial engine PIDs')
+    js,qemu=(controller['processes'][role] for role in ('js','qemu'))
+    need(all(type(guest[key]) is int for guest in (js,qemu) for key in ('spawnMonoNs','reapMonoNs')) and
+         all(0<=guest['reapMonoNs']-guest['spawnMonoNs']<=CHILD_NS for guest in (js,qemu)),
+         'exact finite original guest intervals')
+    need(process['spawnMonoNs']<=js['spawnMonoNs']<=js['reapMonoNs']<=qemu['spawnMonoNs']<=qemu['reapMonoNs']<=process['reapMonoNs'],
+         'serial original guests contained by controller lifetime')
+    def refs(names,prefix):return {name:{'bytes':len(originals[prefix+name]),'sha256':sha(originals[prefix+name])} for name in names}
+    input_refs=refs(('fixture.rom','fixture.json'),'inputs/')
+    need(all(same_json(controller[key],input_refs) for key in ('inputsBefore','barrierInputs','inputsAfter')) and
+         same_json(controller['jsOriginals'],refs(ControllerOps.JS_FILES,'js/')),'internal original input/JS references')
+    return {'schema':'bw.ring3.resources.v1','enclosing':{'before':before['before']['enclosing'],'after':cleanup['beforeCleanup']['enclosing']},
+        'controller':{'pid':pid,'before':before['before']['controller'],'after':cleanup['beforeCleanup']['controller']},
+        'children':{role:{'before':before['before'][role],'after':cleanup['beforeCleanup'][role]} for role in ('js','qemu')},
+        'firstFailure':None,'secondary':[]}
+
+
+def finalize_packet(outside_result,outside_failure,pre_git,environ=None,*,post_observer=None,emit=None,flush=None):
+    """Unprivileged original assembly. No actual CLI/job or standalone-reader authority."""
+    environ=dict(os.environ if environ is None else environ);failure=outside_failure
+    need(isinstance(failure,FirstFailure),'authoritative in-memory outside failure required')
+    originals={};raw_internal={};internal={};progress=None;staged=[];post_git=None
+    try:
+        outside_unprivileged(environ)
+        try:finalizer_tree()
+        except Exception as error:failure.add(error,'finalizer-tree')
+        for name in INTERNAL_NAMES:
+            try:
+                raw=read_final_original(name,JSON_CAP);raw_internal[name]=raw;internal[name]=final_json(raw)
+            except FileNotFoundError as error:
+                if name!='.entry-failure.json':failure.add(error,'finalizer-internal')
+            except Exception as error:failure.add(error,'finalizer-internal')
+        # Existing outside failure stays authoritative. No phase-string or
+        # chronology guesses reorder it; child originals remain secondary.
+        for name in ('.entry-failure.json','.controller.json'):
+            value=internal.get(name,{})
+            if value.get('firstFailure') is not None:failure.secondary.append(value['firstFailure'])
+            failure.secondary.extend(value.get('secondary',[]))
+        if failure.secondary:
+            failure.secondary.append({'phase':'finalizer-ordering','name':'ObservationLimit','message':'cross-phase first-error timing not inferred'})
+            if failure.first is None:failure.add(ValueError('internal failure envelope refused'),'finalizer-errors')
+        for name in sorted(PACKET_ROLES-{'audit.json','resources.json'}):
+            try:originals[name]=read_final_original(name,role_cap(name))
+            except Exception as error:failure.add(error,'finalizer-original-'+name)
+        observer=GitObservation(environ,'after') if post_observer is None else post_observer
+        try:
+            post_git,found=observer.capture(environ['BW_EXPECTED_HEAD']);failure.adopt(found.first,found.secondary)
+        except Exception as error:failure.add(error,'finalizer-post-git')
+        try:
+            resources=join_final_resources(internal,originals,outside_result,environ)
+            for phase,raw in (('before',pre_git),('after',post_git)):
+                check_git_trace(raw,phase,final_json(originals['source.'+phase+'.json']),outside_result['process'])
+            need('.entry-failure.json' not in internal,'entry failure cannot produce a positive packet')
+            originals['resources.json']=encode(resources)
+        except Exception as error:failure.add(error,'finalizer-join')
+        log_originals=dict(raw_internal)
+        if type(pre_git) is bytes:log_originals['git.before.json']=pre_git
+        if type(post_git) is bytes:log_originals['git.after.json']=post_git
+        progress=emit_originals(log_originals,sys.stdout.buffer.write if emit is None else emit,failure,
+                                sys.stdout.buffer.flush if flush is None else flush)
+        EXPORT.mkdir(mode=0o700)  # Exclusive directory; no overwrite or retry.
+        for directory in ('inputs','js','qemu'):(EXPORT/directory).mkdir(mode=0o700)
+        for name in sorted(originals):
+            try:
+                data=originals[name];need(len(data)<=role_cap(name),'staged original role cap')
+                write_new(EXPORT/name,data,role_cap(name));staged.append(name)
+            except Exception as error:failure.add(error,'finalizer-stage-'+name)
+        rows=[{'path':name,'bytes':len(originals[name]),'sha256':sha(originals[name])} for name in sorted(staged)]
+        if set(staged)!=PACKET_ROLES-{'audit.json'}:failure.add(ValueError('incomplete closed original packet'),'finalizer-roles')
+        source=final_json(originals['source.before.json']) if 'source.before.json' in originals else {}
+        audit={'schema':'bw.ring3.audit.v1','head':environ.get('BW_EXPECTED_HEAD'),'sourceTree':environ.get('BW_EXPECTED_TREE'),
+            'workflowSha256':source.get('files',{}).get('.github/workflows/i80386-ring3-int-iret.yml',{}).get('sha256'),
+            'roles':rows,'caps':AUDIT_CAPS,'firstFailure':failure.first,'secondary':failure.secondary}
+        raw=encode(audit);need(len(raw)<=JSON_CAP and sum(item['bytes'] for item in rows)+len(raw)<=PACKET_CAP,'expanded packet including audit cap')
+        write_new(EXPORT/'audit.json',raw,JSON_CAP);staged.append('audit.json')
+    except BaseException as error:
+        failure.add(error,'finalizer')
+        try:
+            diagnostic=encode({'firstFailure':failure.first,'secondary':failure.secondary})
+            need(len(diagnostic)<=16384,'finalizer failure diagnostic cap');sys.stderr.buffer.write(diagnostic)
+        except BaseException as secondary:failure.add(secondary,'finalizer-diagnostic')
+    return {'staged':staged,'log':progress,'pass':failure.first is None and failure.secondary==[] and set(staged)==PACKET_ROLES},failure
+
+
 def controls():
     """Inert actual-function controls. Never opens a cgroup, forks or execs."""
     import unittest
@@ -1429,6 +1742,248 @@ def controls():
                 'rusage':{'userSeconds':0.1,'systemSeconds':0.01,'maxRssKiB':1024}}
 
     class Tests(unittest.TestCase):
+        @contextlib.contextmanager
+        def finalizer_edges(self):
+            with self.controller_edges() as (ops,state,plan,files,calls):
+                def factory(groups,role,argv):
+                    fake=Fake([[('stdout',role.encode()+b'-opaque')]],status(0 if role=='js' else 1));fake.t=12000 if role=='js' else 14000
+                    pid=201 if role=='js' else 202
+                    fake.spawn=lambda:{'pid':pid,'pgid':pid,'parentPid':101,'startTicks':123+pid}
+                    return fake
+                ops.child_factory=factory;_,control_failure=controller_execute(ops);self.assertIsNone(control_failure.first)
+                data={'source.before.json':encode(state['source']),'.entry.json':encode(state['owner'])}
+                data.update({'inputs/'+name:raw for name,raw in state['inputs'].items()})
+                data.update({'js/'+name:raw for name,raw in state['rawJs'].items()})
+                data.update({str(Path(name).relative_to(PACKET)):raw for name,raw in state['writes']})
+                outer_fake=Fake(terminal=status());outer_fake.environment=dict(ENV,**{k:state['env'][k] for k in
+                    ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')},SUDO_UID='1001',SUDO_GID='1002')
+                process,_=collect_child(outer_fake,'controller',['/usr/bin/python3.12','-I','-B',RUN_FILE,'--bootstrap'],profile='controller')
+                process.update(spawnMonoNs=10000,reapMonoNs=20000)
+                empty=json.loads(json.dumps(state['owner']['cgroups']))
+                outside={'process':process,'cleanup':{'beforeCleanup':empty,'afterCleanup':json.loads(json.dumps(empty)),
+                    'sessionSignalAttempted':False,'cgroupKillAttempted':False,'cleanupTerminal':None,'polls':1}}
+                outside['cleanup']['afterCleanup']['controller']['raw']['memoryCurrent']='1\n'
+                data['.outside.json']=encode(dict(outside,firstFailure=None,secondary=[],streamsHex={'stdout':'','stderr':''}))
+                source=state['source'];listing=''.join(source['files'][name]['mode']+' blob '+source['files'][name]['blob']+'\t'+name+'\n' for name in sorted(SOURCE_PATHS))
+                def trace(phase):
+                    commands=[]
+                    for index,argv in enumerate(GitObservation({},phase).allowed):
+                        p=json.loads(json.dumps(process));p.update(role='discovery',argv=['/usr/bin/git',*argv[1:]],environment=dict(ENV),pid=501+index,pgid=501+index,parentPid=100)
+                        start=(100 if phase=='before' else 30000)+index*100;p.update(spawnMonoNs=start,reapMonoNs=start+1)
+                        output=((source['head']+'\n'),(source['tree']+'\n'),listing)[index].encode()
+                        commands.append({'process':p,'stdoutHex':output.hex(),'stderrHex':''})
+                    return encode({'schema':'bw.ring3.git.v1','phase':phase,'source':source,'commands':commands,'firstFailure':None,'secondary':[]})
+                stage={'data':data,'export':{},'directories':set(),'log':[],'reads':[],'symlinks':set()}
+                old_read=globals()['bounded_read']
+                def read(path,cap,**kwargs):
+                    try:name=Path(path).relative_to(PACKET).as_posix()
+                    except ValueError:return old_read(path,cap,**kwargs)
+                    stage['reads'].append(name)
+                    if name not in data:raise FileNotFoundError('inert missing '+name)
+                    need(len(data[name])<=cap,'inert original extent cap');return data[name]
+                def iterdir(path):
+                    prefix=Path(path).relative_to(PACKET).as_posix();prefix='' if prefix=='.' else prefix+'/'
+                    names={name[len(prefix):].split('/')[0] for name in data if name.startswith(prefix)}
+                    if not prefix:names.update(('inputs','js','qemu'))
+                    return iter([path/name for name in sorted(names)])
+                def lstat(path):
+                    relative=str(path).replace('/checkout/','')
+                    isdir=relative in ('/checkout','build',str(PACKET),*(str(PACKET/name) for name in ('inputs','js','qemu')))
+                    mode=0o120777 if relative in stage['symlinks'] else 0o40755 if isdir else 0o100644
+                    return SimpleNamespace(st_mode=mode,st_uid=1001,st_gid=1002)
+                def mkdir(path,mode=0o777):
+                    name=str(path);need(name not in stage['directories'],'exclusive export directory');stage['directories'].add(name)
+                def write(path,raw,cap):
+                    name=Path(path).relative_to(EXPORT).as_posix();need(name not in stage['export'],'exclusive staged original')
+                    need(len(raw)<=cap,'staged encoding cap');stage['export'][name]=raw
+                observer=Mock();observer.capture.return_value=(trace('after'),FirstFailure())
+                with patch.dict(globals(),bounded_read=read,write_new=write),patch.object(Path,'iterdir',iterdir),\
+                     patch.object(Path,'lstat',lstat),patch.object(Path,'mkdir',mkdir),patch.object(os,'getpid',return_value=100),\
+                     patch.dict(globals(),entry_proc=lambda path:'0::/actions/job\n' if path.endswith('cgroup') else ''.join(k+':\t'+v+'\n' for k,v in state['caps'].items())):
+                    yield outside,state['env'],trace('before'),observer,stage
+
+        def test_finalizer_closed_stage_exact_originals_and_lexical_nineteen_rows(self):
+            with self.finalizer_edges() as (outside,env,pre,post,state):
+                result,failure=finalize_packet(outside,FirstFailure(),pre,env,post_observer=post,
+                    emit=lambda line:state['log'].append(line) or len(line),flush=lambda:None)
+                self.assertTrue(result['pass']);self.assertIsNone(failure.first);self.assertEqual(set(state['export']),PACKET_ROLES)
+                audit=final_json(state['export']['audit.json'])
+                self.assertEqual(audit['roles'],[{'path':name,'bytes':len(state['export'][name]),'sha256':sha(state['export'][name])}
+                    for name in sorted(PACKET_ROLES-{'audit.json'})])
+                self.assertEqual(state['export']['js/report.json'],state['data']['js/report.json'])
+                self.assertFalse(set(INTERNAL_NAMES)&set(state['export']))
+                resources=final_json(state['export']['resources.json'])
+                self.assertEqual(resources['controller']['after'],outside['cleanup']['beforeCleanup']['controller'])
+                names={final_json(line[len(b'RING3_ORIGINAL '):])['name'] for line in state['log']}
+                self.assertEqual(names,set(INTERNAL_NAMES)-{'.entry-failure.json'}|{'git.before.json','git.after.json'})
+
+        def test_finalizer_authoritative_first_survives_missing_facts_and_child_rows(self):
+            with self.finalizer_edges() as (outside,env,pre,post,state):
+                failure=FirstFailure();failure.add(ValueError('AUTHORITATIVE'),'outside')
+                child=final_json(state['data']['.controller.json']);child['firstFailure']={'phase':'child','name':'Fault','message':'ORIGINAL CHILD'}
+                state['data']['.controller.json']=encode(child);state['data'].pop('.outside.json')
+                result,failure=finalize_packet(outside,failure,pre,env,post_observer=post,emit=lambda line:len(line),flush=lambda:None)
+                self.assertFalse(result['pass']);self.assertEqual(failure.first['message'],'AUTHORITATIVE')
+                self.assertIn('ORIGINAL CHILD',[row['message'] for row in failure.secondary])
+                self.assertIn('ObservationLimit',[row['name'] for row in failure.secondary])
+                self.assertIn('audit.json',state['export'])
+
+        def test_finalizer_missing_or_retrospective_pre_git_refuses_positive(self):
+            for fault in ('missing','late','raw-head'):
+                with self.finalizer_edges() as (outside,env,pre,post,state):
+                    if fault=='missing':pre=None
+                    else:
+                        value=final_json(pre)
+                        if fault=='late':value['commands'][0]['process']['reapMonoNs']=outside['process']['reapMonoNs']+1
+                        else:value['commands'][0]['stdoutHex']=b'wrong\n'.hex()
+                        pre=encode(value)
+                    result,failure=finalize_packet(outside,FirstFailure(),pre,env,post_observer=post,emit=lambda line:len(line),flush=lambda:None)
+                    self.assertFalse(result['pass']);self.assertIsNotNone(failure.first)
+
+        def test_finalizer_git_typed_source_alias_requires_canonical_json_join(self):
+            with self.finalizer_edges() as (outside,env,pre,post,state):
+                source=final_json(state['data']['source.before.json'])
+                self.assertEqual(check_git_trace(pre,'before',source,outside['process'])['source'],source)
+                trace=final_json(pre);trace['source']['files']['LICENSE']['bytes']=float(source['files']['LICENSE']['bytes'])
+                # The raw HEAD/tree/tree rows still match. Reencode the complete
+                # trace; the compound source join must reject the number alias.
+                with self.assertRaises(ValueError):check_git_trace(encode(trace),'before',source,outside['process'])
+
+        def test_finalizer_reencoded_typed_compound_and_pid_aliases_refuse(self):
+            for fault in ('source-after','runtime-after','before-pid','controller-pid','guest-parent','guest-process','identity','before-procs','input-refs','js-refs','outside-rusage'):
+                with self.finalizer_edges() as (outside,env,pre,post,state):
+                    def change(name,callback):
+                        value=final_json(state['data'][name]);callback(value);state['data'][name]=encode(value)
+                    def number_alias(value):
+                        for key,item in value.items():
+                            if type(item) is int:value[key]=float(item);return True
+                            if type(item) is dict and number_alias(item):return True
+                        return False
+                    if fault=='source-after':change('source.after.json',lambda v:v['files']['LICENSE'].update(bytes=float(v['files']['LICENSE']['bytes'])))
+                    elif fault=='runtime-after':change('runtime.after.json',lambda v:self.assertTrue(number_alias(v)))
+                    elif fault=='before-pid':change('.controller.before.json',lambda v:v.update(pid=float(v['pid'])))
+                    elif fault=='controller-pid':change('.controller.json',lambda v:v.update(pid=float(v['pid'])))
+                    elif fault=='guest-parent':
+                        change('js/process.json',lambda v:v.update(parentPid=float(v['parentPid'])))
+                        change('.controller.json',lambda v:v['processes'].update(js=final_json(state['data']['js/process.json'])))
+                    elif fault=='guest-process':change('.controller.json',lambda v:v['processes']['js'].update(startTicks=float(v['processes']['js']['startTicks'])))
+                    elif fault=='identity':change('.entry.json',lambda v:v['cgroups']['controller']['identity'].update(inode=float(v['cgroups']['controller']['identity']['inode'])))
+                    elif fault=='before-procs':
+                        change('.controller.before.json',lambda v:v['before']['controller'].update(procs=[101.0]))
+                        change('.controller.json',lambda v:v.update(before=final_json(state['data']['.controller.before.json'])['before']))
+                    elif fault=='input-refs':
+                        change('.controller.json',lambda v:[v[key]['fixture.rom'].update(bytes=float(v[key]['fixture.rom']['bytes'])) for key in ('inputsBefore','barrierInputs','inputsAfter')])
+                    elif fault=='js-refs':change('.controller.json',lambda v:v['jsOriginals']['report.json'].update(bytes=float(v['jsOriginals']['report.json']['bytes'])))
+                    elif fault=='outside-rusage':change('.outside.json',lambda v:v['process']['rusage'].update(maxRssKiB=float(v['process']['rusage']['maxRssKiB'])))
+                    result,failure=finalize_packet(outside,FirstFailure(),pre,env,post_observer=post,emit=lambda line:len(line),flush=lambda:None)
+                    self.assertFalse(result['pass'],fault);self.assertNotIn('resources.json',state['export'],fault)
+                    self.assertIsNotNone(failure.first,fault)
+
+        def test_finalizer_reencoded_guest_intervals_require_controller_containment(self):
+            for fault in ('outer-reap','js-before-parent','qemu-before-js','reversed','float','guest-over-cap'):
+                with self.finalizer_edges() as (outside,env,pre,post,state):
+                    def change_guest(role,callback):
+                        guest=final_json(state['data'][role+'/process.json']);callback(guest)
+                        state['data'][role+'/process.json']=encode(guest)
+                        controller=final_json(state['data']['.controller.json']);controller['processes'][role]=guest
+                        state['data']['.controller.json']=encode(controller)
+                    if fault=='outer-reap':outside['process']['reapMonoNs']=outside['process']['spawnMonoNs']+1
+                    elif fault=='js-before-parent':change_guest('js',lambda g:g.update(spawnMonoNs=outside['process']['spawnMonoNs']-1))
+                    elif fault=='qemu-before-js':change_guest('qemu',lambda g:g.update(spawnMonoNs=final_json(state['data']['js/process.json'])['reapMonoNs']-1))
+                    elif fault=='reversed':change_guest('js',lambda g:g.update(spawnMonoNs=g['reapMonoNs']+1))
+                    elif fault=='float':change_guest('js',lambda g:g.update(spawnMonoNs=float(g['spawnMonoNs'])))
+                    else:
+                        change_guest('qemu',lambda g:g.update(reapMonoNs=g['spawnMonoNs']+CHILD_NS+1))
+                        outside['process']['reapMonoNs']=final_json(state['data']['qemu/process.json'])['reapMonoNs']
+                        trace=final_json(post.capture.return_value[0])
+                        for index,row in enumerate(trace['commands']):
+                            start=outside['process']['reapMonoNs']+index*100+1
+                            row['process'].update(spawnMonoNs=start,reapMonoNs=start+1)
+                        post.capture.return_value=(encode(trace),FirstFailure())
+                    original=final_json(state['data']['.outside.json']);original['process']=outside['process']
+                    state['data']['.outside.json']=encode(original)
+                    result,failure=finalize_packet(outside,FirstFailure(),pre,env,post_observer=post,emit=lambda line:len(line),flush=lambda:None)
+                    self.assertFalse(result['pass'],fault);self.assertNotIn('resources.json',state['export'],fault)
+                    self.assertIsNotNone(failure.first,fault)
+
+        def test_finalizer_cleanup_or_wrong_controller_join_never_yields_resources(self):
+            for fault in ('cleanup','before','pid'):
+                with self.finalizer_edges() as (outside,env,pre,post,state):
+                    if fault=='cleanup':outside['cleanup']['cgroupKillAttempted']=True
+                    elif fault=='before':outside['cleanup']['beforeCleanup']['controller']['procs']=[101]
+                    else:outside['process']['pid']=999
+                    state['data']['.outside.json']=encode(dict(outside,firstFailure=None,secondary=[],streamsHex={'stdout':'','stderr':''}))
+                    result,failure=finalize_packet(outside,FirstFailure(),pre,env,post_observer=post,emit=lambda line:len(line),flush=lambda:None)
+                    self.assertFalse(result['pass']);self.assertNotIn('resources.json',state['export'])
+
+        def test_finalizer_tree_refusal_still_reads_only_known_originals_logs_and_failure_stage(self):
+            for fault in ('unknown','stale','symlink'):
+                with self.finalizer_edges() as (outside,env,pre,post,state):
+                    if fault=='unknown':state['data']['unknown.bin']=b'NEVER READ'
+                    elif fault=='stale':state['data']['audit.json']=b'STALE ORIGINAL'
+                    else:state['symlinks'].add(str(PACKET/'js/stdout'))
+                    result,failure=finalize_packet(outside,FirstFailure(),pre,env,post_observer=post,
+                        emit=lambda line:state['log'].append(line) or len(line),flush=lambda:None)
+                    self.assertFalse(result['pass']);self.assertEqual(failure.first['phase'],'finalizer-tree')
+                    self.assertNotIn('unknown.bin',state['reads']);self.assertTrue(state['log']);self.assertIn('audit.json',state['export'])
+                    if fault=='symlink':self.assertNotIn('js/stdout',state['reads'])
+
+        def test_finalizer_stage_failure_keeps_original_primary_and_other_available_roles(self):
+            with self.finalizer_edges() as (outside,env,pre,post,state):
+                failure=FirstFailure();failure.add(ValueError('FIRST'),'outside')
+                original=globals()['write_new']
+                def write(path,raw,cap):
+                    if Path(path).name=='stdout':raise OSError('STAGE')
+                    original(path,raw,cap)
+                with patch.dict(globals(),write_new=write):
+                    result,failure=finalize_packet(outside,failure,pre,env,post_observer=post,emit=lambda line:len(line),flush=lambda:None)
+                self.assertEqual(failure.first['message'],'FIRST');self.assertFalse(result['pass'])
+                self.assertIn('audit.json',state['export']);self.assertIn('js/stderr',state['export'])
+
+        def test_log_original_chunking_exact_roundtrip_and_flush_before_complete(self):
+            originals={'.entry.json':b'A'*10000,'git.before.json':b'RAW'};lines=[];failure=FirstFailure();flushed=[]
+            progress=emit_originals(originals,lambda line:lines.append(line) or len(line),failure,lambda:flushed.append(True))
+            self.assertTrue(progress['complete']);self.assertEqual(flushed,[True]);self.assertIsNone(failure.first)
+            reconstructed={}
+            for line in lines:
+                value=final_json(line[len(b'RING3_ORIGINAL '):]);self.assertLessEqual(len(value['data']),3072)
+                reconstructed.setdefault(value['name'],'');reconstructed[value['name']]+=value['data']
+            self.assertEqual({name:base64.b64decode(value,validate=True) for name,value in reconstructed.items()},originals)
+            self.assertEqual(progress['encodedBytes'],sum(map(len,lines)))
+
+        def test_log_short_write_flush_and_caps_preserve_first_no_complete_claim(self):
+            for fault in ('short','flush','aggregate','individual'):
+                failure=FirstFailure();failure.add(ValueError('FIRST'),'outside');flushed=[]
+                originals={'.entry.json':b'A'}
+                if fault=='aggregate':originals={name:b'A'*(1<<20) for name in INTERNAL_NAMES};originals['git.before.json']=b'X'
+                if fault=='individual':originals={'git.before.json':b'A'*(GIT_TRACE_CAP+1)}
+                def flush():
+                    flushed.append(True)
+                    if fault=='flush':raise OSError('FLUSH')
+                progress=emit_originals(originals,lambda line:len(line)-1 if fault=='short' else len(line),failure,flush)
+                self.assertFalse(progress['complete']);self.assertEqual(failure.first['message'],'FIRST');self.assertTrue(failure.secondary);self.assertEqual(flushed,[True])
+
+        def test_finalizer_flush_error_keeps_failure_audit_and_source_originals(self):
+            with self.finalizer_edges() as (outside,env,pre,post,state):
+                before=dict(state['data'])
+                def flush():raise OSError('FLUSH')
+                result,failure=finalize_packet(outside,FirstFailure(),pre,env,post_observer=post,emit=lambda line:len(line),flush=flush)
+                self.assertFalse(result['pass']);self.assertEqual(failure.first['message'],'FLUSH');self.assertFalse(result['log']['complete'])
+                self.assertEqual(state['data'],before);self.assertEqual(final_json(state['export']['audit.json'])['firstFailure'],failure.first)
+
+        def test_outside_git_actual_fixed_callback_three_originals_and_no_arbitrary_command(self):
+            with self.controller_edges() as (ops,state,plan,files,calls):
+                source=state['source'];listing=''.join(source['files'][name]['mode']+' blob '+source['files'][name]['blob']+'\t'+name+'\n' for name in sorted(SOURCE_PATHS)).encode()
+                outputs=[(source['head']+'\n').encode(),(source['tree']+'\n').encode(),listing];created=[]
+                def factory(argv):
+                    created.append(argv);return Fake([[('stdout',outputs[len(created)-1])]],status())
+                with patch.dict(globals(),outside_unprivileged=lambda env:(1001,1002)):
+                    observer=GitObservation(state['env'],'after',factory);raw,failure=observer.capture('a'*40)
+                    self.assertIsNone(failure.first);trace=final_json(raw);self.assertEqual(len(trace['commands']),3)
+                    self.assertEqual(trace['source'],source);self.assertTrue(all(argv[0]=='/usr/bin/git' for argv in created))
+                    with self.assertRaises(ValueError):observer.command(['git','fetch'],100)
+                    self.assertEqual(len(created),3)
+
         @contextlib.contextmanager
         def controller_edges(self,fail_probe=None):
             with self.entry_edges() as (entry,state):
