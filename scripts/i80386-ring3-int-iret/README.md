@@ -243,15 +243,48 @@ audit; missing guest results are never synthesized.
 Internal entry, controller and outside facts remain outside the twenty-role
 artifact. Their exact bytes and the two Git traces use `RING3_ORIGINAL` log
 records with base64 payloads of at most 3,072 ASCII characters. Each record binds
-the name, index, count, original extent and SHA-256. The five internal names are
-closed; entry-failure is optional. Internal files are capped at 1 MiB, each Git
-trace at 256 KiB, all raw originals together at 5 MiB, and emitted records
+the name, index, count, original extent and SHA-256. The five internal file names are
+closed; entry-failure is optional. One additional closed log name,
+`preparation.phase.json`, is an in-memory original, never a packet file. Each
+internal file and this preparation record is capped at 1 MiB, each Git trace
+at 256 KiB, all raw originals together at 5 MiB, and emitted records
 including headers and newlines at 8 MiB. Failed or short emission and failed
 flush preserve failure and cannot claim completion. The internal files remain
 untouched. A separate original-only job-log auditor and its source/official
 joins must be frozen before any event: the packet reader does not grade these
 logs or the outer 600-second lifetime. Neither runtime equality nor these
 assembler controls externally pins QEMU or establishes a complete host graph.
+
+The preparation log record uses `bw.ring3.preparation-original.v1` with the
+closed fields `schema`, `runId`, `attempt`, `head`, `tree`, `python`, `invoker`,
+`captureMonoNs`, `process`, `stdout`, `stderr`, `ownership`, `preGit`,
+`firstFailure` and `secondary`. Each stream retains its exact raw prefix as
+base64 with its byte extent and SHA-256; `preGit` is the extent/hash reference
+to the original decoded frame body. The record freezes immutable canonical
+bytes immediately after the ownership finish and descriptor close, before
+outside controller creation. Later changes to returned dictionaries cannot
+replace those bytes. Failed phases retain null or partial originals and their
+original error rows; encoding or cap failure prevents the next phase.
+
+The composition requires its own frozen record. Its unprivileged finalizer
+joins the fixed Python, source, run, invoker, descriptor, parent PID, frame and
+root-owned sibling facts. The three original PRE Git children are serial and
+contained in the preparation lifetime, at most ten seconds each. Preparation
+is at most 120 seconds; its terminal time precedes capture, which precedes the
+outside controller spawn. Equal monotonic timestamps are allowed. The root
+parent only decodes binary framing, never PRE JSON or guest bytes. Failure-only
+log emission requires a verified privilege drop and preserves the original
+failure through emission or flush faults. Standalone finalizer controls may
+omit this optional argument; composition and the new independent original
+admission require it. The packet reader and twenty roles stay unchanged.
+
+These source controls do not admit the sibling identity or the preparation
+record as their own expected external facts. A separately frozen standalone
+original auditor must join independently observed source, Python, invoker,
+root-owned sibling device/inode, official job and new preparation log record
+before any actual event. Earlier V4 originals and their readers remain
+unchanged; new phase provenance, hosted setup and the job backstop still need
+admission. No actual launch was enabled by this log-only addition.
 
 Preparation invocation, actual entry, finalizer integration, the hosted actual job and
 results remain unconnected. Polling cannot preempt blocking kernel operations,

@@ -1442,7 +1442,7 @@ def emit_originals(originals, emit, failure, flush):
     progress={'items':0,'chunks':0,'encodedBytes':0,'complete':False}
     emitted_all=False;flushed=False
     try:
-        allowed=set(INTERNAL_NAMES)|{'git.before.json','git.after.json'}
+        allowed=set(INTERNAL_NAMES)|{'git.before.json','git.after.json','preparation.phase.json'}
         need(set(originals)<=allowed,'closed log-original names')
         need(sum(len(data) for data in originals.values())<=5<<20,'aggregate raw log-original cap')
         for name in sorted(originals):
@@ -1581,6 +1581,95 @@ def check_git_trace(raw,phase,source,outer):
     return trace
 
 
+def check_preparation_original(raw,pre_git,outside_result,entry,environ):
+    """Unprivileged joins of frozen preparation originals; no expected oracle.
+
+    External source, runtime and sibling identity admission remains separate.
+    The root parent never uses this parser on the opaque PRE body.
+    """
+    need(type(raw) is bytes and 0<len(raw)<=JSON_CAP,'bounded frozen preparation original')
+    value=final_json(raw)
+    require_fields(value,'schema runId attempt head tree python invoker captureMonoNs process stdout stderr ownership preGit firstFailure secondary',
+                   'closed preparation original')
+    need(raw==encode(value) and value['schema']=='bw.ring3.preparation-original.v1' and
+         value['runId']==environ['GITHUB_RUN_ID'] and re.fullmatch('[1-9][0-9]*',value['runId']) is not None and
+         type(value['attempt']) is int and value['attempt']==1 and environ['GITHUB_RUN_ATTEMPT']=='1' and
+         value['head']==environ['BW_EXPECTED_HEAD'] and value['tree']==environ['BW_EXPECTED_TREE'] and
+         same_json(value['python'],entry['python']) and same_json(value['invoker'],{'uid':entry['uid'],'gid':entry['gid']}) and
+         value['firstFailure'] is None and value['secondary']==[], 'preparation source/invoker/error joins')
+    streams={}
+    for name in ('stdout','stderr'):
+        item=value[name];require_fields(item,'bytes sha256 base64','closed preparation stream original')
+        need(type(item['bytes']) is int and 0<=item['bytes']<=PREPARATION_STREAMS[name] and
+             type(item['base64']) is str,'bounded preparation stream encoding')
+        data=base64.b64decode(item['base64'],validate=True)
+        need(base64.b64encode(data).decode('ascii')==item['base64'] and len(data)==item['bytes'] and
+             sha(data)==item['sha256'],'preparation stream original extent/hash')
+        streams[name]=data
+    need(streams['stderr']==b'' and preparation_body(streams['stdout'])==pre_git and
+         same_json(value['preGit'],{'bytes':len(pre_git),'sha256':sha(pre_git)}),'original PRE framed-body join')
+    process=value['process'];outer=outside_result['process']
+    require_fields(process,'schema role argv cwdRole environment pid pgid parentPid startTicks spawnMonoNs reapMonoNs exitCode signal waitStatus timedOut rusage firstFailure secondary',
+                   'closed preparation process original')
+    need(process['schema']=='bw.ring3.process.v1' and process['role']=='preparation' and process['cwdRole']=='checkout' and
+         all(type(process[key]) is int and process[key]>0 for key in ('pid','pgid','parentPid','startTicks')) and
+         process['pid']==process['pgid'] and type(outer['parentPid']) is int and process['parentPid']==outer['parentPid'] and
+         same_json(process['argv'],[entry['python']['path'],'-I','-B',RUN_FILE,'--prepare']) and
+         same_json(process['environment'],dict(ENV,**{name:environ[name] for name in
+            ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')},SUDO_UID=str(entry['uid']),SUDO_GID=str(entry['gid']))) and
+         process['timedOut'] is False and type(process['exitCode']) is int and process['exitCode']==0 and
+         type(process['waitStatus']) is int and process['waitStatus']==0 and process['signal'] is None and
+         process['firstFailure'] is None and process['secondary']==[],'natural preparation descriptor/parent terminal joins')
+    start,end,captured=process['spawnMonoNs'],process['reapMonoNs'],value['captureMonoNs']
+    need(all(type(item) is int for item in (start,end,captured,outer['spawnMonoNs'])) and
+         0<start<=end<=captured<=outer['spawnMonoNs'] and end-start<=120000000000,'preparation/capture/outside interval chain')
+    trace=final_json(pre_git)
+    need(type(trace.get('commands')) is list and len(trace['commands'])==3,'three original PRE Git children')
+    previous=start
+    for command in trace['commands']:
+        git=command['process'];begin,finish=git['spawnMonoNs'],git['reapMonoNs']
+        need(type(git['parentPid']) is int and git['parentPid']==process['pid'] and
+             type(begin) is int and type(finish) is int and previous<=begin<=finish<=end and
+             finish-begin<=10000000000,'serial PRE Git children contained by preparation lifetime')
+        previous=finish
+    ownership=value['ownership']
+    require_fields(ownership,'schema path identity owner before beforeCleanup afterCleanup spawnAttempted sessionSignalAttempted killAttempted cleanupTerminal polls closeAttempted closeSucceeded partial',
+                   'closed preparation ownership original')
+    need(ownership['schema']=='bw.ring3.preparation-ownership.v1' and
+         ownership['path']==str(expected_cgroup(environ))+'-preparation' and
+         same_json(ownership['owner'],{'uid':0,'gid':0}) and
+         type(ownership['identity']) is dict and set(ownership['identity'])=={'device','inode'} and
+         all(type(item) is int and item>0 for item in ownership['identity'].values()) and
+         ownership['spawnAttempted'] is True and ownership['sessionSignalAttempted'] is False and
+         ownership['killAttempted'] is False and ownership['cleanupTerminal'] is None and
+         type(ownership['polls']) is int and 1<=ownership['polls']<=128 and
+         ownership['closeAttempted'] is True and ownership['closeSucceeded'] is True and
+         same_json(ownership['partial'],ownership['afterCleanup']),'natural closed preparation ownership')
+    previous=None
+    for key in ('before','beforeCleanup','afterCleanup'):
+        snapshot=ownership[key]
+        require_fields(snapshot,'identity owner limits raw procs','closed preparation ownership census')
+        need(same_json(snapshot['identity'],ownership['identity']) and same_json(snapshot['owner'],ownership['owner']) and
+             same_json(snapshot['limits'],LIMITS) and type(snapshot['raw']) is dict and
+             set(snapshot['raw'])==set(PreparationOwnership.FILES) and
+             all(type(item) is str and len(item.encode('ascii'))<=4096 for item in snapshot['raw'].values()) and
+             snapshot['raw']['cgroupProcs']=='','original root-owned preparation census identity/cap join')
+        entry_empty(snapshot)
+        need(all(snapshot['raw'][key].strip()==item for key,item in LIMITS.items()),'original preparation raw caps')
+        counters={}
+        for line in snapshot['raw']['memoryEvents'].splitlines():
+            pair=line.split();need(len(pair)==2 and pair[0] not in counters and re.fullmatch('[0-9]+',pair[1]) is not None,
+                                   'original bounded preparation memory counter')
+            counters[pair[0]]=int(pair[1])
+        need({'oom','oom_kill'}<=set(counters) and len(counters)<=32,'original preparation OOM counter keys')
+        if previous is not None:
+            need(set(previous)==set(counters) and all(counters[key]>=previous[key] for key in previous) and
+                 all(counters[key]==previous[key] for key in previous if key in ('oom','oom_kill','oom_group_kill')),
+                 'original preparation OOM/counter drift')
+        previous=counters
+    return value
+
+
 def join_final_resources(internal,originals,outside_result,environ):
     entry=internal['.entry.json'];before=internal['.controller.before.json'];controller=internal['.controller.json'];outer=internal['.outside.json']
     require_fields(entry,'schema uid gid root sourceSha256 python cgroups','closed final entry original')
@@ -1642,7 +1731,7 @@ def join_final_resources(internal,originals,outside_result,environ):
         'firstFailure':None,'secondary':[]}
 
 
-def finalize_packet(outside_result,outside_failure,pre_git,environ=None,*,post_observer=None,emit=None,flush=None):
+def finalize_packet(outside_result,outside_failure,pre_git,environ=None,*,post_observer=None,emit=None,flush=None,preparation_original=None):
     """Unprivileged original assembly. No actual CLI/job or standalone-reader authority."""
     environ=dict(os.environ if environ is None else environ);failure=outside_failure
     need(isinstance(failure,FirstFailure),'authoritative in-memory outside failure required')
@@ -1675,12 +1764,15 @@ def finalize_packet(outside_result,outside_failure,pre_git,environ=None,*,post_o
         except Exception as error:failure.add(error,'finalizer-post-git')
         try:
             resources=join_final_resources(internal,originals,outside_result,environ)
+            if preparation_original is not None:
+                check_preparation_original(preparation_original,pre_git,outside_result,internal['.entry.json'],environ)
             for phase,raw in (('before',pre_git),('after',post_git)):
                 check_git_trace(raw,phase,final_json(originals['source.'+phase+'.json']),outside_result['process'])
             need('.entry-failure.json' not in internal,'entry failure cannot produce a positive packet')
             originals['resources.json']=encode(resources)
         except Exception as error:failure.add(error,'finalizer-join')
         log_originals=dict(raw_internal)
+        if type(preparation_original) is bytes:log_originals['preparation.phase.json']=preparation_original
         if type(pre_git) is bytes:log_originals['git.before.json']=pre_git
         if type(post_git) is bytes:log_originals['git.after.json']=post_git
         progress=emit_originals(log_originals,sys.stdout.buffer.write if emit is None else emit,failure,
@@ -2162,7 +2254,7 @@ class EntryComposition:
         self.environ=dict(os.environ if environ is None else environ)
         self.bootstrap=BootstrapOps(self.environ);self.python=None;self.preparation=None
         self.pre_child=None;self.pre_started=False;self.outside_result=None
-        self.final=None;self.failure=None;self.pre_git=None;self.preparation_ownership=None
+        self.final=None;self.failure=None;self.pre_git=None;self.preparation_ownership=None;self._preparation_original=None
 
     def validate(self):
         need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root outside composition parent required')
@@ -2221,7 +2313,31 @@ class EntryComposition:
         finally:
             try:self.finish_preparation_ownership(process)
             except BaseException as error:failure.add(error,'composition-preparation-ownership')
+            try:self.freeze_preparation_original(failure)
+            except BaseException as error:failure.add(error,'composition-preparation-original')
         return failure
+
+    def freeze_preparation_original(self,failure):
+        """Capture only owned phase facts, never parse the opaque PRE body.
+
+        Bytes are immutable and precede OutsideOwner. Caller-visible mutable
+        dictionaries are not a replacement for this retained original.
+        """
+        need(self._preparation_original is None,'preparation original already frozen; no recapture')
+        value=self.preparation or {};streams=value.get('streams',{'stdout':b'','stderr':b''})
+        def stream(name):
+            raw=streams[name]
+            need(type(raw) is bytes and len(raw)<=PREPARATION_STREAMS[name],'bounded original preparation stream')
+            return {'bytes':len(raw),'sha256':sha(raw),'base64':base64.b64encode(raw).decode('ascii')}
+        captured=time.monotonic_ns();need(type(captured) is int and captured>0,'original preparation capture clock')
+        record={'schema':'bw.ring3.preparation-original.v1','runId':self.environ['GITHUB_RUN_ID'],'attempt':1,
+            'head':self.environ['BW_EXPECTED_HEAD'],'tree':self.environ['BW_EXPECTED_TREE'],
+            'python':self.python,'invoker':self.bootstrap.invoker,'captureMonoNs':captured,
+            'process':value.get('process'),'stdout':stream('stdout'),'stderr':stream('stderr'),
+            'ownership':value.get('ownership'),'preGit':None if self.pre_git is None else {'bytes':len(self.pre_git),'sha256':sha(self.pre_git)},
+            'firstFailure':failure.first,'secondary':failure.secondary}
+        raw=encode(record);need(len(raw)<=JSON_CAP,'preparation original encoding cap')
+        self._preparation_original=raw
 
     def outside(self):
         need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'composition root parent must retain privilege until outside observation')
@@ -2239,6 +2355,9 @@ class EntryComposition:
             uid,gid=(self.bootstrap.invoker[key] for key in ('uid','gid'))
             if os.getresuid()!=(uid,)*3 or os.getresgid()!=(gid,)*3 or os.getgroups():self.bootstrap.drop()
             self.dropped()
+            if type(self._preparation_original) is bytes:
+                self._preparation_log=emit_originals({'preparation.phase.json':self._preparation_original},
+                    sys.stdout.buffer.write,failure,sys.stdout.buffer.flush)
         except BaseException as error:failure.add(error,'composition-failure-drop')
         return {'pass':False,'preparation':self.preparation,'outside':self.outside_result,'final':None}
 
@@ -2247,7 +2366,8 @@ class EntryComposition:
         process=facts.get('process');cleanup=facts.get('cleanup') or {}
         terminal=(process if type(process) is dict and type(process.get('waitStatus')) is int else cleanup.get('cleanupTerminal'))
         need(type(terminal) is dict and type(terminal.get('waitStatus')) is int,'known outer terminal required before finalizer/POST Git')
-        return finalize_packet(facts,failure,self.pre_git,self.environ)
+        need(type(self._preparation_original) is bytes,'own frozen preparation original required')
+        return finalize_packet(facts,failure,self.pre_git,self.environ,preparation_original=self._preparation_original)
 
 
 def compose_entry(ops=None):
@@ -2257,6 +2377,7 @@ def compose_entry(ops=None):
         ops.validate();ops.prepare(failure)
         if failure.first is not None or failure.secondary:return ops.failure_only(failure),failure
         need(type(ops.pre_git) is bytes and 0<len(ops.pre_git)<=GIT_TRACE_CAP,'original preparation PRE bytes required')
+        need(type(ops._preparation_original) is bytes and 0<len(ops._preparation_original)<=JSON_CAP,'own frozen preparation original required before outside')
         facts,outside_failure=ops.outside();ops.outside_result=facts
         need(isinstance(outside_failure,FirstFailure),'original outside failure owner required')
         failure=outside_failure;ops.failure=failure  # Keep the SAME authoritative object.
@@ -2516,7 +2637,7 @@ def controls():
                     self.assertEqual(state['uids'],(0,)*3);self.assertEqual(parent.pre_git,b'opaque PRE bytes\xff')
                     if state['outsideDrop']:parent.bootstrap.drop()
                     return {'process':{'waitStatus':0 if state['outsideKnown'] else None},'cleanup':{}},state['outsideFailure']
-                def final(facts,failure,pre,environ):
+                def final(facts,failure,pre,environ,**kwargs):
                     state['phaseEvents'].append('finalize')
                     entry_ids(1001,1002);self.assertIs(failure,state['outsideFailure'])
                     self.assertEqual(pre,b'opaque PRE bytes\xff')
@@ -2909,6 +3030,203 @@ def controls():
                      patch.object(Path,'lstat',lstat),patch.object(Path,'mkdir',mkdir),patch.object(os,'getpid',return_value=100),\
                      patch.dict(globals(),entry_proc=lambda path:'0::/actions/job\n' if path.endswith('cgroup') else ''.join(k+':\t'+v+'\n' for k,v in state['caps'].items())):
                     yield outside,state['env'],trace('before'),observer,stage
+
+        @contextlib.contextmanager
+        def preparation_original_edges(self):
+            # New full-phase fixture is causally coherent; old phase-local
+            # fake ticks remain held and are not advertised as V5 positives.
+            with self.finalizer_edges() as (outside,env,pre,post,state):
+                entry=final_json(state['data']['.entry.json']);trace=final_json(pre)
+                process=json.loads(json.dumps(outside['process']))
+                process.update(role='preparation',pid=401,pgid=401,startTicks=901,
+                    argv=[entry['python']['path'],'-I','-B',RUN_FILE,'--prepare'],spawnMonoNs=50,reapMonoNs=500)
+                for command in trace['commands']:command['process']['parentPid']=401
+                pre=encode(trace)
+                with self.ownership_edges() as (owner,parent,kernel):
+                    owner.admit();owner.begin_spawn();ownership,found=owner.finish({'waitStatus':0});self.assertIsNone(found.first)
+                ops=EntryComposition(env);ops.python=entry['python'];ops.bootstrap.invoker={'uid':entry['uid'],'gid':entry['gid']}
+                ops.pre_git=pre;ops.preparation={'process':process,'streams':{'stdout':preparation_frame(pre),'stderr':b''},'ownership':ownership}
+                with patch.object(time,'monotonic_ns',return_value=600):ops.freeze_preparation_original(FirstFailure())
+                yield ops,outside,env,pre,post,state
+
+        def test_preparation_original_actual_freeze_and_full_finalizer_log_only_positive(self):
+            with self.preparation_original_edges() as (ops,outside,env,pre,post,state):
+                raw=ops._preparation_original;entry=final_json(state['data']['.entry.json'])
+                value=check_preparation_original(raw,pre,outside,entry,env)
+                self.assertEqual(value['process']['pid'],401);self.assertEqual(preparation_body(ops.preparation['streams']['stdout']),pre)
+                ops.preparation['process']['pid']=999;ops.preparation['streams']['stdout']=b'caller replacement'
+                ops.preparation['ownership']['identity']['inode']=999;ops.preparation_original=b'public replacement'
+                self.assertEqual(ops._preparation_original,raw)
+                result,failure=finalize_packet(outside,FirstFailure(),pre,env,post_observer=post,
+                    emit=lambda line:state['log'].append(line) or len(line),flush=lambda:None,preparation_original=raw)
+                self.assertTrue(result['pass']);self.assertIsNone(failure.first);self.assertEqual(set(state['export']),PACKET_ROLES)
+                self.assertNotIn('preparation.phase.json',state['export']);self.assertEqual(len(INTERNAL_NAMES),5)
+                groups=[final_json(line[len(b'RING3_ORIGINAL '):]) for line in state['log']]
+                rows=[row for row in groups if row['name']=='preparation.phase.json']
+                self.assertTrue(rows);self.assertEqual(base64.b64decode(''.join(row['data'] for row in rows)),raw)
+
+        def test_preparation_original_equal_ticks_and_reused_reaped_pid_are_allowed(self):
+            with self.preparation_original_edges() as (ops,outside,env,pre,post,state):
+                value=final_json(ops._preparation_original);value['captureMonoNs']=value['process']['reapMonoNs']
+                value['process']['pid']=value['process']['pgid']=outside['process']['pid']
+                trace=final_json(pre)
+                for row in trace['commands']:row['process']['parentPid']=value['process']['pid']
+                pre=encode(trace);wire=preparation_frame(pre)
+                value['stdout']={'bytes':len(wire),'sha256':sha(wire),'base64':base64.b64encode(wire).decode()}
+                value['preGit']={'bytes':len(pre),'sha256':sha(pre)}
+                self.assertEqual(check_preparation_original(encode(value),pre,outside,final_json(state['data']['.entry.json']),env)['captureMonoNs'],500)
+
+        def test_preparation_original_reencoded_closed_typed_descriptor_and_timing_refusals(self):
+            for fault in ('unknown','attempt-float','pid-float','parent','python','invoker','argv','environment','signal','capture-early','capture-late','prep-span','git-parent','git-before','git-overlap','git-after','git-span','frame','pre-ref'):
+                with self.preparation_original_edges() as (ops,outside,env,pre,post,state):
+                    value=final_json(ops._preparation_original);process=value['process']
+                    if fault=='unknown':value['unknown']=True
+                    elif fault=='attempt-float':value['attempt']=1.0
+                    elif fault=='pid-float':process['pid']=float(process['pid'])
+                    elif fault=='parent':process['parentPid']+=1
+                    elif fault=='python':value['python']['bytes']=float(value['python']['bytes'])
+                    elif fault=='invoker':value['invoker']['uid']=float(value['invoker']['uid'])
+                    elif fault=='argv':process['argv'][-1]='--run'
+                    elif fault=='environment':process['environment']['LD_PRELOAD']='injected'
+                    elif fault=='signal':process['signal']=15
+                    elif fault=='capture-early':value['captureMonoNs']=499
+                    elif fault=='capture-late':value['captureMonoNs']=outside['process']['spawnMonoNs']+1
+                    elif fault=='prep-span':process['spawnMonoNs']=1;process['reapMonoNs']=120000000002;value['captureMonoNs']=process['reapMonoNs'];outside['process']['spawnMonoNs']=value['captureMonoNs']
+                    elif fault.startswith('git-'):
+                        trace=final_json(pre);commands=trace['commands']
+                        if fault=='git-parent':commands[0]['process']['parentPid']+=1
+                        elif fault=='git-before':commands[0]['process']['spawnMonoNs']=49
+                        elif fault=='git-overlap':commands[1]['process']['spawnMonoNs']=100
+                        elif fault=='git-after':commands[-1]['process']['reapMonoNs']=501
+                        else:
+                            process.update(spawnMonoNs=1,reapMonoNs=12000000001);value['captureMonoNs']=12000000001;outside['process']['spawnMonoNs']=12000000001
+                            commands[0]['process'].update(spawnMonoNs=1,reapMonoNs=10000000002)
+                        pre=encode(trace);wire=preparation_frame(pre)
+                        value['stdout']={'bytes':len(wire),'sha256':sha(wire),'base64':base64.b64encode(wire).decode()};value['preGit']={'bytes':len(pre),'sha256':sha(pre)}
+                    elif fault=='frame':
+                        wire=preparation_frame(pre)+b'suffix';value['stdout']={'bytes':len(wire),'sha256':sha(wire),'base64':base64.b64encode(wire).decode()}
+                    else:value['preGit']['bytes']+=1
+                    with self.assertRaises((ValueError,TypeError,KeyError)):
+                        check_preparation_original(encode(value),pre,outside,final_json(state['data']['.entry.json']),env)
+
+        def test_preparation_original_reencoded_ownership_refusals_preserve_fixed_packet(self):
+            for fault in ('root-owner','identity','limits','nested','oom','kill','session','unknown-terminal','close','partial'):
+                with self.preparation_original_edges() as (ops,outside,env,pre,post,state):
+                    value=final_json(ops._preparation_original);owner=value['ownership']
+                    if fault=='root-owner':owner['owner']['uid']=1001
+                    elif fault=='identity':owner['identity']['inode']+=1
+                    elif fault=='limits':owner['beforeCleanup']['raw']['cpuMax']='200000 100000\n'
+                    elif fault=='nested':owner['beforeCleanup']['raw']['pidsCurrent']='1\n'
+                    elif fault=='oom':owner['beforeCleanup']['raw']['memoryEvents']=owner['beforeCleanup']['raw']['memoryEvents'].replace('oom 0','oom 1')
+                    elif fault=='kill':owner['killAttempted']=True
+                    elif fault=='session':owner['sessionSignalAttempted']=True
+                    elif fault=='unknown-terminal':owner['cleanupTerminal']={'waitStatus':0}
+                    elif fault=='close':owner['closeSucceeded']=False
+                    else:owner['partial']['identity']['inode']+=1
+                    result,failure=finalize_packet(outside,FirstFailure(),pre,env,post_observer=post,
+                        emit=lambda line:state['log'].append(line) or len(line),flush=lambda:None,preparation_original=encode(value))
+                    self.assertFalse(result['pass']);self.assertIsNotNone(failure.first)
+                    self.assertNotIn('resources.json',state['export']);self.assertNotIn('preparation.phase.json',state['export'])
+                    self.assertIn('audit.json',state['export'])
+
+        def test_preparation_original_capture_follows_finish_precedes_outside_and_is_not_recaptured(self):
+            with self.composition_edges() as (parent,state):
+                freeze=parent.freeze_preparation_original
+                def captured(failure):
+                    self.assertEqual(state['phaseEvents'][-1],'preparation-descendants');freeze(failure)
+                    state['capture']=parent._preparation_original
+                parent.freeze_preparation_original=captured
+                outside=parent.outside
+                def launch():
+                    self.assertEqual(parent._preparation_original,state['capture'])
+                    parent.preparation['streams']['stdout']=b'altered public dictionary'
+                    return outside()
+                parent.outside=launch
+                result,failure=compose_entry(parent);self.assertTrue(result['pass']);self.assertIsNone(failure.first)
+                self.assertEqual(parent._preparation_original,state['capture'])
+                with self.assertRaisesRegex(ValueError,'no recapture'):freeze(FirstFailure())
+
+        def test_preparation_original_public_bytes_cannot_replace_missing_own_capture_before_outside(self):
+            with self.composition_edges() as (parent,state):
+                parent.freeze_preparation_original=Mock();parent.preparation_original=b'public replacement'
+                result,failure=compose_entry(parent)
+                self.assertFalse(result['pass']);self.assertIsNotNone(failure.first)
+                self.assertNotIn('outside',state['phaseEvents']);self.assertNotIn('finalize',state['phaseEvents'])
+                self.assertIsNone(parent._preparation_original)
+
+        def test_preparation_original_capture_cap_or_encode_failure_stops_outside_keeps_original_primary(self):
+            for fault in ('cap','encode','prior'):
+                with self.composition_edges() as (parent,state):
+                    if fault=='prior':state['preStatus']=1
+                    finish=parent.finish_preparation_ownership
+                    def finished(process):
+                        finish(process)
+                        if fault=='cap':parent.preparation['ownership']={'partial':'X'*JSON_CAP}
+                    parent.finish_preparation_ownership=finished;original_encode=encode
+                    def encoded(value):
+                        if fault in ('encode','prior') and type(value) is dict and value.get('schema')=='bw.ring3.preparation-original.v1':raise OSError('CAPTURE_ENCODING')
+                        return original_encode(value)
+                    with patch.dict(globals(),encode=encoded):result,failure=compose_entry(parent)
+                    self.assertFalse(result['pass']);self.assertNotIn('outside',state['phaseEvents']);self.assertIsNone(parent._preparation_original)
+                    self.assertEqual(parent.preparation['streams']['stdout'],state['preWire'])
+                    if fault=='prior':
+                        self.assertNotEqual(failure.first['message'],'CAPTURE_ENCODING')
+                        self.assertIn('CAPTURE_ENCODING',[row['message'] for row in failure.secondary])
+                    else:self.assertEqual(failure.first['message'],'preparation original encoding cap' if fault=='cap' else 'CAPTURE_ENCODING')
+
+        def test_preparation_original_failed_prefixes_are_frozen_before_later_errors(self):
+            with self.composition_edges() as (parent,state):
+                parent.validate();state['preStatus']=1;failure=FirstFailure();parent.prepare(failure)
+                raw=parent._preparation_original;value=final_json(raw)
+                self.assertIsNotNone(value['firstFailure']);self.assertEqual(value['firstFailure'],failure.first)
+                self.assertIsNone(value['preGit']);self.assertEqual(base64.b64decode(value['stdout']['base64']),state['preWire'])
+                self.assertEqual(value['process'],parent.preparation['process'])
+                failure.add(OSError('LATER_RETENTION'),'retention');parent.preparation['streams']['stdout']=b'changed'
+                self.assertEqual(parent._preparation_original,raw)
+                self.assertNotIn('LATER_RETENTION',[row['message'] for row in value['secondary']])
+            with self.preparation_original_edges() as (parent,outside,env,pre,post,state):
+                parent._preparation_original=None
+                with patch.object(time,'monotonic_ns',return_value=0),self.assertRaisesRegex(ValueError,'capture clock'):
+                    parent.freeze_preparation_original(FirstFailure())
+                self.assertIsNone(parent._preparation_original)
+
+        def test_preparation_original_emitter_uses_same_individual_aggregate_and_encoded_caps(self):
+            for fault in ('individual','aggregate','short','flush'):
+                originals={'preparation.phase.json':b'raw original'};lines=[];failure=FirstFailure()
+                failure.add(ValueError('FIRST_PHASE'),'preparation')
+                if fault=='individual':originals['preparation.phase.json']=b'X'*(JSON_CAP+1)
+                elif fault=='aggregate':originals={name:b'X'*JSON_CAP for name in INTERNAL_NAMES};originals['preparation.phase.json']=b'X'
+                def emit(line):lines.append(line);return len(line)-1 if fault=='short' else len(line)
+                def flush():
+                    if fault=='flush':raise OSError('FLUSH_FAILED')
+                progress=emit_originals(originals,emit,failure,flush)
+                self.assertFalse(progress['complete']);self.assertEqual(failure.first['message'],'FIRST_PHASE');self.assertTrue(failure.secondary)
+                self.assertLessEqual(progress['encodedBytes'],8<<20)
+                if fault in ('individual','aggregate'):self.assertEqual(lines,[])
+            with self.preparation_original_edges() as (parent,outside,env,pre,post,state):
+                failure=FirstFailure();lines=[]
+                progress=emit_originals({'preparation.phase.json':parent._preparation_original},lambda line:lines.append(line) or len(line),failure,lambda:None)
+                self.assertTrue(progress['complete']);self.assertIsNone(failure.first)
+                rows=[final_json(line[len(b'RING3_ORIGINAL '):]) for line in lines]
+                self.assertTrue(all(len(row['data'])<=3072 for row in rows));self.assertEqual(progress['encodedBytes'],sum(map(len,lines)))
+                self.assertEqual(base64.b64decode(''.join(row['data'] for row in rows)),parent._preparation_original)
+
+        def test_preparation_original_failure_emission_only_after_verified_drop_and_first_survives(self):
+            for fault in ('none','drop','readback','emit','flush'):
+                with self.composition_edges() as (parent,state):
+                    parent.validate();parent._preparation_original=b'original failed phase prefix'
+                    failure=FirstFailure();failure.add(ValueError('FIRST_PREPARATION'),'preparation');lines=[];attempted=[]
+                    if fault=='drop':parent.bootstrap.drop=Mock(side_effect=OSError('DROP_FAILED'))
+                    elif fault=='readback':parent.bootstrap.drop=Mock()
+                    def emit(raw):attempted.append(raw);entry_ids(1001,1002);lines.append(raw);return len(raw)-1 if fault=='emit' else len(raw)
+                    def flush():
+                        entry_ids(1001,1002)
+                        if fault=='flush':raise OSError('FLUSH_FAILED')
+                    with patch.object(sys,'stdout',SimpleNamespace(buffer=SimpleNamespace(write=emit,flush=flush))):
+                        result=parent.failure_only(failure)
+                    self.assertFalse(result['pass']);self.assertEqual(failure.first['message'],'FIRST_PREPARATION')
+                    if fault in ('drop','readback'):self.assertEqual(attempted,[]);self.assertEqual(lines,[])
+                    else:self.assertTrue(lines);self.assertEqual(parent._preparation_log['complete'],fault=='none')
 
         def test_finalizer_closed_stage_exact_originals_and_lexical_nineteen_rows(self):
             with self.finalizer_edges() as (outside,env,pre,post,state):
