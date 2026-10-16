@@ -67,6 +67,27 @@ a continuous host guarantee. Unexpected descendants after the leader is reaped
 refuse acceptance and require the outside owner.
 These callback paths are covered by inert controls, not actual tool execution.
 
+The unprivileged preparation functions accept exactly the two frozen authored
+input byte strings; they do not generate them or run a tool to do so. They
+require the fixed official run and first attempt, exact expected head and tree,
+uniform positive invoker IDs, empty supplementary groups and zero capability
+fields. A future hosted launch must establish and observe that identity before
+preparation: ordinary hosted runner processes may have supplementary groups.
+This checkpoint neither assumes that prerequisite holds nor silently performs
+privileged setup or adds a tool to establish it.
+
+Preparation creates fresh canonical invoker-owned packet directories and writes
+the input originals exclusively. It captures fresh outside PRE Git originals,
+freezes the twelve-file source envelope, observes the selected non-setid Python
+bytes and four distinct empty owned cgroups with the fixed limits, then rereads
+source, inputs, Python and cgroups before writing entry facts last. Every write
+is exclusive; an existing directory or earlier original refuses reuse. Failure
+preserves available originals, PRE Git bytes and partial observations and cannot
+launch a controller. Entry-file presence alone is not a successful preparation
+verdict. The file checks and readbacks do not establish a continuous lease,
+external QEMU pin or resource sufficiency. Input generation, actual preparation
+invocation and the following launch remain separate unconnected work.
+
 The same-file privileged-entry functions are also a source checkpoint. They
 require trusted positive sudo invoker IDs before validating the fixed run's
 internal entry facts, the twelve held source paths, the actual Python bytes,
@@ -163,7 +184,7 @@ joins must be frozen before any event: the packet reader does not grade these
 logs or the outer 600-second lifetime. Neither runtime equality nor these
 assembler controls externally pins QEMU or establishes a complete host graph.
 
-Entry preparation, actual entry, finalizer integration, the hosted actual job and
+Preparation invocation, actual entry, finalizer integration, the hosted actual job and
 results remain unconnected. Polling cannot preempt blocking kernel operations,
 process creation or identity reads. The 15-minute job backstop is not wired at
 this checkpoint, and no real outside-owner lifecycle has been qualified.

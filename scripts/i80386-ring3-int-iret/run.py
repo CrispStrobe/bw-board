@@ -1705,6 +1705,178 @@ def finalize_packet(outside_result,outside_failure,pre_git,environ=None,*,post_o
     return {'staged':staged,'log':progress,'pass':failure.first is None and failure.secondary==[] and set(staged)==PACKET_ROLES},failure
 
 
+
+class PreparationOps:
+    """Unprivileged, fixed entry preparation; no controller creation or guest.
+
+    The two supplied immutable byte strings must match the authored fixture.
+    Generating them and admitting an actual event remain separate launch work.
+    """
+    def __init__(self,inputs,environ=None,observer=None):
+        self.environ=dict(os.environ if environ is None else environ)
+        self.inputs=dict(inputs);self.observer=observer
+        self.uid=self.gid=None;self.directory_admitted=False;self.groups=None
+        self.source=self.entry=self.pre_git=None
+        self.partial={'source':None,'sourceReadback':None,'inputsReadback':None,
+                      'pythonBefore':None,'pythonReadback':None,'cgroupsBefore':{},'cgroupsReadback':{}}
+
+    def directory(self,path):
+        path=Path(path);info=path.lstat()
+        need(path.resolve(strict=True)==path and stat.S_ISDIR(info.st_mode) and
+             (info.st_uid,info.st_gid)==(self.uid,self.gid),'canonical invoker-owned preparation directory')
+
+    def packet_path(self,path):
+        path=Path(path)
+        need(path in (PACKET/'inputs/fixture.rom',PACKET/'inputs/fixture.json',PACKET/'source.before.json',ENTRY_FILE,ENTRY_FAILURE),
+             'fixed preparation original path')
+        self.directory(Path.cwd()/PACKET)
+        if path.parent!=PACKET:self.directory(Path.cwd()/path.parent)
+        return path
+
+    def read(self,path,cap):
+        path=self.packet_path(path)
+        need(path.resolve(strict=True)==Path.cwd()/path and stat.S_ISREG(path.lstat().st_mode),'canonical prepared original read')
+        return bounded_read(path,cap)
+
+    def write(self,path,raw,cap):
+        write_new(self.packet_path(path),raw,cap)
+
+    def source_read(self,path,cap=4<<20,*,with_mode=False):
+        name=str(path);need(name in SOURCE_PATHS,'fixed preparation source path')
+        path=Path(name)
+        need(path.resolve(strict=True)==Path.cwd()/path and stat.S_ISREG(path.lstat().st_mode),
+             'canonical regular preparation source path')
+        return bounded_read(path,cap,with_mode=with_mode)
+
+    def admit(self):
+        uid,gid=os.getresuid()[0],os.getresgid()[0]
+        need(type(uid) is int and type(gid) is int and uid>0 and gid>0,'unprivileged preparation invoker')
+        entry_ids(uid,gid);self.uid,self.gid=uid,gid
+        root=expected_cgroup(self.environ)
+        need(all(re.fullmatch('[0-9a-f]{40}',self.environ.get(k,'')) for k in ('BW_EXPECTED_HEAD','BW_EXPECTED_TREE')),
+             'fixed preparation head and tree')
+        membership=entry_proc('/proc/self/cgroup')
+        need(membership.startswith('0::/') and membership.endswith('\n') and membership.count('\n')==1 and
+             not membership[4:-1].startswith(root.name+'/') and membership[4:-1]!=root.name,
+             'preparation must remain outside owned subtree')
+        self.directory(Path.cwd());self.directory(Path.cwd()/'build')
+        need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,'held preparation script location')
+        # Admit every fixed source pathname before the Git adapter reads any
+        # bytes. Readback repeats these checks; this is not a continuous lease.
+        for name in sorted(SOURCE_PATHS):
+            path=Path(name)
+            need(path.resolve(strict=True)==Path.cwd()/path and stat.S_ISREG(path.lstat().st_mode),
+                 'canonical regular preparation source path')
+        need(set(self.inputs)=={'fixture.rom','fixture.json'} and
+             all(type(data) is bytes and len(data)<= (65536 if name=='fixture.rom' else JSON_CAP)
+                 for name,data in self.inputs.items()),'closed frozen preparation inputs')
+        _,failure=input_facts(read=lambda path,cap:self.inputs[Path(path).name])
+        if failure.first is not None:raise ObservedFailure(failure.first,failure.secondary)
+        PACKET.mkdir(mode=0o700)  # Existing directory, including a symlink, refuses.
+        self.directory(Path.cwd()/PACKET);self.directory_admitted=True
+        for name in ('inputs','js','qemu'):
+            (PACKET/name).mkdir(mode=0o700);self.directory(Path.cwd()/PACKET/name)
+        self.groups=Cgroups(root,uid,self.environ)
+
+    def originals(self):
+        failure=FirstFailure()
+        for name in ('fixture.rom','fixture.json'):
+            try:self.write(PACKET/'inputs'/name,self.inputs[name],65536 if name=='fixture.rom' else JSON_CAP)
+            except Exception as error:failure.add(error,'prepare-input-'+name)
+        if failure.first is not None:raise ObservedFailure(failure.first,failure.secondary)
+        observer=GitObservation(self.environ,'before') if self.observer is None else self.observer
+        self.pre_git,found=observer.capture(self.environ['BW_EXPECTED_HEAD'])
+        if found.first is not None:raise ObservedFailure(found.first,found.secondary)
+        trace=final_json(self.pre_git);source=entry_json(encode(trace['source']));self.partial['source']=source
+        # This is an observed PRE completion boundary, not an invented outer
+        # spawn record. The real finalizer will join the future outer original.
+        check_git_trace(self.pre_git,'before',source,{'spawnMonoNs':time.monotonic_ns()})
+        need(source['head']==self.environ['BW_EXPECTED_HEAD'] and source['tree']==self.environ['BW_EXPECTED_TREE'] and
+             type(source['files']) is dict and set(source['files'])==SOURCE_PATHS,'fixed preparation Git binding')
+        checked,failure=source_facts(source,read=lambda path:self.source_read(path,with_mode=True),stage='before')
+        self.partial['sourceReadback']=checked
+        if failure.first is not None:raise ObservedFailure(failure.first,failure.secondary)
+        self.source=entry_json(encode(source))
+        self.write(PACKET/'source.before.json',encode(self.source),JSON_CAP)
+
+    def python(self):
+        files=RuntimeFiles();path,_=files.resolve(RUNTIME_EXECUTABLES['python'])
+        need(files.resolve(sys.executable)[0]==path and stat.S_ISREG(Path(path).stat().st_mode) and
+             Path(path).stat().st_mode & 0o6000==0,'canonical non-setid preparation Python')
+        data=files.read(path,RUNTIME_CAPS['fileBytes'])
+        need(type(data) is bytes and 0<len(data)<=RUNTIME_CAPS['fileBytes'],'bounded observed preparation Python')
+        return {'path':path,'bytes':len(data),'sha256':sha(data)}
+
+    def resources(self,target):
+        identities=set();device=None
+        for role in ('enclosing','controller','js','qemu'):
+            snap=self.groups.observe(role);target[role]=snap;entry_snapshot(snap)
+            need(self.groups.path(role).stat().st_gid==self.gid,'preparation cgroup group owner')
+            identity=tuple(snap['identity'][key] for key in ('device','inode'))
+            need(identity not in identities and (device is None or identity[0]==device),'distinct same-filesystem preparation groups')
+            identities.add(identity);device=identity[0]
+        return target
+
+    def barrier(self):
+        self.partial['pythonBefore']=self.python()
+        self.resources(self.partial['cgroupsBefore'])
+        failure=FirstFailure()
+        try:
+            source,found=source_facts(self.source,read=lambda path:self.source_read(path,with_mode=True),stage='before')
+            self.partial['sourceReadback']=source;failure.adopt(found.first,found.secondary)
+        except Exception as error:failure.add(error,'prepare-source-readback')
+        try:
+            raw=self.read(PACKET/'source.before.json',JSON_CAP)
+            need(raw==encode(self.source),'prepared source original readback')
+        except Exception as error:failure.add(error,'prepare-source-original-readback')
+        try:
+            data,found=input_facts(self.inputs,read=self.read);self.partial['inputsReadback']={name:{'bytes':len(raw),'sha256':sha(raw)} for name,raw in data.items()}
+            failure.adopt(found.first,found.secondary)
+        except Exception as error:failure.add(error,'prepare-input-readback')
+        try:
+            self.partial['pythonReadback']=self.python()
+            need(same_json(self.partial['pythonBefore'],self.partial['pythonReadback']),'preparation Python readback drift')
+        except Exception as error:failure.add(error,'prepare-python-readback')
+        try:
+            self.resources(self.partial['cgroupsReadback'])
+            for role in ('enclosing','controller','js','qemu'):
+                before=self.partial['cgroupsBefore'][role];after=self.partial['cgroupsReadback'][role]
+                need(same_json(before['identity'],after['identity']) and same_json(before['limits'],after['limits']),
+                     'preparation cgroup identity or limits readback drift')
+        except Exception as error:failure.add(error,'prepare-cgroup-readback')
+        if failure.first is not None:raise ObservedFailure(failure.first,failure.secondary)
+        entry_ids(self.uid,self.gid)
+        for directory in (Path.cwd(),Path.cwd()/'build',Path.cwd()/PACKET,*[Path.cwd()/PACKET/name for name in ('inputs','js','qemu')]):self.directory(directory)
+        self.entry={'schema':'bw.ring3.entry.v1','uid':self.uid,'gid':self.gid,'root':str(self.groups.root),
+            'sourceSha256':sha(encode(self.source)),'python':self.partial['pythonReadback'],
+            'cgroups':self.partial['cgroupsReadback']}
+
+    def commit(self):
+        raw=encode(self.entry);self.write(ENTRY_FILE,raw,JSON_CAP)
+        need(self.read(ENTRY_FILE,JSON_CAP)==raw,'exclusive prepared entry readback')
+
+    def retain(self,failure):
+        # No privileged retention, no new role, no overwrite of earlier facts.
+        try:
+            need(self.directory_admitted,'preparation packet was not admitted')
+            entry_ids(self.uid,self.gid);self.directory(Path.cwd()/PACKET)
+            retain_failure(failure,lambda facts:self.write(ENTRY_FAILURE,encode(facts),JSON_CAP),sys.stderr.buffer.write)
+        except Exception as error:
+            failure.add(error,'prepare-retention')
+            try:
+                raw=encode({'firstFailure':failure.first,'secondary':failure.secondary})
+                need(len(raw)<=16384,'preparation diagnostic cap');sys.stderr.buffer.write(raw)
+            except Exception as secondary:failure.add(secondary,'prepare-diagnostic')
+
+
+def prepare_entry(ops):
+    """Fixed source/input/resource preparation only. No launch side effects."""
+    failure=FirstFailure();complete=False
+    try:ops.admit();ops.originals();ops.barrier();ops.commit();complete=True
+    except BaseException as error:failure.add(error,'entry-preparation')
+    if failure.first is not None:ops.retain(failure)
+    return {'preGit':ops.pre_git,'entry':ops.entry,'facts':ops.partial,'pass':complete and failure.first is None},failure
+
 def controls():
     """Inert actual-function controls. Never opens a cgroup, forks or execs."""
     import unittest
@@ -1742,6 +1914,209 @@ def controls():
                 'rusage':{'userSeconds':0.1,'systemSeconds':0.01,'maxRssKiB':1024}}
 
     class Tests(unittest.TestCase):
+        @contextlib.contextmanager
+        def preparation_edges(self):
+            with self.entry_edges() as (bootstrap,state):
+                state.update(uids=(1001,)*3,gids=(1002,)*3,groups=[],migrated=False)
+                state['inputs']={'fixture.rom':b'R'*65536,'fixture.json':encode({'authored':'inert preparation input'})}
+                state.update(prepData={},prepWrites=[],prepReads=[],prepEvents=[],prepDirs={'/checkout','/checkout/build'},
+                    mkdirFaults={},writeFaults={},readFaults={},sourceMode={},observeCalls=[],pythonReads=0,
+                    pythonData=b'python',onWrite=lambda name:None,onObserve=lambda role:None)
+                def absolute(path):return str(path if path.is_absolute() else Path('/checkout')/path)
+                def lstat(path):
+                    name=absolute(path);uid,gid=state['directoryOwners'].get(name,(1001,1002))
+                    return SimpleNamespace(st_mode=0o40700 if name in state['prepDirs'] else 0o100644,st_uid=uid,st_gid=gid)
+                def mkdir(path,mode=0o777):
+                    name=absolute(path);state['prepEvents'].append(('mkdir',name))
+                    if name in state['mkdirFaults']:raise state['mkdirFaults'][name]
+                    if name in state['prepDirs']:raise FileExistsError('inert existing directory')
+                    state['prepDirs'].add(name)
+                def read(path,cap,*,with_mode=False):
+                    name=str(path);state['prepReads'].append(name)
+                    if name in state['readFaults']:raise state['readFaults'][name]
+                    if name in state['prepData']:data=state['prepData'][name]
+                    elif name in state['sourceData']:data=state['sourceData'][name]
+                    else:raise FileNotFoundError('inert missing preparation file')
+                    need(len(data)<=cap,'inert preparation extent cap')
+                    return (data,state['sourceMode'].get(name,'100644')) if with_mode else data
+                def write(path,raw,cap):
+                    name=str(path);state['prepWrites'].append(name);state['prepEvents'].append(('write',name))
+                    if name in state['writeFaults']:raise state['writeFaults'][name]
+                    need(name not in state['prepData'],'exclusive preparation original')
+                    need(len(raw)<=cap,'inert prepared file cap');state['prepData'][name]=raw;state['onWrite'](name)
+                base_observe=Cgroups.observe
+                def observe(groups,role):
+                    state['observeCalls'].append(role);state['onObserve'](role)
+                    return base_observe(groups,role)
+                def python_read(files,path,cap):state['pythonReads']+=1;return state['pythonData']
+                def capture(head):
+                    state['prepEvents'].append(('git',head));commands=[];source=state['source']
+                    listing=''.join(source['files'][name]['mode']+' blob '+source['files'][name]['blob']+'\t'+name+'\n' for name in sorted(SOURCE_PATHS))
+                    for index,argv in enumerate(GitObservation({},'before').allowed):
+                        process={'schema':'bw.ring3.process.v1','role':'discovery','argv':['/usr/bin/git',*argv[1:]],
+                            'cwdRole':'checkout','environment':dict(ENV),'pid':501+index,'pgid':501+index,'parentPid':101,
+                            'startTicks':123,'spawnMonoNs':100+index*100,'reapMonoNs':101+index*100,
+                            'exitCode':0,'signal':None,'waitStatus':0,'timedOut':False,
+                            'rusage':{'userSeconds':0.1,'systemSeconds':0.01,'maxRssKiB':1024},'firstFailure':None,'secondary':[]}
+                        output=((source['head']+'\n'),(source['tree']+'\n'),listing)[index].encode()
+                        commands.append({'process':process,'stdoutHex':output.hex(),'stderrHex':''})
+                    raw=encode({'schema':'bw.ring3.git.v1','phase':'before','source':source,'commands':commands,'firstFailure':None,'secondary':[]})
+                    return state.get('preRaw',raw),state.get('preFailure',FirstFailure())
+                observer=Mock();observer.capture.side_effect=capture
+                with patch.object(Path,'lstat',lstat),patch.object(Path,'mkdir',mkdir),patch.object(Cgroups,'observe',observe),                     patch.object(RuntimeFiles,'read',python_read),patch.object(time,'monotonic_ns',return_value=10000),                     patch.dict(globals(),bounded_read=read,write_new=write,ROM_SHA=sha(state['inputs']['fixture.rom']),                        FIXTURE_JSON_SHA=sha(encode(entry_json(state['inputs']['fixture.json']))[:-1]),                        entry_proc=lambda path:'0::/actions/job\n' if path.endswith('cgroup') else ''.join(k+':\t'+v+'\n' for k,v in state['caps'].items())),                     patch.object(subprocess,'Popen',side_effect=AssertionError('no process in preparation controls')):
+                    yield PreparationOps(state['inputs'],state['env'],observer),state,observer
+
+        def test_preparation_actual_fresh_originals_pre_git_barrier_and_entry_last(self):
+            with self.preparation_edges() as (ops,state,observer):
+                result,failure=prepare_entry(ops)
+                self.assertTrue(result['pass']);self.assertIsNone(failure.first);observer.capture.assert_called_once_with('a'*40)
+                self.assertEqual(state['events'],[]);self.assertFalse(state['migrated'])
+                self.assertEqual(state['prepWrites'],[str(PACKET/'inputs/fixture.rom'),str(PACKET/'inputs/fixture.json'),str(PACKET/'source.before.json'),str(ENTRY_FILE)])
+                self.assertEqual(state['observeCalls'],['enclosing','controller','js','qemu']*2)
+                self.assertEqual(state['pythonReads'],2)
+                self.assertEqual(state['prepData'][str(PACKET/'inputs/fixture.rom')],state['inputs']['fixture.rom'])
+                self.assertEqual(ops.entry['sourceSha256'],sha(state['prepData'][str(PACKET/'source.before.json')]))
+                self.assertEqual(state['prepData'][str(ENTRY_FILE)],encode(ops.entry))
+                self.assertEqual(ops.entry['cgroups'],state['snapshots'])
+                self.assertEqual(set(ops.source['files']),SOURCE_PATHS);self.assertIsNotNone(result['preGit'])
+                before=dict(state['prepData']);again,found=prepare_entry(PreparationOps(state['inputs'],state['env'],observer))
+                self.assertFalse(again['pass']);self.assertEqual(found.first['name'],'FileExistsError')
+                self.assertEqual(state['prepData'],before);self.assertEqual(observer.capture.call_count,1)
+
+        def test_preparation_identity_environment_and_source_paths_refuse_before_creation(self):
+            for fault in ('root','groups','cap','attempt','head','tree','checkout','build-owner','source-path','membership'):
+                with self.preparation_edges() as (ops,state,observer):
+                    if fault=='root':state['uids']=(0,)*3
+                    elif fault=='groups':state['groups']=[1001]
+                    elif fault=='cap':state['caps']['CapInh']='1'
+                    elif fault=='attempt':ops.environ['GITHUB_RUN_ATTEMPT']='2'
+                    elif fault in ('head','tree'):ops.environ['BW_EXPECTED_'+fault.upper()]='invalid'
+                    elif fault=='checkout':state['redirect']['/checkout']='/outside'
+                    elif fault=='build-owner':state['directoryOwners']['/checkout/build']=(1003,1002)
+                    elif fault=='source-path':state['redirect'][RUN_FILE]='/outside/source'
+                    else:
+                        with patch.dict(globals(),entry_proc=lambda path:'0::/bw-ring3-123-1/controller\n' if path.endswith('cgroup') else ''.join(k+':\t'+v+'\n' for k,v in state['caps'].items())):
+                            result,failure=prepare_entry(ops)
+                        self.assertFalse(result['pass']);self.assertEqual(state['prepWrites'],[]);observer.capture.assert_not_called();continue
+                    result,failure=prepare_entry(ops)
+                    self.assertFalse(result['pass']);self.assertEqual(state['prepWrites'],[]);observer.capture.assert_not_called()
+                    self.assertEqual(state['events'],[])
+
+        def test_preparation_closed_input_bytes_and_golden_refusal_before_directory_creation(self):
+            for fault in ('extra','missing','rom','metadata','type'):
+                with self.preparation_edges() as (ops,state,observer):
+                    if fault=='extra':ops.inputs['extra']=b'x'
+                    elif fault=='missing':ops.inputs.pop('fixture.rom')
+                    elif fault=='rom':ops.inputs['fixture.rom']=b'X'*65536
+                    elif fault=='metadata':ops.inputs['fixture.json']=encode({'wrong':True})
+                    else:ops.inputs['fixture.rom']=bytearray(ops.inputs['fixture.rom'])
+                    result,failure=prepare_entry(ops)
+                    self.assertFalse(result['pass']);self.assertEqual(state['prepWrites'],[]);observer.capture.assert_not_called()
+                    self.assertFalse(any(event[0]=='mkdir' for event in state['prepEvents']))
+
+        def test_preparation_preserves_input_write_primary_and_available_original(self):
+            with self.preparation_edges() as (ops,state,observer):
+                state['writeFaults'][str(PACKET/'inputs/fixture.rom')]=OSError('FIRST_INPUT_WRITE')
+                result,failure=prepare_entry(ops)
+                self.assertFalse(result['pass']);self.assertEqual(failure.first['message'],'FIRST_INPUT_WRITE')
+                self.assertIn(str(PACKET/'inputs/fixture.json'),state['prepData']);self.assertNotIn(str(ENTRY_FILE),state['prepData'])
+                self.assertEqual(final_json(state['prepData'][str(ENTRY_FAILURE)])['firstFailure'],failure.first)
+                observer.capture.assert_not_called()
+
+        def test_preparation_bad_or_failed_pre_git_never_writes_source_or_entry(self):
+            for fault in ('tree','raw-head','typed','duplicate','failed'):
+                with self.preparation_edges() as (ops,state,observer):
+                    raw,_=observer.capture('a'*40);observer.reset_mock()
+                    value=final_json(raw)
+                    if fault=='tree':value['source']['tree']='c'*40;state['preRaw']=encode(value)
+                    elif fault=='raw-head':value['commands'][0]['stdoutHex']=b'wrong\n'.hex();state['preRaw']=encode(value)
+                    elif fault=='typed':value['source']['files']['LICENSE']['bytes']=float(value['source']['files']['LICENSE']['bytes']);state['preRaw']=encode(value)
+                    elif fault=='duplicate':state['preRaw']=raw.replace(b'"phase":"before"',b'"phase":"before","phase":"before"')
+                    else:found=FirstFailure();found.add(ValueError('ORIGINAL_GIT'),'git');state['preFailure']=found
+                    result,failure=prepare_entry(ops)
+                    self.assertFalse(result['pass']);self.assertIsNotNone(result['preGit'])
+                    self.assertNotIn(str(PACKET/'source.before.json'),state['prepData']);self.assertNotIn(str(ENTRY_FILE),state['prepData'])
+                    if fault=='failed':self.assertEqual(failure.first['message'],'ORIGINAL_GIT')
+
+        def test_preparation_late_source_input_python_and_resource_drift_refuses_commit(self):
+            for fault in ('source','mode','input','python','inode','limit','populated','source-original','redirect-input'):
+                with self.preparation_edges() as (ops,state,observer):
+                    def written(name):
+                        if name!=str(PACKET/'source.before.json'):return
+                        if fault=='source':state['sourceData'][RUN_FILE]=b'changed'
+                        elif fault=='mode':state['sourceMode'][RUN_FILE]='100755'
+                        elif fault=='input':state['prepData'][str(PACKET/'inputs/fixture.rom')]=b'X'*65536
+                        elif fault=='source-original':state['prepData'][name]+=b' '
+                        elif fault=='redirect-input':state['redirect']['/checkout/'+str(PACKET/'inputs')]='/outside'
+                    state['onWrite']=written
+                    def observed(role):
+                        if len(state['observeCalls'])!=5:return
+                        if fault=='python':state['pythonData']=b'changed Python'
+                        elif fault=='inode':state['snapshots']['controller']['identity']['inode']=99
+                        elif fault=='limit':state['snapshots']['js']['limits']['pidsMax']='65'
+                        elif fault=='populated':state['snapshots']['qemu']['procs']=[999]
+                    state['onObserve']=observed
+                    if fault=='python':
+                        original=ops.python;calls=[]
+                        def python():
+                            calls.append(True)
+                            if len(calls)==2:state['pythonData']=b'changed Python'
+                            return original()
+                        ops.python=python
+                    result,failure=prepare_entry(ops)
+                    self.assertFalse(result['pass'],fault);self.assertNotIn(str(ENTRY_FILE),state['prepData'],fault)
+                    self.assertIsNotNone(failure.first);self.assertEqual(state['events'],[])
+                    if fault=='redirect-input':self.assertNotIn(str(PACKET/'inputs/fixture.rom'),state['prepReads'])
+
+        def test_preparation_python_setid_and_cgroup_shape_owner_alias_refuse(self):
+            for fault in ('setid','owner','duplicate','extra'):
+                with self.preparation_edges() as (ops,state,observer):
+                    if fault=='setid':state['pythonMode']=0o104755
+                    elif fault=='owner':state['dirGid']=1003
+                    elif fault=='duplicate':state['snapshots']['qemu']['identity']=dict(state['snapshots']['js']['identity'])
+                    else:state['snapshots']['qemu']['extra']=0
+                    result,failure=prepare_entry(ops)
+                    self.assertFalse(result['pass']);self.assertNotIn(str(ENTRY_FILE),state['prepData']);self.assertEqual(state['events'],[])
+
+        def test_preparation_mkdir_entry_close_and_retention_failures_keep_first(self):
+            for fault in ('mkdir','entry-read','source-write','retention'):
+                with self.preparation_edges() as (ops,state,observer):
+                    if fault=='mkdir':state['mkdirFaults']['/checkout/'+str(PACKET/'inputs')]=OSError('FIRST_MKDIR')
+                    elif fault=='entry-read':state['readFaults'][str(ENTRY_FILE)]=OSError('FIRST_ENTRY_READ')
+                    elif fault=='source-write':state['writeFaults'][str(PACKET/'source.before.json')]=OSError('FIRST_SOURCE_WRITE')
+                    else:
+                        state['writeFaults'][str(PACKET/'source.before.json')]=OSError('FIRST_SOURCE_WRITE')
+                        state['writeFaults'][str(ENTRY_FAILURE)]=OSError('SECONDARY_RETENTION')
+                    result,failure=prepare_entry(ops)
+                    self.assertFalse(result['pass']);self.assertTrue(failure.first['message'].startswith('FIRST_'))
+                    if fault=='retention':self.assertIn('SECONDARY_RETENTION',[v['message'] for v in failure.secondary])
+                    self.assertEqual(state['events'],[])
+
+        def test_preparation_actual_entry_writer_close_failure_and_prior_write_error(self):
+            real_write=write_new
+            for fault in ('close','write-close'):
+                with self.preparation_edges() as (ops,state,observer):
+                    mock_write=write_new;stream=Mock()
+                    def original_write(raw):
+                        # File creation/write precedes close. Preserve exact or
+                        # partial marker bytes even when the operation refuses.
+                        state['prepData'][str(ENTRY_FILE)]=raw if fault=='close' else raw[:17]
+                        if fault=='write-close':raise OSError('FIRST_ENTRY_WRITE')
+                        return len(raw)
+                    stream.write.side_effect=original_write
+                    stream.close.side_effect=OSError('ENTRY_CLOSE')
+                    def write(path,raw,cap):
+                        if Path(path)!=ENTRY_FILE:return mock_write(path,raw,cap)
+                        with patch.object(os,'open',return_value=7),patch.object(os,'fdopen',return_value=stream):
+                            return real_write(path,raw,cap)
+                    with patch.dict(globals(),write_new=write):result,failure=prepare_entry(ops)
+                    self.assertFalse(result['pass']);stream.close.assert_called_once()
+                    self.assertEqual(failure.first['message'],'ENTRY_CLOSE' if fault=='close' else 'FIRST_ENTRY_WRITE')
+                    if fault=='write-close':self.assertIn('ENTRY_CLOSE',[v['message'] for v in failure.secondary])
+                    self.assertIn(str(ENTRY_FILE),state['prepData']);self.assertEqual(state['events'],[])
+                    self.assertEqual(state['prepData'][str(ENTRY_FILE)],encode(ops.entry) if fault=='close' else encode(ops.entry)[:17])
+                    self.assertEqual(final_json(state['prepData'][str(ENTRY_FAILURE)])['firstFailure'],failure.first)
+
         @contextlib.contextmanager
         def finalizer_edges(self):
             with self.controller_edges() as (ops,state,plan,files,calls):
