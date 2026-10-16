@@ -71,13 +71,30 @@ node scripts/run-i80386-at-console.mjs \
   --hdd-image media/freedos.img --geometry 615,4,17 --steps 1000000
 ```
 
-Replace every hash placeholder with the actual 64-digit hash. The system BIOS must be 64 KiB and the CLI VGA ROM must be 16–64 KiB. The HDD byte length must equal cylinders × heads × sectors × 512. The geometry limits are 1–1024 cylinders, 1–16 heads and 1–63 sectors. `--live` enables the terminal; `--steps` sets the instruction budget.
+Replace every hash placeholder with the actual 64-digit hash. The system BIOS must be 64 KiB and the CLI VGA ROM must be 16–64 KiB. The HDD byte length must equal cylinders × heads × sectors × 512. The geometry limits are 1–1024 cylinders, 1–16 heads and 1–63 sectors. `--live` enables the terminal; `--steps` bounds ordinary machine step calls, not guest completion.
 
 For interaction, add `--live` to the same command and run it in a terminal with TTY input and output. Typed keys go to the guest; **Ctrl-]** quits and **Ctrl-L** redraws. The display uses ANSI text or supported VGA graphics, scaled to the terminal. Mouse movement/buttons use xterm SGR mouse reporting when the terminal supports it; guest software must also enable its mouse interface. Terminal state is restored on exit. This is terminal interaction, not a separate SDL window.
 
 The [owned live-PTY acceptance](I80386-CLI-PTY-RESULTS.md) verifies keyboard input, guest text, redraw, quit and terminal restoration on the ordinary JavaScript path. It does not establish interaction with every DOS guest or a guest mouse driver.
 
-Disk writes change the emulated disk in memory. This runner does not write them back to the original image or offer a saved-disk export option. `AT_CONSOLE_REPORT=media/new-report.json` saves the final execution report, including the disk hash, but does not save changed disk bytes.
+Disk writes change the emulated disk in memory. Add `--hdd-output media/new-disk.img`
+to create an exclusive verified raw export; the destination must be new and
+different from the input. Export requires ordinary JavaScript execution, an
+admitted budget/user-quit stop and an idle master-copy boundary; it is refused
+after guest failure or uncertain termination. It preserves the original image
+and is not autosave, guest completion or filesystem-flush evidence.
+`AT_CONSOLE_REPORT=media/new-report.json` saves a separate final report, not the
+disk bytes. See the [finite write/export/reload result](I80386-HDD-PERSISTENCE-RESULTS.md).
+
+For floppy boot with a master data disk, select that disk with `--hdd-image`
+and its matching `AT_HDD_SHA256`, then add `--floppy-image media/boot.img` with
+`AT_FLOPPY_SHA256=FLOPPY_SHA256`. The optional raw boot floppy must be 360 KiB
+or 1.2 MiB; replace its hash placeholder too. The qualified finite recipe uses
+`--geometry 306,4,17`, the same admitted floppy in two fresh processes and the
+exact exported master on reload. The earlier 615,4,17 example is a separate
+raw-HDD invocation, and its example step budget is not a boot-sufficiency claim.
+See the result's exact inputs and procedure; it does not qualify arbitrary HDD
+boot or durability.
 
 The console's **different** DOSBox parser accepts one HDD declaration, for example:
 
@@ -88,6 +105,17 @@ boot -l c
 ```
 
 Use `--dosbox-conf path/to/config.conf` instead of the direct image/geometry options; the BIOS/VGA/HDD hash environment is still required. Image paths resolve relative to the config directory. `-size` is bytes-per-sector, sectors, heads, cylinders, unlike CLI `--geometry`. This parser accepts HDD `-fs none` or `fat`, checks boot references, and does not execute arbitrary DOSBox commands. It does not mount an ISO.
+
+## Bounded ZIP package CLI candidate
+
+[Draft PR637](https://github.com/CrispStrobe/bw-board/pull/637) publishes the
+separate `scripts/run-dos-package.mjs` candidate. It is not yet a merged loader
+or a guest-qualified route. Its initial scope is a bounded STORED ZIP with one
+supported config-relative raw HDD and exact CHS; COM/MZ virtual files, DEFLATE,
+ISO/CD, host mounts, arbitrary autoexec and network fallback are refused.
+Source controls do not substitute for the pending four-case hosted PTY gate.
+Use the [package lane](X86-NEXT-LANES.md#bounded-dos-package-admission) for the
+source/actual boundary; existing runners above retain their own grammars.
 
 ## Browser GUI
 
