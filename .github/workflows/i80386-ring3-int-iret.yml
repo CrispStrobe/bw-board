@@ -1,7 +1,7 @@
 name: Ring3 INT80 IRETD source controls
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
     paths:
       - '.github/workflows/i80386-ring3-int-iret.yml'
       - 'scripts/i80386-ring3-int-iret/**'
@@ -15,6 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   controls:
+    if: github.event.action != 'labeled'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
@@ -44,3 +45,40 @@ jobs:
           node --test test/i80386-ring3-int-iret.test.mjs
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/run.py --controls
+  # Installation scaffold only. BOTH this literal guard and the source guard
+  # require separate review before any official event is authorized.
+  hosted-envelope-installation:
+    if: ${{ false && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-int-iret-actual' && github.actor == 'CrispStrobe' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      BW_RING3_APPROVED_REQUEST_SHA256: ${{ vars.BW_RING3_APPROVED_REQUEST_SHA256 }}
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      PYTHONPATH: ''
+      PYTHONHOME: ''
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Disabled hosted-envelope installation scaffold
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git --no-replace-objects -c gc.auto=0 -c maintenance.auto=false rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          export BW_EXPECTED_TREE="$(git --no-replace-objects -c gc.auto=0 -c maintenance.auto=false rev-parse 'HEAD^{tree}')"
+          sudo -- /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+            BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+            BW_RING3_APPROVED_REQUEST_SHA256="$BW_RING3_APPROVED_REQUEST_SHA256" \
+            GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+            GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+            GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+            GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" \
+            /usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/run.py --install-hosted-envelope

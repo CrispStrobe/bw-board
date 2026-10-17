@@ -488,7 +488,7 @@ resource operation or guest ran in these controls. Bounded read loops cannot
 preempt blocking kernel calls; the separately reviewed job backstop is still
 required.
 
-The fixed CLI now recognizes exactly one of five modes, without option
+The fixed CLI now recognizes exactly one of six modes, without option
 abbreviations. The static source constant `ACTUAL_ENTRY_ENABLED=False` refuses
 every mode except `--controls` before reading its environment, checking IDs,
 constructing a handler or opening a resource. Neither a plan field, command
@@ -503,6 +503,7 @@ status through `SystemExit`.
 | `--bootstrap` | Starts as root, validates entry facts, migrates itself into the controller leaf, drops IDs/groups/capabilities, then executes the fixed `--controller` descriptor. Any return from bootstrap is failure. |
 | `--controller` | Starts dropped in the controller leaf; requires both complete local capture facts and an empty authoritative failure object. |
 | `--hosted-actual` | Performs fresh fixed setup, admitted preparation, outside observation and dropped finalization. Its external event and runtime authority remain pending. |
+| `--install-hosted-envelope` | Disabled input-installation scaffold. Even complete installation returns nonzero before resource setup or guests because independent runtime, observer and reader gates remain pending. |
 
 Preparation and hosted success require `pass` to be the boolean `true` and
 the same authoritative `FirstFailure` to have neither primary nor secondary
@@ -550,7 +551,8 @@ control/readback facts remain in the returned in-memory setup result, including
 failure after a verified invoker drop. They are not a new original or packet
 role and do not independently establish actual installation or ownership.
 
-Ten added inert controls bring the runner total to 180. They drive the fixed
+The preceding source checkpoint added ten inert controls, bringing its total
+to 180. They drive the fixed
 CLI through mocked setup, opaque-plan reuse, preparation framing, outside
 observation and dropped finalization; separately they exercise the actual
 bootstrap exec boundary and dropped controller glue. The hosted CLI chain
@@ -561,14 +563,13 @@ separate evidence. The fake hierarchy root
 omits `cgroup.type`, and fake kill files retain mode `0200`. No real setup,
 controller, Node generation or guest ran. Independent expected preparation
 identity, hosted installation evidence and full event/runtime admission remain
-pending. The existing `jobMinutes: 15` policy calls for a separately reviewed
-900-second hosted job backstop; this checkpoint leaves the controls workflow
-unchanged and installs no actual job or backstop.
+pending. That checkpoint left the controls workflow unchanged. The installation
+scaffold below now declares a disabled 900-second job; its backstop remains
+unqualified until a separately admitted actual invocation.
 
-Actual invocation, hosted job/backstop installation and guest qualification
-remain unconnected. Polling cannot preempt blocking kernel operations,
-process creation or identity reads. The 15-minute job backstop is not wired at
-this checkpoint, and no real outside-owner lifecycle has been qualified.
+Actual invocation and guest qualification remain unconnected. Polling cannot
+preempt blocking kernel operations, process creation or identity reads, and no
+real outside-owner lifecycle has been qualified.
 The actual command refuses to run at this checkpoint. Remaining implementation
 stays within the existing nine-path claim. Before any actual event, freeze the
 complete source/input/runtime graph,
@@ -581,3 +582,74 @@ each official original once before independent audits.
 This fixture does not establish hardware IRQ delivery, paging, task switching,
 general DPMI or protected-application compatibility. CPU or device repairs need
 their own reviewed ownership scope.
+
+The disabled hosted-envelope installation scaffold adds one internal mode,
+`--install-hosted-envelope`. The workflow job has a literal false condition and
+a 15 minute timeout; `ACTUAL_ENTRY_ENABLED=False` refuses this mode before any
+environment, identity, event, network or filesystem edge. Neither environment
+variables nor command arguments enable it. No official label is consumed by
+these source controls. Thirteen added inert methods bring the total to 193; they
+exercise request/event admission, immutable transport, live source binding,
+exclusive installation, partial failures and the disabled sixth CLI mode.
+
+Its closed `bw.ring3.approval-request.v1` original contains `schema`,
+`repository` (`CrispStrobe/bw-board`), integer `pullRequest`, `head`, `tree`,
+`source` (canonical source12 original with `bytes`, `sha256`, `base64`) and
+`runtime`. The runtime descriptor has exactly `commit`, `tree`, `path`, `blob`,
+`mode`, `bytes`, `sha256`; its fixed root path is
+`ring3-runtime-expectation.json`, its mode is `100644` and its maximum size is
+256 KiB. A future independently reviewed public input commit must supply that
+complete runtime expectation. The retained historical QEMU fingerprint alone
+does not supply the shared library, TCG, data, alias or tool graph.
+
+The immutable labeled PR event body carries exactly one block beginning
+`<!-- BW_RING3_ACTUAL_REQUEST_V1` followed by a newline, a canonical one-line
+original wrapper (`bytes`, `sha256`, `base64`), another newline and
+`BW_RING3_ACTUAL_REQUEST_V1 -->`. The source checks the owner actor, own
+repository, open PR number, head, label, first run attempt and platform job and
+workflow observations. It never fetches a moving PR body. The separately
+supplied `BW_RING3_APPROVED_REQUEST_SHA256` comes from an Actions repository
+variable. Its presence is not independent approval: before any future label,
+external operator review must retain its exact selected value together with
+the request, source, runtime and event expectations. An independent original
+reader must receive that prior pin and join the eventual official event, job
+and configuration. Run ID, workflow SHA and job name are later observations;
+they are not invented pre-event approvals or numeric job IDs.
+
+Before network access or installation, the installer checks all twelve live
+source bytes, modes and Git object IDs against the request and checks actual
+HEAD/tree. The standard library HTTPS adapter uses only fixed public Git API
+commit/tree/blob routes in the owned repository, without caller credentials,
+proxies, redirects, moving refs or retries. It admits commit/tree and unique
+regular blob metadata before reading the blob once. Both the Git blob SHA-1
+and the externally pinned SHA-256 must match. Installer Git uses a canonical
+invoker-owned checkout, one command-scoped `safe.directory`, a fixed environment
+and `GIT_NO_LAZY_FETCH=1`; it writes no Git configuration. The successful
+installation record retains exact API and source-command originals and event
+identity observations. Partial failure facts remain in memory; the CLI emits
+only failure diagnostics, so an outside failure-original collector remains an
+activation requirement. Socket timeouts do not establish a hard total deadline.
+
+The root installer treats runtime bytes as opaque input; it does not execute
+probes or self-admit a runtime policy. It exclusively creates
+`/run/bw-ring3-<run>-1-admission/` and installs `request.original.json`,
+`event.original.json`, `runtime-expectation.json`, `launch-plan.json` and
+`installation.original.json` as root-owned, single-link, `0444` regular files.
+Held-descriptor and path metadata plus byte/hash readbacks are checked. The
+`bw.ring3.installation-envelope.v1` record describes this installer; it is not
+an independent resource observation or a cross-process inode lease. Errors
+preserve partial facts, with no overwrite, adoption, cleanup or retry. The
+dynamically formed plan retains `bw.ring3.launch-plan.v1`; its digest provides
+delivery integrity, while the separately reviewed request digest supplies the
+external identity selection. Existing phase.v3, V7, packet roles and caps stay
+unchanged. These new prerequisites are not silently accepted by V7 or emitted
+as a qualified original bundle.
+
+Even a complete installation deliberately returns failure before resource
+setup or guest execution. Full runtime graph admission before any probe,
+independent readonly setup observation (including metadata-only treatment of
+write-only `cgroup.kill`), versioned controller delivery and a standalone V8
+reader remain unconnected. Actual command activation, exact executing workflow
+source admission, installation/event API joins, final source12 after commit
+and a separately authorized single hosted run remain required. The disabled
+15 minute job supplies no measured backstop or guest qualification.

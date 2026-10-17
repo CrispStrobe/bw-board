@@ -75,49 +75,61 @@ Compare returned CPU/cache fields, complete selected pages and board state; inde
 
 **Status:** ownership claim [PR643](https://github.com/CrispStrobe/bw-board/pull/643)
 is merged; implementation [PR645](https://github.com/CrispStrobe/bw-board/pull/645)
-is draft. Checkpoint `62698e30` has 170 mocked runner controls, including
-admitted-plan delivery, source/Node comparisons and bounded generator originals.
-The fixed CLI dispatcher and fresh hosted-setup adapters retain a static source
-guard that disables every actual mode. The independent reader accepts
-manufactured originals and refuses rehashed counterexamples. External hosted
-plan installation, event/runtime admission, independent setup evidence and the
-job backstop remain unfinished. The adapters do not authenticate a caller
-choosing the plan or establish successful kernel operations. No actual ring-changing guest, QEMU
-comparison, protected-application or performance result follows from these
-controls. The current source and remaining activation gaps are documented in
+is draft. Published checkpoint `747b63ff` has 180 mocked runner controls,
+including admitted-plan delivery, source/Node comparisons, the fixed CLI and
+fresh hosted-setup adapters. A static source guard disables every actual mode.
+The independent reader accepts manufactured originals and refuses rehashed
+counterexamples. The current source slice adds immutable event/request admission,
+read-only installation and a disabled hosted job with a 15-minute backstop.
+Its thirteen additional inert controls bring the total to 193; the previous 180
+test bodies remain unchanged, and twenty-one source mutations are detected.
+Those source paths do not establish successful kernel operations or independently
+approve their own inputs. Complete runtime expectations, an independent setup
+observer and a reader joining those new originals remain activation blockers.
+No actual ring-changing guest, QEMU comparison, protected-application or
+performance result follows from these controls. The current source and remaining activation gaps are documented in
 [`scripts/i80386-ring3-int-iret/README.md`](../scripts/i80386-ring3-int-iret/README.md).
 
 Concrete remaining tasks, in order:
 
-1. Finish fixed authored-input staging inside the dropped preparation child.
-   Require exact preparation-group membership, an empty owned staging directory,
-   one bounded fixed Node invocation, exclusive writes and independent readback
-   against the frozen ROM and metadata goldens. Preserve partial files and first
-   errors. A separate callable and memory-only observations do not activate it.
-2. Supply the admitted preparation adapters from a separately reviewed hosted
-   launch step. Freeze the final committed twelve-file source manifest, its
-   original bytes, SHA-256, head and tree outside the generator channel, and
-   retain the independently admitted Node expectation. Install the exact plan
-   at the fixed root-owned read-only location before preparation; select its
-   expected digest from the reviewed event plan. Pass the independent source,
-   Node and plan expectations to the standalone reader. Do not derive expected
-   facts from generated output or a caller success flag. Review event/job
-   authority separately: the delivery adapters authenticate neither the caller
-   nor the hosted installation. Source comparisons do not freshly observe Git
-   HEAD/tree or serialize twelve early file reads; later PRE Git observations
-   do not establish that earlier order.
-3. Review the fixed internal dispatcher and fresh hosted resource setup against
-   actual runner prerequisites. Preparation starts dropped; bootstrap starts as
-   root, migrates itself, drops privileges and executes the controller. Require
-   parent controllers to be enabled already; do not mutate the shared cgroup
-   parent or adopt existing resources. Independently retain and admit setup
-   identity and ownership evidence before treating later observations as proof.
-   Add the actual hosted job with its 15-minute backstop, complete reviewed plan
-   installation and runtime expectations before changing the static activation
-   guard. Keep execution disabled until the full source, input, runtime,
-   resource, output and event envelope passes review. Preserve twenty packet
-   roles, the reader, limits and unrelated workflows.
-4. After all enabled final-head checks succeed, separately admit one hosted
+1. Finish and review the hosted-envelope installation source slice documented
+   in the runner README. It must compare the frozen twelve-file source manifest
+   with live checkout bytes, modes, HEAD and tree before network or installation;
+   admit fixed owned-repository runtime commit/tree/blob metadata before fetching
+   its bytes once; and install fresh read-only request, event, runtime and plan
+   files. Keep its source guard and the 15-minute job guard disabled. An immutable
+   labeled-PR event transports the request. A repository variable transports its
+   digest selected by independent pre-label review; neither is self-approval.
+   A dynamically computed plan digest proves delivery integrity only. Do not
+   apply the label or populate approval configuration during source development.
+2. Implement a separate read-only observer outside both resource trees. Before
+   preparation, retain its process and exact output originals, all five resource
+   identities, ownership/delegation/cap observations and installed-input hashes.
+   Do not serialize setup code's memory facts as independent evidence. Require
+   parent controllers to be enabled already, with no shared-parent mutation or
+   adoption. Preserve partial failures through an outside collector, including
+   failures before installation can produce an original.
+3. Independently freeze the complete stable runtime graph before probes or
+   guests. Historical QEMU executable, BIOS and VGA hashes are only selected-file
+   expectations; libraries, interpreters, aliases, TCG modules and the selected
+   package-data graph remain required. Preserve raw probe output separately from
+   stable comparison fields. A mismatch refuses; do not install a fallback or
+   silently update a pin. Extend the standalone reader with an explicit version
+   joining the request, installation, observer and runtime originals to external
+   expectations. Preserve the older reader and twenty packet roles. Test wrong
+   external pins and rehashed conflicting originals, not just producer success.
+4. Connect those admitted prerequisites to the existing setup, dropped
+   preparation, bootstrap and controller adapters. Preparation must retain exact
+   group membership, empty owned staging, the bounded fixed Node invocation,
+   exclusive writes and independent golden readback. Bootstrap migrates itself,
+   drops privileges and executes the controller. Pass independent source, Node,
+   request and installation expectations through the closed descriptors to the
+   reader. Preserve partial files and first errors. Source mocks are not actual
+   setup, observed ownership or guest qualification.
+5. Review the complete source, input, runtime, resource, output and event
+   envelope before a separate source change enables execution. Preserve limits
+   and unrelated workflows.
+6. After all enabled final-head checks succeed, separately admit one hosted
    event. Acquire each official original once and perform independent audits
    without producer imports or replay. Preserve refusals; a later candidate
    requires its own source and admission, not a retry of a consumed attempt.

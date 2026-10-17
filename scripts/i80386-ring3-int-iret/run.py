@@ -22,6 +22,7 @@ import struct
 import subprocess
 import sys
 import time
+import urllib.request
 
 PACKET = Path('build/i80386-ring3-int-iret')
 ENV = {'LANG': 'C.UTF-8', 'HOME': '/nonexistent', 'PATH': '/usr/bin:/bin'}
@@ -3335,13 +3336,341 @@ def hosted_entry(expected_plan_sha256,environ=None):
     return {'pass':False,'setup':result},failure
 
 
+APPROVAL_REPOSITORY='CrispStrobe/bw-board'
+APPROVAL_LABEL='x86-ring3-int-iret-actual'
+RUNTIME_INPUT_PATH='ring3-runtime-expectation.json'
+APPROVAL_BLOCK_START='<!-- BW_RING3_ACTUAL_REQUEST_V1\n'
+APPROVAL_BLOCK_END='\nBW_RING3_ACTUAL_REQUEST_V1 -->'
+RUNTIME_INPUT_CAP=256<<10  # Fits base64 Git API JSON within the existing JSON cap.
+
+
+def admitted_original(value,cap,message):
+    require_fields(value,'bytes sha256 base64',message)
+    need(type(value['bytes']) is int and 0<value['bytes']<=cap and type(value['base64']) is str,
+         'bounded original encoding')
+    need(type(value['sha256']) is str and re.fullmatch('[0-9a-f]{64}',value['sha256']), 'original digest syntax')
+    raw=base64.b64decode(value['base64'],validate=True)
+    need(len(raw)==value['bytes'] and sha(raw)==value['sha256'] and
+         base64.b64encode(raw).decode('ascii')==value['base64'],'exact original extent/digest/encoding')
+    return raw
+
+
+def original_bytes(raw):
+    need(type(raw) is bytes and 0<len(raw)<=JSON_CAP,'bounded retained original')
+    return {'bytes':len(raw),'sha256':sha(raw),'base64':base64.b64encode(raw).decode('ascii')}
+
+
+def admit_approval_request(raw,expected_sha256):
+    """Expected digest originates in separately retained pre-label review.
+
+    A repository variable transports that selection; neither its presence nor
+    event-body equality authenticates approval. No future run ID is approved here.
+    """
+    need(type(raw) is bytes and 0<len(raw)<=JSON_CAP and type(expected_sha256) is str and
+         re.fullmatch('[0-9a-f]{64}',expected_sha256) and sha(raw)==expected_sha256,
+         'externally selected approval-request digest')
+    request=final_json(raw)
+    require_fields(request,'schema repository pullRequest head tree source runtime','closed approval request')
+    need(encode(request)==raw and request['schema']=='bw.ring3.approval-request.v1' and
+         request['repository']==APPROVAL_REPOSITORY and type(request['pullRequest']) is int and
+         0<request['pullRequest']<2**31,'canonical fixed repository approval request')
+    source=admitted_original(request['source'],JSON_CAP,'closed approved source original')
+    admit_generation_source(source,request['source']['sha256'],request['head'],request['tree'])
+    runtime=request['runtime']
+    require_fields(runtime,'commit tree path blob mode bytes sha256','closed immutable runtime input')
+    need(runtime['path']==RUNTIME_INPUT_PATH and runtime['mode']=='100644' and
+         type(runtime['bytes']) is int and 0<runtime['bytes']<=RUNTIME_INPUT_CAP,'fixed bounded runtime input')
+    for key,size in (('commit',40),('tree',40),('blob',40),('sha256',64)):
+        need(type(runtime[key]) is str and re.fullmatch('[0-9a-f]{'+str(size)+'}',runtime[key]),
+             'immutable runtime input object/digest')
+    return request
+
+
+def admit_approval_event(event_raw,expected_request_sha256,environ):
+    """Immutable platform snapshot joins; no moving PR-body API read."""
+    need(type(event_raw) is bytes and 0<len(event_raw)<=JSON_CAP,'bounded raw official event')
+    event=final_json(event_raw);need(type(event) is dict,'official event object')
+    pr=event.get('pull_request');repo=event.get('repository');sender=event.get('sender');label=event.get('label')
+    need(type(pr) is dict and type(repo) is dict and type(sender) is dict and type(label) is dict,
+         'labeled PR event objects')
+    need(event.get('action')=='labeled' and label.get('name')==APPROVAL_LABEL and
+         repo.get('full_name')==APPROVAL_REPOSITORY and sender.get('login')=='CrispStrobe' and
+         environ.get('GITHUB_EVENT_NAME')=='pull_request' and environ.get('GITHUB_REPOSITORY')==APPROVAL_REPOSITORY and
+         environ.get('GITHUB_ACTOR')=='CrispStrobe','closed own labeled event and platform observations')
+    body=pr.get('body');need(type(body) is str and body.count(APPROVAL_BLOCK_START)==1 and
+         body.count(APPROVAL_BLOCK_END)==1,'one immutable approval request block')
+    need(body.index(APPROVAL_BLOCK_START)<body.index(APPROVAL_BLOCK_END),'ordered approval request block')
+    block=body.split(APPROVAL_BLOCK_START,1)[1].split(APPROVAL_BLOCK_END,1)[0]
+    wrapper=final_json(block.encode());require_fields(wrapper,'bytes sha256 base64','closed event request wrapper')
+    need(encode(wrapper).decode().rstrip('\n')==block,'canonical event request wrapper bytes')
+    request_raw=admitted_original(wrapper,JSON_CAP,'bounded event request original')
+    request=admit_approval_request(request_raw,expected_request_sha256)
+    head=pr.get('head');base=pr.get('base')
+    need(type(head) is dict and type(base) is dict and type(head.get('repo')) is dict and type(base.get('repo')) is dict and
+         head['repo'].get('full_name')==APPROVAL_REPOSITORY and head['repo'].get('fork') is False and
+         base['repo'].get('full_name')==APPROVAL_REPOSITORY and base.get('ref')=='master' and
+         head.get('sha')==request['head'] and type(event.get('number')) is int and
+         event['number']==request['pullRequest'] and type(pr.get('number')) is int and
+         pr['number']==request['pullRequest'] and pr.get('state')=='open','exact own open PR/head joins')
+    expected_cgroup(environ)
+    need(environ.get('BW_EXPECTED_HEAD')==request['head'] and environ.get('BW_EXPECTED_TREE')==request['tree'] and
+         environ.get('GITHUB_JOB')=='hosted-envelope-installation' and
+         type(environ.get('GITHUB_WORKFLOW_SHA')) is str and
+         re.fullmatch('[0-9a-f]{40}',environ['GITHUB_WORKFLOW_SHA']) and
+         environ.get('GITHUB_WORKFLOW_REF')==APPROVAL_REPOSITORY+'/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+
+             str(request['pullRequest'])+'/merge','official run/job/workflow observations')
+    return request_raw,request
+
+
+class ImmutableRuntimeInput:
+    """Fixed public HTTPS metadata admission, then one immutable blob read.
+
+    No credential/header from caller, proxies, moving refs, redirects or retry.
+    API metadata is integrity evidence; approval is the external request pin.
+    """
+    API='https://api.github.com/repos/'+APPROVAL_REPOSITORY+'/git/'
+
+    def __init__(self):self.attempted=False;self.observations=[]
+
+    def response(self,suffix):
+        need(type(suffix) is str and re.fullmatch('(commits|trees|blobs)/[0-9a-f]{40}',suffix),
+             'closed owned immutable Git API route')
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self,*args,**kwargs):raise ValueError('runtime input redirect refused')
+        opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
+        request=urllib.request.Request(self.API+suffix,headers={'Accept':'application/vnd.github+json',
+            'User-Agent':'bw-ring3-immutable-input-v1','X-GitHub-Api-Version':'2022-11-28'})
+        with opener.open(request,timeout=10) as response:
+            need(response.status==200 and response.geturl()==self.API+suffix,'fixed successful runtime API response')
+            raw=response.read(JSON_CAP+1)
+            need(type(raw) is bytes and 0<len(raw)<=JSON_CAP,'bounded runtime API response')
+        self.observations.append({'path':suffix,'response':original_bytes(raw)})
+        return final_json(raw)
+
+    def acquire(self,descriptor):
+        need(not self.attempted,'immutable runtime acquisition consumed; no retry');self.attempted=True
+        # Reuse complete request validation for untrusted public descriptor maps
+        # only in the caller; capture the admitted descriptor before callbacks.
+        descriptor=final_json(encode(descriptor))
+        require_fields(descriptor,'commit tree path blob mode bytes sha256','closed transport runtime descriptor')
+        need(descriptor['path']==RUNTIME_INPUT_PATH and descriptor['mode']=='100644' and
+             type(descriptor['bytes']) is int and 0<descriptor['bytes']<=RUNTIME_INPUT_CAP,'fixed transport input path/mode/extent')
+        for key,size in (('commit',40),('tree',40),('blob',40),('sha256',64)):
+            need(type(descriptor[key]) is str and re.fullmatch('[0-9a-f]{'+str(size)+'}',descriptor[key]),
+                 'fixed transport hexadecimal object/digest')
+        commit=self.response('commits/'+descriptor['commit'])
+        need(type(commit) is dict and commit.get('sha')==descriptor['commit'] and
+             type(commit.get('tree')) is dict and commit['tree'].get('sha')==descriptor['tree'],
+             'runtime input immutable commit/tree metadata')
+        tree=self.response('trees/'+descriptor['tree'])
+        need(type(tree) is dict and tree.get('sha')==descriptor['tree'] and tree.get('truncated') is False and
+             type(tree.get('tree')) is list,'complete runtime input tree metadata')
+        names=[]
+        for item in tree['tree']:
+            need(type(item) is dict and type(item.get('path')) is str and '/' not in item['path'] and
+                 item['path'] not in ('','.','..') and item['path'] not in names,'unique well-formed root Git entries')
+            names.append(item['path'])
+        entries=[item for item in tree['tree'] if item['path']==RUNTIME_INPUT_PATH]
+        need(len(entries)==1 and entries[0].get('mode')==descriptor['mode'] and entries[0].get('type')=='blob' and
+             entries[0].get('sha')==descriptor['blob'] and type(entries[0].get('size')) is int and
+             entries[0]['size']==descriptor['bytes'],'admitted runtime blob metadata BEFORE retrieval')
+        blob=self.response('blobs/'+descriptor['blob'])
+        need(type(blob) is dict and blob.get('sha')==descriptor['blob'] and blob.get('encoding')=='base64' and
+             type(blob.get('size')) is int and blob['size']==descriptor['bytes'] and type(blob.get('content')) is str,
+             'runtime immutable blob response')
+        text=blob['content'];need(re.fullmatch('[A-Za-z0-9+/=\n]*',text) is not None,'Git base64 alphabet')
+        raw=base64.b64decode(text.replace('\n',''),validate=True)
+        need(base64.b64encode(raw).decode()==text.replace('\n','') and len(raw)==descriptor['bytes'] and
+             sha(raw)==descriptor['sha256'] and
+             hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()==descriptor['blob'],
+             'runtime input exact Git blob extent and independent digest')
+        return raw
+
+
+class HostedSourceGit(OutsideGit):
+    def __init__(self,argv):
+        super().__init__(argv)
+        self.environment=dict(ENV,GIT_NO_LAZY_FETCH='1',GIT_CONFIG_NOSYSTEM='1')
+
+
+class HostedEnvelopeInstaller:
+    """Opaque input installation only; no resource or guest admission.
+
+    Root does not parse runtime policy or synthesize an approved runtime graph.
+    Partial facts survive failure in memory; installed records are not an
+    independent setup observer or a cross-process kernel ownership lease.
+    """
+    def __init__(self,environ,transport=None):
+        self.environ=dict(environ);self.transport=ImmutableRuntimeInput() if transport is None else transport
+        self.attempted=False;self.facts={'created':[],'files':{},'transport':self.transport.observations,'sourceCommands':[]}
+        self.checkout=None
+
+    def event(self):
+        path=self.environ.get('GITHUB_EVENT_PATH')
+        need(type(path) is str and Path(path).is_absolute(),'official event snapshot path')
+        path=Path(path);before=path.lstat()
+        need(path.resolve(strict=True)==path and stat.S_ISREG(before.st_mode),'canonical regular official event snapshot')
+        keys=('st_dev','st_ino','st_mode','st_uid','st_gid','st_nlink','st_size','st_mtime_ns')
+        need(0<before.st_size<=JSON_CAP,'bounded official event snapshot extent')
+        descriptor=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK);first=None;raw=bytearray()
+        try:
+            need(all(getattr(before,key)==getattr(os.fstat(descriptor),key) for key in keys),'held official event path identity')
+            while True:
+                chunk=os.read(descriptor,min(65536,JSON_CAP+1-len(raw)))
+                if not chunk:break
+                raw.extend(chunk);need(len(raw)<=JSON_CAP,'official event read cap')
+            after=path.lstat();held=os.fstat(descriptor)
+            need(len(raw)==before.st_size and all(getattr(before,key)==getattr(after,key)==getattr(held,key) for key in keys) and
+                 path.resolve(strict=True)==path,'stable official event path/held identity and bytes')
+        except BaseException as error:first=error
+        finally:first=close_owned(descriptor,first,'official-event-close')
+        if first is not None:raise first
+        self.facts['eventIdentity']={key:getattr(before,key) for key in keys}
+        return bytes(raw)
+
+    def source_command(self,argv,cap):
+        git=['git','--no-replace-objects','-c','gc.auto=0','-c','maintenance.auto=false']
+        need(argv in (git+['rev-parse','HEAD'],git+['rev-parse','HEAD^{tree}'],
+             git+['ls-tree','-r','HEAD','--',*sorted(SOURCE_PATHS)]) and
+             len(self.facts['sourceCommands'])<3,'three fixed installer Git descriptors')
+        checkout=self.checkout
+        need(checkout is not None and Path.cwd()==checkout and checkout.resolve(strict=True)==checkout,
+             'same frozen canonical installer checkout for every Git command')
+        actual=['/usr/bin/git','-c','safe.directory='+str(checkout),*argv[1:]]
+        process,streams=collect_child(HostedSourceGit(actual),'discovery',actual,profile='discovery')
+        self.facts['sourceCommands'].append({'argv':actual,'process':process,'stdout':original_bytes(streams['stdout']) if streams['stdout'] else None,
+            'stderr':original_bytes(streams['stderr']) if streams['stderr'] else None})
+        if process['firstFailure'] is not None:raise ObservedFailure(process['firstFailure'],process['secondary'])
+        need(streams['stderr']==b'' and len(streams['stdout'])<=cap,'installer Git bounded original output')
+        return streams['stdout']
+
+    def source(self,request):
+        need(self.checkout is None,'installer checkout admission consumed')
+        checkout=Path.cwd();info=checkout.lstat()
+        need(checkout.resolve(strict=True)==checkout and stat.S_ISDIR(info.st_mode) and
+             info.st_uid>0 and info.st_gid>0 and info.st_mode&0o022==0,
+             'canonical nonwritable invoker-owned installer checkout')
+        self.checkout=checkout
+        def read(path,cap):
+            target=Path(path);need(Path.cwd()==self.checkout and target.resolve(strict=True)==self.checkout/target and stat.S_ISREG(target.lstat().st_mode),
+                 'canonical regular live installer source')
+            raw,mode=bounded_read(target,cap,with_mode=True)
+            need(mode=='100644','live installer source mode matches admitted regular Git mode')
+            return raw
+        observed=capture_source(request['head'],self.source_command,read)
+        self.facts['source']=observed
+        need(encode(observed)==admitted_original(request['source'],JSON_CAP,'approved source twelve original'),
+             'all twelve live source modes/bytes/blobs and actual HEAD/tree match approval')
+
+    def install(self,files):
+        need(type(files) is dict and set(files)=={'request.original.json','event.original.json','runtime-expectation.json','launch-plan.json'} and
+             all(type(raw) is bytes and 0<len(raw)<=JSON_CAP for raw in files.values()),'exact bounded installation input roster')
+        path=launch_plan_path(self.environ).parent;parents={};descriptors=[];failure=None
+        def identity(info):
+            return {key:getattr(info,'st_'+key) for key in ('dev','ino','mode','uid','gid','nlink','size','mtime_ns')}
+        def directory(name):
+            fd=os.open(name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK)
+            descriptors.append(fd);info=os.fstat(fd)
+            need(stat.S_ISDIR(info.st_mode) and (info.st_uid,info.st_gid)==(0,0) and info.st_mode&0o022==0,
+                 'root-owned nonwritable admission directory')
+            return fd,identity(info)
+        try:
+            root,parents['/']=directory('/')
+            run=os.open('run',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=root)
+            descriptors.append(run);info=os.fstat(run)
+            need(stat.S_ISDIR(info.st_mode) and (info.st_uid,info.st_gid)==(0,0) and info.st_mode&0o022==0,
+                 'root-owned nonwritable run directory');parents['/run']=identity(info)
+            os.mkdir(path.name,0o755,dir_fd=run);self.facts['created'].append(str(path))
+            held=os.open(path.name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=run)
+            descriptors.append(held);info=os.fstat(held)
+            need(stat.S_ISDIR(info.st_mode) and (info.st_uid,info.st_gid)==(0,0) and stat.S_IMODE(info.st_mode)==0o755,
+                 'fresh root-owned admission directory');self.facts['directory']=identity(info)
+            for name,raw in files.items():
+                need(name in ('request.original.json','event.original.json','runtime-expectation.json','launch-plan.json') and
+                     type(raw) is bytes and 0<len(raw)<=JSON_CAP,'closed bounded installation file')
+                fd=os.open(name,os.O_RDWR|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_NONBLOCK,0o600,dir_fd=held)
+                descriptors.append(fd);self.facts['created'].append(str(path/name))
+                need(os.write(fd,raw)==len(raw),'complete admission original installation write')
+                os.fchmod(fd,0o444);before=os.fstat(fd)
+                need(stat.S_ISREG(before.st_mode) and (before.st_uid,before.st_gid)==(0,0) and
+                     stat.S_IMODE(before.st_mode)==0o444 and before.st_nlink==1 and before.st_size==len(raw),
+                     'readonly single-link root-owned installed original')
+                os.lseek(fd,0,os.SEEK_SET);readback=os.read(fd,len(raw)+1)
+                need(readback==raw and identity(os.fstat(fd))==identity(before) and
+                     identity(os.stat(name,dir_fd=held,follow_symlinks=False))==identity(before),
+                     'held installed original bytes/identity readback')
+                self.facts['files'][name]={'identity':identity(before),'bytes':len(raw),'sha256':sha(raw)}
+            # This record witnesses this installer, not independent resources.
+            record=encode({'schema':'bw.ring3.installation-envelope.v1','runId':self.environ['GITHUB_RUN_ID'],
+                'attempt':1,'requestSha256':self.environ['BW_RING3_APPROVED_REQUEST_SHA256'],
+                'launchPlanSha256':sha(files['launch-plan.json']),'files':self.facts['files'],
+                'directory':self.facts['directory'],'ancestors':parents,
+                'observations':{'sourceCommands':self.facts['sourceCommands'],'source':self.facts['source'],
+                    'eventIdentity':self.facts.get('eventIdentity'),'transport':self.transport.observations}})
+            need(len(record)<=JSON_CAP,'bounded installation envelope')
+            fd=os.open('installation.original.json',os.O_RDWR|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_NONBLOCK,0o600,dir_fd=held)
+            descriptors.append(fd);self.facts['created'].append(str(path/'installation.original.json'))
+            need(os.write(fd,record)==len(record),'complete installation envelope write');os.fchmod(fd,0o444)
+            before=os.fstat(fd);os.lseek(fd,0,os.SEEK_SET);readback=os.read(fd,len(record)+1)
+            need(stat.S_ISREG(before.st_mode) and (before.st_uid,before.st_gid)==(0,0) and
+                 stat.S_IMODE(before.st_mode)==0o444 and before.st_nlink==1 and before.st_size==len(record) and
+                 readback==record and identity(os.fstat(fd))==identity(before) and
+                 identity(os.stat('installation.original.json',dir_fd=held,follow_symlinks=False))==identity(before),
+                 'readonly single-link installation envelope held bytes/identity readback')
+            self.facts['files']['installation.original.json']={'identity':identity(before),'bytes':len(record),'sha256':sha(record)}
+            for observed,actual in ((parents['/'],os.fstat(root)),(parents['/run'],os.fstat(run)),
+                 (parents['/run'],os.stat('run',dir_fd=root,follow_symlinks=False)),
+                 (self.facts['directory'],os.fstat(held)),(self.facts['directory'],os.stat(path.name,dir_fd=run,follow_symlinks=False))):
+                need(all(observed[key]==getattr(actual,'st_'+key) for key in ('dev','ino','mode','uid','gid')),
+                     'stable held installation directory and path binding')
+            self.facts['installationOriginal']=record
+        except BaseException as error:failure=error
+        finally:
+            for fd in reversed(descriptors):failure=close_owned(fd,failure,'envelope-install-close')
+        if failure is not None:raise failure
+
+    def prepare(self):
+        failure=FirstFailure();installed=False
+        try:
+            need(not self.attempted,'hosted envelope installation consumed; no retry');self.attempted=True
+            need(os.getresuid()==(0,0,0) and os.getresgid()==(0,0,0),'root opaque installer identity')
+            event_raw=self.event();request_raw,request=admit_approval_event(event_raw,
+                self.environ.get('BW_RING3_APPROVED_REQUEST_SHA256'),self.environ)
+            self.facts['requestOriginal']=request_raw;self.facts['eventOriginal']=event_raw
+            self.source(request)  # All source reads/Git observations precede any network or mutation.
+            runtime=self.transport.acquire(final_json(encode(request['runtime'])))
+            # Transport objects are injectable edges; admission repeats after
+            # callback return, before the first privileged filesystem mutation.
+            need(type(runtime) is bytes and len(runtime)==request['runtime']['bytes'] and
+                 sha(runtime)==request['runtime']['sha256'] and
+                 hashlib.sha1(b'blob '+str(len(runtime)).encode()+b'\0'+runtime).hexdigest()==request['runtime']['blob'],
+                 'admitted opaque runtime input bytes before installation')
+            plan=encode({'schema':'bw.ring3.launch-plan.v1','runId':self.environ['GITHUB_RUN_ID'],'attempt':1,
+                'head':request['head'],'tree':request['tree'],'source':request['source']})
+            admit_launch_plan(plan,sha(plan),self.environ)  # Delivery integrity, NOT approval.
+            files={'request.original.json':request_raw,'event.original.json':event_raw,
+                   'runtime-expectation.json':runtime,'launch-plan.json':plan}
+            need(sum(map(len,files.values()))<=5<<20,'existing aggregate original byte cap')
+            observations=encode({'sourceCommands':self.facts['sourceCommands'],'source':self.facts['source'],
+                'eventIdentity':self.facts.get('eventIdentity'),'transport':self.transport.observations})
+            need(len(observations)<=JSON_CAP-(64<<10),'installation observation originals fit unchanged JSON cap before mkdir')
+            self.install(files);installed=True
+            raise ValueError('installation only: independent runtime graph gate, setup observer, versioned delivery/reader and actual job activation pending')
+        except BaseException as error:failure.add(error,'hosted-envelope-installation')
+        return {'pass':False,'installationComplete':installed,'facts':self.facts},failure
+
+
+def install_hosted_envelope(environ):
+    return HostedEnvelopeInstaller(environ).prepare()
+
+
 ACTUAL_ENTRY_ENABLED=False  # Activation requires a separate reviewed source/workflow change.
 
 
 def dispatch_cli(argv=None,environ=None):
     parser=argparse.ArgumentParser(description=__doc__,allow_abbrev=False)
     modes=parser.add_mutually_exclusive_group(required=True)
-    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual'):
+    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope'):
         modes.add_argument('--'+name,action='store_const',const=name,dest='mode')
     argv=list(sys.argv[1:] if argv is None else argv)
     if len(argv)!=1:parser.error('exactly one fixed mode argument required')
@@ -3351,7 +3680,10 @@ def dispatch_cli(argv=None,environ=None):
         if args.mode=='controls':controls();return 0
         need(ACTUAL_ENTRY_ENABLED is True,'actual entry disabled pending final source/event/workflow admission')
         environ=dict(os.environ if environ is None else environ)
-        if args.mode=='prepare-admitted-generated':
+        if args.mode=='install-hosted-envelope':
+            result,returned=install_hosted_envelope(environ)
+            need(isinstance(returned,FirstFailure),'authoritative envelope installation failure required');failure=returned
+        elif args.mode=='prepare-admitted-generated':
             result,returned=admitted_generated_preparation_child(environ)
             need(isinstance(returned,FirstFailure),'authoritative preparation failure required');failure=returned
         elif args.mode=='bootstrap':
@@ -3414,6 +3746,321 @@ def controls():
                 'rusage':{'userSeconds':0.1,'systemSeconds':0.01,'maxRssKiB':1024}}
 
     class Tests(unittest.TestCase):
+        def envelope_fixture(self):
+            data={path:('held '+path+'\n').encode() for path in SOURCE_PATHS}
+            source={'schema':'bw.ring3.source.v1','head':'a'*40,'tree':'b'*40,'files':{path:{'bytes':len(raw),
+                'sha256':sha(raw),'mode':'100644','blob':hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()}
+                for path,raw in data.items()}}
+            runtime=b'{"unqualifiedOpaqueRuntime":true}\n'
+            descriptor={'commit':'c'*40,'tree':'d'*40,'path':RUNTIME_INPUT_PATH,'mode':'100644','bytes':len(runtime),
+                'sha256':sha(runtime),'blob':hashlib.sha1(b'blob '+str(len(runtime)).encode()+b'\0'+runtime).hexdigest()}
+            request={'schema':'bw.ring3.approval-request.v1','repository':APPROVAL_REPOSITORY,'pullRequest':645,
+                'head':source['head'],'tree':source['tree'],'source':original_bytes(encode(source)),'runtime':descriptor}
+            raw=encode(request)
+            event={'action':'labeled','number':645,'repository':{'full_name':APPROVAL_REPOSITORY},
+                'sender':{'login':'CrispStrobe'},'label':{'name':APPROVAL_LABEL},'pull_request':{
+                    'number':645,'state':'open','body':APPROVAL_BLOCK_START+encode(original_bytes(raw)).decode().rstrip('\n')+APPROVAL_BLOCK_END,
+                    'head':{'sha':source['head'],'repo':{'full_name':APPROVAL_REPOSITORY,'fork':False}},
+                    'base':{'ref':'master','repo':{'full_name':APPROVAL_REPOSITORY}}}}
+            env={'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1','GITHUB_EVENT_PATH':'/event.json',
+                'GITHUB_EVENT_NAME':'pull_request','GITHUB_REPOSITORY':APPROVAL_REPOSITORY,'GITHUB_ACTOR':'CrispStrobe',
+                'GITHUB_JOB':'hosted-envelope-installation','GITHUB_WORKFLOW_SHA':'e'*40,
+                'GITHUB_WORKFLOW_REF':APPROVAL_REPOSITORY+'/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/645/merge',
+                'BW_EXPECTED_HEAD':source['head'],'BW_EXPECTED_TREE':source['tree'],'BW_RING3_APPROVED_REQUEST_SHA256':sha(raw)}
+            responses={'commits/'+descriptor['commit']:{'sha':descriptor['commit'],'tree':{'sha':descriptor['tree']}},
+                'trees/'+descriptor['tree']:{'sha':descriptor['tree'],'truncated':False,'tree':[{'path':RUNTIME_INPUT_PATH,
+                    'mode':'100644','type':'blob','sha':descriptor['blob'],'size':len(runtime)}]},
+                'blobs/'+descriptor['blob']:{'sha':descriptor['blob'],'encoding':'base64','size':len(runtime),
+                    'content':base64.b64encode(runtime).decode()+'\n'}}
+            return env,event,request,raw,runtime,data,responses
+
+        @contextlib.contextmanager
+        def envelope_edges(self,env,data,responses):
+            state={'rows':{},'fds':{},'next':50,'events':[],'fault':None}
+            def row(path,mode,raw=b''):
+                state['rows'][str(path)]={'st_dev':1,'st_ino':len(state['rows'])+1,'st_mode':mode,
+                    'st_uid':0,'st_gid':0,'st_nlink':1,'st_size':len(raw),'st_mtime_ns':1,'raw':raw}
+            row('/',0o40755);row('/run',0o40755)
+            def pathof(name,dir_fd=None):return str(Path(state['fds'][dir_fd]['path'])/name) if dir_fd is not None else str(name)
+            def info(path):return SimpleNamespace(**{k:v for k,v in state['rows'][path].items() if k!='raw'})
+            def opened(name,flags,mode=0o777,dir_fd=None):
+                path=pathof(name,dir_fd)
+                if flags&os.O_CREAT:
+                    self.assertTrue(flags&os.O_EXCL);self.assertTrue(flags&os.O_NOFOLLOW)
+                    if path in state['rows']:raise FileExistsError(path)
+                    row(path,stat.S_IFREG|mode)
+                if path not in state['rows']:raise FileNotFoundError(path)
+                state['next']+=1;fd=state['next'];state['fds'][fd]={'path':path,'offset':0}
+                state['events'].append(('open',path));return fd
+            def mkdir(name,mode,dir_fd=None):
+                path=pathof(name,dir_fd);state['events'].append(('mkdir',path))
+                if path in state['rows']:raise FileExistsError(path)
+                row(path,stat.S_IFDIR|mode)
+            def write(fd,raw):
+                path=state['fds'][fd]['path'];state['events'].append(('write',path))
+                if state['fault']=='write':raise OSError('ORIGINAL_INSTALL_WRITE')
+                state['rows'][path].update(raw=raw,st_size=len(raw));return len(raw)-(state['fault']=='short')
+            def read(fd,cap):
+                path=state['fds'][fd]['path'];raw=state['rows'][path]['raw']
+                return b'CHANGED' if state['fault']=='readback' or (state['fault']=='record-readback' and path.endswith('/installation.original.json')) else raw[:cap]
+            def chmod(fd,mode):
+                path=state['fds'][fd]['path'];state['rows'][path]['st_mode']=stat.S_IFREG|mode
+                if state['fault']=='owner':state['rows'][path]['st_uid']=1001
+                if state['fault']=='links':state['rows'][path]['st_nlink']=2
+                if state['fault']=='input-mode' and not path.endswith('/installation.original.json'):state['rows'][path]['st_mode']=0o100644
+                if state['fault']=='record-mode' and path.endswith('/installation.original.json'):state['rows'][path]['st_mode']=0o100644
+            def close(fd):
+                state['fds'].pop(fd)
+                if state['fault']=='close':raise OSError('ORIGINAL_INSTALL_CLOSE')
+            def git(argv,cap):
+                state['events'].append(('git',tuple(argv)))
+                if argv[-1]=='HEAD':return (env['BW_EXPECTED_HEAD']+'\n').encode()
+                if argv[-1]=='HEAD^{tree}':return (env['BW_EXPECTED_TREE']+'\n').encode()
+                return ''.join('100644 blob '+hashlib.sha1(b'blob '+str(len(data[path])).encode()+b'\0'+data[path]).hexdigest()+
+                    '\t'+path+'\n' for path in sorted(data)).encode()
+            def source_read(path,cap,with_mode=False):
+                raw=data[str(path)];return (raw,'100755' if state['fault']=='source-mode' else '100644') if with_mode else raw
+            def response(suffix):
+                state['events'].append(('network',suffix));return final_json(encode(responses[suffix]))
+            with contextlib.ExitStack() as stack:
+                for context in (patch.object(os,'getresuid',return_value=(0,)*3),patch.object(os,'getresgid',return_value=(0,)*3),
+                    patch.object(os,'open',side_effect=opened),patch.object(os,'mkdir',side_effect=mkdir),
+                    patch.object(os,'write',side_effect=write),patch.object(os,'read',side_effect=read),
+                    patch.object(os,'lseek',return_value=0),patch.object(os,'fchmod',side_effect=chmod),
+                    patch.object(os,'close',side_effect=close),patch.object(os,'fstat',side_effect=lambda fd:info(state['fds'][fd]['path'])),
+                    patch.object(os,'stat',side_effect=lambda name,dir_fd=None,**kw:info(pathof(name,dir_fd))),
+                    patch.object(Path,'cwd',return_value=Path('/checkout')),
+                    patch.object(Path,'resolve',lambda path,**kw:path if path.is_absolute() else Path('/checkout')/path),
+                    patch.object(Path,'lstat',lambda path:SimpleNamespace(st_mode=0o40755 if str(path)=='/checkout' else 0o100644,
+                        st_uid=1001,st_gid=1002)),
+                    patch.dict(globals(),bounded_read=source_read),patch.object(HostedEnvelopeInstaller,'source_command',side_effect=git),
+                    patch.object(ImmutableRuntimeInput,'response',side_effect=response)):
+                    stack.enter_context(context)
+                yield state
+
+        def test_envelope_request_event_external_pin_and_exact_source_join(self):
+            env,event,request,raw,runtime,data,responses=self.envelope_fixture()
+            got,admitted=admit_approval_event(encode(event),sha(raw),env)
+            self.assertEqual(got,raw);self.assertEqual(admitted,request)
+            for pin in (None,'0'*64,sha(encode(event))):
+                with self.assertRaises(ValueError):admit_approval_event(encode(event),pin,env)
+            changed=final_json(raw);changed['pullRequest']=True
+            with self.assertRaises(ValueError):admit_approval_request(encode(changed),sha(encode(changed)))
+            changed=final_json(raw);changed['unexpected']=1
+            with self.assertRaises(ValueError):admit_approval_request(encode(changed),sha(encode(changed)))
+            with self.assertRaises(ValueError):admit_approval_request(raw.rstrip(),sha(raw.rstrip()))
+            duplicate=raw.replace(b'"pullRequest":645',b'"pullRequest":645,"pullRequest":645')
+            with self.assertRaises(ValueError):admit_approval_request(duplicate,sha(duplicate))
+
+        def test_envelope_event_held_snapshot_identity_extent_and_close_refusals(self):
+            env,event,request,raw,runtime,data,responses=self.envelope_fixture();event_raw=encode(event)
+            for fault in ('none','held-identity','path-identity','extent','close'):
+                initial=SimpleNamespace(st_dev=1,st_ino=2,st_mode=0o100644,st_uid=1001,st_gid=1002,
+                    st_nlink=1,st_size=len(event_raw),st_mtime_ns=1)
+                changed=SimpleNamespace(**vars(initial));changed.st_ino=9
+                reads=[event_raw,b''] if fault!='extent' else [event_raw[:-1],b'']
+                with patch.object(Path,'resolve',lambda path,**kw:path),patch.object(Path,'lstat',side_effect=[initial,
+                        changed if fault=='path-identity' else initial]),patch.object(os,'open',return_value=77) as opened,\
+                     patch.object(os,'fstat',return_value=changed if fault=='held-identity' else initial),\
+                     patch.object(os,'read',side_effect=reads),patch.object(os,'close',side_effect=OSError('EVENT_CLOSE') if fault=='close' else None) as closed:
+                    installer=HostedEnvelopeInstaller(env)
+                    if fault=='none':self.assertEqual(installer.event(),event_raw);self.assertEqual(installer.facts['eventIdentity']['st_ino'],2)
+                    else:
+                        with self.assertRaises((ValueError,OSError)):installer.event()
+                    closed.assert_called_once_with(77)
+                    self.assertTrue(opened.call_args.args[1]&os.O_NOFOLLOW)
+
+        def test_envelope_source_git_frozen_checkout_scoped_safe_directory_and_no_lazy_fetch(self):
+            env,event,request,raw,runtime,data,responses=self.envelope_fixture();installer=HostedEnvelopeInstaller(env)
+            git=['git','--no-replace-objects','-c','gc.auto=0','-c','maintenance.auto=false','rev-parse','HEAD']
+            installer.checkout=Path('/checkout');process={'firstFailure':None,'secondary':[]}
+            with patch.object(Path,'cwd',return_value=Path('/checkout')),patch.object(Path,'resolve',lambda path,**kw:path),\
+                 patch.dict(globals(),collect_child=Mock(return_value=(process,{'stdout':b'head\n','stderr':b''}))) as patched:
+                self.assertEqual(installer.source_command(git,1024),b'head\n')
+                tool,role,argv=patched['collect_child'].call_args.args
+                self.assertEqual(argv[:3],['/usr/bin/git','-c','safe.directory=/checkout'])
+                self.assertEqual(argv[3:],git[1:]);self.assertEqual(tool.environment,dict(ENV,GIT_NO_LAZY_FETCH='1',GIT_CONFIG_NOSYSTEM='1'))
+            with patch.object(Path,'cwd',return_value=Path('/other')),patch.dict(globals(),collect_child=Mock(side_effect=AssertionError('no moved checkout child'))):
+                with self.assertRaisesRegex(ValueError,'same frozen'):installer.source_command(git,1024)
+
+        def test_envelope_event_each_authority_and_platform_join_refuses(self):
+            env,event,request,raw,runtime,data,responses=self.envelope_fixture()
+            edits=[(('action',),'synchronize'),(('number',),True),(('sender','login'),'other'),
+                (('label','name'),'other'),(('repository','full_name'),'other/repo'),
+                (('pull_request','head','sha'),'f'*40),(('pull_request','head','repo','fork'),True),
+                (('pull_request','base','ref'),'other'),(('pull_request','state'),'closed'),
+                (('pull_request','number'),1),(('pull_request','body'),event['pull_request']['body']*2),
+                (('pull_request','body'),event['pull_request']['body'].replace('{','{ ',1))]
+            for keys,value in edits:
+                changed=final_json(encode(event));target=changed
+                for key in keys[:-1]:target=target[key]
+                target[keys[-1]]=value
+                with self.subTest(keys=keys),self.assertRaises(ValueError):admit_approval_event(encode(changed),sha(raw),env)
+            for key in ('GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE','GITHUB_JOB','GITHUB_ACTOR',
+                        'GITHUB_EVENT_NAME','GITHUB_REPOSITORY','GITHUB_WORKFLOW_SHA','GITHUB_WORKFLOW_REF'):
+                with self.subTest(key=key),self.assertRaises((ValueError,TypeError)):
+                    admit_approval_event(encode(event),sha(raw),dict(env,**{key:'invalid'}))
+
+        def test_envelope_real_transport_order_digest_and_one_acquisition(self):
+            env,event,request,raw,runtime,data,responses=self.envelope_fixture();transport=ImmutableRuntimeInput()
+            with patch.object(transport,'response',side_effect=lambda suffix:responses[suffix]) as observed:
+                self.assertEqual(transport.acquire(request['runtime']),runtime)
+                self.assertEqual([call.args[0].split('/')[0] for call in observed.call_args_list],['commits','trees','blobs'])
+                with self.assertRaisesRegex(ValueError,'consumed'):transport.acquire(request['runtime'])
+                self.assertEqual(observed.call_count,3)
+
+        def test_envelope_transport_wrong_metadata_refuses_before_blob_and_no_repair(self):
+            env,event,request,raw,runtime,data,responses=self.envelope_fixture()
+            for fault in ('commit','tree','truncated','duplicate','mode','kind','extent','malformed'):
+                changed=final_json(encode(responses));commit=changed['commits/'+request['runtime']['commit']]
+                tree=changed['trees/'+request['runtime']['tree']];entry=tree['tree'][0]
+                if fault=='commit':commit['sha']='f'*40
+                elif fault=='tree':commit['tree']['sha']='f'*40
+                elif fault=='truncated':tree['truncated']=True
+                elif fault=='duplicate':tree['tree'].append(dict(entry))
+                elif fault=='mode':entry['mode']='120000'
+                elif fault=='kind':entry['type']='commit'
+                elif fault=='extent':entry['size']=True
+                else:tree['tree'].append({'path':'bad/path'})
+                transport=ImmutableRuntimeInput()
+                with patch.object(transport,'response',side_effect=lambda suffix:changed[suffix]) as observed:
+                    with self.assertRaises(ValueError):transport.acquire(request['runtime'])
+                    self.assertFalse(any(call.args[0].startswith('blobs/') for call in observed.call_args_list),fault)
+                    with self.assertRaisesRegex(ValueError,'consumed'):transport.acquire(request['runtime'])
+            for field,value in (('path','../other'),('commit','main'),('bytes',True),('mode','160000')):
+                transport=ImmutableRuntimeInput()
+                with patch.object(transport,'response',side_effect=AssertionError('no request before descriptor admission')):
+                    with self.assertRaises(ValueError):transport.acquire(dict(request['runtime'],**{field:value}))
+
+        def test_envelope_transport_blob_hash_bytes_and_base64_mutations_refuse(self):
+            env,event,request,raw,runtime,data,responses=self.envelope_fixture()
+            for fault in ('sha','extent','encoding','base64','bytes','sha256','git-sha1'):
+                changed=final_json(encode(responses));descriptor=dict(request['runtime']);blob=changed['blobs/'+descriptor['blob']]
+                if fault=='sha':blob['sha']='f'*40
+                elif fault=='extent':blob['size']=True
+                elif fault=='encoding':blob['encoding']='utf-8'
+                elif fault=='base64':blob['content']+=' '
+                elif fault=='bytes':blob['content']=base64.b64encode(b'x'*len(runtime)).decode()
+                elif fault=='sha256':descriptor['sha256']='f'*64
+                else:
+                    descriptor['blob']='f'*40
+                    changed['trees/'+descriptor['tree']]['tree'][0]['sha']=descriptor['blob']
+                    changed['blobs/'+descriptor['blob']]=dict(blob,sha=descriptor['blob'])
+                with patch.object(ImmutableRuntimeInput,'response',side_effect=lambda suffix:changed[suffix]):
+                    with self.subTest(fault=fault),self.assertRaises(ValueError):ImmutableRuntimeInput().acquire(descriptor)
+
+        def test_envelope_https_fixed_request_no_proxies_redirects_or_unbounded_response(self):
+            env,event,request,raw,runtime,data,responses=self.envelope_fixture()
+            suffix='commits/'+request['runtime']['commit'];url=ImmutableRuntimeInput.API+suffix
+            for fault in ('none','status','url','cap'):
+                response=Mock();response.status=500 if fault=='status' else 200
+                response.geturl.return_value='https://other.invalid/' if fault=='url' else url
+                response.read.return_value=b'x'*(JSON_CAP+1) if fault=='cap' else encode(responses[suffix])
+                opened=Mock();opened.__enter__=Mock(return_value=response);opened.__exit__=Mock(return_value=False)
+                opener=Mock();opener.open.return_value=opened
+                with patch.object(urllib.request,'build_opener',return_value=opener) as build:
+                    transport=ImmutableRuntimeInput()
+                    if fault=='none':self.assertEqual(transport.response(suffix),responses[suffix]);self.assertEqual(len(transport.observations),1)
+                    else:
+                        with self.assertRaises(ValueError):transport.response(suffix)
+                    self.assertEqual(build.call_args.args[0].proxies,{})
+                    with self.assertRaises(ValueError):build.call_args.args[1].redirect_request(None,None,None,None,None,None)
+                    sent=opener.open.call_args.args[0];self.assertEqual(sent.full_url,url)
+                    self.assertNotIn('Authorization',sent.headers);self.assertEqual(opener.open.call_args.kwargs,{'timeout':10})
+                    if fault not in ('status','url'):response.read.assert_called_once_with(JSON_CAP+1)
+
+        def test_envelope_source_event_transport_install_coherent_path_still_terminal_refusal(self):
+            env,event,request,raw,runtime,data,responses=self.envelope_fixture()
+            with self.envelope_edges(env,data,responses) as state:
+                installer=HostedEnvelopeInstaller(env)
+                with patch.object(installer,'event',return_value=encode(event)):
+                    result,failure=installer.prepare()
+                self.assertFalse(result['pass']);self.assertTrue(result['installationComplete'])
+                self.assertIn('independent runtime graph gate',failure.first['message']);self.assertFalse(failure.secondary)
+                self.assertEqual(state['fds'],{});self.assertEqual(len(installer.facts['files']),5)
+                events=[item[0] for item in state['events']];self.assertLess(events.index('git'),events.index('network'))
+                self.assertLess(max(i for i,x in enumerate(events) if x=='network'),events.index('mkdir'))
+                for name,item in installer.facts['files'].items():
+                    self.assertEqual(item['identity']['mode'],0o100444);self.assertEqual(item['identity']['nlink'],1)
+                    installed=state['rows'][str(launch_plan_path(env).parent/name)]['raw']
+                    self.assertEqual(sha(installed),item['sha256'])
+                plan=state['rows'][str(launch_plan_path(env))]['raw'];admit_launch_plan(plan,sha(plan),env)
+                record=final_json(installer.facts['installationOriginal']);self.assertEqual(record['requestSha256'],sha(raw))
+                self.assertEqual(record['launchPlanSha256'],sha(plan));self.assertNotEqual(sha(plan),sha(raw))
+                count=len(state['events']);again,refused=installer.prepare()
+                self.assertFalse(again['installationComplete']);self.assertIn('consumed',refused.first['message'])
+                self.assertEqual(len(state['events']),count)
+
+        def test_envelope_early_source_pin_and_fetched_bytes_refuse_before_install(self):
+            for fault in ('pin','head','tree','source-mode','source-bytes','runtime'):
+                env,event,request,raw,runtime,data,responses=self.envelope_fixture()
+                if fault=='pin':env['BW_RING3_APPROVED_REQUEST_SHA256']='0'*64
+                elif fault=='head':env['BW_EXPECTED_HEAD']='f'*40
+                elif fault=='tree':env['BW_EXPECTED_TREE']='f'*40
+                elif fault=='source-bytes':data[RUN_FILE]=b'changed runner\n'
+                with self.envelope_edges(env,data,responses) as state:
+                    if fault=='source-mode':state['fault']=fault
+                    installer=HostedEnvelopeInstaller(env)
+                    with patch.object(installer,'event',return_value=encode(event)),contextlib.ExitStack() as extra:
+                        if fault=='runtime':extra.enter_context(patch.object(installer.transport,'acquire',return_value=b'x'*len(runtime)))
+                        result,failure=installer.prepare()
+                    self.assertFalse(result['installationComplete']);self.assertIsNotNone(failure.first)
+                    self.assertFalse(any(item[0]=='mkdir' for item in state['events']),fault)
+                    if fault!='runtime':self.assertFalse(any(item[0]=='network' for item in state['events']),fault)
+
+        def test_envelope_installer_partial_failures_preserve_first_no_adopt_retry_cleanup(self):
+            for fault in ('write','short','readback','owner','links','close','preexisting','record-readback','record-mode','input-mode'):
+                env,event,request,raw,runtime,data,responses=self.envelope_fixture()
+                with self.envelope_edges(env,data,responses) as state:
+                    state['fault']=fault
+                    if fault=='preexisting':state['rows'][str(launch_plan_path(env).parent)]=dict(state['rows']['/run'])
+                    installer=HostedEnvelopeInstaller(env)
+                    with patch.object(installer,'event',return_value=encode(event)):
+                        result,failure=installer.prepare()
+                    self.assertFalse(result['installationComplete']);self.assertIsNotNone(failure.first)
+                    self.assertEqual(state['fds'],{})
+                    if fault=='write':self.assertEqual(failure.first['message'],'ORIGINAL_INSTALL_WRITE')
+                    if fault!='preexisting':self.assertTrue(result['facts']['created'])
+                    count=len(state['events']);state['fault']=None
+                    again,refused=installer.prepare();self.assertIn('consumed',refused.first['message'])
+                    self.assertEqual(len(state['events']),count)
+
+        def test_envelope_coherent_transport_descriptor_replacement_cannot_repin_approved_bytes(self):
+            env,event,request,raw,runtime,data,responses=self.envelope_fixture()
+            replacement=b'x'*len(runtime);seen=[]
+            def acquire(descriptor):
+                seen.append(descriptor)
+                descriptor.update(bytes=len(replacement),sha256=sha(replacement),
+                    blob=hashlib.sha1(b'blob '+str(len(replacement)).encode()+b'\0'+replacement).hexdigest())
+                return replacement
+            with self.envelope_edges(env,data,responses) as state:
+                installer=HostedEnvelopeInstaller(env)
+                with patch.object(installer,'event',return_value=encode(event)),\
+                     patch.object(installer.transport,'acquire',side_effect=acquire):
+                    result,failure=installer.prepare()
+                self.assertFalse(result['installationComplete']);self.assertFalse(result['pass'])
+                self.assertEqual(failure.first['message'],'admitted opaque runtime input bytes before installation')
+                self.assertEqual(len(seen),1);self.assertEqual(seen[0]['sha256'],sha(replacement))
+                held=final_json(installer.facts['requestOriginal'])
+                self.assertEqual(held,request);self.assertEqual(held['runtime']['sha256'],sha(runtime))
+                self.assertNotEqual(held['runtime']['sha256'],seen[0]['sha256'])
+                self.assertFalse(any(item[0]=='mkdir' for item in state['events']));self.assertEqual(state['fds'],{})
+
+        def test_envelope_cli_fixed_sixth_mode_static_guard_and_terminal_status(self):
+            output=io.BytesIO();handler=Mock(side_effect=AssertionError('guard before factory'))
+            with patch.dict(globals(),install_hosted_envelope=handler),patch.object(sys,'stderr',SimpleNamespace(buffer=output)):
+                self.assertEqual(dispatch_cli(['--install-hosted-envelope'],object()),1)
+            handler.assert_not_called();self.assertIn(b'actual entry disabled',output.getvalue())
+            for argv in (['--install-hosted-envelope']*2,['--install-hosted-envelope','--help'],['--install-hosted'],
+                         ['--controls','--install-hosted-envelope']):
+                with contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit) as caught:dispatch_cli(argv,{})
+                self.assertEqual(caught.exception.code,2)
+            failure=FirstFailure();failure.add(ValueError('EXACT_TERMINAL_PREREQUISITE'),'installation')
+            with patch.dict(globals(),ACTUAL_ENTRY_ENABLED=True,install_hosted_envelope=Mock(return_value=(
+                {'pass':False,'installationComplete':True},failure))),patch.object(sys,'stderr',SimpleNamespace(buffer=output)):
+                self.assertEqual(dispatch_cli(['--install-hosted-envelope'],{}),1)
+            self.assertIn(b'EXACT_TERMINAL_PREREQUISITE',output.getvalue())
+
         @contextlib.contextmanager
         def hosted_kernel_edges(self):
             env={'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1','BW_EXPECTED_HEAD':'a'*40,'BW_EXPECTED_TREE':'b'*40,

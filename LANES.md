@@ -5312,12 +5312,15 @@ its results; installed-GUI acceptance remains separate.
 CLAIM MERGED; IMPLEMENTATION DRAFT — Codex x86. The ownership claim landed in
 [PR643](https://github.com/CrispStrobe/bw-board/pull/643). Source candidate
 [PR645](https://github.com/CrispStrobe/bw-board/pull/645) remains draft, with no
-actual ring-changing guest result. Checkpoint `62698e30` adds admitted-plan
-delivery and 170 mocked runner controls. The fixed CLI dispatcher and fresh
-hosted-setup adapters are documented in the runner README. A static source guard
-keeps every actual mode disabled. External plan installation, event/runtime
-admission, independent setup evidence and the hosted job backstop remain pending.
-Source controls do not establish actual ownership or guest qualification.
+actual ring-changing guest result. Published checkpoint `747b63ff` has 180
+mocked runner controls, admitted-plan delivery, the fixed CLI and fresh hosted
+setup. The current slice owns immutable event/request admission, fresh read-only
+installation and a disabled hosted job with a 15-minute backstop. The candidate
+has 193 inert controls with the prior 180 test bodies unchanged. Both static
+source and job guards remain disabled. Complete runtime expectations, independent
+resource evidence and a separately versioned original-only reader remain
+activation gates. Source controls do not establish actual ownership or guest
+qualification.
 The existing same-CPL0 paged IRQ fixture and older 286 claims do not own this
 new software-interrupt fixture.
 
