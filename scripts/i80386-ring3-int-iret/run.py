@@ -3038,13 +3038,18 @@ class AdmittedGeneratedEntryComposition(GeneratedEntryComposition):
              sha(self._launch_plan_original)==self._expected_launch_plan_sha256,'own pinned opaque launch plan before child factory')
         self.require_preparation_ownership();self.pre_child=LinuxAdmittedGeneratedPreparation(self);return self.pre_child
 
+    def capture_launch_plan(self):
+        return read_launch_plan(self.environ,self._expected_launch_plan_sha256)
+
     def prepare(self,failure):
         try:
             need(not self._launch_plan_attempted,'launch-plan capture consumed; no retry')
             self._launch_plan_attempted=True  # Refusal consumes this instance before any read or root check.
             need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root opaque launch-plan capture required')
             need(self._launch_plan_original is None,'launch plan already captured; no recapture')
-            self._launch_plan_original=read_launch_plan(self.environ,self._expected_launch_plan_sha256)
+            self._launch_plan_original=self.capture_launch_plan()
+            need(type(self._launch_plan_original) is bytes and sha(self._launch_plan_original)==self._expected_launch_plan_sha256,
+                 'captured launch-plan bytes match independent digest')
         except BaseException as error:
             failure.add(error,'admitted-composition-launch-plan')
             try:self.freeze_preparation_original(failure)
@@ -3108,6 +3113,270 @@ def compose_entry(ops=None):
     except BaseException as error:
         failure.add(error,'composition');return ops.failure_only(failure),failure
 
+
+class HostedSetupOps:
+    """Fresh fixed hosted resources only; actual dispatch remains disabled.
+
+    No shared controller enablement, adoption, retry, migration, kill or removal.
+    Partial facts are memory-only and are not an installation original.
+    """
+    def __init__(self,expected_plan_sha256,environ=None):
+        need(type(expected_plan_sha256) is str and re.fullmatch('[0-9a-f]{64}',expected_plan_sha256),'explicit hosted plan digest')
+        self.environ=dict(os.environ if environ is None else environ);self.expected_plan_sha256=expected_plan_sha256
+        self.invoker=None;self.plan_original=None;self.attempted=False;self.complete=False
+        self.fds={};self.bindings={};self.owners={};self.control_owners={}
+        self.facts={'created':[],'controls':{},'snapshots':{}}
+        self.base=Path('/sys/fs/cgroup');self.manual=expected_cgroup(self.environ)
+        self.preparation=self.manual.with_name(self.manual.name+'-preparation');self.checkout=None
+
+    def root(self):
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root hosted setup required')
+
+    def validate(self):
+        self.root()
+        ids=[self.environ.get('SUDO_'+key,'') for key in ('UID','GID')]
+        need(all(type(value) is str and re.fullmatch('[1-9][0-9]{0,9}',value) and int(value)<2**31 for value in ids),
+             'trusted positive hosted invoker')
+        self.invoker=dict(zip(('uid','gid'),map(int,ids)))
+        need(all(type(self.environ.get(key)) is str and re.fullmatch('[0-9a-f]{40}',self.environ[key]) for key in
+                 ('BW_EXPECTED_HEAD','BW_EXPECTED_TREE')),'exact hosted source bindings')
+        need(platform.system()=='Linux' and platform.machine()=='x86_64','fixed hosted Linux x86-64 setup')
+        text=entry_proc('/proc/self/cgroup')
+        names=('/'+self.manual.name,'/'+self.preparation.name)
+        need(text.startswith('0::/') and text.endswith('\n') and text.count('\n')==1 and
+             all(text[3:-1]!=name and not text[3:-1].startswith(name+'/') for name in names),'setup outside both fresh trees')
+        self.checkout=Path.cwd()
+        need(Path(__file__).resolve(strict=True)==self.checkout/RUN_FILE,'held hosted setup script location')
+
+    def owner(self):return self.invoker['uid'],self.invoker['gid']
+
+    def check_directory(self,path,descriptor,owner):
+        held=os.fstat(descriptor);named=path.lstat()
+        need(path.resolve(strict=True)==path and stat.S_ISDIR(held.st_mode) and
+             stat.S_ISDIR(named.st_mode) and held.st_mode==named.st_mode and held.st_mode&0o022==0 and
+             (held.st_uid,held.st_gid)==owner and (named.st_uid,named.st_gid)==owner and
+             (held.st_dev,held.st_ino)==(named.st_dev,named.st_ino),'anchored hosted directory identity/owner')
+        binding=(held.st_dev,held.st_ino)
+        need(path not in self.bindings or self.bindings[path]==binding,'hosted setup directory identity drift')
+        self.bindings[path]=binding;return held
+
+    def open_directory(self,path,owner):
+        if path in self.fds:
+            self.check_directory(path,self.fds[path],owner);return self.fds[path]
+        if path.parent in self.fds:
+            descriptor=os.open(path.name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=self.fds[path.parent])
+        else:descriptor=os.open(path,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK)
+        self.fds[path]=descriptor;self.owners[path]=owner
+        self.check_directory(path,descriptor,owner);return descriptor
+
+    def fresh_directory(self,path,owner,mode=0o755):
+        need(path.parent in self.fds,'held fixed parent before exclusive directory creation')
+        self.check_directory(path.parent,self.fds[path.parent],self.owners[path.parent])
+        os.mkdir(path.name,0o700,dir_fd=self.fds[path.parent]);self.facts['created'].append(str(path))
+        descriptor=self.open_directory(path,(0,0))
+        if owner!=(0,0):os.fchown(descriptor,*owner)
+        os.fchmod(descriptor,mode);self.owners[path]=owner;self.check_directory(path,descriptor,owner)
+        return descriptor
+
+    def control(self,path,name,data=None,delegate=False,inspect=False):
+        reads=set(PreparationOwnership.FILES.values())|{'cgroup.controllers','cgroup.subtree_control','cgroup.type'}
+        need(path==self.base or path in {self.manual,self.preparation,*(self.manual/role for role in ('controller','js','qemu'))},
+             'fixed hosted cgroup directory')
+        need(name in reads or name=='cgroup.kill','fixed hosted cgroup control')
+        writable=set(Cgroups.FILES.values())|{'cgroup.subtree_control'}
+        if data is not None:need(path!=self.base and name in writable and path in map(Path,self.facts['created']),
+                                  'only fresh owned caps or subtree controls may be written')
+        if delegate:
+            need((path==self.manual and name=='cgroup.procs') or
+                 (path in (self.manual/'js',self.manual/'qemu') and name in ('cgroup.procs','cgroup.kill')),
+                 'fixed minimum migration/kill delegation')
+        owner=self.control_owners.get((path,name),(0,0));directory=self.fds[path]
+        self.check_directory(path,directory,self.owners[path])
+        fd=os.open(name,(os.O_WRONLY if data is not None or delegate or name=='cgroup.kill' else os.O_RDONLY)|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=directory)
+        first=None;result=None
+        try:
+            info=os.fstat(fd)
+            need(stat.S_ISREG(info.st_mode) and info.st_dev==self.bindings[self.base][0] and
+                 (info.st_uid,info.st_gid)==owner and info.st_mode&0o022==0,'held hosted control file identity/owner')
+            if delegate:
+                need(info.st_mode&0o200!=0,'delegated control requires existing owner-write permission')
+                os.fchown(fd,*self.owner());self.control_owners[path,name]=self.owner()
+                observed=os.fstat(fd);need((observed.st_uid,observed.st_gid)==self.owner() and
+                    observed.st_mode==info.st_mode,'delegated fixed control readback preserves kernel mode')
+            elif inspect:pass  # In particular, cgroup.kill may be write-only.
+            elif data is not None:
+                need(type(data) is bytes and 0<len(data)<=64 and os.write(fd,data)==len(data),'complete bounded hosted control write')
+            else:
+                raw=os.read(fd,4097);need(len(raw)<=4096,'hosted control read cap');result=raw.decode('ascii')
+            after=os.fstat(fd)
+            need((after.st_dev,after.st_ino)==(info.st_dev,info.st_ino) and
+                 (after.st_uid,after.st_gid)==self.control_owners.get((path,name),(0,0)) and
+                 after.st_mode==info.st_mode,'stable held hosted control identity/owner/mode')
+            self.check_directory(path,directory,self.owners[path])
+        except BaseException as error:first=error
+        finally:first=close_owned(fd,first,'hosted-control-close')
+        if first is not None:raise first
+        if result is not None:self.facts['controls'][str(path/name)]=result
+        return result
+
+    def absent(self,parent,name):
+        try:os.stat(name,dir_fd=self.fds[parent],follow_symlinks=False)
+        except FileNotFoundError:return
+        raise ValueError('hosted output or staging path already exists')
+
+    def create(self):
+        self.open_directory(self.checkout,self.owner());self.open_directory(self.base,(0,0))
+        needed={'cpu','memory','pids'}
+        need(needed<=set(self.control(self.base,'cgroup.controllers').split()) and
+             needed<=set(self.control(self.base,'cgroup.subtree_control').split()),'parent controllers must already be enabled')
+        build=self.checkout/'build'
+        try:os.stat('build',dir_fd=self.fds[self.checkout],follow_symlinks=False)
+        except FileNotFoundError:self.fresh_directory(build,self.owner())
+        else:self.open_directory(build,self.owner())
+        for name in (STAGED_INPUTS.name,PACKET.name,EXPORT.name):self.absent(build,name)
+        self.fresh_directory(self.checkout/STAGED_INPUTS,self.owner(),0o700)
+        self.fresh_directory(self.manual,(0,0))
+        need(self.control(self.manual,'cgroup.procs')=='','fresh manual root must be empty before subtree enablement')
+        need(self.control(self.manual,'cgroup.type').strip()=='domain','fresh manual domain cgroup')
+        self.control(self.manual,'cgroup.subtree_control',b'+cpu +memory +pids')
+        need(set(self.control(self.manual,'cgroup.subtree_control').split())==needed,'fresh manual child-controller readback')
+        for path in (self.manual,*(self.manual/role for role in ('controller','js','qemu')),self.preparation):
+            if path!=self.manual:self.fresh_directory(path,(0,0))
+            need(self.control(path,'cgroup.type').strip()=='domain','fresh hosted domain cgroup')
+            for key,name in Cgroups.FILES.items():self.control(path,name,LIMITS[key].encode('ascii'))
+        for path in (self.manual,self.manual/'js',self.manual/'qemu'):
+            self.control(path,'cgroup.procs',delegate=True)
+            if path!=self.manual:self.control(path,'cgroup.kill',delegate=True)
+        for path in (self.manual,*(self.manual/role for role in ('controller','js','qemu'))):
+            os.fchown(self.fds[path],*self.owner());self.owners[path]=self.owner()
+            self.check_directory(path,self.fds[path],self.owner())
+
+    def readback(self):
+        snapshots={};self.facts['snapshots']=snapshots
+        for role,path in (('enclosing',self.manual),('controller',self.manual/'controller'),('js',self.manual/'js'),
+                          ('qemu',self.manual/'qemu'),('preparation',self.preparation)):
+            owner=(0,0) if role=='preparation' else self.owner();self.open_directory(path,owner)
+            need(self.control(path,'cgroup.type').strip()=='domain','hosted readback domain cgroup')
+            limits={key:self.control(path,name).strip() for key,name in Cgroups.FILES.items()}
+            need(limits==LIMITS,'hosted limit readback drift')
+            raw={key:self.control(path,name) for key,name in PreparationOwnership.FILES.items() if key not in LIMITS}
+            need(raw['cgroupProcs']=='' and raw['pidsCurrent']=='0\n' and 'populated 0' in raw['cgroupEvents'].splitlines(),
+                 'fresh hosted resource must be empty')
+            identity={'device':self.bindings[path][0],'inode':self.bindings[path][1]}
+            snapshots[role]={'identity':identity,'owner':{'uid':owner[0],'gid':owner[1]},'limits':limits,'raw':raw}
+        identities=[tuple(value['identity'].values()) for value in snapshots.values()]
+        need(len(set(identities))==5 and all(device==self.bindings[self.base][0] for device,inode in identities),
+             'five distinct same-filesystem hosted resources')
+        need(set(self.control(self.manual,'cgroup.subtree_control').split())=={'cpu','memory','pids'},
+             'hosted root-owned subtree-control readback')
+        # Recheck the minimum migration delegation; limits and all other
+        # controls retain their root ownership through control() observations.
+        for path in (self.manual,self.manual/'js',self.manual/'qemu'):
+            self.control(path,'cgroup.procs')
+            if path!=self.manual:self.control(path,'cgroup.kill',inspect=True)
+        return snapshots
+
+    def close(self,failure):
+        descriptors=list(reversed(list(self.fds.values())));self.fds={}
+        for descriptor in descriptors:
+            try:os.close(descriptor)
+            except BaseException as error:failure.add(error,'hosted-directory-close')
+
+    def prepare(self):
+        failure=FirstFailure()
+        try:
+            need(not self.attempted,'hosted setup consumed; no retry');self.attempted=True
+            self.validate();self.plan_original=read_launch_plan(self.environ,self.expected_plan_sha256)
+            need(type(self.plan_original) is bytes and sha(self.plan_original)==self.expected_plan_sha256,'hosted opaque plan capture')
+            self.create();self.readback()
+        except BaseException as error:failure.add(error,'hosted-setup')
+        finally:self.close(failure)
+        self.complete=failure.first is None and failure.secondary==[]
+        return {'pass':self.complete,'facts':self.facts},failure
+
+    def verify(self):
+        failure=FirstFailure()
+        try:
+            self.root();need(self.complete and type(self.plan_original) is bytes and
+                sha(self.plan_original)==self.expected_plan_sha256,'complete pinned hosted setup required')
+            self.open_directory(self.base,(0,0));self.readback()
+        except BaseException as error:failure.add(error,'hosted-setup-readback')
+        finally:self.close(failure)
+        if failure.first is not None:
+            self.complete=False  # A repaired observation cannot revive refused setup.
+            raise ObservedFailure(failure.first,failure.secondary)
+
+
+class HostedEntryComposition(AdmittedGeneratedEntryComposition):
+    def __init__(self,setup):
+        super().__init__(setup.expected_plan_sha256,setup.environ);self.setup=setup
+
+    def validate(self):
+        self.setup.verify();super().validate()
+
+    def capture_launch_plan(self):
+        self.setup.verify();return self.setup.plan_original  # Same parent capture, not a second acquisition.
+
+    def outside(self):
+        self.setup.verify();return super().outside()
+
+
+def hosted_entry(expected_plan_sha256,environ=None):
+    setup=HostedSetupOps(expected_plan_sha256,environ);result,failure=setup.prepare()
+    if result['pass'] is True and failure.first is None and failure.secondary==[]:
+        returned,owned_failure=compose_entry(HostedEntryComposition(setup));returned['setup']=result
+        return returned,owned_failure
+    # No resources are killed or removed. Any available plan original can be
+    # retained only after the same verified irreversible invoker drop.
+    if setup.invoker is not None:
+        parent=AdmittedGeneratedEntryComposition(expected_plan_sha256,setup.environ)
+        parent.bootstrap.invoker=dict(setup.invoker);parent._launch_plan_original=setup.plan_original
+        returned=parent.failure_only(failure);returned['setup']=result;return returned,failure
+    return {'pass':False,'setup':result},failure
+
+
+ACTUAL_ENTRY_ENABLED=False  # Activation requires a separate reviewed source/workflow change.
+
+
+def dispatch_cli(argv=None,environ=None):
+    parser=argparse.ArgumentParser(description=__doc__,allow_abbrev=False)
+    modes=parser.add_mutually_exclusive_group(required=True)
+    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual'):
+        modes.add_argument('--'+name,action='store_const',const=name,dest='mode')
+    argv=list(sys.argv[1:] if argv is None else argv)
+    if len(argv)!=1:parser.error('exactly one fixed mode argument required')
+    args=parser.parse_args(argv)
+    failure=FirstFailure();result=None
+    try:
+        if args.mode=='controls':controls();return 0
+        need(ACTUAL_ENTRY_ENABLED is True,'actual entry disabled pending final source/event/workflow admission')
+        environ=dict(os.environ if environ is None else environ)
+        if args.mode=='prepare-admitted-generated':
+            result,returned=admitted_generated_preparation_child(environ)
+            need(isinstance(returned,FirstFailure),'authoritative preparation failure required');failure=returned
+        elif args.mode=='bootstrap':
+            returned=controller_bootstrap(BootstrapOps(environ))
+            need(isinstance(returned,FirstFailure),'bootstrap returned without authoritative failure');failure=returned
+            failure.add(RuntimeError('bootstrap returned; successful exec cannot return'),'cli-bootstrap-return')
+        elif args.mode=='controller':
+            ops,returned=controller_execute(ControllerOps(environ))
+            need(isinstance(returned,FirstFailure),'authoritative controller failure required');failure=returned
+            result={'pass':failure.first is None and failure.secondary==[] and ops.unprivileged is True and
+                ops.paths_admitted is True and set(ops.processes)=={'js','qemu'} and ops.source_after is not None and ops.runtime_after is not None}
+        else:
+            result,returned=hosted_entry(environ.get('BW_LAUNCH_PLAN_SHA256'),environ)
+            need(isinstance(returned,FirstFailure),'authoritative hosted failure required');failure=returned
+        need(isinstance(failure,FirstFailure),'authoritative CLI failure required')
+        if type(result) is dict and result.get('pass') is True and failure.first is None and failure.secondary==[]:return 0
+        if failure.first is None:failure.add(ValueError('CLI result and authoritative failures must both pass'),'cli-result')
+    except BaseException as error:failure.add(error,'cli-dispatch')
+    try:
+        raw=encode({'schema':'bw.ring3.cli-failure.v1','mode':args.mode,'firstFailure':failure.first,'secondary':failure.secondary})
+        need(len(raw)<=16384,'bounded CLI failure diagnostic');written=sys.stderr.buffer.write(raw)
+        need(type(written) is int and written==len(raw),'complete CLI failure diagnostic');sys.stderr.buffer.flush()
+    except BaseException:pass  # Exit remains nonzero even when stderr is unavailable.
+    return 1
+
 def controls():
     """Inert actual-function controls. Never opens a cgroup, forks or execs."""
     import unittest
@@ -3145,6 +3414,265 @@ def controls():
                 'rusage':{'userSeconds':0.1,'systemSeconds':0.01,'maxRssKiB':1024}}
 
     class Tests(unittest.TestCase):
+        @contextlib.contextmanager
+        def hosted_kernel_edges(self):
+            env={'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1','BW_EXPECTED_HEAD':'a'*40,'BW_EXPECTED_TREE':'b'*40,
+                 'SUDO_UID':'1001','SUDO_GID':'1002'}
+            state={'rows':{},'fds':{},'nextFd':50,'nextInode':10,'events':[],'uids':(0,)*3,'gids':(0,)*3,'groups':[],
+                   'faults':{},'plan':b'opaque independently selected plan','planReads':0,'membership':'0::/actions/job\n'}
+            checkout=Path('/checkout');base=Path('/sys/fs/cgroup');manual=expected_cgroup(env)
+            def row(path,mode,uid=0,gid=0,data=b''):
+                state['nextInode']+=1
+                state['rows'][path]={'st_dev':3 if path.is_relative_to(base) else 4,'st_ino':state['nextInode'],
+                    'st_mode':mode,'st_uid':uid,'st_gid':gid,'st_nlink':1,'st_size':0,'st_mtime_ns':1,'data':data}
+            row(checkout,0o40755,1001,1002);row(base,0o40755);row(Path('/usr/bin/python3.12'),0o100755)
+            defaults={'cgroup.controllers':b'cpu memory pids\n','cgroup.subtree_control':b'', 'cgroup.type':b'domain\n',
+                'cgroup.procs':b'','cgroup.events':b'populated 0\n','pids.current':b'0\n','memory.current':b'0\n',
+                'memory.peak':b'0\n','memory.events':b'oom 0\noom_kill 0\n','cpu.stat':b'usage_usec 0\nuser_usec 0\nsystem_usec 0\n',
+                'cpu.max':b'max 100000\n','memory.max':b'max\n','memory.swap.max':b'max\n','pids.max':b'max\n','cgroup.kill':b''}
+            def controls(path):
+                for name,data in defaults.items():row(path/name,0o100200 if name=='cgroup.kill' else 0o100644,data=data)
+            controls(base);state['rows'].pop(base/'cgroup.type');state['rows'].pop(base/'cgroup.events')
+            state['rows'][base/'cgroup.subtree_control']['data']=b'cpu memory pids\n'
+            def pathof(name,dir_fd=None):
+                path=Path(name)
+                return path if path.is_absolute() else (state['fds'][dir_fd]['path'] if dir_fd is not None else checkout)/path
+            def fault(operation,path):
+                error=state['faults'].get((operation,str(path)))
+                if error:raise error
+            def info(path):
+                fault('stat',path)
+                if path not in state['rows']:raise FileNotFoundError(str(path))
+                return SimpleNamespace(**{key:value for key,value in state['rows'][path].items() if key!='data'})
+            def opened(name,flags,dir_fd=None):
+                path=pathof(name,dir_fd);fault('open',path);metadata=info(path)
+                if flags&os.O_DIRECTORY:self.assertTrue(stat.S_ISDIR(metadata.st_mode))
+                if path.name=='cgroup.kill':self.assertEqual(flags&os.O_ACCMODE,os.O_WRONLY)
+                state['nextFd']+=1;fd=state['nextFd'];state['fds'][fd]={'path':path,'offset':0,'flags':flags}
+                state['events'].append(('open',str(path)));return fd
+            def read(fd,cap):
+                entry=state['fds'][fd];path=entry['path'];fault('read',path)
+                self.assertNotEqual(entry['flags']&os.O_ACCMODE,os.O_WRONLY)
+                data=state['rows'][path]['data'];start=entry['offset'];entry['offset']+=cap
+                state['events'].append(('read',str(path)));return data[start:start+cap]
+            def write(fd,data):
+                path=state['fds'][fd]['path'];fault('write',path)
+                self.assertNotEqual(path.parent,base);self.assertNotIn(path.name,('cgroup.procs','cgroup.kill'))
+                state['events'].append(('write',str(path),data))
+                state['rows'][path]['data']=b'cpu memory pids\n' if path.name=='cgroup.subtree_control' else data+b'\n'
+                return len(data)
+            def mkdir(name,mode,dir_fd=None):
+                path=pathof(name,dir_fd);fault('mkdir',path)
+                if path in state['rows']:raise FileExistsError(str(path))
+                self.assertIsNotNone(dir_fd);state['events'].append(('mkdir',str(path)));row(path,stat.S_IFDIR|mode)
+                if path.is_relative_to(base):controls(path)
+            def chown(fd,uid,gid):
+                path=state['fds'][fd]['path'];fault('chown',path)
+                state['rows'][path].update(st_uid=uid,st_gid=gid);state['events'].append(('chown',str(path),uid,gid))
+            def chmod(fd,mode):
+                path=state['fds'][fd]['path'];fault('chmod',path)
+                state['rows'][path]['st_mode']=stat.S_IFMT(state['rows'][path]['st_mode'])|mode
+                state['events'].append(('chmod',str(path),mode))
+            def close(fd):
+                self.assertIn(fd,state['fds']);path=state['fds'].pop(fd)['path'];state['events'].append(('close',str(path)));fault('close',path)
+            def plan(environ,expected):
+                self.assertEqual(state['uids'],(0,)*3);self.assertEqual(expected,sha(state['plan']))
+                state['planReads']+=1;state['events'].append(('plan',));fault('plan',Path('/fixed-plan'));return state['plan']
+            def proc(path):
+                if path.endswith('cgroup'):return state['membership']
+                return ''.join(key+':\t'+'0'*16+'\n' for key in ('CapInh','CapPrm','CapEff','CapAmb'))
+            def resolve(path,**kwargs):return checkout/RUN_FILE if str(path)==__file__ else path
+            with contextlib.ExitStack() as stack:
+                for context in (
+                    patch.object(Path,'cwd',return_value=checkout),patch.object(Path,'resolve',resolve),
+                    patch.object(Path,'lstat',lambda path:info(path)),patch.object(Path,'stat',lambda path,**kwargs:info(path)),
+                    patch.object(os,'stat',side_effect=lambda name,dir_fd=None,**kwargs:info(pathof(name,dir_fd))),
+                    patch.object(os,'open',side_effect=opened),patch.object(os,'fstat',side_effect=lambda fd:info(state['fds'][fd]['path'])),
+                    patch.object(os,'read',side_effect=read),patch.object(os,'write',side_effect=write),
+                    patch.object(os,'mkdir',side_effect=mkdir),patch.object(os,'fchown',side_effect=chown),patch.object(os,'fchmod',side_effect=chmod),
+                    patch.object(os,'close',side_effect=close),patch.object(os,'getresuid',side_effect=lambda:state['uids']),
+                    patch.object(os,'getresgid',side_effect=lambda:state['gids']),patch.object(os,'getgroups',side_effect=lambda:state['groups']),
+                    patch.object(os,'setgroups',side_effect=lambda groups:state.update(groups=list(groups))),
+                    patch.object(os,'setresgid',side_effect=lambda *ids:state.update(gids=ids)),
+                    patch.object(os,'setresuid',side_effect=lambda *ids:state.update(uids=ids)),
+                    patch.object(platform,'system',return_value='Linux'),patch.object(platform,'machine',return_value='x86_64'),
+                    patch.object(RuntimeFiles,'resolve',return_value=('/usr/bin/python3.12',{})),patch.object(RuntimeFiles,'read',return_value=b'python'),
+                    patch.dict(globals(),entry_proc=proc,read_launch_plan=plan),
+                    patch.object(subprocess,'Popen',side_effect=AssertionError('no process in hosted setup controls'))):stack.enter_context(context)
+                yield env,state,manual
+
+        def test_hosted_setup_fresh_anchored_resources_minimum_delegation_and_writeonly_kill(self):
+            with self.hosted_kernel_edges() as (env,state,manual):
+                setup=HostedSetupOps(sha(state['plan']),env);result,failure=setup.prepare()
+                self.assertTrue(result['pass'],failure.first);self.assertIsNone(failure.first);self.assertEqual(state['fds'],{})
+                self.assertNotIn(Path('/sys/fs/cgroup/cgroup.type'),state['rows'])
+                self.assertEqual(set(setup.facts['snapshots']),{'enclosing','controller','js','qemu','preparation'})
+                writes=[event for event in state['events'] if event[0]=='write']
+                self.assertEqual(len(writes),21);self.assertTrue(all(not event[1].rsplit('/',1)[0]=='/sys/fs/cgroup' for event in writes))
+                control_chowns={event[1] for event in state['events'] if event[0]=='chown' and stat.S_ISREG(state['rows'][Path(event[1])]['st_mode'])}
+                expected={str(manual/'cgroup.procs'),*(str(manual/role/name) for role in ('js','qemu') for name in ('cgroup.procs','cgroup.kill'))}
+                self.assertEqual(control_chowns,expected)
+                for role in ('js','qemu'):
+                    self.assertEqual(state['rows'][manual/role/'cgroup.kill']['st_mode'],0o100200)
+                    self.assertNotIn(('read',str(manual/role/'cgroup.kill')),state['events'])
+                self.assertEqual(state['rows'][manual/'controller/cgroup.procs']['st_uid'],0)
+                self.assertLess(state['events'].index(('plan',)),next(index for index,event in enumerate(state['events']) if event[0]=='mkdir'))
+                setup.verify();self.assertEqual(state['planReads'],1);self.assertEqual(state['fds'],{})
+
+        def test_hosted_setup_refusals_are_one_shot_and_preserve_partial_creation(self):
+            for fault in ('root','invoker','plan','parent-disabled','preexisting-stage','preexisting-manual','limit-write','directory-close'):
+                with self.hosted_kernel_edges() as (env,state,manual):
+                    if fault=='root':state['uids']=(1001,)*3
+                    elif fault=='invoker':env['SUDO_UID']='0'
+                    elif fault=='plan':state['faults']['plan','/fixed-plan']=OSError('ORIGINAL_PLAN')
+                    elif fault=='parent-disabled':state['rows'][Path('/sys/fs/cgroup/cgroup.subtree_control')]['data']=b'cpu\n'
+                    elif fault in ('preexisting-stage','preexisting-manual'):
+                        path=Path('/checkout')/STAGED_INPUTS if fault=='preexisting-stage' else manual
+                        state['rows'][path]={'st_dev':3,'st_ino':999,'st_mode':0o40755,'st_uid':0,'st_gid':0,'st_nlink':1,'st_size':0,'st_mtime_ns':1,'data':b''}
+                    elif fault=='limit-write':state['faults']['write',str(manual/'memory.max')]=OSError('ORIGINAL_CAP_WRITE')
+                    else:state['faults']['close','/checkout/build']=OSError('ORIGINAL_CLOSE')
+                    setup=HostedSetupOps(sha(state['plan']),env);result,failure=setup.prepare()
+                    self.assertFalse(result['pass'],fault);self.assertIsNotNone(failure.first);self.assertEqual(state['fds'],{})
+                    if fault=='limit-write':self.assertEqual(failure.first['message'],'ORIGINAL_CAP_WRITE');self.assertTrue(setup.facts['created'])
+                    if fault=='directory-close':self.assertEqual(failure.first['message'],'ORIGINAL_CLOSE')
+                    count=len(state['events']);state['faults'].clear();state['uids']=(0,)*3
+                    second,refused=setup.prepare();self.assertFalse(second['pass']);self.assertEqual(refused.first['message'],'hosted setup consumed; no retry')
+                    self.assertEqual(len(state['events']),count)
+
+        def test_hosted_setup_late_identity_limit_owner_and_population_readbacks_refuse(self):
+            for fault in ('identity','limit','owner','populated','subtree','kill-owner'):
+                with self.hosted_kernel_edges() as (env,state,manual):
+                    setup=HostedSetupOps(sha(state['plan']),env);result,failure=setup.prepare();self.assertTrue(result['pass'])
+                    if fault=='identity':state['rows'][manual/'js']['st_ino']+=1
+                    elif fault=='limit':state['rows'][manual/'js/memory.max']['data']=b'max\n'
+                    elif fault=='owner':state['rows'][manual/'controller/cpu.max']['st_uid']=1001
+                    elif fault=='populated':state['rows'][manual/'qemu/cgroup.events']['data']=b'populated 1\n'
+                    elif fault=='subtree':state['rows'][manual/'cgroup.subtree_control']['data']=b'cpu\n'
+                    else:state['rows'][manual/'qemu/cgroup.kill']['st_uid']=0
+                    with self.assertRaises(ObservedFailure):setup.verify()
+                    self.assertEqual(state['fds'],{})
+                    self.assertIs(setup.complete,False);before=len(state['events'])
+                    with self.assertRaisesRegex(ObservedFailure,'complete pinned hosted setup required'):setup.verify()
+                    self.assertEqual(len(state['events']),before)
+
+        def test_hosted_setup_every_fresh_nonroot_group_requires_domain_type(self):
+            for role in ('enclosing','controller','js','qemu','preparation'):
+                with self.hosted_kernel_edges() as (env,state,manual):
+                    setup=HostedSetupOps(sha(state['plan']),env);result,failure=setup.prepare();self.assertTrue(result['pass'])
+                    path=manual if role=='enclosing' else setup.preparation if role=='preparation' else manual/role
+                    state['rows'][path/'cgroup.type']['data']=b'threaded\n'
+                    with self.assertRaisesRegex(ObservedFailure,'domain cgroup'):setup.verify()
+                    self.assertEqual(state['fds'],{});self.assertIs(setup.complete,False)
+
+        def test_hosted_entry_partial_setup_failure_retains_memory_facts_after_verified_drop(self):
+            with self.hosted_kernel_edges() as (env,state,manual):
+                state['faults']['write',str(manual/'memory.max')]=OSError('ORIGINAL_PARTIAL_LIMIT_WRITE')
+                output=io.BytesIO();compose=Mock(side_effect=AssertionError('no composition after partial setup'))
+                with patch.dict(globals(),compose_entry=compose),patch.object(sys,'stdout',SimpleNamespace(buffer=output)):
+                    result,failure=hosted_entry(sha(state['plan']),env)
+                self.assertFalse(result['pass']);self.assertEqual(failure.first['message'],'ORIGINAL_PARTIAL_LIMIT_WRITE')
+                self.assertFalse(result['setup']['pass']);self.assertIn(str(manual),result['setup']['facts']['created'])
+                self.assertIn(str(manual/'cgroup.subtree_control'),result['setup']['facts']['controls'])
+                self.assertEqual(state['uids'],(1001,)*3);self.assertEqual(state['fds'],{});compose.assert_not_called()
+                self.assertIn(b'launch-plan.original.json',output.getvalue())
+
+        def test_cli_static_disable_precedes_all_identity_reads_and_factories(self):
+            self.assertIs(ACTUAL_ENTRY_ENABLED,False)
+            handlers={name:Mock(side_effect=AssertionError('static gate before '+name)) for name in
+                ('admitted_generated_preparation_child','controller_bootstrap','controller_execute','hosted_entry')}
+            for mode in ('prepare-admitted-generated','bootstrap','controller','hosted-actual'):
+                stderr=io.BytesIO()
+                with patch.dict(globals(),**handlers),patch.object(os,'getresuid',side_effect=AssertionError('no identity read')),\
+                     patch.object(sys,'stderr',SimpleNamespace(buffer=stderr)):
+                    status=dispatch_cli(['--'+mode],{'ACTUAL_ENTRY_ENABLED':'true','BW_ACTUAL_ENABLED':'1'})
+                self.assertEqual(status,1);self.assertIn(b'actual entry disabled',stderr.getvalue())
+            for handler in handlers.values():handler.assert_not_called()
+            with patch.object(sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
+                self.assertEqual(dispatch_cli(['--controller'],object()),1)  # The disabled endpoint does not read caller environment.
+            invalid=[[],['--controller','--bootstrap'],['--prepare'],['--controller','arbitrary'],['--actual-enabled'],
+                     ['--controls','--help'],['--help','--controls']]
+            invalid.extend([['--'+mode,'--'+mode] for mode in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual')])
+            with patch.dict(globals(),controls=Mock(side_effect=AssertionError('no duplicate controls invocation'))):
+                for argv in invalid:
+                    with contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit) as caught:dispatch_cli(argv,{})
+                    self.assertEqual(caught.exception.code,2)
+            with contextlib.redirect_stdout(io.StringIO()),self.assertRaises(SystemExit) as caught:dispatch_cli(['--help'],{})
+            self.assertEqual(caught.exception.code,0)
+            with patch.dict(globals(),controls=Mock()) as patched:self.assertEqual(dispatch_cli(['--controls'],{}),0);patched['controls'].assert_called_once()
+
+        def test_cli_prep_exact_frame_only_and_strict_failure_status(self):
+            for fault in ('none','pass-alias','primary','secondary','invalid-failure'):
+                output=io.BytesIO();stderr=io.BytesIO();failure=FirstFailure()
+                if fault=='primary':failure.add(ValueError('ORIGINAL_PREP'),'preparation')
+                elif fault=='secondary':failure.secondary.append(row(ValueError('ORIGINAL_SECONDARY'),'preparation'))
+                def prep(environ):
+                    output.write(b'EXACT_ORIGINAL_FRAME');return {'pass':1 if fault=='pass-alias' else True},None if fault=='invalid-failure' else failure
+                with patch.dict(globals(),ACTUAL_ENTRY_ENABLED=True,admitted_generated_preparation_child=prep),\
+                     patch.object(sys,'stdout',SimpleNamespace(buffer=output)),patch.object(sys,'stderr',SimpleNamespace(buffer=stderr)):
+                    status=dispatch_cli(['--prepare-admitted-generated'],{})
+                self.assertEqual(status,0 if fault=='none' else 1);self.assertEqual(output.getvalue(),b'EXACT_ORIGINAL_FRAME')
+                if fault=='none':self.assertEqual(stderr.getvalue(),b'')
+                else:self.assertTrue(stderr.getvalue())
+
+        def test_cli_bootstrap_return_is_failure_and_controller_requires_complete_authoritative_result(self):
+            for returned in (FirstFailure(),None,True):
+                with patch.dict(globals(),ACTUAL_ENTRY_ENABLED=True,controller_bootstrap=Mock(return_value=returned)),\
+                     patch.object(sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
+                    self.assertEqual(dispatch_cli(['--bootstrap'],{}),1)
+            for fault in ('none','secondary','missing-role','not-dropped','missing-after','invalid-failure'):
+                failure=FirstFailure();ops=SimpleNamespace(unprivileged=True,paths_admitted=True,
+                    processes={'js':{},'qemu':{}},source_after={},runtime_after={})
+                if fault=='secondary':failure.secondary.append(row(ValueError('ORIGINAL_SECONDARY'),'controller'))
+                elif fault=='missing-role':ops.processes.pop('qemu')
+                elif fault=='not-dropped':ops.unprivileged=False
+                elif fault=='missing-after':ops.runtime_after=None
+                with patch.dict(globals(),ACTUAL_ENTRY_ENABLED=True,controller_execute=Mock(return_value=(ops,None if fault=='invalid-failure' else failure))),\
+                     patch.object(sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
+                    self.assertEqual(dispatch_cli(['--controller'],{}),0 if fault=='none' else 1)
+
+        def test_cli_actual_bootstrap_exec_boundary_and_dropped_controller_glue(self):
+            with self.entry_edges() as (ops,state),patch.dict(globals(),ACTUAL_ENTRY_ENABLED=True):
+                self.assertEqual(dispatch_cli(['--bootstrap'],state['env']),1)  # Fake exec returns: production correctly refuses.
+                self.assertEqual([event[0] for event in state['events']],['move','groups','gids','uids','exec'])
+                executable,argv,environment=state['events'][-1][1]
+                self.assertEqual(argv,[executable,'-I','-B',RUN_FILE,'--controller'])
+                self.assertNotIn('SUDO_UID',environment);self.assertNotIn('BW_LAUNCH_PLAN_SHA256',environment)
+                self.assertEqual(state['uids'],(1001,)*3);self.assertEqual(state['gids'],(1002,)*3)
+            with self.controller_edges() as (ops,state,plan,files,calls):
+                with patch.dict(globals(),ACTUAL_ENTRY_ENABLED=True,ControllerOps=Mock(return_value=ops)):
+                    self.assertEqual(dispatch_cli(['--controller'],state['env']),0)
+                self.assertEqual(state['factories'],['js','qemu']);self.assertEqual(len(calls),11)
+
+        def test_cli_hosted_setup_composition_drop_and_finalizer_coherent_mock_chain(self):
+            with self.hosted_kernel_edges() as (env,state,manual):
+                env['BW_LAUNCH_PLAN_SHA256']=sha(state['plan']);events=[];expected=state['plan']
+                def child(parent):
+                    self.assertEqual(parent._launch_plan_original,expected);events.append('preparation-factory')
+                    value=Fake([[('stdout',generation_frame(b'opaque GEN',b'opaque PRE'))]],status())
+                    descriptor=LinuxPreparation(parent);value.argv=[parent.python['path'],'-I','-B',RUN_FILE,'--prepare-admitted-generated']
+                    value.environment=dict(descriptor.environment,BW_LAUNCH_PLAN_SHA256=sha(expected))
+                    def spawn():
+                        parent.require_preparation_ownership();parent.preparation_ownership.begin_spawn();events.append('preparation-spawn')
+                        return {'pid':201,'pgid':201,'parentPid':101,'startTicks':901}
+                    value.spawn=spawn;return value
+                def outside(owner):
+                    self.assertEqual(state['uids'],(0,)*3);events.append('outside-root')
+                    owner.bootstrap.invoker={'uid':1001,'gid':1002};owner.bootstrap.drop();entry_ids(1001,1002)
+                    return {'process':{'waitStatus':0},'cleanup':{}},FirstFailure()
+                def final(facts,failure,pre,environ,**kwargs):
+                    entry_ids(1001,1002);events.append('finalizer-dropped');self.assertEqual(pre,b'opaque PRE')
+                    self.assertEqual(kwargs['launch_plan_original'],expected);self.assertEqual(kwargs['launch_plan_sha256'],sha(expected))
+                    self.assertEqual(final_json(kwargs['preparation_original'])['schema'],'bw.ring3.preparation-original.v3')
+                    return {'pass':True},failure
+                diagnostic=io.BytesIO()
+                with patch.dict(globals(),ACTUAL_ENTRY_ENABLED=True,LinuxAdmittedGeneratedPreparation=child,
+                                outside_controller=outside,finalize_packet=final),\
+                     patch.object(sys,'stderr',SimpleNamespace(buffer=diagnostic)):
+                    cli_status=dispatch_cli(['--hosted-actual'],env)
+                self.assertEqual(cli_status,0,diagnostic.getvalue());self.assertEqual(state['planReads'],1);self.assertEqual(state['fds'],{})
+                self.assertEqual(events,['preparation-factory','preparation-spawn','outside-root','finalizer-dropped'])
+                self.assertEqual(state['uids'],(1001,)*3)
+
         def launch_plan_original(self,source,environ):
             return encode({'schema':'bw.ring3.launch-plan.v1','runId':environ['GITHUB_RUN_ID'],'attempt':1,
                 'head':environ['BW_EXPECTED_HEAD'],'tree':environ['BW_EXPECTED_TREE'],
@@ -5913,11 +6441,7 @@ def controls():
 
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--controls',action='store_true')
-    args=parser.parse_args()
-    need(args.controls, 'actual entry not connected before runtime/bootstrap source review')
-    controls()
+    return dispatch_cli()
 
 
-if __name__=='__main__':main()
+if __name__=='__main__':raise SystemExit(main())

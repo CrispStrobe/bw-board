@@ -488,7 +488,84 @@ resource operation or guest ran in these controls. Bounded read loops cannot
 preempt blocking kernel calls; the separately reviewed job backstop is still
 required.
 
-Actual command dispatch, hosted launcher/resource setup and guest qualification
+The fixed CLI now recognizes exactly one of five modes, without option
+abbreviations. The static source constant `ACTUAL_ENTRY_ENABLED=False` refuses
+every mode except `--controls` before reading its environment, checking IDs,
+constructing a handler or opening a resource. Neither a plan field, command
+argument nor environment flag enables it. Activation requires a separately
+reviewed source and hosted-workflow change. `main` propagates the dispatch
+status through `SystemExit`.
+
+| Mode | Entry boundary and result |
+| --- | --- |
+| `--controls` | Runs inert controls and returns zero only after they pass. |
+| `--prepare-admitted-generated` | Requires the actual dropped invoker in the preparation sibling; stdout contains only the existing original GEN/PRE frame. |
+| `--bootstrap` | Starts as root, validates entry facts, migrates itself into the controller leaf, drops IDs/groups/capabilities, then executes the fixed `--controller` descriptor. Any return from bootstrap is failure. |
+| `--controller` | Starts dropped in the controller leaf; requires both complete local capture facts and an empty authoritative failure object. |
+| `--hosted-actual` | Performs fresh fixed setup, admitted preparation, outside observation and dropped finalization. Its external event and runtime authority remain pending. |
+
+Preparation and hosted success require `pass` to be the boolean `true` and
+the same authoritative `FirstFailure` to have neither primary nor secondary
+errors. Controller success also requires both guest process roles and source
+and runtime readbacks. No internal mode prints a separate success JSON.
+Failures return nonzero and attempt only a bounded 16 KiB stderr diagnostic;
+existing original-byte channels keep their existing semantics.
+
+The unused `HostedSetupOps` adapter establishes the trusted positive invoker
+before fallible setup, then captures the opaque independently pinned plan
+before mutations. It creates the fixed staging directory exclusively under a
+canonical invoker-owned checkout/build directory. Existing packet, export or
+staging paths refuse. A missing build directory can be created and assigned to
+the invoker; an existing build directory is checked without changing its owner.
+It creates only the run-specific manual cgroup, its controller/JS/QEMU leaves
+and the separate preparation sibling. Creation and control access use held
+directory descriptors; descriptor closure is attempted once, including failures.
+
+The shared hierarchy parent must already expose and enable `cpu`, `memory`
+and `pids`. The adapter never writes or changes ownership of shared parent
+controls. It enables those controllers only in its new empty manual root,
+sets the existing four limits on all five new resource groups, then reads back
+limits, empty membership, population, domains, owners, filesystem and distinct
+directory identities. Domain checks apply to every new non-root group; the
+hierarchy root need not provide `cgroup.type`.
+
+Manual cgroup directories belong to the invoker, while limit files and subtree
+controls remain owned by root. Delegation changes ownership of only five
+fixed files: manual-root `cgroup.procs`, plus `cgroup.procs` and `cgroup.kill`
+in each JS/QEMU leaf. Common-ancestor migration permission follows the
+[kernel delegation contract](https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html#delegation-containment).
+Kernel file modes are preserved, including a write-only `cgroup.kill`; kill
+contents are never read. Controller migration remains privileged, discovery
+children inherit its membership, and preparation directories and controls
+remain owned by root. No recursive ownership change occurs.
+
+`HostedEntryComposition` verifies setup identities and limits again before
+composition, preparation and outside observation. It reuses the same opaque
+parent plan capture instead of acquiring it again; the dropped child still
+performs its own fixed-path read against that selected digest. A setup attempt
+is consumed before validation or reads, and a failed later readback invalidates
+the setup. No repaired path or fresh failure object revives it. Failure does
+not adopt, kill, delete or retry existing resources. Created paths and partial
+control/readback facts remain in the returned in-memory setup result, including
+failure after a verified invoker drop. They are not a new original or packet
+role and do not independently establish actual installation or ownership.
+
+Ten added inert controls bring the runner total to 180. They drive the fixed
+CLI through mocked setup, opaque-plan reuse, preparation framing, outside
+observation and dropped finalization; separately they exercise the actual
+bootstrap exec boundary and dropped controller glue. The hosted CLI chain
+replaces `outside_controller` and `finalize_packet` with finite stubs, checking
+routing and the dropped handoff rather than their implementations. The prior
+170 method controls and earlier nine-group V7 interoperability audit remain
+separate evidence. The fake hierarchy root
+omits `cgroup.type`, and fake kill files retain mode `0200`. No real setup,
+controller, Node generation or guest ran. Independent expected preparation
+identity, hosted installation evidence and full event/runtime admission remain
+pending. The existing `jobMinutes: 15` policy calls for a separately reviewed
+900-second hosted job backstop; this checkpoint leaves the controls workflow
+unchanged and installs no actual job or backstop.
+
+Actual invocation, hosted job/backstop installation and guest qualification
 remain unconnected. Polling cannot preempt blocking kernel operations,
 process creation or identity reads. The 15-minute job backstop is not wired at
 this checkpoint, and no real outside-owner lifecycle has been qualified.

@@ -75,14 +75,14 @@ Compare returned CPU/cache fields, complete selected pages and board state; inde
 
 **Status:** ownership claim [PR643](https://github.com/CrispStrobe/bw-board/pull/643)
 is merged; implementation [PR645](https://github.com/CrispStrobe/bw-board/pull/645)
-is draft. Checkpoint `4997cded` has 160 mocked runner controls, including
-source/Node identity comparisons, preparation ownership, bounded generator
-originals and privilege handoff. The admitted preparation adapters bind a
-separately selected launch-plan digest to the versioned child mode and retain
-the original plan for the outside audit. The independent reader accepts
+is draft. Checkpoint `62698e30` has 170 mocked runner controls, including
+admitted-plan delivery, source/Node comparisons and bounded generator originals.
+The fixed CLI dispatcher and fresh hosted-setup adapters retain a static source
+guard that disables every actual mode. The independent reader accepts
 manufactured originals and refuses rehashed counterexamples. External hosted
-plan installation, event authorization and actual command dispatch remain
-unfinished; the adapters do not authenticate a caller choosing the plan. No actual ring-changing guest, QEMU
+plan installation, event/runtime admission, independent setup evidence and the
+job backstop remain unfinished. The adapters do not authenticate a caller
+choosing the plan or establish successful kernel operations. No actual ring-changing guest, QEMU
 comparison, protected-application or performance result follows from these
 controls. The current source and remaining activation gaps are documented in
 [`scripts/i80386-ring3-int-iret/README.md`](../scripts/i80386-ring3-int-iret/README.md).
@@ -106,10 +106,17 @@ Concrete remaining tasks, in order:
    nor the hosted installation. Source comparisons do not freshly observe Git
    HEAD/tree or serialize twelve early file reads; later PRE Git observations
    do not establish that earlier order.
-3. Wire fixed internal modes, resource-group creation/readback and the 15-minute
-   job backstop. Keep actual execution disabled until the whole source, input,
-   runtime, resource, output and event envelope passes separate review. Preserve
-   the existing twenty packet roles, reader, limits and unrelated workflows.
+3. Review the fixed internal dispatcher and fresh hosted resource setup against
+   actual runner prerequisites. Preparation starts dropped; bootstrap starts as
+   root, migrates itself, drops privileges and executes the controller. Require
+   parent controllers to be enabled already; do not mutate the shared cgroup
+   parent or adopt existing resources. Independently retain and admit setup
+   identity and ownership evidence before treating later observations as proof.
+   Add the actual hosted job with its 15-minute backstop, complete reviewed plan
+   installation and runtime expectations before changing the static activation
+   guard. Keep execution disabled until the full source, input, runtime,
+   resource, output and event envelope passes review. Preserve twenty packet
+   roles, the reader, limits and unrelated workflows.
 4. After all enabled final-head checks succeed, separately admit one hosted
    event. Acquire each official original once and perform independent audits
    without producer imports or replay. Preserve refusals; a later candidate
