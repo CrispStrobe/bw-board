@@ -5312,11 +5312,12 @@ its results; installed-GUI acceptance remains separate.
 CLAIM MERGED; IMPLEMENTATION DRAFT — Codex x86. The ownership claim landed in
 [PR643](https://github.com/CrispStrobe/bw-board/pull/643). Source candidate
 [PR645](https://github.com/CrispStrobe/bw-board/pull/645) remains draft, with no
-actual ring-changing guest result. Checkpoint `9e35d072` adds bounded generator
-original transport and 151 mocked runner controls. The additive source/Node
-comparison interface is described in the runner README; its external launch-plan
-trust connection remains unfinished. Source controls do not establish actual
-ownership or guest qualification.
+actual ring-changing guest result. Checkpoint `4997cded` adds the source/Node
+comparison primitive and 160 mocked runner controls. The admitted preparation
+adapters now bind a separately selected launch-plan digest to a versioned child
+mode and retain the original plan for the outside audit. External hosted plan
+installation, event authorization and actual command dispatch remain unfinished.
+Source controls do not establish actual ownership or guest qualification.
 The existing same-CPL0 paged IRQ fixture and older 286 claims do not own this
 new software-interrupt fixture.
 

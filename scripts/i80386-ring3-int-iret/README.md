@@ -428,8 +428,68 @@ Nine additional inert controls cover the comparison primitive, including the
 caller-selected coherent-manifest limitation; the complete runner suite has
 160 controls. No actual generator, resource or guest ran.
 
-Preparation invocation, actual entry, finalizer integration, the hosted actual job and
-results remain unconnected. Polling cannot preempt blocking kernel operations,
+A separate, unused `AdmittedGeneratedEntryComposition` now carries an
+independently selected launch-plan SHA-256 to a dropped preparation adapter.
+Its required digest argument must originate in the separately reviewed event
+plan. Root first captures opaque bytes from the fixed path
+`/run/bw-ring3-RUN-1-admission/launch-plan.json`, derived only from the official
+first-attempt run. Root checks the selected digest before child construction
+and preserves those immutable bytes; it parses neither plan, GEN nor PRE JSON.
+An attempt guard is consumed before the first root check or read, so neither
+successful capture nor a refused first read can be retried on that instance.
+
+Both parent and child readers require canonical root-owned ancestors outside
+the checkout, without group or world write permission. The final file must be
+root-owned, regular, mode `0444`, single-link and within the existing 1 MiB
+JSON cap. An `O_RDONLY|O_NOFOLLOW|O_NONBLOCK` descriptor binds each reader's
+before and after file-identity, extent, ownership, mode and link-count checks;
+path and ancestor identities are checked again before close. Each reader
+checks its own observations. The two readers are joined by exact pinned bytes,
+with no claim that they held the same inode or a continuous filesystem lease.
+These metadata checks are not serialized as independent original observations.
+
+The canonical `bw.ring3.launch-plan.v1` original has exactly `schema`, `runId`,
+`attempt`, `head`, `tree` and `source`. Its source object has exactly `bytes`,
+`sha256` and canonical `base64` containing the original canonical twelve-file
+source manifest. The whole plan stays within 1 MiB, including that encoding;
+an oversized combination refuses. Run, first attempt, head and tree join the
+descriptor's independently available environment. The source manifest must be
+prepared from the final reviewed committed revision after source work ends;
+an earlier checkpoint is not an automatic runtime selection.
+
+The new descriptor uses `--prepare-admitted-generated` and adds only
+`BW_LAUNCH_PLAN_SHA256` to the held preparation environment. Its explicitly
+versioned `bw.ring3.preparation-original.v3` retains the same fifteen fields.
+The child validates its actual expected dropped IDs, supplementary groups,
+capabilities and preparation-sibling membership before reading or decoding the
+plan. It reopens the fixed readonly file, checks the independently delivered
+digest and event/source joins, constructs `PinnedRecordingStagingOps`, then
+calls the existing generated-preparation adapter. GEN v1, its bounded frame,
+generator command and later PRE originals retain their existing formats.
+
+After verified privilege drop, the finalizer joins the parent's retained plan
+original and independent digest to the v3 environment, exact packet source
+original, generator observations and fixed selected Node fingerprint. It emits
+the exact plan bytes as log-only `launch-plan.original.json`. Failure-only
+emission also requires verified drop and preserves the original failure.
+The same 5 MiB raw, 8 MiB encoded, individual JSON and chunk caps apply. There
+are still twenty packet roles and five internal names; the plan is not an
+artifact file. The v2 default and existing controls remain unchanged. Ten
+additional inert controls exercise this delivery slice, for 170 runner controls.
+
+The held original-only V6 policy rejects v3; a separately admitted reader
+revision must receive the external plan digest and source/runtime expectations
+and grade all retained originals before any actual event. A constructor
+argument or root-owned file alone does not establish approval or event origin.
+External installation of the exact reviewed plan and independent digest
+selection remain pending. Actual internal-mode dispatch is disabled, as is the
+actual launcher. No real plan-file read, privilege change, child generation,
+resource operation or guest ran in these controls. Bounded read loops cannot
+preempt blocking kernel calls; the separately reviewed job backstop is still
+required.
+
+Actual command dispatch, hosted launcher/resource setup and guest qualification
+remain unconnected. Polling cannot preempt blocking kernel operations,
 process creation or identity reads. The 15-minute job backstop is not wired at
 this checkpoint, and no real outside-owner lifecycle has been qualified.
 The actual command refuses to run at this checkpoint. Remaining implementation

@@ -1442,7 +1442,7 @@ def emit_originals(originals, emit, failure, flush):
     progress={'items':0,'chunks':0,'encodedBytes':0,'complete':False}
     emitted_all=False;flushed=False
     try:
-        allowed=set(INTERNAL_NAMES)|{'git.before.json','git.after.json','preparation.phase.json','generation.phase.json'}
+        allowed=set(INTERNAL_NAMES)|{'git.before.json','git.after.json','preparation.phase.json','generation.phase.json','launch-plan.original.json'}
         need(set(originals)<=allowed,'closed log-original names')
         need(sum(len(data) for data in originals.values())<=5<<20,'aggregate raw log-original cap')
         for name in sorted(originals):
@@ -1670,7 +1670,7 @@ def check_preparation_original(raw,pre_git,outside_result,entry,environ):
     return value
 
 
-def check_generated_phase(raw,generation_raw,pre_git,outside_result,entry,environ):
+def check_generated_phase(raw,generation_raw,pre_git,outside_result,entry,environ,*,launch_plan_sha256=None):
     """Unprivileged joins of frozen preparation originals; no expected oracle.
 
     External source, runtime and sibling identity admission remains separate.
@@ -1680,7 +1680,11 @@ def check_generated_phase(raw,generation_raw,pre_git,outside_result,entry,enviro
     value=final_json(raw)
     require_fields(value,'schema runId attempt head tree python invoker captureMonoNs process stdout stderr ownership preGit firstFailure secondary',
                    'closed preparation original')
-    need(raw==encode(value) and value['schema']=='bw.ring3.preparation-original.v2' and
+    admitted=launch_plan_sha256 is not None
+    if admitted:
+        need(type(launch_plan_sha256) is str and re.fullmatch('[0-9a-f]{64}',launch_plan_sha256),
+             'independent admitted phase launch-plan digest')
+    need(raw==encode(value) and value['schema']==('bw.ring3.preparation-original.v3' if admitted else 'bw.ring3.preparation-original.v2') and
          value['runId']==environ['GITHUB_RUN_ID'] and re.fullmatch('[1-9][0-9]*',value['runId']) is not None and
          type(value['attempt']) is int and value['attempt']==1 and environ['GITHUB_RUN_ATTEMPT']=='1' and
          value['head']==environ['BW_EXPECTED_HEAD'] and value['tree']==environ['BW_EXPECTED_TREE'] and
@@ -1703,9 +1707,10 @@ def check_generated_phase(raw,generation_raw,pre_git,outside_result,entry,enviro
     need(process['schema']=='bw.ring3.process.v1' and process['role']=='preparation' and process['cwdRole']=='checkout' and
          all(type(process[key]) is int and process[key]>0 for key in ('pid','pgid','parentPid','startTicks')) and
          process['pid']==process['pgid'] and type(outer['parentPid']) is int and process['parentPid']==outer['parentPid'] and
-         same_json(process['argv'],[entry['python']['path'],'-I','-B',RUN_FILE,'--prepare-generated']) and
+         same_json(process['argv'],[entry['python']['path'],'-I','-B',RUN_FILE,'--prepare-admitted-generated' if admitted else '--prepare-generated']) and
          same_json(process['environment'],dict(ENV,**{name:environ[name] for name in
-            ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')},SUDO_UID=str(entry['uid']),SUDO_GID=str(entry['gid']))) and
+            ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')},SUDO_UID=str(entry['uid']),SUDO_GID=str(entry['gid']),
+            **({'BW_LAUNCH_PLAN_SHA256':launch_plan_sha256} if admitted else {}))) and
          process['timedOut'] is False and type(process['exitCode']) is int and process['exitCode']==0 and
          type(process['waitStatus']) is int and process['waitStatus']==0 and process['signal'] is None and
          process['firstFailure'] is None and process['secondary']==[],'natural preparation descriptor/parent terminal joins')
@@ -1759,10 +1764,10 @@ def check_generated_phase(raw,generation_raw,pre_git,outside_result,entry,enviro
     return value
 
 
-def check_generated_originals(phase_raw,generation_raw,pre_git,outside_result,entry,originals,environ):
+def check_generated_originals(phase_raw,generation_raw,pre_git,outside_result,entry,originals,environ,*,launch_plan_sha256=None):
     """Original-to-original joins only. External prelaunch pinning is not here."""
     need(type(generation_raw) is bytes and 0<len(generation_raw)<=GENERATION_CAP,'bounded generator original')
-    phase=check_generated_phase(phase_raw,generation_raw,pre_git,outside_result,entry,environ)
+    phase=check_generated_phase(phase_raw,generation_raw,pre_git,outside_result,entry,environ,launch_plan_sha256=launch_plan_sha256)
     value=final_json(generation_raw)
     require_fields(value,'schema runId attempt head tree invoker captureMonoNs process stdout stderr before after outputs firstFailure secondary',
                    'closed generator original')
@@ -1801,6 +1806,19 @@ def check_generated_originals(phase_raw,generation_raw,pre_git,outside_result,en
     need(all(type(item) is int for item in (start,end,captured)) and
          prep['spawnMonoNs']<=before<=start<=end<=after<=captured<=first_git and end-start<=10000000000,
          'preparation/identity/generator/capture/PRE causal chain')
+    return value
+
+
+def check_admitted_generated_originals(plan_raw,expected_sha256,phase_raw,generation_raw,pre_git,outside_result,entry,originals,environ):
+    """Dropped-only caller supplies its retained plan and independent digest."""
+    plan,source_raw=admit_launch_plan(plan_raw,expected_sha256,environ)
+    need(originals['source.before.json']==source_raw,'packet source original joins independently pinned launch plan')
+    value=check_generated_originals(phase_raw,generation_raw,pre_git,outside_result,entry,originals,environ,
+                                    launch_plan_sha256=expected_sha256)
+    extent,digest=GENERATION_NODE_PIN
+    expected={'path':RUNTIME_EXECUTABLES['node'],'bytes':extent,'sha256':digest}
+    for name in ('before','after'):
+        need(same_json(value[name]['files']['node'],expected),'admitted generator matches independent selected Node pin')
     return value
 
 
@@ -1865,7 +1883,7 @@ def join_final_resources(internal,originals,outside_result,environ):
         'firstFailure':None,'secondary':[]}
 
 
-def finalize_packet(outside_result,outside_failure,pre_git,environ=None,*,post_observer=None,emit=None,flush=None,preparation_original=None,generation_original=None):
+def finalize_packet(outside_result,outside_failure,pre_git,environ=None,*,post_observer=None,emit=None,flush=None,preparation_original=None,generation_original=None,launch_plan_original=None,launch_plan_sha256=None):
     """Unprivileged original assembly. No actual CLI/job or standalone-reader authority."""
     environ=dict(os.environ if environ is None else environ);failure=outside_failure
     need(isinstance(failure,FirstFailure),'authoritative in-memory outside failure required')
@@ -1898,7 +1916,10 @@ def finalize_packet(outside_result,outside_failure,pre_git,environ=None,*,post_o
         except Exception as error:failure.add(error,'finalizer-post-git')
         try:
             resources=join_final_resources(internal,originals,outside_result,environ)
-            if generation_original is not None:
+            if launch_plan_original is not None or launch_plan_sha256 is not None:
+                check_admitted_generated_originals(launch_plan_original,launch_plan_sha256,preparation_original,
+                    generation_original,pre_git,outside_result,internal['.entry.json'],originals,environ)
+            elif generation_original is not None:
                 check_generated_originals(preparation_original,generation_original,pre_git,outside_result,internal['.entry.json'],originals,environ)
             elif preparation_original is not None:
                 check_preparation_original(preparation_original,pre_git,outside_result,internal['.entry.json'],environ)
@@ -1908,6 +1929,7 @@ def finalize_packet(outside_result,outside_failure,pre_git,environ=None,*,post_o
             originals['resources.json']=encode(resources)
         except Exception as error:failure.add(error,'finalizer-join')
         log_originals=dict(raw_internal)
+        if type(launch_plan_original) is bytes:log_originals['launch-plan.original.json']=launch_plan_original
         if type(generation_original) is bytes:log_originals['generation.phase.json']=generation_original
         if type(preparation_original) is bytes:log_originals['preparation.phase.json']=preparation_original
         if type(pre_git) is bytes:log_originals['git.before.json']=pre_git
@@ -2388,6 +2410,93 @@ class PinnedRecordingStagingOps(RecordingStagingOps):
             observed=time.monotonic_ns();need(type(observed) is int and observed>0,'generation identity observation clock')
             self.observation_times[stage]=observed
         except BaseException as error:failure.add(error,'pinned-staging-clock')
+
+
+def launch_plan_path(environ):
+    return Path('/run')/(expected_cgroup(environ).name+'-admission')/'launch-plan.json'
+
+
+def read_launch_plan(environ,expected_sha256):
+    """Bounded opaque read; external reviewed installation remains required.
+
+    Each reader checks its own held file and paths. Equal pinned bytes do not
+    establish a parent-to-child inode lease or independent metadata original.
+    """
+    need(type(expected_sha256) is str and re.fullmatch('[0-9a-f]{64}',expected_sha256),
+         'independently selected launch-plan SHA-256')
+    path=launch_plan_path(environ);parents=(Path('/'),Path('/run'),path.parent)
+    def identity(info):
+        return tuple(getattr(info,key) for key in ('st_dev','st_ino','st_mode','st_uid','st_gid','st_nlink','st_size','st_mtime_ns'))
+    def directory(parent):
+        info=parent.lstat()
+        need(parent.resolve(strict=True)==parent and stat.S_ISDIR(info.st_mode) and
+             (info.st_uid,info.st_gid)==(0,0) and info.st_mode&0o022==0,'canonical root-owned launch-plan ancestors')
+        return identity(info)
+    before={parent:directory(parent) for parent in parents}
+    initial=path.lstat()
+    need(path.resolve(strict=True)==path and stat.S_ISREG(initial.st_mode) and
+         (initial.st_uid,initial.st_gid)==(0,0) and stat.S_IMODE(initial.st_mode)==0o444 and
+         initial.st_nlink==1 and type(initial.st_size) is int and 0<initial.st_size<=JSON_CAP,
+         'canonical readonly single-link root-owned launch plan')
+    descriptor=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK);first=None;raw=bytearray()
+    try:
+        need(identity(os.fstat(descriptor))==identity(initial),'held launch-plan file identity')
+        while True:
+            chunk=os.read(descriptor,min(65536,JSON_CAP+1-len(raw)))
+            if not chunk:break
+            raw.extend(chunk);need(len(raw)<=JSON_CAP,'launch-plan read extent cap')
+        need(len(raw)==initial.st_size and identity(os.fstat(descriptor))==identity(initial) and
+             identity(path.lstat())==identity(initial) and path.resolve(strict=True)==path,
+             'stable held launch-plan identity and extent')
+        need(all(directory(parent)==before[parent] for parent in parents),'launch-plan ancestor readback identity')
+        need(sha(raw)==expected_sha256,'independently selected launch-plan digest')
+    except BaseException as error:first=error
+    finally:first=close_owned(descriptor,first,'launch-plan-descriptor-close')
+    if first is not None:raise first
+    return bytes(raw)
+
+
+def admit_launch_plan(raw,expected_sha256,environ):
+    """Closed original/event/source joins, not proof of external approval."""
+    need(type(raw) is bytes and 0<len(raw)<=JSON_CAP and type(expected_sha256) is str and
+         re.fullmatch('[0-9a-f]{64}',expected_sha256) and sha(raw)==expected_sha256,'bounded pinned launch-plan original')
+    expected_cgroup(environ)
+    need(all(type(environ.get(key)) is str and re.fullmatch('[0-9a-f]{40}',environ[key]) for key in
+             ('BW_EXPECTED_HEAD','BW_EXPECTED_TREE')),'external launch-plan head/tree bindings')
+    plan=final_json(raw);require_fields(plan,'schema runId attempt head tree source','closed launch-plan original')
+    need(raw==encode(plan) and plan['schema']=='bw.ring3.launch-plan.v1' and
+         plan['runId']==environ['GITHUB_RUN_ID'] and type(plan['attempt']) is int and plan['attempt']==1 and
+         plan['head']==environ['BW_EXPECTED_HEAD'] and plan['tree']==environ['BW_EXPECTED_TREE'],
+         'launch-plan official run/attempt/head/tree joins')
+    item=plan['source'];require_fields(item,'bytes sha256 base64','closed launch-plan source original')
+    need(type(item['bytes']) is int and 0<item['bytes']<=JSON_CAP and type(item['base64']) is str,
+         'bounded launch-plan source encoding')
+    source=base64.b64decode(item['base64'],validate=True)
+    need(base64.b64encode(source).decode('ascii')==item['base64'] and len(source)==item['bytes'],
+         'exact launch-plan source original encoding')
+    admit_generation_source(source,item['sha256'],plan['head'],plan['tree'])
+    return plan,source
+
+
+def admitted_generated_preparation_child(environ=None,*,observer=None,emit=None,flush=None):
+    """Unwired dropped child: fixed-path plan admission before pinned staging."""
+    environ=dict(os.environ if environ is None else environ);failure=FirstFailure();raw=None
+    try:
+        ids=[environ.get('SUDO_'+key,'') for key in ('UID','GID')]
+        need(all(type(value) is str and re.fullmatch('[1-9][0-9]{0,9}',value) and int(value)<2**31 for value in ids),
+             'admitted child fixed dropped invoker')
+        entry_ids(*map(int,ids))  # Actual IDs/groups/capabilities BEFORE plan read or decode.
+        need(entry_proc('/proc/self/cgroup')=='0::/'+expected_cgroup(environ).name+'-preparation\n',
+             'admitted child dropped preparation sibling membership')
+        expected=environ.get('BW_LAUNCH_PLAN_SHA256')
+        raw=read_launch_plan(environ,expected);plan,source=admit_launch_plan(raw,expected,environ)
+        ops=PinnedRecordingStagingOps(source,plan['source']['sha256'],plan['head'],plan['tree'],environ)
+        result,found=generated_preparation_child(environ,staging_ops=ops,observer=observer,emit=emit,flush=flush)
+        failure.adopt(found.first,found.secondary);result['launchPlanOriginal']=raw
+        return result,failure
+    except BaseException as error:failure.add(error,'admitted-generated-preparation')
+    return {'pass':False,'generation':None,'generationOriginal':None,'preparation':None,'preGit':b'',
+            'launchPlanOriginal':raw},failure
 
 
 def generation_original(ops,result,failure):
@@ -2905,6 +3014,82 @@ class GeneratedEntryComposition(EntryComposition):
         return {'pass':False,'preparation':self.preparation,'outside':self.outside_result,'final':None}
 
 
+class LinuxAdmittedGeneratedPreparation(LinuxPreparation):
+    def __init__(self,parent):
+        super().__init__(parent)
+        self.argv=[parent.python['path'],'-I','-B',RUN_FILE,'--prepare-admitted-generated']
+        self.environment['BW_LAUNCH_PLAN_SHA256']=parent._expected_launch_plan_sha256
+
+
+class AdmittedGeneratedEntryComposition(GeneratedEntryComposition):
+    """Unwired plan delivery; expected digest selection is external authority.
+
+    Root reads only opaque plan bytes. External job installation, approval and
+    actual internal-mode dispatch remain separate, unconnected review work.
+    """
+    def __init__(self,expected_launch_plan_sha256,environ=None):
+        need(type(expected_launch_plan_sha256) is str and re.fullmatch('[0-9a-f]{64}',expected_launch_plan_sha256),
+             'explicit independently selected launch-plan digest')
+        super().__init__(environ);self._expected_launch_plan_sha256=expected_launch_plan_sha256
+        self._launch_plan_original=None;self._launch_plan_attempted=False
+
+    def create_preparation(self):
+        need(type(self._launch_plan_original) is bytes and
+             sha(self._launch_plan_original)==self._expected_launch_plan_sha256,'own pinned opaque launch plan before child factory')
+        self.require_preparation_ownership();self.pre_child=LinuxAdmittedGeneratedPreparation(self);return self.pre_child
+
+    def prepare(self,failure):
+        try:
+            need(not self._launch_plan_attempted,'launch-plan capture consumed; no retry')
+            self._launch_plan_attempted=True  # Refusal consumes this instance before any read or root check.
+            need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root opaque launch-plan capture required')
+            need(self._launch_plan_original is None,'launch plan already captured; no recapture')
+            self._launch_plan_original=read_launch_plan(self.environ,self._expected_launch_plan_sha256)
+        except BaseException as error:
+            failure.add(error,'admitted-composition-launch-plan')
+            try:self.freeze_preparation_original(failure)
+            except BaseException as secondary:failure.add(secondary,'admitted-composition-original')
+            return failure
+        return super().prepare(failure)
+
+    def freeze_preparation_original(self,failure):
+        need(self._preparation_original is None,'preparation original already frozen; no recapture')
+        value=self.preparation or {};streams=value.get('streams',{'stdout':b'','stderr':b''})
+        def stream(name):
+            raw=streams[name];need(type(raw) is bytes and len(raw)<=PREPARATION_STREAMS[name],'bounded original preparation stream')
+            return {'bytes':len(raw),'sha256':sha(raw),'base64':base64.b64encode(raw).decode('ascii')}
+        captured=time.monotonic_ns();need(type(captured) is int and captured>0,'original preparation capture clock')
+        record={'schema':'bw.ring3.preparation-original.v3','runId':self.environ['GITHUB_RUN_ID'],'attempt':1,
+            'head':self.environ['BW_EXPECTED_HEAD'],'tree':self.environ['BW_EXPECTED_TREE'],
+            'python':self.python,'invoker':self.bootstrap.invoker,'captureMonoNs':captured,
+            'process':value.get('process'),'stdout':stream('stdout'),'stderr':stream('stderr'),
+            'ownership':value.get('ownership'),'preGit':None if self.pre_git is None else {'bytes':len(self.pre_git),'sha256':sha(self.pre_git)},
+            'firstFailure':failure.first,'secondary':failure.secondary}
+        raw=encode(record);need(len(raw)<=JSON_CAP,'preparation original encoding cap');self._preparation_original=raw
+
+    def finalize(self,facts,failure):
+        self.dropped();process=facts.get('process');cleanup=facts.get('cleanup') or {}
+        terminal=process if type(process) is dict and type(process.get('waitStatus')) is int else cleanup.get('cleanupTerminal')
+        need(type(terminal) is dict and type(terminal.get('waitStatus')) is int,'known admitted outer terminal required')
+        need(type(self._preparation_original) is bytes and type(self._generation_original) is bytes and
+             type(self._launch_plan_original) is bytes,'own admitted phase/plan originals required')
+        return finalize_packet(facts,failure,self.pre_git,self.environ,preparation_original=self._preparation_original,
+            generation_original=self._generation_original,launch_plan_original=self._launch_plan_original,
+            launch_plan_sha256=self._expected_launch_plan_sha256)
+
+    def failure_only(self,failure):
+        try:
+            uid,gid=(self.bootstrap.invoker[key] for key in ('uid','gid'))
+            if os.getresuid()!=(uid,)*3 or os.getresgid()!=(gid,)*3 or os.getgroups():self.bootstrap.drop()
+            self.dropped();originals={}
+            for name,raw in (('launch-plan.original.json',self._launch_plan_original),
+                             ('preparation.phase.json',self._preparation_original),('generation.phase.json',self._generation_original)):
+                if type(raw) is bytes:originals[name]=raw
+            if originals:self._preparation_log=emit_originals(originals,sys.stdout.buffer.write,failure,sys.stdout.buffer.flush)
+        except BaseException as error:failure.add(error,'admitted-composition-failure-drop')
+        return {'pass':False,'preparation':self.preparation,'outside':self.outside_result,'final':None}
+
+
 def compose_entry(ops=None):
     """No privilege regain: root waits for dropped prep child, then drops itself."""
     ops=EntryComposition() if ops is None else ops;failure=FirstFailure();ops.failure=failure
@@ -2960,6 +3145,253 @@ def controls():
                 'rusage':{'userSeconds':0.1,'systemSeconds':0.01,'maxRssKiB':1024}}
 
     class Tests(unittest.TestCase):
+        def launch_plan_original(self,source,environ):
+            return encode({'schema':'bw.ring3.launch-plan.v1','runId':environ['GITHUB_RUN_ID'],'attempt':1,
+                'head':environ['BW_EXPECTED_HEAD'],'tree':environ['BW_EXPECTED_TREE'],
+                'source':{'bytes':len(source),'sha256':sha(source),'base64':base64.b64encode(source).decode('ascii')}})
+
+        @contextlib.contextmanager
+        def launch_plan_file_edges(self,raw=b'opaque externally admitted plan'):
+            env={'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1','BW_EXPECTED_HEAD':'a'*40,'BW_EXPECTED_TREE':'b'*40}
+            path=launch_plan_path(env);parents={Path('/'),Path('/run'),path.parent}
+            state={'raw':raw,'position':0,'events':[],'owner':(0,0),'mode':0o100444,'links':1,
+                'extent':len(raw),'directoryOwner':(0,0),'directoryMode':0o40755,'redirect':None,
+                'fstatCalls':0,'lateInode':False,'readError':None,'closeError':None}
+            def info(name,held=False):
+                directory=name in parents
+                uid,gid=state['directoryOwner'] if directory else state['owner']
+                inode=1 if directory else 7
+                if held and state['lateInode'] and state['fstatCalls']>1:inode+=1
+                return SimpleNamespace(st_dev=3,st_ino=inode,st_mode=state['directoryMode'] if directory else state['mode'],
+                    st_uid=uid,st_gid=gid,st_nlink=2 if directory else state['links'],
+                    st_size=0 if directory else state['extent'],st_mtime_ns=99)
+            def opened(name,flags):
+                self.assertEqual(Path(name),path)
+                self.assertEqual(flags,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+                state['events'].append('open');return 41
+            def fstat(fd):
+                self.assertEqual(fd,41);state['fstatCalls']+=1;return info(path,True)
+            def read(fd,cap):
+                self.assertEqual(fd,41);state['events'].append('read')
+                if state['readError']:raise state['readError']
+                result=state['raw'][state['position']:state['position']+cap];state['position']+=len(result);return result
+            def closed(fd):
+                self.assertEqual(fd,41);state['events'].append('close')
+                if state['closeError']:raise state['closeError']
+            with patch.object(Path,'lstat',lambda name:info(name)),\
+                 patch.object(Path,'resolve',lambda name,**kwargs:Path('/redirected') if name==state['redirect'] else name),\
+                 patch.object(os,'open',side_effect=opened),patch.object(os,'fstat',side_effect=fstat),\
+                 patch.object(os,'read',side_effect=read),patch.object(os,'close',side_effect=closed):
+                yield env,state,path
+
+        def test_launch_plan_fixed_readonly_held_file_and_primary_close_failure(self):
+            with self.launch_plan_file_edges() as (env,state,path):
+                self.assertEqual(str(path),'/run/bw-ring3-123-1-admission/launch-plan.json')
+                self.assertEqual(read_launch_plan(env,sha(state['raw'])),state['raw'])
+                self.assertEqual(state['events'],['open','read','read','close']);self.assertEqual(state['fstatCalls'],2)
+            for fault in ('owner','mode','links','extent','directoryOwner','directoryMode','redirect','lateInode','digest'):
+                with self.launch_plan_file_edges() as (env,state,path):
+                    if fault in ('owner','directoryOwner'):state[fault]=(1001,1002)
+                    elif fault=='mode':state['mode']=0o100644
+                    elif fault=='links':state['links']=2
+                    elif fault=='extent':state['extent']=JSON_CAP+1
+                    elif fault=='directoryMode':state['directoryMode']=0o40777
+                    elif fault=='redirect':state['redirect']=path.parent
+                    elif fault=='lateInode':state['lateInode']=True
+                    with self.assertRaises(ValueError):read_launch_plan(env,'0'*64 if fault=='digest' else sha(state['raw']))
+                    self.assertEqual(state['events'].count('close'),state['events'].count('open'))
+            with self.launch_plan_file_edges() as (env,state,path):
+                state['readError']=OSError('ORIGINAL_PLAN_READ');state['closeError']=OSError('PLAN_CLOSE')
+                with self.assertRaisesRegex(OSError,'ORIGINAL_PLAN_READ') as caught:read_launch_plan(env,sha(state['raw']))
+                self.assertEqual(caught.exception.ring3_secondary[0]['message'],'PLAN_CLOSE')
+                self.assertEqual(state['events'].count('close'),1)
+
+        def test_launch_plan_closed_canonical_event_and_source_original_joins(self):
+            with self.pinned_staging_edges() as (ops,state,source):
+                raw=self.launch_plan_original(source,ops.environ)
+                self.assertEqual(admit_launch_plan(raw,sha(raw),ops.environ)[1],source)
+                for fault in ('schema','runId','attempt','head','tree','extra','source-extra','source-bytes','source-hash','source-base64','canonical','expected-digest'):
+                    value=final_json(raw)
+                    if fault=='schema':value['schema']='other'
+                    elif fault=='runId':value['runId']='456'
+                    elif fault=='attempt':value['attempt']=True
+                    elif fault in ('head','tree'):value[fault]='c'*40
+                    elif fault=='extra':value['extra']=0
+                    elif fault=='source-extra':value['source']['extra']=0
+                    elif fault=='source-bytes':value['source']['bytes']=float(value['source']['bytes'])
+                    elif fault=='source-hash':value['source']['sha256']='0'*64
+                    elif fault=='source-base64':value['source']['base64']+='!'
+                    data=encode(value)+(b' ' if fault=='canonical' else b'')
+                    with self.assertRaises(ValueError):admit_launch_plan(data,'0'*64 if fault=='expected-digest' else sha(data),ops.environ)
+
+        def test_admitted_child_loads_plan_after_drop_and_runs_pinned_generator_before_pre(self):
+            with self.pinned_staging_edges() as (old,state,source):
+                raw=self.launch_plan_original(source,old.environ);env=dict(old.environ,BW_LAUNCH_PLAN_SHA256=sha(raw),SUDO_UID='1001',SUDO_GID='1002')
+                frames=[];pre=[];clock=iter((10,40,50));factory=globals()['PinnedRecordingStagingOps']
+                def pinned(*args):
+                    ops=factory(*args);create=ops.create
+                    def child():
+                        value=create();value.t=20;return value
+                    ops.create=child;return ops
+                def load(environ,expected):
+                    entry_ids(1001,1002);self.assertEqual(expected,sha(raw));state['events'].append('plan-load');return raw
+                def preparation(environ,**kwargs):
+                    pre.append(True);state['events'].append('PRE-GIT')
+                    kwargs['emit'](preparation_frame(b'original PRE bytes'));kwargs['flush']();return {'pass':True},FirstFailure()
+                with patch.dict(globals(),read_launch_plan=load,PinnedRecordingStagingOps=pinned,preparation_child=preparation),\
+                     patch.object(time,'monotonic_ns',side_effect=lambda:next(clock)):
+                    result,failure=admitted_generated_preparation_child(env,emit=lambda frame:frames.append(frame) or len(frame),flush=lambda:None)
+                self.assertTrue(result['pass'],(failure.first,failure.secondary));self.assertIsNone(failure.first);self.assertEqual(pre,[True])
+                self.assertEqual(result['launchPlanOriginal'],raw)
+                generation,pre_raw=generation_parts(frames[0]);value=final_json(generation)
+                self.assertEqual(pre_raw,b'original PRE bytes');self.assertEqual(value['before']['monoNs'],10)
+                self.assertLess(state['events'].index('plan-load'),state['events'].index('factory'))
+                self.assertLess(state['events'].index('spawn'),state['events'].index('PRE-GIT'))
+                self.assertEqual(state['sourceReads'],sorted(SOURCE_PATHS)*2)
+
+        def test_admitted_child_refuses_root_ids_bad_plan_and_source_before_factory(self):
+            for fault in ('root','groups','capability','membership','invoker','missing-pin','bad-plan','wrong-plan-digest','source-drift'):
+                with self.pinned_staging_edges() as (ops,state,source):
+                    raw=self.launch_plan_original(source,ops.environ);env=dict(ops.environ,BW_LAUNCH_PLAN_SHA256=sha(raw),SUDO_UID='1001',SUDO_GID='1002');loads=[]
+                    if fault=='root':state['uids']=state['gids']=(0,)*3
+                    elif fault=='groups':state['groups']=[1002]
+                    elif fault=='membership':state['member']='0::/wrong-preparation\n'
+                    elif fault=='invoker':env['SUDO_UID']='1003'
+                    elif fault=='missing-pin':env.pop('BW_LAUNCH_PLAN_SHA256')
+                    elif fault=='source-drift':state['sourceData']['LICENSE']+=b'changed'
+                    def load(environ,expected):loads.append(True);return b'bad' if fault=='bad-plan' else raw
+                    if fault=='wrong-plan-digest':env['BW_LAUNCH_PLAN_SHA256']='0'*64
+                    previous=globals()['entry_proc']
+                    def proc(path):return previous(path).replace('CapEff:\t0000000000000000','CapEff:\t0000000000000001') if fault=='capability' else previous(path)
+                    with patch.dict(globals(),read_launch_plan=load,entry_proc=proc),patch.object(time,'monotonic_ns',return_value=1):
+                        result,failure=admitted_generated_preparation_child(env,emit=lambda frame:len(frame),flush=lambda:None)
+                    self.assertFalse(result['pass'],fault);self.assertIsNotNone(failure.first)
+                    self.assertNotIn('factory',state['events'])
+                    if fault in ('root','groups','capability','membership','invoker'):self.assertEqual(loads,[])
+
+        def test_admitted_parent_captures_opaque_plan_before_factory_with_closed_v3_descriptor(self):
+            with self.composition_edges() as (old,state):
+                raw=b'opaque external original; root must not parse';expected=sha(raw)
+                refused=AdmittedGeneratedEntryComposition(expected,state['env']);state['uids']=(1001,)*3
+                with patch.dict(globals(),read_launch_plan=Mock(side_effect=AssertionError('no plan open before root validation'))) as patches:
+                    failed=FirstFailure();refused.prepare(failed);patches['read_launch_plan'].assert_not_called()
+                self.assertEqual(failed.first['message'],'root opaque launch-plan capture required');state['uids']=(0,)*3
+                ops=AdmittedGeneratedEntryComposition(expected,state['env']);ops.validate()
+                ops.require_preparation_ownership=old.require_preparation_ownership;ops.finish_preparation_ownership=old.finish_preparation_ownership
+                with self.assertRaisesRegex(ValueError,'before child factory'):ops.create_preparation()
+                with patch.object(os,'getpid',return_value=101):descriptor=LinuxAdmittedGeneratedPreparation(ops)
+                self.assertEqual(descriptor.argv,[ops.python['path'],'-I','-B',RUN_FILE,'--prepare-admitted-generated'])
+                self.assertEqual(descriptor.environment['BW_LAUNCH_PLAN_SHA256'],expected)
+                self.assertEqual(set(descriptor.environment),set(ENV)|{'GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE','SUDO_UID','SUDO_GID','BW_LAUNCH_PLAN_SHA256'})
+                def load(environ,pin):
+                    self.assertEqual(state['uids'],(0,)*3);self.assertEqual(pin,expected);state['phaseEvents'].append('opaque-plan');return raw
+                def create():
+                    self.assertEqual(ops._launch_plan_original,raw);state['phaseEvents'].append('admitted-factory')
+                    child=Fake([[('stdout',generation_frame(b'opaque GEN\xff',b'opaque PRE\xff'))]],status())
+                    child.argv=descriptor.argv;child.environment=descriptor.environment;return child
+                ops.create_preparation=create;failure=FirstFailure()
+                with patch.dict(globals(),read_launch_plan=load,final_json=Mock(side_effect=AssertionError('no root plan/GEN/PRE parsing'))):ops.prepare(failure)
+                self.assertIsNone(failure.first);self.assertEqual(ops._launch_plan_original,raw)
+                self.assertLess(state['phaseEvents'].index('opaque-plan'),state['phaseEvents'].index('admitted-factory'))
+                phase=final_json(ops._preparation_original);self.assertEqual(phase['schema'],'bw.ring3.preparation-original.v3')
+                self.assertEqual(phase['process']['environment']['BW_LAUNCH_PLAN_SHA256'],expected)
+                with patch.dict(globals(),read_launch_plan=Mock(side_effect=AssertionError('no recapture'))):ops.prepare(failure)
+                self.assertIsNotNone(failure.first);self.assertEqual(state['phaseEvents'].count('admitted-factory'),1)
+                self.assertEqual(ops._launch_plan_original,raw)
+
+        def test_admitted_parent_drop_only_failure_log_keeps_plan_and_primary_error(self):
+            for fault in ('none','drop','flush'):
+                with self.composition_edges() as (old,state):
+                    raw=b'opaque retained plan';ops=AdmittedGeneratedEntryComposition(sha(raw),state['env']);ops.validate()
+                    ops._launch_plan_original=raw;ops._preparation_original=b'original phase';ops._generation_original=b'original GEN'
+                    failure=FirstFailure();failure.add(ValueError('ORIGINAL_PLAN_FAILURE'),'admission');lines=[];attempted=[]
+                    if fault=='drop':ops.bootstrap.drop=Mock()
+                    def emit(line):attempted.append(True);entry_ids(1001,1002);lines.append(line);return len(line)
+                    def flush():
+                        if fault=='flush':raise OSError('ADMISSION_FLUSH')
+                    with patch.object(sys,'stdout',SimpleNamespace(buffer=SimpleNamespace(write=emit,flush=flush))):result=ops.failure_only(failure)
+                    self.assertFalse(result['pass']);self.assertEqual(failure.first['message'],'ORIGINAL_PLAN_FAILURE')
+                    if fault=='drop':self.assertEqual(lines,[]);self.assertEqual(attempted,[])
+                    else:
+                        rows=[final_json(line[len(b'RING3_ORIGINAL '):]) for line in lines]
+                        self.assertEqual({row['name'] for row in rows},{'launch-plan.original.json','preparation.phase.json','generation.phase.json'})
+                        self.assertEqual(ops._preparation_log['complete'],fault=='none')
+
+        def test_admitted_parent_failed_capture_or_root_check_cannot_retry_with_repaired_plan(self):
+            for fault in ('read','root'):
+                with self.composition_edges() as (old,state):
+                    raw=b'valid bytes only after refused attempt';ops=AdmittedGeneratedEntryComposition(sha(raw),state['env']);ops.validate()
+                    reads=Mock(side_effect=[OSError('ORIGINAL_PLAN_READ'),raw] if fault=='read' else [raw])
+                    delegated=Mock(return_value=FirstFailure())
+                    if fault=='root':state['uids']=(1001,)*3
+                    with patch.dict(globals(),read_launch_plan=reads),patch.object(GeneratedEntryComposition,'prepare',delegated):
+                        first=FirstFailure();ops.prepare(first);original=ops._preparation_original
+                        state['uids']=(0,)*3;second=FirstFailure();ops.prepare(second)
+                    self.assertEqual(first.first['message'],'ORIGINAL_PLAN_READ' if fault=='read' else 'root opaque launch-plan capture required')
+                    self.assertEqual(second.first['message'],'launch-plan capture consumed; no retry')
+                    self.assertEqual(reads.call_count,1 if fault=='read' else 0);delegated.assert_not_called()
+                    self.assertIsNone(ops._launch_plan_original);self.assertEqual(ops._preparation_original,original)
+
+        @contextlib.contextmanager
+        def admitted_original_edges(self):
+            with self.generated_original_edges() as (old,outside,env,pre,post,state):
+                raw=self.launch_plan_original(state['data']['source.before.json'],env);expected=sha(raw)
+                ops=AdmittedGeneratedEntryComposition(expected,env);ops.python=old.python;ops.bootstrap.invoker=old.bootstrap.invoker
+                ops._launch_plan_original=raw;ops._generation_original=old._generation_original;ops.pre_git=pre
+                ops.preparation=json.loads(json.dumps(old.preparation,default=lambda data:None))
+                ops.preparation['streams']=old.preparation['streams'];ops.preparation['process']['argv'][-1]='--prepare-admitted-generated'
+                ops.preparation['process']['environment']['BW_LAUNCH_PLAN_SHA256']=expected
+                with patch.object(time,'monotonic_ns',return_value=600):ops.freeze_preparation_original(FirstFailure())
+                node=final_json(old._generation_original)['before']['files']['node']
+                with patch.dict(globals(),GENERATION_NODE_PIN=(node['bytes'],node['sha256'])):
+                    yield ops,outside,env,pre,post,state
+
+        def test_admitted_v3_actual_finalizer_exports_twenty_roles_and_exact_plan_original(self):
+            with self.admitted_original_edges() as (ops,outside,env,pre,post,state):
+                self.assertEqual(final_json(ops._preparation_original)['schema'],'bw.ring3.preparation-original.v3')
+                result,failure=finalize_packet(outside,FirstFailure(),pre,env,post_observer=post,
+                    preparation_original=ops._preparation_original,generation_original=ops._generation_original,
+                    launch_plan_original=ops._launch_plan_original,launch_plan_sha256=ops._expected_launch_plan_sha256,
+                    emit=lambda line:state['log'].append(line) or len(line),flush=lambda:None)
+                self.assertTrue(result['pass']);self.assertIsNone(failure.first);self.assertEqual(set(state['export']),PACKET_ROLES)
+                rows=[final_json(line[len(b'RING3_ORIGINAL '):]) for line in state['log']]
+                self.assertEqual(len({row['name'] for row in rows}),9)
+                self.assertEqual(base64.b64decode(''.join(row['data'] for row in rows if row['name']=='launch-plan.original.json')),ops._launch_plan_original)
+                self.assertNotIn('launch-plan.original.json',state['export'])
+                with self.assertRaises(ValueError):check_generated_phase(ops._preparation_original,ops._generation_original,pre,outside,
+                    final_json(state['data']['.entry.json']),env)  # No silent v2 acceptance.
+
+        def test_admitted_v3_plan_digest_descriptor_source_and_missing_pair_refuse(self):
+            for fault in ('plan-digest','phase-digest','phase-mode','phase-v2','plan-source','missing-plan','missing-pin'):
+                with self.admitted_original_edges() as (ops,outside,env,pre,post,state):
+                    plan=ops._launch_plan_original;expected=ops._expected_launch_plan_sha256;phase=final_json(ops._preparation_original)
+                    if fault=='plan-digest':expected='0'*64
+                    elif fault=='phase-digest':phase['process']['environment']['BW_LAUNCH_PLAN_SHA256']='0'*64
+                    elif fault=='phase-mode':phase['process']['argv'][-1]='--prepare-generated'
+                    elif fault=='phase-v2':phase['schema']='bw.ring3.preparation-original.v2'
+                    elif fault=='plan-source':
+                        value=final_json(plan);source=final_json(state['data']['source.before.json']);source['files']['LICENSE']['sha256']='0'*64
+                        data=encode(source);value['source']={'bytes':len(data),'sha256':sha(data),'base64':base64.b64encode(data).decode('ascii')}
+                        plan=encode(value);expected=sha(plan);phase['process']['environment']['BW_LAUNCH_PLAN_SHA256']=expected
+                    elif fault=='missing-plan':plan=None
+                    else:expected=None
+                    result,failure=finalize_packet(outside,FirstFailure(),pre,env,post_observer=post,
+                        preparation_original=encode(phase),generation_original=ops._generation_original,
+                        launch_plan_original=plan,launch_plan_sha256=expected,emit=lambda line:len(line),flush=lambda:None)
+                    self.assertFalse(result['pass'],fault);self.assertNotIn('resources.json',state['export']);self.assertIsNotNone(failure.first)
+
+        def test_admitted_v3_finalizer_node_pin_is_independent_of_coherent_runtime_and_gen(self):
+            with self.admitted_original_edges() as (ops,outside,env,pre,post,state):
+                generation=final_json(ops._generation_original);node=generation['before']['files']['node']
+                for name in ('before','after'):generation[name]['files']['node']=dict(node,sha256='0'*64)
+                runtime=final_json(state['data']['runtime.before.json']);runtime['qemuPackage']['files'][node['path']]['sha256']='0'*64
+                originals=dict(state['data']);originals['runtime.before.json']=encode(runtime)
+                wire=generation_frame(encode(generation),pre);phase=final_json(ops._preparation_original)
+                phase['stdout']={'bytes':len(wire),'sha256':sha(wire),'base64':base64.b64encode(wire).decode('ascii')}
+                with self.assertRaisesRegex(ValueError,'independent selected Node pin'):
+                    check_admitted_generated_originals(ops._launch_plan_original,ops._expected_launch_plan_sha256,
+                        encode(phase),encode(generation),pre,outside,final_json(state['data']['.entry.json']),originals,env)
+
         @contextlib.contextmanager
         def pinned_staging_edges(self):
             with self.staging_edges() as (old,state):
