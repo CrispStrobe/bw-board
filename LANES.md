@@ -5312,9 +5312,11 @@ its results; installed-GUI acceptance remains separate.
 CLAIM MERGED; IMPLEMENTATION DRAFT — Codex x86. The ownership claim landed in
 [PR643](https://github.com/CrispStrobe/bw-board/pull/643). Source candidate
 [PR645](https://github.com/CrispStrobe/bw-board/pull/645) remains draft, with no
-actual ring-changing guest result. Published checkpoint `9a817700` includes
-135 mocked runner controls; later source additions are described in the runner
-README. Source controls do not establish actual ownership or guest qualification.
+actual ring-changing guest result. Checkpoint `9e35d072` adds bounded generator
+original transport and 151 mocked runner controls. The additive source/Node
+comparison interface is described in the runner README; its external launch-plan
+trust connection remains unfinished. Source controls do not establish actual
+ownership or guest qualification.
 The existing same-CPL0 paged IRQ fixture and older 286 claims do not own this
 new software-interrupt fixture.
 

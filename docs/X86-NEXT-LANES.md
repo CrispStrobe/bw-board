@@ -75,10 +75,13 @@ Compare returned CPU/cache fields, complete selected pages and board state; inde
 
 **Status:** ownership claim [PR643](https://github.com/CrispStrobe/bw-board/pull/643)
 is merged; implementation [PR645](https://github.com/CrispStrobe/bw-board/pull/645)
-is draft. Published checkpoint `9a817700` has 135 mocked runner controls,
-including preparation ownership, transport, privilege handoff and immutable
-log provenance. The independent reader accepts manufactured originals and
-refuses rehashed counterexamples. No actual ring-changing guest, QEMU
+is draft. Checkpoint `9e35d072` has 151 mocked runner controls, including
+preparation ownership, bounded generator-original transport, privilege handoff
+and immutable log provenance. The independent reader accepts manufactured
+originals and refuses rehashed counterexamples. The additive source/Node
+comparison interface requires an independently reviewed source manifest; it
+cannot authenticate the caller choosing that manifest. Its connection to a
+trusted launch plan remains unfinished. No actual ring-changing guest, QEMU
 comparison, protected-application or performance result follows from these
 controls. The current source and remaining activation gaps are documented in
 [`scripts/i80386-ring3-int-iret/README.md`](../scripts/i80386-ring3-int-iret/README.md).
@@ -90,10 +93,15 @@ Concrete remaining tasks, in order:
    one bounded fixed Node invocation, exclusive writes and independent readback
    against the frozen ROM and metadata goldens. Preserve partial files and first
    errors. A separate callable and memory-only observations do not activate it.
-2. Retain generator process, raw streams, source/runtime observations and output
-   references in an original channel that reaches the outside audit. Freeze an
-   independent reader for that channel, with source and Node identity admitted
-   before generation. Later PRE Git observations alone do not prove this order.
+2. Connect the source/Node comparison interface to a separately reviewed launch
+   plan. Freeze the exact committed twelve-file source manifest and its original
+   bytes, SHA-256, head and tree outside the generator channel; admit the selected
+   Node identity independently. Refuse before generator creation if either live
+   identity differs. Do not derive expected facts from the same generator record
+   or replace admission with a caller success flag. Retain generator originals
+   through the bounded channel and audit with the independent reader. The source
+   comparison does not freshly observe Git HEAD/tree or serialize twelve early
+   file reads; later PRE Git observations do not establish that earlier order.
 3. Wire fixed internal modes, resource-group creation/readback and the 15-minute
    job backstop. Keep actual execution disabled until the whole source, input,
    runtime, resource, output and event envelope passes separate review. Preserve

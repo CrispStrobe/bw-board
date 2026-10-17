@@ -2309,6 +2309,87 @@ class RecordingStagingOps(StagingOps):
         except BaseException as error:failure.add(error,'recording-staging-clock')
 
 
+def admit_generation_source(raw,expected_sha256,expected_head,expected_tree):
+    """Compare separately retained source admission, never derive its authority.
+
+    The external event plan must select all four arguments independently of
+    generation. This primitive cannot authenticate a caller-selected manifest.
+    """
+    need(type(raw) is bytes and 0<len(raw)<=JSON_CAP,'bounded immutable admitted source original')
+    for value,size in ((expected_sha256,64),(expected_head,40),(expected_tree,40)):
+        need(type(value) is str and re.fullmatch('[0-9a-f]{'+str(size)+'}',value),
+             'explicit external source digest/head/tree')
+    need(sha(raw)==expected_sha256,'external source original digest')
+    source=final_json(raw)
+    require_fields(source,'schema head tree files','closed admitted source original')
+    need(source['schema']=='bw.ring3.source.v1' and source['head']==expected_head and
+         source['tree']==expected_tree,'external admitted source head/tree')
+    need(type(source['files']) is dict and set(source['files'])==SOURCE_PATHS,'admitted source twelve-path roster')
+    for item in source['files'].values():
+        require_fields(item,'bytes sha256 mode blob','closed admitted source file')
+        need(type(item['bytes']) is int and 0<=item['bytes']<=4<<20 and item['mode']=='100644',
+             'admitted source extent and regular mode')
+        for key,size in (('sha256',64),('blob',40)):
+            need(type(item[key]) is str and re.fullmatch('[0-9a-f]{'+str(size)+'}',item[key]),
+                 'admitted source file digest')
+    need(encode(source)==raw,'canonical admitted source original')
+    return raw
+
+
+# Selected-file identity admitted from the separate CLI646 original. This is
+# not a dependency-graph, upstream-authenticity or host-ownership assertion.
+GENERATION_NODE_PIN=(124827920,'fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48')
+
+
+class PinnedRecordingStagingOps(RecordingStagingOps):
+    """Unwired identity-comparison primitive, separate from generated defaults.
+
+    Full twelve-file observations remain in memory. GEN v1 retains only its
+    existing three identities; neither it nor later PRE proves all twelve live
+    before observations independently. External launch-plan admission is pending.
+    """
+    def __init__(self,source_original,source_sha256,expected_head,expected_tree,environ=None):
+        self._source_original=admit_generation_source(source_original,source_sha256,expected_head,expected_tree)
+        self._expected_head,self._expected_tree=expected_head,expected_tree
+        super().__init__(environ);self.source_observations={}
+
+    def admit(self):
+        need(self.environ.get('BW_EXPECTED_HEAD')==self._expected_head and
+             self.environ.get('BW_EXPECTED_TREE')==self._expected_tree,'staging environment joins external source admission')
+        super().admit()
+
+    def source_read(self,path):
+        need(path in SOURCE_PATHS,'fixed pinned staging source path')
+        target=Path.cwd()/path;info=target.lstat()
+        need(target.resolve(strict=True)==target and stat.S_ISREG(info.st_mode) and
+             (info.st_uid,info.st_gid)==(self.uid,self.gid),'canonical owned pinned staging source')
+        return bounded_read(target,4<<20,with_mode=True)
+
+    def observe(self,stage,failure):
+        source=final_json(self._source_original)  # Fresh copy; public observations are not authority.
+        try:
+            observed,found=source_facts(source,self.source_read,stage=stage)
+            self.source_observations[stage]=observed;failure.adopt(found.first,found.secondary)
+        except BaseException as error:failure.add(error,'pinned-staging-source-'+stage)
+        try:StagingOps.observe(self,stage,failure)
+        except BaseException as error:failure.add(error,'pinned-staging-'+stage)
+        for role,name in (('fixture','fixture.mjs'),('runner','run.py')):
+            try:
+                path='scripts/i80386-ring3-int-iret/'+name;item=source['files'][path]
+                need(same_json(self.facts[stage][role],{'path':path,'bytes':item['bytes'],'sha256':item['sha256']}),
+                     'staging observed identity joins admitted source: '+role)
+            except BaseException as error:failure.add(error,'pinned-staging-'+stage+'-'+role)
+        try:
+            extent,digest=GENERATION_NODE_PIN
+            need(same_json(self.facts[stage]['node'],{'path':RUNTIME_EXECUTABLES['node'],'bytes':extent,'sha256':digest}),
+                 'staging observed Node matches independent selected-file pin')
+        except BaseException as error:failure.add(error,'pinned-staging-'+stage+'-node')
+        try:
+            observed=time.monotonic_ns();need(type(observed) is int and observed>0,'generation identity observation clock')
+            self.observation_times[stage]=observed
+        except BaseException as error:failure.add(error,'pinned-staging-clock')
+
+
 def generation_original(ops,result,failure):
     def stream(name):
         data=result['streams'][name]
@@ -2879,6 +2960,153 @@ def controls():
                 'rusage':{'userSeconds':0.1,'systemSeconds':0.01,'maxRssKiB':1024}}
 
     class Tests(unittest.TestCase):
+        @contextlib.contextmanager
+        def pinned_staging_edges(self):
+            with self.staging_edges() as (old,state):
+                source_data={name:('held '+name).encode() for name in SOURCE_PATHS}
+                source_data[RUN_FILE]=state['runner']
+                source_data['scripts/i80386-ring3-int-iret/fixture.mjs']=state['fixture']
+                source={'schema':'bw.ring3.source.v1','head':'a'*40,'tree':'b'*40,'files':{
+                    name:{'bytes':len(data),'sha256':sha(data),'mode':'100644',
+                        'blob':hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()}
+                    for name,data in source_data.items()}}
+                raw=encode(source);state.update(sourceData=source_data,sourceReads=[],sourceFaults={},sourceModes={})
+                previous=globals()['bounded_read']
+                def read(path,cap,**kwargs):
+                    name=str(path).removeprefix('/checkout/')
+                    if kwargs.get('with_mode') and name in SOURCE_PATHS:
+                        state['events'].append('pin-source-'+name);state['sourceReads'].append(name)
+                        if name in state['sourceFaults']:raise state['sourceFaults'][name]
+                        return state['sourceData'][name],state['sourceModes'].get(name,'100644')
+                    return previous(path,cap,**kwargs)
+                ops=PinnedRecordingStagingOps(raw,sha(raw),'a'*40,'b'*40,old.environ)
+                with patch.dict(globals(),bounded_read=read,GENERATION_NODE_PIN=(len(state['node']),sha(state['node']))):
+                    yield ops,state,raw
+
+        def test_pinned_generation_source_requires_canonical_closed_external_admission(self):
+            with self.pinned_staging_edges() as (ops,state,raw):
+                self.assertEqual(admit_generation_source(raw,sha(raw),'a'*40,'b'*40),raw)
+                invalid=[]
+                for fault in ('schema','head','tree','roster','fields','bytes-bool','bytes-float','bytes-cap','mode','blob','hash'):
+                    value=final_json(raw);item=value['files'][RUN_FILE]
+                    if fault=='schema':value['schema']='other'
+                    elif fault in ('head','tree'):value[fault]='c'*40
+                    elif fault=='roster':value['files'].pop('LICENSE')
+                    elif fault=='fields':item['extra']=0
+                    elif fault=='bytes-bool':item['bytes']=True
+                    elif fault=='bytes-float':item['bytes']=float(item['bytes'])
+                    elif fault=='bytes-cap':item['bytes']=(4<<20)+1
+                    elif fault=='mode':item['mode']='100755'
+                    elif fault=='blob':item['blob']='G'*40
+                    else:item['sha256']='G'*64
+                    invalid.append(encode(value))
+                invalid.extend((raw+b' ',raw.replace(b'"schema":',b'"schema":"duplicate","schema":'),b'X'*(JSON_CAP+1)))
+                for data in invalid:
+                    with self.assertRaises(ValueError):PinnedRecordingStagingOps(data,sha(data),'a'*40,'b'*40,ops.environ)
+                for arguments in ((raw,'0'*64,'a'*40,'b'*40),(raw,sha(raw),'c'*40,'b'*40),
+                                  (raw,sha(raw),'a'*40,'c'*40),(None,sha(raw),'a'*40,'b'*40),
+                                  (raw,None,'a'*40,'b'*40),(raw,sha(raw),None,'b'*40)):
+                    with self.assertRaises(ValueError):PinnedRecordingStagingOps(*arguments,environ=ops.environ)
+                with self.assertRaises(TypeError):PinnedRecordingStagingOps()
+                self.assertNotIn('factory',state['events'])
+
+        def test_pinned_generation_selected_node_policy_is_fixed(self):
+            self.assertEqual(GENERATION_NODE_PIN,(124827920,'fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48'))
+
+        def test_pinned_generation_twelve_live_sources_and_node_precede_factory_and_clock(self):
+            with self.pinned_staging_edges() as (ops,state,raw):
+                ticks=[]
+                def clock():ticks.append(tuple(state['events']));return len(ticks)
+                with patch.object(time,'monotonic_ns',side_effect=clock):result,failure=stage_preparation_inputs(ops)
+                self.assertTrue(result['pass']);self.assertIsNone(failure.first)
+                self.assertEqual(state['sourceReads'],sorted(SOURCE_PATHS)*2)
+                factory=state['events'].index('factory')
+                for name in SOURCE_PATHS:self.assertLess(state['events'].index('pin-source-'+name),factory)
+                self.assertIn('read-node',ticks[0]);self.assertNotIn('factory',ticks[0])
+                self.assertEqual(ops.observation_times,{'before':1,'after':2})
+                self.assertEqual(ops.source_observations['before'],final_json(raw))
+                self.assertEqual(ops.source_observations['after'],final_json(raw))
+                self.assertEqual(set(result['facts']['before']),{'node','fixture','runner'})
+
+        def test_pinned_generation_every_held_source_mode_and_read_fault_refuses_before_factory(self):
+            for name in sorted(SOURCE_PATHS):
+                for fault in ('bytes','mode','read'):
+                    with self.pinned_staging_edges() as (ops,state,raw):
+                        if fault=='bytes':state['sourceData'][name]+=b'changed'
+                        elif fault=='mode':state['sourceModes'][name]='100755'
+                        else:state['sourceFaults'][name]=OSError('ORIGINAL_SOURCE_READ')
+                        result,failure=stage_preparation_inputs(ops)
+                        self.assertFalse(result['pass'],(name,fault));self.assertIsNotNone(failure.first)
+                        self.assertNotIn('factory',state['events']);self.assertEqual(set(state['sourceReads']),SOURCE_PATHS)
+                        self.assertIn('after',ops.source_observations);self.assertIsNone(result['process'])
+                        if fault=='read':
+                            self.assertEqual(failure.first['message'],'ORIGINAL_SOURCE_READ')
+                            self.assertEqual(ops.source_observations['before']['files'][name]['firstFailure']['message'],'ORIGINAL_SOURCE_READ')
+
+        def test_pinned_generation_late_gen_identity_joins_and_environment_refuse_before_factory(self):
+            for fault in ('fixture','runner','node','head','tree'):
+                with self.pinned_staging_edges() as (ops,state,raw):
+                    if fault in ('head','tree'):ops.environ['BW_EXPECTED_'+fault.upper()]='c'*40
+                    else:state[fault]+=b'changed after twelve-file observation'
+                    result,failure=stage_preparation_inputs(ops)
+                    self.assertFalse(result['pass'],fault);self.assertIsNotNone(failure.first)
+                    self.assertNotIn('factory',state['events']);self.assertIsNone(result['process'])
+                    if fault in ('fixture','runner'):
+                        self.assertEqual(ops.source_observations['before'],final_json(raw))
+                        self.assertIn('joins admitted source',failure.first['message'])
+                    elif fault=='node':self.assertIn('independent selected-file pin',failure.first['message'])
+
+        def test_pinned_generation_after_drift_retains_original_generator_failure_and_all_reads(self):
+            for fault in ('source','node','fixture','runner'):
+                with self.pinned_staging_edges() as (ops,state,raw):
+                    state['code']=7
+                    def changed():
+                        if fault=='source':state['sourceData']['LICENSE']+=b'changed'
+                        else:state['drift'][fault]=b'changed after generation'
+                    state['onSpawn']=changed
+                    result,failure=stage_preparation_inputs(ops)
+                    self.assertFalse(result['pass']);self.assertEqual(result['process']['exitCode'],7)
+                    self.assertEqual(failure.first,result['process']['firstFailure'])
+                    self.assertEqual(failure.first['message'],'unexpected engine terminal status')
+                    self.assertTrue(failure.secondary);self.assertEqual(state['sourceReads'],sorted(SOURCE_PATHS)*2)
+                    self.assertEqual(set(ops.facts['outputFacts']),{'fixture.rom','fixture.json'})
+
+        def test_pinned_generation_public_source_observations_cannot_replace_frozen_admission(self):
+            with self.pinned_staging_edges() as (ops,state,raw):
+                source=final_json(raw);source['files']['LICENSE']['sha256']='0'*64
+                ops.source_observations={'before':source,'after':source}
+                state['sourceData']['LICENSE']+=b'changed'
+                result,failure=stage_preparation_inputs(ops)
+                self.assertFalse(result['pass']);self.assertNotIn('factory',state['events'])
+                self.assertNotEqual(ops.source_observations['before']['files']['LICENSE'],source['files']['LICENSE'])
+                self.assertEqual(ops._source_original,raw)
+
+        def test_pinned_generation_coherent_public_before_and_after_drift_cannot_replace_pins(self):
+            for role in ('node','fixture','runner'):
+                with self.pinned_staging_edges() as (ops,state,raw):
+                    def changed():
+                        data=b'coherently replaced public observations';state['drift'][role]=data
+                        ops.facts['before'][role].update(bytes=len(data),sha256=sha(data))
+                    state['onSpawn']=changed
+                    result,failure=stage_preparation_inputs(ops)
+                    self.assertFalse(result['pass'],role);self.assertIsNotNone(failure.first)
+                    self.assertEqual(result['process']['exitCode'],0)
+                    self.assertEqual(ops.facts['before'][role],ops.facts['after'][role])
+                    self.assertIn('independent selected-file pin' if role=='node' else 'joins admitted source',failure.first['message'])
+
+        def test_pinned_generation_caller_selected_coherent_manifest_is_not_authenticated(self):
+            for role,name in (('fixture','fixture.mjs'),('runner','run.py')):
+                with self.pinned_staging_edges() as (old,state,raw):
+                    path='scripts/i80386-ring3-int-iret/'+name;data=b'caller-selected coherent replacement'
+                    state[role]=data;state['sourceData'][path]=data
+                    value=final_json(raw);value['files'][path]={'bytes':len(data),'sha256':sha(data),'mode':'100644',
+                        'blob':hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()}
+                    selected=encode(value)
+                    ops=PinnedRecordingStagingOps(selected,sha(selected),'a'*40,'b'*40,old.environ)
+                    result,failure=stage_preparation_inputs(ops)
+                    self.assertTrue(result['pass']);self.assertIsNone(failure.first)
+                    self.assertNotEqual(selected,raw)  # External provenance must reject unreviewed selections.
+
         def test_generation_frame_preserves_original_bytes_and_refuses_all_extent_and_digest_cuts(self):
             generation=b'{"original":"GEN"}\n';pre=b'original PRE bytes\xff'
             frame=generation_frame(generation,pre)

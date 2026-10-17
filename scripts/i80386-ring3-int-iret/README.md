@@ -388,6 +388,46 @@ joins, but no actual generator, child, resource operation or guest has run.
 Trusted external source/runtime-before-generation admission, actual setup,
 retained-original audit admission and workflow/backstop wiring remain closed.
 
+An additional `PinnedRecordingStagingOps` subclass is an unwired
+identity-comparison primitive. Its required arguments are separately retained
+canonical `bw.ring3.source.v1` bytes, their independently selected SHA-256, and
+the independently selected reviewed Git head and tree. Missing, malformed,
+noncanonical or mismatched arguments refuse before a child factory. The
+manifest has exactly the existing twelve source paths, with closed, typed
+byte-extent, SHA-256, Git blob and regular-mode facts. It stores immutable
+original bytes and reparses them for comparisons; mutable public observation
+dictionaries cannot replace that admission.
+
+Before the generator factory, this subclass reads every named live source
+file, checks canonical owned regular paths and compares modes, extents,
+SHA-256 and Git blob hashes against the manifest. It then joins the existing
+fixture and runner observations to that same manifest and checks the existing
+Node observation against the separately admitted selected-file fingerprint:
+Node 22.23.3, 124,827,920 bytes, SHA-256
+`fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48`.
+That fingerprint originates in the retained, independently audited
+[CLI646 original](https://github.com/CrispStrobe/bw-board/actions/runs/38937680307).
+The existing before clock follows these comparisons. After-generation
+observations repeat the comparisons, preserving generator errors ahead of
+readback errors and attempting all twelve source reads after individual file
+failures. Partial source facts remain available in memory.
+
+This performs no fresh pre-generation Git capture: the head and tree are
+external admission labels. The existing generator original still serializes
+only Node, fixture and runner observations, so it cannot independently prove
+all twelve live source observations at that before boundary. Full twelve-file
+facts and errors are not added to its schema or exported as a new original.
+The separate original-only reader must retain the independently admitted
+source manifest and runtime expectation. A caller that selects both a changed
+manifest and its matching digest/head/tree can satisfy this comparison
+primitive; authenticating those selections requires the separately reviewed
+external event plan. No actual command supplies that trust origin yet.
+The default staging and generated-preparation adapters, twenty packet roles,
+five internal names, stream/log caps and actual-command refusal are unchanged.
+Nine additional inert controls cover the comparison primitive, including the
+caller-selected coherent-manifest limitation; the complete runner suite has
+160 controls. No actual generator, resource or guest ran.
+
 Preparation invocation, actual entry, finalizer integration, the hosted actual job and
 results remain unconnected. Polling cannot preempt blocking kernel operations,
 process creation or identity reads. The 15-minute job backstop is not wired at
