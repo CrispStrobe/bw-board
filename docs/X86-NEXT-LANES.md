@@ -74,65 +74,80 @@ Compare returned CPU/cache fields, complete selected pages and board state; inde
 ### Ordinary-JS ring-changing INT/IRETD fixture
 
 **Status:** ownership claim [PR643](https://github.com/CrispStrobe/bw-board/pull/643)
-is merged; implementation [PR645](https://github.com/CrispStrobe/bw-board/pull/645)
-is draft. Published checkpoint `747b63ff` has 180 mocked runner controls,
-including admitted-plan delivery, source/Node comparisons, the fixed CLI and
-fresh hosted-setup adapters. A static source guard disables every actual mode.
-The independent reader accepts manufactured originals and refuses rehashed
-counterexamples. The current source slice adds immutable event/request admission,
-read-only installation and a disabled hosted job with a 15-minute backstop.
-Its thirteen additional inert controls bring the total to 193; the previous 180
-test bodies remain unchanged, and twenty-one source mutations are detected.
-Those source paths do not establish successful kernel operations or independently
-approve their own inputs. Complete runtime expectations, an independent setup
-observer and a reader joining those new originals remain activation blockers.
-No actual ring-changing guest, QEMU comparison, protected-application or
-performance result follows from these controls. The current source and remaining activation gaps are documented in
-[`scripts/i80386-ring3-int-iret/README.md`](../scripts/i80386-ring3-int-iret/README.md).
+is merged. Implementation [PR645](https://github.com/CrispStrobe/bw-board/pull/645)
+remains draft at published checkpoint
+[`6c72c42a`](https://github.com/CrispStrobe/bw-board/commit/6c72c42a1ef6115099f4cd0e30460e9418841191).
+The implementation files are on that draft, not the default branch. Refresh its
+head, base and enabled checks before continuing; use its reviewed source rather
+than reconstructing already completed adapters.
+
+**Completed source checkpoint:** deterministic ROM and architectural goldens,
+bounded runner and original-only validation, fixed six-mode CLI, dropped
+preparation and root-to-dropped bootstrap adapters, fresh resource setup,
+immutable event/request admission, pinned Git metadata/blob transport and fresh
+read-only installation. The workflow declares a disabled 15-minute installation
+job. Both source and job guards remain false; complete installation deliberately
+returns nonzero before resource setup or guests. All 193 inert controls pass,
+with the prior 180 test bodies unchanged; 21 source mutations are detected.
+The mutable transport-descriptor regression is fixed and independently checked.
+These are source results. Actual setup ownership, the ring-changing guest,
+QEMU comparison, protected applications and performance remain unqualified.
+
+Start with the immutable
+[source README](https://github.com/CrispStrobe/bw-board/blob/6c72c42a1ef6115099f4cd0e30460e9418841191/scripts/i80386-ring3-int-iret/README.md)
+and the existing adapters in `scripts/i80386-ring3-int-iret/run.py`.
+The remaining tasks below stay within the owned fixture paths. A CPU/device,
+unrelated workflow or dependency change needs a separately reviewed scope.
 
 Concrete remaining tasks, in order:
 
-1. Finish and review the hosted-envelope installation source slice documented
-   in the runner README. It must compare the frozen twelve-file source manifest
-   with live checkout bytes, modes, HEAD and tree before network or installation;
-   admit fixed owned-repository runtime commit/tree/blob metadata before fetching
-   its bytes once; and install fresh read-only request, event, runtime and plan
-   files. Keep its source guard and the 15-minute job guard disabled. An immutable
-   labeled-PR event transports the request. A repository variable transports its
-   digest selected by independent pre-label review; neither is self-approval.
-   A dynamically computed plan digest proves delivery integrity only. Do not
-   apply the label or populate approval configuration during source development.
-2. Implement a separate read-only observer outside both resource trees. Before
-   preparation, retain its process and exact output originals, all five resource
-   identities, ownership/delegation/cap observations and installed-input hashes.
-   Do not serialize setup code's memory facts as independent evidence. Require
-   parent controllers to be enabled already, with no shared-parent mutation or
-   adoption. Preserve partial failures through an outside collector, including
-   failures before installation can produce an original.
-3. Independently freeze the complete stable runtime graph before probes or
-   guests. Historical QEMU executable, BIOS and VGA hashes are only selected-file
-   expectations; libraries, interpreters, aliases, TCG modules and the selected
-   package-data graph remain required. Preserve raw probe output separately from
-   stable comparison fields. A mismatch refuses; do not install a fallback or
-   silently update a pin. Extend the standalone reader with an explicit version
-   joining the request, installation, observer and runtime originals to external
-   expectations. Preserve the older reader and twenty packet roles. Test wrong
-   external pins and rehashed conflicting originals, not just producer success.
-4. Connect those admitted prerequisites to the existing setup, dropped
-   preparation, bootstrap and controller adapters. Preparation must retain exact
-   group membership, empty owned staging, the bounded fixed Node invocation,
-   exclusive writes and independent golden readback. Bootstrap migrates itself,
-   drops privileges and executes the controller. Pass independent source, Node,
-   request and installation expectations through the closed descriptors to the
-   reader. Preserve partial files and first errors. Source mocks are not actual
-   setup, observed ownership or guest qualification.
-5. Review the complete source, input, runtime, resource, output and event
-   envelope before a separate source change enables execution. Preserve limits
-   and unrelated workflows.
-6. After all enabled final-head checks succeed, separately admit one hosted
-   event. Acquire each official original once and perform independent audits
-   without producer imports or replay. Preserve refusals; a later candidate
-   requires its own source and admission, not a retry of a consumed attempt.
+1. **Independent observer and failure collector.** Consume the fixed installed
+   request/event/runtime/plan files and independently read all five resource
+   identities, owners, limits, delegations and empty membership from outside
+   both resource trees. Observe write-only kill controls through metadata only.
+   Retain exact observer process/output originals and partial failures, including
+   failures before installation can produce an original. Never copy setup code's
+   memory facts as independent evidence, mutate the shared parent, adopt or retry.
+   Source completion requires adversarial controls for ownership/identity drift,
+   missing inputs, wrong caps, partial reads and first-error preservation.
+2. **Complete runtime expectation and gate.** Supply a separately reviewed
+   immutable owned-repository input containing the full selected files, aliases,
+   tools/interpreters, TCG module, package data/versions and probe descriptors.
+   Historical QEMU/BIOS/VGA hashes cover selected files only. Compare the live
+   stable graph before the first probe and again afterward; retain ASLR-bearing
+   probe originals separately. Missing, changed or coherently rehashed graphs
+   must refuse before any probe or guest factory. Do not install a fallback,
+   self-admit an expectation from the same producer or silently update a pin.
+3. **Versioned standalone reader.** Take externally selected request/source/runtime
+   pins and expected event/job/configuration as inputs. Join request, raw event,
+   installation, independent observer, runtime, phase and generator originals in
+   an explicit new version of the original-only validation path. Preserve older
+   reader predicates, twenty packet roles and existing caps. Completion requires
+   independent positive and wrong-pin, rehashed-conflict and dropped-identity
+   adversaries, with no producer imports or guest replay.
+4. **Wire existing execution adapters.** Deliver those admitted expectations
+   through deliberately versioned closed parent/preparation/bootstrap/controller
+   descriptors. Reuse the captured plan; preserve drop-before-decode, fixed Node
+   generation/golden readback and bootstrap migration/drop/exec. Keep exclusive
+   staging, exact preparation membership and first/partial failures. Completion
+   requires a coherent full mocked CLI chain reaching the new reader and every
+   prerequisite mismatch refusing before its protected edge. The current
+   install-only endpoint's deliberate terminal refusal is not that connection.
+5. **Review and activate separately.** Freeze the final committed twelve-file
+   source manifest, including the workflow, complete runtime input and request
+   digest selected by prior independent review. Join the exact executing
+   workflow, event, job and configuration; review root installation, outside
+   collection and the 900-second job envelope. A repository variable and immutable
+   event transport the request identity; neither self-approves it. Only a separate
+   reviewed source/workflow change may remove both false guards. Do not populate
+   approval configuration or consume the label during source development.
+6. **One hosted qualification and result.** After every enabled exact-head check
+   succeeds, separately admit one hosted event. Acquire each official original
+   once after metadata admission, independently audit provenance and raw guest
+   effects against the architectural goldens, then publish the bounded result
+   or preserved failure. Affected clean actual guest evidence is required before
+   merging PR645; 193 mocks do not meet that gate. A later candidate needs its
+   own source/admission, not a retry of a consumed attempt.
 
 This is the next software-interrupt mechanism fixture after the reached
 same-CPL0 paged IRQ/IRET result. It does not repeat that fixture or adopt a
