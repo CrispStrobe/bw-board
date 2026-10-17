@@ -73,10 +73,85 @@ Compare returned CPU/cache fields, complete selected pages and board state; inde
 
 ### Ordinary-JS ring-changing INT/IRETD fixture
 
-**Status:** proposed claim, no implementation or new guest result. This is the
-next software-interrupt mechanism fixture after the reached same-CPL0 paged
-IRQ/IRET result. It does not repeat that fixture or adopt a native backend.
-Implementation starts only after the matching `LANES.md` claim merges.
+**Status:** ownership claim [PR643](https://github.com/CrispStrobe/bw-board/pull/643)
+is merged. Implementation [PR645](https://github.com/CrispStrobe/bw-board/pull/645)
+remains draft at published checkpoint
+[`6c72c42a`](https://github.com/CrispStrobe/bw-board/commit/6c72c42a1ef6115099f4cd0e30460e9418841191).
+The implementation files are on that draft, not the default branch. Refresh its
+head, base and enabled checks before continuing; use its reviewed source rather
+than reconstructing already completed adapters.
+
+**Completed source checkpoint:** deterministic ROM and architectural goldens,
+bounded runner and original-only validation, fixed six-mode CLI, dropped
+preparation and root-to-dropped bootstrap adapters, fresh resource setup,
+immutable event/request admission, pinned Git metadata/blob transport and fresh
+read-only installation. The workflow declares a disabled 15-minute installation
+job. Both source and job guards remain false; complete installation deliberately
+returns nonzero before resource setup or guests. All 193 inert controls pass,
+with the prior 180 test bodies unchanged; 21 source mutations are detected.
+The mutable transport-descriptor regression is fixed and independently checked.
+These are source results. Actual setup ownership, the ring-changing guest,
+QEMU comparison, protected applications and performance remain unqualified.
+
+Start with the immutable
+[source README](https://github.com/CrispStrobe/bw-board/blob/6c72c42a1ef6115099f4cd0e30460e9418841191/scripts/i80386-ring3-int-iret/README.md)
+and the existing adapters in `scripts/i80386-ring3-int-iret/run.py`.
+The remaining tasks below stay within the owned fixture paths. A CPU/device,
+unrelated workflow or dependency change needs a separately reviewed scope.
+
+Concrete remaining tasks, in order:
+
+1. **Independent observer and failure collector.** Consume the fixed installed
+   request/event/runtime/plan files and independently read all five resource
+   identities, owners, limits, delegations and empty membership from outside
+   both resource trees. Observe write-only kill controls through metadata only.
+   Retain exact observer process/output originals and partial failures, including
+   failures before installation can produce an original. Never copy setup code's
+   memory facts as independent evidence, mutate the shared parent, adopt or retry.
+   Source completion requires adversarial controls for ownership/identity drift,
+   missing inputs, wrong caps, partial reads and first-error preservation.
+2. **Complete runtime expectation and gate.** Supply a separately reviewed
+   immutable owned-repository input containing the full selected files, aliases,
+   tools/interpreters, TCG module, package data/versions and probe descriptors.
+   Historical QEMU/BIOS/VGA hashes cover selected files only. Compare the live
+   stable graph before the first probe and again afterward; retain ASLR-bearing
+   probe originals separately. Missing, changed or coherently rehashed graphs
+   must refuse before any probe or guest factory. Do not install a fallback,
+   self-admit an expectation from the same producer or silently update a pin.
+3. **Versioned standalone reader.** Take externally selected request/source/runtime
+   pins and expected event/job/configuration as inputs. Join request, raw event,
+   installation, independent observer, runtime, phase and generator originals in
+   an explicit new version of the original-only validation path. Preserve older
+   reader predicates, twenty packet roles and existing caps. Completion requires
+   independent positive and wrong-pin, rehashed-conflict and dropped-identity
+   adversaries, with no producer imports or guest replay.
+4. **Wire existing execution adapters.** Deliver those admitted expectations
+   through deliberately versioned closed parent/preparation/bootstrap/controller
+   descriptors. Reuse the captured plan; preserve drop-before-decode, fixed Node
+   generation/golden readback and bootstrap migration/drop/exec. Keep exclusive
+   staging, exact preparation membership and first/partial failures. Completion
+   requires a coherent full mocked CLI chain reaching the new reader and every
+   prerequisite mismatch refusing before its protected edge. The current
+   install-only endpoint's deliberate terminal refusal is not that connection.
+5. **Review and activate separately.** Freeze the final committed twelve-file
+   source manifest, including the workflow, complete runtime input and request
+   digest selected by prior independent review. Join the exact executing
+   workflow, event, job and configuration; review root installation, outside
+   collection and the 900-second job envelope. A repository variable and immutable
+   event transport the request identity; neither self-approves it. Only a separate
+   reviewed source/workflow change may remove both false guards. Do not populate
+   approval configuration or consume the label during source development.
+6. **One hosted qualification and result.** After every enabled exact-head check
+   succeeds, separately admit one hosted event. Acquire each official original
+   once after metadata admission, independently audit provenance and raw guest
+   effects against the architectural goldens, then publish the bounded result
+   or preserved failure. Affected clean actual guest evidence is required before
+   merging PR645; 193 mocks do not meet that gate. A later candidate needs its
+   own source/admission, not a retry of a consumed attempt.
+
+This is the next software-interrupt mechanism fixture after the reached
+same-CPL0 paged IRQ/IRET result. It does not repeat that fixture or adopt a
+native backend.
 
 **Owned files:** new
 `scripts/i80386-ring3-int-iret/{fixture.mjs,probe.mjs,run.py,reader.py,controls.py,README.md}`,
