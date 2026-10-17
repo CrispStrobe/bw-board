@@ -5309,11 +5309,22 @@ its results; installed-GUI acceptance remains separate.
 
 ## Ordinary-JS ring-changing INT/IRETD fixture — 2026-10-16
 
-PROPOSED CLAIM — Codex x86. Claim-only branch
-`docs/386-ring3-int-iret-claim-20261016`, inspected base
-`e2e44dd2e63cea8fac872efd0ea8b2aa765b1a49`. No implementation until this claim
-is merged. The existing same-CPL0 paged IRQ fixture and older 286 claims do
-not own this new software-interrupt fixture.
+CLAIM MERGED; IMPLEMENTATION DRAFT — Codex x86. The ownership claim landed in
+[PR643](https://github.com/CrispStrobe/bw-board/pull/643). Source checkpoint
+[`6c72c42a`](https://github.com/CrispStrobe/bw-board/commit/6c72c42a1ef6115099f4cd0e30460e9418841191)
+is published in draft [PR645](https://github.com/CrispStrobe/bw-board/pull/645),
+not merged to the default branch. Its six-mode CLI, setup/admission/installation
+adapters and disabled 15-minute job have 193 inert controls, preserving the prior
+180 test bodies; 21 source mutations are detected. Both activation guards stay
+false, and completed installation still refuses before resources or guests.
+The completed source work and six remaining tasks, with inputs and completion
+gates, are scoped in the [handoff](docs/X86-NEXT-LANES.md#ordinary-js-ring-changing-intiretd-fixture):
+independent observer/collector, full runtime gate, versioned reader, adapter
+wiring, separate activation review, then one qualified hosted event. Actual
+ownership and ring-changing guest qualification remain pending; source controls
+alone cannot satisfy the source merge gate.
+The existing same-CPL0 paged IRQ fixture and older 286 claims do not own this
+new software-interrupt fixture.
 
 Own only new `scripts/i80386-ring3-int-iret/{fixture.mjs,probe.mjs,run.py,reader.py,controls.py,README.md}`,
 `test/i80386-ring3-int-iret.test.mjs`,
