@@ -5638,3 +5638,14 @@ Actual guards remain false. Runtime-expectation and actual argv adoption are a
 separate explicit follow-up, with affected clean guest qualification and every
 enabled final-head check required before source merge. The linked contract
 specifies the fixed destination, failed-partial handling and completion criteria.
+
+
+### PR backlog source disposition — 2026-10-18
+
+PR650 merged as `1df9d2e7ffd53afdf24c3b152764bb19ade27c0f` with 26 enabled exact-head checks passing
+and 15 conditional skips. All 86 original intake commits
+are incorporated; individual retirement and any later owner-head exceptions
+are recorded in [the backlog report](docs/PR-BACKLOG-2026-10-18.md).
+PR557 remains open under its original paired performance gate. Source-only
+landing does not qualify inactive compiler/native diagnostics or the ring3
+guest path; all activation guards and remaining task contracts are preserved.
