@@ -763,8 +763,10 @@ are not portable identity pins. The guarded V8 route below connects preparation,
 bootstrap, finalizer and independent original-reader delivery.
 
 A separate metadata-only `runtime-inventory` job and reader endpoint
-`--inventory-runtime` provide a concrete candidate acquisition path. Both the
-job literal and independent source constant `INVENTORY_ENTRY_ENABLED` are false.
+`--inventory-runtime` provide a concrete candidate acquisition path. The
+metadata-only job literal and `INVENTORY_ENTRY_ENABLED` switch are enabled.
+The closed label and separately reviewed request pin are still required;
+actual execution remains disabled.
 The job has a literal 15 minute timeout, uses the existing fixed checkout and
 Node setup actions, and installs no QEMU or fallback packages. It runs without
 sudo, resource creation or guests. A historical tool mismatch refuses before
@@ -919,5 +921,5 @@ installer, apt fallback or parent-controller repair. Historical mismatch,
 missing controllers and graph/census cap overflow refuse and require explicit
 review. Node setup or inventory on another VM does not establish actual-VM
 availability. Independently reviewed runtime inventory/publication, final
-source12/event admission, guard activation and one affected clean hosted guest
+source12/event admission, actual guard activation and one affected clean hosted guest
 qualification remain outstanding.

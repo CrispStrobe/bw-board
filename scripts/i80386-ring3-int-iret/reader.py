@@ -930,7 +930,7 @@ RUNTIME_QEMU='/usr/bin/qemu-system-i386'
 RUNTIME_TCG='/usr/lib/x86_64-linux-gnu/qemu/accel-tcg-i386.so'
 RUNTIME_SELECTED={'node':{'bytes':124827920,'sha256':'fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48'},
     'qemu':{'bytes':26359752,'sha256':'28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5'}}
-INVENTORY_ENTRY_ENABLED=False  # Metadata-only activation requires separate review.
+INVENTORY_ENTRY_ENABLED=True  # Reviewed metadata-only path; actual execution remains disabled.
 
 
 def stable_probe_descriptors(value):

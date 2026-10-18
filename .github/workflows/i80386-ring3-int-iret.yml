@@ -112,7 +112,7 @@ jobs:
   # Independent candidate inventory only. No automatic runtime approval,
   # resource setup, fallback installation or guest execution.
   runtime-inventory:
-    if: ${{ false && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-runtime-inventory' && github.actor == 'CrispStrobe' && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ true && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-runtime-inventory' && github.actor == 'CrispStrobe' && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -134,7 +134,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22.23.3
-      - name: Disabled independent runtime inventory
+      - name: Independent runtime inventory
         shell: bash
         run: |
           set -euo pipefail

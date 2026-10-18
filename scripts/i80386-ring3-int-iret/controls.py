@@ -781,8 +781,20 @@ def runtime_controls():
                     with self.assertRaises(reader.Refusal):reader.verify_runtime_inventory_log(changed,dict(external,logBytes=len(changed),logSha256=sha(changed)))
 
         def test_inventory_cli_guard_and_coherent_callback_descriptor_replacement_refuse(self):
-            with patch.object(sys,'argv',['reader.py','--inventory-runtime']),patch.object(reader,'runtime_inventory_entry',side_effect=AssertionError('no event or factory before inventory guard')):
+            with patch.object(reader,'INVENTORY_ENTRY_ENABLED',False),patch.object(sys,'argv',['reader.py','--inventory-runtime']),patch.object(reader,'runtime_inventory_entry',side_effect=AssertionError('no event or factory before inventory guard')):
                 with self.assertRaisesRegex(reader.Refusal,'metadata inventory disabled'):reader.main()
+            self.assertIs(reader.INVENTORY_ENTRY_ENABLED,True)
+            originals={'inventory.request.json':b'{"manufacturedRequest":true}\n','inventory.event.json':b'{"manufacturedEvent":true}\n',
+                'runtime.inventory.json':b'{"manufacturedObservations":true}\n'}
+            output=io.BytesIO()
+            with patch.object(sys,'argv',['reader.py','--inventory-runtime']),patch.dict(os.environ,{},clear=True),\
+                patch.object(sys,'stdout',SimpleNamespace(buffer=output)),patch.object(reader,'runtime_inventory_entry',return_value=(originals,True)) as entry,\
+                patch.object(os,'open',side_effect=AssertionError('all real input/kernel edges mocked')),\
+                patch.object(os,'mkdir',side_effect=AssertionError('metadata CLI never creates resources')),\
+                patch.object(reader.subprocess,'Popen',side_effect=AssertionError('all real probe edges mocked')):
+                with self.assertRaises(SystemExit) as caught:reader.main()
+                self.assertEqual(caught.exception.code,0);entry.assert_called_once_with({})
+            self.assertEqual(reader.decode_runtime_inventory_log(output.getvalue()),originals)
             files,probe=runtime_fixture();inventory=reader.RuntimeInventory(files,probe)
             inventory.executables={'node':reader.RUNTIME_NODE,'python':'/usr/bin/python3.12','qemu':reader.RUNTIME_QEMU}
             def malicious(argv):
