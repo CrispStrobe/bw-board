@@ -12,10 +12,12 @@ intake heads other than #557 are ancestors of the merge. Retirement records belo
 incorporated drafts from any later owner head left open. Original commits,
 branches, failures and consumed events remain preserved.
 
-Remaining original PRs requiring work: #557, #645.
-PR557 remains unadopted under the user-preserved original paired application
-performance gate; the separate public code16 result cannot replace it. Its local
-combined-source review passed 12 correctness tests but grants no adoption.
+Remaining original PR requiring implementation/qualification: #645.
+PR557 is resolved as **not adopted**: its complete original paired application
+qualification failed the user-preserved lower-bound requirement on 2026-10-18.
+Median CPU ratio was 1.0336687306501549, but the minimum was
+0.9823853211009174; all seven had to exceed 1. Its correctness and median gains
+do not override that gate. See [the retained decision](I80386-DECODEEA16-ALLOCATION.md#original-paired-result--2026-10-18).
 Ring3 runtime expectation, execution delivery, final event admission and actual
 guest qualification remain separate tasks in X86-NEXT-LANES and the source README.
 Archive/compiler and native diagnostic promotion retain their original gates
@@ -49,9 +51,9 @@ Planned groups:
   review the opt-in CPU observer delta explicitly against current master.
 - Rollback sampler/tool-support sources: stack ending at #506. Preserve all
   baseline failures, inactive adapters and bounded tool/runtime admission.
-- Scalar EA candidate #557: actual correctness evidence exists; its declared
-  paired performance decision is still outstanding. Do not silently promote it
-  as a speed improvement or call it obsolete without an evidenced disposition.
+- Scalar EA candidate #557: the complete original paired decision failed its
+  predeclared lower-bound requirement. Resolve as not adopted; preserve all
+  original observations and candidate history. No CPU change is merged.
 - Ring3 fixture #645: preserve both false activation guards and its outstanding
   runtime/reader/actual-guest gates. Source-only integration must be recorded as
   inactive preparation, never a successful ring transition.
@@ -119,17 +121,18 @@ All existing mock-control entrypoints/assertions still run. The actual jobs keep
 their original source admission and activation conditions; none was enabled.
 Six independent refusal/readback controls cover the new boundary.
 
-The user explicitly chose to preserve PR557's performance gate. Twelve address-
-decoding correctness tests pass against a local combined-source review, but
-that review is not promoted. The separate public code16 fixture result already
-recorded in X86-NEXT-LANES does not replace the original private application
-workload. Next, locate its original frozen inputs, baseline/candidate and
-measurement contract in the ignored local handoff; confirm eligibility without
-changing that contract; then obtain and independently audit the original paired
-CPU/wall observations. Require median CPU ratio >=1.03, all seven ratios >1,
-median wall ratio <=1.02 and exact semantic equality. If the frozen inputs or
-qualification are unavailable, leave #557 open and unadopted. Do not substitute
-a new microbenchmark, cherry-pick the CPU optimization or describe it as obsolete.
+The user explicitly chose to preserve PR557's performance gate. The complete
+original 18-child qualification and independent retained-original audit now give
+a failed decision: median CPU ratio 1.0336687306501549, minimum CPU ratio
+0.9823853211009174, median wall ratio 0.9672191528545121. The minimum fails the
+predeclared strict >1 requirement. All 22 semantic comparison fields matched the
+frozen reference; no child/pair was repeated or dropped. The first warmup and
+collector failure/interruption are preserved. Full scoped result and limitations
+are in [the acceptance guide](I80386-DECODEEA16-ALLOCATION.md#original-paired-result--2026-10-18).
+PR557 is resolved as not adopted, with its branch/history and private evidence
+retained. Do not cherry-pick the optimization, substitute public code16 evidence,
+rerun this completed plan or relax its gate. A future candidate requires a new
+claim and predeclared acceptance plan.
 
 Final combined-source CI and all original ancestry proofs completed before
 source retirement. Any later owner head listed as open still requires its own
@@ -228,7 +231,7 @@ Refresh exact head/default/checks before merging or closing anything.
 | [#522](https://github.com/CrispStrobe/bw-board/pull/522) | `lane/386-fixed-archive-acquisition-20261012` | `b281e779266f6d225d91a88750c85a36e858042e` | 386: prepare gated fixed-archive materialization only | Incorporated through #650; draft retired |
 | [#524](https://github.com/CrispStrobe/bw-board/pull/524) | `lane/386-fixed-archive-hosted-20261012` | `e5cbd37186aa9bf834be9fa1a6b4a9011e1acc69` | x86: identify archive refusal rules without changing acceptance | Incorporated through #650; draft retired |
 | [#525](https://github.com/CrispStrobe/bw-board/pull/525) | `lane/386-archive-refusal-diagnostic-20261012` | `c9a22a1b173aa5f2fc41f8edf4a97a8fbfab5cc2` | fix(x86): admit bounded GNU long-name metadata | Incorporated through #650; draft retired |
-| [#557](https://github.com/CrispStrobe/bw-board/pull/557) | `master` | `fc799aef5945014dd1920aded9d60339da3caea8` | Remove decodeEA16 temporary arrays; performance qualification pending | Open; original performance gate preserved |
+| [#557](https://github.com/CrispStrobe/bw-board/pull/557) | `master` | `fc799aef5945014dd1920aded9d60339da3caea8` | Remove decodeEA16 temporary arrays; performance qualification pending | Resolved; not adopted after original paired gate failed |
 | [#645](https://github.com/CrispStrobe/bw-board/pull/645) | `master` | `a5054f3a9a6e572cc926d1537991f12ab650be14` | test: add bounded ring3 fixture and hosted runner source | Original incorporated in #650; newer owner head left open |
 
 ## Hosted qualification correction
