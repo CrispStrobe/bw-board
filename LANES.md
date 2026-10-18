@@ -5520,6 +5520,26 @@ inventory endpoint. Controls pass 205 runner, seven independent runtime and
 five prerequisite methods, with seventeen detected runtime source cuts. The
 prior 198 runner bodies are held. Both new guards remain false; execution
 delivery and actual guest qualification remain pending.
+The [execution-delivery checkpoint](https://github.com/CrispStrobe/bw-board/commit/ba90a2ea)
+connects actual runtime/preparation/bootstrap/controller descriptors, phase v4,
+dropped original retention and independent V8 validation. Controls pass 205
+runner, seven runtime, five prerequisite and seven delivery methods, plus a
+full manufactured V8 log/artifact through the unchanged twenty-role predicates.
+Four retained peer census counterexamples now refuse. This is source evidence,
+not a guest result. Both source/workflow guards remain false. Hosted QEMU and
+already-enabled parent controllers remain unestablished external prerequisites.
+A separately reviewed metadata-only activation enables the inventory guard/job;
+actual remains false. Exact source12/request and immutable one-shot own-PR event
+admission remain separate. Refresh labels/body/runs before acting, never repeat
+an event or acquire an official original twice.
+The first metadata event is consumed at source `dff8f6b0`:
+[run 39108893671](https://github.com/CrispStrobe/bw-board/actions/runs/39108893671)
+failed before a completed file fact or tool probe. Its sole original is already
+acquired; do not repeat it. The unchanged guard refused regularity/extent/mode,
+with no retained rejected-file stat in that original. The subsequent
+[failure-only diagnostics](https://github.com/CrispStrobe/bw-board/commit/6c521914)
+retain named/held stat and close/readback errors; nine mocked runtime controls
+and ten detected mutations do not qualify a guest or the failed inventory.
 The [handoff](docs/X86-NEXT-LANES.md#ordinary-js-ring-changing-intiretd-fixture)
 scopes the remaining complete runtime expectation/gate, versioned execution
 reader and adapter delivery, separate activation review and one hosted event.
