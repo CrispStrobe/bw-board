@@ -5322,6 +5322,12 @@ prerequisite reader and bounded versioned log emission. Its seven-mode CLI has
 193 test bodies and twenty reader functions are unchanged. Seventeen new
 source mutations are detected. Both guards stay false, and the new path
 explicitly refuses before preparation, runtime probes or guests.
+The [runtime checkpoint](https://github.com/CrispStrobe/bw-board/commit/337c8169)
+adds external stable-superset admission and a separately guarded metadata
+inventory endpoint. Controls pass 205 runner, seven independent runtime and
+five prerequisite methods, with seventeen detected runtime source cuts. The
+prior 198 runner bodies are held. Both new guards remain false; execution
+delivery and actual guest qualification remain pending.
 The [handoff](docs/X86-NEXT-LANES.md#ordinary-js-ring-changing-intiretd-fixture)
 scopes the remaining complete runtime expectation/gate, versioned execution
 reader and adapter delivery, separate activation review and one hosted event.
