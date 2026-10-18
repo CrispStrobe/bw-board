@@ -1668,9 +1668,12 @@ def staged_runtime_controls():
             self.assertIs(p.STAGED_RUNTIME_ENTRY_ENABLED,True);self.assertIs(reader.STAGED_RUNTIME_INVENTORY_ENABLED,True)
             self.assertIs(p.NODE_STAGE_ENTRY_ENABLED,False);self.assertIs(reader.NODE_STAGE_OBSERVER_ENABLED,False);self.assertIs(p.ACTUAL_ENTRY_ENABLED,False)
             with patch.object(p,'STAGED_RUNTIME_ENTRY_ENABLED',False),patch.object(p,'stage_runtime_inventory_node',side_effect=AssertionError('no factory')),patch.object(sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
-                self.assertEqual(p.dispatch_cli(['--stage-runtime-inventory-node'],{}),1)
+                for environ in ({},{'STAGED_RUNTIME_ENTRY_ENABLED':'true'}):
+                    self.assertEqual(p.dispatch_cli(['--stage-runtime-inventory-node'],environ),1)
             with patch.object(reader,'STAGED_RUNTIME_INVENTORY_ENABLED',False),patch.object(sys,'argv',['reader.py','--inventory-staged-runtime']),patch.object(reader,'staged_runtime_inventory_entry',side_effect=AssertionError('no observer')):
-                with self.assertRaisesRegex(reader.Refusal,'disabled'):reader.main()
+                for environ in ({},{'STAGED_RUNTIME_INVENTORY_ENABLED':'true'}):
+                    with patch.dict(os.environ,environ,clear=True):
+                        with self.assertRaisesRegex(reader.Refusal,'disabled'):reader.main()
         def test_complete_root_copy_drop_eleven_probes_reread_log_and_independent_reader(self):
             with edges() as (producer,env,request,raw,state):
                 result,failure=producer.stage_runtime_inventory_node(env)

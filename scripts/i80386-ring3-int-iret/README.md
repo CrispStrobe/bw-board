@@ -1133,6 +1133,7 @@ runs locally.
 
 The phase-specific control asserts the reviewed metadata guards enabled while
 retaining actual and older-stage guards false. It also explicitly disables each
-metadata guard and checks refusal before its factory or observer. The other
+metadata guard and checks refusal before its factory or observer, including
+environment strings that attempt to enable it. The other
 full-chain controls are unchanged. Eight affected mocked controls pass; they do
 not qualify a hosted stage, runtime candidate, resource operation or guest.
