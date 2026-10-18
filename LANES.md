@@ -5356,3 +5356,33 @@ No CPU/device/parser/old runner/test/fixture, dependency pin, existing workflow,
 native backend, sampler/provisioner or consumer changes are included. A product
 repair requires a separate reviewed ownership extension. No hardware IRQ, IOPL
 isolation, paging, task switch, general DPMI, full386DX/OS or timing claim.
+
+## Open-PR backlog reconciliation — 2026-10-18
+
+CLAIM — Codex root, branch `lane/pr-backlog-integration-20261018`, initial
+reviewed default `847d1d8aa46c9180bae0f905168577eacdcadd84`. The user explicitly
+requests consolidation and landing of the 87 open drafts, with obsolete work
+identified. This lane owns the backlog inventory, isolated integration branches,
+reviewed merge-conflict resolutions and final disposition records; existing
+owners' branches, historical originals, consumed one-shots and default behavior
+are preserved. Land this documentation claim before source composition.
+
+Use ancestry and exact owned-file comparisons to collapse stacked dependencies
+into their current leaf tips, rather than launch 87 separate current CI runs.
+Qualify each resulting source batch against current master with the unchanged
+required CI tier. Inactive diagnostic/source checkpoints may be integrated as
+such under this user-requested source consolidation; this does not activate
+workflows, qualify a guest/native backend, adopt an unmeasured optimization or
+relabel historical failures. Preserve existing runtime/performance promotion
+gates, immutable source bindings, prior failures and activation guards. Any CPU
+conflict requires explicit source/behavior review and affected regressions;
+never resolve it by discarding current master wholesale. Do not rerun consumed
+actuals, remove scientific assertions, change budgets or advance consumer pins.
+
+Close an original PR only after its work is demonstrably on master through the
+integration, or an exact documented supersession/obsolete decision preserves its
+remaining useful work. Record incorporated commits, surviving limitations and
+concrete remaining gates in `docs/PR-BACKLOG-2026-10-18.md`. A reduced PR count
+alone is not completed work. The scalar-EA optimization's predeclared paired
+performance decision and ring3 fixture's actual guest acceptance remain separate
+from landing inactive tooling or retiring superseded incremental drafts.
