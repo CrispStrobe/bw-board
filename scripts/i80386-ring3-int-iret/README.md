@@ -1029,10 +1029,14 @@ required.
 
 The separate staged-runtime inventory route now connects copying to a complete
 metadata candidate. The prior stage-only observer and its explicit boundary
-refusal stay unchanged. New `STAGED_RUNTIME_ENTRY_ENABLED`,
-`STAGED_RUNTIME_INVENTORY_ENABLED` and `staged-runtime-inventory` job guards are
-false; actual execution remains false. This route does not adopt a staged Node
-in generator, GEN, guest argv or V8 actual delivery.
+refusal stay unchanged. This review candidate enables only
+`STAGED_RUNTIME_ENTRY_ENABLED`, `STAGED_RUNTIME_INVENTORY_ENABLED` and the
+`staged-runtime-inventory` job guard. Actual execution and the older stage-only
+route remain disabled. No event is admitted by these source literals. After
+final exact-head CI and reviewed skips, independently bind the complete source12,
+fresh v3 request and executing workflow before selecting one fresh metadata
+event. Do not reuse an earlier request or consumed event. This route does not
+adopt a staged Node in generator, GEN, guest argv or V8 actual delivery.
 
 Its immutable request is `bw.ring3.inventory-request.v3`, with the v2 fields
 plus `emptyPythonSources`. `selected.node.path` explicitly names
@@ -1091,8 +1095,8 @@ The distinct `RING3_STAGED_RUNTIME_INVENTORY` stream has exactly
 Its new log/original versions retain complete stage-before/after observations,
 copy original, graph, typed-source EOF/close facts and process originals. JSON
 1 MiB, total raw5 MiB, encoded8 MiB, chunk and candidate limits stay unchanged.
-Overflow retains the bounded failure prefix and cannot qualify. The still
-false15 minute job uses the same checkout/setup-node/upload action pins and
+Overflow retains the bounded failure prefix and cannot qualify. The
+15 minute metadata job uses the same checkout/setup-node/upload action pins and
 exports only bounded log/stderr, never the executable. This budget is a
 backstop, not evidence of hosted sufficiency or preemption of blocked syscalls.
 
@@ -1126,3 +1130,10 @@ runs locally.
 ```sh
 /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --staged-runtime-only
 ```
+
+The phase-specific control asserts the reviewed metadata guards enabled while
+retaining actual and older-stage guards false. It also explicitly disables each
+metadata guard and checks refusal before its factory or observer, including
+environment strings that attempt to enable it. The other
+full-chain controls are unchanged. Eight affected mocked controls pass; they do
+not qualify a hosted stage, runtime candidate, resource operation or guest.
