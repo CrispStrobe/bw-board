@@ -209,3 +209,23 @@ Refresh exact head/default/checks before merging or closing anything.
 | [#525](https://github.com/CrispStrobe/bw-board/pull/525) | `lane/386-archive-refusal-diagnostic-20261012` | `c9a22a1b173aa5f2fc41f8edf4a97a8fbfab5cc2` | fix(x86): admit bounded GNU long-name metadata |
 | [#557](https://github.com/CrispStrobe/bw-board/pull/557) | `master` | `fc799aef5945014dd1920aded9d60339da3caea8` | Remove decodeEA16 temporary arrays; performance qualification pending |
 | [#645](https://github.com/CrispStrobe/bw-board/pull/645) | `master` | `a5054f3a9a6e572cc926d1537991f12ab650be14` | test: add bounded ring3 fixture and hosted runner source |
+
+## Hosted qualification correction
+
+At `561586af`, 23 enabled checks passed, including all vector/corpus suites,
+xv6 and the ring3 source controls. Fast CI ran 9,441 tests: 9,135 passed, one
+failed and 305 retained skips. The failure was the unchanged IRQ clean-source
+assertion finding the separate firmware checkout inside the board worktree.
+Move that same pinned firmware checkout to the runner temporary directory and
+supply its existing `BLINKENROCKET_HEX` input; retain all firmware and source
+assertions. Two mock jobs also lacked their required ancestor commits because
+they fetched only eight commits. Their checkouts now retain full history,
+preserving the ancestor checks and all mock assertions. These are new-source
+qualification corrections, not retries of consumed actual events.
+
+Current master documentation through `ac51ad28` is normally merged. PR645 has
+advanced beyond its incorporated `f7d36a07` checkpoint; its later execution
+delivery, metadata-only activation and failure diagnostics remain on the owner
+branch and are not silently adopted here. Preserve that open PR if its live head
+is not an ancestor of the qualified integration. Its consumed metadata event
+and immutable failure original must not be repeated.

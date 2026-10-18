@@ -179,6 +179,16 @@ jobs:
           repository: CrispStrobe/blinkenrocket-firmware
           ref: 813e2656f38f9f41180ecde1783e26e49035dac9
           path: blinkenrocket-firmware
+          persist-credentials: false
+      - name: Keep pinned firmware outside the qualified source checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C blinkenrocket-firmware rev-parse HEAD)" = 813e2656f38f9f41180ecde1783e26e49035dac9
+          test ! -e "$RUNNER_TEMP/blinkenrocket-firmware"
+          mv -- blinkenrocket-firmware "$RUNNER_TEMP/blinkenrocket-firmware"
+          test -s "$RUNNER_TEMP/blinkenrocket-firmware/releases/blinkenrocket_2.1.hex"
+          printf 'BLINKENROCKET_HEX=%s/releases/blinkenrocket_2.1.hex\n' "$RUNNER_TEMP/blinkenrocket-firmware" >> "$GITHUB_ENV"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
