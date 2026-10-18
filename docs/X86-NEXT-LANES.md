@@ -136,9 +136,21 @@ The first metadata event is consumed for source
 `dff8f6b0d5374afd41eb73b7ae4506f81c1651c3` and request digest
 `ca83b600c7c5ca72e169031df94076da0c37ac662e30bd97f1cf5e8a2060e525`:
 [run 39108893671](https://github.com/CrispStrobe/bw-board/actions/runs/39108893671).
-It is pending at publication. Await and acquire its official original once;
-do not repeat its label. A failed inventory is evidence of a prerequisite refusal,
-not a successful runtime candidate or an automatic retry authorization.
+The run failed before any completed executable-file fact or tool probe:
+`bounded inventory regular file and mode`. Its sole official original has been
+acquired and independently audited; do not repeat its label or download. The
+original joins the twelve selected source files, request and event. It observes
+an already-enabled parent controller set at that finite instant, without
+establishing a continuous ownership lease. It contains no rejected-file stat or
+path, so neither its precise cause nor QEMU readiness is established.
+
+The [failure-diagnostic checkpoint](https://github.com/CrispStrobe/bw-board/commit/6c521914)
+adds failure-only `inventory.rejectedFiles` with available named/held stat,
+readback and close observations. It preserves the regular-file, extent and
+non-group/world-writable guards and refuses before content/tool execution when
+those guards fail. Nine mocked runtime controls pass, with ten detected source
+mutations; successful inventory schemas and actual guards remain held. These
+source controls do not repair or qualify the earlier failed inventory.
 
 Start with the immutable
 [source README](https://github.com/CrispStrobe/bw-board/blob/ba90a2ea/scripts/i80386-ring3-int-iret/README.md)
@@ -163,9 +175,14 @@ Concrete remaining tasks, in order:
    digest and immutable event payload, then admit one own-PR
    `x86-ring3-runtime-inventory` label. Acquire the official original once and use
    the standalone inventory reader; no producer imports or guest replay.
-   Historical Node/QEMU bytes must match before metadata probes. Current hosted
-   QEMU and already-enabled parent cpu/memory/pids controllers are unestablished
-   prerequisites; missing or changed inputs must produce a retained refusal.
+   The first event above is consumed and failed; never repeat it. A distinct
+   diagnostic candidate must first freeze the failure-collector source and
+   independently reviewed immutable request/event. Retain rejected-file raw stat
+   and determine the precise guard refusal before considering a remedy. Do not
+   infer permissions from the old error or make the selected file writable.
+   Historical Node/QEMU bytes must match before metadata probes. Hosted QEMU
+   readiness remains unestablished; the first run's parent-controller observation
+   does not transfer to another job. Missing or changed inputs must refuse.
    Do not install a fallback, write shared parent controllers or silently repin.
    The inventory candidate is not automatic approval: independently freeze the
    stable selected superset, aliases, tools, package data and probe descriptors;
