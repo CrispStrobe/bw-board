@@ -5505,16 +5505,20 @@ CLAIM MERGED; IMPLEMENTATION DRAFT — Codex x86. The ownership claim landed in
 [PR643](https://github.com/CrispStrobe/bw-board/pull/643). Source checkpoint
 [`6c72c42a`](https://github.com/CrispStrobe/bw-board/commit/6c72c42a1ef6115099f4cd0e30460e9418841191)
 is published in draft [PR645](https://github.com/CrispStrobe/bw-board/pull/645),
-not merged to the default branch. Its six-mode CLI, setup/admission/installation
-adapters and disabled 15-minute job have 193 inert controls, preserving the prior
-180 test bodies; 21 source mutations are detected. Both activation guards stay
-false, and completed installation still refuses before resources or guests.
-The completed source work and six remaining tasks, with inputs and completion
-gates, are scoped in the [handoff](docs/X86-NEXT-LANES.md#ordinary-js-ring-changing-intiretd-fixture):
-independent observer/collector, full runtime gate, versioned reader, adapter
-wiring, separate activation review, then one qualified hosted event. Actual
-ownership and ring-changing guest qualification remain pending; source controls
-alone cannot satisfy the source merge gate.
+not merged to the default branch. The subsequent
+[prerequisite source checkpoint](https://github.com/CrispStrobe/bw-board/commit/e99d28c7dd29e5a73059df039564c4242c875a8d)
+connects installation, fresh setup, an independently implemented readonly
+observer, irreversible invoker drop, fixed original retention, a standalone
+prerequisite reader and bounded versioned log emission. Its seven-mode CLI has
+198 runner controls and five independent reader control methods; all prior
+193 test bodies and twenty reader functions are unchanged. Seventeen new
+source mutations are detected. Both guards stay false, and the new path
+explicitly refuses before preparation, runtime probes or guests.
+The [handoff](docs/X86-NEXT-LANES.md#ordinary-js-ring-changing-intiretd-fixture)
+scopes the remaining complete runtime expectation/gate, versioned execution
+reader and adapter delivery, separate activation review and one hosted event.
+Prerequisite source controls do not qualify actual resource ownership or the
+ring-changing guest and cannot satisfy the source merge gate.
 The existing same-CPL0 paged IRQ fixture and older 286 claims do not own this
 new software-interrupt fixture.
 
