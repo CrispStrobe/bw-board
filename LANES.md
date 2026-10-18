@@ -5336,6 +5336,10 @@ full manufactured V8 log/artifact through the unchanged twenty-role predicates.
 Four retained peer census counterexamples now refuse. This is source evidence,
 not a guest result. Both source/workflow guards remain false. Hosted QEMU and
 already-enabled parent controllers remain unestablished external prerequisites.
+A separately reviewed metadata-only activation enables the inventory guard/job;
+actual remains false. Exact source12/request and immutable one-shot own-PR event
+admission remain separate. Refresh labels/body/runs before acting, never repeat
+an event or acquire an official original twice.
 The [handoff](docs/X86-NEXT-LANES.md#ordinary-js-ring-changing-intiretd-fixture)
 scopes the remaining complete runtime expectation/gate, versioned execution
 reader and adapter delivery, separate activation review and one hosted event.
