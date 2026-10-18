@@ -729,6 +729,94 @@ def runtime_controls():
                         with self.assertRaises((reader.Refusal,OSError)):backend.fact(path)
                     self.assertEqual(state['fds'],{})
 
+        def test_rejected_file_raw_stat_extent_readback_and_close_preserve_primary(self):
+            env,expected,originals,data=prerequisite_fixture()
+            for fault in ('none','mode','directory','zero','oversize','read','open','close','mode-readback-close'):
+                with self.subTest(fault=fault),prerequisite_observer_edges(env,originals,data) as state:
+                    path='/fixture/rejected.so';raw=b'\x7fELF inert selected bytes'
+                    row={'st_dev':1,'st_ino':999,'st_mode':0o100644,'st_uid':0,'st_gid':0,'st_nlink':1,'st_size':len(raw),
+                        'st_mtime_ns':1700000000000000000,'raw':raw};state['rows'][path]=row
+                    if fault in ('mode','mode-readback-close'):row['st_mode']=0o100666
+                    elif fault=='directory':row['st_mode']=0o40755
+                    elif fault=='zero':row['st_size']=0
+                    elif fault=='oversize':row['st_size']=268435457
+                    elif fault=='read':state['faults']['read',path]=OSError('FIRST_REJECTED_READ')
+                    if fault in ('close','mode-readback-close'):state['faults']['close',path]=OSError('SECONDARY_REJECTED_CLOSE')
+                    held_stat=os.fstat;opened=os.open;calls=0
+                    def fstat(fd):
+                        nonlocal calls
+                        calls+=1
+                        if fault=='mode-readback-close' and calls>1:raise OSError('SECONDARY_REJECTED_READBACK')
+                        return held_stat(fd)
+                    def open_(name,flags,**kw):
+                        if fault=='open':raise PermissionError('FIRST_REJECTED_OPEN')
+                        return opened(name,flags,**kw)
+                    backend=reader.InventoryFiles()
+                    with patch.object(os,'fstat',side_effect=fstat),patch.object(os,'open',side_effect=open_):
+                        if fault=='none':
+                            self.assertEqual(backend.fact(path),{'bytes':len(raw),'sha256':sha(raw),'mode':0o644})
+                            self.assertEqual(backend.rejected,{})
+                        else:
+                            with self.assertRaises((reader.Refusal,OSError)) as caught:backend.fact(path)
+                            rejected=backend.rejected[path]
+                            self.assertEqual(rejected['path'],path);self.assertTrue(rejected['canonical'])
+                            self.assertEqual(rejected['namedBefore'],reader.setup_metadata(SimpleNamespace(**row)))
+                            self.assertEqual(rejected['firstFailure']['message'],str(caught.exception))
+                            self.assertEqual(rejected['secondary'],getattr(caught.exception,'setup_secondary',[]))
+                            self.assertEqual(rejected['closeAttempted'],fault!='open')
+                            self.assertEqual(rejected['closeSucceeded'],fault not in ('open','close','mode-readback-close'))
+                            if fault in ('mode','directory','zero','oversize','mode-readback-close'):
+                                self.assertEqual(rejected['firstFailure']['message'],'bounded inventory regular file and mode')
+                                self.assertEqual(rejected['heldBefore'],rejected['namedBefore'])
+                                self.assertEqual(rejected['bytesRead'],0)
+                                self.assertNotIn(('read',path),state['events'])
+                            if fault=='mode-readback-close':
+                                self.assertEqual([r['message'] for r in rejected['secondary']],
+                                    ['SECONDARY_REJECTED_READBACK','SECONDARY_REJECTED_CLOSE'])
+                    self.assertEqual(state['fds'],{})
+
+        def test_rejected_file_real_inventory_cli_retains_failed_raw_original_without_tools(self):
+            env,expected,old_originals,data=prerequisite_fixture()
+            source=reader.parse(reader.prerequisite_original(reader.canonical(reader.parse(old_originals['request.original.json'])['source'])))
+            def wrapper(raw):return {'bytes':len(raw),'sha256':sha(raw),'base64':reader.base64.b64encode(raw).decode()}
+            request={'schema':'bw.ring3.inventory-request.v1','repository':'CrispStrobe/bw-board','pullRequest':645,'head':'a'*40,'tree':'b'*40,
+                'source':wrapper(reader.canonical(source)),'selected':{'node':{'path':reader.RUNTIME_NODE,**reader.RUNTIME_SELECTED['node']},
+                'qemu':{'path':reader.RUNTIME_QEMU,**reader.RUNTIME_SELECTED['qemu']}}}
+            request_raw=reader.canonical(request);event=reader.parse(old_originals['event.original.json']);event['label']['name']='x86-ring3-runtime-inventory'
+            event['pull_request']['body']='<!-- BW_RING3_RUNTIME_INVENTORY_V1\n'+reader.canonical(wrapper(request_raw)).decode().rstrip('\n')+'\nBW_RING3_RUNTIME_INVENTORY_V1 -->'
+            event_raw=reader.canonical(event)
+            env={**env,'GITHUB_EVENT_PATH':'/inventory-event.json','GITHUB_EVENT_NAME':'pull_request','GITHUB_REPOSITORY':'CrispStrobe/bw-board',
+                'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':'runtime-inventory','GITHUB_WORKFLOW_SHA':'e'*40,
+                'GITHUB_WORKFLOW_REF':'CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/645/merge',
+                'BW_RING3_INVENTORY_REQUEST_SHA256':sha(request_raw)}
+            with prerequisite_observer_edges(env,old_originals,data) as state:
+                state['rows']['/inventory-event.json']={'st_dev':1,'st_ino':998,'st_mode':0o100644,'st_uid':1001,'st_gid':1002,
+                    'st_nlink':1,'st_size':len(event_raw),'st_mtime_ns':1700000000000000000,'raw':event_raw}
+                for path in reversed(Path(reader.RUNTIME_NODE).parents):
+                    state['rows'].setdefault(str(path),{'st_dev':1,'st_ino':900+len(state['rows']),'st_mode':0o40755,'st_uid':0,'st_gid':0,
+                        'st_nlink':1,'st_size':0,'st_mtime_ns':1700000000000000000,'raw':b''})
+                state['rows'][reader.RUNTIME_NODE]={'st_dev':1,'st_ino':999,'st_mode':0o100777,'st_uid':1001,'st_gid':1002,
+                    'st_nlink':1,'st_size':124827920,'st_mtime_ns':1700000000000000000,'raw':b'never read rejected executable'}
+                output=io.BytesIO()
+                with patch.object(os,'getresuid',return_value=(1001,)*3),patch.object(os,'getresgid',return_value=(1002,)*3),\
+                    patch.object(os,'lstat',side_effect=lambda path:Path(path).lstat()),\
+                    patch.object(sys,'argv',['reader.py','--inventory-runtime']),patch.dict(os.environ,env,clear=True),\
+                    patch.object(sys,'stdout',SimpleNamespace(buffer=output)),\
+                    patch.object(reader.subprocess,'Popen',side_effect=AssertionError('no tool before rejected-file guard')) as popen:
+                    with self.assertRaises(SystemExit) as caught:reader.main()
+                    self.assertEqual(caught.exception.code,1);popen.assert_not_called()
+                originals=reader.decode_runtime_inventory_log(output.getvalue());value=reader.parse(originals['runtime.inventory.json'])
+                self.assertEqual(originals['inventory.request.json'],request_raw);self.assertEqual(originals['inventory.event.json'],event_raw)
+                self.assertEqual(set(value['source']),reader.SETUP_SOURCE_PATHS);self.assertTrue(value['parent']['alreadyEnabled'])
+                self.assertEqual(value['firstFailure']['message'],'bounded inventory regular file and mode');self.assertEqual(value['secondary'],[])
+                self.assertIsNone(value['candidate']);self.assertEqual(value['inventory']['files'],{});self.assertEqual(value['inventory']['fileMetadata'],{})
+                self.assertEqual(value['inventory']['probes'],[]);self.assertEqual(value['inventory']['processes'],[])
+                rejected=value['inventory']['rejectedFiles'][reader.RUNTIME_NODE]
+                self.assertEqual(rejected['heldBefore'][2],0o100777);self.assertEqual(rejected['heldBefore'][6],124827920)
+                self.assertEqual(rejected['heldBefore'],rejected['heldAfter']);self.assertEqual(rejected['namedBefore'],rejected['namedAfter'])
+                self.assertEqual(rejected['bytesRead'],0);self.assertTrue(rejected['closeAttempted']);self.assertTrue(rejected['closeSucceeded'])
+                self.assertNotIn(('read',reader.RUNTIME_NODE),state['events']);self.assertEqual(state['fds'],{})
+
         def test_real_inventory_event_source_parent_entry_to_offline_log_admission(self):
             env,expected,old_originals,data=prerequisite_fixture();source=reader.parse(reader.prerequisite_original(reader.canonical(reader.parse(old_originals['request.original.json'])['source'])))
             source_raw=reader.canonical(source)

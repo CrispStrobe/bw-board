@@ -923,3 +923,15 @@ review. Node setup or inventory on another VM does not establish actual-VM
 availability. Independently reviewed runtime inventory/publication, final
 source12/event admission, actual guard activation and one affected clean hosted guest
 qualification remain outstanding.
+
+Failed metadata inventory can additionally retain `inventory.rejectedFiles`.
+Each rejected-file record contains the bounded selected path, canonical-path
+check, available named and held stat observations in the existing eight-field
+metadata order, bytes read, close outcome, exact first error and secondary
+readback or close errors. A stat observation precedes the unchanged regular-file,
+positive extent, 256 MiB and non-group/world-writable mode guard. A refused
+guard permits no file-content read or tool execution. These failure-only facts
+do not populate admitted files, produce a candidate or change successful
+inventory and runtime-expectation schemas. Nine mocked runtime controls include
+regularity/mode/extent refusal, open/read/readback/close errors and the enabled
+CLI's retained failed original; no real resource or guest operation is involved.

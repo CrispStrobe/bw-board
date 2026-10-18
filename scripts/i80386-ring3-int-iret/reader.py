@@ -1022,7 +1022,7 @@ def verify_runtime_stable_original(original,expectation_raw,expected_sha256):
 
 class InventoryFiles:
     """Independent metadata/hash reader; no producer code or mutable setup API."""
-    def __init__(self):self.prefixes={};self.metadata={};self.maps_original=None
+    def __init__(self):self.prefixes={};self.metadata={};self.maps_original=None;self.rejected={}
 
     def resolve(self,path,seen=()):
         runtime_path(path);need(path not in seen and len(seen)<16,'bounded independent inventory aliases')
@@ -1039,28 +1039,51 @@ class InventoryFiles:
         return path,aliases
 
     def fact(self,path):
-        need(str(Path(path).resolve(strict=True))==path,'canonical independent inventory file')
-        fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK);first=None;count=0;digest=hashlib.sha256();prefix=bytearray()
+        runtime_path(path)
+        observation={'path':path,'canonical':False,'namedBefore':None,'heldBefore':None,'heldAfter':None,'namedAfter':None,
+            'bytesRead':0,'closeAttempted':False,'closeSucceeded':False,'firstFailure':None,'secondary':[]}
+        fd=None;first=None;count=0;digest=hashlib.sha256();prefix=bytearray()
+        def failed(error,phase):
+            nonlocal first
+            if first is None:first=error
+            else:first.setup_secondary=getattr(first,'setup_secondary',[])+[{'phase':phase,'name':type(error).__name__,'message':str(error)}]
         try:
-            before=os.fstat(fd);need(stat.S_ISREG(before.st_mode) and 0<before.st_size<=268435456 and before.st_mode&0o022==0,
+            need(str(Path(path).resolve(strict=True))==path,'canonical independent inventory file');observation['canonical']=True
+            observation['namedBefore']=setup_metadata(os.stat(path,follow_symlinks=False))
+            fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+            before=os.fstat(fd);observation['heldBefore']=setup_metadata(before)
+            need(stat.S_ISREG(before.st_mode) and 0<before.st_size<=268435456 and before.st_mode&0o022==0,
                 'bounded inventory regular file and mode')
             while True:
                 part=os.read(fd,min(65536,268435457-count))
                 if not part:break
                 count+=len(part);need(count<=268435456,'inventory file extent cap');digest.update(part)
                 if len(prefix)<64:prefix.extend(part[:64-len(prefix)])
-            need(count==before.st_size and setup_metadata(os.fstat(fd))==setup_metadata(before) and
-                 setup_metadata(os.stat(path,follow_symlinks=False))==setup_metadata(before) and str(Path(path).resolve(strict=True))==path,
+            observation['heldAfter']=setup_metadata(os.fstat(fd));observation['namedAfter']=setup_metadata(os.stat(path,follow_symlinks=False))
+            need(count==before.st_size and observation['heldAfter']==setup_metadata(before) and
+                 observation['namedAfter']==setup_metadata(before) and str(Path(path).resolve(strict=True))==path,
                  'inventory held file/mode/name identity readback')
             value={'bytes':count,'sha256':digest.hexdigest(),'mode':stat.S_IMODE(before.st_mode)}
             self.prefixes[path]=bytes(prefix);self.metadata[path]=setup_metadata(before)
         except BaseException as error:first=error
         finally:
-            try:os.close(fd)
-            except BaseException as error:
-                if first is None:first=error
-                else:first.setup_secondary=getattr(first,'setup_secondary',[])+[{'phase':'inventory-file-close','name':type(error).__name__,'message':str(error)}]
-        if first is not None:raise first
+            if first is not None:
+                for name,observe in (('heldAfter',lambda:os.fstat(fd)),('namedAfter',lambda:os.stat(path,follow_symlinks=False))):
+                    if name=='heldAfter' and fd is None:continue
+                    try:
+                        observation[name]=setup_metadata(observe())
+                        reference=observation['heldBefore'] if name=='heldAfter' else observation['namedBefore']
+                        need(reference is None or observation[name]==reference,'rejected inventory file identity readback drift')
+                    except BaseException as error:failed(error,'inventory-rejected-'+name)
+            if fd is not None:
+                observation['closeAttempted']=True
+                try:os.close(fd);observation['closeSucceeded']=True
+                except BaseException as error:failed(error,'inventory-file-close')
+        if first is not None:
+            observation.update(bytesRead=count,firstFailure={'phase':'inventory-file','name':type(first).__name__,'message':str(first)},
+                secondary=list(getattr(first,'setup_secondary',[])))
+            self.rejected[path]=observation
+            raise first
         return value
 
     def alias(self,path):
@@ -1437,7 +1460,10 @@ def runtime_inventory_entry(environ,files=None,probe=None):
         value['firstFailure']=getattr(error,'inventory_first',{'phase':'runtime-inventory','name':type(error).__name__,'message':str(error)})
         value['secondary'].extend(getattr(error,'setup_secondary',[]))
         value['secondary'].extend(getattr(error,'inventory_secondary',[]))
-    if inventory is not None:value['inventory']=inventory.partial
+    if inventory is not None:
+        value['inventory']=inventory.partial
+        rejected=getattr(inventory.ops,'rejected',{})
+        if rejected:value['inventory']['rejectedFiles']=rejected
     raw=canonical(value)
     if len(raw)>1<<20:
         error={'phase':'inventory-original-cap','name':'Refusal','message':'unchanged inventory original JSON cap'}
