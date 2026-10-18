@@ -11,11 +11,18 @@ import hashlib
 import io
 import json
 import os
+import platform
 import posixpath
 import re
+import resource
+import selectors
+import signal
 import struct
 import stat
 import sys
+import subprocess
+import time
+import urllib.request
 import zipfile
 from pathlib import Path
 
@@ -917,10 +924,677 @@ def verify_prerequisite_log(raw,expected):
     return verdict
 
 
+RUNTIME_NODE='/opt/hostedtoolcache/node/22.23.3/x64/bin/node'
+RUNTIME_QEMU='/usr/bin/qemu-system-i386'
+RUNTIME_TCG='/usr/lib/x86_64-linux-gnu/qemu/accel-tcg-i386.so'
+RUNTIME_SELECTED={'node':{'bytes':124827920,'sha256':'fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48'},
+    'qemu':{'bytes':26359752,'sha256':'28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5'}}
+INVENTORY_ENTRY_ENABLED=False  # Metadata-only activation requires separate review.
+
+
+def stable_probe_descriptors(value):
+    paths={name:value['executables'][name]['path'] for name in ('node','python','qemu')}
+    argv={role+'-version':[path,'--version'] for role,path in paths.items()}
+    argv.update({'ldd-'+role:['/usr/bin/ldd',path] for role,path in paths.items()})
+    argv.update({'ldd-shell':['/usr/bin/ldd','/usr/bin/bash'],'ldd-dpkg-query':['/usr/bin/ldd','/usr/bin/dpkg-query'],
+        'ldd-tcg':['/usr/bin/ldd',resolve_alias(RUNTIME_TCG,value['aliases'])],
+        'package-version':['/usr/bin/dpkg-query','-W','-f=${Package}\t${Version}\t${Architecture}\n',*PACKAGE_NAMES],
+        'package-files':['/usr/bin/dpkg-query','-L',*PACKAGE_NAMES]})
+    result=[]
+    for role,arguments in sorted(argv.items()):
+        path=resolve_alias(arguments[0],value['aliases']);row=value['files'][path]
+        result.append({'role':role,'argv':arguments,'environment':{'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'},
+            'executable':{'path':path,'bytes':row['bytes'],'sha256':row['sha256'],'mode':row['mode']}})
+    return result
+
+
+def runtime_expectation(raw,expected_sha256):
+    """Standalone stable-policy admission. Raw ASLR text is never its pin."""
+    need(type(raw) is bytes and 0<len(raw)<=256<<10 and digest(expected_sha256)==sha(raw),'external runtime expectation original pin')
+    value=parse(raw);keys(value,'schema platform executables versions files aliases packages packagePaths probes')
+    need(raw==canonical(value) and value['schema']=='bw.ring3.runtime-expectation.v1','canonical explicit runtime expectation version')
+    keys(value['platform'],'sysname release machine')
+    need(value['platform']['sysname']=='Linux' and value['platform']['machine']=='x86_64' and
+         type(value['platform']['release']) is str and re.fullmatch('[A-Za-z0-9_.+-]{1,128}',value['platform']['release']),'selected platform release')
+    files=value['files'];aliases=value['aliases']
+    need(type(files) is dict and 1<=len(files)<=512 and type(aliases) is dict and len(aliases)<=256,'held stable graph counts')
+    total=0
+    for path,row in files.items():
+        runtime_path(path);keys(row,'bytes sha256 kind mode');total+=integer(row['bytes'],1,268435456);digest(row['sha256'])
+        need(row['kind'] in RUNTIME_KINDS and type(row['mode']) is int and 0<=row['mode']<=0o777 and row['mode']&0o022==0,
+             'selected file kind/permission mode')
+        if row['kind'].endswith('-binary') or row['kind'] in ('observation-tool','tool-interpreter'):need(row['mode']&0o111!=0,'selected executable permissions')
+    need(total<=1073741824,'held selected graph total extent')
+    for path,row in aliases.items():
+        runtime_path(path);keys(row,'linkText target');runtime_path(row['target'])
+        need(path not in files and type(row['linkText']) is str and 0<len(row['linkText'].encode())<=256 and
+             re.fullmatch('[A-Za-z0-9_.+/-]+',row['linkText']) and
+             resolve_alias(posixpath.normpath(posixpath.join(posixpath.dirname(path),row['linkText'])),aliases)==row['target'],
+             'selected stable alias text/canonical target')
+    need(all(resolve_alias(path,aliases)==path for path in files),'canonical selected file keys')
+    keys(value['executables'],'node python qemu');keys(value['versions'],'node python qemu')
+    for role,requested in (('node',RUNTIME_NODE),('python','/usr/bin/python3'),('qemu',RUNTIME_QEMU)):
+        path=resolve_alias(requested,aliases);row=value['executables'][role];keys(row,'path bytes sha256')
+        need(path in files and row=={'path':path,'bytes':files[path]['bytes'],'sha256':files[path]['sha256']} and
+             type(row['bytes']) is int and files[path]['kind']==role+'-binary','fixed selected executable graph join')
+        if role in RUNTIME_SELECTED:need({key:row[key] for key in ('bytes','sha256')}==RUNTIME_SELECTED[role],'independent historical '+role+' selection')
+    need(value['versions']['node']=='v22.23.3' and type(value['versions']['python']) is str and re.fullmatch(r'Python 3\.\d+\.\d+',value['versions']['python']) and
+         type(value['versions']['qemu']) is str and re.fullmatch(r'QEMU emulator version 8\.2\.2(?:[ (][^\r\n]*)?',value['versions']['qemu']),'selected runtime versions')
+    packages=value['packages'];need(type(packages) is list and len(packages)==5 and
+         [row.get('name') for row in packages if type(row) is dict]==sorted(PACKAGE_NAMES),'five sorted unique package rows')
+    for row in packages:
+        keys(row,'name version architecture');need(type(row['version']) is str and re.fullmatch('[A-Za-z0-9.+:~_-]{1,128}',row['version']) and
+             row['architecture'] in ('amd64','all'),'stable selected package fields')
+        if row['name']=='qemu-system-x86':need(row['version']=='1:8.2.2+ds-0ubuntu1.18' and row['architecture']=='amd64','historical selected QEMU package')
+    paths=value['packagePaths'];need(type(paths) is list and 0<len(paths)<=2048 and paths==sorted(set(paths)),'bounded sorted stable package path union')
+    for path in paths:runtime_path(path)
+    module=resolve_alias(RUNTIME_TCG,aliases);need(module in files and files[module]['kind']=='tcg-module' and RUNTIME_TCG in paths,'selected i386 TCG module')
+    required={value['executables']['qemu']['path'],module}|{path for path,row in files.items() if row['kind']=='qemu-data'}
+    need(any(row['kind']=='qemu-data' for row in files.values()) and required<={resolve_alias(path,aliases) for path in paths},'selected QEMU package file ownership')
+    need(equal(value['probes'],stable_probe_descriptors(value)),'complete fixed probe descriptor/executable roster')
+    return value
+
+
+def verify_runtime_stable_original(original,expectation_raw,expected_sha256):
+    expected=runtime_expectation(expectation_raw,expected_sha256)
+    runtime(original,original)  # Preserve every legacy internal/raw predicate.
+    need(equal(original['platform'],expected['platform']) and equal(original['executables'],expected['executables']) and
+         equal(original['versions'],expected['versions']),'raw runtime joins admitted stable platform/executables/versions')
+    package=original['qemuPackage']
+    for path,row in package['files'].items():
+        need(path in expected['files'] and equal(row,{key:expected['files'][path][key] for key in ('bytes','sha256','kind')}),
+             'every discovered original file joins selected superset')
+    for path,row in package['aliases'].items():need(path in expected['aliases'] and equal(row,expected['aliases'][path]),'discovered original alias joins selected superset')
+    required={path for path,row in expected['files'].items() if row['kind'] in
+        ('qemu-data','tcg-module','qemu-binary','node-binary','python-binary','observation-tool','tool-interpreter')}
+    need(required<=set(package['files']),'complete engine/tool/package graph in original')
+    for probe in package['probes']:
+        if probe['role']=='package-version':
+            need(sorted(line.split('\t') for line in probe['stdout'].splitlines())==[[row['name'],row['version'],row['architecture']] for row in expected['packages']],
+                 'raw original package version join')
+        elif probe['role']=='package-files':need(sorted(set(probe['stdout'].splitlines()))==expected['packagePaths'],'raw original stable package path union')
+        elif probe['role'].startswith('ldd-'):
+            need(all(resolve_alias(path,expected['aliases']) in expected['files'] for path in ldd_paths(probe['stdout'])),
+                 'raw ldd paths independently join selected graph without ASLR pinning')
+    return expected
+
+
+class InventoryFiles:
+    """Independent metadata/hash reader; no producer code or mutable setup API."""
+    def __init__(self):self.prefixes={};self.metadata={};self.maps_original=None
+
+    def resolve(self,path,seen=()):
+        runtime_path(path);need(path not in seen and len(seen)<16,'bounded independent inventory aliases')
+        parts=Path(path).parts;aliases={}
+        for index in range(1,len(parts)):
+            name=str(Path(*parts[:index+1]));info=os.lstat(name)
+            if not stat.S_ISLNK(info.st_mode):continue
+            text=os.readlink(name);need(0<len(text.encode())<=256 and re.fullmatch('[A-Za-z0-9_.+/-]+',text),'bounded inventory alias text')
+            target=posixpath.normpath(posixpath.join(posixpath.dirname(name),text));final,nested=self.resolve(target,seen+(path,))
+            aliases.update(nested);aliases[name]={'linkText':text,'target':final}
+            later=str(Path(final,*parts[index+1:]))
+            resolved,more=self.resolve(later,seen+(path,)) if later!=final else (final,{})
+            aliases.update(more);return resolved,aliases
+        return path,aliases
+
+    def fact(self,path):
+        need(str(Path(path).resolve(strict=True))==path,'canonical independent inventory file')
+        fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK);first=None;count=0;digest=hashlib.sha256();prefix=bytearray()
+        try:
+            before=os.fstat(fd);need(stat.S_ISREG(before.st_mode) and 0<before.st_size<=268435456 and before.st_mode&0o022==0,
+                'bounded inventory regular file and mode')
+            while True:
+                part=os.read(fd,min(65536,268435457-count))
+                if not part:break
+                count+=len(part);need(count<=268435456,'inventory file extent cap');digest.update(part)
+                if len(prefix)<64:prefix.extend(part[:64-len(prefix)])
+            need(count==before.st_size and setup_metadata(os.fstat(fd))==setup_metadata(before) and
+                 setup_metadata(os.stat(path,follow_symlinks=False))==setup_metadata(before) and str(Path(path).resolve(strict=True))==path,
+                 'inventory held file/mode/name identity readback')
+            value={'bytes':count,'sha256':digest.hexdigest(),'mode':stat.S_IMODE(before.st_mode)}
+            self.prefixes[path]=bytes(prefix);self.metadata[path]=setup_metadata(before)
+        except BaseException as error:first=error
+        finally:
+            try:os.close(fd)
+            except BaseException as error:
+                if first is None:first=error
+                else:first.setup_secondary=getattr(first,'setup_secondary',[])+[{'phase':'inventory-file-close','name':type(error).__name__,'message':str(error)}]
+        if first is not None:raise first
+        return value
+
+    def alias(self,path):
+        before=os.lstat(path);need(stat.S_ISLNK(before.st_mode),'inventory alias remains link')
+        text=os.readlink(path);target,_=self.resolve(posixpath.normpath(posixpath.join(posixpath.dirname(path),text)))
+        need(setup_metadata(os.lstat(path))==setup_metadata(before),'inventory alias identity readback')
+        return {'linkText':text,'target':target}
+
+    def platform(self):
+        value=platform.uname();return {'sysname':value.system,'release':value.release,'machine':value.machine}
+
+    def is_file(self,path):return Path(path).is_file()
+
+    def python_files(self):
+        # Review this explicit union when either executable source imports new
+        # runtime modules. It deliberately excludes producer and test modules.
+        import resource,selectors,signal,subprocess,time,urllib.request,zipfile,io,platform
+        paths=set();checkout=Path.cwd().resolve()
+        for module in tuple(sys.modules.values()):
+            for key in ('__file__','__cached__'):
+                name=getattr(module,key,None)
+                if not isinstance(name,str) or not Path(name).is_absolute():continue
+                path=Path(name).resolve()
+                if not path.is_relative_to(checkout) and path.is_file():paths.add(str(path))
+        need(len(paths)<=256,'held Python module superset census cap');return sorted(paths)
+
+    def mapped_libraries(self):
+        fd=os.open('/proc/self/maps',os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK);first=None;raw=bytearray()
+        try:
+            while True:
+                part=os.read(fd,65537-len(raw))
+                if not part:break
+                raw.extend(part);need(len(raw)<=65536,'held bounded Python maps inventory')
+        except BaseException as error:first=error
+        finally:
+            try:os.close(fd)
+            except BaseException as error:
+                if first is None:first=error
+                else:first.setup_secondary=getattr(first,'setup_secondary',[])+[{'phase':'inventory-maps-close','name':type(error).__name__,'message':str(error)}]
+        prefix=bytes(raw[:65536]);self.maps_original={'bytes':len(prefix),'sha256':sha(prefix),'base64':base64.b64encode(prefix).decode()}
+        if first is not None:raise first
+        paths=set()
+        for line in raw.decode().splitlines():
+            fields=line.split(None,5)
+            if len(fields)<6 or not fields[5].startswith('/'):continue
+            path=fields[5];need(not path.endswith(' (deleted)'),'mapped inventory file not deleted')
+            if '.so' in Path(path).name or Path(path).name.startswith('ld-'):paths.add(runtime_path(path))
+        need(len(paths)<=128,'held mapped library inventory cap');return sorted(paths)
+
+
+def inventory_probe(argv):
+    """Fixed-caller metadata child; bounded streams and retained terminal facts.
+
+    Spawn/preexec is not preempted by this loop. The separately reviewed job
+    deadline remains required. No signal is sent after the owned leader reaps.
+    """
+    environment={'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'}
+    process=None;selector=None;streams={'stdout':bytearray(),'stderr':bytearray()};pipes={};terminal=None;identity=None
+    started=time.monotonic_ns();deadline=started+10000000000;cleanup=None;failure=None;secondary=[];sent=False;overflowed=set()
+    record={'schema':'bw.ring3.inventory-process.v1','argv':argv,'environment':environment,'pid':None,'pgid':None,
+        'parentPid':os.getpid(),'startTicks':None,'spawnMonoNs':started,'reapMonoNs':None,'exitCode':None,'signal':None,
+        'waitStatus':None,'timedOut':False,'rusage':None,'firstFailure':None,'secondary':secondary}
+    def failed(error,phase):
+        nonlocal failure
+        row={'phase':phase,'name':type(error).__name__,'message':str(error)}
+        if failure is None:failure=row
+        else:secondary.append(row)
+    def limits():
+        resource.setrlimit(resource.RLIMIT_CORE,(0,0));resource.setrlimit(resource.RLIMIT_FSIZE,(1<<20,1<<20));resource.setrlimit(resource.RLIMIT_NOFILE,(64,64))
+    def child_identity():
+        fd=os.open('/proc/'+str(process.pid)+'/stat',os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+        try:raw=os.read(fd,4097);need(len(raw)<=4096,'bounded inventory child identity')
+        finally:os.close(fd)
+        fields=raw.decode().rsplit(')',1)[1].split()
+        need(len(fields)>19 and int(fields[1])==os.getpid() and int(fields[2])==process.pid and int(fields[3])==process.pid,
+             'direct fresh inventory session leader')
+        return (process.pid,int(fields[19]))
+    def reap():
+        nonlocal terminal
+        pid,status,usage=os.wait4(process.pid,os.WNOHANG)
+        if pid:
+            need(pid==process.pid,'owned inventory child wait result');terminal=status;process.returncode=os.waitstatus_to_exitcode(status)
+            record.update(waitStatus=status,exitCode=os.WEXITSTATUS(status) if os.WIFEXITED(status) else None,
+                signal=os.WTERMSIG(status) if os.WIFSIGNALED(status) else None,reapMonoNs=time.monotonic_ns(),
+                rusage={'userSeconds':usage.ru_utime,'systemSeconds':usage.ru_stime,'maxRssKiB':usage.ru_maxrss})
+    def stop():
+        nonlocal sent
+        if sent or terminal is not None or process is None:return
+        need(identity is not None and child_identity()==identity and signal.getsignal(signal.SIGCHLD)==signal.SIG_DFL,
+             'unreaped exact inventory leader identity before signal')
+        sent=True;os.killpg(process.pid,signal.SIGKILL)
+    try:
+        signal.signal(signal.SIGCHLD,signal.SIG_DFL)
+        process=subprocess.Popen(argv,env=environment,cwd=Path.cwd(),stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+            start_new_session=True,close_fds=True,preexec_fn=limits)
+        record['pid']=process.pid
+        pipes={'stdout':process.stdout,'stderr':process.stderr};identity=child_identity()
+        record.update(pid=process.pid,pgid=process.pid,startTicks=identity[1]);selector=selectors.DefaultSelector()
+        for name,stream in pipes.items():os.set_blocking(stream.fileno(),False);selector.register(stream,selectors.EVENT_READ,name)
+        while True:
+            now=time.monotonic_ns()
+            if now>=deadline and failure is None:
+                record['timedOut']=True;failed(Refusal('inventory metadata wall bound'),'inventory-timeout');cleanup=now+2000000000
+                try:stop()
+                except BaseException as error:failed(error,'inventory-kill')
+            if cleanup is not None and now>=cleanup:break
+            for key,unused in selector.select(0 if terminal is not None else min(.05,max(0,(deadline-now)/1e9))):
+                try:part=os.read(key.fileobj.fileno(),16385)
+                except BlockingIOError:continue
+                if not part:selector.unregister(key.fileobj);continue
+                name=key.data;remaining=16384-len(streams[name]);streams[name].extend(part[:remaining])
+                if len(part)>remaining:
+                    if name not in overflowed:
+                        failed(Refusal('inventory original '+name+' stream cap'),'inventory-stream');overflowed.add(name)
+                    if cleanup is None:cleanup=time.monotonic_ns()+2000000000
+                    try:stop()
+                    except BaseException as error:failed(error,'inventory-kill')
+            if terminal is None:reap()
+            if terminal is not None:
+                if not selector.get_map():break
+                if cleanup is None:cleanup=time.monotonic_ns()+2000000000
+        if terminal is None:failed(Refusal('inventory owned leader not reaped'),'inventory-terminal')
+        elif selector.get_map():failed(Refusal('inventory streams/descendants remain uncertain after leader reap'),'inventory-drain')
+        if terminal is not None:need(record['exitCode']==0 and record['signal'] is None,'inventory metadata natural zero exit')
+    except BaseException as error:
+        failed(error,'inventory-probe')
+        if process is not None and terminal is None:
+            try:stop()
+            except BaseException as extra:failed(extra,'inventory-exception-kill')
+            # A failure does not claim successful cleanup or retry the command.
+            try:reap()
+            except BaseException as extra:failed(extra,'inventory-exception-reap')
+    finally:
+        if selector is not None:
+            try:selector.close()
+            except BaseException as error:failed(error,'inventory-selector-close')
+        for stream in pipes.values():
+            try:stream.close()
+            except BaseException as error:failed(error,'inventory-stream-close')
+    record['firstFailure']=failure
+    return record,{name:bytes(raw) for name,raw in streams.items()}
+
+
+class RuntimeInventory:
+    PRIORITY={'shared-library':0,'qemu-data':1,'python-stdlib':2,'observation-tool':3,'tool-interpreter':3,
+        'tcg-module':4,'elf-interpreter':4,'qemu-binary':5,'node-binary':5,'python-binary':5}
+    def __init__(self,files=None,probe=None):
+        self.ops=InventoryFiles() if files is None else files;self.probe=inventory_probe if probe is None else probe
+        self.files={};self.aliases={};self.probes=[];self.processes=[];self.attempted=False;self.partial={};self.executables={}
+
+    def argv(self,role):
+        if role.endswith('-version') and role[:-8] in self.executables:return [self.executables[role[:-8]],'--version']
+        if role.startswith('ldd-') and role[4:] in self.executables:return ['/usr/bin/ldd',self.executables[role[4:]]]
+        if role=='ldd-shell':return ['/usr/bin/ldd','/usr/bin/bash']
+        if role=='ldd-dpkg-query':return ['/usr/bin/ldd','/usr/bin/dpkg-query']
+        if role=='ldd-tcg':return ['/usr/bin/ldd',self.ops.resolve(RUNTIME_TCG)[0]]
+        if role=='package-version':return ['/usr/bin/dpkg-query','-W','-f=${Package}\t${Version}\t${Architecture}\n',*PACKAGE_NAMES]
+        if role=='package-files':return ['/usr/bin/dpkg-query','-L',*PACKAGE_NAMES]
+        raise Refusal('unknown fixed inventory probe role')
+
+    def add(self,path,kind):
+        path,aliases=self.ops.resolve(runtime_path(path))
+        for name,item in aliases.items():
+            need(name not in self.aliases or self.aliases[name]==item,'inventory alias drift during census')
+            self.aliases[name]=item;need(len(self.aliases)<=256,'held inventory alias cap')
+        if path not in self.files:
+            need(len(self.files)<512,'held inventory file cap');fact=self.ops.fact(path)
+            # Retain the actual observation even when its executable mode or
+            # ELF prefix refuses admission before any metadata child.
+            self.files[path]={**fact,'kind':kind}
+            need(type(fact['bytes']) is int and 0<fact['bytes']<=268435456,'held inventory file extent')
+            if kind.endswith('-binary') or kind in ('observation-tool','tool-interpreter'):
+                need(type(fact['mode']) is int and fact['mode']&0o111!=0,'inventory fixed tool executable mode before probes')
+            if kind.endswith('-binary') or kind in ('shared-library','elf-interpreter','tcg-module','tool-interpreter'):
+                need(self.ops.prefixes[path].startswith(b'\x7fELF'),'selected inventory ELF identity')
+            need(sum(row['bytes'] for row in self.files.values())<=1073741824,'held inventory graph extent')
+        elif self.PRIORITY[kind]>self.PRIORITY[self.files[path]['kind']]:self.files[path]['kind']=kind
+        return path
+
+    def observe(self,role,argv):
+        need(role in RUNTIME_ROLES and role not in {row['role'] for row in self.probes} and len(self.probes)<16,'fixed unique inventory probe roster')
+        need(equal(argv,self.argv(role)),'exact fixed inventory metadata argv before process factory')
+        # The caller constructs only the fixed named descriptors below, after
+        # selected engine and tool identities have been read and retained.
+        held_argv=canonical(argv)
+        process,streams=self.probe(parse(held_argv))
+        self.processes.append({'role':role,'process':process,'stdout':{'bytes':len(streams['stdout']),'sha256':sha(streams['stdout']),
+            'base64':base64.b64encode(streams['stdout']).decode()},'stderr':{'bytes':len(streams['stderr']),'sha256':sha(streams['stderr']),
+            'base64':base64.b64encode(streams['stderr']).decode()}})
+        original={'role':role,'argv':argv,'environment':{'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'},
+            'exitCode':process['exitCode'],'stdout':streams['stdout'].decode('utf-8','surrogateescape'),'stderr':streams['stderr'].decode('utf-8','surrogateescape')}
+        self.probes.append(original)
+        need(equal(process['argv'],parse(held_argv)) and equal(argv,parse(held_argv)),'returned metadata process joins held fixed descriptor')
+        if process['firstFailure'] is not None:
+            error=Refusal(process['firstFailure']['message']);error.inventory_first=process['firstFailure'];error.inventory_secondary=process['secondary']
+            raise error
+        need(len(streams['stdout'])<=16384 and len(streams['stderr'])<=16384 and process['firstFailure'] is None and process['secondary']==[] and
+             type(process['exitCode']) is int and process['exitCode']==0 and streams['stderr']==b'','bounded successful original inventory metadata probe')
+        return original['stdout']
+
+    def ldd(self,role,path):
+        output=self.observe(role,['/usr/bin/ldd',path]);count=0
+        for line in output.splitlines():
+            line=line.strip()
+            if re.fullmatch(r'linux-vdso\.so\.\d+ \(0x[0-9a-f]+\)',line):continue
+            match=re.fullmatch(r'(?:([^/\s]+) => )?(/[^\s]+) \(0x[0-9a-f]+\)',line)
+            need(match is not None,'closed resolved inventory ldd row')
+            self.add(match[2],'shared-library' if match[1] else 'elf-interpreter');count+=1
+        need(count>0,'original inventory ELF dependencies')
+
+    def discover(self):
+        need(not self.attempted,'independent runtime inventory consumed; no retry');self.attempted=True
+        self.partial={'files':self.files,'aliases':self.aliases,'probes':self.probes,'processes':self.processes,'fileMetadata':getattr(self.ops,'metadata',{}),
+            'pythonFiles':[],'mappedLibraries':[],'mapsOriginal':None}
+        executables=self.executables={name:self.add(path,name+'-binary') for name,path in (('node',RUNTIME_NODE),('python','/usr/bin/python3'),('qemu',RUNTIME_QEMU))}
+        for role,pin in RUNTIME_SELECTED.items():
+            row=self.files[executables[role]];need({key:row[key] for key in ('bytes','sha256')}==pin,'historical selected '+role+' mismatch before any metadata tool execution')
+        self.add('/usr/bin/ldd','observation-tool');self.add('/usr/bin/dpkg-query','observation-tool');shell=self.add('/usr/bin/bash','tool-interpreter')
+        script=self.ops.prefixes[resolve_alias('/usr/bin/ldd',self.aliases)]
+        need(script.startswith((b'#!/bin/bash\n',b'#!/usr/bin/bash\n')),'selected ldd fixed shell interface')
+        need(self.add(script.splitlines()[0][2:].decode(),'tool-interpreter')==shell,'inventory ldd interpreter alias')
+        for path in ('/lib/ld-linux.so.2','/lib64/ld-linux-x86-64.so.2','/libx32/ld-linux-x32.so.2'):
+            if self.ops.is_file(path):self.add(path,'elf-interpreter')
+        self.ldd('ldd-shell','/usr/bin/bash');self.ldd('ldd-dpkg-query','/usr/bin/dpkg-query')
+        for name,path in executables.items():self.ldd('ldd-'+name,path)
+        rows=[line.split('\t') for line in self.observe('package-version',['/usr/bin/dpkg-query','-W','-f=${Package}\t${Version}\t${Architecture}\n',*PACKAGE_NAMES]).splitlines()]
+        need(len(rows)==5 and all(len(row)==3 for row in rows) and {row[0] for row in rows}==set(PACKAGE_NAMES),'fixed original inventory packages')
+        packages=[{'name':name,'version':version,'architecture':architecture} for name,version,architecture in sorted(rows)]
+        qemu=next(row for row in packages if row['name']=='qemu-system-x86')
+        need(qemu['version']=='1:8.2.2+ds-0ubuntu1.18' and qemu['architecture']=='amd64','historical selected inventory package')
+        listed=self.observe('package-files',['/usr/bin/dpkg-query','-L',*PACKAGE_NAMES]).splitlines()
+        need(listed and len(set(listed))<=2048,'bounded inventory package path union')
+        for path in listed:runtime_path(path)
+        need(RUNTIME_TCG in listed and self.ops.is_file(RUNTIME_TCG),'original package-owned TCG module')
+        module=self.add(RUNTIME_TCG,'tcg-module');self.ldd('ldd-tcg',module)
+        for path in sorted(set(listed)):
+            if path.startswith(('/usr/share/qemu/','/usr/share/seabios/','/usr/share/ipxe/','/usr/share/ipxe-qemu/')) and self.ops.is_file(path):self.add(path,'qemu-data')
+        self.partial['pythonFiles']=self.ops.python_files()
+        for path in self.partial['pythonFiles']:self.add(path,'python-stdlib')
+        try:self.partial['mappedLibraries']=self.ops.mapped_libraries()
+        finally:self.partial['mapsOriginal']=getattr(self.ops,'maps_original',None)
+        for path in self.partial['mappedLibraries']:self.add(path,'shared-library')
+        versions={}
+        for role,path in executables.items():
+            output=self.observe(role+'-version',[path,'--version']);need(output.splitlines(),'original version first line');versions[role]=output.splitlines()[0]
+        value={'schema':'bw.ring3.runtime-expectation.v1','platform':self.ops.platform(),
+            'executables':{role:{'path':path,'bytes':self.files[path]['bytes'],'sha256':self.files[path]['sha256']} for role,path in executables.items()},
+            'versions':versions,'files':self.files,'aliases':self.aliases,'packages':packages,'packagePaths':sorted(set(listed))}
+        value['probes']=stable_probe_descriptors(value);raw=canonical(value);runtime_expectation(raw,sha(raw))
+        # Each actual inventory file/alias is reread before this candidate can
+        # be exported. The candidate is still not approved for an actual run.
+        for path,row in self.files.items():need(equal(self.ops.fact(path),{key:row[key] for key in ('bytes','sha256','mode')}),'inventory full selected file readback')
+        for path,row in self.aliases.items():need(equal(self.ops.alias(path),row),'inventory full alias readback')
+        self.partial['candidate']={'bytes':len(raw),'sha256':sha(raw),'base64':base64.b64encode(raw).decode()}
+        return raw
+
+
+def inventory_file(path,cap):
+    """Independent bounded input read; final symlinks and inode swaps refuse."""
+    need(type(cap) is int and 0<cap<=4<<20,'fixed inventory input/source extent')
+    descriptor=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK);first=None;data=bytearray()
+    try:
+        before=os.fstat(descriptor);need(stat.S_ISREG(before.st_mode) and 0<before.st_size<=cap,'bounded regular inventory input')
+        while True:
+            chunk=os.read(descriptor,min(65536,cap+1-len(data)))
+            if not chunk:break
+            data.extend(chunk);need(len(data)<=cap,'inventory input read cap')
+        need(len(data)==before.st_size and setup_metadata(os.fstat(descriptor))==setup_metadata(before) and
+             setup_metadata(os.stat(path,follow_symlinks=False))==setup_metadata(before),'stable inventory input held/name identity')
+    except BaseException as error:first=error
+    finally:
+        try:os.close(descriptor)
+        except BaseException as error:
+            if first is None:first=error
+            else:first.setup_secondary=getattr(first,'setup_secondary',[])+[{'phase':'inventory-input-close','name':type(error).__name__,'message':str(error)}]
+    if first is not None:raise first
+    return bytes(data)
+
+
+def admit_inventory_event(event_raw,environ):
+    pin=digest(environ.get('BW_RING3_INVENTORY_REQUEST_SHA256'));event=parse(event_raw)
+    need(event.get('action')=='labeled' and event.get('repository',{}).get('full_name')=='CrispStrobe/bw-board' and
+         event.get('label',{}).get('name')=='x86-ring3-runtime-inventory' and event.get('sender',{}).get('login')=='CrispStrobe' and
+         environ.get('GITHUB_REPOSITORY')=='CrispStrobe/bw-board' and environ.get('GITHUB_EVENT_NAME')=='pull_request' and
+         environ.get('GITHUB_ACTOR')=='CrispStrobe' and environ.get('GITHUB_JOB')=='runtime-inventory','fixed owned metadata-only event/job')
+    pr=event.get('pull_request',{});body=pr.get('body');start='<!-- BW_RING3_RUNTIME_INVENTORY_V1\n';end='\nBW_RING3_RUNTIME_INVENTORY_V1 -->'
+    need(type(body) is str and body.count(start)==1 and body.count(end)==1 and body.index(start)<body.index(end),'one immutable inventory request block')
+    block=body.split(start,1)[1].split(end,1)[0];wrapper=parse(block.encode())
+    need(canonical(wrapper).decode().rstrip('\n')==block,'canonical inventory request wrapper')
+    raw=prerequisite_original(canonical(wrapper));need(sha(raw)==pin,'independently preselected inventory request SHA-256')
+    request=parse(raw);keys(request,'schema repository pullRequest head tree source selected')
+    need(raw==canonical(request) and request['schema']=='bw.ring3.inventory-request.v1' and request['repository']=='CrispStrobe/bw-board' and
+         type(request['pullRequest']) is int and 0<request['pullRequest']<2**31 and
+         type(event.get('number')) is int and event['number']==request['pullRequest'] and
+         type(pr.get('number')) is int and pr['number']==request['pullRequest'] and pr.get('state')=='open' and
+         pr.get('head',{}).get('sha')==request['head'] and pr.get('head',{}).get('repo',{}).get('full_name')=='CrispStrobe/bw-board' and
+         pr.get('head',{}).get('repo',{}).get('fork') is False and pr.get('base',{}).get('ref')=='master' and
+         pr.get('base',{}).get('repo',{}).get('full_name')=='CrispStrobe/bw-board','immutable owned inventory PR/head')
+    digest(request['head'],40);digest(request['tree'],40)
+    need(environ.get('BW_EXPECTED_HEAD')==request['head'] and environ.get('BW_EXPECTED_TREE')==request['tree'] and
+         environ.get('GITHUB_RUN_ATTEMPT')=='1' and type(environ.get('GITHUB_RUN_ID')) is str and
+         re.fullmatch('[1-9][0-9]{0,19}',environ['GITHUB_RUN_ID']) and
+         environ.get('GITHUB_WORKFLOW_REF')=='CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request['pullRequest'])+'/merge',
+         'first inventory run/platform source observations')
+    digest(environ.get('GITHUB_WORKFLOW_SHA'),40)
+    selected={'node':{'path':RUNTIME_NODE,**RUNTIME_SELECTED['node']},'qemu':{'path':RUNTIME_QEMU,**RUNTIME_SELECTED['qemu']}}
+    need(equal(request['selected'],selected),'fixed historical selected inventory engines')
+    source_raw=prerequisite_original(canonical(request['source']));source=parse(source_raw);keys(source,'schema head tree files')
+    need(source_raw==canonical(source) and source['schema']=='bw.ring3.source.v1' and source['head']==request['head'] and
+         source['tree']==request['tree'] and type(source['files']) is dict and set(source['files'])==SETUP_SOURCE_PATHS,'closed independently approved inventory source12')
+    for row in source['files'].values():keys(row,'bytes sha256 mode blob');integer(row['bytes'],0,4<<20);digest(row['sha256']);digest(row['blob'],40);need(row['mode']=='100644','regular inventory source')
+    return raw,request,source
+
+
+def inventory_parent_availability():
+    path=Path('/sys/fs/cgroup');fd=os.open(path,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK)
+    first=None;result={'controls':{}}
+    try:
+        info=os.fstat(fd);result['meta']=setup_metadata(info)
+        need(path.resolve(strict=True)==path and stat.S_ISDIR(info.st_mode) and (info.st_uid,info.st_gid)==(0,0) and
+             info.st_mode&0o022==0 and setup_metadata(path.lstat())==setup_metadata(info),'canonical readonly cgroup parent')
+        for name in ('cgroup.controllers','cgroup.subtree_control'):
+            control=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=fd);error=None
+            try:
+                before=os.fstat(control);need(stat.S_ISREG(before.st_mode) and (before.st_uid,before.st_gid)==(0,0) and before.st_mode&0o022==0,
+                                             'readonly parent-controller metadata')
+                raw=os.read(control,4097);result['controls'][name]={'meta':setup_metadata(before),'raw':raw.decode('ascii')}
+                need(len(raw)<=4096 and setup_metadata(os.fstat(control))==setup_metadata(before) and
+                     setup_metadata(os.stat(name,dir_fd=fd,follow_symlinks=False))==setup_metadata(before),'bounded stable parent-controller read')
+            except BaseException as caught:error=caught
+            finally:
+                try:os.close(control)
+                except BaseException as caught:
+                    if error is None:error=caught
+                    else:error.setup_secondary=getattr(error,'setup_secondary',[])+[{'phase':'inventory-parent-control-close','name':type(caught).__name__,'message':str(caught)}]
+            if error is not None:raise error
+        need(setup_metadata(os.fstat(fd))==setup_metadata(info) and setup_metadata(path.lstat())==setup_metadata(info),'parent directory readback')
+        result['alreadyEnabled']=all({'cpu','memory','pids'}<=set(row['raw'].split()) for row in result['controls'].values())
+        # Missing parent enablement is an explicit future actual-run blocker;
+        # this metadata-only path never writes or invents a root cgroup.type.
+    except BaseException as error:first=error
+    finally:
+        try:os.close(fd)
+        except BaseException as error:
+            if first is None:first=error
+            else:first.setup_secondary=getattr(first,'setup_secondary',[])+[{'phase':'inventory-parent-close','name':type(error).__name__,'message':str(error)}]
+    if first is not None:raise first
+    return result
+
+
+def runtime_inventory_entry(environ,files=None,probe=None):
+    value={'schema':'bw.ring3.runtime-inventory-original.v1','source':{},'platformObservations':{},'parent':None,'membership':None,
+        'inventory':None,'candidate':None,'firstFailure':None,'secondary':[]};originals={};inventory=None
+    try:
+        uid,gid=os.getresuid(),os.getresgid();need(len(set(uid))==1 and uid[0]>0 and len(set(gid))==1 and gid[0]>0,'unprivileged metadata inventory entry')
+        pin=digest(environ.get('BW_RING3_INVENTORY_REQUEST_SHA256'))
+        path=environ.get('GITHUB_EVENT_PATH');need(type(path) is str and Path(path).is_absolute(),'official inventory event path')
+        event_raw=inventory_file(path,1<<20);originals['inventory.event.json']=event_raw
+        request_raw,request,source=admit_inventory_event(event_raw,environ);originals['inventory.request.json']=request_raw
+        value['platformObservations']={name:environ[name] for name in ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_REPOSITORY','GITHUB_EVENT_NAME',
+            'GITHUB_ACTOR','GITHUB_JOB','GITHUB_WORKFLOW_REF','GITHUB_WORKFLOW_SHA','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')}
+        value['platformObservations'].update(requestSha256=pin,uid=uid[0],gid=gid[0])
+        checkout=Path.cwd();need(checkout.resolve(strict=True)==checkout,'canonical inventory checkout')
+        for name,row in sorted(source['files'].items()):
+            path=checkout/name;need(path.resolve(strict=True)==path,'canonical inventory source path')
+            info=path.lstat();need(stat.S_ISREG(info.st_mode) and stat.S_IMODE(info.st_mode)==0o644 and (info.st_uid,info.st_gid)==(uid[0],gid[0]),'owned inventory source mode')
+            data=inventory_file(path,4<<20)
+            fact={'bytes':len(data),'sha256':sha(data),'blob':hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest(),'mode':'100644'}
+            value['source'][name]={'identity':setup_metadata(info),**fact};need(equal(fact,row),'live inventory twelve-file source mismatch')
+        value['membership']=setup_proc_read('/proc/self/cgroup');setup_membership(value['membership'],environ['GITHUB_RUN_ID'])
+        value['parent']=inventory_parent_availability()
+        inventory=RuntimeInventory(files,probe);candidate=inventory.discover();value['candidate']={'bytes':len(candidate),'sha256':sha(candidate),'base64':base64.b64encode(candidate).decode()}
+    except BaseException as error:
+        value['firstFailure']=getattr(error,'inventory_first',{'phase':'runtime-inventory','name':type(error).__name__,'message':str(error)})
+        value['secondary'].extend(getattr(error,'setup_secondary',[]))
+        value['secondary'].extend(getattr(error,'inventory_secondary',[]))
+    if inventory is not None:value['inventory']=inventory.partial
+    raw=canonical(value)
+    if len(raw)>1<<20:
+        error={'phase':'inventory-original-cap','name':'Refusal','message':'unchanged inventory original JSON cap'}
+        if value['firstFailure'] is None:value['firstFailure']=error
+        else:value['secondary'].append(error)
+        # Explicit partial-prefix failure variant; never an admitted candidate.
+        # The attempted complete record's bounded original prefix is retained.
+        prefix=raw[:128<<10]
+        raw=canonical({'schema':'bw.ring3.runtime-inventory-overflow.v1','firstFailure':value['firstFailure'],'secondary':value['secondary'],
+            'attemptedBytes':len(raw),'attemptedSha256':sha(raw),'prefix':{'bytes':len(prefix),'sha256':sha(prefix),'base64':base64.b64encode(prefix).decode()}})
+    originals['runtime.inventory.json']=raw
+    return originals,value['firstFailure'] is None and value['secondary']==[]
+
+
+def emit_runtime_inventory(originals,emit,flush):
+    need(type(originals) is dict and set(originals)<={'inventory.request.json','inventory.event.json','runtime.inventory.json'} and
+         all(type(raw) is bytes and len(raw)<=1<<20 for raw in originals.values()) and sum(map(len,originals.values()))<=5<<20,'bounded distinct inventory originals')
+    encoded_bytes=0;chunks=0
+    for name,raw in sorted(originals.items()):
+        encoded=base64.b64encode(raw).decode();count=max(1,(len(encoded)+3071)//3072);need(count<=456,'finite inventory chunks')
+        for index in range(count):
+            line=b'RING3_RUNTIME_INVENTORY '+canonical({'schema':'bw.ring3.runtime-inventory-log.v1','name':name,'index':index,'count':count,
+                'bytes':len(raw),'sha256':sha(raw),'data':encoded[index*3072:(index+1)*3072]})
+            need(encoded_bytes+len(line)<=8<<20 and chunks<2600,'held encoded inventory log cap')
+            written=emit(line);need(type(written) is int and written==len(line),'complete immutable inventory log chunk')
+            encoded_bytes+=len(line);chunks+=1
+    flush()
+
+
+def decode_runtime_inventory_log(raw):
+    need(type(raw) is bytes and len(raw)<=8<<20,'bounded runtime inventory official log original')
+    groups={};chunks=0
+    for line in raw.splitlines():
+        marker=b'RING3_RUNTIME_INVENTORY ';offset=line.find(marker)
+        if offset<0:continue
+        prefix=line[:offset];need(prefix==b'' or re.fullmatch(rb'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ',prefix),'canonical inventory log timestamp')
+        value=parse(line[offset+len(marker):]);keys(value,'schema name index count bytes sha256 data')
+        need(value['schema']=='bw.ring3.runtime-inventory-log.v1' and value['name'] in
+            ('inventory.request.json','inventory.event.json','runtime.inventory.json'),'exact inventory log version/roles')
+        count=integer(value['count'],1,456);index=integer(value['index'],0,count-1);extent=integer(value['bytes'],0,1<<20);digest(value['sha256'])
+        need(type(value['data']) is str and len(value['data'])<=3072,'bounded inventory original chunk')
+        group=groups.setdefault(value['name'],{'count':count,'bytes':extent,'sha256':value['sha256'],'parts':[]})
+        need((group['count'],group['bytes'],group['sha256'])==(count,extent,value['sha256']) and index==len(group['parts']),
+             'one ordered immutable inventory original sequence')
+        group['parts'].append(value['data']);chunks+=1;need(chunks<=2600,'held finite inventory chunk count')
+    need(set(groups)=={'inventory.request.json','inventory.event.json','runtime.inventory.json'},'three complete independent inventory originals')
+    originals={}
+    for name,group in groups.items():
+        need(len(group['parts'])==group['count'],'complete inventory original chunk sequence')
+        encoded=''.join(group['parts']);value=base64.b64decode(encoded,validate=True)
+        need(base64.b64encode(value).decode()==encoded and len(value)==group['bytes'] and sha(value)==group['sha256'],'exact inventory original encoding/bytes/hash')
+        originals[name]=value
+    need(sum(map(len,originals.values()))<=5<<20,'unchanged inventory raw aggregate cap')
+    return originals
+
+
+def verify_runtime_inventory_log(raw,external):
+    """Audit a separately selected metadata event; never approves an actual."""
+    keys(external,'schema requestSha256 runId attempt head tree workflowSha workflowFileSha256 jobId jobName conclusion logBytes logSha256')
+    need(external['schema']=='bw.ring3.inventory-expectation.v1' and type(external['attempt']) is int and external['attempt']==1 and
+         external['jobName']=='runtime-inventory' and external['conclusion']=='success','independently admitted official inventory job')
+    integer(external['jobId'],1);need(type(external['runId']) is str and re.fullmatch('[1-9][0-9]{0,19}',external['runId']),'admitted inventory run ID')
+    for name,size in (('head',40),('tree',40),('workflowSha',40),('workflowFileSha256',64),('requestSha256',64),('logSha256',64)):digest(external[name],size)
+    need(integer(external['logBytes'],1,8<<20)==len(raw) and sha(raw)==external['logSha256'],'official inventory original log byte/hash admission')
+    originals=decode_runtime_inventory_log(raw);request_raw=originals['inventory.request.json']
+    need(sha(request_raw)==external['requestSha256'],'external prior inventory approval pin')
+    request=parse(request_raw);value=parse(originals['runtime.inventory.json'])
+    keys(value,'schema source platformObservations parent membership inventory candidate firstFailure secondary')
+    need(value['schema']=='bw.ring3.runtime-inventory-original.v1' and value['firstFailure'] is None and value['secondary']==[],'complete failure-free inventory original')
+    observed=value['platformObservations']
+    expected={'GITHUB_RUN_ID':external['runId'],'GITHUB_RUN_ATTEMPT':'1','GITHUB_REPOSITORY':'CrispStrobe/bw-board','GITHUB_EVENT_NAME':'pull_request',
+        'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':'runtime-inventory','GITHUB_WORKFLOW_SHA':external['workflowSha'],
+        'GITHUB_WORKFLOW_REF':'CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request.get('pullRequest'))+'/merge',
+        'BW_EXPECTED_HEAD':external['head'],'BW_EXPECTED_TREE':external['tree']}
+    need(type(observed) is dict and set(observed)==set(expected)|{'requestSha256','uid','gid'} and
+         all(equal(observed[name],item) for name,item in expected.items()) and observed['requestSha256']==external['requestSha256'],
+         'official inventory platform/source/request observations join')
+    uid=integer(observed['uid'],1,2**31-1);gid=integer(observed['gid'],1,2**31-1)
+    environ=dict(expected,BW_RING3_INVENTORY_REQUEST_SHA256=external['requestSha256'])
+    admitted,request,source=admit_inventory_event(originals['inventory.event.json'],environ)
+    need(admitted==request_raw and source['files'][WORKFLOW]['sha256']==external['workflowFileSha256'],'exact approved request/executing workflow file join')
+    need(type(value['source']) is dict and set(value['source'])==SETUP_SOURCE_PATHS,'independent complete live inventory source census')
+    for name,row in value['source'].items():
+        keys(row,'identity bytes sha256 blob mode')
+        metadata=row['identity'];need(type(metadata) is list and len(metadata)==8 and all(type(x) is int and x>=0 for x in metadata) and
+            metadata[0]>0 and metadata[1]>0 and metadata[2]==0o100644 and metadata[3:5]==[uid,gid] and metadata[6]==row['bytes'],
+            'independent inventory source identity/mode/owner')
+        need(equal({key:row[key] for key in ('bytes','sha256','blob','mode')},source['files'][name]),'live source12 joins external approved source')
+    setup_membership(value['membership'],external['runId']);parent=value['parent'];keys(parent,'meta controls alreadyEnabled')
+    need(type(parent['meta']) is list and len(parent['meta'])==8 and stat.S_ISDIR(parent['meta'][2]) and parent['meta'][3:5]==[0,0] and
+         parent['meta'][2]&0o022==0 and set(parent['controls'])=={'cgroup.controllers','cgroup.subtree_control'},'readonly shared parent availability original')
+    for row in parent['controls'].values():
+        keys(row,'meta raw');need(type(row['meta']) is list and len(row['meta'])==8 and stat.S_ISREG(row['meta'][2]) and
+            row['meta'][3:5]==[0,0] and row['meta'][2]&0o022==0 and type(row['raw']) is str and len(row['raw'].encode('ascii'))<=4096,
+            'readonly bounded original parent controller')
+    enabled=all({'cpu','memory','pids'}<=set(row['raw'].split()) for row in parent['controls'].values())
+    need(parent['alreadyEnabled'] is enabled,'truthful parent controller readiness, never enablement')
+    candidate_raw=prerequisite_original(canonical(value['candidate']));candidate=runtime_expectation(candidate_raw,sha(candidate_raw))
+    inventory=value['inventory'];keys(inventory,'files aliases probes processes fileMetadata pythonFiles mappedLibraries mapsOriginal candidate')
+    need(equal(inventory['files'],candidate['files']) and equal(inventory['aliases'],candidate['aliases']) and
+         inventory['candidate']==value['candidate'],'exact separately retained inventory candidate facts')
+    need(type(inventory['fileMetadata']) is dict and set(inventory['fileMetadata'])==set(candidate['files']),'complete actual inventory file metadata')
+    python_files=inventory['pythonFiles'];need(type(python_files) is list and len(python_files)<=256 and python_files==sorted(set(python_files)) and
+        all(path in candidate['files'] and candidate['files'][path]['kind']=='python-stdlib' for path in python_files),'retained selected Python file superset census')
+    maps_raw=prerequisite_original(canonical(inventory['mapsOriginal']));need(len(maps_raw)<=65536,'held raw Python maps original cap')
+    mapped=set()
+    for line in maps_raw.decode().splitlines():
+        fields=line.split(None,5)
+        if len(fields)<6 or not fields[5].startswith('/'):continue
+        path=fields[5];need(not path.endswith(' (deleted)'),'retained map paths not deleted')
+        if '.so' in Path(path).name or Path(path).name.startswith('ld-'):mapped.add(runtime_path(path))
+    need(len(mapped)<=128 and inventory['mappedLibraries']==sorted(mapped) and
+        all(resolve_alias(path,candidate['aliases']) in candidate['files'] for path in mapped),'independent raw mapped-library/selected graph join')
+    for path,metadata in inventory['fileMetadata'].items():
+        row=candidate['files'][path]
+        need(type(metadata) is list and len(metadata)==8 and all(type(x) is int and x>=0 for x in metadata) and metadata[0]>0 and metadata[1]>0 and
+            stat.S_ISREG(metadata[2]) and stat.S_IMODE(metadata[2])==row['mode'] and metadata[6]==row['bytes'],'inventory file original mode/extent')
+    qemu=next(row for row in candidate['packages'] if row['name']=='qemu-system-x86')
+    runtime_original={'schema':'bw.ring3.runtime.v2','observationPolicy':'prelaunch-probes-and-before-after-file-readback','platform':candidate['platform'],
+        'executables':candidate['executables'],'versions':candidate['versions'],'qemuPackage':{'name':qemu['name'],'version':qemu['version'],'architecture':qemu['architecture'],
+        'files':{path:{key:row[key] for key in ('bytes','sha256','kind')} for path,row in candidate['files'].items()},'aliases':candidate['aliases'],'probes':inventory['probes']}}
+    verify_runtime_stable_original(runtime_original,candidate_raw,sha(candidate_raw))
+    processes=inventory['processes'];need(type(processes) is list and len(processes)==11,'complete exact metadata probe process originals')
+    probe_by_role={probe['role']:probe for probe in inventory['probes']};seen=set();last=0;parent_pid=None
+    for entry in processes:
+        keys(entry,'role process stdout stderr');role=entry['role'];need(role in probe_by_role and role not in seen,'unique inventory process probe role');seen.add(role)
+        process=entry['process'];keys(process,'schema argv environment pid pgid parentPid startTicks spawnMonoNs reapMonoNs exitCode signal waitStatus timedOut rusage firstFailure secondary')
+        probe=probe_by_role[role]
+        need(process['schema']=='bw.ring3.inventory-process.v1' and equal(process['argv'],probe['argv']) and equal(process['environment'],probe['environment']) and
+            type(process['exitCode']) is int and process['exitCode']==0 and integer(process['waitStatus'],0,65535)==0 and process['signal'] is None and
+            process['timedOut'] is False and process['firstFailure'] is None and process['secondary']==[],'complete fixed successful metadata probe process')
+        pid=integer(process['pid'],1);need(integer(process['pgid'],1)==pid and integer(process['parentPid'],1)!=pid,'fresh metadata process session')
+        integer(process['startTicks'],1)
+        if parent_pid is None:parent_pid=process['parentPid']
+        need(process['parentPid']==parent_pid,'one independent inventory parent')
+        start=integer(process['spawnMonoNs'],last);end=integer(process['reapMonoNs'],start);need(end-start<=10000000000,'finite ordered metadata probe windows');last=end
+        keys(process['rusage'],'userSeconds systemSeconds maxRssKiB')
+        for name in ('userSeconds','systemSeconds'):need(type(process['rusage'][name]) in (int,float) and 0<=process['rusage'][name]<=10,'bounded original inventory process usage')
+        integer(process['rusage']['maxRssKiB'],0,1048576)
+        need(prerequisite_original(canonical(entry['stdout']))==probe['stdout'].encode('utf-8','surrogateescape') and
+             prerequisite_original(canonical(entry['stderr']))==probe['stderr'].encode('utf-8','surrogateescape'),'exact raw metadata probe stream/process join')
+    return {'schema':'bw.ring3.runtime-inventory-admission.v1','candidateSha256':sha(candidate_raw),'candidateBytes':len(candidate_raw),
+        'candidateReviewed':False,'actualRunApproved':False,'parentControllersAlreadyEnabled':enabled,'selectedBoundary':'reviewed selected executable/tool/package and Python superset only'}
 def main():
     internal={'--observe-hosted-setup','--admit-hosted-prerequisites'}
     if any(flag in internal for flag in sys.argv[1:]) and (len(sys.argv)!=2 or sys.argv[1] not in internal):
         raise Refusal('exactly one fixed internal prerequisite mode required')
+    if '--inventory-runtime' in sys.argv[1:]:
+        need(sys.argv[1:]==['--inventory-runtime'],'exact single metadata inventory mode')
+        need(INVENTORY_ENTRY_ENABLED is True,'metadata inventory disabled pending separate source/event review')
+        originals,passed=runtime_inventory_entry(dict(os.environ))
+        emit_runtime_inventory(originals,sys.stdout.buffer.write,sys.stdout.buffer.flush);raise SystemExit(0 if passed else 1)
+    if sys.argv[1:2]==['--runtime-inventory-log']:
+        parser=argparse.ArgumentParser(description='Original-only independent runtime inventory audit',allow_abbrev=False)
+        parser.add_argument('--runtime-inventory-log',required=True);parser.add_argument('--external-admission',required=True);args=parser.parse_args()
+        with Path(args.runtime_inventory_log).open('rb') as stream:raw=stream.read((8<<20)+1)
+        with Path(args.external_admission).open('rb') as stream:external=parse(stream.read((1<<20)+1))
+        print(json.dumps(verify_runtime_inventory_log(raw,external),sort_keys=True));return
     if sys.argv[1:]==['--observe-hosted-setup']:
         raw,passed=observe_hosted_setup(dict(os.environ))
         need(sys.stdout.buffer.write(raw)==len(raw),'complete observer original stdout');sys.stdout.buffer.flush()

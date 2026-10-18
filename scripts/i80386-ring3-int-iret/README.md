@@ -488,7 +488,7 @@ resource operation or guest ran in these controls. Bounded read loops cannot
 preempt blocking kernel calls; the separately reviewed job backstop is still
 required.
 
-The fixed CLI now recognizes exactly one of seven modes, without option
+The fixed CLI now recognizes exactly one of eight modes, without option
 abbreviations. The static source constant `ACTUAL_ENTRY_ENABLED=False` refuses
 every mode except `--controls` before reading its environment, checking IDs,
 constructing a handler or opening a resource. Neither a plan field, command
@@ -502,6 +502,7 @@ status through `SystemExit`.
 | `--prepare-admitted-generated` | Requires the actual dropped invoker in the preparation sibling; stdout contains only the existing original GEN/PRE frame. |
 | `--bootstrap` | Starts as root, validates entry facts, migrates itself into the controller leaf, drops IDs/groups/capabilities, then executes the fixed `--controller` descriptor. Any return from bootstrap is failure. |
 | `--controller` | Starts dropped in the controller leaf; requires both complete local capture facts and an empty authoritative failure object. |
+| `--controller-runtime-admitted` | Explicit dropped controller selection. Reads the separately pinned installed request/runtime input, hashes the entire admitted stable superset before any probe factory, and joins unchanged raw runtime observations. Closed preparation/bootstrap delivery and final original-reader integration remain pending. |
 | `--hosted-actual` | Performs fresh fixed setup, admitted preparation, outside observation and dropped finalization. Its external event and runtime authority remain pending. |
 | `--install-hosted-envelope` | Disabled input-installation scaffold. Even complete installation returns nonzero before resource setup or guests because independent runtime, observer and reader gates remain pending. |
 | `--hosted-prerequisites` | Disabled installation/setup/independent-observer/dropped-collector path. Its new reader can admit prerequisite observations only; missing full runtime admission still returns nonzero before preparation, probes or guests. |
@@ -719,7 +720,7 @@ The new controls run without the Node ROM builder:
 /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --prerequisites-only
 ```
 
-Five added runner methods bring that total to 198, preserving all prior 193
+At the prerequisite checkpoint, five added runner methods brought the total to 198, preserving all prior 193
 test bodies. Five independent methods cover readonly observer/file access,
 dropped admission, rehashed conflicts, log framing and failure boundaries.
 Seventeen targeted source mutations are detected. The
@@ -727,7 +728,100 @@ coherent runner path exercises the actual bounded collector, drop and retention
 adapters and independent admission over the retained bytes; installer/setup and
 process creation/kernel edges are manufactured, separately tested endpoints.
 It is source routing evidence, not actual root setup, process execution or guest
-qualification. Both activation guards remain false. No runtime expectation is
+qualification. Both prerequisite activation guards remain false. No runtime expectation is
 auto-admitted, and the path always stops before preparation/probes/guests until
 the complete independently reviewed runtime graph and closed execution delivery
 are connected.
+
+The additive runtime gate uses canonical `bw.ring3.runtime-expectation.v1`
+bytes, whose digest must be selected through the separately reviewed request.
+Its exact fields are `schema`, `platform`, `executables`, `versions`, `files`,
+`aliases`, `packages`, `packagePaths` and `probes`. Each file binds bytes,
+SHA256, POSIX mode and its runtime role; aliases bind literal link text and
+resolved target. The three engines, five package records and eleven fixed
+probe descriptors remain closed. Historical Node and QEMU bytes and QEMU
+package version must match before any metadata tool executes. Missing or
+changed expected bytes cannot be admitted from the controller's own discovery.
+
+`RuntimeExpectationGate` reads every externally selected file and alias before
+constructing a discovery/probe factory, then rereads the entire superset after
+probes and after guests. Attempts are consumed even on failure. Partial facts
+and first errors survive refusal. Every runtime.v2 file, alias and probe must
+join the selected graph, including all engine/tool/package files. The superset
+also covers the explicit Python module/import union and mapped libraries for
+the launcher, observer, reader and controller. It is a selected runtime boundary,
+not an attestation of the whole host. Existing file, alias, stream and time caps
+remain fixed; a census exceeding them refuses.
+
+The standalone reader implements the stable expectation independently, without
+producer imports. Its new explicit stable-policy entry preserves the existing
+runtime.v2 raw predicates and default original equality. Raw `ldd` streams stay
+originals; independently parsed paths join the pinned graph, while ASLR addresses
+are not portable identity pins. The new controller selection is guarded and
+does not yet supply the complete preparation/bootstrap/finalizer V8 chain.
+
+A separate metadata-only `runtime-inventory` job and reader endpoint
+`--inventory-runtime` provide a concrete candidate acquisition path. Both the
+job literal and independent source constant `INVENTORY_ENTRY_ENABLED` are false.
+The job has a literal 15 minute timeout, uses the existing fixed checkout and
+Node setup actions, and installs no QEMU or fallback packages. It runs without
+sudo, resource creation or guests. A historical tool mismatch refuses before
+executing that tool. Readonly parent-controller availability is retained;
+missing enablement remains an actual-run blocker and is never repaired here.
+
+Before any event, the operator must separately freeze the exact value transported
+by `BW_RING3_INVENTORY_REQUEST_SHA256`. The immutable labeled-event body carries
+one `BW_RING3_RUNTIME_INVENTORY_V1` block containing a canonical bytes/SHA256/base64
+wrapper. Its `bw.ring3.inventory-request.v1` has exactly `schema`, `repository`,
+`pullRequest`, `head`, `tree`, `source` and `selected`; `source` is the independently
+reviewed twelve-file manifest and `selected` contains the fixed Node/QEMU paths,
+lengths and hashes. The owned repository, authorized actor, nonfork PR, label
+`x86-ring3-runtime-inventory`, run attempt one and platform/workflow context are
+closed. The variable transports a prior selection; its mere presence supplies
+no approval. Live source bytes, modes and Git blob IDs must match before probes.
+
+Inventory retains original event/request bytes, file metadata, the bounded raw
+Python maps census, the selected Python file census, and all eleven bounded
+metadata process/stream originals. Process capture checks a fresh direct session
+leader, preserves terminal status and partial errors, and never signals a reaped
+leader. Its loop does not preempt blocked spawn or kernel operations. The
+separately reviewed job deadline remains necessary. The new three-original
+`RING3_RUNTIME_INVENTORY` log uses the existing JSON/raw/encoded/chunk caps and
+cannot be interpreted as the old twenty-role packet or V7 admission.
+
+The offline command is:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/reader.py \
+  --runtime-inventory-log retained-inventory.log \
+  --external-admission reviewed-inventory-expectation.json
+```
+
+Its external `bw.ring3.inventory-expectation.v1` contains exactly `schema`,
+`requestSha256`, `runId`, `attempt`, `head`, `tree`, `workflowSha`,
+`workflowFileSha256`, `jobId`, `jobName`, `conclusion`, `logBytes` and `logSha256`.
+The operator separately admits official event/job metadata and the acquired log
+before using this reader. A positive verdict says `candidateReviewed=false` and
+`actualRunApproved=false`: a later independent review must select the resulting
+stable inventory and publish its immutable owned-repository input before an
+actual request can refer to it. Inventory acquisition is not automatic approval.
+
+Seven additive runner methods bring the total to 205, with the prior 198 bodies
+held. Seven independent runtime methods exercise the real gate, readonly file
+backends, fixed metadata process capture and entry-to-log reader over mocked OS
+edges, including coherent callback replacement, ASLR changes, rewritten census
+and process conflicts, cap failures and pre-tool historical mismatch. Run them
+without the Node ROM builder using:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --runtime-only
+```
+
+Seventeen targeted runtime gate/inventory mutations are detected, including
+pre-factory hashing, graph joins, retained mismatch facts, repeated observation,
+raw maps/census/process joins, stream caps and no signaling after leader reap.
+
+The complete approved runtime graph is still absent. Closed versioned execution
+delivery, V8 originals and the separately reviewed actual event remain required.
+No inventory event, runtime probe, resource operation or guest execution is
+qualified by these inert controls.
