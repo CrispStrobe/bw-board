@@ -1664,12 +1664,12 @@ def staged_runtime_controls():
     def log(originals):
         output=io.BytesIO();reader.emit_staged_inventory(originals,output.write,output.flush);return output.getvalue()
     class Tests(unittest.TestCase):
-        def test_all_new_guards_false_before_any_edges(self):
-            self.assertIs(p.STAGED_RUNTIME_ENTRY_ENABLED,False);self.assertIs(reader.STAGED_RUNTIME_INVENTORY_ENABLED,False)
+        def test_reviewed_metadata_guards_and_disabled_boundary(self):
+            self.assertIs(p.STAGED_RUNTIME_ENTRY_ENABLED,True);self.assertIs(reader.STAGED_RUNTIME_INVENTORY_ENABLED,True)
             self.assertIs(p.NODE_STAGE_ENTRY_ENABLED,False);self.assertIs(reader.NODE_STAGE_OBSERVER_ENABLED,False);self.assertIs(p.ACTUAL_ENTRY_ENABLED,False)
-            with patch.object(p,'stage_runtime_inventory_node',side_effect=AssertionError('no factory')),patch.object(sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
+            with patch.object(p,'STAGED_RUNTIME_ENTRY_ENABLED',False),patch.object(p,'stage_runtime_inventory_node',side_effect=AssertionError('no factory')),patch.object(sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
                 self.assertEqual(p.dispatch_cli(['--stage-runtime-inventory-node'],{}),1)
-            with patch.object(sys,'argv',['reader.py','--inventory-staged-runtime']),patch.object(reader,'staged_runtime_inventory_entry',side_effect=AssertionError('no observer')):
+            with patch.object(reader,'STAGED_RUNTIME_INVENTORY_ENABLED',False),patch.object(sys,'argv',['reader.py','--inventory-staged-runtime']),patch.object(reader,'staged_runtime_inventory_entry',side_effect=AssertionError('no observer')):
                 with self.assertRaisesRegex(reader.Refusal,'disabled'):reader.main()
         def test_complete_root_copy_drop_eleven_probes_reread_log_and_independent_reader(self):
             with edges() as (producer,env,request,raw,state):

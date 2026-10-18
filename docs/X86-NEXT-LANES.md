@@ -2928,8 +2928,9 @@ HEAD/tree, workflow/run and invoker. This verifies only a completed stage
 observation and its explicit boundary refusal. See the
 [fixture README](../scripts/i80386-ring3-int-iret/README.md) for schemas and
 mocked control commands. The separate complete-inventory source candidate below
-now supplies the next metadata path; no job is activated. Independently review
-its fresh immutable source, request and official event before one observation.
+now supplies the next metadata path. This review candidate enables only that
+metadata source/job; it admits no event. Independently review its fresh immutable
+source12, rebuilt request and executing workflow before one observation.
 Runtime-expectation and actual argv adoption remain a separate follow-up after
 that metadata result.
 
@@ -2950,8 +2951,12 @@ probes. Executables, libraries and all generic file reads keep their positive
 extent requirements. Full-inventory source controls must reach all eleven
 fixed metadata probes, then independent final readback and the standalone
 original reader; coherent source/event/stage/process/census mutations must
-refuse. All new entry, observer and job guards stay false during source work.
-The later actual runtime-expectation and argv adoption remain separate.
+refuse. Initial source work kept the metadata guards false; this review
+candidate enables only the staged metadata entry, observer and job. Actual and
+older-stage guards remain false. Final exact-head CI and individually reviewed
+skips, a fresh request/source12 binding, executing workflow proof and separate
+event admission remain required. The later actual runtime-expectation and argv
+adoption remain separate.
 
 The complete-inventory original-only audit is:
 

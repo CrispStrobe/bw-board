@@ -5641,10 +5641,14 @@ runtime expectation v2, all eleven metadata probes and independent final stage,
 source, file and typed-empty Python-source readbacks. Its standalone reader
 retains `candidateReviewed=false` and `actualRunApproved=false`; it cannot
 approve an actual run. Eight full-chain mocked controls pass; 20 source mutations
-and 14 independent packet counterexamples are detected. New entry,
-observer and job guards remain false. Next independently review fresh source,
-runtime-selection policy, request/workflow and one distinct hosted metadata
-event; audit its originals and review the resulting complete runtime candidate.
+and 14 independent packet counterexamples are detected. The separate review
+candidate enables only the staged metadata entry, observer and job. Its
+phase-specific control preserves both disabled refusal paths; eight affected
+mocked controls pass. It targets the existing PR645 branch for coordination and
+does not change that branch or admit an event by itself. Require final exact-head
+CI and reviewed skips, then independently rebind source12, the fresh request,
+runtime-selection policy and executing workflow before one distinct metadata
+event. Retain and audit its originals once, then review the complete candidate.
 Actual guards remain false. Runtime-expectation and actual argv adoption are a
 separate explicit follow-up, with affected clean guest qualification and every
 enabled final-head check required before source merge. The linked contract

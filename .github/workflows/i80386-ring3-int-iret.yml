@@ -209,9 +209,9 @@ jobs:
           include-hidden-files: false
           retention-days: 1
   # Separately versioned metadata candidate only, never actual approval.
-  # New source and job guards remain false until independent admission.
+  # Metadata source enabled; each event still requires separate admission.
   staged-runtime-inventory:
-    if: ${{ false && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-staged-runtime-inventory' && github.actor == 'CrispStrobe' && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ true && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-staged-runtime-inventory' && github.actor == 'CrispStrobe' && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:

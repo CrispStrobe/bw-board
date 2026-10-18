@@ -2509,7 +2509,7 @@ def verify_node_stage_observation(raw,expected):
     return {'schema':'bw.ring3.node-stage-admission.v1','stagedNodeObserved':True,'runtimeCandidate':False,'qualified':False,'boundary':dict(NODE_STAGE_BOUNDARY)}
 
 
-STAGED_RUNTIME_INVENTORY_ENABLED=False
+STAGED_RUNTIME_INVENTORY_ENABLED=True
 STAGED_EMPTY_PYTHON_SOURCES={'/usr/lib/python3.12/urllib/__init__.py':{'kind':'python-source-empty','bytes':0,'sha256':'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','mode':0o644,'owner':[0,0],'links':1}}
 STAGED_RUNTIME_PLATFORM=tuple('BW_RING3_STAGED_INVENTORY_REQUEST_SHA256' if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key for key in NODE_STAGE_PLATFORM)
 
