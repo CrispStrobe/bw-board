@@ -3,6 +3,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
+      - scripts/pr-backlog-current-source.py
+      - test/pr-backlog-current-source.test.py
       - 'scripts/i80386-retained-tool-source-controls/**'
       - '.github/workflows/i80386-retained-tool-source-controls.yml'
 concurrency:
@@ -40,7 +42,7 @@ jobs:
           trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > retained-tool-controls/status.txt' EXIT
           : > retained-tool-controls/control.stdout
           : > retained-tool-controls/control.stderr
-          timeout --signal=KILL 90s python3 -I -B scripts/i80386-retained-tool-source-controls/admit.py
+          timeout --signal=KILL 90s python3 -I -B scripts/pr-backlog-current-source.py retained-tool > retained-tool-controls/source.json
           phase=observer-controls
           timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-retained-tool-observer/observer-control.py > retained-tool-controls/control.stdout 2> retained-tool-controls/control.stderr
           phase=complete

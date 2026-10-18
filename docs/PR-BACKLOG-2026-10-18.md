@@ -74,6 +74,47 @@ remain intact. Two other initial failures were caused by editing during a
 clean-source test and macOS's `/tmp` alias; final controls require a committed
 clean checkout and canonical temporary directory. No native actual is rerun.
 
+## Current qualification follow-up
+
+PR650 is the combined source candidate. The owner's later PR645 checkpoint
+`f7d36a07` is also included by normal merge; its 205 inert runner controls and
+separate prerequisite/runtime reader controls require Linux qualification.
+The macOS runner-control attempt refuses because `os.getresuid` is unavailable;
+that is not a passing Linux execution result. Both execution guards and the
+additional runtime-inventory guard remain false.
+
+Thirteen historical diagnostic jobs admitted a narrow original PR delta before
+running pure mock controls. That source-event admission is not applicable to a
+combined branch with current master: the first hosted nursery mock job at
+`daa09495` failed its original six-path envelope. Historical admission programs,
+original source commits and actual-event paths remain preserved. The current
+mock jobs now use `scripts/pr-backlog-current-source.py`, which admits the real
+current own-repository PR event and mock job, verifies exact HEAD, refuses dirty
+or untracked source, and reads back a bounded inventory of committed source,
+tests, workflows and package manifests against Git blob identities. Its distinct
+report schema explicitly grants current unit-control evidence only; it cannot
+qualify an original event, compiler, native build, CPU run, guest or performance.
+All existing mock-control entrypoints/assertions still run. The actual jobs keep
+their original source admission and activation conditions; none was enabled.
+Six independent refusal/readback controls cover the new boundary.
+
+The user explicitly chose to preserve PR557's performance gate. Twelve address-
+decoding correctness tests pass against a local combined-source review, but
+that review is not promoted. The separate public code16 fixture result already
+recorded in X86-NEXT-LANES does not replace the original private application
+workload. Next, locate its original frozen inputs, baseline/candidate and
+measurement contract in the ignored local handoff; confirm eligibility without
+changing that contract; then obtain and independently audit the original paired
+CPU/wall observations. Require median CPU ratio >=1.03, all seven ratios >1,
+median wall ratio <=1.02 and exact semantic equality. If the frozen inputs or
+qualification are unavailable, leave #557 open and unadopted. Do not substitute
+a new microbenchmark, cherry-pick the CPU optimization or describe it as obsolete.
+
+Hosted full CI must pass at the final combined source before landing PR650.
+Then recheck live original heads, prove each is an ancestor of remote master,
+and retire only incorporated drafts with a backlink and surviving limitations.
+Keep any newly advanced owner head open until it too is incorporated.
+
 ## Initial PR inventory
 
 Heads and base branches identify the original intake, not future authority.

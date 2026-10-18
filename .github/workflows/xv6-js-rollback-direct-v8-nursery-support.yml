@@ -4,6 +4,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
     paths:
+      - scripts/pr-backlog-current-source.py
+      - test/pr-backlog-current-source.test.py
       - scripts/xv6-js-rollback-direct-v8-nursery-support/**
       - .github/workflows/xv6-js-rollback-direct-v8-nursery-support.yml
 
@@ -49,7 +51,7 @@ jobs:
           test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
           git --no-replace-objects cat-file -e 79f1f13b6037265785e18342ca06b04eec2ab475^{commit}
           git --no-replace-objects merge-base --is-ancestor 79f1f13b6037265785e18342ca06b04eec2ab475 HEAD
-          timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8-nursery-support/source.py "$evidence/source.json" > "$evidence/source.stdout" 2> "$evidence/source.stderr"
+          timeout 30s python3 -I -B scripts/pr-backlog-current-source.py nursery-support > "$evidence/source.json" 2> "$evidence/source.stderr"
           phase=mock-controls
           for script in source-control.py grade-control.py control.py inventory-control.py; do
             timeout --signal=TERM --kill-after=5s 30s python3 -B "scripts/xv6-js-rollback-direct-v8-nursery-support/$script" >> "$evidence/control.stdout" 2>> "$evidence/control.stderr"

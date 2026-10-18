@@ -4,6 +4,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
     paths:
+      - scripts/pr-backlog-current-source.py
+      - test/pr-backlog-current-source.test.py
       - scripts/i80386-cwsdpmi-0501-post-pf-connected/**
       - .github/workflows/i80386-cwsdpmi-0501-post-pf-connected.yml
 
@@ -62,7 +64,7 @@ jobs:
           test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
           git --no-replace-objects cat-file -e 3bd7b09cc01f02bd99f2c3b4d72b982d1f511f77^{commit}
           git --no-replace-objects merge-base --is-ancestor 3bd7b09cc01f02bd99f2c3b4d72b982d1f511f77 HEAD
-          timeout --signal=TERM --kill-after=5s 30s python3 -B scripts/i80386-cwsdpmi-0501-post-pf-connected/source.py "$BW_EXPECTED_HEAD" "$e/source-before.json"
+          timeout --signal=TERM --kill-after=5s 30s python3 -I -B scripts/pr-backlog-current-source.py post-pf > "$e/source-before.json"
           phase=source-controls
           timeout --signal=TERM --kill-after=5s 20s python3 -B scripts/i80386-cwsdpmi-0501-post-pf-connected/source-control.py > "$e/source-control.stdout" 2> "$e/source-control.stderr"
           phase=orchestration-controls

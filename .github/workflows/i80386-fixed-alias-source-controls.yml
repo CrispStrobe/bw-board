@@ -3,6 +3,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
+      - scripts/pr-backlog-current-source.py
+      - test/pr-backlog-current-source.test.py
       - 'scripts/i80386-fixed-alias-source-controls/**'
       - '.github/workflows/i80386-fixed-alias-source-controls.yml'
 concurrency:
@@ -40,7 +42,7 @@ jobs:
           trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > fixed-alias-controls/status.txt' EXIT
           : > fixed-alias-controls/control.stdout
           : > fixed-alias-controls/control.stderr
-          timeout --signal=KILL 90s python3 -I -B scripts/i80386-fixed-alias-source-controls/admit.py
+          timeout --signal=KILL 90s python3 -I -B scripts/pr-backlog-current-source.py fixed-alias > fixed-alias-controls/source.json
           phase=fixed-alias-controls
           timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-fixed-alias-materializer/materialize-control.py > fixed-alias-controls/control.stdout 2> fixed-alias-controls/control.stderr
           phase=complete

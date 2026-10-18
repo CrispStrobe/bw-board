@@ -3,6 +3,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
+      - scripts/pr-backlog-current-source.py
+      - test/pr-backlog-current-source.test.py
       - scripts/i80386-cwsdpmi-0501-boundary-receipts/tool-boundary.py
       - scripts/i80386-cwsdpmi-0501-boundary-receipts/tool-boundary-control.py
       - scripts/i80386-cwsdpmi-0501-boundary-receipts/README.md
@@ -40,28 +42,7 @@ jobs:
           mkdir "$e"
           phase=source-admission
           trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$e/status.txt"' EXIT
-          python3 -B - "$e/source.json" <<'PY'
-          import hashlib,json,os,pathlib,subprocess,sys
-          head=os.environ['EXPECTED_HEAD']
-          base='e1f44e70bd21e4f3b146d0c0e00da141eb045182'
-          paths=['scripts/i80386-cwsdpmi-0501-boundary-receipts/tool-boundary.py', 'scripts/i80386-cwsdpmi-0501-boundary-receipts/tool-boundary-control.py', 'scripts/i80386-cwsdpmi-0501-boundary-receipts/README.md', '.github/workflows/i80386-tool-boundary-source.yml', 'LANES.md']
-          held={'scripts/i80386-cwsdpmi-compile-only/compile.py': '959931875f090164b2a0d34f07f6eb1b06940d0f34c1ef6c2f7e8c903f87ac51'}
-          def git(*args):return subprocess.check_output(['git','--no-replace-objects',*args])
-          if git('rev-parse','HEAD').decode().strip()!=head:raise ValueError('exact source head')
-          subprocess.run(['git','--no-replace-objects','merge-base','--is-ancestor',base,'HEAD'],check=True)
-          changed=git('diff','--name-only',base,'HEAD').decode().splitlines()
-          if not set(changed)<=set(paths):raise ValueError('declared source envelope')
-          roles={}
-          for name in paths:
-           raw=git('show','HEAD:'+name)
-           if pathlib.Path(name).read_bytes()!=raw:raise ValueError('worktree source differs')
-           roles[name]=hashlib.sha256(raw).hexdigest()
-          for name,digest in held.items():
-           raw=git('show','HEAD:'+name)
-           if hashlib.sha256(raw).hexdigest()!=digest or pathlib.Path(name).read_bytes()!=raw:raise ValueError('held source changed')
-           roles[name]=digest
-          pathlib.Path(sys.argv[1]).write_text(json.dumps({'schema':'bw.x86-finite-source-controls.v1','head':head,'base':base,'roles':roles,'qualification':'SOURCE_CONTROLS_ONLY_NO_COMPILER_CPU_GUEST_OR_PERFORMANCE'},sort_keys=True)+'\n')
-          PY
+          python3 -I -B scripts/pr-backlog-current-source.py tool-boundary > "$e/source.json"
           phase=pure-controls
           timeout --signal=TERM --kill-after=5s 60s python3 -B scripts/i80386-cwsdpmi-0501-boundary-receipts/tool-boundary-control.py > "$e/control.stdout" 2> "$e/control.stderr"
           phase=complete

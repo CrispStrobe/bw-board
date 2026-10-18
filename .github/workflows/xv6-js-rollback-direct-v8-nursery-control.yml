@@ -4,6 +4,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
+      - scripts/pr-backlog-current-source.py
+      - test/pr-backlog-current-source.test.py
       - scripts/xv6-js-rollback-direct-v8-target-site-nursery/**
       - .github/workflows/xv6-js-rollback-direct-v8-nursery-control.yml
 
@@ -35,7 +37,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Admit six new paths and run synthetic nursery control
+      - name: Admit current integrated source and run synthetic nursery control
         shell: bash
         run: |
           set -euo pipefail
@@ -52,7 +54,7 @@ jobs:
           production_sha=42e8314138241c6cfd29d769b4e9913b7dc69c31487d561af7359f4a44945fdf
           node_bin="$(command -v node)"
           {
-            printf 'schema=bw.direct-v8-nursery-control.source.v1\n'
+            printf 'schema=bw.direct-v8-nursery-integrated-control.source.v1\n'
             printf 'expected_head=%s\nbase=%s\n' "$BW_EXPECTED_HEAD" "$base"
             printf 'observed_head=%s\n' "$(git --no-replace-objects rev-parse HEAD)"
             printf 'production_sha256=%s\n' "$(sha256sum "$production" | cut -d' ' -f1)"
@@ -65,9 +67,7 @@ jobs:
           test -z "$(git --no-replace-objects status --porcelain)"
           test "$(git --no-replace-objects cat-file -t "$base")" = commit
           git --no-replace-objects merge-base --is-ancestor "$base" HEAD
-          actual="$(git --no-replace-objects diff --name-only --no-renames "$base" HEAD)"
-          expected="$(printf '%s\n' "$workflow" scripts/xv6-js-rollback-direct-v8-target-site-nursery/{README.md,admission.mjs,case.mjs,control.mjs,policy.mjs})"
-          test "$actual" = "$expected"
+          python3 -I -B scripts/pr-backlog-current-source.py nursery-mock >> "$e/source.txt"
           test "$(git --no-replace-objects show "$base:$production" | sha256sum | cut -d' ' -f1)" = "$production_sha"
           test "$(sha256sum "$production" | cut -d' ' -f1)" = "$production_sha"
           phase=mock-control

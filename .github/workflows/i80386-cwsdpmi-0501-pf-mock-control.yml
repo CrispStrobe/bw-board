@@ -4,6 +4,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
+      - scripts/pr-backlog-current-source.py
+      - test/pr-backlog-current-source.test.py
       - scripts/i80386-cwsdpmi-0501-pf-connected/orchestration-control.mjs
       - .github/workflows/i80386-cwsdpmi-0501-pf-mock-control.yml
 
@@ -35,7 +37,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Admit exact two-path correction and run CPU-free mock
+      - name: Admit current integrated source and run CPU-free mock
         shell: bash
         run: |
           set -euo pipefail
@@ -52,7 +54,7 @@ jobs:
           production_sha=10f406264e8fb828259a3e7af008f777d68564010a965dc83c551a0cec9dfa7b
           node_bin="$(command -v node)"
           {
-            printf 'schema=bw.cwsdpmi-0501-pf-mock-control.source.v1\n'
+            printf 'schema=bw.cwsdpmi-0501-pf-mock-integrated-control.source.v1\n'
             printf 'expected_head=%s\nbase=%s\n' "$BW_EXPECTED_HEAD" "$base"
             printf 'observed_head=%s\n' "$(git --no-replace-objects rev-parse HEAD)"
             printf 'production_sha256=%s\n' "$(sha256sum "$production" | cut -d' ' -f1)"
@@ -64,9 +66,7 @@ jobs:
           test -z "$(git --no-replace-objects status --porcelain)"
           test "$(git --no-replace-objects cat-file -t "$base")" = commit
           git --no-replace-objects merge-base --is-ancestor "$base" HEAD
-          actual="$(git --no-replace-objects diff --name-only --no-renames "$base" HEAD)"
-          expected="$(printf '%s\n' "$workflow" "$control")"
-          test "$actual" = "$expected"
+          python3 -I -B scripts/pr-backlog-current-source.py pf-mock >> "$e/source.txt"
           test "$(git --no-replace-objects show "$base:$production" | sha256sum | cut -d' ' -f1)" = "$production_sha"
           test "$(sha256sum "$production" | cut -d' ' -f1)" = "$production_sha"
           phase=mock-control

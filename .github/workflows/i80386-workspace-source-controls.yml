@@ -3,6 +3,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
+      - scripts/pr-backlog-current-source.py
+      - test/pr-backlog-current-source.test.py
       - 'scripts/i80386-workspace-source-controls/**'
       - '.github/workflows/i80386-workspace-source-controls.yml'
 concurrency:
@@ -36,13 +38,14 @@ jobs:
           ulimit -c 0
           ulimit -f 64
           mkdir workspace-controls
+          python3 -I -B test/pr-backlog-current-source.test.py
           phase=source-admission
           trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > workspace-controls/status.txt' EXIT
           for unit in phase route writer creator; do
             : > "workspace-controls/$unit.stdout"
             : > "workspace-controls/$unit.stderr"
           done
-          timeout --signal=KILL 90s python3 -I -B scripts/i80386-workspace-source-controls/admit.py
+          timeout --signal=KILL 90s python3 -I -B scripts/pr-backlog-current-source.py workspace > workspace-controls/source.json
           phase=phase-controls
           timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-compile-tool-boundary/boundary-owner-control.py > workspace-controls/phase.stdout 2> workspace-controls/phase.stderr
           phase=route-controls

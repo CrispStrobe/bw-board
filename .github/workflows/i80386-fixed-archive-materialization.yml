@@ -3,6 +3,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
     paths:
+      - scripts/pr-backlog-current-source.py
+      - test/pr-backlog-current-source.test.py
       - 'scripts/i80386-fixed-archive-materialization-hosted/**'
       - 'scripts/i80386-cwsdpmi-archive-refusal-diagnostic/**'
       - 'scripts/i80386-cwsdpmi-gnu-longname-materializer/**'
@@ -44,7 +46,7 @@ jobs:
           trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > fixed-archive-materialization/status.txt' EXIT
           : > fixed-archive-materialization/control.stdout
           : > fixed-archive-materialization/control.stderr
-          timeout --signal=KILL 90s python3 -I -B scripts/i80386-fixed-archive-materialization-hosted/admit.py controls
+          timeout --signal=KILL 90s python3 -I -B scripts/pr-backlog-current-source.py fixed-archive > fixed-archive-materialization/source-before.json
           phase=manufactured-controls
           timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-gnu-longname-materializer/materialize-control.py > fixed-archive-materialization/control.stdout 2> fixed-archive-materialization/control.stderr
           phase=complete
