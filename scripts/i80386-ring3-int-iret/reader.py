@@ -6,12 +6,16 @@ this reader. Manufactured controls exercise predicates; they confer no actual
 run/source/runtime authority.
 """
 import argparse
+import base64
 import hashlib
 import io
 import json
+import os
 import posixpath
 import re
 import struct
+import stat
+import sys
 import zipfile
 from pathlib import Path
 
@@ -493,7 +497,444 @@ def verify_artifact(raw, external):
             'hardwareIrqQualified': False, 'generalDpmiQualified': False, 'performanceQualified': False}
 
 
+SETUP_ROLES=('enclosing','controller','js','qemu','preparation')
+SETUP_INPUTS=('request.original.json','event.original.json','runtime-expectation.json','launch-plan.json','installation.original.json')
+SETUP_LIMITS={'cpu.max':'100000 100000','memory.max':'1073741824','memory.swap.max':'0','pids.max':'64'}
+SETUP_READS=tuple(SETUP_LIMITS)+('cgroup.type','cgroup.procs','pids.current','cgroup.events',
+    'memory.events','cpu.stat','memory.current','memory.peak')
+SETUP_OBSERVATION_CAP=16384
+SETUP_SOURCE_PATHS=frozenset(('LICENSE package.json src/experimental/i80386.js .github/workflows/i80386-ring3-int-iret.yml '
+    'docs/I80386-RING3-INT-IRET-RESULTS.md test/i80386-ring3-int-iret.test.mjs').split())|{
+    'scripts/i80386-ring3-int-iret/'+name for name in ('fixture.mjs','probe.mjs','run.py','reader.py','controls.py','README.md')}
+
+
+def canonical(value):
+    return (json.dumps(value,sort_keys=True,separators=(',', ':'),allow_nan=False)+'\n').encode()
+
+
+def setup_environment(environ):
+    run=environ.get('GITHUB_RUN_ID');attempt=environ.get('GITHUB_RUN_ATTEMPT')
+    need(type(run) is str and re.fullmatch('[1-9][0-9]{0,19}',run) and attempt=='1','first official setup run')
+    for name,size in (('BW_EXPECTED_HEAD',40),('BW_EXPECTED_TREE',40),('BW_RING3_APPROVED_REQUEST_SHA256',64)):
+        digest(environ.get(name),size)
+    ids=[]
+    for name in ('SUDO_UID','SUDO_GID'):
+        value=environ.get(name);need(type(value) is str and re.fullmatch('[1-9][0-9]{0,9}',value) and int(value)<2**31,'positive setup invoker')
+        ids.append(int(value))
+    return run,ids
+
+
+def setup_metadata(info):
+    return [getattr(info,'st_'+name) for name in ('dev','ino','mode','uid','gid','nlink','size','mtime_ns')]
+
+
+def setup_membership(raw,run):
+    need(type(raw) is str and len(raw.encode('ascii'))<=4096 and raw.startswith('0::/') and raw.endswith('\n') and raw.count('\n')==1,
+         'bounded canonical unified membership')
+    path=raw[3:-1];parts=path[1:].split('/') if path!='/' else []
+    need(all(part not in ('','.','..') and re.fullmatch('[A-Za-z0-9_.:@+-]+',part) for part in parts),'canonical membership components')
+    name='bw-ring3-'+run+'-1'
+    need(all(path!='/'+group and not path.startswith('/'+group+'/') for group in (name,name+'-preparation')),'outside both resource trees')
+
+
+def setup_proc_read(path):
+    need(path in ('/proc/self/cgroup','/proc/self/status'),'two fixed observer proc inputs')
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK);first=None;raw=bytearray()
+    try:
+        before=os.fstat(fd);need(stat.S_ISREG(before.st_mode),'regular fixed proc input')
+        while True:
+            chunk=os.read(fd,min(4096,4097-len(raw)))
+            if not chunk:break
+            raw.extend(chunk);need(len(raw)<=4096,'fixed proc byte cap')
+        need(setup_metadata(os.fstat(fd))==setup_metadata(before) and
+             setup_metadata(os.stat(path,follow_symlinks=False))==setup_metadata(before),'stable fixed proc descriptor/path identity')
+    except BaseException as error:first=error
+    finally:
+        try:os.close(fd)
+        except BaseException as error:
+            if first is None:first=error
+            else:first.setup_secondary=getattr(first,'setup_secondary',[])+[{'phase':'proc-close','name':type(error).__name__,'message':str(error)}]
+    if first is not None:raise first
+    return bytes(raw).decode('ascii')
+
+
+def observe_hosted_setup(environ):
+    """Independent readonly implementation; never imports producer setup code.
+
+    Each held descriptor is compared with its named path. This is one finite
+    observation, not a root ownership lease or a runtime/guest approval.
+    """
+    result={'schema':'bw.ring3.setup-observation.v1','inputs':{},'source':{},'directories':{},'parent':{},'firstFailure':None,'secondary':[]}
+    descriptors=[]
+    def failed(error,phase):
+        value={'phase':phase,'name':type(error).__name__,'message':str(error)}
+        if result['firstFailure'] is None:result['firstFailure']=value
+        else:result['secondary'].append(value)
+        result['secondary'].extend(getattr(error,'setup_secondary',[]))
+    def attempt(phase,operation):
+        try:return operation()
+        except BaseException as error:failed(error,phase)
+    def directory(path,owner):
+        need(path.resolve(strict=True)==path,'canonical observer directory')
+        fd=os.open(path,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK);descriptors.append(fd)
+        info=os.fstat(fd)
+        need(stat.S_ISDIR(info.st_mode) and (info.st_uid,info.st_gid)==tuple(owner) and info.st_mode&0o022==0 and
+             setup_metadata(info)==setup_metadata(path.lstat()),'observer held directory owner/mode/path')
+        return fd,setup_metadata(info)
+    def held_item(opened,fd,name,target,cap,metadata_only=False,installed=False,source=False):
+        before=os.fstat(opened)
+        target['meta']=setup_metadata(before)
+        need(stat.S_ISREG(before.st_mode) and before.st_mode&0o022==0,'observer regular nondelegated-write mode')
+        need(setup_metadata(os.stat(name,dir_fd=fd,follow_symlinks=False))==target['meta'],'observer file name/held identity')
+        if installed:
+            need((before.st_uid,before.st_gid)==(0,0) and stat.S_IMODE(before.st_mode)==0o444 and before.st_nlink==1 and
+                 0<before.st_size<=cap,'observer root readonly installed original')
+        if not metadata_only:
+            raw=bytearray()
+            while True:
+                chunk=os.read(opened,min(65536,cap+1-len(raw)))
+                if not chunk:break
+                raw.extend(chunk)
+                target.update({'bytes':len(raw),'sha256':sha(raw)} if installed or source else {'raw':bytes(raw).decode('ascii')})
+                need(len(raw)<=cap,'observer fixed read cap')
+            if installed or source:need(len(raw)==before.st_size,'observer hashed input/source extent')
+            else:target.setdefault('raw','')
+            if source:target['blob']=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()
+        need(setup_metadata(os.fstat(opened))==target['meta'] and
+             setup_metadata(os.stat(name,dir_fd=fd,follow_symlinks=False))==target['meta'],'observer file readback identity')
+        need(len(canonical(result))<=SETUP_OBSERVATION_CAP-1024,'observer original stdout cap reservation')
+    def item(fd,name,target,cap,metadata_only=False,installed=False,source=False):
+        flags=(os.O_PATH if metadata_only else os.O_RDONLY)|os.O_NOFOLLOW|os.O_NONBLOCK
+        opened=os.open(name,flags,dir_fd=fd);first=None
+        try:held_item(opened,fd,name,target,cap,metadata_only,installed,source)
+        except BaseException as error:first=error
+        finally:
+            try:os.close(opened)
+            except BaseException as error:
+                if first is None:first=error
+                else:first.setup_secondary=getattr(first,'setup_secondary',[])+[{'phase':'observer-file-close','name':type(error).__name__,'message':str(error)}]
+        if first is not None:raise first
+    try:
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root readonly setup observer')
+        run,invoker=setup_environment(environ);name='bw-ring3-'+run+'-1'
+        result.update(runId=run,attempt=1,head=environ['BW_EXPECTED_HEAD'],tree=environ['BW_EXPECTED_TREE'],
+            requestSha256=environ['BW_RING3_APPROVED_REQUEST_SHA256'],invoker=invoker)
+        result['membership']=setup_proc_read('/proc/self/cgroup');setup_membership(result['membership'],run)
+        checkout=Path.cwd();checkoutfd,_=directory(checkout,invoker)
+        for filename in sorted(SETUP_SOURCE_PATHS):
+            target={};result['source'][filename]=target
+            def source_item(filename=filename,target=target):
+                path=checkout/filename;need(path.resolve(strict=True)==path,'canonical independent source path')
+                item(checkoutfd,filename,target,4<<20,source=True)
+                need(path.resolve(strict=True)==path,'independent source path readback')
+            attempt('source-'+filename,source_item)
+        for path in (Path('/'),Path('/run')):directory(path,(0,0))
+        installed=Path('/run')/(name+'-admission');fd,meta=directory(installed,(0,0));result['installationDirectory']=meta
+        for filename in SETUP_INPUTS:
+            target={};result['inputs'][filename]=target
+            attempt('installed-'+filename,lambda filename=filename,target=target:item(fd,filename,target,1<<20,installed=True))
+        base=Path('/sys/fs/cgroup');basefd,meta=directory(base,(0,0));result['parent']={'meta':meta,'controls':{}}
+        for filename in ('cgroup.controllers','cgroup.subtree_control'):
+            target={};result['parent']['controls'][filename]=target
+            attempt('parent-'+filename,lambda filename=filename,target=target:item(basefd,filename,target,4096))
+        for role in SETUP_ROLES:
+            path=base/(name+'-preparation') if role=='preparation' else base/name if role=='enclosing' else base/name/role
+            target={'controls':{}};result['directories'][role]=target
+            opened=attempt('directory-'+role,lambda path=path,role=role:directory(path,(0,0) if role=='preparation' else invoker))
+            if opened is None:continue
+            fd,meta=opened;target['meta']=meta
+            filenames=SETUP_READS+(('cgroup.subtree_control',) if role=='enclosing' else ())+(('cgroup.kill',) if role in ('js','qemu') else ())
+            for filename in filenames:
+                control={};target['controls'][filename]=control
+                attempt(role+'-'+filename,lambda filename=filename,control=control:item(fd,filename,control,4096,filename=='cgroup.kill'))
+            attempt('directory-readback-'+role,lambda path=path,fd=fd,meta=meta:need(
+                setup_metadata(os.fstat(fd))==meta and setup_metadata(path.lstat())==meta and path.resolve(strict=True)==path,
+                'observer directory readback identity'))
+    except BaseException as error:failed(error,'setup-observer')
+    finally:
+        for fd in reversed(descriptors):
+            try:os.close(fd)
+            except BaseException as error:failed(error,'setup-observer-close')
+    if result['firstFailure'] is None:
+        try:verify_setup_observation(result,prerequisite_expected(environ))
+        except BaseException as error:failed(error,'setup-observer-policy')
+    raw=canonical(result)
+    if len(raw)>SETUP_OBSERVATION_CAP:
+        # The child still fails. No truncated/missing snapshot is positive
+        # evidence; the outside collector retains the exact bounded prefix.
+        return raw[:SETUP_OBSERVATION_CAP],False
+    return raw,result['firstFailure'] is None and result['secondary']==[]
+
+
+def verify_setup_observation(value,expected):
+    keys(value,'schema inputs source directories parent firstFailure secondary runId attempt head tree requestSha256 invoker membership installationDirectory')
+    need(value['schema']=='bw.ring3.setup-observation.v1' and value['firstFailure'] is None and value['secondary']==[],
+         'complete failure-free independent observer')
+    for key in ('runId','attempt','head','tree','requestSha256','invoker'):
+        need(equal(value[key],expected[key]),'observer external '+key+' join')
+    setup_membership(value['membership'],expected['runId'])
+    def metadata(row,owner,kind,device=None):
+        need(type(row) is list and len(row)==8 and all(type(x) is int and x>=0 for x in row) and row[0]>0 and row[1]>0 and
+             stat.S_IFMT(row[2])==kind and row[2]&0o022==0 and row[3:5]==owner and
+             (device is None or row[0]==device),'independent observed metadata policy')
+        return tuple(row[:2])
+    metadata(value['installationDirectory'],[0,0],stat.S_IFDIR)
+    need(type(value['source']) is dict and set(value['source'])==SETUP_SOURCE_PATHS,'independent twelve-file source observations')
+    for row in value['source'].values():
+        keys(row,'meta bytes sha256 blob');metadata(row['meta'],expected['invoker'],stat.S_IFREG)
+        need(stat.S_IMODE(row['meta'][2])==0o644 and integer(row['bytes'],0,4<<20)==row['meta'][6],'observed source mode/extent')
+        digest(row['sha256']);digest(row['blob'],40)
+    need(type(value['inputs']) is dict and set(value['inputs'])==set(SETUP_INPUTS),'all independent installed inputs')
+    for name,row in value['inputs'].items():
+        keys(row,'meta bytes sha256');metadata(row['meta'],[0,0],stat.S_IFREG)
+        need(stat.S_IMODE(row['meta'][2])==0o444 and row['meta'][5]==1 and
+             integer(row['bytes'],1,CAPS['jsonBytes'])==row['meta'][6],'independent readonly input extent')
+        digest(row['sha256'])
+    need(value['inputs']['request.original.json']['sha256']==expected['requestSha256'],'independent request pin observation')
+    parent=value['parent'];keys(parent,'meta controls');metadata(parent['meta'],[0,0],stat.S_IFDIR);device=parent['meta'][0]
+    need(set(parent['controls'])=={'cgroup.controllers','cgroup.subtree_control'},'only required readonly shared-parent controls')
+    for row in parent['controls'].values():
+        keys(row,'meta raw');metadata(row['meta'],[0,0],stat.S_IFREG,device)
+        need(type(row['raw']) is str and {'cpu','memory','pids'}<=set(row['raw'].split()),'parent controllers already enabled')
+    need(type(value['directories']) is dict and set(value['directories'])==set(SETUP_ROLES),'all five independent resources')
+    identities=set()
+    for role,row in value['directories'].items():
+        keys(row,'controls meta');owner=[0,0] if role=='preparation' else expected['invoker']
+        identity=metadata(row['meta'],owner,stat.S_IFDIR,device)
+        need(identity not in identities,'five distinct independently observed resources');identities.add(identity)
+        files=set(SETUP_READS)|({'cgroup.subtree_control'} if role=='enclosing' else set())|({'cgroup.kill'} if role in ('js','qemu') else set())
+        need(type(row['controls']) is dict and set(row['controls'])==files,'fixed resource observation controls')
+        for filename,control in row['controls'].items():
+            keys(control,'meta' if filename=='cgroup.kill' else 'meta raw')
+            delegated=(role=='enclosing' and filename=='cgroup.procs') or (role in ('js','qemu') and filename in ('cgroup.procs','cgroup.kill'))
+            metadata(control['meta'],expected['invoker'] if delegated else [0,0],stat.S_IFREG,device)
+            if delegated:need(control['meta'][2]&0o200!=0,'minimum owner-write migration/kill delegation')
+            if filename!='cgroup.kill':need(type(control['raw']) is str and len(control['raw'].encode('ascii'))<=4096,'bounded raw control original')
+        controls=row['controls']
+        need(all(controls[key]['raw'].strip()==item for key,item in SETUP_LIMITS.items()),'independently observed fixed caps')
+        need(controls['cgroup.type']['raw'].strip()=='domain' and controls['cgroup.procs']['raw']=='' and
+             controls['pids.current']['raw']=='0\n','independently observed empty domain resource')
+        events=counters(controls['cgroup.events']['raw']);need(events.get('populated')==0 and events.get('frozen')==0,'empty unfrozen hierarchical resource')
+        memory=counters(controls['memory.events']['raw']);need({'oom','oom_kill'}<=set(memory) and all(v==0 for k,v in memory.items() if k.startswith('oom')),
+             'no independent setup OOM events')
+        need({'usage_usec','user_usec','system_usec'}<=set(counters(controls['cpu.stat']['raw'])),'raw CPU counters retained')
+        for filename in ('memory.current','memory.peak'):
+            need(controls[filename]['raw'].strip().isdigit() and int(controls[filename]['raw'].strip())<=1<<30,'bounded setup memory observations')
+        if role=='enclosing':need(set(controls['cgroup.subtree_control']['raw'].split())=={'cpu','memory','pids'},'root-owned manual controller enablement')
+    return {'device':value['directories']['preparation']['meta'][0],'inode':value['directories']['preparation']['meta'][1]}
+
+
+def prerequisite_expected(environ):
+    run,invoker=setup_environment(environ)
+    return {'schema':'bw.ring3.prerequisite-expectation.v1','runId':run,'attempt':1,'head':environ['BW_EXPECTED_HEAD'],
+        'tree':environ['BW_EXPECTED_TREE'],'requestSha256':environ['BW_RING3_APPROVED_REQUEST_SHA256'],'invoker':invoker}
+
+
+def prerequisite_original(raw):
+    value=parse(raw);keys(value,'bytes sha256 base64')
+    need(type(value['base64']) is str,'encoded prerequisite original')
+    data=base64.b64decode(value['base64'],validate=True)
+    need(base64.b64encode(data).decode()==value['base64'] and integer(value['bytes'],0,CAPS['jsonBytes'])==len(data) and
+         digest(value['sha256'])==sha(data),'exact prerequisite original wrapper')
+    return data
+
+
+def verify_prerequisites(originals,expected):
+    """New observation-only version. Never returns a guest admission verdict."""
+    keys(expected,'schema runId attempt head tree requestSha256 invoker')
+    need(expected['schema']=='bw.ring3.prerequisite-expectation.v1' and type(expected['attempt']) is int and expected['attempt']==1 and
+         type(expected['runId']) is str and re.fullmatch('[1-9][0-9]{0,19}',expected['runId']) and
+         type(expected['invoker']) is list and len(expected['invoker'])==2 and all(type(x) is int and 0<x<2**31 for x in expected['invoker']),
+         'external prerequisite expectation shape')
+    for key,size in (('head',40),('tree',40),('requestSha256',64)):digest(expected[key],size)
+    need(type(originals) is dict and set(originals)==set(SETUP_INPUTS)|{'setup.observer.json','prerequisite.outer.json'},'closed prerequisite original set')
+    need(all(type(raw) is bytes and len(raw)<=CAPS['jsonBytes'] for raw in originals.values()) and
+         sum(map(len,originals.values()))<=5<<20,'unchanged prerequisite original caps')
+    request_raw=originals['request.original.json'];need(sha(request_raw)==expected['requestSha256'],'external pre-label request pin')
+    request=parse(request_raw);keys(request,'schema repository pullRequest head tree source runtime')
+    need(request_raw==canonical(request) and request['schema']=='bw.ring3.approval-request.v1' and request['repository']=='CrispStrobe/bw-board' and
+         type(request['pullRequest']) is int and request['pullRequest']>0 and request['head']==expected['head'] and request['tree']==expected['tree'],
+         'approved source/repository/PR bindings')
+    source_raw=prerequisite_original(canonical(request['source']));source=parse(source_raw)
+    keys(source,'schema head tree files');need(source_raw==canonical(source) and source['schema']=='bw.ring3.source.v1' and
+         source['head']==expected['head'] and source['tree']==expected['tree'],'approved source original')
+    roster=set(('LICENSE package.json src/experimental/i80386.js .github/workflows/i80386-ring3-int-iret.yml '
+        'docs/I80386-RING3-INT-IRET-RESULTS.md test/i80386-ring3-int-iret.test.mjs').split())|{
+        'scripts/i80386-ring3-int-iret/'+name for name in ('fixture.mjs','probe.mjs','run.py','reader.py','controls.py','README.md')}
+    need(type(source['files']) is dict and set(source['files'])==roster,'approved twelve-file roster')
+    for row in source['files'].values():
+        keys(row,'bytes sha256 mode blob');integer(row['bytes'],0,4<<20);digest(row['sha256']);digest(row['blob'],40);need(row['mode']=='100644','approved regular source mode')
+    descriptor=request['runtime'];keys(descriptor,'commit tree path blob mode bytes sha256')
+    for key,size in (('commit',40),('tree',40),('blob',40),('sha256',64)):digest(descriptor[key],size)
+    runtime=originals['runtime-expectation.json']
+    need(descriptor['path']=='ring3-runtime-expectation.json' and descriptor['mode']=='100644' and
+         integer(descriptor['bytes'],1,256<<10)==len(runtime) and sha(runtime)==descriptor['sha256'] and
+         hashlib.sha1(b'blob '+str(len(runtime)).encode()+b'\0'+runtime).hexdigest()==descriptor['blob'],'approved opaque runtime input')
+    event=parse(originals['event.original.json']);pr=event.get('pull_request',{})
+    need(event.get('action')=='labeled' and event.get('number')==request['pullRequest'] and type(event.get('number')) is int and
+         event.get('repository',{}).get('full_name')=='CrispStrobe/bw-board' and event.get('sender',{}).get('login')=='CrispStrobe' and
+         event.get('label',{}).get('name')==LABEL and pr.get('number')==request['pullRequest'] and type(pr.get('number')) is int and
+         pr.get('state')=='open' and pr.get('head',{}).get('sha')==expected['head'] and
+         pr.get('head',{}).get('repo',{}).get('full_name')=='CrispStrobe/bw-board' and pr.get('head',{}).get('repo',{}).get('fork') is False and
+         pr.get('base',{}).get('ref')=='master' and pr.get('base',{}).get('repo',{}).get('full_name')=='CrispStrobe/bw-board','immutable event joins')
+    body=pr.get('body');start='<!-- BW_RING3_ACTUAL_REQUEST_V1\n';end='\nBW_RING3_ACTUAL_REQUEST_V1 -->'
+    need(type(body) is str and body.count(start)==1 and body.count(end)==1 and body.index(start)<body.index(end),'one immutable request block')
+    block=body.split(start,1)[1].split(end,1)[0];wrapper=parse(block.encode())
+    need(canonical(wrapper).decode().rstrip('\n')==block and prerequisite_original(canonical(wrapper))==request_raw,'event request original join')
+    plan_raw=originals['launch-plan.json'];plan=parse(plan_raw);keys(plan,'schema runId attempt head tree source')
+    need(plan_raw==canonical(plan) and plan=={'schema':'bw.ring3.launch-plan.v1','runId':expected['runId'],'attempt':1,
+        'head':expected['head'],'tree':expected['tree'],'source':request['source']} and type(plan['attempt']) is int,'dynamic delivery plan joins approved source')
+    installation=parse(originals['installation.original.json'])
+    keys(installation,'schema runId attempt requestSha256 launchPlanSha256 files directory ancestors observations')
+    need(installation['schema']=='bw.ring3.installation-envelope.v1' and installation['runId']==expected['runId'] and
+         type(installation['attempt']) is int and installation['attempt']==1 and installation['requestSha256']==expected['requestSha256'] and
+         installation['launchPlanSha256']==sha(plan_raw),'installation delivery hashes')
+    need(set(installation['files'])==set(SETUP_INPUTS)-{'installation.original.json'},'installed four original identities')
+    for name,row in installation['files'].items():
+        keys(row,'identity bytes sha256');need(type(row['bytes']) is int and row['bytes']==len(originals[name]) and row['sha256']==sha(originals[name]),'installation exact original bytes/hash')
+    observer=parse(originals['setup.observer.json']);keys(observer,'schema process stdout stderr')
+    need(observer['schema']=='bw.ring3.setup-observer-original.v1','separate observer process original')
+    process=observer['process'];keys(process,'schema role argv cwdRole environment pid pgid parentPid startTicks spawnMonoNs reapMonoNs exitCode signal waitStatus timedOut rusage firstFailure secondary')
+    expected_environment={'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin','GITHUB_RUN_ID':expected['runId'],
+        'GITHUB_RUN_ATTEMPT':'1','BW_EXPECTED_HEAD':expected['head'],'BW_EXPECTED_TREE':expected['tree'],
+        'BW_RING3_APPROVED_REQUEST_SHA256':expected['requestSha256'],'SUDO_UID':str(expected['invoker'][0]),'SUDO_GID':str(expected['invoker'][1])}
+    need(process['schema']=='bw.ring3.process.v1' and process['role']=='discovery' and process['cwdRole']=='checkout' and
+         equal(process['environment'],expected_environment),'closed independent observer descriptor environment')
+    integer(process['pid'],1);integer(process['pgid'],1);integer(process['parentPid'],1);integer(process['startTicks'],1)
+    need(process['pgid']==process['pid'] and process['pid']!=process['parentPid'],'fresh independently observed process identity')
+    start=integer(process['spawnMonoNs'],1);end=integer(process['reapMonoNs'],start)
+    need(end-start<=10000000000,'finite observer spawn-to-reap original')
+    keys(process['rusage'],'userSeconds systemSeconds maxRssKiB')
+    for key in ('userSeconds','systemSeconds'):
+        need(type(process['rusage'][key]) in (int,float) and 0<=process['rusage'][key]<=10,'bounded observer process usage')
+    integer(process['rusage']['maxRssKiB'],0,1048576)
+    need(type(process) is dict and process.get('firstFailure') is None and process.get('secondary')==[] and
+         type(process.get('exitCode')) is int and process['exitCode']==0 and process.get('signal') is None and
+         integer(process.get('waitStatus'),0,65535)==0 and process.get('timedOut') is False and
+         process.get('argv')==['/usr/bin/python3','-I','-B','scripts/i80386-ring3-int-iret/reader.py','--observe-hosted-setup'],
+         'fixed successful independent observer process')
+    stdout=prerequisite_original(canonical(observer['stdout']));stderr=prerequisite_original(canonical(observer['stderr']))
+    need(len(stdout)<=SETUP_OBSERVATION_CAP and stderr==b'','bounded observer original streams')
+    observed=parse(stdout);prep=verify_setup_observation(observed,expected)
+    for name,row in observed['source'].items():
+        need(equal({'bytes':row['bytes'],'sha256':row['sha256'],'blob':row['blob'],'mode':'100644'},source['files'][name]),
+             'independent live source joins approved twelve-file manifest')
+    for name,row in observed['inputs'].items():
+        need(row['bytes']==len(originals[name]) and row['sha256']==sha(originals[name]),'independent observed installation bytes/hash')
+        if name in installation['files']:
+            recorded=installation['files'][name]['identity'];keys(recorded,'dev ino mode uid gid nlink size mtime_ns')
+            need(row['meta']==[recorded[key] for key in ('dev','ino','mode','uid','gid','nlink','size','mtime_ns')],'installer/observer finite file identity join')
+    outer=parse(originals['prerequisite.outer.json']);keys(outer,'schema expectation installation setup partialInstallation partialSetup firstFailure secondary')
+    need(outer['schema']=='bw.ring3.prerequisites-original.v1' and equal(outer['expectation'],expected) and
+         outer['installation'] is True and outer['setup'] is True and outer['firstFailure'] is None and outer['secondary']==[],
+         'failure-free original prerequisite stages')
+    return {'schema':'bw.ring3.prerequisite-admission.v1','prerequisitesObserved':True,'guestQualified':False,
+            'runtimeAdmitted':False,'preparationIdentity':prep,'requestSha256':expected['requestSha256']}
+
+
+def admit_hosted_prerequisites(environ):
+    expected=prerequisite_expected(environ);uid,gid=expected['invoker']
+    need(os.getresuid()==(uid,)*3 and os.getresgid()==(gid,)*3 and os.getgroups()==[],'actual dropped prerequisite reader')
+    status=setup_proc_read('/proc/self/status');setup_membership(setup_proc_read('/proc/self/cgroup'),expected['runId'])
+    for field in ('CapInh','CapPrm','CapEff','CapAmb'):
+        found=re.search('^'+field+r':\s*([0-9a-fA-F]+)\s*$',status,re.M);need(found is not None and int(found[1],16)==0,'dropped prerequisite reader capabilities')
+    path=Path.cwd()/'build'/'i80386-ring3-int-iret-prerequisites';info=path.lstat()
+    need(path.resolve(strict=True)==path and stat.S_ISDIR(info.st_mode) and (info.st_uid,info.st_gid)==(uid,gid) and
+         stat.S_IMODE(info.st_mode)==0o700,'fixed dropped prerequisite directory')
+    originals={};directory=os.open(path,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK)
+    try:
+        for name in (*SETUP_INPUTS,'setup.observer.json','prerequisite.outer.json'):
+            fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=directory)
+            try:
+                before=os.fstat(fd);need(stat.S_ISREG(before.st_mode) and (before.st_uid,before.st_gid)==(uid,gid) and
+                    stat.S_IMODE(before.st_mode)==0o400 and before.st_nlink==1 and 0<before.st_size<=1<<20,'fixed readonly dropped original')
+                raw=bytearray()
+                while True:
+                    chunk=os.read(fd,min(65536,(1<<20)+1-len(raw)))
+                    if not chunk:break
+                    raw.extend(chunk);need(len(raw)<=1<<20,'dropped prerequisite read cap')
+                need(len(raw)==before.st_size and setup_metadata(os.fstat(fd))==setup_metadata(before) and
+                     setup_metadata(os.stat(name,dir_fd=directory,follow_symlinks=False))==setup_metadata(before),'stable dropped original bytes/identity')
+                originals[name]=bytes(raw)
+            finally:os.close(fd)
+        need(setup_metadata(os.fstat(directory))==setup_metadata(info) and setup_metadata(path.lstat())==setup_metadata(info),'stable dropped prerequisite directory')
+    finally:os.close(directory)
+    return verify_prerequisites(originals,expected)
+
+
+def decode_prerequisite_log(raw):
+    need(type(raw) is bytes and len(raw)<=8<<20,'bounded prerequisite log original')
+    names=set(SETUP_INPUTS)|{'setup.observer.json','prerequisite.outer.json','prerequisite.reader.json'}
+    groups={};chunks=0
+    for line in raw.splitlines():
+        marker=b'RING3_PREREQUISITE ';offset=line.find(marker)
+        if offset<0:continue
+        prefix=line[:offset]
+        need(prefix==b'' or re.fullmatch(rb'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ',prefix),'canonical official log timestamp prefix')
+        value=parse(line[offset+len(marker):]);keys(value,'schema name index count bytes sha256 data')
+        need(value['schema']=='bw.ring3.prerequisite-log.v1' and value['name'] in names,'new prerequisite-only log version/name')
+        count=integer(value['count'],1,456);index=integer(value['index'],0,count-1);extent=integer(value['bytes'],0,1<<20);digest(value['sha256'])
+        need(type(value['data']) is str and len(value['data'])<=3072,'bounded prerequisite chunk encoding')
+        group=groups.setdefault(value['name'],{'count':count,'bytes':extent,'sha256':value['sha256'],'parts':[]})
+        need((group['count'],group['bytes'],group['sha256'])==(count,extent,value['sha256']) and index==len(group['parts']),
+             'one ordered immutable prerequisite chunk sequence')
+        group['parts'].append(value['data']);chunks+=1;need(chunks<=2600,'finite prerequisite log chunk roster')
+    originals={}
+    for name,group in groups.items():
+        need(len(group['parts'])==group['count'],'complete prerequisite original chunks')
+        encoded=''.join(group['parts']);data=base64.b64decode(encoded,validate=True)
+        need(base64.b64encode(data).decode()==encoded and len(data)==group['bytes'] and sha(data)==group['sha256'],'prerequisite original exact encoding/bytes/digest')
+        originals[name]=data
+    need(sum(map(len,originals.values()))<=5<<20,'unchanged aggregate prerequisite originals cap')
+    return originals
+
+
+def verify_prerequisite_log(raw,expected):
+    originals=decode_prerequisite_log(raw);reader_raw=originals.pop('prerequisite.reader.json',None)
+    verdict=verify_prerequisites(originals,expected)
+    need(type(reader_raw) is bytes,'original dropped admission process required')
+    retained=parse(reader_raw);keys(retained,'schema process stdout stderr')
+    need(retained['schema']=='bw.ring3.prerequisite-reader-original.v1','new dropped reader original version')
+    original_observer=parse(originals['setup.observer.json'])
+    process=retained['process'];observer_process=original_observer['process']
+    need(type(process) is dict and set(process)==set(observer_process) and process['schema']=='bw.ring3.process.v1' and
+         process['role']=='discovery' and process['cwdRole']=='checkout' and equal(process['environment'],observer_process['environment']) and
+         process['argv']==['/usr/bin/python3','-I','-B','scripts/i80386-ring3-int-iret/reader.py','--admit-hosted-prerequisites'] and
+         type(process['exitCode']) is int and process['exitCode']==0 and integer(process['waitStatus'],0,65535)==0 and process['signal'] is None and
+         process['timedOut'] is False and process['firstFailure'] is None and process['secondary']==[],
+         'fixed successful dropped admission process original')
+    pid=integer(process['pid'],1);need(integer(process['pgid'],1)==pid and integer(process['parentPid'],1)==observer_process['parentPid'] and
+         pid!=process['parentPid'] and (pid,integer(process['startTicks'],1))!=(observer_process['pid'],observer_process['startTicks']),
+         'distinct fresh dropped reader process under same outside parent')
+    start=integer(process['spawnMonoNs'],integer(observer_process['reapMonoNs'],1));end=integer(process['reapMonoNs'],start)
+    need(end-start<=10000000000,'finite causally later dropped reader process')
+    keys(process['rusage'],'userSeconds systemSeconds maxRssKiB')
+    for key in ('userSeconds','systemSeconds'):
+        need(type(process['rusage'][key]) in (int,float) and 0<=process['rusage'][key]<=10,'bounded dropped reader usage')
+    integer(process['rusage']['maxRssKiB'],0,1048576)
+    need(prerequisite_original(canonical(retained['stdout']))==canonical(verdict) and
+         prerequisite_original(canonical(retained['stderr']))==b'','retained independent admission verdict matches fresh offline validation')
+    return verdict
+
+
 def main():
+    internal={'--observe-hosted-setup','--admit-hosted-prerequisites'}
+    if any(flag in internal for flag in sys.argv[1:]) and (len(sys.argv)!=2 or sys.argv[1] not in internal):
+        raise Refusal('exactly one fixed internal prerequisite mode required')
+    if sys.argv[1:]==['--observe-hosted-setup']:
+        raw,passed=observe_hosted_setup(dict(os.environ))
+        need(sys.stdout.buffer.write(raw)==len(raw),'complete observer original stdout');sys.stdout.buffer.flush()
+        raise SystemExit(0 if passed else 1)
+    if sys.argv[1:]==['--admit-hosted-prerequisites']:
+        result=admit_hosted_prerequisites(dict(os.environ));raw=canonical(result)
+        need(sys.stdout.buffer.write(raw)==len(raw),'complete prerequisite reader verdict');sys.stdout.buffer.flush();return
+    if sys.argv[1:2]==['--prerequisite-log']:
+        parser=argparse.ArgumentParser(description='Original-only prerequisite observation admission',allow_abbrev=False)
+        parser.add_argument('--prerequisite-log',required=True);parser.add_argument('--external-admission',required=True)
+        args=parser.parse_args()
+        with Path(args.prerequisite_log).open('rb') as stream:raw=stream.read((8<<20)+1)
+        with Path(args.external_admission).open('rb') as stream:expected=parse(stream.read((1<<20)+1))
+        print(json.dumps(verify_prerequisite_log(raw,expected),sort_keys=True));return
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--artifact', required=True)
     parser.add_argument('--external-admission', required=True)

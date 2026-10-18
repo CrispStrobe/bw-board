@@ -488,7 +488,7 @@ resource operation or guest ran in these controls. Bounded read loops cannot
 preempt blocking kernel calls; the separately reviewed job backstop is still
 required.
 
-The fixed CLI now recognizes exactly one of six modes, without option
+The fixed CLI now recognizes exactly one of seven modes, without option
 abbreviations. The static source constant `ACTUAL_ENTRY_ENABLED=False` refuses
 every mode except `--controls` before reading its environment, checking IDs,
 constructing a handler or opening a resource. Neither a plan field, command
@@ -504,6 +504,7 @@ status through `SystemExit`.
 | `--controller` | Starts dropped in the controller leaf; requires both complete local capture facts and an empty authoritative failure object. |
 | `--hosted-actual` | Performs fresh fixed setup, admitted preparation, outside observation and dropped finalization. Its external event and runtime authority remain pending. |
 | `--install-hosted-envelope` | Disabled input-installation scaffold. Even complete installation returns nonzero before resource setup or guests because independent runtime, observer and reader gates remain pending. |
+| `--hosted-prerequisites` | Disabled installation/setup/independent-observer/dropped-collector path. Its new reader can admit prerequisite observations only; missing full runtime admission still returns nonzero before preparation, probes or guests. |
 
 Preparation and hosted success require `pass` to be the boolean `true` and
 the same authoritative `FirstFailure` to have neither primary nor secondary
@@ -645,11 +646,88 @@ external identity selection. Existing phase.v3, V7, packet roles and caps stay
 unchanged. These new prerequisites are not silently accepted by V7 or emitted
 as a qualified original bundle.
 
-Even a complete installation deliberately returns failure before resource
-setup or guest execution. Full runtime graph admission before any probe,
-independent readonly setup observation (including metadata-only treatment of
-write-only `cgroup.kill`), versioned controller delivery and a standalone V8
-reader remain unconnected. Actual command activation, exact executing workflow
-source admission, installation/event API joins, final source12 after commit
-and a separately authorized single hosted run remain required. The disabled
-15 minute job supplies no measured backstop or guest qualification.
+The legacy install-only endpoint still returns failure before resource setup.
+The new prerequisite endpoint below connects independent observation and
+collection. Full runtime admission, versioned preparation/controller delivery,
+complete guest-provenance reader integration, executing-workflow admission,
+official installation/event API joins and a separately authorized hosted run
+remain required. The disabled 15 minute job supplies no measured backstop or
+guest qualification.
+
+`--hosted-prerequisites` connects the admitted input installer to fresh
+`HostedSetupOps`, then launches the separate fixed command
+`/usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/reader.py --observe-hosted-setup`.
+The observer imports no producer and implements its own readonly OS access.
+It reads the five installed originals, all twelve live source files, the
+already-enabled parent controllers and all five resource directories. Its
+`bw.ring3.setup-observation.v1` output records exact control strings and compact
+stat arrays ordered as device, inode, mode, UID, GID, links, size and modification
+nanoseconds. Ordinary files use bounded nofollow reads with held/named identity
+readback. Write-only `cgroup.kill` uses `O_PATH` and metadata only. Membership
+comes from bounded proc descriptors and rejects noncanonical path components.
+Control files close immediately; mocked peak ownership is eleven descriptors,
+within the existing 64-descriptor limit. Child stdout retains its existing
+16 KiB discovery cap; overflow preserves only a bounded failure prefix and
+cannot become positive observation evidence.
+
+After the observer, the parent irreversibly drops all real/effective/saved
+UIDs/GIDs, supplementary groups and capabilities before creating the exclusive
+`build/i80386-ring3-int-iret-prerequisites/` directory. It writes the captured
+originals as invoker-owned `0400` files. A second fixed command, the same Python
+and reader with `--admit-hosted-prerequisites`, validates the actual dropped IDs,
+capabilities, outside membership and held readonly input files before parsing.
+The independent reader joins the externally selected request digest, immutable
+event and plan, installed-input identities/hashes, live source12 and all resource
+caps/delegations. It derives the preparation identity from the separate observer,
+never from setup code's memory facts. This new
+`bw.ring3.prerequisite-admission.v1` verdict explicitly says
+`guestQualified=false` and `runtimeAdmitted=false`.
+
+Exact child process/stream originals and partial setup/installation facts use
+new prerequisite schemas. Publication occurs only after verified drop, with
+the separate `RING3_PREREQUISITE` log prefix. Original names are the five
+installed input names plus `setup.observer.json`, `prerequisite.outer.json` and
+`prerequisite.reader.json`; they are neither the twenty artifact roles nor the
+five old internal names. Existing JSON, aggregate 5 MiB raw, 8 MiB encoded and
+chunk caps remain fixed. Partial writes/flushes refuse without retry. Earlier
+errors survive observer, drop, collection and retention errors. If the invoker
+is unknown or drop fails, raw partials remain in the returned memory result;
+the CLI can emit only bounded failure diagnostics, never root originals or an
+invented successful collector record. Setup/installation failures keep partial
+created paths and observations; they cause no adoption, deletion or cleanup.
+
+An offline original-only reader can independently audit the retained new log:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/reader.py \
+  --prerequisite-log retained-prerequisites.log \
+  --external-admission reviewed-prerequisite-expectation.json
+```
+
+The external `bw.ring3.prerequisite-expectation.v1` object contains exactly
+`schema`, `runId`, integer `attempt` (one), `head`, `tree`, `requestSha256` and
+`invoker` (UID/GID array). The request pin must come from the separately retained
+pre-label review; the source path transports that pin and later platform/invoker
+observations, but does not authenticate their official origin. The reader
+checks both original process descriptors, their causal order, fresh identities
+and exact verdict bytes. It does not import producer code, replay guests or
+silently extend the older artifact/V7 predicates.
+
+The new controls run without the Node ROM builder:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --prerequisites-only
+```
+
+Five added runner methods bring that total to 198, preserving all prior 193
+test bodies. Five independent methods cover readonly observer/file access,
+dropped admission, rehashed conflicts, log framing and failure boundaries.
+Seventeen targeted source mutations are detected. The
+coherent runner path exercises the actual bounded collector, drop and retention
+adapters and independent admission over the retained bytes; installer/setup and
+process creation/kernel edges are manufactured, separately tested endpoints.
+It is source routing evidence, not actual root setup, process execution or guest
+qualification. Both activation guards remain false. No runtime expectation is
+auto-admitted, and the path always stops before preparation/probes/guests until
+the complete independently reviewed runtime graph and closed execution delivery
+are connected.

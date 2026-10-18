@@ -6,14 +6,21 @@ runtime and kernel records below are manufactured and never actual admission.
 The full positive includes independently assembled register/frame/RAM goldens.
 """
 import copy
+import contextlib
 import importlib.util
 import io
 import json
+import os
+import stat
 import struct
 import subprocess
+import sys
+import unittest
 import zipfile
 from hashlib import sha256
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location('standalone_ring3_reader', HERE / 'reader.py')
@@ -328,4 +335,221 @@ def main():
         'fullyRehashedSemanticRefusals':len(results),'controls':results},sort_keys=True))
 
 
-if __name__=='__main__':main()
+def prerequisite_fixture():
+    """Manufactured literals only. No Node builder, CPU or kernel edges."""
+    canonical=reader.canonical
+    def wrapper(raw):return {'bytes':len(raw),'sha256':sha(raw),'base64':reader.base64.b64encode(raw).decode()}
+    data={name:('held '+name+'\n').encode() for name in reader.SETUP_SOURCE_PATHS}
+    source={'schema':'bw.ring3.source.v1','head':'a'*40,'tree':'b'*40,'files':{name:{'bytes':len(raw),'sha256':sha(raw),
+        'mode':'100644','blob':reader.hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()} for name,raw in data.items()}}
+    runtime=b'{"pendingIndependentRuntimeAdmission":true}\n'
+    request={'schema':'bw.ring3.approval-request.v1','repository':'CrispStrobe/bw-board','pullRequest':645,'head':'a'*40,'tree':'b'*40,
+        'source':wrapper(canonical(source)),'runtime':{'commit':'c'*40,'tree':'d'*40,'path':'ring3-runtime-expectation.json','mode':'100644',
+            'blob':reader.hashlib.sha1(b'blob '+str(len(runtime)).encode()+b'\0'+runtime).hexdigest(),'bytes':len(runtime),'sha256':sha(runtime)}}
+    request_raw=canonical(request);expected={'schema':'bw.ring3.prerequisite-expectation.v1','runId':'123','attempt':1,
+        'head':'a'*40,'tree':'b'*40,'requestSha256':sha(request_raw),'invoker':[1001,1002]}
+    env={'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1','BW_EXPECTED_HEAD':'a'*40,'BW_EXPECTED_TREE':'b'*40,
+        'BW_RING3_APPROVED_REQUEST_SHA256':sha(request_raw),'SUDO_UID':'1001','SUDO_GID':'1002'}
+    event={'action':'labeled','number':645,'repository':{'full_name':'CrispStrobe/bw-board'},'sender':{'login':'CrispStrobe'},
+        'label':{'name':reader.LABEL},'pull_request':{'number':645,'state':'open',
+            'body':'<!-- BW_RING3_ACTUAL_REQUEST_V1\n'+canonical(wrapper(request_raw)).decode().rstrip('\n')+'\nBW_RING3_ACTUAL_REQUEST_V1 -->',
+            'head':{'sha':'a'*40,'repo':{'full_name':'CrispStrobe/bw-board','fork':False}},
+            'base':{'ref':'master','repo':{'full_name':'CrispStrobe/bw-board'}}}}
+    plan=canonical({'schema':'bw.ring3.launch-plan.v1','runId':'123','attempt':1,'head':'a'*40,'tree':'b'*40,'source':request['source']})
+    originals={'request.original.json':request_raw,'event.original.json':canonical(event),'runtime-expectation.json':runtime,'launch-plan.json':plan}
+    return env,expected,originals,data
+
+
+@contextlib.contextmanager
+def prerequisite_observer_edges(env,originals,data):
+    state={'rows':{},'fds':{},'next':20,'events':[],'faults':{},'peakFds':0}
+    def row(path,mode,uid=0,gid=0,raw=b'',device=1):
+        state['rows'][str(path)]={'st_dev':device,'st_ino':len(state['rows'])+100,'st_mode':mode,'st_uid':uid,'st_gid':gid,
+            'st_nlink':1,'st_size':len(raw) if stat.S_ISREG(mode) and device==1 else 0,'st_mtime_ns':1700000000000000000,'raw':raw}
+    for path in ('/','/run','/checkout'):row(path,0o40755,*((1001,1002) if path=='/checkout' else (0,0)))
+    row('/proc/self/cgroup',0o100444,raw=b'0::/actions/job\n')
+    row('/proc/self/status',0o100444,raw=b'CapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapAmb:\t0000000000000000\n')
+    admission='/run/bw-ring3-123-1-admission';row(admission,0o40755)
+    for name,raw in originals.items():row(admission+'/'+name,0o100444,raw=raw)
+    for name,raw in data.items():row('/checkout/'+name,0o100644,1001,1002,raw)
+    base='/sys/fs/cgroup';row(base,0o40755,device=2)
+    for name in ('cgroup.controllers','cgroup.subtree_control'):row(base+'/'+name,0o100644,raw=b'cpu memory pids\n',device=2)
+    values={**{name:(value+'\n').encode() for name,value in reader.SETUP_LIMITS.items()},'cgroup.type':b'domain\n','cgroup.procs':b'',
+        'pids.current':b'0\n','cgroup.events':b'populated 0\nfrozen 0\n','memory.events':b'low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\n',
+        'cpu.stat':b'usage_usec 0\nuser_usec 0\nsystem_usec 0\n','memory.current':b'0\n','memory.peak':b'0\n','cgroup.subtree_control':b'cpu memory pids\n'}
+    for role in reader.SETUP_ROLES:
+        path=base+'/bw-ring3-123-1'+('-preparation' if role=='preparation' else '' if role=='enclosing' else '/'+role)
+        owner=(0,0) if role=='preparation' else (1001,1002);row(path,0o40755,*owner,device=2)
+        names=reader.SETUP_READS+(('cgroup.subtree_control',) if role=='enclosing' else ())+(('cgroup.kill',) if role in ('js','qemu') else ())
+        for name in names:
+            delegated=(role=='enclosing' and name=='cgroup.procs') or (role in ('js','qemu') and name in ('cgroup.procs','cgroup.kill'))
+            row(path+'/'+name,0o100200 if name=='cgroup.kill' else 0o100644,*((1001,1002) if delegated else (0,0)),
+                raw=values.get(name,b''),device=2)
+    def info(path):
+        if ('stat',path) in state['faults']:raise state['faults']['stat',path]
+        return SimpleNamespace(**{key:value for key,value in state['rows'][path].items() if key!='raw'})
+    def pathof(path,dir_fd=None):return str(Path(state['fds'][dir_fd]['path'])/path) if dir_fd is not None else str(path)
+    def opened(path,flags,dir_fd=None):
+        path=pathof(path,dir_fd);state['events'].append(('open',path,flags));info(path)
+        assert not flags&(os.O_CREAT|os.O_TRUNC) and flags&os.O_NOFOLLOW
+        if path.endswith('/cgroup.kill'):assert flags&os.O_PATH
+        else:assert flags&os.O_ACCMODE==os.O_RDONLY
+        state['next']+=1;fd=state['next'];state['fds'][fd]={'path':path,'offset':0};state['peakFds']=max(state['peakFds'],len(state['fds']));return fd
+    def read(fd,cap):
+        record=state['fds'][fd];path=record['path'];state['events'].append(('read',path))
+        assert not path.endswith('/cgroup.kill')
+        if ('read',path) in state['faults']:raise state['faults']['read',path]
+        raw=state['rows'][path]['raw'];start=record['offset'];record['offset']+=cap;return raw[start:start+cap]
+    def close(fd):
+        path=state['fds'].pop(fd)['path'];state['events'].append(('close',path))
+        if ('close',path) in state['faults']:raise state['faults']['close',path]
+    with contextlib.ExitStack() as stack:
+        for context in (patch.object(os,'getresuid',return_value=(0,)*3),patch.object(os,'getresgid',return_value=(0,)*3),
+            patch.object(os,'open',side_effect=opened),patch.object(os,'read',side_effect=read),patch.object(os,'close',side_effect=close),
+            patch.object(os,'fstat',side_effect=lambda fd:info(state['fds'][fd]['path'])),
+            patch.object(os,'stat',side_effect=lambda path,dir_fd=None,**kw:info(pathof(path,dir_fd))),
+            patch.object(Path,'lstat',lambda path:info(str(path))),patch.object(Path,'cwd',return_value=Path('/checkout')),
+            patch.object(Path,'resolve',lambda path,**kw:path),patch.object(Path,'read_text',return_value='0::/actions/job\n'),
+            patch.object(os,'write',side_effect=AssertionError('observer must never write')),
+            patch.object(os,'fchown',side_effect=AssertionError('observer must never chown')),
+            patch.object(os,'fchmod',side_effect=AssertionError('observer must never chmod')),
+            patch.object(os,'mkdir',side_effect=AssertionError('observer must never mkdir'))):stack.enter_context(context)
+        yield state
+
+
+def prerequisite_manufactured():
+    env,expected,originals,data=prerequisite_fixture();admission='/run/bw-ring3-123-1-admission'
+    with prerequisite_observer_edges(env,originals,data) as state:
+        rows={}
+        for name,raw in originals.items():
+            info=state['rows'][admission+'/'+name]
+            rows[name]={'identity':{key:info['st_'+key] for key in ('dev','ino','mode','uid','gid','nlink','size','mtime_ns')},'bytes':len(raw),'sha256':sha(raw)}
+        record={'schema':'bw.ring3.installation-envelope.v1','runId':'123','attempt':1,'requestSha256':expected['requestSha256'],
+            'launchPlanSha256':sha(originals['launch-plan.json']),'files':rows,'directory':{},'ancestors':{},'observations':{}}
+    originals['installation.original.json']=reader.canonical(record)
+    with prerequisite_observer_edges(env,originals,data):stdout,passed=reader.observe_hosted_setup(env)
+    assert passed,stdout.decode(errors='replace')
+    process={'schema':'bw.ring3.process.v1','role':'discovery','argv':['/usr/bin/python3','-I','-B','scripts/i80386-ring3-int-iret/reader.py','--observe-hosted-setup'],
+        'cwdRole':'checkout','environment':{'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin',**env},'pid':201,'pgid':201,'parentPid':101,
+        'startTicks':1,'spawnMonoNs':1,'reapMonoNs':2,'exitCode':0,'signal':None,'waitStatus':0,'timedOut':False,
+        'rusage':{'userSeconds':0.001,'systemSeconds':0.001,'maxRssKiB':1024},'firstFailure':None,'secondary':[]}
+    def wrap(raw):return {'bytes':len(raw),'sha256':sha(raw),'base64':reader.base64.b64encode(raw).decode()}
+    originals['setup.observer.json']=reader.canonical({'schema':'bw.ring3.setup-observer-original.v1','process':process,'stdout':wrap(stdout),'stderr':wrap(b'')})
+    originals['prerequisite.outer.json']=reader.canonical({'schema':'bw.ring3.prerequisites-original.v1','expectation':expected,
+        'installation':True,'setup':True,'partialInstallation':{},'partialSetup':{},'firstFailure':None,'secondary':[]})
+    return env,expected,originals,data
+
+
+def prerequisite_controls():
+    class Tests(unittest.TestCase):
+        def test_independent_observer_and_original_reader_positive(self):
+            env,expected,originals,data=prerequisite_manufactured()
+            verdict=reader.verify_prerequisites(originals,expected)
+            self.assertTrue(verdict['prerequisitesObserved']);self.assertFalse(verdict['guestQualified']);self.assertFalse(verdict['runtimeAdmitted'])
+            self.assertEqual(len(reader.parse(reader.prerequisite_original(reader.canonical(reader.parse(originals['setup.observer.json'])['stdout'])))['directories']),5)
+
+        def test_observer_real_readonly_edges_partial_failures_and_write_only_metadata(self):
+            env,expected,originals,data=prerequisite_manufactured()
+            originals={name:originals[name] for name in reader.SETUP_INPUTS}
+            for fault in ('none','read','read-close','owner','cap','membership','missing','close','source'):
+                with prerequisite_observer_edges(env,originals,data) as state:
+                    path='/sys/fs/cgroup/bw-ring3-123-1/js/memory.max'
+                    if fault in ('read','read-close'):
+                        state['faults']['read',path]=OSError('FIRST_READ')
+                        if fault=='read-close':state['faults']['close',path]=OSError('SECOND_CLOSE')
+                    elif fault=='owner':state['rows'][path]['st_uid']=1001
+                    elif fault=='cap':state['rows'][path]['raw']=b'max\n'
+                    elif fault=='missing':del state['rows']['/run/bw-ring3-123-1-admission/request.original.json']
+                    elif fault=='close':state['faults']['close',path]=OSError('FIRST_CLOSE')
+                    elif fault=='source':state['rows']['/checkout/scripts/i80386-ring3-int-iret/run.py']['st_mode']=0o100755
+                    if fault=='membership':state['rows']['/proc/self/cgroup'].update(raw=b'0::/bw-ring3-123-1/js\n',st_size=len(b'0::/bw-ring3-123-1/js\n'))
+                    raw,passed=reader.observe_hosted_setup(env)
+                    self.assertEqual(passed,fault=='none',fault);self.assertLessEqual(len(raw),16384);self.assertEqual(state['fds'],{})
+                    value=reader.parse(raw);self.assertLessEqual(state['peakFds'],11)
+                    if fault in ('read','read-close'):self.assertEqual(value['firstFailure']['message'],'FIRST_READ');self.assertTrue(value['source'])
+                    if fault=='read-close':self.assertIn('SECOND_CLOSE',[row['message'] for row in value['secondary']])
+                    if fault=='none':
+                        for role in ('js','qemu'):
+                            self.assertEqual(value['directories'][role]['controls']['cgroup.kill']['meta'][2],0o100200)
+                        self.assertFalse(any(item[0]=='read' and item[1].endswith('/cgroup.kill') for item in state['events']))
+
+        def test_independent_reader_mutated_observations_and_coherent_rehashes_refuse(self):
+            env,expected,originals,data=prerequisite_manufactured()
+            def mutate_observer(records,mutate):
+                observer=reader.parse(records['setup.observer.json'])
+                value=reader.parse(reader.prerequisite_original(reader.canonical(observer['stdout'])));mutate(value)
+                raw=reader.canonical(value);observer['stdout']={'bytes':len(raw),'sha256':sha(raw),'base64':reader.base64.b64encode(raw).decode()}
+                records['setup.observer.json']=reader.canonical(observer)
+            mutations=[lambda v:v['directories']['preparation']['meta'].__setitem__(3,1001),
+                lambda v:v['directories']['js']['controls']['cgroup.kill']['meta'].__setitem__(3,0),
+                lambda v:v['directories']['enclosing']['controls']['cgroup.procs']['meta'].__setitem__(3,0),
+                lambda v:v['directories']['controller']['controls']['memory.max'].__setitem__('raw','max\n'),
+                lambda v:v['directories']['qemu']['controls']['cgroup.procs'].__setitem__('raw','999\n'),
+                lambda v:v['directories']['qemu'].__setitem__('meta',v['directories']['js']['meta']),
+                lambda v:v['inputs']['launch-plan.json'].__setitem__('sha256','f'*64),
+                lambda v:v['source']['scripts/i80386-ring3-int-iret/run.py'].__setitem__('sha256','f'*64),
+                lambda v:v.__setitem__('membership','0::/bw-ring3-123-1-preparation\n')]
+            for mutation in mutations:
+                changed=copy.deepcopy(originals);mutate_observer(changed,mutation)
+                with self.assertRaises((reader.Refusal,ValueError)):reader.verify_prerequisites(changed,expected)
+            for key,value in (('requestSha256','0'*64),('head','f'*40),('tree','f'*40),('attempt',True),('invoker',[0,0])):
+                with self.assertRaises(reader.Refusal):reader.verify_prerequisites(originals,dict(expected,**{key:value}))
+            for name in originals:
+                changed=dict(originals);changed.pop(name)
+                with self.assertRaises(reader.Refusal):reader.verify_prerequisites(changed,expected)
+
+        def test_dropped_admitter_fixed_readonly_file_edges_and_uid_capability_refusals(self):
+            env,expected,originals,data=prerequisite_manufactured()
+            for fault in ('none','root','capability','membership','file-mode','file-links'):
+                with prerequisite_observer_edges(env,originals,data) as state:
+                    directory='/checkout/build/i80386-ring3-int-iret-prerequisites'
+                    def add(path,mode,raw=b''):
+                        state['rows'][path]={'st_dev':1,'st_ino':len(state['rows'])+100,'st_mode':mode,'st_uid':1001,'st_gid':1002,
+                            'st_nlink':1,'st_size':len(raw),'st_mtime_ns':1700000000000000000,'raw':raw}
+                    add(directory,0o40700)
+                    for name,raw in originals.items():add(directory+'/'+name,0o100400,raw)
+                    if fault=='capability':state['rows']['/proc/self/status']['raw']=state['rows']['/proc/self/status']['raw'].replace(
+                        b'CapEff:\t0000000000000000',b'CapEff:\t0000000000000001')
+                    elif fault=='membership':state['rows']['/proc/self/cgroup']['raw']=b'0::/bw-ring3-123-1/controller\n'
+                    elif fault=='file-mode':state['rows'][directory+'/request.original.json']['st_mode']=0o100600
+                    elif fault=='file-links':state['rows'][directory+'/request.original.json']['st_nlink']=2
+                    with patch.object(os,'getresuid',return_value=(0,)*3 if fault=='root' else (1001,)*3),\
+                         patch.object(os,'getresgid',return_value=(1002,)*3),patch.object(os,'getgroups',return_value=[]):
+                        if fault=='none':self.assertTrue(reader.admit_hosted_prerequisites(env)['prerequisitesObserved'])
+                        else:
+                            with self.assertRaises(reader.Refusal):reader.admit_hosted_prerequisites(env)
+                    self.assertEqual(state['fds'],{})
+
+        def test_prerequisite_log_version_framing_and_original_only_positive(self):
+            env,expected,originals,data=prerequisite_manufactured();verdict=reader.verify_prerequisites(originals,expected)
+            observer=reader.parse(originals['setup.observer.json']);process=copy.deepcopy(observer['process'])
+            process.update(argv=['/usr/bin/python3','-I','-B','scripts/i80386-ring3-int-iret/reader.py','--admit-hosted-prerequisites'],
+                pid=202,pgid=202,startTicks=2,spawnMonoNs=3,reapMonoNs=4)
+            raw=reader.canonical(verdict);wrapper={'bytes':len(raw),'sha256':sha(raw),'base64':reader.base64.b64encode(raw).decode()}
+            originals['prerequisite.reader.json']=reader.canonical({'schema':'bw.ring3.prerequisite-reader-original.v1','process':process,'stdout':wrapper,'stderr':observer['stderr']})
+            lines=[]
+            for name,raw in sorted(originals.items()):
+                encoded=reader.base64.b64encode(raw).decode();chunks=[encoded[i:i+3072] for i in range(0,len(encoded),3072)]
+                for index,part in enumerate(chunks):lines.append(b'RING3_PREREQUISITE '+reader.canonical({'schema':'bw.ring3.prerequisite-log.v1',
+                    'name':name,'index':index,'count':len(chunks),'bytes':len(raw),'sha256':sha(raw),'data':part}))
+            log=b''.join(lines);self.assertEqual(reader.verify_prerequisite_log(log,expected),verdict)
+            for changed in (b''.join(lines[:-1]),lines[0]+log,log.replace(b'RING3_PREREQUISITE ',b'RING3_ORIGINAL '),
+                log.replace(b'"schema":"bw.ring3.prerequisite-log.v1"',b'"schema":"bw.ring3.prerequisite-log.v0"',1),
+                b'not-a-timestamp '+log):
+                with self.assertRaises((reader.Refusal,ValueError)):reader.verify_prerequisite_log(changed,expected)
+            for path in ('0::/actions/../job\n','0:://actions\n','0::/actions/./job\n','0::/actions/job/\n'):
+                with self.assertRaises(reader.Refusal):reader.setup_membership(path,'123')
+            same_data=bytes(4608)
+            row={'schema':'bw.ring3.prerequisite-log.v1','name':'setup.observer.json','index':0,'count':2,
+                 'bytes':len(same_data),'sha256':sha(same_data),'data':'A'*3072}
+            duplicate=b'RING3_PREREQUISITE '+reader.canonical(row)
+            with self.assertRaises(reader.Refusal):reader.decode_prerequisite_log(duplicate+duplicate)
+
+    result=unittest.TextTestRunner(verbosity=1).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
+    assert result.wasSuccessful(),'prerequisite controls failed'
+    print(json.dumps({'testOnly':True,'tests':result.testsRun,'guestOrResourceOperationExecuted':False,'pass':True}))
+
+
+if __name__=='__main__':
+    if sys.argv[1:]==['--prerequisites-only']:prerequisite_controls()
+    else:main()

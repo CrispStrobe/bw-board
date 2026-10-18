@@ -3654,14 +3654,193 @@ class HostedEnvelopeInstaller:
             observations=encode({'sourceCommands':self.facts['sourceCommands'],'source':self.facts['source'],
                 'eventIdentity':self.facts.get('eventIdentity'),'transport':self.transport.observations})
             need(len(observations)<=JSON_CAP-(64<<10),'installation observation originals fit unchanged JSON cap before mkdir')
+            self.facts['inputOriginals']=dict(files)
             self.install(files);installed=True
-            raise ValueError('installation only: independent runtime graph gate, setup observer, versioned delivery/reader and actual job activation pending')
+            self.after_install()
         except BaseException as error:failure.add(error,'hosted-envelope-installation')
         return {'pass':False,'installationComplete':installed,'facts':self.facts},failure
+
+    def after_install(self):
+        raise ValueError('installation only: independent runtime graph gate, setup observer, versioned delivery/reader and actual job activation pending')
 
 
 def install_hosted_envelope(environ):
     return HostedEnvelopeInstaller(environ).prepare()
+
+
+PREREQUISITE_NAMES=frozenset(('request.original.json event.original.json runtime-expectation.json launch-plan.json '
+    'installation.original.json setup.observer.json prerequisite.outer.json prerequisite.reader.json').split())
+PREREQUISITE_DIRECTORY=Path('build/i80386-ring3-int-iret-prerequisites')
+READER_FILE='scripts/i80386-ring3-int-iret/reader.py'
+PREREQUISITE_ENV=('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE',
+    'BW_RING3_APPROVED_REQUEST_SHA256','SUDO_UID','SUDO_GID')
+
+
+class PrerequisiteInstaller(HostedEnvelopeInstaller):
+    def after_install(self):pass  # Installation success still is not a guest verdict.
+
+
+class PrerequisiteProcess(OutsideGit):
+    def __init__(self,mode,environ):
+        need(mode in ('observe','admit'),'two fixed independent prerequisite processes')
+        flag='--observe-hosted-setup' if mode=='observe' else '--admit-hosted-prerequisites'
+        super().__init__(['/usr/bin/python3','-I','-B',READER_FILE,flag])
+        self.environment=dict(ENV,**{name:environ[name] for name in PREREQUISITE_ENV})
+
+
+def prerequisite_process(mode,environ):
+    child=PrerequisiteProcess(mode,environ)
+    process,streams=collect_child(child,'discovery',child.argv,profile='discovery')
+    original={'schema':'bw.ring3.setup-observer-original.v1' if mode=='observe' else 'bw.ring3.prerequisite-reader-original.v1',
+        'process':process,'stdout':original_bytes(streams['stdout']) if streams['stdout'] else
+            {'bytes':0,'sha256':sha(b''),'base64':''},
+        'stderr':original_bytes(streams['stderr']) if streams['stderr'] else {'bytes':0,'sha256':sha(b''),'base64':''}}
+    raw=encode(original);need(len(raw)<=JSON_CAP,'bounded prerequisite process original')
+    return raw,process
+
+
+def emit_prerequisites(originals,emit,flush,failure):
+    progress={'items':0,'chunks':0,'encodedBytes':0,'complete':False}
+    try:
+        need(type(originals) is dict and set(originals)<=PREREQUISITE_NAMES and
+             all(type(raw) is bytes and len(raw)<=JSON_CAP for raw in originals.values()) and
+             sum(map(len,originals.values()))<=5<<20,'closed capped prerequisite-only originals')
+        for name in sorted(originals):
+            raw=originals[name];encoded=base64.b64encode(raw).decode('ascii');count=max(1,(len(encoded)+3071)//3072)
+            need(count<=456,'finite prerequisite original chunks')
+            for index in range(count):
+                line=b'RING3_PREREQUISITE '+encode({'schema':'bw.ring3.prerequisite-log.v1','name':name,'index':index,'count':count,
+                    'bytes':len(raw),'sha256':sha(raw),'data':encoded[index*3072:(index+1)*3072]})
+                need(progress['encodedBytes']+len(line)<=8<<20 and progress['chunks']<2600,'unchanged encoded prerequisite caps')
+                written=emit(line);need(type(written) is int and written==len(line),'complete prerequisite original log write')
+                progress['encodedBytes']+=len(line);progress['chunks']+=1
+            progress['items']+=1
+        flush();progress['complete']=True
+    except BaseException as error:failure.add(error,'prerequisite-log-retention')
+    return progress
+
+
+class HostedPrerequisites:
+    """Real fixed source closure, still behind the static actual-mode gate.
+
+    Root installation/setup is followed by the independent observer. Evidence
+    parsing, filesystem retention, admission and log publication happen after
+    irreversible invoker drop. No runtime probe, preparation or guest is called.
+    """
+    def __init__(self,environ):
+        self.environ=dict(environ);self.attempted=False;self.invoker=None;self.installer=None;self.setup=None
+        self.originals={};self.expectation=None;self.collector=None
+
+    def admit_invoker(self):
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root prerequisite outside owner')
+        ids=[self.environ.get('SUDO_'+key,'') for key in ('UID','GID')]
+        need(all(type(value) is str and re.fullmatch('[1-9][0-9]{0,9}',value) and int(value)<2**31 for value in ids),
+             'trusted prerequisite invoker before fallible inputs')
+        self.invoker=dict(zip(('uid','gid'),map(int,ids)))
+        expected_cgroup(self.environ)
+        for key,size in (('BW_EXPECTED_HEAD',40),('BW_EXPECTED_TREE',40),('BW_RING3_APPROVED_REQUEST_SHA256',64)):
+            need(type(self.environ.get(key)) is str and re.fullmatch('[0-9a-f]{'+str(size)+'}',self.environ[key]),'prerequisite external binding')
+        self.expectation={'schema':'bw.ring3.prerequisite-expectation.v1','runId':self.environ['GITHUB_RUN_ID'],'attempt':1,
+            'head':self.environ['BW_EXPECTED_HEAD'],'tree':self.environ['BW_EXPECTED_TREE'],
+            'requestSha256':self.environ['BW_RING3_APPROVED_REQUEST_SHA256'],'invoker':[self.invoker['uid'],self.invoker['gid']]}
+
+    def live_source(self):
+        raw=self.originals.get('request.original.json');need(type(raw) is bytes,'captured approved request before child')
+        request=admit_approval_request(raw,self.environ['BW_RING3_APPROVED_REQUEST_SHA256'])
+        source=admitted_original(request['source'],JSON_CAP,'approved child source original')
+        observed,failure=source_facts(final_json(source),stage='before')
+        if failure.first is not None:raise ObservedFailure(failure.first,failure.secondary)
+
+    def drop(self):
+        need(self.invoker is not None,'trusted invoker required for prerequisite original drop')
+        bootstrap=BootstrapOps(self.environ);bootstrap.invoker=dict(self.invoker);bootstrap.drop()
+        entry_ids(self.invoker['uid'],self.invoker['gid'])
+        root=expected_cgroup(self.environ).name;membership=entry_proc('/proc/self/cgroup')
+        need(membership.startswith('0::/') and membership.endswith('\n') and membership.count('\n')==1 and
+             all(membership[3:-1]!='/'+name and not membership[3:-1].startswith('/'+name+'/') for name in (root,root+'-preparation')),
+             'dropped collector outside both resource trees')
+
+    def retain(self):
+        uid,gid=self.invoker['uid'],self.invoker['gid'];entry_ids(uid,gid)
+        need(set(self.originals)<=PREREQUISITE_NAMES and all(type(raw) is bytes and len(raw)<=JSON_CAP for raw in self.originals.values()) and
+             sum(map(len,self.originals.values()))<=5<<20,'bounded dropped prerequisite retention set')
+        checkout=Path.cwd();build=checkout/'build'
+        for path in (checkout,):
+            info=path.lstat();need(path.resolve(strict=True)==path and stat.S_ISDIR(info.st_mode) and
+                 (info.st_uid,info.st_gid)==(uid,gid) and info.st_mode&0o022==0,'canonical invoker-owned collector checkout')
+        try:info=build.lstat()
+        except FileNotFoundError:build.mkdir(mode=0o700);info=build.lstat()
+        need(build.resolve(strict=True)==build and stat.S_ISDIR(info.st_mode) and (info.st_uid,info.st_gid)==(uid,gid) and
+             info.st_mode&0o022==0,'canonical invoker-owned collector build')
+        path=checkout/PREREQUISITE_DIRECTORY;path.mkdir(mode=0o700);self.collector=str(path)
+        for name,raw in sorted(self.originals.items()):
+            write_new(path/name,raw,JSON_CAP);os.chmod(path/name,0o400,follow_symlinks=False)
+
+    def run(self):
+        failure=FirstFailure();installed=False;setup_complete=False;observed=False;reader_passed=False;progress=None
+        if self.attempted:
+            failure.add(ValueError('hosted prerequisites consumed; no retry'),'hosted-prerequisites')
+            return {'pass':False,'prerequisitesObserved':False,'originals':self.originals},failure
+        self.attempted=True
+        try:
+            self.admit_invoker()
+            self.installer=PrerequisiteInstaller(self.environ);installation,found=self.installer.prepare()
+            failure.adopt(found.first,found.secondary);installed=installation['installationComplete'] is True
+            for key,name in (('requestOriginal','request.original.json'),('eventOriginal','event.original.json'),
+                             ('installationOriginal','installation.original.json')):
+                raw=self.installer.facts.get(key)
+                if type(raw) is bytes:self.originals[name]=raw
+            self.originals.update(self.installer.facts.get('inputOriginals',{}))
+            if failure.first is not None or failure.secondary:raise ObservedFailure(failure.first,failure.secondary)
+            need(installed,'complete prerequisite installation required')
+            plan=self.originals['launch-plan.json'];self.setup=HostedSetupOps(sha(plan),self.environ)
+            result,found=self.setup.prepare();failure.adopt(found.first,found.secondary)
+            setup_complete=result['pass'] is True
+            if failure.first is not None or failure.secondary:raise ObservedFailure(failure.first,failure.secondary)
+            need(setup_complete,'complete hosted setup required before observer');self.live_source()
+            raw,process=prerequisite_process('observe',self.environ);self.originals['setup.observer.json']=raw
+            if process['firstFailure'] is not None:raise ObservedFailure(process['firstFailure'],process['secondary'])
+            need(type(process['exitCode']) is int and process['exitCode']==0 and process['secondary']==[],
+                 'independent readonly observer must finish successfully');observed=True
+        except BaseException as error:
+            # Re-throwing an already adopted failure must not duplicate it.
+            if not (isinstance(error,ObservedFailure) and error.firstFailure==failure.first):failure.add(error,'hosted-prerequisites')
+        try:
+            self.drop()
+            partial_installation={} if self.installer is None else {key:value for key,value in self.installer.facts.items()
+                if key not in ('requestOriginal','eventOriginal','installationOriginal','inputOriginals')}
+            outer={'schema':'bw.ring3.prerequisites-original.v1','expectation':self.expectation,'installation':installed,
+                'setup':setup_complete,'partialInstallation':partial_installation,
+                'partialSetup':None if self.setup is None else self.setup.facts,'firstFailure':failure.first,'secondary':failure.secondary}
+            raw=encode(outer);need(len(raw)<=JSON_CAP,'bounded partial prerequisite original')
+            self.originals['prerequisite.outer.json']=raw;self.retain()
+            if failure.first is None and failure.secondary==[] and observed:
+                self.live_source();raw,process=prerequisite_process('admit',self.environ);self.originals['prerequisite.reader.json']=raw
+                need(process['firstFailure'] is None and process['secondary']==[] and type(process['exitCode']) is int and
+                     process['exitCode']==0,'standalone prerequisite reader must finish successfully')
+                verdict=admitted_original(final_json(raw)['stdout'],16384,'bounded independent prerequisite verdict')
+                value=final_json(verdict)
+                require_fields(value,'schema prerequisitesObserved guestQualified runtimeAdmitted preparationIdentity requestSha256','closed prerequisite reader verdict')
+                need(value['schema']=='bw.ring3.prerequisite-admission.v1' and value['prerequisitesObserved'] is True and
+                     value['guestQualified'] is False and value['runtimeAdmitted'] is False and
+                     value['requestSha256']==self.environ['BW_RING3_APPROVED_REQUEST_SHA256'],
+                     'observation-only independent prerequisite verdict');reader_passed=True
+        except BaseException as error:failure.add(error,'prerequisite-outside-collector')
+        try:
+            need(self.invoker is not None,'known dropped invoker required before original emission')
+            entry_ids(self.invoker['uid'],self.invoker['gid'])
+            progress=emit_prerequisites(self.originals,sys.stdout.buffer.write,sys.stdout.buffer.flush,failure)
+        except BaseException as error:failure.add(error,'prerequisite-original-drop')
+        if failure.first is None:failure.add(ValueError('prerequisites observed only: independently expected complete runtime graph and versioned execution delivery required before preparation/probes/guests'),
+                                           'prerequisite-runtime-gate')
+        return {'pass':False,'prerequisitesObserved':reader_passed,'installationComplete':installed,'setupComplete':setup_complete,
+            'observerComplete':observed,'collector':self.collector,'log':progress,'originals':self.originals,
+            'partialInstallation':None if self.installer is None else self.installer.facts,
+            'partialSetup':None if self.setup is None else self.setup.facts},failure
+
+
+def hosted_prerequisites(environ):
+    return HostedPrerequisites(environ).run()
 
 
 ACTUAL_ENTRY_ENABLED=False  # Activation requires a separate reviewed source/workflow change.
@@ -3670,7 +3849,7 @@ ACTUAL_ENTRY_ENABLED=False  # Activation requires a separate reviewed source/wor
 def dispatch_cli(argv=None,environ=None):
     parser=argparse.ArgumentParser(description=__doc__,allow_abbrev=False)
     modes=parser.add_mutually_exclusive_group(required=True)
-    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope'):
+    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites'):
         modes.add_argument('--'+name,action='store_const',const=name,dest='mode')
     argv=list(sys.argv[1:] if argv is None else argv)
     if len(argv)!=1:parser.error('exactly one fixed mode argument required')
@@ -3680,7 +3859,10 @@ def dispatch_cli(argv=None,environ=None):
         if args.mode=='controls':controls();return 0
         need(ACTUAL_ENTRY_ENABLED is True,'actual entry disabled pending final source/event/workflow admission')
         environ=dict(os.environ if environ is None else environ)
-        if args.mode=='install-hosted-envelope':
+        if args.mode=='hosted-prerequisites':
+            result,returned=hosted_prerequisites(environ)
+            need(isinstance(returned,FirstFailure),'authoritative prerequisite failure required');failure=returned
+        elif args.mode=='install-hosted-envelope':
             result,returned=install_hosted_envelope(environ)
             need(isinstance(returned,FirstFailure),'authoritative envelope installation failure required');failure=returned
         elif args.mode=='prepare-admitted-generated':
@@ -3746,6 +3928,148 @@ def controls():
                 'rusage':{'userSeconds':0.1,'systemSeconds':0.01,'maxRssKiB':1024}}
 
     class Tests(unittest.TestCase):
+        def prerequisite_test_module(self):
+            import importlib.util
+            spec=importlib.util.spec_from_file_location('inert_prerequisite_controls',Path(__file__).with_name('controls.py'))
+            module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
+
+        @contextlib.contextmanager
+        def prerequisite_chain_edges(self,fault=None):
+            module=self.prerequisite_test_module();env,expected,originals,data=module.prerequisite_manufactured()
+            state={'ids':(0,)*3,'gids':(0,)*3,'groups':[0],'events':[],'files':{},'directories':{'/checkout','/checkout/build'},'fault':fault}
+            installfacts={'inputOriginals':{name:originals[name] for name in module.reader.SETUP_INPUTS if name!='installation.original.json'},
+                'installationOriginal':originals['installation.original.json'],'created':['/run/fixed-admission'],'source':{},'files':{}}
+            installer=SimpleNamespace(facts=installfacts)
+            def install():
+                state['events'].append('install');failure=FirstFailure()
+                if fault=='installation':failure.add(OSError('FIRST_INSTALL'),'installation')
+                return {'installationComplete':fault!='installation','facts':installfacts},failure
+            installer.prepare=install
+            setup=SimpleNamespace(facts={'created':['owned-manual'],'controls':{'memory.max':'1073741824\n'}})
+            def prepare():
+                state['events'].append('setup');failure=FirstFailure()
+                if fault=='setup':failure.add(OSError('FIRST_SETUP'),'setup')
+                return {'pass':fault!='setup','facts':setup.facts},failure
+            setup.prepare=prepare
+            process_class=PrerequisiteProcess
+            def factory(mode,environ):
+                state['events'].append(mode)
+                child=process_class(mode,environ)
+                if mode=='observe':
+                    stdout=admitted_original(final_json(originals['setup.observer.json'])['stdout'],16384,'original observer fixture')
+                    if fault=='observer':stdout=b'ORIGINAL_OBSERVER_FAILURE'
+                else:
+                    self.assertEqual(state['ids'],(1001,)*3);self.assertEqual(state['gids'],(1002,)*3)
+                    # Invoke the actual independent admission predicate against
+                    # the bytes the actual dropped-retain adapter handed off.
+                    retained={name:state['files'][str(Path('/checkout')/PREREQUISITE_DIRECTORY/name)] for name in
+                        (*module.reader.SETUP_INPUTS,'setup.observer.json','prerequisite.outer.json')}
+                    stdout=module.reader.canonical(module.reader.verify_prerequisites(retained,expected))
+                    if fault=='reader':stdout=b'ORIGINAL_READER_FAILURE'
+                failed_mode=(fault=='observer' and mode=='observe') or (fault=='reader' and mode=='admit')
+                edge=Fake([[('stdout',stdout)]],status(1 if failed_mode else 0))
+                if mode=='admit':edge.t=100
+                for name in ('now','spawn','read_available','reap','kill','close'):setattr(child,name,getattr(edge,name))
+                child.spawn=lambda:{'pid':201 if mode=='observe' else 202,'pgid':201 if mode=='observe' else 202,'parentPid':101,'startTicks':1 if mode=='observe' else 2}
+                return child
+            actual_process=prerequisite_process
+            def process(mode,environ):
+                with patch.dict(globals(),PrerequisiteProcess=lambda mode,environ:factory(mode,environ)):
+                    return actual_process(mode,environ)
+            def read(path,cap,with_mode=False):
+                raw=data[str(path)];return (raw,'100644') if with_mode else raw
+            def proc(path):
+                if path.endswith('cgroup'):return '0::/actions/job\n'
+                return ''.join(key+':\t'+'0'*16+'\n' for key in ('CapInh','CapPrm','CapEff','CapAmb'))
+            def lstat(path):
+                if str(path) not in state['directories']:raise FileNotFoundError(str(path))
+                return SimpleNamespace(st_mode=0o40700,st_uid=1001,st_gid=1002)
+            def mkdir(path,mode=0o777,**kwargs):
+                self.assertEqual(state['ids'],(1001,)*3);state['events'].append('mkdir')
+                if str(path) in state['directories']:raise FileExistsError(str(path))
+                state['directories'].add(str(path))
+            def write(path,raw,cap):
+                self.assertEqual(state['ids'],(1001,)*3);self.assertEqual(state['groups'],[])
+                state['events'].append('retain');self.assertLessEqual(len(raw),cap)
+                if fault=='retention':raise OSError('FIRST_RETAIN')
+                if str(path) in state['files']:raise FileExistsError(str(path))
+                state['files'][str(path)]=raw
+            def setuid(*ids):
+                state['events'].append('drop')
+                if fault=='drop':raise OSError('FIRST_DROP')
+                state['ids']=ids
+            output=io.BytesIO()
+            with contextlib.ExitStack() as stack:
+                for context in (patch.dict(globals(),PrerequisiteInstaller=lambda env:installer,
+                    HostedSetupOps=lambda *args:setup,prerequisite_process=process,bounded_read=read,entry_proc=proc,write_new=write),
+                    patch.object(os,'getresuid',side_effect=lambda:state['ids']),patch.object(os,'getresgid',side_effect=lambda:state['gids']),
+                    patch.object(os,'getgroups',side_effect=lambda:state['groups']),patch.object(os,'setgroups',side_effect=lambda groups:state.update(groups=groups)),
+                    patch.object(os,'setresgid',side_effect=lambda *ids:state.update(gids=ids)),patch.object(os,'setresuid',side_effect=setuid),
+                    patch.object(os,'getpid',return_value=101),patch.object(Path,'cwd',return_value=Path('/checkout')),
+                    patch.object(Path,'resolve',lambda path,**kw:path),patch.object(Path,'lstat',lstat),patch.object(Path,'mkdir',mkdir),
+                    patch.object(os,'chmod',side_effect=lambda *args,**kw:state['events'].append('readonly')),
+                    patch.object(sys,'stdout',SimpleNamespace(buffer=output))):stack.enter_context(context)
+                yield env,state,output,expected,module
+
+        def test_prerequisite_real_process_collector_drop_retention_and_independent_admitter_chain(self):
+            with self.prerequisite_chain_edges() as (env,state,output,expected,module):
+                ops=HostedPrerequisites(env);result,failure=ops.run()
+                self.assertFalse(result['pass']);self.assertTrue(result['prerequisitesObserved'])
+                self.assertTrue(result['installationComplete']);self.assertTrue(result['setupComplete']);self.assertTrue(result['observerComplete'])
+                self.assertEqual(failure.first['phase'],'prerequisite-runtime-gate');self.assertEqual(failure.secondary,[])
+                self.assertLess(state['events'].index('install'),state['events'].index('setup'))
+                self.assertLess(state['events'].index('observe'),state['events'].index('drop'))
+                self.assertLess(state['events'].index('drop'),state['events'].index('retain'))
+                self.assertLess(state['events'].index('retain'),state['events'].index('admit'))
+                self.assertTrue(output.getvalue().startswith(b'RING3_PREREQUISITE '));self.assertTrue(result['log']['complete'])
+                self.assertNotIn(b'RING3_ORIGINAL ',output.getvalue());self.assertEqual(len(result['originals']),8)
+                verdict=module.reader.verify_prerequisite_log(output.getvalue(),expected)
+                self.assertTrue(verdict['prerequisitesObserved']);self.assertFalse(verdict['guestQualified'])
+                count=len(state['events']);again,refused=ops.run();self.assertFalse(again['pass'])
+                self.assertIn('consumed',refused.first['message']);self.assertEqual(len(state['events']),count)
+
+        def test_prerequisite_failures_preserve_original_stage_and_opaque_partial_facts(self):
+            for fault in ('installation','setup','observer','reader','retention','drop'):
+                with self.prerequisite_chain_edges(fault) as (env,state,output,expected,module):
+                    result,failure=HostedPrerequisites(env).run();self.assertFalse(result['pass']);self.assertIsNotNone(failure.first)
+                    self.assertIsNotNone(result['partialInstallation'])
+                    if fault=='installation':self.assertEqual(failure.first['message'],'FIRST_INSTALL');self.assertNotIn('setup',state['events'])
+                    if fault=='setup':self.assertEqual(failure.first['message'],'FIRST_SETUP');self.assertTrue(result['partialSetup']['created']);self.assertNotIn('observe',state['events'])
+                    if fault in ('installation','setup','observer'):self.assertNotIn('admit',state['events'])
+                    if fault=='drop':self.assertEqual(failure.first['message'],'FIRST_DROP');self.assertEqual(output.getvalue(),b'');self.assertEqual(state['files'],{})
+                    if fault=='retention':self.assertEqual(failure.first['message'],'FIRST_RETAIN');self.assertNotIn('admit',state['events'])
+                    if fault=='observer':self.assertIn(b'ORIGINAL_OBSERVER_FAILURE',base64.b64decode(final_json(result['originals']['setup.observer.json'])['stdout']['base64']))
+
+        def test_prerequisite_unknown_invoker_never_emits_root_originals_or_creates_resources(self):
+            with self.prerequisite_chain_edges() as (env,state,output,expected,module):
+                env['SUDO_UID']='0';result,failure=HostedPrerequisites(env).run()
+                self.assertIn('trusted prerequisite invoker',failure.first['message']);self.assertFalse(result['pass'])
+                self.assertEqual(state['events'],[]);self.assertEqual(output.getvalue(),b'');self.assertEqual(state['ids'],(0,)*3)
+
+        def test_prerequisite_stream_emission_short_write_and_caps_preserve_primary(self):
+            for fault in ('short','flush','name','extent'):
+                failure=FirstFailure();failure.add(ValueError('EARLIER'),'original')
+                originals={'prerequisite.outer.json':b'raw'}
+                if fault=='name':originals={'audit.json':b'raw'}
+                elif fault=='extent':originals={'prerequisite.outer.json':b'x'*(JSON_CAP+1)}
+                emit=Mock(side_effect=lambda raw:len(raw)-(fault=='short'))
+                flush=Mock(side_effect=OSError('FLUSH') if fault=='flush' else None)
+                progress=emit_prerequisites(originals,emit,flush,failure)
+                self.assertFalse(progress['complete']);self.assertEqual(failure.first['message'],'EARLIER');self.assertTrue(failure.secondary)
+                if fault in ('name','extent'):emit.assert_not_called()
+
+        def test_prerequisite_seventh_cli_mode_static_disable_and_closed_arity(self):
+            handler=Mock(side_effect=AssertionError('static refusal before prerequisites'))
+            for environ in (object(),{'ACTUAL_ENTRY_ENABLED':'true'}):
+                output=io.BytesIO()
+                with patch.dict(globals(),hosted_prerequisites=handler),patch.object(sys,'stderr',SimpleNamespace(buffer=output)):
+                    self.assertEqual(dispatch_cli(['--hosted-prerequisites'],environ),1)
+                self.assertIn(b'actual entry disabled',output.getvalue())
+            handler.assert_not_called()
+            for argv in (['--hosted-prerequisites']*2,['--hosted-prerequisites','--help'],['--hosted-prereq']):
+                with contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit) as caught:dispatch_cli(argv,{})
+                self.assertEqual(caught.exception.code,2)
+
         def envelope_fixture(self):
             data={path:('held '+path+'\n').encode() for path in SOURCE_PATHS}
             source={'schema':'bw.ring3.source.v1','head':'a'*40,'tree':'b'*40,'files':{path:{'bytes':len(raw),
