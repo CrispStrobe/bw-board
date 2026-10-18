@@ -1,0 +1,51 @@
+/** Authenticated separate IRQ provider derivative; the old profile stays immutable. */
+import assert from 'node:assert/strict';
+import {derivePagedIntIretProvider} from '../bochs-cpu3-native-paged-int-iret/provider-derivation.mjs';
+import {authenticated,replacement,sha256} from '../bochs-cpu3-native-owned-clock/derive.mjs';
+export const parentSha256='afc02de595449021f64cfa74cb0004ae71028e57596195769563439b5d0f005f';
+export function derivePagedIrqProvider(bytes=derivePagedIntIretProvider().bytes){
+ let s=authenticated(bytes,parentSha256,'qualified paged INT/IRET provider');const edits=[];
+ const once=(old,next,label)=>{s=replacement(s,old,next,label);edits.push({old,next,label});};
+ const many=(old,next,count,label)=>{assert.equal(s.split(old).length-1,count,label);s=s.split(old).join(next);edits.push({old,next,count,label});};
+ many('SourcePagedIntIretBoard','SourcePagedIrqBoard',2,'new separate board');
+ once('createOwnedPagedIntIretProvider','createOwnedPagedIrqProvider','new private factory');
+ once('frameWords:0,tableValues:', 'frameWords:0,markerWords:0,tableValues:', 'marker effect ledger');
+ once('this.pagingReads=[];this.ramAdmitted=false;this.ramWrites=[];', 'this.pagingReads=[];this.ramAdmitted=false;this.ramWrites=[];this.irqAcks=0;', 'single real PIC ACK ledger');
+ once('m.reset();assert.equal(m.cycles,4);', "m.reset();assert.deepEqual([m._pic.vectorBase,m._pic.imr,m._pic.irr,m._pic.isr,m._pic.intActive],[0,0,0,0,false],'reset PIC source admission');assert.equal(m.cycles,4);", 'actual reset PIC snapshot');
+ once("acknowledgeIrq(){return this._call('ack',[],()=>{throw Error('cold BIOS source scope forbids PIC ACK/delivery');});}",
+ "acknowledgeIrq(){return this._call('ack',[],()=>{const p=this.machine._pic;assert.equal(this.irqAcks,0,'once-only PIC ACK');assert.ok(this.lineAsserted&&p.intActive,'actual PIC line');assert.deepEqual([p.vectorBase,p.imr,p.irr,p.isr],[0,0,1,0],'scoped IRQ0 before ACK');assert.ok(!this.machine.chips.pic2.intActive,'no slave IRQ');const vector=p.acknowledge();assert.equal(vector,0);p.setIRQ(0,0);assert.deepEqual([p.irr,p.isr,p.intActive],[0,1,false]);this.irqAcks=1;return vector;});}", 'real PIC ACK after complete preflight');
+ once('const expected=[5,0x70,0x18,0,2,0];','const expected=[2,0x70,0x18,0,2,2];','IRQ frame physical bytes');
+ once("if(next.kind==='frame')this.pagingState.frameWords=next.nextFrameWords;", "if(next.kind==='frame')this.pagingState.frameWords=next.nextFrameWords;if(next.kind==='marker')this.pagingState.markerWords=next.nextMarkerWords;", 'marker write sequence');
+ once('frameWords:this.pagingState.frameWords,writes:', 'frameWords:this.pagingState.frameWords,markerWords:this.pagingState.markerWords,irqAcks:this.irqAcks,pic:this.machine._pic.getState(),writes:', 'copied PIC and marker diagnostic state');
+ once("assert.ok(!closed&&!active,'clock reentry');assert.ok(words instanceof Uint32Array", "if(active){poisoned=true;throw Error('clock reentry');}assert.ok(!poisoned&&!closed,'clock reentry');active=true;try{assert.ok(words instanceof Uint32Array", 'guard and latch copied tape preflight reentry');
+ once("assert.ok(words instanceof Uint32Array&&words.buffer instanceof ArrayBuffer&&words.byteOffset===0&&words.byteLength===words.buffer.byteLength&&words.length<=900,'owned tape');\n   const query=words.length===0;",
+ "assert.ok(words instanceof Uint32Array,'owned tape');const buffer=words.buffer,offset=words.byteOffset,byteLength=words.byteLength,length=words.length;const actualBuffer=apply(typedBuffer,words,[]),actualOffset=apply(typedOffset,words,[]),actualByteLength=apply(typedByteLength,words,[]),actualLength=apply(typedLength,words,[]);assert.ok(buffer instanceof ArrayBuffer&&buffer===actualBuffer&&offset===actualOffset&&byteLength===actualByteLength&&length===actualLength&&offset===0&&byteLength===buffer.byteLength&&Number.isSafeInteger(length)&&length>=0&&length<=900&&length*4===byteLength,'owned tape');new DataView(buffer);const tape=new Uint32Array(length);for(let i=0;i<length;i++){const word=words[i];assert.ok(word===1||word===2||word===3,'word enum');tape[i]=word;}assert.ok(!poisoned,'clock tape copy reentry');\n   const query=tape.length===0;",
+ 'copy bounded caller tape once before validating or committing');
+ assert.equal(s.split('for(const word of words)').length-1,2,'one preflight and one commit traversal');
+ s=s.split('for(const word of words)').join('for(const word of tape)');edits.push({old:'for(const word of words)',next:'for(const word of tape)',count:2,label:'commit only validated private tape'});
+ once('   }finally{active=false;}\n  }\n });', '   }finally{active=false;}\n   }finally{active=false;}\n  }\n });', 'release preflight guard after all callbacks');
+ once('let lease=false,closed=false,initialized=false,entry=false,postPio=false,mappingPending=false,active=false,n=0,q=0;',
+ 'let lease=false,closed=false,initialized=false,entry=false,postPio=false,mappingPending=false,active=false,pulsed=false,poisoned=false,n=0,q=0;',
+ 'one-shot paused stimulus ledger');
+ once('const apply=Reflect.apply;',
+ "const apply=Reflect.apply;const typedArrayPrototype=Object.getPrototypeOf(Uint32Array.prototype);const typedBuffer=Object.getOwnPropertyDescriptor(typedArrayPrototype,'buffer').get,typedOffset=Object.getOwnPropertyDescriptor(typedArrayPrototype,'byteOffset').get,typedByteLength=Object.getOwnPropertyDescriptor(typedArrayPrototype,'byteLength').get,typedLength=Object.getOwnPropertyDescriptor(typedArrayPrototype,'length').get;",
+ 'capture intrinsic typed-array metadata getters');
+ once("const callback=fn=>(...args)=>{assert.ok(lease&&!closed&&!active&&!entry&&!postPio&&!mappingPending,'owned callback lease');",
+ "const callback=fn=>(...args)=>{if(active){poisoned=true;throw Error('owned callback lease reentry');}assert.ok(!poisoned&&lease&&!closed&&!entry&&!postPio&&!mappingPending,'owned callback lease');",
+ 'latch callback reentry before any outer tape effects');
+ once(' const state=()=>[board.nativeTicks,board.successfulQuanta,',
+ " const noReentry=()=>{if(active){poisoned=true;throw Error('paused provider reentry');}};\n const state=()=>[board.nativeTicks,board.successfulQuanta,",
+ 'all exposed paused methods latch active callback reentry');
+ once('   n=nextN;q=nextQ;mappingPending=nextMapping;active=true;try{',
+ "   assert.ok(!poisoned,'clock tape reentry before effects');n=nextN;q=nextQ;mappingPending=nextMapping;active=true;try{",
+ 'reject swallowed reentry before clock commit');
+ once("  stage(){assert.ok(initialized&&!lease&&!closed&&!active);return call('stageLine');},",
+ "  pulse(){assert.ok(initialized&&!lease&&!closed&&!active&&!poisoned&&!pulsed&&!board.irqAcks&&!board.lineAsserted,'paused once-only fixture pulse');assert.deepEqual([board.machine._pic.vectorBase,board.machine._pic.imr,board.machine._pic.irr,board.machine._pic.isr],[0,0,0,0]);assert.deepEqual([board.nativeTicks,board.successfulQuanta],[39,39],'actual named N/Q cut');board.machine._pic.setIRQ(0,1);assert.equal(board.machine._pic.intActive,true);pulsed=true;},\n  stage(){assert.ok(initialized&&!lease&&!closed&&!active&&!poisoned);return call('stageLine');},", 'paused actual PIC stimulus');
+ once("  begin(){assert.ok(initialized&&!lease&&!closed&&!active);call('beginRun');", "  begin(){assert.ok(initialized&&!lease&&!closed&&!active&&!poisoned);call('beginRun');", 'deny a new run after reentry violation');
+ once("  settleCheckpoint(){assert.ok(!lease&&!active&&!closed);const state=call('settleTerminal');", "  settleCheckpoint(){assert.ok(!lease&&!active&&!closed&&!poisoned);const state=call('settleTerminal');", 'deny effectful settlement after reentry violation');
+ for(const method of ['pulse','stage','begin','end','checkpoint','records','settleCheckpoint','close'])
+  once(`  ${method}(){`,`  ${method}(){noReentry();`,'deny nested paused method '+method);
+ let inverse=s;for(const e of [...edits].reverse())if(e.count){assert.equal(inverse.split(e.next).length-1,e.count);inverse=inverse.split(e.next).join(e.old);}else inverse=replacement(inverse,e.next,e.old,'IRQ provider inverse '+e.label);
+ assert.equal(sha256(inverse),parentSha256);return {bytes:Buffer.from(s),edits,baseSha256:parentSha256};
+}
+export async function createOwnedPagedIrqProvider(...args){assert.equal(args.length,0);const s=derivePagedIrqProvider().bytes.toString().replace(/from (['"])([^'"]+)\1/g,(_,q,p)=>`from ${q}${new URL(p,import.meta.url).href}${q}`);return (await import('data:text/javascript;base64,'+Buffer.from(s).toString('base64'))).createOwnedPagedIrqProvider();}

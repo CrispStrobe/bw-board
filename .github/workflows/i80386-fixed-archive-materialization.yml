@@ -1,0 +1,129 @@
+name: i80386 fixed archive materialization only
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    paths:
+      - scripts/pr-backlog-current-source.py
+      - test/pr-backlog-current-source.test.py
+      - 'scripts/i80386-fixed-archive-materialization-hosted/**'
+      - 'scripts/i80386-cwsdpmi-archive-refusal-diagnostic/**'
+      - 'scripts/i80386-cwsdpmi-gnu-longname-materializer/**'
+      - 'scripts/i80386-cwsdpmi-fixed-archive-materialization/**'
+      - 'scripts/i80386-fixed-archive-acquisition/**'
+      - '.github/workflows/i80386-fixed-archive-materialization.yml'
+concurrency:
+  group: fixed-archive-materialization-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}-${{ github.event.action }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  fixed-archive-controls:
+    if: github.event.action != 'labeled' && github.event.pull_request.head.repo.full_name == github.repository && github.repository == 'CrispStrobe/bw-board' && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact own head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 32
+          persist-credentials: false
+      - name: Admit source and run manufactured acquisition controls
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          PYTHONDONTWRITEBYTECODE: '1'
+          PYTHONPATH: ''
+          LD_PRELOAD: ''
+          LD_AUDIT: ''
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          ulimit -f 256
+          mkdir fixed-archive-materialization
+          phase=source-before
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > fixed-archive-materialization/status.txt' EXIT
+          : > fixed-archive-materialization/control.stdout
+          : > fixed-archive-materialization/control.stderr
+          timeout --signal=KILL 90s python3 -I -B scripts/pr-backlog-current-source.py fixed-archive > fixed-archive-materialization/source-before.json
+          phase=manufactured-controls
+          timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-gnu-longname-materializer/materialize-control.py > fixed-archive-materialization/control.stdout 2> fixed-archive-materialization/control.stderr
+          phase=complete
+      - name: Retain bounded control text
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-fixed-archive-controls-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            fixed-archive-materialization/source-before.json
+            fixed-archive-materialization/event.json
+            fixed-archive-materialization/control.stdout
+            fixed-archive-materialization/control.stderr
+            fixed-archive-materialization/status.txt
+  fixed-archive-materialization:
+    if: github.event.action == 'labeled' && github.event.label.name == 'x86-fixed-archive-gnu-longname' && github.event.pull_request.head.repo.full_name == github.repository && github.repository == 'CrispStrobe/bw-board' && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact own head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 32
+          persist-credentials: false
+      - name: Admit and materialize fixed archives once
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          PYTHONDONTWRITEBYTECODE: '1'
+          PYTHONPATH: ''
+          LD_PRELOAD: ''
+          LD_AUDIT: ''
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          ulimit -f 16384
+          ulimit -v 1048576
+          mkdir fixed-archive-materialization
+          phase=source-before
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > fixed-archive-materialization/status.txt' EXIT
+          : > fixed-archive-materialization/control.stdout
+          : > fixed-archive-materialization/control.stderr
+          : > fixed-archive-materialization/run.stdout
+          : > fixed-archive-materialization/run.stderr
+          timeout --signal=KILL 90s python3 -I -B scripts/i80386-fixed-archive-materialization-hosted/admit.py actual-before
+          phase=manufactured-controls
+          timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-gnu-longname-materializer/materialize-control.py > fixed-archive-materialization/control.stdout 2> fixed-archive-materialization/control.stderr
+          phase=materialization
+          set +e
+          timeout --signal=KILL 600s python3 -I -B scripts/i80386-fixed-archive-materialization-hosted/execute.py > fixed-archive-materialization/run.stdout 2> fixed-archive-materialization/run.stderr
+          execution_code=$?
+          set -e
+          phase=source-after
+          timeout --signal=KILL 90s python3 -I -B scripts/i80386-fixed-archive-materialization-hosted/admit.py actual-after
+          if [ "$execution_code" -ne 0 ]; then
+            phase=materialization
+            exit "$execution_code"
+          fi
+          phase=complete
+      - name: Retain bounded materialization text only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-fixed-archive-materialization-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            fixed-archive-materialization/source-before.json
+            fixed-archive-materialization/source-after.json
+            fixed-archive-materialization/event.json
+            fixed-archive-materialization/acquisition.json
+            fixed-archive-materialization/control.stdout
+            fixed-archive-materialization/control.stderr
+            fixed-archive-materialization/run.stdout
+            fixed-archive-materialization/run.stderr
+            fixed-archive-materialization/status.txt
