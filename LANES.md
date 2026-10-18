@@ -5328,6 +5328,14 @@ inventory endpoint. Controls pass 205 runner, seven independent runtime and
 five prerequisite methods, with seventeen detected runtime source cuts. The
 prior 198 runner bodies are held. Both new guards remain false; execution
 delivery and actual guest qualification remain pending.
+The [execution-delivery checkpoint](https://github.com/CrispStrobe/bw-board/commit/ba90a2ea)
+connects actual runtime/preparation/bootstrap/controller descriptors, phase v4,
+dropped original retention and independent V8 validation. Controls pass 205
+runner, seven runtime, five prerequisite and seven delivery methods, plus a
+full manufactured V8 log/artifact through the unchanged twenty-role predicates.
+Four retained peer census counterexamples now refuse. This is source evidence,
+not a guest result. Both source/workflow guards remain false. Hosted QEMU and
+already-enabled parent controllers remain unestablished external prerequisites.
 The [handoff](docs/X86-NEXT-LANES.md#ordinary-js-ring-changing-intiretd-fixture)
 scopes the remaining complete runtime expectation/gate, versioned execution
 reader and adapter delivery, separate activation review and one hosted event.
