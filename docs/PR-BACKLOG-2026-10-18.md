@@ -39,6 +39,41 @@ ancestry/content proof or a documented supersession decision; preserve any
 remaining work in this report. Machine paths and private continuation details
 belong in gitignored local handoffs.
 
+## Candidate integration (not yet landed)
+
+Claim #649 merged as `27e9f8b34e2bfb2580e415d84946d23a6f22db71`. The isolated
+combined branch preserves 86 original PR heads by exact ancestry, using nine
+leaf merges; #557 remains separate. This is a candidate, not completed landing
+or permission to close the original drafts. Fresh combined-source qualification
+is required.
+
+The merge retains all original branches and source commits. The existing CPU observer, two CI workflows and two ledgers change; the
+obsolete serial-runner wiring is superseded by current master. Two added unit
+entrypoints forward to their unchanged original assertions in fixed retained Git
+contexts; other paths are additions. Workflow conflicts keep
+both fixed historical source fetches and the current split historical/current
+test policy. Ledger conflicts retain both sets of ownership. The current richer
+xv6 and DPMI outcome summaries supersede older compile/QEMU-only paragraphs;
+the separate QEMU receipt is still retained. The FreeDOS direct-Circuits receipt
+was preserved and its old Lite pin explicitly labeled historical.
+
+Existing one-shot labels have not been reapplied, failed experiments have not
+been rerun and the ring3 execution guards remain false. No package/consumer pin
+or ordinary-JS default is changed. The scalar-EA allocation change is excluded
+pending its separate performance decision.
+
+First combined local controls: 275 passed, five failed, zero skipped. Two failures
+came from the old cohort planner assuming HEAD still contained its original test
+bytes; current master deliberately replaced those inputs with source-context
+bridges. The old serial-runner wiring is therefore obsolete. Its complete eight
+original controls now run unchanged at retained source `c9a22a1b` instead of
+rewiring current CI. The IRQ oracle likewise attests the exact `6fba6812` CPU;
+its unchanged original assertion body runs at `8f1be780`, while current CPU
+regressions remain separate. The original strict hashes and all negative checks
+remain intact. Two other initial failures were caused by editing during a
+clean-source test and macOS's `/tmp` alias; final controls require a committed
+clean checkout and canonical temporary directory. No native actual is rerun.
+
 ## Initial PR inventory
 
 Heads and base branches identify the original intake, not future authority.

@@ -39,6 +39,10 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Fetch fixed compatible historical source context
         run: git fetch --no-tags --depth=1 origin c3ada315e9dfc51cd70ac6403d9e1ab18a0faf5c
+      - name: Fetch fixed retained units for consolidated source-only diagnostics
+        run: |
+          git fetch --no-tags --depth=1 origin 8f1be780b191176ff1d3789b38e2c73e48041198
+          git fetch --no-tags --depth=1 origin c9a22a1b173aa5f2fc41f8edf4a97a8fbfab5cc2
       - name: Fetch exact pre-journal CPU for historical source-bound tests
         run: git fetch --no-tags --depth=1 origin 41db7ba4a0c96076aa6a5e5c74cd70be2a0ad0d7
       - name: Fetch exact compiled source of fixed PIC IMR profile
