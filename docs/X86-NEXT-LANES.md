@@ -76,68 +76,110 @@ Compare returned CPU/cache fields, complete selected pages and board state; inde
 **Status:** ownership claim [PR643](https://github.com/CrispStrobe/bw-board/pull/643)
 is merged. Implementation [PR645](https://github.com/CrispStrobe/bw-board/pull/645)
 remains draft at published checkpoint
-[`6c72c42a`](https://github.com/CrispStrobe/bw-board/commit/6c72c42a1ef6115099f4cd0e30460e9418841191).
+[`ba90a2ea`](https://github.com/CrispStrobe/bw-board/commit/ba90a2ea).
 The implementation files are on that draft, not the default branch. Refresh its
 head, base and enabled checks before continuing; use its reviewed source rather
 than reconstructing already completed adapters.
 
-**Completed source checkpoint:** deterministic ROM and architectural goldens,
-bounded runner and original-only validation, fixed six-mode CLI, dropped
-preparation and root-to-dropped bootstrap adapters, fresh resource setup,
-immutable event/request admission, pinned Git metadata/blob transport and fresh
-read-only installation. The workflow declares a disabled 15-minute installation
-job. Both source and job guards remain false; complete installation deliberately
-returns nonzero before resource setup or guests. All 193 inert controls pass,
-with the prior 180 test bodies unchanged; 21 source mutations are detected.
-The mutable transport-descriptor regression is fixed and independently checked.
-These are source results. Actual setup ownership, the ring-changing guest,
-QEMU comparison, protected applications and performance remain unqualified.
+**Completed source checkpoints:** deterministic ROM and architectural goldens,
+bounded runner and original-only validation, dropped preparation and bootstrap
+adapters, immutable request/event admission, fixed Git blob transport and
+fresh readonly installation. The
+[subsequent prerequisite checkpoint](https://github.com/CrispStrobe/bw-board/commit/e99d28c7dd29e5a73059df039564c4242c875a8d)
+connects fresh setup to a separate independently implemented readonly observer,
+then drops to the invoker identity before fixed original retention, independent
+prerequisite admission and bounded versioned log publication. The seven-mode
+CLI has 198 runner controls and five independent reader control methods; all
+prior 193 test bodies and twenty reader functions are unchanged. Seventeen
+additional source mutations are detected. The observer checks source12, five
+installed inputs and all five resource groups; write-only kill controls are
+metadata-only. Its mocked peak is eleven descriptors under the unchanged cap.
+These are mocked source-boundary results, not actual resource ownership.
+
+The [runtime source checkpoint](https://github.com/CrispStrobe/bw-board/commit/337c8169)
+adds an immutable external superset gate before and after runtime discovery,
+independent stable-graph admission and a separate fixed metadata inventory
+endpoint. Its source and workflow guards remain false. The runtime expectation
+is versioned separately from raw ASLR-bearing observations, which remain retained.
+205 runner controls, seven independent runtime methods and the five prerequisite
+methods pass; the prior 198 runner bodies are held. Seventeen additional runtime
+source mutations are detected. None of these mocked controls is a hosted result.
+
+The [execution-delivery checkpoint](https://github.com/CrispStrobe/bw-board/commit/ba90a2ea)
+connects the admitted runtime to concrete preparation, bootstrap and controller
+descriptors, explicit phase v4 and an independent V8 original reader. The guarded
+`actual` job selects `--hosted-runtime-actual`, sets up the existing selected Node
+version and exports only the twenty original packet roles. Prerequisite/runtime
+originals remain in the separately capped versioned log. The online verdict
+always leaves official qualification false; only the independent offline reader
+joins original official workflow, log and artifact identities.
+
+Independent controls pass 205 runner methods, seven runtime methods, five
+prerequisite methods and seven delivery methods. A complete manufactured V8 log
+and artifact also pass the unchanged twenty-role architectural predicates.
+Peer review found four accepted malformed census cases; all now refuse while
+the positive still passes. No emulator, QEMU, kernel-resource or guest operation
+ran in these controls; only the tiny authored ROM byte builder ran in Node.
+Both inventory and actual remain source/workflow disabled at this checkpoint.
+Fixed Git/checkout/setup/sudo and pre-admission interpreter startup are trusted
+hosted platform boundaries, not complete executable or whole-host attestation.
 
 Start with the immutable
-[source README](https://github.com/CrispStrobe/bw-board/blob/6c72c42a1ef6115099f4cd0e30460e9418841191/scripts/i80386-ring3-int-iret/README.md)
+[source README](https://github.com/CrispStrobe/bw-board/blob/ba90a2ea/scripts/i80386-ring3-int-iret/README.md)
 and the existing adapters in `scripts/i80386-ring3-int-iret/run.py`.
 The remaining tasks below stay within the owned fixture paths. A CPU/device,
 unrelated workflow or dependency change needs a separately reviewed scope.
 
 Concrete remaining tasks, in order:
 
-1. **Independent observer and failure collector.** Consume the fixed installed
-   request/event/runtime/plan files and independently read all five resource
-   identities, owners, limits, delegations and empty membership from outside
-   both resource trees. Observe write-only kill controls through metadata only.
-   Retain exact observer process/output originals and partial failures, including
-   failures before installation can produce an original. Never copy setup code's
-   memory facts as independent evidence, mutate the shared parent, adopt or retry.
-   Source completion requires adversarial controls for ownership/identity drift,
-   missing inputs, wrong caps, partial reads and first-error preservation.
-2. **Complete runtime expectation and gate.** Supply a separately reviewed
-   immutable owned-repository input containing the full selected files, aliases,
-   tools/interpreters, TCG module, package data/versions and probe descriptors.
-   Historical QEMU/BIOS/VGA hashes cover selected files only. Compare the live
-   stable graph before the first probe and again afterward; retain ASLR-bearing
-   probe originals separately. Missing, changed or coherently rehashed graphs
-   must refuse before any probe or guest factory. Do not install a fallback,
-   self-admit an expectation from the same producer or silently update a pin.
-3. **Versioned standalone reader.** Take externally selected request/source/runtime
+1. **Independent observer and failure collector: source delivered.** Continue
+   the existing `--hosted-prerequisites` path and independent reader modes;
+   do not reconstruct them. The new eight-original prerequisite protocol is
+   distinct from the twenty guest packet roles and older V7. Controls cover
+   ownership/cap drift, write-only metadata, bounded proc reads, partial reads,
+   close failures, irreversible drop, first errors, fixed retention and log
+   framing. Actual setup/process observations remain part of the final hosted
+   qualification; this source checkpoint alone provides no such evidence.
+2. **Observe and independently admit the hosted runtime.** The separate
+   `reader.py --inventory-runtime` endpoint is implemented and disabled.
+   Review a metadata-only activation of its source guard and `runtime-inventory`
+   job, keeping actual false. Freeze the activation head's twelve-file manifest
+   and `bw.ring3.inventory-request.v1`, set the externally selected request
+   digest and immutable event payload, then admit one own-PR
+   `x86-ring3-runtime-inventory` label. Acquire the official original once and use
+   the standalone inventory reader; no producer imports or guest replay.
+   Historical Node/QEMU bytes must match before metadata probes. Current hosted
+   QEMU and already-enabled parent cpu/memory/pids controllers are unestablished
+   prerequisites; missing or changed inputs must produce a retained refusal.
+   Do not install a fallback, write shared parent controllers or silently repin.
+   The inventory candidate is not automatic approval: independently freeze the
+   stable selected superset, aliases, tools, package data and probe descriptors;
+   keep raw ASLR-bearing probe originals separate.
+3. **Versioned standalone reader: source delivered.** Continue the explicit V8
+   path in `reader.py`; take externally selected request/source/runtime
    pins and expected event/job/configuration as inputs. Join request, raw event,
    installation, independent observer, runtime, phase and generator originals in
    an explicit new version of the original-only validation path. Preserve older
    reader predicates, twenty packet roles and existing caps. Completion requires
    independent positive and wrong-pin, rehashed-conflict and dropped-identity
    adversaries, with no producer imports or guest replay.
-4. **Wire existing execution adapters.** Deliver those admitted expectations
+4. **Execution adapters: source delivered.** Continue the concrete
+   `--hosted-runtime-actual` endpoint and its admitted preparation/bootstrap/
+   controller modes. Deliver those admitted expectations
    through deliberately versioned closed parent/preparation/bootstrap/controller
    descriptors. Reuse the captured plan; preserve drop-before-decode, fixed Node
    generation/golden readback and bootstrap migration/drop/exec. Keep exclusive
    staging, exact preparation membership and first/partial failures. Completion
-   requires a coherent full mocked CLI chain reaching the new reader and every
-   prerequisite mismatch refusing before its protected edge. The current
-   install-only endpoint's deliberate terminal refusal is not that connection.
+   has a coherent full mocked CLI chain reaching the new reader and protected-edge
+   negatives. The legacy install-only refusal remains separately unchanged.
+   Do not reconstruct the completed adapters or infer actual execution from them.
 5. **Review and activate separately.** Freeze the final committed twelve-file
    source manifest, including the workflow, complete runtime input and request
    digest selected by prior independent review. Join the exact executing
    workflow, event, job and configuration; review root installation, outside
-   collection and the 900-second job envelope. A repository variable and immutable
+   collection and the 900-second job envelope including Node setup. Actual
+   preinstalled QEMU and parent-controller admission remain mandatory; source
+   plumbing does not provision them. A repository variable and immutable
    event transport the request identity; neither self-approves it. Only a separate
    reviewed source/workflow change may remove both false guards. Do not populate
    approval configuration or consume the label during source development.
@@ -146,7 +188,7 @@ Concrete remaining tasks, in order:
    once after metadata admission, independently audit provenance and raw guest
    effects against the architectural goldens, then publish the bounded result
    or preserved failure. Affected clean actual guest evidence is required before
-   merging PR645; 193 mocks do not meet that gate. A later candidate needs its
+   merging PR645; the mocked prerequisite controls do not meet that gate. A later candidate needs its
    own source/admission, not a retry of a consumed attempt.
 
 This is the next software-interrupt mechanism fixture after the reached
