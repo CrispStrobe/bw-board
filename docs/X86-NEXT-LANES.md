@@ -76,40 +76,49 @@ Compare returned CPU/cache fields, complete selected pages and board state; inde
 **Status:** ownership claim [PR643](https://github.com/CrispStrobe/bw-board/pull/643)
 is merged. Implementation [PR645](https://github.com/CrispStrobe/bw-board/pull/645)
 remains draft at published checkpoint
-[`6c72c42a`](https://github.com/CrispStrobe/bw-board/commit/6c72c42a1ef6115099f4cd0e30460e9418841191).
+[`e99d28c7`](https://github.com/CrispStrobe/bw-board/commit/e99d28c7dd29e5a73059df039564c4242c875a8d).
 The implementation files are on that draft, not the default branch. Refresh its
 head, base and enabled checks before continuing; use its reviewed source rather
 than reconstructing already completed adapters.
 
-**Completed source checkpoint:** deterministic ROM and architectural goldens,
-bounded runner and original-only validation, fixed six-mode CLI, dropped
-preparation and root-to-dropped bootstrap adapters, fresh resource setup,
-immutable event/request admission, pinned Git metadata/blob transport and fresh
-read-only installation. The workflow declares a disabled 15-minute installation
-job. Both source and job guards remain false; complete installation deliberately
-returns nonzero before resource setup or guests. All 193 inert controls pass,
-with the prior 180 test bodies unchanged; 21 source mutations are detected.
-The mutable transport-descriptor regression is fixed and independently checked.
-These are source results. Actual setup ownership, the ring-changing guest,
-QEMU comparison, protected applications and performance remain unqualified.
+**Completed source checkpoints:** deterministic ROM and architectural goldens,
+bounded runner and original-only validation, dropped preparation and bootstrap
+adapters, immutable request/event admission, fixed Git blob transport and
+fresh readonly installation. The
+[subsequent prerequisite checkpoint](https://github.com/CrispStrobe/bw-board/commit/e99d28c7dd29e5a73059df039564c4242c875a8d)
+connects fresh setup to a separate independently implemented readonly observer,
+then drops to the invoker identity before fixed original retention, independent
+prerequisite admission and bounded versioned log publication. The seven-mode
+CLI has 198 runner controls and five independent reader control methods; all
+prior 193 test bodies and twenty reader functions are unchanged. Seventeen
+additional source mutations are detected. The observer checks source12, five
+installed inputs and all five resource groups; write-only kill controls are
+metadata-only. Its mocked peak is eleven descriptors under the unchanged cap.
+These are mocked source-boundary results, not actual resource ownership.
+
+The workflow's 15-minute job and the source entry remain disabled. The legacy
+install-only endpoint still refuses before setup; the new prerequisite endpoint
+always refuses before preparation, runtime probes or guests because full
+runtime admission and versioned execution delivery are not connected. Neither
+path qualifies the ring-changing guest, QEMU comparison, protected applications
+or performance. Original failures and partial records remain preserved.
 
 Start with the immutable
-[source README](https://github.com/CrispStrobe/bw-board/blob/6c72c42a1ef6115099f4cd0e30460e9418841191/scripts/i80386-ring3-int-iret/README.md)
+[source README](https://github.com/CrispStrobe/bw-board/blob/e99d28c7dd29e5a73059df039564c4242c875a8d/scripts/i80386-ring3-int-iret/README.md)
 and the existing adapters in `scripts/i80386-ring3-int-iret/run.py`.
 The remaining tasks below stay within the owned fixture paths. A CPU/device,
 unrelated workflow or dependency change needs a separately reviewed scope.
 
 Concrete remaining tasks, in order:
 
-1. **Independent observer and failure collector.** Consume the fixed installed
-   request/event/runtime/plan files and independently read all five resource
-   identities, owners, limits, delegations and empty membership from outside
-   both resource trees. Observe write-only kill controls through metadata only.
-   Retain exact observer process/output originals and partial failures, including
-   failures before installation can produce an original. Never copy setup code's
-   memory facts as independent evidence, mutate the shared parent, adopt or retry.
-   Source completion requires adversarial controls for ownership/identity drift,
-   missing inputs, wrong caps, partial reads and first-error preservation.
+1. **Independent observer and failure collector: source delivered.** Continue
+   the existing `--hosted-prerequisites` path and independent reader modes;
+   do not reconstruct them. The new eight-original prerequisite protocol is
+   distinct from the twenty guest packet roles and older V7. Controls cover
+   ownership/cap drift, write-only metadata, bounded proc reads, partial reads,
+   close failures, irreversible drop, first errors, fixed retention and log
+   framing. Actual setup/process observations remain part of the final hosted
+   qualification; this source checkpoint alone provides no such evidence.
 2. **Complete runtime expectation and gate.** Supply a separately reviewed
    immutable owned-repository input containing the full selected files, aliases,
    tools/interpreters, TCG module, package data/versions and probe descriptors.
@@ -146,7 +155,7 @@ Concrete remaining tasks, in order:
    once after metadata admission, independently audit provenance and raw guest
    effects against the architectural goldens, then publish the bounded result
    or preserved failure. Affected clean actual guest evidence is required before
-   merging PR645; 193 mocks do not meet that gate. A later candidate needs its
+   merging PR645; the mocked prerequisite controls do not meet that gate. A later candidate needs its
    own source/admission, not a retry of a consumed attempt.
 
 This is the next software-interrupt mechanism fixture after the reached
