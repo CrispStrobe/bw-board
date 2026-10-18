@@ -1,3 +1,16 @@
+2026-10-11 bounded compiler tool boundary receipts — CLAIM, Codex.
+Branch lane/386-tool-boundary-receipts-20261011, exact base
+`e1f44e70bd21e4f3b146d0c0e00da141eb045182`. Owns this row and only new
+`scripts/i80386-cwsdpmi-0501-boundary-receipts/{tool-boundary.py,tool-boundary-control.py,README.md}`.
+Prepare a separate CPU-free receipt unit for the nine held canonical extracted
+tool/header roles: bounded ordinary-file identity and hash observations before
+probes, after link and on failure. Hold all inherited source, compiler commands,
+profiles and defaults unchanged. Remote claim precedes source edits. Pure
+manufactured filesystem/metadata controls only; unconnected to compiler,
+runtime or guest execution. Boundary observations do not prove continuous
+identity, process identity or source-to-binary correspondence. No workflow,
+actual label, integration, default adoption or merge is included in this claim.
+
 2026-10-16 A10 interrupt-chain engine follow-up — DONE (producer), Codex.
 Branch lane/a10-uarte-irq-engine-20261015. Core
 [PR247](https://github.com/CrispStrobe/labwired-core/pull/247) is merged,
@@ -4620,6 +4633,185 @@ Astra coordinated one Sol coder and one independent auditor. Qualified source `1
 ### 2026-10-01: combined native paging/RAM/REP actual-board checkpoint
 
 Measured source `809c3fba86a81501a08b0d1e81d4e1d23e241d41` authenticates63 inputs. All four budgets and a fresh root repeat pass192 successfulQ/194N/1156functional clocks, eight RAM witnesses, two page faults, five successfulREP elements and actualPIT/PIC delivery. All62 actual-report tests (61 specific coherent corruption cases) and eight host tests pass with zero skips; 24 native guards, 22 transport rejections and 11 API witnesses pass with actual failure phases checked. Root authenticates251 artifacts and whole backing per capture; independent raw checks4705 each verify aliases, pagewalk/A-D and exact budget-one resume cuts. Raw native streams, allCPU/chips/bus/RPC match between captures; completeJSON retains differing paths. Prior six inventories300 inputs remain unchanged. [Notes and receipts](docs/I80386-NATIVE-COMBINED-PAGING-RAM-ACTUAL-BOARD.md) disclose reset/ordered-bus/cache-policy differences and retained unqualified diagnostics. Next direct callbacks/optional capture for the same bounded guest, then measured speed and broader backend qualification. No fullAT/broader guest/broader game/RTx claim.
+
+2026-10-11 guest rollback snapshot cohort seam — CLAIM, Codex independent PF auditor.
+Branch lane/386-guest-snapshot-cohort-seam-20261011, exact source base
+3a0e595c7b813a753fd79c436bfafe2c20cea690. Own this ledger row and only new
+scripts/xv6-js-rollback-direct-v8-guest-site-cohort/{cohort.mjs,README.md}
+and test/xv6-guest-snapshot-cohort.test.mjs. Instance-only transparent first64
+rollback-root capture seam, private once-only extraction, closed primitive
+status and refusal/cleanup controls. Source unit only: UNCONNECTED and unrun.
+No CPU, board, probe, addon, runner, workflow, media, pin or default change.
+Outer exact-source/live-instance authority and four connected guest cases,
+ancestry/sample-ID/weak lifetime, semantics and resources remain future gates.
+Preserve failed originals and the separately audited finite nursery fixture.
+
+
+### 386 guest-site controller source preparation — 2026-10-11
+
+Claimed: `scripts/xv6-js-rollback-direct-v8-guest-site-controller/{controller.mjs,README.md}` and `test/xv6-guest-site-controller.test.mjs` on `lane/386-guest-site-controller-source-20261011`. Prepare synthetic lifecycle ports and controls for a private 64-root handoff; no caller reports establish live CPU/source/reset authority. Held sources remain unchanged. PR501 hosted source controls, full source-owned adapter admission, guest outcome parity and separate reader/launch gates remain prerequisites. No CPU/guest/Node execution, native loading, resource adoption, performance or default claim.
+
+
+### 386 guest-site runtime helper source preparation — 2026-10-11
+
+Claimed `scripts/xv6-js-rollback-direct-v8-guest-site-runtime/{runtime-ports.mjs,README.md}` and `test/xv6-guest-site-runtime.test.mjs` on `lane/386-guest-site-runtime-source-20261011`. Prepare a source-owned Node event-loop turn and fixed bounded pressure helpers; authored synthetic tests locally unrun. No caller ports or reports establish runtime/GC/source identity. Held sources and PR504 controller remain unchanged. Full runtime/driver admission, guest parity, sample predicates and launch qualification remain future gates; no local Node/CPU/guest/native/compiler execution or performance claim.
+
+
+### 386 compile tool boundary source preparation — 2026-10-11
+
+Claimed: `scripts/i80386-cwsdpmi-compile-tool-boundary/{compile.py,boundary-owner.py,boundary-owner-control.py,README.md}` on `lane/386-compile-tool-boundary-source-20261011`. Derive the held compiler helper and fixed-role receipts in a new namespace; prepare phase ownership and injected controls only. Held sources remain unchanged. PR502 hosted source controls, independent reader/input closure and a separate reviewed launch gate remain prerequisites; no compiler or guest execution, default or consumer adoption is claimed.
+
+
+### 386 compile root routes source preparation — 2026-10-11
+
+Claimed `scripts/i80386-cwsdpmi-compile-root-routes/{root-routes.py,root-routes-control.py,README.md}` on `lane/386-compile-root-routes-source-20261011`. Standalone bounded descriptor route observations for fixed tool/evidence roots and ancestor identity separation; manufactured filesystem controls only. PR503 compiler disable and held sources remain unchanged. Route observations cannot authenticate source-owned workspace creation or continuous identity; no compiler, guest, runtime, defaults or launch qualification.
+
+
+### 386 evidence descriptor writer preparation — 2026-10-11
+
+Claimed `scripts/i80386-cwsdpmi-evidence-descriptor-writer/{evidence-owner.py,evidence-owner-control.py,README.md}` on `lane/386-evidence-descriptor-writer-source-20261011`. A version-bound private composition with retained root-route descriptors prepares fixed exclusive diagnostic writes and bounded failure controls. No caller descriptor or output path admission; source-owned workspace creation and full tool/input identity remain external. Held sources and the unconditional production compiler disable remain unchanged; no compiler, guest or runtime qualification.
+
+
+### 386 workspace creator source preparation — 2026-10-11
+
+Claimed `scripts/i80386-cwsdpmi-workspace-creator/{workspace.py,workspace-control.py,README.md}` on `lane/386-workspace-creator-source-20261011`. Standalone bounded parent-route observations and one source-created session with fixed tool/evidence siblings; manufactured filesystem controls only. Preserve partial creation and uncertain cleanup, without public descriptors or caller-selected names. Parent trust, source admission, later private writer handoff and production compiler qualification remain external; held helpers and compiler disable unchanged.
+
+
+### 386 workspace unit hosted controls — 2026-10-11
+
+Claimed `scripts/i80386-workspace-source-controls/{admit.py,README.md}` and `.github/workflows/i80386-workspace-source-controls.yml` on `lane/386-workspace-source-controls-20261011`. Exact-source admission and one automatic PR-only hosted control job for the frozen phase, route, writer and creator units. Manufactured Python controls only; preserve original reports and failures. No compiler/client, guest, runtime, workspace-parent authority, private media or production enable. Existing unit sources remain unchanged.
+
+
+### 386 retained workspace evidence composition — 2026-10-12
+
+Claimed `scripts/i80386-cwsdpmi-owned-workspace-evidence/{owner.py,owner-control.py,README.md}` on `lane/386-owned-workspace-evidence-20261012`. Exact-source private creator/route/writer composition with retained descriptors, seeded chains and once-only close ownership; manufactured filesystem controls only after the finite four-unit original gate. No public caller FD/path handoff, compiler enable or parent/source authority. Held helpers remain unchanged; partial failures and cleanup uncertainty must survive.
+
+
+### 386 retained composition hosted controls — 2026-10-12
+
+Claimed `scripts/i80386-owned-workspace-source-controls/{admit.py,README.md}` and `.github/workflows/i80386-owned-workspace-source-controls.yml` on `lane/386-owned-workspace-controls-20261012`. Exact-source admission and one automatic PR-only hosted manufactured control job for the frozen retained workspace/evidence composition and its creator/route/writer dependencies. Keep the earlier four-unit original frozen and all inherited executable bytes unchanged. No compiler, client, guest, runtime, authority, media, performance or production enable. Preserve the original complete or failed text report; do not dispatch duplicate diagnostics.
+
+
+### 386 retained fixed-role tool observer — 2026-10-12
+
+Claimed `scripts/i80386-cwsdpmi-retained-tool-observer/{observer.py,observer-control.py,README.md}` on `lane/386-retained-tool-observer-20261012`. Parent-only source-bound factory observes the nine fixed tool roles through the private retained workspace tool descriptor and writes bounded internally issued complete or partial receipts. No root pathname reopening, caller descriptor/pin/receipt/provision callback, tool execution or compiler enable. Manufactured filesystem controls only; reserve per-role and aggregate byte budgets before content reads, preserve original failures and uncertain cleanup, distinguish ordinary diagnostic refusal from reentry cleanup-only, and retain all authority/guest/performance refusals. Existing units and original hosted receipts remain unchanged.
+
+### Retained tool observer hosted source controls — 2026-10-12
+
+Claimed: `scripts/i80386-retained-tool-source-controls/{admit.py,README.md}`
+and `.github/workflows/i80386-retained-tool-source-controls.yml`. Prepare
+exact-source, own-repository PR-only manufactured controls for the retained
+nine-role observer. Fixed dependencies and the disabled compiler remain
+unchanged. No actual tools, compiler, CPU, guest or performance execution;
+original hosted evidence and independent audit are required before credit.
+
+### Retained selected-role archive materialization — 2026-10-12
+
+Claimed: `scripts/i80386-cwsdpmi-retained-tool-materializer/`
+`{materialize.py,materialize-control.py,README.md}`. Privately compose the
+pinned observer; authenticate four fixed immutable archive byte inputs before
+bounded inventory parsing and exclusive retained-root writes. Materialize only
+the nine fixed roles with archive/source provenance joins. Synthetic controls
+are preparation only: full toolchain, implicit inputs, actual archive layout,
+compiler launch and guest/performance qualification remain separate gates.
+Held sources, production compiler disable, defaults and consumer pins stay fixed.
+
+### Hosted selected-role materializer controls — 2026-10-12
+
+Claimed: `scripts/i80386-retained-materializer-source-controls/{admit.py,README.md}`
+and `.github/workflows/i80386-retained-materializer-source-controls.yml`.
+Freeze eighteen dependency/observer/materializer source roles and the three
+profile roles; run only the 31 manufactured controls in a bounded own-PR
+exact-head attempt-one job. Preserve original artifacts for independent audit.
+No actual archives, tools, compiler, guest, defaults or consumer pin changes.
+
+### Fixed metadata-alias materialization revision — 2026-10-12
+
+Claimed: `scripts/i80386-cwsdpmi-fixed-alias-materializer/`
+`{materialize.py,materialize-control.py,README.md}`. Privately load the frozen
+selected-role materializer and admit only the thirteen reported tool-archive
+hard-link metadata aliases against eleven already observed ordinary targets
+with fixed extents/hashes. Create no links or alias outputs; retain the nine
+selected single-link outputs. Preserve all archive/input/lifecycle bounds and
+source provenance. Actual raw header compatibility, full toolchain provisioning,
+compiler, guest and performance results remain unqualified.
+
+### Hosted fixed-alias materializer controls — 2026-10-12
+
+Claimed: `scripts/i80386-fixed-alias-source-controls/{admit.py,README.md}`
+and `.github/workflows/i80386-fixed-alias-source-controls.yml`.
+Freeze twenty-one dependency/materializer source roles and three profile roles;
+run only the 42 manufactured fixed-alias controls in a bounded own-PR exact-head
+attempt-one job. Preserve the original for independent audit. Actual archives,
+complete toolchain, compiler, guest and performance qualification remain separate;
+held profiles, production compiler disable, defaults and consumer pins stay fixed.
+
+### Fixed-archive materialization runner preparation — 2026-10-12
+
+Claimed: `scripts/i80386-cwsdpmi-fixed-archive-materialization/`
+`{run.py,run-control.py,README.md}`. Privately compose the fixed-alias owner;
+admit four pinned immutable archive inputs, run materialization once, retain
+bounded raw before/failure-final observations and close status. Manufactured
+controls prepare actual hosted archive qualification; no acquisition, executable
+launch, full namespace census, final mode proof, compiler or guest authority.
+Held source, compiler disable, defaults and consumer pins stay unchanged.
+
+### Hosted materialization-runner controls — 2026-10-12
+
+Claimed: `scripts/i80386-materialization-runner-source-controls/{admit.py,README.md}`
+and `.github/workflows/i80386-materialization-runner-source-controls.yml`.
+Freeze twenty-five inherited unit/compiler-source roles plus three profile roles;
+run only the 22 manufactured runner controls in a bounded own-PR exact-head
+attempt-one job. Compiler source is admitted but never executed. Preserve the
+sole original for independent audit; actual acquisition/materialization remains
+a separate profile. Held source, defaults and consumer pins remain unchanged.
+
+### Fixed public archive acquisition adapter — 2026-10-12
+
+Claimed: `scripts/i80386-fixed-archive-acquisition/`
+`{acquire.py,acquire-control.py,README.md}`. Fetch only the four fixed public
+archive URLs under per-input and aggregate byte/time bounds, authenticate their
+exact extents/hashes and pass immutable bytes once to the pinned materialization
+runner. Preserve bounded original refusal/cleanup evidence. Manufactured controls
+prepare hosted acquisition; no local real archive, tool/compiler/guest launch,
+namespace/mode witness, default or consumer pin change.
+
+### Hosted actual four-archive materialization — 2026-10-12
+
+Claimed: `scripts/i80386-fixed-archive-materialization-hosted/`
+`{admit.py,execute.py,README.md}` and
+`.github/workflows/i80386-fixed-archive-materialization.yml`.
+Freeze twenty-eight inherited source roles plus four profile roles. Automatic
+own-PR manufactured controls prepare a separately labeled one-shot actual job;
+actual acquisition remains unarmed until exact-source checks, frozen reader and
+external launch reservation pass. Retain bounded text evidence only. No tool,
+compiler or guest invocation, namespace/mode census, default or consumer pin change.
+
+
+### Actual archive refusal diagnostics — 2026-10-12
+
+Claimed: `scripts/i80386-cwsdpmi-archive-refusal-diagnostic/` and bounded
+propagation in `scripts/i80386-cwsdpmi-fixed-archive-materialization/`,
+`scripts/i80386-fixed-archive-acquisition/`,
+`scripts/i80386-fixed-archive-materialization-hosted/` and its workflow.
+Preserve failed original run38253971654. Identify the exact first refused rule
+using bounded fixed reason, header ordinal/offset/type and magic class; no member
+names, raw headers or bodies. Retain parser acceptance, four input pins, alias
+inventory, compiler refusal, defaults and consumer pins. No retry or relabel of
+the failed head; any future actual attempt needs separate source qualification.
+
+### Bounded GNU long-name materialization — 2026-10-12
+
+Claimed: new `scripts/i80386-cwsdpmi-gnu-longname-materializer/` and scoped
+runner/acquisition/hosted propagation plus its existing workflow. Actual
+run38276900168 reported GNU type L at header102/decoded offset5634048; preserve
+that failed original and never retry its head. Add bounded one-shot GNU long-name
+metadata for the immediately following ordinary member, retaining path policy,
+checksums, budgets, authenticated input pins, selected hashes and thirteen fixed
+hard-link mappings. Do not admit GNU K, PAX, symbolic links or general extraction.
+Hold prior modules unchanged and retain disabled compiler/defaults/consumer pins.
+Manufactured positive/adversarial controls and independent review precede any
+separately qualified actual materialization.
 
 2026-10-12 bounded full-tree packet source preparation — CLAIM, Codex x86.
 Branch lane/386-full-tree-packet-source-20261012, exact base

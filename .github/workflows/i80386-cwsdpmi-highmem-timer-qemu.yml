@@ -1,0 +1,111 @@
+name: 386 owned high-memory timer QEMU control
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x86-cwsdpmi-highmem-timer-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  qemu-control:
+    if: >-
+      github.event.label.name == 'x86-cwsdpmi-highmem-timer-qemu' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Authenticate source and bounded controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          e="$RUNNER_TEMP/cwsdpmi-highmem-evidence"
+          mkdir "$e"
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          timeout --signal=TERM --kill-after=5s 30s python3 -B scripts/i80386-cwsdpmi-highmem-timer/source.py "$BW_EXPECTED_HEAD" "$e/source-before.json"
+          for test in compile-adapter-control.py grade-control.py inventory-control.py source-control.py oracle-control.py; do
+            timeout --signal=TERM --kill-after=5s 30s python3 -B "scripts/i80386-cwsdpmi-highmem-timer/$test" > "$e/$test.stdout" 2> "$e/$test.stderr"
+          done
+          timeout --signal=TERM --kill-after=5s 30s node scripts/i80386-cwsdpmi-highmem-timer/media-control.mjs > "$e/media-control.stdout" 2> "$e/media-control.stderr"
+          node -e 'const fs=require("node:fs"),os=require("node:os");const c=os.cpus();fs.writeFileSync(process.argv[1],JSON.stringify({schema:"bw.cwsdpmi-highmem-timer.host.v1",node:process.version,v8:process.versions.v8,platform:process.platform,arch:process.arch,cpuModel:c[0]?.model??null,logicalCpuCount:c.length,availableParallelism:os.availableParallelism()},null,2)+"\n",{flag:"wx"})' "$e/host.json"
+      - name: Install bounded Ubuntu QEMU and SeaBIOS packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          e="$RUNNER_TEMP/cwsdpmi-highmem-evidence"
+          phase=apt-update
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$e/apt-step-status.txt"' EXIT
+          timeout --signal=TERM --kill-after=10s 180s sudo apt-get -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=1 -o DPkg::Lock::Timeout=30 update -qq > "$e/apt-update.stdout" 2> "$e/apt-update.stderr"
+          phase=apt-install
+          timeout --signal=TERM --kill-after=10s 180s sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=1 -o DPkg::Lock::Timeout=30 install -y --no-install-recommends qemu-system-x86 seabios > "$e/apt-install.stdout" 2> "$e/apt-install.stderr"
+          phase=complete
+      - name: Fetch exact inputs, compile internally, build private media and run one QEMU guest
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          e="$RUNNER_TEMP/cwsdpmi-highmem-evidence"
+          i="$RUNNER_TEMP/cwsdpmi-highmem-inputs"
+          w="$RUNNER_TEMP/cwsdpmi-highmem-work"
+          mkdir "$i" "$w" "$w/oracle-scratch"
+          phase=setup
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$e/guest-step-status.txt"' EXIT
+          fetch() {
+            phase="$1"
+            timeout --signal=TERM --kill-after=10s "$2" curl --fail --location --silent --show-error --retry 1 --max-time "$3" --max-filesize "$4" -o "$i/$5" "$6" > "$e/$1-fetch.stdout" 2> "$e/$1-fetch.stderr"
+          }
+          fetch toolchain 300s 260 81000000 toolchain.tar.bz2 https://github.com/andrewwutw/build-djgpp/releases/download/v3.4/djgpp-linux64-gcc1220.tar.bz2
+          fetch djcrx 90s 75 3000000 djcrx205.zip https://www.delorie.com/pub/djgpp/current/v2/djcrx205.zip
+          fetch djdev 90s 75 3000000 djdev205.zip https://www.delorie.com/pub/djgpp/current/v2/djdev205.zip
+          fetch djlsr 90s 75 3000000 djlsr205.zip https://www.delorie.com/pub/djgpp/current/v2/djlsr205.zip
+          fetch cwsdpmi 90s 75 1000000 cwsdpmi.zip https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/repositories/1.4/tools/cwsdpmi.zip
+          fetch freedos 180s 150 33554432 freedos.zip https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/distributions/1.4/FD14-FloppyEdition.zip
+          phase=compile
+          timeout --signal=TERM --kill-after=10s 360s python3 -B scripts/i80386-cwsdpmi-highmem-timer/compile-adapter.py "$i/toolchain.tar.bz2" "$i/djcrx205.zip" "$i/djdev205.zip" "$i/djlsr205.zip" scripts/i80386-cwsdpmi-highmem-timer/client.c "$e/compile-audit" "$w/compile" > "$e/compile.stdout" 2> "$e/compile.stderr"
+          phase=host-and-floppy
+          timeout --signal=TERM --kill-after=5s 30s python3 -B scripts/i80386-cwsdpmi-qemu-owned/package.py "$i/cwsdpmi.zip" "$e/package" "$w/package-private" > "$e/package.stdout" 2> "$e/package.stderr"
+          timeout --signal=TERM --kill-after=5s 30s python3 -B scripts/i80386-dos32a-owned/acquire.py "$i/freedos.zip" "$w/freedos-floppy.img" "$e/freedos-input.json" > "$e/freedos.stdout" 2> "$e/freedos.stderr"
+          phase=media
+          timeout --signal=TERM --kill-after=5s 30s node scripts/i80386-cwsdpmi-highmem-timer/media.mjs "$w/package-private/CWSDPMI.EXE" "$w/compile/build/client.exe" scripts/i80386-cwsdpmi-highmem-timer/client.c "$e/highmem-compile.json" "$e/compile-audit/compile-report.json" "$w/initial-hdd.img" "$e/media.json" > "$e/media.stdout" 2> "$e/media.stderr"
+          phase=qemu-runtime
+          timeout --signal=TERM --kill-after=5s 20s python3 -B scripts/i80386-cwsdpmi-qemu-owned/runtime.py "$w/freedos-floppy.img" "$w/initial-hdd.img" "$e/media.json" "$w/oracle-scratch" "$e/qemu-runtime.json" "$w/oracle-input.json" > "$e/runtime.stdout" 2> "$e/runtime.stderr"
+          phase=qemu-guest
+          timeout --signal=TERM --kill-after=10s 270s python3 -B scripts/i80386-cwsdpmi-highmem-timer/oracle.py "$w/oracle-input.json" "$e/highmem-oracle.json" > "$e/oracle-driver.stdout" 2> "$e/oracle-driver.stderr"
+          phase=complete
+      - name: Recheck source and report-only artifact inventory
+        id: inventory
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          e="$RUNNER_TEMP/cwsdpmi-highmem-evidence"
+          mkdir -p "$e"
+          python3 -B scripts/i80386-cwsdpmi-highmem-timer/source.py "$BW_EXPECTED_HEAD" "$e/source-after.json" > "$e/source-after.stdout" 2> "$e/source-after.stderr"
+          if test -f "$e/source-before.json"; then cmp "$e/source-before.json" "$e/source-after.json"; fi
+          python3 -B scripts/i80386-cwsdpmi-highmem-timer/inventory.py "$e"
+      - name: Retain bounded reports and owned observations only
+        if: always() && steps.inventory.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-cwsdpmi-highmem-timer-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cwsdpmi-highmem-evidence/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

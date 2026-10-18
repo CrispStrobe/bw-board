@@ -75,6 +75,12 @@ jobs:
         run: git fetch --no-tags --depth=1 origin 4c468e24833d59bebeae2486593df887289f29a9
       - name: Fetch fixed compatible historical source context
         run: git fetch --no-tags --depth=1 origin c3ada315e9dfc51cd70ac6403d9e1ab18a0faf5c
+      - name: Fetch fixed retained units for consolidated source-only diagnostics
+        run: |
+          git fetch --no-tags --depth=1 origin 8f1be780b191176ff1d3789b38e2c73e48041198
+          git fetch --no-tags --depth=1 origin c9a22a1b173aa5f2fc41f8edf4a97a8fbfab5cc2
+      - name: Fetch exact pre-journal CPU for historical source-bound x86 tests
+        run: git fetch --no-tags --depth=1 origin 41db7ba4a0c96076aa6a5e5c74cd70be2a0ad0d7
       - name: Fetch exact compiled source of fixed PIC IMR profile
         run: git fetch --no-tags --depth=1 origin a6f605280f778b2bc409ef97ac3b40e15874530c
       - name: Fetch fixed native dispatch baseline for source reconstruction controls
@@ -173,6 +179,16 @@ jobs:
           repository: CrispStrobe/blinkenrocket-firmware
           ref: 813e2656f38f9f41180ecde1783e26e49035dac9
           path: blinkenrocket-firmware
+          persist-credentials: false
+      - name: Keep pinned firmware outside the qualified source checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C blinkenrocket-firmware rev-parse HEAD)" = 813e2656f38f9f41180ecde1783e26e49035dac9
+          test ! -e "$RUNNER_TEMP/blinkenrocket-firmware"
+          mv -- blinkenrocket-firmware "$RUNNER_TEMP/blinkenrocket-firmware"
+          test -s "$RUNNER_TEMP/blinkenrocket-firmware/releases/blinkenrocket_2.1.hex"
+          printf 'BLINKENROCKET_HEX=%s/releases/blinkenrocket_2.1.hex\n' "$RUNNER_TEMP/blinkenrocket-firmware" >> "$GITHUB_ENV"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22

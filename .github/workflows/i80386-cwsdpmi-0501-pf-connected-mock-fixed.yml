@@ -1,0 +1,172 @@
+name: 386 owned CWSDPMI AX=0501 PF mock-corrected AT diagnostic
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x86-cwsdpmi-0501-pf-mock-fixed-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  at-frame:
+    if: >-
+      github.event.label.name == 'x86-cwsdpmi-0501-pf-mock-fixed' &&
+      github.run_attempt == 1 &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Admit exact source and CPU-free controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          e="$RUNNER_TEMP/cwsdpmi-0501-pf-connected-evidence"
+          mkdir "$e"
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          timeout --signal=TERM --kill-after=5s 30s python3 -B scripts/i80386-cwsdpmi-0501-pf-connected-mock-fixed/source.py "$BW_EXPECTED_HEAD" "$e/source-before.json"
+          timeout --signal=TERM --kill-after=5s 20s python3 -B scripts/i80386-cwsdpmi-0501-pf-connected-mock-fixed/source-control.py > "$e/source-control.stdout" 2> "$e/source-control.stderr"
+          for test in compile-adapter-control.py grade-control.py inventory-control.py; do
+            timeout --signal=TERM --kill-after=5s 30s python3 -B "scripts/i80386-cwsdpmi-highmem-timer/$test" > "$e/$test.stdout" 2> "$e/$test.stderr"
+          done
+          timeout --signal=TERM --kill-after=5s 30s node scripts/i80386-cwsdpmi-highmem-timer/media-control.mjs > "$e/media-control.stdout" 2> "$e/media-control.stderr"
+          timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-highmem-at/binding-control.mjs > "$e/binding-control.stdout" 2> "$e/binding-control.stderr"
+          timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-at-loaded/passive-ram-control.mjs > "$e/passive-ram-control.stdout" 2> "$e/passive-ram-control.stderr"
+          timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-highmem-at/cut-control.mjs > "$e/owned-code-cut-control.stdout" 2> "$e/owned-code-cut-control.stderr"
+          timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-highmem-at/grade-control.mjs > "$e/grade-control.stdout" 2> "$e/grade-control.stderr"
+          TMPDIR="$RUNNER_TEMP" timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-highmem-at/driver-control.mjs > "$e/driver-control.stdout" 2> "$e/driver-control.stderr"
+          timeout --signal=TERM --kill-after=5s 20s node --test test/i80386-0501-frame-policy.test.mjs > "$e/frame-policy-test.stdout" 2> "$e/frame-policy-test.stderr"
+          timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-0501-task-mode-at/orchestration-control.mjs > "$e/task-mode-orchestration-control.stdout" 2> "$e/task-mode-orchestration-control.stderr"
+          timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-0501-pf-connected/orchestration-control.mjs > "$e/pf-orchestration-control.stdout" 2> "$e/pf-orchestration-control.stderr"
+          timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-0501-pf-connected/grade-control.mjs > "$e/pf-grade-control.stdout" 2> "$e/pf-grade-control.stderr"
+          TMPDIR="$RUNNER_TEMP" timeout --signal=TERM --kill-after=5s 20s python3 -B scripts/i80386-cwsdpmi-0501-pf-connected/inventory-control.py > "$e/pf-connected-inventory-control.stdout" 2> "$e/pf-connected-inventory-control.stderr"
+          {
+            printf 'run=%s attempt=%s event=%s expected_head=%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_EVENT_NAME" "$BW_EXPECTED_HEAD"
+            python3 --version
+            node --version
+          } > "$e/host.txt"
+          node -e 'const os=require("node:os"); const cpus=os.cpus(); process.stdout.write(JSON.stringify({schema:"bw.cwsdpmi-owned.host-hardware.v1",cpuModel:cpus[0]?.model??null,logicalCpus:cpus.length,availableParallelism:os.availableParallelism(),node:process.versions.node,v8:process.versions.v8,platform:process.platform,arch:process.arch})+"\n")' > "$e/host-hardware.json"
+      - name: Fetch pinned inputs, compile owned client, and attempt one bounded task-mode observation
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          e="$RUNNER_TEMP/cwsdpmi-0501-pf-connected-evidence"
+          i="$RUNNER_TEMP/cwsdpmi-0501-pf-connected-inputs"
+          w="$RUNNER_TEMP/cwsdpmi-highmem-work"
+          mkdir "$i" "$w"
+          phase=setup
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$e/guest-step-status.txt"' EXIT
+          fetch() {
+            phase="$1"
+            timeout --signal=TERM --kill-after=10s "$2" curl --fail --location --silent --show-error --retry 1 --max-time "$3" --max-filesize "$4" -o "$i/$5" "$6" > "$e/$1-fetch.stdout" 2> "$e/$1-fetch.stderr"
+          }
+          fetch toolchain 240s 210 81000000 toolchain.tar.bz2 https://github.com/andrewwutw/build-djgpp/releases/download/v3.4/djgpp-linux64-gcc1220.tar.bz2
+          fetch djcrx 65s 55 3000000 djcrx205.zip https://www.delorie.com/pub/djgpp/current/v2/djcrx205.zip
+          fetch djdev 65s 55 3000000 djdev205.zip https://www.delorie.com/pub/djgpp/current/v2/djdev205.zip
+          fetch djlsr 65s 55 3000000 djlsr205.zip https://www.delorie.com/pub/djgpp/current/v2/djlsr205.zip
+          fetch cwsdpmi 65s 55 1000000 cwsdpmi.zip https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/repositories/1.4/tools/cwsdpmi.zip
+          fetch freedos 135s 120 33554432 freedos.zip https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/distributions/1.4/FD14-FloppyEdition.zip
+          phase=compile
+          timeout --signal=TERM --kill-after=10s 360s python3 -B scripts/i80386-cwsdpmi-highmem-timer/compile-adapter.py "$i/toolchain.tar.bz2" "$i/djcrx205.zip" "$i/djdev205.zip" "$i/djlsr205.zip" scripts/i80386-cwsdpmi-highmem-timer/client.c "$e/compile-audit" "$w/compile" > "$e/compile.stdout" 2> "$e/compile.stderr"
+          phase=source-slot-observation
+          timeout --signal=TERM --kill-after=5s 20s python3 -B - "$i/djlsr205.zip" "$e/source-slot-observation.json" <<'PY'
+          import hashlib,io,json,pathlib,stat,sys,zipfile
+          archive,output=map(pathlib.Path,sys.argv[1:])
+          sha=lambda raw:hashlib.sha256(raw).hexdigest()
+          with archive.open('rb') as source:
+              raw=source.read(2047172)
+              if source.read(1):raise ValueError('source archive size cap')
+          receipt={'schema':'bw.cwsdpmi-owned.source-slot-observation.v1',
+                   'archive':{'bytes':len(raw),'sha256':sha(raw)},
+                   'status':'INPUT_OBSERVED_NO_BINARY_CORRESPONDENCE'}
+          def save():output.write_text(json.dumps(receipt,indent=2,sort_keys=True)+'\n')
+          save()
+          if len(raw)!=2047171 or sha(raw)!='80690b6e44ff8bc6c6081fca1f4faeba1591c4490b76ef0ec8b35847baa5deea':
+              raise ValueError('source archive pin')
+          targets={'src/libc/go32/exceptn.s':('src/libc/go32/exceptn.S','c0e40d70a9439aea6498c16a0f523c3fbded61093eeb83899579bb9663939720',12198),
+                   'src/libc/go32/dpmiexcp.c':('src/libc/go32/dpmiexcp.c','53161981a15802bfe7a20495d2f30432ae7fb134752312fa441ee361226653c5',20322)}
+          with zipfile.ZipFile(io.BytesIO(raw)) as z:
+              infos=z.infolist()
+              if len(infos)>2500:raise ValueError('source archive member cap')
+              found={}
+              for item in infos:
+                  key=item.filename.casefold()
+                  if key not in targets:continue
+                  if key in found or item.filename!=targets[key][0] or item.filename.startswith('/') or '..' in pathlib.PurePosixPath(item.filename).parts:
+                      raise ValueError('source member identity')
+                  if item.is_dir() or stat.S_IFMT(item.external_attr>>16)==stat.S_IFLNK or item.file_size>100000:
+                      raise ValueError('source member shape')
+                  found[key]=item
+              if set(found)!=set(targets):raise ValueError('source members absent')
+              selected={}
+              for key,item in sorted(found.items()):
+                  member=z.read(item)
+                  if len(member)!=item.file_size:raise ValueError('source member length')
+                  _,expected,size=targets[key]
+                  selected[item.filename]={'bytes':len(member),'sha256':sha(member),
+                    'equalsReviewedMirror':len(member)==size and sha(member)==expected}
+          receipt['members']=selected
+          receipt['status']='PINNED_SOURCE_MEMBERS_OBSERVED_NO_BINARY_CORRESPONDENCE'
+          save()
+          PY
+          phase=host-and-floppy
+          timeout --signal=TERM --kill-after=5s 30s python3 -B scripts/i80386-cwsdpmi-qemu-owned/package.py "$i/cwsdpmi.zip" "$e/package" "$w/package-private" > "$e/package.stdout" 2> "$e/package.stderr"
+          timeout --signal=TERM --kill-after=5s 30s python3 -B scripts/i80386-dos32a-owned/acquire.py "$i/freedos.zip" "$w/freedos-floppy.img" "$e/freedos-input.json" > "$e/freedos.stdout" 2> "$e/freedos.stderr"
+          phase=media
+          timeout --signal=TERM --kill-after=5s 30s node scripts/i80386-cwsdpmi-highmem-timer/media.mjs "$w/package-private/CWSDPMI.EXE" "$w/compile/build/client.exe" scripts/i80386-cwsdpmi-highmem-timer/client.c "$e/highmem-compile.json" "$e/compile-audit/compile-report.json" "$w/initial-hdd.img" "$e/media.json" > "$e/media.stdout" 2> "$e/media.stderr"
+          phase=AT-owned-0501-pf-connected
+          python3 -B - "$i" "$w" "$e" <<'PY'
+          import json,pathlib,sys
+          inputs,work,evidence=map(pathlib.Path,sys.argv[1:])
+          roles={'bios':pathlib.Path('roms/free-at-bios/BIOS-bochs-legacy'),
+                 'vga':pathlib.Path('roms/free-at-bios/vgabios-lgpl.bin'),
+                 'floppy':work/'freedos-floppy.img',
+                 'host':work/'package-private/CWSDPMI.EXE',
+                 'client':work/'compile/build/client.exe',
+                 'map':work/'compile/build/client.map',
+                 'compileReport':evidence/'compile-audit/compile-report.json',
+                 'outerCompileReport':evidence/'highmem-compile.json',
+                 'source':pathlib.Path('scripts/i80386-cwsdpmi-highmem-timer/client.c'),
+                 'mediaReport':evidence/'media.json',
+                 'disk':work/'initial-hdd.img'}
+          (work/'driver-input.json').write_text(json.dumps({key:str(path.resolve(strict=True)) for key,path in roles.items()})+'\n')
+          PY
+          timeout --signal=TERM --kill-after=10s 820s node --max-old-space-size=768 scripts/i80386-cwsdpmi-0501-pf-connected/adapter.mjs "$w/driver-input.json" "$e/pf-connected.json" "$e/progress.json" > "$e/driver.stdout" 2> "$e/driver.stderr"
+          phase=complete
+      - name: Recheck source and inventory safe report-only evidence
+        id: inventory
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          e="$RUNNER_TEMP/cwsdpmi-0501-pf-connected-evidence"
+          mkdir -p "$e"
+          python3 -B scripts/i80386-cwsdpmi-0501-pf-connected-mock-fixed/source.py "$BW_EXPECTED_HEAD" "$e/source-after.json" > "$e/source-after.stdout" 2> "$e/source-after.stderr"
+          if test -f "$e/source-before.json"; then cmp "$e/source-before.json" "$e/source-after.json"; fi
+          python3 -B scripts/i80386-cwsdpmi-0501-pf-connected/inventory.py "$e"
+      - name: Retain bounded reports and progress only
+        if: always() && steps.inventory.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-cwsdpmi-0501-pf-mock-fixed-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cwsdpmi-0501-pf-connected-evidence/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

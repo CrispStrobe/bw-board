@@ -39,6 +39,82 @@ ancestry/content proof or a documented supersession decision; preserve any
 remaining work in this report. Machine paths and private continuation details
 belong in gitignored local handoffs.
 
+## Candidate integration (not yet landed)
+
+Claim #649 merged as `27e9f8b34e2bfb2580e415d84946d23a6f22db71`. The isolated
+combined branch preserves 86 original PR heads by exact ancestry, using nine
+leaf merges; #557 remains separate. This is a candidate, not completed landing
+or permission to close the original drafts. Fresh combined-source qualification
+is required.
+
+The merge retains all original branches and source commits. The existing CPU observer, two CI workflows and two ledgers change; the
+obsolete serial-runner wiring is superseded by current master. Two added unit
+entrypoints forward to their unchanged original assertions in fixed retained Git
+contexts; other paths are additions. Workflow conflicts keep
+both fixed historical source fetches and the current split historical/current
+test policy. Ledger conflicts retain both sets of ownership. The current richer
+xv6 and DPMI outcome summaries supersede older compile/QEMU-only paragraphs;
+the separate QEMU receipt is still retained. The FreeDOS direct-Circuits receipt
+was preserved and its old Lite pin explicitly labeled historical.
+
+Existing one-shot labels have not been reapplied, failed experiments have not
+been rerun and the ring3 execution guards remain false. No package/consumer pin
+or ordinary-JS default is changed. The scalar-EA allocation change is excluded
+pending its separate performance decision.
+
+First combined local controls: 275 passed, five failed, zero skipped. Two failures
+came from the old cohort planner assuming HEAD still contained its original test
+bytes; current master deliberately replaced those inputs with source-context
+bridges. The old serial-runner wiring is therefore obsolete. Its complete eight
+original controls now run unchanged at retained source `c9a22a1b` instead of
+rewiring current CI. The IRQ oracle likewise attests the exact `6fba6812` CPU;
+its unchanged original assertion body runs at `8f1be780`, while current CPU
+regressions remain separate. The original strict hashes and all negative checks
+remain intact. Two other initial failures were caused by editing during a
+clean-source test and macOS's `/tmp` alias; final controls require a committed
+clean checkout and canonical temporary directory. No native actual is rerun.
+
+## Current qualification follow-up
+
+PR650 is the combined source candidate. The owner's later PR645 checkpoint
+`f7d36a07` is also included by normal merge; its 205 inert runner controls and
+separate prerequisite/runtime reader controls require Linux qualification.
+The macOS runner-control attempt refuses because `os.getresuid` is unavailable;
+that is not a passing Linux execution result. Both execution guards and the
+additional runtime-inventory guard remain false.
+
+Thirteen historical diagnostic jobs admitted a narrow original PR delta before
+running pure mock controls. That source-event admission is not applicable to a
+combined branch with current master: the first hosted nursery mock job at
+`daa09495` failed its original six-path envelope. Historical admission programs,
+original source commits and actual-event paths remain preserved. The current
+mock jobs now use `scripts/pr-backlog-current-source.py`, which admits the real
+current own-repository PR event and mock job, verifies exact HEAD, refuses dirty
+or untracked source, and reads back a bounded inventory of committed source,
+tests, workflows and package manifests against Git blob identities. Its distinct
+report schema explicitly grants current unit-control evidence only; it cannot
+qualify an original event, compiler, native build, CPU run, guest or performance.
+All existing mock-control entrypoints/assertions still run. The actual jobs keep
+their original source admission and activation conditions; none was enabled.
+Six independent refusal/readback controls cover the new boundary.
+
+The user explicitly chose to preserve PR557's performance gate. Twelve address-
+decoding correctness tests pass against a local combined-source review, but
+that review is not promoted. The separate public code16 fixture result already
+recorded in X86-NEXT-LANES does not replace the original private application
+workload. Next, locate its original frozen inputs, baseline/candidate and
+measurement contract in the ignored local handoff; confirm eligibility without
+changing that contract; then obtain and independently audit the original paired
+CPU/wall observations. Require median CPU ratio >=1.03, all seven ratios >1,
+median wall ratio <=1.02 and exact semantic equality. If the frozen inputs or
+qualification are unavailable, leave #557 open and unadopted. Do not substitute
+a new microbenchmark, cherry-pick the CPU optimization or describe it as obsolete.
+
+Hosted full CI must pass at the final combined source before landing PR650.
+Then recheck live original heads, prove each is an ancestor of remote master,
+and retire only incorporated drafts with a backlink and surviving limitations.
+Keep any newly advanced owner head open until it too is incorporated.
+
 ## Initial PR inventory
 
 Heads and base branches identify the original intake, not future authority.
@@ -133,3 +209,23 @@ Refresh exact head/default/checks before merging or closing anything.
 | [#525](https://github.com/CrispStrobe/bw-board/pull/525) | `lane/386-archive-refusal-diagnostic-20261012` | `c9a22a1b173aa5f2fc41f8edf4a97a8fbfab5cc2` | fix(x86): admit bounded GNU long-name metadata |
 | [#557](https://github.com/CrispStrobe/bw-board/pull/557) | `master` | `fc799aef5945014dd1920aded9d60339da3caea8` | Remove decodeEA16 temporary arrays; performance qualification pending |
 | [#645](https://github.com/CrispStrobe/bw-board/pull/645) | `master` | `a5054f3a9a6e572cc926d1537991f12ab650be14` | test: add bounded ring3 fixture and hosted runner source |
+
+## Hosted qualification correction
+
+At `561586af`, 23 enabled checks passed, including all vector/corpus suites,
+xv6 and the ring3 source controls. Fast CI ran 9,441 tests: 9,135 passed, one
+failed and 305 retained skips. The failure was the unchanged IRQ clean-source
+assertion finding the separate firmware checkout inside the board worktree.
+Move that same pinned firmware checkout to the runner temporary directory and
+supply its existing `BLINKENROCKET_HEX` input; retain all firmware and source
+assertions. Two mock jobs also lacked their required ancestor commits because
+they fetched only eight commits. Their checkouts now retain full history,
+preserving the ancestor checks and all mock assertions. These are new-source
+qualification corrections, not retries of consumed actual events.
+
+Current master documentation through `ac51ad28` is normally merged. PR645 has
+advanced beyond its incorporated `f7d36a07` checkpoint; its later execution
+delivery, metadata-only activation and failure diagnostics remain on the owner
+branch and are not silently adopted here. Preserve that open PR if its live head
+is not an ancestor of the qualified integration. Its consumed metadata event
+and immutable failure original must not be repeated.

@@ -1,0 +1,97 @@
+{
+  "admissionReportSha256": "7aeca5742a1705e68de2c3ee4a8cc01dfe02329e344b579967b9abbbab2e763c",
+  "artifactUrl": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11528449869",
+  "artifactZip": {
+    "bytes": 101308,
+    "inventoryEntries": 77,
+    "sha256": "ee932d79deeeb396fcbe5b1a1c852ab9cd80f66a8e93f4f6d33aadcac2e17563",
+    "uniqueMembers": 78
+  },
+  "audit": {
+    "additionalStdlibGitCheck": "PASS",
+    "independentPeer": "PASS",
+    "root": "PASS"
+  },
+  "documentationBase": "48d219429492defefd0b2c911bea5e1569e93015",
+  "executable": {
+    "bytes": 179581,
+    "sha256": "66ce1db6017aff8a491c0775f14639281e780fe31b1ecd6da0005dfd9d31b43b",
+    "uploaded": false
+  },
+  "formatRaw": {
+    "coffHeaderHex": "4c010b0000000000b8160200790700001c000701",
+    "coffOffset": 2048,
+    "mzHeaderHex": "4d5a00000400000020002700ffff0000600700005400000000000000",
+    "optionalHeaderBytes": 28,
+    "optionalHeaderHex": "0b010000180e01000034000000360000f0190000e819000000280100",
+    "sectionCount": 11,
+    "sectionTableHex": "2e74657874000000e8190000e8190000180e0100e8110000000000000000000000000000200000002e6461746100000000280100002801000034000000200100000000000000000000000000400000002e62737300000000005c0100005c01000036000000000000000000000000000000000000800000002f3400000000000000000000000000006800000000540100000000000000000000000000000200002f313900000000000000000000000000c145000068540100000000000000000000000000000200002f3331000000000000000000000000003e090000299a0100000000000000000000000000000200002f343500000000000000000000000000901d000067a30100000000000000000000000000000200002f353700000000000000000000000000d0010000f7c00100000000000000000000000000000200002f36380000000000000000000000000002440000c7c20100000000000000000000000000000200002f3739000000000000000000000000005b080000c9060200000000000000000000000000000200002e636f6d6d656e74000000000000000094070000240f020000000000000000000000000000020000"
+  },
+  "formatReportSha256": "86cf60b4e288370c58407a876bba4730146230f4276faa75c47c6024c5e71c1d",
+  "limits": [
+    "Executable and linked-text hashes are hosted observations because those bytes were excluded from the artifact",
+    "No loaded AT code, DPMI service trace, guest execution, or performance measurement"
+  ],
+  "linkedText": {
+    "address": 6632,
+    "bytes": 69144,
+    "sha256": "6b3164795ef31bf665f535005fdefa206fd7e6f7b903f338f5c715fb58a85563",
+    "uploaded": false
+  },
+  "map": {
+    "bytes": 194507,
+    "sha256": "fdeae497b1b1930b96ca1622289741e12da55cdb5759567ceb420392b3cfa850",
+    "uploaded": true
+  },
+  "mapRoles": {
+    "allocateLdt": {
+      "address": 22080,
+      "bytes": 48,
+      "member": "libc.a(d0000.o)"
+    },
+    "allocateMemory": {
+      "address": 22528,
+      "bytes": 80,
+      "member": "libc.a(d0501.o)"
+    },
+    "freeLdt": {
+      "address": 22128,
+      "bytes": 48,
+      "member": "libc.a(d0001.o)"
+    },
+    "freeMemory": {
+      "address": 22608,
+      "bytes": 48,
+      "member": "libc.a(d0502.o)"
+    },
+    "main": {
+      "address": 75168,
+      "bytes": 548,
+      "member": "client.o"
+    },
+    "setBase": {
+      "address": 22224,
+      "bytes": 48,
+      "member": "libc.a(d0007.o)"
+    },
+    "setLimit": {
+      "address": 22272,
+      "bytes": 48,
+      "member": "libc.a(d0008.o)"
+    },
+    "simulateInt": {
+      "address": 22320,
+      "bytes": 144,
+      "member": "libc.a(d0300_z.o)"
+    }
+  },
+  "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37729007748",
+  "schema": "bw.cwsdpmi-owned.at-binding-actual-result.v1",
+  "scope": "FRESH_COMPILE_FORMAT_AND_MAP_ONLY",
+  "source": {
+    "afterSha256": "877dd5e3ac9553f29120df1f1a52422c1198bfb3cdae9535faf816e4d2da4952",
+    "beforeSha256": "877dd5e3ac9553f29120df1f1a52422c1198bfb3cdae9535faf816e4d2da4952",
+    "roles": 17
+  },
+  "testedSource": "f5f2996d0b049a5fe6e7c6a369b7ac315676beb6"
+}
