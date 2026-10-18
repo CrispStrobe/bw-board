@@ -5342,7 +5342,12 @@ admission remain separate. Refresh labels/body/runs before acting, never repeat
 an event or acquire an official original twice.
 The first metadata event is consumed at source `dff8f6b0`:
 [run 39108893671](https://github.com/CrispStrobe/bw-board/actions/runs/39108893671)
-is pending at publication. Await its sole official original; do not repeat it.
+failed before a completed file fact or tool probe. Its sole original is already
+acquired; do not repeat it. The unchanged guard refused regularity/extent/mode,
+with no retained rejected-file stat in that original. The subsequent
+[failure-only diagnostics](https://github.com/CrispStrobe/bw-board/commit/6c521914)
+retain named/held stat and close/readback errors; nine mocked runtime controls
+and ten detected mutations do not qualify a guest or the failed inventory.
 The [handoff](docs/X86-NEXT-LANES.md#ordinary-js-ring-changing-intiretd-fixture)
 scopes the remaining complete runtime expectation/gate, versioned execution
 reader and adapter delivery, separate activation review and one hosted event.
