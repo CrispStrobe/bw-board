@@ -1,0 +1,118 @@
+name: 386 owned CWSDPMI client compile only
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x86-cwsdpmi-compile-only-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  compile:
+    if: >-
+      github.event.label.name == 'x86-cwsdpmi-compile-only' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Authenticate source and bounded pre-tool controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cwsdpmi-compile-evidence"
+          mkdir "$evidence"
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          timeout 20s python3 -B scripts/i80386-cwsdpmi-compile-only/source.py \
+            "$BW_EXPECTED_HEAD" "$evidence/source-before.json"
+          timeout 20s python3 -B scripts/i80386-cwsdpmi-compile-only/compile-control.py \
+            > "$evidence/compile-control.stdout" 2> "$evidence/compile-control.stderr"
+          {
+            printf 'run=%s attempt=%s event=%s expected_head=%s\n' \
+              "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_EVENT_NAME" "$BW_EXPECTED_HEAD"
+            python3 --version
+            uname -a
+          } > "$evidence/host.txt"
+      - name: Fetch exact component archives and compile owned source internally
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cwsdpmi-compile-evidence"
+          inputs="$RUNNER_TEMP/cwsdpmi-compile-inputs"
+          work="$RUNNER_TEMP/cwsdpmi-compile-work"
+          mkdir "$inputs"
+          phase=setup
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$evidence/compile-step-status.txt"' EXIT
+          fetch() {
+            phase="$1"
+            timeout "$2" curl --fail --location --silent --show-error --retry 1 \
+              --max-time "$3" --max-filesize "$4" -o "$inputs/$5" "$6" \
+              > "$evidence/$1-fetch.stdout" 2> "$evidence/$1-fetch.stderr"
+          }
+          fetch toolchain 300s 260 81000000 toolchain.tar.bz2 \
+            https://github.com/andrewwutw/build-djgpp/releases/download/v3.4/djgpp-linux64-gcc1220.tar.bz2
+          fetch djcrx 90s 75 3000000 djcrx205.zip \
+            https://www.delorie.com/pub/djgpp/current/v2/djcrx205.zip
+          fetch djdev 90s 75 3000000 djdev205.zip \
+            https://www.delorie.com/pub/djgpp/current/v2/djdev205.zip
+          fetch djlsr 90s 75 3000000 djlsr205.zip \
+            https://www.delorie.com/pub/djgpp/current/v2/djlsr205.zip
+          phase=internal-compile
+          timeout 360s python3 -B scripts/i80386-cwsdpmi-compile-only/compile.py \
+            "$inputs/toolchain.tar.bz2" "$inputs/djcrx205.zip" \
+            "$inputs/djdev205.zip" "$inputs/djlsr205.zip" \
+            scripts/i80386-cwsdpmi-owned/client.c "$evidence/audit" "$work" \
+            > "$evidence/audit.stdout" 2> "$evidence/audit.stderr"
+          phase=complete
+      - name: Recheck source and report-only artifact inventory
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/cwsdpmi-compile-evidence"
+          mkdir -p "$evidence"
+          python3 -B scripts/i80386-cwsdpmi-compile-only/source.py \
+            "$BW_EXPECTED_HEAD" "$evidence/source-after.json" \
+            > "$evidence/source-after.stdout" 2> "$evidence/source-after.stderr"
+          if test -f "$evidence/source-before.json"; then
+            cmp "$evidence/source-before.json" "$evidence/source-after.json"
+          fi
+          python3 -B - "$evidence" <<'PY'
+          import hashlib,json,pathlib,sys
+          root=pathlib.Path(sys.argv[1]);files={};total=0
+          for path in sorted(root.rglob('*')):
+              if path.is_symlink():raise ValueError('artifact symlink')
+              if path.is_file() and path.name!='artifact-inventory.json':
+                  raw=path.read_bytes();total+=len(raw)
+                  if len(raw)>5<<20 or total>12<<20:raise ValueError('report-only artifact cap')
+                  files[str(path.relative_to(root))]={'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
+          (root/'artifact-inventory.json').write_text(json.dumps({'files':files},indent=2)+'\n')
+          if (root/'audit/client.exe').exists() or (root/'audit/client.o').exists():
+              raise ValueError('binary leaked into report-only artifact')
+          PY
+      - name: Retain logs/maps/hashes only, never compiler or client binaries
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-cwsdpmi-compile-only-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cwsdpmi-compile-evidence/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

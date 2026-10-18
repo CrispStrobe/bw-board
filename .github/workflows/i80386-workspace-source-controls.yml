@@ -1,0 +1,72 @@
+name: i80386 workspace standalone Python controls
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'scripts/i80386-workspace-source-controls/**'
+      - '.github/workflows/i80386-workspace-source-controls.yml'
+concurrency:
+  group: workspace-source-controls-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  workspace-source-controls:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.repository == 'CrispStrobe/bw-board' && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact own head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 32
+          persist-credentials: false
+      - name: Admit source and run manufactured Python controls
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          PYTHONDONTWRITEBYTECODE: '1'
+          PYTHONPATH: ''
+          LD_PRELOAD: ''
+          LD_AUDIT: ''
+          PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          ulimit -f 64
+          mkdir workspace-controls
+          phase=source-admission
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > workspace-controls/status.txt' EXIT
+          for unit in phase route writer creator; do
+            : > "workspace-controls/$unit.stdout"
+            : > "workspace-controls/$unit.stderr"
+          done
+          timeout --signal=KILL 90s python3 -I -B scripts/i80386-workspace-source-controls/admit.py
+          phase=phase-controls
+          timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-compile-tool-boundary/boundary-owner-control.py > workspace-controls/phase.stdout 2> workspace-controls/phase.stderr
+          phase=route-controls
+          timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-compile-root-routes/root-routes-control.py > workspace-controls/route.stdout 2> workspace-controls/route.stderr
+          phase=writer-controls
+          timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-evidence-descriptor-writer/evidence-owner-control.py > workspace-controls/writer.stdout 2> workspace-controls/writer.stderr
+          phase=creator-controls
+          timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-workspace-creator/workspace-control.py > workspace-controls/creator.stdout 2> workspace-controls/creator.stderr
+          phase=complete
+      - name: Retain bounded source-control text
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-workspace-source-controls-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            workspace-controls/source.json
+            workspace-controls/phase.stdout
+            workspace-controls/phase.stderr
+            workspace-controls/route.stdout
+            workspace-controls/route.stderr
+            workspace-controls/writer.stdout
+            workspace-controls/writer.stderr
+            workspace-controls/creator.stdout
+            workspace-controls/creator.stderr
+            workspace-controls/status.txt

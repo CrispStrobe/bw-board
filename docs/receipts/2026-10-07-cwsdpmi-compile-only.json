@@ -1,0 +1,37 @@
+{
+  "schema": "bw.cwsdpmi-owned.compile-only-result.v1",
+  "status": "COMPILED_ONLY_NO_GUEST_OR_BINARY_PUBLICATION",
+  "testedSource": "b327898fa66ee818faa4a6d2369724ee1ee3a039",
+  "run": "https://github.com/CrispStrobe/bw-board/actions/runs/37686644243",
+  "artifact": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11511766071",
+  "artifactZipSha256": "cdf8853adc4d6ecc87e7da410ec603867c85f2f301bc0d606b23ff7171672a22",
+  "artifactZipMembers": 67,
+  "inventoryEntries": 66,
+  "sourceRoles": 24,
+  "sourceBeforeAfterMatch": true,
+  "admittedImplicitRoles": 6,
+  "compile": {"exit": 0, "stderrBytes": 0, "march": "i386", "mtune": "i386"},
+  "link": {"exit": 0, "stderrBytes": 0},
+  "object": {
+    "bytes": 1848,
+    "sha256": "fe150a3ff9a9eb7fe78ace8759ed307ebdaa93af4710363583c2a7d67ccb9315",
+    "format": "i386 COFF relocatable",
+    "uploaded": false
+  },
+  "executable": {
+    "bytes": 179581,
+    "sha256": "66ce1db6017aff8a491c0775f14639281e780fe31b1ecd6da0005dfd9d31b43b",
+    "format": "MZ stub plus i386 executable COFF",
+    "coffOffset": 2048,
+    "uploaded": false
+  },
+  "map": {
+    "bytes": 191810,
+    "sha256": "63f4c74c5f1f02e4c521339a4c0263140c26d0b413dc4ec70bc252af78303972"
+  },
+  "limits": [
+    "Literal link path-substring booleans are diagnostics, not runtime linkage traces.",
+    "Owned-object i386 flags do not certify the linked startup or runtime as 386-only.",
+    "No QEMU or AT guest, DPMI service, DOS exit, component-publication clearance or performance result is established."
+  ]
+}

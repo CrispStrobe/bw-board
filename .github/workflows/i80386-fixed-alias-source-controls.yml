@@ -1,0 +1,58 @@
+name: i80386 fixed alias materializer manufactured Python controls
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'scripts/i80386-fixed-alias-source-controls/**'
+      - '.github/workflows/i80386-fixed-alias-source-controls.yml'
+concurrency:
+  group: fixed-alias-source-controls-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  fixed-alias-source-controls:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.repository == 'CrispStrobe/bw-board' && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact own head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 32
+          persist-credentials: false
+      - name: Admit source and run manufactured Python controls
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          PYTHONDONTWRITEBYTECODE: '1'
+          PYTHONPATH: ''
+          LD_PRELOAD: ''
+          LD_AUDIT: ''
+          PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          ulimit -f 64
+          mkdir fixed-alias-controls
+          phase=source-admission
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > fixed-alias-controls/status.txt' EXIT
+          : > fixed-alias-controls/control.stdout
+          : > fixed-alias-controls/control.stderr
+          timeout --signal=KILL 90s python3 -I -B scripts/i80386-fixed-alias-source-controls/admit.py
+          phase=fixed-alias-controls
+          timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-fixed-alias-materializer/materialize-control.py > fixed-alias-controls/control.stdout 2> fixed-alias-controls/control.stderr
+          phase=complete
+      - name: Retain bounded source-control text
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-fixed-alias-source-controls-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            fixed-alias-controls/source.json
+            fixed-alias-controls/control.stdout
+            fixed-alias-controls/control.stderr
+            fixed-alias-controls/status.txt
