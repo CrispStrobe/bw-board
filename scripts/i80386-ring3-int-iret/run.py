@@ -3794,6 +3794,9 @@ class HostedEnvelopeInstaller:
         self.attempted=False;self.facts={'created':[],'files':{},'transport':self.transport.observations,'sourceCommands':[]}
         self.checkout=None
 
+    def admit_event(self,event_raw):
+        return admit_approval_event(event_raw,self.environ.get('BW_RING3_APPROVED_REQUEST_SHA256'),self.environ)
+
     def event(self):
         path=self.environ.get('GITHUB_EVENT_PATH')
         need(type(path) is str and Path(path).is_absolute(),'official event snapshot path')
@@ -3923,8 +3926,7 @@ class HostedEnvelopeInstaller:
         try:
             need(not self.attempted,'hosted envelope installation consumed; no retry');self.attempted=True
             need(os.getresuid()==(0,0,0) and os.getresgid()==(0,0,0),'root opaque installer identity')
-            event_raw=self.event();request_raw,request=admit_approval_event(event_raw,
-                self.environ.get('BW_RING3_APPROVED_REQUEST_SHA256'),self.environ)
+            event_raw=self.event();request_raw,request=self.admit_event(event_raw)
             self.facts['requestOriginal']=request_raw;self.facts['eventOriginal']=event_raw
             self.source(request)  # All source reads/Git observations precede any network or mutation.
             runtime=self.transport.acquire(final_json(encode(request['runtime'])))
@@ -4132,13 +4134,493 @@ def hosted_prerequisites(environ):
     return HostedPrerequisites(environ).run()
 
 
+def finalize_runtime_packet(context,outside_result,outside_failure,pre_git,environ=None,*,post_observer=None,emit=None,flush=None,preparation_original=None,generation_original=None,launch_plan_original=None,launch_plan_sha256=None):
+    """Explicit V8 finalizer: retained originals stay raw; no old-log emission."""
+    environ=dict(os.environ if environ is None else environ);failure=outside_failure
+    need(isinstance(failure,FirstFailure),'authoritative in-memory outside failure required')
+    originals={};raw_internal={};internal={};progress=None;staged=[];post_git=None
+    try:
+        outside_unprivileged(environ)
+        try:finalizer_tree()
+        except Exception as error:failure.add(error,'finalizer-tree')
+        for name in INTERNAL_NAMES:
+            try:
+                raw=read_final_original(name,JSON_CAP);raw_internal[name]=raw;internal[name]=final_json(raw)
+            except FileNotFoundError as error:
+                if name!='.entry-failure.json':failure.add(error,'finalizer-internal')
+            except Exception as error:failure.add(error,'finalizer-internal')
+        # Existing outside failure stays authoritative. No phase-string or
+        # chronology guesses reorder it; child originals remain secondary.
+        for name in ('.entry-failure.json','.controller.json'):
+            value=internal.get(name,{})
+            if value.get('firstFailure') is not None:failure.secondary.append(value['firstFailure'])
+            failure.secondary.extend(value.get('secondary',[]))
+        if failure.secondary:
+            failure.secondary.append({'phase':'finalizer-ordering','name':'ObservationLimit','message':'cross-phase first-error timing not inferred'})
+            if failure.first is None:failure.add(ValueError('internal failure envelope refused'),'finalizer-errors')
+        for name in sorted(PACKET_ROLES-{'audit.json','resources.json'}):
+            try:originals[name]=read_final_original(name,role_cap(name))
+            except Exception as error:failure.add(error,'finalizer-original-'+name)
+        observer=GitObservation(environ,'after') if post_observer is None else post_observer
+        try:
+            post_git,found=observer.capture(environ['BW_EXPECTED_HEAD']);failure.adopt(found.first,found.secondary)
+        except Exception as error:failure.add(error,'finalizer-post-git')
+        try:
+            resources=context.resources(internal,originals,outside_result,environ)
+            context.phases(preparation_original,generation_original,pre_git,outside_result,internal['.entry.json'],originals,environ)
+            for phase,raw in (('before',pre_git),('after',post_git)):
+                check_git_trace(raw,phase,final_json(originals['source.'+phase+'.json']),outside_result['process'])
+            need('.entry-failure.json' not in internal,'entry failure cannot produce a positive packet')
+            originals['resources.json']=encode(resources)
+        except Exception as error:failure.add(error,'finalizer-join')
+        log_originals=dict(raw_internal)
+        if type(launch_plan_original) is bytes:log_originals['launch-plan.original.json']=launch_plan_original
+        if type(generation_original) is bytes:log_originals['generation.phase.json']=generation_original
+        if type(preparation_original) is bytes:log_originals['preparation.phase.json']=preparation_original
+        if type(pre_git) is bytes:log_originals['git.before.json']=pre_git
+        if type(post_git) is bytes:log_originals['git.after.json']=post_git
+        context.originals.update(log_originals)  # One later V8 emission shares all aggregate caps.
+        EXPORT.mkdir(mode=0o700)  # Exclusive directory; no overwrite or retry.
+        for directory in ('inputs','js','qemu'):(EXPORT/directory).mkdir(mode=0o700)
+        for name in sorted(originals):
+            try:
+                data=originals[name];need(len(data)<=role_cap(name),'staged original role cap')
+                write_new(EXPORT/name,data,role_cap(name));staged.append(name)
+            except Exception as error:failure.add(error,'finalizer-stage-'+name)
+        rows=[{'path':name,'bytes':len(originals[name]),'sha256':sha(originals[name])} for name in sorted(staged)]
+        if set(staged)!=PACKET_ROLES-{'audit.json'}:failure.add(ValueError('incomplete closed original packet'),'finalizer-roles')
+        source=final_json(originals['source.before.json']) if 'source.before.json' in originals else {}
+        audit={'schema':'bw.ring3.audit.v1','head':environ.get('BW_EXPECTED_HEAD'),'sourceTree':environ.get('BW_EXPECTED_TREE'),
+            'workflowSha256':source.get('files',{}).get('.github/workflows/i80386-ring3-int-iret.yml',{}).get('sha256'),
+            'roles':rows,'caps':AUDIT_CAPS,'firstFailure':failure.first,'secondary':failure.secondary}
+        raw=encode(audit);need(len(raw)<=JSON_CAP and sum(item['bytes'] for item in rows)+len(raw)<=PACKET_CAP,'expanded packet including audit cap')
+        write_new(EXPORT/'audit.json',raw,JSON_CAP);staged.append('audit.json')
+    except BaseException as error:
+        failure.add(error,'finalizer')
+        try:
+            diagnostic=encode({'firstFailure':failure.first,'secondary':failure.secondary})
+            need(len(diagnostic)<=16384,'finalizer failure diagnostic cap');sys.stderr.buffer.write(diagnostic)
+        except BaseException as secondary:failure.add(secondary,'finalizer-diagnostic')
+    return {'staged':staged,'log':progress,'pass':failure.first is None and failure.secondary==[] and set(staged)==PACKET_ROLES},failure
+
+
+RUNTIME_DELIVERY_DIRECTORY=Path('build/i80386-ring3-int-iret-runtime')
+RUNTIME_DELIVERY_NAMES=frozenset(('preparation.runtime.json','controller.runtime.json'))
+
+
+def runtime_delivery_original(name,raw=None):
+    """Dropped-only exclusive originals, in a separate fixed sibling sink."""
+    need(name in RUNTIME_DELIVERY_NAMES,'fixed new runtime original name')
+    uid,gid=os.getresuid()[0],os.getresgid()[0];need(uid>0 and gid>0,'dropped runtime original owner')
+    entry_ids(uid,gid)
+    need(raw is None or type(raw) is bytes and 0<len(raw)<=JSON_CAP,'bounded runtime original write')
+    descriptors=[];first=None;result=None
+    def identity(info):return (info.st_dev,info.st_ino,info.st_mode,info.st_uid,info.st_gid,info.st_nlink,info.st_size,info.st_mtime_ns)
+    try:
+        checkout=Path.cwd();paths=(checkout,checkout/'build',checkout/RUNTIME_DELIVERY_DIRECTORY);held=[]
+        for path in paths:
+            need(path.resolve(strict=True)==path,'canonical runtime original ancestry')
+            fd=os.open(path,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK);descriptors.append(fd);info=os.fstat(fd)
+            need(stat.S_ISDIR(info.st_mode) and (info.st_uid,info.st_gid)==(uid,gid) and info.st_mode&0o022==0,
+                 'nonwritable invoker-owned runtime original ancestry')
+            if path==paths[-1]:need(stat.S_IMODE(info.st_mode)==0o700,'exclusive private runtime original directory')
+            held.append((path,fd,identity(info)))
+        directory=descriptors[-1]
+        flags=os.O_NOFOLLOW|os.O_NONBLOCK|(os.O_RDWR|os.O_CREAT|os.O_EXCL if raw is not None else os.O_RDONLY)
+        fd=os.open(name,flags,0o600,dir_fd=directory);descriptors.append(fd)
+        before=os.fstat(fd)
+        need(stat.S_ISREG(before.st_mode) and (before.st_uid,before.st_gid)==(uid,gid) and before.st_nlink==1 and
+             stat.S_IMODE(before.st_mode)==(0o600 if raw is not None else 0o400),'fixed single-link runtime original owner/mode')
+        if raw is not None:
+            need(before.st_size==0,'fresh empty runtime original');need(os.write(fd,raw)==len(raw),'complete exclusive runtime original write')
+            os.fchmod(fd,0o400);os.lseek(fd,0,os.SEEK_SET);before=os.fstat(fd)
+        need(0<before.st_size<=JSON_CAP,'bounded runtime original file')
+        data=bytearray()
+        while True:
+            part=os.read(fd,min(65536,JSON_CAP+1-len(data)))
+            if not part:break
+            data.extend(part);need(len(data)<=JSON_CAP,'runtime original read cap')
+        need(len(data)==before.st_size and identity(os.fstat(fd))==identity(before) and
+             identity(os.stat(name,dir_fd=directory,follow_symlinks=False))==identity(before) and
+             (raw is None or bytes(data)==raw),'runtime original exact held/named readback')
+        for path,held_fd,frozen in held:
+            # Creating this exclusive file changes only the sink's size/time;
+            # keep its inode, owner, mode and links pinned through that write.
+            bound=6 if raw is not None and path==paths[-1] else 8
+            need(identity(os.fstat(held_fd))[:bound]==frozen[:bound] and identity(path.lstat())[:bound]==frozen[:bound],
+                 'runtime original ancestor readback')
+        result=bytes(data)
+    except BaseException as error:first=error
+    finally:
+        for fd in reversed(descriptors):first=close_owned(fd,first,'runtime-original-close')
+    if first is not None:raise first
+    return result
+
+
+def runtime_preparation_child(environ=None,*,observer=None,emit=None,flush=None):
+    """Versioned dropped selection; full stable gate precedes fixed Node."""
+    environ=dict(os.environ if environ is None else environ);failure=FirstFailure();gate=None;request_raw=None;result={'pass':False}
+    try:
+        ids=[environ.get('SUDO_'+key,'') for key in ('UID','GID')]
+        need(all(type(value) is str and re.fullmatch('[1-9][0-9]{0,9}',value) and int(value)<2**31 for value in ids),
+             'runtime preparation positive dropped invoker')
+        entry_ids(*map(int,ids))  # BEFORE JSON or readonly admission inputs.
+        need(entry_proc('/proc/self/cgroup')=='0::/'+expected_cgroup(environ).name+'-preparation\n',
+             'runtime preparation sibling membership')
+        request_raw,runtime_raw,request=read_admitted_runtime(environ)
+        plan_raw=read_launch_plan(environ,environ.get('BW_LAUNCH_PLAN_SHA256'))
+        plan,source=admit_launch_plan(plan_raw,environ.get('BW_LAUNCH_PLAN_SHA256'),environ)
+        need(same_json(plan['source'],request['source']),'delivery checksum plan joins independently pinned request source')
+        gate=RuntimeExpectationGate(runtime_raw,request['runtime']['sha256']);gate.observe('before-probes')
+        ops=PinnedRecordingStagingOps(source,plan['source']['sha256'],plan['head'],plan['tree'],environ)
+        result,found=generated_preparation_child(environ,staging_ops=ops,observer=observer,emit=emit,flush=flush)
+        failure.adopt(found.first,found.secondary);result['launchPlanOriginal']=plan_raw
+    except BaseException as error:failure.add(error,'runtime-preparation')
+    finally:
+        if gate is not None and gate.before_complete:
+            try:gate.observe('after-probes')
+            except BaseException as error:failure.add(error,'runtime-preparation-after')
+        try:
+            uid,gid=map(int,(environ.get('SUDO_UID',''),environ.get('SUDO_GID','')));entry_ids(uid,gid)
+            original={'schema':'bw.ring3.preparation-runtime-original.v1','requestSha256':None if request_raw is None else sha(request_raw),
+                'runtimeSha256':None if gate is None else sha(gate._raw),'pid':os.getpid(),
+                'observations':{} if gate is None else gate.observations,'firstFailure':failure.first,'secondary':failure.secondary}
+            runtime_delivery_original('preparation.runtime.json',encode(original))
+        except BaseException as error:failure.add(error,'runtime-preparation-original')
+    result['pass']=result.get('pass') is True and failure.first is None and failure.secondary==[]
+    return result,failure
+
+
+class RuntimeBootstrapOps(BootstrapOps):
+    """Root migration/drop remains identical; only the closed exec version differs."""
+    def validate(self):
+        owner=super().validate();request_raw,runtime_raw,request=read_admitted_runtime(self.environ)
+        need(admitted_original(request['source'],JSON_CAP,'runtime bootstrap source')==bounded_read(PACKET/'source.before.json',JSON_CAP),
+             'runtime bootstrap prepared source joins request')
+        self.runtime_request_sha256=sha(request_raw)
+        return owner
+
+    def execute(self):
+        entry_ids(self.invoker['uid'],self.invoker['gid']);self.entered()
+        need(self.runtime_request_sha256==self.environ['BW_RING3_APPROVED_REQUEST_SHA256'],'held bootstrap external request pin')
+        python=self.owner['python']['path'];environment=dict(ENV,**{name:self.environ[name] for name in
+            ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE','BW_RING3_APPROVED_REQUEST_SHA256')})
+        os.execve(python,[python,'-I','-B',RUN_FILE,'--controller-runtime-admitted'],environment)
+        raise RuntimeError('runtime entry exec unexpectedly returned')
+
+
+class LinuxRuntimeController(LinuxController):
+    def __init__(self,bootstrap):
+        super().__init__(bootstrap);self.argv[-1]='--bootstrap-runtime-admitted'
+        self.environment['BW_RING3_APPROVED_REQUEST_SHA256']=bootstrap.environ['BW_RING3_APPROVED_REQUEST_SHA256']
+
+
+class RuntimeOutsideOwner(OutsideOwner):
+    def create_child(self):
+        need(self.admitted,'runtime outside owner admitted');self.outside()
+        self.child=LinuxRuntimeController(self.bootstrap);return self.child
+
+
+class DeliveredRuntimeControllerOps(AdmittedRuntimeControllerOps):
+    def after_all(self,failure):
+        try:super().after_all(failure)
+        finally:
+            if self.unprivileged and self.paths_admitted:
+                try:
+                    value=final_json(self.runtime_original());value['schema']='bw.ring3.runtime-admission-original.v2'
+                    value.update(pid=os.getpid(),firstFailure=failure.first,secondary=failure.secondary)
+                    runtime_delivery_original('controller.runtime.json',encode(value))
+                except BaseException as error:failure.add(error,'runtime-controller-original')
+
+
+class LinuxRuntimePreparation(LinuxAdmittedGeneratedPreparation):
+    def __init__(self,parent):
+        super().__init__(parent);self.argv[-1]='--prepare-runtime-admitted'
+        self.environment['BW_RING3_APPROVED_REQUEST_SHA256']=parent.environ['BW_RING3_APPROVED_REQUEST_SHA256']
+
+
+class RuntimeEntryComposition(HostedEntryComposition):
+    def __init__(self,setup,context):
+        super().__init__(setup);self.runtime_context=context
+
+    def create_preparation(self):
+        need(type(self._launch_plan_original) is bytes and sha(self._launch_plan_original)==self._expected_launch_plan_sha256,
+             'own captured runtime launch-plan before preparation factory')
+        self.require_preparation_ownership();self.pre_child=LinuxRuntimePreparation(self);return self.pre_child
+
+    def freeze_preparation_original(self,failure):
+        super().freeze_preparation_original(failure)
+        value=final_json(self._preparation_original);value['schema']='bw.ring3.preparation-original.v4'
+        self._preparation_original=encode(value)
+
+    def outside(self):
+        self.setup.verify()
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'runtime outside parent retains privilege until terminal observation')
+        return outside_controller(RuntimeOutsideOwner(RuntimeBootstrapOps(self.environ)))
+
+
+    def finalize(self,facts,failure):
+        self.dropped()
+        need(type(facts.get('process')) is dict and type(facts['process'].get('waitStatus')) is int,
+             'known runtime controller terminal before finalization')
+        return finalize_runtime_packet(self.runtime_context,facts,failure,self.pre_git,self.environ,
+            preparation_original=self._preparation_original,generation_original=self._generation_original,
+            launch_plan_original=self._launch_plan_original,launch_plan_sha256=self._expected_launch_plan_sha256)
+
+    def failure_only(self,failure):
+        try:
+            uid,gid=(self.bootstrap.invoker[key] for key in ('uid','gid'))
+            if os.getresuid()!=(uid,)*3 or os.getresgid()!=(gid,)*3 or os.getgroups():self.bootstrap.drop()
+            self.dropped()
+            for name,raw in (('launch-plan.original.json',self._launch_plan_original),
+                ('preparation.phase.json',self._preparation_original),('generation.phase.json',self._generation_original)):
+                if type(raw) is bytes:self.runtime_context.originals[name]=raw
+        except BaseException as error:failure.add(error,'runtime-composition-failure-drop')
+        return {'pass':False,'preparation':self.preparation,'outside':self.outside_result,'final':None}
+
+
+class RuntimeFinalizerContext:
+    def __init__(self,request_raw,runtime_raw,environ):
+        self.environ=dict(environ);self.request_raw=bytes(request_raw);self.runtime_raw=bytes(runtime_raw);self.originals={}
+        request=admit_approval_request(self.request_raw,self.environ['BW_RING3_APPROVED_REQUEST_SHA256'])
+        need(len(self.runtime_raw)==request['runtime']['bytes'] and sha(self.runtime_raw)==request['runtime']['sha256'] and
+             hashlib.sha1(b'blob '+str(len(self.runtime_raw)).encode()+b'\0'+self.runtime_raw).hexdigest()==request['runtime']['blob'],
+             'V8 finalizer runtime selected by independently pinned request')
+        admit_runtime_expectation(self.runtime_raw,request['runtime']['sha256'])
+
+    def legacy_outer(self,value,entry,environ):
+        frozen=final_json(encode(value));process=frozen['process']
+        need(same_json(process['argv'],[entry['python']['path'],'-I','-B',RUN_FILE,'--bootstrap-runtime-admitted']) and
+             same_json(process['environment'],dict(ENV,**{name:environ[name] for name in
+                ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE','BW_RING3_APPROVED_REQUEST_SHA256')},
+                SUDO_UID=str(entry['uid']),SUDO_GID=str(entry['gid']))) and
+             process['environment']['BW_RING3_APPROVED_REQUEST_SHA256']==sha(self.request_raw),
+             'explicit V8 outside descriptor and independently held request pin')
+        process['argv'][-1]='--bootstrap';del process['environment']['BW_RING3_APPROVED_REQUEST_SHA256']
+        return frozen
+
+    def resources(self,internal,originals,outside,environ):
+        entry=internal['.entry.json'];view=final_json(encode(internal))
+        view['.outside.json']=self.legacy_outer(view['.outside.json'],entry,environ)
+        projected=self.legacy_outer(outside,entry,environ)
+        return join_final_resources(view,originals,projected,environ)
+
+    def phases(self,phase_raw,generation_raw,pre_git,outside,entry,originals,environ):
+        phase=final_json(phase_raw)
+        need(phase_raw==encode(phase) and phase['schema']=='bw.ring3.preparation-original.v4','explicit canonical V8 preparation phase')
+        request=admit_approval_request(self.request_raw,environ['BW_RING3_APPROVED_REQUEST_SHA256'])
+        need(admitted_original(request['source'],JSON_CAP,'V8 selected source')==originals['source.before.json'],
+             'V8 packet source12 joins independently pinned request')
+        process=phase['process'];need(process['argv']==[entry['python']['path'],'-I','-B',RUN_FILE,'--prepare-runtime-admitted'] and
+             process['environment'].get('BW_RING3_APPROVED_REQUEST_SHA256')==sha(self.request_raw),
+             'explicit V8 preparation descriptor and prior request pin')
+        phase['schema']='bw.ring3.preparation-original.v3';process['argv'][-1]='--prepare-admitted-generated'
+        del process['environment']['BW_RING3_APPROVED_REQUEST_SHA256']
+        # Only validated local views select held finite predicates. Originals
+        # retained by the new finalizer and V8 log remain byte-exact V4.
+        plan_raw=encode({'schema':'bw.ring3.launch-plan.v1','runId':environ['GITHUB_RUN_ID'],'attempt':1,
+            'head':request['head'],'tree':request['tree'],'source':request['source']})
+        return check_admitted_generated_originals(plan_raw,sha(plan_raw),encode(phase),generation_raw,pre_git,
+            self.legacy_outer(outside,entry,environ),entry,originals,environ)
+
+
+V8_DIRECTORY=Path('build/i80386-ring3-int-iret-v8')
+V8_BASE_NAMES=PREREQUISITE_NAMES|frozenset(('root.runtime.json preparation.runtime.json controller.runtime.json execution.outer.json '
+    '.entry.json .controller.before.json .controller.json .outside.json git.before.json git.after.json '
+    'preparation.phase.json generation.phase.json launch-plan.original.json').split())
+V8_ORIGINAL_NAMES=V8_BASE_NAMES|{'v8.reader.json','.entry-failure.json'}
+
+
+class RuntimeAdmissionProcess(OutsideGit):
+    def __init__(self,environ):
+        super().__init__(['/usr/bin/python3','-I','-B',READER_FILE,'--admit-hosted-runtime'])
+        self.environment=dict(ENV,**{name:environ[name] for name in PREREQUISITE_ENV})
+
+
+def runtime_admission_process(environ):
+    child=RuntimeAdmissionProcess(environ);process,streams=collect_child(child,'discovery',child.argv,profile='discovery')
+    original={'schema':'bw.ring3.execution-reader-original.v8','process':process,
+        **{name:{'bytes':len(raw),'sha256':sha(raw),'base64':base64.b64encode(raw).decode()} for name,raw in streams.items()}}
+    raw=encode(original);need(len(raw)<=JSON_CAP,'bounded V8 independent reader process original');return raw,process
+
+
+class RuntimeInstaller(PrerequisiteInstaller):
+    def admit_event(self,event_raw):
+        need(self.environ.get('GITHUB_JOB')=='actual','closed actual V8 job before selecting held event predicates')
+        projected=dict(self.environ,GITHUB_JOB='hosted-envelope-installation')
+        # Only this independently checked descriptor is projected. Original
+        # platform observations retained by the V8 collector remain actual.
+        return admit_approval_event(event_raw,self.environ.get('BW_RING3_APPROVED_REQUEST_SHA256'),projected)
+
+
+class HostedRuntimeActual(HostedPrerequisites):
+    """Guarded concrete V8 path; external official qualification stays offline."""
+    def __init__(self,environ):
+        super().__init__(environ);self.runtime_context=None;self.runtime_gate=None;self.composition=None;self.v8_collector=None
+
+    def create_runtime_sink(self):
+        need(self.setup is not None,'fresh admitted setup before runtime sink');self.setup.verify()
+        descriptors=[];first=None;uid,gid=self.invoker['uid'],self.invoker['gid']
+        try:
+            parents=[]
+            for path in (Path.cwd(),Path.cwd()/'build'):
+                need(path.resolve(strict=True)==path,'canonical root runtime sink ancestry')
+                fd=os.open(path,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK);descriptors.append(fd);info=os.fstat(fd)
+                need(stat.S_ISDIR(info.st_mode) and (info.st_uid,info.st_gid)==(uid,gid) and info.st_mode&0o022==0,
+                     'held invoker-owned runtime sink ancestry')
+                parents.append((path,fd,(info.st_dev,info.st_ino,info.st_mode,info.st_uid,info.st_gid)))
+            parent=descriptors[-1];name=RUNTIME_DELIVERY_DIRECTORY.name
+            os.mkdir(name,0o700,dir_fd=parent);self.setup.facts.setdefault('runtimeCreated',[]).append(str(RUNTIME_DELIVERY_DIRECTORY))
+            fd=os.open(name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=parent);descriptors.append(fd)
+            os.fchown(fd,uid,gid);info=os.fstat(fd);named=os.stat(name,dir_fd=parent,follow_symlinks=False)
+            need(stat.S_ISDIR(info.st_mode) and (info.st_uid,info.st_gid)==(uid,gid) and stat.S_IMODE(info.st_mode)==0o700 and
+                 (info.st_dev,info.st_ino)==(named.st_dev,named.st_ino),'fresh held invoker-owned runtime original sink')
+            for path,descriptor,frozen in parents:
+                for actual in (os.fstat(descriptor),path.lstat()):
+                    need((actual.st_dev,actual.st_ino,actual.st_mode,actual.st_uid,actual.st_gid)==frozen,'runtime sink ancestor name/descriptor readback')
+        except BaseException as error:first=error
+        finally:
+            for fd in reversed(descriptors):first=close_owned(fd,first,'runtime-sink-close')
+        if first is not None:raise first
+
+    def ensure_drop(self,allow_drop=True):
+        need(self.invoker is not None,'known invoker before V8 collection')
+        uid,gid=self.invoker['uid'],self.invoker['gid']
+        if os.getresuid()!=(uid,)*3 or os.getresgid()!=(gid,)*3 or os.getgroups():
+            need(allow_drop,'V8 collector drop unverified; no retry during publication');self.drop()
+        entry_ids(uid,gid)
+        root=expected_cgroup(self.environ).name;text=entry_proc('/proc/self/cgroup')
+        need(text.startswith('0::/') and text.endswith('\n') and text.count('\n')==1 and
+             all(text[3:-1]!='/'+name and not text[3:-1].startswith('/'+name+'/') for name in (root,root+'-preparation')),
+             'V8 collector remains outside both owned resource trees')
+
+    def retain_v8(self,originals):
+        self.ensure_drop(False);uid,gid=self.invoker['uid'],self.invoker['gid']
+        need(type(originals) is dict and set(originals)<=V8_ORIGINAL_NAMES and all(type(raw) is bytes and len(raw)<=JSON_CAP for raw in originals.values()) and
+             sum(map(len,originals.values()))<=5<<20,'same aggregate raw V8 original cap before retention')
+        checkout=Path.cwd()
+        for path in (checkout,checkout/'build'):
+            info=path.lstat();need(path.resolve(strict=True)==path and stat.S_ISDIR(info.st_mode) and
+                (info.st_uid,info.st_gid)==(uid,gid) and info.st_mode&0o022==0,'canonical invoker V8 collector ancestry')
+        path=checkout/V8_DIRECTORY;path.mkdir(mode=0o700);self.v8_collector=str(path)
+        for name,raw in sorted(originals.items()):write_new(path/name,raw,JSON_CAP);os.chmod(path/name,0o400,follow_symlinks=False)
+
+    def run(self):
+        failure=FirstFailure();installed=False;setup_complete=False;observed=False;execution=False;qualified=False;progress=None;originals={}
+        if self.attempted:
+            failure.add(ValueError('hosted V8 execution consumed; no retry'),'hosted-runtime')
+            return {'pass':False,'originals':originals},failure
+        self.attempted=True
+        try:
+            self.admit_invoker();self.installer=RuntimeInstaller(self.environ);installation,found=self.installer.prepare()
+            failure.adopt(found.first,found.secondary);installed=installation['installationComplete'] is True
+            for key,name in (('requestOriginal','request.original.json'),('eventOriginal','event.original.json'),('installationOriginal','installation.original.json')):
+                raw=self.installer.facts.get(key)
+                if type(raw) is bytes:self.originals[name]=raw
+            self.originals.update(self.installer.facts.get('inputOriginals',{}))
+            if failure.first is not None or failure.secondary:raise ObservedFailure(failure.first,failure.secondary)
+            need(installed,'complete independent-request installation before runtime/resource admission')
+            self.runtime_context=RuntimeFinalizerContext(self.originals['request.original.json'],self.originals['runtime-expectation.json'],self.environ)
+            request=admit_approval_request(self.originals['request.original.json'],self.environ['BW_RING3_APPROVED_REQUEST_SHA256'])
+            self.runtime_gate=RuntimeExpectationGate(self.originals['runtime-expectation.json'],request['runtime']['sha256'])
+            self.runtime_gate.observe('before-probes')  # No setup/preparation/controller factory before the entire selected graph.
+            self.setup=HostedSetupOps(sha(self.originals['launch-plan.json']),self.environ);setup_result,found=self.setup.prepare()
+            failure.adopt(found.first,found.secondary);setup_complete=setup_result['pass'] is True
+            if failure.first is not None or failure.secondary:raise ObservedFailure(failure.first,failure.secondary)
+            need(setup_complete,'complete hosted setup before independent observer');self.create_runtime_sink();self.live_source()
+            raw,process=prerequisite_process('observe',self.environ);self.originals['setup.observer.json']=raw
+            if process['firstFailure'] is not None:raise ObservedFailure(process['firstFailure'],process['secondary'])
+            need(type(process['exitCode']) is int and process['exitCode']==0 and process['secondary']==[],'successful independent setup observer before preparation')
+            observed=True;self.composition=RuntimeEntryComposition(self.setup,self.runtime_context)
+            result,found=compose_entry(self.composition);failure=found;execution=result['pass'] is True
+        except BaseException as error:
+            if not (isinstance(error,ObservedFailure) and error.firstFailure==failure.first):failure.add(error,'hosted-runtime')
+        originals.update({} if self.runtime_context is None else self.runtime_context.originals);originals.update(self.originals)
+        try:
+            self.ensure_drop()
+            if self.runtime_gate is not None and self.runtime_gate.before_complete:
+                try:self.runtime_gate.observe('after-guests')
+                except BaseException as error:failure.add(error,'root-runtime-after')
+            partial_installation={} if self.installer is None else {key:value for key,value in self.installer.facts.items()
+                if key not in ('requestOriginal','eventOriginal','installationOriginal','inputOriginals')}
+            outer={'schema':'bw.ring3.prerequisites-original.v1','expectation':self.expectation,'installation':installed,'setup':setup_complete,
+                'partialInstallation':partial_installation,'partialSetup':None if self.setup is None else self.setup.facts,
+                'firstFailure':failure.first,'secondary':failure.secondary}
+            self.originals['prerequisite.outer.json']=encode(outer);self.retain()
+            if failure.first is None and failure.secondary==[] and observed:
+                self.live_source();raw,process=prerequisite_process('admit',self.environ);self.originals['prerequisite.reader.json']=raw
+                if process['firstFailure'] is not None:raise ObservedFailure(process['firstFailure'],process['secondary'])
+                need(type(process['exitCode']) is int and process['exitCode']==0 and process['secondary']==[],'successful dropped prerequisite admission')
+            originals.update({} if self.runtime_context is None else self.runtime_context.originals);originals.update(self.originals)
+            originals['root.runtime.json']=encode({'schema':'bw.ring3.root-runtime-original.v1','requestSha256':self.environ['BW_RING3_APPROVED_REQUEST_SHA256'],
+                'runtimeSha256':None if self.runtime_gate is None else sha(self.runtime_gate._raw),'pid':os.getpid(),
+                'observations':{} if self.runtime_gate is None else self.runtime_gate.observations,'firstFailure':failure.first,'secondary':failure.secondary})
+            for name in sorted(RUNTIME_DELIVERY_NAMES):
+                try:originals[name]=runtime_delivery_original(name)
+                except BaseException as error:failure.add(error,'runtime-outside-original-'+name)
+            originals['execution.outer.json']=encode({'schema':'bw.ring3.execution-outer-original.v8','requestSha256':self.environ['BW_RING3_APPROVED_REQUEST_SHA256'],
+                'platform':{name:self.environ.get(name) for name in ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_REPOSITORY','GITHUB_EVENT_NAME',
+                    'GITHUB_ACTOR','GITHUB_JOB','GITHUB_WORKFLOW_SHA','GITHUB_WORKFLOW_REF','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')},
+                'drop':{'uids':list(os.getresuid()),'gids':list(os.getresgid()),'groups':os.getgroups(),'pid':os.getpid(),
+                    'status':entry_proc('/proc/self/status'),'membership':entry_proc('/proc/self/cgroup')},
+                'firstFailure':failure.first,'secondary':failure.secondary})
+            self.retain_v8(originals)
+            if failure.first is None and failure.secondary==[] and execution:
+                raw,process=runtime_admission_process(self.environ);originals['v8.reader.json']=raw
+                if process['firstFailure'] is not None:raise ObservedFailure(process['firstFailure'],process['secondary'])
+                need(type(process['exitCode']) is int and process['exitCode']==0 and process['secondary']==[],'successful independent V8 execution admission')
+                value=final_json(admitted_original(final_json(raw)['stdout'],16384,'bounded independent V8 verdict'))
+                need(value['schema']=='bw.ring3.execution-reader-admission.v8' and value['verdict']['schema']=='bw.ring3.execution-admission.v8' and
+                     value['verdict']['guestPredicatesObserved'] is True and value['verdict']['officialQualified'] is False and
+                     value['verdict']['requestSha256']==self.environ['BW_RING3_APPROVED_REQUEST_SHA256'],
+                     'independent V8 guest observations remain separate from official qualification')
+                write_new(Path(self.v8_collector)/'v8.reader.json',raw,JSON_CAP);os.chmod(Path(self.v8_collector)/'v8.reader.json',0o400,follow_symlinks=False)
+                qualified=True
+        except BaseException as error:
+            if not (isinstance(error,ObservedFailure) and error.firstFailure==failure.first):failure.add(error,'runtime-outside-collector')
+        originals.update(self.originals)
+        try:
+            self.ensure_drop(False);progress=emit_v8_originals(originals,sys.stdout.buffer.write,sys.stdout.buffer.flush,failure)
+        except BaseException as error:failure.add(error,'runtime-original-drop')
+        passed=qualified and execution and failure.first is None and failure.secondary==[]
+        if not passed and failure.first is None:failure.add(ValueError('incomplete V8 execution or independent observation'),'runtime-verdict')
+        return {'pass':passed,'guestPredicatesObserved':qualified,'officialQualified':False,'originals':originals,'log':progress,
+            'partialInstallation':None if self.installer is None else self.installer.facts,'partialSetup':None if self.setup is None else self.setup.facts,
+            'partialRuntime':None if self.runtime_gate is None else self.runtime_gate.observations},failure
+
+
+def hosted_runtime_actual(environ):
+    return HostedRuntimeActual(environ).run()
+
+
+def emit_v8_originals(originals,emit,flush,failure):
+    progress={'items':0,'chunks':0,'encodedBytes':0,'complete':False}
+    try:
+        need(type(originals) is dict and set(originals)<=V8_ORIGINAL_NAMES and
+             all(type(raw) is bytes and len(raw)<=JSON_CAP for raw in originals.values()) and
+             sum(map(len,originals.values()))<=5<<20,'closed capped V8-only originals')
+        for name in sorted(originals):
+            raw=originals[name];encoded=base64.b64encode(raw).decode('ascii');count=max(1,(len(encoded)+3071)//3072)
+            need(count<=456,'finite V8 original chunks')
+            for index in range(count):
+                line=b'RING3_V8 '+encode({'schema':'bw.ring3.execution-log.v8','name':name,'index':index,'count':count,
+                    'bytes':len(raw),'sha256':sha(raw),'data':encoded[index*3072:(index+1)*3072]})
+                need(progress['encodedBytes']+len(line)<=8<<20 and progress['chunks']<2600,'unchanged encoded V8 caps')
+                written=emit(line);need(type(written) is int and written==len(line),'complete V8 original log write')
+                progress['encodedBytes']+=len(line);progress['chunks']+=1
+            progress['items']+=1
+        flush();progress['complete']=True
+    except BaseException as error:failure.add(error,'V8-log-retention')
+    return progress
+
+
 ACTUAL_ENTRY_ENABLED=False  # Activation requires a separate reviewed source/workflow change.
 
 
 def dispatch_cli(argv=None,environ=None):
     parser=argparse.ArgumentParser(description=__doc__,allow_abbrev=False)
     modes=parser.add_mutually_exclusive_group(required=True)
-    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted'):
+    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual'):
         modes.add_argument('--'+name,action='store_const',const=name,dest='mode')
     argv=list(sys.argv[1:] if argv is None else argv)
     if len(argv)!=1:parser.error('exactly one fixed mode argument required')
@@ -4151,18 +4633,21 @@ def dispatch_cli(argv=None,environ=None):
         if args.mode=='hosted-prerequisites':
             result,returned=hosted_prerequisites(environ)
             need(isinstance(returned,FirstFailure),'authoritative prerequisite failure required');failure=returned
+        elif args.mode=='hosted-runtime-actual':
+            result,returned=hosted_runtime_actual(environ)
+            need(isinstance(returned,FirstFailure),'authoritative V8 execution failure required');failure=returned
         elif args.mode=='install-hosted-envelope':
             result,returned=install_hosted_envelope(environ)
             need(isinstance(returned,FirstFailure),'authoritative envelope installation failure required');failure=returned
-        elif args.mode=='prepare-admitted-generated':
-            result,returned=admitted_generated_preparation_child(environ)
+        elif args.mode in ('prepare-admitted-generated','prepare-runtime-admitted'):
+            result,returned=(admitted_generated_preparation_child if args.mode=='prepare-admitted-generated' else runtime_preparation_child)(environ)
             need(isinstance(returned,FirstFailure),'authoritative preparation failure required');failure=returned
-        elif args.mode=='bootstrap':
-            returned=controller_bootstrap(BootstrapOps(environ))
+        elif args.mode in ('bootstrap','bootstrap-runtime-admitted'):
+            returned=controller_bootstrap(BootstrapOps(environ) if args.mode=='bootstrap' else RuntimeBootstrapOps(environ))
             need(isinstance(returned,FirstFailure),'bootstrap returned without authoritative failure');failure=returned
             failure.add(RuntimeError('bootstrap returned; successful exec cannot return'),'cli-bootstrap-return')
         elif args.mode in ('controller','controller-runtime-admitted'):
-            ops,returned=controller_execute(ControllerOps(environ) if args.mode=='controller' else AdmittedRuntimeControllerOps(environ))
+            ops,returned=controller_execute(ControllerOps(environ) if args.mode=='controller' else DeliveredRuntimeControllerOps(environ))
             need(isinstance(returned,FirstFailure),'authoritative controller failure required');failure=returned
             result={'pass':failure.first is None and failure.secondary==[] and ops.unprivileged is True and
                 ops.paths_admitted is True and set(ops.processes)=={'js','qemu'} and ops.source_after is not None and ops.runtime_after is not None}

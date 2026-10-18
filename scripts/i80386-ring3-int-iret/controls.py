@@ -795,7 +795,405 @@ def runtime_controls():
     print(json.dumps({'testOnly':True,'tests':result.testsRun,'guestOrResourceOperationExecuted':False,'pass':True}))
 
 
+
+def producer_fixture_case():
+    """Extract only the inert source fixture class; no producer command runs."""
+    import ast
+    source=(HERE/'run.py').read_text();module=SimpleNamespace(__file__=str(HERE/'run.py'),__name__='inert_ring3_v8_producer')
+    exec(compile(source,module.__file__,'exec'),module.__dict__)
+    tree=ast.parse(source);function=next(row for row in tree.body if isinstance(row,ast.FunctionDef) and row.name=='controls')
+    cut=next(index for index,row in enumerate(function.body) if isinstance(row,ast.Assign) and any(isinstance(target,ast.Name) and target.id=='result' for target in row.targets))
+    function.body=function.body[:cut]+[ast.Return(ast.Name('Tests',ast.Load()))]
+    exec(compile(ast.fix_missing_locations(ast.Module(body=[function],type_ignores=[])),'<inert-source-fixtures>','exec'),module.__dict__)
+    return module,module.controls()()
+
+
+@contextlib.contextmanager
+def v8_manufactured(producer,case,architectural=None):
+    """Real finalizer/independent observer over manufactured OS/process facts.
+
+    Architectural bytes are an optional separately manufactured full packet;
+    the node-free delivery controls declare its predicate boundary explicitly.
+    """
+    p=producer
+    with case.admitted_original_edges() as (ops,outside,env,pre,post,state),patch.dict(p.__dict__,
+            GENERATION_NODE_PIN=(reader.RUNTIME_SELECTED['node']['bytes'],reader.RUNTIME_SELECTED['node']['sha256'])):
+        raw,selected,runtime,files,inventory=runtime_manufactured()
+        source=p.final_json(state['data']['source.before.json']);source_raw=p.encode(source)
+        entry=p.final_json(state['data']['.entry.json']);entry['python']=selected['executables']['python']
+        controller=p.final_json(state['data']['.controller.json']);before=p.final_json(state['data']['.controller.before.json'])
+        for snapshots in (entry['cgroups'],controller['before'],before['before'],outside['cleanup']['beforeCleanup'],outside['cleanup']['afterCleanup']):
+            for snapshot_value in snapshots.values():
+                snapshot_value['raw']['memoryEvents']='low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\n'
+                snapshot_value['raw']['cpuStat']='usage_usec 0\nuser_usec 0\nsystem_usec 0\n'
+        for when in ('before','after'):state['data']['runtime.'+when+'.json']=p.encode(runtime)
+        controller['barrier']['runtime']=runtime
+        if architectural is not None:
+            for name,value in architectural.items():
+                if name.startswith(('inputs/','js/','qemu/')) and not name.endswith('/process.json'):state['data'][name]=value
+        refs=lambda names,prefix:{name:{'bytes':len(state['data'][prefix+name]),'sha256':sha(state['data'][prefix+name])} for name in names}
+        input_refs=refs(('fixture.rom','fixture.json'),'inputs/')
+        for key in ('inputsBefore','inputsAfter','barrierInputs'):controller[key]=input_refs
+        controller['jsOriginals']=refs(('report.json','observations.json','writes.json','memory.before.bin','memory.after.bin'),'js/')
+        state['data']['.entry.json']=p.encode(entry);state['data']['.controller.json']=p.encode(controller);state['data']['.controller.before.json']=p.encode(before)
+        env0,expected,originals,data=prerequisite_fixture();request=reader.parse(originals['request.original.json'])
+        wrapper=lambda value:{'bytes':len(value),'sha256':sha(value),'base64':reader.base64.b64encode(value).decode()}
+        request['source']=wrapper(source_raw);request['runtime'].update(bytes=len(raw),sha256=sha(raw),blob=reader.hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest())
+        request_raw=reader.canonical(request);pin=sha(request_raw);expected['requestSha256']=pin
+        event=reader.parse(originals['event.original.json']);event['pull_request']['body']='<!-- BW_RING3_ACTUAL_REQUEST_V1\n'+reader.canonical(wrapper(request_raw)).decode().rstrip('\n')+'\nBW_RING3_ACTUAL_REQUEST_V1 -->'
+        plan=reader.canonical({'schema':'bw.ring3.launch-plan.v1','runId':'123','attempt':1,'head':source['head'],'tree':source['tree'],'source':request['source']})
+        originals={'request.original.json':request_raw,'event.original.json':reader.canonical(event),'runtime-expectation.json':raw,'launch-plan.json':plan}
+        env.update(BW_RING3_APPROVED_REQUEST_SHA256=pin,GITHUB_JOB='actual',GITHUB_EVENT_NAME='pull_request',GITHUB_REPOSITORY='CrispStrobe/bw-board',
+            GITHUB_ACTOR='CrispStrobe',GITHUB_WORKFLOW_SHA='e'*40,GITHUB_WORKFLOW_REF='CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/645/merge')
+        generation=p.final_json(ops._generation_original)
+        for when in ('before','after'):generation[when]['files']['node']=dict(reader.V8_NODE_PIN)
+        generation['outputs']=input_refs;generation_raw=p.encode(generation)
+        phase=p.final_json(ops._preparation_original);phase['schema']='bw.ring3.preparation-original.v4';phase['python']=entry['python']
+        phase['process']['argv'][-1]='--prepare-runtime-admitted';phase['process']['environment'].update(BW_RING3_APPROVED_REQUEST_SHA256=pin,BW_LAUNCH_PLAN_SHA256=sha(plan))
+        phase['stdout']=wrapper(p.generation_frame(generation_raw,pre))
+        outside['process']['argv'][-1]='--bootstrap-runtime-admitted';outside['process']['environment']['BW_RING3_APPROVED_REQUEST_SHA256']=pin
+        state['data']['.outside.json']=p.encode(dict(outside,firstFailure=None,secondary=[],streamsHex={'stdout':'','stderr':''}))
+        context=p.RuntimeFinalizerContext(request_raw,raw,env)
+        result,failure=p.finalize_runtime_packet(context,outside,p.FirstFailure(),pre,env,post_observer=post,preparation_original=p.encode(phase),
+            generation_original=generation_raw,launch_plan_original=plan,launch_plan_sha256=sha(plan))
+        assert result['pass'] and failure.first is None,(failure.first,failure.secondary)
+        packet=dict(state['export']);originals.update(context.originals)
+        data={name:('authored '+name).encode() for name in reader.SETUP_SOURCE_PATHS}
+        admission='/run/bw-ring3-123-1-admission'
+        def adapt(rows):
+            for name,row in rows.items():
+                if name.startswith('/sys/fs/cgroup'):row['st_dev']=3
+            for role in reader.SETUP_ROLES:
+                path='/sys/fs/cgroup/bw-ring3-123-1'+('-preparation' if role=='preparation' else '' if role=='enclosing' else '/'+role)
+                rows[path]['st_ino']=phase['ownership']['identity']['inode'] if role=='preparation' else entry['cgroups'][role]['identity']['inode']
+        installed={name:originals[name] for name in reader.SETUP_INPUTS if name!='installation.original.json'}
+        with prerequisite_observer_edges(env,installed,data) as observed:
+            adapt(observed['rows']);rows={}
+            for name,value in installed.items():
+                info=observed['rows'][admission+'/'+name];rows[name]={'identity':{key:info['st_'+key] for key in ('dev','ino','mode','uid','gid','nlink','size','mtime_ns')},'bytes':len(value),'sha256':sha(value)}
+            installed['installation.original.json']=reader.canonical({'schema':'bw.ring3.installation-envelope.v1','runId':'123','attempt':1,'requestSha256':pin,
+                'launchPlanSha256':sha(plan),'files':rows,'directory':{},'ancestors':{},'observations':{}})
+        with prerequisite_observer_edges(env,installed,data) as observed:
+            adapt(observed['rows']);stdout,passed=reader.observe_hosted_setup(env);assert passed,stdout
+        originals.update(installed)
+        process_environment={**reader.V8_ENV,**{name:env[name] for name in p.PREREQUISITE_ENV}}
+        def process(pid,start,end,argv):return {'schema':'bw.ring3.process.v1','role':'discovery','argv':argv,'cwdRole':'checkout','environment':process_environment,
+            'pid':pid,'pgid':pid,'parentPid':100,'startTicks':pid,'spawnMonoNs':start,'reapMonoNs':end,'exitCode':0,'signal':None,'waitStatus':0,'timedOut':False,
+            'rusage':{'userSeconds':.001,'systemSeconds':.001,'maxRssKiB':1024},'firstFailure':None,'secondary':[]}
+        argv=['/usr/bin/python3','-I','-B','scripts/i80386-ring3-int-iret/reader.py']
+        originals['setup.observer.json']=reader.canonical({'schema':'bw.ring3.setup-observer-original.v1','process':process(301,3,4,argv+['--observe-hosted-setup']),'stdout':wrapper(stdout),'stderr':wrapper(b'')})
+        originals['prerequisite.outer.json']=reader.canonical({'schema':'bw.ring3.prerequisites-original.v1','expectation':expected,'installation':True,'setup':True,
+            'partialInstallation':{},'partialSetup':{},'firstFailure':None,'secondary':[]})
+        verdict=reader.verify_prerequisites({name:originals[name] for name in set(reader.SETUP_INPUTS)|{'setup.observer.json','prerequisite.outer.json'}},expected)
+        originals['prerequisite.reader.json']=reader.canonical({'schema':'bw.ring3.prerequisite-reader-original.v1','process':process(302,22000,22001,argv+['--admit-hosted-prerequisites']),
+            'stdout':wrapper(reader.canonical(verdict)),'stderr':wrapper(b'')})
+        def observation(start,end):return {'files':{path:{key:row[key] for key in ('bytes','sha256','mode')} for path,row in selected['files'].items()},
+            'aliases':selected['aliases'],'platform':selected['platform'],'startMonoNs':start,'finishMonoNs':end}
+        common={'requestSha256':pin,'runtimeSha256':sha(raw),'firstFailure':None,'secondary':[]}
+        originals['root.runtime.json']=reader.canonical(dict(common,schema='bw.ring3.root-runtime-original.v1',pid=100,
+            observations={'before-probes':observation(1,2),'after-guests':observation(20001,21000)}))
+        originals['preparation.runtime.json']=reader.canonical(dict(common,schema='bw.ring3.preparation-runtime-original.v1',pid=401,
+            observations={'before-probes':observation(51,52),'after-probes':observation(400,401)}))
+        census={role:controller['before'][role] for role in ('controller','js','qemu')};records=[]
+        for index,descriptor in enumerate(selected['probes']):
+            value=process(600+index,10100+20*index,10101+20*index,descriptor['argv']);value.update(parentPid=outside['process']['pid'],environment=dict(reader.V8_ENV))
+            records.append({'role':descriptor['role'],'process':value,'census':census})
+        originals['controller.runtime.json']=reader.canonical(dict(common,schema='bw.ring3.runtime-admission-original.v2',pid=outside['process']['pid'],probeProcesses=records,
+            observations={'before-probes':observation(10001,10002),'after-probes':observation(10500,10501),'after-guests':observation(15000,15001)}))
+        dropped={'uids':[1001]*3,'gids':[1002]*3,'groups':[],'pid':100,'status':'CapInh:\t0\nCapPrm:\t0\nCapEff:\t0\nCapAmb:\t0\n','membership':'0::/actions/job\n'}
+        originals['execution.outer.json']=reader.canonical({'schema':'bw.ring3.execution-outer-original.v8','requestSha256':pin,
+            'platform':{name:env[name] for name in ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_REPOSITORY','GITHUB_EVENT_NAME','GITHUB_ACTOR','GITHUB_JOB','GITHUB_WORKFLOW_SHA','GITHUB_WORKFLOW_REF','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')},
+            'drop':dropped,'firstFailure':None,'secondary':[]})
+        execution_expected=dict(expected,schema='bw.ring3.execution-expectation.v8')
+        yield env,execution_expected,originals,packet,selected,files,state
+
+
+
+
+@contextlib.contextmanager
+def delivery_file_edges(originals=None,packet=None):
+    state={'rows':{},'fds':{},'next':20,'faults':{},'events':[],'peak':0}
+    def row(path,raw=None,mode=None):
+        state['rows'][path]={'st_dev':1,'st_ino':100+len(state['rows']),'st_mode':mode or (0o40700 if raw is None else 0o100400),
+            'st_uid':1001,'st_gid':1002,'st_nlink':1,'st_size':0 if raw is None else len(raw),'st_mtime_ns':1700000000000000000,'raw':raw}
+    for name in ('/checkout','/checkout/build','/checkout/build/i80386-ring3-int-iret-runtime','/checkout/'+str(reader.V8_DIRECTORY),
+        '/checkout/build/i80386-ring3-int-iret-export','/checkout/build/i80386-ring3-int-iret-export/inputs',
+        '/checkout/build/i80386-ring3-int-iret-export/js','/checkout/build/i80386-ring3-int-iret-export/qemu'):row(name)
+    for name,raw in (originals or {}).items():row('/checkout/'+str(reader.V8_DIRECTORY)+'/'+name,raw)
+    for name,raw in (packet or {}).items():row('/checkout/build/i80386-ring3-int-iret-export/'+name,raw,0o100600)
+    row('/proc/self/status',b'CapInh:\t0\nCapPrm:\t0\nCapEff:\t0\nCapAmb:\t0\n',0o100444)
+    row('/proc/self/cgroup',b'0::/actions/job\n',0o100444)
+    def pathname(name,dir_fd=None):return str(Path(state['fds'][dir_fd]['path'])/name) if dir_fd is not None else str(name)
+    def info(name):
+        if ('stat',name) in state['faults']:raise state['faults']['stat',name]
+        return SimpleNamespace(**{key:value for key,value in state['rows'][name].items() if key!='raw'})
+    def opened(name,flags,mode=0o777,dir_fd=None):
+        path=pathname(name,dir_fd);state['events'].append(('open',path,flags));assert flags&os.O_NOFOLLOW
+        if flags&os.O_CREAT:
+            if path in state['rows']:raise FileExistsError('exclusive existing runtime original')
+            row(path,b'',stat.S_IFREG|mode);state['rows'][str(Path(path).parent)]['st_mtime_ns']+=1
+        info(path);state['next']+=1;fd=state['next'];state['fds'][fd]={'path':path,'offset':0};state['peak']=max(state['peak'],len(state['fds']));return fd
+    def read(fd,cap):
+        record=state['fds'][fd];path=record['path']
+        if ('read',path) in state['faults']:raise state['faults']['read',path]
+        raw=state['rows'][path]['raw'];start=record['offset'];record['offset']+=cap;return raw[start:start+cap]
+    def write(fd,raw):
+        path=state['fds'][fd]['path'];state['rows'][path]['raw']+=raw;state['rows'][path]['st_size']+=len(raw);return len(raw)
+    def closed(fd):
+        path=state['fds'].pop(fd)['path'];state['events'].append(('close',path))
+        if ('close',path) in state['faults']:raise state['faults']['close',path]
+    def listing(fd):
+        path=state['fds'][fd]['path'];return sorted({name[len(path)+1:].split('/')[0] for name in state['rows'] if name.startswith(path+'/')})
+    def chmod(fd,mode):state['rows'][state['fds'][fd]['path']]['st_mode']=stat.S_IFREG|mode
+    with contextlib.ExitStack() as stack:
+        for context in (patch.object(Path,'cwd',return_value=Path('/checkout')),patch.object(Path,'resolve',lambda path,**kw:path),
+            patch.object(Path,'lstat',lambda path:info(str(path))),patch.object(os,'open',side_effect=opened),patch.object(os,'read',side_effect=read),
+            patch.object(os,'write',side_effect=write),patch.object(os,'close',side_effect=closed),patch.object(os,'listdir',side_effect=listing),
+            patch.object(os,'lseek',side_effect=lambda fd,position,how:state['fds'][fd].update(offset=position)),patch.object(os,'fchmod',side_effect=chmod),
+            patch.object(os,'fstat',side_effect=lambda fd:info(state['fds'][fd]['path'])),patch.object(os,'stat',side_effect=lambda name,dir_fd=None,**kw:info(pathname(name,dir_fd))),
+            patch.object(os,'getresuid',return_value=(1001,)*3),patch.object(os,'getresgid',return_value=(1002,)*3),patch.object(os,'getgroups',return_value=[]),
+            patch.object(os,'getpid',return_value=303),patch.object(os,'getppid',return_value=100)):stack.enter_context(context)
+        yield state
+
+
+def delivery_controls():
+    producer,case=producer_fixture_case();p=producer
+    class Tests(unittest.TestCase):
+        def test_v8_real_finalizer_observer_and_independent_reader_with_rehashed_conflicts(self):
+            import ast
+            tree=ast.parse((HERE/'reader.py').read_text());functions={node.name:node for node in tree.body if isinstance(node,ast.FunctionDef)}
+            with v8_manufactured(p,case) as (env,expected,originals,packet,selected,files,state),patch.object(reader,'v8_packet_predicates',return_value={'guestPredicatesObserved':True}) as architectural:
+                verdict=reader.verify_v8_delivery(originals,packet,expected)
+                self.assertTrue(verdict['guestPredicatesObserved']);self.assertFalse(verdict['officialQualified']);architectural.assert_called_once()
+                self.assertEqual(len(packet),20);self.assertEqual(len(originals),21)
+                cuts=[('source',lambda values:values['request.original.json']['source'].__setitem__('sha256','0'*64)),
+                    ('legacy-phase',lambda values:values['preparation.phase.json'].__setitem__('schema','bw.ring3.preparation-original.v3')),
+                    ('prep-pin',lambda values:values['preparation.phase.json']['process']['environment'].__setitem__('BW_RING3_APPROVED_REQUEST_SHA256','0'*64)),
+                    ('outer-mode',lambda values:values['.outside.json']['process']['argv'].__setitem__(-1,'--bootstrap')),
+                    ('legacy-job',lambda values:values['execution.outer.json']['platform'].__setitem__('GITHUB_JOB','hosted-envelope-installation')),
+                    ('unknown-drop',lambda values:values['execution.outer.json']['drop'].__setitem__('uids',None)),
+                    ('drop-root',lambda values:values['execution.outer.json']['drop'].__setitem__('uids',[0]*3)),
+                    ('first-error',lambda values:values['execution.outer.json'].__setitem__('firstFailure',{'name':'Original','message':'FAILED','phase':'source'})),
+                    ('prep-inode',lambda values:values['preparation.phase.json']['ownership']['identity'].__setitem__('inode',9999)),
+                    ('early-generator',lambda values:values['preparation.runtime.json']['observations']['before-probes'].__setitem__('finishMonoNs',60)),
+                    ('late-observer',lambda values:values['setup.observer.json']['process'].__setitem__('reapMonoNs',51)),
+                    ('missing-file',lambda values:values['controller.runtime.json']['observations']['before-probes']['files'].pop('/usr/bin/ldd')),
+                    ('late-file',lambda values:values['controller.runtime.json']['observations']['after-guests']['files']['/usr/bin/ldd'].__setitem__('sha256','f'*64)),
+                    ('probe-parent',lambda values:values['controller.runtime.json']['probeProcesses'][0]['process'].__setitem__('parentPid',999)),
+                    ('probe-argv',lambda values:values['controller.runtime.json']['probeProcesses'][0]['process']['argv'].__setitem__(0,'/unapproved/tool')),
+                    ('invented-raw-procs',lambda values:values['controller.runtime.json']['probeProcesses'][0]['census']['js']['raw'].__setitem__('cgroupProcs','999\n')),
+                    ('invented-raw-limit',lambda values:values['controller.runtime.json']['probeProcesses'][0]['census']['js']['raw'].__setitem__('pidsMax','999\n')),
+                    ('duplicate-populated',lambda values:values['controller.runtime.json']['probeProcesses'][0]['census']['js']['raw'].__setitem__('cgroupEvents','populated 0\nfrozen 0\npopulated 1\n')),
+                    ('peer-duplicate-populated',lambda values:values['controller.runtime.json']['probeProcesses'][0]['census']['js']['raw'].__setitem__('cgroupEvents','populated 1\npopulated 0\n')),
+                    ('peer-invalid-memory-scalar',lambda values:values['controller.runtime.json']['probeProcesses'][0]['census']['js']['raw'].__setitem__('memoryCurrent','not-a-number\n')),
+                    ('frozen-probe',lambda values:values['controller.runtime.json']['probeProcesses'][0]['census']['js']['raw'].__setitem__('cgroupEvents','populated 0\nfrozen 1\n')),
+                    ('probe-census',lambda values:values['controller.runtime.json']['probeProcesses'][0]['census']['js'].__setitem__('procs',[999]))]
+                for name,edit in cuts:
+                    values={key:reader.parse(raw) for key,raw in originals.items()};edit(values);changed={key:reader.canonical(value) for key,value in values.items()}
+                    with self.assertRaises((reader.Refusal,KeyError,TypeError),msg=name):reader.verify_v8_delivery(changed,packet,expected)
+                for field,value in (('requestSha256','0'*64),('attempt',True),('invoker',[True,1002])):
+                    with self.assertRaises(reader.Refusal):reader.verify_v8_delivery(originals,packet,dict(expected,**{field:value}))
+                # The new internal packet policy holds the entire old
+                # architecture body, from audit through the final QEMU joins.
+                old=functions['verify_artifact'].body;new=functions['v8_packet_predicates'].body
+                index=next(i for i,node in enumerate(old) if isinstance(node,ast.Assign) and any(isinstance(target,ast.Name) and target.id=='audit' for target in node.targets))
+                self.assertEqual([ast.dump(node,include_attributes=False) for node in old[index:-1]],
+                    [ast.dump(node,include_attributes=False) for node in new[3:-1]])
+
+        def test_actual_installer_job_selection_bootstrap_exec_boundary_and_cli_guards(self):
+            env,event,request,raw,runtime_data,source_data,responses=case.envelope_fixture()
+            event=p.encode(event)
+            actual_env=dict(env,GITHUB_JOB='actual');installer=p.RuntimeInstaller(actual_env)
+            self.assertEqual(installer.admit_event(event)[0],raw)
+            with self.assertRaises(ValueError):p.RuntimeInstaller(env).admit_event(event)
+            with self.assertRaises(ValueError):p.HostedEnvelopeInstaller(actual_env).admit_event(event)
+            owner=p.RuntimeBootstrapOps(dict(actual_env,BW_RING3_APPROVED_REQUEST_SHA256=sha(raw)))
+            owner.invoker={'uid':1001,'gid':1002};owner.owner={'python':{'path':'/usr/bin/python3.12'}};owner.runtime_request_sha256=sha(raw)
+            events=[]
+            with patch.dict(p.__dict__,entry_ids=lambda uid,gid:events.append(('ids',uid,gid))),patch.object(owner,'entered',side_effect=lambda:events.append('entered')),patch.object(os,'execve') as execute:
+                with self.assertRaisesRegex(RuntimeError,'exec unexpectedly returned'):owner.execute()
+                argv=execute.call_args.args;self.assertEqual(argv[1][-1],'--controller-runtime-admitted');self.assertEqual(argv[2]['BW_RING3_APPROVED_REQUEST_SHA256'],sha(raw))
+                self.assertNotIn('SUDO_UID',argv[2]);self.assertNotIn('SUDO_GID',argv[2]);self.assertEqual(events,[('ids',1001,1002),'entered'])
+            for flag in ('--prepare-runtime-admitted','--bootstrap-runtime-admitted','--controller-runtime-admitted','--hosted-runtime-actual'):
+                output=io.BytesIO()
+                with patch.object(sys,'stderr',SimpleNamespace(buffer=output)):
+                    self.assertEqual(p.dispatch_cli([flag],{'ACTUAL_ENTRY_ENABLED':'1'}),1)
+                self.assertIn(b'actual entry disabled',output.getvalue())
+                for argv in ([flag,flag],[flag,'--help']):
+                    with contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit) as caught:p.dispatch_cli(argv,{})
+                    self.assertEqual(caught.exception.code,2)
+
+        def test_dropped_preparation_entire_graph_gate_before_generator_and_retained_failure(self):
+            with v8_manufactured(p,case) as (env,expected,originals,packet,selected,files,state):
+                env=dict(env,BW_LAUNCH_PLAN_SHA256=sha(originals['launch-plan.json']));real_gate=p.RuntimeExpectationGate
+                for fault in ('none','node','root','request'):
+                    backend,unused=runtime_fixture();events=[];saved={};changed_env=dict(env)
+                    if fault=='node':backend.facts[reader.RUNTIME_NODE]['sha256']='0'*64
+                    elif fault=='request':changed_env['BW_RING3_APPROVED_REQUEST_SHA256']='0'*64
+                    def dropped(uid,gid):
+                        events.append('dropped')
+                        if fault=='root':raise ValueError('ROOT_BEFORE_READ')
+                    def read(environ,name,cap):events.append('read-'+name);return originals[name]
+                    def generate(environ,**kwargs):
+                        self.assertTrue(set(selected['files'])<=set(path for kind,path in backend.events if kind=='file'));events.append('generator');return {'pass':True},p.FirstFailure()
+                    with patch.dict(p.__dict__,entry_ids=dropped,entry_proc=lambda path:'0::/bw-ring3-123-1-preparation\n',
+                        read_admission_input=read,read_launch_plan=lambda *args:originals['launch-plan.json'],
+                        RuntimeExpectationGate=lambda raw,digest:real_gate(raw,digest,backend),generated_preparation_child=generate,
+                        runtime_delivery_original=lambda name,raw=None:saved.setdefault(name,raw)):
+                        result,failure=p.runtime_preparation_child(changed_env,emit=lambda raw:len(raw),flush=lambda:None)
+                    self.assertEqual(result['pass'],fault=='none');self.assertEqual(events[0],'dropped')
+                    if fault!='none':self.assertNotIn('generator',events);self.assertIsNotNone(failure.first)
+                    if fault=='root':self.assertEqual(events,['dropped','dropped'])
+                    else:self.assertIn('preparation.runtime.json',saved)
+                    if fault=='none':self.assertEqual(set(reader.parse(saved['preparation.runtime.json'])['observations']),{'before-probes','after-probes'})
+
+        def test_dropped_runtime_original_real_file_edges_exclusive_mode_caps_and_first_error(self):
+            path='/checkout/build/i80386-ring3-int-iret-runtime/preparation.runtime.json';raw=b'{"held":true}\n'
+            for fault in ('none','mode','read-close'):
+                with delivery_file_edges() as state:
+                    if fault!='none':
+                        state['rows'][path]={'st_dev':1,'st_ino':900,'st_mode':0o100600 if fault=='mode' else 0o100400,'st_uid':1001,'st_gid':1002,
+                            'st_nlink':1,'st_size':len(raw),'st_mtime_ns':1,'raw':raw}
+                    if fault=='read-close':state['faults']['read',path]=OSError('ORIGINAL_RUNTIME_READ');state['faults']['close',path]=OSError('RUNTIME_CLOSE')
+                    if fault=='none':
+                        self.assertEqual(p.runtime_delivery_original('preparation.runtime.json',raw),raw)
+                        self.assertEqual(p.runtime_delivery_original('preparation.runtime.json'),raw)
+                        with self.assertRaises(FileExistsError):p.runtime_delivery_original('preparation.runtime.json',raw)
+                    elif fault=='mode':
+                        with self.assertRaises(ValueError):p.runtime_delivery_original('preparation.runtime.json')
+                    else:
+                        with self.assertRaisesRegex(OSError,'ORIGINAL_RUNTIME_READ') as caught:p.runtime_delivery_original('preparation.runtime.json')
+                        self.assertEqual(caught.exception.ring3_secondary[0]['message'],'RUNTIME_CLOSE')
+                    self.assertEqual(state['fds'],{});self.assertLessEqual(state['peak'],4)
+
+        def test_root_runtime_sink_uses_held_directory_creation_and_fchown_only(self):
+            for fault in ('none','parent-mode','parent-drift'):
+                with delivery_file_edges() as state:
+                    path='/checkout/build/i80386-ring3-int-iret-runtime';del state['rows'][path]
+                    owner=p.HostedRuntimeActual({});owner.invoker={'uid':1001,'gid':1002}
+                    owner.setup=SimpleNamespace(facts={},verify=lambda:None);mutations=[]
+                    if fault=='parent-mode':state['rows']['/checkout/build']['st_mode']=0o40777
+                    def mkdir(name,mode,dir_fd):
+                        self.assertEqual(name,'i80386-ring3-int-iret-runtime');self.assertEqual(mode,0o700)
+                        self.assertEqual(state['fds'][dir_fd]['path'],'/checkout/build');mutations.append('mkdir')
+                        state['rows'][path]={'st_dev':1,'st_ino':999,'st_mode':0o40700,'st_uid':0,'st_gid':0,'st_nlink':1,'st_size':0,'st_mtime_ns':1,'raw':None}
+                    def chown(fd,uid,gid):
+                        self.assertEqual((uid,gid),(1001,1002));self.assertEqual(state['fds'][fd]['path'],path);mutations.append('fchown')
+                        state['rows'][path].update(st_uid=uid,st_gid=gid)
+                        if fault=='parent-drift':state['rows']['/checkout/build']['st_ino']+=1
+                    with patch.object(os,'mkdir',side_effect=mkdir),patch.object(os,'fchown',side_effect=chown),patch.object(os,'chown',side_effect=AssertionError('no pathname chown')):
+                        if fault=='none':owner.create_runtime_sink()
+                        else:
+                            with self.assertRaises(ValueError):owner.create_runtime_sink()
+                    self.assertEqual(state['fds'],{});self.assertLessEqual(state['peak'],3)
+                    self.assertEqual(mutations,[] if fault=='parent-mode' else ['mkdir','fchown'])
+                    if fault!='parent-mode':self.assertEqual(owner.setup.facts['runtimeCreated'],['build/i80386-ring3-int-iret-runtime'])
+
+        def test_independent_dropped_v8_reader_real_readonly_roster_and_uid_before_decode(self):
+            with v8_manufactured(p,case) as (env,expected,originals,packet,selected,files,stage):
+                with delivery_file_edges(originals,packet) as state,patch.object(reader,'v8_packet_predicates',return_value={'guestPredicatesObserved':True}):
+                    result=reader.admit_hosted_runtime(env);self.assertTrue(result['verdict']['guestPredicatesObserved']);self.assertFalse(result['verdict']['officialQualified'])
+                    self.assertEqual(result['identity']['uids'],[1001]*3);self.assertEqual(state['fds'],{});self.assertLessEqual(state['peak'],5)
+                    self.assertTrue(all(event[2]&os.O_ACCMODE==os.O_RDONLY for event in state['events'] if event[0]=='open'))
+                with patch.object(os,'getresuid',return_value=(0,)*3),patch.object(os,'getresgid',return_value=(0,)*3),patch.object(os,'getgroups',return_value=[]),patch.object(os,'open') as opened:
+                    with self.assertRaisesRegex(reader.Refusal,'actual dropped'):reader.admit_hosted_runtime(env)
+                    opened.assert_not_called()
+                path='/checkout/'+str(reader.V8_DIRECTORY)+'/controller.runtime.json'
+                with delivery_file_edges(originals,packet) as state:
+                    state['faults']['read',path]=OSError('ORIGINAL_V8_READ');state['faults']['close',path]=OSError('V8_CLOSE')
+                    with self.assertRaisesRegex(OSError,'ORIGINAL_V8_READ') as caught:reader.v8_read_roster(reader.V8_DIRECTORY,reader.V8_BASE_NAMES,1001,1002)
+                    self.assertEqual(caught.exception.setup_secondary[0]['message'],'V8_CLOSE');self.assertEqual(state['fds'],{})
+
+        def test_full_mocked_actual_cli_parent_gates_collectors_and_separate_reader(self):
+            for fault in ('none','node','setup','reader','unknown'):
+                with v8_manufactured(p,case) as (env,expected,originals,packet,selected,files,state):
+                    uid_state={'uid':0,'gid':0};events=[];captured={};real_gate=p.RuntimeExpectationGate
+                    if fault=='node':files.facts[reader.RUNTIME_NODE]['sha256']='0'*64
+                    if fault=='unknown':env=dict(env,SUDO_UID='')
+                    owner=p.HostedRuntimeActual(env)
+                    setup=SimpleNamespace(environ=env,expected_plan_sha256=sha(originals['launch-plan.json']),plan_original=originals['launch-plan.json'],facts={'created':['owned-fixed-resource']},verify=lambda:events.append('setup-verify'))
+                    def setup_prepare():
+                        events.append('setup-prepare');failure=p.FirstFailure()
+                        if fault=='setup':failure.add(OSError('FIRST_SETUP'),'hosted-setup')
+                        return {'pass':fault!='setup','facts':setup.facts},failure
+                    setup.prepare=setup_prepare
+                    facts={'requestOriginal':originals['request.original.json'],'eventOriginal':originals['event.original.json'],'installationOriginal':originals['installation.original.json'],
+                        'inputOriginals':{name:originals[name] for name in ('request.original.json','event.original.json','runtime-expectation.json','launch-plan.json')}}
+                    installer=SimpleNamespace(facts=facts,prepare=lambda:({'installationComplete':True},p.FirstFailure()))
+                    def drop():uid_state.update(uid=1001,gid=1002);events.append('drop')
+                    owner.drop=drop;owner.create_runtime_sink=lambda:events.append('runtime-sink')
+                    def compose(composition):
+                        self.assertIsInstance(composition,p.RuntimeEntryComposition);self.assertTrue(owner.runtime_gate.before_complete);events.append('compose')
+                        composition.runtime_context.originals.update({name:value for name,value in originals.items() if name in reader.V8_PHASE_NAMES});drop()
+                        return {'pass':True},p.FirstFailure()
+                    def retain():self.assertEqual(uid_state['uid'],1001);events.append('retain-prerequisites')
+                    owner.retain=retain
+                    def retain_v8(values):
+                        self.assertEqual(uid_state['uid'],1001);captured.update(values);owner.v8_collector='/owned-v8';events.append('retain-v8')
+                    owner.retain_v8=retain_v8
+                    def prerequisite(mode,environ):events.append(mode);value=reader.parse(originals['setup.observer.json' if mode=='observe' else 'prerequisite.reader.json']);return reader.canonical(value),value['process']
+                    def admit(environ):
+                        events.append('V8-reader');value=reader.verify_v8_delivery(captured,packet,expected)
+                        if fault=='reader':value['guestPredicatesObserved']=False
+                        process=reader.parse(originals['prerequisite.reader.json'])['process'];process.update(pid=303,pgid=303,startTicks=303,spawnMonoNs=23000,reapMonoNs=23001)
+                        process['argv'][-1]='--admit-hosted-runtime'
+                        payload=reader.canonical({'schema':'bw.ring3.execution-reader-admission.v8','verdict':value,'identity':{}})
+                        wrap=lambda raw:{'bytes':len(raw),'sha256':sha(raw),'base64':reader.base64.b64encode(raw).decode()}
+                        return reader.canonical({'schema':'bw.ring3.execution-reader-original.v8','process':process,'stdout':wrap(payload),'stderr':wrap(b'')}),process
+                    ticks=iter((1,2,20001,21000));output=io.BytesIO();saved_env=dict(env)
+                    def setup_factory(*args):self.assertTrue(owner.runtime_gate.before_complete);return setup
+                    with patch.dict(p.__dict__,ACTUAL_ENTRY_ENABLED=True,HostedRuntimeActual=lambda env:owner,RuntimeInstaller=lambda env:installer,
+                        HostedSetupOps=setup_factory,RuntimeExpectationGate=lambda raw,digest:real_gate(raw,digest,files),compose_entry=compose,
+                        prerequisite_process=prerequisite,runtime_admission_process=admit,
+                        runtime_delivery_original=lambda name,raw=None:originals[name],write_new=lambda *args:None),\
+                        patch.object(os,'getresuid',side_effect=lambda:(uid_state['uid'],)*3),patch.object(os,'getresgid',side_effect=lambda:(uid_state['gid'],)*3),\
+                        patch.object(os,'getgroups',return_value=[]),patch.object(os,'getpid',return_value=100),patch.object(os,'chmod'),\
+                        patch.object(p.time,'monotonic_ns',side_effect=lambda:next(ticks)),patch.object(sys,'stdout',SimpleNamespace(buffer=output)),\
+                        patch.object(sys,'stderr',SimpleNamespace(buffer=io.BytesIO())),patch.object(reader,'v8_packet_predicates',return_value={'guestPredicatesObserved':True}):
+                        status=p.dispatch_cli(['--hosted-runtime-actual'],saved_env)
+                    self.assertEqual(status,0 if fault=='none' else 1,fault)
+                    if fault=='none':
+                        self.assertEqual(events,['setup-prepare','runtime-sink','observe','compose','drop','retain-prerequisites','admit','retain-v8','V8-reader'])
+                        decoded=reader.decode_v8_log(output.getvalue());self.assertEqual(set(decoded),reader.V8_ORIGINAL_NAMES)
+                    else:
+                        self.assertNotIn('compose',events) if fault in ('node','setup','unknown') else None
+                        if fault=='unknown':self.assertEqual(output.getvalue(),b'');self.assertEqual(events,[])
+                        elif fault=='setup':self.assertEqual(reader.parse(reader.decode_v8_log(output.getvalue())['execution.outer.json'])['firstFailure']['message'],'FIRST_SETUP')
+                    self.assertTrue(owner.attempted)
+                    repeated,failure=owner.run();self.assertFalse(repeated['pass']);self.assertEqual(failure.first['message'],'hosted V8 execution consumed; no retry')
+
+    result=unittest.TextTestRunner(verbosity=1).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
+    assert result.wasSuccessful(),'inert V8 delivery controls failed'
+    print(json.dumps({'testOnly':True,'tests':result.testsRun,'guestOrResourceOperationExecuted':False,'architecturalPredicateBoundary':'held separately; mocked only in node-free source routing controls','pass':True}))
+
+
+def delivery_full_control():
+    """Hosted source control only: existing pure Node builder; no CPU/guest."""
+    rom,manifest=pure_fixture();architectural,external=manufacture(rom,manifest);producer,case=producer_fixture_case()
+    with v8_manufactured(producer,case,architectural) as (env,expected,originals,packet,selected,files,state):
+        verdict=reader.verify_v8_delivery(originals,packet,expected)
+        assert verdict['guestPredicatesObserved'] is True and verdict['officialQualified'] is False
+        process=reader.parse(originals['prerequisite.reader.json'])['process'];process.update(pid=303,pgid=303,startTicks=303,spawnMonoNs=23000,reapMonoNs=23001)
+        process['argv'][-1]='--admit-hosted-runtime';identity=reader.parse(originals['execution.outer.json'])['drop'];identity.update(pid=303,parentPid=100)
+        wrap=lambda raw:{'bytes':len(raw),'sha256':sha(raw),'base64':reader.base64.b64encode(raw).decode()}
+        originals['v8.reader.json']=reader.canonical({'schema':'bw.ring3.execution-reader-original.v8','process':process,
+            'stdout':wrap(reader.canonical({'schema':'bw.ring3.execution-reader-admission.v8','verdict':verdict,'identity':identity})),'stderr':wrap(b'')})
+        official=dict(external['official'],runId=123,workflowSha256=reader.parse(packet['source.before.json'])['files'][reader.WORKFLOW]['sha256'])
+        artifact=repack(packet,{'official':official});log=io.BytesIO();failure=producer.FirstFailure()
+        progress=producer.emit_v8_originals(originals,log.write,log.flush,failure);assert progress['complete'] and failure.first is None
+        raw=log.getvalue();admission={**expected,'schema':'bw.ring3.execution-official-expectation.v8','official':official,'workflowSha':'e'*40,
+            'logBytes':len(raw),'logSha256':sha(raw)}
+        result=reader.verify_v8_artifact(raw,artifact,admission);assert result['pass'] is True and result['versionedExecutionProvenance'] is True
+        for field,value in (('requestSha256','0'*64),('workflowSha','f'*40),('logSha256','0'*64)):
+            try:reader.verify_v8_artifact(raw,artifact,dict(admission,**{field:value}))
+            except reader.Refusal:pass
+            else:raise AssertionError('independently selected original pin replacement accepted: '+field)
+    print(json.dumps({'testOnly':True,'fullV8AndTwentyRolePositive':True,'fullOriginalLogAndArtifactReaderPositive':True,'guestOrCpuExecuted':False}))
+
+
 if __name__=='__main__':
     if sys.argv[1:]==['--prerequisites-only']:prerequisite_controls()
     elif sys.argv[1:]==['--runtime-only']:runtime_controls()
+    elif sys.argv[1:]==['--delivery-only']:delivery_controls()
+    elif sys.argv[1:]==['--delivery-full']:delivery_full_control()
     else:main()

@@ -488,7 +488,7 @@ resource operation or guest ran in these controls. Bounded read loops cannot
 preempt blocking kernel calls; the separately reviewed job backstop is still
 required.
 
-The fixed CLI now recognizes exactly one of eight modes, without option
+The fixed CLI now recognizes exactly one of eleven modes, without option
 abbreviations. The static source constant `ACTUAL_ENTRY_ENABLED=False` refuses
 every mode except `--controls` before reading its environment, checking IDs,
 constructing a handler or opening a resource. Neither a plan field, command
@@ -502,10 +502,13 @@ status through `SystemExit`.
 | `--prepare-admitted-generated` | Requires the actual dropped invoker in the preparation sibling; stdout contains only the existing original GEN/PRE frame. |
 | `--bootstrap` | Starts as root, validates entry facts, migrates itself into the controller leaf, drops IDs/groups/capabilities, then executes the fixed `--controller` descriptor. Any return from bootstrap is failure. |
 | `--controller` | Starts dropped in the controller leaf; requires both complete local capture facts and an empty authoritative failure object. |
-| `--controller-runtime-admitted` | Explicit dropped controller selection. Reads the separately pinned installed request/runtime input, hashes the entire admitted stable superset before any probe factory, and joins unchanged raw runtime observations. Closed preparation/bootstrap delivery and final original-reader integration remain pending. |
+| `--controller-runtime-admitted` | Explicit dropped controller selection. Gates the complete selected stable runtime before probes, retains process originals and rereads the superset after probes and guests. |
+| `--prepare-runtime-admitted` | Starts dropped in the preparation sibling; joins the plan to the prior request and gates the full selected runtime before fixed Node generation and after PRE capture. |
+| `--bootstrap-runtime-admitted` | Starts as root; validates entry/request/source, migrates, drops IDs and executes the runtime-admitted controller with the prior request pin and no SUDO fields. Any return fails. |
 | `--hosted-actual` | Performs fresh fixed setup, admitted preparation, outside observation and dropped finalization. Its external event and runtime authority remain pending. |
 | `--install-hosted-envelope` | Disabled input-installation scaffold. Even complete installation returns nonzero before resource setup or guests because independent runtime, observer and reader gates remain pending. |
 | `--hosted-prerequisites` | Disabled installation/setup/independent-observer/dropped-collector path. Its new reader can admit prerequisite observations only; missing full runtime admission still returns nonzero before preparation, probes or guests. |
+| `--hosted-runtime-actual` | Disabled complete V8 source route: actual-job request admission, stable runtime gate, fresh setup, independent observer, versioned execution, outside terminal collection and dropped standalone execution reader. Official qualification is separate. |
 
 Preparation and hosted success require `pass` to be the boolean `true` and
 the same authoritative `FirstFailure` to have neither primary nor secondary
@@ -648,12 +651,11 @@ unchanged. These new prerequisites are not silently accepted by V7 or emitted
 as a qualified original bundle.
 
 The legacy install-only endpoint still returns failure before resource setup.
-The new prerequisite endpoint below connects independent observation and
-collection. Full runtime admission, versioned preparation/controller delivery,
-complete guest-provenance reader integration, executing-workflow admission,
-official installation/event API joins and a separately authorized hosted run
-remain required. The disabled 15 minute job supplies no measured backstop or
-guest qualification.
+The prerequisite endpoint below connects independent observation and collection.
+The later V8 source route adds stable runtime admission and closed execution
+delivery. Independently reviewed runtime inputs, official event/API joins and
+one authorized hosted run remain required. The disabled 15 minute job supplies
+no measured backstop or guest qualification.
 
 `--hosted-prerequisites` connects the admitted input installer to fresh
 `HostedSetupOps`, then launches the separate fixed command
@@ -757,8 +759,8 @@ The standalone reader implements the stable expectation independently, without
 producer imports. Its new explicit stable-policy entry preserves the existing
 runtime.v2 raw predicates and default original equality. Raw `ldd` streams stay
 originals; independently parsed paths join the pinned graph, while ASLR addresses
-are not portable identity pins. The new controller selection is guarded and
-does not yet supply the complete preparation/bootstrap/finalizer V8 chain.
+are not portable identity pins. The guarded V8 route below connects preparation,
+bootstrap, finalizer and independent original-reader delivery.
 
 A separate metadata-only `runtime-inventory` job and reader endpoint
 `--inventory-runtime` provide a concrete candidate acquisition path. Both the
@@ -821,7 +823,101 @@ Seventeen targeted runtime gate/inventory mutations are detected, including
 pre-factory hashing, graph joins, retained mismatch facts, repeated observation,
 raw maps/census/process joins, stream caps and no signaling after leader reap.
 
-The complete approved runtime graph is still absent. Closed versioned execution
-delivery, V8 originals and the separately reviewed actual event remain required.
+The complete approved runtime graph is still absent. Separately reviewed
+inventory and actual events remain required.
 No inventory event, runtime probe, resource operation or guest execution is
 qualified by these inert controls.
+
+The disabled `actual` job now selects the concrete V8 route. It has its own
+fixed Node setup step, using the existing action commit and version. The
+repo-existing upload-artifact commit `ea165f8d65b6e75b540449e92b4886f43607fa02`
+retains only the existing export directory as `i80386-ring3-int-iret-originals`,
+with hidden files excluded, one-day retention and missing files treated as
+error. It runs even after an earlier step fails: an absent export remains an
+upload failure, never an invented complete packet. The literal 15 minute
+budget includes setup and upload. Job and source activation guards remain false.
+
+`RuntimeInstaller` admits only the closed `actual` job; legacy installer
+selection stays unchanged. Root validates the prior request/source/runtime
+bytes and gates the entire stable graph before setup/preparation factories.
+Fresh setup precedes the independent observer, whose terminal must precede
+preparation. A fresh runtime-original sibling directory uses held nofollow
+directory descriptors and descriptor ownership assignment, with no recursive
+ownership changes, adoption, deletion or retry.
+
+Dropped preparation checks actual IDs before JSON, joins the delivery plan to
+the prior request source, gates the entire selected runtime before fixed Node
+generation and rereads it after PRE. The bootstrap preserves root migration,
+drop and exec order. Its clean controller environment deliberately adds the
+prior request digest and removes SUDO fields. Root retains GEN/PRE as opaque
+bytes. Phase.v4 records the new descriptor; phase.v3 and V7 stay separate.
+Controller runtime originals retain all eleven process records and terminal
+censuses, plus full readbacks before probes, after probes and after guests.
+Runtime.v2 raw equality and existing architecture predicates remain fixed.
+
+After genuine controller terminal observations, the outside owner drops before
+retaining or decoding originals. The collector records actual UID/GID,
+capability and membership observations, platform event/job/workflow context,
+first errors and partial setup/installation facts. Unknown invoker or failed
+drop keeps partials in memory and cannot publish root originals. Publication
+does not retry a failed drop. The prerequisite reader derives preparation
+identity from the independent observer. A second fixed dropped process invokes
+reader.py `--admit-hosted-runtime`, reads closed readonly original and packet
+rosters through bounded descriptors, and checks the complete V8 chain. Its
+verdict distinguishes `guestPredicatesObserved=true` and `officialQualified=false`.
+
+New runtime originals use separate sibling sinks. The
+`RING3_V8`/`bw.ring3.execution-log.v8` stream combines phase, installation,
+observer, runtime and reader originals under the same aggregate 5 MiB raw,
+8 MiB encoded, JSON and chunk caps. The positive roster has 22 originals,
+including `execution.outer.json` and the final reader process. Failure-only
+entry originals can be retained but cannot qualify. No extra becomes a sixth
+old internal name or a twenty-first packet role. New-mode fields are validated
+before local projections select held finite provenance rules; projected data
+is never emitted as an original. The packet still has exactly twenty roles.
+
+The independent official V8 audit is:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/reader.py \
+  --execution-log retained-actual.log --artifact retained-originals.zip \
+  --external-admission reviewed-execution-expectation.json
+```
+
+Its external `bw.ring3.execution-official-expectation.v8` contains exactly
+`schema`, `runId`, `attempt`, `head`, `tree`, `requestSha256`, `invoker`,
+`official`, `workflowSha`, `logBytes` and `logSha256`. `official` keeps the
+existing closed event/job/step/artifact admission fields. The prior request
+transitively selects source12 and immutable runtime input; the dynamic plan
+hash supplies delivery integrity. The official workflow revision, source bytes,
+one attempt, successful required steps, artifact and log originals must be
+admitted separately. An online verdict cannot authenticate their official origin.
+
+Seven node-free delivery controls cover the mocked CLI/collector path,
+independent provenance, coherent rehash conflicts, actual versus legacy job
+selection, bootstrap descriptors, pre-generator refusal, readonly descriptor
+closure and preserved first errors. Architectural predicates are an explicit
+separate boundary in those routing controls. `--delivery-full` runs only the
+existing pure Node fixture byte builder, then the unmocked twenty-role
+architecture and V8 original-log/artifact reader over manufactured observations.
+It executes no CPU or QEMU guest:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --delivery-only
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --delivery-full
+```
+
+The selected graph does not authenticate interpreter/system startup before
+admission. Python `-I -B` startup, fixed source-metadata Git processes,
+checkout/setup actions, sudo and env remain trusted hosted-platform boundaries.
+Git descriptors and raw streams remain closed and retained. Later observations
+supply no whole-host executable authenticity claim.
+
+Current hosted QEMU bytes/package availability and pre-enabled parent
+cpu/memory/pids controllers remain external hard blockers. There is no QEMU
+installer, apt fallback or parent-controller repair. Historical mismatch,
+missing controllers and graph/census cap overflow refuse and require explicit
+review. Node setup or inventory on another VM does not establish actual-VM
+availability. Independently reviewed runtime inventory/publication, final
+source12/event admission, guard activation and one affected clean hosted guest
+qualification remain outstanding.

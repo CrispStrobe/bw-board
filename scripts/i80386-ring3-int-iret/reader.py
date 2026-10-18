@@ -10,6 +10,7 @@ import base64
 import hashlib
 import io
 import json
+import math
 import os
 import platform
 import posixpath
@@ -1580,8 +1581,662 @@ def verify_runtime_inventory_log(raw,external):
              prerequisite_original(canonical(entry['stderr']))==probe['stderr'].encode('utf-8','surrogateescape'),'exact raw metadata probe stream/process join')
     return {'schema':'bw.ring3.runtime-inventory-admission.v1','candidateSha256':sha(candidate_raw),'candidateBytes':len(candidate_raw),
         'candidateReviewed':False,'actualRunApproved':False,'parentControllersAlreadyEnabled':enabled,'selectedBoundary':'reviewed selected executable/tool/package and Python superset only'}
+# Explicit V8 provenance policy; old artifact and V7 predicates stay separate.
+V8_ENV={'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'}
+V8_LIMITS={'cpuMax':'100000 100000','memoryMax':'1073741824','swapMax':'0','pidsMax':'64'}
+V8_RUN_FILE='scripts/i80386-ring3-int-iret/run.py'
+V8_PHASE_NAMES=frozenset(('.entry.json .controller.before.json .controller.json .outside.json git.before.json git.after.json preparation.phase.json generation.phase.json launch-plan.original.json').split())
+V8_NODE_PIN={'path':RUNTIME_NODE,**RUNTIME_SELECTED['node']}
+
+def v8_keys(value,names):
+    need(type(value) is dict and set(value)==set(names),'closed V8 provenance fields')
+
+def v8_canonical(value):
+    return json.dumps(value,sort_keys=True,separators=(',',':'),allow_nan=False)
+
+V8_STAGING_DRIVER = "import fs from 'node:fs';\nimport path from 'node:path';\nimport {buildFixture} from './scripts/i80386-ring3-int-iret/fixture.mjs';\nconst uid=process.getuid(),gid=process.getgid(),root=process.cwd();\nconst staged=path.resolve('build/i80386-ring3-int-iret-staged');\nfunction directory(name){const s=fs.lstatSync(name);if(!s.isDirectory()||s.uid!==uid||s.gid!==gid||(s.mode&0o022)||fs.realpathSync(name)!==name)throw Error('canonical owned staging directory');}\nfunction parents(){for(const name of [root,path.join(root,'build'),staged])directory(name);}\nparents();if(uid<=0||gid<=0)throw Error('unprivileged staging only');\nconst directoryHandle=fs.opendirSync(staged);let directoryError=null;\ntry{if(directoryHandle.readSync()!==null)throw Error('empty staging only');}catch(e){directoryError=e;}\ntry{directoryHandle.closeSync();}catch(e){if(directoryError)directoryError.ring3Secondary=[String(e)];else directoryError=e;}\nif(directoryError)throw directoryError;\nconst stable=v=>Array.isArray(v)?'['+v.map(stable).join(',')+']':v!==null&&typeof v==='object'?'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+stable(v[k])).join(',')+'}':JSON.stringify(v);\nconst fixture=buildFixture();\nfunction write(name,data){\n  if(!['fixture.rom','fixture.json'].includes(name))throw Error('fixed staging output');\n  parents();const target=path.join(staged,name);\n  const fd=fs.openSync(target,fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_NOFOLLOW,0o600);let first=null;\n  try{const s=fs.fstatSync(fd);if(!s.isFile()||s.uid!==uid||s.gid!==gid||s.size!==0)throw Error('owned empty regular staging descriptor');\n    if(fs.writeSync(fd,data,0,data.length)!==data.length)throw Error('complete staging write');\n    if(fs.fstatSync(fd).size!==data.length)throw Error('staging descriptor extent');\n  }catch(e){first=e;}\n  try{fs.closeSync(fd);}catch(e){if(first)first.ring3Secondary=[String(e)];else first=e;}\n  if(first)throw first;\n}\nconst rom=Buffer.from(fixture.rom),metadata=Buffer.from(stable(fixture.manifest)+'\\n');\nif(rom.length!==65536||metadata.length>1048576)throw Error('bounded authored staging extent');\nwrite('fixture.rom',rom);write('fixture.json',metadata);\n"
+
+V8_PROCESS_KEYS = set('schema role argv cwdRole environment pid pgid parentPid startTicks spawnMonoNs reapMonoNs exitCode signal waitStatus timedOut rusage firstFailure secondary'.split())
+
+def v8_hex_bytes(value, cap):
+    need(type(value) is str and len(value) <= 2 * cap, 'bounded original hex')
+    try:
+        body = bytes.fromhex(value)
+    except ValueError as error:
+        raise Refusal('invalid original hex') from error
+    need(body.hex() == value, 'canonical original hex')
+    return body
+
+def v8_process(row, role, argv, environment, milliseconds):
+    v8_keys(row, V8_PROCESS_KEYS)
+    need(row['schema'] == 'bw.ring3.process.v1' and row['role'] == role and equal(row['argv'], argv) and (row['cwdRole'] == 'checkout') and equal(row['environment'], environment), 'original launch descriptor')
+    integer(row['pid'], 1)
+    integer(row['pgid'], 1)
+    integer(row['parentPid'], 1)
+    integer(row['startTicks'], 1)
+    need(row['pid'] == row['pgid'] and row['pid'] != row['parentPid'], 'fresh original session')
+    start, end = (integer(row['spawnMonoNs'], 1), integer(row['reapMonoNs'], 1))
+    need(start <= end <= start + milliseconds * 1000000, 'original lifetime bound')
+    need(type(row['waitStatus']) is int and row['waitStatus'] == 0 and (type(row['exitCode']) is int) and (row['exitCode'] == 0) and (row['signal'] is None) and (row['timedOut'] is False) and (row['firstFailure'] is None) and (row['secondary'] == []), 'natural original status and errors')
+    v8_keys(row['rusage'], ('userSeconds', 'systemSeconds', 'maxRssKiB'))
+    for name, value in row['rusage'].items():
+        need(type(value) in (int, float) and math.isfinite(value) and (value >= 0), 'finite original rusage')
+    return (start, end)
+
+def v8_phase_stream(value, cap):
+    v8_keys(value, ('bytes', 'sha256', 'base64'))
+    size = integer(value['bytes'], 0, cap)
+    need(type(value['base64']) is str and value['base64'].isascii() and (len(value['base64']) == 4 * ((size + 2) // 3)), 'phase stream encoded extent')
+    try:
+        raw = base64.b64decode(value['base64'], validate=True)
+    except (ValueError, TypeError) as error:
+        raise Refusal('phase stream base64') from error
+    need(base64.b64encode(raw).decode('ascii') == value['base64'] and len(raw) == size and (value['sha256'] == sha(raw)), 'phase stream original bytes/digest')
+    return raw
+
+def v8_kernel_rows(raw):
+    need(type(raw) is str and raw.isascii() and (len(raw) <= 4096), 'bounded original kernel text')
+    rows = raw.splitlines()
+    need(len(rows) <= 32, 'finite kernel rows')
+    values = {}
+    for line in rows:
+        match = re.fullmatch('([A-Za-z_][A-Za-z_0-9]*) ([0-9]+)', line)
+        need(match is not None and match[1] not in values, 'unique original kernel counter')
+        values[match[1]] = int(match[2])
+    return values
+
+def v8_preparation_snapshot(value, expected_identity):
+    v8_keys(value, ('identity', 'owner', 'limits', 'raw', 'procs'))
+    need(equal(value['identity'], expected_identity) and equal(value['owner'], {'uid': 0, 'gid': 0}) and equal(value['limits'], V8_LIMITS) and (value['procs'] == []), 'preparation snapshot identity/owner/limits/empty')
+    raw = value['raw']
+    v8_keys(raw, ('cpuMax', 'memoryMax', 'swapMax', 'pidsMax', 'memoryEvents', 'cpuStat', 'cgroupEvents', 'memoryCurrent', 'memoryPeak', 'pidsCurrent', 'cgroupProcs'))
+    need(all((type(body) is str and body.isascii() and (len(body) <= 4096) for body in raw.values())), 'preparation raw observation cap')
+    need(all((raw[name].strip() == literal for name, literal in V8_LIMITS.items())), 'preparation raw fixed caps')
+    events = v8_kernel_rows(raw['cgroupEvents'])
+    need(events.get('populated') == 0 and raw['pidsCurrent'] == '0\n' and (raw['cgroupProcs'] == ''), 'hierarchical and local preparation emptiness')
+    for name in ('memoryCurrent', 'memoryPeak'):
+        need(re.fullmatch('[0-9]+\\n', raw[name]) is not None, 'original memory scalar')
+    memory = v8_kernel_rows(raw['memoryEvents'])
+    need({'oom', 'oom_kill'} <= set(memory), 'original preparation OOM fields')
+    cpu = v8_kernel_rows(raw['cpuStat'])
+    need({'usage_usec', 'user_usec', 'system_usec'} <= set(cpu), 'original preparation CPU counters')
+    return (memory, cpu)
+
+def v8_check_preparation(values, originals, expected, entry, outer, outer_start):
+    phase = values['preparation.phase.json']
+    need(originals['preparation.phase.json'] == (v8_canonical(phase) + '\n').encode(), 'canonical frozen phase original bytes')
+    v8_keys(phase, ('schema', 'runId', 'attempt', 'head', 'tree', 'python', 'invoker', 'captureMonoNs', 'process', 'stdout', 'stderr', 'ownership', 'preGit', 'firstFailure', 'secondary'))
+    need(phase['schema'] == 'bw.ring3.preparation-original.v3' and phase['runId'] == str(expected['runId']) and (type(phase['attempt']) is int) and (phase['attempt'] == 1) and (phase['head'] == expected['source']['head']) and (phase['tree'] == expected['source']['tree']) and equal(phase['python'], expected['python']) and equal(phase['invoker'], {'uid': entry['uid'], 'gid': entry['gid']}) and (phase['firstFailure'] is None) and (phase['secondary'] == []), 'phase source/run/Python/invoker/error envelope')
+    row = phase['process']
+    start, end = v8_process(row, 'preparation', [expected['python']['path'], '-I', '-B', V8_RUN_FILE, '--prepare-admitted-generated'], dict(outer['environment'], BW_LAUNCH_PLAN_SHA256=expected['launchPlanSha256']), 120000)
+    need(integer(row['parentPid'], 1) == integer(outer['parentPid'], 1), 'same root parent of preparation and controller')
+    need(end <= integer(phase['captureMonoNs'], 1) <= outer_start, 'phase captured after preparation and before controller')
+    frame = v8_phase_stream(phase['stdout'], (256 << 10) + 44)
+    need(v8_phase_stream(phase['stderr'], 16384) == b'', 'successful preparation stderr empty')
+    need(44 < len(frame) <= (256 << 10) + 44 and frame[:8] == b'R3GENv1\x00', 'fixed generated frame magic and header')
+    size = struct.unpack('>I', frame[8:12])[0]
+    need(8 < size <= 256 << 10 and len(frame) == size + 44 and (hashlib.sha256(frame[44:]).digest() == frame[12:44]), 'exact generated body length/digest/no suffix')
+    gen_size, pre_size = struct.unpack('>II', frame[44:52])
+    need(1 <= gen_size <= 128 << 10 and 1 <= pre_size <= 256 << 10 and (8 + gen_size + pre_size == size), 'closed generated segment lengths/shared cap')
+    generation, body = (frame[52:52 + gen_size], frame[52 + gen_size:])
+    need(generation == originals['generation.phase.json'] and body == originals['git.before.json'] and equal(phase['preGit'], {'bytes': len(body), 'sha256': sha(body)}), 'generation and PRE original segment/log joins')
+    v8_check_generation(values, originals, expected, entry, row, start, end)
+    identity = expected['preparationIdentity']
+    v8_keys(identity, ('device', 'inode'))
+    integer(identity['device'], 1)
+    integer(identity['inode'], 1)
+    owner = phase['ownership']
+    v8_keys(owner, ('schema', 'path', 'identity', 'owner', 'before', 'beforeCleanup', 'afterCleanup', 'spawnAttempted', 'sessionSignalAttempted', 'killAttempted', 'cleanupTerminal', 'polls', 'closeAttempted', 'closeSucceeded', 'partial'))
+    need(owner['schema'] == 'bw.ring3.preparation-ownership.v1' and owner['path'] == '/sys/fs/cgroup/bw-ring3-' + str(expected['runId']) + '-1-preparation' and equal(owner['identity'], identity) and equal(owner['owner'], {'uid': 0, 'gid': 0}), 'independently admitted preparation group')
+    need(owner['spawnAttempted'] is True and owner['sessionSignalAttempted'] is False and (owner['killAttempted'] is False) and (owner['cleanupTerminal'] is None) and (owner['closeAttempted'] is True) and (owner['closeSucceeded'] is True) and (1 <= integer(owner['polls']) <= 128), 'natural preparation terminal, no forced cleanup, closed ownership')
+    before = v8_preparation_snapshot(owner['before'], identity)
+    for name in ('beforeCleanup', 'afterCleanup'):
+        after = v8_preparation_snapshot(owner[name], identity)
+        for index in (0, 1):
+            need(set(before[index]) == set(after[index]) and all((after[index][k] >= before[index][k] for k in before[index])), 'monotone preparation kernel counters')
+        need(all((after[0][k] == before[0][k] for k in before[0] if k in ('oom', 'oom_kill', 'oom_group_kill'))), 'no new preparation OOM')
+        before = after
+    need(equal(owner['partial'], owner['afterCleanup']), 'last preparation partial snapshot original join')
+    return (start, end, row['pid'])
+
+def v8_check_generation(values, originals, expected, entry, prep, prep_start, prep_end):
+    raw = originals['generation.phase.json']
+    need(1 <= len(raw) <= 128 << 10, 'generation original cap')
+    gen = values['generation.phase.json']
+    need(raw == (v8_canonical(gen) + '\n').encode(), 'canonical generation original')
+    v8_keys(gen, ('schema', 'runId', 'attempt', 'head', 'tree', 'invoker', 'captureMonoNs', 'process', 'stdout', 'stderr', 'before', 'after', 'outputs', 'firstFailure', 'secondary'))
+    need(gen['schema'] == 'bw.ring3.generation-original.v1' and gen['runId'] == str(expected['runId']) and (type(gen['attempt']) is int) and (gen['attempt'] == 1) and (gen['head'] == expected['source']['head']) and (gen['tree'] == expected['source']['tree']) and equal(gen['invoker'], {'uid': entry['uid'], 'gid': entry['gid']}) and (gen['firstFailure'] is None) and (gen['secondary'] == []), 'generation source/run/invoker/first-error envelope')
+    node = expected['node']
+    v8_keys(node, ('path', 'bytes', 'sha256'))
+    need(type(node['path']) is str and node['path'].startswith('/') and ('/..' not in node['path']), 'external canonical Node path')
+    integer(node['bytes'], 1)
+    need(type(node['sha256']) is str and re.fullmatch('[0-9a-f]{64}', node['sha256']), 'external Node digest')
+    files = {'node': node}
+    for name, rel in (('fixture', 'scripts/i80386-ring3-int-iret/fixture.mjs'), ('runner', V8_RUN_FILE)):
+        source_row = expected['source']['files'][rel]
+        files[name] = {'path': rel, 'bytes': source_row['bytes'], 'sha256': source_row['sha256']}
+    for name in ('before', 'after'):
+        v8_keys(gen[name], ('monoNs', 'files'))
+        v8_keys(gen[name]['files'], ('node', 'fixture', 'runner'))
+        for file_row in gen[name]['files'].values():
+            v8_keys(file_row, ('path', 'bytes', 'sha256'))
+        need(equal(gen[name]['files'], files), 'independently admitted Node/source BEFORE and AFTER generation')
+    start, end = v8_process(gen['process'], 'discovery', [node['path'], '--input-type=module', '--eval', V8_STAGING_DRIVER], V8_ENV, 10000)
+    need(integer(gen['process']['parentPid'], 1) == integer(prep['pid'], 1), 'generator parent is preparation PID')
+    need(gen['process']['pid'] != prep['parentPid'], 'generator differs from known-live root owner')
+    need(v8_phase_stream(gen['stdout'], 16384) == b'' and v8_phase_stream(gen['stderr'], 16384) == b'', 'silent natural generation streams')
+    v8_keys(gen['outputs'], ('fixture.rom', 'fixture.json'))
+    for row in gen['outputs'].values():
+        v8_keys(row, ('bytes', 'sha256'))
+    need(equal(gen['outputs'], expected['inputs']), 'generation output references to independently admitted packet inputs')
+    first_git = integer(values['git.before.json']['commands'][0]['process']['spawnMonoNs'], 1)
+    need(prep_start <= integer(gen['before']['monoNs'], 1) <= start <= end <= integer(gen['after']['monoNs'], 1) <= integer(gen['captureMonoNs'], 1) <= first_git <= prep_end, 'generation observation/process/capture before PRE chronology')
+
+def v8_check_launch_plan(raw, expected):
+    """Compare retained original to separately admitted digest/source/runtime.
+
+    The caller must independently authenticate the event-plan installation and
+    digest selection. These original bytes cannot establish their own authority,
+    root file properties, child read order or all12 early observations.
+    """
+    need(type(raw) is bytes and 0 < len(raw) <= 1 << 20, 'bounded launch plan original')
+    digest = expected['launchPlanSha256']
+    need(type(digest) is str and re.fullmatch('[0-9a-f]{64}', digest), 'independent launch plan digest format')
+    need(sha(raw) == digest, 'independently admitted launch plan original digest')
+    plan = parse(raw)
+    v8_keys(plan, ('schema', 'runId', 'attempt', 'head', 'tree', 'source'))
+    need(raw == (v8_canonical(plan) + '\n').encode(), 'canonical launch plan original')
+    need(plan['schema'] == 'bw.ring3.launch-plan.v1' and type(plan['runId']) is str and re.fullmatch('[1-9][0-9]{0,19}', plan['runId']) and (plan['runId'] == str(integer(expected['runId'], 1))) and (type(plan['attempt']) is int) and (plan['attempt'] == 1) and (plan['head'] == expected['source']['head']) and (plan['tree'] == expected['source']['tree']), 'launch plan independent run/head/tree join')
+    source_raw = v8_phase_stream(plan['source'], 1 << 20)
+    need(len(source_raw) > 0 and sha(source_raw) == expected['sourceSha256'], 'launch plan independently admitted source original digest')
+    source = parse(source_raw)
+    v8_keys(source, ('schema', 'head', 'tree', 'files'))
+    need(source_raw == (v8_canonical(source) + '\n').encode() and equal(source, expected['source']), 'launch plan original source and independently admitted source equality')
+    need(source['schema'] == 'bw.ring3.source.v1' and all((type(source[k]) is str and re.fullmatch('[0-9a-f]{40}', source[k]) for k in ('head', 'tree'))) and (type(source['files']) is dict) and (set(source['files']) == SETUP_SOURCE_PATHS), 'launch plan exact source12 envelope')
+    for row in source['files'].values():
+        v8_keys(row, ('bytes', 'sha256', 'mode', 'blob'))
+        integer(row['bytes'], 0, 4 << 20)
+        need(row['mode'] == '100644' and type(row['sha256']) is str and re.fullmatch('[0-9a-f]{64}', row['sha256']) and (type(row['blob']) is str) and re.fullmatch('[0-9a-f]{40}', row['blob']), 'launch plan closed regular source12 identities')
+    need(equal(expected['node'], V8_NODE_PIN), 'independently admitted fixed selected Node identity')
+    return plan
+
+def v8_check_internal(originals, expected):
+    """Join decoded originals to independently admitted packet/source facts.
+
+    expected is supplied by the future standalone original audit after it has
+    independently admitted official/source/runtime and the frozen packet reader.
+    """
+    need(set(originals) == V8_PHASE_NAMES, 'failure-only or missing original cannot qualify')
+    v8_keys(expected, ('runId', 'source', 'sourceSha256', 'python', 'resources', 'guestProcesses', 'runtime', 'inputs', 'jsOriginals', 'preparationIdentity', 'node', 'launchPlanSha256'))
+    run_id = integer(expected['runId'], 1)
+    source = expected['source']
+    v8_keys(source, ('schema', 'head', 'tree', 'files'))
+    need(source['schema'] == 'bw.ring3.source.v1' and len(source['files']) == 12, 'source12 envelope')
+    need(all((re.fullmatch('[0-9a-f]{40}', source[key]) for key in ('head', 'tree'))), 'source head/tree')
+    v8_check_launch_plan(originals['launch-plan.original.json'], expected)
+    values = {name: parse(body) for name, body in originals.items()}
+    entry, before, controller, outside = (values[n] for n in ('.entry.json', '.controller.before.json', '.controller.json', '.outside.json'))
+    v8_keys(entry, ('schema', 'uid', 'gid', 'root', 'sourceSha256', 'python', 'cgroups'))
+    need(entry['schema'] == 'bw.ring3.entry.v1' and entry['sourceSha256'] == expected['sourceSha256'] and equal(entry['python'], expected['python']) and (entry['root'] == '/sys/fs/cgroup/bw-ring3-' + str(run_id) + '-1'), 'entry source/runtime/run join')
+    uid, gid = (integer(entry['uid'], 1), integer(entry['gid'], 1))
+    v8_keys(before, ('pid', 'before'))
+    v8_keys(controller, ('pid', 'before', 'barrier', 'inputsBefore', 'inputsAfter', 'barrierInputs', 'lastCensus', 'jsOriginals', 'processes', 'firstFailure', 'secondary'))
+    v8_keys(outside, ('process', 'cleanup', 'firstFailure', 'secondary', 'streamsHex'))
+    need(controller['firstFailure'] is None and outside['firstFailure'] is None and (controller['secondary'] == outside['secondary'] == []), 'internal original first errors')
+    environment = dict(V8_ENV, GITHUB_RUN_ID=str(run_id), GITHUB_RUN_ATTEMPT='1', BW_EXPECTED_HEAD=source['head'], BW_EXPECTED_TREE=source['tree'], SUDO_UID=str(uid), SUDO_GID=str(gid))
+    outer = outside['process']
+    start, end = v8_process(outer, 'controller', [entry['python']['path'], '-I', '-B', V8_RUN_FILE, '--bootstrap'], environment, 600000)
+    pid = outer['pid']
+    need(integer(before['pid'], 1) == integer(controller['pid'], 1) == pid and equal(before['before'], controller['before']), 'original controller PID/BEFORE join')
+    v8_keys(controller['barrier'], ('admitSource', 'source', 'runtime'))
+    need(equal(controller['barrier']['admitSource'], source) and equal(controller['barrier']['source'], source) and equal(controller['barrier']['runtime'], expected['runtime']), 'original source/runtime factory barrier')
+    need(all((equal(controller[key], expected['inputs']) for key in ('inputsBefore', 'inputsAfter', 'barrierInputs'))) and equal(controller['jsOriginals'], expected['jsOriginals']), 'original input/JS byte references')
+    v8_keys(outside['streamsHex'], ('stdout', 'stderr'))
+    for body in outside['streamsHex'].values():
+        v8_hex_bytes(body, 16384)
+    cleanup = outside['cleanup']
+    v8_keys(cleanup, ('beforeCleanup', 'afterCleanup', 'sessionSignalAttempted', 'cgroupKillAttempted', 'cleanupTerminal', 'polls'))
+    need(cleanup['sessionSignalAttempted'] is False and cleanup['cgroupKillAttempted'] is False and (cleanup['cleanupTerminal'] is None) and (1 <= integer(cleanup['polls']) <= 128), 'forced cleanup cannot qualify')
+    roles = ('enclosing', 'controller', 'js', 'qemu')
+    v8_keys(before['before'], roles)
+    v8_keys(entry['cgroups'], roles)
+    resources = expected['resources']
+    v8_keys(resources, ('schema', 'enclosing', 'controller', 'children', 'firstFailure', 'secondary'))
+    need(integer(resources['controller']['pid'], 1) == pid and resources['firstFailure'] is None and (resources['secondary'] == []), 'packet resource controller join')
+    for name in roles:
+        pair = resources[name] if name in ('enclosing', 'controller') else resources['children'][name]
+        need(equal(before['before'][name], pair['before']) and equal(cleanup['beforeCleanup'][name], pair['after']), 'original BEFORE and PREcleanup-AFTER packet joins')
+        for stage in ('beforeCleanup', 'afterCleanup'):
+            snap = cleanup[stage][name]
+            need(snap['procs'] == [] and snap['raw']['pidsCurrent'].strip() == '0' and ('populated 0' in snap['raw']['cgroupEvents'].splitlines()), 'genuine terminal empty observations')
+            need(equal(snap['identity'], entry['cgroups'][name]['identity']) and equal(snap['limits'], V8_LIMITS), 'frozen original cgroup identity/limits')
+    need(equal(controller['processes'], expected['guestProcesses']) and set(controller['processes']) == {'js', 'qemu'} and all((integer(row['parentPid'], 1) == pid for row in controller['processes'].values())), 'guest parents/original process joins')
+    times = [start]
+    for role in ('js', 'qemu'):
+        child = controller['processes'][role]
+        child_start, child_end = (integer(child['spawnMonoNs'], 1), integer(child['reapMonoNs'], 1))
+        need(child_start <= child_end <= child_start + 120000000000, 'held original guest lifetime bound')
+        times.extend((child_start, child_end))
+    times.append(end)
+    need(times == sorted(times), 'serial guest lifetimes inside original controller interval')
+    prep_start, prep_end, prep_pid = v8_check_preparation(values, originals, expected, entry, outer, start)
+    git_prefix = ['/usr/bin/git', '--no-replace-objects', '-c', 'gc.auto=0', '-c', 'maintenance.auto=false']
+    commands = [git_prefix + ['rev-parse', 'HEAD'], git_prefix + ['rev-parse', 'HEAD^{tree}'], git_prefix + ['ls-tree', '-r', 'HEAD', '--'] + sorted(source['files'])]
+    for phase in ('before', 'after'):
+        trace = values['git.' + phase + '.json']
+        v8_keys(trace, ('schema', 'phase', 'source', 'commands', 'firstFailure', 'secondary'))
+        need(trace['schema'] == 'bw.ring3.git.v1' and trace['phase'] == phase and equal(trace['source'], source) and (trace['firstFailure'] is None) and (trace['secondary'] == []) and (len(trace['commands']) == 3), 'original Git phase/source/errors')
+        previous, outputs = (0, [])
+        for row, argv in zip(trace['commands'], commands):
+            v8_keys(row, ('process', 'stdoutHex', 'stderrHex'))
+            gs, ge = v8_process(row['process'], 'discovery', argv, V8_ENV, 10000)
+            need(previous <= gs and (ge <= start if phase == 'before' else gs >= end), 'PRE/POST original Git chronology')
+            if phase == 'before':
+                need(prep_start <= gs <= ge <= prep_end and integer(row['process']['parentPid'], 1) == prep_pid, 'PRE Git contained by original preparation child')
+            previous = ge
+            need(row['stderrHex'] == '', 'original Git stderr')
+            outputs.append(v8_hex_bytes(row['stdoutHex'], 16384))
+        need(outputs[0] == (source['head'] + '\n').encode() and outputs[1] == (source['tree'] + '\n').encode(), 'raw Git HEAD/tree stdout')
+        listed = {}
+        for line in outputs[2].decode('utf-8').splitlines():
+            match = re.fullmatch('(100644) blob ([0-9a-f]{40})\\t([^\\t\\r\\n]+)', line)
+            need(match is not None and match[3] in source['files'] and (match[3] not in listed), 'raw Git ls-tree role/mode')
+            listed[match[3]] = (match[1], match[2])
+        need(set(listed) == set(source['files']) and all((listed[p] == (row['mode'], row['blob']) for p, row in source['files'].items())), 'raw Git blob/mode/source join')
+    return {'provenancePass': True, 'runId': run_id, 'head': source['head'], 'controllerPid': pid, 'controllerElapsedNs': end - start, 'originals': len(originals), 'preparationPid': prep_pid, 'wholeActualQualified': False, 'launchPlanSha256': expected['launchPlanSha256']}
+
+def v8_packet_predicates(packet,source_value,runtime_value):
+    need(type(packet) is dict and set(packet)==ROLES and all(type(raw) is bytes for raw in packet.values()) and
+         sum(map(len,packet.values()))<=CAPS['packetBytes'],'unchanged twenty-role expanded packet cap')
+    external={'source':source_value,'runtime':runtime_value}
+    official={'head':source_value['head'],'workflowSha256':source_value['files'][WORKFLOW]['sha256']}
+    audit = parse(packet['audit.json']); keys(audit, 'schema head sourceTree workflowSha256 roles caps firstFailure secondary')
+    source = external['source']; keys(source, 'head tree files'); digest(source['tree'], 40)
+    need(source['head'] == official['head'] == audit['head'] and audit['sourceTree'] == source['tree'] and
+         audit['workflowSha256'] == official['workflowSha256'] and audit['schema'] == SCHEMA+'audit.v1' and
+         equal(audit['caps'], CAPS) and audit['firstFailure'] is None and audit['secondary'] == [], 'frozen source/caps and first-error envelope')
+    need(audit['roles'] == [{'path': name, 'bytes': len(packet[name]), 'sha256': sha(packet[name])} for name in sorted(ROLES-{'audit.json'})], 'closed sorted original role hash census')
+    for when in ('before', 'after'):
+        observed = parse(packet['source.'+when+'.json'])
+        need(observed == {'schema': SCHEMA+'source.v1', **source}, 'independently frozen source before/after')
+        runtime(parse(packet['runtime.'+when+'.json']), external['runtime'])
+    need(type(source['files']) is dict and len(source['files']) >= 10, 'complete admitted source graph')
+    required = ['src/experimental/i80386.js', 'LICENSE', WORKFLOW] + ['scripts/i80386-ring3-int-iret/'+name for name in ('fixture.mjs', 'probe.mjs', 'reader.py', 'controls.py', 'run.py')]
+    need(set(required) <= set(source['files']), 'held execution/reader/controller source graph')
+    for name, row in source['files'].items():
+        need(type(name) is str and re.fullmatch(r'[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*', name) and
+             not any(part in ('.', '..') for part in name.split('/')), 'canonical source path')
+        keys(row, 'bytes sha256 mode blob'); integer(row['bytes'], 1); digest(row['sha256']); digest(row['blob'], 40)
+        need(row['mode'] == '100644', 'regular source mode')
+    need(source['files'][WORKFLOW]['sha256'] == official['workflowSha256'], 'workflow/source byte join')
+    rom = packet['inputs/fixture.rom']; expected = expected_memory(rom)
+    fixture = parse(packet['inputs/fixture.json'])
+    need(sha(json.dumps(fixture, sort_keys=True, separators=(',', ':')).encode()) == FIXTURE_JSON_SHA,
+         'entire independently frozen fixture metadata')
+    need(fixture.get('schema') == 'bw.ring3.fixture.v1' and fixture.get('romSha256') == ROM_SHA and
+         fixture.get('romBytes') == 65536 and fixture.get('ramBytes') == 1048576 and fixture.get('symbols') == SYMBOLS and
+         fixture.get('selectorPaddingOffsets') == list(PADDING) and fixture.get('wireBytes') == 1730 and
+         fixture.get('cpuProfile') == 'strict386' and fixture.get('deliverFaults') is False and
+         fixture.get('ordinaryStepLimit') == CAPS['calls'], 'independent literal fixture contract')
+    processes = {role: parse(packet[role+'/process.json']) for role in ('js', 'qemu')}
+    js_start, js_end = process(processes['js'], 'js', external['runtime'])
+    q_start, q_end = process(processes['qemu'], 'qemu', external['runtime'])
+    need(js_end <= q_start and q_end-js_start <= CAPS['controllerMs']*1000000, 'two fresh serial finite engines')
+    resources(parse(packet['resources.json']), processes)
+    need(packet['js/stderr'] == b'' and packet['qemu/stderr'] == b'', 'unexpected engine diagnostics refuse')
+    js_memory = wire_memory(packet['js/stdout'], expected)
+    wire_memory(packet['qemu/stdout'], expected)
+    before, after = packet['js/memory.before.bin'], packet['js/memory.after.bin']
+    need(before == bytes(1048576) and len(after) == 1048576, 'fixed original owned RAM images')
+    # JS observes the full RAM bus, not just selected reporter ranges. Undefined
+    # selector padding remains ungraded; every other owned byte must match.
+    # The startup return frame at0xafec is made by authored PUSH imm32, so its
+    # selector high halves ARE defined zero. Only CPU-created selector padding
+    # in the first INT frame/copy and the terminal INT81 frame is ungraded.
+    ignored = {frame+i for frame in (0x70c0, 0x7fec, 0x9fec) for i in PADDING}
+    need(all(after[i] == expected[i] for i in range(len(after)) if i not in ignored), 'whole owned RAM architectural projection')
+    for address, count in RANGES:
+        need(after[address:address+count] == js_memory[address:address+count], 'raw reporter/original RAM join')
+    rows = parse(packet['js/observations.json']); last_call = observations(rows)
+    need(bytes(rows[1]['frame']) == after[0x7fec:0x8000], 'original observed/final copied frame join')
+    report = parse(packet['js/report.json'])
+    keys(report, 'schema finiteRoundTripPass firstFailure calls completed fixtureSha256 memoryBeforeSha256 memoryAfterSha256 outputSha256 ports observations')
+    calls = integer(report['calls'], last_call, CAPS['calls'])
+    need(report['schema'] == SCHEMA+'js-probe.v1' and report['firstFailure'] is None and report['completed'] is True and
+         report['finiteRoundTripPass'] is True and report['fixtureSha256'] == ROM_SHA and report['memoryBeforeSha256'] == sha(before) and
+         report['memoryAfterSha256'] == sha(after) and report['outputSha256'] == sha(packet['js/stdout']) and
+         type(report['observations']) is int and report['observations'] == 4, 'raw JS report joins')
+    need(type(report['ports']) is list and len(report['ports']) == 2, 'two actual PIC masks')
+    previous = 0
+    for row, port in zip(report['ports'], (0x21, 0xa1)):
+        keys(row, 'port value call'); need(row['port'] == port and row['value'] == 255, 'original PIC output')
+        previous = integer(row['call'], previous+1, rows[0]['beforeCall']-1)
+    writes = parse(packet['js/writes.json']); need(type(writes) is list and len(writes) <= CAPS['writes'], 'bounded original byte-write journal')
+    replay = bytearray(before); previous = 1; last_writes = {}; observation_index = 0
+    for index, row in enumerate(writes):
+        keys(row, 'index call address before after')
+        need(type(row['index']) is int and row['index'] == index, 'original write order'); previous = integer(row['call'], previous, calls)
+        # Observations precede step(call), so only writes with SMALLER call
+        # numbers can have affected their twenty raw frame bytes.
+        while observation_index < 4 and rows[observation_index]['beforeCall'] <= row['call']:
+            need(bytes(rows[observation_index]['frame']) == replay[0x7fec:0x8000], 'observed frame/original journal prefix')
+            observation_index += 1
+        address = integer(row['address'], 0, 0xeffff); integer(row['before'], 0, 255); integer(row['after'], 0, 255)
+        need(replay[address] == row['before'], 'original write before byte'); replay[address] = row['after']
+        last_writes[address] = row['call']
+    while observation_index < 4:
+        need(bytes(rows[observation_index]['frame']) == replay[0x7fec:0x8000], 'observed frame/original journal prefix')
+        observation_index += 1
+    need(bytes(replay) == after, 'whole RAM original write replay')
+    for address in range(0x7fec, 0x8000):
+        need(last_writes.get(address) == rows[0]['beforeCall'], 'actual INT80 frame write at observed instruction')
+    for start, count, low, high in ((0x7000,48,1,rows[0]['beforeCall']-1),
+            (0x7040,48,rows[1]['beforeCall'],rows[2]['beforeCall']-1),
+            (0x70c0,20,rows[1]['beforeCall'],rows[2]['beforeCall']-1),
+            (0x7080,48,rows[3]['beforeCall'],calls)):
+        need(all(low <= last_writes.get(address, -1) <= high for address in range(start,start+count)),
+             'original record writes inside observed instruction intervals')
+    qreport = parse(packet['qemu/report.json']); keys(qreport, 'schema fixtureSha256 outputSha256 firstFailure secondary')
+    need(qreport == {'schema': SCHEMA+'qemu.v1', 'fixtureSha256': ROM_SHA, 'outputSha256': sha(packet['qemu/stdout']), 'firstFailure': None, 'secondary': []}, 'QEMU raw report joins')
+    return {'guestPredicatesObserved':True,'officialQualified':False,'ordinaryCalls':calls,'roles':20}
+
+
+V8_BASE_NAMES=frozenset(SETUP_INPUTS)|V8_PHASE_NAMES|frozenset(('setup.observer.json','prerequisite.outer.json',
+    'prerequisite.reader.json','root.runtime.json','preparation.runtime.json','controller.runtime.json','execution.outer.json'))
+V8_ORIGINAL_NAMES=V8_BASE_NAMES|{'v8.reader.json'}
+V8_LOG_NAMES=V8_ORIGINAL_NAMES|{'.entry-failure.json'}
+V8_DIRECTORY=Path('build/i80386-ring3-int-iret-v8')
+
+
+def v8_observations(value,stages,expected,low,high):
+    need(type(value) is dict and set(value)==set(stages),'complete explicitly versioned runtime observation stages')
+    previous=low
+    for stage in stages:
+        row=value[stage];keys(row,'files aliases platform startMonoNs finishMonoNs')
+        need(equal(row['files'],{path:{key:item[key] for key in ('bytes','sha256','mode')} for path,item in expected['files'].items()}) and
+             equal(row['aliases'],expected['aliases']) and equal(row['platform'],expected['platform']),
+             'entire externally selected runtime superset observed without omissions')
+        start=integer(row['startMonoNs'],previous);end=integer(row['finishMonoNs'],start,high);previous=end
+    return value
+
+
+def verify_v8_delivery(originals,packet,expected):
+    """New version only: guest predicates plus independently retained prerequisites.
+
+    No process-created fact authenticates an official GitHub event or artifact.
+    That final authority is supplied separately to verify_v8_artifact below.
+    """
+    keys(expected,'schema runId attempt head tree requestSha256 invoker')
+    need(expected['schema']=='bw.ring3.execution-expectation.v8' and set(originals)==V8_BASE_NAMES,
+         'explicit complete V8 original and external expectation versions')
+    need(all(type(raw) is bytes and len(raw)<=CAPS['jsonBytes'] for raw in originals.values()) and
+         sum(map(len,originals.values()))<=5<<20,'held aggregate V8 raw original cap')
+    prereq_expected=dict(expected,schema='bw.ring3.prerequisite-expectation.v1')
+    prereq_names=set(SETUP_INPUTS)|{'setup.observer.json','prerequisite.outer.json'}
+    verdict=verify_prerequisites({name:originals[name] for name in prereq_names},prereq_expected)
+    # The old independent reader's exact process/verdict joins are reused over
+    # a new bounded framing assembled from these already retained raw bytes.
+    prereq_raw=bytearray()
+    for name in sorted(prereq_names|{'prerequisite.reader.json'}):
+        raw=originals[name];encoded=base64.b64encode(raw).decode();parts=[encoded[i:i+3072] for i in range(0,len(encoded),3072)] or ['']
+        for index,part in enumerate(parts):
+            prereq_raw.extend(b'RING3_PREREQUISITE '+canonical({'schema':'bw.ring3.prerequisite-log.v1','name':name,'index':index,
+                'count':len(parts),'bytes':len(raw),'sha256':sha(raw),'data':part}))
+    need(equal(verify_prerequisite_log(bytes(prereq_raw),prereq_expected),verdict),'held independent prerequisite reader verdict joins')
+    request=parse(originals['request.original.json']);source_raw=prerequisite_original(canonical(request['source']));source=parse(source_raw)
+    collection=parse(originals['execution.outer.json']);keys(collection,'schema requestSha256 platform drop firstFailure secondary')
+    need(collection['schema']=='bw.ring3.execution-outer-original.v8' and collection['requestSha256']==expected['requestSha256'] and
+         collection['firstFailure'] is None and collection['secondary']==[],'original failure-free outside V8 collector')
+    context=collection['platform'];keys(context,'GITHUB_RUN_ID GITHUB_RUN_ATTEMPT GITHUB_REPOSITORY GITHUB_EVENT_NAME GITHUB_ACTOR GITHUB_JOB GITHUB_WORKFLOW_SHA GITHUB_WORKFLOW_REF BW_EXPECTED_HEAD BW_EXPECTED_TREE')
+    need(context=={'GITHUB_RUN_ID':expected['runId'],'GITHUB_RUN_ATTEMPT':'1','GITHUB_REPOSITORY':'CrispStrobe/bw-board',
+         'GITHUB_EVENT_NAME':'pull_request','GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':'actual','GITHUB_WORKFLOW_SHA':context['GITHUB_WORKFLOW_SHA'],
+         'GITHUB_WORKFLOW_REF':'CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request['pullRequest'])+'/merge',
+         'BW_EXPECTED_HEAD':expected['head'],'BW_EXPECTED_TREE':expected['tree']},'raw actual platform source/event/run/job joins')
+    digest(context['GITHUB_WORKFLOW_SHA'],40)
+    dropped=collection['drop'];keys(dropped,'uids gids groups pid status membership');uid,gid=expected['invoker']
+    need(equal(dropped['uids'],[uid]*3) and equal(dropped['gids'],[gid]*3) and dropped['groups']==[],'raw outside collector UID/GID drop')
+    integer(dropped['pid'],1);setup_membership(dropped['membership'],expected['runId'])
+    need(type(dropped['status']) is str and len(dropped['status'].encode())<=4096,'bounded raw collector capability status')
+    for field in ('CapInh','CapPrm','CapEff','CapAmb'):
+        found=re.search('^'+field+r':\s*([0-9a-fA-F]+)\s*$',dropped['status'],re.M)
+        need(found is not None and int(found[1],16)==0,'raw outside collector capabilities dropped')
+    runtime_raw=originals['runtime-expectation.json'];selected=runtime_expectation(runtime_raw,request['runtime']['sha256'])
+    before=parse(packet['runtime.before.json']);verify_runtime_stable_original(before,runtime_raw,request['runtime']['sha256'])
+    verify_runtime_stable_original(parse(packet['runtime.after.json']),runtime_raw,request['runtime']['sha256'])
+    need(originals['launch-plan.original.json']==originals['launch-plan.json'],'same retained dynamic delivery plan, never external approval')
+    phase=parse(originals['preparation.phase.json']);outside=parse(originals['.outside.json']);entry=parse(originals['.entry.json'])
+    need(originals['preparation.phase.json']==canonical(phase) and phase['schema']=='bw.ring3.preparation-original.v4',
+         'canonical explicit new preparation phase version')
+    pin=expected['requestSha256'];outer=outside['process'];prep=phase['process']
+    need(dropped['pid']==outer['parentPid'],'same outside drop and preparation/controller parent identity')
+    for process_value,mode in ((outer,'--bootstrap-runtime-admitted'),(prep,'--prepare-runtime-admitted')):
+        need(process_value['argv']==[entry['python']['path'],'-I','-B',V8_RUN_FILE,mode] and
+             process_value['environment'].get('BW_RING3_APPROVED_REQUEST_SHA256')==pin,
+             'new execution descriptors carry prior external request pin')
+    need([entry['uid'],entry['gid']]==expected['invoker'],'V8 invoker joins independent observer/external expectation')
+    # Validate the new identities before selecting the held finite provenance
+    # rules. These local projections never replace the retained V4 originals.
+    held={name:raw for name,raw in originals.items() if name in V8_PHASE_NAMES}
+    projected_phase=parse(canonical(phase));projected_phase['schema']='bw.ring3.preparation-original.v3'
+    projected_phase['process']['argv'][-1]='--prepare-admitted-generated'
+    del projected_phase['process']['environment']['BW_RING3_APPROVED_REQUEST_SHA256']
+    projected_outer=parse(canonical(outside));projected_outer['process']['argv'][-1]='--bootstrap'
+    del projected_outer['process']['environment']['BW_RING3_APPROVED_REQUEST_SHA256']
+    held['preparation.phase.json']=canonical(projected_phase);held['.outside.json']=canonical(projected_outer)
+    resources_value=parse(packet['resources.json']);guest_processes={role:parse(packet[role+'/process.json']) for role in ('js','qemu')}
+    refs=lambda names,prefix:{name:{'bytes':len(packet[prefix+name]),'sha256':sha(packet[prefix+name])} for name in names}
+    provenance={'runId':int(expected['runId']),'source':source,'sourceSha256':sha(source_raw),'python':selected['executables']['python'],
+        'resources':resources_value,'guestProcesses':guest_processes,'runtime':before,'inputs':refs(('fixture.rom','fixture.json'),'inputs/'),
+        'jsOriginals':refs(('report.json','observations.json','writes.json','memory.before.bin','memory.after.bin'),'js/'),
+        'preparationIdentity':verdict['preparationIdentity'],'node':V8_NODE_PIN,'launchPlanSha256':sha(originals['launch-plan.json'])}
+    v8_check_internal(held,provenance)
+    runtime_hash=sha(runtime_raw);generation=parse(originals['generation.phase.json'])
+    for name,schema in (('preparation.runtime.json','bw.ring3.preparation-runtime-original.v1'),
+                        ('controller.runtime.json','bw.ring3.runtime-admission-original.v2'),('root.runtime.json','bw.ring3.root-runtime-original.v1')):
+        row=parse(originals[name]);keys(row,'schema requestSha256 runtimeSha256 pid observations firstFailure secondary'+
+            (' probeProcesses' if name=='controller.runtime.json' else ''))
+        need(originals[name]==canonical(row) and row['schema']==schema and row['requestSha256']==pin and row['runtimeSha256']==runtime_hash and
+             row['firstFailure'] is None and row['secondary']==[],'canonical failure-free independently pinned runtime original')
+        integer(row['pid'],1)
+        if name=='preparation.runtime.json':
+            need(row['pid']==prep['pid'],'preparation runtime observations belong to actual preparation PID')
+            obs=v8_observations(row['observations'],('before-probes','after-probes'),selected,prep['spawnMonoNs'],prep['reapMonoNs'])
+            need(obs['before-probes']['finishMonoNs']<=generation['before']['monoNs'] and
+                 obs['after-probes']['startMonoNs']>=parse(originals['git.before.json'])['commands'][-1]['process']['reapMonoNs'],
+                 'entire runtime gate precedes generation and rereads after PRE')
+        elif name=='root.runtime.json':
+            need(row['pid']==outer['parentPid'],'root gate and outside collector parent identity')
+            observer=parse(originals['setup.observer.json'])['process']
+            obs=v8_observations(row['observations'],('before-probes','after-guests'),selected,1,2**63-1)
+            reader_start=parse(originals['prerequisite.reader.json'])['process']['spawnMonoNs']
+            need(obs['before-probes']['finishMonoNs']<=observer['spawnMonoNs']<=observer['reapMonoNs']<=prep['spawnMonoNs'] and
+                 obs['after-guests']['startMonoNs']>=outer['reapMonoNs'] and obs['after-guests']['finishMonoNs']<=reader_start,
+                 'root stable gate before preparation and after controller terminal')
+        else:
+            need(row['pid']==outer['pid'],'runtime probe originals belong to held controller PID')
+            obs=v8_observations(row['observations'],('before-probes','after-probes','after-guests'),selected,outer['spawnMonoNs'],outer['reapMonoNs'])
+            records=row['probeProcesses'];need(type(records) is list and len(records)==11,'complete independently retained probe process roster')
+            descriptors={row['role']:row for row in selected['probes']};seen=set();previous=obs['before-probes']['finishMonoNs']
+            for record in records:
+                keys(record,'role process census');role=record['role'];need(role in descriptors and role not in seen,'closed original probe process roles');seen.add(role)
+                descriptor=descriptors[role];process_value=record['process']
+                start,end=v8_process(process_value,'discovery',descriptor['argv'],descriptor['environment'],10000)
+                for usage_name in ('userSeconds','systemSeconds'):
+                    need(0<=process_value['rusage'][usage_name]<=10,'bounded V8 metadata child CPU usage')
+                integer(process_value['rusage']['maxRssKiB'],0,1048576)
+                need(process_value['parentPid']==outer['pid'] and start>=previous and end<=obs['after-probes']['startMonoNs'],
+                     'serial discovery children after full gate and before full readback')
+                previous=end;census=record['census'];keys(census,'controller js qemu')
+                probe_resources=parse(canonical(resources_value))
+                for role_name,snapshot in census.items():
+                    keys(snapshot,'identity limits raw procs')
+                    keys(snapshot['raw'],'memoryEvents cpuStat cgroupEvents memoryCurrent memoryPeak pidsCurrent')
+                    need(equal(snapshot['identity'],entry['cgroups'][role_name]['identity']) and equal(snapshot['limits'],V8_LIMITS) and
+                         equal(snapshot['procs'],[outer['pid']] if role_name=='controller' else []) and
+                         snapshot['raw']['pidsCurrent'].strip()==('1' if role_name=='controller' else '0') and
+                         'populated '+('1' if role_name=='controller' else '0') in snapshot['raw']['cgroupEvents'].splitlines(),
+                         'independent raw probe terminal controller/guest census')
+                    pair=probe_resources['controller'] if role_name=='controller' else probe_resources['children'][role_name]
+                    pair['before']=snapshot
+                # The held resource rules independently validate exact identity
+                # fields, scalar text, unique counters, frozen state, caps and
+                # monotonic no-OOM joins from each probe to the final census.
+                resources(probe_resources,guest_processes)
+            need(obs['after-probes']['finishMonoNs']<=guest_processes['js']['spawnMonoNs'] and
+                 obs['after-guests']['startMonoNs']>=guest_processes['qemu']['reapMonoNs'],'full runtime readbacks bracket actual guests')
+    packet_verdict=v8_packet_predicates(packet,{key:source[key] for key in ('head','tree','files')},before)
+    return {'schema':'bw.ring3.execution-admission.v8','guestPredicatesObserved':packet_verdict['guestPredicatesObserved'],
+        'officialQualified':False,'requestSha256':pin,'runtimeSha256':runtime_hash,'preparationIdentity':verdict['preparationIdentity']}
+
+
+def v8_read_roster(relative,roster,uid,gid,packet=False):
+    """Independent dropped readonly sink reader; never imports the producer."""
+    result={};descriptors=[];first=None
+    try:
+        checkout=Path.cwd();ancestors=[]
+        for path in (checkout,checkout/'build',checkout/relative):
+            need(path.resolve(strict=True)==path,'canonical V8 read ancestry')
+            fd=os.open(path,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK);descriptors.append(fd);info=os.fstat(fd)
+            need(stat.S_ISDIR(info.st_mode) and (info.st_uid,info.st_gid)==(uid,gid) and info.st_mode&0o022==0,
+                 'invoker-owned nonwritable V8 read ancestry')
+            ancestors.append((path,fd,setup_metadata(info)))
+        root=descriptors[-1];groups={}
+        for name in roster:
+            parts=name.split('/');need(len(parts)<=2,'fixed V8 role depth')
+            groups.setdefault(parts[0] if len(parts)==2 else '',set()).add(parts[-1])
+        need(set(os.listdir(root))==groups.get('',set())|{name for name in groups if name},'closed V8 original directory roster')
+        for group,names in sorted(groups.items()):
+            directory=root;group_info=None
+            if group:
+                directory=os.open(group,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=root);descriptors.append(directory)
+                group_info=os.fstat(directory);need(stat.S_ISDIR(group_info.st_mode) and (group_info.st_uid,group_info.st_gid)==(uid,gid) and
+                    group_info.st_mode&0o022==0 and set(os.listdir(directory))==names,'closed invoker-owned packet role directory')
+            try:
+                for name in sorted(names):
+                    role=(group+'/' if group else '')+name
+                    cap=(CAPS['jsonBytes'] if name.endswith('.json') else CAPS['ramBytes'] if name.endswith('.bin') else
+                         CAPS['romBytes'] if name.endswith('.rom') else CAPS['streamBytes']) if packet else CAPS['jsonBytes']
+                    fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=directory);descriptors.append(fd);file_error=None
+                    try:
+                        info=os.fstat(fd);need(stat.S_ISREG(info.st_mode) and (info.st_uid,info.st_gid)==(uid,gid) and
+                            stat.S_IMODE(info.st_mode)==(0o600 if packet else 0o400) and info.st_nlink==1 and 0<=info.st_size<=cap,
+                            'fixed bounded single-link V8 original file')
+                        raw=bytearray()
+                        while True:
+                            part=os.read(fd,min(65536,cap+1-len(raw)))
+                            if not part:break
+                            raw.extend(part);need(len(raw)<=cap,'V8 per-role read cap')
+                        need(len(raw)==info.st_size and setup_metadata(os.fstat(fd))==setup_metadata(info) and
+                             setup_metadata(os.stat(name,dir_fd=directory,follow_symlinks=False))==setup_metadata(info),'held V8 original name/descriptor readback')
+                        result[role]=bytes(raw)
+                        need(sum(map(len,result.values()))<=(CAPS['packetBytes'] if packet else 5<<20),'unchanged aggregate V8 read cap')
+                    except BaseException as error:file_error=error
+                    finally:
+                        descriptors.pop()
+                        try:os.close(fd)
+                        except BaseException as error:
+                            if file_error is None:file_error=error
+                            else:file_error.setup_secondary=getattr(file_error,'setup_secondary',[])+[{'phase':'v8-file-close','name':type(error).__name__,'message':str(error)}]
+                    if file_error is not None:raise file_error
+                if group:
+                    need(setup_metadata(os.fstat(directory))==setup_metadata(group_info) and
+                         setup_metadata(os.stat(group,dir_fd=root,follow_symlinks=False))==setup_metadata(group_info),'held packet directory identity readback')
+            finally:
+                if group:
+                    primary=sys.exc_info()[1];descriptors.pop()
+                    try:os.close(directory)
+                    except BaseException as error:
+                        if primary is None:raise
+                        primary.setup_secondary=getattr(primary,'setup_secondary',[])+[{'phase':'v8-packet-directory-close','name':type(error).__name__,'message':str(error)}]
+        for path,fd,frozen in ancestors:
+            need(setup_metadata(os.fstat(fd))==frozen and setup_metadata(path.lstat())==frozen,'held V8 sink ancestry readback')
+    except BaseException as error:first=error
+    finally:
+        for fd in reversed(descriptors):
+            try:os.close(fd)
+            except BaseException as error:
+                if first is None:first=error
+                else:first.setup_secondary=getattr(first,'setup_secondary',[])+[{'phase':'v8-directory-close','name':type(error).__name__,'message':str(error)}]
+    if first is not None:raise first
+    return result
+
+
+def admit_hosted_runtime(environ):
+    expected=dict(prerequisite_expected(environ),schema='bw.ring3.execution-expectation.v8');uid,gid=expected['invoker']
+    identity={'uids':list(os.getresuid()),'gids':list(os.getresgid()),'groups':os.getgroups(),'pid':os.getpid(),'parentPid':os.getppid()}
+    need(identity['uids']==[uid]*3 and identity['gids']==[gid]*3 and identity['groups']==[],'actual dropped V8 reader BEFORE any original decode')
+    identity['status']=setup_proc_read('/proc/self/status');identity['membership']=setup_proc_read('/proc/self/cgroup')
+    setup_membership(identity['membership'],expected['runId'])
+    for field in ('CapInh','CapPrm','CapEff','CapAmb'):
+        row=re.search('^'+field+r':\s*([0-9a-fA-F]+)\s*$',identity['status'],re.M)
+        need(row is not None and int(row[1],16)==0,'actual dropped V8 reader capabilities before JSON')
+    originals=v8_read_roster(V8_DIRECTORY,V8_BASE_NAMES,uid,gid)
+    packet=v8_read_roster(Path('build/i80386-ring3-int-iret-export'),ROLES,uid,gid,packet=True)
+    verdict=verify_v8_delivery(originals,packet,expected)
+    return {'schema':'bw.ring3.execution-reader-admission.v8','identity':identity,'verdict':verdict}
+
+
+def decode_v8_log(raw):
+    need(type(raw) is bytes and len(raw)<=8<<20,'unchanged aggregate V8 encoded/log cap')
+    groups={};chunks=0
+    for line in raw.splitlines():
+        marker=b'RING3_V8 ';offset=line.find(marker)
+        if offset<0:continue
+        need(line[:offset]==b'' or re.fullmatch(rb'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ',line[:offset]),'canonical official V8 log timestamp')
+        row=parse(line[offset+len(marker):]);keys(row,'schema name index count bytes sha256 data')
+        need(row['schema']=='bw.ring3.execution-log.v8' and row['name'] in V8_LOG_NAMES,'explicit new V8 log version and original name')
+        count=integer(row['count'],1,456);index=integer(row['index'],0,count-1);extent=integer(row['bytes'],0,CAPS['jsonBytes']);digest(row['sha256'])
+        need(type(row['data']) is str and len(row['data'])<=3072,'held encoded V8 chunk cap')
+        group=groups.setdefault(row['name'],{'count':count,'bytes':extent,'sha256':row['sha256'],'parts':[]})
+        need((group['count'],group['bytes'],group['sha256'])==(count,extent,row['sha256']) and index==len(group['parts']),'one immutable ordered V8 chunk sequence')
+        group['parts'].append(row['data']);chunks+=1;need(chunks<=2600,'unchanged aggregate V8 chunk cap')
+    originals={}
+    for name,group in groups.items():
+        need(len(group['parts'])==group['count'],'complete retained V8 original')
+        encoded=''.join(group['parts']);data=base64.b64decode(encoded,validate=True)
+        need(base64.b64encode(data).decode()==encoded and len(data)==group['bytes'] and sha(data)==group['sha256'],'exact retained V8 bytes/hash/encoding')
+        originals[name]=data;need(sum(map(len,originals.values()))<=5<<20,'unchanged aggregate V8 raw cap')
+    return originals
+
+
+def verify_v8_artifact(log_raw,artifact_raw,external):
+    keys(external,'schema runId attempt head tree requestSha256 invoker official workflowSha logBytes logSha256')
+    need(external['schema']=='bw.ring3.execution-official-expectation.v8' and
+         integer(external['logBytes'],1,8<<20)==len(log_raw) and digest(external['logSha256'])==sha(log_raw),
+         'independently admitted official V8 log original')
+    originals=decode_v8_log(log_raw);need(set(originals)==V8_ORIGINAL_NAMES,'full V8 originals including separate dropped admission process')
+    need(digest(external['workflowSha'],40)==parse(originals['execution.outer.json'])['platform']['GITHUB_WORKFLOW_SHA'],
+         'separately admitted official executing workflow revision')
+    reader_raw=originals.pop('v8.reader.json');packet=read_archive(artifact_raw)
+    expected={key:external[key] for key in ('runId','attempt','head','tree','requestSha256','invoker')};expected['schema']='bw.ring3.execution-expectation.v8'
+    verdict=verify_v8_delivery(originals,packet,expected)
+    retained=parse(reader_raw);keys(retained,'schema process stdout stderr');need(retained['schema']=='bw.ring3.execution-reader-original.v8','explicit final dropped reader original')
+    process_value=retained['process'];prior=parse(originals['prerequisite.reader.json'])['process'];outer=parse(originals['.outside.json'])['process']
+    start,end=v8_process(process_value,'discovery',['/usr/bin/python3','-I','-B',V8_RUN_FILE.replace('run.py','reader.py'),'--admit-hosted-runtime'],prior['environment'],10000)
+    need(start>=prior['reapMonoNs'] and process_value['parentPid']==outer['parentPid'] and process_value['pid']!=outer['parentPid'],
+         'causally later independent V8 reader under outside dropped collector')
+    output=parse(prerequisite_original(canonical(retained['stdout'])));keys(output,'schema identity verdict')
+    need(output['schema']=='bw.ring3.execution-reader-admission.v8' and equal(output['verdict'],verdict) and
+         prerequisite_original(canonical(retained['stderr']))==b'','retained V8 verdict matches fresh standalone original validation')
+    identity=output['identity'];keys(identity,'uids gids groups pid parentPid status membership');uid,gid=expected['invoker']
+    need(equal(identity['uids'],[uid]*3) and equal(identity['gids'],[gid]*3) and identity['groups']==[] and
+         integer(identity['pid'],1)==process_value['pid'] and integer(identity['parentPid'],1)==process_value['parentPid'],
+         'retained actual dropped V8 reader identity')
+    setup_membership(identity['membership'],expected['runId'])
+    need(type(identity['status']) is str and len(identity['status'].encode())<=4096,'bounded original V8 reader status')
+    for field in ('CapInh','CapPrm','CapEff','CapAmb'):
+        found=re.search('^'+field+r':\s*([0-9a-fA-F]+)\s*$',identity['status'],re.M)
+        need(found is not None and int(found[1],16)==0,'original V8 reader capability drop')
+    request=parse(originals['request.original.json']);source=parse(prerequisite_original(canonical(request['source'])))
+    official=external['official'];need(official['runId']==int(expected['runId']) and official['head']==expected['head'],'external official run/source joins V8 request')
+    result=verify_artifact(artifact_raw,{'official':official,'source':{key:source[key] for key in ('head','tree','files')},
+        'runtime':parse(packet['runtime.before.json'])})
+    return dict(result,schema='bw.ring3.official-admission.v8',requestSha256=expected['requestSha256'],runtimeSha256=verdict['runtimeSha256'],
+        versionedExecutionProvenance=True)
+
+
 def main():
-    internal={'--observe-hosted-setup','--admit-hosted-prerequisites'}
+    internal={'--observe-hosted-setup','--admit-hosted-prerequisites','--admit-hosted-runtime'}
     if any(flag in internal for flag in sys.argv[1:]) and (len(sys.argv)!=2 or sys.argv[1] not in internal):
         raise Refusal('exactly one fixed internal prerequisite mode required')
     if '--inventory-runtime' in sys.argv[1:]:
@@ -1602,6 +2257,16 @@ def main():
     if sys.argv[1:]==['--admit-hosted-prerequisites']:
         result=admit_hosted_prerequisites(dict(os.environ));raw=canonical(result)
         need(sys.stdout.buffer.write(raw)==len(raw),'complete prerequisite reader verdict');sys.stdout.buffer.flush();return
+    if sys.argv[1:]==['--admit-hosted-runtime']:
+        result=admit_hosted_runtime(dict(os.environ));raw=canonical(result)
+        need(len(raw)<=16384 and sys.stdout.buffer.write(raw)==len(raw),'bounded complete independent V8 reader verdict');sys.stdout.buffer.flush();return
+    if sys.argv[1:2]==['--execution-log']:
+        parser=argparse.ArgumentParser(description='Independent official V8 original admission',allow_abbrev=False)
+        parser.add_argument('--execution-log',required=True);parser.add_argument('--artifact',required=True);parser.add_argument('--external-admission',required=True);args=parser.parse_args()
+        with Path(args.execution_log).open('rb') as stream:log=stream.read((8<<20)+1)
+        with Path(args.artifact).open('rb') as stream:artifact=stream.read(CAPS['packetBytes']+1)
+        with Path(args.external_admission).open('rb') as stream:external=parse(stream.read(CAPS['jsonBytes']+1))
+        print(json.dumps(verify_v8_artifact(log,artifact,external),sort_keys=True));return
     if sys.argv[1:2]==['--prerequisite-log']:
         parser=argparse.ArgumentParser(description='Original-only prerequisite observation admission',allow_abbrev=False)
         parser.add_argument('--prerequisite-log',required=True);parser.add_argument('--external-admission',required=True)
