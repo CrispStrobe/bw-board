@@ -2362,6 +2362,250 @@ def admit_generation_source(raw,expected_sha256,expected_head,expected_tree):
 # Selected-file identity admitted from the separate CLI646 original. This is
 # not a dependency-graph, upstream-authenticity or host-ownership assertion.
 GENERATION_NODE_PIN=(124827920,'fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48')
+SELECTED_QEMU_PIN=(26359752,'28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5')
+
+
+def expectation_resolve(path,aliases):
+    seen=set()
+    for unused in range(16):
+        need(path not in seen,'admitted runtime alias cycle');seen.add(path)
+        matches=[name for name in aliases if path==name or path.startswith(name+'/')]
+        if not matches:return path
+        name=max(matches,key=len)
+        path=posixpath.normpath(posixpath.join(posixpath.dirname(name),aliases[name]['linkText'])+path[len(name):])
+    raise ValueError('admitted runtime alias depth')
+
+
+def expectation_probe_descriptors(value):
+    paths={name:value['executables'][name]['path'] for name in RUNTIME_EXECUTABLES}
+    descriptors={name+'-version':[path,'--version'] for name,path in paths.items()}
+    descriptors.update({'ldd-'+name:['/usr/bin/ldd',path] for name,path in paths.items()})
+    descriptors.update({'ldd-shell':['/usr/bin/ldd','/usr/bin/bash'],'ldd-dpkg-query':['/usr/bin/ldd','/usr/bin/dpkg-query'],
+        'ldd-tcg':['/usr/bin/ldd',expectation_resolve(TCG_MODULE,value['aliases'])],
+        'package-version':['/usr/bin/dpkg-query','-W','-f=${Package}\t${Version}\t${Architecture}\n',*PACKAGE_NAMES],
+        'package-files':['/usr/bin/dpkg-query','-L',*PACKAGE_NAMES]})
+    result=[]
+    for role,argv in sorted(descriptors.items()):
+        path=expectation_resolve(argv[0],value['aliases']);item=value['files'][path]
+        result.append({'role':role,'argv':argv,'environment':dict(ENV),
+            'executable':{'path':path,**{key:item[key] for key in ('bytes','sha256','mode')}}})
+    return result
+
+
+def admit_runtime_expectation(raw,expected_sha256):
+    """Identity policy only; caller must originate its pin in reviewed request.
+
+    A coherent caller-selected raw+digest is not independent runtime approval.
+    The installed-input adapter below supplies the actual external request join.
+    """
+    need(type(raw) is bytes and 0<len(raw)<=RUNTIME_INPUT_CAP and type(expected_sha256) is str and
+         re.fullmatch('[0-9a-f]{64}',expected_sha256) and sha(raw)==expected_sha256,'externally pinned bounded runtime expectation')
+    value=final_json(raw);require_fields(value,'schema platform executables versions files aliases packages packagePaths probes','closed runtime expectation')
+    need(raw==encode(value) and value['schema']=='bw.ring3.runtime-expectation.v1','canonical selected runtime expectation')
+    require_fields(value['platform'],'sysname release machine','closed admitted platform')
+    need(value['platform']['sysname']=='Linux' and value['platform']['machine']=='x86_64' and
+         type(value['platform']['release']) is str and re.fullmatch('[A-Za-z0-9_.+-]{1,128}',value['platform']['release']),
+         'fixed admitted Linux platform release')
+    files=value['files'];aliases=value['aliases']
+    need(type(files) is dict and 1<=len(files)<=512 and type(aliases) is dict and len(aliases)<=256,'held runtime graph count caps')
+    total=0
+    for path,item in files.items():
+        runtime_path(path);require_fields(item,'bytes sha256 kind mode','closed admitted runtime file')
+        need(type(item['bytes']) is int and 0<item['bytes']<=268435456 and item['kind'] in RuntimeDiscovery.PRIORITY and
+             type(item['mode']) is int and 0<=item['mode']<=0o777 and item['mode']&0o022==0,'admitted runtime file extent/kind/mode')
+        need(type(item['sha256']) is str and re.fullmatch('[0-9a-f]{64}',item['sha256']),'admitted runtime file SHA-256')
+        total+=item['bytes'];need(total<=1073741824,'held selected graph aggregate file cap')
+        if item['kind'].endswith('-binary') or item['kind'] in ('observation-tool','tool-interpreter'):
+            need(item['mode']&0o111!=0,'admitted observation tool executable mode')
+    for path,item in aliases.items():
+        runtime_path(path);require_fields(item,'linkText target','closed admitted runtime alias')
+        need(path not in files and type(item['linkText']) is str and 0<len(item['linkText'].encode())<=256 and
+             re.fullmatch('[A-Za-z0-9_.+/-]+',item['linkText']),'admitted alias text and file separation')
+        runtime_path(item['target'])
+        need(expectation_resolve(posixpath.normpath(posixpath.join(posixpath.dirname(path),item['linkText'])),aliases)==item['target'],
+             'admitted alias canonical target')
+    need(all(expectation_resolve(path,aliases)==path for path in files),'admitted file keys have canonical alias resolution')
+    require_fields(value['executables'],'node python qemu','fixed three admitted executables')
+    require_fields(value['versions'],'node python qemu','fixed admitted version roster')
+    for name,requested in RUNTIME_EXECUTABLES.items():
+        row=value['executables'][name];require_fields(row,'path bytes sha256','closed admitted executable')
+        path=expectation_resolve(requested,aliases)
+        need(path in files and same_json(row,{'path':path,**{key:files[path][key] for key in ('bytes','sha256')}}) and
+             files[path]['kind']==name+'-binary','fixed executable aliases and selected bytes')
+    for role,pin in (('node',GENERATION_NODE_PIN),('qemu',SELECTED_QEMU_PIN)):
+        item=value['executables'][role]
+        need((item['bytes'],item['sha256'])==pin,'independently selected historical '+role+' identity')
+    need(value['versions']['node']=='v22.23.3' and type(value['versions']['python']) is str and
+         re.fullmatch(r'Python 3\.\d+\.\d+',value['versions']['python']) and type(value['versions']['qemu']) is str and
+         re.fullmatch(r'QEMU emulator version 8\.2\.2(?:[ (][^\r\n]*)?',value['versions']['qemu']),'fixed admitted executable versions')
+    packages=value['packages'];need(type(packages) is list and len(packages)==5,'exact package expectation roster')
+    need([row.get('name') for row in packages if type(row) is dict]==sorted(PACKAGE_NAMES),'sorted unique admitted packages')
+    for package in packages:
+        require_fields(package,'name version architecture','closed admitted package row')
+        need(type(package['version']) is str and re.fullmatch('[A-Za-z0-9.+:~_-]{1,128}',package['version']) and
+             package['architecture'] in ('amd64','all'),'admitted package version/architecture')
+        if package['name']=='qemu-system-x86':need(package['version']=='1:8.2.2+ds-0ubuntu1.18' and package['architecture']=='amd64',
+                                                 'independently selected historical QEMU package')
+    paths=value['packagePaths'];need(type(paths) is list and 0<len(paths)<=2048 and paths==sorted(set(paths)),'bounded sorted stable package paths')
+    for path in paths:runtime_path(path)
+    module=expectation_resolve(TCG_MODULE,aliases)
+    need(module in files and files[module]['kind']=='tcg-module' and TCG_MODULE in paths,'admitted named i386 TCG package module')
+    used={item['path'] for name,item in value['executables'].items() if name=='qemu'}|{module}|{path for path,item in files.items() if item['kind']=='qemu-data'}
+    need(any(item['kind']=='qemu-data' for item in files.values()) and used<={expectation_resolve(path,aliases) for path in paths},
+         'admitted QEMU executable/module/data package ownership')
+    need(same_json(value['probes'],expectation_probe_descriptors(value)),'exact fixed probe roster/argv/environment/executable identities')
+    return raw
+
+
+class RuntimeAdmissionFiles(RuntimeFiles):
+    def fact(self,path):
+        runtime_path(path);need(str(Path(path).resolve(strict=True))==path,'canonical admitted runtime read path')
+        fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK);first=None;count=0;digest=hashlib.sha256()
+        def identity(info):return tuple(getattr(info,key) for key in ('st_dev','st_ino','st_mode','st_uid','st_gid','st_nlink','st_size','st_mtime_ns'))
+        try:
+            before=os.fstat(fd)
+            need(stat.S_ISREG(before.st_mode) and 0<before.st_size<=268435456 and before.st_mode&0o022==0,
+                 'bounded nonwritable admitted runtime regular file')
+            while True:
+                chunk=os.read(fd,min(65536,268435457-count))
+                if not chunk:break
+                count+=len(chunk);need(count<=268435456,'runtime admission file read cap');digest.update(chunk)
+            need(count==before.st_size and identity(os.fstat(fd))==identity(before) and
+                 identity(os.stat(path,follow_symlinks=False))==identity(before) and str(Path(path).resolve(strict=True))==path,
+                 'held runtime bytes/mode/path identity readback')
+            result={'bytes':count,'sha256':digest.hexdigest(),'mode':stat.S_IMODE(before.st_mode)}
+        except BaseException as error:first=error
+        finally:first=close_owned(fd,first,'runtime-admission-file-close')
+        if first is not None:raise first
+        return result
+
+
+class RuntimeExpectationGate:
+    def __init__(self,raw,expected_sha256,files=None):
+        self._raw=admit_runtime_expectation(raw,expected_sha256);self.files=RuntimeAdmissionFiles() if files is None else files
+        self.observations={};self.before_complete=False;self._observed_stages=set()
+
+    def observe(self,stage):
+        need(stage in ('before-probes','after-probes','after-guests'),'fixed admitted runtime observation stage')
+        need(stage not in self._observed_stages,'admitted runtime observation consumed; no retry');self._observed_stages.add(stage)
+        if stage=='before-probes':need(not self.observations,'admitted runtime preprobe gate consumed; no retry')
+        else:need(self.before_complete,'complete admitted runtime gate before later observations')
+        template=final_json(self._raw);observed={'files':{},'aliases':{},'platform':None,'startMonoNs':time.monotonic_ns(),'finishMonoNs':None}
+        self.observations[stage]=observed;failure=FirstFailure()
+        for path,item in template['files'].items():
+            try:
+                fact=final_json(encode(self.files.fact(path)));observed['files'][path]=fact
+                need(same_json(fact,{key:item[key] for key in ('bytes','sha256','mode')}),'admitted runtime file identity or mode drift')
+            except BaseException as error:
+                observed['files'].setdefault(path,{'firstFailure':row(error,'admitted-runtime-file')});failure.add(error,'admitted-runtime-file')
+        for path,item in template['aliases'].items():
+            try:
+                fact=final_json(encode(self.files.alias(path)));observed['aliases'][path]=fact
+                need(same_json(fact,item),'admitted runtime alias drift')
+            except BaseException as error:
+                observed['aliases'].setdefault(path,{'firstFailure':row(error,'admitted-runtime-alias')});failure.add(error,'admitted-runtime-alias')
+        try:observed['platform']=final_json(encode(self.files.platform()));need(same_json(observed['platform'],template['platform']),'admitted runtime platform drift')
+        except BaseException as error:failure.add(error,'admitted-runtime-platform')
+        observed['finishMonoNs']=time.monotonic_ns()
+        try:need(type(observed['startMonoNs']) is int and observed['startMonoNs']>0 and type(observed['finishMonoNs']) is int and
+                 observed['finishMonoNs']>=observed['startMonoNs'],'finite admitted runtime observation clock')
+        except BaseException as error:failure.add(error,'admitted-runtime-clock')
+        if failure.first is not None:
+            self.before_complete=False
+            raise ObservedFailure(failure.first,failure.secondary)
+        if stage=='before-probes':self.before_complete=True
+        return observed
+
+    def join(self,runtime):
+        need(self.before_complete,'complete external runtime preprobe gate required')
+        expected=final_json(self._raw)
+        need(runtime['schema']=='bw.ring3.runtime.v2' and same_json(runtime['platform'],expected['platform']) and
+             same_json(runtime['executables'],expected['executables']) and same_json(runtime['versions'],expected['versions']),
+             'raw runtime stable executable/platform/version joins')
+        package=runtime['qemuPackage']
+        for path,item in package['files'].items():
+            need(path in expected['files'] and same_json(item,{key:expected['files'][path][key] for key in ('bytes','sha256','kind')}),
+                 'every discovered file joins admitted selected superset')
+        for path,item in package['aliases'].items():
+            need(path in expected['aliases'] and same_json(item,expected['aliases'][path]),'every discovered alias joins admitted selected superset')
+        required={path for path,item in expected['files'].items() if item['kind'] in
+            ('qemu-data','tcg-module','qemu-binary','node-binary','python-binary','observation-tool','tool-interpreter')}
+        need(required<=set(package['files']),'complete exact selected engine/tool/package file graph')
+        descriptors={item['role']:item for item in expected['probes']};seen=set()
+        for probe in package['probes']:
+            role=probe['role'];need(role in descriptors and role not in seen,'exact unique observed probe roster');seen.add(role)
+            descriptor=descriptors[role]
+            need(same_json(probe['argv'],descriptor['argv']) and same_json(probe['environment'],descriptor['environment']) and
+                 type(probe['exitCode']) is int and probe['exitCode']==0 and probe['stderr']=='' and type(probe['stdout']) is str and
+                 len(probe['stdout'].encode())<=16384,'admitted probe descriptor and retained raw output')
+            if role=='package-version':
+                rows=[line.split('\t') for line in probe['stdout'].splitlines()]
+                need(all(len(item)==3 for item in rows) and sorted(rows)==[[row['name'],row['version'],row['architecture']] for row in expected['packages']],
+                     'raw package versions join admitted rows')
+            elif role=='package-files':need(sorted(set(probe['stdout'].splitlines()))==expected['packagePaths'],'raw stable package path census')
+            elif role.endswith('-version'):
+                need(probe['stdout'].splitlines() and probe['stdout'].splitlines()[0]==expected['versions'][role[:-8]],'raw executable version joins')
+            elif role.startswith('ldd-'):
+                count=0
+                for line in probe['stdout'].splitlines():
+                    line=line.strip()
+                    if re.fullmatch(r'linux-vdso\.so\.\d+ \(0x[0-9a-f]+\)',line):continue
+                    match=re.fullmatch(r'(?:[^/\s]+ => )?(/[^\s]+) \(0x[0-9a-f]+\)',line)
+                    need(match is not None,'closed original ldd dependency row')
+                    path=expectation_resolve(runtime_path(match[1]),expected['aliases'])
+                    need(path in package['files'] and path in expected['files'] and
+                         expected['files'][path]['kind'] in ('shared-library','elf-interpreter'),
+                         'all raw ldd dependency paths join admitted graph');count+=1
+                need(count>0,'original resolved ELF dependency set')
+        need(seen==set(descriptors),'all fixed probes retained without dropping raw originals')
+        qemu=next(item for item in expected['packages'] if item['name']=='qemu-system-x86')
+        need(package['name']==qemu['name'] and package['version']==qemu['version'] and package['architecture']==qemu['architecture'],
+             'raw selected QEMU package joins')
+        return runtime
+
+
+class AdmittedRuntimeControllerOps(ControllerOps):
+    """Explicit new controller selection; held controller defaults stay intact."""
+    def __init__(self,environ=None):
+        super().__init__(environ);self.runtime_gate=None;self.runtime_request=None;self.runtime_probe_processes=[]
+
+    def admit(self):
+        super().admit()  # Actual dropped IDs/membership BEFORE admission JSON.
+        request_raw,runtime_raw,request=read_admitted_runtime(self.environ)
+        need(admitted_original(request['source'],JSON_CAP,'approved runtime source')==encode(self.source_before),
+             'runtime admission joins prepared twelve-file source')
+        self.runtime_request=request_raw;self.runtime_gate=RuntimeExpectationGate(runtime_raw,request['runtime']['sha256'])
+
+    def discover(self):
+        need(self.runtime_gate is not None,'independently admitted runtime gate required')
+        self.runtime_gate.observe('before-probes')  # BEFORE any callback/factory construction.
+        self.plan=controller_runtime_discovery(self.groups);callback=self.plan.probe
+        def observed_probe(role,argv):
+            try:return callback(role,argv)
+            finally:
+                self.runtime_probe_processes.append(final_json(encode({'role':role,'process':getattr(callback,'last_process',None),
+                    'census':getattr(callback,'last_census',None)})))
+        self.plan.probe=observed_probe
+        self.runtime_before=self.plan.discover();self.runtime_gate.join(self.runtime_before)
+        expected_roles={row['role'] for row in final_json(self.runtime_gate._raw)['probes']}
+        need(len(self.runtime_probe_processes)==len(expected_roles) and
+             {row['role'] for row in self.runtime_probe_processes}==expected_roles and
+             all(type(row['process']) is dict and row['process'].get('firstFailure') is None and row['process'].get('secondary')==[] and
+                 type(row['process'].get('exitCode')) is int and row['process']['exitCode']==0 for row in self.runtime_probe_processes),
+             'all original independent runtime probe processes retained')
+        self.runtime_gate.observe('after-probes')
+
+    def after_all(self,failure):
+        super().after_all(failure)
+        if self.runtime_gate is not None and self.runtime_gate.before_complete:
+            try:self.runtime_gate.observe('after-guests')
+            except BaseException as error:failure.add(error,'controller-admitted-runtime-after')
+
+    def runtime_original(self):
+        value={'schema':'bw.ring3.runtime-admission-original.v1','requestSha256':sha(self.runtime_request) if self.runtime_request is not None else None,
+            'runtimeSha256':sha(self.runtime_gate._raw) if self.runtime_gate is not None else None,
+            'observations':{} if self.runtime_gate is None else self.runtime_gate.observations,'probeProcesses':self.runtime_probe_processes}
+        raw=encode(value);need(len(raw)<=JSON_CAP,'held runtime admission original JSON cap');return raw
 
 
 class PinnedRecordingStagingOps(RecordingStagingOps):
@@ -2415,6 +2659,51 @@ class PinnedRecordingStagingOps(RecordingStagingOps):
 
 def launch_plan_path(environ):
     return Path('/run')/(expected_cgroup(environ).name+'-admission')/'launch-plan.json'
+
+
+def read_admission_input(environ,name,cap):
+    need(name in ('request.original.json','runtime-expectation.json') and type(cap) is int and 0<cap<=JSON_CAP,'two fixed admitted runtime inputs')
+    directory=launch_plan_path(environ).parent;descriptors=[];first=None;raw=bytearray()
+    def identity(info):return tuple(getattr(info,key) for key in ('st_dev','st_ino','st_mode','st_uid','st_gid','st_nlink','st_size','st_mtime_ns'))
+    try:
+        parent=None
+        for path in (Path('/'),Path('/run'),directory):
+            fd=os.open(path if parent is None else path.name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK,
+                       **({} if parent is None else {'dir_fd':parent}));descriptors.append(fd)
+            info=os.fstat(fd)
+            need(path.resolve(strict=True)==path and stat.S_ISDIR(info.st_mode) and (info.st_uid,info.st_gid)==(0,0) and
+                 info.st_mode&0o022==0 and identity(path.lstat())==identity(info),'held root-owned runtime admission ancestors')
+            parent=fd
+        fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=parent);descriptors.append(fd);before=os.fstat(fd)
+        need(stat.S_ISREG(before.st_mode) and (before.st_uid,before.st_gid)==(0,0) and stat.S_IMODE(before.st_mode)==0o444 and
+             before.st_nlink==1 and 0<before.st_size<=cap,'readonly single-link bounded runtime admission input')
+        while True:
+            chunk=os.read(fd,min(65536,cap+1-len(raw)))
+            if not chunk:break
+            raw.extend(chunk);need(len(raw)<=cap,'runtime admission input read extent cap')
+        need(len(raw)==before.st_size and identity(os.fstat(fd))==identity(before) and
+             identity(os.stat(name,dir_fd=parent,follow_symlinks=False))==identity(before),'held runtime admission bytes/path identity')
+        for path,fd in zip((Path('/'),Path('/run'),directory),descriptors[:3]):
+            need(identity(path.lstat())==identity(os.fstat(fd)) and path.resolve(strict=True)==path,'runtime admission ancestor readback identity')
+    except BaseException as error:first=error
+    finally:
+        for fd in reversed(descriptors):first=close_owned(fd,first,'runtime-admission-input-close')
+    if first is not None:raise first
+    return bytes(raw)
+
+
+def read_admitted_runtime(environ):
+    expected=environ.get('BW_RING3_APPROVED_REQUEST_SHA256')
+    need(type(expected) is str and re.fullmatch('[0-9a-f]{64}',expected),'external request pin before runtime input reads')
+    request_raw=read_admission_input(environ,'request.original.json',JSON_CAP)
+    request=admit_approval_request(request_raw,expected)
+    need(request['head']==environ.get('BW_EXPECTED_HEAD') and request['tree']==environ.get('BW_EXPECTED_TREE'),
+         'admitted runtime request source environment join')
+    raw=read_admission_input(environ,'runtime-expectation.json',RUNTIME_INPUT_CAP);descriptor=request['runtime']
+    need(len(raw)==descriptor['bytes'] and sha(raw)==descriptor['sha256'] and
+         hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()==descriptor['blob'],'admitted immutable Git runtime input bytes')
+    admit_runtime_expectation(raw,descriptor['sha256'])
+    return request_raw,raw,request
 
 
 def read_launch_plan(environ,expected_sha256):
@@ -3849,7 +4138,7 @@ ACTUAL_ENTRY_ENABLED=False  # Activation requires a separate reviewed source/wor
 def dispatch_cli(argv=None,environ=None):
     parser=argparse.ArgumentParser(description=__doc__,allow_abbrev=False)
     modes=parser.add_mutually_exclusive_group(required=True)
-    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites'):
+    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted'):
         modes.add_argument('--'+name,action='store_const',const=name,dest='mode')
     argv=list(sys.argv[1:] if argv is None else argv)
     if len(argv)!=1:parser.error('exactly one fixed mode argument required')
@@ -3872,8 +4161,8 @@ def dispatch_cli(argv=None,environ=None):
             returned=controller_bootstrap(BootstrapOps(environ))
             need(isinstance(returned,FirstFailure),'bootstrap returned without authoritative failure');failure=returned
             failure.add(RuntimeError('bootstrap returned; successful exec cannot return'),'cli-bootstrap-return')
-        elif args.mode=='controller':
-            ops,returned=controller_execute(ControllerOps(environ))
+        elif args.mode in ('controller','controller-runtime-admitted'):
+            ops,returned=controller_execute(ControllerOps(environ) if args.mode=='controller' else AdmittedRuntimeControllerOps(environ))
             need(isinstance(returned,FirstFailure),'authoritative controller failure required');failure=returned
             result={'pass':failure.first is None and failure.secondary==[] and ops.unprivileged is True and
                 ops.paths_admitted is True and set(ops.processes)=={'js','qemu'} and ops.source_after is not None and ops.runtime_after is not None}
@@ -3928,6 +4217,139 @@ def controls():
                 'rusage':{'userSeconds':0.1,'systemSeconds':0.01,'maxRssKiB':1024}}
 
     class Tests(unittest.TestCase):
+        def test_runtime_expectation_gate_hashes_entire_superset_before_factory_and_retains_raw_discovery(self):
+            module=self.prerequisite_test_module();raw,value,original,files,inventory=module.runtime_manufactured()
+            gate=RuntimeExpectationGate(raw,sha(raw),files);gate.observe('before-probes')
+            self.assertTrue(gate.before_complete);self.assertEqual(set(gate.observations['before-probes']['files']),set(value['files']))
+            self.assertIn('/usr/lib/python3.12/zipfile/__init__.py',gate.observations['before-probes']['files'])
+            self.assertNotIn('/usr/lib/python3.12/zipfile/__init__.py',original['qemuPackage']['files'])
+            self.assertIs(gate.join(original),original);gate.observe('after-probes');gate.observe('after-guests')
+            self.assertEqual(set(gate.observations),{'before-probes','after-probes','after-guests'})
+            with self.assertRaisesRegex(ValueError,'consumed'):gate.observe('after-guests')
+            count=len(files.events)
+            with self.assertRaisesRegex(ValueError,'consumed'):gate.observe('before-probes')
+            self.assertEqual(len(files.events),count)
+            class Callback:
+                last_process=None;last_census=None
+                def __call__(self,role,argv):
+                    self.last_process={'firstFailure':None,'secondary':[],'exitCode':0,'argv':argv}
+                    self.last_census={'originalRole':role};return next(row for row in original['qemuPackage']['probes'] if row['role']==role),FirstFailure()
+            plan=SimpleNamespace(probe=Callback())
+            def discover():
+                for row in original['qemuPackage']['probes']:plan.probe(row['role'],row['argv'])
+                return original
+            plan.discover=Mock(side_effect=discover)
+            gate=RuntimeExpectationGate(raw,sha(raw),files);ops=AdmittedRuntimeControllerOps({});ops.runtime_gate=gate
+            ops.groups=object();seen=[]
+            def factory(groups):
+                self.assertTrue(gate.before_complete);self.assertEqual(set(gate.observations['before-probes']['files']),set(value['files']))
+                seen.append('factory');return plan
+            with patch.dict(globals(),controller_runtime_discovery=factory):ops.discover()
+            self.assertEqual(seen,['factory']);plan.discover.assert_called_once();self.assertEqual(ops.runtime_before,original)
+            self.assertEqual(len(ops.runtime_probe_processes),11)
+
+        def test_runtime_wrong_file_mode_alias_platform_refuses_before_any_plan_or_probe(self):
+            module=self.prerequisite_test_module()
+            for fault in ('node','qemu','mode','alias','platform','late'):
+                raw,value,original,files,inventory=module.runtime_manufactured();gate=RuntimeExpectationGate(raw,sha(raw),files)
+                if fault in ('node','qemu'):files.facts[RUNTIME_EXECUTABLES[fault]]['sha256']='f'*64
+                elif fault=='mode':files.facts['/usr/bin/dpkg-query']['mode']=0o644
+                elif fault=='alias':files.aliases['/usr/bin/python3']['linkText']='unapproved-python'
+                elif fault=='platform':files.platform=lambda:{'sysname':'Linux','release':'different','machine':'x86_64'}
+                else:
+                    gate.observe('before-probes');files.facts['/usr/lib/python3.12/zipfile/__init__.py']['sha256']='f'*64
+                ops=AdmittedRuntimeControllerOps({});ops.runtime_gate=gate;ops.groups=object()
+                factory=Mock(side_effect=AssertionError('no tool factory before full admitted graph'))
+                with patch.dict(globals(),controller_runtime_discovery=factory),self.assertRaises((ObservedFailure,ValueError)):
+                    if fault=='late':gate.observe('after-probes')
+                    else:ops.discover()
+                factory.assert_not_called();self.assertFalse(gate.before_complete)
+                self.assertTrue(gate.observations)
+                with self.assertRaises((ObservedFailure,ValueError)):gate.observe('before-probes' if fault!='late' else 'after-probes')
+
+        def test_runtime_admission_external_pin_and_raw_original_policy_mutations_refuse(self):
+            module=self.prerequisite_test_module();raw,value,original,files,inventory=module.runtime_manufactured()
+            with self.assertRaises(ValueError):RuntimeExpectationGate(raw,'0'*64,files)
+            for fault in ('historical','extra','probe','mode','package'):
+                changed=final_json(raw)
+                if fault=='historical':changed['executables']['qemu']['sha256']='f'*64
+                elif fault=='extra':changed['extra']=True
+                elif fault=='probe':changed['probes'][0]['argv'][0]='/unapproved/tool'
+                elif fault=='mode':changed['files']['/usr/bin/ldd']['mode']=0o777
+                else:next(row for row in changed['packages'] if row['name']=='qemu-system-x86')['version']='1:8.2.2+ds-0ubuntu1.19'
+                candidate=encode(changed)
+                with self.assertRaises((ValueError,KeyError)):RuntimeExpectationGate(candidate,sha(candidate),files)
+            gate=RuntimeExpectationGate(raw,sha(raw),files);gate.observe('before-probes')
+            for fault in ('unknown-file','ldd','package','missing-probe'):
+                changed=final_json(encode(original));package=changed['qemuPackage']
+                if fault=='unknown-file':package['files']['/usr/lib/unapproved.so']={'bytes':1,'sha256':'f'*64,'kind':'shared-library'}
+                elif fault=='ldd':package['probes'][0]['stdout']='libbad.so => /unapproved/lib.so (0x1234)\n'
+                elif fault=='package':next(row for row in package['probes'] if row['role']=='package-files')['stdout']+='/unapproved/package-file\n'
+                else:package['probes'].pop()
+                with self.assertRaises((ValueError,KeyError)):gate.join(changed)
+
+        def test_runtime_installed_expectation_pin_origin_is_approved_request_not_same_discovery(self):
+            module=self.prerequisite_test_module();runtime,value,original,files,inventory=module.runtime_manufactured()
+            env,event,request,request_raw,unused,data,responses=self.envelope_fixture()
+            request['runtime'].update(bytes=len(runtime),sha256=sha(runtime),blob=hashlib.sha1(b'blob '+str(len(runtime)).encode()+b'\0'+runtime).hexdigest())
+            request_raw=encode(request);env['BW_RING3_APPROVED_REQUEST_SHA256']=sha(request_raw)
+            def read(environ,name,cap):return request_raw if name=='request.original.json' else runtime
+            with patch.dict(globals(),read_admission_input=read):
+                admitted,raw,plan=read_admitted_runtime(env);self.assertEqual(admitted,request_raw);self.assertEqual(raw,runtime)
+                with self.assertRaises(ValueError):read_admitted_runtime(dict(env,BW_RING3_APPROVED_REQUEST_SHA256='0'*64))
+            changed=final_json(runtime);changed['platform']['release']='changed';coherent=encode(changed)
+            with patch.dict(globals(),read_admission_input=lambda env,name,cap:request_raw if name=='request.original.json' else coherent):
+                with self.assertRaisesRegex(ValueError,'Git runtime input bytes'):read_admitted_runtime(env)
+
+        def test_runtime_file_real_hash_mode_identity_and_close_edges_are_bounded_readonly(self):
+            payload=b'\x7fELF selected bytes';metadata=SimpleNamespace(st_dev=1,st_ino=2,st_mode=0o100755,st_uid=0,st_gid=0,st_nlink=1,
+                st_size=len(payload),st_mtime_ns=1)
+            for fault in ('none','mode','identity','close','extent'):
+                before=SimpleNamespace(**vars(metadata));after=SimpleNamespace(**vars(metadata))
+                if fault=='mode':before.st_mode=0o100777
+                elif fault=='identity':after.st_ino=3
+                with patch.object(Path,'resolve',lambda path,**kw:path),patch.object(os,'open',return_value=77) as opened,\
+                     patch.object(os,'fstat',side_effect=[before,after]),patch.object(os,'stat',return_value=after),\
+                     patch.object(os,'read',side_effect=[payload[:-1] if fault=='extent' else payload,b'']),\
+                     patch.object(os,'close',side_effect=OSError('CLOSE_FIRST') if fault=='close' else None) as closed:
+                    if fault=='none':self.assertEqual(RuntimeAdmissionFiles().fact('/usr/bin/selected'),{'bytes':len(payload),'sha256':sha(payload),'mode':0o755})
+                    else:
+                        with self.assertRaises((ValueError,OSError)):RuntimeAdmissionFiles().fact('/usr/bin/selected')
+                    closed.assert_called_once_with(77);self.assertEqual(opened.call_args.args[1]&os.O_ACCMODE,os.O_RDONLY)
+
+        def test_runtime_controller_explicit_mode_has_no_static_guard_bypass_or_prefix_alias(self):
+            handler=Mock(side_effect=AssertionError('no controller before static source activation'))
+            output=io.BytesIO()
+            with patch.dict(globals(),AdmittedRuntimeControllerOps=handler),patch.object(sys,'stderr',SimpleNamespace(buffer=output)):
+                self.assertEqual(dispatch_cli(['--controller-runtime-admitted'],{'ACTUAL_ENTRY_ENABLED':'1'}),1)
+            handler.assert_not_called();self.assertIn(b'actual entry disabled',output.getvalue())
+            for argv in (['--controller-runtime-admitted']*2,['--controller-runtime-admitted','--help'],['--controller-runtime']):
+                with contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit) as caught:dispatch_cli(argv,{})
+                self.assertEqual(caught.exception.code,2)
+
+        def test_runtime_admission_rootreadonly_real_inputs_identity_modes_and_first_close_error(self):
+            for fault in ('none','owner','mode','links','read-close'):
+                with self.hosted_kernel_edges() as (env,state,manual):
+                    directory=launch_plan_path(env).parent;payload=b'opaque immutable input\n'
+                    for index,path in enumerate((Path('/'),Path('/run'),directory,directory/'request.original.json')):
+                        state['rows'][path]={'st_dev':3,'st_ino':900+index,'st_mode':0o100444 if path.name=='request.original.json' else 0o40755,
+                            'st_uid':0,'st_gid':0,'st_nlink':1,'st_size':len(payload) if path.name=='request.original.json' else 0,
+                            'st_mtime_ns':1,'data':payload if path.name=='request.original.json' else b''}
+                    target=directory/'request.original.json'
+                    if fault=='owner':state['rows'][target]['st_uid']=1001
+                    elif fault=='mode':state['rows'][target]['st_mode']=0o100644
+                    elif fault=='links':state['rows'][target]['st_nlink']=2
+                    elif fault=='read-close':
+                        state['faults']['read',str(target)]=OSError('FIRST_RUNTIME_READ')
+                        state['faults']['close',str(target)]=OSError('SECOND_RUNTIME_CLOSE')
+                    if fault=='none':self.assertEqual(read_admission_input(env,'request.original.json',JSON_CAP),payload)
+                    else:
+                        with self.assertRaises((ValueError,OSError)) as caught:read_admission_input(env,'request.original.json',JSON_CAP)
+                        if fault=='read-close':
+                            self.assertEqual(str(caught.exception),'FIRST_RUNTIME_READ')
+                            self.assertEqual(caught.exception.ring3_secondary[0]['message'],'SECOND_RUNTIME_CLOSE')
+                    self.assertEqual(state['fds'],{})
+
         def prerequisite_test_module(self):
             import importlib.util
             spec=importlib.util.spec_from_file_location('inert_prerequisite_controls',Path(__file__).with_name('controls.py'))

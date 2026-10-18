@@ -550,6 +550,252 @@ def prerequisite_controls():
     print(json.dumps({'testOnly':True,'tests':result.testsRun,'guestOrResourceOperationExecuted':False,'pass':True}))
 
 
+def runtime_fixture():
+    class Files:
+        def __init__(self):
+            paths=[reader.RUNTIME_NODE,'/usr/bin/python3.12',reader.RUNTIME_QEMU,'/usr/bin/ldd','/usr/bin/dpkg-query','/usr/bin/bash',reader.RUNTIME_TCG,
+                '/usr/lib/x86_64-linux-gnu/libc.so.6','/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2','/usr/share/qemu/bios.bin',
+                '/usr/lib/python3.12/ssl.py','/usr/lib/python3.12/zipfile/__init__.py']
+            self.facts={path:{'bytes':1024,'sha256':sha(path.encode()),'mode':0o755 if path in paths[:6] or 'ld-linux' in path else 0o644} for path in paths}
+            for name,path in (('node',reader.RUNTIME_NODE),('qemu',reader.RUNTIME_QEMU)):self.facts[path].update(reader.RUNTIME_SELECTED[name])
+            self.prefixes={path:b'\x7fELF inert metadata fixture' for path in paths};self.prefixes['/usr/bin/ldd']=b'#!/bin/bash\n'
+            self.metadata={};self.events=[]
+            self.aliases={'/bin':{'linkText':'usr/bin','target':'/usr/bin'},'/usr/bin/python3':{'linkText':'python3.12','target':'/usr/bin/python3.12'},
+                '/lib64/ld-linux-x86-64.so.2':{'linkText':'/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2','target':'/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2'}}
+        def resolve(self,path):
+            target=reader.resolve_alias(path,self.aliases)
+            return target,{name:item for name,item in self.aliases.items() if path==name or path.startswith(name+'/')}
+        def fact(self,path):
+            self.events.append(('file',path));row=self.facts[path]
+            self.metadata[path]=[1,list(self.facts).index(path)+100,stat.S_IFREG|row['mode'],0,0,1,row['bytes'],1700000000000000000]
+            return dict(row)
+        def alias(self,path):self.events.append(('alias',path));return dict(self.aliases[path])
+        def is_file(self,path):return self.resolve(path)[0] in self.facts
+        def python_files(self):return ['/usr/lib/python3.12/ssl.py','/usr/lib/python3.12/zipfile/__init__.py']
+        def mapped_libraries(self):
+            raw=b'1000-2000 r-xp 00000000 00:00 1 /usr/lib/x86_64-linux-gnu/libc.so.6\n'
+            self.maps_original={'bytes':len(raw),'sha256':sha(raw),'base64':reader.base64.b64encode(raw).decode()}
+            return ['/usr/lib/x86_64-linux-gnu/libc.so.6']
+        def platform(self):return {'sysname':'Linux','release':'6.8.0-fixture','machine':'x86_64'}
+    files=Files();processes=[]
+    def probe(argv):
+        files.events.append(('probe',list(argv)))
+        if argv[0]=='/usr/bin/ldd':output='libc.so.6 => /usr/lib/x86_64-linux-gnu/libc.so.6 (0x1234)\n/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 (0x5678)\n'
+        elif '-W' in argv:output=''.join(name+'\t'+('1:8.2.2+ds-0ubuntu1.18' if name.startswith('qemu-') else '1.0')+'\t'+('amd64' if name in ('qemu-system-x86','qemu-system-common') else 'all')+'\n' for name in reader.PACKAGE_NAMES)
+        elif '-L' in argv:output=reader.RUNTIME_QEMU+'\n'+reader.RUNTIME_TCG+'\n/usr/share/qemu/bios.bin\n'
+        else:output=('v22.23.3' if argv[0]==reader.RUNTIME_NODE else 'QEMU emulator version 8.2.2 (manufactured)' if argv[0]==reader.RUNTIME_QEMU else 'Python 3.12.3')+'\n'
+        process={'schema':'bw.ring3.inventory-process.v1','argv':list(argv),'environment':{'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'},
+            'pid':201+len(processes),'pgid':201+len(processes),'parentPid':101,'startTicks':1+len(processes),
+            'spawnMonoNs':1+len(processes)*10,'reapMonoNs':2+len(processes)*10,'exitCode':0,'signal':None,'waitStatus':0,'timedOut':False,
+            'rusage':{'userSeconds':0.001,'systemSeconds':0.001,'maxRssKiB':1024},'firstFailure':None,'secondary':[]}
+        processes.append(process);return process,{'stdout':output.encode(),'stderr':b''}
+    return files,probe
+
+
+def runtime_manufactured():
+    files,probe=runtime_fixture();inventory=reader.RuntimeInventory(files,probe);raw=inventory.discover();value=reader.parse(raw)
+    qemu=next(row for row in value['packages'] if row['name']=='qemu-system-x86')
+    original={'schema':'bw.ring3.runtime.v2','observationPolicy':'prelaunch-probes-and-before-after-file-readback','platform':value['platform'],
+        'executables':value['executables'],'versions':value['versions'],'qemuPackage':{'name':qemu['name'],'version':qemu['version'],
+        'architecture':qemu['architecture'],'files':{path:{key:row[key] for key in ('bytes','sha256','kind')} for path,row in value['files'].items()
+            if path!='/usr/lib/python3.12/zipfile/__init__.py'},'aliases':value['aliases'],'probes':inventory.probes}}
+    return raw,value,original,files,inventory
+
+
+def runtime_controls():
+    class Tests(unittest.TestCase):
+        @contextlib.contextmanager
+        def process_edges(self,fault=None):
+            state={'fds':{},'events':[],'clock':0,'clockCalls':0,'waited':False,'out':0}
+            stdout=SimpleNamespace(fileno=lambda:10,close=lambda:state['events'].append('stdout-close'))
+            stderr=SimpleNamespace(fileno=lambda:11,close=lambda:state['events'].append('stderr-close'))
+            process=SimpleNamespace(pid=201,stdout=stdout,stderr=stderr,returncode=None)
+            class Selector:
+                def __init__(self):self.rows={}
+                def register(self,stream,events,name):self.rows[stream.fileno()]=SimpleNamespace(fileobj=stream,data=name)
+                def unregister(self,stream):self.rows.pop(stream.fileno())
+                def select(self,timeout):return [(row,None) for row in list(self.rows.values())]
+                def get_map(self):return self.rows
+                def close(self):state['events'].append('selector-close')
+            def opened(path,flags):
+                assert path=='/proc/201/stat' and flags&os.O_NOFOLLOW;state['events'].append('identity-open');return 12
+            def read(fd,cap):
+                if fd==12:
+                    fields=['R','102' if fault=='identity' else '101','201','201']+['0']*15+['9']
+                    return ('201 (metadata) '+' '.join(fields)).encode()
+                if fd==11:return b''
+                state['out']+=1
+                if fault=='overflow':return b'x'*16385 if state['out']<3 else b''
+                if fault=='late-overflow':return b'x' if state['out']==1 else b'x'*16385 if state['out']==2 else b''
+                if fault=='noisy':return b'x'*16385
+                if fault=='drain':return b'x'
+                return b'ORIGINAL_METADATA' if state['out']==1 else b''
+            def wait(pid,flags):
+                assert pid==201 and flags==os.WNOHANG
+                if state['waited']:return 0,0,None
+                state['waited']=True;return 201,(7<<8 if fault=='nonzero' else 0),SimpleNamespace(ru_utime=.001,ru_stime=.001,ru_maxrss=1024)
+            def clock():
+                state['clockCalls']+=1
+                if state['clockCalls']>100:raise AssertionError('MOCK_CLOCK_AUDIT_LIMIT')
+                state['clock']+=11000000000 if fault=='timeout' else 100000000 if fault=='noisy' else 1000000000
+                return state['clock']
+            with contextlib.ExitStack() as stack:
+                for context in (patch.object(reader.subprocess,'Popen',return_value=process),patch.object(reader.selectors,'DefaultSelector',Selector),
+                    patch.object(os,'open',side_effect=opened),patch.object(os,'read',side_effect=read),patch.object(os,'close',side_effect=lambda fd:state['events'].append('identity-close')),
+                    patch.object(os,'set_blocking'),patch.object(os,'wait4',side_effect=wait),patch.object(os,'getpid',return_value=101),
+                    patch.object(os,'killpg',side_effect=lambda pid,sig:state['events'].append(('kill',pid,sig))),
+                    patch.object(reader.signal,'signal'),patch.object(reader.signal,'getsignal',return_value=reader.signal.SIG_DFL),
+                    patch.object(reader.time,'monotonic_ns',side_effect=clock)):
+                    stack.enter_context(context)
+                yield state
+
+        def test_independent_inventory_and_stable_projection_accept_aslr_changes(self):
+            raw,value,original,files,inventory=runtime_manufactured()
+            self.assertEqual(reader.runtime_expectation(raw,sha(raw)),value)
+            self.assertEqual(reader.verify_runtime_stable_original(original,raw,sha(raw)),value)
+            changed=copy.deepcopy(original)
+            for probe in changed['qemuPackage']['probes']:
+                if probe['role'].startswith('ldd-'):probe['stdout']=probe['stdout'].replace('0x1234','0xabcdef1234').replace('0x5678','0xabcdef5678')
+            self.assertEqual(reader.verify_runtime_stable_original(changed,raw,sha(raw)),value)
+            self.assertNotEqual(original['qemuPackage']['probes'],changed['qemuPackage']['probes'])
+            self.assertEqual(len(inventory.processes),11)
+            before=len(files.events)
+            with self.assertRaises(reader.Refusal):inventory.discover()
+            self.assertEqual(len(files.events),before)
+
+        def test_inventory_selected_engine_mismatch_refuses_before_any_tool(self):
+            for name,path in (('node',reader.RUNTIME_NODE),('qemu',reader.RUNTIME_QEMU),('mode',reader.RUNTIME_NODE)):
+                files,probe=runtime_fixture()
+                if name=='mode':files.facts[path]['mode']=0o644
+                else:files.facts[path]['sha256']='0'*64
+                inventory=reader.RuntimeInventory(files,probe)
+                with self.assertRaisesRegex(reader.Refusal,'historical selected|executable mode'):inventory.discover()
+                self.assertEqual(inventory.probes,[]);self.assertEqual(inventory.processes,[])
+                self.assertTrue(inventory.partial['files'])
+                with self.assertRaisesRegex(reader.Refusal,'consumed'):inventory.discover()
+            files,probe=runtime_fixture();inventory=reader.RuntimeInventory(files,probe)
+            with self.assertRaises(reader.Refusal):inventory.observe('qemu-version',['/arbitrary/qemu','--version'])
+            self.assertFalse(any(item[0]=='probe' for item in files.events))
+
+        def test_stable_expectation_wrong_pins_unknown_graph_and_rehashed_policy_refuse(self):
+            raw,value,original,files,inventory=runtime_manufactured()
+            with self.assertRaises(reader.Refusal):reader.runtime_expectation(raw,'0'*64)
+            edits=[lambda v:v['files'][reader.RUNTIME_QEMU].__setitem__('mode',0o777),
+                lambda v:v['executables']['qemu'].__setitem__('sha256','0'*64),
+                lambda v:v['packages'][3].__setitem__('version','8.2.2-changed'),
+                lambda v:v['probes'][0]['argv'].__setitem__(0,'/arbitrary/tool'),
+                lambda v:v['files'].__setitem__('/alias/../bad',dict(next(iter(v['files'].values())))),
+                lambda v:v['probes'].pop(),lambda v:v.__setitem__('extra',True)]
+            for edit in edits:
+                changed=copy.deepcopy(value);edit(changed);encoded=reader.canonical(changed)
+                with self.assertRaises((reader.Refusal,KeyError,ValueError)):reader.runtime_expectation(encoded,sha(encoded))
+            for fault in ('extra-file','ldd-path','package-version','package-path','omit-tool'):
+                changed=copy.deepcopy(original);package=changed['qemuPackage']
+                if fault=='extra-file':package['files']['/usr/lib/extra.so']={'bytes':1,'sha256':'f'*64,'kind':'shared-library'}
+                elif fault=='ldd-path':package['probes'][0]['stdout']=package['probes'][0]['stdout'].replace('/usr/lib/x86_64-linux-gnu/libc.so.6','/usr/lib/unapproved.so')
+                elif fault=='package-version':next(row for row in package['probes'] if row['role']=='package-version')['stdout']=next(row for row in package['probes'] if row['role']=='package-version')['stdout'].replace('1:8.2.2+ds-0ubuntu1.18','1:8.2.2+ds-0ubuntu1.19')
+                elif fault=='package-path':next(row for row in package['probes'] if row['role']=='package-files')['stdout']+='/usr/share/qemu/extra.bin\n'
+                else:package['files'].pop('/usr/bin/dpkg-query')
+                with self.assertRaises((reader.Refusal,KeyError)):reader.verify_runtime_stable_original(changed,raw,sha(raw))
+
+        def test_real_inventory_metadata_process_edges_caps_identity_and_no_signal_after_reap(self):
+            for fault in (None,'nonzero','overflow','late-overflow','noisy','timeout','identity','drain'):
+                with self.process_edges(fault) as state:
+                    process,streams=reader.inventory_probe(['/usr/bin/ldd','/usr/bin/bash'])
+                self.assertLessEqual(len(streams['stdout']),16384);self.assertLessEqual(len(streams['stderr']),16384)
+                self.assertIn('stdout-close',state['events']);self.assertIn('stderr-close',state['events'])
+                if fault is None:self.assertIsNone(process['firstFailure']);self.assertEqual(streams['stdout'],b'ORIGINAL_METADATA');self.assertEqual(process['exitCode'],0)
+                else:self.assertIsNotNone(process['firstFailure'])
+                kills=[event for event in state['events'] if isinstance(event,tuple) and event[0]=='kill']
+                self.assertLessEqual(len(kills),1)
+                if fault in ('identity','drain','nonzero','late-overflow',None):self.assertEqual(kills,[])
+                if fault=='overflow':self.assertEqual(streams['stdout'],b'x'*16384)
+                if fault=='timeout':self.assertTrue(process['timedOut'])
+                if fault=='noisy':self.assertLess(state['clockCalls'],50);self.assertLessEqual(len(process['secondary']),2)
+
+        def test_independent_real_file_hash_modes_and_bounded_metadata_backend(self):
+            env,expected,originals,data=prerequisite_manufactured()
+            for fault in ('none','mode','extent','close'):
+                with prerequisite_observer_edges(env,originals,data) as state:
+                    path='/fixture/selected.so';raw=b'\x7fELF exact held metadata'
+                    state['rows'][path]={'st_dev':1,'st_ino':999,'st_mode':0o100644,'st_uid':0,'st_gid':0,'st_nlink':1,'st_size':len(raw),
+                        'st_mtime_ns':1700000000000000000,'raw':raw}
+                    if fault=='mode':state['rows'][path]['st_mode']=0o100666
+                    elif fault=='extent':state['rows'][path]['st_size']+=1
+                    elif fault=='close':state['faults']['close',path]=OSError('ORIGINAL_HASH_CLOSE')
+                    backend=reader.InventoryFiles()
+                    if fault=='none':self.assertEqual(backend.fact(path),{'bytes':len(raw),'sha256':sha(raw),'mode':0o644});self.assertEqual(backend.prefixes[path],raw)
+                    else:
+                        with self.assertRaises((reader.Refusal,OSError)):backend.fact(path)
+                    self.assertEqual(state['fds'],{})
+
+        def test_real_inventory_event_source_parent_entry_to_offline_log_admission(self):
+            env,expected,old_originals,data=prerequisite_fixture();source=reader.parse(reader.prerequisite_original(reader.canonical(reader.parse(old_originals['request.original.json'])['source'])))
+            source_raw=reader.canonical(source)
+            def wrapper(raw):return {'bytes':len(raw),'sha256':sha(raw),'base64':reader.base64.b64encode(raw).decode()}
+            request={'schema':'bw.ring3.inventory-request.v1','repository':'CrispStrobe/bw-board','pullRequest':645,'head':'a'*40,'tree':'b'*40,
+                'source':wrapper(source_raw),'selected':{'node':{'path':reader.RUNTIME_NODE,**reader.RUNTIME_SELECTED['node']},'qemu':{'path':reader.RUNTIME_QEMU,**reader.RUNTIME_SELECTED['qemu']}}}
+            request_raw=reader.canonical(request);event=reader.parse(old_originals['event.original.json'])
+            event['label']['name']='x86-ring3-runtime-inventory'
+            event['pull_request']['body']='<!-- BW_RING3_RUNTIME_INVENTORY_V1\n'+reader.canonical(wrapper(request_raw)).decode().rstrip('\n')+'\nBW_RING3_RUNTIME_INVENTORY_V1 -->'
+            event_raw=reader.canonical(event)
+            env={**env,'GITHUB_EVENT_PATH':'/inventory-event.json','GITHUB_EVENT_NAME':'pull_request','GITHUB_REPOSITORY':'CrispStrobe/bw-board',
+                'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':'runtime-inventory','GITHUB_WORKFLOW_SHA':'e'*40,
+                'GITHUB_WORKFLOW_REF':'CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/645/merge',
+                'BW_RING3_INVENTORY_REQUEST_SHA256':sha(request_raw)}
+            for fault in ('none','pin','source','historical','parent-disabled'):
+                with prerequisite_observer_edges(env,old_originals,data) as state:
+                    state['rows']['/inventory-event.json']={'st_dev':1,'st_ino':999,'st_mode':0o100644,'st_uid':1001,'st_gid':1002,
+                        'st_nlink':1,'st_size':len(event_raw),'st_mtime_ns':1700000000000000000,'raw':event_raw}
+                    changed_env=dict(env);files,probe=runtime_fixture()
+                    if fault=='pin':changed_env['BW_RING3_INVENTORY_REQUEST_SHA256']='0'*64
+                    elif fault=='source':state['rows']['/checkout/scripts/i80386-ring3-int-iret/reader.py']['raw']=b'changed source'
+                    elif fault=='historical':files.facts[reader.RUNTIME_QEMU]['sha256']='f'*64
+                    elif fault=='parent-disabled':state['rows']['/sys/fs/cgroup/cgroup.subtree_control']['raw']=b'cpu\n'
+                    with patch.object(os,'getresuid',return_value=(1001,)*3),patch.object(os,'getresgid',return_value=(1002,)*3):
+                        originals,passed=reader.runtime_inventory_entry(changed_env,files,probe)
+                    self.assertEqual(passed,fault in ('none','parent-disabled'),fault);self.assertEqual(state['fds'],{})
+                    log=io.BytesIO();reader.emit_runtime_inventory(originals,log.write,log.flush);raw=log.getvalue()
+                    if fault not in ('none','parent-disabled'):
+                        value=reader.parse(originals['runtime.inventory.json']);self.assertIsNotNone(value['firstFailure'])
+                        if fault in ('pin','source','historical'):self.assertFalse(any(row[0]=='probe' for row in files.events))
+                        continue
+                    external={'schema':'bw.ring3.inventory-expectation.v1','requestSha256':sha(request_raw),'runId':'123','attempt':1,
+                        'head':'a'*40,'tree':'b'*40,'workflowSha':'e'*40,'workflowFileSha256':source['files'][reader.WORKFLOW]['sha256'],
+                        'jobId':12345,'jobName':'runtime-inventory','conclusion':'success','logBytes':len(raw),'logSha256':sha(raw)}
+                    verdict=reader.verify_runtime_inventory_log(raw,external)
+                    self.assertFalse(verdict['candidateReviewed']);self.assertFalse(verdict['actualRunApproved'])
+                    self.assertEqual(verdict['parentControllersAlreadyEnabled'],fault=='none')
+                    for cut in ('maps','python','process'):
+                        changed_originals=dict(originals);changed_value=reader.parse(originals['runtime.inventory.json'])
+                        held=changed_value['inventory']
+                        if cut=='maps':held['mappedLibraries']=[]
+                        elif cut=='python':held['pythonFiles']=['/unapproved/python.py']
+                        else:held['processes'][0]['process']['argv'][0]='/unapproved/tool'
+                        changed_originals['runtime.inventory.json']=reader.canonical(changed_value)
+                        output=io.BytesIO();reader.emit_runtime_inventory(changed_originals,output.write,output.flush);changed=output.getvalue()
+                        with self.assertRaises(reader.Refusal):reader.verify_runtime_inventory_log(changed,dict(external,logBytes=len(changed),logSha256=sha(changed)))
+                    for key,value in (('requestSha256','0'*64),('workflowSha','f'*40),('workflowFileSha256','0'*64),('attempt',True)):
+                        with self.assertRaises(reader.Refusal):reader.verify_runtime_inventory_log(raw,dict(external,**{key:value}))
+                    changed=raw+raw.splitlines(keepends=True)[0]
+                    with self.assertRaises(reader.Refusal):reader.verify_runtime_inventory_log(changed,dict(external,logBytes=len(changed),logSha256=sha(changed)))
+
+        def test_inventory_cli_guard_and_coherent_callback_descriptor_replacement_refuse(self):
+            with patch.object(sys,'argv',['reader.py','--inventory-runtime']),patch.object(reader,'runtime_inventory_entry',side_effect=AssertionError('no event or factory before inventory guard')):
+                with self.assertRaisesRegex(reader.Refusal,'metadata inventory disabled'):reader.main()
+            files,probe=runtime_fixture();inventory=reader.RuntimeInventory(files,probe)
+            inventory.executables={'node':reader.RUNTIME_NODE,'python':'/usr/bin/python3.12','qemu':reader.RUNTIME_QEMU}
+            def malicious(argv):
+                argv[0]='/unapproved/tool';return probe(argv)
+            inventory.probe=malicious
+            with self.assertRaises(reader.Refusal):inventory.observe('qemu-version',[reader.RUNTIME_QEMU,'--version'])
+
+    result=unittest.TextTestRunner(verbosity=1).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
+    assert result.wasSuccessful(),'independent runtime controls failed'
+    print(json.dumps({'testOnly':True,'tests':result.testsRun,'guestOrResourceOperationExecuted':False,'pass':True}))
+
+
 if __name__=='__main__':
     if sys.argv[1:]==['--prerequisites-only']:prerequisite_controls()
+    elif sys.argv[1:]==['--runtime-only']:runtime_controls()
     else:main()

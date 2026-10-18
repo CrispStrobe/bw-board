@@ -96,6 +96,15 @@ installed inputs and all five resource groups; write-only kill controls are
 metadata-only. Its mocked peak is eleven descriptors under the unchanged cap.
 These are mocked source-boundary results, not actual resource ownership.
 
+The [runtime source checkpoint](https://github.com/CrispStrobe/bw-board/commit/337c8169)
+adds an immutable external superset gate before and after runtime discovery,
+independent stable-graph admission and a separate fixed metadata inventory
+endpoint. Its source and workflow guards remain false. The runtime expectation
+is versioned separately from raw ASLR-bearing observations, which remain retained.
+205 runner controls, seven independent runtime methods and the five prerequisite
+methods pass; the prior 198 runner bodies are held. Seventeen additional runtime
+source mutations are detected. None of these mocked controls is a hosted result.
+
 The workflow's 15-minute job and the source entry remain disabled. The legacy
 install-only endpoint still refuses before setup; the new prerequisite endpoint
 always refuses before preparation, runtime probes or guests because full
@@ -119,7 +128,9 @@ Concrete remaining tasks, in order:
    close failures, irreversible drop, first errors, fixed retention and log
    framing. Actual setup/process observations remain part of the final hosted
    qualification; this source checkpoint alone provides no such evidence.
-2. **Complete runtime expectation and gate.** Supply a separately reviewed
+2. **Runtime gate source delivered; inventory and admission pending.** Continue
+   the existing `--controller-runtime-admitted` and guarded metadata inventory
+   endpoints. Supply a separately reviewed
    immutable owned-repository input containing the full selected files, aliases,
    tools/interpreters, TCG module, package data/versions and probe descriptors.
    Historical QEMU/BIOS/VGA hashes cover selected files only. Compare the live
