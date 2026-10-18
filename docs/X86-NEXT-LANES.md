@@ -2828,3 +2828,65 @@ Its success does not prove the suspected BIOS/queue-overrun cause. Preserve
 the same marker, geometry, input
 hashes, resource limits, causal reader and step budget; do not weaken acceptance
 or claim a speedup from this change.
+
+
+## Selected Node staging for hosted qualification
+
+The [metadata diagnostic](https://github.com/CrispStrobe/bw-board/actions/runs/39110980557)
+identified a concrete prerequisite: the selected cached Node executable has
+mode0777. Held and named stat agree before/after; zero content bytes were read,
+the descriptor closed, and no tool or guest ran. This establishes the mode
+refusal, not the historical file digest or QEMU availability. Preserve the
+original and the existing non-group/world-writable runtime guard.
+
+This is a proposed extension of the ring3 fixture ownership claim. Merge its
+LANES claim before source implementation. Reuse the existing installer and
+independent reader boundaries; introduce no general provisioning framework.
+The work is split into these concrete tasks:
+
+1. **Version the explicit stage selection.** Add an inventory request v2 that
+   binds the unchanged cache source path and historical Node byte count/digest
+   to fixed destination `/run/bw-ring3-node-22.23.3/node`. Keep the previous v1
+   request, runtime expectation, original decoder and V8 predicates unchanged.
+   Bind exact source12, workflow and distinct event as before. No path fallback,
+   alternate Node build, silent constant replacement or automatic event retry.
+2. **Stage without executing the writable source.** Add one fixed metadata-stage
+   command and root workflow step, followed by the dropped inventory endpoint.
+   Refuse any existing destination or unowned/writable ancestor. Exclusively
+   create an initially non-executable0600 output in fresh root-owned storage.
+   Stream at most the existing selected124827920 bytes, retaining held/named
+   source metadata and first/secondary failures; verify exact length, historical
+   SHA-256 and ELF identity. Independently reopen and hash the output before
+   final root-owned0555 file/directory publication. Do not modify the cache,
+   download software, execute its bytes, clean/adopt partials or retry. Failed
+   partial outputs remain non-executable and retain their observed status;
+   faults after executable publication must explicitly report that uncertainty.
+3. **Independently admit the staged graph.** Retain a separate versioned copy
+   original, then have the dropped reader independently observe destination
+   ancestors, owner/mode, held/named identity and complete hash before any tool
+   probe. A producer copy report cannot approve runtime identity. Preserve the
+   512-file/256-alias and existing byte/output/probe limits. Missing stage,
+   foreign owner, writable file/parent, symlink, drift, wrong length/digest,
+   short write, reopen/readback failure, close failure and failed-partial
+   adoption must all refuse while preserving the first error. Meaningful
+   controls need a full positive chain and mutations that reach each boundary;
+   mock-only tests must not run root operations or guests locally.
+4. **Qualify metadata once.** Independently review exact stage source, request,
+   runtime selection, event/job and workflow before one distinct hosted event.
+   Acquire each official original once and audit with the standalone reader.
+   Preserve the earlier0777 refusal; no successful staged observation may be
+   inferred from source controls. Actual execution remains disabled throughout
+   this first delivery. Hosted setup budgets need explicit review, never a
+   silent timeout increase or package fallback.
+5. **Adopt the staged runtime explicitly.** In a separate follow-up, version the
+   runtime expectation and actual delivery mapping so generator, GEN value,
+   runtime graph and guest argv all select the same admitted staged Node.
+   Preserve historical bytes, the twenty architectural packet roles, caps and
+   older V8 defaults. Reuse the fixed stage on a fresh actual VM through an
+   explicitly admitted installer; another VM's inventory does not provision it.
+   After independent actual activation review, require every enabled exact-head
+   check and affected clean hosted guest qualification before source merge.
+
+No full386DX, Windows, performance or continuous runtime-ownership claim follows
+from this task. The cache observation remains a failure until an independently
+qualified staged graph and the later actual guest result exist.

@@ -5411,3 +5411,33 @@ concrete remaining gates in `docs/PR-BACKLOG-2026-10-18.md`. A reduced PR count
 alone is not completed work. The scalar-EA optimization's predeclared paired
 performance decision and ring3 fixture's actual guest acceptance remain separate
 from landing inactive tooling or retiring superseded incremental drafts.
+
+
+## 386 selected Node staging for hosted qualification — 2026-10-18
+
+CLAIM PROPOSED — Codex x86, `lane/386-node-staging-claim-20261018`.
+Merge this claim before implementing executable staging. This explicitly extends
+the existing ring3 fixture claim; its read-only metadata scope alone does not
+permit installing an executable. Own only
+`scripts/i80386-ring3-int-iret/{run.py,reader.py,controls.py,README.md}`,
+`.github/workflows/i80386-ring3-int-iret.yml`, this ledger section and the matching
+[x86 task contract](docs/X86-NEXT-LANES.md#selected-node-staging-for-hosted-qualification).
+Coordinate shared fixture files with the PR645 owner; preserve its candidate and
+all existing source controls. No CPU/device, package, dependency-pin, other
+workflow or other-owner change is included.
+
+The independently audited [diagnostic run 39110980557](https://github.com/CrispStrobe/bw-board/actions/runs/39110980557)
+observed the selected hosted Node executable as mode0777. The unchanged runtime
+mode guard correctly refused before reading content or starting a tool. Its
+historical digest was not observed in that failure; QEMU readiness remains unknown.
+The proposed remedy copies the same externally selected bytes into fixed fresh
+root-owned storage, then independently admits that staged runtime. Never chmod
+or execute the writable cache input, change its pin, adopt an existing target,
+or turn a copy record into independent runtime approval.
+
+First deliver a versioned metadata-only stage/request/original/reader path with
+mocked adversarial controls and one independently admitted hosted observation.
+Actual guards remain false. Runtime-expectation and actual argv adoption are a
+separate explicit follow-up, with affected clean guest qualification and every
+enabled final-head check required before source merge. The linked contract
+specifies the fixed destination, failed-partial handling and completion criteria.
