@@ -5646,6 +5646,11 @@ PR650 merged as `1df9d2e7ffd53afdf24c3b152764bb19ade27c0f` with 26 enabled exact
 and 15 conditional skips. All 86 original intake commits
 are incorporated; individual retirement and any later owner-head exceptions
 are recorded in [the backlog report](docs/PR-BACKLOG-2026-10-18.md).
-PR557 remains open under its original paired performance gate. Source-only
-landing does not qualify inactive compiler/native diagnostics or the ring3
-guest path; all activation guards and remaining task contracts are preserved.
+PR557 is resolved as not adopted after the complete original paired performance
+gate failed on 2026-10-18: median CPU ratio 1.0336687306501549, but minimum
+0.9823853211009174 fails strict >1. All seven pairs and the initial collector
+failure remain retained; no CPU change or consumer pin is adopted. See the
+[acceptance guide](docs/I80386-DECODEEA16-ALLOCATION.md#original-paired-result--2026-10-18).
+PR645 remains an active owner lane requiring its own actual qualification.
+Source-only landing does not qualify inactive compiler/native diagnostics or
+the ring3 guest path; activation guards and remaining contracts are preserved.
