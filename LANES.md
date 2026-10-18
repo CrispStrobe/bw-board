@@ -5635,9 +5635,16 @@ or turn a copy record into independent runtime approval.
 The first versioned stage/request/original/reader source candidate is implemented
 with mocked adversarial controls. Its entry, independent observer and new
 workflow job guards remain false. No real staging or hosted observation has run.
-A complete stage-only observation still refuses at the unconnected full-runtime
-boundary; it cannot approve a runtime candidate. Next admit the complete staged
-graph and separately review source/event activation for one hosted observation.
+The earlier stage-only observation still refuses at its unconnected boundary.
+The new complete metadata source candidate adds explicit request v3, staged
+runtime expectation v2, all eleven metadata probes and independent final stage,
+source, file and typed-empty Python-source readbacks. Its standalone reader
+retains `candidateReviewed=false` and `actualRunApproved=false`; it cannot
+approve an actual run. Eight full-chain mocked controls pass; 20 source mutations
+and 14 independent packet counterexamples are detected. New entry,
+observer and job guards remain false. Next independently review fresh source,
+runtime-selection policy, request/workflow and one distinct hosted metadata
+event; audit its originals and review the resulting complete runtime candidate.
 Actual guards remain false. Runtime-expectation and actual argv adoption are a
 separate explicit follow-up, with affected clean guest qualification and every
 enabled final-head check required before source merge. The linked contract

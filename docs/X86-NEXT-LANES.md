@@ -2863,6 +2863,9 @@ and standalone original-only audit. All three new guards remain false. A
 complete stage observation deliberately refuses because full runtime inventory
 and actual mapping are still unconnected. No hosted copy or runtime observation
 is claimed. Reuse the existing installer and independent reader boundaries.
+The audit commands in this section require the exact reviewed candidate source
+from draft PR645; documentation landing alone does not add those endpoints to
+the default branch or qualify their runtime behavior.
 The complete delivery and remaining tasks are:
 
 1. **Version the explicit stage selection.** Add an inventory request v2 that
@@ -2924,7 +2927,58 @@ The reviewed expectation binds exact original bytes/digest, request, source
 HEAD/tree, workflow/run and invoker. This verifies only a completed stage
 observation and its explicit boundary refusal. See the
 [fixture README](../scripts/i80386-ring3-int-iret/README.md) for schemas and
-mocked control commands. Next implement complete staged runtime inventory
-without activating a job; then independently review a fresh immutable source,
-request and official event. Runtime-expectation and actual argv adoption remain
-a separate follow-up after that metadata result.
+mocked control commands. The separate complete-inventory source candidate below
+now supplies the next metadata path; no job is activated. Independently review
+its fresh immutable source, request and official event before one observation.
+Runtime-expectation and actual argv adoption remain a separate follow-up after
+that metadata result.
+
+The complete-inventory source candidate uses a distinct inventory request v3,
+label/job and immutable request digest. It selects the staged executable
+explicitly; the earlier request v2 and stage-only observation v1 keep their
+original refusal boundary. A separate runtime expectation v2 must join the
+staged selection to the complete selected file/alias/package/probe census and
+retain raw metadata-process originals. No runtime global may be temporarily
+rewritten to reinterpret a legacy cache-path observation.
+
+The Python census also needs an explicit empty-package-source role for
+`/usr/lib/python3.12/urllib/__init__.py`: root-owned0644, single link, zero
+extent, exact empty SHA256, held EOF read, stable named/held snapshots and
+successful close. Keep that role disjoint from positive files and aliases,
+within the existing shared512-file cap. Observe it before and after metadata
+probes. Executables, libraries and all generic file reads keep their positive
+extent requirements. Full-inventory source controls must reach all eleven
+fixed metadata probes, then independent final readback and the standalone
+original reader; coherent source/event/stage/process/census mutations must
+refuse. All new entry, observer and job guards stay false during source work.
+The later actual runtime-expectation and argv adoption remain separate.
+
+The complete-inventory original-only audit is:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/reader.py \
+  --staged-runtime-inventory-log retained-staged-inventory.log \
+  --external-admission reviewed-staged-inventory-expectation.json
+```
+
+The external `bw.ring3.staged-inventory-expectation.v1` pins the exact official
+log, source HEAD/tree, request, workflow commit/file, run/attempt/job and invoker.
+The reader independently joins those inputs to the retained copy original,
+raw process identity, stage before/after, Python census/maps and all eleven
+metadata process/stream originals. Probe PIDs join the dropped observer and
+probe windows follow the terminal source Git observation. A positive metadata
+verdict still declares `candidateReviewed=false` and `actualRunApproved=false`.
+Eight source controls pass; 20 source mutations and 14 independent packet
+counterexamples are detected, with all OS/process edges mocked. No hosted hash,
+privilege transition, resource ownership or guest result is inferred.
+
+Next independently review source, runtime-selection policy and all request/event
+joins, then separately review activation for one fresh metadata event. Admit
+official run/job/workflow/artifact metadata before acquiring its originals once;
+use the standalone reader without a producer import or guest replay. Review the
+resulting complete runtime candidate independently. Keep old events and their
+failures consumed. Only after that result should the separate
+actual delivery mapping select this same staged path across generator, GEN and
+guest descriptors on a fresh VM, preserving historical pins, V8 defaults and
+all twenty architectural roles. Clean affected hosted guest qualification and
+every enabled final-head check remain necessary before source merge.
