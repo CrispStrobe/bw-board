@@ -124,6 +124,22 @@ Both inventory and actual remain source/workflow disabled at this checkpoint.
 Fixed Git/checkout/setup/sudo and pre-admission interpreter startup are trusted
 hosted platform boundaries, not complete executable or whole-host attestation.
 
+The [metadata-only activation](https://github.com/CrispStrobe/bw-board/commit/a33eef32)
+enables only the inventory reader guard and inventory job. Actual source/job
+remain false. All reader function bodies and actual-job bytes are unchanged;
+seven runtime controls and three targeted activation mutations pass. An exact
+source12/request selection and separate own-PR event are still required.
+Refresh the PR's labels/body and existing runs before acting; never repeat a
+consumed event or original acquisition.
+
+The first metadata event is consumed for source
+`dff8f6b0d5374afd41eb73b7ae4506f81c1651c3` and request digest
+`ca83b600c7c5ca72e169031df94076da0c37ac662e30bd97f1cf5e8a2060e525`:
+[run 39108893671](https://github.com/CrispStrobe/bw-board/actions/runs/39108893671).
+It is pending at publication. Await and acquire its official original once;
+do not repeat its label. A failed inventory is evidence of a prerequisite refusal,
+not a successful runtime candidate or an automatic retry authorization.
+
 Start with the immutable
 [source README](https://github.com/CrispStrobe/bw-board/blob/ba90a2ea/scripts/i80386-ring3-int-iret/README.md)
 and the existing adapters in `scripts/i80386-ring3-int-iret/run.py`.
@@ -141,9 +157,8 @@ Concrete remaining tasks, in order:
    framing. Actual setup/process observations remain part of the final hosted
    qualification; this source checkpoint alone provides no such evidence.
 2. **Observe and independently admit the hosted runtime.** The separate
-   `reader.py --inventory-runtime` endpoint is implemented and disabled.
-   Review a metadata-only activation of its source guard and `runtime-inventory`
-   job, keeping actual false. Freeze the activation head's twelve-file manifest
+   `reader.py --inventory-runtime` endpoint and metadata-only activation are implemented; actual stays false.
+   Freeze the final selected activation head's twelve-file manifest
    and `bw.ring3.inventory-request.v1`, set the externally selected request
    digest and immutable event payload, then admit one own-PR
    `x86-ring3-runtime-inventory` label. Acquire the official original once and use
