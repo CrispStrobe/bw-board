@@ -4614,13 +4614,232 @@ def emit_v8_originals(originals,emit,flush,failure):
     return progress
 
 
+NODE_STAGE_ENTRY_ENABLED=False
+NODE_STAGE_DIRECTORY=Path('/run/bw-ring3-node-22.23.3')
+NODE_STAGE_FILE=NODE_STAGE_DIRECTORY/'node'
+NODE_STAGE_RECORD=NODE_STAGE_DIRECTORY/'installation.original.json'
+NODE_STAGE_ENV=('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_REPOSITORY','GITHUB_EVENT_NAME','GITHUB_ACTOR',
+    'GITHUB_JOB','GITHUB_WORKFLOW_SHA','GITHUB_WORKFLOW_REF','BW_EXPECTED_HEAD','BW_EXPECTED_TREE',
+    'BW_RING3_NODE_STAGE_REQUEST_SHA256','SUDO_UID','SUDO_GID')
+
+
+def admit_node_stage_request(raw,pin):
+    need(type(raw) is bytes and 0<len(raw)<=JSON_CAP and type(pin) is str and re.fullmatch('[0-9a-f]{64}',pin) and sha(raw)==pin,
+         'independently selected Node-stage request')
+    value=final_json(raw);require_fields(value,'schema repository pullRequest head tree source selected nodeStage','closed Node-stage request v2')
+    need(raw==encode(value) and value['schema']=='bw.ring3.inventory-request.v2' and value['repository']==APPROVAL_REPOSITORY and
+         type(value['pullRequest']) is int and 0<value['pullRequest']<2**31,'canonical owned Node-stage request')
+    source=admitted_original(value['source'],JSON_CAP,'Node-stage source original')
+    admit_generation_source(source,value['source']['sha256'],value['head'],value['tree'])
+    selected={'node':{'path':RUNTIME_EXECUTABLES['node'],'bytes':GENERATION_NODE_PIN[0],'sha256':GENERATION_NODE_PIN[1]},
+        'qemu':{'path':RUNTIME_EXECUTABLES['qemu'],'bytes':SELECTED_QEMU_PIN[0],'sha256':SELECTED_QEMU_PIN[1]}}
+    stage={'source':RUNTIME_EXECUTABLES['node'],'destination':str(NODE_STAGE_FILE),'owner':[0,0],'fileMode':0o555,'directoryMode':0o555}
+    need(same_json(value['selected'],selected) and same_json(value['nodeStage'],stage),'fixed typed Node-stage policy and historical pins')
+    return value
+
+
+def admit_node_stage_event(event_raw,environ):
+    event=final_json(event_raw);pr=event.get('pull_request',{});body=pr.get('body')
+    start='<!-- BW_RING3_NODE_STAGE_V2\n';end='\nBW_RING3_NODE_STAGE_V2 -->'
+    need(type(body) is str and body.count(start)==body.count(end)==1 and body.index(start)<body.index(end),'one immutable Node-stage block')
+    block=body.split(start,1)[1].split(end,1)[0];wrapper=final_json(block.encode())
+    need(encode(wrapper).decode().rstrip('\n')==block,'canonical Node-stage wrapper')
+    raw=admitted_original(wrapper,JSON_CAP,'Node-stage request wrapper')
+    request=admit_node_stage_request(raw,environ.get('BW_RING3_NODE_STAGE_REQUEST_SHA256'))
+    need(event.get('action')=='labeled' and event.get('label',{}).get('name')=='x86-ring3-node-stage-inventory' and
+         event.get('repository',{}).get('full_name')==APPROVAL_REPOSITORY and event.get('sender',{}).get('login')=='CrispStrobe' and
+         type(event.get('number')) is int and event['number']==request['pullRequest'] and type(pr.get('number')) is int and
+         pr['number']==request['pullRequest'] and pr.get('state')=='open' and pr.get('head',{}).get('sha')==request['head'] and
+         pr.get('head',{}).get('repo',{}).get('full_name')==APPROVAL_REPOSITORY and pr['head']['repo'].get('fork') is False and
+         pr.get('base',{}).get('ref')=='master' and pr['base'].get('repo',{}).get('full_name')==APPROVAL_REPOSITORY,
+         'closed owned Node-stage immutable event')
+    expected_cgroup(environ)
+    need(all(environ.get(k)==v for k,v in {'GITHUB_REPOSITORY':APPROVAL_REPOSITORY,'GITHUB_EVENT_NAME':'pull_request',
+         'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':'node-stage-inventory','BW_EXPECTED_HEAD':request['head'],'BW_EXPECTED_TREE':request['tree'],
+         'GITHUB_WORKFLOW_REF':APPROVAL_REPOSITORY+'/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request['pullRequest'])+'/merge'}.items()) and
+         type(environ.get('GITHUB_WORKFLOW_SHA')) is str and re.fullmatch('[0-9a-f]{40}',environ['GITHUB_WORKFLOW_SHA']),
+         'Node-stage producing platform bindings')
+    return raw,request
+
+
+class NodeStageCopy:
+    """One fixed exclusive local copy; source is untrusted data, never executed."""
+    def __init__(self):
+        self.fds={};self.bindings={};self.attempted=False
+        self.facts={'created':[],'sourceBefore':None,'sourceAfter':None,'sourceNamedAfter':None,'bytesCopied':0,
+            'sourceBytesRead':0,'writeUncertain':False,'targetAfterFailure':None,'directoryAfterFailure':None,
+            'copiedSha256':None,'readbackSha256':None,'filePublicationAttempted':False,'directoryPublicationAttempted':False,
+            'filePublished':False,'directoryPublished':False,'file':None,'directory':None}
+
+    @staticmethod
+    def metadata(info):return [getattr(info,'st_'+key) for key in ('dev','ino','mode','uid','gid','nlink','size','mtime_ns')]
+
+    def directory(self,path):
+        parent=self.fds.get(path.parent)
+        fd=os.open(path if parent is None else path.name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK,
+            **({} if parent is None else {'dir_fd':parent}));self.fds[path]=fd
+        held=self.metadata(os.fstat(fd));named=self.metadata(path.lstat())
+        need(path.resolve(strict=True)==path and held==named and stat.S_ISDIR(held[2]) and held[3:5]==[0,0] and held[2]&0o022==0,
+             'held root-owned nonwritable Node-stage directory')
+        self.bindings[path]=held;return fd
+
+    def recheck_directories(self):
+        for path,fd in self.fds.items():
+            held=self.metadata(os.fstat(fd));named=self.metadata(path.lstat());before=self.bindings[path]
+            need(held[:5]==named[:5]==before[:5] and path.resolve(strict=True)==path,'Node-stage parent identity readback')
+
+    def copy(self):
+        need(not self.attempted,'Node-stage copy consumed; no retry');self.attempted=True
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root fixed Node copy')
+        self.directory(Path('/'));run=self.directory(Path('/run'));self.recheck_directories()
+        os.mkdir(NODE_STAGE_DIRECTORY.name,0o700,dir_fd=run);self.facts['created'].append(str(NODE_STAGE_DIRECTORY))
+        directory=self.directory(NODE_STAGE_DIRECTORY)
+        need(stat.S_IMODE(self.bindings[NODE_STAGE_DIRECTORY][2])==0o700,'fresh private Node-stage directory mode')
+        source_fd=output_fd=None;first=None
+        try:
+            source=RUNTIME_EXECUTABLES['node'];need(str(Path(source).resolve(strict=True))==source,'canonical fixed untrusted Node input')
+            source_fd=os.open(source,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+            before=self.metadata(os.fstat(source_fd));self.facts['sourceBefore']=before
+            need(before==self.metadata(os.stat(source,follow_symlinks=False)) and stat.S_ISREG(before[2]) and before[5]==1 and
+                 before[6]==GENERATION_NODE_PIN[0] and before[2]&0o6000==0,'fixed regular single-link bounded untrusted Node input')
+            output_fd=os.open('node',os.O_RDWR|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_NONBLOCK,0o600,dir_fd=directory)
+            self.facts['created'].append(str(NODE_STAGE_FILE));info=self.metadata(os.fstat(output_fd))
+            need(stat.S_ISREG(info[2]) and stat.S_IMODE(info[2])==0o600 and info[3:7]==[0,0,1,0],'fresh nonexecutable root Node output')
+            digest=hashlib.sha256();prefix=b'';count=0
+            while True:
+                chunk=os.read(source_fd,min(65536,GENERATION_NODE_PIN[0]+1-count))
+                if not chunk:break
+                count+=len(chunk);self.facts['sourceBytesRead']=count
+                need(count<=GENERATION_NODE_PIN[0],'fixed Node copy extent cap')
+                digest.update(chunk);prefix=(prefix+chunk)[:4]
+                try:written=os.write(output_fd,chunk)
+                except BaseException:self.facts['writeUncertain']=True;raise
+                need(type(written) is int and 0<=written<=len(chunk),'bounded Node-stage write result')
+                self.facts['bytesCopied']+=written
+                need(written==len(chunk),'complete Node-stage chunk write')
+            self.facts['copiedSha256']=digest.hexdigest()
+            self.facts['sourceAfter']=self.metadata(os.fstat(source_fd));self.facts['sourceNamedAfter']=self.metadata(os.stat(source,follow_symlinks=False))
+            need(count==GENERATION_NODE_PIN[0] and digest.hexdigest()==GENERATION_NODE_PIN[1] and prefix==b'\x7fELF' and
+                 before==self.facts['sourceAfter']==self.facts['sourceNamedAfter'] and str(Path(source).resolve(strict=True))==source,
+                 'historical Node bytes and held source readback')
+            need(self.metadata(os.fstat(output_fd))[3:7]==[0,0,1,count],'complete root Node output extent')
+        except BaseException as error:
+            first=error
+            if source_fd is not None:
+                for name,observe in (('sourceAfter',lambda:os.fstat(source_fd)),('sourceNamedAfter',lambda:os.stat(source,follow_symlinks=False))):
+                    try:self.facts[name]=self.metadata(observe())
+                    except BaseException as extra:first.ring3_secondary=getattr(first,'ring3_secondary',[])+[row(extra,'Node-stage-failed-source-stat')]
+            if output_fd is not None:
+                try:self.facts['targetAfterFailure']=self.metadata(os.fstat(output_fd))
+                except BaseException as extra:first.ring3_secondary=getattr(first,'ring3_secondary',[])+[row(extra,'Node-stage-failed-target-stat')]
+        finally:
+            for fd in (output_fd,source_fd):
+                if fd is not None:first=close_owned(fd,first,'Node-stage-copy-close')
+        if first is not None:raise first
+        self.recheck_directories()
+        fd=os.open('node',os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=directory);first=None
+        try:
+            before=self.metadata(os.fstat(fd));need(before==self.metadata(os.stat('node',dir_fd=directory,follow_symlinks=False)) and
+                stat.S_ISREG(before[2]) and stat.S_IMODE(before[2])==0o600 and before[3:7]==[0,0,1,GENERATION_NODE_PIN[0]],'independent root Node reopen')
+            digest=hashlib.sha256();count=0
+            while True:
+                chunk=os.read(fd,min(65536,GENERATION_NODE_PIN[0]+1-count))
+                if not chunk:break
+                count+=len(chunk);need(count<=GENERATION_NODE_PIN[0],'Node reopen extent cap');digest.update(chunk)
+            self.facts['readbackSha256']=digest.hexdigest()
+            need(count==GENERATION_NODE_PIN[0] and digest.hexdigest()==GENERATION_NODE_PIN[1] and
+                 before==self.metadata(os.fstat(fd))==self.metadata(os.stat('node',dir_fd=directory,follow_symlinks=False)),
+                 'independent Node output bytes/identity readback before publication')
+            self.facts['filePublicationAttempted']=True
+            os.fchmod(fd,0o555);self.facts['filePublished']=True;self.facts['file']=self.metadata(os.fstat(fd))
+            need(stat.S_IMODE(self.facts['file'][2])==0o555 and self.facts['file'][3:7]==[0,0,1,GENERATION_NODE_PIN[0]],'root Node publication readback')
+        except BaseException as error:
+            first=error
+            if self.facts['filePublicationAttempted']:
+                try:self.facts['file']=self.metadata(os.fstat(fd))
+                except BaseException as extra:first.ring3_secondary=getattr(first,'ring3_secondary',[])+[row(extra,'Node-stage-publication-stat')]
+        finally:first=close_owned(fd,first,'Node-stage-readback-close')
+        if first is not None:raise first
+        self.facts['directory']=self.metadata(os.fstat(directory));self.recheck_directories()
+
+    def record(self,raw):
+        need(type(raw) is bytes and 0<len(raw)<=JSON_CAP and self.facts['filePublished'],'bounded verified Node installation record')
+        self.recheck_directories();directory=self.fds[NODE_STAGE_DIRECTORY]
+        fd=os.open(NODE_STAGE_RECORD.name,os.O_RDWR|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_NONBLOCK,0o600,dir_fd=directory);first=None
+        self.facts['created'].append(str(NODE_STAGE_RECORD))
+        try:
+            need(os.write(fd,raw)==len(raw),'complete Node installation record write');os.fchmod(fd,0o444);os.lseek(fd,0,os.SEEK_SET)
+            before=self.metadata(os.fstat(fd))
+            need(stat.S_ISREG(before[2]) and stat.S_IMODE(before[2])==0o444 and before[3:7]==[0,0,1,len(raw)] and
+                os.read(fd,len(raw)+1)==raw and before==self.metadata(os.fstat(fd))==self.metadata(os.stat(NODE_STAGE_RECORD.name,dir_fd=directory,follow_symlinks=False)),
+                'readonly root installation record readback')
+        except BaseException as error:first=error
+        finally:first=close_owned(fd,first,'Node-stage-record-close')
+        if first is not None:raise first
+        self.recheck_directories();self.facts['directoryPublicationAttempted']=True
+        try:os.fchmod(directory,0o555)
+        except BaseException as error:
+            try:self.facts['directoryAfterFailure']=self.metadata(os.fstat(directory))
+            except BaseException as extra:error.ring3_secondary=getattr(error,'ring3_secondary',[])+[row(extra,'Node-stage-directory-publication-stat')]
+            raise
+        self.facts['directoryPublished']=True
+        published=self.metadata(os.fstat(directory));before=self.bindings[NODE_STAGE_DIRECTORY]
+        need(stat.S_ISDIR(published[2]) and stat.S_IMODE(published[2])==0o555 and published[3:5]==[0,0] and
+            published[:2]==before[:2],'fixed root directory publication readback')
+        self.bindings[NODE_STAGE_DIRECTORY]=published;self.recheck_directories()
+
+    def close(self,failure):
+        fds=list(reversed(list(self.fds.values())));self.fds={}
+        for fd in fds:
+            try:os.close(fd)
+            except BaseException as error:failure.add(error,'Node-stage-parent-close')
+
+
+def stage_inventory_node(environ):
+    failure=FirstFailure();invoker=None;copy=None;raw=None;record=None;inputs=None;publication_safe=False
+    try:
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root Node-stage entry')
+        ids=[environ.get('SUDO_'+key,'') for key in ('UID','GID')]
+        need(all(type(x) is str and re.fullmatch('[1-9][0-9]{0,9}',x) and int(x)<2**31 for x in ids),'trusted Node-stage invoker before writes')
+        invoker=list(map(int,ids));observer=HostedEnvelopeInstaller(environ);event=observer.event();request_raw,request=admit_node_stage_event(event,environ)
+        need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,'held Node-stage entry source path')
+        observer.source(request)  # Existing fixed Git/live12 admission before any staging mutation.
+        checkout=Path.cwd().lstat();need((checkout.st_uid,checkout.st_gid)==tuple(invoker),'Node-stage checkout belongs to invoking identity')
+        for path in SOURCE_PATHS:
+            info=Path(path).lstat();need(stat.S_ISREG(info.st_mode) and stat.S_IMODE(info.st_mode)==0o644 and
+                (info.st_uid,info.st_gid)==tuple(invoker),'Node-stage live source owner/mode before writes')
+        need(len(encode({'request':original_bytes(request_raw),'event':original_bytes(event),'observations':observer.facts['sourceCommands'],
+            'source':observer.facts['source']}))<=JSON_CAP-(64<<10),'Node-stage originals fit unchanged cap before writes')
+        inputs={'request':original_bytes(request_raw),'event':original_bytes(event),'platform':{key:environ[key] for key in NODE_STAGE_ENV},
+            'source':observer.facts['source'],'sourceCommands':observer.facts['sourceCommands'],'eventIdentity':observer.facts['eventIdentity']}
+        copy=NodeStageCopy();copy.copy()
+        record={'schema':'bw.ring3.node-stage-original.v1',**inputs,'copy':final_json(encode(copy.facts)),'recordBoundary':'verified copy before directory publication and ancestor close',
+            'firstFailure':None,'secondary':[]}
+        raw=encode(record);copy.record(raw)
+    except BaseException as error:failure.add(error,'Node-stage')
+    finally:
+        if copy is not None:copy.close(failure)
+    try:
+        need(invoker is not None,'known Node-stage invoker before publication')
+        os.setgroups([]);os.setresgid(invoker[1],invoker[1],invoker[1]);os.setresuid(invoker[0],invoker[0],invoker[0]);entry_ids(*invoker);publication_safe=True
+        if failure.first is None and failure.secondary==[]:
+            environment=dict(ENV,**{key:environ[key] for key in NODE_STAGE_ENV})
+            os.execve('/usr/bin/python3',['/usr/bin/python3','-I','-B',READER_FILE,'--observe-staged-node'],environment)
+            raise RuntimeError('Node-stage observer exec unexpectedly returned')
+        payload=encode({'schema':'bw.ring3.node-stage-failure.v1','inputs':inputs,'copy':None if copy is None else copy.facts,
+            'installationOriginal':None if raw is None else original_bytes(raw),'firstFailure':failure.first,'secondary':failure.secondary})
+        need(len(payload)<=JSON_CAP and sys.stdout.buffer.write(payload)==len(payload),'bounded dropped Node-stage failure original');sys.stdout.buffer.flush()
+    except BaseException as error:failure.add(error,'Node-stage-drop-or-exec')
+    return {'pass':False,'record':record,'inputs':inputs,'copy':None if copy is None else copy.facts,'publicationSafe':publication_safe},failure
+
+
 ACTUAL_ENTRY_ENABLED=False  # Activation requires a separate reviewed source/workflow change.
 
 
 def dispatch_cli(argv=None,environ=None):
     parser=argparse.ArgumentParser(description=__doc__,allow_abbrev=False)
     modes=parser.add_mutually_exclusive_group(required=True)
-    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual'):
+    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node'):
         modes.add_argument('--'+name,action='store_const',const=name,dest='mode')
     argv=list(sys.argv[1:] if argv is None else argv)
     if len(argv)!=1:parser.error('exactly one fixed mode argument required')
@@ -4628,6 +4847,12 @@ def dispatch_cli(argv=None,environ=None):
     failure=FirstFailure();result=None
     try:
         if args.mode=='controls':controls();return 0
+        if args.mode=='stage-inventory-node':
+            need(NODE_STAGE_ENTRY_ENABLED is True,'Node staging disabled pending separate source/event review')
+            result,returned=stage_inventory_node(dict(os.environ if environ is None else environ))
+            if type(result) is not dict or result.get('publicationSafe') is not True:return 1
+            need(isinstance(returned,FirstFailure),'authoritative Node-stage failure required');failure=returned
+            raise ObservedFailure(failure.first or row(ValueError('staged runtime inventory remains unconnected'),'Node-stage-boundary'),failure.secondary)
         need(ACTUAL_ENTRY_ENABLED is True,'actual entry disabled pending final source/event/workflow admission')
         environ=dict(os.environ if environ is None else environ)
         if args.mode=='hosted-prerequisites':

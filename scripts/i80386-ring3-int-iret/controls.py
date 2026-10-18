@@ -1291,8 +1291,223 @@ def delivery_full_control():
     print(json.dumps({'testOnly':True,'fullV8AndTwentyRolePositive':True,'fullOriginalLogAndArtifactReaderPositive':True,'guestOrCpuExecuted':False}))
 
 
+def node_stage_controls():
+    """Compact authored copy data; every OS/identity/process edge is mocked."""
+    p,_=producer_fixture_case();payload=b'\x7fELF authored compact staging bytes\n'
+    historical=p.GENERATION_NODE_PIN
+    assert historical==(124827920,'fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48')
+
+    @contextlib.contextmanager
+    def edges(fault=None):
+        env,expected,old,data=prerequisite_fixture();source=reader.parse(reader.prerequisite_original(reader.canonical(reader.parse(old['request.original.json'])['source'])))
+        def wrap(raw):return {'bytes':len(raw),'sha256':sha(raw),'base64':reader.base64.b64encode(raw).decode()}
+        request={'schema':'bw.ring3.inventory-request.v2','repository':'CrispStrobe/bw-board','pullRequest':645,'head':'a'*40,'tree':'b'*40,
+            'source':wrap(reader.canonical(source)),'selected':{'node':{'path':reader.RUNTIME_NODE,'bytes':len(payload),'sha256':sha(payload)},
+            'qemu':{'path':reader.RUNTIME_QEMU,**reader.RUNTIME_SELECTED['qemu']}},
+            'nodeStage':{'source':reader.RUNTIME_NODE,'destination':reader.NODE_STAGE_TARGET,'owner':[0,0],'fileMode':0o555,'directoryMode':0o555}}
+        raw=reader.canonical(request);event=reader.parse(old['event.original.json']);event['label']['name']='x86-ring3-node-stage-inventory'
+        event['pull_request']['body']='<!-- BW_RING3_NODE_STAGE_V2\n'+reader.canonical(wrap(raw)).decode().rstrip('\n')+'\nBW_RING3_NODE_STAGE_V2 -->'
+        event_raw=reader.canonical(event)
+        env={**env,'GITHUB_EVENT_PATH':'/event.json','BW_RING3_NODE_STAGE_REQUEST_SHA256':sha(raw),'GITHUB_EVENT_NAME':'pull_request',
+            'GITHUB_REPOSITORY':'CrispStrobe/bw-board','GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':'node-stage-inventory','GITHUB_WORKFLOW_SHA':'e'*40,
+            'GITHUB_WORKFLOW_REF':'CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/645/merge'}
+        state={'rows':{},'fds':{},'next':10,'events':[],'uid':0,'gid':0,'groups':[0],'exec':None,'observation':None,'observerOriginal':None,'statSource':0}
+        def put(path,mode,uid=0,gid=0,body=b''):
+            state['rows'][path]={'st_dev':1,'st_ino':100+len(state['rows']),'st_mode':mode,'st_uid':uid,'st_gid':gid,'st_nlink':1,
+                'st_size':len(body),'st_mtime_ns':100,'raw':body}
+        for path in ('/','/run'):put(path,0o40755)
+        put('/checkout',0o40755,1001,1002)
+        for name,body in data.items():put('/checkout/'+name,0o100644,1001,1002,body)
+        put('/event.json',0o100644,1001,1002,event_raw);put(reader.RUNTIME_NODE,0o100777,1001,1000,payload)
+        put('/proc/self/status',0o100444,body=b'CapInh:\t0\nCapPrm:\t0\nCapEff:\t0\nCapAmb:\t0\n');put('/proc/self/cgroup',0o100444,body=b'0::/actions/job\n')
+        if fault=='existing':put(str(p.NODE_STAGE_DIRECTORY),0o40555)
+        elif fault in ('source-hash','drop-error'):state['rows'][reader.RUNTIME_NODE]['raw']=payload[:-2]+b'X\n'
+        elif fault=='source-kind':state['rows'][reader.RUNTIME_NODE]['st_mode']=0o40777
+        elif fault=='source-link':state['rows'][reader.RUNTIME_NODE]['st_nlink']=2
+        elif fault=='parent-owner':state['rows']['/run']['st_uid']=1001
+        elif fault=='checkout-owner':state['rows']['/checkout']['st_uid']=1003
+        elif fault=='file-owner':state['rows']['/checkout/'+next(iter(data))]['st_uid']=1003
+        elif fault=='source-data':state['rows']['/checkout/'+next(iter(data))]['raw']=b'drift'
+        elif fault=='pin':env['BW_RING3_NODE_STAGE_REQUEST_SHA256']='0'*64
+        def pathof(path,dir_fd=None):
+            target=Path(state['fds'][dir_fd]['path'])/path if dir_fd is not None else Path(path)
+            return str(target if target.is_absolute() else Path('/checkout')/target)
+        def info(path):
+            if path not in state['rows']:raise FileNotFoundError(path)
+            return SimpleNamespace(**{k:v for k,v in state['rows'][path].items() if k!='raw'})
+        def opened(path,flags,mode=0o777,dir_fd=None):
+            path=pathof(path,dir_fd);state['events'].append(('open',path,flags))
+            if flags&os.O_CREAT:
+                assert flags&os.O_EXCL and path in (reader.NODE_STAGE_TARGET,str(p.NODE_STAGE_RECORD))
+                if path in state['rows']:raise FileExistsError(path)
+                put(path,stat.S_IFREG|mode)
+            if fault=='reopen-corrupt' and path==reader.NODE_STAGE_TARGET and flags&os.O_ACCMODE==os.O_RDONLY:
+                state['rows'][path]['raw']=payload[:-2]+b'Y\n'
+            info(path);state['next']+=1;fd=state['next'];state['fds'][fd]={'path':path,'offset':0,'flags':flags};return fd
+        def read(fd,cap):
+            record=state['fds'][fd];path=record['path'];state['events'].append(('read',path))
+            body=state['rows'][path]['raw']
+            if path=='/proc/self/status':
+                body=('Pid:\t101\nUid:\t'+'\t'.join([str(state['uid'])]*4)+'\nGid:\t'+'\t'.join([str(state['gid'])]*4)+
+                    '\nGroups:\t'+' '.join(map(str,state['groups']))+'\n').encode()+body
+            at=record['offset'];chunk=body[at:at+cap];record['offset']+=len(chunk);return chunk
+        def written(fd,body):
+            record=state['fds'][fd];path=record['path'];assert path in (reader.NODE_STAGE_TARGET,str(p.NODE_STAGE_RECORD))
+            state['events'].append(('write',path,len(body)))
+            if fault=='write-error' and path==reader.NODE_STAGE_TARGET:raise OSError('FIRST_STAGE_WRITE')
+            count=2 if fault in ('short-write','copy-and-close') and path==reader.NODE_STAGE_TARGET else len(body)
+            row=state['rows'][path];at=record['offset'];row['raw']=row['raw'][:at]+body[:count];record['offset']+=count;row['st_size']=len(row['raw']);return count
+        def close(fd):
+            record=state['fds'].pop(fd);path=record['path'];state['events'].append(('close',path))
+            if fault in ('late-close','copy-and-close') and path==reader.NODE_STAGE_TARGET and (fault=='copy-and-close' or stat.S_IMODE(state['rows'][path]['st_mode'])==0o555):
+                raise OSError('LATE_PUBLISHED_CLOSE')
+            if fault=='parent-close' and path==str(p.NODE_STAGE_DIRECTORY):raise OSError('LATE_PARENT_CLOSE')
+        def mkdir(name,mode=0o777,dir_fd=None):
+            path=pathof(name,dir_fd);assert path==str(p.NODE_STAGE_DIRECTORY);state['events'].append(('mkdir',path))
+            if path in state['rows']:raise FileExistsError(path)
+            put(path,stat.S_IFDIR|mode)
+        def chmod(fd,mode):
+            path=state['fds'][fd]['path'];assert path in (str(p.NODE_STAGE_DIRECTORY),reader.NODE_STAGE_TARGET,str(p.NODE_STAGE_RECORD))
+            state['events'].append(('chmod',path,mode))
+            if fault=='directory-publication' and path==str(p.NODE_STAGE_DIRECTORY) and mode==0o555:mode=0o755
+            state['rows'][path]['st_mode']=stat.S_IFMT(state['rows'][path]['st_mode'])|mode
+            if mode==0o555 and ((fault=='file-chmod-error' and path==reader.NODE_STAGE_TARGET) or
+                (fault=='directory-chmod-error' and path==str(p.NODE_STAGE_DIRECTORY))):raise OSError('UNCERTAIN_PUBLICATION')
+        def resolve(path,**kw):
+            if str(path)==p.__file__:return Path('/checkout')/p.RUN_FILE
+            return path if path.is_absolute() else Path('/checkout')/path
+        def collect(child,role,argv,**kw):
+            state['events'].append(('git',argv))
+            if argv[-2:]==['rev-parse','HEAD']:body=b'a'*40+b'\n'
+            elif argv[-2:]==['rev-parse','HEAD^{tree}']:body=b'b'*40+b'\n'
+            else:body=''.join(source['files'][name]['mode']+' blob '+source['files'][name]['blob']+'\t'+name+'\n' for name in sorted(source['files'])).encode()
+            index=len([item for item in state['events'] if item[0]=='git'])
+            process={'schema':'bw.ring3.process.v1','role':'discovery','argv':argv,'cwdRole':'checkout','environment':child.environment,
+                'pid':200+index,'pgid':200+index,'parentPid':101,'startTicks':index,'spawnMonoNs':index*10000000,'reapMonoNs':index*10000000+1000000,
+                'firstFailure':None,'secondary':[],'exitCode':0,'waitStatus':0,'signal':None,'timedOut':False,
+                'rusage':{'userSeconds':0,'systemSeconds':0,'maxRssKiB':0}}
+            return process,{'stdout':body,'stderr':b''}
+        def setuid(*ids):
+            if fault=='drop-error':raise OSError('ACQUIRED_DROP_DIAGNOSTIC')
+            state['uid']=ids[0]
+        def exec_(path,argv,environment):
+            state['exec']=(path,argv,environment);output=io.BytesIO()
+            with patch.object(reader,'NODE_STAGE_OBSERVER_ENABLED',True),patch.object(sys,'argv',argv[3:]),patch.dict(os.environ,environment,clear=True),\
+                patch.object(sys,'stdout',SimpleNamespace(buffer=output)):
+                try:reader.main()
+                except SystemExit as error:assert error.code==1
+            state['observerOriginal']=output.getvalue();state['observation']=reader.parse(output.getvalue())
+            return None  # Real exec cannot return; production must refuse this test boundary.
+        with contextlib.ExitStack() as stack:
+            for context in (patch.dict(p.__dict__,GENERATION_NODE_PIN=(len(payload),sha(payload))),patch.dict(reader.RUNTIME_SELECTED,{'node':{'bytes':len(payload),'sha256':sha(payload)}}),
+                patch.object(Path,'cwd',return_value=Path('/checkout')),patch.object(Path,'resolve',resolve),patch.object(Path,'lstat',lambda path:info(pathof(path))),
+                patch.object(os,'stat',side_effect=lambda path,dir_fd=None,**kw:info(pathof(path,dir_fd))),patch.object(os,'fstat',side_effect=lambda fd:info(state['fds'][fd]['path'])),
+                patch.object(os,'open',side_effect=opened),patch.object(os,'read',side_effect=read),patch.object(os,'write',side_effect=written),patch.object(os,'close',side_effect=close),
+                patch.object(os,'lseek',side_effect=lambda fd,at,whence:state['fds'][fd].update(offset=at)),patch.object(os,'mkdir',side_effect=mkdir),patch.object(os,'fchmod',side_effect=chmod),
+                patch.object(os,'getresuid',side_effect=lambda:(state['uid'],)*3),patch.object(os,'getresgid',side_effect=lambda:(state['gid'],)*3),patch.object(os,'getgroups',side_effect=lambda:state['groups']),
+                patch.object(os,'setgroups',side_effect=lambda groups:state.update(groups=groups)),patch.object(os,'setresuid',side_effect=setuid),
+                patch.object(os,'setresgid',side_effect=lambda *ids:state.update(gid=ids[0])),patch.object(os,'execve',side_effect=exec_),patch.object(os,'getpid',return_value=101),
+                patch.object(p,'collect_child',side_effect=collect),patch.object(p.subprocess,'Popen',side_effect=AssertionError('no Node/process execution in staging controls'))):stack.enter_context(context)
+            yield p,env,request,raw,state
+
+    class Tests(unittest.TestCase):
+        def test_disabled_new_modes_before_any_edges_and_old_actual_false(self):
+            self.assertIs(p.NODE_STAGE_ENTRY_ENABLED,False);self.assertIs(reader.NODE_STAGE_OBSERVER_ENABLED,False);self.assertIs(p.ACTUAL_ENTRY_ENABLED,False)
+            with patch.object(p,'stage_inventory_node',side_effect=AssertionError('no entry before guard')),patch.object(sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
+                self.assertEqual(p.dispatch_cli(['--stage-inventory-node'],{}),1)
+            with patch.object(sys,'argv',['reader.py','--observe-staged-node']),patch.object(reader,'observe_staged_node',side_effect=AssertionError('no observer before guard')):
+                with self.assertRaisesRegex(reader.Refusal,'disabled'):reader.main()
+        def test_real_copy_drop_exec_observer_and_independent_original_positive_before_refusal(self):
+            with edges() as (producer,env,request,raw,state):
+                result,failure=producer.stage_inventory_node(env)
+                self.assertFalse(result['pass']);self.assertIn('exec unexpectedly returned',failure.first['message'])
+                value=state['observation'];self.assertTrue(value['stageObserved'],value);self.assertEqual(value['firstFailure'],reader.NODE_STAGE_BOUNDARY)
+                self.assertEqual(value['secondary'],[]);self.assertFalse(value['runtimeCandidate']);self.assertFalse(value['qualified'])
+                self.assertEqual(state['exec'][1][-1],'--observe-staged-node');self.assertEqual(state['uid'],1001);self.assertEqual(state['groups'],[])
+                self.assertEqual(stat.S_IMODE(state['rows'][reader.RUNTIME_NODE]['st_mode']),0o777)
+                self.assertEqual(stat.S_IMODE(state['rows'][reader.NODE_STAGE_TARGET]['st_mode']),0o555);self.assertEqual(state['fds'],{})
+                observed=state['observerOriginal'];self.assertEqual(observed,reader.canonical(value));expected={'schema':'bw.ring3.node-stage-expectation.v1','requestSha256':sha(raw),'head':'a'*40,'tree':'b'*40,
+                    'runId':123,'workflowSha':'e'*40,'invoker':[1001,1002],'observation':{'bytes':len(observed),'sha256':sha(observed)}}
+                verdict=reader.verify_node_stage_observation(observed,expected);self.assertTrue(verdict['stagedNodeObserved']);self.assertFalse(verdict['qualified'])
+                for mutate in (lambda v:v['files']['node'].__setitem__('sha256','0'*64),lambda v:v['identity'].__setitem__('groups',[0]),
+                    lambda v:v['files']['installation.original.json'].__setitem__('prefix','ffffffff'),
+                    lambda v:v.__setitem__('stageObserved',False),lambda v:v['directories'][-1]['before'].__setitem__(2,0o40777),
+                    lambda v:v['files']['node']['before'].__setitem__(0,2**64),
+                    lambda v:v['identity'].__setitem__('status',v['identity']['status'].replace('Uid:\t1001\t1001\t1001\t1001','Uid:\t0\t0\t0\t0')),
+                    lambda v:v['identity'].__setitem__('status',v['identity']['status']+'Gid:\t1002\t1002\t1002\t1002\n'),
+                    lambda v:v['identity'].__setitem__('status',v['identity']['status'].replace('Groups:\t\n','Groups:\t0\n')),
+                    lambda v:v['identity'].__setitem__('status',v['identity']['status'].replace('Pid:\t101','Pid:\t999')),
+                    lambda v:(v['identity'].__setitem__('pid',999),v['identity'].__setitem__('status',v['identity']['status'].replace('Pid:\t101','Pid:\t999')))):
+                    changed=copy.deepcopy(value);mutate(changed);bad=reader.canonical(changed)
+                    with self.assertRaises(reader.Refusal):reader.verify_node_stage_observation(bad,dict(expected,observation={'bytes':len(bad),'sha256':sha(bad)}))
+                for field,replacement in (('timedOut',True),('signal',9),('schema','unknown'),('extra',0)):
+                    changed=copy.deepcopy(value);root=reader.parse(reader.prerequisite_original(reader.canonical(changed['record'])))
+                    root['sourceCommands'][0]['process'][field]=replacement;root_raw=reader.canonical(root)
+                    changed['record']={'bytes':len(root_raw),'sha256':sha(root_raw),'base64':reader.base64.b64encode(root_raw).decode()}
+                    file=changed['files']['installation.original.json'];file.update(bytes=len(root_raw),sha256=sha(root_raw))
+                    for name in ('before','after','namedAfter'):file[name][6]=len(root_raw)
+                    bad=reader.canonical(changed)
+                    with self.assertRaises(reader.Refusal):reader.verify_node_stage_observation(bad,dict(expected,observation={'bytes':len(bad),'sha256':sha(bad)}))
+        def test_prewrite_source_request_and_parent_refusals(self):
+            for fault in ('pin','source-data','parent-owner','checkout-owner','file-owner','existing'):
+                with self.subTest(fault=fault),edges(fault) as (producer,env,request,raw,state),patch.object(sys,'stdout',SimpleNamespace(buffer=io.BytesIO())):
+                    result,failure=producer.stage_inventory_node(env);self.assertIsNotNone(failure.first);self.assertIsNone(state['exec']);self.assertEqual(state['fds'],{})
+                    self.assertFalse(any(event[0]=='write' for event in state['events']))
+                    if fault in ('pin','source-data','parent-owner','checkout-owner','file-owner'):self.assertFalse(any(event[0]=='mkdir' for event in state['events']))
+        def test_copy_write_hash_and_late_publication_failures_remain_truthful(self):
+            for fault in ('source-hash','source-kind','source-link','reopen-corrupt','short-write','write-error','late-close','directory-publication','file-chmod-error','directory-chmod-error','copy-and-close','parent-close'):
+                with self.subTest(fault=fault),edges(fault) as (producer,env,request,raw,state),patch.object(sys,'stdout',SimpleNamespace(buffer=io.BytesIO())):
+                    result,failure=producer.stage_inventory_node(env);self.assertIsNotNone(failure.first);self.assertIsNone(state['exec']);self.assertEqual(state['fds'],{})
+                    facts=result['copy'];self.assertEqual(stat.S_IMODE(state['rows'][reader.RUNTIME_NODE]['st_mode']),0o777)
+                    if fault=='short-write':self.assertEqual(facts['bytesCopied'],2);self.assertEqual(facts['sourceBytesRead'],len(payload));self.assertFalse(facts['filePublished'])
+                    if fault=='write-error':self.assertEqual(facts['bytesCopied'],0);self.assertTrue(facts['writeUncertain']);self.assertEqual(failure.first['message'],'FIRST_STAGE_WRITE')
+                    if fault=='late-close':self.assertTrue(facts['filePublished']);self.assertEqual(failure.first['message'],'LATE_PUBLISHED_CLOSE')
+                    if fault=='directory-publication':self.assertTrue(facts['directoryPublished']);self.assertIn('publication readback',failure.first['message'])
+                    if fault=='file-chmod-error':
+                        self.assertTrue(facts['filePublicationAttempted']);self.assertFalse(facts['filePublished']);self.assertEqual(stat.S_IMODE(facts['file'][2]),0o555)
+                    if fault=='directory-chmod-error':
+                        self.assertTrue(facts['directoryPublicationAttempted']);self.assertFalse(facts['directoryPublished']);self.assertEqual(stat.S_IMODE(facts['directoryAfterFailure'][2]),0o555)
+                    if fault=='copy-and-close':
+                        self.assertEqual(failure.first['message'],'complete Node-stage chunk write');self.assertEqual(facts['bytesCopied'],2)
+                        self.assertTrue(any(item['message']=='LATE_PUBLISHED_CLOSE' for item in failure.secondary))
+                    if fault=='parent-close':self.assertTrue(facts['directoryPublished']);self.assertEqual(failure.first['message'],'LATE_PARENT_CLOSE')
+        def test_mocked_enabled_fixed_cli_and_exact_mode_arity(self):
+            with edges() as (producer,env,request,raw,state),patch.object(producer,'NODE_STAGE_ENTRY_ENABLED',True),\
+                patch.object(sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
+                self.assertEqual(producer.dispatch_cli(['--stage-inventory-node'],env),1)
+                self.assertTrue(state['observation']['stageObserved']);self.assertEqual(state['observation']['firstFailure'],reader.NODE_STAGE_BOUNDARY)
+                self.assertFalse(state['observation']['runtimeCandidate']);self.assertEqual(state['fds'],{})
+            for args in (['--stage-inventory-node','--stage-inventory-node'],['--stage-inventory-node','--help'],['--stage-inventory-nod']):
+                with patch.object(producer,'stage_inventory_node',side_effect=AssertionError('no malformed mode entry')),patch.object(sys,'stderr',io.StringIO()):
+                    with self.assertRaises(SystemExit) as error:producer.dispatch_cli(args,{})
+                    self.assertEqual(error.exception.code,2)
+        def test_unverified_drop_suppresses_acquired_stdout_and_stderr(self):
+            output=io.BytesIO();diagnostic=io.BytesIO()
+            with edges('drop-error') as (producer,env,request,raw,state),patch.object(producer,'NODE_STAGE_ENTRY_ENABLED',True),\
+                patch.object(sys,'stdout',SimpleNamespace(buffer=output)),patch.object(sys,'stderr',SimpleNamespace(buffer=diagnostic)):
+                self.assertEqual(producer.dispatch_cli(['--stage-inventory-node'],env),1)
+                self.assertIsNone(state['exec']);self.assertEqual(output.getvalue(),b'');self.assertEqual(diagnostic.getvalue(),b'');self.assertEqual(state['fds'],{})
+            with edges('drop-error') as (producer,env,request,raw,state),patch.object(sys,'stdout',SimpleNamespace(buffer=io.BytesIO())):
+                result,failure=producer.stage_inventory_node(env);self.assertFalse(result['publicationSafe'])
+                self.assertEqual(failure.first['message'],'historical Node bytes and held source readback')
+                self.assertTrue(any(row['message']=='ACQUIRED_DROP_DIAGNOSTIC' for row in failure.secondary))
+        def test_v2_owner_modes_are_typed_and_v1_is_not_reinterpreted(self):
+            with edges() as (producer,env,request,raw,state):
+                producer.admit_node_stage_request(raw,sha(raw));reader.node_stage_request(raw,sha(raw))
+                for change in (lambda v:v['nodeStage'].__setitem__('fileMode',True),lambda v:v['nodeStage'].__setitem__('fileMode',365.0),
+                    lambda v:v['nodeStage'].__setitem__('owner',[False,0]),lambda v:v['nodeStage'].__setitem__('destination','/arbitrary/node'),
+                    lambda v:v.__setitem__('schema','bw.ring3.inventory-request.v1')):
+                    changed=copy.deepcopy(request);change(changed);bad=reader.canonical(changed)
+                    for admit in (producer.admit_node_stage_request,reader.node_stage_request):
+                        with self.assertRaises(ValueError):admit(bad,sha(bad))
+    result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests));assert result.wasSuccessful(),'Node-stage controls failed'
+    print(json.dumps({'testOnly':True,'tests':result.testsRun,'OSAndIdentityEdgesMocked':True,'compactAuthoredFixturePinsOnly':True,
+        'historicalProductionPinHeld':p.GENERATION_NODE_PIN==historical,'runtimeCandidate':False,'qualified':False,'pass':True}))
+
+
 if __name__=='__main__':
-    if sys.argv[1:]==['--prerequisites-only']:prerequisite_controls()
+    if sys.argv[1:]==['--node-stage-only']:node_stage_controls()
+    elif sys.argv[1:]==['--prerequisites-only']:prerequisite_controls()
     elif sys.argv[1:]==['--runtime-only']:runtime_controls()
     elif sys.argv[1:]==['--delivery-only']:delivery_controls()
     elif sys.argv[1:]==['--delivery-full']:delivery_full_control()

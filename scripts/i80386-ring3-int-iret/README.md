@@ -935,3 +935,94 @@ do not populate admitted files, produce a candidate or change successful
 inventory and runtime-expectation schemas. Nine mocked runtime controls include
 regularity/mode/extent refusal, open/read/readback/close errors and the enabled
 CLI's retained failed original; no real resource or guest operation is involved.
+
+The additive Node-stage checkpoint addresses the observed cache mode0777
+without changing the runtime mode guard. Its new `node-stage-inventory` job,
+`NODE_STAGE_ENTRY_ENABLED` and independent `NODE_STAGE_OBSERVER_ENABLED` guards
+are all false. Existing metadata request v1 and its enabled inventory route,
+actual guards, historical Node/QEMU pins, V8, twenty packet roles and caps stay
+unchanged. This checkpoint executes no runtime probes or guests.
+
+A separately selected request digest is transported as
+`BW_RING3_NODE_STAGE_REQUEST_SHA256`; the variable alone is not approval.
+The immutable labeled event contains exactly one `BW_RING3_NODE_STAGE_V2` block
+with a canonical bytes/SHA256/base64 wrapper. Its
+`bw.ring3.inventory-request.v2` has the previous seven request fields plus
+`nodeStage`: fixed cache `source`, fixed `destination`
+`/run/bw-ring3-node-22.23.3/node`, `owner=[0,0]`, integer `fileMode=365` and
+integer `directoryMode=365`. Selection remains the historical124827920 bytes
+and SHA256 `fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48`.
+The closed actor/repository/PR/head/tree/workflow/attempt-one joins use label
+`x86-ring3-node-stage-inventory` and job `node-stage-inventory`. Fresh source12
+and request expectations must be reviewed after the source commit.
+
+The root `--stage-inventory-node` entry establishes a positive invoking UID/GID,
+reads the bounded event and admits actual Git HEAD/tree plus all twelve live
+source files before staging writes. Held root-owned nonwritable `/` and `/run`
+ancestors lead to one exclusive0700 directory and0600 output. The cached Node
+is untrusted data: staging never executes or chmods it. Bounded streaming checks
+length, ELF prefix, historical SHA256 and held/named source identity. Independent
+reopen and complete hash/readback precede0555 file publication. The root-owned
+readonly `installation.original.json` retains exact request/event originals,
+Git process/stream observations, source manifest, raw source/output stat facts
+and copy hashes. Its declared boundary precedes directory publication and
+ancestor close; it is not a terminal success record.
+
+The copy refuses short writes; `bytesCopied` counts only returned write bytes,
+while `sourceBytesRead` records acquired data. An exception without a write
+return leaves confirmed bytes unchanged and marks uncertainty. Publication
+attempts and confirmed returns are separate facts; available post-error stats,
+primary/secondary failures and close errors survive. No partial output is
+adopted, deleted or retried. A failure after executable publication reports that
+state or uncertainty. After a verified irreversible drop, bounded failure output
+can include admitted input originals and copy partials. Unknown or failed drop
+suppresses acquired stdout and stderr while preserving in-memory failures.
+
+Successful root staging drops and execs only the fixed Python reader
+`--observe-staged-node`. Before reading JSON, this separate implementation derives
+actual UID/GID/groups, zero capabilities and outside-tree membership. It
+independently reads root-owned0555 ancestors and Node, the0444 installation
+original and live source12 through bounded nofollow descriptors, checking full
+hashes and held/named identity. Even a complete observation has
+`stageObserved=true`, `runtimeCandidate=false`, `qualified=false` and a deliberate
+nonzero refusal: full staged runtime inventory and actual argv mapping remain
+unconnected. Python startup, the fixed source Git processes, checkout/setup
+Node actions, sudo and env remain trusted hosted-platform boundaries. No cache
+hash or staged availability has yet been observed on a hosted VM.
+
+The disabled job retains only observation JSON and controller stderr using the
+existing upload action pin, one-day retention and hidden-file exclusion, within
+its literal15 minute budget. It never uploads the executable. A separately
+admitted official run/job/workflow/artifact remains required; an empty export
+or missing artifact is not a positive record. Job deadlines do not preempt
+blocked kernel operations in the copy loop.
+
+The standalone original-only audit is:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/reader.py \
+  --node-stage-observation observation.original.json \
+  --stage-expected reviewed-stage-expectation.json
+```
+
+The external `bw.ring3.node-stage-expectation.v1` closes `schema`,
+`requestSha256`, `head`, `tree`, `runId`, `workflowSha`, `invoker` and
+`observation` (exact bytes/SHA256). It checks a completed stage observation and
+its deliberate boundary refusal; it cannot approve a runtime candidate or an
+actual run. Official provenance must be admitted independently before these
+inputs are selected.
+
+Seven `--node-stage-only` controls exercise real source admission/copy/drop and
+the separate observer CLI/export/original reader with every OS edge mocked.
+Compact authored ELF-prefix bytes replace the Node pin only inside the control
+context; production historical pins are asserted and restored. Cases cover
+pre-write refusal, foreign parents, existing partials, regularity/link/hash
+failure, independent reopen drift, short/unknown writes, late publication and
+close failures, typed policy and unverified-drop publication suppression. They
+qualify source behavior only. Full staged graph admission, explicit actual
+mapping, separately reviewed activation and clean guest qualification remain
+required.
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --node-stage-only
+```

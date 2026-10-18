@@ -2261,7 +2261,264 @@ def verify_v8_artifact(log_raw,artifact_raw,external):
         versionedExecutionProvenance=True)
 
 
+NODE_STAGE_OBSERVER_ENABLED=False
+NODE_STAGE_ROOT=Path('/run/bw-ring3-node-22.23.3')
+NODE_STAGE_TARGET=str(NODE_STAGE_ROOT/'node')
+NODE_STAGE_BOUNDARY={'phase':'Node-stage-boundary','name':'Refusal','message':'full staged runtime inventory and actual mapping remain unconnected'}
+NODE_STAGE_PLATFORM=('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_REPOSITORY','GITHUB_EVENT_NAME','GITHUB_ACTOR','GITHUB_JOB',
+    'GITHUB_WORKFLOW_SHA','GITHUB_WORKFLOW_REF','BW_EXPECTED_HEAD','BW_EXPECTED_TREE','BW_RING3_NODE_STAGE_REQUEST_SHA256','SUDO_UID','SUDO_GID')
+
+
+def node_stage_request(raw,pin):
+    need(type(raw) is bytes and 0<len(raw)<=1<<20 and digest(pin)==sha(raw),'externally selected Node-stage request v2')
+    value=parse(raw);keys(value,'schema repository pullRequest head tree source selected nodeStage')
+    need(raw==canonical(value) and value['schema']=='bw.ring3.inventory-request.v2' and value['repository']=='CrispStrobe/bw-board' and
+         type(value['pullRequest']) is int and 0<value['pullRequest']<2**31,'canonical fixed Node-stage request')
+    digest(value['head'],40);digest(value['tree'],40)
+    source_raw=prerequisite_original(canonical(value['source']));source=parse(source_raw);keys(source,'schema head tree files')
+    need(source_raw==canonical(source) and source['schema']=='bw.ring3.source.v1' and source['head']==value['head'] and
+         source['tree']==value['tree'] and type(source['files']) is dict and set(source['files'])==SETUP_SOURCE_PATHS,'closed stage source12')
+    for row in source['files'].values():
+        keys(row,'mode blob bytes sha256');need(row['mode']=='100644','stage regular Git mode');integer(row['bytes'],1,4<<20);digest(row['sha256']);digest(row['blob'],40)
+    selected={'node':{'path':RUNTIME_NODE,**RUNTIME_SELECTED['node']},'qemu':{'path':RUNTIME_QEMU,**RUNTIME_SELECTED['qemu']}}
+    stage={'source':RUNTIME_NODE,'destination':NODE_STAGE_TARGET,'owner':[0,0],'fileMode':0o555,'directoryMode':0o555}
+    need(equal(value['selected'],selected) and equal(value['nodeStage'],stage),'fixed typed stage source/destination/owner/mode and pins')
+    return value,source
+
+
+def node_stage_event(raw,request,pin,environment):
+    event=parse(raw);pr=event.get('pull_request',{});body=pr.get('body');start='<!-- BW_RING3_NODE_STAGE_V2\n';end='\nBW_RING3_NODE_STAGE_V2 -->'
+    need(type(body) is str and body.count(start)==body.count(end)==1 and body.index(start)<body.index(end),'one immutable stage request block')
+    block=body.split(start,1)[1].split(end,1)[0];wrapper=parse(block.encode())
+    need(canonical(wrapper).decode().rstrip('\n')==block and prerequisite_original(canonical(wrapper))==canonical(request) and
+         wrapper['sha256']==pin,'exact stage event request bytes')
+    need(event.get('action')=='labeled' and event.get('label',{}).get('name')=='x86-ring3-node-stage-inventory' and
+         event.get('repository',{}).get('full_name')=='CrispStrobe/bw-board' and event.get('sender',{}).get('login')=='CrispStrobe' and
+         type(event.get('number')) is int and event['number']==request['pullRequest'] and type(pr.get('number')) is int and pr['number']==event['number'] and
+         pr.get('state')=='open' and pr.get('head',{}).get('sha')==request['head'] and pr.get('head',{}).get('repo',{}).get('full_name')=='CrispStrobe/bw-board' and
+         pr['head']['repo'].get('fork') is False and pr.get('base',{}).get('ref')=='master' and pr['base'].get('repo',{}).get('full_name')=='CrispStrobe/bw-board',
+         'fixed owned stage event')
+    need(type(environment) is dict and all(environment.get(k)==v for k,v in {'GITHUB_RUN_ATTEMPT':'1','GITHUB_REPOSITORY':'CrispStrobe/bw-board',
+        'GITHUB_EVENT_NAME':'pull_request','GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':'node-stage-inventory','BW_EXPECTED_HEAD':request['head'],
+        'BW_EXPECTED_TREE':request['tree'],'BW_RING3_NODE_STAGE_REQUEST_SHA256':pin,
+        'GITHUB_WORKFLOW_REF':'CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request['pullRequest'])+'/merge'}.items()),'closed stage platform joins')
+    need(type(environment.get('GITHUB_RUN_ID')) is str and re.fullmatch('[1-9][0-9]{0,19}',environment['GITHUB_RUN_ID']),'first Node-stage run')
+    digest(environment.get('GITHUB_WORKFLOW_SHA'),40)
+
+
+def node_stage_record(record,pin):
+    keys(record,'schema request event platform source sourceCommands eventIdentity copy recordBoundary firstFailure secondary')
+    need(record['schema']=='bw.ring3.node-stage-original.v1' and record['firstFailure'] is None and record['secondary']==[] and
+        record['recordBoundary']=='verified copy before directory publication and ancestor close','closed Node installation record boundary')
+    request_raw=prerequisite_original(canonical(record['request']));request,source=node_stage_request(request_raw,pin)
+    event_raw=prerequisite_original(canonical(record['event']));environment=record['platform']
+    need(type(environment) is dict and set(environment)==set(NODE_STAGE_PLATFORM),'closed stage recorded platform')
+    node_stage_event(event_raw,request,pin,environment);need(equal(record['source'],source),'root Git/live source joins request')
+    copy=record['copy'];keys(copy,'created sourceBefore sourceAfter sourceNamedAfter bytesCopied sourceBytesRead writeUncertain targetAfterFailure directoryAfterFailure copiedSha256 readbackSha256 filePublicationAttempted directoryPublicationAttempted filePublished directoryPublished file directory')
+    need(copy['created']==[str(NODE_STAGE_ROOT),NODE_STAGE_TARGET] and copy['filePublicationAttempted'] is True and copy['directoryPublicationAttempted'] is False and
+        copy['filePublished'] is True and copy['directoryPublished'] is False and
+        type(copy['bytesCopied']) is int and copy['bytesCopied']==RUNTIME_SELECTED['node']['bytes'] and
+        type(copy['sourceBytesRead']) is int and copy['sourceBytesRead']==copy['bytesCopied'] and copy['writeUncertain'] is False and copy['targetAfterFailure'] is None and copy['directoryAfterFailure'] is None and
+        copy['copiedSha256']==copy['readbackSha256']==RUNTIME_SELECTED['node']['sha256'],'verified fixed copy before directory publication')
+    for name in ('sourceBefore','sourceAfter','sourceNamedAfter','file','directory'):
+        info=copy[name];need(type(info) is list and len(info)==8 and all(type(x) is int for x in info),'raw stage metadata shape')
+        need(all(0<=x<2**64 for x in info[:7]) and -2**63<=info[7]<2**63,'raw stage metadata scalar bounds')
+    before=copy['sourceBefore'];need(before==copy['sourceAfter']==copy['sourceNamedAfter'] and stat.S_ISREG(before[2]) and before[2]&0o6000==0 and
+        before[5:7]==[1,RUNTIME_SELECTED['node']['bytes']],'untrusted cache source held identity and extent')
+    file=copy['file'];directory=copy['directory']
+    need(stat.S_ISREG(file[2]) and stat.S_IMODE(file[2])==0o555 and file[3:7]==[0,0,1,RUNTIME_SELECTED['node']['bytes']] and
+        stat.S_ISDIR(directory[2]) and stat.S_IMODE(directory[2])==0o700 and directory[3:5]==[0,0],'fixed published Node and prepublication directory')
+    commands=record['sourceCommands'];need(type(commands) is list and len(commands)==3,'three original stage Git observations')
+    git=['--no-replace-objects','-c','gc.auto=0','-c','maintenance.auto=false'];safe=None
+    tails=[['rev-parse','HEAD'],['rev-parse','HEAD^{tree}'],['ls-tree','-r','HEAD','--',*sorted(SETUP_SOURCE_PATHS)]]
+    outputs=[(request['head']+'\n').encode(),(request['tree']+'\n').encode(),''.join(source['files'][path]['mode']+' blob '+source['files'][path]['blob']+'\t'+path+'\n' for path in sorted(SETUP_SOURCE_PATHS)).encode()]
+    previous=0;parent=None
+    for index,command in enumerate(commands):
+        keys(command,'argv process stdout stderr');argv=command['argv'];need(type(argv) is list and len(argv)>3 and argv[:2]==['/usr/bin/git','-c'] and
+            type(argv[2]) is str and argv[2].startswith('safe.directory=/'),'scoped stage source Git checkout')
+        if safe is None:safe=argv[2]
+        need(argv==['/usr/bin/git','-c',safe,*git,*tails[index]],'fixed Node-stage Git descriptor')
+        process=command['process'];start,end=v8_process(process,'discovery',argv,
+            {'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin','GIT_NO_LAZY_FETCH':'1','GIT_CONFIG_NOSYSTEM':'1'},10000)
+        if parent is None:parent=process['parentPid']
+        need(start>=previous and process['parentPid']==parent,'causal sequential source Git processes under one installer');previous=end
+        need(prerequisite_original(canonical(command['stdout']))==outputs[index] and command['stderr'] is None,'exact original stage Git output')
+    keys(record['eventIdentity'],'st_dev st_ino st_mode st_uid st_gid st_nlink st_size st_mtime_ns')
+    event_meta=record['eventIdentity']
+    need(all(type(x) is int for x in event_meta.values()) and all(0<=event_meta[key]<2**64 for key in event_meta if key!='st_mtime_ns') and
+        -2**63<=event_meta['st_mtime_ns']<2**63 and event_meta['st_size']==len(event_raw) and stat.S_ISREG(event_meta['st_mode']),'held official event extent')
+    return request,source
+
+
+class NodeStageReadonly:
+    """Separate held readonly implementation; no producer imports or mutations."""
+    def __init__(self):self.fds=[];self.directories=[];self.facts={}
+
+    def open(self):
+        parent=None
+        for path in (Path('/'),Path('/run'),NODE_STAGE_ROOT):
+            fd=os.open(path if parent is None else path.name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK,
+                **({} if parent is None else {'dir_fd':parent}));self.fds.append(fd);parent=fd
+            before=setup_metadata(os.fstat(fd));need(path.resolve(strict=True)==path and before==setup_metadata(path.lstat()) and
+                stat.S_ISDIR(before[2]) and before[3:5]==[0,0] and before[2]&0o022==0 and
+                (path!=NODE_STAGE_ROOT or stat.S_IMODE(before[2])==0o555),'root-owned staged Node ancestors')
+            self.directories.append((path,fd,before))
+
+    def read(self,name,retain=False):
+        need(name in ('node','installation.original.json'),'fixed stage readonly input')
+        directory=self.fds[-1];fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=directory)
+        first=None;count=0;digest_=hashlib.sha256();prefix=b'';data=bytearray()
+        row={'before':None,'after':None,'namedAfter':None,'closeSucceeded':False};self.facts[name]=row
+        try:
+            before=setup_metadata(os.fstat(fd));row['before']=before
+            cap=RUNTIME_SELECTED['node']['bytes'] if name=='node' else 1<<20;mode=0o555 if name=='node' else 0o444
+            need(before==setup_metadata(os.stat(name,dir_fd=directory,follow_symlinks=False)) and stat.S_ISREG(before[2]) and
+                stat.S_IMODE(before[2])==mode and before[3:6]==[0,0,1] and 0<before[6]<=cap and
+                (name!='node' or before[6]==cap),'readonly root staged input owner/mode/extent')
+            while True:
+                chunk=os.read(fd,min(65536,cap+1-count))
+                if not chunk:break
+                count+=len(chunk);need(count<=cap,'bounded staged input read');digest_.update(chunk);prefix=(prefix+chunk)[:4]
+                if retain:data.extend(chunk)
+            row.update(bytes=count,sha256=digest_.hexdigest(),prefix=prefix.hex(),after=setup_metadata(os.fstat(fd)),
+                namedAfter=setup_metadata(os.stat(name,dir_fd=directory,follow_symlinks=False)))
+            need(before==row['after']==row['namedAfter'] and count==before[6],'independent staged input held readback')
+            if name=='node':need(digest_.hexdigest()==RUNTIME_SELECTED['node']['sha256'] and prefix==b'\x7fELF','independent historical staged Node bytes')
+        except BaseException as error:first=error
+        finally:
+            try:os.close(fd);row['closeSucceeded']=True
+            except BaseException as error:
+                if first is None:first=error
+                else:first.setup_secondary=getattr(first,'setup_secondary',[])+[{'phase':'stage-read-close','name':type(error).__name__,'message':str(error)}]
+        if first is not None:raise first
+        return bytes(data) if retain else row
+
+    def close(self):
+        first=None
+        try:
+            for path,fd,before in self.directories:
+                held=setup_metadata(os.fstat(fd));named=setup_metadata(path.lstat());length=8 if path==NODE_STAGE_ROOT else 5
+                need(held[:length]==named[:length]==before[:length] and path.resolve(strict=True)==path,'staged ancestor held readback')
+        except BaseException as error:first=error
+        for fd in reversed(self.fds):
+            try:os.close(fd)
+            except BaseException as error:
+                if first is None:first=error
+                else:first.setup_secondary=getattr(first,'setup_secondary',[])+[{'phase':'stage-parent-close','name':type(error).__name__,'message':str(error)}]
+        self.fds=[]
+        if first is not None:raise first
+
+
+def node_stage_identity(identity,uid,gid):
+    keys(identity,'uid gid groups status membership pid')
+    need(all(type(identity[key]) is int for key in ('uid','gid')) and [identity['uid'],identity['gid']]==[uid,gid] and
+        identity['groups']==[],'observed dropped stage IDs/groups')
+    pid=integer(identity['pid'],1);status=identity['status']
+    need(type(status) is str and len(status.encode())<=4096,'bounded original stage process status')
+    required={'Pid','Uid','Gid','Groups','CapInh','CapPrm','CapEff','CapAmb'};rows={}
+    for line in status.splitlines():
+        name,separator,text=line.partition(':')
+        if name not in required:continue
+        need(separator==':' and name not in rows,'unique required stage process status row');rows[name]=text.strip()
+    need(set(rows)==required and rows['Pid']==str(pid) and rows['Uid'].split()==[str(uid)]*4 and
+        rows['Gid'].split()==[str(gid)]*4 and rows['Groups']=='','raw stage PID/UID/GID/groups join actual dropped identity')
+    for name in ('CapInh','CapPrm','CapEff','CapAmb'):
+        need(re.fullmatch('[0-9a-fA-F]+',rows[name]) is not None and int(rows[name],16)==0,'raw zero stage capability '+name)
+
+
+def observe_staged_node(environ):
+    value={'schema':'bw.ring3.node-stage-observation.v1','stageObserved':False,'runtimeCandidate':False,'qualified':False,
+        'record':None,'files':{},'directories':[],'source':{},'identity':None,'firstFailure':None,'secondary':[]};backend=None
+    def failed(error,phase):
+        row={'phase':phase,'name':type(error).__name__,'message':str(error)}
+        if value['firstFailure'] is None:value['firstFailure']=row
+        else:value['secondary'].append(row)
+        value['secondary'].extend(getattr(error,'setup_secondary',[]))
+    try:
+        ids=[environ.get('SUDO_'+name,'') for name in ('UID','GID')]
+        need(all(type(x) is str and re.fullmatch('[1-9][0-9]{0,9}',x) and int(x)<2**31 for x in ids),'known stage invoker')
+        uid,gid=map(int,ids);need(os.getresuid()==(uid,)*3 and os.getresgid()==(gid,)*3 and os.getgroups()==[],'actual dropped stage observer IDs/groups')
+        status=setup_proc_read('/proc/self/status')
+        membership=setup_proc_read('/proc/self/cgroup');setup_membership(membership,environ['GITHUB_RUN_ID'])
+        value['identity']={'uid':uid,'gid':gid,'groups':os.getgroups(),'status':status,'membership':membership,'pid':os.getpid()}
+        node_stage_identity(value['identity'],uid,gid)  # Before any acquired JSON is decoded.
+        pin=digest(environ.get('BW_RING3_NODE_STAGE_REQUEST_SHA256'))
+        backend=NodeStageReadonly();backend.open();record_raw=backend.read('installation.original.json',True);value['record']={'bytes':len(record_raw),'sha256':sha(record_raw),'base64':base64.b64encode(record_raw).decode()}
+        record=parse(record_raw);request,source=node_stage_record(record,pin)
+        need(value['identity']['pid']==record['sourceCommands'][0]['process']['parentPid'],'exec preserves installer/observer PID')
+        event_raw=prerequisite_original(canonical(record['event']));node_stage_event(event_raw,request,pin,environ)
+        need(set(environ)==set(NODE_STAGE_PLATFORM)|{'LANG','HOME','PATH'} and all(environ[key]==expected for key,expected in
+            {'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'}.items()) and
+            equal(record['platform'],{key:environ[key] for key in NODE_STAGE_PLATFORM}),'Node-stage original actual closed platform join')
+        for path,row in sorted(source['files'].items()):
+            target=Path.cwd()/path;info=target.lstat();need(target.resolve(strict=True)==target and stat.S_ISREG(info.st_mode) and
+                stat.S_IMODE(info.st_mode)==0o644 and (info.st_uid,info.st_gid)==(uid,gid),'live stage source regular owner/mode')
+            raw=inventory_file(target,4<<20);fact={'bytes':len(raw),'sha256':sha(raw),'blob':hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest(),'mode':'100644'}
+            value['source'][path]=fact;need(equal(fact,row),'independent stage source12 bytes')
+        backend.read('node');need(backend.facts['node']['before']==record['copy']['file'],'finite installer/observer Node file identity join');value['stageObserved']=True
+    except BaseException as error:failed(error,'stage-observer')
+    finally:
+        if backend is not None:
+            value['files']=backend.facts;value['directories']=[{'path':str(path),'before':metadata} for path,fd,metadata in backend.directories]
+            try:backend.close()
+            except BaseException as error:failed(error,'stage-observer-close')
+    if value['firstFailure'] is None:value['firstFailure']=dict(NODE_STAGE_BOUNDARY)
+    return value  # Explicit terminal refusal, including after a genuine staged observation.
+
+
+def verify_node_stage_observation(raw,expected):
+    keys(expected,'schema requestSha256 head tree runId workflowSha invoker observation')
+    need(expected['schema']=='bw.ring3.node-stage-expectation.v1','explicit metadata-only stage expectation')
+    digest(expected['requestSha256']);digest(expected['head'],40);digest(expected['tree'],40);digest(expected['workflowSha'],40);integer(expected['runId'],1)
+    need(type(expected['invoker']) is list and len(expected['invoker'])==2 and all(type(x) is int and 0<x<2**31 for x in expected['invoker']),'externally observed stage invoker')
+    keys(expected['observation'],'bytes sha256');need(type(raw) is bytes and integer(expected['observation']['bytes'],1,1<<20)==len(raw) and
+        digest(expected['observation']['sha256'])==sha(raw),'independently selected staged observation bytes')
+    value=parse(raw);keys(value,'schema stageObserved runtimeCandidate qualified record files directories source identity firstFailure secondary')
+    need(raw==canonical(value) and value['schema']=='bw.ring3.node-stage-observation.v1' and value['stageObserved'] is True and
+        value['runtimeCandidate'] is False and value['qualified'] is False and equal(value['firstFailure'],NODE_STAGE_BOUNDARY) and value['secondary']==[],
+        'genuine staged metadata observation followed by explicit unimplemented boundary refusal')
+    record_raw=prerequisite_original(canonical(value['record']));record=parse(record_raw);request,source=node_stage_record(record,expected['requestSha256'])
+    env=record['platform'];need(request['head']==expected['head'] and request['tree']==expected['tree'] and env['GITHUB_RUN_ID']==str(expected['runId']) and
+        env['GITHUB_WORKFLOW_SHA']==expected['workflowSha'] and [env['SUDO_UID'],env['SUDO_GID']]==list(map(str,expected['invoker'])),'external stage source/platform/invoker joins')
+    need(equal(value['source'],source['files']),'independent live stage source12 joins request')
+    identity=value['identity'];node_stage_identity(identity,*expected['invoker'])
+    need(identity['pid']==record['sourceCommands'][0]['process']['parentPid'],'original exec preserves installer/observer PID')
+    setup_membership(identity['membership'],str(expected['runId']))
+    files=value['files'];need(type(files) is dict and set(files)=={'node','installation.original.json'},'two independent stage file observations')
+    for name,row in files.items():
+        keys(row,'before after namedAfter closeSucceeded bytes sha256 prefix');need(row['closeSucceeded'] is True and equal(row['before'],row['after']) and equal(row['before'],row['namedAfter']),
+            'closed stable stage readonly file')
+        metadata=row['before'];need(type(metadata) is list and len(metadata)==8 and all(type(x) is int for x in metadata) and all(0<=x<2**64 for x in metadata[:7]) and
+            -2**63<=metadata[7]<2**63 and stat.S_ISREG(metadata[2]) and
+            metadata[3:6]==[0,0,1] and metadata[6]==row['bytes'] and type(row['bytes']) is int,'root regular stage metadata')
+        mode=0o555 if name=='node' else 0o444;need(stat.S_IMODE(metadata[2])==mode,'strict independent stage file mode')
+        data=value['record'] if name!='node' else RUNTIME_SELECTED['node']
+        need(row['bytes']==data['bytes'] and row['sha256']==data['sha256'],'independent staged file content identity')
+        if name=='node':need(row['prefix']=='7f454c46' and row['before']==record['copy']['file'],'staged ELF/install finite file identity')
+        else:need(row['prefix']==record_raw[:4].hex(),'observed original record prefix joins retained bytes')
+    dirs=value['directories'];need(type(dirs) is list and [row['path'] for row in dirs]==['/','/run',str(NODE_STAGE_ROOT)],'fixed readonly stage ancestors')
+    for index,row in enumerate(dirs):
+        keys(row,'path before');info=row['before'];need(type(info) is list and len(info)==8 and all(type(x) is int for x in info) and all(0<=x<2**64 for x in info[:7]) and -2**63<=info[7]<2**63 and
+            stat.S_ISDIR(info[2]) and info[3:5]==[0,0] and info[2]&0o022==0 and (index!=2 or stat.S_IMODE(info[2])==0o555),'root nonwritable stage ancestor original')
+    need(dirs[-1]['before'][:2]==record['copy']['directory'][:2],'finite staged directory inode join')
+    return {'schema':'bw.ring3.node-stage-admission.v1','stagedNodeObserved':True,'runtimeCandidate':False,'qualified':False,'boundary':dict(NODE_STAGE_BOUNDARY)}
+
+
 def main():
+    if sys.argv[1:2]==['--node-stage-observation']:
+        parser=argparse.ArgumentParser(description='Independent retained Node-stage observation audit',allow_abbrev=False)
+        parser.add_argument('--node-stage-observation',required=True);parser.add_argument('--stage-expected',required=True)
+        need(len(sys.argv)==5 and sys.argv.count('--node-stage-observation')==sys.argv.count('--stage-expected')==1,'exact stage audit inputs')
+        args=parser.parse_args()
+        with Path(args.node_stage_observation).open('rb') as stream:raw=stream.read((1<<20)+1)
+        with Path(args.stage_expected).open('rb') as stream:expected=parse(stream.read((1<<20)+1))
+        print(json.dumps(verify_node_stage_observation(raw,expected),sort_keys=True));return
+    if '--observe-staged-node' in sys.argv[1:]:
+        need(sys.argv[1:]==['--observe-staged-node'],'exact single stage observer mode')
+        need(NODE_STAGE_OBSERVER_ENABLED is True,'Node-stage observer disabled pending separate source/event review')
+        value=observe_staged_node(dict(os.environ));raw=canonical(value)
+        need(len(raw)<=1<<20 and sys.stdout.buffer.write(raw)==len(raw),'bounded dropped staged observation original');sys.stdout.buffer.flush()
+        raise SystemExit(1)
     internal={'--observe-hosted-setup','--admit-hosted-prerequisites','--admit-hosted-runtime'}
     if any(flag in internal for flag in sys.argv[1:]) and (len(sys.argv)!=2 or sys.argv[1] not in internal):
         raise Refusal('exactly one fixed internal prerequisite mode required')
