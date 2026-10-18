@@ -5420,10 +5420,10 @@ from landing inactive tooling or retiring superseded incremental drafts.
 
 ## 386 selected Node staging for hosted qualification — 2026-10-18
 
-CLAIM PROPOSED — Codex x86, `lane/386-node-staging-claim-20261018`.
-Merge this claim before implementing executable staging. This explicitly extends
-the existing ring3 fixture claim; its read-only metadata scope alone does not
-permit installing an executable. Own only
+CLAIM MERGED — [PR653](https://github.com/CrispStrobe/bw-board/pull/653),
+Codex x86, `lane/386-node-staging-claim-20261018`; source delivery remains in
+draft PR645. This explicitly extends the existing ring3 fixture claim beyond
+read-only metadata. Own only
 `scripts/i80386-ring3-int-iret/{run.py,reader.py,controls.py,README.md}`,
 `.github/workflows/i80386-ring3-int-iret.yml`, this ledger section and the matching
 [x86 task contract](docs/X86-NEXT-LANES.md#selected-node-staging-for-hosted-qualification).
@@ -5435,13 +5435,17 @@ The independently audited [diagnostic run 39110980557](https://github.com/CrispS
 observed the selected hosted Node executable as mode0777. The unchanged runtime
 mode guard correctly refused before reading content or starting a tool. Its
 historical digest was not observed in that failure; QEMU readiness remains unknown.
-The proposed remedy copies the same externally selected bytes into fixed fresh
-root-owned storage, then independently admits that staged runtime. Never chmod
+The source candidate copies the same externally selected bytes into fixed fresh
+root-owned storage, then independently observes that staged executable. Never chmod
 or execute the writable cache input, change its pin, adopt an existing target,
 or turn a copy record into independent runtime approval.
 
-First deliver a versioned metadata-only stage/request/original/reader path with
-mocked adversarial controls and one independently admitted hosted observation.
+The first versioned stage/request/original/reader source candidate is implemented
+with mocked adversarial controls. Its entry, independent observer and new
+workflow job guards remain false. No real staging or hosted observation has run.
+A complete stage-only observation still refuses at the unconnected full-runtime
+boundary; it cannot approve a runtime candidate. Next admit the complete staged
+graph and separately review source/event activation for one hosted observation.
 Actual guards remain false. Runtime-expectation and actual argv adoption are a
 separate explicit follow-up, with affected clean guest qualification and every
 enabled final-head check required before source merge. The linked contract

@@ -2856,10 +2856,14 @@ the descriptor closed, and no tool or guest ran. This establishes the mode
 refusal, not the historical file digest or QEMU availability. Preserve the
 original and the existing non-group/world-writable runtime guard.
 
-This is a proposed extension of the ring3 fixture ownership claim. Merge its
-LANES claim before source implementation. Reuse the existing installer and
-independent reader boundaries; introduce no general provisioning framework.
-The work is split into these concrete tasks:
+The ownership extension merged in [PR653](https://github.com/CrispStrobe/bw-board/pull/653).
+The first source candidate in draft PR645 implements explicit request v2, fixed
+exclusive copy, retained installation original, independent dropped observation
+and standalone original-only audit. All three new guards remain false. A
+complete stage observation deliberately refuses because full runtime inventory
+and actual mapping are still unconnected. No hosted copy or runtime observation
+is claimed. Reuse the existing installer and independent reader boundaries.
+The complete delivery and remaining tasks are:
 
 1. **Version the explicit stage selection.** Add an inventory request v2 that
    binds the unchanged cache source path and historical Node byte count/digest
@@ -2907,3 +2911,20 @@ The work is split into these concrete tasks:
 No full386DX, Windows, performance or continuous runtime-ownership claim follows
 from this task. The cache observation remains a failure until an independently
 qualified staged graph and the later actual guest result exist.
+
+The stage-only source audit command is:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/reader.py \
+  --node-stage-observation observation.original.json \
+  --stage-expected reviewed-stage-expectation.json
+```
+
+The reviewed expectation binds exact original bytes/digest, request, source
+HEAD/tree, workflow/run and invoker. This verifies only a completed stage
+observation and its explicit boundary refusal. See the
+[fixture README](../scripts/i80386-ring3-int-iret/README.md) for schemas and
+mocked control commands. Next implement complete staged runtime inventory
+without activating a job; then independently review a fresh immutable source,
+request and official event. Runtime-expectation and actual argv adoption remain
+a separate follow-up after that metadata result.
