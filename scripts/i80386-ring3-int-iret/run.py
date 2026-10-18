@@ -4833,13 +4833,95 @@ def stage_inventory_node(environ):
     return {'pass':False,'record':record,'inputs':inputs,'copy':None if copy is None else copy.facts,'publicationSafe':publication_safe},failure
 
 
+STAGED_RUNTIME_ENTRY_ENABLED=False
+STAGED_EMPTY_PYTHON_SOURCES={'/usr/lib/python3.12/urllib/__init__.py':{'kind':'python-source-empty','bytes':0,'sha256':'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','mode':0o644,'owner':[0,0],'links':1}}
+STAGED_RUNTIME_ENV=tuple('BW_RING3_STAGED_INVENTORY_REQUEST_SHA256' if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key for key in NODE_STAGE_ENV)
+
+
+def admit_staged_runtime_request(raw,pin):
+    need(type(raw) is bytes and 0<len(raw)<=JSON_CAP and type(pin) is str and re.fullmatch('[0-9a-f]{64}',pin) and sha(raw)==pin,
+         'independently selected Node-stage request')
+    value=final_json(raw);require_fields(value,'schema repository pullRequest head tree source selected nodeStage emptyPythonSources','closed Node-stage request v3')
+    need(raw==encode(value) and value['schema']=='bw.ring3.inventory-request.v3' and value['repository']==APPROVAL_REPOSITORY and
+         type(value['pullRequest']) is int and 0<value['pullRequest']<2**31,'canonical owned Node-stage request')
+    source=admitted_original(value['source'],JSON_CAP,'Node-stage source original')
+    admit_generation_source(source,value['source']['sha256'],value['head'],value['tree'])
+    selected={'node':{'path':str(NODE_STAGE_FILE),'bytes':GENERATION_NODE_PIN[0],'sha256':GENERATION_NODE_PIN[1]},
+        'qemu':{'path':RUNTIME_EXECUTABLES['qemu'],'bytes':SELECTED_QEMU_PIN[0],'sha256':SELECTED_QEMU_PIN[1]}}
+    stage={'source':RUNTIME_EXECUTABLES['node'],'destination':str(NODE_STAGE_FILE),'owner':[0,0],'fileMode':0o555,'directoryMode':0o555}
+    need(same_json(value['selected'],selected) and same_json(value['nodeStage'],stage) and same_json(value['emptyPythonSources'],STAGED_EMPTY_PYTHON_SOURCES),'fixed typed Node-stage policy and historical pins')
+    return value
+
+
+def admit_staged_runtime_event(event_raw,environ):
+    event=final_json(event_raw);pr=event.get('pull_request',{});body=pr.get('body')
+    start='<!-- BW_RING3_STAGED_RUNTIME_INVENTORY_V3\n';end='\nBW_RING3_STAGED_RUNTIME_INVENTORY_V3 -->'
+    need(type(body) is str and body.count(start)==body.count(end)==1 and body.index(start)<body.index(end),'one immutable Node-stage block')
+    block=body.split(start,1)[1].split(end,1)[0];wrapper=final_json(block.encode())
+    need(encode(wrapper).decode().rstrip('\n')==block,'canonical Node-stage wrapper')
+    raw=admitted_original(wrapper,JSON_CAP,'Node-stage request wrapper')
+    request=admit_staged_runtime_request(raw,environ.get('BW_RING3_STAGED_INVENTORY_REQUEST_SHA256'))
+    need(event.get('action')=='labeled' and event.get('label',{}).get('name')=='x86-ring3-staged-runtime-inventory' and
+         event.get('repository',{}).get('full_name')==APPROVAL_REPOSITORY and event.get('sender',{}).get('login')=='CrispStrobe' and
+         type(event.get('number')) is int and event['number']==request['pullRequest'] and type(pr.get('number')) is int and
+         pr['number']==request['pullRequest'] and pr.get('state')=='open' and pr.get('head',{}).get('sha')==request['head'] and
+         pr.get('head',{}).get('repo',{}).get('full_name')==APPROVAL_REPOSITORY and pr['head']['repo'].get('fork') is False and
+         pr.get('base',{}).get('ref')=='master' and pr['base'].get('repo',{}).get('full_name')==APPROVAL_REPOSITORY,
+         'closed owned Node-stage immutable event')
+    expected_cgroup(environ)
+    need(all(environ.get(k)==v for k,v in {'GITHUB_REPOSITORY':APPROVAL_REPOSITORY,'GITHUB_EVENT_NAME':'pull_request',
+         'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':'staged-runtime-inventory','BW_EXPECTED_HEAD':request['head'],'BW_EXPECTED_TREE':request['tree'],
+         'GITHUB_WORKFLOW_REF':APPROVAL_REPOSITORY+'/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request['pullRequest'])+'/merge'}.items()) and
+         type(environ.get('GITHUB_WORKFLOW_SHA')) is str and re.fullmatch('[0-9a-f]{40}',environ['GITHUB_WORKFLOW_SHA']),
+         'Node-stage producing platform bindings')
+    return raw,request
+
+
+def stage_runtime_inventory_node(environ):
+    failure=FirstFailure();invoker=None;copy=None;raw=None;record=None;inputs=None;publication_safe=False
+    try:
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root Node-stage entry')
+        ids=[environ.get('SUDO_'+key,'') for key in ('UID','GID')]
+        need(all(type(x) is str and re.fullmatch('[1-9][0-9]{0,9}',x) and int(x)<2**31 for x in ids),'trusted Node-stage invoker before writes')
+        invoker=list(map(int,ids));observer=HostedEnvelopeInstaller(environ);event=observer.event();request_raw,request=admit_staged_runtime_event(event,environ)
+        need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,'held Node-stage entry source path')
+        observer.source(request)  # Existing fixed Git/live12 admission before any staging mutation.
+        checkout=Path.cwd().lstat();need((checkout.st_uid,checkout.st_gid)==tuple(invoker),'Node-stage checkout belongs to invoking identity')
+        for path in SOURCE_PATHS:
+            info=Path(path).lstat();need(stat.S_ISREG(info.st_mode) and stat.S_IMODE(info.st_mode)==0o644 and
+                (info.st_uid,info.st_gid)==tuple(invoker),'Node-stage live source owner/mode before writes')
+        need(len(encode({'request':original_bytes(request_raw),'event':original_bytes(event),'observations':observer.facts['sourceCommands'],
+            'source':observer.facts['source']}))<=JSON_CAP-(64<<10),'Node-stage originals fit unchanged cap before writes')
+        inputs={'request':original_bytes(request_raw),'event':original_bytes(event),'platform':{key:environ[key] for key in STAGED_RUNTIME_ENV},
+            'source':observer.facts['source'],'sourceCommands':observer.facts['sourceCommands'],'eventIdentity':observer.facts['eventIdentity']}
+        copy=NodeStageCopy();copy.copy()
+        record={'schema':'bw.ring3.node-stage-original.v2',**inputs,'copy':final_json(encode(copy.facts)),'recordBoundary':'verified copy before directory publication and ancestor close',
+            'firstFailure':None,'secondary':[]}
+        raw=encode(record);copy.record(raw)
+    except BaseException as error:failure.add(error,'Node-stage')
+    finally:
+        if copy is not None:copy.close(failure)
+    try:
+        need(invoker is not None,'known Node-stage invoker before publication')
+        os.setgroups([]);os.setresgid(invoker[1],invoker[1],invoker[1]);os.setresuid(invoker[0],invoker[0],invoker[0]);entry_ids(*invoker);publication_safe=True
+        if failure.first is None and failure.secondary==[]:
+            environment=dict(ENV,**{key:environ[key] for key in STAGED_RUNTIME_ENV})
+            os.execve('/usr/bin/python3',['/usr/bin/python3','-I','-B',READER_FILE,'--inventory-staged-runtime'],environment)
+            raise RuntimeError('Node-stage observer exec unexpectedly returned')
+        payload=encode({'schema':'bw.ring3.staged-runtime-stage-failure.v1','inputs':inputs,'copy':None if copy is None else copy.facts,
+            'installationOriginal':None if raw is None else original_bytes(raw),'firstFailure':failure.first,'secondary':failure.secondary})
+        need(len(payload)<=JSON_CAP and sys.stdout.buffer.write(payload)==len(payload),'bounded dropped Node-stage failure original');sys.stdout.buffer.flush()
+    except BaseException as error:failure.add(error,'Node-stage-drop-or-exec')
+    return {'pass':False,'record':record,'inputs':inputs,'copy':None if copy is None else copy.facts,'publicationSafe':publication_safe},failure
+
+
 ACTUAL_ENTRY_ENABLED=False  # Activation requires a separate reviewed source/workflow change.
 
 
 def dispatch_cli(argv=None,environ=None):
     parser=argparse.ArgumentParser(description=__doc__,allow_abbrev=False)
     modes=parser.add_mutually_exclusive_group(required=True)
-    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node'):
+    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node'):
         modes.add_argument('--'+name,action='store_const',const=name,dest='mode')
     argv=list(sys.argv[1:] if argv is None else argv)
     if len(argv)!=1:parser.error('exactly one fixed mode argument required')
@@ -4847,6 +4929,12 @@ def dispatch_cli(argv=None,environ=None):
     failure=FirstFailure();result=None
     try:
         if args.mode=='controls':controls();return 0
+        if args.mode=='stage-runtime-inventory-node':
+            need(STAGED_RUNTIME_ENTRY_ENABLED is True,'staged runtime metadata disabled pending separate source/event review')
+            result,returned=stage_runtime_inventory_node(dict(os.environ if environ is None else environ))
+            if type(result) is not dict or result.get('publicationSafe') is not True:return 1
+            need(isinstance(returned,FirstFailure),'authoritative staged inventory failure required');failure=returned
+            raise ObservedFailure(failure.first or row(ValueError('staged inventory exec returned'),'staged-inventory-boundary'),failure.secondary)
         if args.mode=='stage-inventory-node':
             need(NODE_STAGE_ENTRY_ENABLED is True,'Node staging disabled pending separate source/event review')
             result,returned=stage_inventory_node(dict(os.environ if environ is None else environ))

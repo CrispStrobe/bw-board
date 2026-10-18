@@ -1228,6 +1228,11 @@ def inventory_probe(argv):
 
 
 class RuntimeInventory:
+    NODE_PATH=RUNTIME_NODE
+
+    def candidate(self,value):return value
+    def validate_candidate(self,raw):return runtime_expectation(raw,sha(raw))
+
     PRIORITY={'shared-library':0,'qemu-data':1,'python-stdlib':2,'observation-tool':3,'tool-interpreter':3,
         'tcg-module':4,'elf-interpreter':4,'qemu-binary':5,'node-binary':5,'python-binary':5}
     def __init__(self,files=None,probe=None):
@@ -1298,7 +1303,7 @@ class RuntimeInventory:
         need(not self.attempted,'independent runtime inventory consumed; no retry');self.attempted=True
         self.partial={'files':self.files,'aliases':self.aliases,'probes':self.probes,'processes':self.processes,'fileMetadata':getattr(self.ops,'metadata',{}),
             'pythonFiles':[],'mappedLibraries':[],'mapsOriginal':None}
-        executables=self.executables={name:self.add(path,name+'-binary') for name,path in (('node',RUNTIME_NODE),('python','/usr/bin/python3'),('qemu',RUNTIME_QEMU))}
+        executables=self.executables={name:self.add(path,name+'-binary') for name,path in (('node',self.NODE_PATH),('python','/usr/bin/python3'),('qemu',RUNTIME_QEMU))}
         for role,pin in RUNTIME_SELECTED.items():
             row=self.files[executables[role]];need({key:row[key] for key in ('bytes','sha256')}==pin,'historical selected '+role+' mismatch before any metadata tool execution')
         self.add('/usr/bin/ldd','observation-tool');self.add('/usr/bin/dpkg-query','observation-tool');shell=self.add('/usr/bin/bash','tool-interpreter')
@@ -1332,7 +1337,7 @@ class RuntimeInventory:
         value={'schema':'bw.ring3.runtime-expectation.v1','platform':self.ops.platform(),
             'executables':{role:{'path':path,'bytes':self.files[path]['bytes'],'sha256':self.files[path]['sha256']} for role,path in executables.items()},
             'versions':versions,'files':self.files,'aliases':self.aliases,'packages':packages,'packagePaths':sorted(set(listed))}
-        value['probes']=stable_probe_descriptors(value);raw=canonical(value);runtime_expectation(raw,sha(raw))
+        value['probes']=stable_probe_descriptors(value);value=self.candidate(value);raw=canonical(value);self.validate_candidate(raw)
         # Each actual inventory file/alias is reread before this candidate can
         # be exported. The candidate is still not approved for an actual run.
         for path,row in self.files.items():need(equal(self.ops.fact(path),{key:row[key] for key in ('bytes','sha256','mode')}),'inventory full selected file readback')
@@ -2504,7 +2509,527 @@ def verify_node_stage_observation(raw,expected):
     return {'schema':'bw.ring3.node-stage-admission.v1','stagedNodeObserved':True,'runtimeCandidate':False,'qualified':False,'boundary':dict(NODE_STAGE_BOUNDARY)}
 
 
+STAGED_RUNTIME_INVENTORY_ENABLED=False
+STAGED_EMPTY_PYTHON_SOURCES={'/usr/lib/python3.12/urllib/__init__.py':{'kind':'python-source-empty','bytes':0,'sha256':'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','mode':0o644,'owner':[0,0],'links':1}}
+STAGED_RUNTIME_PLATFORM=tuple('BW_RING3_STAGED_INVENTORY_REQUEST_SHA256' if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key for key in NODE_STAGE_PLATFORM)
+
+
+def staged_runtime_request(raw,pin):
+    need(type(raw) is bytes and 0<len(raw)<=1<<20 and digest(pin)==sha(raw),'externally selected Node-stage request v3')
+    value=parse(raw);keys(value,'schema repository pullRequest head tree source selected nodeStage emptyPythonSources')
+    need(raw==canonical(value) and value['schema']=='bw.ring3.inventory-request.v3' and value['repository']=='CrispStrobe/bw-board' and
+         type(value['pullRequest']) is int and 0<value['pullRequest']<2**31,'canonical fixed Node-stage request')
+    digest(value['head'],40);digest(value['tree'],40)
+    source_raw=prerequisite_original(canonical(value['source']));source=parse(source_raw);keys(source,'schema head tree files')
+    need(source_raw==canonical(source) and source['schema']=='bw.ring3.source.v1' and source['head']==value['head'] and
+         source['tree']==value['tree'] and type(source['files']) is dict and set(source['files'])==SETUP_SOURCE_PATHS,'closed stage source12')
+    for row in source['files'].values():
+        keys(row,'mode blob bytes sha256');need(row['mode']=='100644','stage regular Git mode');integer(row['bytes'],1,4<<20);digest(row['sha256']);digest(row['blob'],40)
+    selected={'node':{'path':NODE_STAGE_TARGET,**RUNTIME_SELECTED['node']},'qemu':{'path':RUNTIME_QEMU,**RUNTIME_SELECTED['qemu']}}
+    stage={'source':RUNTIME_NODE,'destination':NODE_STAGE_TARGET,'owner':[0,0],'fileMode':0o555,'directoryMode':0o555}
+    need(equal(value['selected'],selected) and equal(value['nodeStage'],stage) and equal(value['emptyPythonSources'],STAGED_EMPTY_PYTHON_SOURCES),'fixed typed stage source/destination/owner/mode and pins')
+    return value,source
+
+
+def staged_runtime_event(raw,request,pin,environment):
+    event=parse(raw);pr=event.get('pull_request',{});body=pr.get('body');start='<!-- BW_RING3_STAGED_RUNTIME_INVENTORY_V3\n';end='\nBW_RING3_STAGED_RUNTIME_INVENTORY_V3 -->'
+    need(type(body) is str and body.count(start)==body.count(end)==1 and body.index(start)<body.index(end),'one immutable stage request block')
+    block=body.split(start,1)[1].split(end,1)[0];wrapper=parse(block.encode())
+    need(canonical(wrapper).decode().rstrip('\n')==block and prerequisite_original(canonical(wrapper))==canonical(request) and
+         wrapper['sha256']==pin,'exact stage event request bytes')
+    need(event.get('action')=='labeled' and event.get('label',{}).get('name')=='x86-ring3-staged-runtime-inventory' and
+         event.get('repository',{}).get('full_name')=='CrispStrobe/bw-board' and event.get('sender',{}).get('login')=='CrispStrobe' and
+         type(event.get('number')) is int and event['number']==request['pullRequest'] and type(pr.get('number')) is int and pr['number']==event['number'] and
+         pr.get('state')=='open' and pr.get('head',{}).get('sha')==request['head'] and pr.get('head',{}).get('repo',{}).get('full_name')=='CrispStrobe/bw-board' and
+         pr['head']['repo'].get('fork') is False and pr.get('base',{}).get('ref')=='master' and pr['base'].get('repo',{}).get('full_name')=='CrispStrobe/bw-board',
+         'fixed owned stage event')
+    need(type(environment) is dict and all(environment.get(k)==v for k,v in {'GITHUB_RUN_ATTEMPT':'1','GITHUB_REPOSITORY':'CrispStrobe/bw-board',
+        'GITHUB_EVENT_NAME':'pull_request','GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':'staged-runtime-inventory','BW_EXPECTED_HEAD':request['head'],
+        'BW_EXPECTED_TREE':request['tree'],'BW_RING3_STAGED_INVENTORY_REQUEST_SHA256':pin,
+        'GITHUB_WORKFLOW_REF':'CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request['pullRequest'])+'/merge'}.items()),'closed stage platform joins')
+    need(type(environment.get('GITHUB_RUN_ID')) is str and re.fullmatch('[1-9][0-9]{0,19}',environment['GITHUB_RUN_ID']),'first Node-stage run')
+    digest(environment.get('GITHUB_WORKFLOW_SHA'),40)
+
+
+def staged_runtime_record(record,pin):
+    keys(record,'schema request event platform source sourceCommands eventIdentity copy recordBoundary firstFailure secondary')
+    need(record['schema']=='bw.ring3.node-stage-original.v2' and record['firstFailure'] is None and record['secondary']==[] and
+        record['recordBoundary']=='verified copy before directory publication and ancestor close','closed Node installation record boundary')
+    request_raw=prerequisite_original(canonical(record['request']));request,source=staged_runtime_request(request_raw,pin)
+    event_raw=prerequisite_original(canonical(record['event']));environment=record['platform']
+    need(type(environment) is dict and set(environment)==set(STAGED_RUNTIME_PLATFORM),'closed stage recorded platform')
+    staged_runtime_event(event_raw,request,pin,environment);need(equal(record['source'],source),'root Git/live source joins request')
+    copy=record['copy'];keys(copy,'created sourceBefore sourceAfter sourceNamedAfter bytesCopied sourceBytesRead writeUncertain targetAfterFailure directoryAfterFailure copiedSha256 readbackSha256 filePublicationAttempted directoryPublicationAttempted filePublished directoryPublished file directory')
+    need(copy['created']==[str(NODE_STAGE_ROOT),NODE_STAGE_TARGET] and copy['filePublicationAttempted'] is True and copy['directoryPublicationAttempted'] is False and
+        copy['filePublished'] is True and copy['directoryPublished'] is False and
+        type(copy['bytesCopied']) is int and copy['bytesCopied']==RUNTIME_SELECTED['node']['bytes'] and
+        type(copy['sourceBytesRead']) is int and copy['sourceBytesRead']==copy['bytesCopied'] and copy['writeUncertain'] is False and copy['targetAfterFailure'] is None and copy['directoryAfterFailure'] is None and
+        copy['copiedSha256']==copy['readbackSha256']==RUNTIME_SELECTED['node']['sha256'],'verified fixed copy before directory publication')
+    for name in ('sourceBefore','sourceAfter','sourceNamedAfter','file','directory'):
+        info=copy[name];need(type(info) is list and len(info)==8 and all(type(x) is int for x in info),'raw stage metadata shape')
+        need(all(0<=x<2**64 for x in info[:7]) and -2**63<=info[7]<2**63,'raw stage metadata scalar bounds')
+    before=copy['sourceBefore'];need(before==copy['sourceAfter']==copy['sourceNamedAfter'] and stat.S_ISREG(before[2]) and before[2]&0o6000==0 and
+        before[5:7]==[1,RUNTIME_SELECTED['node']['bytes']],'untrusted cache source held identity and extent')
+    file=copy['file'];directory=copy['directory']
+    need(stat.S_ISREG(file[2]) and stat.S_IMODE(file[2])==0o555 and file[3:7]==[0,0,1,RUNTIME_SELECTED['node']['bytes']] and
+        stat.S_ISDIR(directory[2]) and stat.S_IMODE(directory[2])==0o700 and directory[3:5]==[0,0],'fixed published Node and prepublication directory')
+    commands=record['sourceCommands'];need(type(commands) is list and len(commands)==3,'three original stage Git observations')
+    git=['--no-replace-objects','-c','gc.auto=0','-c','maintenance.auto=false'];safe=None
+    tails=[['rev-parse','HEAD'],['rev-parse','HEAD^{tree}'],['ls-tree','-r','HEAD','--',*sorted(SETUP_SOURCE_PATHS)]]
+    outputs=[(request['head']+'\n').encode(),(request['tree']+'\n').encode(),''.join(source['files'][path]['mode']+' blob '+source['files'][path]['blob']+'\t'+path+'\n' for path in sorted(SETUP_SOURCE_PATHS)).encode()]
+    previous=0;parent=None
+    for index,command in enumerate(commands):
+        keys(command,'argv process stdout stderr');argv=command['argv'];need(type(argv) is list and len(argv)>3 and argv[:2]==['/usr/bin/git','-c'] and
+            type(argv[2]) is str and argv[2].startswith('safe.directory=/'),'scoped stage source Git checkout')
+        if safe is None:safe=argv[2]
+        need(argv==['/usr/bin/git','-c',safe,*git,*tails[index]],'fixed Node-stage Git descriptor')
+        process=command['process'];start,end=v8_process(process,'discovery',argv,
+            {'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin','GIT_NO_LAZY_FETCH':'1','GIT_CONFIG_NOSYSTEM':'1'},10000)
+        if parent is None:parent=process['parentPid']
+        need(start>=previous and process['parentPid']==parent,'causal sequential source Git processes under one installer');previous=end
+        need(prerequisite_original(canonical(command['stdout']))==outputs[index] and command['stderr'] is None,'exact original stage Git output')
+    keys(record['eventIdentity'],'st_dev st_ino st_mode st_uid st_gid st_nlink st_size st_mtime_ns')
+    event_meta=record['eventIdentity']
+    need(all(type(x) is int for x in event_meta.values()) and all(0<=event_meta[key]<2**64 for key in event_meta if key!='st_mtime_ns') and
+        -2**63<=event_meta['st_mtime_ns']<2**63 and event_meta['st_size']==len(event_raw) and stat.S_ISREG(event_meta['st_mode']),'held official event extent')
+    return request,source
+
+
+def staged_runtime_expectation(raw,expected_sha256):
+    """Standalone stable-policy admission. Raw ASLR text is never its pin."""
+    need(type(raw) is bytes and 0<len(raw)<=256<<10 and digest(expected_sha256)==sha(raw),'external runtime expectation original pin')
+    value=parse(raw);keys(value,'schema platform executables versions files aliases packages packagePaths probes emptyPythonSources')
+    need(raw==canonical(value) and value['schema']=='bw.ring3.runtime-expectation.v2','canonical explicit runtime expectation version')
+    keys(value['platform'],'sysname release machine')
+    need(value['platform']['sysname']=='Linux' and value['platform']['machine']=='x86_64' and
+         type(value['platform']['release']) is str and re.fullmatch('[A-Za-z0-9_.+-]{1,128}',value['platform']['release']),'selected platform release')
+    files=value['files'];aliases=value['aliases']
+    need(type(files) is dict and 1<=len(files)<=512 and type(aliases) is dict and len(aliases)<=256,'held stable graph counts')
+    need(equal(value['emptyPythonSources'],STAGED_EMPTY_PYTHON_SOURCES) and len(files)+len(value['emptyPythonSources'])<=512 and
+        not ((set(files)|set(aliases))&set(value['emptyPythonSources'])) and
+        all(resolve_alias(path,aliases)==path for path in value['emptyPythonSources']) and RUNTIME_NODE not in files and RUNTIME_NODE not in aliases,'explicit disjoint typed-empty/staged selection under shared cap')
+    total=0
+    for path,row in files.items():
+        runtime_path(path);keys(row,'bytes sha256 kind mode');total+=integer(row['bytes'],1,268435456);digest(row['sha256'])
+        need(row['kind'] in RUNTIME_KINDS and type(row['mode']) is int and 0<=row['mode']<=0o777 and row['mode']&0o022==0,
+             'selected file kind/permission mode')
+        if row['kind'].endswith('-binary') or row['kind'] in ('observation-tool','tool-interpreter'):need(row['mode']&0o111!=0,'selected executable permissions')
+    need(total<=1073741824,'held selected graph total extent')
+    for path,row in aliases.items():
+        runtime_path(path);keys(row,'linkText target');runtime_path(row['target'])
+        need(path not in files and type(row['linkText']) is str and 0<len(row['linkText'].encode())<=256 and
+             re.fullmatch('[A-Za-z0-9_.+/-]+',row['linkText']) and
+             resolve_alias(posixpath.normpath(posixpath.join(posixpath.dirname(path),row['linkText'])),aliases)==row['target'],
+             'selected stable alias text/canonical target')
+    need(all(resolve_alias(path,aliases)==path for path in files),'canonical selected file keys')
+    keys(value['executables'],'node python qemu');keys(value['versions'],'node python qemu')
+    for role,requested in (('node',NODE_STAGE_TARGET),('python','/usr/bin/python3'),('qemu',RUNTIME_QEMU)):
+        path=resolve_alias(requested,aliases);row=value['executables'][role];keys(row,'path bytes sha256')
+        need(path in files and row=={'path':path,'bytes':files[path]['bytes'],'sha256':files[path]['sha256']} and
+             type(row['bytes']) is int and files[path]['kind']==role+'-binary','fixed selected executable graph join')
+        if role in RUNTIME_SELECTED:need({key:row[key] for key in ('bytes','sha256')}==RUNTIME_SELECTED[role],'independent historical '+role+' selection')
+    need(value['versions']['node']=='v22.23.3' and type(value['versions']['python']) is str and re.fullmatch(r'Python 3\.\d+\.\d+',value['versions']['python']) and
+         type(value['versions']['qemu']) is str and re.fullmatch(r'QEMU emulator version 8\.2\.2(?:[ (][^\r\n]*)?',value['versions']['qemu']),'selected runtime versions')
+    packages=value['packages'];need(type(packages) is list and len(packages)==5 and
+         [row.get('name') for row in packages if type(row) is dict]==sorted(PACKAGE_NAMES),'five sorted unique package rows')
+    for row in packages:
+        keys(row,'name version architecture');need(type(row['version']) is str and re.fullmatch('[A-Za-z0-9.+:~_-]{1,128}',row['version']) and
+             row['architecture'] in ('amd64','all'),'stable selected package fields')
+        if row['name']=='qemu-system-x86':need(row['version']=='1:8.2.2+ds-0ubuntu1.18' and row['architecture']=='amd64','historical selected QEMU package')
+    paths=value['packagePaths'];need(type(paths) is list and 0<len(paths)<=2048 and paths==sorted(set(paths)),'bounded sorted stable package path union')
+    for path in paths:runtime_path(path)
+    module=resolve_alias(RUNTIME_TCG,aliases);need(module in files and files[module]['kind']=='tcg-module' and RUNTIME_TCG in paths,'selected i386 TCG module')
+    required={value['executables']['qemu']['path'],module}|{path for path,row in files.items() if row['kind']=='qemu-data'}
+    need(any(row['kind']=='qemu-data' for row in files.values()) and required<={resolve_alias(path,aliases) for path in paths},'selected QEMU package file ownership')
+    need(equal(value['probes'],stable_probe_descriptors(value)),'complete fixed probe descriptor/executable roster')
+    return value
+
+
+def verify_staged_runtime_stable_original(original,expectation_raw,expected_sha256):
+    expected=staged_runtime_expectation(expectation_raw,expected_sha256)
+    runtime(original,original)  # Preserve every legacy internal/raw predicate.
+    need(equal(original['platform'],expected['platform']) and equal(original['executables'],expected['executables']) and
+         equal(original['versions'],expected['versions']),'raw runtime joins admitted stable platform/executables/versions')
+    package=original['qemuPackage']
+    for path,row in package['files'].items():
+        need(path in expected['files'] and equal(row,{key:expected['files'][path][key] for key in ('bytes','sha256','kind')}),
+             'every discovered original file joins selected superset')
+    for path,row in package['aliases'].items():need(path in expected['aliases'] and equal(row,expected['aliases'][path]),'discovered original alias joins selected superset')
+    required={path for path,row in expected['files'].items() if row['kind'] in
+        ('qemu-data','tcg-module','qemu-binary','node-binary','python-binary','observation-tool','tool-interpreter')}
+    need(required<=set(package['files']),'complete engine/tool/package graph in original')
+    for probe in package['probes']:
+        if probe['role']=='package-version':
+            need(sorted(line.split('\t') for line in probe['stdout'].splitlines())==[[row['name'],row['version'],row['architecture']] for row in expected['packages']],
+                 'raw original package version join')
+        elif probe['role']=='package-files':need(sorted(set(probe['stdout'].splitlines()))==expected['packagePaths'],'raw original stable package path union')
+        elif probe['role'].startswith('ldd-'):
+            need(all(resolve_alias(path,expected['aliases']) in expected['files'] for path in ldd_paths(probe['stdout'])),
+                 'raw ldd paths independently join selected graph without ASLR pinning')
+    return expected
+
+
+def observe_staged_inventory_stage(environ):
+    value={'schema':'bw.ring3.staged-node-observation.v2','stageObserved':False,'runtimeCandidate':False,'qualified':False,
+        'record':None,'files':{},'directories':[],'source':{},'identity':None,'firstFailure':None,'secondary':[],'publicationSafe':False};backend=None
+    def failed(error,phase):
+        row={'phase':phase,'name':type(error).__name__,'message':str(error)}
+        if value['firstFailure'] is None:value['firstFailure']=row
+        else:value['secondary'].append(row)
+        value['secondary'].extend(getattr(error,'setup_secondary',[]))
+    try:
+        ids=[environ.get('SUDO_'+name,'') for name in ('UID','GID')]
+        need(all(type(x) is str and re.fullmatch('[1-9][0-9]{0,9}',x) and int(x)<2**31 for x in ids),'known stage invoker')
+        uid,gid=map(int,ids);need(os.getresuid()==(uid,)*3 and os.getresgid()==(gid,)*3 and os.getgroups()==[],'actual dropped stage observer IDs/groups')
+        status=setup_proc_read('/proc/self/status')
+        membership=setup_proc_read('/proc/self/cgroup');setup_membership(membership,environ['GITHUB_RUN_ID'])
+        value['identity']={'uid':uid,'gid':gid,'groups':os.getgroups(),'status':status,'membership':membership,'pid':os.getpid()}
+        node_stage_identity(value['identity'],uid,gid);value['publicationSafe']=True  # Before any acquired JSON.
+        pin=digest(environ.get('BW_RING3_STAGED_INVENTORY_REQUEST_SHA256'))
+        backend=NodeStageReadonly();backend.open();record_raw=backend.read('installation.original.json',True);value['record']={'bytes':len(record_raw),'sha256':sha(record_raw),'base64':base64.b64encode(record_raw).decode()}
+        record=parse(record_raw);request,source=staged_runtime_record(record,pin)
+        need(value['identity']['pid']==record['sourceCommands'][0]['process']['parentPid'],'exec preserves installer/observer PID')
+        event_raw=prerequisite_original(canonical(record['event']));staged_runtime_event(event_raw,request,pin,environ)
+        need(set(environ)==set(STAGED_RUNTIME_PLATFORM)|{'LANG','HOME','PATH'} and all(environ[key]==expected for key,expected in
+            {'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'}.items()) and
+            equal(record['platform'],{key:environ[key] for key in STAGED_RUNTIME_PLATFORM}),'Node-stage original actual closed platform join')
+        for path,row in sorted(source['files'].items()):
+            target=Path.cwd()/path;info=target.lstat();need(target.resolve(strict=True)==target and stat.S_ISREG(info.st_mode) and
+                stat.S_IMODE(info.st_mode)==0o644 and (info.st_uid,info.st_gid)==(uid,gid),'live stage source regular owner/mode')
+            raw=inventory_file(target,4<<20);fact={'bytes':len(raw),'sha256':sha(raw),'blob':hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest(),'mode':'100644'}
+            value['source'][path]=fact;need(equal(fact,row),'independent stage source12 bytes')
+        backend.read('node');need(backend.facts['node']['before']==record['copy']['file'],'finite installer/observer Node file identity join');value['stageObserved']=True
+    except BaseException as error:failed(error,'stage-observer')
+    finally:
+        if backend is not None:
+            value['files']=backend.facts;value['directories']=[{'path':str(path),'before':metadata} for path,fd,metadata in backend.directories]
+            try:backend.close()
+            except BaseException as error:failed(error,'stage-observer-close')
+    return value
+
+
+def verify_staged_inventory_stage(raw,expected):
+    keys(expected,'schema requestSha256 head tree runId workflowSha invoker observation')
+    need(expected['schema']=='bw.ring3.staged-node-expectation.v2','explicit metadata-only stage expectation')
+    digest(expected['requestSha256']);digest(expected['head'],40);digest(expected['tree'],40);digest(expected['workflowSha'],40);integer(expected['runId'],1)
+    need(type(expected['invoker']) is list and len(expected['invoker'])==2 and all(type(x) is int and 0<x<2**31 for x in expected['invoker']),'externally observed stage invoker')
+    keys(expected['observation'],'bytes sha256');need(type(raw) is bytes and integer(expected['observation']['bytes'],1,1<<20)==len(raw) and
+        digest(expected['observation']['sha256'])==sha(raw),'independently selected staged observation bytes')
+    value=parse(raw);keys(value,'schema stageObserved runtimeCandidate qualified record files directories source identity firstFailure secondary publicationSafe')
+    need(raw==canonical(value) and value['schema']=='bw.ring3.staged-node-observation.v2' and value['stageObserved'] is True and
+        value['runtimeCandidate'] is False and value['qualified'] is False and value['firstFailure'] is None and value['secondary']==[] and value['publicationSafe'] is True,
+        'genuine staged metadata observation followed by explicit unimplemented boundary refusal')
+    record_raw=prerequisite_original(canonical(value['record']));record=parse(record_raw);request,source=staged_runtime_record(record,expected['requestSha256'])
+    env=record['platform'];need(request['head']==expected['head'] and request['tree']==expected['tree'] and env['GITHUB_RUN_ID']==str(expected['runId']) and
+        env['GITHUB_WORKFLOW_SHA']==expected['workflowSha'] and [env['SUDO_UID'],env['SUDO_GID']]==list(map(str,expected['invoker'])),'external stage source/platform/invoker joins')
+    need(equal(value['source'],source['files']),'independent live stage source12 joins request')
+    identity=value['identity'];node_stage_identity(identity,*expected['invoker'])
+    need(identity['pid']==record['sourceCommands'][0]['process']['parentPid'],'original exec preserves installer/observer PID')
+    setup_membership(identity['membership'],str(expected['runId']))
+    files=value['files'];need(type(files) is dict and set(files)=={'node','installation.original.json'},'two independent stage file observations')
+    for name,row in files.items():
+        keys(row,'before after namedAfter closeSucceeded bytes sha256 prefix');need(row['closeSucceeded'] is True and equal(row['before'],row['after']) and equal(row['before'],row['namedAfter']),
+            'closed stable stage readonly file')
+        metadata=row['before'];need(type(metadata) is list and len(metadata)==8 and all(type(x) is int for x in metadata) and all(0<=x<2**64 for x in metadata[:7]) and
+            -2**63<=metadata[7]<2**63 and stat.S_ISREG(metadata[2]) and
+            metadata[3:6]==[0,0,1] and metadata[6]==row['bytes'] and type(row['bytes']) is int,'root regular stage metadata')
+        mode=0o555 if name=='node' else 0o444;need(stat.S_IMODE(metadata[2])==mode,'strict independent stage file mode')
+        data=value['record'] if name!='node' else RUNTIME_SELECTED['node']
+        need(row['bytes']==data['bytes'] and row['sha256']==data['sha256'],'independent staged file content identity')
+        if name=='node':need(row['prefix']=='7f454c46' and row['before']==record['copy']['file'],'staged ELF/install finite file identity')
+        else:need(row['prefix']==record_raw[:4].hex(),'observed original record prefix joins retained bytes')
+    dirs=value['directories'];need(type(dirs) is list and [row['path'] for row in dirs]==['/','/run',str(NODE_STAGE_ROOT)],'fixed readonly stage ancestors')
+    for index,row in enumerate(dirs):
+        keys(row,'path before');info=row['before'];need(type(info) is list and len(info)==8 and all(type(x) is int for x in info) and all(0<=x<2**64 for x in info[:7]) and -2**63<=info[7]<2**63 and
+            stat.S_ISDIR(info[2]) and info[3:5]==[0,0] and info[2]&0o022==0 and (index!=2 or stat.S_IMODE(info[2])==0o555),'root nonwritable stage ancestor original')
+    need(dirs[-1]['before'][:2]==record['copy']['directory'][:2],'finite staged directory inode join')
+    return {'schema':'bw.ring3.staged-node-admission.v2','stagedNodeObserved':True,'runtimeCandidate':False,'qualified':False,'sourceHead':request['head']}
+
+
+class StagedInventoryFiles(InventoryFiles):
+    """Only the explicitly selected empty Python source has a zero-extent role."""
+    def empty_python(self,path):
+        need(path in STAGED_EMPTY_PYTHON_SOURCES,'fixed typed empty Python-source role/path')
+        fd=None;first=None;row={'path':path,'namedBefore':None,'heldBefore':None,'heldAfter':None,'namedAfter':None,
+            'bytesRead':0,'readHex':None,'eof':None,'sha256':None,'closeAttempted':False,'closeSucceeded':False,'firstFailure':None,'secondary':[]}
+        try:
+            need(str(Path(path).resolve(strict=True))==path,'canonical typed empty Python source')
+            row['namedBefore']=setup_metadata(os.stat(path,follow_symlinks=False))
+            fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK);row['heldBefore']=setup_metadata(os.fstat(fd));info=row['heldBefore']
+            need(info==row['namedBefore'] and stat.S_ISREG(info[2]) and stat.S_IMODE(info[2])==0o644 and info[3:5]==[0,0] and
+                info[5]==1 and info[6]==0,'root0644 zero-extent typed Python source')
+            raw=os.read(fd,1);row.update(bytesRead=len(raw),readHex=raw.hex(),eof=raw==b'',sha256=sha(raw))
+            need(raw==b'','typed empty Python-source held EOF')
+            row['heldAfter']=setup_metadata(os.fstat(fd));row['namedAfter']=setup_metadata(os.stat(path,follow_symlinks=False))
+            need(info==row['heldAfter']==row['namedAfter'] and str(Path(path).resolve(strict=True))==path,'typed empty source held/named readback')
+        except BaseException as error:first=error
+        finally:
+            if first is not None:
+                for name,observe in (('heldAfter',lambda:os.fstat(fd)),('namedAfter',lambda:os.stat(path,follow_symlinks=False))):
+                    if name=='heldAfter' and fd is None:continue
+                    try:row[name]=setup_metadata(observe())
+                    except BaseException as error:
+                        first.setup_secondary=getattr(first,'setup_secondary',[])+[{'phase':'typed-empty-readback','name':type(error).__name__,'message':str(error)}]
+            if fd is not None:
+                row['closeAttempted']=True
+                try:os.close(fd);row['closeSucceeded']=True
+                except BaseException as error:
+                    if first is None:first=error
+                    else:first.setup_secondary=getattr(first,'setup_secondary',[])+[{'phase':'typed-empty-close','name':type(error).__name__,'message':str(error)}]
+        if first is not None:
+            row['firstFailure']={'phase':'typed-empty-python','name':type(first).__name__,'message':str(first)}
+            row['secondary']=list(getattr(first,'setup_secondary',[]));first.empty_python_original=row;raise first
+        return row
+
+
+def verify_staged_empty_python(rows):
+    keys(rows,'before after')
+    expected_path=next(iter(STAGED_EMPTY_PYTHON_SOURCES));previous=None
+    for row in rows.values():
+        keys(row,'path namedBefore heldBefore heldAfter namedAfter bytesRead readHex eof sha256 closeAttempted closeSucceeded firstFailure secondary')
+        need(row['path']==expected_path and type(row['bytesRead']) is int and row['bytesRead']==0 and row['readHex']=='' and row['eof'] is True and
+            row['sha256']==STAGED_EMPTY_PYTHON_SOURCES[expected_path]['sha256'] and row['closeAttempted'] is True and row['closeSucceeded'] is True and
+            row['firstFailure'] is None and row['secondary']==[],'complete typed empty source EOF/hash/close observations')
+        info=row['heldBefore'];need(type(info) is list and len(info)==8 and all(type(x) is int for x in info) and
+            all(0<=x<2**64 for x in info[:7]) and -2**63<=info[7]<2**63 and info[2]==0o100644 and info[3:5]==[0,0] and
+            info[5]==1 and info[6]==0 and all(equal(row[key],info) for key in ('namedBefore','heldAfter','namedAfter')),'strict typed empty source four raw stat joins')
+        need(previous is None or equal(previous,info),'same typed empty source before/after inventory');previous=info
+
+
+class StagedRuntimeInventory(RuntimeInventory):
+    NODE_PATH=NODE_STAGE_TARGET
+
+    def __init__(self,stage_node,files=None,probe=None):
+        super().__init__(StagedInventoryFiles() if files is None else files,probe)
+        self.stage_node=tuple(parse(canonical(stage_node)));self.empty_originals={};self.staged_attempted=False
+
+    def add(self,path,kind):
+        resolved,_=self.ops.resolve(runtime_path(path))
+        if resolved in STAGED_EMPTY_PYTHON_SOURCES:
+            need(kind=='python-stdlib' and resolved==path,'typed empty source only in fixed Python role, without alias substitution')
+            return resolved
+        need(len(self.files)+len(STAGED_EMPTY_PYTHON_SOURCES)+(0 if resolved in self.files else 1)<=512,'shared positive and typed-empty inventory file cap')
+        result=super().add(path,kind)
+        mode=self.files[result]['mode'];need(type(mode) is int and 0<=mode<=0o777 and mode&0o022==0,
+            'staged inventory executable/file permission guard before metadata tools')
+        if kind=='node-binary':
+            need(result==NODE_STAGE_TARGET and equal(self.ops.metadata[result],list(self.stage_node)) and self.files[result]['mode']==0o555 and
+                self.ops.metadata[result][3:5]==[0,0],'independent staged Node owner/mode/identity before tools')
+        return result
+
+    def candidate(self,value):
+        need(set(STAGED_EMPTY_PYTHON_SOURCES)<=set(self.partial['pythonFiles']),'typed empty source remains in actual Python census')
+        return dict(value,schema='bw.ring3.runtime-expectation.v2',emptyPythonSources=parse(canonical(STAGED_EMPTY_PYTHON_SOURCES)))
+
+    def validate_candidate(self,raw):return staged_runtime_expectation(raw,sha(raw))
+
+    def empty_read(self,when):
+        try:self.empty_originals[when]=self.ops.empty_python(next(iter(STAGED_EMPTY_PYTHON_SOURCES)))
+        except BaseException as error:
+            self.empty_originals[when]=getattr(error,'empty_python_original',None);raise
+
+    def discover(self):
+        need(not self.staged_attempted,'staged inventory consumed; no retry');self.staged_attempted=True
+        self.partial={'emptyPythonSources':self.empty_originals}
+        try:
+            self.empty_read('before')  # Mandatory known source is admitted before every metadata tool.
+            raw=super().discover();self.empty_read('after');verify_staged_empty_python(self.empty_originals);return raw
+        finally:self.partial['emptyPythonSources']=self.empty_originals
+
+
+def staged_runtime_inventory_entry(environ,files=None,probe=None):
+    value={'schema':'bw.ring3.staged-runtime-inventory-original.v1','stageBefore':None,'stageAfter':None,'parent':None,
+        'inventory':None,'candidate':None,'firstFailure':None,'secondary':[],'publicationSafe':False};originals={};inventory=None
+    def failed(error,phase):
+        error_row=getattr(error,'inventory_first',{'phase':phase,'name':type(error).__name__,'message':str(error)})
+        if value['firstFailure'] is None:value['firstFailure']=error_row
+        else:value['secondary'].append(error_row)
+        value['secondary'].extend(getattr(error,'setup_secondary',[]));value['secondary'].extend(getattr(error,'inventory_secondary',[]))
+    try:
+        before=observe_staged_inventory_stage(environ);value['stageBefore']=before;value['publicationSafe']=before['publicationSafe']
+        if before['firstFailure'] is not None:
+            error=Refusal(before['firstFailure']['message']);error.inventory_first=before['firstFailure'];error.inventory_secondary=before['secondary'];raise error
+        need(before['stageObserved'] is True,'complete independent staged Node observation before metadata tools')
+        record=parse(prerequisite_original(canonical(before['record'])))
+        originals['staged.request.json']=prerequisite_original(canonical(record['request']))
+        originals['staged.event.json']=prerequisite_original(canonical(record['event']))
+        value['parent']=inventory_parent_availability()
+        inventory=StagedRuntimeInventory(before['files']['node']['before'],files,probe)
+        candidate=inventory.discover();value['candidate']={'bytes':len(candidate),'sha256':sha(candidate),'base64':base64.b64encode(candidate).decode()}
+    except BaseException as error:failed(error,'staged-runtime-inventory')
+    finally:
+        if inventory is not None:
+            value['inventory']=inventory.partial
+            rejected=getattr(inventory.ops,'rejected',{})
+            if rejected:value['inventory']['rejectedFiles']=rejected
+        if value['stageBefore'] is not None and value['stageBefore']['stageObserved']:
+            after=observe_staged_inventory_stage(environ);value['stageAfter']=after
+            if after['firstFailure'] is not None:
+                error=Refusal(after['firstFailure']['message']);error.inventory_first=after['firstFailure'];error.inventory_secondary=after['secondary'];failed(error,'staged-after')
+            elif not all(equal(after[key],value['stageBefore'][key]) for key in ('record','files','directories','source')):
+                failed(Refusal('staged source/input/file changed across complete inventory'),'staged-after')
+    raw=canonical(value)
+    if len(raw)>1<<20:
+        error={'phase':'staged-inventory-original-cap','name':'Refusal','message':'unchanged staged inventory original JSON cap'}
+        if value['firstFailure'] is None:value['firstFailure']=error
+        else:value['secondary'].append(error)
+        prefix=raw[:128<<10]
+        raw=canonical({'schema':'bw.ring3.staged-runtime-inventory-overflow.v1','firstFailure':value['firstFailure'],'secondary':value['secondary'],
+            'attemptedBytes':len(raw),'attemptedSha256':sha(raw),'prefix':{'bytes':len(prefix),'sha256':sha(prefix),'base64':base64.b64encode(prefix).decode()}})
+    originals['runtime.staged-inventory.json']=raw
+    return originals,value['firstFailure'] is None and value['secondary']==[],value['publicationSafe']
+
+
+def verify_staged_runtime_inventory_log(raw,external):
+    keys(external,'schema requestSha256 runId attempt head tree workflowSha workflowFileSha256 jobId jobName conclusion logBytes logSha256 invoker')
+    need(external['schema']=='bw.ring3.staged-inventory-expectation.v1' and type(external['attempt']) is int and external['attempt']==1 and
+        external['jobName']=='staged-runtime-inventory' and external['conclusion']=='success','independently admitted official staged inventory job')
+    integer(external['jobId'],1);need(type(external['runId']) is str and re.fullmatch('[1-9][0-9]{0,19}',external['runId']),'official staged inventory run')
+    for name,size in (('head',40),('tree',40),('workflowSha',40),('workflowFileSha256',64),('requestSha256',64),('logSha256',64)):digest(external[name],size)
+    need(integer(external['logBytes'],1,8<<20)==len(raw) and sha(raw)==external['logSha256'],'independently selected staged inventory log original')
+    originals=decode_staged_inventory_log(raw);value=parse(originals['runtime.staged-inventory.json'])
+    keys(value,'schema stageBefore stageAfter parent inventory candidate firstFailure secondary publicationSafe')
+    need(value['schema']=='bw.ring3.staged-runtime-inventory-original.v1' and value['firstFailure'] is None and value['secondary']==[] and
+        value['publicationSafe'] is True,'complete failure-free staged runtime inventory original')
+    for stage in (value['stageBefore'],value['stageAfter']):
+        stage_raw=canonical(stage);expected={'schema':'bw.ring3.staged-node-expectation.v2','requestSha256':external['requestSha256'],
+            'head':external['head'],'tree':external['tree'],'runId':int(external['runId']),'workflowSha':external['workflowSha'],
+            'invoker':external['invoker'],'observation':{'bytes':len(stage_raw),'sha256':sha(stage_raw)}}
+        verify_staged_inventory_stage(stage_raw,expected)
+    before,after=value['stageBefore'],value['stageAfter']
+    need(all(equal(before[key],after[key]) for key in ('record','files','directories','source')),'same staged source/files before and after every metadata tool')
+    record=parse(prerequisite_original(canonical(before['record'])))
+    request_raw=prerequisite_original(canonical(record['request']));request,source=staged_runtime_request(request_raw,external['requestSha256'])
+    need(request_raw==originals['staged.request.json'] and prerequisite_original(canonical(record['event']))==originals['staged.event.json'] and
+        source['files'][WORKFLOW]['sha256']==external['workflowFileSha256'],'exact raw request/event/source/workflow joins, without projected originals')
+    parent=value['parent'];keys(parent,'meta controls alreadyEnabled')
+    need(type(parent['meta']) is list and len(parent['meta'])==8 and all(type(x) is int for x in parent['meta']) and
+        all(0<=x<2**64 for x in parent['meta'][:7]) and -2**63<=parent['meta'][7]<2**63 and stat.S_ISDIR(parent['meta'][2]) and parent['meta'][3:5]==[0,0] and
+        parent['meta'][2]&0o022==0 and set(parent['controls'])=={'cgroup.controllers','cgroup.subtree_control'},'readonly original shared parent availability')
+    for row in parent['controls'].values():
+        keys(row,'meta raw');need(type(row['meta']) is list and len(row['meta'])==8 and all(type(x) is int for x in row['meta']) and
+            all(0<=x<2**64 for x in row['meta'][:7]) and -2**63<=row['meta'][7]<2**63 and stat.S_ISREG(row['meta'][2]) and row['meta'][3:5]==[0,0] and
+            row['meta'][2]&0o022==0 and type(row['raw']) is str and len(row['raw'].encode('ascii'))<=4096,'bounded root-owned parent control observation')
+    enabled=all({'cpu','memory','pids'}<=set(row['raw'].split()) for row in parent['controls'].values())
+    need(parent['alreadyEnabled'] is enabled,'truthful parent availability, never parent mutation')
+    result=verify_staged_inventory_graph(value)
+    need(equal(value['inventory']['fileMetadata'][NODE_STAGE_TARGET],after['files']['node']['before']),'inventory Node observation joins independent staged inode/owner/mode/hash')
+    need(all(entry['process']['parentPid']==before['identity']['pid'] for entry in value['inventory']['processes']),
+        'all eleven actual metadata child processes descend from the dropped staged observer')
+    need(all(entry['process']['spawnMonoNs']>=record['sourceCommands'][-1]['process']['reapMonoNs'] for entry in value['inventory']['processes']),
+        'metadata probe windows follow root source admission on the same monotonic clock')
+    return dict(result,schema='bw.ring3.staged-runtime-inventory-admission.v1',candidateReviewed=False,actualRunApproved=False,
+        parentControllersAlreadyEnabled=enabled,selectedBoundary='staged executable/tool/package and selected Python superset, including typed empty source')
+
+
+
+def verify_staged_inventory_graph(value):
+    candidate_raw=prerequisite_original(canonical(value['candidate']));candidate=staged_runtime_expectation(candidate_raw,sha(candidate_raw))
+    inventory=value['inventory'];keys(inventory,'files aliases probes processes fileMetadata pythonFiles mappedLibraries mapsOriginal candidate emptyPythonSources')
+    need(equal(inventory['files'],candidate['files']) and equal(inventory['aliases'],candidate['aliases']) and
+         equal(inventory['candidate'],value['candidate']),'exact separately retained inventory candidate facts')
+    need(type(inventory['fileMetadata']) is dict and set(inventory['fileMetadata'])==set(candidate['files']),'complete actual inventory file metadata')
+    python_files=inventory['pythonFiles'];need(type(python_files) is list and len(python_files)<=256 and python_files==sorted(set(python_files)) and
+        all((path in candidate['files'] and candidate['files'][path]['kind']=='python-stdlib') or path in candidate['emptyPythonSources'] for path in python_files) and set(candidate['emptyPythonSources'])<=set(python_files),'retained selected Python file superset census')
+    maps_raw=prerequisite_original(canonical(inventory['mapsOriginal']));need(len(maps_raw)<=65536,'held raw Python maps original cap')
+    mapped=set()
+    for line in maps_raw.decode().splitlines():
+        fields=line.split(None,5)
+        if len(fields)<6 or not fields[5].startswith('/'):continue
+        path=fields[5];need(not path.endswith(' (deleted)'),'retained map paths not deleted')
+        if '.so' in Path(path).name or Path(path).name.startswith('ld-'):mapped.add(runtime_path(path))
+    need(len(mapped)<=128 and inventory['mappedLibraries']==sorted(mapped) and
+        all(resolve_alias(path,candidate['aliases']) in candidate['files'] for path in mapped),'independent raw mapped-library/selected graph join')
+    for path,metadata in inventory['fileMetadata'].items():
+        row=candidate['files'][path]
+        need(type(metadata) is list and len(metadata)==8 and all(type(x) is int for x in metadata) and all(0<=x<2**64 for x in metadata[:7]) and -2**63<=metadata[7]<2**63 and metadata[0]>0 and metadata[1]>0 and
+            stat.S_ISREG(metadata[2]) and stat.S_IMODE(metadata[2])==row['mode'] and metadata[6]==row['bytes'],'inventory file original mode/extent')
+    qemu=next(row for row in candidate['packages'] if row['name']=='qemu-system-x86')
+    runtime_original={'schema':'bw.ring3.runtime.v2','observationPolicy':'prelaunch-probes-and-before-after-file-readback','platform':candidate['platform'],
+        'executables':candidate['executables'],'versions':candidate['versions'],'qemuPackage':{'name':qemu['name'],'version':qemu['version'],'architecture':qemu['architecture'],
+        'files':{path:{key:row[key] for key in ('bytes','sha256','kind')} for path,row in candidate['files'].items()},'aliases':candidate['aliases'],'probes':inventory['probes']}}
+    verify_staged_runtime_stable_original(runtime_original,candidate_raw,sha(candidate_raw))
+    processes=inventory['processes'];need(type(processes) is list and len(processes)==11,'complete exact metadata probe process originals')
+    probe_by_role={probe['role']:probe for probe in inventory['probes']};seen=set();last=0;parent_pid=None
+    for entry in processes:
+        keys(entry,'role process stdout stderr');role=entry['role'];need(role in probe_by_role and role not in seen,'unique inventory process probe role');seen.add(role)
+        process=entry['process'];keys(process,'schema argv environment pid pgid parentPid startTicks spawnMonoNs reapMonoNs exitCode signal waitStatus timedOut rusage firstFailure secondary')
+        probe=probe_by_role[role]
+        need(process['schema']=='bw.ring3.inventory-process.v1' and equal(process['argv'],probe['argv']) and equal(process['environment'],probe['environment']) and
+            type(process['exitCode']) is int and process['exitCode']==0 and integer(process['waitStatus'],0,65535)==0 and process['signal'] is None and
+            process['timedOut'] is False and process['firstFailure'] is None and process['secondary']==[],'complete fixed successful metadata probe process')
+        pid=integer(process['pid'],1);need(integer(process['pgid'],1)==pid and integer(process['parentPid'],1)!=pid,'fresh metadata process session')
+        integer(process['startTicks'],1)
+        if parent_pid is None:parent_pid=process['parentPid']
+        need(process['parentPid']==parent_pid,'one independent inventory parent')
+        start=integer(process['spawnMonoNs'],last);end=integer(process['reapMonoNs'],start);need(end-start<=10000000000,'finite ordered metadata probe windows');last=end
+        keys(process['rusage'],'userSeconds systemSeconds maxRssKiB')
+        for name in ('userSeconds','systemSeconds'):need(type(process['rusage'][name]) in (int,float) and 0<=process['rusage'][name]<=10,'bounded original inventory process usage')
+        integer(process['rusage']['maxRssKiB'],0,1048576)
+        need(prerequisite_original(canonical(entry['stdout']))==probe['stdout'].encode('utf-8','surrogateescape') and
+             prerequisite_original(canonical(entry['stderr']))==probe['stderr'].encode('utf-8','surrogateescape'),'exact raw metadata probe stream/process join')
+    verify_staged_empty_python(inventory['emptyPythonSources'])
+    return {'candidateSha256':sha(candidate_raw),'candidateBytes':len(candidate_raw)}
+
+
+
+def emit_staged_inventory(originals,emit,flush):
+    need(type(originals) is dict and set(originals)<={'staged.request.json','staged.event.json','runtime.staged-inventory.json'} and
+         all(type(raw) is bytes and len(raw)<=1<<20 for raw in originals.values()) and sum(map(len,originals.values()))<=5<<20,'bounded distinct inventory originals')
+    encoded_bytes=0;chunks=0
+    for name,raw in sorted(originals.items()):
+        encoded=base64.b64encode(raw).decode();count=max(1,(len(encoded)+3071)//3072);need(count<=456,'finite inventory chunks')
+        for index in range(count):
+            line=b'RING3_STAGED_RUNTIME_INVENTORY '+canonical({'schema':'bw.ring3.staged-runtime-inventory-log.v1','name':name,'index':index,'count':count,
+                'bytes':len(raw),'sha256':sha(raw),'data':encoded[index*3072:(index+1)*3072]})
+            need(encoded_bytes+len(line)<=8<<20 and chunks<2600,'held encoded inventory log cap')
+            written=emit(line);need(type(written) is int and written==len(line),'complete immutable inventory log chunk')
+            encoded_bytes+=len(line);chunks+=1
+    flush()
+
+
+def decode_staged_inventory_log(raw):
+    need(type(raw) is bytes and len(raw)<=8<<20,'bounded runtime inventory official log original')
+    groups={};chunks=0
+    for line in raw.splitlines():
+        marker=b'RING3_STAGED_RUNTIME_INVENTORY ';offset=line.find(marker)
+        if offset<0:continue
+        prefix=line[:offset];need(prefix==b'' or re.fullmatch(rb'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ',prefix),'canonical inventory log timestamp')
+        value=parse(line[offset+len(marker):]);keys(value,'schema name index count bytes sha256 data')
+        need(value['schema']=='bw.ring3.staged-runtime-inventory-log.v1' and value['name'] in
+            ('staged.request.json','staged.event.json','runtime.staged-inventory.json'),'exact inventory log version/roles')
+        count=integer(value['count'],1,456);index=integer(value['index'],0,count-1);extent=integer(value['bytes'],0,1<<20);digest(value['sha256'])
+        need(type(value['data']) is str and len(value['data'])<=3072,'bounded inventory original chunk')
+        group=groups.setdefault(value['name'],{'count':count,'bytes':extent,'sha256':value['sha256'],'parts':[]})
+        need((group['count'],group['bytes'],group['sha256'])==(count,extent,value['sha256']) and index==len(group['parts']),
+             'one ordered immutable inventory original sequence')
+        group['parts'].append(value['data']);chunks+=1;need(chunks<=2600,'held finite inventory chunk count')
+    need(set(groups)=={'staged.request.json','staged.event.json','runtime.staged-inventory.json'},'three complete independent inventory originals')
+    originals={}
+    for name,group in groups.items():
+        need(len(group['parts'])==group['count'],'complete inventory original chunk sequence')
+        encoded=''.join(group['parts']);value=base64.b64decode(encoded,validate=True)
+        need(base64.b64encode(value).decode()==encoded and len(value)==group['bytes'] and sha(value)==group['sha256'],'exact inventory original encoding/bytes/hash')
+        originals[name]=value
+    need(sum(map(len,originals.values()))<=5<<20,'unchanged inventory raw aggregate cap')
+    return originals
+
+
 def main():
+    if '--inventory-staged-runtime' in sys.argv[1:]:
+        need(sys.argv[1:]==['--inventory-staged-runtime'],'exact single staged inventory mode')
+        need(STAGED_RUNTIME_INVENTORY_ENABLED is True,'staged runtime inventory disabled pending separate source/event review')
+        originals,passed,safe=staged_runtime_inventory_entry(dict(os.environ))
+        if safe:emit_staged_inventory(originals,sys.stdout.buffer.write,sys.stdout.buffer.flush)
+        raise SystemExit(0 if passed and safe else 1)
+    if sys.argv[1:2]==['--staged-runtime-inventory-log']:
+        parser=argparse.ArgumentParser(description='Independent original-only staged runtime inventory admission',allow_abbrev=False)
+        parser.add_argument('--staged-runtime-inventory-log',required=True);parser.add_argument('--external-admission',required=True)
+        need(len(sys.argv)==5 and sys.argv.count('--staged-runtime-inventory-log')==sys.argv.count('--external-admission')==1,'exact staged inventory audit inputs')
+        args=parser.parse_args()
+        with Path(args.staged_runtime_inventory_log).open('rb') as stream:raw=stream.read((8<<20)+1)
+        with Path(args.external_admission).open('rb') as stream:external=parse(stream.read((1<<20)+1))
+        print(json.dumps(verify_staged_runtime_inventory_log(raw,external),sort_keys=True));return
     if sys.argv[1:2]==['--node-stage-observation']:
         parser=argparse.ArgumentParser(description='Independent retained Node-stage observation audit',allow_abbrev=False)
         parser.add_argument('--node-stage-observation',required=True);parser.add_argument('--stage-expected',required=True)

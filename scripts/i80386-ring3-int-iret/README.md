@@ -1026,3 +1026,103 @@ required.
 ```sh
 /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --node-stage-only
 ```
+
+The separate staged-runtime inventory route now connects copying to a complete
+metadata candidate. The prior stage-only observer and its explicit boundary
+refusal stay unchanged. New `STAGED_RUNTIME_ENTRY_ENABLED`,
+`STAGED_RUNTIME_INVENTORY_ENABLED` and `staged-runtime-inventory` job guards are
+false; actual execution remains false. This route does not adopt a staged Node
+in generator, GEN, guest argv or V8 actual delivery.
+
+Its immutable request is `bw.ring3.inventory-request.v3`, with the v2 fields
+plus `emptyPythonSources`. `selected.node.path` explicitly names
+`/run/bw-ring3-node-22.23.3/node`; `nodeStage.source` still names the writable
+cache only as untrusted copy input. Both selections retain the same historical
+Node bytes/hash. The closed marker is `BW_RING3_STAGED_RUNTIME_INVENTORY_V3`,
+label `x86-ring3-staged-runtime-inventory`, job `staged-runtime-inventory` and
+external digest transport `BW_RING3_STAGED_INVENTORY_REQUEST_SHA256`. A variable
+is transport, not approval. Root validates request/event/source12/invoker before
+copying, retains `bw.ring3.node-stage-original.v2`, drops irreversibly and execs
+only the fixed independent reader `--inventory-staged-runtime`. Failed or
+unknown drop suppresses acquired stdout and stderr. Existing v2 stage requests
+and v1 inventory requests are not reinterpreted.
+
+The dropped reader independently observes the stage, raw PID/UID/GID/group/cap
+identity, immutable input, source12 and parent-controller availability before
+metadata tools. A staged subclass selects the fixed staged Node from its first
+file observation and every Node probe. Three explicit default-preserving hooks
+in `RuntimeInventory` select the node path, candidate decoration and validator;
+the old route still emits its original v1 candidate bytes. No runtime globals
+are rebound and no original path is renamed after execution. Staged files and
+tools reject setuid/setgid and group/world-write modes before any metadata
+process. Historical QEMU identity must match before probes; no apt, alternate
+binary, permission repair or parent-controller write is provided.
+
+Only `/usr/lib/python3.12/urllib/__init__.py` has the separate selected
+`python-source-empty` role. The v3 request and new candidate declare exactly
+`kind`, zero `bytes`, the empty SHA256, integer0644 `mode`, `owner=[0,0]` and
+`links=1`. Positive `files` and this typed roster are disjoint from each other
+and aliases, including aliases in ancestors. Together they share the512-file
+cap; alias256, Python census256, probe11 and every byte/time/output cap stay
+held. Generic files, binaries and libraries retain positive extent rules.
+
+A separate readonly implementation opens the fixed empty source with nofollow
+flags, verifies canonical root-owned single-link0644/zero extent, reads one
+byte to establish EOF and the empty digest, retains all four named/held raw stat
+observations, and closes. It repeats after the complete inventory, with exact
+identity equality. EOF, readback and close errors preserve primary/secondary
+facts; nonempty substitution, another path or role and missing actual Python
+census membership refuse. Other empty files remain failures until separately
+reviewed policy changes; none are dropped from the census to produce a candidate.
+
+All eleven original metadata process/stream records, libraries, aliases,
+packages, Python files and raw maps are retained under the existing finite
+limits. Probe parent PIDs join the dropped observer, and their monotonic windows
+follow the terminal root Git observations. Positive files and aliases are reread. Independent stage/source/input
+observations repeat after all probes, joining full Node hash, inode, ownership
+and mode to the actual inventory. The new `bw.ring3.runtime-expectation.v2`
+candidate explicitly includes the typed-empty partition and staged executable;
+its metadata does not supply independent runtime approval. Legacy runtime.v2
+positive-graph predicates are reused only as local finite checks; the typed
+partition is checked separately. No projected object is emitted as an original.
+
+The distinct `RING3_STAGED_RUNTIME_INVENTORY` stream has exactly
+`staged.request.json`, `staged.event.json` and `runtime.staged-inventory.json`.
+Its new log/original versions retain complete stage-before/after observations,
+copy original, graph, typed-source EOF/close facts and process originals. JSON
+1 MiB, total raw5 MiB, encoded8 MiB, chunk and candidate limits stay unchanged.
+Overflow retains the bounded failure prefix and cannot qualify. The still
+false15 minute job uses the same checkout/setup-node/upload action pins and
+exports only bounded log/stderr, never the executable. This budget is a
+backstop, not evidence of hosted sufficiency or preemption of blocked syscalls.
+
+The independent original-only audit is:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/reader.py \
+  --staged-runtime-inventory-log retained-staged-inventory.log \
+  --external-admission reviewed-staged-inventory-expectation.json
+```
+
+Its external `bw.ring3.staged-inventory-expectation.v1` closes `schema`,
+`requestSha256`, `runId`, `attempt`, `head`, `tree`, `workflowSha`,
+`workflowFileSha256`, `jobId`, `jobName`, `conclusion`, `logBytes`, `logSha256`
+and `invoker`. It joins separately admitted official metadata and exact original
+bytes to source, event, stage and all graph/probe facts. A positive verdict
+still has `candidateReviewed=false` and `actualRunApproved=false`. Runtime graph
+review/publication, separate activation and explicit actual mapping on a fresh
+VM remain necessary before the affected hosted guest qualification. Python
+startup and fixed platform setup/Git boundaries remain as stated above.
+
+Eight `--staged-runtime-only` controls execute the full root-copy/drop/observer,
+eleven metadata probes, all readbacks, log export and standalone audit over
+mocked OS/process edges and compact authored Node fixture bytes. They cover
+request/event/source joins, typed EOF and close failures, coherent rewritten
+originals, alias substitution, early privilege-mode refusal, shared cap512,
+no retry, fixed CLI arity and unknown-drop publication suppression. Historical
+production pins are asserted and restored; no tool, resource operation or guest
+runs locally.
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --staged-runtime-only
+```
