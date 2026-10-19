@@ -1,9 +1,0 @@
-# SDCC build artifacts — only .ihx (Intel HEX) is shipped
-*.asm
-*.lk
-*.lst
-*.map
-*.mem
-*.rel
-*.rst
-*.sym

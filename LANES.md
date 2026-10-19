@@ -5665,3 +5665,25 @@ failure remain retained; no CPU change or consumer pin is adopted. See the
 PR645 remains an active owner lane requiring its own actual qualification.
 Source-only landing does not qualify inactive compiler/native diagnostics or
 the ring3 guest path; activation guards and remaining contracts are preserved.
+
+
+### Selected QEMU availability follow-up — 2026-10-19
+
+Owner: ring3 runtime qualification. Claim the source proposal for explicit
+provisioning of the already selected QEMU before a new staged metadata observer.
+The consumed [run 39204174598](https://github.com/CrispStrobe/bw-board/actions/runs/39204174598)
+failed with the selected executable absent. Its retained originals join the
+reviewed request, event, source and executing workflow; Node staging/readback
+observed the fixed bytes, but no complete runtime candidate or probes qualified.
+PR645 remains draft and unqualified for master. All 11 enabled checks before
+that event passed, with nine reviewed skips; the failed event is retained.
+
+Scope: establish availability/provenance of `qemu-system-x86=1:8.2.2+ds-0ubuntu1.18`,
+then propose a separately reviewed setup step and controls for missing package,
+wrong version/hash, failed setup and unchanged disabled actual entry. Preserve
+QEMU's 26,359,752-byte selection and existing SHA256, all Node/runtime pins,
+observer boundaries and prior failures. No latest-version fallback, pin change,
+local tool/guest execution or rerun/relabel of the consumed event is included.
+A new source/request/workflow and distinct metadata-event boundary require
+review and all enabled CI before any fresh qualification. The detailed sequence
+and completion criteria are in the [task contract](docs/X86-NEXT-LANES.md#selected-qemu-availability--2026-10-19).

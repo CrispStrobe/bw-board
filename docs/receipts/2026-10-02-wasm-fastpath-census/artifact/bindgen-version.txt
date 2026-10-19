@@ -1,1 +1,0 @@
-wasm-bindgen 0.2.121
