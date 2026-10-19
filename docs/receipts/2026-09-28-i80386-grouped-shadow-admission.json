@@ -1,0 +1,677 @@
+{
+  "schema": "bw.i80386-grouped-shadow-result.v1",
+  "sourceRevision": "80137b0ce78af6a8e65245289995ae5d33737eba",
+  "completedSteps": 60000000,
+  "sourceHashesVerified": true,
+  "selectedReportedGuestParity": true,
+  "privateEvidenceSha256": {
+    "observedReport": "890b9bc05e2f9ab9d8e387e78664f0c18b18c5702b1615185f619974d8f3f292",
+    "baselineReport": "8a4fed02a96ea5814caaa8a64811445a304daf6668c168866a16d4f91caf07ac",
+    "sourceBoundCandidate": "b88b69c05a875762641f8a812cd282762d164a17340e14d2eb722b196e1a2759"
+  },
+  "eligibleRetiredOrdinals": 55316160,
+  "admittedOrdinals": 22624178,
+  "refusedOrdinals": 32691982,
+  "disjointRuns": 8674732,
+  "uniqueOrdinalsInRunsAtLeast8": 4642606,
+  "protected16OrVm86OrdinalsInRunsAtLeast8": 4298838,
+  "predeclaredGate": {
+    "overall": 15000000,
+    "protected16OrVm86": 5000000,
+    "passed": false
+  },
+  "modes": {
+    "real": {
+      "eligibleRetiredOrdinals": 12134947,
+      "admittedOrdinals": 2526308,
+      "refusedOrdinals": 9608639,
+      "disjointRuns": 1243559,
+      "uniqueOrdinalsInRunsAtLeast8": 169545,
+      "optimisticIoOrdinalsInRunsAtLeast8": 48,
+      "admittedAccessClasses": {
+        "register": 790836,
+        "ram-read": 538446,
+        "control": 919651,
+        "address-only": 44155,
+        "ram-write": 198099,
+        "ram-read+write": 4808,
+        "port-read": 2196,
+        "port-write": 28117
+      },
+      "longRunAccessClasses": {
+        "register": 56213,
+        "control": 57290,
+        "ram-read": 40617,
+        "ram-write": 13408,
+        "address-only": 308,
+        "ram-read+write": 1661,
+        "port-write": 48
+      },
+      "topAdmittedForms": [
+        {
+          "key": "75:-/-/-:o16:a16:-:control",
+          "count": 437428
+        },
+        {
+          "key": "74:-/-/-:o16:a16:-:control",
+          "count": 172225
+        },
+        {
+          "key": "73:-/-/-:o16:a16:-:control",
+          "count": 97463
+        },
+        {
+          "key": "eb:-/-/-:o16:a16:-:control",
+          "count": 95602
+        },
+        {
+          "key": "72:-/-/-:o16:a16:-:control",
+          "count": 87495
+        },
+        {
+          "key": "3d:-/66/-:o32:a16:-:register",
+          "count": 65769
+        },
+        {
+          "key": "83:-/66/-:o32:a16:m3r7b2d0:register",
+          "count": 65455
+        },
+        {
+          "key": "8b:-/-/-:o16:a16:m1r0b6d1:ram-read",
+          "count": 42897
+        }
+      ],
+      "topLongRunForms": [
+        {
+          "key": "75:-/-/-:o16:a16:-:control",
+          "count": 20305
+        },
+        {
+          "key": "74:-/-/-:o16:a16:-:control",
+          "count": 13872
+        },
+        {
+          "key": "3d:-/-/-:o16:a16:-:register",
+          "count": 10139
+        },
+        {
+          "key": "3c:-/-/-:o8:a16:-:register",
+          "count": 9922
+        },
+        {
+          "key": "76:-/-/-:o16:a16:-:control",
+          "count": 6703
+        },
+        {
+          "key": "73:-/-/-:o16:a16:-:control",
+          "count": 6343
+        },
+        {
+          "key": "72:-/-/-:o16:a16:-:control",
+          "count": 5964
+        },
+        {
+          "key": "83:-/-/-:o16:a16:m3r7b7d0:register",
+          "count": 3812
+        }
+      ],
+      "topRefusalReasons": [
+        {
+          "key": "unsafe-code",
+          "count": 5531915
+        },
+        {
+          "key": "unsupported-opcode",
+          "count": 2003398
+        },
+        {
+          "key": "deferred-stack-state",
+          "count": 1063261
+        },
+        {
+          "key": "deferred-control-stack-state",
+          "count": 596526
+        },
+        {
+          "key": "identity-change",
+          "count": 188658
+        },
+        {
+          "key": "unsupported-group-extension",
+          "count": 110773
+        },
+        {
+          "key": "deferred-segment-state",
+          "count": 45186
+        },
+        {
+          "key": "unsafe-data",
+          "count": 37215
+        }
+      ],
+      "topRunEndReasons": [
+        {
+          "key": "unsupported-opcode",
+          "count": 664124
+        },
+        {
+          "key": "deferred-control-stack-state",
+          "count": 200441
+        },
+        {
+          "key": "deferred-stack-state",
+          "count": 166761
+        },
+        {
+          "key": "identity-change",
+          "count": 82586
+        },
+        {
+          "key": "deferred-segment-state",
+          "count": 40962
+        },
+        {
+          "key": "unsupported-group-extension",
+          "count": 40677
+        },
+        {
+          "key": "unsafe-data",
+          "count": 25754
+        },
+        {
+          "key": "code-or-table-write",
+          "count": 15960
+        }
+      ]
+    },
+    "protected16": {
+      "eligibleRetiredOrdinals": 9068664,
+      "admittedOrdinals": 5319630,
+      "refusedOrdinals": 3749034,
+      "disjointRuns": 1389229,
+      "uniqueOrdinalsInRunsAtLeast8": 2948754,
+      "optimisticIoOrdinalsInRunsAtLeast8": 26366,
+      "admittedAccessClasses": {
+        "register": 1168137,
+        "ram-write": 301428,
+        "control": 2009330,
+        "ram-read": 1588029,
+        "ram-read+write": 179217,
+        "address-only": 45493,
+        "port-read": 26394,
+        "port-write": 1602
+      },
+      "longRunAccessClasses": {
+        "register": 500283,
+        "control": 1184403,
+        "ram-read": 957738,
+        "ram-write": 145903,
+        "address-only": 15741,
+        "ram-read+write": 118320,
+        "port-read": 26361,
+        "port-write": 5
+      },
+      "topAdmittedForms": [
+        {
+          "key": "74:-/-/-:o16:a16:-:control",
+          "count": 1126696
+        },
+        {
+          "key": "75:-/-/-:o16:a16:-:control",
+          "count": 564837
+        },
+        {
+          "key": "3a:26/-/-:o8:a16:m0r1b6d2:ram-read",
+          "count": 466011
+        },
+        {
+          "key": "3c:-/-/-:o8:a16:-:register",
+          "count": 307689
+        },
+        {
+          "key": "8b:-/-/-:o16:a16:m1r3b6d1:ram-read",
+          "count": 186283
+        },
+        {
+          "key": "ff:-/-/-:o16:a16:m1r0b6d1:ram-read+write",
+          "count": 163216
+        },
+        {
+          "key": "eb:-/-/-:o16:a16:-:control",
+          "count": 137545
+        },
+        {
+          "key": "0b:-/-/-:o16:a16:m3r7b7d0:register",
+          "count": 132598
+        }
+      ],
+      "topLongRunForms": [
+        {
+          "key": "74:-/-/-:o16:a16:-:control",
+          "count": 779859
+        },
+        {
+          "key": "3a:26/-/-:o8:a16:m0r1b6d2:ram-read",
+          "count": 466005
+        },
+        {
+          "key": "75:-/-/-:o16:a16:-:control",
+          "count": 279420
+        },
+        {
+          "key": "3c:-/-/-:o8:a16:-:register",
+          "count": 222572
+        },
+        {
+          "key": "0b:-/-/-:o16:a16:m3r7b7d0:register",
+          "count": 118262
+        },
+        {
+          "key": "8b:-/-/-:o16:a16:m1r3b6d1:ram-read",
+          "count": 117021
+        },
+        {
+          "key": "ff:-/-/-:o16:a16:m1r0b6d1:ram-read+write",
+          "count": 114233
+        },
+        {
+          "key": "eb:-/-/-:o16:a16:-:control",
+          "count": 86866
+        }
+      ],
+      "topRefusalReasons": [
+        {
+          "key": "unsupported-opcode",
+          "count": 1937337
+        },
+        {
+          "key": "deferred-stack-state",
+          "count": 867106
+        },
+        {
+          "key": "deferred-control-stack-state",
+          "count": 339529
+        },
+        {
+          "key": "identity-change",
+          "count": 246749
+        },
+        {
+          "key": "unsupported-group-extension",
+          "count": 166057
+        },
+        {
+          "key": "deferred-segment-state",
+          "count": 123893
+        },
+        {
+          "key": "unsafe-data",
+          "count": 22994
+        },
+        {
+          "key": "code-or-table-write",
+          "count": 22377
+        }
+      ],
+      "topRunEndReasons": [
+        {
+          "key": "unsupported-opcode",
+          "count": 838813
+        },
+        {
+          "key": "deferred-stack-state",
+          "count": 199933
+        },
+        {
+          "key": "unsupported-group-extension",
+          "count": 101265
+        },
+        {
+          "key": "deferred-control-stack-state",
+          "count": 91696
+        },
+        {
+          "key": "deferred-segment-state",
+          "count": 56111
+        },
+        {
+          "key": "identity-change",
+          "count": 53131
+        },
+        {
+          "key": "run-budget",
+          "count": 19793
+        },
+        {
+          "key": "unsafe-data",
+          "count": 10346
+        }
+      ]
+    },
+    "vm86": {
+      "eligibleRetiredOrdinals": 20282881,
+      "admittedOrdinals": 9073997,
+      "refusedOrdinals": 11208884,
+      "disjointRuns": 3301430,
+      "uniqueOrdinalsInRunsAtLeast8": 1350084,
+      "optimisticIoOrdinalsInRunsAtLeast8": 0,
+      "admittedAccessClasses": {
+        "control": 2100648,
+        "register": 3857255,
+        "ram-read": 2042451,
+        "ram-write": 993372,
+        "address-only": 31688,
+        "ram-read+write": 48583
+      },
+      "longRunAccessClasses": {
+        "register": 542508,
+        "control": 506200,
+        "ram-read": 240247,
+        "address-only": 1069,
+        "ram-write": 53952,
+        "ram-read+write": 6108
+      },
+      "topAdmittedForms": [
+        {
+          "key": "75:-/-/-:o16:a16:-:control",
+          "count": 797914
+        },
+        {
+          "key": "74:-/-/-:o16:a16:-:control",
+          "count": 480679
+        },
+        {
+          "key": "89:-/-/-:o16:a16:m1r2b6d1:ram-write",
+          "count": 383691
+        },
+        {
+          "key": "89:-/-/-:o16:a16:m3r4b5d0:register",
+          "count": 300591
+        },
+        {
+          "key": "89:-/-/-:o16:a16:m3r5b4d0:register",
+          "count": 293355
+        },
+        {
+          "key": "8b:26/-/-:o16:a16:m1r0b4d1:ram-read",
+          "count": 264170
+        },
+        {
+          "key": "89:-/-/-:o16:a16:m3r0b3d0:register",
+          "count": 258741
+        },
+        {
+          "key": "31:-/-/-:o16:a16:m3r2b2d0:register",
+          "count": 244615
+        }
+      ],
+      "topLongRunForms": [
+        {
+          "key": "75:-/-/-:o16:a16:-:control",
+          "count": 165128
+        },
+        {
+          "key": "3d:-/-/-:o16:a16:-:register",
+          "count": 106629
+        },
+        {
+          "key": "76:-/-/-:o16:a16:-:control",
+          "count": 101733
+        },
+        {
+          "key": "73:-/-/-:o16:a16:-:control",
+          "count": 99268
+        },
+        {
+          "key": "83:-/-/-:o16:a16:m3r7b7d0:register",
+          "count": 84995
+        },
+        {
+          "key": "74:-/-/-:o16:a16:-:control",
+          "count": 64982
+        },
+        {
+          "key": "72:-/-/-:o16:a16:-:control",
+          "count": 54099
+        },
+        {
+          "key": "8b:26/-/-:o16:a16:m1r0b4d1:ram-read",
+          "count": 52383
+        }
+      ],
+      "topRefusalReasons": [
+        {
+          "key": "deferred-stack-state",
+          "count": 3883402
+        },
+        {
+          "key": "unsafe-code",
+          "count": 2471975
+        },
+        {
+          "key": "unsupported-opcode",
+          "count": 2417551
+        },
+        {
+          "key": "identity-change",
+          "count": 932596
+        },
+        {
+          "key": "deferred-control-stack-state",
+          "count": 860309
+        },
+        {
+          "key": "deferred-segment-state",
+          "count": 322021
+        },
+        {
+          "key": "unsupported-group-extension",
+          "count": 273577
+        },
+        {
+          "key": "pre-step-event-horizon",
+          "count": 19847
+        }
+      ],
+      "topRunEndReasons": [
+        {
+          "key": "unsupported-opcode",
+          "count": 1475177
+        },
+        {
+          "key": "deferred-stack-state",
+          "count": 599121
+        },
+        {
+          "key": "identity-change",
+          "count": 462440
+        },
+        {
+          "key": "deferred-segment-state",
+          "count": 310936
+        },
+        {
+          "key": "deferred-control-stack-state",
+          "count": 255329
+        },
+        {
+          "key": "unsupported-group-extension",
+          "count": 127541
+        },
+        {
+          "key": "code-page-change",
+          "count": 57638
+        },
+        {
+          "key": "post-step-event-horizon",
+          "count": 9552
+        }
+      ]
+    },
+    "protected32": {
+      "eligibleRetiredOrdinals": 13829668,
+      "admittedOrdinals": 5704243,
+      "refusedOrdinals": 8125425,
+      "disjointRuns": 2740514,
+      "uniqueOrdinalsInRunsAtLeast8": 174223,
+      "optimisticIoOrdinalsInRunsAtLeast8": 23,
+      "admittedAccessClasses": {
+        "ram-read": 2248099,
+        "ram-write": 396813,
+        "register": 838592,
+        "control": 1958852,
+        "address-only": 135753,
+        "ram-read+write": 53141,
+        "port-write": 30210,
+        "port-read": 42783
+      },
+      "longRunAccessClasses": {
+        "ram-read": 79132,
+        "register": 46689,
+        "control": 43643,
+        "ram-write": 4577,
+        "port-write": 18,
+        "port-read": 5,
+        "ram-read+write": 143,
+        "address-only": 16
+      },
+      "topAdmittedForms": [
+        {
+          "key": "74:-/-/-:o32:a32:-:control",
+          "count": 832959
+        },
+        {
+          "key": "75:-/-/-:o32:a32:-:control",
+          "count": 582935
+        },
+        {
+          "key": "8b:-/-/-:o32:a32:m0r3b5d4:ram-read",
+          "count": 282280
+        },
+        {
+          "key": "72:-/-/-:o32:a32:-:control",
+          "count": 198684
+        },
+        {
+          "key": "80:-/-/-:o8:a32:m1r7b2d1:ram-read",
+          "count": 147684
+        },
+        {
+          "key": "73:-/-/-:o32:a32:-:control",
+          "count": 124152
+        },
+        {
+          "key": "eb:-/-/-:o32:a32:-:control",
+          "count": 122234
+        },
+        {
+          "key": "8b:-/-/-:o32:a32:m1r5b3d1:ram-read",
+          "count": 107055
+        }
+      ],
+      "topLongRunForms": [
+        {
+          "key": "74:-/-/-:o32:a32:-:control",
+          "count": 35409
+        },
+        {
+          "key": "8b:-/-/-:o32:a32:m1r5b3d1:ram-read",
+          "count": 15042
+        },
+        {
+          "key": "83:-/66/-:o16:a32:m0r7b5d4:ram-read",
+          "count": 14165
+        },
+        {
+          "key": "85:-/-/-:o32:a32:m3r0b0d0:register",
+          "count": 14165
+        },
+        {
+          "key": "8b:-/-/-:o32:a32:m0r0b6d0:ram-read",
+          "count": 14165
+        },
+        {
+          "key": "8b:-/-/-:o32:a32:m1r2b6d1:ram-read",
+          "count": 14165
+        },
+        {
+          "key": "8b:-/-/-:o32:a32:m3r7b0d0:register",
+          "count": 14162
+        },
+        {
+          "key": "8b:-/-/-:o32:a32:m2r6b3d4:ram-read",
+          "count": 13374
+        }
+      ],
+      "topRefusalReasons": [
+        {
+          "key": "unsupported-opcode",
+          "count": 4316198
+        },
+        {
+          "key": "deferred-stack-state",
+          "count": 1580503
+        },
+        {
+          "key": "deferred-control-stack-state",
+          "count": 977066
+        },
+        {
+          "key": "unsupported-group-extension",
+          "count": 723036
+        },
+        {
+          "key": "identity-change",
+          "count": 273500
+        },
+        {
+          "key": "unsafe-data",
+          "count": 120311
+        },
+        {
+          "key": "data-page-crossing",
+          "count": 86087
+        },
+        {
+          "key": "code-or-table-write",
+          "count": 33255
+        }
+      ],
+      "topRunEndReasons": [
+        {
+          "key": "unsupported-opcode",
+          "count": 1737095
+        },
+        {
+          "key": "deferred-stack-state",
+          "count": 362575
+        },
+        {
+          "key": "deferred-control-stack-state",
+          "count": 297282
+        },
+        {
+          "key": "unsupported-group-extension",
+          "count": 186726
+        },
+        {
+          "key": "identity-change",
+          "count": 85496
+        },
+        {
+          "key": "data-page-crossing",
+          "count": 34694
+        },
+        {
+          "key": "code-or-table-write",
+          "count": 29505
+        },
+        {
+          "key": "code-page-change",
+          "count": 3474
+        }
+      ]
+    }
+  },
+  "limitation": "Disjoint retired-ordinal opportunity only; ordinary execution supplies optimistic syntax/semantics and synchronous I/O. No executable-backend feasibility or speed claim."
+}

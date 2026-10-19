@@ -1,0 +1,29 @@
+{
+  "status": "PASS",
+  "source": "12c678b4c0eafea2a13d4e9802f1f772c1040719",
+  "actualExternalNodeWrappers": 1,
+  "actualNamedPythonMockMethods": 2,
+  "sourcePaths": {
+    "own": 15,
+    "roles": 390
+  },
+  "exit": {
+    "exitCode": 0,
+    "timeout": false,
+    "wallSeconds": 4.0874262768775225,
+    "wallScope": "parent including final authentication",
+    "childExitWallSeconds": 0.3839982636272907,
+    "rawWait4Status": 0,
+    "leaderRusage": {
+      "userSeconds": 0.278822,
+      "systemSeconds": 0.068525,
+      "maxRSSKiB": 50504
+    },
+    "rusageScope": "wait4 leader and its waited descendants; not guest or execution-window CPU",
+    "error": null,
+    "cleanupError": null,
+    "finalizationError": null,
+    "pinsEqual": true
+  },
+  "scope": "ONE_FOCUSED_SOURCE_CONTROL; heldmechanics hash equality and defaultfalse; no setup/perf/guest/build"
+}

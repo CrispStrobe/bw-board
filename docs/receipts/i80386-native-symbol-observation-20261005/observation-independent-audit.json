@@ -1,0 +1,23 @@
+{
+  "status": "INDEPENDENT_POST_ACK_CONTAINER_CONTROL_AND_TERMINAL_AUDIT_PASS",
+  "runId": 37249319996,
+  "artifactId": 11320875527,
+  "completeExportedFiles": 86,
+  "sourceRoles": 390,
+  "controlCommands": 4,
+  "ackFrameHex": "61636b0a00",
+  "nativeWordsPerResetFinalLast": 166,
+  "n": 316562,
+  "q": 316562,
+  "orderedPioEvents": 16475,
+  "wholeBoardAndRamHash": "PASS",
+  "closed": {
+    "native": true,
+    "provider": true
+  },
+  "rawPerfBytes": 1478129,
+  "fullHeldValidator": "root bounded unchanged held terminal PASS; saved source reviewed",
+  "samplingQuality": "PENDING_RAW_EVENT_SYMBOL_MMAPPED_IMAGES_THREAD_LOSS_UNWIND_AUDIT",
+  "clockScope": "conservative ACK interval only; execution-only attribution unproved",
+  "scope": "Same soleZIP read-only independent comparisons; no decoding tools/extraction/guest replay."
+}

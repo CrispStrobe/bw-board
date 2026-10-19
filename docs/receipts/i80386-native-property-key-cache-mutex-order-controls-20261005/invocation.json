@@ -1,0 +1,37 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "--test-name-pattern=^exact complete counted inverse|^generated lifecycle and held",
+    "test/i80386-native-property-key-cache-source.test.mjs"
+  ],
+  "cwd": "/tmp/bw-native-property-key-cache-source-20261005",
+  "revision": "cd27495e594a47c5a2a701d800b1d4397fa6a15a",
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "niceIncrement": 10,
+    "compilerMemoryLimit": "not applicable; no compiler child for selected structural controls; Node heap cap128"
+  },
+  "blankHooks": [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "LD_PRELOAD",
+    "LD_AUDIT",
+    "BW_HOT_NAPI_PROFILE",
+    "NODE_V8_COVERAGE"
+  ],
+  "absentCompilerOverrides": [
+    "CPATH",
+    "CPLUS_INCLUDE_PATH",
+    "C_INCLUDE_PATH",
+    "GCC_EXEC_PREFIX",
+    "COMPILER_PATH",
+    "LIBRARY_PATH"
+  ],
+  "scope": "Two selected Node structural cases: exact inverse and generated lifecycle wiring; helper mock unselected, no compiler/addon/guest/profile/build"
+}

@@ -1,0 +1,12 @@
+{
+  "status": "ROOT_FULL_NATIVE_MODE_COMPARISON_PASS",
+  "fullCaptureFieldsCompared": 12,
+  "resumes": 448,
+  "N": "100702",
+  "Q": "100700",
+  "canonicalRows": 1649374,
+  "logicalClockRows": 201402,
+  "offSha256": "41a16293d16c89d0724743ec9a218a710ff0c4e112d3d9c360281caac071c588",
+  "onSha256": "dac00973bb24adb23990bdc2db68c210b17177471d5595e1b54f5dbc0bc29430",
+  "scope": "Fixed PIC fixture semantic qualification only; no performance/physicalRTx/generalAT qualification"
+}

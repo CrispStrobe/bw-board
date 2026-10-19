@@ -1,0 +1,31 @@
+{
+  "schema": "astra.i80386-shared-ram.v1",
+  "date": "2026-09-27",
+  "status": "Experimental no-copy memory backing only; production JavaScript 386 unchanged and no speedup claimed",
+  "workload": {
+    "command": "XV6_SHARED_RAM=1 XV6_LEAN=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+    "guestSteps": 24338279,
+    "xv6ImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "fileSystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "kernelSha256": "025cef15636863063e4101aa0cfc424e556f70ad43b6a80d57581c05b465202d"
+  },
+  "sourceSha256": {
+    "src/experimental/i80386-ram-bridge.c": "c75b1d289f4b29531e998b5cb4b8d540d12d361033f3a3f5941ad54ce8e1ef2b",
+    "src/experimental/i80386-ram-bridge.js": "316725acd8934cea10abae2b4625d4840d1ad34d6a4c67e77dab519da24722ef",
+    "wasm/i80386-ram-bridge.wasm": "8051f3b0ffef80ddff38feeaf8c4a9c6454d75143dd80322b6c1f9e124484928",
+    "scripts/probe-xv6-stock.mjs": "a2addd930851992e709f13030fab8651df71a830188a15792058138b75a7b865"
+  },
+  "module": {
+    "wasmBytes": 353,
+    "reservedRamBytes": 16777216,
+    "maximumMemoryBytes": 16908288,
+    "growthRejected": true
+  },
+  "guestResult": {
+    "userCpuSeconds": 27.45,
+    "rawReportSha256": "9f6db3c19f5932b77a7900fd449aeed61484d3ec0d76f9875c2ad72b72135554",
+    "normalizedReportSha256": "96f5a9da5f1c391b03454fd985c2ecd632879a2d6188924035bec2fbfe5bb2ad",
+    "normalization": "Set three worktree-specific media paths to empty and omit the sharedRam flag. All other complete receipt fields match the plain JavaScript 386 run."
+  },
+  "verification": "Two RAM bridge tests passed; 24,338,279-step xv6 run passed. The bridge changes backing storage, not instruction execution, and its CPU time is not evidence of a gain."
+}

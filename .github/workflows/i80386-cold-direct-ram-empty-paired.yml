@@ -1,0 +1,205 @@
+name: Cold CPU3 empty-batch paired timing
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cold-direct-empty-paired-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  paired:
+    if: >-
+      github.event.label.name == 'x86-direct-ram-empty-paired' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    env:
+      BW_EXPECTED_HARNESS_HEAD: ${{ github.event.pull_request.head.sha }}
+      GH_TOKEN: ${{ github.token }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      NODE_V8_COVERAGE: ''
+      BW_HOT_NAPI_PROFILE: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: harness
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1
+          path: qualified
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Authenticate source and bounded controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cold-direct-empty-paired-evidence"
+          mkdir "$evidence"
+          test "$(git -C harness rev-parse HEAD)" = "$BW_EXPECTED_HARNESS_HEAD"
+          test "$(git -C qualified rev-parse HEAD)" = acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1
+          test -z "$(git -C harness status --porcelain)"
+          test -z "$(git -C qualified status --porcelain)"
+          test "$(node --version)" = v22.23.3
+          timeout 60s node harness/scripts/cold-direct-ram-empty-paired/provider-control.mjs \
+            "$GITHUB_WORKSPACE/qualified" > "$evidence/provider-control.stdout" 2> "$evidence/provider-control.stderr"
+          timeout 30s node harness/scripts/cold-direct-ram-empty-paired/native-child-control.mjs \
+            > "$evidence/native-child-control.stdout" 2> "$evidence/native-child-control.stderr"
+          timeout 30s node harness/scripts/cold-direct-ram-empty-paired/source-admission-control.mjs \
+            > "$evidence/source-admission-control.stdout" 2> "$evidence/source-admission-control.stderr"
+          timeout 30s python3 -B harness/scripts/cold-direct-ram-empty-paired/policy-control.py \
+            > "$evidence/policy-control.stdout" 2> "$evidence/policy-control.stderr"
+          timeout 60s python3 -B harness/scripts/cold-direct-ram-paired/resource-control.py "$(command -v node)" \
+            > "$evidence/resource-control.json" 2> "$evidence/resource-control.stderr"
+          timeout 120s node harness/scripts/cold-direct-ram-empty-paired/source-admission.mjs \
+            "$GITHUB_WORKSPACE/harness" "$BW_EXPECTED_HARNESS_HEAD" "$GITHUB_WORKSPACE/qualified" \
+            "$evidence/source-admission.json" > "$evidence/source-admission.stdout" \
+            2> "$evidence/source-admission.stderr"
+          test -z "$(git -C harness status --porcelain)"
+          test -z "$(git -C qualified status --porcelain)"
+          {
+            printf 'run=%s attempt=%s event=%s harness=%s qualified=acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1\n' \
+              "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_EVENT_NAME" "$BW_EXPECTED_HARNESS_HEAD"
+            node --version
+            python3 --version
+            c++ --version
+            uname -a
+            lscpu
+            df -h "$RUNNER_TEMP"
+            sha256sum "$(command -v node)" harness/.github/workflows/i80386-cold-direct-ram-empty-paired.yml
+          } > "$evidence/host-and-source.txt"
+          cp qualified/roms/free-at-bios/LICENSE "$evidence/free-at-bios-LICENSE.txt"
+          cp qualified/roms/free-at-bios/README.md "$evidence/free-at-bios-README.txt"
+      - name: Authenticate both official guest packets before timing
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cold-direct-empty-paired-evidence"
+          timeout 180s gh api /repos/CrispStrobe/bw-board/actions/artifacts/11474662523/zip \
+            > "$RUNNER_TEMP/cold-direct-actual-qualified.zip"
+          timeout 180s gh api /repos/CrispStrobe/bw-board/actions/artifacts/11483318041/zip \
+            > "$RUNNER_TEMP/cold-direct-empty-actual-qualified.zip"
+          timeout 180s python3 -B harness/scripts/cold-direct-ram-paired/reference.py \
+            "$RUNNER_TEMP/cold-direct-actual-qualified.zip" "$evidence/reference.json" \
+            > "$evidence/reference-auth.stdout" 2> "$evidence/reference-auth.stderr"
+          timeout 180s python3 -B harness/scripts/cold-direct-ram-empty-paired/empty-reference.py \
+            "$RUNNER_TEMP/cold-direct-empty-actual-qualified.zip" \
+            "$RUNNER_TEMP/cold-direct-actual-qualified.zip" "$evidence/empty-prior-qualification.json" \
+            > "$evidence/empty-reference-auth.stdout" 2> "$evidence/empty-reference-auth.stderr"
+      - name: Install bounded native build dependencies and fetch pinned Bochs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y build-essential libltdl-dev libnode-dev
+          test -r /usr/include/node/node_api.h
+          git init "$RUNNER_TEMP/cold-direct-pristine"
+          git -C "$RUNNER_TEMP/cold-direct-pristine" remote add origin https://github.com/bochs-emu/Bochs.git
+          timeout 180s git -C "$RUNNER_TEMP/cold-direct-pristine" fetch --depth=1 --no-tags origin 0e45b736ef9792eb9b752b0a35db49eaf2faea47
+          git -C "$RUNNER_TEMP/cold-direct-pristine" checkout --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/cold-direct-pristine" rev-parse HEAD)" = 0e45b736ef9792eb9b752b0a35db49eaf2faea47
+          for notice in COPYING COPYING.LIB LICENSE; do
+            for folder in "$RUNNER_TEMP/cold-direct-pristine" "$RUNNER_TEMP/cold-direct-pristine/bochs"; do
+              if test -f "$folder/$notice"; then
+                cp "$folder/$notice" "$RUNNER_TEMP/cold-direct-empty-paired-evidence/upstream-$(basename "$folder")-$notice.txt"
+              fi
+            done
+          done
+      - name: Rebuild and authenticate unchanged qualified direct addon
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cold-direct-empty-paired-evidence"
+          export BOCHS_386_ROOT="$RUNNER_TEMP/cold-direct-pristine"
+          export BW_EXPECTED_HEAD=acdb5dcef438c0ac7bc3c7794d43af4371d6e0d1
+          cd qualified
+          timeout 180s node scripts/prepare-bochs-cpu3-native-cold-direct-ram.mjs --prepare \
+            "$RUNNER_TEMP/cold-direct-prepared" > "$evidence/prepare.json" 2> "$evidence/prepare.stderr"
+          timeout 60s node scripts/bochs-cpu3-native-cold-direct-ram/verify-build-control.mjs \
+            "$evidence/prepare.json" > "$evidence/metadata-controls.stdout" 2> "$evidence/metadata-controls.stderr"
+          cd "$RUNNER_TEMP/cold-direct-prepared/bochs"
+          timeout 180s ./configure --enable-cpu-level=3 --with-nogui --disable-plugins --disable-debugger \
+            --disable-repeat-speedups --disable-handlers-chaining --enable-instrumentation=instrument/stubs \
+            'CFLAGS=-O2 -fPIC' 'CXXFLAGS=-O2 -fPIC' \
+            > "$evidence/configure.stdout" 2> "$evidence/configure.stderr"
+          timeout 900s nice make -j1 -f Makefile -f bw_direct_addon.mk bw_direct.node \
+            > "$evidence/make.stdout" 2> "$evidence/make.stderr"
+          cd "$GITHUB_WORKSPACE/qualified"
+          timeout 60s node scripts/bochs-cpu3-native-cold-direct-ram/verify-build.mjs \
+            "$evidence/prepare.json" "$RUNNER_TEMP/cold-direct-prepared/bochs/bw_direct.node" \
+            "$evidence/build-auth.json" > "$evidence/build-auth.stdout" 2> "$evidence/build-auth.stderr"
+          sha256sum "$RUNNER_TEMP/cold-direct-prepared/bochs/bw_direct.node" > "$evidence/direct-addon-sha256.txt"
+      - name: Run same-host semantic-gated alternating pairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cold-direct-empty-paired-evidence"
+          node harness/scripts/cold-direct-ram-paired/configuration.mjs \
+            "$GITHUB_WORKSPACE/qualified" "$evidence" > "$evidence/config-auth.json"
+          python3 - "$GITHUB_WORKSPACE" "$RUNNER_TEMP" "$BW_EXPECTED_HARNESS_HEAD" <<'PY'
+          import hashlib,json,pathlib,shutil,sys
+          workspace=pathlib.Path(sys.argv[1]);temp=pathlib.Path(sys.argv[2]);head=sys.argv[3]
+          evidence=temp/'cold-direct-empty-paired-evidence'
+          digest=lambda p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()
+          config=json.loads((evidence/'config-auth.json').read_text())['direct']
+          addon=temp/'cold-direct-prepared/bochs/bw_direct.node'
+          data={'schema':'bw.cold-direct-ram.empty-paired-setup.v1',
+            'harnessRoot':str(workspace/'harness'),'harnessHead':head,
+            'qualifiedRoot':str(workspace/'qualified'),
+            'sourceAdmission':str(evidence/'source-admission.json'),
+            'priorQualification':str(evidence/'empty-prior-qualification.json'),
+            'priorQualificationSha256':digest(evidence/'empty-prior-qualification.json'),
+            'addon':str(addon),'addonSha256':digest(addon),
+            'buildAuth':str(evidence/'build-auth.json'),'buildAuthSha256':digest(evidence/'build-auth.json'),
+            'configuration':config['path'],'configurationSha256':config['sha256'],
+            'reference':str(evidence/'reference.json'),'referenceSha256':digest(evidence/'reference.json'),
+            'output':str(evidence/'pairs'),'node':str(pathlib.Path(shutil.which('node')).resolve())}
+          (evidence/'setup.json').write_text(json.dumps(data,sort_keys=True,indent=2)+'\n')
+          PY
+          python3 -B harness/scripts/cold-direct-ram-empty-paired/parent.py "$evidence/setup.json" \
+            > "$evidence/parent.stdout" 2> "$evidence/parent.stderr"
+          test "$(git -C harness rev-parse HEAD)" = "$BW_EXPECTED_HARNESS_HEAD"
+          test -z "$(git -C harness status --porcelain)"
+          test -z "$(git -C qualified status --porcelain)"
+      - name: Inventory retained evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$RUNNER_TEMP/cold-direct-empty-paired-evidence" <<'PY'
+          import hashlib,json,pathlib,sys
+          root=pathlib.Path(sys.argv[1]);root.mkdir(exist_ok=True)
+          files={str(p.relative_to(root)):{'bytes':p.stat().st_size,
+                 'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+                 for p in sorted(root.rglob('*')) if p.is_file() and p.name!='artifact-inventory.json'}
+          (root/'artifact-inventory.json').write_text(json.dumps({'files':files},indent=2)+'\n')
+          PY
+      - name: Retain timing and first-failure evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cold-direct-empty-paired-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cold-direct-empty-paired-evidence/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

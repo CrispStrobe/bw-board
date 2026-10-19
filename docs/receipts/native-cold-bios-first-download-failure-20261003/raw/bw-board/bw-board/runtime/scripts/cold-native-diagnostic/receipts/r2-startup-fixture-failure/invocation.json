@@ -1,0 +1,22 @@
+{
+  "command": [
+    "python3",
+    "-B",
+    "scripts/cold-native-diagnostic/test_parent.py"
+  ],
+  "cwd": "/tmp/bw-cold-native-diagnostic-source-20261003",
+  "CPU": 10,
+  "wall": 30,
+  "file": 8388608,
+  "core": 0,
+  "nice": 10,
+  "blankHooks": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  },
+  "scope": "pure controls including synthetic nested-session timeout; no artifact/network/native"
+}

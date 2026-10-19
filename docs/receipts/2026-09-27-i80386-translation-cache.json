@@ -1,0 +1,36 @@
+{
+  "schema": "astra.i80386-translation-cache.v1",
+  "date": "2026-09-27",
+  "nodeVersion": "v20.20.2",
+  "baselineRevision": "2feb23a3c4799f285c56d7304ed48873a79e6cc3",
+  "workload": "stock xv6-public eeb7b415dbcb12cc362d0783e41c3d1f44066b17 forktest, 4 MiB, bundled Bochs BIOS",
+  "command": "XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+  "inputSha256": {
+    "xv6.img": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "fs.img": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "kernel": "025cef15636863063e4101aa0cfc424e556f70ad43b6a80d57581c05b465202d"
+  },
+  "sourceSha256": {
+    "baselineI80386": "db27e7540a388bc06ebd9194b459d3fd014f0cc26ac395d8c874959806055b0b",
+    "optimizedI80386": "e93db862fb236f4121e31c344e439cfc620c26a8c364552c18fb619d1a13a8d3",
+    "optimizedAtMachine": "509fb910298fb6232bf642e760d3194af6ea4a15256683fccff5b9333b0292fa",
+    "probe": "0756a2eff99930620906863c6840256d975eafc8a3caa61110a9defa7d1f3190"
+  },
+  "change": "Opt-in successful 4 KiB translation cache on the experimental 386 AT, invalidated on guest page-table writes, host and DMA writes, CR0/CR3/CR4 changes and A20 transitions; string-opcode dispatch no longer allocates arrays per instruction.",
+  "userCpuSeconds": {
+    "baseline": [40.05, 37.56],
+    "optimized": [32.77, 33.47]
+  },
+  "meanUserCpuSeconds": {
+    "baseline": 38.805,
+    "optimized": 33.12
+  },
+  "userCpuSpeedup": 1.17164855,
+  "guest": {
+    "steps": 24338279,
+    "reportSha256AllRuns": "94f776d8362c7fb53042a41d20bb7268779f6f4befeba82d08c6e061853a8a5f",
+    "note": "Complete JSON report identical, including serial, CPU, display, APIC and interrupt state."
+  },
+  "validation": "47 focused paging, string, I/O bitmap and task-switch tests passed; A20-gated host/DMA table write is covered.",
+  "limits": "This is a bounded 1.17x CPU-time improvement for forktest, not the requested 10x overall target. Wall time varied with host load. The isolated string-dispatch comparison was 32.85 versus 32.02 user CPU seconds (1.026x) and is included in the final combined result."
+}

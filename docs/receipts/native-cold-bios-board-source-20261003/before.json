@@ -1,0 +1,5 @@
+{
+  "scripts/bochs-cpu3-native-cold-bios/board-profile.mjs": "6ea848b7a97eea178926fc2c966e3ad4e8b76a60da6ba8cefe07f47e4d5922e3",
+  "scripts/bochs-cpu3-native-cold-bios/board-provider.mjs": "3b0338acd724f341c424e66119b7be287e4f01192fc0a94cca6b9f09bb986809",
+  "test/i80386-cold-bios-board-source.test.mjs": "d29160740aa95ed362bb2ccaf5acbb7898832e4887d1fe18e15ccce24a6a2366"
+}

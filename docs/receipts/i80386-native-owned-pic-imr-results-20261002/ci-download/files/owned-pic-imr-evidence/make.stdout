@@ -1,0 +1,441 @@
+g++ -std=c++17 -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES      -DBX_SHARE_PATH='"/usr/local/share/bochs"' -fPIC -pthread -I/usr/include/node -c bochs-cpu3-native-direct-board-adapter/napi.cc -o bw_direct_napi.o
+g++ -c -I. -I./. -Iinstrument/stubs -I./instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES      -DBX_SHARE_PATH='"/usr/local/share/bochs"' logio.cc -o logio.o
+g++ -c -I. -I./. -Iinstrument/stubs -I./instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES      -DBX_SHARE_PATH='"/usr/local/share/bochs"' main.cc -o main.o
+g++ -c -I. -I./. -Iinstrument/stubs -I./instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES      -DBX_SHARE_PATH='"/usr/local/share/bochs"' config.cc -o config.o
+g++ -c -I. -I./. -Iinstrument/stubs -I./instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES      -DBX_SHARE_PATH='"/usr/local/share/bochs"' pc_system.cc -o pc_system.o
+g++ -c -I. -I./. -Iinstrument/stubs -I./instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES      -DBX_SHARE_PATH='"/usr/local/share/bochs"' osdep.cc -o osdep.o
+g++ -c -I. -I./. -Iinstrument/stubs -I./instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES      -DBX_SHARE_PATH='"/usr/local/share/bochs"' plugin.cc -o plugin.o
+g++ -c -I. -I./. -Iinstrument/stubs -I./instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES      -DBX_SHARE_PATH='"/usr/local/share/bochs"' crc.cc -o crc.o
+g++ -c -I. -I./. -Iinstrument/stubs -I./instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES      -DBX_SHARE_PATH='"/usr/local/share/bochs"' bxthread.cc -o bxthread.o
+cd iodev && \
+make  libiodev.a
+make[1]: Entering directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/iodev'
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    devices.cc -o devices.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    virt_timer.cc -o virt_timer.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    slowdown_timer.cc -o slowdown_timer.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    pic.cc -o pic.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    pit.cc -o pit.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    serial.cc -o serial.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    parallel.cc -o parallel.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    floppy.cc -o floppy.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    keyboard.cc -o keyboard.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    biosdev.cc -o biosdev.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    cmos.cc -o cmos.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    harddrv.cc -o harddrv.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    dma.cc -o dma.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    unmapped.cc -o unmapped.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    extfpuirq.cc -o extfpuirq.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    speaker.cc -o speaker.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    ioapic.cc -o ioapic.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    pci.cc -o pci.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    pci2isa.cc -o pci2isa.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    pci_ide.cc -o pci_ide.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    acpi.cc -o acpi.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    hpet.cc -o hpet.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    pit82c54.cc -o pit82c54.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    scancodes.cc -o scancodes.o
+g++ -c  -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    serial_raw.cc -o serial_raw.o
+rm -f  libiodev.a
+ar rv libiodev.a devices.o virt_timer.o slowdown_timer.o  pic.o pit.o serial.o parallel.o floppy.o keyboard.o biosdev.o cmos.o harddrv.o dma.o unmapped.o extfpuirq.o speaker.o ioapic.o pci.o pci2isa.o pci_ide.o acpi.o hpet.o  pit82c54.o scancodes.o serial_raw.o
+a - devices.o
+a - virt_timer.o
+a - slowdown_timer.o
+a - pic.o
+a - pit.o
+a - serial.o
+a - parallel.o
+a - floppy.o
+a - keyboard.o
+a - biosdev.o
+a - cmos.o
+a - harddrv.o
+a - dma.o
+a - unmapped.o
+a - extfpuirq.o
+a - speaker.o
+a - ioapic.o
+a - pci.o
+a - pci2isa.o
+a - pci_ide.o
+a - acpi.o
+a - hpet.o
+a - pit82c54.o
+a - scancodes.o
+a - serial_raw.o
+ranlib libiodev.a
+make[1]: Leaving directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/iodev'
+echo done
+done
+cd iodev/display && \
+make  libdisplay.a
+make[1]: Entering directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/iodev/display'
+g++ -c  -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    vga.cc -o vga.o
+g++ -c  -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    vgacore.cc -o vgacore.o
+g++ -c  -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    ddc.cc -o ddc.o
+rm -f  libdisplay.a
+ar rv libdisplay.a  vga.o  vgacore.o ddc.o 
+a - vga.o
+a - vgacore.o
+a - ddc.o
+ranlib libdisplay.a
+make[1]: Leaving directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/iodev/display'
+echo done
+done
+cd iodev/hdimage && \
+make  libhdimage.a
+make[1]: Entering directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/iodev/hdimage'
+g++ -c  -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    hdimage.cc -o hdimage.o
+g++ -c  -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    cdrom.cc -o cdrom.o
+g++ -c  -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    cdrom_misc.cc -o cdrom_misc.o
+g++ -c  -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    vbox.cc -o vbox.o
+g++ -c  -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    vmware3.cc -o vmware3.o
+g++ -c  -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    vmware4.cc -o vmware4.o
+g++ -c  -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    vpc.cc -o vpc.o
+g++ -c  -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES    vvfat.cc -o vvfat.o
+rm -f  libhdimage.a
+ar rv libhdimage.a hdimage.o cdrom.o cdrom_misc.o vbox.o vmware3.o vmware4.o vpc.o vvfat.o 
+a - hdimage.o
+a - cdrom.o
+a - cdrom_misc.o
+a - vbox.o
+a - vmware3.o
+a - vmware4.o
+a - vpc.o
+a - vvfat.o
+ranlib libhdimage.a
+make[1]: Leaving directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/iodev/hdimage'
+echo done
+done
+cd cpu && \
+make  libcpu.a
+make[1]: Entering directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/cpu'
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   init.cc -o init.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   cpu.cc -o cpu.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   event.cc -o event.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   icache.cc -o icache.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   decoder/fetchdecode32.cc -o decoder/fetchdecode32.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   access.cc -o access.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   access2.cc -o access2.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   shift16.cc -o shift16.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   logical16.cc -o logical16.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   ctrl_xfer32.cc -o ctrl_xfer32.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   ctrl_xfer16.cc -o ctrl_xfer16.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   mmx.cc -o mmx.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   3dnow.cc -o 3dnow.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   fpu_emu.cc -o fpu_emu.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   sse.cc -o sse.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   sse_move.cc -o sse_move.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   sse_pfp.cc -o sse_pfp.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   sse_rcp.cc -o sse_rcp.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   sse_string.cc -o sse_string.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   xsave.cc -o xsave.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   aes.cc -o aes.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   gf2.cc -o gf2.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   sha.cc -o sha.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   svm.cc -o svm.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   vmx.cc -o vmx.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   vmcs.cc -o vmcs.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   vmexit.cc -o vmexit.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   vmfunc.cc -o vmfunc.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   soft_int.cc -o soft_int.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   apic.cc -o apic.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   bcd.cc -o bcd.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   mult16.cc -o mult16.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   tasking.cc -o tasking.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   shift32.cc -o shift32.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   shift8.cc -o shift8.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   arith8.cc -o arith8.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   stack.cc -o stack.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   stack16.cc -o stack16.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   protect_ctrl.cc -o protect_ctrl.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   mult8.cc -o mult8.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   load.cc -o load.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   data_xfer8.cc -o data_xfer8.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   vm8086.cc -o vm8086.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   logical8.cc -o logical8.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   logical32.cc -o logical32.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   arith16.cc -o arith16.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   segment_ctrl.cc -o segment_ctrl.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   data_xfer16.cc -o data_xfer16.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   data_xfer32.cc -o data_xfer32.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   exception.cc -o exception.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   cpuid.cc -o cpuid.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   generic_cpuid.cc -o generic_cpuid.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   proc_ctrl.cc -o proc_ctrl.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   mwait.cc -o mwait.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   crregs.cc -o crregs.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   cet.cc -o cet.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   msr.cc -o msr.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   smm.cc -o smm.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   flag_ctrl_pro.cc -o flag_ctrl_pro.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   stack32.cc -o stack32.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   debugstuff.cc -o debugstuff.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   flag_ctrl.cc -o flag_ctrl.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   mult32.cc -o mult32.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   arith32.cc -o arith32.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   jmp_far.cc -o jmp_far.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   call_far.cc -o call_far.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   ret_far.cc -o ret_far.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   iret.cc -o iret.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   ctrl_xfer_pro.cc -o ctrl_xfer_pro.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   segment_ctrl_pro.cc -o segment_ctrl_pro.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   io.cc -o io.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   crc32.cc -o crc32.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   bit.cc -o bit.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   bit16.cc -o bit16.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   bit32.cc -o bit32.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   bmi32.cc -o bmi32.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   string.cc -o string.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   faststring.cc -o faststring.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   paging.cc -o paging.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   rdrand.cc -o rdrand.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   wide_int.cc -o wide_int.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   decoder/disasm.cc -o decoder/disasm.o
+rm -f  libcpu.a
+ar rv libcpu.a init.o cpu.o event.o icache.o decoder/fetchdecode32.o access.o access2.o shift16.o logical16.o ctrl_xfer32.o ctrl_xfer16.o mmx.o 3dnow.o fpu_emu.o sse.o sse_move.o sse_pfp.o sse_rcp.o sse_string.o xsave.o aes.o gf2.o sha.o svm.o vmx.o vmcs.o vmexit.o vmfunc.o soft_int.o apic.o bcd.o mult16.o tasking.o shift32.o shift8.o arith8.o stack.o stack16.o protect_ctrl.o mult8.o load.o data_xfer8.o vm8086.o logical8.o logical32.o arith16.o segment_ctrl.o data_xfer16.o data_xfer32.o exception.o cpuid.o generic_cpuid.o proc_ctrl.o mwait.o crregs.o cet.o msr.o smm.o flag_ctrl_pro.o stack32.o debugstuff.o flag_ctrl.o mult32.o arith32.o jmp_far.o call_far.o ret_far.o iret.o ctrl_xfer_pro.o segment_ctrl_pro.o io.o crc32.o bit.o bit16.o bit32.o bmi32.o string.o faststring.o paging.o rdrand.o wide_int.o decoder/disasm.o 
+a - init.o
+a - cpu.o
+a - event.o
+a - icache.o
+a - decoder/fetchdecode32.o
+a - access.o
+a - access2.o
+a - shift16.o
+a - logical16.o
+a - ctrl_xfer32.o
+a - ctrl_xfer16.o
+a - mmx.o
+a - 3dnow.o
+a - fpu_emu.o
+a - sse.o
+a - sse_move.o
+a - sse_pfp.o
+a - sse_rcp.o
+a - sse_string.o
+a - xsave.o
+a - aes.o
+a - gf2.o
+a - sha.o
+a - svm.o
+a - vmx.o
+a - vmcs.o
+a - vmexit.o
+a - vmfunc.o
+a - soft_int.o
+a - apic.o
+a - bcd.o
+a - mult16.o
+a - tasking.o
+a - shift32.o
+a - shift8.o
+a - arith8.o
+a - stack.o
+a - stack16.o
+a - protect_ctrl.o
+a - mult8.o
+a - load.o
+a - data_xfer8.o
+a - vm8086.o
+a - logical8.o
+a - logical32.o
+a - arith16.o
+a - segment_ctrl.o
+a - data_xfer16.o
+a - data_xfer32.o
+a - exception.o
+a - cpuid.o
+a - generic_cpuid.o
+a - proc_ctrl.o
+a - mwait.o
+a - crregs.o
+a - cet.o
+a - msr.o
+a - smm.o
+a - flag_ctrl_pro.o
+a - stack32.o
+a - debugstuff.o
+a - flag_ctrl.o
+a - mult32.o
+a - arith32.o
+a - jmp_far.o
+a - call_far.o
+a - ret_far.o
+a - iret.o
+a - ctrl_xfer_pro.o
+a - segment_ctrl_pro.o
+a - io.o
+a - crc32.o
+a - bit.o
+a - bit16.o
+a - bit32.o
+a - bmi32.o
+a - string.o
+a - faststring.o
+a - paging.o
+a - rdrand.o
+a - wide_int.o
+a - decoder/disasm.o
+ranlib libcpu.a
+make[1]: Leaving directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/cpu'
+echo done
+done
+cd cpu/cpudb && \
+make  libcpudb.a
+make[1]: Entering directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/cpu/cpudb'
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/pentium.cc -o intel/pentium.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/pentium_mmx.cc -o intel/pentium_mmx.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/p2_klamath.cc -o intel/p2_klamath.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/p3_katmai.cc -o intel/p3_katmai.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/p4_willamette.cc -o intel/p4_willamette.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/p4_prescott_celeron_336.cc -o intel/p4_prescott_celeron_336.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/atom_n270.cc -o intel/atom_n270.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/core_duo_t2400_yonah.cc -o intel/core_duo_t2400_yonah.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/core2_penryn_t9600.cc -o intel/core2_penryn_t9600.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/corei5_lynnfield_750.cc -o intel/corei5_lynnfield_750.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/corei5_arrandale_m520.cc -o intel/corei5_arrandale_m520.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/corei7_sandy_bridge_2600K.cc -o intel/corei7_sandy_bridge_2600K.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/corei7_ivy_bridge_3770K.cc -o intel/corei7_ivy_bridge_3770K.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/corei7_haswell_4770.cc -o intel/corei7_haswell_4770.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/broadwell_ult.cc -o intel/broadwell_ult.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/corei7_skylake-x.cc -o intel/corei7_skylake-x.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/corei3_cnl.cc -o intel/corei3_cnl.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/corei7_icelake-u.cc -o intel/corei7_icelake-u.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   intel/tigerlake.cc -o intel/tigerlake.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   amd/amd_k6_2_chomper.cc -o amd/amd_k6_2_chomper.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   amd/athlon64_clawhammer.cc -o amd/athlon64_clawhammer.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   amd/athlon64_venice.cc -o amd/athlon64_venice.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   amd/turion64_tyler.cc -o amd/turion64_tyler.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   amd/phenomx3_8650_toliman.cc -o amd/phenomx3_8650_toliman.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   amd/trinity_apu.cc -o amd/trinity_apu.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   amd/zambezi.cc -o amd/zambezi.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   amd/ryzen.cc -o amd/ryzen.o
+rm -f  libcpudb.a
+ar rv libcpudb.a intel/pentium.o intel/pentium_mmx.o intel/p2_klamath.o intel/p3_katmai.o intel/p4_willamette.o intel/p4_prescott_celeron_336.o intel/atom_n270.o intel/core_duo_t2400_yonah.o intel/core2_penryn_t9600.o intel/corei5_lynnfield_750.o intel/corei5_arrandale_m520.o intel/corei7_sandy_bridge_2600K.o intel/corei7_ivy_bridge_3770K.o intel/corei7_haswell_4770.o intel/broadwell_ult.o intel/corei7_skylake-x.o intel/corei3_cnl.o intel/corei7_icelake-u.o intel/tigerlake.o amd/amd_k6_2_chomper.o amd/athlon64_clawhammer.o amd/athlon64_venice.o amd/turion64_tyler.o amd/phenomx3_8650_toliman.o amd/trinity_apu.o amd/zambezi.o amd/ryzen.o
+a - intel/pentium.o
+a - intel/pentium_mmx.o
+a - intel/p2_klamath.o
+a - intel/p3_katmai.o
+a - intel/p4_willamette.o
+a - intel/p4_prescott_celeron_336.o
+a - intel/atom_n270.o
+a - intel/core_duo_t2400_yonah.o
+a - intel/core2_penryn_t9600.o
+a - intel/corei5_lynnfield_750.o
+a - intel/corei5_arrandale_m520.o
+a - intel/corei7_sandy_bridge_2600K.o
+a - intel/corei7_ivy_bridge_3770K.o
+a - intel/corei7_haswell_4770.o
+a - intel/broadwell_ult.o
+a - intel/corei7_skylake-x.o
+a - intel/corei3_cnl.o
+a - intel/corei7_icelake-u.o
+a - intel/tigerlake.o
+a - amd/amd_k6_2_chomper.o
+a - amd/athlon64_clawhammer.o
+a - amd/athlon64_venice.o
+a - amd/turion64_tyler.o
+a - amd/phenomx3_8650_toliman.o
+a - amd/trinity_apu.o
+a - amd/zambezi.o
+a - amd/ryzen.o
+ranlib libcpudb.a
+make[1]: Leaving directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/cpu/cpudb'
+echo done
+done
+cd memory && \
+make  libmemory.a
+make[1]: Entering directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/memory'
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   memory.cc -o memory.o
+g++ -c -I.. -I./.. -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   misc_mem.cc -o misc_mem.o
+rm -f  libmemory.a
+ar rv libmemory.a memory.o misc_mem.o
+a - memory.o
+a - misc_mem.o
+ranlib libmemory.a
+make[1]: Leaving directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/memory'
+echo done
+done
+cd gui && \
+make  libgui.a
+make[1]: Entering directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/gui'
+g++ -c  -I.. -I./.. -I../iodev -I./../iodev -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES     keymap.cc -o keymap.o
+g++ -c  -I.. -I./.. -I../iodev -I./../iodev -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES     gui.cc -o gui.o
+g++ -c  -I.. -I./.. -I../iodev -I./../iodev -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES     siminterface.cc -o siminterface.o
+g++ -c  -I.. -I./.. -I../iodev -I./../iodev -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES     paramtree.cc -o paramtree.o
+g++ -c  -I.. -I./.. -I../iodev -I./../iodev -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES     nogui.cc -o nogui.o
+g++ -c  -I.. -I./.. -I../iodev -I./../iodev -I../instrument/stubs -I./../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES     textconfig.cc -o textconfig.o
+rm -f  libgui.a
+ar rv libgui.a keymap.o gui.o siminterface.o paramtree.o  nogui.o textconfig.o 
+a - keymap.o
+a - gui.o
+a - siminterface.o
+a - paramtree.o
+a - nogui.o
+a - textconfig.o
+ranlib libgui.a
+make[1]: Leaving directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/gui'
+echo done
+done
+cd instrument/stubs && \
+make  libinstrument.a
+make[1]: Entering directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/instrument/stubs'
+g++ -c -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES  -I../.. -I./../.. -I. -I./. instrument.cc -o instrument.o
+rm -f  libinstrument.a
+ar rv libinstrument.a instrument.o
+a - instrument.o
+ranlib libinstrument.a
+make[1]: Leaving directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/instrument/stubs'
+echo done
+done
+cd cpu/fpu && \
+make  libfpu.a
+make[1]: Entering directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/cpu/fpu'
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   ferr.cc -o ferr.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   fpu.cc -o fpu.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   fpu_arith.cc -o fpu_arith.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   fpu_compare.cc -o fpu_compare.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   fpu_const.cc -o fpu_const.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   fpu_cmov.cc -o fpu_cmov.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   fpu_load_store.cc -o fpu_load_store.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   fpu_misc.cc -o fpu_misc.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   fpu_trans.cc -o fpu_trans.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   fprem.cc -o fprem.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   fsincos.cc -o fsincos.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   f2xm1.cc -o f2xm1.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   fyl2x.cc -o fyl2x.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   fpatan.cc -o fpatan.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   softfloat.cc -o softfloat.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   softfloatx80.cc -o softfloatx80.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   softfloat16.cc -o softfloat16.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   softfloat-muladd.cc -o softfloat-muladd.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   softfloat-specialize.cc -o softfloat-specialize.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   softfloat-round-pack.cc -o softfloat-round-pack.o
+g++ -c -I.. -I../.. -I./.. -I./../.. -I../../instrument/stubs -I./../../instrument/stubs -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES   poly.cc -o poly.o
+rm -f  libfpu.a
+ar rv libfpu.a ferr.o fpu.o fpu_arith.o fpu_compare.o fpu_const.o fpu_cmov.o fpu_load_store.o fpu_misc.o fpu_trans.o fprem.o fsincos.o f2xm1.o fyl2x.o fpatan.o softfloat.o softfloatx80.o softfloat16.o softfloat-muladd.o softfloat-specialize.o softfloat-round-pack.o poly.o
+a - ferr.o
+a - fpu.o
+a - fpu_arith.o
+a - fpu_compare.o
+a - fpu_const.o
+a - fpu_cmov.o
+a - fpu_load_store.o
+a - fpu_misc.o
+a - fpu_trans.o
+a - fprem.o
+a - fsincos.o
+a - f2xm1.o
+a - fyl2x.o
+a - fpatan.o
+a - softfloat.o
+a - softfloatx80.o
+a - softfloat16.o
+a - softfloat-muladd.o
+a - softfloat-specialize.o
+a - softfloat-round-pack.o
+a - poly.o
+ranlib libfpu.a
+make[1]: Leaving directory '/home/runner/work/_temp/owned-pic-imr-prepared/bochs/cpu/fpu'
+echo done
+done
+g++ -shared -o bw_direct.node -O2 -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES      -DBX_SHARE_PATH='"/usr/local/share/bochs"'  bw_direct_napi.o logio.o main.o config.o pc_system.o osdep.o plugin.o crc.o bxthread.o   iodev/libiodev.a iodev/display/libdisplay.a iodev/hdimage/libhdimage.a cpu/libcpu.a cpu/cpudb/libcpudb.a memory/libmemory.a gui/libgui.a instrument/stubs/libinstrument.a cpu/fpu/libfpu.a        -pthread

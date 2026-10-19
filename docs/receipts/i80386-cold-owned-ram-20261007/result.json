@@ -1,0 +1,58 @@
+{
+  "schema": "bw.i80386.cold-owned-ram.local-actual-result.v1",
+  "testedSourceRevision": "7f8c4f07f95e5e1f02618f6868fcbc796b295dad",
+  "sourceBaseRevision": "a1126312288867127343c2f9bbdfcd2856a18508",
+  "cpu3Addon": {
+    "sourceRevision": "e4807d0647ab1e151755811ff8ef53d493ebf6ff",
+    "officialBuildRun": "https://github.com/CrispStrobe/bw-board/actions/runs/37260140804",
+    "officialArtifactId": 11323824722,
+    "sha256": "0323040b94db365ff66b51c7b0827c6fc07bd3ba4153eac80ee4023920a1ac3d"
+  },
+  "companionOwnedRamAddon": {
+    "builtFromTestedSource": true,
+    "sha256": "3d35c5a7170d761e15092f7c563cb22d0d5285dcee40e62b72332c7f6fbc5583"
+  },
+  "localToolchain": {
+    "platform": "linux-x64",
+    "node": "20.20.2",
+    "gxx": "13.3.0"
+  },
+  "fixture": {
+    "asset": "roms/free-at-bios/BIOS-bochs-legacy",
+    "provider": "scripts/bochs-cpu3-native-cold-owned-ram/provider.mjs",
+    "runner": "scripts/bochs-cpu3-native-cold-owned-ram/actual-fixture.mjs",
+    "comparison": "scripts/bochs-cpu3-native-cold-owned-ram/compare-fixtures.mjs",
+    "arms": ["owned", "callback"],
+    "targetQuanta": 316562
+  },
+  "result": {
+    "status": "LOCAL_ACTUAL_FULL_COLD_PARITY_PASS",
+    "bothArmsExitedZero": true,
+    "bothSessionsClosed": true,
+    "nativeTicks": 316562,
+    "successfulQuanta": 316562,
+    "resumes": 16524,
+    "orderedPioEvents": 16475,
+    "fullNativeWordsAtEachOfResetLastFinal": 166,
+    "exactResetLastFinalNativeAndFinalBoardPioEquality": true,
+    "wholeFinalRamBytesHashed": 16777216,
+    "wholeFinalRamSha256": "af0c07fc87959f6481ab7611967ac40a2c8d3d5fa14beac0979cc99e95913f02",
+    "ownedReportSha256": "62a7ce5f0ae4e139003b2876410c83ff08281088c620a22c80b3d7a6b0329254",
+    "callbackReportSha256": "6884a1c39f9e3d0f58c4180c2b2b3d387f46216d1cf66f348dcfe72972343b88"
+  },
+  "unchangedCpu3CountsPerArm": {
+    "physicalReads": 91949,
+    "physicalWrites": 91958,
+    "executePages": 10,
+    "fusedMemoryEntries": 167123
+  },
+  "sourceChecks": {
+    "nodeSourceTests": "2 passed, 0 failed",
+    "concurrentWorkerSessions": "2 isolated sessions passed",
+    "workflowLint": "passed",
+    "sourceWorktreeCleanBeforeAndAfterGuest": true
+  },
+  "scope": "Companion N-API RAM ownership behind existing JavaScript CPU3 memory callbacks; fixed A20, ordinary RAM/ROM and ROM execution in the free BIOS cold target. Clock and device callbacks retained. No direct CPU3-to-owned-RAM path, MMIO ownership, paging, DMA, mapping change, executed RAM write, speed comparison or broader PC/OS qualification.",
+  "hostedReproductionWorkflow": ".github/workflows/i80386-native-cold-owned-ram.yml",
+  "hostedResultAtPublication": "PENDING"
+}

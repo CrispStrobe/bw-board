@@ -1,0 +1,24 @@
+{
+  "status": "ROOT_GRANT_ONE_LOCAL_CAPTURE_OFF_NATIVE_PARITY_CELL_ONLY",
+  "recordedUTC": "2026-10-02T19:31:29.649955+00:00",
+  "pins": {
+    "run.py": "d0d036fa535344af35aacf8835500feeb90f23425ffb030e213eacc8d73d321e",
+    "approved-bindings.json": "bf269ade7c912e8276d39b96003f3160010935f356fafbe3416f8ee5e3097106",
+    "independent-off-readiness-audit.json": "4fb23856817138a26f3052861abe31c25ffb851e7e3ca56a37264b9c5915520c"
+  },
+  "label": "smoke-off",
+  "bounds": {
+    "cpuSeconds": 120,
+    "wallSeconds": 120,
+    "heapMiB": 512,
+    "fileMiB": 256,
+    "niceIncrement": 10,
+    "blankHooks": 6
+  },
+  "resourceEvidence": {
+    "load1": 2.18,
+    "logicalCPUs": 4,
+    "availableMiB": 5314
+  },
+  "scope": "One actual smoke guest, unchanged compiled core; no native trace, CPU gate, adoption, broad AT or physical RTx. Preserve failure; no retry."
+}

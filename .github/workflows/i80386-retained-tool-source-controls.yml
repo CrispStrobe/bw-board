@@ -1,0 +1,60 @@
+name: i80386 retained tool observer manufactured Python controls
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - scripts/pr-backlog-current-source.py
+      - test/pr-backlog-current-source.test.py
+      - 'scripts/i80386-retained-tool-source-controls/**'
+      - '.github/workflows/i80386-retained-tool-source-controls.yml'
+concurrency:
+  group: retained-tool-source-controls-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  retained-tool-source-controls:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.repository == 'CrispStrobe/bw-board' && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact own head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 32
+          persist-credentials: false
+      - name: Admit source and run manufactured Python controls
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          PYTHONDONTWRITEBYTECODE: '1'
+          PYTHONPATH: ''
+          LD_PRELOAD: ''
+          LD_AUDIT: ''
+          PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          ulimit -f 64
+          mkdir retained-tool-controls
+          phase=source-admission
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > retained-tool-controls/status.txt' EXIT
+          : > retained-tool-controls/control.stdout
+          : > retained-tool-controls/control.stderr
+          timeout --signal=KILL 90s python3 -I -B scripts/pr-backlog-current-source.py retained-tool > retained-tool-controls/source.json
+          phase=observer-controls
+          timeout --signal=KILL 30s python3 -I -B scripts/i80386-cwsdpmi-retained-tool-observer/observer-control.py > retained-tool-controls/control.stdout 2> retained-tool-controls/control.stderr
+          phase=complete
+      - name: Retain bounded source-control text
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-retained-tool-source-controls-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            retained-tool-controls/source.json
+            retained-tool-controls/control.stdout
+            retained-tool-controls/control.stderr
+            retained-tool-controls/status.txt

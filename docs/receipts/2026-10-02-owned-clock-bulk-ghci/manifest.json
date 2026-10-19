@@ -1,0 +1,861 @@
+{
+  "schema": "bw.lossless-result-receipts.v1",
+  "scope": "Actual single fixed-protocol hosted gate; failed adoption threshold; no physical RTx",
+  "files": {
+    "artifact-metadata.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/artifact-metadata.json",
+      "bytes": 818,
+      "sha256": "d558d91c01352a5e20040573be1b7377cd92bd85cb649bd05370071216b0a010"
+    },
+    "run.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/run.json",
+      "bytes": 14555,
+      "sha256": "cbc9ef5e365d5078a8faacade591b79d35050c7bfb07d7eed7a43aac5d6bee75"
+    },
+    "jobs.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/jobs.json",
+      "bytes": 4895,
+      "sha256": "b8422d1e9b0384d6e3e01eb75f65d262afb96d0cde17e61c30151231874fd29a"
+    },
+    "files/owned-bulk-context/artifact-metadata.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-context/artifact-metadata.json",
+      "bytes": 741,
+      "sha256": "0ece3110fc76ec138ad12c107a741b6688420122cdada1b9020547cd33318c26"
+    },
+    "files/owned-bulk-context/context.txt": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-context/context.txt",
+      "bytes": 4697,
+      "sha256": "8058ed3dd8c7db8f6178b99744e9eba481869178d4f131d8d3030f406caff4ca"
+    },
+    "files/owned-bulk-context/parent.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-context/parent.stdout",
+      "bytes": 19993,
+      "sha256": "d981a19916ec89302f4ef24bbe8c6f936e3a056f48606d8a0360458082abf63c"
+    },
+    "files/owned-bulk-context/parent.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-context/parent.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/0-BULK.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BULK.input.json",
+      "bytes": 934,
+      "sha256": "1ebda32c340f21704485c4557b4b636fa316f8a4ca4c8b238a36012221af08e7"
+    },
+    "files/owned-bulk-gate/gate/results/6-BASE.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BASE.input.json",
+      "bytes": 934,
+      "sha256": "fd02ebdacac7ba85e62dd0f7a6f9ba7b5baf807f5bb29358ad1509c68c218e55"
+    },
+    "files/owned-bulk-gate/gate/results/7-BASE.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BASE.input.json",
+      "bytes": 934,
+      "sha256": "51026cf2aeef6eeda1155256c97ef50bbb4bed298846ed707d7ddfcb38249f35"
+    },
+    "files/owned-bulk-gate/gate/results/summary.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/summary.json",
+      "bytes": 25751,
+      "sha256": "d55d856aef061d62adf4a1cf460b520f2dc2e78910b856fbca6bb6df76fa8685"
+    },
+    "files/owned-bulk-gate/gate/results/auth-before.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/auth-before.json",
+      "bytes": 187346,
+      "sha256": "d4095d3c1f695b3c1199fe4835eab07f4e8ff4da3a6a9f34b8f3376d11c250c2"
+    },
+    "files/owned-bulk-gate/gate/results/5-BASE.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BASE.input.json",
+      "bytes": 934,
+      "sha256": "8c466b3dad81685db28c83807b7caada9c182da7676e13a9113d9badb7dd9558"
+    },
+    "files/owned-bulk-gate/gate/results/1-BASE.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BASE.input.json",
+      "bytes": 934,
+      "sha256": "7d8a035519285bd56f11ad96d8409436a54c3c7657b00cac72d51d5d226e85d3"
+    },
+    "files/owned-bulk-gate/gate/results/8-BULK.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BULK.input.json",
+      "bytes": 934,
+      "sha256": "ca712823f95179429c49f9c2235f352ce083d3fe20ca4068fbaaa65e613897bd"
+    },
+    "files/owned-bulk-gate/gate/results/4-BULK.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BULK.input.json",
+      "bytes": 934,
+      "sha256": "612213282814348b4a21d967fc1a9c42276bda40fa046c84ad3ce59b2ba5d883"
+    },
+    "files/owned-bulk-gate/gate/results/6-BULK.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BULK.input.json",
+      "bytes": 934,
+      "sha256": "1a6a8aef7e6875f2327e1b76134e125978cccabbe731c1da43caa9ed95922ec1"
+    },
+    "files/owned-bulk-gate/gate/results/1-BULK.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BULK.input.json",
+      "bytes": 934,
+      "sha256": "d6a2a1623c992b05e04ea9b9216baa3c20591e7bad312f5ea1b171f154bb7809"
+    },
+    "files/owned-bulk-gate/gate/results/8-BASE.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BASE.input.json",
+      "bytes": 934,
+      "sha256": "9dd0065382ac08dd3ba98be8b5d221d7f890e4a3b6fc6eb0a79e86cf4a176d0d"
+    },
+    "files/owned-bulk-gate/gate/results/7-BULK.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BULK.input.json",
+      "bytes": 934,
+      "sha256": "517e18dc115bb1beb0730f8cdca3d4bb9bec5f18d5b7161de0219d0af97f0136"
+    },
+    "files/owned-bulk-gate/gate/results/5-BULK.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BULK.input.json",
+      "bytes": 934,
+      "sha256": "0d47e27caea50e1d958b0e28845aa60bd2e9c2c68070e52f7aeb1d9577c5735f"
+    },
+    "files/owned-bulk-gate/gate/results/3-BULK.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BULK.input.json",
+      "bytes": 934,
+      "sha256": "be923f098e72b4c796f61b2f389247ac0952c2ee70b8b14ab2e31c9752191c6d"
+    },
+    "files/owned-bulk-gate/gate/results/2-BASE.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BASE.input.json",
+      "bytes": 934,
+      "sha256": "763386aa45c563b9ead913f52b1ff30c4c5f38b263ae90ca24446e3fb000b37a"
+    },
+    "files/owned-bulk-gate/gate/results/3-BASE.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BASE.input.json",
+      "bytes": 934,
+      "sha256": "6c2d912b55f406b384ee88d7713d8edd2335e6cc328fe7ab5f4f01d2b5be9f68"
+    },
+    "files/owned-bulk-gate/gate/results/auth-after.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/auth-after.json",
+      "bytes": 187346,
+      "sha256": "d4095d3c1f695b3c1199fe4835eab07f4e8ff4da3a6a9f34b8f3376d11c250c2"
+    },
+    "files/owned-bulk-gate/gate/results/4-BASE.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BASE.input.json",
+      "bytes": 934,
+      "sha256": "a2501c1a23849b7ab68806d5c8de9518c1aa410d962f3b61cc50f359d3485017"
+    },
+    "files/owned-bulk-gate/gate/results/0-BASE.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BASE.input.json",
+      "bytes": 934,
+      "sha256": "c5c8de95869b895c0e7a4e5b6e460e4602bc8a5aeffce11474d0aa4926d7db3c"
+    },
+    "files/owned-bulk-gate/gate/results/2-BULK.input.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BULK.input.json",
+      "bytes": 934,
+      "sha256": "60ab051d53d29d2b2cc25ffd9e788c83ab97408e5d09b32c0a8ad4b04fd5bdfe"
+    },
+    "files/owned-bulk-gate/gate/results/1-BASE/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BASE/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/1-BASE/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BASE/child.exit.json",
+      "bytes": 839,
+      "sha256": "b96d9d58d8d6560029924790379940c617bf6ecff9a3c571554ea913fd5e4746"
+    },
+    "files/owned-bulk-gate/gate/results/1-BASE/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BASE/child.stderr",
+      "bytes": 398,
+      "sha256": "7abca3652f3e7d60208e36cb7bd17905d79b7ead727aff5d06fa38f08c94c270"
+    },
+    "files/owned-bulk-gate/gate/results/2-BASE/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BASE/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/2-BASE/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BASE/child.exit.json",
+      "bytes": 839,
+      "sha256": "55a1fdde2ac5f63025d46ba70b7886745a561a89f90920f8d1b32e320dd253bf"
+    },
+    "files/owned-bulk-gate/gate/results/2-BASE/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BASE/child.stderr",
+      "bytes": 398,
+      "sha256": "d9c93b7265afda200d47cdc67b16246fa2b02541725c8480d081f1d27cbc120d"
+    },
+    "files/owned-bulk-gate/gate/results/8-BASE/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BASE/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/8-BASE/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BASE/child.exit.json",
+      "bytes": 839,
+      "sha256": "65f77518adf8a2e5873827251cea634ed9f28f764b0578a859ad1944931e7c8c"
+    },
+    "files/owned-bulk-gate/gate/results/8-BASE/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BASE/child.stderr",
+      "bytes": 398,
+      "sha256": "f112f5672d89f10c9eb62c3ac4b8d9a66cc8d1c520ef897cb581abe9760640d6"
+    },
+    "files/owned-bulk-gate/gate/results/0-BASE/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BASE/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/0-BASE/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BASE/child.exit.json",
+      "bytes": 839,
+      "sha256": "ec90400b3b6a81062a8f67ff1ec222a94aceaa16ba0e9e3c66cbea4555d8f59d"
+    },
+    "files/owned-bulk-gate/gate/results/0-BASE/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BASE/child.stderr",
+      "bytes": 398,
+      "sha256": "a5ca2d0fb59476f208f54863075a4a228fe7037ceaab56c6ec70a765c108ca29"
+    },
+    "files/owned-bulk-gate/gate/results/0-BULK/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BULK/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/0-BULK/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BULK/child.exit.json",
+      "bytes": 834,
+      "sha256": "9ae80305fe9f5ad562ff97490a98078bd7f9ac8c80e28d02b2979cc1d2602d44"
+    },
+    "files/owned-bulk-gate/gate/results/0-BULK/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BULK/child.stderr",
+      "bytes": 398,
+      "sha256": "9c9507d8a9fd7b86c49a399f5852c78630424700a413d00c3708a5ac6c64fdc8"
+    },
+    "files/owned-bulk-gate/gate/results/4-BULK/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BULK/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/4-BULK/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BULK/child.exit.json",
+      "bytes": 834,
+      "sha256": "c47cc3c82c388e59273793d98f2584b315761f0176adb6677aa0f4adab9e27a0"
+    },
+    "files/owned-bulk-gate/gate/results/4-BULK/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BULK/child.stderr",
+      "bytes": 398,
+      "sha256": "5f1fda6a82ffe401210797cc0d3dc4f09dc2bd03dd68f97016ee22559fb6be38"
+    },
+    "files/owned-bulk-gate/gate/results/3-BASE/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BASE/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/3-BASE/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BASE/child.exit.json",
+      "bytes": 839,
+      "sha256": "0d10ad565db9f5db1863d12f7868ec426791fc531b912af3d22ce14232a88a0c"
+    },
+    "files/owned-bulk-gate/gate/results/3-BASE/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BASE/child.stderr",
+      "bytes": 398,
+      "sha256": "020d01b078f47b6e7ed4d17e887f169bc97dc98a90899f052902a2b763ed381f"
+    },
+    "files/owned-bulk-gate/gate/results/7-BASE/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BASE/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/7-BASE/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BASE/child.exit.json",
+      "bytes": 839,
+      "sha256": "3ffb50dc0b7a4ffc67d0b8910ee763093983b5e99c90ac358fa8327c87b8f35b"
+    },
+    "files/owned-bulk-gate/gate/results/7-BASE/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BASE/child.stderr",
+      "bytes": 398,
+      "sha256": "7511e37dc611ba0e77cbebb015772f5b87af0deca483d1434216e80789e81fa5"
+    },
+    "files/owned-bulk-gate/gate/results/2-BULK/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BULK/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/2-BULK/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BULK/child.exit.json",
+      "bytes": 834,
+      "sha256": "a28f8331b2e118d097336359defaed664cd82fdd78b54b11ec02fe2493be9e34"
+    },
+    "files/owned-bulk-gate/gate/results/2-BULK/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BULK/child.stderr",
+      "bytes": 398,
+      "sha256": "b0d381de02026bd7ca1e9036ad7b3cac73e5e5b8a07eed2d676ef09f4ad3e937"
+    },
+    "files/owned-bulk-gate/gate/results/6-BULK/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BULK/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/6-BULK/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BULK/child.exit.json",
+      "bytes": 834,
+      "sha256": "a9c10e48d72c16d5fa775d635680953e4fcdfb45889a3df8fd29acf82bfa0703"
+    },
+    "files/owned-bulk-gate/gate/results/6-BULK/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BULK/child.stderr",
+      "bytes": 398,
+      "sha256": "d23f446cd84cc690e7889ef8742425ade1420c0766d2158d4f8e184fca063f7c"
+    },
+    "files/owned-bulk-gate/gate/results/6-BASE/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BASE/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/6-BASE/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BASE/child.exit.json",
+      "bytes": 839,
+      "sha256": "43984ac8cefce4a70767a85cf4e99d2c00622a8f747d46cc8635c4751462cd0a"
+    },
+    "files/owned-bulk-gate/gate/results/6-BASE/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BASE/child.stderr",
+      "bytes": 398,
+      "sha256": "8cc590b36914b89719f6b116ae5ddebdfc704289f3e3e22b74edc8ea3420652f"
+    },
+    "files/owned-bulk-gate/gate/results/5-BULK/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BULK/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/5-BULK/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BULK/child.exit.json",
+      "bytes": 834,
+      "sha256": "f5b8f6c460841b823b912ac11c70d1653a822049ebe5d81aac1fe23aa7cd79a6"
+    },
+    "files/owned-bulk-gate/gate/results/5-BULK/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BULK/child.stderr",
+      "bytes": 398,
+      "sha256": "c30dd1ccb96b240ade31de9ca77ccba46bc637f0bc00d6c6315c4d94e445be24"
+    },
+    "files/owned-bulk-gate/gate/results/8-BULK/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BULK/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/8-BULK/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BULK/child.exit.json",
+      "bytes": 834,
+      "sha256": "0db3e0f440da370f47ce199c8ce1acc8ce5ec45687da337e2d2cd8f726905a68"
+    },
+    "files/owned-bulk-gate/gate/results/8-BULK/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BULK/child.stderr",
+      "bytes": 398,
+      "sha256": "7d66383ccf3ae524bde87a205fee969693b280cad9f10712e08d18eebf678268"
+    },
+    "files/owned-bulk-gate/gate/results/1-BULK/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BULK/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/1-BULK/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BULK/child.exit.json",
+      "bytes": 834,
+      "sha256": "91c2e3917425feb07e371ab05c218bc7300838b3ed0601ad4e8dd3e075ab9fda"
+    },
+    "files/owned-bulk-gate/gate/results/1-BULK/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BULK/child.stderr",
+      "bytes": 398,
+      "sha256": "19faad1eca931b6233ced5c079f3773411123c82b09de0f2372de0c816a375b1"
+    },
+    "files/owned-bulk-gate/gate/results/4-BASE/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BASE/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/4-BASE/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BASE/child.exit.json",
+      "bytes": 839,
+      "sha256": "31c3208ea164fb8e65dc9e9ab4b0262a221b85e8f191f777115b072990d49a3f"
+    },
+    "files/owned-bulk-gate/gate/results/4-BASE/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BASE/child.stderr",
+      "bytes": 398,
+      "sha256": "6d08323308a03c72ea764ebd7b8129c4be8bd5e7a60ebd03ac601dff951d4b4b"
+    },
+    "files/owned-bulk-gate/gate/results/7-BULK/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BULK/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/7-BULK/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BULK/child.exit.json",
+      "bytes": 834,
+      "sha256": "c087dbf3cb4a3c3aaad45fe62c2b4c7d2225d1733e5664d989d0d7273daf8579"
+    },
+    "files/owned-bulk-gate/gate/results/7-BULK/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BULK/child.stderr",
+      "bytes": 398,
+      "sha256": "e61cae5a444233e23904d5f981aa6f3365ae9d13816962a9c02ac071a6efc7ad"
+    },
+    "files/owned-bulk-gate/gate/results/5-BASE/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BASE/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/5-BASE/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BASE/child.exit.json",
+      "bytes": 839,
+      "sha256": "483eb89859f43f19dcd0a3df925320eb36fee75f93bb68f4d7b3de360d602786"
+    },
+    "files/owned-bulk-gate/gate/results/5-BASE/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BASE/child.stderr",
+      "bytes": 398,
+      "sha256": "ad0e9d2d5df8eb15f3273b1cd7679b51c736110f3adc2177bf2d774a6921101f"
+    },
+    "files/owned-bulk-gate/gate/results/3-BULK/child.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BULK/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/3-BULK/child.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BULK/child.exit.json",
+      "bytes": 834,
+      "sha256": "4b8d7e089c265d583d9ec45f3649a1f05f7d5d6c29848e93a3271dec2938276c"
+    },
+    "files/owned-bulk-gate/gate/results/3-BULK/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BULK/child.stderr",
+      "bytes": 398,
+      "sha256": "ceeafbce3c311b00ffeacd9e91f42c98859e10c8ebc1cb64dfb6f00c9211c7cb"
+    },
+    "files/owned-bulk-gate/gate/results/3-BULK/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BULK/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "66e8ec72ea057b881f15b71184239bf281a655b59fcf8c9bff9ea5ee6990f67b"
+    },
+    "files/owned-bulk-gate/gate/results/3-BULK/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BULK/guest/capture.json",
+      "bytes": 254561,
+      "sha256": "6731cafe129bc1ed63f14f68527742dd52a234abb3708d0b22fc7a7ebd68897c"
+    },
+    "files/owned-bulk-gate/gate/results/3-BULK/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BULK/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/3-BULK/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BULK/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "32ad86ef3b04d6d69fac696ebc5639c150520c5d1fe40093e691132968e453ae"
+    },
+    "files/owned-bulk-gate/gate/results/5-BASE/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BASE/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "9a268451058762819c72fd31f991d0ca2884b1135094456f71ebc7f293561e7f"
+    },
+    "files/owned-bulk-gate/gate/results/5-BASE/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BASE/guest/capture.json",
+      "bytes": 216278,
+      "sha256": "843398748b8ef67211d08404cd53c9a459b9e1abb2995a51e03c279db9783253"
+    },
+    "files/owned-bulk-gate/gate/results/5-BASE/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BASE/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/5-BASE/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BASE/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "7e6e0c2483d2fccb967307cf23c11e90c42ddd708df89d8bfd222102f92fe3d7"
+    },
+    "files/owned-bulk-gate/gate/results/7-BULK/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BULK/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "08598bb0f4d47a130a6d4689fe6f21d80cb874d40bdab45f2f076f5f40135939"
+    },
+    "files/owned-bulk-gate/gate/results/7-BULK/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BULK/guest/capture.json",
+      "bytes": 254561,
+      "sha256": "4f9a83da7e812b8d2136f644b488bee66394a9db8184f6ea53629deae723e564"
+    },
+    "files/owned-bulk-gate/gate/results/7-BULK/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BULK/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/7-BULK/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BULK/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "b21448dc7074858d737af6a76d9e1d144880131648156a5f30bd6b41081b9263"
+    },
+    "files/owned-bulk-gate/gate/results/4-BASE/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BASE/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "fc9c1782ab2199c2686e8222cfc9661b4e02fbce2b5b41ddaa79bcb4934f2644"
+    },
+    "files/owned-bulk-gate/gate/results/4-BASE/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BASE/guest/capture.json",
+      "bytes": 216278,
+      "sha256": "fb73b2bfe31fc5e574cd115b11df920d2753ea8301a62b1eba5535223fbab4e9"
+    },
+    "files/owned-bulk-gate/gate/results/4-BASE/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BASE/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/4-BASE/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BASE/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "d12e0b5cd7623d3b014babf92fe1433c943999c946b37dc53bca20d17ffcd4c1"
+    },
+    "files/owned-bulk-gate/gate/results/1-BULK/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BULK/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "f2a80773fbca094f7b6326a38558c567b0131eb3d37813a2a907f8ee3bbb5787"
+    },
+    "files/owned-bulk-gate/gate/results/1-BULK/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BULK/guest/capture.json",
+      "bytes": 254561,
+      "sha256": "0e2b618d4de91957305baf5e6cb6bd093003161008d9a3d8c71b2ed46d9177c9"
+    },
+    "files/owned-bulk-gate/gate/results/1-BULK/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BULK/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/1-BULK/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BULK/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "414bd863bc31c99ab66130d8c351816d1bb52655ede53833f0e8384bf7c1b9c3"
+    },
+    "files/owned-bulk-gate/gate/results/8-BULK/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BULK/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "8f7b9801c1f3daee966b94ae740074b92ffd3389e4717802e34a738736646a16"
+    },
+    "files/owned-bulk-gate/gate/results/8-BULK/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BULK/guest/capture.json",
+      "bytes": 254561,
+      "sha256": "2df2cac3dfb447a610bf07132b11c7a5b85e185dc39664978fb16c8775302517"
+    },
+    "files/owned-bulk-gate/gate/results/8-BULK/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BULK/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/8-BULK/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BULK/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "aad18361e93ef4bab49a99668c5868fa4c57cbe9807d44a2c7f877a21274e295"
+    },
+    "files/owned-bulk-gate/gate/results/5-BULK/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BULK/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "57be3032e9a17615b923ae80b52fba3c635ad79c2257cb5a64908c8bc657e02d"
+    },
+    "files/owned-bulk-gate/gate/results/5-BULK/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BULK/guest/capture.json",
+      "bytes": 254561,
+      "sha256": "370fefa49db5337eb8123c3594f6f7654fbfbf54f133b49ccb11bc7aeb36f0c1"
+    },
+    "files/owned-bulk-gate/gate/results/5-BULK/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BULK/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/5-BULK/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/5-BULK/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "f2df2497d345ff2de273375ba08d0477f7af620a4a9177cfa312d2eb80e74865"
+    },
+    "files/owned-bulk-gate/gate/results/6-BASE/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BASE/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "a2bfff91121be86126ae299b491ba88b16f00e2e44b31e308fd62183a32c55d6"
+    },
+    "files/owned-bulk-gate/gate/results/6-BASE/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BASE/guest/capture.json",
+      "bytes": 216278,
+      "sha256": "2b788ddf10a160a588fa8ed97d3f50165221fe1f693704b0394774e81d00b103"
+    },
+    "files/owned-bulk-gate/gate/results/6-BASE/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BASE/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/6-BASE/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BASE/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "dac72b0dc57e15def6ee662ad3645b61cfe9e449861744b6757fc7e6496999e9"
+    },
+    "files/owned-bulk-gate/gate/results/6-BULK/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BULK/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "b6039b48819d768798a2334c3d713f4342b4d2a6bca7f2437782ed1b02b4d6a0"
+    },
+    "files/owned-bulk-gate/gate/results/6-BULK/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BULK/guest/capture.json",
+      "bytes": 254561,
+      "sha256": "136ec1c0df531c0476f499066da1183db5659c5f012a1e9833e96bda5c7918e2"
+    },
+    "files/owned-bulk-gate/gate/results/6-BULK/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BULK/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/6-BULK/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/6-BULK/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "e276d1c046dd99c7dba1dcf6b00f2a9d717026d8420b2d2e5830eb1d0fce80a8"
+    },
+    "files/owned-bulk-gate/gate/results/2-BULK/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BULK/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "7f6f8a70e28614595648797800af205b156ded6bf25b92b6851f7869a8f9bf86"
+    },
+    "files/owned-bulk-gate/gate/results/2-BULK/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BULK/guest/capture.json",
+      "bytes": 254561,
+      "sha256": "9afd41a5bf9f8c9dd2dee2dc834cab4e5324ab28507f85a52d55078c7e97fd8a"
+    },
+    "files/owned-bulk-gate/gate/results/2-BULK/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BULK/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/2-BULK/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BULK/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "41c63d3c222368ffbce8cd9455bee2ce1324aab2f637cc256861a798decceaaf"
+    },
+    "files/owned-bulk-gate/gate/results/7-BASE/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BASE/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "562c986ce03530cf943be3c0714d2acdd7df0a8bf824eb5e9577aa5646237de9"
+    },
+    "files/owned-bulk-gate/gate/results/7-BASE/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BASE/guest/capture.json",
+      "bytes": 216278,
+      "sha256": "fb8e8f5c6c7161ba8be6ba549c6e048e2f0402089bcf67e0587cecb87363d676"
+    },
+    "files/owned-bulk-gate/gate/results/7-BASE/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BASE/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/7-BASE/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/7-BASE/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "506cdc314aedf5ea76884bc16e7b928cf4d5bb05f8a8a4641c183f014fbdbec5"
+    },
+    "files/owned-bulk-gate/gate/results/3-BASE/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BASE/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "3d1016f11f1bdb8dc4b7b2b3eb9d25b189f8d26c4654d1bd1df0d507caaa0d0f"
+    },
+    "files/owned-bulk-gate/gate/results/3-BASE/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BASE/guest/capture.json",
+      "bytes": 216278,
+      "sha256": "6b51e26e05144c37b520164e393e10216d703449c17c85957e69384c3baca7d4"
+    },
+    "files/owned-bulk-gate/gate/results/3-BASE/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BASE/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/3-BASE/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/3-BASE/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "0fa02119c70930193bd411bf5c8753ed25d6660874a07b955db560ced7318f2e"
+    },
+    "files/owned-bulk-gate/gate/results/4-BULK/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BULK/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "7de180d6028c44dee1f4b98444106e9459a1c6e2a77da0594e742a37f86fd7bc"
+    },
+    "files/owned-bulk-gate/gate/results/4-BULK/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BULK/guest/capture.json",
+      "bytes": 254561,
+      "sha256": "fef5bada164924bbe7a09945b14ddcf68fa1a6f495d853f7ad56481de3bb446a"
+    },
+    "files/owned-bulk-gate/gate/results/4-BULK/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BULK/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/4-BULK/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/4-BULK/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "067ec32f49a694b07f19c7f638f13eedd9eb2d772df98ff8b0e9a5acb2131814"
+    },
+    "files/owned-bulk-gate/gate/results/0-BULK/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BULK/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "37bd525e75ee9d7671bab9c3b1eb857029594889c66fad75ebf82f995442c227"
+    },
+    "files/owned-bulk-gate/gate/results/0-BULK/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BULK/guest/capture.json",
+      "bytes": 254561,
+      "sha256": "6b6ca936e5533f91da3b605ebce76b34c081d451affcf8880a0b761a8c6758d9"
+    },
+    "files/owned-bulk-gate/gate/results/0-BULK/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BULK/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/0-BULK/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BULK/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "a83b97c415751ec8a4a4bff54e9bbbe998b200a2c8d7ab0b9ad68cfa714c8d15"
+    },
+    "files/owned-bulk-gate/gate/results/0-BASE/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BASE/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "24b2ec164dbce3dea7eea462e9a7cc2f5aabaad06b40627fa91256cad01ac541"
+    },
+    "files/owned-bulk-gate/gate/results/0-BASE/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BASE/guest/capture.json",
+      "bytes": 216278,
+      "sha256": "2bc8706ff0cf2f3514a1e989c2af2643b36ffcfb3b282f1782b8d405e5443a1b"
+    },
+    "files/owned-bulk-gate/gate/results/0-BASE/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BASE/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/0-BASE/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/0-BASE/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "5f24c55208d25ecc2d3598d4678c095216e00836e17e5f59114923adbf2c531d"
+    },
+    "files/owned-bulk-gate/gate/results/8-BASE/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BASE/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "a0d3be1bb44333b8c0c4b0f81a054de8fc33cc8579705b2cce6595ffedf51f2b"
+    },
+    "files/owned-bulk-gate/gate/results/8-BASE/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BASE/guest/capture.json",
+      "bytes": 216278,
+      "sha256": "b0fcea5c864a1e215911ccd872313d0b27c49009c7696f8a8b6775ed79c43436"
+    },
+    "files/owned-bulk-gate/gate/results/8-BASE/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BASE/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/8-BASE/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/8-BASE/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "aabf1f5b4c4d43b7ae3d229f8909b1226a23d209d84f01a1d40fb6b2b0296288"
+    },
+    "files/owned-bulk-gate/gate/results/2-BASE/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BASE/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "26b96e1516833c858bec979956f7d29c23cff57dbd0e2bbb825afcd520cb407a"
+    },
+    "files/owned-bulk-gate/gate/results/2-BASE/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BASE/guest/capture.json",
+      "bytes": 216278,
+      "sha256": "b8f4ac6c0ebca7b0127ec7a6dd22e94925b4b73da54d92e351c3146b399cc7ea"
+    },
+    "files/owned-bulk-gate/gate/results/2-BASE/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BASE/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/2-BASE/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/2-BASE/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "0613c1ce994b51c6db5b0b42118e3f290b9995153a444d20c894ba19ff577855"
+    },
+    "files/owned-bulk-gate/gate/results/1-BASE/guest/guest.bochsrc": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BASE/guest/guest.bochsrc",
+      "bytes": 527,
+      "sha256": "5b3d04775aa1f3f904949207dd4953f64baa7638c46080bfd0e0f3c83ff747d3"
+    },
+    "files/owned-bulk-gate/gate/results/1-BASE/guest/capture.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BASE/guest/capture.json",
+      "bytes": 216278,
+      "sha256": "e0de50cc4152cf96aafa470df0d04cf6527599b0f084ffbb59fa076fcd22d6ce"
+    },
+    "files/owned-bulk-gate/gate/results/1-BASE/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BASE/guest/callbacks.jsonl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/results/1-BASE/guest/guest.bochs.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/results/1-BASE/guest/guest.bochs.log",
+      "bytes": 7423,
+      "sha256": "d059f3fb37b7f17b7b1d990fe86dbd95442e11c2cbbaeab554982e54d153edc1"
+    },
+    "files/owned-bulk-gate/portable-derivation.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/portable-derivation.json",
+      "bytes": 1656,
+      "sha256": "1b6cabdac864a7f064a669e6f022826e5d0ea5d65976016e00d2ea6445a2c01d"
+    },
+    "files/owned-bulk-gate/benchmark.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/benchmark.exit.json",
+      "bytes": 156,
+      "sha256": "42759f1affbff5e138d71500cf24f0a9b8bca2b8eb78f78aef86982d76446039"
+    },
+    "files/owned-bulk-gate/benchmark.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/benchmark.stdout",
+      "bytes": 39168,
+      "sha256": "c93feadb2e451c92e60fdfb653472279ac311a3c93ebc21a15853f26b110f3b9"
+    },
+    "files/owned-bulk-gate/benchmark.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/benchmark.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/node-version.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/node-version.json",
+      "bytes": 132,
+      "sha256": "8e454900ae85008b79653c035631d8855889a5efdc434be557edaf48bd480d01"
+    },
+    "files/owned-bulk-gate/restore.exit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/restore.exit.json",
+      "bytes": 231,
+      "sha256": "1d5a11c7e029bfb1b577ed4f3efd0f107faf1ddd633c59b5bc680b5b54b4f97f"
+    },
+    "files/owned-bulk-gate/restore.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/restore.stdout",
+      "bytes": 12252,
+      "sha256": "533db7bdd1e53e8fc847cbe91ab919c8eda9ba4e814926446410a337fcf6267e"
+    },
+    "files/owned-bulk-gate/restore.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/restore.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "files/owned-bulk-gate/gate/approved-bindings.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/approved-bindings.json",
+      "bytes": 189784,
+      "sha256": "6b51bc822a3339018a609d1adb2c354ea8430d50a9c1c2b483df6a3fd436bf8b"
+    },
+    "files/owned-bulk-gate/gate/plan.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/gate/plan.json",
+      "bytes": 2785,
+      "sha256": "45e270b2e00399d06888579cd6701ace9592542a3972d20636e36dcb4e11e921"
+    },
+    "files/owned-bulk-gate/restored/source-admission.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/restored/source-admission.stdout",
+      "bytes": 11743,
+      "sha256": "21111e780f29d27dbe75dff970cc99ac22653fb76625d3d6a610e54fbb81667c"
+    },
+    "files/owned-bulk-gate/restored/source-admission.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/files/owned-bulk-gate/restored/source-admission.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "retention.json": {
+      "generated": true,
+      "bytes": 444,
+      "sha256": "7003bdb391b1ee822ddbf9fbe9f87fd55adbe84f7e580fcda615df25853ec4df"
+    },
+    "independent-gate-audit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/independent-gate-audit.json",
+      "bytes": 1194,
+      "sha256": "f21d65d70705cb2062a49355b03fb3ff3d5cd397c340cf69e0ffb5ad3ad00c98"
+    },
+    "independent-gate-audit.py": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/independent-gate-audit.py",
+      "bytes": 6154,
+      "sha256": "02a158e306049ff4f3a9e82cca9449bdcafd3e35ec3e0a2bb4450406ca0a2286"
+    },
+    "independent-gate-audit.pre-tar-review.py": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/independent-gate-audit.pre-tar-review.py",
+      "bytes": 5898,
+      "sha256": "47551dcac8d49eb3ea8e0222f7e62ecd37bccc1bbbcde573bb4a025bb6e57a02"
+    },
+    "independent-gate-audit.pre-layout-review.py": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt2-20261002/independent-gate-audit.pre-layout-review.py",
+      "bytes": 6092,
+      "sha256": "c06777fc9959df1a3fa7e4c72213b01502125ac61585789be568628bee669bd8"
+    }
+  }
+}

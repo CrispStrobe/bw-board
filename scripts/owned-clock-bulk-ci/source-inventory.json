@@ -1,0 +1,198 @@
+{
+  "restore.py": {
+    "sha256": "e2917db0212d5aa8cf562750675fc2d0729d610eb1bf62b581da5f369f5d47b7",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-in8-ci-restoration-20261002/restore.py"
+  },
+  "authenticate.mjs": {
+    "sha256": "7cab0626cd02006548c7651efe671271594cff17fe4050e9f9e1400e92fb81df",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-in8-ci-restoration-20261002/authenticate.mjs"
+  },
+  "gate.py": {
+    "sha256": "87230b61f7747d2b2c1e1e1974838a43e1345786d095cd131a034c4e6dac7b51",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/run.py"
+  },
+  "plan.json": {
+    "sha256": "45e270b2e00399d06888579cd6701ace9592542a3972d20636e36dcb4e11e921",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/plan.json"
+  },
+  "bounded.py": {
+    "sha256": "77758628414540ff4fdc04eb47d83df2ca92b8ab47c84e9e0c99c5fef015ed9b",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/bounded.py"
+  },
+  "runner.mjs": {
+    "sha256": "712511cf33e37034f277f52afbeb85ed9b040ca19d675f2eef0d5bf67eee0b17",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-source-20261002/runtime-derivation/runner.mjs"
+  },
+  "admission.mjs": {
+    "sha256": "ee33575bd58c34283ce3ab8203fc0a8732062df777bb9459f1cf471794e483f6",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-source-20261002/runtime-derivation/admission.mjs"
+  },
+  "reference.json": {
+    "sha256": "86bc14cab1d0fe883a1f7f3e7511aec82a026e45133b362c3b1826b57b9d3969",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on/guest/capture.json"
+  },
+  "js-reference.json": {
+    "sha256": "bf026d23f0c51d63a9744dc4facb4d58809c50f1d35747ffc6ea5873b518e45e",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-in8-source-r3-20261002/js-reference/capture.json"
+  },
+  "restore-bindings.json": {
+    "sha256": "24f5781bd85902059374a1fc4216c36eb611f9c5227bada1cf00c73a8674a7eb",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-attempt2-20261002/restoration-bindings.json"
+  },
+  "gate-bindings.json": {
+    "sha256": "ffc288d0071ae48f69b8c4ef2b1c5c6c2cbd1af4b7952d122cdc1431e501c777",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/approved-bindings.json"
+  },
+  "guest.bochsrc": {
+    "sha256": "5683c4731d60804502b17ee0653085ef761137199878880b3b5ed64fd0a49d3d",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-in8-r2-build-20261002/guest-source.bochsrc"
+  },
+  "smoke-off/parity.json": {
+    "sha256": "e7988a9830cd51e0df606011273baca5aed0b225a7e1cc3163f929670cf7f34e",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-parity-20261002/smoke-off/parity.json"
+  },
+  "smoke-off/independent-audit.json": {
+    "sha256": "53c6476d3a5a00b1cc6a539c08a1cb38156bda1d34034617ecd27fc59c497b98",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-parity-20261002/smoke-off/independent-audit.json"
+  },
+  "fulltrace-on/parity.json": {
+    "sha256": "194c37e12f3f5d58f8620bb063ef5069c3ce908e497fe5a6dfb1d13310a3eef7",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-parity-20261002/fulltrace-on/parity.json"
+  },
+  "fulltrace-on/independent-audit.json": {
+    "sha256": "da855dc3c854bbb707205d9742225d3a32761ba33e5ff49bbcacee564b3e0896",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-parity-20261002/fulltrace-on/independent-audit.json"
+  },
+  "trace-fast/parity.json": {
+    "sha256": "92c44d941e8bbd138101979addec2c029cfa48793354a026b16daa856d8fe2b0",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-parity-20261002/trace-fast/parity.json"
+  },
+  "trace-fast/independent-audit.json": {
+    "sha256": "1869b19074c5865b7568c0f03d1c1eca944dc30f277fbf7707c9d6501f032875",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-parity-20261002/trace-fast/independent-audit.json"
+  },
+  "vps-incomplete/results/0-BULK.input.json": {
+    "sha256": "a35ba537758034b51768f4899b52cee2d891875e81aec246d156c96182c63e30",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BULK.input.json"
+  },
+  "vps-incomplete/results/auth-before.json": {
+    "sha256": "a921c39a9f33955f3c4ac264528a6957027eb3df13e9c178ba0da4e573ac4380",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/auth-before.json"
+  },
+  "vps-incomplete/results/1-BASE.input.json": {
+    "sha256": "691f8009ca3c40632a9ab970a8016a5c311469ef4247206b3b9937059779e9cd",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/1-BASE.input.json"
+  },
+  "vps-incomplete/results/1-BULK.input.json": {
+    "sha256": "8a534594b42fbc4df475e2817225197d2042740c34259e586a293c24e4faad6d",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/1-BULK.input.json"
+  },
+  "vps-incomplete/results/0-BASE.input.json": {
+    "sha256": "c943e79622ba82316ef9e82227364d100dcb5f05d9e877b1d84fd3ee065917ac",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BASE.input.json"
+  },
+  "vps-incomplete/results/1-BASE/child.stdout": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/1-BASE/child.stdout"
+  },
+  "vps-incomplete/results/1-BASE/child.exit.json": {
+    "sha256": "bf2464f0438e3e337a666717c6fb40d33aa788f9889181d309b6c4980d7e3934",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/1-BASE/child.exit.json"
+  },
+  "vps-incomplete/results/1-BASE/child.stderr": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/1-BASE/child.stderr"
+  },
+  "vps-incomplete/results/0-BASE/child.stdout": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BASE/child.stdout"
+  },
+  "vps-incomplete/results/0-BASE/child.exit.json": {
+    "sha256": "c88e822cbe070b06d7b25c48b86a6e95b371fb200bfd03e22851d2a484a746c7",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BASE/child.exit.json"
+  },
+  "vps-incomplete/results/0-BASE/child.stderr": {
+    "sha256": "db0a43632ba85ec04ba7465ad2c5a27e2ab416994fa674c07851208a081d401b",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BASE/child.stderr"
+  },
+  "vps-incomplete/results/0-BULK/child.stdout": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BULK/child.stdout"
+  },
+  "vps-incomplete/results/0-BULK/child.exit.json": {
+    "sha256": "60b613a4fb6324b83a78d9e856949b48ed9698a6455110ad5bab268b2b9ee494",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BULK/child.exit.json"
+  },
+  "vps-incomplete/results/0-BULK/child.stderr": {
+    "sha256": "3daaf18701ad85be07b28d295b33e73ecc108de2bf38448173e47c2fa990e3d2",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BULK/child.stderr"
+  },
+  "vps-incomplete/results/1-BULK/child.stdout": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/1-BULK/child.stdout"
+  },
+  "vps-incomplete/results/1-BULK/child.exit.json": {
+    "sha256": "e669f883244f739e082148346eecabf91cb76d9e7016a045c33710c440387ebc",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/1-BULK/child.exit.json"
+  },
+  "vps-incomplete/results/1-BULK/child.stderr": {
+    "sha256": "c00dd3b257efe4d46c0fda2b904aa53503b3205f70e2ff1aa8566a63d707374f",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/1-BULK/child.stderr"
+  },
+  "vps-incomplete/results/1-BULK/guest/guest.bochsrc": {
+    "sha256": "a7bcc1b5c0a89cbf973c30ae979ccdf152c399a08ccba203310a38fc65fc0c01",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/1-BULK/guest/guest.bochsrc"
+  },
+  "vps-incomplete/results/1-BULK/guest/capture.json": {
+    "sha256": "e4fd152ca4b7259f67a29f73c7a67885ab47cb5f16a15e26ea25dd4ff233335b",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/1-BULK/guest/capture.json"
+  },
+  "vps-incomplete/results/1-BULK/guest/callbacks.jsonl": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/1-BULK/guest/callbacks.jsonl"
+  },
+  "vps-incomplete/results/1-BULK/guest/guest.bochs.log": {
+    "sha256": "ff3ff6ed201d83cbece39f43d2f14d0e2a6707632e9020a3c559f35339f3ee17",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/1-BULK/guest/guest.bochs.log"
+  },
+  "vps-incomplete/results/0-BULK/guest/guest.bochsrc": {
+    "sha256": "a38884f93d6ff97f7fda882f14fde486dc2b47d3fa1e9edd2091cca31960c948",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BULK/guest/guest.bochsrc"
+  },
+  "vps-incomplete/results/0-BULK/guest/capture.json": {
+    "sha256": "8eff196ed2105305d2427fedf27d30951f47dbf6f5aec8040fce85f7c093307f",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BULK/guest/capture.json"
+  },
+  "vps-incomplete/results/0-BULK/guest/callbacks.jsonl": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BULK/guest/callbacks.jsonl"
+  },
+  "vps-incomplete/results/0-BULK/guest/guest.bochs.log": {
+    "sha256": "a90cc8f4bc51303b806950b04615a17247047f07198cd113b841a85349e017c4",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BULK/guest/guest.bochs.log"
+  },
+  "vps-incomplete/results/0-BASE/guest/guest.bochsrc": {
+    "sha256": "eda3f875c91ad3d6abc93bad9b3459ae8587c5ca2ac35a3b0ac2bae5c2ff02c3",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BASE/guest/guest.bochsrc"
+  },
+  "vps-incomplete/results/0-BASE/guest/capture.json": {
+    "sha256": "30a427ffa3b19095d9824bd047c5bba2f9a9cc9522123ec091b5d9b4f395dc6e",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BASE/guest/capture.json"
+  },
+  "vps-incomplete/results/0-BASE/guest/callbacks.jsonl": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BASE/guest/callbacks.jsonl"
+  },
+  "vps-incomplete/results/0-BASE/guest/guest.bochs.log": {
+    "sha256": "c214c2d6ef4d87d245c64386634ab92878613e18e5b7c2c38ec104190220a5ab",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/results/0-BASE/guest/guest.bochs.log"
+  },
+  "vps-incomplete/hardware-context.json": {
+    "sha256": "32ebcbc4c2f79df6dfbb3acc1a847d43835291c7bfa5b9fce0beef01473cdebd",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/hardware-context.json"
+  },
+  "vps-incomplete/hardware-preparation.json": {
+    "sha256": "89a38fd1000cede9f18cc31c48d0ea0c3ed90e9e8157e30bf7c809057648bb90",
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-cpu-gate-20261002/hardware-preparation.json"
+  }
+}

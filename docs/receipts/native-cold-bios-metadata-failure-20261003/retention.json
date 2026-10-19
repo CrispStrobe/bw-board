@@ -1,0 +1,8 @@
+{
+  "officialArtifactId": 11268896285,
+  "run": 37107834752,
+  "zipBytes": 9664414,
+  "zipSha256": "461c4aa0ef589ed21e1baed39283e0677339f692f86f6f5e9ec34f2950984a92",
+  "retainedZip": "/tmp/native-cold-native-second-diagnostic-publication-20261003/official-artifact.zip",
+  "scope": "Selected small failure evidence; full ZIP retained externally; no duplicate source trees or native binaries"
+}

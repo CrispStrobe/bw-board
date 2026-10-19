@@ -1,0 +1,346 @@
+TAP version 13
+# node:internal/modules/esm/resolve:873
+#   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+#         ^
+# Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'avr8js' imported from /mnt/volume1/code/lego/cp13-motion-board-20261001/src/avr8js-adapter.js
+#     at packageResolve (node:internal/modules/esm/resolve:873:9)
+#     at moduleResolve (node:internal/modules/esm/resolve:946:18)
+#     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+#     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+#     at \#cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+#     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+#     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+#     at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+#   code: 'ERR_MODULE_NOT_FOUND'
+# }
+# Node.js v20.20.2
+# Subtest: /mnt/volume1/code/lego/cp13-motion-board-20261001/test/labwired-adapter.test.mjs
+not ok 1 - /mnt/volume1/code/lego/cp13-motion-board-20261001/test/labwired-adapter.test.mjs
+  ---
+  duration_ms: 278.155367
+  location: '/mnt/volume1/code/lego/cp13-motion-board-20261001/test/labwired-adapter.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: labwired bridge: our netlist → their system manifest
+    # Subtest: every header pin gets an injection binding, whatever it is wired to
+    ok 1 - every header pin gets an injection binding, whatever it is wired to
+      ---
+      duration_ms: 7.471769
+      ...
+    # Subtest: the classifier walks THROUGH the series resistor to the LED
+    ok 2 - the classifier walks THROUGH the series resistor to the LED
+      ---
+      duration_ms: 2.072765
+      ...
+    # Subtest: an output binding is named with OUR part id, so a consumer can join on it
+    ok 3 - an output binding is named with OUR part id, so a consumer can join on it
+      ---
+      duration_ms: 4.651218
+      ...
+    # Subtest: the manifest declares NO external_devices — one board, one truth
+    ok 4 - the manifest declares NO external_devices — one board, one truth
+      ---
+      duration_ms: 10.245148
+      ...
+    # Subtest: a pull-up + button pad is a contact, and gets ONE input binding
+    ok 5 - a pull-up + button pad is a contact, and gets ONE input binding
+      ---
+      duration_ms: 1.632441
+      ...
+    # Subtest: an analog pad is NAMED and its injection is REFUSED, not silently booleanised
+    ok 6 - an analog pad is NAMED and its injection is REFUSED, not silently booleanised
+      ---
+      duration_ms: 2.549272
+      ...
+    # Subtest: a connection on a pad outside the header map is refused BY NAME
+    ok 7 - a connection on a pad outside the header map is refused BY NAME
+      ---
+      duration_ms: 0.643297
+      ...
+    # Subtest: the controller's OWN supply terminals are not refusals
+    ok 8 - the controller's OWN supply terminals are not refusals
+      ---
+      duration_ms: 1.500091
+      ...
+    # Subtest: a chip with no heavy-tier descriptor refuses, and names what does ship
+    ok 9 - a chip with no heavy-tier descriptor refuses, and names what does ship
+      ---
+      duration_ms: 1.296447
+      ...
+    # Subtest: maps Arduino Uno headers to LabWired AVR ports without claiming ATtiny support
+    ok 10 - maps Arduino Uno headers to LabWired AVR ports without claiming ATtiny support
+      ---
+      duration_ms: 0.611812
+      ...
+    # Subtest: bridges micro:bit v2 and PyBadge at their zero-based flash geometry
+    ok 11 - bridges micro:bit v2 and PyBadge at their zero-based flash geometry
+      ---
+      duration_ms: 2.439808
+      ...
+    # Subtest: no controller, or two, refuses rather than guessing
+    ok 12 - no controller, or two, refuses rather than guessing
+      ---
+      duration_ms: 0.468621
+      ...
+    # Subtest: classifyAttachment orders analog before contact before indicator
+    ok 13 - classifyAttachment orders analog before contact before indicator
+      ---
+      duration_ms: 0.491424
+      ...
+    # Subtest: adapter options come out ready to hand to createLabwiredAdapter
+    ok 14 - adapter options come out ready to hand to createLabwiredAdapter
+      ---
+      duration_ms: 0.915297
+      ...
+    # Subtest: a board the bridge cannot carry throws with the reasons attached
+    ok 15 - a board the bridge cannot carry throws with the reasons attached
+      ---
+      duration_ms: 0.995155
+      ...
+    1..15
+ok 2 - labwired bridge: our netlist → their system manifest
+  ---
+  duration_ms: 43.140358
+  type: 'suite'
+  ...
+# Subtest: labwired bridge census: the shipped F030 gallery
+    # Subtest: the fixture is the corpus, and says where it came from
+    ok 1 - the fixture is the corpus, and says where it came from
+      ---
+      duration_ms: 0.52763
+      ...
+    # Subtest: every shipped bench bridges — no chip, mcu or pin refusal anywhere
+    ok 2 - every shipped bench bridges — no chip, mcu or pin refusal anywhere
+      ---
+      duration_ms: 76.104557
+      ...
+    # Subtest: THE LEDGER IS EMPTY for every bench with no analog pad
+    ok 3 - THE LEDGER IS EMPTY for every bench with no analog pad
+      ---
+      duration_ms: 40.923865
+      ...
+    # Subtest: the analog refusals are exactly the ADC pads, one per pad
+    ok 4 - the analog refusals are exactly the ADC pads, one per pad
+      ---
+      duration_ms: 45.935174
+      ...
+    # Subtest: the pad-role census matches what the corpus actually wires
+    ok 5 - the pad-role census matches what the corpus actually wires
+      ---
+      duration_ms: 39.058467
+      ...
+    1..5
+ok 3 - labwired bridge census: the shipped F030 gallery
+  ---
+  duration_ms: 206.620796
+  type: 'suite'
+  ...
+# node:internal/modules/esm/resolve:873
+#   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+#         ^
+# Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'avr8js' imported from /mnt/volume1/code/lego/cp13-motion-board-20261001/src/avr8js-adapter.js
+#     at packageResolve (node:internal/modules/esm/resolve:873:9)
+#     at moduleResolve (node:internal/modules/esm/resolve:946:18)
+#     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+#     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+#     at \#cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+#     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+#     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+#     at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+#   code: 'ERR_MODULE_NOT_FOUND'
+# }
+# Node.js v20.20.2
+# Subtest: /mnt/volume1/code/lego/cp13-motion-board-20261001/test/labwired-firmware-only.test.mjs
+not ok 3 - /mnt/volume1/code/lego/cp13-motion-board-20261001/test/labwired-firmware-only.test.mjs
+  ---
+  duration_ms: 275.723941
+  location: '/mnt/volume1/code/lego/cp13-motion-board-20261001/test/labwired-firmware-only.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: engineering input JS call contract (backend doubles, not model proof)
+    # Subtest: missing APIs refuse explicitly, never use sequential set_input fallback
+    ok 1 - missing APIs refuse explicitly, never use sequential set_input fallback
+      ---
+      duration_ms: 3.420154
+      ...
+    # Subtest: discovery normalizes actual serde Map shapes and rejects malformed top level
+    ok 2 - discovery normalizes actual serde Map shapes and rejects malformed top level
+      ---
+      duration_ms: 2.047369
+      ...
+    # Subtest: validates every row before one copied atomic call, without trimming identities
+    ok 3 - validates every row before one copied atomic call, without trimming identities
+      ---
+      duration_ms: 2.129729
+      ...
+    # Subtest: bad later rows, nonfinite values and unknown fields never reach the backend
+    ok 4 - bad later rows, nonfinite values and unknown fields never reach the backend
+      ---
+      duration_ms: 1.302009
+      ...
+    # Subtest: backend transaction errors propagate without a success receipt
+    ok 5 - backend transaction errors propagate without a success receipt
+      ---
+      duration_ms: 6.331271
+      ...
+    # Subtest: reset uses the new backend for both discovery and writes
+    ok 6 - reset uses the new backend for both discovery and writes
+      ---
+      duration_ms: 1.034066
+      ...
+    # Subtest: debug boundary refuses missing input methods and detached targets
+    ok 7 - debug boundary refuses missing input methods and detached targets
+      ---
+      duration_ms: 1.845093
+      ...
+    1..7
+ok 5 - engineering input JS call contract (backend doubles, not model proof)
+  ---
+  duration_ms: 31.078096
+  type: 'suite'
+  ...
+# Subtest: actual WASM engineering-input transaction proof
+    # Subtest: discovers both scoped ids and drives real analog-kit ADC inputs in one transaction
+    ok 1 - discovers both scoped ids and drives real analog-kit ADC inputs in one transaction
+      ---
+      duration_ms: 1171.647614
+      ...
+    # Subtest: backend rejects ambiguous or unknown identities and bad later ranges atomically
+    ok 2 - backend rejects ambiguous or unknown identities and bad later ranges atomically
+      ---
+      duration_ms: 12.088582
+      ...
+    # Subtest: debug success emits one isolated input fact; replay routes atomically without re-emitting
+    ok 3 - debug success emits one isolated input fact; replay routes atomically without re-emitting
+      ---
+      duration_ms: 5.387249
+      ...
+    # Subtest: a circuit-bound target refuses input replay rather than half-rewinding its board
+    ok 4 - a circuit-bound target refuses input replay rather than half-rewinding its board
+      ---
+      duration_ms: 9.112549
+      ...
+    1..4
+ok 6 - actual WASM engineering-input transaction proof
+  ---
+  duration_ms: 1200.088203
+  type: 'suite'
+  ...
+# Subtest: the micro:bit matrix, without an engine
+    # Subtest: gray8 draws red LEDs by brightness, a dark one as a dim body
+    ok 1 - gray8 draws red LEDs by brightness, a dark one as a dim body
+      ---
+      duration_ms: 14.093801
+      ...
+    # Subtest: a micro:bit bench declares its on-module matrix; other benches declare no devices
+    ok 2 - a micro:bit bench declares its on-module matrix; other benches declare no devices
+      ---
+      duration_ms: 14.693788
+      ...
+    # Subtest: Board.setPartMatrix: an mcu part (no model) gets an overlay; a rebuild clears it
+    ok 3 - Board.setPartMatrix: an mcu part (no model) gets an overlay; a rebuild clears it
+      ---
+      duration_ms: 27.728405
+      ...
+    # Subtest: Board.setPartMatrix: a part with a registered model gets it on its own state
+    ok 4 - Board.setPartMatrix: a part with a registered model gets it on its own state
+      ---
+      duration_ms: 61.354658
+      ...
+    # Subtest: binToElf carries extra records (an nRF .hex UICR) as their own PT_LOADs
+    ok 5 - binToElf carries extra records (an nRF .hex UICR) as their own PT_LOADs
+      ---
+      duration_ms: 1.168354
+      ...
+    1..5
+ok 7 - the micro:bit matrix, without an engine
+  ---
+  duration_ms: 146.605395
+  type: 'suite'
+  ...
+# Subtest: the micro:bit matrix on the real engine
+    # Subtest: the catalog offers microbit-v2 with its matrix as a drawable display
+    ok 1 - the catalog offers microbit-v2 with its matrix as a drawable display
+      ---
+      duration_ms: 0.310738
+      ...
+    # Subtest: the engine's picture reaches the micro:bit part's device state
+    ok 2 - the engine's picture reaches the micro:bit part's device state
+      ---
+      duration_ms: 1358.697874
+      ...
+    1..2
+ok 8 - the micro:bit matrix on the real engine
+  ---
+  duration_ms: 1359.315171
+  type: 'suite'
+  ...
+# node:internal/modules/esm/resolve:873
+#   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+#         ^
+# Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'avr8js' imported from /mnt/volume1/code/lego/cp13-motion-board-20261001/src/avr8js-adapter.js
+#     at packageResolve (node:internal/modules/esm/resolve:873:9)
+#     at moduleResolve (node:internal/modules/esm/resolve:946:18)
+#     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+#     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+#     at \#cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+#     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+#     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+#     at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+#   code: 'ERR_MODULE_NOT_FOUND'
+# }
+# Node.js v20.20.2
+# Subtest: /mnt/volume1/code/lego/cp13-motion-board-20261001/test/labwired-roundtrip.test.mjs
+not ok 6 - /mnt/volume1/code/lego/cp13-motion-board-20261001/test/labwired-roundtrip.test.mjs
+  ---
+  duration_ms: 423.775602
+  location: '/mnt/volume1/code/lego/cp13-motion-board-20261001/test/labwired-roundtrip.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# node:internal/modules/esm/resolve:873
+#   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+#         ^
+# Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'rp2040js' imported from /mnt/volume1/code/lego/cp13-motion-board-20261001/src/cortex-m0-machine.js
+#     at packageResolve (node:internal/modules/esm/resolve:873:9)
+#     at moduleResolve (node:internal/modules/esm/resolve:946:18)
+#     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+#     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+#     at \#cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+#     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+#     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+#     at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+#   code: 'ERR_MODULE_NOT_FOUND'
+# }
+# Node.js v20.20.2
+# Subtest: /mnt/volume1/code/lego/cp13-motion-board-20261001/test/pad-drive-parity.test.mjs
+not ok 7 - /mnt/volume1/code/lego/cp13-motion-board-20261001/test/pad-drive-parity.test.mjs
+  ---
+  duration_ms: 679.386898
+  location: '/mnt/volume1/code/lego/cp13-motion-board-20261001/test/pad-drive-parity.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..10
+# tests 42
+# suites 6
+# pass 38
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3373.928368

@@ -1,0 +1,6 @@
+{
+  "oldSha256": "514f4175751c29d6647f0cb5f2499fbade1bf989f6abb2d32ea98f40eaa4f7ec",
+  "newSha256": "16616a5b40d04058d46a479383a32efc9d1b0948cb470ab483ec203b37c451d4",
+  "change": "Exact six checkpoint names/order; reset board is not exported by production capture and is not fabricated.",
+  "executed": false
+}

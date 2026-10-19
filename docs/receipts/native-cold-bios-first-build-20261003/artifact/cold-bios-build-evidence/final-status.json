@@ -1,0 +1,23 @@
+{
+  "scope": "COLD_BIOS_BUILD_ONLY_NO_ADDON_LOAD_OR_GUEST",
+  "completed": true,
+  "result": "COLD_BIOS_BUILD_AND_STATIC_PREFLIGHT_PASS_NO_ADDON_LOAD_OR_GUEST",
+  "sourceBeforeAfterEqual": true,
+  "guards": {
+    "head": "a6fae61a549d595c88a324f50589d92497040c07",
+    "status": "",
+    "upstreamHead": "0e45b736ef9792eb9b752b0a35db49eaf2faea47",
+    "upstreamStatus": "",
+    "node": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+    "helper": "0c951ee68c227fc290287170ad87b53a5370641c77b691e38278b86486f42a47",
+    "workflow": "24c54c02af99e2db0178dd82a23c00d9bcec46bca3d7ee3a8f855f8de759191f",
+    "header": "757bb6bf5ea89e173bad159bfc31d8a5840157694a9374f2c3276747ae061530"
+  },
+  "errors": {},
+  "nodeSha256Before": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "helperSha256Before": "0c951ee68c227fc290287170ad87b53a5370641c77b691e38278b86486f42a47",
+  "workflowSha256Before": "24c54c02af99e2db0178dd82a23c00d9bcec46bca3d7ee3a8f855f8de759191f",
+  "headerSha256Before": "757bb6bf5ea89e173bad159bfc31d8a5840157694a9374f2c3276747ae061530",
+  "preparedInputsBeforeAfterEqual": true,
+  "frozenInputsBeforeAfterEqual": true
+}

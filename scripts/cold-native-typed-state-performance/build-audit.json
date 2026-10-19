@@ -1,0 +1,16 @@
+{
+  "status": "PASS_INDEPENDENT_STATIC_BUILD_AUDIT",
+  "runId": 37143329563,
+  "head": "f4a2f2ceae48dde3e4585d84e6c759e13ebadc53",
+  "artifactId": 11280864695,
+  "zipBytes": 7512416,
+  "zipSha256": "06259925a4c2ab6e97b490f11cceb52000a24ac372e37e159e266be1d9daea36",
+  "sourceInputs": 134,
+  "preparedInputs": 811,
+  "addonSha256": "d7fa1a7206afc8204d96fcd75d0130f17f39ade5c18fa32b3e25c7a62cb93993",
+  "addonBytes": 2069584,
+  "typedNapiSha256": "8929ce31877a3f5a0617f56073c04ca2429bc55bb012b0929f38c24a04a637ab",
+  "runtimeSha256": "6fdf5fccf797777acce655be2609cf58fb498d18ad6d0dd78fdef8e38a505643",
+  "stateExportProfile": "bw.cold-native.copied-u32-state.v1",
+  "scope": "Genuine first static compile/admission; frozen134 and complete prepared TAR map streamed byte-verified, config/exports/context/beforeafter authenticated. No addon load, guest, parity or performance claim."
+}

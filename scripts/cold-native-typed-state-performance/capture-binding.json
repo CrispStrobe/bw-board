@@ -1,0 +1,31 @@
+{
+  "schema": "bw.cold-native-typed-state.capture-binding.v1",
+  "status": "CANDIDATE_BUILD_STATIC_AUDIT_READY",
+  "captureAuthority": {
+    "schema": "bw.cold-native-performance.capture-binding.v1",
+    "status": "INDEPENDENTLY_AUDITED_CAPTURE_READY",
+    "compiledRevision": "7632e6a0995ceaab88bc8cede91506a5330d2e1c",
+    "driverRevision": "11c0bdcade020117fc682e97db284c6ff8797842",
+    "driverSourceSha256": "3afa8154985620bed1ca82042555010df066e8e7dc1227471c297fcc977e6179",
+    "captureSha256": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf",
+    "independentAuditSha256": "a1b93101bd0584837d495ca3083c176c76610be31909df44035d9be0050941b2",
+    "independentAuditApproved": true,
+    "targetQ": 316562
+  },
+  "candidateBuild": {
+    "sourceRevision": "f4a2f2ceae48dde3e4585d84e6c759e13ebadc53",
+    "sourceContextSha256": "08c57bce8ad41516fd52827952db73279d6ba1534706c2f9d5650c72096649bb",
+    "sourceInputs": 134,
+    "stateExportProfile": "bw.cold-native.copied-u32-state.v1",
+    "napiSha256": "8929ce31877a3f5a0617f56073c04ca2429bc55bb012b0929f38c24a04a637ab",
+    "addonSha256": "d7fa1a7206afc8204d96fcd75d0130f17f39ade5c18fa32b3e25c7a62cb93993",
+    "officialArtifact": {
+      "id": 11280864695,
+      "runId": 37143329563,
+      "headSha": "f4a2f2ceae48dde3e4585d84e6c759e13ebadc53",
+      "sizeInBytes": 7512416,
+      "sha256": "06259925a4c2ab6e97b490f11cceb52000a24ac372e37e159e266be1d9daea36"
+    },
+    "independentBuildAuditSha256": "203b7c34c656c2d1eb41fb74c242bf6ce108ba405f1bb295ea2a9f8145e784c7"
+  }
+}

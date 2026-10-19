@@ -1,0 +1,8 @@
+{
+  "addon": "/home/runner/work/_temp/paged-int-iret-build-prepared/bochs/bw_direct.node",
+  "sha256": "92a5121df194c6675303913ebd527e7d0253e29e686b2cbd8dd91fb579489b6f",
+  "preparedManifest": "/home/runner/work/_temp/paged-int-iret-build-evidence/prepare.json",
+  "preparedManifestSha256": "bc37a25c7eae18c5ef9e586de3df8317bd7375e3062e70dfda6e87dd610a28f2",
+  "buildReceipt": "/home/runner/work/_temp/paged-int-iret-build-evidence/build-static-preflight.json",
+  "buildReceiptSha256": "cefafcb47bc0358d3ffc692dad4d04cd5fbc7ec54d10c4cf28fa9c3276d879f4"
+}

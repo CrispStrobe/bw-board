@@ -1,0 +1,27 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "/tmp/native-cold-native-symbol-ack-hosted-binding-controls-20261005/selected-wrapper.mjs"
+  ],
+  "cwd": "/tmp/bw-cold-native-symbol-ack-hosted-binding-source-20261005",
+  "revision": "12c678b4c0eafea2a13d4e9802f1f772c1040719",
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 8388608,
+    "coreBytes": 0,
+    "niceIncrement": 10,
+    "pythonMemoryLimit": "not imposed; Python mock child inherits process CPU/file limits; Node heap cap applies only to Node"
+  },
+  "blankHooks": [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "LD_PRELOAD",
+    "LD_AUDIT",
+    "BW_HOT_NAPI_PROFILE",
+    "NODE_V8_COVERAGE"
+  ],
+  "scope": "One external Node wrapper forwarding two selected Python mocks plus held hosted/export mechanics hash checks and disabled workflow checks; remaining controls unselected; no setup/perf/guest/build"
+}

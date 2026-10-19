@@ -1,0 +1,51 @@
+{
+  "scope": "Independent read/hash/inverse audit only; no build or guest execution",
+  "checks": {
+    "approvedPins": true,
+    "H4": {
+      "exactIndependentReconstruction": true,
+      "exactInverse": true,
+      "cleanPinnedRevision": "15631beb63d7c1f17e693de7c86d4ed37b96a768",
+      "originalSha256": "279152f53b3a335e7f8b319f2be4cd74db6d7a90b7f4f4367b74666044ec2106",
+      "derivedSha256": "b9dc6b91c183f9cd27ccd755a7a42ca3f7a295e98d502a61e87f6bd500b83973",
+      "manifestSourceHashCount": 32,
+      "transformedHashCount": 12,
+      "actualCompiledFiles": {
+        "bochs/bochs-cpu3-native-direct-board-adapter/napi.cc": "b57a3cea1f5f5eea2092401f8dba3041eb0bc0d19551bf4273e66ad7372c60cb",
+        "bochs/cpu/bw_slice_runtime.inc": "89acf83dda501a097550e0465b4db2351229a991e51cbf8439d43bad77d4a42a",
+        "bochs/bochs-cpu3-native-direct-board/abi.h": "04f7030ab482caaffa510bd83681f96a3cd3a2a0b900ff9304acefa8d1623a2d",
+        "bochs/config.h": "d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c"
+      },
+      "binarySha256": "5257a116734fb813b3ef9df31666eea0b41753d344f5c928b312765c0c497cd4"
+    },
+    "H5": {
+      "exactIndependentReconstruction": true,
+      "exactInverse": true,
+      "cleanPinnedRevision": "ef106b4ae3a2ca55e9cc3253597ec66773e07847",
+      "originalSha256": "434d7c9d49f610b6955c53b0da39c556410b48aa909c4ddd3772a51a404c3946",
+      "derivedSha256": "73cf3a822f5f5c4fc32853fdb1c240c7e53cf46b976ab9e9ee16e41cfd5f663e",
+      "manifestSourceHashCount": 37,
+      "transformedHashCount": 12,
+      "actualCompiledFiles": {
+        "bochs/bochs-cpu3-native-direct-board-adapter/napi.cc": "f83992b411bb0756c4a0744fdd8f9ae70be6d1b3a7e23d65db199ef2fbec58b5",
+        "bochs/cpu/bw_slice_runtime.inc": "89acf83dda501a097550e0465b4db2351229a991e51cbf8439d43bad77d4a42a",
+        "bochs/bochs-cpu3-native-direct-board/abi.h": "04f7030ab482caaffa510bd83681f96a3cd3a2a0b900ff9304acefa8d1623a2d",
+        "bochs/config.h": "d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c"
+      },
+      "binarySha256": "c52943191195faae07107049dcea594f8e35451cff6d7aa0cafc485886895fc0"
+    },
+    "criterion": {
+      "warmupPairs": 2,
+      "alternatingMeasuredPairs": 7,
+      "meanCpuReductionMinimum": 0.03,
+      "allSevenStrictlyFavorable": true,
+      "formula": "1 - mean(H5 total user+system CPU microseconds)/mean(H4 total user+system CPU microseconds)"
+    }
+  },
+  "limitations": [
+    "Process CPU covers all process threads and adapter execution; includes timer overhead; excludes startup, settlement and serialization.",
+    "timing.unit remains nanoseconds for wall fields; CPU fields explicitly Us and are microseconds.",
+    "Source manifest counts are H4 32 and H5 37; transformed inputs 12 are separate from explicit actual compiled NAPI/runtime/header/config pins.",
+    "No performance result or physical RTx qualification from this audit."
+  ]
+}

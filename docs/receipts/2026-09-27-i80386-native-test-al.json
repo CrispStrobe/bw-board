@@ -1,0 +1,50 @@
+{
+  "schema": "bw.i80386-native-test-al-immediate.v1",
+  "date": "2026-09-27",
+  "workload": "stock xv6 4 MiB forktest with vendored Bochs BIOS",
+  "sourceSha256": {
+    "src/experimental/i80386-block-spike.c": "379821ff6409586e5f63a2bb9c75e7604c6add46e6c7d62fd209b6fe38a7925d",
+    "src/experimental/i80386-block-spike.js": "f9841f06bfe338bed79f3940a338d82794dcaf4b4d02af0d584a61d6e3fec689",
+    "src/experimental/i80386-native-byte-block.js": "adcd61793d46b1e8f7643141feed45af2a3010235c6b4fd6b3687a55913b9346",
+    "wasm/i80386-block-spike.wasm": "e69254d3309feb43b058a9a96876100354dedf4d1a8e22ac01516e58d6fb5c02"
+  },
+  "matchingFields": [
+    "steps",
+    "first32",
+    "serial",
+    "inputSent",
+    "interrupts",
+    "postBootInterrupts",
+    "lapicIdReads",
+    "milestones",
+    "userModeEntries",
+    "screen",
+    "lapic",
+    "ioapic",
+    "cpu",
+    "ramSha256"
+  ],
+  "steps": 24338279,
+  "ramSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+  "serialSuffix": "fork test OK\n$ ",
+  "beforeNativeStats": {
+    "attempts": 15121837,
+    "decoded": 17373,
+    "blockCalls": 2082524,
+    "instructions": 11298966,
+    "repStosDecoded": 2154,
+    "repStosBlockCalls": 136188,
+    "repStosIterations": 2145309
+  },
+  "afterNativeStats": {
+    "attempts": 15032399,
+    "decoded": 17425,
+    "blockCalls": 2100227,
+    "instructions": 11406107,
+    "repStosDecoded": 2154,
+    "repStosBlockCalls": 136188,
+    "repStosIterations": 2145309
+  },
+  "additionalNativeInstructions": 107141,
+  "scope": "A8 TEST AL,imm8 is admitted in bounded 32-bit native blocks. Guest state matches the prior native path on this workload; no speedup claim is made from these runs."
+}

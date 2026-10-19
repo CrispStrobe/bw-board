@@ -1,0 +1,8 @@
+{
+  "status": "PASS_METADATA_ONLY_48_CURRENT_GIT_INPUTS",
+  "head": "60a9b11ab480531e692dbac70ecbb35430cf425d",
+  "sourceInputs": 48,
+  "elapsedSeconds": 1.121032850816846,
+  "scope": "Metadata import/sourceIdentity only; no factory/capture/native",
+  "stdoutSha256": "0cbdc9b3ff6daa7f251cba14144441d79b5873158007c6faeaa51df5747f360c"
+}

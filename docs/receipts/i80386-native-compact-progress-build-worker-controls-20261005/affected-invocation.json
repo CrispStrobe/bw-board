@@ -1,0 +1,37 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "--test-name-pattern=^actual final composition validates",
+    "test/i80386-native-compact-progress-worker-source.test.mjs"
+  ],
+  "cwd": "/tmp/bw-native-compact-progress-build-source-20261005",
+  "revision": "7acbc4ccc9553fd2ae303b1c57117abf9695ca7a",
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "niceIncrement": 10,
+    "compilerMemoryLimit": "not imposed; tiny C++ mock compiler inherits CPU/file limits; Node heap cap applies only to Node"
+  },
+  "blankHooks": [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "LD_PRELOAD",
+    "LD_AUDIT",
+    "BW_HOT_NAPI_PROFILE",
+    "NODE_V8_COVERAGE"
+  ],
+  "absentCompilerOverrides": [
+    "CPATH",
+    "CPLUS_INCLUDE_PATH",
+    "C_INCLUDE_PATH",
+    "GCC_EXEC_PREFIX",
+    "COMPILER_PATH",
+    "LIBRARY_PATH"
+  ],
+  "scope": "Exactly one affected Node pure final-composition case with exact genuine retained terminal progress/slice projection with manufactured board/JS/onePIO composition fixtures; other methods unselected. Initial six-pass/one-fail packet preserved. No compiler/addon/provider/guest/build/profile"
+}

@@ -1,0 +1,18 @@
+{
+  "trace": {
+    "path": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced.stderr",
+    "sha256": "fbdcd8ae90edc1282a0725443db4942ab9d0fafb614f91dcd1d3039540312d3d"
+  },
+  "journal": {
+    "path": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced/callbacks.jsonl",
+    "sha256": "bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1"
+  },
+  "capture": {
+    "path": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced/capture.json",
+    "sha256": "fef68e50495e97ff03df0a3ce8a22a92dfb12b202eef28f3dfbbfd3d7a0befbb"
+  },
+  "fences": {
+    "path": "/mnt/volume1/tmp-astra/native-hot-clock-fenced-capture-20261002/fenced/fences.jsonl",
+    "sha256": "3e0610e5507b612ba15a6323428149d15ecdc02933c273bd4efdd92103d3c30a"
+  }
+}

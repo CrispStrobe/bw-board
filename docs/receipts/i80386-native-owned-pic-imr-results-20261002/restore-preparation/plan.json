@@ -1,0 +1,49 @@
+{
+  "scope": "PREPARATION_ONLY_NO_DOWNLOAD_RESTORE_NATIVE_BUILD_OR_EXECUTION",
+  "compiledSource": "a6f605280f778b2bc409ef97ac3b40e15874530c",
+  "compiledCount": 111,
+  "runtimeSource": "3792a908d81e04903974aa7d2bdc545e0713a290",
+  "runtimeCount": 122,
+  "toolingCount": 3,
+  "profile": {
+    "kind": "PIC_IMR_FIXED_FREE_ROM",
+    "sourceRevision": "a6f605280f778b2bc409ef97ac3b40e15874530c",
+    "sourceCount": 111,
+    "romSha256": "8a7380f01bbc40985d377fe9764667749c36b05d45ee602b28c7e68556bd509f",
+    "expectedPicWitness": [
+      255,
+      255
+    ],
+    "witnessAddresses": [
+      1426,
+      1427
+    ],
+    "status": "SOURCE_PREPARATION_ONLY_NO_BUILD_OR_GUEST"
+  },
+  "trustedCiInputs": "Root binds exact official run/head/artifact/ZIP/inventory once actual build exists; null template cannot execute.",
+  "relocationAllowedManifest": [
+    "preparedTree"
+  ],
+  "relocationAllowedReceipt": [
+    "preparedTree",
+    "preparedManifestPath",
+    "preparedManifestSha256",
+    "addonPath",
+    "provenanceKind",
+    "relocation"
+  ],
+  "preserve": [
+    "Raw original records and inventory",
+    "Original IN8 provenance object unchanged",
+    "Generated native runtime/headers/NAPI/config/DSO bytes unchanged"
+  ],
+  "proof": "Full restore inverse to retained original; new adapter explicitly validates runtime3792 and compileda6 separately",
+  "bounds": {
+    "cpuSeconds": 120,
+    "wallSeconds": 120,
+    "heapMiB": 512,
+    "fileMiB": 256,
+    "nice": 10,
+    "core": 0
+  }
+}

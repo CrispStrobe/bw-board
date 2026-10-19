@@ -1,0 +1,14 @@
+display_library: nogui
+memory: guest=16, host=16
+romimage: file=/home/runner/work/bw-board/bw-board/baseline/roms/free-at-bios/BIOS-bochs-legacy
+vgaromimage: file=/home/runner/work/bw-board/bw-board/baseline/roms/free-at-bios/vgabios-lgpl.bin
+cpu: count=1, ips=10000000
+clock: sync=none, time0=946684800
+boot: disk
+port_e9_hack: enabled=1
+log: "/home/runner/work/_temp/owned-baseline-profile/profile/guest/guest.bochs.log"
+panic: action=fatal
+error: action=report
+info: action=report
+debug: action=ignore
+mouse: enabled=0

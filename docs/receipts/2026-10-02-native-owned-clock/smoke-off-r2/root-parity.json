@@ -1,0 +1,16 @@
+{
+  "status": "ROOT_ABI3_CAPTURE_OFF_LOGICAL_SNAPSHOT_PARITY_PASS_NOT_FULL_TRACE",
+  "checks": 16,
+  "canonicalNativeRows": 0,
+  "captureSha256": "a99528c0bcf38957885a0e169b0db7790b9d7e5ba2fc1993d9c0e30da30added",
+  "orderedJournalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "ramSha256": "7aecf019a32f109760267d6ac1c60ef3d8793661910226cca3bcf5661189c38d",
+  "clockTransfers": {
+    "transfers": "9204",
+    "commits": "8738",
+    "words": "201366"
+  },
+  "resumes": 439,
+  "snapshotProjection": "only new physical clockTransfers field removed and indexed-object sliceBytes bijectively converted to exact160-byte array; every original CPU/cache/segment/debug/system/logical callback counter/slice and six whole-board snapshots exact",
+  "scope": "fixed free protected-mode ROM; no native broad-guest or throughput qualification"
+}

@@ -1,0 +1,40 @@
+{
+  "official-artifact.zip": {
+    "origin": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/official-artifact.zip",
+    "bytes": 14841836,
+    "sha256": "73b99f1a5328707e3a613570f588548d66057fb6f4ff6f309d87660a3eb3c5d8",
+    "artifactId": 11243860198,
+    "runId": 37042592639,
+    "policy": "External officialZIP retained; no duplicate binary archive vendored."
+  },
+  "owned-dispatch-gate/download/owned-in8-evidence/bw_direct.node": {
+    "origin": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/download/owned-in8-evidence/bw_direct.node",
+    "bytes": 2069608,
+    "sha256": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841",
+    "policy": "Retained externally in verified officialartifact; generated/compiled trees not duplicated."
+  },
+  "owned-dispatch-gate/download/owned-in8-evidence/frozen-source103.tar.gz": {
+    "origin": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/download/owned-in8-evidence/frozen-source103.tar.gz",
+    "bytes": 554518,
+    "sha256": "ea67eff31f56d98b8e1aaf611d3de1eff502c25821deff0d32502d1bb3a4cdfb",
+    "policy": "Retained externally in verified officialartifact; generated/compiled trees not duplicated."
+  },
+  "owned-dispatch-gate/download/owned-in8-evidence/prepared-source.tar.gz": {
+    "origin": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/download/owned-in8-evidence/prepared-source.tar.gz",
+    "bytes": 5329158,
+    "sha256": "40dcddcd190a836aa89f164b3db0023fb193c6980965d0a6431e45156043711e",
+    "policy": "Retained externally in verified officialartifact; generated/compiled trees not duplicated."
+  },
+  "owned-dispatch-gate/restored/prepared/bochs/bw_direct.node": {
+    "origin": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/restored/prepared/bochs/bw_direct.node",
+    "bytes": 2069608,
+    "sha256": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841",
+    "policy": "Retained externally in verified officialartifact; generated/compiled trees not duplicated."
+  },
+  "owned-dispatch-gate/restored/prepared/bochs/patches/patch.decode-interrupts.gz": {
+    "origin": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/restored/prepared/bochs/patches/patch.decode-interrupts.gz",
+    "bytes": 35666,
+    "sha256": "1d1474debaf225e0b4bebca33f84a44d45fb8b1846b05a9c80fdfb9b642f994d",
+    "policy": "Retained externally in verified officialartifact; generated/compiled trees not duplicated."
+  }
+}

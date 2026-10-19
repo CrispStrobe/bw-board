@@ -1,0 +1,8 @@
+{
+  "latestHead": "457980b9c84a7e7da95be165160b3e5e8f3198cc",
+  "targets": [
+    {"run": 37123365031, "head": "43b82467b25b7913df46dab4c15d177b7e0c3281", "workflow": "CI", "observedStatus": "queued"},
+    {"run": 37123288998, "head": "43b82467b25b7913df46dab4c15d177b7e0c3281", "workflow": "CI", "observedStatus": "queued"}
+  ],
+  "reason": "Cancel only our obsolete queued tool-head CI; do not cancel measurements or erase inspection captures"
+}

@@ -1,0 +1,317 @@
+{
+  "schema": "labwired.fastpath-census.v1",
+  "diagnosticOnly": true,
+  "source": "16c501c0506d4bde312a04fc4f9d4ae5f8e4b2ec",
+  "node": "v20.20.2",
+  "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+  "startedAt": "2026-10-02T13:20:22.684Z",
+  "artifact": {
+    "labwired_wasm.js": {
+      "bytes": 136498,
+      "sha256": "a9ac9dfd20736fa0adc05a50bb47fe14b1cc600a9d12336a46bc2728827feec7"
+    },
+    "labwired_wasm_bg.wasm": {
+      "bytes": 27396368,
+      "sha256": "9ffdcf20a1fe245ce3e282820639e2cfce596a2e81bef2a3eb5219eea2fd2d13"
+    }
+  },
+  "warmupCycles": 200000,
+  "windowCycles": 2000000,
+  "compiler": "arm-none-eabi-gcc (15:13.2.rel1-2) 13.2.1 20231009\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+  "rustVersion": "rustc 1.95.0 (59807616e 2026-04-14)",
+  "bindgenVersion": "wasm-bindgen 0.2.121",
+  "files": {
+    "scripts/probe-labwired-fastpath-census.mjs": "c9becf056d020007518c4b374188ce7624598d6f5ecaf87dfff3bc276cef854d",
+    "scripts/lib/fastpath-census-receipt.mjs": "711287b296b9eabb6206f4cb33d7379ac26613dd31f524a704e3edcbabc85dd9",
+    "src/labwired-bridge.js": "4c5f2a39c2f94d4dfbc042fac9b69a1ce54e11deec2d085fb364239732cbfa64",
+    "src/labwired-chips.js": "cd511c13cb1a3f088ff53fab52fcbd7559caa2553aee21a86e369e2958f54afa",
+    "src/labwired-adapter.js": "6dbe7cab38e109ff96b8ed8bbbecab52e8bd70584c5ca0669b5f9e9d2af3b185",
+    "src/bin-to-elf.js": "2aa1771918c390742cae506c377a458daab66d724b06f280ce9d6e07b4b7c2dd",
+    "src/uf2-to-elf.js": "fa1277fdbae9680459f1dbbca2136fb10af51b25d74d7630e7cd1c4acdca4d8a",
+    "test/fixtures/labwired/f0-timing/active.S": "48b9a92d1b3e82f20b944312634e13e9048a64163cb6483b0993aa615a3309c5",
+    "test/fixtures/labwired/f0-timing/active.ld": "fb2065445ff60036572f85b1b6d0eb15f7445b674a3f43bbea0cdc4ab0af7efc"
+  },
+  "limitations": [
+    "instrumented occurrence counts, not time attribution, RTx or optimization acceptance",
+    "thread-local aggregate; only one machine runs in each reset window",
+    "selected active F0 firmware, no debugger/observers/circuit solving; not all chips",
+    "48 MHz engine-reported cycles are not physically calibrated silicon CPI"
+  ],
+  "workloads": {
+    "ram": {
+      "elfSha256": "763cbc1825955944d9a0c714555ef296e927741162928a6cc76b7df43fd78177",
+      "imageSha256": "70301209d467b87380162a750adc5f2feb207794cbcc9ef1e8a33fd59cef1aa4",
+      "chipYamlSha256": "5e200f47e2cf02ddc0d33d2f8a9311ceff3ca72bdd60f3ec7e783aee2f0e74c1",
+      "systemYamlSha256": "d3cdba26461b491372c765ad747e3c38f738d5e7838ce2ce3541d334d01e5d03",
+      "samples": [
+        {
+          "high": false,
+          "cycles": 2000000,
+          "counts": {
+            "BlockAdmissionRejects": 0,
+            "BlockCacheHits": 1995,
+            "BlockCalls": 1995,
+            "BlockCompileAttempts": 0,
+            "BlockDiscovered": 0,
+            "BlockDiscoveryMisses": 0,
+            "BlockExecutionRejects": 0,
+            "BlockMemoizedMisses": 0,
+            "BlockRetired": 2000000,
+            "BlockZero": 0,
+            "CachedRunCacheStops": 0,
+            "CachedRunCalls": 0,
+            "CachedRunExecutionRejects": 0,
+            "CachedRunRetired": 0,
+            "CachedRunZero": 0,
+            "FastCalls": 1995,
+            "FastColdEntry": 0,
+            "FastRetired": 2000000,
+            "FastZero": 0,
+            "GpioColdCalls": 0,
+            "GpioDevicesVisited": 0,
+            "GpioHostedServices": 0,
+            "GpioNoEdgeDevices": 0,
+            "OrdinaryRetired": 0
+          },
+          "summary": {
+            "fastZeroFraction": 0,
+            "blockZeroFraction": 0,
+            "gpioNoEdgeFraction": null,
+            "countedRetired": 2000000
+          },
+          "guest": {
+            "iterations": 220000,
+            "checksum": 220064,
+            "input": 0,
+            "mirror": 219999,
+            "output": null
+          }
+        },
+        {
+          "high": true,
+          "cycles": 2000000,
+          "counts": {
+            "BlockAdmissionRejects": 0,
+            "BlockCacheHits": 1995,
+            "BlockCalls": 1995,
+            "BlockCompileAttempts": 0,
+            "BlockDiscovered": 0,
+            "BlockDiscoveryMisses": 0,
+            "BlockExecutionRejects": 0,
+            "BlockMemoizedMisses": 0,
+            "BlockRetired": 2000000,
+            "BlockZero": 0,
+            "CachedRunCacheStops": 0,
+            "CachedRunCalls": 0,
+            "CachedRunExecutionRejects": 0,
+            "CachedRunRetired": 0,
+            "CachedRunZero": 0,
+            "FastCalls": 1995,
+            "FastColdEntry": 0,
+            "FastRetired": 2000000,
+            "FastZero": 0,
+            "GpioColdCalls": 0,
+            "GpioDevicesVisited": 0,
+            "GpioHostedServices": 0,
+            "GpioNoEdgeDevices": 0,
+            "OrdinaryRetired": 0
+          },
+          "summary": {
+            "fastZeroFraction": 0,
+            "blockZeroFraction": 0,
+            "gpioNoEdgeFraction": null,
+            "countedRetired": 2000000
+          },
+          "guest": {
+            "iterations": 420000,
+            "checksum": 419936,
+            "input": 0,
+            "mirror": 419999,
+            "output": null
+          }
+        },
+        {
+          "high": false,
+          "cycles": 2000000,
+          "counts": {
+            "BlockAdmissionRejects": 0,
+            "BlockCacheHits": 1995,
+            "BlockCalls": 1995,
+            "BlockCompileAttempts": 0,
+            "BlockDiscovered": 0,
+            "BlockDiscoveryMisses": 0,
+            "BlockExecutionRejects": 0,
+            "BlockMemoizedMisses": 0,
+            "BlockRetired": 2000000,
+            "BlockZero": 0,
+            "CachedRunCacheStops": 0,
+            "CachedRunCalls": 0,
+            "CachedRunExecutionRejects": 0,
+            "CachedRunRetired": 0,
+            "CachedRunZero": 0,
+            "FastCalls": 1995,
+            "FastColdEntry": 0,
+            "FastRetired": 2000000,
+            "FastZero": 0,
+            "GpioColdCalls": 0,
+            "GpioDevicesVisited": 0,
+            "GpioHostedServices": 0,
+            "GpioNoEdgeDevices": 0,
+            "OrdinaryRetired": 0
+          },
+          "summary": {
+            "fastZeroFraction": 0,
+            "blockZeroFraction": 0,
+            "gpioNoEdgeFraction": null,
+            "countedRetired": 2000000
+          },
+          "guest": {
+            "iterations": 620000,
+            "checksum": 619808,
+            "input": 0,
+            "mirror": 619999,
+            "output": null
+          }
+        }
+      ]
+    },
+    "gpio": {
+      "elfSha256": "2d599e59d743f018a992cc88b1869b6232dd84b85efaf3df8460a65a6412cef9",
+      "imageSha256": "cee1c14b0a4b6b7bbfea8b7987742d9c6a78b8d87d1dd2e677571b7eed1b4a6c",
+      "chipYamlSha256": "5e200f47e2cf02ddc0d33d2f8a9311ceff3ca72bdd60f3ec7e783aee2f0e74c1",
+      "systemYamlSha256": "d3cdba26461b491372c765ad747e3c38f738d5e7838ce2ce3541d334d01e5d03",
+      "samples": [
+        {
+          "high": false,
+          "cycles": 2000000,
+          "counts": {
+            "BlockAdmissionRejects": 0,
+            "BlockCacheHits": 0,
+            "BlockCalls": 553084,
+            "BlockCompileAttempts": 0,
+            "BlockDiscovered": 0,
+            "BlockDiscoveryMisses": 0,
+            "BlockExecutionRejects": 0,
+            "BlockMemoizedMisses": 553084,
+            "BlockRetired": 0,
+            "BlockZero": 553084,
+            "CachedRunCacheStops": 0,
+            "CachedRunCalls": 553084,
+            "CachedRunExecutionRejects": 552867,
+            "CachedRunRetired": 1660666,
+            "CachedRunZero": 330876,
+            "FastCalls": 553084,
+            "FastColdEntry": 0,
+            "FastRetired": 1660666,
+            "FastZero": 330876,
+            "GpioColdCalls": 111111,
+            "GpioDevicesVisited": 0,
+            "GpioHostedServices": 0,
+            "GpioNoEdgeDevices": 111111,
+            "OrdinaryRetired": 339334
+          },
+          "summary": {
+            "fastZeroFraction": 0.59823824229231,
+            "blockZeroFraction": 1,
+            "gpioNoEdgeFraction": 1,
+            "countedRetired": 2000000
+          },
+          "guest": {
+            "iterations": 122222,
+            "checksum": 122257,
+            "input": 0,
+            "mirror": 122221,
+            "output": 0
+          }
+        },
+        {
+          "high": true,
+          "cycles": 2000000,
+          "counts": {
+            "BlockAdmissionRejects": 0,
+            "BlockCacheHits": 0,
+            "BlockCalls": 419686,
+            "BlockCompileAttempts": 161,
+            "BlockDiscovered": 0,
+            "BlockDiscoveryMisses": 19,
+            "BlockExecutionRejects": 0,
+            "BlockMemoizedMisses": 419667,
+            "BlockRetired": 0,
+            "BlockZero": 419686,
+            "CachedRunCacheStops": 1,
+            "CachedRunCalls": 419686,
+            "CachedRunExecutionRejects": 419371,
+            "CachedRunRetired": 1783590,
+            "CachedRunZero": 209056,
+            "FastCalls": 419688,
+            "FastColdEntry": 2,
+            "FastRetired": 1783590,
+            "FastZero": 209058,
+            "GpioColdCalls": 105263,
+            "GpioDevicesVisited": 0,
+            "GpioHostedServices": 0,
+            "GpioNoEdgeDevices": 105263,
+            "OrdinaryRetired": 216410
+          },
+          "summary": {
+            "fastZeroFraction": 0.49812718019099905,
+            "blockZeroFraction": 1,
+            "gpioNoEdgeFraction": 1,
+            "countedRetired": 2000000
+          },
+          "guest": {
+            "iterations": 227485,
+            "checksum": 227426,
+            "input": 2,
+            "mirror": 227484,
+            "output": 1
+          }
+        },
+        {
+          "high": false,
+          "cycles": 2000000,
+          "counts": {
+            "BlockAdmissionRejects": 1,
+            "BlockCacheHits": 0,
+            "BlockCalls": 553113,
+            "BlockCompileAttempts": 0,
+            "BlockDiscovered": 0,
+            "BlockDiscoveryMisses": 0,
+            "BlockExecutionRejects": 0,
+            "BlockMemoizedMisses": 553112,
+            "BlockRetired": 0,
+            "BlockZero": 553113,
+            "CachedRunCacheStops": 0,
+            "CachedRunCalls": 553113,
+            "CachedRunExecutionRejects": 552665,
+            "CachedRunRetired": 1660898,
+            "CachedRunZero": 331121,
+            "FastCalls": 553113,
+            "FastColdEntry": 0,
+            "FastRetired": 1660898,
+            "FastZero": 331121,
+            "GpioColdCalls": 111112,
+            "GpioDevicesVisited": 0,
+            "GpioHostedServices": 0,
+            "GpioNoEdgeDevices": 111112,
+            "OrdinaryRetired": 339102
+          },
+          "summary": {
+            "fastZeroFraction": 0.5986498238153868,
+            "blockZeroFraction": 1,
+            "gpioNoEdgeFraction": 1,
+            "countedRetired": 2000000
+          },
+          "guest": {
+            "iterations": 338596,
+            "checksum": 338523,
+            "input": 0,
+            "mirror": 338595,
+            "output": 0
+          }
+        }
+      ]
+    }
+  },
+  "completedAt": "2026-10-02T13:20:47.632Z"
+}

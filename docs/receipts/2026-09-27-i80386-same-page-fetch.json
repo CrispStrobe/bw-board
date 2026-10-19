@@ -1,0 +1,30 @@
+{
+  "schema": "astra.i80386-same-page-fetch.v1",
+  "date": "2026-09-27",
+  "nodeVersion": "v20.20.2",
+  "baselineRevision": "e3cf607a7838ac4444700c763853efe675168b3e",
+  "workload": "stock xv6-public eeb7b415dbcb12cc362d0783e41c3d1f44066b17 forktest, 4 MiB, bundled Bochs BIOS",
+  "command": "XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+  "sourceSha256": {
+    "baselineI80386": "727f652153ecbee33c18141c93ef9893dc8a2d35ed52156a4eabe6833cad14d5",
+    "optimizedI80386": "26d812a31ac63020d3f5ed899b441ae474c74c7f72c8a3ed4fadfe382d99ad19"
+  },
+  "change": "Same-page 2/4-byte immediate fetch translates once, still invokes the instruction-fetch bus and advances EIP per byte. Segment, page and 15-byte instruction boundaries retain the old bytewise path and partial-fault state.",
+  "userCpuSeconds": {
+    "baseline": [31.13, 30.41],
+    "optimized": [30.43, 29.38]
+  },
+  "meanUserCpuSeconds": {
+    "baseline": 30.77,
+    "optimized": 29.905
+  },
+  "userCpuSpeedup": 1.02892493,
+  "guest": {
+    "steps": 24338279,
+    "baselineReportSha256": "35ec2e36b5d299fa5d34bd2ebbee67e2c13cc3306fec5e6b13096af352aafede",
+    "optimizedReportSha256": "e42f0c0e3806ee3bb804ea8a55b2fa6a7535c5bd426a0893d85ed71a1aff8940",
+    "difference": "Only the worktree-local ROM path differs; all guest-state fields and the ROM SHA are identical."
+  },
+  "validation": "49 focused paging/string/I-O/task tests and 28 Windows/VGA/AT tests passed. A test covers one same-page PDE walk and a cross-page partial-EIP page fault.",
+  "limits": "Only a small 1.029x incremental CPU-time gain on this workload; host variability could affect its precision. The 10x overall target remains open."
+}

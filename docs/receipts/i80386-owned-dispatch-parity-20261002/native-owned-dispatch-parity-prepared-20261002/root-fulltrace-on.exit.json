@@ -1,0 +1,9 @@
+{
+  "label": "fulltrace-on",
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 57.60446284338832,
+  "approvedBindingSha256": "9a2ade3a06cb974ffd451f6ac80dcc9e8d11e6078553b2ef47a88066326b1e5c",
+  "stdoutSha256": "bbce08842e814328525d7346c298d5e7b87662661eb5010b4153c2d7edadabf7",
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

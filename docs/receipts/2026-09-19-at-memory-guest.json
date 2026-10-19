@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "revision": "9f99607fdbe8a6600ad4de0b11438a4b6d5899c4",
+  "node": "v22.23.2",
+  "accepted": true,
+  "scope": "owned 80286 guest: original-AT 8042 D1 A20 enable, protected HMA fetch and bit-21 RAM write; not a full PC/AT",
+  "sourceHashes": {
+    "scripts/run-at-memory-guest.mjs": "131250ddcd4f796d83f2f219c2c9822173b50d2643fef09f5dd8daec73aaee6a",
+    "src/i8086-machine.js": "e68f01684963879de58ccc1e77d16073247e9eb404a5e047333af3d27cfc1747",
+    "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+    "src/at-8042-a20.js": "246c2915d5095c7ce3330d3fa023baf58e20b5673e357cec9c87b193013593a7",
+    "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+    "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70"
+  },
+  "expected": {
+    "halted": true,
+    "steps": 21,
+    "a20Enabled": true,
+    "lowAlias": 17,
+    "hmaFirstByte": 184,
+    "extendedWord": 4660,
+    "cs": 8,
+    "ip": 13,
+    "ds": 16,
+    "pc": 1048589
+  },
+  "observed": {
+    "halted": true,
+    "steps": 21,
+    "a20Enabled": true,
+    "lowAlias": 17,
+    "hmaFirstByte": 184,
+    "extendedWord": 4660,
+    "cs": 8,
+    "ip": 13,
+    "ds": 16,
+    "pc": 1048589
+  }
+}

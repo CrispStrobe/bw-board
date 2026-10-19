@@ -1,0 +1,22 @@
+{
+  "scope": "First failed workflow; no uploaded artifact or independently readable native extent",
+  "runId": 37243459679,
+  "headSha": "e823dc3dfbcd6e8f98e918eeeff1ab77c21e008d",
+  "records": {
+    "failed-log.txt": {
+      "bytes": 6080,
+      "sha256": "5e5284ab640b40ffdcd6f9c7689b67ab26db6a076f3caca645768dbe20e27eaf",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-first-execution-publication-20261004/failed-log.txt"
+    },
+    "artifacts.json": {
+      "bytes": 32,
+      "sha256": "244563f989470892c537c9a4622920af0d228ee4528f7d00c64a06d6cd95856c",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-first-execution-publication-20261004/artifacts.json"
+    },
+    "root-first-outcome-audit.json": {
+      "bytes": 742,
+      "sha256": "b4a098ded472d9c2d0a39e6422dcbf506fcf57bf42c6b7a10227190255c315fb",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-first-execution-publication-20261004/root-first-outcome-audit.json"
+    }
+  }
+}

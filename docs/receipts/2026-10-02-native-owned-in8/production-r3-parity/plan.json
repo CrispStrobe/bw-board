@@ -1,0 +1,85 @@
+{
+  "schema": "bw.owned-in8.actual-parity-plan.v1",
+  "status": "PREPARED_ACTUAL_CI_RESTORED_BINDINGS_NO_NATIVE_EXECUTION",
+  "sourceRevision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "abiVersion": 4,
+  "sourceClosure": 103,
+  "compiledClosure": 103,
+  "JSReference": {
+    "path": "/mnt/volume1/tmp-astra/native-owned-in8-source-r3-20261002/js-reference/capture.json",
+    "sha256": "bf026d23f0c51d63a9744dc4facb4d58809c50f1d35747ffc6ea5873b518e45e",
+    "revision": "b68f316b",
+    "CPUFields": [
+      "eax",
+      "ebx",
+      "ecx",
+      "edx",
+      "esp",
+      "eip",
+      "cs",
+      "cr0",
+      "cr2",
+      "cr3"
+    ],
+    "scope": "Actual JS capture has mapped CPU fields, not all166 native words. All166 native words/complete descriptors/counters preserved and compared exactly CAPOFF versus CAPON; no invented reference words.",
+    "CPUFieldCount": 10
+  },
+  "cells": [
+    {
+      "label": "smoke-off",
+      "nativeTrace": false,
+      "hostJournal": false
+    },
+    {
+      "label": "fulltrace-on",
+      "nativeTrace": true,
+      "hostJournal": true
+    }
+  ],
+  "requirements": [
+    "All stored full native reset/final/six checkpoint fields exact between CAP modes, including all166 words/descriptors/logical andphysical counters.",
+    "Eight recorded JS CPU fields exact; EDX andCR0 each exact explicit source-backed profile values at reset/cuts/final. Raw native states retained; no broad normalization.",
+    "Entire board states exact at six cuts and settlement; production reset board is not exported and is not fabricated.",
+    "Raw nativeRAM ec... andrawJSRAM8b... retained and authenticated. Exacteight native reset-witness bytes must agree with native recordedresetEDX/CR0; only510..517 excluded from canonicalwholeRAMhash588f... verified by actual diagnosticpair proof. PITbytes50/18 exact.",
+    "Host journal orderedN/Q kinds andcounters exact withcanonical trace. JS STEP completion outcomes source-bound reconstructionQ(if delta1),N; not claimed observedJS nativecallbackorder.",
+    "All32actualJS PIO values/ports/widths/order andINevents match; PIOcompletednativeN=JScurrentattempt-1, Q/cycles unchanged.",
+    "Whole canonical trace retained, no projection masking/fixed historicaltrace or439resume assumption.",
+    "No speedgate or fullAT admission."
+  ],
+  "bounds": {
+    "heapMiB": 512,
+    "wallSeconds": 120,
+    "CPUSeconds": 120,
+    "fileMiB": 256,
+    "core": 0,
+    "nice": 10,
+    "processGroupTimeoutKill": true
+  },
+  "blankEnvironment": [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "LD_PRELOAD",
+    "LD_AUDIT",
+    "BW_HOT_NAPI_PROFILE"
+  ],
+  "snapshotScope": "Production CLI produces full snapshot on every resume, preserves reset/final/six selected snapshots in capture. These stored full native fields are compared exactly between modes; raw canonical resume/step rows retained for all steps, not a fabricated archived all-resume array.",
+  "sourceCount": 103,
+  "comparisonPolicy": {
+    "rawNativeRAM": "ecb57a4b83090fcf232c4bd2f7019cdfde992bdc8ecf708e04bdc1de9272733a",
+    "rawJSRAM": "8bbabd33892728f64bae9b9a558ba106112aef5024196e10aa037e45d0ca7344",
+    "canonicalRAM": "588f9bfd1292b8405d0e42552147fb2d8d082a8253b52771291ca0a603eaf18f",
+    "onlyRange": "0x510..0x517 inclusive; verify8bytes vs ownreset beforecanonical",
+    "cpu": "other8fields exact, EDXnative0/JS300, resetCR07ffffff0/0; protectedfffffff1/80000011; BochsCPU3 fixedOR7ffffff0. No broad normalization."
+  },
+  "artifactAdmission": "ActualCIrun37006765968/head880475 artifact11226630502/digest0335f4c... passed independent3150staticchecks and167relocationchecks. Rawrecords immutable; localderivedmanifest/receipt/source103/config80f5/DSO8d separatelypinned. No localcompile or nativeguestqualification.",
+  "CIbuild": {
+    "runId": 37006765968,
+    "headSha": "8804758633b3cabd23ff9c084238f80433da99f7",
+    "artifactId": 11226630502,
+    "artifactZipSha256": "0335f4c5088280cfcdf00186f5e0ca59ff431442edc3a978dd26b7dc2341a0e0",
+    "derivedManifestSha256": "b3c606e3bd5a2dc9f536116dbefa4f347efb2f6316239d6f7162d134c00f4c3a",
+    "derivedReceiptSha256": "33809d68e99497f957905b5d3ab5e119bf90a5de87c52d65e91715dc995fdb10",
+    "addonSha256": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841",
+    "configSha256": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe"
+  }
+}

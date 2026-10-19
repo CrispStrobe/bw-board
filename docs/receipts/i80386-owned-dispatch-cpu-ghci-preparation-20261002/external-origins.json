@@ -1,0 +1,23 @@
+{
+  "draft-pins.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/draft-pins.json",
+  "draft-pins-with-fetch-guards.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/draft-pins-with-fetch-guards.json",
+  "final-draft-pins.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/final-draft-pins.json",
+  "source-freeze.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/source-freeze.json",
+  "independent-draft-source-review.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/independent-draft-source-review.json",
+  "independent-final-39-source-readiness.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/independent-final-39-source-readiness.json",
+  "pre-control-parent-syntax-failures.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/pre-control-parent-syntax-failures.json",
+  "fetch-guard-derivation.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/fetch-guard-derivation.json",
+  "shallow-control.py": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/shallow-control.py",
+  "source-check/before.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/source-check/before.json",
+  "source-check/after.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/source-check/after.json",
+  "source-check/stdout": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/source-check/stdout",
+  "source-check/stderr": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/source-check/stderr",
+  "source-check/exit.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/source-check/exit.json",
+  "shallow-check/before.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/shallow-check/before.json",
+  "shallow-check/after.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/shallow-check/after.json",
+  "shallow-check/stdout": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/shallow-check/stdout",
+  "shallow-check/stderr": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/shallow-check/stderr",
+  "shallow-check/exit.json": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/shallow-check/exit.json",
+  "source-check-executed37/scripts/ci-benchmark-i80386-owned-dispatch.py": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/source-check-executed37/scripts/ci-benchmark-i80386-owned-dispatch.py",
+  "orchestrator-before-additive-fetch-artifact-pins.py": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/orchestrator-before-additive-fetch-artifact-pins.py"
+}

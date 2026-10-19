@@ -1,0 +1,19 @@
+{
+  "status": "PASS_INDEPENDENT_FIRST_ATTEMPT_FAILURE_AUDIT_ZERO_NATIVE_CHILDREN",
+  "checks": 1216,
+  "runId": 37106448211,
+  "head": "e4114004a49395d2494f201087488fc4dde522a8",
+  "attempt": 1,
+  "artifactId": 11267273346,
+  "zipSha256": "d0c0b583bf0666a3e7d53ed358e66713c6ccf9fcd8b8f7afeee22f02b64d268d",
+  "members": 320,
+  "stage": "Source setup successful; official old-build metadata retrieved, ZIP HTTP redirect returns401 before download/mutation/restore/native",
+  "sourceBeforeAfterEqual": true,
+  "compiledInputs": 124,
+  "driverInputs": 52,
+  "nativeChildren": 0,
+  "restoreChildren": 0,
+  "scope": "Failure is hosted acquisition plumbing, not native CPU/device/E16/RAM/performance qualification or rejection",
+  "limits": "Redirect/token forwarding is a source-backed hypothesis, not independently proved by retained response headers. No patch/retry/guest/download by auditor.",
+  "auditSourceSha256": "f51a279e1611dd85019a5f64a99c0685d5f3f359687ddfbe5bc8a20cf4ffb4bc"
+}

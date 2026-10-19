@@ -1,0 +1,47 @@
+{
+  "base": "3cf52d1dd8b77d8f4d39747f1002ed8c7206ffab",
+  "toolHead": "1d7023e9813d8a574301b42e0447a02e383032e0",
+  "changed": [
+    ".github/workflows/labwired-window-profile.yml",
+    "scripts/lib/window-cpu-profiler.mjs",
+    "scripts/oracle-census.mjs",
+    "scripts/profile-labwired-f0-windows.mjs",
+    "test/labwired-f0-gpio-window-profile.test.mjs",
+    "test/window-cpu-profiler.test.mjs",
+    "test/window-profile-scope.test.mjs"
+  ],
+  "unchanged": [
+    {
+      "path": "test/labwired-f0-gpio-profile.test.mjs",
+      "sha256": "8a59d4246094953d93f0dd278b869f7b81ecf4bdc642db9c725aab343599284e"
+    },
+    {
+      "path": "test/labwired-f0-timing.test.mjs",
+      "sha256": "23d29e1a2475578e9d61673891bd78c78714c76828c359880461a636b633265a"
+    },
+    {
+      "path": "scripts/probe-labwired-f0.mjs",
+      "sha256": "7eeb305b0dc747454708c2e4b0e6792ec268d0cac4ec3db989b1e0e91c24e114"
+    },
+    {
+      "path": "scripts/probe-labwired-motion-ab.mjs",
+      "sha256": "156bf6ef8a6b431757ac65a31b91c274b08bef726b328d5ef280abe178e50ab9"
+    },
+    {
+      "path": ".github/workflows/labwired-motion-ab.yml",
+      "sha256": "64566e275872e24112628b788bc373773d571c01c4bce9fff46725e180aff3ea"
+    },
+    {
+      "path": "scripts/lib/wasm-motion-profile.mjs",
+      "sha256": "f1de7785b1aa3b5f10c496bc87b4b894771f0ecb161ea4b8cf6b01301cf03e1e"
+    },
+    {
+      "path": "scripts/lib/f0-gpio-profile-receipt.mjs",
+      "sha256": "1422c48d42bf905b1f42f718602d95b3447314e07722ed6459b26cf505b34c0a"
+    }
+  ],
+  "core": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+  "productionEngineModified": false,
+  "ordinaryTimingHarnessModified": false,
+  "frozenAcceptanceHarness": "fb13d48b7bc377bceb5da5a1d4ed5cd11555e162"
+}

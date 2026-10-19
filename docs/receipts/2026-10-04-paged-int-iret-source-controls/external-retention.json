@@ -1,0 +1,8 @@
+{
+  "capture": {
+    "path": "/tmp/native-paged-int-iret-source-controls-20261004/js-control.json",
+    "bytes": 3996225,
+    "sha256": "45efeb75ae7362074150d8d1089181a502fcdc5649f9a0ecd1bfc751b21fe9aa",
+    "scope": "Sole actual JS source-control capture; no native guest"
+  }
+}

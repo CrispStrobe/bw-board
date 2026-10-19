@@ -1,0 +1,23 @@
+# First cold BIOS native build: static checks passed
+
+The first hosted cold-BIOS build compiled successfully and passed static admission. It did not initialize the addon or execute the BIOS. This establishes that the source integration compiles; the E16 checkpoint, decoder behavior, device chronology and guest comparisons remain unqualified.
+
+[Run 37102085724](https://github.com/CrispStrobe/bw-board/actions/runs/37102085724) executed once, on PR #278 at exact source [a6fae61a549d595c88a324f50589d92497040c07](https://github.com/CrispStrobe/bw-board/tree/a6fae61a549d595c88a324f50589d92497040c07), event `pull_request`, attempt 1, job `111143460894`. It authenticated **124 source inputs**, the clean pinned Bochs revision `0e45b736ef9792eb9b752b0a35db49eaf2faea47`, the unchanged BIOS SHA256 `6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac`, and the generated cold C/NAPI/ABI4 artifacts. Previous 119-input source preparation evidence remains a separate historical record.
+
+| Step | Exit | Wall seconds |
+| --- | ---: | ---: |
+| Configure | 0 | 16.456 |
+| Single-job make | 0 | 40.822 |
+| Read/hash static admission | 0 | 1.018 |
+
+No step timed out. These are build durations, not guest performance measurements. The build used Ubuntu 24.04, GCC 13.3.0 and Node 22.23.3 on a GitHub runner exposing four logical AMD EPYC 7763 CPUs. Exact package, kernel, CPU and header records are retained in [the host context](receipts/native-cold-bios-first-build-20261003/artifact/cold-bios-build-context/context.txt).
+
+The addon is 2,069,552 bytes with SHA256 `4b372f2d0e7b677c56e168a0da791c1c0aeaae391eb6a103507e383540281907`. The config SHA256 is `80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe`. Actual CPU level 3, SMP/debugger/idle/repeat/chaining speedups/plugins disabled and FPU enabled were checked, together with all six required exports. `nm` and `readelf` inspected the artifact; no addon load or guest entry point ran. Prepared source inputs, publication source, Node, header, helper and workflow hashes remained unchanged across the build.
+
+The [coder audit](receipts/native-cold-bios-first-build-20261003/review/coder-actual-static-audit.json) passed 1,478 checks and the [independent audit](receipts/native-cold-bios-first-build-20261003/review/independent-actual-static-audit.json) passed **1,629 checks**. They authenticated the official ZIP, raw exits/streams, source and context maps, generated and patched inputs, config, exports, licences, 124 frozen-source archive files and 810 prepared-source archive files. The independent parser first rejected three assumptions about historical `--check` versus actual `--prepare` metadata. Those [failure records](receipts/native-cold-bios-first-build-20261003/review/independent-audit-parser-attempt1.json) and all script versions remain retained. They were read-only audit adaptations; the source, artifact and single actual build did not change or rerun.
+
+[Official artifact 11265997873](https://github.com/CrispStrobe/bw-board/actions/runs/37102085724/artifacts/11265997873) is 7,396,223 bytes with API-verified ZIP SHA256 `315587c2a738cb201f6ad09f2f82c19f82a46a25f73051062234fdeeffc2eda9`. The official artifact expires on 2026-10-17 at 06:10:22 UTC; the link is not permanent. The canonical ZIP is retained at `/tmp/native-cold-bios-first-build-publication-20261003/official-artifact.zip`. The DSO and two source TARs remain inside it, with exact member hashes and sizes in [the retention record](receipts/native-cold-bios-first-build-20261003/retention.json); binaries and archives are not duplicated in Git. All selected small raw metadata/logs and both audits/scripts are preserved losslessly through [the receipt index](receipts/native-cold-bios-first-build-20261003/index.json) and [external-origin map](receipts/native-cold-bios-first-build-20261003/origins.json).
+
+This is build/static evidence only. It provides no cold BIOS boot, E16 guest, speed, physical 386 RTx or adoption result. The known ordinary-JavaScript versus Bochs CPU3 reset-register/RAM comparison question remains open; this build did not change reset state or normalize registers/RAM. Artifact restoration, native initialization and complete checkpoint comparison require separately reviewed work.
+
+The compiled checkout remains the exact `a6fae61a` source identity. These later result notes do not relabel the docs checkout as that compiled identity. The newly completed JavaScript census/reference and its comparison-profile work are separate from this build; the remaining native runner and guest checkpoint must use explicitly authenticated compiled/runtime identities.

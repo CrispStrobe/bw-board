@@ -1,0 +1,10 @@
+{
+  "status": "PASS_INDEPENDENT_ACTUAL_READ_ONLY_SPAN_BUILD_AUTHENTICATION",
+  "runtime116Revision": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+  "compiled103Revision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "artifactCount": 179,
+  "compiledFullProofExactHistorical": true,
+  "sourceAndHelperBeforeAfterExact": true,
+  "resultSha256": "79a0717246c41f9d7eff32c649b4709af029a055401f4c7f67f17e28133948e8",
+  "scope": "Read/hash/sourceIdentity/authenticateBuild only; no provider/ROM/addon/guest execution or performance qualification."
+}

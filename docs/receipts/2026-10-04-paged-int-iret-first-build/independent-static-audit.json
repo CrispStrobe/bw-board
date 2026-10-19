@@ -1,0 +1,46 @@
+{
+  "schema": "bw.paged-int-iret.independent-static-build-audit.v1",
+  "status": "PASS",
+  "sourceRevision": "4a4ec3c92a67c4db6d3bd361f9456d2be144a13c",
+  "runId": 37218196080,
+  "officialArtifact": {
+    "id": 11309320742,
+    "zipBytes": 8097621,
+    "zipSha256": "4ac91409753cc618711107cf4fbff1ebb8c73c40295978eb4b6e798af3119a6c",
+    "members": 70
+  },
+  "sourcePaths": 208,
+  "fullSourcePrePostPaths": 11548,
+  "preparedBefore": 790,
+  "preparedAfter": 821,
+  "tarAuthenticated": {
+    "frozen-source.tar.gz": 208,
+    "prepared-source.tar.gz": 820
+  },
+  "successfulPhases": [
+    "architecture",
+    "compiler",
+    "configure",
+    "identity-after",
+    "identity-before",
+    "make",
+    "nm",
+    "platform",
+    "prepare",
+    "readelf",
+    "static-admission"
+  ],
+  "addonSha256": "92a5121df194c6675303913ebd527e7d0253e29e686b2cbd8dd91fb579489b6f",
+  "addonBytes": 2074512,
+  "generated": {
+    "bochs/cpu/bw_slice_runtime.inc": "44d6166807419eebc02f6e69f767e22fed21ead738b2a10e71d87791c364b796",
+    "bochs/cpu/bw_slice_abi.h": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990",
+    "bochs/bochs-cpu3-native-direct-board/abi.h": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990",
+    "bochs/bochs-cpu3-native-direct-board-adapter/napi.cc": "e4f4e55d139971ba073aa0ff422a6f6f1206587b80fccc88e5f6aba10f8cf1a7",
+    "bochs/owned-paged-int-iret-provider.mjs": "afc02de595449021f64cfa74cb0004ae71028e57596195769563439b5d0f005f",
+    "bochs/owned-paged-int-iret-ROM.bin": "b8b3525d4299ba14dc467144fc743a39f1c04d1a7d92ea3b34da6f4ee601cd30"
+  },
+  "abiVersion": 4,
+  "heldPagingProvenanceChecked": true,
+  "scope": "Static source/build/archive/config/ELF/export/admission proof only. No addon load, emulated instruction, differential INT/IRET or timing qualification."
+}

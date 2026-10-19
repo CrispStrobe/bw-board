@@ -1,0 +1,31 @@
+{
+  "status": "AGENT_SOURCE_ONLY_EXPORT_CONTROLS_PASS",
+  "testedRevision": "d35b10efabd2d66eb491a3620db1cc7b427b6223",
+  "ownedRuntimeTestPaths": 15,
+  "firstFailureArchivePaths": 4,
+  "materializedFrozenRolePaths": 390,
+  "allCurrentAndGitPaths": 409,
+  "beforeAfterEqual": true,
+  "nodeSelectedCases": 1,
+  "namedPythonMethods": 8,
+  "remainingNodeCases": "unselected, not executed",
+  "wait4": {
+    "rawWaitStatus": 0,
+    "rusage": {
+      "ru_utime": 0.465041,
+      "ru_stime": 0.10557699999999999,
+      "ru_maxrss": 51328,
+      "ru_minflt": 12044,
+      "ru_majflt": 4,
+      "ru_inblock": 3288,
+      "ru_oublock": 152,
+      "ru_nvcsw": 135,
+      "ru_nivcsw": 684
+    },
+    "scope": "Raw wait4 leader exit accounting; descendant inclusion follows kernel semantics, not execution-only worker CPU"
+  },
+  "parentWallSeconds": 8.525128159672022,
+  "actualRootExporterOrRecorderOrGuestExecuted": false,
+  "firstOriginalObserverCause": "Unknown; official artifact absent",
+  "controlSourceScope": "Manufactured filesystem/lifecycle/source authority, not live privileges/export/readiness/unwind"
+}

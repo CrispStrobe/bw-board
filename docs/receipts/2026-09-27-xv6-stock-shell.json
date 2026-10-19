@@ -1,0 +1,297 @@
+{
+  "schema": "bw.xv6-stock-shell.v1",
+  "date": "2026-09-27",
+  "sourceRevision": "eeb7b415dbcb12cc362d0783e41c3d1f44066b17",
+  "build": {
+    "phystop": "0x400000",
+    "compilerTarget": "i386",
+    "stockSmpKernel": true
+  },
+  "rom": {
+    "sha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+    "external": true
+  },
+  "bootImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+  "filesystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+  "echo": {
+    "steps": 80000000,
+    "serial": "\fxv6...\ncpu0: starting 0\nsb: size 1000 nblocks 941 ninodes 200 nlog 30 logstart 2 inodestart 32 bmap start 58\ninit: starting sh\n$ echo BW_XV6_OK\nBW_XV6_OK\n$ ",
+    "inputBytes": 15,
+    "inputFirstStep": 75113575,
+    "userModeEntries": [
+      {
+        "step": 72016173,
+        "cs": 27,
+        "eip": 0
+      },
+      {
+        "step": 72540469,
+        "cs": 27,
+        "eip": 0
+      },
+      {
+        "step": 72740409,
+        "cs": 27,
+        "eip": 750
+      },
+      {
+        "step": 73532077,
+        "cs": 27,
+        "eip": 758
+      },
+      {
+        "step": 73669196,
+        "cs": 27,
+        "eip": 750
+      },
+      {
+        "step": 73771682,
+        "cs": 27,
+        "eip": 718
+      },
+      {
+        "step": 73883633,
+        "cs": 27,
+        "eip": 718
+      },
+      {
+        "step": 74261690,
+        "cs": 27,
+        "eip": 678
+      },
+      {
+        "step": 74940433,
+        "cs": 27,
+        "eip": 0
+      },
+      {
+        "step": 75078537,
+        "cs": 27,
+        "eip": 3310
+      },
+      {
+        "step": 75179212,
+        "cs": 27,
+        "eip": 3270
+      },
+      {
+        "step": 75291496,
+        "cs": 27,
+        "eip": 3270
+      },
+      {
+        "step": 75627740,
+        "cs": 27,
+        "eip": 3238
+      },
+      {
+        "step": 76143163,
+        "cs": 27,
+        "eip": 0
+      },
+      {
+        "step": 76255222,
+        "cs": 27,
+        "eip": 590
+      },
+      {
+        "step": 76374683,
+        "cs": 27,
+        "eip": 3254
+      }
+    ],
+    "milestones": {
+      "main": {
+        "count": 1,
+        "first": 70636354,
+        "last": 70636354
+      },
+      "userinit": {
+        "count": 1,
+        "first": 71692438,
+        "last": 71692438
+      },
+      "scheduler": {
+        "count": 1,
+        "first": 71952065,
+        "last": 71952065
+      },
+      "trapret": {
+        "count": 111,
+        "first": 71953824,
+        "last": 78357246
+      },
+      "forkret": {
+        "count": 3,
+        "first": 71954769,
+        "last": 75631008
+      },
+      "iinit": {
+        "count": 1,
+        "first": 71955130,
+        "last": 71955130
+      },
+      "initlog": {
+        "count": 1,
+        "first": 71980910,
+        "last": 71980910
+      },
+      "syscall": {
+        "count": 64,
+        "first": 72016788,
+        "last": 76407459
+      },
+      "exec": {
+        "count": 3,
+        "first": 72019710,
+        "last": 75657160
+      }
+    },
+    "sampledApicIdeInterrupts": 41,
+    "sampledApicCom1Interrupts": 2,
+    "interruptSampleLimit": 64
+  },
+  "filesystem": {
+    "steps": 86000000,
+    "serial": "\fxv6...\ncpu0: starting 0\nsb: size 1000 nblocks 941 ninodes 200 nlog 30 logstart 2 inodestart 32 bmap start 58\ninit: starting sh\n$ echo BW_XV6_FS_OK > bwfile; cat bwfile; rm bwfile\nBW_XV6_FS_OK\n$ ",
+    "inputBytes": 50,
+    "inputFirstStep": 75113575,
+    "userModeEntries": [
+      {
+        "step": 72016173,
+        "cs": 27,
+        "eip": 0
+      },
+      {
+        "step": 72540469,
+        "cs": 27,
+        "eip": 0
+      },
+      {
+        "step": 72740409,
+        "cs": 27,
+        "eip": 750
+      },
+      {
+        "step": 73532077,
+        "cs": 27,
+        "eip": 758
+      },
+      {
+        "step": 73669196,
+        "cs": 27,
+        "eip": 750
+      },
+      {
+        "step": 73771682,
+        "cs": 27,
+        "eip": 718
+      },
+      {
+        "step": 73883633,
+        "cs": 27,
+        "eip": 718
+      },
+      {
+        "step": 74261690,
+        "cs": 27,
+        "eip": 678
+      },
+      {
+        "step": 74940433,
+        "cs": 27,
+        "eip": 0
+      },
+      {
+        "step": 75078537,
+        "cs": 27,
+        "eip": 3310
+      },
+      {
+        "step": 75183727,
+        "cs": 27,
+        "eip": 3270
+      },
+      {
+        "step": 75296011,
+        "cs": 27,
+        "eip": 3270
+      },
+      {
+        "step": 75408295,
+        "cs": 27,
+        "eip": 3270
+      },
+      {
+        "step": 75520579,
+        "cs": 27,
+        "eip": 3270
+      },
+      {
+        "step": 75632863,
+        "cs": 27,
+        "eip": 3270
+      },
+      {
+        "step": 75745147,
+        "cs": 27,
+        "eip": 3270
+      }
+    ],
+    "milestones": {
+      "main": {
+        "count": 1,
+        "first": 70636354,
+        "last": 70636354
+      },
+      "userinit": {
+        "count": 1,
+        "first": 71692438,
+        "last": 71692438
+      },
+      "scheduler": {
+        "count": 1,
+        "first": 71952065,
+        "last": 71952065
+      },
+      "trapret": {
+        "count": 277,
+        "first": 71953824,
+        "last": 85024077
+      },
+      "forkret": {
+        "count": 5,
+        "first": 71954769,
+        "last": 80287000
+      },
+      "iinit": {
+        "count": 1,
+        "first": 71955130,
+        "last": 71955130
+      },
+      "initlog": {
+        "count": 1,
+        "first": 71980910,
+        "last": 71980910
+      },
+      "syscall": {
+        "count": 118,
+        "first": 72016788,
+        "last": 82046870
+      },
+      "exec": {
+        "count": 5,
+        "first": 72019710,
+        "last": 81054714
+      }
+    },
+    "sampledApicIdeInterrupts": 59,
+    "sampledApicCom1Interrupts": 2,
+    "interruptSampleLimit": 64
+  },
+  "accepted": {
+    "bootToShell": true,
+    "externalEcho": true,
+    "filesystemWriteReadDelete": true
+  }
+}

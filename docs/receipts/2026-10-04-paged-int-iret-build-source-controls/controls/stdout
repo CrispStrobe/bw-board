@@ -1,0 +1,62 @@
+TAP version 13
+# TAP version 13
+# \# Subtest: INT manifest/config uses new generated roles and preserves historical protected/RAM/cold origins
+# ok 1 - INT manifest/config uses new generated roles and preserves historical protected/RAM/cold origins
+#   ---
+#   duration_ms: 4294.367072
+#   type: 'test'
+#   ...
+# \# Subtest: INT preparation derivative authenticates parent and output roles without materialization
+# ok 2 - INT preparation derivative authenticates parent and output roles without materialization
+#   ---
+#   duration_ms: 826.350397
+#   type: 'test'
+#   ...
+# \# Subtest: INT builder definition-only import retains checked inverse and refuses wrong paths
+# ok 3 - INT builder definition-only import retains checked inverse and refuses wrong paths
+#   ---
+#   duration_ms: 277.125207
+#   type: 'test'
+#   ...
+# \# Subtest: INT build metadata and context deny old artifacts and execution claims
+# ok 4 - INT build metadata and context deny old artifacts and execution claims
+#   ---
+#   duration_ms: 10806.207551
+#   type: 'test'
+#   ...
+# \# Subtest: new manual workflow is fixed disabled/build-only with immutable checkout and always raw evidence
+# ok 5 - new manual workflow is fixed disabled/build-only with immutable checkout and always raw evidence
+#   ---
+#   duration_ms: 0.594474
+#   type: 'test'
+#   ...
+# \# Subtest: complete INT build identity authenticates current/Git closure and all generated roles
+# ok 6 - complete INT build identity authenticates current/Git closure and all generated roles
+#   ---
+#   duration_ms: 2387.522771
+#   type: 'test'
+#   ...
+# 1..6
+# \# tests 6
+# \# suites 0
+# \# pass 6
+# \# fail 0
+# \# cancelled 0
+# \# skipped 0
+# \# todo 0
+# \# duration_ms 19420.290617
+# Subtest: six paged INT/IRET build/admission source controls run in an exact clean owned fixture
+ok 1 - six paged INT/IRET build/admission source controls run in an exact clean owned fixture
+  ---
+  duration_ms: 21940.391946
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 22656.866427

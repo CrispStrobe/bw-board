@@ -1,0 +1,78 @@
+{
+  "schema": "bw.exact-origin.receipts.v1",
+  "scope": "Preserved dirty-caller CI refusal plus one affected clean-fixture identity test; no production guard changes or native CPU",
+  "records": [
+    {
+      "path": "control-parent.py",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-identity-controls-20261005/parent.py",
+      "bytes": 6884,
+      "sha256": "ae6f6648a035d4646ed1f59cc02ae1004fc27b4822be48cbc0d6daa8b2869dc7"
+    },
+    {
+      "path": "control-before.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-identity-controls-20261005/before.json",
+      "bytes": 18545,
+      "sha256": "c9d32aca033b1bc62383d496c8562792e996d9766e2bb6b9f17dc43f4dd0d377"
+    },
+    {
+      "path": "control-after.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-identity-controls-20261005/after.json",
+      "bytes": 18545,
+      "sha256": "c9d32aca033b1bc62383d496c8562792e996d9766e2bb6b9f17dc43f4dd0d377"
+    },
+    {
+      "path": "control-invocation.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-identity-controls-20261005/invocation.json",
+      "bytes": 1654,
+      "sha256": "07541031fe42748a0fed17a6c4227bb6e46b3dfa11820ab567fdc6518e18f737"
+    },
+    {
+      "path": "control-exit.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-identity-controls-20261005/exit.json",
+      "bytes": 567,
+      "sha256": "973a0979413466593108c61650a62cd0146c563a86bf02ead7a6d4d46aeaa51e"
+    },
+    {
+      "path": "control-stdout",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-identity-controls-20261005/stdout",
+      "bytes": 366,
+      "sha256": "feedc1f98b21cd2319128c1585bec5763250543639f2c8f2117b0ab32fa2313a"
+    },
+    {
+      "path": "control-stderr",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-identity-controls-20261005/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "failed-ci-pr-checks.json",
+      "origin": "/tmp/pf-pr392-ci-dirty-source-failure-20261005/pr-checks.json",
+      "bytes": 5070,
+      "sha256": "a1fde232bd7c9ab20de6743666addafca34b6c2212e77b92a6fa968c059e2094"
+    },
+    {
+      "path": "failed-ci-origins.json",
+      "origin": "/tmp/pf-pr392-ci-dirty-source-failure-20261005/origins.json",
+      "bytes": 862,
+      "sha256": "3dccba27b8975944f59e4013d8335e0474015ea97059569647314553677cd880"
+    },
+    {
+      "path": "failed-ci-37258852677-identity-failure.txt",
+      "origin": "/tmp/pf-pr392-ci-dirty-source-failure-20261005/37258852677-identity-failure.txt",
+      "bytes": 2370,
+      "sha256": "6fe2d3bad90b6fe389ceed681f96745402e8c2adcd93d4561aef697067e1cd6d"
+    },
+    {
+      "path": "failed-ci-37258850009-identity-failure.txt",
+      "origin": "/tmp/pf-pr392-ci-dirty-source-failure-20261005/37258850009-identity-failure.txt",
+      "bytes": 2370,
+      "sha256": "650c168563c836804eef6865cfbcf2dbf59f2dee6fb44ace934cef6b1b77b363"
+    },
+    {
+      "path": "independent-audit.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-ci-identity-controls-20261005/independent-audit.json",
+      "bytes": 1145,
+      "sha256": "fcbc7507efde40d37df4e88d2178c44d18b639ed745d2ae61cecd72a0b30e43c"
+    }
+  ]
+}

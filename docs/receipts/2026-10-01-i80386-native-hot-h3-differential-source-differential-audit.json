@@ -1,0 +1,8 @@
+{
+  "status": "H3_EXACT_SOURCE_DIFFERENTIAL_PASS_NO_RUNTIME_CLAIM",
+  "checks": 7,
+  "h2Sha256": "eed8d0692f6158562a0ab2dc4cd64f52f08045ad45c45cf607b797a3d5cf1896",
+  "h3Sha256": "7f1c59f85acb858caaf672a21310b6e43e24529196ed9c7ee3880cc194e78634",
+  "preserved": "all H2 bytes after reversing only scope/key/get/scalar marker additions",
+  "scope": "only eight scalar string handles; dynamic methods/getters remain; parent closes before returned snapshot"
+}

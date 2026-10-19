@@ -1,0 +1,543 @@
+{
+  "accepted": true,
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/150.0.0.0 Safari/537.36",
+  "hardwareConcurrency": 4,
+  "rounds": 3,
+  "warmupRounds": 1,
+  "modes": {
+    "reference": {},
+    "packed": {
+      "netBackend": "compiled",
+      "memoryScheduling": true,
+      "deviceScheduling": true,
+      "packedBus": true
+    }
+  },
+  "busTraceEnabled": false,
+  "cpuHistoryEnabled": true,
+  "initializationIncluded": true,
+  "constructionIncluded": false,
+  "yieldOverheadIncluded": true,
+  "fullDOSBoot": false,
+  "cancellation": {
+    "status": "stopped",
+    "clocks": 96,
+    "chunks": 1,
+    "periodClosed": true
+  },
+  "heartbeat": {
+    "count": 4355,
+    "medianMS": 16,
+    "p95MS": 17.300000190734863,
+    "maxMS": 29.800000190734863
+  },
+  "samples": [
+    {
+      "round": 0,
+      "name": "memory",
+      "mode": "reference",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 6069.39999961853,
+      "periodsPerSecond": 5412.726134719213,
+      "chunks": 533,
+      "maxChunkMS": 16.90000057220459,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 0,
+      "name": "memory",
+      "mode": "packed",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 3231.2000007629395,
+      "periodsPerSecond": 10167.12057199898,
+      "chunks": 317,
+      "maxChunkMS": 16.59999942779541,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 0,
+      "name": "io",
+      "mode": "reference",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 1547.3000001907349,
+      "periodsPerSecond": 4374.070961782274,
+      "chunks": 133,
+      "maxChunkMS": 17.899999618530273,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 0,
+      "name": "io",
+      "mode": "packed",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 612.2999992370605,
+      "periodsPerSecond": 11053.405207305372,
+      "chunks": 61,
+      "maxChunkMS": 14.199999809265137,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 0,
+      "name": "dma",
+      "mode": "reference",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 1301.1999998092651,
+      "periodsPerSecond": 4388.256994187668,
+      "chunks": 104,
+      "maxChunkMS": 16.299999237060547,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 0,
+      "name": "dma",
+      "mode": "packed",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 691.5,
+      "periodsPerSecond": 8257.411424439624,
+      "chunks": 73,
+      "maxChunkMS": 11.399999618530273,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 0,
+      "name": "interrupt",
+      "mode": "reference",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 447.0999994277954,
+      "periodsPerSecond": 7488.257670062213,
+      "chunks": 43,
+      "maxChunkMS": 23.5,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 0,
+      "name": "interrupt",
+      "mode": "packed",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 137.79999923706055,
+      "periodsPerSecond": 24296.081411730327,
+      "chunks": 15,
+      "maxChunkMS": 9.5,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 0,
+      "name": "idle",
+      "mode": "reference",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 922.8999996185303,
+      "periodsPerSecond": 10835.41012475174,
+      "chunks": 95,
+      "maxChunkMS": 11.600000381469727,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 0,
+      "name": "idle",
+      "mode": "packed",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 320.5,
+      "periodsPerSecond": 31201.248049921996,
+      "chunks": 36,
+      "maxChunkMS": 13.899999618530273,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 1,
+      "name": "memory",
+      "mode": "packed",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 3300.800000190735,
+      "periodsPerSecond": 9952.738729429733,
+      "chunks": 338,
+      "maxChunkMS": 13.399999618530273,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 1,
+      "name": "memory",
+      "mode": "reference",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 7215.5,
+      "periodsPerSecond": 4552.9762317233735,
+      "chunks": 597,
+      "maxChunkMS": 19.40000057220459,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 1,
+      "name": "io",
+      "mode": "packed",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 786.4000005722046,
+      "periodsPerSecond": 8606.307216525218,
+      "chunks": 75,
+      "maxChunkMS": 17.09999942779541,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 1,
+      "name": "io",
+      "mode": "reference",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 1458.5,
+      "periodsPerSecond": 4640.383956119301,
+      "chunks": 113,
+      "maxChunkMS": 16.59999942779541,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 1,
+      "name": "dma",
+      "mode": "packed",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 590.5,
+      "periodsPerSecond": 9669.771380186283,
+      "chunks": 58,
+      "maxChunkMS": 13.199999809265137,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 1,
+      "name": "dma",
+      "mode": "reference",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 1304.3000001907349,
+      "periodsPerSecond": 4377.827186356663,
+      "chunks": 107,
+      "maxChunkMS": 16.300000190734863,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 1,
+      "name": "interrupt",
+      "mode": "packed",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 184.39999961853027,
+      "periodsPerSecond": 18156.18225014118,
+      "chunks": 20,
+      "maxChunkMS": 10.800000190734863,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 1,
+      "name": "interrupt",
+      "mode": "reference",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 432.20000076293945,
+      "periodsPerSecond": 7746.413683688004,
+      "chunks": 44,
+      "maxChunkMS": 17.700000762939453,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 1,
+      "name": "idle",
+      "mode": "packed",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 378.69999980926514,
+      "periodsPerSecond": 26406.126234582964,
+      "chunks": 43,
+      "maxChunkMS": 10.40000057220459,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 1,
+      "name": "idle",
+      "mode": "reference",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 1016.4000005722046,
+      "periodsPerSecond": 9838.646196743684,
+      "chunks": 103,
+      "maxChunkMS": 16,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 2,
+      "name": "memory",
+      "mode": "reference",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 7698.800000190735,
+      "periodsPerSecond": 4267.158518104913,
+      "chunks": 662,
+      "maxChunkMS": 17,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 2,
+      "name": "memory",
+      "mode": "packed",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 3450.2000007629395,
+      "periodsPerSecond": 9521.766851989876,
+      "chunks": 345,
+      "maxChunkMS": 23.899999618530273,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 2,
+      "name": "io",
+      "mode": "reference",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 1547.2999992370605,
+      "periodsPerSecond": 4374.070964478221,
+      "chunks": 120,
+      "maxChunkMS": 30.699999809265137,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 2,
+      "name": "io",
+      "mode": "packed",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 604.9000005722046,
+      "periodsPerSecond": 11188.626208625916,
+      "chunks": 63,
+      "maxChunkMS": 12.100000381469727,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 2,
+      "name": "dma",
+      "mode": "reference",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 1481.7999992370605,
+      "periodsPerSecond": 3853.421516358434,
+      "chunks": 118,
+      "maxChunkMS": 24.800000190734863,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 2,
+      "name": "dma",
+      "mode": "packed",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 721.6000003814697,
+      "periodsPerSecond": 7912.97117098315,
+      "chunks": 67,
+      "maxChunkMS": 17.700000762939453,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 2,
+      "name": "interrupt",
+      "mode": "reference",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 445.30000019073486,
+      "periodsPerSecond": 7518.526832620603,
+      "chunks": 42,
+      "maxChunkMS": 15.899999618530273,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 2,
+      "name": "interrupt",
+      "mode": "packed",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 216.10000038146973,
+      "periodsPerSecond": 15492.827367376009,
+      "chunks": 22,
+      "maxChunkMS": 15.09999942779541,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 2,
+      "name": "idle",
+      "mode": "reference",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 1300.5,
+      "periodsPerSecond": 7689.350249903883,
+      "chunks": 119,
+      "maxChunkMS": 29.799999237060547,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 2,
+      "name": "idle",
+      "mode": "packed",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 487.4000005722046,
+      "periodsPerSecond": 20517.029110094503,
+      "chunks": 54,
+      "maxChunkMS": 13.399999618530273,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    }
+  ],
+  "summaries": [
+    {
+      "name": "memory",
+      "modes": {
+        "reference": {
+          "medianMS": 7215.5,
+          "minMS": 6069.39999961853,
+          "maxMS": 7698.800000190735,
+          "periodsPerSecond": 4552.9762317233735,
+          "xtCapacityFactor": 0.00047697848962693375
+        },
+        "packed": {
+          "medianMS": 3300.800000190735,
+          "minMS": 3231.2000007629395,
+          "maxMS": 3450.2000007629395,
+          "periodsPerSecond": 9952.738729429733,
+          "xtCapacityFactor": 0.0010426679264736631
+        }
+      }
+    },
+    {
+      "name": "io",
+      "modes": {
+        "reference": {
+          "medianMS": 1547.2999992370605,
+          "minMS": 1458.5,
+          "maxMS": 1547.3000001907349,
+          "periodsPerSecond": 4374.070964478221,
+          "xtCapacityFactor": 0.0004582360319873964
+        },
+        "packed": {
+          "medianMS": 612.2999992370605,
+          "minMS": 604.9000005722046,
+          "maxMS": 786.4000005722046,
+          "periodsPerSecond": 11053.405207305372,
+          "xtCapacityFactor": 0.001157975849792516
+        }
+      }
+    },
+    {
+      "name": "dma",
+      "modes": {
+        "reference": {
+          "medianMS": 1304.3000001907349,
+          "minMS": 1301.1999998092651,
+          "maxMS": 1481.7999992370605,
+          "periodsPerSecond": 4377.827186356663,
+          "xtCapacityFactor": 0.0004586295409685766
+        },
+        "packed": {
+          "medianMS": 691.5,
+          "minMS": 590.5,
+          "maxMS": 721.6000003814697,
+          "periodsPerSecond": 8257.411424439624,
+          "xtCapacityFactor": 0.0008650621986591338
+        }
+      }
+    },
+    {
+      "name": "interrupt",
+      "modes": {
+        "reference": {
+          "medianMS": 445.30000019073486,
+          "minMS": 432.20000076293945,
+          "maxMS": 447.0999994277954,
+          "periodsPerSecond": 7518.526832620603,
+          "xtCapacityFactor": 0.0007876552369976958
+        },
+        "packed": {
+          "medianMS": 184.39999961853027,
+          "minMS": 137.79999923706055,
+          "maxMS": 216.10000038146973,
+          "periodsPerSecond": 18156.18225014118,
+          "xtCapacityFactor": 0.0019020763444191529
+        }
+      }
+    },
+    {
+      "name": "idle",
+      "modes": {
+        "reference": {
+          "medianMS": 1016.4000005722046,
+          "minMS": 922.8999996185303,
+          "maxMS": 1300.5,
+          "periodsPerSecond": 9838.646196743684,
+          "xtCapacityFactor": 0.0010307153747473599
+        },
+        "packed": {
+          "medianMS": 378.69999980926514,
+          "minMS": 320.5,
+          "maxMS": 487.4000005722046,
+          "periodsPerSecond": 26406.126234582964,
+          "xtCapacityFactor": 0.0027663562397957147
+        }
+      }
+    }
+  ],
+  "benchmark": "owned-wired-browser-worker",
+  "browserVersion": "Chromium 150.0.7869.0",
+  "node": "v20.20.2",
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "logicalCPUs": 4
+  },
+  "sourceHashes": {
+    "bench/harris-browser.mjs": "89dace304749fc5df3aa315e16a2aa0f8409d67bda7aac36d58c230925965ad6",
+    "bench/harris-browser.html": "9a8d1550d241d89a7cd4ce8022fa66beec2309c4a09c92f0e78220f606134233",
+    "bench/harris-browser-worker.mjs": "aa9a19f142bf751d94ad09ee15cb382e4248aa1e1dd79a3aedd23471f91b1737",
+    "scripts/lib/harris-owned-workloads.mjs": "93e712d8f08512a1727f91a962936a181f059ff94d89883ada1069212a0dbdb4",
+    "src/experimental/harris-run-chunks.js": "a252a4263a04136b7e5d77e82ec0a2c552ebfa375aff81aa2bda89d22117a2ce",
+    "src/i8086-asm.js": "3270c33885fbb6524ceaa727a1600570fe974e0bb4bc3488d1ecda894fdb0841",
+    "src/experimental/harris-boot-rom.js": "ecbee5bc5556257acaae231e2b2d153a9a1d04acde67d98342374dc6c2cbd98c",
+    "src/experimental/harris-80c286-boot-cpu.js": "4a57426bf51f8971ed5890a4717618181a0900a3cb69f8683c0d877c9474b007",
+    "src/experimental/harris-8259-adapter.js": "702bc90387e706ffeb886c6acf1c0c1aa32943556564ea6b092adcb2c59dccb8",
+    "src/experimental/harris-80c286-memory-board.js": "a340ecac07be2e341882ecd91da675fd4e580bd43eafb12aacfbc04f4ff25c5b",
+    "src/experimental/harris-keyboard-adapter.js": "acccc5ac0a78c4fe5fada61ee0204f606c7bd2cc7feaa126ac6d2d8fa4475e12",
+    "src/devices/bus-memory.js": "5a7fdaf4135f1cf40f58ac4050fdfabaae2d284a8342b8a0f95313cc06409587",
+    "src/experimental/harris-8254-adapter.js": "eb1643b2be68f21f0e9c319d03a74e305383214b983d720d5b77718890e7f293",
+    "src/experimental/harris-dma-adapter.js": "a43239174f83ed665edb21cb388b45ba98a846d5f2f54b1564ddbbcfe55cb02c",
+    "src/experimental/harris-fdc-adapter.js": "b19260367dcb2e9a737ec68fb639a6fb2491c4bfb1c2a93e4881019e1e2a2fe8",
+    "src/experimental/digital-circuit.js": "25706053494e30bab3ec65be15008c961bcbe61d5080b386afede66d5fda91d8",
+    "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+    "src/devices.js": "396ffede2fa30fbf39a16cae97b747d16ee099f7665e8094dab939b48a681151",
+    "src/experimental/compiled-digital-circuit.js": "0da0f31269ba01f40550f6bba432ba779d766d4e9b32d385f046da811fe89fc9",
+    "src/experimental/harris-80c286-bus.js": "987832faf0b66548dbfce7062b18a9a2abbac0d0ae0ce7fea2976a3416ecf386",
+    "src/experimental/harris-memory-decoder.js": "19c7892261781d680856deac58384503a4fdd7291943f3692e8bde91d0e2d9ad",
+    "src/experimental/latched-memory-components.js": "f5f963d25f17d6970babc5a13b53daf6fe046c445cfa51f875619d0ae87418c4",
+    "src/experimental/compiled-device-scheduler.js": "b0674f709446a3e1b42f22d2712988a25cdd5e3e4239c841b7ea00d2f6dc66f3",
+    "src/i8255.js": "3445ac6676005f225db542031be51b6d1561045d2be76be339e5853a50f6ff7f",
+    "src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874",
+    "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+    "src/experimental/harris-80c286-contract.js": "bb9325becac1c41339b3ba642444da332aef26083b1a2cbd49d147faf037e287",
+    "src/chip-ledger.js": "b12b5d635086636f0f9f405e4a06816943b74c03c1b036fcbd3ffe813055ac3a"
+  },
+  "nodeReference": {
+    "receipt": "HARRIS-OWNED-WORKLOADS-BENCH.json",
+    "sha256": "0639dbdcff3bb6bf4b72e9f8e4138d71f58826dead82956cba12614298007c41",
+    "revision": "03946c7fa6574848e35659941b3f6f19fd2adaa5"
+  },
+  "notes": [
+    "Fresh browser profile and loopback-only source server; no guest media.",
+    "Capacity factor is not complete silicon timing certification.",
+    "Worker heartbeat is observed responsiveness, not a hard frame deadline or an intrinsic throughput gain.",
+    "Shared host load uncontrolled."
+  ]
+}

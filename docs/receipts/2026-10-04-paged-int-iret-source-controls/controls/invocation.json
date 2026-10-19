@@ -1,0 +1,27 @@
+{
+  "argv": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "test/i80386-paged-int-iret-source.test.mjs"
+  ],
+  "cwd": "/tmp/bw-native-paged-int-iret-source-20261004",
+  "jsControlOutput": "/tmp/native-paged-int-iret-source-controls-20261004/js-control.json",
+  "scope": "FIVE_MANUFACTURED_ONE_FACTORY_RESET_STAGE_ONE_BOUNDED_FIXED_JS_PATH_NO_NATIVE",
+  "blankVariables": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  },
+  "limits": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "heapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "nice": 10
+  }
+}

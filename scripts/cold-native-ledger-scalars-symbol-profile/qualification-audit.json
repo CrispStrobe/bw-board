@@ -1,0 +1,62 @@
+{
+  "schema": "bw.cold-ledger-scalars.qualification-audit.v1",
+  "status": "PASS",
+  "worker": {
+    "revision": "06581f3831aa765933b1d160a41ab37b1b652913",
+    "sourceSha256": "3e0bb128aa00ea763125d2cc6f0af2ab7ac752de05a3485acc9432f89a799e9d"
+  },
+  "compiledRevision": "85fc1599af0ee71e32208da9d36caac86daa3b8c",
+  "targetN": 316562,
+  "targetQ": 316562,
+  "captureSha256": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf",
+  "addonSha256": "7de755f02b385149e17abfb086972bc73cbcb3fac5294f758eda5a4ab97d2351",
+  "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "stateExportProfile": "bw.cold-native.copied-u32-state.v1",
+  "scalarProviderProfile": "bw.cold-native.memory-clock-fusion.ledger-scalars.v1",
+  "memoryFusionProfile": "bw.cold-native.memory-clock-fusion.v1",
+  "officialArtifact": {
+    "runId": 37205324209,
+    "headSha": "c26ad6701c9fa13f983dd84c2764c2f073371f57",
+    "artifactId": 11304208460,
+    "zipBytes": 18501813,
+    "zipSha256": "9c9e39393c3c67b35d496af838473c8af28cd11e055ccec0dfd2f1f5a2cf09ac"
+  },
+  "checks": 66440,
+  "scope": "Actual typed batched reset/final/last-return raw166, terminal represented JS counterparts via immutable capture, full board/RAM hash/ordered PIO and source/input/restoration guards. No intermediate166 reconstruction or performance qualification. Typed ownership assertion is instrumented source-attested; serialized arrays cannot independently prove live backing-buffer identity. Scalar pre-effect validation and live ownership remain authenticated-source attested. Single execution timing is informational only; no paired gain, speed qualification or adoption claim.",
+  "returns": {
+    "resumes": 16524,
+    "irqSnapshots": 1,
+    "zeroQ": 0,
+    "reasons": {
+      "1": 3,
+      "3": 16475,
+      "7": 46
+    },
+    "maxChargedN": 300,
+    "maxChargedQ": 300
+  },
+  "child": {
+    "pid": 4785,
+    "exitCode": 0,
+    "rawWaitStatus": 0,
+    "timedOut": false,
+    "wallSeconds": 4.419602806,
+    "terminatedPids": [],
+    "interrupted": null,
+    "rusage": {
+      "ru_utime": 2.715735,
+      "ru_stime": 2.235977,
+      "ru_maxrss": 265028,
+      "ru_minflt": 453675,
+      "ru_majflt": 0,
+      "ru_inblock": 0,
+      "ru_oublock": 3808,
+      "ru_nvcsw": 5809,
+      "ru_nivcsw": 247
+    },
+    "cpuSeconds": 4.951712000000001
+  },
+  "sourceRolePaths": 298,
+  "zipMembers": 56,
+  "scalarOverlayOwnership": "Fixed source-owned overlay hash verified against authenticated worker identity; no caller authority"
+}

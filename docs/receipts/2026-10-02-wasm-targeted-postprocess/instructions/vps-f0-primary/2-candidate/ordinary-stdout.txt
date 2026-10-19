@@ -1,0 +1,74 @@
+F0_WASM_GUEST {"workload":"ram","elfSha256":"382bbd4db224329be8ee913c5f09bdf6f2a4e31ed931fd7fe5bc867c78643a87","imageSha256":"70301209d467b87380162a750adc5f2feb207794cbcc9ef1e8a33fd59cef1aa4"}
+F0_WASM_SAMPLE {"workload":"ram","index":0,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.6807415659999999,"rtx":1.468986249621784,"iterations":5400000,"checksum":5399872,"input":0,"mirror":5399999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":1,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.234465665,"rtx":0.8100670827487129,"iterations":10200000,"checksum":10199872,"input":0,"mirror":10199999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":2,"cycles":48000000,"cpuHz":48000000,"wallSeconds":0.9602112399999997,"rtx":1.0414375070218926,"iterations":15000000,"checksum":14999872,"input":0,"mirror":14999999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":3,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.221911967,"rtx":0.8183895624290911,"iterations":19800000,"checksum":19799872,"input":0,"mirror":19799999,"output":null}
+F0_WASM_SAMPLE {"workload":"ram","index":4,"cycles":48000000,"cpuHz":48000000,"wallSeconds":1.3022502050000002,"rtx":0.7679015876983485,"iterations":24600000,"checksum":24599872,"input":0,"mirror":24599999,"output":null}
+F0_WASM_GUEST {"workload":"gpio","elfSha256":"a4a77ecf93f33d9ca8c791fc3c1008fdad31a593364cf00518aef6dd17747650","imageSha256":"cee1c14b0a4b6b7bbfea8b7987742d9c6a78b8d87d1dd2e677571b7eed1b4a6c"}
+F0_WASM_SAMPLE {"workload":"gpio","index":0,"cycles":48000000,"cpuHz":48000000,"wallSeconds":7.545224004,"rtx":0.13253416988943778,"iterations":3000000,"checksum":2999872,"input":0,"mirror":2999999,"output":0}
+F0_WASM_SAMPLE {"workload":"gpio","index":1,"cycles":48000000,"cpuHz":48000000,"wallSeconds":5.273742428000001,"rtx":0.18961866523679222,"iterations":5526315,"checksum":5526484,"input":2,"mirror":5526315,"output":1}
+F0_WASM_SAMPLE {"workload":"gpio","index":2,"cycles":48000000,"cpuHz":48000000,"wallSeconds":4.478708019000002,"rtx":0.22327867674286977,"iterations":8192982,"checksum":8192809,"input":0,"mirror":8192981,"output":0}
+F0_WASM_SAMPLE {"workload":"gpio","index":3,"cycles":48000000,"cpuHz":48000000,"wallSeconds":2.8174997760000005,"rtx":0.3549246067446714,"iterations":10719298,"checksum":10719421,"input":2,"mirror":10719297,"output":1}
+F0_WASM_SAMPLE {"workload":"gpio","index":4,"cycles":48000000,"cpuHz":48000000,"wallSeconds":3.066436036000003,"rtx":0.32611148194842016,"iterations":13385965,"checksum":13385747,"input":0,"mirror":13385964,"output":0}
+TAP version 13
+# Subtest: F0 ram: active guest and RAM/MMIO observations
+ok 1 - F0 ram: active guest and RAM/MMIO observations
+  ---
+  duration_ms: 593.641801
+  ...
+# Subtest: F0 ram: all five 48M-cycle windows meet 1x
+not ok 2 - F0 ram: all five 48M-cycle windows meet 1x
+  ---
+  duration_ms: 5541.513654
+  location: '/mnt/volume1/code/lego/cp13-motion-board-20261001/test/labwired-f0-timing.test.mjs:95:5'
+  failureType: 'testCodeFailure'
+  error: 'every window must meet 1x: [1.468986249621784,0.8100670827487129,1.0414375070218926,0.8183895624290911,0.7679015876983485]'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///mnt/volume1/code/lego/cp13-motion-board-20261001/test/labwired-f0-timing.test.mjs:120:20)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:796:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:526:18)
+    Test.postRun (node:internal/test_runner/test:889:19)
+    Test.run (node:internal/test_runner/test:835:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: F0 gpio: active guest and RAM/MMIO observations
+ok 3 - F0 gpio: active guest and RAM/MMIO observations
+  ---
+  duration_ms: 1373.447775
+  ...
+# Subtest: F0 gpio: all five 48M-cycle windows meet 1x
+not ok 4 - F0 gpio: all five 48M-cycle windows meet 1x
+  ---
+  duration_ms: 24361.09401
+  location: '/mnt/volume1/code/lego/cp13-motion-board-20261001/test/labwired-f0-timing.test.mjs:95:5'
+  failureType: 'testCodeFailure'
+  error: 'every window must meet 1x: [0.13253416988943778,0.18961866523679222,0.22327867674286977,0.3549246067446714,0.32611148194842016]'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///mnt/volume1/code/lego/cp13-motion-board-20261001/test/labwired-f0-timing.test.mjs:120:20)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:796:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:526:18)
+    Test.postRun (node:internal/test_runner/test:889:19)
+    Test.run (node:internal/test_runner/test:835:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 2
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 32048.24286

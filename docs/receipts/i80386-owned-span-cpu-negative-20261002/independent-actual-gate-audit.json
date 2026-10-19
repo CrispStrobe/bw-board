@@ -1,0 +1,26 @@
+{
+  "status": "PASS_INDEPENDENT_ACTUAL_18_SEMANTICS_CPU_GATE_FAIL_KEEP_FE1",
+  "checks": 771,
+  "runId": 37061280177,
+  "head": "d48ba37f4b38784757275b28f26da71bb9113c11",
+  "artifactId": 11250412021,
+  "zipSha256": "075ff42a9194624ed4b157b57cc64d213ca61891023c74d5f820bb509a23e4f6",
+  "meansUs": {
+    "BASE": 123178.14285714286,
+    "SPAN": 117977.71428571429
+  },
+  "meanReductionPercent": 4.221876098148202,
+  "favorablePairs": [
+    true,
+    false,
+    false,
+    true,
+    true,
+    true,
+    true
+  ],
+  "measuredPairs": 7,
+  "discardedWarmupChildren": 4,
+  "all18FullSemanticParity": true,
+  "scope": "Recorded pre/post source/artifact authentication plus genuine ZIP and exact full saved native/board/RAM parity. No new guest, no speed adoption; only fixed fixture and execution window."
+}

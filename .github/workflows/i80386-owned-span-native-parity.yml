@@ -1,0 +1,77 @@
+name: Owned 386 private span native parity
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/i80386-owned-span-native-parity.yml'
+      - 'scripts/owned-span-parity-ci/**'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: owned-span-native-parity-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  native-parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      BW_HOT_NAPI_PROFILE: ''
+      NODE_V8_COVERAGE: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: fe1eff2039520536350922a2164c8bbe29404c68
+          path: baseline
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Fetch exact historical ROM admission source
+        shell: bash
+        run: git -C baseline fetch --depth=1 origin 7df84bc2c367aff1cadec7cecdde69cf0e904ace
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Authenticate and materialize fixed historical build and runtime
+        id: prepare
+        env:
+          BW_SPAN_PUBLICATION: ${{ github.workspace }}
+          BW_SPAN_COMPILED: ${{ github.workspace }}/baseline
+          BW_SPAN_CONTEXT: ${{ runner.temp }}/owned-span-native-parity/context
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$BW_SPAN_CONTEXT"
+          python3 scripts/owned-span-parity-ci/prepare.py > "$BW_SPAN_CONTEXT/preparation.stdout" 2> "$BW_SPAN_CONTEXT/preparation.stderr"
+      - name: Run three sequential bounded native parity cells
+        if: ${{ steps.prepare.outcome == 'success' }}
+        env:
+          BW_SPAN_PUBLICATION: ${{ github.workspace }}
+          BW_SPAN_COMPILED: ${{ github.workspace }}/baseline
+          BW_SPAN_CONTEXT: ${{ runner.temp }}/owned-span-native-parity/context
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/owned-span-parity-ci/run-cells.py > "$BW_SPAN_CONTEXT/cells.stdout" 2> "$BW_SPAN_CONTEXT/cells.stderr"
+      - name: Retain complete materialization and success or failure evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: owned-span-native-parity-pr-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/owned-span-native-parity
+            /mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002
+            scripts/owned-span-parity-ci
+            .github/workflows/i80386-owned-span-native-parity.yml
+          include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: error

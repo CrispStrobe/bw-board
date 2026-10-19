@@ -1,0 +1,14 @@
+{
+  "status": "PASS_ACTUAL_DISPATCH_SMOKE_OFF_EXACT_STATE_AND_CANONICAL_WHERE_ENABLED",
+  "checks": 397,
+  "canonicalRows": 0,
+  "runtimeInputs": 112,
+  "frozenDispatchInputs": 106,
+  "compiledInputs": 103,
+  "artifactPins": 223,
+  "resumes": 445,
+  "captureSha256": "ffeb611d36433463e576346e100614cfc4ac74250cd20fccb366d0d11c180231",
+  "traceSha256": "17113488c0f878f2b2e541710a78d31569af64196b7e7c4fea9e89ab8996c2bf",
+  "journalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "scope": "All full166 native snapshot/reset/final/sixcut/boards/counters/rawcanonicalRAM/physical fields exact qualifiedfe1 reference; source/provenance/input/streams/bounds/artifact auth verified. Traced modes everycanonicalrow exact; ON wholejournal and candidateOFF snapshots exact, nullsink traced mode source-backedfalse-to-null and emptyjournal. Eight recordedJS CPU fields plus exact EDX/CR0 resetprofile only. No speed/adoption/generalAT claim; no extra native execution."
+}

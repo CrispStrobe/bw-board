@@ -1,0 +1,97 @@
+{
+  "status": "PASS_INDEPENDENT_H1_BINDING_AND_EFFECT_AUDIT_NOT_QUALIFICATION",
+  "sourceRevision": "c626bce01f59ae830283bfa30cda5f311612650a",
+  "bindings": {
+    "sourceInputs": 25,
+    "sourceCurrentAndHistoricalHashes": 50,
+    "patchedInputs": 12,
+    "addonSha256": "3d8e53ca438aadb9c854bea5ab9bf1c84b9d9560e50c1e9951859bb67a787f15",
+    "runtimeSha256": "89acf83dda501a097550e0465b4db2351229a991e51cbf8439d43bad77d4a42a",
+    "manifestSha256": "c51f8822b32ad5259e658554483fdc5f6a258f66501cf0a9f38027467b10d173",
+    "nativeCaptureSha256": "12893aa4a70ba90d9e78909d19734369bfc527e3e828cebc75cf662add96a8ec",
+    "javascriptCaptureSha256": "c079fc196461e7d062df7e6a8a9b13b28ab9014b36a1040698fc5bab91ecdc5f"
+  },
+  "actualCounts": {
+    "page": 8,
+    "quantum": 100682,
+    "nativeTick": 100684,
+    "write": 4203,
+    "read": 4235,
+    "outPort": 26,
+    "ack": 1
+  },
+  "javascriptCounts": {
+    "STEP": 100684,
+    "WRITE": 16743,
+    "PIO": 26,
+    "DELIVERY": 3
+  },
+  "successfulQuanta": 100682,
+  "nativeTicks": 100684,
+  "wholeSettledConfiguredBoardExact": true,
+  "all26PioPreQuantumClockPortValueExact": true,
+  "checksumsAndEightSmcWitnessesExact": true,
+  "wholeRam": {
+    "bytes": 16777216,
+    "nativeRawSha256": "7aecf019a32f109760267d6ac1c60ef3d8793661910226cca3bcf5661189c38d",
+    "auditCopyAfterNamedResetWitnessTransformationSha256": "0194be01b176f034836acb514956f29b224b4cea87e92b1b7c50f0bb6cb951b7",
+    "javascriptActualSha256": "0194be01b176f034836acb514956f29b224b4cea87e92b1b7c50f0bb6cb951b7"
+  },
+  "namedRawResetWitnessDifference": {
+    "range": "0x510..0x517",
+    "nativeRaw": [
+      0,
+      0,
+      0,
+      0,
+      240,
+      255,
+      255,
+      127
+    ],
+    "javascriptRaw": [
+      0,
+      3,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "differentFinalBytes": [
+      {
+        "address": "0x511",
+        "native": 0,
+        "javascript": 3
+      },
+      {
+        "address": "0x514",
+        "native": 240,
+        "javascript": 0
+      },
+      {
+        "address": "0x515",
+        "native": 255,
+        "javascript": 0
+      },
+      {
+        "address": "0x516",
+        "native": 255,
+        "javascript": 0
+      },
+      {
+        "address": "0x517",
+        "native": 127,
+        "javascript": 0
+      }
+    ],
+    "scope": "guest-stored hardware-reset EDX/CR0 words only; transformation in owned audit copy only; captures/source untouched"
+  },
+  "limitations": [
+    "No assertion that total150000Q/160000N cap was reached by normal100682Q execution.",
+    "Selected native snapshots are resume-end observations, not exact JS hot-region boundaries.",
+    "PC-range phase label mislabels correctness-prefix PF-handler PC907 as completion.",
+    "No full hot-loop per-instruction CPU/cache parity claim from capture-OFF evidence."
+  ]
+}

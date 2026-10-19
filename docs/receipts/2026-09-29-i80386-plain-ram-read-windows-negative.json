@@ -1,0 +1,58 @@
+{
+  "schema": "bw.i80386-plain-ram-read-windows-result.v1",
+  "boardRevision": "a0ac741d9f17bbf4b0528927280e13b4921e2936",
+  "privateProtocolRevision": "7ffbeecaa85c51c97c5e1f02a2e1d9821c86c53d",
+  "privateArchiveCommit": "77eabfc",
+  "sourceSha256": {
+    "machine": "c7df1d928119639c9c6765507d3b5cd3afd19f7266da3e41bbf2972e70d64ff1",
+    "runner": "8c5344d15537074ba51e01223ea6570b0280304840a2ac8a1222e45fd8c45a35",
+    "protocol": "56d4e4539b53cc84cbc765242b72a4837212e037de9f157530e11fdfee08c083"
+  },
+  "completedStepsPerArm": 60000000,
+  "completedArms": 4,
+  "sourceHashesVerified": true,
+  "wholeReportParityExceptOptIn": true,
+  "ramAndDiskHashesEqual": true,
+  "privateEvidenceSha256": {
+    "hostManifest": "4c7ceeb0366cf7776fa9ebfee1e4b4d436971db70f564be685e8384af9bc1fcd",
+    "pair1-baseline-private.json": "fb2734f3e5dfcc2268a9b0d43a7bfcad033d34e12e7c92339ea1e2bee35edfaa",
+    "pair1-baseline-time.txt": "a704ed17bae8dd2e9da259117684cf8334c657a7259d45b74bb5e84a323c67d6",
+    "pair1-shortcut-private.json": "eb3e16e0c2fa9325e79d7cf02ec5f1d46e99432ad3095118b1028da62437fa9e",
+    "pair1-shortcut-time.txt": "c33562ca0522af7df518780d4d34d41fe41588aea9016f9ee98eafea9bbacf2d",
+    "pair2-shortcut-private.json": "eb3e16e0c2fa9325e79d7cf02ec5f1d46e99432ad3095118b1028da62437fa9e",
+    "pair2-shortcut-time.txt": "450b58ade8f84725794c26332dc08221d1a86e986c6fac045443d39691e6c84d",
+    "pair2-baseline-private.json": "fb2734f3e5dfcc2268a9b0d43a7bfcad033d34e12e7c92339ea1e2bee35edfaa",
+    "pair2-baseline-time.txt": "75fdbb9f4337dd3e7f7d4c334ca21c34783dd0120a0a90638e7499aab0222951"
+  },
+  "pairs": [
+    {
+      "pair": 1,
+      "order": [
+        "baseline",
+        "shortcut"
+      ],
+      "baselineUserCpuSeconds": 78.33,
+      "shortcutUserCpuSeconds": 78.23,
+      "shortcutFavorable": true
+    },
+    {
+      "pair": 2,
+      "order": [
+        "shortcut",
+        "baseline"
+      ],
+      "baselineUserCpuSeconds": 77.53,
+      "shortcutUserCpuSeconds": 80.18,
+      "shortcutFavorable": false
+    }
+  ],
+  "predeclaredGate": {
+    "minimumMeanUserCpuReduction": 0.05,
+    "everyPairMustFavorShortcut": true,
+    "stopReason": "first-unfavorable-pair",
+    "windowsPassed": false,
+    "thirdPairRun": false,
+    "xv6PairRun": false
+  },
+  "interpretation": "The Windows retention gate failed; no xv6 timing pair was run. No speed benefit is established."
+}

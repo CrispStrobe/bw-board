@@ -1,0 +1,254 @@
+[
+  {
+    "newStart": 1354,
+    "newEnd": 1579,
+    "new": "assert a['nodeSha256']=='fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48'\n assert a['node'] in a['artifactHashes'] and a['artifactHashes'][a['node']]==a['nodeSha256']\n assert sha(a['node'])==a['nodeSha256']\n ",
+    "old": ""
+  },
+  {
+    "newStart": 1949,
+    "newEnd": 1949,
+    "new": "",
+    "old": ";audit=Path(a['parityDirectory'])/mode/'independent-audit.json'"
+  },
+  {
+    "newStart": 1967,
+    "newEnd": 1967,
+    "new": "",
+    "old": ") in a['artifactHashes'] and str(audit"
+  },
+  {
+    "newStart": 2026,
+    "newEnd": 2038,
+    "new": "\n expectedSt",
+    "old": ";"
+  },
+  {
+    "newStart": 2039,
+    "newEnd": 2231,
+    "new": "tus={'smoke-off':'SPAN_CAPTURE_OFF_EXACT_PARITY_PASS_NOT_SPEED_GATE','fulltrace-on':'SPAN_CAPTURE_ON_EXACT_PARITY_PASS','trace-fast':'SPAN_FULL_CANONICAL_TRACE_NULLSINK_PARITY_PASS'}\n assert p",
+    "old": ""
+  },
+  {
+    "newStart": 2232,
+    "newEnd": 2435,
+    "new": "['status']==expectedStatus[mode]\n reviews={}\n for name,record in a['qualificationReviews'].items():\n  assert record['path']in a['artifactHashes'] and sha(record['path'])==record['sha256']\n  reviews[name]",
+    "old": ""
+  },
+  {
+    "newStart": 2447,
+    "newEnd": 2448,
+    "new": "P",
+    "old": ""
+  },
+  {
+    "newStart": 2449,
+    "newEnd": 2457,
+    "new": "th(recor",
+    "old": "u"
+  },
+  {
+    "newStart": 2458,
+    "newEnd": 2462,
+    "new": "['pa",
+    "old": "i"
+  },
+  {
+    "newStart": 2463,
+    "newEnd": 2467,
+    "new": "h'])",
+    "old": ""
+  },
+  {
+    "newStart": 2489,
+    "newEnd": 2511,
+    "new": "reviews[name]==record[",
+    "old": ""
+  },
+  {
+    "newStart": 2512,
+    "newEnd": 2520,
+    "new": "expected",
+    "old": "PASS"
+  },
+  {
+    "newStart": 2521,
+    "newEnd": 2523,
+    "new": "]\n",
+    "old": ""
+  },
+  {
+    "newStart": 2524,
+    "newEnd": 2532,
+    "new": "core=rev",
+    "old": ""
+  },
+  {
+    "newStart": 2533,
+    "newEnd": 2621,
+    "new": "ews[a['coreReview']];peer=reviews[a['peerReview']];root=reviews[a['rootReview']]\n assert",
+    "old": "n"
+  },
+  {
+    "newStart": 2623,
+    "newEnd": 2626,
+    "new": "eer",
+    "old": "v"
+  },
+  {
+    "newStart": 2636,
+    "newEnd": 2718,
+    "new": "=='PASS_INDEPENDENT_ACTUAL_HOSTED_SPAN_THREE_CELL_COMPLETE_PROVENANCE_AND_PARITY'\n",
+    "old": ""
+  },
+  {
+    "newStart": 2720,
+    "newEnd": 2725,
+    "new": "ssert",
+    "old": "nd"
+  },
+  {
+    "newStart": 2726,
+    "newEnd": 2728,
+    "new": "ro",
+    "old": "'FAIL' n"
+  },
+  {
+    "newStart": 2730,
+    "newEnd": 2730,
+    "new": "",
+    "old": " in pv"
+  },
+  {
+    "newStart": 2740,
+    "newEnd": 3775,
+    "new": "=='ROOT_ACTUAL_HOSTED_SPAN_OFFICIAL_ZIP_STREAM_AND_RECORDED_CLOSURE_PASS'\n assert peer['coreParityReceiptSha256']==a['qualificationReviews'][a['coreReview']]['sha256']\n actual=next(x for x in core['cells']if x['mode']==mode)\n assert actual['stateParity']and actual['captureSha256']==pv['captureSha256']and actual['journalSha256']==pv['journalSha256']and actual['canonicalRows']==pv['canonicalRows']\n modeInput=json.loads((Path(a['parityDirectory'])/mode/'input.json').read_bytes())\n assert str(Path(a['parityDirectory'])/mode/'input.json') in a['artifactHashes']\n assert modeInput['nativeTrace']==(mode!='smoke-off') and modeInput['hostJournal']==(mode=='fulltrace-on')\n modeCapturePath=Path(a['parityDirectory'])/mode/'guest/capture.json'; modeJournalPath=Path(a['parityDirectory'])/mode/'guest/callbacks.jsonl.stream-proof.json'\n assert str(modeCapturePath) in a['artifactHashes'] and sha(modeCapturePath)==pv['captureSha256']\n assert str(modeJournalPath) in a['artifactHashes']\n journalProof=json.loads(modeJournalPath.read_bytes())",
+    "old": ""
+  },
+  {
+    "newStart": 3783,
+    "newEnd": 3796,
+    "new": "journalProof[",
+    "old": ""
+  },
+  {
+    "newStart": 3797,
+    "newEnd": 3803,
+    "new": "sha256",
+    "old": "PASS"
+  },
+  {
+    "newStart": 3804,
+    "newEnd": 3808,
+    "new": "]==p",
+    "old": " in a"
+  },
+  {
+    "newStart": 3811,
+    "newEnd": 3816,
+    "new": "journ",
+    "old": "st"
+  },
+  {
+    "newStart": 3817,
+    "newEnd": 3824,
+    "new": "lSha256",
+    "old": "tus"
+  },
+  {
+    "newStart": 3831,
+    "newEnd": 3844,
+    "new": "journalProof[",
+    "old": ""
+  },
+  {
+    "newStart": 3845,
+    "newEnd": 3883,
+    "new": "rows']==(209871 if mode=='fulltrace-on",
+    "old": "FAIL"
+  },
+  {
+    "newStart": 3885,
+    "newEnd": 3909,
+    "new": "else 0)\n modeCapture=jso",
+    "old": ""
+  },
+  {
+    "newStart": 3910,
+    "newEnd": 3912,
+    "new": ".l",
+    "old": ""
+  },
+  {
+    "newStart": 3913,
+    "newEnd": 3953,
+    "new": "ads(modeCapturePath.read_bytes())\n asser",
+    "old": ""
+  },
+  {
+    "newStart": 3955,
+    "newEnd": 3960,
+    "new": "modeC",
+    "old": "in "
+  },
+  {
+    "newStart": 3961,
+    "newEnd": 3966,
+    "new": "pture",
+    "old": "v"
+  },
+  {
+    "newStart": 3969,
+    "newEnd": 4005,
+    "new": "ource']==sources['SPAN'] and modeCap",
+    "old": ""
+  },
+  {
+    "newStart": 4006,
+    "newEnd": 4041,
+    "new": "ure['provenance']==a['currentCandid",
+    "old": ""
+  },
+  {
+    "newStart": 4043,
+    "newEnd": 4073,
+    "new": "eProvenance']\n assert modeCapt",
+    "old": ""
+  },
+  {
+    "newStart": 4074,
+    "newEnd": 4171,
+    "new": "re['provenance']['compiled']['proof']==a['currentCompiledProof']\n assert modeCapture['resetWitnes",
+    "old": ""
+  },
+  {
+    "newStart": 4174,
+    "newEnd": 4448,
+    "new": "==[0,0,0,0,240,255,255,127]\n assert modeCapture['ramCanonicalSha256']=='588f9bfd1292b8405d0e42552147fb2d8d082a8253b52771291ca0a603eaf18f'\n assert modeCapture['journal']['rows']==(209871 if mode=='fulltrace-on' else 0)\n assert mode=='fulltrace-on' or journalProof['bytes']==0",
+    "old": ""
+  },
+  {
+    "newStart": 4560,
+    "newEnd": 4612,
+    "new": "\nassert a['referenceCapture'] in a['artifactHashes']",
+    "old": ""
+  },
+  {
+    "newStart": 5497,
+    "newEnd": 5499,
+    "new": "a[",
+    "old": ""
+  },
+  {
+    "newStart": 5500,
+    "newEnd": 5500,
+    "new": "",
+    "old": "/tmp/node-v22.23.3-linux-x64/bin/"
+  },
+  {
+    "newStart": 5505,
+    "newEnd": 5506,
+    "new": "]",
+    "old": ""
+  }
+]

@@ -1,0 +1,7 @@
+# Cold native selector comparison
+
+[Run 37109006890](https://github.com/CrispStrobe/bw-board/actions/runs/37109006890) restored and authenticated the original build, initialized the native addon, and executed 182 N/Q. The first 128-element REP completed. At F000:0664, comparison refused DS cached selector decomposition despite both architectural DS selectors being F000. E16 was not reached; no retry occurred.
+
+Pinned Bochs real/v8086 segment loading updates selector value, RPL and base while cached index/TI may retain prior values (`segment_ctrl_pro.cc`, lines 178–180). Those internal fields have no JavaScript snapshot counterpart. The new driver freeze `ad1bb6a2ab1052a88ac4edc1479b3478ebc1e5a3` removes arithmetic reconstruction of cached fields, compares duplicated native CS fields against each other, and preserves all166 raw words/digests. Architectural selectors, bases, limits, presence, default-size, registers and flags remain strict. No CPU, C, RAM or reset state is changed.
+
+Eight bounded pure controls passed, including the authentic Q182 regression and architectural mutation refusals. An initial sparse-checkout import failure is retained separately. Read-only driver identity binds52 current/Git inputs. Genuine native execution with this driver remains unrun. [Lossless small records and full first divergence](receipts/native-cold-bios-selector-failure-20261003/index.json) retain the authentic outcome; the full official ZIP remains external.

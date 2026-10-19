@@ -1,0 +1,80 @@
+{
+  "status": "independent-reproduction-full-native-board-RPC-rejection-parity-pass",
+  "measuredSourceFiles": 58,
+  "semanticSha256": "d24790bb378618ad77db153d28bb50f92137503c9319eda8290f60bbc1c75238",
+  "configDifference": "only capture log directory",
+  "formalCaptureSha256": "ffe756082dac7bd83e8fd3d18f94ff3ae927edb7066c4e6162b779ec598ccc59",
+  "rootCaptureSha256": "781c62b955cc3bcda1741d0660a9d894ef1d5e2719cdd17bd51c895b1b94e422",
+  "formalArtifacts": {
+    "status": "independent-external-artifacts-and-raw-native-audit-pass",
+    "artifactFiles": 161,
+    "modes": {
+      "continuous": {
+        "logicalEvents": 958,
+        "rawHaltIdle": 2,
+        "slices": 9
+      },
+      "budget1": {
+        "logicalEvents": 958,
+        "rawHaltIdle": 1,
+        "slices": 50
+      },
+      "budget2": {
+        "logicalEvents": 958,
+        "rawHaltIdle": 1,
+        "slices": 26
+      },
+      "budget257": {
+        "logicalEvents": 958,
+        "rawHaltIdle": 2,
+        "slices": 9
+      }
+    },
+    "actualNativeGuards": 12,
+    "actualTransportRejections": 16
+  },
+  "rootArtifacts": {
+    "status": "independent-external-artifacts-and-raw-native-audit-pass",
+    "artifactFiles": 161,
+    "modes": {
+      "continuous": {
+        "logicalEvents": 958,
+        "rawHaltIdle": 2,
+        "slices": 9
+      },
+      "budget1": {
+        "logicalEvents": 958,
+        "rawHaltIdle": 1,
+        "slices": 50
+      },
+      "budget2": {
+        "logicalEvents": 958,
+        "rawHaltIdle": 1,
+        "slices": 26
+      },
+      "budget257": {
+        "logicalEvents": 958,
+        "rawHaltIdle": 2,
+        "slices": 9
+      }
+    },
+    "actualNativeGuards": 12,
+    "actualTransportRejections": 16
+  },
+  "sourceRevision": "c49d573144691071d60336e49dcc1d9b1e5e221f",
+  "compressedCaptureSha256": "3b3374df18d43e0be7d6a0af98ffe492208d0c6283e094f8af3c1553cfdb3892",
+  "compressedCaptureBytes": 334756,
+  "uncompressedCaptureBytes": 17123591,
+  "focusedTests": {
+    "passed": 79,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hardware": {
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "logicalCpus": 4,
+    "node": "v20.20.2",
+    "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+  },
+  "speedMeasurement": false
+}

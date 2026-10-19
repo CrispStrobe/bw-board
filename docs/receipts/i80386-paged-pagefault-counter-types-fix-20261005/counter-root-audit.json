@@ -1,0 +1,34 @@
+{
+  "status": "PASS",
+  "head": "e0aebea784e4daf1bb4cfcb69edeea2d2aec9ada",
+  "sourceInputs": 107,
+  "cases": 2,
+  "passes": 2,
+  "skips": 0,
+  "beforeAfterEqual": true,
+  "exit": {
+    "status": "PASS",
+    "pid": 3919484,
+    "exitCode": 0,
+    "rawWaitStatus": 0,
+    "reaped": true,
+    "timeout": false,
+    "primaryError": null,
+    "finalizationErrors": [],
+    "pinsEqual": true,
+    "rusage": {
+      "userSeconds": 2.114065,
+      "systemSeconds": 2.709133,
+      "maxRssKiB": 84896,
+      "scope": "wait4 leader plus descendants reaped by it; not cgroup attribution"
+    },
+    "rawExitWallSeconds": 7.581866800785065,
+    "tests": 2,
+    "passes": 2,
+    "failures": 0,
+    "skips": 0,
+    "groupCleanup": "already absent",
+    "finalAuthInclusiveWallSeconds": 9.943500846624374
+  },
+  "scope": "Affected driver identity plus genuine reset reconstruction validation; no addon load, provider/oracle factory, CPU, build or guest."
+}

@@ -1,0 +1,29 @@
+TAP version 13
+# test_ack_failure_is_permanent_and_cleans_owned_child (test_recorder.Controls.test_ack_failure_is_permanent_and_cleans_owned_child) ... ok
+# test_cleanup_reaps_after_group_kill (test_recorder.Controls.test_cleanup_reaps_after_group_kill) ... ok
+# test_fragmented_exact_ack_and_absolute_timeout (test_recorder.Controls.test_fragmented_exact_ack_and_absolute_timeout) ... ok
+# test_independent_final_guards_and_terminal_projection (test_recorder.Controls.test_independent_final_guards_and_terminal_projection) ... ok
+# test_isolated_held_modules_restore_collision_and_exception (test_recorder.Controls.test_isolated_held_modules_restore_collision_and_exception) ... ok
+# test_order_nonce_pid_and_markers (test_recorder.Controls.test_order_nonce_pid_and_markers) ... ok
+# test_owner_environment_and_launch_failure_receipt (test_recorder.Controls.test_owner_environment_and_launch_failure_receipt) ... ok
+# test_pending_precedes_every_effect (test_recorder.Controls.test_pending_precedes_every_effect) ... ok
+# test_stale_and_trailing_ack_refuse (test_recorder.Controls.test_stale_and_trailing_ack_refuse) ... ok
+# test_tracking_named_commands_and_unknown_selector_ack_refusal (test_recorder.Controls.test_tracking_named_commands_and_unknown_selector_ack_refusal) ... ok
+# ----------------------------------------------------------------------
+# Ran 10 tests in 0.052s
+# OK
+# Subtest: ten Python controller methods use manufactured dependencies; raw nested tape retained
+ok 1 - ten Python controller methods use manufactured dependencies; raw nested tape retained
+  ---
+  duration_ms: 317.262048
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 510.381343

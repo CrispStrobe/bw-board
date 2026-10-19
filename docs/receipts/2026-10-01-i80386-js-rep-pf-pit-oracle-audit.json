@@ -1,0 +1,172 @@
+{
+  "status": "qualified-actual-javascript-board-rep-two-pf-pit-baseline",
+  "measuredSourceRevision": "7891a5c1f9ca242a86a6fcd39a61b5bc29e8d247",
+  "measuredSourceInputs": 41,
+  "capture": {
+    "bytes": 3138118,
+    "sha256": "f2c3187c40173f64b0acb51cd86d0ca9ce8a250b5d634fc4e9a2c3d95c56fe1e",
+    "gzipBytes": 51014,
+    "gzipSha256": "b1cb5b61c736534b82ce6105a8c0f943c37b60921345f6e1dd78914ceb975f7b"
+  },
+  "independentFreshCaptureByteIdentical": true,
+  "rootIndependentAudit": {
+    "status": "root-independent-linked-ROM-historical-source-byte-backing-delivery-frame-rep-and-rational-PIT-pass",
+    "captureSha256": "f2c3187c40173f64b0acb51cd86d0ca9ce8a250b5d634fc4e9a2c3d95c56fe1e",
+    "sourceRevision": "7891a5c1f9ca242a86a6fcd39a61b5bc29e8d247",
+    "measuredInputs": 41,
+    "romSha256": "6fae1b9e92872ec3ae497eb5f9e7b65126409480f37e9126cc42de862f2e570b",
+    "fixtureSha256": "d3ee700dd0da5b35c36b7a14c30bf7070a4d7a596ce0ff017985b1c2d6f17dd4",
+    "successfulQuanta": 135,
+    "attempts": 137,
+    "boardClocks": 814,
+    "eventCensus": {
+      "fetch": 520,
+      "write": 234,
+      "read": 337,
+      "pio": 21,
+      "pit-output": 1,
+      "ack": 1
+    },
+    "deliveryFrames": {
+      "fault73": {
+        "words": [
+          2,
+          556,
+          8,
+          65606
+        ],
+        "writtenByteOrder": [
+          36848,
+          36849,
+          36850,
+          36851,
+          36852,
+          36853,
+          36854,
+          36855,
+          36856,
+          36857,
+          36858,
+          36859,
+          36860,
+          36861,
+          36862,
+          36863
+        ]
+      },
+      "fault90": {
+        "words": [
+          2,
+          567,
+          8,
+          65606
+        ],
+        "writtenByteOrder": [
+          36848,
+          36849,
+          36850,
+          36851,
+          36852,
+          36853,
+          36854,
+          36855,
+          36856,
+          36857,
+          36858,
+          36859,
+          36860,
+          36861,
+          36862,
+          36863
+        ]
+      },
+      "irq108": {
+        "words": [
+          597,
+          8,
+          582
+        ],
+        "writtenByteOrder": [
+          36852,
+          36853,
+          36854,
+          36855,
+          36856,
+          36857,
+          36858,
+          36859,
+          36860,
+          36861,
+          36862,
+          36863
+        ]
+      }
+    },
+    "independentModeZeroRises": [
+      {
+        "attempt": 73,
+        "quantum": 72,
+        "boardCycles": 436,
+        "settledClocks": 436
+      }
+    ],
+    "scope": "Independent ledger/timing audit of actual JS capture, not a separate full CPU implementation or native execution qualification."
+  },
+  "secondIndependentSourceRomBackingFrameAudit": {
+    "status": "PASS",
+    "boardRevision": "7891a5c1f9ca242a86a6fcd39a61b5bc29e8d247",
+    "authenticatedSourceInputs": 41,
+    "independentRomSha256": "6fae1b9e92872ec3ae497eb5f9e7b65126409480f37e9126cc42de862f2e570b",
+    "linkedSymbolsExact": true,
+    "orderedLowRamBackingAndPFFrames": true,
+    "sparsePagingGdtIdt": true,
+    "edge": {
+      "Q": 72,
+      "cycle": 436,
+      "CX": 3,
+      "DI": 20476,
+      "beforeSecondElementFetch": true
+    },
+    "eventCounts": {
+      "fetch": 520,
+      "write": 234,
+      "read": 337,
+      "pio": 21,
+      "pit-output": 1,
+      "ack": 1
+    },
+    "quanta": 135,
+    "attempts": 137,
+    "scope": "actual JS only; no native proof; PIT rational full-chip audit separately owned by root"
+  },
+  "tests": {
+    "pass": 48,
+    "fail": 0,
+    "skip": 0,
+    "durationMs": 87326.756227
+  },
+  "validationScope": {
+    "cpuCheckpoints": "explicitly labeled same-engine checkpoint reexecution",
+    "byteBackingAndLinkedRom": "independently replayed and assembled with Python/GNU binutils",
+    "pitTiming": "independent rational oscillator and mode-zero counter replay",
+    "nativeExecutionQualified": false,
+    "strict386Profile": false,
+    "architecturalResetParityClaimed": false,
+    "performanceOrRtxMeasured": false,
+    "windowsEnhancedModeDoomOrFullAtBootQualified": false
+  },
+  "retainedFailedPilots": [
+    {
+      "name": "pilot-1",
+      "reason": "Unlinked ELF relocations produced an incorrect protected far target; assembler corrected to link before objcopy. This failed prototype is not qualification evidence."
+    },
+    {
+      "name": "pilot-2",
+      "reason": "PIT reload two fired before REP; retained diagnostic, later reload six has required partial-progress edge."
+    },
+    {
+      "name": "committed-pilot-1",
+      "reason": "Validator expected EFLAGS without the architectural RF saved in the PF frame; corrected expected frame from source review before fresh final captures."
+    }
+  ]
+}

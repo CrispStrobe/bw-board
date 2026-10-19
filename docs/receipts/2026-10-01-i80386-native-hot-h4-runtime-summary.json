@@ -1,0 +1,649 @@
+{
+  "status": "H4_ACTUAL_BASELINE_AND_HOSTILE_CONTROLS_PASS",
+  "records": [
+    {
+      "control": "baseline",
+      "positive": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 410,
+        "stderrSha256": "a63b4a908a36544cb6ead81424ccf22bd800dfc304303cc7848f5b1cac9e1ded",
+        "wallNs": 4548517051,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/baseline.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 410,
+          "sha256": "a63b4a908a36544cb6ead81424ccf22bd800dfc304303cc7848f5b1cac9e1ded"
+        }
+      }
+    },
+    {
+      "control": "method-swap",
+      "positive": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 416,
+        "stderrSha256": "f6aa478549f93549d23d8b8cf20bcde3f15d330544d1dcb48d6af3334b532d55",
+        "wallNs": 3581417109,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/method-swap.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "name": "quantum-original"
+        },
+        {
+          "name": "mapping-replacement"
+        },
+        {
+          "name": "tick-replacement"
+        }
+      ],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 416,
+          "sha256": "f6aa478549f93549d23d8b8cf20bcde3f15d330544d1dcb48d6af3334b532d55"
+        }
+      }
+    },
+    {
+      "control": "getter-order",
+      "positive": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 418,
+        "stderrSha256": "09eb74b48a83dfbe7507ae138c1d94899f9f62050b94f0783f017959815f6ca7",
+        "wallNs": 3316533744,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/getter-order.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "name": "mapping-original"
+        },
+        {
+          "name": "epoch-getter"
+        },
+        {
+          "name": "later-a20-getter"
+        }
+      ],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 418,
+          "sha256": "09eb74b48a83dfbe7507ae138c1d94899f9f62050b94f0783f017959815f6ca7"
+        }
+      }
+    },
+    {
+      "control": "reentry",
+      "positive": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 408,
+        "stderrSha256": "3f4f59fd9c191851f2da88a83ccc9f8dd706ecd2da2ffa26f8a0217cce60a511",
+        "wallNs": 3460374471,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/reentry.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "name": "reentry-before"
+        },
+        {
+          "name": "three-rejections"
+        }
+      ],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 408,
+          "sha256": "3f4f59fd9c191851f2da88a83ccc9f8dd706ecd2da2ffa26f8a0217cce60a511"
+        }
+      }
+    },
+    {
+      "control": "intrinsics",
+      "positive": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 414,
+        "stderrSha256": "d4c40c2cf686e2cf5a35f3ae16787b9c6c7ee2e17d9a41e16737b72af45c1ec3",
+        "wallNs": 3402060265,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/intrinsics.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "name": "intrinsics-mutated"
+        },
+        {
+          "name": "captured-mapping-lookup"
+        },
+        {
+          "name": "epoch"
+        },
+        {
+          "name": "a20"
+        }
+      ],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 414,
+          "sha256": "d4c40c2cf686e2cf5a35f3ae16787b9c6c7ee2e17d9a41e16737b72af45c1ec3"
+        }
+      }
+    },
+    {
+      "control": "primitive-map",
+      "positive": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 420,
+        "stderrSha256": "2fbc91ee3c06beedbdf8ae43b2220dcd7fd3735d363020525f06659b9f9fe145",
+        "wallNs": 5151432600,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/primitive-map.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "name": "mappingEpoch"
+        },
+        {
+          "name": "boardA20"
+        }
+      ],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 420,
+          "sha256": "2fbc91ee3c06beedbdf8ae43b2220dcd7fd3735d363020525f06659b9f9fe145"
+        }
+      }
+    },
+    {
+      "control": "primitive-pio",
+      "positive": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 420,
+        "stderrSha256": "9c5cd2e50e8182469b669332e51f8753105269ccac0177ac5ef18edb99447cfe",
+        "wallNs": 18300424505,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/primitive-pio.input.json"
+        ],
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "name": "value"
+        },
+        {
+          "name": "mappingEpoch"
+        },
+        {
+          "name": "boardA20"
+        }
+      ],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 420,
+          "sha256": "9c5cd2e50e8182469b669332e51f8753105269ccac0177ac5ef18edb99447cfe"
+        }
+      }
+    },
+    {
+      "control": "invalid-operation-value",
+      "positive": false,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 474,
+        "stderrSha256": "d3370a9b746fdc5a977959267fe5c907d337ef57d8a29037b2c21d9ee3caa0b5",
+        "wallNs": 8700793586,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/invalid-operation-value.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "name": "invalid-operation-value"
+        }
+      ],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 474,
+          "sha256": "d3370a9b746fdc5a977959267fe5c907d337ef57d8a29037b2c21d9ee3caa0b5"
+        }
+      }
+    },
+    {
+      "control": "throw-epoch",
+      "positive": false,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 450,
+        "stderrSha256": "33e19b64f40026a05331a9eeb7334ef50fd29bf199791890d0f02224263e649f",
+        "wallNs": 4129090745,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/throw-epoch.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "name": "epoch-getter"
+        }
+      ],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 450,
+          "sha256": "33e19b64f40026a05331a9eeb7334ef50fd29bf199791890d0f02224263e649f"
+        }
+      }
+    },
+    {
+      "control": "invalid-epoch",
+      "positive": false,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 454,
+        "stderrSha256": "675f89011694be12e1808fea441f64de793e1137f01e32b69cb5fc4908838297",
+        "wallNs": 4294930326,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/invalid-epoch.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "name": "epoch-getter"
+        }
+      ],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 454,
+          "sha256": "675f89011694be12e1808fea441f64de793e1137f01e32b69cb5fc4908838297"
+        }
+      }
+    },
+    {
+      "control": "tuple-float",
+      "positive": false,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 450,
+        "stderrSha256": "bc3bb776e4340af831fba13c74a289e73d1ceb721bbf674485368c35a360149a",
+        "wallNs": 3456931788,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/tuple-float.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "name": "malformed-tuple-return",
+          "kind": "tuple-float"
+        }
+      ],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 450,
+          "sha256": "bc3bb776e4340af831fba13c74a289e73d1ceb721bbf674485368c35a360149a"
+        }
+      }
+    },
+    {
+      "control": "tuple-length",
+      "positive": false,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 452,
+        "stderrSha256": "f1738e6fbe189b3050311e24925eea24d4094c707426074c46e46e471e76a6be",
+        "wallNs": 5691924792,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/tuple-length.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "name": "malformed-tuple-return",
+          "kind": "tuple-length"
+        }
+      ],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 452,
+          "sha256": "f1738e6fbe189b3050311e24925eea24d4094c707426074c46e46e471e76a6be"
+        }
+      }
+    },
+    {
+      "control": "tuple-offset",
+      "positive": false,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 452,
+        "stderrSha256": "488f44c326caf7df7425dc77cc9bdb1f9983fde1ececf0bfe4ac5b42aad37f24",
+        "wallNs": 7345725632,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/tuple-offset.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "name": "malformed-tuple-return",
+          "kind": "tuple-offset"
+        }
+      ],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 452,
+          "sha256": "488f44c326caf7df7425dc77cc9bdb1f9983fde1ececf0bfe4ac5b42aad37f24"
+        }
+      }
+    },
+    {
+      "control": "tuple-backing",
+      "positive": false,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 454,
+        "stderrSha256": "440fd36d4a1b6a38cdc13e182fd27084ab4e2f54d61c6e274aac71d0c55729fe",
+        "wallNs": 4460249042,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/tuple-backing.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "name": "malformed-tuple-return",
+          "kind": "tuple-backing"
+        }
+      ],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 454,
+          "sha256": "440fd36d4a1b6a38cdc13e182fd27084ab4e2f54d61c6e274aac71d0c55729fe"
+        }
+      }
+    },
+    {
+      "control": "tuple-shared",
+      "positive": false,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 452,
+        "stderrSha256": "80779468dc17396fc87004fbe0a4b42a6378ef43710ccc86fb29f94780c7e104",
+        "wallNs": 2466853469,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/tuple-shared.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "name": "malformed-tuple-return",
+          "kind": "tuple-shared"
+        }
+      ],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 452,
+          "sha256": "80779468dc17396fc87004fbe0a4b42a6378ef43710ccc86fb29f94780c7e104"
+        }
+      }
+    },
+    {
+      "control": "tuple-detached",
+      "positive": false,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 456,
+        "stderrSha256": "38f532f2c45f4816cc8c4b9f5372793ca78fc20d485d8ea0561070b1949dad08",
+        "wallNs": 6181057286,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/child.mjs",
+          "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/tuple-detached.input.json"
+        ],
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "name": "malformed-tuple-return",
+          "kind": "tuple-detached"
+        }
+      ],
+      "artifacts": {
+        ".stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        ".stderr": {
+          "bytes": 456,
+          "sha256": "38f532f2c45f4816cc8c4b9f5372793ca78fc20d485d8ea0561070b1949dad08"
+        }
+      }
+    }
+  ],
+  "scope": "host metadata effects may precede rejected native acceptance; controls do not qualify arbitrary guest modes"
+}

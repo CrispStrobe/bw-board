@@ -1,0 +1,23 @@
+{
+  "status": "native-ram-smc-a20-proof-pass",
+  "nativeTicks": 75,
+  "successfulQuanta": 75,
+  "boardCycles": 454,
+  "instructionBytes": 235,
+  "dataReadBytes": 32,
+  "dataWriteBytes": 70,
+  "pioBytes": 11,
+  "architecturalResetParity": false,
+  "nativeInternalA20": "fixed-on",
+  "actualBoardA20Transitions": 2,
+  "ramCacheCoherence": true,
+  "fullByteBusOrderParity": false,
+  "nativeBudgetByteBusOrderParity": true,
+  "farCallWordOrderDifferences": 8,
+  "slices": {
+    "continuous": 13,
+    "budget1": 76,
+    "budget2": 40,
+    "budget257": 13
+  }
+}

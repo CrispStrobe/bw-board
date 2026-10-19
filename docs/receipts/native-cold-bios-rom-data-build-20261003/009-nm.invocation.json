@@ -1,0 +1,23 @@
+{
+  "command": [
+    "nm",
+    "-D",
+    "--defined-only",
+    "/home/runner/work/_temp/cold-bios-build-prepared/bochs/bw_direct.node"
+  ],
+  "cwd": "/home/runner/work/bw-board/bw-board/publication",
+  "pid": 8312,
+  "cpuSeconds": 15,
+  "wallSeconds": 30,
+  "coreBytes": 0,
+  "fileBytes": 268435456,
+  "niceIncrement": 10,
+  "blankHooks": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  }
+}

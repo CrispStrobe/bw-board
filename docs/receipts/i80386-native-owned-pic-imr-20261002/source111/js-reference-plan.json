@@ -1,0 +1,45 @@
+{
+  "status": "PREPARED_ONLY_NO_GUEST_RUN",
+  "sourceWorktree": "/tmp/bw-board-386-owned-pic-imr-source-20261002",
+  "sourceRevision": null,
+  "sourceCount": 111,
+  "romSha256": "8a7380f01bbc40985d377fe9764667749c36b05d45ee602b28c7e68556bd509f",
+  "romBytes": 65536,
+  "expectedPorts": [
+    64,
+    64,
+    33,
+    161
+  ],
+  "expectedPitBytes": [
+    50,
+    18
+  ],
+  "expectedPicImrBytes": [
+    255,
+    255
+  ],
+  "picWitnessAddresses": [
+    1426,
+    1427
+  ],
+  "proof": "Immediately around PIC.read(1), complete actual getState before/after exact; noACK/poll, bothmasksff. Clockcatchup may have prior effects.",
+  "retainedProfile": "RPGH001/twoPF14/oneIRQ32/hotchecksums/sixnamedcuts; unknownnewNQ/cuts/RAM need actualreference",
+  "bounds": {
+    "heapMiB": 512,
+    "wallSeconds": 120,
+    "cpuSeconds": 120,
+    "niceIncrement": 10,
+    "fileMiB": 256,
+    "coreBytes": 0,
+    "blankEnvironment": [
+      "NODE_OPTIONS",
+      "NODE_PATH",
+      "LD_PRELOAD",
+      "LD_AUDIT",
+      "BW_HOT_NAPI_PROFILE"
+    ]
+  },
+  "nativeAdmission": "No actual build/load. Old PIT addon cannot initialize newROM. Future new compiledmanifest must bind111source +newruntime initializer8a7380; ABI4/NAPI/clockcode unchanged.",
+  "prerequisites": "Clean frozen111 git/current admission +sourcepeerPASS +root explicit guestgrant. Source-onlycontrols are not actualfixtureexecution."
+}

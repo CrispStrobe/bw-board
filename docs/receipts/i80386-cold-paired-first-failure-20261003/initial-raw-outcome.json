@@ -1,0 +1,14 @@
+{
+  "stage": "parent progress-path receipt after first qualified warmup child",
+  "childCount": 1,
+  "measuredPairs": 0,
+  "error": "TypeError(\"unsupported operand type(s) for +: 'PosixPath' and 'str'\")",
+  "firstChildStatus": "NATIVE_ARM_EXECUTION_AND_FINAL_PARITY_PASS",
+  "progress": {
+    "n": 316562,
+    "q": 316562,
+    "dn": 1,
+    "dq": 1
+  },
+  "qualificationOnlyNotGateResult": true
+}

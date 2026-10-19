@@ -1,0 +1,122 @@
+{
+  "artifacts.json": {
+    "bytes": 796,
+    "sha256": "845073017a85a10b261ce94b460d0b34389029b2be278f0945dfe6aea2fb5ced"
+  },
+  "coder-actual-audit-r1.py": {
+    "bytes": 7447,
+    "sha256": "936ee21eb02b0c8d022bb423f61be52cdf2e59c06c20ed8c76a1b06363bbff63"
+  },
+  "coder-actual-audit-r2.py": {
+    "bytes": 7871,
+    "sha256": "c7b967b67ef2649cd2c3fd559c002b8393e027ea340ff60da572452a475f8cfe"
+  },
+  "coder-actual-audit.json": {
+    "bytes": 995,
+    "sha256": "032b73289408f506c45f19795011d7af34220562cc40ad3445180006aacbdae8"
+  },
+  "coder-actual-audit.py": {
+    "bytes": 8065,
+    "sha256": "26225bd99c3758e2225d598b205d7820381e526c7c5f1b1c5a9ec8f9a1cdf9e8"
+  },
+  "coder-actual-parser-failure.json": {
+    "bytes": 577,
+    "sha256": "7b849a4fc0d9ecb5150b699d244643fbdec235f48befd6a457909d62f34de139"
+  },
+  "execution/driver-identity.exit.json": {
+    "bytes": 1442,
+    "sha256": "66c734387f52b720d64f485aa9031848d6e859473cc71cada7b16a1cd642733d"
+  },
+  "execution/final-status.json": {
+    "bytes": 653,
+    "sha256": "11164ae6fe777b8bb8ba263a9db490d195515dce3e9d9181bd314d78b35f4d7e"
+  },
+  "execution/fixed-after.json": {
+    "bytes": 32455,
+    "sha256": "01f1a8ed0fdc4400e196a6c8bd9c2fb294a149cfe8ad02c66efbdd14a7f6d124"
+  },
+  "execution/fixed-before.json": {
+    "bytes": 32455,
+    "sha256": "01f1a8ed0fdc4400e196a6c8bd9c2fb294a149cfe8ad02c66efbdd14a7f6d124"
+  },
+  "execution/input.json": {
+    "bytes": 1056,
+    "sha256": "360cbc50892c6a8ea57797dde65fb770e94530cafc17470d97710e98badc2c10"
+  },
+  "execution/materialization.json": {
+    "bytes": 339,
+    "sha256": "d858adebd61c4e9576cc96c41625f3737b6161a16e1e4e840b6e7d822f374ccc"
+  },
+  "execution/restored-after.json": {
+    "bytes": 143870,
+    "sha256": "93f118b64a3075242334de8316ff05923ee0b8f34bf8c1f1b61a040ba33c308d"
+  },
+  "execution/restored-before.json": {
+    "bytes": 143870,
+    "sha256": "93f118b64a3075242334de8316ff05923ee0b8f34bf8c1f1b61a040ba33c308d"
+  },
+  "execution/static-admission-config.exit.json": {
+    "bytes": 1455,
+    "sha256": "bff22aafe0c24988225233a953e598b1fffa5541143a4a5e32de9f7e2d627293"
+  },
+  "execution/worker-launch.json": {
+    "bytes": 81,
+    "sha256": "f10854b76854bc564c2d813c3300c9f531a29c9dae78699033fc4a010356a77d"
+  },
+  "execution/worker.exit.json": {
+    "bytes": 1444,
+    "sha256": "7045ac399f57761f0ab6e4c7e938d53f42e2733f7b6003f40f36006d128b8bf9"
+  },
+  "execution/worker.invocation.json": {
+    "bytes": 660,
+    "sha256": "d7b6c79c61044be252a48e282f491e032f190367551e7ab375e76c4f5836c6b6"
+  },
+  "external-retention.json": {
+    "bytes": 1028,
+    "sha256": "67cafa4e18fe86a2c45279a8bd201887e1f6d6b01bced0d964ea6df6e4bb55fc"
+  },
+  "independent-audit.json": {
+    "bytes": 956,
+    "sha256": "b2465fc88e739c9bb020f71b6349330144d343108e4fdb0c68ea77ba655ff8a9"
+  },
+  "independent-audit.py": {
+    "bytes": 6735,
+    "sha256": "6e66b2f5e6fbc3d8eefcf1e4d649ec5b12360cb78330c7a527c45b432d81704a"
+  },
+  "invocation.json": {
+    "bytes": 555,
+    "sha256": "75016f1d9600f582d61736fe368f1f43b0d2a5ce16a212ed69122fcf1547163a"
+  },
+  "jobs.json": {
+    "bytes": 3965,
+    "sha256": "798242b5fc9822538949f77ef09fb1a5643a04d3f5cf28da264ee02d52883682"
+  },
+  "origins.json": {
+    "bytes": 7327,
+    "sha256": "437bf8e17ffc354c5c4475067f4fc96b36476617d479bde6adaf4f5c39f028c3"
+  },
+  "root-cross-check.json": {
+    "bytes": 403,
+    "sha256": "7209a32d4de8ed6fed0159c0936fccc3155c92ac2eabeb2979196b0ca36a6563"
+  },
+  "root-saved-state-audit.json": {
+    "bytes": 681,
+    "sha256": "48cb789bac3bee3dd8d031fa82bda47a14f354e70e91baa2c00d07a17c75df2c"
+  },
+  "root-saved-state-audit.mjs": {
+    "bytes": 3191,
+    "sha256": "3f7b023d91cdbe5b89e2754f60f850acb63d6699071863bdd8b8efbc40aa3631"
+  },
+  "run.json": {
+    "bytes": 12650,
+    "sha256": "62aa5e11c03329c1fd2fd4eadd02aa25087d0a5be2d53b95b437cb857d9e56cc"
+  },
+  "upstream-result.md": {
+    "bytes": 2461,
+    "sha256": "6717b53b6833dff7d86e04bd51d7df324533648cffef4ed88328733f7ac9ad15"
+  },
+  "zip-retention.json": {
+    "bytes": 20806,
+    "sha256": "996f99d94799a73957fba7bec431a944ec2920fd03ac26dbcca3e4fd82721d7b"
+  }
+}

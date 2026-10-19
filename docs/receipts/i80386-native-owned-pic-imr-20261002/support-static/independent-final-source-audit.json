@@ -1,0 +1,14 @@
+{
+  "status": "PASS_FINAL_FROZEN_PIC_SOURCE_AND_PREPARER_CHECK_READY_FOR_BUILD_ONLY_REVIEW",
+  "checks": 501,
+  "runtimeRevision": "3792a908d81e04903974aa7d2bdc545e0713a290",
+  "runtimeSourceCount": 122,
+  "compiledRevision": "a6f605280f778b2bc409ef97ac3b40e15874530c",
+  "compiledSourceCount": 111,
+  "toolingCount": 3,
+  "intermediateIn8SourceCount": 103,
+  "focusedSourceControls": 16,
+  "sourceFreezeSha256": "9def969e0ec3d23a80a320979e614094506c38a6424d2491cd89723d4f6df107",
+  "prepareCheckSha256": "510e9e77fd5caf5cf5bf354d97e399619a78d3eece7e84f70e6089a7f50aba38",
+  "scope": "Actual bounded source identity/preparer --check exit0, all current/git pins and logged artifacts exact. New runtime initializer8a hash retained separately from original IN8 intermediate; ABI4/NAPI and patched CPU unchanged. Source-only controls no addon/build/guest; subsequent actual compile/staticartifact and guest qualification still required."
+}

@@ -1,0 +1,43 @@
+{
+  "argv": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--input-type=module",
+    "-e",
+    "import {intIretBuildPlan} from './scripts/bochs-cpu3-native-paged-int-iret/build-identity.mjs'; console.log(JSON.stringify(intIretBuildPlan()))"
+  ],
+  "cwd": "/tmp/bw-native-paged-int-iret-build-source-20261004",
+  "scope": "SEPARATE_READONLY_SOURCE_BUILD_PLAN_NO_PREPARATION_BUILD_ADDON_CPU",
+  "environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "TMPDIR": "/tmp",
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": "",
+    "PYTHONPATH": "",
+    "PYTHONHOME": "",
+    "PYTHONSTARTUP": "",
+    "PYTHONINSPECT": ""
+  },
+  "blankVariables": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  },
+  "limits": {
+    "cpuSeconds": 15,
+    "wallSeconds": 45,
+    "heapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "nice": 10
+  }
+}

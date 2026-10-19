@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "--test",
+    "/tmp/bw-board-386-owned-dispatch-runtime-20261002/test/i80386-owned-dispatch-runtime.test.mjs"
+  ],
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 0.4741156045347452,
+  "beforeAfterIdentical": true,
+  "stdoutSha256": "68ec3c410450a3d9cf47c4168bca3999701c1b7b0dff9d482e1cc8a0855c819d",
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

@@ -1,0 +1,175 @@
+{
+  "schema": "bw.i80386-code16-post-admission-profile.v1",
+  "profileRevision": "ef376f0ca221c3ea988afa4ddfa182751230baad",
+  "priorCandidateRevision": "f6aac9189c6fc6715ee1340b220ccfc0a4ee0695",
+  "observerSha256": "dfeb05f720f1b4d119e853b4e54d35c5244faa663ca5d5acf6901b4a7fb62143",
+  "source": {
+    "priorReportedFiles": 31,
+    "profileReportedFiles": 34,
+    "unchangedPriorExecutionSourcesExceptRunner": true,
+    "expectedNewHelpers": {
+      "../src/experimental/i80386-code16-window.js": "5d6c34acb249b9326e3733dc5fcc821747ee761d3c4f162d65f3429294e09aa3",
+      "../src/experimental/i80386-code16-ea.js": "087bb8fbeba2e963d792275ebd5ca964f0e7a68ef0ca185f24c6fb05283723d2",
+      "../src/experimental/i80386-code16-data-window.js": "e3913610a8b8594e196d0756d7b3c499b0c39b75a08d48acd7047841d4e1505e"
+    },
+    "priorRunnerSha256": "3923895ca14256d838bd65331126b1df06ed37d6bfed2797a32ec68f657957bb",
+    "profileRunnerSha256": "915b0e1eee64abe4ffb24e09e9e70881544300468ebed9d9f8bb4e6b930e7b49",
+    "code16WindowSha256": "5d6c34acb249b9326e3733dc5fcc821747ee761d3c4f162d65f3429294e09aa3"
+  },
+  "selectedReportedFields": [
+    "steps",
+    "stop",
+    "refusal",
+    "cpu",
+    "delivered",
+    "serial",
+    "textRam",
+    "vga"
+  ],
+  "selectedReportedFieldsSha256": "671373ced87f5d5307d01a498c7ef9f3fd835057356a9e604585465ce92b7511",
+  "normalizedFullReportedJsonEqual": true,
+  "expectedRawReportDifferences": "Execution revision, runner source hash, and three newly listed helper source hashes only.",
+  "privateInputsIdentical": true,
+  "exact": {
+    "steps": 60000000,
+    "attempts": 39761006,
+    "decoded": 390473,
+    "blockCalls": 2345288,
+    "instructions": 5042482,
+    "fallback": 54957518,
+    "boundary": 180069
+  },
+  "host": {
+    "cpuModel": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "logicalCpus": 4,
+    "node": "v20.20.2",
+    "startUtc": "2026-09-28T16:42:28Z",
+    "endUtc": "2026-09-28T16:47:11Z",
+    "loadStart": [
+      11.1953125,
+      13.8447265625,
+      12.8671875
+    ],
+    "loadEnd": [
+      9.67236328125,
+      11.5419921875,
+      12.17431640625
+    ]
+  },
+  "timing": {
+    "wall": 282.7,
+    "user": 261.92,
+    "system": 8.76,
+    "maxrss": 222384
+  },
+  "rawArtifactSha256": {
+    "report": "dc3e4159b547a221629f19c385129526b94c6c59dbaa20976e342e6ff40c9a7f",
+    "time": "d2400e17a340583c6f278e2408a95ba55ee8a72ed134d792310d04d65d44d443",
+    "host": "51ac9c133800011af1358679a0781f2a91da08d63e585467dda11fbe995a47a7",
+    "cpuprofile": "3f4b8d6645eb03fe71d16d80290eaa8b0d8a36a0819181428e6ed03d40210b13"
+  },
+  "sampling": {
+    "requestedIntervalMicroseconds": 5000,
+    "allProcessSelfSamples": 52168,
+    "disjointBuckets": {
+      "ordinaryFallbackCore": 13993,
+      "codeWindowProof": 12599,
+      "otherDispatcher": 6169,
+      "blockDecode": 5231,
+      "otherProcess": 4613,
+      "dispatcherDiagnostics": 3093,
+      "eaDataProof": 2406,
+      "ordinaryFallbackBoard": 2034,
+      "dispatcherAdmission": 1307,
+      "blockPrepare": 672,
+      "wasm": 51
+    },
+    "topSelfFunctions": [
+      {
+        "functionName": "src/experimental/i80386-code16-window.js::prevalidateI80386Code16Window",
+        "samples": 11101
+      },
+      {
+        "functionName": "src/experimental/i80386-code16-wasm-block.js::decodeBlock",
+        "samples": 5231
+      },
+      {
+        "functionName": "src/experimental/i80386-code16-wasm-block.js::run",
+        "samples": 4830
+      },
+      {
+        "functionName": "src/experimental/i80386.js::_stepInstruction",
+        "samples": 3472
+      },
+      {
+        "functionName": "src/experimental/i80386-code16-wasm-block.js::bump",
+        "samples": 2248
+      },
+      {
+        "functionName": "src/experimental/i80386.js::step",
+        "samples": 2191
+      },
+      {
+        "functionName": "(runtime)::(redacted)",
+        "samples": 2066
+      },
+      {
+        "functionName": "src/experimental/i80386-code16-wasm-block.js::(anonymous)",
+        "samples": 1335
+      },
+      {
+        "functionName": "scripts/run-i80386-at-console.mjs::runChunk",
+        "samples": 1221
+      },
+      {
+        "functionName": "src/experimental/i80386-code16-window.js::inspect",
+        "samples": 1200
+      },
+      {
+        "functionName": "src/experimental/i80386-code16-wasm-block.js::eligible",
+        "samples": 1164
+      },
+      {
+        "functionName": "src/experimental/i80386.js::_translate",
+        "samples": 1152
+      },
+      {
+        "functionName": "src/experimental/i80386-at-machine.js::_read386",
+        "samples": 961
+      },
+      {
+        "functionName": "src/experimental/i80386.js::_decodeEA",
+        "samples": 791
+      },
+      {
+        "functionName": "src/experimental/i80386-code16-form-census.js::decodeI80386Code16ObservedForm",
+        "samples": 687
+      },
+      {
+        "functionName": "src/experimental/i80386-code16-wasm-block.js::prepare",
+        "samples": 672
+      },
+      {
+        "functionName": "src/experimental/i80386.js::_linear",
+        "samples": 601
+      },
+      {
+        "functionName": "src/experimental/i80386-code16-data-window.js::(anonymous)",
+        "samples": 499
+      },
+      {
+        "functionName": "src/experimental/i80386-at-machine.js::_write386",
+        "samples": 450
+      },
+      {
+        "functionName": "src/experimental/i80386-code16-data-window.js::prevalidateI80386Code16DataWindow",
+        "samples": 444
+      }
+    ],
+    "nonWindowDispatcherAndFallbackSamples": 34905,
+    "nonWindowDispatcherAndFallbackShareOfAllSamples": 0.6690883300107345,
+    "feasibilitySampleScreenAtLeast20Percent": true
+  },
+  "nextGate": "Even if the sample screen passes, a separate disjoint event-aware run observer must reach >=4 mean instructions per all admitted run and cover >=25% of unique real/protected16/VM86 completed step ordinals in runs of length >=4 before runtime coding.",
+  "limits": "Self samples indicate approximate CPU position, not removable cost. This one profiled run is not a timing A/B. Full reported JSON equality omits full guest RAM, disk state, hidden CPU state and diagnostic-census maps. Private media identifiers, paths and guest text are omitted."
+}

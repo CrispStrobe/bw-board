@@ -1,0 +1,34 @@
+{
+  "officialZip": {
+    "path": "/tmp/native-owned-8042-interface-first-build-publication-20261003/official-artifact/official.zip",
+    "bytes": 7047995,
+    "sha256": "4ef2d5790ef19bb9122088532b4f44f15f95707ceb235441a9300792b476d0f6",
+    "artifactId": 11264256418,
+    "run": 37095573249,
+    "attempt": 1
+  },
+  "zipOnlyMembers": {
+    "fixed-8042-interface-evidence/bw_direct.node": {
+      "sha256": "4b877e6d83189149f1f365f4e541721ba796362db0f4360b0f6b273149f95432",
+      "bytes": 2065368,
+      "extracted": false
+    },
+    "fixed-8042-interface-evidence/frozen-source.tar.gz": {
+      "sha256": "a52b81271e22c42848c80713037d4ed23448b92f3705c09154eb23c8d249fa4b",
+      "bytes": 617056,
+      "extracted": false
+    },
+    "fixed-8042-interface-evidence/prepared-source.tar.gz": {
+      "sha256": "c0cf64bc93c20d5d7c6fdc4016a04d136745021aab42a01500afe3b93e799386",
+      "bytes": 5328845,
+      "extracted": false
+    }
+  },
+  "coldBoardFullCIJobLog": {
+    "path": "/tmp/coldboard-pr271-test-full-20261003.log",
+    "bytes": 4169105,
+    "sha256": "f821de35d2322eb39bf247c2bf60f9dfd307dc10298b54aa8578474a27b728cc",
+    "scope": "Separate source-only seven-control excerpt from CI37096088986 at7885bb; no native cold guest",
+    "excerpt": "cold-board/seven-control-excerpt.log"
+  }
+}

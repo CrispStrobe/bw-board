@@ -1,0 +1,32 @@
+{
+  "status": "INDEPENDENT_PF_COUNTER_TYPES_TWO_AFFECTED_SOURCE_CONTROLS_PASS_NO_GUEST",
+  "revision": "e0aebea784e4daf1bb4cfcb69edeea2d2aec9ada",
+  "sourceInputs": 107,
+  "beforeAfterEqual": true,
+  "selectedCases": 2,
+  "exit": {
+    "status": "PASS",
+    "pid": 3919484,
+    "exitCode": 0,
+    "rawWaitStatus": 0,
+    "reaped": true,
+    "timeout": false,
+    "primaryError": null,
+    "finalizationErrors": [],
+    "pinsEqual": true,
+    "rusage": {
+      "userSeconds": 2.114065,
+      "systemSeconds": 2.709133,
+      "maxRssKiB": 84896,
+      "scope": "wait4 leader plus descendants reaped by it; not cgroup attribution"
+    },
+    "rawExitWallSeconds": 7.581866800785065,
+    "tests": 2,
+    "passes": 2,
+    "failures": 0,
+    "skips": 0,
+    "groupCleanup": "already absent",
+    "finalAuthInclusiveWallSeconds": 9.943500846624374
+  },
+  "scope": "Clean source identity and exact retained failed-reset reconstruction with strict live BigInt/persisted canonical strings, full166 reset CPU/board/ten pages; no addon/provider/oracle factory, guest, compiler or build replay. Original actual failure retained."
+}

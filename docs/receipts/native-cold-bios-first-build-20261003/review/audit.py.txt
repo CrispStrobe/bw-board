@@ -1,0 +1,54 @@
+"""Read-only static artifact audit. No binary extraction/load or helper execution."""
+import pathlib,json,zipfile,tarfile,hashlib,subprocess,re,stat
+R=pathlib.Path('/tmp/native-cold-bios-first-build-publication-20261003');W=pathlib.Path('/tmp/bw-cold-native-build-preparation-20261003');HEAD='a6fae61a549d595c88a324f50589d92497040c07';checks=0
+sha=lambda b:hashlib.sha256(b).hexdigest()
+def check(value):
+ global checks
+ assert value;checks+=1
+with zipfile.ZipFile(R/'official-artifact.zip') as z:
+ def read(name):return z.read('cold-bios-build-evidence/'+name)
+ def obj(name):return json.loads(read(name))
+ run=json.loads((R/'run-final.json').read_bytes());check(run['head_sha']==HEAD and run['event']=='pull_request' and run['run_attempt']==1 and run['conclusion']=='success')
+ v=json.loads((R/'zip-verification.json').read_bytes());check(sha((R/'official-artifact.zip').read_bytes())==v['zipSha256'])
+ inventory=obj('artifact-inventory.json')
+ for p,record in inventory['files'].items():b=read(p);check(sha(b)==record['sha256'] and len(b)==record['bytes'])
+ identity=obj('identity-before.stdout');check(identity==obj('identity-after.stdout'));check(identity['revision']==HEAD and len(identity['hashes'])==124)
+ before=obj('source-before.json');after=obj('source-after.json');check(before==after)
+ for p,h in identity['hashes'].items():
+  check(before[p]==h);check(sha((W/p).read_bytes())==h);check(sha(subprocess.check_output(['git','show',HEAD+':'+p],cwd=W))==h)
+ manifest=obj('prepare.json');receipt=obj('build-static-preflight.json');context=obj('build-context.json');status=obj('final-status.json')
+ check(manifest['sourceHashes']==identity['hashes']==receipt['sourceHashes']==context['sourceHashes']);check(receipt['sourceRevision']==context['sourceRevision']==HEAD)
+ check(receipt['schema']=='bw.native-cold-bios-build-receipt.v1' and receipt['status']=='BUILD_AND_STATIC_PREFLIGHT_PASS_NO_ADDON_LOAD_OR_GUEST')
+ check(status['completed'] and status['frozenInputsBeforeAfterEqual'] and status['preparedInputsBeforeAfterEqual']);check(not status['errors'])
+ check(sha(read('build-context.json'))==receipt['contextSha256']);check(sha(read('prepare.json'))==receipt['preparedManifestSha256']==context['preparedManifestSha256'])
+ check(context['addonLoaded'] is False and context['nodeVersion']=='v22.23.3');check(context['bochsRevision']==manifest['bochsRevision']=='0e45b736ef9792eb9b752b0a35db49eaf2faea47')
+ check(context['helperSha256']==identity['hashes']['scripts/ci-build-i80386-native-cold-bios.py']==sha(z.read('cold-bios-build-context/build-helper.py')))
+ check(context['workflowSha256']==identity['hashes']['.github/workflows/i80386-native-cold-bios-build.yml']==sha(z.read('cold-bios-build-context/workflow.yml')))
+ check(sha(read('bw_direct.node'))==receipt['addonSha256'] and len(read('bw_direct.node'))==receipt['addonBytes']);check(read('bw_direct.node')[:4]==b'\x7fELF')
+ check(sha(read('config.h'))==receipt['configSha256']==context['configSha256'])
+ for name,value in receipt['requiredFeatures'].items():matches=re.findall(r'^#define\s+'+name+r'\s+(\d+)\s*$',read('config.h').decode(),re.M);check(len(matches)==1 and int(matches[0])==value)
+ for export in receipt['requiredExports']:check(re.search(r'\b'+export+r'$',read('nm.stdout').decode(),re.M) is not None)
+ for label in ['identity-before','prepare','configure','make','nm','readelf','identity-after','compiler','platform','architecture','static-admission']:
+  e=obj(label+'.exit.json');i=obj(label+'.invocation.json');check(e['exitCode']==0 and e['timedOut'] is False);check(e['command']==i['command']);check(all(v=='' for v in i['blankHooks'].values()) and i['niceIncrement']==10 and i['coreBytes']==0)
+  for stream in ['stdout','stderr']:b=read(label+'.'+stream);check(sha(b)==e['streams'][stream]['sha256'] and len(b)==e['streams'][stream]['bytes'])
+ check(obj('static-admission.stdout')['addonSha256']==receipt['addonSha256']);check(obj('static-admission.stdout')['preparedHashes']==manifest['actualPreparedHashes'])
+ pbefore=obj('prepared-before-build.json');pafter=obj('prepared-after-build.json');check(all(pafter.get(p)==h for p,h in pbefore.items()))
+ def tape(name):
+  mapping={}
+  with z.open('cold-bios-build-evidence/'+name) as raw,tarfile.open(fileobj=raw,mode='r|gz') as tar:
+   for m in tar:
+    path=pathlib.PurePosixPath(m.name);check(m.isfile() and not path.is_absolute() and '..' not in path.parts and m.name not in mapping and m.size<=256<<20)
+    h=hashlib.sha256();f=tar.extractfile(m)
+    while True:
+     chunk=f.read(1<<20)
+     if not chunk:break
+     h.update(chunk)
+    mapping[m.name]=h.hexdigest()
+  return mapping
+ frozen=tape('frozen-source.tar.gz');check(frozen==identity['hashes']);prepared=tape('prepared-source.tar.gz');check(prepared=={p:h for p,h in pafter.items() if not p.endswith('.node')})
+ for p,h in manifest['actualPreparedHashes'].items():check(prepared[p]==h)
+ for p,h in manifest['patchedHashes'].items():check(prepared[p]==h)
+ check(manifest['coldProfile']['romSha256']==identity['hashes']['roms/free-at-bios/BIOS-bochs-legacy']);check(prepared['bochs/cpu/bw_slice_runtime.inc']==manifest['generatedRuntimeSha256'])
+ check('roms/free-at-bios/LICENSE' in frozen and 'roms/free-at-bios/README.md' in frozen);check(len(read('upstream-COPYING'))>0 and len(read('upstream-LICENSE'))>0)
+ result={'status':'ACTUAL_FIRST_COLD_BUILD_STATIC_ARTIFACT_AUDIT_PASS','checks':checks,'runId':37102085724,'head':HEAD,'attempt':1,'artifactId':11265997873,'zipSha256':v['zipSha256'],'zipBytes':v['zipBytes'],'sourceCount':len(identity['hashes']),'frozenArchiveFiles':len(frozen),'preparedArchiveFiles':len(prepared),'addonSha256':receipt['addonSha256'],'addonBytes':receipt['addonBytes'],'scope':'NO_ADDON_LOAD_OR_GUEST','auditSourceSha256':sha(pathlib.Path(__file__).read_bytes())}
+ (R/'coder-actual-static-audit.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result,indent=2))

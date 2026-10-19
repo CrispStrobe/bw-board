@@ -1,0 +1,116 @@
+{
+  "schema": "bw.cold-memory-fusion.qualification-audit.v1",
+  "status": "PASS",
+  "worker": {
+    "revision": "735740cb52550bb71edde5aba326da6f3a01f473",
+    "sourceSha256": "f2a2a7c6f19366e2b11b9b9667ecff08dd22253f2914a24a2faa98f7c07d1649"
+  },
+  "compiledRevision": "85fc1599af0ee71e32208da9d36caac86daa3b8c",
+  "targetN": 316562,
+  "targetQ": 316562,
+  "captureSha256": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf",
+  "addonSha256": "7de755f02b385149e17abfb086972bc73cbcb3fac5294f758eda5a4ab97d2351",
+  "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "stateExportProfile": "bw.cold-native.copied-u32-state.v1",
+  "officialArtifact": {
+    "runId": 37186156651,
+    "headSha": "a200b3d6fe8d42a020e8c65f0f33dacb777e6317",
+    "artifactId": 11297192345,
+    "zipBytes": 18498695,
+    "zipSha256": "3ac39db8078412044bd0f39239daf2e32f0b413ed485f68f1e981deab0984b9d"
+  },
+  "checks": 66365,
+  "scope": "Actual fusion batched reset/final/last-return raw166, terminal represented JS counterparts via immutable capture, full board/RAM hash/ordered PIO and source/input/restoration guards. No intermediate166 reconstruction or performance qualification. Typed ownership assertion is instrumented source-attested; serialized arrays cannot independently prove live backing-buffer identity. Native BigInt attempt maps independently checked as exact decimal strings, reset/final/last equality and provider validated effect counts. Logical clock transfer counts do not denote outer bridge entries; no speed gain inferred.",
+  "returns": {
+    "resumes": 16524,
+    "irqSnapshots": 1,
+    "zeroQ": 0,
+    "reasons": {
+      "1": 3,
+      "3": 16475,
+      "7": 46
+    },
+    "maxChargedN": 300,
+    "maxChargedQ": 300
+  },
+  "child": {
+    "pid": 4961,
+    "exitCode": 0,
+    "rawWaitStatus": 0,
+    "timedOut": false,
+    "wallSeconds": 5.775461855000003,
+    "terminatedPids": [],
+    "interrupted": null,
+    "rusage": {
+      "ru_utime": 3.807928,
+      "ru_stime": 2.652664,
+      "ru_maxrss": 270016,
+      "ru_minflt": 442297,
+      "ru_majflt": 0,
+      "ru_inblock": 0,
+      "ru_oublock": 3800,
+      "ru_nvcsw": 5617,
+      "ru_nivcsw": 378
+    },
+    "cpuSeconds": 6.460592
+  },
+  "memoryFusionProfile": "bw.cold-native.memory-clock-fusion.v1",
+  "bridgeAttemptCounts": {
+    "provider": {
+      "memoryOuterEntries": 167123,
+      "replyValidations": 167123,
+      "readEffects": 75401,
+      "writeEffects": 91722
+    },
+    "reset": {
+      "clock": {
+        "unknown": "0",
+        "INIT": "1",
+        "ENTRY": "0",
+        "MEMORY": "0",
+        "PAGE": "0",
+        "PRE_PIO": "0",
+        "POST_PIO": "0",
+        "ACK": "0",
+        "FAULT": "0",
+        "IRQ": "0",
+        "HLT": "0",
+        "RETURN": "0"
+      },
+      "memory": {
+        "ordinaryRead": "0",
+        "ordinaryWrite": "0",
+        "fusedOuter": "0"
+      }
+    },
+    "final": {
+      "clock": {
+        "unknown": "0",
+        "INIT": "1",
+        "ENTRY": "16524",
+        "MEMORY": "0",
+        "PAGE": "4",
+        "PRE_PIO": "16471",
+        "POST_PIO": "16475",
+        "ACK": "0",
+        "FAULT": "0",
+        "IRQ": "0",
+        "HLT": "0",
+        "RETURN": "16524"
+      },
+      "memory": {
+        "ordinaryRead": "16548",
+        "ordinaryWrite": "236",
+        "fusedOuter": "167123"
+      }
+    },
+    "scope": "Actual outer entry attempts; clockTransfers.transfers is logical accepted transfers in this profile, not outer entries"
+  },
+  "sourceInputs": {
+    "tooling": 17,
+    "compiled": 151,
+    "driver": 54,
+    "worker": 63
+  },
+  "memberCount": 56
+}

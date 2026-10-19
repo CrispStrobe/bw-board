@@ -1,0 +1,147 @@
+{
+  "schema": "astra.i80386-windows300-desktop.v1",
+  "accepted": true,
+  "scope": "Audited source-bound Windows 3.0 Program Manager desktop and real Set-1 keyboard launch of File Manager on the bounded experimental 386 AT profile.",
+  "runnerContract": {
+    "diagnosticOnly": true,
+    "windowsBootAccepted": false,
+    "note": "The generic runner deliberately does not self-accept Windows from CPU mode or nonzero VGA planes. This receipt records the separately decoded and visually audited milestone."
+  },
+  "inputs": {
+    "bios": {
+      "bytes": 65536,
+      "sha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f"
+    },
+    "vgaRom": {
+      "bytes": 32256,
+      "sha256": "90f59d96821517d6bfac2b24eab96eb875e13ae164e8e0008ac93ae558bc6a9a"
+    },
+    "hdd": {
+      "bytes": 21411840,
+      "sha256": "127d214b6c4ff2520c95063e00028547cf287a22e56c0c7a8d550af08486f1aa",
+      "geometry": {
+        "cylinders": 615,
+        "heads": 4,
+        "sectors": 17
+      }
+    },
+    "cmos": {
+      "driveTypes": 32,
+      "floppyTypes": 32,
+      "equipment": 1,
+      "checksum": 336
+    },
+    "inputReceipt": "docs/receipts/2026-09-20-windows300-input.json",
+    "distribution": "External ROMs and HDD image; no guest or rendered pixel payload is stored in this repository."
+  },
+  "runs": {
+    "desktop": {
+      "executionRevision": "4973455f4618ac8161f5f991cdd037bc5a79e045",
+      "steps": 150000000,
+      "stopReason": "budget",
+      "refusal": null,
+      "halted": false,
+      "shutdown": false,
+      "rawReport": {
+        "localPath": "/tmp/astra-windows300-497-150m.json",
+        "sha256": "eb15928729dc887aab6014de0b10445d3ba434df4f5bdaabfc70ddc75da76917"
+      },
+      "sourceSha256": {
+        "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+        "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+        "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+        "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+        "src/experimental/i80386.js": "cdc3f4f44b248d90c84a94217a2af7e1d12c5fe03522798764bbf3ce2b29c157",
+        "src/experimental/i80386-at-machine.js": "11c1f3fa578bab9f14d356d53c95183319f43c6fb1ee787be5c4f38ff3fa8b71",
+        "src/experimental/ata16.js": "e84e22eb7edd97c83ac481a9096159370365368806b851e22a2bbce66d245c6e",
+        "src/experimental/vga-memory.js": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a",
+        "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
+        "src/at-8042-a20.js": "67ef77cffdbaa1ad6fa0abd074d688a243c397249175859b60386781657e5173",
+        "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+        "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+        "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+        "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+        "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+        "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
+        "scripts/run-i80386-windows300.mjs": "aad2d1fd3f685ffd69408553a4d71a5b0d1e52c056f70de51307f9e00dc6b295"
+      },
+      "decoded": {
+        "width": 640,
+        "height": 350,
+        "rgb24Sha256": "9412ff492f0af8e78a5e32c8c1230e4491ed2dfba247d28ff1de54a5d0f16524",
+        "pngSha256": "c8e840e72ee8c17f68620790e636d569f0bc477be22e81ed4965d21efec8c074",
+        "observation": "Windows 3.0 Program Manager desktop with the Main group and File Manager selected."
+      }
+    },
+    "fileManager": {
+      "executionRevision": "4356395ebdc7f41e25bcc5d73dbae67541894a38",
+      "steps": 120000000,
+      "stopReason": "budget",
+      "refusal": null,
+      "halted": false,
+      "shutdown": false,
+      "rawReport": {
+        "localPath": "/tmp/astra-windows300-435-action-120m.json",
+        "sha256": "0b67a4e5c0524c4e525c8f68ce6d6dd84c23fc6e7ff7380ad483219c72af33a4"
+      },
+      "sourceSha256": {
+        "src/i8086-machine.js": "b76d45d55a3bc01857c37e1423860a543e5db0f3a637868a3d5b028d370e97bc",
+        "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+        "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+        "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+        "src/experimental/i80386.js": "cdc3f4f44b248d90c84a94217a2af7e1d12c5fe03522798764bbf3ce2b29c157",
+        "src/experimental/i80386-at-machine.js": "11c1f3fa578bab9f14d356d53c95183319f43c6fb1ee787be5c4f38ff3fa8b71",
+        "src/experimental/ata16.js": "e84e22eb7edd97c83ac481a9096159370365368806b851e22a2bbce66d245c6e",
+        "src/experimental/vga-memory.js": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a",
+        "src/vga-card.js": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71",
+        "src/at-8042-a20.js": "67ef77cffdbaa1ad6fa0abd074d688a243c397249175859b60386781657e5173",
+        "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+        "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+        "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+        "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+        "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+        "src/upd765.js": "d352e49e22c4e860f498e673cb64d3a8c525e21b23fe88609b61d04445d8d4d1",
+        "scripts/run-i80386-windows300.mjs": "6ac7e21d9fc00f1f0d1c4650af58df387c7048cb7a3d39a4c9c930d44dddfb14"
+      },
+      "keyboard": [
+        {
+          "step": 100000000,
+          "code": 28,
+          "accepted": true
+        },
+        {
+          "step": 100002000,
+          "code": 156,
+          "accepted": true
+        }
+      ],
+      "before": {
+        "rgb24Sha256": "9412ff492f0af8e78a5e32c8c1230e4491ed2dfba247d28ff1de54a5d0f16524",
+        "pngSha256": "c8e840e72ee8c17f68620790e636d569f0bc477be22e81ed4965d21efec8c074"
+      },
+      "after": {
+        "rgb24Sha256": "74fd79593d2a0d9f1bb61feeb22fe7b372228f747d3e8dcf0dbb97ed5b2b95e2",
+        "pngSha256": "e681463105090777984c9ded42cfff26c19d1369cf6238d4c152cf286d73bba7",
+        "observation": "File Manager displays drives A, B and C, the C:\\WINDOWS tree, and 16926720 bytes free."
+      }
+    }
+  },
+  "ataTiming": {
+    "failedProfileCycles": 256,
+    "correctedFunctionalCycles": 8192,
+    "failedObservation": "During an eight-sector BIOS read, a chained IRQ0 service outlasted the 256-cycle BSY phase; BIOS observed 58h after sector four and returned INT13 AH=80, CF=1.",
+    "correctedEvidence": "The 8192-cycle bounded profile covers the longest chained IRQ0 service observed in this exact Windows diagnostic and reaches the desktop.",
+    "limitation": "Functional scheduling guard for this profile only; it is not measured ATA rotational/service timing and does not guarantee arbitrary interrupt-handler lengths."
+  },
+  "acceptance": [
+    "Program Manager decoded from four raw VGA planes at 640x350",
+    "Set-1 make 1Ch and break 9Ch both accepted through the modeled 8042",
+    "File Manager visibly launched and read the C: volume",
+    "Both runs ended only at their instruction budgets with no refusal, CPU halt or shutdown"
+  ],
+  "limitations": [
+    "Windows 3.0 standard/286-mode installation only; no general Windows-version compatibility claim",
+    "Visual observations were independently audited from local raw-plane reports; guest pixels and external media are not committed",
+    "No arbitrary ATA timing, full 386, VM86 application, networking, sound or printer compatibility claim"
+  ]
+}

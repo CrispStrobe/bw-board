@@ -1,0 +1,6 @@
+{
+  "revision": "06581f3831aa765933b1d160a41ab37b1b652913",
+  "path": "scripts/cold-native-memory-fusion-ledger-scalars-performance/actual-snapshot-fixtures.json",
+  "sha256": "55656ad72b4aa5cc890cc32ebc0405d2b7317a98345c0a4b48b5e4d0dc33c080",
+  "scope": "Exact held ordinary166 fixtures; test reconstructs typed slots/maps, represented JS fields, board and one PIO event for manufactured final-composition control, not new execution"
+}

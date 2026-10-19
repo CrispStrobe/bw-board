@@ -1,0 +1,16 @@
+{
+  "status": "PASS_ACTUAL_CAPTURE_PARITY_NOT_PERFORMANCE_QUALIFICATION",
+  "scope": "smoke-off",
+  "checks": 17858,
+  "canonicalRows": 0,
+  "sourceRevision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "captureSha256": "a99528c0bcf38957885a0e169b0db7790b9d7e5ba2fc1993d9c0e30da30added",
+  "clockTransfers": {
+    "transfers": "9204",
+    "commits": "8738",
+    "words": "201366"
+  },
+  "resumes": 439,
+  "snapshotProjection": "physical metadata only at native snapshot objects; strict160byte indexed-object/array bijection; every original field equal",
+  "scriptSha256": "76bd78df631d42c816d6f393e23cde766e4e002398a8406c015e616b96c229bf"
+}

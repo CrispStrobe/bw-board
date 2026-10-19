@@ -1,0 +1,75 @@
+{
+  "diagnosticOnly": true,
+  "artifacts": {
+    "baseline": {
+      "source": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+      "wasmSha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d",
+      "wasmBytes": 27556189,
+      "glueSha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73",
+      "definedFunctions": 22635,
+      "cortexM": [
+        {
+          "index": 73,
+          "offset": 64103,
+          "bodyBytes": 77390,
+          "name": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+        },
+        {
+          "index": 77,
+          "offset": 258833,
+          "bodyBytes": 32735,
+          "name": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+        },
+        {
+          "index": 78,
+          "offset": 291571,
+          "bodyBytes": 31605,
+          "name": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505"
+        },
+        {
+          "index": 8516,
+          "offset": 7608970,
+          "bodyBytes": 234,
+          "name": "labwired_core::cpu::cortex_m::CortexM::write_reg::h2f43d0bdd83b1d5a"
+        },
+        {
+          "index": 9667,
+          "offset": 7827320,
+          "bodyBytes": 210,
+          "name": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591"
+        }
+      ]
+    },
+    "candidate": {
+      "source": "53b2be10799570c607b444fa174e2eb37ea74095",
+      "wasmSha256": "93057ffed6b78b2fa848c7b5462345b8b2bc22540180a70f52bfe7b0575360b8",
+      "wasmBytes": 27773578,
+      "glueSha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73",
+      "definedFunctions": 22633,
+      "cortexM": [
+        {
+          "index": 73,
+          "offset": 64099,
+          "bodyBytes": 217959,
+          "name": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+        },
+        {
+          "index": 77,
+          "offset": 474989,
+          "bodyBytes": 33605,
+          "name": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+        },
+        {
+          "index": 78,
+          "offset": 508597,
+          "bodyBytes": 32493,
+          "name": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505"
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "body byte sizes are not timing or removable cost",
+    "no WASM execution or artifact mutation; no publication or pin changes"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "pid": 17194,
+  "exitCode": 0,
+  "rawWaitStatus": 0,
+  "timedOut": false,
+  "wallSeconds": 3.394171529999994,
+  "terminatedPids": [],
+  "interrupted": null,
+  "rusage": {
+    "ru_utime": 2.018175,
+    "ru_stime": 1.785615,
+    "ru_maxrss": 269112,
+    "ru_minflt": 373966,
+    "ru_majflt": 0,
+    "ru_inblock": 0,
+    "ru_oublock": 3776,
+    "ru_nvcsw": 5132,
+    "ru_nivcsw": 229
+  },
+  "cpuSeconds": 3.80379
+}

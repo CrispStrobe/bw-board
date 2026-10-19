@@ -1,0 +1,12 @@
+{
+  "status": "PASS_ACTUAL_JS_PIC_IMR_REFERENCE_NOT_NATIVE_QUALIFICATION",
+  "checks": 302366,
+  "sourceRevision": "a6f605280f778b2bc409ef97ac3b40e15874530c",
+  "sourceInputs": 111,
+  "captureSha256": "fdca8f8fa92952cd9cd5f4447e66b194a5f691025bcf925f7ddd443290143346",
+  "journalRows": 117487,
+  "attempts": 100702,
+  "successfulQuanta": 100700,
+  "ports": 35,
+  "scope": "Authenticatesactualsource/journalledgers/allPIO/deliveries/cuts/fullPICbeforeafterreadstate. PIT50/18 PICff/ff noIRR/ISR/ACKeffect inread. JSonly; no independentemulationofunexportedstate/native/performancequalification."
+}

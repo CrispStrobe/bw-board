@@ -1,0 +1,20 @@
+{
+  "originalHead": "8e7a147ec0663390e83a87a2e32ce1d812e26e11",
+  "originalRun": 37140820456,
+  "originalConclusion": "failure",
+  "originalFailure": "CPU selection exceeds receipt bound",
+  "originalEvidence": "cpu-hotpath-inspection-20261003",
+  "correctedHead": "7b44d053da9331ee7cf07ca574a3b4ddfcb25f18",
+  "correctedRun": 37141895222,
+  "actualToolRef": "perf/wasm-cpu-hotpath-inspection-20261003",
+  "captureControllerMetadataNote": "Mechanical cloning also renamed the non-operative toolRef label in the already loaded read-only controller; source corrected immediately. Original runtime state may retain this label. Actual inspection run ID, tool SHA and artifact/source hashes remain pinned and verified; no workflow dispatch occurs in this controller.",
+  "correction": "Exclude the full interpreter from the bounded batch/cached hotpath selection",
+  "receiptLimitUnchangedBytes": 2000000,
+  "requiredRootsUnchanged": ["step_batch", "run_t16_cached_run"],
+  "missingTypesAndDuplicateIdentitiesStillFail": true,
+  "fourPortableGuardTestsPassed": true,
+  "engineBuildAndBytesUnchanged": true,
+  "performanceOrCorrectnessFloorWaived": false,
+  "engineExecution": false,
+  "enginePromotion": false
+}

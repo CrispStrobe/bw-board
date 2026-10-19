@@ -1,0 +1,48 @@
+{
+  "date": "2026-09-27",
+  "baseCommit": "2bf5bef27553231806a00335bc6ea1f27931ef67",
+  "scope": "Opt-in diagnostic-only actual-successor census for code16 terminal single JZ/JNZ fallbacks; no linked guest execution",
+  "sources": {
+    "src/experimental/i80386-code16-wasm-block.js": "sha256:df73158f17187b1737a77085536b31d6c7ba56319d4da8e581090ab4c27fb0f9",
+    "scripts/run-i80386-at-console.mjs": "sha256:def1fab11d0c1bf85707e9aec70e640fc6eb15d18ab89007380a74c391885d1f",
+    "test/i80386-code16-wasm-block.test.mjs": "sha256:132d08a3ca9ac234e59fab5f85d4984450db0d7ab375e9e1d884fe7ed29154f9",
+    "docs/I80386-CODE16-WASM-BLOCK.md": "sha256:77e304adba0afcf2d845d341bf9a8e1e87aa5c79eb7c2ed6952719e30f7d773d"
+  },
+  "validation": {
+    "command": "node --test test/i80386*.test.mjs",
+    "tests": 451,
+    "passed": 447,
+    "failed": 0,
+    "skipped": 4,
+    "focusedWasmTests": 23,
+    "focusedPass": 23
+  },
+  "privateLongRunObservation": {
+    "measuredExecutionRevision": "d5d070f1ba6338e02cc468c23c032e798e85863c",
+    "stepsPerRun": 60000000,
+    "normalizedGuestReportsEqual": true,
+    "normalizedGuestReportSha256": "ebd37f619ab5afc90177e51efdf2c7ea36d4895461ec66329b989d03af0b8fac",
+    "terminalSingleJccFallbackCalls": 3484531,
+    "firstFetchMismatch": 0,
+    "fetchedBytesMismatch": 0,
+    "didNotRetire": 0,
+    "unexpectedSuccessor": 0,
+    "modeOrSegmentChange": 0,
+    "taken": 1738345,
+    "fallthrough": 1746186,
+    "samePageLandings": 3422856,
+    "otherPageLandings": 61675,
+    "samePageReadySuccessorsAtLeastTwoInstructions": 223020,
+    "samePageReadyRegisterOnly": 52044,
+    "samePageReadyWithMemoryRead": 170976,
+    "samePagePostStepIneligible": 2911,
+    "samePageShortOrUnsupported": 3196791,
+    "samePageDataRefusal": 129,
+    "samePageOtherRefusal": 5,
+    "samePageOneInstructionSuccessorRefusal": 877964,
+    "ordinaryUserCpuSeconds": 79.63,
+    "diagnosticOptInUserCpuSeconds": 363.14
+  },
+  "decision": "No-go for a narrow Jcc-to-current-block performance slice: only 6.40% of terminal single-Jcc calls have a ready same-page successor under the present decoder, and only 1.49% are register-only. Broaden opcode, stack and store coverage and reduce block-entry cost first.",
+  "limits": "These are dispatcher-call and post-step syntactic readiness counts, not distinct static branches or a linked executor's retired instruction count. The current decoder rejects a one-instruction successor, so 877,964 such refusals may conceal recursive graph opportunities; their forms were not classified. A post-step proof does not establish that the previous chip-event budget could have admitted a linked successor. Diagnostic timing includes millions of extra decode/proof probes. Commercial media and raw reports remain private."
+}

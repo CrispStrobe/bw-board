@@ -1,0 +1,41 @@
+{
+  "status": "ROOT_THREE_EXECUTION_PROFILE_OFF_PAIRS_SOURCE_AND_FULL_NATIVE_CPU_BOARD_RAM_PASS",
+  "sourceRevision": "fd0b83eb1c97ac031b3ef87afe24b0d6f0d6606c",
+  "sourceInputs": 55,
+  "checks": 232,
+  "profiles": [
+    {
+      "index": 0,
+      "inclusiveSha256": "a4eb67cc30f66f8ff386b4774709ae69a9c70e346152a79aaf7f8e385d9e4fb1",
+      "cpuProfileSha256": "dba16fa9688ff645cc9817d60141d56f9ffb69ec8267d0d8a989aef74828f484",
+      "samples": 731,
+      "executionNs": 1000836666,
+      "mappingStateCalls": 201367,
+      "mappingStateInclusiveNs": "36010485"
+    },
+    {
+      "index": 1,
+      "inclusiveSha256": "d6ff21a96609153aeb824619fe9374301493af24c175ea5088ab0786babaf27b",
+      "cpuProfileSha256": "dfd19b848324089ac796fb95cf5229dae39d04d53fe72303f6c6ecdcce48333b",
+      "samples": 653,
+      "executionNs": 892968479,
+      "mappingStateCalls": 201367,
+      "mappingStateInclusiveNs": "35744414"
+    },
+    {
+      "index": 2,
+      "inclusiveSha256": "22df3a39d6488ba380bd7fd24023e5d5a4d9573584f7f617716e7fd25478a53b",
+      "cpuProfileSha256": "0f66d27f7c2a77b8f599b26654827d541374d92e8d230bd985eb7b2ce77f836a",
+      "samples": 649,
+      "executionNs": 828426547,
+      "mappingStateCalls": 201367,
+      "mappingStateInclusiveNs": "31586345"
+    }
+  ],
+  "observedProfileVsOffWallRatios": [
+    1.4531284034670535,
+    1.4640812554757936,
+    1.1734517355786553
+  ],
+  "limitations": "nested inclusive buckets overlap; shared-host interference and profiler overhead not isolated. V8 measure or close leaf names can include native execution attribution; no exclusive C++ hotspot attribution. Inspector stop command remains sampled after execution timer ends. No native optimization or RTx claim."
+}

@@ -1,0 +1,3023 @@
+{
+  "formal": {
+    "status": "independent-actual-files-historical-current-source-and-whole-backing-audit-pass",
+    "captureSha256": "042f2bf173feee45453ea0a699f06da99ef1cead963dc9a30b1962d848d11c12",
+    "boardRevision": "6af0969e611910265364448e0819086768ed4f02",
+    "sourceInputs": 64,
+    "assertions": 4242,
+    "artifacts": [
+      {
+        "path": "bochsrc",
+        "sha256": "44f5091ea7f152a6d313c242b077e95c0995f12169539502a16f147d43a9ec3b",
+        "bytes": 520
+      },
+      {
+        "path": "continuous.stdout.txt",
+        "sha256": "6018ddf9aa6a75233d423a94d427c68708a1122f4b64c5cee2412d65bef12b79",
+        "bytes": 307
+      },
+      {
+        "path": "continuous.stderr.txt",
+        "sha256": "299c0b1549f336e75e98f7ebc7e04627a1564e60e93390086b1aa57d1ce48040",
+        "bytes": 489764
+      },
+      {
+        "path": "continuous.rpcToNative.txt",
+        "sha256": "84f14c678f28a512977272a5af72d65edf24f22c24b2d2cb8f44746a329cb7c1",
+        "bytes": 96173
+      },
+      {
+        "path": "continuous.rpcFromNative.txt",
+        "sha256": "2ce6b192c78ce6c1e4c481aa7ef4891b53054fc31f97d9c1a02c8931e8d94153",
+        "bytes": 28165
+      },
+      {
+        "path": "continuous.bochs.log",
+        "sha256": "374e464b1ba4360acf213ead0132992879f4c64f725707d8e88afe9d22321e40",
+        "bytes": 7441
+      },
+      {
+        "path": "budget1.stdout.txt",
+        "sha256": "6018ddf9aa6a75233d423a94d427c68708a1122f4b64c5cee2412d65bef12b79",
+        "bytes": 307
+      },
+      {
+        "path": "budget1.stderr.txt",
+        "sha256": "4787039d626ce926d84cce0cd2849f829ff06a42d7d046cc995e56f387d66cc6",
+        "bytes": 521648
+      },
+      {
+        "path": "budget1.rpcToNative.txt",
+        "sha256": "a82715f1756bf40848e6b6c590a7d269e82466ce4c9598cc27d8d39887358f21",
+        "bytes": 103471
+      },
+      {
+        "path": "budget1.rpcFromNative.txt",
+        "sha256": "6777827129c670290e531e27bc40738fadf6af1bea445011430503c6eaed205a",
+        "bytes": 38443
+      },
+      {
+        "path": "budget1.bochs.log",
+        "sha256": "53cb90dcf5a9836ac16bde2cdba77252a68fe153cf08344e4ed0a0db95cf852f",
+        "bytes": 7441
+      },
+      {
+        "path": "budget2.stdout.txt",
+        "sha256": "6018ddf9aa6a75233d423a94d427c68708a1122f4b64c5cee2412d65bef12b79",
+        "bytes": 307
+      },
+      {
+        "path": "budget2.stderr.txt",
+        "sha256": "e7af7143d9cc802fdee7c6ad613486252686d6efe838bcc82f9e84e0fe8bfe5b",
+        "bytes": 503285
+      },
+      {
+        "path": "budget2.rpcToNative.txt",
+        "sha256": "d5e81fbe05c329cd4b17d2ce64eb270d01af28030a5ea27605dc2f86fc972e2a",
+        "bytes": 99241
+      },
+      {
+        "path": "budget2.rpcFromNative.txt",
+        "sha256": "465e0edaa61400ab0d3bf83f672277e1e89261157aed789b959a29e8066fe8e7",
+        "bytes": 32544
+      },
+      {
+        "path": "budget2.bochs.log",
+        "sha256": "1d7a15e565637d0360b8fb80a8eae5d7152439ba87c6262ff7ab1b25343861d5",
+        "bytes": 7441
+      },
+      {
+        "path": "budget257.stdout.txt",
+        "sha256": "6018ddf9aa6a75233d423a94d427c68708a1122f4b64c5cee2412d65bef12b79",
+        "bytes": 307
+      },
+      {
+        "path": "budget257.stderr.txt",
+        "sha256": "9d3d1aad0a0f516bf6fb16303e9cd1f28b44dc9f1d5cf00b418eb12b46e5e565",
+        "bytes": 489764
+      },
+      {
+        "path": "budget257.rpcToNative.txt",
+        "sha256": "a9fd92ed983ba3e62e460b0bd5b3ed9336c885e38f682e0c767621f0c8a79504",
+        "bytes": 96173
+      },
+      {
+        "path": "budget257.rpcFromNative.txt",
+        "sha256": "2ce6b192c78ce6c1e4c481aa7ef4891b53054fc31f97d9c1a02c8931e8d94153",
+        "bytes": 28165
+      },
+      {
+        "path": "budget257.bochs.log",
+        "sha256": "8d8d26d2adfa0dd042b321c89d2548d538feea64aea0d3cde58ec4e3b195f799",
+        "bytes": 7441
+      },
+      {
+        "path": "guard-admitted-unexecuted-code-write.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-admitted-unexecuted-code-write.stderr.txt",
+        "sha256": "84a56b0be308b98cf9ddbdade3b4ee48bff797d465da7d16961d899ea4a72c55",
+        "bytes": 1491
+      },
+      {
+        "path": "guard-admitted-unexecuted-code-write.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-admitted-unexecuted-code-write.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-admitted-unexecuted-code-write.bochs.log",
+        "sha256": "16033797142852095dd89a03951f0c68e5ddea02ffac63d2ad501bac12c88c28",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-current-code-write.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-current-code-write.stderr.txt",
+        "sha256": "551bf2e46959b72054d76b165df3dafd405e5d2b09aa8608539afc122aff5a4f",
+        "bytes": 1479
+      },
+      {
+        "path": "guard-current-code-write.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-current-code-write.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-current-code-write.bochs.log",
+        "sha256": "de58439f8b5240389cb74887a921e316478413b0448c589aeb715c5474d66631",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-executable-table-ad-write.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-executable-table-ad-write.stderr.txt",
+        "sha256": "f1c815502d57b1a0536a6a9d132adfd220e900c33fcad57941e7ce3e1fee5462",
+        "bytes": 1486
+      },
+      {
+        "path": "guard-executable-table-ad-write.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-executable-table-ad-write.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-executable-table-ad-write.bochs.log",
+        "sha256": "8e7f3d5aa01eb27db7438eee245ce4b2804b455b861b2b4404d938acd5771a83",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-pio-port92.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-pio-port92.stderr.txt",
+        "sha256": "d825dfa064d8bcaf410e8ae795b0b3b62f7f6ee794f89d72b640314830ab625a",
+        "bytes": 1474
+      },
+      {
+        "path": "guard-pio-port92.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-pio-port92.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-pio-port92.bochs.log",
+        "sha256": "8011ad7f7ca93a1d26f5db8387665c9e68b47822c0b76870eb022eb4904b2bc3",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-mapping-boundary-kind.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-mapping-boundary-kind.stderr.txt",
+        "sha256": "041ec2aa44e8ca3447d33b577f7812cb907e62734cd1b8fcfaa344a6f6febb9b",
+        "bytes": 1529
+      },
+      {
+        "path": "guard-mapping-boundary-kind.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-mapping-boundary-kind.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-mapping-boundary-kind.bochs.log",
+        "sha256": "367edb54cf8cea7e785a75c8e25820cf6ceafa0a25c0c14a4281dacc86b14c3a",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-unsupported-span-width.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsupported-span-width.stderr.txt",
+        "sha256": "14999577bb5835d7cff4b919f1b002d9e2db4fb4f7b9095106eee7911a199ebe",
+        "bytes": 1479
+      },
+      {
+        "path": "guard-unsupported-span-width.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsupported-span-width.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsupported-span-width.bochs.log",
+        "sha256": "2abbf41021de15f6b8f025f55f54f0d8b7df2fc25583bb55c25ac35cee8949b2",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-physical-overflow.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-physical-overflow.stderr.txt",
+        "sha256": "14999577bb5835d7cff4b919f1b002d9e2db4fb4f7b9095106eee7911a199ebe",
+        "bytes": 1479
+      },
+      {
+        "path": "guard-physical-overflow.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-physical-overflow.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-physical-overflow.bochs.log",
+        "sha256": "172db287172f848e101a5d124440c885040d9e86645ff25cebfe3a65faa70ac9",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-unsafe-execute-ram.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-ram.stderr.txt",
+        "sha256": "706c5e8393a7ec50f631dfa6fd3fed1fb9080e72de7bb6a62ea025c22ab3a92e",
+        "bytes": 1480
+      },
+      {
+        "path": "guard-unsafe-execute-ram.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-ram.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-ram.bochs.log",
+        "sha256": "bed9d338a735aad2e930ac5e88fe856833ee46005b44314875fd16f41aaea69c",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-unsupported-rep.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsupported-rep.stderr.txt",
+        "sha256": "c3c4a17a109abc23b7109433683cd04e1c57fab127a699cc5865945a5499688f",
+        "bytes": 1476
+      },
+      {
+        "path": "guard-unsupported-rep.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsupported-rep.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsupported-rep.bochs.log",
+        "sha256": "9e12b31e1d38b8c17ff3aeb818cfb386a8a0a1dbf1520ba04bea824496dae36e",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-prefetch-non-pagewalk-write.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-prefetch-non-pagewalk-write.stderr.txt",
+        "sha256": "d348226c063d15e1b00e7d58b333ceab3bfe169f10e51d173955806d9865d9e8",
+        "bytes": 1488
+      },
+      {
+        "path": "guard-prefetch-non-pagewalk-write.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-prefetch-non-pagewalk-write.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-prefetch-non-pagewalk-write.bochs.log",
+        "sha256": "36dd8d9fcb5b07a3e10e1b3a9f908f0883f3a04cac0fc2656fc9a4a2729400af",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-execute-pending-write.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-execute-pending-write.stderr.txt",
+        "sha256": "5ef193519ced901e86765dd033820cf40396f19c3d00c5f5ef89912686b51016",
+        "bytes": 1487
+      },
+      {
+        "path": "guard-execute-pending-write.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-execute-pending-write.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-execute-pending-write.bochs.log",
+        "sha256": "d0c2621e70e283fd4a964c7ed72b819dded5d3a2696d29edfced9bd21f8ae4f9",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-native-a20-off.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-native-a20-off.stderr.txt",
+        "sha256": "361ee84cf7d17984c1dc5a5c3cb41ce8eba5c59f6e72a05a0f25196484ddf16b",
+        "bytes": 1522
+      },
+      {
+        "path": "guard-native-a20-off.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-native-a20-off.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-native-a20-off.bochs.log",
+        "sha256": "1a004d12380f373dec37818e461efb75c4b591e0e007cebd1bdef9e966774e25",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-stale-cache-generation.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-stale-cache-generation.stderr.txt",
+        "sha256": "4e885c5c6de735bc410a3a01c8cd2ab9b56696fbf6589befc8594fbd2834c43e",
+        "bytes": 1485
+      },
+      {
+        "path": "guard-stale-cache-generation.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-stale-cache-generation.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-stale-cache-generation.bochs.log",
+        "sha256": "e36a3224d68b6b081337db145b9bbe020615fed9fe0733d52d3bfb8cb6821ac5",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-write-stage-bound.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-write-stage-bound.stderr.txt",
+        "sha256": "4febfe2351883a1bcbc0a3fb553e5f6051046cb98c4be1a6b64af682f707a8a2",
+        "bytes": 1485
+      },
+      {
+        "path": "guard-write-stage-bound.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-write-stage-bound.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-write-stage-bound.bochs.log",
+        "sha256": "8b34dfa89a50efd1bf3b7ec2ec6b502738cfb2958c11e656198e70510f676931",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-write-generation-overflow.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-write-generation-overflow.stderr.txt",
+        "sha256": "4febfe2351883a1bcbc0a3fb553e5f6051046cb98c4be1a6b64af682f707a8a2",
+        "bytes": 1485
+      },
+      {
+        "path": "guard-write-generation-overflow.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-write-generation-overflow.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-write-generation-overflow.bochs.log",
+        "sha256": "285f41fc86506d92448c43fcc6b8125c69033dcfd5f51364cce076d43c7836d0",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-unsafe-execute-mmio.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-mmio.stderr.txt",
+        "sha256": "706c5e8393a7ec50f631dfa6fd3fed1fb9080e72de7bb6a62ea025c22ab3a92e",
+        "bytes": 1480
+      },
+      {
+        "path": "guard-unsafe-execute-mmio.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-mmio.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-mmio.bochs.log",
+        "sha256": "19a864b74c7f8dc9845c163d0e8af703ccc0662d710647c4bb2882b2b632ece1",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-unsafe-execute-unmapped.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-unmapped.stderr.txt",
+        "sha256": "706c5e8393a7ec50f631dfa6fd3fed1fb9080e72de7bb6a62ea025c22ab3a92e",
+        "bytes": 1480
+      },
+      {
+        "path": "guard-unsafe-execute-unmapped.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-unmapped.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-unmapped.bochs.log",
+        "sha256": "5a7a4e57c433db9db380bef7de9a1698f3deb62e63903c572aed1871a3aa7fd9",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-unexpected-pio.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unexpected-pio.stderr.txt",
+        "sha256": "d825dfa064d8bcaf410e8ae795b0b3b62f7f6ee794f89d72b640314830ab625a",
+        "bytes": 1474
+      },
+      {
+        "path": "guard-unexpected-pio.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unexpected-pio.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unexpected-pio.bochs.log",
+        "sha256": "2adfc851f6b80866129069da725f11ed6bd8de2234bf7fb209caac97c363e86d",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-bochs-ram-read.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-ram-read.stderr.txt",
+        "sha256": "f2a79f35913d7a9c791cefa55277e816fff33f1af6d066bce308f680c4ab59fe",
+        "bytes": 1484
+      },
+      {
+        "path": "guard-bochs-ram-read.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-ram-read.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-ram-read.bochs.log",
+        "sha256": "a95a7ce0cf299da9384b6c7316dd9c5da4ca663b289a11687df82ac8772269ea",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-bochs-ram-write.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-ram-write.stderr.txt",
+        "sha256": "544b0f9f1377fdfa428768197542caf768ff5ae7636cba48bf9481caf6ab6dd9",
+        "bytes": 1485
+      },
+      {
+        "path": "guard-bochs-ram-write.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-ram-write.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-ram-write.bochs.log",
+        "sha256": "1431396276283d2f8cd3e9d23494be371f44b6b664db84429ba535c04b345a84",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-bochs-direct-pointer.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-direct-pointer.stderr.txt",
+        "sha256": "59870e73f40c70b3014c86b34ee5014a78a02acc38725a2475c846acae6fb6a9",
+        "bytes": 1490
+      },
+      {
+        "path": "guard-bochs-direct-pointer.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-direct-pointer.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-direct-pointer.bochs.log",
+        "sha256": "7d5e81e9543108d28f2b7ac052859f2c3288bd9abce5afa26a306ad26eb68110",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-bochs-pio.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-pio.stderr.txt",
+        "sha256": "f78c7e0e61b3c7391059fd1f03c5f2f5859e207cf094cbda72a3eaf601e74f99",
+        "bytes": 1479
+      },
+      {
+        "path": "guard-bochs-pio.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-pio.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-pio.bochs.log",
+        "sha256": "f65c3e60b5e60d28ab365424ae252da24c9b26c65dc6cd521ca566aa6b5dc1c3",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-bochs-timer.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-timer.stderr.txt",
+        "sha256": "3e94e36ec100a17e3586f2b5960d90a6e896d4ab8b50958658fbc256522810e2",
+        "bytes": 1481
+      },
+      {
+        "path": "guard-bochs-timer.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-timer.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-timer.bochs.log",
+        "sha256": "1a6ab611dceb10264889a58f2ae66819b49e2584ed63f7e133d5418aa16ecd7a",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-unknown-trap.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unknown-trap.stderr.txt",
+        "sha256": "be9724ec5876a240839ddf4d59e2fc69553bdca759001082f4253f0c3dabe2e8",
+        "bytes": 1477
+      },
+      {
+        "path": "guard-unknown-trap.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unknown-trap.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unknown-trap.bochs.log",
+        "sha256": "e264922008b6d7654a4c517b1536c2f134c3bd4e853f8ed6682698e53f3ee36b",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-pio-a20.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-pio-a20.stderr.txt",
+        "sha256": "1fbecdaa5cb890319f259a034b2cc52c2a7b3e4776be9f37dc5b274800d3d523",
+        "bytes": 163720
+      },
+      {
+        "path": "transport-pio-a20.rpcToNative.txt",
+        "sha256": "f845c0b5137917c886b0460cfd597ebd19ec816c627b8ff3c56c89ef780b44ce",
+        "bytes": 34168
+      },
+      {
+        "path": "transport-pio-a20.rpcFromNative.txt",
+        "sha256": "aec85f970890dd7d6bbdca9db33c132c125dcd7cdc6d87cba7ee8a8df183f72f",
+        "bytes": 8160
+      },
+      {
+        "path": "transport-pio-a20.bochs.log",
+        "sha256": "d4017fbbaac2773ac1be3c1e33da7ffbce7964f0cd22240e00e55cfb7486d69f",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-pio-epoch.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-pio-epoch.stderr.txt",
+        "sha256": "1fbecdaa5cb890319f259a034b2cc52c2a7b3e4776be9f37dc5b274800d3d523",
+        "bytes": 163720
+      },
+      {
+        "path": "transport-pio-epoch.rpcToNative.txt",
+        "sha256": "52b15134550511a18fa645b30bbbebcc06710f9786513d0e47cb3cdfd8f54d8e",
+        "bytes": 34168
+      },
+      {
+        "path": "transport-pio-epoch.rpcFromNative.txt",
+        "sha256": "aec85f970890dd7d6bbdca9db33c132c125dcd7cdc6d87cba7ee8a8df183f72f",
+        "bytes": 8160
+      },
+      {
+        "path": "transport-pio-epoch.bochs.log",
+        "sha256": "f6a31188c713bde15d1402187e2b3ed34726df82453335f90fcf07c8e712119e",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-memory-a20.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-memory-a20.stderr.txt",
+        "sha256": "1a9eb2b6df840abfc2d66584142849f45c077de61b84b7d309d61d7b9f1fcfe2",
+        "bytes": 33402
+      },
+      {
+        "path": "transport-memory-a20.rpcToNative.txt",
+        "sha256": "c9805e6bad63eb19691d8f35395a892b91b81a7c319e34c3abd1c9693c39b8fd",
+        "bytes": 19124
+      },
+      {
+        "path": "transport-memory-a20.rpcFromNative.txt",
+        "sha256": "bb6ac7213350bcfb23e2c8d3286d3bca24df4168a1ef00b9f07b077d7a7a9aba",
+        "bytes": 702
+      },
+      {
+        "path": "transport-memory-a20.bochs.log",
+        "sha256": "d5ece1beba6c3060b34d51b86bcf453e1fba3dac6efb36e95a513bd2472a7ee2",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-a20.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-a20.stderr.txt",
+        "sha256": "fd3b776fbb98c372dc6ac3e24c9f0a7cb42560633be92516f01352f057d59a70",
+        "bytes": 1905
+      },
+      {
+        "path": "transport-page-a20.rpcToNative.txt",
+        "sha256": "3892e94653b23d663f03308ba08ab7a291a80caf5e153a951ac33d211cd3a00a",
+        "bytes": 9422
+      },
+      {
+        "path": "transport-page-a20.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-a20.bochs.log",
+        "sha256": "2887dcb6e376bb41b91cdae922e94bca2ff4a0f20cbd4fd995540ecd035d348a",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-command-sequence.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-command-sequence.stderr.txt",
+        "sha256": "b2aad45bf0c9fc887f596d83ad70f278a5e7775441ba6d917e9ce83e0e140581",
+        "bytes": 1780
+      },
+      {
+        "path": "transport-command-sequence.rpcToNative.txt",
+        "sha256": "51a9c5e9785930de6c785adc4178b8303c1c3d754f806e2f2a250480775c0059",
+        "bytes": 47
+      },
+      {
+        "path": "transport-command-sequence.rpcFromNative.txt",
+        "sha256": "abe73a290eb633d2fc1939452e34fb80561ec2f62afea10bf4f2f61242446fd1",
+        "bytes": 30
+      },
+      {
+        "path": "transport-command-sequence.bochs.log",
+        "sha256": "27c91382b700fb8c190288fd0b50a9d0ff9940be7d3e457c624cb46842109a74",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-command-prefix.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-command-prefix.stderr.txt",
+        "sha256": "6e152488f49d4b516bc5d142d0c1f2a8280180ccd16eaf759290f7c820fd04ba",
+        "bytes": 1771
+      },
+      {
+        "path": "transport-command-prefix.rpcToNative.txt",
+        "sha256": "0114a3df4ad45d2660fe424b3e4b9671338018bdb8b857dab3d14fd208cdb03b",
+        "bytes": 44
+      },
+      {
+        "path": "transport-command-prefix.rpcFromNative.txt",
+        "sha256": "abe73a290eb633d2fc1939452e34fb80561ec2f62afea10bf4f2f61242446fd1",
+        "bytes": 30
+      },
+      {
+        "path": "transport-command-prefix.bochs.log",
+        "sha256": "add04de57bdf8614179dbbc3cd8f96d37a18a7d0cc4547307d2fc660b4dcf424",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-command-zero-budget.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-command-zero-budget.stderr.txt",
+        "sha256": "1c3f69c284d41e230237286d54d72882523a148a9425f8e5dda2d092cbf3a525",
+        "bytes": 1819
+      },
+      {
+        "path": "transport-command-zero-budget.rpcToNative.txt",
+        "sha256": "7db9c6c445487e803e95d96f7200b3843c96bb4465206392c71837ec5f82c165",
+        "bytes": 43
+      },
+      {
+        "path": "transport-command-zero-budget.rpcFromNative.txt",
+        "sha256": "abe73a290eb633d2fc1939452e34fb80561ec2f62afea10bf4f2f61242446fd1",
+        "bytes": 30
+      },
+      {
+        "path": "transport-command-zero-budget.bochs.log",
+        "sha256": "3f5a645e9da4fc8f0b036eac3712d0d9952464d8966126ac4d22007919931e48",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-command-overlong-line.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-command-overlong-line.stderr.txt",
+        "sha256": "cc26e94e791bc3b7d612bb164800d6c20622adc43bf7b4d0bebb3ad5d5e378a8",
+        "bytes": 1774
+      },
+      {
+        "path": "transport-command-overlong-line.rpcToNative.txt",
+        "sha256": "0a91a5e2d0cbdf2daf6dbd097a40f4d43219335671fc14508abb5ea588e2d49a",
+        "bytes": 311
+      },
+      {
+        "path": "transport-command-overlong-line.rpcFromNative.txt",
+        "sha256": "abe73a290eb633d2fc1939452e34fb80561ec2f62afea10bf4f2f61242446fd1",
+        "bytes": 30
+      },
+      {
+        "path": "transport-command-overlong-line.bochs.log",
+        "sha256": "a820861b8bb08b3772037f6b1b5235e9963e9a26d4545c62bd254c082335464f",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-scalar-sequence.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-scalar-sequence.stderr.txt",
+        "sha256": "b212c312791efb4e64c0a78dec29bd4262f4bf7807511f7db7ebc20cf33fa389",
+        "bytes": 11991
+      },
+      {
+        "path": "transport-scalar-sequence.rpcToNative.txt",
+        "sha256": "f0c5028e9b0d186253a2fafd8b3f39f1e8eab5832efd7688a0addf53bddf07c5",
+        "bytes": 9441
+      },
+      {
+        "path": "transport-scalar-sequence.rpcFromNative.txt",
+        "sha256": "7bff45ca4ab74e98480c385b8a22546898733c3aa7c597f76771772986c6007a",
+        "bytes": 103
+      },
+      {
+        "path": "transport-scalar-sequence.bochs.log",
+        "sha256": "75add9b941c923283941527f093a4378c42dba686945c6b0a2eae71ff82ff6be",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-scalar-range.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-scalar-range.stderr.txt",
+        "sha256": "3fbf1c0f849df586873f229840b9c003b25ea710e88092fdb1495d260804b3d4",
+        "bytes": 11997
+      },
+      {
+        "path": "transport-scalar-range.rpcToNative.txt",
+        "sha256": "871d9843c248af78ba78dbf069aabed51138d59894980d2353a76eac547994cd",
+        "bytes": 9448
+      },
+      {
+        "path": "transport-scalar-range.rpcFromNative.txt",
+        "sha256": "7bff45ca4ab74e98480c385b8a22546898733c3aa7c597f76771772986c6007a",
+        "bytes": 103
+      },
+      {
+        "path": "transport-scalar-range.bochs.log",
+        "sha256": "4b3d703b57ac3a68f031e9bd9d6e86dabf41e68b4f096a029c5741cf88a256b1",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-generation.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-generation.stderr.txt",
+        "sha256": "fd3b776fbb98c372dc6ac3e24c9f0a7cb42560633be92516f01352f057d59a70",
+        "bytes": 1905
+      },
+      {
+        "path": "transport-page-generation.rpcToNative.txt",
+        "sha256": "1de29045ede0df67950e96fc7fb65280c7e7f588f881934a2e5bd2cb9adb084c",
+        "bytes": 9422
+      },
+      {
+        "path": "transport-page-generation.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-generation.bochs.log",
+        "sha256": "239b8da26d5ddab3db98cdcc035b0c7917a8aecdd59db81a3732cb76adc9fde2",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-classification.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-classification.stderr.txt",
+        "sha256": "fd3b776fbb98c372dc6ac3e24c9f0a7cb42560633be92516f01352f057d59a70",
+        "bytes": 1905
+      },
+      {
+        "path": "transport-page-classification.rpcToNative.txt",
+        "sha256": "cc70bcab1b748439a7def07f0d64b2e5aba8be64f407fd84d08834318c0c7c60",
+        "bytes": 9422
+      },
+      {
+        "path": "transport-page-classification.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-classification.bochs.log",
+        "sha256": "a932ea4109a5685f8b29ef63d38e2fa1f738a0de4d352664ae2753b55a94b281",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-decoded.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-decoded.stderr.txt",
+        "sha256": "fd3b776fbb98c372dc6ac3e24c9f0a7cb42560633be92516f01352f057d59a70",
+        "bytes": 1905
+      },
+      {
+        "path": "transport-page-decoded.rpcToNative.txt",
+        "sha256": "67e4fb48bb2b8009eb5565b980f563717823dd6cde54531732db491c2f3f34f2",
+        "bytes": 9422
+      },
+      {
+        "path": "transport-page-decoded.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-decoded.bochs.log",
+        "sha256": "d38d4c2a3a8fed60bdce131a50b73f8c3ca413ea0bc2463131f985c5ec18086c",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-chunk-order.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-chunk-order.stderr.txt",
+        "sha256": "31aad842a66f5cf0be72883de0b5429bdc73c19280f4418932a1b4caac630265",
+        "bytes": 1902
+      },
+      {
+        "path": "transport-page-chunk-order.rpcToNative.txt",
+        "sha256": "3900f643fac80d0016fd2575899ac1d429ccc1de49cae1330c90184f2d2ab8a1",
+        "bytes": 9422
+      },
+      {
+        "path": "transport-page-chunk-order.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-chunk-order.bochs.log",
+        "sha256": "0caa446d0e8d7a4f8a0edbc13b2a672577c186732aff3f88afed53a4b56a1528",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-chunk-width.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-chunk-width.stderr.txt",
+        "sha256": "a69b0581e171307775b01658aba509af866efcc784088e81f3f373a12d4dba38",
+        "bytes": 1903
+      },
+      {
+        "path": "transport-page-chunk-width.rpcToNative.txt",
+        "sha256": "d04d50e88b18b8295160fc3888013ec4afaaf8155c0574051e3a76c1369a99f8",
+        "bytes": 9420
+      },
+      {
+        "path": "transport-page-chunk-width.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-chunk-width.bochs.log",
+        "sha256": "fefc01d2b89a5ae4d223ab4ec53854d46279fbe00d938008a31142dbf969586b",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-end-sequence.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-end-sequence.stderr.txt",
+        "sha256": "931a3d6d516686a55d168532e3d724d12d2bfe3a183d1bfe6dd6adb11eeac341",
+        "bytes": 11554
+      },
+      {
+        "path": "transport-page-end-sequence.rpcToNative.txt",
+        "sha256": "dabfe880a908f80ab836c9c8501f378432d83d3f88f877ed300d8a51a2a5d007",
+        "bytes": 9424
+      },
+      {
+        "path": "transport-page-end-sequence.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-end-sequence.bochs.log",
+        "sha256": "42940a00adbd0d2387e86a8e6f4e77d48d6821f42ef781f6362e6d4815fb20c8",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-digest.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-digest.stderr.txt",
+        "sha256": "4c841b2d429cbaa00814e828f9a63e32ba529e9417e4534e936112ffd0d5746b",
+        "bytes": 11557
+      },
+      {
+        "path": "transport-page-digest.rpcToNative.txt",
+        "sha256": "a26981e788d91009be92a679d04ace67b13d8c18c784560819104ef7e5c90273",
+        "bytes": 9422
+      },
+      {
+        "path": "transport-page-digest.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-digest.bochs.log",
+        "sha256": "403d99bdf0cf796370fed46445d3b984800e097a2f1b7a24432716c2b4824fe9",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-memory-classification.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-memory-classification.stderr.txt",
+        "sha256": "c2f621a374e4c8056b7a0aea25cdc9375818d6fa444d049a1c35f457798a03c9",
+        "bytes": 33407
+      },
+      {
+        "path": "transport-memory-classification.rpcToNative.txt",
+        "sha256": "858840bea3360b219703c87501ada8297eaab6c74a94a6ac080385219a272261",
+        "bytes": 19124
+      },
+      {
+        "path": "transport-memory-classification.rpcFromNative.txt",
+        "sha256": "bb6ac7213350bcfb23e2c8d3286d3bca24df4168a1ef00b9f07b077d7a7a9aba",
+        "bytes": 702
+      },
+      {
+        "path": "transport-memory-classification.bochs.log",
+        "sha256": "c47d5e33a1a0ad4bebe7911026fd081bca82d7ec31cb69e293007a96125eb38c",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-memory-write-commit.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-memory-write-commit.stderr.txt",
+        "sha256": "1c5f7d6edc7f57bf792ebe171ed8936c80ed752f8992be4346a52613b36ba93e",
+        "bytes": 33398
+      },
+      {
+        "path": "transport-memory-write-commit.rpcToNative.txt",
+        "sha256": "60c646948e8f593ad09fe3ce93657342d4efc4737c7ff13e65956287bdc56a21",
+        "bytes": 19124
+      },
+      {
+        "path": "transport-memory-write-commit.rpcFromNative.txt",
+        "sha256": "bb6ac7213350bcfb23e2c8d3286d3bca24df4168a1ef00b9f07b077d7a7a9aba",
+        "bytes": 702
+      },
+      {
+        "path": "transport-memory-write-commit.bochs.log",
+        "sha256": "f282cb0fd86d013f3ec19da2bd5b3f007fa0de9b23df78cc5de9274eb596bf25",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-memory-generation.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-memory-generation.stderr.txt",
+        "sha256": "1a9eb2b6df840abfc2d66584142849f45c077de61b84b7d309d61d7b9f1fcfe2",
+        "bytes": 33402
+      },
+      {
+        "path": "transport-memory-generation.rpcToNative.txt",
+        "sha256": "0d9332784077d06dbdc1faee2256d5ff7ac6a1a0159c41771365b13546e339be",
+        "bytes": 19124
+      },
+      {
+        "path": "transport-memory-generation.rpcFromNative.txt",
+        "sha256": "bb6ac7213350bcfb23e2c8d3286d3bca24df4168a1ef00b9f07b077d7a7a9aba",
+        "bytes": 702
+      },
+      {
+        "path": "transport-memory-generation.bochs.log",
+        "sha256": "91190b326649fbfa2183d1681409dc42d32b4ed237f2d1eec15075aef3488dd1",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-memory-epoch.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-memory-epoch.stderr.txt",
+        "sha256": "1a9eb2b6df840abfc2d66584142849f45c077de61b84b7d309d61d7b9f1fcfe2",
+        "bytes": 33402
+      },
+      {
+        "path": "transport-memory-epoch.rpcToNative.txt",
+        "sha256": "910b350670f79709829e272e429c01fbb617ffa1bc7088b3d5e395bdef8d1f60",
+        "bytes": 19124
+      },
+      {
+        "path": "transport-memory-epoch.rpcFromNative.txt",
+        "sha256": "bb6ac7213350bcfb23e2c8d3286d3bca24df4168a1ef00b9f07b077d7a7a9aba",
+        "bytes": 702
+      },
+      {
+        "path": "transport-memory-epoch.bochs.log",
+        "sha256": "f68e8907612258e50e0b6a04a901c6f040d87cbfe798c758c9284b546b7b4fe8",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-epoch.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-epoch.stderr.txt",
+        "sha256": "fd3b776fbb98c372dc6ac3e24c9f0a7cb42560633be92516f01352f057d59a70",
+        "bytes": 1905
+      },
+      {
+        "path": "transport-page-epoch.rpcToNative.txt",
+        "sha256": "90220999294871bc08249f0fc94170649ae2327db1d0f3cc7817eee999d16d6e",
+        "bytes": 9422
+      },
+      {
+        "path": "transport-page-epoch.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-epoch.bochs.log",
+        "sha256": "f991b80637c90feddaeaabb81618f7aec20317af5dbce937bc48b7206c9878b1",
+        "bytes": 7384
+      }
+    ],
+    "arms": {
+      "continuous": {
+        "reads": 625,
+        "writes": 327,
+        "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39",
+        "smcWitnesses": [
+          17,
+          17,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          85,
+          85,
+          85,
+          85,
+          51,
+          51,
+          68,
+          68
+        ],
+        "fallback": {
+          "bochsRamReads": 0,
+          "bochsRamWrites": 0,
+          "bochsDirectPointers": 0,
+          "bochsPio": 0,
+          "bochsTimer": 0
+        }
+      },
+      "budget1": {
+        "reads": 625,
+        "writes": 327,
+        "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39",
+        "smcWitnesses": [
+          17,
+          17,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          85,
+          85,
+          85,
+          85,
+          51,
+          51,
+          68,
+          68
+        ],
+        "fallback": {
+          "bochsRamReads": 0,
+          "bochsRamWrites": 0,
+          "bochsDirectPointers": 0,
+          "bochsPio": 0,
+          "bochsTimer": 0
+        }
+      },
+      "budget2": {
+        "reads": 625,
+        "writes": 327,
+        "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39",
+        "smcWitnesses": [
+          17,
+          17,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          85,
+          85,
+          85,
+          85,
+          51,
+          51,
+          68,
+          68
+        ],
+        "fallback": {
+          "bochsRamReads": 0,
+          "bochsRamWrites": 0,
+          "bochsDirectPointers": 0,
+          "bochsPio": 0,
+          "bochsTimer": 0
+        }
+      },
+      "budget257": {
+        "reads": 625,
+        "writes": 327,
+        "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39",
+        "smcWitnesses": [
+          17,
+          17,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          85,
+          85,
+          85,
+          85,
+          51,
+          51,
+          68,
+          68
+        ],
+        "fallback": {
+          "bochsRamReads": 0,
+          "bochsRamWrites": 0,
+          "bochsDirectPointers": 0,
+          "bochsPio": 0,
+          "bochsTimer": 0
+        }
+      }
+    },
+    "nativeBudgetByteBusOrderParity": true,
+    "qualificationStatus": "QUALIFIED",
+    "speedMeasured": false
+  },
+  "repeat": {
+    "status": "independent-actual-files-historical-current-source-and-whole-backing-audit-pass",
+    "captureSha256": "5c235f31163d245688d8cd91a438099429188249e8445ec5e370c41cbe48f6c0",
+    "boardRevision": "6af0969e611910265364448e0819086768ed4f02",
+    "sourceInputs": 64,
+    "assertions": 4242,
+    "artifacts": [
+      {
+        "path": "bochsrc",
+        "sha256": "1a002234e9cdea566309472bae380f491cbf1e177d5a44d1eea0c438aa31b9eb",
+        "bytes": 525
+      },
+      {
+        "path": "continuous.stdout.txt",
+        "sha256": "6018ddf9aa6a75233d423a94d427c68708a1122f4b64c5cee2412d65bef12b79",
+        "bytes": 307
+      },
+      {
+        "path": "continuous.stderr.txt",
+        "sha256": "3faa94e08693509d83d966204191a9b14615b032d20dccda0b2e5d441587eb74",
+        "bytes": 489774
+      },
+      {
+        "path": "continuous.rpcToNative.txt",
+        "sha256": "84f14c678f28a512977272a5af72d65edf24f22c24b2d2cb8f44746a329cb7c1",
+        "bytes": 96173
+      },
+      {
+        "path": "continuous.rpcFromNative.txt",
+        "sha256": "2ce6b192c78ce6c1e4c481aa7ef4891b53054fc31f97d9c1a02c8931e8d94153",
+        "bytes": 28165
+      },
+      {
+        "path": "continuous.bochs.log",
+        "sha256": "5ed73a493b8c20892f8ab7c9289b3e540811d3c99c70924f51de94138972e27d",
+        "bytes": 7441
+      },
+      {
+        "path": "budget1.stdout.txt",
+        "sha256": "6018ddf9aa6a75233d423a94d427c68708a1122f4b64c5cee2412d65bef12b79",
+        "bytes": 307
+      },
+      {
+        "path": "budget1.stderr.txt",
+        "sha256": "978dc0ad42c0254743e76b750068a63a495c40e925a2f05538ac448b270ddef2",
+        "bytes": 521658
+      },
+      {
+        "path": "budget1.rpcToNative.txt",
+        "sha256": "a82715f1756bf40848e6b6c590a7d269e82466ce4c9598cc27d8d39887358f21",
+        "bytes": 103471
+      },
+      {
+        "path": "budget1.rpcFromNative.txt",
+        "sha256": "6777827129c670290e531e27bc40738fadf6af1bea445011430503c6eaed205a",
+        "bytes": 38443
+      },
+      {
+        "path": "budget1.bochs.log",
+        "sha256": "7e11ad7b3ed2d495944437726d5388609e0da9a47237a549d94f0b13dd9dc6a5",
+        "bytes": 7441
+      },
+      {
+        "path": "budget2.stdout.txt",
+        "sha256": "6018ddf9aa6a75233d423a94d427c68708a1122f4b64c5cee2412d65bef12b79",
+        "bytes": 307
+      },
+      {
+        "path": "budget2.stderr.txt",
+        "sha256": "e631e316c0f2243df6adc321e3e14da96daa369943f1fca4a0e730fa2f1affe5",
+        "bytes": 503295
+      },
+      {
+        "path": "budget2.rpcToNative.txt",
+        "sha256": "d5e81fbe05c329cd4b17d2ce64eb270d01af28030a5ea27605dc2f86fc972e2a",
+        "bytes": 99241
+      },
+      {
+        "path": "budget2.rpcFromNative.txt",
+        "sha256": "465e0edaa61400ab0d3bf83f672277e1e89261157aed789b959a29e8066fe8e7",
+        "bytes": 32544
+      },
+      {
+        "path": "budget2.bochs.log",
+        "sha256": "3511759029c189593bc4126863ab53817d3692725d6f9a3cc401cee684d4483a",
+        "bytes": 7441
+      },
+      {
+        "path": "budget257.stdout.txt",
+        "sha256": "6018ddf9aa6a75233d423a94d427c68708a1122f4b64c5cee2412d65bef12b79",
+        "bytes": 307
+      },
+      {
+        "path": "budget257.stderr.txt",
+        "sha256": "54f7c1bec932c1e33d82d62113baef3c32d1b2b1319a70962c2345afa7ee46ba",
+        "bytes": 489774
+      },
+      {
+        "path": "budget257.rpcToNative.txt",
+        "sha256": "a9fd92ed983ba3e62e460b0bd5b3ed9336c885e38f682e0c767621f0c8a79504",
+        "bytes": 96173
+      },
+      {
+        "path": "budget257.rpcFromNative.txt",
+        "sha256": "2ce6b192c78ce6c1e4c481aa7ef4891b53054fc31f97d9c1a02c8931e8d94153",
+        "bytes": 28165
+      },
+      {
+        "path": "budget257.bochs.log",
+        "sha256": "ccaa08ad2fc3efabdeb60bd7eae445648f74c12b7f5ae247391cf6acf86dc14a",
+        "bytes": 7441
+      },
+      {
+        "path": "guard-admitted-unexecuted-code-write.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-admitted-unexecuted-code-write.stderr.txt",
+        "sha256": "26f4e1013efd752d3186cfb49e63a351159a458ce238df4804968f970105d606",
+        "bytes": 1501
+      },
+      {
+        "path": "guard-admitted-unexecuted-code-write.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-admitted-unexecuted-code-write.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-admitted-unexecuted-code-write.bochs.log",
+        "sha256": "a28fa5d11b8c6198b80576820a4aea91c96fd34edb4b1f7b98199b6972cc7d4d",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-current-code-write.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-current-code-write.stderr.txt",
+        "sha256": "19e7e97b32ff5b096d6f1fae18d4d98be99ccb2b7236b1d1ff4c8a3f32391d62",
+        "bytes": 1489
+      },
+      {
+        "path": "guard-current-code-write.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-current-code-write.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-current-code-write.bochs.log",
+        "sha256": "cf755d63b02a8681013f801aff03e97d16014e2c38ecc5c504e21d5c218d68a2",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-executable-table-ad-write.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-executable-table-ad-write.stderr.txt",
+        "sha256": "69dbb35df77e10294b70048edc5830f85fa4991a0036f502d64f4c5ff772f836",
+        "bytes": 1496
+      },
+      {
+        "path": "guard-executable-table-ad-write.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-executable-table-ad-write.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-executable-table-ad-write.bochs.log",
+        "sha256": "47cfd8ba9adbc88f3ec66cf169affe5efb856053007a784fdd102c6fd64f7060",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-pio-port92.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-pio-port92.stderr.txt",
+        "sha256": "34a056cd264550416b6db2b5c8f3cbf92fed05774c03bc6c5ffad8880d753a75",
+        "bytes": 1484
+      },
+      {
+        "path": "guard-pio-port92.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-pio-port92.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-pio-port92.bochs.log",
+        "sha256": "cab8d4487b48ecdc781c963b7a182c238c66403789da844e614cdcaf14a1ec1a",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-mapping-boundary-kind.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-mapping-boundary-kind.stderr.txt",
+        "sha256": "5111573570c6183d7c7fe983f67efc0100fe265c0ef6bb266d4a4d029a0ec5ea",
+        "bytes": 1539
+      },
+      {
+        "path": "guard-mapping-boundary-kind.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-mapping-boundary-kind.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-mapping-boundary-kind.bochs.log",
+        "sha256": "3af17f56b3b378e32a60e771d68011baa6df78b2c20582d359938441af7600f3",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-unsupported-span-width.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsupported-span-width.stderr.txt",
+        "sha256": "99de24b3e8f9f55de427c0519ab0f58f2e41d0efc32e882bbf01c21c6c782cee",
+        "bytes": 1489
+      },
+      {
+        "path": "guard-unsupported-span-width.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsupported-span-width.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsupported-span-width.bochs.log",
+        "sha256": "502b7631116d7c54936f150d9c8a22f8c5125645d7bbd0c5edd4e222ce73b70c",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-physical-overflow.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-physical-overflow.stderr.txt",
+        "sha256": "99de24b3e8f9f55de427c0519ab0f58f2e41d0efc32e882bbf01c21c6c782cee",
+        "bytes": 1489
+      },
+      {
+        "path": "guard-physical-overflow.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-physical-overflow.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-physical-overflow.bochs.log",
+        "sha256": "172f57352e76bcb1e3c57d8d413337f3e4408d186951c86ae49095922c9d283a",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-unsafe-execute-ram.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-ram.stderr.txt",
+        "sha256": "232eefe3b43156a10fe71084047b69296f9d6106d6f947a85d91a34b8f6bfb58",
+        "bytes": 1490
+      },
+      {
+        "path": "guard-unsafe-execute-ram.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-ram.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-ram.bochs.log",
+        "sha256": "c3fa2c7230b0aef640df5e56e6d977cd6ba4da8ef2d44ae89af140e1cc5a9d45",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-unsupported-rep.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsupported-rep.stderr.txt",
+        "sha256": "96bfdcbf4a67221046a711dcf200d5b884ff3cda887da7c359e5269215601fcc",
+        "bytes": 1486
+      },
+      {
+        "path": "guard-unsupported-rep.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsupported-rep.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsupported-rep.bochs.log",
+        "sha256": "359a4504feb6dfa0819772e5e0126326c3713363589d126574058d1d33ab25e2",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-prefetch-non-pagewalk-write.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-prefetch-non-pagewalk-write.stderr.txt",
+        "sha256": "66273dad20b5c6fe661ca00df4578c3511051fa8cb9e2e0b7b896185e722b26f",
+        "bytes": 1498
+      },
+      {
+        "path": "guard-prefetch-non-pagewalk-write.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-prefetch-non-pagewalk-write.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-prefetch-non-pagewalk-write.bochs.log",
+        "sha256": "da037dace643eaf7088c5342348d1fa51096dca3a6106aab1dfb8d6191593abe",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-execute-pending-write.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-execute-pending-write.stderr.txt",
+        "sha256": "38e16591f6f22b067058ff264a735e6ef24c2debd97d9db5bc35af5b58225747",
+        "bytes": 1497
+      },
+      {
+        "path": "guard-execute-pending-write.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-execute-pending-write.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-execute-pending-write.bochs.log",
+        "sha256": "ebe21d9cb1b371607379cb7503345cb36f95e194783e1c441bb9ffb9e8c7372a",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-native-a20-off.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-native-a20-off.stderr.txt",
+        "sha256": "34c9e96448daea412e5d9a732f6d7d7251634babee2185f76205159c5e347bd2",
+        "bytes": 1532
+      },
+      {
+        "path": "guard-native-a20-off.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-native-a20-off.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-native-a20-off.bochs.log",
+        "sha256": "0e08dc677f9641d451aebb23e75e28355ba2eaac0b4afbf37349541956aed0ae",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-stale-cache-generation.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-stale-cache-generation.stderr.txt",
+        "sha256": "f32f0b37277edf676000f0b01aa99568bef2ffc7ff81914dd75caa52ed7551e8",
+        "bytes": 1495
+      },
+      {
+        "path": "guard-stale-cache-generation.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-stale-cache-generation.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-stale-cache-generation.bochs.log",
+        "sha256": "ea09c86e2b02d237c2af2789bebf9d60852916537336e5d0ca7ecf75181d114d",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-write-stage-bound.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-write-stage-bound.stderr.txt",
+        "sha256": "1db4ea27fe294bbaf903b9f48e58ee62c2feb5d5f567634b4e32d85ff5d7a93f",
+        "bytes": 1495
+      },
+      {
+        "path": "guard-write-stage-bound.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-write-stage-bound.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-write-stage-bound.bochs.log",
+        "sha256": "bff2fa206817a8a627ef6e117771930eed0c09672c53fde614d3f3112906ba99",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-write-generation-overflow.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-write-generation-overflow.stderr.txt",
+        "sha256": "1db4ea27fe294bbaf903b9f48e58ee62c2feb5d5f567634b4e32d85ff5d7a93f",
+        "bytes": 1495
+      },
+      {
+        "path": "guard-write-generation-overflow.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-write-generation-overflow.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-write-generation-overflow.bochs.log",
+        "sha256": "951e0bfa3e09d2e2a1059aed80a0ae9928d9ec2b613a4310528c6f9c6a229134",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-unsafe-execute-mmio.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-mmio.stderr.txt",
+        "sha256": "232eefe3b43156a10fe71084047b69296f9d6106d6f947a85d91a34b8f6bfb58",
+        "bytes": 1490
+      },
+      {
+        "path": "guard-unsafe-execute-mmio.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-mmio.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-mmio.bochs.log",
+        "sha256": "846052978bc30823c9f54cc5bf0fb8eee5df1240f08fb048b87e1bd1c441f847",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-unsafe-execute-unmapped.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-unmapped.stderr.txt",
+        "sha256": "232eefe3b43156a10fe71084047b69296f9d6106d6f947a85d91a34b8f6bfb58",
+        "bytes": 1490
+      },
+      {
+        "path": "guard-unsafe-execute-unmapped.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-unmapped.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unsafe-execute-unmapped.bochs.log",
+        "sha256": "0b64222d52a22c86e6042f09f0d80227b17517ca2e3ff325d5f3e86cdf65f9dc",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-unexpected-pio.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unexpected-pio.stderr.txt",
+        "sha256": "34a056cd264550416b6db2b5c8f3cbf92fed05774c03bc6c5ffad8880d753a75",
+        "bytes": 1484
+      },
+      {
+        "path": "guard-unexpected-pio.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unexpected-pio.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unexpected-pio.bochs.log",
+        "sha256": "6dc0603b3e68fd0426f5f6b15159ae85a9dc015a6ab7636f06b26026f96dca9d",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-bochs-ram-read.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-ram-read.stderr.txt",
+        "sha256": "7036d141656ae1a7fc05f09a240848410850b8eea9110e9bb782cd28d33b5091",
+        "bytes": 1494
+      },
+      {
+        "path": "guard-bochs-ram-read.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-ram-read.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-ram-read.bochs.log",
+        "sha256": "5d78768113bc22ceb9356253476e699e0ba83a9c9b77fc457780b0246fd25401",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-bochs-ram-write.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-ram-write.stderr.txt",
+        "sha256": "47b5ccce1d2b1e4d4ad1e0c4ec9c77c049c03470dc81235942e85cdaa4a747f3",
+        "bytes": 1495
+      },
+      {
+        "path": "guard-bochs-ram-write.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-ram-write.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-ram-write.bochs.log",
+        "sha256": "41e8433c69e6fa6434dee918816ce1dc048217bd5e6cb06b8f811b98bb4bc59e",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-bochs-direct-pointer.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-direct-pointer.stderr.txt",
+        "sha256": "65d6a352d7941d84a1b47244c224d7dd3acbbeb85b181c313a0ab14502eb31ee",
+        "bytes": 1500
+      },
+      {
+        "path": "guard-bochs-direct-pointer.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-direct-pointer.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-direct-pointer.bochs.log",
+        "sha256": "a3eb91bbae268f20249315521bd328fdf2cf5e3b46eb6fb15c9dd657fe32c6a6",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-bochs-pio.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-pio.stderr.txt",
+        "sha256": "8673c1601bd71617a89dc84fb6f99e9815b17ff6dac00de783342547d9849ab0",
+        "bytes": 1489
+      },
+      {
+        "path": "guard-bochs-pio.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-pio.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-pio.bochs.log",
+        "sha256": "c5ea512da7903bff696a4748d995b2de60f3567abe9438c6bdecf60cefc7f35f",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-bochs-timer.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-timer.stderr.txt",
+        "sha256": "4f3e7b839369193d544a24aa8c1b939cd65cbb7f0562b84d3f6f347f9ccd629c",
+        "bytes": 1491
+      },
+      {
+        "path": "guard-bochs-timer.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-timer.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-bochs-timer.bochs.log",
+        "sha256": "7fa548e6deadf83b7268cc176b08db9b9759a0ca46876b547535048090850041",
+        "bytes": 7384
+      },
+      {
+        "path": "guard-unknown-trap.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unknown-trap.stderr.txt",
+        "sha256": "5a9cbd20eb8c20ea486657f679f902a05632040911d18e2639584305df840a86",
+        "bytes": 1487
+      },
+      {
+        "path": "guard-unknown-trap.rpcToNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unknown-trap.rpcFromNative.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "guard-unknown-trap.bochs.log",
+        "sha256": "203b1175475d7b500cc14fef0b2ab7a52e99bb7b26221a1e241208aa13cd8dcc",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-pio-a20.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-pio-a20.stderr.txt",
+        "sha256": "fb62eb6d12cf79645c6f6ec1a63453f549c8c69714565cdd16e9f764fb365cdc",
+        "bytes": 163730
+      },
+      {
+        "path": "transport-pio-a20.rpcToNative.txt",
+        "sha256": "f845c0b5137917c886b0460cfd597ebd19ec816c627b8ff3c56c89ef780b44ce",
+        "bytes": 34168
+      },
+      {
+        "path": "transport-pio-a20.rpcFromNative.txt",
+        "sha256": "aec85f970890dd7d6bbdca9db33c132c125dcd7cdc6d87cba7ee8a8df183f72f",
+        "bytes": 8160
+      },
+      {
+        "path": "transport-pio-a20.bochs.log",
+        "sha256": "eae8087e169712e304e2d1a8be8b19d1c649a389500de2540ca34d12ab8661ab",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-pio-epoch.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-pio-epoch.stderr.txt",
+        "sha256": "fb62eb6d12cf79645c6f6ec1a63453f549c8c69714565cdd16e9f764fb365cdc",
+        "bytes": 163730
+      },
+      {
+        "path": "transport-pio-epoch.rpcToNative.txt",
+        "sha256": "52b15134550511a18fa645b30bbbebcc06710f9786513d0e47cb3cdfd8f54d8e",
+        "bytes": 34168
+      },
+      {
+        "path": "transport-pio-epoch.rpcFromNative.txt",
+        "sha256": "aec85f970890dd7d6bbdca9db33c132c125dcd7cdc6d87cba7ee8a8df183f72f",
+        "bytes": 8160
+      },
+      {
+        "path": "transport-pio-epoch.bochs.log",
+        "sha256": "c0bbf220126dec58b7816ff2826aa166cbfbe25f63b1d6308fa05f1ab7b4e827",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-memory-a20.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-memory-a20.stderr.txt",
+        "sha256": "74d48d3b1d03ceab9e9569053933dfbd8b474a0aa3f16bbc9eb1a884a665f6f4",
+        "bytes": 33412
+      },
+      {
+        "path": "transport-memory-a20.rpcToNative.txt",
+        "sha256": "c9805e6bad63eb19691d8f35395a892b91b81a7c319e34c3abd1c9693c39b8fd",
+        "bytes": 19124
+      },
+      {
+        "path": "transport-memory-a20.rpcFromNative.txt",
+        "sha256": "bb6ac7213350bcfb23e2c8d3286d3bca24df4168a1ef00b9f07b077d7a7a9aba",
+        "bytes": 702
+      },
+      {
+        "path": "transport-memory-a20.bochs.log",
+        "sha256": "7b826249fdf78bc2cd6c3588130a6f0cf5809622bf72d29bcc8c079a7f2cb2c8",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-a20.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-a20.stderr.txt",
+        "sha256": "7ee602918c021a42676d57eeb9b9fe79fd80d7725f6ad8342e9eeb167efd5a77",
+        "bytes": 1915
+      },
+      {
+        "path": "transport-page-a20.rpcToNative.txt",
+        "sha256": "3892e94653b23d663f03308ba08ab7a291a80caf5e153a951ac33d211cd3a00a",
+        "bytes": 9422
+      },
+      {
+        "path": "transport-page-a20.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-a20.bochs.log",
+        "sha256": "d7ac8a46122a0b99b02b3125c586bd46accd8b5f8b9d0b48a98fa4a27b24878e",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-command-sequence.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-command-sequence.stderr.txt",
+        "sha256": "dc4f42d4325a3589581ad7fb195f19f7f641fc9ff5bea5b97597bfd102ff7f50",
+        "bytes": 1790
+      },
+      {
+        "path": "transport-command-sequence.rpcToNative.txt",
+        "sha256": "51a9c5e9785930de6c785adc4178b8303c1c3d754f806e2f2a250480775c0059",
+        "bytes": 47
+      },
+      {
+        "path": "transport-command-sequence.rpcFromNative.txt",
+        "sha256": "abe73a290eb633d2fc1939452e34fb80561ec2f62afea10bf4f2f61242446fd1",
+        "bytes": 30
+      },
+      {
+        "path": "transport-command-sequence.bochs.log",
+        "sha256": "54209fff9ad62a26f5e45176d575e14ac467787dd4e6a32646588f29408c4a44",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-command-prefix.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-command-prefix.stderr.txt",
+        "sha256": "0af93bf9ef3b6feff8563ab116280e9deea8e8fce17df97a20fd8e1189337e3f",
+        "bytes": 1781
+      },
+      {
+        "path": "transport-command-prefix.rpcToNative.txt",
+        "sha256": "0114a3df4ad45d2660fe424b3e4b9671338018bdb8b857dab3d14fd208cdb03b",
+        "bytes": 44
+      },
+      {
+        "path": "transport-command-prefix.rpcFromNative.txt",
+        "sha256": "abe73a290eb633d2fc1939452e34fb80561ec2f62afea10bf4f2f61242446fd1",
+        "bytes": 30
+      },
+      {
+        "path": "transport-command-prefix.bochs.log",
+        "sha256": "6b4dd2387a7baa51ec045f72c50708a1a196ab556112576754cfa199043f2aa9",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-command-zero-budget.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-command-zero-budget.stderr.txt",
+        "sha256": "96c6025d88bbcdb3bb3e1882d2b0947c695326983c6a6198cee4f8b9dfa0980b",
+        "bytes": 1829
+      },
+      {
+        "path": "transport-command-zero-budget.rpcToNative.txt",
+        "sha256": "7db9c6c445487e803e95d96f7200b3843c96bb4465206392c71837ec5f82c165",
+        "bytes": 43
+      },
+      {
+        "path": "transport-command-zero-budget.rpcFromNative.txt",
+        "sha256": "abe73a290eb633d2fc1939452e34fb80561ec2f62afea10bf4f2f61242446fd1",
+        "bytes": 30
+      },
+      {
+        "path": "transport-command-zero-budget.bochs.log",
+        "sha256": "94c2dc8866e78669d8a5d33cb16835179604063ccdd0120121b050ac913695b5",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-command-overlong-line.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-command-overlong-line.stderr.txt",
+        "sha256": "1fe8ffffeac15b1351a95312a9b429dff56d44c2533320c036f95274af5b19d9",
+        "bytes": 1784
+      },
+      {
+        "path": "transport-command-overlong-line.rpcToNative.txt",
+        "sha256": "0a91a5e2d0cbdf2daf6dbd097a40f4d43219335671fc14508abb5ea588e2d49a",
+        "bytes": 311
+      },
+      {
+        "path": "transport-command-overlong-line.rpcFromNative.txt",
+        "sha256": "abe73a290eb633d2fc1939452e34fb80561ec2f62afea10bf4f2f61242446fd1",
+        "bytes": 30
+      },
+      {
+        "path": "transport-command-overlong-line.bochs.log",
+        "sha256": "3e837198109e899fae965dbb234ed65a3185e0ce6f73b15bfb1bed2aa58142f1",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-scalar-sequence.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-scalar-sequence.stderr.txt",
+        "sha256": "098a6c41f29d872783387d1472e53554c96612119a621f1d92fa68820cbe1bd8",
+        "bytes": 12001
+      },
+      {
+        "path": "transport-scalar-sequence.rpcToNative.txt",
+        "sha256": "f0c5028e9b0d186253a2fafd8b3f39f1e8eab5832efd7688a0addf53bddf07c5",
+        "bytes": 9441
+      },
+      {
+        "path": "transport-scalar-sequence.rpcFromNative.txt",
+        "sha256": "7bff45ca4ab74e98480c385b8a22546898733c3aa7c597f76771772986c6007a",
+        "bytes": 103
+      },
+      {
+        "path": "transport-scalar-sequence.bochs.log",
+        "sha256": "d6889fe25d0142bd0a5001173c897f150b70d83aaec2a004f0bbe55034ee6563",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-scalar-range.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-scalar-range.stderr.txt",
+        "sha256": "b16c41bc6086407abe82614c0b0da4e51cff0bddeaf3431b94c1311154a7a158",
+        "bytes": 12007
+      },
+      {
+        "path": "transport-scalar-range.rpcToNative.txt",
+        "sha256": "871d9843c248af78ba78dbf069aabed51138d59894980d2353a76eac547994cd",
+        "bytes": 9448
+      },
+      {
+        "path": "transport-scalar-range.rpcFromNative.txt",
+        "sha256": "7bff45ca4ab74e98480c385b8a22546898733c3aa7c597f76771772986c6007a",
+        "bytes": 103
+      },
+      {
+        "path": "transport-scalar-range.bochs.log",
+        "sha256": "5dc1f75dd2fb92d4613c353ef4ac4f18fb9307045842e45e23482ced3603c5a5",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-generation.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-generation.stderr.txt",
+        "sha256": "7ee602918c021a42676d57eeb9b9fe79fd80d7725f6ad8342e9eeb167efd5a77",
+        "bytes": 1915
+      },
+      {
+        "path": "transport-page-generation.rpcToNative.txt",
+        "sha256": "1de29045ede0df67950e96fc7fb65280c7e7f588f881934a2e5bd2cb9adb084c",
+        "bytes": 9422
+      },
+      {
+        "path": "transport-page-generation.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-generation.bochs.log",
+        "sha256": "98458780bfe587aa6d0cdac473c56aa13bb23dd96588d92a46679882238325c4",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-classification.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-classification.stderr.txt",
+        "sha256": "7ee602918c021a42676d57eeb9b9fe79fd80d7725f6ad8342e9eeb167efd5a77",
+        "bytes": 1915
+      },
+      {
+        "path": "transport-page-classification.rpcToNative.txt",
+        "sha256": "cc70bcab1b748439a7def07f0d64b2e5aba8be64f407fd84d08834318c0c7c60",
+        "bytes": 9422
+      },
+      {
+        "path": "transport-page-classification.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-classification.bochs.log",
+        "sha256": "9550b3364c9b009310217fa558c51eb778f339cc6d66ecaa1d8443519457fbe5",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-decoded.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-decoded.stderr.txt",
+        "sha256": "7ee602918c021a42676d57eeb9b9fe79fd80d7725f6ad8342e9eeb167efd5a77",
+        "bytes": 1915
+      },
+      {
+        "path": "transport-page-decoded.rpcToNative.txt",
+        "sha256": "67e4fb48bb2b8009eb5565b980f563717823dd6cde54531732db491c2f3f34f2",
+        "bytes": 9422
+      },
+      {
+        "path": "transport-page-decoded.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-decoded.bochs.log",
+        "sha256": "f4de24d5f35e7e55fed074354974ea917f58a3833ed8ca439bfa73e620b5cb0a",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-chunk-order.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-chunk-order.stderr.txt",
+        "sha256": "ec107a36c6c6693cd7203465bfe8727d3fd6f6e72cc95473a92d70193f64d841",
+        "bytes": 1912
+      },
+      {
+        "path": "transport-page-chunk-order.rpcToNative.txt",
+        "sha256": "3900f643fac80d0016fd2575899ac1d429ccc1de49cae1330c90184f2d2ab8a1",
+        "bytes": 9422
+      },
+      {
+        "path": "transport-page-chunk-order.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-chunk-order.bochs.log",
+        "sha256": "35be1fdc776c69a32523c0c70fc485f72457b85a44bb8d51d46fc6a232a691ba",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-chunk-width.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-chunk-width.stderr.txt",
+        "sha256": "d80b7b0824bfded1193124a5ed984cac5f4b9992b26d2fa10c313cbec2799324",
+        "bytes": 1913
+      },
+      {
+        "path": "transport-page-chunk-width.rpcToNative.txt",
+        "sha256": "d04d50e88b18b8295160fc3888013ec4afaaf8155c0574051e3a76c1369a99f8",
+        "bytes": 9420
+      },
+      {
+        "path": "transport-page-chunk-width.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-chunk-width.bochs.log",
+        "sha256": "13ed3d421db1c554a0bcfef9cb6bcb5712ab2d4e62f0d406f3a9eb63fc0e0549",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-end-sequence.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-end-sequence.stderr.txt",
+        "sha256": "e1cb1180535e642d532a5dc7b60eda44a4fa567d9e75cd1119aef02c0c8839ac",
+        "bytes": 11564
+      },
+      {
+        "path": "transport-page-end-sequence.rpcToNative.txt",
+        "sha256": "dabfe880a908f80ab836c9c8501f378432d83d3f88f877ed300d8a51a2a5d007",
+        "bytes": 9424
+      },
+      {
+        "path": "transport-page-end-sequence.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-end-sequence.bochs.log",
+        "sha256": "60c0961fe1f5aaa08c464d6db9c5dea774a92c0f167f117ba38b5228b3469d62",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-digest.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-digest.stderr.txt",
+        "sha256": "08415d3937f61a6a7f4d54776f2c22092e5642e5bdc8857d2710c1023a59c402",
+        "bytes": 11567
+      },
+      {
+        "path": "transport-page-digest.rpcToNative.txt",
+        "sha256": "a26981e788d91009be92a679d04ace67b13d8c18c784560819104ef7e5c90273",
+        "bytes": 9422
+      },
+      {
+        "path": "transport-page-digest.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-digest.bochs.log",
+        "sha256": "d4d0d698220d7cfa66baf1e5fcfba50acfab437c5438eea84ff15cac1bcbd36e",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-memory-classification.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-memory-classification.stderr.txt",
+        "sha256": "6f9b2602e6fc54947a77a254f6fb9e82f441ac3ef9576652201b3a97f0b32e6f",
+        "bytes": 33417
+      },
+      {
+        "path": "transport-memory-classification.rpcToNative.txt",
+        "sha256": "858840bea3360b219703c87501ada8297eaab6c74a94a6ac080385219a272261",
+        "bytes": 19124
+      },
+      {
+        "path": "transport-memory-classification.rpcFromNative.txt",
+        "sha256": "bb6ac7213350bcfb23e2c8d3286d3bca24df4168a1ef00b9f07b077d7a7a9aba",
+        "bytes": 702
+      },
+      {
+        "path": "transport-memory-classification.bochs.log",
+        "sha256": "e211422a5879d8d33f7a6ecf41389dc96b868e18a97b53db025dce46408c6907",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-memory-write-commit.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-memory-write-commit.stderr.txt",
+        "sha256": "d6cd42624c95eae9576a2acd3a6376234a01546f2547d63ec5c7a6868602c448",
+        "bytes": 33408
+      },
+      {
+        "path": "transport-memory-write-commit.rpcToNative.txt",
+        "sha256": "60c646948e8f593ad09fe3ce93657342d4efc4737c7ff13e65956287bdc56a21",
+        "bytes": 19124
+      },
+      {
+        "path": "transport-memory-write-commit.rpcFromNative.txt",
+        "sha256": "bb6ac7213350bcfb23e2c8d3286d3bca24df4168a1ef00b9f07b077d7a7a9aba",
+        "bytes": 702
+      },
+      {
+        "path": "transport-memory-write-commit.bochs.log",
+        "sha256": "9552ff50e6979967d922b5abf3248a7bd35e8ce1c780eebba5f0f09a20d5c8f2",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-memory-generation.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-memory-generation.stderr.txt",
+        "sha256": "74d48d3b1d03ceab9e9569053933dfbd8b474a0aa3f16bbc9eb1a884a665f6f4",
+        "bytes": 33412
+      },
+      {
+        "path": "transport-memory-generation.rpcToNative.txt",
+        "sha256": "0d9332784077d06dbdc1faee2256d5ff7ac6a1a0159c41771365b13546e339be",
+        "bytes": 19124
+      },
+      {
+        "path": "transport-memory-generation.rpcFromNative.txt",
+        "sha256": "bb6ac7213350bcfb23e2c8d3286d3bca24df4168a1ef00b9f07b077d7a7a9aba",
+        "bytes": 702
+      },
+      {
+        "path": "transport-memory-generation.bochs.log",
+        "sha256": "945ea5619e13dfd779c9e5d599b5077292fc2a625ae94c742313246d44c510fe",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-memory-epoch.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-memory-epoch.stderr.txt",
+        "sha256": "74d48d3b1d03ceab9e9569053933dfbd8b474a0aa3f16bbc9eb1a884a665f6f4",
+        "bytes": 33412
+      },
+      {
+        "path": "transport-memory-epoch.rpcToNative.txt",
+        "sha256": "910b350670f79709829e272e429c01fbb617ffa1bc7088b3d5e395bdef8d1f60",
+        "bytes": 19124
+      },
+      {
+        "path": "transport-memory-epoch.rpcFromNative.txt",
+        "sha256": "bb6ac7213350bcfb23e2c8d3286d3bca24df4168a1ef00b9f07b077d7a7a9aba",
+        "bytes": 702
+      },
+      {
+        "path": "transport-memory-epoch.bochs.log",
+        "sha256": "c161ff096328ce2cfd1d71e439d0e047d460a102c5e2d5d36fdaf5050b8edb5c",
+        "bytes": 7384
+      },
+      {
+        "path": "transport-page-epoch.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "transport-page-epoch.stderr.txt",
+        "sha256": "7ee602918c021a42676d57eeb9b9fe79fd80d7725f6ad8342e9eeb167efd5a77",
+        "bytes": 1915
+      },
+      {
+        "path": "transport-page-epoch.rpcToNative.txt",
+        "sha256": "90220999294871bc08249f0fc94170649ae2327db1d0f3cc7817eee999d16d6e",
+        "bytes": 9422
+      },
+      {
+        "path": "transport-page-epoch.rpcFromNative.txt",
+        "sha256": "475cbd0d69a5855b3a82c34ce6a9d7798a1dd9dc9f8ded14bd6893d7f9b420a8",
+        "bytes": 71
+      },
+      {
+        "path": "transport-page-epoch.bochs.log",
+        "sha256": "fdf4bc38d4a1c7f2c5ab50dad8b0626fbcd4dc3f7a74d678907c781568637f6b",
+        "bytes": 7384
+      }
+    ],
+    "arms": {
+      "continuous": {
+        "reads": 625,
+        "writes": 327,
+        "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39",
+        "smcWitnesses": [
+          17,
+          17,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          85,
+          85,
+          85,
+          85,
+          51,
+          51,
+          68,
+          68
+        ],
+        "fallback": {
+          "bochsRamReads": 0,
+          "bochsRamWrites": 0,
+          "bochsDirectPointers": 0,
+          "bochsPio": 0,
+          "bochsTimer": 0
+        }
+      },
+      "budget1": {
+        "reads": 625,
+        "writes": 327,
+        "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39",
+        "smcWitnesses": [
+          17,
+          17,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          85,
+          85,
+          85,
+          85,
+          51,
+          51,
+          68,
+          68
+        ],
+        "fallback": {
+          "bochsRamReads": 0,
+          "bochsRamWrites": 0,
+          "bochsDirectPointers": 0,
+          "bochsPio": 0,
+          "bochsTimer": 0
+        }
+      },
+      "budget2": {
+        "reads": 625,
+        "writes": 327,
+        "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39",
+        "smcWitnesses": [
+          17,
+          17,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          85,
+          85,
+          85,
+          85,
+          51,
+          51,
+          68,
+          68
+        ],
+        "fallback": {
+          "bochsRamReads": 0,
+          "bochsRamWrites": 0,
+          "bochsDirectPointers": 0,
+          "bochsPio": 0,
+          "bochsTimer": 0
+        }
+      },
+      "budget257": {
+        "reads": 625,
+        "writes": 327,
+        "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39",
+        "smcWitnesses": [
+          17,
+          17,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          85,
+          85,
+          85,
+          85,
+          51,
+          51,
+          68,
+          68
+        ],
+        "fallback": {
+          "bochsRamReads": 0,
+          "bochsRamWrites": 0,
+          "bochsDirectPointers": 0,
+          "bochsPio": 0,
+          "bochsTimer": 0
+        }
+      }
+    },
+    "nativeBudgetByteBusOrderParity": true,
+    "qualificationStatus": "QUALIFIED",
+    "speedMeasured": false
+  },
+  "pair": {
+    "status": "independent-fresh-native-pair-source-fullCPU-allchips-backing-cache-RPC-and-raw-path-audit-pass",
+    "sourceRevision": "6af0969e611910265364448e0819086768ed4f02",
+    "sourceInputs": 63,
+    "captures": [
+      {
+        "sha256": "042f2bf173feee45453ea0a699f06da99ef1cead963dc9a30b1962d848d11c12",
+        "bytes": 187804975,
+        "qualification": {
+          "qualificationStatus": "QUALIFIED",
+          "claim": "native-actual-board-bounded-combined-paging-ram-rep-pf-pit-only",
+          "budgetProof": {
+            "logicalRecords": 6192,
+            "rawPreserved": true,
+            "scopedRepResumeDecodes": 2,
+            "fullRawInstructionFetchParity": false,
+            "nativeBudgetByteBusOrderParity": true
+          },
+          "arms": {
+            "continuous": {
+              "successfulQuanta": 192,
+              "nativeTicks": 194,
+              "boardClocks": 1156
+            },
+            "budget1": {
+              "successfulQuanta": 192,
+              "nativeTicks": 194,
+              "boardClocks": 1156
+            },
+            "budget2": {
+              "successfulQuanta": 192,
+              "nativeTicks": 194,
+              "boardClocks": 1156
+            },
+            "budget257": {
+              "successfulQuanta": 192,
+              "nativeTicks": 194,
+              "boardClocks": 1156
+            }
+          },
+          "fullResetParity": false,
+          "fullByteBusOrderParity": false,
+          "nativeBudgetByteBusOrderParity": true
+        }
+      },
+      {
+        "sha256": "5c235f31163d245688d8cd91a438099429188249e8445ec5e370c41cbe48f6c0",
+        "bytes": 187805480,
+        "qualification": {
+          "qualificationStatus": "QUALIFIED",
+          "claim": "native-actual-board-bounded-combined-paging-ram-rep-pf-pit-only",
+          "budgetProof": {
+            "logicalRecords": 6192,
+            "rawPreserved": true,
+            "scopedRepResumeDecodes": 2,
+            "fullRawInstructionFetchParity": false,
+            "nativeBudgetByteBusOrderParity": true
+          },
+          "arms": {
+            "continuous": {
+              "successfulQuanta": 192,
+              "nativeTicks": 194,
+              "boardClocks": 1156
+            },
+            "budget1": {
+              "successfulQuanta": 192,
+              "nativeTicks": 194,
+              "boardClocks": 1156
+            },
+            "budget2": {
+              "successfulQuanta": 192,
+              "nativeTicks": 194,
+              "boardClocks": 1156
+            },
+            "budget257": {
+              "successfulQuanta": 192,
+              "nativeTicks": 194,
+              "boardClocks": 1156
+            }
+          },
+          "fullResetParity": false,
+          "fullByteBusOrderParity": false,
+          "nativeBudgetByteBusOrderParity": true
+        }
+      }
+    ],
+    "arms": {
+      "continuous": {
+        "fullNativeRecordsIdentical": true,
+        "fullHostAndRpcIdentical": true,
+        "bwsSha256": "cf8a1a09467fcbeb1c8b1be9c7a75b7cef58ddcc7d7e6425fb702f1f457e2df3",
+        "rawPathDifferences": {
+          "stderr": [
+            "--- ",
+            "+++ ",
+            "@@ -1,7 +1,7 @@",
+            " 00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'",
+            "-00000000000i[      ] reading configuration from /tmp/bw-native-combined-formal-6af0969e-20261001/bochsrc",
+            "+00000000000i[      ] reading configuration from /tmp/bw-native-combined-root-repeat-6af0969e-20261001/bochsrc",
+            " 00000000000i[      ] installing nogui module as the Bochs GUI",
+            "-00000000000i[      ] using log file /tmp/bw-native-combined-formal-6af0969e-20261001/bochs.log",
+            "+00000000000i[      ] using log file /tmp/bw-native-combined-root-repeat-6af0969e-20261001/bochs.log",
+            " BWS12\tPROBE\tresume-before-activation\trejected",
+            " BWS12\tPROBE\tirq-before-activation\trejected",
+            " BWS12\tRESET\t00000000\t00000000\t00000000\t00000000\t00000000\t00000000\t00000000\t00000000\t0000fff0\t00000002\t7ffffff0\t00000000\t00000000\tf000\t0000\t0000\t00000000\tffff\t00000000\tffff"
+          ]
+        },
+        "nativeCounters": {
+          "nativeTicks": 194,
+          "successfulQuanta": 192,
+          "attempts": 192,
+          "completed": 189,
+          "repIterations": 5,
+          "repPartial": 1,
+          "faults": 2,
+          "portCommits": 25,
+          "irqDeliveries": 1,
+          "haltIdleCuts": 2,
+          "rpcRequests": 663,
+          "rpcReplies": 663,
+          "nativeTickCallbacks": 194,
+          "quantumCallbacks": 192
+        },
+        "finalBackingSha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39"
+      },
+      "budget1": {
+        "fullNativeRecordsIdentical": true,
+        "fullHostAndRpcIdentical": true,
+        "bwsSha256": "1d27e03b8931c0922993dccf8e1c358e199b2c96dfe364e2f590daec3284f990",
+        "rawPathDifferences": {
+          "stderr": [
+            "--- ",
+            "+++ ",
+            "@@ -1,7 +1,7 @@",
+            " 00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'",
+            "-00000000000i[      ] reading configuration from /tmp/bw-native-combined-formal-6af0969e-20261001/bochsrc",
+            "+00000000000i[      ] reading configuration from /tmp/bw-native-combined-root-repeat-6af0969e-20261001/bochsrc",
+            " 00000000000i[      ] installing nogui module as the Bochs GUI",
+            "-00000000000i[      ] using log file /tmp/bw-native-combined-formal-6af0969e-20261001/bochs.log",
+            "+00000000000i[      ] using log file /tmp/bw-native-combined-root-repeat-6af0969e-20261001/bochs.log",
+            " BWS12\tPROBE\tresume-before-activation\trejected",
+            " BWS12\tPROBE\tirq-before-activation\trejected",
+            " BWS12\tRESET\t00000000\t00000000\t00000000\t00000000\t00000000\t00000000\t00000000\t00000000\t0000fff0\t00000002\t7ffffff0\t00000000\t00000000\tf000\t0000\t0000\t00000000\tffff\t00000000\tffff"
+          ]
+        },
+        "nativeCounters": {
+          "nativeTicks": 194,
+          "successfulQuanta": 192,
+          "attempts": 194,
+          "completed": 189,
+          "repIterations": 5,
+          "repPartial": 3,
+          "faults": 2,
+          "portCommits": 25,
+          "irqDeliveries": 1,
+          "haltIdleCuts": 1,
+          "rpcRequests": 663,
+          "rpcReplies": 663,
+          "nativeTickCallbacks": 194,
+          "quantumCallbacks": 192
+        },
+        "finalBackingSha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39"
+      },
+      "budget2": {
+        "fullNativeRecordsIdentical": true,
+        "fullHostAndRpcIdentical": true,
+        "bwsSha256": "817bce1210057838dc06ac7ebfb9e0cb33cf1806d701bcaaba82cc6c5aeb8ee5",
+        "rawPathDifferences": {
+          "stderr": [
+            "--- ",
+            "+++ ",
+            "@@ -1,7 +1,7 @@",
+            " 00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'",
+            "-00000000000i[      ] reading configuration from /tmp/bw-native-combined-formal-6af0969e-20261001/bochsrc",
+            "+00000000000i[      ] reading configuration from /tmp/bw-native-combined-root-repeat-6af0969e-20261001/bochsrc",
+            " 00000000000i[      ] installing nogui module as the Bochs GUI",
+            "-00000000000i[      ] using log file /tmp/bw-native-combined-formal-6af0969e-20261001/bochs.log",
+            "+00000000000i[      ] using log file /tmp/bw-native-combined-root-repeat-6af0969e-20261001/bochs.log",
+            " BWS12\tPROBE\tresume-before-activation\trejected",
+            " BWS12\tPROBE\tirq-before-activation\trejected",
+            " BWS12\tRESET\t00000000\t00000000\t00000000\t00000000\t00000000\t00000000\t00000000\t00000000\t0000fff0\t00000002\t7ffffff0\t00000000\t00000000\tf000\t0000\t0000\t00000000\tffff\t00000000\tffff"
+          ]
+        },
+        "nativeCounters": {
+          "nativeTicks": 194,
+          "successfulQuanta": 192,
+          "attempts": 192,
+          "completed": 189,
+          "repIterations": 5,
+          "repPartial": 1,
+          "faults": 2,
+          "portCommits": 25,
+          "irqDeliveries": 1,
+          "haltIdleCuts": 2,
+          "rpcRequests": 663,
+          "rpcReplies": 663,
+          "nativeTickCallbacks": 194,
+          "quantumCallbacks": 192
+        },
+        "finalBackingSha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39"
+      },
+      "budget257": {
+        "fullNativeRecordsIdentical": true,
+        "fullHostAndRpcIdentical": true,
+        "bwsSha256": "97437fefbe3eb0505b57370a3d2bbc768a27cfbfb25a106af4325e58d71af2bd",
+        "rawPathDifferences": {
+          "stderr": [
+            "--- ",
+            "+++ ",
+            "@@ -1,7 +1,7 @@",
+            " 00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'",
+            "-00000000000i[      ] reading configuration from /tmp/bw-native-combined-formal-6af0969e-20261001/bochsrc",
+            "+00000000000i[      ] reading configuration from /tmp/bw-native-combined-root-repeat-6af0969e-20261001/bochsrc",
+            " 00000000000i[      ] installing nogui module as the Bochs GUI",
+            "-00000000000i[      ] using log file /tmp/bw-native-combined-formal-6af0969e-20261001/bochs.log",
+            "+00000000000i[      ] using log file /tmp/bw-native-combined-root-repeat-6af0969e-20261001/bochs.log",
+            " BWS12\tPROBE\tresume-before-activation\trejected",
+            " BWS12\tPROBE\tirq-before-activation\trejected",
+            " BWS12\tRESET\t00000000\t00000000\t00000000\t00000000\t00000000\t00000000\t00000000\t00000000\t0000fff0\t00000002\t7ffffff0\t00000000\t00000000\tf000\t0000\t0000\t00000000\tffff\t00000000\tffff"
+          ]
+        },
+        "nativeCounters": {
+          "nativeTicks": 194,
+          "successfulQuanta": 192,
+          "attempts": 192,
+          "completed": 189,
+          "repIterations": 5,
+          "repPartial": 1,
+          "faults": 2,
+          "portCommits": 25,
+          "irqDeliveries": 1,
+          "haltIdleCuts": 2,
+          "rpcRequests": 663,
+          "rpcReplies": 663,
+          "nativeTickCallbacks": 194,
+          "quantumCallbacks": 192
+        },
+        "finalBackingSha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39"
+      }
+    },
+    "fullCaptureByteIdentity": false,
+    "scope": "Same native core, separately fresh actual boards. Raw captures retained; only exact directory substitutions permitted in raw text. Not an independent third CPU, architectural full byte order, Windows acceptance or speed measurement."
+  }
+}

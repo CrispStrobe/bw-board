@@ -1,0 +1,244 @@
+TAP version 13
+# Subtest: actual MessageChannel full native/board/BigInt/typed bytes
+ok 1 - actual MessageChannel full native/board/BigInt/typed bytes
+  ---
+  duration_ms: 30.994888
+  type: 'test'
+  ...
+# Subtest: channel copy isolates sender and each subsequent receive
+ok 2 - channel copy isolates sender and each subsequent receive
+  ---
+  duration_ms: 9.985122
+  type: 'test'
+  ...
+# Subtest: accessor executed only in trusted sender, normalized data receiver
+ok 3 - accessor executed only in trusted sender, normalized data receiver
+  ---
+  duration_ms: 1.540178
+  type: 'test'
+  ...
+# Subtest: custom prototypes and typed-array own shadows normalized
+ok 4 - custom prototypes and typed-array own shadows normalized
+  ---
+  duration_ms: 1.595145
+  type: 'test'
+  ...
+# Subtest: DataCloneError function
+ok 5 - DataCloneError function
+  ---
+  duration_ms: 6.862596
+  type: 'test'
+  ...
+# Subtest: DataCloneError proxy
+ok 6 - DataCloneError proxy
+  ---
+  duration_ms: 0.408312
+  type: 'test'
+  ...
+# Subtest: DataCloneError symbol-value
+ok 7 - DataCloneError symbol-value
+  ---
+  duration_ms: 0.384101
+  type: 'test'
+  ...
+# Subtest: sparse holes survive transport and are denied
+ok 8 - sparse holes survive transport and are denied
+  ---
+  duration_ms: 3.35427
+  type: 'test'
+  ...
+# Subtest: cycles and internal aliases survive transport; closed schema rejects wrong fields
+ok 9 - cycles and internal aliases survive transport; closed schema rejects wrong fields
+  ---
+  duration_ms: 2.059858
+  type: 'test'
+  ...
+# Subtest: transport does not prove map domain; schema denies
+ok 10 - transport does not prove map domain; schema denies
+  ---
+  duration_ms: 2.125834
+  type: 'test'
+  ...
+# Subtest: transport does not prove date domain; schema denies
+ok 11 - transport does not prove date domain; schema denies
+  ---
+  duration_ms: 1.671777
+  type: 'test'
+  ...
+# Subtest: transport does not prove shared domain; schema denies
+ok 12 - transport does not prove shared domain; schema denies
+  ---
+  duration_ms: 1.248349
+  type: 'test'
+  ...
+# Subtest: transport does not prove resizable domain; schema denies
+ok 13 - transport does not prove resizable domain; schema denies
+  ---
+  duration_ms: 1.251068
+  type: 'test'
+  ...
+# Subtest: transport does not prove wrong-number domain; schema denies
+ok 14 - transport does not prove wrong-number domain; schema denies
+  ---
+  duration_ms: 1.247143
+  type: 'test'
+  ...
+# Subtest: transport does not prove unknown-field domain; schema denies
+ok 15 - transport does not prove unknown-field domain; schema denies
+  ---
+  duration_ms: 1.808802
+  type: 'test'
+  ...
+# Subtest: copied envelope exact sequence/command still checked
+ok 16 - copied envelope exact sequence/command still checked
+  ---
+  duration_ms: 4.483527
+  type: 'test'
+  ...
+# Subtest: authenticated saved reset/final/six full cuts/terminal admit
+ok 17 - authenticated saved reset/final/six full cuts/terminal admit
+  ---
+  duration_ms: 42.694273
+  type: 'test'
+  ...
+# Subtest: native BigInt number
+ok 18 - native BigInt number
+  ---
+  duration_ms: 0.928462
+  type: 'test'
+  ...
+# Subtest: native BigInt string
+ok 19 - native BigInt string
+  ---
+  duration_ms: 0.464156
+  type: 'test'
+  ...
+# Subtest: native BigInt negative
+ok 20 - native BigInt negative
+  ---
+  duration_ms: 0.347722
+  type: 'test'
+  ...
+# Subtest: native BigInt excess
+ok 21 - native BigInt excess
+  ---
+  duration_ms: 0.413043
+  type: 'test'
+  ...
+# Subtest: full state dimensions and dense fields
+ok 22 - full state dimensions and dense fields
+  ---
+  duration_ms: 0.471493
+  type: 'test'
+  ...
+# Subtest: full extra dimensions and dense fields
+ok 23 - full extra dimensions and dense fields
+  ---
+  duration_ms: 0.431748
+  type: 'test'
+  ...
+# Subtest: full segments dimensions and dense fields
+ok 24 - full segments dimensions and dense fields
+  ---
+  duration_ms: 0.501182
+  type: 'test'
+  ...
+# Subtest: full system dimensions and dense fields
+ok 25 - full system dimensions and dense fields
+  ---
+  duration_ms: 0.914364
+  type: 'test'
+  ...
+# Subtest: full debug dimensions and dense fields
+ok 26 - full debug dimensions and dense fields
+  ---
+  duration_ms: 0.935883
+  type: 'test'
+  ...
+# Subtest: raw accessor/symbol/prototype/extra fields deny without getter
+ok 27 - raw accessor/symbol/prototype/extra fields deny without getter
+  ---
+  duration_ms: 1.047805
+  type: 'test'
+  ...
+# Subtest: slice short denies
+ok 28 - slice short denies
+  ---
+  duration_ms: 0.613179
+  type: 'test'
+  ...
+# Subtest: slice offset denies
+ok 29 - slice offset denies
+  ---
+  duration_ms: 1.020112
+  type: 'test'
+  ...
+# Subtest: slice backing denies
+ok 30 - slice backing denies
+  ---
+  duration_ms: 0.567418
+  type: 'test'
+  ...
+# Subtest: slice shared denies
+ok 31 - slice shared denies
+  ---
+  duration_ms: 1.764162
+  type: 'test'
+  ...
+# Subtest: slice detached denies
+ok 32 - slice detached denies
+  ---
+  duration_ms: 0.558427
+  type: 'test'
+  ...
+# Subtest: slice resizable denies
+ok 33 - slice resizable denies
+  ---
+  duration_ms: 0.607497
+  type: 'test'
+  ...
+# Subtest: slice shadow denies
+ok 34 - slice shadow denies
+  ---
+  duration_ms: 0.66497
+  type: 'test'
+  ...
+# Subtest: slice backing-shadow denies
+ok 35 - slice backing-shadow denies
+  ---
+  duration_ms: 0.709149
+  type: 'test'
+  ...
+# Subtest: checkpoint hostile generation proxy denies before trap
+ok 36 - checkpoint hostile generation proxy denies before trap
+  ---
+  duration_ms: 0.541301
+  type: 'test'
+  ...
+# Subtest: exact command/sequence/error envelope
+ok 37 - exact command/sequence/error envelope
+  ---
+  duration_ms: 1.398281
+  type: 'test'
+  ...
+# Subtest: caller mutations cannot alter retained primitive ledger or other snapshot
+ok 38 - caller mutations cannot alter retained primitive ledger or other snapshot
+  ---
+  duration_ms: 2.738365
+  type: 'test'
+  ...
+# Subtest: requested cap/charge deltas and decreasing counters deny
+ok 39 - requested cap/charge deltas and decreasing counters deny
+  ---
+  duration_ms: 0.788152
+  type: 'test'
+  ...
+1..39
+# tests 39
+# suites 0
+# pass 39
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 301.844019

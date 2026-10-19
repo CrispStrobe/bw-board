@@ -1,0 +1,17 @@
+{
+  "initialToolHead": "43b82467b25b7913df46dab4c15d177b7e0c3281",
+  "correctedToolHead": "457980b9c84a7e7da95be165160b3e5e8f3198cc",
+  "initialControllerSession": 70600,
+  "initialControllerExitCode": 143,
+  "initialBaselineRun": 37123288945,
+  "initialMiddleRun": 37123517754,
+  "initialBaselineStaticWindows": 17,
+  "initialLooseButtonMatches": 5,
+  "strongButtonMatches": 1,
+  "strongButtonAddress": 17082440,
+  "observation": "A Button symbol anywhere in a window also selects function-table data; require independent drop, Debug, as_sim_input, size and alignment prefix clues",
+  "originalCapturesPreserved": true,
+  "performanceEvidence": false,
+  "enginePromotion": false,
+  "timingPipelineInterrupted": false
+}

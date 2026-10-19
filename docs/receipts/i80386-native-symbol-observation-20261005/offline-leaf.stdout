@@ -1,0 +1,638 @@
+# ========
+# captured on    : Mon Oct  5 01:11:46 2026
+# header version : 1
+# data offset    : 1232
+# data size      : 1444864
+# feat offset    : 1446096
+# hostname : runnervm8df0l
+# os release : 6.17.0-1022-azure
+# perf version : 6.17.13
+# arch : x86_64
+# nrcpus online : 4
+# nrcpus avail : 4
+# cpudesc : INTEL(R) XEON(R) PLATINUM 8573C
+# cpuid : GenuineIntel,6,207,2
+# total memory : 16372432 kB
+# cmdline : /usr/lib/linux-azure-6.17-tools-6.17.0-1022/perf 
+# event : name = cpu-clock, , id = { 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46 }, type = 1 (software), size = 136, config = 0 (PERF_COUNT_SW_CPU_CLOCK), { sample_period, sample_freq } = 99, sample_type = IP|TID|TIME|ADDR|CALLCHAIN|PERIOD|REGS_USER|STACK_USER|IDENTIFIER|DATA_SRC, read_format = ID|LOST, disabled = 1, inherit = 1, freq = 1, sample_id_all = 1, exclude_callchain_user = 1, use_clockid = 1, sample_regs_user = 0xff0fff, sample_stack_user = 8192, clockid = 1
+# event : name = dummy:u, , id = { 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74 }, type = 1 (software), size = 136, config = 0x9 (PERF_COUNT_SW_DUMMY), { sample_period, sample_freq } = 99, sample_type = IP|TID|TIME|ADDR|CALLCHAIN|PERIOD|REGS_USER|STACK_USER|IDENTIFIER|DATA_SRC, read_format = ID|LOST, disabled = 1, inherit = 1, exclude_kernel = 1, exclude_hv = 1, freq = 1, sample_id_all = 1, exclude_callchain_user = 1, use_clockid = 1, sample_regs_user = 0xff0fff, sample_stack_user = 8192, clockid = 1
+# event : name = dummy:u, , id = { 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102 }, type = 1 (software), size = 136, config = 0x9 (PERF_COUNT_SW_DUMMY), { sample_period, sample_freq } = 99, sample_type = IP|TID|TIME|ADDR|PERIOD|IDENTIFIER|DATA_SRC, read_format = ID|LOST, disabled = 1, inherit = 1, exclude_kernel = 1, exclude_hv = 1, mmap = 1, comm = 1, freq = 1, enable_on_exec = 1, task = 1, mmap_data = 1, sample_id_all = 1, exclude_guest = 1, mmap2 = 1, comm_exec = 1, use_clockid = 1, ksymbol = 1, bpf_event = 1, build_id = 1, clockid = 1
+# CPU_TOPOLOGY info available, use -I to display
+# NUMA_TOPOLOGY info available, use -I to display
+# pmu mappings: cpu = 4, breakpoint = 5, hwmon_nvme = 4294901760, kprobe = 8, msr = 10, software = 1, tool = 4294967294, tracepoint = 2, uprobe = 9
+# CACHE info available, use -I to display
+# time of first sample : 0.000000
+# time of last sample : 0.000000
+# sample duration :      0.000 ms
+# MEM_TOPOLOGY info available, use -I to display
+# clockid frequency: 1000 MHz
+# bpf_prog_info 67: bpf_prog_134b8a301991f6b7_sd_devices addr 0xffffffffc004e170 size 314
+# bpf_prog_info 68: bpf_prog_6deef7357e7b4530_sd_fw_egress addr 0xffffffffc004bf64 size 59
+# bpf_prog_info 69: bpf_prog_6deef7357e7b4530_sd_fw_ingress addr 0xffffffffc004bfe8 size 59
+# bpf_prog_info 70: bpf_prog_654d7024997e7811_sd_devices addr 0xffffffffc004e2c8 size 293
+# bpf_prog_info 71: bpf_prog_ee0e253c78993a24_sd_devices addr 0xffffffffc004e40c size 263
+# bpf_prog_info 72: bpf_prog_6deef7357e7b4530_sd_fw_egress addr 0xffffffffc004e560 size 59
+# bpf_prog_info 73: bpf_prog_6deef7357e7b4530_sd_fw_ingress addr 0xffffffffc004e5fc size 59
+# bpf_prog_info 74: bpf_prog_384856681694f215_sd_devices addr 0xffffffffc004e668 size 452
+# bpf_prog_info 75: bpf_prog_6deef7357e7b4530_sd_fw_egress addr 0xffffffffc004e868 size 59
+# bpf_prog_info 76: bpf_prog_6deef7357e7b4530_sd_fw_ingress addr 0xffffffffc004e8c8 size 59
+# bpf_prog_info 77: bpf_prog_fa89e8df8be8cbe4_sd_devices addr 0xffffffffc004e954 size 356
+# bpf_prog_info 81: bpf_prog_fba67f14acbaee05_sd_devices addr 0xffffffffc005ab20 size 106
+# bpf_prog_info 82: bpf_prog_134b8a301991f6b7_sd_devices addr 0xffffffffc005abe4 size 314
+# bpf_prog_info 84: bpf_prog_fe256bb8caeb4279_enter_mmap addr 0xffffffffc0046ac8 size 258
+# bpf_prog_info 86: bpf_prog_523b52a72eca6649_tc_egress_traffic_monitor addr 0xffffffffc004990c size 1538
+# bpf_prog_info 87: bpf_prog_f7ad70fe1bb92f94_tc_ingress_traffic_monitor addr 0xffffffffc005ad68 size 1412
+# bpf_prog_info 88: bpf_prog_3cb14dfc2a0c8309_kprobe_ip_send_skb addr 0xffffffffc004bd70 size 433
+# bpf_prog_info 89: bpf_prog_c2534a958d3d11fc_kprobe_skb_consume_udp addr 0xffffffffc005b308 size 361
+# btf info of id 61
+# btf info of id 63
+# btf info of id 64
+# btf info of id 68
+# btf info of id 69
+# cpu pmu capabilities: not available
+# clockid: monotonic (1)
+# reference time: 2026-10-05 00:55:16.795655 = 1791161716.795655 (TOD) = 57.704354269 (monotonic)
+# missing features: TRACING_DATA BUILD_ID BRANCH_STACK GROUP_DESC AUXTRACE STAT DIR_FORMAT COMPRESSED HYBRID_TOPOLOGY 
+# ========
+#
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffb0200000(0x2a72f80) @ 0xffffffffb0200000 <69f86991943f21a6e5450266c913374d52c1dbf3>]: ---p [kernel.kallsyms]_text
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0400000(0x6000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [autofs4]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0406000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [efi_pstore]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0407000(0x5000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [x_tables]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc040c000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [msr]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc040d000(0x4000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [ip_tables]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0411000(0x2000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [nfnetlink]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0413000(0x3000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [nvme_fabrics]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0416000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [polyval_clmulni]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0417000(0x5000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [dm_multipath]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc041c000(0x3000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [sch_fq_codel]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc041f000(0x2000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [hyperv_drm]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0421000(0x10000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [hid]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0431000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [irqbypass]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0432000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [hyperv_keyboard]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0433000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [hid_generic]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0434000(0xd000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [hv_netvsc]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0441000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [nls_iso8859_1]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0442000(0xe000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [aesni_intel]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0450000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [serio_raw]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0451000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [ghash_clmulni_intel]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0452000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [nf_defrag_ipv4]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0453000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [hid_hyperv]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0454000(0x2000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [nft_compat]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0456000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [llc]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0457000(0x3000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [joydev]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc045a000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [xt_tcpudp]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc045b000(0x90000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [kvm]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc04eb000(0x4e000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [kvm_intel]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0539000(0x2000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [binfmt_misc]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc053b000(0x36000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [nf_tables]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0571000(0x2000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [nf_defrag_ipv6]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0573000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [xfrm_algo]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0574000(0x13000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [nf_conntrack]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0587000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [xt_conntrack]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0588000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [stp]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0589000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [xt_owner]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc058a000(0x2000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [mrp]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc058c000(0x2000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [garp]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc058e000(0x5000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [8021q]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0593000(0x36000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [ib_core]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc05c9000(0x17000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [ib_uverbs]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc05e0000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [xt_addrtype]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc05e1000(0x8000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [mana_ib]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc05e9000(0x12000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [tls]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc05fb000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [xt_MASQUERADE]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc05fc000(0x1000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [nft_chain_nat]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc05fd000(0x5000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [xt_set]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0800000(0x1b000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [overlay]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc081b000(0x9000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [xfrm_user]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0824000(0x6000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [nf_nat]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc082a000(0x6000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [ip_set]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0830000(0x36000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [bridge]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0866000(0x2000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [sch_ingress]
+         swapper       0/0           0.000000000: PERF_RECORD_MMAP2 -1/0: [0xffffffffc0868000(0x6000) @ 0 <313b2acefa962628ddb9a90e0f5581d50b9b7920>]: ---p [cls_bpf]
+            node       0/0           0.000000000: PERF_RECORD_COMM: node:6955/6955
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x400000(0xa37000) @ 0 <a9b42ba41811e1291145304b7c278c5d3fbaca71>]: r--p /opt/hostedtoolcache/node/22.23.3/x64/bin/node
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0xe37000(0x24b0000) @ 0xa37000 <a9b42ba41811e1291145304b7c278c5d3fbaca71>]: r-xp /opt/hostedtoolcache/node/22.23.3/x64/bin/node
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3400000(0x1000) @ 0x3000000 <a9b42ba41811e1291145304b7c278c5d3fbaca71>]: r-xp /opt/hostedtoolcache/node/22.23.3/x64/bin/node
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3401000(0x3710000) @ 0x3001000 <a9b42ba41811e1291145304b7c278c5d3fbaca71>]: r--p /opt/hostedtoolcache/node/22.23.3/x64/bin/node
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x6b11000(0x4000) @ 0x6710000 <a9b42ba41811e1291145304b7c278c5d3fbaca71>]: r--p /opt/hostedtoolcache/node/22.23.3/x64/bin/node
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x6b15000(0x29000) @ 0x6714000 <a9b42ba41811e1291145304b7c278c5d3fbaca71>]: rw-p /opt/hostedtoolcache/node/22.23.3/x64/bin/node
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x6b3e000(0x38000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x35c71000(0xc23000) @ 0 00:00 0 0]: rw-p [heap]
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0xdef39c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x17810740000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x200c6dc0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2a511dc0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2b37b4c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x30de6f80000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3c3ae900000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3c74b980000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x46bdf140000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x5c4b1b80000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x5f7de240000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x62a13280000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x67461f80000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7a2968c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x809b23c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x91ef4240000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0xa78415c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0xaaaf0d40000(0x36000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0xab582900000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0xbb235f40000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0xc7f75580000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0xc93d74c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0xd75f1b80000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0xed056580000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0xfcb86d00000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x10104f640000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x106c94340000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x1096f0000000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x10a2997c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x1111e8cc0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x114683080000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x117978840000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x11a814f80000(0xc000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x129bc8ec0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x132ced300000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x13b812000000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x144747240000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x145186e80000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x14f066e00000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x15a126e80000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x15e6bef80000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x166194ac0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x175ee4000000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x17a946f80000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x17ceec280000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x192d10e40000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x192ef2000000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x199e17cc0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x19c4125c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x19e9ff700000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x1a996b800000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x1aaa49f40000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x1c8522580000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x1ca7ae200000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x1cdf83c40000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x1dfe98fc0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x1e3a572c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x1eb8978c0000(0xc000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x1eeb58780000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x20630a9c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x206bf3b80000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x22064f080000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2209c3580000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x22be572c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x22f1a6a80000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x230a16540000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x232819a40000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x23aef0a80000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x24c481580000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2536a3d40000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x25da3a080000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x25fd3b5c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x27714b840000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x279c37800000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x282ef2b00000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2840412c0000(0x22000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x294f8f040000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2a3552080000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2b11d0100000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2b324f0c0000(0x1b000) @ 0 00:00 0 0]: r--p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2c09d7600000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2c89d07c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2cb81d940000(0x22000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2ccc23780000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2d36b6880000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2e3201e80000(0x22000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2e3e211c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2e579bb00000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2f552b600000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2fad3a700000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x2ff170e00000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x300fe4980000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x30549f340000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x30d865340000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x30f24e340000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3119343c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x316e28700000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x322d4cc40000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x330219680000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x337267400000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3389fac00000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x34d5f0dc0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x34e46abc0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x362114d40000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x366670a80000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x366c69b40000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x36e8bfa40000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x397ea6dc0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3bd1c72c0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3bd5e9300000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3c215a780000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3c52a8200000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3c603dd00000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3dab95400000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3dda60c40000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3f9cdeac0000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3fe5e5700000(0x40000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x3fee5b880000(0x42000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f9350000000(0x92000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f9358000000(0x1ee000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f935c000000(0x8d000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f9360000000(0xcc000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f93667c0000(0x2000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f93667c3000(0x3c000) @ 0 00:00 0 0]: rwxp //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f9366800000(0x2000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f9366803000(0x3c000) @ 0 00:00 0 0]: rwxp //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f93867fe000(0x800000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f9386fff000(0x800000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f9387800000(0x800000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f9388000000(0x21000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938c1ff000(0x800000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938ca00000(0x800000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d200000(0x28000) @ 0 <a4a7992a8e66555c8141ab2a08a8465ff6e0ea65>]: r--p /usr/lib/x86_64-linux-gnu/libc.so.6
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d228000(0x189000) @ 0x28000 <a4a7992a8e66555c8141ab2a08a8465ff6e0ea65>]: r-xp /usr/lib/x86_64-linux-gnu/libc.so.6
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d3b1000(0x4f000) @ 0x1b1000 <a4a7992a8e66555c8141ab2a08a8465ff6e0ea65>]: r--p /usr/lib/x86_64-linux-gnu/libc.so.6
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d400000(0x4000) @ 0x1ff000 <a4a7992a8e66555c8141ab2a08a8465ff6e0ea65>]: r--p /usr/lib/x86_64-linux-gnu/libc.so.6
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d404000(0x2000) @ 0x203000 <a4a7992a8e66555c8141ab2a08a8465ff6e0ea65>]: rw-p /usr/lib/x86_64-linux-gnu/libc.so.6
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d406000(0xd000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d600000(0x9d000) @ 0 <753c6c8608b61d4e67be8f0c890e03e0aa046b8b>]: r--p /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d69d000(0x148000) @ 0x9d000 <753c6c8608b61d4e67be8f0c890e03e0aa046b8b>]: r-xp /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d7e5000(0x87000) @ 0x1e5000 <753c6c8608b61d4e67be8f0c890e03e0aa046b8b>]: r--p /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d86c000(0xb000) @ 0x26b000 <753c6c8608b61d4e67be8f0c890e03e0aa046b8b>]: r--p /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d877000(0x3000) @ 0x276000 <753c6c8608b61d4e67be8f0c890e03e0aa046b8b>]: rw-p /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d87a000(0x4000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d898000(0x8000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d8c1000(0x4000) @ 0x10000000 00:10 23370 0]: rw-s anon_inode:[io_uring]
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d8c5000(0x3000) @ 0 00:10 23370 0]: rw-s anon_inode:[io_uring]
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d8c8000(0x4000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d948000(0x4000) @ 0x10000000 00:10 24571 0]: rw-s anon_inode:[io_uring]
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d94c000(0x6000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d952000(0x1000) @ 0 <bfb64d71f59022ae638ad01b47fd80c4416ba5e9>]: r--p /usr/lib/x86_64-linux-gnu/libpthread.so.0
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d953000(0x1000) @ 0x1000 <bfb64d71f59022ae638ad01b47fd80c4416ba5e9>]: r-xp /usr/lib/x86_64-linux-gnu/libpthread.so.0
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d954000(0x1000) @ 0x2000 <bfb64d71f59022ae638ad01b47fd80c4416ba5e9>]: r--p /usr/lib/x86_64-linux-gnu/libpthread.so.0
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d955000(0x1000) @ 0x2000 <bfb64d71f59022ae638ad01b47fd80c4416ba5e9>]: r--p /usr/lib/x86_64-linux-gnu/libpthread.so.0
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d956000(0x1000) @ 0x3000 <bfb64d71f59022ae638ad01b47fd80c4416ba5e9>]: rw-p /usr/lib/x86_64-linux-gnu/libpthread.so.0
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d957000(0x4000) @ 0 <58736497cba1173fec6ad05c75e996dacefd1def>]: r--p /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d95b000(0x24000) @ 0x4000 <58736497cba1173fec6ad05c75e996dacefd1def>]: r-xp /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d97f000(0x4000) @ 0x28000 <58736497cba1173fec6ad05c75e996dacefd1def>]: r--p /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d983000(0x1000) @ 0x2b000 <58736497cba1173fec6ad05c75e996dacefd1def>]: r--p /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d984000(0x1000) @ 0x2c000 <58736497cba1173fec6ad05c75e996dacefd1def>]: rw-p /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d985000(0x10000) @ 0 <d53fcbff9f855463606b25cfbe2a2e10856ea3a7>]: r--p /usr/lib/x86_64-linux-gnu/libm.so.6
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938d995000(0x7f000) @ 0x10000 <d53fcbff9f855463606b25cfbe2a2e10856ea3a7>]: r-xp /usr/lib/x86_64-linux-gnu/libm.so.6
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da14000(0x58000) @ 0x8f000 <d53fcbff9f855463606b25cfbe2a2e10856ea3a7>]: r--p /usr/lib/x86_64-linux-gnu/libm.so.6
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da6c000(0x1000) @ 0xe7000 <d53fcbff9f855463606b25cfbe2a2e10856ea3a7>]: r--p /usr/lib/x86_64-linux-gnu/libm.so.6
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da6d000(0x1000) @ 0xe8000 <d53fcbff9f855463606b25cfbe2a2e10856ea3a7>]: rw-p /usr/lib/x86_64-linux-gnu/libm.so.6
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da6e000(0x1000) @ 0 <33dc200682ecde2bb9db3e93bfd95a91a6fd80a4>]: r--p /usr/lib/x86_64-linux-gnu/libdl.so.2
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da6f000(0x1000) @ 0x1000 <33dc200682ecde2bb9db3e93bfd95a91a6fd80a4>]: r-xp /usr/lib/x86_64-linux-gnu/libdl.so.2
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da70000(0x1000) @ 0x2000 <33dc200682ecde2bb9db3e93bfd95a91a6fd80a4>]: r--p /usr/lib/x86_64-linux-gnu/libdl.so.2
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da71000(0x1000) @ 0x2000 <33dc200682ecde2bb9db3e93bfd95a91a6fd80a4>]: r--p /usr/lib/x86_64-linux-gnu/libdl.so.2
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da72000(0x1000) @ 0x3000 <33dc200682ecde2bb9db3e93bfd95a91a6fd80a4>]: rw-p /usr/lib/x86_64-linux-gnu/libdl.so.2
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da73000(0x3000) @ 0 00:10 24571 0]: rw-s anon_inode:[io_uring]
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da76000(0x4000) @ 0x10000000 00:10 23367 0]: rw-s anon_inode:[io_uring]
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da7a000(0x3000) @ 0 00:10 23367 0]: rw-s anon_inode:[io_uring]
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da7d000(0x2000) @ 0 00:00 0 0]: rw-p //anon
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da7f000(0x4000) @ 0 00:00 0 0]: r--p [vvar]
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da83000(0x2000) @ 0 00:00 0 0]: r--p [vvar_vclock]
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da85000(0x2000) @ 0 00:00 0 0]: r-xp [vdso]
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da87000(0x1000) @ 0 <0d77dbd4379bf0b5af3e05be7fb6af1e4cea7c96>]: r--p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938da88000(0x2b000) @ 0x1000 <0d77dbd4379bf0b5af3e05be7fb6af1e4cea7c96>]: r-xp /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938dab3000(0xa000) @ 0x2c000 <0d77dbd4379bf0b5af3e05be7fb6af1e4cea7c96>]: r--p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938dabd000(0x2000) @ 0x36000 <0d77dbd4379bf0b5af3e05be7fb6af1e4cea7c96>]: r--p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7f938dabf000(0x2000) @ 0x38000 <0d77dbd4379bf0b5af3e05be7fb6af1e4cea7c96>]: rw-p /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0x7ffc5882c000(0x21000) @ 0 00:00 0 0]: rw-p [stack]
+            node       0/0           0.000000000: PERF_RECORD_MMAP2 6955/6955: [0xffffffffff600000(0x1000) @ 0 00:00 0 0]: --xp [vsyscall]
+ DelayedTaskSche       0/0           0.000000000: PERF_RECORD_COMM: DelayedTaskSche:6955/6956
+            node       0/0           0.000000000: PERF_RECORD_COMM: node:6955/6957
+            node       0/0           0.000000000: PERF_RECORD_COMM: node:6955/6958
+            node       0/0           0.000000000: PERF_RECORD_COMM: node:6955/6959
+            node       0/0           0.000000000: PERF_RECORD_COMM: node:6955/6960
+            node       0/0           0.000000000: PERF_RECORD_COMM: node:6955/6961
+            node    6955/6955       57.802151655: PERF_RECORD_MMAP2 6955/6955: [0x7f93657bf000(0x1001000) @ 0x7f93657bf000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.807694054: PERF_RECORD_MMAP2 6955/6955: [0x7f93647be000(0x2002000) @ 0x7f93647be000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.810066764: PERF_RECORD_MMAP2 6955/6955: [0x7f9366840000(0x2000) @ 0x7f9366840000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.810080950: PERF_RECORD_MMAP2 6955/6955: [0x7f9366843000(0x3c000) @ 0x7f9366843000 00:00 0 0]: rwxp //anon
+            node    6955/6955       57.812847669: PERF_RECORD_MMAP2 6955/6955: [0x7f9356400000(0x1a61000) @ 0 <21a1b2583d7f4dad797aa9492547a8186df56f38>]: r--p /home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node
+            node    6955/6955       57.812861370: PERF_RECORD_MMAP2 6955/6955: [0x7f9356476000(0xd6000) @ 0x76000 <21a1b2583d7f4dad797aa9492547a8186df56f38>]: r-xp /home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node
+            node    6955/6955       57.812867272: PERF_RECORD_MMAP2 6955/6955: [0x7f935654c000(0x1915000) @ 0x14c000 <21a1b2583d7f4dad797aa9492547a8186df56f38>]: r--p /home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node
+            node    6955/6955       57.812875600: PERF_RECORD_MMAP2 6955/6955: [0x7f935659f000(0x19000) @ 0x19e000 <21a1b2583d7f4dad797aa9492547a8186df56f38>]: rw-p /home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node
+            node    6955/6955       57.812885699: PERF_RECORD_MMAP2 6955/6955: [0x7f93565b8000(0x18a9000) @ 0x7f93565b8000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.813629824: PERF_RECORD_MMAP2 6955/6955: [0x7f935659f000(0xd000) @ 0x19e000 <21a1b2583d7f4dad797aa9492547a8186df56f38>]: r--p /home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node
+            node    6955/6955       57.814199409: PERF_RECORD_MMAP2 6955/6955: [0x7f93643bd000(0x2403000) @ 0x7f93643bd000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.816065792: PERF_RECORD_MMAP2 6955/6955: [0x7f93551dd000(0x1223000) @ 0x7f93551dd000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.817120176: PERF_RECORD_MMAP2 6955/6955: [0x7f93541dc000(0x2224000) @ 0x7f93541dc000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.819443442: PERF_RECORD_MMAP2 6955/6955: [0x7f934f05f000(0x1033000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.822364100: PERF_RECORD_MMAP2 6955/6955: [0x2df25d540000(0x7f000) @ 0x2df25d540000 00:00 0 0]: ---p //anon
+            node    6955/6955       57.822381487: PERF_RECORD_MMAP2 6955/6955: [0x2df25d540000(0x40000) @ 0x2df25d540000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.825245482: PERF_RECORD_MMAP2 6955/6955: [0x1fd175f00000(0x7f000) @ 0x1fd175f00000 00:00 0 0]: ---p //anon
+            node    6955/6955       57.825255472: PERF_RECORD_MMAP2 6955/6955: [0x1fd175f00000(0x40000) @ 0x1fd175f00000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.832581006: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x1038000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.833431011: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x103d000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.833438891: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x1044000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.833449628: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x104c000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.833486988: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x1054000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.833517182: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x105c000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.833555839: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x1064000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.833570110: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x106c000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.833584067: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x1074000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.833619760: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x107c000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.833646892: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x1084000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.833705103: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x108c000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.833743889: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x1094000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.833753424: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x109c000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.833848384:   10101010 cpu-clock:           1d54252 Builtins_Call_ReceiverIsNotNullOrUndefined (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6960       57.834061184: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x10a4000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.834078660: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x10ac000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.834137979: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x10b4000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.834187041: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x10bc000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.834241011: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x10c4000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.834298764: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x10cc000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.843949133:   10101010 cpu-clock:           1e00a65 Builtins_GetProperty (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       57.854078934:   10101010 cpu-clock:           126900b v8::Integer::NewFromUnsigned(v8::Isolate*, unsigned int) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6958       57.860082043: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x1f1000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.860143250: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x1f9000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.860180078: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x205000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.860185109: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x20d000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.860459011: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x21d000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.860480287: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x225000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.860520207: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x22d000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.860575319: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x235000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.860623660: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x23f000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.861445035: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x247000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.861457773: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x24f000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.861471584: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x257000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.861517080: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x25f000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.861573693: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x267000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.861623964:   10101010 cpu-clock:           2d5e406 v8::internal::compiler::Instruction::Instruction(unsigned int, unsigned long, v8::internal::compiler::InstructionOperand*, unsigned long, v8::internal::compiler::InstructionOperand*, unsigned long, v8::internal::compiler::InstructionOperand*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6958       57.861645056: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x26f000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.861657363: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x277000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.861733885: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x27f000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.861799508: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x287000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.861865493: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x28f000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.861945974: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x297000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.862038443: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x29f000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.862110522: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x2a7000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6958       57.862161740: PERF_RECORD_MMAP2 6955/6958: [0x7f9358000000(0x2af000) @ 0x7f9358000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.863237571: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0x8e000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.863902709: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0x96000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.863991092: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0x9e000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.864189656:   10101010 cpu-clock:           1dbadb4 Builtins_LoadGlobalIC (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6960       57.866801510: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x10cd000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.866807114: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x10d6000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.866823524: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x10de000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.866873646: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x10e6000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.866884024: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x10ee000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.866889683: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x10f6000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.867027449: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x10fe000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.867038569: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x1106000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.867106414: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x1112000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.867111150: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x111a000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.867121659: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x1122000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.867170563: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x1132000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.867188301: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x113a000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.867709155: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x1142000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.867776036: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x114a000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.867831980: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x1152000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.867892136: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x115a000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.867901304: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x1163000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6960       57.867923079: PERF_RECORD_MMAP2 6955/6960: [0x7f934f05f000(0x116b000) @ 0x7f934f05f000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.874320902:   10101010 cpu-clock:      7f938d2ab6c4 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6957       57.875265378:   10101010 cpu-clock:           2bd062f v8::internal::compiler::Typer::Visitor::TypeNode(v8::internal::compiler::Node*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6959       57.877301034: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0x9f000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.877384421: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0xa7000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.877467361: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0xaf000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.878316610: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0xb2000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.878391927: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0xba000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.878560019: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0xcf000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.878595574: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0xd7000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.878606576: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0xdf000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.878625872: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0xc2000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.878628262: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0xe7000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.878692013: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0xca000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.878737539: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0xef000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.878745423: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0xd2000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.878858220: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0xf7000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.878974909: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0xff000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.879059749: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x107000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.879122579: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x10f000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.879210282: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x117000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.879254297:   10101010 cpu-clock:           2d8b7af v8::internal::compiler::LiveRangeConnector::ResolveControlFlow(v8::internal::Zone*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6957       57.879327405: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x11f000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.879385433: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x127000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.879448078: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x12f000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.879500746: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x137000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.879549298: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x13f000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.879583372: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x147000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881151999: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x14b000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881182875: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x153000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881194888: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x15f000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881213233: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x167000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881220231: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x16f000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881235763: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x177000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881336966: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x17f000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881364613: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x187000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881369721: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x18f000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881723308: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x19f000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881739391: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x1a7000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881814511: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x1af000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881839960: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x1b7000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881894423: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x1bf000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881932163: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x1c7000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881964146: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x1cf000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881982110: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x1d7000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.881999317: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x1df000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.882047896: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x1e7000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.882092846: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x1ef000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.882130772: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x1f8000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.882149764: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x200000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6957       57.882196869: PERF_RECORD_MMAP2 6955/6957: [0x7f9360000000(0x208000) @ 0x7f9360000000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.883531814: PERF_RECORD_MMAP2 6955/6955: [0x1b8b7a8c0000(0x7f000) @ 0x1b8b7a8c0000 00:00 0 0]: ---p //anon
+            node    6955/6955       57.883544897: PERF_RECORD_MMAP2 6955/6955: [0x1b8b7a8c0000(0x40000) @ 0x1b8b7a8c0000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.884421722:   10101010 cpu-clock:      7f93564edd80 bw_slice_tick(unsigned int) (/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node)
+            node    6955/6955       57.894557427:   10101010 cpu-clock:      7f93668706c8 [unknown] (/tmp/perf-6955.map)
+            node    6955/6957       57.901408649:   10101010 cpu-clock:           2d753fc v8::internal::compiler::LiveRange::Covers(v8::internal::compiler::LifetimePosition) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6959       57.903472879: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0xd8000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.903488270: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0xe0000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.903531960: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0xe8000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.903540881: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0xf0000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.903547064: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0xf8000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.903700913: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0x100000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.903723556: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0x108000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.903733683: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0x110000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.904323414: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0x118000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6959       57.904370055: PERF_RECORD_MMAP2 6955/6959: [0x7f935c000000(0x120000) @ 0x7f935c000000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.904661978:   10101010 cpu-clock:           1dcaf01 Builtins_ShiftLeft_Baseline (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6960       57.910475831:   10101010 cpu-clock:           1242440 std::_Sp_counted_deleter<v8::internal::BackingStore*, std::default_delete<v8::internal::BackingStore>, std::allocator<void>, (__gnu_cxx::_Lock_policy)2>::_M_dispose() (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       57.914822565:   10101010 cpu-clock:      7f9366870804 [unknown] (/tmp/perf-6955.map)
+            node    6955/6955       57.924923513:   10101010 cpu-clock:           1735131 v8::internal::Object::GetProperty(v8::internal::LookupIterator*, bool) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       57.935048448:   10101010 cpu-clock:           13272b0 v8::internal::DisallowJavascriptExecution::DisallowJavascriptExecution(v8::internal::Isolate*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       57.945149497:   10101010 cpu-clock:      7f938d2abb18 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       57.955250729:   10101010 cpu-clock:      7f935649a395 bx_pc_system_c::get_enable_a20() (/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node)
+            node    6955/6959       57.956578748:   10101010 cpu-clock:           2eafebe v8::internal::compiler::StateValuesCache::BuildTree(unsigned long*, v8::internal::compiler::Node**, unsigned long, v8::internal::compiler::BytecodeLivenessState const*, unsigned long) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       57.956883171: PERF_RECORD_MMAP2 6955/6955: [0x7f9366880000(0x2000) @ 0x7f9366880000 00:00 0 0]: rw-p //anon
+            node    6955/6955       57.956895533: PERF_RECORD_MMAP2 6955/6955: [0x7f9366883000(0x3c000) @ 0x7f9366883000 00:00 0 0]: rwxp //anon
+            node    6955/6955       57.965378819:   10101010 cpu-clock:           1717ca3 v8::internal::PropertyKey::PropertyKey(v8::internal::Isolate*, v8::internal::Handle<v8::internal::Object>, bool*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       57.975514074:   10101010 cpu-clock:           18a582b v8::internal::Runtime::GetObjectProperty(v8::internal::Isolate*, v8::internal::Handle<v8::internal::Object>, v8::internal::Handle<v8::internal::Object>, v8::internal::Handle<v8::internal::Object>, bool*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       57.985616490:   10101010 cpu-clock:           144bec5 v8::internal::Factory::NewJSTypedArray(v8::internal::ExternalArrayType, v8::internal::Handle<v8::internal::JSArrayBuffer>, unsigned long, unsigned long, bool) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       57.995758182:   10101010 cpu-clock:           19016c0 v8::internal::Utf8DecoderBase<v8::internal::Utf8Decoder>::Utf8DecoderBase(v8::base::Vector<unsigned char const>) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6960       58.000152008:   10101010 cpu-clock:           2e64f87 v8::internal::compiler::JSTypeHintLowering::ReduceBinaryOperation(v8::internal::compiler::Operator const*, v8::internal::compiler::Node*, v8::internal::compiler::Node*, v8::internal::compiler::Node*, v8::internal::compiler::Node*, v8::internal::FeedbackSlot) const (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.005859241:   10101010 cpu-clock:      7f938d2a9bc9 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.015986972:   10101010 cpu-clock:           1775989 v8::internal::Handle<v8::internal::String> v8::internal::StringTable::LookupKey<v8::internal::SequentialStringKey<unsigned char>, v8::internal::Isolate>(v8::internal::Isolate*, v8::internal::SequentialStringKey<unsigned char>*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.026113685:   10101010 cpu-clock:            eaa42b node::NodeArrayBufferAllocator::Allocate(unsigned long) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.036223464:   10101010 cpu-clock:           14292e9 v8::internal::FactoryBase<v8::internal::Factory>::InternalizeString(v8::base::Vector<unsigned char const>, bool) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.046324717:   10101010 cpu-clock:      7f938d2aba00 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6958       58.049974074:   10101010 cpu-clock:           2d9dc3f v8::internal::compiler::BytecodeGraphBuilder::BuildLoopHeaderEnvironment(int) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.056460878:   10101010 cpu-clock:           18ce1b4 v8::internal::Runtime_TypedArrayCopyElements(int, unsigned long*, v8::internal::Isolate*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.066562667:   10101010 cpu-clock:           1e54280 Builtins_CreateShallowObjectLiteral (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6958       58.073939973: PERF_RECORD_MMAP2 6955/6958: [0x1dfd5eb40000(0x7f000) @ 0x1dfd5eb40000 00:00 0 0]: ---p //anon
+            node    6955/6958       58.073952200: PERF_RECORD_MMAP2 6955/6958: [0x1dfd5eb40000(0x40000) @ 0x1dfd5eb40000 00:00 0 0]: rw-p //anon
+            node    6955/6955       58.076692960:   10101010 cpu-clock:           1250f8a v8::Value::IsFunction() const (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.086794258:   10101010 cpu-clock:           16646c4 v8::internal::JSTypedArray::GetBuffer() (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.096895330:   10101010 cpu-clock:           14704c0 v8::internal::Heap::NotifyObjectLayoutChangeDone(v8::internal::Tagged<v8::internal::HeapObject>) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.106996480:   10101010 cpu-clock:           1dca32d Builtins_BitwiseOr_Baseline (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.117096477:   10101010 cpu-clock:            f4d340 v8impl::TryCatch::~TryCatch() (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6960       58.119338674:   10101010 cpu-clock:      7f938d2ab3ed [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.127197508:   10101010 cpu-clock:      7f93668788f2 [unknown] (/tmp/perf-6955.map)
+            node    6955/6955       58.137298922:   10101010 cpu-clock:      7f938d2a9d41 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.147400024:   10101010 cpu-clock:           1da2b88 Builtins_LoadIC (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6957       58.152282085:   10101010 cpu-clock:           13f7c8c v8::internal::ArrayBufferSweeper::SweepingJob::SweepYoung() (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.157533001:   10101010 cpu-clock:      7f93564ede56 bw_slice_note_attempt(unsigned int) (/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node)
+            node    6955/6959       58.165645323: PERF_RECORD_MMAP2 6955/6959: [0x1e5b8ee80000(0x7f000) @ 0x1e5b8ee80000 00:00 0 0]: ---p //anon
+            node    6955/6959       58.165663603: PERF_RECORD_MMAP2 6955/6959: [0x1e5b8ee80000(0x40000) @ 0x1e5b8ee80000 00:00 0 0]: rw-p //anon
+            node    6955/6955       58.167753684:   10101010 cpu-clock:      7f938d2ad803 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.177854116:   10101010 cpu-clock:           1719538 v8::internal::LookupIterator::WriteDataValue(v8::internal::Handle<v8::internal::Object>, bool) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.187978051:   10101010 cpu-clock:           1d5418e Builtins_Call_ReceiverIsNullOrUndefined (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6960       58.195691428:   10101010 cpu-clock:      7f938d2ab3ed [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.198078250:   10101010 cpu-clock:           15de8ff v8::internal::BackingStore::Allocate(v8::internal::Isolate*, unsigned long, v8::internal::SharedFlag, v8::internal::InitializedFlag) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.208179537:   10101010 cpu-clock:           1da2b88 Builtins_LoadIC (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6959       58.213029924:   10101010 cpu-clock:           13f7c8c v8::internal::ArrayBufferSweeper::SweepingJob::SweepYoung() (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.218280431:   10101010 cpu-clock:           1e48880 Builtins_ArrayBufferPrototypeGetResizable (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6958       58.225994879:   10101010 cpu-clock:           2d434a1 v8::internal::compiler::InstructionSelectorT<v8::internal::compiler::TurboshaftAdapter>::TryRename(v8::internal::compiler::InstructionOperand*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.228383591:   10101010 cpu-clock:      7f93564e9dac bw_emit_extra(BX_CPU_C*, bool) (/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node)
+            node    6955/6955       58.238482401:   10101010 cpu-clock:            eaa42b node::NodeArrayBufferAllocator::Allocate(unsigned long) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.248611570:   10101010 cpu-clock:      7f938d2abafb [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6959       58.258044169:   10101010 cpu-clock:      7f938d2ab3ed [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.258867477:   10101010 cpu-clock:           1718aa4 v8::internal::LookupIterator::FetchValue(v8::internal::AllocationPolicy) const (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.268969124:   10101010 cpu-clock:           144afc4 v8::internal::Factory::NewJSArrayBufferAndBackingStore(unsigned long, unsigned long, v8::internal::InitializedFlag, v8::internal::ResizableFlag, v8::internal::AllocationType) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6960       58.271182385:   10101010 cpu-clock:           15e10e8 v8::internal::BackingStore::~BackingStore() (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.279069288:   10101010 cpu-clock:      7f938d2aba00 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.289171533:   10101010 cpu-clock:            f40041 napi_get_named_property (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.299271212:   10101010 cpu-clock:           1d53c8f Builtins_CallFunction_ReceiverIsAny (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.309542557:   10101010 cpu-clock:           12542e3 v8::Object::Set(v8::Local<v8::Context>, v8::Local<v8::Value>, v8::Local<v8::Value>) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.319688627:   10101010 cpu-clock:           16205e1 v8::internal::(anonymous namespace)::ElementsAccessorBase<v8::internal::(anonymous namespace)::FastPackedDoubleElementsAccessor, v8::internal::(anonymous namespace)::ElementsKindTraits<(v8::internal::ElementsKind)4> >::TransitionElementsKind(v8::internal::Handle<v8::internal::JSObject>, v8::internal::Handle<v8::internal::Map>) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.329790489:   10101010 cpu-clock:      7f9366877bda [unknown] (/tmp/perf-6955.map)
+            node    6955/6955       58.339890779:   10101010 cpu-clock:      7f935647ed10 napi_create_arraybuffer@plt (/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node)
+            node    6955/6957       58.344205519:   10101010 cpu-clock:           322a1b6 v8::internal::compiler::turboshaft::UseMap::UseMap(v8::internal::compiler::turboshaft::Graph const&, v8::internal::Zone*, bool (*)(v8::internal::compiler::turboshaft::Operation const&, v8::internal::Zone*)) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.349991273:   10101010 cpu-clock:           1e00687 Builtins_GetProperty (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.360092305:   10101010 cpu-clock:           148f366 v8::internal::Heap::AllocateExternalBackingStore(std::function<void* (unsigned long)> const&, unsigned long) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.370207213:   10101010 cpu-clock:      7f936687873e [unknown] (/tmp/perf-6955.map)
+            node    6955/6958       58.376432757:   10101010 cpu-clock:           28c456b absl::container_internal::HashSetResizeHelper::GrowIntoSingleGroupShuffleControlBytes(absl::container_internal::ctrl_t*, unsigned long) const (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.380309029:   10101010 cpu-clock:            f42ed6 napi_create_uint32 (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6957       58.380615872:   10101010 cpu-clock:           13f7c5d v8::internal::ArrayBufferSweeper::SweepingJob::SweepYoung() (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.390409331:   10101010 cpu-clock:      7f938d2a1ba4 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.400528026:   10101010 cpu-clock:           1d580d0 Builtins_CallWithArrayLike (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.410629046:   10101010 cpu-clock:      7f9366866dae [unknown] (/tmp/perf-6955.map)
+            node    6955/6958       58.410888728: PERF_RECORD_MMAP2 6955/6958: [0x251903bc0000(0x7f000) @ 0x251903bc0000 00:00 0 0]: ---p //anon
+            node    6955/6958       58.410904700: PERF_RECORD_MMAP2 6955/6958: [0x251903bc0000(0x40000) @ 0x251903bc0000 00:00 0 0]: rw-p //anon
+            node    6955/6955       58.420754806:   10101010 cpu-clock:            f65b80 node_napi_env__::can_call_into_js() const (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.430879235:   10101010 cpu-clock:      7f936680a859 [unknown] (/tmp/perf-6955.map)
+            node    6955/6955       58.440983541:   10101010 cpu-clock:           15f9ffa v8::internal::(anonymous namespace)::TypedElementsAccessor<(v8::internal::ElementsKind)29, unsigned short>::HoleyPrototypeLookupRequired(v8::internal::Isolate*, v8::internal::Tagged<v8::internal::Context>, v8::internal::Tagged<v8::internal::JSArray>) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.451080738:   10101010 cpu-clock:      7f938d2ad803 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6960       58.452935691: PERF_RECORD_MMAP2 6955/6960: [0x1bd366800000(0x7f000) @ 0x1bd366800000 00:00 0 0]: ---p //anon
+            node    6955/6960       58.452943333: PERF_RECORD_MMAP2 6955/6960: [0x1bd366800000(0x40000) @ 0x1bd366800000 00:00 0 0]: rw-p //anon
+            node    6955/6955       58.461181924:   10101010 cpu-clock:           1e008a3 Builtins_GetProperty (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.471283183:   10101010 cpu-clock:      7f93564eed62 bw_slice_note_completed() (/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node)
+            node    6955/6955       58.481383744:   10101010 cpu-clock:           12e5650 v8::internal::Builtin_TypedArrayPrototypeBuffer(int, unsigned long*, v8::internal::Isolate*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.491485119:   10101010 cpu-clock:      7f938d2abb18 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.501586276:   10101010 cpu-clock:           1eb5a49 Builtins_CreateTypedArray (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.511695363:   10101010 cpu-clock:      7f9366885e7f [unknown] (/tmp/perf-6955.map)
+            node    6955/6955       58.521795865:   10101010 cpu-clock:      7f938d2abafb [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6959       58.528881916:   10101010 cpu-clock:      7f938d2ab3ed [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.537160178:   10101010 cpu-clock:           1718b72 v8::internal::LookupIterator::FetchValue(v8::internal::AllocationPolicy) const (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.547261048:   10101010 cpu-clock:      7f935648862a (anonymous namespace)::call(char const*, unsigned long, napi_value__**, napi_value__**) (/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node)
+            node    6955/6955       58.557361878:   10101010 cpu-clock:      7f938d6b98a0 [unknown] (/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33)
+            node    6955/6955       58.567463177:   10101010 cpu-clock:           1717a24 int v8::internal::BinarySearch<(v8::internal::SearchMode)1, v8::internal::DescriptorArray>(v8::internal::DescriptorArray*, v8::internal::Tagged<v8::internal::Name>, int, int*) [clone .isra.0] (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.577564098:   10101010 cpu-clock:           14292f0 v8::internal::FactoryBase<v8::internal::Factory>::InternalizeString(v8::base::Vector<unsigned char const>, bool) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.587664906:   10101010 cpu-clock:           1919040 v8::internal::GetCurrentStackPosition() (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.597766426:   10101010 cpu-clock:           1486074 void v8::internal::Heap::CopyRange<v8::internal::FullObjectSlot>(v8::internal::Tagged<v8::internal::HeapObject>, v8::internal::FullObjectSlot, v8::internal::FullObjectSlot, int, v8::internal::WriteBarrierMode) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.607867449:   10101010 cpu-clock:      7f9356488644 (anonymous namespace)::call(char const*, unsigned long, napi_value__**, napi_value__**) (/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node)
+            node    6955/6955       58.617969347:   10101010 cpu-clock:           13f76b3 v8::internal::ArrayBufferSweeper::Append(v8::internal::Tagged<v8::internal::JSArrayBuffer>, v8::internal::ArrayBufferExtension*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.628069360:   10101010 cpu-clock:  ffffffffb052c39c [unknown] ([kernel.kallsyms])
+            node    6955/6957       58.628855529:   10101010 cpu-clock:           15e1119 v8::internal::BackingStore::~BackingStore() (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.638169979:   10101010 cpu-clock:           1650b30 v8::internal::FieldType::NowContains(v8::internal::Tagged<v8::internal::FieldType>, v8::internal::Tagged<v8::internal::Object>) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6959       58.644322610:   10101010 cpu-clock:      7f938d2ab349 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.648270872:   10101010 cpu-clock:      7f93564ed312 bw_slice_read(unsigned long long, unsigned int, void*) (/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node)
+            node    6955/6955       58.658373746:   10101010 cpu-clock:           177599c v8::internal::Handle<v8::internal::String> v8::internal::StringTable::LookupKey<v8::internal::SequentialStringKey<unsigned char>, v8::internal::Isolate>(v8::internal::Isolate*, v8::internal::SequentialStringKey<unsigned char>*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.668473084:   10101010 cpu-clock:           1dfeb1c Builtins_CEntry_Return1_ArgvOnStack_NoBuiltinExit (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.678574268:   10101010 cpu-clock:           1251048 v8::Value::IsArrayBuffer() const (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.688676183:   10101010 cpu-clock:           166432d v8::internal::JSTypedArray::GetBuffer() (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.698777771:   10101010 cpu-clock:      7f93668718d8 [unknown] (/tmp/perf-6955.map)
+            node    6955/6955       58.700195381: PERF_RECORD_MMAP2 6955/6955: [0x365891cc0000(0x7f000) @ 0x365891cc0000 00:00 0 0]: ---p //anon
+            node    6955/6955       58.700206801: PERF_RECORD_MMAP2 6955/6955: [0x365891cc0000(0x40000) @ 0x365891cc0000 00:00 0 0]: rw-p //anon
+            node    6955/6960       58.702638189:   10101010 cpu-clock:           13f7c8c v8::internal::ArrayBufferSweeper::SweepingJob::SweepYoung() (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.708907052:   10101010 cpu-clock:           171cc65 v8::internal::LookupIterator::ApplyTransitionToDataProperty(v8::internal::Handle<v8::internal::JSReceiver>) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.714798773: PERF_RECORD_MMAP2 6955/6955: [0xb5bcdcc0000(0x7f000) @ 0xb5bcdcc0000 00:00 0 0]: ---p //anon
+            node    6955/6955       58.714809826: PERF_RECORD_MMAP2 6955/6955: [0xb5bcdcc0000(0x40000) @ 0xb5bcdcc0000 00:00 0 0]: rw-p //anon
+            node    6955/6955       58.719035150:   10101010 cpu-clock:      7f93564ebaf2 bw_host_memory(unsigned int, unsigned char*, unsigned int, unsigned int*, bw_cpu3_combined_paging_ram_byte_result*, bool) (/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node)
+            node    6955/6955       58.729135503:   10101010 cpu-clock:           13f771f v8::internal::ArrayBufferSweeper::Append(v8::internal::Tagged<v8::internal::JSArrayBuffer>, v8::internal::ArrayBufferExtension*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.739236433:   10101010 cpu-clock:      7f9356488955 (anonymous namespace)::u32(napi_value__*, unsigned int*) (/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node)
+            node    6955/6955       58.749337529:   10101010 cpu-clock:           144b917 v8::internal::Factory::NewJSArrayBufferView(v8::internal::Handle<v8::internal::Map>, v8::internal::Handle<v8::internal::FixedArrayBase>, v8::internal::Handle<v8::internal::JSArrayBuffer>, unsigned long, unsigned long) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.759438230:   10101010 cpu-clock:      7f938d2aba00 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.769548575:   10101010 cpu-clock:           144bcc0 v8::internal::Factory::NewJSTypedArray(v8::internal::ExternalArrayType, v8::internal::Handle<v8::internal::JSArrayBuffer>, unsigned long, unsigned long, bool) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.779650003:   10101010 cpu-clock:      7f936686df88 [unknown] (/tmp/perf-6955.map)
+            node    6955/6955       58.789750611:   10101010 cpu-clock:           125650d v8::Object::GetPropertyNames(v8::Local<v8::Context>, v8::KeyCollectionMode, v8::PropertyFilter, v8::IndexFilter, v8::KeyConversionMode) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.799851656:   10101010 cpu-clock:      7f93564edf1d bw_slice_note_attempt(unsigned int) (/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node)
+            node    6955/6955       58.805910604:   10101010 cpu-clock:           172f02f v8::internal::Handle<v8::internal::Object> v8::internal::Object::WrapForRead<(v8::internal::AllocationType)0, v8::internal::Isolate>(v8::internal::Isolate*, v8::internal::Handle<v8::internal::Object>, v8::internal::Representation) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.816011702:   10101010 cpu-clock:      7f938d2abb18 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.826111986:   10101010 cpu-clock:           1664730 v8::internal::JSTypedArray::type() (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6960       58.830656348:   10101010 cpu-clock:      7f938d2ab349 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.836213148:   10101010 cpu-clock:      7f938d2abb18 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.846313971:   10101010 cpu-clock:            f49286 napi_create_typedarray (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6957       58.847718938:   10101010 cpu-clock:  ffffffffb068b1f0 [unknown] ([kernel.kallsyms])
+            node    6955/6955       58.856414881:   10101010 cpu-clock:           1775989 v8::internal::Handle<v8::internal::String> v8::internal::StringTable::LookupKey<v8::internal::SequentialStringKey<unsigned char>, v8::internal::Isolate>(v8::internal::Isolate*, v8::internal::SequentialStringKey<unsigned char>*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.866516140:   10101010 cpu-clock:           144b7c3 v8::internal::Factory::NewJSArrayBufferView(v8::internal::Handle<v8::internal::Map>, v8::internal::Handle<v8::internal::FixedArrayBase>, v8::internal::Handle<v8::internal::JSArrayBuffer>, unsigned long, unsigned long) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.876617185:   10101010 cpu-clock:      7f938d2abb18 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.886718370:   10101010 cpu-clock:      7f938d2abafb [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.896829811:   10101010 cpu-clock:           1775d48 v8::internal::Handle<v8::internal::String> v8::internal::StringTable::LookupKey<v8::internal::SequentialStringKey<unsigned char>, v8::internal::Isolate>(v8::internal::Isolate*, v8::internal::SequentialStringKey<unsigned char>*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.906930712:   10101010 cpu-clock:           144ae3c v8::internal::Factory::NewJSArrayBufferAndBackingStore(unsigned long, unsigned long, v8::internal::InitializedFlag, v8::internal::ResizableFlag, v8::internal::AllocationType) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.917031101:   10101010 cpu-clock:           1775986 v8::internal::Handle<v8::internal::String> v8::internal::StringTable::LookupKey<v8::internal::SequentialStringKey<unsigned char>, v8::internal::Isolate>(v8::internal::Isolate*, v8::internal::SequentialStringKey<unsigned char>*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.927132105:   10101010 cpu-clock:           14292eb v8::internal::FactoryBase<v8::internal::Factory>::InternalizeString(v8::base::Vector<unsigned char const>, bool) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.937233509:   10101010 cpu-clock:           1664760 v8::internal::JSTypedArray::element_size() const (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.947335714:   10101010 cpu-clock:           1734355 v8::internal::Object::TransitionAndWriteDataProperty(v8::internal::LookupIterator*, v8::internal::Handle<v8::internal::Object>, v8::internal::PropertyAttributes, v8::Maybe<v8::internal::ShouldThrow>, v8::internal::StoreOrigin) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6960       58.948953372:   10101010 cpu-clock:           13f7c8c v8::internal::ArrayBufferSweeper::SweepingJob::SweepYoung() (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.957444189:   10101010 cpu-clock:      7f938d2abb18 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6957       58.962410956:   10101010 cpu-clock:  ffffffffb0656d36 [unknown] ([kernel.kallsyms])
+            node    6955/6955       58.967545734:   10101010 cpu-clock:      7f938d2aba00 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       58.977648590:   10101010 cpu-clock:           126a79c v8::Isolate::AdjustAmountOfExternalAllocatedMemory(long) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.987747648:   10101010 cpu-clock:           16abe60 v8::internal::JSObject::GetHeaderSize(v8::internal::InstanceType, bool) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       58.997848496:   10101010 cpu-clock:      7f935648879d (anonymous namespace)::fusion_u32(unsigned int const*, unsigned long) (/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node)
+            node    6955/6955       59.007953152:   10101010 cpu-clock:           1d526f4 Builtins_RecordWriteSaveFP (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       59.018077065:   10101010 cpu-clock:      7f9366878646 [unknown] (/tmp/perf-6955.map)
+            node    6955/6955       59.028178166:   10101010 cpu-clock:           1e00668 Builtins_GetProperty (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       59.038279469:   10101010 cpu-clock:           14292eb v8::internal::FactoryBase<v8::internal::Factory>::InternalizeString(v8::base::Vector<unsigned char const>, bool) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       59.048380403:   10101010 cpu-clock:           1718ac4 v8::internal::LookupIterator::FetchValue(v8::internal::AllocationPolicy) const (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       59.058481099:   10101010 cpu-clock:           1775989 v8::internal::Handle<v8::internal::String> v8::internal::StringTable::LookupKey<v8::internal::SequentialStringKey<unsigned char>, v8::internal::Isolate>(v8::internal::Isolate*, v8::internal::SequentialStringKey<unsigned char>*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6959       59.065053549: PERF_RECORD_MMAP2 6955/6959: [0x2496cee00000(0x7f000) @ 0x2496cee00000 00:00 0 0]: ---p //anon
+            node    6955/6959       59.065069758: PERF_RECORD_MMAP2 6955/6959: [0x2496cee00000(0x40000) @ 0x2496cee00000 00:00 0 0]: rw-p //anon
+            node    6955/6955       59.068705350:   10101010 cpu-clock:      7f93564ed672 bw_slice_write(unsigned long long, unsigned int, void const*) (/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node)
+            node    6955/6955       59.078805671:   10101010 cpu-clock:           1261693 v8::String::NewFromUtf8(v8::Isolate*, char const*, v8::NewStringType, int) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       59.086197787: PERF_RECORD_MMAP2 6955/6955: [0x6bd2b900000(0x6d000) @ 0x6bd2b900000 00:00 0 0]: ---p //anon
+            node    6955/6955       59.086208207: PERF_RECORD_MMAP2 6955/6955: [0x6bd2b900000(0x2e000) @ 0x6bd2b900000 00:00 0 0]: rw-p //anon
+            node    6955/6955       59.088906810:   10101010 cpu-clock:           15de959 v8::internal::BackingStore::Allocate(v8::internal::Isolate*, unsigned long, v8::internal::SharedFlag, v8::internal::InitializedFlag) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6958       59.093458259:   10101010 cpu-clock:      7f938d2ade59 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       59.099005971:   10101010 cpu-clock:      7f938d2abb18 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6960       59.107807168: PERF_RECORD_MMAP2 6955/6960: [0xfdfc22c0000(0x7f000) @ 0xfdfc22c0000 00:00 0 0]: ---p //anon
+            node    6955/6960       59.107816065: PERF_RECORD_MMAP2 6955/6960: [0xfdfc22c0000(0x40000) @ 0xfdfc22c0000 00:00 0 0]: rw-p //anon
+            node    6955/6955       59.109188772:   10101010 cpu-clock:           14292eb v8::internal::FactoryBase<v8::internal::Factory>::InternalizeString(v8::base::Vector<unsigned char const>, bool) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       59.119289949:   10101010 cpu-clock:      7f938d2abb18 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6959       59.125412237:   10101010 cpu-clock:      7f938d2ab3d3 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       59.129391099:   10101010 cpu-clock:           1429306 v8::internal::FactoryBase<v8::internal::Factory>::InternalizeString(v8::base::Vector<unsigned char const>, bool) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       59.139491781:   10101010 cpu-clock:           13a9ee8 v8::internal::(anonymous namespace)::Invoke(v8::internal::Isolate*, v8::internal::(anonymous namespace)::InvokeParams const&) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       59.149593085:   10101010 cpu-clock:           18a56c8 v8::internal::Runtime::GetObjectProperty(v8::internal::Isolate*, v8::internal::Handle<v8::internal::Object>, v8::internal::Handle<v8::internal::Object>, v8::internal::Handle<v8::internal::Object>, bool*) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       59.159694454:   10101010 cpu-clock:            eaa42b node::NodeArrayBufferAllocator::Allocate(unsigned long) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       59.169795551:   10101010 cpu-clock:           1251478 v8::Value::IsNumber() const (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6955       59.179896521:   10101010 cpu-clock:      7f938d2ad8c4 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       59.189997662:   10101010 cpu-clock:           16abe45 v8::internal::JSObject::GetHeaderSize(v8::internal::InstanceType, bool) (/opt/hostedtoolcache/node/22.23.3/x64/bin/node)
+            node    6955/6958       59.196167339:   10101010 cpu-clock:      7f938d2ab3ed [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)
+            node    6955/6955       59.200098121:   10101010 cpu-clock:      7f938d2a9d62 [unknown] (/usr/lib/x86_64-linux-gnu/libc.so.6)

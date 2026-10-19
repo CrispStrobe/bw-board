@@ -1,0 +1,4 @@
+00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'
+00000000000i[      ] reading configuration from /home/runner/work/_temp/owned-bulk-gate/gate/results/7-BASE/guest/guest.bochsrc
+00000000000i[      ] installing nogui module as the Bochs GUI
+00000000000i[      ] using log file /home/runner/work/_temp/owned-bulk-gate/gate/results/7-BASE/guest/guest.bochs.log

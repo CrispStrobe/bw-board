@@ -1,0 +1,31 @@
+{
+  "schema": "astra.i80386-apic-pending-mask.v1",
+  "date": "2026-09-27",
+  "nodeVersion": "v20.20.2",
+  "baselineRevision": "bc539d33a87e3bf31421ea2bcc88d4712fcd7632",
+  "workload": "stock xv6-public eeb7b415dbcb12cc362d0783e41c3d1f44066b17 forktest, 4 MiB, bundled Bochs BIOS",
+  "command": "XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+  "sourceSha256": {
+    "baselineAtMachine": "509fb910298fb6232bf642e760d3194af6ea4a15256683fccff5b9333b0292fa",
+    "optimizedAtMachine": "1aeeb7f033841e2b7b2aa7f08f3a26b77176e6d144363f0fd5baf0bcf66a8dcc"
+  },
+  "change": "Track pending IOAPIC edges in a 24-bit mask, avoiding a 24-slot scan on instruction boundaries with no pending edge. Delivery remains lowest eligible IRQ first, and masked edges stay latched until unmasked.",
+  "userCpuSeconds": {
+    "baseline": [30.07, 29.50],
+    "optimized": [27.52, 27.73]
+  },
+  "meanUserCpuSeconds": {
+    "baseline": 29.785,
+    "optimized": 27.625
+  },
+  "userCpuSpeedup": 1.0781900452488689,
+  "userCpuReduction": 0.07251972469363777,
+  "guest": {
+    "steps": 24338279,
+    "baselineReportSha256": "98893ad5a1c94ffe425facf370976a62841298758015e3c18e6c0d124e890686",
+    "optimizedReportSha256": "9882a726e30331903ec654314bd56a473f2190f84f9bea01192d84027dccbca3",
+    "difference": "Only the absolute worktree-local ROM path differs; all guest-state fields and ROM SHA match."
+  },
+  "validation": "38 AT-machine and paging tests passed, including masked-edge retention and lowest-eligible-IRQ order.",
+  "limits": "This 1.078x incremental CPU-time gain is for the bounded xv6 workload; it does not establish a 10x overall target."
+}

@@ -1,0 +1,10 @@
+{
+  "status": "ROOT_H5_ACTUAL_CONTROLS_PASS",
+  "checks": 952,
+  "cases": 17,
+  "sourceRevision": "ef106b4ae3a2ca55e9cc3253597ec66773e07847",
+  "summarySha256": "7e2e92e7b6222bcf609dc7abe71e528e2a95feb69ad1573234a9ba94112a9db5",
+  "approvedSha256": "66821c83ac27cf350956f98dbeece71b19c5100cba2ff59150852947181824eb",
+  "referenceH4CaptureSha256": "3085b4f7ee43bb8cfcea8ce98611e0f7a567907f3b7e5a7521065c1bc91e8649",
+  "scope": "Full exposed CPU/board/RAM accepted controls; exact contained fatal/error chronology on nine denials; test-only raw-loader internal argc observation"
+}

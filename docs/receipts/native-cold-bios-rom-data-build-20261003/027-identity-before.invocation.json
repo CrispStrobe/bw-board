@@ -1,0 +1,24 @@
+{
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=128",
+    "--input-type=module",
+    "-e",
+    "import {sourceIdentity} from './scripts/bochs-cpu3-native-cold-bios/identity.mjs';console.log(JSON.stringify(sourceIdentity()))"
+  ],
+  "cwd": "/home/runner/work/bw-board/bw-board/publication",
+  "pid": 3044,
+  "cpuSeconds": 15,
+  "wallSeconds": 30,
+  "coreBytes": 0,
+  "fileBytes": 268435456,
+  "niceIncrement": 10,
+  "blankHooks": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  }
+}

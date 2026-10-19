@@ -1,0 +1,24 @@
+{
+  "status": "READ_ONLY_SOLE_STATIC_ZIP_SOURCE_SELECTION",
+  "zip": "/tmp/native-paged-int-iret-first-build-20261004.zip",
+  "zipSha256": "4ac91409753cc618711107cf4fbff1ebb8c73c40295978eb4b6e798af3119a6c",
+  "member": "paged-int-iret-build-evidence/prepared-source.tar.gz",
+  "records": {
+    "bochs/cpu/bw_slice_abi.h": {
+      "bytes": 7038,
+      "sha256": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990",
+      "selectedFile": "/tmp/native-paged-pagefault-native-policy-design-20261005/bw_slice_abi.h"
+    },
+    "bochs/cpu/bw_slice_runtime.h": {
+      "bytes": 1583,
+      "sha256": "58cf1014f613c450654ec885e2dfc6b0da53581cc5d8883c4dd66aec914f9ea3",
+      "selectedFile": "/tmp/native-paged-pagefault-native-policy-design-20261005/bw_slice_runtime.h"
+    },
+    "bochs/cpu/bw_slice_runtime.inc": {
+      "bytes": 65912,
+      "sha256": "44d6166807419eebc02f6e69f767e22fed21ead738b2a10e71d87791c364b796",
+      "selectedFile": "/tmp/native-paged-pagefault-native-policy-design-20261005/bw_slice_runtime.inc"
+    }
+  },
+  "noCompileOrAddon": true
+}

@@ -1,0 +1,38 @@
+{
+  "status": "PASS_SOURCE_ONLY_SAVED_DATA_EVIDENCE_NOT_CANDIDATE_ADMISSION",
+  "checks": 25,
+  "resultSha256": "4f391f4319156f4594dceafe6be745f251fc602bee9d5fe7e160d58594efc94a",
+  "means": {
+    "json": {
+      "perPayloadCPUus": [
+        191.62,
+        213.6,
+        177.875
+      ],
+      "meanCPUus": 194.365
+    },
+    "dto": {
+      "perPayloadCPUus": [
+        347.835,
+        212.475,
+        314.81
+      ],
+      "meanCPUus": 291.70666666666665
+    },
+    "packed": {
+      "perPayloadCPUus": [
+        489.99,
+        803.625,
+        238.605
+      ],
+      "meanCPUus": 510.74
+    }
+  },
+  "packedCPUIncreasePercent": 162.7736475188434,
+  "limits": [
+    "Same-process MessageChannel; no native/worker execution or production chronology",
+    "200 repeated authentic zero-work terminal payloads per cell; all3 rounds retained; no warmup discard",
+    "Encoder slice length reads shadowable property; authenticated actual160-byte slice unshadowed; source-domain completeness not admitted",
+    "First parity-order failure and r2 missing sender checks not final cost evidence"
+  ]
+}

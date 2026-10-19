@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python3",
+    "-B",
+    "/tmp/native-cold-native-restore-genuine-readonly-20261003/check.py"
+  ],
+  "cpu": 10,
+  "wall": 30,
+  "nice": 10,
+  "scope": "read-only existing genuine ZIP/TAR parsing, no extraction"
+}

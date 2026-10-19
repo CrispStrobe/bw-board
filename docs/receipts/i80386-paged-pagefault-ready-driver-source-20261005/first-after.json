@@ -1,0 +1,445 @@
+{
+  "head": "c7859eab6184f3dd3fc1de6a86144f3039a7f23a",
+  "status": "",
+  "files": {
+    "package.json": {
+      "bytes": 2820,
+      "sha256": "29706d10ae264677b8fcaecce5929acee945f9d27ece8cb3347bdff16431f0ee"
+    },
+    "roms/free-at-bios/BIOS-bochs-legacy": {
+      "bytes": 65536,
+      "sha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac"
+    },
+    "roms/free-at-bios/LICENSE": {
+      "bytes": 26530,
+      "sha256": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551"
+    },
+    "roms/free-at-bios/vgabios-lgpl.bin": {
+      "bytes": 38400,
+      "sha256": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1"
+    },
+    "scripts/bochs-cpu3-native-cold-bios/board-profile.mjs": {
+      "bytes": 1454,
+      "sha256": "6ea848b7a97eea178926fc2c966e3ad4e8b76a60da6ba8cefe07f47e4d5922e3"
+    },
+    "scripts/bochs-cpu3-native-cold-bios/board-provider.mjs": {
+      "bytes": 11919,
+      "sha256": "19bb6335c40feeacf12be2dc19d5bd7abbc90ffcb26580785f1ffda98332e107"
+    },
+    "scripts/bochs-cpu3-native-cold-bios/bochs-reference.mjs": {
+      "bytes": 6935,
+      "sha256": "1f9260893f5d4fbc967e0104e02937d3f88bda698d39f2ac0df0e9fee8e58c24"
+    },
+    "scripts/bochs-cpu3-native-cold-bios/driver-auth.mjs": {
+      "bytes": 3525,
+      "sha256": "b7245d8c88aa4b70bf845366026fe5e64e4aabfe3eda833975e6d7f88ef98eb6"
+    },
+    "scripts/bochs-cpu3-native-cold-bios/fetch-policy.mjs": {
+      "bytes": 1273,
+      "sha256": "59c28bc3e5a29d27a06599094f9a7f7c152c081499a46b2df19d278099ae4369"
+    },
+    "scripts/bochs-cpu3-native-cold-bios/parity.mjs": {
+      "bytes": 7768,
+      "sha256": "5943e3bbb6225e224cbaa4555782fa320f8e4637323c8f16c63d42e851704ff0"
+    },
+    "scripts/bochs-cpu3-native-cold-bios/reference.mjs": {
+      "bytes": 14714,
+      "sha256": "49654b942878e01dcc9824fd78fe7509750fd896a5fd43b456828bc8791c476a"
+    },
+    "scripts/bochs-cpu3-native-cold-bios/rep-policy.mjs": {
+      "bytes": 1729,
+      "sha256": "411b8fdfe5a31193bd09c5f874eb397d7ce46684f26e3366e528f318ce4f3c80"
+    },
+    "scripts/bochs-cpu3-native-cold-bios/rom-data-policy.mjs": {
+      "bytes": 621,
+      "sha256": "39e6b1c471a9804a0ab89fbcc3afa5e948ab278aa433db861d7ca6f1a1c4b9b2"
+    },
+    "scripts/bochs-cpu3-native-cold-bios/runtime-rep.mjs": {
+      "bytes": 3467,
+      "sha256": "d79b652a3120da61e99f08a2a5844bba4fd372a3c4221073f2626661949abb5d"
+    },
+    "scripts/bochs-cpu3-native-cold-bios/runtime.mjs": {
+      "bytes": 6815,
+      "sha256": "4577806b3a1cea0e1fb02df73843576fb5a2e0aec616a64a3d015c28f57e600a"
+    },
+    "scripts/bochs-cpu3-native-cold-bios/undefined-of.mjs": {
+      "bytes": 3148,
+      "sha256": "99bae79696c73b6ede31136659ddde8a876a5417b00a1c82b9242c40297e6840"
+    },
+    "scripts/bochs-cpu3-native-combined-paging-ram/host.mjs": {
+      "bytes": 18738,
+      "sha256": "80b2022f5b460e4a5a423d47bc0a3d3f81c9f09b6a2654a7f9dd87e9086b0446"
+    },
+    "scripts/bochs-cpu3-native-direct-board/board.mjs": {
+      "bytes": 7105,
+      "sha256": "02102c01ffce3d12310cffdeb2e16129d4419971d95ce0503d551b822078e2dc"
+    },
+    "scripts/bochs-cpu3-native-direct-board/runtime.inc": {
+      "bytes": 47814,
+      "sha256": "1c0e7b6f58016e875a4e8d53e4dc0427ef519f7b0c64797bdff750089bd8f9c4"
+    },
+    "scripts/bochs-cpu3-native-hot-direct/board.mjs": {
+      "bytes": 2001,
+      "sha256": "95a268d026ee06ceac81e29e2f4c66151f497502bdf1f87483d2c3a0aefefe8b"
+    },
+    "scripts/bochs-cpu3-native-hot-direct/profile.mjs": {
+      "bytes": 394,
+      "sha256": "3f2c0b2773cc3e4e27a71ba1e5c0c154d37f2e2ae20005506f4c3da7f9499117"
+    },
+    "scripts/bochs-cpu3-native-hot-direct/runtime.mjs": {
+      "bytes": 1939,
+      "sha256": "e668548dbc56ae9835cc341a1efec6ef9acea4ef523ef1852f1d914885441264"
+    },
+    "scripts/bochs-cpu3-native-nonidentity-paging/profile.mjs": {
+      "bytes": 8654,
+      "sha256": "6a7ee63fa924e9dbe46a82d0f1627c196eef7cdd0512b72a1658f442fd45899e"
+    },
+    "scripts/bochs-cpu3-native-nonidentity-paging/provider-derivation.mjs": {
+      "bytes": 6790,
+      "sha256": "0c457d7991414e650df7e3ce3fca5bbf04ec3770a9ea58b4f0995918bcfbdf48"
+    },
+    "scripts/bochs-cpu3-native-nonidentity-paging/provider-profile.mjs": {
+      "bytes": 5587,
+      "sha256": "a82cf72e584c4a87ba040c63e3becad40b015b4d00a885f65fa18c3f739007d7"
+    },
+    "scripts/bochs-cpu3-native-nonidentity-paging/runtime.mjs": {
+      "bytes": 10671,
+      "sha256": "62bff730fd3f204eb5a5ef67259327eefe8faa4b31b5240bdb012e1fba06744d"
+    },
+    "scripts/bochs-cpu3-native-owned-8042-interface/profile.mjs": {
+      "bytes": 2621,
+      "sha256": "d663126cf2a4cae6fb9fea1b816576237fd03482201fbefd954784a4edb53f0e"
+    },
+    "scripts/bochs-cpu3-native-owned-8042-interface/reference.mjs": {
+      "bytes": 12844,
+      "sha256": "381f1c233bddd27c73dc19cb144c3308d4b4b8fe5ae0b4bf952351fbc5945757"
+    },
+    "scripts/bochs-cpu3-native-owned-8042/profile.mjs": {
+      "bytes": 2430,
+      "sha256": "e7c3e0127f4363dc68b23f542132b5c388b4e78f198d733bc44c5f3e3a1aa546"
+    },
+    "scripts/bochs-cpu3-native-owned-clock/abi.h": {
+      "bytes": 7013,
+      "sha256": "8cb93c00c24ca088184f4201fcf97a97a9cf508b7c3a2048ca532848dba7a9bc"
+    },
+    "scripts/bochs-cpu3-native-owned-clock/clock.inc": {
+      "bytes": 3247,
+      "sha256": "861080333e8e656005d1919bc55191710f98d9af6ef375642ec50efebc0ff0ab"
+    },
+    "scripts/bochs-cpu3-native-owned-clock/derive.mjs": {
+      "bytes": 417,
+      "sha256": "14413e740b13d0fb0b78aea26054578a652c59237aca4ecf807937f7e78459f6"
+    },
+    "scripts/bochs-cpu3-native-owned-clock/runtime.mjs": {
+      "bytes": 4665,
+      "sha256": "2a7865f992199397a16fc0989e1c6fb620f1e02c41b66b5e758095302f11af9f"
+    },
+    "scripts/bochs-cpu3-native-owned-in8/runtime.mjs": {
+      "bytes": 2057,
+      "sha256": "b20b0af4322cb3f71c97e7ce04297196bd316750b48ec1bb7213c4ce0f59af73"
+    },
+    "scripts/bochs-cpu3-native-paged-int-iret/cpu-comparison.mjs": {
+      "bytes": 1506,
+      "sha256": "fc3b46fae89abe5cb412321d027b8fff3505036157824178d5ef62839aa4f98d"
+    },
+    "scripts/bochs-cpu3-native-paged-int-iret/driver-auth.mjs": {
+      "bytes": 6419,
+      "sha256": "3ba195a77cd775541520d6435888faf3cf2b3e487fbc0074ca012249f591719c"
+    },
+    "scripts/bochs-cpu3-native-paged-int-iret/driver-provider.mjs": {
+      "bytes": 3222,
+      "sha256": "370d2fe94b392433cdf524c967da0232e2a4116c4d6f4711457969d78b3a2fb3"
+    },
+    "scripts/bochs-cpu3-native-paged-int-iret/evidence.mjs": {
+      "bytes": 5513,
+      "sha256": "a64b90d66ab74b90815c1d8eb3db6fab35d1ba750c36341cbf5f67ab7854bf05"
+    },
+    "scripts/bochs-cpu3-native-paged-int-iret/parity.mjs": {
+      "bytes": 10343,
+      "sha256": "452940cbf2c9d30ca47ba5b69906ed6bda644bc71de5adddd71d60bc38586631"
+    },
+    "scripts/bochs-cpu3-native-paged-int-iret/profile.mjs": {
+      "bytes": 8867,
+      "sha256": "8fb1e69c475d4e4e5ce4d6d09481184280a000d7bf73565c821c464387b8690a"
+    },
+    "scripts/bochs-cpu3-native-paged-int-iret/provider-derivation.mjs": {
+      "bytes": 5381,
+      "sha256": "4907972858f7c9c7ed0ff630ec0334e4606184448707a6d1e1e1cdc0c7942376"
+    },
+    "scripts/bochs-cpu3-native-paged-int-iret/provider-profile.mjs": {
+      "bytes": 6557,
+      "sha256": "e65291fb0e6262745dc9af1c557a491d3af04fd2399d8bc4da72e1d580620626"
+    },
+    "scripts/bochs-cpu3-native-paged-int-iret/reference.mjs": {
+      "bytes": 8177,
+      "sha256": "8230aa965693c51508259b281d01ce4e110f439ff54e1c7c6c395fe6bb534dbb"
+    },
+    "scripts/bochs-cpu3-native-paged-int-iret/runner.mjs": {
+      "bytes": 16011,
+      "sha256": "82ae77509a498e7b5ff3f20e85a308456801db149856c46504f2982eef54d47a"
+    },
+    "scripts/bochs-cpu3-native-paged-int-iret/runtime.mjs": {
+      "bytes": 9122,
+      "sha256": "fd0c289171e1ff08f1978d3fd687954e9706c052870f89abefc53c080e4e1ea1"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/NATIVE-DRIVER-SOURCE.md": {
+      "bytes": 10303,
+      "sha256": "b7720db6a33e601facffa66472c1eaecf0301ad6cb8e14211140568b374a0a61"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/actual-first-pf-build-prepare.json.gz": {
+      "bytes": 298502,
+      "sha256": "fda019035d9bc8df07cc1578abb9cb4ecbd79be4f556ab01bc6d0bf9707a66b8"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/cpu-comparison.mjs": {
+      "bytes": 1510,
+      "sha256": "0cfada8bf3b4797dd9257f81b3c55b049595c4cd52518880794b22ceeca526b0"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/driver-auth.mjs": {
+      "bytes": 7348,
+      "sha256": "025f56d99a748e240620fb77c998303decfa6bb0b85f32df1083a70bf2136bda"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/driver-build-binding.json": {
+      "bytes": 31438,
+      "sha256": "0311ea55d664b3555fd823d544bc13c5313283b3c91dc15e3bbe0258a10b9a42"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/driver-provider.mjs": {
+      "bytes": 3070,
+      "sha256": "19eec174322e618fa268a8c9627c19407e21d66fdfbb5654e20889436e05986f"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/native-fault-policy.mjs": {
+      "bytes": 11129,
+      "sha256": "b67e9a6c4fdee124d737e6907d71f1e905b9b9231fa2777b11630a21fae597a8"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/parity.mjs": {
+      "bytes": 12603,
+      "sha256": "188d02fc77cab045eed177d6f531b8378fe9a5c18581f9f40beafdbbbc2b6c44"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/profile.mjs": {
+      "bytes": 11384,
+      "sha256": "c442a68bd76eccee912674de033ce44a3ca71d89cd06590fd468c2db03375df4"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/provider-derivation.mjs": {
+      "bytes": 5447,
+      "sha256": "c0f08f4c27fef6544d98ad7b9e089c10a897c1399a491ddbd1367107b19bf40c"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/provider-profile.mjs": {
+      "bytes": 7556,
+      "sha256": "103f321f8c015b5922c625d7a7d6d32ef9288567444a7d5d40a30b0ba15cb636"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/reference.mjs": {
+      "bytes": 11062,
+      "sha256": "9cb5b9a5d141d9ea416454f221551584a080c5aee0ac73625f05695bc29f92db"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/runner.mjs": {
+      "bytes": 19151,
+      "sha256": "261ab8c49dfdef9a12a0e8209c8f62938ef5adc2f3d73e35fd0b8cbea75ac02f"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/runtime.mjs": {
+      "bytes": 13192,
+      "sha256": "d0dcaa8067ec3573472c58c1071ec5db8de710c0b35c73ed747177c420f669da"
+    },
+    "scripts/bochs-cpu3-native-paged-pagefault/saved-js-fault-phases.json": {
+      "bytes": 100906,
+      "sha256": "13a9701162adbf95cd0bccb0cae5a8e18e45ecaa68d0c817426d67ec14ba7710"
+    },
+    "scripts/bochs-cpu3-native-protected-ram/cpu-profile.mjs": {
+      "bytes": 1979,
+      "sha256": "a0020f6eb374df8872a1e9ab4b46e9b8c1dd648797bfe85e44c6dacf978c3aa6"
+    },
+    "scripts/bochs-cpu3-native-protected-ram/profile.mjs": {
+      "bytes": 4894,
+      "sha256": "802889b3a703697b0a66dd7c7fca44e5c53114af3b6da02894bc34d2280098b7"
+    },
+    "scripts/bochs-cpu3-native-protected-ram/provider-derivation.mjs": {
+      "bytes": 5337,
+      "sha256": "2a5242b97b385efa3ba759228d7cc73d7ff96d82226182f774f537d7cd1c4ab6"
+    },
+    "scripts/bochs-cpu3-native-protected-ram/runtime.mjs": {
+      "bytes": 5785,
+      "sha256": "a7158bcca2572422efa2743551fe1e5a70f90d09b2278345d41aaca7b87aad7b"
+    },
+    "scripts/bochs-cpu3-native-protected-stack/driver-auth.mjs": {
+      "bytes": 6076,
+      "sha256": "c44f982eafbea6b9ba1efaaa07f68bcf5b9f4eb24b0dd796539e843a841682cd"
+    },
+    "scripts/bochs-cpu3-native-protected-stack/profile.mjs": {
+      "bytes": 7424,
+      "sha256": "0e5eee9921c2f6e3b87471aa67bfef303f7731583ea497581c04a378d7333fd3"
+    },
+    "scripts/bochs-cpu3-native-protected-stack/provider-derivation.mjs": {
+      "bytes": 3603,
+      "sha256": "cb985dde558276b48032d1f1a70b7f37a24c685f505f3173d93775f40c348540"
+    },
+    "scripts/bochs-cpu3-native-protected-stack/runtime.mjs": {
+      "bytes": 5835,
+      "sha256": "d00a95fcde0a7af590acd59ce6a0018ffd437196e9c094172c0b4f0dba5e9806"
+    },
+    "scripts/bochs-cpu3-native-ram-bootstrap/profile.mjs": {
+      "bytes": 4096,
+      "sha256": "f1e3656d06f9cc1690ff3020c2ba5f9de4d1c32b6ee1c8d038cf8c4ce411d39c"
+    },
+    "scripts/bochs-cpu3-native-ram-bootstrap/reference.mjs": {
+      "bytes": 3616,
+      "sha256": "9a60956dfd694261beb63e17e70d5d1d7fc87411ce1f248cb38c1688643c4c1d"
+    },
+    "scripts/bochs-cpu3-native-ram-bootstrap/runtime.mjs": {
+      "bytes": 6212,
+      "sha256": "d7b28771f49ae26cb906814670db8435b4d65929ba1f19a658ff7ada4fadc01e"
+    },
+    "src/adc0809.js": {
+      "bytes": 6267,
+      "sha256": "92926d8bd4315fa837d6cce7bc3770148960d181802eb52ba5d9aa013e5f64af"
+    },
+    "src/at-8042-a20.js": {
+      "bytes": 19631,
+      "sha256": "c604c8a272034a9a80eeb30abe1c5d6ab09ebe6c816b3f3c778874f6b9a9f6b8"
+    },
+    "src/at-ps2-mouse.js": {
+      "bytes": 2891,
+      "sha256": "b75f93e3a4473e21568af438d658941e9a9703ab330147b8f444baba278281ea"
+    },
+    "src/at-system-control.js": {
+      "bytes": 2682,
+      "sha256": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7"
+    },
+    "src/audio-bus.js": {
+      "bytes": 10590,
+      "sha256": "95a263b2432f8309b76a64a0b6dcf0ddcc1dd61aeabb7a8727505f343e26ba08"
+    },
+    "src/cga-card.js": {
+      "bytes": 10416,
+      "sha256": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc"
+    },
+    "src/chip-ledger.js": {
+      "bytes": 6217,
+      "sha256": "b12b5d635086636f0f9f405e4a06816943b74c03c1b036fcbd3ffe813055ac3a"
+    },
+    "src/dac0832.js": {
+      "bytes": 5848,
+      "sha256": "81b24b9c8f461cbd2f4a9bcd1aceda3e366062841d1c530440eccdb8cbeae787"
+    },
+    "src/ega-card.js": {
+      "bytes": 6552,
+      "sha256": "5b93057ca256f7a43046b477127862278c80bb9849e062528c1cd603f7e3d2f5"
+    },
+    "src/experimental/ata16.js": {
+      "bytes": 13489,
+      "sha256": "bcf08d6e5e2316cfefe7e264c587e6d23e94b5a4f4e5099c8aace162164a88b7"
+    },
+    "src/experimental/i80286-protected.js": {
+      "bytes": 73806,
+      "sha256": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70"
+    },
+    "src/experimental/i80386-at-machine.js": {
+      "bytes": 26851,
+      "sha256": "6c5f12cc92ba7219ed4b53f6237622f6ce58269402ee14770791e04c68f93cb0"
+    },
+    "src/experimental/i80386.js": {
+      "bytes": 133968,
+      "sha256": "6fba681208e1443cc9eff00ae6aba444903d23e5feafe62527b25428e72d60ed"
+    },
+    "src/experimental/vga-memory.js": {
+      "bytes": 7229,
+      "sha256": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a"
+    },
+    "src/hercules-card.js": {
+      "bytes": 4798,
+      "sha256": "6e3af9bce88edbc609b2f8a07dc464b8a1fb60ce5fd800a4d345dac61367752b"
+    },
+    "src/i8086-machine.js": {
+      "bytes": 128619,
+      "sha256": "7cf7fdf4e6de451071809e32e128aa0ac663524eaf8b2e08581780b0ec4f167c"
+    },
+    "src/i8086-ram-words.js": {
+      "bytes": 1656,
+      "sha256": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5"
+    },
+    "src/i8086.js": {
+      "bytes": 107519,
+      "sha256": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a"
+    },
+    "src/i8237.js": {
+      "bytes": 26099,
+      "sha256": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad"
+    },
+    "src/i8251.js": {
+      "bytes": 9962,
+      "sha256": "45a2df29bc0920e7d57188a365e8c05addab0805efc1eb02d8df72a41d4dca2b"
+    },
+    "src/i8254.js": {
+      "bytes": 18502,
+      "sha256": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30"
+    },
+    "src/i8255.js": {
+      "bytes": 8295,
+      "sha256": "3445ac6676005f225db542031be51b6d1561045d2be76be339e5853a50f6ff7f"
+    },
+    "src/i8259.js": {
+      "bytes": 19093,
+      "sha256": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278"
+    },
+    "src/machine-checkpoint.js": {
+      "bytes": 8280,
+      "sha256": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139"
+    },
+    "src/mc146818.js": {
+      "bytes": 12655,
+      "sha256": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c"
+    },
+    "src/mc6845.js": {
+      "bytes": 11052,
+      "sha256": "30c369c37fc4030162dde6d46bea388ce9acbf489141195ab166f3c0cab5c599"
+    },
+    "src/mc6850.js": {
+      "bytes": 2854,
+      "sha256": "e987c5243a92a7b43533a99ff9bf2da29e0bd608a2417162c7b5dfeb1cb75889"
+    },
+    "src/ne2000.js": {
+      "bytes": 17462,
+      "sha256": "12a97f87807aaf74a94245d81acddfb10f43748c09a1d4633e0ba7959b7a1244"
+    },
+    "src/ns16c550.js": {
+      "bytes": 8784,
+      "sha256": "34633ec3bec4d0826998fadde5e11bf88f20dfd32fc5a09144c6bad64461f41b"
+    },
+    "src/pc-speaker.js": {
+      "bytes": 6434,
+      "sha256": "50260dcd04eaedd84373e5c2b1e42faa2f1bc924833b6bdf0aa7d23a80ea9499"
+    },
+    "src/sb-dsp.js": {
+      "bytes": 13475,
+      "sha256": "901fc1d6536e19a552380d226b8e285ff4ab29f871a319d552701c2100044f71"
+    },
+    "src/upd765.js": {
+      "bytes": 53603,
+      "sha256": "b5a066fd577ee358f40c13682015d28be490acbeb00a50d8c7199671523fcde4"
+    },
+    "src/vga-card.js": {
+      "bytes": 10652,
+      "sha256": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71"
+    },
+    "src/ym3812.js": {
+      "bytes": 15069,
+      "sha256": "c78833b8efb3048143e7fac898a7af5374ce3f00f1b9e5b55baa6d212a51df04"
+    },
+    "test/i80386-paged-pagefault-native-runtime-driver.test.mjs": {
+      "bytes": 22100,
+      "sha256": "8eb9008d9ad6d6ac39690772da01cfb30ce79cfdbf07e7d1cf1bf95faeda4e49"
+    }
+  },
+  "tools": {
+    "/tmp/node-v22.23.3-linux-x64/bin/node": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+    "/usr/bin/python3.12": "e1efa562c2cc2e35521a5c9c9b9939921001ff8ca9708a13ef15ace68cc2ccd7",
+    "/mnt/volume1/miniconda/bin/python3.13": "a01ee3c14977f56b5e19c491985ab51585c089101364e696f29516eb6dc42a13",
+    "/usr/bin/git": "2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668",
+    "/tmp/run-native-paged-pagefault-ready-driver-source-controls-20261005.py": "7d9114c09c0369d329ad73d2551f0731fb569740037ccc9a2303ea77d2de0502",
+    "/tmp/native-paged-pagefault-ready-driver-source-freeze-20261005/source-freeze.json": "7290d64c4a4a844b8dd1e8190c322fb43e602348e92bc252ecbc38bdf26bd8b6",
+    "/tmp/native-paged-pagefault-native-policy-design-20261005/source-provenance.json": "d7dd93ef7fc5cb8a5bdcb018ee2e637beff56b2a6702f81dc3cf598dcff27421"
+  },
+  "staticAuthority": {
+    "/tmp/native-paged-pagefault-static-build-37262460989.zip": "c74915df6046cb6c6a92b4830dfe9b6cf8b2110f57717d8a9142bee99c6bbac8",
+    "/tmp/native-paged-pagefault-static-build-audit-20261005/official-metadata.json": "c3981e9e733d0666b3d68fd299172b7198692e23c679286b596cac9f7c635e14",
+    "/tmp/native-paged-pagefault-static-build-audit-20261005/root-audit.json": "1edc6c22c9225241be5555c298d8eb5d117251f92a5cb03f52d73d7e1abf1b7e",
+    "/tmp/native-paged-pagefault-static-build-audit-20261005/independent-audit.json": "855dc0b9a95a3f803b798d166705c9894da4a65dcfa40f28bd3612f931ff8ab2"
+  }
+}

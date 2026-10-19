@@ -1,0 +1,5 @@
+00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'
+00000000000i[      ] reading configuration from /mnt/volume1/tmp-astra/native-owned-in8-runtime-controls-r3-20261002/clock-resume/guest.bochsrc
+00000000000i[      ] installing nogui module as the Bochs GUI
+00000000000i[      ] using log file /mnt/volume1/tmp-astra/native-owned-in8-runtime-controls-r3-20261002/clock-resume/guest.bochs.log
+BWSD1	FAIL	owned-transfer-callback

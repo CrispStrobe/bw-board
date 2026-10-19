@@ -1,0 +1,11 @@
+{
+  "status": "ROOT_SHARED_OFFICIAL_ARTIFACT",
+  "zip": "/tmp/native-paged-int-iret-post-persistence-20261005.zip",
+  "zipBytes": 10763002,
+  "zipSha256": "01fe2bd1bd151ad25328d294b7e50f24f7d27c2538994c896964980e578bab69",
+  "runId": 37247392133,
+  "artifactId": 11319662434,
+  "attempt": 1,
+  "hostedRevision": "d46b68c201628a05f5f9934ada7fdddd3a57e683",
+  "output": "/tmp/native-paged-int-iret-post-persistence-observation-20261005"
+}

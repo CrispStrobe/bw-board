@@ -1,0 +1,27 @@
+{
+  "base": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+  "source": "565dce2b35c67c4661055443ce9bb5d47039249e",
+  "sourceFiles": [
+    ".github/workflows/wasm-short-cached-budget.yml",
+    "crates/core/src/cpu/cortex_m.rs",
+    "crates/core/src/cpu/cortex_m/t16_discovery_tests.rs"
+  ],
+  "originalCpuSha256": "3cce26ce11616709e363419f520a60eccc118c9a01af3d65959a9159b6af2e98",
+  "cpuReconstructionExact": true,
+  "existingTestsPreserved": true,
+  "nativeDispatchUnchanged": true,
+  "wasmBudgets": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "cachedRunCap": 16,
+  "callerGuardsUnchanged": true,
+  "noLocalEngineExecution": true,
+  "noPerformanceConclusion": true
+}

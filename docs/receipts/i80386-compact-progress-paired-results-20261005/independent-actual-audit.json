@@ -1,0 +1,131 @@
+{
+  "status": "INDEPENDENT_COMPACT_PAIRED_ACTUAL_SEMANTICS_PASS_QUANTITATIVE_FAIL_KEEP_BASELINE",
+  "runId": 37267527701,
+  "artifactId": 11327261646,
+  "members": 266,
+  "sourcePaths": 377,
+  "children": 18,
+  "warmupPairs": 2,
+  "measuredPairs": 7,
+  "favorablePairs": 0,
+  "gate": false,
+  "cpuCandidateOverBaseline": 4.397239251994649,
+  "wallCandidateOverBaseline": 7.371980675536277,
+  "metrics": {
+    "plain-JS": {
+      "cpu": {
+        "mean": 0.2968657142857143,
+        "median": 0.293912,
+        "series": [
+          0.284613,
+          0.311465,
+          0.295149,
+          0.293912,
+          0.30875,
+          0.290291,
+          0.29388
+        ]
+      },
+      "wall": {
+        "mean": 0.14199422685714286,
+        "median": 0.141380683,
+        "series": [
+          0.137457772,
+          0.15003993,
+          0.142821946,
+          0.140137156,
+          0.141380683,
+          0.140490035,
+          0.141632066
+        ]
+      },
+      "wholeCpu": {
+        "mean": 1.120618,
+        "median": 1.1225699999999998,
+        "series": [
+          1.104304,
+          1.131756,
+          1.133734,
+          1.109694,
+          1.13036,
+          1.1119080000000001,
+          1.1225699999999998
+        ]
+      },
+      "wholeWall": {
+        "mean": 0.8655342564285705,
+        "median": 0.8584408510000117,
+        "series": [
+          0.8570771840000049,
+          0.884141814000003,
+          0.8823228840000041,
+          0.8584408510000117,
+          0.8618000169999931,
+          0.8575176919999876,
+          0.8574393529999895
+        ]
+      }
+    },
+    "compact-progress-batched": {
+      "cpu": {
+        "mean": 1.3053895714285715,
+        "median": 1.297106,
+        "series": [
+          1.327075,
+          1.272553,
+          1.294638,
+          1.374062,
+          1.297106,
+          1.29892,
+          1.273373
+        ]
+      },
+      "wall": {
+        "mean": 1.0467786964285715,
+        "median": 1.037385678,
+        "series": [
+          1.072633827,
+          1.025094355,
+          1.036266268,
+          1.090498604,
+          1.040960706,
+          1.037385678,
+          1.024611437
+        ]
+      },
+      "wholeCpu": {
+        "mean": 5.077412571428571,
+        "median": 5.0761780000000005,
+        "series": [
+          5.120915999999999,
+          5.002137,
+          5.093838999999999,
+          5.147705,
+          5.057048,
+          5.0761780000000005,
+          5.044065
+        ]
+      },
+      "wholeWall": {
+        "mean": 4.513027182857139,
+        "median": 4.498951162999987,
+        "series": [
+          4.5721304009999955,
+          4.449614797999999,
+          4.523150170000008,
+          4.550409063999993,
+          4.498764688999998,
+          4.498169994999998,
+          4.498951162999987
+        ]
+      }
+    }
+  },
+  "hardware": {
+    "models": [
+      "AMD EPYC 9V74 80-Core Processor"
+    ],
+    "logicalCpus": 4
+  },
+  "scope": "Read-only soleZIP/std-library checks; all18 terminalCPU/board/RAMhash/orderedPIO, nine actual combined160-byteABI slices/full166, closure/source/setup guards. Timing samehost plainJS versuscompact only; no physical386 calibration or heldscalar comparison."
+}

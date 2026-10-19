@@ -1,0 +1,14 @@
+{
+  "status": "PASS_INDEPENDENT_FOURTH_ATTEMPT_FATAL_GUARD_AUDIT",
+  "head": "cffc3c0c457830716124fabaf3f2b7bfa5a227b4",
+  "artifactId": 11269880360,
+  "zipSha256": "sha256:8d090cee95dd06211142d8885db666521dfac8558e3189044e7cceffac45b110",
+  "members": 408,
+  "nativeReturncode": -6,
+  "timedOut": false,
+  "failure": "host-rom-observed-value",
+  "sourceAndImmutableArtifactsUnchanged": true,
+  "observabilityLimit": "No address/Q or partial CPU snapshot was persisted at native fatal abort; admission succeeded but endpoint progression cannot be reconstructed.",
+  "sourceMechanism": "Inherited bw_rom_observed checks only previously cached execute-ROM pages; absent page returns false, even for authentic ROM data. Exact triggering address unobserved.",
+  "scope": "No E16, final RAM, close or boot qualification"
+}

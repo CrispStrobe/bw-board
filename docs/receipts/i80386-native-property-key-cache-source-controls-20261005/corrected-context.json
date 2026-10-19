@@ -1,0 +1,29 @@
+{
+  "revision": "83a081650397d5e1e95845b3aa65402f12b49ece",
+  "ownFiles": {
+    "scripts/bochs-cpu3-native-property-key-cache/README.md": "ba741b5aa65c440e1c4e672bebed1ef99fd0156df803d9591fd26ee970fc0498",
+    "scripts/bochs-cpu3-native-property-key-cache/held-napi.cc": "052dfe2d8bbcf37b2abd621dbd78c5f2078026f34cb02fa1afd40ee1c9cb15ac",
+    "scripts/bochs-cpu3-native-property-key-cache/keys.inc": "a3bce399d7ff2def35b3b7748141ea0ac202b06269718c04fa33bf58f094cfdc",
+    "scripts/bochs-cpu3-native-property-key-cache/keys.json": "d397a4b8e1d5cce9155aff3225dc61c4c30508975c27e5144dfdc8c4d9341409",
+    "scripts/bochs-cpu3-native-property-key-cache/mock.cc": "bbcf946c756a4d968d4d0161153ea6049d5e759ff806dc891da79afadd00f8e1",
+    "scripts/bochs-cpu3-native-property-key-cache/napi.mjs": "b5cfed7faf02bd4b322831b6a475a55f351f8aa7cc62997c414c9e5b2775943a",
+    "test/i80386-native-property-key-cache-source.test.mjs": "ae5f9ee0a87134fd1a8947c52d1a1d973eb65cec087b4de33f99cc51ea42a64c"
+  },
+  "roles": {},
+  "toolFiles": {
+    "/tmp/node-v22.23.3-linux-x64/bin/node": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+    "/usr/bin/python3.12": "e1efa562c2cc2e35521a5c9c9b9939921001ff8ca9708a13ef15ace68cc2ccd7",
+    "/usr/bin/git": "2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668",
+    "/usr/bin/x86_64-linux-gnu-g++-13": "1353e9bdd29a7295c7226bf6c63abccce056d8cac31f112e5cdbecc3f28c2769",
+    "/usr/libexec/gcc/x86_64-linux-gnu/13/cc1plus": "840b332fb62ec6f694ac77d91fe69ef7f80b0d69512ed89374af0ee7a506255d",
+    "/usr/libexec/gcc/x86_64-linux-gnu/13/collect2": "4d1f341ae5b763b513258ee2812422a45e063c30a2f1924a0cf63d3699f3a158",
+    "/usr/bin/x86_64-linux-gnu-as": "21aff249b692b5c31a44007491f922dcb49f41323e362c57d2ada3f52eddb7f0",
+    "/usr/bin/x86_64-linux-gnu-ld.bfd": "e9ceb054c12207970f2726dfc07e9a66b411602748628baf27399f02a9bbb31b"
+  },
+  "scope": "Seven source files; generated key helper mock only; compiler stages pinned, system C++ headers are not a native-build qualification",
+  "compilerLaunchAlias": {
+    "path": "/usr/bin/c++",
+    "resolvedPath": "/usr/bin/x86_64-linux-gnu-g++-13",
+    "sha256": "1353e9bdd29a7295c7226bf6c63abccce056d8cac31f112e5cdbecc3f28c2769"
+  }
+}

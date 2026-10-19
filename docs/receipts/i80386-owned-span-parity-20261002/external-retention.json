@@ -1,0 +1,93 @@
+{
+  "status": "LARGE_ORIGINAL_STREAMS_RETAINED_WITHOUT_DUPLICATION",
+  "officialArtifactId": 11248833105,
+  "officialRunId": 37056398077,
+  "officialArchiveSha256": "7cae79af646feba252df601a811098a92614cc334a8a29b0d90d5d51d552f41e",
+  "officialArchiveUrl": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11248833105/zip",
+  "officialRunUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37056398077",
+  "localNamespace": "/mnt/volume1/tmp-astra/386-owned-span-hosted-native-parity-publication-20261002",
+  "files": {
+    "hosted-artifact/home/runner/work/_temp/owned-span-native-parity/context/official-artifact.zip": {
+      "sourcePath": "/mnt/volume1/tmp-astra/386-owned-span-hosted-native-parity-publication-20261002/artifact/home/runner/work/_temp/owned-span-native-parity/context/official-artifact.zip",
+      "officialArtifactId": 11248833105,
+      "officialZipMember": "home/runner/work/_temp/owned-span-native-parity/context/official-artifact.zip",
+      "bytes": 6711552,
+      "sha256": "0335f4c5088280cfcdf00186f5e0ca59ff431442edc3a978dd26b7dc2341a0e0"
+    },
+    "hosted-artifact/home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/bw_direct.node": {
+      "sourcePath": "/mnt/volume1/tmp-astra/386-owned-span-hosted-native-parity-publication-20261002/artifact/home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/bw_direct.node",
+      "officialArtifactId": 11248833105,
+      "officialZipMember": "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/bw_direct.node",
+      "bytes": 2069608,
+      "sha256": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841"
+    },
+    "hosted-artifact/home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/prepared-source.tar.gz": {
+      "sourcePath": "/mnt/volume1/tmp-astra/386-owned-span-hosted-native-parity-publication-20261002/artifact/home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/prepared-source.tar.gz",
+      "officialArtifactId": 11248833105,
+      "officialZipMember": "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/prepared-source.tar.gz",
+      "bytes": 5329158,
+      "sha256": "40dcddcd190a836aa89f164b3db0023fb193c6980965d0a6431e45156043711e"
+    },
+    "hosted-artifact/mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/386-owned-span-hosted-native-parity-publication-20261002/artifact/mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/child.stderr",
+      "officialArtifactId": 11248833105,
+      "officialZipMember": "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/child.stderr",
+      "bytes": 149884558,
+      "sha256": "6d4d04901a68bf73b62e125f87f29e222fd3543cb9ddf831003cdb4816743a9f"
+    },
+    "hosted-artifact/mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/386-owned-span-hosted-native-parity-publication-20261002/artifact/mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/guest/callbacks.jsonl",
+      "officialArtifactId": 11248833105,
+      "officialZipMember": "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/guest/callbacks.jsonl",
+      "bytes": 11730929,
+      "sha256": "6e130c37266188258be29fe21f4e165b0c2d75a5c6b79347964a6d509fb55946"
+    },
+    "hosted-artifact/mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/386-owned-span-hosted-native-parity-publication-20261002/artifact/mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/child.stderr",
+      "officialArtifactId": 11248833105,
+      "officialZipMember": "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/child.stderr",
+      "bytes": 149884554,
+      "sha256": "a4f540282dcdc8b6e9e3b00b63d3cdb0eec3c769c6e17bfe96110c4bdfd98992"
+    },
+    "hosted-artifact/home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/reference-callbacks.jsonl.gz": {
+      "sourcePath": "/mnt/volume1/tmp-astra/386-owned-span-hosted-native-parity-publication-20261002/artifact/home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/reference-callbacks.jsonl.gz",
+      "officialArtifactId": 11248833105,
+      "officialZipMember": "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/reference-callbacks.jsonl.gz",
+      "bytes": 2335024,
+      "sha256": "978f9e9c6b957da0d99faf600e590fb44ad44941cb3e4b7808ad5047a3079087"
+    },
+    "hosted-artifact/home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/reference-child.stderr.gz": {
+      "sourcePath": "/mnt/volume1/tmp-astra/386-owned-span-hosted-native-parity-publication-20261002/artifact/home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/reference-child.stderr.gz",
+      "officialArtifactId": 11248833105,
+      "officialZipMember": "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/reference-child.stderr.gz",
+      "bytes": 14849895,
+      "sha256": "5df5a5b4de1afe0c317284a269636dd9c1c72c41787c8f282b420a962ef360af"
+    },
+    "hosted-artifact/home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/reference-events.jsonl.gz": {
+      "sourcePath": "/mnt/volume1/tmp-astra/386-owned-span-hosted-native-parity-publication-20261002/artifact/home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/reference-events.jsonl.gz",
+      "officialArtifactId": 11248833105,
+      "officialZipMember": "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/reference-events.jsonl.gz",
+      "bytes": 2024136,
+      "sha256": "745960866f10f12ba78a097f7b083296b24d58ec9e8c107a8bc29d808dd3b6c4"
+    },
+    "publication/official-artifact-11248833105.zip": {
+      "sourcePath": "/mnt/volume1/tmp-astra/386-owned-span-hosted-native-parity-publication-20261002/official-artifact-11248833105.zip",
+      "officialArtifactId": 11248833105,
+      "sha256": "7cae79af646feba252df601a811098a92614cc334a8a29b0d90d5d51d552f41e",
+      "bytes": 44331598
+    },
+    "local-prerequisite/fulltrace-on/child.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/child.stderr",
+      "scope": "Separate previously granted local OFF/ON prerequisite; not the hosted three-cell run.",
+      "sha256": "6d4d04901a68bf73b62e125f87f29e222fd3543cb9ddf831003cdb4816743a9f",
+      "bytes": 149884558
+    },
+    "local-prerequisite/fulltrace-on/guest/callbacks.jsonl": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/guest/callbacks.jsonl",
+      "scope": "Separate previously granted local OFF/ON prerequisite; not the hosted three-cell run.",
+      "sha256": "6e130c37266188258be29fe21f4e165b0c2d75a5c6b79347964a6d509fb55946",
+      "bytes": 11730929
+    }
+  },
+  "scope": "Raw large traces/journal, original addon/archive and compressed reference payloads stay in the retained official ZIP and/or exact lossless original local paths. No native binary or OS media added to these notes."
+}

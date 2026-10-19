@@ -1,0 +1,113 @@
+{
+  "schema": "bw.x86-platform-benchmark.v1",
+  "revision": "853c667de3f7025eb3bc6342d1c7f5f1e74b76cf",
+  "dirty": false,
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "cpus": [
+      "Intel(R) Xeon(R) CPU @ 2.00GHz"
+    ],
+    "logicalCpus": 4,
+    "node": "v20.19.0",
+    "githubRunner": null,
+    "kaggleGpu": "Tesla T4\nTesla T4"
+  },
+  "note": "386 real-mode workload; its virtual factor uses configured synthetic instruction charges and is not measured 80386 timing",
+  "rows": [
+    {
+      "name": "8086-core",
+      "clockHz": 4772727,
+      "cycleMeaning": "estimated 8086 instruction cycles",
+      "steps": 1000000,
+      "passes": 3,
+      "instructionsPerSecond": 16611177.581661047,
+      "virtualFactor": 34.10828658338897,
+      "medianSeconds": 0.060200428,
+      "cycles": 9800000,
+      "state": {
+        "ax": 65534,
+        "bx": 65535,
+        "ip": 0,
+        "word": 65535
+      },
+      "runSeconds": [
+        0.08158728,
+        0.060200428,
+        0.058778869
+      ]
+    },
+    {
+      "name": "8086-machine",
+      "clockHz": 4772727,
+      "cycleMeaning": "estimated 8086 instruction cycles",
+      "steps": 1000000,
+      "passes": 3,
+      "instructionsPerSecond": 9277412.492546178,
+      "virtualFactor": 19.04962140657795,
+      "medianSeconds": 0.107788675,
+      "cycles": 9800000,
+      "state": {
+        "ax": 65534,
+        "bx": 65535,
+        "ip": 0,
+        "word": 65535
+      },
+      "runSeconds": [
+        0.117140115,
+        0.107533137,
+        0.107788675
+      ]
+    },
+    {
+      "name": "386-core",
+      "clockHz": 16000000,
+      "cycleMeaning": "one synthetic cycle per completed instruction",
+      "steps": 1000000,
+      "passes": 3,
+      "instructionsPerSecond": 3203092.7013144563,
+      "virtualFactor": 0.2001932938321535,
+      "medianSeconds": 0.31219827,
+      "cycles": 1000000,
+      "state": {
+        "ax": 65534,
+        "bx": 65535,
+        "ip": 0,
+        "word": 65535
+      },
+      "runSeconds": [
+        0.359991009,
+        0.31219827,
+        0.310409626
+      ]
+    },
+    {
+      "name": "386-at-machine",
+      "clockHz": 16000000,
+      "cycleMeaning": "six synthetic scheduling cycles per completed instruction",
+      "steps": 1000000,
+      "passes": 3,
+      "instructionsPerSecond": 1845468.4993438548,
+      "virtualFactor": 0.6920506872539455,
+      "medianSeconds": 0.541867824,
+      "cycles": 6000000,
+      "state": {
+        "ax": 65534,
+        "bx": 65535,
+        "ip": 0,
+        "word": 65535
+      },
+      "runSeconds": [
+        0.550079715,
+        0.539094142,
+        0.541867824
+      ]
+    }
+  ],
+  "kaggle": {
+    "gpuAttached": true,
+    "gpuModel": "Tesla T4\nTesla T4",
+    "gpuUsedByBenchmark": false,
+    "sourceBundle": "/kaggle/input/datasets/chr1s4/bw-board-x86-rtx-bundle"
+  }
+}

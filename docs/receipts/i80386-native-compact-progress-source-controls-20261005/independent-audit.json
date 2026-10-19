@@ -1,0 +1,33 @@
+{
+  "status": "INDEPENDENT_COMPACT_TWO_SOURCE_CPP_MOCK_CONTROLS_PASS_NOT_REAL_NAPI",
+  "revision": "74db2cb967d6f4422055c49f730ae6f6f9caad15",
+  "sourcePaths": 7,
+  "prepostEqual": true,
+  "tests": 2,
+  "passes": 2,
+  "failures": 0,
+  "skips": 0,
+  "stderrBytes": 0,
+  "exitCode": 0,
+  "rawWaitStatus": 0,
+  "retainedExit": {
+    "exitCode": 0,
+    "timeout": false,
+    "wallSeconds": 2.505141858011484,
+    "wallScope": "parent including final authentication",
+    "childExitWallSeconds": 1.5435954984277487,
+    "rawWait4Status": 0,
+    "leaderRusage": {
+      "userSeconds": 1.242229,
+      "systemSeconds": 0.229841,
+      "maxRSSKiB": 96416
+    },
+    "rusageScope": "wait4 leader and its waited descendants; not guest or execution-window CPU",
+    "error": null,
+    "cleanupError": null,
+    "finalizationError": null,
+    "pinsEqual": true
+  },
+  "scope": "Two source controls including tiny generated constructor/parser C++ mock compile/run; no actual NAPI/full addon/guest/ABI qualification",
+  "auditMethod": "Read saved records and actual source hashes only; no replay/import/compiler"
+}

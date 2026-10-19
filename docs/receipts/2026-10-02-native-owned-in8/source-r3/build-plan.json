@@ -1,0 +1,12 @@
+{
+  "status": "PREPARED_ONLY_NO_BUILD",
+  "baseHelperSha256": "e662d42496281e09c289d4dd3db2f2a8195c013d70429d0cae15ba94e885194b",
+  "helper": "/mnt/volume1/tmp-astra/native-owned-in8-r3-root-build-20261002.py",
+  "helperSha256": "5ecc4532a3e09ee50bddc63b9a8b92fcbacb9dba42007993ab99be7ef9c5907c",
+  "derivation": "Only W/R/T r2-to-r3 path substitutions; expected revision argument pinned afterfreeze; build/config/prepare/resourcecommands unchanged.",
+  "sourceClosureExpected": 103,
+  "compiledNativeInputs": "Runtime/NAPI/ABI source unchanged versus6b, but rebuilt source103 and runtime103 explicitly newrevision; no oldcompiled relabel.",
+  "reference": "historical bf026 capture atb68 unchanged; comparisoncanonical588f9b derived actual diagnosticRAM proof, rawhashes retained",
+  "sourceRevision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "sourceFreezeSha256": "68d8a6d425ee47db53f8ddb121ebcc98ef9a84343ed6279b47a36266778ccc87"
+}

@@ -1,0 +1,23 @@
+{
+  "schema": "lossless-source-readonly-preflight.v1",
+  "files": {
+    "r2-exit.json": "9d61b060527f6465ce16243e459a30a11c27e1603d65bc8154775102e576182e",
+    "attempt1-exit.json": "45287074308b791e37779be45877463c4de925a0f16cf9284195b5f5f04ce820",
+    "r2-after.json": "7b991e63b9df7ee94372101edd2905f80bff5b493234431bc9255b147574db0f",
+    "r2-audit.json": "4b3aaf870c850b0f86c6cc9003a88766d9582413194d2b0cc0f13c5d386c727f",
+    "attempt1-helper.mjs.txt": "46f812b8a1772a109bd8ebb50e7ab8563f39dcdeec0e4460b56a97193a21209a",
+    "r2-stdout": "04d72229ecfc84bbb23e8995a11fe4b2d1b99afa827ec4140ab82ffb527ec9d6",
+    "r2-helper.mjs.txt": "46f812b8a1772a109bd8ebb50e7ab8563f39dcdeec0e4460b56a97193a21209a",
+    "r2-derivation.json": "cf476223331a89779f89ec07bc09d73a1bf5d1784666065c0bb8b4285493f810",
+    "attempt1-after.json": "be28864c6d266a578fcc3002a9c02c8e8fb323edc43b3528a22d01163d2d8822",
+    "r2-before.json": "7b991e63b9df7ee94372101edd2905f80bff5b493234431bc9255b147574db0f",
+    "r2-stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "setup-setup.json": "f2f8ce4e88cf91cabe05f35b3d508d32a80a7c4ba777aacbaa7008d45085bfac",
+    "attempt1-run.py.txt": "3b73172fd4c858d966298d85b251e45d5470714ba87389892708d51ce37fe053",
+    "attempt1-stderr": "71bbc5841031c6d07f8e4e066e3b39a4f732274b720fa7be0a4814a2cf0a2daf",
+    "r2-run.py.txt": "e1266f79078d0afe0fda51be881289b6537e516f50bab46d203773f56a906866",
+    "attempt1-stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "origins.json": "cbc0a6d62746ed3565c3f66b07271947e882251b733c06b09f7bc7faf23abf7d",
+    "attempt1-before.json": "be28864c6d266a578fcc3002a9c02c8e8fb323edc43b3528a22d01163d2d8822"
+  }
+}

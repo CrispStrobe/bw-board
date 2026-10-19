@@ -1,0 +1,16 @@
+{
+  "status": "INDEPENDENT_ACTUAL_FENCED_H4_FULL_PARITY_AND_FENCE_INVARIANTS_PASS_NOT_BATCH_ADMISSION",
+  "checks": 1887438,
+  "auditScriptSha256": "370fe0883280f4011e5d229d6a18acc837fa23f98ec867c7889572eb89f939df",
+  "driverRevision": "2d1cf651d7d7d0dfda55b9df482cf0ec70d9187c",
+  "compiledSourceRevision": "15631beb63d7c1f17e693de7c86d4ed37b96a768",
+  "driverSourceInputs": 67,
+  "compiledSourceInputs": 32,
+  "transformInputs": 12,
+  "actualResumes": 439,
+  "fenceRows": 1326,
+  "canonicalNativeRows": 1649067,
+  "fenceSha256": "3e0610e5507b612ba15a6323428149d15ecdc02933c273bd4efdd92103d3c30a",
+  "captureSha256": "fef68e50495e97ff03df0a3ce8a22a92dfb12b202eef28f3dfbbfd3d7a0befbb",
+  "scope": "Actual unchanged H4 diagnostic; no native batch implementation, legal span count or timing/performance qualification"
+}

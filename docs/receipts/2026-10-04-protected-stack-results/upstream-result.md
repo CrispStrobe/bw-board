@@ -1,0 +1,9 @@
+First protected DS/SS and stack correctness run **PASS**, independently audited: [run37196612572](https://github.com/CrispStrobe/bw-board/actions/runs/37196612572), attempt1, exact hosted source `bcef57ac`, driver `f9c525b0` (67inputs), compiled build `d065cbb7` (174inputs), new addon `4076aca3`.
+
+Actual execution completed30 native instructions/quanta in30 resumes, with no zero-Q return. All32 saved boundaries retain the complete166 native words. Every represented JS counterpart, full board state and all three copied4096-byte GDT/code/stack pages match. Thirteen ordinary milestones establish DS/SS loading, PUSH/POP, CALL/RET and the stop beforeHLT. Separate strict native descriptor checks confirm CSvalid1, DSvalid1 and SSvalid1→7 at the first stack write. JS MOVSS returned shadows and the compiled native inhibit-phase guard remain distinct evidence, not a fabricated shadow-word comparison.
+
+Final AX=`abcd`, BX=`1234`, CX=`5678`, SP=`9000`, CS=`18`, EIP=`7015`, DS=SS=`10`, CR0=`7ffffff1`. Settled whole rawRAM SHA-256 agrees exactly: `45d6115ea87c30d9e4fa0c2a4a484451e1bd2ac34b3667e76db231b4abee2cdd`. All three owners closed; the worker exited0 without timeout, all source/input/config/build/Node and restored maps are unchanged.
+
+Sole official artifact11301206742 contains97 authenticated members: ZIP9,886,658bytes, SHA-256 `103f392ae223ebe5590f9611fc7f5c3cca1813e594c0bebd7d58faa3407ed1ed`; rawcapture SHA-256 `c94e9ce96528da9a04c85caa40d5fbfe939ead7ca68dc6c15a718cb600c35484`. Independent, root and coder retained-evidence audits passed without another guest run.
+
+This qualifies only the fixed same-ring code16 DS/SS/stack fixture. Host-provider RAM pages are actual copied backing bytes; native cache coherence/inhibit enforcement is source-attested. It does not establish all166 cross-engine counterparts, paging, exception delivery, an OS boot, performance, physical386 timing or adoption.

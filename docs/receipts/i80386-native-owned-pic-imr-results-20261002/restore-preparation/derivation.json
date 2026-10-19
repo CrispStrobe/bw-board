@@ -1,0 +1,54 @@
+{
+  "originalRestoreSha256": "e2917db0212d5aa8cf562750675fc2d0729d610eb1bf62b581da5f369f5d47b7",
+  "derivedRestoreSha256": "f234663e802caf2e03de46c8bb3ac795c440fabbbbf329ee92f3bd6d928ac6be",
+  "inverseExact": true,
+  "restoreSeams": [
+    {
+      "before": "EXPECTED='fe1eff2039520536350922a2164c8bbe29404c68'",
+      "after": "EXPECTED='a6f605280f778b2bc409ef97ac3b40e15874530c';RUNTIME='3792a908d81e04903974aa7d2bdc545e0713a290'"
+    },
+    {
+      "before": "assert len(A['sourceHashes'])==103",
+      "after": "assert len(A['sourceHashes'])==111\nRW=pathlib.Path(A['runtimeWorktree']);assert RW.is_absolute() and A['runtimeRevision']==RUNTIME and len(A['runtimeSourceHashes'])==122\nassert A['ci']['runId'] and A['ci']['artifactId'] and re.fullmatch('[a-f0-9]{40}',A['ci']['headSha']) and re.fullmatch('[a-f0-9]{64}',A['ci']['zipSha256']) and re.fullmatch('[a-f0-9]{64}',A['inventorySha256'])\nassert A['ci']['toolingRevision']==A['ci']['headSha']\nassert subprocess.check_output(['git','rev-parse','HEAD'],cwd=RW,text=True).strip()==RUNTIME and not subprocess.check_output(['git','status','--porcelain'],cwd=RW).strip()\nfor name,h in A['runtimeSourceHashes'].items():assert sha(read(RW/name))==h==sha(subprocess.check_output(['git','show',RUNTIME+':'+name],cwd=RW))\nfor name,h in A['sourceHashes'].items():assert A['runtimeSourceHashes'][name]==h"
+    },
+    {
+      "before": "R.mkdir();T=R/'prepared';F=R/'frozen-source';T.mkdir();F.mkdir()",
+      "after": "assert B['tooling']==M['tooling'] and B['profile']==M['profile']\nassert M['profile']=={'kind': 'PIC_IMR_FIXED_FREE_ROM', 'sourceRevision': 'a6f605280f778b2bc409ef97ac3b40e15874530c', 'sourceCount': 111, 'romSha256': '8a7380f01bbc40985d377fe9764667749c36b05d45ee602b28c7e68556bd509f', 'expectedPicWitness': [255, 255], 'witnessAddresses': [1426, 1427], 'status': 'SOURCE_PREPARATION_ONLY_NO_BUILD_OR_GUEST'}\nassert len(M['originalIn8Provenance']['sourceHashes'])==103\nassert M['tooling']['revision']==A['ci']['toolingRevision'] and len(M['tooling']['hashes'])==3\nexpectedTools={'scripts/prepare-bochs-cpu3-native-owned-pic-imr.mjs','scripts/ci-build-i80386-native-owned-pic-imr.py','.github/workflows/i80386-native-owned-pic-imr-build.yml'}\nassert set(M['tooling']['hashes'])==expectedTools\nfor name,h in M['tooling']['hashes'].items():assert A['runtimeSourceHashes'][name]==h==sha(subprocess.check_output(['git','show',A['ci']['toolingRevision']+':'+name],cwd=RW))\nassert M['tooling']['hashes']['scripts/ci-build-i80386-native-owned-pic-imr.py']==B['helperSha256']==A['ci']['helperSha256']\nassert M['tooling']['hashes']['.github/workflows/i80386-native-owned-pic-imr-build.yml']==A['ci']['workflowSha256']\noriginalManifest=json.loads(manifestRaw);originalReceipt=json.loads(receiptRaw)\nR.mkdir();T=R/'prepared';F=R/'frozen-source';T.mkdir();F.mkdir()"
+    },
+    {
+      "before": "'frozen-source103.tar.gz'",
+      "after": "'frozen-source111.tar.gz'"
+    },
+    {
+      "before": "'sourceHashes':A['sourceHashes']}",
+      "after": "'sourceHashes':A['sourceHashes'],'runtimeRevision':RUNTIME,'runtimeSourceHashes':A['runtimeSourceHashes'],'tooling':M['tooling'],'profile':M['profile']}"
+    },
+    {
+      "before": "input={'preparedManifest':",
+      "after": "assert M['originalIn8Provenance']==originalManifest['originalIn8Provenance']\nexpectedM={**originalManifest,'preparedTree':str(T)};assert M==expectedM\nexpectedB={**originalReceipt,'preparedTree':str(T),'preparedManifestPath':str(derivedManifest),'preparedManifestSha256':sha(read(derivedManifest)),'addonPath':str(T/'bochs/bw_direct.node'),'provenanceKind':'DERIVED_RELOCATED_CI_BUILD','relocation':relocation};assert B==expectedB\ninput={'preparedManifest':"
+    },
+    {
+      "before": "{'sourceWorktree':str(W),'input':input}",
+      "after": "{'sourceWorktree':str(RW),'compiledWorktree':str(W),'compiledRevision':EXPECTED,'compiledSourceHashes':A['sourceHashes'],'runtimeRevision':RUNTIME,'runtimeSourceHashes':A['runtimeSourceHashes'],'input':input}"
+    },
+    {
+      "before": "(R/'relocation-proof.json').write_text",
+      "after": "for name,h in A['sourceHashes'].items():assert sha(read(W/name))==h\nfor name,h in A['runtimeSourceHashes'].items():assert sha(read(RW/name))==h\nassert subprocess.check_output(['git','rev-parse','HEAD'],cwd=RW,text=True).strip()==RUNTIME and not subprocess.check_output(['git','status','--porcelain'],cwd=RW).strip()\nfor name,h in A['helperHashes'].items():assert sha(read(P/name))==h\n(R/'relocation-proof.json').write_text"
+    },
+    {
+      "before": "inventoryRaw=read(D/'artifact-inventory.json');",
+      "after": "assert sha(read(A['originalArchive'],256<<20))==A['ci']['zipSha256']\nassert subprocess.check_output([A['node'],'--version'],text=True,timeout=10).strip()=='v22.23.3'\ninventoryRaw=read(D/'artifact-inventory.json');"
+    },
+    {
+      "before": "assert sha(read(D/'artifact-inventory.json'))==A['inventorySha256'];",
+      "after": "assert sha(read(A['originalArchive'],256<<20))==A['ci']['zipSha256']\nassert sha(read(D/'artifact-inventory.json'))==A['inventorySha256'];"
+    },
+    {
+      "before": "for name,h in A['sourceHashes'].items():assert sha(read(W/name))==h\nfor name,h in A['runtimeSourceHashes']",
+      "after": "assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=W,text=True).strip()==EXPECTED\nfor name,h in A['sourceHashes'].items():assert sha(read(W/name))==h\nfor name,h in A['runtimeSourceHashes']"
+    }
+  ],
+  "authenticator": "Explicit new reviewed dual-identity adapter; original adapter retained unchanged",
+  "originalAuthenticateSha256": "7cab0626cd02006548c7651efe671271594cff17fe4050e9f9e1400e92fb81df",
+  "derivedAuthenticateSha256": "56790352c05a15aedbba1d49ce6a6976b94d5d92ce6ec24fd928d4892a52d00a"
+}

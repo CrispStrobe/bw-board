@@ -1,0 +1,30 @@
+{
+  "scope": "Source-only mocked controls; no live observation",
+  "testedRevision": "2bf89ff132eb8813292d8b46eecb43643aec2093",
+  "records": [
+    {
+      "path": "exit.json",
+      "bytes": 167,
+      "sha256": "436c760b231f12107262167e6eae12500609f7e8cbab2d1ab06a3ca8b2d20cdb",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-hosted-pure-controls-20261004/exit.json"
+    },
+    {
+      "path": "invocation.json",
+      "bytes": 899,
+      "sha256": "66f00e9b7837ac8bf83fbf4f68edb2412dfa2808d6087f273e5abe34cb015bcf",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-hosted-pure-controls-20261004/invocation.json"
+    },
+    {
+      "path": "controls.tap",
+      "bytes": 679,
+      "sha256": "d4282b980ba4e14750bd5acd1ddf571be4c0c5522a0fe442e4926acd8dd11be7",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-hosted-pure-controls-20261004/stdout"
+    },
+    {
+      "path": "independent-audit.json",
+      "bytes": 673,
+      "sha256": "e83925538f27a169a889ceabe389698ac75507e441abebe6b9d903e9fd84bfa3",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-hosted-pure-controls-20261004/independent-audit.json"
+    }
+  ]
+}

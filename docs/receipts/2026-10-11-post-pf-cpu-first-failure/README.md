@@ -1,0 +1,9 @@
+# Post-PF CPU prerequisite first failure
+
+[Exact-source push run38122000618](https://github.com/CrispStrobe/bw-board/actions/runs/38122000618) at [b9fe9370](https://github.com/CrispStrobe/bw-board/commit/b9fe9370ff61472a310587fc311bf6004a0a5742) failed, attempt1. Current controls recorded 1,773 tests: 1,756 passed, six failed and 11 skipped. All 288 historical controls passed. Every subsequent xv6 build and guest step was skipped. No CPU/xv6 qualification follows.
+
+All six failures are new IRQ controls: accepted source IRQ, accepted candidate IRQ, original exception identity and CR0/VM86/retained-CS mutation adversaries. The type-14 gate used earlier in the fixture clears IF, and the authored incoming task did not restore it. Ordinary CPU interrupt admission therefore correctly rejected the IRQ before reaching the intended observer assertions.
+
+The narrow [test-only repair3bd7b09c](https://github.com/CrispStrobe/bw-board/commit/3bd7b09cc01f02bd99f2c3b4d72b982d1f511f77) explicitly enables IF in the mocked incoming task before PF/anchor capture. Accepted and throwing IRQ cases opt in; the masked candidate retains IF clear. It adds premise assertions and does not mutate a live terminal anchor or change CPU bytes. Coordinator and independent static reviews pass; at this repair-source checkpoint, corrected execution qualification was still pending. The [later corrected original](../2026-10-11-post-pf-cpu-corrected-success/README.md) records the finite controls/xv6 pass. Preserve this original failure and qualify the new source through its normal hosted CPU/xv6 and all enabled checks before a connection.
+
+[Curated summary](summary.json) retains the original run and exact log-capture identity. The GH textual capture is not a binary HTTP log archive. Raw host logs are not bundled.

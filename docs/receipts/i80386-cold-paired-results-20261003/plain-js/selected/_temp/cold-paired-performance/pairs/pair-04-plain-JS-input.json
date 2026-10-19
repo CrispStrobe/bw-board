@@ -1,0 +1,8 @@
+{
+  "capture": "/home/runner/work/_temp/cold-paired-performance/setup/capture.json",
+  "independentAudit": "/home/runner/work/_temp/cold-paired-performance/setup/independent-audit.json",
+  "output": "/home/runner/work/_temp/cold-paired-performance/pairs/pair-04-plain-JS/receipt",
+  "workerRevision": "0f1ec8cc73b7dd4f39250be2fe8be5cb39352f83",
+  "workerSourceSha256": "9d648c4204e4892dbbb9a7008ea47fd682320063432b902dc1eb0a7c24d2fbd0",
+  "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48"
+}

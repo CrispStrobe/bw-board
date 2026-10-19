@@ -1,0 +1,55 @@
+building fixture 'atmega328p' (perf-spin-avr avr-atmega328p flash=0x00000000 ram=0x00000100)
+building fixture 'esp32' (perf-spin-xtensa xtensa-esp32-none-elf flash=0x400d0000 ram=0x3ffb0000)
+building fixture 'esp32c3' (firmware-perf-spin-riscv riscv32imc-unknown-none-elf flash=0x42000000 ram=0x3fc80000)
+building fixture 'esp32c6' (firmware-perf-spin-riscv riscv32imc-unknown-none-elf flash=0x42000000 ram=0x40800000)
+building fixture 'esp32s3' (perf-spin-xtensa xtensa-esp32s3-none-elf flash=0x42000000 ram=0x3fc88000)
+building fixture 'imxrt' (firmware-perf-spin thumbv6m-none-eabi flash=0x20000000 ram=0x20010000)
+building fixture 'kinetis' (firmware-perf-spin thumbv6m-none-eabi flash=0x00000000 ram=0x1fff8000)
+building fixture 'nrf' (firmware-perf-spin thumbv6m-none-eabi flash=0x00000000 ram=0x20000000)
+building fixture 'nrf51-app' (firmware-perf-spin thumbv6m-none-eabi flash=0x00018000 ram=0x20000000)
+building fixture 'rp2xxx' (firmware-perf-spin thumbv6m-none-eabi flash=0x10000000 ram=0x20000000)
+building fixture 'stm32' (firmware-perf-spin thumbv6m-none-eabi flash=0x08000000 ram=0x20000000)
+board            clock MHz   median RTx   range RTx      batch
+----------------------------------------------------------------
+atmega328p             16.0       103.58x 97.78-104.06x      227.6
+atsamd21               48.0       133.98x 132.82-134.05x     1023.8
+atsamd21g18a           48.0       112.61x 110.47-113.49x     1023.8
+atsamd51              120.0        67.66x 66.58-67.96x     1023.8
+atsamd51-pybadge      120.0        67.92x 65.34-68.11x     1023.8
+efr32mg26              78.0        48.13x 47.80-48.83x     1023.8
+esp32                 240.0        33.55x 33.27-33.94x     1023.8
+esp32c3               160.0        11.89x 11.43-12.03x     1023.8
+esp32c6               160.0        12.23x 11.99-12.33x     1023.8
+esp32s3               240.0        19.42x 19.41-19.56x     1023.8
+esp32s3-zero          240.0        20.14x 19.97-20.14x     1023.8
+imxrt1064             600.0        16.54x 16.53-16.55x     1023.8
+mkw41z4                48.0        65.77x 65.11-66.37x     1023.8
+nrf51822               16.0       183.37x 178.60-184.24x     1023.8
+nrf52832               64.0        49.85x 49.75-50.06x     1023.8
+nrf52833               64.0        27.40x 27.39-27.72x     1023.8
+nrf52840               64.0        23.74x 23.52-23.79x     1023.8
+nrf5340               128.0        18.69x 18.56-18.74x     1023.8
+nrf54l15              128.0        21.20x 21.11-21.35x     1023.8
+nrf54lm20a            128.0        39.07x 39.04-39.09x     1023.8
+ra4m1                  48.0       133.77x 133.43-133.97x     1023.8
+rp2040                125.0        26.90x 26.72-27.01x     1023.8
+rp2350                150.0        35.15x 34.86-35.25x     1023.8
+stm32f103              72.0        42.13x 41.62-42.41x     1023.8
+stm32f401              84.0        46.60x 45.66-46.97x     1023.8
+stm32f401cdu6          84.0        32.96x 32.19-32.97x     1023.8
+stm32f405             168.0        32.87x 32.71-32.99x     1023.8
+stm32f407             168.0        22.88x 22.86-23.00x     1023.8
+stm32f411ceu6         100.0        30.32x 30.31-30.60x     1023.8
+stm32f746             216.0        41.57x 41.52-41.96x     1023.8
+stm32f767             216.0        26.60x 26.53-26.62x     1023.8
+stm32g071              64.0        93.18x 88.75-96.82x     1023.8
+stm32g474re           170.0        30.01x 29.79-30.06x     1023.8
+stm32h563             250.0        14.73x 14.58-14.77x      992.8
+stm32h735             550.0        10.70x 10.65-10.74x     1023.8
+stm32l073              32.0        46.77x 46.70-47.06x     1023.8
+stm32l476              80.0        23.09x 22.20-23.14x     1023.8
+stm32u575             160.0        14.90x 14.83-14.94x      992.8
+stm32wb55              64.0        45.13x 45.09-45.92x     1023.8
+stm32wba52            100.0        32.54x 32.28-32.60x     1023.8
+
+all 40 chips meet or exceed 1.00x real time

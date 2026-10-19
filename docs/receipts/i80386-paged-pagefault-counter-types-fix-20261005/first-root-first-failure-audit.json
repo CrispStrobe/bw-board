@@ -1,0 +1,29 @@
+{
+  "status": "FIRST_FAILURE_EXTENT_AUTHENTICATED",
+  "runId": 37266253433,
+  "artifactId": 11325808399,
+  "members": 102,
+  "zipBytes": 11282682,
+  "zipSha256": "3da1d6b9b3ce457ef2355e265fad9a5bea65dda583552b5fdb5f376f0f1d255e",
+  "sourceGitChecks": 362,
+  "originalError": {
+    "text": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'bigint' !== 'string'\n",
+    "utf8Bytes": 93,
+    "sha256": "4d8c13803175acebba9b5e075fe007517a28ad4bba93afdbc34a59eddc47163f",
+    "truncated": false
+  },
+  "progress": {
+    "n": 0,
+    "q": 0,
+    "faults": 0,
+    "attemptOrdinal": 0,
+    "resumes": 0,
+    "zeroQ": 0
+  },
+  "boundaries": 0,
+  "cuts": 0,
+  "resetRawWords": 166,
+  "guardsEqual": true,
+  "cleanup": "native/provider/javascript closed",
+  "scope": "Addon initialized; live BigInt versus persisted string assertion at reset. No emulated instruction or page-fault recovery/parity/performance PASS."
+}

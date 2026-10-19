@@ -1,0 +1,71 @@
+{
+  "status": "ROOT_H2_H3_BENCHMARK_ARTIFACT_AND_FULL_INVARIANT_AUDIT_PASS",
+  "checks": 1500,
+  "summarySha256": "e66e4d2187fb4bb9f5cd029c0744b24fb43ddfd4c8f625c798aa600130d5ead4",
+  "helperSha256": "84de24c8455a0c60fc10a6784337427835e9c436ab6aa37ec8946f946d584eb2",
+  "driverRevision": "a645480594a9bc20a4046619745bb85e57abacd0",
+  "actualChildren": 18,
+  "discardedWarmupPairs": 2,
+  "measuredPairs": 7,
+  "distributions": {
+    "h2": {
+      "minNs": 454600164,
+      "medianNs": 488240473,
+      "maxNs": 619070587
+    },
+    "h3": {
+      "minNs": 412634640,
+      "medianNs": 449992957,
+      "maxNs": 498055032
+    }
+  },
+  "pairs": [
+    {
+      "index": 2,
+      "h2": 488240473,
+      "h3": 437006919,
+      "h3OverH2": 0.8950649181433182
+    },
+    {
+      "index": 3,
+      "h3": 444208139,
+      "h2": 486794996,
+      "h3OverH2": 0.9125158283262221
+    },
+    {
+      "index": 4,
+      "h2": 454600164,
+      "h3": 412634640,
+      "h3OverH2": 0.907686958071577
+    },
+    {
+      "index": 5,
+      "h3": 455161981,
+      "h2": 542644869,
+      "h3OverH2": 0.8387842712652647
+    },
+    {
+      "index": 6,
+      "h2": 619070587,
+      "h3": 498055032,
+      "h3OverH2": 0.8045205869229901
+    },
+    {
+      "index": 7,
+      "h3": 449992957,
+      "h2": 497369391,
+      "h3OverH2": 0.9047459798345331
+    },
+    {
+      "index": 8,
+      "h2": 460159110,
+      "h3": 485097784,
+      "h3OverH2": 1.054195762852549
+    }
+  ],
+  "medianTimeReductionPercent": 7.8337454830378235,
+  "lowerH3Pairs": 6,
+  "medianPairedH3OverH2": 0.9047459798345331,
+  "legacyAnnotation": "The original sample.profile flag selects H3 rather than enabling profiling; every child input.profile and BW_HOT_NAPI_PROFILE were disabled. Original summary.scope has copied H2 three-profiler-pairs wording; this receipt describes seven measured OFF H2/H3 pairs. Original evidence remains unchanged.",
+  "scope": "Whole adapter execution includes per-resume key allocation/close and returned snapshots, not cold setup/settlement/serialization. Shared VPS and fresh-process JIT variation remain; no physical RTx, 10x gain or general workload claim."
+}

@@ -1,0 +1,13 @@
+import pathlib,subprocess,resource,os,json,hashlib,time,signal
+R=pathlib.Path(__file__).parent;W=pathlib.Path('/tmp/bw-cold-native-diagnostic-source-20261003');S=W;files=[p for d in ['cold-native-restore','cold-native-diagnostic'] for p in (W/'scripts'/d).iterdir() if p.is_file()]+[W/'.github/workflows/i80386-cold-native-diagnostic.yml',pathlib.Path(__file__)]
+def pins():return {str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
+before=pins();(R/'before.json').write_text(json.dumps(before,indent=2)+'\n')
+env=dict(os.environ);hooks=['NODE_OPTIONS','NODE_PATH','LD_PRELOAD','LD_AUDIT','BW_HOT_NAPI_PROFILE','NODE_V8_COVERAGE'];env.update({k:'' for k in hooks});env['PYTHONDONTWRITEBYTECODE']='1';env['BW_METADATA_CONTROL_RECEIPT']=str(R/'metadata-control.json')
+def bounds():
+ resource.setrlimit(resource.RLIMIT_CPU,(10,10));resource.setrlimit(resource.RLIMIT_FSIZE,(8<<20,8<<20));resource.setrlimit(resource.RLIMIT_CORE,(0,0));os.nice(10)
+cmd=['python3','-B','-c',"import sys,unittest;sys.path[:0]=['scripts/cold-native-diagnostic','scripts/cold-native-restore'];s=unittest.defaultTestLoader.loadTestsFromNames(['test_parent']);r=unittest.TextTestRunner(verbosity=2).run(s);sys.exit(not r.wasSuccessful())"];start=time.monotonic();timed=False
+with (R/'stdout').open('wb') as out,(R/'stderr').open('wb') as err:
+ p=subprocess.Popen(cmd,cwd=S,env=env,stdout=out,stderr=err,start_new_session=True,preexec_fn=bounds)
+ try:p.wait(timeout=30)
+ except subprocess.TimeoutExpired:timed=True;os.killpg(p.pid,signal.SIGKILL);p.wait()
+after=pins();(R/'after.json').write_text(json.dumps(after,indent=2)+'\n');receipt={'command':cmd,'cwd':str(S),'returncode':p.returncode,'timedOut':timed,'wallSeconds':time.monotonic()-start,'pinsEqual':before==after,'cpuSeconds':10,'wallLimitSeconds':30,'fileBytes':8<<20,'coreBytes':0,'niceIncrement':10,'blankHooks':{k:env[k] for k in hooks},'scope':'PURE_125_PARENT_AND_ARCHIVE_NO_NETWORK_RESTORE_NATIVE_OR_BUILD'};(R/'exit.json').write_text(json.dumps(receipt,indent=2)+'\n');assert p.returncode==0 and not timed and before==after

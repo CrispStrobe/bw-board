@@ -1,0 +1,60 @@
+{
+  "date": "2026-09-27",
+  "baseCommit": "c2cf1d207537d5857c72c1961705c7c61c4a2bf5",
+  "scope": "Opt-in pure form and sequential-continuation census of byte-proven code16 WASM refusals; no guest execution or ordinary path change",
+  "activation": "AT_CODE16_WASM=1 AT_CODE16_WASM_DIAGNOSTICS=1 AT_CODE16_WASM_FORM_CENSUS=1",
+  "sources": {
+    "src/experimental/i80386-code16-form-census.js": "sha256:44093b9e51d2540727ea2a5d6154f8feff8c330e67e365a8cef45b6d8b0302ab",
+    "src/experimental/i80386-code16-wasm-block.js": "sha256:7e7457d4644b45e5ed2fd40cb3582d61c32c7ed3fc620995c8a529a82d2f6a8e",
+    "scripts/run-i80386-at-console.mjs": "sha256:dd9154d48bfcb4e52538fd7276f7c2a0416d4d4d0e56eb03a56c46d1cc520bf0",
+    "test/i80386-code16-wasm-block.test.mjs": "sha256:de991e796dbb4d7f6af626531e12f2988fcd780ccfc16b75038d8b5e5c08b4a9",
+    "docs/I80386-CODE16-WASM-FORM-CENSUS.md": "sha256:220b68339135340647c5d4640bef1b7cc15bf0cddc102337dabc52d5ac2207a3"
+  },
+  "validation": {
+    "command": "node --test test/i80386*.test.mjs",
+    "tests": 444,
+    "passed": 440,
+    "failed": 0,
+    "skipped": 4,
+    "focusedWasmTests": 16,
+    "guestParity": "Pinned private 60-million-step serial ordinary/form-census reports matched after dropping source/revision and opt-in-only metadata; both stopped at budget without refusal"
+  },
+  "measuredExecutionRevision": "c1c557ffc32be536ba38263e3b42d13914bb320a",
+  "measurementProvenance": "Both raw reports directly record the new form parser, dispatcher, and CLI source SHA-256, identical to this candidate. Media identifiers, raw reports and timing remain in the private evidence repository.",
+  "calls": {
+    "first26": 2840502,
+    "first66": 1113760,
+    "first8e": 1114818,
+    "shortBlockSequential": 4039831,
+    "excludedTerminalBranches": 3965253,
+    "allShortBlocks": 8005084
+  },
+  "topForms": {
+    "first26": {
+      "26:8b:mem:o16:a16": 670274,
+      "26:3a:mem:o16:a16": 482417,
+      "26:8a:mem:o16:a16": 407566
+    },
+    "first66": {
+      "66:d1:reg:o32:a16": 119281,
+      "66:c1:reg/5:o32:a16": 93193,
+      "66:c1:reg/4:o32:a16": 86444
+    },
+    "first8e": {
+      "-:8e:reg/0:o16:a16": 600021,
+      "-:8e:mem/0:o16:a16": 399147
+    },
+    "shortBlockSequential": {
+      "-:50:plain:o16:a16": 424461,
+      "-:89:mem:o16:a16": 338449,
+      "-:31:reg:o16:a16": 284384
+    }
+  },
+  "lengthDescription": {
+    "first26Known": 2840502,
+    "first66Known": 1112486,
+    "first8eKnown": 1114818,
+    "shortBlockSequentialKnown": 3877592
+  },
+  "interpretation": "These are dispatcher-call frequencies, not distinct instructions, native retirements, or a speed projection. The first bounded execution candidate is 0x26-prefixed read-only 8A/8B loads and 3A byte compare using the existing ES EA/data proof. Segment-cache mutations in 8E, mixed 32-bit semantics in 66, stack effects and writes need separate fault-ordering work. Terminal branch fallthrough bytes are excluded from sequential-continuation inference."
+}

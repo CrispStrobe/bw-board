@@ -1,0 +1,52 @@
+{
+  "records": [
+    {
+      "path": "initial-exit.json",
+      "bytes": 498,
+      "sha256": "692a1fc228f7c404294e03a4058b560b8a98f3f86023815beb56b7f5c110b4ea",
+      "origin": "/tmp/native-cold-property-key-cache-source-controls-20261005/exit.json"
+    },
+    {
+      "path": "initial-stdout.txt",
+      "bytes": 3314,
+      "sha256": "28702e7bc0601e21b67adabe8199a552e9b6570dc9f8768b7195b81b402aab72",
+      "origin": "/tmp/native-cold-property-key-cache-source-controls-20261005/stdout"
+    },
+    {
+      "path": "corrected-exit.json",
+      "bytes": 507,
+      "sha256": "bb6639d79d23347bdf6948c7dd3786d05e48c0e2d5a0d13d5bb8b9b408260896",
+      "origin": "/tmp/native-cold-property-key-cache-setter-inverse-controls-20261005/exit.json"
+    },
+    {
+      "path": "corrected-stdout.txt",
+      "bytes": 1052,
+      "sha256": "bdcad8d2d005f9599ca150c5604eeb68d2c0d2c8d63e2da63606a24049c75ffc",
+      "origin": "/tmp/native-cold-property-key-cache-setter-inverse-controls-20261005/stdout"
+    },
+    {
+      "path": "corrected-context.json",
+      "bytes": 2225,
+      "sha256": "9f9f8a8eafa1133233a56cbb69e66843bcabf9d4d005d823bd133341fdaabb02",
+      "origin": "/tmp/native-cold-property-key-cache-setter-inverse-controls-20261005/context.json"
+    },
+    {
+      "path": "corrected-parent.py",
+      "bytes": 5311,
+      "sha256": "9a49f393141a7e63b8febe75d381fbc17b9850413a2763baa65d7651fef53cb5",
+      "origin": "/tmp/native-cold-property-key-cache-setter-inverse-controls-20261005/parent.py"
+    },
+    {
+      "path": "coder-audit.json",
+      "bytes": 418,
+      "sha256": "862cd4267784376b112251c76c001d6ca4a75d33bf021eafc72ebe194c111ad6",
+      "origin": "/tmp/native-cold-property-key-cache-setter-inverse-controls-20261005/coder-audit.json"
+    },
+    {
+      "path": "independent-audit.json",
+      "bytes": 1041,
+      "sha256": "7f4a030d7fa804559cb932c98d420cdc70fc0aae2d996bdb2e61d6d863f77c27",
+      "origin": "/tmp/native-cold-property-key-cache-setter-inverse-controls-20261005/independent-audit.json"
+    }
+  ]
+}

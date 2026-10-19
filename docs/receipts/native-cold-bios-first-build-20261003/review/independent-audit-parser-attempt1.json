@@ -1,0 +1,6 @@
+{
+  "status": "READ_ONLY_AUDIT_ASSERTION_FAILURE_NOT_BUILD_FAILURE",
+  "reason": "Comparison of originalH4Provenance assumed historical boardRevision unchanged; inherited preparer labels current authenticated build revision. Other provenance fields unchanged.",
+  "script": "independent-audit.py",
+  "nativeOrBuildRetries": 0
+}

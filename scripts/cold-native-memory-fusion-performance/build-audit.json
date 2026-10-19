@@ -1,0 +1,43 @@
+{
+  "status": "PASS_INDEPENDENT_STATIC_BUILD_AUDIT",
+  "runId": 37182277120,
+  "head": "85fc1599af0ee71e32208da9d36caac86daa3b8c",
+  "artifactId": 11295731777,
+  "zipBytes": 7537808,
+  "zipSha256": "07bcd66ce81469ce06beaa8cb7567b7812a94110568e89e5f3225a55ac250875",
+  "sourceInputs": 151,
+  "preparedInputs": 811,
+  "addonSha256": "7de755f02b385149e17abfb086972bc73cbcb3fac5294f758eda5a4ab97d2351",
+  "addonBytes": 2070080,
+  "typedNapiSha256": "052dfe2d8bbcf37b2abd621dbd78c5f2078026f34cb02fa1afd40ee1c9cb15ac",
+  "runtimeSha256": "c313c842c4b405e859191b05f4e2f4b9bc535b7a581c2fa2fd17f016fd67e445",
+  "stateExportProfile": "bw.cold-native.copied-u32-state.v1",
+  "scope": "Genuine first static compile/admission; frozen151 and complete prepared TAR map streamed byte-verified, config/exports/context/beforeafter authenticated. No addon load, guest, parity or performance claim.",
+  "memoryFusionProfile": "bw.cold-native.memory-clock-fusion.v1",
+  "requiredExports": [
+    "bw_direct_initialize",
+    "bw_direct_resume",
+    "bw_direct_set_irq_line",
+    "bw_direct_inspect",
+    "bw_direct_close",
+    "napi_register_module_v1",
+    "bw_memory_fusion"
+  ],
+  "memberCount": 65,
+  "preparedSourceTarFiles": 810,
+  "allOfficialMemberHashesVerified": true,
+  "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "helperSha256": "c6dbc16e8e8c84dcaae810130ed24726132c1f37e07e4c63d2cd1a78ddaba39a",
+  "workflowSha256": "29e153f72deef9ba895460ba57391340cbd9520f1a37e0be6507ed8680637086",
+  "configSha256": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe",
+  "guards": {
+    "head": "85fc1599af0ee71e32208da9d36caac86daa3b8c",
+    "status": "",
+    "upstreamHead": "0e45b736ef9792eb9b752b0a35db49eaf2faea47",
+    "upstreamStatus": "",
+    "node": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+    "helper": "c6dbc16e8e8c84dcaae810130ed24726132c1f37e07e4c63d2cd1a78ddaba39a",
+    "workflow": "29e153f72deef9ba895460ba57391340cbd9520f1a37e0be6507ed8680637086",
+    "header": "757bb6bf5ea89e173bad159bfc31d8a5840157694a9374f2c3276747ae061530"
+  }
+}

@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: new runtime and provider preserve exact held derivatives and unknown source refuses
+ok 1 - new runtime and provider preserve exact held derivatives and unknown source refuses
+  ---
+  duration_ms: 69.688658
+  type: 'test'
+  ...
+# Subtest: genuine first PF manifest exceeds held cap and is admitted by bounded four MiB source seam
+ok 2 - genuine first PF manifest exceeds held cap and is admitted by bounded four MiB source seam
+  ---
+  duration_ms: 58.899148
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 397.379005

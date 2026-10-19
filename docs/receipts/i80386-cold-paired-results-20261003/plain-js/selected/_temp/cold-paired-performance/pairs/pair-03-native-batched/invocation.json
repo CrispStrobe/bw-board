@@ -1,0 +1,29 @@
+{
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=128",
+    "/home/runner/work/bw-board/bw-board/native-worker/scripts/cold-native-performance/worker.mjs",
+    "/home/runner/work/_temp/cold-paired-performance/pairs/pair-03-native-batched-input.json"
+  ],
+  "cwd": "/home/runner/work/bw-board/bw-board/native-worker",
+  "bounds": {
+    "cpuSeconds": 60,
+    "wallSeconds": 120,
+    "heapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "niceIncrement": 10
+  },
+  "heapScope": "heapMiB is enforced only by explicit Node --max-old-space-size; Python has no V8 heap limit",
+  "blankHooks": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  },
+  "processGroup": true,
+  "apiCredentialAllowed": false,
+  "rusageScope": "Raw kernel wait4 rusage when this main child exits; descendant accounting follows OS semantics. Separate from execution-phase self process.cpuUsage."
+}

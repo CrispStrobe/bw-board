@@ -1,0 +1,8 @@
+{
+  "status": "PASS_INDEPENDENT_CPU_FROZEN_SOURCE_AND_QUALIFICATION_ADDENDUM",
+  "sourceGitHashes": 219,
+  "qualificationReviews": 3,
+  "runtimeRevision": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+  "compiledRevision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "scope": "116 runtime plus103 compiled frozen Git blobs authenticated independently; genuine post-run aggregate qualification reviews match retained source copies. Recorded gate artifact maps unchanged; prior static build provenance remains governing, no new addon load."
+}

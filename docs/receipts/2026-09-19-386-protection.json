@@ -1,0 +1,3632 @@
+{
+  "schema": "astra.386-protection-evidence.v1",
+  "executionRevision": "f87a3b42cdd90b1866f9204273c1c1720d212bbb",
+  "priorQualifiedMilestone": "833dca7219d24243b8b5e7ed4888d68aa3c61941",
+  "scope": "Bounded inner-ring interrupts, outer IRET, protected far control, call gates, conforming code and TSS scalar I/O permissions. No full386DX, VM86, tasking, Windows, Doom or silicon timing claim.",
+  "focusedTests": {
+    "command": "node --test test/i80386-*.test.mjs",
+    "node": "v22.23.2",
+    "passed": 133,
+    "skipped": 2,
+    "failed": 0,
+    "rawSha256": "f75bf98df368ea9275b17f42e4075d595d1400deff7d7c1280e93ade1c99c670"
+  },
+  "pcjsProtection": {
+    "rawSha256": "83548b8b8fd55a51f7a71fc5e778f0a268feeea9310494fedb8e6a83d8fe6eda",
+    "report": {
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "executionRevision": "f87a3b42cdd90b1866f9204273c1c1720d212bbb",
+      "node": "v22.23.2",
+      "scope": "same-ring and ring-3-to-ring-0 80386 32-bit interrupt/trap gates, IRET, TSS stack selection, and #GP restart/error frame; architectural state only",
+      "knownOracleLimitations": {
+        "resumeFlag": {
+          "graded": false,
+          "pcjsObserved": 770,
+          "intel386Expected": "RF set in the saved EFLAGS image for a fault",
+          "localObserved": 66306
+        },
+        "ioResumeFlag": {
+          "graded": false,
+          "pcjsObserved": 2,
+          "intel386Expected": "RF set in the saved EFLAGS image for the denied IN fault",
+          "localObserved": 65538
+        },
+        "conformingGateTargetRpl": {
+          "graded": false,
+          "pcjsObserved": "target selector RPL 0 becomes CPL 0 and selects the inner stack",
+          "intel386Expected": "conforming target retains caller CPL 3 and the current stack",
+          "localObserved": "handler CS has RPL 3 and the current ring-3 stack contains the frame"
+        }
+      },
+      "sourceHashes": {
+        "./compare-pcjs-protected386-faults.mjs": "3b5aa9f56cb7fe159a956b11e8c4c26ff047d3403885f9017df644cbeaa5741b",
+        "../src/experimental/i80386.js": "ab3d1719b573422a8ce361ae45c699f8c1c2edfa9a1422be24bf79d32a5b2daf"
+      },
+      "mutation": null,
+      "status": "pass",
+      "cases": {
+        "interrupt32": {
+          "reference": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 0,
+              "frame": [
+                16,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "actual": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 0,
+              "frame": [
+                16,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "trap32": {
+          "reference": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 512,
+              "frame": [
+                16,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "actual": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 512,
+              "frame": [
+                16,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "generalProtection": {
+          "reference": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1008,
+              "flags": 0,
+              "frame": [
+                0,
+                14,
+                8,
+                770
+              ]
+            }
+          },
+          "actual": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1008,
+              "flags": 0,
+              "frame": [
+                0,
+                14,
+                8,
+                66306
+              ]
+            }
+          }
+        },
+        "ringTransition": {
+          "reference": {
+            "cs": 27,
+            "eip": 2,
+            "ss": 35,
+            "esp": 2048,
+            "flags": 2,
+            "visitedHandler": true,
+            "completed": true,
+            "frame": [
+              2,
+              27,
+              2,
+              2048,
+              35
+            ]
+          },
+          "actual": {
+            "cs": 27,
+            "eip": 2,
+            "ss": 35,
+            "esp": 2048,
+            "flags": 2,
+            "visitedHandler": true,
+            "completed": true,
+            "frame": [
+              2,
+              27,
+              2,
+              2048,
+              35
+            ]
+          }
+        },
+        "callGate": {
+          "reference": {
+            "cs": 27,
+            "eip": 7,
+            "ss": 35,
+            "esp": 2052,
+            "visitedHandler": true,
+            "completed": true,
+            "frame": [
+              7,
+              27,
+              287454020,
+              2048,
+              35
+            ]
+          },
+          "actual": {
+            "cs": 27,
+            "eip": 7,
+            "ss": 35,
+            "esp": 2052,
+            "visitedHandler": true,
+            "completed": true,
+            "frame": [
+              7,
+              27,
+              287454020,
+              2048,
+              35
+            ]
+          }
+        },
+        "ioAllowed": {
+          "reference": {
+            "bootstrap": true,
+            "completed": true,
+            "al": 90,
+            "ports": [
+              [
+                32,
+                8
+              ]
+            ]
+          },
+          "actual": {
+            "bootstrap": true,
+            "completed": true,
+            "al": 90,
+            "ports": [
+              [
+                32,
+                8
+              ]
+            ]
+          }
+        },
+        "ioDenied": {
+          "reference": {
+            "bootstrap": true,
+            "handler": true,
+            "error": 0,
+            "restartEip": 0,
+            "savedCs": 27,
+            "savedFlags": 2,
+            "ports": []
+          },
+          "actual": {
+            "bootstrap": true,
+            "handler": true,
+            "error": 0,
+            "restartEip": 0,
+            "savedCs": 27,
+            "savedFlags": 65538,
+            "ports": []
+          }
+        },
+        "conformingInterrupt": {
+          "reference": {
+            "cs": 27,
+            "eip": 2,
+            "ss": 35,
+            "esp": 2048,
+            "handlerCs": 8,
+            "completed": true,
+            "currentStackFrame": [
+              0,
+              0,
+              0
+            ],
+            "innerStackFrame": [
+              2,
+              27,
+              2,
+              2048,
+              35
+            ]
+          },
+          "actual": {
+            "cs": 27,
+            "eip": 2,
+            "ss": 35,
+            "esp": 2048,
+            "handlerCs": 11,
+            "completed": true,
+            "currentStackFrame": [
+              2,
+              27,
+              2
+            ],
+            "innerStackFrame": [
+              0,
+              27,
+              2,
+              2048,
+              35
+            ]
+          }
+        }
+      },
+      "differences": []
+    }
+  },
+  "negativeControls": {
+    "frame": {
+      "rawSha256": "922413a5aab128f0a9a1becc547eedfe7325ff972cb225c4e65dae470e345104",
+      "report": {
+        "oracle": "PCjs",
+        "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+        "executionRevision": "f87a3b42cdd90b1866f9204273c1c1720d212bbb",
+        "node": "v22.23.2",
+        "scope": "same-ring and ring-3-to-ring-0 80386 32-bit interrupt/trap gates, IRET, TSS stack selection, and #GP restart/error frame; architectural state only",
+        "knownOracleLimitations": {
+          "resumeFlag": {
+            "graded": false,
+            "pcjsObserved": 770,
+            "intel386Expected": "RF set in the saved EFLAGS image for a fault",
+            "localObserved": 66306
+          },
+          "ioResumeFlag": {
+            "graded": false,
+            "pcjsObserved": 2,
+            "intel386Expected": "RF set in the saved EFLAGS image for the denied IN fault",
+            "localObserved": 65538
+          },
+          "conformingGateTargetRpl": {
+            "graded": false,
+            "pcjsObserved": "target selector RPL 0 becomes CPL 0 and selects the inner stack",
+            "intel386Expected": "conforming target retains caller CPL 3 and the current stack",
+            "localObserved": "handler CS has RPL 3 and the current ring-3 stack contains the frame"
+          }
+        },
+        "sourceHashes": {
+          "./compare-pcjs-protected386-faults.mjs": "3b5aa9f56cb7fe159a956b11e8c4c26ff047d3403885f9017df644cbeaa5741b",
+          "../src/experimental/i80386.js": "ab3d1719b573422a8ce361ae45c699f8c1c2edfa9a1422be24bf79d32a5b2daf"
+        },
+        "mutation": "frame",
+        "status": "fail",
+        "cases": {
+          "interrupt32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  17,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "trap32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "generalProtection": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  770
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  66306
+                ]
+              }
+            }
+          },
+          "ringTransition": {
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            }
+          },
+          "callGate": {
+            "reference": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            }
+          },
+          "ioAllowed": {
+            "reference": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            },
+            "actual": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            }
+          },
+          "ioDenied": {
+            "reference": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 2,
+              "ports": []
+            },
+            "actual": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 65538,
+              "ports": []
+            }
+          },
+          "conformingInterrupt": {
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 8,
+              "completed": true,
+              "currentStackFrame": [
+                0,
+                0,
+                0
+              ],
+              "innerStackFrame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 11,
+              "completed": true,
+              "currentStackFrame": [
+                2,
+                27,
+                2
+              ],
+              "innerStackFrame": [
+                0,
+                27,
+                2,
+                2048,
+                35
+              ]
+            }
+          }
+        },
+        "differences": [
+          {
+            "case": "interrupt32",
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  17,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "if": {
+      "rawSha256": "064ef012d0c5fc22138cfe9d13397775a74a7360b7a09ec0924f42ebec5e1ffb",
+      "report": {
+        "oracle": "PCjs",
+        "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+        "executionRevision": "f87a3b42cdd90b1866f9204273c1c1720d212bbb",
+        "node": "v22.23.2",
+        "scope": "same-ring and ring-3-to-ring-0 80386 32-bit interrupt/trap gates, IRET, TSS stack selection, and #GP restart/error frame; architectural state only",
+        "knownOracleLimitations": {
+          "resumeFlag": {
+            "graded": false,
+            "pcjsObserved": 770,
+            "intel386Expected": "RF set in the saved EFLAGS image for a fault",
+            "localObserved": 66306
+          },
+          "ioResumeFlag": {
+            "graded": false,
+            "pcjsObserved": 2,
+            "intel386Expected": "RF set in the saved EFLAGS image for the denied IN fault",
+            "localObserved": 65538
+          },
+          "conformingGateTargetRpl": {
+            "graded": false,
+            "pcjsObserved": "target selector RPL 0 becomes CPL 0 and selects the inner stack",
+            "intel386Expected": "conforming target retains caller CPL 3 and the current stack",
+            "localObserved": "handler CS has RPL 3 and the current ring-3 stack contains the frame"
+          }
+        },
+        "sourceHashes": {
+          "./compare-pcjs-protected386-faults.mjs": "3b5aa9f56cb7fe159a956b11e8c4c26ff047d3403885f9017df644cbeaa5741b",
+          "../src/experimental/i80386.js": "ab3d1719b573422a8ce361ae45c699f8c1c2edfa9a1422be24bf79d32a5b2daf"
+        },
+        "mutation": "if",
+        "status": "fail",
+        "cases": {
+          "interrupt32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "trap32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "generalProtection": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  770
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  66306
+                ]
+              }
+            }
+          },
+          "ringTransition": {
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            }
+          },
+          "callGate": {
+            "reference": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            }
+          },
+          "ioAllowed": {
+            "reference": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            },
+            "actual": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            }
+          },
+          "ioDenied": {
+            "reference": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 2,
+              "ports": []
+            },
+            "actual": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 65538,
+              "ports": []
+            }
+          },
+          "conformingInterrupt": {
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 8,
+              "completed": true,
+              "currentStackFrame": [
+                0,
+                0,
+                0
+              ],
+              "innerStackFrame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 11,
+              "completed": true,
+              "currentStackFrame": [
+                2,
+                27,
+                2
+              ],
+              "innerStackFrame": [
+                0,
+                27,
+                2,
+                2048,
+                35
+              ]
+            }
+          }
+        },
+        "differences": [
+          {
+            "case": "trap32",
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "ring-stack": {
+      "rawSha256": "114edd5823eac89094f0157aa348914e1604dcf273a0bf5866b67f0c76cfc31d",
+      "report": {
+        "oracle": "PCjs",
+        "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+        "executionRevision": "f87a3b42cdd90b1866f9204273c1c1720d212bbb",
+        "node": "v22.23.2",
+        "scope": "same-ring and ring-3-to-ring-0 80386 32-bit interrupt/trap gates, IRET, TSS stack selection, and #GP restart/error frame; architectural state only",
+        "knownOracleLimitations": {
+          "resumeFlag": {
+            "graded": false,
+            "pcjsObserved": 770,
+            "intel386Expected": "RF set in the saved EFLAGS image for a fault",
+            "localObserved": 66306
+          },
+          "ioResumeFlag": {
+            "graded": false,
+            "pcjsObserved": 2,
+            "intel386Expected": "RF set in the saved EFLAGS image for the denied IN fault",
+            "localObserved": 65538
+          },
+          "conformingGateTargetRpl": {
+            "graded": false,
+            "pcjsObserved": "target selector RPL 0 becomes CPL 0 and selects the inner stack",
+            "intel386Expected": "conforming target retains caller CPL 3 and the current stack",
+            "localObserved": "handler CS has RPL 3 and the current ring-3 stack contains the frame"
+          }
+        },
+        "sourceHashes": {
+          "./compare-pcjs-protected386-faults.mjs": "3b5aa9f56cb7fe159a956b11e8c4c26ff047d3403885f9017df644cbeaa5741b",
+          "../src/experimental/i80386.js": "ab3d1719b573422a8ce361ae45c699f8c1c2edfa9a1422be24bf79d32a5b2daf"
+        },
+        "mutation": "ring-stack",
+        "status": "fail",
+        "cases": {
+          "interrupt32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "trap32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "generalProtection": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  770
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  66306
+                ]
+              }
+            }
+          },
+          "ringTransition": {
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2049,
+                35
+              ]
+            }
+          },
+          "callGate": {
+            "reference": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            }
+          },
+          "ioAllowed": {
+            "reference": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            },
+            "actual": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            }
+          },
+          "ioDenied": {
+            "reference": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 2,
+              "ports": []
+            },
+            "actual": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 65538,
+              "ports": []
+            }
+          },
+          "conformingInterrupt": {
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 8,
+              "completed": true,
+              "currentStackFrame": [
+                0,
+                0,
+                0
+              ],
+              "innerStackFrame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 11,
+              "completed": true,
+              "currentStackFrame": [
+                2,
+                27,
+                2
+              ],
+              "innerStackFrame": [
+                0,
+                27,
+                2,
+                2048,
+                35
+              ]
+            }
+          }
+        },
+        "differences": [
+          {
+            "case": "ringTransitionExpected",
+            "engine": "actual",
+            "expected": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2049,
+                35
+              ]
+            }
+          },
+          {
+            "case": "ringTransition",
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2049,
+                35
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "gate-parameter": {
+      "rawSha256": "5d27dfaa99992f9b681294cfbf7faa96a4a886d7ea47fb3fc24fb0ef24c99614",
+      "report": {
+        "oracle": "PCjs",
+        "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+        "executionRevision": "f87a3b42cdd90b1866f9204273c1c1720d212bbb",
+        "node": "v22.23.2",
+        "scope": "same-ring and ring-3-to-ring-0 80386 32-bit interrupt/trap gates, IRET, TSS stack selection, and #GP restart/error frame; architectural state only",
+        "knownOracleLimitations": {
+          "resumeFlag": {
+            "graded": false,
+            "pcjsObserved": 770,
+            "intel386Expected": "RF set in the saved EFLAGS image for a fault",
+            "localObserved": 66306
+          },
+          "ioResumeFlag": {
+            "graded": false,
+            "pcjsObserved": 2,
+            "intel386Expected": "RF set in the saved EFLAGS image for the denied IN fault",
+            "localObserved": 65538
+          },
+          "conformingGateTargetRpl": {
+            "graded": false,
+            "pcjsObserved": "target selector RPL 0 becomes CPL 0 and selects the inner stack",
+            "intel386Expected": "conforming target retains caller CPL 3 and the current stack",
+            "localObserved": "handler CS has RPL 3 and the current ring-3 stack contains the frame"
+          }
+        },
+        "sourceHashes": {
+          "./compare-pcjs-protected386-faults.mjs": "3b5aa9f56cb7fe159a956b11e8c4c26ff047d3403885f9017df644cbeaa5741b",
+          "../src/experimental/i80386.js": "ab3d1719b573422a8ce361ae45c699f8c1c2edfa9a1422be24bf79d32a5b2daf"
+        },
+        "mutation": "gate-parameter",
+        "status": "fail",
+        "cases": {
+          "interrupt32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "trap32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "generalProtection": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  770
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  66306
+                ]
+              }
+            }
+          },
+          "ringTransition": {
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            }
+          },
+          "callGate": {
+            "reference": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454021,
+                2048,
+                35
+              ]
+            }
+          },
+          "ioAllowed": {
+            "reference": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            },
+            "actual": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            }
+          },
+          "ioDenied": {
+            "reference": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 2,
+              "ports": []
+            },
+            "actual": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 65538,
+              "ports": []
+            }
+          },
+          "conformingInterrupt": {
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 8,
+              "completed": true,
+              "currentStackFrame": [
+                0,
+                0,
+                0
+              ],
+              "innerStackFrame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 11,
+              "completed": true,
+              "currentStackFrame": [
+                2,
+                27,
+                2
+              ],
+              "innerStackFrame": [
+                0,
+                27,
+                2,
+                2048,
+                35
+              ]
+            }
+          }
+        },
+        "differences": [
+          {
+            "case": "callGateExpected",
+            "engine": "actual",
+            "expected": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454021,
+                2048,
+                35
+              ]
+            }
+          },
+          {
+            "case": "callGate",
+            "reference": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454021,
+                2048,
+                35
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "io-access": {
+      "rawSha256": "fa9502434d586a8630638b16fa9c08b806413edcd825a0af946ef7211dbd79c8",
+      "report": {
+        "oracle": "PCjs",
+        "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+        "executionRevision": "f87a3b42cdd90b1866f9204273c1c1720d212bbb",
+        "node": "v22.23.2",
+        "scope": "same-ring and ring-3-to-ring-0 80386 32-bit interrupt/trap gates, IRET, TSS stack selection, and #GP restart/error frame; architectural state only",
+        "knownOracleLimitations": {
+          "resumeFlag": {
+            "graded": false,
+            "pcjsObserved": 770,
+            "intel386Expected": "RF set in the saved EFLAGS image for a fault",
+            "localObserved": 66306
+          },
+          "ioResumeFlag": {
+            "graded": false,
+            "pcjsObserved": 2,
+            "intel386Expected": "RF set in the saved EFLAGS image for the denied IN fault",
+            "localObserved": 65538
+          },
+          "conformingGateTargetRpl": {
+            "graded": false,
+            "pcjsObserved": "target selector RPL 0 becomes CPL 0 and selects the inner stack",
+            "intel386Expected": "conforming target retains caller CPL 3 and the current stack",
+            "localObserved": "handler CS has RPL 3 and the current ring-3 stack contains the frame"
+          }
+        },
+        "sourceHashes": {
+          "./compare-pcjs-protected386-faults.mjs": "3b5aa9f56cb7fe159a956b11e8c4c26ff047d3403885f9017df644cbeaa5741b",
+          "../src/experimental/i80386.js": "ab3d1719b573422a8ce361ae45c699f8c1c2edfa9a1422be24bf79d32a5b2daf"
+        },
+        "mutation": "io-access",
+        "status": "fail",
+        "cases": {
+          "interrupt32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "trap32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "generalProtection": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  770
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  66306
+                ]
+              }
+            }
+          },
+          "ringTransition": {
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            }
+          },
+          "callGate": {
+            "reference": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            }
+          },
+          "ioAllowed": {
+            "reference": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            },
+            "actual": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            }
+          },
+          "ioDenied": {
+            "reference": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 2,
+              "ports": []
+            },
+            "actual": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 65538,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            }
+          },
+          "conformingInterrupt": {
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 8,
+              "completed": true,
+              "currentStackFrame": [
+                0,
+                0,
+                0
+              ],
+              "innerStackFrame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 11,
+              "completed": true,
+              "currentStackFrame": [
+                2,
+                27,
+                2
+              ],
+              "innerStackFrame": [
+                0,
+                27,
+                2,
+                2048,
+                35
+              ]
+            }
+          }
+        },
+        "differences": [
+          {
+            "case": "ioDeniedExpected",
+            "engine": "actual",
+            "expected": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 65538,
+              "ports": []
+            },
+            "actual": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 65538,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            }
+          },
+          {
+            "case": "ioDenied",
+            "reference": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 2,
+              "ports": []
+            },
+            "actual": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 65538,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "conforming-cpl": {
+      "rawSha256": "a9b6f8f2cd1e2cf38339229bea290b556023d7f6ec65269d7ea2be8ee2e52e36",
+      "report": {
+        "oracle": "PCjs",
+        "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+        "executionRevision": "f87a3b42cdd90b1866f9204273c1c1720d212bbb",
+        "node": "v22.23.2",
+        "scope": "same-ring and ring-3-to-ring-0 80386 32-bit interrupt/trap gates, IRET, TSS stack selection, and #GP restart/error frame; architectural state only",
+        "knownOracleLimitations": {
+          "resumeFlag": {
+            "graded": false,
+            "pcjsObserved": 770,
+            "intel386Expected": "RF set in the saved EFLAGS image for a fault",
+            "localObserved": 66306
+          },
+          "ioResumeFlag": {
+            "graded": false,
+            "pcjsObserved": 2,
+            "intel386Expected": "RF set in the saved EFLAGS image for the denied IN fault",
+            "localObserved": 65538
+          },
+          "conformingGateTargetRpl": {
+            "graded": false,
+            "pcjsObserved": "target selector RPL 0 becomes CPL 0 and selects the inner stack",
+            "intel386Expected": "conforming target retains caller CPL 3 and the current stack",
+            "localObserved": "handler CS has RPL 3 and the current ring-3 stack contains the frame"
+          }
+        },
+        "sourceHashes": {
+          "./compare-pcjs-protected386-faults.mjs": "3b5aa9f56cb7fe159a956b11e8c4c26ff047d3403885f9017df644cbeaa5741b",
+          "../src/experimental/i80386.js": "ab3d1719b573422a8ce361ae45c699f8c1c2edfa9a1422be24bf79d32a5b2daf"
+        },
+        "mutation": "conforming-cpl",
+        "status": "fail",
+        "cases": {
+          "interrupt32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "trap32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "generalProtection": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  770
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  66306
+                ]
+              }
+            }
+          },
+          "ringTransition": {
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            }
+          },
+          "callGate": {
+            "reference": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            }
+          },
+          "ioAllowed": {
+            "reference": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            },
+            "actual": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            }
+          },
+          "ioDenied": {
+            "reference": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 2,
+              "ports": []
+            },
+            "actual": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 65538,
+              "ports": []
+            }
+          },
+          "conformingInterrupt": {
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 8,
+              "completed": true,
+              "currentStackFrame": [
+                0,
+                0,
+                0
+              ],
+              "innerStackFrame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 8,
+              "completed": true,
+              "currentStackFrame": [
+                2,
+                27,
+                2
+              ],
+              "innerStackFrame": [
+                0,
+                27,
+                2,
+                2048,
+                35
+              ]
+            }
+          }
+        },
+        "differences": [
+          {
+            "case": "conformingExpected",
+            "engine": "actual",
+            "expected": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 11,
+              "completed": true,
+              "currentStackFrame": [
+                2,
+                27,
+                2
+              ],
+              "innerStackFrame": [
+                0,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 8,
+              "completed": true,
+              "currentStackFrame": [
+                2,
+                27,
+                2
+              ],
+              "innerStackFrame": [
+                0,
+                27,
+                2,
+                2048,
+                35
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "RING-budget": {
+      "rawSha256": "e6fbdb9ce812041dd292c99e6ba372fca0a7f3bbd2347016b88f88b4caaa778a",
+      "report": {
+        "oracle": "PCjs",
+        "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+        "executionRevision": "f87a3b42cdd90b1866f9204273c1c1720d212bbb",
+        "node": "v22.23.2",
+        "scope": "same-ring and ring-3-to-ring-0 80386 32-bit interrupt/trap gates, IRET, TSS stack selection, and #GP restart/error frame; architectural state only",
+        "knownOracleLimitations": {
+          "resumeFlag": {
+            "graded": false,
+            "pcjsObserved": 770,
+            "intel386Expected": "RF set in the saved EFLAGS image for a fault",
+            "localObserved": 66306
+          },
+          "ioResumeFlag": {
+            "graded": false,
+            "pcjsObserved": 2,
+            "intel386Expected": "RF set in the saved EFLAGS image for the denied IN fault",
+            "localObserved": 65538
+          },
+          "conformingGateTargetRpl": {
+            "graded": false,
+            "pcjsObserved": "target selector RPL 0 becomes CPL 0 and selects the inner stack",
+            "intel386Expected": "conforming target retains caller CPL 3 and the current stack",
+            "localObserved": "handler CS has RPL 3 and the current ring-3 stack contains the frame"
+          }
+        },
+        "sourceHashes": {
+          "./compare-pcjs-protected386-faults.mjs": "3b5aa9f56cb7fe159a956b11e8c4c26ff047d3403885f9017df644cbeaa5741b",
+          "../src/experimental/i80386.js": "ab3d1719b573422a8ce361ae45c699f8c1c2edfa9a1422be24bf79d32a5b2daf"
+        },
+        "mutation": null,
+        "status": "fail",
+        "cases": {
+          "interrupt32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "trap32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "generalProtection": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  770
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  66306
+                ]
+              }
+            }
+          },
+          "ringTransition": {
+            "reference": {
+              "cs": 0,
+              "eip": 17,
+              "ss": 0,
+              "esp": 0,
+              "flags": 2,
+              "visitedHandler": false,
+              "completed": false,
+              "frame": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "actual": {
+              "cs": 0,
+              "eip": 20,
+              "ss": 0,
+              "esp": 0,
+              "flags": 2,
+              "visitedHandler": false,
+              "completed": false,
+              "frame": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "callGate": {
+            "reference": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            }
+          },
+          "ioAllowed": {
+            "reference": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            },
+            "actual": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            }
+          },
+          "ioDenied": {
+            "reference": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 2,
+              "ports": []
+            },
+            "actual": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 65538,
+              "ports": []
+            }
+          },
+          "conformingInterrupt": {
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 8,
+              "completed": true,
+              "currentStackFrame": [
+                0,
+                0,
+                0
+              ],
+              "innerStackFrame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 11,
+              "completed": true,
+              "currentStackFrame": [
+                2,
+                27,
+                2
+              ],
+              "innerStackFrame": [
+                0,
+                27,
+                2,
+                2048,
+                35
+              ]
+            }
+          }
+        },
+        "differences": [
+          {
+            "case": "ringTransitionExpected",
+            "engine": "reference",
+            "expected": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 0,
+              "eip": 17,
+              "ss": 0,
+              "esp": 0,
+              "flags": 2,
+              "visitedHandler": false,
+              "completed": false,
+              "frame": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          {
+            "case": "ringTransitionExpected",
+            "engine": "actual",
+            "expected": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 0,
+              "eip": 20,
+              "ss": 0,
+              "esp": 0,
+              "flags": 2,
+              "visitedHandler": false,
+              "completed": false,
+              "frame": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          {
+            "case": "ringTransition",
+            "reference": {
+              "cs": 0,
+              "eip": 17,
+              "ss": 0,
+              "esp": 0,
+              "flags": 2,
+              "visitedHandler": false,
+              "completed": false,
+              "frame": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "actual": {
+              "cs": 0,
+              "eip": 20,
+              "ss": 0,
+              "esp": 0,
+              "flags": 2,
+              "visitedHandler": false,
+              "completed": false,
+              "frame": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "GATE-budget": {
+      "rawSha256": "fb9bdca44cad91a26443a75b04d0f5447ebf0885849323255f79f950facd0215",
+      "report": {
+        "oracle": "PCjs",
+        "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+        "executionRevision": "f87a3b42cdd90b1866f9204273c1c1720d212bbb",
+        "node": "v22.23.2",
+        "scope": "same-ring and ring-3-to-ring-0 80386 32-bit interrupt/trap gates, IRET, TSS stack selection, and #GP restart/error frame; architectural state only",
+        "knownOracleLimitations": {
+          "resumeFlag": {
+            "graded": false,
+            "pcjsObserved": 770,
+            "intel386Expected": "RF set in the saved EFLAGS image for a fault",
+            "localObserved": 66306
+          },
+          "ioResumeFlag": {
+            "graded": false,
+            "pcjsObserved": 2,
+            "intel386Expected": "RF set in the saved EFLAGS image for the denied IN fault",
+            "localObserved": 65538
+          },
+          "conformingGateTargetRpl": {
+            "graded": false,
+            "pcjsObserved": "target selector RPL 0 becomes CPL 0 and selects the inner stack",
+            "intel386Expected": "conforming target retains caller CPL 3 and the current stack",
+            "localObserved": "handler CS has RPL 3 and the current ring-3 stack contains the frame"
+          }
+        },
+        "sourceHashes": {
+          "./compare-pcjs-protected386-faults.mjs": "3b5aa9f56cb7fe159a956b11e8c4c26ff047d3403885f9017df644cbeaa5741b",
+          "../src/experimental/i80386.js": "ab3d1719b573422a8ce361ae45c699f8c1c2edfa9a1422be24bf79d32a5b2daf"
+        },
+        "mutation": null,
+        "status": "fail",
+        "cases": {
+          "interrupt32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 0,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "trap32": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1012,
+                "flags": 512,
+                "frame": [
+                  16,
+                  8,
+                  770,
+                  0
+                ]
+              },
+              "returned": {
+                "cs": 8,
+                "eip": 16,
+                "esp": 1024,
+                "flags": 768,
+                "frame": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          },
+          "generalProtection": {
+            "reference": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  770
+                ]
+              }
+            },
+            "actual": {
+              "entry": {
+                "cs": 8,
+                "eip": 256,
+                "esp": 1008,
+                "flags": 0,
+                "frame": [
+                  0,
+                  14,
+                  8,
+                  66306
+                ]
+              }
+            }
+          },
+          "ringTransition": {
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "flags": 2,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            }
+          },
+          "callGate": {
+            "reference": {
+              "cs": 0,
+              "eip": 17,
+              "ss": 0,
+              "esp": 0,
+              "visitedHandler": false,
+              "completed": false,
+              "frame": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "actual": {
+              "cs": 0,
+              "eip": 20,
+              "ss": 0,
+              "esp": 0,
+              "visitedHandler": false,
+              "completed": false,
+              "frame": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "ioAllowed": {
+            "reference": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            },
+            "actual": {
+              "bootstrap": true,
+              "completed": true,
+              "al": 90,
+              "ports": [
+                [
+                  32,
+                  8
+                ]
+              ]
+            }
+          },
+          "ioDenied": {
+            "reference": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 2,
+              "ports": []
+            },
+            "actual": {
+              "bootstrap": true,
+              "handler": true,
+              "error": 0,
+              "restartEip": 0,
+              "savedCs": 27,
+              "savedFlags": 65538,
+              "ports": []
+            }
+          },
+          "conformingInterrupt": {
+            "reference": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 8,
+              "completed": true,
+              "currentStackFrame": [
+                0,
+                0,
+                0
+              ],
+              "innerStackFrame": [
+                2,
+                27,
+                2,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 27,
+              "eip": 2,
+              "ss": 35,
+              "esp": 2048,
+              "handlerCs": 11,
+              "completed": true,
+              "currentStackFrame": [
+                2,
+                27,
+                2
+              ],
+              "innerStackFrame": [
+                0,
+                27,
+                2,
+                2048,
+                35
+              ]
+            }
+          }
+        },
+        "differences": [
+          {
+            "case": "callGateExpected",
+            "engine": "reference",
+            "expected": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 0,
+              "eip": 17,
+              "ss": 0,
+              "esp": 0,
+              "visitedHandler": false,
+              "completed": false,
+              "frame": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          {
+            "case": "callGateExpected",
+            "engine": "actual",
+            "expected": {
+              "cs": 27,
+              "eip": 7,
+              "ss": 35,
+              "esp": 2052,
+              "visitedHandler": true,
+              "completed": true,
+              "frame": [
+                7,
+                27,
+                287454020,
+                2048,
+                35
+              ]
+            },
+            "actual": {
+              "cs": 0,
+              "eip": 20,
+              "ss": 0,
+              "esp": 0,
+              "visitedHandler": false,
+              "completed": false,
+              "frame": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          {
+            "case": "callGate",
+            "reference": {
+              "cs": 0,
+              "eip": 17,
+              "ss": 0,
+              "esp": 0,
+              "visitedHandler": false,
+              "completed": false,
+              "frame": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "actual": {
+              "cs": 0,
+              "eip": 20,
+              "ss": 0,
+              "esp": 0,
+              "visitedHandler": false,
+              "completed": false,
+              "frame": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "externalTest386": {
+    "rawSha256": "c88ae6815b6edcd2ed5658e58546e7137696fdc529860a67a2a63334ac961735",
+    "report": {
+      "schema": "astra.i80386-test386-diagnostic.v1",
+      "accepted": false,
+      "status": "bounded-blocker",
+      "fullRomPass": false,
+      "scope": "unchanged pinned test386 capture ROM; diagnostic progress only, no full-ROM or hardware-timing claim",
+      "node": "v22.23.2",
+      "steps": 805601,
+      "post": [
+        {
+          "value": 0,
+          "width": 8
+        },
+        {
+          "value": 1,
+          "width": 8
+        },
+        {
+          "value": 2,
+          "width": 8
+        },
+        {
+          "value": 3,
+          "width": 8
+        },
+        {
+          "value": 4,
+          "width": 8
+        },
+        {
+          "value": 5,
+          "width": 8
+        },
+        {
+          "value": 6,
+          "width": 8
+        },
+        {
+          "value": 8,
+          "width": 8
+        },
+        {
+          "value": 9,
+          "width": 8
+        },
+        {
+          "value": 32,
+          "width": 8
+        },
+        {
+          "value": 33,
+          "width": 8
+        }
+      ],
+      "output": "",
+      "blocker": {
+        "name": "UnsupportedI80386",
+        "message": "VM86 IRET is outside the bounded profile",
+        "cs": 208,
+        "eip": 11424,
+        "physical": 994464,
+        "opcode": 207
+      },
+      "executionRevision": "f87a3b42cdd90b1866f9204273c1c1720d212bbb",
+      "instructionBudget": 2000000,
+      "input": {
+        "bytes": 65536,
+        "sha256": "3c4859cac2235f6ef5e8dbf3d706d8226ad860e2a624be3f9751981fadca4067",
+        "provenanceSha256": "8445f111e459457b950cd4b616bd6de63cd5209ed2c265fdd60cb8fe1bbc6403",
+        "revision": "cfd052d1e64d5375dea5a681c1eadeed64ceda2c",
+        "sourceClean": true
+      },
+      "sourceHashes": {
+        "./run-i80386-test386-diagnostic.mjs": "4a4a3a5162251a261b20aa90f99e1eaceb90105ff13102048eb348751625af0d",
+        "../src/experimental/i80386.js": "ab3d1719b573422a8ce361ae45c699f8c1c2edfa9a1422be24bf79d32a5b2daf"
+      }
+    }
+  },
+  "audit": [
+    "Original-386 INT null new SS uses #GP; CALL null new SS uses #TS.",
+    "Mixed gate width, stack address size, copied parameters and outer discard have independent witnesses.",
+    "Execute-only far pointer reads fault before bus access.",
+    "I/O bitmap base at/above TSS limit is absent; a later permission byte at the inclusive limit remains addressable.",
+    "Denied I/O reference evidence requires owned #GP handler and restart frame, never generic host abort.",
+    "Conforming interrupt results are independently graded; pinned PCjs target-RPL stack-switch difference is explicit."
+  ],
+  "inheritedAcceptance": "286 DOS2 boot/write/fresh-read source dependencies unchanged; earlier source-bound receipt remains authoritative."
+}

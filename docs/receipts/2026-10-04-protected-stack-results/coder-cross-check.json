@@ -1,0 +1,15 @@
+{
+  "status": "PASS_READONLY_CODER_ACTUAL_CROSSCHECK",
+  "checks": 1304,
+  "runId": 37196612572,
+  "artifactId": 11301206742,
+  "captureSha256": "c94e9ce96528da9a04c85caa40d5fbfe939ead7ca68dc6c15a718cb600c35484",
+  "boundaries": 32,
+  "cuts": 13,
+  "n": 30,
+  "q": 30,
+  "compiledGit": 174,
+  "driverGit": 67,
+  "toolingGit": 9,
+  "scope": "Raw represented registers/fullboards/threepages/strict CSDS/SS1-to7/source and allmembers crosscheck; independent complete audit separately covers all counterpart fields/native-only source contracts; no rerun"
+}

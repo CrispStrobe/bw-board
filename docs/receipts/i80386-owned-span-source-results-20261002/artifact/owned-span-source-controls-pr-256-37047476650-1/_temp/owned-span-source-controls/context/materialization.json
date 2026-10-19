@@ -1,0 +1,14 @@
+{
+  "status": "SEVEN_SOURCE_PAYLOADS_MATERIALIZED_BYTE_EXACT_NO_CONTROL_CHILD",
+  "baselineRevision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "sourcePayloads": {
+    "scripts/bochs-cpu3-native-owned-span/baseline-source.json": "52c0a2805f6b26eaad9380b86239cd7fe2a1df1be237775c521cb3ae9f811be5",
+    "scripts/bochs-cpu3-native-owned-span/controls.mjs": "22a406cc0af13d8e87c9a24a07c45dcbbdd2260c0bc1ba9fa4c1a820a24d577c",
+    "scripts/bochs-cpu3-native-owned-span/derivation.json": "2177eca4e3fa01874ca5d66a59404b98563a455ea5d32d02c585ddcae873a168",
+    "scripts/bochs-cpu3-native-owned-span/derive.mjs": "20735787a09b59867782a4530c7e62068db63fb22681d03256539089065d80d3",
+    "scripts/bochs-cpu3-native-owned-span/plan.md": "2cf6714757c048c7c57cd2db9f8a0440ceda2a1c262f945eef7eaf007446a395",
+    "scripts/bochs-cpu3-native-owned-span/provider.mjs": "c0194f3d39a59d79d5875d9ff25dd32900eace493257cc6a092f5f840a169d7d",
+    "scripts/bochs-cpu3-native-owned-span/span-method.txt": "a3760c895904a5683b6244fb162e593e67fac7c51551bc0b60fdf7d2e4b63149"
+  },
+  "sourceDestination": "/home/runner/work/bw-board/bw-board/baseline"
+}

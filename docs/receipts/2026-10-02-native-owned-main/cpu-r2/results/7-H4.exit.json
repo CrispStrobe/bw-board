@@ -1,0 +1,36 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "/mnt/volume1/tmp-astra/native-hot-h3-vs-h4-cpu-benchmark-20261001/H4-cpu-child.mjs",
+    "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/7-H4.input.json"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 19.810959776863456,
+  "limits": {
+    "heapMiB": 512,
+    "wallSeconds": 120,
+    "cpuSeconds": 120,
+    "niceIncrement": 10,
+    "fileMiB": 256,
+    "coreBytes": 0
+  },
+  "blankEnvironment": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": ""
+  },
+  "streams": {
+    "stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stderr": {
+      "bytes": 416,
+      "sha256": "eb439db274c22fd455d83f5cc545fbca1f33d8b5d236a51b24ca1c462f1d8517"
+    }
+  }
+}

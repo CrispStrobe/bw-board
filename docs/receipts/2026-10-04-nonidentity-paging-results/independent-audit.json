@@ -1,0 +1,22 @@
+{
+  "status": "PASS_INDEPENDENT_NONIDENTITY_PAGING_CORRECTNESS_AUDIT",
+  "runId": 37207113095,
+  "artifactId": 11304886677,
+  "officialMembers": 98,
+  "sourceRolePaths": 272,
+  "nativeTicks": 34,
+  "quanta": 34,
+  "resumes": 34,
+  "zeroQ": 0,
+  "boundaries": 36,
+  "comparableBoundaries": 34,
+  "unmatchedBoundaries": 2,
+  "cuts": 11,
+  "comparableCuts": 9,
+  "unmatchedCuts": 2,
+  "rawWordsPerBoundary": 166,
+  "wholeRawPagesPerBoundary": 7,
+  "memoryEvents": 39,
+  "ramSha256": "b36573f67cf2de4454d97a8c2a04b1fa5980ad47c7207da9f42fb07b5b33cf43",
+  "scope": "Strict represented CPU at all boundaries; full board/seven unmodified pages only at declared comparable phases. PG-enable and entry are raw unmatched phases, never parity PASS. Complete successful native callback chronology retained independently of JS AD order. Cache coherence/live callback ownership source-attested; whole RAM hash only. No faults/IRQs/PIO/OS/speed/adoption qualification."
+}

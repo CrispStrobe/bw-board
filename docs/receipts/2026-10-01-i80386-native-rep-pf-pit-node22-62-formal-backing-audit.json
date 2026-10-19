@@ -1,0 +1,114 @@
+{
+  "continuous": {
+    "status": "independent-actual-RPC-ordered-backing-generation-ROM-NQ-replay-pass",
+    "nativeTicks": 137,
+    "successfulQuanta": 135,
+    "requests": 432,
+    "census": {
+      "PAGE": 2,
+      "QUANTUM": 135,
+      "NATIVE_TICK": 137,
+      "WRITE": 60,
+      "READ": 76,
+      "PIO_OUT": 21,
+      "ACK": 1
+    },
+    "entirePhysicalBackingSha256": "70740538341b327527e37945543e7c77cddc932f7e09fe79d0611feafe18354a",
+    "executePageSha256": [
+      "5f4dd953eb30d573f201fbf100925b4a533c1678f64ff052eb0d8312151cbc75",
+      "36cb28ad458dacc39861917a80aff9b1144c127fa466cbc3eb91d0816ccc142c"
+    ],
+    "ackAtNQ": [
+      [
+        110,
+        108
+      ]
+    ],
+    "dataLedgerSha256": "eaa81f2725bed42c82b555e990822b95589eb9e952f698a53d076ae4e23dcca1",
+    "scope": "Independent actual RPC replay; comparator qualification is a separate result, no speed measurement."
+  },
+  "budget1": {
+    "status": "independent-actual-RPC-ordered-backing-generation-ROM-NQ-replay-pass",
+    "nativeTicks": 137,
+    "successfulQuanta": 135,
+    "requests": 432,
+    "census": {
+      "PAGE": 2,
+      "QUANTUM": 135,
+      "NATIVE_TICK": 137,
+      "WRITE": 60,
+      "READ": 76,
+      "PIO_OUT": 21,
+      "ACK": 1
+    },
+    "entirePhysicalBackingSha256": "70740538341b327527e37945543e7c77cddc932f7e09fe79d0611feafe18354a",
+    "executePageSha256": [
+      "5f4dd953eb30d573f201fbf100925b4a533c1678f64ff052eb0d8312151cbc75",
+      "36cb28ad458dacc39861917a80aff9b1144c127fa466cbc3eb91d0816ccc142c"
+    ],
+    "ackAtNQ": [
+      [
+        110,
+        108
+      ]
+    ],
+    "dataLedgerSha256": "eaa81f2725bed42c82b555e990822b95589eb9e952f698a53d076ae4e23dcca1",
+    "scope": "Independent actual RPC replay; comparator qualification is a separate result, no speed measurement."
+  },
+  "budget2": {
+    "status": "independent-actual-RPC-ordered-backing-generation-ROM-NQ-replay-pass",
+    "nativeTicks": 137,
+    "successfulQuanta": 135,
+    "requests": 432,
+    "census": {
+      "PAGE": 2,
+      "QUANTUM": 135,
+      "NATIVE_TICK": 137,
+      "WRITE": 60,
+      "READ": 76,
+      "PIO_OUT": 21,
+      "ACK": 1
+    },
+    "entirePhysicalBackingSha256": "70740538341b327527e37945543e7c77cddc932f7e09fe79d0611feafe18354a",
+    "executePageSha256": [
+      "5f4dd953eb30d573f201fbf100925b4a533c1678f64ff052eb0d8312151cbc75",
+      "36cb28ad458dacc39861917a80aff9b1144c127fa466cbc3eb91d0816ccc142c"
+    ],
+    "ackAtNQ": [
+      [
+        110,
+        108
+      ]
+    ],
+    "dataLedgerSha256": "eaa81f2725bed42c82b555e990822b95589eb9e952f698a53d076ae4e23dcca1",
+    "scope": "Independent actual RPC replay; comparator qualification is a separate result, no speed measurement."
+  },
+  "budget257": {
+    "status": "independent-actual-RPC-ordered-backing-generation-ROM-NQ-replay-pass",
+    "nativeTicks": 137,
+    "successfulQuanta": 135,
+    "requests": 432,
+    "census": {
+      "PAGE": 2,
+      "QUANTUM": 135,
+      "NATIVE_TICK": 137,
+      "WRITE": 60,
+      "READ": 76,
+      "PIO_OUT": 21,
+      "ACK": 1
+    },
+    "entirePhysicalBackingSha256": "70740538341b327527e37945543e7c77cddc932f7e09fe79d0611feafe18354a",
+    "executePageSha256": [
+      "5f4dd953eb30d573f201fbf100925b4a533c1678f64ff052eb0d8312151cbc75",
+      "36cb28ad458dacc39861917a80aff9b1144c127fa466cbc3eb91d0816ccc142c"
+    ],
+    "ackAtNQ": [
+      [
+        110,
+        108
+      ]
+    ],
+    "dataLedgerSha256": "eaa81f2725bed42c82b555e990822b95589eb9e952f698a53d076ae4e23dcca1",
+    "scope": "Independent actual RPC replay; comparator qualification is a separate result, no speed measurement."
+  }
+}

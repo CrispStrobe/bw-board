@@ -1,0 +1,84 @@
+name: LabWired live-word dispatcher regression
+
+on:
+  push:
+    branches: ['test/wasm-live-word-dispatch-*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  regression:
+    name: Actual WASM RAM and MMIO dispatcher
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22.23.3'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: labwired-wasm-b
+          path: baseline
+          run-id: 36915940413
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: labwired-wasm-b
+          path: candidate
+          run-id: 37027849668
+          github-token: ${{ github.token }}
+      - name: Verify original source and module bytes
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          const sources={baseline:'43b2d62f5a0fa24ae0b38a645069f5aaa78af685',candidate:'90ff69aa8b78e91667d1d5067a39dc0b37bc8115'};
+          const hashes={baseline:{'labwired_wasm_bg.wasm':'7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d','labwired_wasm.js':'b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73'},candidate:{'labwired_wasm_bg.wasm':'ad1704cbb2438baeb92536ed963b5353ccc86688032b921619c6415e101cac4b','labwired_wasm.js':'339deaca58b4c5a5319f95168b8356a9d0b495905383d1d2166e527c8f2cb3cd'}};
+          mkdirSync('evidence',{recursive:true});
+          for(const label of ['baseline','candidate']) {
+            const raw=readFileSync(label+'/BUILD-INFO.json');
+            const info=JSON.parse(raw);
+            assert.equal(info.ref,sources[label]);
+            for(const file of ['labwired_wasm.js','labwired_wasm_bg.wasm']) {
+              const bytes=readFileSync(label+'/nodejs/'+file);
+              const actual=createHash('sha256').update(bytes).digest('hex');
+              assert.equal(bytes.length,info.targets.nodejs[file].bytes);
+              assert.equal(actual,info.targets.nodejs[file].sha256);
+              assert.equal(actual,hashes[label][file]);
+            }
+            writeFileSync(label+'/nodejs/package.json',JSON.stringify({type:'commonjs'}));
+            writeFileSync('evidence/'+label+'-BUILD-INFO.json',raw);
+          }
+          NODE
+      - name: Install locked adapter dependencies
+        run: npm ci
+      - name: Exercise both original engines without debugger bypass or skipped tests
+        env:
+          LABWIRED_WORD_REQUIRED: '1'
+        run: |
+          set -euo pipefail
+          for engine in baseline candidate; do
+            LABWIRED_WASM="$PWD/$engine/nodejs" node --test test/labwired-word-admission.test.mjs 2>&1 | tee "evidence/$engine-tests.txt"
+            node --input-type=module - "$engine" <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFileSync} from 'node:fs';
+          const text=readFileSync('evidence/'+process.argv[2]+'-tests.txt','utf8');
+          assert.match(text,/^# fail 0$/m);
+          assert.match(text,/^# skipped 0$/m);
+          const tests=text.match(/^# tests (\d+)$/m);
+          assert.ok(tests&&Number(tests[1])===7,'All seven focused actual-WASM tests must execute');
+          NODE
+          done
+      - name: Preserve regression evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: labwired-word-dispatch-regression
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 14

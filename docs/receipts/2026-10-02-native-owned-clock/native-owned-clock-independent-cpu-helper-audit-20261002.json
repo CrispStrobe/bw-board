@@ -1,0 +1,11 @@
+{
+  "status": "PASS_CPU_HELPER_SOURCE_AUDIT_NOT_EXECUTED",
+  "planSha256": "0a73c3f9af983d04d0bc22c783e49f2ed2e432c15f15b80082d5ac3c5a5d3fd2",
+  "helperSha256": "61eb3d821fac4de302fe50473dd39c5cfc9a9df588d4c8bd7a9cc13d6de57202",
+  "baselineHelperSha256": "b9dc6b91c183f9cd27ccd755a7a42ca3f7a295e98d502a61e87f6bd500b83973",
+  "candidateDriverSha256": "d9a24d9ac044ae41117bd47bd02768a0b07abe549daf575977e1e58b8dbff0ff",
+  "samples": "18 sequential fresh children; two warmup pairs plus seven alternating measured pairs",
+  "metric": "process all-thread user+system CPU execution delta including scheduler/resumes/native snapshots/six checkpoints and ABI3 IPC/GC; excludes startup/settlement",
+  "criterion": "ratio of means >=10% reduction AND all7 favorable; full logical parity everychild",
+  "limitations": "trusted pristine driver process.cpuUsage; synthetic fixed free ROM; shared system load; no physical386 RTx or broad-guest claim"
+}

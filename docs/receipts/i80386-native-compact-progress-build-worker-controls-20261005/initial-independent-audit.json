@@ -1,0 +1,34 @@
+{
+  "status": "INDEPENDENT_COMPACT_INITIAL_SIX_PASS_ONE_MANUFACTURED_FINAL_FIXTURE_FAILURE",
+  "revision": "7e0a4b7bafc3834f95c5c60b9562c5709ecb6130",
+  "sourcePaths": 189,
+  "prepostEqual": true,
+  "tests": 7,
+  "passes": 6,
+  "failures": 1,
+  "skips": 0,
+  "rawWaitStatus": 256,
+  "exitCode": 1,
+  "stderrBytes": 0,
+  "cause": "Manufactured last progress copied early resume32 while actual final cut316562; unchanged production guard rejects",
+  "retainedExit": {
+    "exitCode": 1,
+    "timeout": false,
+    "wallSeconds": 2.6374145168811083,
+    "wallScope": "parent including final authentication",
+    "childExitWallSeconds": 0.3947800528258085,
+    "rawWait4Status": 256,
+    "leaderRusage": {
+      "userSeconds": 0.52299,
+      "systemSeconds": 0.103019,
+      "maxRSSKiB": 64368
+    },
+    "rusageScope": "wait4 leader and its waited descendants; not guest or execution-window CPU",
+    "error": null,
+    "cleanupError": null,
+    "finalizationError": null,
+    "pinsEqual": true
+  },
+  "scope": "Pure source/metadata/protocol fixtures only; no addon/provider/guest/compiler",
+  "auditMethod": "Read saved packet only; no replay"
+}

@@ -1,0 +1,745 @@
+{
+  "status": "MAIN_LIFECYCLE_CONTROLS_PASS_NOT_FULL_QUALIFICATION",
+  "records": [
+    {
+      "control": "second-create",
+      "negativeFatal": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 432,
+        "stderrSha256": "11fd83cc8723396e1047081376a0aeac2ba48dd1f727da7a831b7d686015fd3c",
+        "wallNs": 8788236538,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/second-create.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "n": "0",
+          "q": "0",
+          "calls": 1,
+          "ordinal": 1,
+          "name": "initialized"
+        },
+        {
+          "ordinal": 2,
+          "name": "second-create-denied"
+        },
+        {
+          "ordinal": 3,
+          "name": "done"
+        }
+      ],
+      "stderrSha256": "11fd83cc8723396e1047081376a0aeac2ba48dd1f727da7a831b7d686015fd3c"
+    },
+    {
+      "control": "failed-capture",
+      "negativeFatal": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 434,
+        "stderrSha256": "ef3fc237f7c46f5614cb9ee0829d79c9f02458e31e75108fa5a2c64fc2053df5",
+        "wallNs": 6921888349,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/failed-capture.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "ordinal": 1,
+          "name": "capture-denied-before-callback"
+        },
+        {
+          "n": "0",
+          "q": "0",
+          "calls": 1,
+          "ordinal": 2,
+          "name": "initialized"
+        },
+        {
+          "ordinal": 3,
+          "name": "done"
+        }
+      ],
+      "stderrSha256": "ef3fc237f7c46f5614cb9ee0829d79c9f02458e31e75108fa5a2c64fc2053df5"
+    },
+    {
+      "control": "wrong-thread",
+      "negativeFatal": false,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 430,
+        "stderrSha256": "8c60a74a0e1f9eb7e98625bdaeb3c19b554ec4bc5a76ecac827eeb27ba1533aa",
+        "wallNs": 6883675698,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/wrong-thread.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      },
+      "events": [
+        {
+          "n": "0",
+          "q": "0",
+          "calls": 1,
+          "ordinal": 1,
+          "name": "initialized"
+        },
+        {
+          "operations": [
+            "create",
+            "resume",
+            "inspect",
+            "close",
+            "setIRQ"
+          ],
+          "ordinal": 2,
+          "name": "wrong-thread-denied"
+        },
+        {
+          "ordinal": 3,
+          "name": "done"
+        }
+      ],
+      "stderrSha256": "8c60a74a0e1f9eb7e98625bdaeb3c19b554ec4bc5a76ecac827eeb27ba1533aa"
+    },
+    {
+      "control": "clock-resume",
+      "negativeFatal": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 465,
+        "stderrSha256": "e285dd69deb056a90e70dda2121d62f0d0fc87cc03477b7e6841860d7a6d70cc",
+        "wallNs": 4312652785,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-resume.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "n": "0",
+          "q": "0",
+          "calls": 1,
+          "ordinal": 1,
+          "name": "initialized"
+        },
+        {
+          "operation": "resume",
+          "callback": "clockTransfer",
+          "calls": 4,
+          "logical": 1,
+          "ordinal": 2,
+          "name": "attack-before-effect"
+        },
+        {
+          "operation": "resume",
+          "message": "direct concurrent, thread or reentry rejected",
+          "logical": 1,
+          "ordinal": 3,
+          "name": "nested-denied"
+        }
+      ],
+      "stderrSha256": "e285dd69deb056a90e70dda2121d62f0d0fc87cc03477b7e6841860d7a6d70cc"
+    },
+    {
+      "control": "clock-inspect",
+      "negativeFatal": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 467,
+        "stderrSha256": "07f91e4b97a141bd6f4bb9e4acc77dd1e01a9f9699f135fa5ba390e4bc08395e",
+        "wallNs": 3589776955,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-inspect.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "n": "0",
+          "q": "0",
+          "calls": 1,
+          "ordinal": 1,
+          "name": "initialized"
+        },
+        {
+          "operation": "inspect",
+          "callback": "clockTransfer",
+          "calls": 4,
+          "logical": 1,
+          "ordinal": 2,
+          "name": "attack-before-effect"
+        },
+        {
+          "operation": "inspect",
+          "message": "direct concurrent, thread or reentry rejected",
+          "logical": 1,
+          "ordinal": 3,
+          "name": "nested-denied"
+        }
+      ],
+      "stderrSha256": "07f91e4b97a141bd6f4bb9e4acc77dd1e01a9f9699f135fa5ba390e4bc08395e"
+    },
+    {
+      "control": "clock-close",
+      "negativeFatal": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 463,
+        "stderrSha256": "9032f94cf8efe69b4835abbfdce1691ff677b94eec6aa4aac032071fe9b369b7",
+        "wallNs": 4035783409,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-close.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "n": "0",
+          "q": "0",
+          "calls": 1,
+          "ordinal": 1,
+          "name": "initialized"
+        },
+        {
+          "operation": "close",
+          "callback": "clockTransfer",
+          "calls": 4,
+          "logical": 1,
+          "ordinal": 2,
+          "name": "attack-before-effect"
+        },
+        {
+          "operation": "close",
+          "message": "direct concurrent, thread or reentry rejected",
+          "logical": 1,
+          "ordinal": 3,
+          "name": "nested-denied"
+        }
+      ],
+      "stderrSha256": "9032f94cf8efe69b4835abbfdce1691ff677b94eec6aa4aac032071fe9b369b7"
+    },
+    {
+      "control": "clock-setIRQ",
+      "negativeFatal": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 465,
+        "stderrSha256": "6b0502e48d5bb6cd1ef212c33d7ae41afb3ba7cfcc3dc81c8de777e564ffb6d9",
+        "wallNs": 3794499225,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-setIRQ.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "n": "0",
+          "q": "0",
+          "calls": 1,
+          "ordinal": 1,
+          "name": "initialized"
+        },
+        {
+          "operation": "setIRQ",
+          "callback": "clockTransfer",
+          "calls": 4,
+          "logical": 1,
+          "ordinal": 2,
+          "name": "attack-before-effect"
+        },
+        {
+          "operation": "setIRQ",
+          "message": "direct concurrent, thread or reentry rejected",
+          "logical": 1,
+          "ordinal": 3,
+          "name": "nested-denied"
+        }
+      ],
+      "stderrSha256": "6b0502e48d5bb6cd1ef212c33d7ae41afb3ba7cfcc3dc81c8de777e564ffb6d9"
+    },
+    {
+      "control": "clock-create",
+      "negativeFatal": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 465,
+        "stderrSha256": "94cb8795d10dd11cc0d6c263c36d52493221566f25ee90183516a24ae375448c",
+        "wallNs": 3825472781,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-create.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "n": "0",
+          "q": "0",
+          "calls": 1,
+          "ordinal": 1,
+          "name": "initialized"
+        },
+        {
+          "operation": "create",
+          "callback": "clockTransfer",
+          "calls": 4,
+          "logical": 1,
+          "ordinal": 2,
+          "name": "attack-before-effect"
+        },
+        {
+          "operation": "create",
+          "message": "direct concurrent, thread or reentry rejected",
+          "logical": 1,
+          "ordinal": 3,
+          "name": "nested-denied"
+        }
+      ],
+      "stderrSha256": "94cb8795d10dd11cc0d6c263c36d52493221566f25ee90183516a24ae375448c"
+    },
+    {
+      "control": "memory-resume",
+      "negativeFatal": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 466,
+        "stderrSha256": "7becf12b7b333b49178c01898bf1834bfec3fd534e8fafdc1b501ba30a2656c4",
+        "wallNs": 5657106312,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/memory-resume.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "n": "0",
+          "q": "0",
+          "calls": 1,
+          "ordinal": 1,
+          "name": "initialized"
+        },
+        {
+          "operation": "resume",
+          "callback": "readPhysical",
+          "calls": 69,
+          "logical": 117,
+          "ordinal": 2,
+          "name": "attack-before-effect"
+        },
+        {
+          "operation": "resume",
+          "message": "direct concurrent, thread or reentry rejected",
+          "logical": 117,
+          "ordinal": 3,
+          "name": "nested-denied"
+        }
+      ],
+      "stderrSha256": "7becf12b7b333b49178c01898bf1834bfec3fd534e8fafdc1b501ba30a2656c4"
+    },
+    {
+      "control": "memory-inspect",
+      "negativeFatal": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 468,
+        "stderrSha256": "e02c83ed5aa8691ad07b21956301b50d8591225dca54e0886c1c651931bd7cb8",
+        "wallNs": 4849036933,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/memory-inspect.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "n": "0",
+          "q": "0",
+          "calls": 1,
+          "ordinal": 1,
+          "name": "initialized"
+        },
+        {
+          "operation": "inspect",
+          "callback": "readPhysical",
+          "calls": 69,
+          "logical": 117,
+          "ordinal": 2,
+          "name": "attack-before-effect"
+        },
+        {
+          "operation": "inspect",
+          "message": "direct concurrent, thread or reentry rejected",
+          "logical": 117,
+          "ordinal": 3,
+          "name": "nested-denied"
+        }
+      ],
+      "stderrSha256": "e02c83ed5aa8691ad07b21956301b50d8591225dca54e0886c1c651931bd7cb8"
+    },
+    {
+      "control": "memory-close",
+      "negativeFatal": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 464,
+        "stderrSha256": "3f8c04719824e5f0b26732f4dd334e66dcfcdc3b1c5dfa2aaf455bfd7e48afcf",
+        "wallNs": 4760969331,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/memory-close.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "n": "0",
+          "q": "0",
+          "calls": 1,
+          "ordinal": 1,
+          "name": "initialized"
+        },
+        {
+          "operation": "close",
+          "callback": "readPhysical",
+          "calls": 69,
+          "logical": 117,
+          "ordinal": 2,
+          "name": "attack-before-effect"
+        },
+        {
+          "operation": "close",
+          "message": "direct concurrent, thread or reentry rejected",
+          "logical": 117,
+          "ordinal": 3,
+          "name": "nested-denied"
+        }
+      ],
+      "stderrSha256": "3f8c04719824e5f0b26732f4dd334e66dcfcdc3b1c5dfa2aaf455bfd7e48afcf"
+    },
+    {
+      "control": "memory-setIRQ",
+      "negativeFatal": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 466,
+        "stderrSha256": "72d346660cf2cb920de190478c1d2c448bc4d5579a0b69351f1cf290e2d854e8",
+        "wallNs": 4909158974,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/memory-setIRQ.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "n": "0",
+          "q": "0",
+          "calls": 1,
+          "ordinal": 1,
+          "name": "initialized"
+        },
+        {
+          "operation": "setIRQ",
+          "callback": "readPhysical",
+          "calls": 69,
+          "logical": 117,
+          "ordinal": 2,
+          "name": "attack-before-effect"
+        },
+        {
+          "operation": "setIRQ",
+          "message": "direct concurrent, thread or reentry rejected",
+          "logical": 117,
+          "ordinal": 3,
+          "name": "nested-denied"
+        }
+      ],
+      "stderrSha256": "72d346660cf2cb920de190478c1d2c448bc4d5579a0b69351f1cf290e2d854e8"
+    },
+    {
+      "control": "memory-create",
+      "negativeFatal": true,
+      "exit": {
+        "returncode": -6,
+        "signal": 6,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 466,
+        "stderrSha256": "2438a761aa4bbe45a72f9a372f8c70b6abda829548b65621f4ede064cc3f8fae",
+        "wallNs": 6395076105,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/memory-create.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+      },
+      "events": [
+        {
+          "n": "0",
+          "q": "0",
+          "calls": 1,
+          "ordinal": 1,
+          "name": "initialized"
+        },
+        {
+          "operation": "create",
+          "callback": "readPhysical",
+          "calls": 69,
+          "logical": 117,
+          "ordinal": 2,
+          "name": "attack-before-effect"
+        },
+        {
+          "operation": "create",
+          "message": "direct concurrent, thread or reentry rejected",
+          "logical": 117,
+          "ordinal": 3,
+          "name": "nested-denied"
+        }
+      ],
+      "stderrSha256": "2438a761aa4bbe45a72f9a372f8c70b6abda829548b65621f4ede064cc3f8fae"
+    }
+  ]
+}

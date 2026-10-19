@@ -1,0 +1,127 @@
+name: 386 owned CWSDPMI QEMU control
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x86-cwsdpmi-qemu-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  qemu-control:
+    if: >-
+      github.event.label.name == 'x86-cwsdpmi-qemu-owned' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Authenticate source and bounded controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          e="$RUNNER_TEMP/cwsdpmi-qemu-evidence"
+          mkdir "$e"
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          timeout --signal=TERM --kill-after=5s 20s python3 -B scripts/i80386-cwsdpmi-qemu-owned/source.py "$BW_EXPECTED_HEAD" "$e/source-before.json"
+          for test in package-control.py oracle-control.py source-control.py; do
+            timeout --signal=TERM --kill-after=5s 20s python3 -B "scripts/i80386-cwsdpmi-qemu-owned/$test" > "$e/$test.stdout" 2> "$e/$test.stderr"
+          done
+          timeout --signal=TERM --kill-after=5s 20s node scripts/i80386-cwsdpmi-qemu-owned/media-control.mjs > "$e/media-control.stdout" 2> "$e/media-control.stderr"
+          {
+            printf 'run=%s attempt=%s event=%s expected_head=%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_EVENT_NAME" "$BW_EXPECTED_HEAD"
+            python3 --version
+            node --version
+            uname -a
+          } > "$e/host.txt"
+      - name: Install bounded Ubuntu QEMU and SeaBIOS packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          e="$RUNNER_TEMP/cwsdpmi-qemu-evidence"
+          phase=apt-update
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$e/apt-step-status.txt"' EXIT
+          timeout --signal=TERM --kill-after=10s 180s sudo apt-get -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=1 -o DPkg::Lock::Timeout=30 update -qq > "$e/apt-update.stdout" 2> "$e/apt-update.stderr"
+          phase=apt-install
+          timeout --signal=TERM --kill-after=10s 180s sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=1 -o DPkg::Lock::Timeout=30 install -y --no-install-recommends qemu-system-x86 seabios > "$e/apt-install.stdout" 2> "$e/apt-install.stderr"
+          phase=complete
+      - name: Fetch exact archives, compile internally, build private media and run one QEMU guest
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          e="$RUNNER_TEMP/cwsdpmi-qemu-evidence"
+          i="$RUNNER_TEMP/cwsdpmi-qemu-inputs"
+          w="$RUNNER_TEMP/cwsdpmi-qemu-work"
+          mkdir "$i" "$w" "$w/oracle-scratch"
+          phase=setup
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$e/guest-step-status.txt"' EXIT
+          fetch() {
+            phase="$1"
+            timeout --signal=TERM --kill-after=10s "$2" curl --fail --location --silent --show-error --retry 1 --max-time "$3" --max-filesize "$4" -o "$i/$5" "$6" > "$e/$1-fetch.stdout" 2> "$e/$1-fetch.stderr"
+          }
+          fetch toolchain 300s 260 81000000 toolchain.tar.bz2 https://github.com/andrewwutw/build-djgpp/releases/download/v3.4/djgpp-linux64-gcc1220.tar.bz2
+          fetch djcrx 90s 75 3000000 djcrx205.zip https://www.delorie.com/pub/djgpp/current/v2/djcrx205.zip
+          fetch djdev 90s 75 3000000 djdev205.zip https://www.delorie.com/pub/djgpp/current/v2/djdev205.zip
+          fetch djlsr 90s 75 3000000 djlsr205.zip https://www.delorie.com/pub/djgpp/current/v2/djlsr205.zip
+          fetch cwsdpmi 90s 75 1000000 cwsdpmi.zip https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/repositories/1.4/tools/cwsdpmi.zip
+          fetch freedos 180s 150 33554432 freedos.zip https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/distributions/1.4/FD14-FloppyEdition.zip
+          phase=compile
+          timeout --signal=TERM --kill-after=10s 360s python3 -B scripts/i80386-cwsdpmi-compile-only/compile.py "$i/toolchain.tar.bz2" "$i/djcrx205.zip" "$i/djdev205.zip" "$i/djlsr205.zip" scripts/i80386-cwsdpmi-owned/client.c "$e/compile-audit" "$w/compile" > "$e/compile.stdout" 2> "$e/compile.stderr"
+          phase=host-and-floppy
+          timeout --signal=TERM --kill-after=5s 30s python3 -B scripts/i80386-cwsdpmi-qemu-owned/package.py "$i/cwsdpmi.zip" "$e/package" "$w/package-private" > "$e/package.stdout" 2> "$e/package.stderr"
+          timeout --signal=TERM --kill-after=5s 30s python3 -B scripts/i80386-dos32a-owned/acquire.py "$i/freedos.zip" "$w/freedos-floppy.img" "$e/freedos-input.json" > "$e/freedos.stdout" 2> "$e/freedos.stderr"
+          phase=media
+          timeout --signal=TERM --kill-after=5s 30s node scripts/i80386-cwsdpmi-qemu-owned/media.mjs "$w/package-private/CWSDPMI.EXE" "$w/compile/build/client.exe" "$e/compile-audit/compile-report.json" "$w/initial-hdd.img" "$e/media.json" > "$e/media.stdout" 2> "$e/media.stderr"
+          phase=qemu-runtime
+          timeout --signal=TERM --kill-after=5s 20s python3 -B scripts/i80386-cwsdpmi-qemu-owned/runtime.py "$w/freedos-floppy.img" "$w/initial-hdd.img" "$e/media.json" "$w/oracle-scratch" "$e/qemu-runtime.json" "$w/oracle-input.json" > "$e/runtime.stdout" 2> "$e/runtime.stderr"
+          phase=qemu-guest
+          timeout --signal=TERM --kill-after=10s 270s python3 -B scripts/i80386-cwsdpmi-qemu-owned/oracle.py "$w/oracle-input.json" "$e/oracle.json" > "$e/oracle-driver.stdout" 2> "$e/oracle-driver.stderr"
+          phase=complete
+      - name: Recheck source and report-only artifact inventory
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          e="$RUNNER_TEMP/cwsdpmi-qemu-evidence"
+          mkdir -p "$e"
+          python3 -B scripts/i80386-cwsdpmi-qemu-owned/source.py "$BW_EXPECTED_HEAD" "$e/source-after.json" > "$e/source-after.stdout" 2> "$e/source-after.stderr"
+          if test -f "$e/source-before.json"; then cmp "$e/source-before.json" "$e/source-after.json"; fi
+          python3 -B - "$e" <<'PY'
+          import hashlib,json,pathlib,sys
+          root=pathlib.Path(sys.argv[1]); files={}; total=0
+          forbidden={'.exe','.o','.zip','.img','.bz2','.tar','.node'}
+          for path in sorted(root.rglob('*')):
+              if path.is_symlink(): raise ValueError('artifact symlink')
+              if path.is_file() and path.name!='artifact-inventory.json':
+                  if path.suffix.lower() in forbidden: raise ValueError('binary/image in artifact')
+                  raw=path.read_bytes(); total+=len(raw)
+                  if len(raw)>5<<20 or total>16<<20: raise ValueError('report-only artifact cap')
+                  files[str(path.relative_to(root))]={'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
+          (root/'artifact-inventory.json').write_text(json.dumps({'files':files},indent=2,sort_keys=True)+'\n')
+          PY
+      - name: Retain bounded reports and observations only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-cwsdpmi-qemu-owned-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cwsdpmi-qemu-evidence/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,63 @@
+{
+  "schema": "bw.i80386-broad-jcc-linked-potential-receipt.v1",
+  "date": "2026-09-27",
+  "scope": "Observation-only conditional-Jcc successor-run view on pinned Windows 3.11 60M and stock xv6 4 MiB forktest",
+  "grammarAndLimits": "docs/I80386-BROAD-BLOCK-CENSUS.md",
+  "source": {
+    "measuredCommit": "7d44c377f9f32b76d4f465c933321ad5a418de3f",
+    "baseCommit": "d7ac0be43405a16c22347ce32869d52676ad4a26",
+    "censusSha256": "57f5875eaacf2f434fb36ba6949b6c6f32a6f69cf0878eb9f02759e80f950db0",
+    "atCliSha256": "6392be165f00457f97d2035051376c8b8450355af9459adaae452d82c4dba550",
+    "xv6ProbeSha256": "d0e1f010d3618ba4e7b576f61d1f7907e12951811363054435cd5e67fb6437df"
+  },
+  "validation": {
+    "focusedTests": "14/14 pass, including taken/fallthrough short and near Jcc, 16-bit target wrap, redirect/event, identity/page/mode boundaries, unchanged unlinked counters and histogram partitions",
+    "windowsNormalizedGuestSha256": "0dbb2b2c01b87a109fdaea6b05631941ba589aab1b96da4185466db95701ded6",
+    "xv6NormalizedGuestSha256": "bfa900396b4123b3b10758d5e91b310302c6dcc4ada599c76afea3ae3041ff3e",
+    "unlinkedCounters": "Byte-for-byte equal to the prior Windows and xv6 broad-block potential census mode objects on both full workloads",
+    "partitions": "For each mode, linked histogram counts and end reasons equal runs; histogram length-weighted counts equal potential steps; joined plus refused Jcc equal attempts; >=4 and >=8 run/step tails reconcile with the histogram; successor-page totals equal outcome-specific page totals."
+  },
+  "windows60m": {
+    "rawReportSha256": "966bd7a0710b6f49c1ff8132499eab8916c1993aaa719f3b9502cce15e633f52",
+    "steps": 60000000,
+    "completedCoreSteps": 59971215,
+    "potentialSteps": 44938027,
+    "potentialCoverage": 0.749327,
+    "linkedRuns": 17574341,
+    "meanPotentialStepsPerLinkedRun": 2.557025,
+    "jccAttempts": 7369127,
+    "jccJoined": 4496554,
+    "samePageObservedSuccessors": 7291543,
+    "crossPageObservedSuccessors": 75724,
+    "runsAtLeast4": 3943613,
+    "stepsInRunsAtLeast4": 23969207,
+    "runsAtLeast8": 734939,
+    "stepsInRunsAtLeast8": 8166828,
+    "leadingLinkRefusals": {"unsupported-opcode": 2663015, "unsupported-0f": 121923, "linear-page-change": 75724, "chip-event-due": 5868},
+    "modeMeanRuns": {"real": 2.467821, "protected16": 2.048982, "vm86": 3.204472, "protected32": 2.30619}
+  },
+  "xv6Forktest": {
+    "rawReportSha256": "6dac001b94017d04c301f2cc053bc0a2f86c2032b10f361f163a435e348f7b25",
+    "steps": 24338279,
+    "completedCoreSteps": 24335051,
+    "potentialSteps": 21604831,
+    "potentialCoverage": 0.887807,
+    "linkedRuns": 6039528,
+    "meanPotentialStepsPerLinkedRun": 3.577238,
+    "jccAttempts": 3702948,
+    "jccJoined": 2542403,
+    "samePageObservedSuccessors": 3702294,
+    "crossPageObservedSuccessors": 321,
+    "runsAtLeast4": 1934068,
+    "stepsInRunsAtLeast4": 15708915,
+    "runsAtLeast8": 561708,
+    "stepsInRunsAtLeast8": 8387424,
+    "leadingLinkRefusals": {"unsupported-opcode": 1150868, "lock-prefix": 4853, "chip-event-due": 3722, "unsupported-0f": 445},
+    "modeMeanRuns": {"real": 3.634215, "protected16": 0, "vm86": 0, "protected32": 3.573779}
+  },
+  "gate": {
+    "predeclared": "Mean >=4 potential steps per linked run and >=50% potential completed-step coverage on both workloads",
+    "result": "No-go: coverage clears 50%, but Windows mean 2.557 and xv6 mean 3.577 both miss four.",
+    "interpretation": "A syntactic upper bound from ordinary observed step calls, not a native safety proof or CPU-time share. Diagnostic host timings are not speed evidence; no executable branch-link optimization is proposed."
+  }
+}

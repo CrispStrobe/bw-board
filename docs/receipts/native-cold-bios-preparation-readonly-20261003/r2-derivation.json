@@ -1,0 +1,6 @@
+{
+  "originalParentSha256": "3b73172fd4c858d966298d85b251e45d5470714ba87389892708d51ce37fe053",
+  "newParentSha256": "e1266f79078d0afe0fda51be881289b6537e516f50bab46d203773f56a906866",
+  "change": "output namespace only; tracked package.json restored from unchanged frozen HEAD before run",
+  "materializationReceiptSha256": "f2f8ce4e88cf91cabe05f35b3d508d32a80a7c4ba777aacbaa7008d45085bfac"
+}

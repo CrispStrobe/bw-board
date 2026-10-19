@@ -1,0 +1,1112 @@
+name: 80286 qualification
+
+on:
+  push:
+    branches: ['lane/astra-286-integration', 'lane/astra-x86-next', 'lane/astra-x86-idt', 'lane/astra-x86-memory-isa', 'lane/astra-x86-protection-at', 'lane/astra-x86-tasks', 'lane/astra-x86-at-boot']
+  workflow_dispatch:
+    inputs:
+      evidence:
+        description: Evidence to collect from the exact dispatched revision
+        required: true
+        type: choice
+        default: both
+        options:
+          - both
+          - full-semantic
+          - wired-bios
+      run_dos:
+        description: Run the long reference wired DOS boot (manual dispatch only)
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harris-evidence-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.run_dos && 'dos' || 'qualification' }}
+  cancel-in-progress: false
+
+jobs:
+  protected-pcjs-oracle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Check out the pinned PCjs protected-mode oracle
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: jeffpar/pcjs
+          ref: c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70
+          path: pcjs
+          sparse-checkout: |
+            package.json
+            machines/modules/v2
+            machines/pcx86/modules/v2
+          sparse-checkout-cone-mode: false
+      - name: Compare the bounded protected-mode bootstrap and IDT gates with PCjs
+        env:
+          PCJS_ROOT: ${{ github.workspace }}/pcjs
+        run: |
+          set -euo pipefail
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/protected-286-pcjs.XXXXXX")
+          export RECEIPT_DIR
+          echo "RECEIPT_DIR=$RECEIPT_DIR" >> "$GITHUB_ENV"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C "$PCJS_ROOT" rev-parse HEAD)" = c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70
+          test -z "$(git -C "$PCJS_ROOT" status --porcelain)"
+          node --input-type=module -e 'import fs from "node:fs";fs.writeFileSync(process.env.RECEIPT_DIR+"/context.json",JSON.stringify({schemaVersion:1,revision:process.env.GITHUB_SHA,pcjsRevision:"c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",node:process.version,run:process.env.GITHUB_RUN_ID,attempt:process.env.GITHUB_RUN_ATTEMPT,scope:"bounded protected-286 and same-ring 386 PCjs semantic oracles"},null,2)+"\n",{flag:"wx"});'
+          node scripts/compare-pcjs-protected286.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected286.json"
+          node scripts/compare-pcjs-protected286-idt.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected286-idt.json"
+          node scripts/compare-pcjs-protected286-isa.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected286-isa.json"
+          node scripts/compare-pcjs-protected286-rep.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected286-rep.json"
+          node scripts/compare-pcjs-protected286-privilege.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected286-privilege.json"
+          node scripts/compare-pcjs-protected286-common-isa.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected286-common-isa.json"
+          node scripts/compare-pcjs-protected286-external-images.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected286-external-images.json"
+          node scripts/compare-pcjs-protected386.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected386.json"
+          if I386_ORACLE_MUTATION=result node scripts/compare-pcjs-protected386.mjs \
+            > "$RECEIPT_DIR/rejected-386-result.json"; then
+            echo "386 oracle failed to reject result mutation" >&2
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+'/rejected-386-result.json'));
+          assert.equal(report.status,'fail');
+          assert.equal(report.mutation,'result');
+          assert.deepEqual(report.differences.map(d=>d.field),['result']);
+          NODE
+          node scripts/compare-pcjs-protected386-faults.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected386-faults.json"
+          for mutation in frame if; do
+            if I386_FAULT_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-protected386-faults.mjs \
+              > "$RECEIPT_DIR/rejected-386-$mutation.json"; then
+              echo "386 fault oracle accepted $mutation mutation" >&2
+              exit 1
+            fi
+            MUTATION="$mutation" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const mutation=process.env.MUTATION;
+          const r=JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/rejected-386-${mutation}.json`));
+          assert.equal(r.status,'fail');
+          assert.equal(r.mutation,mutation);
+          assert.deepEqual(r.differences.map(d=>d.case),[mutation==='frame'?'interrupt32':'trap32']);
+          NODE
+          done
+          if I386_FAULT_ORACLE_MUTATION=ring-stack node scripts/compare-pcjs-protected386-faults.mjs \
+            > "$RECEIPT_DIR/rejected-386-ring-stack.json"; then
+            echo "386 ring oracle accepted a saved-stack mutation" >&2
+            exit 1
+          fi
+          if I386_FAULT_ORACLE_RING_BUDGET=5 node scripts/compare-pcjs-protected386-faults.mjs \
+            > "$RECEIPT_DIR/rejected-386-ring-budget.json"; then
+            echo "386 ring oracle accepted incomplete execution" >&2
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const read=name=>JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/rejected-386-ring-${name}.json`));
+          const stack=read('stack');
+          assert.equal(stack.status,'fail');
+          assert.equal(stack.mutation,'ring-stack');
+          assert.deepEqual(stack.differences.map(d=>d.case),['ringTransitionExpected','ringTransition']);
+          const budget=read('budget');
+          assert.equal(budget.status,'fail');
+          for(const engine of ['reference','actual']) {
+            assert.equal(budget.cases.ringTransition[engine].completed,false);
+            assert.ok(budget.differences.some(d=>d.case==='ringTransitionExpected'&&d.engine===engine));
+          }
+          NODE
+          if I386_FAULT_ORACLE_MUTATION=gate-parameter node scripts/compare-pcjs-protected386-faults.mjs \
+            > "$RECEIPT_DIR/rejected-386-gate-parameter.json"; then
+            echo "386 call-gate oracle accepted a copied-parameter mutation" >&2
+            exit 1
+          fi
+          if I386_FAULT_ORACLE_GATE_BUDGET=5 node scripts/compare-pcjs-protected386-faults.mjs \
+            > "$RECEIPT_DIR/rejected-386-gate-budget.json"; then
+            echo "386 call-gate oracle accepted incomplete execution" >&2
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const read=name=>JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/rejected-386-gate-${name}.json`));
+          const parameter=read('parameter');
+          assert.equal(parameter.status,'fail');
+          assert.equal(parameter.mutation,'gate-parameter');
+          assert.deepEqual(parameter.differences.map(d=>d.case),['callGateExpected','callGate']);
+          const budget=read('budget');
+          assert.equal(budget.status,'fail');
+          for(const engine of ['reference','actual']) {
+            assert.equal(budget.cases.callGate[engine].completed,false);
+            assert.ok(budget.differences.some(d=>d.case==='callGateExpected'&&d.engine===engine));
+          }
+          NODE
+          for mutation in io-access conforming-cpl vm-frame into-of into-eip; do
+            if I386_FAULT_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-protected386-faults.mjs \
+              > "$RECEIPT_DIR/rejected-386-$mutation.json"; then
+              echo "386 protection oracle accepted $mutation mutation" >&2
+              exit 1
+            fi
+          done
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          for (const [mutation,expected] of [
+            ['io-access',['ioDeniedExpected','ioDenied']],
+            ['conforming-cpl',['conformingExpected']],
+            ['vm-frame',['vm86Expected','vm86RoundTrip']],
+            ['into-of',['intoClearExpected','intoClear']],
+            ['into-eip',['intoSetExpected','intoSet']],
+          ]) {
+            const report=JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/rejected-386-${mutation}.json`));
+            assert.equal(report.status,'fail');
+            assert.equal(report.mutation,mutation);
+            assert.deepEqual(report.differences.map(d=>d.case),expected);
+          }
+          NODE
+          node scripts/compare-pcjs-i80386-lar-lsl.mjs > "$RECEIPT_DIR/pcjs-i80386-lar-lsl.json"
+          for mutation in lar-defined lsl-limit; do
+            if I386_SYSTEM_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-i80386-lar-lsl.mjs > "$RECEIPT_DIR/rejected-$mutation.json"; then
+              echo "LAR/LSL comparator accepted $mutation mutation" >&2
+              exit 1
+            fi
+          done
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const read=name=>JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/${name}.json`));
+          assert.equal(read('pcjs-i80386-lar-lsl').status,'pass');
+          for(const [mutation,field] of [['lar-defined','larDefined'],['lsl-limit','edi']]) {
+            const r=read(`rejected-${mutation}`);
+            assert.equal(r.status,'fail');
+            assert.deepEqual(r.differences.map(d=>d.field),[`actual.${field}`]);
+          }
+          NODE
+          node scripts/compare-pcjs-i80386-verr.mjs > "$RECEIPT_DIR/pcjs-i80386-verr.json"
+          for mutation in zf budget; do
+            if I386_VERR_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-i80386-verr.mjs > "$RECEIPT_DIR/rejected-verr-$mutation.json"; then
+              echo "VERR comparator accepted $mutation mutation" >&2
+              exit 1
+            fi
+          done
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const read=name=>JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/${name}.json`));
+          assert.equal(read('pcjs-i80386-verr').status,'pass');
+          const zf=read('rejected-verr-zf');
+          assert.deepEqual(zf.differences.map(d=>d.field),['actual.bx']);
+          const budget=read('rejected-verr-budget');
+          assert.equal(budget.status,'fail');
+          assert.ok(budget.differences.some(d=>d.field==='actual.halted'));
+          assert.ok(budget.differences.some(d=>d.field==='reference.halted'));
+          NODE
+          node scripts/compare-pcjs-i80386-system-selectors.mjs \
+            | tee "$RECEIPT_DIR/pcjs-i80386-system-selectors.json"
+          for mutation in busy budget; do
+            if I386_SYSTEM_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-i80386-system-selectors.mjs \
+              > "$RECEIPT_DIR/rejected-386-system-$mutation.json"; then
+              echo "386 system oracle accepted $mutation mutation" >&2
+              exit 1
+            fi
+            MUTATION="$mutation" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const mutation=process.env.MUTATION;
+          const r=JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/rejected-386-system-${mutation}.json`));
+          assert.equal(r.status,'fail');
+          assert.equal(r.mutation,mutation);
+          if(mutation==='busy')assert.deepEqual(r.differences.map(d=>d.field),['actual.busyAccess']);
+          else {
+            assert.equal(r.differences.length,20);
+            for(const route of ['reference','actual']) {
+              assert.equal(r[route].halted,false);
+              assert.ok(r.differences.some(d=>d.field===`${route}.halted`));
+            }
+          }
+          NODE
+          done
+          node scripts/compare-pcjs-i80386-group1-alias.mjs > "$RECEIPT_DIR/pcjs-i80386-group1-alias.json"
+          for mutation in result budget; do
+            if I386_GROUP1_ALIAS_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-i80386-group1-alias.mjs > "$RECEIPT_DIR/rejected-group1-alias-$mutation.json"; then
+              echo "Byte Group 1 alias comparator accepted $mutation mutation" >&2
+              exit 1
+            fi
+          done
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const read=name=>JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/${name}.json`));
+          assert.equal(read('pcjs-i80386-group1-alias').status,'pass');
+          const result=read('rejected-group1-alias-result');
+          assert.equal(result.status,'fail');
+          assert.deepEqual(result.differences.map(d=>d.case),['adc-carry-prefix66']);
+          const budget=read('rejected-group1-alias-budget');
+          assert.equal(budget.status,'fail');
+          assert.deepEqual(budget.differences.map(d=>d.case),['cmp-memory','adc-carry-prefix66']);
+          for(const observation of Object.values(budget.observations)) {
+            assert.equal(observation.reference.completed,false);
+            assert.equal(observation.actual.completed,false);
+          }
+          NODE
+          node scripts/compare-pcjs-i80386-unreal-rep.mjs > "$RECEIPT_DIR/pcjs-i80386-unreal-rep.json"
+          for mutation in result budget cache; do
+            if I386_UNREAL_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-i80386-unreal-rep.mjs > "$RECEIPT_DIR/rejected-unreal-$mutation.json"; then
+              echo "Unreal-mode comparator accepted $mutation mutation" >&2
+              exit 1
+            fi
+          done
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const read=name=>JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/${name}.json`));
+          const positive=read('pcjs-i80386-unreal-rep');
+          assert.equal(positive.status,'pass');
+          assert.deepEqual(positive.differences,[]);
+          for(const side of ['reference','actual']) {
+            assert.equal(positive[side].halted,true);
+            assert.equal(positive[side].ds,0);
+            assert.equal(positive[side].es,0);
+            assert.equal(positive[side].copiedSha256,positive.expectedCopySha256);
+          }
+          for(const [mutation,fields] of [['result',['boundary']],['cache',['actual.dsLimit','actual.esLimit']]]) {
+            const rejected=read(`rejected-unreal-${mutation}`);
+            assert.equal(rejected.status,'fail');
+            assert.equal(rejected.mutation,mutation);
+            assert.deepEqual(rejected.differences.map(d=>d.field),fields);
+          }
+          const budget=read('rejected-unreal-budget');
+          assert.equal(budget.status,'fail');
+          for(const side of ['reference','actual']) {
+            assert.equal(budget[side].halted,false);
+            assert.ok(budget.differences.some(d=>d.field===`${side}.halted`));
+          }
+          NODE
+          node scripts/compare-pcjs-i80386-task16.mjs > "$RECEIPT_DIR/pcjs-i80386-task16.json"
+          for mutation in result budget; do
+            if I386_TASK16_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-i80386-task16.mjs > "$RECEIPT_DIR/rejected-task16-$mutation.json"; then
+              echo "286-format TSS comparator accepted $mutation mutation" >&2
+              exit 1
+            fi
+          done
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const read=name=>JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/${name}.json`));
+          const positive=read('pcjs-i80386-task16');
+          assert.equal(positive.status,'pass');
+          assert.deepEqual(positive.differences,[]);
+          const result=read('rejected-task16-result');
+          assert.equal(result.status,'fail');
+          assert.equal(result.mutation,'result');
+          assert.deepEqual(result.differences.map(d=>d.field),['actual.ax']);
+          const budget=read('rejected-task16-budget');
+          assert.equal(budget.status,'fail');
+          assert.equal(budget.mutation,'budget');
+          for(const engine of ['reference','actual']) {
+            assert.equal(budget[engine].halted,false);
+            assert.ok(budget.differences.some(d=>d.field===`${engine}.halted`));
+          }
+          NODE
+          node scripts/compare-pcjs-i80386-tasks.mjs > "$RECEIPT_DIR/pcjs-i80386-tasks.json"
+          for mutation in result budget; do
+            if I386_TASK_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-i80386-tasks.mjs \
+              > "$RECEIPT_DIR/rejected-386-task-$mutation.json"; then
+              echo "386 task oracle accepted $mutation mutation" >&2
+              exit 1
+            fi
+            MUTATION="$mutation" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const mutation=process.env.MUTATION;
+          const r=JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/rejected-386-task-${mutation}.json`));
+          assert.equal(r.status,'fail');
+          assert.equal(r.mutation,mutation);
+          if(mutation==='result')assert.deepEqual(r.differences.map(d=>d.field),['actual.result']);
+          else for(const route of ['reference','actual']) {
+            assert.equal(r[route].halted,false);
+            assert.ok(r.differences.some(d=>d.field===`${route}.halted`));
+          }
+          NODE
+          done
+          node scripts/compare-pcjs-i80386-group3.mjs \
+            | tee "$RECEIPT_DIR/pcjs-i80386-group3.json"
+          if I386_GROUP3_ORACLE_MUTATION=quotient node scripts/compare-pcjs-i80386-group3.mjs \
+            > "$RECEIPT_DIR/rejected-386-group3-quotient.json"; then
+            echo "386 group3 oracle accepted quotient mutation" >&2
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const r=JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/rejected-386-group3-quotient.json`));
+          assert.equal(r.status,'fail');
+          assert.equal(r.mutation,'quotient');
+          assert.deepEqual(r.differences.map(d=>d.case),['div16']);
+          NODE
+          node scripts/compare-pcjs-protected386-paging.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected386-paging.json"
+          if I386_PAGING_ORACLE_MUTATION=cr2 node scripts/compare-pcjs-protected386-paging.mjs \
+            > "$RECEIPT_DIR/rejected-386-paging-cr2.json"; then
+            echo "386 paging oracle accepted CR2 mutation" >&2
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const r=JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/rejected-386-paging-cr2.json`));
+          assert.equal(r.status,'fail');
+          assert.equal(r.mutation,'cr2');
+          assert.deepEqual(r.differences.map(d=>d.field),['cr2','completion:local:cr2']);
+          NODE
+          node --test test/i80286-protected-external-images.test.mjs \
+            | tee "$RECEIPT_DIR/protected286-external-image-tests.log"
+          for mutation in video taskreturn fixturehash sector taskstate; do
+            if EXTERNAL286_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-protected286-external-images.mjs \
+              > "$RECEIPT_DIR/rejected-external-$mutation.json"; then
+              echo "external image oracle failed to reject $mutation mutation" >&2
+              exit 1
+            fi
+            MUTATION="$mutation" RECEIPT="$RECEIPT_DIR/rejected-external-$mutation.json" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT));
+          const expected={
+            video:[['hellop.img','videoSha256']],
+            taskreturn:[['tasksw.img','trSequence']],
+            fixturehash:[['ptr_validn.img','inputSha256']],
+            sector:[['hellop.img','sectorSha256'],['hellop.img','sectorByteDifferences']],
+            taskstate:[['tasksw.img','known task-state oracle differences']],
+          };
+          assert.equal(report.mutation,process.env.MUTATION);
+          assert.equal(report.status,'fail');
+          assert.deepEqual(report.unexpectedDifferences.map(d=>[d.image,d.field]),expected[process.env.MUTATION]);
+          NODE
+          done
+          if COMMON_ISA_ORACLE_MUTATION=ax node scripts/compare-pcjs-protected286-common-isa.mjs \
+            > "$RECEIPT_DIR/rejected-common-isa-ax.json"; then
+            echo "common ISA oracle failed to reject register mutation" >&2
+            exit 1
+          fi
+          RECEIPT="$RECEIPT_DIR/rejected-common-isa-ax.json" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT));
+          assert.equal(report.mutation,'ax');
+          assert.equal(report.status,'fail');
+          assert.deepEqual(report.differences.map(d=>d.field),['ax']);
+          NODE
+          if PRIVILEGE_ORACLE_MUTATION=frame node scripts/compare-pcjs-protected286-privilege.mjs \
+            > "$RECEIPT_DIR/rejected-privilege-frame.json"; then
+            echo "protected privilege oracle failed to reject frame mutation" >&2
+            exit 1
+          fi
+          RECEIPT="$RECEIPT_DIR/rejected-privilege-frame.json" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT));
+          assert.equal(report.mutation,'frame');
+          assert.equal(report.status,'fail');
+          assert.deepEqual(report.differences.map(d=>d.field),['firstFrame']);
+          NODE
+          if REP_ORACLE_MUTATION=destination node scripts/compare-pcjs-protected286-rep.mjs \
+            > "$RECEIPT_DIR/rejected-rep-destination.json"; then
+            echo "protected REP oracle failed to reject destination mutation" >&2
+            exit 1
+          fi
+          RECEIPT="$RECEIPT_DIR/rejected-rep-destination.json" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT));
+          assert.equal(report.mutation,'destination');
+          assert.equal(report.status,'fail');
+          assert.deepEqual(report.differences.map(d=>d.field),['destination']);
+          NODE
+          if ISA_ORACLE_MUTATION=result node scripts/compare-pcjs-protected286-isa.mjs \
+            > "$RECEIPT_DIR/rejected-isa-result.json"; then
+            echo "protected ISA oracle failed to reject result mutation" >&2
+            exit 1
+          fi
+          RECEIPT="$RECEIPT_DIR/rejected-isa-result.json" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT));
+          assert.equal(report.mutation,'result');
+          assert.equal(report.status,'fail');
+          assert.deepEqual(report.differences.map(d=>d.field),['result']);
+          NODE
+          node --test test/i8086-at-memory.test.mjs test/i8086-at-devices.test.mjs test/i8086-machine-protected-interrupts.test.mjs \
+            | tee "$RECEIPT_DIR/i8086-at-memory-tests.log"
+          node scripts/run-at-memory-guest.mjs \
+            | tee "$RECEIPT_DIR/at-memory-guest.json"
+          node scripts/run-at-devices-guest.mjs --out "$RECEIPT_DIR/at-devices-guest.json"
+          for mutation in frame if restart; do
+            if IDT_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-protected286-idt.mjs \
+              > "$RECEIPT_DIR/rejected-$mutation.json"; then
+              echo "IDT oracle failed to reject $mutation mutation" >&2
+              exit 1
+            fi
+            MUTATION="$mutation" RECEIPT="$RECEIPT_DIR/rejected-$mutation.json" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT));
+          const expected=process.env.MUTATION === 'restart' ? 'generalProtection' : 'interruptGate';
+          assert.equal(report.mutation,process.env.MUTATION);
+          assert.equal(report.status,'fail');
+          assert.equal(report.differences.length,1);
+          assert.equal(report.differences[0].case,expected);
+          NODE
+          done
+      - name: Upload the fresh protected-mode PCjs receipt
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: protected286-pcjs-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload the fresh protected ISA PCjs receipt
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: protected286-isa-pcjs-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}/pcjs-protected286-isa.json
+          if-no-files-found: error
+          retention-days: 30
+
+  sampled-386:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Check out pinned physical 386EX samples
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: SingleStepTests/80386
+          ref: 459d49fbe6280e9ed46fee887b58dacd9cb880ab
+          path: sst386
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /LICENSE
+            /README.md
+            /revocation_list.txt
+            /v1_ex_real_mode/8D.MOO.gz
+            /v1_ex_real_mode/668D.MOO.gz
+            /v1_ex_real_mode/678D.MOO.gz
+            /v1_ex_real_mode/67668D.MOO.gz
+            /v1_ex_real_mode/06.MOO.gz
+            /v1_ex_real_mode/07.MOO.gz
+            /v1_ex_real_mode/0E.MOO.gz
+            /v1_ex_real_mode/16.MOO.gz
+            /v1_ex_real_mode/17.MOO.gz
+            /v1_ex_real_mode/1E.MOO.gz
+            /v1_ex_real_mode/1F.MOO.gz
+            /v1_ex_real_mode/0FA0.MOO.gz
+            /v1_ex_real_mode/0FA1.MOO.gz
+            /v1_ex_real_mode/0FA8.MOO.gz
+            /v1_ex_real_mode/0FA9.MOO.gz
+            /v1_ex_real_mode/6606.MOO.gz
+            /v1_ex_real_mode/6607.MOO.gz
+            /v1_ex_real_mode/660E.MOO.gz
+            /v1_ex_real_mode/6616.MOO.gz
+            /v1_ex_real_mode/6617.MOO.gz
+            /v1_ex_real_mode/661E.MOO.gz
+            /v1_ex_real_mode/661F.MOO.gz
+            /v1_ex_real_mode/660FA0.MOO.gz
+            /v1_ex_real_mode/660FA1.MOO.gz
+            /v1_ex_real_mode/660FA8.MOO.gz
+            /v1_ex_real_mode/660FA9.MOO.gz
+            /v1_ex_real_mode/8F.MOO.gz
+            /v1_ex_real_mode/668F.MOO.gz
+            /v1_ex_real_mode/678F.MOO.gz
+            /v1_ex_real_mode/67668F.MOO.gz
+            /v1_ex_real_mode/6A.MOO.gz
+            /v1_ex_real_mode/666A.MOO.gz
+            /v1_ex_real_mode/8C.MOO.gz
+            /v1_ex_real_mode/668C.MOO.gz
+            /v1_ex_real_mode/60.MOO.gz
+            /v1_ex_real_mode/61.MOO.gz
+            /v1_ex_real_mode/6660.MOO.gz
+            /v1_ex_real_mode/6661.MOO.gz
+            /v1_ex_real_mode/9C.MOO.gz
+            /v1_ex_real_mode/9D.MOO.gz
+            /v1_ex_real_mode/669C.MOO.gz
+            /v1_ex_real_mode/669D.MOO.gz
+            /v1_ex_real_mode/A0.MOO.gz
+            /v1_ex_real_mode/A1.MOO.gz
+            /v1_ex_real_mode/A2.MOO.gz
+            /v1_ex_real_mode/A3.MOO.gz
+            /v1_ex_real_mode/66A1.MOO.gz
+            /v1_ex_real_mode/66A3.MOO.gz
+            /v1_ex_real_mode/67A1.MOO.gz
+            /v1_ex_real_mode/67A3.MOO.gz
+            /v1_ex_real_mode/A4.MOO.gz
+            /v1_ex_real_mode/A5.MOO.gz
+            /v1_ex_real_mode/66A5.MOO.gz
+            /v1_ex_real_mode/67A4.MOO.gz
+            /v1_ex_real_mode/67A5.MOO.gz
+            /v1_ex_real_mode/6766A5.MOO.gz
+            /v1_ex_real_mode/AA.MOO.gz
+            /v1_ex_real_mode/AB.MOO.gz
+            /v1_ex_real_mode/66AB.MOO.gz
+            /v1_ex_real_mode/67AA.MOO.gz
+            /v1_ex_real_mode/67AB.MOO.gz
+            /v1_ex_real_mode/6766AB.MOO.gz
+            /v1_ex_real_mode/D0.0.MOO.gz
+            /v1_ex_real_mode/D0.1.MOO.gz
+            /v1_ex_real_mode/D0.2.MOO.gz
+            /v1_ex_real_mode/D0.3.MOO.gz
+            /v1_ex_real_mode/D1.0.MOO.gz
+            /v1_ex_real_mode/D1.1.MOO.gz
+            /v1_ex_real_mode/D1.2.MOO.gz
+            /v1_ex_real_mode/D1.3.MOO.gz
+            /v1_ex_real_mode/66D1.0.MOO.gz
+            /v1_ex_real_mode/66D1.1.MOO.gz
+            /v1_ex_real_mode/66D1.2.MOO.gz
+            /v1_ex_real_mode/66D1.3.MOO.gz
+            /v1_ex_real_mode/C0.0.MOO.gz
+            /v1_ex_real_mode/C0.1.MOO.gz
+            /v1_ex_real_mode/86.MOO.gz
+            /v1_ex_real_mode/87.MOO.gz
+            /v1_ex_real_mode/6687.MOO.gz
+            /v1_ex_real_mode/FE.0.MOO.gz
+            /v1_ex_real_mode/FE.1.MOO.gz
+            /v1_ex_real_mode/FF.0.MOO.gz
+            /v1_ex_real_mode/FF.1.MOO.gz
+            /v1_ex_real_mode/FF.2.MOO.gz
+            /v1_ex_real_mode/FF.4.MOO.gz
+            /v1_ex_real_mode/FF.6.MOO.gz
+            /v1_ex_real_mode/C4.MOO.gz
+            /v1_ex_real_mode/C5.MOO.gz
+            /v1_ex_real_mode/0FB2.MOO.gz
+            /v1_ex_real_mode/0FB4.MOO.gz
+            /v1_ex_real_mode/0FB5.MOO.gz
+            /v1_ex_real_mode/66C4.MOO.gz
+            /v1_ex_real_mode/66C5.MOO.gz
+            /v1_ex_real_mode/660FB2.MOO.gz
+            /v1_ex_real_mode/660FB4.MOO.gz
+            /v1_ex_real_mode/660FB5.MOO.gz
+            /v1_ex_real_mode/08.MOO.gz
+            /v1_ex_real_mode/09.MOO.gz
+            /v1_ex_real_mode/10.MOO.gz
+            /v1_ex_real_mode/11.MOO.gz
+            /v1_ex_real_mode/18.MOO.gz
+            /v1_ex_real_mode/19.MOO.gz
+            /v1_ex_real_mode/20.MOO.gz
+            /v1_ex_real_mode/21.MOO.gz
+            /v1_ex_real_mode/80.2.MOO.gz
+            /v1_ex_real_mode/81.3.MOO.gz
+            /v1_ex_real_mode/0C.MOO.gz
+            /v1_ex_real_mode/15.MOO.gz
+            /v1_ex_real_mode/1D.MOO.gz
+            /v1_ex_real_mode/25.MOO.gz
+            /v1_ex_real_mode/01.MOO.gz
+            /v1_ex_real_mode/6601.MOO.gz
+            /v1_ex_real_mode/6701.MOO.gz
+            /v1_ex_real_mode/676601.MOO.gz
+            /v1_ex_real_mode/30.MOO.gz
+            /v1_ex_real_mode/6730.MOO.gz
+            /v1_ex_real_mode/88.MOO.gz
+            /v1_ex_real_mode/6788.MOO.gz
+            /v1_ex_real_mode/0FB6.MOO.gz
+            /v1_ex_real_mode/660FB6.MOO.gz
+            /v1_ex_real_mode/670FB6.MOO.gz
+            /v1_ex_real_mode/67660FB6.MOO.gz
+            /v1_ex_real_mode/0FBE.MOO.gz
+            /v1_ex_real_mode/660FBE.MOO.gz
+            /v1_ex_real_mode/670FBE.MOO.gz
+            /v1_ex_real_mode/67660FBE.MOO.gz
+            /v1_ex_real_mode/C1.4.MOO.gz
+            /v1_ex_real_mode/C1.5.MOO.gz
+            /v1_ex_real_mode/C1.7.MOO.gz
+            /v1_ex_real_mode/66C1.4.MOO.gz
+            /v1_ex_real_mode/66C1.5.MOO.gz
+            /v1_ex_real_mode/66C1.7.MOO.gz
+            /v1_ex_real_mode/67C1.4.MOO.gz
+            /v1_ex_real_mode/67C1.5.MOO.gz
+            /v1_ex_real_mode/67C1.7.MOO.gz
+            /v1_ex_real_mode/6766C1.4.MOO.gz
+            /v1_ex_real_mode/6766C1.5.MOO.gz
+            /v1_ex_real_mode/6766C1.7.MOO.gz
+            /v1_ex_real_mode/69.MOO.gz
+            /v1_ex_real_mode/6B.MOO.gz
+            /v1_ex_real_mode/666B.MOO.gz
+            /v1_ex_real_mode/0F90.MOO.gz
+            /v1_ex_real_mode/0F91.MOO.gz
+            /v1_ex_real_mode/0F92.MOO.gz
+            /v1_ex_real_mode/0F93.MOO.gz
+            /v1_ex_real_mode/0F94.MOO.gz
+            /v1_ex_real_mode/0F95.MOO.gz
+            /v1_ex_real_mode/0F96.MOO.gz
+            /v1_ex_real_mode/0F97.MOO.gz
+            /v1_ex_real_mode/0F98.MOO.gz
+            /v1_ex_real_mode/0F99.MOO.gz
+            /v1_ex_real_mode/0F9A.MOO.gz
+            /v1_ex_real_mode/0F9B.MOO.gz
+            /v1_ex_real_mode/0F9C.MOO.gz
+            /v1_ex_real_mode/0F9D.MOO.gz
+            /v1_ex_real_mode/0F9E.MOO.gz
+            /v1_ex_real_mode/0F9F.MOO.gz
+            /v1_ex_real_mode/0FA4.MOO.gz
+            /v1_ex_real_mode/0FA5.MOO.gz
+            /v1_ex_real_mode/0FAC.MOO.gz
+            /v1_ex_real_mode/0FAD.MOO.gz
+            /v1_ex_real_mode/660FA4.MOO.gz
+            /v1_ex_real_mode/660FA5.MOO.gz
+            /v1_ex_real_mode/660FAC.MOO.gz
+            /v1_ex_real_mode/660FAD.MOO.gz
+            /v1_ex_real_mode/C2.MOO.gz
+            /v1_ex_real_mode/66C2.MOO.gz
+            /v1_ex_real_mode/C8.MOO.gz
+            /v1_ex_real_mode/66C8.MOO.gz
+            /v1_ex_real_mode/C9.MOO.gz
+            /v1_ex_real_mode/66C9.MOO.gz
+            /v1_ex_real_mode/27.MOO.gz
+            /v1_ex_real_mode/2F.MOO.gz
+            /v1_ex_real_mode/37.MOO.gz
+            /v1_ex_real_mode/3F.MOO.gz
+            /v1_ex_real_mode/0FA3.MOO.gz
+            /v1_ex_real_mode/0FAB.MOO.gz
+            /v1_ex_real_mode/0FB3.MOO.gz
+            /v1_ex_real_mode/0FBB.MOO.gz
+            /v1_ex_real_mode/0FBA.4.MOO.gz
+            /v1_ex_real_mode/0FBA.5.MOO.gz
+            /v1_ex_real_mode/0FBA.6.MOO.gz
+            /v1_ex_real_mode/0FBA.7.MOO.gz
+            /v1_ex_real_mode/660FA3.MOO.gz
+            /v1_ex_real_mode/660FAB.MOO.gz
+            /v1_ex_real_mode/660FB3.MOO.gz
+            /v1_ex_real_mode/660FBB.MOO.gz
+            /v1_ex_real_mode/660FBA.4.MOO.gz
+            /v1_ex_real_mode/660FBA.5.MOO.gz
+            /v1_ex_real_mode/660FBA.6.MOO.gz
+            /v1_ex_real_mode/660FBA.7.MOO.gz
+            /v1_ex_real_mode/670FA3.MOO.gz
+            /v1_ex_real_mode/670FAB.MOO.gz
+            /v1_ex_real_mode/670FB3.MOO.gz
+            /v1_ex_real_mode/670FBB.MOO.gz
+            /v1_ex_real_mode/670FBA.4.MOO.gz
+            /v1_ex_real_mode/670FBA.5.MOO.gz
+            /v1_ex_real_mode/670FBA.6.MOO.gz
+            /v1_ex_real_mode/670FBA.7.MOO.gz
+            /v1_ex_real_mode/67660FA3.MOO.gz
+            /v1_ex_real_mode/67660FAB.MOO.gz
+            /v1_ex_real_mode/67660FB3.MOO.gz
+            /v1_ex_real_mode/67660FBB.MOO.gz
+            /v1_ex_real_mode/67660FBA.4.MOO.gz
+            /v1_ex_real_mode/67660FBA.5.MOO.gz
+            /v1_ex_real_mode/67660FBA.6.MOO.gz
+            /v1_ex_real_mode/67660FBA.7.MOO.gz
+            /v1_ex_real_mode/0FBC.MOO.gz
+            /v1_ex_real_mode/0FBD.MOO.gz
+            /v1_ex_real_mode/660FBC.MOO.gz
+            /v1_ex_real_mode/660FBD.MOO.gz
+            /v1_ex_real_mode/670FBC.MOO.gz
+            /v1_ex_real_mode/670FBD.MOO.gz
+            /v1_ex_real_mode/67660FBC.MOO.gz
+            /v1_ex_real_mode/67660FBD.MOO.gz
+            /v1_ex_real_mode/0F06.MOO.gz
+      - name: Grade the bounded 386 profiles and reject corrupted evidence
+        env:
+          SST386_ROOT: ${{ github.workspace }}/sst386
+        run: |
+          set -euo pipefail
+          I386_RECEIPTS=$(mktemp -d "$RUNNER_TEMP/i386-samples.XXXXXX")
+          export I386_RECEIPTS
+          echo "I386_RECEIPTS=$I386_RECEIPTS" >> "$GITHUB_ENV"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          node --test test/i80386-experimental.test.mjs test/i80386-fault-delivery.test.mjs test/i80386-paging.test.mjs test/i80386-reset-io.test.mjs test/i80386-group3.test.mjs test/i80386-segment-string.test.mjs test/i80386-moo-parser.test.mjs test/i80386-group5.test.mjs test/i80386-far-pointer.test.mjs test/i80386-alu-complete.test.mjs test/i80386-group1-alias.test.mjs test/i80386-at-machine.test.mjs test/i80386-pusha-popa.test.mjs test/i80386-moffs.test.mjs test/i80386-rotate.test.mjs test/i80386-system-selectors.test.mjs test/i80386-lea.test.mjs test/i80386-segment-stack.test.mjs test/i80386-pop-rm.test.mjs test/i80386-protected-far.test.mjs test/i80386-io-bitmap.test.mjs test/i80386-conforming.test.mjs test/i80386-vm86.test.mjs test/i80386-lar-lsl.test.mjs test/i80386-aam-aad.test.mjs test/i80386-arpl.test.mjs test/i80386-bound.test.mjs test/i80386-compiler-isa.test.mjs test/i80386-ata16.test.mjs test/i80386-at-hdd-image.test.mjs test/i80386-expand-down.test.mjs test/i80386-absent-npx.test.mjs test/i80386-xlat.test.mjs test/i80386-sign-extend.test.mjs test/i80386-at-dos-persistence-evidence.test.mjs test/i80386-task-switch.test.mjs test/i80386-task16.test.mjs test/i80386-task-vm86.test.mjs test/i80386-unreal-mode.test.mjs test/i80386-ret.test.mjs test/i80386-doom-fat16-image.test.mjs test/i80386-doom-vga-frame.test.mjs test/i80386-windows-vga-frame.test.mjs test/i80386-windows300-inputs.test.mjs test/i80386-enter-leave.test.mjs test/i80386-bit-test.test.mjs test/i80386-bcd.test.mjs test/i80386-bit-scan.test.mjs test/i80386-clts.test.mjs test/i80386-pe-cpl.test.mjs test/i80386-into.test.mjs test/vga-memory.test.mjs test/i80386-at-vga.test.mjs test/i80386-vga-bios-grade.test.mjs \
+            | tee "$I386_RECEIPTS/tests.tap"
+          for profile in add-sizes byte-movx shifts segment-mov xchg group5-basic far-pointer alu-complete pusha-popa flags-stack string-move-store moffs rotates rotate-full-circle lea segment-stack pop-rm push-imm8 imul-immediate setcc double-shift enter-ret bit-test bcd-adjust bit-scan clts; do
+            I386_MOO_PROFILE="$profile" node scripts/verify-i80386-moo-sample.mjs \
+              > "$I386_RECEIPTS/$profile.json"
+          done
+          for pair in flags-stack:carry string-move-store:ram imul-immediate:carry setcc:ram double-shift:carry enter-ret:stray-write bit-test:carry bcd-adjust:carry bit-scan:zf clts:cr0-ts; do
+            profile=${pair%:*}
+            mutation=${pair#*:}
+            if I386_MOO_PROFILE="$profile" I386_MOO_MUTATION="$mutation" node scripts/verify-i80386-moo-sample.mjs > "$I386_RECEIPTS/rejected-$profile.json"; then
+              echo "386 $profile comparator accepted $mutation mutation" >&2
+              exit 1
+            fi
+          done
+          for mutation in ram stray-write; do
+            if I386_MOO_MUTATION="$mutation" node scripts/verify-i80386-moo-sample.mjs \
+              > "$I386_RECEIPTS/rejected-$mutation.json"; then
+              echo "386 hardware comparator accepted $mutation mutation" >&2
+              exit 1
+            fi
+          done
+          if I386_MOO_PROFILE=rotate-full-circle I386_MOO_MUTATION=carry node scripts/verify-i80386-moo-sample.mjs \
+            > "$I386_RECEIPTS/rejected-carry.json"; then
+            echo "386 full-circle comparator accepted carry mutation" >&2
+            exit 1
+          fi
+          if I386_MOO_PROFILE=clts I386_MOO_MUTATION=eax node scripts/verify-i80386-moo-sample.mjs > "$I386_RECEIPTS/rejected-clts-eax.json"; then
+            echo "386 comparator accepted corruption of an unchanged register" >&2
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const dir=process.env.I386_RECEIPTS;
+          const read=name=>JSON.parse(fs.readFileSync(`${dir}/${name}.json`));
+          for(const [profile,count,excluded,prefixExcluded=0] of [['add-sizes',12,888],['byte-movx',36,2600],['shifts',36,3111],['segment-mov',6,46],['xchg',9,16,58],['group5-basic',21,319,194],['far-pointer',30,955],['alu-complete',42,163],['pusha-popa',12,405],['moffs',24,452],['rotates',36,904],['rotate-full-circle',2,134],['lea',12,2704],['segment-stack',66,690],['pop-rm',12,601],['push-imm8',6,68],['imul-immediate',9,224],['setcc',48,297],['double-shift',24,654],['enter-ret',18,938],['bit-test',96,7616,1068],['bcd-adjust',12,0],['bit-scan',24,2106],['clts',3,3]]) {
+            const r=read(profile);
+            assert.equal(r.accounting.admitted,count);
+            assert.equal(r.accounting.exceptionExcluded,excluded);
+            assert.equal(r.accounting.profileExcluded,prefixExcluded);
+            assert.equal(r.accounting.revoked,0);
+            assert.equal(r.accounting.unsupported,0);
+            assert.equal(r.accounting.failures,0);
+          }
+          for(const profile of ['imul-immediate','setcc','double-shift','enter-ret','bit-test','bcd-adjust','bit-scan','clts']) {
+            const r=read(`rejected-${profile}`);
+            assert.equal(r.accounting.unsupported,0);
+            assert.equal(r.failures.length,1);
+            assert.equal(r.failures[0].differences.length,1);
+            const field=r.failures[0].differences[0].field;
+            if(profile==='setcc')assert.match(field,/^ram:[0-9a-f]+$/);
+            else if(profile==='enter-ret')assert.equal(field,'unexpected-write:f00000');
+            else if(profile==='clts')assert.equal(field,'cr0');
+            else assert.equal(field,'eflags');
+          }
+          const unchanged=read('rejected-clts-eax');
+          assert.equal(unchanged.accounting.unsupported,0);
+          assert.equal(unchanged.failures.length,1);
+          assert.equal(unchanged.failures[0].differences.length,1);
+          assert.equal(unchanged.failures[0].differences[0].field,'eax');
+          const carry=read('rejected-carry');
+          assert.equal(carry.mutation,'carry');
+          assert.equal(carry.accounting.unsupported,0);
+          assert.equal(carry.failures.length,1);
+          assert.equal(carry.failures[0].differences.length,1);
+          assert.equal(carry.failures[0].differences[0].field,'eflags');
+          for(const mutation of ['ram','stray-write']) {
+            const r=read(`rejected-${mutation}`);
+            assert.equal(r.mutation,mutation);
+            assert.equal(r.accounting.unsupported,0);
+            assert.equal(r.failures.length,1);
+            assert.equal(r.failures[0].differences.length,1);
+            const field=r.failures[0].differences[0].field;
+            if(mutation==='stray-write')assert.equal(field,'unexpected-write:f00000');
+            else assert.match(field,/^ram:[0-9a-f]+$/);
+          }
+          assert.match(fs.readFileSync(`${dir}/tests.tap`,'utf8'),/^# skipped 0$/m);
+          fs.writeFileSync(`${dir}/context.json`,JSON.stringify({revision:process.env.GITHUB_SHA,
+            run:process.env.GITHUB_RUN_ID,node:process.version,scope:'bounded real-mode 386EX samples; not full 386DX compatibility'},null,2)+'\n');
+          NODE
+      - name: Upload source-bound 386 sample evidence
+        if: ${{ always() && env.I386_RECEIPTS != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sampled386-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.I386_RECEIPTS }}
+          if-no-files-found: error
+          retention-days: 30
+
+  dos-guest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Check out exact MIT-licensed DOS 2.0 inputs
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: microsoft/MS-DOS
+          ref: 2d04cacc5322951f187bb17e017c12920ac8ebe2
+          path: ms-dos
+      - name: Admit all six DOS and toolchain inputs
+        env:
+          MSDOS_BIN_DIR: ${{ github.workspace }}/ms-dos/v2.0/bin
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C ms-dos rev-parse HEAD)" = 2d04cacc5322951f187bb17e017c12920ac8ebe2
+          cd "$MSDOS_BIN_DIR"
+          sha256sum -c <<'HASHES'
+          1edf5190671ed4edcc9e6cc095e5094749c58f1833a2e26e40ba7d3389e276d1  MSDOS.SYS
+          4cc71b3692b894eef9a7c8b3ac0fc63a71bdfa08175089562fdc4c7c5b038e8a  COMMAND.COM
+          56d9d59d8cf6dbec648c3b391d3532bf4dffa8b615a096aca76312acbeecc7aa  SYSINIT.OBJ
+          bf3399d0ec33fd97c3789887b336208d9f4900524609c04985e16a124cbf4449  MASM.EXE
+          fe52892da7bd6832cb88a959cccd230f307e30c7c83a225b2e638f4ea25d76be  LINK.EXE
+          80ac337843421764bb019845f9ef802d35ef642045026b1788373cea756201e2  EXE2BIN.EXE
+          HASHES
+      - name: Boot, persist, build, link and execute under real DOS
+        env:
+          MSDOS_BIN_DIR: ${{ github.workspace }}/ms-dos/v2.0/bin
+        run: |
+          set -euo pipefail
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/fast-286-dos-guest.XXXXXX")
+          echo "RECEIPT_DIR=$RECEIPT_DIR" >> "$GITHUB_ENV"
+          node --test --test-reporter=spec \
+            test/dos-guest-persistence.test.mjs test/dos-toolchain-guest.test.mjs \
+            | tee "$RECEIPT_DIR/tests.log"
+          node scripts/run-dos-toolchain-guest.mjs 80286 \
+            | tee "$RECEIPT_DIR/dos-toolchain-fast286.json"
+      - name: Upload the exact-source DOS guest receipt
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fast286-dos-guest-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 30
+
+  fast-full:
+    if: ${{ github.event_name == 'push' || (inputs.run_dos != true && (inputs.evidence == 'both' || inputs.evidence == 'full-semantic')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Check out the pinned public SST286 corpus
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: SingleStepTests/80286
+          ref: 37c73caf53dcd22d3dd369ff09305d13d117a4fe
+          path: 80286-vectors
+      - name: Grade the fast core against every pinned real-mode vector
+        env:
+          I80286_VECTORS: ${{ github.workspace }}/80286-vectors
+        run: |
+          set -euo pipefail
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/fast-80286-semantic.XXXXXX")
+          export RECEIPT_DIR
+          echo "RECEIPT_DIR=$RECEIPT_DIR" >> "$GITHUB_ENV"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C 80286-vectors rev-parse HEAD)" = 37c73caf53dcd22d3dd369ff09305d13d117a4fe
+          node --input-type=module -e 'import fs from "node:fs";fs.writeFileSync(process.env.RECEIPT_DIR+"/context.json",JSON.stringify({schemaVersion:1,revision:process.env.GITHUB_SHA,suiteRevision:"37c73caf53dcd22d3dd369ff09305d13d117a4fe",node:process.version,run:process.env.GITHUB_RUN_ID,attempt:process.env.GITHUB_RUN_ATTEMPT,claim:"fast-core real-mode semantic state only",timingGraded:false,physicalBoardGraded:false},null,2)+"\n",{flag:"wx"});'
+          node scripts/grind-i8086-286.mjs --report "$RECEIPT_DIR/fast80286-full.json" \
+            | tee "$RECEIPT_DIR/grind.log"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          import {createHash} from 'node:crypto';
+          const r=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+'/fast80286-full.json')).summary;
+          assert.equal(r.suiteRevision,'37c73caf53dcd22d3dd369ff09305d13d117a4fe');
+          assert.equal(r.fullSuite,true);
+          assert.equal(r.files,326);
+          assert.equal(r.selected,1478000);
+          assert.equal(r.revoked,3);
+          assert.equal(r.executed,r.pass);
+          assert.equal(r.pass,1477997);
+          assert.deepEqual({fail:r.fail,unsupported:r.unsupported,budget:r.budget},{fail:0,unsupported:0,budget:0});
+          assert.equal(r.accepted,true);
+          assert.equal(r.timingGraded,false);
+          assert.equal(r.physicalBoardGraded,false);
+          for(const [key,file] of [['../src/i8086.js','src/i8086.js'],['./lib/sst286.mjs','scripts/lib/sst286.mjs'],['./lib/fast286-verdict.mjs','scripts/lib/fast286-verdict.mjs'],['./grind-i8086-286.mjs','scripts/grind-i8086-286.mjs']]){
+            assert.equal(r.sourceHashes[key],createHash('sha256').update(fs.readFileSync(file)).digest('hex'),key);
+          }
+          NODE
+      - name: Upload the fast-core full semantic receipt
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fast80286-full-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 30
+
+  full-semantic:
+    if: ${{ github.event_name == 'push' || (inputs.run_dos != true && (inputs.evidence == 'both' || inputs.evidence == 'full-semantic')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Check out the pinned public SST286 corpus
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: SingleStepTests/80286
+          ref: 37c73caf53dcd22d3dd369ff09305d13d117a4fe
+          path: 80286-vectors
+      - name: Prepare an exact-source receipt
+        run: |
+          set -euo pipefail
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/harris-286-semantic.XXXXXX")
+          export RECEIPT_DIR
+          echo "RECEIPT_DIR=$RECEIPT_DIR" >> "$GITHUB_ENV"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C 80286-vectors rev-parse HEAD)" = 37c73caf53dcd22d3dd369ff09305d13d117a4fe
+          node --input-type=module -e 'import fs from "node:fs";fs.writeFileSync(process.env.RECEIPT_DIR+"/context.json",JSON.stringify({schemaVersion:1,revision:process.env.GITHUB_SHA,suiteRevision:"37c73caf53dcd22d3dd369ff09305d13d117a4fe",node:process.version,run:process.env.GITHUB_RUN_ID,attempt:process.env.GITHUB_RUN_ATTEMPT,claim:"real-mode semantic state only",timingGraded:false,physicalBoardGraded:false,coprocessorGraded:false},null,2)+"\n",{flag:"wx"});'
+      - name: Grade every pinned real-mode vector
+        env:
+          I80286_VECTORS: ${{ github.workspace }}/80286-vectors
+        run: |
+          set -euo pipefail
+          node scripts/grind-i80286.mjs --report "$RECEIPT_DIR/SST286-REAL-MODE-REPORT.json" \
+            | tee "$RECEIPT_DIR/grind.log"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          import {createHash} from 'node:crypto';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+'/SST286-REAL-MODE-REPORT.json')).summary;
+          assert.equal(report.suiteRevision,'37c73caf53dcd22d3dd369ff09305d13d117a4fe');
+          assert.equal(report.fullSuite,true);
+          assert.equal(report.files,326);
+          assert.equal(report.selected,1478000);
+          assert.equal(report.revoked,3);
+          assert.equal(report.executed,report.pass);
+          assert.deepEqual({fail:report.fail,unsupported:report.unsupported,budget:report.budget},{fail:0,unsupported:0,budget:0});
+          assert.equal(report.accepted,true);
+          assert.equal(report.timingGraded,false);
+          assert.equal(report.physicalBoardGraded,false);
+          const cpu=fs.readFileSync('src/experimental/harris-80c286-boot-cpu.js');
+          assert.equal(report.sourceHashes['../src/experimental/harris-80c286-boot-cpu.js'],createHash('sha256').update(cpu).digest('hex'));
+          NODE
+      - name: Upload the fresh semantic receipt
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: harris-286-full-semantic-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 30
+
+  wired-bios:
+    if: ${{ github.event_name == 'push' || (inputs.run_dos != true && (inputs.evidence == 'both' || inputs.evidence == 'wired-bios')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Prepare an exact-source receipt
+        run: |
+          set -euo pipefail
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/harris-286-wired-bios.XXXXXX")
+          export RECEIPT_DIR
+          echo "RECEIPT_DIR=$RECEIPT_DIR" >> "$GITHUB_ENV"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          node --input-type=module -e 'import fs from "node:fs";fs.writeFileSync(process.env.RECEIPT_DIR+"/context.json",JSON.stringify({schemaVersion:1,revision:process.env.GITHUB_SHA,node:process.version,run:process.env.GITHUB_RUN_ID,attempt:process.env.GITHUB_RUN_ATTEMPT,claim:"bounded owned-BIOS wired diagnostic",accepted:false,dosBoot:false,timingGraded:false,physicalBoardGraded:false},null,2)+"\n",{flag:"wx"});'
+      - name: Run the bounded wired BIOS diagnostic
+        run: |
+          set -uo pipefail
+          set +e
+          node scripts/probe-harris-bios.mjs \
+            --max-clocks 20000 \
+            --pic-mode single-unbuffered --ram-kib 640 \
+            --fdc-mode control --dma-mode registers \
+            > "$RECEIPT_DIR/wired-bios.json" 2> "$RECEIPT_DIR/wired-bios.progress.log"
+          status=$?
+          set -e
+          test "$status" -eq 2
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          import {createHash} from 'node:crypto';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+'/wired-bios.json'));
+          assert.equal(report.accepted,false);
+          assert.equal(report.diagnosticOnly,true);
+          assert.equal(report.maxClocks,20000);
+          assert.ok(report.completedClocks>0 && report.completedClocks<=report.maxClocks);
+          assert.deepEqual(report.outcome,{status:'budget-exhausted'});
+          assert.ok(report.retired>=1700,'owned BIOS did not reach the programmed peripheral path');
+          assert.equal(report.configuration.picMode,'single-unbuffered');
+          assert.equal(report.configuration.fdcMode,'control');
+          assert.equal(report.configuration.dmaMode,'registers');
+          assert.equal(report.pic.initialized,true);
+          assert.ok(report.pic.writes>=4);
+          assert.equal(report.timer.configured,true);
+          assert.ok(report.timer.writes>=3);
+          assert.ok(report.recentTransfers.length>0);
+          const cpu=fs.readFileSync('src/experimental/harris-80c286-boot-cpu.js');
+          assert.equal(report.sourceHashes['../src/experimental/harris-80c286-boot-cpu.js'],createHash('sha256').update(cpu).digest('hex'));
+          NODE
+      - name: Upload the wired diagnostic receipt
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: harris-286-wired-bios-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 30
+
+  wired-dos:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_dos }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Check out exact MIT-licensed DOS 2.0 inputs
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: microsoft/MS-DOS
+          ref: 2d04cacc5322951f187bb17e017c12920ac8ebe2
+          path: ms-dos
+      - name: Run the reference wired DOS boot
+        env:
+          MSDOS_BIN_DIR: ${{ github.workspace }}/ms-dos/v2.0/bin
+          HARRIS_NET_BACKEND: reference
+          HARRIS_BUS_TRACE: 'on'
+          HARRIS_MEMORY_SCHEDULING: 'off'
+          HARRIS_MEMORY_JOURNAL: 'off'
+          HARRIS_DECODER_SPECIALIZATION: 'off'
+          HARRIS_DEVICE_SCHEDULING: 'off'
+          HARRIS_PACKED_BUS: 'off'
+          HARRIS_DRIVE_LAYOUTS: 'off'
+        run: |
+          set -euo pipefail
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/harris-286-wired-dos.XXXXXX")
+          export RECEIPT_DIR
+          echo "RECEIPT_DIR=$RECEIPT_DIR" >> "$GITHUB_ENV"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C ms-dos rev-parse HEAD)" = 2d04cacc5322951f187bb17e017c12920ac8ebe2
+          node --input-type=module -e 'import fs from "node:fs";fs.writeFileSync(process.env.RECEIPT_DIR+"/context.json",JSON.stringify({schemaVersion:1,revision:process.env.GITHUB_SHA,dosRevision:"2d04cacc5322951f187bb17e017c12920ac8ebe2",node:process.version,run:process.env.GITHUB_RUN_ID,attempt:process.env.GITHUB_RUN_ATTEMPT,claim:"functional wired DOS prompt on the reference net backend",timingGraded:false,physicalBoardGraded:false},null,2)+"\n",{flag:"wx"});'
+          node scripts/probe-harris-dos.mjs 10000000 "$RECEIPT_DIR/wired-dos.json" \
+            2> >(tee "$RECEIPT_DIR/wired-dos.progress.log" >&2) \
+            | tee "$RECEIPT_DIR/wired-dos.stdout.json"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          import {createHash} from 'node:crypto';
+          const r=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+'/wired-dos.json'));
+          assert.equal(r.accepted,true);
+          assert.equal(r.outcome.status,'dos-prompt');
+          assert.equal(r.bootSectorEntered,true);
+          assert.equal(r.commandMatches,true);
+          assert.equal(r.netBackend,'reference');
+          assert.equal(r.busTraceEnabled,true);
+          for(const key of ['memoryScheduling','memoryWriteJournal','decoderSpecialization','deviceScheduling','packedBus','driveLayouts'])assert.equal(r[key],false,key);
+          assert.deepEqual(r.inputHashes,{msdos:'1edf5190671ed4edcc9e6cc095e5094749c58f1833a2e26e40ba7d3389e276d1',command:'4cc71b3692b894eef9a7c8b3ac0fc63a71bdfa08175089562fdc4c7c5b038e8a',sysinit:'56d9d59d8cf6dbec648c3b391d3532bf4dffa8b615a096aca76312acbeecc7aa'});
+          const cpu=fs.readFileSync('src/experimental/harris-80c286-boot-cpu.js');
+          assert.equal(r.sourceHashes['../src/experimental/harris-80c286-boot-cpu.js'],createHash('sha256').update(cpu).digest('hex'));
+          NODE
+      - name: Upload the wired DOS receipt
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: harris-286-wired-dos-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 30

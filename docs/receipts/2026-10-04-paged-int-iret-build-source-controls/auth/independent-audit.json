@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "testedRevision": "2379db3a081260d159aa08e39727c88d58a8b511",
+  "sourceFiles": 208,
+  "controls": "one outer plus six nested actual PASS/zero skip",
+  "readonlySourceIdentity": "exact208/control/currentGit map",
+  "canonicalSourceSha256": "c458aee2729802dc28c21371df3a58d4845da03a421726686f448f5ae6350d7f",
+  "prePostSourceToolsEqual": true,
+  "historicalFailure": "CPU15 SIGKILL before named cases retained; cause not retrospectively proven",
+  "scope": "Read-only packet audit; no rerun/materializer/build/addon/emulated CPU"
+}

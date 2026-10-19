@@ -1,0 +1,620 @@
+{
+  "accepted": true,
+  "maxClocks": 10000000,
+  "clocks": 5930000,
+  "elapsedMS": 6330054,
+  "outcome": {
+    "status": "dos-prompt"
+  },
+  "bootSectorEntered": true,
+  "landmarks": {
+    "bootSector": 2269772,
+    "iosysEntry": 2921790,
+    "HWINIT": 2921802,
+    "sysinit": 2922066,
+    "CONIN": 3030804,
+    "RE_INIT": 3503972,
+    "DSK_RED": 3521264,
+    "commandCom": 4139156
+  },
+  "commandMatches": true,
+  "timerClockHalfPeriod": 1,
+  "sourceHashes": {
+    "./probe-harris-dos.mjs": "a3280f4110c7aee715512e06dfbaed9b84c816d007d7a18cb9186585650ea959",
+    "./build-bios.mjs": "1b263f1cb3579994b0f5147efcd44ce0c5e5eaf913c372eeae3b5d6a65b08fbb",
+    "./build-dos-image.mjs": "7073f065ea11b10e25ddd6ded1358abbd66ef3475582865f5d456b4c3e187ec7",
+    "../src/experimental/harris-80c286-boot-cpu.js": "4a57426bf51f8971ed5890a4717618181a0900a3cb69f8683c0d877c9474b007",
+    "../src/experimental/harris-80c286-bus.js": "d7b3d07c950743bfb74a26a82a017db39429cb571902b2975dac82ea0ed53270",
+    "../src/experimental/harris-80c286-memory-board.js": "2d2544f613efb2325b38e0d2c2cd365590e6665737135261add0005f58c97ac4",
+    "../src/experimental/digital-circuit.js": "ebf7e278921601737fe993e43f9f1a8db3ea7a6800b8684f7fa4d2e0ee19d3f0",
+    "../src/experimental/latched-memory-components.js": "24f0bb87cfaec18151de1816f2a345220e943464f2f0cffd180aaa74164a3ae2",
+    "../src/experimental/harris-fdc-adapter.js": "a4072d59771fe0efe6f3ff516631bf8405f449263b34eebd96408b84bed4f701",
+    "../src/experimental/harris-dma-adapter.js": "7ad3aab6fc85698ee82fcaf925bfedf4e5fc53252947e1750bb7b381604d400d",
+    "../src/experimental/harris-keyboard-adapter.js": "d5583daf1cd143f1a525dc0feccf0780922e9ec604aa4491f6319f6d7dcf93ab",
+    "../src/experimental/harris-8259-adapter.js": "43ebef88cd6843c874c79eb9b4b4d8d573ee3f97790429ce904156ac4cdca934",
+    "../src/experimental/harris-8254-adapter.js": "60b19b100e0e2fc6f4d1612af4212b1c40760cff1efe18037bfbbdba73697878",
+    "../src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874",
+    "../src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+    "../src/i8255.js": "3445ac6676005f225db542031be51b6d1561045d2be76be339e5853a50f6ff7f",
+    "../src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+    "../src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+    "../rom/bios.asm": "c9cbc1fb86c24d97d7f5c679c85b03df6024d62c33ae6931c2df3ce69fd02a35"
+  },
+  "romSHA256": "de2af892077af637fc90f5203353382ec1fac60dfd1470db63e9bf098363b5c1",
+  "diskSHA256": "5fbbe5e86fb845cff120ae8d17a01904c0db9d0b6103ce382b31130bd3eadd39",
+  "inputHashes": {
+    "msdos": "1edf5190671ed4edcc9e6cc095e5094749c58f1833a2e26e40ba7d3389e276d1",
+    "command": "4cc71b3692b894eef9a7c8b3ac0fc63a71bdfa08175089562fdc4c7c5b038e8a",
+    "sysinit": "56d9d59d8cf6dbec648c3b391d3532bf4dffa8b615a096aca76312acbeecc7aa"
+  },
+  "cpu": {
+    "status": "running",
+    "registers": {
+      "ax": 496,
+      "cx": 1414,
+      "dx": 127,
+      "bx": 10,
+      "sp": 1236,
+      "bp": 1230,
+      "si": 437,
+      "di": 337
+    },
+    "cs": 61440,
+    "csBase": 983040,
+    "ip": 890,
+    "instructionBoundary": true,
+    "ds": 64,
+    "es": 352,
+    "ss": 352,
+    "flags": 514,
+    "msw": 65520,
+    "gdtr": {
+      "base": 0,
+      "limit": 0
+    },
+    "idtr": {
+      "base": 0,
+      "limit": 1023
+    },
+    "nmi": {
+      "blocked": false,
+      "count": 0,
+      "ssShadow": 0
+    },
+    "intr": {
+      "count": 279,
+      "lastVector": 8,
+      "stiShadow": 0
+    },
+    "retired": 513244,
+    "fault": null,
+    "history": [
+      {
+        "cs": 352,
+        "ip": 4396,
+        "physical": 10028,
+        "opcode": 163,
+        "retired": 513181
+      },
+      {
+        "cs": 352,
+        "ip": 4400,
+        "physical": 10032,
+        "opcode": 140,
+        "retired": 513182
+      },
+      {
+        "cs": 352,
+        "ip": 4405,
+        "physical": 10037,
+        "opcode": 255,
+        "retired": 513183
+      },
+      {
+        "cs": 96,
+        "ip": 229,
+        "physical": 1765,
+        "opcode": 137,
+        "retired": 513184
+      },
+      {
+        "cs": 96,
+        "ip": 234,
+        "physical": 1770,
+        "opcode": 140,
+        "retired": 513185
+      },
+      {
+        "cs": 96,
+        "ip": 239,
+        "physical": 1775,
+        "opcode": 203,
+        "retired": 513186
+      },
+      {
+        "cs": 352,
+        "ip": 4410,
+        "physical": 10042,
+        "opcode": 139,
+        "retired": 513187
+      },
+      {
+        "cs": 352,
+        "ip": 4413,
+        "physical": 10045,
+        "opcode": 163,
+        "retired": 513188
+      },
+      {
+        "cs": 352,
+        "ip": 4417,
+        "physical": 10049,
+        "opcode": 255,
+        "retired": 513189
+      },
+      {
+        "cs": 96,
+        "ip": 240,
+        "physical": 1776,
+        "opcode": 199,
+        "retired": 513190
+      },
+      {
+        "cs": 96,
+        "ip": 247,
+        "physical": 1783,
+        "opcode": 235,
+        "retired": 513191
+      },
+      {
+        "cs": 96,
+        "ip": 283,
+        "physical": 1819,
+        "opcode": 80,
+        "retired": 513192
+      },
+      {
+        "cs": 96,
+        "ip": 284,
+        "physical": 1820,
+        "opcode": 83,
+        "retired": 513193
+      },
+      {
+        "cs": 96,
+        "ip": 285,
+        "physical": 1821,
+        "opcode": 81,
+        "retired": 513194
+      },
+      {
+        "cs": 96,
+        "ip": 286,
+        "physical": 1822,
+        "opcode": 82,
+        "retired": 513195
+      },
+      {
+        "cs": 96,
+        "ip": 287,
+        "physical": 1823,
+        "opcode": 86,
+        "retired": 513196
+      },
+      {
+        "cs": 96,
+        "ip": 288,
+        "physical": 1824,
+        "opcode": 87,
+        "retired": 513197
+      },
+      {
+        "cs": 96,
+        "ip": 289,
+        "physical": 1825,
+        "opcode": 85,
+        "retired": 513198
+      },
+      {
+        "cs": 96,
+        "ip": 290,
+        "physical": 1826,
+        "opcode": 30,
+        "retired": 513199
+      },
+      {
+        "cs": 96,
+        "ip": 291,
+        "physical": 1827,
+        "opcode": 6,
+        "retired": 513200
+      },
+      {
+        "cs": 96,
+        "ip": 292,
+        "physical": 1828,
+        "opcode": 14,
+        "retired": 513201
+      },
+      {
+        "cs": 96,
+        "ip": 293,
+        "physical": 1829,
+        "opcode": 31,
+        "retired": 513202
+      },
+      {
+        "cs": 96,
+        "ip": 294,
+        "physical": 1830,
+        "opcode": 196,
+        "retired": 513203
+      },
+      {
+        "cs": 96,
+        "ip": 298,
+        "physical": 1834,
+        "opcode": 138,
+        "retired": 513204
+      },
+      {
+        "cs": 96,
+        "ip": 302,
+        "physical": 1838,
+        "opcode": 48,
+        "retired": 513205
+      },
+      {
+        "cs": 96,
+        "ip": 304,
+        "physical": 1840,
+        "opcode": 131,
+        "retired": 513206
+      },
+      {
+        "cs": 96,
+        "ip": 307,
+        "physical": 1843,
+        "opcode": 118,
+        "retired": 513207
+      },
+      {
+        "cs": 96,
+        "ip": 314,
+        "physical": 1850,
+        "opcode": 209,
+        "retired": 513208
+      },
+      {
+        "cs": 96,
+        "ip": 316,
+        "physical": 1852,
+        "opcode": 139,
+        "retired": 513209
+      },
+      {
+        "cs": 96,
+        "ip": 320,
+        "physical": 1856,
+        "opcode": 1,
+        "retired": 513210
+      },
+      {
+        "cs": 96,
+        "ip": 322,
+        "physical": 1858,
+        "opcode": 139,
+        "retired": 513211
+      },
+      {
+        "cs": 96,
+        "ip": 324,
+        "physical": 1860,
+        "opcode": 255,
+        "retired": 513212
+      },
+      {
+        "cs": 96,
+        "ip": 437,
+        "physical": 1973,
+        "opcode": 180,
+        "retired": 513213
+      },
+      {
+        "cs": 96,
+        "ip": 439,
+        "physical": 1975,
+        "opcode": 205,
+        "retired": 513214
+      },
+      {
+        "cs": 61440,
+        "ip": 786,
+        "physical": 983826,
+        "opcode": 30,
+        "retired": 513215
+      },
+      {
+        "cs": 61440,
+        "ip": 787,
+        "physical": 983827,
+        "opcode": 6,
+        "retired": 513216
+      },
+      {
+        "cs": 61440,
+        "ip": 788,
+        "physical": 983828,
+        "opcode": 87,
+        "retired": 513217
+      },
+      {
+        "cs": 61440,
+        "ip": 789,
+        "physical": 983829,
+        "opcode": 86,
+        "retired": 513218
+      },
+      {
+        "cs": 61440,
+        "ip": 790,
+        "physical": 983830,
+        "opcode": 85,
+        "retired": 513219
+      },
+      {
+        "cs": 61440,
+        "ip": 791,
+        "physical": 983831,
+        "opcode": 82,
+        "retired": 513220
+      },
+      {
+        "cs": 61440,
+        "ip": 792,
+        "physical": 983832,
+        "opcode": 81,
+        "retired": 513221
+      },
+      {
+        "cs": 61440,
+        "ip": 793,
+        "physical": 983833,
+        "opcode": 83,
+        "retired": 513222
+      },
+      {
+        "cs": 61440,
+        "ip": 794,
+        "physical": 983834,
+        "opcode": 80,
+        "retired": 513223
+      },
+      {
+        "cs": 61440,
+        "ip": 795,
+        "physical": 983835,
+        "opcode": 137,
+        "retired": 513224
+      },
+      {
+        "cs": 61440,
+        "ip": 797,
+        "physical": 983837,
+        "opcode": 251,
+        "retired": 513225
+      },
+      {
+        "cs": 61440,
+        "ip": 798,
+        "physical": 983838,
+        "opcode": 184,
+        "retired": 513226
+      },
+      {
+        "cs": 61440,
+        "ip": 801,
+        "physical": 983841,
+        "opcode": 142,
+        "retired": 513227
+      },
+      {
+        "cs": 61440,
+        "ip": 803,
+        "physical": 983843,
+        "opcode": 139,
+        "retired": 513228
+      },
+      {
+        "cs": 61440,
+        "ip": 806,
+        "physical": 983846,
+        "opcode": 128,
+        "retired": 513229
+      },
+      {
+        "cs": 61440,
+        "ip": 809,
+        "physical": 983849,
+        "opcode": 114,
+        "retired": 513230
+      },
+      {
+        "cs": 61440,
+        "ip": 819,
+        "physical": 983859,
+        "opcode": 128,
+        "retired": 513231
+      },
+      {
+        "cs": 61440,
+        "ip": 822,
+        "physical": 983862,
+        "opcode": 116,
+        "retired": 513232
+      },
+      {
+        "cs": 61440,
+        "ip": 824,
+        "physical": 983864,
+        "opcode": 128,
+        "retired": 513233
+      },
+      {
+        "cs": 61440,
+        "ip": 827,
+        "physical": 983867,
+        "opcode": 116,
+        "retired": 513234
+      },
+      {
+        "cs": 61440,
+        "ip": 850,
+        "physical": 983890,
+        "opcode": 250,
+        "retired": 513235
+      },
+      {
+        "cs": 61440,
+        "ip": 851,
+        "physical": 983891,
+        "opcode": 139,
+        "retired": 513236
+      },
+      {
+        "cs": 61440,
+        "ip": 855,
+        "physical": 983895,
+        "opcode": 59,
+        "retired": 513237
+      },
+      {
+        "cs": 61440,
+        "ip": 859,
+        "physical": 983899,
+        "opcode": 116,
+        "retired": 513238
+      },
+      {
+        "cs": 61440,
+        "ip": 874,
+        "physical": 983914,
+        "opcode": 131,
+        "retired": 513239
+      },
+      {
+        "cs": 61440,
+        "ip": 878,
+        "physical": 983918,
+        "opcode": 251,
+        "retired": 513240
+      },
+      {
+        "cs": 61440,
+        "ip": 879,
+        "physical": 983919,
+        "opcode": 235,
+        "retired": 513241
+      },
+      {
+        "cs": 61440,
+        "ip": 887,
+        "physical": 983927,
+        "opcode": 88,
+        "retired": 513242
+      },
+      {
+        "cs": 61440,
+        "ip": 888,
+        "physical": 983928,
+        "opcode": 91,
+        "retired": 513243
+      },
+      {
+        "cs": 61440,
+        "ip": 889,
+        "physical": 983929,
+        "opcode": 89,
+        "retired": 513244
+      }
+    ],
+    "dropped": 513180
+  },
+  "pic": {
+    "initialized": true,
+    "initPhase": 0,
+    "irr": 0,
+    "isr": 0,
+    "imr": 188,
+    "vectorBase": 8,
+    "pulse": 0,
+    "vector": null,
+    "writes": 283,
+    "reads": 0,
+    "pairs": 279
+  },
+  "timer": {
+    "configured": true,
+    "mode": 3,
+    "divisor": 65536,
+    "count": 47394,
+    "out": 1,
+    "loaded": true,
+    "loadPending": false,
+    "lowByte": null,
+    "latched": null,
+    "writes": 3,
+    "reads": 0,
+    "ticks": 2965025
+  },
+  "fdc": {
+    "dor": 28,
+    "irq6": 0,
+    "phase": "command",
+    "pendingInterrupts": 0,
+    "commandBytes": [],
+    "resultRemaining": 0,
+    "nonDma": false,
+    "srt": 13,
+    "hut": 15,
+    "hlt": 1,
+    "reads": 3950,
+    "writes": 1622,
+    "dmaBytes": 57856
+  },
+  "dma": {
+    "channel2": {
+      "page": 0,
+      "baseAddr": 21643,
+      "curAddr": 22155,
+      "baseCount": 511,
+      "curCount": 65535,
+      "mode": 1,
+      "transferType": 1,
+      "autoinit": false,
+      "decrement": false,
+      "masked": true,
+      "swRequest": false,
+      "dreqLevel": false
+    },
+    "command": 0,
+    "status": 0,
+    "byteHigh": false,
+    "hrq": false,
+    "reads": 113,
+    "writes": 1035,
+    "master": "IDLE",
+    "transferred": 57856,
+    "tcPulses": 113
+  },
+  "keyboard": {
+    "configured": true,
+    "scan": null,
+    "irq1": 0,
+    "portB": 0,
+    "keys": 2
+  },
+  "screen": "bw-board 8086 BIOS v0.1                                                         \n640K OK                                                                         \n                                                                                \nMS-DOS version 2.00                                                             \nCopyright 1981,82,83 Microsoft Corp.                                            \n                                                                                \nCommand v. 2.02                                                                 \nCurrent date is Tue  1-01-1980                                                  \nEnter new date:                                                                 \nCurrent time is  0:00:02.00                                                     \nEnter new time:                                                                 \n                                                                                \nA>                                                                              \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                ",
+  "executionRevision": "743f99e84242212476c18d4c86c19bd7a979a050",
+  "receiptNote": "Original reference-net interpreter, before later performance changes. Laboratory PIT clock ratio, not stock-clock or compiled-backend acceptance. No guest media included."
+}

@@ -1,0 +1,19 @@
+{
+  "status": "ACTUAL_NEW_ROM_DATA_COLD_BUILD_STATIC_ARTIFACT_AUDIT_PASS",
+  "checks": 1635,
+  "runId": 37110636554,
+  "head": "d4281b28aa4b2e5913c006fb7b9e7b9f0773c1e3",
+  "attempt": 1,
+  "artifactId": 11269357815,
+  "zipSha256": "260bcaf91b360df209d7b1245bf6ae013ae069a0c1f2737a4e70c503cedd6931",
+  "zipBytes": 7446420,
+  "sourceCount": 125,
+  "frozenArchiveFiles": 125,
+  "preparedArchiveFiles": 810,
+  "addonSha256": "40179a4f0bc2456e59bc2ea49303e17e29be72ef564adb1fe1a6879abb015ab0",
+  "addonBytes": 2069552,
+  "scope": "NO_ADDON_LOAD_OR_GUEST",
+  "method": "Independent read-only review of retained raw artifact and adapted audit, additional official metadata/ZIP safety/prior independently authenticated CPU rederivation checks",
+  "warnings": "Compiler diagnostics retained; successful compilation does not prove cold guest compatibility",
+  "auditSourceSha256": "4a341de898bbfb57ee25f0998df7e512f1da2c222585df757108485b9c1ea9f4"
+}

@@ -1,0 +1,119 @@
+name: 386 AT owned live PTY acceptance
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x86-cli-pty-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  owned-pty:
+    if: >-
+      github.event.label.name == 'x86-cli-pty-actual' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Admit exact source and run bounded source controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cli-pty-evidence"
+          mkdir "$evidence"
+          test "$(git rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          test -z "$(git status --porcelain)"
+          test "$(node --version)" = v22.23.3
+          cp .github/workflows/i80386-at-cli-pty-actual.yml "$evidence/workflow.yml"
+          {
+            printf 'run=%s attempt=%s event=%s expected_head=%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_EVENT_NAME" "$BW_EXPECTED_HEAD"
+            git rev-parse HEAD
+            node --version
+            python3 --version
+            uname -a
+            sha256sum scripts/run-i80386-at-console.mjs scripts/i80386-at-cli-pty/*.py scripts/i80386-at-cli-pty/*.mjs .github/workflows/i80386-at-cli-pty-actual.yml
+          } > "$evidence/source-and-host.txt"
+          timeout 30s node --test scripts/i80386-at-cli-pty/owned-hdd-control.mjs > "$evidence/owned-source-control.txt" 2> "$evidence/owned-source-control.stderr"
+          timeout 30s python3 -B scripts/i80386-at-cli-pty/live-pty-control.py > "$evidence/pty-source-control.txt" 2> "$evidence/pty-source-control.stderr"
+      - name: Build owned HDD and authenticate free bundled firmware
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cli-pty-evidence"
+          printf '%s  %s\n' 6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac roms/free-at-bios/BIOS-bochs-legacy | sha256sum -c -
+          printf '%s  %s\n' 76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1 roms/free-at-bios/vgabios-lgpl.bin | sha256sum -c -
+          timeout 30s node scripts/i80386-at-cli-pty/owned-hdd.mjs "$RUNNER_TEMP/owned-cli-pty.img" "$evidence/owned-hdd.json" > "$evidence/owned-hdd.stdout" 2> "$evidence/owned-hdd.stderr"
+          printf '%s  %s\n' a5245b3f5cb74761e87c372fd38f49cd0e21bf3e870708d1f427e994ba81cd9b "$RUNNER_TEMP/owned-cli-pty.img" | sha256sum -c -
+          sha256sum roms/free-at-bios/BIOS-bochs-legacy roms/free-at-bios/vgabios-lgpl.bin "$RUNNER_TEMP/owned-cli-pty.img" > "$evidence/media-sha256.txt"
+          cp roms/free-at-bios/LICENSE "$evidence/free-bios-LICENSE.txt"
+          cp roms/free-at-bios/README.md "$evidence/free-bios-README.txt"
+      - name: Run actual owned guest in a bounded PTY
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cli-pty-evidence"
+          python3 - "$evidence/driver-input.json" <<'PY'
+          import json,os,pathlib,shutil,sys
+          root=pathlib.Path(os.environ['GITHUB_WORKSPACE']).resolve()
+          temp=pathlib.Path(os.environ['RUNNER_TEMP']).resolve()
+          node=pathlib.Path(shutil.which('node')).resolve()
+          data={'schema':'bw.i80386.cli-pty-input.v1',
+                'sourceRoot':str(root),'sourceHead':os.environ['BW_EXPECTED_HEAD'],
+                'node':str(node),'bios':str(root/'roms/free-at-bios/BIOS-bochs-legacy'),
+                'biosSha256':'6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac',
+                'vga':str(root/'roms/free-at-bios/vgabios-lgpl.bin'),
+                'vgaSha256':'76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1',
+                'hdd':str(temp/'owned-cli-pty.img'),
+                'hddSha256':'a5245b3f5cb74761e87c372fd38f49cd0e21bf3e870708d1f427e994ba81cd9b',
+                'geometry':'306,4,17','output':str(temp/'cli-pty-evidence/guest')}
+          pathlib.Path(sys.argv[1]).write_text(json.dumps(data,indent=2)+'\n')
+          PY
+          timeout 150s python3 -B scripts/i80386-at-cli-pty/live-pty.py "$evidence/driver-input.json" > "$evidence/driver.stdout" 2> "$evidence/driver.stderr"
+          test "$(git rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          test -z "$(git status --porcelain)"
+      - name: Inventory original evidence, including first failure
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$RUNNER_TEMP/cli-pty-evidence" <<'PY'
+          import hashlib,json,pathlib,sys
+          root=pathlib.Path(sys.argv[1]);root.mkdir(exist_ok=True)
+          files={}
+          for path in sorted(root.rglob('*')):
+              if path.is_symlink():raise ValueError('evidence symlink')
+              if path.is_file() and path.name!='artifact-inventory.json':
+                  data=path.read_bytes()
+                  files[str(path.relative_to(root))]={'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()}
+          (root/'artifact-inventory.json').write_text(json.dumps({'files':files},indent=2)+'\n')
+          PY
+      - name: Retain bounded PTY result and raw failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-at-cli-pty-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cli-pty-evidence/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

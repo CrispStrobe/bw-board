@@ -1,0 +1,43 @@
+{
+  "baseline": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+  "candidate": "226fe97835bb5bed06cbb377b3d218c661937a49",
+  "changed": [
+    ".github/workflows/wasm-edge-eligibility-bool-tail.yml",
+    "crates/core/src/bus/device_hooks.rs",
+    "crates/core/src/bus/edge_eligibility_bool_tests.rs",
+    "crates/core/src/bus/resident_device.rs"
+  ],
+  "nativeProductionDispatchAndTraitUnchanged": true,
+  "noCachedInventoryOrEligibility": true,
+  "outlinedLayoutUnchanged": true,
+  "liveSliceQueryPreserved": true,
+  "hostedOnly": true,
+  "existingTraitDeclarationOrderUnchanged": true,
+  "compiledVtableLayoutNotAssumed": true,
+  "comparisonCandidate": "14a275f63daaf3cd4af4b1845e52678032553522",
+  "productionHooks": {
+    "beforeSha256": "a000d693262484b42a1f9222e3e1157d6bbc8d0103451e06d4a82b5366d7163a",
+    "afterSha256": "8fbd7c82585bf6fb66b7e2e6f4dd42d09c05c5dfd2540974a66d0edcb50270d3",
+    "boolGate": "        // Retain the outlined layout and the same live query. Only the\n        // eligibility result crosses the WASM trait ABI, not a slice pair.\n        #[cfg(any(target_arch = \"wasm32\", test))]\n        if !self.gpio_devices.iter().any(|d| d.has_edge_service_addrs()) {\n            return;\n        }\n"
+  },
+  "traitMethod": "    /// Live eligibility without returning a slice through the WASM trait ABI.\n    /// The default still queries `edge_service_addrs` on every call: device\n    /// addresses and the public resident inventory may change after attachment.\n    /// Concrete empty defaults can compile to a boolean return instead of a\n    /// shared empty-fat-pointer store. No registration-time cache is involved.\n    /// Overrides must equal `!self.edge_service_addrs().is_empty()` for the\n    /// current state; a stale capability flag would miss synchronous edges.\n    #[cfg(any(target_arch = \"wasm32\", test))]\n    fn has_edge_service_addrs(&self) -> bool {\n        !self.edge_service_addrs().is_empty()\n    }\n",
+  "unchanged": [
+    {
+      "path": "crates/core/src/bus/accessors.rs",
+      "sha256": "8a39a7759eefdc43aad948d5854dceca6ad173969598634af1c84d24eea297c2"
+    },
+    {
+      "path": "crates/core/src/bus/routing.rs",
+      "sha256": "d6f4f64c8b9c653556a46cc4fad57a0121c59765199569d1a2f6681b4007a0b1"
+    },
+    {
+      "path": "crates/core/src/bus/tick.rs",
+      "sha256": "b46f824b63fc16233bd1d9ca87ce3bbe298ac96ae6b25abad5befb25aa20d4c7"
+    },
+    {
+      "path": "crates/core/src/cpu/cortex_m.rs",
+      "sha256": "3cce26ce11616709e363419f520a60eccc118c9a01af3d65959a9159b6af2e98"
+    }
+  ],
+  "engineDiff": "diff --git a/crates/core/src/bus/device_hooks.rs b/crates/core/src/bus/device_hooks.rs\nindex 0a188097..da7ee8e8 100644\n--- a/crates/core/src/bus/device_hooks.rs\n+++ b/crates/core/src/bus/device_hooks.rs\n@@ -216,6 +216,7 @@ impl SystemBus {\n     fn service_edge_driven_gpio_devices_cold(&mut self, idx: usize) {\n         // Cheap gate: almost every bus has no edge-driven device at all, and\n         // this runs on every MMIO write.\n+        #[cfg(not(any(target_arch = \"wasm32\", test)))]\n         if !self\n             .gpio_devices\n             .iter()\n@@ -223,6 +224,12 @@ impl SystemBus {\n         {\n             return;\n         }\n+        // Retain the outlined layout and the same live query. Only the\n+        // eligibility result crosses the WASM trait ABI, not a slice pair.\n+        #[cfg(any(target_arch = \"wasm32\", test))]\n+        if !self.gpio_devices.iter().any(|d| d.has_edge_service_addrs()) {\n+            return;\n+        }\n         let now = self.current_cycle;\n         let (base, size) = (self.peripherals[idx].base, self.peripherals[idx].size);\n         let mut devices = std::mem::take(&mut self.gpio_devices);\n@@ -395,3 +402,7 @@ impl SystemBus {\n         }\n     }\n }\n+\n+#[cfg(test)]\n+#[path = \"edge_eligibility_bool_tests.rs\"]\n+mod edge_eligibility_bool_tests;\ndiff --git a/crates/core/src/bus/resident_device.rs b/crates/core/src/bus/resident_device.rs\nindex 43c7bad6..d784e479 100644\n--- a/crates/core/src/bus/resident_device.rs\n+++ b/crates/core/src/bus/resident_device.rs\n@@ -297,6 +297,18 @@ pub trait BusResidentDevice: std::fmt::Debug + Send {\n     /// downcast — this is only for callers that want a specific model back out.\n     fn as_any(&self) -> &dyn std::any::Any;\n     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;\n+\n+    /// Live eligibility without returning a slice through the WASM trait ABI.\n+    /// The default still queries `edge_service_addrs` on every call: device\n+    /// addresses and the public resident inventory may change after attachment.\n+    /// Concrete empty defaults can compile to a boolean return instead of a\n+    /// shared empty-fat-pointer store. No registration-time cache is involved.\n+    /// Overrides must equal `!self.edge_service_addrs().is_empty()` for the\n+    /// current state; a stale capability flag would miss synchronous edges.\n+    #[cfg(any(target_arch = \"wasm32\", test))]\n+    fn has_edge_service_addrs(&self) -> bool {\n+        !self.edge_service_addrs().is_empty()\n+    }\n }\n \n impl SystemBus {\n"
+}

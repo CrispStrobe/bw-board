@@ -1,0 +1,48 @@
+{
+  "schema": "bw.i80386-same-page-write-performance.v1",
+  "date": "2026-09-28",
+  "baselineCommit": "bdffe9471ace9bfa4023211bc6488d117344f41d",
+  "host": {
+    "place": "shared VPS",
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX), KVM, 4 vCPU",
+    "node": "v20.20.2"
+  },
+  "sourceSha256": {
+    "baselineI80386": "afc1e6c1812e60118e0569dbdd89c1f74d3f65ac1d26eea64c3adbf3f6c0ea0d",
+    "candidateI80386": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2"
+  },
+  "change": "For 2- or 4-byte linear writes wholly inside one 4 KiB page, translate once before the first write and preserve ordered byte bus writes. Cross-page writes retain the prior all-byte translation preflight.",
+  "workload": {
+    "name": "stock xv6-public forktest, 4 MiB, Bochs BIOS",
+    "command": "XV6_LEAN=1 XV6_RAM_HASH=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+    "xv6ImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "fileSystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "kernelSha256": "025cef15636863063e4101aa0cfc424e556f70ad43b6a80d57581c05b465202d"
+  },
+  "order": ["baseline", "candidate", "baseline", "candidate", "baseline", "candidate"],
+  "baselineUserCpuSeconds": [24.23, 24.53, 24.83],
+  "candidateUserCpuSeconds": [22.61, 24.11, 23.92],
+  "baselineMeanUserCpuSeconds": 24.53,
+  "candidateMeanUserCpuSeconds": 23.546667,
+  "candidateUserCpuSpeedup": 1.041761,
+  "guest": {
+    "steps": 24338279,
+    "finalPhysicalRamSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+    "normalizedReportSha256": "80117807a71b563ff81134932486d8eb1948f9118dc2b083ec669b3f715e6048",
+    "allSixNormalizedReportsEqual": true,
+    "normalization": "Replace only absolute ROM, xv6 image, and filesystem image paths with <rom> or <image>; retain every other JSON field in original order, including serial, interrupts, CPU, display and RAM hash. Hash SHA-256 of JSON.stringify of normalized parsed report."
+  },
+  "profile": {
+    "mode": "Node --cpu-prof, full lean xv6 forktest before the change",
+    "sampleType": "V8 self samples; not exclusive CPU seconds",
+    "topSelfSamples": {
+      "_stepInstruction": 4043,
+      "step": 2129,
+      "_translate": 1933,
+      "_read386": 1330,
+      "_decodeEA": 1031,
+      "_writeLinear": 366
+    }
+  },
+  "limits": "This is a 4.2% workload-specific user-CPU throughput gain on a shared VPS, not calibrated 386DX real-time speed. Wall time varied substantially; the requested 10x overall gain remains open."
+}

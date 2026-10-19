@@ -1,0 +1,20 @@
+{
+  "id": 11324707742,
+  "node_id": "MDg6QXJ0aWZhY3QxMTMyNDcwNzc0Mg==",
+  "name": "paged-pagefault-build-only-37262460989-1",
+  "size_in_bytes": 8578008,
+  "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11324707742",
+  "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11324707742/zip",
+  "expired": false,
+  "digest": "sha256:c74915df6046cb6c6a92b4830dfe9b6cf8b2110f57717d8a9142bee99c6bbac8",
+  "created_at": "2026-10-05T04:13:36Z",
+  "updated_at": "2026-10-05T04:13:36Z",
+  "expires_at": "2026-10-19T04:13:35Z",
+  "workflow_run": {
+    "id": 37262460989,
+    "repository_id": 1327885818,
+    "head_repository_id": 1327885818,
+    "head_branch": "lane/386-paged-pagefault-build-source-20261005",
+    "head_sha": "5df525f72790876d35e49d936bac1f1284fa81e7"
+  }
+}

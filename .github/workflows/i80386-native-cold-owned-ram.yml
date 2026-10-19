@@ -1,0 +1,105 @@
+name: Cold BIOS owned RAM actual parity
+
+on:
+  workflow_dispatch:
+    inputs:
+      enable_actual:
+        description: Run full cold owned RAM and callback guest parity
+        type: boolean
+        default: false
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cold-owned-ram-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  owned-ram-actual-parity:
+    if: ${{ inputs.enable_actual == true }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Compile and exercise owned RAM source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/owned-ram-actual"
+          headers="$(node -p 'require("path").resolve(require("path").dirname(process.execPath),"../include/node")')"
+          test -r "$headers/node_api.h" || headers=/usr/include/node
+          test -r "$headers/node_api.h"
+          node --test test/i80386-cold-owned-ram-source.test.mjs test/i80386-cold-owned-ram-napi-source.test.mjs
+          c++ -std=c++17 -O1 -fPIC -shared -Wall -Wextra -Werror "-I$headers" \
+            scripts/bochs-cpu3-native-cold-owned-ram/napi.cc \
+            -o "$RUNNER_TEMP/owned-ram-actual/owned_ram.node"
+      - name: Acquire exact earlier CPU3 addon artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh run download 37260140804 --repo CrispStrobe/bw-board \
+            --name cold-compact-progress-build-only-37260140804-1 \
+            --dir "$RUNNER_TEMP/owned-ram-actual/earlier-build"
+          addon="$RUNNER_TEMP/owned-ram-actual/earlier-build/cold-compact-progress-build-evidence/bw_direct.node"
+          printf '%s  %s\n' 0323040b94db365ff66b51c7b0827c6fc07bd3ba4153eac80ee4023920a1ac3d "$addon" | sha256sum -c -
+      - name: Run both actual guest arms and compare
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          ulimit -t 45
+          evidence="$RUNNER_TEMP/owned-ram-actual"
+          addon="$evidence/earlier-build/cold-compact-progress-build-evidence/bw_direct.node"
+          python3 - "$PWD" "$evidence" <<'PY'
+          import pathlib,sys
+          root=pathlib.Path(sys.argv[1]); out=pathlib.Path(sys.argv[2])
+          for mode in ('owned','callback'):
+              config='\n'.join((
+                  'display_library: nogui','memory: guest=16, host=16',
+                  f'romimage: file={root}/roms/free-at-bios/BIOS-bochs-legacy',
+                  f'vgaromimage: file={root}/roms/free-at-bios/vgabios-lgpl.bin',
+                  'cpu: count=1, ips=10000000','clock: sync=none, time0=946684800',
+                  'boot: disk','port_e9_hack: enabled=1',f'log: {out}/{mode}.bochs.log',
+                  'panic: action=fatal','error: action=report','info: action=report',
+                  'debug: action=ignore','mouse: enabled=0',''))
+              (out/f'{mode}.conf').write_text(config)
+          PY
+          timeout 90s node scripts/bochs-cpu3-native-cold-owned-ram/actual-fixture.mjs \
+            owned "$addon" "$evidence/owned_ram.node" "$evidence/owned.conf" 316562 "$evidence/owned.json" \
+            > "$evidence/owned.stdout" 2> "$evidence/owned.stderr"
+          timeout 90s node scripts/bochs-cpu3-native-cold-owned-ram/actual-fixture.mjs \
+            callback "$addon" - "$evidence/callback.conf" 316562 "$evidence/callback.json" \
+            > "$evidence/callback.stdout" 2> "$evidence/callback.stderr"
+          node scripts/bochs-cpu3-native-cold-owned-ram/compare-fixtures.mjs \
+            "$evidence/owned.json" "$evidence/callback.json" | tee "$evidence/comparison.json"
+          git rev-parse HEAD > "$evidence/source-head.txt"
+          sha256sum "$addon" "$evidence/owned_ram.node" > "$evidence/addon-hashes.txt"
+          node --version > "$evidence/node-version.txt"
+          git status --porcelain > "$evidence/source-status.txt"
+          test ! -s "$evidence/source-status.txt"
+      - name: Retain actual and failure evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cold-owned-ram-actual-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/owned-ram-actual/*.json
+            ${{ runner.temp }}/owned-ram-actual/*.txt
+            ${{ runner.temp }}/owned-ram-actual/*.stdout
+            ${{ runner.temp }}/owned-ram-actual/*.stderr
+            ${{ runner.temp }}/owned-ram-actual/*.bochs.log
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

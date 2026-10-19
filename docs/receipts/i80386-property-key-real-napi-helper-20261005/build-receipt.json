@@ -1,0 +1,13 @@
+{
+  "schema": "bw.property-key.fixture-build.v1",
+  "status": "BUILD_STATIC_PASS",
+  "candidateRevision": "07a1cdb4db7d10d70ecd7caee1ac6b81ce4abd2f",
+  "sourceRevision": "6f021f61523c2544dabffb3d5eeaf377a4e2583d",
+  "helperSha256": "3ad4cfd4b8c07c8350620f1da39b7e480b064597194d2e67a21a78cbfde634a1",
+  "fixtureSha256": "64c5e94e4dc669aa9b79c667fba4e3ee27826abc5aadaef0e0ed46770d4ae759",
+  "addonSha256": "0416987e348f6a3269428ec5b39e2637d76f5532412d6d540e2a751b476eaa53",
+  "addonBytes": 38792,
+  "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "staticInspection": "Raw nm/readelf retained; no addon load",
+  "toolchainScope": "Pinned images; system C++ headers/startup objects/libraries are host inputs, not complete Bochs closure"
+}

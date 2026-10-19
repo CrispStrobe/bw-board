@@ -1,0 +1,14 @@
+{
+  "originalPipelineSession": 35202,
+  "originalExitCode": 143,
+  "signalCause": "Unknown; observed SIGTERM, no engine evaluation child remained",
+  "checkedAt": "2026-10-03T12:53:46Z",
+  "existingCandidateBuild": 37123103124,
+  "verifiedArtifactsBeforeResume": ["baseline"],
+  "existingComparisons": 0,
+  "dispatchPending": false,
+  "error": false,
+  "resume": "Direct existing evaluator state after guard self-test; do not rerun native/build launcher or duplicate dispatch",
+  "newBuildDispatch": false,
+  "enginePromotion": false
+}

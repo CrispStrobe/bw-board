@@ -1,0 +1,900 @@
+{
+  "benchmark": "native-dirty-driver-frontier",
+  "accepted": true,
+  "capacityClaim": false,
+  "fullBoard": false,
+  "cpu": false,
+  "rounds": 3,
+  "periods": 8194,
+  "benchmarkSHA256": "f12afa89aa11f5b59f4d810d6982c6719c83f19c39d5473c44febbd92451f96c",
+  "revisions": {
+    "admitted-full-scan": "e6ca521f9d464f6d1c5873601be0792a97829e93",
+    "incremental-scan": "e6ca521f9d464f6d1c5873601be0792a97829e93",
+    "incremental-driver-frontier": "25ed8b452f18c6074928e12343c20f12afd225ae"
+  },
+  "builds": {
+    "before": {
+      "prototype": "wired-owned-memory-circuit",
+      "compiler": "Ubuntu clang version 18.1.3 (1ubuntu1)\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin",
+      "args": [
+        "--target=wasm32",
+        "-O3",
+        "-nostdlib",
+        "-fno-builtin",
+        "-Werror",
+        "-Wall",
+        "-Wextra",
+        "-fuse-ld=/tmp/harris-net-kernel.nhKEjD/wasm-ld",
+        "-Wl,--no-entry",
+        "-Wl,--export=arena_ptr",
+        "-Wl,--export=arena_capacity",
+        "-Wl,--export=resolve_nets",
+        "-Wl,--export=settle_owned",
+        "-Wl,--export=owned_kernel_version",
+        "-Wl,--export=memory_kernel_version",
+        "-Wl,--export=preview_memory_banks",
+        "-Wl,--export=memory_circuit_version",
+        "-Wl,--export=settle_memory_circuit",
+        "-Wl,--export=phase_components_version",
+        "-Wl,--export=read_memory_phase_commands",
+        "-Wl,--export=begin_memory_phase",
+        "-Wl,--export=preview_memory_phase_end",
+        "-Wl,--export=finish_memory_phase",
+        "-Wl,--export=update_address_latch",
+        "-Wl,--export=phase_circuit_version",
+        "-Wl,--export=begin_latched_memory_clock",
+        "-Wl,--export=end_latched_memory_clock",
+        "-Wl,--export=phase_schedule_version",
+        "-Wl,--export=run_latched_memory_schedule",
+        "-Wl,--export=admit_owned_context",
+        "-Wl,--export=settle_owned_context",
+        "-Wl,--export=incremental_kernel_version",
+        "-Wl,--export=incremental_work_counters_version",
+        "-Wl,--export=incremental_work_counters_ptr",
+        "-Wl,--export=reset_incremental_work_counters",
+        "-Wl,--export-memory",
+        "/mnt/volume1/code/wt/bwb-native-dirty-frontier/src/experimental/wired-kernel/net-resolver.c",
+        "/mnt/volume1/code/wt/bwb-native-dirty-frontier/src/experimental/wired-kernel/memory-banks.c",
+        "/mnt/volume1/code/wt/bwb-native-dirty-frontier/src/experimental/wired-kernel/memory-circuit.c",
+        "/mnt/volume1/code/wt/bwb-native-dirty-frontier/src/experimental/wired-kernel/phase-components.c",
+        "/mnt/volume1/code/wt/bwb-native-dirty-frontier/src/experimental/wired-kernel/phase-circuit.c",
+        "/mnt/volume1/code/wt/bwb-native-dirty-frontier/src/experimental/wired-kernel/phase-schedule.c",
+        "/mnt/volume1/code/wt/bwb-native-dirty-frontier/src/experimental/wired-kernel/incremental-nets.c",
+        "-o",
+        "/tmp/sim2cx-dirty-counters-build-v2/wired-net-kernel.wasm"
+      ],
+      "sourceSHA256": "6dff8c1442dfac4bd5c02fdd43f8c60aa756bb12660a377800d538ba8836ed75",
+      "sourceHashes": {
+        "src/experimental/wired-kernel/net-resolver.c": "6dff8c1442dfac4bd5c02fdd43f8c60aa756bb12660a377800d538ba8836ed75",
+        "src/experimental/wired-kernel/memory-banks.c": "98baf316c856a1c65b18527bd545ce1af61c273759f4f5f149c1ef5e208e5579",
+        "src/experimental/wired-kernel/memory-circuit.c": "5d1724d07ad061656772cd48a46cefde304fd1d0a768fff0d626e6b793983a76",
+        "src/experimental/wired-kernel/phase-components.c": "3f4c4f432ab0bf7c2f7cae356b1fc89f2ce30a179c67a942c2f630e59bd4dfa7",
+        "src/experimental/wired-kernel/phase-circuit.c": "c057bbecf4808a40b389417c8f20d78b599cc7086d5e7a64c3b43c2efabcc8f8",
+        "src/experimental/wired-kernel/phase-schedule.c": "0d877602afc087f25811bef244ea91f0bd2e2c10d6d202951f29530419b60ba3",
+        "src/experimental/wired-kernel/incremental-nets.c": "364d54df4a1a48e6eea594b23c12e0b45ea994d504d0d8cddc8d6ad5358ca940"
+      },
+      "wasmSHA256": "71535605ee6deacab5df2ed233c5ba2895acbd084e9fab996d866700d1fa57b8",
+      "notes": [
+        "Owned C, no runtime imports/WASI, no guest media.",
+        "No board backend or real-time throughput claim."
+      ]
+    },
+    "after": {
+      "prototype": "wired-owned-memory-circuit",
+      "compiler": "Ubuntu clang version 18.1.3 (1ubuntu1)\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin",
+      "args": [
+        "--target=wasm32",
+        "-O3",
+        "-nostdlib",
+        "-fno-builtin",
+        "-Werror",
+        "-Wall",
+        "-Wextra",
+        "-fuse-ld=/tmp/harris-net-kernel.nhKEjD/wasm-ld",
+        "-Wl,--no-entry",
+        "-Wl,--export=arena_ptr",
+        "-Wl,--export=arena_capacity",
+        "-Wl,--export=resolve_nets",
+        "-Wl,--export=settle_owned",
+        "-Wl,--export=owned_kernel_version",
+        "-Wl,--export=memory_kernel_version",
+        "-Wl,--export=preview_memory_banks",
+        "-Wl,--export=memory_circuit_version",
+        "-Wl,--export=settle_memory_circuit",
+        "-Wl,--export=phase_components_version",
+        "-Wl,--export=read_memory_phase_commands",
+        "-Wl,--export=begin_memory_phase",
+        "-Wl,--export=preview_memory_phase_end",
+        "-Wl,--export=finish_memory_phase",
+        "-Wl,--export=update_address_latch",
+        "-Wl,--export=phase_circuit_version",
+        "-Wl,--export=begin_latched_memory_clock",
+        "-Wl,--export=end_latched_memory_clock",
+        "-Wl,--export=phase_schedule_version",
+        "-Wl,--export=run_latched_memory_schedule",
+        "-Wl,--export=admit_owned_context",
+        "-Wl,--export=settle_owned_context",
+        "-Wl,--export=incremental_kernel_version",
+        "-Wl,--export=incremental_work_counters_version",
+        "-Wl,--export=incremental_work_counters_ptr",
+        "-Wl,--export=reset_incremental_work_counters",
+        "-Wl,--export=write_owned_driver",
+        "-Wl,--export-memory",
+        "/mnt/volume1/code/wt/bwb-native-dirty-frontier/src/experimental/wired-kernel/net-resolver.c",
+        "/mnt/volume1/code/wt/bwb-native-dirty-frontier/src/experimental/wired-kernel/memory-banks.c",
+        "/mnt/volume1/code/wt/bwb-native-dirty-frontier/src/experimental/wired-kernel/memory-circuit.c",
+        "/mnt/volume1/code/wt/bwb-native-dirty-frontier/src/experimental/wired-kernel/phase-components.c",
+        "/mnt/volume1/code/wt/bwb-native-dirty-frontier/src/experimental/wired-kernel/phase-circuit.c",
+        "/mnt/volume1/code/wt/bwb-native-dirty-frontier/src/experimental/wired-kernel/phase-schedule.c",
+        "/mnt/volume1/code/wt/bwb-native-dirty-frontier/src/experimental/wired-kernel/incremental-nets.c",
+        "-o",
+        "/tmp/sim2cx-dirty-frontier-build-v1/wired-net-kernel.wasm"
+      ],
+      "sourceSHA256": "6dff8c1442dfac4bd5c02fdd43f8c60aa756bb12660a377800d538ba8836ed75",
+      "sourceHashes": {
+        "src/experimental/wired-kernel/net-resolver.c": "6dff8c1442dfac4bd5c02fdd43f8c60aa756bb12660a377800d538ba8836ed75",
+        "src/experimental/wired-kernel/memory-banks.c": "98baf316c856a1c65b18527bd545ce1af61c273759f4f5f149c1ef5e208e5579",
+        "src/experimental/wired-kernel/memory-circuit.c": "d67debb7c80dc839be962701d67592a16eeb18f4e0d466a1d485b270d9604cc9",
+        "src/experimental/wired-kernel/phase-components.c": "3f4c4f432ab0bf7c2f7cae356b1fc89f2ce30a179c67a942c2f630e59bd4dfa7",
+        "src/experimental/wired-kernel/phase-circuit.c": "7426536620e9934e755c06f25795125f13718181bdc5d4f79e655bdeec3af8e1",
+        "src/experimental/wired-kernel/phase-schedule.c": "fb0a0601d3e3012c703cf15113cef3b3f3d134f9841fda31c785c4224d1e9357",
+        "src/experimental/wired-kernel/incremental-nets.c": "d3f0ce93a40e530af7d0fdd0f39338d07bd85d1c6501c3e4e94796c3008c345d"
+      },
+      "wasmSHA256": "4c3ce190a646abe972a1f28b9c162c9cf59a653be5148a300c0845b8e3f50e9c",
+      "notes": [
+        "Owned C, no runtime imports/WASI, no guest media.",
+        "No board backend or real-time throughput claim."
+      ]
+    }
+  },
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "logicalCPUs": 4,
+    "node": "v20.20.2"
+  },
+  "summaries": {
+    "admitted-full-scan": {
+      "medianMS": 101.05412500000011,
+      "minMS": 95.21030499999961,
+      "maxMS": 135.70697700000005,
+      "counters": {
+        "driverComparisons": 4916900,
+        "valueChangingDriverWrites": 86022,
+        "dirtyNetResolutions": 4130196,
+        "netDriverVisits": 4916900,
+        "evaluatorRows": 98338,
+        "dependencyProbes": 2603924,
+        "stagedDriverCopies": 4916900,
+        "committedEvaluatorOutputs": 2,
+        "publishNetCopies": 4130112,
+        "deltas": 49169
+      }
+    },
+    "incremental-scan": {
+      "medianMS": 84.92460900000015,
+      "minMS": 76.92632499999945,
+      "maxMS": 86.98233400000004,
+      "counters": {
+        "driverComparisons": 6248400,
+        "valueChangingDriverWrites": 86022,
+        "dirtyNetResolutions": 86105,
+        "netDriverVisits": 151657,
+        "evaluatorRows": 26630,
+        "dependencyProbes": 667808,
+        "stagedDriverCopies": 1331500,
+        "committedEvaluatorOutputs": 2,
+        "publishNetCopies": 4130112,
+        "deltas": 49169
+      }
+    },
+    "incremental-driver-frontier": {
+      "medianMS": 90.74509599999965,
+      "minMS": 62.93685699999969,
+      "maxMS": 117.29245999999989,
+      "counters": {
+        "driverComparisons": 1980824,
+        "valueChangingDriverWrites": 86022,
+        "dirtyNetResolutions": 86105,
+        "netDriverVisits": 151657,
+        "evaluatorRows": 26630,
+        "dependencyProbes": 667808,
+        "stagedDriverCopies": 1331500,
+        "committedEvaluatorOutputs": 2,
+        "publishNetCopies": 4130112,
+        "deltas": 49169
+      }
+    }
+  },
+  "categories": {
+    "admitted-full-scan": {
+      "empty-input-period": {
+        "driverComparisons": 700,
+        "valueChangingDriverWrites": 0,
+        "dirtyNetResolutions": 588,
+        "netDriverVisits": 700,
+        "evaluatorRows": 14,
+        "dependencyProbes": 378,
+        "stagedDriverCopies": 700,
+        "committedEvaluatorOutputs": 0,
+        "publishNetCopies": 588,
+        "deltas": 7
+      },
+      "one-host-pin-change": {
+        "driverComparisons": 1400,
+        "valueChangingDriverWrites": 2,
+        "dirtyNetResolutions": 1176,
+        "netDriverVisits": 1400,
+        "evaluatorRows": 28,
+        "dependencyProbes": 756,
+        "stagedDriverCopies": 1400,
+        "committedEvaluatorOutputs": 0,
+        "publishNetCopies": 1176,
+        "deltas": 14
+      },
+      "memory-write-controller-latch": {
+        "driverComparisons": 2400,
+        "valueChangingDriverWrites": 57,
+        "dirtyNetResolutions": 2016,
+        "netDriverVisits": 2400,
+        "evaluatorRows": 48,
+        "dependencyProbes": 1244,
+        "stagedDriverCopies": 2400,
+        "committedEvaluatorOutputs": 2,
+        "publishNetCopies": 1932,
+        "deltas": 24
+      },
+      "memory-read-controller-latch": {
+        "driverComparisons": 2500,
+        "valueChangingDriverWrites": 56,
+        "dirtyNetResolutions": 2100,
+        "netDriverVisits": 2500,
+        "evaluatorRows": 50,
+        "dependencyProbes": 1350,
+        "stagedDriverCopies": 2500,
+        "committedEvaluatorOutputs": 0,
+        "publishNetCopies": 2100,
+        "deltas": 25
+      }
+    },
+    "incremental-scan": {
+      "empty-input-period": {
+        "driverComparisons": 700,
+        "valueChangingDriverWrites": 0,
+        "dirtyNetResolutions": 0,
+        "netDriverVisits": 0,
+        "evaluatorRows": 0,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 0,
+        "publishNetCopies": 588,
+        "deltas": 7
+      },
+      "one-host-pin-change": {
+        "driverComparisons": 1600,
+        "valueChangingDriverWrites": 2,
+        "dirtyNetResolutions": 2,
+        "netDriverVisits": 2,
+        "evaluatorRows": 4,
+        "dependencyProbes": 108,
+        "stagedDriverCopies": 200,
+        "committedEvaluatorOutputs": 0,
+        "publishNetCopies": 1176,
+        "deltas": 14
+      },
+      "memory-write-controller-latch": {
+        "driverComparisons": 3100,
+        "valueChangingDriverWrites": 57,
+        "dirtyNetResolutions": 57,
+        "netDriverVisits": 73,
+        "evaluatorRows": 14,
+        "dependencyProbes": 326,
+        "stagedDriverCopies": 700,
+        "committedEvaluatorOutputs": 2,
+        "publishNetCopies": 1932,
+        "deltas": 24
+      },
+      "memory-read-controller-latch": {
+        "driverComparisons": 3200,
+        "valueChangingDriverWrites": 56,
+        "dirtyNetResolutions": 56,
+        "netDriverVisits": 104,
+        "evaluatorRows": 14,
+        "dependencyProbes": 378,
+        "stagedDriverCopies": 700,
+        "committedEvaluatorOutputs": 0,
+        "publishNetCopies": 2100,
+        "deltas": 25
+      }
+    },
+    "incremental-driver-frontier": {
+      "empty-input-period": {
+        "driverComparisons": 40,
+        "valueChangingDriverWrites": 0,
+        "dirtyNetResolutions": 0,
+        "netDriverVisits": 0,
+        "evaluatorRows": 0,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 0,
+        "publishNetCopies": 588,
+        "deltas": 7
+      },
+      "one-host-pin-change": {
+        "driverComparisons": 282,
+        "valueChangingDriverWrites": 2,
+        "dirtyNetResolutions": 2,
+        "netDriverVisits": 2,
+        "evaluatorRows": 4,
+        "dependencyProbes": 108,
+        "stagedDriverCopies": 200,
+        "committedEvaluatorOutputs": 0,
+        "publishNetCopies": 1176,
+        "deltas": 14
+      },
+      "memory-write-controller-latch": {
+        "driverComparisons": 1009,
+        "valueChangingDriverWrites": 57,
+        "dirtyNetResolutions": 57,
+        "netDriverVisits": 73,
+        "evaluatorRows": 14,
+        "dependencyProbes": 326,
+        "stagedDriverCopies": 700,
+        "committedEvaluatorOutputs": 2,
+        "publishNetCopies": 1932,
+        "deltas": 24
+      },
+      "memory-read-controller-latch": {
+        "driverComparisons": 1025,
+        "valueChangingDriverWrites": 56,
+        "dirtyNetResolutions": 56,
+        "netDriverVisits": 104,
+        "evaluatorRows": 14,
+        "dependencyProbes": 378,
+        "stagedDriverCopies": 700,
+        "committedEvaluatorOutputs": 0,
+        "publishNetCopies": 2100,
+        "deltas": 25
+      }
+    }
+  },
+  "raw": {
+    "admitted-full-scan": {
+      "idle": {
+        "result": 1,
+        "counters": [
+          4,
+          0,
+          3,
+          4,
+          1,
+          3,
+          4,
+          0,
+          3,
+          1
+        ],
+        "stateSHA256": "386c74536e86f82e3f9c55e6c005be8150ee16d6a661b73ba2065c7cc9795121"
+      },
+      "one-host-pin-change": {
+        "result": 1,
+        "counters": [
+          4,
+          0,
+          3,
+          4,
+          1,
+          1,
+          4,
+          0,
+          3,
+          1
+        ],
+        "stateSHA256": "53c127d833d4ebd760dcdf4e4e4ec28dd13d75ac7add12660b7531e9ed2bf3ae"
+      },
+      "x-z": {
+        "result": 2,
+        "counters": [
+          8,
+          1,
+          6,
+          8,
+          2,
+          5,
+          8,
+          1,
+          3,
+          2
+        ],
+        "stateSHA256": "3829fa09bb485e0320a34e41695e09ac67dfaefb38da9edfbbf0fefafd143e7d"
+      },
+      "conflict": {
+        "result": 1,
+        "counters": [
+          4,
+          0,
+          3,
+          4,
+          1,
+          3,
+          4,
+          0,
+          3,
+          1
+        ],
+        "stateSHA256": "1a61470c86b1dbec37029e9c8a436b2e46f572a28bd539adae078d4e0e3bb507"
+      },
+      "masked-same-net": {
+        "result": 1,
+        "counters": [
+          4,
+          0,
+          3,
+          4,
+          1,
+          3,
+          4,
+          0,
+          3,
+          1
+        ],
+        "stateSHA256": "4e33168a5c476ab0c26a1eb4ef78b62059b69b42a2af4d6fd6d113ae6ca7d55b"
+      },
+      "conflict-only": {
+        "result": 1,
+        "counters": [
+          4,
+          0,
+          3,
+          4,
+          1,
+          3,
+          4,
+          0,
+          3,
+          1
+        ],
+        "stateSHA256": "26079381f7921e8d95cf5e458a080472f64e8dd8da24dedc3b12d1310e392fb1"
+      },
+      "nonconvergence-recovery": {
+        "failed": 2147483651,
+        "recovered": 1,
+        "failedStateSHA256": "527ac17b9181abdba0618abd05bf63510211f1bd2976f935fb9f3bc07b122f14",
+        "recoveredStateSHA256": "85798c2b8b790f259905b956a0282ca12025a120c9883e3af38712cfc3881a49",
+        "recoveryCounters": [
+          3,
+          0,
+          3,
+          3,
+          1,
+          1,
+          3,
+          0,
+          3,
+          1
+        ]
+      }
+    },
+    "incremental-scan": {
+      "idle": {
+        "result": 1,
+        "counters": [
+          4,
+          0,
+          3,
+          4,
+          0,
+          0,
+          0,
+          0,
+          3,
+          1
+        ],
+        "stateSHA256": "386c74536e86f82e3f9c55e6c005be8150ee16d6a661b73ba2065c7cc9795121"
+      },
+      "one-host-pin-change": {
+        "result": 1,
+        "counters": [
+          8,
+          0,
+          1,
+          1,
+          1,
+          1,
+          4,
+          0,
+          3,
+          1
+        ],
+        "stateSHA256": "53c127d833d4ebd760dcdf4e4e4ec28dd13d75ac7add12660b7531e9ed2bf3ae"
+      },
+      "x-z": {
+        "result": 2,
+        "counters": [
+          16,
+          1,
+          3,
+          5,
+          2,
+          5,
+          8,
+          1,
+          3,
+          2
+        ],
+        "stateSHA256": "3829fa09bb485e0320a34e41695e09ac67dfaefb38da9edfbbf0fefafd143e7d"
+      },
+      "conflict": {
+        "result": 1,
+        "counters": [
+          8,
+          0,
+          1,
+          2,
+          1,
+          3,
+          4,
+          0,
+          3,
+          1
+        ],
+        "stateSHA256": "1a61470c86b1dbec37029e9c8a436b2e46f572a28bd539adae078d4e0e3bb507"
+      },
+      "masked-same-net": {
+        "result": 1,
+        "counters": [
+          4,
+          0,
+          1,
+          2,
+          0,
+          0,
+          0,
+          0,
+          3,
+          1
+        ],
+        "stateSHA256": "4e33168a5c476ab0c26a1eb4ef78b62059b69b42a2af4d6fd6d113ae6ca7d55b"
+      },
+      "conflict-only": {
+        "result": 1,
+        "counters": [
+          4,
+          0,
+          1,
+          2,
+          0,
+          0,
+          0,
+          0,
+          3,
+          1
+        ],
+        "stateSHA256": "26079381f7921e8d95cf5e458a080472f64e8dd8da24dedc3b12d1310e392fb1"
+      },
+      "nonconvergence-recovery": {
+        "failed": 2147483651,
+        "recovered": 1,
+        "failedStateSHA256": "527ac17b9181abdba0618abd05bf63510211f1bd2976f935fb9f3bc07b122f14",
+        "recoveredStateSHA256": "85798c2b8b790f259905b956a0282ca12025a120c9883e3af38712cfc3881a49",
+        "recoveryCounters": [
+          6,
+          0,
+          1,
+          1,
+          1,
+          1,
+          3,
+          0,
+          3,
+          1
+        ]
+      }
+    },
+    "incremental-driver-frontier": {
+      "idle": {
+        "result": 1,
+        "counters": [
+          4,
+          0,
+          3,
+          4,
+          0,
+          0,
+          0,
+          0,
+          3,
+          1
+        ],
+        "stateSHA256": "386c74536e86f82e3f9c55e6c005be8150ee16d6a661b73ba2065c7cc9795121"
+      },
+      "one-host-pin-change": {
+        "result": 1,
+        "counters": [
+          8,
+          1,
+          1,
+          1,
+          1,
+          1,
+          4,
+          0,
+          3,
+          1
+        ],
+        "stateSHA256": "53c127d833d4ebd760dcdf4e4e4ec28dd13d75ac7add12660b7531e9ed2bf3ae"
+      },
+      "x-z": {
+        "result": 2,
+        "counters": [
+          12,
+          3,
+          3,
+          5,
+          2,
+          5,
+          8,
+          1,
+          3,
+          2
+        ],
+        "stateSHA256": "3829fa09bb485e0320a34e41695e09ac67dfaefb38da9edfbbf0fefafd143e7d"
+      },
+      "conflict": {
+        "result": 1,
+        "counters": [
+          8,
+          1,
+          1,
+          2,
+          1,
+          3,
+          4,
+          0,
+          3,
+          1
+        ],
+        "stateSHA256": "1a61470c86b1dbec37029e9c8a436b2e46f572a28bd539adae078d4e0e3bb507"
+      },
+      "masked-same-net": {
+        "result": 1,
+        "counters": [
+          4,
+          1,
+          1,
+          2,
+          0,
+          0,
+          0,
+          0,
+          3,
+          1
+        ],
+        "stateSHA256": "4e33168a5c476ab0c26a1eb4ef78b62059b69b42a2af4d6fd6d113ae6ca7d55b"
+      },
+      "conflict-only": {
+        "result": 1,
+        "counters": [
+          4,
+          1,
+          1,
+          2,
+          0,
+          0,
+          0,
+          0,
+          3,
+          1
+        ],
+        "stateSHA256": "26079381f7921e8d95cf5e458a080472f64e8dd8da24dedc3b12d1310e392fb1"
+      },
+      "nonconvergence-recovery": {
+        "failed": 2147483651,
+        "recovered": 1,
+        "failedStateSHA256": "527ac17b9181abdba0618abd05bf63510211f1bd2976f935fb9f3bc07b122f14",
+        "recoveredStateSHA256": "85798c2b8b790f259905b956a0282ca12025a120c9883e3af38712cfc3881a49",
+        "recoveryCounters": [
+          6,
+          1,
+          1,
+          1,
+          1,
+          1,
+          3,
+          0,
+          3,
+          1
+        ]
+      }
+    }
+  },
+  "samples": [
+    {
+      "round": 0,
+      "mode": "admitted-full-scan",
+      "elapsedMS": 135.70697700000005,
+      "counters": {
+        "driverComparisons": 4916900,
+        "valueChangingDriverWrites": 86022,
+        "dirtyNetResolutions": 4130196,
+        "netDriverVisits": 4916900,
+        "evaluatorRows": 98338,
+        "dependencyProbes": 2603924,
+        "stagedDriverCopies": 4916900,
+        "committedEvaluatorOutputs": 2,
+        "publishNetCopies": 4130112,
+        "deltas": 49169
+      },
+      "stateSHA256": "32a70e09935588c1d031965fed5012d4573ea85bd97b5ba76be6e96de3cc81f2",
+      "phaseSHA256": "ca6f396c6c11a84479de980d4738532061b51cf4684ca3dd7049c8a6eeb365d0",
+      "memorySHA256": "e33680758847ede8d29aa1196b0edc355c2ae17de208079013d4e201f67d422c"
+    },
+    {
+      "round": 0,
+      "mode": "incremental-scan",
+      "elapsedMS": 86.98233400000004,
+      "counters": {
+        "driverComparisons": 6248400,
+        "valueChangingDriverWrites": 86022,
+        "dirtyNetResolutions": 86105,
+        "netDriverVisits": 151657,
+        "evaluatorRows": 26630,
+        "dependencyProbes": 667808,
+        "stagedDriverCopies": 1331500,
+        "committedEvaluatorOutputs": 2,
+        "publishNetCopies": 4130112,
+        "deltas": 49169
+      },
+      "stateSHA256": "32a70e09935588c1d031965fed5012d4573ea85bd97b5ba76be6e96de3cc81f2",
+      "phaseSHA256": "ca6f396c6c11a84479de980d4738532061b51cf4684ca3dd7049c8a6eeb365d0",
+      "memorySHA256": "e33680758847ede8d29aa1196b0edc355c2ae17de208079013d4e201f67d422c"
+    },
+    {
+      "round": 0,
+      "mode": "incremental-driver-frontier",
+      "elapsedMS": 117.29245999999989,
+      "counters": {
+        "driverComparisons": 1980824,
+        "valueChangingDriverWrites": 86022,
+        "dirtyNetResolutions": 86105,
+        "netDriverVisits": 151657,
+        "evaluatorRows": 26630,
+        "dependencyProbes": 667808,
+        "stagedDriverCopies": 1331500,
+        "committedEvaluatorOutputs": 2,
+        "publishNetCopies": 4130112,
+        "deltas": 49169
+      },
+      "stateSHA256": "32a70e09935588c1d031965fed5012d4573ea85bd97b5ba76be6e96de3cc81f2",
+      "phaseSHA256": "ca6f396c6c11a84479de980d4738532061b51cf4684ca3dd7049c8a6eeb365d0",
+      "memorySHA256": "e33680758847ede8d29aa1196b0edc355c2ae17de208079013d4e201f67d422c"
+    },
+    {
+      "round": 1,
+      "mode": "incremental-driver-frontier",
+      "elapsedMS": 62.93685699999969,
+      "counters": {
+        "driverComparisons": 1980824,
+        "valueChangingDriverWrites": 86022,
+        "dirtyNetResolutions": 86105,
+        "netDriverVisits": 151657,
+        "evaluatorRows": 26630,
+        "dependencyProbes": 667808,
+        "stagedDriverCopies": 1331500,
+        "committedEvaluatorOutputs": 2,
+        "publishNetCopies": 4130112,
+        "deltas": 49169
+      },
+      "stateSHA256": "32a70e09935588c1d031965fed5012d4573ea85bd97b5ba76be6e96de3cc81f2",
+      "phaseSHA256": "ca6f396c6c11a84479de980d4738532061b51cf4684ca3dd7049c8a6eeb365d0",
+      "memorySHA256": "e33680758847ede8d29aa1196b0edc355c2ae17de208079013d4e201f67d422c"
+    },
+    {
+      "round": 1,
+      "mode": "incremental-scan",
+      "elapsedMS": 84.92460900000015,
+      "counters": {
+        "driverComparisons": 6248400,
+        "valueChangingDriverWrites": 86022,
+        "dirtyNetResolutions": 86105,
+        "netDriverVisits": 151657,
+        "evaluatorRows": 26630,
+        "dependencyProbes": 667808,
+        "stagedDriverCopies": 1331500,
+        "committedEvaluatorOutputs": 2,
+        "publishNetCopies": 4130112,
+        "deltas": 49169
+      },
+      "stateSHA256": "32a70e09935588c1d031965fed5012d4573ea85bd97b5ba76be6e96de3cc81f2",
+      "phaseSHA256": "ca6f396c6c11a84479de980d4738532061b51cf4684ca3dd7049c8a6eeb365d0",
+      "memorySHA256": "e33680758847ede8d29aa1196b0edc355c2ae17de208079013d4e201f67d422c"
+    },
+    {
+      "round": 1,
+      "mode": "admitted-full-scan",
+      "elapsedMS": 101.05412500000011,
+      "counters": {
+        "driverComparisons": 4916900,
+        "valueChangingDriverWrites": 86022,
+        "dirtyNetResolutions": 4130196,
+        "netDriverVisits": 4916900,
+        "evaluatorRows": 98338,
+        "dependencyProbes": 2603924,
+        "stagedDriverCopies": 4916900,
+        "committedEvaluatorOutputs": 2,
+        "publishNetCopies": 4130112,
+        "deltas": 49169
+      },
+      "stateSHA256": "32a70e09935588c1d031965fed5012d4573ea85bd97b5ba76be6e96de3cc81f2",
+      "phaseSHA256": "ca6f396c6c11a84479de980d4738532061b51cf4684ca3dd7049c8a6eeb365d0",
+      "memorySHA256": "e33680758847ede8d29aa1196b0edc355c2ae17de208079013d4e201f67d422c"
+    },
+    {
+      "round": 2,
+      "mode": "admitted-full-scan",
+      "elapsedMS": 95.21030499999961,
+      "counters": {
+        "driverComparisons": 4916900,
+        "valueChangingDriverWrites": 86022,
+        "dirtyNetResolutions": 4130196,
+        "netDriverVisits": 4916900,
+        "evaluatorRows": 98338,
+        "dependencyProbes": 2603924,
+        "stagedDriverCopies": 4916900,
+        "committedEvaluatorOutputs": 2,
+        "publishNetCopies": 4130112,
+        "deltas": 49169
+      },
+      "stateSHA256": "32a70e09935588c1d031965fed5012d4573ea85bd97b5ba76be6e96de3cc81f2",
+      "phaseSHA256": "ca6f396c6c11a84479de980d4738532061b51cf4684ca3dd7049c8a6eeb365d0",
+      "memorySHA256": "e33680758847ede8d29aa1196b0edc355c2ae17de208079013d4e201f67d422c"
+    },
+    {
+      "round": 2,
+      "mode": "incremental-scan",
+      "elapsedMS": 76.92632499999945,
+      "counters": {
+        "driverComparisons": 6248400,
+        "valueChangingDriverWrites": 86022,
+        "dirtyNetResolutions": 86105,
+        "netDriverVisits": 151657,
+        "evaluatorRows": 26630,
+        "dependencyProbes": 667808,
+        "stagedDriverCopies": 1331500,
+        "committedEvaluatorOutputs": 2,
+        "publishNetCopies": 4130112,
+        "deltas": 49169
+      },
+      "stateSHA256": "32a70e09935588c1d031965fed5012d4573ea85bd97b5ba76be6e96de3cc81f2",
+      "phaseSHA256": "ca6f396c6c11a84479de980d4738532061b51cf4684ca3dd7049c8a6eeb365d0",
+      "memorySHA256": "e33680758847ede8d29aa1196b0edc355c2ae17de208079013d4e201f67d422c"
+    },
+    {
+      "round": 2,
+      "mode": "incremental-driver-frontier",
+      "elapsedMS": 90.74509599999965,
+      "counters": {
+        "driverComparisons": 1980824,
+        "valueChangingDriverWrites": 86022,
+        "dirtyNetResolutions": 86105,
+        "netDriverVisits": 151657,
+        "evaluatorRows": 26630,
+        "dependencyProbes": 667808,
+        "stagedDriverCopies": 1331500,
+        "committedEvaluatorOutputs": 2,
+        "publishNetCopies": 4130112,
+        "deltas": 49169
+      },
+      "stateSHA256": "32a70e09935588c1d031965fed5012d4573ea85bd97b5ba76be6e96de3cc81f2",
+      "phaseSHA256": "ca6f396c6c11a84479de980d4738532061b51cf4684ca3dd7049c8a6eeb365d0",
+      "memorySHA256": "e33680758847ede8d29aa1196b0edc355c2ae17de208079013d4e201f67d422c"
+    }
+  ],
+  "notes": [
+    "Counters are reset after construction/admission and read outside each timed region.",
+    "The 8,194-period schedule contains reset/idle, controller/latch changes, 1,024 memory writes and 1,024 memory reads; every period and sampled read executes.",
+    "Raw cases isolate idle, one input change, X/Z, contention, a masked same-net change, conflict-only publication and nonconvergence/recovery.",
+    "Timing ranges are shared-host component measurements and make no speed or full-board capacity claim."
+  ]
+}

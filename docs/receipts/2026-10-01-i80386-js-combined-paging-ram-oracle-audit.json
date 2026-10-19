@@ -1,0 +1,188 @@
+{
+  "status": "qualified-bounded-js-actual-board-protected-paging-ram-smc-a20",
+  "measuredSourceRevision": "15f010c92b5227622b76da815bd47000e28a988c",
+  "measuredSourceInputs": 41,
+  "capture": {
+    "bytes": 4762372,
+    "sha256": "bcf52cc49849a2c7889077d2b6f80d980916766d175ab78cd656689d9a7f3ab2",
+    "gzipBytes": 91478,
+    "gzipSha256": "93d02510df5d98c7db2b079bd2d316e56111162fc4d4d58ec685851e7b950bb1"
+  },
+  "rootIndependentAudit": {
+    "status": "root-independent-linked-ROM-source-backing-call-delivery-frame-PIT-pair-pass",
+    "wholeCapturesByteIdentical": true,
+    "captures": [
+      {
+        "result": "PASS",
+        "captureSha256": "bcf52cc49849a2c7889077d2b6f80d980916766d175ab78cd656689d9a7f3ab2",
+        "captureBytes": 4762372,
+        "sourceRevision": "15f010c92b5227622b76da815bd47000e28a988c",
+        "sourceInputs": 41,
+        "romSha256": "608930336bd6ea9bc7a49ae02d823f54c46786a2359b335c0c1ccee55f7bb938",
+        "physicalBackingSha256": "1911190e781425ea0b63f09b2ad3c23973f195ca27f2436669a44c829d7dc4e1",
+        "orderedBus": {
+          "fetch": 761,
+          "write": 347,
+          "read": 857
+        },
+        "protectedRamEntries": 8,
+        "quanta": 192,
+        "attempts": 194,
+        "functionalClocks": 1156,
+        "independentLinkedCallFramesAndFaultIrqFrames": true,
+        "independentRationalPitAndMode0Countdown": true
+      },
+      {
+        "result": "PASS",
+        "captureSha256": "bcf52cc49849a2c7889077d2b6f80d980916766d175ab78cd656689d9a7f3ab2",
+        "captureBytes": 4762372,
+        "sourceRevision": "15f010c92b5227622b76da815bd47000e28a988c",
+        "sourceInputs": 41,
+        "romSha256": "608930336bd6ea9bc7a49ae02d823f54c46786a2359b335c0c1ccee55f7bb938",
+        "physicalBackingSha256": "1911190e781425ea0b63f09b2ad3c23973f195ca27f2436669a44c829d7dc4e1",
+        "orderedBus": {
+          "fetch": 761,
+          "write": 347,
+          "read": 857
+        },
+        "protectedRamEntries": 8,
+        "quanta": 192,
+        "attempts": 194,
+        "functionalClocks": 1156,
+        "independentLinkedCallFramesAndFaultIrqFrames": true,
+        "independentRationalPitAndMode0Countdown": true
+      }
+    ]
+  },
+  "independentAgentAudits": {
+    "formal": {
+      "capture": "/tmp/bw-combined-js-pilot-20261001/formal-capture-15f010c9.json",
+      "captureSha256": "bcf52cc49849a2c7889077d2b6f80d980916766d175ab78cd656689d9a7f3ab2",
+      "qualifiedSource": true,
+      "sourceRevision": "15f010c92b5227622b76da815bd47000e28a988c",
+      "sourceInputs": 41,
+      "sourceDiagnosticDifferences": [],
+      "romSha256": "608930336bd6ea9bc7a49ae02d823f54c46786a2359b335c0c1ccee55f7bb938",
+      "memorySha256": "1911190e781425ea0b63f09b2ad3c23973f195ca27f2436669a44c829d7dc4e1",
+      "counts": {
+        "translation": 1049,
+        "fetch": 761,
+        "write": 347,
+        "read": 857,
+        "translation-invalidate": 36,
+        "pio": 25,
+        "pit-output": 1,
+        "ack": 1,
+        "a20-transition": 2
+      },
+      "providers": {
+        "byte": 1114,
+        "read32": 504
+      },
+      "quanta": 192,
+      "attempts": 194,
+      "clocks": 1156,
+      "A20Transitions": [
+        [
+          146,
+          880,
+          false
+        ],
+        [
+          167,
+          1006,
+          true
+        ]
+      ],
+      "RAMEntryQuanta": [
+        58,
+        63,
+        149,
+        153,
+        158,
+        162,
+        170,
+        175
+      ],
+      "checkCount": 27260,
+      "result": "PASS",
+      "limitations": [
+        "Independent byte/table/frame/timer audit, not an independent CPU implementation.",
+        "Translation invalidation reflects actual JS board policy, not architectural/native TLB parity."
+      ]
+    },
+    "repeat": {
+      "capture": "/tmp/bw-combined-js-pilot-20261001/root-repeat-capture-15f010c9.json",
+      "captureSha256": "bcf52cc49849a2c7889077d2b6f80d980916766d175ab78cd656689d9a7f3ab2",
+      "qualifiedSource": true,
+      "sourceRevision": "15f010c92b5227622b76da815bd47000e28a988c",
+      "sourceInputs": 41,
+      "sourceDiagnosticDifferences": [],
+      "romSha256": "608930336bd6ea9bc7a49ae02d823f54c46786a2359b335c0c1ccee55f7bb938",
+      "memorySha256": "1911190e781425ea0b63f09b2ad3c23973f195ca27f2436669a44c829d7dc4e1",
+      "counts": {
+        "translation": 1049,
+        "fetch": 761,
+        "write": 347,
+        "read": 857,
+        "translation-invalidate": 36,
+        "pio": 25,
+        "pit-output": 1,
+        "ack": 1,
+        "a20-transition": 2
+      },
+      "providers": {
+        "byte": 1114,
+        "read32": 504
+      },
+      "quanta": 192,
+      "attempts": 194,
+      "clocks": 1156,
+      "A20Transitions": [
+        [
+          146,
+          880,
+          false
+        ],
+        [
+          167,
+          1006,
+          true
+        ]
+      ],
+      "RAMEntryQuanta": [
+        58,
+        63,
+        149,
+        153,
+        158,
+        162,
+        170,
+        175
+      ],
+      "checkCount": 27260,
+      "result": "PASS",
+      "limitations": [
+        "Independent byte/table/frame/timer audit, not an independent CPU implementation.",
+        "Translation invalidation reflects actual JS board policy, not architectural/native TLB parity."
+      ]
+    }
+  },
+  "tests": {
+    "passed": 37,
+    "failed": 0,
+    "skipped": 0,
+    "assembler": 1,
+    "actualBaseline": 1,
+    "targetedCorruptions": 35
+  },
+  "limitations": {
+    "javascriptProfile": "compatibility",
+    "strict386": false,
+    "combinedNativeQualification": false,
+    "architecturalStalePteParity": false,
+    "performanceMeasured": false,
+    "fullAtBoot": false,
+    "windowsOrDoomAcceptance": false
+  }
+}

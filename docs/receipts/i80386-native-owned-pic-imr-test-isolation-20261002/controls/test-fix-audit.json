@@ -1,0 +1,62 @@
+{
+  "status": "PASS_TEST_ONLY_CLEAN_FIXTURE_ISOLATION_WITH_ACTUAL_DIRTY_CALLER",
+  "publicationHead": "726c1ca1799a4d316c206ae4ff9f72bea9c8bb89",
+  "testPath": "test/i80386-native-owned-pic-imr-profile.test.mjs",
+  "testSha256": "c454e0a7b65832a39004d360ad00be1ce8c2226b7fa85ddce50f49b879a1c96d",
+  "sourceControlsPerRun": 17,
+  "callerConditions": [
+    "current caller with test-only uncommitted derivative",
+    "owned caller tracked package-lock plus untracked firmware directory"
+  ],
+  "records": {
+    "caller": {
+      "command": [
+        "/tmp/node-v22.23.3-linux-x64/bin/node",
+        "--max-old-space-size=512",
+        "--test",
+        "/tmp/bw-board-386-owned-pic-imr-publication-20261002/test/i80386-native-owned-pic-imr-profile.test.mjs"
+      ],
+      "returncode": 0,
+      "timeout": false,
+      "wallSeconds": 49.473120752722025,
+      "testSha256": "c454e0a7b65832a39004d360ad00be1ce8c2226b7fa85ddce50f49b879a1c96d",
+      "scope": "Source only; no addon/build/guest",
+      "streams": {
+        "stdout": {
+          "sha256": "ba39bb23b26e802ee012fb3342cb85a77f2f1e83f9fb332cb01652eb9335ec31",
+          "bytes": 3944
+        },
+        "stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "dirty-caller": {
+      "command": [
+        "/tmp/node-v22.23.3-linux-x64/bin/node",
+        "--max-old-space-size=512",
+        "--test",
+        "/tmp/bw-pic-dirty-caller-zscjndgd/checkout/test/i80386-native-owned-pic-imr-profile.test.mjs"
+      ],
+      "returncode": 0,
+      "timeout": false,
+      "wallSeconds": 45.89374872855842,
+      "testSha256": "c454e0a7b65832a39004d360ad00be1ce8c2226b7fa85ddce50f49b879a1c96d",
+      "scope": "Source only; no addon/build/guest",
+      "streams": {
+        "stdout": {
+          "sha256": "6c78840f295953b6ad64da379315f84c3b04deaa10acf1cb2ad5911b485f4aef",
+          "bytes": 3940
+        },
+        "stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    }
+  },
+  "productionChanges": [],
+  "historicalFrozenSourceControls": 16,
+  "scope": "Real production identity/authenticator from detached currentHEAD fixture.121otherinputs current/Git matched before any control; sevenmetadata controls retained; tracked+untrackedfixturedirty denied and restored; only owned temporaryworktrees cleaned. Frozena6/3792 and productionclean guard unchanged. No native/addon/build/guest/CIrerun."
+}

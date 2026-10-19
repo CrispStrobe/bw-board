@@ -1,0 +1,24 @@
+{
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=128",
+    "--input-type=module",
+    "-e",
+    "import {readFileSync}from 'node:fs';import {compareNativeReference,compareNativeModes,compareNativePorts,compareNativeTraceSnapshots}from './scripts/bochs-cpu3-native-owned-8042-interface/reference.mjs';const root=\"/home/runner/work/_temp/fixed-8042-interface-evidence\";const load=p=>JSON.parse(readFileSync(root+'/'+p));const r=load('reference.json'),off=load('off/capture.json'),on=load('on/capture.json');console.log(JSON.stringify({off:compareNativeReference(off,r),on:compareNativeReference(on,r),modes:compareNativeModes(off,on),ports:compareNativePorts(readFileSync(root+'/on.stderr','utf8'),r),traceSnapshots:compareNativeTraceSnapshots(readFileSync(root+'/on.stderr','utf8'),on)}));"
+  ],
+  "cwd": "/home/runner/work/bw-board/bw-board/publication",
+  "pid": 9158,
+  "cpuSeconds": 10,
+  "wallSeconds": 30,
+  "coreBytes": 0,
+  "fileBytes": 268435456,
+  "niceIncrement": 10,
+  "blankHooks": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  }
+}

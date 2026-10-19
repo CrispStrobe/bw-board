@@ -1,0 +1,210 @@
+/**
+ * Sensor devices — ultrasonic, PIR, tilt, flex, force, phototransistor.
+ *
+ * These are behavioral models controlled via setControl():
+ * - Ultrasonic: control = distance (cm), output = pulse width
+ * - PIR: control = 0/1 (motion detected), output = digital HIGH/LOW
+ * - Tilt: control = 0/1 (tilted), acts as switch
+ * - Flex: control = 0..1 (bend amount), resistance varies
+ * - Force: control = 0..1 (pressure), resistance varies
+ * - Phototransistor: control = 0..1 (light), current source
+ *
+ * @module
+ */
+
+import { registerDevice } from '../devices.js';
+import { ambient, surfaceDistanceCm } from '../world.js';
+
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
+
+/**
+ * Register all sensor device models.
+ */
+export function registerSensors() {
+
+  // ─── Ultrasonic (HC-SR04) ──────────────────────────────────────────
+  // The module's own sequence (HC-SR04 datasheet): a TRIG pulse of at least
+  // 10 µs; when it ENDS the module sends 8 cycles of 40 kHz (200 µs) and
+  // only then raises ECHO, which stays high for the round trip — at
+  // 343 m/s, 58 µs per cm. It ignores TRIG while a measurement runs.
+  //
+  // Until 2026-10-05 ECHO rose at the TRIG RISING edge. A fast core never
+  // noticed; a 12T 8051 spends ~400 µs between its trigger and its first
+  // look at ECHO, so it saw the pulse already running and read 29 cm for
+  // 37. The burst delay is what gives every core time to get ready.
+  registerDevice('ultrasonic', {
+    terminals: ['vcc', 'gnd', 'trig', 'echo'],
+
+    init() {
+      return {
+        drives: { echo: { vTh: 0, rTh: 50 } },
+        _trigHigh: false,
+        _echoStartNs: 0n,
+        _echoEndNs: 0n,
+        _pending: false,
+        _measuring: false,
+      };
+    },
+
+    update(part, state, read, tNs) {
+      const vcc = read('vcc') || 5.0;
+      const threshold = vcc * 0.5;
+      const trigHigh = read('trig') > threshold;
+
+      let changed = false;
+
+      // Trigger FALLING edge → burst, then the echo (unless one is running).
+      if (!trigHigh && state._trigHigh && !state._pending && !state._measuring) {
+        // Own param, else the surface in front (world.js), else 1 m.
+        const distanceCm = part.params?.distance ?? surfaceDistanceCm(part) ?? 100;
+        state._echoStartNs = tNs + 200_000n;              // 8 cycles at 40 kHz
+        state._echoEndNs = state._echoStartNs + BigInt(Math.round(distanceCm * 58 * 1000));
+        state._pending = true;
+        state._wakeNs = state._echoStartNs;
+      }
+      state._trigHigh = trigHigh;
+
+      if (state._pending && tNs >= state._echoStartNs) {
+        state._pending = false;
+        state._measuring = true;
+        state._wakeNs = 0n;
+        state.drives.echo = { vTh: vcc, rTh: 50 };
+        changed = true;
+      }
+
+      // End echo pulse when time is up
+      if (state._measuring && tNs >= state._echoEndNs) {
+        state._measuring = false;
+        state.drives.echo = { vTh: 0, rTh: 50 };
+        changed = true;
+      }
+
+      return changed;
+    },
+  });
+
+  // ─── PIR motion sensor ─────────────────────────────────────────────
+  // Digital output: HIGH when motion detected (control = 1).
+  registerDevice('pir', {
+    terminals: ['vcc', 'gnd', 'out'],
+
+    init() {
+      return { drives: { out: { vTh: 0, rTh: 50 } } };
+    },
+
+    stamp(ctx) { /* no analog loading */ },
+
+    update(part, state, read) {
+      const vcc = read('vcc') || 5.0;
+      const motion = part.params?.motion ?? 0;
+      const newDrive = motion ? { vTh: vcc, rTh: 50 } : { vTh: 0, rTh: 50 };
+
+      if ((state.drives.out?.vTh ?? 0) === newDrive.vTh) return false;
+      state.drives.out = newDrive;
+      return true;
+    },
+  });
+
+  // ─── Tilt sensor ───────────────────────────────────────────────────
+  // Acts as a switch: closed when upright, open when tilted.
+  // Control = 0 (upright/closed) or 1 (tilted/open).
+  registerDevice('tilt_sensor', {
+    terminals: ['a', 'b'],
+
+    init() { return { drives: {}, _closed: true }; },
+
+    stamp(ctx, part, state) {
+      if (state._closed) {
+        ctx.conductance('a', 'b', 1 / 0.1); // closed: ~0.1Ω
+      }
+      // open: no conductance
+    },
+
+    update(part, state) {
+      const tilted = (part.params?.tilted ?? 0) === 1;
+      const shouldClose = !tilted;
+      if (shouldClose === state._closed) return false;
+      state._closed = shouldClose;
+      return true;
+    },
+  });
+
+  // ─── Flex sensor ───────────────────────────────────────────────────
+  // Resistance varies with bend: straight = rFlat, fully bent = rBent.
+  // Control = 0..1 (bend amount).
+  registerDevice('flex_sensor', {
+    terminals: ['a', 'b'],
+
+    init() { return { drives: {}, _ohms: 25000 }; },
+
+    stamp(ctx, part, state) {
+      ctx.conductance('a', 'b', 1 / state._ohms);
+    },
+
+    update(part, state) {
+      const bend = part.params?.bend ?? 0;
+      const rFlat = part.params?.rFlat ?? 25000;
+      const rBent = part.params?.rBent ?? 100000;
+      // Linear interpolation
+      const newOhms = rFlat + (rBent - rFlat) * bend;
+      if (Math.abs(newOhms - state._ohms) < 1) return false;
+      state._ohms = newOhms;
+      return true;
+    },
+  });
+
+  // ─── Force sensor (FSR) ────────────────────────────────────────────
+  // Resistance decreases with pressure: no force = very high R, full force = low R.
+  registerDevice('force_sensor', {
+    terminals: ['a', 'b'],
+
+    init() { return { drives: {}, _ohms: 1e6 }; },
+
+    stamp(ctx, part, state) {
+      ctx.conductance('a', 'b', 1 / state._ohms);
+    },
+
+    update(part, state) {
+      const force = part.params?.force ?? 0;
+      const rNone = part.params?.rNone ?? 1e6;   // no force: 1MΩ
+      const rFull = part.params?.rFull ?? 200;    // full force: 200Ω
+      // Exponential interpolation (FSRs are logarithmic)
+      const newOhms = force > 0.01
+        ? rNone * Math.pow(rFull / rNone, force)
+        : rNone;
+      if (Math.abs(newOhms - state._ohms) / state._ohms < 0.01) return false;
+      state._ohms = newOhms;
+      return true;
+    },
+  });
+
+  // ─── Phototransistor ───────────────────────────────────────────────
+  // Current source proportional to light (control = 0..1).
+  // Collector-emitter, like a transistor but light-controlled.
+  registerDevice('phototransistor', {
+    terminals: ['collector', 'emitter'],
+
+    init() { return { drives: {}, _current: 0 }; },
+
+    stamp(ctx, part, state) {
+      if (state._current > 0) {
+        ctx.current('collector', -state._current);
+        ctx.current('emitter', state._current);
+      }
+    },
+
+    update(part, state) {
+      const light = ambient(part, 'light', 0);
+      const iMax = part.params?.iMax ?? 0.005; // 5mA at full light
+      const newCurrent = light * iMax;
+      if (Math.abs(newCurrent - state._current) < 1e-6) return false;
+      state._current = newCurrent;
+      return true;
+    },
+  });
+}

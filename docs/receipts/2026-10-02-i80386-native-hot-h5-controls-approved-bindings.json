@@ -1,0 +1,18 @@
+{
+  "revision": "ef106b4ae3a2ca55e9cc3253597ec66773e07847",
+  "tree": "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-hot-h5-20261001",
+  "manifestPath": "/mnt/volume1/tmp-astra/native-hot-build-h5-20261001/prepare.json",
+  "manifestSha256": "48d432eea6dded26395957ce49ae250bcdd4e37e9ee101a4ba34b64709f6f4b9",
+  "addonPath": "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-hot-h5-20261001/bochs/bw_direct.node",
+  "addonSha256": "c52943191195faae07107049dcea594f8e35451cff6d7aa0cafc485886895fc0",
+  "configSha256": "d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c",
+  "bindingHelperSha256": "d14f04ccdea81bf3c9e61d9114396a62a1550999f4b697fa6b67505a72299c6a",
+  "helperHashes": {
+    "run.py": "f31d1a0f36070fa4a2af196aa9cfc1fbf03301deeac82ad95c3d1111ea46a4ac",
+    "child.mjs": "e76c5264b269f09d10b582fe1131cd90c48cf9c247fd52e15c722ba9dafe6662",
+    "prepare.py": "5ac493f8bace53312640f15ddc34cbeff7814b965923ce70d2856f46a53f914b",
+    "preparation.json": "8e893fd63a5865e094f7b399563263c533c7ea922c0d263c9d1b01bfe1deaab9",
+    "plan.json": "18cd5f5d28fbe8cd1b95f1f2a3bedcea579bc5e781cf2ad813b3f8377e5fdb48",
+    "build-bindings.py": "d14f04ccdea81bf3c9e61d9114396a62a1550999f4b697fa6b67505a72299c6a"
+  }
+}

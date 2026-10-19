@@ -1,0 +1,107 @@
+{
+  "controls/parent.py": {
+    "origin": "/tmp/native-paged-int-iret-source-controls-20261004/parent.py",
+    "bytes": 4592,
+    "sha256": "e44fb341f4748908113dde6283893188c1958fa301c23f5cc5b06b62e7cee036"
+  },
+  "controls/invocation.json": {
+    "origin": "/tmp/native-paged-int-iret-source-controls-20261004/invocation.json",
+    "bytes": 720,
+    "sha256": "502e2369f44911874cf74cd177d1b35887171db9007e854e39a682aa951a9244"
+  },
+  "controls/before.json": {
+    "origin": "/tmp/native-paged-int-iret-source-controls-20261004/before.json",
+    "bytes": 8202,
+    "sha256": "76aae5c0f27837b048f9bd100b3924399fe117650d33d754e597538d6e2c929c"
+  },
+  "controls/after.json": {
+    "origin": "/tmp/native-paged-int-iret-source-controls-20261004/after.json",
+    "bytes": 8202,
+    "sha256": "76aae5c0f27837b048f9bd100b3924399fe117650d33d754e597538d6e2c929c"
+  },
+  "controls/stdout": {
+    "origin": "/tmp/native-paged-int-iret-source-controls-20261004/stdout",
+    "bytes": 2469,
+    "sha256": "60f4a2f1ddf51c97653e21a6cb31ef295e866c4a89b21450ce8d7d4c7f89082a"
+  },
+  "controls/stderr": {
+    "origin": "/tmp/native-paged-int-iret-source-controls-20261004/stderr",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "controls/exit.json": {
+    "origin": "/tmp/native-paged-int-iret-source-controls-20261004/exit.json",
+    "bytes": 173,
+    "sha256": "783a6170ab00219771aa5b04a15cdfb70b99d4dab42ede9137e2549cb85adcfe"
+  },
+  "controls/coder-audit.py": {
+    "origin": "/tmp/native-paged-int-iret-source-controls-20261004/coder-audit.py",
+    "bytes": 4555,
+    "sha256": "e30a8bcef63d939f2179ee3ec56419091a7bef30466de03e47c718496148a7cb"
+  },
+  "controls/coder-audit.json": {
+    "origin": "/tmp/native-paged-int-iret-source-controls-20261004/coder-audit.json",
+    "bytes": 644,
+    "sha256": "bf7b2a22b88a6bda203ecde4b235772df1b375093cd515656e4fc62e112ab9d6"
+  },
+  "controls/root-saved-capture-audit.json": {
+    "origin": "/tmp/native-paged-int-iret-source-controls-20261004/root-saved-capture-audit.json",
+    "bytes": 386,
+    "sha256": "4618246bd9da963e4503381d2f1580268b8ae5e214b1991fc312e28c457239a6"
+  },
+  "auth/parent.py": {
+    "origin": "/tmp/native-paged-int-iret-source-auth-20261004/parent.py",
+    "bytes": 4529,
+    "sha256": "51ac33e77ee315c82669834d75db8d0c210cc4b0ce286e099d988e5aa69517b3"
+  },
+  "auth/invocation.json": {
+    "origin": "/tmp/native-paged-int-iret-source-auth-20261004/invocation.json",
+    "bytes": 757,
+    "sha256": "34f0fd7adc611035b843f23fd927111b776095ace9515652ff08df2e99bbc0f0"
+  },
+  "auth/before.json": {
+    "origin": "/tmp/native-paged-int-iret-source-auth-20261004/before.json",
+    "bytes": 8202,
+    "sha256": "458f3b9b22c206fd0ecf055170a7a9d510c1b8b53206eb21d2f95703a10a76b4"
+  },
+  "auth/after.json": {
+    "origin": "/tmp/native-paged-int-iret-source-auth-20261004/after.json",
+    "bytes": 8202,
+    "sha256": "458f3b9b22c206fd0ecf055170a7a9d510c1b8b53206eb21d2f95703a10a76b4"
+  },
+  "auth/stdout": {
+    "origin": "/tmp/native-paged-int-iret-source-auth-20261004/stdout",
+    "bytes": 5072,
+    "sha256": "69e51d10f73f1b550a6413054b329bdbd4f6100cddc67a4050829a4b8227bb25"
+  },
+  "auth/stderr": {
+    "origin": "/tmp/native-paged-int-iret-source-auth-20261004/stderr",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "auth/exit.json": {
+    "origin": "/tmp/native-paged-int-iret-source-auth-20261004/exit.json",
+    "bytes": 114,
+    "sha256": "58d14ac152caf3b9dac67d99237a368c38b6edbd0b071d91814bec1138466d46"
+  },
+  "auth/result.json": {
+    "origin": "/tmp/native-paged-int-iret-source-auth-20261004/result.json",
+    "bytes": 278,
+    "sha256": "1f88143d0358a99ee5d238831a826717b5aa6f1e1f362cbc81718dd9e29a1267"
+  },
+  "controls/root-saved-capture-audit.mjs": {
+    "origin": "/tmp/root-paged-int-iret-saved-audit-20261004.mjs",
+    "bytes": 1987,
+    "sha256": "1dc6f1240323a4e605fa29423e32ec9c507face674837fec4f3ad5bdeb0c6845"
+  },
+  "controls/independent-audit.py": {
+    "origin": "/tmp/native-paged-int-iret-source-controls-20261004/independent-audit.py",
+    "bytes": 4566,
+    "sha256": "b6071cedc9be719ebea849c26424d84b5bec4e4dfd8034eef2fcf1ce156a1a7d"
+  },
+  "controls/independent-audit.json": {
+    "origin": "/tmp/native-paged-int-iret-source-controls-20261004/independent-audit.json",
+    "bytes": 649,
+    "sha256": "f3f59688d9f9c9071edec03e0ea279ab431483a6703b75407f08771b39886a8f"
+  }
+}

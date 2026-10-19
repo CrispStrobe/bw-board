@@ -1,0 +1,22 @@
+{
+  "schema": "bw.i80386-code16-load-exec-ab.v1",
+  "date": "2026-09-27",
+  "boardCandidate": "bf78fd2036733be6995bf9336292bcdd57bc6aad",
+  "scope": "Opt-in one-instruction JavaScript 8A/8B memory-load proof on an external Windows 3.11 workload; not a native block or speed improvement",
+  "sampleSteps": 60000000,
+  "ordinary": {
+    "userCpuSeconds": 83.13,
+    "elapsedSeconds": 108.05,
+    "loadExecutions": 0
+  },
+  "optIn": {
+    "userCpuSeconds": 164.94,
+    "elapsedSeconds": 228.62,
+    "loadExecutions": 2637257,
+    "percentOfSteps": 4.395428333333333
+  },
+  "normalizedGuestReportSha256": "ebd37f619ab5afc90177e51efdf2c7ea36d4895461ec66329b989d03af0b8fac",
+  "normalization": "Remove sourceSha256, executionRevision, inputs.code16Loads, and code16LoadExecutions; sort JSON keys. Both full reports then have the same SHA-256, including CPU, steps, stop/refusal, serial, text, VGA, and delivered events.",
+  "testResult": "node --test test/i80386-*.test.mjs: 421 passed, 4 skipped, 0 failed",
+  "conclusion": "Exact bounded guest parity, but 1.984x ordinary user CPU time. Flag remains off by default. This is semantic groundwork and a negative speed result; the 10x target remains open."
+}

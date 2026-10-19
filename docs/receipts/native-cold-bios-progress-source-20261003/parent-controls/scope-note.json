@@ -1,0 +1,4 @@
+{
+  "scope": "Pure Python controls; no native/Node child executed",
+  "heapFieldClarification": "The reused outer invocation writer recorded nominal heapMiB128, but the exact command is Python and no V8 heap flag applies. CPU10/wall30/file8/core0/nice10/hooks were enforced; Node driver controls and future native child separately use --max-old-space-size=128. Raw invocation and executed wrapper retained unchanged."
+}

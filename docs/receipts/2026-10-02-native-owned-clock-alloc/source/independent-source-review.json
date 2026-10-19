@@ -1,0 +1,10 @@
+{
+  "status": "PASS_PREFREEZE_SOURCE_ONLY_NO_NATIVE",
+  "checks": 107,
+  "newSourceFiles": 5,
+  "oldSourceFilesUnchanged": 95,
+  "focusedPass": 33,
+  "focusedSkip": 0,
+  "receiptSha256": "2a0c2b652f4d71fc75018a5219b0ad7320ea39a660fdfed94d5b9eefce69b715",
+  "scope": "Private CAPOFF class preserves exactlifecycle/kind/caps/NQcyclesdebt/finally; CAPON originalsuper eventpath; providerdispatch unchanged; driver twoimport inverse. Pending cleanfreeze actualidentity100/buildauth readhash."
+}

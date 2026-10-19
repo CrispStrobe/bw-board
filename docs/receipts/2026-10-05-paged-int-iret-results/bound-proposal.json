@@ -1,0 +1,66 @@
+{
+  "status": "OFFICIAL_DESCRIPTOR_BOUND_AUDITOR_UNEXECUTED",
+  "purpose": "Read-only audit of sole future root-downloaded official ZIP; first failure audit remains immutable.",
+  "files": {
+    "audit-transport.py": {
+      "bytes": 9605,
+      "sha256": "cc0059f0f556bf581cd2d4ba43b5d787aa5ea5a7545d0832f433da7ea500ebf0"
+    },
+    "audit-logical.mjs": {
+      "bytes": 7525,
+      "sha256": "2e37f0c1d6931c8fa90c4379fb5f3040eb58dbb77442ac28be89c0ad6d78b013"
+    },
+    "official-request.json": {
+      "bytes": 437,
+      "sha256": "114858b3262165ab5ae2d1f0b75b3a25922b226fb88c5123150b34fdc710c99c"
+    }
+  },
+  "pr": 382,
+  "hostedRevision": "d46b68c201628a05f5f9934ada7fdddd3a57e683",
+  "driverRevision": "98fb8216aa5bd0fa046cc6388f7ff6c1b22f5750",
+  "sourceRoles": [
+    12,
+    208,
+    81
+  ],
+  "transportCaps": {
+    "outcomeBytes": 131072,
+    "storedBytes": 16777216,
+    "decodedBytes": 67108864,
+    "officialZipBytes": 67108864,
+    "archiveDecodedAggregateBytes": 201326592,
+    "members": 256
+  },
+  "declaredScope": [
+    "official descriptor/ZIP digest/CRC/member hashes",
+    "available before-after/source/build maps without claiming unavailable setup evidence",
+    "small outcome retains original primary/storage/finalization failure",
+    "single-member gzip exact stored+decoded SHA/count and no trailing bytes",
+    "all available raw166 and represented CPU comparisons against unchanged source",
+    "saved41-step JS reference and fullten4096byte physical pages at comparable cuts only",
+    "unmatched entry/prefetch/zeroQ/stage raw records remain unmatched",
+    "independent native20boot+3frame+6AD effects/callback tape, no JS ordering",
+    "strict CS/DS/SS and returned shadow source phases",
+    "14 orderedcuts, real INT frame, IRET state and final whole-RAM hash",
+    "independent N/Q/resumes/zeroQ, cleanup and all-outcome authentication"
+  ],
+  "futureSuggestedLimits": {
+    "offlineAuditCpuSeconds": 30,
+    "offlineAuditWallSeconds": 60,
+    "nodeHeapMiB": 512,
+    "note": "Audit is not worker timing; separate processes can retain up to64MiB logical JSON plus typed page copies; no audit invocation authorized here."
+  },
+  "futureCommand": "python3 audit-transport.py | /tmp/node-v22.23.3-linux-x64/bin/node --max-old-space-size=512 audit-logical.mjs (root reviewed descriptor and execution grant required; shell pipefail; no extraction)",
+  "noSourceComparisonsChanged": true,
+  "noPreparationOrGuestInvoked": true,
+  "partialReport": "Finally writes exclusive coder-transport-audit.json with original bounded primary error, completed member hashes/current stage and already available outcome; independent write error is separately emitted. No body/guest PASS from unavailable evidence.",
+  "logicalPassGuardPairs": "All initial/final input, driver, compiled, build, configuration and Node fields must be present and exactly equal for PASS.",
+  "officialMetadata": {
+    "path": "/tmp/native-paged-int-iret-post-persistence-observation-20261005/official-zip-metadata.json",
+    "bytes": 306,
+    "sha256": "d3d1f5c25e5c555d7e80e1d3accd57588196e850eea789894ddc527c6174df20"
+  },
+  "runId": 37247392133,
+  "artifactId": 11319662434,
+  "output": "/tmp/native-paged-int-iret-post-persistence-observation-20261005"
+}

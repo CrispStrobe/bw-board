@@ -1,0 +1,119 @@
+/**
+ * The two copies of the F0 machine definition must not drift.
+ *
+ * The labwired CLI reads a chip descriptor as a FILE (the differential oracle
+ * hands it a path); a browser constructs with it as a STRING. So the same
+ * silicon is described twice, and if those two ever disagree the oracle and the
+ * shipping tier are comparing different machines — while both look healthy,
+ * which is the failure mode worth spending a test on.
+ */
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import {
+    ATMEGA328P, ATMEGA328P_CHIP_YAML, ATMEGA328P_LABWIRED_PINS,
+    STM32F0_CHIP_YAML, STM32F0_LABWIRED_PINS, STM32F0,
+    NRF52833_CHIP_YAML, MICROBIT_V2_LABWIRED_PINS, MICROBIT_V2,
+    ATSAMD51_CHIP_YAML, PYBADGE_LABWIRED_PINS, PYBADGE,
+    ESP32_DEVKIT, ESP32_DEVKIT_LABWIRED_PINS, LABWIRED_CHIPS,
+} from '../src/labwired-chips.js';
+import { LABWIRED_CATALOG } from '../src/labwired-catalog.js';
+import { STM32F0_PINS } from '../src/stm32-adapter.js';
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+describe('labwired chip descriptors', () => {
+    it('the embedded YAML is byte-identical to the oracle fixture', () => {
+        const fixture = readFileSync(join(root, 'test/fixtures/labwired/stm32f0-chip.yaml'), 'utf8');
+        assert.equal(STM32F0_CHIP_YAML, fixture,
+            'src/labwired-chips.js has drifted from the fixture. Regenerate it: '
+            + 'node scripts/gen-labwired-chips.mjs');
+    });
+
+    it('every GPIO port keeps the V2 profile', () => {
+        // Losing this is silent and total: stm32_gpioport routes to the STM32F1
+        // register map, so every output write lands on a different register and
+        // every pad reads low forever while the firmware runs and the UART talks.
+        const ports = (STM32F0_CHIP_YAML.match(/type: stm32_gpioport/g) || []).length;
+        const profiles = (STM32F0_CHIP_YAML.match(/profile: stm32v2/g) || []).length;
+        assert.ok(ports > 0, 'no GPIO ports in the descriptor at all');
+        assert.equal(profiles, ports,
+            `${ports} GPIO ports but ${profiles} carry profile: stm32v2`);
+    });
+
+    it('both tiers offer a project the same pins', () => {
+        // A design that runs on the light tier must not silently lose I/O on
+        // the heavy one, so the header maps have to name the same pads.
+        assert.deepEqual(
+            Object.keys(STM32F0_LABWIRED_PINS).sort(),
+            Object.keys(STM32F0_PINS).sort(),
+            'the labwired and CortexM0Machine pin maps disagree');
+    });
+
+    it('the pin map addresses the ports the descriptor declares', () => {
+        for (const [name, def] of Object.entries(STM32F0_LABWIRED_PINS)) {
+            assert.match(STM32F0_CHIP_YAML, new RegExp(`id: ${def.peripheral}\\b`),
+                `${name} names peripheral '${def.peripheral}', which the chip descriptor does not declare`);
+        }
+    });
+
+    it('STM32F0 bundles what a caller needs', () => {
+        assert.equal(STM32F0.chipYaml, STM32F0_CHIP_YAML);
+        assert.equal(STM32F0.clockHz, 48_000_000);
+        assert.ok(Object.keys(STM32F0.pins).length > 0);
+    });
+
+    it('embeds the pinned LabWired ATmega328P descriptor byte-for-byte', () => {
+        const fixture = readFileSync(join(root, 'test/fixtures/labwired/atmega328p-chip.yaml'), 'utf8');
+        assert.equal(ATMEGA328P_CHIP_YAML, fixture);
+        assert.equal(ATMEGA328P.clockHz, 16_000_000);
+        assert.deepEqual(ATMEGA328P.boardKinds, ['arduino_uno']);
+        assert.deepEqual(Object.keys(ATMEGA328P_LABWIRED_PINS), [
+            'D0', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7',
+            'D8', 'D9', 'D10', 'D11', 'D12', 'D13',
+            'A0', 'A1', 'A2', 'A3', 'A4', 'A5',
+        ]);
+    });
+
+    it('embeds the exact nRF52833 and SAMD51 descriptors byte-for-byte', () => {
+        assert.equal(NRF52833_CHIP_YAML,
+            readFileSync(join(root, 'test/fixtures/labwired/nrf52833-chip.yaml'), 'utf8'));
+        assert.equal(ATSAMD51_CHIP_YAML,
+            readFileSync(join(root, 'test/fixtures/labwired/atsamd51-chip.yaml'), 'utf8'));
+        assert.equal(MICROBIT_V2.flashOrigin, 0);
+        assert.equal(PYBADGE.flashOrigin, 0);
+        assert.match(NRF52833_CHIP_YAML, /name: "nrf52833"/);
+        assert.match(ATSAMD51_CHIP_YAML, /name: "atsamd51j19a"/);
+    });
+
+    it('maps official board labels to package pins, not connector ordinals', () => {
+        assert.deepEqual(MICROBIT_V2_LABWIRED_PINS.p0, { peripheral: 'gpio0', pin: 2 });
+        assert.deepEqual(MICROBIT_V2_LABWIRED_PINS.p6, { peripheral: 'gpio1', pin: 5 });
+        assert.deepEqual(MICROBIT_V2_LABWIRED_PINS.p20, { peripheral: 'gpio1', pin: 0 });
+        assert.deepEqual(PYBADGE_LABWIRED_PINS.a0, { peripheral: 'porta', pin: 2 });
+        assert.deepEqual(PYBADGE_LABWIRED_PINS.d2, { peripheral: 'portb', pin: 3 });
+        assert.deepEqual(PYBADGE_LABWIRED_PINS.stemma_sda, PYBADGE_LABWIRED_PINS.sda);
+    });
+
+    it('the classic ESP32 DevKit reuses the catalog descriptor at the wasm PIN', () => {
+        // ONE copy of configs/chips/esp32.yaml: the catalog's, regenerated at
+        // the build PIN. A second fixture would be a second drawing of it.
+        assert.equal(LABWIRED_CHIPS.esp32_devkit, ESP32_DEVKIT);
+        assert.equal(ESP32_DEVKIT.chipYaml, LABWIRED_CATALOG.esp32.chipYaml);
+        assert.match(ESP32_DEVKIT.chipYaml, /arch: "xtensa-lx6"/);
+        assert.equal(ESP32_DEVKIT.clockHz, LABWIRED_CATALOG.esp32.clockHz);
+        assert.equal(ESP32_DEVKIT.arduinoEsp32, true);
+        // Pad numbers, one GPIO block; no flash pads (6..11), no unbonded 37/38.
+        assert.deepEqual(ESP32_DEVKIT_LABWIRED_PINS.gpio2, { peripheral: 'gpio', pin: 2 });
+        assert.deepEqual(ESP32_DEVKIT_LABWIRED_PINS.gpio39, { peripheral: 'gpio', pin: 39 });
+        for (const n of [6, 7, 8, 9, 10, 11, 37, 38]) {
+            assert.equal(ESP32_DEVKIT_LABWIRED_PINS[`gpio${n}`], undefined, `gpio${n} is not on the header`);
+        }
+        // Input-only pads cannot carry an LEDC channel.
+        assert.ok(!ESP32_DEVKIT.pwmPins.includes('gpio34'));
+        assert.ok(ESP32_DEVKIT.pwmPins.includes('gpio33'));
+    });
+});

@@ -1,0 +1,50 @@
+{
+  "status": "INDEPENDENT_REAL_NAPI_HELPER_BEHAVIOR_PASS_NOT_FULL_ADAPTER_OR_GUEST",
+  "sourceRevision": "6f021f61523c2544dabffb3d5eeaf377a4e2583d",
+  "parentSha256": "fe31bb5e757161b6f20bc3eb017c63a9af0f0569fd57e9ac27246066906406b4",
+  "contextSha256": "c575b033a70179acaa8c68eed1277619f467a14f0083929b9e85b16bee89f866",
+  "originalAndBuildPinsEqual": true,
+  "stagedInputs": 19,
+  "materializedInputs": 3,
+  "rawReport": {
+    "status": "REAL_NAPI_BEHAVIOR_PASS",
+    "primaryError": null,
+    "cleanupErrors": [],
+    "reads": 2,
+    "writes": [
+      7,
+      8
+    ],
+    "envRecords": [
+      {
+        "command": "release",
+        "foreignDenied": true,
+        "freshPreparedAndReleased": true
+      },
+      {
+        "command": "teardown",
+        "foreignDenied": true,
+        "freshPreparedAndReleased": true
+      }
+    ],
+    "scope": "Exact generated key helper plus fixture failure/busy/thread/env glue only; not held invoke/fail paths or full addon; no guest, leak accounting or speed"
+  },
+  "rawWait4Status": 0,
+  "stderrBytes": 0,
+  "addon": {
+    "present": true,
+    "bytes": 38792,
+    "sha256": "0416987e348f6a3269428ec5b39e2637d76f5532412d6d540e2a751b476eaa53"
+  },
+  "qualificationCpuSeconds": 4.7641670000000005,
+  "childWallSeconds": 4.569381590932608,
+  "parentWallSeconds": 6.479210328310728,
+  "limitations": [
+    "Exact generated key helper plus fixture glue only",
+    "No held invoke/fail or full adapter qualification",
+    "GC reachability behavior is not leak accounting",
+    "Sequential Worker ownership and teardown is not general concurrency proof",
+    "No guest, Bochs or performance qualification"
+  ],
+  "auditMethod": "Read retained packet and actual file bytes only; no addon load or replay"
+}

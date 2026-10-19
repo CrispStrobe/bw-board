@@ -1,0 +1,24 @@
+{
+  "native": {
+    "artifactId": 11276168163,
+    "runId": 37129594786,
+    "head": "d9fbe713c7a2d878b3311ac14620d055b6e16ae9",
+    "bytes": 44302763,
+    "sha256": "1b048847be0708fcc9bd1baf40690c8ce16a35059277d40e620ac073940f2ad7",
+    "expiresAt": "2027-01-01T14:26:32Z",
+    "localCanonicalZip": "/tmp/native-cold-paired-native-comparison-r2-publication-20261003/official-artifact.zip",
+    "scope": "All original ZIP members retained externally; full per-child receipt/PIO/authentication and progress evidence not duplicated in Git",
+    "memberHashes": "native/official-member-hashes.json"
+  },
+  "plain-js": {
+    "artifactId": 11276158773,
+    "runId": 37130085357,
+    "head": "d9fbe713c7a2d878b3311ac14620d055b6e16ae9",
+    "bytes": 43816867,
+    "sha256": "3c7bd9791c46aeb595300f8c97f47cbfa7cde5352eaed760122a6afef4dd1402",
+    "expiresAt": "2027-01-01T14:34:33Z",
+    "localCanonicalZip": "/tmp/native-cold-paired-js-comparison-publication-20261003/official-artifact.zip",
+    "scope": "All original ZIP members retained externally; full per-child receipt/PIO/authentication and progress evidence not duplicated in Git",
+    "memberHashes": "plain-js/official-member-hashes.json"
+  }
+}

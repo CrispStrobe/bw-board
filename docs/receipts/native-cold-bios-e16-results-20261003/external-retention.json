@@ -1,0 +1,8 @@
+{
+  "officialArtifactId": 11272405254,
+  "runId": 37116448106,
+  "localZip": "/tmp/native-cold-native-eighth-diagnostic-publication-20261003/official-artifact.zip",
+  "bytes": 10438346,
+  "sha256": "702c9eafeb7dbfd95d6d49b0df9b1d293491d8276d8a8857a543a80ce8abb1f2",
+  "omission": "Original ZIP and its embedded compiled binaries/source archives remain external; selected receipts are lossless. Full intermediate CPU states and whole RAM bytes were not captured."
+}

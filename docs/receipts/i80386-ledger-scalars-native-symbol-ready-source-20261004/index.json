@@ -1,0 +1,42 @@
+{
+  "testedRevision": "f791950482ab50b657fa957205533dbc0e629ca3",
+  "scope": "Source metadata and readonly identity only; no live capability or observation",
+  "records": [
+    {
+      "path": "metadata-exit.json",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-ready-metadata-controls-20261004/exit.json",
+      "bytes": 168,
+      "sha256": "437883b76b39b8fab99894c5b1739e332790813733380180c6049703b6131f6a"
+    },
+    {
+      "path": "metadata-independent-audit.json",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-ready-metadata-controls-20261004/independent-audit.json",
+      "bytes": 559,
+      "sha256": "1ff932456253ea5223662d4fec2aaf148a75170e284a8e61b22d17b441ab9e4c"
+    },
+    {
+      "path": "identity-exit.json",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-ready-frozen-auth-20261004/exit.json",
+      "bytes": 168,
+      "sha256": "c6568782fa4ac09a7ebfe3e9149ff1b5eba5f2608229bf06fde0037d9e742793"
+    },
+    {
+      "path": "identity-independent-audit.json",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-ready-frozen-auth-20261004/independent-audit.json",
+      "bytes": 559,
+      "sha256": "1ff932456253ea5223662d4fec2aaf148a75170e284a8e61b22d17b441ab9e4c"
+    },
+    {
+      "path": "metadata.tap",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-ready-metadata-controls-20261004/stdout",
+      "bytes": 347,
+      "sha256": "cd88dfec1bd58fa7d9eab6e63ec88d05288b89c6200a5426cf6ed3209c99d53c"
+    },
+    {
+      "path": "root-audit.json",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-ready-root-audit-20261004.json",
+      "bytes": 915,
+      "sha256": "304031363cb691fae8df5f281218343feedafc4356f44062c5168e188e62dbc0"
+    }
+  ]
+}

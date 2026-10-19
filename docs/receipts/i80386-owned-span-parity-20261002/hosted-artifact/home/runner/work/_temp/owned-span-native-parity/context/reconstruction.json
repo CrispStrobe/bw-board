@@ -1,0 +1,36 @@
+{
+  "status": "EXACT_SOURCE110_RUNTIME116_RAW_GIT_RECONSTRUCTION_PASS_NO_BUILD",
+  "commits": [
+    {
+      "revision": "8e35080d29b32e9fcee5f8fbc5800209c74df2e7",
+      "parent": "fe1eff2039520536350922a2164c8bbe29404c68",
+      "tree": "da92f8a1cad09f5cd1d273becf8d1e98da9b8e7f",
+      "rawCommitSha256": "f79914cff896ccbe5049415120b9ad3a1065fff2e64c91e59239c1e020448f3f",
+      "addedPaths": [
+        "scripts/bochs-cpu3-native-owned-span/baseline-source.json",
+        "scripts/bochs-cpu3-native-owned-span/controls.mjs",
+        "scripts/bochs-cpu3-native-owned-span/derivation.json",
+        "scripts/bochs-cpu3-native-owned-span/derive.mjs",
+        "scripts/bochs-cpu3-native-owned-span/plan.md",
+        "scripts/bochs-cpu3-native-owned-span/provider.mjs",
+        "scripts/bochs-cpu3-native-owned-span/span-method.txt"
+      ]
+    },
+    {
+      "revision": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+      "parent": "8e35080d29b32e9fcee5f8fbc5800209c74df2e7",
+      "tree": "f1b59b9fd00c3ae113247fbe86a9e17244070bda",
+      "rawCommitSha256": "817a63f130fa562ed081fffd7ff1e0ff7babc2293d76fe5bd5be5669cc24e4b3",
+      "addedPaths": [
+        "scripts/bochs-cpu3-native-owned-span-runtime/identity.mjs",
+        "scripts/bochs-cpu3-native-owned-span-runtime/derive.mjs",
+        "scripts/bochs-cpu3-native-owned-span-runtime/admission.mjs",
+        "scripts/bochs-cpu3-native-owned-span-runtime/frozen-source.json",
+        "scripts/run-i80386-native-owned-span.mjs",
+        "test/i80386-owned-span-runtime.test.mjs"
+      ]
+    }
+  ],
+  "compiledRevision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "runtimeRevision": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1"
+}

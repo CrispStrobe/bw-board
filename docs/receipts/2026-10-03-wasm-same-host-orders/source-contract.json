@@ -1,0 +1,24 @@
+{
+  "head": "b00bff0b266eacb7dc975225cf23120fb931ccac",
+  "base": "9a3ed736c51b4ed85a80824c3411bbe5692a5319",
+  "changed": [
+    ".github/workflows/labwired-same-host-orders.yml",
+    "scripts/lib/same-host-orders.mjs",
+    "scripts/probe-labwired-same-host-orders.mjs",
+    "test/same-host-orders.test.mjs"
+  ],
+  "files": {
+    ".github/workflows/labwired-same-host-orders.yml": "f595cbbbf78bb4dc66978b0e8cb885962a6ecde07502989d685dc74a582fb5a3",
+    "scripts/lib/same-host-orders.mjs": "d36c96f4adac2d0a5810afb2d5b060d85d6d3d9408be6fc36b13640a386193f9",
+    "scripts/probe-labwired-same-host-orders.mjs": "ef0ff6861c7449780ee66461fd2ce838fa173bd8865e74c4c1b7052497ae3f13",
+    "test/same-host-orders.test.mjs": "fd75632b218c92038998133d69ddf45d8d190170da8aa93a1813086f7bfd3378"
+  },
+  "parsers": {
+    "scripts/lib/motion-ab-receipt.mjs": "0c05c1f65c8254a5ca38488467d7f2b6f269ea4643689af131444526c37b6d8e",
+    "scripts/lib/f0-timing-receipt.mjs": "a4e55d0f8bb7b3c6495da42f85c3075285fe46812ca35480c1f1c1421654d8e5"
+  },
+  "frozenHarness": "fb13d48b7bc377bceb5da5a1d4ed5cd11555e162",
+  "engineModified": false,
+  "ordinaryHarnessModified": false,
+  "physicalAcknowledgementsModified": false
+}

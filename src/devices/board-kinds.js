@@ -1,0 +1,419 @@
+/**
+ * Board-kind device models — Arduino Nano/Uno/Mega, Pi Pico, and the MakeCode
+ * boards (micro:bit, Calliope mini, Circuit Playground Express, PyBadge).
+ *
+ * These represent the development board as a whole. Their power pins (5V,
+ * 3V3, GND, VIN, VBUS, VSYS) are stamped as Thévenin sources / ground
+ * references so the solver sees them as real supply terminals — identical
+ * to what standalone VCC/GND parts provide.
+ *
+ * GPIO terminals are NOT stamped here. They are driven by the boundary-A
+ * adapter (avr8js-adapter, rp2040js-adapter) via board.setPin(); the
+ * board copies those pin states into this model's `state.drives` before
+ * each solve (the `gpioFollowsPinStates` flag below) — the same Thévenin
+ * treatment MCU-kind pins get. The device model itself handles only the
+ * power rails the adapter doesn't touch. (Until 2026-08-13 this header
+ * CLAIMED the pinSources path covered board-kind GPIO; no such path
+ * existed, and a bench LED on a board-kind part never lit at engine
+ * level — the app's canvas had been reading pin states directly.)
+ *
+ * Why not just use separate VCC/GND parts? Because the designer places
+ * ONE board (e.g. an Arduino Nano), and that board has 5V, 3V3, GND, GND2
+ * pins on its header. Making those act as real sources means a user can
+ * wire an LED to the Nano's 5V pin and see the correct voltage without
+ * having to also place a standalone VCC part.
+ *
+ * @module
+ */
+
+import { registerDevice } from '../devices.js';
+
+/** Very low source impedance for regulated supply pins (mΩ). */
+const R_SUPPLY = 0.1;
+
+// ─── Terminal classification ─────────────────────────────────────────────
+
+/** Classify a terminal name by electrical role. */
+function classifyTerminal(name) {
+  // Ground pins: gnd, gnd2, gnd3, gnd_1–gnd_7, agnd, swd_gnd
+  if (/^gnd\d?$|^gnd_\d+$|^agnd$|^swd_gnd$/.test(name)) return 'gnd';
+  // 5V supply: 5v
+  if (name === '5v') return '5v';
+  // 3.3V supply: 3v3
+  if (name === '3v3') return '3v3';
+  // USB VBUS (5V from USB)
+  if (name === 'vbus') return '5v';
+  // VSYS on Pico: system supply, 1.8–5.5V, typically 5V from USB
+  if (name === 'vsys') return 'vsys';
+  // VIN: external voltage input (7–12V for Arduino, not driven by the board)
+  if (name === 'vin') return 'vin';
+  // Reference and control pins with no power role
+  if (name === 'aref' || name === 'adc_vref' || name === '3v3_en') return 'ref';
+  if (name === 'reset' || name === 'reset2' || name === 'run') return 'ref';
+  if (name === 'swclk' || name === 'swdio') return 'ref';
+  // Everything else is a GPIO (d0–d13, a0–a7, gp0–gp28)
+  return 'gpio';
+}
+
+/**
+ * Build a device model for a board kind given its terminal list.
+ * Power terminals are stamped; GPIO terminals are left for the adapter.
+ */
+function boardModel(allTerminals, boardVcc, roles = {}) {
+  const powerTerminals = [];
+  const gpioTerminals = [];
+  for (const t of allTerminals) {
+    // `roles` names a board's own power pads where the shared spelling rules
+    // above would misread them — a micro:bit-style `3v` pad or Feather `usb`
+    // pin would otherwise classify as GPIO and silently source nothing.
+    const role = Object.hasOwn(roles, t) ? roles[t] : classifyTerminal(t);
+    if (role === 'gpio') gpioTerminals.push(t);
+    else powerTerminals.push({ name: t, role });
+  }
+  // Explicit model policy, not a guess from voltage or `_staticDrives`.
+  // These positive supply outputs are a convenience fallback so a bare
+  // development board can power a lesson. When an authored ideal `vcc` part
+  // owns the net, the fallback yields. Ground and GPIO never do. This is an
+  // application abstraction, NOT a Schottky-diode model: a real forward-fed
+  // supply can still carry current and needs an explicit physical model.
+  const automaticSupplyFallbackTerminals = new Set(powerTerminals
+    .filter(({ role }) => role === '5v' || role === '3v3' || role === 'vsys')
+    .map(({ name }) => name));
+
+  return {
+    terminals: allTerminals,
+    automaticSupplyFallbackTerminals,
+
+    init() {
+      const drives = {};
+      for (const { name, role } of powerTerminals) {
+        if (role === '5v') {
+          drives[name] = { vTh: 5.0, rTh: R_SUPPLY };
+        } else if (role === '3v3') {
+          drives[name] = { vTh: 3.3, rTh: R_SUPPLY };
+        } else if (role === 'vsys') {
+          // Default: USB-powered, VSYS ≈ 5V through a Schottky diode
+          drives[name] = { vTh: 4.7, rTh: R_SUPPLY };
+        } else if (role === 'gnd') {
+          drives[name] = { vTh: 0, rTh: R_SUPPLY };
+        }
+        // vin, ref: not driven (high-Z), so no entry in drives
+      }
+      return { drives };
+    },
+
+    // NO stamp(). The rails above are already sources: `stampDevice` stamps
+    // every entry of `state.drives` as a Norton BEFORE it calls `model.stamp`,
+    // so a `ctx.thevenin` on the same terminal put a SECOND identical Norton in
+    // parallel and halved the declared impedance. Measured: a Pico with VBUS
+    // and VSYS on a 3.3 V bench rail drew 34 A where the single source draws
+    // 17, and on a 5 V bench VSYS drew -6 A against -3. Both readings agreed
+    // with what was stamped — the stamp was doubled, not the extraction.
+    // See test/device-sources-once.test.mjs, which enumerates every registered
+    // kind rather than the one that was found.
+    //
+    // vin gets no source in either place: it is an external input, high-Z.
+    // There used to be a pull-down here "to stop it floating", written against
+    // no second terminal, so it never stamped — and it was never needed:
+    // solveMNA ties EVERY node to the reference through GMIN, so an unwired vin
+    // solves to 0 V on its own (spec-updates/ideal-high-z-inputs.md).
+
+    update() { return false; }, // static power rails
+
+    // The board copies pinStates onto state.drives for GPIO terminals
+    // before each solve; power-rail entries (set at init) are never
+    // overwritten. vcc is the board's logic level — a Pico pin drives
+    // 3.3 V, a Nano pin 5 V, whatever the bench supply is.
+    gpioFollowsPinStates: true,
+    vcc: boardVcc,
+  };
+}
+
+// ─── Arduino Nano ────────────────────────────────────────────────────────
+
+const NANO_TERMINALS = [
+  'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7',
+  'd8', 'd9', 'd10', 'd11', 'd12', 'd13',
+  'a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7',
+  '5v', '3v3', 'gnd', 'gnd2', 'vin', 'aref', 'reset', 'reset2',
+];
+
+// ─── Arduino Uno ─────────────────────────────────────────────────────────
+
+const UNO_TERMINALS = [
+  'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7',
+  'd8', 'd9', 'd10', 'd11', 'd12', 'd13',
+  'a0', 'a1', 'a2', 'a3', 'a4', 'a5',
+  '5v', '3v3', 'gnd', 'gnd2', 'gnd3', 'vin', 'aref', 'reset',
+];
+
+// ─── Arduino Mega 2560 ───────────────────────────────────────────────────
+// 78 terminals, spellings from the bw-parts sidecar (arduino_mega.json).
+// Unregistered until 2026-08-16, so a Mega body was ELECTRICALLY DEAD —
+// same class of bug as the bare-chip gap, found by the example sweep.
+
+const MEGA_TERMINALS = [
+  'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'd8', 'd9',
+  'd10', 'd11', 'd12', 'd13', 'gnd', 'aref', 'd14', 'd15', 'd16', 'd17',
+  'd18', 'd19', 'd20', 'd21', 'reset', '3v3', '5v', 'gnd2', 'gnd3', 'vin',
+  'a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7',
+  'a8', 'a9', 'a10', 'a11', 'a12', 'a13', 'a14', 'a15',
+  'd22', 'd23', 'd24', 'd25', 'd26', 'd27', 'd28', 'd29', 'd30', 'd31',
+  'd32', 'd33', 'd34', 'd35', 'd36', 'd37', 'd38', 'd39', 'd40', 'd41',
+  'd42', 'd43', 'd44', 'd45', 'd46', 'd47', 'd48', 'd49', 'd50', 'd51',
+  'd52', 'd53',
+];
+
+// ─── Pi Pico ─────────────────────────────────────────────────────────────
+
+const PICO_TERMINALS = [
+  'gp0', 'gp1', 'gp2', 'gp3', 'gp4', 'gp5', 'gp6', 'gp7',
+  'gp8', 'gp9', 'gp10', 'gp11', 'gp12', 'gp13', 'gp14', 'gp15',
+  'gp16', 'gp17', 'gp18', 'gp19', 'gp20', 'gp21', 'gp22',
+  'gp25',  // onboard LED pin (not on header, but electrically real)
+  'gp26', 'gp27', 'gp28',
+  'vbus', 'vsys', '3v3', '3v3_en', 'adc_vref',
+  'gnd_1', 'gnd_2', 'gnd_3', 'gnd_4', 'gnd_5', 'gnd_6', 'gnd_7',
+  'agnd', 'swd_gnd',
+  'run', 'swclk', 'swdio',
+];
+
+// ─── Eater 6502 breadboard computer ─────────────────────────────────────
+
+const EATER6502_TERMINALS = [
+  // VIA1 port A (PA0-PA7) — main GPIO, LED bar, LCD, etc.
+  'via1.pa0', 'via1.pa1', 'via1.pa2', 'via1.pa3',
+  'via1.pa4', 'via1.pa5', 'via1.pa6', 'via1.pa7',
+  // VIA1 port B (PB0-PB7) — PB6 is T2 pulse input, PB7 is T1 square wave
+  'via1.pb0', 'via1.pb1', 'via1.pb2', 'via1.pb3',
+  'via1.pb4', 'via1.pb5', 'via1.pb6', 'via1.pb7',
+  // Power rails
+  '5v', 'gnd',
+];
+
+// ─── Bare MCU chips (DIP bodies, not dev boards) ────────────────────────
+//
+// A bare chip differs from a dev board in exactly one way: it has no
+// regulator, so its vcc/avcc/gnd pins are CONSUMERS — the bench supplies
+// them via wired VCC/GND symbols. Stamping them as sources here would
+// fight whatever the user actually wired (a 3.3 V bench on an attiny's
+// vcc pin must win). So: no power drives, no stamp; GPIO terminals
+// follow pinStates exactly like board-kind GPIO does.
+//
+// Without this registration the chip was ELECTRICALLY ABSENT: the
+// boundary-A adapter published pin states nobody consumed, because
+// board.js's _pinSources recognizes only kind 'mcu' (the STC12 body).
+// The blinkenrocket pendant's matrix stayed dark with a perfectly
+// running firmware (owner report, 2026-08-16).
+
+function bareChipModel(allTerminals, chipVcc) {
+  return {
+    terminals: allTerminals,
+    init() { return { drives: {} }; },
+    update() { return false; },
+    gpioFollowsPinStates: true,
+    vcc: chipVcc,
+  };
+}
+
+// Terminal spellings must match the bw-parts sidecar (the netlist's own
+// namespace) — this is what the adapter's lowercased AVR pin names join
+// against. DIP-28.
+//
+// PIN 22 IS `gnd2`, NOT `pa0`. The PDIP-28 does not bond out port A — PA0-PA3
+// reach a pad only on the 32-pin QFN — and pin 22 is a SECOND GND that
+// somebody needed a name for. Audited against Microchip ATtiny88 datasheet
+// DS40002178; the same audit fixed the top row's column order in
+// bw-circuit-ui's footprint table (14 of 14 columns had been wrong).
+//
+// PA0-PA3 REMAIN in avr-chips.js ATTINY88_PINS and that is correct: those are
+// the DIE's registers (0x2C-0x2E), which exist whatever the package does. This
+// list is the PACKAGE's terminals — what a leg can be soldered to. Firmware
+// driving PA0 on a DIP-28 now finds no terminal to join, which is what the
+// hardware does too.
+//
+// This list is a SET, not a pin order: nothing indexes it, and it is not in
+// package order (the audited order is in the sidecar's `_note`). Said plainly
+// because the comment here used to claim it followed the sidecar, and it does
+// not.
+const ATTINY88_TERMINALS = [
+  'pc6', 'pd0', 'pd1', 'pd2', 'pd3', 'pd4', 'vcc', 'gnd',
+  'pb6', 'pb7', 'pd5', 'pd6', 'pd7', 'pb0', 'pb1', 'pb2',
+  'pb3', 'pb4', 'pb5', 'avcc', 'gnd2', 'pc0', 'pc1', 'pc2',
+  'pc3', 'pc4', 'pc5', 'pc7',
+];
+
+// ATtiny88 32-pad QFN / 32-lead TQFP package. Unlike the PDIP-28 above,
+// these packages bond out PA0-PA3; PA0/PA1 are ADC6/ADC7. This is the package
+// used by the Blinkenrocket hardware, whose audio modem reaches ADC6 through
+// PA0. Keep this a distinct board kind: adding PA0 to `attiny88` would make a
+// physically impossible lead appear on every breadboarded PDIP circuit.
+//
+// Package order from Microchip ATtiny48/88 datasheet doc8008, 32 QFN top view.
+// This is a terminal SET, but retaining package order makes audits mechanical.
+const ATTINY88_QFN32_TERMINALS = [
+  'pd3', 'pd4', 'pa2', 'vcc', 'gnd', 'pa3', 'pb6', 'pb7',
+  'pd5', 'pd6', 'pd7', 'pb0', 'pb1', 'pb2', 'pb3', 'pb4',
+  'pb5', 'avcc', 'pa0', 'pc7', 'gnd2', 'pa1', 'pc0', 'pc1',
+  'pc2', 'pd2', 'pc3', 'pc4', 'pc5', 'pc6', 'pd0', 'pd1',
+];
+
+// DIP-8. pb5 doubles as reset on the real part; electrically it is a pin.
+const ATTINY85_TERMINALS = [
+  'pb5', 'pb3', 'pb4', 'gnd', 'pb0', 'pb1', 'pb2', 'vcc',
+];
+
+// STM32F030F4P6, TSSOP20 (the classroom breakout the F0 tier targets).
+// Package order, pin 1 top-left down to 10, pin 11 bottom-right up to 20.
+// vss/vdd are named gnd/vcc so classifyTerminal stamps the supply rails;
+// vdda ties to the same 3.3 V rail on the breakout, so it is a second
+// vcc alias, not a separate source. boot0/nrst/pf0/pf1/pa13/pa14 (BOOT,
+// reset, crystal, SWD) are real pads with no GPIO role in the codegen.
+const STM32F030_TERMINALS = [
+  // Left side, pins 1–10
+  'boot0', 'pf0', 'pf1', 'nrst', 'vcc2' /* VDDA, pin 5 */,
+  'pa0', 'pa1', 'pa2', 'pa3', 'pa4',
+  // Right side, pins 20 down to 11 — the order the package renders in
+  // (same rule as the STC15 comment below: top-right is the highest pin).
+  'pa14', 'pa13', 'pa10', 'pa9', 'vcc' /* VDD, pin 16 */,
+  'gnd' /* VSS, pin 15 */, 'pb1', 'pa7', 'pa6', 'pa5',
+];
+
+// STC15F2K60S2 PDIP-40. NOT pin-compatible with the STC12: VCC is pin 18
+// (not 40), RST is pin 17 (P5.4, shared with GPIO), P0 runs ASCENDING
+// (pin 1 = P0.0), XTAL shares P1.6/P1.7 (=ADC6/7). Pin order follows
+// the DIP package (1..20 left, 40..21 right).
+// Source: stc repo docs/PINOUT-STC15.md, cross-checked against the 100
+// gallery benches' terminal references.
+// Both upper- and lowercase forms are registered because the gallery
+// benches mix cases (some generated by the circuit-builder with uppercase
+// port names, others with lowercase).
+const STC15_TERMINALS = [
+  // Left side, pins 1–20 (top to bottom)
+  'P0.0', 'P0.1', 'P0.2', 'P0.3', 'P0.4', 'P0.5', 'P0.6', 'P0.7', // 1-8
+  'P1.0', 'P1.1', 'P1.2', 'P1.3', 'P1.4', 'P1.5',                  // 9-14
+  'P1.6', 'P1.7',                                                     // 15-16 (XTAL2/XTAL1 shared)
+  'P5.4',                                                              // 17 (RST shared)
+  'VCC',                                                               // 18
+  'P5.5',                                                              // 19
+  'GND',                                                               // 20
+  // Right side, pins 40 DOWN TO 21 — the order the package RENDERS in.
+  // Pin 1 is top-left and pins descend the left column to 20 at the
+  // bottom-left; pin 21 is bottom-right and they ascend to 40 at the
+  // top-right. So a symbol drawn top-to-bottom lists 40, 39, … 21.
+  // (Ordered 21→40 until this commit, which disagreed with
+  // bw-circuit-ui's own stc15_mcu sidecar — and terminal order is what
+  // drives wire-attachment positions on that side. The sidecar was
+  // right; docs/PINOUT-STC15.md's DIP diagram in the stc repo settles
+  // it: pin 40 = P4.5/ALE top-right, pin 21 = P3.0/RxD bottom-right.)
+  'P4.5',                                                              // 40
+  'P2.7', 'P2.6', 'P2.5', 'P2.4', 'P2.3', 'P2.2', 'P2.1', 'P2.0', // 39-32
+  'P4.4',                                                              // 31
+  'P4.2', 'P4.1',                                                     // 30-29
+  'P3.7', 'P3.6', 'P3.5', 'P3.4', 'P3.3', 'P3.2', 'P3.1', 'P3.0', // 28-21
+  // Lowercase aliases, same order (some benches use lowercase port names)
+  'p0.0', 'p0.1', 'p0.2', 'p0.3', 'p0.4', 'p0.5', 'p0.6', 'p0.7',
+  'p1.0', 'p1.1', 'p1.2', 'p1.3', 'p1.4', 'p1.5', 'p1.6', 'p1.7',
+  'p5.4', 'vcc', 'p5.5', 'gnd',
+  'p4.5',
+  'p2.7', 'p2.6', 'p2.5', 'p2.4', 'p2.3', 'p2.2', 'p2.1', 'p2.0',
+  'p4.4',
+  'p4.2', 'p4.1',
+  'p3.7', 'p3.6', 'p3.5', 'p3.4', 'p3.3', 'p3.2', 'p3.1', 'p3.0',
+];
+
+// ─── MakeCode boards: micro:bit, Calliope mini, Circuit Playground Express, PyBadge
+//
+// The boards lite runs MakeCode programs on. Terminal spellings are the
+// bw-circuit-ui sidecars' (the netlist's namespace), which are MakeCode's own
+// pin names lowercased — `DigitalPin.P0` is `p0`, `pins.A1` is `a1` — so a
+// program's setPin('p0', …) lands on the pad it names. All three are 3.3 V
+// logic: registered as 'mcu' passthroughs (the pre-registration fallback in
+// bw-circuit-ui) their pins drove at the BOARD's vcc, which the designer
+// constructs at 5 V, and their 3V/GND pads sourced nothing.
+
+// Calliope mini 1.x/2.x (nRF51822): the six ring pads — P0-P3 on the arms,
+// `+` (3V) and `-` (GND) at the top. The 2x13 header (C4-C17, …) and the Grove
+// sockets are not modelled as terminals.
+const CALLIOPE_MINI_TERMINALS = ['p0', 'p1', 'p2', 'p3', '3v', 'gnd'];
+const CALLIOPE_MINI_ROLES = { '3v': '3v3' };
+
+// BBC micro:bit (V2, nRF52833): the five large edge-connector pads, exactly
+// as bw-circuit-ui's `microbit` sidecar names them. `3v` is the 3.3 V rail,
+// the same misread-as-GPIO spelling as the Calliope's. The micro:bit is the
+// board this block was written for and was the one left unregistered: it
+// collapsed to the generic 'mcu' surface, where P0 -> 220 R -> LED -> the
+// micro:bit's own GND pad carried 0 mA with every node floating at 5 V
+// (test/makecode-boards.test.mjs pins that counterfactual).
+const MICROBIT_TERMINALS = ['p0', 'p1', 'p2', '3v', 'gnd'];
+const MICROBIT_ROLES = { '3v': '3v3' };
+
+// micro:bit seated in an edge-connector breakout (`microbit_breakout` sidecar):
+// a representative subset of the edge pins, with the rail brought out on BOTH
+// header sides. `3v_l`/`3v_r` and `gnd_l`/`gnd_r` match none of the shared
+// spellings, so they are named here — otherwise they would be GPIO that
+// sources nothing, the same defect as the bare board.
+const MICROBIT_BREAKOUT_TERMINALS = [
+  'p0', 'p1', 'p2', '3v_l', 'gnd_l', 'p8', 'p12', 'p16', '3v_r', 'gnd_r',
+];
+const MICROBIT_BREAKOUT_ROLES = {
+  '3v_l': '3v3', '3v_r': '3v3', gnd_l: 'gnd', gnd_r: 'gnd',
+};
+
+// Adafruit Circuit Playground Express (ATSAMD21G18): its 14 alligator pads —
+// A0-A7, two 3.3 V, three GND and VOUT. Onboard NeoPixels, buttons, slide
+// switch and sensors belong to the board, not to pads.
+const CPX_TERMINALS = [
+  'a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7',
+  '3v3', '3v3_2', 'gnd', 'gnd2', 'gnd3', 'vout',
+];
+// VOUT is USB 5 V or the battery, whichever is higher, after the power-path
+// diode — the Pico's VSYS role (USB-powered, ~4.7 V) is the same assumption.
+const CPX_ROLES = { '3v3_2': '3v3', vout: 'vsys' };
+
+// Adafruit PyBadge (ATSAMD51J19): the Feather headers, STEMMA and the D2/D3
+// JST ports, exactly as bw-circuit-ui's pybadge sidecar names them.
+const PYBADGE_TERMINALS = [
+  'reset', '3v3', 'aref', 'gnd', 'a0', 'a1', 'a2', 'a3', 'a4', 'a5',
+  'sck', 'mosi', 'miso', 'rx', 'tx', 'free', 'sda', 'scl',
+  'd5', 'd6', 'd9', 'd10', 'd11', 'd12', 'd13',
+  'usb', 'enable', 'battery',
+  'stemma_sda', 'stemma_scl', 'd2', 'd3',
+];
+// Feather `USB` is VBUS (5 V when plugged in). `BAT` is a LiPo that is not
+// assumed present, and `EN` is the regulator enable — neither sources.
+const PYBADGE_ROLES = { usb: '5v', battery: 'ref', enable: 'ref' };
+
+// ESP8266 board (NodeMCU-style), as the esp8266js adapter publishes it: the
+// GPIOs by number — 0-5 and 12-15; 6-11 are the module's flash and GPIO16 is
+// not modelled — plus the 3.3 V rail, VIN (USB 5 V on these boards) and GND.
+// The adapter's 'GPIO2' joins `gpio2` (the board's pin join is case-blind).
+const ESP8266_TERMINALS = [
+  'gpio0', 'gpio1', 'gpio2', 'gpio3', 'gpio4', 'gpio5',
+  'gpio12', 'gpio13', 'gpio14', 'gpio15',
+  '3v3', 'vin', 'gnd',
+];
+const ESP8266_ROLES = { vin: '5v' };
+
+/**
+ * Register board-kind device models.
+ */
+export function registerBoardKinds() {
+  registerDevice('arduino_nano', boardModel(NANO_TERMINALS, 5.0));
+  registerDevice('arduino_uno', boardModel(UNO_TERMINALS, 5.0));
+  registerDevice('arduino_mega', boardModel(MEGA_TERMINALS, 5.0));
+  registerDevice('pi_pico', boardModel(PICO_TERMINALS, 3.3));
+  registerDevice('microbit', boardModel(MICROBIT_TERMINALS, 3.3, MICROBIT_ROLES));
+  registerDevice('microbit_breakout',
+    boardModel(MICROBIT_BREAKOUT_TERMINALS, 3.3, MICROBIT_BREAKOUT_ROLES));
+  registerDevice('calliopemini', boardModel(CALLIOPE_MINI_TERMINALS, 3.3, CALLIOPE_MINI_ROLES));
+  registerDevice('circuit_playground_express', boardModel(CPX_TERMINALS, 3.3, CPX_ROLES));
+  registerDevice('esp8266', boardModel(ESP8266_TERMINALS, 3.3, ESP8266_ROLES));
+  registerDevice('pybadge', boardModel(PYBADGE_TERMINALS, 3.3, PYBADGE_ROLES));
+  registerDevice('eater6502', boardModel(EATER6502_TERMINALS, 5.0));
+  registerDevice('attiny88', bareChipModel(ATTINY88_TERMINALS, 5.0));
+  registerDevice('attiny88_qfn32', bareChipModel(ATTINY88_QFN32_TERMINALS, 5.0));
+  registerDevice('attiny85', bareChipModel(ATTINY85_TERMINALS, 5.0));
+  registerDevice('stc15_mcu', bareChipModel(STC15_TERMINALS, 5.0));
+  registerDevice('stm32f030', bareChipModel(STM32F030_TERMINALS, 3.3));
+}

@@ -1,0 +1,17 @@
+{
+  "status": "INDEPENDENT_READY_PF_TWO_AFFECTED_CONTROLS_PASS_SPLIT_OUTCOME",
+  "head": "c7ba003148a636e468431498626933c2e2e93e26",
+  "sourceInputs": 106,
+  "completeBeforeAfterEqual": true,
+  "frozenSourceGitPreflightReviewed": true,
+  "parentSha256": "552dec70afa17045986c203001a6adec5d557556662ab4c26b5f20e08b868294",
+  "tests": 2,
+  "passes": 2,
+  "failures": 0,
+  "skips": 0,
+  "exitCode": 0,
+  "rawWaitStatus": 0,
+  "rawExitWallSeconds": 3.1907281447201967,
+  "finalAuthInclusiveWallSeconds": 5.314209846779704,
+  "scope": "Exact derivative and genuine manifest cap cases only; earlier authority+identity PASS and original two header failures retained. No full four-case rerun, query, factory, compiler, addon or native instructions."
+}

@@ -1,0 +1,18 @@
+{
+  "controls/run.py.txt": "/tmp/native-cold-native-undefined-of-source-controls-20261003/run.py",
+  "controls/before.json": "/tmp/native-cold-native-undefined-of-source-controls-20261003/before.json",
+  "controls/after.json": "/tmp/native-cold-native-undefined-of-source-controls-20261003/after.json",
+  "controls/invocation.json": "/tmp/native-cold-native-undefined-of-source-controls-20261003/invocation.json",
+  "controls/stdout": "/tmp/native-cold-native-undefined-of-source-controls-20261003/stdout",
+  "controls/stderr": "/tmp/native-cold-native-undefined-of-source-controls-20261003/stderr",
+  "controls/exit.json": "/tmp/native-cold-native-undefined-of-source-controls-20261003/exit.json",
+  "controls/source-context.json": "/tmp/native-cold-native-undefined-of-source-controls-20261003/source-context.json",
+  "identity/run.py.txt": "/tmp/native-cold-native-undefined-of-frozen-source-auth-20261003/run.py",
+  "identity/before.json": "/tmp/native-cold-native-undefined-of-frozen-source-auth-20261003/before.json",
+  "identity/after.json": "/tmp/native-cold-native-undefined-of-frozen-source-auth-20261003/after.json",
+  "identity/invocation.json": "/tmp/native-cold-native-undefined-of-frozen-source-auth-20261003/invocation.json",
+  "identity/stdout": "/tmp/native-cold-native-undefined-of-frozen-source-auth-20261003/stdout",
+  "identity/stderr": "/tmp/native-cold-native-undefined-of-frozen-source-auth-20261003/stderr",
+  "identity/exit.json": "/tmp/native-cold-native-undefined-of-frozen-source-auth-20261003/exit.json",
+  "independent-review.json": "/tmp/native-cold-native-undefined-of-independent-review-20261003.json"
+}

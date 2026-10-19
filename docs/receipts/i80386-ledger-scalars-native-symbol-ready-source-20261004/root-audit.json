@@ -1,0 +1,35 @@
+{
+  "result": "ROOT_METADATA_AND_READONLY_SOURCE_IDENTITY_PASS",
+  "selectedCases": 1,
+  "otherCases": "unselected",
+  "actualIdentityPaths": 92,
+  "guestInstructions": 0,
+  "controls": [
+    {
+      "path": "/tmp/native-cold-ledger-scalars-native-symbol-ready-metadata-controls-20261004",
+      "sourceCount": 92,
+      "exit": {
+        "exitCode": 0,
+        "timeout": false,
+        "wallSeconds": 1.7753858603537083,
+        "error": null,
+        "cleanupError": null,
+        "finalizationError": null,
+        "pinsEqual": true
+      }
+    },
+    {
+      "path": "/tmp/native-cold-ledger-scalars-native-symbol-ready-frozen-auth-20261004",
+      "sourceCount": 92,
+      "exit": {
+        "exitCode": 0,
+        "timeout": false,
+        "wallSeconds": 2.8776732310652733,
+        "error": null,
+        "cleanupError": null,
+        "finalizationError": null,
+        "pinsEqual": true
+      }
+    }
+  ]
+}

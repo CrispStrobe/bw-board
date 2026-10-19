@@ -1,0 +1,12 @@
+import sys
+sys.dont_write_bytecode=True
+sys.path.insert(0,'/tmp/bw-cold-native-restoration-source-20261003/scripts/cold-native-restore')
+import json
+from pathlib import Path
+from archive import ordinary,zip_members,tar_members,require
+h=Path(sys.path[0]);m=json.loads(ordinary(h/'official-members.json'));f=json.loads(ordinary(h/'frozen-members.json'));p=json.loads(ordinary(h/'prepared-members.json'))
+z=zip_members(Path('/tmp/native-cold-bios-first-build-publication-20261003/official-artifact.zip'),m['members'],m['zipSha256'],m['zipBytes']);prefix='cold-bios-build-evidence/'
+require({n:r['sha256'] for n,r in f.items()}==json.loads(z[prefix+'identity-before.stdout'])['hashes'],'source receipt map')
+require({n:r['sha256'] for n,r in p.items()}=={n:v for n,v in json.loads(z[prefix+'prepared-after-build.json']).items() if not n.endswith('.node')},'prepared receipt map')
+ff=tar_members(z[prefix+'frozen-source.tar.gz'],f);pp=tar_members(z[prefix+'prepared-source.tar.gz'],p)
+print(json.dumps({'status':'READONLY_GENUINE_ZIP_AND_TAR_MAPS_PASS_NO_MATERIALIZATION','zipMembers':len(z),'frozenFiles':len(ff),'preparedFiles':len(pp),'frozenBytes':sum(map(len,ff.values())),'preparedBytes':sum(map(len,pp.values()))}))

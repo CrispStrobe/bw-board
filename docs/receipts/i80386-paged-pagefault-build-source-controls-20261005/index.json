@@ -1,0 +1,67 @@
+{
+  "schema": "bw.exact-origin.receipts.v1",
+  "scope": "Six direct metadata/definition-only/read-only source controls; not materialization/build/addon/CPU",
+  "testedRevision": "1adb9cbf5b1c33d9eca448ff0e7ba777d62f98ab",
+  "records": [
+    {
+      "path": "parent.py",
+      "origin": "/tmp/native-paged-pagefault-build-source-controls-20261005/parent.py",
+      "bytes": 7397,
+      "sha256": "cc2f0754ebf2a9ec94ff548e6539b4c8248b3a0a8bf81c3c43c753b3898eb317"
+    },
+    {
+      "path": "before.json",
+      "origin": "/tmp/native-paged-pagefault-build-source-controls-20261005/before.json",
+      "bytes": 41619,
+      "sha256": "383f564395f5347da93a2448df8ca9d3a852d61dd7ca88b1e91e7705fccb3c62"
+    },
+    {
+      "path": "after.json",
+      "origin": "/tmp/native-paged-pagefault-build-source-controls-20261005/after.json",
+      "bytes": 41619,
+      "sha256": "383f564395f5347da93a2448df8ca9d3a852d61dd7ca88b1e91e7705fccb3c62"
+    },
+    {
+      "path": "invocation.json",
+      "origin": "/tmp/native-paged-pagefault-build-source-controls-20261005/invocation.json",
+      "bytes": 1490,
+      "sha256": "c65f1e832303d8a081e6e223881a9909c51a773ca3699769b35c4061a26cd44e"
+    },
+    {
+      "path": "exit.json",
+      "origin": "/tmp/native-paged-pagefault-build-source-controls-20261005/exit.json",
+      "bytes": 601,
+      "sha256": "85bb24ab4141f7843c7d2ef52f8caa63b30edba36b39c048ba8fbe4854436a05"
+    },
+    {
+      "path": "stdout",
+      "origin": "/tmp/native-paged-pagefault-build-source-controls-20261005/stdout",
+      "bytes": 30557,
+      "sha256": "513d52fbc64299653d17ced4f777f4ae6ff2507cf3b7b373dcc368d9822796c4"
+    },
+    {
+      "path": "stderr",
+      "origin": "/tmp/native-paged-pagefault-build-source-controls-20261005/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "source-identity.json",
+      "origin": "/tmp/native-paged-pagefault-build-source-controls-20261005/source-identity.json",
+      "bytes": 29742,
+      "sha256": "107ff263b2310e7fb35e8755e065e3394020744fa3fe7f835ea40662f0fe8018"
+    },
+    {
+      "path": "generated-hashes.json",
+      "origin": "/tmp/native-paged-pagefault-build-source-controls-20261005/generated-hashes.json",
+      "bytes": 670,
+      "sha256": "240f051082c573280e680a59e25a60ec514fe6552d09c6a5bbaa805b9a4d144c"
+    },
+    {
+      "path": "independent-audit.json",
+      "origin": "/tmp/native-paged-pagefault-build-source-controls-20261005/independent-audit.json",
+      "bytes": 1888,
+      "sha256": "fb8cf3d1f015c2ac01d0e5f1213781f3f9101a86fcf34b113da6b355b3dc9f61"
+    }
+  ]
+}

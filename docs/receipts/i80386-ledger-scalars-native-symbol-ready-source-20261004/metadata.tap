@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: owned READY source metadata retains manufactured PENDING refusal and fixed pins
+ok 1 - owned READY source metadata retains manufactured PENDING refusal and fixed pins
+  ---
+  duration_ms: 5.020546
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 192.50328

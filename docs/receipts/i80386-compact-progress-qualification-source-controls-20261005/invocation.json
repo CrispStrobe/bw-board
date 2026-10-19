@@ -1,0 +1,36 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "test/i80386-cold-compact-progress-qualification-source.test.mjs"
+  ],
+  "cwd": "/tmp/bw-native-compact-progress-paired-source-20261005",
+  "revision": "eb761ad7522275da9125c87e1c0bc0216f19df3b",
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "niceIncrement": 10,
+    "pythonMemoryLimit": "not imposed; seven Python pure methods inherit process CPU/file limits; Node heap cap applies only to Node"
+  },
+  "blankHooks": [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "LD_PRELOAD",
+    "LD_AUDIT",
+    "BW_HOT_NAPI_PROFILE",
+    "NODE_V8_COVERAGE"
+  ],
+  "absentCompilerOverrides": [
+    "CPATH",
+    "CPLUS_INCLUDE_PATH",
+    "C_INCLUDE_PATH",
+    "GCC_EXEC_PREFIX",
+    "COMPILER_PATH",
+    "LIBRARY_PATH"
+  ],
+  "scope": "One Node wrapper forwarding seven named Python pure methods; fixed qualifier terminal fixture uses historical raw records and manufactured compact/source metadata with one PIO projection. No setup/restore/addon/provider/guest/compiler/perf"
+}

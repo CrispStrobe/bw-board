@@ -1,0 +1,170 @@
+{
+  "baseRevision": "162a9b2a72d780cd7ea4491c91cf7260b15b0a8b",
+  "basePath": "scripts/cold-native-typed-state-performance/worker.mjs",
+  "baseSha256": "9428e5dd6c74103a27342491cf05bedb36b63700fa919ad2a8e73833304fd2bf",
+  "heldProtocolSha256": "e15f481a5e0af0aec007dc4d48259b87aef9e86b7f7b6bbc31d047bde549b74b",
+  "edits": [
+    {
+      "start": 509,
+      "end": 529,
+      "old": "",
+      "next": "memoryFusionProfile,"
+    },
+    {
+      "start": 598,
+      "end": 621,
+      "old": "",
+      "next": "eEvidence,validateBridg"
+    },
+    {
+      "start": 2868,
+      "end": 2873,
+      "old": "t",
+      "next": "memor"
+    },
+    {
+      "start": 2874,
+      "end": 2874,
+      "old": "ped",
+      "next": ""
+    },
+    {
+      "start": 2875,
+      "end": 2877,
+      "old": "",
+      "next": "fu"
+    },
+    {
+      "start": 2878,
+      "end": 2881,
+      "old": "tate",
+      "next": "ion"
+    },
+    {
+      "start": 2943,
+      "end": 2991,
+      "old": "",
+      "next": "Profile,requiredMemoryFusionProfile:memoryFusion"
+    },
+    {
+      "start": 5849,
+      "end": 5851,
+      "old": "34",
+      "next": "51"
+    },
+    {
+      "start": 6152,
+      "end": 6162,
+      "old": "b",
+      "next": "memory-fus"
+    },
+    {
+      "start": 6164,
+      "end": 6165,
+      "old": "s-typed-state",
+      "next": "n"
+    },
+    {
+      "start": 6628,
+      "end": 6640,
+      "old": "bas",
+      "next": "input.compil"
+    },
+    {
+      "start": 6641,
+      "end": 6646,
+      "old": "",
+      "next": "dRoot"
+    },
+    {
+      "start": 6648,
+      "end": 6656,
+      "old": "",
+      "next": "scripts/"
+    },
+    {
+      "start": 6658,
+      "end": 6668,
+      "old": "",
+      "next": "chs-cpu3-n"
+    },
+    {
+      "start": 6669,
+      "end": 6677,
+      "old": "r",
+      "next": "tive-col"
+    },
+    {
+      "start": 6679,
+      "end": 6683,
+      "old": "p",
+      "next": "memo"
+    },
+    {
+      "start": 6684,
+      "end": 6690,
+      "old": "",
+      "next": "y-fusi"
+    },
+    {
+      "start": 6691,
+      "end": 6698,
+      "old": "vide",
+      "next": "n/facto"
+    },
+    {
+      "start": 6699,
+      "end": 6700,
+      "old": "",
+      "next": "y"
+    },
+    {
+      "start": 6744,
+      "end": 6747,
+      "old": "C",
+      "next": "Mem"
+    },
+    {
+      "start": 6748,
+      "end": 6753,
+      "old": "ldB",
+      "next": "ryFus"
+    },
+    {
+      "start": 6755,
+      "end": 6756,
+      "old": "s",
+      "next": "n"
+    },
+    {
+      "start": 6891,
+      "end": 6951,
+      "old": "",
+      "next": "Profile;receipt.admittedMemoryFusionProfile=api.memoryFusion"
+    },
+    {
+      "start": 9472,
+      "end": 9581,
+      "old": "",
+      "next": "receipt.bridgeAttemptCounts=validateBridgeEvidence(receipt.reset.native,native,provider.bridgeEntryCounts());"
+    },
+    {
+      "start": 10053,
+      "end": 10054,
+      "old": "",
+      "next": "{"
+    },
+    {
+      "start": 10100,
+      "end": 10233,
+      "old": "",
+      "next": "receipt.lastSuccessfullyReturnedBridgeAttemptCounts={clock:native.bridgeClockEntryAttempts,memory:native.bridgeMemoryEntryAttempts};}"
+    },
+    {
+      "start": 10361,
+      "end": 10431,
+      "old": "",
+      "next": "s()],['providerFusionCountsAfterFailure',()=>provider.bridgeEntryCount"
+    }
+  ]
+}

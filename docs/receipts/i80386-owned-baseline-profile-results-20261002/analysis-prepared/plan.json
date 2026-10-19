@@ -1,0 +1,9 @@
+{
+  "status": "PREPARED_ONLY_NO_ACTUAL_PROFILE_ANALYSIS",
+  "inputs": "Root-verified original raw profile, phases, hosted alignment, capture, derivation, summary, exact runner/admission and diagnostic manifest; each bounded regular file SHA authenticated. No default artifact identities.",
+  "execution": "One root-approved read-only Python invocation: CPU/wall120 seconds, nice10, memory512MiB, core0/file256MiB; fresh output and exact stdout/stderr/exit plus before/after helper/input SHA receipts.",
+  "accounting": "Endpoint timestamps use profile.startTime plus cumulative timeDeltas. Leaf counts partition selected samples; inclusive function identity credited once per sample; inclusive stacks overlap. Full tape and selected indices retained. Interval intersection is bookkeeping, never CPU attribution.",
+  "sourceIdentity": "Original hosted resume URL recovered from exact inverse import seam, not relocated local filename. Native close alias only under source-owned resume ancestor.",
+  "limits": "Single JS isolate qualitative samples; not all-thread CPU, native-core/NAPI split, physical RTx or speed. Program/GC/idle remain actual frame categories. Raw inputs unchanged even on refusal.",
+  "controls": "Synthetic controls prepared separately; never actual Inspector/guest evidence."
+}

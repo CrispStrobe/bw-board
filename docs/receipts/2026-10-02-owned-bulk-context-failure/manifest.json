@@ -1,0 +1,81 @@
+{
+  "schema": "bw.lossless-failure-receipts.v1",
+  "scope": "First hosted context failure before any benchmark children, and source-only portability controls",
+  "files": {
+    "attempt1/artifact-metadata.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt1-20261002/artifact-metadata.json",
+      "bytes": 812,
+      "sha256": "446f82ae5eacaa47cd295e7c73e9acc7372d909306c467c59a82785e558c3ede"
+    },
+    "attempt1/run.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt1-20261002/run.json",
+      "bytes": 13879,
+      "sha256": "3204a38758cdccd86b4d4a231d5397725214a6b25fe4f053ae49fb584d04ded9"
+    },
+    "attempt1/root-failure-audit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt1-20261002/root-failure-audit.json",
+      "bytes": 1188,
+      "sha256": "336c54ec531bedf13177b1e3c5c3ba990af92e8441375f36d5bd2818b5331d9e"
+    },
+    "attempt1/jobs.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt1-20261002/jobs.json",
+      "bytes": 4894,
+      "sha256": "ecc045d80193f84efb4f788f406cfe8f21d750357a4adf33e9bafabf35a6e6c0"
+    },
+    "attempt1/failed.log": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt1-20261002/failed.log",
+      "bytes": 4255,
+      "sha256": "cb6b63754858a30492ed55160197da87fd865a787180ab6656514e069305fbad"
+    },
+    "attempt1/files/owned-bulk-context/artifact-metadata.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt1-20261002/files/owned-bulk-context/artifact-metadata.json",
+      "bytes": 741,
+      "sha256": "0ece3110fc76ec138ad12c107a741b6688420122cdada1b9020547cd33318c26"
+    },
+    "attempt1/files/owned-bulk-context/context.txt": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt1-20261002/files/owned-bulk-context/context.txt",
+      "bytes": 460,
+      "sha256": "3a743c30e08655af504d1a4ea5ef51800ece8a37297127c83086c99cf285e866"
+    },
+    "source-controls/absent.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-context-fix-20261002/absent.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "source-controls/v2.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-context-fix-20261002/v2.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "source-controls/v1.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-context-fix-20261002/v1.stdout",
+      "bytes": 3288,
+      "sha256": "8c34a404272dcdf84c66334bc0b215bc10c04efc7d1de4468ac6872937206159"
+    },
+    "source-controls/v2.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-context-fix-20261002/v2.stdout",
+      "bytes": 3309,
+      "sha256": "308edefd3a2c62f6df3a9a74aed1052f7122f99168d3e34ab5ecc35b6dc77d34"
+    },
+    "source-controls/v1.stderr": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-context-fix-20261002/v1.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "source-controls/attempt1-failure-audit.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-context-fix-20261002/attempt1-failure-audit.json",
+      "bytes": 1227,
+      "sha256": "85f1be898c34b06c439bb9bf91f71f3778ea207f8e7ff1b8df6a3ce0c2c259eb"
+    },
+    "source-controls/absent.stdout": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-context-fix-20261002/absent.stdout",
+      "bytes": 3324,
+      "sha256": "d1818730b222fcf7d629bf6a297093f8906087908d25454039aaea4b24b6f49a"
+    },
+    "source-controls/source-controls.json": {
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-clock-bulk-context-fix-20261002/source-controls.json",
+      "bytes": 826,
+      "sha256": "2bfc178fb5727c45693ffa8a51ef802be6a9c8b6f55972fa91d105664168e42c"
+    }
+  }
+}

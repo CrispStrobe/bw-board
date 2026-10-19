@@ -1,0 +1,53 @@
+TAP version 13
+# {"scope":"tiny actual private JS PF source control","attempts":57,"q":56,"cuts":[{"name":"reset","q":0,"attemptOrdinal":0,"faultSerial":0},{"name":"after-LGDT","q":36,"attemptOrdinal":36,"faultSerial":0},{"name":"after-LIDT","q":37,"attemptOrdinal":37,"faultSerial":0},{"name":"CR3-ready","q":39,"attemptOrdinal":39,"faultSerial":0},{"name":"PE-enabled","q":41,"attemptOrdinal":41,"faultSerial":0},{"name":"DS-ready","q":43,"attemptOrdinal":43,"faultSerial":0},{"name":"SS-loaded","q":44,"attemptOrdinal":44,"faultSerial":0},{"name":"SP-ready","q":45,"attemptOrdinal":45,"faultSerial":0},{"name":"PG-enabled","q":47,"attemptOrdinal":47,"faultSerial":0},{"name":"entered-paged-code","q":48,"attemptOrdinal":48,"faultSerial":0},{"name":"before-faulting-store","q":49,"attemptOrdinal":49,"faultSerial":0},{"name":"entered-PF-handler","q":49,"attemptOrdinal":50,"faultSerial":1},{"name":"PTE-repaired","q":50,"attemptOrdinal":51,"faultSerial":1},{"name":"CR3-read","q":51,"attemptOrdinal":52,"faultSerial":1},{"name":"CR3-reloaded","q":52,"attemptOrdinal":53,"faultSerial":1},{"name":"error-discarded","q":53,"attemptOrdinal":54,"faultSerial":1},{"name":"returned-for-retry","q":54,"attemptOrdinal":55,"faultSerial":1},{"name":"retry-committed","q":55,"attemptOrdinal":56,"faultSerial":1},{"name":"readback-before-HLT","q":56,"attemptOrdinal":57,"faultSerial":1}],"stores":37,"updates":11,"ramSha256":"041d1251872170fe2369dbcda00cd2959a6cbd13a32091be43f57be65df1bc94"}
+# Subtest: fixed source ROM and RAM instructions prove vector14 gate, handler CR3 reload and error discard encodings
+ok 1 - fixed source ROM and RAM instructions prove vector14 gate, handler CR3 reload and error discard encodings
+  ---
+  duration_ms: 5.236672
+  type: 'test'
+  ...
+# Subtest: physical fetch accepts only encoded instructions and rejects poison aliases and HLT
+ok 2 - physical fetch accepts only encoded instructions and rejects poison aliases and HLT
+  ---
+  duration_ms: 16.175559
+  type: 'test'
+  ...
+# Subtest: ordered real frame, ordinary PTE repair and once-only retry store owners refuse changed address phase and byte
+ok 3 - ordered real frame, ordinary PTE repair and once-only retry store owners refuse changed address phase and byte
+  ---
+  duration_ms: 24.196046
+  type: 'test'
+  ...
+# Subtest: exact JS A/D sources distinguish repair table writes and retried data dirtiness while code stays clean
+ok 4 - exact JS A/D sources distinguish repair table writes and retried data dirtiness while code stays clean
+  ---
+  duration_ms: 9.774578
+  type: 'test'
+  ...
+# Subtest: manufactured terminal and zero-completion ledger refuse duplicate fault charge missing repair wrong cache or any page byte
+ok 5 - manufactured terminal and zero-completion ledger refuse duplicate fault charge missing repair wrong cache or any page byte
+  ---
+  duration_ms: 390.837464
+  type: 'test'
+  ...
+# Subtest: private no-arg factory reset stage returns detached pages and refuses early settle
+ok 6 - private no-arg factory reset stage returns detached pages and refuses early settle
+  ---
+  duration_ms: 56.937698
+  type: 'test'
+  ...
+# Subtest: bounded actual private JS page fault repair CR3 reload IRET and once-only retry retains genuine effects
+ok 7 - bounded actual private JS page fault repair CR3 reload IRET and once-only retry retains genuine effects
+  ---
+  duration_ms: 176.933338
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 951.70106

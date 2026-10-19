@@ -1,0 +1,14 @@
+{
+  "status": "INDEPENDENT_READY_PF_INITIAL_TWO_PASS_TWO_STRICT_LIFECYCLE_FAILURES",
+  "head": "c7859eab6184f3dd3fc1de6a86144f3039a7f23a",
+  "sourceInputs": 106,
+  "fullSourceGitAndBeforeAfterEqual": true,
+  "tests": 4,
+  "passes": 2,
+  "failures": 2,
+  "skips": 0,
+  "exitCode": 1,
+  "rawWaitStatus": 256,
+  "cause": "Executing runner header differs from exact counted lifecycle derivative; strict guard refuses in derivative and genuine manifest cases. Authority and identity cases passed. No guard weakening or replay.",
+  "scope": "Saved packet audit only; no factories/compiler/addon/native CPU. Original failure remains immutable."
+}

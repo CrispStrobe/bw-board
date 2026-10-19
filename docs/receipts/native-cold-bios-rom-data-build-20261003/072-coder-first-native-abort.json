@@ -1,0 +1,17 @@
+{
+  "status": "FIRST_NATIVE_FATAL_GUARD_RETAINED_NO_RETRY",
+  "run": 37109832930,
+  "head": "cffc3c0c457830716124fabaf3f2b7bfa5a227b4",
+  "artifactId": 11269880360,
+  "child": {
+    "returncode": -6,
+    "timedOut": false,
+    "wallSeconds": 2.5213770129999986,
+    "terminatedPids": [],
+    "interrupted": null
+  },
+  "guard": "host-rom-observed-value",
+  "sourceAndArtifactsEqual": true,
+  "exactOffendingAddressAndCounters": "NOT_RETAINED_BY_FATAL_GUARD",
+  "scope": "Not E16/boot/performance qualification"
+}

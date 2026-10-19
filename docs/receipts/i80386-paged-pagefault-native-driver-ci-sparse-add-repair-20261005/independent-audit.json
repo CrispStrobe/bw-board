@@ -1,0 +1,15 @@
+{
+  "status": "INDEPENDENT_PF_PORTABLE_SPARSE_ADD_ONE_AFFECTED_CONTROL_PASS",
+  "head": "e939567e10556ae55028208c372267a64abc0e67",
+  "sourceInputs": 105,
+  "frozenGitHashesEqual": true,
+  "completeBeforeAfterEqual": true,
+  "parentSha256": "315a5b26db80ce71f2d222b1b37c9d17e7954e19461a399cc1ded30e4f9542cc",
+  "tests": 1,
+  "passes": 1,
+  "skips": 0,
+  "stderrBytes": 0,
+  "rawExitWallSeconds": 7.091015791520476,
+  "finalAuthInclusiveWallSeconds": 9.222363902255893,
+  "scope": "Saved evidence only. One portable identity fixture case; no replay, factory, compiler, addon or CPU. Prior CI failure retained."
+}

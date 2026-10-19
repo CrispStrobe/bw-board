@@ -1,0 +1,9 @@
+{
+  "beforeAfterEqual": true,
+  "finalizationErrors": [],
+  "mode": "six-focused-evidence-source-controls",
+  "primaryError": null,
+  "scope": "manufactured/read-only source proof; no factory/provider/addon/emulated instruction",
+  "sourceCount": 81,
+  "status": "SOURCE_CONTROLS_PASS"
+}

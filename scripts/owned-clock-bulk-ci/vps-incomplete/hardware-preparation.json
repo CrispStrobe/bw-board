@@ -1,0 +1,10 @@
+{
+  "scope": "Preparation context only; execution context must be freshly recorded by root",
+  "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.39",
+  "loadAverage": [
+    8.939453125,
+    8.99267578125,
+    7.17724609375
+  ],
+  "cgroupCpuMax": "/sys/fs/cgroup/cpu.max unavailable in this namespace"
+}

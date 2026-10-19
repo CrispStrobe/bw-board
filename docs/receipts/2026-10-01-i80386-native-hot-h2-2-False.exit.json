@@ -1,0 +1,19 @@
+{
+  "returncode": 0,
+  "signal": null,
+  "timedOut": false,
+  "fileLimitReached": false,
+  "error": null,
+  "stderrBytes": 396,
+  "stderrSha256": "ab646f7f991bce318610ea0a9916afd74d17b0b98d44502019007d3d7eb07aea",
+  "wallNs": 2936575318,
+  "transport": "regular file descriptors, no nonblocking pipe",
+  "RLIMIT_FSIZE": 268435456,
+  "heapMiB": 512,
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "/tmp/bw-board-386-native-hot-napi-profile-20261001/scripts/run-i80386-native-hot-direct.mjs",
+    "/mnt/volume1/tmp-astra/native-hot-h2-cost-pairs-20261001/2-False.input.json"
+  ],
+  "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+}

@@ -1,0 +1,21 @@
+{
+  "status": "FAIL",
+  "scope": "ONE_TRACE_OFF_COLD_BOCHS_RESET_MODEL_DIAGNOSTIC_NO_SPEED_OR_FULL_BOOT",
+  "error": "restore failed; no guest launched",
+  "sourceBeforeAfterEqual": true,
+  "immutableInputsBeforeAfterEqual": true,
+  "host": {
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "architecture": "x86_64",
+    "libc": [
+      "glibc",
+      "2.39"
+    ],
+    "cpuModels": [
+      "AMD EPYC 7763 64-Core Processor"
+    ],
+    "logicalCpus": 4,
+    "osRelease": "PRETTY_NAME=\"Ubuntu 24.04.5 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.5 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo\n",
+    "contextTiming": "current parent end, not throughput evidence"
+  }
+}

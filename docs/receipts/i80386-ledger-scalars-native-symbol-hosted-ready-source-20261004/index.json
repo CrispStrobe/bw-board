@@ -1,0 +1,42 @@
+{
+  "testedRevision": "16fc71d0336ad4c9a5de86d874b0dd1bb3393cb9",
+  "scope": "Source mocks and readonly metadata; no live readiness/sampling/guest proof",
+  "records": [
+    {
+      "path": "controls-exit.json",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-hosted-ready-controls-20261004/exit.json",
+      "bytes": 167,
+      "sha256": "c34cadf243a60a622edf452052fc7ae14cc0283f3a9d171d75a02bd793aa4b6b"
+    },
+    {
+      "path": "controls-independent-audit.json",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-hosted-ready-controls-20261004/independent-audit.json",
+      "bytes": 431,
+      "sha256": "d28201d4e7c0ec3280a6181e028a9f333f2234e1893c76a2e8558f3bbfb1bce4"
+    },
+    {
+      "path": "controls-controls.tap",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-hosted-ready-controls-20261004/stdout",
+      "bytes": 680,
+      "sha256": "3dab4c75a080ffa901bc02c64d8d3f255e6bd365e45e72e5efa38685478718e9"
+    },
+    {
+      "path": "frozen-auth-exit.json",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-hosted-ready-frozen-auth-20261004/exit.json",
+      "bytes": 167,
+      "sha256": "19b6be7559922dd9796fb483734357a0ee207549bdea5832cf79a1724f5227cc"
+    },
+    {
+      "path": "frozen-auth-independent-audit.json",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-hosted-ready-frozen-auth-20261004/independent-audit.json",
+      "bytes": 445,
+      "sha256": "ca29424b42b369e2fc148a7d90597ad0d4802b1c826eec683ad0a663644519ae"
+    },
+    {
+      "path": "root-audit.json",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-hosted-ready-root-audit-20261004.json",
+      "bytes": 925,
+      "sha256": "2453ad79793f357db53e4a8e75c3066eb27d94d84c065aba91a9b6d83d52314a"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "prototype": "wired-owned-combinational-and-memory-components",
+  "compiler": "Ubuntu clang version 18.1.3 (1ubuntu1)\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin",
+  "args": [
+    "--target=wasm32",
+    "-O3",
+    "-nostdlib",
+    "-fno-builtin",
+    "-Werror",
+    "-Wall",
+    "-Wextra",
+    "-fuse-ld=/tmp/harris-net-kernel.nhKEjD/wasm-ld",
+    "-Wl,--no-entry",
+    "-Wl,--export=arena_ptr",
+    "-Wl,--export=arena_capacity",
+    "-Wl,--export=resolve_nets",
+    "-Wl,--export=settle_owned",
+    "-Wl,--export=owned_kernel_version",
+    "-Wl,--export=memory_kernel_version",
+    "-Wl,--export=preview_memory_banks",
+    "-Wl,--export-memory",
+    "/mnt/volume1/code/wt/i8086-optimized-pinned/src/experimental/wired-kernel/net-resolver.c",
+    "/mnt/volume1/code/wt/i8086-optimized-pinned/src/experimental/wired-kernel/memory-banks.c",
+    "-o",
+    "/tmp/harris-memory-kernel.GnAQxE/wired-net-kernel.wasm"
+  ],
+  "sourceSHA256": "b37463162042c39813f5f6bf5e64543a60adc665962fe90185ce9df3d391b456",
+  "sourceHashes": {
+    "src/experimental/wired-kernel/net-resolver.c": "b37463162042c39813f5f6bf5e64543a60adc665962fe90185ce9df3d391b456",
+    "src/experimental/wired-kernel/memory-banks.c": "98baf316c856a1c65b18527bd545ce1af61c273759f4f5f149c1ef5e208e5579"
+  },
+  "wasmSHA256": "07f71d012b9003a472ba5fe72b369afcf6ce291d0919ba23568a29b01ae60c8a",
+  "notes": [
+    "Owned C, no runtime imports/WASI, no guest media.",
+    "No board backend or real-time throughput claim."
+  ]
+}

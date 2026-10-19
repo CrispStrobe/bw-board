@@ -1,0 +1,43 @@
+{
+  "status": "ONE_SOURCE_ONLY_LEVEL1_GZIP_BATCH_ALL_RAW_ROUNDTRIPS_PASS",
+  "results": [
+    {
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on/child.stderr",
+      "sourceSha256": "b3646e15a29a0d40f0e9ca8e93f82a28e20fd8caed3d30365f441446460eeda2",
+      "sourceBytes": 149884550,
+      "outputName": "reference-child.stderr.gz",
+      "sourceSha256Before": "b3646e15a29a0d40f0e9ca8e93f82a28e20fd8caed3d30365f441446460eeda2",
+      "sourceSha256After": "b3646e15a29a0d40f0e9ca8e93f82a28e20fd8caed3d30365f441446460eeda2",
+      "compressedSha256": "5df5a5b4de1afe0c317284a269636dd9c1c72c41787c8f282b420a962ef360af",
+      "compressedBytes": 14849895,
+      "roundtripSha256": "b3646e15a29a0d40f0e9ca8e93f82a28e20fd8caed3d30365f441446460eeda2",
+      "roundtripBytes": 149884550
+    },
+    {
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on/guest/callbacks.jsonl",
+      "sourceSha256": "6e130c37266188258be29fe21f4e165b0c2d75a5c6b79347964a6d509fb55946",
+      "sourceBytes": 11730929,
+      "outputName": "reference-callbacks.jsonl.gz",
+      "sourceSha256Before": "6e130c37266188258be29fe21f4e165b0c2d75a5c6b79347964a6d509fb55946",
+      "sourceSha256After": "6e130c37266188258be29fe21f4e165b0c2d75a5c6b79347964a6d509fb55946",
+      "compressedSha256": "978f9e9c6b957da0d99faf600e590fb44ad44941cb3e4b7808ad5047a3079087",
+      "compressedBytes": 2335024,
+      "roundtripSha256": "6e130c37266188258be29fe21f4e165b0c2d75a5c6b79347964a6d509fb55946",
+      "roundtripBytes": 11730929
+    },
+    {
+      "path": "/mnt/volume1/tmp-astra/native-owned-in8-source-r3-20261002/js-reference/events.jsonl",
+      "sourceSha256": "3b90f08b6d832c8ce259e88744572abd06e2088e46c87c1fa6d2f3daf61e2322",
+      "sourceBytes": 7049784,
+      "outputName": "reference-events.jsonl.gz",
+      "sourceSha256Before": "3b90f08b6d832c8ce259e88744572abd06e2088e46c87c1fa6d2f3daf61e2322",
+      "sourceSha256After": "3b90f08b6d832c8ce259e88744572abd06e2088e46c87c1fa6d2f3daf61e2322",
+      "compressedSha256": "745960866f10f12ba78a097f7b083296b24d58ec9e8c107a8bc29d808dd3b6c4",
+      "compressedBytes": 2024136,
+      "roundtripSha256": "3b90f08b6d832c8ce259e88744572abd06e2088e46c87c1fa6d2f3daf61e2322",
+      "roundtripBytes": 7049784
+    }
+  ],
+  "totalCompressedBytes": 19209055,
+  "scope": "Exact source-only oracle bytes retained; no guest or speed result."
+}

@@ -1,0 +1,353 @@
+{
+  "status": "ROOT_H3_ACTUAL_ARTIFACT_AND_COST_PARTITION_AUDIT_PASS",
+  "checks": 648,
+  "sourceRevision": "a645480594a9bc20a4046619745bb85e57abacd0",
+  "bindings": {
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/summary.json": {
+      "bytes": 47600,
+      "sha256": "6f8e92c39f2a924ebd0f514423a9b44f2662332e782088f37865e63dec64de82"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h1-regularfile-pair-20261001/off/capture.json": {
+      "bytes": 82235,
+      "sha256": "43f6f016b0af5282ceed079e8d690b2788861ee2c28bd80315132e6b163fef57"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-build-h3-20261001/prepare.json": {
+      "bytes": 16026,
+      "sha256": "3bc47aadcfd01d3dd70266071be48259b93920ad3a566d0f02ec71f9af138e87"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/run.py": {
+      "bytes": 5575,
+      "sha256": "54685732ecd89cef7ddc49fdddbf31201dc8afdc793c60681566b2dcf75e943a"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/0-False/capture.json": {
+      "bytes": 82374,
+      "sha256": "e0c9efd70223cd0e0458050dc67a6c89639cb24077efa132d1fc5da9b19a168f"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/0-False.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/0-False.stderr": {
+      "bytes": 396,
+      "sha256": "c3a455583873d1e10e0db743e8d752b7e9499a91b35404e6e756363a36377cd5"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/0-True/capture.json": {
+      "bytes": 82371,
+      "sha256": "677d75e917053bc9d170e4e078d986cc25fe44eb636b6426236c5725de8e37f6"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/0-True.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/0-True.stderr": {
+      "bytes": 1270,
+      "sha256": "33e9e5c770c8c6973696e2a85e4ea86c6ca736c41beaad8a81025a93d389e248"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/1-True/capture.json": {
+      "bytes": 82371,
+      "sha256": "471827e1e7195af590a58f0895c487b8836811b3c95551dcd608a52e332161ad"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/1-True.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/1-True.stderr": {
+      "bytes": 1270,
+      "sha256": "0ac47527472bc70fa358d0529f17b856e85bdec69aea6a41b123efc024bd3d11"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/1-False/capture.json": {
+      "bytes": 82374,
+      "sha256": "a45c345baa2e5e57be0d15f3c49a0db42dabaf832765815da8038b94fcdd63b7"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/1-False.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/1-False.stderr": {
+      "bytes": 396,
+      "sha256": "98f1d0f8ce175b9b5394e0605d560f131f6b049ece58579167cd8176f920d962"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/2-False/capture.json": {
+      "bytes": 82374,
+      "sha256": "3281cb3c9b67d7d214ba4ca78bed29c575055eadcd154360dc44028f1ec014b0"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/2-False.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/2-False.stderr": {
+      "bytes": 396,
+      "sha256": "75d68ef87f07155c1768cb43d928739dcb4713a76da16b10f7d86b4fe6d50468"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/2-True/capture.json": {
+      "bytes": 82371,
+      "sha256": "8e3b84fd3dfe0dd78137e989374cec3da69d70cfe5f8984eecbdba8e698ef261"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/2-True.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-cost-pairs-20261001/2-True.stderr": {
+      "bytes": 1265,
+      "sha256": "750edb33deeaee8e56b5c09bfd040ce2808b567727644841b66c5e6093747c9d"
+    },
+    "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-hot-h3-20261001/bochs/bw_direct.node": {
+      "bytes": 2066568,
+      "sha256": "47cbd33c1856d585208221d28aa614345723a42ea302eff83128671e6fe030de"
+    },
+    "/mnt/volume1/tmp-astra/native-hot-h3-root-cost-audit-20261001/audit.py": {
+      "bytes": 5656,
+      "sha256": "f029273a691ae75edb525f930af6f399a266e3b84b4f58d76398f4ec2a4aeb1f"
+    }
+  },
+  "profiledRows": [
+    {
+      "pair": 0,
+      "executionNs": 532158969,
+      "buckets": {
+        "native_resume_inclusive": {
+          "count": 439,
+          "totalNs": 485811193,
+          "maxNs": 31451246
+        },
+        "resume_return_conversion": {
+          "count": 439,
+          "totalNs": 28259961,
+          "maxNs": 893314
+        },
+        "scalar_whole": {
+          "count": 201393,
+          "totalNs": 338077452,
+          "maxNs": 1676170
+        },
+        "memory_whole": {
+          "count": 8438,
+          "totalNs": 69409981,
+          "maxNs": 2375672
+        },
+        "page_whole": {
+          "count": 8,
+          "totalNs": 30761957,
+          "maxNs": 12358545
+        },
+        "scalar_arguments_scopes": {
+          "count": 201393,
+          "totalNs": 20397293,
+          "maxNs": 140842
+        },
+        "scalar_op_call": {
+          "count": 201393,
+          "totalNs": 118403478,
+          "maxNs": 837658
+        },
+        "scalar_return_validation": {
+          "count": 201393,
+          "totalNs": 13085982,
+          "maxNs": 49756
+        },
+        "scalar_mapping_call": {
+          "count": 201367,
+          "totalNs": 85262936,
+          "maxNs": 1668979
+        },
+        "scalar_mapping_fields": {
+          "count": 201393,
+          "totalNs": 83693986,
+          "maxNs": 513297
+        },
+        "scalar_scope_close": {
+          "count": 201393,
+          "totalNs": 17233777,
+          "maxNs": 110970
+        },
+        "scalar_native_tick": {
+          "count": 100684,
+          "totalNs": 166634694,
+          "maxNs": 1676170
+        },
+        "scalar_quantum": {
+          "count": 100682,
+          "totalNs": 166568452,
+          "maxNs": 489896
+        },
+        "scalar_pio": {
+          "count": 26,
+          "totalNs": 4393943,
+          "maxNs": 843851
+        },
+        "scalar_ack": {
+          "count": 1,
+          "totalNs": 480363,
+          "maxNs": 480363
+        }
+      },
+      "residualResumeNs": 47561803
+    },
+    {
+      "pair": 1,
+      "executionNs": 539268863,
+      "buckets": {
+        "native_resume_inclusive": {
+          "count": 439,
+          "totalNs": 489988305,
+          "maxNs": 15362626
+        },
+        "resume_return_conversion": {
+          "count": 439,
+          "totalNs": 29323697,
+          "maxNs": 802671
+        },
+        "scalar_whole": {
+          "count": 201393,
+          "totalNs": 359522085,
+          "maxNs": 2590625
+        },
+        "memory_whole": {
+          "count": 8438,
+          "totalNs": 65747174,
+          "maxNs": 765975
+        },
+        "page_whole": {
+          "count": 8,
+          "totalNs": 16406322,
+          "maxNs": 4462889
+        },
+        "scalar_arguments_scopes": {
+          "count": 201393,
+          "totalNs": 21208914,
+          "maxNs": 67375
+        },
+        "scalar_op_call": {
+          "count": 201393,
+          "totalNs": 131386035,
+          "maxNs": 1611625
+        },
+        "scalar_return_validation": {
+          "count": 201393,
+          "totalNs": 13157762,
+          "maxNs": 122400
+        },
+        "scalar_mapping_call": {
+          "count": 201367,
+          "totalNs": 89754746,
+          "maxNs": 2581635
+        },
+        "scalar_mapping_fields": {
+          "count": 201393,
+          "totalNs": 86786473,
+          "maxNs": 670379
+        },
+        "scalar_scope_close": {
+          "count": 201393,
+          "totalNs": 17228155,
+          "maxNs": 113813
+        },
+        "scalar_native_tick": {
+          "count": 100684,
+          "totalNs": 180091195,
+          "maxNs": 2590625
+        },
+        "scalar_quantum": {
+          "count": 100682,
+          "totalNs": 173431272,
+          "maxNs": 673823
+        },
+        "scalar_pio": {
+          "count": 26,
+          "totalNs": 5744596,
+          "maxNs": 1619231
+        },
+        "scalar_ack": {
+          "count": 1,
+          "totalNs": 255022,
+          "maxNs": 255022
+        }
+      },
+      "residualResumeNs": 48312724
+    },
+    {
+      "pair": 2,
+      "executionNs": 454852430,
+      "buckets": {
+        "native_resume_inclusive": {
+          "count": 439,
+          "totalNs": 416082233,
+          "maxNs": 13025445
+        },
+        "resume_return_conversion": {
+          "count": 439,
+          "totalNs": 24362580,
+          "maxNs": 418802
+        },
+        "scalar_whole": {
+          "count": 201393,
+          "totalNs": 303692832,
+          "maxNs": 875446
+        },
+        "memory_whole": {
+          "count": 8438,
+          "totalNs": 59044607,
+          "maxNs": 1091691
+        },
+        "page_whole": {
+          "count": 8,
+          "totalNs": 11961171,
+          "maxNs": 2782515
+        },
+        "scalar_arguments_scopes": {
+          "count": 201393,
+          "totalNs": 20218408,
+          "maxNs": 36124
+        },
+        "scalar_op_call": {
+          "count": 201393,
+          "totalNs": 105821918,
+          "maxNs": 869646
+        },
+        "scalar_return_validation": {
+          "count": 201393,
+          "totalNs": 11165826,
+          "maxNs": 45205
+        },
+        "scalar_mapping_call": {
+          "count": 201367,
+          "totalNs": 74543239,
+          "maxNs": 658739
+        },
+        "scalar_mapping_fields": {
+          "count": 201393,
+          "totalNs": 76900114,
+          "maxNs": 419796
+        },
+        "scalar_scope_close": {
+          "count": 201393,
+          "totalNs": 15043327,
+          "maxNs": 561477
+        },
+        "scalar_native_tick": {
+          "count": 100684,
+          "totalNs": 150759584,
+          "maxNs": 663930
+        },
+        "scalar_quantum": {
+          "count": 100682,
+          "totalNs": 149469229,
+          "maxNs": 599583
+        },
+        "scalar_pio": {
+          "count": 26,
+          "totalNs": 3318000,
+          "maxNs": 875446
+        },
+        "scalar_ack": {
+          "count": 1,
+          "totalNs": 146019,
+          "maxNs": 146019
+        }
+      },
+      "residualResumeNs": 41383623
+    }
+  ],
+  "qualification": false,
+  "scope": "Full native H1 invariants preserved; diagnostic overlap and instrumentation/shared-host overhead remain. Residual is not pure Bochs. No speedup or physical RTx established."
+}

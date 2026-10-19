@@ -1,0 +1,2449 @@
+/**
+ * The composable 8086 machine — a CONFIG realized, the m6502-machine.js
+ * shape with the two things an x86 breadboard has that a 6502 one does not.
+ *
+ * TWENTY-BIT MEMORY. A megabyte, not 64K, and every region address is a
+ * physical one. The CPU's segments never appear here: seg:off resolution
+ * happens inside the core, and the machine sees only what the address pins
+ * carry.
+ *
+ * A SECOND DECODE SPACE. The 8086 has IN and OUT and a port address space
+ * that shares no pins-decoded logic with memory, so a chip declares which
+ * bus it sits on: `bus: 'io'` (the default, and where a breadboard normally
+ * puts its 8255 and UART, because a 74138 on A0-A7 with M/IO is cheaper
+ * than decoding twenty address lines) or `bus: 'mem'` for the memory-mapped
+ * arrangement. Getting this wrong is silent: the program writes, nothing
+ * moves, and the LED stays dark.
+ *
+ * Everything else is the house contract. Execution is instruction-stepped
+ * (the vector-verified core), peripherals advance by each instruction's
+ * cycle count, and only pin-level effects cross the boundary, in the same
+ * {tMs, pin, level} shape every other device emits.
+ *
+ * INTERRUPT DELIVERY LIVES HERE. The core deliberately does not deliver
+ * INTR on its own; this layer does it (ROADMAP E6.3). When an 8259 is on
+ * the machine, step() checks its INTR output before each instruction: if
+ * the line is asserted AND the CPU's interrupt flag is set, the machine
+ * runs the acknowledge cycle (pic.acknowledge() → vector), delivers it
+ * through cpu.interrupt(vector), and a HLT waiting on a timer tick wakes.
+ * A peripheral reaches the PIC by declaring `irq: n` in its config; a
+ * PIT counter's OUT and a UART's IRQ pin are wired the same way. NMI is
+ * separate: machine.nmi() latches an edge that is delivered ahead of any
+ * INTR, ignores the interrupt flag, and always takes vector 2. The
+ * one-instruction inhibition after a segment-register load is the core's
+ * concern and is not modelled at this resolution.
+ *
+ * @module
+ */
+import { I8086 } from './i8086.js';
+import ProtectedI80286 from './experimental/i80286-protected.js';
+import { AT8042A20 } from './at-8042-a20.js';
+import { ATDMAPageRegisters, ATSystemControl } from './at-system-control.js';
+import {
+    MACHINE_CHECKPOINT_SCHEMA, checkpointRefusal, checkpointSupport,
+    checkpointTopology, cloneCheckpointValue, statePair, validateCheckpointEnvelope,
+    validateCheckpointState
+} from './machine-checkpoint.js';
+import { installI8086RamWordAccess } from './i8086-ram-words.js';
+import { I8255 } from './i8255.js';
+import { NS16C550 } from './ns16c550.js';
+import { MC6850 } from './mc6850.js';
+import { I8254 } from './i8254.js';
+import { I8259 } from './i8259.js';
+import { MC146818 } from './mc146818.js';
+
+/**
+ * Opcodes whose cycle-table key carries the modrm reg field: 80-83, D0-D3,
+ * F6, F7, FE, FF. Derived from the generated tables rather than asserted --
+ * those are exactly the keys that contain a '.'.
+ */
+const CYCLE_GROUP_OPCODES = new Set([
+    0x80, 0x81, 0x82, 0x83, 0xd0, 0xd1, 0xd2, 0xd3, 0xf6, 0xf7, 0xfe, 0xff,
+]);
+
+/**
+ * Every table key, precomputed. `CYCLE_KEY[op]` is the plain key and
+ * `CYCLE_GROUP_KEY[op * 8 + reg]` the extended one.
+ *
+ * Built once because the alternative -- `b.toString(16).toUpperCase()
+ * .padStart(2, '0')` -- allocates three strings on the hot path of the
+ * cycle-timing mode, once per instruction. 256 + 2048 strings is nothing to
+ * build and nothing to hold.
+ */
+const CYCLE_KEY = new Array(256);
+const CYCLE_GROUP_KEY = new Array(256 * 8);
+for (let b = 0; b < 256; b++) {
+    const hex = b.toString(16).toUpperCase().padStart(2, '0');
+    CYCLE_KEY[b] = hex;
+    if (CYCLE_GROUP_OPCODES.has(b)) {
+        for (let r = 0; r < 8; r++) CYCLE_GROUP_KEY[b * 8 + r] = `${hex}.${r}`;
+    }
+}
+import { I8251 } from './i8251.js';
+import { CGACard } from './cga-card.js';
+import { PCSpeaker } from './pc-speaker.js';
+import { ADC0809 } from './adc0809.js';
+import { NE2000 } from './ne2000.js';
+import { DAC0832 } from './dac0832.js';
+import { HerculesCard } from './hercules-card.js';
+import { VGACard } from './vga-card.js';
+import { EGACard } from './ega-card.js';
+import { I8237 } from './i8237.js';
+import { UPD765 } from './upd765.js';
+import { SBDSP } from './sb-dsp.js';
+import { YM3812 } from './ym3812.js';
+import { AudioBus } from './audio-bus.js';
+
+/** The interrupt flag bit in FLAGS — the machine's gate on INTR delivery. */
+const IF = 0x0200;
+
+/**
+ * Which register of a decoded window an address hits, honouring the
+ * window's stride (address step per register) and mirroring past the
+ * register count the way an under-decoded window does on the bench.
+ */
+function regOf(w, addr) {
+    return Math.floor((addr - w.start) / w.stride) % w.regs;
+}
+
+/**
+ * @typedef {object} MachineConfig
+ * @property {number} clockHz CPU clock
+ * @property {'8086'|'80186'|'80286'} [variant] which chip the core is. Default
+ *   '8086'. '80286' is the 186 real-mode ISA on this real-mode core (the 0x0F
+ *   protected-mode group faults as unimplemented). '80186' adds the fifteen
+ *   opcodes the 186 put in the holes the
+ *   8086 left as decode aliases and masks shift counts to five bits, which
+ *   is the one difference a program can SEE on an instruction both parts
+ *   have. A breadboard 80188 is the reason this exists: same ISA, eight-bit
+ *   bus, and nothing else in this file changes.
+ * @property {Array<{kind: 'ram'|'rom', start: number, end: number}>} regions
+ *   inclusive PHYSICAL address ranges in the 1 MB space
+ * @property {Array<{kind: 'ppi'|'uart16550'|'acia6850'|'pit'|'pic'|'usart8251',
+ *   name: string, at: number, bus?: 'io'|'mem', span?: number, xtal?: number,
+ *   inputs?: object, irq?: number, irqChannel?: number}>} chips
+ *   `at` is a port address when bus is 'io' (the default) and a physical
+ *   address when it is 'mem'. `span` widens the decoded window past the
+ *   chip's register count — PARTIAL DECODE, the breadboard normal, where
+ *   registers mirror through the window because the high address lines
+ *   were never wired to the comparator. `irq` names the PIC input line a
+ *   chip's interrupt output is wired to (a serial chip's IRQ pin, or a
+ *   PIT counter's OUT); `irqChannel` picks which PIT counter drives it
+ *   (default 0, the way OUT0 feeds IRQ0 on a PC).
+ */
+
+/** Registers each chip kind answers to; the window mirrors past it. */
+const REGS = {
+    ppi: 4, uart16550: 8, acia6850: 2,
+    pit: 4,          // counters 0/1/2 and the control word
+    // THE CHANNEL IS AN ADDRESS, NOT A DATA BYTE. A0-A2 drive the 0809's mux
+    // select lines, so eight ports select eight channels; the ninth reads
+    // End-Of-Conversion, which is the only way to know a result is ready on a
+    // bench with no PIC to deliver an interrupt.
+    adc0809: 9,
+    // The NE2000 decodes a 32-port block: the NIC's sixteen registers, the
+    // remote-DMA data window, and the reset port.
+    ne2000: 32,
+    // FOUR PORTS FOR A ONE-BYTE CHIP, because the 0832's two latches are its
+    // feature: 310h loads and transfers, 311h stages, 312h is the XFER strobe.
+    // A card that tied XFER low would need one port and could not move two
+    // converters at the same instant.
+    dac0832: 4,
+    pic: 2, rtc: 2,  // A0 selects command/status vs data/mask
+    usart8251: 2,    // C/D selects data vs control/status
+    cga: 16,         // the 3D0h-3DFh block (mode 3D8h, colour 3D9h, status 3DAh)
+    hercules: 16,    // the 3B0h-3BFh block (mode 3B8h, status 3BAh, config 3BFh)
+    vga: 32,         // the 3C0h-3DFh block (attr/seq/gc/crtc/dac/misc + status)
+    ega: 32,         // the 3C0h-3DFh register block (framebuffer at A0000 is a second, mem window)
+    dma: 16,         // the 8237's 00h-0Fh: four channels, then the command block
+    // THE PAGE LATCH IS NOT PART OF THE 8237. The chip counts sixteen bits of
+    // address and the XT needs twenty, so IBM bolted a separate 74LS670 latch
+    // file at 80h-8Fh to supply A16-A19. It is a second decoded window onto the
+    // same chip, which is why it is its own kind rather than a wider span: the
+    // two blocks are 0x70 ports apart and nothing decodes the gap.
+    dmapage: 16,
+    atdmapage: 16,
+    atsystem: 1,
+    fdc: 8,          // the uPD765 card's 3F0h-3F7h (DOR 3F2h, MSR 3F4h, data 3F5h)
+    // The Sound Blaster's 2x0h-2xFh block: reset 2x6h, read 2xAh, write 2xCh,
+    // read-status 2xEh. The OPL at 388h is a SEPARATE chip and a separate
+    // decode, not part of this window.
+    sb: 16,
+    // The OPL2 is TWO ports at 388h/389h, and it is a SEPARATE chip from the
+    // Sound Blaster's 2x0h block even on a card that carries both -- which is
+    // why it is its own kind and its own decode rather than a wider `sb`.
+    opl2: 2,
+};
+
+/**
+ * The canonical 8086 breadboard preset — OURS, not a copy of anyone's.
+ *
+ * It is the arrangement these machines converge on because the parts make
+ * them converge: RAM from zero (the interrupt vector table has to live at
+ * 0000:0000 whether or not you use it), ROM at the top of the megabyte so
+ * the reset fetch at FFFF:0000 lands in it, and I/O in the port space
+ * behind a small decoder. slador.uk's 8088 machine and GREENSHELLRAGE's
+ * 8086 both have this skeleton; neither was copied, and neither could be
+ * (the first is a blog, the second carries no licence at all).
+ *
+ * 32K of ROM means the reset vector sits at F8000+7FF0. A monitor small
+ * enough to read is the point, not a large one.
+ */
+export const BREADBOARD8086 = Object.freeze({
+    clockHz: 5_000_000,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'ppi', name: 'ppi1', at: 0x00 },         // LEDs, switches, LCD
+        { kind: 'uart16550', name: 'uart1', at: 0x10 },  // the terminal
+    ],
+});
+
+/**
+ * The Tier A reference build: an 8088 behind an 8284 clock, its I/O behind a
+ * 74LS138 with 74LS244 buffers, an 8254 for the timer tick, an 8255 driving
+ * a text LCD and the switches, and an 8259 to take the timer interrupt.
+ * Flash at the top of the megabyte.
+ *
+ * Named for its ROLE, not its source. It is modelled on the CHIP LIST of a
+ * published hobbyist 8088 breadboard writeup (slador.uk) — a list of which
+ * parts sit on a board is not copyrightable, and nothing of that build's
+ * ROM, code or schematic is here. The 8284 and the 74-series glue carry no
+ * registers, so they are not machine devices; they are wiring the extractor
+ * infers. The port map is ours.
+ */
+export const TIERA8088 = Object.freeze({
+    clockHz: 5_000_000,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x1ffff },   // 128K
+        { kind: 'rom', start: 0xe0000, end: 0xfffff },   // 128K flash, holds the reset vector
+    ],
+    chips: [
+        { kind: 'ppi', name: 'ppi1', at: 0x00 },            // text LCD, LEDs, switches
+        { kind: 'pit', name: 'pit1', at: 0x20, irq: 0 },    // OUT0 -> IRQ0, the timer tick
+        { kind: 'pic', name: 'pic1', at: 0x40 },
+    ],
+});
+
+/**
+ * A serial + SD-card 8086 reference build: an 8086, 256K of RAM and 256K of
+ * ROM, an 8259, an 8251 UART, and an SD-card interface.
+ *
+ * Named for its SHAPE, not its source — deliberately, because the build it
+ * is modelled on is a personal project that carries NO LICENCE (all rights
+ * reserved). Only the non-copyrightable facts were used: the list of chips
+ * from its public README and nothing else — no ROM, no .asm, no schematic,
+ * and its author's handle is not embedded in our shipped API. A chip roster
+ * this generic (8086 + PIC + UART + SD + 256K/256K) is a natural
+ * configuration, not that project's intellectual property.
+ *
+ * The SD interface and an unconnected graphic LCD are NOT modelled here; the
+ * SPI side lives in sdcard-spi.js and attaches as a device when a lesson
+ * wants it. The port map is ours.
+ */
+export const SDCARD8086 = Object.freeze({
+    clockHz: 10_000_000,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x3ffff },   // 256K
+        { kind: 'rom', start: 0xc0000, end: 0xfffff },   // 256K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'pic', name: 'pic1', at: 0x40 },
+        { kind: 'usart8251', name: 'uart1', at: 0x00, irq: 0 },   // 8251 IRQ -> IRQ0
+    ],
+});
+
+/**
+ * A PC/XT-shaped machine: the real IBM XT I/O map, so a corpus program
+ * written for a PC finds its hardware where it expects. 8259 at 20h, 8254 at
+ * 40h, 8255 at 60h, the PC speaker gated off port 61h, and the CGA card at
+ * 3D0h. 640K of RAM, a small BIOS ROM at the top holding the reset vector.
+ *
+ * This is where the speaker and the CGA status card actually live in this
+ * lane — the ports are the ones the 24 corpus writes to 61h and the retrace
+ * polls on 3DAh are aimed at. A DOS-service tier that carries no hardware can
+ * name these same chip kinds in its own config to make a beep audible.
+ */
+export const PCXT8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x9ffff },   // 640K conventional
+        { kind: 'ram', start: 0xb8000, end: 0xbffff },   // the CGA text page (B800:0000) — the renderer reads it
+        { kind: 'rom', start: 0xf0000, end: 0xfffff },   // 64K BIOS, holds the reset vector at FFFF0h
+    ],
+    chips: [
+        { kind: 'pic', name: 'pic1', at: 0x20 },                       // XT: 8259 at 20-21h
+        { kind: 'pit', name: 'pit1', at: 0x40, irq: 0 },               // XT: 8254 at 40-43h, OUT0 -> IRQ0 (18.2 Hz tick)
+        { kind: 'ppi', name: 'ppi1', at: 0x60 },                       // XT: 8255 at 60-63h (keyboard scancode + config)
+        { kind: 'pcspeaker', name: 'spk', ppi: 'ppi1', pit: 'pit1' },  // 61h bits 0/1 gate counter 2
+        { kind: 'dma', name: 'dma1', at: 0x00 },                       // XT: 8237 at 00-0Fh
+        { kind: 'dmapage', name: 'dmapg', at: 0x80, dma: 'dma1' },     // the 74LS670 page latch at 80-8Fh
+        // uPD765 at 3F0-3F7h, IRQ6, DMA ch 2. The `dma: 'dma1'` field IS the
+        // wire, not a label: without it the machine builds both chips and
+        // connects neither, the FDC falls back to non-DMA execution, raises
+        // RQM and waits forever for a host byte that never comes. The failure
+        // is a silent hang with no error — anyone hand-writing this config
+        // must not omit it.
+        { kind: 'fdc', name: 'fdc1', at: 0x3f0, irq: 6, dma: 'dma1' },
+        { kind: 'cga', name: 'cga1', at: 0x3d0 },                      // CGA at 3D0-3DFh (text page at B800:0000)
+    ],
+});
+
+/** Opt-in, bounded original-AT device profile; it is not a complete PC/AT. */
+export const PCAT80286 = Object.freeze({
+    clockHz:6_000_000,variant:'80286',memoryBytes:4<<20,
+    a20:{controller:'8042',enabled:false,queueLimit:16},
+    regions:[
+        {kind:'ram',start:0,end:0x9ffff},{kind:'rom',start:0xf0000,end:0xfffff},
+        {kind:'ram',start:0x100000,end:0x3fffff},
+    ],
+    chips:[
+        {kind:'pic',name:'pic1',at:0x20},
+        {kind:'pic',name:'pic2',at:0xa0,cascadeTo:'pic1',cascadeIrq:2},
+        {kind:'rtc',name:'rtc1',at:0x70,pic:'pic2',irq:0,initialUnixSeconds:0},
+    ],
+});
+
+/** Genuine-reset IBM 5170-shaped profile for externally supplied AT BIOS ROMs. */
+export const PCAT80286_BOOT = Object.freeze({
+    clockHz:6_000_000,variant:'80286',cpuBackend:'protected286-experimental',memoryBytes:16<<20,
+    a20:{controller:'8042',enabled:true,queueLimit:16,inputBusyCycles:12,responseDelayCycles:32,inputPort:0xb0,
+        allowReset:true,powerOnKeyboardBatCycles:4_200_000,keyboardAckCycles:60_000,keyboardBatCycles:4_200_000,
+        keyboardUnlocked:true},
+    hardwareReset:true,
+    regions:[
+        {kind:'ram',start:0,end:0x7ffff},
+        {kind:'ram',start:0xb8000,end:0xbffff},
+        {kind:'rom',start:0xf0000,end:0xfffff},
+        {kind:'ram',start:0x100000,end:0x17ffff},
+        {kind:'rom',start:0xff0000,end:0xffffff},
+    ],
+    chips:[
+        {kind:'dma',name:'dma1',at:0x00},
+        {kind:'pic',name:'pic1',at:0x20},
+        {kind:'pit',name:'pit1',at:0x40,irq:0,refreshChannel:1,systemControl:'sysctl'},
+        {kind:'atsystem',name:'sysctl',at:0x61,pit:'pit1'},
+        {kind:'atdmapage',name:'dmapg',at:0x80,primary:'dma1',secondary:'dma2'},
+        {kind:'pic',name:'pic2',at:0xa0,cascadeTo:'pic1',cascadeIrq:2},
+        {kind:'dma',name:'dma2',at:0xc0,stride:2,atWordTransfersUnsupported:true},
+        {kind:'rtc',name:'rtc1',at:0x70,pic:'pic2',irq:0,initialUnixSeconds:0,
+            initialCmos:[[0x10,0x20],[0x14,0x21],[0x15,0x00],[0x16,0x02],
+                [0x17,0x00],[0x18,0x02],[0x2e,0x00],[0x2f,0x45],
+                [0x30,0x00],[0x31,0x02],[0x32,0x19]]},
+        {kind:'cga',name:'cga1',at:0x3d0},
+        {kind:'uart16550',name:'uart1',at:0x3f8,pic:'pic1',irq:4},
+        {kind:'fdc',name:'fdc1',at:0x3f0,pic:'pic1',irq:6,dma:'dma1',dmaChannel:2},
+    ],
+});
+
+/** 640K conventional-RAM boot configuration for AT firmware and DOS guests. */
+export const PCAT80286_BOOT_640K = Object.freeze({
+    ...PCAT80286_BOOT,
+    regions:PCAT80286_BOOT.regions.map(region=>region.kind==='ram'&&region.start===0
+        ? {...region,end:0x9ffff}:region),
+    chips:PCAT80286_BOOT.chips.map(chip=>chip.kind==='rtc'?{...chip,
+        initialCmos:[[0x10,0x20],[0x14,0x21],[0x15,0x80],[0x16,0x02],
+            [0x17,0x00],[0x18,0x02],[0x2e,0x00],[0x2f,0xc5],
+            [0x30,0x00],[0x31,0x02],[0x32,0x19]]}:chip),
+});
+
+/**
+ * The UART-shell example — the 8086's counterpart to the Z80 and 6502 serial
+ * monitors. An 8086, 64K of RAM, a 32K ROM holding the reset vector, and a
+ * single 16550 UART at port 10h. Load rom/serial-monitor.bin (built by
+ * scripts/build-serial-monitor.mjs) and it boots itself into a shell that
+ * prints a banner and echoes what you type, driving the same SerialConsole
+ * the other MCUs use — no BIOS, no disk, nothing to configure.
+ */
+export const SERIALSHELL8086 = Object.freeze({
+    clockHz: 5_000_000,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'uart16550', name: 'uart1', at: 0x10 },  // the terminal
+    ],
+});
+
+/**
+ * The display-shell example — the screen counterpart to SERIALSHELL8086. An
+ * 8086, 64K of RAM, the CGA text page mapped at B800:0000, a CGA card at
+ * 3D0-3DFh, and a 32K ROM holding the reset vector. Load rom/cga-demo.bin
+ * (built by scripts/build-cga-demo.mjs) and it boots itself: it selects CGA
+ * text mode and writes a message straight into the text page, which the
+ * VdpScreen widget renders — a board that "boots into a screen" with no BIOS,
+ * no disk, nothing to configure.
+ */
+export const CGADEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional
+        { kind: 'ram', start: 0xb8000, end: 0xbffff },   // the CGA text page (B800:0000) — the renderer reads it
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'cga', name: 'cga1', at: 0x3d0 },        // CGA at 3D0-3DFh (text page at B800:0000)
+    ],
+});
+
+/**
+ * The interrupt example — the third self-booting board, and the one that proves
+ * the tier's interrupt path from a program's point of view. An 8086, 64K RAM,
+ * the CGA text page, an 8259 PIC at 20h, an 8254 PIT at 40h wired OUT0->IR0,
+ * and a 32K ROM. Load rom/timer-demo.bin (scripts/build-timer-demo.mjs) and it
+ * hooks INT 8, programs the PIT to tick, and paints a live counter into the
+ * text page every timer interrupt: 8254 OUT0 -> 8259 IR0 -> CPU INT 8 -> ISR ->
+ * B800 -> EOI, the whole chain, driven only by the running program. The screen
+ * shows a climbing hex counter with no BIOS and no DOS.
+ */
+export const TIMERDEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional (IVT, stack, the counter)
+        { kind: 'ram', start: 0xb8000, end: 0xbffff },   // the CGA text page (B800:0000)
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'pic', name: 'pic1', at: 0x20 },         // 8259 at 20-21h (IR0 -> INT 8)
+        { kind: 'pit', name: 'pit1', at: 0x40, irq: 0 }, // 8254 at 40-43h, OUT0 -> IR0
+        { kind: 'cga', name: 'cga1', at: 0x3d0 },        // CGA at 3D0-3DFh (text page at B800:0000)
+    ],
+});
+
+/**
+ * The Hercules display board — the mono-graphics member of the display-demo
+ * set (ROADMAP E7.1). An 8086, 64K RAM, the HGC mono page mapped at B000:0000,
+ * a Hercules card at 3B0-3BFh, and a 32K ROM. Load rom/hercules-demo.bin
+ * (scripts/build-hercules-demo.mjs) and it sets HGC graphics mode and fills the
+ * 720x348 mono framebuffer with vertical bars.
+ *
+ * NOTE (2026-09-04): the firmware and the card STATE are verified, but the
+ * DOS/host renderer does NOT yet decode HGC — its videoFrame() refuses mode 6h
+ * by name ("Hercules graphics is 720x348 mono at B0000h, which this renderer
+ * does not draw"). So this board is not yet wired into the Machine-Loader: it
+ * would show a refusal string, not a picture. It ships as verified state now,
+ * ready for when the renderer's four-bank (y mod 4, 8KB banks) decode lands.
+ */
+export const HERCDEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional
+        { kind: 'ram', start: 0xb0000, end: 0xb7fff },   // the HGC mono page (B000:0000) — 32K, four 8K banks
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'hercules', name: 'hgc1', at: 0x3b0 },   // Hercules at 3B0-3BFh (mono page at B000:0000)
+    ],
+});
+
+/**
+ * The VGA display board — the 256-colour member of the display-demo set
+ * (ROADMAP E7.1), and the one the DOS/host renderer already draws today (it
+ * decodes mode 13h / vga8). An 8086, 64K RAM, the mode-13h framebuffer mapped
+ * at A000:0000 (320x200 linear, one byte a pixel), a VGA card at 3C0-3DFh, and
+ * a 32K ROM. Load rom/vga-demo.bin (scripts/build-vga-demo.mjs) and it programs
+ * mode 13h, sets a DAC palette, and writes a picture into A0000 — which
+ * VdpScreen renders in colour, no BIOS.
+ *
+ * This is the first display board besides CGA whose renderer decode ships:
+ * mode 13h is a LINEAR framebuffer with no bank interleave, so it is the
+ * simplest of the graphics modes to fill and the most colourful payoff.
+ */
+export const VGADEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional
+        { kind: 'ram', start: 0xa0000, end: 0xaffff },   // the mode-13h framebuffer (A000:0000), 64K
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'vga', name: 'vga1', at: 0x3c0 },        // VGA register block at 3C0-3DFh
+    ],
+});
+
+/**
+ * The keyboard board — the INPUT counterpart to the display set, proving the
+ * XT keyboard hardware path end to end. An 8086, 64K RAM, the CGA text page, an
+ * 8259 PIC at 20h, an 8255 PPI at 60h (the keyboard port), a CGA card, and a
+ * 32K ROM. Call machine.keyIn(scancode) and it latches the byte at port A and
+ * raises IRQ1; rom/keyboard-demo.bin (scripts/build-keyboard-demo.mjs) hooks
+ * INT 09h, reads 0x60, acknowledges via the port-B strobe, translates set-1
+ * scancodes to ASCII, echoes to the text page, and issues its own EOI.
+ *
+ * This is the first thing in the tier to drive the 8259's IRQ1 path for real —
+ * setIRQ, priority, acknowledge, EOI — rather than calling cpu.interrupt(9)
+ * directly. The demo must EOI itself (bare-metal, no BIOS) or exactly one key
+ * ever arrives, the same failure the timer demo's EOI guards against.
+ */
+export const KBDDEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional (IVT, stack, cursor)
+        { kind: 'ram', start: 0xb8000, end: 0xbffff },   // the CGA text page (B800:0000)
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'pic', name: 'pic1', at: 0x20 },         // 8259 at 20-21h (IR1 -> INT 9)
+        { kind: 'ppi', name: 'ppi1', at: 0x60 },         // 8255 at 60-63h (keyboard: scancode at 60h, ack at 61h)
+        { kind: 'cga', name: 'cga1', at: 0x3d0 },        // CGA at 3D0-3DFh (echo shows at B800:0000)
+    ],
+});
+
+/**
+ * The EGA display board — the 16-colour PLANAR member of the display-demo set
+ * (ROADMAP E7.1), and the hardest. An 8086, 64K RAM, an EGA card at 3C0-3DFh,
+ * and a 32K ROM. There is deliberately NO RAM region at A0000: the EGA card
+ * mediates that window (a write is routed by the sequencer map mask into one or
+ * more of the four bit planes, not stored linearly). Load rom/ega-demo.bin
+ * (scripts/build-ega-demo.mjs) and it selects a planar graphics mode, sets the
+ * 16-entry attribute palette, and fills the four planes with distinct patterns.
+ *
+ * NOTE (2026-09-04): firmware + card STATE (registers + planes) are verified,
+ * but the DOS/host renderer's planar decode is the other lane's half and is not
+ * written yet, so this board is NOT wired into the Machine-Loader — same
+ * discipline as Hercules before its decode landed. Ships as verified state.
+ */
+export const EGADEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional (NO RAM at A0000 — the EGA card owns it)
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'ega', name: 'ega1', at: 0x3c0 },        // EGA register block at 3C0-3DFh; framebuffer at A0000
+    ],
+});
+
+/**
+ * The capstone board — TWO interrupt sources at once. An 8086, 64K RAM, the CGA
+ * text page, an 8259 PIC, an 8254 PIT wired OUT0->IR0, an 8255 keyboard port,
+ * and a CGA card. Load rom/desk-demo.bin (scripts/build-desk-demo.mjs) and the
+ * 8259 arbitrates both live IRQ lines: IRQ0 (the timer) updates a hex clock at
+ * the top-right every tick, and IRQ1 (the keyboard) echoes what you type onto a
+ * line below — concurrently, each interrupt acknowledged and EOI'd on its own.
+ * The timer and keyboard demos each drive one source; this proves they compose
+ * through the PIC's priority and two independent EOIs.
+ */
+export const DESKDEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional
+        { kind: 'ram', start: 0xb8000, end: 0xbffff },   // the CGA text page (B800:0000)
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'pic', name: 'pic1', at: 0x20 },         // 8259: IR0 -> INT 8, IR1 -> INT 9
+        { kind: 'pit', name: 'pit1', at: 0x40, irq: 0 }, // 8254 OUT0 -> IR0 (the clock)
+        { kind: 'ppi', name: 'ppi1', at: 0x60 },         // 8255 keyboard: scancode at 60h, ack at 61h
+        { kind: 'cga', name: 'cga1', at: 0x3d0 },        // CGA text page at B800:0000
+    ],
+});
+
+/**
+ * The BLINK board — the smallest 8086 that is about PINS, and the one the Z80
+ * and 6502 tiers have while the 8086 did not. An 8086, 64K RAM, an 8255 at 60h,
+ * a 32K ROM, and nothing else: no CGA, no floppy, nothing that is not the
+ * lesson, so a learner's first 8086 board is the one where a pin means an LED.
+ * It is what lite's LED panel (draws 8255 port pins gated on direction) and
+ * switch panel (setInput drives a bit) and pseudocode pin I/O (P1/P2/P3 ->
+ * ports A/B/C) point at.
+ *
+ * Load rom/blink-demo.bin (scripts/build-blink-demo.mjs) and it walks a pattern
+ * across the LEDs on PORT B and mirrors a switch read from PORT C. LEDs live on
+ * port B, not port A, deliberately: on a PC the keyboard scancode latches into
+ * this same 8255's port A, so a board that drove LEDs there would ask a question
+ * about two owners of one port that a first board should never raise.
+ */
+export const BLINK8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'ppi', name: 'ppi1', at: 0x60 },         // 8255 GPIO: LEDs on port B (61h), switches on port C (62h)
+    ],
+});
+
+/**
+ * The SAME minimal GPIO board, run as a real-mode 80286. The blink ROM is pure
+ * 186-compatible code (CLI/MOV/OUT/IN/NOT/OR/ROL/LOOP), so it drives the 8255
+ * byte-for-byte identically on the 286 — the point is that the 80286 core (the
+ * one graded to zero SST286 real-mode fails) reaches PINS through the same board
+ * as every other tier, so "an 80286 blinking an LED" is a picked target, not a
+ * special case. Reuses rom/blink-demo.bin.
+ */
+export const BLINK80286 = Object.freeze({ ...BLINK8086, variant: '80286' });
+
+/**
+ * A game controller board for the 80286: an 8255 for DIGITAL input (a d-pad and
+ * buttons land on port C bits — the same widget->pin path the switches use) and
+ * an ADC0809 for ANALOG sticks (each axis is a channel; a widget's position
+ * becomes a voltage via axisToVolts, which the converter reports as 0..255 at
+ * port 300h+n). So digital and analog sticks reach the 286 through real parts a
+ * learner can see, and the controller-panel widgets drive them.
+ */
+export const GAMEPAD80286 = Object.freeze({
+    clockHz: 4_772_727,
+    variant: '80286',
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },
+    ],
+    chips: [
+        { kind: 'ppi', name: 'ppi1', at: 0x60 },                  // digital: d-pad/buttons on port C
+        { kind: 'adc0809', name: 'adc1', at: 0x300, vref: 5 },    // analog: stick axes on channels 0..7
+    ],
+});
+
+export class I8086Machine {
+    /**
+     * @param {MachineConfig} [config]
+     * @param {{ onPinChange?: (pin: string, level: 0|1, tMs: number) => void,
+     *           onSerial?: (byte: number, tMs: number) => void }} [hooks]
+     * @param {{ allow386HighMemory?: boolean }} [internal]
+     */
+    constructor(config = BREADBOARD8086, hooks = {}, internal = {}) {
+        this.config = config;
+        this.hooks = hooks;
+        this.clockHz = config.clockHz;
+        const memoryBytes=config.memoryBytes ?? (1 << 20);
+        // Only the experimental 386 adapter opts into a larger physical
+        // backing. Ordinary 8086/286 boards retain their 24-bit ceiling.
+        const maxMemoryBytes = internal.allow386HighMemory &&
+            config.cpuBackend === 'protected286-experimental' ? 256 << 20 : 1 << 24;
+        if (!Number.isInteger(memoryBytes) || memoryBytes < (1 << 20) || memoryBytes > maxMemoryBytes)
+            throw new Error(`machine config: memoryBytes must be an integer from 1 MiB through ${maxMemoryBytes >> 20} MiB`);
+        if (config.a20 && config.a20.controller !== '8042')
+            throw new Error("machine config: a20.controller must be '8042'; port 92h fast A20 is not implemented");
+        if (config.cpuBackend && config.cpuBackend !== 'protected286-experimental')
+            throw new Error(`machine config: unknown cpuBackend ${config.cpuBackend}`);
+        if (config.cpuBackend === 'protected286-experimental' && (config.variant ?? '8086') !== '80286')
+            throw new Error("machine config: protected286-experimental requires variant '80286'");
+        this.memoryBytes=memoryBytes;
+        this.cpuBackend=config.cpuBackend ?? 'default';
+        this._a20Configured=!!config.a20;
+        this._a20Initial=!!config.a20?.enabled;
+        this._a20Enabled=this._a20Initial;
+        this.mem = new Uint8Array(memoryBytes);
+        /** @type {Record<string, I8255|NS16C550|MC6850>} */
+        this.chips = {};
+        // Flattened advance schedule, built on first use. null = needs rebuild.
+        // See _advanceChips: this exists because Object.keys() in that loop
+        // allocated an array per INSTRUCTION.
+        //
+        // IT MUST STAY LAZY, and the reason is not performance. Config
+        // validation later in this constructor -- the port-conflict refusal --
+        // can THROW. Building the schedule here instead would mean caching a
+        // board that is about to be rejected. Nothing would fail if someone
+        // moved it: the throw still happens, the cache is simply garbage that
+        // is never read. The hazard is silent, which is why it is written at
+        // the site rather than left in a review comment.
+        this._cycleEst = null;   // opt-in; see enableI8088CycleTiming()
+        this._advList = null;
+        // DEADLINE-BATCHED CHIP ADVANCE. Advancing every chip on every
+        // instruction was measured at 30% of machine.step() (bench-i8086 +
+        // --prof), more than the CPU core itself, even after the Object.keys
+        // fix in _advanceChips. So the cycles a chip has not yet been charged
+        // are ACCRUED here and applied in one batch when the nearest chip
+        // event is actually due -- the same `nextWake` horizon _wakeHorizon
+        // uses for HLT. A chip is caught up lazily the instant anything reads
+        // it (_in/_out) or the machine is snapshotted, so nothing ever observes
+        // a stale chip; between those points the advance simply does not run.
+        // Equivalent to the per-instruction advance because chips do not change
+        // between events by definition, and an event fires at the instruction
+        // boundary that crosses its cycle either way.
+        this._chipDebt = 0;
+        this._chipDeadline = 0;
+        // Monotonic invalidation token for a host renderer. It moves on the
+        // events that can change what is VISIBLE -- video-window writes, display
+        // control ports, an overlapping bulk load, a state restore -- and on
+        // nothing else. A renderer caches its last frame against it and skips
+        // when it has not moved. The negative is what makes it useful: a token
+        // that moved on every instruction would be safe and carry no
+        // information, so ordinary RAM must leave it alone.
+        this.displayRevision = 0;
+        this.cycles = 0;
+        this._pinLevels = {};
+        this._nmiPending = false;
+        this._nmiMasked = false;
+        this._cpuResetPending = false;
+        /** Regions of the memory space, in declaration order. */
+        this._mem = config.regions.map((r) => ({ ...r }));
+        /** Decoded windows, split by which bus they answer on. */
+        this._io = [];
+        this._mmio = [];
+        for (const r of this._mem) {
+            if (!Number.isInteger(r.start) || !Number.isInteger(r.end) || r.start < 0 || r.end < r.start || r.end >= memoryBytes)
+                throw new Error(`machine config: ${r.kind} region ${r.start}-${r.end} exceeds memoryBytes ${memoryBytes}`);
+        }
+
+        // The PC speaker is not a bus chip — it observes an 8255 port and an
+        // 8254 counter that ARE, so it is built in a second pass once they
+        // exist. Collect its configs here.
+        const speakerConfigs = [];
+        // The DMA page latch names the 8237 it extends, which may be declared
+        // after it, so it is built in the same second pass as the speaker.
+        const pageConfigs = [];
+        const atPageConfigs = [];
+
+        for (const c of config.chips || []) {
+            if (c.kind === 'pcspeaker') { speakerConfigs.push(c); continue; }
+            if (c.kind === 'dmapage') { pageConfigs.push(c); continue; }
+            if (c.kind === 'atdmapage') { atPageConfigs.push(c); continue; }
+            const regs = REGS[c.kind];
+            if (!regs) throw new Error(`machine config: unknown chip kind ${c.kind}`);
+            const span = c.span || regs;
+            if (span < regs) {
+                throw new Error(`machine config: ${c.kind} span ${span} smaller than its ${regs} registers`);
+            }
+            let chip;
+            if (c.kind === 'ppi') {
+                chip = new I8255({
+                    onPortChange: (port, value, out) => this._portChange(c.name, port, value, out),
+                });
+                if (c.inputs) {
+                    for (const p of ['a', 'b', 'c']) {
+                        if (c.inputs[p] != null) chip.setInputPort(p, c.inputs[p]);
+                    }
+                }
+            } else if (c.kind === 'uart16550') {
+                chip = new NS16C550({
+                    onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
+                    onIrqChange: (active) => {
+                        if (!this._restoring)
+                            (this.chips[c.pic] || this._pic)?.setIRQ(c.irq ?? 4, active ? 1 : 0);
+                    },
+                    clockHz: c.xtal || config.clockHz,
+                });
+            } else if (c.kind === 'pit') {
+                chip = new I8254({
+                    onOutput: (channel, level) => this._pitOutput(c, channel, level),
+                    variant: c.variant,   // '8253' for the original PC/XT part (no read-back)
+                });
+            } else if (c.kind === 'atsystem') {
+                chip = new ATSystemControl();
+            } else if (c.kind === 'pic') {
+                // The INTR output is polled in step(); the hook is only a
+                // convenience for a test or UI that wants the edge.
+                chip = new I8259({
+                    onInterrupt: (active) => { if (this.hooks.onIntr) this.hooks.onIntr(c.name, active); },
+                });
+            } else if (c.kind === 'rtc') {
+                chip = new MC146818(config.clockHz, {initialUnixSeconds:c.initialUnixSeconds ?? 0,
+                    initialCmos:c.initialCmos??[],
+                    onNmiMask:(masked)=>{if(!this._restoring)this._nmiMasked=masked;},
+                    onIRQ:(active)=>{if(this._restoring)return;const p=this.chips[c.pic]||this._pic;p?.setIRQ(c.irq??0,active?1:0);}});
+            } else if (c.kind === 'usart8251') {
+                chip = new I8251({
+                    onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
+                });
+            } else if (c.kind === 'ne2000') {
+                // 32 ports: 00-0F the DP8390 registers, 10-17 the remote DMA
+                // data port, 18-1F the card reset. `link` is supplied by the
+                // board -- a loopback, or a hub joining two machines.
+                chip = new NE2000({
+                    mac: c.mac, link: c.link || null,
+                    onIRQ: (level) => { if (this.hooks.onIntr) this.hooks.onIntr(c.name, !!level); },
+                });
+            } else if (c.kind === 'adc0809') {
+                chip = new ADC0809(config.clockHz, {vref: c.vref, adcClockHz: c.adcClockHz});
+            } else if (c.kind === 'dac0832') {
+                chip = new DAC0832({vref: c.vref});
+            } else if (c.kind === 'cga') {
+                chip = new CGACard(config.clockHz, {
+                    onVSync: () => { if (this.hooks.onVSync) this.hooks.onVSync(); },
+                });
+            } else if (c.kind === 'hercules') {
+                chip = new HerculesCard(config.clockHz, {
+                    onVSync: () => { if (this.hooks.onVSync) this.hooks.onVSync(); },
+                });
+            } else if (c.kind === 'dma') {
+                chip = new I8237({
+                    // TC is the pin that tells a peripheral the count ran out;
+                    // the FDC ends its transfer on it. Surfaced as a hook so a
+                    // machine can wire it without the 8237 knowing who listens.
+                    onTerminalCount: (ch) => { if (this.hooks.onDmaComplete) this.hooks.onDmaComplete(c.name, ch); },
+                    onHrq: (active) => { if (this.hooks.onDmaRequest) this.hooks.onDmaRequest(c.name, active); },
+                });
+                if(c.atWordTransfersUnsupported) {
+                    chip.transfer=()=>{throw new Error('AT secondary DMA transfer is unsupported: word addressing, page bit 0, and cascade are not implemented');};
+                }
+            } else if (c.kind === 'opl2') {
+                chip = new YM3812();
+            } else if (c.kind === 'sb') {
+                // The DSP counts MACHINE cycles, so it is told which clock it
+                // is counting rather than guessing -- the lesson the AY's own
+                // crystal taught this tier (see m6502-machine.js's ayRatio).
+                chip = new SBDSP({ clockHz: config.clockHz });
+            } else if (c.kind === 'fdc') {
+                chip = new UPD765({
+                    onMotorChange: (drive, on) => {
+                        if (this.hooks.onMotorChange) this.hooks.onMotorChange(c.name, drive, on);
+                    },
+                }, { seekBeyondEnd: c.seekBeyondEnd,
+                    acceptedCcrByImageBytes: c.acceptedCcrByImageBytes });
+            } else if (c.kind === 'vga') {
+                chip = new VGACard(config.clockHz, {
+                    onVSync: () => { if (this.hooks.onVSync) this.hooks.onVSync(); },
+                });
+            } else if (c.kind === 'ega') {
+                chip = new EGACard(config.clockHz);
+            } else {
+                chip = new MC6850({
+                    onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
+                });
+            }
+            this.chips[c.name] = chip;
+            // `stride` is the address step between consecutive registers. It
+            // is 1 for a chip whose register select rides A0, and 2 for the
+            // "even addresses only" wiring an 8086's 16-bit bus gives a
+            // byte-wide device — data at the base, the next register two
+            // ports up, the odd address in between mirroring the register
+            // below it (A0 unwired).
+            const stride = c.stride || 1;
+            const win = {
+                name: c.name, chip, regs, stride,
+                start: c.at, end: c.at + stride * span - 1,
+            };
+            ((c.bus ?? 'io') === 'io' ? this._io : this._mmio).push(win);
+        }
+
+        // TWO CHIPS MUST NOT CLAIM ONE ADDRESS, and until now nothing said so.
+        //
+        // An ADC0809 sits at 300h and an NE2000's first jumper setting is also
+        // 300h, so a board that declares both is a plausible mistake rather
+        // than a contrived one. Without this the later chip simply wins every
+        // read and the earlier one answers nothing — a machine that runs, a
+        // program that gets plausible bytes from the wrong device, and no
+        // diagnostic anywhere. That is the failure class this tier keeps
+        // finding, and it is cheap to make impossible.
+        //
+        // Checked per bus: an I/O window and a memory window at the same
+        // number are different places and do not collide.
+        for (const [busName, wins] of [['I/O', this._io], ['memory', this._mmio]]) {
+            const sorted = [...wins].sort((a, b) => a.start - b.start);
+            if (busName === 'memory') for (const w of sorted) {
+                if (w.start < 0 || w.end >= memoryBytes)
+                    throw new Error(`machine config: memory window "${w.name}" exceeds memoryBytes ${memoryBytes}`);
+            }
+            for (let i = 1; i < sorted.length; i++) {
+                const prev = sorted[i - 1], cur = sorted[i];
+                if (cur.start <= prev.end) {
+                    const hex = (n) => n.toString(16).toUpperCase().padStart(3, '0');
+                    throw new Error(
+                        `machine config: "${prev.name}" and "${cur.name}" both claim ${busName} `
+                        + `address ${hex(cur.start)}h. "${prev.name}" decodes ${hex(prev.start)}h-`
+                        + `${hex(prev.end)}h and "${cur.name}" decodes ${hex(cur.start)}h-`
+                        + `${hex(cur.end)}h. Move one of them: two chips answering one address `
+                        + 'is a board that runs and reads the wrong device.');
+                }
+            }
+        }
+
+        if (this._a20Configured) {
+            for (const w of this._io) {
+                if ((w.start <= 0x60 && w.end >= 0x60) || (w.start <= 0x64 && w.end >= 0x64))
+                    throw new Error(`machine config: AT 8042 A20 controller conflicts with I/O window "${w.name}" at port 60h or 64h`);
+            }
+            this._a20Controller=new AT8042A20({a20Enabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16,
+                responseDelayCycles:this.config.a20.responseDelayCycles??0,
+                inputBusyCycles:this.config.a20.inputBusyCycles??0,
+                inputPort:this.config.a20.inputPort??0xb0,
+                powerOnKeyboardBatCycles:this.config.a20.powerOnKeyboardBatCycles??null,
+                keyboardAckCycles:this.config.a20.keyboardAckCycles??null,
+                keyboardBatCycles:this.config.a20.keyboardBatCycles??null,
+                keyboardUnlocked:!!this.config.a20.keyboardUnlocked,
+                mouse:!!this.config.a20.mouse,
+                allowReset:!!this.config.a20.allowReset,
+                onResetRequest:()=>{this._cpuResetPending=true;},
+                onA20Change:(enabled)=>{ this._a20Enabled=enabled; },
+                onIRQ:(active)=>{if(!this._restoring)this._pic?.setIRQ(1,active?1:0);},
+                onAuxIRQ:(active)=>{if(!this._restoring)this.chips.pic2?.setIRQ(4,active?1:0);}});
+        } else this._a20Controller=null;
+
+        // The master PIC — the one step() polls to deliver INTR. A breadboard
+        // has at most one; if there are several, the first declared wins.
+        const picConfigs=(config.chips||[]).filter(c=>c.kind==='pic');
+        const rtcConfigs=(config.chips||[]).filter(c=>c.kind==='rtc');
+        if(rtcConfigs.length>1)throw new Error('machine config: bounded AT profile supports one RTC/NMI mask driver');
+        for(const c of rtcConfigs)if(!c.pic||!(this.chips[c.pic] instanceof I8259))throw new Error(`machine config: RTC ${c.name} names missing PIC ${c.pic??'(none)'}`);
+        const slaveNames=new Set(picConfigs.filter(c=>c.cascadeTo).map(c=>c.name));
+        const masters=picConfigs.filter(c=>!slaveNames.has(c.name));
+        if(masters.length>1&&picConfigs.some(c=>c.cascadeTo))throw new Error('machine config: cascaded PIC topology requires exactly one master');
+        this._pic=this.chips[masters[0]?.name]||null;
+        this._picCascade=null;
+        for(const c of picConfigs.filter(c=>c.cascadeTo)){
+            if(this._picCascade)throw new Error('machine config: bounded AT profile supports one slave PIC');
+            const master=this.chips[c.cascadeTo],slave=this.chips[c.name],line=c.cascadeIrq;
+            if(!(master instanceof I8259)||master===slave||!Number.isInteger(line)||line<0||line>7)throw new Error(`machine config: invalid PIC cascade ${c.name}`);
+            this._picCascade={master,slave,line};
+            const prior=slave.hooks.onInterrupt;slave.hooks.onInterrupt=(active)=>{prior?.(active);if(!this._restoring)master.setIRQ(line,active?1:0);};
+            master.setIRQ(line,slave.intActive?1:0);
+            const masterWrite=master.write.bind(master),slaveWrite=slave.write.bind(slave);
+            master.write=(reg,val)=>{if((reg&1)&&master.initPhase===2&&!(val&(1<<line)))throw new Error(`8259 cascade ICW3 must mark master IR${line}`);return masterWrite(reg,val);};
+            slave.write=(reg,val)=>{if((reg&1)&&slave.initPhase===2&&(val&7)!==line)throw new Error(`8259 slave ICW3 identity must be ${line}`);return slaveWrite(reg,val);};
+        }
+
+        // The XT keyboard sits on the first 8255: its scancode is read at port A
+        // and its acknowledge is the port-B bit-7 strobe. keyIn() latches a byte
+        // and raises IRQ1; the strobe (bit 7 rising, seen in _out) clears it.
+        this._kbdPpi = Object.values(this.chips).find((c) => c instanceof I8255) || null;
+        this._kbdStrobe = false;
+
+        // Wire each interrupting peripheral's output to its PIC line. The PIT
+        // routes through _pitOutput (it has three outputs, only one of which
+        // is the IRQ source); a serial chip drives onIrqChange directly. The
+        // wiring is a second pass so a peripheral declared before the PIC in
+        // config order still finds it.
+        this._irqLines = {};
+        for (const c of config.chips || []) {
+            if (c.irq == null) continue;
+            const chip = this.chips[c.name];
+            if (chip instanceof I8254) {
+                this._irqLines[c.name] = { irq: c.irq, channel: c.irqChannel ?? 0 };
+            } else if (chip && chip.hooks) {
+                chip.hooks.onIrqChange = (asserted) => {
+                    const pic=this.chips[c.pic]||this._pic;
+                    if (pic) pic.setIRQ(c.irq, asserted ? 1 : 0);
+                };
+            }
+        }
+
+        // The page latch: a second window onto an already-built 8237, reached
+        // through readPage/writePage rather than read/write. It is registered
+        // as a decoded window but NOT added to this.chips -- the page bytes
+        // live inside the 8237 and are already in its getState(), and a second
+        // entry would snapshot them twice and restore them twice.
+        for (const c of pageConfigs) {
+            const dma = this.chips[c.dma];
+            if (!dma) {
+                throw new Error(
+                    `machine config: dmapage '${c.name}' names dma '${c.dma}', which is not a `
+                    + `declared chip. The latch supplies A16-A19 for that 8237 and is inert `
+                    + `without it.`);
+            }
+            const span = c.span || REGS.dmapage;
+            const stride = c.stride || 1;
+            const window={
+                name: c.name, regs: REGS.dmapage, stride,
+                chip: { read: (r) => dma.readPage(r), write: (r, v) => dma.writePage(r, v) },
+                start: c.at, end: c.at + stride * span - 1,
+            };
+            const overlap=this._io.find(other=>window.start<=other.end&&other.start<=window.end);
+            if(overlap)throw new Error(`machine config: "${overlap.name}" and "${window.name}" both claim I/O address ${Math.max(overlap.start,window.start).toString(16).toUpperCase()}h`);
+            if(this._a20Controller&&((window.start<=0x60&&window.end>=0x60)||
+                (window.start<=0x64&&window.end>=0x64)))
+                throw new Error(`machine config: AT 8042 A20 controller conflicts with I/O window "${window.name}" at port 60h or 64h`);
+            this._io.push(window);
+        }
+
+        for (const c of atPageConfigs) {
+            const primary=this.chips[c.primary],secondary=this.chips[c.secondary];
+            const chip=new ATDMAPageRegisters({primary,secondary});
+            this.chips[c.name]=chip;
+            const window={name:c.name,regs:REGS.atdmapage,stride:1,chip,
+                start:c.at,end:c.at+(c.span||REGS.atdmapage)-1};
+            const overlap=this._io.find(other=>window.start<=other.end&&other.start<=window.end);
+            if(overlap)throw new Error(`machine config: "${overlap.name}" and "${window.name}" both claim I/O address ${Math.max(overlap.start,window.start).toString(16).toUpperCase()}h`);
+            if(this._a20Controller&&((window.start<=0x60&&window.end>=0x60)||
+                (window.start<=0x64&&window.end>=0x64)))
+                throw new Error(`machine config: AT 8042 A20 controller conflicts with I/O window "${window.name}" at port 60h or 64h`);
+            this._io.push(window);
+        }
+
+        for (const c of config.chips || []) {
+            if(c.kind!=='atsystem')continue;
+            const system=this.chips[c.name],pit=this.chips[c.pit];
+            if(!pit)throw new Error(`machine config: atsystem '${c.name}' names missing pit '${c.pit}'`);
+            system.onTimer2Gate=(level)=>pit.counters[2].setGate(level);
+            system.onTimer2Gate(!!(system.latch&1));
+        }
+
+        // The EGA framebuffer: a SECOND, memory-bus window onto the already-built
+        // EGA card at A0000-AFFFF, reached through memRead/memWrite (the planar
+        // path) rather than read/write (the registers). Registered as an mmio
+        // window but NOT added to this.chips -- the planes live inside the card
+        // and are already in its getState(). This is why EGA memory is not a plain
+        // RAM region: a write there is routed by the sequencer map mask into the
+        // selected planes, not stored linearly.
+        for (const c of config.chips) {
+            if (c.kind !== 'ega') continue;
+            const ega = this.chips[c.name];
+            this._mmio.push({
+                name: c.name + '.fb', regs: 0x10000, stride: 1,
+                chip: { read: (o) => ega.memRead(o), write: (o, v) => ega.memWrite(o, v) },
+                start: 0xa0000, end: 0xaffff,
+            });
+        }
+
+        // The Sound Blaster's transfer path: the same 8237 the floppy uses, on
+        // its own channel (1 by convention), and an 8259 line for the
+        // end-of-block interrupt. Everything hard here was already built --
+        // which is why E6.8.11 calls the digital half of audio nearly free.
+        for (const c of config.chips || []) {
+            if (c.kind !== 'sb') continue;
+            const sb = this.chips[c.name];
+            const dma = c.dma ? this.chips[c.dma] : null;
+            const ch = c.dmaChannel ?? 1;
+            if (sb && dma) {
+                sb.hooks.onDmaRequest = () => {
+                    let got = null;
+                    // The request IS the DRQ pulse, asserted around the single
+                    // byte -- without it transfer() sees no requesting channel
+                    // and moves nothing while reporting success, which is the
+                    // silently-corrupt-read the FDC path documents above.
+                    dma.dreq(ch, true);
+                    const moved = dma.transfer(
+                        (a) => (a === null ? 0x80 : this._read(a)),
+                        (a, b) => { if (a === null) got = b & 0xff; },
+                        1);
+                    dma.dreq(ch, false);
+                    return moved === 0 ? false : (got === null ? false : got);
+                };
+            }
+            if (sb && c.irq != null && this._pic) {
+                // A LEVEL, NOT AN EVENT. setIRQ takes a line state, and the
+                // DSP's end-of-block is an edge, so it is raised here and
+                // dropped when the driver acknowledges by reading 2xEh --
+                // which is the same port read that clears `sb.irq`. A line
+                // left asserted would re-enter the handler forever.
+                sb.hooks.onIrq = () => this._pic.setIRQ(c.irq, 1);
+                const drop = () => { if (!sb.irq) this._pic.setIRQ(c.irq, 0); };
+                const origRead = sb.read.bind(sb);
+                sb.read = (reg) => { const v = origRead(reg); drop(); return v; };
+            }
+        }
+
+        this._buildPageTable();
+
+        // The floppy transfer path. The FDC drives one byte per DMA request
+        // (its onDmaRequest hook); the byte crosses through _read/_write — the
+        // SAME memory decode the CPU uses, so a DMA write into a ROM window is
+        // discarded exactly as a CPU write is, and a bad page register cannot
+        // silently overwrite the BIOS. The 8237's terminal count is chained
+        // back to the FDC's TC pin WITHOUT dropping the existing onDmaComplete
+        // forward a UI observes — the wire that, unmade, hangs a BIOS read.
+        for (const c of config.chips || []) {
+            if (c.kind !== 'fdc' || !c.dma) continue;
+            const fdc = this.chips[c.name];
+            const dma = this.chips[c.dma];
+            if (!fdc || !dma) continue;
+            const dmaChannel = c.dmaChannel ?? 2;
+            let fromMem = 0xff;
+            fdc.hooks.onDmaRequest = (dir, byte) => {
+                // The FDC's request IS the DRQ pulse — assert it around the
+                // single-byte transfer, or transfer()'s pendingChannel() sees
+                // no requesting channel and moves nothing while reporting
+                // success (a silently corrupt read).
+                dma.dreq(dmaChannel, true);
+                const moved = dma.transfer(
+                    (a) => (a === null ? byte : this._read(a)),
+                    (a, b) => { if (a === null) fromMem = b & 0xff; else this._write(a, b); },
+                    1);
+                dma.dreq(dmaChannel, false);
+                if (moved === 0) return false;   // masked or finished: terminal count
+                return dir === 'read' ? fromMem : true;
+            };
+            const prevTC = dma.hooks.onTerminalCount;
+            dma.hooks.onTerminalCount = (ch) => {
+                if (ch === dmaChannel) fdc.terminalCount();
+                if (prevTC) prevTC(ch);
+            };
+        }
+
+        // Build the PC speaker(s) now that the 8255 and 8254 they observe
+        // exist. Each reads its counter's divisor on demand and listens to a
+        // named 8255 port (61h = port B on a PC) through _portChange.
+        this._speakers = [];
+        for (const c of speakerConfigs) {
+            const pitName = c.pit;
+            const channel = c.channel ?? 2;
+            const spk = new PCSpeaker({
+                readDivisor: () => {
+                    const pit = this.chips[pitName];
+                    const cnt = pit && pit.counters && pit.counters[channel];
+                    return cnt ? cnt.reload : 0;
+                },
+            });
+            this.chips[c.name] = spk;
+            this._speakers.push({ spk, ppi: c.ppi, port: c.port ?? 'b' });
+        }
+
+        this.variant = config.variant || '8086';
+        const cpuBus={
+            read: this._a20Configured ? (a) => this._read(this._applyA20(a)) : (a) => this._read(a),
+            write: this._a20Configured ? (a,v) => this._write(this._applyA20(a),v) : (a,v) => this._write(a,v),
+            in: (p) => this._in(p),
+            out: (p, v) => this._out(p, v),
+            // Asked between REP iterations, so a long block move does not
+            // starve the timer -- and so the 8086's mid-REP segment-override
+            // erratum has something to happen to.
+            intPending: () => !!(this._pic && this._pic.intActive),
+        };
+        this.cpu = this.cpuBackend === 'protected286-experimental'
+            ? new ProtectedI80286(cpuBus,{deliverProtectedFaults:true})
+            : new I8086(cpuBus,{variant:this.variant});
+        // Interrupt-trap bridge (E6.8.3): a SOFTWARE INT n (INT/INT3/INTO and the
+        // internal exceptions) executes inside the core, so the core emits it via
+        // cpu.onInterrupt; forward it to the machine's single onInterrupt hook so
+        // the debugger sees one stream — 'int' from here, 'irq'/'nmi' from
+        // _serviceInterrupts. The core must emit from the opcode/exception sites,
+        // NOT from its shared _interrupt(n) funnel, which the hardware path also
+        // uses and which would then double-fire against 'irq'/'nmi'.
+        this.cpu.onInterrupt = (ev) => { if (this.hooks.onInterrupt) this.hooks.onInterrupt(ev); };
+        if (config.fastWords !== false && this.cpuBackend === 'default') installI8086RamWordAccess(this);
+    }
+
+    /**
+     * Can anything on this machine render samples (E6.8.11a)? Asked by the
+     * debug target so `capabilities().audio` advertises 'samples' only when
+     * a chip can actually produce them — the same rule that keeps 'cycle' out
+     * of `steps`.
+     */
+    canRenderAudio() {
+        for (const { spk } of this._speakers || []) {
+            if (spk && typeof spk.renderAudio === 'function') return true;
+        }
+        for (const c of Object.values(this.chips || {})) {
+            if (c && typeof c.renderAudio === 'function') return true;
+        }
+        return false;
+    }
+
+    /**
+     * Per-voice {hz, on}, ALWAYS AN ARRAY (E6.8.11a) -- and EMPTY when this
+     * machine has no speaker at all. That distinction is the reason the
+     * arity matters: an empty array is "no voices", a one-element array with
+     * `on: false` is "a speaker that is silent", and the old `null` conflated
+     * them into a value every caller had to null-check before it could ask
+     * anything useful.
+     */
+    audioTone() {
+        // DE-DUPLICATED, because a speaker is in BOTH lists: `_speakers` holds
+        // it for the 61h wiring and `chips` holds it under its config name.
+        // Collecting from both without a Set reports one speaker as two
+        // voices -- which the preset test caught immediately, and which would
+        // have been a UI showing a phantom oscillator otherwise.
+        const seen = new Set();
+        const out = [];
+        const take = (c) => {
+            if (!c || seen.has(c) || typeof c.audioTone !== 'function') return;
+            seen.add(c);
+            out.push(...c.audioTone());
+        };
+        for (const { spk } of this._speakers || []) take(spk);
+        for (const c of Object.values(this.chips || {})) take(c);
+        return out;
+    }
+
+    /**
+     * The shared mixer and ring (E6.8.11a), built on first use so a machine
+     * nobody listens to never allocates one.
+     */
+    get audio() {
+        if (!this._audioBus) {
+            this._audioBus = new AudioBus({ sampleRate: this.audioSampleRate || 48000 });
+            for (const src of this._audioSources()) this._audioBus.addSource(src);
+        }
+        return this._audioBus;
+    }
+
+    _audioSources() {
+        // Same de-duplication as audioTone(), and it matters more here: a
+        // source added to the bus twice would be MIXED twice, which is a
+        // doubled amplitude and a clip counter that blames the wrong thing.
+        const seen = new Set();
+        for (const { spk } of this._speakers || []) {
+            if (spk && typeof spk.renderAudio === 'function') seen.add(spk);
+        }
+        for (const c of Object.values(this.chips || {})) {
+            if (c && typeof c.renderAudio === 'function') seen.add(c);
+        }
+        return [...seen];
+    }
+
+    /** Machine time in (fractional) milliseconds. */
+    get tMs() { return this.cycles * 1000 / this.clockHz; }
+
+    /** Apply the motherboard A20 gate to a CPU bus address. */
+    _applyA20(addr) {
+        addr &= 0xffffff;
+        return this._a20Configured && !this._a20Enabled ? addr & ~0x100000 : addr;
+    }
+
+    get a20Enabled() { return this._a20Configured ? this._a20Enabled : true; }
+
+    setA20Enabled(enabled) {
+        if (!this._a20Controller) throw new Error('A20 control is not configured on this machine');
+        this._a20Controller.setA20Enabled(!!enabled);
+    }
+
+    // ---- the memory bus -------------------------------------------------
+    /**
+     * A 4 KB page table over the 1 MB space, so the common case is one array
+     * index instead of two linear scans (E6.8.4a).
+     *
+     * MEASURED, NOT ASSUMED. `_read()` was two `for...of` scans per BYTE, and
+     * a profile of a realistic XT config over 20 M accesses said: as shipped
+     * 31.9 M ops/s, with indexed loops and an empty-MMIO guard 36.2 (1.13x,
+     * not worth doing), with this table 65.2 (2.04x). A raw `mem[addr]` is
+     * ~201, so this recovers about half the gap and the rest is the call
+     * itself. The reason it matters at all is the other half of that
+     * profile: the machine layer costs about two thirds of total execution
+     * time, MORE than the CPU it wraps.
+     *
+     * A PAGE IS FAST ONLY IF IT IS ENTIRELY ONE THING. Any page touched by an
+     * MMIO window, or straddling a region boundary, or covered by more than
+     * one region, is marked SLOW and falls through to the original scans —
+     * which are still there, unchanged, and are still the definition of
+     * correct. This is a cache in front of the decode, not a replacement for
+     * it, and that is deliberate: a fast path that had to reimplement the
+     * mirroring and priority rules would be a second place for them to be
+     * wrong.
+     */
+    _buildPageTable() {
+        const PAGES = this.memoryBytes >>> 12;
+        const t = new Uint8Array(PAGES);             // 0 unmapped, 1 ram, 2 rom, 3 slow
+        for (let p = 0; p < PAGES; p++) {
+            const lo = p << 12, hi = lo + 0xfff;
+            let kind = 0, slow = false;
+            for (const w of this._mmio) {
+                if (hi >= w.start && lo <= w.end) { slow = true; break; }
+            }
+            if (!slow) {
+                for (const r of this._mem) {
+                    if (hi < r.start || lo > r.end) continue;
+                    // Partial cover, or a second region: the scan decides.
+                    if (lo < r.start || hi > r.end || kind !== 0) { slow = true; break; }
+                    kind = r.kind === 'rom' ? 2 : 1;
+                }
+            }
+            t[p] = slow ? 3 : kind;
+        }
+        this._page = t;
+    }
+
+    _read(addr) {
+        const k = this._page[addr >>> 12];
+        if (k === 1 || k === 2) return this.mem[addr];
+        if (k === 0) return 0xff;                    // open bus reads high
+        return this._readSlow(addr);
+    }
+
+    /** The original decode, unchanged, and still the definition of correct. */
+    _readSlow(addr) {
+        for (const w of this._mmio) {
+            if (addr >= w.start && addr <= w.end) return w.chip.read(regOf(w, addr));
+        }
+        for (const r of this._mem) if (addr >= r.start && addr <= r.end) return this.mem[addr];
+        return 0xff;   // open bus reads high, like the undriven data lines
+    }
+
+    _write(addr, val) {
+        if (addr >= 0xa0000 && addr <= 0xbffff) {
+            this.displayRevision = (this.displayRevision + 1) >>> 0;
+        }
+        const k = this._page[addr >>> 12];
+        if (k === 1) { this.mem[addr] = val & 0xff; return; }
+        if (k === 2 || k === 0) return;              // ROM swallows it; unmapped goes nowhere
+        this._writeSlow(addr, val);
+    }
+
+    _writeSlow(addr, val) {
+        for (const w of this._mmio) {
+            if (addr >= w.start && addr <= w.end) { w.chip.write(regOf(w, addr), val); return; }
+        }
+        for (const r of this._mem) {
+            if (addr < r.start || addr > r.end) continue;
+            if (r.kind === 'rom') return;   // a write to ROM vanishes, as on the bench
+            this.mem[addr] = val & 0xff;
+            return;
+        }
+        // Unmapped: the write goes nowhere. Silently, exactly like the board.
+    }
+
+    // ---- the port bus ---------------------------------------------------
+    _in(port) {
+        this._catchUpChips();   // a chip must be current at the cycle it is read
+        let val = 0xff;
+        if (this._a20Controller && port === 0x60) val=this._a20Controller.readData();
+        else if (this._a20Controller && port === 0x64) val=this._a20Controller.readStatus();
+        else for (const w of this._io) {
+            if (port >= w.start && port <= w.end) { val = w.chip.read(regOf(w, port)); break; }
+        }
+        this._chipDeadline = this._wakeHorizon();   // a latch read can change the horizon
+        // Port-access trap (E6.8.3): the value handed back is the one the program
+        // sees, so the hook fires AFTER the read and reports what was read. This
+        // does not reopen the refusal to DUMP the port space (i8086-debug.js:22):
+        // that refuses a debugger-initiated read; this observes the PROGRAM's read
+        // and never performs one of its own.
+        if (this.hooks.onPortAccess) this.hooks.onPortAccess({ dir: 'in', port, value: val & 0xff });
+        return val;
+    }
+
+    _out(port, val) {
+        this._catchUpChips();   // a chip must be current at the cycle it is written
+        if (port >= 0x3b0 && port <= 0x3df) {
+            this.displayRevision = (this.displayRevision + 1) >>> 0;
+        }
+        if (this._a20Controller && port === 0x60) this._a20Controller.writeData(val);
+        else if (this._a20Controller && port === 0x64) this._a20Controller.writeCommand(val);
+        else for (const w of this._io) {
+            if (port >= w.start && port <= w.end) {
+                const reg = regOf(w, port);
+                w.chip.write(reg, val);
+                // XT keyboard acknowledge: a write to the keyboard 8255's port B
+                // (reg 1) with bit 7 HIGH strobes the latch clear and drops IRQ1.
+                // The clear happens on the RISING edge — a program that sets bit 7
+                // and leaves it there has still acknowledged — so edge, not level.
+                if (w.chip === this._kbdPpi && reg === 1 && this._pic) {
+                    const hi = (val & 0x80) !== 0;
+                    if (hi && !this._kbdStrobe) this._pic.setIRQ(1, 0);
+                    this._kbdStrobe = hi;
+                }
+                break;
+            }
+        }
+        // The write may have changed a chip's next event (a loaded PIT counter,
+        // an unmasked PIC line): re-arm the deadline from the post-write state.
+        this._chipDeadline = this._wakeHorizon();
+        // Port-access trap (E6.8.3): fires on EVERY OUT, decoded or not — a debug
+        // watch on "anything touches port 61h" wants the access the program made,
+        // not only the ones that hit a chip. Zero cost when no watch is set.
+        if (this.hooks.onPortAccess) this.hooks.onPortAccess({ dir: 'out', port, value: val & 0xff });
+    }
+
+    // ---- pins -----------------------------------------------------------
+    /** @param {string} chipName @param {'a'|'b'|'c'} port @param {number} value @param {number} out */
+    _portChange(chipName, port, value, out) {
+        // The speaker sits on a PPI port (61h = port B): the low two bits gate
+        // the timer into the cone. Route the written latch to it.
+        if (this._speakers) {
+            for (const s of this._speakers) {
+                if (s.ppi === chipName && s.port === port) s.spk.setControl(value);
+            }
+        }
+        if (!this.hooks.onPinChange) return;
+        for (let bit = 0; bit < 8; bit++) {
+            const mask = 1 << bit;
+            if (!(out & mask)) continue;    // only driven pins produce edges
+            const pin = `${chipName}.P${port.toUpperCase()}${bit}`;
+            const level = value & mask ? 1 : 0;
+            if (this._pinLevels[pin] !== level) {
+                this._pinLevels[pin] = level;
+                this.hooks.onPinChange(pin, level, this.tMs);
+            }
+        }
+    }
+
+    /**
+     * Does this machine deliver a real timer interrupt TO INT 8?
+     *
+     * The DOS layer asks because it SYNTHESISES a BIOS tick for benches with
+     * no chips, and the two must never both fire on the same vector: a
+     * program would then receive INT 8 from hardware and from machine time,
+     * at rates with no relationship, and nothing would say so.
+     *
+     * THE VECTOR IS THE QUESTION, NOT THE WIRING, and asking the wrong one
+     * cost a real regression. This used to return true whenever a PIT was
+     * wired to a PIC at all. But a program may reprogram the 8259's ICW2 to
+     * deliver IRQ0 somewhere else — the preemptive scheduler in the
+     * pseudocode back end maps it to vector 70h precisely so that INT 8 and
+     * INT 1Ch stay free for the BIOS tick. On that machine the old test said
+     * "hardware makes its own tick", the synthetic one stood down, and
+     * nothing fired INT 8 at all: measured, 163 ticks before the change and
+     * ZERO after, for a program hooking INT 1Ch under the scheduler.
+     *
+     * So it asks what the hardware would actually deliver. `vectorBase | irq`
+     * is what the 8259 hands the CPU on acknowledge; only if that is 8 does
+     * the synthetic tick have a collision to avoid. This is READ LIVE rather
+     * than cached, because ICW2 is written by the program at run time and a
+     * value computed at construction would describe the machine before its
+     * own startup code had configured it.
+     */
+    hasHardwareTimerIrq() {
+        if (!this._pic) return false;
+        for (const [name, w] of Object.entries(this._irqLines || {})) {
+            if (!(this.chips[name] instanceof I8254)) continue;
+            if (((this._pic.vectorBase | w.irq) & 0xff) === 8) return true;
+        }
+        return false;
+    }
+
+    /** A PIT counter's OUT changed. If it is the wired IRQ source, drive the PIC. */
+    _pitOutput(config, channel, level) {
+        const wiring = this._irqLines[config.name];
+        if (wiring && wiring.channel === channel && this._pic) {
+            this._pic.setIRQ(wiring.irq, level ? 1 : 0);
+        }
+        const system=config.systemControl&&this.chips[config.systemControl];
+        if(system instanceof ATSystemControl) {
+            if(channel===(config.refreshChannel??1))system.setRefresh(level);
+            if(channel===2)system.setTimer2(level);
+        }
+        if (this.hooks.onPitOutput) this.hooks.onPitOutput(config.name, channel, level);
+    }
+
+    // ---- loading and running --------------------------------------------
+    /** Load a ROM image at a physical address (default: the first rom region). */
+    loadRom(bytes, at) {
+        const rom = this.config.regions.find((r) => r.kind === 'rom');
+        const base = at ?? (rom ? rom.start : 0xf8000);
+        if (!Number.isInteger(base) || base < 0 || base + bytes.length > this.memoryBytes)
+            throw new RangeError('ROM image exceeds configured physical memory');
+        this.mem.set(bytes, base); // host load is raw physical and never A20-gated
+        if (base <= 0xbffff && base + bytes.length > 0xa0000) {
+            this.displayRevision = (this.displayRevision + 1) >>> 0;
+        }
+        return base;
+    }
+
+    /**
+     * Reset. The 8086 fetches its first instruction from FFFF:0000 —
+     * physical FFFF0h, sixteen bytes below the top of the space, which is
+     * why every ROM image for one of these ends in a far jump.
+     */
+    reset() {
+        this._chipDebt = 0;
+        this._cpuResetPending = false;
+        if(this.config.hardwareReset) {
+            if(typeof this.cpu.hardwareReset!=='function')
+                throw new Error('machine config: hardwareReset requires a CPU backend with hardwareReset()');
+            this.cpu.hardwareReset();
+        } else this.cpu.reset();
+        if (this._a20Controller) this._a20Controller.reset();
+        this.cycles += 4;
+        this._advanceChips(4);
+        this._chipDeadline = this._wakeHorizon();
+    }
+
+    /**
+     * Attach a non-bus device that needs machine time. It gets
+     * advance(cycles) with the chips but owns no addresses — its outputs
+     * reach the CPU through chip inputs, like the bench.
+     */
+    attachDevice(name, dev) {
+        // Settle the accrued debt on the CURRENT set first, so the newcomer is
+        // not charged cycles from before it existed; then re-arm the deadline
+        // with it included, or a device attached mid-run would not be advanced
+        // until the stale deadline happened to fire.
+        this._catchUpChips();
+        this.devices = this.devices || {};
+        this.devices[name] = dev;
+        this._advList = null;   // schedule is stale
+        this._chipDeadline = this._wakeHorizon();
+        return dev;
+    }
+
+    /**
+     * Build the flattened advance schedule: [target, isMs, target, isMs, ...].
+     *
+     * Interleaved in ONE array rather than an array of {target, isMs} pairs so
+     * that rebuilding allocates once instead of once per chip, and so the hot
+     * loop below does no property lookups on a wrapper object.
+     */
+    _buildAdvanceList() {
+        const list = [];
+        let anyMs = false;
+        for (const name of Object.keys(this.chips)) {
+            const chip = this.chips[name];
+            if (chip.advanceMs) { list.push(chip, 1); anyMs = true; }
+            else if (chip.advance) list.push(chip, 0);
+        }
+        if(this._a20Controller?.advance)list.push(this._a20Controller,0);
+        if (this.devices) {
+            for (const name of Object.keys(this.devices)) {
+                const dev = this.devices[name];
+                if (dev.advance) list.push(dev, 0);
+            }
+        }
+        this._anyMs = anyMs;
+        this._advList = list;
+        return list;
+    }
+
+    /**
+     * Apply the accrued cycle debt to the chips and re-arm the deadline. Cheap
+     * when there is no debt (the deadline still has to be recomputed after any
+     * event, so it always runs _wakeHorizon). Called at the deadline in step(),
+     * and eagerly wherever a chip is about to be read so no reader sees a chip
+     * that is behind: _in, _out, and saveState.
+     */
+    _flushChips() {
+        this._catchUpChips();
+        this._chipDeadline = this._wakeHorizon();
+    }
+
+    /** Apply the accrued debt WITHOUT re-arming the deadline -- the caller
+     *  re-arms after whatever it does next, because a chip WRITE (loading a PIT
+     *  counter, say) changes the horizon and the deadline must be recomputed
+     *  from the post-write state, not the pre-write one. */
+    _catchUpChips() {
+        if (this._chipDebt > 0) { this._advanceChips(this._chipDebt); this._chipDebt = 0; }
+    }
+
+    _advanceChips(n) {
+        // HOT: called once per instruction, and on a 7-chip PCXT8086 it was
+        // measured at 1079 ns/step against the CPU core's own 87 ns -- 89% of
+        // machine.step(). Roughly 400 ns of that was Object.keys() allocating
+        // a fresh array of chip names EVERY INSTRUCTION. Hence the cached
+        // schedule; do not reintroduce an iteration that allocates.
+        const list = this._advList !== null ? this._advList : this._buildAdvanceList();
+        if (list.length === 0) return;
+        // The OPL runs on its OWN 3.58 MHz crystal and generates at
+        // clock/72, so it is advanced in MILLISECONDS of emulated time rather
+        // than in machine cycles -- the same distinction the AY's crystal
+        // taught this fleet, expressed as a different method name so the two
+        // cannot be confused at a call site. Skipped entirely when no attached
+        // chip wants ms, which is the common case.
+        const ms = this._anyMs ? n * 1000 / this.clockHz : 0;
+        for (let i = 0; i < list.length; i += 2) {
+            if (list[i + 1] === 1) list[i].advanceMs(ms);
+            else list[i].advance(n);
+        }
+    }
+
+    /**
+     * How far a halted CPU may jump in one step: the nearest time-driven
+     * wake source, exactly the 6502 machine's WAI rule. A chip that
+     * advances but cannot name a horizon vetoes the jump (n=1 crawl) — a
+     * skipped event is a correctness bug, a crawl is only slow.
+     */
+    _wakeHorizon() {
+        let h = Infinity;
+        const list = this._advList !== null ? this._advList : this._buildAdvanceList();
+        for (let i = 0; i < list.length; i += 2) {
+            const device = list[i];
+            const inMs = list[i + 1] === 1;
+            const method = inMs ? device.nextWakeMs : device.nextWake;
+            if (typeof method !== 'function') return 1;
+            const wait = method.call(device) * (inMs ? this.clockHz / 1000 : 1);
+            if (!(wait >= 0)) return 1;
+            h = Math.min(h, wait);
+        }
+        if (!Number.isFinite(h)) h = Math.round(this.clockHz / 1000);   // re-check once per millisecond
+        // Round toward the event, never across it. The next machine cycle
+        // resolves a fractional horizon at instruction granularity.
+        return Math.max(1, Math.min(Math.floor(h), Math.round(this.clockHz / 1000)));
+    }
+
+    /**
+     * Request a non-maskable interrupt. NMI is edge-triggered, ignores the
+     * interrupt flag, and always takes vector 2 — the parity-error / power-
+     * fail / coprocessor line, or on a breadboard just a button. Latched
+     * here and delivered before the next instruction; multiple calls before
+     * delivery collapse to one edge.
+     */
+    nmi() { this._nmiPending = true; }
+
+    /**
+     * Deliver a pending hardware interrupt. NMI wins over INTR and ignores
+     * IF; a maskable INTR is taken only when the PIC's line is asserted and
+     * IF is set. Either wakes a halted CPU. Returns true if one was taken.
+     */
+    _serviceInterrupts() {
+        if (this._nmiPending && !this._nmiMasked && (typeof this.cpu.canTakeNmi !== 'function' || this.cpu.canTakeNmi())) {
+            this._nmiPending = false;
+            // Interrupt trap (E6.8.3): source distinguishes the delivered lines
+            // the machine drives — 'nmi' here, 'irq' below — from a software INT n
+            // (source 'int'), which executes inside the core and is emitted there.
+            // "break on IRQ0" and "break on INT 21h" are different questions.
+            if (this.hooks.onInterrupt) this.hooks.onInterrupt({ vector: 2, source: 'nmi' });
+            this.cpu.interrupt(2);        // NMI is vector 2, unconditional
+            return true;
+        }
+        if (!this._pic || !this._pic.intActive) return false;
+        // NOT a bare IF test: the core also holds a one-instruction shadow
+        // after a segment-register load, so that `mov ss,ax` / `mov sp,imm`
+        // cannot be interrupted between the two. canTakeInterrupt() is both
+        // halves.
+        if (!this.cpu.canTakeInterrupt()) return false;
+        let vector;
+        if(this._picCascade&&this._pic._serviceable()===this._picCascade.line&&this._picCascade.slave.intActive){
+            this._pic.acknowledge(); vector=this._picCascade.slave.acknowledge();
+        } else vector=this._pic.acknowledge();
+        if (this.hooks.onInterrupt) this.hooks.onInterrupt({ vector, source: 'irq' });
+        this.cpu.interrupt(vector);   // pushes flags/cs/ip, clears halted
+        return true;
+    }
+
+    /** Execute one instruction (or, while halted, let time pass). */
+    /**
+     * Charge instructions from the measured 8088 cycle tables instead of the
+     * core's per-instruction estimate.
+     *
+     * OPT-IN, AND IT COSTS SOMETHING. Feeding the tables needs the data-access
+     * count, which means running the CPU's bus trace on every instruction. The
+     * default path is untouched; nothing here executes unless this is called.
+     *
+     * IT REFUSES ON THE 80186. The tables were captured from an AMD D8088 and
+     * the 186 changed both instruction timings and the queue, so applying them
+     * there would be claiming coverage that was never measured. Refusing is
+     * the honest answer; a silent fallback would read as support.
+     *
+     * THE 8086 CAVEAT IS REAL AND NOT REFUSED. An 8086 has a 16-bit bus and a
+     * six-byte queue against the 8088's 8-bit bus and four-byte queue, so its
+     * true timings differ by an amount NOBODY HAS MEASURED -- there is no 8086
+     * oracle. Enabling this on an 8086 config gives 8088 timings, which are
+     * closer than the core's flat estimate and are not the same thing as
+     * correct. `cycleTimingStats()` reports coverage so the difference between
+     * "predicted" and "fell back" is never invisible.
+     */
+    enableI8088CycleTiming(on = true, {CycleEstimator} = {}) {
+        // THE ESTIMATOR IS INJECTED, NOT IMPORTED, and the reason is 975 KB.
+        //
+        // This file used to `import { CycleEstimator } from './i8088-timing.js'`
+        // at module scope, and that file imports `./i8088-cycles.js` — a single
+        // generated table of 974,864 bytes. Both static, so every bundle carrying
+        // this machine carried the table, for a path that is opt-in, defaults to
+        // null, and that NOTHING in this repo enables.
+        //
+        // Downstream it was not a cost, it was an EXCLUSION: brickwright-lite
+        // could not ship 975 KB in an editor bundle, so it removed the whole
+        // cycle-timing path and declared both files `absentByDesign`. A consumer
+        // dropping a FEATURE to avoid a byte cost is the strongest signal
+        // available that a dependency is in the wrong place — and it made this
+        // file unvendorable, which cost a pin bump an extra divergence.
+        //
+        // Injected, the feature is unchanged for anyone who wants it and free for
+        // everyone who does not. The refusal is BY NAME rather than a TypeError
+        // on `new undefined`, so a caller who forgets learns what to pass.
+        if (on && typeof CycleEstimator !== 'function') {
+            throw new Error(
+                'enableI8088CycleTiming needs its estimator injected: '
+                + "import { CycleEstimator } from './i8088-timing.js' and pass "
+                + '{CycleEstimator}. It is not imported here because its cycle '
+                + 'table is 975 KB and this path is opt-in.');
+        }
+        if (on && (this.variant === '80186' || this.variant === '80286')) {
+            throw new Error(
+                `i8088 cycle tables do not cover the ${this.variant}: the 186/286 changed `
+                + 'both instruction timings and the prefetch queue, and no oracle for '
+                + 'either exists. Refusing rather than reporting 8088 numbers as 186/286 ones.');
+        }
+        if (!on) { this._cycleEst = null; return false; }
+        this._cycleEst = new CycleEstimator();
+        this._traceBuf = [];
+        return true;
+    }
+
+    /**
+     * Coverage of the cycle tables since they were enabled. `fellBack` is the
+     * count of instructions charged from the core's estimate instead -- an
+     * unmeasured case, or an interval where the queue was desynchronised.
+     */
+    cycleTimingStats() {
+        const e = this._cycleEst;
+        if (!e) return null;
+        const total = e.hits + e.misses;
+        return {
+            predicted: e.hits,
+            fellBack: e.misses,
+            // Split, because the two need different fixes: a primary miss is
+            // an opcode or state the tables never measured, while a desync
+            // miss is the CONSEQUENCE of an earlier one -- a single unmeasured
+            // instruction costs every instruction after it until the next
+            // taken branch. A combined total hides which problem you have.
+            primaryMisses: e.primaryMisses,
+            desyncMisses: e.desyncMisses,
+            resyncs: e.resyncs,
+            coverage: total ? e.hits / total : 0,
+            desynced: e.desynced,
+        };
+    }
+
+    /**
+     * Table key and second-byte slot for the instruction at seg:off.
+     *
+     * THE SECOND BYTE IS NOT ALWAYS A MODRM, AND THE TABLE DOES NOT CARE.
+     * The generator keys on `bytes[p+1]` -- the byte after any prefixes and
+     * the opcode -- for EVERY opcode, so for `33 C0` it is a real modrm and
+     * for `B8 00 00` it is half an immediate. That is what was measured and
+     * validated at 98%, so the run-time lookup must reproduce it exactly.
+     * Passing null for non-group opcodes instead (the first attempt here)
+     * silently missed on every one of them: 0% coverage, no error.
+     *
+     * The byte only exists when the instruction is longer than the prefixes
+     * plus the opcode; a one-byte instruction gets slot 32, the generator's
+     * "no second byte" value. Reading memory past a one-byte instruction
+     * would take the NEXT instruction's opcode, which is a different bug with
+     * the same silent shape.
+     */
+    _cycleKey(seg, off, length) {
+        let p = off, b = 0, prefixes = 0;
+        for (let i = 0; i < 8; i++) {
+            b = this.mem[I8086.phys(seg, p)] & 0xff;
+            if (b === 0x26 || b === 0x2e || b === 0x36 || b === 0x3e
+                || b === 0xf0 || b === 0xf1 || b === 0xf2 || b === 0xf3) {
+                p = (p + 1) & 0xffff; prefixes++;
+            } else break;
+        }
+        const hasSecond = length > prefixes + 1;
+        const second = hasSecond ? this.mem[I8086.phys(seg, (p + 1) & 0xffff)] & 0xff : -1;
+        const slot = second < 0 ? 32 : ((second >> 6) << 3) | (second & 7);
+        const key = second >= 0 && CYCLE_GROUP_OPCODES.has(b)
+            ? CYCLE_GROUP_KEY[b * 8 + ((second >> 3) & 7)]
+            : CYCLE_KEY[b];
+        return { key, slot };
+    }
+
+    step() {
+        // The nearest chip event is due once the accrued debt reaches the
+        // deadline: apply it (which fires that event and, e.g., raises the PIT's
+        // IRQ) BEFORE the interrupt is checked for the next instruction. A
+        // hardware interrupt also wakes a HLT that was waiting for the timer or
+        // the UART.
+        if (this._chipDebt >= this._chipDeadline) this._flushChips();
+        this._serviceInterrupts();
+        if (this.cpu.halted || this.cpu.shutdown) {
+            // A halted CPU jumps straight to the horizon. Settle any debt first
+            // so the jump is measured from where the chips actually are.
+            this._flushChips();
+            const n = this._wakeHorizon();
+            this.cycles += n;
+            this._advanceChips(n);
+            this._chipDeadline = this._wakeHorizon();
+            return n;
+        }
+        const n = this._cycleEst === null ? this.cpu.step() : this._stepTimed();
+        this.cycles += n;
+        this._chipDebt += n;      // accrued, not charged: see the deadline batch above
+        if(this._cpuResetPending) {
+            this._cpuResetPending=false;
+            if(typeof this.cpu.hardwareReset!=='function')
+                throw new Error('AT 8042 reset requires a CPU backend with hardwareReset()');
+            this.cpu.hardwareReset();
+        }
+        return n;
+    }
+
+    /**
+     * COLD PATH, deliberately a separate method. Keeping this out of step()
+     * leaves the default hot path exactly as it was -- the same split the
+     * core uses for its bus trace, and for the same measured reason.
+     */
+    _stepTimed() {
+        const cs = this.cpu.cs, ip = this.cpu.ip;
+        const buf = this._traceBuf;
+        buf.length = 0;
+        this.cpu.busTrace = buf;
+        const n = this.cpu.step();
+        this.cpu.busTrace = null;
+
+        let accesses = 0;
+        for (let i = 0; i < buf.length; i += 2) {
+            const k = buf[i];
+            if (k >= 1 && k <= 4) accesses++;
+        }
+        // Length is where the queue would have continued, NOT where IP ended:
+        // a taken branch moves IP somewhere unrelated to the instruction size.
+        const length = (this.cpu._seqIp - ip) & 0xffff;
+        const taken = this.cpu._tookBranch
+            || this.cpu.ip !== this.cpu._seqIp || this.cpu.cs !== this.cpu._seqCs;
+
+        let predicted = null;
+        if (length > 0 && length < 16) {
+            // Read the key from the ORIGINAL address: an instruction that
+            // wrote to its own following bytes would otherwise be keyed on
+            // what it produced rather than what executed.
+            const { key, slot } = this._cycleKey(cs, ip, length);
+            // Primitives, no options object: the allocation cost 8 microseconds
+            // per instruction against 0.8 for the lookups it wrapped.
+            predicted = this._cycleEst.step(
+                key, length, accesses, slot, taken, this.cpu.ax, this.cpu.cx);
+        } else {
+            this._cycleEst.desynced = true;
+            this._cycleEst.misses++;
+            this._cycleEst.primaryMisses++;
+        }
+        // A null is "not measured" or "queue unknown" -- fall back to the
+        // core's own count. Never substitute a guess for an absent measurement.
+        return predicted === null ? n : predicted;
+    }
+
+    /** Run until machine time reaches targetMs — the adapter's verb. */
+    advanceToMs(targetMs) {
+        const target = Math.round(targetMs * this.clockHz / 1000);
+        let steps = 0;
+        while (this.cycles < target) { this.step(); steps++; }
+        return steps;
+    }
+
+    /** Run for a slice of machine time. */
+    runMs(ms) { return this.advanceToMs(this.tMs + ms); }
+
+    /** Feed a byte to the first UART on the machine. */
+    serialIn(byte) {
+        for (const c of Object.values(this.chips)) {
+            if (typeof c.rxPush === 'function') { c.rxPush(byte & 0xff); return true; }
+            if (typeof c.rxByte === 'function') { c.rxByte(byte & 0xff); return true; }
+        }
+        return false;
+    }
+
+    /**
+     * Press a key: the XT keyboard hardware path, the counterpart to serialIn.
+     * The scancode appears at the keyboard 8255's port A (read at 0x60) and the
+     * keyboard raises IRQ1 on the PIC — exactly what a bare-metal INT 09h reader
+     * or a BIOS both sit on. The interrupt clears when the program strobes the
+     * ack (port B bit 7), handled in _out. Host widgets map key events to set-1
+     * scancodes and call this; it is machine-agnostic, needing only a PPI + PIC.
+     */
+    /**
+     * WHAT THE WORLD CAN SEE THE MACHINE DOING — the counterpart to
+     * `inputPoints()`, and the half that makes an LED possible.
+     *
+     * Each entry is one 8255 port: what the chip DRIVES (`value`), which bits
+     * it drives at all (`dir`, 1 = driven by the chip), and what the pins
+     * actually carry (`pins`, the latch where it drives and the input
+     * elsewhere). All three are needed and none substitutes for another --
+     * `value` alone would light an LED on a bit configured as an INPUT, which
+     * is a lamp for a wire the chip is not driving.
+     *
+     * DIRECTION IS REPORTED HERE AND NOT IN `inputPoints()`, and the asymmetry
+     * is deliberate rather than an oversight. A caller writing an input asks
+     * "can I drive this", which only the write can answer. A caller DRAWING an
+     * output must know, this frame, which bits mean anything -- and it is
+     * reading a snapshot it is about to render, so a value that is one
+     * instruction stale is exactly as stale as everything else in the frame.
+     */
+    outputPoints() {
+        const out = [];
+        for (const [name, chip] of Object.entries(this.chips || {})) {
+            if (typeof chip.setInput !== 'function') continue;   // an 8255-shaped chip
+            for (const port of ['a', 'b', 'c']) {
+                const P = port.toUpperCase();
+                out.push({
+                    chip: name, port, bits: 8,
+                    value: chip[`out${P}`] & 0xff,
+                    dir: chip[`dir${P}`] & 0xff,
+                    pins: chip[`_pins${P}`] ? chip[`_pins${P}`]() & 0xff : 0xff,
+                });
+            }
+        }
+        return out;
+    }
+
+    /**
+     * THE ANALOG HALF OF THE SAME PAIR, and a separate reporter rather than an
+     * extra shape inside `outputPoints()`.
+     *
+     * A DAC's output is a VOLTAGE. It has no per-bit direction, no pin latch
+     * and no notion of "driven" -- the three fields that make an 8255 entry
+     * mean something are all absent, and the one field that matters here has
+     * no counterpart there. Returning both shapes from one method would give
+     * callers a contract they had to type-test before using, which is the
+     * thing `audioTone()` already refuses to do by always returning an array.
+     *
+     * `counts` is reported BESIDE `volts` because they are different facts: a
+     * program wrote the code, the card chose the reference, and a learner
+     * debugging "why is it half what I asked for" needs to see which of the
+     * two is the surprise.
+     *
+     * @returns {Array<{chip: string, counts: number, volts: number, vref: number}>}
+     */
+    analogOutputs() {
+        const out = [];
+        for (const [name, chip] of Object.entries(this.chips || {})) {
+            if (typeof chip.volts !== 'function') continue;
+            out.push({ chip: name, counts: chip.counts | 0, volts: chip.volts(), vref: chip.vref });
+        }
+        return out;
+    }
+
+    /**
+     * WHAT THE WORLD CAN PUT INTO THE MACHINE AS A VOLTAGE -- the ADC's
+     * channels, so a knob widget can find them without being told a chip name.
+     *
+     * The digital pair splits the same way and for the same reason:
+     * `inputPoints()` reports what EXISTS and leaves the present value to the
+     * write, because a channel's voltage is the world's to state and the
+     * machine has no opinion about it until something says so.
+     *
+     * @returns {Array<{chip: string, channels: number, vref: number}>}
+     */
+    analogInputs() {
+        const out = [];
+        for (const [name, chip] of Object.entries(this.chips || {})) {
+            if (typeof chip.setChannel !== 'function') continue;
+            out.push({ chip: name, channels: 8, vref: chip.vref });
+        }
+        return out;
+    }
+
+    /**
+     * WHAT A WIDGET OR A CODE BLOCK CAN CHANGE ABOUT THE WORLD.
+     *
+     * Every input point the machine currently has, as `{chip, port, bits}`.
+     * Today that is the 8255's ports, which is where a breadboard hangs its
+     * switches -- the same ports `setInput` drives from a drawn board.
+     *
+     * DIRECTION IS NOT REPORTED HERE, DELIBERATELY. A port's direction is a
+     * mode word the PROGRAM writes and can rewrite at any instruction, so a
+     * list computed once would be stale by the time anyone read it. What is
+     * stable is which ports EXIST; whether a given bit is an input right now
+     * is `setInput`'s answer, not this one's.
+     */
+    inputPoints() {
+        const out = [];
+        for (const [name, chip] of Object.entries(this.chips || {})) {
+            if (typeof chip.setInput !== 'function') continue;
+            for (const port of ['a', 'b', 'c']) out.push({ chip: name, port, bits: 8 });
+        }
+        return out;
+    }
+
+    /**
+     * Drive one input bit, as a switch or a sensor would.
+     *
+     * @returns {boolean} false when there is nothing to drive, rather than
+     *   silently succeeding -- a widget offered for a machine with no 8255
+     *   would otherwise look connected and do nothing.
+     *
+     * THE HONEST LIMIT, and it is the one a caller must know: a machine
+     * ATTACHED TO A DRAWN BOARD re-reads every input pin from that board on
+     * each advance (`i8086-adapter.js`), so a value set here is overwritten
+     * on the next step. The board is the world for such a machine, and it
+     * should be -- flipping a switch in a widget while the schematic says
+     * otherwise is a contradiction, not an input. Callers that want both
+     * should drive the board.
+     */
+    setInput(chipName, port, bit, level) {
+        const chip = (this.chips || {})[chipName];
+        if (!chip || typeof chip.setInput !== 'function') return false;
+        if (!['a', 'b', 'c'].includes(port)) return false;
+        if (!(bit >= 0 && bit < 8)) return false;
+        chip.setInput(port, bit, level ? 1 : 0);
+        return true;
+    }
+
+    /**
+     * Can this machine take a key at all? A board with no 8255 has nowhere to
+     * latch a scancode and one with no 8259 has no wire to raise IRQ1 on.
+     * Asked BEFORE a host offers a keyboard, so the offer matches the board.
+     */
+    canTakeKeys() { return !!(this._pic && (this._kbdPpi || this._a20Controller)); }
+
+    keyIn(scancode) {
+        if (!this._pic) return false;
+        if(this._a20Controller)return this._a20Controller.injectSet1(scancode);
+        if (!this._kbdPpi) return false;
+        this._kbdPpi.setInputPort('a', scancode & 0xff);   // scancode latched at port A (0x60)
+        this._pic.setIRQ(1, 1);                             // the keyboard's IRQ1
+        return true;
+    }
+
+    /** Optional PS/2 aux port; positive dy means screen down. */
+    canTakeMouse() { return !!(this._a20Controller?.mouse && this.chips.pic2); }
+
+    mouseIn({dx=0,dy=0,buttons=0}={}) {
+        return this.canTakeMouse() ? this._a20Controller.injectMouse({dx,dy,buttons}) : false;
+    }
+
+    /** CPU state keys to snapshot (same pattern as M6502Machine.CPU_STATE). */
+    static CPU_STATE = ['ax', 'bx', 'cx', 'dx', 'sp', 'bp', 'si', 'di',
+        'ip', 'cs', 'ds', 'es', 'ss', 'flags', 'halted', 'cycles',
+        // The interrupt inhibition after MOV/POP SS is architecturally live
+        // between instructions. repInterrupted is diagnostic state exposed by
+        // the core and therefore part of an equality-preserving checkpoint.
+        'intShadow', 'repInterrupted'];
+
+    // `cycles` above is the CORE's own counter (i8086.js:1274 increments it per
+    // instruction) and is NOT a duplicate of `machine.cycles`, which this class
+    // advances itself and never derives from the core. It is tempting to read
+    // them as one number, because on a freshly-constructed machine that has
+    // never been reset they agree exactly. MEASURED, they part company twice:
+    //
+    //   after construct    machine      0   cpu     0
+    //   after reset()      machine      4   cpu     0   <- reset() adds 4, the
+    //                                                      core's reset zeroes
+    //   two steps          machine     50   cpu    46
+    //   HLT, then 5 steps  machine +25000   cpu    +0   <- the machine advances
+    //                                                      by the wake horizon
+    //                                                      without calling
+    //                                                      cpu.step() at all
+    //
+    // machine.cycles is the AUTHORITATIVE simulation time -- tMs, runUntil and
+    // the checkpoint's time.ticks all read it -- and it is snapshotted
+    // separately at the top level of saveState(). cpu.cycles is read by nothing
+    // in this machine and is carried so a restored machine is EQUAL to the
+    // captured one rather than merely equivalent. Two counters, both restored,
+    // neither derived; dropping either restores a machine that is subtly not the
+    // one that was captured.
+
+    /**
+     * EVERYTHING THE CHIPS REFUSED, in one place, because until 2026-09-05
+     * nothing read any of it.
+     *
+     * Every chip here announces when a program asks for something it does not
+     * model -- the 8255 and 8251 set `modeWarning`, the uPD765 returns
+     * IC=invalid and names itself in `lastRefusal`, the SB DSP and YM3812
+     * count unknown commands, the 8237 records unmodelled command bits. All of
+     * it was correct, individually well-designed, and UNREACHABLE: a grep for
+     * any of those names across this file returned nothing, so a driver
+     * programming memory-to-memory or an 8255 handshake left a precise record
+     * in a field no consumer ever asked for.
+     *
+     * That is the week's failure with the halves swapped. Usually a check
+     * reports on something it never looked at; here the chips looked carefully
+     * and nobody read the report. An announcement with no reader is the same
+     * silence it was meant to replace, arrived at more expensively.
+     *
+     * I added the 8237's ledger an hour before writing this and gave it
+     * exactly the same unreachable shape, which is the reason to state the
+     * rule rather than the instance: A LEDGER IS ONLY WORTH THE CONSUMER THAT
+     * READS IT.
+     *
+     * Shape-driven rather than a list of chips, so a chip added later is
+     * collected without editing this: anything exposing `report()`, or any of
+     * the four field names below, is picked up. `test/chip-refusals.test.mjs`
+     * asserts every chip that HAS a ledger is reachable through here, so the
+     * next private field fails rather than joins them.
+     *
+     * @returns {Array<{name: string, kind: 'chip'|'device', refusals: object}>}
+     */
+    /**
+     * What makes a field a refusal ledger. Exported so the gate that checks
+     * every chip is reachable uses THE SAME pattern rather than a copy of it --
+     * two lists that must agree is the shape that let two ledgers go unread.
+     */
+    static LEDGER_FIELD = /refus|unsupport|unmodel|warning|invalid/i;
+
+    /** Suffixes that mark a field as a ledger's companion, not a ledger. */
+    static LEDGER_SIBLING = /(At|Symptom)$/;
+
+    /**
+     * Every chip's refusal ledger, as rows of `ROW_FIELDS` shape.
+     *
+     * MERGING THIS METHOD BY HAND: it needs BOTH static fields declared above
+     * -- `LEDGER_FIELD` and `LEDGER_SIBLING` -- and neither is adjacent to it.
+     * brickwright-lite's first merge extracted the block by walking backwards
+     * over doc comments, stopped at the `LEDGER_FIELD` declaration because a
+     * field between two comments is not a comment, and produced a file that
+     * parses, imports and constructs perfectly and throws on the first call.
+     * A partial merge of this method looks exactly like a whole one.
+     */
+    chipRefusals() {
+        const rows = [];
+        // `at` is the address the program touched to trigger the refusal -- a
+        // port number, or a register offset. lego-ac's ask, and the argument
+        // is right: the debugger's line wants to point at the instruction and
+        // the P-lane table wants to join to the part's port map. A SYMPTOM
+        // SENTENCE CANNOT BE CLICKED.
+        //
+        // null when the chip does not record one. A refusal with no address is
+        // still worth reporting; inventing an address for it would not be.
+        //
+        // `ats` IS THE SET, `at` IS THE ANCHOR. A feature refused at more than
+        // one address reports all of them, first-seen; `at` is the first, and
+        // it is the first rather than the last so a row's anchor does not move
+        // under a reader while the program runs. `atsMore` is true when the
+        // per-feature cap dropped addresses, because a bounded list that does
+        // not say it is bounded reads as a complete one.
+        //
+        // `space` says what `at` is an address IN -- 'port' or 'register'.
+        // Without it a consumer holding a bare integer cannot tell "port 08h"
+        // from "register 08h", and the only alternative is a part-to-space
+        // table on the reading side: a second list that must agree with these
+        // chips. 'port' is the default because it is true of every chip but
+        // the YM3812, which says so at its own call site.
+        //
+        // `at` IS THE BUS PORT, `atOffset` IS THE CHIP-RELATIVE ONE.
+        //
+        // A chip records the offset it was written at -- the 8255's control
+        // register is 3 -- because `write(reg, val)` never sees a base. That
+        // made `at: 3, space: 'port'` TRUE on a breadboard (PPI at 0x00) and
+        // FALSE on a PC/XT (PPI at 0x60, so the bus port is 0x63): same row,
+        // two meanings, and right on the board where being right teaches the
+        // wrong rule.
+        //
+        // The chip cannot fix this without carrying the board's decode. THIS
+        // layer knows it -- `this.config` names each chip's base -- so the
+        // resolution belongs here, and `atOffset` keeps the number that joins
+        // to the part's own register map.
+        const baseOf = (name) => {
+            const c = (this.config?.chips || []).find((x) => x.name === name);
+            return typeof c?.at === 'number' ? c.at : null;
+        };
+        const push = (part, kind, feature, symptom, count, at, ats, atsMore, space) => {
+            const set = (ats && ats.length) ? [...ats]
+                : (at !== null && at !== undefined) ? [at] : [];
+            const wantPort = (space ?? 'port') === 'port';
+            const base = wantPort ? baseOf(part) : null;
+            // A base this layer cannot resolve is NOT quietly treated as zero.
+            // Zero is a real base, so defaulting to it would emit a number that
+            // looks like a port and is not -- the exact defect being fixed. The
+            // row says 'register' instead and reports what the chip knew.
+            const resolved = (wantPort && base !== null) ? set.map((n) => n + base) : set;
+            rows.push({part, kind, feature, symptom: symptom ?? null,
+                count: count ?? 1, at: resolved.length ? resolved[0] : null,
+                ats: resolved, atsMore: !!atsMore,
+                space: wantPort ? (base === null ? 'register' : 'port') : (space ?? 'port'),
+                atOffset: set.length ? set[0] : null});
+        };
+
+        const sources = [
+            ...Object.entries(this.chips || {}).map(([n, c]) => ['chip', n, c]),
+            ...Object.entries(this.devices || {}).map(([n, d]) => ['device', n, d]),
+        ];
+        for (const [kind, name, part] of sources) {
+            if (!part || typeof part !== 'object') continue;
+
+            // A chip may shape its own report; ym3812 already does.
+            let reported = null;
+            if (typeof part.report === 'function') {
+                try { reported = part.report(); } catch { /* a report must not break a read */ }
+            }
+            // A FIELD READ ONCE. Both paths below reach real fields, and the
+            // name-derived scan further down would reach them AGAIN -- the
+            // first smoke of the finished vocabulary printed the YM3812's
+            // rhythm-mode refusal twice and the FDC's bad opcode twice, once
+            // through the chip's own report() and once through the field the
+            // report was built from. Two rows for one refusal is a count that
+            // quantifies over views instead of over events.
+            const consumed = new Set(['lastRefusal']);
+            for (const e of reported?.unsupported ?? []) {
+                consumed.add('unsupported');
+                push(name, kind, e.what ?? String(e), e.symptom ?? null, e.count,
+                    e.at, e.ats, e.atsMore, e.space);
+            }
+
+            if (part.lastRefusal) {
+                push(name, kind, part.lastRefusal, part.lastRefusalSymptom ?? null,
+                    part.refusals || 1, part.lastRefusalAt, null, false,
+                    part.lastRefusalSpace);
+            }
+
+            // DERIVED, NOT ENUMERATED. The first version listed the field names
+            // it knew -- modeWarning, lastRefusal, unsupported, unmodelled --
+            // and the reachability gate immediately found two ledgers it did
+            // not reach: the 8259's `initWarning` and the board's
+            // `_refusedControls`. Adding those two by name would have fixed the
+            // instances and left the class, which is how the list got short in
+            // the first place.
+            //
+            // So: any own field whose NAME says it records a refusal, holding
+            // either a Map of features or a non-empty string. A chip that
+            // invents a new name is collected the moment it exists.
+            for (const field of Object.keys(part)) {
+                if (!I8086Machine.LEDGER_FIELD.test(field)) continue;
+                if (consumed.has(field)) continue;
+                // A SIBLING IS NOT A LEDGER. `modeWarningAt` and
+                // `modeWarningSymptom` both contain a word the pattern looks
+                // for, so the scan collected each of them as a refusal of its
+                // own -- a row whose feature was the symptom sentence and
+                // whose symptom was null. The suffix is only ignored when the
+                // field it belongs to actually exists, so a chip that genuinely
+                // names a ledger `resetAt` is still collected.
+                if (I8086Machine.LEDGER_SIBLING.test(field)
+                    && part[field.replace(I8086Machine.LEDGER_SIBLING, '')] !== undefined) continue;
+                const v = part[field];
+                // A STRING LEDGER carries its address in a sibling `<field>At`,
+                // because a sentence has nowhere to put one. Convention rather
+                // than restructuring every chip: the 8255's modeWarning stays
+                // a sentence and gains modeWarningAt beside it.
+                // and its symptom in `<field>Symptom`, for the same reason:
+                // so a sentence-shaped ledger produces the same row as a Map
+                // one rather than a thinner one.
+                if (typeof v === 'string' && v) {
+                    push(name, kind, v, part[`${field}Symptom`] ?? null, 1,
+                        part[`${field}At`], null, false, part[`${field}Space`]);
+                    continue;
+                }
+                if (!(v instanceof Map)) continue;
+                for (const [feature, entry] of v) {
+                    // Two shapes in the wild: a bare count, and the
+                    // {count, symptom, ats, atsMore} that chip-ledger.js keeps.
+                    if (typeof entry === 'number') push(name, kind, String(feature), null, entry);
+                    else push(name, kind, String(feature), entry?.symptom ?? null,
+                        entry?.count ?? 1, entry?.at, entry?.ats, entry?.atsMore,
+                        entry?.space);
+                }
+            }
+        }
+        return rows;
+    }
+
+    _snapshotTopology() {
+        return JSON.stringify({
+            variant: this.variant,
+            cpuBackend:this.cpuBackend,
+            memoryBytes:this.memoryBytes,
+            a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16,
+                inputBusyCycles:this.config.a20.inputBusyCycles??0,responseDelayCycles:this.config.a20.responseDelayCycles??0,
+                allowReset:!!this.config.a20.allowReset,inputPort:this.config.a20.inputPort??0xb0,
+                powerOnKeyboardBatCycles:this.config.a20.powerOnKeyboardBatCycles??null,
+                keyboardAckCycles:this.config.a20.keyboardAckCycles??null,
+                keyboardBatCycles:this.config.a20.keyboardBatCycles??null,
+                keyboardUnlocked:!!this.config.a20.keyboardUnlocked,
+                ...(this.config.a20.mouse?{mouse:true}:{})} : null,
+            regions: this.config.regions.map(r => [r.kind, r.start, r.end]),
+            chips: (this.config.chips || []).map(c => [
+                c.kind, c.name, c.at ?? null, c.bus ?? 'io', c.span ?? null,
+                c.stride ?? 1, c.irq ?? null, c.irqChannel ?? null,c.pic??null,c.cascadeTo??null,c.cascadeIrq??null,c.initialUnixSeconds??null
+            ]),
+            attached: Object.keys(this.devices || {}).sort()
+        });
+    }
+
+    // ─── the shared machine-checkpoint contract ─────────────────────────
+    // The 8086 is the third consumer of machine-checkpoint.js, after m6502 and
+    // z80. It reaches the same contract from a different starting point (it once
+    // hand-rolled clone/topology/refusal and THREW; m6502/z80 always RETURNED),
+    // and the module took it with no amendment: its per-machine `reasons` slot
+    // already carries machine-specific refusals (m6502 passes bit-banged serial
+    // and audio; z80 passes buffer-input), so the 8086's bus-trace and audio
+    // refusals are just more reasons.
+
+    checkpointSupport() {
+        // Live state outside the component snapshot: refuse these MODES, the same
+        // shape m6502/z80 use for their own unsnapshotable queues. The shared
+        // checkpointSupport adds a reason for any chip or device whose state
+        // codec is not a complete getState/setState or saveState/loadState pair.
+        const reasons = [];
+        if (this.cpu.busTrace !== null) reasons.push('bus trace is an externally-owned append cursor, not part of the snapshot');
+        if (this._audioBus) reasons.push('audio mixer source phases and buffers are not covered by the chip state APIs');
+        if (this.cpuBackend === 'protected286-experimental')
+            reasons.push('experimental protected 286 hidden descriptor caches and system registers are not covered by the machine checkpoint codec');
+        return checkpointSupport(this.chips, this.devices, reasons);
+    }
+
+    checkpointTopology() {
+        // `variant` in the extra slot: 60h is PUSHA on an 80186 and JO on an
+        // 8086, so a checkpoint from the wrong variant must not restore. The
+        // deep state codec guards it again inside loadState; this guards the
+        // envelope before the state is even inspected.
+        return checkpointTopology('i8086', this.config, this.chips, this.devices, {
+            variant:this.variant,cpuBackend:this.cpuBackend,memoryBytes:this.memoryBytes,
+            a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16,
+                inputBusyCycles:this.config.a20.inputBusyCycles??0,responseDelayCycles:this.config.a20.responseDelayCycles??0,
+                allowReset:!!this.config.a20.allowReset,inputPort:this.config.a20.inputPort??0xb0,
+                powerOnKeyboardBatCycles:this.config.a20.powerOnKeyboardBatCycles??null,
+                keyboardAckCycles:this.config.a20.keyboardAckCycles??null,
+                keyboardBatCycles:this.config.a20.keyboardBatCycles??null,
+                keyboardUnlocked:!!this.config.a20.keyboardUnlocked,
+                ...(this.config.a20.mouse?{mouse:true}:{})} : null
+        });
+    }
+
+    /** Kept for callers that only need the boolean; derived from checkpointSupport now. */
+    canCheckpoint() {
+        return this.checkpointSupport().supported;
+    }
+
+    captureCheckpoint() {
+        const support = this.checkpointSupport();
+        if (!support.supported) return checkpointRefusal(support);
+        // A base machine-domain time; the debug target overrides it with its
+        // own event-clock domain, the same way m6502/z80's debug bridges do.
+        return cloneCheckpointValue({
+            schema: MACHINE_CHECKPOINT_SCHEMA,
+            topology: this.checkpointTopology(),
+            time: {ticks: this.cycles, domain: 'i8086-cycles', hz: this.clockHz},
+            state: this.saveState()
+        });
+    }
+
+    restoreCheckpoint(checkpoint) {
+        const support = this.checkpointSupport();
+        if (!support.supported) return checkpointRefusal(support);
+        const refusal = validateCheckpointEnvelope(checkpoint, this.checkpointTopology());
+        if (refusal) return refusal;
+        // THE STATE BODY IS VALIDATED HERE, BEFORE ANYTHING IS MUTATED, by the
+        // same shared clauses m6502 and z80 use. Until 2026-09-10 this machine
+        // had no equivalent: `this.mem.set(s.mem)` accepts a SHORT image and
+        // leaves the tail as the destination machine had it, so a truncated
+        // checkpoint restored a wrong machine instead of failing. The over-long
+        // direction did throw, but with the engine's own "offset is out of
+        // bounds" rather than a refusal anyone could act on.
+        const badState = validateCheckpointState(checkpoint.state, {
+            version: 2,
+            memBytes: this.mem.length,
+            cpuKeys: I8086Machine.CPU_STATE,
+            chips: this.chips,
+            devices: this.devices,
+            shape: this.saveState()
+        });
+        if (badState) return badState;
+        // loadState still owns the deep, 8086-specific validation -- the
+        // variant-decode guard, the topology string, per-component restore
+        // APIs. It signals a bad snapshot by THROWING; surface that as a returned
+        // INVALID_CHECKPOINT so this contract is return-convention like m6502/z80,
+        // without moving that validation out of the codec that owns it. Time is
+        // NOT validated here: unlike m6502/z80 whose domain is machine-derived,
+        // the 8086's checkpoint time is written by the debug layer (eventDomain),
+        // so the machine cannot judge it -- the debug bridge does.
+        try {
+            this.loadState(cloneCheckpointValue(checkpoint.state));
+        } catch (error) {
+            return {refused: error.message, code: 'INVALID_CHECKPOINT'};
+        }
+        return undefined;
+    }
+
+    saveState() {
+        if (this.cpuBackend === 'protected286-experimental')
+            throw new Error('8086 checkpoint refused: experimental protected 286 hidden state is not covered');
+        // Settle the accrued chip debt first: a snapshot must record chips at
+        // the machine's current cycle, never a state they have not been advanced
+        // to yet. This keeps the debt out of the serialised form entirely.
+        this._flushChips();
+        const cpu = {};
+        for (const k of I8086Machine.CPU_STATE) cpu[k] = this.cpu[k] ?? 0;
+        // BOTH CONVENTIONS via the shared statePair, the same discovery
+        // m6502/z80 use: getState/setState or saveState/loadState, raw state
+        // stored under the chip name. A chip with neither is skipped here and
+        // refused at capture by checkpointSupport, not silently dropped into a
+        // checkpoint.
+        const chips = {};
+        for (const [name, c] of Object.entries(this.chips)) {
+            const pair = statePair(c);
+            if (pair) chips[name] = c[pair[0]]();
+        }
+        const devices = {};
+        for (const [name, d] of Object.entries(this.devices || {})) {
+            const pair = statePair(d);
+            if (pair) devices[name] = d[pair[0]]();
+        }
+        // THE VARIANT IS PART OF THE SNAPSHOT even though it is not CPU state,
+        // because restoring without it fails SILENTLY and in the worst way:
+        // the same bytes execute as different instructions. 60h is PUSHA on
+        // one machine and JO on the other, and nothing about the restored
+        // registers or memory would look wrong. See loadState().
+        return {
+            v: 2, topology: this._snapshotTopology(), cpu, cycles: this.cycles,
+            mem: this.mem.slice(), chips, devices,
+            machine: {
+                nmiPending: this._nmiPending,
+                nmiMasked: this._nmiMasked,
+                kbdStrobe: this._kbdStrobe,
+                pinLevels: {...this._pinLevels},
+                a20Enabled:this.a20Enabled,
+                a20Controller:this._a20Controller?.getState() ?? null
+            }
+        };
+    }
+
+    loadState(s) {
+        if (this.cpuBackend === 'protected286-experimental')
+            throw new Error('8086 checkpoint refused: experimental protected 286 hidden state is not covered');
+        if (!s || s.v !== 2) {
+            throw new Error(`8086 checkpoint refused: complete state version 2 required (got ${s?.v})`);
+        }
+        if (s.topology !== this._snapshotTopology()) {
+            throw new Error('8086 checkpoint refused: machine topology does not match');
+        }
+        // mem leniency matches m6502/z80's loadState: the real checkpoint path
+        // clones with structuredClone (mem stays a Uint8Array), while a caller
+        // that JSON-encodes a snapshot chooses its own re-decoding; this.mem.set
+        // takes whatever array-like it is handed. The strict Uint8Array/length
+        // check lives in the contract layer, as it does for m6502/z80.
+        if (!s.cpu || !s.mem || !s.machine || !s.chips || !s.devices) {
+            throw new Error('8086 checkpoint refused: snapshot is incomplete');
+        }
+        if(typeof s.machine.nmiPending!=='boolean'||typeof s.machine.nmiMasked!=='boolean')
+            throw new Error('8086 checkpoint refused: NMI state must be boolean');
+        if (this._a20Controller) {
+            if (typeof s.machine.a20Enabled !== 'boolean')
+                throw new Error('8086 checkpoint refused: A20 enabled state must be boolean');
+            this._a20Controller.validateState(s.machine.a20Controller);
+            if (!!(s.machine.a20Controller.outputPort&2) !== !!s.machine.a20Enabled)
+                throw new Error('8086 checkpoint refused: A20 gate and 8042 output port disagree');
+        } else if (s.machine.a20Controller !== null || s.machine.a20Enabled !== true) {
+            throw new Error('8086 checkpoint refused: A20 state does not match machine topology');
+        }
+        for (const k of I8086Machine.CPU_STATE) {
+            if (!(k in s.cpu)) throw new Error(`8086 checkpoint refused: CPU field '${k}' is missing`);
+        }
+        // A MISMATCHED RESTORE IS REFUSED BY NAME, following z80-machine.js
+        // (a snapshot with a tape position and no tape inserted). A snapshot
+        // is restored onto an identically-BUILT machine; the variant is a
+        // construction choice, not state, so a difference here means the
+        // caller built the wrong machine rather than that the state is stale.
+        // Silently loading it would produce a machine that runs the restored
+        // program correctly right up to the first 186 opcode and then quietly
+        // takes a conditional jump instead.
+        const want = JSON.parse(s.topology).variant;
+        if (want !== this.variant) {
+            throw new Error(`snapshot is from a ${want} machine and this is a ${this.variant}: `
+                + 'the same bytes decode differently on the two, so this would run '
+                + 'silently wrong rather than fail');
+        }
+        const chipNames = Object.keys(this.chips).sort();
+        const savedChipNames = Object.keys(s.chips).sort();
+        const deviceNames = Object.keys(this.devices || {}).sort();
+        const savedDeviceNames = Object.keys(s.devices).sort();
+        if (JSON.stringify(chipNames) !== JSON.stringify(savedChipNames) ||
+            JSON.stringify(deviceNames) !== JSON.stringify(savedDeviceNames)) {
+            throw new Error('8086 checkpoint refused: component state set does not match');
+        }
+        // Verify all restore APIs before mutating any execution state.
+        for (const name of chipNames) {
+            if (!statePair(this.chips[name])) {
+                throw new Error(`8086 checkpoint refused: component '${name}' has no state API`);
+            }
+            if(this.chips[name] instanceof MC146818)this.chips[name].validateState(s.chips[name]);
+        }
+        for (const name of deviceNames) {
+            if (!statePair(this.devices[name])) {
+                throw new Error(`8086 checkpoint refused: component 'device:${name}' has no state API`);
+            }
+        }
+        const rtc=Object.values(this.chips).find(c=>c instanceof MC146818);
+        if(rtc&&s.machine.nmiMasked!==s.chips[Object.keys(this.chips).find(n=>this.chips[n]===rtc)].nmiMasked)
+            throw new Error('8086 checkpoint refused: NMI mask and RTC port 70 state disagree');
+        this._restoring=true;
+        try {
+        for (const k of I8086Machine.CPU_STATE) this.cpu[k] = s.cpu[k];
+        this.cycles = s.cycles;
+        this.mem.set(s.mem);
+        this._nmiPending = !!s.machine.nmiPending;
+        this._nmiMasked = s.machine.nmiMasked;
+        this._kbdStrobe = !!s.machine.kbdStrobe;
+        this._pinLevels = {...s.machine.pinLevels};
+        if (this._a20Controller) this._a20Controller.setState(s.machine.a20Controller);
+        // A restore replaces video memory wholesale without going through
+        // _write, so a renderer holding a cached frame would keep drawing the
+        // pre-restore screen until something unrelated moved the token.
+        this.displayRevision = (this.displayRevision + 1) >>> 0;
+        for (const name of chipNames) {
+            const pair = statePair(this.chips[name]);
+            this.chips[name][pair[1]](s.chips[name]);
+        }
+        for (const name of deviceNames) {
+            const pair = statePair(this.devices[name]);
+            this.devices[name][pair[1]](s.devices[name]);
+        }
+        } finally {
+            this._restoring=false;
+        }
+        // The restored chips are at the restored cycle: no debt is owed, and the
+        // deadline is re-armed from their fresh state.
+        this._chipDebt = 0;
+        this._chipDeadline = this._wakeHorizon();
+    }
+
+    /**
+     * The architectural register file, as a plain snapshot.
+     *
+     * Added with the instruction hook (438d8bb) and OUTLIVED it: the hook is
+     * gone, this is not. `i8086-debug.js` passes it to the shared event module
+     * as `captureRegisters`, so reverting it with its original commit would
+     * have taken the register half of every instruction fact with it.
+     */
+    _architecturalRegisters() {
+        return {
+            ax: this.cpu.ax, bx: this.cpu.bx, cx: this.cpu.cx, dx: this.cpu.dx,
+            sp: this.cpu.sp, bp: this.cpu.bp, si: this.cpu.si, di: this.cpu.di,
+            ip: this.cpu.ip, cs: this.cpu.cs, ds: this.cpu.ds, es: this.cpu.es,
+            ss: this.cpu.ss, flags: this.cpu.flags, pc: this.cpu.pc
+        };
+    }
+
+}
+
+export default I8086Machine;

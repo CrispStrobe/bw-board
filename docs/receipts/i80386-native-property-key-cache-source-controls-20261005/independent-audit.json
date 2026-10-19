@@ -1,0 +1,29 @@
+{
+  "status": "INDEPENDENT_THREE_CORRECTED_SOURCE_MOCK_CONTROLS_PASS",
+  "revision": "83a081650397d5e1e95845b3aa65402f12b49ece",
+  "sourceCount": 7,
+  "sourceToolsPrepostEqual": true,
+  "rawNodeTests": 3,
+  "rawPass": 3,
+  "rawSkip": 0,
+  "scope": "Exact inverse, actual extracted generated key-helper tiny C++ compile/mock, static lifecycle wiring; no actual NAPI/GC/Bochs/addon/guest.",
+  "historicalFailure": "Earlier7aed3 inverse failures before compiler remain distinct preserved.",
+  "exit": {
+    "exitCode": 0,
+    "timeout": false,
+    "wallSeconds": 2.0515580009669065,
+    "wallScope": "parent including final authentication",
+    "childExitWallSeconds": 1.2846216447651386,
+    "rawWait4Status": 0,
+    "leaderRusage": {
+      "userSeconds": 0.986467,
+      "systemSeconds": 0.23540999999999998,
+      "maxRSSKiB": 75568
+    },
+    "rusageScope": "wait4 leader and its waited descendants; not guest or execution-window CPU",
+    "error": null,
+    "cleanupError": null,
+    "finalizationError": null,
+    "pinsEqual": true
+  }
+}

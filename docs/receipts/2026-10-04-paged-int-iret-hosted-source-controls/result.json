@@ -1,0 +1,9 @@
+{
+  "beforeAfterEqual": true,
+  "finalizationErrors": [],
+  "mode": "one-node-six-manufactured-hosted-controls",
+  "primaryError": null,
+  "scope": "manufactured/read-only source proof; no factory/provider/addon/emulated instruction",
+  "sourceCount": 11,
+  "status": "SOURCE_CONTROLS_PASS"
+}

@@ -1,0 +1,16 @@
+{
+  "scripts/cold-native-diagnostic/setup.py": "4522a39573d344c7eccc2b96672d084266d9443ea5daaf6477c899e8715d7bcd",
+  "scripts/cold-native-diagnostic/README.md": "a931799086c34afcf57786fc0ceca2af2b906bd1072ef6699f3fae858db65711",
+  "scripts/cold-native-diagnostic/test_parent.py": "f37eb2fc971a7808f9c4daf810492161cc291f70c5bf0e0ac9d3208322b6eee5",
+  "scripts/cold-native-diagnostic/contract.json": "11c070c00f3bca420449714ce25e07560d0951d5fff617f376f96461381d00ac",
+  "scripts/cold-native-diagnostic/parent.py": "75ddc1645106f106952c294b3d67571966713f07eb6872b1c3c4748f8278264f",
+  "scripts/cold-native-restore/archive.py": "683f4c2086e9039e289db19175f6a92bcbb71a48173639d8162f0fc5ffd5e370",
+  "scripts/cold-native-restore/prepared-members.json": "69f139ff9196b958523af8e1905362734b3248088678526a3f753d0884eac302",
+  "scripts/cold-native-restore/frozen-members.json": "a6e9e9bc96eaf8237d2524719338e78d1d631d37c93085e6407976b1e203cd9c",
+  "scripts/cold-native-restore/restore.py": "35148eadcf9878923c093e25ebe39c5dcc92110e60ea95c426f4f58a9de791ed",
+  "scripts/cold-native-restore/README.md": "bfda73fe9fdfddd7eac2c411c2ed9570f97bbb71458d79f1040d29cbf87e20a4",
+  "scripts/cold-native-restore/official-members.json": "d2df0987fe9bda0d956f1ed7c0c8c49020e4046cd06e7cf53358d9a4a4651dec",
+  "scripts/cold-native-restore/test_archive.py": "1ab03e011353249976ac9916963557b47380c95a9e18d7bfbcad386896658297",
+  "scripts/cold-native-restore/admission.py": "f3f7023c5f73c18b0a3c908aa2c5269dbef98003795a079e0d9a3cc205035bb3",
+  ".github/workflows/i80386-cold-native-diagnostic.yml": "a9970184cb4ed98be7c1bd38f6065b2dbf107e060f1b5d66c07a1daf65cbc192"
+}

@@ -1,0 +1,99 @@
+{
+  "source": "a40c1dfccddc77ff6e8adf04930176997e04040e",
+  "nativeRun": 37108051017,
+  "toolHead": "d1f2c8ebfc5e4e76d5fc81f930588c13de13e974",
+  "toolRef": "test/wasm-live-word-dispatch-20261002",
+  "hostedOnly": true,
+  "publication": false,
+  "appPinChanges": false,
+  "startedAt": "2026-10-03T07:57:43.587Z",
+  "nativeCorrectness": {
+    "conclusion": "success",
+    "headSha": "a40c1dfccddc77ff6e8adf04930176997e04040e",
+    "jobs": [
+      {
+        "completedAt": "2026-10-03T08:08:30Z",
+        "conclusion": "success",
+        "databaseId": 111160339473,
+        "name": "correctness",
+        "startedAt": "2026-10-03T07:57:07Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-10-03T07:57:09Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-10-03T07:57:08Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T07:57:24Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 2,
+            "startedAt": "2026-10-03T07:57:09Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T07:57:24Z",
+            "conclusion": "success",
+            "name": "Preserve the real main merge-base for bus-proof ratchets",
+            "number": 3,
+            "startedAt": "2026-10-03T07:57:24Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T07:57:32Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@1.95.0",
+            "number": 4,
+            "startedAt": "2026-10-03T07:57:24Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T08:08:27Z",
+            "conclusion": "success",
+            "name": "Verify live gate, both scheduler configurations and full regressions",
+            "number": 5,
+            "startedAt": "2026-10-03T07:57:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T08:08:27Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 10,
+            "startedAt": "2026-10-03T08:08:27Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-03T08:08:27Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 11,
+            "startedAt": "2026-10-03T08:08:27Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37108051017/job/111160339473"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37108051017"
+  },
+  "dispatchAttemptedAt": "2026-10-03T08:09:18.313Z",
+  "buildInputs": {
+    "ref": "a40c1dfccddc77ff6e8adf04930176997e04040e",
+    "publish": false,
+    "qualify_motion": true
+  },
+  "dispatchCommandCompletedAt": "2026-10-03T08:09:20.392Z",
+  "buildRun": {
+    "createdAt": "2026-10-03T08:09:20Z",
+    "databaseId": 37108738331,
+    "headSha": "d1f2c8ebfc5e4e76d5fc81f930588c13de13e974",
+    "status": "in_progress",
+    "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37108738331"
+  }
+}

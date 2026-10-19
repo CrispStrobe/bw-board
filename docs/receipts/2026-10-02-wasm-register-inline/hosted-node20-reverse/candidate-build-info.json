@@ -1,0 +1,33 @@
+{
+  "ref": "53b2be10799570c607b444fa174e2eb37ea74095",
+  "wasmBindgen": "0.2.121",
+  "rustflags": "--remap-path-prefix=/tmp/labwired-wasm-build/src=/labwired --remap-path-prefix=/tmp/labwired-wasm-build/target=/labwired-target --remap-path-prefix=/home/runner/.cargo=/cargo",
+  "builtAt": "2026-10-02T07:23:34.164Z",
+  "targets": {
+    "nodejs": {
+      "labwired_wasm.js": {
+        "bytes": 135762,
+        "brotliBytes": 25386,
+        "sha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73"
+      },
+      "labwired_wasm_bg.wasm": {
+        "bytes": 27773578,
+        "brotliBytes": 3071834,
+        "sha256": "93057ffed6b78b2fa848c7b5462345b8b2bc22540180a70f52bfe7b0575360b8"
+      }
+    },
+    "web": {
+      "labwired_wasm.js": {
+        "bytes": 138392,
+        "brotliBytes": 25941,
+        "sha256": "4d7b80824057f8bbffa2b6953d3a15918a1d58e496cdb25fc1f26f537db5c846"
+      },
+      "labwired_wasm_bg.wasm": {
+        "bytes": 27773578,
+        "brotliBytes": 3071834,
+        "sha256": "93057ffed6b78b2fa848c7b5462345b8b2bc22540180a70f52bfe7b0575360b8"
+      }
+    }
+  },
+  "rawBytes": 137116733
+}

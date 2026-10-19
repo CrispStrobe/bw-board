@@ -1,0 +1,28 @@
+{
+  "prototype": "wired-net-resolution-only",
+  "compiler": "Ubuntu clang version 18.1.3 (1ubuntu1)\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin",
+  "args": [
+    "--target=wasm32",
+    "-O3",
+    "-nostdlib",
+    "-fno-builtin",
+    "-Werror",
+    "-Wall",
+    "-Wextra",
+    "-fuse-ld=/tmp/harris-net-kernel.nhKEjD/wasm-ld",
+    "-Wl,--no-entry",
+    "-Wl,--export=arena_ptr",
+    "-Wl,--export=arena_capacity",
+    "-Wl,--export=resolve_nets",
+    "-Wl,--export-memory",
+    "/mnt/volume1/code/wt/i8086-optimized-pinned/src/experimental/wired-kernel/net-resolver.c",
+    "-o",
+    "/tmp/harris-net-kernel.nhKEjD/wired-net-kernel.wasm"
+  ],
+  "sourceSHA256": "8b7dd9402d9a4d575a1249d245e933e1a92c086a141c2f779f9310a1dfdbc945",
+  "wasmSHA256": "750687b9d3b799316008c3cb073bb7e827951cbd72ad3af24688dbdd5ccf989a",
+  "notes": [
+    "Owned C, no runtime imports/WASI, no guest media.",
+    "No board backend or real-time throughput claim."
+  ]
+}

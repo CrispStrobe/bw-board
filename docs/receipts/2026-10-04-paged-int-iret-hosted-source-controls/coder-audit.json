@@ -1,0 +1,33 @@
+{
+  "status": "PASS",
+  "revision": "f259485ac5de4696b35768809cb96f6769eb0eaf",
+  "toolingCount": 11,
+  "compiledCount": 208,
+  "driverCount": 80,
+  "beforeAfterEqual": true,
+  "currentGitEqual": true,
+  "namedPythonCases": [
+    "test_authenticated_archive_rejects_unsafe_or_modified_members (__main__.Controls.test_authenticated_archive_rejects_unsafe_or_modified_members) ... ok",
+    "test_final_authentication_cannot_leave_pass_on_mutation_or_missing_maps (__main__.Controls.test_final_authentication_cannot_leave_pass_on_mutation_or_missing_maps) ... ok",
+    "test_fixed_artifact_sources_counts_node_and_addon (__main__.Controls.test_fixed_artifact_sources_counts_node_and_addon) ... ok",
+    "test_https_redirect_origin_domains (__main__.Controls.test_https_redirect_origin_domains) ... ok",
+    "test_pending_refuses_before_any_download_or_restore (__main__.Controls.test_pending_refuses_before_any_download_or_restore) ... ok",
+    "test_source_current_and_git_are_required (__main__.Controls.test_source_current_and_git_are_required) ... ok"
+  ],
+  "nodeTests": 1,
+  "pythonCases": 6,
+  "failures": 0,
+  "skips": 0,
+  "outerStderrBytes": 0,
+  "rawWaitStatus": 0,
+  "leaderReaped": true,
+  "rawExitWallSeconds": 4.057660823687911,
+  "rootReportedFinalAuthInclusiveSeconds": 6.982858606,
+  "rusage": {
+    "maxRSSKiB": 51280,
+    "scope": "wait4 leader plus descendants reaped by it; not every orphan process",
+    "systemSeconds": 0.125709,
+    "userSeconds": 0.664492
+  },
+  "scope": "Manufactured source/mock control evidence only; no real restoration/download/worker/factory/addon/emulated CPU."
+}

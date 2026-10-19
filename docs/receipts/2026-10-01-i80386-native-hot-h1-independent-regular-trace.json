@@ -1,0 +1,290 @@
+{
+  "status": "PASS_FULL_REGULAR_FILE_TRACE_AND_BACKING_NOT_FULL_ARCHITECTURAL_JS_PARITY",
+  "tracePath": "/mnt/volume1/tmp-astra/native-hot-h1-regularfile-pair-20261001/on.stderr",
+  "traceSha256": "21ea17d068097696c3bf3c991cfdead2f236a833319a563747cabc66f7488308",
+  "traceBytes": 149865640,
+  "exactContiguousOrdinals": 1649047,
+  "nativeTicks": 100684,
+  "successfulQuanta": 100682,
+  "tagCounts": {
+    "PROBE": 4,
+    "RESET": 1,
+    "RESET_EXTRA": 1,
+    "RESET_SEG": 6,
+    "RESET_SYS": 2,
+    "RESET_DR": 1,
+    "TLB_OBSERVED": 8,
+    "ACTIVATE": 1,
+    "PREFETCH": 35,
+    "EXEC": 26,
+    "ATTEMPT": 100682,
+    "QUANTUM": 100682,
+    "BOUNDARY": 100688,
+    "COHERENCE": 100688,
+    "POST_STATE": 100688,
+    "POST_EXTRA": 100688,
+    "POST_SEG": 604128,
+    "POST_SYS": 201376,
+    "POST_DR": 100688,
+    "NATIVE_TICK": 100684,
+    "MEM": 33732,
+    "COMMIT": 4203,
+    "ALIAS_UPDATE": 4,
+    "STAMP": 4,
+    "PREFETCH_INVALIDATE": 3,
+    "PORT": 26,
+    "IRQ_LINE": 2,
+    "FAULT_BEGIN": 2,
+    "FAULT_DELIVERED": 2,
+    "IRQ_ACK": 1,
+    "IRQ_DELIVERED": 1,
+    "MAP_COMMIT": 2,
+    "TLB_INVALIDATE": 2,
+    "HALT_IDLE": 2,
+    "STATE": 1,
+    "CALLBACKS": 1,
+    "FALLBACK": 1,
+    "DEACTIVATE": 1
+  },
+  "boundaryKinds": {
+    "ordinary": 100677,
+    "prefetch-pagewalk": 3,
+    "rep-element": 5,
+    "fault-delivery": 2,
+    "irq-delivery": 1
+  },
+  "completePostGroups": 100688,
+  "fullNativeGroupSelectorCsCacheDebugSystemPendingIfMirrors": true,
+  "fullTerminalNativeSnapshotCounterCloseBindings": true,
+  "postGroupKinds": {
+    "ordinary": 100677,
+    "prefetch-pagewalk": 3,
+    "rep-element": 5,
+    "fault-delivery": 2,
+    "irq-delivery": 1
+  },
+  "selectedSuccessCpuComparisons": 100682,
+  "exactDeliveryCpuComparisons": 3,
+  "sourceNamedPersistentEdxResetDifference": {
+    "native": 0,
+    "javascript": 768,
+    "scope": "fixed guest only stores EDX, never modifies it"
+  },
+  "sourceNamedInitialMovCr0EaxCarry": [
+    {
+      "Q": 10,
+      "nativeEax": 2147483632,
+      "javascriptEax": 0
+    },
+    {
+      "Q": 11,
+      "nativeEax": 2147483632,
+      "javascriptEax": 0
+    },
+    {
+      "Q": 12,
+      "nativeEax": 2147483632,
+      "javascriptEax": 0
+    },
+    {
+      "Q": 13,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 14,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 15,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 16,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 17,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 18,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 19,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 20,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 21,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 22,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 23,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 24,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 25,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 26,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 27,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 28,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 29,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 30,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 31,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 32,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 33,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 34,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 35,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 36,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 37,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 38,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 39,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 40,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 41,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 42,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 43,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    },
+    {
+      "Q": 44,
+      "nativeEax": 2147483647,
+      "javascriptEax": 65535
+    }
+  ],
+  "sourceNamedNonfinalRepRipStaging": [
+    {
+      "Q": 93,
+      "N": 92,
+      "nativeEip": 679,
+      "javascriptEip": 676,
+      "instructionBytes": "66f3ab",
+      "actualLength": 3,
+      "postCX": 3
+    },
+    {
+      "Q": 94,
+      "N": 93,
+      "nativeEip": 679,
+      "javascriptEip": 676,
+      "instructionBytes": "66f3ab",
+      "actualLength": 3,
+      "postCX": 2
+    },
+    {
+      "Q": 107,
+      "N": 107,
+      "nativeEip": 679,
+      "javascriptEip": 676,
+      "instructionBytes": "66f3ab",
+      "actualLength": 3,
+      "postCX": 1
+    }
+  ],
+  "actualReadBytes": 17009,
+  "actualWriteBytes": 16723,
+  "nativeActualRamSha256": "7aecf019a32f109760267d6ac1c60ef3d8793661910226cca3bcf5661189c38d",
+  "auditCopyNamedResetWordTransformationSha256": "0194be01b176f034836acb514956f29b224b4cea87e92b1b7c50f0bb6cb951b7",
+  "all26PioExact": true,
+  "limitations": [
+    "JS STEP records contain CS/EIP/EAX/EBX/ECX only; additional native full-cache/system/debug fields are complete but cannot be asserted equal to unrecorded JS fields.",
+    "Three deliveries compare separately authenticated JS delivery snapshots, not same-number STEP rows.",
+    "Prefetch pagewalk POST groups are retained separately, never relabeled successful instructions.",
+    "Raw reset witness transformation applies only audit memory copy; actual capture remains unchanged."
+  ]
+}

@@ -1,0 +1,82 @@
+name: Harris native counter overhead
+
+on:
+  push:
+    branches: ['measure/native-counter-overhead', 'measure/native-counter-overhead-*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Prepare exact revisions and owned build tools
+        run: |
+          set -euo pipefail
+          BASE_SHA=a26853ad946edb05e4d3192298207c25437129fa
+          COUNTER_SHA=9b35e08d25a972dcf51b214a054195a7430a3c0e
+          git cat-file -e "$BASE_SHA^{commit}"
+          git cat-file -e "$COUNTER_SHA^{commit}"
+          git merge-base --is-ancestor "$COUNTER_SHA" "$GITHUB_SHA"
+          OVERHEAD_DIR=$(mktemp -d "$RUNNER_TEMP/harris-counter-overhead.XXXXXX")
+          TREE_DIR=$(mktemp -d "$RUNNER_TEMP/harris-counter-trees.XXXXXX")
+          BASE_TREE="$TREE_DIR/base"
+          COUNTER_TREE="$TREE_DIR/counter"
+          git worktree add --detach "$BASE_TREE" "$BASE_SHA"
+          git worktree add --detach "$COUNTER_TREE" "$COUNTER_SHA"
+          test "$(git -C "$BASE_TREE" rev-parse HEAD)" = "$BASE_SHA"
+          test "$(git -C "$COUNTER_TREE" rev-parse HEAD)" = "$COUNTER_SHA"
+          if ! command -v clang >/dev/null || ! command -v wasm-ld >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y clang lld
+          fi
+          {
+            echo "CLANG=$(command -v clang)"
+            echo "WASM_LD=$(command -v wasm-ld)"
+            echo "OVERHEAD_DIR=$OVERHEAD_DIR"
+            echo "TREE_DIR=$TREE_DIR"
+            echo "BASE_TREE=$BASE_TREE"
+            echo "COUNTER_TREE=$COUNTER_TREE"
+          } >> "$GITHUB_ENV"
+
+      - name: Build exact base and counter modules independently
+        run: |
+          set -euo pipefail
+          mkdir "$OVERHEAD_DIR/base-build" "$OVERHEAD_DIR/counter-build"
+          node "$BASE_TREE/scripts/build-wired-net-kernel.mjs" "$OVERHEAD_DIR/base-build" \
+            | tee "$OVERHEAD_DIR/base-build.log"
+          node "$COUNTER_TREE/scripts/build-wired-net-kernel.mjs" "$OVERHEAD_DIR/counter-build" \
+            | tee "$OVERHEAD_DIR/counter-build.log"
+          test -s "$OVERHEAD_DIR/base-build/wired-net-kernel.wasm"
+          test -s "$OVERHEAD_DIR/counter-build/wired-net-kernel.wasm"
+
+      - name: Measure same-runner interleaved native counter overhead
+        run: |
+          set -euo pipefail
+          node --expose-gc scripts/measure-harris-native-counter-overhead.mjs --experimental \
+            --base-dir="$BASE_TREE" --counter-dir="$COUNTER_TREE" \
+            --base-wasm="$OVERHEAD_DIR/base-build/wired-net-kernel.wasm" \
+            --counter-wasm="$OVERHEAD_DIR/counter-build/wired-net-kernel.wasm" \
+            --iterations=2048 --warmup-rounds=2 --rounds=10 \
+            --batch-periods=8192 --wall-budget-ms=1000 \
+            > "$OVERHEAD_DIR/native-counter-overhead.json"
+          node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const r=JSON.parse(fs.readFileSync(process.env.OVERHEAD_DIR+"/native-counter-overhead.json")); assert.equal(r.measurementRevision,process.env.GITHUB_SHA); assert.equal(r.variants.base.revision,"a26853ad946edb05e4d3192298207c25437129fa"); assert.equal(r.variants.counter.revision,"9b35e08d25a972dcf51b214a054195a7430a3c0e"); assert.equal(r.warmups.length,4); assert.equal(r.samples.length,20); assert.equal(Object.keys(r.expected.work).length,12); for(const x of Object.values(r.ratios))assert.ok(Number.isFinite(x));'
+
+      - name: Upload exact overhead receipt and both build receipts
+        if: ${{ always() && env.OVERHEAD_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: harris-native-counter-overhead-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.OVERHEAD_DIR }}
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,7 @@
+{
+  "schema": "labwired.lossless-utf8.v1",
+  "bytes": 917,
+  "sha256": "ac205ebf4e548662f533285b4e6f7ccb4a8e9b38ce9d22ce69d5c66a561656ab",
+  "encoding": "utf8",
+  "text": "diff --git a/crates/core/src/lib.rs b/crates/core/src/lib.rs\nindex 8edf80a1..e96040a8 100644\n--- a/crates/core/src/lib.rs\n+++ b/crates/core/src/lib.rs\n@@ -392,0 +393,9 @@ pub trait Cpu: Send {\n+    /// Explicitly compiled diagnostic capability, absent from default vtables.\n+    #[cfg(feature = \"t16-discovery-census\")]\n+    fn begin_t16_discovery_census(&mut self) -> bool {\n+        false\n+    }\n+    #[cfg(feature = \"t16-discovery-census\")]\n+    fn end_t16_discovery_census(&mut self) -> Option<serde_json::Value> {\n+        None\n+    }\n@@ -636,0 +646,8 @@ impl Cpu for Box<dyn Cpu> {\n+    #[cfg(feature = \"t16-discovery-census\")]\n+    fn begin_t16_discovery_census(&mut self) -> bool {\n+        (**self).begin_t16_discovery_census()\n+    }\n+    #[cfg(feature = \"t16-discovery-census\")]\n+    fn end_t16_discovery_census(&mut self) -> Option<serde_json::Value> {\n+        (**self).end_t16_discovery_census()\n+    }\n"
+}

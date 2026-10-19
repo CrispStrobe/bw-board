@@ -1,0 +1,45 @@
+{
+  "argv": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "scripts/bochs-cpu3-native-paged-pagefault/build-controls.mjs"
+  ],
+  "cwd": "/tmp/bw-native-paged-pagefault-build-source-20261005",
+  "head": "1adb9cbf5b1c33d9eca448ff0e7ba777d62f98ab",
+  "environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "TMPDIR": "/tmp",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": "",
+    "PYTHONPATH": "",
+    "PYTHONHOME": "",
+    "PYTHONSTARTUP": "",
+    "PYTHONINSPECT": ""
+  },
+  "sourceCount": 243,
+  "limits": {
+    "cpuSeconds": 30,
+    "wallSeconds": 45,
+    "nodeHeapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "nice": 10
+  },
+  "scope": "SIX direct Node manufactured metadata/config-ROM-fixture, definition-only Python and read-only source identity cases. No materialization/configure/C compiler/addon/provider/oracle/CPU execution.",
+  "preparedSourceProvenance": {
+    "path": "/tmp/native-paged-pagefault-native-policy-design-20261005/source-provenance.json",
+    "sha256": "d7dd93ef7fc5cb8a5bdcb018ee2e637beff56b2a6702f81dc3cf598dcff27421"
+  },
+  "sourceFreeze": {
+    "path": "/tmp/native-paged-pagefault-build-source-freeze-r2-20261005/source-freeze.json",
+    "sha256": "eb275ec31e56cf4ad8a935d4c33a38874b1cc51685d0bd509d2eaeec504a5937"
+  }
+}

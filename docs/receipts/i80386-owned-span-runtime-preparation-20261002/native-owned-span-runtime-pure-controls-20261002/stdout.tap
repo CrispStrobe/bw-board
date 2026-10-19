@@ -1,0 +1,154 @@
+TAP version 13
+# Subtest: exact full runner inverse retains original scheduler, timing, guards and snapshots
+ok 1 - exact full runner inverse retains original scheduler, timing, guards and snapshots
+  ---
+  duration_ms: 29.0192
+  type: 'test'
+  ...
+# Subtest: fixed IN8 validators remain exact original functions with unchanged narrow input policy
+ok 2 - fixed IN8 validators remain exact original functions with unchanged narrow input policy
+  ---
+  duration_ms: 33.328214
+  type: 'test'
+  ...
+# Subtest: frozen span110 plus six authenticated support files remains separate from compiled fe1/103
+ok 3 - frozen span110 plus six authenticated support files remains separate from compiled fe1/103
+  ---
+  duration_ms: 2.177227
+  type: 'test'
+  ...
+# Subtest: map refusal provider
+ok 4 - map refusal provider
+  ---
+  duration_ms: 1.626939
+  type: 'test'
+  ...
+# Subtest: map refusal compiled
+ok 5 - map refusal compiled
+  ---
+  duration_ms: 2.716193
+  type: 'test'
+  ...
+# Subtest: map refusal compiled-pin
+ok 6 - map refusal compiled-pin
+  ---
+  duration_ms: 5.816148
+  type: 'test'
+  ...
+# Subtest: map refusal support-missing
+ok 7 - map refusal support-missing
+  ---
+  duration_ms: 1.2939
+  type: 'test'
+  ...
+# Subtest: map refusal support-malformed
+ok 8 - map refusal support-malformed
+  ---
+  duration_ms: 0.556483
+  type: 'test'
+  ...
+# Subtest: map refusal extra
+ok 9 - map refusal extra
+  ---
+  duration_ms: 1.82533
+  type: 'test'
+  ...
+# Subtest: map refusal old-runtime
+ok 10 - map refusal old-runtime
+  ---
+  duration_ms: 1.207356
+  type: 'test'
+  ...
+# Subtest: map refusal wrong-source
+ok 11 - map refusal wrong-source
+  ---
+  duration_ms: 1.197382
+  type: 'test'
+  ...
+# Subtest: map refusal same-source-revision
+ok 12 - map refusal same-source-revision
+  ---
+  duration_ms: 0.363352
+  type: 'test'
+  ...
+# Subtest: map refusal same-compiled-revision
+ok 13 - map refusal same-compiled-revision
+  ---
+  duration_ms: 0.360818
+  type: 'test'
+  ...
+# Subtest: map refusal bad-revision
+ok 14 - map refusal bad-revision
+  ---
+  duration_ms: 0.47948
+  type: 'test'
+  ...
+# Subtest: authentic relocated origin stays exact compiled fe1 with original DSO identity
+ok 15 - authentic relocated origin stays exact compiled fe1 with original DSO identity
+  ---
+  duration_ms: 0.644382
+  type: 'test'
+  ...
+# Subtest: origin refusal kind
+ok 16 - origin refusal kind
+  ---
+  duration_ms: 0.588631
+  type: 'test'
+  ...
+# Subtest: origin refusal revision
+ok 17 - origin refusal revision
+  ---
+  duration_ms: 1.055393
+  type: 'test'
+  ...
+# Subtest: origin refusal old103
+ok 18 - origin refusal old103
+  ---
+  duration_ms: 1.079458
+  type: 'test'
+  ...
+# Subtest: origin refusal origin-revision
+ok 19 - origin refusal origin-revision
+  ---
+  duration_ms: 0.574244
+  type: 'test'
+  ...
+# Subtest: origin refusal origin-hash
+ok 20 - origin refusal origin-hash
+  ---
+  duration_ms: 1.67142
+  type: 'test'
+  ...
+# Subtest: origin refusal origin-addon
+ok 21 - origin refusal origin-addon
+  ---
+  duration_ms: 0.560725
+  type: 'test'
+  ...
+# Subtest: origin refusal addon
+ok 22 - origin refusal addon
+  ---
+  duration_ms: 0.522006
+  type: 'test'
+  ...
+# Subtest: origin refusal missing-relocation
+ok 23 - origin refusal missing-relocation
+  ---
+  duration_ms: 2.412602
+  type: 'test'
+  ...
+# Subtest: origin refusal compiled
+ok 24 - origin refusal compiled
+  ---
+  duration_ms: 0.960973
+  type: 'test'
+  ...
+1..24
+# tests 24
+# suites 0
+# pass 24
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1210.243312

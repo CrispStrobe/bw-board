@@ -1,0 +1,11 @@
+{
+  "schema": "lossless-source-controls.v1",
+  "files": {
+    "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "after.json": "54b03b4fbff88ccc198b9449027a637624dc0e27679cc3bd044dcb3d268cf036",
+    "exit.json": "11c532a5e9ec1c6ace8734493962b3e6b82c37bb9cff85e752526d18df1d05cf",
+    "before.json": "54b03b4fbff88ccc198b9449027a637624dc0e27679cc3bd044dcb3d268cf036",
+    "stdout": "0782d8a89720d805bf0e3a9d308dc6e0246f4c45b490a0f2a264ebfcb0edbc3d",
+    "origins.json": "bc4a94ff5d9880e9464b6337435a7c2f1498f1d22eeb1d78373215fafb759b38"
+  }
+}

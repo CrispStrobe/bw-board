@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: private Bochs reset profile installs once and paused stage does not execute instructions
+ok 1 - private Bochs reset profile installs once and paused stage does not execute instructions
+  ---
+  duration_ms: 659.56065
+  type: 'test'
+  ...
+# Subtest: dynamic represented CPU values compare directly without persistent EDX allowance
+ok 2 - dynamic represented CPU values compare directly without persistent EDX allowance
+  ---
+  duration_ms: 186.735126
+  type: 'test'
+  ...
+# Subtest: native Q zero or one alignment keeps N independent and rejects malformed snapshots
+ok 3 - native Q zero or one alignment keeps N independent and rejects malformed snapshots
+  ---
+  duration_ms: 162.078343
+  type: 'test'
+  ...
+# Subtest: every native word and returned metadata contributes to ordered boundary commitment
+ok 4 - every native word and returned metadata contributes to ordered boundary commitment
+  ---
+  duration_ms: 504.280321
+  type: 'test'
+  ...
+# Subtest: whole PIO compares actual pre-Q clocks while independent native N is retained
+ok 5 - whole PIO compares actual pre-Q clocks while independent native N is retained
+  ---
+  duration_ms: 14.28234
+  type: 'test'
+  ...
+# Subtest: closed driver refuses wrong compiled revision hashes paths and extra input knobs before native load
+ok 6 - closed driver refuses wrong compiled revision hashes paths and extra input knobs before native load
+  ---
+  duration_ms: 27.519453
+  type: 'test'
+  ...
+# Subtest: source admission rejects nonordinary symlink and oversized file inputs before reading
+ok 7 - source admission rejects nonordinary symlink and oversized file inputs before reading
+  ---
+  duration_ms: 22.699305
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3933.758656

@@ -1,0 +1,25 @@
+{
+  "total_count": 1,
+  "artifacts": [
+    {
+      "id": 11280696224,
+      "node_id": "MDg6QXJ0aWZhY3QxMTI4MDY5NjIyNA==",
+      "name": "compiled-cpu-hotpath-inspection",
+      "size_in_bytes": 1343,
+      "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11280696224",
+      "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11280696224/zip",
+      "expired": false,
+      "digest": "sha256:7e4be2b61cfd99a103d3a0508457347da4bbcea2404ad4404078abd023038aa0",
+      "created_at": "2026-10-03T17:36:54Z",
+      "updated_at": "2026-10-03T17:36:54Z",
+      "expires_at": "2026-10-17T17:36:53Z",
+      "workflow_run": {
+        "id": 37140820456,
+        "repository_id": 1327885818,
+        "head_repository_id": 1327885818,
+        "head_branch": "perf/wasm-cpu-hotpath-inspection-20261003",
+        "head_sha": "8e7a147ec0663390e83a87a2e32ce1d812e26e11"
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "base": "/mnt/volume1/tmp-astra/native-owned-in8-runtime-controls-r2-20261002",
+  "baseRunSha256": "24dc866169e5333eff21e22ddfc70ce6cd12080750750a3030b8cf2070bbca87",
+  "newRunSha256": "f3ff10988e014e804216af025ff7baa46d6a3017f6e75549dfa3a681ac78c12b",
+  "changes": "Only first-IN completed tick17/Q17/value50 and exact ATTEMPT f000:122 e440 assertion; original24 controls retained.",
+  "executed": false
+}

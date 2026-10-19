@@ -1,0 +1,29 @@
+{
+  "returncode": 0,
+  "signal": null,
+  "timedOut": false,
+  "fileLimitReached": false,
+  "error": null,
+  "stderrBytes": 406,
+  "stderrSha256": "e44cb444b4775cc1737d01a29aac55e548f7101dc38995bdc7e13141fc14e365",
+  "wallNs": 1618934581,
+  "transport": "regular file descriptors, no nonblocking pipe",
+  "RLIMIT_FSIZE": 268435456,
+  "heapMiB": 512,
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=512",
+    "/home/runner/work/_temp/owned-dispatch-gate/gate/base-runner.mjs",
+    "/home/runner/work/_temp/owned-dispatch-gate/gate/results/2-BASE.input.json"
+  ],
+  "RLIMIT_CPU": 120,
+  "niceIncrement": 10,
+  "blankEnvironment": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": ""
+  },
+  "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+}

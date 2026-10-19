@@ -1,0 +1,47 @@
+{
+  "schema": "bw.i80386-dependent-read-xv6-observation-receipt.v1",
+  "date": "2026-09-28",
+  "scope": "Execution-neutral admission observation at a reached dependent PDE/PTE read in pinned lean xv6 forktest",
+  "source": {
+    "baseCommit": "670b91e5a23b426f8c8cdd61b07ba2a91718116d",
+    "measuredHelperSha256": "f67654012b5f1872a3823ae1b0fdd31654ff13dc2ffdaafd14aa22e209f2a6c5",
+    "observerSha256": "fe61fe5aba6327a2de54510c739f25325ff155e88274f5313a8bfa728e904893",
+    "focusedTestSha256": "6dc6c6139108aebd47f3600af4033bdc646196ebb809532481479d30a7e9b41c",
+    "privateEvidenceCommit": "32563bb5070c9bf75f7b25fa62760c0d2b29c69c",
+    "privateEvidenceNote": "performance/2026-09-28/i80386-dependent-read-xv6-observation.json"
+  },
+  "fixture": {
+    "kernelSha256": "025cef15636863063e4101aa0cfc424e556f70ad43b6a80d57581c05b465202d",
+    "run": "Pinned lean stock xv6 forktest, Bochs firmware, 40M step cap, stop on expected serial",
+    "completedStepCalls": 24338279
+  },
+  "observedPair": {
+    "firstRead": "DS dword at ESI + 4*EDX, where EDX = EBX >>> 22",
+    "secondRead": "DS dword at the EAX produced from the loaded PDE page base, EBX page-table index, and kernel linear bias",
+    "probePoint": "First cached-window status is recorded before the first ordinary MOV. The dependent helper is called only when ordinary execution reaches the second MOV, after branches and address derivation. It checks the actual first loaded value and live second EAX against the proof."
+  },
+  "diagnosis": {
+    "oldHelperResult": "A bounded 4M-step diagnostic found the dominant refusal: the actual DS cache encodes DPL 0 in access=0x93 but has no separate dpl property. Both read windows and code were distinct cached kind-1 RAM pages.",
+    "fix": "Decode DPL from the cached descriptor access byte only when dpl is absent; refuse disagreement if both representations exist. CS/DS access scalars remain captured and validated.",
+    "shortRawSha256": "99a3ebeaa939f4969f3a7d20419570f2d649b2e71d08d80c8a9afb7a6091aa12"
+  },
+  "fixedFullObservation": {
+    "firstAttempts": 76750,
+    "firstCachedReadWindows": 76697,
+    "firstReadWindowUnavailable": 53,
+    "firstCompleted": 76750,
+    "secondAttempts": 51200,
+    "secondMatchedActualLoadedValueAndEA": 51200,
+    "secondHelperAccepted": 51150,
+    "secondReadWindowUnavailable": 50,
+    "otherSecondRefusals": 0,
+    "partitions": "76,750 = 76,697 + 53; 51,200 = 51,150 + 50; all second attempts matched the observed first load and derived address.",
+    "rawObserverSha256": "ba82cf8d61150ce10329c22dc0917c6240f4ee38f7bba0b26bdf054b69d6ef4c",
+    "rawGuestReportSha256": "f506d66fac29c1f446b8fb25e090f242c515458c06f97930c988a1585922960c",
+    "normalizedGuestSha256": "bfa900396b4123b3b10758d5e91b310302c6dcc4ada599c76afea3ae3041ff3e",
+    "normalization": "jq -S 'del(.hotLoopLocator,.hotLoopLocatorSourceSha256,.rom.path,.image.path,.slaveImage.path)'",
+    "guestParity": "Exact match to the prior pinned ordinary xv6 baseline."
+  },
+  "validation": "8/8 focused helper tests and 50/50 combined nearby read/write/native-block tests pass, including missing/access-derived DPL and explicit/access mismatch. The observer uses ordinary machine.step() throughout and does not call _translate or bus read/write itself.",
+  "limits": "Counts are admission attempts at one reached instruction site, not disjoint guest-step coverage or proof that a native loop can execute. The 50 unavailable second windows need ordinary translation and A-bit/fault behavior. Future execution still needs code-byte, per-instruction fault/restart, write-coherence, and event proofs. No CPU-time or speed claim. Raw addresses and trace remain private."
+}

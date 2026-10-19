@@ -1,0 +1,107 @@
+{
+  "diagnosticOnly": true,
+  "hostedOnly": true,
+  "engineModified": false,
+  "files": [
+    {
+      "path": "failure-job-log.json",
+      "bytes": 10424,
+      "sha256": "81b5a0ddd3361cf6ce89ed7e24024998b8e30642bfd84c76b020d69238ba4d13"
+    },
+    {
+      "path": "failure-run.json",
+      "bytes": 3921,
+      "sha256": "b2983e185e980c83c1d9ca2da9fbf8c053ebb1d5f5aaaf99ebd180bcf252dfd7"
+    },
+    {
+      "path": "initial-job-log.json",
+      "bytes": 9584,
+      "sha256": "832162585ba316a9c5a701d89ca4a0c43245feaa874dc9dcd20890b524fb9ff8"
+    },
+    {
+      "path": "initial-run.json",
+      "bytes": 3921,
+      "sha256": "c42517028505f06d4e047b11b04a8a02054c186d0495e64610371b751d109cbb"
+    },
+    {
+      "path": "initial/build-info.json",
+      "bytes": 1129,
+      "sha256": "d3052e87f1be597cf7e9665ab1720a9a89355aebadaf147ad86266a630cd1d16"
+    },
+    {
+      "path": "initial/disassembler-version.txt",
+      "bytes": 7,
+      "sha256": "989e2e78e20053890f21593eef0061d5b45d51bbfbf53fe28b68a43a1818d324"
+    },
+    {
+      "path": "initial/selected-callees.json",
+      "bytes": 984605,
+      "sha256": "7ca66e3b343d68047caee6f5dbc7ec34f570bcd8a6edb152dfcd2ae4496b6a1a"
+    },
+    {
+      "path": "source-proof.json",
+      "bytes": 92115,
+      "sha256": "05a8d62f7c488e0dfb24ebfb9d1f348d1b476a510307c9b2e7768e1ea802e47c"
+    },
+    {
+      "path": "static-failure.json",
+      "bytes": 1956,
+      "sha256": "487ccf6d59f1f52b271c2ef3149b3302105ea1755278043f6efa506a8a4ca17e"
+    },
+    {
+      "path": "static-job-log.json",
+      "bytes": 9940,
+      "sha256": "941d3a34f7883f7cdb19127022c2933906e7dcbf11d44ebc713325de0eab31ec"
+    },
+    {
+      "path": "static-run.json",
+      "bytes": 3921,
+      "sha256": "8d9c28c0754de3e725691de968974f8b101656aaa630c511fa62ad9e1521f06c"
+    },
+    {
+      "path": "static/build-info.json",
+      "bytes": 1129,
+      "sha256": "d3052e87f1be597cf7e9665ab1720a9a89355aebadaf147ad86266a630cd1d16"
+    },
+    {
+      "path": "static/disassembler-version.txt",
+      "bytes": 7,
+      "sha256": "989e2e78e20053890f21593eef0061d5b45d51bbfbf53fe28b68a43a1818d324"
+    },
+    {
+      "path": "static/selected-callees.json",
+      "bytes": 1038485,
+      "sha256": "4265f1ef72c33aa99898a3a8ba36d04f01e13f8a5fb32716b63433790fc7510e"
+    },
+    {
+      "path": "tool-landing.json",
+      "bytes": 5551,
+      "sha256": "15d219b1f343b5fc8f613d734016727d822a6dc12d3a355c7e9847a99aa6f24c"
+    },
+    {
+      "path": "types-job-log.json",
+      "bytes": 9604,
+      "sha256": "1f0d21b21fdd7a7895a10f324c84d7d8de9a50b8263488f5d3789afd48d1189d"
+    },
+    {
+      "path": "types-run.json",
+      "bytes": 3921,
+      "sha256": "45c328a1571a3a40d1ae20710d717c4efe95f2cd7a65f221d952e20a20c2e15a"
+    },
+    {
+      "path": "types/build-info.json",
+      "bytes": 1129,
+      "sha256": "d3052e87f1be597cf7e9665ab1720a9a89355aebadaf147ad86266a630cd1d16"
+    },
+    {
+      "path": "types/disassembler-version.txt",
+      "bytes": 7,
+      "sha256": "989e2e78e20053890f21593eef0061d5b45d51bbfbf53fe28b68a43a1818d324"
+    },
+    {
+      "path": "types/selected-callees.json",
+      "bytes": 984707,
+      "sha256": "446159ce150a00b0e1284a8f1b45e190198ba3bbe7db71a70b57549ccfea89f3"
+    }
+  ]
+}

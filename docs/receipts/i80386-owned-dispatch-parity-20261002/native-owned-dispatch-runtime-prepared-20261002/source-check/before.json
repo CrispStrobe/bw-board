@@ -1,0 +1,8 @@
+{
+  "scripts/bochs-cpu3-native-owned-dispatch-runtime/identity.mjs": "578eca08cc8c0c0abcb548c308c499fa2b92f023ea25a771ec8e689137cd00a5",
+  "scripts/bochs-cpu3-native-owned-dispatch-runtime/derive.mjs": "fc2e17578fb04bbae5b74d4f2410f16527d1a638756d41ff9b4a1ffb7de119af",
+  "scripts/bochs-cpu3-native-owned-dispatch-runtime/admission.mjs": "c2d4d8b4fe00f2a39649a67e2f540583a1d08c2e5a841d9abef1a2610a04ba43",
+  "scripts/bochs-cpu3-native-owned-dispatch-runtime/frozen-source.json": "e905bb3bb7024c343119c08ee90bfdde343bf30aada79345668e7177f6d6f8f1",
+  "scripts/run-i80386-native-owned-dispatch.mjs": "ad21a082496beb6fac54b051c5b453404d71c93a316d6078c2e56c7744ed2115",
+  "test/i80386-owned-dispatch-runtime.test.mjs": "fff48fb72084c5c186012212dc1b2bd74039041e142ae13406b8e5c86f96a150"
+}

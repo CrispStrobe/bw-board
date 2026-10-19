@@ -1,0 +1,32 @@
+{
+  "status": "PASS_PINNED_SOURCE_MESSAGECHANNEL_AUDIT_ALL3_DTO_CPU_NEGATIVE_NO_NATIVE",
+  "checks": 20,
+  "cpuMicrosecondsPerPayload": {
+    "json": [
+      281.64,
+      115.48,
+      143.59
+    ],
+    "dto": [
+      310.625,
+      210.685,
+      211.69
+    ]
+  },
+  "meanCpuMicrosecondsPerPayload": {
+    "json": 180.23666666666668,
+    "dto": 244.33333333333334
+  },
+  "dtoCpuIncreasePercent": 35.56250115588763,
+  "allThreeDtoWorse": true,
+  "inputSha256": "246193ed7da4c872df55ddf7593b189f3966f55c45a8e06ef40382efc1b840fe",
+  "resultSha256": "10194c46573e731dc503d516a4a5e4682fe9f7cb750555612cbb8203a46d3904",
+  "executionReceiptSha256": "603713420a02fed31d1be33c23f0f907e419ad340a6b8fd4f4be746d687234ad",
+  "sourceHashes": {
+    "scripts/compare-i80386-owned-dto-message-codecs.mjs": "022ef2ff5d76b5fe5fb4aa9666445c1114c75bf70c83f6058a413b8dce8edbf4",
+    "scripts/bochs-cpu3-native-owned-dto/response.mjs": "d4f7fee0ac0b58072f1ecb1c5cb40a1e52a712c04805ac0d755bff2de186705e",
+    "scripts/bochs-cpu3-native-owned-dto/ipc-response.mjs": "6e119774c7b65e5cc5884ae1a4c0f1e636a1ad3737e7c5e8148879dc5fc74712",
+    "scripts/bochs-cpu3-native-owned-dto/board-schema.json": "63c19323e0e955a7bbec40d394dba43bedaad10a79a5e2613e4cc38cf5262f93"
+  },
+  "scope": "all retained3rounds200repeated authenticzero-workterminalpayloads; real sameprocessMessageChannel primitiveJSON request/response vsDTO schema+ledger; sender+receiver processCPU window; no native/Worker chronology/factoryqualification; noformalwarmup/gate; sharedload/JIT effects remain"
+}

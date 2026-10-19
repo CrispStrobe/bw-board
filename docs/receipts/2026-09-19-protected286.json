@@ -1,0 +1,48 @@
+{
+  "oracle": "PCjs",
+  "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+  "node": "v22.23.2",
+  "scope": "owned ring-0 GDT-only LGDT/LMSW/far-JMP/high-memory/HLT bootstrap; no timing, gates, tasks, or privilege claim",
+  "sourceHashes": {
+    "./compare-pcjs-protected286.mjs": "b6379872ebab521ac733805917a973d9c1a4e8148a0ef307b3645c790148efb5",
+    "../src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+    "../src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70"
+  },
+  "status": "pass",
+  "reference": {
+    "cs": 8,
+    "ip": 17,
+    "ds": 16,
+    "bx": 4660,
+    "pc": 1048593,
+    "csBase": 1048576,
+    "dsBase": 1179648,
+    "data": [
+      52,
+      18
+    ],
+    "accessed": [
+      155,
+      147
+    ]
+  },
+  "actual": {
+    "cs": 8,
+    "ip": 17,
+    "ds": 16,
+    "bx": 4660,
+    "pc": 1048593,
+    "csBase": 1048576,
+    "dsBase": 1179648,
+    "data": [
+      52,
+      18
+    ],
+    "accessed": [
+      155,
+      147
+    ]
+  },
+  "differences": [],
+  "executionRevision": "da0a27a61befe1a9751ed64082244a896cd6b3a4"
+}

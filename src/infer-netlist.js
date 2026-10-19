@@ -1,0 +1,925 @@
+/**
+ * Boundary C — infer a default netlist from project.stc.pins.
+ *
+ * Each declared pin gets a default wiring based on its direction and
+ * active-low flag. The user can then redraw any of it.
+ *
+ * The reverse check is the teaching feature: warn when the code drives
+ * a pin with nothing attached, or when something is wired that the code
+ * never references.
+ *
+ * @module
+ */
+
+/** @typedef {import('./types.js').Part} Part */
+/** @typedef {import('./types.js').Net} Net */
+
+/**
+ * A pin declaration from the project.
+ * @typedef {object} StcPin
+ * @property {string} name
+ * @property {number} port
+ * @property {number} bit
+ * @property {'output' | 'input' | 'analog'} direction
+ * @property {boolean} activeLow
+ */
+
+/**
+ * A port declaration (whole-port I/O).
+ * @typedef {object} StcPort
+ * @property {string} name
+ * @property {number} port
+ * @property {string} sfr - e.g. "P0"
+ * @property {number} width - typically 8
+ * @property {'output' | 'input'} direction
+ * @property {boolean} activeLow
+ */
+
+/**
+ * @typedef {object} StcProject
+ * @property {string} [device]
+ * @property {number} [clock]
+ * @property {StcPin[]} pins
+ * @property {StcPort[]} [ports]
+ */
+
+/**
+ * Infer a default netlist from the project's pin declarations.
+ *
+ * @param {StcProject} stc
+ * @returns {{ parts: Part[], nets: Net[], notes: string[] }}
+ */
+/**
+ * The terminal name a declared pin joins the board under. 8051 pins carry
+ * port/bit; Arduino and Pico pins carry `where` (D13, GP15) — the header
+ * name IS the terminal (the board's pin join is case-blind, so the
+ * spelling only affects display). This lived as a downstream patch in the
+ * app's vendored copy until 2026-08-13; a re-vendor silently destroyed it
+ * once, which is why it moved upstream — and to MODULE scope, because
+ * checkWiring needs it too.
+ * @param {StcPin} p
+ */
+const pinName = (p) => p.where ? String(p.where) : `P${p.port}.${p.bit}`;
+
+// Sensor MODULES named by the pin. Both are anchored at the start of the name
+// so an unrelated word that merely contains the letters (`dynamic`, `empire`)
+// keeps the meaning it already had.
+const PIR_NAME = /^(pir|motion|presence)/i;
+const SOUND_NAME = /^(sound|noise|clap|mic|loud)/i;
+
+// An LED named for a colour is shown in that colour (the catalog's led
+// variants). Display only: the forward voltage stays the generic 2.0 V every
+// generated LED already uses, so no bench reads a different current. Three
+// LEDs named red/yellow/green used to arrive as three red ones.
+const LED_COLORS = ['green', 'yellow', 'blue', 'white'];
+const ledColor = (name) => LED_COLORS.find((c) => new RegExp(c, 'i').test(name)) ?? 'red';
+
+export function inferNetlist(stc, opts) {
+  /** @type {Part[]} */
+  const parts = [];
+  /** @type {Net[]} */
+  const nets = [];
+  /** @type {string[]} */
+  const notes = [];
+
+  // Always add VCC, GND, and the MCU
+  parts.push({ id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] });
+  parts.push({ id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] });
+
+  // Collect MCU terminals from declared pins (header names — see pinName).
+  const mcuTerminals = stc.pins.map(pinName);
+  parts.push({ id: 'MCU', kind: 'mcu', params: {}, terminals: mcuTerminals });
+
+  // VCC and GND nets (shared by multiple parts)
+  const vccNet = { id: 'net_vcc', terminals: [{ part: 'VCC', terminal: 'vcc' }] };
+  const gndNet = { id: 'net_gnd', terminals: [{ part: 'GND', terminal: 'gnd' }] };
+
+  // A three-wire sensor module powered from the rails whose output terminal
+  // drives the pin directly (PIR `out`, sound module `ao`/`do`).
+  const wireModule = (kind, prefix, pinId, safeName, declName, outTerminal) => {
+    const id = `${prefix}_${safeName}`;
+    const def = kind === 'pir' ? ['vcc', 'gnd', 'out'] : ['vcc', 'gnd', 'ao', 'do'];
+    parts.push({ id, kind, declName, params: {}, terminals: def });
+    nets.push({ id: `net_${safeName}_pin`,
+      terminals: [{ part: 'MCU', terminal: pinId }, { part: id, terminal: outTerminal }] });
+    vccNet.terminals.push({ part: id, terminal: 'vcc' });
+    gndNet.terminals.push({ part: id, terminal: 'gnd' });
+  };
+
+  // Pins that belong to a synthesized STRUCTURE get no generic LED/button:
+  //  - I2C/SPI bus pins carry a display, not an LED per line (the Pico
+  //    calculator bench hung LEDs on sda/scl — owner screenshot, 2026-08-17),
+  //  - rowN/colN pin families are a matrix KEYPAD: buttons sit BETWEEN a row
+  //    and a column, not from each column to ground. A generic bench made
+  //    the calculator untypable.
+  const lname = (p) => String(p.name).toLowerCase();
+  const nameSet = new Set(stc.pins.map(lname));
+  const hasI2cBus = nameSet.has('sda') && nameSet.has('scl');
+  const hasSpiBus = ['cs', 'dc', 'sck', 'mosi'].every((n) => nameSet.has(n));
+  const rowPins = stc.pins.filter((p) => /^row\d+$/i.test(p.name) &&
+    (p.direction === 'output' || p.direction === 'pwm'));
+  const colPins = stc.pins.filter((p) => /^col\d+$/i.test(p.name) && p.direction === 'input');
+  const isMatrix = rowPins.length >= 2 && colPins.length >= 2;
+  const bareNames = new Set();
+  if (hasI2cBus) { bareNames.add('sda'); bareNames.add('scl'); }
+  if (hasSpiBus) ['cs', 'dc', 'sck', 'mosi'].forEach((n) => bareNames.add(n));
+  if (isMatrix) rowPins.forEach((p) => bareNames.add(lname(p)));
+  const matrixColNames = new Set(isMatrix ? colPins.map(lname) : []);
+
+  const usedNames = new Set();
+  // ── Bit-banged 74HC595: three OUTPUT pins named data + clock + latch,
+  // as a trio, are the shift-register idiom (the PART declaration says it
+  // explicitly; a program that bit-bangs the raw pins says it by naming
+  // them). The bench places the board's BEHAVIORAL shift_register — its
+  // terminals are literally data/clock/latch/q0..q7 — with 8 LED+resistor
+  // outputs, so the shifted pattern actually lights. Without this rule the
+  // regenerated benches turned the 74HC595 example into three plain LEDs
+  // (found 2026-08-17: the e2e test asked "where is the shift register?").
+  // All three names must be present and outputs — a lone pin named
+  // 'clock' stays an ordinary pin.
+  const trioConsumed = new Set();
+  // ONE emitter for both 595 idioms — the named-pin trio below and the
+  // explicit PART declaration later — so the bench shape is identical
+  // either way: behavioral shift_register, OE grounded (outputs enabled),
+  // 8× series-330Ω + LED on q0..q7.
+  const emit595 = (prefix, pinsByRole, activeLow = false) => {
+    const srId = `SR_${prefix}`;
+    parts.push({ id: srId, kind: 'shift_register', params: {},
+      terminals: ['data', 'clock', 'latch', 'oe', 'q0', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7'] });
+    for (const [role, pid] of Object.entries(pinsByRole)) {
+      if (!mcuTerminals.includes(pid)) mcuTerminals.push(pid);
+      nets.push({ id: `net_${prefix}_${role}`,
+        terminals: [{ part: 'MCU', terminal: pid }, { part: srId, terminal: role }] });
+    }
+    gndNet.terminals.push({ part: srId, terminal: 'oe' }); // outputs enabled
+    for (let bit = 0; bit < 8; bit++) {
+      const rId = `R_${prefix}_q${bit}`;
+      const ledId = `LED_${prefix}_q${bit}`;
+      parts.push({ id: rId, kind: 'resistor', params: { ohms: 330 }, terminals: ['a', 'b'] });
+      parts.push({ id: ledId, kind: 'led', params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'] });
+      if (activeLow) {
+        // Output LOW lights: VCC → R → LED → Qn (current sinks into the pin)
+        vccNet.terminals.push({ part: rId, terminal: 'a' });
+        nets.push({ id: `net_${prefix}_q${bit}_led`,
+          terminals: [{ part: rId, terminal: 'b' }, { part: ledId, terminal: 'anode' }] });
+        nets.push({ id: `net_${prefix}_q${bit}_out`,
+          terminals: [{ part: ledId, terminal: 'cathode' }, { part: srId, terminal: `q${bit}` }] });
+      } else {
+        nets.push({ id: `net_${prefix}_q${bit}_out`,
+          terminals: [{ part: srId, terminal: `q${bit}` }, { part: rId, terminal: 'a' }] });
+        nets.push({ id: `net_${prefix}_q${bit}_led`,
+          terminals: [{ part: rId, terminal: 'b' }, { part: ledId, terminal: 'anode' }] });
+        gndNet.terminals.push({ part: ledId, terminal: 'cathode' });
+      }
+    }
+  };
+  {
+    const named = (re) => stc.pins.find((p) =>
+      re.test(p.name) && (p.direction === 'output' || p.direction === 'pwm'));
+    const dataPin = named(/^data$/i);
+    const clockPin = named(/^(clock|clk)$/i);
+    const latchPin = named(/^(latch|rclk)$/i);
+    if (dataPin && clockPin && latchPin) {
+      emit595('595', {
+        data: pinName(dataPin), clock: pinName(clockPin), latch: pinName(latchPin),
+      });
+      for (const p of [dataPin, clockPin, latchPin]) trioConsumed.add(p.name);
+    }
+  }
+
+  for (const pin of stc.pins) {
+    if (trioConsumed.has(pin.name)) continue; // wired to the 595 above
+    const pinId = pinName(pin);
+    let safeName = pin.name.replace(/[^a-zA-Z0-9_]/g, '_');
+    // Two pins may carry the same NAME on different ports ('led' on P1.0
+    // and P3.0). Every net and part id below derives from safeName, so a
+    // repeat minted duplicate net ids — which the board now rejects as
+    // fatal (they make the MNA matrix singular). Disambiguate by pin.
+    if (usedNames.has(safeName)) {
+      safeName = `${safeName}_${pinId.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+    }
+    usedNames.add(safeName);
+
+    if (bareNames.has(lname(pin))) {
+      const isI2c = hasI2cBus && (lname(pin) === 'sda' || lname(pin) === 'scl');
+      const net = { id: `net_${safeName}_pin`,
+        terminals: [{ part: 'MCU', terminal: pinId }] };
+      if (isI2c) {
+        // The two most classic resistors in electronics: I2C is an
+        // open-drain bus, and without pull-ups it idles at 0 V forever.
+        // The 8051 firmware configures sda/scl open-drain (correctly!),
+        // and the bench without these resistors was dead on the emulator
+        // AND would be dead on real silicon (49-lcd-hello, 2026-08-17).
+        const rId = `R_PU_${safeName}`;
+        parts.push({ id: rId, kind: 'resistor',
+          params: { ohms: 4700 }, terminals: ['a', 'b'] });
+        net.terminals.push({ part: rId, terminal: 'b' });
+        vccNet.terminals.push({ part: rId, terminal: 'a' });
+      }
+      nets.push(net);
+      continue;
+    }
+    if (matrixColNames.has(lname(pin))) {
+      // Keypad column: pull-up to VCC; the buttons come per row below.
+      const rId = `R_PU_${safeName}`;
+      parts.push({ id: rId, kind: 'resistor',
+        params: { ohms: 10000 }, terminals: ['a', 'b'] });
+      nets.push({ id: `net_${safeName}_pin`,
+        terminals: [{ part: 'MCU', terminal: pinId }, { part: rId, terminal: 'b' }] });
+      vccNet.terminals.push({ part: rId, terminal: 'a' });
+      continue;
+    }
+
+    // Detect buzzer, motor and relay by name convention
+    const isBuzzer = /buzz|speaker|tone|beep/i.test(pin.name);
+    const isMotor = /motor|fan\b/i.test(pin.name) && !isBuzzer;
+    const isRelay = /relay/i.test(pin.name) && !isBuzzer && !isMotor;
+    // A servo is a registered three-terminal device that takes the pin as its
+    // signal and its own power from the rails — so unlike the motor it needs no
+    // driver transistor, and unlike the LED it must not be one. A pin named
+    // `servo` rendered as an LED, which is how 53-servo-sweep came to describe
+    // "a servo motor sweeping back and forth" over a bench holding one LED.
+    const isServo = /servo/i.test(pin.name) && !isBuzzer && !isMotor && !isRelay;
+
+    switch (pin.direction) {
+      case 'tone': {
+        // Timer-driven GPIO toggle → buzzer between pin and GND.
+        // buzzerTone measures the toggle period; nothing in the MCU knows about sound.
+        const buzzId = `BUZZ_${safeName}`;
+        parts.push({
+          id: buzzId, kind: 'buzzer', declName: pin.name,
+          params: {}, terminals: ['a', 'b'],
+        });
+        nets.push({
+          id: `net_${safeName}_pin`,
+          terminals: [
+            { part: 'MCU', terminal: pinId },
+            { part: buzzId, terminal: 'a' },
+          ],
+        });
+        gndNet.terminals.push({ part: buzzId, terminal: 'b' });
+        break;
+      }
+
+      case 'output':
+      case 'pwm': {
+        if (isServo) {
+          const sId = `SERVO_${safeName}`;
+          parts.push({ id: sId, kind: 'servo', params: {},
+            terminals: ['signal', 'vcc', 'gnd'] });
+          nets.push({ id: `net_${safeName}_sig`,
+            terminals: [{ part: 'MCU', terminal: pinId }, { part: sId, terminal: 'signal' }] });
+          vccNet.terminals.push({ part: sId, terminal: 'vcc' });
+          gndNet.terminals.push({ part: sId, terminal: 'gnd' });
+          break;
+        }
+        if (isMotor) {
+          // pin → NPN base via 1k; motor VCC→collector, emitter→GND. A pin
+          // named 'motor' rendered as an LED and the owner asked, fairly,
+          // where the motor was (2026-08-17). The transistor is not
+          // decoration: an MCU pin cannot source a motor, which is the
+          // same lesson the port-current examples teach.
+          const rId = `R_${safeName}`;
+          const qId = `Q_${safeName}`;
+          const mId = `MOTOR_${safeName}`;
+          const dId = `D_${safeName}`;
+          parts.push({ id: rId, kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] });
+          parts.push({ id: qId, kind: 'npn', params: {}, terminals: ['base', 'collector', 'emitter'] });
+          parts.push({ id: mId, kind: 'dc_motor', params: {}, terminals: ['a', 'b'] });
+          parts.push({ id: dId, kind: 'diode', params: { vf: 0.7 }, terminals: ['anode', 'cathode'] });
+          nets.push({ id: `net_${safeName}_pin`,
+            terminals: [{ part: 'MCU', terminal: pinId }, { part: rId, terminal: 'a' }] });
+          nets.push({ id: `net_${safeName}_base`,
+            terminals: [{ part: rId, terminal: 'b' }, { part: qId, terminal: 'base' }] });
+          nets.push({ id: `net_${safeName}_col`,
+            terminals: [{ part: mId, terminal: 'b' }, { part: qId, terminal: 'collector' },
+              { part: dId, terminal: 'anode' }] });
+          vccNet.terminals.push({ part: mId, terminal: 'a' });
+          // Reverse-biased during normal operation; conducts the motor's
+          // inductive current when the transistor switches off.
+          vccNet.terminals.push({ part: dId, terminal: 'cathode' });
+          gndNet.terminals.push({ part: qId, terminal: 'emitter' });
+          break;
+        }
+        if (isRelay) {
+          // Same driver topology as the motor — an MCU pin cannot source a
+          // relay coil either: pin → 1k → NPN base; coil VCC→coil_a,
+          // coil_b→collector, emitter→GND. Found the same day the same way
+          // (2026-08-17): the relay-clicker's regenerated bench had no
+          // relay in it, and the e2e test asked where it went.
+          const rId = `R_${safeName}`;
+          const qId = `Q_${safeName}`;
+          const kId = `RELAY_${safeName}`;
+          const dId = `D_${safeName}`;
+          parts.push({ id: rId, kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] });
+          parts.push({ id: qId, kind: 'npn', params: {}, terminals: ['base', 'collector', 'emitter'] });
+          parts.push({ id: kId, kind: 'relay', params: {},
+            terminals: ['coil_a', 'coil_b', 'com', 'nc', 'no'] });
+          parts.push({ id: dId, kind: 'diode', params: { vf: 0.7 }, terminals: ['anode', 'cathode'] });
+          nets.push({ id: `net_${safeName}_pin`,
+            terminals: [{ part: 'MCU', terminal: pinId }, { part: rId, terminal: 'a' }] });
+          nets.push({ id: `net_${safeName}_base`,
+            terminals: [{ part: rId, terminal: 'b' }, { part: qId, terminal: 'base' }] });
+          nets.push({ id: `net_${safeName}_coil`,
+            terminals: [{ part: kId, terminal: 'coil_b' }, { part: qId, terminal: 'collector' },
+              { part: dId, terminal: 'anode' }] });
+          vccNet.terminals.push({ part: kId, terminal: 'coil_a' });
+          vccNet.terminals.push({ part: dId, terminal: 'cathode' });
+          gndNet.terminals.push({ part: qId, terminal: 'emitter' });
+          break;
+        }
+        if (isBuzzer) {
+          // pin → buzzer → GND
+          const buzzId = `BUZZ_${safeName}`;
+          parts.push({
+            id: buzzId, kind: 'buzzer', declName: pin.name,
+            params: {}, terminals: ['a', 'b'],
+          });
+          nets.push({
+            id: `net_${safeName}_pin`,
+            terminals: [
+              { part: 'MCU', terminal: pinId },
+              { part: buzzId, terminal: 'a' },
+            ],
+          });
+          gndNet.terminals.push({ part: buzzId, terminal: 'b' });
+          break;
+        }
+
+        if (pin.activeLow) {
+          // VCC → 1kΩ → LED → pin (active-low, the correct wiring)
+          const rId = `R_${safeName}`;
+          const ledId = `LED_${safeName}`;
+          parts.push({
+            id: rId, kind: 'resistor',
+            params: { ohms: 1000 }, terminals: ['a', 'b'],
+          });
+          parts.push({
+            id: ledId, kind: 'led', declName: pin.name,
+            params: { vf: 2.0, color: ledColor(pin.name) }, terminals: ['anode', 'cathode'],
+          });
+          // VCC → R.a
+          vccNet.terminals.push({ part: rId, terminal: 'a' });
+          // R.b → LED.anode
+          nets.push({
+            id: `net_${safeName}_r_led`,
+            terminals: [
+              { part: rId, terminal: 'b' },
+              { part: ledId, terminal: 'anode' },
+            ],
+          });
+          // LED.cathode → MCU pin
+          nets.push({
+            id: `net_${safeName}_pin`,
+            terminals: [
+              { part: ledId, terminal: 'cathode' },
+              { part: 'MCU', terminal: pinId },
+            ],
+          });
+        } else {
+          // pin → 1kΩ → LED → GND (active-high)
+          const rId = `R_${safeName}`;
+          const ledId = `LED_${safeName}`;
+          parts.push({
+            id: rId, kind: 'resistor',
+            params: { ohms: 1000 }, terminals: ['a', 'b'],
+          });
+          parts.push({
+            id: ledId, kind: 'led', declName: pin.name,
+            params: { vf: 2.0, color: ledColor(pin.name) }, terminals: ['anode', 'cathode'],
+          });
+          // MCU pin → R.a
+          nets.push({
+            id: `net_${safeName}_pin_r`,
+            terminals: [
+              { part: 'MCU', terminal: pinId },
+              { part: rId, terminal: 'a' },
+            ],
+          });
+          // R.b → LED.anode
+          nets.push({
+            id: `net_${safeName}_r_led`,
+            terminals: [
+              { part: rId, terminal: 'b' },
+              { part: ledId, terminal: 'anode' },
+            ],
+          });
+          // LED.cathode → GND
+          gndNet.terminals.push({ part: ledId, terminal: 'cathode' });
+        }
+        break;
+      }
+
+      case 'analog': {
+        // A named sensor is the sensor, not a knob. Every analog pin used to
+        // become a potentiometer, so 03-night-light opened with "a
+        // light-dependent resistor (LDR) in a voltage divider" over a bench
+        // holding a pot — and the reader had no way to tell the substitution
+        // had happened. LDR and NTC are two-terminal variable resistors, so
+        // each forms the TOP leg of a divider with a fixed 10k to ground,
+        // which is the textbook wiring both examples describe.
+        // Light wins a name that says both; the ternary below is the only
+        // place that precedence lives, so there is no second guard to drift.
+        const isLdr = /ldr|photo|light/i.test(pin.name);
+        const isNtc = /ntc|thermistor|thermo|temp/i.test(pin.name);
+        // A knock sensor IS a piezo disc read as a voltage; it takes the same
+        // divider shape as the resistive sensors above. Precedence lives ONLY
+        // in the ternary below, so there is no second guard to drift from it.
+        const isPiezo = /piezo|knock/i.test(pin.name);
+        // A sound module's AO pin is a driven voltage (level * VCC), not a
+        // resistance: it needs no divider leg. Only when no resistive sensor
+        // claimed the name, so `micLight` stays the LDR the older rule made it.
+        const isSoundAo = !isLdr && !isNtc && !isPiezo && SOUND_NAME.test(pin.name);
+        if (isSoundAo) {
+          wireModule('sound_module', 'SOUND', pinId, safeName, pin.name, 'ao');
+          break;
+        }
+        if (isLdr || isNtc || isPiezo) {
+          const sId = `${isLdr ? 'LDR' : isNtc ? 'NTC' : 'PIEZO'}_${safeName}`;
+          const rId = `R_DIV_${safeName}`;
+          parts.push({ id: sId, kind: isLdr ? 'ldr' : isNtc ? 'ntc' : 'piezo', declName: pin.name,
+            params: {}, terminals: ['a', 'b'] });
+          parts.push({ id: rId, kind: 'resistor',
+            params: { ohms: 10000 }, terminals: ['a', 'b'] });
+          vccNet.terminals.push({ part: sId, terminal: 'a' });
+          nets.push({
+            id: `net_${safeName}_div`,
+            terminals: [
+              { part: sId, terminal: 'b' },
+              { part: rId, terminal: 'a' },
+              { part: 'MCU', terminal: pinId },
+            ],
+          });
+          gndNet.terminals.push({ part: rId, terminal: 'b' });
+          break;
+        }
+        // Potentiometer across VCC/GND, wiper → pin
+        const potId = `POT_${safeName}`;
+        parts.push({
+          id: potId, kind: 'potentiometer', declName: pin.name,
+          params: { ohms: 10000 }, terminals: ['a', 'b', 'wiper'],
+        });
+        // VCC → pot.a
+        vccNet.terminals.push({ part: potId, terminal: 'a' });
+        // pot.b → GND
+        gndNet.terminals.push({ part: potId, terminal: 'b' });
+        // pot.wiper → MCU pin
+        nets.push({
+          id: `net_${safeName}_wiper`,
+          terminals: [
+            { part: potId, terminal: 'wiper' },
+            { part: 'MCU', terminal: pinId },
+          ],
+        });
+        break;
+      }
+
+      case 'input': {
+        // A named tilt switch is a tilt switch. It is a two-terminal contact
+        // like a button and wires identically — but the DECLARED NAME is the
+        // lesson, and lite gates on exactly that: `PIN tilt = D8 INPUT` sitting
+        // on a button is the same species as an LDR pin sitting on a knob.
+        const isTilt = /tilt/i.test(pin.name);
+        // A PIR and a sound module's DO are ACTIVE outputs that drive the pin
+        // high on detection. They need no pull-up and no contact to ground:
+        // a pull-up would hold the idle line at VCC and read as permanent
+        // motion. Tilt keeps precedence — it is the older rule.
+        if (!isTilt && PIR_NAME.test(pin.name)) {
+          wireModule('pir', 'PIR', pinId, safeName, pin.name, 'out');
+          break;
+        }
+        if (!isTilt && SOUND_NAME.test(pin.name)) {
+          wireModule('sound_module', 'SOUND', pinId, safeName, pin.name, 'do');
+          break;
+        }
+        // Button pin → GND, plus a 10kΩ pull-up to VCC
+        const rpuId = `R_PU_${safeName}`;
+        const btnId = `${isTilt ? 'TILT' : 'BTN'}_${safeName}`;
+        parts.push({
+          id: rpuId, kind: 'resistor',
+          params: { ohms: 10000 }, terminals: ['a', 'b'],
+        });
+        parts.push({
+          id: btnId, kind: isTilt ? 'tilt_sensor' : 'button', declName: pin.name,
+          params: {}, terminals: ['a', 'b'],
+        });
+        // VCC → R_PU.a
+        vccNet.terminals.push({ part: rpuId, terminal: 'a' });
+        // R_PU.b → pin net (shared with button and MCU)
+        nets.push({
+          id: `net_${safeName}_pin`,
+          terminals: [
+            { part: rpuId, terminal: 'b' },
+            { part: btnId, terminal: 'a' },
+            { part: 'MCU', terminal: pinId },
+          ],
+        });
+        // button.b → GND
+        gndNet.terminals.push({ part: btnId, terminal: 'b' });
+        break;
+      }
+
+      default:
+        notes.push(`Unknown direction '${pin.direction}' for pin ${pin.name} (${pinId})`);
+    }
+  }
+
+  // ─── Port declarations (whole-port I/O) ────────────────────────────────
+
+  if (stc.ports) {
+    for (const port of stc.ports) {
+      const safeName = port.name.replace(/[^a-zA-Z0-9_]/g, '_');
+      const width = port.width ?? 8;
+
+      if (port.direction === 'output') {
+        // PORT OUTPUT: each bit gets a load.
+        // Common pattern: 7-segment display or 8-LED bar.
+        // Add 8 LEDs with series resistors, each on one port bit.
+        for (let bit = 0; bit < width; bit++) {
+          const pinId = `P${port.port}.${bit}`;
+          const segName = width === 8 && bit < 7
+            ? ['a', 'b', 'c', 'd', 'e', 'f', 'g'][bit]
+            : bit === 7 ? 'dp' : `b${bit}`;
+          const rId = `R_${safeName}_${segName}`;
+          const ledId = `LED_${safeName}_${segName}`;
+
+          // Add pin to MCU terminals if not already there
+          if (!mcuTerminals.includes(pinId)) mcuTerminals.push(pinId);
+
+          parts.push({
+            id: rId, kind: 'resistor',
+            params: { ohms: 330 }, terminals: ['a', 'b'],
+          });
+          parts.push({
+            id: ledId, kind: 'led',
+            params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'],
+          });
+
+          if (port.activeLow) {
+            // Active-low: VCC → R → LED → pin
+            vccNet.terminals.push({ part: rId, terminal: 'a' });
+            nets.push({
+              id: `net_${safeName}_${segName}_r_led`,
+              terminals: [
+                { part: rId, terminal: 'b' },
+                { part: ledId, terminal: 'anode' },
+              ],
+            });
+            nets.push({
+              id: `net_${safeName}_${segName}_pin`,
+              terminals: [
+                { part: ledId, terminal: 'cathode' },
+                { part: 'MCU', terminal: pinId },
+              ],
+            });
+          } else {
+            // Active-high: pin → R → LED → GND
+            nets.push({
+              id: `net_${safeName}_${segName}_pin_r`,
+              terminals: [
+                { part: 'MCU', terminal: pinId },
+                { part: rId, terminal: 'a' },
+              ],
+            });
+            nets.push({
+              id: `net_${safeName}_${segName}_r_led`,
+              terminals: [
+                { part: rId, terminal: 'b' },
+                { part: ledId, terminal: 'anode' },
+              ],
+            });
+            gndNet.terminals.push({ part: ledId, terminal: 'cathode' });
+          }
+        }
+      } else {
+        notes.push(`Unknown port direction '${port.direction}' for port ${port.name}`);
+      }
+    }
+  }
+
+  // ─── Parts declarations (shift registers, etc.) ────────────────────────
+
+  // I2C lines that already carry their pull-up (one per net, however many
+  // I2C parts share it).
+  const i2cPulled = new Set();
+  if (stc.parts) {
+    for (const part of stc.parts) {
+      const safeName = part.name.replace(/[^a-zA-Z0-9_]/g, '_');
+
+      if (part.type === '74hc595' || part.kind === '74hc595') {
+        // PART leds = 74HC595 data P1.0 clock P1.1 latch P1.2 — the parsed
+        // shape carries {type, data/clock/latch coord objects, activeLow}.
+        // (An earlier version of this branch tested part.kind and part.pins,
+        // which the parser never produces — so PART-only programs inferred
+        // NO circuit at all, and the 8-LED chaser had no benches to
+        // generate. Found 2026-08-17 closing the owner's device-picker
+        // report.) The emitter is shared with the bit-banged-trio rule
+        // above, so both idioms produce the identical bench shape.
+        const roles = {};
+        for (const role of ['data', 'clock', 'latch']) {
+          // Top-level (parser output) or nested in part.pins (JSON fixture)
+          const coord = part[role] ?? (part.pins && part.pins[role]);
+          if (coord) roles[role] = typeof coord === 'string' ? coord : pinName(coord);
+        }
+        if (Object.keys(roles).length === 3) {
+          emit595(safeName, roles, !!part.activeLow);
+        } else {
+          notes.push(`74HC595 part ${part.name} is missing pin roles: ` +
+            `have ${Object.keys(roles).join(', ') || 'none'}`);
+        }
+      } else if (part.type === 'lcd1602' || part.kind === 'lcd1602') {
+        // PART lcd = LCD1602 DATA P1.4 P1.5 P1.6 P1.7 RS P2.0 EN P2.1 [RW Px.y]
+        // [WRITE ONLY]. Only `74hc595` was ever built from a PART binding, so
+        // a program that declared its whole display inferred nothing and the
+        // generated bench showed a bare MCU — which is how 81-8051-lcd1602-
+        // parallel came to document a wiring the bench did not have. The panel
+        // is a registered char_lcd; a write-only board ties RW to ground,
+        // exactly as the declaration says.
+        const lcdId = `LCD_${safeName}`;
+        parts.push({ id: lcdId, kind: 'char_lcd', declName: part.name, params: {},
+          terminals: ['rs', 'rw', 'e', 'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7',
+            'vcc', 'gnd', 'vo', 'bl_a', 'bl_k'] });
+        const wire = (terminal, coord) => {
+          if (!coord) return;
+          nets.push({ id: `net_${safeName}_${terminal}`, terminals: [
+            { part: 'MCU', terminal: pinName(coord) },
+            { part: lcdId, terminal },
+          ] });
+        };
+        // A 4-bit bus drives D4..D7; D0..D3 stay unconnected, which is what
+        // 4-bit mode means.
+        (part.data || []).forEach((coord, i) => wire(`d${i + 4}`, coord));
+        wire('rs', part.rs);
+        wire('e', part.en);
+        if (part.rw) wire('rw', part.rw);
+        else gndNet.terminals.push({ part: lcdId, terminal: 'rw' });
+        vccNet.terminals.push({ part: lcdId, terminal: 'vcc' });
+        vccNet.terminals.push({ part: lcdId, terminal: 'bl_a' });
+        gndNet.terminals.push({ part: lcdId, terminal: 'gnd' });
+        gndNet.terminals.push({ part: lcdId, terminal: 'bl_k' });
+        gndNet.terminals.push({ part: lcdId, terminal: 'vo' });
+      } else if (part.type === 'ledbank8' || part.kind === 'ledbank8') {
+        // PART leds = LEDBANK8 ON P2 [ACTIVE LOW] — eight LEDs on one whole
+        // port, which the A2 board carries as its D1-D8 row.
+        const bankId = `LEDS_${safeName}`;
+        parts.push({ id: bankId, kind: 'ledbank8', declName: part.name,
+          params: { activeLow: !!part.activeLow },
+          terminals: ['vcc', 'gnd', 'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7'] });
+        const port = part.ledPort;
+        for (let bit = 0; bit < 8; bit++) {
+          nets.push({ id: `net_${safeName}_d${bit}`, terminals: [
+            { part: 'MCU', terminal: pinName({ port, bit }) },
+            { part: bankId, terminal: `d${bit}` },
+          ] });
+        }
+        vccNet.terminals.push({ part: bankId, terminal: 'vcc' });
+        gndNet.terminals.push({ part: bankId, terminal: 'gnd' });
+      } else if (part.type === 'keypad4x4' || part.kind === 'keypad4x4') {
+        // PART keys = KEYPAD4X4 ROWS P1.7 P1.6 P1.5 P1.4 COLS P1.3 P1.2 P1.1 P1.0
+        const padId = `KEYPAD_${safeName}`;
+        parts.push({ id: padId, kind: 'keypad_4x4', declName: part.name, params: {},
+          terminals: ['r0', 'r1', 'r2', 'r3', 'c0', 'c1', 'c2', 'c3'] });
+        const line = (prefix, coords) => (coords || []).forEach((coord, i) => {
+          if (!coord) return;
+          nets.push({ id: `net_${safeName}_${prefix}${i}`, terminals: [
+            { part: 'MCU', terminal: pinName(coord) },
+            { part: padId, terminal: `${prefix}${i}` },
+          ] });
+        });
+        line('r', part.rows);
+        line('c', part.cols);
+      } else if (part.type === 'sevenseg8' || part.kind === 'sevenseg8') {
+        // PART display = SEVENSEG8 SEGMENTS P0 SELECT P2.2 P2.3 P2.4 — eight
+        // digits multiplexed behind three select lines, segments on one port.
+        const dispId = `DISP_${safeName}`;
+        const segs = ['seg_a', 'seg_b', 'seg_c', 'seg_d', 'seg_e', 'seg_f', 'seg_g', 'seg_dp'];
+        parts.push({ id: dispId, kind: 'sevenseg8', declName: part.name,
+          // THE KEY THE DEVICE READS. registerSevenseg8's init() asks for
+          // `params.common` and tests it with /anode/i; `commonAnode` was a
+          // name nothing looked at, so a program declaring COMMON ANODE was
+          // inferred as a common-cathode display and its segments ran
+          // inverted. sb3-creator's circuit-params-are-read gate names this
+          // exactly: "declared by circuits, read by no engine code".
+          params: { common: part.commonAnode ? 'anode' : 'cathode' },
+          terminals: ['vcc', 'gnd', ...segs, 'sel_a', 'sel_b', 'sel_c'] });
+        segs.forEach((seg, bit) => {
+          nets.push({ id: `net_${safeName}_${seg}`, terminals: [
+            { part: 'MCU', terminal: pinName({ port: part.segPort, bit }) },
+            { part: dispId, terminal: seg },
+          ] });
+        });
+        (part.selPins || []).forEach((coord, i) => {
+          if (!coord) return;
+          nets.push({ id: `net_${safeName}_sel${i}`, terminals: [
+            { part: 'MCU', terminal: pinName(coord) },
+            { part: dispId, terminal: ['sel_a', 'sel_b', 'sel_c'][i] },
+          ] });
+        });
+        vccNet.terminals.push({ part: dispId, terminal: 'vcc' });
+        gndNet.terminals.push({ part: dispId, terminal: 'gnd' });
+      } else if (part.type === 'hcsr04' || part.kind === 'hcsr04') {
+        // PART sonar = HCSR04 TRIG <pin> ECHO <pin> — the four-pin ultrasonic
+        // module. Its distance is the bench's stimulus (param `distance`, cm).
+        const usId = `SONAR_${safeName}`;
+        parts.push({ id: usId, kind: 'ultrasonic', declName: part.name,
+          params: { distance: 100 }, terminals: ['vcc', 'gnd', 'trig', 'echo'] });
+        for (const role of ['trig', 'echo']) {
+          if (!part[role]) continue;
+          nets.push({ id: `net_${safeName}_${role}`, terminals: [
+            { part: 'MCU', terminal: pinName(part[role]) },
+            { part: usId, terminal: role },
+          ] });
+        }
+        vccNet.terminals.push({ part: usId, terminal: 'vcc' });
+        gndNet.terminals.push({ part: usId, terminal: 'gnd' });
+      } else if (['ds3231', 'at24c02', 'i2c'].includes(part.type || part.kind)) {
+        // PART clock = DS3231 SDA <pin> SCL <pin>, PART memory = AT24C02 ...,
+        // PART bus = I2C ... — I2C parts SHARE their two pins, so each line is
+        // one net (found by its MCU terminal, created once), and each carries
+        // one 4.7 kOhm pull-up: SDA and SCL are open drain on every device.
+        const type = part.type || part.kind;
+        let devId = null;
+        if (type !== 'i2c') {
+          devId = `${type === 'ds3231' ? 'RTC' : 'EEPROM'}_${safeName}`;
+          // The AT24C02 is the real DIP-8: A0-A2 strapped low (address 0x50)
+          // and WP low (writes allowed), as the learning boards wire it.
+          const eeprom = type === 'at24c02';
+          parts.push({ id: devId, kind: type, declName: part.name, params: {},
+            terminals: eeprom ? ['a0', 'a1', 'a2', 'gnd', 'sda', 'scl', 'wp', 'vcc'] : ['vcc', 'gnd', 'sda', 'scl'] });
+          vccNet.terminals.push({ part: devId, terminal: 'vcc' });
+          gndNet.terminals.push({ part: devId, terminal: 'gnd' });
+          if (eeprom) for (const t of ['a0', 'a1', 'a2', 'wp']) gndNet.terminals.push({ part: devId, terminal: t });
+        }
+        for (const role of ['sda', 'scl']) {
+          if (!part[role]) continue;
+          const term = pinName(part[role]);
+          let net = nets.find((n) => n.terminals.some((t) => t.part === 'MCU' && t.terminal === term));
+          if (!net) {
+            net = { id: `net_i2c_${role}_${term.replace(/[^a-zA-Z0-9_]/g, '_')}`, terminals: [{ part: 'MCU', terminal: term }] };
+            nets.push(net);
+          }
+          if (devId) net.terminals.push({ part: devId, terminal: role });
+          if (!i2cPulled.has(net.id)) {
+            i2cPulled.add(net.id);
+            const rId = `R_${role}_pullup_${net.id.replace(/^net_/, '')}`;
+            parts.push({ id: rId, kind: 'resistor', params: { ohms: 4700 }, terminals: ['a', 'b'] });
+            net.terminals.push({ part: rId, terminal: 'b' });
+            vccNet.terminals.push({ part: rId, terminal: 'a' });
+          }
+        }
+      } else if (part.type === 'ds18b20' || part.kind === 'ds18b20') {
+        // PART probe = DS18B20 ON <pin> — 1-Wire is open drain, so the bus
+        // needs its pull-up: the datasheet's 4.7 kOhm from DQ to VCC. Without
+        // it nothing ever pulls the line high and every read slot is a 0.
+        const tId = `THERMO_${safeName}`;
+        const rId = `R_${safeName}_pullup`;
+        parts.push({ id: tId, kind: 'ds18b20', declName: part.name,
+          params: { temperature: 25 }, terminals: ['vcc', 'gnd', 'dq'] });
+        parts.push({ id: rId, kind: 'resistor', params: { ohms: 4700 }, terminals: ['a', 'b'] });
+        if (part.dq) {
+          nets.push({ id: `net_${safeName}_dq`, terminals: [
+            { part: 'MCU', terminal: pinName(part.dq) },
+            { part: tId, terminal: 'dq' },
+            { part: rId, terminal: 'b' },
+          ] });
+        }
+        vccNet.terminals.push({ part: tId, terminal: 'vcc' });
+        vccNet.terminals.push({ part: rId, terminal: 'a' });
+        gndNet.terminals.push({ part: tId, terminal: 'gnd' });
+      } else {
+        notes.push(`Unknown part kind '${part.type || part.kind}' for part ${part.name}`);
+      }
+    }
+  }
+
+  // Bus-named pins imply their display: 'sda'+'scl' is the 4-pin OLED,
+  // 'cs'+'dc'+'sck'+'mosi' the SPI TFT. The pin loop above already made
+  // each an output net; seat the panel on those nets so a generated
+  // bench SHOWS what the program draws — before this, a device-picked
+  // calculator bench carried the keys and no display (the verbs declare
+  // no part, so nothing else can know).
+  const findPin = (n) => stc.pins.find((q) => String(q.name).toLowerCase() === n);
+  const netOfPin = (pin) => {
+    // Robust against net-naming schemes: the pin's net is the one carrying
+    // the MCU's own terminal for it (guessing id prefixes missed —
+    // outputs name theirs net_<name>_pin_r).
+    if (!pin) return null;
+    const term = pinName(pin);
+    return nets.find((nn) => nn.terminals.some(
+      (t) => t.part === 'MCU' && t.terminal === term)) || null;
+  };
+  if (isMatrix) {
+    // The keypad itself: a button at every row/column crossing. Scanning
+    // drives one row low; a pressed key pulls its column low through it.
+    for (const rp of rowPins) {
+      const rNet = netOfPin(rp);
+      if (!rNet) continue;
+      for (const cp of colPins) {
+        const cNet = netOfPin(cp);
+        if (!cNet) continue;
+        const btnId = `BTN_${lname(rp)}_${lname(cp)}`.replace(/[^a-zA-Z0-9_]/g, '_');
+        parts.push({ id: btnId, kind: 'button', params: {}, terminals: ['a', 'b'] });
+        rNet.terminals.push({ part: btnId, terminal: 'a' });
+        cNet.terminals.push({ part: btnId, terminal: 'b' });
+      }
+    }
+    notes.push(`row/col pins: seated a ${rowPins.length}x${colPins.length} keypad matrix`);
+  }
+  const sdaPin = findPin('sda'), sclPin = findPin('scl');
+  const sdaNet = netOfPin(sdaPin), sclNet = netOfPin(sclPin);
+  if (sdaNet && sclNet) {
+    // Which panel sits on the bus is the PROGRAM's business (oled vs lcd
+    // verbs) — callers that know pass opts.display; 'oled' is the default.
+    const isLcd = opts && opts.display === 'lcd';
+    const dispId = isLcd ? 'LCD' : 'OLED';
+    parts.push({ id: dispId, kind: isLcd ? 'char_lcd_i2c' : 'ssd1306',
+      params: {}, terminals: isLcd ? ['sda', 'scl', 'vcc', 'gnd'] : ['vcc', 'gnd', 'sda', 'scl'] });
+    sdaNet.terminals.push({ part: dispId, terminal: 'sda' });
+    sclNet.terminals.push({ part: dispId, terminal: 'scl' });
+    vccNet.terminals.push({ part: dispId, terminal: 'vcc' });
+    gndNet.terminals.push({ part: dispId, terminal: 'gnd' });
+    notes.push(`sda/scl pins: seated ${isLcd ? 'an I2C character LCD' : 'an SSD1306 OLED'} on the bus`);
+  }
+  const tftNets = ['cs', 'dc', 'sck', 'mosi'].map((n) => netOfPin(findPin(n)));
+  if (tftNets.every(Boolean)) {
+    parts.push({ id: 'TFT', kind: 'ili9341', params: {},
+      terminals: ['vcc', 'gnd', 'cs', 'rst', 'dc', 'mosi', 'sck', 'miso', 'led'] });
+    ['cs', 'dc', 'sck', 'mosi'].forEach((t, i) => tftNets[i].terminals.push({ part: 'TFT', terminal: t }));
+    vccNet.terminals.push({ part: 'TFT', terminal: 'vcc' }, { part: 'TFT', terminal: 'led' }, { part: 'TFT', terminal: 'rst' });
+    gndNet.terminals.push({ part: 'TFT', terminal: 'gnd' });
+    notes.push('cs/dc/sck/mosi pins: seated an ILI9341 TFT on the SPI bus');
+  }
+
+  // Add the shared VCC and GND nets
+  nets.push(vccNet);
+  nets.push(gndNet);
+
+  // A PART's pins are the chip's pins too. The MCU's terminals were taken
+  // from PIN declarations alone, so a net wired to a PART's pin named a
+  // terminal the chip did not have: on a board-specific MCU part the drive
+  // never reached the net (an HC-SR04 TRIG that stayed at 0 V).
+  for (const n of nets) {
+    for (const t of n.terminals) {
+      if (t.part === 'MCU' && !mcuTerminals.includes(t.terminal)) mcuTerminals.push(t.terminal);
+    }
+  }
+
+  return { parts, nets, notes };
+}
+
+/**
+ * Check for wiring issues: pins driven with nothing attached, or parts
+ * wired that the code never references.
+ *
+ * @param {StcPin[]} declaredPins - pins declared in the project
+ * @param {Part[]} wiredParts - parts in the current netlist
+ * @param {Net[]} wiredNets - nets in the current netlist
+ * @returns {string[]} warning notes
+ */
+export function checkWiring(declaredPins, wiredParts, wiredNets) {
+  /** @type {string[]} */
+  const notes = [];
+
+  // Find all MCU pin terminals in the netlist
+  const mcuPart = wiredParts.find(p => p.kind === 'mcu');
+  if (!mcuPart) return notes;
+
+  const wiredPinIds = new Set();
+  for (const net of wiredNets) {
+    for (const t of net.terminals) {
+      if (t.part === mcuPart.id) {
+        wiredPinIds.add(t.terminal);
+      }
+    }
+  }
+
+  // Check: declared pins with nothing wired
+  const declaredPinIds = new Set(declaredPins.map(pinName));
+  for (const pin of declaredPins) {
+    const pinId = pinName(pin);
+    if (!wiredPinIds.has(pinId)) {
+      notes.push(`Pin ${pin.name} (${pinId}) is declared as ${pin.direction} but has nothing wired to it`);
+    }
+  }
+
+  // Check: MCU terminals wired but not declared in the project
+  for (const pinId of wiredPinIds) {
+    if (!declaredPinIds.has(pinId)) {
+      notes.push(`${pinId} has wiring on the board but is not declared in the project`);
+    }
+  }
+
+  // Check: wired pins with only their own connection (no external parts)
+  for (const net of wiredNets) {
+    const mcuTerminals = net.terminals.filter(t => t.part === mcuPart.id);
+    if (mcuTerminals.length > 0 && net.terminals.length === 1) {
+      for (const t of mcuTerminals) {
+        const pin = declaredPins.find(p => `P${p.port}.${p.bit}` === t.terminal);
+        const name = pin ? `${pin.name} (${t.terminal})` : t.terminal;
+        notes.push(`${name} is connected to a net with no external components`);
+      }
+    }
+  }
+
+  return notes;
+}

@@ -1,0 +1,27 @@
+{
+  "command": [
+    "python3",
+    "-B",
+    "-c",
+    "import sys,unittest;sys.path[:0]=['scripts/cold-native-diagnostic','scripts/cold-native-restore'];s=unittest.defaultTestLoader.loadTestsFromNames(['test_parent']);r=unittest.TextTestRunner(verbosity=2).run(s);sys.exit(not r.wasSuccessful())"
+  ],
+  "cwd": "/tmp/bw-cold-native-diagnostic-source-20261003",
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 6.5237139612436295,
+  "pinsEqual": true,
+  "cpuSeconds": 10,
+  "wallLimitSeconds": 30,
+  "fileBytes": 8388608,
+  "coreBytes": 0,
+  "niceIncrement": 10,
+  "blankHooks": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  },
+  "scope": "PURE_125_PARENT_AND_ARCHIVE_NO_NETWORK_RESTORE_NATIVE_OR_BUILD"
+}

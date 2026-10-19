@@ -1,0 +1,7 @@
+test_exact_held_lifecycle_and_fault_context_inverse (__main__.Controls.test_exact_held_lifecycle_and_fault_context_inverse) ... ok
+test_closed_fresh_source_roles_refuse_old_or_invented_artifact (__main__.Controls.test_closed_fresh_source_roles_refuse_old_or_invented_artifact) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.248s
+
+OK

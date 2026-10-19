@@ -1,0 +1,25 @@
+TAP version 13
+# test_actual_parent_success_writes_all_eighteen_progress_records (__main__.PureControls.test_actual_parent_success_writes_all_eighteen_progress_records) ... ok
+# test_held_schedule_and_cpu_gate_source_are_exact (__main__.PureControls.test_held_schedule_and_cpu_gate_source_are_exact) ... ok
+# test_native_full166_independent_totals_and_counter_refusals (__main__.PureControls.test_native_full166_independent_totals_and_counter_refusals) ... ok
+# test_owned_pending_audit_denies_before_setup_network_or_process (__main__.PureControls.test_owned_pending_audit_denies_before_setup_network_or_process) ... ok
+# test_scalar_projection_and_independent_setup_failure_guards (__main__.PureControls.test_scalar_projection_and_independent_setup_failure_guards) ... ok
+# test_whole_board_ram_complete_pio_and_js_counter_scope (__main__.PureControls.test_whole_board_ram_complete_pio_and_js_counter_scope) ... ok
+# ----------------------------------------------------------------------
+# Ran 6 tests in 0.320s
+# OK
+# Subtest: six pure compact paired policy controls; no guest
+ok 1 - six pure compact paired policy controls; no guest
+  ---
+  duration_ms: 636.112531
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 798.096581

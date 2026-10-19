@@ -1,0 +1,25 @@
+{
+  "total_count": 1,
+  "artifacts": [
+    {
+      "id": 11325808399,
+      "node_id": "MDg6QXJ0aWZhY3QxMTMyNTgwODM5OQ==",
+      "name": "paged-pagefault-one-correctness-37266253433-1",
+      "size_in_bytes": 11282682,
+      "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11325808399",
+      "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11325808399/zip",
+      "expired": false,
+      "digest": "sha256:3da1d6b9b3ce457ef2355e265fad9a5bea65dda583552b5fdb5f376f0f1d255e",
+      "created_at": "2026-10-05T05:06:25Z",
+      "updated_at": "2026-10-05T05:06:25Z",
+      "expires_at": "2027-01-03T05:05:39Z",
+      "workflow_run": {
+        "id": 37266253433,
+        "repository_id": 1327885818,
+        "head_repository_id": 1327885818,
+        "head_branch": "lane/386-paged-pagefault-hosted-source-20261005",
+        "head_sha": "0078f10c1710fb8a4eae4460f0d89fd3b2413b1d"
+      }
+    }
+  ]
+}

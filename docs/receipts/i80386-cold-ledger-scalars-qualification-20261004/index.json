@@ -1,0 +1,35 @@
+{
+  "scope": "Compact exact raw receipts; original official ZIP and raw worker remain canonical/external. No replay.",
+  "files": [
+    {
+      "path": "independent-qualification-audit.json",
+      "origin": "/tmp/native-cold-ledger-scalars-first-qualification-publication-20261004/independent-qualification-audit.json",
+      "bytes": 2527,
+      "sha256": "81948a5bcc32715cee07f90fc0b07e6d5400eb8d5ccc7a39baa407676101eecd"
+    },
+    {
+      "path": "root-cross-check.json",
+      "origin": "/tmp/native-cold-ledger-scalars-first-qualification-publication-20261004/root-cross-check.json",
+      "bytes": 777,
+      "sha256": "3d58a436927fcba02581c0c6ea8fab4e6aad3e2857d3c27e57959e70d520e2bb"
+    },
+    {
+      "path": "official-metadata.json",
+      "origin": "/tmp/native-cold-ledger-scalars-first-qualification-publication-20261004/official-metadata.json",
+      "bytes": 312,
+      "sha256": "d0a7186ba5c9362442a2a65d95fca413ea7c04f130c4cf08f3871a312c94ca7e"
+    },
+    {
+      "path": "members.json",
+      "origin": "/tmp/native-cold-ledger-scalars-first-qualification-publication-20261004/members.json",
+      "bytes": 11430,
+      "sha256": "93d8a1087cfab7678b171cb8cdff6d2d28156e45303e7a3d90a2140d1766d203"
+    },
+    {
+      "path": "host-before.json",
+      "origin": "/tmp/native-cold-ledger-scalars-first-qualification-publication-20261004/selected/cold-ledger-scalars-qualification/host-before.json",
+      "bytes": 9045,
+      "sha256": "daf39b6ee206b13a1a6025a2172c307e47fbdf4254cc7283379c0e6631a36047"
+    }
+  ]
+}

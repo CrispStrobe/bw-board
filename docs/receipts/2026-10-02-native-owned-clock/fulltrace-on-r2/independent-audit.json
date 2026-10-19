@@ -1,0 +1,16 @@
+{
+  "status": "PASS_ACTUAL_CAPTURE_PARITY_NOT_PERFORMANCE_QUALIFICATION",
+  "scope": "fulltrace-on",
+  "checks": 1876776,
+  "canonicalRows": 1649067,
+  "sourceRevision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "captureSha256": "8ef8d8773294af80936734f11254f853e9f75d8e87601a483c3921487f49c98c",
+  "clockTransfers": {
+    "transfers": "9204",
+    "commits": "8738",
+    "words": "201366"
+  },
+  "resumes": 439,
+  "snapshotProjection": "physical metadata only at native snapshot objects; strict160byte indexed-object/array bijection; every original field equal",
+  "scriptSha256": "76bd78df631d42c816d6f393e23cde766e4e002398a8406c015e616b96c229bf"
+}

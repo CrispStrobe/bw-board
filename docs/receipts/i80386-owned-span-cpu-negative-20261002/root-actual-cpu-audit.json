@@ -1,0 +1,35 @@
+{
+  "status": "ROOT_ACTUAL_CPU_ZIP_CAPTURE_AND_ARITHMETIC_PASS_KEEP_FE1",
+  "run": 37061280177,
+  "head": "d48ba37f4b38784757275b28f26da71bb9113c11",
+  "artifact": 11250412021,
+  "zipSha256": "075ff42a9194624ed4b157b57cc64d213ca61891023c74d5f820bb509a23e4f6",
+  "zipFilesExact": 187,
+  "fullSemanticCaptures": 18,
+  "storedNativeSnapshotsPerCapture": 8,
+  "producedSnapshotsPerChild": 445,
+  "samplesUs": {
+    "BASE": [
+      128404,
+      119753,
+      119306,
+      117013,
+      118311,
+      132341,
+      127119
+    ],
+    "SPAN": [
+      119143,
+      121212,
+      120741,
+      116968,
+      115050,
+      111422,
+      121308
+    ]
+  },
+  "meanReductionPercent": 4.221876098148214,
+  "favorablePairs": 5,
+  "adoption": false,
+  "physicalRTxClaim": false
+}

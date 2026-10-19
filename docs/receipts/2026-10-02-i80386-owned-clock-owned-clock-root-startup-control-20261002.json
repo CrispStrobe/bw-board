@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "control": "startup assembler ENOENT rejects and process exits without ten-second pending timer",
+  "elapsedSeconds": 0.4423060994595289,
+  "returncode": 0,
+  "stdout": "EXPECTED_STARTUP_REJECTION_AND_TIMER_CLEANUP\n",
+  "stderr": "",
+  "scope": "source-only startup failure; no native addon or CPU execution"
+}

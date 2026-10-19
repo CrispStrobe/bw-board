@@ -1,0 +1,48 @@
+{
+  "argv": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "--test-name-pattern=^(?!bounded actual private JS).*$",
+    "test/i80386-paged-pagefault-source.test.mjs"
+  ],
+  "cwd": "/tmp/bw-native-paged-pagefault-source-20261005",
+  "head": "75be9c4aaa9fe08ff2adbffa47ff8cc1335b19d2",
+  "mode": "controls",
+  "sourceCount": 51,
+  "scope": "five manufactured/source cases + one actual factory/reset/stage zero instruction; no guest instructions",
+  "environment": {
+    "PATH": "/tmp/node-v22.23.3-linux-x64/bin:/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "TMPDIR": "/tmp",
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": "",
+    "PYTHONPATH": "",
+    "PYTHONHOME": "",
+    "PYTHONSTARTUP": "",
+    "PYTHONINSPECT": ""
+  },
+  "absentCompilerVariables": [
+    "GCC_EXEC_PREFIX",
+    "COMPILER_PATH",
+    "LIBRARY_PATH",
+    "CPATH",
+    "C_INCLUDE_PATH",
+    "CPLUS_INCLUDE_PATH",
+    "OBJC_INCLUDE_PATH"
+  ],
+  "limits": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "nice": 10
+  },
+  "wait4Scope": "leader plus reaped descendants; whole-child setup/test CPU, no execution-phase speed claim"
+}

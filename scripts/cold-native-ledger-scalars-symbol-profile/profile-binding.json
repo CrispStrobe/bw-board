@@ -1,0 +1,25 @@
+{
+  "schema": "bw.cold-ledger-scalars.native-symbol.source.v1",
+  "status": "ROOT_REVIEWED_NATIVE_SYMBOL_DIAGNOSTIC_READY",
+  "baseWorkerRevision": "06581f3831aa765933b1d160a41ab37b1b652913",
+  "baseSourceSha256": "3e0bb128aa00ea763125d2cc6f0af2ab7ac752de05a3485acc9432f89a799e9d",
+  "compiledRevision": "85fc1599af0ee71e32208da9d36caac86daa3b8c",
+  "addonSha256": "7de755f02b385149e17abfb086972bc73cbcb3fac5294f758eda5a4ab97d2351",
+  "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "targetN": 316562,
+  "targetQ": 316562,
+  "heldContextSha256": "b285a114e3a25eeb72dcea358e8acf9aa0418db8831b3ac6f17f9145d4c096e1",
+  "qualificationAuditSha256": "81948a5bcc32715cee07f90fc0b07e6d5400eb8d5ccc7a39baa407676101eecd",
+  "pairedAuditSha256": "4f9b86de87093d69dbfbbc57d2dd56ce9dc2249578f003e97e44b02ff1311a46",
+  "capabilityPins": {
+    "capability-result.json": "12096977ce412a952d335885aa9cfe3d304209bcd5e644b2d228e1041218155f",
+    "capability-audit.json": "97187580ff9b412bdef2dc8799d2b900eb7a5ca5dc78ce37b4257615ea9c8c9e",
+    "capability-artifacts.json": "c424a1fef38170aeb41f665378dc1707ab443411cf5a91120891eb00a2c5dac6",
+    "capability-version.stdout": "c3e20cd8f7c7ec7e2abfbaec586a6c12a2b9ff25d645ad0df87816bf02b9e01b"
+  },
+  "perfElfSha256": "5fb08c90293471b24086be829f4da4707ecc83101945868101964be48267ab71",
+  "output": "/home/runner/work/_temp/cold-ledger-scalars-native-symbol/worker-output/receipt",
+  "clockProof": "PENDING; conservative enable/disable acknowledgement window only",
+  "defaultEnabled": false,
+  "qualifierSourceContextSha256": "3eccfa0968edb9f15fc6823f84e8b829b02a514dca5bce091441a6011d7230e2"
+}

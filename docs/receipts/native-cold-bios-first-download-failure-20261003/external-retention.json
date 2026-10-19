@@ -1,0 +1,12 @@
+{
+  "scope": "Complete original official result ZIP retained externally; no source-packet/binary ZIP duplication in repository",
+  "path": "/tmp/native-cold-native-first-diagnostic-publication-20261003/official-artifact.zip",
+  "runId": 37106448211,
+  "head": "e4114004a49395d2494f201087488fc4dde522a8",
+  "artifactId": 11267273346,
+  "bytes": 1395047,
+  "digest": "sha256:d0c0b583bf0666a3e7d53ed358e66713c6ccf9fcd8b8f7afeee22f02b64d268d",
+  "expiresAt": "2027-01-01T07:28:18Z",
+  "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37106448211/artifacts/11267273346",
+  "omittedSourcePackets": "Full compiled124/driver52/tooling bytes remain in original ZIP; hashes and audit authenticate frozen Git identities."
+}

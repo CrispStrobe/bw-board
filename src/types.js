@@ -1,0 +1,193 @@
+/**
+ * bw-board type definitions — boundary A (MCU ⇄ board) and boundary B (board ⇄ UI).
+ *
+ * These are the contract. See /simulation-contract.md for the reasoning.
+ * No implementation here — just the shapes that both sides must agree on.
+ *
+ * @module
+ */
+
+// ─── Boundary A — the pin bus (MCU ⇄ board) ────────────────────────────────
+
+/**
+ * Pin identifier, e.g. "P1.0", "P3.2".
+ * @typedef {string} PinId
+ */
+
+/**
+ * The four STC12 port modes. Each is a different Thévenin equivalent.
+ *   quasi       — strong pull-down, weak pull-up (~230 µA). Reset default.
+ *   pushpull    — strong both ways.
+ *   input       — high impedance, drives nothing.
+ *   opendrain   — strong pull-down, no pull-up at all.
+ *
+ * @typedef {'quasi' | 'pushpull' | 'input' | 'opendrain' | 'input-pullup' | 'input-pulldown'} PinMode
+ */
+
+/**
+ * What the MCU tells the board.
+ *
+ * @typedef {object} McuToBoard
+ * @property {(pin: PinId, mode: PinMode, driveHigh: boolean) => void} setPin
+ *   The MCU changed what it does to a pin: its mode, its driven level, or both.
+ *   A write to PxM0/PxM1 is a pin event, not just a write to Px.
+ * @property {(tNs: bigint) => void} advanceTo
+ *   Time has passed. Nanoseconds since reset; the board integrates RC/audio up to here.
+ */
+
+/**
+ * What the board answers.
+ *
+ * @typedef {object} BoardToMcu
+ * @property {(pin: PinId) => (0 | 1)} readPin
+ *   The resolved logic level the MCU would read back on that pin.
+ * @property {(pin: PinId) => number} readAnalog
+ *   The ADC input as a voltage, 0…VCC. The MCU scales it to counts itself.
+ */
+
+// ─── Thévenin model ─────────────────────────────────────────────────────────
+
+/**
+ * A Thévenin equivalent source: open-circuit voltage and series resistance.
+ * 'high-z' means the source is disconnected (input-only mode, or open-drain driving 1).
+ *
+ * @typedef {{ vTh: number; rTh: number } | 'high-z'} TheveninSource
+ */
+
+// ─── Boundary B — parts, probes and transducers (board ⇄ UI) ───────────────
+
+/**
+ * @typedef {'vcc' | 'gnd' | 'resistor' | 'capacitor' | 'diode' | 'led'
+ *   | 'potentiometer' | 'button' | 'switch' | 'buzzer' | 'mcu'
+ *   | 'npn' | 'pnp' | 'ldr' | 'ntc' | 'inductor' | 'zener'
+ *   | 'seven_segment' | 'rgb_led'
+ *   | 'nmos' | 'pmos' | 'opamp' | 'vsource' | 'isource'
+ *   | 'shift_register' | 'char_lcd' | 'led_matrix' | 'led_cube'
+ *   | 'ir_receiver' | 'temp_sensor' | 'eeprom'
+ *   | 'gate_and' | 'gate_or' | 'gate_not' | 'gate_nand' | 'gate_nor' | 'gate_xor'
+ *   | 'relay' | 'dc_motor' | 'servo' | 'timer_555'
+ *   | 'battery' | 'vreg' | 'fuse'
+ *   | 'h_bridge' | 'stepper' | 'solenoid'
+ *   | 'ultrasonic' | 'pir' | 'tilt_sensor' | 'flex_sensor' | 'force_sensor' | 'phototransistor'
+ *   | 'neopixel' | 'bargraph'
+ *   | 'decade_counter' | 'dff' | 'jkff' | 'darlington_driver' | 'piezo'} PartKind
+ */
+
+/**
+ * A component on the board.
+ *
+ * @typedef {object} Part
+ * @property {string} id
+ * @property {PartKind} kind
+ * @property {Record<string, number | string>} params
+ *   Kind-specific parameters: {ohms} for resistor, {farads} for capacitor,
+ *   {vf, color} for LED, {ohms} for potentiometer, etc.
+ * @property {string[]} terminals
+ *   Terminal names: "a", "b", "wiper", or a PinId for the MCU part.
+ */
+
+/**
+ * A net connecting terminals of parts.
+ *
+ * @typedef {object} Net
+ * @property {string} id
+ * @property {Array<{part: string, terminal: string}>} terminals
+ */
+
+/**
+ * The board — boundary B interface.
+ *
+ * @typedef {object} Board
+ * @property {(parts: Part[], nets: Net[]) => void} setNetlist
+ * @property {(id: 'interactive-v1'|'interactive-v2'|'precision-v1', options?: {maxStepSec?:number}) =>
+ *   Readonly<Record<string, number|string>>} configureTransientAnalysis Select a fixed bounded integration profile
+ *   on a fresh board, optionally tightening (never widening) its maximum internal step.
+ * @property {() => {profile: Readonly<Record<string, number|string>>,
+ *   integrationMode: 'algebraic-direct'|'adaptive', accuracyMet: boolean|null,
+ *   stepBound: Readonly<{maxStepSec:number|null,basis:string[]}>,
+ *   failure: Readonly<Record<string, number|string>>|null,
+ *   work: Readonly<{attempts:number, solves:number, advances:number}>}} transientAnalysisStatus
+ *   Qualify whether the selected local-error target was met (`null` before work); an analysis must not claim a
+ *   numerical pass after a minimum-step, non-finite-error, or work-budget failure.
+ *
+ * @property {(net: string) => number} nodeVoltage
+ *   Volts at the named net.
+ *
+ * @property {(part: string, terminal: string) => number} branchCurrent
+ *   Amperes out of the named part terminal into its net. Requires MNA.
+ *   OP results explicitly use the opposite, positive-into-terminal convention.
+ *   Throws for explicitly indeterminate source/supply-symbol currents.
+ *
+ * @property {(net: string) => number} railCurrent
+ *   Total amperes delivered by an ideal supply rail into its net, independent
+ *   of the number/order of vcc symbols. Refuses unknown rails, failed solves
+ *   and conflicting rails; a known powered-off rail returns zero.
+ *
+ * @property {() => {analysis: {kind: 'dc-operating-point', scope: string,
+ *   supportedKinds: string[], capacitors: 'open', sources: 'fixed-dc-only',
+ *   controlledSources: 'ideal-explicit-finite-parameters-only',
+ *   inductors: 'exact-ideal-dc-short-explicit-henrys',
+ *   diodes: {model: 'explicit-shockley', parameters: string[],
+ *     thermalVoltage: number, temperatureModel: 'fixed'},
+ *   currentConvention: 'positive-into-part-terminal'}, converged: boolean,
+ *   nodeVoltages: Map<string, number>,
+ *   branchCurrents: Map<string, Map<string, number>>,
+ *   indeterminateBranchCurrents: Set<string>, railCurrents: Map<string, number>,
+ *   railConflicts: string[]}} operatingPoint
+ *   Non-mutating capacitor-open DC analysis for the explicitly reported
+ *   supported scope (static native R/C/L/V/I, exact ideal-DC inductors,
+ *   explicit finite-parameter Shockley diodes, and ideal finite-parameter
+ *   VCVS/VCCS). Result currents
+ *   are positive into each named terminal;
+ *   railCurrents are likewise positive into the ideal supply rail. Symbol
+ *   currents listed as indeterminate are not a physical current allocation;
+ *   unsupported, floating, or non-ideal circuit semantics throw rather than
+ *   being approximated.
+ *
+ * @property {(options?: {fallback?: 'refuse'|'proven-zero-state'}) => {analysis: object, converged: true,
+ *   nodeVoltages: Map<string, number>,
+ *   branchCurrents: Map<string, Map<string, number>>,
+ *   capacitorVoltages: Map<string, number>,
+ *   inductorCurrents: Map<string, number>}} initializeTransientFromOperatingPoint
+ *   Atomically adopt the strict source-on operating point as time-zero storage
+ *   state for a fresh non-UIC transient. A time-varying source is initialized
+ *   from its exact transient value at t=0; its separate `dcValue` belongs to
+ *   explicit DC/AC bias analysis and is never substituted here. Explicit
+ *   reactive initial conditions, advanced or already-reactive state, and every unsupported
+ *   operating-point topology refuse without mutation. The explicit
+ *   `proven-zero-state` fallback admits only a fresh grounded linear R/C/L/V/I
+ *   network whose independent sources are exactly zero at transient t=0; it
+ *   does not broaden the observational operating-point contract.
+ *
+ * @property {(a: string, b: string) => number | 'requires-power-off'} resistance
+ *   Resistance between two nets. Returns the reason, NOT a number, when the
+ *   board is powered. A real DMM measures resistance with the power OFF.
+ *
+ * @property {(part: string) => number} ledBrightness
+ *   0…1, current × PWM duty integrated over ~20 ms.
+ *
+ * @property {(pin: PinId, percent: number, opts?: {hz?: number, pulseUs?: number}) => boolean} setPwm
+ *   A PWM the host DRIVES on a pin (a timer the host cannot emulate): the board
+ *   switches the pin itself at real edge times inside advanceTo, so every
+ *   consumer sees true switching. See spec-updates/set-pwm.md.
+ *
+ * @property {(netA: string, netB?: string|null) => number} meterVoltage
+ *   What a DMM shows between two nets: the mean over the last 100 ms, so a
+ *   PWM net reads its average where nodeVoltage reads on or off. The first
+ *   read of a pair starts watching it and returns the instantaneous value.
+ *
+ * @property {(part: string, terminal: string) => number} meterCurrent
+ *   The same 100 ms mean of branchCurrent, for a DMM in series.
+ *
+ * @property {(part: string) => {hz: number, on: boolean}} buzzerTone
+ *   Frequency derived from toggle period. The UI feeds this to Web Audio.
+ *
+ * @property {(part: string, value: number) => void} setControl
+ *   User interaction: pot position 0…1, button 0/1, switch position.
+ *
+ * @property {(on: boolean) => void} setPower
+ */
+
+// ─── Exports (for documentation; this module defines only types) ────────────
+
+export {};

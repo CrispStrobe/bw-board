@@ -1,0 +1,12 @@
+{
+  "status": "PASS_INDEPENDENT_FIFTH_PRE_SNAPSHOT_FAILURE_AUDIT_ZERO_NATIVE",
+  "head": "0fadffe13532e428fdcb3717ee4790405cbdef85",
+  "artifactId": 11270163005,
+  "zipSha256": "sha256:7e444e4b07b5c9cc191984f78452ea31b38d401a7a6ab073477309da2b235c02",
+  "members": 87,
+  "failure": "Initial compiled-source snapshot missing rom-data-policy.mjs",
+  "stage": "Before artifact download/restoration/native",
+  "nativeChildren": 0,
+  "limit": "Full before/after source map unavailable because initial snapshot failed",
+  "reviewCorrection": "Prior migration peer review omitted governing workflow checkout ref. Stale a6fa checkout did not match contract7632/125."
+}

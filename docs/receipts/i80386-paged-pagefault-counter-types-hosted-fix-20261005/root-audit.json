@@ -1,0 +1,28 @@
+{
+  "status": "PASS",
+  "head": "3d5929fe79487d9ff9551a846ba35374737f261c",
+  "ownFiles": 13,
+  "compiledFiles": 243,
+  "driverFiles": 107,
+  "cases": 2,
+  "skips": 0,
+  "beforeAfterEqual": true,
+  "exit": {
+    "childStarted": true,
+    "exitCode": 0,
+    "finalizationErrors": [],
+    "leaderReaped": true,
+    "pid": 3925119,
+    "primaryError": null,
+    "rawWaitStatus": 0,
+    "rusage": {
+      "maxRSSKiB": 29184,
+      "scope": "wait4 leader plus descendants reaped by it; not every orphan process",
+      "systemSeconds": 0.046526,
+      "userSeconds": 0.48308799999999996
+    },
+    "timeout": false,
+    "wallSeconds": 5.93792512267828
+  },
+  "scope": "Two affected direct Python held inverse and driver authority controls; no guest."
+}

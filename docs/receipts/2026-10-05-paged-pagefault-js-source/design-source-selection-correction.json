@@ -1,0 +1,6 @@
+{
+  "status": "READ_ONLY_FILENAME_CORRECTION",
+  "initialMissingPath": "bochs/cpu/ctrl_regs.cc",
+  "actualPreparedPath": "bochs/cpu/crregs.cc",
+  "scope": "Initial source selection stopped at count assertion after five readable source files; no build/CPU/control occurred."
+}

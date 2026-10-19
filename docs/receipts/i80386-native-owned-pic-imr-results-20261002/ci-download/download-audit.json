@@ -1,0 +1,13 @@
+{
+  "status": "OFFICIAL_ZIP_DIGEST_SAFE_EXTRACT_AND_INVENTORY_PASS_NO_ADDON_LOAD",
+  "runId": 37027774273,
+  "headSha": "a45fc6f60cabf97e8230ff1bf49a0394bbaef622",
+  "artifactId": 11235962916,
+  "zipSha256": "9adece0d5c82360fa87e77cb7c2257f96f72113cff0b1215f53e06917d18fffd",
+  "zipBytes": 6722091,
+  "entries": 32,
+  "uncompressedBytes": 8638679,
+  "evidenceRoot": "/mnt/volume1/tmp-astra/native-owned-pic-imr-ci-build-download-20261002/files/owned-pic-imr-evidence",
+  "inventorySha256": "fb70d03644f4eab625ea1745c1a3ba83f167de69a270c40f6d457365b20bc36e",
+  "inventoryFiles": 28
+}

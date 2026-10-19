@@ -1,0 +1,44 @@
+{
+  "status": "ROOT_DIAGNOSTIC_NATIVE_STREAM_AND_WHOLE_RAM_REPLAY_PASS_NOT_QUALIFIED",
+  "captureSha256": "12893aa4a70ba90d9e78909d19734369bfc527e3e828cebc75cf662add96a8ec",
+  "journalSha256": "bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1",
+  "nativeTicks": 100684,
+  "quanta": 100682,
+  "journalRows": 209839,
+  "nativeWriteBytes": 16723,
+  "javascriptWriteBytes": 16743,
+  "settledWholeBoardEqual": true,
+  "orderedOutPortsEqual": true,
+  "nativeWholeRamSha256": "7aecf019a32f109760267d6ac1c60ef3d8793661910226cca3bcf5661189c38d",
+  "javascriptWholeRamSha256": "0194be01b176f034836acb514956f29b224b4cea87e92b1b7c50f0bb6cb951b7",
+  "hotTailOrderedWritesExactlyEqual": true,
+  "hotTailWriteBytes": 16396,
+  "ramDifferences": [
+    {
+      "address": 1297,
+      "native": 0,
+      "javascript": 3
+    },
+    {
+      "address": 1300,
+      "native": 240,
+      "javascript": 0
+    },
+    {
+      "address": 1301,
+      "native": 255,
+      "javascript": 0
+    },
+    {
+      "address": 1302,
+      "native": 255,
+      "javascript": 0
+    },
+    {
+      "address": 1303,
+      "native": 127,
+      "javascript": 0
+    }
+  ],
+  "scope": "actual c626 smoke; no normalization applied, no performance claim or full CPU qualification"
+}

@@ -1,0 +1,34 @@
+{
+  "schema": "cold-first-build-raw-summary.v1",
+  "sourceCount": 124,
+  "sourceRevision": "a6fae61a549d595c88a324f50589d92497040c07",
+  "bochsRevision": "0e45b736ef9792eb9b752b0a35db49eaf2faea47",
+  "addonSha256": "4b372f2d0e7b677c56e168a0da791c1c0aeaae391eb6a103507e383540281907",
+  "addonBytes": 2069552,
+  "receiptStatus": "BUILD_AND_STATIC_PREFLIGHT_PASS_NO_ADDON_LOAD_OR_GUEST",
+  "finalCompleted": true,
+  "finalResult": "COLD_BIOS_BUILD_AND_STATIC_PREFLIGHT_PASS_NO_ADDON_LOAD_OR_GUEST",
+  "frozenInputsBeforeAfterEqual": true,
+  "preparedInputsBeforeAfterEqual": true,
+  "configure": {
+    "exitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 16.45587072899997
+  },
+  "make": {
+    "exitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 40.82157908600004
+  },
+  "staticAdmission": {
+    "exitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 1.0183252150000044
+  },
+  "nodeVersion": "v22.23.3",
+  "compilerVersion": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+  "platform": "Linux runnervm8df0l 6.17.0-1022-azure #22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux",
+  "architecture": "x86_64",
+  "nodeAPIHeaderSHA256": "757bb6bf5ea89e173bad159bfc31d8a5840157694a9374f2c3276747ae061530",
+  "scope": "BUILD_AND_STATIC_PREFLIGHT_ONLY_NO_ADDON_LOAD_OR_GUEST"
+}

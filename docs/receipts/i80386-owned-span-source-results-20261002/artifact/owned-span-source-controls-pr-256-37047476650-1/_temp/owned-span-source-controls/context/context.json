@@ -1,0 +1,106 @@
+{
+  "recordedUtc": "2026-10-02T18:27:03.959379+00:00",
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+  "logicalCPUs": 4,
+  "blankEnvironment": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  },
+  "node": {
+    "path": "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "expectedVersion": "22.23.3",
+    "sha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48"
+  },
+  "publication": {
+    "command": [
+      "git",
+      "-C",
+      "/home/runner/work/bw-board/bw-board/publication",
+      "rev-parse",
+      "HEAD"
+    ],
+    "exitCode": 0,
+    "stdout": "6422a7824a1143f99d8ad206a41fb10146933840\n",
+    "stderr": ""
+  },
+  "baseline": {
+    "command": [
+      "git",
+      "-C",
+      "/home/runner/work/bw-board/bw-board/baseline",
+      "rev-parse",
+      "HEAD"
+    ],
+    "exitCode": 0,
+    "stdout": "fe1eff2039520536350922a2164c8bbe29404c68\n",
+    "stderr": ""
+  },
+  "helpers": {
+    "docs/receipts/2026-10-02-owned-span-source-preparation/prepare-hosted.py": "6df0c47a2b2fa4a478d8e1d6d997585a1a12f6152f0eda60ef8e8252fc987421",
+    "docs/receipts/2026-10-02-owned-span-source-preparation/run-controls.py": "ece144be20ab803aedf9ea4301429d284212d512174cd90ed192430cbbc633d2",
+    "docs/receipts/2026-10-02-owned-span-source-preparation/source-binding.json": "2bb29cbbbccebcb2d58c1631e316a66ed87e5012dae5af0c52d1d4ed91f80405",
+    ".github/workflows/i80386-owned-span-source-controls.yml": "8bc5369afcb1a50d84e0bfc5a60b77429d87dd8a95f06a370e6bf7e70ba89b70"
+  },
+  "toolchain": {
+    "as": {
+      "command": [
+        "/usr/bin/as",
+        "--version"
+      ],
+      "exitCode": 0,
+      "stdout": "GNU assembler (GNU Binutils for Ubuntu) 2.42\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis program is free software; you may redistribute it under the terms of\nthe GNU General Public License version 3 or later.\nThis program has absolutely no warranty.\nThis assembler was configured for a target of `x86_64-linux-gnu'.\n",
+      "stderr": ""
+    },
+    "ld": {
+      "command": [
+        "/usr/bin/ld",
+        "--version"
+      ],
+      "exitCode": 0,
+      "stdout": "GNU ld (GNU Binutils for Ubuntu) 2.42\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis program is free software; you may redistribute it under the terms of\nthe GNU General Public License version 3 or (at your option) a later version.\nThis program has absolutely no warranty.\n",
+      "stderr": ""
+    },
+    "objcopy": {
+      "command": [
+        "/usr/bin/objcopy",
+        "--version"
+      ],
+      "exitCode": 0,
+      "stdout": "GNU objcopy (GNU Binutils for Ubuntu) 2.42\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis program is free software; you may redistribute it under the terms of\nthe GNU General Public License version 3 or (at your option) any later version.\nThis program has absolutely no warranty.\n",
+      "stderr": ""
+    },
+    "nm": {
+      "command": [
+        "/usr/bin/nm",
+        "--version"
+      ],
+      "exitCode": 0,
+      "stdout": "GNU nm (GNU Binutils for Ubuntu) 2.42\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis program is free software; you may redistribute it under the terms of\nthe GNU General Public License version 3 or (at your option) any later version.\nThis program has absolutely no warranty.\n",
+      "stderr": ""
+    },
+    "objdump": {
+      "command": [
+        "/usr/bin/objdump",
+        "--version"
+      ],
+      "exitCode": 0,
+      "stdout": "GNU objdump (GNU Binutils for Ubuntu) 2.42\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis program is free software; you may redistribute it under the terms of\nthe GNU General Public License version 3 or (at your option) any later version.\nThis program has absolutely no warranty.\n",
+      "stderr": ""
+    }
+  },
+  "kernelFiles": {
+    "/proc/loadavg": "0.62 0.35 0.13 1/255 2545\n",
+    "/proc/meminfo": "MemTotal:       16372436 kB\nMemFree:        12452104 kB\nMemAvailable:   15187000 kB\nBuffers:           94852 kB\nCached:          2883436 kB\nSwapCached:            0 kB\nActive:           762948 kB\nInactive:        2504404 kB\nActive(anon):     343556 kB\nInactive(anon):        0 kB\nActive(file):     419392 kB\nInactive(file):  2504404 kB\nUnevictable:       46760 kB\nMlocked:           43688 kB\nSwapTotal:       3145724 kB\nSwapFree:        3145724 kB\nZswap:                 0 kB\nZswapped:              0 kB\nDirty:            319064 kB\nWriteback:             0 kB\nAnonPages:        324476 kB\nMapped:           318952 kB\nShmem:             45720 kB\nKReclaimable:     144928 kB\nSlab:             228464 kB\nSReclaimable:     144928 kB\nSUnreclaim:        83536 kB\nKernelStack:        4144 kB\nPageTables:         6300 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    11331940 kB\nCommitted_AS:    2006372 kB\nVmallocTotal:   13743895347199 kB\nVmallocUsed:       41536 kB\nVmallocChunk:          0 kB\nPercpu:             2224 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:     98304 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:     36864 kB\nFilePmdMapped:         0 kB\nCmaTotal:              0 kB\nCmaFree:               0 kB\nUnaccepted:            0 kB\nBalloon:               0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      146560 kB\nDirectMap2M:     5091328 kB\nDirectMap1G:    13631488 kB\n",
+    "/proc/pressure/cpu": "some avg10=0.06 avg60=1.09 avg300=0.79 total=3528473\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0\n",
+    "/proc/pressure/memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=0\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0\n",
+    "/sys/fs/cgroup/cpu.max": {
+      "error": "FileNotFoundError: [Errno 2] No such file or directory: '/sys/fs/cgroup/cpu.max'"
+    }
+  },
+  "scope": "Source-control context only; no CPU attribution, throughput or native runtime evidence."
+}

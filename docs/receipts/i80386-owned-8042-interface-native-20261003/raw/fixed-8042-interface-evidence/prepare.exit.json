@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=512",
+    "scripts/prepare-bochs-cpu3-native-owned-8042-interface.mjs",
+    "--prepare",
+    "/home/runner/work/_temp/fixed-8042-interface-prepared"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 0.9169557010000062,
+  "streams": {
+    "stdout": {
+      "bytes": 30843,
+      "sha256": "4a6d7706e18e332c9c552fa3423a3b6fd1be1fe0075d00d271332d236990fd43"
+    },
+    "stderr": {
+      "bytes": 664,
+      "sha256": "0f36516b349191872b6faeba04c7b45da786fa57ebd7d7dd8c8c84e091b11ee4"
+    }
+  }
+}

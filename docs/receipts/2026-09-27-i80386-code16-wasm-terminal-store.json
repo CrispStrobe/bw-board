@@ -1,0 +1,51 @@
+{
+  "date": "2026-09-27",
+  "baseCommit": "3dd295028143dd085429aeedc6c2e574ce78350a",
+  "scope": "Default-off terminal unprefixed MOV DS:[disp16],r16 in a code16 WASM block of at least two instructions; no ordinary CLI or production GUI wiring",
+  "wasmAbiVersion": 3,
+  "buildCommand": "clang --target=wasm32 -O3 -Wall -Wextra -Werror -nostdlib -Wl,--no-entry -Wl,--export-all -Wl,--import-memory -Wl,--global-base=16779264 -Wl,--initial-memory=16908288 -Wl,--max-memory=16908288 -o wasm/i80386-code16-wasm.wasm src/experimental/i80386-code16-wasm.c",
+  "sources": {
+    "src/experimental/i80386-code16-wasm-block.js": "sha256:d34e118b23f42ab24822bf9559bab11d723cb3ce65ad27246312589e511dc758",
+    "src/experimental/i80386-code16-wasm.c": "sha256:8e3acf8f9971dd46a58e72468a9a8ce70b3021be40923fd88080b555829a5333",
+    "wasm/i80386-code16-wasm.wasm": "sha256:364eb3d68824235f1cdd11c074e1918060bb4c29fdc83e4f5fc9cfd72b371aae",
+    "src/experimental/i80386-code16-data-window.js": "sha256:e3913610a8b8594e196d0756d7b3c499b0c39b75a08d48acd7047841d4e1505e",
+    "src/experimental/i80386-code16-ea.js": "sha256:087bb8fbeba2e963d792275ebd5ca964f0e7a68ef0ca185f24c6fb05283723d2",
+    "src/experimental/i80386-code16-window.js": "sha256:b792ba1593483ca628fe791b9a285996b2f6bd0c9413d0bb612ee5f2ff058637",
+    "src/experimental/i80386-at-machine.js": "sha256:0c15e925ec521be49ae82ecaeead74af3f2700eabc5f4c240a544b7fe554433c",
+    "src/experimental/i80386.js": "sha256:26d812a31ac63020d3f5ed899b441ae474c74c7f72c8a3ed4fadfe382d99ad19",
+    "src/i8086-machine.js": "sha256:90f6ad69ae6a23b4412e2632232461be0c4505a05d4e272650790cf941d45731",
+    "src/experimental/i80386-ram-bridge.js": "sha256:316725acd8934cea10abae2b4625d4840d1ad34d6a4c67e77dab519da24722ef",
+    "scripts/run-i80386-at-console.mjs": "sha256:def1fab11d0c1bf85707e9aec70e640fc6eb15d18ab89007380a74c391885d1f",
+    "test/i80386-code16-wasm-block.test.mjs": "sha256:a39535d2417148841ba21acd3f3b76cf39b565ceca0c129182828259f088ebb3",
+    "docs/I80386-CODE16-WASM-BLOCK.md": "sha256:29cb5554245da270b712811e544be08ace71afc69f15e5e269e4d79f1490e091"
+  },
+  "validation": {
+    "command": "node --test test/i80386*.test.mjs",
+    "tests": 456,
+    "passed": 452,
+    "failed": 0,
+    "skipped": 4,
+    "focusedWasmTests": 28,
+    "focusedPass": 28
+  },
+  "privateLongRunObservation": {
+    "measuredExecutionRevision": "9be51607cc323b32d251994cee405c142b9cfdeb",
+    "stepsPerRun": 60000000,
+    "normalizedGuestReportsEqual": true,
+    "normalizedGuestReportSha256": "ebd37f619ab5afc90177e51efdf2c7ea36d4895461ec66329b989d03af0b8fac",
+    "nativeInstructions": 5042482,
+    "nativeInstructionCoveragePercent": 8.40,
+    "nativeBlockCalls": 2345288,
+    "fallbackSteps": 54957518,
+    "boundaryExits": 180069,
+    "priorSliceNativeInstructions": 5039835,
+    "priorSliceNativeBlockCalls": 2344005,
+    "nativeInstructionGain": 2647,
+    "nativeBlockCallGain": 1283,
+    "ordinaryUserCpuSeconds": 79.20,
+    "optInUserCpuSeconds": 303.48,
+    "optInSlowdown": 3.83
+  },
+  "coherenceContract": "Both byte addresses are proved before store; only one physically contiguous kind-1 RAM page is admitted. A20-gated writes, tracked page-table pages, code overlap and all display/device/ROM regions are refused, so the board's skipped notePhysicalWrite and display/device paths have no guest-visible effect. Native store uses the live source register, leaves flags unchanged and ends the call; next call revalidates code bytes.",
+  "limitations": "This isolated opcode adds only 2,647 native instructions in the pinned 60M run and remains 3.83x slower than ordinary execution in user CPU time. It is correctness groundwork, unsuitable for performance; default execution is unchanged. Commercial media and raw reports remain private."
+}

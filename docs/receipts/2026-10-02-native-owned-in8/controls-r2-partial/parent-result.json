@@ -1,0 +1,23 @@
+{
+  "status": "PARTIAL_FAILED_PARENT_ASSERTION_NOT24PASS",
+  "parentExitCode": 1,
+  "completedChildren": 14,
+  "successfulParentCases": 13,
+  "failedCase": "in-reply-kind",
+  "observedEffect": {
+    "port": 64,
+    "width": 1,
+    "value": 50,
+    "n": 17,
+    "q": 17
+  },
+  "expectedByParent": {
+    "n": 18,
+    "q": 17
+  },
+  "scope": "Correct SIGABRT6 owned-IN8-callback observed; counter mismatch under investigation. No full guest or speed gate. Executed helpers retained unchanged.",
+  "parentStreams": {
+    "parent.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "parent.stderr": "3fc05c27e9d997d06a3f085bc3197447e4e2689c636ec9d6339534b74da3a0ee"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "status": "INDEPENDENT_INITIAL_PF_SOURCE_CONTROLS_SEVEN_PASS_ONE_FIXTURE_FAILURE_CONFIRMED",
+  "head": "65069876c60de32826427624bc41efb2a530fec1",
+  "sourcePaths": 105,
+  "prepostEqual": true,
+  "rawTests": 8,
+  "passes": 7,
+  "failures": 1,
+  "skips": 0,
+  "exitCode": 1,
+  "rawWaitStatus": 256,
+  "reaped": true,
+  "timeout": false,
+  "stderrBytes": 0,
+  "failure": "fifth comparable snapshot case: Missing expected exception",
+  "sourceCause": "fixture returns pages shared with js.pages; structuredClone retains alias, so mutation changes both comparison sides",
+  "rawExitWallSeconds": 4.91448094509542,
+  "finalAuthInclusiveWallSeconds": 7.048637369647622,
+  "conditionalIdentityExecuted": false,
+  "scope": "Manufactured/source controls only; no factory, addon, compiler or CPU execution",
+  "auditMethod": "Read retained packet only; no replay"
+}

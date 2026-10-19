@@ -1,0 +1,49 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-B",
+    "scripts/paged-pagefault-hosted/test_source.py",
+    "Controls.test_pending_or_null_authority_refuses_before_restoration_or_child",
+    "Controls.test_exact_held_lifecycle_and_fault_context_inverse",
+    "Controls.test_closed_fresh_source_roles_refuse_old_or_invented_artifact",
+    "Controls.test_current_git_and_dirty_checkout_are_refused",
+    "Controls.test_archive_and_lossless_transport_bounds",
+    "Controls.test_final_auth_and_spawn_refusal_keep_first_error"
+  ],
+  "bounds": {
+    "coreBytes": 0,
+    "cpuSeconds": 10,
+    "fileMiB": 16,
+    "memoryScope": "Python fixture has no heap cap; Node binary only pinned, not invoked",
+    "nice": 10,
+    "wallSeconds": 30
+  },
+  "compilerInjectionVariablesAbsent": [
+    "GCC_EXEC_PREFIX",
+    "COMPILER_PATH",
+    "LIBRARY_PATH",
+    "CPATH",
+    "C_INCLUDE_PATH",
+    "CPLUS_INCLUDE_PATH"
+  ],
+  "cwd": "/tmp/bw-native-paged-pagefault-hosted-source-20261005",
+  "environment": {
+    "BW_HOT_NAPI_PROFILE": "",
+    "LC_ALL": "C.UTF-8",
+    "LD_AUDIT": "",
+    "LD_PRELOAD": "",
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "NODE_V8_COVERAGE": "",
+    "PATH": "/usr/bin:/bin",
+    "PYTHONHOME": "",
+    "PYTHONINSPECT": "",
+    "PYTHONPATH": "",
+    "PYTHONSTARTUP": "",
+    "TMPDIR": "/tmp",
+    "TZ": "UTC"
+  },
+  "mode": "six-ready-manufactured-python-source-controls",
+  "scope": "six manufactured Python source/decoder methods; no Node invocation, download, restore, worker, factory, provider, addon or emulated instructions",
+  "sourceCount": 13
+}

@@ -1,0 +1,17 @@
+{
+  "firstBuild": {
+    "run": 37110636554,
+    "head": "d4281b28aa4b2e5913c006fb7b9e7b9f0773c1e3",
+    "artifactId": 11269357815,
+    "bytes": 7446420,
+    "sha256": "260bcaf91b360df209d7b1245bf6ae013ae069a0c1f2737a4e70c503cedd6931",
+    "retained": "/tmp/native-cold-native-rom-data-build-publication-20261003/official-artifact.zip"
+  },
+  "nativeAbort": {
+    "run": 37109832930,
+    "artifactId": 11269880360,
+    "bytes": 9794890,
+    "sha256": "8d090cee95dd06211142d8885db666521dfac8558e3189044e7cceffac45b110",
+    "retained": "/tmp/native-cold-native-fourth-diagnostic-publication-20261003/official-artifact.zip"
+  }
+}

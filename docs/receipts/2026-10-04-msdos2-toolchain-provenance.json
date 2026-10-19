@@ -1,0 +1,25 @@
+{
+  "scope": "read-only provenance check; no program execution",
+  "officialRevision": "2d04cacc5322951f187bb17e017c12920ac8ebe2",
+  "license": "https://github.com/microsoft/MS-DOS/blob/2d04cacc5322951f187bb17e017c12920ac8ebe2/LICENSE",
+  "files": {
+    "MASM.EXE": {
+      "bytes": 77440,
+      "sha256": "bf3399d0ec33fd97c3789887b336208d9f4900524609c04985e16a124cbf4449",
+      "source": "https://github.com/microsoft/MS-DOS/blob/2d04cacc5322951f187bb17e017c12920ac8ebe2/v2.0/bin/MASM.EXE",
+      "localBytesEqualOfficialRelease": true
+    },
+    "LINK.EXE": {
+      "bytes": 42368,
+      "sha256": "fe52892da7bd6832cb88a959cccd230f307e30c7c83a225b2e638f4ea25d76be",
+      "source": "https://github.com/microsoft/MS-DOS/blob/2d04cacc5322951f187bb17e017c12920ac8ebe2/v2.0/bin/LINK.EXE",
+      "localBytesEqualOfficialRelease": true
+    },
+    "EXE2BIN.EXE": {
+      "bytes": 1649,
+      "sha256": "80ac337843421764bb019845f9ef802d35ef642045026b1788373cea756201e2",
+      "source": "https://github.com/microsoft/MS-DOS/blob/2d04cacc5322951f187bb17e017c12920ac8ebe2/v2.0/bin/EXE2BIN.EXE",
+      "localBytesEqualOfficialRelease": true
+    }
+  }
+}

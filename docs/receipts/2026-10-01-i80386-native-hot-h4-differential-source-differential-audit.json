@@ -1,0 +1,8 @@
+{
+  "status": "H4_EXACT_SCALAR_ONLY_SOURCE_DIFFERENTIAL_PASS_NO_RUNTIME_CLAIM",
+  "checks": 12,
+  "baseNapiSha256": "a131583191a71a4a675c66339440d5ce6b4ae1332d5b14bef10d7a8d47e36c40",
+  "h4GeneratedNapiSha256": "b57a3cea1f5f5eea2092401f8dba3041eb0bc0d19551bf4273e66ad7372c60cb",
+  "unchanged": "every byte before and after scalar callback, including memory/PAGE ownership and all lifecycle/snapshot/export functions",
+  "delta": "scalar callback returns owned copied u32[3] via one dynamic JS packedScalar call; no profiler/key caching"
+}

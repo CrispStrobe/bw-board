@@ -1,0 +1,16 @@
+{
+  "command": [
+    "python3",
+    "/mnt/volume1/tmp-astra/native-owned-pic-imr-parity-prepared-20261002/run.py",
+    "fulltrace-on"
+  ],
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 46.137950368225574,
+  "terminatedDescendantPids": [],
+  "bindingSha256": "a746b53c7c5b89c58f1857e63689e39faa77fc73e6eddf93004fa6885416a894",
+  "streams": {
+    "stdout": "a5e01c6fa0ef12ad5494d22ce369d72bc0f9818acb118ac0b3e9d80f26a170e0",
+    "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

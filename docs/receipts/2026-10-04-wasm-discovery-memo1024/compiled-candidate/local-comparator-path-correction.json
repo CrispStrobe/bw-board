@@ -1,0 +1,11 @@
+{
+  "scope": "Local comparison path resolution, not a hosted inspection or engine failure",
+  "initialOutcome": "ENOENT for fast-root candidate pipeline before comparison receipt creation",
+  "initialPath": "/mnt/volume1/code/lego/labwired-same-host-20261003.R0T0cC/discovery-memo1024-cpu-inspection-20261004/pipeline.json",
+  "correction": "Add explicit fast-root compatibility symlinks to existing CIFS evidence directories, consistent with storage policy",
+  "dataDestination": "/mnt/storage/code/labwired-evidence/labwired-same-host-20261003.R0T0cC/discovery-memo1024-cpu-inspection-20261004",
+  "originalChunksModified": false,
+  "hostedInspectionRepeated": false,
+  "benchmarksRepeated": false,
+  "engineExecution": false
+}

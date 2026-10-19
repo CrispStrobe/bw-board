@@ -1,0 +1,13 @@
+{
+  "addon": "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-owned-clock-20261002/bochs/bw_direct.node",
+  "sha256": "144f3af7b906e46bfb68c10b991fef15847d81c60e7bb44820ee73653e723818",
+  "configuration": "/mnt/volume1/tmp-astra/native-owned-clock-build-20261002/guest-source.bochsrc",
+  "baseline": "/mnt/volume1/tmp-astra/js-hot-formal-final-20261001/capture.json",
+  "output": "/mnt/volume1/tmp-astra/native-owned-clock-alloc-trace-fast-20261002/actual/guest",
+  "nativeTrace": true,
+  "hostJournal": false,
+  "preparedManifest": "/mnt/volume1/tmp-astra/native-owned-clock-build-20261002/prepare.json",
+  "preparedManifestSha256": "7092cf5efdb3d68b65e2b4b8a91f726ae07516e8df0de4712eeb8c92c7369c28",
+  "buildReceipt": "/mnt/volume1/tmp-astra/native-owned-clock-build-20261002/build-static-preflight.json",
+  "buildReceiptSha256": "acebb536e93e6e74218057f18ae1e5a47d8f436e7aee212c0d82b8658d4e3da8"
+}

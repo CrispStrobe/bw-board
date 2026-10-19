@@ -1,0 +1,13 @@
+{
+  "command": [
+    "python3",
+    "-B",
+    "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/shallow-control.py"
+  ],
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 3.9016906060278416,
+  "beforeAfterIdentical": true,
+  "stdoutSha256": "3ac0ae01789cd5482520dd249946227d9061efedbfbb1f2812b0d448a160ead3",
+  "stderrSha256": "d6d8b4fb7f52ab1697027d4fff84b483697dd04f550c1e47735a51932b984552"
+}

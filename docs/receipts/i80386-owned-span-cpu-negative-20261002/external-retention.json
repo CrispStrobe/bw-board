@@ -1,0 +1,10 @@
+{
+  "officialActualCPUArtifact": {
+    "origin": "/mnt/volume1/tmp-astra/386-owned-span-cpu-hosted-actual-20261002/official-artifact.zip",
+    "runId": 37061280177,
+    "artifactId": 11250412021,
+    "bytes": 513822,
+    "sha256": "075ff42a9194624ed4b157b57cc64d213ca61891023c74d5f820bb509a23e4f6",
+    "scope": "Completeactual18childartifact retained externally; indexedextractednewactualfiles preserved losslessly."
+  }
+}

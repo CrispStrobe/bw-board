@@ -1,0 +1,203 @@
+{
+  "schema": "bw.bochs-cpu3-owned-paging-compare.v1",
+  "boardRevision": "9737a1cfe5da7f607d62d6f7fb36dc6287cd89e5",
+  "sourceHashes": {
+    "test/fixtures/i80386-bochs-cpu3-paging-v2.S": "1b0becee3682ba8c8fbc3a4d583dffb88f4a00b52d7eb77105b5ba0a0d5c929e",
+    "scripts/bochs-cpu3-owned-oracle-v2/instrument.cc": "d0b0512a128a9e94812254424129eb3ea0380e29806ecf65d458cebf199ae7be",
+    "scripts/bochs-cpu3-owned-oracle-v2/parse.mjs": "d432c3cd70c02be2da7f8d2175cec86951e9ed5c76c8d1c434885f80ee70caef",
+    "scripts/bochs-cpu3-owned-oracle-v2/patch.mjs": "717c7938343ae2da337029266e667a4f0d697f977dd4d0c90db725d34f2ecbc0",
+    "scripts/prepare-bochs-cpu3-owned-oracle-v2.mjs": "a71a0d6702c25c888461dd8f5b2a8cb2ed776afed4e212bbfbbda49f97437176",
+    "scripts/run-bochs-cpu3-owned-oracle-v2.mjs": "8925b2ef56eaf77862eff79db5d7028864bc7fb295fac1a10720928b37d17268",
+    "test/bochs-cpu3-owned-oracle-v2.test.mjs": "5fa48a66102096bef5c9b0d6a1e48ffadadc312d733d2a84253843c13b017f03",
+    "docs/I80386-BOCHS-CPU3-OWNED-MEMORY-ORACLE-V2.md": "d3186acbe52bb14a095bfd617cf42880b83a95321dc8b4682965f6bfaa3a9a4e",
+    "docs/receipts/2026-09-30-i80386-bochs-cpu3-owned-memory-v2.json": "0865be3b65043672d436b6716fc060795b0853cbac93d2f858f0bcf93f4e73f7",
+    "src/experimental/i80386.js": "6fba681208e1443cc9eff00ae6aba444903d23e5feafe62527b25428e72d60ed",
+    "scripts/compare-bochs-cpu3-owned-paging-v2.mjs": "8587a8f90b8b38f5e04456abbaf272631b6ef3f2af66378a4c50ddf9074462e9"
+  },
+  "nativeReceipt": "docs/receipts/2026-09-30-i80386-bochs-cpu3-owned-memory-v2.json",
+  "nativeBochsRevision": "0e45b736ef9792eb9b752b0a35db49eaf2faea47",
+  "nativeBinarySha256": "e2eba18cb55e36826d38783b07d9d55b3bfe596af646f6b68b16e61e2d11982b",
+  "imageSha256": "f209db76d5660e2abb17ff9929034723e0f90cbfefdee9a790d9e787b36c65b7",
+  "jsSetup": "strict386, explicit 80387 reset, direct owned post-load entry at 0000:7e00",
+  "jsSteps": 1847,
+  "marker": "BHPG004",
+  "comparison": {
+    "scope": "owned 4 KiB paging fixture after final E9 OUT: selected integer/system fields and three physical RAM words",
+    "status": "scoped-field-mismatch",
+    "mismatches": [
+      {
+        "field": "idtr.limit",
+        "reference": 65535,
+        "actual": 1023
+      }
+    ],
+    "compared": {
+      "registers": [
+        "eax",
+        "ecx",
+        "edx",
+        "ebx",
+        "esp",
+        "ebp",
+        "esi",
+        "edi"
+      ],
+      "eflagsDefined386Mask": 229335,
+      "cr0Defined386Mask": 2147483679,
+      "ramAddresses": {
+        "pde0": 36864,
+        "pte5": 40980,
+        "data5": 20480
+      }
+    },
+    "selectedState": {
+      "native": {
+        "eax": 287454004,
+        "ecx": 0,
+        "edx": 0,
+        "ebx": 0,
+        "esp": 28672,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 41984,
+        "eip": 32440,
+        "eflagsDefined386": 70,
+        "cr0Defined386": 2147483665,
+        "cr2": 0,
+        "cr3": 36864,
+        "gdtr": 32448,
+        "gdtrLimit": 23,
+        "idtr": 0,
+        "idtrLimit": 65535
+      },
+      "js": {
+        "eax": 287454004,
+        "ecx": 0,
+        "edx": 0,
+        "ebx": 0,
+        "esp": 28672,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 41984,
+        "eip": 32440,
+        "eflagsDefined386": 70,
+        "cr0Defined386": 2147483665,
+        "cr2": 0,
+        "cr3": 36864,
+        "gdtr": 32448,
+        "gdtrLimit": 23,
+        "idtr": 0,
+        "idtrLimit": 1023
+      }
+    },
+    "ramSnapshots": {
+      "native": {
+        "pde0": {
+          "physicalAddress": 36864,
+          "bytes": "23a00000",
+          "source": "checkpoint plain RAM snapshot, not a hook event"
+        },
+        "pte5": {
+          "physicalAddress": 40980,
+          "bytes": "63500000",
+          "source": "checkpoint plain RAM snapshot, not a hook event"
+        },
+        "data5": {
+          "physicalAddress": 20480,
+          "bytes": "44332211",
+          "source": "checkpoint plain RAM snapshot, not a hook event"
+        }
+      },
+      "js": {
+        "pde0": {
+          "physicalAddress": 36864,
+          "bytes": "23a00000"
+        },
+        "pte5": {
+          "physicalAddress": 40980,
+          "bytes": "63500000"
+        },
+        "data5": {
+          "physicalAddress": 20480,
+          "bytes": "44332211"
+        }
+      }
+    },
+    "raw": {
+      "eflags": {
+        "native": 70,
+        "js": 70
+      },
+      "cr0": {
+        "native": 4294967281,
+        "js": 2147483665
+      },
+      "debug": {
+        "native": {
+          "dr0": 0,
+          "dr1": 0,
+          "dr2": 0,
+          "dr3": 0,
+          "dr6": 4294909936,
+          "dr7": 1024
+        },
+        "js": {
+          "dr0": 0,
+          "dr1": 0,
+          "dr2": 0,
+          "dr3": 0,
+          "dr6": 0,
+          "dr7": 0
+        }
+      },
+      "nullSystemCaches": {
+        "nativeTr": {
+          "selector": 0,
+          "valid": 1,
+          "base": 0,
+          "limitScaled": 65535,
+          "present": 1,
+          "dpl": 0,
+          "segment": 0,
+          "type": 11,
+          "granularity": 0,
+          "default32": 0
+        },
+        "nativeLdtr": {
+          "selector": 0,
+          "valid": 1,
+          "base": 0,
+          "limitScaled": 65535,
+          "present": 1,
+          "dpl": 0,
+          "segment": 0,
+          "type": 2,
+          "granularity": 0,
+          "default32": 0
+        },
+        "jsTr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "jsLdtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        }
+      }
+    },
+    "excluded": [
+      "undefined/reserved CR0 and EFLAGS bits",
+      "undefined debug-register reset values",
+      "unloaded TR/LDTR hidden caches",
+      "Bochs internal segment-valid encodings",
+      "Bochs callback event order versus JavaScript bus order",
+      "all RAM outside the three selected plain-owned words",
+      "FPU/device state",
+      "instruction counts, timing, and full physical bus cycles"
+    ]
+  }
+}

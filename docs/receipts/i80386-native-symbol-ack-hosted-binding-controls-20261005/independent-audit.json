@@ -1,0 +1,13 @@
+{
+  "status": "INDEPENDENT_SAVED_HOSTED_ACK_BINDING_SOURCE_CONTROLS_PASS",
+  "revision": "12c678b4c0eafea2a13d4e9802f1f772c1040719",
+  "ownPaths": 15,
+  "rolePaths": 390,
+  "fullBeforeAfterEqual": true,
+  "externalNodeWrapper": 1,
+  "selectedPythonMethods": 2,
+  "staticGuard": "five held mechanics hash checks and disabled workflow",
+  "childExitWallSeconds": 0.3839982636272907,
+  "parentFinalAuthInclusiveWallSeconds": 4.0874262768775225,
+  "scope": "Saved metadata/mock controls; PENDING actual gate/manufactured READY positive; no setup/download/perf/provider/addon/guest/replay."
+}

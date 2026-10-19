@@ -1,0 +1,36 @@
+{
+  "schema": "bw.i80386.cold-owned-ram.admission-correction.v1",
+  "testedSourceRevision": "dd54cd321c6423d4e1191421961e78a37ec13390",
+  "providerSha256": "c7d6a5cdc6af2557ed8e03c83267ec85a2f9b336b89e3a0c8c9d1f923b4f7ba7",
+  "testSha256": "778d996588be26a864129adda17165a8ac99334d9e55bfaad7383c62f5ed1f4b",
+  "cpu3AddonSha256": "0323040b94db365ff66b51c7b0827c6fc07bd3ba4153eac80ee4023920a1ac3d",
+  "companionOwnedRamAddonSha256": "3d35c5a7170d761e15092f7c563cb22d0d5285dcee40e62b72332c7f6fbc5583",
+  "bochsConfigSha256": "16f392f1ab00f42ac8b3e1e44b2c3ec3af383560a2da83ea5bec1eb7abb1776b",
+  "predecessor": {
+    "revision": "b82ddc793d15fa2fdc0768a05695cc095849d744",
+    "adversary": "A pending native write is prematurely acknowledged by an invalid clock reason before refusal; expected acknowledgement 0, observed 1.",
+    "result": "FAIL"
+  },
+  "correctedAdversary": {
+    "result": "PASS",
+    "nodeTests": 3,
+    "denials": ["invalid clock reason and phase", "malformed tape and word", "Q greater than N", "N and Q per-run caps", "callback reentry", "invalid ROM page", "invalid scalar payload", "forbidden PIC acknowledgement"],
+    "assertions": "For every denied callback with one pending native write: no journal drain or acknowledgement, no board RAM or page-generation mutation, no N/Q mutation. A later valid transfer reconciles the write once."
+  },
+  "actualGuest": {
+    "fixture": "scripts/bochs-cpu3-native-cold-owned-ram/actual-fixture.mjs",
+    "comparison": "scripts/bochs-cpu3-native-cold-owned-ram/compare-fixtures.mjs",
+    "targetQuanta": 316562,
+    "bothArmsExitedZero": true,
+    "parity": "PASS",
+    "nativeTicks": 316562,
+    "successfulQuanta": 316562,
+    "resumesPerArm": 16524,
+    "orderedPioEventsPerArm": 16475,
+    "fullNativeWordsAtEachOfResetLastFinal": 166,
+    "wholeFinalRamSha256": "af0c07fc87959f6481ab7611967ac40a2c8d3d5fa14beac0979cc99e95913f02",
+    "ownedReportSha256": "62a7ce5f0ae4e139003b2876410c83ff08281088c620a22c80b3d7a6b0329254",
+    "callbackReportSha256": "6884a1c39f9e3d0f58c4180c2b2b3d387f46216d1cf66f348dcfe72972343b88"
+  },
+  "scope": "Local actual free BIOS cold guest; the correction preflights malformed clock tapes, page/scalar arguments, reentry and forbidden PIC ACK before native journal acknowledgement. Stateful board PIO errors after valid argument admission remain outside this denial assertion. CPU3 memory callbacks still cross JavaScript; no measured speed improvement, new clock authority or wider PC qualification is claimed."
+}

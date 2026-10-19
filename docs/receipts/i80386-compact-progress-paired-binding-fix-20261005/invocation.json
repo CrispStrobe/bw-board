@@ -1,0 +1,37 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "--test-name-pattern=^real retained setup binding assembly",
+    "test/i80386-cold-compact-progress-paired-source.test.mjs"
+  ],
+  "cwd": "/tmp/bw-native-compact-progress-paired-binding-fix-20261005",
+  "revision": "35d1f7bef9339e75410bbea22cd1f5a43f084cc3",
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "niceIncrement": 10,
+    "pythonMemoryLimit": "not imposed; one Python pure method inherit process CPU/file limits; Node heap cap applies only to Node"
+  },
+  "blankHooks": [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "LD_PRELOAD",
+    "LD_AUDIT",
+    "BW_HOT_NAPI_PROFILE",
+    "NODE_V8_COVERAGE"
+  ],
+  "absentCompilerOverrides": [
+    "CPATH",
+    "CPLUS_INCLUDE_PATH",
+    "C_INCLUDE_PATH",
+    "GCC_EXEC_PREFIX",
+    "COMPILER_PATH",
+    "LIBRARY_PATH"
+  ],
+  "scope": "One selected Node wrapper forwarding the production binding assembly regression on the exact retained first-failure descriptor and authenticated qualifier contract; no historical six-method rerun. No setup/restore/addon/provider/guest/compiler/perf"
+}

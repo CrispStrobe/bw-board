@@ -1,0 +1,118 @@
+{
+  "schema": "bw.exact-origin.receipts.v1",
+  "scope": "First actual run remained FAIL; native instruction/parity/closure extent unknown. No ZIP or guest capture copied into Git.",
+  "files": {
+    "run.json": {
+      "bytes": 12624,
+      "sha256": "0ec01866c6cddfcfcb79c62747f4c23798c5b50fd7789a56b1413692ad245886",
+      "origin": {
+        "path": "/tmp/native-paged-int-iret-first-execution-publication-20261004/run.json"
+      }
+    },
+    "official-zip.json": {
+      "bytes": 241,
+      "sha256": "b831eb162156234d0474625c3dcf4cd75a8dc4b950829a25e394ea0340dda2c8",
+      "origin": {
+        "path": "/tmp/native-paged-int-iret-first-execution-publication-20261004/official-zip.json"
+      }
+    },
+    "independent-audit.json": {
+      "bytes": 18809,
+      "sha256": "af75798dda891c5bee7eb22c6745839b633580b6fd627e624d024e167877c077",
+      "origin": {
+        "path": "/tmp/native-paged-int-iret-first-execution-publication-20261004/independent-audit.json"
+      }
+    },
+    "root-first-outcome-audit.json": {
+      "bytes": 504,
+      "sha256": "d7a0bb93a701046cdf4af4cc08bc1926a96eb86e20a77b595a98ab4971207924",
+      "origin": {
+        "path": "/tmp/native-paged-int-iret-first-execution-publication-20261004/root-first-outcome-audit.json"
+      }
+    },
+    "coder-actual-audit.json": {
+      "bytes": 21285,
+      "sha256": "c3805e40e161b3c1fc1ec24b24db7badac3704e209f23b4c9fac68b36e654fe6",
+      "origin": {
+        "path": "/tmp/native-paged-int-iret-first-execution-publication-20261004/coder-actual-audit.json"
+      }
+    },
+    "coder-actual-audit.py": {
+      "bytes": 3460,
+      "sha256": "845aebfed4797fe619cf3e7a5f02fcc2b785019d35e9fc3ccc380ec7aef97f42",
+      "origin": {
+        "path": "/tmp/native-paged-int-iret-first-execution-publication-20261004/coder-actual-audit.py"
+      }
+    },
+    "coder-parser-correction.json": {
+      "bytes": 205,
+      "sha256": "da59be1b49ca5ca490fa2023477305d82c4a7f2da095f3840c38c067e21437f5",
+      "origin": {
+        "path": "/tmp/native-paged-int-iret-first-execution-publication-20261004/coder-parser-correction.json"
+      }
+    },
+    "worker.stderr": {
+      "bytes": 1118,
+      "sha256": "5a284046f75f4a53a880b2921f28572655b88107677e997767cfb475ddc23572",
+      "origin": {
+        "zip": "/tmp/native-paged-int-iret-first-execution-20261004.zip",
+        "member": "_temp/paged-int-iret-execution/worker.stderr",
+        "zipSha256": "d22a80827878bb4ef3e767466bc702ea747f913db2a2bfda619bfab7cd477b8c"
+      }
+    },
+    "worker.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": {
+        "zip": "/tmp/native-paged-int-iret-first-execution-20261004.zip",
+        "member": "_temp/paged-int-iret-execution/worker.stdout",
+        "zipSha256": "d22a80827878bb4ef3e767466bc702ea747f913db2a2bfda619bfab7cd477b8c"
+      }
+    },
+    "worker.exit.json": {
+      "bytes": 1444,
+      "sha256": "da5da1683c70822b826dc08500953b304cdf0aeeed9a828cc2bf62018d2ea3a2",
+      "origin": {
+        "zip": "/tmp/native-paged-int-iret-first-execution-20261004.zip",
+        "member": "_temp/paged-int-iret-execution/worker.exit.json",
+        "zipSha256": "d22a80827878bb4ef3e767466bc702ea747f913db2a2bfda619bfab7cd477b8c"
+      }
+    },
+    "worker.invocation.json": {
+      "bytes": 644,
+      "sha256": "b9c5b7fcc7f8058b54e3bb8d86f8b7ecde09fda9a227a19ead3d77816eea831b",
+      "origin": {
+        "zip": "/tmp/native-paged-int-iret-first-execution-20261004.zip",
+        "member": "_temp/paged-int-iret-execution/worker.invocation.json",
+        "zipSha256": "d22a80827878bb4ef3e767466bc702ea747f913db2a2bfda619bfab7cd477b8c"
+      }
+    },
+    "final-status.json": {
+      "bytes": 828,
+      "sha256": "91365c18b072bda44e1149846e1a5ce68d55af8611c9524e6ca18c842d8efb77",
+      "origin": {
+        "zip": "/tmp/native-paged-int-iret-first-execution-20261004.zip",
+        "member": "_temp/paged-int-iret-execution/final-status.json",
+        "zipSha256": "d22a80827878bb4ef3e767466bc702ea747f913db2a2bfda619bfab7cd477b8c"
+      }
+    },
+    "worker-launch.json": {
+      "bytes": 81,
+      "sha256": "228b9320dd67aa51151b59de8a0efe53fb8c9bef104c022966376c0d4639086d",
+      "origin": {
+        "zip": "/tmp/native-paged-int-iret-first-execution-20261004.zip",
+        "member": "_temp/paged-int-iret-execution/worker-launch.json",
+        "zipSha256": "d22a80827878bb4ef3e767466bc702ea747f913db2a2bfda619bfab7cd477b8c"
+      }
+    },
+    "bochs.log": {
+      "bytes": 7377,
+      "sha256": "b44f6fc146cb962232dd252c11161eb7a28cce63d83a4cefed48e3bb64f24d00",
+      "origin": {
+        "zip": "/tmp/native-paged-int-iret-first-execution-20261004.zip",
+        "member": "_temp/paged-int-iret-execution/bochs.log",
+        "zipSha256": "d22a80827878bb4ef3e767466bc702ea747f913db2a2bfda619bfab7cd477b8c"
+      }
+    }
+  }
+}

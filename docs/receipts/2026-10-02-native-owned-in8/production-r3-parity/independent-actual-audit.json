@@ -1,0 +1,10 @@
+{
+  "status": "PASS_ACTUAL_IN8_R3_CI_FULL_NATIVE_CAPTURE_EXPLICIT_PROFILE_NOT_SPEED_GATE",
+  "checks": 520820,
+  "canonicalRows": 1649271,
+  "journalRows": 209871,
+  "clockRows": 201390,
+  "rawTraceSha256": "b3646e15a29a0d40f0e9ca8e93f82a28e20fd8caed3d30365f441446460eeda2",
+  "sourceRevision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "scope": "Whole stored166-native-word snapshots/descriptors/physicalcounts andRAM exact vsCAPOFF diagnostic; nativecanonical\u2194journal ordered clock/kind tuples exact; source-boundQthenN outcomes and32PIO currentattempt-minus1 exactJS. Productionexit0 with explicit rawresetprofile/canonicalRAM policy; independentOFF390check supplies JS mappedCPU/profile/wholeboards comparison. No rerun."
+}

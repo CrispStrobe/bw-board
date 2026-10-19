@@ -1,0 +1,3 @@
+# First real-mode RAM bootstrap evidence
+
+These 17 records are byte-exact copies of the retained official run and its read-only independent audits. `index.json` binds each record; `origins.json` identifies the unchanged external source. The official 9,500,151-byte ZIP is retained outside Git at `/tmp/native-ram-bootstrap-first-execution-publication-20261003/official-artifact.zip`, SHA `b8fbf9f03ec36a6626c11cfcc18ecae72924873c0dd44c7bcb73613b2ad98b15`, artifact `11280788469`. No addon or duplicate ZIP is committed. The capture retains the 21 native snapshots, JS counterparts, full boards and copied host-provider 4096-byte code pages. Native cache coherence is still source-attested; this is not a separate native-memory dump or performance gate.

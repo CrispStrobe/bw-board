@@ -1,0 +1,108 @@
+{
+  "schema": "bw.cold-three-arm.corrected-failure-public-records.v1",
+  "records": {
+    "run.json": {
+      "bytes": 12606,
+      "sha256": "8b72838069cf638e764c8cae2b9a8cbd6b4ac28dee0c809ebcac56e386657ed9",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/run.json"
+    },
+    "jobs.json": {
+      "bytes": 4392,
+      "sha256": "4c52ed6556d20a5fe292042f68811beee506de9af18cdfca27da1d26a7c50d27",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/jobs.json"
+    },
+    "artifacts.json": {
+      "bytes": 791,
+      "sha256": "3ffe738034008270bf8d2e9417d3ce9ad417912e1d16b6d059f80a095210f92b",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/artifacts.json"
+    },
+    "zip-retention.json": {
+      "bytes": 33998,
+      "sha256": "abe2fe5ab4713bae1c5e96cca90764b68d4372ad5b300752a9b9a3731afca797",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/zip-retention.json"
+    },
+    "corrected-failure-findings.json": {
+      "bytes": 39029,
+      "sha256": "c08dd5238562c05b914d074a1409cb4e1012f59941be1c22cfe0ea39cb948545",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/corrected-failure-findings.json"
+    },
+    "independent-corrected-qualification-audit.json": {
+      "bytes": 679,
+      "sha256": "da6a8ca17cf4746b108f52c2c3ddbb2772ef586d2392ad0ea9d82edab6619bb9",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/independent-corrected-qualification-audit.json"
+    },
+    "selected/_temp/cold-three-arm-context/parent.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/selected/_temp/cold-three-arm-context/parent.stdout"
+    },
+    "selected/_temp/cold-three-arm-context/parent.stderr": {
+      "bytes": 1123,
+      "sha256": "ec3b943c4e8e625eed7ed5e7a4b7a9eed169b0ab0b1201ed58cbca2cd7aa7c0c",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/selected/_temp/cold-three-arm-context/parent.stderr"
+    },
+    "selected/_temp/cold-three-arm-qualification/result.json": {
+      "bytes": 86145,
+      "sha256": "11656e2eaab30e875b8d80a0eb11c85f2b9752c3e0b033b0b6cee8c352697a26",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/result.json"
+    },
+    "selected/_temp/cold-three-arm-qualification/plain-JS/exit.json": {
+      "bytes": 415,
+      "sha256": "b50461fe9d7c2499459c6c0c39444997de39fb455c353431253c79d768ccc8ac",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/plain-JS/exit.json"
+    },
+    "selected/_temp/cold-three-arm-qualification/plain-JS/receipt/receipt.json": {
+      "bytes": 1472005,
+      "sha256": "9b2295ce780ae0ae3935b3ef19f0b2769b159e5c0080bd47b17d32d33f23b18f",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/plain-JS/receipt/receipt.json"
+    },
+    "selected/_temp/cold-three-arm-qualification/native-oneQ/exit.json": {
+      "bytes": 429,
+      "sha256": "f2da67bc41e90180bbf276b30956b54408bd4991f87b0ba835030227181b65ef",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/native-oneQ/exit.json"
+    },
+    "selected/_temp/cold-three-arm-qualification/native-oneQ/stderr": {
+      "bytes": 1255,
+      "sha256": "5ba5dbdd58368aa5bb1a63f999a14852ec4ce01941d13950004e7710ca2cbef9",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/native-oneQ/stderr"
+    },
+    "selected/_temp/cold-three-arm-qualification/native-oneQ/receipt/failure.json": {
+      "bytes": 3785070,
+      "sha256": "a67b610dde86676b5290a41104189dba21d9b1d67fdf6eaffbf283f5928047d5",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/native-oneQ/receipt/failure.json"
+    },
+    "selected/_temp/cold-three-arm-qualification/before-arms.json": {
+      "bytes": 210799,
+      "sha256": "0feefb74e70e1349cb6e4e72d409cbbff7485c7d6425939b6cd03cdb873c71c0",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/before-arms.json"
+    },
+    "selected/_temp/cold-three-arm-qualification/after-arms.json": {
+      "bytes": 210799,
+      "sha256": "0feefb74e70e1349cb6e4e72d409cbbff7485c7d6425939b6cd03cdb873c71c0",
+      "origin": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/selected/_temp/cold-three-arm-qualification/after-arms.json"
+    },
+    "single-after-dispatch-runs.json": {
+      "bytes": 12642,
+      "sha256": "98b8bbeff4ff2932c6ea65ab8e0e230a7e2007bde6aedc797b9ad603707b45d0",
+      "origin": "/tmp/native-cold-three-arm-corrected-retention-preparation-20261003/after-dispatch-runs.json"
+    },
+    "exact-head-checks-pass.json": {
+      "bytes": 42629,
+      "sha256": "f8c28f8fd9175cd88aac9bcf9962a89c34626071e410ae6aa8208f7ebb37e69e",
+      "origin": "/tmp/native-cold-three-arm-final-admission-source-freeze-20261003/exact-head-checks-pass.json"
+    },
+    "pr304-merged.json": {
+      "bytes": 174,
+      "sha256": "f65776fcb60d5f00dd38478dec9716a09e07f944862aa4687203e59502885978",
+      "origin": "/tmp/native-cold-three-arm-final-admission-source-freeze-20261003/pr304-merged.json"
+    }
+  },
+  "externalRetention": {
+    "path": "/tmp/native-cold-three-arm-corrected-qualification-publication-20261003/official-artifact.zip",
+    "bytes": 20036972,
+    "sha256": "1722b40f4396d7f7e6da2077a6f274cc7f8a7aaab714e241660fca99fbd0f87e",
+    "officialArtifact": 11273439966,
+    "officialDownload": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11273439966/zip"
+  },
+  "scope": "Byte-exact failed-run evidence. No three-arm PASS, speed or adoption claim."
+}

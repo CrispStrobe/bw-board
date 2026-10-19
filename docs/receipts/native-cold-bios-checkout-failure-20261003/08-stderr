@@ -1,0 +1,12 @@
+test_both_checkout_roles_follow_validated_contract (test_parent.Controls.test_both_checkout_roles_follow_validated_contract) ... ok
+test_disabled_never_downloads (test_parent.Controls.test_disabled_never_downloads) ... ok
+test_fixed_artifact_and_mode (test_parent.Controls.test_fixed_artifact_and_mode) ... ok
+test_nested_session_timeout_cleanup (test_parent.Controls.test_nested_session_timeout_cleanup) ... ok
+test_redirect_credentials_and_https (test_parent.Controls.test_redirect_credentials_and_https) ... ok
+test_setup_current_git_maps_reject_wrong_head_and_missing_input (test_parent.Controls.test_setup_current_git_maps_reject_wrong_head_and_missing_input) ... ok
+test_unfrozen_contract_refuses (test_parent.Controls.test_unfrozen_contract_refuses) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 3.945s
+
+OK

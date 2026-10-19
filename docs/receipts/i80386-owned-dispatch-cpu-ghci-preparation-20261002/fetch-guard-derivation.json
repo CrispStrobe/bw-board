@@ -1,0 +1,15 @@
+{
+  "status": "SOURCE_ONLY_TWO_CI_FETCH_GUARDS_AND_ADDITIVE_TOOLING_AUTH",
+  "executed37Archive": "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-prepared-20261002/source-check-executed37",
+  "originalSourceCheckBeforeAfterPreserved": true,
+  "changes": {
+    "workflows": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/x86-xv6.yml"
+    ],
+    "orchestrator": "toolingPaths includes both prerequisite workflows; no metric/schedule changes"
+  },
+  "newPinCount": 39,
+  "noRedundantControlRun": true,
+  "initialPackagingAssertion": "Tooling list substring matched twice; two workflow edits already applied, no controls or native executed during packaging."
+}

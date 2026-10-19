@@ -1,0 +1,10 @@
+{
+  "status": "PASS_ROOT_OFFICIAL_BYTES_AND_SOURCE_GUARDS",
+  "runId": 37207113095,
+  "artifactId": 11304886677,
+  "zipSha256": "cd972db5688862feb09001c0b68ec407d69ffa3c46f13de3b30befc52168ee02",
+  "members": 98,
+  "sourceRolePaths": 272,
+  "workerExitCode": 0,
+  "scope": "Lossless first artifact, original build ZIP and genuine prepost/Git/lifecycle checks; full saved-state policy separately PASS"
+}

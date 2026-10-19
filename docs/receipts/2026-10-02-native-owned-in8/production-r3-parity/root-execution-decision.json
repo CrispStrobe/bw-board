@@ -1,0 +1,8 @@
+{
+  "scope": "Execute reviewed fixed-ROM smoke-off then fulltrace-on once, after each preceding cell passes; no performance or full AT admission",
+  "bindingSha256": "8456f20889e5c7405aecc04ba018108e724cfbfc6cce1e11d7dd7427f2e8b8e2",
+  "independentReadinessAuditSha256": "0e4e4b259d9d12cbf51a23831b2818cae7b40bd1a712da8a3ab96696b497f16e",
+  "ciRun": 37006765968,
+  "runtimeRevision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "priorRootPreflight": "Earlier stale ab3e130b hash assertion failed before any child or approval; final coder metadata plan and peer review now both bind8456f208"
+}

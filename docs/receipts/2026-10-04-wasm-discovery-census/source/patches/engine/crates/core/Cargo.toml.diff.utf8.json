@@ -1,0 +1,7 @@
+{
+  "schema": "labwired.lossless-utf8.v1",
+  "bytes": 281,
+  "sha256": "36dae360cdbaea19d27749e532f93c2706a40c27a70e3263bb14b49f761655d3",
+  "encoding": "utf8",
+  "text": "diff --git a/crates/core/Cargo.toml b/crates/core/Cargo.toml\nindex 58b2c712..91627315 100644\n--- a/crates/core/Cargo.toml\n+++ b/crates/core/Cargo.toml\n@@ -67,0 +68,2 @@ default = []\n+# Explicit measurement-only instrumentation; never enabled by default.\n+t16-discovery-census = []\n"
+}

@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "/mnt/volume1/tmp-astra/native-owned-dispatch-runtime-prepared-20261002/authenticate.mjs"
+  ],
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 14.516198579221964,
+  "beforeAfterIdentical": true,
+  "stdoutSha256": "e0dfaa3b9470211b4333f5a73e5d31283d3b827b8472e8f7cc177eba4d07d759",
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

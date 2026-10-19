@@ -1,0 +1,63 @@
+{
+  "schema": "bw.xv6-stock-usertests-224m-6b-budget-public.v1",
+  "runId": 36495380872,
+  "boardRevision": "6d4b2be74a4d9bcb8dc7282b2c1dd58f7aa4eb16",
+  "xv6SourceRevision": "eeb7b415dbcb12cc362d0783e41c3d1f44066b17",
+  "sourceSha256": {
+    "scripts/probe-xv6-stock.mjs": "c156e03cbfaf7112fb9448cfd6bfdd4fdd390e1e0c254a7c947e252e75cc69d6",
+    "scripts/lib/xv6-serial-tee.mjs": "99a6a0bbddd6aa1c6a0315554d7bac21c0158f32bf1a600e1cf72f02072d35cc",
+    "src/experimental/i80386.js": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2",
+    "src/experimental/i80386-at-machine.js": "6c5f12cc92ba7219ed4b53f6237622f6ce58269402ee14770791e04c68f93cb0",
+    "src/i8086-machine.js": "7cf7fdf4e6de451071809e32e128aa0ac663524eaf8b2e08581780b0ec4f167c"
+  },
+  "probeWrapperSha256": "666abcdfe852d2eadade6f607a991709cf4544f10a47e05940017713668a6ef8",
+  "mediaSha256": {
+    "rom": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "vgaRom": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1",
+    "bootImage": "de7f0e4aab39c0fc6d21aa283943e8dfe6420ef0806df87efb21bf336e1a353a",
+    "filesystemImage": "0b86e83c68d45d34fd0cecddd627b2d71893ab9df7d77d5372941c701d4eae22",
+    "kernel": "10bf65351fe69951a42673bc314049c15a1432cd5cdab004df5e7268cff8eafb"
+  },
+  "stepBudget": 6000000000,
+  "completedSteps": 6000000000,
+  "elapsedWallSeconds": 2921.872,
+  "markerSerialPositions": {
+    "createdelete ok\n": 193,
+    "linkunlink ok\n": 225,
+    "concreate ok\n": 254,
+    "sbrk test OK\n": 3813,
+    "mem ok\n": 4208,
+    "pipe1 ok\n": 4215,
+    "preempt ok\n": 4249,
+    "exitwait ok\n": 4260,
+    "fork test OK\n": 4492,
+    "bigdir test\n": 4505
+  },
+  "missingMarkers": [
+    "bigdir ok\n",
+    "ALL TESTS PASSED\n$ "
+  ],
+  "stop": "budget-before-full-suite-marker",
+  "fullUsertestsPassed": false,
+  "serialComparison": {
+    "serialTeeEqualsRawReport": true,
+    "serialByteLength": 4517,
+    "serialSha256": "b6d297104179ad9c3901b307c6fd4cdd6a0bb532befc5dc9f7dea99cbee88813",
+    "threeBSerialIsExactPrefix": true,
+    "threeBSerialByteLength": 4208,
+    "leadingBoardByte": "0x0c",
+    "qemuOraclePrivateCommit": "88f242401ac01e96e579f971228dd06d89841ae0",
+    "qemuOracleSerialByteLength": 4658,
+    "qemuOracleSerialSha256": "a60b4272f7e6ec98bf10fb598c1976021354bb9af3fce19f792602175928efc8",
+    "boardAfterLeadingByteIsExactQemuPrefix": true,
+    "boardPrefixCompleteLineCount": 120,
+    "qemuOracleLineCount": 127
+  },
+  "privateEvidence": {
+    "commit": "b944cbfae8e1167e796418269ef9be39eca0c01f",
+    "rawReportSha256": "f9b3425ab44ad6cc2a76d343ca8ba6747057695a1e28fd9ae921f41bd4b8dd4b"
+  },
+  "workflowConclusion": "failure",
+  "probeExitStatus": 1,
+  "limitations": "The 6B-step board run stopped inside bigdir test. Source-ordered prefix agreement with the independent QEMU oracle does not establish board full-suite completion or performance parity. Raw serial, host logs, and guest media are not in this public receipt."
+}

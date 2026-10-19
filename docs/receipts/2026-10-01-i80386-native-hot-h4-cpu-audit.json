@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "checks": 1665,
+  "summarySha256": "6f508677e6c42d8d84021dc8d1df7d4371d3e4ade7d656552682e3adb3c45680",
+  "auditScriptSha256": "84d50154ea702aa1f17935562f173820ae8349197475a8f395c7a3f0cab522e2",
+  "meanCpuTotalUs": {
+    "H3": 580046.5714285715,
+    "H4": 502477.4285714286
+  },
+  "meanCpuReduction": 0.13372916361888187,
+  "allSevenFavorable": true,
+  "predeclaredCriterionMet": true,
+  "scope": "Process-wide CPU all threads; whole candidate bridge/protocol comparison, shared CPU/cache/GC; no physical RTx or pure-engine claim."
+}

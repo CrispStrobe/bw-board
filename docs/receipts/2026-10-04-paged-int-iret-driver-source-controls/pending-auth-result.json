@@ -1,0 +1,9 @@
+{
+  "beforeAfterEqual": true,
+  "finalizationErrors": [],
+  "mode": "conditional-readonly-identity",
+  "primaryError": null,
+  "scope": "manufactured/read-only source proof; no factory/provider/addon/emulated instruction",
+  "sourceCount": 80,
+  "status": "READONLY_SOURCE_AUTH_PASS"
+}

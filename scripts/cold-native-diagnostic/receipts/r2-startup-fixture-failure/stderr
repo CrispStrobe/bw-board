@@ -1,0 +1,23 @@
+..E.
+======================================================================
+ERROR: test_nested_session_timeout_cleanup (__main__.Controls.test_nested_session_timeout_cleanup)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-diagnostic/test_parent.py", line 22, in test_nested_session_timeout_cleanup
+    self.assertTrue(r['timedOut']);self.assertIn(int(pid.read_text()),r['terminatedPids'])
+                                                     ~~~~~~~~~~~~~^^
+  File "/opt/miniconda/lib/python3.13/pathlib/_local.py", line 546, in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/miniconda/lib/python3.13/pathlib/_abc.py", line 632, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/miniconda/lib/python3.13/pathlib/_local.py", line 537, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmpaxpeyen2/nested.pid'
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.558s
+
+FAILED (errors=1)

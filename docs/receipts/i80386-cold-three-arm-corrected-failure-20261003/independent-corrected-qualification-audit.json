@@ -1,0 +1,13 @@
+{
+  "status": "PASS_INDEPENDENT_CORRECTED_QUALIFICATION_FAILURE_AUDIT",
+  "members": 181,
+  "qualifiedArms": [
+    "plain-JS"
+  ],
+  "nativeOneQReturnedExtent": 316562,
+  "nativeBatchedExecuted": false,
+  "nativeOneQRetainedTerminalEvidence": "Raw166 lastreturn/inspect/eighth equal; fullsettledboard/rawRAMhash/full16475PIO independently match, but worker fails live Uint8Array-vs-Array guard before success.",
+  "cause": "NAPI copied() produces napi_uint8_array; JSON serializer projects it to array. Array.isArray live guard invalid.",
+  "finalAuthenticationExact": true,
+  "scope": "No complete three-arm PASS or benchmark. All failure evidence preserved; no guest retry."
+}

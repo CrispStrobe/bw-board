@@ -1,0 +1,64 @@
+{
+  "schema": "bw.bochs-cpu3-owned-integer-compare.v1",
+  "boardRevision": "485b72af12a115d9a6d6c9da33ab04c47c3456d5",
+  "sourceHashes": {
+    "test/fixtures/i80386-vm-task.S": "4c7d5e77fcc8b5f9d97c0325e03dbb3732402b8d855a5fd553446c850a690972",
+    "docs/receipts/2026-09-30-i80386-bochs-cpu3-owned-native-checkpoint.json": "0a4509eb64cf9d3ac1d044947297543c3e06c8aa1a81ae02e00add6faf9d3ca9",
+    "src/experimental/i80386.js": "6fba681208e1443cc9eff00ae6aba444903d23e5feafe62527b25428e72d60ed",
+    "scripts/compare-bochs-cpu3-owned-integer-state.mjs": "a171ac018c7a2b197b70de91551862a5463402a9637cb8e22c46a2084a1c3a1b"
+  },
+  "nativeReceipt": "docs/receipts/2026-09-30-i80386-bochs-cpu3-owned-native-checkpoint.json",
+  "nativeBochsRevision": "0e45b736ef9792eb9b752b0a35db49eaf2faea47",
+  "nativeBinarySha256": "209ec4ef28fa0f0e1f458d0515aeb916bc87ffbdae8d50b4cf4be8d60f43be19",
+  "imageSha256": "3f52637b99e7dac85e052e212ce4f520c64ad9116b83c4e67a648cb18ed513ae",
+  "jsSetup": "explicit 80387 reset; direct post-load entry at 0000:7e00",
+  "jsSteps": 37,
+  "marker": "BHVK003",
+  "comparison": {
+    "scope": "owned VM86 fixture integer/system fields at final E9 OUT",
+    "status": "scoped-fields-match",
+    "mismatches": [],
+    "cr0": {
+      "defined386Mask": 2147483679,
+      "nativeRaw": 2147483641,
+      "jsRaw": 25,
+      "rawEqual": false,
+      "nativeReservedHigh": 2147483616,
+      "jsReservedHigh": 0,
+      "etNative": 1,
+      "etJs": 1
+    },
+    "debug": {
+      "native": {
+        "dr0": 0,
+        "dr1": 0,
+        "dr2": 0,
+        "dr3": 0,
+        "dr6": 4294909936,
+        "dr7": 1024
+      },
+      "js": {
+        "dr0": 0,
+        "dr1": 0,
+        "dr2": 0,
+        "dr3": 0,
+        "dr6": 0,
+        "dr7": 0
+      },
+      "comparison": "raw values reported only: 80386 reset leaves debug-register contents unspecified"
+    },
+    "internalVm86Cache": {
+      "nativeCsType": 3,
+      "jsCsCode": true,
+      "comparison": "different internal encodings; selector/base/limit/presence/default32 compared above"
+    },
+    "excluded": [
+      "TSS RAM and page hashes",
+      "FPU/device state",
+      "instruction counts and timing",
+      "Bochs hook stream versus board byte bus order",
+      "undefined reset debug-register values",
+      "Bochs-specific CR0 reserved-high-bit readback"
+    ]
+  }
+}

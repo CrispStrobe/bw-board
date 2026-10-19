@@ -1,0 +1,7506 @@
+/**
+ * Board implementation — boundary B, and the router between two solvers.
+ *
+ * A closed-form Thévenin walker covers the bare starter-kit vocabulary
+ * (resistor, LED, pot, button, buzzer, RC via graph walk); everything
+ * beyond it — transistors, sources, op-amps, any registered device, LED
+ * fan-out, and ALWAYS the instruments — routes to the MNA solver in
+ * mna.js (`_needsMNA`). A digital fast path defers analog solves for
+ * pure-logic nets. Time integration: fixed-step backward-Euler transient
+ * sub-stepping, device updates to a bounded fixpoint per sub-step.
+ *
+ * @module
+ */
+
+/** @typedef {import('./types.js').Part} Part */
+/** @typedef {import('./types.js').Net} Net */
+/** @typedef {import('./types.js').PinId} PinId */
+/** @typedef {import('./types.js').PinMode} PinMode */
+/** @typedef {import('./types.js').TheveninSource} TheveninSource */
+
+import { pinThevenin } from './pin-model.js';
+import { buildPinAliasTable } from './pin-aliases.js';
+import {
+  solveMNA, OPAMP_ISHORT_DEFAULT, JUNCTION_THERMAL_VOLTAGE, MOS_BULK_THERMAL_VOLTAGE, kneeFromVf,
+  sourceDcValue, sourceVoltage, sourceCurrent,
+} from './mna.js';
+import { resolveParams, classDefaults } from './parts-library.js';
+import { acSweep } from './ac.js';
+import { validateNetlist } from './validate.js';
+import { getDevice, initDeviceState, resetDeviceState } from './devices.js';
+import { servoCalibration } from './devices/servo.js';
+import { expandLm741LinearPoles } from './lm741-linear-pole.js';
+import { meterQuadraticSegment, meterQuadraticIntegral } from './meter-quadrature.js';
+import { feedI2CSlave } from './devices/i2c-slave.js';
+import { checkCurrentBudget } from './current-ratings.js';
+import { createWorld, bindPartsToHost } from './world.js';
+import { junctionModelOf } from './mna.js';
+import {
+  nextSpiceExpCorner, nextSpicePulseCorner, nextSpicePwlCorner, nextSpiceSineCorner,
+  spiceSineDerivative, spiceSineIntegral,
+} from './source-waveforms.js';
+
+/**
+ * Internal pin state.
+ * @typedef {object} PinState
+ * @property {PinMode} mode
+ * @property {boolean} driveHigh
+ */
+
+/**
+ * LED default parameters.
+ */
+const LED_VF = 2.0;       // forward voltage threshold
+const LED_RD = 10;         // dynamic resistance above threshold
+const LED_I_RATED = 0.020; // 20 mA rated current (for brightness normalization)
+
+/**
+ * Part kinds the closed-form walker cannot represent. Their presence routes
+ * _solve() through the full MNA path — the walker would otherwise report
+ * voltages as if these parts were absent.
+ */
+const MNA_ONLY_KINDS = new Set([
+  'npn', 'pnp', 'nmos', 'pmos', 'opamp', 'zener', 'diode', 'vsource', 'isource', 'vcvs', 'vccs',
+  'transformer',
+]);
+
+/** Exact first public DC-analysis envelope. Expanding it requires a model proof. */
+const OPERATING_POINT_KINDS = new Set([
+  'resistor', 'capacitor', 'inductor', 'diode', 'led', 'zener', 'npn', 'nmos', 'pmos', 'vsource', 'isource',
+  'vcvs', 'vccs', 'gnd', 'vcc',
+]);
+
+const DIODE_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs']);
+// An LED is the same junction: mna.js branches on `kind === 'led' || kind === 'diode'`
+// everywhere and applies one limiter to both. It was refused here by KIND ALONE,
+// so an LED carrying a complete explicit Shockley set — which solves, and lands a
+// red LED at 1.998 V — could not be asked for its own operating point. `vf` is
+// admitted alongside because it is only the Newton seed in mna.js, never a term in
+// the Shockley law: present or absent, the solved voltage is bit-identical. `color`
+// is a label with no electrical meaning at all.
+const LED_OPERATING_POINT_PARAMS = new Set([...DIODE_OPERATING_POINT_PARAMS, 'vf', 'color']);
+const ZENER_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs', 'vz', 'ibv']);
+const NPN_OPERATING_POINT_PARAMS = new Set([
+  'model', 'is', 'beta', 'br', 'n', 'vaf', 'ikf', 'rb', 'rc', 'cje', 'cjc', 'tf', '_model',
+]);
+const NMOS_OPERATING_POINT_PARAMS = new Set([
+  'model', 'vth', 'kp', 'w', 'l', 'lambda', 'gamma', 'phi',
+  'bulkAtGround', 'bulkOnSource', '_model',
+]);
+const PMOS_OPERATING_POINT_PARAMS = new Set([
+  'model', 'vth', 'kp', 'w', 'l', 'lambda', '_model',
+]);
+const INDUCTOR_OPERATING_POINT_PARAMS = new Set(['henrys']);
+
+// A source-only trace needs a sampling theorem as well as the adaptive LTE
+// controller: two endpoint samples can otherwise alias a whole smooth cycle.
+// Sixty-four intervals per shortest declared feature is deliberately more
+// conservative than a display trace while allowing a 1 Hz source to remain a
+// 1 Hz source instead of inheriting the profile's unrelated 10 us ceiling.
+const SOURCE_WAVEFORM_INTERVALS = 64;
+
+const CONTROLLED_SOURCE_TERMINALS = ['outp', 'outn', 'inp', 'inn'];
+const NONIDEAL_CONTROLLED_PARAMS = ['railLow', 'railHigh', 'rout', 'iShort', 'iMax'];
+
+/**
+ * Nets whose DC voltage is fixed, directly or through a resistive/voltage
+ * constraint. Capacitors and current sources deliberately add NO edge: both
+ * leave common-mode voltage unconstrained at DC.
+ */
+function dcFloatingNets(parts, nets) {
+  const terminalNet = new Map();
+  for (const net of nets) {
+    for (const t of net.terminals) terminalNet.set(`${t.part}\0${t.terminal}`, net.id);
+  }
+  const graph = new Map(nets.map(n => [n.id, new Set()]));
+  const anchored = new Set();
+  const netFor = (part, terminal) => terminalNet.get(`${part.id}\0${terminal}`);
+  const join = (a, b) => {
+    if (!a || !b || a === b) return;
+    graph.get(a)?.add(b);
+    graph.get(b)?.add(a);
+  };
+  for (const part of parts) {
+    if (part.kind === 'gnd') {
+      const n = netFor(part, 'gnd');
+      if (n) anchored.add(n);
+    } else if (part.kind === 'vcc') {
+      const n = netFor(part, 'vcc');
+      if (n) anchored.add(n);
+    } else if (part.kind === 'resistor' || part.kind === 'inductor') {
+      join(netFor(part, 'a'), netFor(part, 'b'));
+    } else if ((part.kind === 'nmos' || part.kind === 'pmos')
+        && part.params?.model === 'level1') {
+      // The admitted Level-1 stamp always carries MOS_GDS_FLOOR between
+      // drain and source, including cutoff.  Preflight must therefore see
+      // that structural DC path, while gate and proven-ground bulk remain
+      // insulating control terminals.
+      join(netFor(part, 'drain'), netFor(part, 'source'));
+    } else if (part.kind === 'vsource') {
+      join(netFor(part, 'pos'), netFor(part, 'neg'));
+    } else if (part.kind === 'vcvs') {
+      // An ideal VCVS fixes its OUTPUT differential voltage, so that pair
+      // propagates a DC reference. Its ideal control pins draw no current and
+      // impose no common-mode constraint. A VCCS fixes no voltage anywhere.
+      join(netFor(part, 'outp'), netFor(part, 'outn'));
+    }
+  }
+  const hasGround = parts.some(p => p.kind === 'gnd' && netFor(p, 'gnd'));
+  if (!hasGround) return nets.map(n => n.id);
+  const reached = new Set(anchored);
+  const queue = [...anchored];
+  while (queue.length) {
+    const here = queue.shift();
+    for (const next of graph.get(here) ?? []) {
+      if (reached.has(next)) continue;
+      reached.add(next);
+      queue.push(next);
+    }
+  }
+  return nets.map(n => n.id).filter(id => !reached.has(id));
+}
+
+/** Raw/public currents are out of part; OP explicitly reports into terminals. */
+function currentsIntoTerminals(branchCurrents) {
+  const out = new Map();
+  for (const [partId, terminals] of branchCurrents) {
+    out.set(partId, new Map([...terminals].map(([terminal, amps]) =>
+      [terminal, amps === 0 ? 0 : -amps])));
+  }
+  return out;
+}
+
+/**
+ * Brightness integrator window.
+ */
+const BRIGHTNESS_WINDOW_NS = 20_000_000n; // 20 ms
+
+/**
+ * Carrier of a driven PWM (setPwm) when the caller names none: 500 Hz.
+ *
+ * Its 2 ms period divides BRIGHTNESS_WINDOW_NS exactly, so an LED's window
+ * always holds whole periods and ledBrightness() reads the duty-cycle average
+ * with no window-phase error (see setPwm for the bound at other carriers).
+ * It is also within 2 % of the Arduino Uno's 490 Hz analogWrite carrier.
+ */
+/** The verbs `set motor direction` takes (the devices blocks' dirMenu). */
+const MOTOR_DIRECTIONS = new Set(['forward', 'reverse', 'brake', 'coast']);
+/**
+ * The two-lead DC-motor models `set motor speed` / `set motor direction`
+ * drive, all through the same pin and H-bridge routes and all signed
+ * (src/devices/dc-motor.js stepMotorVelocity). gearmotor and
+ * dc_motor_encoder joined in Lite task B14; before, both verbs were refused
+ * on them as "no simulator action".
+ */
+const DRIVEN_MOTOR_KINDS = new Set(['dc_motor', 'gearmotor', 'dc_motor_encoder']);
+/** An h_bridge's two channels: EN, the two IN pins, the outputs they drive. */
+const H_BRIDGE_CHANNELS = [
+  { en: 'en1', ins: ['in1', 'in2'], outs: ['out1', 'out2'] },
+  { en: 'en2', ins: ['in3', 'in4'], outs: ['out3', 'out4'] },
+];
+const DEFAULT_PWM_HZ = 500;
+/**
+ * A DMM's integration window: 100 ms, five 20 ms mains cycles — the reading
+ * rate of a bench meter (~10/s) and a whole number of periods of every carrier
+ * this board drives by default (500 Hz PWM, 50 Hz servo and micro:bit analog).
+ */
+const METER_WINDOW_NS = 100_000_000n;
+/** A meter watch nobody has read for this long (sim time) is dropped. */
+const METER_IDLE_NS = 2_000_000_000n;
+
+// Fixed policies, not arbitrary caller-supplied accuracy or work knobs.
+// v2 allows the existing controller to resolve picosecond model modes;
+// easy intervals still grow normally, and the attempt cap remains binding.
+const TRANSIENT_ANALYSIS_PROFILES = Object.freeze({
+  'interactive-v2': Object.freeze({
+    id: 'interactive-v2', relativeTolerance: 1e-4,
+    absoluteVoltage: 1e-6, absoluteCurrent: 1e-9,
+    minStepSec: 1e-15, seedStepSec: 1e-9,
+    maxStepSec: 1e-4, maxAttempts: 20000,
+    // Restart the trapezoidal history once before accepting a floor step
+    // whose error did not shrink with the step (see _integrateTransientMNA).
+    floorHistoryRestart: true,
+  }),
+  'interactive-v1': Object.freeze({
+    id: 'interactive-v1', relativeTolerance: 1e-4,
+    absoluteVoltage: 1e-6, absoluteCurrent: 1e-9,
+    minStepSec: 1e-8, seedStepSec: 1e-9,
+    maxStepSec: 1e-4, maxAttempts: 20000,
+  }),
+  'precision-v1': Object.freeze({
+    id: 'precision-v1', relativeTolerance: 1e-8,
+    absoluteVoltage: 1e-10, absoluteCurrent: 1e-13,
+    minStepSec: 1e-12, seedStepSec: 1e-12,
+    maxStepSec: 1e-5, maxAttempts: 20000,
+  }),
+});
+
+/**
+ * The next edge time of a driven PWM (BoardImpl.drivenPwm entry), or null for
+ * a steady 0 % / 100 % level, which has none.
+ * @param {{periodNs: bigint, highNs: bigint, riseNs: bigint, high: boolean}} e
+ * @returns {bigint|null}
+ */
+function pwmNextEdgeNs(e) {
+  if (e.highNs <= 0n || e.highNs >= e.periodNs) return null;
+  return e.high ? e.riseNs + e.highNs : e.riseNs + e.periodNs;
+}
+
+/**
+ * Combine multiple Thévenin sources into one via Norton equivalents.
+ * @param {Array<{vTh: number, rTh: number}>} sources
+ * @returns {{ vTh: number, rTh: number } | null}
+ */
+function combineThevenin(sources) {
+  if (sources.length === 0) return null;
+  if (sources.length === 1) return sources[0];
+
+  let iTotal = 0;
+  let gTotal = 0;
+  for (const s of sources) {
+    const r = Math.max(s.rTh, 0.001);
+    gTotal += 1 / r;
+    iTotal += s.vTh / r;
+  }
+  if (gTotal <= 0) return null;
+  return { vTh: iTotal / gTotal, rTh: 1 / gTotal };
+}
+
+export class BoardImpl {
+  constructor(vcc = 5.0) {
+    /** @type {number} */
+    this.vcc = vcc;
+
+    /** @type {boolean} */
+    this.powered = true;
+
+    /** @type {Part[]} */
+    this.parts = [];
+
+    /** @type {Net[]} */
+    this.nets = [];
+
+    /** @type {Map<string, Part>} part id → Part */
+    this.partMap = new Map();
+
+    /** @type {Map<string, Net>} net id → Net */
+    this.netMap = new Map();
+
+    /** @type {Map<string, PinState>} PinId → state */
+    // Pin names join netlist terminals BY STRING, and the two sides come
+    // from different worlds: adapters speak the datasheet spelling (D13,
+    // GP15), sidecars and the inferred bench speak lowercase (d13, gp15).
+    // The join is normalized here, once, at the map that carries it — the
+    // case mismatch has now silently darkened a bench LED on two cores
+    // (the AVR was "fixed" by patching a vendored copy, which the next
+    // re-vendor would have silently destroyed).
+    this.pinStates = new Map();
+
+    /** @type {Map<string, number>} part id → control value (pot 0…1, button 0/1) */
+    this.controls = new Map();
+
+    /** @type {bigint} current simulation time in nanoseconds */
+    this.timeNs = 0n;
+
+    /**
+     * LED brightness history: part id → array of {tNs, current} samples.
+     * @type {Map<string, Array<{tNs: bigint, current: number}>>}
+     */
+    this.ledHistory = new Map();
+
+    /**
+     * What the meters are watching: key → {kind, a, b, part, terminal,
+     * hist: [{tSec, before, v}], readNs}. `before`/`v` retain both sides of
+     * discrete edges; accepted continuous solves use the same value for both.
+     * a watch is created by its first meterVoltage/meterCurrent read.
+     * @type {Map<string, object>}
+     */
+    this._meterWatches = new Map();
+
+    /**
+     * Buzzer edge history: part id → array of timestamps when the driving net toggled.
+     * @type {Map<string, bigint[]>}
+     */
+    this.buzzerEdges = new Map();
+    /** partId -> {hz, sinceNs}: a tone the MCU is DRIVING, as a hardware timer would. */
+    this.drivenTones = new Map();
+    /**
+     * pin (lowercase) -> a PWM the program is DRIVING, as a hardware timer
+     * would (setPwm). The board switches the pin itself, at real edge times,
+     * inside advanceTo. A pin state, not a part state: it survives
+     * setNetlist like pinStates does.
+     * @type {Map<string, {as: string, mode: string, duty: number, hz: number,
+     *   periodNs: bigint, highNs: bigint, riseNs: bigint, high: boolean}>}
+     */
+    this.drivenPwm = new Map();
+
+    /**
+     * Cached node voltages from last solve.
+     * @type {Map<string, number>}
+     */
+    this.nodeVoltages = new Map();
+
+    /**
+     * Inductor currents: part id → current through the inductor.
+     * @type {Map<string, number>}
+     */
+    this.inductorCurrents = new Map();
+
+    /**
+     * Trapezoidal companion history (spec-updates/adaptive-transient.md):
+     * capacitor currents and inductor voltages at the last accepted step.
+     * Valid only while `_trapValid` — any discrete event (setPin,
+     * setControl, power, netlist, a device flip) is a discontinuity, and
+     * the first step after one runs backward Euler to re-seed.
+     * @type {Map<string, number>}
+     */
+    this.capCurrents = new Map();
+    /** @type {Map<string, number>} */
+    this.inductorVoltages = new Map();
+    this._trapValid = false;
+    /** Last accepted adaptive step size (seconds); seeds the next call. */
+    this._transH = 1e-4;
+    /**
+     * Transient integration policy. The stiff-capable interactive default
+     * retains v1 accuracy/work limits but can refine fast model modes.
+     * The legacy and precision profiles remain explicitly selectable.
+     */
+    this._transientAnalysisProfile = TRANSIENT_ANALYSIS_PROFILES['interactive-v2'];
+    this._transientAccuracyUnmet = null;
+    this._transientAnalysisWork = { attempts: 0, solves: 0, advances: 0 };
+
+    /**
+     * Cached LED currents from last solve.
+     * @type {Map<string, number>}
+     */
+    this.ledCurrents = new Map();
+
+    /**
+     * Oscilloscope probes: net id → ring buffer of {tNs, voltage} samples.
+     * @type {Map<string, Array<{tNs: bigint, v: number}>>}
+     */
+    this._probes = new Map();
+
+    /** Maximum samples per probe (ring buffer size). */
+    this._probeMaxSamples = 10000;
+
+    /** Digital fast path (see setPin): net → logic-level volts pending a
+     *  deferred solve; the pin → qualification cache; the dirty flag every
+     *  analog read surface flushes on. */
+    this._digitalOverlay = new Map();
+    this._solveDirty = false;
+    this._fastNetCache = new Map();
+    this._fastNets = new Map();
+
+    /**
+     * Scope channels: handle → channel config + ring buffer.
+     * @type {Map<number, object>}
+     */
+    this._scopeChannels = new Map();
+    /** The project's world (ambient temperature, humidity, light …):
+     *  bench temperature in °C (E2.2) is its temperatureC. Shared between
+     *  boards with setWorld (src/world.js, docs/WORLD.md). */
+    this._world = null;
+    this._worldUnsubscribe = null;
+    this.setWorld(createWorld());
+
+    /** Next scope channel handle. */
+    this._nextScopeHandle = 1;
+
+    /** Whether the last MNA solve converged. */
+    this._lastSolveConverged = true;
+    this._liveSolveError = null;
+
+    /** Whether advanceTo hit the device sub-step cap. */
+    this._deviceSubstepOverflow = false;
+
+    /**
+     * 74HC595 shift register states: part id → FSM state.
+     * @type {Map<string, {shiftReg: number, latchReg: number, lastClock: boolean, lastLatch: boolean}>}
+     */
+    this._shiftRegisters = new Map();
+
+    /**
+     * Capacitor voltages: part id → current voltage across the cap.
+     * @type {Map<string, number>}
+     */
+    this.capVoltages = new Map();
+
+    /**
+     * Registered-device states: part id → model state (incl. state.drives).
+     * @type {Map<string, object>}
+     */
+    this._deviceStates = new Map();
+
+    /**
+     * LED cube state: part id → { selectPins, dataPins, polarity, voxelHistory }.
+     * Each voxel accumulates lit-time over the brightness window.
+     * @type {Map<string, object>}
+     */
+    this._cubes = new Map();
+  }
+
+  // ─── Boundary B: setNetlist ──────────────────────────────────────────────
+
+  /**
+   * @param {Part[]} parts
+   * @param {Net[]} nets
+   */
+  /**
+   * Composite parts expand into the sub-LEDs their read surfaces
+   * already expect (rgbLedBrightness reads `${id}_r/_g/_b`,
+   * sevenSegmentBrightness `${id}_a..dp`). The declaration path
+   * (infer-netlist) always built these; a DESIGNER-placed composite
+   * had nothing — validated, rendered, and electrically inert, 5V
+   * through with no drop (audit escalation E3). The original part
+   * stays in the list for identity; the synthetic LEDs carry the
+   * electrical role.
+   */
+  /**
+   * Give each dc_motor's winding inductance to the SOLVER as a real
+   * series inductor on a hidden net between the motor's 'a' terminal and
+   * whatever it was wired to. The device model then owns only R + back-EMF.
+   *
+   * Why: a device-side inductor companion cannot be made consistent with
+   * the adaptive integrator — its Norton memory is frozen across the
+   * step-doubling's full/half solves (a permanent phantom error that
+   * pinned the controller at err ≈ 0.73), its update cadence differs from
+   * the solver's history cycle, and in series with a solver inductor the
+   * shared node divides the two histories' disagreement by a vanishing
+   * conductance (measured as a 1e35 V blow-up). As a first-class solver
+   * inductor it gets trapezoidal companions, error control, and history
+   * management like every other L — and the motor's 'a' pin now reads the
+   * true series winding current as (v_a − v_b − e)/R.
+   * DC is unchanged: the hidden inductor is a 1 mΩ wire there.
+   */
+  static _expandMotorWindings(parts, nets) {
+    const outParts = [...parts];
+    const outNets = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
+    for (const p of parts) {
+      if (p.kind !== 'dc_motor') continue;
+      const L = p.params?.windingH ?? 0.005;
+      if (!(L > 0)) continue;
+      const net = outNets.find((n) =>
+        n.terminals.some((t) => t.part === p.id && t.terminal === 'a'));
+      if (!net) continue;
+      const hidId = `${p.id}_winding`;
+      const hidNetId = `n_${p.id}_winding`;
+      net.terminals = net.terminals.filter(
+        (t) => !(t.part === p.id && t.terminal === 'a'));
+      net.terminals.push({ part: hidId, terminal: 'a' });
+      outNets.push({
+        id: hidNetId,
+        terminals: [{ part: hidId, terminal: 'b' }, { part: p.id, terminal: 'a' }],
+      });
+      outParts.push({
+        id: hidId, kind: 'inductor', params: { henrys: L }, terminals: ['a', 'b'],
+      });
+    }
+    return { parts: outParts, nets: outNets };
+  }
+
+  /**
+   * Give each h_bridge (L293D) its output clamp diodes as real SOLVER diodes:
+   * per connected output, one from the output up to the bridge's VCC net and
+   * one from its GND net up to the output. No new nets — the diodes sit on
+   * the nets the bridge's own terminals are on — and, like the motor
+   * windings above, they live only in the solver view, so DRC, exporters and
+   * the drawn netlist keep seeing one L293D.
+   *
+   * Why: a disabled output is an open circuit, and a motor's winding current
+   * cannot stop. With nowhere to go but GMIN it made the transient grind —
+   * one EN-low on a spinning motor took 347 s of wall time to advance 100 ms,
+   * a 500 Hz PWM on EN 66 s per 40 ms (test/h-bridge-direction.test.mjs) —
+   * while the L293D the part depicts carries exactly these diodes (the CUI's
+   * DRC exempts it from the flyback check for that reason). A switched
+   * clamp inside the device model was tried first and rejected: it cannot
+   * turn off smoothly at zero current, so the step controller reported
+   * 'minimum-step-accuracy-unmet' at every release. `params.clampDiodes:
+   * false` leaves a bare L298-style bridge, which needs external diodes.
+   */
+  static _expandBridgeClampDiodes(parts, nets) {
+    const bridges = parts.filter((p) => p.kind === 'h_bridge' && p.params?.clampDiodes !== false);
+    if (!bridges.length) return { parts, nets };
+    const netOf = new Map();
+    for (const n of nets) for (const t of n.terminals) netOf.set(`${t.part}\0${t.terminal}`, n);
+    const outParts = [...parts];
+    const outNets = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
+    const byId = new Map(outNets.map((n) => [n.id, n]));
+    for (const br of bridges) {
+      const vccNet = netOf.get(`${br.id}\0vcc`);
+      const gndNet = netOf.get(`${br.id}\0gnd`);
+      for (const out of ['out1', 'out2', 'out3', 'out4']) {
+        const outNet = netOf.get(`${br.id}\0${out}`);
+        if (!outNet) continue;
+        const add = (suffix, anodeNet, cathodeNet) => {
+          if (!anodeNet || !cathodeNet || anodeNet === cathodeNet) return;
+          const id = `${br.id}_clamp_${out}_${suffix}`;
+          outParts.push({ id, kind: 'diode', params: { vf: 0.7 }, terminals: ['anode', 'cathode'] });
+          byId.get(anodeNet.id).terminals.push({ part: id, terminal: 'anode' });
+          byId.get(cathodeNet.id).terminals.push({ part: id, terminal: 'cathode' });
+        };
+        add('hi', outNet, vccNet);
+        add('lo', gndNet, outNet);
+      }
+    }
+    return { parts: outParts, nets: outNets };
+  }
+
+  /**
+   * Merge nets that share any (part, terminal) — electrically they are
+   * one node, whatever the wire-derivation upstream produced. Union-find
+   * keyed on terminal membership; the surviving net keeps the FIRST
+   * net's id in input order (deterministic), and every merge is reported
+   * so the drawing tooling can flag the duplication at its source.
+   * @param {import('./types.js').Net[]} nets
+   * @returns {{nets: import('./types.js').Net[], merges: Array<{terminal: string, into: string, from: string}>}}
+   */
+  static _coalesceSharedTerminals(nets) {
+    const owner = new Map(); // "part\0terminal" → index of first net seen
+    const parent = nets.map((_, i) => i);
+    const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+    const merges = [];
+    nets.forEach((net, i) => {
+      for (const t of net.terminals) {
+        const key = `${t.part}\0${t.terminal}`;
+        const first = owner.get(key);
+        if (first === undefined) { owner.set(key, i); continue; }
+        const a = find(first);
+        const b = find(i);
+        if (a !== b) {
+          const into = Math.min(a, b);
+          const from = Math.max(a, b);
+          parent[from] = into;
+          merges.push({
+            terminal: `${t.part}.${t.terminal}`,
+            into: nets[into].id,
+            from: nets[from].id,
+          });
+        }
+      }
+    });
+    if (merges.length === 0) return { nets, merges };
+    const grouped = new Map();
+    nets.forEach((net, i) => {
+      const root = find(i);
+      if (!grouped.has(root)) grouped.set(root, { id: nets[root].id, terminals: [] });
+      grouped.get(root).terminals.push(...net.terminals);
+    });
+    // Dedupe terminals inside each merged net.
+    const out = [...grouped.values()].map(n => {
+      const seen = new Set();
+      return {
+        ...n,
+        terminals: n.terminals.filter(t => {
+          const k = `${t.part}\0${t.terminal}`;
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        }),
+      };
+    });
+    return { nets: out, merges };
+  }
+
+  /**
+   * Expand each opt-in macromodel op-amp (`params.model: 'macro'`) into
+   * the standard single-pole macromodel on hidden nets — SOLVER VIEW
+   * only, like the motor windings (spec-updates/opamp-macromodel.md):
+   *
+   *   G1 (vccs, gm = 2π·GBW·Cint, iMax = SR·Cint) : (inp,inn) → X
+   *   C1 (capacitor, Cint) and Rp (A0/gm)         : X → gnd
+   *   E1 (vcvs ×1, rails)                          : X → OUTI
+   *   Rout                                         : OUTI → out
+   *
+   * The pole (GBW/A0), the slew (iMax/Cint = SR exactly), and the rails
+   * all come from first-class solver parts — C1 gets adaptive-transient
+   * and AC treatment for free, with no device-cadence companion anywhere
+   * (the motor-winding lesson). Ground-referenced like every textbook
+   * macromodel; a bench with no gnd part keeps the ideal row and says so
+   * via getWarnings.
+   */
+  static _expandOpampMacros(parts, nets, vcc) {
+    const notes = [];
+    if (!parts.some(p => p.kind === 'opamp' && p.params?.model === 'macro')) {
+      return { parts, nets, notes };
+    }
+    const gndNetId = nets.find(n => n.terminals.some(t => {
+      const p = parts.find(pp => pp.id === t.part);
+      return p && p.kind === 'gnd';
+    }))?.id;
+    const outNets = nets.map(n => ({ ...n, terminals: [...n.terminals] }));
+    const netHolding = (partId, terminal) => outNets.find(n =>
+      n.terminals.some(t => t.part === partId && t.terminal === terminal));
+    const outParts = [];
+    for (const p of parts) {
+      if (!(p.kind === 'opamp' && p.params?.model === 'macro')) {
+        outParts.push(p);
+        continue;
+      }
+      if (gndNetId === undefined) {
+        notes.push(p.id);
+        outParts.push(p); // ideal row stays; the warning says why
+        continue;
+      }
+      const P = p.params ?? {};
+      const a0 = P.a0 ?? 1e5;
+      const gbw = P.gbw ?? 1e6;
+      const slew = P.slew ?? 0.5e6; // V/s
+      const cint = P.cint ?? 30e-12;
+      const rout = P.rout ?? 100;
+      const gm = 2 * Math.PI * gbw * cint;
+      const ids = {
+        g1: `${p.id}_g1`, c1: `${p.id}_c1`, rp: `${p.id}_rp`,
+        e1: `${p.id}_e1`, ro: `${p.id}_ro`,
+      };
+      outParts.push(
+        { id: ids.g1, kind: 'vccs', params: { gm, iMax: slew * cint },
+          terminals: ['outp', 'outn', 'inp', 'inn'] },
+        { id: ids.c1, kind: 'capacitor', params: { farads: cint }, terminals: ['a', 'b'] },
+        { id: ids.rp, kind: 'resistor', params: { ohms: a0 / gm }, terminals: ['a', 'b'] },
+        { id: ids.e1, kind: 'vcvs',
+          // The buffer carries the macro op-amp's rails AND its output
+          // current limit, so `model: 'macro'` and the ideal row answer the
+          // same question the same way (spec-updates/opamp-output-limit.md).
+          params: { gain: 1, railLow: P.railLow ?? 0, railHigh: P.railHigh ?? vcc,
+            iShort: P.iShort ?? OPAMP_ISHORT_DEFAULT },
+          terminals: ['outp', 'outn', 'inp', 'inn'] },
+        { id: ids.ro, kind: 'resistor', params: { ohms: rout }, terminals: ['a', 'b'] },
+      );
+      const X = `n_${p.id}_x`;
+      const OUTI = `n_${p.id}_outi`;
+      netHolding(p.id, 'inp')?.terminals.push({ part: ids.g1, terminal: 'inp' });
+      netHolding(p.id, 'inn')?.terminals.push({ part: ids.g1, terminal: 'inn' });
+      netHolding(p.id, 'out')?.terminals.push({ part: ids.ro, terminal: 'b' });
+      const gndView = outNets.find(n => n.id === gndNetId);
+      gndView.terminals.push(
+        { part: ids.g1, terminal: 'outn' },
+        { part: ids.c1, terminal: 'b' },
+        { part: ids.rp, terminal: 'b' },
+        { part: ids.e1, terminal: 'inn' },
+        { part: ids.e1, terminal: 'outn' },
+      );
+      outNets.push({
+        id: X,
+        terminals: [
+          { part: ids.g1, terminal: 'outp' },
+          { part: ids.c1, terminal: 'a' },
+          { part: ids.rp, terminal: 'a' },
+          { part: ids.e1, terminal: 'inp' },
+        ],
+      });
+      outNets.push({
+        id: OUTI,
+        terminals: [{ part: ids.e1, terminal: 'outp' }, { part: ids.ro, terminal: 'a' }],
+      });
+      // The op-amp itself leaves the solver view: no ideal row, no
+      // phantom pins (its terminal entries go too).
+      for (const n of outNets) {
+        n.terminals = n.terminals.filter(t => t.part !== p.id);
+      }
+    }
+    return { parts: outParts, nets: outNets, notes };
+  }
+
+  static _expandComposites(parts, nets) {
+    // IDEMPOTENT, BECAUSE THE OUTPUT OF THIS FUNCTION IS A LEGAL INPUT TO IT.
+    //
+    // A caller that round-trips the board's own list --
+    // `setNetlist(board.parts, board.nets)`, which is the obvious way to
+    // re-stamp after changing a param -- used to get the composites synthesized
+    // a SECOND time, under the same ids, and the duplicates are real loads.
+    // Measured on a Pico blink bench:
+    //
+    //   call 1   7 parts   I(gp25) 2.833 mA   V 3.229173
+    //   call 2   9 parts   I(gp25) 4.152 mA   V 3.196200     <- +46.6 %
+    //   call 3  11 parts
+    //
+    // Two onboard LEDs on one pin, and nothing said so: the ids collide, the
+    // answer moves, and the summary reads clean. Skipping a composite whose
+    // expansion is already present makes the function safe to re-run, which is
+    // what any caller reasonably assumes of a pure-looking static.
+    const present = new Set(parts.map((p) => p.id));
+    const extraParts = [];
+    const netCopies = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
+    const netsOf = (partId, terminal) => netCopies.filter(
+      (n) => n.terminals.some((t) => t.part === partId && t.terminal === terminal));
+    const addLed = (id, anodeNets, cathodeNets) => {
+      if (present.has(id)) return;   // already expanded — see the note above
+      extraParts.push({ id, kind: 'led', params: {}, terminals: ['anode', 'cathode'] });
+      for (const n of anodeNets) n.terminals.push({ part: id, terminal: 'anode' });
+      for (const n of cathodeNets) n.terminals.push({ part: id, terminal: 'cathode' });
+    };
+    for (const p of parts) {
+      if (p.kind === 'rgb_led') {
+        const cath = netsOf(p.id, 'cathode');
+        addLed(`${p.id}_r`, netsOf(p.id, 'r_anode'), cath);
+        addLed(`${p.id}_g`, netsOf(p.id, 'g_anode'), cath);
+        addLed(`${p.id}_b`, netsOf(p.id, 'b_anode'), cath);
+      } else if (p.kind === 'seven_segment') {
+        const common = netsOf(p.id, 'common');
+        for (const seg of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp']) {
+          addLed(`${p.id}_${seg}`, netsOf(p.id, seg), common);
+        }
+      } else if (p.kind === 'seven_seg_3' || p.kind === 'seven_seg_4') {
+        // Multiplexed displays (3-digit 056SMG-3; 4-digit as on the Prechin
+        // A2's tubes): eight shared segment lines, one common per digit.
+        // Each digit is eight LEDs from the shared segment net to that
+        // digit's common. The multiplex physics falls out for free: a
+        // segment lights only while ITS digit's common is pulled low, and
+        // the brightness filter integrates the scan duty exactly as it
+        // does for the matrices.
+        const nDigits = p.kind === 'seven_seg_4' ? 4 : 3;
+        for (let digit = 0; digit < nDigits; digit++) {
+          const common = netsOf(p.id, `com${digit}`);
+          for (const seg of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp']) {
+            addLed(`${p.id}_d${digit}_${seg}`, netsOf(p.id, seg), common);
+          }
+        }
+      } else if (p.kind === 'pi_pico') {
+        if (present.has(`${p.id}_onboard`)) continue;   // already expanded
+        // Onboard LED: GP25 → 1 kΩ resistor → LED → GND (hardwired on PCB).
+        // Expand to synthetic resistor + LED so ledBrightness('<id>_onboard')
+        // reports the onboard LED state — same pattern as seven_segment.
+        let gp25Nets = netsOf(p.id, 'gp25');
+        const gndNets = netsOf(p.id, 'gnd_1');
+        if (gp25Nets.length === 0) {
+          // GP25 unwired is the NORMAL case — the LED is on the PCB, no
+          // jumper ever touches it. Synthesize the internal anode net so
+          // the onboard LED exists on every seated Pico, wires or not
+          // (gating on an external gp25 net left ledBrightness dark on
+          // exactly the benches the feature was built for).
+          const internalAnode = {
+            id: `${p.id}__onboard_anode`, terminals: [{ part: p.id, terminal: 'gp25' }],
+          };
+          netCopies.push(internalAnode);
+          gp25Nets = [internalAnode];
+        }
+        {
+          // If gnd_1 has no net yet, look for any gnd terminal that does
+          let cathNets = gndNets;
+          if (cathNets.length === 0) {
+            for (const gn of ['gnd_2','gnd_3','gnd_4','gnd_5','gnd_6','gnd_7','agnd','swd_gnd']) {
+              cathNets = netsOf(p.id, gn);
+              if (cathNets.length > 0) break;
+            }
+          }
+          if (cathNets.length === 0) {
+            // No ground net connected — create an internal ground net
+            // tied to the pi_pico's gnd_1 terminal for the onboard LED
+            const internalGnd = {
+              id: `${p.id}__onboard_gnd`, terminals: [{ part: p.id, terminal: 'gnd_1' }],
+            };
+            netCopies.push(internalGnd);
+            cathNets = [internalGnd];
+          }
+          // Internal net between resistor and LED anode
+          const midNet = {
+            id: `${p.id}__onboard_mid`, terminals: [],
+          };
+          netCopies.push(midNet);
+          // Synthetic 1 kΩ resistor: gp25 → a, b → midNet
+          const rId = `${p.id}_onboard_r`;
+          extraParts.push({ id: rId, kind: 'resistor', params: { resistance: 1000 }, terminals: ['a', 'b'] });
+          for (const n of gp25Nets) n.terminals.push({ part: rId, terminal: 'a' });
+          midNet.terminals.push({ part: rId, terminal: 'b' });
+          // Synthetic LED: anode → midNet, cathode → gnd
+          const ledId = `${p.id}_onboard`;
+          extraParts.push({ id: ledId, kind: 'led', params: {}, terminals: ['anode', 'cathode'] });
+          midNet.terminals.push({ part: ledId, terminal: 'anode' });
+          for (const n of cathNets) n.terminals.push({ part: ledId, terminal: 'cathode' });
+        }
+      }
+    }
+    return extraParts.length
+      ? { parts: [...parts, ...extraParts], nets: netCopies }
+      : { parts, nets };
+  }
+
+  setNetlist(parts, nets) {
+    this._ledFanout = undefined; // netlist changed: recompute the fan-out memo
+    this._wiperLoaded = undefined; // ditto for the loaded-wiper routing memo
+    this._wiperMcuPins = undefined; // and the MCU pins sitting on a wiper net
+    this._qualCache = new Map(); // qualified-pin resolutions are per-netlist
+    this._pinNetCache = new Map(); // pin -> net id (per-netlist, see _pinVoltage)
+    this._mcuSurface = undefined;
+    this._hasQualifiedPin = false;
+    // Validate the netlist and reject malformed input. Without this,
+    // a wrong terminal name (e.g. {a,b} instead of {anode,cathode} for
+    // an LED) silently produces brightness 0 — a plausible wrong answer.
+    const errors = validateNetlist(parts, nets);
+    ({ parts, nets } = BoardImpl._expandComposites(parts, nets));
+    // ONE TERMINAL IS ONE NODE. Input netlists exist in the wild where a
+    // terminal appears in two nets (five shipped circuits: a gnd pin
+    // reached by two independently-derived wire groups). The old solver
+    // MUTATED the caller's nets during its gnd-island merge, which
+    // accidentally repaired those inputs; the non-mutation fix preserved
+    // the drawn input — duplication included — and every getNets()
+    // consumer then saw a terminal on two nets, resolver-order deciding
+    // which one answered (found by the schematic completeness gate,
+    // adjudicated 2026-08-23). Coalesce deterministically HERE, and say
+    // so via getWarnings rather than repairing in silence.
+    const coalesced = BoardImpl._coalesceSharedTerminals(nets);
+    nets = coalesced.nets;
+    this._netMergeNotes = coalesced.merges;
+    const fatal = errors.filter(e => e.severity === 'error');
+    if (fatal.length > 0) {
+      throw new Error(
+        'Invalid netlist:\n' + fatal.map(e => `  - ${e.message}`).join('\n')
+      );
+    }
+
+    this.parts = parts;
+    bindPartsToHost(parts, this);
+    this.nets = nets;
+    this.partMap = new Map(parts.map(p => [p.id, p]));
+    this.netMap = new Map(nets.map(n => [n.id, n]));
+    // SOLVER-INTERNAL view: motor winding inductances become first-class
+    // solver inductors on hidden series nets (_expandMotorWindings — the
+    // why lives there). The PUBLIC parts/nets above stay exactly what the
+    // user drew: topology consumers (DRC, corpus invariants, exporters)
+    // must keep seeing the diode on the net the motor pin is wired to,
+    // not one hop into the motor's insides.
+    const windingView = BoardImpl._expandMotorWindings(parts, nets);
+    const solveView = BoardImpl._expandBridgeClampDiodes(windingView.parts, windingView.nets);
+    const linearView = expandLm741LinearPoles(solveView.parts, solveView.nets);
+    const macroView = BoardImpl._expandOpampMacros(linearView.parts, linearView.nets, this.vcc);
+    this._solveParts = macroView.parts;
+    this._solveNets = macroView.nets;
+    this._macroFallbacks = macroView.notes;
+
+    // RESOLVE EACH JUNCTION'S MODEL ONCE, HERE, FOR THE WHOLE SOLVE.
+    //
+    // `junctionCurrent` in mna.js carries the comment "must match what was
+    // stamped" — the model used to READ a solved voltage has to be the one used
+    // to STAMP the matrix. Deciding per call site would let those two disagree
+    // whenever the inputs differed, and the disagreement would be silent: a
+    // current read off a matrix built for the other model.
+    //
+    // So it is decided in one place, on the solve-local parts (derived data,
+    // rebuilt with every netlist — never the caller's objects), and every site
+    // downstream reads that answer rather than recomputing it.
+    // PART CARDS RESOLVE HERE, before anything reads a parameter. A part
+    // naming `params.part: '2N2222'` gets the card's numbers merged in, with
+    // anything set explicitly winning -- a card is a DEFAULT with provenance,
+    // not an override. Resolving once, into the private copy, keeps the rule
+    // that every downstream site reads an answer rather than recomputing it;
+    // it is also why a card cannot disagree with the solver by construction.
+    for (const p of this._solveParts) {
+      if (p.params && p.params.part) p.params = resolveParams(p.params);
+    }
+    {
+      for (const p of this._solveParts) {
+        if (p.kind === 'led' || p.kind === 'diode') {
+          p._junctionModel = junctionModelOf(p, this._junctionHeadroomFor(p));
+        }
+      }
+    }
+    // A new netlist is a new bench: every reactive part starts at rest.
+    // The clear has to come BEFORE the seeding below, not after it — it
+    // used to run after, which silently undid the whole seeding pass and
+    // left every HIDDEN reactive part (motor windings, macromodel poles)
+    // absent from capVoltages, because the public-parts loop further down
+    // re-seeded only what the user drew.
+    this.capVoltages.clear();
+    for (const p of this._solveParts) {
+      if (p.kind === 'inductor' && !this.inductorCurrents.has(p.id)) {
+        this.inductorCurrents.set(p.id, 0);
+      }
+      // Hidden reactive parts (motor windings, macromodel poles) need
+      // their history seeded like any drawn part — an unseeded macro cap
+      // let the DC solve teleport the output past the slew limit.
+      if (p.kind === 'capacitor' && !this.capVoltages.has(p.id)) {
+        this.capVoltages.set(p.id, 0);
+      }
+    }
+    this.ledHistory.clear();
+    this._meterWatches.clear();
+    this.buzzerEdges.clear();
+    this.drivenTones.clear();
+    this.nodeVoltages.clear();
+    this.ledCurrents.clear();
+
+    for (const p of parts) {
+      if (p.kind === 'led') {
+        this.ledHistory.set(p.id, []);
+      }
+      if (p.kind === 'buzzer') {
+        this.buzzerEdges.set(p.id, []);
+      }
+      if (p.kind === 'capacitor') {
+        if (!this.capVoltages.has(p.id)) {
+          this.capVoltages.set(p.id, 0); // start uncharged
+        }
+      }
+      if (p.kind === 'shift_register') {
+        this._shiftRegisters.set(p.id, {
+          shiftReg: 0,    // 8-bit shift register
+          latchReg: 0,    // 8-bit output latch
+          lastClock: false,
+          lastLatch: false,
+        });
+      }
+      if (p.kind === 'led_cube') {
+        // Default: 8 scan lines × 8 data bits.
+        // The STC12 cube scans 8 lines (4 layers × 2 colour groups)
+        // with P0 as 8-bit data. A voxel lit on exactly one scan line
+        // has 12.5% duty (1/8), not 25%.
+        const layers = /** @type {number} */ (p.params.layers ?? 8);
+        const cols = /** @type {number} */ (p.params.cols ?? 8);
+        const polarity = /** @type {string} */ (p.params.polarity ?? 'active-high');
+        const voxels = layers * cols;
+        // History: array of {tNs, litMask} where litMask is a BigInt bitmask
+        this._cubes.set(p.id, {
+          layers, cols, polarity,
+          history: [{ tNs: 0n, litMask: 0n }],
+        });
+      }
+    }
+
+    // Topology caches die with the topology (the qualification and
+    // MCU-surface caches were built against the OLD nets).
+    this._fastNetCache = new Map();
+    this._fastNets = new Map();
+    this._digitalOverlay = new Map();
+    this._solveDirty = false;
+    this._mcuSurface = null;
+    this._qualCache = null;
+    // Dual-function package pins (one pin, two datasheet names) resolved
+    // once per netlist — see pin-aliases.js for the measurement and the
+    // unique-match rule. null on every bench that has none, which is
+    // almost all of them, so _pinSources() pays nothing for this.
+    this._pinAliases = buildPinAliasTable(parts);
+
+    this._deviceStates = new Map();
+    // Displays a controller MODULE carries on itself (setPartMatrix), for parts
+    // with no registered device model — a micro:bit is an `mcu` part here.
+    this._partOverlays = null;
+    for (const p of parts) {
+      const st = initDeviceState(p);
+      if (st) {
+        // Remember which drives the model itself owns (power rails) —
+        // the GPIO pre-pass below must never overwrite those.
+        st._staticDrives = new Set(Object.keys(st.drives ?? {}));
+        this._deviceStates.set(p.id, st);
+      }
+    }
+
+    // Keep the fully expanded and parameter-resolved circuit as the immutable
+    // base for opt-in instrument loads. A scope channel may be attached and
+    // removed repeatedly; rebuilding from this base makes that operation
+    // idempotent and keeps virtual probes out of the public topology.
+    this._scopeBaseParts = this._solveParts;
+    this._scopeBaseNets = this._solveNets;
+    this._rebuildScopeLoadView();
+
+    this._solve();
+    this._recordLedSamples();
+    this._notifyChange('netlist');
+  }
+
+  // ─── Boundary A: McuToBoard ──────────────────────────────────────────────
+
+  /**
+   * @param {PinId} pin
+   * @param {PinMode} mode
+   * @param {boolean} driveHigh
+   */
+  setPin(pin, mode, driveHigh) {
+    // Canonical key, original spelling kept for the read surface — the
+    // solver joins case-blind, the UI shows what the caller wrote.
+    const asGiven = String(pin);
+    pin = asGiven.toLowerCase();
+    // A DIRECT WRITE TAKES THE PIN BACK FROM A DRIVEN PWM, exactly as it does
+    // from a driven tone below: `digitalWrite(9, LOW)` after `analogWrite(9,
+    // 64)` stops the timer on silicon. The board's own PWM edges come through
+    // here too, flagged, and must not cancel themselves.
+    if (!this._pwmEdge && this.drivenPwm.size > 0) this.drivenPwm.delete(pin);
+    const prev = this.pinStates.get(pin);
+    this.pinStates.set(pin, { mode, driveHigh, as: asGiven });
+    // A device sees an edge at its next update; until then the edge is owed
+    // to it (see dueDeviceDeadline).
+    if (!prev || prev.mode !== mode || prev.driveHigh !== driveHigh) this._unseenEdge = true;
+    if (!this._hasQualifiedPin && this._resolveQualified(pin)) this._hasQualifiedPin = true;
+
+    // Digital fast path: when the driven net's only consumers are pure
+    // digital decoders (I2C slaves, SPI displays, shift registers) and
+    // passives, an emulator bit-banging the bus does not need an MNA
+    // solve per edge — a 1024-byte display clear is ~60k edges, and
+    // per-edge solving made the in-app Pico sim run ~1000x slower than
+    // wall clock (measured 2026-08-17). The decoders get their edges
+    // eagerly at logic level through their update/FSM; the solve is
+    // DEFERRED to the next analog read, so every observable voltage
+    // stays exact. Nets with an analog observer (LED, buzzer, scope,
+    // cube, anything not a decoder) never take this branch — edge
+    // timing IS their signal.
+    const fast = this._digitalFastInfo(pin);
+    if (fast) {
+      this._solveDirty = true;
+      this._settleDigital();
+      this._notifyChange('pin', { pin: asGiven, mode, driveHigh });
+      return;
+    }
+
+    this._solve();
+    this._recordLedSamples();
+
+    // Update scope channel min/max for voltage changes between sample points
+    if (this._scopeChannels.size > 0) {
+      this._feedScopeVoltages();
+    }
+
+    // A DIRECT WRITE TAKES THE PIN BACK FROM THE TIMER, whether or not the level
+    // changed: `turn off buzzer` after `set buzzer to 440 hz` must silence it,
+    // and the stored level may already match. Guarded on there being a tone at
+    // all, so the ordinary case costs one map lookup rather than a net walk.
+    if (this.drivenTones.size > 0) {
+      const sounding = this._buzzerOnPin(pin);
+      if (sounding) this.drivenTones.delete(sounding.id);
+    }
+
+    // Record buzzer edges on state change
+    if (prev && prev.driveHigh !== driveHigh) {
+      this._recordBuzzerEdges(pin);
+    }
+
+    // Update LED cube voxel state
+    for (const [cubeId] of this._cubes) {
+      this._updateCube(cubeId);
+    }
+
+    this._notifyChange('pin', { pin: asGiven, mode, driveHigh });
+  }
+
+  /** Materialize any deferred digital state through a real solve. Every
+   *  analog read surface calls this first, so a caller can never observe
+   *  the fast path — only its absence of intermediate solves. */
+  _flushSolve() {
+    if (!this._solveDirty) return;
+    this._solve();
+    this._recordLedSamples();
+  }
+
+  /**
+   * Qualify a pin for the digital fast path and cache the verdict.
+   *
+   * A pin qualifies when its net's members are exactly: the MCU-surface
+   * part it belongs to, passive resistors, and at least one DIGITAL
+   * decoder — a registered device with update() (I2C slave, SPI display,
+   * etc.) or a built-in shift_register. Anything else on the net — an
+   * LED, a buzzer, a transistor, another MCU — is an analog consumer
+   * whose signal lives in the edges, so the eager solve stays. Scope
+   * channels and probes anywhere on the board disable the fast path
+   * wholesale: waveform fidelity is the point of both.
+   *
+   * @param {string} pinLower - canonical lowercase pin id
+   * @returns {{netId: string, pinLower: string, vLogic: number,
+   *   feeders: Array<{part: Part, terminalNets: Map<string, string>}>} | null}
+   */
+  _digitalFastInfo(pinLower) {
+    if (this._scopeChannels.size > 0 || this._probes.size > 0) return null;
+    if (!this._fastNetCache) this._fastNetCache = new Map();
+    if (this._fastNetCache.has(pinLower)) return this._fastNetCache.get(pinLower);
+    let info = null;
+    resolve: {
+      // The pin's home: the MCU body or a gpioFollowsPinStates device.
+      let homePart = null;
+      let homeTerminal = null;
+      for (const part of this.parts) {
+        const model = getDevice(part.kind);
+        const isSurface = part.kind === 'mcu' || (model && model.gpioFollowsPinStates);
+        if (!isSurface) continue;
+        for (const t of part.terminals) {
+          if (String(t).toLowerCase() === pinLower) {
+            homePart = part;
+            homeTerminal = String(t);
+            break;
+          }
+        }
+        if (homePart) break;
+      }
+      if (!homePart) break resolve;
+      const netId = this._netForTerminal(homePart.id, homeTerminal);
+      if (!netId) break resolve;
+      const net = this.nets.find((n) => n.id === netId);
+      if (!net) break resolve;
+      const feeders = [];
+      const seen = new Set();
+      for (const t of net.terminals) {
+        if (t.part === homePart.id) continue;
+        const part = this.partMap.get(t.part);
+        if (!part) break resolve;
+        if (part.kind === 'resistor') continue;
+        // A digital decoder is: (a) a registered device whose state
+        // carries an I2C slave (_i2c) or declares digitalFastPath, or
+        // (b) a built-in shift register (74HC595 FSM). Both operate at
+        // logic level and never need analog edge timing. Their update/FSM
+        // runs in the settle loop at the resolved digital level, exactly
+        // as one MNA solve would conclude — but without the matrix.
+        // Devices that have analog concerns (probes, muxes, level
+        // shifters) do NOT qualify even though they have update().
+        const model = getDevice(part.kind);
+        const st = this._deviceStates.get(part.id);
+        const isDigitalDecoder = (st && st._i2c)
+          || (model && model.digitalFastPath)
+          || part.kind === 'shift_register';
+        if (isDigitalDecoder) {
+          if (!seen.has(part.id)) {
+            seen.add(part.id);
+            // Terminal→net map so the decoder's read() never rescans.
+            const terminalNets = new Map();
+            for (const term of part.terminals) {
+              const n = this._netForTerminal(part.id, term);
+              if (n) terminalNets.set(term, n);
+            }
+            feeders.push({ part, terminalNets });
+          }
+          continue;
+        }
+        break resolve; // analog consumer — edges are its signal
+      }
+      if (!feeders.length) break resolve;
+      const homeModel = getDevice(homePart.kind);
+      const vLogic = (homeModel && homeModel.vcc) ?? this.vcc;
+      info = { netId, pinLower, vLogic, feeders };
+      if (!this._fastNets) this._fastNets = new Map();
+      this._fastNets.set(netId, info);
+    }
+    this._fastNetCache.set(pinLower, info);
+    return info;
+  }
+
+  /** The bus level a fast net settles to: the strongest driver among the
+   *  master pin's Thévenin source and every slave drive a decoder holds
+   *  on this net; nothing driving means the pull-up wins. This is the
+   *  digital twin of what one MNA solve would conclude — an I2C read
+   *  works BECAUSE the slave's data/ACK drive beats the released master. */
+  _fastNetLevel(info) {
+    // A source stiffer than this counts as driving; anything weaker is a
+    // released output (device models publish "off" as {vTh: 0, rTh: 1e9},
+    // which must NOT read as a low drive) or a mere keeper — the bus
+    // pull-up out-argues those. Real drivers are 25–50 Ω; the weakest
+    // intentional source, the input pull-down, is 50 kΩ.
+    const R_DRIVING = 1e5;
+    let best = null;
+    const consider = (d) => {
+      if (d && typeof d === 'object' && d.rTh < R_DRIVING &&
+          (!best || d.rTh < best.rTh)) best = d;
+    };
+    const ps = this.pinStates.get(info.pinLower);
+    if (ps) consider(pinThevenin(ps.mode, ps.driveHigh, info.vLogic));
+    for (const f of info.feeders) {
+      const st = this._deviceStates.get(f.part.id);
+      if (!st || !st.drives) continue;
+      for (const [term, n] of f.terminalNets) {
+        if (n !== info.netId) continue;
+        consider(st.drives[term]);
+      }
+    }
+    return best ? best.vTh : info.vLogic;
+  }
+
+  /**
+   * Digital settle: recompute every fast net's level and feed the
+   * decoders until nothing changes — the fixpoint the analog settle loop
+   * reaches through repeated solves, at logic level and zero solves.
+   * One master edge per call; a decoder that responds (ACK, read-bit
+   * data) changes its drive, the recompute sees it, and the next
+   * iteration publishes the new bus level for the master to read.
+   */
+  _settleDigital() {
+    if (!this._fastNets || this._fastNets.size === 0) return;
+    for (let round = 0; round < 8; round++) {
+      let changed = false;
+      for (const [netId, info] of this._fastNets) {
+        const level = this._fastNetLevel(info);
+        if (this._digitalOverlay.get(netId) !== level) {
+          this._digitalOverlay.set(netId, level);
+          changed = true;
+        }
+      }
+      if (!changed) break;
+      const fed = new Set();
+      for (const [, info] of this._fastNets) {
+        for (const f of info.feeders) {
+          if (fed.has(f.part.id)) continue;
+          fed.add(f.part.id);
+          if (f.part.kind === 'shift_register') {
+            // Built-in FSM: feed via the same _updateShiftRegisters path,
+            // but with voltages from the overlay so deferred state is seen.
+            this._settleShiftRegister(f.part.id, f.terminalNets);
+            continue;
+          }
+          const model = getDevice(f.part.kind);
+          if (!model || !model.update) continue;
+          const state = this._deviceStates.get(f.part.id);
+          if (!state) continue;
+          const read = (terminal) => {
+            const n = f.terminalNets.get(terminal);
+            if (!n) return 0;
+            const ov = this._digitalOverlay.get(n);
+            return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
+          };
+          model.update(f.part, state, read, this.timeNs);
+        }
+      }
+    }
+  }
+
+  /** Settle one shift register from the digital overlay — the same FSM
+   *  _updateShiftRegisters runs, but reading voltages from the overlay
+   *  so deferred edges are visible. */
+  _settleShiftRegister(partId, terminalNets) {
+    const sr = this._shiftRegisters.get(partId);
+    if (!sr) return;
+    const VCC = this.vcc;
+    const VIH = 0.7 * VCC;
+    const VIL = 0.3 * VCC;
+
+    const readV = (terminal) => {
+      const n = terminalNets.get(terminal);
+      if (!n) return 0;
+      const ov = this._digitalOverlay.get(n);
+      return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
+    };
+
+    const clockHigh = readV('clock') > VIH;
+    const latchHigh = readV('latch') > VIH;
+    const oeV = readV('oe');
+    const oeActive = oeV < VIL;
+
+    if (clockHigh && !sr.lastClock) {
+      const dataHigh = readV('data') > VIH;
+      sr.shiftReg = ((sr.shiftReg << 1) | (dataHigh ? 1 : 0)) & 0xff;
+    }
+    sr.lastClock = clockHigh;
+
+    if (latchHigh && !sr.lastLatch) {
+      sr.latchReg = sr.shiftReg;
+    }
+    sr.lastLatch = latchHigh;
+    sr.oeActive = oeActive;
+  }
+
+  /** One-shot, opt-in whole-capture work limit; ordinary advanceTo is unchanged. */
+  advanceToBounded(tNs, limits) {
+    return this._advanceToBoundedCapture(tNs, limits);
+  }
+
+  /** Finite synchronous stream; observations are provisional until final receipt. */
+  advanceToBoundedStream(tNs, limits, options) {
+    if (!options || typeof options !== 'object' || Array.isArray(options)
+      || Object.keys(options).length !== 2
+      || Object.keys(options).some(key => key !== 'stepNs' && key !== 'onStep')) {
+      throw new Error('advanceToBoundedStream requires stepNs and synchronous onStep');
+    }
+    const {stepNs, onStep} = options;
+    if (typeof tNs !== 'bigint' || tNs <= 0n || tNs > BigInt(Number.MAX_SAFE_INTEGER)
+      || typeof stepNs !== 'bigint' || stepNs <= 0n || typeof onStep !== 'function'
+      || (tNs - 1n) / stepNs + 1n > 200n) {
+      throw new Error('advanceToBoundedStream requires positive time/step and at most 200 observations');
+    }
+    return this._advanceToBoundedCapture(tNs, limits, {stepNs, onStep});
+  }
+
+  _advanceToBoundedCapture(tNs, limits, stream = null) {
+    if (this._boundedAdvanceContext) {
+      const error = new Error('advanceToBounded refuses reentrant capture');
+      if (this._boundedAdvanceContext.stream) this._boundedAdvanceContext.failure ||= error;
+      throw error;
+    }
+    if (this.timeNs !== 0n || this._lastBoundedAdvance || this._transientAnalysisWork.advances) {
+      throw new Error('advanceToBounded requires a fresh Board at time zero');
+    }
+    if (typeof tNs !== 'bigint' || tNs <= 0n || tNs > BigInt(Number.MAX_SAFE_INTEGER)) {
+      throw new Error('advanceToBounded requires a positive bigint target within the safe nanosecond horizon');
+    }
+    if (this.drivenPwm.size) throw new Error('advanceToBounded refuses driven PWM');
+    const ceilings = { maxAttempts: 20000, maxSolves: 60001, maxAdvances: 200 };
+    if (!limits || typeof limits !== 'object' || Array.isArray(limits)
+      || Object.keys(limits).length !== 3
+      || Object.keys(limits).some(key => !Object.hasOwn(ceilings, key))) {
+      throw new Error('advanceToBounded requires bounded maxAttempts/maxSolves/maxAdvances');
+    }
+    const selected = Object.fromEntries(Object.keys(ceilings).map(key => [key, limits[key]]));
+    if (Object.entries(ceilings).some(([key, ceiling]) =>
+      !Number.isSafeInteger(selected[key]) || selected[key] < 1 || selected[key] > ceiling)) {
+      throw new Error('advanceToBounded requires bounded maxAttempts/maxSolves/maxAdvances');
+    }
+    const context = { limits: Object.freeze(selected), work: { attempts: 0, solves: 0, advances: 0 } };
+    if (stream) context.stream = true;
+    this._boundedAdvanceContext = context;
+    let failure = null;
+    try {
+      if (!stream) this.advanceTo(tNs);
+      else {
+        let index = 0;
+        for (let target = stream.stepNs; ; target += stream.stepNs) {
+          const endpoint = target < tNs ? target : tNs;
+          this.advanceTo(endpoint);
+          if (context.failure) throw context.failure;
+          if (this.timeNs !== endpoint) throw new Error('bounded stream did not reach requested chunk endpoint');
+          context.observing = true;
+          context.observerCalls = (context.observerCalls || 0) + 1;
+          let result;
+          try {
+            result = stream.onStep(Object.freeze({index, timeNs: endpoint,
+              qualified: false, work: Object.freeze({...context.work})}));
+          } finally { context.observing = false; }
+          if (result && typeof result.then === 'function') {
+            Promise.resolve(result).catch(() => {});
+            throw new Error('bounded stream requires a synchronous observer');
+          }
+          if (context.failure) throw context.failure;
+          if (this.timeNs !== endpoint) throw new Error('bounded stream observer changed capture time');
+          index++;
+          if (endpoint === tNs) break;
+        }
+      }
+      if (context.failure) throw context.failure;
+      if (this._deviceSubstepOverflow || this._transientAttemptOverflow) {
+        throw new Error('advanceToBounded refuses incomplete device/transient work');
+      }
+    } catch (error) {
+      failure = error.code === 'WHOLE_ADVANCE_BUDGET_EXCEEDED'
+        ? 'whole-advance-budget-exceeded' : 'whole-advance-refused';
+      this._transientAccuracyUnmet ||= { code: failure, timeSec: Number(this.timeNs) / 1e9,
+        detail: error.message };
+      this._invalidateLiveMeasurements(error);
+      throw error;
+    } finally {
+      this._lastBoundedAdvance = Object.freeze({ limits: context.limits,
+        work: Object.freeze({ ...context.work }), requestedTimeNs: tNs.toString(),
+        ...(stream ? {stream: Object.freeze({stepNs: stream.stepNs.toString(),
+          observerCalls: context.observerCalls || 0})} : {}),
+        completed: failure === null, failure });
+      this._boundedAdvanceContext = null;
+    }
+    return this._lastBoundedAdvance;
+  }
+
+  _chargeBoundedAdvanceWork(counter) {
+    const context = this._boundedAdvanceContext;
+    if (!context) return;
+    if (context.failure) throw context.failure;
+    const key = `max${counter[0].toUpperCase()}${counter.slice(1)}`;
+    if (context.work[counter] >= context.limits[key]) {
+      const error = new Error(`whole-advance work budget exceeded: ${counter} limit ${context.limits[key]}`);
+      error.code = 'WHOLE_ADVANCE_BUDGET_EXCEEDED';
+      context.failure = error;
+      throw error;
+    }
+    context.work[counter]++;
+  }
+
+  /**
+   * Whether a device has something to do by `tNs` that an input read would
+   * see: a scheduled wake inside (now, tNs] — an HC-SR04 echo ending, a
+   * DS18B20 releasing its slot — or a pin edge no device has processed yet
+   * (a 1-Wire slave answers the master's falling edge).
+   *
+   * CPU adapters push input levels into their peripherals at slice
+   * boundaries and after their own writes. A level a DEVICE changes on its
+   * own inside a slice was invisible until the slice ended: a 2 ms echo
+   * read as one 10 ms slice (171 cm for 37), and a presence pulse 30 us
+   * after reset was never seen at all. An adapter asks this before handing
+   * the CPU an input, and advances the board to the CPU's time when true.
+   * @param {bigint} tNs
+   */
+  dueDeviceDeadline(tNs) {
+    if (typeof tNs !== 'bigint' || tNs <= this.timeNs) return false;
+    if (this._deviceStates.size === 0) return false;
+    if (this._unseenEdge) return true;
+    return this._earliestDeviceDeadline(this.timeNs, tNs) !== null;
+  }
+
+  /**
+   * Process a small, resumable live-clock quantum at real event boundaries.
+   * This is a scheduling limit, NOT a renewable whole-analysis work budget.
+   * The caller yields between calls and uses processedTimeNs, not its target.
+   */
+  advanceToLive(tNs, options = {}) {
+    if (this._liveAdvanceContext) {
+      const error = new Error('advanceToLive refuses reentrant clock advancement');
+      this._liveAdvanceContext.failure ||= error;
+      throw error;
+    }
+    if (!options || typeof options !== 'object' || Array.isArray(options)
+      || Object.keys(options).some(key => key !== 'maxSteps')) {
+      throw new Error('advanceToLive requires only maxSteps between 1 and 128');
+    }
+    const requestedSteps = options.maxSteps;
+    const maxSteps = requestedSteps === undefined ? 32 : requestedSteps;
+    if (!Number.isSafeInteger(maxSteps) || maxSteps < 1 || maxSteps > 128) {
+      throw new Error('advanceToLive requires only maxSteps between 1 and 128');
+    }
+    if (typeof tNs !== 'bigint' || tNs < this.timeNs
+      || tNs > BigInt(Number.MAX_SAFE_INTEGER)) {
+      throw new Error('advanceToLive requires a nondecreasing safe bigint target');
+    }
+    // Sample options first: a getter must not change analysis authority after
+    // it was checked (for example by completing a finite capture).
+    if (this._boundedAdvanceContext || this._lastBoundedAdvance
+      || !['interactive-v1','interactive-v2'].includes(this._transientAnalysisProfile.id)) {
+      throw new Error('advanceToLive refuses finite or precision analysis reuse');
+    }
+    const assertHealthy = () => {
+      this._assertMeasurementSolution();
+      if (this._transientAttemptOverflow || this._transientAccuracyUnmet) {
+        throw new Error('advanceToLive refuses failed transient history');
+      }
+    };
+    assertHealthy();
+    const startedTimeNs = this.timeNs;
+    const context = { entering: false, failure: null };
+    this._liveAdvanceContext = context;
+    let steps = 0;
+    try {
+      while (this.timeNs < tNs && steps < maxSteps) {
+        // Reactive MNA can need many adaptive solves inside one scheduling
+        // interval (e.g. a probe-loaded flyback ring). Yield at its existing
+        // public waveform/analysis bound, rather than making callers insert
+        // measurement endpoints to avoid exhausting the integration backstop.
+        // This bounds CLOCK span, not CPU work: all solver limits and genuine
+        // failures still apply. Unbounded/static and nonreactive paths retain
+        // their historical 1 ms span. Board clocks have nanosecond resolution.
+        const reactiveBound = this._hasReactive() && this._needsMNA()
+          ? this._transientStepBound().maxStepSec : null;
+        const spanNs = reactiveBound === null ? 1_000_000n
+          : BigInt(Math.max(1, Math.floor(Math.min(1e-3, reactiveBound) * 1e9)));
+        const ceiling = this.timeNs + spanNs;
+        let endpoint = ceiling < tNs ? ceiling : tNs;
+        endpoint = this._earliestDeviceDeadline(this.timeNs, endpoint) ?? endpoint;
+        for (const pwm of this.drivenPwm.values()) {
+          const edge = pwmNextEdgeNs(pwm);
+          if (edge !== null && edge < endpoint) endpoint = edge;
+        }
+        if (endpoint <= this.timeNs) throw new Error('advanceToLive requires a future event boundary');
+        // Permit exactly this ordinary entry, never a listener's nested entry.
+        context.entering = true;
+        this.advanceTo(endpoint);
+        if (context.failure) throw context.failure;
+        if (this.timeNs !== endpoint) throw new Error('advanceToLive clock changed during an interval');
+        assertHealthy();
+        steps++;
+      }
+      return Object.freeze({ startedTimeNs: startedTimeNs.toString(),
+        requestedTimeNs: tNs.toString(), processedTimeNs: this.timeNs.toString(),
+        completed: this.timeNs === tNs, steps, maxSteps });
+    } finally {
+      this._liveAdvanceContext = null;
+    }
+  }
+
+  /** @param {bigint} tNs */
+  advanceTo(tNs) {
+    const live = this._liveAdvanceContext;
+    if (live) {
+      if (!live.entering) {
+        const error = new Error('live clock listener cannot advance time');
+        live.failure ||= error;
+        throw error;
+      }
+      live.entering = false;
+    }
+    const context = this._boundedAdvanceContext;
+    if (context?.observing) {
+      const error = new Error('bounded stream observer cannot advance capture time');
+      context.failure ||= error;
+      throw error;
+    }
+    // A DRIVEN PWM IS REAL SWITCHING. With none (every emulator route, which
+    // publishes its own timer edges), this is the plain advance. With one, the
+    // advance is split at each of its edges, and each edge is a real setPin at
+    // its exact time — so every consumer (the LED integrator, a motor's
+    // mechanical state, a servo's pulse decoder, a buzzer, a scope) reads the
+    // same waveform an emulated timer would have produced, and none of them
+    // needs a PWM-specific path. See setPwm.
+    if (this.drivenPwm.size === 0 || tNs <= this.timeNs) {
+      this._advanceTime(tNs);
+      return;
+    }
+    for (;;) {
+      let next = null;
+      for (const e of this.drivenPwm.values()) {
+        const t = pwmNextEdgeNs(e);
+        if (t !== null && (next === null || t < next)) next = t;
+      }
+      if (next === null || next > tNs) break;
+      if (next > this.timeNs) this._advanceTime(next);
+      for (const e of [...this.drivenPwm.values()]) {
+        if (pwmNextEdgeNs(e) !== next) continue;
+        if (e.high) {
+          e.high = false;
+        } else {
+          e.riseNs += e.periodNs;
+          e.high = true;
+        }
+        this._drivePwmLevel(e);
+      }
+    }
+    this._advanceTime(tNs);
+  }
+
+  /** One level of a driven PWM onto its pin, without cancelling the PWM. */
+  _drivePwmLevel(e) {
+    this._pwmEdge = true;
+    try {
+      this.setPin(e.as, e.mode, e.high);
+    } finally {
+      this._pwmEdge = false;
+    }
+  }
+
+  /**
+   * Drive a PWM on a pin, the way an MCU's timer does: a standing square wave
+   * at `percent` duty (the fraction of each period the pin is driven HIGH),
+   * until it is changed or the pin is written directly with setPin.
+   *
+   * This is the method the generated stc12 drivers have always called
+   * (`_board().setPwm(pin, percent)`, guarded on it existing) and that no
+   * board implemented, so a `set <pin> to 25 percent` was a silent no-op —
+   * the same defect setTone had. It is also what a host without a cycle-level
+   * timer uses (the Scratch VM, the MakeCode simulator bridge, the micro:bit+
+   * extension): those can only say "this pin is at 25 %", never emit edges.
+   *
+   * THE MODEL IS TRUE SWITCHING, NOT AN AVERAGE. The board itself switches
+   * the pin at real edge times inside advanceTo, so a PWM driven here reaches
+   * the circuit exactly as an emulated timer's does (avr8js OCR, rp2040js PWM
+   * slices already publish their edges through setPin): LED brightness is the
+   * windowed average current, a motor integrates its torque over the real
+   * on/off intervals, a servo decodes the real pulse width. An averaged
+   * (duty × V) drive was rejected because it is wrong for the load this
+   * matters most for: a red LED at 25 % of 5 V (1.25 V) sits below its knee
+   * and would read DARK, where the switched average is 25 % of full-on.
+   *
+   * ERROR BOUND. ledBrightness() averages a 20 ms window. It holds whole
+   * periods when 20 ms is a multiple of the period (the 500 Hz default and
+   * 50 Hz servo frames), and the result is then the exact duty average. At
+   * any other carrier the partial period at the window's edge shifts one
+   * reading by at most (period / 20 ms) of full-on, depending on the phase:
+   * up to 10.2 % at Arduino's 490.196 Hz, the same bound its emulated
+   * timer has. Averaging readings over time removes that phase term. Between
+   * the edges the solve is the ordinary per-instant solve, so reactive parts
+   * (capacitors, the motor winding) see the real ripple.
+   *
+   * @param {PinId} pin
+   * @param {number} percent 0..100, clamped; 0 and 100 are steady levels
+   * @param {{hz?: number, pulseUs?: number}} [opts] carrier frequency (default
+   *   500 Hz); `pulseUs` gives the HIGH time directly and overrides `percent`
+   *   (a servo frame: `{hz: 50, pulseUs: 1500}`)
+   * @returns {boolean} false (with a warning) when the value is not a number
+   */
+  setPwm(pin, percent, opts = {}) {
+    const asGiven = String(pin);
+    const key = asGiven.toLowerCase();
+    const hz = opts.hz === undefined ? DEFAULT_PWM_HZ : Number(opts.hz);
+    const duty = opts.pulseUs === undefined
+      ? Number(percent) / 100
+      : Number(opts.pulseUs) * hz / 1e6;
+    if (!Number.isFinite(duty) || !Number.isFinite(hz) || hz <= 0) {
+      this._recordRefusedControl(asGiven, 'pwm',
+        `duty ${percent}${opts.pulseUs === undefined ? '' : ` / pulse ${opts.pulseUs} us`} at ${opts.hz ?? DEFAULT_PWM_HZ} Hz is not a PWM`);
+      return false;
+    }
+    const d = Math.min(1, Math.max(0, duty));
+    const periodNs = BigInt(Math.max(2, Math.round(1e9 / hz)));
+    const highNs = BigInt(Math.round(d * Number(periodNs)));
+    const cur = this.drivenPwm.get(key);
+    // The same PWM written again (a loop re-issuing analogWrite, a host that
+    // re-reports every pin) keeps its phase: restarting it would stretch a
+    // period on every write and bias the duty.
+    if (cur && cur.periodNs === periodNs && cur.highNs === highNs) return true;
+    const prevMode = this.pinStates.get(key)?.mode;
+    const mode = prevMode === 'quasi' || prevMode === 'opendrain' ? prevMode : 'pushpull';
+    const e = { as: asGiven, mode, duty: d, hz, periodNs, highNs, riseNs: this.timeNs, high: highNs > 0n };
+    this.drivenPwm.set(key, e);
+    this._drivePwmLevel(e);
+    return true;
+  }
+
+  /**
+   * The PWM the board is driving on a pin, or null (none, or taken back by
+   * a direct setPin).
+   * @param {PinId} pin
+   * @returns {{duty: number, hz: number}|null}
+   */
+  getPwm(pin) {
+    const e = this.drivenPwm.get(String(pin).toLowerCase());
+    return e ? { duty: e.duty, hz: e.hz } : null;
+  }
+
+  /** The plain time advance (no driven-PWM edges); see advanceTo. */
+  _advanceTime(tNs) {
+    // No flush here, deliberately: the rp2040js adapter calls advanceTo
+    // before EVERY published edge ("time first, edge second"), so a flush
+    // would resurrect the per-edge solve the fast path exists to remove.
+    // This is sound because deferred state only ever lives on nets whose
+    // sole consumers are digital decoders — every net an LED sampler,
+    // probe, or reactive integrator can see is unchanged since the last
+    // real solve, so the analog work below reads correct values. The
+    // decoders themselves read through the overlay (_updateDevices).
+    const prevNs = this.timeNs;
+    if (tNs < prevNs) return;
+    if (tNs === prevNs) {
+      // Same time: still record probes/LED samples (first call at t=0)
+      this._recordLedSamples();
+      if (this._scopeChannels.size > 0) this._updateScopeChannels(tNs);
+      for (const [netId, data] of this._probes) {
+        const v = this.nodeVoltages.get(netId) ?? 0;
+        data.push({ tNs, v: Number.isFinite(v) ? v : 0 });
+        if (data.length > this._probeMaxSamples) data.splice(0, data.length - this._probeMaxSamples);
+      }
+      this._notifyChange('time', { tNs });
+      return;
+    }
+
+    const hasDevices = this._deviceStates.size > 0 || this._shiftRegisters.size > 0;
+
+    // Sub-step through device deadlines so timed transitions fire at the
+    // correct time, not just at the destination. Without this, a relay with
+    // a 5ms deadline jumped 0→100ms would only see 100ms, and an encoder
+    // would undercount edges by the entire interval.
+    if (hasDevices && (this.powered || this._hasReactive())) {
+      const MAX_DEVICE_SUBSTEPS = 200;
+      let steps = 0;
+      let cursor = prevNs;
+
+      while (cursor < tNs && steps < MAX_DEVICE_SUBSTEPS) {
+        // Find the earliest device deadline in (cursor, tNs]
+        const deadline = this._earliestDeviceDeadline(cursor, tNs);
+        const nextT = deadline ?? tNs;
+
+        // Advance time to this point
+        this.timeNs = nextT;
+        const dtSec = Number(nextT - cursor) / 1e9;
+
+        // Integrate reactive components for this sub-interval
+        if (dtSec > 0) {
+          if (this._needsMNA() && (this._hasReactive() || this._hasTimeVaryingSource())) {
+            this._integrateTransientMNA(dtSec);
+          } else if (this.powered) {
+            this._integrateCapacitors(dtSec);
+            this._integrateInductors(dtSec);
+          } else {
+            // Power off with stored energy: same rule as the fast path —
+            // the discharge is solved against the dead network.
+            this._integrateTransientMNA(dtSec);
+          }
+        }
+
+        // Update devices at this time and re-solve if state changed
+        for (let round = 0; round < 5; round++) {
+          if (!this._updateDevices()) break;
+          this._solve();
+        }
+        this._unseenEdge = false;
+
+        // Feed the scope at every sub-step, not only at the advance's
+        // end: a digital channel records its transition AT the wake that
+        // caused it (E4.2 — the end-of-advance feed alone collapsed a
+        // whole ring oscillation into one sample), and analog envelopes
+        // get the same per-event fidelity.
+        if (this._scopeChannels.size > 0) this._updateScopeChannels(nextT);
+
+        cursor = nextT;
+        steps++;
+
+        // If we hit the destination and no deadline pulled us earlier, done
+        if (nextT >= tNs) break;
+      }
+
+      // If we hit the sub-step cap, report it
+      if (steps >= MAX_DEVICE_SUBSTEPS && cursor < tNs) {
+        this.timeNs = tNs;
+        this._deviceSubstepOverflow = true;
+        // The ordinary clock historically reaches the requested destination,
+        // but the device state did not. Do not certify that gap as integrated.
+        // The bounded wrapper owns its separate refusal/receipt vocabulary.
+        if (!this._boundedAdvanceContext) this._transientAccuracyUnmet ||= {
+          code: 'device-substep-budget-exceeded', timeSec: Number(cursor) / 1e9,
+          requestedTimeSec: Number(tNs) / 1e9, maxDeviceSubsteps: MAX_DEVICE_SUBSTEPS,
+        };
+      }
+    } else {
+      // No devices: original fast path
+      this.timeNs = tNs;
+
+      if (tNs > prevNs && (this.powered || this._hasReactive())) {
+        const dtSec = Number(tNs - prevNs) / 1e9;
+        if (this._needsMNA() && (this._hasReactive() || this._hasTimeVaryingSource())) {
+          this._integrateTransientMNA(dtSec);
+        } else if (this.powered) {
+          this._integrateCapacitors(dtSec);
+          this._integrateInductors(dtSec);
+        } else {
+          // Power off with stored energy: route through the transient
+          // MNA so the discharge is solved against the dead network.
+          this._integrateTransientMNA(dtSec);
+        }
+      }
+    }
+
+    // Record LED current samples at this timestamp
+    this._recordLedSamples();
+
+    // Update scope channels (fixed cadence, min/max decimation)
+    if (this._scopeChannels.size > 0) {
+      this._updateScopeChannels(tNs);
+    }
+
+    // Record oscilloscope probe samples
+    for (const [netId, data] of this._probes) {
+      const v = this.nodeVoltages.get(netId) ?? 0;
+      data.push({ tNs, v: Number.isFinite(v) ? v : 0 });
+      if (data.length > this._probeMaxSamples) {
+        data.splice(0, data.length - this._probeMaxSamples);
+      }
+    }
+
+    this._notifyChange('time', { tNs });
+  }
+
+  /**
+   * Select a fixed, reviewed transient integration profile. This is not an
+   * arbitrary tolerance knob: callers cannot smuggle zero/NaN tolerances or
+   * unbounded work into the solver. The precision profile controls local
+   * integration error for numerical analysis; it does not promise that every
+   * output is globally accurate to the same tolerance.
+   *
+   * Must be selected on a fresh board, before transient state exists.
+   * @param {'interactive-v1'|'interactive-v2'|'precision-v1'} id
+   * @param {{maxStepSec?: number}} [options]
+   * @returns {Readonly<Record<string, number|string>>}
+   */
+  configureTransientAnalysis(id, options = undefined) {
+    if (this.timeNs !== 0n || this._trapValid || this.capCurrents.size || this.inductorVoltages.size) {
+      throw new Error('configureTransientAnalysis: requires a fresh board at time zero');
+    }
+    const profiles = TRANSIENT_ANALYSIS_PROFILES;
+    if (!Object.prototype.hasOwnProperty.call(profiles, id)) {
+      throw new Error(`configureTransientAnalysis: unsupported profile ${String(id)}`);
+    }
+    if (options !== undefined && (options === null || Array.isArray(options)
+      || typeof options !== 'object')) {
+      throw new Error('configureTransientAnalysis: options must be an object');
+    }
+    const optionKeys = options === undefined ? [] : Object.keys(options);
+    const unknown = optionKeys.filter(key => key !== 'maxStepSec');
+    if (unknown.length) {
+      throw new Error(`configureTransientAnalysis: unsupported option ${unknown[0]}`);
+    }
+    const profile = { ...profiles[id] };
+    if (Object.prototype.hasOwnProperty.call(options ?? {}, 'maxStepSec')) {
+      const requested = options.maxStepSec;
+      if (!Number.isFinite(requested) || requested <= 0) {
+        throw new Error('configureTransientAnalysis: maxStepSec must be finite and positive');
+      }
+      if (requested < profile.minStepSec) {
+        throw new Error(`configureTransientAnalysis: maxStepSec must be at least ${profile.minStepSec}`);
+      }
+      profile.authoredMaxStepSec = requested;
+    }
+    this._transientAnalysisProfile = Object.freeze(profile);
+    this._transientAccuracyUnmet = null;
+    this._transientAnalysisWork = { attempts: 0, solves: 0, advances: 0 };
+    return this.transientAnalysisStatus().profile;
+  }
+
+  /** A copy-safe qualification record for the most recent transient work. */
+  transientAnalysisStatus() {
+    return {
+      profile: Object.freeze({ ...this._transientAnalysisProfile }),
+      integrationMode: this._transientIntegrationMode(),
+      stepBound: Object.freeze(this._transientStepBound()),
+      accuracyMet: this._transientAccuracyUnmet ? false
+        : this._transientAnalysisWork.advances > 0 ? true : null,
+      failure: this._transientAccuracyUnmet ? Object.freeze({ ...this._transientAccuracyUnmet }) : null,
+      work: Object.freeze({ ...this._transientAnalysisWork }),
+      ...(this._lastBoundedAdvance ? { boundedAdvance: this._lastBoundedAdvance } : {}),
+    };
+  }
+
+  // ─── Boundary A: BoardToMcu ──────────────────────────────────────────────
+
+  /**
+   * @param {PinId} pin
+   * @returns {0 | 1}
+   */
+  readPin(pin) {
+    const v = this._pinVoltage(pin);
+    // Standard TTL threshold for 5V: ~1.5V (VIL max ~0.8V, VIH min ~2.0V).
+    // Use midpoint ~1.5V for simplicity.
+    return v > 1.5 ? 1 : 0;
+  }
+
+  /**
+   * @param {PinId} pin
+   * @returns {number} voltage 0…VCC
+   */
+  readAnalog(pin) {
+    const v = this._pinVoltage(pin);
+    return Number.isFinite(v) ? v : 0;
+  }
+
+  // ─── Boundary B: instruments ─────────────────────────────────────────────
+
+  /**
+   * @param {string} netId
+   * @returns {number}
+   */
+  nodeVoltage(netId) {
+    // Overlay-first for the same reason as _pinVoltage: the deferred
+    // digital level IS the settled value; everything else is unchanged.
+    const ov = this._digitalOverlay.get(netId);
+    if (ov !== undefined) return ov;
+    // A net not in the overlay but with a dirty solve needs flushing —
+    // shift register outputs depend on latchReg updated by the fast path.
+    if (this._solveDirty) this._flushSolve();
+    const v = this.nodeVoltages.get(netId) ?? 0;
+    return Number.isFinite(v) ? v : 0;
+  }
+
+  // ─── Meters: what a DMM shows ───────────────────────────────────────────
+
+  /**
+   * The voltage a DMM shows between two nets: the MEAN of the difference over
+   * the last 100 ms (METER_WINDOW_NS), not the instantaneous solve.
+   *
+   * On a steady net the two are the same number. On a PWM net they are not:
+   * `nodeVoltage` reads the pin on or off, depending on the instant, and a real
+   * meter reads the average — 1.25 V for a 25 % PWM of 5 V into a resistor.
+   * The window is five 20 ms cycles, a whole number of periods of the board's
+   * default carriers (500 Hz PWM, 50 Hz servo/micro:bit analog), where the mean
+   * is exact; at any other carrier the partial period at the window's edge
+   * moves a reading by at most period / 100 ms of the swing.
+   *
+   * The first read of a pair starts watching it and returns the instantaneous
+   * value (there is no history yet); later reads average what the board
+   * recorded at accepted solve instants since, over at most the window.
+   * Continuous segments use linear quadrature; discrete edges remain steps.
+   * This is a DC mean, not a true-RMS or bandwidth/noise model. A watch that is
+   * not read for 2 s of sim time is dropped.
+   *
+   * @param {string} netA
+   * @param {string|null} [netB] reference net; omitted = ground (0 V)
+   * @returns {number}
+   */
+  meterVoltage(netA, netB = null) {
+    return this._meterRead(`v\0${netA}\0${netB ?? ''}`, { kind: 'v', a: netA, b: netB });
+  }
+
+  /**
+   * The current a DMM in series with `partId`'s `terminal` shows: the mean of
+   * branchCurrent over the last 100 ms, signed as branchCurrent is (out of the
+   * part). Same window, first-read and expiry rules as meterVoltage.
+   * @param {string} partId
+   * @param {string} terminal
+   * @returns {number}
+   */
+  meterCurrent(partId, terminal) {
+    return this._meterRead(`i\0${partId}\0${terminal}`, { kind: 'i', part: partId, terminal });
+  }
+
+  /** Refuse only currents the solver explicitly identifies as non-unique. */
+  _assertDeterminateCurrent(solution, partId, terminal) {
+    if (!solution?.indeterminateBranchCurrents?.has(partId)) return;
+    const railSymbol = this._solveParts.some(part => part.id === partId && part.kind === 'vcc');
+    if (railSymbol ? terminal === 'vcc' : terminal === 'pos' || terminal === 'neg') {
+      const error = new Error(`indeterminate source current ${partId}.${terminal}: redundant ideal voltage source`);
+      error.code = 'INDETERMINATE_BRANCH_CURRENT';
+      throw error;
+    }
+  }
+
+  /** Instrument validity, not a change to the solver or nodeVoltage API. */
+  _assertMeasurementSolution(solution = this._mnaCache) {
+    if (this._deviceSubstepOverflow) {
+      const error = new Error('measurement unavailable: device sub-step budget exhausted; initialize a fresh Board');
+      error.code = 'SOLVE_FAILED_MEASUREMENT';
+      throw error;
+    }
+    if (!this._liveSolveError && solution?.converged !== false && !solution?.railConflicts?.length) return;
+    const detail = this._liveSolveError ? `: ${this._liveSolveError.message}` : ' or rail conflict';
+    const error = new Error(`measurement unavailable: circuit solve failed${detail}`);
+    error.code = 'SOLVE_FAILED_MEASUREMENT';
+    throw error;
+  }
+
+  /** Preserve the original live solver exception while invalidating observers. */
+  _invalidateLiveMeasurements(error) {
+    this._liveSolveError = error;
+    this._lastSolveConverged = false;
+    const reason = `measurement unavailable: circuit solve failed: ${error.message}`;
+    for (const w of this._meterWatches.values()) w.failure ||= reason;
+    for (const ch of this._scopeChannels.values()) {
+      if (ch.type !== 'digital') ch.failure ||= reason;
+    }
+    for (const part of this.parts) {
+      const model = getDevice(part.kind);
+      if (model?.measurement && model.invalidateMeasurement) {
+        model.invalidateMeasurement(this._deviceStates.get(part.id), reason);
+      }
+    }
+  }
+
+  /** Only opt-in measurement devices receive observer validity; ordinary reads stay unchanged. */
+  _attachMeasurementValidity(model, read, solution = this._mnaCache) {
+    if (!model.measurement) return;
+    read.measurementError = null;
+    try { this._assertMeasurementSolution(solution); }
+    catch (error) {
+      if (error.code !== 'SOLVE_FAILED_MEASUREMENT') throw error;
+      read.measurementError = error.message;
+    }
+  }
+
+  /** Keep an invalid analog capture invalid even if a later solve recovers. */
+  _scopeMeasurementFailed(ch, solution = this._mnaCache) {
+    if (ch.type === 'digital') return false;
+    if (!ch.failure) {
+      try { this._assertMeasurementSolution(solution); }
+      catch (error) {
+        if (error.code !== 'SOLVE_FAILED_MEASUREMENT') throw error;
+        ch.failure = error.message;
+      }
+    }
+    return !!ch.failure;
+  }
+
+  /** @private */
+  _meterValue(w, solution = null) {
+    if (w.kind === 'i' && !this.powered) return 0;
+    this._assertMeasurementSolution(solution ?? this._mnaCache);
+    if (w.kind === 'v') {
+      const at = (net) => {
+        if (net == null || net === '') return 0;
+        const ov = solution ? undefined : this._digitalOverlay.get(net);
+        const v = ov !== undefined ? ov : ((solution?.nodeVoltages ?? this.nodeVoltages).get(net) ?? 0);
+        return Number.isFinite(v) ? v : 0;
+      };
+      return at(w.a) - at(w.b);
+    }
+    if (!this.powered) return 0;
+    if (!solution && !this._mnaCache) this._mnaCache = this._solveMNA(false);
+    const result = solution ?? this._mnaCache;
+    this._assertMeasurementSolution(result);
+    this._assertDeterminateCurrent(result, w.part, w.terminal);
+    const i = result.branchCurrents.get(w.part)?.get(w.terminal) ?? 0;
+    return Number.isFinite(i) ? i : 0;
+  }
+
+  /** @private */
+  _meterRead(key, spec) {
+    this._flushSolve();
+    this._assertMeasurementSolution();
+    if (this._transientAccuracyUnmet) {
+      throw new Error(`meter mean refused: ${this._transientAccuracyUnmet.code}`);
+    }
+    let w = this._meterWatches.get(key);
+    if (!w) {
+      w = { ...spec, hist: [], readNs: this.timeNs };
+      const v = this._meterValue(w);
+      w.hist.push({ tSec: Number(this.timeNs)/1e9, before:v, v });
+      this._meterWatches.set(key, w);
+      return w.hist[0].v;
+    }
+    w.readNs = this.timeNs;
+    const now = Number(this.timeNs)/1e9;
+    const h = w.hist;
+    // An analytic interval must publish its descriptor through the current
+    // clock. A missing interval cannot be replaced with a held endpoint.
+    if (!w.failure && now>h[h.length-1].tSec && this._transientIntegrationMode()==='source-constrained-inductor-direct') {
+      w.failure='source-constrained-inductor-meter-integral-unqualified';
+    }
+    if (w.failure) throw new Error(`meter mean refused: ${w.failure}`);
+    const windowStart = Number(this.timeNs>METER_WINDOW_NS
+      ? this.timeNs-METER_WINDOW_NS : 0n)/1e9;
+    const from = Math.max(h[0].tSec,windowStart);
+    if (now <= from) return h[h.length - 1].v;
+    // Clip each linear segment to the actual window; same-time edge updates
+    // replace only the right-hand value, preserving the preceding integral.
+    let sum = 0;
+    let constant, flat=true;
+    for (let k = 0; k < h.length; k++) {
+      const a=h[k], b=h[k+1], end=b?.tSec ?? now;
+      const t0=Math.max(a.tSec,from), t1=Math.min(end,now);
+      if (t1<=t0) continue;
+      if (b?.analytic) {
+        const area=b.analytic.factor * spiceSineIntegral(b.analytic.params,t0,t1,b.analytic.derivative);
+        if (!Number.isFinite(area) || !Number.isFinite(sum+area)) {
+          w.failure='non-finite-analytic-meter-integral';
+          throw new Error(`meter mean refused: ${w.failure}`);
+        }
+        sum += area;
+        flat=false;
+        continue;
+      }
+      if (b?.quadratic) {
+        let area;
+        try { area=meterQuadraticIntegral(b.quadratic,t0,t1); }
+        catch (error) {
+          w.failure=`invalid-quadratic-meter-integral: ${error.message}`;
+          throw new Error(`meter mean refused: ${w.failure}`);
+        }
+        if (!Number.isFinite(sum+area)) {
+          w.failure='non-finite-quadratic-meter-integral';
+          throw new Error(`meter mean refused: ${w.failure}`);
+        }
+        sum+=area;
+        flat=false;
+        continue;
+      }
+      const slope=b && end>a.tSec ? (b.before-a.v)/(end-a.tSec) : 0;
+      const v0=a.v+slope*(t0-a.tSec), v1=a.v+slope*(t1-a.tSec);
+      if (constant===undefined) constant=v0;
+      if (v0!==constant || v1!==constant) flat=false;
+      sum+=(v0+v1)/2*(t1-t0);
+    }
+    return flat && constant!==undefined ? constant : sum/(now-from);
+  }
+
+  /** Accepted continuous solves pass their exact instant and matching maps. */
+  _recordMeterSamples(atSec = Number(this.timeNs)/1e9, solution = null, analytic = null, quadratic = null) {
+    // A final floating-point substep can overshoot the integer clock by an
+    // ulp. Never let this numerical artifact publish a future meter point.
+    atSec=Math.min(atSec,Number(this.timeNs)/1e9);
+    const windowStart = Math.max(0,atSec-Number(METER_WINDOW_NS)/1e9);
+    const boundarySlack=2*Number.EPSILON*Math.max(Math.abs(atSec),Number(METER_WINDOW_NS)/1e9);
+    for (const [key, w] of this._meterWatches) {
+      if (atSec-Number(w.readNs)/1e9 > Number(METER_IDLE_NS)/1e9) { this._meterWatches.delete(key); continue; }
+      if (this._transientAccuracyUnmet) w.failure=this._transientAccuracyUnmet.code;
+      if (w.failure) continue;
+      let v;
+      try { v = this._meterValue(w,solution); }
+      catch (error) {
+        if (error.code !== 'INDETERMINATE_BRANCH_CURRENT'
+            && error.code !== 'SOLVE_FAILED_MEASUREMENT') throw error;
+        w.failure = error.message;
+        continue;
+      }
+      const h = w.hist;
+      // Retire out-of-window observations before enforcing capacity. A full
+      // rolling window may have room for this sample after its oldest point
+      // expires; checking capacity first would falsely refuse that case.
+      let keep = 0;
+      while (keep + 1 < h.length && h[keep + 1].tSec <= windowStart+boundarySlack) keep++;
+      if (keep > 0) h.splice(0, keep);
+      const last = h[h.length - 1];
+      if (last && atSec<last.tSec) { w.failure='nonmonotonic-meter-time'; continue; }
+      if (last && last.tSec === atSec) { last.v = v; }
+      else if (solution || !last || last.v !== v) {
+        // Remove only a redundant middle point on an unchanged flat segment.
+        if (!analytic && !quadratic?.has(key) && !last?.analytic && !last?.quadratic && last && h.length>1 && h[h.length-2].v===last.v
+            && last.before===last.v && last.v===v) h.pop();
+        let segment;
+        if (analytic) {
+          const {a,b,reference,source,inductor,currentSign,henrys} = analytic;
+          const netFactor = net => net===reference ? 0 : net===a ? 1 : net===b ? -1 : 0;
+          const factor = w.kind==='v' ? henrys*currentSign*(netFactor(w.a)-netFactor(w.b))
+            : !this.powered ? 0 : w.part===source.id ? (w.terminal==='pos' ? 1 : w.terminal==='neg' ? -1 : 0)
+            : w.part===inductor.id ? currentSign*(w.terminal==='a' ? -1 : w.terminal==='b' ? 1 : 0) : 0;
+          segment={params:{...source.params},factor,derivative:w.kind==='v'};
+        }
+        // An exact analytic function integrates any clipped subinterval; its
+        // caller endpoints are redundant, unlike adaptive solve observations.
+        // Keep visible static edges and every change in the function itself.
+        if (segment && last?.analytic && h.length>1 && last.before===last.v
+            && segment.factor===last.analytic.factor
+            && segment.derivative===last.analytic.derivative
+            && ['offset','amplitude','freq','td','theta','phase'].every(
+              key => segment.params[key]===last.analytic.params[key])) {
+          h.pop();
+        }
+        if (h.length>=100000) { w.failure='meter-history-limit-exceeded'; continue; }
+        h.push({ tSec:atSec, before:solution?v:(last?.v ?? v), v, ...(segment ? {analytic:segment} : {}),
+          ...(quadratic?.has(key) ? {quadratic:quadratic.get(key)} : {}) });
+      }
+    }
+  }
+
+  /** Precision meters may integrate only a fully accepted adaptive pair.
+   * The start value is already observed; midpoint/end maps are the same two
+   * half-step solutions selected by the unchanged LTE gate. No model update,
+   * scope publication or new solve is performed by this helper. */
+  _acceptedMeterQuadrature(startSec,midSec,endSec,midpoint,endpoint) {
+    if (this._transientAnalysisProfile.id !== 'precision-v1' || !this._meterWatches.size
+      || this._transientAccuracyUnmet) return null;
+    const segments=new Map();
+    for (const [key,w] of this._meterWatches) {
+      if (w.failure) continue;
+      const last=w.hist[w.hist.length-1];
+      const rounding=4*Number.EPSILON*Math.max(Math.abs(startSec),1e-12);
+      // The existing integration loop may finish <=1 fs before the integer
+      // endpoint. Use that actual observed timestamp as the polynomial origin;
+      // never move its value forward or extrapolate from a future observation.
+      const gap=last ? startSec-last.tSec : Infinity;
+      if (!last || gap < -rounding || gap > 1e-15+rounding) {
+        w.failure='meter-quadrature-start-not-observed';
+        continue;
+      }
+      let middle,end;
+      try { middle=this._meterValue(w,midpoint);end=this._meterValue(w,endpoint); }
+      catch (error) {
+        if (error.code !== 'INDETERMINATE_BRANCH_CURRENT' && error.code !== 'SOLVE_FAILED_MEASUREMENT') throw error;
+        w.failure=error.message;
+        continue;
+      }
+      // Constant segments preserve bit-identical flat means and the existing
+      // redundant-point compaction; no polynomial descriptor is needed.
+      if (last.v===middle && middle===end) continue;
+      segments.set(key,meterQuadraticSegment(last.tSec,midSec,endSec,last.v,middle,end));
+    }
+    return segments;
+  }
+
+  // ─── Oscilloscope probes ────────────────────────────────────────────────
+
+  /**
+   * Attach an oscilloscope probe to a net. Starts recording voltage
+   * samples at each advanceTo call.
+   * @param {string} netId
+   */
+  addProbe(netId) {
+    // A probe wants real waveforms: materialize any deferred digital
+    // state and stop qualifying nets for the fast path (the qualifier
+    // checks _probes before its cache, so this takes effect at once).
+    this._flushSolve();
+    if (!this._probes.has(netId)) {
+      this._probes.set(netId, []);
+    }
+  }
+
+  /**
+   * Remove a probe from a net.
+   * @param {string} netId
+   */
+  removeProbe(netId) {
+    this._probes.delete(netId);
+  }
+
+  /**
+   * Get the recorded waveform for a probed net.
+   * @param {string} netId
+   * @returns {Array<{tNs: bigint, v: number}>}
+   */
+  getProbeData(netId) {
+    return this._probes.get(netId) ?? [];
+  }
+
+  /**
+   * Get all active probe net IDs.
+   * @returns {string[]}
+   */
+  getProbes() {
+    return [...this._probes.keys()];
+  }
+
+  /** Clear all probe data without removing probes. */
+  clearProbeData() {
+    for (const [, data] of this._probes) {
+      data.length = 0;
+    }
+  }
+
+  // ─── Scope channels ────────────────────────────────────────────────────
+
+  /**
+   * Rebuild the solver-only view with the finite input networks requested by
+   * scope channels. These parts are instruments, not authored circuit parts:
+   * they stay out of `parts`, `nets`, exports and snapshots of topology, but
+   * their electrical consequences are solved by the same MNA as everything
+   * else. Rebuilding from the post-expansion base prevents repeated add/remove
+   * cycles from accumulating phantom loads.
+   * @private
+   */
+  _rebuildScopeLoadView() {
+    if (!this._scopeBaseParts || !this._scopeBaseNets) return;
+    const parts = [...this._scopeBaseParts];
+    const nets = this._scopeBaseNets.map(n => ({ ...n, terminals: [...n.terminals] }));
+    const byNet = new Map(nets.map(n => [n.id, n]));
+    const liveCaps = new Set();
+    for (const [handle, ch] of this._scopeChannels) {
+      if (ch.type !== 'voltage' || ch.referenceNetId === null) continue;
+      const tip = byNet.get(ch.netId);
+      const reference = byNet.get(ch.referenceNetId);
+      if (!tip || !reference) continue;
+      const add = (suffix, kind, params) => {
+        const id = `@scope:${handle}:${suffix}`;
+        parts.push({ id, kind, params, terminals: ['a', 'b'] });
+        tip.terminals.push({ part: id, terminal: 'a' });
+        reference.terminals.push({ part: id, terminal: 'b' });
+        return id;
+      };
+      if (ch.inputOhms !== null) add('r', 'resistor', { ohms: ch.inputOhms });
+      if (ch.inputFarads !== null && ch.inputFarads > 0) {
+        const id = add('c', 'capacitor', { farads: ch.inputFarads });
+        liveCaps.add(id);
+        if (!this.capVoltages.has(id)) this.capVoltages.set(id, 0);
+      }
+    }
+    for (const id of [...this.capVoltages.keys()]) {
+      if (String(id).startsWith('@scope:') && !liveCaps.has(id)) this.capVoltages.delete(id);
+    }
+    this._solveParts = parts;
+    this._solveNets = nets;
+    this._mnaCache = null;
+    this._trapValid = false;
+  }
+
+  /** Voltage at a channel's tip relative to its explicit reference, or to
+   * engine ground for the historical ideal observer. @private */
+  _scopeVoltage(ch) {
+    const tip = this.nodeVoltages.get(ch.netId) ?? 0;
+    const reference = ch.referenceNetId === null
+      ? 0 : (this.nodeVoltages.get(ch.referenceNetId) ?? 0);
+    const value = tip - reference;
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  /**
+   * Attach a scope channel with fixed sim-time cadence and (min,max) decimation.
+   *
+   * @param {object} opts
+   * @param {'voltage' | 'current' | 'digital'} opts.type - Channel type
+   * @param {string} [opts.netId] - Net to probe (voltage/digital channels)
+   * @param {string} [opts.partId] - Part to probe (for current channels)
+   * @param {string} [opts.terminal] - Terminal to probe (for current channels)
+   * @param {number} [opts.sampleRateHz=100000] - Sim-time sample rate
+   * @param {number} [opts.depth=8192] - Ring buffer depth in (min,max) pairs
+   *   (voltage) or transitions (digital, default 4096)
+   * @param {number} [opts.threshold] - Digital logic threshold in volts
+   *   (default vcc/2, captured at add time)
+   * @param {string} [opts.referenceNetId] - Explicit differential reference
+   *   for a voltage channel. Omit to preserve the historical ideal observer
+   *   against engine ground.
+   * @param {number} [opts.inputOhms] - Finite resistance stamped from tip to
+   *   reference. Requires referenceNetId.
+   * @param {number} [opts.inputFarads] - Finite parallel capacitance stamped
+   *   from tip to reference. Requires referenceNetId; zero is allowed.
+   * @param {'display'|'simulation'} [opts.currentClock='display'] - Current
+   *   channels only. Simulation mode records accepted-solve current at exact
+   *   sample times; display mode preserves sampleCurrentChannels acquisition.
+   * @returns {number} Channel handle
+   */
+  addScopeChannel(opts) {
+    if (opts.currentClock !== undefined && (opts.type !== 'current'
+      || !['display', 'simulation'].includes(opts.currentClock))) {
+      throw new Error('scope currentClock requires current type and display or simulation');
+    }
+    if (opts.currentClock === 'simulation' &&
+      (!this.parts.some(part => part.id === opts.partId)
+        || this._netForTerminal(opts.partId, opts.terminal) === undefined)) {
+      throw new Error('simulation current scope requires a connected part terminal');
+    }
+    if (opts.currentClock === 'simulation' &&
+      (!(Number.isFinite(opts.sampleRateHz ?? 100000) && (opts.sampleRateHz ?? 100000) > 0
+          && (opts.sampleRateHz ?? 100000) <= 1e9)
+        || !Number.isSafeInteger(opts.depth ?? 8192) || (opts.depth ?? 8192) < 1
+        || (opts.depth ?? 8192) > 1000000
+        || (opts.capture !== undefined && opts.capture !== 'sample'))) {
+      throw new Error('simulation current scope requires finite cadence, bounded depth and sample capture');
+    }
+    const referenceNetId = opts.referenceNetId ?? null;
+    const hasInputResistance = opts.inputOhms !== undefined;
+    const hasInputCapacitance = opts.inputFarads !== undefined;
+    const loadsCircuit = hasInputResistance || hasInputCapacitance;
+    if (opts.type === 'voltage' && referenceNetId !== null) {
+      if (!this.netMap?.has(opts.netId)) {
+        throw new Error(`scope probe tip net "${opts.netId}" does not exist`);
+      }
+      if (!this.netMap.has(referenceNetId)) {
+        throw new Error(`scope probe reference net "${referenceNetId}" does not exist`);
+      }
+    }
+    if (loadsCircuit) {
+      if (opts.type !== 'voltage') {
+        throw new Error('scope input loading is supported only for voltage channels');
+      }
+      if (referenceNetId === null) {
+        throw new Error('a loaded scope probe requires an explicit referenceNetId');
+      }
+      if (referenceNetId === opts.netId) {
+        throw new Error('a loaded scope probe tip and reference must be different nets');
+      }
+      if (hasInputResistance && !(Number.isFinite(opts.inputOhms) && opts.inputOhms > 0)) {
+        throw new Error('scope inputOhms must be a positive finite number');
+      }
+      if (hasInputCapacitance && !(Number.isFinite(opts.inputFarads) && opts.inputFarads >= 0)) {
+        throw new Error('scope inputFarads must be a non-negative finite number');
+      }
+    }
+    const handle = this._nextScopeHandle++;
+    if (opts.type === 'digital') {
+      // E4.2: a logic-analyzer channel stores (t, level) TRANSITIONS,
+      // not sampled envelopes — with E4.1 every gate flip and source
+      // edge lands on a solve point, so the timestamps are exact, and
+      // a quiet net costs nothing however long the run.
+      const depth = opts.depth ?? 4096;
+      this._scopeChannels.set(handle, {
+        type: 'digital',
+        netId: opts.netId ?? null,
+        threshold: opts.threshold ?? this.vcc / 2,
+        depth,
+        // Interleaved [tNs0, level0, tNs1, level1, ...]; NaN = unwritten.
+        trans: new Float64Array(depth * 2).fill(NaN),
+        writeIndex: 0,
+        count: 0,
+        _lastLevel: null,
+      });
+      return handle;
+    }
+    const sampleRateHz = opts.sampleRateHz ?? 100_000;
+    const depth = opts.depth ?? 8192;
+    const intervalNs = BigInt(Math.round(1e9 / sampleRateHz));
+    // 'envelope' (the default, unchanged) keeps the (min,max) of everything
+    // that happened inside the bucket — right for DRAWING, because it is what
+    // keeps a narrow pulse visible at a coarse timebase.
+    //
+    // 'sample' records the instantaneous value at the sample instant into both
+    // slots, i.e. a true uniformly-spaced sample series. A transform needs
+    // that and cannot use the other: an envelope's min and max are two
+    // different instants reported as one, so an FFT over it is a spectrum of a
+    // signal that never existed (bw-circuit-ui D24 / X2.2). The value stored is
+    // the solution at the FIRST solve point at or after the sample instant — a
+    // zero-order hold from above, within one solve step of the sample time, and
+    // with E4.1 every source edge is already a solve point.
+    // Legacy current channels are display sampled. The explicit simulation
+    // clock instead records accepted-solve samples through the shared grid.
+    const capture = opts.capture === 'sample' || opts.type === 'current' ? 'sample' : 'envelope';
+
+    const ch = {
+      type: opts.type,
+      ...(opts.currentClock === 'simulation' ? {currentClock: 'simulation'} : {}),
+      netId: opts.netId ?? null,
+      referenceNetId,
+      inputOhms: hasInputResistance ? opts.inputOhms : null,
+      inputFarads: hasInputCapacitance ? opts.inputFarads : null,
+      partId: opts.partId ?? null,
+      terminal: opts.terminal ?? null,
+      sampleRateHz,
+      intervalNs,
+      capture,
+      depth,
+      // Ring buffer: interleaved [min0, max0, min1, max1, ...]
+      // Unwritten regions are NaN, never flat 0 — per boundary-B v2.
+      samples: new Float64Array(depth * 2).fill(NaN),
+      writeIndex: 0,     // next write position (in pairs, 0..depth-1)
+      count: 0,          // how many pairs have been written total
+      startTNs: 0n,      // sim-time of the oldest sample in the buffer
+      // For voltage channels: track running (min, max) within current bucket
+      _bucketMin: Infinity,
+      _bucketMax: -Infinity,
+      _nextSampleNs: this.timeNs + intervalNs, // next sample point
+      // For 'sample' channels: the previous solve point, so the value AT the
+      // sample instant can be interpolated rather than held from whichever
+      // solve happened to land next. See _updateScopeChannels.
+      _prevTNs: this.timeNs,
+      _prevExactTimeSec: null,
+      _prevVal: null,
+    };
+
+    this._scopeChannels.set(handle, ch);
+    // A passive DC board may have used the closed-form walker before this
+    // observer selected MNA. Acquire its static snapshot once at attachment,
+    // not by flushing a later endpoint into a transient sample. Reactive and
+    // device histories must keep their actual accepted-step authority.
+    if (ch.currentClock === 'simulation' && this.powered && !this._mnaCache
+      && !this._hasReactive() && this._deviceStates.size === 0 && this._shiftRegisters.size === 0
+      && !this._liveSolveError && !this._deviceSubstepOverflow && !this._transientAccuracyUnmet) {
+      // _solveMNA's existing wrapper owns the shared-budget charge exactly once.
+      this._adoptSolution(this._solveMNA(false));
+    }
+    if (loadsCircuit) {
+      this._rebuildScopeLoadView();
+      this._solve();
+    }
+    return handle;
+  }
+
+  /**
+   * Remove a scope channel.
+   * @param {number} handle
+   */
+  removeScopeChannel(handle) {
+    const loaded = this._scopeChannels.get(handle)?.referenceNetId !== null
+      && (this._scopeChannels.get(handle)?.inputOhms !== null
+        || this._scopeChannels.get(handle)?.inputFarads !== null);
+    this._scopeChannels.delete(handle);
+    if (loaded) {
+      this._rebuildScopeLoadView();
+      this._solve();
+    }
+  }
+
+  /** Remove all scope channels. */
+  clearScopeChannels() {
+    const loaded = [...this._scopeChannels.values()].some(ch => ch.referenceNetId !== null
+      && (ch.inputOhms !== null || ch.inputFarads !== null));
+    this._scopeChannels.clear();
+    if (loaded) {
+      this._rebuildScopeLoadView();
+      this._solve();
+    }
+  }
+
+  /**
+   * Get the waveform data for a scope channel.
+   * @param {number} handle
+   * @returns {{samples: Float64Array, startTNs: bigint, sampleIntervalNs: bigint,
+   *            writeIndex: number, count: number, channelType: string} | null}
+   */
+  getScopeData(handle) {
+    const ch = this._scopeChannels.get(handle);
+    if (!ch) return null;
+    if (this._scopeMeasurementFailed(ch)) {
+      const error = new Error(`scope capture refused: ${ch.failure}`);
+      error.code = 'SOLVE_FAILED_MEASUREMENT';
+      throw error;
+    }
+    if (ch.type === 'digital') {
+      return {
+        transitions: ch.trans,
+        writeIndex: ch.writeIndex,
+        count: ch.count,
+        depth: ch.depth,
+        threshold: ch.threshold,
+        channelType: 'digital',
+      };
+    }
+    return {
+      samples: ch.samples,
+      startTNs: ch.startTNs,
+      sampleIntervalNs: ch.intervalNs,
+      writeIndex: ch.writeIndex,
+      count: ch.count,
+      channelType: ch.type,
+      // Which of the two things the pairs are. A consumer that transforms the
+      // buffer must be able to ASK, rather than assume — assuming was D24.
+      capture: ch.capture ?? 'envelope',
+      ...(ch.currentClock === 'simulation' ? {currentClock: 'simulation'} : {}),
+    };
+  }
+
+  /**
+   * Sample display-clock current channels once (call from display loop, ~60 Hz).
+   * Simulation-clock channels are acquired independently and are excluded.
+   * Returns a Map of handle → instantaneous current.
+   * @returns {Map<number, number>}
+   */
+  sampleCurrentChannels() {
+    const results = new Map();
+    for (const [handle, ch] of this._scopeChannels) {
+      if (ch.type !== 'current') continue;
+      if (ch.currentClock === 'simulation') continue; // Never add display-time samples to a clocked ring.
+      const current = this.branchCurrent(ch.partId, ch.terminal);
+      // Write into ring buffer as a single (min=max=current) pair
+      const idx = ch.writeIndex * 2;
+      ch.samples[idx] = current;
+      ch.samples[idx + 1] = current;
+      ch.writeIndex = (ch.writeIndex + 1) % ch.depth;
+      ch.count++;
+      if (ch.count > ch.depth) {
+        ch.startTNs += ch.intervalNs;
+      }
+      results.set(handle, current);
+    }
+    return results;
+  }
+
+  /**
+   * Get all active scope channel handles.
+   * @returns {number[]}
+   */
+  getScopeChannels() {
+    return [...this._scopeChannels.keys()];
+  }
+
+  /**
+   * Update scope channel min/max with current voltages (no flush).
+   * Called from setPin/setControl to capture intra-bucket voltage changes.
+   * @private
+   */
+  _feedScopeVoltages() {
+    for (const [, ch] of this._scopeChannels) {
+      if (ch.type === 'digital') { this._feedDigital(ch, this.timeNs); continue; }
+      if (ch.type !== 'voltage' && ch.currentClock !== 'simulation') continue;
+      if (this._scopeMeasurementFailed(ch)) continue;
+      const val = ch.currentClock === 'simulation' ? this._scopeCurrentSample(ch, this._mnaCache) : this._scopeVoltage(ch);
+      if (val === null) continue;
+      if (val < ch._bucketMin) ch._bucketMin = val;
+      if (val > ch._bucketMax) ch._bucketMax = val;
+      // A setPin/setControl edge is a DISCONTINUITY at this instant, not a
+      // ramp towards it: a sample channel's interpolation must start from the
+      // post-edge value, or the next sample would be drawn part-way up a step
+      // that took no time at all.
+      if (ch.capture === 'sample') {
+        ch._prevTNs = this.timeNs; ch._prevExactTimeSec = null; ch._prevVal = val;
+      }
+    }
+  }
+
+  /** Record a digital channel's level at tNs, only when it changed.
+   * @private */
+  _feedDigital(ch, tNs) {
+    const v = this.nodeVoltages.get(ch.netId) ?? 0;
+    const level = (Number.isFinite(v) ? v : 0) > ch.threshold ? 1 : 0;
+    if (ch._lastLevel === level) return;
+    ch._lastLevel = level;
+    const idx = ch.writeIndex * 2;
+    ch.trans[idx] = Number(tNs);
+    ch.trans[idx + 1] = level;
+    ch.writeIndex = (ch.writeIndex + 1) % ch.depth;
+    ch.count++;
+  }
+
+  /**
+   * Feed accepted analog values into voltage and simulation-current channels. MNA may supply its
+   * actual fractional solve time; the integer label alone is not sample readiness.
+   * Called from advanceTo when time crosses sample boundaries.
+   * @private
+   */
+  _updateScopeChannels(tNs, exactTimeSec = null, solution = this._mnaCache) {
+    for (const [, ch] of this._scopeChannels) {
+      if (ch.type === 'digital') { this._feedDigital(ch, tNs); continue; }
+      if (ch.type !== 'voltage' && ch.currentClock !== 'simulation') continue;
+      if (this._scopeMeasurementFailed(ch, solution)) continue;
+
+      // Accepted analog value, with OUT-of-terminal polarity for currents.
+      const val = ch.currentClock === 'simulation' ? this._scopeCurrentSample(ch, solution) : this._scopeVoltage(ch);
+      if (val === null) continue;
+
+      // Track running min/max for this bucket
+      if (val < ch._bucketMin) ch._bucketMin = val;
+      if (val > ch._bucketMax) ch._bucketMax = val;
+
+      // Flush completed buckets
+      while (tNs >= ch._nextSampleNs
+          && !(ch.capture === 'sample' && exactTimeSec !== null
+            && exactTimeSec < Number(ch._nextSampleNs) / 1e9)) {
+        const idx = ch.writeIndex * 2;
+        // A 'sample' channel stores the value AT the sample instant, linearly
+        // interpolated between the two solve points that bracket it. Holding
+        // the later solve's value instead (the obvious implementation) is a
+        // zero-order hold whose time error is a whole solve step: measured on
+        // a 1 kHz sine at 100 kHz capture, 618 mV of a 2 V amplitude, because
+        // the transient controller was taking 50 µs steps. Interpolation
+        // brings the same bench to under 1 mV. Fractional readiness also keeps
+        // the existing sample-grid barrier from being skipped prematurely.
+        const s = ch.capture === 'sample' ? sampleAtInstant(ch, tNs, val, exactTimeSec) : 0;
+        ch.samples[idx] = ch.capture === 'sample' ? s : ch._bucketMin;
+        ch.samples[idx + 1] = ch.capture === 'sample' ? s : ch._bucketMax;
+        ch.writeIndex = (ch.writeIndex + 1) % ch.depth;
+        ch.count++;
+
+        // Update start time when buffer wraps.
+        //
+        // An envelope pair is labelled by the START of the bucket it covers; a
+        // sample is labelled by the INSTANT it was taken, which is one interval
+        // later. Getting that wrong is not a rounding matter: the whole series
+        // reads one sample early, and on a 1 kHz sine at 100 kHz that is a
+        // 126 mV disagreement with the closed form that looks exactly like an
+        // amplitude error.
+        if (ch.count > ch.depth) {
+          ch.startTNs = ch._nextSampleNs - ch.intervalNs * BigInt(
+            ch.capture === 'sample' ? ch.depth - 1 : ch.depth);
+        } else if (ch.count === 1) {
+          ch.startTNs = ch.capture === 'sample'
+            ? ch._nextSampleNs
+            : ch._nextSampleNs - ch.intervalNs;
+        }
+
+        ch._nextSampleNs += ch.intervalNs;
+        // Reset bucket for next interval
+        ch._bucketMin = val;
+        ch._bucketMax = val;
+      }
+      if (ch.capture === 'sample') {
+        ch._prevTNs = tNs; ch._prevExactTimeSec = exactTimeSec; ch._prevVal = val;
+      }
+    }
+  }
+
+  /** Accepted-solve snapshot only: do not flush a later endpoint into a sample. */
+  _scopeCurrentSample(ch, solution) {
+    try {
+      this._assertMeasurementSolution(solution);
+      if (!this.powered) return 0;
+      this._assertDeterminateCurrent(solution, ch.partId, ch.terminal);
+      const current = solution?.branchCurrents?.get(ch.partId)?.get(ch.terminal);
+      if (!Number.isFinite(current)) {
+        const error = new Error(`simulation current sample unavailable: ${ch.partId}.${ch.terminal}`);
+        error.code = 'SIM_SCOPE_CURRENT_UNAVAILABLE';
+        throw error;
+      }
+      return current;
+    } catch (error) {
+      if (!['SOLVE_FAILED_MEASUREMENT', 'INDETERMINATE_BRANCH_CURRENT',
+        'SIM_SCOPE_CURRENT_UNAVAILABLE'].includes(error.code)) throw error;
+      ch.failure ||= error.message;
+      return null;
+    }
+  }
+
+  /**
+   * @param {string} partId
+   * @param {string} terminal
+   * @returns {number}
+   */
+  // Amperes leaving the part through the named terminal into its net.
+  branchCurrent(partId, terminal) {
+    this._flushSolve();
+    if (!this.powered) return 0; // no current without power
+
+    // Cache the MNA result — only re-solve when the state has changed.
+    // The cache is invalidated by _solve() (called by setPin, setControl,
+    // setPower, setNetlist).
+    if (!this._mnaCache) {
+      this._mnaCache = this._solveMNA(false);
+    }
+    this._assertMeasurementSolution(this._mnaCache);
+    this._assertDeterminateCurrent(this._mnaCache, partId, terminal);
+    const partCurrents = this._mnaCache.branchCurrents.get(partId);
+    if (!partCurrents) return 0;
+    const i = partCurrents.get(terminal) ?? 0;
+    return Number.isFinite(i) ? i : 0;
+  }
+
+  /** Total amperes delivered by an ideal supply rail, not an alias's share. */
+  railCurrent(netId) {
+    if (typeof netId !== 'string' || netId.length === 0) {
+      throw new Error('rail current unavailable: requires a nonempty net ID');
+    }
+    this._flushSolve();
+    const known = this._solveParts.some(part => part.kind === 'vcc'
+      && this._netForTerminal(part.id, 'vcc') === netId);
+    if (!known) throw new Error(`rail current unavailable: ${netId} is not an ideal supply rail`);
+    if (!this.powered) return 0;
+    if (!this._mnaCache) this._mnaCache = this._solveMNA(false);
+    const result = this._mnaCache;
+    if (result.converged === false || result.railConflicts?.length) {
+      throw new Error(`rail current unavailable for ${netId}: solve failed or rail conflict`);
+    }
+    const amps = result.railCurrents?.get(netId);
+    if (!Number.isFinite(amps)) throw new Error(`rail current unavailable for ${netId}: no finite aggregate`);
+    return amps;
+  }
+
+  /**
+   * The companion elements THIS BOARD'S CURRENT SOLVE stamped for a part.
+   *
+   * READ THE NAME OF WHAT THIS IS. It is not "the DC operating point" and it is
+   * not a model. It is a snapshot of the same solve every other reading on this
+   * board comes from — `nodeVoltage`, `branchCurrent`, the meters — taken at
+   * `timeNs`, with whatever transient companions were in play at that instant
+   * (a charged capacitor is a conductance and a source, not an open). The first
+   * version of this comment said "DC linearisation at the converged operating
+   * point"; both halves were wrong, because `_solveMNA(false)` is the live
+   * instantaneous solve and convergence was neither checked nor reported.
+   * Caught in review. If you want a true DC bias, advance the board to
+   * steady state, or use `operatingPoint()`, which refuses what it cannot do.
+   *
+   * The return therefore carries its own provenance, so a caller cannot pick up
+   * the records without the two facts that qualify them:
+   *
+   *   {converged, timeNs, records}
+   *
+   * `converged: false` means the solver did not settle and the records describe
+   * an iterate, not an answer. Do not average it, publish it, or oracle against
+   * it — say the circuit did not settle, as the bench does.
+   *
+   * Record shapes, one per companion, terminal NAMES not net ids:
+   *
+   *   {kind: 'cond',    tA, tB, g}        conductance between two terminals
+   *   {kind: 'norton',  t, g, vth}        Thevenin vth behind 1/g, to ground
+   *   {kind: 'between', tP, tN, g, vth}   the same, floating between two pins
+   *   {kind: 'inject',  t, amps}          a current pushed into a terminal
+   *
+   * The soft-start ramp is already applied to `vth` and `amps`. Records are
+   * copies: a caller cannot edit what the solve stamped.
+   *
+   * WHY IT IS EXPOSED. A part a target format has no card for used to be
+   * dropped from an export, and a dropped part does not make a deck smaller, it
+   * makes it a DIFFERENT CIRCUIT — which the foreign simulator then answers
+   * about with total confidence. Measured against ngspice on the shipped
+   * corpus: a `74hc595` dropped this way left eight LED branches at 0 V against
+   * the engine's 1.842233 V, and a `buzzer` dropped this way left its node at
+   * the full 5 V rail against the engine's 4.0 (5 x 100/125). 42 kinds are in
+   * that state, in 1,250 of 2,163 corpus circuits. Writing these records
+   * instead keeps the two solvers on one circuit; an exporter that kept its own
+   * table of each device's value instead is the defect that made all 45 LDR
+   * circuits disagree by a factor of 1,000.
+   *
+   * An export built on this is valid AT THIS SNAPSHOT ONLY and must say so.
+   *
+   * @param {string} partId
+   * @returns {{converged: boolean, timeNs: bigint, records: Array<Record<string, *>>}}
+   *   `records` is empty when the part is not a registered device or built-in
+   *   that records companions, when it drove nothing, or when the board is
+   *   unpowered — which is NOT the same as a companion of zero conductance.
+   */
+  deviceCompanions(partId) {
+    this._flushSolve();
+    if (!this.powered) {
+      return { converged: this._lastSolveConverged !== false, timeNs: this.timeNs, records: [] };
+    }
+    if (!this._mnaCache) this._mnaCache = this._solveMNA(false);
+    const rec = this._mnaCache.deviceStamps?.get(partId);
+    return {
+      converged: this._lastSolveConverged !== false,
+      timeNs: this.timeNs,
+      records: rec ? rec.map(r => ({ ...r })) : [],
+    };
+  }
+
+  /**
+   * @param {string} a
+   * @param {string} b
+   * @returns {number | 'requires-power-off'}
+   */
+  resistance(a, b) {
+    if (this.powered) return 'requires-power-off';
+
+    const testCurrent = 0.001; // 1 mA test current
+    // testNodeB is used as the reference (V=0), so R = V_A / I_test
+    const result = this._solveMNA(true, a, b, testCurrent);
+    const vA = result.nodeVoltages.get(a) ?? 0;
+    const r = Math.abs(vA) / testCurrent;
+    return Number.isFinite(r) ? r : 0;
+  }
+
+  // ─── Boundary B: transducers ─────────────────────────────────────────────
+
+  /**
+   * @param {string} partId
+   * @returns {number} 0…1
+   */
+  ledBrightness(partId) {
+    const history = this.ledHistory.get(partId);
+    if (!history || history.length === 0) return 0;
+
+    const now = this.timeNs;
+    const windowStart = now > BRIGHTNESS_WINDOW_NS ? now - BRIGHTNESS_WINDOW_NS : 0n;
+
+    // Find the most recent sample at or before windowStart (the "initial" value
+    // for the window), plus all samples within the window.
+    let initialCurrent = 0;
+    for (let i = history.length - 1; i >= 0; i--) {
+      if (history[i].tNs <= windowStart) {
+        initialCurrent = history[i].current;
+        break;
+      }
+    }
+
+    // Build the step function over [windowStart, now].
+    // Each segment holds a constant current until the next change.
+    /** @type {Array<{tNs: bigint, current: number}>} */
+    const steps = [];
+
+    // Start of window: either the initial sample's value or 0
+    steps.push({ tNs: windowStart, current: initialCurrent });
+
+    // Add all samples within the window
+    for (const s of history) {
+      if (s.tNs > windowStart && s.tNs <= now) {
+        steps.push(s);
+      }
+    }
+
+    // Integrate the step function
+    const windowNs = now - windowStart;
+    if (windowNs <= 0n) {
+      // Time hasn't advanced — return instantaneous value
+      const last = history[history.length - 1];
+      return Math.min(1, Math.max(0, last.current / LED_I_RATED));
+    }
+
+    let weightedSum = 0;
+    for (let i = 0; i < steps.length; i++) {
+      const nextT = i + 1 < steps.length ? steps[i + 1].tNs : now;
+      const dt = nextT - steps[i].tNs;
+      weightedSum += steps[i].current * Number(dt);
+    }
+
+    const avgCurrent = weightedSum / Number(windowNs);
+    return Math.min(1, Math.max(0, avgCurrent / LED_I_RATED));
+  }
+
+  /**
+   * @param {string} partId
+   * @returns {{hz: number, on: boolean}}
+   */
+  buzzerTone(partId) {
+    // A DRIVEN tone outranks measured edges. Real hardware makes a note with a
+    // timer toggling the pin; the program only advances simulated time when it
+    // waits, so it cannot emit those edges itself — `set <buzzer> to 440 hz`
+    // between two half-second waits would produce two edges, not 440. So
+    // setTone() records the oscillation and this reports it, flagged `driven`
+    // so a consumer can still tell a modelled note from a measured waveform.
+    const driven = this.drivenTones.get(partId);
+    if (driven && driven.hz > 0) {
+      return {hz: driven.hz, on: this.powered !== false, driven: true, sinceNs: driven.sinceNs};
+    }
+    const edges = this.buzzerEdges.get(partId);
+    if (!edges || edges.length < 2) return this._buzzerDcTone(partId);
+
+    // Measure period from the last two edges
+    const last = edges[edges.length - 1];
+    const prev = edges[edges.length - 2];
+    const halfPeriodNs = Number(last - prev);
+    if (halfPeriodNs <= 0) return { hz: 0, on: false };
+
+    // Staleness check: if the last edge is more than 100ms ago,
+    // the buzzer has stopped toggling (e.g., after a debug halt).
+    // Report as off rather than a meaninglessly low frequency.
+    const age = this.timeNs - last;
+    if (age > 100_000_000n) return this._buzzerDcTone(partId);
+
+    const hz = 1e9 / (2 * halfPeriodNs); // two edges = one full period
+    return { hz, on: true };
+  }
+
+  /**
+   * An ACTIVE buzzer has a built-in oscillator: sustained DC across it
+   * IS sound (its own doc said so; the implementation demanded MCU
+   * edges — audit escalation E2). Rated tone via params.toneHz,
+   * datasheet-typical 2400 Hz default.
+   */
+  _buzzerDcTone(partId) {
+    const part = this.partMap.get(partId);
+    if (!part || part.kind !== 'buzzer' || !this.powered) return { hz: 0, on: false };
+    const netOf = (terminal) => {
+      const n = this.nets.find((x) => x.terminals.some((t) => t.part === partId && t.terminal === terminal));
+      return n ? n.id : null;
+    };
+    const v = Math.abs((this.nodeVoltages.get(netOf('a')) ?? 0) - (this.nodeVoltages.get(netOf('b')) ?? 0));
+    if (v > 2.0) return { hz: part.params?.toneHz ?? 2400, on: true, dc: true };
+    return { hz: 0, on: false };
+  }
+
+  /**
+   * Seven-segment display brightness: returns brightness for each segment.
+   * The display part has terminals: a, b, c, d, e, f, g, dp, common.
+   * Each segment is an LED between its terminal and the common terminal.
+   *
+   * @param {string} partId
+   * @returns {{ a: number, b: number, c: number, d: number, e: number, f: number, g: number, dp: number }}
+   */
+  sevenSegmentBrightness(partId) {
+    const result = { a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, g: 0, dp: 0 };
+    const segments = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp'];
+    for (const seg of segments) {
+      const ledId = `${partId}_${seg}`;
+      result[seg] = this.ledBrightness(ledId);
+    }
+    return result;
+  }
+
+  /**
+   * 3-digit seven-segment brightness, one map per digit. The contract for
+   * the UI face: index = digit (com0..com2), keys = segments. Built on the
+   * same synthetic LEDs the composite expansion creates.
+   *
+   * @param {string} partId
+   * @returns {Array<{ a: number, b: number, c: number, d: number, e: number, f: number, g: number, dp: number }>}
+   */
+  sevenSeg3Brightness(partId, digits = 3) {
+    const segments = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp'];
+    return Array.from({ length: digits }, (_, digit) => {
+      const m = {};
+      for (const seg of segments) m[seg] = this.ledBrightness(`${partId}_d${digit}_${seg}`);
+      return m;
+    });
+  }
+
+  /**
+   * RGB LED brightness: returns brightness for each channel.
+   * The part has terminals: r, g, b, common.
+   *
+   * @param {string} partId
+   * @returns {{ r: number, g: number, b: number }}
+   */
+  rgbLedBrightness(partId) {
+    return {
+      r: this.ledBrightness(`${partId}_r`),
+      g: this.ledBrightness(`${partId}_g`),
+      b: this.ledBrightness(`${partId}_b`),
+    };
+  }
+
+  /**
+   * LED cube voxel brightness: POV-integrated over ~20ms.
+   *
+   * A voxel is lit when its layer select is active AND its column data
+   * bit is active. Polarity is a parameter: 'active-high' (default)
+   * means a pin HIGH lights the voxel; 'active-low' means pin LOW does.
+   *
+   * Returns a flat array of brightness values [0..1] for all voxels,
+   * in layer-major order: [layer0_col0, layer0_col1, ..., layer3_col15].
+   *
+   * @param {string} partId
+   * @returns {number[]}
+   */
+  cubeBrightness(partId) {
+    const cube = this._cubes.get(partId);
+    if (!cube) return [];
+
+    const { layers, cols, history } = cube;
+    const total = layers * cols;
+    const result = new Array(total).fill(0);
+
+    const now = this.timeNs;
+    const windowStart = now > BRIGHTNESS_WINDOW_NS ? now - BRIGHTNESS_WINDOW_NS : 0n;
+    const windowNs = now - windowStart;
+    if (windowNs <= 0n) return result;
+
+    // Find initial state before window
+    let initialMask = 0n;
+    for (let i = history.length - 1; i >= 0; i--) {
+      if (history[i].tNs <= windowStart) {
+        initialMask = history[i].litMask;
+        break;
+      }
+    }
+
+    // Build step function over the window
+    /** @type {Array<{tNs: bigint, mask: bigint}>} */
+    const steps = [{ tNs: windowStart, mask: initialMask }];
+    for (const s of history) {
+      if (s.tNs > windowStart && s.tNs <= now) {
+        steps.push({ tNs: s.tNs, mask: s.litMask });
+      }
+    }
+
+    // Integrate each voxel's lit time
+    for (let i = 0; i < steps.length; i++) {
+      const nextT = i + 1 < steps.length ? steps[i + 1].tNs : now;
+      const dt = Number(nextT - steps[i].tNs);
+      const mask = steps[i].mask;
+
+      for (let v = 0; v < total; v++) {
+        if ((mask >> BigInt(v)) & 1n) {
+          result[v] += dt;
+        }
+      }
+    }
+
+    // Normalize to 0..1
+    const windowF = Number(windowNs);
+    for (let v = 0; v < total; v++) {
+      result[v] = Math.min(1, result[v] / windowF);
+    }
+
+    return result;
+  }
+
+  /**
+   * Update cube voxel state from current pin states.
+   * Called from advanceTo after pin state changes.
+   * @param {string} partId
+   */
+  _updateCube(partId) {
+    const cube = this._cubes.get(partId);
+    if (!cube) return;
+
+    const part = this.partMap.get(partId);
+    if (!part) return;
+
+    const { layers, cols, polarity, history } = cube;
+    const activeHigh = polarity !== 'active-low';
+
+    // Read select and data pin states from the part's params
+    const selectPins = /** @type {string[]} */ (part.params.selectPins ?? []);
+    const dataPins = /** @type {string[]} */ (part.params.dataPins ?? []);
+
+    let litMask = 0n;
+
+    for (let layer = 0; layer < layers && layer < selectPins.length; layer++) {
+      const selState = this.pinStates.get(String(selectPins[layer]).toLowerCase());
+      if (!selState) continue;
+
+      const selActive = activeHigh ? selState.driveHigh : !selState.driveHigh;
+      if (!selActive) continue;
+
+      for (let col = 0; col < cols && col < dataPins.length; col++) {
+        const dataState = this.pinStates.get(String(dataPins[col]).toLowerCase());
+        if (!dataState) continue;
+
+        const dataActive = activeHigh ? dataState.driveHigh : !dataState.driveHigh;
+        if (dataActive) {
+          litMask |= 1n << BigInt(layer * cols + col);
+        }
+      }
+    }
+
+    // Record only if changed
+    const last = history.length > 0 ? history[history.length - 1] : null;
+    if (!last || last.litMask !== litMask) {
+      history.push({ tNs: this.timeNs, litMask });
+
+      // Prune when large
+      if (history.length > 200) {
+        const windowStart = this.timeNs > BRIGHTNESS_WINDOW_NS
+          ? this.timeNs - BRIGHTNESS_WINDOW_NS : 0n;
+        let keepIdx = -1;
+        for (let i = history.length - 1; i >= 0; i--) {
+          if (history[i].tNs <= windowStart) { keepIdx = i; break; }
+        }
+        if (keepIdx > 0) history.splice(0, keepIdx);
+      }
+    }
+  }
+
+  // ─── Boundary B: user interaction ────────────────────────────────────────
+
+  /**
+   * @param {string} partId
+   * @param {number} value
+   */
+  setControl(partId, value) {
+    this.controls.set(partId, value);
+    this._solve();
+    this._notifyChange('control', { partId, value });
+  }
+
+  /**
+   * Boundary B: high-level device intent — the write counterpart of
+   * getDeviceState() (spec-updates/set-device-control.md). Routes to the
+   * device model's optional `control(part, state, verb, value)` hook;
+   * `verb === 'state'` falls back to the plain control channel. Refusals
+   * return false AND surface in getWarnings() — the devices extension
+   * called this method for months while no board defined it, so every
+   * actuator block was a silent no-op; silence is not an option twice.
+   *
+   * @param {string} partId
+   * @param {string} verb
+   * @param {*} value
+   * @returns {boolean} true if a device accepted the verb
+   */
+  setDeviceControl(partId, verb, value) {
+    const part = this.parts.find(p => p.id === partId);
+    if (!part) {
+      this._recordRefusedControl(partId, verb, 'no such part');
+      return false;
+    }
+    // A motor's speed and a servo's angle are what the MCU pin that drives
+    // the part says, so the intent is carried out ON THAT PIN, as a PWM the
+    // board switches (setPwm) — one mechanism with analogWrite and the
+    // emulated timers, which every consumer already reads (spec-updates/
+    // set-pwm.md, "Actuator intent").
+    if (DRIVEN_MOTOR_KINDS.has(part.kind) && verb === 'speed') return this._motorSpeed(part, value);
+    if (DRIVEN_MOTOR_KINDS.has(part.kind) && verb === 'direction') return this._motorDirection(part, value);
+    const model = getDevice(part.kind);
+    const state = this._deviceStates.get(partId);
+    if (part.kind === 'servo' && verb === 'angle' && state) this._servoPulse(part, state, value);
+    if (model && model.control && state) {
+      let handled = false;
+      try {
+        handled = model.control(part, state, verb, value) === true;
+      } catch (err) {
+        this._recordRefusedControl(partId, verb, String(err?.message ?? err));
+        return false;
+      }
+      if (handled) {
+        this._solve();
+        this._notifyChange('deviceControl', { partId, verb });
+        return true;
+      }
+    }
+    // Plain on/off intent maps to the existing control channel — the same
+    // semantics setControl has always had (buzzer enable, switch state).
+    if (verb === 'state' && typeof value === 'number') {
+      this.setControl(partId, value);
+      return true;
+    }
+    this._recordRefusedControl(partId, verb,
+      `"${part.kind}" has no simulator action for this`);
+    return false;
+  }
+
+  /**
+   * The MCU pins that drive a part, found by walking its nets.
+   *
+   * From each named terminal of `part`, the walk crosses nets and the parts on
+   * them — a base resistor, a driver transistor, an H-bridge — up to `maxHops`
+   * parts deep, and collects every MCU-surface terminal it reaches (the bare
+   * `mcu` body or any `gpioFollowsPinStates` board). A power rail stops it: a
+   * net holding a supply or ground, or an MCU power pin, is shared by
+   * everything and says nothing about who drives this part.
+   *
+   * Each hit carries `enable`: whether the net it was found on also holds an
+   * enable-named terminal (EN/ENA/ENB/EN1/EN12/PWM), the pin an H-bridge takes
+   * its speed from.
+   *
+   * @param {object} part
+   * @param {string[]} terminals where to start
+   * @param {number} [maxHops]
+   * @returns {Array<{pin: string, enable: boolean}>} unique by pin
+   */
+  _mcuPinsDriving(part, terminals, maxHops = 3) {
+    const RAIL_KINDS = /^(vcc|gnd|ground|battery|power|power_supply|dc_supply|supply|vsource|dc_source|coin_cell)$/i;
+    const POWER_PIN = /^(vcc|vdd|vss|gnd|5v|3v3|3\.3v|3v|vin|vbus|vsys|aref|ioref|reset|rst)$/i;
+    const ENABLE = /^(en|ena|enb|en\d+|enable|pwm)$/i;
+    const isSurface = (p) => p.kind === 'mcu' || !!getDevice(p.kind)?.gpioFollowsPinStates;
+    const isRail = (net) => net.terminals.some((t) => {
+      const p = this.partMap.get(t.part);
+      if (!p) return false;
+      if (RAIL_KINDS.test(p.kind)) return true;
+      return isSurface(p) && POWER_PIN.test(String(t.terminal));
+    });
+    // The DRAWN netlist, not the solver view: the solver moves an expanded
+    // motor's 'a' onto a hidden winding net, which no MCU pin is on.
+    const netOf = new Map();
+    for (const net of this.nets) {
+      for (const t of net.terminals) netOf.set(`${t.part}\0${t.terminal}`, net.id);
+    }
+    const hits = new Map();
+    const seenParts = new Set([part.id]);
+    const seenNets = new Set();
+    let frontier = terminals.map((terminal) => netOf.get(`${part.id}\0${terminal}`)).filter(Boolean);
+    for (let depth = 0; depth <= maxHops && frontier.length; depth++) {
+      const next = [];
+      for (const netId of frontier) {
+        if (seenNets.has(netId)) continue;
+        seenNets.add(netId);
+        const net = this.netMap.get(netId);
+        if (!net || isRail(net)) continue;
+        const enable = net.terminals.some((t) => ENABLE.test(String(t.terminal))
+          && !isSurface(this.partMap.get(t.part) || {}));
+        for (const t of net.terminals) {
+          const p = this.partMap.get(t.part);
+          if (!p) continue;
+          if (isSurface(p)) {
+            const pin = String(t.terminal);
+            const prev = hits.get(pin.toLowerCase());
+            hits.set(pin.toLowerCase(), { pin, enable: enable || !!prev?.enable });
+            continue;
+          }
+          if (seenParts.has(p.id) || depth === maxHops) continue;
+          seenParts.add(p.id);
+          for (const other of p.terminals || []) {
+            const n = netOf.get(`${p.id}\0${other}`);
+            if (n && !seenNets.has(n)) next.push(n);
+          }
+        }
+      }
+      frontier = next;
+    }
+    return [...hits.values()];
+  }
+
+  /**
+   * The one MCU pin that drives `part`, or null with the reason recorded.
+   * Several candidates narrow to those on an enable net; still several is
+   * refused by name rather than guessed.
+   * @returns {string|null}
+   */
+  _drivingPin(part, terminals, verb) {
+    let pins = this._mcuPinsDriving(part, terminals);
+    if (pins.length > 1 && pins.some((p) => p.enable)) pins = pins.filter((p) => p.enable);
+    if (pins.length === 1) return pins[0].pin;
+    this._recordRefusedControl(part.id, verb, pins.length
+      ? `driven by several MCU pins (${pins.map((p) => p.pin).join(', ')}); drive one of them`
+      : 'no MCU pin drives it');
+    return null;
+  }
+
+  /**
+   * `set motor speed to N`: N % duty (0..100, clamped — the C and MicroPython
+   * drivers' clamp) on the pin that drives the motor, switched by the board.
+   * The motor integrates its torque over the real on/off intervals, so its
+   * speed follows the duty exactly as it does under analogWrite.
+   */
+  _motorSpeed(part, value) {
+    const pct = Number(value);
+    if (!Number.isFinite(pct)) {
+      this._recordRefusedControl(part.id, 'speed', `${value} is not a speed`);
+      return false;
+    }
+    const duty = Math.max(0, Math.min(100, pct));
+    const bridge = this._motorBridge(part);
+    if (bridge) {
+      const intent = this._motorIntentOf(part.id);
+      intent.duty = duty;
+      const ok = this._applyBridge(part, bridge, intent, 'speed');
+      if (ok) this._notifyChange('deviceControl', { partId: part.id, verb: 'speed' });
+      return ok;
+    }
+    const pin = this._drivingPin(part, ['a', 'b'], 'speed');
+    if (!pin) return false;
+    const ok = this.setPwm(pin, duty);
+    if (ok) this._notifyChange('deviceControl', { partId: part.id, verb: 'speed' });
+    return ok;
+  }
+
+  /**
+   * `set motor direction to D` (forward | reverse | brake | coast).
+   *
+   * A direction is a property of the DRIVER, not of the motor: only a motor
+   * whose two leads sit on one H-bridge channel's outputs can be reversed.
+   * The board finds that channel (an `h_bridge`, which the L293D and KiCad's
+   * L298 map onto), the MCU pins on its IN pins and, if driven, its EN pin,
+   * and sets them by the L293D truth table — forward drives the input whose
+   * output carries the motor's `a` lead high and the other low, reverse the
+   * opposite, brake both high (EN high), coast drops EN. The speed is a PWM
+   * on the active input with the other low and EN held high (sign-magnitude
+   * drive, braking between pulses), so a direction change moves the PWM to
+   * the other input. A program that drives the inputs itself and only sets a
+   * speed keeps its inputs, and the speed is a PWM on EN (B5's route).
+   *
+   * What it cannot drive is refused by name, never guessed: a motor on ONE
+   * MCU pin (a single transistor, or the pin itself) turns one way only, so
+   * reverse and brake are refused there and forward is accepted as already
+   * true; a bridge whose IN pins are not both MCU pins cannot be steered;
+   * coast needs an MCU pin on EN (with EN tied high, both inputs low is a
+   * brake, not a coast).
+   */
+  _motorDirection(part, value) {
+    const dir = String(value).trim().toLowerCase();
+    if (!MOTOR_DIRECTIONS.has(dir)) {
+      this._recordRefusedControl(part.id, 'direction',
+        `"${value}" is not a direction (forward, reverse, brake or coast)`);
+      return false;
+    }
+    const bridge = this._motorBridge(part);
+    if (!bridge) {
+      const pins = this._mcuPinsDriving(part, ['a', 'b']);
+      if (pins.length === 1) {
+        if (dir === 'forward') return true;
+        this._recordRefusedControl(part.id, 'direction',
+          `driven by one MCU pin (${pins[0].pin}) through a single switch, which turns it one way only; ` +
+          `${dir} needs an H-bridge (an L293D) between the pins and the motor`);
+        return false;
+      }
+      this._recordRefusedControl(part.id, 'direction', pins.length
+        ? `driven by several MCU pins (${pins.map((p) => p.pin).join(', ')}) but not through one H-bridge channel`
+        : 'no MCU pin drives it');
+      return false;
+    }
+    const intent = this._motorIntentOf(part.id);
+    const prev = intent.dir;
+    intent.dir = dir;
+    const ok = this._applyBridge(part, bridge, intent, 'direction');
+    if (!ok) intent.dir = prev;
+    else this._notifyChange('deviceControl', { partId: part.id, verb: 'direction' });
+    return ok;
+  }
+
+  /** The motor's last commanded speed and direction (the bridge's state). */
+  _motorIntentOf(partId) {
+    if (!this._motorIntents) this._motorIntents = new Map();
+    let intent = this._motorIntents.get(partId);
+    if (!intent) { intent = { duty: null, dir: null }; this._motorIntents.set(partId, intent); }
+    return intent;
+  }
+
+  /**
+   * The H-bridge channel whose two outputs carry this motor's two leads, with
+   * the MCU pin on each of its control inputs (null where none drives it), or
+   * null when the motor is not across one channel. `inA` is the input whose
+   * output is on the motor's `a` lead, so forward is always inA high.
+   */
+  _motorBridge(part) {
+    const netOf = new Map();
+    for (const net of this.nets) {
+      for (const t of net.terminals) netOf.set(`${t.part}\0${t.terminal}`, net.id);
+    }
+    const netA = netOf.get(`${part.id}\0a`);
+    const netB = netOf.get(`${part.id}\0b`);
+    if (!netA || !netB || netA === netB) return null;
+    for (const bridge of this.parts) {
+      if (bridge.kind !== 'h_bridge') continue;
+      for (const ch of H_BRIDGE_CHANNELS) {
+        const o1 = netOf.get(`${bridge.id}\0${ch.outs[0]}`);
+        const o2 = netOf.get(`${bridge.id}\0${ch.outs[1]}`);
+        let inA, inB;
+        if (o1 === netA && o2 === netB) [inA, inB] = ch.ins;
+        else if (o1 === netB && o2 === netA) [inB, inA] = ch.ins;
+        else continue;
+        const one = (terminal) => {
+          const hits = this._mcuPinsDriving(bridge, [terminal], 1);
+          return hits.length === 1 ? hits[0].pin : null;
+        };
+        return {
+          bridge, terminals: { en: ch.en, inA, inB },
+          pins: { en: one(ch.en), inA: one(inA), inB: one(inB) },
+        };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Put a motor's speed and direction onto its H-bridge's MCU pins (see
+   * _motorDirection for the table). Returns false, with the reason recorded,
+   * when the pins this needs are not MCU pins.
+   */
+  _applyBridge(part, bridge, intent, verb) {
+    const { pins, terminals, bridge: br } = bridge;
+    const dir = intent.dir ?? 'forward';
+    const duty = intent.duty;
+    const name = (t) => `${br.id}.${t.toUpperCase()}`;
+    const level = (pin, high) => this.setPin(pin, 'pushpull', high);
+    const steer = pins.inA && pins.inB;
+    if (verb === 'direction' && !steer) {
+      const missing = [['inA', terminals.inA], ['inB', terminals.inB]]
+        .filter(([k]) => !pins[k]).map(([, t]) => name(t));
+      this._recordRefusedControl(part.id, 'direction',
+        `${missing.join(' and ')} ${missing.length > 1 ? 'are' : 'is'} not driven by an MCU pin, so the bridge cannot be steered`);
+      return false;
+    }
+    if (dir === 'coast') {
+      if (!pins.en) {
+        this._recordRefusedControl(part.id, verb,
+          `${name(terminals.en)} is not driven by an MCU pin, so the bridge cannot release the motor (both inputs low brakes it)`);
+        return false;
+      }
+      level(pins.en, false);
+      return true;
+    }
+    if (dir === 'brake') {
+      if (!steer) return this._refuseUnsteered(part, verb, bridge);
+      if (pins.en) level(pins.en, true);
+      level(pins.inA, true);
+      level(pins.inB, true);
+      return true;
+    }
+    const active = dir === 'reverse' ? pins.inB : pins.inA;
+    const idle = dir === 'reverse' ? pins.inA : pins.inB;
+    // A program that drives the inputs itself and never named a direction
+    // keeps them: the speed then goes where B5 put it, a PWM on EN.
+    const programSteers = intent.dir === null && steer
+      && (this.pinStates.has(active.toLowerCase()) || this.pinStates.has(idle.toLowerCase()));
+    if (programSteers || !steer) {
+      if (!pins.en) return this._refuseUnsteered(part, verb, bridge);
+      return duty !== null ? this.setPwm(pins.en, duty) : true;
+    }
+    // Sign-magnitude: EN held on, the speed a PWM on the active input, the
+    // other input low, so between pulses both outputs sit low and the
+    // winding current recirculates through the low side (a brake), never
+    // through the clamp diodes. Measured on the L293D bench, 10 ms at 50 %:
+    // 207-273 integrator attempts (0.2-0.3 s) this way, 6712-7005 (4.8-5.5 s)
+    // with the same duty on EN, where every pulse commutates the diodes.
+    if (pins.en) level(pins.en, true);
+    level(idle, false);
+    return this.setPwm(active, duty ?? 100);
+  }
+
+  _refuseUnsteered(part, verb, bridge) {
+    this._recordRefusedControl(part.id, verb,
+      `neither ${bridge.bridge.id}.EN nor both of its inputs are driven by MCU pins`);
+    return false;
+  }
+
+  /**
+   * `set servo angle to N`, on a servo an MCU pin drives: the 50 Hz frame
+   * whose pulse THIS servo decodes to N degrees (its own minPulseUs /
+   * maxPulseUs / maxAngle), so the horn moves by the same decode an emulated
+   * timer's pulses go through and the canvas sees a signal. The target is
+   * still set directly by the model's control hook, as before, so a servo no
+   * pin drives (a bench with the signal left open) keeps working.
+   */
+  _servoPulse(part, state, value) {
+    const deg = Number(value);
+    if (!Number.isFinite(deg)) return;
+    const pin = this._mcuPinsDriving(part, ['signal']);
+    if (pin.length !== 1) return;
+    const cal = servoCalibration(part);
+    const a = Math.max(0, Math.min(cal.maxAngle, deg));
+    this.setPwm(pin[0].pin, 0, {
+      hz: 50, pulseUs: cal.minPulseUs + (a / cal.maxAngle) * (cal.maxPulseUs - cal.minPulseUs),
+    });
+  }
+
+  /** @param {string} partId @param {string} verb @param {string} why */
+  _recordRefusedControl(partId, verb, why) {
+    if (!this._refusedControls) this._refusedControls = new Map();
+    const key = `${partId}\0${verb}`;
+    const cur = this._refusedControls.get(key);
+    if (cur) { cur.count++; return; }
+    if (this._refusedControls.size >= 20) return; // bounded; first 20 shapes
+    this._refusedControls.set(key, { partId, verb, why, count: 1 });
+  }
+
+  /**
+   * Set a named parameter on a part's params object.
+   * Used by the environment-stimulus extension to inject world conditions
+   * (temperature, humidity, magnetic field, etc.) into device models.
+   * @param {string} partId
+   * @param {string} param - Parameter name (e.g. 'temperature', 'field')
+   * @param {*} value
+   */
+  setPartParam(partId, param, value) {
+    const part = this.parts.find(p => p.id === partId);
+    if (!part) return;
+    const constrained = this._meterWatches.size ? this._sourceConstrainedInductorDirect() : null;
+    if (constrained && (partId===constrained.source.id || partId===constrained.inductor.id)) {
+      // Parameter jumps can imply ideal-inductor impulses; do not invent an
+      // integral for them or rewrite already observed intervals retroactively.
+      for (const w of this._meterWatches.values()) w.failure='source-constrained-inductor-parameter-edit-unqualified';
+    }
+    if (!part.params) part.params = {};
+    part.params[param] = value;
+    this._solve();
+    this._notifyChange('param', { partId, param, value });
+  }
+
+  /**
+   * Get a named parameter from a part's params object.
+   * @param {string} partId
+   * @param {string} param
+   * @returns {*}
+   */
+  getPartParam(partId, param) {
+    const part = this.parts.find(p => p.id === partId);
+    return part?.params?.[param];
+  }
+
+  /**
+   * @param {boolean} on
+   */
+  /**
+   * Bench temperature in celsius (E2.2). Default 25. Consumers: every
+   * silicon junction's forward drop (−2 mV/°C — diode, LED, zener
+   * forward, BJT Vbe) and the TMP36's default reading. A part whose
+   * user-set param already fixes the quantity (params.tempC on a TMP36,
+   * an explicit control) is NOT overridden.
+   * @param {number} celsius
+   */
+  setTemperature(celsius) {
+    const t = Number(celsius);
+    if (!Number.isFinite(t)) return;
+    if (t === this.temperatureC) return;
+    // The world notifies every board sharing it (this one included), which
+    // re-solves and emits 'temperature' (see setWorld).
+    this.temperatureC = t;
+  }
+
+  /** Bench temperature in °C: the world's temperatureC at this board's sim time. */
+  get temperatureC() {
+    return this._world.get('temperatureC', Number(this.timeNs) / 1e9);
+  }
+
+  set temperatureC(celsius) {
+    this._world.set('temperatureC', celsius);
+  }
+
+  /** @returns {import('./world.js').World} */
+  get world() { return this._world; }
+
+  /**
+   * Make this board read `world` (src/world.js). Boards in one project share
+   * one world: every board sharing it re-solves and is notified when any of
+   * them (or the world itself) changes a value.
+   * @param {import('./world.js').World} world
+   */
+  setWorld(world) {
+    if (!world || typeof world.get !== 'function' || typeof world.subscribe !== 'function') {
+      throw new Error('setWorld needs a World (src/world.js)');
+    }
+    if (world === this._world) return;
+    const before = this._world ? this.temperatureC : null;
+    this._worldUnsubscribe?.();
+    this._world = world;
+    this._worldUnsubscribe = world.subscribe((key, value) => this._onWorldChange(key, value));
+    if (before !== null) {
+      this._solve();
+      this._notifyChange('world', { key: null, value: null });
+    }
+  }
+
+  /**
+   * Bench positions for parts (step 2, docs/WORLD.md): the circuit
+   * designer's layout coordinates, handed over by the host because the
+   * engine netlist carries no layout. `positions` maps part id → {x, y};
+   * entries without finite numbers are dropped. Replaces the previous set.
+   * @param {Record<string, {x: number, y: number}>|Map<string, {x: number, y: number}>} positions
+   */
+  setPartPositions(positions) {
+    const next = new Map();
+    const entries = positions instanceof Map ? positions.entries() : Object.entries(positions || {});
+    for (const [id, p] of entries) {
+      const x = Number(p?.x), y = Number(p?.y);
+      if (Number.isFinite(x) && Number.isFinite(y)) next.set(String(id), { x, y });
+    }
+    this._partPositions = next;
+    this._solve();
+    this._notifyChange('world', { key: 'positions', value: null });
+  }
+
+  /**
+   * Where this board sits on the shared bench: added to every part position,
+   * so boards laid out side by side in one project share one coordinate frame.
+   */
+  setBenchOrigin(x, y) {
+    const ox = Number(x), oy = Number(y);
+    if (!Number.isFinite(ox) || !Number.isFinite(oy)) return;
+    this._benchOrigin = { x: ox, y: oy };
+    this._solve();
+    this._notifyChange('world', { key: 'origin', value: null });
+  }
+
+  /**
+   * A part's position on the shared bench, or null when it has none: a
+   * position from setPartPositions, else finite part.x / part.y from the
+   * netlist; plus the board's bench origin.
+   */
+  partBenchPosition(part) {
+    if (!part) return null;
+    const p = this._partPositions?.get(part.id) ??
+      (Number.isFinite(part.x) && Number.isFinite(part.y) ? { x: part.x, y: part.y } : null);
+    if (!p) return null;
+    const o = this._benchOrigin ?? { x: 0, y: 0 };
+    return { x: p.x + o.x, y: p.y + o.y };
+  }
+
+  _onWorldChange(key, value) {
+    this._solve();
+    if (key === 'temperatureC') this._notifyChange('temperature', { celsius: this.temperatureC });
+    else this._notifyChange('world', { key, value });
+  }
+
+  setPower(on) {
+    this.powered = on;
+    this._solve();
+    this._recordLedSamples();
+    this._notifyChange('power', { on });
+  }
+
+  /**
+   * Boundary B: true small-signal AC sweep
+   * (spec-updates/ac-small-signal.md; the engine answer that replaces the
+   * time-domain sine correlation — which stays available in sweep.js as
+   * the cross-check the two must agree with on linear circuits).
+   *
+   * Linearizes at the DC operating point and solves the complex system per
+   * frequency; the swept source drives a unit phasor, every other source
+   * is killed. Runs against the SOLVER view (motor windings included).
+   * Refuses — throws — when the operating point did not converge: an AC
+   * answer about a nonexistent bias point is a plausible wrong Bode plot.
+   *
+   * @param {object} opts
+   * @param {string} opts.sourceId - independent voltage/current source to sweep
+   * @param {number} [opts.from] - legacy start frequency, Hz
+   * @param {number} [opts.to] - legacy end frequency, Hz
+   * @param {number} [opts.pointsPerDecade]
+   * @param {number[]} [opts.frequencies] - exact, strictly increasing source-analysis grid
+   * @param {'interactive-v1'|'source-analysis-v1'} [opts.analysisProfile='interactive-v1']
+   * @param {number} [opts.nodeRegularizationSiemens=1e-12]
+   * @param {string[]} [opts.probes] - net ids to report (default: all)
+   * @returns {Array<{hz: number, results: Map<string, {mag: number, phaseDeg: number}>,
+   *   profile: {id: string, nodeRegularizationSiemens: number, sourceBiasPolicy: string}}>}
+   */
+  runAc({ sourceId, from, to, pointsPerDecade = 20, frequencies, probes,
+    analysisProfile = 'interactive-v1', nodeRegularizationSiemens = 1e-12 }) {
+    if (!['interactive-v1', 'source-analysis-v1'].includes(analysisProfile)) {
+      throw new Error('runAc: unsupported analysisProfile');
+    }
+    if (!Number.isFinite(nodeRegularizationSiemens) || nodeRegularizationSiemens < 0) {
+      throw new Error('runAc: nodeRegularizationSiemens must be finite and >= 0');
+    }
+    const exactGrid = frequencies !== undefined;
+    if (exactGrid) {
+      if (analysisProfile !== 'source-analysis-v1' || from !== undefined || to !== undefined
+          || !Array.isArray(frequencies) || frequencies.length === 0
+          || frequencies.some((hz, index) => !Number.isFinite(hz) || hz <= 0
+            || (index > 0 && hz <= frequencies[index - 1]))) {
+        throw new Error('runAc: source-analysis frequencies must be a non-empty, finite, positive, strictly increasing exact grid');
+      }
+    } else if (analysisProfile !== 'interactive-v1' || !(from > 0) || !(to > from)) {
+      throw new Error('runAc: interactive-v1 needs 0 < from < to');
+    }
+    // DC operating point: caps open, inductors shorted — the bias the
+    // small-signal model is valid around.
+    // Source analysis uses authored DC/DC-bias values, never a waveform's
+    // instantaneous value or an interactive source-control override.
+    const biasControls = analysisProfile === 'source-analysis-v1' ? new Map() : this.controls;
+    const op = this._solveDcOperatingPoint({
+      parts: this._solveParts,
+      controls: biasControls,
+      deviceStates: this._deviceStates,
+      tSeconds: Number(this.timeNs) / 1e9,
+      dcSources: analysisProfile === 'source-analysis-v1',
+    });
+    if (op.converged === false) {
+      throw new Error('runAc: the DC operating point did not converge — ' +
+        'there is no bias point to linearize around');
+    }
+    let freqs;
+    if (exactGrid) freqs = [...frequencies];
+    else {
+      const decades = Math.log10(to / from);
+      const nPts = Math.max(2, Math.round(decades * pointsPerDecade) + 1);
+      freqs = Array.from({ length: nPts },
+        (_, i) => from * Math.pow(10, (i * decades) / (nPts - 1)));
+    }
+    return acSweep({
+      parts: this._solveParts,
+      nets: this._solveNets,
+      pinSources: this._pinSources(),
+      controls: biasControls,
+      vcc: this.vcc,
+      opVoltages: op.nodeVoltages,
+      opBranchCurrents: currentsIntoTerminals(op.branchCurrents),
+      // The region each op-amp settled in at this bias. Without it the sweep
+      // linearises a saturated or current-limited stage as if it were linear
+      // and reports its ideal gain (spec-updates/ac-operating-region.md).
+      opRegions: op.opampRegions,
+      deviceStates: this._deviceStates,
+      sourceId,
+      freqs,
+      probes,
+      nodeRegularizationSiemens,
+      analysisProfile,
+      sourceBiasPolicy: analysisProfile === 'source-analysis-v1'
+        ? 'authored-dc-value-no-interactive-source-controls'
+        : 'waveform-at-current-board-time',
+    });
+  }
+
+  /**
+   * Adopt the strict source-on time-zero operating point as the initial state of a
+   * fresh non-UIC transient.  This is intentionally a separate operation from
+   * `operatingPoint()`: the latter is observational, while this method commits
+   * capacitor voltage and ideal-inductor current atomically at time zero.
+   *
+   * The accepted device/source domain is exactly `operatingPoint()`'s domain;
+   * waveform sources use their transient t=0 value, not a separate DC value.
+   * Explicit initial-condition fields are not interpreted here; callers must
+   * refuse them instead of combining them with the source-declared bias.
+   *
+   * @returns {{analysis: object, converged: true, nodeVoltages: Map<string, number>,
+   *   branchCurrents: Map<string, Map<string, number>>, capacitorVoltages: Map<string, number>,
+   *   inductorCurrents: Map<string, number>}}
+   */
+  initializeTransientFromOperatingPoint({ fallback = 'refuse' } = {}) {
+    if (!['refuse', 'proven-zero-state'].includes(fallback)) {
+      throw new Error(`initializeTransientFromOperatingPoint: unknown fallback ${fallback}`);
+    }
+    if (this.timeNs !== 0n) {
+      throw new Error('initializeTransientFromOperatingPoint: requires a fresh board at time zero');
+    }
+    const explicitInitial = this._solveParts.find(part =>
+      (part.kind === 'capacitor' || part.kind === 'inductor')
+      && ['ic', 'initial', 'initialVoltage', 'initialCurrent'].some(name =>
+        Object.prototype.hasOwnProperty.call(part.params ?? {}, name)));
+    if (explicitInitial) {
+      throw new Error(`initializeTransientFromOperatingPoint: explicit initial condition on ${explicitInitial.id} is unsupported`);
+    }
+    const nonFreshCap = [...this.capVoltages].find(([, value]) => value !== 0);
+    const nonFreshInductor = [...this.inductorCurrents].find(([, value]) => value !== 0);
+    if (nonFreshCap || nonFreshInductor || this._trapValid
+        || this.capCurrents.size || this.inductorVoltages.size) {
+      throw new Error('initializeTransientFromOperatingPoint: reactive state is not fresh');
+    }
+
+    // operatingPoint() is independently mutation-tested.  Everything below is
+    // prospective until all required storage values have been validated, so a
+    // refusal cannot leave a half-biased transient behind.
+    const hasTimeVaryingSource = this._solveParts.some(part =>
+      (part.kind === 'vsource' || part.kind === 'isource')
+      && part.params?.wave && part.params.wave !== 'dc');
+    let point;
+    try {
+      point = this.operatingPoint({ waveformBias: 'time-zero' });
+    } catch (error) {
+      if (fallback !== 'proven-zero-state' || !this._canInitializeProvenZeroState()) throw error;
+      return this._initializeProvenZeroState({ hasTimeVaryingSource });
+    }
+    if (point.converged !== true) {
+      throw new Error('initializeTransientFromOperatingPoint: DC operating point did not converge');
+    }
+    if ((point.railConflicts ?? []).length) {
+      throw new Error('initializeTransientFromOperatingPoint: DC operating point has conflicting constraints');
+    }
+    const capacitorVoltages = new Map();
+    const inductorCurrents = new Map();
+    for (const part of this._solveParts) {
+      if (part.kind === 'capacitor') {
+        const a = this._netForTerminal(part.id, 'a');
+        const b = this._netForTerminal(part.id, 'b');
+        const value = point.nodeVoltages.get(a) - point.nodeVoltages.get(b);
+        if (!Number.isFinite(value)) {
+          throw new Error(`initializeTransientFromOperatingPoint: missing finite capacitor voltage for ${part.id}`);
+        }
+        capacitorVoltages.set(part.id, value);
+      } else if (part.kind === 'inductor') {
+        // TERMINAL A, AND THE REASON IS UGLY: THIS ENGINE HAS TWO BRANCH-CURRENT
+        // CONVENTIONS, AND THIS READS THE OTHER ONE.
+        //
+        // `operatingPoint()` reports INTO-THE-TERMINAL positive.
+        // `solveMNA`'s extraction, which is what `branchCurrent()` returns,
+        // reports OUT-OF-PART positive. Both are self-consistent, so net-level
+        // KCL holds inside each, and the two are exact negatives of each other.
+        // Measured on V -> R1 -> L1 -> R2 -> gnd:
+        //
+        //   branchCurrent()    L1.a = -2.499988e-2   R1.b = +2.499988e-2
+        //   operatingPoint()   L1.a = +2.500000e-2   R1.b = -2.500000e-2
+        //
+        // `point` here is an `operatingPoint()` result, so terminal A's reading
+        // IS the a -> b current and this line is correct as written. It looked
+        // wrong from the outside, and the repair that followed flipped
+        // `solveMNA`'s PUBLIC inductor signs instead -- which fixed nothing here
+        // and broke net-level KCL for every inductor sharing a net with another
+        // device, by exactly twice the branch current.
+        //
+        // The real defect is the two conventions, not this line. Converging them
+        // touches every `operatingPoint()` consumer and that API is a separate
+        // lane's contract, so it is pinned by
+        // `test/inductor-kcl-convention.test.mjs` rather than silently fixed
+        // here: the test asserts BOTH conventions as they are, so a change to
+        // either one reds with the remedy named instead of moving a sign.
+        const value = point.branchCurrents.get(part.id)?.get('a');
+        if (!Number.isFinite(value)) {
+          throw new Error(`initializeTransientFromOperatingPoint: missing finite inductor current for ${part.id}`);
+        }
+        inductorCurrents.set(part.id, value);
+      }
+    }
+
+    // A successful operating point is not by itself a quiescence certificate:
+    // biased static circuits and a waveform sampled at zero both have valid
+    // time-zero points.  Reuse the deliberately narrow proven-zero topology
+    // authority, then verify the result it produced byte-for-value before
+    // allowing a caller to omit all later transient integration work.
+    const quiescent = !hasTimeVaryingSource
+      && this._canInitializeProvenZeroState()
+      && [...point.nodeVoltages.values()].every(value => value === 0)
+      && [...point.branchCurrents.values()].every(values =>
+        [...values.values()].every(value => value === 0))
+      && [...capacitorVoltages.values()].every(value => value === 0)
+      && [...inductorCurrents.values()].every(value => value === 0);
+
+    this.capVoltages = new Map(capacitorVoltages);
+    this.inductorCurrents = new Map(inductorCurrents);
+    this.capCurrents = new Map([...capacitorVoltages.keys()].map(id => [id, 0]));
+    this.inductorVoltages = new Map([...inductorCurrents.keys()].map(id => [id, 0]));
+    this.nodeVoltages = new Map(point.nodeVoltages);
+    // NEGATED ON THE WAY IN, so `branchCurrent()` speaks ONE convention for the
+    // whole life of the board.
+    //
+    // `point` is an `operatingPoint()` result and that API is INTO-THE-TERMINAL
+    // positive; `_mnaCache.branchCurrents` is what `branchCurrent()` returns,
+    // and that is OUT-OF-PART positive everywhere else. Seeding the cache
+    // verbatim made every device's public current INVERT for as long as this
+    // cache stood, and then invert back on the next solve -- so the sign a
+    // meter reported depended on whether the board had just been initialised.
+    //
+    // Measured at volts = -4 on the RCL bench in
+    // `test/nonuic-transient.test.mjs`: straight after initialisation
+    // `branchCurrent('L1','b')` read +1.333333e-3 where every other moment in
+    // the board's life gives -1.333333e-3.
+    //
+    // This is the ONE boundary where the two conventions meet, so it is the one
+    // place the conversion belongs. It is not the fix for the underlying
+    // duplication -- see `test/inductor-kcl-convention.test.mjs`, which pins
+    // both conventions and names the remedy -- but it stops the inconsistency
+    // leaking into the public reader.
+    this._mnaCache = { nodeVoltages: new Map(point.nodeVoltages),
+      indeterminateBranchCurrents: new Set(point.indeterminateBranchCurrents),
+      railCurrents: new Map([...(point.railCurrents ?? [])].map(([net, i]) => [net, -i])),
+      branchCurrents: new Map([...point.branchCurrents].map(([id, values]) =>
+        [id, new Map([...values].map(([terminal, i]) => [terminal, -i]))])),
+      converged: true, deviceStamps: new Map() };
+    this._lastSolveConverged = true;
+    this._liveSolveError = null;
+    this._trapValid = false;
+    this._transH = 1e-4;
+    this._lastTransientSolves = 0;
+    this._transientAttemptOverflow = false;
+    this._transientAccuracyUnmet = null;
+    this._transientAnalysisWork = { attempts: 0, solves: 0, advances: 0 };
+
+    return {
+      analysis: {
+        ...point.analysis,
+        kind: 'non-uic-transient-initialization',
+        initialization: quiescent
+          ? 'source-declared-quiescent-zero-state'
+          : hasTimeVaryingSource
+            ? 'source-declared-waveform-time-zero-operating-point'
+            : 'source-declared-dc-operating-point',
+        quiescent,
+        storage: 'capacitor-voltage-and-inductor-current',
+        integrationRestart: 'backward-euler',
+        timeNs: 0n,
+      },
+      converged: true,
+      nodeVoltages: new Map(point.nodeVoltages),
+      branchCurrents: new Map([...point.branchCurrents].map(([id, values]) => [id, new Map(values)])),
+      capacitorVoltages: new Map(capacitorVoltages),
+      inductorCurrents: new Map(inductorCurrents),
+    };
+  }
+
+  /**
+   * Prove the narrow case where zero is an exact transient initial state even
+   * though DC branch-current attribution is not unique (notably parallel ideal
+   * inductors). This is deliberately stricter than transient solvability.
+   * @private
+   */
+  _canInitializeProvenZeroState() {
+    if (!this.powered || this._solveParts.some(part =>
+      !['resistor', 'capacitor', 'inductor', 'vsource', 'isource', 'gnd'].includes(part.kind))) return false;
+    const byId = new Map(this._solveParts.map(part => [part.id, part]));
+    if ([...this.controls].some(([id]) => byId.get(id)?.kind !== 'vsource')) return false;
+
+    const nodes = new Set(this._solveNets.map(net => net.id));
+    const adjacency = new Map([...nodes].map(id => [id, new Set()]));
+    const connect = (a, b) => {
+      if (!adjacency.has(a) || !adjacency.has(b)) return false;
+      adjacency.get(a).add(b); adjacency.get(b).add(a); return true;
+    };
+    const idealParent = new Map([...nodes].map(id => [id, id]));
+    const root = id => {
+      let value = id;
+      while (idealParent.get(value) !== value) value = idealParent.get(value);
+      while (idealParent.get(id) !== id) { const next = idealParent.get(id); idealParent.set(id, value); id = next; }
+      return value;
+    };
+    const joinIdeal = (a, b) => {
+      const left = root(a); const right = root(b);
+      if (left === right) return false;
+      idealParent.set(left, right); return true;
+    };
+    let ground = null;
+    try {
+      for (const part of this._solveParts) {
+        if (part.kind === 'gnd') {
+          const net = this._netForTerminal(part.id, 'gnd');
+          if (!nodes.has(net) || (ground !== null && ground !== net)) return false;
+          ground = net; continue;
+        }
+        if (part.kind === 'resistor' || part.kind === 'capacitor' || part.kind === 'inductor') {
+          const parameter = part.kind === 'resistor' ? 'ohms' : part.kind === 'capacitor' ? 'farads' : 'henrys';
+          if (!Number.isFinite(part.params?.[parameter]) || part.params[parameter] <= 0) return false;
+          if (!connect(this._netForTerminal(part.id, 'a'), this._netForTerminal(part.id, 'b'))) return false;
+          continue;
+        }
+        const pos = this._netForTerminal(part.id, 'pos'); const neg = this._netForTerminal(part.id, 'neg');
+        const value = part.kind === 'vsource'
+          ? (this.controls.has(part.id) ? Number(this.controls.get(part.id)) : sourceVoltage(part, 0, this.vcc))
+          : sourceCurrent(part, 0);
+        if (!Number.isFinite(value) || value !== 0) return false;
+        if (part.kind === 'isource') continue;
+        const rInternal = part.params?.rInternal ?? 0;
+        const iLimit = part.params?.iLimit ?? 0;
+        if (!Number.isFinite(rInternal) || rInternal < 0 || !Number.isFinite(iLimit) || iLimit !== 0
+            || !connect(pos, neg)) return false;
+        if (rInternal === 0 && !joinIdeal(pos, neg)) return false;
+      }
+    } catch { return false; }
+    if (ground === null) return false;
+    const reached = new Set([ground]); const pending = [ground];
+    while (pending.length) for (const next of adjacency.get(pending.pop()) || []) {
+      if (!reached.has(next)) { reached.add(next); pending.push(next); }
+    }
+    return reached.size === nodes.size;
+  }
+
+  /** @private */
+  _initializeProvenZeroState({ hasTimeVaryingSource }) {
+    const capacitorVoltages = new Map(this._solveParts.filter(part => part.kind === 'capacitor').map(part => [part.id, 0]));
+    const inductorCurrents = new Map(this._solveParts.filter(part => part.kind === 'inductor').map(part => [part.id, 0]));
+    const nodeVoltages = new Map(this._solveNets.map(net => [net.id, 0]));
+    const branchCurrents = new Map(this._solveParts.map(part =>
+      [part.id, new Map(part.terminals.map(terminal => [terminal, 0]))]));
+    this.capVoltages = new Map(capacitorVoltages);
+    this.inductorCurrents = new Map(inductorCurrents);
+    this.capCurrents = new Map([...capacitorVoltages.keys()].map(id => [id, 0]));
+    this.inductorVoltages = new Map([...inductorCurrents.keys()].map(id => [id, 0]));
+    this.nodeVoltages = new Map(nodeVoltages);
+    this._mnaCache = { nodeVoltages: new Map(nodeVoltages), branchCurrents: new Map(branchCurrents),
+      converged: true, deviceStamps: new Map() };
+    this._lastSolveConverged = true;
+    this._liveSolveError = null;
+    this._trapValid = false;
+    this._transH = 1e-4;
+    this._lastTransientSolves = 0;
+    this._transientAttemptOverflow = false;
+    this._transientAccuracyUnmet = null;
+    this._transientAnalysisWork = { attempts: 0, solves: 0, advances: 0 };
+    return {
+      analysis: {
+        kind: 'non-uic-transient-initialization',
+        scope: 'grounded-linear-r-c-l-v-i-proven-zero-state',
+        supportedKinds: ['resistor', 'capacitor', 'inductor', 'vsource', 'isource', 'gnd'],
+        sources: 'exact-waveform-time-zero-zero-only',
+        initialization: hasTimeVaryingSource
+          ? 'source-declared-waveform-time-zero-zero-state'
+          : 'source-declared-quiescent-zero-state',
+        quiescent: !hasTimeVaryingSource,
+        storage: 'explicit-zero-capacitor-voltage-and-inductor-current',
+        integrationRestart: 'backward-euler',
+        timeNs: 0n,
+      },
+      converged: true,
+      nodeVoltages: new Map(nodeVoltages),
+      branchCurrents: new Map([...branchCurrents].map(([id, values]) => [id, new Map(values)])),
+      capacitorVoltages: new Map(capacitorVoltages),
+      inductorCurrents: new Map(inductorCurrents),
+    };
+  }
+
+  /**
+   * Compute, but do not adopt, a DC operating point for the first proven
+   * public domain: grounded static native R/C/L/D/Z/Q/M/V/I/E/G networks.
+   * Semiconductor devices must explicitly select a supported model and its
+   * complete admitted DC parameter set.
+   * This is not
+   * an instantaneous read: capacitors are open, independent of stored charge.
+   * Positive current means current INTO the named part terminal.
+   */
+  operatingPoint({ waveformBias = 'refuse' } = {}) {
+    if (!['refuse', 'dc-value', 'time-zero'].includes(waveformBias)) {
+      throw new Error(`operatingPoint: unknown waveform bias mode ${waveformBias}`);
+    }
+    if (!this.powered) {
+      throw new Error('operatingPoint: the board is powered off; a source-on DC point was not computed');
+    }
+    for (const part of this._solveParts) {
+      if (!OPERATING_POINT_KINDS.has(part.kind)) {
+        throw new Error(`operatingPoint: unsupported part ${part.id} (${part.kind}); `
+          + 'the supported domain is static R/C/L/V/I, explicit Shockley D/LED/Z/NPN, '
+          + 'explicit grounded-bulk Level-1 NMOS, '
+          + 'plus ideal VCVS/VCCS only');
+      }
+      if (part.kind === 'vsource' || part.kind === 'isource') {
+        const wave = String(part.params?.wave ?? 'dc').toLowerCase();
+        if (wave !== 'dc' && waveformBias === 'refuse') {
+          throw new Error(`operatingPoint: unsupported time-varying source ${part.id} (${wave}); `
+            + 'no waveform sample is silently treated as DC');
+        }
+        if (wave !== 'dc' && waveformBias === 'dc-value') {
+          sourceDcValue(part, part.kind === 'isource' ? 0.001 : this.vcc);
+        }
+      }
+      if (part.kind === 'vsource') {
+        const wave = String(part.params?.wave ?? 'dc').toLowerCase();
+        if ((part.params?.iLimit ?? 0) > 0) {
+          throw new Error(`operatingPoint: unsupported current-limited source ${part.id}; `
+            + 'constant-voltage and constant-current mode selection is stateful');
+        }
+        const posNet = this._netForTerminal(part.id, 'pos');
+        const negNet = this._netForTerminal(part.id, 'neg');
+        const volts = this.controls.has(part.id)
+          ? Number(this.controls.get(part.id))
+          : Number(waveformBias === 'dc-value'
+            ? sourceDcValue(part, this.vcc) : sourceVoltage(part, 0, this.vcc));
+        const internalOhms = Number(part.params?.rInternal) || 0;
+        if (internalOhms <= 0 && posNet !== undefined && posNet === negNet && volts !== 0) {
+          throw new Error(`operatingPoint: inconsistent ideal voltage constraint ${part.id}; `
+            + `${volts} V cannot be imposed across the same net ${posNet}`);
+        }
+      }
+      if (part.kind === 'diode' || part.kind === 'led') {
+        const params = part.params ?? {};
+        const what = part.kind === 'led' ? 'LED' : 'diode';
+        if (params.model !== 'shockley') {
+          throw new Error(`operatingPoint: unsupported ${what} ${part.id}; `
+            + "model must be explicitly 'shockley'"
+            + (part.kind === 'led' && params.vf !== undefined
+              ? ` (this LED declares only vf=${params.vf}, which is the knee model: `
+                + 'add is, n and rs to ask for its DC operating point)' : ''));
+        }
+        for (const name of ['is', 'n']) {
+          if (typeof params[name] !== 'number' || !Number.isFinite(params[name])
+              || params[name] <= 0) {
+            throw new Error(`operatingPoint: unsupported ${what} ${part.id}; `
+              + `${name} must be an explicit finite number greater than zero`);
+          }
+        }
+        if (typeof params.rs !== 'number' || !Number.isFinite(params.rs) || params.rs < 0) {
+          throw new Error(`operatingPoint: unsupported ${what} ${part.id}; `
+            + 'rs must be an explicit finite number greater than or equal to zero');
+        }
+        const admitted = part.kind === 'led'
+          ? LED_OPERATING_POINT_PARAMS : DIODE_OPERATING_POINT_PARAMS;
+        const extra = Object.keys(params).find(name => !admitted.has(name));
+        if (extra) {
+          throw new Error(`operatingPoint: unsupported ${what} ${part.id}; `
+            + `parameter ${extra} is outside the explicit Shockley DC domain`);
+        }
+        for (const terminal of ['anode', 'cathode']) {
+          if (this._netForTerminal(part.id, terminal) === undefined) {
+            throw new Error(`operatingPoint: unsupported ${what} ${part.id}; `
+              + `terminal ${terminal} is not connected to a supplied net`);
+          }
+        }
+      }
+      if (part.kind === 'zener') {
+        const params = part.params ?? {};
+        if (params.model !== 'shockley') {
+          throw new Error(`operatingPoint: unsupported zener ${part.id}; `
+            + "model must be explicitly 'shockley'");
+        }
+        for (const name of ['is', 'n', 'vz', 'ibv']) {
+          if (typeof params[name] !== 'number' || !Number.isFinite(params[name])
+              || params[name] <= 0) {
+            throw new Error(`operatingPoint: unsupported zener ${part.id}; `
+              + `${name} must be an explicit finite number greater than zero`);
+          }
+        }
+        if (typeof params.rs !== 'number' || !Number.isFinite(params.rs) || params.rs < 0) {
+          throw new Error(`operatingPoint: unsupported zener ${part.id}; `
+            + 'rs must be an explicit finite number greater than or equal to zero');
+        }
+        const extra = Object.keys(params).find(name => !ZENER_OPERATING_POINT_PARAMS.has(name));
+        if (extra) {
+          throw new Error(`operatingPoint: unsupported zener ${part.id}; `
+            + `parameter ${extra} is outside the explicit Shockley breakdown DC domain`);
+        }
+        for (const terminal of ['anode', 'cathode']) {
+          if (this._netForTerminal(part.id, terminal) === undefined) {
+            throw new Error(`operatingPoint: unsupported zener ${part.id}; `
+              + `terminal ${terminal} is not connected to a supplied net`);
+          }
+        }
+      }
+      if (part.kind === 'npn') {
+        const params = part.params ?? {};
+        if (params.model !== 'shockley') {
+          throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+            + "model must be explicitly 'shockley'");
+        }
+        for (const name of ['is', 'beta']) {
+          if (typeof params[name] !== 'number' || !Number.isFinite(params[name])
+              || params[name] <= 0) {
+            throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+              + `${name} must be an explicit finite number greater than zero`);
+          }
+        }
+        for (const name of ['br', 'n', 'vaf', 'ikf']) {
+          if (Object.prototype.hasOwnProperty.call(params, name)
+              && (typeof params[name] !== 'number' || !Number.isFinite(params[name])
+                || params[name] <= 0)) {
+            throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+              + `${name} must be a finite number greater than zero when declared`);
+          }
+        }
+        if (Object.prototype.hasOwnProperty.call(params, 'rb')
+            && (typeof params.rb !== 'number' || !Number.isFinite(params.rb)
+              || params.rb < 0)) {
+          throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+            + 'rb must be a finite number greater than or equal to zero when declared');
+        }
+        if (Object.prototype.hasOwnProperty.call(params, 'rc')
+            && (typeof params.rc !== 'number' || !Number.isFinite(params.rc)
+              || params.rc < 0)) {
+          throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+            + 'rc must be a finite number greater than or equal to zero when declared');
+        }
+        const chargeFields = ['cje', 'cjc', 'tf'];
+        const declaredChargeFields = chargeFields.filter(name =>
+          Object.prototype.hasOwnProperty.call(params, name));
+        if (declaredChargeFields.length !== 0 && declaredChargeFields.length !== chargeFields.length) {
+          throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+            + 'cje, cjc and tf must be declared together');
+        }
+        for (const name of declaredChargeFields) {
+          if (typeof params[name] !== 'number' || !Number.isFinite(params[name])
+              || params[name] < 0) {
+            throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+              + `${name} must be a finite number greater than or equal to zero when declared`);
+          }
+        }
+        if (Object.prototype.hasOwnProperty.call(params, '_model')
+            && (typeof params._model !== 'string' || !params._model.length)) {
+          throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+            + '_model must be a non-empty inert source-model name when retained');
+        }
+        const extra = Object.keys(params).find(name => !NPN_OPERATING_POINT_PARAMS.has(name));
+        if (extra) {
+          throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+            + `parameter ${extra} is outside the explicit Ebers-Moll DC domain`);
+        }
+        for (const terminal of ['base', 'collector', 'emitter']) {
+          if (this._netForTerminal(part.id, terminal) === undefined) {
+            throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+              + `terminal ${terminal} is not connected to a supplied net`);
+          }
+        }
+      }
+      if (part.kind === 'nmos') {
+        const params = part.params ?? {};
+        if (params.model !== 'level1') {
+          throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+            + "model must be explicitly 'level1'");
+        }
+        if (typeof params.vth !== 'number' || !Number.isFinite(params.vth)) {
+          throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+            + 'vth must be an explicit finite number');
+        }
+        for (const name of ['kp', 'w', 'l']) {
+          if (typeof params[name] !== 'number' || !Number.isFinite(params[name])
+              || params[name] <= 0) {
+            throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+              + `${name} must be an explicit finite number greater than zero`);
+          }
+        }
+        if (typeof params.lambda !== 'number' || !Number.isFinite(params.lambda)
+            || params.lambda < 0) {
+          throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+            + 'lambda must be an explicit finite number greater than or equal to zero');
+        }
+        const groundedBulk = params.bulkAtGround === true
+          && !Object.prototype.hasOwnProperty.call(params, 'bulkOnSource');
+        const sourceTiedBulk = params.bulkOnSource === true
+          && !Object.prototype.hasOwnProperty.call(params, 'bulkAtGround');
+        if (!groundedBulk && !sourceTiedBulk) {
+          throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+            + 'bulkAtGround must explicitly prove the fourth terminal is the reference net, '
+            + 'or bulkOnSource must exclusively prove it is tied to source');
+        }
+        const hasGamma = Object.prototype.hasOwnProperty.call(params, 'gamma');
+        const hasPhi = Object.prototype.hasOwnProperty.call(params, 'phi');
+        if (hasGamma !== hasPhi) {
+          throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+            + 'gamma and phi must be declared together');
+        }
+        if (hasGamma) {
+          if (!groundedBulk) {
+            throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+              + 'gamma/phi body effect requires an explicitly grounded bulk');
+          }
+          if (typeof params.gamma !== 'number' || !Number.isFinite(params.gamma)
+              || params.gamma < 0) {
+            throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+              + 'gamma must be a finite number greater than or equal to zero');
+          }
+          if (typeof params.phi !== 'number' || !Number.isFinite(params.phi)
+              || params.phi <= 0) {
+            throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+              + 'phi must be a finite number greater than zero');
+          }
+        }
+        if (Object.prototype.hasOwnProperty.call(params, '_model')
+            && (typeof params._model !== 'string' || !params._model.length)) {
+          throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+            + '_model must be a non-empty inert source-model name when retained');
+        }
+        const extra = Object.keys(params).find(name => !NMOS_OPERATING_POINT_PARAMS.has(name));
+        if (extra) {
+          throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+            + `parameter ${extra} is outside the explicit grounded-bulk Level-1 DC domain`);
+        }
+        for (const terminal of ['gate', 'drain', 'source']) {
+          if (this._netForTerminal(part.id, terminal) === undefined) {
+            throw new Error(`operatingPoint: unsupported nmos ${part.id}; `
+              + `terminal ${terminal} is not connected to a supplied net`);
+          }
+        }
+      }
+      if (part.kind === 'pmos') {
+        const params = part.params ?? {};
+        if (params.model !== 'level1') {
+          throw new Error(`operatingPoint: unsupported pmos ${part.id}; `
+            + "model must be explicitly 'level1'");
+        }
+        if (typeof params.vth !== 'number' || !Number.isFinite(params.vth)) {
+          throw new Error(`operatingPoint: unsupported pmos ${part.id}; `
+            + 'vth must be an explicit finite number');
+        }
+        for (const name of ['kp', 'w', 'l']) {
+          if (typeof params[name] !== 'number' || !Number.isFinite(params[name])
+              || params[name] <= 0) {
+            throw new Error(`operatingPoint: unsupported pmos ${part.id}; `
+              + `${name} must be an explicit finite number greater than zero`);
+          }
+        }
+        if (typeof params.lambda !== 'number' || !Number.isFinite(params.lambda)
+            || params.lambda < 0) {
+          throw new Error(`operatingPoint: unsupported pmos ${part.id}; `
+            + 'lambda must be an explicit finite number greater than or equal to zero');
+        }
+        if (Object.prototype.hasOwnProperty.call(params, '_model')
+            && (typeof params._model !== 'string' || !params._model.length)) {
+          throw new Error(`operatingPoint: unsupported pmos ${part.id}; `
+            + '_model must be a non-empty inert source-model name when retained');
+        }
+        const extra = Object.keys(params).find(name => !PMOS_OPERATING_POINT_PARAMS.has(name));
+        if (extra) {
+          throw new Error(`operatingPoint: unsupported pmos ${part.id}; `
+            + `parameter ${extra} is outside the explicit-bulk Level-1 DC domain`);
+        }
+        for (const terminal of ['gate', 'drain', 'source', 'bulk']) {
+          if (this._netForTerminal(part.id, terminal) === undefined) {
+            throw new Error(`operatingPoint: unsupported pmos ${part.id}; `
+              + `terminal ${terminal} is not connected to a supplied net`);
+          }
+        }
+      }
+      if (part.kind === 'inductor') {
+        const params = part.params ?? {};
+        if (typeof params.henrys !== 'number' || !Number.isFinite(params.henrys)
+            || params.henrys <= 0) {
+          throw new Error(`operatingPoint: unsupported inductor ${part.id}; `
+            + 'henrys must be an explicit finite number greater than zero');
+        }
+        const extra = Object.keys(params).find(name => !INDUCTOR_OPERATING_POINT_PARAMS.has(name));
+        if (extra) {
+          throw new Error(`operatingPoint: unsupported inductor ${part.id}; `
+            + `parameter ${extra} is outside the ideal DC inductor domain`);
+        }
+        const netA = this._netForTerminal(part.id, 'a');
+        const netB = this._netForTerminal(part.id, 'b');
+        for (const [terminal, net] of [['a', netA], ['b', netB]]) {
+          if (net === undefined) {
+            throw new Error(`operatingPoint: unsupported inductor ${part.id}; `
+              + `terminal ${terminal} is not connected to a supplied net`);
+          }
+        }
+        if (netA === netB) {
+          throw new Error(`operatingPoint: unsupported self-shorted inductor ${part.id}; `
+            + `a and b both resolve to ${netA}, so its branch current is indeterminate`);
+        }
+      }
+      if (part.kind === 'vcvs' || part.kind === 'vccs') {
+        const parameter = part.kind === 'vcvs' ? 'gain' : 'gm';
+        if (typeof part.params?.[parameter] !== 'number'
+            || !Number.isFinite(part.params[parameter])) {
+          throw new Error(`operatingPoint: unsupported ${part.kind} ${part.id}; `
+            + `${parameter} must be an explicit finite number`);
+        }
+        const nonideal = NONIDEAL_CONTROLLED_PARAMS.find(name =>
+          Object.prototype.hasOwnProperty.call(part.params ?? {}, name));
+        if (nonideal) {
+          throw new Error(`operatingPoint: unsupported non-ideal ${part.kind} ${part.id}; `
+            + `declared ${nonideal} is outside the ideal controlled-source domain`);
+        }
+        for (const terminal of CONTROLLED_SOURCE_TERMINALS) {
+          if (this._netForTerminal(part.id, terminal) === undefined) {
+            throw new Error(`operatingPoint: unsupported ${part.kind} ${part.id}; `
+              + `terminal ${terminal} is not connected to a supplied net`);
+          }
+        }
+        if (part.kind === 'vcvs') {
+          const outpNet = this._netForTerminal(part.id, 'outp');
+          const outnNet = this._netForTerminal(part.id, 'outn');
+          if (outpNet === outnNet) {
+            throw new Error(`operatingPoint: unsupported same-net ideal VCVS output ${part.id}; `
+              + `outp and outn both resolve to ${outpNet}`);
+          }
+        }
+      }
+    }
+
+    // An ideal inductor at DC is a zero-volt constraint. Two parallel ideal
+    // zero-volt constraints have a determined total current but no determined
+    // split, so their individual branch-current reports would be fiction.
+    const idealPairs = new Map();
+    const pairKey = (a, b) => a < b ? `${a}\0${b}` : `${b}\0${a}`;
+    for (const part of this._solveParts) {
+      let terminals;
+      if (part.kind === 'inductor') {
+        terminals = ['a', 'b'];
+      } else if (part.kind === 'vsource') {
+        const wave = String(part.params?.wave ?? 'dc').toLowerCase();
+        const volts = this.controls.has(part.id)
+          ? Number(this.controls.get(part.id))
+          : Number(waveformBias === 'dc-value'
+            ? sourceDcValue(part, this.vcc) : sourceVoltage(part, 0, this.vcc));
+        const internalOhms = Number(part.params?.rInternal) || 0;
+        if ((waveformBias === 'refuse' && wave !== 'dc') || volts !== 0 || internalOhms > 0) continue;
+        terminals = ['pos', 'neg'];
+      } else {
+        continue;
+      }
+      const a = this._netForTerminal(part.id, terminals[0]);
+      const b = this._netForTerminal(part.id, terminals[1]);
+      if (a === undefined || b === undefined || a === b) continue;
+      const key = pairKey(a, b);
+      const prior = idealPairs.get(key);
+      if (prior && (part.kind === 'inductor' || prior.kind === 'inductor')) {
+        throw new Error(`operatingPoint: parallel ideal constraints ${prior.id} and ${part.id} `
+          + `share nets ${a}, ${b}; their individual branch currents are indeterminate`);
+      }
+      idealPairs.set(key, part);
+    }
+    const floating = dcFloatingNets(this._solveParts, this._solveNets);
+    if (floating.length) {
+      throw new Error(`operatingPoint: DC-floating net${floating.length === 1 ? '' : 's'} `
+        + `${floating.join(', ')}; capacitors, current sources, and ideal control pins do not anchor voltage`);
+    }
+
+    // solveMNA's current-limit loop writes a private top-level field on source
+    // parts. The accepted domain excludes that mode, and shallow copies make
+    // this observational even if the implementation later inspects the field.
+    const inductorIds = new Set(this._solveParts
+      .filter(part => part.kind === 'inductor').map(part => part.id));
+    const parts = this._solveParts.map(part => inductorIds.has(part.id)
+      ? { ...part, kind: 'vsource', params: { volts: 0 }, terminals: ['pos', 'neg'] }
+      : { ...part });
+    const nets = this._solveNets.map(net => ({
+      ...net,
+      terminals: net.terminals.map(terminal => {
+        if (!inductorIds.has(terminal.part)) return { ...terminal };
+        return { ...terminal, terminal: terminal.terminal === 'a' ? 'pos' : 'neg' };
+      }),
+    }));
+    const op = this._solveDcOperatingPoint({
+      parts,
+      nets,
+      controls: new Map(this.controls),
+      deviceStates: new Map(),
+      tSeconds: 0,
+      dcSources: waveformBias === 'dc-value',
+    });
+    const nmosBulkModes = new Set(parts.filter(part => part.kind === 'nmos').map(part =>
+      part.params?.bulkOnSource === true ? 'source' : 'ground'));
+    const nmosMetadata = nmosBulkModes.size === 1 && nmosBulkModes.has('source') ? {
+      model: 'explicit-spice-level1-source-tied-bulk',
+      requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda', 'bulkOnSource'],
+      defaults: { bulkIs: 1e-14, bulkN: 1 },
+      thermalVoltage: MOS_BULK_THERMAL_VOLTAGE,
+      temperatureModel: 'fixed',
+    } : nmosBulkModes.size > 1 ? {
+      model: 'explicit-spice-level1-known-bulk',
+      requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda'],
+      admittedBulkTopologies: ['ground', 'source'],
+      defaults: { bulkIs: 1e-14, bulkN: 1 },
+      thermalVoltage: MOS_BULK_THERMAL_VOLTAGE,
+      temperatureModel: 'fixed',
+    } : {
+      model: 'explicit-spice-level1-grounded-bulk',
+      requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda', 'bulkAtGround'],
+      optionalParameterGroups: [['gamma', 'phi']],
+      defaults: { bulkIs: 1e-14, bulkN: 1 },
+      thermalVoltage: MOS_BULK_THERMAL_VOLTAGE,
+      temperatureModel: 'fixed',
+    };
+    return {
+      analysis: {
+        kind: 'dc-operating-point',
+        scope: 'grounded-static-native-r-c-l-d-led-z-q-m-v-i-e-g-exact-ideal-l-explicit-shockley-d-led-z-npn-level1-nmos-pmos',
+        supportedKinds: [...OPERATING_POINT_KINDS],
+        capacitors: 'open',
+        sources: waveformBias === 'dc-value' ? 'explicit-waveform-dcValue-bias'
+          : waveformBias === 'time-zero' ? 'waveform-time-zero-bias' : 'fixed-dc-only',
+        controlledSources: 'ideal-explicit-finite-parameters-only',
+        inductors: 'exact-ideal-dc-short-explicit-henrys',
+        diodes: {
+          model: 'explicit-shockley',
+          parameters: ['is', 'n', 'rs'],
+          // One junction law, so one entry: an LED is admitted on exactly these
+          // terms. `vf` and `color` may ride along on an LED and change nothing —
+          // vf is the Newton seed, color is a label.
+          kinds: ['diode', 'led'],
+          ledNonElectricalParameters: ['vf', 'color'],
+          thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
+          temperatureModel: 'fixed',
+        },
+        zeners: {
+          model: 'explicit-shockley-with-breakdown',
+          parameters: ['is', 'n', 'rs', 'vz', 'ibv'],
+          thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
+          temperatureModel: 'fixed',
+        },
+        npn: {
+          model: 'explicit-ebers-moll',
+          requiredParameters: ['is', 'beta'],
+          optionalParameters: ['br', 'n', 'vaf', 'ikf', 'rb', 'rc', 'cje', 'cjc', 'tf'],
+          defaults: { br: 1, n: 1, vaf: 'infinite', ikf: 'infinite', rb: 0, rc: 0,
+            cje: 0, cjc: 0, tf: 0 },
+          thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
+          temperatureModel: 'fixed',
+        },
+        nmos: nmosMetadata,
+        pmos: {
+          model: 'explicit-spice-level1-explicit-bulk-terminal',
+          requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda'],
+          requiredTerminals: ['gate', 'drain', 'source', 'bulk'],
+          defaults: { bulkIs: 1e-14, bulkN: 1 },
+          thermalVoltage: MOS_BULK_THERMAL_VOLTAGE,
+          temperatureModel: 'fixed',
+        },
+        sourceDefaults: { vsourceVolts: this.vcc, isourceAmps: 0.001 },
+        tSeconds: 0,
+        powered: true,
+        currentConvention: 'positive-into-part-terminal',
+      },
+      converged: op.converged === true,
+      nodeVoltages: new Map(op.nodeVoltages),
+      // OP represents inductors internally as zero-volt sources. Keep this
+      // narrowly scoped observation contract on actual sources/supply symbols.
+      indeterminateBranchCurrents: new Set([...(op.indeterminateBranchCurrents ?? [])]
+        .filter(id => this._solveParts.some(part => part.id === id && ['vsource', 'vcc'].includes(part.kind)))),
+      // As with OP branch currents, positive means INTO the supply. Live
+      // railCurrent() converts this sign back when adopting the initial state.
+      railCurrents: new Map([...(op.railCurrents ?? [])].map(([net, i]) => [net, -i])),
+      branchCurrents: (() => {
+        const currents = currentsIntoTerminals(op.branchCurrents);
+        for (const id of inductorIds) {
+          const source = currents.get(id);
+          if (!source) continue;
+          currents.set(id, new Map([
+            ['a', source.get('pos') ?? 0],
+            ['b', source.get('neg') ?? 0],
+          ]));
+        }
+        return currents;
+      })(),
+      railConflicts: [...(op.railConflicts ?? [])],
+    };
+  }
+
+  // ─── Internal: inductor integration ───────────────────────────────────────
+
+  /**
+   * Integrate inductor currents using backward Euler companion model.
+   * V = L · dI/dt → I_new = I_old + (V_across / L) · dt
+   *
+   * At each step, the inductor acts like a current source (I_old) in
+   * parallel with a conductance (dt/L). For the closed-form path, we
+   * compute the voltage across the inductor from the surrounding network
+   * and update the current.
+   *
+   * @param {number} dtSec
+   */
+  _integrateInductors(dtSec) {
+    if (dtSec <= 0) return;
+
+    for (const part of this.parts) {
+      if (part.kind !== 'inductor') continue;
+
+      const henrys = /** @type {number} */ (part.params.henrys ?? 0.01);
+      if (henrys <= 0) continue;
+
+      const netA = this._netForTerminal(part.id, 'a');
+      const netB = this._netForTerminal(part.id, 'b');
+      if (!netA || !netB) continue;
+
+      const vA = this.nodeVoltages.get(netA) ?? 0;
+      const vB = this.nodeVoltages.get(netB) ?? 0;
+      const vAcross = vA - vB;
+
+      // Backward Euler: I_new = I_old + (V / L) × dt
+      const iOld = this.inductorCurrents.get(part.id) ?? 0;
+      const iNew = iOld + (vAcross / henrys) * dtSec;
+
+      this.inductorCurrents.set(part.id, iNew);
+    }
+  }
+
+  // ─── State getters ───────────────────────────────────────────────────────
+
+  /** Current simulation time in nanoseconds. @returns {bigint} */
+  getTime() { return this.timeNs; }
+
+  /** Whether the board is powered. @returns {boolean} */
+  isPowered() { return this.powered; }
+
+  /** Supply voltage. @returns {number} */
+  getVcc() { return this.vcc; }
+
+  /**
+   * Current state of an MCU pin.
+   * @param {PinId} pin
+   * @returns {{ mode: PinMode, driveHigh: boolean } | null}
+   */
+  getPinState(pin) {
+    const s = this.pinStates.get(String(pin).toLowerCase());
+    return s ? { mode: s.mode, driveHigh: s.driveHigh } : null;
+  }
+
+  /**
+   * Current value of a user control (pot position, button state).
+   * @param {string} partId
+   * @returns {number | undefined}
+   */
+  getControl(partId) {
+    return this.controls.get(partId);
+  }
+
+  /**
+   * Current voltage across a capacitor.
+   * @param {string} partId
+   * @returns {number}
+   */
+  getCapVoltage(partId) {
+    return this.capVoltages.get(partId) ?? 0;
+  }
+
+  /**
+   * Current through an inductor (DC steady-state).
+   * @param {string} partId
+   * @returns {number}
+   */
+  getInductorCurrent(partId) {
+    return this.inductorCurrents.get(partId) ?? 0;
+  }
+
+  // ─── Part queries ───────────────────────────────────────────────────────
+
+  /** All parts in the current netlist. @returns {Part[]} */
+  getParts() { return this.parts; }
+
+  /** All nets in the current netlist. @returns {Net[]} */
+  getNets() { return this.nets; }
+
+  /**
+   * Get the expected terminal names for a part kind.
+   * Returns null for MCU (terminals are PinIds) and composites.
+   * Useful for the UI inspector panel.
+   *
+   * @param {string} kind
+   * @returns {string[] | null}
+   */
+  static getTerminalsForKind(kind) {
+    const map = {
+      vcc: ['vcc'], gnd: ['gnd'],
+      resistor: ['a', 'b'], capacitor: ['a', 'b'], inductor: ['a', 'b'],
+      diode: ['anode', 'cathode'], led: ['anode', 'cathode'],
+      zener: ['anode', 'cathode'],
+      potentiometer: ['a', 'b', 'wiper'],
+      button: ['a', 'b'], switch: ['a', 'b'],
+      buzzer: ['a', 'b'], ldr: ['a', 'b'], ntc: ['a', 'b'],
+      npn: ['base', 'collector', 'emitter'],
+      pnp: ['base', 'collector', 'emitter'],
+      nmos: ['gate', 'drain', 'source'],
+      pmos: ['gate', 'drain', 'source'],
+      opamp: ['inp', 'inn', 'out'],
+      vsource: ['pos', 'neg'],
+      isource: ['pos', 'neg'],
+      ir_receiver: ['vcc', 'gnd', 'out'],
+      temp_sensor: ['vcc', 'gnd', 'dq'],
+      eeprom: ['sda', 'scl', 'vcc', 'gnd'],
+      shift_register: ['data', 'clock', 'latch', 'oe', 'q0', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7'],
+      char_lcd: ['rs', 'rw', 'e', 'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'vcc', 'gnd', 'vo', 'bl_a', 'bl_k'],
+      // Device-registry kinds
+      gate_and: ['in0', 'in1', 'out'],
+      gate_or: ['in0', 'in1', 'out'],
+      gate_not: ['in0', 'out'],
+      gate_nand: ['in0', 'in1', 'out'],
+      gate_nor: ['in0', 'in1', 'out'],
+      gate_xor: ['in0', 'in1', 'out'],
+      relay: ['coil_a', 'coil_b', 'com', 'nc', 'no'],
+      dc_motor: ['a', 'b'],
+      servo: ['signal', 'vcc', 'gnd'],
+      timer_555: ['vcc', 'gnd', 'trigger', 'threshold', 'control', 'discharge', 'output', 'reset'],
+    };
+    return map[kind] ?? null;
+  }
+
+  /**
+   * Get all known part kinds.
+   * @returns {string[]}
+   */
+  static getPartKinds() {
+    return [
+      'vcc', 'gnd', 'resistor', 'capacitor', 'inductor',
+      'diode', 'led', 'zener', 'potentiometer',
+      'button', 'switch', 'buzzer', 'ldr', 'ntc',
+      'npn', 'pnp', 'nmos', 'pmos', 'opamp',
+      'vsource', 'isource', 'seven_segment', 'seven_seg_3', 'seven_seg_4', 'rgb_led',
+      'shift_register', 'char_lcd', 'led_matrix', 'led_cube',
+      'ir_receiver', 'temp_sensor', 'eeprom', 'mcu',
+      // Device-registry kinds (registered at runtime, listed here for discovery)
+      'gate_and', 'gate_or', 'gate_not', 'gate_nand', 'gate_nor', 'gate_xor',
+      'relay', 'dc_motor', 'servo', 'timer_555',
+      'battery', 'vreg', 'fuse',
+      'h_bridge', 'stepper', 'solenoid',
+      'ultrasonic', 'pir', 'tilt_sensor', 'flex_sensor', 'force_sensor', 'phototransistor',
+      'neopixel', 'bargraph',
+      'decade_counter', 'dff', 'jkff', 'darlington_driver', 'piezo',
+      // Analog ICs + discrete
+      'tip120', 'lm393', 'tmp36', 'light_bulb', 'optocoupler',
+      // Real DIP chips (chip-composer)
+      '74hc00', '74hc02', '74hc04', '74hc08', '74hc10', '74hc11', '74hc14',
+      '74hc20', '74hc21', '74hc27', '74hc32', '74hc73', '74hc74', '74hc86',
+      '74hc93', '74hc132', 'cd4093', 'cd4511',
+      // Misc parts
+      'dc_motor_encoder', 'keypad_4x4', 'dip_switch', 'vibration_motor', 'polarized_cap',
+      // Named variants (real part numbers)
+      'battery_9v', 'battery_aa', 'battery_coin', 'lm7805', 'ld1117v33',
+      'gas_sensor', 'ambient_light', 'ir_transmitter',
+      '74hc95', 'lm339', 'timer_556',
+      // Tier 1 catalogue parts
+      'photodiode', 'soil_moisture', 'relay_dpdt', 'solar_cell', 'gearmotor',
+      '74hc75', '74hc283', 'header', 'usb_a', 'ir_remote', 'clock_display',
+      'pcf8574', 'char_lcd_i2c', 'mcp4725',
+      // Board kinds (multi-arch, per bw-parts 004)
+      'arduino_uno', 'arduino_nano', 'pi_pico',
+    ];
+  }
+
+  /** All LED part IDs. @returns {string[]} */
+  getLeds() { return this.parts.filter(p => p.kind === 'led').map(p => p.id); }
+
+  /** All buzzer part IDs. @returns {string[]} */
+  getBuzzers() { return this.parts.filter(p => p.kind === 'buzzer').map(p => p.id); }
+
+  /**
+   * All controllable parts: pots, buttons, switches, LDRs, NTCs, vsources.
+   * vsource control value = voltage (for bench supply knob).
+   * @returns {Array<{id: string, kind: string, value: number}>}
+   */
+  /**
+   * The volts a vcc symbol delivers: knob, then its authored rail, then the
+   * board default. FIVE sites read this — two net seeds, two closed-form
+   * source traces and the knob readout — and they must agree, or the seed says
+   * one voltage and the solve finds another, or the panel shows a third. The
+   * MNA stamp applies the same precedence against the controls map it is
+   * handed; `test/vcc-supply-knob.test.mjs` holds the two together on a
+   * nonlinear bench, where the net moves from the resolver to the solver.
+   * @param {object} part
+   * @returns {number}
+   */
+  _railVolts(part) {
+    const knob = this.controls.get(part.id);
+    if (Number.isFinite(knob)) return Number(knob);
+    return Number.isFinite(part?.params?.volts) ? part.params.volts : this.vcc;
+  }
+
+  getControls() {
+    // NOT 'vcc'. A supply rail is bench CONFIGURATION, not a stimulus: adding it
+    // here put a knob on every bench that has a supply — which is nearly all of
+    // them — and changed what getControls() means for every existing consumer.
+    // Lite caught it by name: a bench asserting it "carries exactly one control,
+    // and it is the discharge switch" started reporting ['vcc1', 'sw_discharge'].
+    // The rail is edited through its own `volts` param instead (bw-circuit-ui's
+    // inline editor offers it), which `_railVolts` honours either way, so a
+    // control set by some other route still works and nothing is lost.
+    const controllable = ['potentiometer', 'button', 'switch', 'ldr', 'ntc', 'vsource'];
+    return this.parts
+      .filter(p => controllable.includes(p.kind))
+      .map(p => ({
+        id: p.id, kind: p.kind,
+        // A vcc symbol IS a bench supply, and the solver has honoured
+        // `params.volts` on it for as long as the 3.3 V rail has existed — but
+        // it was not listed here, so no panel offered the knob and the only way
+        // to run a circuit at 9 V was to edit its JSON by hand. Its rest value
+        // is its own authored rail, falling back to the board's.
+        value: this.controls.get(p.id)
+          ?? (p.kind === 'vsource' ? (p.params?.volts ?? 5) : 0),
+      }));
+  }
+
+  /**
+   * Get the state of a registered device or built-in shift register.
+   * Returns the device's internal state object (drives, FSM state, etc.)
+   * or null if the part has no device state.
+   *
+   * For shift registers: { shiftReg, latchReg, oeActive }
+   * For registry devices: whatever the model's init() returned + mutations
+   *
+   * @param {string} partId
+   * @returns {object | null}
+   */
+  /**
+   * Fast-path I2C: feed one complete transaction (address byte first,
+   * payload after) straight into every I2C-slave device's decoder —
+   * synthesized edges on the pure state machine, ZERO solver work.
+   *
+   * Why it exists: the simulator JS driver bit-bangs the bus through
+   * setPin, and every edge is a full MNA solve — a single 1024-byte
+   * display clear is ~29k solves, and the calculator's first frame took
+   * longer than the app's run budget (found 2026-08-17: displayOn
+   * arrived, the text never did). The C/emulator chains keep the real
+   * electrical bit-bang; this is the honest shortcut for the pure-JS
+   * runner, same decoder, same handlers, same framing rules.
+   *
+   * @param {number[]} bytes — [addressByte, ...payload]
+   * @returns {number} how many slave decoders were fed
+   */
+  i2cInject(bytes) {
+    let fed = 0;
+    for (const [, st] of this._deviceStates) {
+      if (!st || !st._i2c || !st._i2c.handlers) continue;
+      const s = st._i2c;
+      const edge = (scl, sda) => feedI2CSlave(s, scl, sda);
+      edge(true, true);                      // bus idle
+      edge(true, false); edge(false, false); // START
+      for (const b of bytes) {
+        for (let k = 7; k >= 0; k--) {
+          const bit = ((b >> k) & 1) === 1;
+          edge(false, bit);
+          edge(true, bit);
+          edge(false, bit);
+        }
+        edge(false, true); edge(true, true); edge(false, true); // ACK clock
+      }
+      edge(false, false); edge(true, false); edge(true, true);  // STOP
+      fed++;
+    }
+    if (fed) this._notifyChange('device', { i2cInject: bytes.length });
+    return fed;
+  }
+
+  getDeviceState(partId) {
+    // Built-in shift register
+    const sr = this._shiftRegisters.get(partId);
+    if (sr) return { shiftReg: sr.shiftReg, latchReg: sr.latchReg, oeActive: sr.oeActive ?? true };
+    // Registry devices, then a controller module's own display (setPartMatrix)
+    return this._deviceStates.get(partId) ?? this._partOverlays?.get(partId) ?? null;
+  }
+
+  /**
+   * Publish the LED matrix a controller MODULE carries on itself (the
+   * micro:bit's 5x5, as its emulator reports it) onto that part, as
+   * `matrix: {width, height, brightness, levels}` — `brightness` 0..1 and
+   * `levels` 0..9 per LED, row-major. A part with a registered device model
+   * gets it on its own state; one without (an `mcu` part) gets an overlay that
+   * getDeviceState returns, so the part's face can read it the same way.
+   *
+   * @param {string} partId
+   * @param {{width:number,height:number,brightness:Float64Array,levels:Uint8Array}} matrix
+   */
+  setPartMatrix(partId, matrix) {
+    const st = this._deviceStates.get(partId);
+    if (st) {
+      st.matrix = matrix;
+      return;
+    }
+    if (!this._partOverlays) this._partOverlays = new Map();
+    const overlay = this._partOverlays.get(partId);
+    if (overlay) overlay.matrix = matrix;
+    else this._partOverlays.set(partId, { matrix });
+  }
+
+  /**
+   * Return I2C handler objects from all devices on the board that expose them.
+   * Each entry has { onAddress, onWriteByte, onReadByte, onStop? }.
+   * Used by the TWI bridge to route hardware-TWI transactions to device models
+   * without going through the bit-level I2C slave engine.
+   * @returns {Array<{onAddress: Function, onWriteByte: Function, onReadByte: Function, onStop?: Function}>}
+   */
+  getI2CHandlers() {
+    const result = [];
+    for (const [, state] of this._deviceStates) {
+      if (state.i2cHandlers) result.push(state.i2cHandlers);
+    }
+    return result;
+  }
+
+  /**
+   * All MCU pin IDs currently tracked.
+   * @returns {Array<{pin: string, mode: string, driveHigh: boolean}>}
+   */
+  getPinStates() {
+    return [...this.pinStates.entries()].map(([pin, s]) => ({
+      pin: s.as ?? pin, mode: s.mode, driveHigh: s.driveHigh,
+    }));
+  }
+
+  // ─── Change notification ────────────────────────────────────────────────
+
+  /**
+   * Register a callback for board state changes.
+   * Called after every setPin, setControl, setPower, advanceTo, and setNetlist.
+   *
+   * @param {(event: {type: string, detail?: any}) => void} fn
+   */
+  onChange(fn) {
+    if (!this._changeListeners) this._changeListeners = [];
+    this._changeListeners.push(fn);
+  }
+
+  /**
+   * Remove a previously registered change listener.
+   * @param {(event: {type: string, detail?: any}) => void} fn
+   */
+  offChange(fn) {
+    if (!this._changeListeners) return;
+    this._changeListeners = this._changeListeners.filter(f => f !== fn);
+  }
+
+  /** @param {string} type @param {any} [detail] */
+  _notifyChange(type, detail) {
+    if (!this._changeListeners) return;
+    const event = { type, detail };
+    for (const fn of this._changeListeners) {
+      try { fn(event); } catch { /* listener error must not break the board */ }
+    }
+  }
+
+  // ─── Circuit warnings ──────────────────────────────────────────────────
+
+  /**
+   * Check the circuit for potential problems: overcurrent, missing
+   * ground path, LED without resistor, etc.
+   *
+   * Warning types emitted (for UI filter/label matching):
+   *   - 'overcurrent'       — single LED exceeds rated current
+   *   - 'no-resistor'       — LED has no series current limiter
+   *   - 'aggregate-current' — chip/port total exceeds budget
+   *   - 'non-convergence'   — MNA solver did not converge
+   *   - 'substep-overflow'  — advanceTo hit device sub-step cap
+   *
+   * Each warning has: severity, message, and optionally:
+   *   partId   — single offending part (overcurrent, no-resistor)
+   *   partIds  — array of contributing parts (aggregate-current)
+   *   unratedIds — parts excluded from the total (aggregate-current)
+   *   type     — machine-readable warning type string
+   *
+   * @returns {Array<{severity: 'warning'|'danger', message: string, partId?: string,
+   *           partIds?: string[], unratedIds?: string[], type?: string}>}
+   */
+  getWarnings() {
+    /** @type {Array<{severity: 'warning'|'danger', message: string, partId?: string,
+     *           partIds?: string[], unratedIds?: string[], type?: string}>} */
+    const warnings = [];
+
+    // A terminal that appeared in two nets was coalesced at setNetlist —
+    // the merge is correct physics, but the drawing that produced it is
+    // worth fixing at the source, so it stays visible.
+    if (this._netMergeNotes?.length) {
+      for (const { terminal, into, from } of this._netMergeNotes) {
+        warnings.push({
+          severity: 'warning',
+          type: 'net-coalesced',
+          message: `${terminal} appeared in both ${into} and ${from} — merged: ` +
+            'one pin is one node. The drawing (or its wire derivation) lists ' +
+            'the terminal twice.',
+        });
+      }
+    }
+
+    // A macromodel op-amp on a bench with no ground keeps the ideal row —
+    // said out loud, because a flat AC response from a part configured
+    // for GBW would otherwise be a silent downgrade.
+    if (this._macroFallbacks?.length) {
+      for (const id of this._macroFallbacks) {
+        warnings.push({
+          severity: 'warning',
+          type: 'opamp-macro-no-ground',
+          partId: id,
+          message: `${id} is configured as a macromodel op-amp, but the bench ` +
+            'has no ground net to reference the internal pole against — it is ' +
+            'running as an IDEAL op-amp (no bandwidth, no slew) until a gnd ' +
+            'part exists.',
+        });
+      }
+    }
+
+    // Refused device-control verbs are user-intent feedback and show
+    // regardless of power state (spec-updates/set-device-control.md).
+    if (this._refusedControls) {
+      for (const { partId, verb, why, count } of this._refusedControls.values()) {
+        warnings.push({
+          severity: 'warning',
+          type: 'device-control-refused',
+          partId,
+          message: `"${verb}" on ${partId} was ignored — ${why}` +
+            (count > 1 ? ` (${count}×)` : ''),
+        });
+      }
+    }
+
+    if (!this.powered) return warnings;
+
+    // Transient attempt overflow: the adaptive integrator hit its runaway
+    // backstop and finished the interval with one coarse BE step.
+    if (this._transientAttemptOverflow) {
+      warnings.push({
+        severity: 'warning',
+        message: 'Transient integration hit its step-attempt backstop — the last ' +
+          'stretch of this interval was integrated coarsely. Waveforms there are ' +
+          'approximate.',
+      });
+    }
+
+    // Device sub-step overflow: advanceTo hit the cap on device sub-steps.
+    if (this._deviceSubstepOverflow) {
+      warnings.push({
+        severity: 'warning',
+        message: 'Device sub-step limit reached — some timed transitions may have been ' +
+          'skipped. This happens when many device deadlines fall within one advanceTo interval.',
+      });
+    }
+
+    // Non-convergence: the solver could not find a consistent operating point.
+    // This is a RESULT, not an error — the UI can render "circuit did not settle".
+    if (this._lastSolveConverged === false) {
+      warnings.push({
+        severity: 'danger',
+        message: 'Circuit did not converge — voltages shown are approximate. ' +
+          'This can happen with circuits that have no stable operating point.',
+      });
+    }
+
+    for (const part of this.parts) {
+      if (part.kind === 'led') {
+        // Use closed-form current if available, fall back to MNA
+        let current = this.ledCurrents.get(part.id) ?? 0;
+        if (current === 0) {
+          try { current = -this.branchCurrent(part.id, 'anode'); } catch {}
+        }
+        if (current > 0.025) { // > 25 mA
+          warnings.push({
+            severity: 'danger',
+            partId: part.id,
+            message: `${part.id}: current ${(current * 1000).toFixed(1)} mA exceeds 20 mA rating. Add or increase the series resistor.`,
+          });
+        }
+      }
+
+      // Check for MCU pins driving into VCC or GND directly (short circuit)
+      if (part.kind === 'mcu') {
+        for (const terminal of part.terminals) {
+          const state = this._pinStateFor(part.id, terminal);
+          if (!state || state.mode === 'input') continue;
+
+          // Find the net this pin is on
+          const net = this.nets.find(n => n.terminals.some(
+            t => t.part === part.id && t.terminal === terminal
+          ));
+          if (!net) continue;
+
+          // Check if this net is directly connected to VCC or GND
+          for (const t of net.terminals) {
+            if (t.part === part.id) continue;
+            const other = this.partMap.get(t.part);
+            if (!other) continue;
+            if (other.kind === 'vcc' && state.mode !== 'input' && !state.driveHigh) {
+              warnings.push({
+                severity: 'danger',
+                partId: part.id,
+                message: `${terminal}: pin drives LOW but is wired directly to VCC. This is a short circuit.`,
+              });
+            }
+            if (other.kind === 'gnd' && state.mode !== 'input' && state.driveHigh && state.mode === 'pushpull') {
+              warnings.push({
+                severity: 'danger',
+                partId: part.id,
+                message: `${terminal}: pin drives HIGH but is wired directly to GND. This is a short circuit.`,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // Check for LED wired backward (cathode to VCC, anode to GND)
+    for (const part of this.parts) {
+      if (part.kind !== 'led') continue;
+      const anodeNet = this._netForTerminal(part.id, 'anode');
+      const cathodeNet = this._netForTerminal(part.id, 'cathode');
+      if (!anodeNet || !cathodeNet) continue;
+
+      const anodeV = this.nodeVoltages.get(anodeNet) ?? 0;
+      const cathodeV = this.nodeVoltages.get(cathodeNet) ?? 0;
+      if (cathodeV > anodeV + 0.5) {
+        warnings.push({
+          severity: 'warning',
+          partId: part.id,
+          message: `${part.id}: LED appears to be wired backward (cathode at ${cathodeV.toFixed(1)}V > anode at ${anodeV.toFixed(1)}V). Swap anode and cathode.`,
+        });
+      }
+    }
+
+    // Check for output pins with nothing connected
+    for (const part of this.parts) {
+      if (part.kind !== 'mcu') continue;
+      for (const terminal of part.terminals) {
+        const state = this._pinStateFor(part.id, terminal);
+        if (!state || state.mode === 'input') continue;
+
+        const net = this.nets.find(n => n.terminals.some(
+          t => t.part === part.id && t.terminal === terminal
+        ));
+        if (!net) continue;
+
+        // Check if this pin's net has only the MCU terminal (nothing else connected)
+        const externalTerminals = net.terminals.filter(t => t.part !== part.id);
+        if (externalTerminals.length === 0) {
+          warnings.push({
+            severity: 'warning',
+            partId: part.id,
+            message: `${terminal}: output pin is driving but nothing is connected to it.`,
+          });
+        }
+      }
+    }
+
+    // Note: drawable-only parts have minimal electrical models (supply
+    // current + input impedance) but no functional simulation. The part
+    // loads the net correctly but its behavior is not modeled.
+    // This is stated honestly rather than hidden.
+
+    // Aggregate current budget check — uses actual solved currents when
+    // available (realistic), falls back to kind maximums (upper bound).
+    const solvedCurrents = new Map();
+    for (const part of this.parts) {
+      if (part.kind === 'led') {
+        const i = this.ledCurrents.get(part.id);
+        if (i !== undefined && i > 0) solvedCurrents.set(part.id, i);
+      }
+    }
+    const budgetWarnings = checkCurrentBudget(this.parts, solvedCurrents.size > 0 ? solvedCurrents : undefined);
+    for (const w of budgetWarnings) warnings.push(w);
+
+    return warnings;
+  }
+
+  // ─── UI render state ─────────────────────────────────────────────────────
+
+  /**
+   * Get everything the UI needs to render the current board state in one call.
+   * Avoids the UI having to make 20+ individual queries per frame.
+   *
+   * @returns {{
+   *   powered: boolean,
+   *   timeNs: bigint,
+   *   vcc: number,
+   *   leds: Array<{id: string, brightness: number, color?: string}>,
+   *   buzzers: Array<{id: string, hz: number, on: boolean}>,
+   *   controls: Array<{id: string, kind: string, value: number}>,
+   *   pins: Array<{pin: string, mode: string, driveHigh: boolean}>,
+   *   warnings: Array<{severity: string, partId?: string, message: string}>,
+   *   nodeVoltages: Array<{net: string, voltage: number}>,
+   *   capacitors: Array<{id: string, voltage: number}>,
+   * }}
+   */
+  getRenderState() {
+    return {
+      powered: this.powered,
+      timeNs: this.timeNs,
+      vcc: this.vcc,
+      leds: this.parts
+        .filter(p => p.kind === 'led')
+        .map(p => ({
+          id: p.id,
+          brightness: this.ledBrightness(p.id),
+          color: /** @type {string | undefined} */ (p.params.color),
+        })),
+      buzzers: this.parts
+        .filter(p => p.kind === 'buzzer')
+        .map(p => ({ id: p.id, ...this.buzzerTone(p.id) })),
+      controls: this.getControls(),
+      pins: this.getPinStates(),
+      warnings: this.getWarnings(),
+      nodeVoltages: this.nets.map(n => ({
+        net: n.id,
+        voltage: this.nodeVoltage(n.id),
+      })),
+      capacitors: this.parts
+        .filter(p => p.kind === 'capacitor')
+        .map(p => ({ id: p.id, voltage: this.getCapVoltage(p.id) })),
+    };
+  }
+
+  // ─── Reset ──────────────────────────────────────────────────────────────
+
+  /**
+   * Reset simulation state without changing the netlist.
+   * Clears pin states, time, capacitor voltages, LED history, buzzer edges.
+   * Parts, nets, and controls are preserved.
+   */
+  reset() {
+    this.pinStates.clear();
+    this.drivenPwm.clear();
+    this.timeNs = 0n;
+    this.capVoltages.clear();
+    this.ledHistory.clear();
+    this._meterWatches.clear();
+    this.buzzerEdges.clear();
+    this.drivenTones.clear();
+    this.nodeVoltages.clear();
+    this.ledCurrents.clear();
+    this.inductorCurrents.clear();
+    // A reset starts a new transient history at t=0. The adaptive step seed,
+    // the trapezoidal history and the failed-history latch belong to the old
+    // history: seed them as a fresh board does, or the restarted run begins
+    // from the last step size of the previous run.
+    this.capCurrents = new Map();
+    this.inductorVoltages = new Map();
+    this._trapValid = false;
+    this._transH = 1e-4;
+    this._transientAttemptOverflow = false;
+    this._transientAccuracyUnmet = null;
+    // Device models that integrate over time (a motor's speed and winding
+    // current) start from rest too; a spinning motor at t = 0 meets a
+    // stopped drive and a fresh integrator, a stiff edge the controller
+    // cannot resolve.
+    for (const part of this.parts) resetDeviceState(part, this._deviceStates.get(part.id));
+
+    // Clock reset starts a new capture epoch on the SAME configured handles.
+    // Keep failure latches: clearing a ring cannot reconstruct refused history.
+    for (const ch of this._scopeChannels.values()) {
+      ch.writeIndex = 0;
+      ch.count = 0;
+      if (ch.type === 'digital') {
+        ch.trans.fill(NaN);
+        ch._lastLevel = null;
+      } else {
+        ch.samples.fill(NaN);
+        ch.startTNs = 0n;
+        ch._bucketMin = Infinity;
+        ch._bucketMax = -Infinity;
+        ch._nextSampleNs = ch.intervalNs;
+        ch._prevTNs = 0n;
+        ch._prevExactTimeSec = null;
+        ch._prevVal = null;
+      }
+    }
+
+    // Re-initialize cap voltages and LED/buzzer tracking
+    for (const p of this.parts) {
+      if (p.kind === 'led') this.ledHistory.set(p.id, []);
+      if (p.kind === 'buzzer') this.buzzerEdges.set(p.id, []);
+      if (p.kind === 'capacitor') this.capVoltages.set(p.id, 0);
+    }
+
+    this._solve();
+    this._recordLedSamples();
+    for (const ch of this._scopeChannels.values()) {
+      if (ch.type === 'digital') this._feedDigital(ch, 0n);
+    }
+    this._notifyChange('reset');
+  }
+
+  // ─── State snapshot ─────────────────────────────────────────────────────
+
+  /**
+   * Take a snapshot of the current board state for save/undo.
+   * @returns {object}
+   */
+  snapshot() {
+    return {
+      timeNs: this.timeNs,
+      powered: this.powered,
+      pinStates: new Map(this.pinStates),
+      drivenPwm: new Map([...this.drivenPwm].map(([k, e]) => [k, { ...e }])),
+      controls: new Map(this.controls),
+      capVoltages: new Map(this.capVoltages),
+      inductorCurrents: new Map(this.inductorCurrents),
+    };
+  }
+
+  /**
+   * Restore a previously taken snapshot.
+   * @param {object} snap
+   */
+  restore(snap) {
+    this.timeNs = snap.timeNs;
+    this.powered = snap.powered;
+    this.pinStates = new Map(snap.pinStates);
+    // A driven PWM is a pin state and comes back with the pins: the designer
+    // snapshots and restores around every edit (see below), and a program's
+    // analogWrite must not stop because a wire was moved.
+    this.drivenPwm = new Map([...(snap.drivenPwm ?? [])].map(([k, e]) => [k, { ...e }]));
+    this.controls = new Map(snap.controls);
+    this.capVoltages = new Map(snap.capVoltages);
+    this.inductorCurrents = new Map(snap.inductorCurrents ?? []);
+    // A snapshot older than a part carries no state for it, and the designer
+    // restores exactly such a snapshot after every edit: `Circuit._syncNetlist`
+    // snapshots, rebuilds the board, and restores — so a capacitor added since
+    // the snapshot came back UNSEEDED. That is what made a freshly loaded
+    // `43-rc-timing` read 5.0000 V on a capacitor getCapVoltage held at 0
+    // (D23). A reactive part the snapshot never saw starts where a new one
+    // does: uncharged, at rest.
+    for (const p of (this._solveParts ?? this.parts)) {
+      if (p.kind === 'capacitor' && !this.capVoltages.has(p.id)) {
+        this.capVoltages.set(p.id, 0);
+      }
+      if (p.kind === 'inductor' && !this.inductorCurrents.has(p.id)) {
+        this.inductorCurrents.set(p.id, 0);
+      }
+    }
+    // Trapezoidal history is NOT snapshotted: _solve() below invalidates
+    // it, so the first step after a restore re-seeds with BE — cleared
+    // here only so stale values never look meaningful in a debugger.
+    this.capCurrents = new Map();
+    this.inductorVoltages = new Map();
+
+    // Re-initialize LED/buzzer tracking
+    this.ledHistory.clear();
+    this._meterWatches.clear();
+    this.buzzerEdges.clear();
+    this.drivenTones.clear();
+    for (const p of this.parts) {
+      if (p.kind === 'led') this.ledHistory.set(p.id, []);
+      if (p.kind === 'buzzer') this.buzzerEdges.set(p.id, []);
+    }
+
+    this._solve();
+    this._recordLedSamples();
+    this._notifyChange('restore');
+  }
+
+  // ─── Internal: MNA solver bridge ──────────────────────────────────────────
+
+  /** Shared capacitor-open DC solve used by public OP analysis and runAc. */
+  _solveDcOperatingPoint({ parts, nets = this._solveNets, controls, deviceStates, tSeconds,
+    dcSources = false }) {
+    this._chargeBoundedAdvanceWork('solves');
+    return solveMNA(parts, nets, this._pinSources(), controls, this.vcc, {
+      tSeconds,
+      dcSources,
+      temperatureC: this.temperatureC,
+      deviceStates,
+      qualifiedSources: this._qualifiedSources(),
+      powerOff: !this.powered,
+    });
+  }
+
+  /**
+   * Run the MNA solver on the current netlist.
+   * @param {boolean} powerOff - if true, omit active sources (for resistance)
+   * @param {string} [testNodeA] - inject test current from this net
+   * @param {string} [testNodeB] - inject test current to this net
+   * @param {number} [testCurrent] - test current magnitude
+   */
+  /**
+   * The node voltages of a DC BIAS POINT: capacitors open, inductors short.
+   *
+   * NOT a second operating-point API. `operatingPoint()` is a strict, narrow,
+   * refuse-by-name contract over static R/C/L/V/I, explicit Shockley diodes and
+   * ideal controlled sources, and it is right to refuse everything else. This is
+   * the ordinary solve with ONE question changed, for callers that already
+   * accept the ordinary solve's domain -- transistors included -- and need the
+   * bias point rather than the instant.
+   *
+   * WHY IT HAS TO EXIST. `_solveMNA` always passes `capVoltages`, because an
+   * instrument must see the circuit as it is at `timeNs`: a half-charged
+   * capacitor pins its nets at its stored voltage. At t = 0 every capacitor is
+   * uncharged, so it pins its two nets EQUAL -- a short. That is correct for an
+   * instrument and wrong for `.op`, and there was no way to ask for the other
+   * answer.
+   *
+   * NON-MUTATING, and the word is load-bearing. It touches no cached solve, no
+   * `capVoltages`, no `nodeVoltages`, no device state, and it does not advance
+   * time. Two callers reading a board in two different ways must not be able to
+   * change what the other sees.
+   *
+   * Reports its own convergence, because a non-converged solve is an iterate and
+   * not an answer, and a caller that cannot see the difference will publish one
+   * as the other.
+   *
+   * @returns {{converged: boolean, nodeVoltages: Map<string, number>}}
+   */
+  biasPointVoltages() {
+    this._syncDeviceGpioDrives();
+    this._chargeBoundedAdvanceWork('solves');
+    const res = solveMNA(this._solveParts, this._solveNets, this._pinSources(),
+      this.controls, this.vcc, {
+        powerOff: false,
+        temperatureC: this.temperatureC,
+        capacitorsOpen: true,
+        tSeconds: Number(this.timeNs) / 1e9,
+        deviceStates: this._deviceStates,
+        qualifiedSources: this._qualifiedSources(),
+      });
+    return {
+      converged: res.converged !== false,
+      nodeVoltages: new Map(res.nodeVoltages),
+    };
+  }
+
+  _solveMNA(powerOff, testNodeA, testNodeB, testCurrent) {
+    this._syncDeviceGpioDrives();
+    const options = {
+      powerOff,
+      temperatureC: this.temperatureC,
+      testNodeA,
+      testNodeB,
+      testCurrent,
+      // Instruments must see the circuit as it IS: a half-charged capacitor
+      // pins its nets at its stored voltage, and a waveform source is at its
+      // value for the current simulation time.
+      capVoltages: this.capVoltages,
+      tSeconds: Number(this.timeNs) / 1e9,
+      deviceStates: this._deviceStates,
+      qualifiedSources: this._qualifiedSources(),
+    };
+    if (powerOff || testNodeA || testNodeB) {
+      this._chargeBoundedAdvanceWork('solves');
+      return solveMNA(this._solveParts, this._solveNets, this._pinSources(), this.controls, this.vcc, options);
+    }
+    return this._solveLiveMNA(this._pinSources(), options);
+  }
+
+  _solveLiveMNA(pinSources, options) {
+    try {
+      this._chargeBoundedAdvanceWork('solves');
+      const result = solveMNA(this._solveParts, this._solveNets, pinSources, this.controls, this.vcc, options);
+      this._liveSolveError = null;
+      return result;
+    } catch (error) {
+      this._invalidateLiveMeasurements(error);
+      throw error;
+    }
+  }
+
+  /** Copy pin states onto board-kind device drives — the engine half of
+   *  the contract board-kinds.js declares (`gpioFollowsPinStates`): a GPIO
+   *  terminal the adapter drives via setPin() gets the same Thévenin
+   *  treatment an MCU-kind pin gets, at the board's own logic level.
+   *  Power-rail entries set at init are never touched. */
+  _syncDeviceGpioDrives() {
+    if (this._deviceStates.size === 0) return;
+    for (const part of this.parts) {
+      const model = getDevice(part.kind);
+      if (!model || !model.gpioFollowsPinStates) continue;
+      const st = this._deviceStates.get(part.id);
+      if (!st) continue;
+      const vLogic = model.vcc ?? this.vcc;
+      for (const terminal of part.terminals) {
+        if (st._staticDrives && st._staticDrives.has(terminal)) continue;
+        const ps = this.pinStates.get(String(terminal).toLowerCase());
+        // pinThevenin returns the STRING 'high-z' for undriven modes, not
+        // null — storing it as a drive made stampDevice compute 1/NaN and
+        // poisoned the whole matrix (every node NaN, rendered as 0 V; a
+        // fully-staged bench with a correct gp15 drive read dark because
+        // 28 innocent input pins each stamped NaN).
+        const thev = ps ? pinThevenin(ps.mode, ps.driveHigh, vLogic) : null;
+        if (thev && typeof thev === 'object') st.drives[terminal] = thev;
+        else delete st.drives[terminal];   // high-Z / no state: no source
+      }
+    }
+  }
+
+  /** Build the pin source map from current pin states.
+   *
+   * Keyed by the NETLIST'S OWN terminal spelling: the solver joins
+   * pinSources to terminals by exact string, and the terminal case is the
+   * netlist author's (sidecars say d13/gp15, hand-written tests say P1.0).
+   * pinStates keys are canonical lowercase; the bridge lives here, in
+   * board-land, so the gated solver never learns about spelling. */
+  /** Lowercased terminal names on every MCU-surface part (kind 'mcu' or a
+   *  gpioFollowsPinStates device). A pin id matching one of these is a BARE
+   *  pin — 'p1.0' is the 8051's P1.0, never part 'p1' terminal '0'. */
+  _mcuSurfaceTerminals() {
+    if (this._mcuSurface) return this._mcuSurface;
+    const set = new Set();
+    for (const part of this.parts) {
+      const model = getDevice(part.kind);
+      if (part.kind !== 'mcu' && !(model && model.gpioFollowsPinStates)) continue;
+      for (const t of part.terminals) set.add(String(t).toLowerCase());
+    }
+    this._mcuSurface = set;
+    return set;
+  }
+
+  /**
+   * Resolve a chip-qualified pin id — `<partId>.<terminal>` — onto a part
+   * terminal. This is how a machine adapter addresses chips the board has
+   * no electrical model for: a 6502 machine's VIA emits `via.pa0`, and the
+   * board turns that into a drive on whatever net the seated w65c22's PA0
+   * terminal is wired to. No device model required — the part only has to
+   * exist in the netlist. Bare MCU pin names win: they are checked first,
+   * so an 8051's 'P1.0' never parses as part 'P1'.
+   * @param {string} keyLower - already-lowercased pin id
+   * @returns {{ partId: string, terminal: string } | null} canonical spelling
+   */
+  _resolveQualified(keyLower) {
+    if (!keyLower.includes('.')) return null;
+    if (this._mcuSurfaceTerminals().has(keyLower)) return null;
+    if (!this._qualCache) this._qualCache = new Map();
+    if (this._qualCache.has(keyLower)) return this._qualCache.get(keyLower);
+    let resolved = null;
+    const dot = keyLower.indexOf('.');
+    const partKey = keyLower.slice(0, dot);
+    const termKey = keyLower.slice(dot + 1);
+    for (const part of this.parts) {
+      if (String(part.id).toLowerCase() !== partKey) continue;
+      for (const t of part.terminals) {
+        if (String(t).toLowerCase() === termKey) {
+          resolved = { partId: part.id, terminal: String(t) };
+          break;
+        }
+      }
+      break;
+    }
+    this._qualCache.set(keyLower, resolved);
+    return resolved;
+  }
+
+  /** Thévenin drives for qualified pins, grouped per part — the machine-chip
+   *  half of what _pinSources() does for the MCU body. */
+  _qualifiedSources() {
+    if (!this._hasQualifiedPin && this._shiftRegisters.size === 0) return null;
+    /** @type {Map<string, Map<string, import('./types.js').TheveninSource>>} */
+    const out = new Map();
+    // A shift register's q outputs are Thevenin drivers exactly like a pin,
+    // and the closed-form net resolver already treats them that way
+    // (_gatherSourcesInner). MNA had no stamp for the part at all, so the
+    // moment ONE nonlinear part — an LED, which is what every gallery bench
+    // puts there — pushed the output net onto the MNA path, all eight outputs
+    // sat at 0 V while the latch register held the right byte. Only the MNA
+    // side is filled in here; the closed-form path still drives them itself,
+    // so no output is driven twice.
+    for (const part of this.parts) {
+      if (part.kind !== 'shift_register') continue;
+      const sr = this._shiftRegisters.get(part.id);
+      if (!sr || sr.oeActive === false) continue; // /OE inactive: high-Z, no source
+      const rOut = /** @type {number} */ (part.params?.rOut ?? 50);
+      let terms = out.get(part.id);
+      if (!terms) { terms = new Map(); out.set(part.id, terms); }
+      for (let i = 0; i < 8; i++) {
+        terms.set(`q${i}`, { vTh: ((sr.latchReg >> i) & 1) ? this.vcc : 0, rTh: rOut });
+      }
+    }
+    if (!this._hasQualifiedPin) return out.size ? out : null;
+    for (const [key, state] of this.pinStates) {
+      const q = this._resolveQualified(key);
+      if (!q) continue;
+      const thev = pinThevenin(state.mode, state.driveHigh, this.vcc);
+      if (!thev || typeof thev !== 'object') continue; // high-z: no source
+      let terms = out.get(q.partId);
+      if (!terms) { terms = new Map(); out.set(q.partId, terms); }
+      terms.set(q.terminal, thev);
+    }
+    return out.size ? out : null;
+  }
+
+  /**
+   * The pin state driving one MCU-body terminal.
+   *
+   * The case-blind join, plus dual-function package pins: the STC12's
+   * PDIP-40 pin 9 is RST by default and GPIO P4.7 under P4SW, so a netlist
+   * that named it one way used to be undrivable through the other — the
+   * unused spelling was bit-identical to a terminal that does not exist
+   * (measured; src/pin-aliases.js carries the volts and the unique-match
+   * rule). The pin's OWN declared name always wins; the alias only fills a
+   * terminal nothing drove.
+   *
+   * Every electrical lookup of an MCU terminal goes through here: the MNA
+   * path's `_pinSources`, both closed-form source traces, the digital fast
+   * path's qualifier, and the DRC's "is this pin driving" questions. A pin
+   * that drove on one path and not another would be exactly the "plausible,
+   * wrong" split this project forbids.
+   *
+   * @param {string} partId
+   * @param {string} terminal terminal name in any spelling
+   * @returns {PinState | undefined}
+   */
+  _pinStateFor(partId, terminal) {
+    const key = String(terminal).toLowerCase();
+    const own = this.pinStates.get(key);
+    if (own) return own;
+    const alias = this._pinAliases?.get(partId)?.get(key);
+    return alias === undefined ? undefined : this.pinStates.get(alias);
+  }
+
+  _pinSources() {
+    /** @type {Map<string, import('./types.js').TheveninSource>} */
+    const pinSources = new Map();
+    for (const part of this.parts) {
+      if (part.kind !== 'mcu') continue;
+      for (const terminal of part.terminals) {
+        const state = this._pinStateFor(part.id, terminal);
+        if (state) pinSources.set(terminal, pinThevenin(state.mode, state.driveHigh, this.vcc));
+      }
+    }
+    return pinSources;
+  }
+
+  /**
+   * Does this netlist contain parts the closed-form walker cannot represent?
+   * If so, node voltages must come from the full MNA solve — the walker would
+   * silently report voltages as if those parts were absent, which is the
+   * "plausible, wrong" answer this project's doctrine forbids.
+   */
+  /**
+   * WHICH JUNCTION MODEL THIS PART USES, and the reason there is a choice.
+   *
+   * MEASURED 2026-09-12 against test/golden/ngspice_diode.json, 19 cases over
+   * five junction families:
+   *
+   *     PWL default        mean 11.4% error   worst 100%
+   *     Shockley default   mean  1.8% error   worst 7.8%
+   *
+   * The 100% is not a calibration offset. Two 2.0 V LEDs on a 3.3 V rail read
+   * 0.000 mA under PWL where ngspice and Shockley both say 0.020 mA: the hard
+   * knee reports a conducting circuit as DARK. That is the failure this routing
+   * exists to prevent.
+   *
+   * SO WHY NOT SHOCKLEY EVERYWHERE. Routing a junction past the walker costs
+   * about 4x per solve (measured: ~80 us -> ~330 us on a one-LED circuit, ratio
+   * stable across three runs on a loaded box). Paid on every LED circuit
+   * including the ones where PWL is already within 2%, that is a real cost in a
+   * live editor.
+   *
+   * THE THRESHOLD IS DERIVED, NOT PICKED. Sweeping supply headroom
+   * (Vcc - sum of forward drops) against the worst disagreement over R and
+   * topology gives a curve that asymptotes at ~13.7%:
+   *
+   *     headroom <= 0 V    93-100%   <- qualitative: PWL says cut off
+   *              1.0 V       32.8%
+   *              2.0 V       18.7%   <- within 1.4x of the asymptote
+   *              4.0 V       13.7%   asymptote
+   *
+   * Above ~2 V the walker is as good as it will ever be and routing buys
+   * nothing; below it the error climbs steeply into the qualitative failure. So
+   * 2 V is where the walker stops being adequate, and that is the number.
+   *
+   * CONSERVATIVE BY CONSTRUCTION: the headroom is computed against the sum of
+   * EVERY junction's forward drop, not per series path. Parallel branches are
+   * therefore over-counted, headroom is under-estimated, and the decision errs
+   * toward MNA — slower, never less accurate.
+   */
+  /**
+   * Headroom for ONE junction: the supply less the forward drops of the
+   * junctions IN SERIES WITH IT.
+   *
+   * This used to sum vf over EVERY junction in the netlist, so routing depended
+   * on parts sharing no current path. lego-38 measured the consequence: a
+   * second LED on a different, undriven pin — carrying 0.0000 A — moved the
+   * first LED's current, because the global sum dropped the computed headroom
+   * from 3.00 V to 1.00 V and flipped that LED from the piecewise path to the
+   * exponential one. A part conducting nothing cannot change another branch,
+   * and a routing input a parallel branch can move is not headroom.
+   *
+   * Series membership is derived from the netlist: two junctions are in series
+   * when a net joins them AND NOTHING ELSE, so the same current must pass
+   * through both. A net with a third terminal is a branch point and ends the
+   * chain. That keeps the case E1.3b cared about — a string of junctions
+   * against a supply barely clearing their sum — while making a parallel
+   * branch irrelevant, which it physically is.
+   */
+  _junctionHeadroomFor(part) {
+    const vfOf = p => Number(p.params?.vf ?? (p.kind === 'diode' ? 0.7 : 2.0)) || 0;
+    const isJunction = p => p.kind === 'led' || p.kind === 'diode';
+    const byId = new Map(this.parts.map(p => [p.id, p]));
+    const allNets = this.nets || [];
+    const chain = new Set([part.id]);
+    const queue = [part.id];
+    while (queue.length) {
+      const id = queue.pop();
+      for (const net of allNets) {
+        const terms = net.terminals || [];
+        if (terms.length !== 2) continue;          // a branch point ends the chain
+        if (!terms.some(t => t.part === id)) continue;
+        for (const t of terms) {
+          const other = byId.get(t.part);
+          if (!other || chain.has(other.id) || !isJunction(other)) continue;
+          chain.add(other.id);
+          queue.push(other.id);
+        }
+      }
+    }
+    let total = 0;
+    for (const id of chain) { const p = byId.get(id); if (p) total += vfOf(p); }
+    return (Number(this.vcc) || 0) - total;
+  }
+
+  _needsMNA() {
+    // A finite probe input is a real parallel branch, and the capacitance is
+    // real storage. The closed-form walker knows neither; answering from it
+    // would display an unloaded voltage while the scope claims a loaded one.
+    for (const [, ch] of this._scopeChannels) {
+      if (ch.currentClock === 'simulation') return true; // Accepted branch-current authority, never a walker guess.
+      if (ch.type === 'voltage' && ch.referenceNetId !== null
+          && (ch.inputOhms !== null || ch.inputFarads !== null)) return true;
+    }
+    for (const p of this.parts) {
+      if (MNA_ONLY_KINDS.has(p.kind) || getDevice(p.kind)) return true;
+      // An opted-in Shockley junction is beyond the walker's knee
+      // vocabulary: letting the walker answer nodeVoltage while the
+      // instruments answer from the exponential model is two truths on
+      // one bench (spec-updates/shockley-junction-limiting.md).
+      // The stamp from setNetlist — the same answer the solver will use.
+      if ((p.kind === 'led' || p.kind === 'diode') && (p._junctionModel ?? junctionModelOf(p)) === 'shockley') return true;
+    }
+    // A potentiometer with a LOADED wiper is beyond the walker:
+    // _solvePot answers the unloaded midpoint while _solveLedChain treats
+    // that midpoint as an ideal source — a stitched answer that violates
+    // KCL at the wiper by exactly what the load draws (measured: a 10 kΩ
+    // pot at 50 % feeding 220 Ω + LED read 2.5000 V while sourcing
+    // 2.174 mA from nowhere; found by the examples owner's KCL residual
+    // check, 2026-08-23).
+    //
+    // AN MCU *INPUT* IS HIGH-Z. AN MCU *OUTPUT* IS 25 OHMS, AND THIS EXEMPTED
+    // THE PART RATHER THAN THE MODE.
+    //
+    // The test was `other.kind !== 'mcu'`, which is a claim about a part where
+    // the thing that matters is a claim about a pin: a push-pull pin, an
+    // open-drain pin driving low, and both input-pullup and input-pulldown all
+    // LOAD the wiper. Only a plain input does not. So the walker answered for a
+    // pot whose wiper was being driven, and `_solvePot` returns the UNLOADED
+    // midpoint.
+    //
+    // Measured on the gallery topology {vcc, pot 10k, mcu} with the wiper on
+    // P1.3, the pin push-pull high:
+    //
+    //   engine                       2.500000 V   (the bare midpoint)
+    //   ngspice                      4.975248 V
+    //   (5/25 + 5/5000)/(1/25 + 1/5000 + 1/5000) = 4.975248 V   analytic
+    //
+    // 2.48 V out, and it accounted for 11 of the 47 remaining disagreements in
+    // the 2,163-circuit gallery sweep -- every one of them an `analogRead`
+    // example on a board kind whose GPIO is a bare `mcu`. The same circuit
+    // passes on every dev-board kind, because those are not `kind === 'mcu'`
+    // and so were never exempted.
+    //
+    // `pinThevenin` is asked rather than a mode list restated here: it already
+    // returns the string 'high-z' for exactly the modes that do not load, and a
+    // second copy of that rule is how the two would drift apart.
+    //
+    // The topological half is still memoised; the MODE half cannot be, because
+    // it changes on every `setPin`. So the pins are collected once and their
+    // modes consulted per call.
+    if (this._wiperLoaded === undefined) {
+      this._wiperLoaded = false;
+      this._wiperMcuPins = [];
+      for (const p of this.parts) {
+        if (p.kind !== 'potentiometer') continue;
+        const wnetId = this._netForTerminal(p.id, 'wiper');
+        if (!wnetId) continue;
+        const wnet = (this._solveNets ?? this.nets).find(n => n.id === wnetId);
+        if (!wnet) continue;
+        for (const t of wnet.terminals) {
+          if (t.part === p.id) continue;
+          const other = this.partMap.get(t.part);
+          if (!other) continue;
+          if (other.kind === 'mcu') this._wiperMcuPins.push(String(t.terminal).toLowerCase());
+          else { this._wiperLoaded = true; break; }
+        }
+        if (this._wiperLoaded) break;
+      }
+    }
+    if (this._wiperLoaded) return true;
+    for (const pin of this._wiperMcuPins ?? []) {
+      const ps = this.pinStates.get(pin);
+      if (!ps) continue;                       // never driven: still high-Z
+      let th;
+      try { th = pinThevenin(ps.mode, ps.driveHigh, this.vcc); } catch { return true; }
+      if (th !== 'high-z') return true;        // a driven pin loads the wiper
+    }
+    // Shared-LED fan-out is beyond the walker's vocabulary: _solveLedChain
+    // traces each LED's series path INDEPENDENTLY, so two LEDs sharing a
+    // net (a multiplexed display's segment bus, a charlieplexed pair)
+    // produce a phantom operating point — a diode 'conducting' at full
+    // brightness while the shared resistor carries no current (found via
+    // the seven_seg_3 composite, 2026-08-16; reproduced with three bare
+    // LEDs on one anode net). The walker's own doctrine applies: beyond
+    // the vocabulary, one full MNA solve answers everything coherently.
+    // Qualified pins drive arbitrary part terminals — outside the walker's
+    // vocabulary entirely.
+    if (this._hasQualifiedPin) return true;
+    // RESOLVED (was KNOWN GAP 2026-08-17): rail-parallel caps now handled
+    // in _integrateCapacitors — the rSource=0 instant-charge path sets the
+    // cap voltage to vTarget directly. Series RC exponentials preserved.
+    if (this._ledFanout === undefined) {
+      const seen = new Set();
+      this._ledFanout = false;
+      for (const net of this.nets) {
+        let count = 0;
+        for (const t of net.terminals) {
+          const part = this.partMap.get(t.part);
+          if (part && part.kind === 'led') count++;
+        }
+        if (count >= 2) { this._ledFanout = true; break; }
+      }
+      void seen;
+    }
+    return this._ledFanout;
+  }
+
+  /** Any capacitor or inductor present? */
+  _hasReactive() {
+    // SOLVER view, not the drawing: hidden reactive parts (motor
+    // windings, macromodel poles) must pull advanceTo into transient
+    // integration too — a macro op-amp's internal capacitor never
+    // charged because this scanned only the public parts, and the
+    // follower sat at 0 V forever.
+    for (const p of (this._solveParts ?? this.parts)) {
+      if (p.kind === 'capacitor' || p.kind === 'inductor' || p.kind === 'transformer') return true;
+    }
+    return false;
+  }
+
+  /**
+   * Current transient execution mode. A network with no storage, scheduled
+   * device state, shift-register state, or scope time grid has no history to
+   * integrate: its value at t depends only on the sources at t. Such a board
+   * can solve each requested endpoint directly. Opening a scope deliberately
+   * leaves it on the adaptive path because scope buckets require intermediate
+   * samples, not merely the final endpoint.
+   *
+   * @returns {'algebraic-direct'|'source-constrained-inductor-direct'|'adaptive'}
+   */
+  _transientIntegrationMode() {
+    if (this._sourceConstrainedInductorDirect()) return 'source-constrained-inductor-direct';
+    return !this._hasReactive()
+      && this._deviceStates.size === 0
+      && this._shiftRegisters.size === 0
+      && this._scopeChannels.size === 0
+      && this._meterWatches.size === 0
+      ? 'algebraic-direct' : 'adaptive';
+  }
+
+  /**
+   * Recognize the one reactive topology whose state is not free: an ideal
+   * current source directly across one ideal inductor. KCL fixes iL(t) from
+   * the source at every instant and vL=L*diL/dt, so subtracting two nearly
+   * equal companion currents is both needless and ill-conditioned.
+   */
+  _sourceConstrainedInductorDirect() {
+    if (this._scopeChannels.size || this._deviceStates.size || this._shiftRegisters.size) return null;
+    const parts = this._solveParts ?? this.parts;
+    if (parts.length !== 3) return null;
+    const inductor = parts.find(part => part.kind === 'inductor');
+    const source = parts.find(part => part.kind === 'isource');
+    const ground = parts.find(part => part.kind === 'gnd');
+    if (!inductor || !source || !ground || source.params?.wave !== 'spice-sine') return null;
+    const henrys = Number(inductor.params?.henrys ?? inductor.params?.henries);
+    if (!(henrys > 0) || !Number.isFinite(henrys)) return null;
+    const a = this._netForTerminal(inductor.id, 'a');
+    const b = this._netForTerminal(inductor.id, 'b');
+    const pos = this._netForTerminal(source.id, 'pos');
+    const neg = this._netForTerminal(source.id, 'neg');
+    const reference = this._netForTerminal(ground.id, 'gnd');
+    if (!a || !b || !pos || !neg || !reference || a === b
+        || this._solveNets.length !== 2 || ![a, b].includes(reference)) return null;
+    const same = pos === a && neg === b;
+    const opposite = pos === b && neg === a;
+    if (!same && !opposite) return null;
+    return { inductor, source, a, b, reference, henrys,
+      currentSign: same ? 1 : -1 };
+  }
+
+  /** Any source whose value moves with time? */
+  _hasTimeVaryingSource() {
+    for (const p of this.parts) {
+      if ((p.kind === 'vsource' || p.kind === 'isource')
+          && p.params && p.params.wave && p.params.wave !== 'dc') {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Conservative anti-alias ceiling derived from authored source features.
+   * `null` means a moving/unknown waveform could not be characterised and the
+   * caller must retain the fixed profile ceiling. Exact source corners remain
+   * separate step barriers; this bound controls the intervals between them.
+   *
+   * @returns {number|null}
+   */
+  _sourceWaveformStepSec() {
+    let bound = Infinity;
+    let found = false;
+    const admit = featureSec => {
+      if (!(typeof featureSec === 'number' && Number.isFinite(featureSec) && featureSec > 0)) {
+        return false;
+      }
+      bound = Math.min(bound, featureSec / SOURCE_WAVEFORM_INTERVALS);
+      found = true;
+      return true;
+    };
+    for (const part of this.parts) {
+      if (part.kind !== 'vsource' && part.kind !== 'isource') continue;
+      const p = part.params ?? {};
+      const wave = p.wave ?? 'dc';
+      if (wave === 'dc') continue;
+      if (wave === 'spice-pulse') {
+        // Corners already land exactly and adaptive LTE resolves each finite
+        // ramp. The repeating period is the independent anti-alias authority;
+        // dividing a 1 ns ramp again would only manufacture 15 ps steps.
+        if (!admit(p.per)) return null;
+      } else if (wave === 'spice-pwl') {
+        if (!Array.isArray(p.points) || p.points.length < 2) return null;
+        for (let i = 1; i < p.points.length; i++) {
+          if (!Array.isArray(p.points[i - 1]) || !Array.isArray(p.points[i])
+              || !admit(p.points[i][0] - p.points[i - 1][0])) return null;
+        }
+      } else if (wave === 'spice-exp') {
+        if (![p.tau1, p.tau2].every(admit)) return null;
+      } else if (wave === 'spice-sine') {
+        if (!admit(1 / p.freq)) return null;
+        if (p.theta > 0 && !admit(1 / p.theta)) return null;
+      } else if (wave === 'sine' || wave === 'triangle'
+          || wave === 'square' || wave === 'pulse') {
+        const freq = p.freq ?? 1000;
+        if (!admit(1 / freq)) return null;
+      } else if (wave === 'pcm') {
+        // PCM is piecewise linear and has no separate corner scheduler, so
+        // visit every authored sample interval rather than dividing it again.
+        const rate = p.rate ?? 44100;
+        if (!(typeof rate === 'number' && Number.isFinite(rate) && rate > 0)) return null;
+        bound = Math.min(bound, 1 / rate);
+        found = true;
+      } else {
+        return null;
+      }
+    }
+    return found && Number.isFinite(bound) ? bound : null;
+  }
+
+  /**
+   * Effective internal transient-step ceiling before the finite duration of a
+   * particular advance is known. The profile ceiling is a trace-fidelity cap:
+   * it applies when a waveform source or scope makes intermediate time
+   * observable. An authored analysis ceiling is independent and applies even
+   * to a static-source storage network. Keeping these authorities separate is
+   * what lets `.tran ... TMAX` honestly request 0.1 s without turning the
+   * interactive profile's 100 us waveform cap into 200,000 invented steps.
+   *
+   * @returns {{maxStepSec:number|null,basis:string[]}}
+   */
+  _transientStepBound() {
+    const profile = this._transientAnalysisProfile;
+    let maxStepSec = Infinity;
+    const basis = [];
+    if (this._scopeChannels.size > 0) {
+      maxStepSec = Math.min(maxStepSec, profile.maxStepSec);
+      basis.push('profile-scope-fidelity');
+    } else if (this._hasTimeVaryingSource()) {
+      const sourceStepSec = this._sourceWaveformStepSec();
+      // The source-derived bound is a precision-analysis relaxation, never a
+      // tightening: existing fast waveforms already rely on adaptive LTE and
+      // exact corners, and must not gain thousands of invented substeps. The
+      // interactive default keeps its shipped byte-for-behaviour cap.
+      const derivedStepSec = profile.id === 'precision-v1' && sourceStepSec !== null
+        ? Math.max(profile.maxStepSec, sourceStepSec)
+        : null;
+      maxStepSec = Math.min(maxStepSec, derivedStepSec ?? profile.maxStepSec);
+      basis.push(derivedStepSec !== null
+        ? 'source-waveform-fidelity'
+        : (profile.id === 'precision-v1'
+          ? 'profile-waveform-fidelity-fallback'
+          : 'profile-waveform-fidelity'));
+    }
+    if (Number.isFinite(profile.authoredMaxStepSec)) {
+      maxStepSec = Math.min(maxStepSec, profile.authoredMaxStepSec);
+      basis.push('authored-analysis-maximum');
+    }
+    for (const [, ch] of this._scopeChannels) {
+      if (ch.capture === 'sample' && (ch.type === 'voltage' || ch.currentClock === 'simulation')) {
+        maxStepSec = Math.min(maxStepSec, Number(ch.intervalNs) / 1e9);
+        basis.push('scope-sample-grid');
+      }
+    }
+    return { maxStepSec: Number.isFinite(maxStepSec) ? maxStepSec : null, basis };
+  }
+
+  /**
+   * Full-MNA instantaneous solve: node voltages, LED currents and the
+   * instrument cache all come from one solution.
+   */
+  _solveViaMNA() {
+    let res = this._solveMNA(false);
+    this._adoptSolution(res);
+    // Devices react to the solved voltages (a gate sees its input change),
+    // may change what they drive, and the network is re-solved — to a
+    // bounded fixpoint, so a chain of gates settles within one event.
+    for (let round = 0; round < 10; round++) {
+      if (!this._updateDevices()) break;
+      res = this._solveMNA(false);
+      this._adoptSolution(res);
+    }
+  }
+
+  /** Adopt an MNA solution as the board's current answer. */
+  _adoptSolution(res) {
+    this._liveSolveError = null;
+    this.nodeVoltages = new Map(res.nodeVoltages);
+    for (const part of this.parts) {
+      if (part.kind !== 'led') continue;
+      const c = res.branchCurrents.get(part.id);
+      this.ledCurrents.set(part.id, Math.max(0, c ? -(c.get('anode') ?? 0) : 0));
+    }
+    this._mnaCache = res;
+    // Track non-convergence — a solver that cannot converge must say so.
+    // Returning the last iterate as if it were an answer is the numerical
+    // form of the silent-degradation bug.
+    this._lastSolveConverged = res.converged !== false;
+    for (const ch of this._scopeChannels.values()) this._scopeMeasurementFailed(ch, res);
+    if (this._meterWatches.size > 0) this._recordMeterSamples();
+  }
+
+  /**
+   * Find the earliest device deadline strictly after `afterNs` and at or before `beforeNs`.
+   * Returns the deadline bigint, or null if no deadline exists in that range.
+   *
+   * Devices with deadlines: relay (_pendingState.deadlineNs), ultrasonic (_echoEndNs).
+   * Continuous devices (motor, servo, encoder) use a max sub-step interval instead.
+   */
+  _earliestDeviceDeadline(afterNs, beforeNs) {
+    let earliest = null;
+
+    // Check registry device states for known deadline fields
+    for (const [, state] of this._deviceStates) {
+      // Relay-style deadline
+      if (state._pendingState && state._pendingState.deadlineNs > afterNs &&
+          state._pendingState.deadlineNs <= beforeNs) {
+        if (earliest === null || state._pendingState.deadlineNs < earliest) {
+          earliest = state._pendingState.deadlineNs;
+        }
+      }
+      // Ultrasonic echo end
+      if (state._measuring && state._echoEndNs > afterNs &&
+          state._echoEndNs <= beforeNs) {
+        if (earliest === null || state._echoEndNs < earliest) {
+          earliest = state._echoEndNs;
+        }
+      }
+      // Generic timed edge (PWM sensors like the Memsic 2125): a model
+      // that sets _nextEdgeNs gets sub-stepped TO the edge, because
+      // pulseIn-grade timing is the point — the 1 ms grid is not enough.
+      if (state._nextEdgeNs && state._nextEdgeNs > afterNs &&
+          state._nextEdgeNs <= beforeNs) {
+        if (earliest === null || state._nextEdgeNs < earliest) {
+          earliest = state._nextEdgeNs;
+        }
+      }
+      // CANONICAL wake (spec-updates/scheduled-device-events.md): any
+      // model may set state._wakeNs and be stepped TO it exactly — the
+      // gate tpd machinery rides this; the legacy fields above keep
+      // working for the devices that predate it.
+      if (state._wakeNs && state._wakeNs > afterNs &&
+          state._wakeNs <= beforeNs) {
+        if (earliest === null || state._wakeNs < earliest) {
+          earliest = state._wakeNs;
+        }
+      }
+    }
+
+    // For continuous devices (motor, encoder, servo): impose a max sub-step
+    // of 1ms so they don't lose resolution on long jumps.
+    // Only if the interval is large enough to warrant sub-stepping.
+    const MAX_DEVICE_INTERVAL = 1_000_000n; // 1ms
+    if (beforeNs - afterNs > MAX_DEVICE_INTERVAL) {
+      const periodicDeadline = afterNs + MAX_DEVICE_INTERVAL;
+      if (periodicDeadline <= beforeNs) {
+        if (earliest === null || periodicDeadline < earliest) {
+          earliest = periodicDeadline;
+        }
+      }
+    }
+
+    return earliest;
+  }
+
+  /**
+   * Update 74HC595 shift register FSMs. Returns true if any output changed.
+   * Called from the settle loop alongside _updateDevices.
+   */
+  _updateShiftRegisters() {
+    if (this._shiftRegisters.size === 0) return false;
+    let changed = false;
+    const VCC = this.vcc;
+    const VIH = 0.7 * VCC;
+    const VIL = 0.3 * VCC;
+
+    for (const part of this.parts) {
+      if (part.kind !== 'shift_register') continue;
+      const sr = this._shiftRegisters.get(part.id);
+      if (!sr) continue;
+
+      // Overlay-first: if the digital fast path has deferred state for
+      // a net, the overlay value is the electrically settled level — the
+      // stale nodeVoltages would re-clock edges that _settleShiftRegister
+      // already processed.
+      const readV = (terminal) => {
+        const n = this._netForTerminal(part.id, terminal);
+        if (!n) return 0;
+        const ov = this._digitalOverlay.get(n);
+        return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
+      };
+
+      const dataV = readV('data');
+      const clockV = readV('clock');
+      const latchV = readV('latch');
+      const oeV = readV('oe');
+
+      const clockHigh = clockV > VIH;
+      const latchHigh = latchV > VIH;
+      const dataBit = dataV > VIH ? 1 : 0;
+      const oeActive = oeV < VIL; // active LOW
+
+      // Rising edge on clock: shift in data bit
+      if (clockHigh && !sr.lastClock) {
+        sr.shiftReg = ((sr.shiftReg << 1) | dataBit) & 0xFF;
+      }
+      sr.lastClock = clockHigh;
+
+      // Rising edge on latch: copy shift to output
+      if (latchHigh && !sr.lastLatch) {
+        if (sr.latchReg !== sr.shiftReg) {
+          sr.latchReg = sr.shiftReg;
+          changed = true;
+        }
+      }
+      sr.lastLatch = latchHigh;
+
+      // Update output drives based on OE and latch contents
+      // (This is read by the MNA via the closed-form or MNA solver)
+      // We store the drive state for the solver to pick up
+      sr.oeActive = oeActive;
+    }
+    return changed;
+  }
+
+  /**
+   * One update pass over all registered devices. True if any changed.
+   * `atNs` is the time the devices are told: inside a transient chunk it
+   * is the SUB-STEP time, not `this.timeNs` — the board sets timeNs to
+   * the chunk end before integrating, so every timed device inside a
+   * long advanceTo used to see the far future (a tpd gate scheduled its
+   * flip relative to the chunk end and never fired mid-chunk).
+   * @param {bigint} [atNs]
+   * @param {boolean} [acceptedTransient] Accepted adaptive substep provenance;
+   *   exposed only to models opting into transientUpdateContext.
+   */
+  _updateDevices(atNs = this.timeNs, solution = this._mnaCache, measurementOnly = false, acceptedTransient = false) {
+    let changed = false;
+    // Built-in shift registers
+    if (!measurementOnly && this._shiftRegisters.size > 0) {
+      if (this._updateShiftRegisters()) changed = true;
+    }
+    // Registry devices
+    if (this._deviceStates.size === 0) return changed;
+    for (const part of this.parts) {
+      const model = getDevice(part.kind);
+      if (!model || !model.update) continue;
+      if (measurementOnly && !model.measurement) continue;
+      const state = this._deviceStates.get(part.id);
+      const read = (terminal) => {
+        const n = this._netForTerminal(part.id, terminal);
+        if (!n) return 0;
+        // Overlay first: while the digital fast path holds deferred
+        // levels, the last-solved voltage on those nets is stale — a
+        // decoder reading it would see phantom edges.
+        const ov = this._digitalOverlay.get(n);
+        return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
+      };
+      this._attachMeasurementValidity(model, read, solution);
+      if (model.transientUpdateContext === true) read.transient = acceptedTransient;
+      try {
+        if (model.update(part, state, read, atNs)) changed = true;
+      } catch (error) {
+        // A rejected accepted-step model invalidates the whole analog capture,
+        // including earlier partial samples. Preserve ordinary callback and
+        // observational semantics, and rethrow the original admission error.
+        if (acceptedTransient && model.transientUpdateContext === true) {
+          this._invalidateLiveMeasurements(error);
+          this._transientAccuracyUnmet ||= {
+            code: 'device-update-refused', stage: 'device-update',
+            timeSec: Number(atNs) / 1e9, partId: part.id, detail: error.message,
+          };
+        }
+        throw error;
+      }
+    }
+    return changed;
+  }
+
+  /**
+   * Transient integration through MNA — adaptive trapezoidal with
+   * backward-Euler restarts (spec-updates/adaptive-transient.md).
+   *
+   * Step control is step-doubling: one trapezoidal step of h against two of
+   * h/2; the element states (capacitor voltages, inductor currents) carry
+   * the error norm, the half-step result is the accepted one, and h scales
+   * by err^(-1/3) (trap is order 2). The first step after any discrete
+   * event (`_trapValid` false — setPin/setControl/power/netlist/device
+   * flip) runs BE to re-seed the trapezoidal history; square/pulse source
+   * edges truncate the step so the edge is a solve point, never straddled,
+   * and restart BE on the far side. With the solver's factor-reuse ladder
+   * the extra half-step solves are numeric refactors, not fresh
+   * factorizations.
+   *
+   * Sampling ceiling: a scope retains the profile cap; a source-only analysis
+   * derives a conservative anti-alias cap from its shortest authored feature.
+   * Adaptive LTE, exact source-corner barriers and authored maxima can only
+   * tighten it. An idle advance with neither runs to h = dtRemaining.
+   *
+   * @param {number} dtSec
+   */
+  _integrateTransientMNA(dtSec) {
+    this._chargeBoundedAdvanceWork('advances');
+    const tEnd = Number(this.timeNs) / 1e9;
+    const t0 = tEnd - dtSec;
+    const profile = this._transientAnalysisProfile;
+    const RELTOL = profile.relativeTolerance;
+    const ABSTOL_V = profile.absoluteVoltage;
+    const ABSTOL_I = profile.absoluteCurrent;
+    const H_MIN = profile.minStepSec;
+    // A BE seed step is UNCONTROLLED (no error estimate), so it must be
+    // tiny: a 100 µs BE step on a 5 kHz tank (ωh ≈ 3) eats the stored
+    // energy before the trapezoidal controller ever runs. 1 ns keeps the
+    // damping negligible AND makes the first observation after a source
+    // edge or device wake effectively instant — a solve point lands just
+    // past the discontinuity, so a tpd gate schedules from the edge, not
+    // from wherever the next chunk boundary happened to fall (measured:
+    // an 80 ns-late observation shifted a scheduled flip by 80 ns).
+    const H_SEED = profile.seedStepSec;
+    // The same copy-safe bound reported by transientAnalysisStatus(): profile
+    // waveform/scope fidelity, authored analysis maximum and sample grid each
+    // contribute independently. A board with none keeps the historical
+    // endpoint-sized ceiling.
+    const activeStepBound = this._transientStepBound().maxStepSec;
+    const hMax = Math.min(dtSec, activeStepBound ?? dtSec);
+    // A runaway backstop far above any real circuit; hitting it is
+    // reported, never silently absorbed (the old 200-step cap's honesty,
+    // kept at the new scale).
+    const MAX_ATTEMPTS = profile.maxAttempts;
+
+    this._syncDeviceGpioDrives();
+    const pinSources = this._pinSources();
+    const qual = this._qualifiedSources();
+    let nSolves = 0;
+
+    const constrained = this._sourceConstrainedInductorDirect();
+    if (constrained) {
+      this._chargeBoundedAdvanceWork('attempts');
+      const amps = sourceCurrent(constrained.source, tEnd);
+      const current = constrained.currentSign * amps;
+      const voltage = constrained.henrys * constrained.currentSign
+        * spiceSineDerivative(constrained.source.params ?? {}, tEnd);
+      const voltageA = constrained.a === constrained.reference ? 0 : voltage;
+      const voltageB = constrained.b === constrained.reference ? 0 : -voltage;
+      this.nodeVoltages = new Map([
+        [constrained.reference, 0], [constrained.a, voltageA], [constrained.b, voltageB],
+      ]);
+      this.inductorCurrents = new Map([[constrained.inductor.id, current]]);
+      this.inductorVoltages = new Map([[constrained.inductor.id, voltage]]);
+      this._mnaCache = {
+        nodeVoltages: new Map(this.nodeVoltages),
+        branchCurrents: new Map([
+          [constrained.inductor.id, new Map([['a', -current], ['b', current]])],
+          [constrained.source.id, new Map([['pos', amps], ['neg', -amps]])],
+          ...this._solveParts.filter(part => part.kind === 'gnd')
+            .map(part => [part.id, new Map()]),
+        ]),
+        converged: true,
+        deviceStamps: new Map(),
+      };
+      this._lastSolveConverged = true;
+      this._liveSolveError = null;
+      this._trapValid = false;
+      this._lastTransientSolves = 0;
+      this._transientAttemptOverflow = false;
+      this._transientAccuracyUnmet = null;
+      this._transientAnalysisWork = {
+        attempts: this._transientAnalysisWork.attempts + 1,
+        solves: this._transientAnalysisWork.solves,
+        advances: this._transientAnalysisWork.advances + 1,
+      };
+      if (this._meterWatches.size) this._recordMeterSamples(tEnd,this._mnaCache,constrained);
+      return;
+    }
+
+    const markSolveFailure = (r, stage, atSec) => {
+      if (this._transientAccuracyUnmet) return;
+      const maps = [r?.nodeVoltages, r?.branchCurrents, r?.capVoltagesNext,
+        r?.capCurrentsNext, r?.inductorCurrentsNext, r?.inductorVoltagesNext];
+      const finiteMap = map => map instanceof Map && [...map.values()].every(value =>
+        value instanceof Map
+          ? [...value.values()].every(Number.isFinite)
+          : Number.isFinite(value));
+      if (r?.converged === true && maps.every(finiteMap)) return;
+      this._transientAccuracyUnmet = {
+        code: r?.converged === true ? 'non-finite-solve-state' : 'transient-solve-not-converged',
+        stage, timeSec: atSec,
+      };
+    };
+    const solveStep = (tStart, hs, method, cvS, ilS, ccS, lvS) => {
+      nSolves++;
+      const r = this._solveLiveMNA(pinSources, {
+        tSeconds: tStart + hs,
+        temperatureC: this.temperatureC,
+        transient: { dtSec: hs, method, capVoltages: cvS, inductorCurrents: ilS,
+          capCurrents: ccS, inductorVoltages: lvS },
+        deviceStates: this._deviceStates,
+        qualifiedSources: qual,
+        // Power off strips the sources but NOT the storage: capacitor
+        // and inductor companions keep stamping, so stored energy
+        // discharges through whatever network remains (the audit found
+        // every discharge-on-power-loss demo frozen instead).
+        powerOff: !this.powered,
+      });
+      markSolveFailure(r, method, tStart + hs);
+      return r;
+    };
+
+    let cv = this.capVoltages;
+    let il = this.inductorCurrents;
+    let cc = this.capCurrents;
+    let lv = this.inductorVoltages;
+    let trapReady = this._trapValid;
+    let t = t0;
+    let h = Math.min(Math.max(this._transH, H_MIN), hMax, dtSec);
+    let attempts = 0;
+    let res = null;
+    // Time of the last floor-step history restart (see the reject branch).
+    let floorRestartAt = null;
+
+    const publish = (r, atSec,quadratic = null) => {
+      this.nodeVoltages = new Map(r.nodeVoltages);
+      if (this._meterWatches.size > 0) this._recordMeterSamples(atSec,r,null,quadratic);
+      if (this._scopeChannels.size > 0) {
+        const remNs = BigInt(Math.max(0, Math.round((tEnd - atSec) * 1e9)));
+        this._updateScopeChannels(this.timeNs - remNs, atSec, r);
+      }
+    };
+    const accept = (r, atSec,quadratic = null) => {
+      cv = r.capVoltagesNext ?? cv;
+      il = r.inductorCurrentsNext ?? il;
+      cc = r.capCurrentsNext ?? cc;
+      lv = r.inductorVoltagesNext ?? lv;
+      res = r;
+      publish(r, atSec,quadratic);
+      // One device pass per accepted step, told the SUB-STEP time — the
+      // chunk-end time made every scheduled event inside a long advance
+      // fire never or late. A flip is a discontinuity — trapezoidal
+      // history restarts and the step shrinks to look closely.
+      if (this._deviceStates.size > 0) {
+        const remNs = BigInt(Math.max(0, Math.round((tEnd - atSec) * 1e9)));
+        if (this._updateDevices(this.timeNs - remNs, r, false, true)) {
+          trapReady = false;
+          h = Math.max(H_MIN, h / 4);
+        }
+      }
+    };
+
+    // No capacitor/inductor/device history and no scope grid means this is a
+    // sequence of independent algebraic operating points. Adaptive stepping
+    // used to solve every 100 us even when callers requested only 101 values
+    // over six seconds (the measured 28-source Fourier case: at least 60,000
+    // accepted steps and three MNA solves per step). One endpoint solve is
+    // exact for this domain because no state is reused across time. This is
+    // intentionally disabled by a scope: its intermediate buckets are
+    // observable and still require the existing time grid.
+    if (this._transientIntegrationMode() === 'algebraic-direct') {
+      this._chargeBoundedAdvanceWork('attempts');
+      attempts = 1;
+      // Keep the established first-step diagnostic stage (`be`). With no
+      // storage, BE and trapezoidal stamp the identical algebraic system.
+      const direct = solveStep(t0, dtSec, 'be', cv, il, cc, lv);
+      t = tEnd;
+      accept(direct, t);
+      trapReady = true;
+    }
+
+    while (t < tEnd - 1e-15 && attempts < MAX_ATTEMPTS) {
+      this._chargeBoundedAdvanceWork('attempts');
+      attempts++;
+      let hEff = Math.min(h, tEnd - t, hMax);
+      const requestedEnd = t + hEff;
+      const barrier = this._transientStepBarrier(t, requestedEnd);
+      if (barrier) hEff = barrier.atSec - t;
+      const atEdge = barrier?.discontinuity === true;
+
+      // Only a genuine discontinuity takes the uncontrolled BE seed. A
+      // floor-sized step goes through the trapezoidal controller like any
+      // other — the old `hEff <= 2*H_MIN` shortcut was a self-trap: the
+      // seed branch never grows h, so once the reject path drove h to
+      // H_MIN every later step re-entered the seed at H_SEED and the
+      // integrator marched 1 ns forever (measured: 5000 solves per 5 µs
+      // on the charge-pump bench, 95 min for that one test file).
+      if (!trapReady) {
+        // Seed / floor step: single BE solve, no error control — kept tiny
+        // (see H_SEED). When the discontinuity starts an authored finite
+        // source segment, cap the seed at one tenth of that segment. A fixed
+        // 1 ns seed spanning an entire 1 ns PULSE ramp integrates the ramp as
+        // one endpoint-valued BE step and introduces millivolts of avoidable
+        // error into a 1 us RC. BE's damping is still what a fresh
+        // discontinuity needs; it simply cannot consume the whole feature.
+        const nextCorner = this._nextSourceEdgeSec(t);
+        const featureSeed = nextCorner !== null && nextCorner > t + 1e-15
+          ? (nextCorner - t) / 10 : Infinity;
+        const hSeed = Math.min(hEff, H_SEED, featureSeed);
+        const r = solveStep(t, hSeed, 'be', cv, il, cc, lv);
+        t += hSeed;
+        accept(r, t);
+        // Only a seed that reached the edge crossed it.
+        trapReady = !(atEdge && hSeed >= hEff - 1e-18);
+        continue;
+      }
+
+      const full = solveStep(t, hEff, 'trap', cv, il, cc, lv);
+      const h1 = solveStep(t, hEff / 2, 'trap', cv, il, cc, lv);
+      const h2 = solveStep(t + hEff / 2, hEff / 2, 'trap',
+        h1.capVoltagesNext ?? cv, h1.inductorCurrentsNext ?? il,
+        h1.capCurrentsNext ?? cc, h1.inductorVoltagesNext ?? lv);
+
+      let err = 0;
+      // The accepted public observables include node voltages, not only the
+      // capacitor-voltage / inductor-current state.
+      // A state-only estimate can look excellent while an inductor voltage
+      // (a derivative of its current) remains measurably outside the requested
+      // local scale. Compare the two endpoint solutions themselves as well as
+      // their stored state so precision profiles control what callers read.
+      for (const [id, vH] of h2.nodeVoltages ?? []) {
+        const vF = full.nodeVoltages?.get(id) ?? 0;
+        const sc = ABSTOL_V + RELTOL * Math.max(Math.abs(vH), Math.abs(vF));
+        err = Math.max(err, Math.abs(vF - vH) / sc);
+      }
+      for (const [id, vH] of h2.capVoltagesNext ?? []) {
+        const vF = full.capVoltagesNext?.get(id) ?? 0;
+        const sc = ABSTOL_V + RELTOL * Math.max(Math.abs(vH), Math.abs(vF));
+        err = Math.max(err, Math.abs(vF - vH) / sc);
+      }
+      for (const [id, iH] of h2.inductorCurrentsNext ?? []) {
+        const iF = full.inductorCurrentsNext?.get(id) ?? 0;
+        const sc = ABSTOL_I + RELTOL * Math.max(Math.abs(iH), Math.abs(iF));
+        err = Math.max(err, Math.abs(iF - iH) / sc);
+      }
+
+      const atFloor = hEff <= H_MIN * 1.000001 && err > 1;
+      // An error that does not shrink with the step is not truncation error:
+      // the full step and the two half steps disagree by the same amount at
+      // every h. That is the trapezoidal rule's undamped ringing on a history
+      // that no longer fits the circuit -- an inductor voltage stored before a
+      // device model moved its stamp (a motor's back-EMF follows its speed
+      // between solves). Trapezoidal integration never damps that alternation
+      // out, so refining further cannot help. Restart the history once at this
+      // time with a damped BE seed, as at a discontinuity, before accepting a
+      // floor step the controller knows to be inaccurate. Only the profiles
+      // that opt in: the legacy policies keep their recorded behaviour.
+      if (profile.floorHistoryRestart && atFloor && Number.isFinite(err)
+        && floorRestartAt !== t) {
+        floorRestartAt = t;
+        trapReady = false;
+        h = H_SEED;
+        continue;
+      }
+      const forcedAtFloor = atFloor;
+      const nonFiniteError = !Number.isFinite(err);
+      if (err <= 1 || nonFiniteError || forcedAtFloor) {
+        // Non-finite means a solve bailed (singular mid-step) — accept the
+        // half-step result and let the convergence warning say so. An
+        // at-floor step is accepted regardless of err: it cannot be
+        // refined below H_MIN, and rejecting it would loop the controller
+        // in place until MAX_ATTEMPTS.
+        const quadratic=err<=1 ? this._acceptedMeterQuadrature(t,t+hEff/2,t+hEff,h1,h2) : null;
+        publish(h1, t + hEff / 2,quadratic);
+        t += hEff;
+        accept(h2, t,quadratic);
+        if ((forcedAtFloor || nonFiniteError) && !this._transientAccuracyUnmet) {
+          this._transientAccuracyUnmet = {
+            code: nonFiniteError ? 'non-finite-error-estimate' : 'minimum-step-accuracy-unmet',
+            timeSec: t, stepSec: hEff, normalizedError: err,
+          };
+        }
+        if (atEdge) trapReady = false;
+        const grow = err > 0 ? Math.min(2, 0.9 * Math.pow(err, -1 / 3)) : 2;
+        h = Math.min(Math.max(hEff * grow, H_MIN), hMax);
+      } else {
+        h = Math.max(hEff * Math.max(0.2, 0.9 * Math.pow(err, -1 / 3)), H_MIN);
+      }
+    }
+
+    if (t < tEnd - 1e-15) {
+      // Backstop hit: finish with one BE step so board time and element
+      // state agree (this.timeNs has already advanced), and say so.
+      const r = solveStep(t, tEnd - t, 'be', cv, il, cc, lv);
+      accept(r, tEnd);
+      trapReady = false;
+      this._transientAttemptOverflow = true;
+      if (!this._transientAccuracyUnmet) {
+        this._transientAccuracyUnmet = {
+          code: 'step-attempt-budget-exceeded', timeSec: t,
+          stepSec: tEnd - t, attempts, maxAttempts: MAX_ATTEMPTS,
+        };
+      }
+    }
+
+    this.capVoltages = new Map(cv);
+    this.inductorCurrents = new Map(il);
+    this.capCurrents = new Map(cc);
+    this.inductorVoltages = new Map(lv);
+    this._trapValid = trapReady;
+    this._transH = h;
+    // Observable for the idle-advance solve-count oracle; costs nothing.
+    this._lastTransientSolves = nSolves;
+    this._transientAnalysisWork = {
+      attempts: this._transientAnalysisWork.attempts + attempts,
+      solves: this._transientAnalysisWork.solves + nSolves,
+      advances: this._transientAnalysisWork.advances + 1,
+    };
+    if (res) {
+      this.nodeVoltages = new Map(res.nodeVoltages);
+      for (const part of this.parts) {
+        if (part.kind !== 'led') continue;
+        const c = res.branchCurrents.get(part.id);
+        this.ledCurrents.set(part.id, Math.max(0, c ? -(c.get('anode') ?? 0) : 0));
+      }
+      this._mnaCache = res;
+    }
+  }
+
+  /**
+   * Earliest scheduled device wake strictly after `tSec`, in seconds —
+   * or null. Scans `state._wakeNs` (the canonical field); cheap, a few
+   * devices at most.
+   * @param {number} tSec
+   * @returns {number | null}
+   */
+  _nextDeviceWakeSec(tSec) {
+    let next = null;
+    for (const [, state] of this._deviceStates) {
+      if (!state._wakeNs) continue;
+      const wSec = Number(state._wakeNs) / 1e9;
+      if (wSec > tSec + 1e-15 && (next === null || wSec < next)) next = wSec;
+    }
+    return next;
+  }
+
+  /**
+   * Next corner of any square/native-pulse/SPICE-PULSE source strictly after
+   * `tSec`, in seconds — or null. Sine/triangle/pcm are smooth and the LTE
+   * controller handles them; authored PULSE ramp corners need exact alignment.
+   * @param {number} tSec
+   * @returns {number | null}
+   */
+  /**
+   * The next 'sample'-capture grid instant after tSec, in seconds, or null.
+   *
+   * Used as a step barrier so the value a sample channel stores is the
+   * solution AT its sample instant rather than an interpolation between the
+   * solves either side. Unlike a source edge this is not a discontinuity: the
+   * caller truncates the step and does NOT restart backward Euler.
+   *
+   * Voltage channels requesting `capture: 'sample'` and explicit simulation-
+   * clock current channels are considered, so an
+   * envelope channel — which is every channel any existing bench opens — adds
+   * no barriers and costs nothing.
+   *
+   * @param {number} tSec
+   * @returns {number | null}
+   */
+  _nextSampleGridSec(tSec) {
+    if (this._scopeChannels.size === 0) return null;
+    let next = null;
+    for (const [, ch] of this._scopeChannels) {
+      if (ch.capture !== 'sample' || (ch.type !== 'voltage' && ch.currentClock !== 'simulation')) continue;
+      const at = Number(ch._nextSampleNs) / 1e9;
+      if (at > tSec + 1e-15 && (next === null || at < next)) next = at;
+    }
+    return next;
+  }
+
+  /**
+   * Choose the nearest transient step barrier in (tSec, requestedEndSec].
+   * Source corners and device wakes restart integration history; a sample
+   * grid only truncates the step. Coincident barriers inherit discontinuity.
+   * Selection is centralized so a later source edge cannot leave a sticky
+   * restart flag when an earlier sample point actually wins.
+   *
+   * @param {number} tSec
+   * @param {number} requestedEndSec
+   * @returns {{atSec:number, discontinuity:boolean}|null}
+   */
+  _transientStepBarrier(tSec, requestedEndSec) {
+    const candidates = [
+      { atSec: this._nextSourceEdgeSec(tSec), discontinuity: true },
+      { atSec: this._nextDeviceWakeSec(tSec), discontinuity: true },
+      { atSec: this._nextSampleGridSec(tSec), discontinuity: false },
+    ].filter(candidate => candidate.atSec !== null
+      && candidate.atSec > tSec + 1e-15
+      && candidate.atSec <= requestedEndSec + 1e-15);
+    if (!candidates.length) return null;
+    const atSec = Math.min(...candidates.map(candidate => candidate.atSec));
+    return {
+      atSec: Math.min(atSec, requestedEndSec),
+      discontinuity: candidates.some(candidate => candidate.discontinuity
+        && Math.abs(candidate.atSec - atSec) <= 1e-15),
+    };
+  }
+
+  _nextSourceEdgeSec(tSec) {
+    let next = null;
+    for (const part of this.parts) {
+      if (part.kind !== 'vsource' && part.kind !== 'isource') continue;
+      const p = part.params ?? {};
+      if (p.wave === 'spice-pulse') {
+        // The caller already uses a 1 fs strict-after threshold for source
+        // edges. Asking past that same threshold prevents a rounded copy of
+        // the current corner from hiding the next one; it is far below the
+        // narrowest nanosecond corpus edge and does not move any solve point.
+        const tEdge = nextSpicePulseCorner(p, tSec + 1e-15);
+        if (next === null || tEdge < next) next = tEdge;
+        continue;
+      }
+      if (p.wave === 'spice-pwl') {
+        const tEdge = nextSpicePwlCorner(p, tSec + 1e-15);
+        if (tEdge !== null && (next === null || tEdge < next)) next = tEdge;
+        continue;
+      }
+      if (p.wave === 'spice-exp') {
+        const tEdge = nextSpiceExpCorner(p, tSec + 1e-15);
+        if (tEdge !== null && (next === null || tEdge < next)) next = tEdge;
+        continue;
+      }
+      if (p.wave === 'spice-sine') {
+        const tEdge = nextSpiceSineCorner(p, tSec + 1e-15);
+        if (tEdge !== null && (next === null || tEdge < next)) next = tEdge;
+        continue;
+      }
+      if (p.wave !== 'square' && p.wave !== 'pulse') continue;
+      const freq = p.freq ?? 1000;
+      if (!(freq > 0)) continue;
+      const period = 1 / freq;
+      const duty = Math.min(1, Math.max(0, p.duty ?? 0.5));
+      const phase = (p.phase ?? 0) / 360;
+      // Edges at cycle fractions 0 and duty.
+      const cycles = tSec * freq + phase;
+      const base = Math.floor(cycles);
+      for (const fracEdge of [0, duty, 1, 1 + duty]) {
+        const tEdge = (base + fracEdge - phase) * period;
+        if (tEdge > tSec + 1e-15) {
+          if (next === null || tEdge < next) next = tEdge;
+          break;
+        }
+      }
+    }
+    return next;
+  }
+
+  // ─── Internal: capacitor RC integration ───────────────────────────────────
+
+  /**
+   * Integrate capacitor voltages using closed-form RC step.
+   * V += (Vt − V) · (1 − e^(−dt/RC))
+   * where Vt is the target voltage from the driving source and RC is the
+   * time constant.
+   *
+   * @param {number} dtSec - time step in seconds
+   */
+  _integrateCapacitors(dtSec) {
+    // Temporarily strip cached voltages from non-ideal-source nets so
+    // _gatherSources traces all the way to VCC/GND/pin Thévenins and
+    // accumulates the real source impedance. Without this, a net like
+    // "MCU quasi-high → 10kΩ pull-up net" gets cached as V=5V (correct)
+    // but with implied R=0 (wrong — the quasi pin has 21.7kΩ behind it).
+    const savedVoltages = new Map(this.nodeVoltages);
+    const idealNets = new Set();
+    for (const net of this.nets) {
+      for (const t of net.terminals) {
+        const p = this.partMap.get(t.part);
+        if (p && (p.kind === 'vcc' || p.kind === 'gnd')) {
+          idealNets.add(net.id);
+        }
+      }
+    }
+    // Keep only VCC/GND net voltages — and ensure they hold the correct
+    // source voltage so _gatherSources returns the right vTh when it
+    // short-circuits on a known-voltage net (rail-parallel cap path).
+    for (const [netId] of this.nodeVoltages) {
+      if (!idealNets.has(netId)) {
+        this.nodeVoltages.delete(netId);
+      }
+    }
+    for (const net of this.nets) {
+      if (!idealNets.has(net.id)) continue;
+      for (const t of net.terminals) {
+        const p = this.partMap.get(t.part);
+        if (p && p.kind === 'vcc') {
+          this.nodeVoltages.set(net.id, this._railVolts(p));
+        } else if (p && p.kind === 'gnd') {
+          this.nodeVoltages.set(net.id, 0);
+        }
+      }
+    }
+
+    for (const part of this.parts) {
+      if (part.kind !== 'capacitor') continue;
+
+      const farads = /** @type {number} */ (part.params.farads ?? 0.0001);
+      const netA = this._netForTerminal(part.id, 'a');
+      const netB = this._netForTerminal(part.id, 'b');
+      if (!netA || !netB) continue;
+
+      // Use _gatherSources to find ALL Thévenin sources reaching each
+      // terminal, including their series resistance. This is critical:
+      // _traceToSource stops at cached node voltages and loses the source
+      // impedance behind them (e.g., a quasi pin's 21.7kΩ behind a net
+      // that _resolveNet cached as "5V").
+      const aSources = this._gatherSources(netA);
+      const bSources = this._gatherSources(netB);
+
+      // Remove any sources from the cap's own side (avoid self-reference)
+      // gatherSources already skips the cap because it doesn't trace
+      // through capacitors.
+
+      if (aSources.length === 0 && bSources.length === 0) continue;
+
+      // Combine each side into a single Thévenin equivalent via Norton.
+      const aThev = combineThevenin(aSources);
+      const bThev = combineThevenin(bSources);
+
+      if (!aThev && !bThev) continue;
+
+      const vTarget = (aThev ? aThev.vTh : 0) - (bThev ? bThev.vTh : 0);
+      const rSource = (aThev ? aThev.rTh : 0) + (bThev ? bThev.rTh : 0);
+
+      const vCap = this.capVoltages.get(part.id) ?? 0;
+      let vNew;
+      if (rSource <= 0 && aThev && bThev) {
+        // Rail-parallel cap (no series R, sources on BOTH sides): ideal
+        // sources charge the cap instantly (τ = RC → 0).
+        vNew = vTarget;
+      } else if (rSource <= 0) {
+        // Only one side has a zero-impedance source, the other is
+        // floating — the cap holds its existing charge.
+        continue;
+      } else {
+        const rc = rSource * farads;
+        vNew = vCap + (vTarget - vCap) * (1 - Math.exp(-dtSec / rc));
+      }
+
+      this.capVoltages.set(part.id, vNew);
+
+      // Update node voltages for the capacitor's terminals
+      // The capacitor voltage determines the node voltage at its "a" terminal
+      // relative to "b"
+      const vB = this.nodeVoltages.get(netB) ?? 0;
+      this.nodeVoltages.set(netA, vB + vNew);
+    }
+
+    // Restore cached voltages for non-cap nets
+    for (const [netId, v] of savedVoltages) {
+      if (!this.nodeVoltages.has(netId)) {
+        this.nodeVoltages.set(netId, v);
+      }
+    }
+  }
+
+  // ─── Internal: closed-form solver ────────────────────────────────────────
+
+  /**
+   * Resolve node voltages for the current state. Closed-form only.
+   *
+   * Strategy: walk each net and determine its voltage from the sources
+   * connected to it (VCC, GND, pin Thévenin equivalents, potentiometer wipers).
+   * For simple series chains (pin → resistor → LED → net), solve the loop
+   * analytically.
+   */
+  _solve() {
+    // Any real solve materializes the pin states the fast path deferred —
+    // pinStates is already current, so clearing the overlay IS the flush.
+    this._solveDirty = false;
+    this._digitalOverlay.clear();
+    this.nodeVoltages.clear();
+    this.ledCurrents.clear();
+    this._mnaCache = null; // invalidate MNA cache
+    // Every discrete event routes through here — it is a discontinuity for
+    // the transient integrator: trapezoidal history is stale, the next
+    // step re-seeds with backward Euler.
+    this._trapValid = false;
+
+    if (!this.powered) {
+      this._liveSolveError = null;
+      this._lastSolveConverged = true;
+      this._updateDevices(this.timeNs, null, true);
+      return;
+    }
+
+    // Parts beyond the walker's vocabulary? One full MNA solve answers
+    // everything coherently (and primes the instrument cache for free).
+    if (this._needsMNA()) {
+      this._solveViaMNA();
+      return;
+    }
+
+    // Set known voltages: VCC and GND nets
+    for (const net of this.nets) {
+      for (const t of net.terminals) {
+        const part = this.partMap.get(t.part);
+        if (!part) continue;
+        if (part.kind === 'vcc') {
+          this.nodeVoltages.set(net.id, this._railVolts(part));
+        } else if (part.kind === 'gnd') {
+          this.nodeVoltages.set(net.id, 0);
+        }
+      }
+    }
+
+    // Resolve potentiometer wipers
+    for (const part of this.parts) {
+      if (part.kind === 'potentiometer') {
+        this._solvePot(part);
+      }
+    }
+
+    // Resolve LED chains: find LEDs and trace their series path
+    for (const part of this.parts) {
+      if (part.kind === 'led') {
+        this._solveLedChain(part);
+      }
+    }
+
+    // Resolve remaining unresolved nets (e.g. pull-up/pull-down to an input pin).
+    // For each unresolved net, trace through resistors/buttons to find a voltage source.
+    // If there's no load (only high-Z connections), voltage equals the source voltage.
+    for (const net of this.nets) {
+      if (this.nodeVoltages.has(net.id)) continue;
+      this._resolveNet(net);
+    }
+
+    // Coverage: a net the walker could not resolve would read UNDEFINED
+    // from nodeVoltage — absent-without-a-reason, a shape every consumer
+    // has to guess about (a UI probe reads blank; a corpus instrument
+    // mis-read the gaps as "not conducting" — 116 nets across the three
+    // quasi-pin benches, while the same circuits under MNA assign every
+    // node). The walker's own doctrine applies: beyond its vocabulary,
+    // one full MNA solve answers everything coherently — a net behind an
+    // off diode gets its gmin-defined floating level instead of a hole.
+    for (const net of this.nets) {
+      if (!this.nodeVoltages.has(net.id)) {
+        this._solveViaMNA();
+        return;
+      }
+    }
+
+    // Override net voltages for capacitor nodes with their actual charge
+    // state. The walker's answer above is the LONG-TERM one — it has no
+    // vocabulary for a capacitor, so it solved the network as if the part
+    // were an open circuit, which is the t = ∞ operating point. The stored
+    // charge is what the bench is at NOW.
+    //
+    // Three rules, and defect D20's sibling D23 is the reason all three are
+    // written out (docs/WAVE-OPEN-DEFECTS.md). Before, this loop skipped any
+    // capacitor with no entry in capVoltages and only ever moved the `a`
+    // side:
+    //
+    //  - An UNSEEDED capacitor is uncharged, not absent. `restore()` used to
+    //    replace capVoltages wholesale with a snapshot that predated the
+    //    part, and the walker then answered with the open-circuit operating
+    //    point: `43-rc-timing` read 5.0000 V on a capacitor the engine's own
+    //    getCapVoltage held at 0, on the very bench whose lesson asks for the
+    //    reading "at t = 0".
+    //  - An IDEAL source wins. A decoupling capacitor across VCC/GND has a
+    //    zero-impedance source on both sides, so it charges in τ = RC = 0 —
+    //    exactly the rule _integrateCapacitors already applies at every later
+    //    step, and exactly what the MNA path answers on the same bench. The
+    //    old blind override pinned the VCC RAIL ITSELF to the cap's 0 V at
+    //    the first solve, while every net resolved FROM that rail kept 5 V.
+    //  - The free side is the one that moves. If `a` is the rail and `b` is
+    //    the floating plate, `b` is what the charge determines.
+    const railHeld = (netId) => {
+      if (!netId) return false;
+      const net = this.netMap.get(netId);
+      if (!net) return false;
+      return net.terminals.some((t) => {
+        const p = this.partMap.get(t.part);
+        return p && (p.kind === 'vcc' || p.kind === 'gnd');
+      });
+    };
+    for (const part of this.parts) {
+      if (part.kind !== 'capacitor') continue;
+      const netA = this._netForTerminal(part.id, 'a');
+      const netB = this._netForTerminal(part.id, 'b');
+      if (!netA && !netB) continue;
+      const capV = this.capVoltages.get(part.id) ?? 0;
+      const vA = netA ? (this.nodeVoltages.get(netA) ?? 0) : 0;
+      const vB = netB ? (this.nodeVoltages.get(netB) ?? 0) : 0;
+      const aPinned = railHeld(netA);
+      const bPinned = railHeld(netB);
+      if (aPinned && bPinned) {
+        // Instant charge: the network decides, and the cap follows it.
+        this.capVoltages.set(part.id, vA - vB);
+      } else if (aPinned && netB) {
+        this.nodeVoltages.set(netB, vA - capV);
+      } else if (netA) {
+        this.nodeVoltages.set(netA, vB + capV);
+      }
+    }
+
+    // Settle built-in shift registers (clock edge → latch → output change → re-solve).
+    if (this._shiftRegisters.size > 0) {
+      for (let round = 0; round < 3; round++) {
+        if (!this._updateShiftRegisters()) break;
+        // Re-resolve affected output nets
+        for (const part of this.parts) {
+          if (part.kind !== 'shift_register') continue;
+          for (let i = 0; i < 8; i++) {
+            const netId = this._netForTerminal(part.id, `q${i}`);
+            if (netId && !this.nodeVoltages.has(netId)) continue;
+            if (netId) {
+              // Clear and re-resolve this net
+              this.nodeVoltages.delete(netId);
+              const net = this.netMap.get(netId);
+              if (net) this._resolveNet(net);
+            }
+          }
+        }
+      }
+    }
+    this._liveSolveError = null;
+    this._lastSolveConverged = true;
+  }
+
+  /**
+   * Resolve a net's voltage by finding all Thévenin sources connected to it
+   * (through resistors, buttons, or directly). Combines parallel sources.
+   * High-Z connections (input pins, open buttons) contribute nothing.
+   *
+   * @param {Net} net
+   */
+  _resolveNet(net) {
+    // Gather all Thévenin sources reaching this net
+    const sources = this._gatherSources(net.id);
+    if (sources.length === 0) return;
+
+    if (sources.length === 1) {
+      // Single source: voltage is Vth (no current flows through the series R
+      // because there's no other path — only high-Z loads)
+      this.nodeVoltages.set(net.id, sources[0].vTh);
+      return;
+    }
+
+    // Multiple sources: combine in parallel using Norton equivalent.
+    // I_total = Σ(Vth_i / Rth_i), G_total = Σ(1 / Rth_i)
+    // V_node = I_total / G_total
+    let iTotal = 0;
+    let gTotal = 0;
+    for (const s of sources) {
+      if (s.rTh <= 0) { s.rTh = 0.001; } // avoid division by zero
+      gTotal += 1 / s.rTh;
+      iTotal += s.vTh / s.rTh;
+    }
+    this.nodeVoltages.set(net.id, gTotal > 0 ? iTotal / gTotal : 0);
+  }
+
+  /**
+   * Gather Thévenin sources that can reach a net (directly or through
+   * resistors/closed buttons). Does not follow through LEDs or buzzers.
+   *
+   * @param {string} netId
+   * @returns {Array<{vTh: number, rTh: number}>}
+   */
+  _gatherSources(netId) {
+    /** @type {Array<{vTh: number, rTh: number}>} */
+    const sources = [];
+    this._gatherSourcesInner(netId, new Set(), 0, sources);
+    return sources;
+  }
+
+  /**
+   * @param {string} netId
+   * @param {Set<string>} visited
+   * @param {number} rAccum
+   * @param {Array<{vTh: number, rTh: number}>} out
+   */
+  _gatherSourcesInner(netId, visited, rAccum, out) {
+    // If this net has a known voltage, it's a terminal source —
+    // return it without marking visited, so parallel paths to the
+    // same known net (e.g. two resistors both to GND) are all found.
+    const knownV = this.nodeVoltages.get(netId);
+    if (knownV !== undefined) {
+      out.push({ vTh: knownV, rTh: rAccum });
+      return;
+    }
+
+    if (visited.has(netId)) return;
+    visited.add(netId);
+
+    const net = this.netMap.get(netId);
+    if (!net) return;
+
+    for (const t of net.terminals) {
+      const part = this.partMap.get(t.part);
+      if (!part) continue;
+
+      switch (part.kind) {
+        case 'vcc':
+          // control > authored rail > board default, the same precedence the
+          // MNA path uses. The two must agree or the closed-form seed lies
+          // about the voltage the solver then finds.
+          out.push({ vTh: this._railVolts(part), rTh: rAccum });
+          break;
+        case 'gnd':
+          out.push({ vTh: 0, rTh: rAccum });
+          break;
+        case 'mcu': {
+          const state = this._pinStateFor(part.id, t.terminal);
+          if (!state) break;
+          const thev = pinThevenin(state.mode, state.driveHigh, this.vcc);
+          if (thev !== 'high-z') {
+            out.push({ vTh: thev.vTh, rTh: rAccum + thev.rTh });
+          }
+          break;
+        }
+        case 'shift_register': {
+          // Output terminals q0-q7 are Thévenin drivers from the latch register
+          const sr = this._shiftRegisters.get(part.id);
+          if (sr && t.terminal.startsWith('q')) {
+            const bitIdx = parseInt(t.terminal.slice(1), 10);
+            if (!isNaN(bitIdx) && sr.oeActive !== false) {
+              const bitVal = (sr.latchReg >> bitIdx) & 1;
+              const rOut = /** @type {number} */ (part.params?.rOut ?? 50);
+              out.push({ vTh: bitVal ? this.vcc : 0, rTh: rAccum + rOut });
+            }
+            // If OE inactive: high-Z, don't push any source
+          }
+          // Input terminals (data, clock, latch, oe): high impedance, ignore
+          break;
+        }
+        case 'resistor': {
+          const ohms = /** @type {number} */ (part.params.ohms ?? 1000);
+          const otherT = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherT);
+          if (otherNet) {
+            this._gatherSourcesInner(otherNet, visited, rAccum + ohms, out);
+          }
+          break;
+        }
+        case 'inductor': {
+          // DC steady state: inductor is a wire (zero resistance)
+          const otherT = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherT);
+          if (otherNet) {
+            this._gatherSourcesInner(otherNet, visited, rAccum, out);
+          }
+          break;
+        }
+        case 'buzzer': {
+          // A BUZZER IS A RESISTANCE TO THE WALKER TOO, AND IT WAS NOT ONE.
+          //
+          // `stampBuzzerResistance` puts it in the MNA matrix, so branchCurrent
+          // was right — but this walker had no case for it, so the walk STOPPED
+          // at the buzzer and nodeVoltage never saw the load. The two answers
+          // then described different circuits, which is the two-solvers-two-
+          // truths trap mna.js warns about, in the one place nothing checked.
+          //
+          // Measured, identical topology, 5 V through 100 Ohm:
+          //   resistor 100   nodeVoltage 2.500000   i 25.0000 mA   consistent
+          //   buzzer         nodeVoltage 5.000000   i 25.0000 mA   DISAGREE
+          //   ldr            nodeVoltage 4.999500   i  0.0050 mA   consistent
+          //
+          // 25 mA through 100 Ohm cannot leave the node at 5 V.
+          const ohms = /** @type {number} */ (part.params.ohms ?? classDefaults('buzzer').ohms);
+          const otherT = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherT);
+          if (otherNet) {
+            this._gatherSourcesInner(otherNet, visited, rAccum + ohms, out);
+          }
+          break;
+        }
+        case 'ldr': {
+          // Photoresistor: control 0…1 maps to resistance range.
+          // 0 = dark (high R, e.g. 1MΩ), 1 = bright (low R, e.g. 100Ω).
+          const rDark = /** @type {number} */ (part.params.rDark ?? 1000000);
+          const rLight = /** @type {number} */ (part.params.rLight ?? 100);
+          const light = this.controls.get(part.id) ?? 0;
+          const ohms = rDark * Math.pow(rLight / rDark, light);
+          const otherT = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherT);
+          if (otherNet) {
+            this._gatherSourcesInner(otherNet, visited, rAccum + ohms, out);
+          }
+          break;
+        }
+        case 'ntc': {
+          // NTC thermistor: control 0…1 maps from cold (high R) to hot (low R).
+          // Simplified: exponential interpolation between rCold and rHot.
+          const rCold = /** @type {number} */ (part.params.rCold ?? 100000);
+          const rHot = /** @type {number} */ (part.params.rHot ?? 1000);
+          const temp = this.controls.get(part.id) ?? 0;
+          const ohms = rCold * Math.pow(rHot / rCold, temp);
+          const otherT = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherT);
+          if (otherNet) {
+            this._gatherSourcesInner(otherNet, visited, rAccum + ohms, out);
+          }
+          break;
+        }
+        case 'button':
+        case 'switch': {
+          const pressed = (this.controls.get(part.id) ?? 0) === 1;
+          if (!pressed) break;
+          const otherT = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherT);
+          if (otherNet) {
+            this._gatherSourcesInner(otherNet, visited, rAccum, out);
+          }
+          break;
+        }
+        case 'potentiometer': {
+          if (t.terminal === 'wiper') {
+            const wiperNet = this._netForTerminal(part.id, 'wiper');
+            if (wiperNet) {
+              const wV = this.nodeVoltages.get(wiperNet);
+              if (wV !== undefined) {
+                out.push({ vTh: wV, rTh: rAccum });
+              }
+            }
+          }
+          break;
+        }
+        // LEDs, buzzers, capacitors: not followed through
+      }
+    }
+  }
+
+  /**
+   * Solve a potentiometer: wiper voltage = VCC × position.
+   * Assumes terminals are ["a", "b", "wiper"] with a→VCC, b→GND.
+   * @param {Part} pot
+   */
+  _solvePot(pot) {
+    // The authored `params.position` is the fallback, NOT a bare 0.5 — the
+    // same rule stampPotentiometer states: "params.position is the AUTHORED
+    // default — where the example's trimmer was left. The user's control
+    // always wins once touched; mid-travel remains the fallback." The walker
+    // ignored it, so a bench with an authored position and an untouched
+    // control had TWO answers depending only on whether _needsMNA routed it
+    // to the other solver: measured 2.5000 V here against MNA's 1.2500 V on
+    // the same 0.25-position pot with an unloaded wiper.
+    const authored = Number.isFinite(pot.params?.position) ? pot.params.position : 0.5;
+    const position = this.controls.get(pot.id) ?? authored;
+    // Find the nets connected to terminals a and b
+    const netA = this._netForTerminal(pot.id, 'a');
+    const netB = this._netForTerminal(pot.id, 'b');
+    const netW = this._netForTerminal(pot.id, 'wiper');
+
+    if (!netA || !netB || !netW) return;
+
+    const vA = this.nodeVoltages.get(netA) ?? 0;
+    const vB = this.nodeVoltages.get(netB) ?? 0;
+
+    // Wiper voltage: linear interpolation from b to a
+    const vWiper = vB + (vA - vB) * position;
+    this.nodeVoltages.set(netW, vWiper);
+  }
+
+  /**
+   * Solve an LED in a series chain. Traces from the LED's anode and cathode
+   * back to voltage sources (VCC/GND/pin Thévenin) through resistors,
+   * then solves the loop analytically.
+   *
+   * @param {Part} led
+   */
+  _solveLedChain(led) {
+    const rd = LED_RD;
+    // DATASHEET DROP -> PIECEWISE KNEE. `vf` is the total drop at the rated
+    // 20 mA (LED_I_RATED, and what the exponential path calibrates to); this
+    // closed form answers `vf + i*rd`, so it must be given the knee or the
+    // part drops 0.2 V too much and the walker disagrees with the MNA about
+    // the same LED. That disagreement is why nodeVoltage and branchCurrent
+    // had to be corrected in one commit.
+    const vf = kneeFromVf(
+      /** @type {number} */ (led.params.vf ?? LED_VF), rd);
+
+    // LED terminals: "anode" and "cathode"
+    const anodeNet = this._netForTerminal(led.id, 'anode');
+    const cathodeNet = this._netForTerminal(led.id, 'cathode');
+    if (!anodeNet || !cathodeNet) return;
+
+    // Trace from anode side: find the Thévenin source looking outward
+    const anodeSource = this._traceToSource(anodeNet, led.id);
+    // Trace from cathode side
+    const cathodeSource = this._traceToSource(cathodeNet, led.id);
+
+    if (!anodeSource || !cathodeSource) return;
+
+    // Both sides resolved: solve the loop.
+    // Convention: current flows anode → cathode (positive = LED is forward-biased).
+    // V_anode_source - I*R_anode - Vf - I*Rd - I*R_cathode - V_cathode_source = 0
+    // (Vth_a - Vth_c - Vf) = I * (Rth_a + Rd + Rth_c)
+
+    const vDiff = anodeSource.vTh - cathodeSource.vTh;
+    const rTotal = anodeSource.rTh + rd + cathodeSource.rTh;
+
+    let current;
+    if (vDiff >= vf) {
+      // Forward biased, above threshold
+      current = (vDiff - vf) / rTotal;
+    } else {
+      // Below threshold or reverse biased — no current
+      current = 0;
+    }
+
+    this.ledCurrents.set(led.id, current);
+
+    // Set node voltages at the LED terminals
+    // V_anode_node = V_anode_source - I * R_anode_source
+    this.nodeVoltages.set(anodeNet, anodeSource.vTh - current * anodeSource.rTh);
+    this.nodeVoltages.set(cathodeNet, cathodeSource.vTh + current * cathodeSource.rTh);
+  }
+
+  /**
+   * Trace from a net outward (excluding `excludePart`) to find a Thévenin
+   * equivalent source. Follows through resistors, buttons (closed = wire),
+   * to reach VCC, GND, or an MCU pin.
+   *
+   * Returns {vTh, rTh} accumulated along the path, or null if no source found.
+   *
+   * @param {string} netId
+   * @param {string} excludePart - part to exclude (the LED we're tracing from)
+   * @returns {{ vTh: number; rTh: number } | null}
+   */
+  _traceToSource(netId, excludePart) {
+    return this._traceToSourceInner(netId, excludePart, new Set(), 0);
+  }
+
+  /**
+   * @param {string} netId
+   * @param {string} excludePart
+   * @param {Set<string>} visited - nets already visited (cycle detection)
+   * @param {number} rAccum - resistance accumulated so far
+   * @returns {{ vTh: number; rTh: number } | null}
+   */
+  _traceToSourceInner(netId, excludePart, visited, rAccum) {
+    if (visited.has(netId)) return null;
+    visited.add(netId);
+
+    const net = this.netMap.get(netId);
+    if (!net) return null;
+
+    // Check if this net has a known voltage source
+    const knownV = this.nodeVoltages.get(netId);
+    if (knownV !== undefined) {
+      return { vTh: knownV, rTh: rAccum };
+    }
+
+    // Look at parts connected to this net (excluding the one we came from)
+    for (const t of net.terminals) {
+      if (t.part === excludePart) continue;
+
+      const part = this.partMap.get(t.part);
+      if (!part) continue;
+
+      switch (part.kind) {
+        case 'vcc':
+          // Same precedence as the other two rail sites; see _gatherSourcesInner.
+          return { vTh: this._railVolts(part), rTh: rAccum };
+
+        case 'gnd':
+          return { vTh: 0, rTh: rAccum };
+
+        case 'mcu': {
+          // The terminal name is the PinId
+          const pinId = t.terminal;
+          const state = this._pinStateFor(part.id, pinId);
+          if (!state) continue;
+          const thev = pinThevenin(state.mode, state.driveHigh, this.vcc);
+          if (thev === 'high-z') continue;
+          return { vTh: thev.vTh, rTh: rAccum + thev.rTh };
+        }
+
+        case 'resistor': {
+          const ohms = /** @type {number} */ (part.params.ohms ?? 1000);
+          const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherTerminal);
+          if (!otherNet) continue;
+          const result = this._traceToSourceInner(
+            otherNet, part.id, visited, rAccum + ohms
+          );
+          if (result) return result;
+          break;
+        }
+
+        case 'inductor': {
+          // DC: wire (zero resistance)
+          const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherTerminal);
+          if (!otherNet) continue;
+          const result = this._traceToSourceInner(otherNet, part.id, visited, rAccum);
+          if (result) return result;
+          break;
+        }
+
+        case 'buzzer': {
+          // Same hole as in _gatherSourcesInner — see the note there.
+          const ohms = /** @type {number} */ (part.params.ohms ?? classDefaults('buzzer').ohms);
+          const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherTerminal);
+          if (!otherNet) continue;
+          const result = this._traceToSourceInner(otherNet, part.id, visited, rAccum + ohms);
+          if (result) return result;
+          break;
+        }
+
+        case 'ldr': {
+          const rDark = /** @type {number} */ (part.params.rDark ?? 1000000);
+          const rLight = /** @type {number} */ (part.params.rLight ?? 100);
+          const light = this.controls.get(part.id) ?? 0;
+          const ohms = rDark * Math.pow(rLight / rDark, light);
+          const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherTerminal);
+          if (!otherNet) continue;
+          const result = this._traceToSourceInner(otherNet, part.id, visited, rAccum + ohms);
+          if (result) return result;
+          break;
+        }
+
+        case 'ntc': {
+          const rCold = /** @type {number} */ (part.params.rCold ?? 100000);
+          const rHot = /** @type {number} */ (part.params.rHot ?? 1000);
+          const temp = this.controls.get(part.id) ?? 0;
+          const ohms = rCold * Math.pow(rHot / rCold, temp);
+          const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherTerminal);
+          if (!otherNet) continue;
+          const result = this._traceToSourceInner(otherNet, part.id, visited, rAccum + ohms);
+          if (result) return result;
+          break;
+        }
+
+        case 'button':
+        case 'switch': {
+          const pressed = (this.controls.get(part.id) ?? 0) === 1;
+          if (!pressed) continue; // open = no connection
+          const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherTerminal);
+          if (!otherNet) continue;
+          const result = this._traceToSourceInner(
+            otherNet, part.id, visited, rAccum
+          );
+          if (result) return result;
+          break;
+        }
+
+        case 'potentiometer': {
+          // If connected to the wiper, return the wiper voltage
+          if (t.terminal === 'wiper') {
+            const wiperNet = this._netForTerminal(part.id, 'wiper');
+            if (wiperNet) {
+              const wV = this.nodeVoltages.get(wiperNet);
+              if (wV !== undefined) {
+                return { vTh: wV, rTh: rAccum };
+              }
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Find the voltage at an MCU pin by looking at the net it's connected to.
+   * @param {PinId} pin
+   * @returns {number}
+   */
+  _pinVoltage(pin) {
+    const key = String(pin).toLowerCase();
+    // Overlay-first, no flush: the digital fast path's levels ARE the
+    // electrically-settled values for their nets (a driven push-pull rail
+    // or a pulled-up bus), and every net NOT in the overlay is unchanged
+    // since the last real solve. Flushing here instead would put a full
+    // MNA solve inside syncInputs — which the adapters run every advance
+    // slice — and quietly resurrect the per-edge cost.
+    const at = (netId) => {
+      const ov = this._digitalOverlay.get(netId);
+      return ov !== undefined ? ov : (this.nodeVoltages.get(netId) ?? 0);
+    };
+    // Per-netlist cache: the scan below is O(nets × terminals) with a
+    // device-registry lookup per hit, and the emulator adapters call
+    // _pinVoltage for EVERY pin on EVERY advance slice (syncInputs) —
+    // ~30 pins × 60 slices/s on the calculator bench, all resolving to
+    // the same nets every time. Cleared in setNetlist beside _qualCache.
+    if (!this._pinNetCache) this._pinNetCache = new Map(); // pre-netlist call
+    const cached = this._pinNetCache.get(key);
+    if (cached !== undefined) return cached === null ? 0 : at(cached);
+    // The pin namespace lives on the MCU-surface part: the STC12 body
+    // (kind 'mcu') or any gpioFollowsPinStates device (dev boards, bare
+    // chips). Only matching kind 'mcu' meant readPin() returned 0 for
+    // every input on an Arduino body or a bare ATtiny — the pendant's
+    // buttons pressed into the void while its outputs worked (the output
+    // path goes through device drives, not through here).
+    for (const net of this.nets) {
+      for (const t of net.terminals) {
+        const part = this.partMap.get(t.part);
+        if (!part || String(t.terminal).toLowerCase() !== key) continue;
+        if (part.kind === 'mcu') { this._pinNetCache.set(key, net.id); return at(net.id); }
+        const model = getDevice(part.kind);
+        if (model && model.gpioFollowsPinStates) {
+          this._pinNetCache.set(key, net.id);
+          return at(net.id);
+        }
+      }
+    }
+    // Chip-qualified id: read the net at that part's terminal, whatever the
+    // part's kind — this is how a machine's VIA input pin sees a button.
+    const q = this._resolveQualified(key);
+    if (q) {
+      const netId = this._netForTerminal(q.partId, q.terminal);
+      if (netId !== undefined) { this._pinNetCache.set(key, netId); return at(netId); }
+    }
+    this._pinNetCache.set(key, null); // a miss is per-netlist too
+    return 0;
+  }
+
+  /**
+   * Find the net connected to a specific terminal of a part.
+   * @param {string} partId
+   * @param {string} terminal
+   * @returns {string | undefined} net id
+   */
+  _netForTerminal(partId, terminal) {
+    // The SOLVER view: identical to the drawn netlist except that an
+    // expanded motor's 'a' resolves to its hidden winding net, so device
+    // reads and instrument taps see the node its model actually sits on.
+    for (const net of (this._solveNets ?? this.nets)) {
+      for (const t of net.terminals) {
+        if (t.part === partId && t.terminal === terminal) {
+          return net.id;
+        }
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Record current LED current values as samples for brightness integration.
+   */
+  _recordLedSamples() {
+    if (this._meterWatches.size > 0) this._recordMeterSamples();
+    for (const [partId, history] of this.ledHistory) {
+      const current = this.ledCurrents.get(partId) ?? 0;
+
+      const last = history.length > 0 ? history[history.length - 1] : null;
+
+      // Skip if nothing changed (same time and current)
+      if (last && last.tNs === this.timeNs && last.current === current) continue;
+
+      // If time hasn't changed but current has, update in place
+      if (last && last.tNs === this.timeNs) {
+        last.current = current;
+        continue;
+      }
+
+      // Skip recording if the current hasn't changed since the last sample
+      // (steady state — no need to record the same value repeatedly)
+      if (last && last.current === current) continue;
+
+      history.push({ tNs: this.timeNs, current });
+
+      // Prune only when the history is large (amortized O(1))
+      if (history.length > 200) {
+        const windowStart = this.timeNs > BRIGHTNESS_WINDOW_NS
+          ? this.timeNs - BRIGHTNESS_WINDOW_NS
+          : 0n;
+
+        let keepIdx = -1;
+        for (let i = history.length - 1; i >= 0; i--) {
+          if (history[i].tNs <= windowStart) {
+            keepIdx = i;
+            break;
+          }
+        }
+        if (keepIdx > 0) {
+          history.splice(0, keepIdx);
+        }
+      }
+    }
+  }
+
+  /**
+   * Check if a pin change affects a buzzer and record the edge.
+   * @param {PinId} pin
+   */
+  _recordBuzzerEdges(pin) {
+    const part = this._buzzerOnPin(pin);
+    if (!part) return;
+    const edges = this.buzzerEdges.get(part.id);
+    if (edges) {
+      edges.push(this.timeNs);
+      while (edges.length > 100) edges.shift();
+    }
+  }
+
+  /**
+   * The buzzer an MCU pin is wired to, either way round (VCC→a, MCU→b or
+   * MCU→a, GND→b), or null.
+   *
+   * THE PIN NAMESPACE DOES NOT LIVE ONLY ON `kind: 'mcu'`. It lives on the
+   * MCU-surface part: the bare body (kind 'mcu') OR any device model that
+   * declares `gpioFollowsPinStates` — the dev boards and bare chips
+   * (`arduino_uno`, `stc15_mcu`, `attiny85`, `stm32f030`, …). Matching only
+   * 'mcu' here made `setTone()` return false and do nothing on every one of
+   * those, so a correct program was silent with no error — which is the same
+   * defect `readPin()` had (see `_pinNetForTerminal`: "Only matching kind 'mcu'
+   * meant readPin() returned 0 for every input on an Arduino body"). Measured
+   * against the shipped corpus before this change: of 17 bench files that
+   * declare a TONE pin and carry a buzzer, `setTone()` reached a buzzer on 8
+   * and found NOTHING on 9, and every one of the 9 drove the buzzer from an
+   * `arduino_uno` or `stc15_mcu` surface.
+   *
+   * @param {PinId} pin
+   * @returns {object|null}
+   */
+  _buzzerOnPin(pin) {
+    const wanted = String(pin).toLowerCase();
+    for (const part of this.parts) {
+      if (part.kind !== 'buzzer') continue;
+      for (const term of ['a', 'b']) {
+        const buzzerNet = this._netForTerminal(part.id, term);
+        if (!buzzerNet) continue;
+        const net = this.netMap.get(buzzerNet);
+        if (!net) continue;
+        for (const t of net.terminals) {
+          const p = this.partMap.get(t.part);
+          if (!p || String(t.terminal).toLowerCase() !== wanted) continue;
+          if (p.kind === 'mcu') return part;
+          const model = getDevice(p.kind);
+          if (model && model.gpioFollowsPinStates) return part;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Drive a TONE pin, the way an MCU's timer does: a standing oscillation on
+   * the pin until it is stopped or the pin is written directly.
+   *
+   * This is the method the generated stc12 driver has always called
+   * (`_board().setTone(pin, hz)`) and that no board implemented, which is why a
+   * two-tone siren was silent with no error while its program was correct. The
+   * audio path was already complete: `buzzerTone()` is read every frame by the
+   * circuit designer and fed to a real oscillator. Only the source was missing.
+   *
+   * @param {PinId} pin the MCU pin the buzzer is wired to
+   * @param {number} hz frequency; 0, negative or non-finite stops the tone
+   * @returns {boolean} whether a buzzer was found on that pin
+   */
+  setTone(pin, hz) {
+    const part = this._buzzerOnPin(pin);
+    if (!part) return false;
+    const frequency = Number(hz);
+    if (!Number.isFinite(frequency) || frequency <= 0) {
+      this.drivenTones.delete(part.id);
+    } else {
+      this.drivenTones.set(part.id, {hz: frequency, sinceNs: this.timeNs});
+    }
+    // A tone is an electrical event like any other: the caches that a pin edge
+    // invalidates are invalidated here too, so a reader in the same instant
+    // does not answer from a stale solve.
+    this._trapValid = false;
+    return true;
+  }
+}
+
+/**
+ * The value a 'sample'-capture scope channel records at its sample instant.
+ *
+ * The channel's `_nextSampleNs` is the instant being written; `tNs`/`val` are
+ * the solve point that has just been reached, and `ch._prevTNs`/`ch._prevVal`
+ * the one before it. The sample instant lies in between, so the honest answer
+ * is the straight line between the two solves evaluated there — the same
+ * assumption the trapezoidal integrator already makes about the interval it
+ * just crossed.
+ *
+ * Falls back to the current value when there is no previous solve to work
+ * from (the first sample of a channel), which is the only case where a hold
+ * is all the information that exists.
+ *
+ * @param {{_nextSampleNs: bigint, _prevTNs: bigint|null, _prevVal: number|null, _prevExactTimeSec?: number|null}} ch
+ * @param {bigint} tNs
+ * @param {number} val
+ * @param {number|null} exactTimeSec
+ * @returns {number}
+ */
+function sampleAtInstant(ch, tNs, val, exactTimeSec = null) {
+  const tPrev = ch._prevTNs;
+  const vPrev = ch._prevVal;
+  // Precision solves can be between integer nanoseconds. Their voltage belongs
+  // to that actual instant, not its rounded label; preserve the bracketing times.
+  if (exactTimeSec !== null || ch._prevExactTimeSec != null) {
+    if (tPrev === null || vPrev === null) return val;
+    const now = exactTimeSec ?? Number(tNs) / 1e9;
+    const previous = ch._prevExactTimeSec ?? Number(tPrev) / 1e9;
+    const sample = Number(ch._nextSampleNs) / 1e9;
+    if (now <= previous || sample >= now) return val;
+    if (sample <= previous) return vPrev;
+    return vPrev + (val - vPrev) * ((sample - previous) / (now - previous));
+  }
+  if (tPrev === null || vPrev === null || tNs <= tPrev) return val;
+  const ts = ch._nextSampleNs;
+  if (ts <= tPrev) return vPrev;
+  if (ts >= tNs) return val;
+  const f = Number(ts - tPrev) / Number(tNs - tPrev);
+  return vPrev + (val - vPrev) * f;
+}

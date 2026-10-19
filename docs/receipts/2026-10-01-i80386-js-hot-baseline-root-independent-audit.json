@@ -1,0 +1,17 @@
+{
+  "status": "ROOT_INDEPENDENT_JS_HOT_SOURCE_ROM_WRITE_LEDGER_LOOP_ARITHMETIC_AND_WHOLE_RAM_PASS",
+  "sourceRevision": "530891c4a4020ff837d359376f1b3496c7ea17a6",
+  "sourceInputs": 47,
+  "assertions": 537996,
+  "journalRows": 117456,
+  "writes": 16743,
+  "quanta": 100682,
+  "attempts": 100684,
+  "registerIterations": 20000,
+  "memoryIterations": 4096,
+  "memorySha256": "0194be01b176f034836acb514956f29b224b4cea87e92b1b7c50f0bb6cb951b7",
+  "captureSha256": "c079fc196461e7d062df7e6a8a9b13b28ab9014b36a1040698fc5bab91ecdc5f",
+  "journalSha256": "2831037576f6426fbc622b6800f5ca6646c99e3b907858575ac352c8accad2f3",
+  "repeatByteIdentical": true,
+  "scope": "selected JS architectural baseline and complete actual write replay; no independent CPU oracle, native parity or physical timing"
+}

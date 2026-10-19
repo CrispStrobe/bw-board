@@ -1,0 +1,9 @@
+{
+  "officialArtifactId": 11271127904,
+  "officialUrl": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11271127904/zip",
+  "expiresAt": "2027-01-01T09:50:13Z",
+  "localZip": "/tmp/native-cold-native-seventh-diagnostic-publication-20261003/official-artifact.zip",
+  "bytes": 9916479,
+  "sha256": "9f879b6c9113e51c1b2ff3372dde0bba1ca4373814634c89caba7d8e49d2639f",
+  "omission": "Full official ZIP retained externally; source-packet/compiled binaries not duplicated into these result receipts"
+}

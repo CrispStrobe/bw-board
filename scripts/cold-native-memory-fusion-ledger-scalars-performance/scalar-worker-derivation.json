@@ -1,0 +1,39 @@
+{
+  "heldWorkerRevision": "735740cb52550bb71edde5aba326da6f3a01f473",
+  "heldWorkerSha256": "abcf0dbd77fccaff8d186e07943b84d0c7cdd96f3ad6ea6a4a02c88ac55234d0",
+  "heldProtocolSha256": "43bb5a988b9b31a6130c960bb8a779291d3fc371a07ca5e837c4f52c50a0408a",
+  "timerLoopSha256": "5fd249f8f0cce6ef48c17c917696f8df53e75658ffa1409f1edf537b14b9e785",
+  "scope": "Fixed JS factory overlay only; native build and C ABI unchanged; no execution authority while pending.",
+  "workerEdits": [
+    {
+      "before": "authenticateCompiledCheckout,compiledRevision,resetSource",
+      "after": "authenticateCompiledCheckout,compiledRevision,resetSource,authenticateScalarOverlay,scalarProviderProfile",
+      "count": 1
+    },
+    {
+      "before": "schema:'bw.cold-native-memory-fusion-performance.worker.v1'",
+      "after": "schema:'bw.cold-native-memory-fusion-ledger-scalars-performance.worker.v1',requiredScalarProviderProfile:scalarProviderProfile",
+      "count": 1
+    },
+    {
+      "before": "  const p=authenticatePrerequisite(input);assert.deepEqual(",
+      "after": "  assert.deepEqual(authenticateScalarOverlay(),receipt.scalarOverlay);\n  const p=authenticatePrerequisite(input);assert.deepEqual(",
+      "count": 1
+    },
+    {
+      "before": "prerequisite=authenticatePrerequisite(input);const targetQ=",
+      "after": "prerequisite=authenticatePrerequisite(input);receipt.scalarOverlay=authenticateScalarOverlay();const targetQ=",
+      "count": 1
+    },
+    {
+      "before": "resolve(input.compiledRoot,'scripts/bochs-cpu3-native-cold-memory-fusion/factory.mjs')",
+      "after": "resolve(sourceRoot,'scripts/bochs-cpu3-native-cold-memory-fusion-ledger-scalars/factory.mjs')",
+      "count": 1
+    },
+    {
+      "before": "providers.createOwnedMemoryFusionProvider()",
+      "after": "providers.createOwnedMemoryFusionLedgerScalarProvider()",
+      "count": 1
+    }
+  ]
+}

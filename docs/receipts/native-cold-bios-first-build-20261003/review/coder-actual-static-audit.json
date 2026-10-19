@@ -1,0 +1,17 @@
+{
+  "status": "ACTUAL_FIRST_COLD_BUILD_STATIC_ARTIFACT_AUDIT_PASS",
+  "checks": 1478,
+  "runId": 37102085724,
+  "head": "a6fae61a549d595c88a324f50589d92497040c07",
+  "attempt": 1,
+  "artifactId": 11265997873,
+  "zipSha256": "315587c2a738cb201f6ad09f2f82c19f82a46a25f73051062234fdeeffc2eda9",
+  "zipBytes": 7396223,
+  "sourceCount": 124,
+  "frozenArchiveFiles": 124,
+  "preparedArchiveFiles": 810,
+  "addonSha256": "4b372f2d0e7b677c56e168a0da791c1c0aeaae391eb6a103507e383540281907",
+  "addonBytes": 2069552,
+  "scope": "NO_ADDON_LOAD_OR_GUEST",
+  "auditSourceSha256": "a6cd3d254d9772d6dd73be12bcb9b66d697ea83e8963f25dc3bcd4bf8e84ec7d"
+}

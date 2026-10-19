@@ -1,0 +1,14 @@
+{
+  "preparedManifest": "/mnt/volume1/tmp-astra/native-owned-pic-imr-ci-restored-20261002/derived-prepare.json",
+  "preparedManifestSha256": "3e9ad7ab4f6a146c9864af0f392f1cfc069545007133d24c371460e2ac44fb56",
+  "buildReceipt": "/mnt/volume1/tmp-astra/native-owned-pic-imr-ci-restored-20261002/derived-build-receipt.json",
+  "buildReceiptSha256": "d50ad5196680bc8a4922decce8511d9e290f558423b247d29749dfdc1e0f8bd7",
+  "addon": "/mnt/volume1/tmp-astra/native-owned-pic-imr-ci-restored-20261002/prepared/bochs/bw_direct.node",
+  "sha256": "baaf3ba0b39f8ffeb001837c30a5f682ced39a75be87cbaf0ed55c8844ae660b",
+  "configuration": "/mnt/volume1/tmp-astra/native-owned-in8-r2-build-20261002/guest-source.bochsrc",
+  "baseline": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-reference-20261002/guest/capture.json",
+  "baselineSha256": "fdca8f8fa92952cd9cd5f4447e66b194a5f691025bcf925f7ddd443290143346",
+  "output": "/mnt/volume1/tmp-astra/native-owned-pic-imr-parity-prepared-20261002/smoke-off/guest",
+  "nativeTrace": false,
+  "hostJournal": false
+}

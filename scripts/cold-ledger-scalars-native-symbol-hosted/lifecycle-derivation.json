@@ -1,0 +1,29 @@
+{
+  "heldPath": "scripts/cold-ledger-scalars-native-symbol-hosted/held-lifecycle.py.txt",
+  "heldSha256": "4d7675796733ec9aa28595c35c9e265a908801bf338b08d5957699b15541fe80",
+  "candidateSha256": "8624ee2036a960760e6f55e7a391f78fd24327d20e379c438d953b20d06a631d",
+  "seams": [
+    {
+      "held": "def bounded_child(command,cwd,out,bounds,artifact_setup=False):",
+      "candidate": "def scoped_setup_environment(command,env):\n    from policy import contract\n    c=contract(json.loads((Path(__file__).resolve().parent/'contract.json').read_text()))\n    require(command==[sys.executable,'-B','/home/runner/work/bw-board/bw-board/symbol-worker/scripts/cold-native-ledger-scalars-symbol-profile/setup.py'],'token only fixed authenticated diagnostic setup-only child')\n    env=dict(env);dispatch_sha=env['GITHUB_SHA'];env['BW_ACTUAL_DISPATCH_SHA']=dispatch_sha;env['GITHUB_SHA']=c['roles']['diagnostic']['revision']\n    require(len(dispatch_sha)==40 and all(x in '0123456789abcdef' for x in dispatch_sha),'retained actual dispatch SHA')\n    return env\ndef bounded_child(command,cwd,out,bounds,artifact_setup=False):",
+      "count": 1
+    },
+    {
+      "held": "require(command[2]==str(Path(__file__).resolve().parent/'setup-entry.py') and command[3]=='setup','token only to exact held artifact setup child')",
+      "candidate": "env=scoped_setup_environment(command,env)",
+      "count": 1
+    },
+    {
+      "held": "('GITHUB_TOKEN','BW_COLD_REFERENCE_OUTPUT','PYTHONPATH','PYTHONSTARTUP')",
+      "candidate": "('GITHUB_TOKEN','BW_COLD_REFERENCE_OUTPUT','PYTHONPATH','PYTHONSTARTUP','PYTHONHOME')",
+      "count": 1
+    },
+    {
+      "held": "'processGroup':True,",
+      "candidate": "'processGroup':True,'actualDispatchSha':os.environ.get('GITHUB_SHA'),'setupOnlyDiagnosticRoleShaAlias':env.get('GITHUB_SHA') if artifact_setup else None,'aliasScope':'Only authenticated setup child uses diagnostic role SHA; never the actual dispatch SHA',",
+      "count": 1
+    }
+  ],
+  "heldOriginalPath": "scripts/cold-memory-fusion-execution-profile-hosted/lifecycle.py",
+  "heldFixtureScope": "Exact historical source bytes, inverse proof only; never executed."
+}

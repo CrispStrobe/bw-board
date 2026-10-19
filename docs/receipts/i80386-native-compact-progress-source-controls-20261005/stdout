@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: complete counted inverse retains held resume and snapshots
+ok 1 - complete counted inverse retains held resume and snapshots
+  ---
+  duration_ms: 5.64099
+  type: 'test'
+  ...
+# Subtest: actual generated progress helper parser, errors and copied ownership under mock
+ok 2 - actual generated progress helper parser, errors and copied ownership under mock
+  ---
+  duration_ms: 1242.880526
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1435.470405

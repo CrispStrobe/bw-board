@@ -1,0 +1,20 @@
+{
+  "status": "PASS_ACTUAL_ATTEMPT_PRESERVATION_NOT_GUEST_QUALIFICATION",
+  "runId": 37114378874,
+  "head": "e9f167cef1c778568ad186c4f449486bd207756b",
+  "artifactId": 11271127904,
+  "zipSha256": "9f879b6c9113e51c1b2ff3372dde0bba1ca4373814634c89caba7d8e49d2639f",
+  "nativeExit": {
+    "returncode": -9,
+    "timedOut": false,
+    "wallSeconds": 59.60194512000001,
+    "terminatedPids": [],
+    "interrupted": null
+  },
+  "equalMapPairs": 3,
+  "admissionPresent": true,
+  "capturePresent": false,
+  "firstDivergencePresent": false,
+  "causeScope": "SIGKILL consistent with fixed CPU60 hard limit; no resource accounting proving exact kill source, no matchedQ/window completion retained",
+  "noRetry": true
+}

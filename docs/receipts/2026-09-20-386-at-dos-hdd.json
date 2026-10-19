@@ -1,0 +1,62 @@
+{
+  "schema": "astra.i80386-at-dos-hdd.v1",
+  "executionRevision": "72f56ab1a5a4606e17d821bed2bb1e3ac36a998e",
+  "scope": [
+    "expand-down data and privilege stacks",
+    "absent-NPX WAIT/ESC; no x87 backend",
+    "XLAT and CBW/CWDE/CWD/CDQ",
+    "genuine BIOS POST/INT19/DOS2 shell file persistence",
+    "separate owned HDD boot-program BIOS full-sector write/read"
+  ],
+  "focused": {
+    "command": "node --test test/i80386-*.test.mjs",
+    "node": "v22.23.2",
+    "pass": 204,
+    "skip": 2,
+    "fail": 0,
+    "tapSha256": "dc67d34c43c36f30214b67642fdb32597e933bf6a44d50c604c221be1e4bf947"
+  },
+  "dos": {
+    "executionRevision": "72f56ab1a5a4606e17d821bed2bb1e3ac36a998e",
+    "writeSteps": 25652224,
+    "rebootSteps": 25567232,
+    "outputMediaSha256": "ec467c38d91d7292152b016c51dc6c2ef81f060ae7afc415418e2d17b3ca8819",
+    "writeReportSha256": "054ab853edfe14391a56f83a19a72c1b43f5c8608bdbf627cca803d7ea2c2112",
+    "rebootReportSha256": "747c445ab9a8e26dd3af8327db1838f92cbefc5070629a8fc41e8ed4dd7d4112"
+  },
+  "hdd": {
+    "executionRevision": "72f56ab1a5a4606e17d821bed2bb1e3ac36a998e",
+    "rawReportSha256": "616d8f4f0735063b915b3d747a5a397e9b5fe25779abbb2f8e2a76ddb6d6abc0",
+    "sourceManifestSha256": "69fbb6c345cf94c6dfb15e97fbd2d72b6a101e0317cdff0f562e24896ced14ab",
+    "steps": 70579183,
+    "accepted": true,
+    "inputMediaSha256": "c1ebf2785e8bf736fc6ed81f6e917bec1cabded671916098b64e2503a1f777ce",
+    "outputMediaSha256": "1cb7732758ebde69e6a61cb344822aa8eb68dbe17075f2c95476285e817c9bf2",
+    "finalSectorSha256": "3fb0f0892cdf3d7a48870c0b9d7dbe5b637466f03c312d0f6c863af6b7723313",
+    "commands": [
+      144,
+      145,
+      16,
+      64,
+      32,
+      48,
+      32
+    ],
+    "dataTransfers": {
+      "reads16": 512,
+      "writes16": 256,
+      "otherWidth": 0
+    }
+  },
+  "evidence": [
+    "test/fixtures/i80386-at-dos-persistence-evidence.json",
+    "docs/receipts/2026-09-20-386-at-hdd-roundtrip.json"
+  ],
+  "limits": [
+    "No HDD operating-system boot acceptance.",
+    "No 386 FreeDOS, Windows or Doom application acceptance.",
+    "No task-switch, x87 backend, full386 diagnostic or silicon timing claim.",
+    "Earlier test386 missing-PTE accessed-bit oracle disagreement remains open."
+  ],
+  "qualification": "The commit containing this receipt is the candidate; execution revisions above are actual measured sources. Hosted results attach to the candidate SHA."
+}

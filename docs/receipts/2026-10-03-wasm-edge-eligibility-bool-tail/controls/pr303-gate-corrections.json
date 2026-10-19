@@ -1,0 +1,10 @@
+{
+  "pr": 303,
+  "head": "457980b9c84a7e7da95be165160b3e5e8f3198cc",
+  "initialGate": {"session": 32146, "expectedVisibleTotal": 15, "expectedVisibleSuccess": 13, "exitCode": 143, "mergeWrite": false},
+  "intermediateWaitingGate": {"session": 74357, "expectedVisibleTotal": 11, "expectedVisibleSuccess": 13, "reason": "Mechanical replacement accidentally changed the wrong count; stopped before any merge write", "exitCode": 143, "mergeWrite": false},
+  "correctedGate": {"session": 63009, "requiredVisibleTotal": 13, "requiredVisibleSuccess": 11, "requiredIntentionalSkips": 2, "additionalActualInspections": 3, "fixtureNegativeControlsPassed": true, "exitCode": 0},
+  "rollupObservation": "Only the push inspection appears in PR rollup; the two workflow_dispatch inspection runs must be checked independently",
+  "waivedChecks": false,
+  "enginePromotion": false
+}

@@ -1,0 +1,29 @@
+{
+  "revision": "0e3fcaeb5a90f8e166e151dbaf9db3f33f906f0d",
+  "ownFiles": {
+    "scripts/bochs-cpu3-native-property-key-cache/README.md": "06bb264ffbed652a940aef0eddd08904b5738d641881c2b864647c0108a649eb",
+    "scripts/bochs-cpu3-native-property-key-cache/held-napi.cc": "052dfe2d8bbcf37b2abd621dbd78c5f2078026f34cb02fa1afd40ee1c9cb15ac",
+    "scripts/bochs-cpu3-native-property-key-cache/keys.inc": "e3232eda391e1d1e2dd96c8f8fc9e7b997ba13df509c6f63882c27db0043fe4c",
+    "scripts/bochs-cpu3-native-property-key-cache/keys.json": "d397a4b8e1d5cce9155aff3225dc61c4c30508975c27e5144dfdc8c4d9341409",
+    "scripts/bochs-cpu3-native-property-key-cache/mock.cc": "215645bd1d07854d2c353dd25c30f1794dc0abf59b92f227ed22ada1f102cc15",
+    "scripts/bochs-cpu3-native-property-key-cache/napi.mjs": "dc507cb0300d9bbdb18fc8b94ff7cc4cd34d2c45c1ba62f046915ef74b5a54f1",
+    "test/i80386-native-property-key-cache-source.test.mjs": "0eeb5245dc2a4f9f1a8deacb6800669e709ce7019b465ed135eb30e633d5580d"
+  },
+  "roles": {},
+  "toolFiles": {
+    "/tmp/node-v22.23.3-linux-x64/bin/node": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+    "/usr/bin/python3.12": "e1efa562c2cc2e35521a5c9c9b9939921001ff8ca9708a13ef15ace68cc2ccd7",
+    "/usr/bin/git": "2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668",
+    "/usr/bin/x86_64-linux-gnu-g++-13": "1353e9bdd29a7295c7226bf6c63abccce056d8cac31f112e5cdbecc3f28c2769",
+    "/usr/libexec/gcc/x86_64-linux-gnu/13/cc1plus": "840b332fb62ec6f694ac77d91fe69ef7f80b0d69512ed89374af0ee7a506255d",
+    "/usr/libexec/gcc/x86_64-linux-gnu/13/collect2": "4d1f341ae5b763b513258ee2812422a45e063c30a2f1924a0cf63d3699f3a158",
+    "/usr/bin/x86_64-linux-gnu-as": "21aff249b692b5c31a44007491f922dcb49f41323e362c57d2ada3f52eddb7f0",
+    "/usr/bin/x86_64-linux-gnu-ld.bfd": "e9ceb054c12207970f2726dfc07e9a66b411602748628baf27399f02a9bbb31b"
+  },
+  "scope": "Two selected generated-helper mock/lifecycle cases; exact counted inverse runs inside both derivations; actual NAPI/GC remains unqualified",
+  "compilerLaunchAlias": {
+    "path": "/usr/bin/c++",
+    "resolvedPath": "/usr/bin/x86_64-linux-gnu-g++-13",
+    "sha256": "1353e9bdd29a7295c7226bf6c63abccce056d8cac31f112e5cdbecc3f28c2769"
+  }
+}

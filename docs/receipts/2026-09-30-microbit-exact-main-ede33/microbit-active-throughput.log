@@ -1,0 +1,13 @@
+
+running 1 test
+MICROBIT_GUEST_SHA256=43223af542141404acabddf15f77a96205cdd5e55078e5c5b8fb1d3186cadb4d
+MICROBIT_ACTIVE_SAMPLE {"cycles":64000000,"guestButtonMask":0,"pass":1,"pixels":[253,0,0,0,0,0,255,0,0,0,0,0,254,0,0,0,0,0,253,0,0,0,0,0,254],"rtxAt64MHz":3.627667984290094,"wallSeconds":0.275659185}
+MICROBIT_ACTIVE_SAMPLE {"cycles":64000000,"guestButtonMask":1,"pass":2,"pixels":[255,0,0,0,0,0,253,0,0,0,0,0,253,0,0,0,0,0,253,0,0,0,0,0,254],"rtxAt64MHz":3.525281192732358,"wallSeconds":0.283665315}
+MICROBIT_ACTIVE_SAMPLE {"cycles":64000000,"guestButtonMask":0,"pass":3,"pixels":[253,0,0,0,0,0,253,0,0,0,0,0,253,0,0,0,0,0,253,0,0,0,0,0,255],"rtxAt64MHz":3.5486276502295726,"wallSeconds":0.281799078}
+MICROBIT_ACTIVE_SAMPLE {"cycles":64000000,"guestButtonMask":1,"pass":4,"pixels":[253,0,0,0,0,0,253,0,0,0,0,0,255,0,0,0,0,0,254,0,0,0,0,0,254],"rtxAt64MHz":3.5593544149742753,"wallSeconds":0.280949825}
+MICROBIT_ACTIVE_SAMPLE {"cycles":64000000,"guestButtonMask":0,"pass":5,"pixels":[253,0,0,0,0,0,255,0,0,0,0,0,253,0,0,0,0,0,253,0,0,0,0,0,254],"rtxAt64MHz":3.5557664867842327,"wallSeconds":0.281233316}
+MICROBIT_ACTIVE_MEDIAN_RTX=3.555766
+test active_display_button_workload_throughput ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 1.52s
+

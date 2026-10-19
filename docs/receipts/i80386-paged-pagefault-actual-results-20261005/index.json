@@ -1,0 +1,85 @@
+{
+  "schema": "bw.paged-pagefault.actual-results-origins.v1",
+  "scope": "Exact compact saved-evidence records; full capture and build outputs remain in the sole official artifact, not copied here. No guest replay.",
+  "run": 37269581753,
+  "artifact": 11328185992,
+  "source": "816ae8b7ead8552eeca3d86e8d23a72405a6a072",
+  "driverRevision": "028344c43d4a7fad2d10a4654e8a37897c11d787",
+  "compiledRevision": "5df525f72790876d35e49d936bac1f1284fa81e7",
+  "officialZip": {
+    "bytes": 11979823,
+    "sha256": "ce8a93125f2b6a42f5b07691e26b52335449a5d8834e28a3d39fbc61f9174d05",
+    "members": 102,
+    "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37269581753/artifacts/11328185992"
+  },
+  "body": {
+    "decodedBytes": 38149335,
+    "storedBytes": 917129,
+    "decodedSha256": "2e7bc6698347390ae105a68994f1f6aba24de39bb2851170e9b3721548eafe33",
+    "storedSha256": "57e0bad4ee9000dbc95eee93bbdfa75c188b8b5e7ebb568be924e03b3af92af3"
+  },
+  "records": {
+    "coder-audit.json": {
+      "size": 30947,
+      "sha256": "bf05b0f887b15dadc3ea4b33ec825937e245795d6ef03c409ea908aa6c8ce939",
+      "origin": {
+        "kind": "saved-evidence-audit",
+        "author": "coder",
+        "sourceArtifactURL": "https://github.com/CrispStrobe/bw-board/actions/runs/37269581753/artifacts/11328185992"
+      }
+    },
+    "root-actual-audit.json": {
+      "size": 1034,
+      "sha256": "e3044c634ba378056e52d869449b0964164813bea6a6ab07638e8fcdf688fc67",
+      "origin": {
+        "kind": "saved-evidence-audit",
+        "author": "coordinator",
+        "sourceArtifactURL": "https://github.com/CrispStrobe/bw-board/actions/runs/37269581753/artifacts/11328185992"
+      }
+    },
+    "independent-audit.json": {
+      "size": 1303,
+      "sha256": "50b3fb42b6382b0404ed5052ae52ca246c6ab6234e8a563f289c4e87c3dcf122",
+      "origin": {
+        "kind": "saved-evidence-audit",
+        "author": "independent-reviewer",
+        "sourceArtifactURL": "https://github.com/CrispStrobe/bw-board/actions/runs/37269581753/artifacts/11328185992"
+      }
+    },
+    "run.json": {
+      "size": 14697,
+      "sha256": "33319fd616a3d16dff7415a3c21c632a047a351b8db3ebb8ae0a5f513f203209",
+      "origin": {
+        "kind": "official-api-snapshot",
+        "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/37269581753"
+      }
+    },
+    "artifacts.json": {
+      "size": 977,
+      "sha256": "f529c5e206a17d0198465798e84b135f400030e0c3694b912686be28c476c5fa",
+      "origin": {
+        "kind": "official-api-snapshot",
+        "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/runs/37269581753/artifacts"
+      }
+    },
+    "outcome.json": {
+      "size": 3512,
+      "sha256": "08198b948298da791addb686fe6aeae4d1763b649dfcbe4534427f8ace12c7e5",
+      "origin": {
+        "kind": "official-artifact-member",
+        "artifactURL": "https://github.com/CrispStrobe/bw-board/actions/runs/37269581753/artifacts/11328185992",
+        "member": "_temp/paged-pagefault-execution/guest/outcome.json"
+      }
+    },
+    "worker.exit.json": {
+      "size": 1447,
+      "sha256": "3417baec4229d058d6c81668cf285ceedc3966e415b032d7336733e914472978",
+      "origin": {
+        "kind": "official-artifact-member",
+        "artifactURL": "https://github.com/CrispStrobe/bw-board/actions/runs/37269581753/artifacts/11328185992",
+        "member": "_temp/paged-pagefault-execution/worker.exit.json"
+      }
+    }
+  },
+  "memberHashes": "coder-audit.json#/membersVerified"
+}

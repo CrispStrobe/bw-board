@@ -1,0 +1,63 @@
+{
+  "status": "PASS",
+  "source": "6b6d620897c4d4a755b16b26284db781cb121bb2",
+  "sourcePaths": 96,
+  "actualSelectedNodeWrappers": 1,
+  "actualNamedPythonMockMethods": 10,
+  "unselectedNodeMethods": "NOT_RUN",
+  "skipCount": 0,
+  "guestOrPerfInvoked": false,
+  "beforeAfterEqual": true,
+  "exit": {
+    "exitCode": 0,
+    "timeout": false,
+    "wallSeconds": 2.0739923529326916,
+    "wallScope": "parent including final authentication",
+    "childExitWallSeconds": 0.64007967710495,
+    "rawWait4Status": 0,
+    "leaderRusage": {
+      "userSeconds": 0.549835,
+      "systemSeconds": 0.092628,
+      "maxRSSKiB": 53468
+    },
+    "rusageScope": "wait4 leader and its waited descendants; not guest or execution-window CPU",
+    "error": null,
+    "cleanupError": null,
+    "finalizationError": null,
+    "pinsEqual": true
+  },
+  "origins": {
+    "parent.py": {
+      "bytes": 4984,
+      "sha256": "18f4a5f2e5115ab8a354fcd03a448362d7213f6bebd1f90fe205b933001d0b29"
+    },
+    "context.json": {
+      "bytes": 11989,
+      "sha256": "91d9ca87ace970423ac4890ca2c80a78ce04936840f06eb19e7d1dbfba170eb0"
+    },
+    "before.json": {
+      "bytes": 12538,
+      "sha256": "55b55e507e9e9f6a92ae6324a8d78b98a935d56fe0b80011fcbf9671fdc56d1f"
+    },
+    "after.json": {
+      "bytes": 12538,
+      "sha256": "55b55e507e9e9f6a92ae6324a8d78b98a935d56fe0b80011fcbf9671fdc56d1f"
+    },
+    "invocation.json": {
+      "bytes": 930,
+      "sha256": "0e94744d9e75873987def2d2d2701974e82377dfaba08cae152b3d3d5f68fd21"
+    },
+    "exit.json": {
+      "bytes": 494,
+      "sha256": "88c93fc691f3f65d942fd635ccfd412fb22813a19b7a57ef1949a760078c0ae4"
+    },
+    "stdout": {
+      "bytes": 1733,
+      "sha256": "d217aed7f2c58b304a4b576173306f6033e88a4f935439b76ba78a8102fbb9e5"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "diagnosticOnly": true,
+  "qualification": false,
+  "windows": 5,
+  "cycles": 320000000,
+  "totals": {
+    "admission_refused": "47403",
+    "branch_exit": "23838",
+    "budget_exit": "72321",
+    "calls": "61614846",
+    "compile_attempts": "95669",
+    "decode_clear": "0",
+    "decode_insert": "0",
+    "discovered": "23920",
+    "executed_ops": "85482046",
+    "generation_wrap": "0",
+    "memo_different_pc_stale_generation": "0",
+    "memo_empty": "23925",
+    "memo_hit": "61423781",
+    "memo_same_generation_collision": "94901",
+    "memo_same_pc_stale_generation": "0",
+    "no_positive_span": "61542607",
+    "positive_reuse": "72239",
+    "runtime_rejected": "0",
+    "search_exhausted": "47503",
+    "search_iterations": "143172"
+  },
+  "memoHitPercent": 99.80692075654188,
+  "collisionPercent": 0.15420373725799427,
+  "limitations": [
+    "Occurrence ratios are not wall-time shares or removable cost",
+    "Selected warmed motion workload only; RAM/GPIO/other chips not measured by this census",
+    "Control module/glue differ from production bytes; no ordinary RTx or binary-identity claim"
+  ]
+}

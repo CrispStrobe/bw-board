@@ -1,0 +1,30 @@
+{
+  "status": "AWAITING_SOURCE_REVIEW_AND_ROOT_CAPTURE_GRANT_NO_INVOCATION",
+  "sourceHead": "75be9c4aaa9fe08ff2adbffa47ff8cc1335b19d2",
+  "sourceCount": 51,
+  "sourceChanged": false,
+  "historicalFirstPacket": "/tmp/native-paged-pagefault-source-controls-20261005",
+  "historicalOutcome": "wrapperFAIL expected6; actual7childPASS including genuine57attempt56Q without full capture",
+  "command": [
+    "/opt/miniconda/bin/python3",
+    "/tmp/run-native-paged-pagefault-oracle-capture-20261005.py"
+  ],
+  "helperSha256": "4ac6e9d3e0dea1e80ef024716ab74deec6b2ce6db6a2cbe5fd57020ed5b1231c",
+  "purpose": "exactly one positively selected genuine JS program to retain full bounded capture; no repeating six other cases",
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileMiB": 16,
+    "coreBytes": 0,
+    "nice": 10,
+    "blankNodeHooks": 6,
+    "compilerKeys": "absent"
+  },
+  "guards": "exact prior raw byte pins+fixed invocation+7namedTAPpass+rawstatus0/reaped/noTimeout/wrappererror only selection assertion; complete oldtools current equality plus new parent pin; all51 source currentGit beforeafter; no automatic retry",
+  "nativeGuestOrAddon": false,
+  "independentFirstAuditPin": {
+    "bytes": 1298,
+    "sha256": "407d861a24ba6ce44df3d216c3c315e250045a36e9e7df707225bc9a3582350d"
+  }
+}

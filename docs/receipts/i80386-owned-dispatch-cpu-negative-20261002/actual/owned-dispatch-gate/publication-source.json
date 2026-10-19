@@ -1,0 +1,10 @@
+{
+  "revision": "7a24f7d4f1057e5e9523d0f2f23d426bb3b40476",
+  "tooling": {
+    "scripts/ci-benchmark-i80386-owned-dispatch.py": "fe48f10e171223fe46d9ce5c5846e482e693c4f8c2a19a7c5c6738eca32056cb",
+    ".github/workflows/i80386-owned-clock-bulk-benchmark.yml": "dbb29cd11374c865c4362f2878c64c4118b0b70aada0b86ce4844ecd7e48c093",
+    "test/i80386-owned-dispatch-ci.test.mjs": "e068d2f87e07497c399dbedd5db6d47d0fbf6512a68d5f9d9158874ec4a447b3",
+    ".github/workflows/ci.yml": "4828a290e35ec0e8a8264a37d3bc090657a32bbaf82c34ca5063584b32c3d12c",
+    ".github/workflows/x86-xv6.yml": "b6ae1f86e4dbcceb500aad51efeb07e981e9c851bc724f6eaae6a4ed9b29319e"
+  }
+}

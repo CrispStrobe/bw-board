@@ -1,0 +1,53 @@
+{
+  "result": "ROOT_SOURCE_CONTROLS_AND_READONLY_IDENTITY_PASS",
+  "lane": "ready-driver",
+  "selectedNodeCases": 2,
+  "nestedPythonCases": 0,
+  "otherNodeCases": "unselected",
+  "sourcePaths": 80,
+  "gitAlternateWarnings": 83,
+  "nativeInstructions": 0,
+  "perfCalls": 0,
+  "packets": [
+    {
+      "path": "/tmp/native-paged-int-iret-ready-driver-source-controls-20261004",
+      "exit": {
+        "childStarted": true,
+        "exitCode": 0,
+        "finalizationErrors": [],
+        "leaderReaped": true,
+        "pid": 3686481,
+        "primaryError": null,
+        "rawWaitStatus": 0,
+        "rusage": {
+          "maxRSSKiB": 75132,
+          "scope": "wait4 leader plus descendants reaped by it; not every orphan process",
+          "systemSeconds": 1.13597,
+          "userSeconds": 1.34943
+        },
+        "timeout": false,
+        "wallSeconds": 3.7636923044919968
+      }
+    },
+    {
+      "path": "/tmp/native-paged-int-iret-ready-driver-source-auth-20261004",
+      "exit": {
+        "childStarted": true,
+        "exitCode": 0,
+        "finalizationErrors": [],
+        "leaderReaped": true,
+        "pid": 3687265,
+        "primaryError": null,
+        "rawWaitStatus": 0,
+        "rusage": {
+          "maxRSSKiB": 63884,
+          "scope": "wait4 leader plus descendants reaped by it; not every orphan process",
+          "systemSeconds": 0.48386199999999996,
+          "userSeconds": 0.419658
+        },
+        "timeout": false,
+        "wallSeconds": 2.2594524938613176
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+/** Nonguest clock-domain control. Run on the actual hosted Node before clipping. */
+import assert from 'node:assert/strict';import {Session}from 'node:inspector';import {writeFileSync}from 'node:fs';
+assert.equal(process.version,'v22.23.3');assert.equal(process.argv.length,3);
+const session=new Session();session.connect();const post=(m,p={})=>new Promise((ok,fail)=>session.post(m,p,(e,r)=>e?fail(e):ok(r)));const now=()=>Number(process.hrtime.bigint()/1000n);
+try{await post('Profiler.enable');await post('Profiler.setSamplingInterval',{interval:1000});const beforeStart=now();await post('Profiler.start');const afterStart=now();let value=0;const busyBegin=now();while(now()-busyBegin<20000)value=(value+1)>>>0;const beforeStop=now();const {profile}=await post('Profiler.stop');const afterStop=now();
+writeFileSync(process.argv[2]+'.cpuprofile',JSON.stringify(profile),{flag:'wx'});
+const toleranceUs=1000;assert.ok(Number.isSafeInteger(profile.startTime)&&Number.isSafeInteger(profile.endTime));assert.ok(profile.startTime>=beforeStart-toleranceUs&&profile.startTime<=afterStart+toleranceUs);assert.ok(profile.endTime>=beforeStop-toleranceUs&&profile.endTime<=afterStop+toleranceUs);assert.ok(profile.samples.length>0);assert.equal(profile.samples.length,profile.timeDeltas.length);writeFileSync(process.argv[2],JSON.stringify({status:'NONGUEST_INSPECTOR_HRTIME_DOMAIN_PASS',node:process.version,toleranceUs,beforeStart,afterStart,beforeStop,afterStop,value,profile},null,2),{flag:'wx'});}finally{session.disconnect();}

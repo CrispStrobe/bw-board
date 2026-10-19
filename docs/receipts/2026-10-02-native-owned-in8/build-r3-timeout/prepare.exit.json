@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "scripts/prepare-bochs-cpu3-native-owned-in8.mjs",
+    "--prepare",
+    "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-owned-in8-r3-20261002"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 13.846673887223005,
+  "streams": {
+    "stdout": {
+      "bytes": 27438,
+      "sha256": "2dda95279f80b9ad97767ba4e0147b63101e3c0929df967b872552a6ceb7f481"
+    },
+    "stderr": {
+      "bytes": 580,
+      "sha256": "1787194a91bee1b34a74d75324301b744b5fc71de2634cd04addf47184b9e30a"
+    }
+  }
+}

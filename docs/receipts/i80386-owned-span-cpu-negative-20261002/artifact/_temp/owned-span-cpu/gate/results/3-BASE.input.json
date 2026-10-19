@@ -1,0 +1,14 @@
+{
+  "preparedManifest": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/derived-prepare.json",
+  "preparedManifestSha256": "b3c606e3bd5a2dc9f536116dbefa4f347efb2f6316239d6f7162d134c00f4c3a",
+  "buildReceipt": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/derived-build-receipt.json",
+  "buildReceiptSha256": "33809d68e99497f957905b5d3ab5e119bf90a5de87c52d65e91715dc995fdb10",
+  "addon": "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/prepared/bochs/bw_direct.node",
+  "sha256": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841",
+  "configuration": "/mnt/volume1/tmp-astra/native-owned-in8-r2-build-20261002/guest-source.bochsrc",
+  "baseline": "/mnt/volume1/tmp-astra/native-owned-in8-source-r3-20261002/js-reference/capture.json",
+  "baselineSha256": "bf026d23f0c51d63a9744dc4facb4d58809c50f1d35747ffc6ea5873b518e45e",
+  "output": "/home/runner/work/_temp/owned-span-cpu/gate/results/3-BASE/guest",
+  "nativeTrace": false,
+  "hostJournal": false
+}

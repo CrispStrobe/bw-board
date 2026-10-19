@@ -1,0 +1,16 @@
+{
+  "status": "ROOT_FROZEN_SOURCE_PASS",
+  "revision": "a46083c0e7792aa4e9ee1923bcaf6a2eb5870e0d",
+  "closureFiles": 51,
+  "artifactChecks": 102,
+  "newPaths": [
+    "scripts/bochs-cpu3-native-owned-clock-replay/contract.md",
+    "scripts/bochs-cpu3-native-owned-clock-replay/factory.mjs",
+    "scripts/bochs-cpu3-native-owned-clock-replay/protocol.mjs",
+    "scripts/bochs-cpu3-native-owned-clock-replay/worker.mjs",
+    "scripts/replay-i80386-native-owned-clock-journal.mjs",
+    "test/i80386-native-owned-clock-replay.test.mjs"
+  ],
+  "tests": 109,
+  "skipped": 0
+}

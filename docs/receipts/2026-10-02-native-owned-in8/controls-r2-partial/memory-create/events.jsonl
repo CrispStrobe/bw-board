@@ -1,0 +1,5 @@
+{"n":"0","q":"0","calls":1,"ordinal":1,"name":"initialized"}
+{"operation":"inPort","args":[64,1],"value":50,"n":17,"q":17,"ordinal":2,"name":"actual-IN-read-effect"}
+{"operation":"inPort","args":[64,1],"value":18,"n":19,"q":19,"ordinal":3,"name":"actual-IN-read-effect"}
+{"operation":"create","callback":"readPhysical","calls":100,"logical":149,"ordinal":4,"name":"attack-before-effect"}
+{"operation":"create","message":"direct concurrent, thread or reentry rejected","logical":149,"ordinal":5,"name":"nested-denied"}

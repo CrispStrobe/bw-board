@@ -1,0 +1,28 @@
+import pathlib,json,hashlib,zipfile,stat,subprocess
+R=pathlib.Path('/tmp/native-cold-native-first-diagnostic-publication-20261003');HEAD='e4114004a49395d2494f201087488fc4dde522a8';checks=0
+sha=lambda b:hashlib.sha256(b).hexdigest()
+def ck(v):
+ global checks
+ assert v;checks+=1
+run=json.loads((R/'run-final.json').read_bytes());a=json.loads((R/'artifacts.json').read_bytes())['artifacts'][0];v=json.loads((R/'zip-verification.json').read_bytes())
+ck(run['id']==37106448211 and run['head_sha']==HEAD and run['event']=='workflow_dispatch' and run['run_attempt']==1 and run['conclusion']=='failure')
+ck(a['id']==11267273346 and a['workflow_run']['id']==run['id'] and a['workflow_run']['head_sha']==HEAD);ck(a['digest']=='sha256:'+sha((R/'official-artifact.zip').read_bytes()) and a['size_in_bytes']==1395047)
+with zipfile.ZipFile(R/'official-artifact.zip') as z:
+ names=set()
+ for e in z.infolist():
+  p=pathlib.PurePosixPath(e.filename);ck(not p.is_absolute() and '..' not in p.parts and e.filename not in names and not stat.S_ISLNK(e.external_attr>>16));names.add(e.filename)
+  b=z.read(e);ck(sha(b)==v['entries'][e.filename]['sha256'] and len(b)==v['entries'][e.filename]['bytes']);ck((R/'selected'/e.filename).read_bytes()==b)
+ def obj(n):return json.loads(z.read('_temp/cold-native-diagnostic/'+n))
+ before=obj('before.json');after=obj('after.json');ck(before==after);final=obj('final-status.json');ck(final['status']=='FAIL' and final['sourceBeforeAfterEqual'] is True and 'HTTP Error 401' in final['error']);ck(obj('partial-restored-inventory.json')=={})
+ ck(before['toolingHead']==HEAD and before['compiledHead']=='a6fae61a549d595c88a324f50589d92497040c07' and before['driverHead']=='64514be6e45418910c5f952873382a2581810e1f');ck(all(before[k]=='' for k in ['toolingStatus','compiledStatus','driverStatus']))
+ for role,key in [('compiled124','compiledFiles'),('driver52','driverFiles'),('tooling','toolingFiles')]:
+  for p,h in before[key].items():ck(sha(z.read('_temp/cold-native-diagnostic/source-packet/'+role+'/'+p))==h)
+ ck(len(before['compiledFiles'])==124 and len(before['driverFiles'])==52 and before['nodeSha256']=='fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48')
+ meta=obj('official-artifact-metadata.json');ck(meta['id']==11265997873 and meta['workflow_run']['id']==37102085724 and meta['workflow_run']['head_sha']==before['compiledHead']);ck(meta['digest']=='sha256:315587c2a738cb201f6ad09f2f82c19f82a46a25f73051062234fdeeffc2eda9')
+ setup=json.loads(z.read('_temp/cold-native-setup/final-status.json'));ck(setup['status']=='EXACT_SOURCE_ROLE_SETUP_PASS_NO_ARTIFACT_OR_NATIVE')
+ for label in ['compiled-sparse','driver-sparse','upstream-0','upstream-1','upstream-2','upstream-3']:
+  e=json.loads(z.read('_temp/cold-native-setup/'+label+'.exit.json'));i=json.loads(z.read('_temp/cold-native-setup/'+label+'.invocation.json'));ck(e['returncode']==0 and e['timedOut'] is False);ck(i['coreBytes']==0 and i['niceIncrement']==10 and all(h=='' for h in i['blankHooks'].values()))
+ ck(not any(n.startswith('_temp/cold-native-diagnostic/') and any(q in n for q in ['native.invocation.json','restore.invocation.json','guest/capture.json','materialization-proof.json','official-artifact.zip']) for n in names))
+ stderr=z.read('_temp/cold-native-parent-context/parent.stderr').decode();ck('zip_path=download(c,out)' in stderr and 'http_error_302' in stderr and 'HTTP Error 401' in stderr)
+ result={'status':'PASS_INDEPENDENT_FIRST_ATTEMPT_FAILURE_AUDIT_ZERO_NATIVE_CHILDREN','checks':checks,'runId':run['id'],'head':HEAD,'attempt':1,'artifactId':a['id'],'zipSha256':sha((R/'official-artifact.zip').read_bytes()),'members':len(names),'stage':'Source setup successful; official old-build metadata retrieved, ZIP HTTP redirect returns401 before download/mutation/restore/native','sourceBeforeAfterEqual':True,'compiledInputs':124,'driverInputs':52,'nativeChildren':0,'restoreChildren':0,'scope':'Failure is hosted acquisition plumbing, not native CPU/device/E16/RAM/performance qualification or rejection','limits':'Redirect/token forwarding is a source-backed hypothesis, not independently proved by retained response headers. No patch/retry/guest/download by auditor.','auditSourceSha256':sha(pathlib.Path(__file__).read_bytes())}
+ (R/'independent-first-attempt-audit.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result,indent=2))

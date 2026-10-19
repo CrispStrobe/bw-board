@@ -1,0 +1,23 @@
+{
+  "schema": "astra.i80386-at-floppy-boot-diagnostic.v1",
+  "accepted": false,
+  "diagnosticOnly": true,
+  "fullBootAccepted": false,
+  "scope": "Genuine-reset IBM 5170 Rev1 BIOS INT 19 and real FDC/DMA handoff of an unchanged DOS 2 boot sector; execution later stops at an unsupported BIOS XLAT.",
+  "executionRevision": "28e1ab0462d8e3834c6b1779d0783a1eec6dfdbe",
+  "rawReportSha256": "ffddde0260305967b12d1db539e78dd7ef885ce15ecd87e0f5fb596e7f2d7709",
+  "sourceManifestDigestMethod": "SHA-256 of jq -Sc '.sourceSha256' over the raw report, including its trailing newline",
+  "sourceManifestSha256": "c1e02bc0bf4c0a9385d9ddf2c188e80fa4dfc9a5eec37f885f4afa365877aaf6",
+  "inputs": {
+    "biosSha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+    "floppySha256": "5fbbe5e86fb845cff120ae8d17a01904c0db9d0b6103ce382b31130bd3eadd39",
+    "bootSectorSha256": "a6c72572438d003327c04838781f3a1fc79b7fd7a6df605df5118d06f520f2b5"
+  },
+  "evidence": {
+    "int19": {"step": 24207120, "before": {"cs": 61440, "ip": 5803}, "after": {"cs": 61440, "ip": 59122}},
+    "bootSector": {"step": 24969879, "after": {"cs": 0, "ip": 31744}, "physical": 31744, "sha256": "a6c72572438d003327c04838781f3a1fc79b7fd7a6df605df5118d06f520f2b5"},
+    "dmaChannel2": {"page": 0, "baseAddress": 31744, "currentAddress": 32256, "baseCount": 511, "currentCount": 65535, "terminalCount": true, "transferType": 1},
+    "fdc": {"refusals": 0, "badReads": 0, "badWrites": 0}
+  },
+  "stop": {"step": 25064872, "reason": "cpu-unsupported", "instruction": "XLAT", "address": "F000:333B / F333B", "opcode": "D7"}
+}

@@ -1,0 +1,102 @@
+{
+  "schema": "bw.exact-origin.receipts.v1",
+  "scope": "Manufactured/source controls only. Original seven-pass/one-fixture-failure and affected-case pass are separate epochs; no native PF execution.",
+  "records": [
+    {
+      "path": "first-parent.py",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-20261005/parent.py",
+      "bytes": 6776,
+      "sha256": "7c547fe844a13a5e0ea1edcafcd32545bf722e79bbb6db7a949e58ba9e34e85c"
+    },
+    {
+      "path": "first-before.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-20261005/before.json",
+      "bytes": 18117,
+      "sha256": "fd01201983a45859903ce8f5399aab516dc05d4080919d1c2e79e46f1f7498e9"
+    },
+    {
+      "path": "first-after.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-20261005/after.json",
+      "bytes": 18117,
+      "sha256": "fd01201983a45859903ce8f5399aab516dc05d4080919d1c2e79e46f1f7498e9"
+    },
+    {
+      "path": "first-invocation.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-20261005/invocation.json",
+      "bytes": 1476,
+      "sha256": "9bbd67c9c206e0a51c159ac284a7f73048ba3219af440db61194e96191fba8b0"
+    },
+    {
+      "path": "first-exit.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-20261005/exit.json",
+      "bytes": 524,
+      "sha256": "dda5b67aaa894a76aee10bbf597da23bd8ba2c396d0d4a804aba5a169e5b98d6"
+    },
+    {
+      "path": "first-stdout",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-20261005/stdout",
+      "bytes": 2918,
+      "sha256": "286132568c8c8fb0629287a436b58a553c966e3d82163d5f294832c6f7a70ca8"
+    },
+    {
+      "path": "first-stderr",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-20261005/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "first-independent-audit.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-20261005/independent-audit.json",
+      "bytes": 859,
+      "sha256": "c60ec7fc5b732146b00584eb8ce87b902be15c947ce6251ac578f1ec4b2390db"
+    },
+    {
+      "path": "repair-parent.py",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-r2-20261005/parent.py",
+      "bytes": 8625,
+      "sha256": "61c58eff0838b6b188cfa8c65bd7e1b9e681acfd7871090a9b4af87c9597c068"
+    },
+    {
+      "path": "repair-before.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-r2-20261005/before.json",
+      "bytes": 18840,
+      "sha256": "b23157f88b87c525b245b279062f0a476ca5ee4a2ffa442fc46ca56b96e3021b"
+    },
+    {
+      "path": "repair-after.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-r2-20261005/after.json",
+      "bytes": 18840,
+      "sha256": "b23157f88b87c525b245b279062f0a476ca5ee4a2ffa442fc46ca56b96e3021b"
+    },
+    {
+      "path": "repair-invocation.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-r2-20261005/invocation.json",
+      "bytes": 1629,
+      "sha256": "f81944add9d4632d4b40abd612aff59a8b38d54ad9c52d3b0752f0cb00d87ff8"
+    },
+    {
+      "path": "repair-exit.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-r2-20261005/exit.json",
+      "bytes": 581,
+      "sha256": "b1548240655a087df74485e28b21afd3bc5067bf7f7ea06f7b460de7940f3a4c"
+    },
+    {
+      "path": "repair-stdout",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-r2-20261005/stdout",
+      "bytes": 383,
+      "sha256": "83c1732b7f8b879f4a783afe1af104c343958461e37449ce0e9f0ceb7374001e"
+    },
+    {
+      "path": "repair-stderr",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-r2-20261005/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "repair-independent-audit.json",
+      "origin": "/tmp/native-paged-pagefault-native-runtime-driver-source-controls-r2-20261005/independent-audit.json",
+      "bytes": 1204,
+      "sha256": "928da49aac39e021d1557958dafbaf42581e900948b3062b6e9bbec928d20db2"
+    }
+  ]
+}

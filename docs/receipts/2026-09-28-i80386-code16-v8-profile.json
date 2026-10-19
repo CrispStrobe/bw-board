@@ -1,0 +1,411 @@
+{
+  "schema": "bw.i80386-code16-v8-profile.v1",
+  "executionRevision": "55da2360a14e1aecb806d3867bd627351a48d115",
+  "observerSha256": "1e2b4b94f14b6bf29f76d0ab0a91c101cf18fa114efb157480c69237ebed69b8",
+  "source": {
+    "filesChecked": 31,
+    "allFourReportedSourceInventoriesIdentical": true,
+    "code16DispatcherSha256": "d34e118b23f42ab24822bf9559bab11d723cb3ce65ad27246312589e511dc758",
+    "code16WindowSha256": "b792ba1593483ca628fe791b9a285996b2f6bd0c9413d0bb612ee5f2ff058637",
+    "code16WindowHashScope": "Hash of the local revision file; the CLI source inventory does not list this module."
+  },
+  "scope": "Four serial 60M executions: ordinary/opt-in, each with a V8 CPU profile and a nearby unprofiled control",
+  "selectedReportedFields": [
+    "steps",
+    "stop",
+    "refusal",
+    "cpu",
+    "delivered",
+    "serial",
+    "textRam",
+    "vga"
+  ],
+  "selectedReportedFieldsSha256": "671373ced87f5d5307d01a498c7ef9f3fd835057356a9e604585465ce92b7511",
+  "privateInputsIdentical": true,
+  "host": {
+    "cpuModel": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "logicalCpus": 4,
+    "node": "v20.20.2",
+    "profileRequestedIntervalMicroseconds": 5000,
+    "load": {
+      "ordinaryProfile": {
+        "startUtc": "2026-09-28T15:12:52Z",
+        "endUtc": "2026-09-28T15:14:19Z",
+        "loadStart": [
+          5.7724609375,
+          6.5947265625,
+          6.71826171875
+        ],
+        "loadEnd": [
+          8.04345703125,
+          7.29248046875,
+          6.9677734375
+        ]
+      },
+      "ordinaryControl": {
+        "startUtc": "2026-09-28T15:14:25Z",
+        "endUtc": "2026-09-28T15:15:51Z",
+        "loadStart": [
+          8.03955078125,
+          7.3046875,
+          6.9736328125
+        ],
+        "loadEnd": [
+          6.3828125,
+          6.94921875,
+          6.875
+        ]
+      },
+      "optinProfile": {
+        "startUtc": "2026-09-28T15:15:55Z",
+        "endUtc": "2026-09-28T15:24:18Z",
+        "loadStart": [
+          6.19189453125,
+          6.89990234375,
+          6.859375
+        ],
+        "loadEnd": [
+          13.1015625,
+          9.77001953125,
+          8.177734375
+        ]
+      },
+      "optinControl": {
+        "startUtc": "2026-09-28T15:24:26Z",
+        "endUtc": "2026-09-28T15:40:21Z",
+        "loadStart": [
+          13.4140625,
+          9.89013671875,
+          8.2255859375
+        ],
+        "loadEnd": [
+          17.14794921875,
+          15.8291015625,
+          12.8974609375
+        ]
+      }
+    }
+  },
+  "timing": {
+    "ordinaryProfile": {
+      "wall": 87.04,
+      "user": 84.5,
+      "system": 2.62,
+      "maxrss": 171704
+    },
+    "ordinaryControl": {
+      "wall": 85.57,
+      "user": 82.71,
+      "system": 1.99,
+      "maxrss": 166144
+    },
+    "optinProfile": {
+      "wall": 502.74,
+      "user": 382.96,
+      "system": 12.8,
+      "maxrss": 167988
+    },
+    "optinControl": {
+      "wall": 954.47,
+      "user": 398.92,
+      "system": 15.4,
+      "maxrss": 173836
+    }
+  },
+  "exact": {
+    "steps": 60000000,
+    "eligibleAttempts": 39761006,
+    "decodedBlocks": 390473,
+    "nativeCalls": 2345288,
+    "nativeRetirements": 5042482,
+    "ordinaryFallbackCalls": 54957518
+  },
+  "profiles": {
+    "ordinary": {
+      "sha256": "d0c76e42273ca01e3f83350824b2c23919c4777f7874666eb5b1562478cdff97",
+      "samples": 16356,
+      "intervalRequestedMicroseconds": 5000,
+      "candidateSelfSamples": 0,
+      "candidateShareOfAllSamples": 0,
+      "categories": {
+        "ordinaryCore": 12639,
+        "ordinaryBoard": 1848,
+        "other": 1236,
+        "runtime": 633
+      },
+      "files": {
+        "src/experimental/i80386.js": 12639,
+        "src/experimental/i80386-at-machine.js": 1848,
+        "scripts/run-i80386-at-console.mjs": 749,
+        "(runtime)": 633,
+        "src/i8086-machine.js": 168,
+        "src/experimental/vga-memory.js": 95,
+        "node-internal": 64,
+        "src/at-8042-a20.js": 35,
+        "src/mc146818.js": 34,
+        "src/i8254.js": 29,
+        "src/vga-card.js": 23,
+        "src/experimental/ata16.js": 20,
+        "src/upd765.js": 10,
+        "src/i8259.js": 5,
+        "src/ns16c550.js": 2,
+        "scripts/lib/i80386-at-console-events.mjs": 1,
+        "src/i8237.js": 1
+      },
+      "topSelfFunctions": [
+        {
+          "functionName": "src/experimental/i80386.js::_stepInstruction",
+          "samples": 3016
+        },
+        {
+          "functionName": "src/experimental/i80386.js::step",
+          "samples": 2204
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_translate",
+          "samples": 1125
+        },
+        {
+          "functionName": "src/experimental/i80386-at-machine.js::_read386",
+          "samples": 1041
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_decodeEA",
+          "samples": 776
+        },
+        {
+          "functionName": "scripts/run-i80386-at-console.mjs::runChunk",
+          "samples": 746
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_linear",
+          "samples": 625
+        },
+        {
+          "functionName": "(runtime)::(garbage collector)",
+          "samples": 586
+        },
+        {
+          "functionName": "src/experimental/i80386-at-machine.js::_write386",
+          "samples": 369
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_fetchN",
+          "samples": 345
+        },
+        {
+          "functionName": "src/experimental/i80386.js::maskFor",
+          "samples": 323
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_fetch8",
+          "samples": 288
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_operandRead",
+          "samples": 275
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_descriptorBytes",
+          "samples": 247
+        },
+        {
+          "functionName": "src/experimental/i80386.js::I80386Fault",
+          "samples": 238
+        },
+        {
+          "functionName": "src/experimental/i80386-at-machine.js::_serviceInterrupts",
+          "samples": 219
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_push",
+          "samples": 217
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_writeLinear",
+          "samples": 168
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_loadSeg",
+          "samples": 157
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_readLinear",
+          "samples": 152
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_stringIo",
+          "samples": 149
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_string",
+          "samples": 146
+        },
+        {
+          "functionName": "src/experimental/i80386.js::notePhysicalWrite",
+          "samples": 118
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_operandWrite",
+          "samples": 110
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_reg",
+          "samples": 100
+        }
+      ]
+    },
+    "optin": {
+      "sha256": "edcef02f05ea1792a7938fbeb0a1f8a2f39ee390957864fba882bb5495115cd4",
+      "samples": 87597,
+      "intervalRequestedMicroseconds": 5000,
+      "candidateSelfSamples": 41473,
+      "candidateShareOfAllSamples": 0.4734522871787847,
+      "categories": {
+        "codeWindow": 34767,
+        "ordinaryFallbackCore": 17737,
+        "otherCode16Dispatcher": 12309,
+        "blockDecode": 6706,
+        "other": 6594,
+        "runtime": 4224,
+        "ordinaryFallbackBoard": 2546,
+        "dispatcherAdmission": 1581,
+        "blockPrepare": 850,
+        "ordinaryBoard": 130,
+        "wasm": 78,
+        "ordinaryCore": 75
+      },
+      "files": {
+        "src/experimental/i80386-code16-window.js": 34767,
+        "src/experimental/i80386-code16-wasm-block.js": 21446,
+        "src/experimental/i80386.js": 17812,
+        "(runtime)": 4224,
+        "src/experimental/i80386-at-machine.js": 2676,
+        "src/experimental/i80386-code16-data-window.js": 1994,
+        "scripts/run-i80386-at-console.mjs": 1618,
+        "src/experimental/i80386-code16-ea.js": 1094,
+        "src/experimental/i80386-code16-form-census.js": 1089,
+        "src/i8086-machine.js": 310,
+        "src/experimental/vga-memory.js": 138,
+        "wasm": 78,
+        "node-internal": 71,
+        "src/mc146818.js": 65,
+        "src/at-8042-a20.js": 49,
+        "src/i8254.js": 49,
+        "src/vga-card.js": 45,
+        "src/experimental/ata16.js": 38,
+        "src/upd765.js": 19,
+        "src/i8259.js": 7,
+        "src/experimental/i80386-ram-bridge.js": 5,
+        "src/ns16c550.js": 2,
+        "src/experimental/i80286-protected.js": 1
+      },
+      "topSelfFunctions": [
+        {
+          "functionName": "src/experimental/i80386-code16-window.js::prevalidateI80386Code16Window",
+          "samples": 33277
+        },
+        {
+          "functionName": "src/experimental/i80386-code16-wasm-block.js::decodeBlock",
+          "samples": 6706
+        },
+        {
+          "functionName": "src/experimental/i80386-code16-wasm-block.js::run",
+          "samples": 6564
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_stepInstruction",
+          "samples": 4390
+        },
+        {
+          "functionName": "(runtime)::(garbage collector)",
+          "samples": 3387
+        },
+        {
+          "functionName": "src/experimental/i80386-code16-wasm-block.js::bump",
+          "samples": 3367
+        },
+        {
+          "functionName": "src/experimental/i80386.js::step",
+          "samples": 2575
+        },
+        {
+          "functionName": "scripts/run-i80386-at-console.mjs::runChunk",
+          "samples": 1612
+        },
+        {
+          "functionName": "src/experimental/i80386-code16-wasm-block.js::eligible",
+          "samples": 1431
+        },
+        {
+          "functionName": "src/experimental/i80386-code16-wasm-block.js::(anonymous)",
+          "samples": 1392
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_translate",
+          "samples": 1363
+        },
+        {
+          "functionName": "src/experimental/i80386-code16-window.js::inspect",
+          "samples": 1186
+        },
+        {
+          "functionName": "src/experimental/i80386-at-machine.js::_read386",
+          "samples": 1175
+        },
+        {
+          "functionName": "src/experimental/i80386-code16-form-census.js::decodeI80386Code16ObservedForm",
+          "samples": 912
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_decodeEA",
+          "samples": 888
+        },
+        {
+          "functionName": "src/experimental/i80386-code16-wasm-block.js::prepare",
+          "samples": 850
+        },
+        {
+          "functionName": "(runtime)::set length",
+          "samples": 801
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_linear",
+          "samples": 794
+        },
+        {
+          "functionName": "src/experimental/i80386-code16-data-window.js::(anonymous)",
+          "samples": 663
+        },
+        {
+          "functionName": "src/experimental/i80386-at-machine.js::_write386",
+          "samples": 551
+        },
+        {
+          "functionName": "src/experimental/i80386-code16-data-window.js::prevalidateI80386Code16DataWindow",
+          "samples": 547
+        },
+        {
+          "functionName": "src/experimental/i80386.js::I80386Fault",
+          "samples": 527
+        },
+        {
+          "functionName": "src/experimental/i80386-code16-wasm-block.js::refused",
+          "samples": 506
+        },
+        {
+          "functionName": "src/experimental/i80386.js::_fetchN",
+          "samples": 493
+        },
+        {
+          "functionName": "src/experimental/i80386-code16-data-window.js::inspect",
+          "samples": 492
+        }
+      ]
+    }
+  },
+  "predeclaredCandidate": "Cheaper code-window/cache admission, with strict candidate self samples from all code-window functions plus decodeBlock only.",
+  "predeclaredGate": "Prototype only if candidate is >=20% of all opt-in V8 self samples with selected reported guest/input/source parity; retain only after two alternating unprofiled 60M A/B pairs with matching selected fields, >=10% mean user-CPU gain, and no individual regression.",
+  "gateResult": "Candidate crosses profile screening gate; no speed or removability claim; unprofiled A/B proof remains required.",
+  "limits": "V8 CPU self samples are approximate process attribution, not removable cost or an Amdahl bound. A single profiled/control pair per mode cannot isolate host drift or profiler overhead. Reports omit full guest RAM, disk state and complete hidden CPU state. Private media identifiers, paths and guest text are omitted."
+}

@@ -1,0 +1,24 @@
+{
+  "status": "PASS",
+  "pid": 3823903,
+  "exitCode": 0,
+  "rawWaitStatus": 0,
+  "reaped": true,
+  "timeout": false,
+  "primaryError": null,
+  "finalizationErrors": [],
+  "pinsEqual": true,
+  "rusage": {
+    "userSeconds": 1.749672,
+    "systemSeconds": 2.229077,
+    "maxRssKiB": 79268,
+    "scope": "wait4 leader plus descendants reaped by it; not cgroup attribution"
+  },
+  "rawExitWallSeconds": 6.59821817651391,
+  "tests": 1,
+  "passes": 1,
+  "failures": 0,
+  "skips": 0,
+  "groupCleanup": "already absent",
+  "finalAuthInclusiveWallSeconds": 8.57648034952581
+}

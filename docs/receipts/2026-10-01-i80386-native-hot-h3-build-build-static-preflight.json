@@ -1,0 +1,34 @@
+{
+  "status": "BUILD_AND_STATIC_PREFLIGHT_PASS_NO_ADDON_LOAD_OR_GUEST",
+  "sourceRevision": "a645480594a9bc20a4046619745bb85e57abacd0",
+  "sourceInputs": 34,
+  "patchedInputs": 12,
+  "checks": 115,
+  "features": {
+    "BX_CPU_LEVEL": 3,
+    "BX_SUPPORT_SMP": 0,
+    "BX_DEBUGGER": 0,
+    "BX_USE_IDLE_HACK": 0,
+    "BX_SUPPORT_REPEAT_SPEEDUPS": 0,
+    "BX_SUPPORT_HANDLERS_CHAINING_SPEEDUPS": 0,
+    "BX_SUPPORT_FPU": 1,
+    "BX_PLUGINS": 0
+  },
+  "manifestSha256": "3bc47aadcfd01d3dd70266071be48259b93920ad3a566d0f02ec71f9af138e87",
+  "addonSha256": "47cbd33c1856d585208221d28aa614345723a42ea302eff83128671e6fe030de",
+  "addonBytes": 2066568,
+  "configSha256": "d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c",
+  "runtimeSha256": "89acf83dda501a097550e0465b4db2351229a991e51cbf8439d43bad77d4a42a",
+  "headerSha256": "04f7030ab482caaffa510bd83681f96a3cd3a2a0b900ff9304acefa8d1623a2d",
+  "napiSha256": "7f1c59f85acb858caaf672a21310b6e43e24529196ed9c7ee3880cc194e78634",
+  "requiredExports": [
+    "bw_direct_initialize",
+    "bw_direct_resume",
+    "bw_direct_set_irq_line",
+    "bw_direct_inspect",
+    "bw_direct_close",
+    "napi_register_module_v1"
+  ],
+  "h1RuntimeUnchanged": true,
+  "h3NativeExecution": false
+}

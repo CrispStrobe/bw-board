@@ -1,0 +1,9 @@
+{
+  "beforeAfterEqual": true,
+  "finalizationErrors": [],
+  "mode": "four-affected-python-source-controls",
+  "primaryError": null,
+  "scope": "four affected Python source/decoder fixtures; normal unittest stderr retained; no restoration/download/worker/factory/addon/CPU",
+  "sourceCount": 12,
+  "status": "SOURCE_CONTROLS_PASS"
+}

@@ -1,0 +1,101 @@
+{
+  "schema": "bw.i80386-current-packed-v8-profile.v1",
+  "date": "2026-09-28",
+  "scope": "Current packed-entry opt-in native protected32 path, complete lean stock xv6 forktest; one unprofiled control and one low-rate V8 CPU profile; no emulator implementation change or speed claim",
+  "source": {
+    "measuredMasterCommit": "ade888dae14b8cc8b6fe555a25e8dbd954c1cbe2",
+    "cpuSha256": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2",
+    "boardSha256": "cd590385f617841429e5de2f2bf7759fcd064f67db61a474272f3188e86c31fb",
+    "nativeDispatcherSha256": "d96a13682f00e74d7f3302444c7608233f94b492d1ea757ee1a8b3bccfde6ed5",
+    "nativeByteBlockSha256": "dfcd43bffbcf4cf42e044b60574ac0089421c5e63c1647cfd37b43d12ca78057",
+    "wasmSha256": "0e6cb0789a33500b512ec1ec5fc778b78a0459aebd2b3a0f89a786411f87a9c7",
+    "probeSha256": "d75485ccddf47fe1491bcff8fc9ac208683a9324b4e1b3cbfc416f76ca814533",
+    "categorySummarizerSha256": "ccf013c80781a32d8c8373a9e250482ec2e5576fb5c1a9cbad31cfee255b7fd5",
+    "functionSummarizerSha256": "f02a974a688501e9731e3684a62fe4cf52c1a60feeb540fae522e93f34cc359f"
+  },
+  "host": {
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX), KVM, 4 vCPU",
+    "node": "v20.20.2",
+    "profileRequestedIntervalMicroseconds": 5000,
+    "sharedHostLoadNote": "One-minute load average was 6.95 on four vCPUs shortly after the two runs. User CPU seconds are recorded only as diagnostic context; one profile/control pair does not establish a speed effect."
+  },
+  "reproduction": {
+    "environment": "XV6_LEAN=1 XV6_RAM_HASH=1 XV6_NATIVE_DISPATCH=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ '",
+    "control": "node scripts/probe-xv6-stock.mjs > /tmp/bw386-profile-control.json",
+    "profile": "node --cpu-prof --cpu-prof-interval=5000 --cpu-prof-dir=/tmp/bw386-current-profile-v8 scripts/probe-xv6-stock.mjs > /tmp/bw386-profile-v8.json",
+    "time": "/usr/bin/time -f 'user=%U system=%S elapsed=%e maxrss_kb=%M' -o FILE before each env-prefixed node command",
+    "categorySummary": "python3 scripts/summarize-i80386-native-profile.py /tmp/bw386-current-profile-v8/CPU.*.cpuprofile",
+    "functionSummary": "python3 scripts/summarize-i80386-current-v8-profile.py /tmp/bw386-current-profile-v8/CPU.*.cpuprofile",
+    "profileDirectoryRequirement": "Use an empty profile directory so the glob selects exactly one file.",
+    "romSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "xv6ImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "filesystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f"
+  },
+  "run": {
+    "controlUserCpuSeconds": 15.53,
+    "controlSystemCpuSeconds": 0.63,
+    "controlElapsedSeconds": 19.30,
+    "profileUserCpuSeconds": 17.46,
+    "profileSystemCpuSeconds": 0.70,
+    "profileElapsedSeconds": 25.46,
+    "profileDurationMicroseconds": 25335256,
+    "profileSha256": "3040079d0164f7f07af80b8fa5e2e9a63aa7fe77dae6726451d7fa5a9c8b910c",
+    "categorySummarySha256": "b924df4b8b1ba2d9308006b07b6cc5b09434b426e99bc21850a1e680efb879e2",
+    "functionSummarySha256": "269fcf89848061f89d8d515323fdba0d104e17d37c1fb6cfa3756adb750c4af2",
+    "controlAndProfiledCompleteReportSha256": "fcc09dc5cf1d6c85667fbde063cdc5613ec88ed44d001c572b89b4614f755de6",
+    "completeReportsByteIdentical": true,
+    "guestSteps": 24338279,
+    "nativeBlockCalls": 4001848,
+    "nativeRetirements": 16428211,
+    "physicalRamSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9"
+  },
+  "profile": {
+    "denominator": "4381 disjoint V8 self samples from the profiled whole Node process; no fallback observer or other diagnostic hook was enabled",
+    "totalSelfSamples": 4381,
+    "ordinaryCpuCore": 2051,
+    "ordinaryCpuCorePercent": 46.82,
+    "boardAndDevices": 447,
+    "dispatcherMixed": 482,
+    "nativeRunnerMixed": 448,
+    "dispatcherRunnerMixedEnvelope": 930,
+    "dispatcherRunnerMixedEnvelopePercent": 21.23,
+    "wasmExecution": 188,
+    "nativeDecodeDirect": 54,
+    "windowValidationDirect": 88,
+    "blockValidationDirect": 15,
+    "cpuStateCopyDirect": 31,
+    "wasmCallWrapperDirect": 41,
+    "blockSpikeOther": 92,
+    "otherHostRuntime": 444,
+    "topOrdinaryCpuDirectFunctions": {
+      "_stepInstruction": 587,
+      "step": 305,
+      "_translate": 181,
+      "_decodeEA": 108,
+      "_linear": 107,
+      "_fetchN": 74,
+      "_fetch8": 59
+    },
+    "directFetchDecodeScreen": {
+      "_decodeEA": 108,
+      "_fetchN": 74,
+      "_fetch8": 59,
+      "disjointTotal": 241,
+      "percentOfWholeProfile": 5.50
+    }
+  },
+  "interpretation": "Ordinary JavaScript 386 fallback execution is the largest observed named category, even after packed native entry. Its 2051 samples are an attribution bucket, not a removable cost estimate. The 930 dispatcher/runner samples are a mixed envelope containing validation, admission, state transfer and decisions; V8 inlining can move helper costs into these frames. The direct fetch/decode bin is an overlap-safe lower bound for those named functions, not a hard ceiling on a future cache. Probe-script, GC and other host-runtime samples remain in the whole-process denominator but are not attributed to an emulator optimization. The profiled run paid profiler overhead and is not compared to the control as an A/B speed result.",
+  "candidateGate": {
+    "candidate": "Before coding an all-current-opcode, page-safe JavaScript fallback fetch/decode cache, require source-position or form-linked evidence that its actually affected non-overlapping path accounts for at least 15% of current packed-entry whole-process V8 self samples. Do not count all of _stepInstruction, step, translation or the mixed native entry frames as removable fetch/decode cost.",
+    "currentDirectFunctionEvidence": "The named _decodeEA, _fetchN and _fetch8 functions contribute only 241/4381 = 5.50% direct self samples; this does not clear the 15% screening gate. Inlining prevents treating 5.50% as a definitive maximum, so a separate overlap-safe attribution is required before reconsidering the candidate.",
+    "screenPassed": false,
+    "retentionIfScreenLaterPasses": "Require focused code-write/DMA, page-remap, A20, privilege, fault rollback and chip/LAPIC/IRQ differential tests; byte-identical complete xv6 report and RAM hash; then three serial adjacent unprofiled baseline/candidate user-CPU pairs with at least 5% lower mean and all three pairs favorable. Measure protected16/Windows effect separately before any general 386 claim."
+  },
+  "priorNegativeComparison": {
+    "movLeaInline": "Duplicated 8B/8D effective-address decoding averaged 1.3% improvement over two pairs with a reversed pair; discarded in 2026-09-27-i80386-mov-lea-fastpath-negative.json.",
+    "registerTemplate": "Cached 89/39/85 register templates averaged about 2.4% improvement, below its 10% gate; discarded in 2026-09-27-i80386-discarded-reg-cache.json.",
+    "nativeMemoryBranchCoverage": "Page-safe 89/A4 and near-Jcc native coverage added 579024 retirements but delivered 0.22% mean user-CPU reduction with one reversed pair; discarded in 2026-09-28-i80386-native-coverage-no-go.json.",
+    "registerOnlyTrace": "The current-source completed native-successor census found only 557642 optimistic register-only successor calls, below its 1.5M gate; see 2026-09-28-i80386-native-successor-census.json."
+  },
+  "decision": "No new production optimization is justified by this profile alone. A larger gain needs an architectural path that replaces enough fallback work per entry, with fault/event/code-write contracts and a measured overlap-safe opportunity count."
+}

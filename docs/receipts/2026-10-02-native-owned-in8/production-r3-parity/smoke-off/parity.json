@@ -1,0 +1,12 @@
+{
+  "status": "IN8_JS_REFERENCE_CAPTURE_OFF_PARITY_PASS_NOT_SPEED_GATE",
+  "checks": 1408,
+  "canonicalRows": 0,
+  "logicalClockRows": 0,
+  "PORTinRows": 0,
+  "captureSha256": "8e94d6c67478dec5b5e1f13675984c264e0383cd9e18f39b9f9ca39653ebe41c",
+  "journalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "sourceRevision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "referenceRevision": "b68f316bf25a08012a110fcd426c435c2b588ad9",
+  "scope": "All166 native words and complete native snapshot fields exact between CAP modes; Eight recorded JS CPU fields exact; EDX/CR0 exact documented per-core profile rule, raw RAM hashes preserved with exact eight-byte reset witness verified and canonicalRAM anchor. Fullboard/IN witness checked. No invented unrecorded JS CPU state, no historical439/trace-row assumptions, no performance or broadAT claim."
+}

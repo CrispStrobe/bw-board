@@ -1,0 +1,10 @@
+{
+  "revision": "d9fbe713c7a2d878b3311ac14620d055b6e16ae9",
+  "files": {
+    "parent.py": "68d36bc4d47eee257b0ac400073f4f050decf14c547e9c0ef18d4421356e7595",
+    "policy.py": "78649692323be58de2f6de948c51b1fcb80918d73bb619b4d2af741cc0b45043",
+    "hosted.py": "202dc17851b2904f182f1af437346f0423059e408444ddb3a887f0555168b510",
+    "setup-entry.py": "5c94ff2ace7cceb6e11208deb271921cd8dca5e316725e2d996291bbd6763228",
+    "test_policy.py": "271f5e32ee1fd45dcff5a689977a6453eadcfb5a79ab4eb7928467abecbb2f99"
+  }
+}

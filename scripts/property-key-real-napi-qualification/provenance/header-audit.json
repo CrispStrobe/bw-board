@@ -1,0 +1,47 @@
+{
+  "status": "PASS_OFFICIAL_ARCHIVE_HEADERS_BYTE_EQUAL",
+  "archive": {
+    "path": "/tmp/pr201-node22.tar.xz",
+    "bytes": 31001304,
+    "sha256": "df450af89261115ef9f9e3830c3eeb2cc9213b63c720b1af623cb5dcbe2e02de",
+    "officialFilename": "node-v22.23.3-linux-x64.tar.xz",
+    "officialUrl": "https://nodejs.org/download/release/v22.23.3/node-v22.23.3-linux-x64.tar.xz"
+  },
+  "checksumSource": {
+    "path": "/tmp/node-v22.23.3-official-SHASUMS256-20261005.txt",
+    "bytes": 3981,
+    "sha256": "4fe99a2ba9d552a6f51c13ed68fb11104cfa5df601aec616be689253a8139e7a",
+    "url": "https://nodejs.org/download/release/v22.23.3/SHASUMS256.txt"
+  },
+  "headers": [
+    {
+      "member": "node-v22.23.3-linux-x64/include/node/node_api.h",
+      "localPath": "/tmp/node-v22.23.3-linux-x64/include/node/node_api.h",
+      "bytes": 10370,
+      "sha256": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a",
+      "byteEqual": true
+    },
+    {
+      "member": "node-v22.23.3-linux-x64/include/node/node_api_types.h",
+      "localPath": "/tmp/node-v22.23.3-linux-x64/include/node/node_api_types.h",
+      "bytes": 1825,
+      "sha256": "088766b3cf1f0cd9b292c361ad30f7a04e7cc6db35a20ca52c572c1adf9635e7",
+      "byteEqual": true
+    },
+    {
+      "member": "node-v22.23.3-linux-x64/include/node/js_native_api.h",
+      "localPath": "/tmp/node-v22.23.3-linux-x64/include/node/js_native_api.h",
+      "bytes": 32319,
+      "sha256": "624b39a85f0fe332f7cc1eb537e98f0e119be8503c742265fef6bdd53893adc8",
+      "byteEqual": true
+    },
+    {
+      "member": "node-v22.23.3-linux-x64/include/node/js_native_api_types.h",
+      "localPath": "/tmp/node-v22.23.3-linux-x64/include/node/js_native_api_types.h",
+      "bytes": 7814,
+      "sha256": "c63d227f42878411e2a291ce81e0adf83ce57b81c0ea806740108b979b741156",
+      "byteEqual": true
+    }
+  ],
+  "scope": "Read-only stream comparison; no extraction, download, Node/compiler/addon execution"
+}

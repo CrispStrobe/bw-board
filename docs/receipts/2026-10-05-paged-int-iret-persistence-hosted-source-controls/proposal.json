@@ -1,0 +1,32 @@
+{
+  "head": "36c46523f1d037832a33a75f7982df7180819ff2",
+  "worktree": "/tmp/bw-native-paged-int-iret-persistence-hosted-20261004",
+  "branch": "lane/386-paged-int-iret-persistence-hosted-20261004",
+  "ownSourceCount": 12,
+  "compiledCount": 208,
+  "driverCount": 81,
+  "combinedRolePaths": 301,
+  "parent": "/tmp/run-native-paged-int-iret-persistence-hosted-source-controls-20261004.py",
+  "sha256": "334bceb6a6224f373d817076a055870e73308d8dd04ca0adea2d546b199b27ea",
+  "command": [
+    "/usr/bin/python3",
+    "-B",
+    "scripts/paged-int-iret-hosted/test_source.py",
+    "Controls.test_fixed_artifact_sources_counts_node_and_addon",
+    "Controls.test_capped_lossless_decoder_accepts_complete_body_and_independent_outcome",
+    "Controls.test_capped_decoder_rejects_trailing_members_truncation_hashes_and_caps",
+    "Controls.test_independent_failed_outcome_is_readable_without_bulk_body_or_pass"
+  ],
+  "coverage": "four affected Python cases; five historical methods not rerun; NodeCI wrapper unchanged and not invoked by this focused capture",
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "fileMiB": 16,
+    "coreBytes": 0,
+    "nice": 10,
+    "blankHooks": 6,
+    "node": "22.23.3 binary pinned, not executed in this Python capture",
+    "memoryScope": "Python child has no heap cap; Node binary pinned, not invoked"
+  },
+  "scope": "No restoration/download/worker/factory/addon/CPU execution; read-only before/after source/tool/artifact maps"
+}

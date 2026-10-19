@@ -1,0 +1,40 @@
+{
+  "status": "ONE_ACTUAL_READ_ONLY_RUNTIME116_COMPILED103_AUTHENTICATION_RECEIPT_AUDIT_PASS",
+  "recordedUtc": "2026-10-02T19:02:34.252928+00:00",
+  "childCount": 1,
+  "runtimeHead": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+  "compiledHead": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "frozenSpanHead": "8e35080d29b32e9fcee5f8fbc5800209c74df2e7",
+  "runtimeSourceCount": 116,
+  "compiledSourceCount": 103,
+  "artifactCount": 179,
+  "preparedArtifactCount": 20,
+  "compiledAddonSha256": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841",
+  "qualifiedInputSha256": "7a0d60feaf9cc2ece5f9aa195cbbc0d7bd434224f8ea52f09b1c19496cc21462",
+  "mapsAndHeadsBeforeAfterUnchanged": true,
+  "NodeHelpersBindingInputBeforeAfterUnchanged": true,
+  "resultStdoutSha256": "79a0717246c41f9d7eff32c649b4709af029a055401f4c7f67f17e28133948e8",
+  "provenanceCanonicalSha256": "5616a5f792b8229f641e58e069860a8e08c3818b309aa7cc631457715eaf9d76",
+  "compiledProvenanceCanonicalSha256": "120a57af514a32dd95b67b82c51b150a50c6af0d02b53069b70c7f013fafc258",
+  "canonicalHashFormat": "SHA256(JSON UTF8 sorted keys, separators comma/colon)",
+  "exitReceiptSha256": "b63b923f977f6a3c017b1b45ad75021e02c19effe2d953fb9cc75e635d1cd8a8",
+  "output": "/mnt/volume1/tmp-astra/native-owned-span-runtime-readonly-auth-20261002",
+  "limits": {
+    "cpuSeconds": 15,
+    "wallSeconds": 60,
+    "heapMiB": 256,
+    "fileBytes": 8388608,
+    "coreBytes": 0,
+    "niceIncrement": 10
+  },
+  "stderrEmpty": true,
+  "evidenceHashes": {
+    "invocation.json": "9b12eafa25c0218e57a4241ae0576f7ea67c97c097f2fdb328ed56b586858a81",
+    "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source-after.json": "f815f8c607de03c62353941ea2b91b4632eb257e127670d39f5620dd1b72f03a",
+    "stdout.json": "79a0717246c41f9d7eff32c649b4709af029a055401f4c7f67f17e28133948e8",
+    "source-before.json": "f815f8c607de03c62353941ea2b91b4632eb257e127670d39f5620dd1b72f03a",
+    "exit.json": "b63b923f977f6a3c017b1b45ad75021e02c19effe2d953fb9cc75e635d1cd8a8"
+  },
+  "scope": "Read-only source/build provenance authentication only. No provider factory, ROM assembly, addon load, native build, guest, profile, performance test or runtime parity qualification."
+}

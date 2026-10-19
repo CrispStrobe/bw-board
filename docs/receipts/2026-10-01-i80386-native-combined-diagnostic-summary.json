@@ -1,0 +1,219 @@
+{
+  "qualificationStatus": "UNQUALIFIED",
+  "captureSha256": "766f987dd058e2a0e6bb3209b60147f3c1a903fe0f2b0a2be1d59a9c1b54508d",
+  "captureBytes": 187802505,
+  "sourceRevision": "cb92e41afc1e71a92a6407bb257730fa3f20e906",
+  "sourceInputs": 59,
+  "probes": 24,
+  "transports": 22,
+  "postcheckFailure": "ReferenceError: inventoryCache is not defined",
+  "guardMismatch": "executable-table-ad-write observed admitted-unexecuted-code-write",
+  "arms": {
+    "continuous": {
+      "finalCounters": {
+        "nativeTicks": 194,
+        "successfulQuanta": 192,
+        "attempts": 192,
+        "completed": 189,
+        "repIterations": 5,
+        "repPartial": 1,
+        "faults": 2,
+        "portCommits": 25,
+        "irqDeliveries": 1,
+        "haltIdleCuts": 2,
+        "rpcRequests": 663,
+        "rpcReplies": 663,
+        "nativeTickCallbacks": 194,
+        "quantumCallbacks": 192
+      },
+      "callbacks": {
+        "physicalReads": 139,
+        "physicalWrites": 104,
+        "executePages": 26,
+        "nativeTickCallbacks": 194,
+        "quantumCallbacks": 192
+      },
+      "fallback": {
+        "bochsRamReads": 0,
+        "bochsRamWrites": 0,
+        "bochsDirectPointers": 0,
+        "bochsPio": 0,
+        "bochsTimer": 0
+      },
+      "smcWitnesses": [
+        17,
+        17,
+        34,
+        34,
+        34,
+        34,
+        34,
+        34,
+        85,
+        85,
+        85,
+        85,
+        51,
+        51,
+        68,
+        68
+      ],
+      "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39"
+    },
+    "budget1": {
+      "finalCounters": {
+        "nativeTicks": 194,
+        "successfulQuanta": 192,
+        "attempts": 194,
+        "completed": 189,
+        "repIterations": 5,
+        "repPartial": 3,
+        "faults": 2,
+        "portCommits": 25,
+        "irqDeliveries": 1,
+        "haltIdleCuts": 1,
+        "rpcRequests": 663,
+        "rpcReplies": 663,
+        "nativeTickCallbacks": 194,
+        "quantumCallbacks": 192
+      },
+      "callbacks": {
+        "physicalReads": 139,
+        "physicalWrites": 104,
+        "executePages": 26,
+        "nativeTickCallbacks": 194,
+        "quantumCallbacks": 192
+      },
+      "fallback": {
+        "bochsRamReads": 0,
+        "bochsRamWrites": 0,
+        "bochsDirectPointers": 0,
+        "bochsPio": 0,
+        "bochsTimer": 0
+      },
+      "smcWitnesses": [
+        17,
+        17,
+        34,
+        34,
+        34,
+        34,
+        34,
+        34,
+        85,
+        85,
+        85,
+        85,
+        51,
+        51,
+        68,
+        68
+      ],
+      "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39"
+    },
+    "budget2": {
+      "finalCounters": {
+        "nativeTicks": 194,
+        "successfulQuanta": 192,
+        "attempts": 192,
+        "completed": 189,
+        "repIterations": 5,
+        "repPartial": 1,
+        "faults": 2,
+        "portCommits": 25,
+        "irqDeliveries": 1,
+        "haltIdleCuts": 2,
+        "rpcRequests": 663,
+        "rpcReplies": 663,
+        "nativeTickCallbacks": 194,
+        "quantumCallbacks": 192
+      },
+      "callbacks": {
+        "physicalReads": 139,
+        "physicalWrites": 104,
+        "executePages": 26,
+        "nativeTickCallbacks": 194,
+        "quantumCallbacks": 192
+      },
+      "fallback": {
+        "bochsRamReads": 0,
+        "bochsRamWrites": 0,
+        "bochsDirectPointers": 0,
+        "bochsPio": 0,
+        "bochsTimer": 0
+      },
+      "smcWitnesses": [
+        17,
+        17,
+        34,
+        34,
+        34,
+        34,
+        34,
+        34,
+        85,
+        85,
+        85,
+        85,
+        51,
+        51,
+        68,
+        68
+      ],
+      "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39"
+    },
+    "budget257": {
+      "finalCounters": {
+        "nativeTicks": 194,
+        "successfulQuanta": 192,
+        "attempts": 192,
+        "completed": 189,
+        "repIterations": 5,
+        "repPartial": 1,
+        "faults": 2,
+        "portCommits": 25,
+        "irqDeliveries": 1,
+        "haltIdleCuts": 2,
+        "rpcRequests": 663,
+        "rpcReplies": 663,
+        "nativeTickCallbacks": 194,
+        "quantumCallbacks": 192
+      },
+      "callbacks": {
+        "physicalReads": 139,
+        "physicalWrites": 104,
+        "executePages": 26,
+        "nativeTickCallbacks": 194,
+        "quantumCallbacks": 192
+      },
+      "fallback": {
+        "bochsRamReads": 0,
+        "bochsRamWrites": 0,
+        "bochsDirectPointers": 0,
+        "bochsPio": 0,
+        "bochsTimer": 0
+      },
+      "smcWitnesses": [
+        17,
+        17,
+        34,
+        34,
+        34,
+        34,
+        34,
+        34,
+        85,
+        85,
+        85,
+        85,
+        51,
+        51,
+        68,
+        68
+      ],
+      "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39"
+    }
+  },
+  "qualificationPassed": false,
+  "speedMeasured": false
+}

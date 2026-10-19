@@ -1,0 +1,857 @@
+{
+  "schema": "astra.386-vm-isa-platform-evidence.v1",
+  "focusedExecutionRevision": "41b630e2408c0a39fcbeb2a75644318ded19cb0b",
+  "priorQualifiedMilestone": "d128b384a9f9df986ae38db72bc7dae33a6b092e",
+  "scope": "Bounded original386 VM86, BIOS selector queries, compiler ISA, interruptible string I/O, snapshot performance and experimental ATA16; not full386DX or DOS/Windows/Doom acceptance. Each measurement retains its actual executed revision.",
+  "focusedTests": {
+    "command": "node --test test/i80386-*.test.mjs test/freedos-at-acceptance.test.mjs test/freedos14-at-persistence-evidence.test.mjs",
+    "node": "v22.23.2",
+    "passed": 191,
+    "skipped": 2,
+    "failed": 0,
+    "rawSha256": "3064a5f3269b87e994874304b8d4351a7363330dc6f5c621d530a40459ce8bdd"
+  },
+  "pcjs": {
+    "verr": {
+      "rawSha256": "0a8879b20bf7da67664bdd00319c397311318cea6f751ab9cd24255bda365ef0",
+      "report": {
+        "oracle": "PCjs",
+        "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+        "executionRevision": "65d60ffc3bf1b954671bcbfe91fbb4bc52db4667",
+        "scope": "owned ring-0 VERR/VERW queries of P=0 accessible data, RPL privilege rejection, execute-only code type rejection and null selectors; exact non-ZF flags and HLT completion",
+        "sourceHashes": {
+          "./compare-pcjs-i80386-verr.mjs": "4182482aa349da0c138914c0eb209b42e04b09f03662f11667965bdcf4da6842",
+          "../src/experimental/i80386.js": "3fb18552ebff870a6360d252d96615871e78e0dbb3c52746ecf62ac8af594182"
+        },
+        "mutation": null,
+        "expected": {
+          "ax": 0,
+          "bx": 2135,
+          "cx": 2135,
+          "dx": 2071,
+          "si": 2071,
+          "bp": 2071,
+          "cs": 8,
+          "eip": 42,
+          "halted": true
+        },
+        "status": "pass",
+        "reference": {
+          "ax": 0,
+          "bx": 2135,
+          "cx": 2135,
+          "dx": 2071,
+          "si": 2071,
+          "di": 0,
+          "bp": 2071,
+          "cs": 8,
+          "eip": 42,
+          "halted": true
+        },
+        "actual": {
+          "ax": 0,
+          "bx": 2135,
+          "cx": 2135,
+          "dx": 2071,
+          "si": 2071,
+          "di": 0,
+          "bp": 2071,
+          "cs": 8,
+          "eip": 42,
+          "halted": true
+        },
+        "differences": []
+      }
+    },
+    "lar-lsl": {
+      "rawSha256": "7c55b006b4db55eecc7341c32c0d66aa1ab6b06ca92931167ce7e3a93f9d841f",
+      "report": {
+        "oracle": "PCjs",
+        "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+        "executionRevision": "65d60ffc3bf1b954671bcbfe91fbb4bc52db4667",
+        "scope": "owned ring-0 32-bit LAR/LSL of a P=0 granular data descriptor after exact selector setup and HLT completion; LAR limit-high nibble is architecturally undefined and recorded separately; no task switch or privilege transition",
+        "sourceHashes": {
+          "./compare-pcjs-i80386-lar-lsl.mjs": "f6110a697e1dc0aa531aa41be338c5dbc69a4706de8ba2a3ff77bc9a73b61625",
+          "../src/experimental/i80386.js": "3fb18552ebff870a6360d252d96615871e78e0dbb3c52746ecf62ac8af594182"
+        },
+        "mutation": null,
+        "expected": {
+          "ax": 32,
+          "larDefined": 8393216,
+          "cx": 24,
+          "edi": 305422335,
+          "ds": 12,
+          "dsBase": 1280,
+          "busyAccess": 139,
+          "cs": 8,
+          "eip": 35,
+          "halted": true,
+          "ldtr": [
+            16,
+            768,
+            15
+          ],
+          "tr": [
+            24,
+            1024,
+            102
+          ]
+        },
+        "status": "pass",
+        "reference": {
+          "ax": 32,
+          "bx": 8458752,
+          "larDefined": 8393216,
+          "larUndefinedNibble": 1,
+          "cx": 24,
+          "edi": 305422335,
+          "ds": 12,
+          "dsBase": 1280,
+          "busyAccess": 139,
+          "cs": 8,
+          "eip": 35,
+          "halted": true,
+          "ldtr": [
+            16,
+            768,
+            15
+          ],
+          "tr": [
+            24,
+            1024,
+            102
+          ]
+        },
+        "actual": {
+          "ax": 32,
+          "bx": 8393216,
+          "larDefined": 8393216,
+          "larUndefinedNibble": 0,
+          "cx": 24,
+          "edi": 305422335,
+          "ds": 12,
+          "dsBase": 1280,
+          "busyAccess": 139,
+          "cs": 8,
+          "eip": 35,
+          "halted": true,
+          "ldtr": [
+            16,
+            768,
+            15
+          ],
+          "tr": [
+            24,
+            1024,
+            102
+          ]
+        },
+        "differences": []
+      }
+    },
+    "lar-defined": {
+      "rawSha256": "e2324bb27cd85ad10e70265fa95143365e15c5c2a59157eca24b6115a3e62e96",
+      "report": {
+        "oracle": "PCjs",
+        "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+        "executionRevision": "65d60ffc3bf1b954671bcbfe91fbb4bc52db4667",
+        "scope": "owned ring-0 32-bit LAR/LSL of a P=0 granular data descriptor after exact selector setup and HLT completion; LAR limit-high nibble is architecturally undefined and recorded separately; no task switch or privilege transition",
+        "sourceHashes": {
+          "./compare-pcjs-i80386-lar-lsl.mjs": "f6110a697e1dc0aa531aa41be338c5dbc69a4706de8ba2a3ff77bc9a73b61625",
+          "../src/experimental/i80386.js": "3fb18552ebff870a6360d252d96615871e78e0dbb3c52746ecf62ac8af594182"
+        },
+        "mutation": "lar-defined",
+        "expected": {
+          "ax": 32,
+          "larDefined": 8393216,
+          "cx": 24,
+          "edi": 305422335,
+          "ds": 12,
+          "dsBase": 1280,
+          "busyAccess": 139,
+          "cs": 8,
+          "eip": 35,
+          "halted": true,
+          "ldtr": [
+            16,
+            768,
+            15
+          ],
+          "tr": [
+            24,
+            1024,
+            102
+          ]
+        },
+        "status": "fail",
+        "reference": {
+          "ax": 32,
+          "bx": 8458752,
+          "larDefined": 8393216,
+          "larUndefinedNibble": 1,
+          "cx": 24,
+          "edi": 305422335,
+          "ds": 12,
+          "dsBase": 1280,
+          "busyAccess": 139,
+          "cs": 8,
+          "eip": 35,
+          "halted": true,
+          "ldtr": [
+            16,
+            768,
+            15
+          ],
+          "tr": [
+            24,
+            1024,
+            102
+          ]
+        },
+        "actual": {
+          "ax": 32,
+          "bx": 8393216,
+          "larDefined": 8393472,
+          "larUndefinedNibble": 0,
+          "cx": 24,
+          "edi": 305422335,
+          "ds": 12,
+          "dsBase": 1280,
+          "busyAccess": 139,
+          "cs": 8,
+          "eip": 35,
+          "halted": true,
+          "ldtr": [
+            16,
+            768,
+            15
+          ],
+          "tr": [
+            24,
+            1024,
+            102
+          ]
+        },
+        "differences": [
+          {
+            "field": "actual.larDefined",
+            "expected": 8393216,
+            "actual": 8393472
+          }
+        ]
+      }
+    },
+    "lsl-limit": {
+      "rawSha256": "0ce6966922f765943471026e4a6ce4d5afd602efae659a2698f61812d66afc30",
+      "report": {
+        "oracle": "PCjs",
+        "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+        "executionRevision": "65d60ffc3bf1b954671bcbfe91fbb4bc52db4667",
+        "scope": "owned ring-0 32-bit LAR/LSL of a P=0 granular data descriptor after exact selector setup and HLT completion; LAR limit-high nibble is architecturally undefined and recorded separately; no task switch or privilege transition",
+        "sourceHashes": {
+          "./compare-pcjs-i80386-lar-lsl.mjs": "f6110a697e1dc0aa531aa41be338c5dbc69a4706de8ba2a3ff77bc9a73b61625",
+          "../src/experimental/i80386.js": "3fb18552ebff870a6360d252d96615871e78e0dbb3c52746ecf62ac8af594182"
+        },
+        "mutation": "lsl-limit",
+        "expected": {
+          "ax": 32,
+          "larDefined": 8393216,
+          "cx": 24,
+          "edi": 305422335,
+          "ds": 12,
+          "dsBase": 1280,
+          "busyAccess": 139,
+          "cs": 8,
+          "eip": 35,
+          "halted": true,
+          "ldtr": [
+            16,
+            768,
+            15
+          ],
+          "tr": [
+            24,
+            1024,
+            102
+          ]
+        },
+        "status": "fail",
+        "reference": {
+          "ax": 32,
+          "bx": 8458752,
+          "larDefined": 8393216,
+          "larUndefinedNibble": 1,
+          "cx": 24,
+          "edi": 305422335,
+          "ds": 12,
+          "dsBase": 1280,
+          "busyAccess": 139,
+          "cs": 8,
+          "eip": 35,
+          "halted": true,
+          "ldtr": [
+            16,
+            768,
+            15
+          ],
+          "tr": [
+            24,
+            1024,
+            102
+          ]
+        },
+        "actual": {
+          "ax": 32,
+          "bx": 8393216,
+          "larDefined": 8393216,
+          "larUndefinedNibble": 0,
+          "cx": 24,
+          "edi": 305422334,
+          "ds": 12,
+          "dsBase": 1280,
+          "busyAccess": 139,
+          "cs": 8,
+          "eip": 35,
+          "halted": true,
+          "ldtr": [
+            16,
+            768,
+            15
+          ],
+          "tr": [
+            24,
+            1024,
+            102
+          ]
+        },
+        "differences": [
+          {
+            "field": "actual.edi",
+            "expected": 305422335,
+            "actual": 305422334
+          }
+        ]
+      }
+    },
+    "protection-vm": {
+      "rawSha256": "8c866290c87bbcc32de35bc93fe26759e67b84a1cb8ce300e52a47786a0a4e32",
+      "executionRevision": "65d60ffc3bf1b954671bcbfe91fbb4bc52db4667",
+      "referenceRevision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "sourceHashes": {
+        "./compare-pcjs-protected386-faults.mjs": "d16d9da20ecd60c83e66386fedfed6638d5f4c0eec53090affcea7ec563f53bd",
+        "../src/experimental/i80386.js": "3fb18552ebff870a6360d252d96615871e78e0dbb3c52746ecf62ac8af594182"
+      },
+      "status": "pass",
+      "knownOracleLimitations": {
+        "resumeFlag": {
+          "graded": false,
+          "pcjsObserved": 770,
+          "intel386Expected": "RF set in the saved EFLAGS image for a fault",
+          "localObserved": 66306
+        },
+        "ioResumeFlag": {
+          "graded": false,
+          "pcjsObserved": 2,
+          "intel386Expected": "RF set in the saved EFLAGS image for the denied IN fault",
+          "localObserved": 65538
+        },
+        "conformingGateTargetRpl": {
+          "graded": false,
+          "pcjsObserved": "target selector RPL 0 becomes CPL 0 and selects the inner stack",
+          "intel386Expected": "conforming target retains caller CPL 3 and the current stack",
+          "localObserved": "handler CS has RPL 3 and the current ring-3 stack contains the frame"
+        }
+      },
+      "vm86Expected": null,
+      "vm86RoundTrip": {
+        "reference": {
+          "cs": 61440,
+          "eip": 257,
+          "ss": 8192,
+          "esp": 512,
+          "vm": true,
+          "visited": true,
+          "completed": true,
+          "frame": [
+            257,
+            61440,
+            143874,
+            512,
+            8192,
+            12288,
+            16384,
+            20480,
+            24576
+          ]
+        },
+        "actual": {
+          "cs": 61440,
+          "eip": 257,
+          "ss": 8192,
+          "esp": 512,
+          "vm": true,
+          "visited": true,
+          "completed": true,
+          "frame": [
+            257,
+            61440,
+            143874,
+            512,
+            8192,
+            12288,
+            16384,
+            20480,
+            24576
+          ]
+        }
+      },
+      "differences": []
+    },
+    "vm-negative": {
+      "rawSha256": "364fa8d505f6b221a945e642659dfcf42d6e4df80e61302cdc43ed8b3ea7ea3d",
+      "executionRevision": "65d60ffc3bf1b954671bcbfe91fbb4bc52db4667",
+      "referenceRevision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "sourceHashes": {
+        "./compare-pcjs-protected386-faults.mjs": "d16d9da20ecd60c83e66386fedfed6638d5f4c0eec53090affcea7ec563f53bd",
+        "../src/experimental/i80386.js": "3fb18552ebff870a6360d252d96615871e78e0dbb3c52746ecf62ac8af594182"
+      },
+      "status": "fail",
+      "knownOracleLimitations": {
+        "resumeFlag": {
+          "graded": false,
+          "pcjsObserved": 770,
+          "intel386Expected": "RF set in the saved EFLAGS image for a fault",
+          "localObserved": 66306
+        },
+        "ioResumeFlag": {
+          "graded": false,
+          "pcjsObserved": 2,
+          "intel386Expected": "RF set in the saved EFLAGS image for the denied IN fault",
+          "localObserved": 65538
+        },
+        "conformingGateTargetRpl": {
+          "graded": false,
+          "pcjsObserved": "target selector RPL 0 becomes CPL 0 and selects the inner stack",
+          "intel386Expected": "conforming target retains caller CPL 3 and the current stack",
+          "localObserved": "handler CS has RPL 3 and the current ring-3 stack contains the frame"
+        }
+      },
+      "vm86Expected": null,
+      "vm86RoundTrip": {
+        "reference": {
+          "cs": 61440,
+          "eip": 257,
+          "ss": 8192,
+          "esp": 512,
+          "vm": true,
+          "visited": true,
+          "completed": true,
+          "frame": [
+            257,
+            61440,
+            143874,
+            512,
+            8192,
+            12288,
+            16384,
+            20480,
+            24576
+          ]
+        },
+        "actual": {
+          "cs": 61440,
+          "eip": 257,
+          "ss": 8192,
+          "esp": 512,
+          "vm": true,
+          "visited": true,
+          "completed": true,
+          "frame": [
+            257,
+            61440,
+            143874,
+            512,
+            8192,
+            12289,
+            16384,
+            20480,
+            24576
+          ]
+        }
+      },
+      "differences": [
+        {
+          "case": "vm86Expected",
+          "engine": "actual",
+          "expected": {
+            "cs": 61440,
+            "eip": 257,
+            "ss": 8192,
+            "esp": 512,
+            "vm": true,
+            "visited": true,
+            "completed": true,
+            "frame": [
+              257,
+              61440,
+              143874,
+              512,
+              8192,
+              12288,
+              16384,
+              20480,
+              24576
+            ]
+          },
+          "actual": {
+            "cs": 61440,
+            "eip": 257,
+            "ss": 8192,
+            "esp": 512,
+            "vm": true,
+            "visited": true,
+            "completed": true,
+            "frame": [
+              257,
+              61440,
+              143874,
+              512,
+              8192,
+              12289,
+              16384,
+              20480,
+              24576
+            ]
+          }
+        },
+        {
+          "case": "vm86RoundTrip",
+          "reference": {
+            "cs": 61440,
+            "eip": 257,
+            "ss": 8192,
+            "esp": 512,
+            "vm": true,
+            "visited": true,
+            "completed": true,
+            "frame": [
+              257,
+              61440,
+              143874,
+              512,
+              8192,
+              12288,
+              16384,
+              20480,
+              24576
+            ]
+          },
+          "actual": {
+            "cs": 61440,
+            "eip": 257,
+            "ss": 8192,
+            "esp": 512,
+            "vm": true,
+            "visited": true,
+            "completed": true,
+            "frame": [
+              257,
+              61440,
+              143874,
+              512,
+              8192,
+              12289,
+              16384,
+              20480,
+              24576
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "hardwareSamples": {
+    "imul-immediate": {
+      "rawSha256": "7d645ef497d81578b15e6277fb6d6a3b12d11951f099ba2ea8f7e3bf91517605",
+      "executionRevision": "46f430a86908206c03cec118cb92d30dd8885a6a",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "0016b0be08a6bb33db11d0968cfc7fff21fa60ef8f7fe2d823614f22a6560479",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "320abbf9e6b6ad42b606d31db30c643516c8534158158b4e510310a107970f8e"
+      },
+      "scope": "9 fixed deterministic signed immediate IMUL samples spanning word and dword operands; malformed 6669 source excluded; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "accounting": {
+        "files": 3,
+        "admitted": 9,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 224,
+        "profileExcluded": 0,
+        "failures": 0
+      }
+    },
+    "setcc": {
+      "rawSha256": "eed1e688a1cf1f84e089d39fb66dd7928cb4497bd91dbbfda386bbf45c60351b",
+      "executionRevision": "46f430a86908206c03cec118cb92d30dd8885a6a",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "0016b0be08a6bb33db11d0968cfc7fff21fa60ef8f7fe2d823614f22a6560479",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "320abbf9e6b6ad42b606d31db30c643516c8534158158b4e510310a107970f8e"
+      },
+      "scope": "48 fixed deterministic SETcc samples covering all original 386 conditions; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "accounting": {
+        "files": 16,
+        "admitted": 48,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 297,
+        "profileExcluded": 0,
+        "failures": 0
+      }
+    },
+    "double-shift": {
+      "rawSha256": "13b27147a42eb74a4e7f75e093c9b04347e0250faa2c4c39d67227011701144d",
+      "executionRevision": "46f430a86908206c03cec118cb92d30dd8885a6a",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "0016b0be08a6bb33db11d0968cfc7fff21fa60ef8f7fe2d823614f22a6560479",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "320abbf9e6b6ad42b606d31db30c643516c8534158158b4e510310a107970f8e"
+      },
+      "scope": "24 fixed count-one SHLD/SHRD samples spanning immediate and CL forms with word and dword operands; wider counts have undefined flags and are not graded; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "accounting": {
+        "files": 8,
+        "admitted": 24,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 654,
+        "profileExcluded": 0,
+        "failures": 0
+      }
+    }
+  },
+  "limits": [
+    "No full386 CPU diagnostic, x87, task switching, Windows or Doom acceptance.",
+    "64KiB test386 capture omits ROM128 task-switch tests; POST22 is not task-switch proof.",
+    "test386 missing-PTE accessed-bit assertion remains a named oracle disagreement.",
+    "LAR limit-high nibble is undefined and excluded explicitly; original386 query type/privilege rules are retained.",
+    "Historical BOUND BIOS diagnostic omitted ATA dependency; it is location evidence only.",
+    "ATA standalone tests and owned image preparation do not establish BIOS sector or OS disk acceptance."
+  ],
+  "test386": {
+    "rawSha256": "8ff09a4547dc1222a87c042a635f2f538e91f866fa770ad5dde19a82655b6cda",
+    "report": {
+      "schema": "astra.i80386-test386-diagnostic.v1",
+      "accepted": false,
+      "status": "bounded-blocker",
+      "fullRomPass": false,
+      "scope": "unchanged pinned test386 capture ROM; diagnostic progress only, no full-ROM or hardware-timing claim",
+      "node": "v22.23.2",
+      "steps": 1425991,
+      "post": [
+        {
+          "value": 0,
+          "width": 8
+        },
+        {
+          "value": 1,
+          "width": 8
+        },
+        {
+          "value": 2,
+          "width": 8
+        },
+        {
+          "value": 3,
+          "width": 8
+        },
+        {
+          "value": 4,
+          "width": 8
+        },
+        {
+          "value": 5,
+          "width": 8
+        },
+        {
+          "value": 6,
+          "width": 8
+        },
+        {
+          "value": 8,
+          "width": 8
+        },
+        {
+          "value": 9,
+          "width": 8
+        },
+        {
+          "value": 32,
+          "width": 8
+        },
+        {
+          "value": 33,
+          "width": 8
+        },
+        {
+          "value": 34,
+          "width": 8
+        },
+        {
+          "value": 11,
+          "width": 8
+        },
+        {
+          "value": 12,
+          "width": 8
+        },
+        {
+          "value": 13,
+          "width": 8
+        },
+        {
+          "value": 14,
+          "width": 8
+        },
+        {
+          "value": 15,
+          "width": 8
+        },
+        {
+          "value": 16,
+          "width": 8
+        },
+        {
+          "value": 17,
+          "width": 8
+        }
+      ],
+      "output": "",
+      "blocker": {
+        "name": "GuestAssertionFailure",
+        "message": "pinned test386 entered its error routine",
+        "step": 1425991,
+        "cs": 208,
+        "eip": 65151,
+        "physical": 1048191,
+        "opcode": 102,
+        "eflags": 2,
+        "eax": 12323,
+        "ebx": 0,
+        "ecx": 74,
+        "edx": 0,
+        "esp": 65519,
+        "ss": 280,
+        "recentInstructions": [
+          {
+            "step": 1425986,
+            "cs": 208,
+            "eip": 40400,
+            "physical": 1023440,
+            "opcode": 100,
+            "eflags": 2,
+            "eax": 1,
+            "ebx": 0,
+            "ecx": 74,
+            "edx": 0,
+            "esp": 65511,
+            "ss": 280
+          },
+          {
+            "step": 1425987,
+            "cs": 208,
+            "eip": 40404,
+            "physical": 1023444,
+            "opcode": 91,
+            "eflags": 2,
+            "eax": 12323,
+            "ebx": 0,
+            "ecx": 74,
+            "edx": 0,
+            "esp": 65511,
+            "ss": 280
+          },
+          {
+            "step": 1425988,
+            "cs": 208,
+            "eip": 40405,
+            "physical": 1023445,
+            "opcode": 195,
+            "eflags": 2,
+            "eax": 12323,
+            "ebx": 0,
+            "ecx": 74,
+            "edx": 0,
+            "esp": 65515,
+            "ss": 280
+          },
+          {
+            "step": 1425989,
+            "cs": 208,
+            "eip": 41068,
+            "physical": 1024108,
+            "opcode": 169,
+            "eflags": 2,
+            "eax": 12323,
+            "ebx": 0,
+            "ecx": 74,
+            "edx": 0,
+            "esp": 65519,
+            "ss": 280
+          },
+          {
+            "step": 1425990,
+            "cs": 208,
+            "eip": 41073,
+            "physical": 1024113,
+            "opcode": 15,
+            "eflags": 2,
+            "eax": 12323,
+            "ebx": 0,
+            "ecx": 74,
+            "edx": 0,
+            "esp": 65519,
+            "ss": 280
+          },
+          {
+            "step": 1425991,
+            "cs": 208,
+            "eip": 65151,
+            "physical": 1048191,
+            "opcode": 102,
+            "eflags": 2,
+            "eax": 12323,
+            "ebx": 0,
+            "ecx": 74,
+            "edx": 0,
+            "esp": 65519,
+            "ss": 280
+          }
+        ]
+      },
+      "executionRevision": "69276643e8ecdc55bd74aed64a0d4aba56bdaf54",
+      "instructionBudget": 2000000,
+      "input": {
+        "bytes": 65536,
+        "sha256": "3c4859cac2235f6ef5e8dbf3d706d8226ad860e2a624be3f9751981fadca4067",
+        "provenanceSha256": "8445f111e459457b950cd4b616bd6de63cd5209ed2c265fdd60cb8fe1bbc6403",
+        "revision": "cfd052d1e64d5375dea5a681c1eadeed64ceda2c",
+        "sourceClean": true
+      },
+      "sourceHashes": {
+        "./run-i80386-test386-diagnostic.mjs": "834685967ba7970d60897eafc9980db8e0c3a3d4e1a005a6d8a553cd07716aac",
+        "../src/experimental/i80386.js": "43b3e20b8a7b97fd425b0d70d004f4f44d5f8d642a2aec0d68306e6af6b2bd2d"
+      }
+    }
+  },
+  "relatedReceipts": [
+    "2026-09-19-386-snapshot-performance.json",
+    "2026-09-20-386-at-bios-isa-progression.json",
+    "2026-09-19-seavgabios-input.json"
+  ]
+}

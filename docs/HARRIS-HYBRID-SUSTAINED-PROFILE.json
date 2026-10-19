@@ -1,0 +1,109 @@
+{
+  "scope": "8192-iteration owned memory-only hybrid loop; complete process sampled including setup/warmup",
+  "rawProfileSHA256": "123de6c2b6f1181cbefcc3e9117ef105a425a1d1d3de3494bda6fc236b0f5e69",
+  "nativeModuleSHA256": "d4f2a84fde3eef4de01a5ef09abc613c0db2d50617b150c725b1c4a3e8a13b7b",
+  "sourceHashes": {
+    "src/experimental/wired-kernel/net-resolver.c": "05761c27766212f7bb7407e53d499c1693dff6d9a2e51ababb780721251ec434",
+    "src/experimental/wired-kernel/memory-banks.c": "98baf316c856a1c65b18527bd545ce1af61c273759f4f5f149c1ef5e208e5579",
+    "src/experimental/wired-kernel/memory-circuit.c": "d67debb7c80dc839be962701d67592a16eeb18f4e0d466a1d485b270d9604cc9",
+    "src/experimental/wired-kernel/phase-components.c": "3f4c4f432ab0bf7c2f7cae356b1fc89f2ce30a179c67a942c2f630e59bd4dfa7",
+    "src/experimental/wired-kernel/phase-circuit.c": "09ab60c2c068079890c179bf68787c5ba0979ac0f23169cd5344920b7816970a",
+    "src/experimental/wired-kernel/phase-schedule.c": "ab83285145df56e6d43bf501d2311df951e014bc3fda89a51a11cc9ef8d12852",
+    "src/experimental/wired-kernel/incremental-nets.c": "c5799bbc7142f04983083d6d66c19f8f5e3fdea1dde29970eff60df67833ff68",
+    "src/experimental/wired-kernel/bus-sequencer.c": "c472dbd15d3006c97c8d90599f8012895e7bf160f9210bbb5e705b7ded031656",
+    "src/experimental/wired-kernel/bus-circuit.c": "cb4836814c31edd4a659c7ba845a8f43e43fa3c8cd188c0a31176b87d9a5156e",
+    "scripts/bench-harris-hybrid-cpu.mjs": "f0592345430174cf6d895e0fee5a66669cd103c05efba6576f3167512da3bcb1",
+    "src/experimental/harris-native-memory-board.js": "3a4cb1e85bb4e154a5c6ad942a637105e6969dd2dcf4465f0178e14c31b7b525",
+    "src/experimental/harris-80c286-boot-cpu.js": "e44f66cbd032e5887fae4f33a03b3100d910cffbfcbc88e354eaf7d1cbe9b5ab",
+    "src/experimental/harris-80c286-memory-board.js": "6a15855cd9da71c3197fea426353b8118e2bdac4b170b1e5bc36f45ec7225aaf",
+    "src/experimental/harris-boot-rom.js": "7e184ed31af43f90775a7caa8f9c2de532abc57c9d42b1be590bb9ebc585c51b"
+  },
+  "bindingBaselineCommit": "d5d1043c3d943d79d1b34961a0c1b9073e38e68e",
+  "totalSamples": 2834,
+  "topSelfSamples": [
+    [
+      "settle_memory_circuit (native)",
+      563
+    ],
+    [
+      "preview_memory_banks (native)",
+      292
+    ],
+    [
+      "write_owned_driver (native)",
+      211
+    ],
+    [
+      "runUntilCompletion (experimental/wired-kernel/bus-circuit-image.js)",
+      187
+    ],
+    [
+      "settle_incremental_context (native)",
+      157
+    ],
+    [
+      "begin_bus_memory_clock (native)",
+      138
+    ],
+    [
+      "inspectBus (experimental/wired-kernel/bus-circuit-image.js)",
+      95
+    ],
+    [
+      "begin_latched_memory_clock (native)",
+      93
+    ],
+    [
+      "(garbage collector) (host)",
+      90
+    ],
+    [
+      "_instructions (experimental/harris-80c286-boot-cpu.js)",
+      83
+    ],
+    [
+      "runTransactions (experimental/harris-80c286-boot-cpu.js)",
+      67
+    ],
+    [
+      "_pump (experimental/harris-80c286-boot-cpu.js)",
+      59
+    ],
+    [
+      " (host)",
+      58
+    ],
+    [
+      "update (experimental/wired-kernel/bus-circuit-image.js)",
+      57
+    ],
+    [
+      "gather_phase (native)",
+      54
+    ],
+    [
+      " (experimental/wired-kernel/bus-circuit-image.js)",
+      37
+    ],
+    [
+      "validProgress (experimental/harris-80c286-boot-cpu.js)",
+      35
+    ],
+    [
+      "completion (experimental/wired-kernel/bus-circuit-image.js)",
+      35
+    ],
+    [
+      "update_address_latch (native)",
+      30
+    ],
+    [
+      "bus_inspect (native)",
+      28
+    ]
+  ],
+  "limitations": [
+    "Self-sample counts, not inclusive native execution attribution or exact time.",
+    "Recorded before scalar admission cleanup; not an isolated A/B speedup proof."
+  ]
+}

@@ -1,0 +1,8 @@
+8d86742993f4600988b9f4f0395ae75dd543caf76997c615fa9276107fc079e3  publication/scripts/ci-benchmark-i80386-owned-clock-bulk.py
+0.87 0.37 0.14 1/251 2624
+some avg10=0.00 avg60=0.22 avg300=0.23 total=1525273
+full avg10=0.00 avg60=0.00 avg300=0.00 total=0
+some avg10=0.00 avg60=0.00 avg300=0.00 total=1
+full avg10=0.00 avg60=0.00 avg300=0.00 total=1
+some avg10=51.03 avg60=32.16 avg300=14.08 total=52453000
+full avg10=50.85 avg60=31.85 avg300=13.88 total=51590860

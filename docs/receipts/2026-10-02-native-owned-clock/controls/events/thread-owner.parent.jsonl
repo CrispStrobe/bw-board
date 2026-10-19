@@ -1,0 +1,5 @@
+{"operation":"inspect","name":"wrong-thread-denied"}
+{"operation":"setIRQ","name":"wrong-thread-denied"}
+{"operation":"resume","name":"wrong-thread-denied"}
+{"operation":"close","name":"wrong-thread-denied"}
+{"name":"authenticated-done"}

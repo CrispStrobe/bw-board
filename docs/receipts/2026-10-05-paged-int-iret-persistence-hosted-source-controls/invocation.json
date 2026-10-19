@@ -1,0 +1,47 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-B",
+    "scripts/paged-int-iret-hosted/test_source.py",
+    "Controls.test_fixed_artifact_sources_counts_node_and_addon",
+    "Controls.test_capped_lossless_decoder_accepts_complete_body_and_independent_outcome",
+    "Controls.test_capped_decoder_rejects_trailing_members_truncation_hashes_and_caps",
+    "Controls.test_independent_failed_outcome_is_readable_without_bulk_body_or_pass"
+  ],
+  "bounds": {
+    "coreBytes": 0,
+    "cpuSeconds": 10,
+    "fileMiB": 16,
+    "memoryScope": "Python fixture has no heap cap; Node binary only pinned, not invoked",
+    "nice": 10,
+    "wallSeconds": 30
+  },
+  "compilerInjectionVariablesAbsent": [
+    "GCC_EXEC_PREFIX",
+    "COMPILER_PATH",
+    "LIBRARY_PATH",
+    "CPATH",
+    "C_INCLUDE_PATH",
+    "CPLUS_INCLUDE_PATH"
+  ],
+  "cwd": "/tmp/bw-native-paged-int-iret-persistence-hosted-20261004",
+  "environment": {
+    "BW_HOT_NAPI_PROFILE": "",
+    "LC_ALL": "C.UTF-8",
+    "LD_AUDIT": "",
+    "LD_PRELOAD": "",
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "NODE_V8_COVERAGE": "",
+    "PATH": "/usr/bin:/bin",
+    "PYTHONHOME": "",
+    "PYTHONINSPECT": "",
+    "PYTHONPATH": "",
+    "PYTHONSTARTUP": "",
+    "TMPDIR": "/tmp",
+    "TZ": "UTC"
+  },
+  "mode": "four-affected-python-source-controls",
+  "scope": "four affected Python source/decoder methods; no Node invocation, download, restore, worker, factory, provider, addon or emulated instructions",
+  "sourceCount": 12
+}

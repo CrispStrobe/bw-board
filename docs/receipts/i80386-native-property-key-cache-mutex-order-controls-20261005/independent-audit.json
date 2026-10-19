@@ -1,0 +1,31 @@
+{
+  "status": "INDEPENDENT_MUTEX_ORDER_TWO_AFFECTED_SOURCE_CONTROLS_PASS",
+  "revision": "cd27495e594a47c5a2a701d800b1d4397fa6a15a",
+  "sourceCount": 7,
+  "selectedNames": [
+    "exact complete counted inverse and fixed indexed key callsites",
+    "generated lifecycle and held callbacks/core-state wiring stay explicit"
+  ],
+  "sourceToolsPrepostEqual": true,
+  "mockSourceUnchangedFromPriorCompiled83a": true,
+  "compilerMockRerun": false,
+  "historicalCoverage": "Original7aed3FAIL, corrected83a3PASS distinct from thiscd2742PASS.",
+  "exit": {
+    "exitCode": 0,
+    "timeout": false,
+    "wallSeconds": 1.1358097083866596,
+    "wallScope": "parent including final authentication",
+    "childExitWallSeconds": 0.32378942519426346,
+    "rawWait4Status": 0,
+    "leaderRusage": {
+      "userSeconds": 0.273267,
+      "systemSeconds": 0.0723,
+      "maxRSSKiB": 55800
+    },
+    "rusageScope": "wait4 leader and its waited descendants; not guest or execution-window CPU",
+    "error": null,
+    "cleanupError": null,
+    "finalizationError": null,
+    "pinsEqual": true
+  }
+}

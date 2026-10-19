@@ -1,0 +1,1047 @@
+{
+  "status": "ACTUAL_FIXED_ROM_MAIN_CPU_GATE_AND_INDEPENDENT_AUDIT_PASS",
+  "qualifiedRuntimeRevision": "bab751825473d55d8bf6da8c6ad5786921ffcfe1",
+  "qualifiedRuntimeFiles": 95,
+  "compiledRevision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "compiledFiles": 86,
+  "addonSha256": "144f3af7b906e46bfb68c10b991fef15847d81c60e7bb44820ee73653e723818",
+  "scope": "lossless seven-new-file qualified-source archive; publication checkout is distinct and not runtime-qualified; no binary/largeCPUtrace/hostjournal archived",
+  "files": [
+    {
+      "path": "qualified-source-bab75182/scripts/run-i80386-native-owned-main.mjs",
+      "bytes": 7201,
+      "sha256": "fd6bd992da3138de58e5568219dd907e8d70ef48aecdce0ce75c28d5fede3920",
+      "originalPath": "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs"
+    },
+    {
+      "path": "qualified-source-bab75182/scripts/bochs-cpu3-native-owned-main/admission.mjs",
+      "bytes": 2450,
+      "sha256": "69cb58f59f1b6f93c16e1121454d637ea7a511d2a39c8273ac436320ffef49d7",
+      "originalPath": "/tmp/bw-board-386-native-owned-main-20261002/scripts/bochs-cpu3-native-owned-main/admission.mjs"
+    },
+    {
+      "path": "qualified-source-bab75182/scripts/bochs-cpu3-native-owned-main/bootstrap.mjs",
+      "bytes": 687,
+      "sha256": "13868ff311ae46e488047cca858e3c7fca14cd0d816edff0fee8c867d23b88fb",
+      "originalPath": "/tmp/bw-board-386-native-owned-main-20261002/scripts/bochs-cpu3-native-owned-main/bootstrap.mjs"
+    },
+    {
+      "path": "qualified-source-bab75182/scripts/bochs-cpu3-native-owned-main/contract.md",
+      "bytes": 1853,
+      "sha256": "9a55ee375f2beb85298d1631e9e53c3074639c27bbe091abf98252036f5e451e",
+      "originalPath": "/tmp/bw-board-386-native-owned-main-20261002/scripts/bochs-cpu3-native-owned-main/contract.md"
+    },
+    {
+      "path": "qualified-source-bab75182/scripts/bochs-cpu3-native-owned-main/identity.mjs",
+      "bytes": 3957,
+      "sha256": "d7c2d22447ab3b2114584d49dea06ed8065fa0e94b1c43546a811f168a18edec",
+      "originalPath": "/tmp/bw-board-386-native-owned-main-20261002/scripts/bochs-cpu3-native-owned-main/identity.mjs"
+    },
+    {
+      "path": "qualified-source-bab75182/test/i80386-native-owned-main.test.mjs",
+      "bytes": 6904,
+      "sha256": "bf6581d221c0553fad43742a05412c225f5f110a38bafb410ba9dd1db2edceb5",
+      "originalPath": "/tmp/bw-board-386-native-owned-main-20261002/test/i80386-native-owned-main.test.mjs"
+    },
+    {
+      "path": "qualified-source-bab75182/test/fixtures/i80386-owned-main-scheduler.json",
+      "bytes": 14876,
+      "sha256": "3b0499cff1a0b606fc03dd0f5e355239921ec14d473cb9f126e5fe9855a00ffc",
+      "originalPath": "/tmp/bw-board-386-native-owned-main-20261002/test/fixtures/i80386-owned-main-scheduler.json"
+    },
+    {
+      "path": "source/source-freeze.json",
+      "bytes": 32749,
+      "sha256": "993a71574217dc713967e6704e5f357d4bd3c03a3c9b7b7e9008349e97fe8615",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-source-20261002/source-freeze.json"
+    },
+    {
+      "path": "source/focused-final.stdout",
+      "bytes": 4688,
+      "sha256": "db7ffcd312e9cb425ac3c49246e02a08929a9d066886d387913bd897d3378f4c",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-source-20261002/focused-final.stdout"
+    },
+    {
+      "path": "source/focused-final.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-source-20261002/focused-final.stderr"
+    },
+    {
+      "path": "source/focused-final-receipt.json",
+      "bytes": 287,
+      "sha256": "954cd7b465564592038ec1a50ed4d110a903a62996a0d4b583aee7695c9249c4",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-source-20261002/focused-final-receipt.json"
+    },
+    {
+      "path": "capoff/independent-audit.json",
+      "bytes": 528,
+      "sha256": "1381bb7f329e79c56ac65afa012e4d3fe5c70b0d53e8d17a767fdf754ffedfe0",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-smoke-off-20261002/independent-audit.json"
+    },
+    {
+      "path": "capoff/auth-before.json",
+      "bytes": 817,
+      "sha256": "6c6b7b98056f854ad2b6ae05f1c8b7b72ba72d8a30570fe50b2a2ff58b6a5a3d",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-smoke-off-20261002/auth-before.json"
+    },
+    {
+      "path": "capoff/auth-after.json",
+      "bytes": 817,
+      "sha256": "6c6b7b98056f854ad2b6ae05f1c8b7b72ba72d8a30570fe50b2a2ff58b6a5a3d",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-smoke-off-20261002/auth-after.json"
+    },
+    {
+      "path": "capon/root-parity.json",
+      "bytes": 864,
+      "sha256": "9eca7dd2d0d4f9ef27d7d4201451c967411ec0f579ac041390f9c0f45362ae47",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-fulltrace-on-20261002/root-parity.json"
+    },
+    {
+      "path": "capon/independent-audit.json",
+      "bytes": 654,
+      "sha256": "c297b1e5cc916763c78f9fd67402a6bac05a7e032cac8dab026ea47d48106b18",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-fulltrace-on-20261002/independent-audit.json"
+    },
+    {
+      "path": "capon/auth-before.json",
+      "bytes": 817,
+      "sha256": "ce4858c093a773fc9baf0bfafdb59e68ed8bfce6c60e16c7e7d7af3b63dbb86a",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-fulltrace-on-20261002/auth-before.json"
+    },
+    {
+      "path": "capon/auth-after.json",
+      "bytes": 817,
+      "sha256": "ce4858c093a773fc9baf0bfafdb59e68ed8bfce6c60e16c7e7d7af3b63dbb86a",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-fulltrace-on-20261002/auth-after.json"
+    },
+    {
+      "path": "capon/input.json",
+      "bytes": 884,
+      "sha256": "bb86ffc3c7b04ed6fbf48d4b7f3a17665c505b9aed572b522a5e7eae83e4284f",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-fulltrace-on-20261002/input.json"
+    },
+    {
+      "path": "controls/run.py",
+      "bytes": 3916,
+      "sha256": "c04fae98c0f5a52d5034161a02ddc7b6bcf371eb657eb901581ea7d68db793bc",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/run.py"
+    },
+    {
+      "path": "controls/child.mjs",
+      "bytes": 4816,
+      "sha256": "ed7d97cea8e081895b6b3443ecb17a289a9f7c6cfa2d31db518b8ffd67dc3190",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/child.mjs"
+    },
+    {
+      "path": "controls/wrong-thread.mjs",
+      "bytes": 435,
+      "sha256": "10d2be4428e5b4335036c0ded7995bb437fe68c41e66015208d55165ba69b59c",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/wrong-thread.mjs"
+    },
+    {
+      "path": "controls/bounded.py",
+      "bytes": 3465,
+      "sha256": "2cb92b11da85a71561605cda251e9944503d055609dd53a6095589865e9fd903",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/bounded.py"
+    },
+    {
+      "path": "controls/bounded-derivation.json",
+      "bytes": 1592,
+      "sha256": "78edeaf543f16d3f2b97af30a5fcb67dee4b43f2c5106ca7da8afd80669ed3f3",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/bounded-derivation.json"
+    },
+    {
+      "path": "controls/plan.json",
+      "bytes": 953,
+      "sha256": "3845b3a4f006ef92300f29870589c6da5c5dffaff20690fd01639d9dc726d3d5",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/plan.json"
+    },
+    {
+      "path": "controls/prepared-helper-pins.json",
+      "bytes": 1225,
+      "sha256": "b9cad0e45b5c77170aae67da485f6a4461639e4d84c0453f271759503850f715",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/prepared-helper-pins.json"
+    },
+    {
+      "path": "controls/approved-bindings.json",
+      "bytes": 16648,
+      "sha256": "baf5120a19018d30c68c77a64c39b6a6a3361163c9fe227f13cd296210e60c9a",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/approved-bindings.json"
+    },
+    {
+      "path": "controls/auth-before.json",
+      "bytes": 15548,
+      "sha256": "f73b7594562f4bcd1859b912af99ed8b3a8a858e0099038fe0fbc003998219ff",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/auth-before.json"
+    },
+    {
+      "path": "controls/auth-after.json",
+      "bytes": 15548,
+      "sha256": "f73b7594562f4bcd1859b912af99ed8b3a8a858e0099038fe0fbc003998219ff",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/auth-after.json"
+    },
+    {
+      "path": "controls/summary.json",
+      "bytes": 22781,
+      "sha256": "9dce82f429ffb73a295470f0691ea96f205a0b9d945213aac863148be420f697",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/summary.json"
+    },
+    {
+      "path": "controls/independent-controls-audit.json",
+      "bytes": 671,
+      "sha256": "6bb07b336004c77d4824ed0eb0259fc69dfd415e33b471badd4c17521f914695",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/independent-controls-audit.json"
+    },
+    {
+      "path": "cpu-attempt1/run.py",
+      "bytes": 9491,
+      "sha256": "61ff6634446a328099c7a3442e167818e3b2b650810c725724aa8b8ff77e2dc0",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-20261002/run.py"
+    },
+    {
+      "path": "cpu-attempt1/plan.json",
+      "bytes": 2566,
+      "sha256": "7347637c20402f4c1c7891b1c5a99880093b792d0ca32d60faf654932f8bb3a6",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-20261002/plan.json"
+    },
+    {
+      "path": "cpu-attempt1/approved-bindings.json",
+      "bytes": 47646,
+      "sha256": "1024dc13ad55927312311e1d02543e1ad470ff64464a2ab975ef38c0c8af25a2",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-20261002/approved-bindings.json"
+    },
+    {
+      "path": "cpu-attempt1/prepared-helper-pins.json",
+      "bytes": 395,
+      "sha256": "7ce01931b44f96b15dbe488ae8f9979068148a760eb2d506dc2ddd7c973b6486",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-20261002/prepared-helper-pins.json"
+    },
+    {
+      "path": "cpu-attempt1/pre-child-failure.json",
+      "bytes": 639,
+      "sha256": "f52418635727d79ce4ff54830378b310757c55fd01c6ed3f9583a1d120abb529",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-20261002/pre-child-failure.json"
+    },
+    {
+      "path": "cpu-r2/run.py",
+      "bytes": 9502,
+      "sha256": "00666da44b35df1b73e14eb8b4806e038c109d608ff7831b5b38f0abd296a50e",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/run.py"
+    },
+    {
+      "path": "cpu-r2/plan.json",
+      "bytes": 2566,
+      "sha256": "7347637c20402f4c1c7891b1c5a99880093b792d0ca32d60faf654932f8bb3a6",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/plan.json"
+    },
+    {
+      "path": "cpu-r2/approved-bindings.json",
+      "bytes": 50596,
+      "sha256": "d25e57d6c1fc67d175a4564d93d84a4fde53308712f76d88a2ba25e6f737a17d",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/approved-bindings.json"
+    },
+    {
+      "path": "cpu-r2/prepared-helper-pins.json",
+      "bytes": 412,
+      "sha256": "3e6f2aa724b42c8c71b7273f36bf449c66a26d394a2807ae174cfd27743906e8",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/prepared-helper-pins.json"
+    },
+    {
+      "path": "controls/clock-close-child.exit.json",
+      "bytes": 864,
+      "sha256": "b14c0ec80f8411066792bbe2e1725cbd3b8b80b2170601e395a3cd309e9482cc",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-close-child.exit.json"
+    },
+    {
+      "path": "controls/clock-create-child.exit.json",
+      "bytes": 865,
+      "sha256": "1837fdd4927f1f3d9f940b3faa8f97b0dd11b3389fcac278634a15fc408d65f1",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-create-child.exit.json"
+    },
+    {
+      "path": "controls/clock-inspect-child.exit.json",
+      "bytes": 866,
+      "sha256": "3b09beb578d9bc70f0e596a85e3ebc5f396fdd89512bea0f62bf78adfe6dbb97",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-inspect-child.exit.json"
+    },
+    {
+      "path": "controls/clock-resume-child.exit.json",
+      "bytes": 865,
+      "sha256": "2d3c64b1b79fe16d9c003655788bb77541b21508caf45e88383c63544788a656",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-resume-child.exit.json"
+    },
+    {
+      "path": "controls/clock-setIRQ-child.exit.json",
+      "bytes": 865,
+      "sha256": "a0ae2eb16d4fc570eaef4fb0f088bb58105b5e84362a7bdbf3257c4583517326",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-setIRQ-child.exit.json"
+    },
+    {
+      "path": "controls/failed-capture-child.exit.json",
+      "bytes": 872,
+      "sha256": "07c15c5949386eed52c3136203cd4af95c564b42301de692946f768b014a8ff2",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/failed-capture-child.exit.json"
+    },
+    {
+      "path": "controls/memory-close-child.exit.json",
+      "bytes": 865,
+      "sha256": "22962d249449e746d3ebdddc35def58138ee36966378e82df371298deec8dbe8",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/memory-close-child.exit.json"
+    },
+    {
+      "path": "controls/memory-create-child.exit.json",
+      "bytes": 866,
+      "sha256": "49bf919226972d39b30bf07221dd34cb659a2a84e077f421fe12e9d477ac2f6b",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/memory-create-child.exit.json"
+    },
+    {
+      "path": "controls/memory-inspect-child.exit.json",
+      "bytes": 867,
+      "sha256": "c654ade5f4aa16bd49f6372e8cda399409dc84d8fab1e8082d6ba0d5e16d64a7",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/memory-inspect-child.exit.json"
+    },
+    {
+      "path": "controls/memory-resume-child.exit.json",
+      "bytes": 866,
+      "sha256": "d89801c4afac459c0e7917c440cf32e7cddd93c2668d3998cef54ed6a258a2ca",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/memory-resume-child.exit.json"
+    },
+    {
+      "path": "controls/memory-setIRQ-child.exit.json",
+      "bytes": 866,
+      "sha256": "60c0763603c8542835c92c0dda85614cdcb8ec3610313327802aca9c838e7b7d",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/memory-setIRQ-child.exit.json"
+    },
+    {
+      "path": "controls/second-create-child.exit.json",
+      "bytes": 871,
+      "sha256": "1988059cc0db9d219f5c3b92b4345d4c2eb05063fdb8d1431f8c8eeb4d1b12f7",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/second-create-child.exit.json"
+    },
+    {
+      "path": "controls/wrong-thread-child.exit.json",
+      "bytes": 870,
+      "sha256": "34afba6f557ff9e2c52d74b8808d1fa983fdf64de8ad5a589ff0b85690f92d44",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/wrong-thread-child.exit.json"
+    },
+    {
+      "path": "controls/clock-close/events.jsonl",
+      "bytes": 301,
+      "sha256": "da4ca6ab7731c44f19c2fac532e8363d18b9dd0c7e3aa41d4291a601770f5251",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-close/events.jsonl"
+    },
+    {
+      "path": "controls/clock-create/events.jsonl",
+      "bytes": 303,
+      "sha256": "25da43af01e96b2aedac7285265ffcd237062bc5bd61b9b645e187eb010afa0a",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-create/events.jsonl"
+    },
+    {
+      "path": "controls/clock-inspect/events.jsonl",
+      "bytes": 305,
+      "sha256": "df8a364009bdb3563878a6a5dd0ad7a6ee3676d4b5a56c7f87eb4a66619bee1b",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-inspect/events.jsonl"
+    },
+    {
+      "path": "controls/clock-resume/events.jsonl",
+      "bytes": 303,
+      "sha256": "a9de528a545231fa87a37a72bda123e63328f45f72c0459e73dca8d51a019fd7",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-resume/events.jsonl"
+    },
+    {
+      "path": "controls/clock-setIRQ/events.jsonl",
+      "bytes": 303,
+      "sha256": "e4c91350c84bae379f078d2c2aba3827b5da07256c0899376f1f61349370bafb",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/clock-setIRQ/events.jsonl"
+    },
+    {
+      "path": "controls/failed-capture/events.jsonl",
+      "bytes": 143,
+      "sha256": "338c7a8db9b55b1db7c530c8d34afdf960a03eaa97f0ed7b66167d6993c46c83",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/failed-capture/events.jsonl"
+    },
+    {
+      "path": "controls/memory-close/events.jsonl",
+      "bytes": 305,
+      "sha256": "8f681e95f1099f9a9703bf35d647a74668c21e7be997c8360e2b0687c20b3c01",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/memory-close/events.jsonl"
+    },
+    {
+      "path": "controls/memory-create/events.jsonl",
+      "bytes": 307,
+      "sha256": "9e61043e97e18d134ab7836e17c4fff8043bce98dbdb844f72ab6061dc2223ee",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/memory-create/events.jsonl"
+    },
+    {
+      "path": "controls/memory-inspect/events.jsonl",
+      "bytes": 309,
+      "sha256": "6d582aa837e669af2b3caa31ab7b332ba2624daf613797e9c467efb3156fa359",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/memory-inspect/events.jsonl"
+    },
+    {
+      "path": "controls/memory-resume/events.jsonl",
+      "bytes": 307,
+      "sha256": "0beeba863c80a97b74732622e5686524dd733673d7873b59c8d1c547c69fea38",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/memory-resume/events.jsonl"
+    },
+    {
+      "path": "controls/memory-setIRQ/events.jsonl",
+      "bytes": 307,
+      "sha256": "fbb1f22cac13b775fc63802a8fc852321702c09764cb205223b51cbd37b8bffb",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/memory-setIRQ/events.jsonl"
+    },
+    {
+      "path": "controls/second-create/events.jsonl",
+      "bytes": 133,
+      "sha256": "daffda2634b1095dc599ea5a413939b57b3f61a0a6e62484f4e606c7254cf939",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/second-create/events.jsonl"
+    },
+    {
+      "path": "controls/wrong-thread/events.jsonl",
+      "bytes": 192,
+      "sha256": "951063ff35bdcda4dfcd16ffa08be8c5ad46d95af72fde6f17ded7c2367ec682",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-lifecycle-controls-20261002/wrong-thread/events.jsonl"
+    },
+    {
+      "path": "compiled-7df-build/prepare.json",
+      "bytes": 25935,
+      "sha256": "7092cf5efdb3d68b65e2b4b8a91f726ae07516e8df0de4712eeb8c92c7369c28",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-build-20261002/prepare.json"
+    },
+    {
+      "path": "compiled-7df-build/build-static-preflight.json",
+      "bytes": 11295,
+      "sha256": "acebb536e93e6e74218057f18ae1e5a47d8f436e7aee212c0d82b8658d4e3da8",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-build-20261002/build-static-preflight.json"
+    },
+    {
+      "path": "compiled-7df-build/guest-config-binding.json",
+      "bytes": 910,
+      "sha256": "1770dff4e885b017572feed058088b441e186cde02a3971a225cd8f60d24bda0",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-build-20261002/guest-config-binding.json"
+    },
+    {
+      "path": "compiled-7df-build/guest-source.bochsrc",
+      "bytes": 510,
+      "sha256": "5683c4731d60804502b17ee0653085ef761137199878880b3b5ed64fd0a49d3d",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-clock-build-20261002/guest-source.bochsrc"
+    },
+    {
+      "path": "cpu-attempt1/parent.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-parent-20261002.stdout"
+    },
+    {
+      "path": "cpu-attempt1/parent.stderr",
+      "bytes": 340,
+      "sha256": "47438a49481938bb695b0928f77c4e6a8d15d0d74423c1e4c038ae86b2a8747a",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-parent-20261002.stderr"
+    },
+    {
+      "path": "cpu-r2/hardware.json",
+      "bytes": 3401,
+      "sha256": "2ecce4e5253a2cb2de780e0292550344fa6a06fa38ea02090a394b72a98fd727",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/hardware.json"
+    },
+    {
+      "path": "cpu-r2/independent-preflight.json",
+      "bytes": 12298,
+      "sha256": "bcce94e5b2e6b915bc37aad62f3e9534ff0c4de2404f8ffee8cf12a94cf0f936",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-r2-independent-preflight-20261002.json"
+    },
+    {
+      "path": "cpu-r2/results/auth-before.json",
+      "bytes": 11545,
+      "sha256": "10e3c5dc60bc84818c5aebf673085910c1535f0020071ba2d2cf2fade9fe5d62",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/auth-before.json"
+    },
+    {
+      "path": "cpu-r2/results/auth-after.json",
+      "bytes": 11545,
+      "sha256": "10e3c5dc60bc84818c5aebf673085910c1535f0020071ba2d2cf2fade9fe5d62",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/auth-after.json"
+    },
+    {
+      "path": "cpu-r2/results/summary.json",
+      "bytes": 28060,
+      "sha256": "ff140a4fbb30ea016beb7d1796ec82e1a60e6db0aedfa8f07a536707c1b9621c",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/summary.json"
+    },
+    {
+      "path": "cpu-r2/results/0-H4.input.json",
+      "bytes": 518,
+      "sha256": "8705c3d7748027d82673a19fbae9eee4e814f34833642de90b810785be787a39",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/0-H4.input.json"
+    },
+    {
+      "path": "cpu-r2/results/0-MAIN.input.json",
+      "bytes": 894,
+      "sha256": "90aaac4fb53f34f03bc2825dcfb4d5d4829777a1bb2013ccc801ffc65c2b814a",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/0-MAIN.input.json"
+    },
+    {
+      "path": "cpu-r2/results/1-H4.input.json",
+      "bytes": 518,
+      "sha256": "e699f73f446a7a905a7c89997483beb4476db3f1d40d222eebbbe7bc42212752",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/1-H4.input.json"
+    },
+    {
+      "path": "cpu-r2/results/1-MAIN.input.json",
+      "bytes": 894,
+      "sha256": "70df26dee473b0955d693e4671d6f335bfacfa74695179b95db9dc5f839f11be",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/1-MAIN.input.json"
+    },
+    {
+      "path": "cpu-r2/results/2-H4.input.json",
+      "bytes": 518,
+      "sha256": "13a1fefd9e6c1b5957ccded3b74c6c159569a5589230f74c0cd22849409c7c07",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/2-H4.input.json"
+    },
+    {
+      "path": "cpu-r2/results/2-MAIN.input.json",
+      "bytes": 894,
+      "sha256": "34b91a0583665b940062a121bf61ec8387f76f7048c258d353d57060bb10435b",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/2-MAIN.input.json"
+    },
+    {
+      "path": "cpu-r2/results/3-H4.input.json",
+      "bytes": 518,
+      "sha256": "aa90c08e8f5724c175a3cfea1be8f6decd7610df32190c7ee532ba947721ea5b",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/3-H4.input.json"
+    },
+    {
+      "path": "cpu-r2/results/3-MAIN.input.json",
+      "bytes": 894,
+      "sha256": "9b5de9a97af39757ce6ff40fe5fd8b0733a868cc59f9bf433859d12823e35734",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/3-MAIN.input.json"
+    },
+    {
+      "path": "cpu-r2/results/4-H4.input.json",
+      "bytes": 518,
+      "sha256": "d276d802aece66ca2fc7a19aa4fa3102f9b2e141f0e00b2cee0687644245e3fe",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/4-H4.input.json"
+    },
+    {
+      "path": "cpu-r2/results/4-MAIN.input.json",
+      "bytes": 894,
+      "sha256": "8c96c0af23ad0954a294c8b533857d0c52307adfe3230a146c641b8b3d69e319",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/4-MAIN.input.json"
+    },
+    {
+      "path": "cpu-r2/results/5-H4.input.json",
+      "bytes": 518,
+      "sha256": "b9d48b8788a240d1916cca1f6d95022eec11d03a9e62388fbf9ed8e71952334c",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/5-H4.input.json"
+    },
+    {
+      "path": "cpu-r2/results/5-MAIN.input.json",
+      "bytes": 894,
+      "sha256": "0fb4e25eea495d504123e0d855feab2d64c70daf2e02eb29eb1d5e210360de80",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/5-MAIN.input.json"
+    },
+    {
+      "path": "cpu-r2/results/6-H4.input.json",
+      "bytes": 518,
+      "sha256": "d87f8d622459d2d8277f4994922b2bb92f56ed5fb2191153369289d10f71df1a",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/6-H4.input.json"
+    },
+    {
+      "path": "cpu-r2/results/6-MAIN.input.json",
+      "bytes": 894,
+      "sha256": "8dac395803d726ea4340c7f9e252635a54899ed64ecc29d5137662e372451f4a",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/6-MAIN.input.json"
+    },
+    {
+      "path": "cpu-r2/results/7-H4.input.json",
+      "bytes": 518,
+      "sha256": "ceefd0e7832b24632791927f01c4573cc23daba147de00c350ce60577f07c443",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/7-H4.input.json"
+    },
+    {
+      "path": "cpu-r2/results/7-MAIN.input.json",
+      "bytes": 894,
+      "sha256": "fda09d4570e0c855bae9e365117b20fd4fa55e744da9f20c1faf09ad557dd2a2",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/7-MAIN.input.json"
+    },
+    {
+      "path": "cpu-r2/results/8-H4.input.json",
+      "bytes": 518,
+      "sha256": "e43406e798ad6685728836454d1961f1deaf08d15ff3e8bce8d39706d3ace798",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/8-H4.input.json"
+    },
+    {
+      "path": "cpu-r2/results/8-MAIN.input.json",
+      "bytes": 894,
+      "sha256": "8fe383f97b1a6e630029e7d298bcb3444e796d29c4674ca2525983cda6009a8a",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/8-MAIN.input.json"
+    },
+    {
+      "path": "cpu-r2/results/0-H4.exit.json",
+      "bytes": 924,
+      "sha256": "6b2a1988e249a14091ecff49660fd1c3612c3d90505c3472e7d5e45f0ed407fb",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/0-H4.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/0-MAIN.exit.json",
+      "bytes": 929,
+      "sha256": "05d726ead47eee254cf8e6f8fe559a95cd658f2a5b492a8a2e93fab597102376",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/0-MAIN.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/1-H4.exit.json",
+      "bytes": 924,
+      "sha256": "b6bf2ba1e924cf8ea7ba308fa7846426bb8efdcd157cc263ff72a61b0385a988",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/1-H4.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/1-MAIN.exit.json",
+      "bytes": 928,
+      "sha256": "0567113f1e6e0e714f37fba1895bf25083a5734eee916b399014b8cf7980edc3",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/1-MAIN.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/2-H4.exit.json",
+      "bytes": 923,
+      "sha256": "ab159f1980a8d98751b784f7f140ad06e11e6edf645d036c3bb492df17f5cc9b",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/2-H4.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/2-MAIN.exit.json",
+      "bytes": 927,
+      "sha256": "6a6753d33ff215fd78c18d2871f6e5f01d08a5dec56471f479d11077aa59d8d6",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/2-MAIN.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/3-H4.exit.json",
+      "bytes": 925,
+      "sha256": "7f2e1c9bfd3759196492bc252a32833dcf17318995bdcf764133255e2e899878",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/3-H4.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/3-MAIN.exit.json",
+      "bytes": 929,
+      "sha256": "8e97667864662d67d7e1cffc8aa9df39f19d1fa2fde253b482c70020dfed0994",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/3-MAIN.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/4-H4.exit.json",
+      "bytes": 924,
+      "sha256": "15a3b2b4b74a932167d6aea16424ef3851a7041ce6dca802abd6db2d9d0768b8",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/4-H4.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/4-MAIN.exit.json",
+      "bytes": 930,
+      "sha256": "3032a558c9c73d481331e56e5634eb7a41eeb7c3b1155ea75d7753f1fc608303",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/4-MAIN.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/5-H4.exit.json",
+      "bytes": 925,
+      "sha256": "c1e07c023c29f8fff403dfa3a3cfbe272f1056e307b9e5f33928881b3715d05b",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/5-H4.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/5-MAIN.exit.json",
+      "bytes": 930,
+      "sha256": "7640648cc757426462803a015822063c52b78acc389199b508e31e19a4c7a5c7",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/5-MAIN.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/6-H4.exit.json",
+      "bytes": 925,
+      "sha256": "f6d61a22a628d65810790a74ec0494a4938f47753b873e935ad7d1467559749b",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/6-H4.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/6-MAIN.exit.json",
+      "bytes": 930,
+      "sha256": "c37a0f0278c74dcf42f2fa4966d8b5436d83704253c275d8b4192542667f2cd2",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/6-MAIN.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/7-H4.exit.json",
+      "bytes": 925,
+      "sha256": "fbd396467bb8068bb33321abb56a11afcb1256c2de124c7b2536e280aa31e648",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/7-H4.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/7-MAIN.exit.json",
+      "bytes": 929,
+      "sha256": "deb845fa912626693aeec493d7a452de4717afb1da56f3803656ea0451f86a2a",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/7-MAIN.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/8-H4.exit.json",
+      "bytes": 924,
+      "sha256": "efb5a23402ee965df49c56c050cdea17c50772a3696f8d94854a4c6cee39fa26",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/8-H4.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/8-MAIN.exit.json",
+      "bytes": 930,
+      "sha256": "94be006249fdf52a2e78f4b25fc5953a4e0106d3b6aafb998034ab6776e6b78f",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/8-MAIN.exit.json"
+    },
+    {
+      "path": "cpu-r2/results/0-H4/capture.json",
+      "bytes": 83462,
+      "sha256": "21883f61c6dd74c1b35b51101e8dcef98b2bb37eeff9f248e8c466145850a300",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/0-H4/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/0-MAIN/capture.json",
+      "bytes": 236163,
+      "sha256": "59e7a1d7f0e53bec6d5c0be63e7e740064f82be5bcbea0a658fd551e207af508",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/0-MAIN/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/1-H4/capture.json",
+      "bytes": 83462,
+      "sha256": "8610f530d07fcea953d999e0cefb9f194d016a8032bc4d8d7d96d6c05f35cca8",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/1-H4/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/1-MAIN/capture.json",
+      "bytes": 236165,
+      "sha256": "2adefcd2428a35504a0ef45ac5aab8b79332ea0a243e0bc9bc98ff9c55684a0e",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/1-MAIN/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/2-H4/capture.json",
+      "bytes": 83465,
+      "sha256": "efbeef6882cfbe344821245b073f39b7f450f0bb202bb387b8a45439a34f8366",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/2-H4/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/2-MAIN/capture.json",
+      "bytes": 236164,
+      "sha256": "10e0d787171f38f6af9b982cc4267c79c2fd4c1073d8cf1904bb25b0ecdb22fc",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/2-MAIN/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/3-H4/capture.json",
+      "bytes": 83465,
+      "sha256": "abe7fa78fce02d1ab263385f7b1ce0d47e7d392b9a7e3e1cc7a29ec8a8b962c9",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/3-H4/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/3-MAIN/capture.json",
+      "bytes": 236165,
+      "sha256": "9ac45d885b7d0a94251782296182c9a4f29755d0a3e80674577c48ec97f269eb",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/3-MAIN/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/4-H4/capture.json",
+      "bytes": 83465,
+      "sha256": "7a2826d8925670135a0408b2e6c3358b0a67326c03d9b9858c2cd4efe7fe8e41",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/4-H4/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/4-MAIN/capture.json",
+      "bytes": 236165,
+      "sha256": "ac05b27dbb240f68e4798b3114269dbe496ad4b72b2261f5c477041d9118541e",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/4-MAIN/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/5-H4/capture.json",
+      "bytes": 83464,
+      "sha256": "74b97e5857956c2d1349fdc26087b4db03de68f62901e72dffe3b392eda7077e",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/5-H4/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/5-MAIN/capture.json",
+      "bytes": 236165,
+      "sha256": "073601a11e0d1706964b3b22fd25eecf10ee8ff1b1e77d3d344549a20fc831d2",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/5-MAIN/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/6-H4/capture.json",
+      "bytes": 83465,
+      "sha256": "79f1cdf504c9c93a84ae468d100a095d97044b54cf932d33fe9c2633493ce422",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/6-H4/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/6-MAIN/capture.json",
+      "bytes": 236166,
+      "sha256": "9d3a991dc01cba6894c45c781ec28c656c3acdc87b9689d59a9380c18969a233",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/6-MAIN/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/7-H4/capture.json",
+      "bytes": 83464,
+      "sha256": "2058b65145ca56eef6c07e25eb87ed1bef13fee9c400b9efde6a64f9d8f038a2",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/7-H4/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/7-MAIN/capture.json",
+      "bytes": 236166,
+      "sha256": "1d203988c32c989a7d8e5709b76265421b88aaf9230485f0d4fdeec91aa416a4",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/7-MAIN/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/8-H4/capture.json",
+      "bytes": 83465,
+      "sha256": "eb6a2bc58edc48d58b1261eeba3a31521ab090a6d021ade69d269ef7a566100f",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/8-H4/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/8-MAIN/capture.json",
+      "bytes": 236165,
+      "sha256": "d16c71bafe5ab5ff9c2ff437044e86292ca8c108befd5c74678f852ba929c709",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/8-MAIN/capture.json"
+    },
+    {
+      "path": "cpu-r2/results/0-H4.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/0-H4.stdout"
+    },
+    {
+      "path": "cpu-r2/results/0-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/0-MAIN.stdout"
+    },
+    {
+      "path": "cpu-r2/results/1-H4.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/1-H4.stdout"
+    },
+    {
+      "path": "cpu-r2/results/1-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/1-MAIN.stdout"
+    },
+    {
+      "path": "cpu-r2/results/2-H4.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/2-H4.stdout"
+    },
+    {
+      "path": "cpu-r2/results/2-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/2-MAIN.stdout"
+    },
+    {
+      "path": "cpu-r2/results/3-H4.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/3-H4.stdout"
+    },
+    {
+      "path": "cpu-r2/results/3-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/3-MAIN.stdout"
+    },
+    {
+      "path": "cpu-r2/results/4-H4.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/4-H4.stdout"
+    },
+    {
+      "path": "cpu-r2/results/4-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/4-MAIN.stdout"
+    },
+    {
+      "path": "cpu-r2/results/5-H4.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/5-H4.stdout"
+    },
+    {
+      "path": "cpu-r2/results/5-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/5-MAIN.stdout"
+    },
+    {
+      "path": "cpu-r2/results/6-H4.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/6-H4.stdout"
+    },
+    {
+      "path": "cpu-r2/results/6-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/6-MAIN.stdout"
+    },
+    {
+      "path": "cpu-r2/results/7-H4.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/7-H4.stdout"
+    },
+    {
+      "path": "cpu-r2/results/7-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/7-MAIN.stdout"
+    },
+    {
+      "path": "cpu-r2/results/8-H4.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/8-H4.stdout"
+    },
+    {
+      "path": "cpu-r2/results/8-MAIN.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/8-MAIN.stdout"
+    },
+    {
+      "path": "cpu-r2/results/0-H4.stderr",
+      "bytes": 416,
+      "sha256": "11180160178e375229a03ffbd3fb08eb27c2a3e9004b0b312340657445594f4f",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/0-H4.stderr"
+    },
+    {
+      "path": "cpu-r2/results/0-MAIN.stderr",
+      "bytes": 420,
+      "sha256": "0e1f47375fd105fa83947f5a1b912446777c87a561aed8af9d929a1440b6ccfd",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/0-MAIN.stderr"
+    },
+    {
+      "path": "cpu-r2/results/1-H4.stderr",
+      "bytes": 416,
+      "sha256": "cd77df7539afd65ba7952688e86b6e9f732c5a7d3e619494e0eca04f6b7014ca",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/1-H4.stderr"
+    },
+    {
+      "path": "cpu-r2/results/1-MAIN.stderr",
+      "bytes": 420,
+      "sha256": "cd19ec2eb77853112966354889e8b6ab7e798fb33565b4136b1206969a4787c9",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/1-MAIN.stderr"
+    },
+    {
+      "path": "cpu-r2/results/2-H4.stderr",
+      "bytes": 416,
+      "sha256": "9210c0f5bc18d0422e8ab6cbb83ae57b5eccaaa3859f191e829e56e29895f460",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/2-H4.stderr"
+    },
+    {
+      "path": "cpu-r2/results/2-MAIN.stderr",
+      "bytes": 420,
+      "sha256": "143f3890d3ddcd9402dacd3081788dbb208df9d16c0ada922d2ec71a006fbbb7",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/2-MAIN.stderr"
+    },
+    {
+      "path": "cpu-r2/results/3-H4.stderr",
+      "bytes": 416,
+      "sha256": "32c6af37709e7d23f62ab247408b71cb9fc9715d681902e4b12dec3880a0a24a",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/3-H4.stderr"
+    },
+    {
+      "path": "cpu-r2/results/3-MAIN.stderr",
+      "bytes": 420,
+      "sha256": "db8e6a159fb43dbe73c2c1b5d3f95de3daf2a7b1cba8ab6b3023e6448619af2a",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/3-MAIN.stderr"
+    },
+    {
+      "path": "cpu-r2/results/4-H4.stderr",
+      "bytes": 416,
+      "sha256": "dec17561dc76f058026995cf4c018688621bea375b570a0ed70387a681550b7e",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/4-H4.stderr"
+    },
+    {
+      "path": "cpu-r2/results/4-MAIN.stderr",
+      "bytes": 420,
+      "sha256": "271a64df22addbfea75a0d73743048378c473d4f8eb737f4419e5906f5338c29",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/4-MAIN.stderr"
+    },
+    {
+      "path": "cpu-r2/results/5-H4.stderr",
+      "bytes": 416,
+      "sha256": "b1111a73cd04b1df4124d5be14be6633deea32ba0b58ced69f71e29bc3add48d",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/5-H4.stderr"
+    },
+    {
+      "path": "cpu-r2/results/5-MAIN.stderr",
+      "bytes": 420,
+      "sha256": "83ec99e62f9da14a157e79ca9cb4a6fbc965ca6e5d998dbe5e6a008acf6f8713",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/5-MAIN.stderr"
+    },
+    {
+      "path": "cpu-r2/results/6-H4.stderr",
+      "bytes": 416,
+      "sha256": "73844665d0d103a579dc09991a1d37063aaf9d7260f4c70bdb14df988007ffcc",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/6-H4.stderr"
+    },
+    {
+      "path": "cpu-r2/results/6-MAIN.stderr",
+      "bytes": 420,
+      "sha256": "ea4b646dca214fd45e2e20e58abbfc071774be6ff7c0aa5ec5779cf92ff84dcd",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/6-MAIN.stderr"
+    },
+    {
+      "path": "cpu-r2/results/7-H4.stderr",
+      "bytes": 416,
+      "sha256": "eb439db274c22fd455d83f5cc545fbca1f33d8b5d236a51b24ca1c462f1d8517",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/7-H4.stderr"
+    },
+    {
+      "path": "cpu-r2/results/7-MAIN.stderr",
+      "bytes": 420,
+      "sha256": "9520ed7e9b29f84ec2421e31550f382c69075da3a0af45d967f30702729e44ab",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/7-MAIN.stderr"
+    },
+    {
+      "path": "cpu-r2/results/8-H4.stderr",
+      "bytes": 416,
+      "sha256": "21492916e53ddade02337b93baec32f472653dbe56b7cd243ff9694dd80a33c5",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/8-H4.stderr"
+    },
+    {
+      "path": "cpu-r2/results/8-MAIN.stderr",
+      "bytes": 420,
+      "sha256": "21286ca07250fb2197faeac622a65c0b479e85afeca5f8f610f6d4c1d0a07fa2",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/8-MAIN.stderr"
+    },
+    {
+      "path": "cpu-r2/parent.stdout",
+      "bytes": 2165,
+      "sha256": "71e213e066db77e2f1311e3dcda5015898ab7f7ddee70ac0d7aaa729e7513649",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-r2-parent-20261002.stdout"
+    },
+    {
+      "path": "cpu-r2/parent.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-r2-parent-20261002.stderr"
+    },
+    {
+      "path": "cpu-r2/results/independent-audit.json",
+      "bytes": 714,
+      "sha256": "0d24327ab3d0a92ba96ffc15d3c50c156d9e4f445d5548533c5efcb2408f404c",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/independent-audit.json"
+    },
+    {
+      "path": "cpu-r2/independent-cpu-audit.py",
+      "bytes": 4825,
+      "sha256": "f16c11c54a3526555bc7133bdfe5d7e875dc443a5bf8073422df90ea910ee657",
+      "originalPath": "/mnt/volume1/tmp-astra/native-owned-main-independent-cpu-audit-20261002.py"
+    }
+  ],
+  "cpuGate": {
+    "summarySha256": "ff140a4fbb30ea016beb7d1796ec82e1a60e6db0aedfa8f07a536707c1b9621c",
+    "h4MeanUs": 503081.5714285714,
+    "mainMeanUs": 370625.71428571426,
+    "meanReductionPercent": 26.32890264032729,
+    "allSevenFavorable": true,
+    "semanticsChildren": 18
+  },
+  "qualifiedSourceUrl": "https://github.com/CrispStrobe/bw-board/tree/bab751825473d55d8bf6da8c6ad5786921ffcfe1",
+  "independentCpuAuditChecks": 318736
+}

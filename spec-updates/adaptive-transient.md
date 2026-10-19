@@ -1,0 +1,105 @@
+# Spec-update: adaptive transient stepping with trapezoidal integration
+
+## Current interactive policy
+
+The default is `interactive-v2`: relative local-error scale1e-4, absolute
+voltage1 microvolt/current1 nanoamp,1 ns restart seed,100 us maximum step
+and20000 attempts per advance. Its minimum adaptive step is1 fs so the
+unchanged integrator can resolve picosecond modes in existing model stamps.
+It is a lower refinement bound, not a fixed simulation timestep or a claim
+of femtosecond physical fidelity. Easy intervals still grow normally.
+
+Explicit `interactive-v1` retains its10 ns floor and all previous settings;
+`precision-v1` is unchanged. A fresh board can select these fixed policies
+through `configureTransientAnalysis()`. Neither arbitrary caller tolerances
+nor unlimited work are admitted. Both interactive policies support the live
+clock; precision/finite-analysis reuse remains refused. All convergence,
+accuracy-floor, skipped-history and work-limit failures remain authoritative.
+See [the winding qualification](npn-winding-transient-boundary.md) for the
+working control, independent electrical references and remaining hosted and
+installed-consumer acceptance requirements. The proposal below is historical,
+not the current profile parameter table.
+
+## Problem
+
+`_integrateTransientMNA` uses a fixed 100 µs backward-Euler sub-step, hard-capped at
+200 sub-steps per `advanceTo`. The code states this honestly ("the cap is a stated
+accuracy limit, not a hidden one") and invites the replacement ("Adaptive control can
+replace this"). Consequences: a 10 kHz RC corner is sampled 1× per period-fraction
+with first-order damping (BE is dissipative — oscillators decay artificially); a
+long idle `advanceTo` silently grows h beyond 100 µs; fast events burn the full
+200-step budget; device switching resolution is one fixed sub-step.
+
+## Proposal
+
+1. **Trapezoidal companions** for C and L alongside the existing BE ones
+   (two-term history). BE is used for the first step after any discontinuity
+   (source edge, switch/region flip, `setPin`, fired device event) to damp the
+   trapezoidal ringing artifact; trapezoidal elsewhere.
+2. **LTE step control**: local truncation error estimated from the standard
+   BE/trapezoidal divided-difference formula per reactive element; accept the step
+   if max LTE ≤ tol (reltol 1e-3, abstol 1e-6 V / 1e-9 A to start), else halve and
+   retry; grow h by ≤ 2× on easy steps. h clamped to [10 ns, dtRemaining].
+3. **Event-aligned steps**: the earliest of (device deadline, waveform-source edge,
+   scheduled event) truncates h so edges are hit exactly, not straddled — this
+   subsumes today's "one sub-step" switching resolution with "one adapted step",
+   which near an edge is a small step.
+4. The 200-step cap is replaced by a **time budget** per `advanceTo` (default the
+   sim-time span requested); if the controller cannot finish within a hard iteration
+   ceiling (guard against pathological circuits), it reports a warning exactly like
+   today's overflow warning — never silently coarsens.
+5. Device `update()` cadence: once per accepted step (unchanged contract), plus
+   immediately at fired events.
+
+## MNA impact
+
+Companion-stamp changes + the stepping loop in `board.js`. Depends on
+`sparse-lu-factor-reuse.md` for affordability (retry-halving refactors the matrix;
+with reuse that is a numeric refactor, not a rebuild). Interacts with
+`scheduled-device-events.md` (event queue provides the edge list in item 3).
+
+## Acceptance
+
+1. RC step response: max error vs analytic e^(−t/RC) < 0.1 % over 5τ (today's BE at
+   100 µs is ~1–5 % depending on τ).
+2. LC tank (1 mH, 1 µF, started charged): amplitude decay over 100 cycles < 1 %
+   (BE-only fails this by design; this is the trapezoidal oracle).
+3. 555 astable: frequency within 1 % of the RC formula (today ~3–5 %).
+4. A 1 Hz circuit advanced 10 s idles in far fewer solves than today's 200-step
+   cap-bound path (assert solve-count budget).
+5. Waveform-source square edge at t=1.0000 ms is a solve point exactly (no straddle).
+6. Full existing oracle suite green; scope traces show no NaN gaps introduced.
+## Numerical-analysis profile
+
+Interactive simulation defaults to the stiff-capable `interactive-v2` policy
+above; explicitly selected `interactive-v1` retains its established limits.
+A fresh board may explicitly select `precision-v1` through
+`configureTransientAnalysis()` before a source-declared numerical analysis.
+The fixed profile is deliberately not an arbitrary tolerance object: it bounds
+relative/absolute local error, minimum/seed/maximum step, and attempts per
+advance without admitting non-finite or unbounded caller values.
+
+`transientAnalysisStatus()` reports the immutable selected profile, cumulative
+attempt/solve/advance work, and a sticky qualification failure. Accuracy is
+`null` before transient work. A non-converged or non-finite solve, forced
+acceptance at the minimum step, or the attempt backstop changes it to `false`;
+an analysis runner must refuse the numerical result. `true` means the local
+integration controls were met, not that every output has a global error equal
+to the local tolerance. An independent reference still needs its own refinement
+study and error budget.
+
+The status also reports the circuit's current `integrationMode`. With no
+reactive storage, scheduled device/shift-register state, or scope sampling
+grid, `algebraic-direct` solves each requested endpoint once: there is no
+history to integrate between observations. Adding any such state selects the
+existing `adaptive` path. This distinction lets bounded analysis callers use
+the requested point count for a stateless many-source circuit instead of the
+otherwise conservative `ceil(stop/maxStep)` integration lower bound.
+
+Source corners and scheduled device wakes at the exact requested step endpoint
+are discontinuities and restart trapezoidal history on their far side. Sample
+grid points only truncate a step. The nearest final barrier decides: a later
+source corner cannot make an earlier sample-grid endpoint spuriously restart.
+The uncontrolled backward-Euler restart is capped at one tenth of the next
+authored source segment, so a fixed seed cannot consume an entire narrow PULSE
+ramp as one endpoint-valued step.

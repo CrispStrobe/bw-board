@@ -1,0 +1,37 @@
+{
+  "baseSha256": "84456fef7ca890530925cfade3ed3e0ecfc1806ee0f3ae00e5bc64ad73df5645",
+  "changes": [
+    [
+      "COMPILED = '7632e6a0995ceaab88bc8cede91506a5330d2e1c'",
+      "COMPILED = 'f4a2f2ceae48dde3e4585d84e6c759e13ebadc53'"
+    ],
+    [
+      "cold-bios-build-prepared",
+      "cold-bios-typed-state-build-prepared"
+    ],
+    [
+      "cold-bios-build-evidence",
+      "cold-bios-typed-state-build-evidence"
+    ],
+    [
+      "cold-bios-build-pristine",
+      "cold-bios-typed-state-build-pristine"
+    ],
+    [
+      "len(frozen)==125",
+      "len(frozen)==134"
+    ],
+    [
+      "fixed inventory counts",
+      "fixed typed inventory counts"
+    ],
+    [
+      "scripts/bochs-cpu3-native-cold-bios/identity.mjs",
+      "scripts/bochs-cpu3-native-cold-bios-typed-state/identity.mjs"
+    ],
+    [
+      "'compiledCount':125",
+      "'compiledCount':134"
+    ]
+  ]
+}

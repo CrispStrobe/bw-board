@@ -1,0 +1,28 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--input-type=module",
+    "-e",
+    "import {driverSourceIdentity} from './scripts/bochs-cpu3-native-cold-bios/driver-auth.mjs'; console.log(JSON.stringify(driverSourceIdentity()))"
+  ],
+  "cwd": "/tmp/bw-cold-native-diagnostic-source-20261003",
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 1.073590263724327,
+  "pinsEqual": true,
+  "cpuSeconds": 10,
+  "wallLimitSeconds": 30,
+  "fileBytes": 8388608,
+  "coreBytes": 0,
+  "niceIncrement": 10,
+  "blankHooks": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  },
+  "scope": "PURE_DRIVER_COMPARISON_NO_NATIVE_GUEST_OR_NETWORK"
+}

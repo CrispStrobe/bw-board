@@ -1,0 +1,745 @@
+{
+  "status": "ACTUAL_BULK_PROCESS_CPU_GATE_FAIL_KEEP_FE1",
+  "records": [
+    {
+      "pair": 0,
+      "arm": "BASE",
+      "warmup": true,
+      "executionCpuTotalUs": 212915,
+      "executionNs": 129363868,
+      "captureSha256": "2bc8706ff0cf2f3514a1e989c2af2643b36ffcfb3b282f1782b8d405e5443a1b",
+      "inputSha256": "c5c8de95869b895c0e7a4e5b6e460e4602bc8a5aeffce11474d0aa4926d7db3c",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "a5ca2d0fb59476f208f54863075a4a228fe7037ceaab56c6ec70a765c108ca29",
+        "wallNs": 1919858736,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/base-runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/0-BASE.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 0,
+      "arm": "BULK",
+      "warmup": true,
+      "executionCpuTotalUs": 211543,
+      "executionNs": 121054042,
+      "captureSha256": "6b6ca936e5533f91da3b605ebce76b34c081d451affcf8880a0b761a8c6758d9",
+      "inputSha256": "1ebda32c340f21704485c4557b4b636fa316f8a4ca4c8b238a36012221af08e7",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "9c9507d8a9fd7b86c49a399f5852c78630424700a413d00c3708a5ac6c64fdc8",
+        "wallNs": 3473485674,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/0-BULK.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 1,
+      "arm": "BULK",
+      "warmup": true,
+      "executionCpuTotalUs": 201363,
+      "executionNs": 119055309,
+      "captureSha256": "0e2b618d4de91957305baf5e6cb6bd093003161008d9a3d8c71b2ed46d9177c9",
+      "inputSha256": "d6a2a1623c992b05e04ea9b9216baa3c20591e7bad312f5ea1b171f154bb7809",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "19faad1eca931b6233ced5c079f3773411123c82b09de0f2372de0c816a375b1",
+        "wallNs": 3524081183,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/1-BULK.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 1,
+      "arm": "BASE",
+      "warmup": true,
+      "executionCpuTotalUs": 212468,
+      "executionNs": 130038908,
+      "captureSha256": "e0de50cc4152cf96aafa470df0d04cf6527599b0f084ffbb59fa076fcd22d6ce",
+      "inputSha256": "7d8a035519285bd56f11ad96d8409436a54c3c7657b00cac72d51d5d226e85d3",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "7abca3652f3e7d60208e36cb7bd17905d79b7ead727aff5d06fa38f08c94c270",
+        "wallNs": 1870252696,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/base-runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/1-BASE.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 2,
+      "arm": "BASE",
+      "warmup": false,
+      "executionCpuTotalUs": 206610,
+      "executionNs": 127225248,
+      "captureSha256": "b8f4ac6c0ebca7b0127ec7a6dd22e94925b4b73da54d92e351c3146b399cc7ea",
+      "inputSha256": "763386aa45c563b9ead913f52b1ff30c4c5f38b263ae90ca24446e3fb000b37a",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "d9c93b7265afda200d47cdc67b16246fa2b02541725c8480d081f1d27cbc120d",
+        "wallNs": 1870041439,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/base-runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/2-BASE.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 2,
+      "arm": "BULK",
+      "warmup": false,
+      "executionCpuTotalUs": 196076,
+      "executionNs": 116964410,
+      "captureSha256": "9afd41a5bf9f8c9dd2dee2dc834cab4e5324ab28507f85a52d55078c7e97fd8a",
+      "inputSha256": "60ab051d53d29d2b2cc25ffd9e788c83ab97408e5d09b32c0a8ad4b04fd5bdfe",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "b0d381de02026bd7ca1e9036ad7b3cac73e5e5b8a07eed2d676ef09f4ad3e937",
+        "wallNs": 3524477572,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/2-BULK.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 3,
+      "arm": "BULK",
+      "warmup": false,
+      "executionCpuTotalUs": 187424,
+      "executionNs": 112336784,
+      "captureSha256": "6731cafe129bc1ed63f14f68527742dd52a234abb3708d0b22fc7a7ebd68897c",
+      "inputSha256": "be923f098e72b4c796f61b2f389247ac0952c2ee70b8b14ab2e31c9752191c6d",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "ceeafbce3c311b00ffeacd9e91f42c98859e10c8ebc1cb64dfb6f00c9211c7cb",
+        "wallNs": 3525253098,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/3-BULK.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 3,
+      "arm": "BASE",
+      "warmup": false,
+      "executionCpuTotalUs": 216919,
+      "executionNs": 130526991,
+      "captureSha256": "6b51e26e05144c37b520164e393e10216d703449c17c85957e69384c3baca7d4",
+      "inputSha256": "6c2d912b55f406b384ee88d7713d8edd2335e6cc328fe7ab5f4f01d2b5be9f68",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "020d01b078f47b6e7ed4d17e887f169bc97dc98a90899f052902a2b763ed381f",
+        "wallNs": 1870416936,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/base-runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/3-BASE.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 4,
+      "arm": "BASE",
+      "warmup": false,
+      "executionCpuTotalUs": 214579,
+      "executionNs": 129284305,
+      "captureSha256": "fb73b2bfe31fc5e574cd115b11df920d2753ea8301a62b1eba5535223fbab4e9",
+      "inputSha256": "a2501c1a23849b7ab68806d5c8de9518c1aa410d962f3b61cc50f359d3485017",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "6d08323308a03c72ea764ebd7b8129c4be8bd5e7a60ebd03ac601dff951d4b4b",
+        "wallNs": 1920173737,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/base-runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/4-BASE.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 4,
+      "arm": "BULK",
+      "warmup": false,
+      "executionCpuTotalUs": 189875,
+      "executionNs": 113326134,
+      "captureSha256": "fef5bada164924bbe7a09945b14ddcf68fa1a6f495d853f7ad56481de3bb446a",
+      "inputSha256": "612213282814348b4a21d967fc1a9c42276bda40fa046c84ad3ce59b2ba5d883",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "5f1fda6a82ffe401210797cc0d3dc4f09dc2bd03dd68f97016ee22559fb6be38",
+        "wallNs": 3474669092,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/4-BULK.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 5,
+      "arm": "BULK",
+      "warmup": false,
+      "executionCpuTotalUs": 215698,
+      "executionNs": 122274774,
+      "captureSha256": "370fefa49db5337eb8123c3594f6f7654fbfbf54f133b49ccb11bc7aeb36f0c1",
+      "inputSha256": "0d47e27caea50e1d958b0e28845aa60bd2e9c2c68070e52f7aeb1d9577c5735f",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "c30dd1ccb96b240ade31de9ca77ccba46bc637f0bc00d6c6315c4d94e445be24",
+        "wallNs": 3473753983,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/5-BULK.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 5,
+      "arm": "BASE",
+      "warmup": false,
+      "executionCpuTotalUs": 208161,
+      "executionNs": 126047965,
+      "captureSha256": "843398748b8ef67211d08404cd53c9a459b9e1abb2995a51e03c279db9783253",
+      "inputSha256": "8c466b3dad81685db28c83807b7caada9c182da7676e13a9113d9badb7dd9558",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "ad0e9d2d5df8eb15f3273b1cd7679b51c736110f3adc2177bf2d774a6921101f",
+        "wallNs": 1870101706,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/base-runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/5-BASE.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 6,
+      "arm": "BASE",
+      "warmup": false,
+      "executionCpuTotalUs": 210551,
+      "executionNs": 126227079,
+      "captureSha256": "2b788ddf10a160a588fa8ed97d3f50165221fe1f693704b0394774e81d00b103",
+      "inputSha256": "fd02ebdacac7ba85e62dd0f7a6f9ba7b5baf807f5bb29358ad1509c68c218e55",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "8cc590b36914b89719f6b116ae5ddebdfc704289f3e3e22b74edc8ea3420652f",
+        "wallNs": 1870359685,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/base-runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/6-BASE.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 6,
+      "arm": "BULK",
+      "warmup": false,
+      "executionCpuTotalUs": 217421,
+      "executionNs": 123076921,
+      "captureSha256": "136ec1c0df531c0476f499066da1183db5659c5f012a1e9833e96bda5c7918e2",
+      "inputSha256": "1a6a8aef7e6875f2327e1b76134e125978cccabbe731c1da43caa9ed95922ec1",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "d23f446cd84cc690e7889ef8742425ade1420c0766d2158d4f8e184fca063f7c",
+        "wallNs": 3473428856,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/6-BULK.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 7,
+      "arm": "BULK",
+      "warmup": false,
+      "executionCpuTotalUs": 206070,
+      "executionNs": 115063111,
+      "captureSha256": "4f9a83da7e812b8d2136f644b488bee66394a9db8184f6ea53629deae723e564",
+      "inputSha256": "517e18dc115bb1beb0730f8cdca3d4bb9bec5f18d5b7161de0219d0af97f0136",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "e61cae5a444233e23904d5f981aa6f3365ae9d13816962a9c02ac071a6efc7ad",
+        "wallNs": 3473030844,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/7-BULK.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 7,
+      "arm": "BASE",
+      "warmup": false,
+      "executionCpuTotalUs": 210108,
+      "executionNs": 128066490,
+      "captureSha256": "fb8e8f5c6c7161ba8be6ba549c6e048e2f0402089bcf67e0587cecb87363d676",
+      "inputSha256": "51026cf2aeef6eeda1155256c97ef50bbb4bed298846ed707d7ddfcb38249f35",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "7511e37dc611ba0e77cbebb015772f5b87af0deca483d1434216e80789e81fa5",
+        "wallNs": 1870283623,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/base-runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/7-BASE.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 8,
+      "arm": "BASE",
+      "warmup": false,
+      "executionCpuTotalUs": 222073,
+      "executionNs": 134378436,
+      "captureSha256": "b0fcea5c864a1e215911ccd872313d0b27c49009c7696f8a8b6775ed79c43436",
+      "inputSha256": "9dd0065382ac08dd3ba98be8b5d221d7f890e4a3b6fc6eb0a79e86cf4a176d0d",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "f112f5672d89f10c9eb62c3ac4b8d9a66cc8d1c520ef897cb581abe9760640d6",
+        "wallNs": 1870123204,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/base-runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/8-BASE.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    },
+    {
+      "pair": 8,
+      "arm": "BULK",
+      "warmup": false,
+      "executionCpuTotalUs": 195174,
+      "executionNs": 115466104,
+      "captureSha256": "2df2cac3dfb447a610bf07132b11c7a5b85e185dc39664978fb16c8775302517",
+      "inputSha256": "ca712823f95179429c49f9c2235f352ce083d3fe20ca4068fbaaa65e613897bd",
+      "fullSemanticParity": true,
+      "exit": {
+        "returncode": 0,
+        "signal": null,
+        "timedOut": false,
+        "fileLimitReached": false,
+        "error": null,
+        "stderrBytes": 398,
+        "stderrSha256": "7d66383ccf3ae524bde87a205fee969693b280cad9f10712e08d18eebf678268",
+        "wallNs": 3473426941,
+        "transport": "regular file descriptors, no nonblocking pipe",
+        "RLIMIT_FSIZE": 268435456,
+        "heapMiB": 512,
+        "command": [
+          "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+          "--max-old-space-size=512",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/runner.mjs",
+          "/home/runner/work/_temp/owned-bulk-gate/gate/results/8-BULK.input.json"
+        ],
+        "RLIMIT_CPU": 120,
+        "niceIncrement": 10,
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+      }
+    }
+  ],
+  "samplesUs": {
+    "BASE": [
+      206610,
+      216919,
+      214579,
+      208161,
+      210551,
+      210108,
+      222073
+    ],
+    "BULK": [
+      196076,
+      187424,
+      189875,
+      215698,
+      217421,
+      206070,
+      195174
+    ]
+  },
+  "meansUs": {
+    "BASE": 212714.42857142858,
+    "BULK": 201105.42857142858
+  },
+  "meanReductionPercent": 5.457551741066657,
+  "favorablePairs": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    true,
+    true
+  ],
+  "gatePassed": false,
+  "planSha256": "45e270b2e00399d06888579cd6701ace9592542a3972d20636e36dcb4e11e921",
+  "metric": "process.cpuUsage user+system unchanged fe1 main execution window: all445 complete resume snapshots, six board cuts, local callbacks, GC; excludes startup, settlement and final serialization. External candidate runner inverse recovers fe1 scheduler exactly.",
+  "noCumulativeSpeedupClaim": true
+}

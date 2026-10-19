@@ -1,0 +1,5 @@
+{
+  "originalPath": "diagnostic-artifacts.json",
+  "encoding": "utf8",
+  "data": "{\"total_count\":1,\"artifacts\":[{\"id\":11228656210,\"node_id\":\"MDg6QXJ0aWZhY3QxMTIyODY1NjIxMA==\",\"name\":\"fastpath-census\",\"size_in_bytes\":4984809,\"url\":\"https://api.github.com/repos/CrispStrobe/labwired-core/actions/artifacts/11228656210\",\"archive_download_url\":\"https://api.github.com/repos/CrispStrobe/labwired-core/actions/artifacts/11228656210/zip\",\"expired\":false,\"digest\":\"sha256:396617aaf794e839c903cd558c85c3c0aa8fbed0620f01c4718bf2adc929fdc7\",\"created_at\":\"2026-10-02T13:17:55Z\",\"updated_at\":\"2026-10-02T13:17:55Z\",\"expires_at\":\"2026-12-31T12:58:32Z\",\"workflow_run\":{\"id\":37009962397,\"repository_id\":1346445405,\"head_repository_id\":1346445405,\"head_branch\":\"perf/fastpath-census-20261002\",\"head_sha\":\"16c501c0506d4bde312a04fc4f9d4ae5f8e4b2ec\"}}]}"
+}

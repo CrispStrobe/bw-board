@@ -1,0 +1,25 @@
+{
+  "revision": "c26ad6701c9fa13f983dd84c2764c2f073371f57",
+  "hashes": {
+    ".github/workflows/i80386-cold-ledger-scalars-qualification.yml": "cc6129f2f8d9cb196f0474538b855b81658acd28718adf14cab254fa1f566e6c",
+    "scripts/cold-ledger-scalars-qualification/README.md": "f127e232227747ac7ab84a534fe0e60676e0d17a799c0417a4398658ec84b887",
+    "scripts/cold-ledger-scalars-qualification/admission.py": "f3f7023c5f73c18b0a3c908aa2c5269dbef98003795a079e0d9a3cc205035bb3",
+    "scripts/cold-ledger-scalars-qualification/archive.py": "605ba070cd11baa0cbf4eff14d825bfd283a42f3fdea576ee26834329216f139",
+    "scripts/cold-ledger-scalars-qualification/contract.json": "7444a16e48185bfdcae1a02b538f75a922dc7e8134b4aa9d37eb842014ba305f",
+    "scripts/cold-ledger-scalars-qualification/emit-roles.py": "0330355c9dfd807e4322e2bd2200830d3c5e658bfe586a9f315356785f0df213",
+    "scripts/cold-ledger-scalars-qualification/fixture-origin.json": "d1bd0ec7a90f3ef4a01c28ea89101421090cce178359acbe01df7e8f11d2c936",
+    "scripts/cold-ledger-scalars-qualification/frozen-members.json": "f52ebff3b42f8a1bb38856621d67e4babecd82b8f97e47e892acaf7a029edda1",
+    "scripts/cold-ledger-scalars-qualification/held-terminal.txt": "22c6aca0a38aaaffacabd45a3e89e5afb58046fce3ae7145d808ca27d3da793f",
+    "scripts/cold-ledger-scalars-qualification/independent-eighth-attempt-audit.json": "a1b93101bd0584837d495ca3083c176c76610be31909df44035d9be0050941b2",
+    "scripts/cold-ledger-scalars-qualification/lifecycle.py": "97aae841d5effd5a7e47b1a81cd0eb2e4c60ebec654ddee490c9ae8d3624b86d",
+    "scripts/cold-ledger-scalars-qualification/official-members.json": "9d4e3ab3107d2e2b1087cae6594ca907db103b616865ba29f5d7a42674015019",
+    "scripts/cold-ledger-scalars-qualification/policy.py": "8e4755def2cd3171a6b111fd5aedeb832ed301a855755e4d4ea29f92aa16dfaa",
+    "scripts/cold-ledger-scalars-qualification/prepared-members.json": "e2c908bca248a45cb12fca2eb081762d6134a937ff5947794da367fe98134d81",
+    "scripts/cold-ledger-scalars-qualification/qualify.py": "05e9ebdfc4446fed76e9fc028da7beca188f80f0c1321b05b1b1bcac3060efac",
+    "scripts/cold-ledger-scalars-qualification/restore-derivation.json": "6adcc94863ad54eaa3e8502b2cb4cc9f578daba93acf8ae2258d192e6802177e",
+    "scripts/cold-ledger-scalars-qualification/restore.py": "b2ebc54577d450f9cbec3f61b83dd3832ae599033a044507fdc95c2c26aeb152",
+    "scripts/cold-ledger-scalars-qualification/terminal-fixture.json": "fe6aa1aab644e40dd34b46a032c017925ecaf9c991ad5743800c8323bbddbaa1",
+    "scripts/cold-ledger-scalars-qualification/test_qualification.py": "f3da1c74f44717fb36ad8c5728daa2d71dcbe257db8678359fb85390528f4917",
+    "test/i80386-cold-ledger-scalars-qualification-source.test.mjs": "a5762efab0d1d4ca76dd4f9cd114446029a84c186db1306ef977c56908cb7af2"
+  }
+}

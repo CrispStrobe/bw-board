@@ -1,0 +1,45 @@
+{
+  "date": "2026-09-27",
+  "baseCommit": "2c4d0d44fdaeb4c90d648e2a898fdc8b0ceca287",
+  "scope": "Opt-in dispatcher reason counters; no guest execution or ordinary/default path change",
+  "activation": "AT_CODE16_WASM=1 AT_CODE16_WASM_DIAGNOSTICS=1",
+  "sources": {
+    "src/experimental/i80386-code16-wasm-block.js": "sha256:04b6855113f765e0e2e9016063b3929cfd5b61166ae6c8371517608cf835cf7e",
+    "scripts/run-i80386-at-console.mjs": "sha256:aa3ee900ffdf30a60bcf21464c22dc8cbc35b1e2688d6001a906f1d70fb794e0",
+    "test/i80386-code16-wasm-block.test.mjs": "sha256:131d9902fb2eb9f80aa44587165eba9c392f6b90fe54b482ca59d5387ce181df",
+    "docs/I80386-CODE16-WASM-BLOCK.md": "sha256:06097c5efc7cf05740badcc9784a578b1f16f6a5976e9ae4210bd545ee10c36a",
+    "wasm/i80386-code16-wasm.wasm": "sha256:74774050128374ed18c757dee6e1ab01bab2a7d5a8528aec3c9d4e5e4987211d"
+  },
+  "validation": {
+    "command": "node --test test/i80386*.test.mjs",
+    "tests": 440,
+    "passed": 436,
+    "failed": 0,
+    "skipped": 4,
+    "focusedWasmTests": 15,
+    "guestParity": "Pinned private 60-million-step ordinary and diagnostic opt-in reports matched after removing source/revision and opt-in diagnostic metadata; both stopped at budget without refusal"
+  },
+  "measuredExecutionRevision": "891489d8c8cca17f2d4756cd8344f16b9ae0bcde",
+  "measurementProvenance": "The pinned A/B ran before an unrelated public-master rebase. Measured CLI and dispatcher SHA-256 are identical to this receipt; test/doc revisions changed only after the run. Raw reports and media identifiers are retained solely in the private evidence repository.",
+  "dispatcherCounts": {
+    "fallbackCalls": 57269596,
+    "blockCalls": 1263367,
+    "nativeInstructions": 2730404,
+    "boundaryExits": 98169,
+    "fallbackReasons": {
+      "unsupportedFirstOpcode": 29848776,
+      "mode32": 15277507,
+      "shortBlock": 8005084,
+      "repeatContext": 2150307,
+      "unsupportedMemoryForm": 1811593,
+      "dataProofRefusal": 13319,
+      "codeWindowRefusal": 47526
+    },
+    "nativeExits": {
+      "completed": 1163742,
+      "dynamicEA": 98169,
+      "eventBudget": 1456
+    }
+  },
+  "interpretation": "Reason counts are dispatcher calls, not retired instructions. Other exact reason counts and numeric first-byte histogram are in private raw evidence. The leading blockers are unsupported opcode/prefix, stack and control-flow forms plus the two-instruction minimum; data proof failure is uncommon. The diagnostic option is off by default and is not for performance use."
+}

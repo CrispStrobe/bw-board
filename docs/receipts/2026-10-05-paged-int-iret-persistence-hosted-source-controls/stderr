@@ -1,0 +1,9 @@
+test_fixed_artifact_sources_counts_node_and_addon (__main__.Controls.test_fixed_artifact_sources_counts_node_and_addon) ... ok
+test_capped_lossless_decoder_accepts_complete_body_and_independent_outcome (__main__.Controls.test_capped_lossless_decoder_accepts_complete_body_and_independent_outcome) ... ok
+test_capped_decoder_rejects_trailing_members_truncation_hashes_and_caps (__main__.Controls.test_capped_decoder_rejects_trailing_members_truncation_hashes_and_caps) ... ok
+test_independent_failed_outcome_is_readable_without_bulk_body_or_pass (__main__.Controls.test_independent_failed_outcome_is_readable_without_bulk_body_or_pass) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.228s
+
+OK

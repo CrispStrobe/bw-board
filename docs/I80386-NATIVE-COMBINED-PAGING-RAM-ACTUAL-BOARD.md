@@ -1,0 +1,59 @@
+# Bounded native combined paging/RAM/REP actual-board gate
+
+This gate runs a freely licensed 64 KiB reset ROM with the native Bochs CPU-level-3 engine and an actual `ExperimentalI80386ATMachine` owning physical RAM/ROM decoding, PIO, clocks, chip debt and all eleven configured chips. The JavaScript CPU never steps during native execution. The guest writes its executable RAM itself, enters protected 16-bit code, enables sparse legacy paging, modifies executable operands, exercises both admitted A20 aliases, retries a short REP after a genuine page fault, recovers a second ordinary-store page fault, and services the actual PIC/PIT interrupt after the STI successor.
+
+The first complete candidate at source `57548693306523025b43787b50337451cd0c6079` passed four budgets (continuous, 1, 2, 257), 24 native denials, 22 malformed-transport cases and eleven API rejection witnesses. Its capture SHA-256 is `3c926e4decb51179698bd8129b14abaebc66edcf77d888b79c3c3ff00c9a9e0a`. This is the historical test-fixture candidate, not the final publication source. Final measured source is `809c3fba86a81501a08b0d1e81d4e1d23e241d41`, with 63 inputs including the mandatory report test and its actual compressed capture. Both fresh captures pass the complete validator. Formal SHA-256: `6f190e35f95630138b206461212a8f05b339bb9616fe9cfa5b1649bfa6c40bcd`; repeat SHA-256: `5e35a98cb7872aa91233f2e6986461a97019e9bf9506097cfa84afcd1f2b7f13`. All 62 report tests and eight host tests pass without skips. Root authenticates 251 actual files and reconstructs the entire backing with 4,240 checks per capture; separate raw audits pass 4,705 checks per capture. Full native records, board journals, CPU snapshots, backing and RPC match between captures. Complete JSON differs in retained configuration/log paths.
+
+All four actual arms charge 192 successful quanta and 194 native ticks, yielding 1156 board clocks including the four-clock reset epoch. Quanta count ordinary successful instructions and successful REP elements; they are not a retired-instruction count. Each arm records five successful REP elements, two faults, one IRQ, 25 PIO commits, 663 RPC requests, 104 staged write commits, four alias updates, four write stamps and two mapping commits. The eight RAM witnesses are 1111/2222/2222/2222/5555/5555/3333/4444. Both current-epoch low and high raw aliases are admitted before the OFF alias operand write; both receive the same decoded-page update. Retired epoch buffers remain intact.
+
+The PIT edge occurs at entry Q93, after one successful REP element, with CX=3 and DI=4ffc, before the next fetch. The actual 8042 output-port writes switch effective board A20 at pre-Q146/cycle880 and pre-Q167/cycle1006. Native mapping publication follows at Q147 and Q168; these are separate recorded stages. Native A20 remains enabled to preserve raw physical addresses, while the actual board performs decoding. Port 92 is denied for this fixture.
+
+Raw reset differences remain visible: native EDX=0, CR0=7ffffff0, descriptor-table limits=ffff and native debug/system-cache defaults differ from the JavaScript compatibility profile. CPU-level-3 SetCR0 retains reserved native bits; guest PE/PG/ET intent agrees, but raw CR0 does not. Guest RAM stores preserve the different raw EDX/CR0 witnesses. Nonfinal native REP hooks expose the decoded end RIP, while the JavaScript per-element checkpoint exposes the restart PC. Neither raw state is rewritten.
+
+Ordered byte journals are retained. Eight protected CALLs have source-backed native CS-then-IP stack writes, one descriptor read instead of the JavaScript duplicate read, and two first-accessed descriptor touches at a different bus phase. Eight RETFs read CS then IP natively; the JavaScript core reads IP then CS. The setup far jump has the same duplicate-descriptor-read distinction. Three IRETDs and three delivery frames have narrowly declared word-order differences. Every other ordinary data byte remains strictly ordered; the checker does not sort writes or apply a general frame permutation. Native pagewalks produce 36 PDE/PTE pairs versus 56 JavaScript walks because the JavaScript board conservatively invalidates tracked tables and every ordinary write while A20 is off. Both raw journals and the exact A/D effects are checked; architectural stale-PTE equivalence is not claimed.
+
+Budget projection validates raw command/slice counters first, then removes administrative records, two specifically proven effect-free budget-1 REP decode reentries and adjacent identical terminal idle stutter. All 6192 remaining records agree, including raw CPU/cache snapshots, typed memory effects, RPC chronology and cache publication. The complete raw records remain available. Actual page payload transport is distinguished from architectural byte reads.
+
+The build is source-bound to pinned Bochs revision 0e45b736ef9792eb9b752b0a35db49eaf2faea47, twelve independently derived patched inputs, copied bridge sources, seven untouched comparison sources and exact configured features. Qualified local binary SHA-256: 21e1b80ed46fd8ac51f896fe8f8cc6532480fceabfbc8b40c9506f07f009270d; config d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c; runtime 41990fb4de6aeb7c1a32134710915f6cdf2252b0c4a1221f190e98405c5fa0b2. The authenticated JavaScript reference source is 15f010c92b5227622b76da815bd47000e28a988c, capture bcf52cc49849a2c7889077d2b6f80d980916766d175ab78cd656689d9a7f3ab2. Revalidation of that reference uses the same JavaScript engine and is labeled accordingly.
+
+The earlier cb92 diagnostic remains UNQUALIFIED: its original pipeline failed with a missing checker-cache declaration, and one denial probe reached the preceding admission guard instead of its intended A/D guard. Its raw actual execution was preserved. A corrected probe setup and a fresh source-bound build/capture establish the candidate; the old report is never relabeled.
+
+This is a bounded fixture gate, not production backend qualification. It covers only the admitted RAM code pages, defined typed spans, legacy sparse paging, these REP/fault/IRQ sites and these A20 transitions. It excludes general MMIO/DMA/external mutation, NPX, arbitrary executable-page writes, unrestricted interrupt timing, cross-page instruction admission, broad paging modes, full reset equivalence, cycle accuracy and GUI integration. Next work should extend the actual common adapter and cache/translation policy with additional independently witnessed fixtures before enabling a general native backend.
+
+## Receipts and reproduction
+
+The [lossless actual capture](receipts/2026-10-01-i80386-native-combined-paging-ram-capture.json.gz), [qualified result](receipts/2026-10-01-i80386-native-combined-paging-ram-result.json), [source/build qualification](receipts/2026-10-01-i80386-native-combined-paging-ram-qualification.json) and [independent audits](receipts/2026-10-01-i80386-native-combined-paging-ram-root-audit.json) retain the evidence. The captured report labels its input `CANDIDATE`; the complete validator returns the separate `QUALIFIED` result.
+
+The mandatory tests run with `node --test --test-concurrency=1 test/i80386-native-combined-paging-ram-board-gate.test.mjs test/i80386-native-combined-paging-ram-host.test.mjs`. The source-bound capture tool is `scripts/run-i80386-native-combined-paging-ram-board-gate.mjs`; its `--build`, `--manifest` and `--out` arguments select an audited prepared build, the original preparation manifest and a new output directory. A different toolchain binary must be audited and pinned separately. This tool is a qualification harness; ordinary CLI/GUI 386 use still selects the existing JavaScript adapter.
+
+The next concrete performance step is a synchronous native Node adapter for this same bounded guest, replacing FIFO round trips and mandatory JSON snapshots with direct callbacks and an optional audit sink. Keep board-owned RAM/PIO/A20/clocks and persistent execute buffers. The initial Bochs SMP=0 embedding must allow only one live native instance per process. Compare audit-enabled effects with the FIFO reference before benchmarking capture-disabled execution. Browser/WASM, GUI integration and broader guest admission follow separate gates. No measured RTx gain follows from this proposal.
+
+## Node 22 diagnostic correction and fresh qualification
+
+Both hosted runs at `9b6d760b` exhausted memory in the native report-test
+worker. [Process and cgroup evidence](receipts/2026-10-01-i80386-node22-assertion-oom.json)
+records about 14.6 GiB RSS and `oom_kill 1`, despite the 1 GiB JavaScript heap
+limit. Official Node 22.23.3 reproduces quadratic external allocation when
+formatting intentional whole-journal assertion failures. The comparator now
+uses the same strict deep-equality predicate and a bounded failure message,
+preserving actual/expected references, error identity and every rejection
+check. There is no global assertion patch or skipped mutation.
+
+The complete suite passes 64 tests on Node 22.23.3: the actual baseline, all
+61 semantic mutants and two new diagnostic/strict-equality regression tests,
+zero skips. Peak RSS is 769,452 KiB. Clean source
+`6af0969e611910265364448e0819086768ed4f02` includes 64 measured inputs. The
+13 compiled native inputs, original prepared manifest and r2 binary remain
+unchanged. A fresh actual capture and independent repetition both qualify
+all four budgets, 24 native denials, 22 transport controls and eleven API
+probes. Root authenticates all 64 current/historical source inputs, 251 actual
+files and complete backing per capture, with 4,242 checks each; full native,
+CPU, device and bus streams agree between captures. Path differences remain.
+
+The new [lossless actual capture](receipts/2026-10-01-i80386-native-combined-paging-ram-node22-64-capture.json.gz),
+[result](receipts/2026-10-01-i80386-native-combined-paging-ram-node22-64-result.json),
+[source qualification](receipts/2026-10-01-i80386-native-combined-paging-ram-node22-64-qualification.json)
+and [independent audits](receipts/2026-10-01-i80386-native-combined-paging-ram-node22-64-root-audit.json)
+are separate receipts. The earlier 809c3fba qualified capture and original
+57548693 test fixture remain intact. This correction does not broaden native
+guest admission or establish a new RTx measurement.

@@ -1,0 +1,31 @@
+{
+  "scope": "SOURCE_ONLY_NO_EXECUTION_GRANT",
+  "baselineSource": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "artifactId": 11226630502,
+  "artifactZipSha256": "0335f4c5088280cfcdf00186f5e0ca59ff431442edc3a978dd26b7dc2341a0e0",
+  "singleChild": true,
+  "samplingIntervalUs": 1000,
+  "clockDomainPrerequisite": "Actual hosted nonguest alignment control before clipping",
+  "preserve": [
+    "445 resumes",
+    "166 architecture words and descriptors",
+    "six board checkpoints",
+    "raw and canonical RAM/reset witness",
+    "physical counters",
+    "all original guard effects"
+  ],
+  "bounds": {
+    "heapMiB": 512,
+    "cpuSeconds": 120,
+    "wallSeconds": 120,
+    "fileMiB": 256,
+    "core": 0,
+    "nice": 10
+  },
+  "limitations": [
+    "No throughput gate or retry of bulk candidate",
+    "Isolate samples are not all-thread CPU shares",
+    "Native.resume includes NAPI snapshot work",
+    "Shared invoke leaf close must not be interpreted as close cost"
+  ]
+}

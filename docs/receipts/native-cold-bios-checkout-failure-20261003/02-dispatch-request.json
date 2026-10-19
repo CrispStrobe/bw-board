@@ -1,0 +1,8 @@
+{
+  "workflow": "i80386-cold-native-diagnostic.yml",
+  "ref": "lane/386-cold-native-125-migration-20261003",
+  "head": "0fadffe13532e428fdcb3717ee4790405cbdef85",
+  "run": 37111905310,
+  "enable_guest": true,
+  "oneTotal": true
+}

@@ -1,0 +1,66 @@
+{
+  "schema": "astra.external-windows300-input.v1",
+  "accepted": false,
+  "scope": "input identity and decoded FAT16 file-table verification only; no execution acceptance",
+  "sourceUrl": "https://harddisks.pcjs.org/pcx86/20mb/PCDOS320-WIN300-EGA.json",
+  "descriptionUrl": "https://www.pcjs.org/software/pcx86/sys/windows/3.00/",
+  "sourceJsonSha256": "a9cef8fa70748500c930cb2d31fc2adc51ee323ca762bc53fbac4dbe1ad01a77",
+  "rawImageSha256": "127d214b6c4ff2520c95063e00028547cf287a22e56c0c7a8d550af08486f1aa",
+  "imageBytes": 21411840,
+  "geometry": {
+    "cylinders": 615,
+    "heads": 4,
+    "sectors": 17,
+    "bytesPerSector": 512
+  },
+  "partition": {
+    "mbrEntry": 3,
+    "startLba": 17
+  },
+  "conversion": "CHS ordered sectors; little-endian 32-bit words; final d-array word repeats to fill each512-byte sector per pinned PCjs disk.js",
+  "pcjsRevision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+  "fileTableMd5Matches": 109,
+  "files": {
+    "/IBMBIO.COM": {
+      "bytes": 16369,
+      "sha256": "841bf028620d0867293d7ba7613772f07e2681f36442182d2fa439133343fd8f"
+    },
+    "/IBMDOS.COM": {
+      "bytes": 28477,
+      "sha256": "bbe0ad857e91f1f077af287d2f6748bd868983be9585a6cb0bba7c52dd42f789"
+    },
+    "/COMMAND.COM": {
+      "bytes": 23791,
+      "sha256": "77402f36394f77fa8270f0563068f7f75949ce030dd28ec9fee7383f1e0b64db"
+    },
+    "/WINDOWS/SYSTEM/KERNEL.EXE": {
+      "bytes": 68928,
+      "sha256": "114675d9854bc96c50eaf2460ec048bad39438aaace42c3c41c6407c1ec4b7b3"
+    },
+    "/WINDOWS/SYSTEM/GDI.EXE": {
+      "bytes": 129691,
+      "sha256": "48956cb3948f06209ac3b22293ceb49106bac9a39aa30d7fb2744ed0267672e2"
+    },
+    "/WINDOWS/SYSTEM/USER.EXE": {
+      "bytes": 231680,
+      "sha256": "609f8945fd73e084851f99b515c534eb68a1db8dc0c1b556d81c105dccef666c"
+    },
+    "/WINDOWS/SYSTEM/KRNL286.EXE": {
+      "bytes": 59568,
+      "sha256": "4bb4af7e0aa0ff83ddb0409644ce198b1eccc4270253ee10d8b8a125be367afc"
+    },
+    "/WINDOWS/WIN.INI": {
+      "bytes": 1236,
+      "sha256": "bbd1f41e7fcc540f707460e8f592a0e249b455d924501ea3764d49fcae2ed523"
+    },
+    "/WINDOWS/SYSTEM.INI": {
+      "bytes": 1031,
+      "sha256": "cae1211c35b3ad752a60a6e398a284fac66a4246bccde660a393f3e9cb653d2b"
+    },
+    "/WINDOWS/WIN.COM": {
+      "bytes": 16014,
+      "sha256": "d2b4dd0877a87f785879ac7fb7ad4681c7e03a531ba636c51320a5bbb3f8cf6f"
+    }
+  },
+  "distribution": "External test input; binary payload is not included in this repository."
+}

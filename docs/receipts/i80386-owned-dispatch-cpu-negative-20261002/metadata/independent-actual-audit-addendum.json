@@ -1,0 +1,10 @@
+{
+  "status": "PASS_OFFICIAL_METADATA_AND_39_SOURCE_CONTEXT_ADDENDUM",
+  "artifactId": 11243860198,
+  "source39ExactFrozenGit": true,
+  "model": "Model name:                              AMD EPYC 9V74 80-Core Processor",
+  "quota": "All five cgroup v1/v2 quota paths explicitly missing/unreadable; no unlimited quota assumption.",
+  "mainReceiptSha256": "6e9cea3ea7691d888619d3a5a8efa02aaf77f20e233affbcd502620f4ba1a7c1",
+  "scriptSha256": "080e5dc604aee3cb7fdd745c5c9fedc848296e206782f5b57d2eebd68125d38b",
+  "qualification": "Protocol complete, gate FAIL_KEEP_FE1; no adoption or retry."
+}

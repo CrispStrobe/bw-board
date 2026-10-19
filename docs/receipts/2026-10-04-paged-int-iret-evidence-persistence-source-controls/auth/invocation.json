@@ -1,0 +1,45 @@
+{
+  "argv": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--input-type=module",
+    "-e",
+    "import {driverSourceIdentity} from './scripts/bochs-cpu3-native-paged-int-iret/driver-auth.mjs';console.log(JSON.stringify(driverSourceIdentity()))"
+  ],
+  "bounds": {
+    "coreBytes": 0,
+    "cpuSeconds": 10,
+    "fileMiB": 16,
+    "heapMiB": 128,
+    "nice": 10,
+    "wallSeconds": 30
+  },
+  "compilerInjectionVariablesAbsent": [
+    "GCC_EXEC_PREFIX",
+    "COMPILER_PATH",
+    "LIBRARY_PATH",
+    "CPATH",
+    "C_INCLUDE_PATH",
+    "CPLUS_INCLUDE_PATH"
+  ],
+  "cwd": "/tmp/bw-native-paged-int-iret-evidence-persistence-20261004",
+  "environment": {
+    "BW_HOT_NAPI_PROFILE": "",
+    "LC_ALL": "C.UTF-8",
+    "LD_AUDIT": "",
+    "LD_PRELOAD": "",
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "NODE_V8_COVERAGE": "",
+    "PATH": "/usr/bin:/bin",
+    "PYTHONHOME": "",
+    "PYTHONINSPECT": "",
+    "PYTHONPATH": "",
+    "PYTHONSTARTUP": "",
+    "TMPDIR": "/tmp",
+    "TZ": "UTC"
+  },
+  "mode": "conditional-readonly-identity",
+  "scope": "source-only; no factory, provider, addon or CPU instructions",
+  "sourceCount": 81
+}

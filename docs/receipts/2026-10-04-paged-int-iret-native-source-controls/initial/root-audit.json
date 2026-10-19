@@ -1,0 +1,21 @@
+{
+  "scope": "read-only first actual saved capture audit; no replay",
+  "sourceRevision": "55d94f2894a7860c20b61b9d55e95c6797c8641c",
+  "sourcePins": 194,
+  "status": "RETAINED_FIRST_FAILURE",
+  "tests": 5,
+  "pass": 4,
+  "fail": 1,
+  "skip": 0,
+  "reason": "GCC_EXEC_PREFIX empty in minimal wrapper env prevented cc1plus startup; affected tiny C case did not compile",
+  "pinsEqual": true,
+  "artifacts": {
+    "before.json": "7e426846da3f4f2e0860d9ca83e5e0da7483926c72a8dfb5cb482f6338973f11",
+    "after.json": "7e426846da3f4f2e0860d9ca83e5e0da7483926c72a8dfb5cb482f6338973f11",
+    "exit.json": "c4a18fae64c895ccb9aff8323b0504715bcedc0f2ea9a97723a0f1f87a6b6fbe",
+    "stdout": "05b662217351372742d01136441cdee5673d7b53683cc429e99e0badcebfa179",
+    "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "invocation.json": "5a9b22e2696ec373585cd5abac603b4025e4c446844c0912983fe8c55f034e1a",
+    "parent.py": "3dac4a785e16f8a8ee435e815491051b8482055f7bad45238018b1d12d94a9ae"
+  }
+}

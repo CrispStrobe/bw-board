@@ -1,0 +1,9 @@
+{
+  "status": "PASS_ACTUAL_BULK_CAPTURE_ON_FULL_CANONICAL_AND_STATE_NOT_SPEED_GATE",
+  "checks": 1859382,
+  "canonicalRows": 1649271,
+  "captureSha256": "b6507287e035971096b5544299436f129c18201021e97fe1678d54a6614ad3b8",
+  "journalSha256": "6e130c37266188258be29fe21f4e165b0c2d75a5c6b79347964a6d509fb55946",
+  "rawTraceSha256": "6c24d2f61969316d7d6a45d167f61ce74c1e272220151a8744b5b4e18b4e2f50",
+  "scope": "Everycanonicalrow exactqualifiedfe1, allstoredwhole166/native/descriptors/physical/fullboard/RAM/witness/resumes equal. ONwholejournal exact ortracefastemptyjournal/sourceboundnullsinkbulkbranch. Dual106runtime/103CIcompiled retained. No native rerun/speedclaim."
+}

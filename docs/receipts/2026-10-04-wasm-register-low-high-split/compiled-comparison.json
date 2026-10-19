@@ -1,0 +1,263 @@
+{
+  "tool": "ad05b8ec01309dba79e7cf9435c6b0b5424d50fc",
+  "baseline": {
+    "source": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+    "run": 37142446921,
+    "wasmSha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d",
+    "glueSha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73",
+    "functions": [
+      {
+        "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+        "labels": [
+          "step_batch"
+        ],
+        "watSha256": "982bd4e12d2c525f20f6be9e7dc6206c9320320a8f3a5981efe8b7a91027008a",
+        "watBytes": 7673574,
+        "nonWhitespaceBytes": 495684,
+        "branchTableTargetHistogram": {
+          "4": 19,
+          "5": 5,
+          "6": 4,
+          "7": 8,
+          "9": 3,
+          "11": 2,
+          "12": 2,
+          "14": 3,
+          "15": 2,
+          "16": 12,
+          "17": 10,
+          "18": 8,
+          "22": 2,
+          "157": 2
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 395,
+          "write_reg": 256,
+          "read_reg_partitioned": 0,
+          "write_reg_partitioned": 0,
+          "read_reg_high": 0,
+          "write_reg_high": 0
+        }
+      },
+      {
+        "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+        "labels": [
+          "run_t16_cached_run"
+        ],
+        "watSha256": "c5ca23e63ba5239c134e398777713955ce908ee5c53d2c8bfd3c474b90aebfc4",
+        "watBytes": 7252781,
+        "nonWhitespaceBytes": 169856,
+        "branchTableTargetHistogram": {
+          "16": 1,
+          "18": 107,
+          "84": 1
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 2,
+          "write_reg": 2,
+          "read_reg_partitioned": 0,
+          "write_reg_partitioned": 0,
+          "read_reg_high": 0,
+          "write_reg_high": 0
+        }
+      }
+    ]
+  },
+  "candidate": {
+    "source": "5fed1f735dd48c899395a74f0565451c38a03716",
+    "run": 37177724078,
+    "wasmSha256": "e1558d973c48b8d78173d321b2839cb07ff36b8d2affa9ff93502abdc65e3de9",
+    "glueSha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73",
+    "functions": [
+      {
+        "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+        "labels": [
+          "step_batch"
+        ],
+        "watSha256": "5ad3f77a5c3ab3d7ea3b131a27fff52b7604c6090243484efcf0e33f2608858c",
+        "watBytes": 7668571,
+        "nonWhitespaceBytes": 495041,
+        "branchTableTargetHistogram": {
+          "4": 19,
+          "5": 5,
+          "6": 4,
+          "7": 8,
+          "9": 6,
+          "11": 2,
+          "12": 2,
+          "14": 2,
+          "15": 2,
+          "16": 12,
+          "17": 10,
+          "18": 6,
+          "22": 2,
+          "157": 2
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 395,
+          "write_reg": 256,
+          "read_reg_partitioned": 0,
+          "write_reg_partitioned": 0,
+          "read_reg_high": 14,
+          "write_reg_high": 11
+        }
+      },
+      {
+        "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+        "labels": [
+          "run_t16_cached_run"
+        ],
+        "watSha256": "748dc990aac2f435b356c7ed65e757e983ec3cae3b988267e72d39730ae8c45c",
+        "watBytes": 2718255,
+        "nonWhitespaceBytes": 106131,
+        "branchTableTargetHistogram": {
+          "9": 106,
+          "16": 1,
+          "17": 1,
+          "84": 1
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 2,
+          "write_reg": 2,
+          "read_reg_partitioned": 0,
+          "write_reg_partitioned": 0,
+          "read_reg_high": 72,
+          "write_reg_high": 37
+        }
+      }
+    ]
+  },
+  "comparisons": [
+    {
+      "labels": [
+        "step_batch"
+      ],
+      "baseline": {
+        "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+        "labels": [
+          "step_batch"
+        ],
+        "watSha256": "982bd4e12d2c525f20f6be9e7dc6206c9320320a8f3a5981efe8b7a91027008a",
+        "watBytes": 7673574,
+        "nonWhitespaceBytes": 495684,
+        "branchTableTargetHistogram": {
+          "4": 19,
+          "5": 5,
+          "6": 4,
+          "7": 8,
+          "9": 3,
+          "11": 2,
+          "12": 2,
+          "14": 3,
+          "15": 2,
+          "16": 12,
+          "17": 10,
+          "18": 8,
+          "22": 2,
+          "157": 2
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 395,
+          "write_reg": 256,
+          "read_reg_partitioned": 0,
+          "write_reg_partitioned": 0,
+          "read_reg_high": 0,
+          "write_reg_high": 0
+        }
+      },
+      "candidate": {
+        "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+        "labels": [
+          "step_batch"
+        ],
+        "watSha256": "5ad3f77a5c3ab3d7ea3b131a27fff52b7604c6090243484efcf0e33f2608858c",
+        "watBytes": 7668571,
+        "nonWhitespaceBytes": 495041,
+        "branchTableTargetHistogram": {
+          "4": 19,
+          "5": 5,
+          "6": 4,
+          "7": 8,
+          "9": 6,
+          "11": 2,
+          "12": 2,
+          "14": 2,
+          "15": 2,
+          "16": 12,
+          "17": 10,
+          "18": 6,
+          "22": 2,
+          "157": 2
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 395,
+          "write_reg": 256,
+          "read_reg_partitioned": 0,
+          "write_reg_partitioned": 0,
+          "read_reg_high": 14,
+          "write_reg_high": 11
+        }
+      },
+      "eighteenTargetTablesDelta": -2
+    },
+    {
+      "labels": [
+        "run_t16_cached_run"
+      ],
+      "baseline": {
+        "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+        "labels": [
+          "run_t16_cached_run"
+        ],
+        "watSha256": "c5ca23e63ba5239c134e398777713955ce908ee5c53d2c8bfd3c474b90aebfc4",
+        "watBytes": 7252781,
+        "nonWhitespaceBytes": 169856,
+        "branchTableTargetHistogram": {
+          "16": 1,
+          "18": 107,
+          "84": 1
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 2,
+          "write_reg": 2,
+          "read_reg_partitioned": 0,
+          "write_reg_partitioned": 0,
+          "read_reg_high": 0,
+          "write_reg_high": 0
+        }
+      },
+      "candidate": {
+        "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+        "labels": [
+          "run_t16_cached_run"
+        ],
+        "watSha256": "748dc990aac2f435b356c7ed65e757e983ec3cae3b988267e72d39730ae8c45c",
+        "watBytes": 2718255,
+        "nonWhitespaceBytes": 106131,
+        "branchTableTargetHistogram": {
+          "9": 106,
+          "16": 1,
+          "17": 1,
+          "84": 1
+        },
+        "staticDirectHelperCalls": {
+          "read_reg": 2,
+          "write_reg": 2,
+          "read_reg_partitioned": 0,
+          "write_reg_partitioned": 0,
+          "read_reg_high": 72,
+          "write_reg_high": 37
+        }
+      },
+      "eighteenTargetTablesDelta": -107
+    }
+  ],
+  "engineExecution": false,
+  "enginePromotion": false,
+  "limitations": [
+    "Static code shape only; no hit-frequency or runtime-cost claim",
+    "Formatted/non-whitespace text sizes are not binary/code-cache sizes",
+    "18-target table counts do not identify every table as a register access",
+    "Actual ordinary paired measurements, not these counts, decide performance"
+  ]
+}

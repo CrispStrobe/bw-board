@@ -1,0 +1,29 @@
+{
+  "returncode": 0,
+  "signal": null,
+  "timedOut": false,
+  "fileLimitReached": false,
+  "error": null,
+  "stderrBytes": 149884550,
+  "stderrSha256": "b3646e15a29a0d40f0e9ca8e93f82a28e20fd8caed3d30365f441446460eeda2",
+  "wallNs": 20138266155,
+  "transport": "regular file descriptors, no nonblocking pipe",
+  "RLIMIT_FSIZE": 268435456,
+  "heapMiB": 512,
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "/tmp/bw-board-386-native-owned-in8-r3-20261002/scripts/run-i80386-native-owned-in8.mjs",
+    "/mnt/volume1/tmp-astra/native-owned-in8-parity-r3-ci-20261002/fulltrace-on/input.json"
+  ],
+  "RLIMIT_CPU": 120,
+  "niceIncrement": 10,
+  "blankEnvironment": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": ""
+  },
+  "status": "CHILD_EXIT_PASS_NOT_QUALIFICATION"
+}

@@ -1,0 +1,18 @@
+{
+  "status": "native-cold-entry-actual-board-proof-pass",
+  "nativeTicks": 49,
+  "successfulQuanta": 49,
+  "boardCycles": 298,
+  "instructionBytes": 143,
+  "dataReadBytes": 5,
+  "dataWriteBytes": 15,
+  "pioBytes": 7,
+  "pageFills": 2,
+  "architecturalResetParity": false,
+  "slices": {
+    "continuous": 9,
+    "budget1": 50,
+    "budget2": 26,
+    "budget257": 9
+  }
+}

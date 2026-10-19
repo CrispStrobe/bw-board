@@ -1,0 +1,57 @@
+MICROBIT_WASM_GUEST_SHA256=9743e84317ff6f19c8c183cdc22ead37f1ffc7cb2fa18314e3fb762dc57ebc41
+MICROBIT_WASM_SAMPLE {"index":0,"cycles":64000000,"cpuHz":64000000,"wallSeconds":1.215930476,"rtx":0.8224154421144717,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":112,"magSamples":112,"scans":2145}
+MICROBIT_WASM_SAMPLE {"index":1,"cycles":64000000,"cpuHz":64000000,"wallSeconds":1.203963999,"rtx":0.8305896196485856,"accelRaw":[-4096,2048,-12288],"magRaw":[-200,0,400],"accelSamples":212,"magSamples":212,"scans":4053}
+MICROBIT_WASM_SAMPLE {"index":2,"cycles":64000000,"cpuHz":64000000,"wallSeconds":1.2125860959999994,"rtx":0.8246837097165598,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":312,"magSamples":312,"scans":5960}
+MICROBIT_WASM_SAMPLE {"index":3,"cycles":64000000,"cpuHz":64000000,"wallSeconds":1.2197450779999999,"rtx":0.8198434394502226,"accelRaw":[-4096,2048,-12288],"magRaw":[-200,0,400],"accelSamples":412,"magSamples":412,"scans":7867}
+MICROBIT_WASM_SAMPLE {"index":4,"cycles":64000000,"cpuHz":64000000,"wallSeconds":1.2222110849999999,"rtx":0.8181892737456232,"accelRaw":[16384,-8192,4096],"magRaw":[200,-100,50],"accelSamples":512,"magSamples":512,"scans":9774}
+TAP version 13
+# Subtest: selected micro:bit motion guest on actual WASM
+    # Subtest: reads both sensor identities, poses, actual DMA, matrix and buttons
+    ok 1 - reads both sensor identities, poses, actual DMA, matrix and buttons
+      ---
+      duration_ms: 280.352289
+      type: 'test'
+      ...
+    # Subtest: all five 64M-cycle windows meet the unchanged 1x floor
+    not ok 2 - all five 64M-cycle windows meet the unchanged 1x floor
+      ---
+      duration_ms: 6260.185249
+      type: 'test'
+      location: '/home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:108:5'
+      failureType: 'testCodeFailure'
+      error: 'all windows must meet 1x: [0.8224154421144717,0.8305896196485856,0.8246837097165598,0.8198434394502226,0.8181892737456232]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:131:20)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    1..2
+not ok 1 - selected micro:bit motion guest on actual WASM
+  ---
+  duration_ms: 6541.408245
+  type: 'suite'
+  location: '/home/runner/work/bw-board/bw-board/test/labwired-microbit-motion.test.mjs:93:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 2
+# suites 1
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6549.194369

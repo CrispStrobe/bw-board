@@ -1,0 +1,459 @@
+{
+  "schema": "bw.i80386-code16-windows-census.v1",
+  "observerSha256": "75e07404d5dc62a0c087616cc87d27d148221b1a8d839890412d43dc4d40be3a",
+  "executionRevision": "e7434073afc67aa5803c01502315609b49cd108e",
+  "scope": "60M ordinary Windows 3.11 steps; current-source 32-bit count and opt-in code16 WASM eligibility",
+  "privateInputsIdentical": true,
+  "selectedReportedFields": [
+    "steps",
+    "stop",
+    "refusal",
+    "cpu",
+    "delivered",
+    "serial",
+    "textRam",
+    "vga"
+  ],
+  "selectedReportedFieldsSha256": "671373ced87f5d5307d01a498c7ef9f3fd835057356a9e604585465ce92b7511",
+  "sourceSha256": {
+    "../src/experimental/i80386.js": "510a7b18c7e5d3c2db67a3624fbea09fdeef169c381dd8e6744dabdb8ea6c5e2",
+    "../src/experimental/i80386-at-machine.js": "cd590385f617841429e5de2f2bf7759fcd064f67db61a474272f3188e86c31fb",
+    "../src/experimental/i80386-code16-wasm-block.js": "d34e118b23f42ab24822bf9559bab11d723cb3ce65ad27246312589e511dc758",
+    "./run-i80386-at-console.mjs": "3923895ca14256d838bd65331126b1df06ed37d6bfed2797a32ec68f657957bb"
+  },
+  "host": {
+    "cpuModel": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "logicalCpus": 4,
+    "node": "v20.20.2",
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "timing": {
+    "ordinary": {
+      "wall": 71.53,
+      "user": 78.52,
+      "system": 0.91,
+      "maxrss": 149520
+    },
+    "optin": {
+      "wall": 408.58,
+      "user": 392.05,
+      "system": 4.42,
+      "maxrss": 218544
+    },
+    "optinUserCpuToOrdinary": 4.992995415180846
+  },
+  "modes": {
+    "protected32Steps": 15277507,
+    "realProtected16Vm86CombinedSteps": 44722493,
+    "splitSource": "the current diagnostic separates protected32 only; historical separate mode-clock receipt has the three-way 16-bit split"
+  },
+  "code16": {
+    "stats": {
+      "attempts": 39761006,
+      "decoded": 390473,
+      "blockCalls": 2345288,
+      "instructions": 5042482,
+      "fallback": 54957518,
+      "boundary": 180069
+    },
+    "retirementShare": 0.08404136666666667,
+    "meanInstructionsPerCall": 2.150048096438476,
+    "fallbacks": [
+      [
+        "unsupportedFirstOpcode",
+        27550452
+      ],
+      [
+        "mode32",
+        15277507
+      ],
+      [
+        "shortBlock",
+        8006100
+      ],
+      [
+        "repeatContext",
+        2150307
+      ],
+      [
+        "unsupportedMemoryForm",
+        1793047
+      ],
+      [
+        "interruptShadow",
+        66243
+      ],
+      [
+        "codeWindowRefusal",
+        47526
+      ],
+      [
+        "eventHorizon",
+        38385
+      ],
+      [
+        "dataProofRefusal",
+        17095
+      ],
+      [
+        "debugState",
+        5992
+      ],
+      [
+        "haltedOrShutdown",
+        3315
+      ],
+      [
+        "truncatedInstruction",
+        1498
+      ],
+      [
+        "pendingInterrupt",
+        51
+      ]
+    ],
+    "exits": [
+      [
+        "completed",
+        2162480
+      ],
+      [
+        "dynamicEA",
+        180069
+      ],
+      [
+        "eventBudget",
+        2739
+      ]
+    ],
+    "shortBlockStops": [
+      [
+        "unsupportedOpcode",
+        3866789
+      ],
+      [
+        "terminalBranch",
+        3484531
+      ],
+      [
+        "unsupportedMemoryForm",
+        637258
+      ],
+      [
+        "terminalStore",
+        17515
+      ],
+      [
+        "truncatedInstruction",
+        4
+      ],
+      [
+        "codePageEnd",
+        3
+      ]
+    ],
+    "unsupportedFirstOpcodeEncoding": "decimal byte values, not hexadecimal; 38=0x26 ES, 142=0x8E MOV segment, 102=0x66 operand-size prefix",
+    "unsupportedFirstOpcodes": [
+      [
+        "38",
+        1280245
+      ],
+      [
+        "142",
+        1114818
+      ],
+      [
+        "102",
+        1113760
+      ],
+      [
+        "232",
+        1112572
+      ],
+      [
+        "195",
+        1086088
+      ],
+      [
+        "80",
+        1071226
+      ],
+      [
+        "243",
+        1024412
+      ],
+      [
+        "131",
+        660797
+      ],
+      [
+        "85",
+        624056
+      ],
+      [
+        "93",
+        599517
+      ],
+      [
+        "60",
+        547980
+      ],
+      [
+        "255",
+        516379
+      ],
+      [
+        "233",
+        450668
+      ],
+      [
+        "86",
+        448818
+      ],
+      [
+        "235",
+        443609
+      ],
+      [
+        "94",
+        435436
+      ]
+    ],
+    "formCensus": {
+      "first26": {
+        "calls": 1280245,
+        "forms": [
+          [
+            "26:89:mem:o16:a16",
+            196395
+          ],
+          [
+            "26:f6:mem/0:o16:a16",
+            184279
+          ],
+          [
+            "26:88:mem:o16:a16",
+            138340
+          ],
+          [
+            "26:80:mem/4:o16:a16",
+            130300
+          ],
+          [
+            "26:80:mem/7:o16:a16",
+            94126
+          ],
+          [
+            "26:83:mem/7:o16:a16",
+            86974
+          ],
+          [
+            "26:03:mem:o16:a16",
+            66810
+          ],
+          [
+            "26:80:mem/1:o16:a16",
+            66411
+          ],
+          [
+            "26:81:mem/7:o16:a16",
+            55224
+          ],
+          [
+            "26:86:mem:o16:a16",
+            45632
+          ],
+          [
+            "26:3b:mem:o16:a16",
+            22867
+          ],
+          [
+            "26:f7:mem/0:o16:a16",
+            18669
+          ]
+        ],
+        "outcomes": [
+          [
+            "known-length",
+            1280245
+          ]
+        ]
+      },
+      "first66": {
+        "calls": 1113760,
+        "forms": [
+          [
+            "66:d1:reg:o32:a16",
+            119281
+          ],
+          [
+            "66:c1:reg/5:o32:a16",
+            93193
+          ],
+          [
+            "66:c1:reg/4:o32:a16",
+            86444
+          ],
+          [
+            "66:25:plain:o32:a16",
+            80915
+          ],
+          [
+            "66:09:reg:o32:a16",
+            80764
+          ],
+          [
+            "66:3d:plain:o32:a16",
+            66846
+          ],
+          [
+            "66:bb:plain:o32:a16",
+            66698
+          ],
+          [
+            "66:b8:plain:o32:a16",
+            65803
+          ],
+          [
+            "66:f7:reg/4:o32:a16",
+            65604
+          ],
+          [
+            "66:83:reg/7:o32:a16",
+            65591
+          ],
+          [
+            "66:89:reg:o32:a16",
+            39556
+          ],
+          [
+            "66:50:plain:o32:a16",
+            26903
+          ]
+        ],
+        "outcomes": [
+          [
+            "known-length",
+            1112486
+          ],
+          [
+            "unknown-length",
+            1274
+          ]
+        ]
+      },
+      "first8e": {
+        "calls": 1114818,
+        "forms": [
+          [
+            "-:8e:reg/0:o16:a16",
+            600021
+          ],
+          [
+            "-:8e:mem/0:o16:a16",
+            399147
+          ],
+          [
+            "-:8e:reg/3:o16:a16",
+            86336
+          ],
+          [
+            "-:8e:mem/3:o16:a16",
+            12028
+          ],
+          [
+            "-:8e:reg/2:o16:a16",
+            11070
+          ],
+          [
+            "-:8e:reg/4:o16:a16",
+            2818
+          ],
+          [
+            "-:8e:reg/5:o16:a16",
+            2470
+          ],
+          [
+            "-:8e:mem/2:o16:a16",
+            928
+          ]
+        ],
+        "outcomes": [
+          [
+            "known-length",
+            1114818
+          ]
+        ]
+      },
+      "shortBlockSequential": {
+        "calls": 4521569,
+        "forms": [
+          [
+            "-:50:plain:o16:a16",
+            454104
+          ],
+          [
+            "-:89:mem:o16:a16",
+            363673
+          ],
+          [
+            "-:3b:mem:o16:a16",
+            255332
+          ],
+          [
+            "-:8e:reg/0:o16:a16",
+            180527
+          ],
+          [
+            "-:e8:plain:o16:a16",
+            160353
+          ],
+          [
+            "-:3c:plain:o16:a16",
+            154420
+          ],
+          [
+            "-:30:reg:o16:a16",
+            138680
+          ],
+          [
+            "-:5d:plain:o16:a16",
+            135794
+          ],
+          [
+            "-:98:plain:o16:a16",
+            128365
+          ],
+          [
+            "-:24:plain:o16:a16",
+            118383
+          ],
+          [
+            "-:83:reg/7:o16:a16",
+            106747
+          ],
+          [
+            "-:52:plain:o16:a16",
+            84614
+          ]
+        ],
+        "outcomes": [
+          [
+            "known-length",
+            4350544
+          ],
+          [
+            "unknown-length",
+            170221
+          ],
+          [
+            "incomplete",
+            804
+          ]
+        ]
+      }
+    }
+  },
+  "limits": "Acceptance compares only the selected reported fields: step count, stop/refusal, reported CPU subset, delivered events, serial/text-RAM and VGA plane results. The console report does not include a full RAM hash, disk state, or complete hidden CPU state; matching fields do not prove full guest-state equivalence. Observed opt-in execution and CPU modes are not a safe admission proof or 386DX timing claim. Private input identifiers and guest text are omitted."
+}

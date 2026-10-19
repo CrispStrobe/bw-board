@@ -1,0 +1,8 @@
+{
+  "status": "PASS_FULL_SAVED_TERMINAL_RECEIPT_AND_BRIDGE",
+  "originalHostedStatus": "FAIL",
+  "projection": "in memory only; original ZIP and bindings unchanged",
+  "orderedPioEvents": 16475,
+  "validatorSha256": "8e4755def2cd3171a6b111fd5aedeb832ed301a855755e4d4ea29f92aa16dfaa",
+  "scope": "No guest run or speed measurement; source-attested full RAM hash equality"
+}

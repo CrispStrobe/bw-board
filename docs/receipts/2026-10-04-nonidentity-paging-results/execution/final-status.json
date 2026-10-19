@@ -1,0 +1,17 @@
+{
+  "schema": "bw.nonidentity-paging.hosted-correctness.v1",
+  "status": "PASS",
+  "scope": "One fixed native/JS paging correctness child; raw166 retained, represented CPU and board/seven pages compared only at declared comparable cuts. PG-entry/zero-Q phases remain unmatched; no callback-order, OS, speed or adoption claim.",
+  "workerStarted": true,
+  "originalProvenance": "Original build records retained unchanged; recreated filesystem is new materialization, not original build execution",
+  "workerAttempted": true,
+  "workerPid": 3716,
+  "progress": {
+    "n": 34,
+    "q": 34,
+    "dn": 1,
+    "dq": 1,
+    "resumes": 34,
+    "zeroQ": 0
+  }
+}

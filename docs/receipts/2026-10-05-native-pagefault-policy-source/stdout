@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: manufactured ABI4 slice agrees with exact offsets and 166 words without direct owner telemetry
+ok 1 - manufactured ABI4 slice agrees with exact offsets and 166 words without direct owner telemetry
+  ---
+  duration_ms: 46.618674
+  type: 'test'
+  ...
+# Subtest: single manufactured FAULT requires paused owner genuine-format frame and no failed operand effect
+ok 2 - single manufactured FAULT requires paused owner genuine-format frame and no failed operand effect
+  ---
+  duration_ms: 267.598772
+  type: 'test'
+  ...
+# Subtest: zero-charge prefetch remains unmatched and cannot smuggle FAULT or attempted instruction
+ok 3 - zero-charge prefetch remains unmatched and cannot smuggle FAULT or attempted instruction
+  ---
+  duration_ms: 13.320107
+  type: 'test'
+  ...
+# Subtest: manufactured finite repair CR3 reload error discard IRET retry ledger rejects duplicate and early writes
+ok 4 - manufactured finite repair CR3 reload error discard IRET retry ledger rejects duplicate and early writes
+  ---
+  duration_ms: 191.688739
+  type: 'test'
+  ...
+# Subtest: genuine saved JS 58-frame projection anchors zero-Q fault and handler phases without native order claims
+ok 5 - genuine saved JS 58-frame projection anchors zero-Q fault and handler phases without native order claims
+  ---
+  duration_ms: 0.752406
+  type: 'test'
+  ...
+# Subtest: pending source policy confers no old DSO authority and malformed starting state or page refuses
+ok 6 - pending source policy confers no old DSO authority and malformed starting state or page refuses
+  ---
+  duration_ms: 16.536928
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 789.797628

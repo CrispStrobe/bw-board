@@ -1,0 +1,18 @@
+{
+  "status": "CONFIRMED_HOSTED_CONTEXT_FAILURE_BEFORE_GATE",
+  "run": 37018977889,
+  "workflowHead": "b3bad5b5e81e1b2c78525c99e1a35e740bc0a5e2",
+  "cause": "Required v2 cpu.max read failed on absent optional cgroup path under set -e; paired-gate step skipped",
+  "guestChildren": 0,
+  "measuredPairs": 0,
+  "speedResult": null,
+  "officialFailureArtifactId": 11232047069,
+  "officialZipSha256": "035be1ed79529036aa8cde7f995aa0633253f7a043206d2d90dd9157871d874e",
+  "rawRecords": {
+    "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt1-20261002/failed.log": "cb6b63754858a30492ed55160197da87fd865a787180ab6656514e069305fbad",
+    "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt1-20261002/jobs.json": "ecc045d80193f84efb4f788f406cfe8f21d750357a4adf33e9bafabf35a6e6c0",
+    "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt1-20261002/run.json": "3204a38758cdccd86b4d4a231d5397725214a6b25fe4f053ae49fb584d04ded9",
+    "/mnt/volume1/tmp-astra/native-owned-clock-bulk-ghci-attempt1-20261002/artifact.zip": "035be1ed79529036aa8cde7f995aa0633253f7a043206d2d90dd9157871d874e"
+  },
+  "fixScope": "Only workflow hardware-context collection; no metric/protocol/native source/artifact/bounds changes"
+}

@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "/tmp/bw-board-386-native-owned-clock-20261002/scripts/run-i80386-native-owned-clock.mjs",
+    "/mnt/volume1/tmp-astra/native-owned-clock-cpu-benchmark-20261002/3-ABI3.input.json"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 6.866465365514159,
+  "streams": {
+    "stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stderr": {
+      "bytes": 410,
+      "sha256": "ce8201eeb2b6f4f37070284cf6d318a4193fe6b50082b439df0e769045f88e02"
+    }
+  }
+}

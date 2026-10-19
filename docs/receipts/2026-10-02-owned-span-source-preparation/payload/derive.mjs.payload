@@ -1,0 +1,22 @@
+/** Exact inverse of a separate SOURCE-ONLY private span provider. No native admission. */
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
+const baseUrl=new URL('../bochs-cpu3-native-owned-in8/provider.mjs',import.meta.url);
+export function deriveOwnedSpanProvider(){
+ const base=readFileSync(baseUrl),source=base.toString(),method=readFileSync(new URL('./span-method.txt',import.meta.url),'utf8');
+ assert.equal(sha(base),'fc2dda9353edd0f28d7bac26bb5336ee2f946a63b405be33d7ba14099ac8c1c0','frozen fe1 provider');
+ const edits=[
+  {old:"from './reset-witness.mjs'",next:"from '../bochs-cpu3-native-owned-in8/reset-witness.mjs'",label:'relocate reset witness import'},
+  {old:'const apply=Reflect.apply;',next:"import {ExperimentalI80386ATMachine} from '../../src/experimental/i80386-at-machine.js';\nimport {DirectBoardFacade} from '../bochs-cpu3-native-direct-board/board.mjs';\nimport {NativeCombinedPagingRamHost} from '../bochs-cpu3-native-combined-paging-ram/host.mjs';\nconst decode386=ExperimentalI80386ATMachine.prototype._decode386,gate386=ExperimentalI80386ATMachine.prototype._gate386;\nconst facadeClass=DirectBoardFacade.prototype._class,hostClass=NativeCombinedPagingRamHost.prototype._class;\nconst apply=Reflect.apply;",label:'capture pinned affine decoder and uniform classifier'},
+  {old:'export function createOwnedIn8Provider(',next:'export function createOwnedSpanProvider(',label:'separate private factory'},
+  {old:' class In8Board extends HotDirectBoardFacade {\n',next:' class In8Board extends HotDirectBoardFacade {\n'+method,label:'private span proof only'}
+ ];
+ let text=source;
+ for(const e of edits){assert.equal(text.split(e.old).length,2,e.label);text=text.replace(e.old,e.next);}
+ let inverse=text;
+ for(const e of [...edits].reverse()){assert.equal(inverse.split(e.next).length,2,'inverse '+e.label);inverse=inverse.replace(e.next,e.old);}
+ assert.equal(inverse,source,'exact provider inverse');
+ return {bytes:Buffer.from(text),baseSha256:sha(base),providerSha256:sha(text),methodSha256:sha(method),edits};
+}

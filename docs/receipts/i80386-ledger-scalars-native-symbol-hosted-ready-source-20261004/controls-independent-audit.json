@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "revision": "16fc71d0336ad4c9a5de86d874b0dd1bb3393cb9",
+  "ownSourceCount": 13,
+  "frozenRoleSourceCount": 390,
+  "fullPrePostEqual": true,
+  "frozenGitAndToolHashesVerified": true,
+  "coverage": "two Node cases with retained six Python mocks",
+  "exitCode": 0,
+  "timeout": false,
+  "wallSeconds": 5.478611618280411,
+  "scope": "source/mock/read-only only; no live setup, sudo, profiler, addon or guest"
+}

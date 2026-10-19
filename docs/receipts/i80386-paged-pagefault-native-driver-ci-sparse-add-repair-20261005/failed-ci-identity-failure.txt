@@ -1,0 +1,36 @@
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2409013Z # error: unknown option `no-cone'
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2409535Z # usage: git sparse-checkout add [--skip-checks] (--stdin | <patterns>)
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2410212Z #     --skip-checks         skip some sanity checks on the given paths that might give false positives
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2410575Z #     --[no-]stdin          read patterns from standard in
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2411272Z # Subtest: frozen source identity includes real fault policy and held multiline checkpoint import
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2411984Z not ok 1479 - frozen source identity includes real fault policy and held multiline checkpoint import
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2412130Z   ---
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2412295Z   duration_ms: 1263.482347
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2413056Z   location: '/home/runner/work/bw-board/bw-board/test/i80386-paged-pagefault-native-runtime-driver.test.mjs:76:1'
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2413270Z   failureType: 'testCodeFailure'
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2413418Z   error: |-
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2413852Z     Command failed: git sparse-checkout add --no-cone /package-lock.json
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2414065Z     error: unknown option `no-cone'
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2414478Z     usage: git sparse-checkout add [--skip-checks] (--stdin | <patterns>)
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2414614Z     
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2415201Z         --skip-checks         skip some sanity checks on the given paths that might give false positives
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2415513Z         --[no-]stdin          read patterns from standard in
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2415648Z     
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2415780Z     
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2415937Z   code: 'ERR_TEST_FAILURE'
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2416087Z   stack: |-
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2416371Z     genericNodeError (node:internal/errors:984:15)
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2416606Z     wrappedFn (node:internal/errors:538:14)
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2416891Z     checkExecSyncError (node:child_process:891:11)
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2417137Z     execFileSync (node:child_process:927:15)
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2418261Z     TestContext.<anonymous> (file:///home/runner/work/bw-board/bw-board/test/i80386-paged-pagefault-native-runtime-driver.test.mjs:90:3)
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2418581Z     async Test.run (node:internal/test_runner/test:797:9)
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2419045Z     async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2419185Z   ...
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2430279Z # {"scope":"tiny actual private JS PF source control","attempts":57,"q":56,"cuts":[{"name":"reset","q":0,"attemptOrdinal":0,"faultSerial":0},{"name":"after-LGDT","q":36,"attemptOrdinal":36,"faultSerial":0},{"name":"after-LIDT","q":37,"attemptOrdinal":37,"faultSerial":0},{"name":"CR3-ready","q":39,"attemptOrdinal":39,"faultSerial":0},{"name":"PE-enabled","q":41,"attemptOrdinal":41,"faultSerial":0},{"name":"DS-ready","q":43,"attemptOrdinal":43,"faultSerial":0},{"name":"SS-loaded","q":44,"attemptOrdinal":44,"faultSerial":0},{"name":"SP-ready","q":45,"attemptOrdinal":45,"faultSerial":0},{"name":"PG-enabled","q":47,"attemptOrdinal":47,"faultSerial":0},{"name":"entered-paged-code","q":48,"attemptOrdinal":48,"faultSerial":0},{"name":"before-faulting-store","q":49,"attemptOrdinal":49,"faultSerial":0},{"name":"entered-PF-handler","q":49,"attemptOrdinal":50,"faultSerial":1},{"name":"PTE-repaired","q":50,"attemptOrdinal":51,"faultSerial":1},{"name":"CR3-read","q":51,"attemptOrdinal":52,"faultSerial":1},{"name":"CR3-reloaded","q":52,"attemptOrdinal":53,"faultSerial":1},{"name":"error-discarded","q":53,"attemptOrdinal":54,"faultSerial":1},{"name":"returned-for-retry","q":54,"attemptOrdinal":55,"faultSerial":1},{"name":"retry-committed","q":55,"attemptOrdinal":56,"faultSerial":1},{"name":"readback-before-HLT","q":56,"attemptOrdinal":57,"faultSerial":1}],"stores":37,"updates":11,"ramSha256":"041d1251872170fe2369dbcda00cd2959a6cbd13a32091be43f57be65df1bc94"}
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2431344Z # Subtest: fixed source ROM and RAM instructions prove vector14 gate, handler CR3 reload and error discard encodings
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2432308Z ok 1480 - fixed source ROM and RAM instructions prove vector14 gate, handler CR3 reload and error discard encodings
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2432445Z   ---
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2432608Z   duration_ms: 5.668349
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2432744Z   ...
+x86-xv6	Run node --test test/i80386*.test.mjs	2026-10-05T03:48:49.2433415Z # Subtest: physical fetch accepts only encoded instructions and rejects poison aliases and HLT

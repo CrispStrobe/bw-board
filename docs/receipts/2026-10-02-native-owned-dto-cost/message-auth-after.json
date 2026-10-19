@@ -1,0 +1,14 @@
+{
+  "sourceHashes": {
+    "scripts/compare-i80386-owned-dto-message-codecs.mjs": "022ef2ff5d76b5fe5fb4aa9666445c1114c75bf70c83f6058a413b8dce8edbf4",
+    "scripts/bochs-cpu3-native-owned-dto/response.mjs": "d4f7fee0ac0b58072f1ecb1c5cb40a1e52a712c04805ac0d755bff2de186705e",
+    "scripts/bochs-cpu3-native-owned-dto/ipc-response.mjs": "6e119774c7b65e5cc5884ae1a4c0f1e636a1ad3737e7c5e8148879dc5fc74712",
+    "scripts/bochs-cpu3-native-owned-dto/board-schema.json": "63c19323e0e955a7bbec40d394dba43bedaad10a79a5e2613e4cc38cf5262f93"
+  },
+  "helperSha256": "3ad417ed303400050a5623c38beea2c3c425be00f4b494b3f92a86d60cc68746",
+  "input": {
+    "path": "/mnt/volume1/tmp-astra/native-owned-clock-cpu-benchmark-20261002/8-ABI3/capture.json",
+    "sha256": "246193ed7da4c872df55ddf7593b189f3966f55c45a8e06ef40382efc1b840fe"
+  },
+  "scope": "SOURCE_ONLY_NO_ADDON_OR_GUEST"
+}

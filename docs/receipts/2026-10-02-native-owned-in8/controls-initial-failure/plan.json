@@ -1,0 +1,55 @@
+{
+  "status": "PREPARED_ONLY_NO_EXECUTION",
+  "controls": [
+    "second-create",
+    "failed-capture",
+    "wrong-thread",
+    "clock-resume",
+    "clock-inspect",
+    "clock-close",
+    "clock-setIRQ",
+    "clock-create",
+    "memory-resume",
+    "memory-inspect",
+    "memory-close",
+    "memory-setIRQ",
+    "memory-create",
+    "in-reply-kind",
+    "in-reply-short",
+    "in-reply-long",
+    "in-reply-offset",
+    "in-reply-shared",
+    "in-reply-detached",
+    "in-reply-byte",
+    "in-reply-epoch",
+    "in-reply-a20",
+    "abi3-denied"
+  ],
+  "negativeFatal": {
+    "clock-*": "SIGABRT6 + BWSD1 FAIL owned-transfer-callback",
+    "memory-*": "SIGABRT6 + BWSD1 FAIL direct-memory-callback",
+    "in-reply-{kind,short,long,offset,shared,detached}": "SIGABRT6 + BWSD1 FAIL owned-IN8-callback",
+    "in-reply-{byte,epoch,a20}": "SIGABRT6 + BWSD1 FAIL owned-IN8-reply"
+  },
+  "positiveDenials": "secondcreate beforecallbacks; failedcapture beforecallbacks thenvalidcreate; wrongthread5ops rejected beforeeffects, maininspect stillvalid",
+  "scope": "23 fresh bounded main-thread children. Retained13 lifecycle cases plus9 malformed replies after real PIT IN side effect and one diagnostic ABI3 version denial before create. Instrumented callback wrappers are unsupported production admission; no rollback. Native IN corruption denies before POSTPIO/PORTin/ordinary Q; prior read/clock effects retained. No broader guest or speed claim.",
+  "sourceRevision": "370cb30fe8af055508f37c2a100b1e9f9b4cbfe9",
+  "referenceSha256": "bf026d23f0c51d63a9744dc4facb4d58809c50f1d35747ffc6ea5873b518e45e",
+  "bounds": {
+    "heapMiB": 512,
+    "wallSeconds": 120,
+    "CPUSeconds": 120,
+    "fileMiB": 256,
+    "core": 0,
+    "nice": 10,
+    "groupTimeoutKill": true,
+    "blankEnvironment": [
+      "NODE_OPTIONS",
+      "NODE_PATH",
+      "LD_PRELOAD",
+      "LD_AUDIT",
+      "BW_HOT_NAPI_PROFILE"
+    ]
+  },
+  "nativeTrace": "True only9 malformed IN reply cases, meaningful preattack NATIVE_TICK/QUANTUM trace required; retained13 lifecycle cases false."
+}

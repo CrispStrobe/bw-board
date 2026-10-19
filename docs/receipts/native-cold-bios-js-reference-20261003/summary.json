@@ -1,0 +1,35 @@
+{
+  "status": "PASS_FIRST_AUTHENTICATED_ORDINARY_JS_COLD_BASELINE",
+  "head": "60a9b11ab480531e692dbac70ecbb35430cf425d",
+  "sourceInputs": 48,
+  "elapsedSeconds": 6.099058428779244,
+  "scope": "Seven pure source controls and ONE ordinary JS cold baseline; no native addon/build/performance",
+  "baselineSha256": "92e2fd339115d97e84eae28d09f00f1a4a4d5c1178fad38ada17ab79b8eec8ce",
+  "q": 316562,
+  "pioEvents": 16475,
+  "namedCuts": 15,
+  "repElements": 400,
+  "codePages": [
+    {
+      "raw": 983040,
+      "decoded": 983040
+    },
+    {
+      "raw": 987136,
+      "decoded": 987136
+    },
+    {
+      "raw": 1019904,
+      "decoded": 1019904
+    },
+    {
+      "raw": 1040384,
+      "decoded": 1040384
+    },
+    {
+      "raw": 4294963200,
+      "decoded": 16773120
+    }
+  ],
+  "ramSha256": "c188c7153084dc45e45a503fc2b5e0e3ab0b81dcbc7a1ef59cfd1c5a3b4de5d2"
+}

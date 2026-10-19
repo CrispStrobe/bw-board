@@ -1,0 +1,42 @@
+{
+  "schema": "bw.cold-native.perf-profile.v1",
+  "status": "SOURCE_REVIEW_PENDING_NO_PROFILE_GRANT",
+  "pairedRevision": "d9fbe713c7a2d878b3311ac14620d055b6e16ae9",
+  "pairedFiles": {
+    "scripts/cold-performance-paired/README.md": "96d0dc173988b3caa875b5a22d33a47b0ce81c36aa860da3a7b20c31ee3cfb96",
+    "scripts/cold-performance-paired/actual-snapshot-fixtures.json": "55656ad72b4aa5cc890cc32ebc0405d2b7317a98345c0a4b48b5e4d0dc33c080",
+    "scripts/cold-performance-paired/binding.json": "6280facb78a68c4499dc0cac0976a2702ab8de1f6fe534a7c0ae6b28a38a7761",
+    "scripts/cold-performance-paired/hosted-contract.json": "8bfce0ba95f786e90e95e4cd7d8016cfd2e748632b99f30d20ccd4e3729e558b",
+    "scripts/cold-performance-paired/hosted.py": "202dc17851b2904f182f1af437346f0423059e408444ddb3a887f0555168b510",
+    "scripts/cold-performance-paired/independent-arm-qualification-audit.json": "5eb7c2cf155bbc3f355dcd677fb6f39b9f6f7826476945d1376bc19bb728e191",
+    "scripts/cold-performance-paired/parent.py": "68d36bc4d47eee257b0ac400073f4f050decf14c547e9c0ef18d4421356e7595",
+    "scripts/cold-performance-paired/policy.py": "78649692323be58de2f6de948c51b1fcb80918d73bb619b4d2af741cc0b45043",
+    "scripts/cold-performance-paired/setup-entry.py": "5c94ff2ace7cceb6e11208deb271921cd8dca5e316725e2d996291bbd6763228",
+    "scripts/cold-performance-paired/test_policy.py": "271f5e32ee1fd45dcff5a689977a6453eadcfb5a79ab4eb7928467abecbb2f99",
+    "package.json": "29706d10ae264677b8fcaecce5929acee945f9d27ece8cb3347bdff16431f0ee",
+    "test/i80386-cold-paired-parent-source.test.mjs": "1a132cc476e32cd4f8a4f4bae65b65af5b7812e932914fa82a286fcb77382f7c",
+    ".github/workflows/i80386-cold-paired-performance.yml": "ff07d90ab690dbb39127eebb6a5c36e39b6c6f5fed6faecf58225fb961152e3d"
+  },
+  "capabilityRun": 37134835355,
+  "capabilityHead": "cbbce5a41663d1b2992b8290b87bcca7f299237a",
+  "capabilityPins": {
+    "capability-result.json": "12096977ce412a952d335885aa9cfe3d304209bcd5e644b2d228e1041218155f",
+    "capability-audit.json": "97187580ff9b412bdef2dc8799d2b900eb7a5ca5dc78ce37b4257615ea9c8c9e",
+    "capability-artifacts.json": "c424a1fef38170aeb41f665378dc1707ab443411cf5a91120891eb00a2c5dac6",
+    "capability-version.stdout": "c3e20cd8f7c7ec7e2abfbaec586a6c12a2b9ff25d645ad0df87816bf02b9e01b"
+  },
+  "perfElfSha256": "5fb08c90293471b24086be829f4da4707ecc83101945868101964be48267ab71",
+  "perfLauncherSha256": "2d0953085bf720a25efbe24f853e97d27b1f12f18a398255ff82cbafde254dad",
+  "nativeRevision": "b01c922c2d634aba9367f6e2a70d109370e4adee",
+  "compiledRevision": "7632e6a0995ceaab88bc8cede91506a5330d2e1c",
+  "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+  "bounds": {
+    "workerCpuSeconds": 60,
+    "wallSeconds": 120,
+    "workerFileBytes": 16777216,
+    "profilerFileBytes": 67108864,
+    "heapMiB": 128,
+    "coreBytes": 0,
+    "niceIncrement": 10
+  }
+}

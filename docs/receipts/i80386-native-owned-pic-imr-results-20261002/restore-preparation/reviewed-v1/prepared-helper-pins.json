@@ -1,0 +1,15 @@
+{
+  "status": "PREPARED_SOURCE_ONLY_NO_ACTUAL_CI_ARTIFACT_ADMISSION",
+  "files": {
+    "restore.py": "20aa31236ab412a67f8fc08655eb67a380704f4b8d0d36bff1f22743ae9c79cf",
+    "authenticate.mjs": "56790352c05a15aedbba1d49ce6a6976b94d5d92ce6ec24fd928d4892a52d00a",
+    "original-restore.py": "e2917db0212d5aa8cf562750675fc2d0729d610eb1bf62b581da5f369f5d47b7",
+    "original-authenticate.mjs": "7cab0626cd02006548c7651efe671271594cff17fe4050e9f9e1400e92fb81df",
+    "derivation.json": "4e5983235198362e2af9d8dddfeb6cca7913ed42df593f5d977d35590215d505",
+    "binding-template.json": "c806a9c2e259e46c82da8afb5599bd72f62d15744506b11f5e69466f725cca22",
+    "plan.json": "4bf0f53c9d6aac0df2c0309fb3fc2e2a9e5a89f9363565c735d72eea9f86ce28",
+    "source-controls.py": "f2bea44ceecb2c51fbbd0302ce51ee2e597f0a20d8568b36d20d0f059dacc32c"
+  },
+  "controls": 13,
+  "nullCiMetadataPreventsExecution": true
+}

@@ -1,0 +1,24 @@
+{
+  "command": [
+    "make",
+    "-j1",
+    "-f",
+    "Makefile",
+    "-f",
+    "bw_direct_addon.mk",
+    "bw_direct.node"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 25.458922119999983,
+  "streams": {
+    "stdout": {
+      "bytes": 36248,
+      "sha256": "94fc645a73b442fefb8f3928f07ce8fbe9d9b2816d6de12a54eb838350a62bc3"
+    },
+    "stderr": {
+      "bytes": 7894,
+      "sha256": "0eea62c1c80939697aa048376ee8dc9039f80a770a32aa99fac399f6d4339d8e"
+    }
+  }
+}

@@ -1,0 +1,146 @@
+[
+  {
+    "dataset": "initial",
+    "node": "20.20.2",
+    "repeat": 1,
+    "name": "warmed-gpio-node-20.20.2-repeat-1",
+    "callers": [
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+        "selfMicros": 246480,
+        "samples": 231
+      },
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+        "selfMicros": 5331,
+        "samples": 5
+      }
+    ]
+  },
+  {
+    "dataset": "initial",
+    "node": "20.20.2",
+    "repeat": 2,
+    "name": "warmed-gpio-node-20.20.2-repeat-2",
+    "callers": [
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+        "selfMicros": 165962,
+        "samples": 156
+      },
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+        "selfMicros": 45663,
+        "samples": 43
+      }
+    ]
+  },
+  {
+    "dataset": "initial",
+    "node": "22.23.3",
+    "repeat": 1,
+    "name": "warmed-gpio-node-22.23.3-repeat-1",
+    "callers": [
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+        "selfMicros": 105167,
+        "samples": 99
+      },
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+        "selfMicros": 15949,
+        "samples": 15
+      }
+    ]
+  },
+  {
+    "dataset": "initial",
+    "node": "22.23.3",
+    "repeat": 2,
+    "name": "warmed-gpio-node-22.23.3-repeat-2",
+    "callers": [
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+        "selfMicros": 324904,
+        "samples": 301
+      },
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+        "selfMicros": 111124,
+        "samples": 103
+      }
+    ]
+  },
+  {
+    "dataset": "corrected",
+    "node": "20.20.2",
+    "repeat": 1,
+    "name": "warmed-gpio-node-20.20.2-repeat-1",
+    "callers": [
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+        "selfMicros": 277827,
+        "samples": 259
+      },
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+        "selfMicros": 59014,
+        "samples": 55
+      }
+    ]
+  },
+  {
+    "dataset": "corrected",
+    "node": "20.20.2",
+    "repeat": 2,
+    "name": "warmed-gpio-node-20.20.2-repeat-2",
+    "callers": [
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+        "selfMicros": 176480,
+        "samples": 166
+      },
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+        "selfMicros": 41469,
+        "samples": 39
+      }
+    ]
+  },
+  {
+    "dataset": "corrected",
+    "node": "22.23.3",
+    "repeat": 1,
+    "name": "warmed-gpio-node-22.23.3-repeat-1",
+    "callers": [
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+        "selfMicros": 259417,
+        "samples": 243
+      },
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+        "selfMicros": 87358,
+        "samples": 82
+      }
+    ]
+  },
+  {
+    "dataset": "corrected",
+    "node": "22.23.3",
+    "repeat": 2,
+    "name": "warmed-gpio-node-22.23.3-repeat-2",
+    "callers": [
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+        "selfMicros": 332932,
+        "samples": 312
+      },
+      {
+        "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+        "selfMicros": 112073,
+        "samples": 105
+      }
+    ]
+  }
+]

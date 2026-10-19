@@ -1,0 +1,13 @@
+{
+  "run.json": "/tmp/native-cold-memory-fusion-paired-first-comparison-publication-20261004/run.json",
+  "official-metadata.json": "/tmp/native-cold-memory-fusion-paired-first-comparison-publication-20261004/official-metadata.json",
+  "coder-actual-audit.json": "/tmp/native-cold-memory-fusion-paired-first-comparison-publication-20261004/coder-actual-audit.json",
+  "coder-audit.py": "/tmp/native-cold-memory-fusion-paired-first-comparison-publication-20261004/coder-audit.py",
+  "independent-fusion-paired-audit.json": "/tmp/native-cold-memory-fusion-paired-first-comparison-publication-20261004/independent-fusion-paired-audit.json",
+  "independent-paired-audit.py": "/tmp/native-cold-memory-fusion-paired-first-comparison-publication-20261004/independent-paired-audit.py",
+  "actual-18-child-series.json": "/tmp/native-cold-memory-fusion-paired-first-comparison-publication-20261004/actual-18-child-series.json",
+  "actual-bridge-count-series.json": "/tmp/native-cold-memory-fusion-paired-first-comparison-publication-20261004/actual-bridge-count-series.json",
+  "members.json": "/tmp/native-cold-memory-fusion-paired-first-comparison-publication-20261004/members.json",
+  "host-before.json": "/tmp/native-cold-memory-fusion-paired-first-comparison-publication-20261004/official-artifact.zip!cold-memory-fusion-paired/pairs/host-before.json",
+  "host-after.json": "/tmp/native-cold-memory-fusion-paired-first-comparison-publication-20261004/official-artifact.zip!cold-memory-fusion-paired/pairs/host-after.json"
+}

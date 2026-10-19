@@ -1,0 +1,256 @@
+{
+  "schema": "labwired.cached-run-fixed-module-comparison.v1",
+  "measuredSource": "8562db36f1598dff93653b96d627de4e0d12eb0c",
+  "fixedSource": "2f5d9355fc5764fde460252ae04bf13d62902bf6",
+  "measuredRun": 36883581882,
+  "fixedRun": 36888339538,
+  "fixedLeg": "a",
+  "measuredWasmSha256": "98e82d6191b2170418b0dd0d55308061f5fc5be89d6cf516a0c686ed8d13c6a5",
+  "fixedWasmSha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d",
+  "bytes": 27556189,
+  "byteIdentical": false,
+  "glueIdentical": true,
+  "glueSha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73",
+  "sections": [
+    {
+      "id": 1,
+      "start": 8,
+      "bytes": 1834,
+      "identical": true,
+      "measuredSha256": "ad9ae70fcd6c1b484d83e2cb9fba1b0906fde3f7ec3ef26934cbdcf9c5eb449f",
+      "fixedSha256": "ad9ae70fcd6c1b484d83e2cb9fba1b0906fde3f7ec3ef26934cbdcf9c5eb449f"
+    },
+    {
+      "id": 2,
+      "start": 1842,
+      "bytes": 4306,
+      "identical": true,
+      "measuredSha256": "33520fe85ac70029386f028240e8a45db0e82ef962548c3ccf6f165080821cf2",
+      "fixedSha256": "33520fe85ac70029386f028240e8a45db0e82ef962548c3ccf6f165080821cf2"
+    },
+    {
+      "id": 3,
+      "start": 6148,
+      "bytes": 23306,
+      "identical": true,
+      "measuredSha256": "7be907cc018a9058efb40b70ba4de4eb59fa58a52d41da98618d897a2973fe29",
+      "fixedSha256": "7be907cc018a9058efb40b70ba4de4eb59fa58a52d41da98618d897a2973fe29"
+    },
+    {
+      "id": 4,
+      "start": 29454,
+      "bytes": 13,
+      "identical": true,
+      "measuredSha256": "e4a932acf550c89702eeba428ca07ad539050545b619f208d7ea83242f26ce01",
+      "fixedSha256": "e4a932acf550c89702eeba428ca07ad539050545b619f208d7ea83242f26ce01"
+    },
+    {
+      "id": 5,
+      "start": 29467,
+      "bytes": 6,
+      "identical": true,
+      "measuredSha256": "a3fac15cd9878a775d1e79f75389cf4731a05201050badf89c7e119047071c67",
+      "fixedSha256": "a3fac15cd9878a775d1e79f75389cf4731a05201050badf89c7e119047071c67"
+    },
+    {
+      "id": 6,
+      "start": 29473,
+      "bytes": 11,
+      "identical": true,
+      "measuredSha256": "9f3cfe5176ae52746cd84164515877d028e9591e51c615e41f3a33b6c52e9608",
+      "fixedSha256": "9f3cfe5176ae52746cd84164515877d028e9591e51c615e41f3a33b6c52e9608"
+    },
+    {
+      "id": 7,
+      "start": 29484,
+      "bytes": 6322,
+      "identical": true,
+      "measuredSha256": "a1acf2bca481d5998d88945b4d1423dac4c6f7cfa09273fd95cd86183fa9cc82",
+      "fixedSha256": "a1acf2bca481d5998d88945b4d1423dac4c6f7cfa09273fd95cd86183fa9cc82"
+    },
+    {
+      "id": 9,
+      "start": 35806,
+      "bytes": 28286,
+      "identical": true,
+      "measuredSha256": "163081f008ec39cb03c732a2d6038955d4a3ae1f8bf4468c6ae568ce40c0ea2d",
+      "fixedSha256": "163081f008ec39cb03c732a2d6038955d4a3ae1f8bf4468c6ae568ce40c0ea2d"
+    },
+    {
+      "id": 10,
+      "start": 64092,
+      "bytes": 8598228,
+      "identical": true,
+      "measuredSha256": "196e0715833e723d2fd707d9c694e7f193820f0acb92d0763dd908f40ebbe61a",
+      "fixedSha256": "196e0715833e723d2fd707d9c694e7f193820f0acb92d0763dd908f40ebbe61a"
+    },
+    {
+      "id": 11,
+      "start": 8662320,
+      "bytes": 16793815,
+      "identical": false,
+      "measuredSha256": "df07674696a9c01e07b81901b8be86d0cb1dd9eabfe3f32f342a060f617821cc",
+      "fixedSha256": "a51984c3aee58506f91b28530410bad849a0b0002b7706d000a7a4a72e213b1e"
+    },
+    {
+      "id": 0,
+      "start": 25456135,
+      "bytes": 2099789,
+      "identical": true,
+      "measuredSha256": "f6da4083245571c770681c4b0484d98ce536e127818e14ff3e2fb839792f0eb7",
+      "fixedSha256": "f6da4083245571c770681c4b0484d98ce536e127818e14ff3e2fb839792f0eb7"
+    },
+    {
+      "id": 0,
+      "start": 27555924,
+      "bytes": 114,
+      "identical": true,
+      "measuredSha256": "d701fc0da083e405d8401c9590a8f0b08a066cc9e3c31153463ddb195895c2a6",
+      "fixedSha256": "d701fc0da083e405d8401c9590a8f0b08a066cc9e3c31153463ddb195895c2a6"
+    },
+    {
+      "id": 0,
+      "start": 27556038,
+      "bytes": 151,
+      "identical": true,
+      "measuredSha256": "b50a3cb070fec5f84e7560fd1b3a74d3ba464d3fcdd952795238eb27a97fc499",
+      "fixedSha256": "b50a3cb070fec5f84e7560fd1b3a74d3ba464d3fcdd952795238eb27a97fc499"
+    }
+  ],
+  "differences": [
+    {
+      "offset": 24750321,
+      "measured": 28,
+      "fixed": 22
+    },
+    {
+      "offset": 24751389,
+      "measured": 52,
+      "fixed": 51
+    },
+    {
+      "offset": 24751390,
+      "measured": 53,
+      "fixed": 57
+    },
+    {
+      "offset": 24751457,
+      "measured": 217,
+      "fixed": 211
+    },
+    {
+      "offset": 24751709,
+      "measured": 102,
+      "fixed": 96
+    },
+    {
+      "offset": 24751725,
+      "measured": 107,
+      "fixed": 101
+    },
+    {
+      "offset": 24751854,
+      "measured": 54,
+      "fixed": 48
+    },
+    {
+      "offset": 24751861,
+      "measured": 208,
+      "fixed": 202
+    },
+    {
+      "offset": 24752017,
+      "measured": 151,
+      "fixed": 145
+    },
+    {
+      "offset": 24752033,
+      "measured": 188,
+      "fixed": 182
+    },
+    {
+      "offset": 24752049,
+      "measured": 75,
+      "fixed": 69
+    },
+    {
+      "offset": 24752065,
+      "measured": 121,
+      "fixed": 115
+    },
+    {
+      "offset": 24752081,
+      "measured": 124,
+      "fixed": 118
+    },
+    {
+      "offset": 24752097,
+      "measured": 38,
+      "fixed": 32
+    },
+    {
+      "offset": 24752113,
+      "measured": 52,
+      "fixed": 46
+    },
+    {
+      "offset": 24752129,
+      "measured": 58,
+      "fixed": 52
+    },
+    {
+      "offset": 24752145,
+      "measured": 19,
+      "fixed": 13
+    },
+    {
+      "offset": 24752161,
+      "measured": 42,
+      "fixed": 36
+    },
+    {
+      "offset": 24752177,
+      "measured": 49,
+      "fixed": 43
+    },
+    {
+      "offset": 24752193,
+      "measured": 58,
+      "fixed": 52
+    },
+    {
+      "offset": 24752789,
+      "measured": 130,
+      "fixed": 124
+    },
+    {
+      "offset": 24752805,
+      "measured": 140,
+      "fixed": 134
+    },
+    {
+      "offset": 24752821,
+      "measured": 142,
+      "fixed": 136
+    },
+    {
+      "offset": 24752837,
+      "measured": 163,
+      "fixed": 157
+    },
+    {
+      "offset": 24752853,
+      "measured": 165,
+      "fixed": 159
+    },
+    {
+      "offset": 24752869,
+      "measured": 210,
+      "fixed": 204
+    }
+  ],
+  "limitations": [
+    "Section equality does not substitute for runtime tests or exact-artifact A/B.",
+    "26 differences confined to data; consistency with shifted source/log locations is an inference, not blanket semantic equivalence."
+  ]
+}

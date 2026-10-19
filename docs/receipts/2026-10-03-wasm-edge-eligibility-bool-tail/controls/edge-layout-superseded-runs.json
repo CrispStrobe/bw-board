@@ -1,0 +1,9 @@
+{
+  "latestHead": "43b82467b25b7913df46dab4c15d177b7e0c3281",
+  "reason": "Cancel only our obsolete queued tool-head runs; retain records, never count them as successful captures",
+  "targets": [
+    {"run": 37123216207, "head": "891dda102bdad6431a36cd25bf05c8c390fd8054", "workflow": "LabWired pinned edge layout inspection (diagnostic)", "observedStatus": "queued"},
+    {"run": 37123216213, "head": "891dda102bdad6431a36cd25bf05c8c390fd8054", "workflow": "CI", "observedStatus": "queued"},
+    {"run": 37123166753, "head": "e0773f425ccd5fe5d62421963677b1f1d87e07e7", "workflow": "CI", "observedStatus": "queued"}
+  ]
+}

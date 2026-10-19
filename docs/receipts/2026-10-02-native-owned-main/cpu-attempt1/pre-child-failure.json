@@ -1,0 +1,12 @@
+{
+  "status": "PRE_CHILD_BINDING_FAILURE_NO_CPU_SAMPLES",
+  "exception": "KeyError abi.h due invalid compiled32 subset runtime61 assumption",
+  "parentExitCode": 1,
+  "childrenExecuted": 0,
+  "cpuSamples": 0,
+  "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderrSha256": "47438a49481938bb695b0928f77c4e6a8d15d0d74423c1e4c038ae86b2a8747a",
+  "planSha256": "7347637c20402f4c1c7891b1c5a99880093b792d0ca32d60faf654932f8bb3a6",
+  "helperSha256": "61ff6634446a328099c7a3442e167818e3b2b650810c725724aa8b8ff77e2dc0",
+  "approvedSha256": "1024dc13ad55927312311e1d02543e1ad470ff64464a2ab975ef38c0c8af25a2"
+}

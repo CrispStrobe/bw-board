@@ -1,0 +1,45 @@
+{
+  "schema": "bw.i80386-xv6-hot-loop-prototype-no-go.v1",
+  "date": "2026-09-28",
+  "scope": "Proof admission for a proposed opt-in executable xv6 protected32 hot-loop path; no executable path was added",
+  "source": {
+    "publicBaseCommit": "cc8c2080aa2293c60e6732807a1439e712c86192",
+    "locatorSha256": "5bdf2dfdd99b91e032f7bcde6d72f58e1faa81eb61811098f4bb3329aa59f7ca",
+    "nativeByteBlockSha256": "ef41f4395d107f0bb394311f79eeae2d1c3ecea6abdfd8cf6878c3dcf5a94334",
+    "readWindowSha256": "4df76257e53f4b8e77da380b2748292743a47d4a9bf3fe6ce5e74882f50c9f5e",
+    "writeWindowSha256": "d18d0f81d2cecd850d38dbaac14f03dcaafc504e5759142be0c672f37bf27bda",
+    "privateEvidenceCommit": "26df54db98048220f67b3243c471fa36042f5942",
+    "privateEvidenceNote": "performance/2026-09-28/i80386-xv6-loop-prototype-no-go.json"
+  },
+  "fixture": {
+    "kernelSha256": "025cef15636863063e4101aa0cfc424e556f70ad43b6a80d57581c05b465202d",
+    "run": "Pinned lean stock xv6 forktest, Bochs firmware, 40M step cap, stop on expected serial"
+  },
+  "validation": {
+    "normalizedGuestSha256": "bfa900396b4123b3b10758d5e91b310302c6dcc4ada599c76afea3ae3041ff3e",
+    "normalization": "jq -S 'del(.hotLoopLocator,.hotLoopLocatorSourceSha256,.rom.path,.image.path,.slaveImage.path)'",
+    "parity": "Expanded site-ranking report and all three one-traversal ordinary-step trace runs equal the pinned locator baseline after normalization; the three traced-run raw guest reports are identical.",
+    "rawTop256Sha256": "0d93cccd5da1581dbf4ecfc4683fc295402c5b7a224622fa956e7bdccf02e60a",
+    "rawObservedTraceSha256": {
+      "mappages25": "960132aff2b929867f78959b85c5daa21ce17b8a31687b0b078f8db8e0c352bb",
+      "deallocuvm18": "b81d0531241ba32ce7f05d5dc788298a22318407df7be6d7592fa9c4796f12fd",
+      "acquire9": "d4989ab001b56bd04ac9172c66a2b35bc18089a0dd7096dfe6b9f7bc49a16c77"
+    }
+  },
+  "exploratorySiteRanking": {
+    "method": "The top 256 protected32 exact-identity records were grouped by observed branch site for discovery only. Identity remains necessary for execution guards. Candidate evictions were zero, but reportTop=256 can omit less prominent distinct sites. These are observed traversals, not disjoint coverage or safe executable calls.",
+    "largestThreeOrMoreStepSite": {"length": 3, "traversals": 624756, "identityKeys": 76},
+    "mappages": {"length": 25, "traversals": 474069, "identityKeys": 59},
+    "deallocuvm": {"length": 18, "traversals": 49961, "identityKeys": 50},
+    "acquire": {"length": 9, "traversals": 9355, "identityKeys": 7},
+    "originalStrongestExactIdentityMappages": {"length": 25, "traversals": 8961, "summedSteps": 224025}
+  },
+  "proofDecision": {
+    "mappages": "The observed 25-step traversal stores a PTE. The current write-window admission rejects translation-table pages; batching that store also needs immediate page-table and TLB coherence before a later dependent access.",
+    "deallocuvm": "The observed 18-step traversal loads a PDE and derives a later PTE read address from it. The current decoder prevalidates read windows at entry and cannot prove that later address before the first load.",
+    "acquire": "The observed 9-step traversal includes a runtime-dependent read, store, then pointer-chasing read. Current native grammar and entry-only windows cannot prove those addresses or precise fault/restart semantics.",
+    "decision": "No-go at the safety proof boundary. No executable patch or CPU-time A/B was made. The predeclared >=10% focused CPU-time keep gate was not evaluated.",
+    "requiredNextArchitecture": "Dynamic per-instruction translation and fault checkpoints, immediate page-table-write/TLB coherence, and bounded event batching with exact interrupt/debug boundaries."
+  },
+  "limits": "The exploratory tracer observes actual ordinary fetch/read/write calls, not every possible bus or device side effect. The 25-step trace used an earlier unpreserved tracer revision and is supplementary; the preserved final tracer produced the 18- and 9-step traces. Instrumented run times are not performance evidence."
+}

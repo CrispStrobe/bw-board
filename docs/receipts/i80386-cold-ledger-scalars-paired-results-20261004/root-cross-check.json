@@ -1,0 +1,28 @@
+{
+  "status": "PASS_ROOT_SAVED_PAIRED_EVIDENCE",
+  "runId": 37207816332,
+  "artifactId": 11305955756,
+  "head": "06c9f95116a67070efaaa3b175eda4d313a0296e",
+  "members": 266,
+  "sourceRolePaths": 364,
+  "children": 18,
+  "quantitativeGatePassed": false,
+  "favorablePairs": 0,
+  "executionMeans": {
+    "plain-JS": {
+      "cpu": 0.4089694285714286,
+      "wall": 0.1986547262857143,
+      "configuredVirtualSecondsOverMeanWall": 1.5935286611037187
+    },
+    "ledger-scalars-batched": {
+      "cpu": 2.1476405714285716,
+      "wall": 1.7766286681428571,
+      "configuredVirtualSecondsOverMeanWall": 0.17818129678775707
+    }
+  },
+  "candidateOverBaseline": {
+    "cpu": 5.251347463624595,
+    "wall": 8.943299267834327
+  },
+  "scope": "Official bytes/Git/prepost/all18 unchanged terminal policy/orderedPIO; samehost cold slice, configured virtual RTx only. No new guest, old-versus-scalar gain, physical386 or adoption claim"
+}

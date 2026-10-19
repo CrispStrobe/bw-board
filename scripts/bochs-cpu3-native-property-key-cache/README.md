@@ -1,0 +1,26 @@
+# Property-name cache source candidate
+
+Source/mock checkpoint only. This does not qualify a Node addon, guest or speed gain.
+Held generated NAPI is SHA `052dfe2d8bbcf37b2abd621dbd78c5f2078026f34cb02fa1afd40ee1c9cb15ac` from the genuine `85fc` / 151-source static build. C ABI 4, all 166 state words and six already captured callback function references remain held semantics.
+
+Fixed reply and snapshot property names live in a private strong-reference array with nonwritable/nonconfigurable own numeric slots defined directly, avoiding inherited index setters. Real get/set operations still run each time; no property values are cached. Each access currently adds one get-reference and get-element operation, using a fixed enum index (no runtime string scan). Benefit is unknown. Initialization is before board getter/native effects; partial failures, environment mismatch and close/environment cleanup are explicit. The compiled core and old worker/DSO are untouched.
+
+Controls exercised at frozen `83a081650397d5e1e95845b3aa65402f12b49ece`: exact counted full inverse/key inventory; compile/run actual generated helper with mocked N-API to exercise changing values, throws, wrong environment, unknown keys, every allocation failure and cleanup; generated whole-NAPI wiring/lifetime guards. Mock coverage cannot prove actual N-API GC, getter/proxy/reentry semantics or native execution. 
+
+The bounded run passed all three Node source cases, including actual compilation and execution of the small generated-helper mock. Seven source current/Git pins and tool/pre/post maps were unchanged; no timeout occurred. The first `7aed` run failed all three cases at an inverse marker collision before compilation; it remains retained separately. The one-line `83a` marker correction preserves the complete held `052d` inverse. 
+
+Compiler warnings are retained in raw TAP stdout. A real Node addon qualification and same-host paired benchmark are later separate gates. Larger memory ownership costs and the tenfold target remain unresolved.
+
+## Larger production direction (design only)
+
+The held fixture uses 16,524 batched resumes for 316,562 logical N/Q and 167,123 fused memory effects. Mandatory 166-word materialization per return belongs to this diagnostic comparator, which stays immutable. A separate production profile could return compact progress metadata with complete snapshots at reset/final and explicit cuts, without crossing device deadlines or hiding fault/IRQ/HLT/PIO visibility. Native-owned RAM and a bounded ordered effect journal would additionally require code-write invalidation, A20/mapping fences, paging ownership and synchronous device-read authority; journal exhaustion must return before another effect. Full terminal state, board, RAM hash and ordered PIO parity plus protected-mode workload coverage must precede same-host timing. This key candidate is unproved and does not solve the tenfold target.
+
+Exact-origin [control receipts](../../docs/receipts/i80386-native-property-key-cache-source-controls-20261005/index.json) retain both outcomes. Final prose/evidence changes follow the tested `83a` head; no final-head test rerun is claimed.
+
+A later mutex-order correction at `cd27495e594a47c5a2a701d800b1d4397fa6a15a` puts the failed-lock gate before shared environment access. Exactly two affected structural cases (inverse and generated lifecycle wiring) passed with seven source/tool pre/post pins unchanged; no compiler or helper-mock rerun occurred. The earlier `83a` three-case compiled-helper result and first `7aed` three failures remain separate. These final prose/receipt changes follow `cd274` without a final-head rerun.
+
+Exact-origin [mutex-order controls](../../docs/receipts/i80386-native-property-key-cache-mutex-order-controls-20261005/index.json) retain the two selected structural outcomes.
+
+The cleanup hook now acquires the same invocation mutex before changing shared key state. At frozen `0e3fcaeb5a90f8e166e151dbaf9db3f33f906f0d`, exactly two affected mock/lifecycle cases passed, including compilation and execution of the generated helper with a real underlying recursive mutex and an acquisition-attempt handshake. The mock proves cleanup waits while invocation ownership is held, completes after release, and retains idempotence and deletion/removal failure state. The inverse-only case was unselected; the complete counted inverse is a prerequisite inside both selected derivations. This is mocked concurrency evidence, not actual N-API teardown/GC qualification. Seven source pins and tools were unchanged before/after.
+
+Exact-origin [cleanup-lock controls](../../docs/receipts/i80386-native-property-key-cache-cleanup-lock-controls-20261005/index.json) preserve this result separately from the earlier three-case compiled mock and two structural controls. Final prose/receipt changes follow `0e3` without another control run.

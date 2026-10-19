@@ -1,0 +1,29 @@
+{
+  "status": "PASS_CODER_FIXED_NONIDENTITY_PAGING_AUDIT",
+  "runId": 37207113095,
+  "artifactId": 11304886677,
+  "captureSha256": "47c25b774a615d0c47d9281e05acb8d7c3f8757b83ffbfe4205a4d454aa1672e",
+  "sourceRolePaths": 272,
+  "nativeTicks": 34,
+  "successfulQuanta": 34,
+  "resumes": 34,
+  "zeroQ": 0,
+  "boundaries": 36,
+  "nativeWords": 5976,
+  "strictComparableBoundaries": 34,
+  "unmatchedPhases": [
+    29,
+    30
+  ],
+  "namedCuts": 11,
+  "namedComparableCuts": 9,
+  "namedUnmatchedCuts": 2,
+  "physicalPagesPerBoundary": 7,
+  "bytesPerPage": 4096,
+  "nativeMemoryEvents": {
+    "write": 23,
+    "read": 16
+  },
+  "settledRamSha256": "b36573f67cf2de4454d97a8c2a04b1fa5980ad47c7207da9f42fb07b5b33cf43",
+  "scope": "Fixed trace-OFF 386 paging correctness only; all166 retained, documented represented counterparts compared; copied host RAM backing/cache ownership source-attested; whole RAM bytes not retained; unmatched stages/phases never parity claims. No OS or speed/adoption claim."
+}

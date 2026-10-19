@@ -1,0 +1,27 @@
+{
+  "schema": "bw.paged-irq.public-summary.v1",
+  "sourceHead": "8f1be780b191176ff1d3789b38e2c73e48041198",
+  "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37622795990",
+  "artifactApiUrl": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11483164789",
+  "zipBytes": 2010826,
+  "zipSha256": "45bf6df2c62e283d3f1eb283088f40812bd2fc459fe3fa8c81cc60372ab57736",
+  "members": 75,
+  "sourceRoles": 236,
+  "status": "PASS_FINITE_CPL0_CODE16_IRQ_IRET_ONLY",
+  "n": 44,
+  "q": 44,
+  "resumes": 45,
+  "namedCuts": 16,
+  "unmatchedQ": [
+    36,
+    37
+  ],
+  "reads": 23,
+  "romReads": 4,
+  "writes": 31,
+  "pagesReplayed": 10,
+  "independentRawAudits": 2,
+  "addonBytesRetained": false,
+  "performanceMeasured": false,
+  "fullOSQualified": false
+}

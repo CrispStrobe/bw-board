@@ -1,0 +1,29 @@
+{
+  "command": [
+    "./configure",
+    "--enable-cpu-level=3",
+    "--with-nogui",
+    "--disable-plugins",
+    "--disable-debugger",
+    "--disable-repeat-speedups",
+    "--disable-handlers-chaining",
+    "--enable-instrumentation=instrument/stubs",
+    "CFLAGS=-O2 -fPIC",
+    "CXXFLAGS=-O2 -fPIC"
+  ],
+  "cwd": "/home/runner/work/_temp/cold-bios-build-prepared/bochs",
+  "pid": 3738,
+  "cpuSeconds": 180,
+  "wallSeconds": 180,
+  "coreBytes": 0,
+  "fileBytes": 268435456,
+  "niceIncrement": 10,
+  "blankHooks": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  }
+}

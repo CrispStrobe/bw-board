@@ -1,0 +1,15 @@
+{
+  "schema": "bw.owned-in8.build-plan.v2",
+  "status": "PREPARED_NOT_EXECUTED_REQUIRES_ROOT_GRANT",
+  "revision": "6b975da14342bc040082142568a539605f580fd7",
+  "sourceFreezeSha256": "3cc451ae21b04db7818f7d68c5649c02406711346f57fb406466886080baa765",
+  "sourceClosure": 102,
+  "helper": "/mnt/volume1/tmp-astra/native-owned-in8-r2-root-build-20261002.py",
+  "helperSha256": "e662d42496281e09c289d4dd3db2f2a8195c013d70429d0cae15ba94e885194b",
+  "derivation": "/mnt/volume1/tmp-astra/native-owned-in8-r2-source-20261002/build-helper-prepared.json",
+  "derivationSha256": "48722b2098e31216993ce29e99cdf5e158d850fed9c33769aa557c91382eef4a",
+  "pristineSource": "/tmp/bw-bochs-pristine-in8-20261002",
+  "preparedTree": "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-owned-in8-r2-20261002",
+  "output": "/mnt/volume1/tmp-astra/native-owned-in8-r2-build-20261002",
+  "scope": "Same pinned configure/make/limits/env5blank and bounded source identity as reviewed9ed helper; exactly3 isolated W/T/R substitutions. Newsource/nativecompile only, no addon load/guest/CPU."
+}

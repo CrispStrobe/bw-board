@@ -1,0 +1,284 @@
+{
+  "schema": "labwired.gpio-edge-vps-trace-extract.v1",
+  "diagnosticOnly": true,
+  "label": "baseline",
+  "node": "v20.20.2",
+  "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+  "startedAt": "2026-10-02T05:27:06.393Z",
+  "completedAt": "2026-10-02T05:27:18.838Z",
+  "wasmSha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d",
+  "glueSha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73",
+  "harnessSha256": "af73787b849eddf697ed988b3a7c0a2fe25a938a561131498f1b7de38db7e3c5",
+  "flags": [
+    "--trace-wasm-compilation-times"
+  ],
+  "samples": [
+    {
+      "index": 0,
+      "cycles": 64000000,
+      "cpuHz": 64000000,
+      "wallSeconds": 2.1497319509999997,
+      "rtx": 0.4651742741855913,
+      "accelRaw": [
+        16384,
+        -8192,
+        4096
+      ],
+      "magRaw": [
+        200,
+        -100,
+        50
+      ],
+      "accelSamples": 112,
+      "magSamples": 112,
+      "scans": 2145
+    },
+    {
+      "index": 1,
+      "cycles": 64000000,
+      "cpuHz": 64000000,
+      "wallSeconds": 2.117953183,
+      "rtx": 0.4721539682872206,
+      "accelRaw": [
+        -4096,
+        2048,
+        -12288
+      ],
+      "magRaw": [
+        -200,
+        0,
+        400
+      ],
+      "accelSamples": 212,
+      "magSamples": 212,
+      "scans": 4053
+    },
+    {
+      "index": 2,
+      "cycles": 64000000,
+      "cpuHz": 64000000,
+      "wallSeconds": 2.1224657530000006,
+      "rtx": 0.4711501227223805,
+      "accelRaw": [
+        16384,
+        -8192,
+        4096
+      ],
+      "magRaw": [
+        200,
+        -100,
+        50
+      ],
+      "accelSamples": 312,
+      "magSamples": 312,
+      "scans": 5960
+    },
+    {
+      "index": 3,
+      "cycles": 64000000,
+      "cpuHz": 64000000,
+      "wallSeconds": 2.1725842639999993,
+      "rtx": 0.46028134170449847,
+      "accelRaw": [
+        -4096,
+        2048,
+        -12288
+      ],
+      "magRaw": [
+        -200,
+        0,
+        400
+      ],
+      "accelSamples": 412,
+      "magSamples": 412,
+      "scans": 7867
+    },
+    {
+      "index": 4,
+      "cycles": 64000000,
+      "cpuHz": 64000000,
+      "wallSeconds": 2.0626027309999992,
+      "rtx": 0.4848243362478125,
+      "accelRaw": [
+        16384,
+        -8192,
+        4096
+      ],
+      "magRaw": [
+        200,
+        -100,
+        50
+      ],
+      "accelSamples": 512,
+      "magSamples": 512,
+      "scans": 9774
+    }
+  ],
+  "guestObservations": [
+    {
+      "accelRaw": [
+        16384,
+        -8192,
+        4096
+      ],
+      "accelSamples": 112,
+      "cpuHz": 64000000,
+      "cycles": 64000000,
+      "index": 0,
+      "magRaw": [
+        200,
+        -100,
+        50
+      ],
+      "magSamples": 112,
+      "scans": 2145
+    },
+    {
+      "accelRaw": [
+        -4096,
+        2048,
+        -12288
+      ],
+      "accelSamples": 212,
+      "cpuHz": 64000000,
+      "cycles": 64000000,
+      "index": 1,
+      "magRaw": [
+        -200,
+        0,
+        400
+      ],
+      "magSamples": 212,
+      "scans": 4053
+    },
+    {
+      "accelRaw": [
+        16384,
+        -8192,
+        4096
+      ],
+      "accelSamples": 312,
+      "cpuHz": 64000000,
+      "cycles": 64000000,
+      "index": 2,
+      "magRaw": [
+        200,
+        -100,
+        50
+      ],
+      "magSamples": 312,
+      "scans": 5960
+    },
+    {
+      "accelRaw": [
+        -4096,
+        2048,
+        -12288
+      ],
+      "accelSamples": 412,
+      "cpuHz": 64000000,
+      "cycles": 64000000,
+      "index": 3,
+      "magRaw": [
+        -200,
+        0,
+        400
+      ],
+      "magSamples": 412,
+      "scans": 7867
+    },
+    {
+      "accelRaw": [
+        16384,
+        -8192,
+        4096
+      ],
+      "accelSamples": 512,
+      "cpuHz": 64000000,
+      "cycles": 64000000,
+      "index": 4,
+      "magRaw": [
+        200,
+        -100,
+        50
+      ],
+      "magSamples": 512,
+      "scans": 9774
+    }
+  ],
+  "allWindowsMeet1x": false,
+  "medianRtx": 0.4711501227223805,
+  "minimumRtx": 0.46028134170449847,
+  "tiers": {
+    "Liftoff": 2315,
+    "TurboFan": 300
+  },
+  "cortexM": [
+    {
+      "module": "0x5d062a0",
+      "index": 73,
+      "tier": "Liftoff",
+      "compileMs": 16,
+      "bodyBytes": 77390,
+      "codeBytes": 242880,
+      "name": null,
+      "wasmName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+    },
+    {
+      "module": "0x5d062a0",
+      "index": 77,
+      "tier": "Liftoff",
+      "compileMs": 7,
+      "bodyBytes": 32735,
+      "codeBytes": 99072,
+      "name": null,
+      "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+    },
+    {
+      "module": "0x5d062a0",
+      "index": 78,
+      "tier": "Liftoff",
+      "compileMs": 2,
+      "bodyBytes": 31605,
+      "codeBytes": 91248,
+      "name": null,
+      "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505"
+    },
+    {
+      "module": "0x5d062a0",
+      "index": 77,
+      "tier": "TurboFan",
+      "compileMs": 127,
+      "bodyBytes": 32735,
+      "codeBytes": 76264,
+      "name": "wasm-function#77",
+      "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d"
+    },
+    {
+      "module": "0x5d062a0",
+      "index": 78,
+      "tier": "TurboFan",
+      "compileMs": 126,
+      "bodyBytes": 31605,
+      "codeBytes": 72564,
+      "name": "wasm-function#78",
+      "wasmName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505"
+    },
+    {
+      "module": "0x5d062a0",
+      "index": 73,
+      "tier": "TurboFan",
+      "compileMs": 366,
+      "bodyBytes": 77390,
+      "codeBytes": 208748,
+      "name": "wasm-function#73",
+      "wasmName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981"
+    }
+  ],
+  "stdoutSha256": "7bcfbd98d0de1c5454f36356b22334eb46087b0e77fa36eb154f50fafacf448f",
+  "limitations": [
+    "Separate unsampled trace; not ordinary A/B or qualification",
+    "Reaching TurboFan in separate processes does not explain prior ordinary outliers",
+    "Raw trace remains in local evidence; hash bound here"
+  ]
+}

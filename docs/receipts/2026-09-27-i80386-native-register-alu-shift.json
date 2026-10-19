@@ -1,0 +1,38 @@
+{
+  "schema": "astra.i80386-native-register-alu-shift.v1",
+  "date": "2026-09-27",
+  "sourceBaselineCommit": "551b2981138f2fdd01b15696a424b7965b9f787e",
+  "workload": {
+    "name": "stock xv6-public forktest, 4 MiB, Bochs BIOS",
+    "commandBase": "XV6_LEAN=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+    "commandNativeAddition": "XV6_NATIVE_BYTE=1",
+    "nodeVersion": "v20.20.2",
+    "guestSteps": 24338279,
+    "serialEndsWith": "fork test OK\n$ ",
+    "xv6ImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "fileSystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "normalizedGuestReportSha256": "29ea533f6d2bfa93919d744fe5c3e9e35bdd660aac337c16e6161e2bcbfbef34",
+    "guestReportsMatch": true,
+    "normalization": "Remove nativeByte, nativeStats and sharedRam fields; replace rom, image and slaveImage absolute paths with <media>; retain all other report fields in original JSON order."
+  },
+  "implementation": {
+    "wasmSourceSha256": "7b3e7eb0234464f9ed35afbd434c6cbfa9f8aed0bdb84d385dc43bc7662a54b9",
+    "wasmBinarySha256": "4f49b057c51ebc09845b5b623ddbae96ecdc57a7c68020095c7191bdafac9e52",
+    "wasmLoaderSha256": "d26db915ea2435aa4e912d573ebb5aa6f0aae4079f3452943edadde12279c521",
+    "nativeByteSourceSha256": "af0466d655aab0fe00903503bfbf5989d94553b4b982e767b3e3a96dba9473af",
+    "probeSourceSha256": "84d88d4be1a7c64a9a3828a76650f89e7b6fe645c9b9dd0707acdf6ea5065976",
+    "change": "Add 32-bit register-only 81/83 ADD, OR and AND immediate, 25 AND EAX immediate, and C1 SHL/SHR immediate to the opt-in decoder and WASM kernel. Preserve JavaScript 386 arithmetic and shift flags, including sign extension and masked zero counts. No guest writes or production CPU changes."
+  },
+  "native": {
+    "attempts": 17398850,
+    "decodedBlocks": 260698,
+    "blockCalls": 1874330,
+    "retiredInstructions": 8813759,
+    "retiredFraction": 0.362136,
+    "instructionsPerCall": 4.70235,
+    "userCpuSeconds": [22.87, 22.49]
+  },
+  "ordinary": {"userCpuSeconds": [26.89, 27.99]},
+  "validation": "node --test test/i80386*.test.mjs: 355 passed, 4 skipped, 0 failed. Both full opt-in xv6 guest reports match the ordinary report after opt-in metadata and absolute media path normalization. Focused tests compare overflow, sign extension, logic flags, shift count 1, shift count 13, masked zero counts and unsupported memory forms against ordinary JavaScript stepping.",
+  "conclusion": "The opt-in native-byte probe has an observed roughly 1.2x full-workload gain on this host, with matching guest results. It is far from 10x and is not yet wired into general CLI or GUI execution."
+}

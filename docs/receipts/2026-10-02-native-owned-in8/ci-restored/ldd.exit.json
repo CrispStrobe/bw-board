@@ -1,0 +1,13 @@
+{
+  "command": [
+    "ldd",
+    "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/prepared/bochs/bw_direct.node"
+  ],
+  "returncode": 0,
+  "timeout": false,
+  "wallSeconds": 0.03797493688762188,
+  "streams": {
+    "stdout": "5ef26221dbc5121f5ea6cb7f85b9cb0796145382696b8711728595055f6aa8c4",
+    "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

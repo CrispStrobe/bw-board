@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=128",
+    "scripts/run-i80386-native-owned-8042.mjs",
+    "/home/runner/work/_temp/fixed-8042-evidence/off.input.json"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 1.2674520360000088,
+  "streams": {
+    "stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stderr": {
+      "bytes": 361,
+      "sha256": "f211577c123469843d2478935c5ebebf43c350de1af4a2574fbc9e6058e8f00d"
+    }
+  }
+}

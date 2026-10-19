@@ -1,0 +1,24 @@
+{
+  "status": "ROOT_GRANT_ONE_LOCAL_TRACE_ON_JOURNAL_ON_PARITY_CELL_ONLY",
+  "recordedUTC": "2026-10-02T19:33:54.443805+00:00",
+  "pins": {
+    "run.py": "d0d036fa535344af35aacf8835500feeb90f23425ffb030e213eacc8d73d321e",
+    "approved-bindings.json": "bf269ade7c912e8276d39b96003f3160010935f356fafbe3416f8ee5e3097106",
+    "smoke-off/independent-audit.json": "e114b6b0f83f83333c20858e452b3f174ca2b109283e95fbd304763b1d486773"
+  },
+  "label": "fulltrace-on",
+  "bounds": {
+    "cpuSeconds": 120,
+    "wallSeconds": 120,
+    "heapMiB": 512,
+    "fileMiB": 256,
+    "niceIncrement": 10,
+    "blankHooks": 6
+  },
+  "resourceEvidence": {
+    "load1": 2.77,
+    "logicalCPUs": 4,
+    "availableMiB": 5334
+  },
+  "scope": "One actual second parity guest; compare all canonical rows and whole journal. No performance/adoption/generalAT/RTx. Preserve failure, no retry."
+}

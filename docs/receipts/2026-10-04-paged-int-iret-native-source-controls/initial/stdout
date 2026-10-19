@@ -1,0 +1,62 @@
+TAP version 13
+# {"scope":"generated source only; no build/addon/CPU","runtimeSha256":"44d6166807419eebc02f6e69f767e22fed21ead738b2a10e71d87791c364b796","providerSha256":"afc02de595449021f64cfa74cb0004ae71028e57596195769563439b5d0f005f","romSha256":"b8b3525d4299ba14dc467144fc743a39f1c04d1a7d92ea3b34da6f4ee601cd30"}
+# g++: fatal error: cannot execute ‘cc1plus’: execvp: No such file or directory
+# compilation terminated.
+# Subtest: INT runtime/provider source authenticates held hashes and exact full inverses
+ok 1 - INT runtime/provider source authenticates held hashes and exact full inverses
+  ---
+  duration_ms: 88.321628
+  type: 'test'
+  ...
+# Subtest: native gate/frame walk phases and combined AD refuse wrong owner/address/value/shadow
+ok 2 - native gate/frame walk phases and combined AD refuse wrong owner/address/value/shadow
+  ---
+  duration_ms: 17.069205
+  type: 'test'
+  ...
+# Subtest: native host predicates own all boot writes, exactly FLAGS/CS/IP words and legal read spans
+ok 3 - native host predicates own all boot writes, exactly FLAGS/CS/IP words and legal read spans
+  ---
+  duration_ms: 12.733777
+  type: 'test'
+  ...
+# Subtest: tiny nonguest C fixture exercises actual generated boot/gate/frame/AD/fetch/shadow predicates
+not ok 4 - tiny nonguest C fixture exercises actual generated boot/gate/frame/AD/fetch/shadow predicates
+  ---
+  duration_ms: 41.436944
+  type: 'test'
+  location: '/tmp/bw-native-paged-int-iret-native-source-20261004/test/i80386-paged-int-iret-native-source.test.mjs:36:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Command failed: g++ -std=c++17 -O0 -Wall -Wextra -Werror -Wno-unused-function /tmp/int-native-policy-LV9q1Q/fixture.cc -o /tmp/int-native-policy-LV9q1Q/fixture
+    g++: fatal error: cannot execute ‘cc1plus’: execvp: No such file or directory
+    compilation terminated.
+    
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    genericNodeError (node:internal/errors:983:15)
+    wrappedFn (node:internal/errors:537:14)
+    checkExecSyncError (node:child_process:916:11)
+    execFileSync (node:child_process:952:15)
+    TestContext.<anonymous> (file:///tmp/bw-native-paged-int-iret-native-source-20261004/test/i80386-paged-int-iret-native-source.test.mjs:47:108)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  ...
+# Subtest: private provider exercises real host callbacks/generations and ten pages without any CPU steps
+ok 5 - private provider exercises real host callbacks/generations and ten pages without any CPU steps
+  ---
+  duration_ms: 126.687145
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 4
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 630.280597

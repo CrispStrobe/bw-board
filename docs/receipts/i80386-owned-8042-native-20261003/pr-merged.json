@@ -1,0 +1,162 @@
+{
+  "headRefOid": "5b182d4147020931a4c19c380a088a1587d7d31c",
+  "mergeCommit": {
+    "oid": "4a6f837818c8294b3e67e34e39b8bf9fc0aee030"
+  },
+  "mergedAt": "2026-10-03T03:39:27Z",
+  "number": 266,
+  "state": "MERGED",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-03T03:35:37Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37093346720/job/111118165935",
+      "name": "test",
+      "startedAt": "2026-10-03T03:29:08Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-03T03:38:37Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37093344345/job/111118157984",
+      "name": "test",
+      "startedAt": "2026-10-03T03:29:05Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-03T03:30:08Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37093346761/job/111118165804",
+      "name": "fixed-8042",
+      "startedAt": "2026-10-03T03:29:08Z",
+      "status": "COMPLETED",
+      "workflowName": "Fixed 8042 first native build and semantic cells"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-03T03:31:40Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37093346747/job/111118165974",
+      "name": "qualify",
+      "startedAt": "2026-10-03T03:29:08Z",
+      "status": "COMPLETED",
+      "workflowName": "Harris native qualification"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-03T03:31:20Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37093344346/job/111118158242",
+      "name": "qualify",
+      "startedAt": "2026-10-03T03:29:05Z",
+      "status": "COMPLETED",
+      "workflowName": "Harris native qualification"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-03T03:32:29Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37093346782/job/111118166126",
+      "name": "x86-xv6",
+      "startedAt": "2026-10-03T03:29:08Z",
+      "status": "COMPLETED",
+      "workflowName": "x86 xv6 lane"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-03T03:31:41Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37093344405/job/111118158367",
+      "name": "x86-xv6",
+      "startedAt": "2026-10-03T03:29:05Z",
+      "status": "COMPLETED",
+      "workflowName": "x86 xv6 lane"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-03T03:29:51Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37093346720/job/111118165705",
+      "name": "vectors",
+      "startedAt": "2026-10-03T03:29:08Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-03T03:29:51Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37093344345/job/111118158073",
+      "name": "vectors",
+      "startedAt": "2026-10-03T03:29:05Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-03T03:29:29Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37093346720/job/111118165865",
+      "name": "corpus",
+      "startedAt": "2026-10-03T03:29:08Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-03T03:30:01Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37093344345/job/111118158083",
+      "name": "corpus",
+      "startedAt": "2026-10-03T03:29:40Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-03T03:29:53Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37093346720/job/111118165964",
+      "name": "vectors186",
+      "startedAt": "2026-10-03T03:29:09Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-03T03:29:49Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37093344345/job/111118158167",
+      "name": "vectors186",
+      "startedAt": "2026-10-03T03:29:05Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-03T03:29:06Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37093346720/job/111118166624",
+      "name": "vectors-full",
+      "startedAt": "2026-10-03T03:29:07Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-03T03:29:03Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37093344345/job/111118158703",
+      "name": "vectors-full",
+      "startedAt": "2026-10-03T03:29:03Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    }
+  ],
+  "url": "https://github.com/CrispStrobe/bw-board/pull/266"
+}

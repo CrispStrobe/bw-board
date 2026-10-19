@@ -1,0 +1,24 @@
+{
+  "status": "PREPARED_ONLY_NO_EXECUTION",
+  "controls": [
+    "second-create",
+    "failed-capture",
+    "wrong-thread",
+    "clock-resume",
+    "clock-inspect",
+    "clock-close",
+    "clock-setIRQ",
+    "clock-create",
+    "memory-resume",
+    "memory-inspect",
+    "memory-close",
+    "memory-setIRQ",
+    "memory-create"
+  ],
+  "negativeFatal": {
+    "clock-*": "SIGABRT6 + BWSD1 FAIL owned-transfer-callback",
+    "memory-*": "SIGABRT6 + BWSD1 FAIL direct-memory-callback"
+  },
+  "positiveDenials": "secondcreate beforecallbacks; failedcapture beforecallbacks thenvalidcreate; wrongthread5ops rejected beforeeffects, maininspect stillvalid",
+  "scope": "13fresh bounded children, actual provider callbacks; instrumented diagnostic wrappers unsupported production admission. Reentry caught for receipt then rethrown, no rollback; before targeted callback effect, prior legitimate clock effects may exist. No later callback/return after attack."
+}

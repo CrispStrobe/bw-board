@@ -1,0 +1,88 @@
+# Keep the committed RISC-V oracle fixtures honest. The gate itself
+# (test/riscv32-oracle.test.mjs) runs in ordinary CI from committed Spike
+# traces, with no Spike and no toolchain. This workflow rebuilds Spike at its
+# pinned commit (cached by that commit), rebuilds riscv-tests, riscv-arch-test
+# and our programs from their pinned sources, regenerates the fixtures, and
+# fails if they differ from what is committed. It then runs the gate against
+# the regenerated fixtures.
+name: RISC-V oracle fixtures
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - 'test/riscv-oracle/**'
+      - 'test/fixtures/riscv-oracle/**'
+      - '.github/workflows/riscv-oracle-regen.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      SPIKE_SHA: 5f2a1d48752121ab09dd0f1932884808c2e6c081
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-unknown-elf picolibc-riscv64-unknown-elf device-tree-compiler
+      - name: Spike source (pinned)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: riscv-software-src/riscv-isa-sim
+          ref: 5f2a1d48752121ab09dd0f1932884808c2e6c081
+          path: ext/riscv-isa-sim
+      - name: riscv-tests (pinned)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: riscv-software-src/riscv-tests
+          ref: 793a5ff2d99a6d9fbd91e84c34b9a0437e313b88
+          path: ext/riscv-tests
+          submodules: true
+      - name: riscv-arch-test 3.10.0 (pinned)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: riscv-non-isa/riscv-arch-test
+          ref: fc32e41d49480fd99ba0a192dfff9c3319b44873
+          path: ext/riscv-arch-test
+      - name: Spike build cache
+        id: spike-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ext/spike-install
+          key: spike-${{ env.SPIKE_SHA }}-ubuntu-24.04
+      - name: Build Spike
+        if: steps.spike-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ext/riscv-isa-sim/build && cd ext/riscv-isa-sim/build
+          ../configure --prefix="$GITHUB_WORKSPACE/ext/spike-install" --without-boost --without-boost-asio --without-boost-regex
+          make -j"$(nproc)" && make install
+      - name: Regenerate fixtures
+        env:
+          SPIKE: ${{ github.workspace }}/ext/spike-install/bin/spike
+          RISCV_TESTS: ${{ github.workspace }}/ext/riscv-tests
+          ARCH_TEST: ${{ github.workspace }}/ext/riscv-arch-test
+        run: |
+          mkdir committed && cp test/fixtures/riscv-oracle/*.br committed/
+          bash test/riscv-oracle/regenerate.sh
+      - name: Upload the regenerated fixtures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: riscv-oracle-fixtures
+          path: test/fixtures/riscv-oracle/*.br
+      - name: Committed fixtures match what Spike produces
+        run: |
+          rc=0
+          for f in committed/*.br; do
+            echo "== $(basename "$f")"
+            node test/riscv-oracle/compare-fixtures.mjs "$f" "test/fixtures/riscv-oracle/$(basename "$f")" || rc=1
+          done
+          exit $rc
+      - name: Oracle gate against the regenerated traces
+        run: node --test test/riscv32-oracle.test.mjs

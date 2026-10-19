@@ -1,0 +1,44 @@
+from pathlib import Path
+import json,hashlib,tarfile,re,subprocess
+P=Path(__file__).resolve().parent;E=P/'files/owned-pic-imr-evidence';W=Path('/tmp/bw-board-386-owned-pic-imr-source-20261002');RW=Path('/tmp/bw-board-386-owned-pic-imr-native-profile-20261002');load=lambda p:json.loads(p.read_bytes());sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();digest=lambda b:hashlib.sha256(b).hexdigest();checks=0
+def ck(v):
+ global checks
+ assert v;checks+=1
+run=load(P/'run.json');meta=load(P/'artifact-metadata.json');ck(run['conclusion']=='success' and run['headSha']=='a45fc6f60cabf97e8230ff1bf49a0394bbaef622');ck(meta['id']==11235962916 and meta['workflow_run']['id']==37027774273 and meta['workflow_run']['head_sha']==run['headSha']);ck(sha(P/'official-build.zip')=='9adece0d5c82360fa87e77cb7c2257f96f72113cff0b1215f53e06917d18fffd' and meta['digest']=='sha256:'+sha(P/'official-build.zip'));ck((P/'official-build.zip').stat().st_size==6722091)
+I=load(E/'artifact-inventory.json');ck(sha(E/'artifact-inventory.json')=='fb70d03644f4eab625ea1745c1a3ba83f167de69a270c40f6d457365b20bc36e');ck(len(I['files'])==28)
+for name,h in I['files'].items():ck(sha(E/name)==h)
+ck({str(p.relative_to(E))for p in E.rglob('*')if p.is_file()}==set(I['files'])|{'artifact-inventory.json'})
+M=load(E/'prepare.json');B=load(E/'build-static-preflight.json');ck(B['sourceRevision']==M['boardRevision']=='a6f605280f778b2bc409ef97ac3b40e15874530c');ck(B['sourceHashes']==M['sourceHashes'] and len(M['sourceHashes'])==111);ck(B['status']=='BUILD_AND_STATIC_PREFLIGHT_PASS_NO_ADDON_LOAD_OR_GUEST');ck(B['preparedManifestSha256']==sha(E/'prepare.json'));ck(B['tooling']==M['tooling']==load(E/'tooling-after.json'));ck(B['profile']==M['profile']==load(Path('/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-static-20261002/prepare-check.stdout'))['profile']);ck(M['bochsRevision']=='0e45b736ef9792eb9b752b0a35db49eaf2faea47');ck(B['tooling']['revision']==run['headSha'] and len(B['tooling']['hashes'])==3)
+for name,h in M['tooling']['hashes'].items():ck(sha(RW/name)==h==digest(subprocess.check_output(['git','show',run['headSha']+':'+name],cwd=RW)))
+ck(B['helperSha256']==M['tooling']['hashes']['scripts/ci-build-i80386-native-owned-pic-imr.py'])
+archives={}
+for name in ['prepared-source.tar.gz','frozen-source111.tar.gz']:
+ data={}
+ with tarfile.open(E/name)as tar:
+  for member in tar:
+   ck(member.isfile()and member.name not in data and not member.name.startswith('/')and '..'not in Path(member.name).parts);data[member.name]=tar.extractfile(member).read()
+ archives[name]=data
+F=archives['frozen-source111.tar.gz'];T=archives['prepared-source.tar.gz'];ck(set(F)==set(M['sourceHashes']))
+for name,h in M['sourceHashes'].items():ck(digest(F[name])==h==sha(W/name)==digest(subprocess.check_output(['git','show',B['sourceRevision']+':'+name],cwd=W)))
+ck(load(E/'identity-before.stdout')==load(E/'identity.stdout')=={'revision':B['sourceRevision'],'hashes':M['sourceHashes']})
+for name,h in M['sourceHashes'].items():ck(load(E/'source-before.json')[name]==h)
+for group in ['patchedHashes','actualPreparedHashes']:
+ for name,h in M[group].items():ck(digest(T[name])==h)
+ck(len(M['patchedHashes'])==12 and len(M['actualPreparedHashes'])==4);ck(M['ownedClock']['abiVersion']==4);ck(M['ownedClock']['runtimeSha256']==M['generatedRuntimeSha256']=='53a24b8b6c6c9d9d62977353527df4c4919160562ff2e1373dc8f1d075b9dc87');ck(M['ownedClock']['heldIn8RuntimeSha256']==M['originalIn8Provenance']['ownedClock']['runtimeSha256']=='8b1aa9d03e8f4112e504ab16cb977649faae5ce3b04848a327b0c8b9d21f6ae5');ck(len(M['originalIn8Provenance']['sourceHashes'])==103 and M['originalIn8Provenance']['patchedHashes']==M['patchedHashes']);ck(M['ownedClock']['abiSha256']==sha(W/'scripts/bochs-cpu3-native-owned-in8/abi.h')=='3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990');ck(M['ownedClock']['napiSha256']==M['originalIn8Provenance']['ownedClock']['napiSha256']=='a677f47c66e70d7aae104266425884ec1de61858aa14b1c91fcf82ebdd931ab7')
+for src,dst in [('scripts/bochs-cpu3-native-direct-board/runtime.h','bochs/cpu/bw_slice_runtime.h'),('scripts/bochs-cpu3-native-direct-board/addon.mk','bochs/bw_direct_addon.mk')]:ck(digest(T[dst])==M['sourceHashes'][src])
+ck(T['bochs/config.h']==(E/'config.h').read_bytes());ck(B['configSha256']==sha(E/'config.h')=='80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe');config=(E/'config.h').read_text()
+features={'BX_CPU_LEVEL':3,'BX_SUPPORT_SMP':0,'BX_DEBUGGER':0,'BX_USE_IDLE_HACK':0,'BX_SUPPORT_REPEAT_SPEEDUPS':0,'BX_SUPPORT_HANDLERS_CHAINING_SPEEDUPS':0,'BX_SUPPORT_FPU':1,'BX_PLUGINS':0};ck(B['requiredFeatures']==features)
+for name,value in features.items():matches=re.findall(r'^#define\s+'+name+r'\s+(\d+)\s*$',config,re.M);ck(matches==[str(value)])
+ck(sha(E/'bw_direct.node')==B['addonSha256']=='baaf3ba0b39f8ffeb001837c30a5f682ced39a75be87cbaf0ed55c8844ae660b');ck((E/'bw_direct.node').stat().st_size==B['addonBytes']==2069608)
+exports=['bw_direct_initialize','bw_direct_resume','bw_direct_set_irq_line','bw_direct_inspect','bw_direct_close','napi_register_module_v1'];ck(B['requiredExports']==exports)
+for name in exports:ck(re.search(r'\b'+name+r'$',(E/'addon-nm-defined.txt').read_text(),re.M)is not None)
+ck('not found'not in(E/'addon-ldd.txt').read_text())
+for label in ['identity-before','prepare','configure','make','identity']:
+ x=load(E/(label+'.exit.json'));ck(x['exitCode']==0 and x['timedOut']is False)
+ for stream,v in x['streams'].items():ck((E/(label+'.'+stream)).stat().st_size==v['bytes'] and sha(E/(label+'.'+stream))==v['sha256'])
+ck((E/'upstream-COPYING').stat().st_size>0 and (E/'upstream-LICENSE').stat().st_size>0);ck(any('COPYING' in name for name in T));ck(b'GNU' in(E/'upstream-COPYING').read_bytes())
+H=Path('/mnt/volume1/tmp-astra/native-owned-pic-imr-ci-restore-prepared-20261002');A=load(H/'approved-bindings.json');ck(sha(H/'approved-bindings.json')=='de4b60cdd207bb9d014b8267bfc3cbb2c0b9bc01df101b848eb77ea892bda0b4');ck(A['ci']['runId']==37027774273 and A['ci']['artifactId']==meta['id'] and A['ci']['headSha']==run['headSha'] and A['ci']['zipSha256']==sha(P/'official-build.zip'));ck(A['sourceHashes']==M['sourceHashes'] and A['sourceRevision']==B['sourceRevision']);ck(A['ci']['toolingRevision']==M['tooling']['revision']);ck(A['ci']['helperSha256']==B['helperSha256'] and A['ci']['workflowSha256']==M['tooling']['hashes']['.github/workflows/i80386-native-owned-pic-imr-build.yml']);ck(A['inventorySha256']==sha(E/'artifact-inventory.json') and Path(A['downloadedEvidence'])==E)
+for name,h in A['helperHashes'].items():ck(sha(H/name)==h)
+for name,h in A['runtimeSourceHashes'].items():ck(sha(RW/name)==h==digest(subprocess.check_output(['git','show',A['runtimeRevision']+':'+name],cwd=RW)))
+for name,h in M['tooling']['hashes'].items():ck(A['runtimeSourceHashes'][name]==h)
+out={'status':'PASS_OFFICIAL_PIC_BUILD_AND_POPULATED_STATIC_RESTORATION_BINDINGS_NO_ADDON_LOAD','checks':checks,'run':37027774273,'artifactId':meta['id'],'workflowHead':run['headSha'],'zipSha256':sha(P/'official-build.zip'),'compiledRevision':B['sourceRevision'],'compiledInputs':111,'toolingInputs':3,'runtimeRevision':A['runtimeRevision'],'runtimeInputs':122,'addonSha256':B['addonSha256'],'addonBytes':B['addonBytes'],'configSha256':B['configSha256'],'inventorySha256':sha(E/'artifact-inventory.json'),'restorationBindingSha256':sha(H/'approved-bindings.json'),'scope':'Official metadata/digest/inventory/tarordinaryfiles/frozen111currentGit/generated12+4/ABI4/initializerPIC8a/intermediateIN8proof/configfeatures/exports/licenses and actual populated source/helper/tool bindings independently authenticated. No addon load, native guest or restoration executed. Ready for root single static restoration; guest qualification remains future.'};target=P/'independent-static-audit.json';assert not target.exists();target.write_text(json.dumps(out,indent=2)+'\n');print(json.dumps(out))

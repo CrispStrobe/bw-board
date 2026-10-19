@@ -1,0 +1,48 @@
+{
+  "status": "INCOMPLETE_TEMPLATE_NOT_AUTHORIZED",
+  "helperHashes": {
+    "analyze.py": "9e5e8dc5a91aa98205effbf7f3acc61bd68e49a79532223e865bc0069918232b",
+    "source-controls.py": "d9c5122480d7a6c6c90579ca6922af85a895a6d64cc241e3febf6c340a3086f9",
+    "plan.json": "38a616f69d953948751b51916645ed5590aac9d05a59be5e21e6de8f679184c0"
+  },
+  "diagnosticManifestSha256": null,
+  "inputs": {
+    "profile": {
+      "path": null,
+      "sha256": null
+    },
+    "phases": {
+      "path": null,
+      "sha256": null
+    },
+    "alignment": {
+      "path": null,
+      "sha256": null
+    },
+    "capture": {
+      "path": null,
+      "sha256": null
+    },
+    "derivation": {
+      "path": null,
+      "sha256": null
+    },
+    "summary": {
+      "path": null,
+      "sha256": null
+    },
+    "runner": {
+      "path": null,
+      "sha256": null
+    },
+    "admission": {
+      "path": null,
+      "sha256": null
+    },
+    "diagnosticManifest": {
+      "path": null,
+      "sha256": null
+    }
+  },
+  "outputDirectory": null
+}

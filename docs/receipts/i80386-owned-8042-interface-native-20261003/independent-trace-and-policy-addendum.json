@@ -1,0 +1,7 @@
+{
+  "status": "PASS_INDEPENDENT_ALL_RAW_TRACE_166_BOUNDARIES_AND_LITERAL_PROFILE",
+  "traceBlocks": 39,
+  "rawWordsCompared": 6474,
+  "nativeTraceSha256": "0d37781a46cbe4b816637bf6ed53659ef1ceb7b8c047dea85d28f1a8fc54afd9",
+  "scope": "All39 emitted RESET/POST STATE EXTRA SEG SYS DR blocks equal retained NAPI boundaries. Zero-charge terminal has a saved NAPI snapshot but no extra POST block. Debug/system/reset deviations remain explicit model profiles; no hardware-correctness claim."
+}

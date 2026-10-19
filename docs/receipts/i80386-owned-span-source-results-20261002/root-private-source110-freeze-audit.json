@@ -1,0 +1,8 @@
+{
+  "status": "ROOT_FROZEN_PRIVATE_SPAN_SOURCE110_CURRENT_AND_GIT_AND_RAW_COMMIT_PASS",
+  "head": "8e35080d29b32e9fcee5f8fbc5800209c74df2e7",
+  "inputCount": 110,
+  "checks": 221,
+  "sourceChangesFromFe1": 7,
+  "scope": "Read-only source freeze authentication, no control rerun/native/build/guest/performance/adoption."
+}

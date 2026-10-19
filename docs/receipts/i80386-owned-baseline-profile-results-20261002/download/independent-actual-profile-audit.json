@@ -1,0 +1,12 @@
+{
+  "status": "PASS_ACTUAL_BASELINE_INSPECTOR_DIAGNOSTIC_BINDINGS_FULL_STATE_AND_SAMPLE_WINDOW",
+  "checks": 1463,
+  "artifactId": 11237781906,
+  "runId": 37031895458,
+  "authPins": 1124,
+  "rawSamples": 112,
+  "executionSamples": 111,
+  "captureSha256": "feaac6222cb5b956605c2747e4ab815ad93984ce2e5000786c6e2ec8527a6665",
+  "profileSha256": "dbe8cf21562f923bdc8731c9c9d93b78bfa1689d4d2b205ddf57df4c8ab59997",
+  "scope": "Official fixed-head artifact and unchanged source/artifact pins, frozen103 native provenance, exact inverse derivative, whole reference reset/final/six checkpoints/boards/rawcanonicalRAM/physical state, actual nonguest alignment and raw profile sample-domain/window independently verified. Qualitative isolate samples only, no all-thread CPU shares, native core/NAPI split or speed proof. No additional guest/profile executed."
+}

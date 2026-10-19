@@ -1,0 +1,8 @@
+{
+  "status": "PASS_ACTUAL_IN8_R3_CI_CAPTURE_OFF_EXPLICIT_PROFILE_NOT_SPEED_GATE",
+  "checks": 390,
+  "captureSha256": "8e94d6c67478dec5b5e1f13675984c264e0383cd9e18f39b9f9ca39653ebe41c",
+  "sourceRevision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "resumes": 445,
+  "scope": "Productionexit0/fullrecordedprofiles/boards/terminal/rawwitness+canonicalRAM/PIT match authenticateddiagnosticpolicy; rawCPU/RAMdifferences preserved. OriginalCIbindings authentic. NoCAPONclaim orspeedgate."
+}

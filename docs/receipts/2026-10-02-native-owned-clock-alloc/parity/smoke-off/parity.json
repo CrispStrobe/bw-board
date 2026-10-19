@@ -1,0 +1,10 @@
+{
+  "status": "ALLOC_CAPTURE_OFF_PARITY_PASS_NOT_SPEED_GATE",
+  "canonicalRows": 0,
+  "completeSnapshotFields": 9,
+  "captureSha256": "15742b1125015d6c2a6ec1e108702673862ed889c31f63a3d03fb76f3f0f5f34",
+  "journalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "sourceRevision": "5da2a4c513a8c35153fd39fb55f73b386560ea80",
+  "compiledRevision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "scope": "alloriginal fullfields plusphysicalclockcounters exact qualifiedMAINbab, no maskedprojection/no broaderguestqualification"
+}

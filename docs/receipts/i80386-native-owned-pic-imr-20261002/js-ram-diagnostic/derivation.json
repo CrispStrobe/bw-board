@@ -1,0 +1,51 @@
+{
+  "status": "EXACT_SOURCE_INVERSE_PASS_DIAGNOSTIC_NOT_FROZEN_RUNNER",
+  "originalRevision": "a6f605280f778b2bc409ef97ac3b40e15874530c",
+  "originalPath": "scripts/run-i80386-free-owned-pic-imr.mjs",
+  "originalSha256": "bb06632fb5cc71304379d7ccc30d3fc62d0e5c1a7e6a567eb3cc7365ce924f86",
+  "diagnosticSha256": "fdf934229793dad3619e9e842b9cd43ea1ff2d33b249a9b2f4d84a85b987624b",
+  "originalCaptureSha256": "fdca8f8fa92952cd9cd5f4447e66b194a5f691025bcf925f7ddd443290143346",
+  "expectedRawRamSha256": "887b7eb9959044f45868a71c29c5c013d65ec0ad3e0205c738719757e63b0ffb",
+  "edits": [
+    {
+      "old": "from './i80386-free-owned-pic-imr.mjs'",
+      "next": "from '/tmp/bw-board-386-owned-pic-imr-source-20261002/scripts/i80386-free-owned-pic-imr.mjs'",
+      "label": "frozen import path"
+    },
+    {
+      "old": "from './bochs-cpu3-native-combined-paging-ram/host.mjs'",
+      "next": "from '/tmp/bw-board-386-owned-pic-imr-source-20261002/scripts/bochs-cpu3-native-combined-paging-ram/host.mjs'",
+      "label": "frozen import path"
+    },
+    {
+      "old": "from '../src/experimental/i80386-at-machine.js'",
+      "next": "from '/tmp/bw-board-386-owned-pic-imr-source-20261002/src/experimental/i80386-at-machine.js'",
+      "label": "frozen import path"
+    },
+    {
+      "old": "from './bochs-cpu3-native-hot-direct/journal.mjs'",
+      "next": "from '/tmp/bw-board-386-owned-pic-imr-source-20261002/scripts/bochs-cpu3-native-hot-direct/journal.mjs'",
+      "label": "frozen import path"
+    },
+    {
+      "old": "from './bochs-cpu3-native-owned-pic-imr/identity.mjs'",
+      "next": "from '/tmp/bw-board-386-owned-pic-imr-source-20261002/scripts/bochs-cpu3-native-owned-pic-imr/identity.mjs'",
+      "label": "frozen import path"
+    },
+    {
+      "old": "root=resolve(dirname(fileURLToPath(import.meta.url)),'..')",
+      "next": "root='/tmp/bw-board-386-owned-pic-imr-source-20261002'",
+      "label": "frozen source git root"
+    },
+    {
+      "old": "const output=process.argv[2];",
+      "next": "import {ramResetEvidence}from '/tmp/bw-board-386-owned-pic-imr-source-20261002/scripts/bochs-cpu3-native-owned-in8/reset-witness.mjs';\nconst output=process.argv[2];",
+      "label": "source-known RAM observer import"
+    },
+    {
+      "old": " assert.deepEqual(identity(),source,'before/after measured source');writeFileSync(output+'/capture.json',JSON.stringify(report,null,2),{flag:'wx'});",
+      "next": " const ramEvidence=ramResetEvidence(m.mem);assert.deepEqual(ramEvidence.resetWitness,[0,3,0,0,0,0,0,0]);assert.equal(Buffer.from(ramEvidence.resetWitness).readUInt32LE(0),reset.cpu.edx);assert.equal(Buffer.from(ramEvidence.resetWitness).readUInt32LE(4),reset.cpu.cr0);assert.equal(reset.cpu.edx,0x300);assert.equal(reset.cpu.cr0,0);\n writeFileSync(output+'/ram.bin',m.mem,{flag:'wx'});writeFileSync(output+'/ram-evidence.json',JSON.stringify({...ramEvidence,rawRamSha256:sha(m.mem),ownReset:{edx:reset.cpu.edx,cr0:reset.cpu.cr0},scope:'Distinct diagnostic observer; canonical comparison changes only510..517 in hash stream'},null,2),{flag:'wx'});\n assert.deepEqual(identity(),source,'before/after measured source');writeFileSync(output+'/capture.json',JSON.stringify(report,null,2),{flag:'wx'});",
+      "label": "write full RAM and own-reset-validated canonical evidence before original report"
+    }
+  ]
+}

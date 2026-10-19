@@ -1,0 +1,33 @@
+{
+  "baseline": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+  "candidate": "324a3e1a0b48a1520c00bed12bc6560742ee5b46",
+  "changed": [
+    ".github/workflows/wasm-c3-word-hook-gate.yml",
+    "crates/core/src/bus/accessors.rs",
+    "crates/core/src/bus/c3_irq_word_gate_tests.rs",
+    "crates/core/src/bus/tests_main.rs"
+  ],
+  "enginePath": "crates/core/src/bus/accessors.rs",
+  "baselineSha256": "8a39a7759eefdc43aad948d5854dceca6ad173969598634af1c84d24eea297c2",
+  "candidateSha256": "cde982ec2e13978ce1311f4dc0a62ab4f400a6c23722f81141bf71921b101b77",
+  "onlyHelperAndWordHookGuardAdded": true,
+  "nativeProductionDispatchUnchanged": true,
+  "byteHalfwordAndReadsUnchanged": true,
+  "originalHookAndCpuUnchanged": [
+    {
+      "path": "crates/core/src/bus/routing.rs",
+      "sha256": "d6f4f64c8b9c653556a46cc4fad57a0121c59765199569d1a2f6681b4007a0b1"
+    },
+    {
+      "path": "crates/core/src/bus/tick.rs",
+      "sha256": "b46f824b63fc16233bd1d9ca87ce3bbe298ac96ae6b25abad5befb25aa20d4c7"
+    },
+    {
+      "path": "crates/core/src/cpu/cortex_m.rs",
+      "sha256": "3cce26ce11616709e363419f520a60eccc118c9a01af3d65959a9159b6af2e98"
+    }
+  ],
+  "helper": "    /// The C3 word-write hook is inert without both its cached-register arm\n    /// and its walk-free scheduler-routing arm. Query live state at the store;\n    /// do not memoize chip identity, device inventory or routing eligibility.\n    /// Keep the scheduler arm even without an INTC cache: refreshing its\n    /// source bitmap is an observable effect of the original hook.\n    #[cfg(any(target_arch = \"wasm32\", test))]\n    #[inline(always)]\n    pub(super) fn c3_irq_word_write_hook_needed(&self) -> bool {\n        let needed = self.irq_fabric.esp32c3.intc.is_some();\n        #[cfg(feature = \"event-scheduler\")]\n        let needed = needed || (self.legacy_walk_disabled && self.irq_fabric.esp32c3.routing);\n        needed\n    }\n\n",
+  "guard": "                #[cfg(any(target_arch = \"wasm32\", test))]\n                if self.c3_irq_word_write_hook_needed() {\n                    self.sync_esp32c3_irq_cache_write(idx, mmio_addr - base);\n                }\n                #[cfg(not(any(target_arch = \"wasm32\", test)))]\n",
+  "engineDiff": "diff --git a/crates/core/src/bus/accessors.rs b/crates/core/src/bus/accessors.rs\nindex 4dd2a6bc..07994975 100644\n--- a/crates/core/src/bus/accessors.rs\n+++ b/crates/core/src/bus/accessors.rs\n@@ -10,6 +10,20 @@ use crate::{SimResult, SimulationError};\n use std::sync::atomic::Ordering;\n \n impl SystemBus {\n+    /// The C3 word-write hook is inert without both its cached-register arm\n+    /// and its walk-free scheduler-routing arm. Query live state at the store;\n+    /// do not memoize chip identity, device inventory or routing eligibility.\n+    /// Keep the scheduler arm even without an INTC cache: refreshing its\n+    /// source bitmap is an observable effect of the original hook.\n+    #[cfg(any(target_arch = \"wasm32\", test))]\n+    #[inline(always)]\n+    pub(super) fn c3_irq_word_write_hook_needed(&self) -> bool {\n+        let needed = self.irq_fabric.esp32c3.intc.is_some();\n+        #[cfg(feature = \"event-scheduler\")]\n+        let needed = needed || (self.legacy_walk_disabled && self.irq_fabric.esp32c3.routing);\n+        needed\n+    }\n+\n     /// Register a [`crate::SimulationObserver`] for the bus's own events\n     /// (`on_memory_write`).\n     ///\n@@ -1129,6 +1143,11 @@ impl crate::Bus for SystemBus {\n             self.collect_scheduled_events(idx);\n             if r.is_ok() {\n                 let base = self.peripherals[idx].base;\n+                #[cfg(any(target_arch = \"wasm32\", test))]\n+                if self.c3_irq_word_write_hook_needed() {\n+                    self.sync_esp32c3_irq_cache_write(idx, mmio_addr - base);\n+                }\n+                #[cfg(not(any(target_arch = \"wasm32\", test)))]\n                 self.sync_esp32c3_irq_cache_write(idx, mmio_addr - base);\n                 // Same write choke, ESP32-S3 interrupt matrix: a level moved by\n                 // this write (above all the FROM_CPU self-IPI that implements\n"
+}

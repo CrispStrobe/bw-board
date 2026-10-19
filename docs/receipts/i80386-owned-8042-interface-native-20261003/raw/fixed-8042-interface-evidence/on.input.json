@@ -1,0 +1,13 @@
+{
+  "addon": "/home/runner/work/_temp/fixed-8042-interface-prepared/bochs/bw_direct.node",
+  "sha256": "4b877e6d83189149f1f365f4e541721ba796362db0f4360b0f6b273149f95432",
+  "configuration": "/home/runner/work/_temp/fixed-8042-interface-evidence/guest-source.bochsrc",
+  "output": "/home/runner/work/_temp/fixed-8042-interface-evidence/on",
+  "preparedManifest": "/home/runner/work/_temp/fixed-8042-interface-evidence/prepare.json",
+  "preparedManifestSha256": "4a6d7706e18e332c9c552fa3423a3b6fd1be1fe0075d00d271332d236990fd43",
+  "buildReceipt": "/home/runner/work/_temp/fixed-8042-interface-evidence/build-static-preflight.json",
+  "buildReceiptSha256": "0c8b55b4d88d3c50a64fefbc712962f3870998de77381d0a080a538266f71943",
+  "reference": "/home/runner/work/_temp/fixed-8042-interface-evidence/reference.json",
+  "referenceSha256": "bbaafa9047d69a17e01c5523d54d49aadfb26a125aa46995ddc53d92082b72c9",
+  "nativeTrace": true
+}

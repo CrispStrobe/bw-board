@@ -1,0 +1,13 @@
+{
+  "status": "ROOT_GRANT_EXACT_HEAD_PUSH_PR_AND_FIRST_HOSTED_THREE_NATIVE_PARITY_CELLS",
+  "head": "80d228ee5452f380655a16c4bc823beb76e781c1",
+  "recordedUTC": "2026-10-02T19:46:23.736288+00:00",
+  "peerReadinessSha256": "35295417530545fc7d33cf22a5018be19dd93b915b6825fce63c926a4c3d1f0c",
+  "rootAudit": "/mnt/volume1/tmp-astra/root-owned-span-hosted-final-source-audit-20261002.json",
+  "cells": [
+    "smoke-off",
+    "fulltrace-on",
+    "trace-fast"
+  ],
+  "scope": "One first hosted PR workflow on reviewed immutable head and newmaterialization; stopfailure, retainrawreceipt, no retry. Unchangedcompiledfe1/DSO8d andruntime116. No performancegate/adoption/broaderAT/physicalRTx; independentactualaudit aftercompletion. Preserve startedduplicatepushchecks."
+}

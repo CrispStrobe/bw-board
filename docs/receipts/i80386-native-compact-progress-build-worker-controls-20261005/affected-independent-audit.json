@@ -1,0 +1,31 @@
+{
+  "status": "INDEPENDENT_COMPACT_ONE_AFFECTED_TERMINAL_COMPOSITION_PASS_SPLIT_OUTCOME",
+  "revision": "7acbc4ccc9553fd2ae303b1c57117abf9695ca7a",
+  "sourcePaths": 191,
+  "prepostAndOriginEqual": true,
+  "tests": 1,
+  "passes": 1,
+  "failures": 0,
+  "skips": 0,
+  "retainedExit": {
+    "exitCode": 0,
+    "timeout": false,
+    "wallSeconds": 2.6482776291668415,
+    "wallScope": "parent including final authentication",
+    "childExitWallSeconds": 0.38245018757879734,
+    "rawWait4Status": 0,
+    "leaderRusage": {
+      "userSeconds": 0.350715,
+      "systemSeconds": 0.072348,
+      "maxRSSKiB": 68132
+    },
+    "rusageScope": "wait4 leader and its waited descendants; not guest or execution-window CPU",
+    "error": null,
+    "cleanupError": null,
+    "finalizationError": null,
+    "pinsEqual": true
+  },
+  "scope": "Genuine historical terminal9-field projection with manufactured board/JS/onePIO; no new compact execution",
+  "historicalOutcome": "Initial six passes/one fixture failure preserved; no full seven rerun",
+  "auditMethod": "Read saved packet only; no replay"
+}

@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=128",
+    "--input-type=module",
+    "-e",
+    "import {readFileSync}from 'node:fs';import {compareNativeReference,compareNativeModes,compareNativePorts}from './scripts/bochs-cpu3-native-owned-8042/reference.mjs';const root=\"/home/runner/work/_temp/fixed-8042-evidence\";const load=p=>JSON.parse(readFileSync(root+'/'+p));const r=load('reference.json'),off=load('off/capture.json'),on=load('on/capture.json');console.log(JSON.stringify({off:compareNativeReference(off,r),on:compareNativeReference(on,r),modes:compareNativeModes(off,on),ports:compareNativePorts(readFileSync(root+'/on.stderr','utf8'),r)}));"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 0.1153536909999957,
+  "streams": {
+    "stdout": {
+      "bytes": 1774,
+      "sha256": "4f1a0cd462af2c7d4887aafdeb47858c12bf11158e2f45100dbf1de135d23398"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

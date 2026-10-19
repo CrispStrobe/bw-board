@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "/mnt/volume1/tmp-astra/native-owned-in8-ci-restoration-20261002/authenticate.mjs",
+    "/mnt/volume1/tmp-astra/native-owned-in8-r3-ci-restored-20261002/static-input.json"
+  ],
+  "returncode": 0,
+  "timeout": false,
+  "wallSeconds": 3.080373078584671,
+  "streams": {
+    "stdout": "6c66eb99e47507d6c8f8bf4938ce561d758f1eae21b996eeefc48618fa37bbb0",
+    "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

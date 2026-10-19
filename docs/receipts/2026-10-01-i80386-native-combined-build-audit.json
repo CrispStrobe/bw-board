@@ -1,0 +1,38 @@
+{
+  "status": "pass-compiled-source-and-artifact-audit-only",
+  "sourceRevision": "0d9db019bcd824422ac8a970ff86c21d4e70d14f",
+  "ownedInputs": 13,
+  "upstreamInputs": 12,
+  "changedTrackedFiles": [
+    "bochs/bochs.h",
+    "bochs/cpu/cpu.cc",
+    "bochs/cpu/event.cc",
+    "bochs/cpu/exception.cc",
+    "bochs/cpu/paging.cc",
+    "bochs/iodev/devices.cc",
+    "bochs/main.cc",
+    "bochs/memory/memory.cc",
+    "bochs/memory/misc_mem.cc",
+    "bochs/pc_system.cc",
+    "bochs/pc_system.h"
+  ],
+  "local": {
+    "binarySha256": "1398f63e252f54c7efa9f8ff40549fcae286ce7088a8f9bf30fd15d751ed070e",
+    "configSha256": "d4945445c2412c0b4e8c5cac80cee28d443bb438c36c9ea6b1bb5196147f1e8c",
+    "runtimeSha256": "43e77cfea9f56b730657a044678b1416204c659161cf515693b8282734d1a941"
+  },
+  "hosted": {
+    "binarySha256": "a0767f767ede7b3653e3841a703483fc1a5e74344b53e025e402db0b5e540116",
+    "configSha256": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe",
+    "runtimeSha256": "43e77cfea9f56b730657a044678b1416204c659161cf515693b8282734d1a941"
+  },
+  "hostedRun": 36866821207,
+  "guestExecuted": false,
+  "claimLimits": [
+    "compiled artifacts only",
+    "no combined native guest executed at this audit",
+    "no correctness qualification",
+    "no production backend",
+    "no RTx measurement"
+  ]
+}

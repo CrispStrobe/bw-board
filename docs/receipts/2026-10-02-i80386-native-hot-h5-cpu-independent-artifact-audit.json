@@ -1,0 +1,88 @@
+{
+  "status": "INDEPENDENT_H4_H5_CPU_ARTIFACT_INVARIANTS_PASS_GATE_FAIL",
+  "checks": 1805,
+  "auditScriptSha256": "ecdf9e5239a389a8a209f7b6110ef641538e1c135cabedcd62a803099f9b5c4d",
+  "favorableCpuPairCount": 3,
+  "summarySha256": "20d25925a85cbd97d5dd28a5295d0b31d822866753ae26142b9af062f930519b",
+  "distributions": {
+    "H4": {
+      "allNs": [
+        372590758,
+        401318305,
+        351381643,
+        388072224,
+        373695017,
+        588101978,
+        670416931
+      ],
+      "minNs": 351381643,
+      "medianNs": 388072224,
+      "maxNs": 670416931
+    },
+    "H5": {
+      "allNs": [
+        386234653,
+        460110427,
+        458270015,
+        370497846,
+        346524335,
+        369238847,
+        507474612
+      ],
+      "minNs": 346524335,
+      "medianNs": 386234653,
+      "maxNs": 507474612
+    }
+  },
+  "pairs": [
+    {
+      "index": 2,
+      "H4": 372590758,
+      "H5": 386234653,
+      "H5overH4": 1.0366189839845679
+    },
+    {
+      "index": 3,
+      "H5": 460110427,
+      "H4": 401318305,
+      "H5overH4": 1.1464974840856064
+    },
+    {
+      "index": 4,
+      "H4": 351381643,
+      "H5": 458270015,
+      "H5overH4": 1.304194525039545
+    },
+    {
+      "index": 5,
+      "H5": 370497846,
+      "H4": 388072224,
+      "H5overH4": 0.9547136411391298
+    },
+    {
+      "index": 6,
+      "H4": 373695017,
+      "H5": 346524335,
+      "H5overH4": 0.9272918268535543
+    },
+    {
+      "index": 7,
+      "H5": 369238847,
+      "H4": 588101978,
+      "H5overH4": 0.62784833381397
+    },
+    {
+      "index": 8,
+      "H4": 670416931,
+      "H5": 507474612,
+      "H5overH4": 0.7569537530071716
+    }
+  ],
+  "cpuMeanUs": {
+    "H4": 464402,
+    "H5": 465336.14285714284
+  },
+  "meanCpuReductionPercent": -0.2011496197567686,
+  "allSevenCpuPairsFavorable": false,
+  "scope": "Process-wide execution CPU includes all active child threads and tiny measurement overhead. Whole H4/H5 candidate comparison fails predeclared CPU criterion, not isolated protocol/core, general applications, 10x or physical RTx. Historical noisy wall result remains inconclusive."
+}

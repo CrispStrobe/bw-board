@@ -1,0 +1,283 @@
+{
+  "schema": "bw.bochs-cpu3-owned-pagefault-retry-compare.v1",
+  "boardRevision": "b7ce0258a5503f36ae95981318efa99d4537b7f2",
+  "sourceHashes": {
+    "test/fixtures/i80386-bochs-cpu3-pagefault-retry.S": "1937bc2af95e330caa62decba328d7aa474fcc94b9e1928924f2ffdf7c6321d0",
+    "scripts/bochs-cpu3-owned-oracle-v2/instrument.cc": "d0b0512a128a9e94812254424129eb3ea0380e29806ecf65d458cebf199ae7be",
+    "scripts/bochs-cpu3-owned-oracle-v2/parse.mjs": "d432c3cd70c02be2da7f8d2175cec86951e9ed5c76c8d1c434885f80ee70caef",
+    "scripts/bochs-cpu3-owned-oracle-v2/patch.mjs": "717c7938343ae2da337029266e667a4f0d697f977dd4d0c90db725d34f2ecbc0",
+    "scripts/prepare-bochs-cpu3-owned-oracle-v2.mjs": "a71a0d6702c25c888461dd8f5b2a8cb2ed776afed4e212bbfbbda49f97437176",
+    "scripts/bochs-cpu3-owned-oracle-v2-idtr-03ff/contract.mjs": "44bd2d63ccfed7ec071dca6053d4fa1273667387ba5b71cc2fa97820c23e97d8",
+    "scripts/bochs-cpu3-owned-oracle-v2-pagefault-retry/contract.mjs": "c600e58517ff62bd514f03a472c5227e521271136fefe12140dc6afa9c24db64",
+    "scripts/run-bochs-cpu3-owned-oracle-v2-pagefault-retry.mjs": "318bef1ee7cad4a99601ee0059395f7a0be019cf774f39a164fb5ca77fefd983",
+    "test/bochs-cpu3-owned-oracle-v2-pagefault-retry.test.mjs": "c2b4744613e84a5aafcab663569fc2f9e2f82674746a0fb38e8d1cc2ecac08e6",
+    "docs/receipts/2026-09-30-i80386-bochs-cpu3-owned-memory-v2.json": "0865be3b65043672d436b6716fc060795b0853cbac93d2f858f0bcf93f4e73f7",
+    "docs/receipts/2026-09-30-i80386-bochs-cpu3-owned-pagefault-retry.json": "6c663a02b1c9b5058b862442dc6ee093c969022e6ec04233698af8a077ee77d8",
+    "src/experimental/i80386.js": "6fba681208e1443cc9eff00ae6aba444903d23e5feafe62527b25428e72d60ed",
+    "scripts/compare-bochs-cpu3-owned-paging-v2.mjs": "063a7a2a226a65ea2591355e87739147f66092a8bad9fd9e165467028dca5e0b",
+    "scripts/compare-bochs-cpu3-owned-pagefault-retry.mjs": "87c41a615268d21e398fb9086fd1c2e6e30215eb3ec6b5669e08dadfe3a33cc3"
+  },
+  "nativeReceipt": "docs/receipts/2026-09-30-i80386-bochs-cpu3-owned-pagefault-retry.json",
+  "nativeBochsRevision": "0e45b736ef9792eb9b752b0a35db49eaf2faea47",
+  "nativeBinarySha256": "e2eba18cb55e36826d38783b07d9d55b3bfe596af646f6b68b16e61e2d11982b",
+  "imageSha256": "17b6df61ebf2a28144a411ed1ec1bbffc2cc2140561ea76cf9c571d2c87f5256",
+  "jsSetup": "strict386; deliverFaults true; explicit 80387 reset; direct owned setup symbol at CS 0000; guest handler/IRETD",
+  "fixtureSymbols": {
+    "setup": 32256,
+    "faulting_store": 32446,
+    "pf_handler": 32499,
+    "cr3_reload": 32582,
+    "iret_retry": 32588
+  },
+  "jsEntry": 32256,
+  "jsSteps": 1881,
+  "marker": "BHPG004",
+  "faultComparison": {
+    "status": "scoped-fault-match",
+    "mismatches": [],
+    "frameDefinedEflagsMask": 229335,
+    "native": {
+      "vector": 14,
+      "errorCode": 2,
+      "cr2": 20480,
+      "attemptedStoreEip": 32446,
+      "handlerEip": 32499,
+      "frame": {
+        "eflags": {
+          "address": 28668,
+          "raw": 65606,
+          "bytes": "46000100"
+        },
+        "cs": {
+          "address": 28664,
+          "raw": 8,
+          "bytes": "08000000"
+        },
+        "eip": {
+          "address": 28660,
+          "raw": 32446,
+          "bytes": "be7e0000"
+        },
+        "errorCode": {
+          "address": 28656,
+          "raw": 2,
+          "bytes": "02000000"
+        }
+      },
+      "failedStoreLinearCallbackCount": 0
+    },
+    "js": {
+      "vector": 14,
+      "vectorProvenance": "read-only instance wrapper around architectural _deliverFault",
+      "deliveredErrorCode": 2,
+      "deliveredReturnEip": 32446,
+      "cr2": 20480,
+      "faultingCs": 8,
+      "attemptedStoreEip": 32446,
+      "handlerEip": 32499,
+      "stackPointer": 28656,
+      "frame": {
+        "errorCode": 2,
+        "eip": 32446,
+        "cs": 8,
+        "eflags": 65606
+      },
+      "pte5BeforeRepair": "02500000",
+      "failedStoreWriteCount": 0,
+      "zeroReturnCount": 1,
+      "storeAttemptCount": 2,
+      "handlerEntryCount": 1,
+      "cr3ReloadCount": 1,
+      "iretRetryCount": 1,
+      "deliveryCallCount": 1,
+      "executionPoints": {
+        "firstStore": 1840,
+        "delivery": 1840,
+        "handler": 1841,
+        "cr3Reload": 1863,
+        "iret": 1865,
+        "retryStore": 1866
+      },
+      "scratchCr2": "00500000"
+    },
+    "excluded": [
+      "native callback ordinals versus JavaScript bus order",
+      "upper 16 bits of saved CS dword",
+      "undefined/reserved saved EFLAGS bits",
+      "complete physical bus cycles and timing"
+    ]
+  },
+  "stateComparison": {
+    "scope": "owned 4 KiB paging fixture after final E9 OUT: selected integer/system fields and three physical RAM words",
+    "status": "scoped-fields-match",
+    "mismatches": [],
+    "compared": {
+      "registers": [
+        "eax",
+        "ecx",
+        "edx",
+        "ebx",
+        "esp",
+        "ebp",
+        "esi",
+        "edi"
+      ],
+      "eflagsDefined386Mask": 229335,
+      "cr0Defined386Mask": 2147483679,
+      "ramAddresses": {
+        "pde0": 36864,
+        "pte5": 40980,
+        "data5": 20480
+      }
+    },
+    "selectedState": {
+      "native": {
+        "eax": 287454004,
+        "ecx": 0,
+        "edx": 0,
+        "ebx": 0,
+        "esp": 28672,
+        "ebp": 28656,
+        "esi": 0,
+        "edi": 41984,
+        "eip": 32491,
+        "eflagsDefined386": 70,
+        "cr0Defined386": 2147483665,
+        "cr2": 20480,
+        "cr3": 36864,
+        "gdtr": 32592,
+        "gdtrLimit": 23,
+        "idtr": 0,
+        "idtrLimit": 1023
+      },
+      "js": {
+        "eax": 287454004,
+        "ecx": 0,
+        "edx": 0,
+        "ebx": 0,
+        "esp": 28672,
+        "ebp": 28656,
+        "esi": 0,
+        "edi": 41984,
+        "eip": 32491,
+        "eflagsDefined386": 70,
+        "cr0Defined386": 2147483665,
+        "cr2": 20480,
+        "cr3": 36864,
+        "gdtr": 32592,
+        "gdtrLimit": 23,
+        "idtr": 0,
+        "idtrLimit": 1023
+      }
+    },
+    "ramSnapshots": {
+      "native": {
+        "pde0": {
+          "physicalAddress": 36864,
+          "bytes": "23a00000",
+          "source": "checkpoint plain RAM snapshot, not a hook event"
+        },
+        "pte5": {
+          "physicalAddress": 40980,
+          "bytes": "63500000",
+          "source": "checkpoint plain RAM snapshot, not a hook event"
+        },
+        "data5": {
+          "physicalAddress": 20480,
+          "bytes": "44332211",
+          "source": "checkpoint plain RAM snapshot, not a hook event"
+        }
+      },
+      "js": {
+        "pde0": {
+          "physicalAddress": 36864,
+          "bytes": "23a00000"
+        },
+        "pte5": {
+          "physicalAddress": 40980,
+          "bytes": "63500000"
+        },
+        "data5": {
+          "physicalAddress": 20480,
+          "bytes": "44332211"
+        }
+      }
+    },
+    "raw": {
+      "eflags": {
+        "native": 70,
+        "js": 70
+      },
+      "cr0": {
+        "native": 4294967281,
+        "js": 2147483665
+      },
+      "debug": {
+        "native": {
+          "dr0": 0,
+          "dr1": 0,
+          "dr2": 0,
+          "dr3": 0,
+          "dr6": 4294909936,
+          "dr7": 1024
+        },
+        "js": {
+          "dr0": 0,
+          "dr1": 0,
+          "dr2": 0,
+          "dr3": 0,
+          "dr6": 0,
+          "dr7": 0
+        }
+      },
+      "nullSystemCaches": {
+        "nativeTr": {
+          "selector": 0,
+          "valid": 1,
+          "base": 0,
+          "limitScaled": 65535,
+          "present": 1,
+          "dpl": 0,
+          "segment": 0,
+          "type": 11,
+          "granularity": 0,
+          "default32": 0
+        },
+        "nativeLdtr": {
+          "selector": 0,
+          "valid": 1,
+          "base": 0,
+          "limitScaled": 65535,
+          "present": 1,
+          "dpl": 0,
+          "segment": 0,
+          "type": 2,
+          "granularity": 0,
+          "default32": 0
+        },
+        "jsTr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "jsLdtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        }
+      }
+    },
+    "excluded": [
+      "undefined/reserved CR0 and EFLAGS bits",
+      "undefined debug-register reset values",
+      "unloaded TR/LDTR hidden caches",
+      "Bochs internal segment-valid encodings",
+      "Bochs callback event order versus JavaScript bus order",
+      "all RAM outside the three selected plain-owned words",
+      "FPU/device state",
+      "instruction counts, timing, and full physical bus cycles"
+    ]
+  }
+}

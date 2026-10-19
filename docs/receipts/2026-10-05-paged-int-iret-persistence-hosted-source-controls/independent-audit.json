@@ -1,0 +1,12 @@
+{
+  "status": "INDEPENDENT_SAVED_SOURCE_CONTROL_AUDIT_PASS",
+  "sourceHead": "36c46523f1d037832a33a75f7982df7180819ff2",
+  "sourcePaths": 12,
+  "compiledPaths": 208,
+  "driverPaths": 81,
+  "fullBeforeAfterEqual": true,
+  "actualPythonMethods": 4,
+  "nodeInvoked": false,
+  "rawExitWallSeconds": 3.7390944994986057,
+  "scope": "Saved packet audit only; four affected source/decoder fixtures. No control replay, restoration, addon or guest."
+}

@@ -1,0 +1,1287 @@
+{
+  "status": "READ_ONLY_TRANSPORT_AUDIT_PASS_OF_PASS",
+  "stage": "complete transport audit",
+  "members": {
+    "_temp/paged-int-iret-execution/driver-identity.exit.json": {
+      "bytes": 1452,
+      "sha256": "c1678b09bf7376d6ef763de41ccf9a8567e5f80c82a65eabf6b94cf9e495a2f4"
+    },
+    "_temp/paged-int-iret-execution/driver-identity.invocation.json": {
+      "bytes": 717,
+      "sha256": "4b2ff5d22f079d58669582ac3490e40241777f4f80596eb62f193d2337921472"
+    },
+    "_temp/paged-int-iret-execution/bochs.log": {
+      "bytes": 7377,
+      "sha256": "a0245b2d6358dfafee948d423f357599053b82f2d4fc0528e5c7e38900167c02"
+    },
+    "_temp/paged-int-iret-execution/driver-identity.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/paged-int-iret-execution/driver-identity.stdout": {
+      "bytes": 8874,
+      "sha256": "c98a9f868d45e4a93c0ae3aabfa9847222c567408a2fb2b49f519be3cda0215a"
+    },
+    "_temp/paged-int-iret-execution/final-status.json": {
+      "bytes": 7710,
+      "sha256": "799e6371cdded5cb1fba307e79a30adb3c2b7f10d5cdf0edebc2cd360d25b09b"
+    },
+    "_temp/paged-int-iret-execution/fixed-after.json": {
+      "bytes": 36206,
+      "sha256": "4119ae57c30307669e8a48c459fd6e826176d5df509153fbafc9a79cf3f9242a"
+    },
+    "_temp/paged-int-iret-execution/fixed-before.json": {
+      "bytes": 36206,
+      "sha256": "4119ae57c30307669e8a48c459fd6e826176d5df509153fbafc9a79cf3f9242a"
+    },
+    "_temp/paged-int-iret-execution/guest/capture.json.gz": {
+      "bytes": 509752,
+      "sha256": "1a8ab0e64d714b0c7868fe91ad1ff50bae1daf74d1a88ba73ff4e16fc7b40024"
+    },
+    "_temp/paged-int-iret-execution/guest/outcome.json": {
+      "bytes": 3422,
+      "sha256": "7b58c4d410184806b2169e849f0d03b0c51f466f312ab4e2bef851523f8b2f1f"
+    },
+    "_temp/paged-int-iret-execution/host.json": {
+      "bytes": 7425,
+      "sha256": "87b22e3710303e2272122f2d00892087de65c67b4d91a7c6c90959ef082806cc"
+    },
+    "_temp/paged-int-iret-execution/input.json": {
+      "bytes": 1036,
+      "sha256": "5b713bfc5bae06d0c09c063f82a6bf66b38a887c4ed44e886745a7f662203cb7"
+    },
+    "_temp/paged-int-iret-execution/materialization.json": {
+      "bytes": 339,
+      "sha256": "0288041f00afd273f76da9aa980e8d4a199463700a7afb70e3acfb7c1d2e02a6"
+    },
+    "_temp/paged-int-iret-execution/official-artifact.zip": {
+      "bytes": 8097621,
+      "sha256": "4ac91409753cc618711107cf4fbff1ebb8c73c40295978eb4b6e798af3119a6c"
+    },
+    "_temp/paged-int-iret-execution/original-artifact.json": {
+      "bytes": 749,
+      "sha256": "e2131bbb41abc29b77be0efc924c49bdd362360047984aacbd340679eb6a85aa"
+    },
+    "_temp/paged-int-iret-execution/original-run.json": {
+      "bytes": 12629,
+      "sha256": "2843be2d91c97ed60ce5b32087ede687322cc665f66cfb44ec95ee90f7857b90"
+    },
+    "_temp/paged-int-iret-execution/protected-source.bochsrc": {
+      "bytes": 513,
+      "sha256": "9b7cca9b4429f867fdc95e2acec9ce53d2117a9d4257122117fd73dc90bb49bb"
+    },
+    "_temp/paged-int-iret-execution/restored-after.json": {
+      "bytes": 140567,
+      "sha256": "ad3ee62e7d861120075f0416ff38ca5353ae802c4e3f1982d9668393115a8a74"
+    },
+    "_temp/paged-int-iret-execution/static-admission-config.exit.json": {
+      "bytes": 1445,
+      "sha256": "4b5eba8289bfdd3624c2c5b91e7f45bffa826d54209023a933b689fa7cf0cfdb"
+    },
+    "_temp/paged-int-iret-execution/restored-before.json": {
+      "bytes": 140567,
+      "sha256": "ad3ee62e7d861120075f0416ff38ca5353ae802c4e3f1982d9668393115a8a74"
+    },
+    "_temp/paged-int-iret-execution/static-admission-config.invocation.json": {
+      "bytes": 1127,
+      "sha256": "748f8019c2a97dd764aa89e469209ceacc0ec7e643f424d43b267d827bb97e8e"
+    },
+    "_temp/paged-int-iret-execution/static-admission-config.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/paged-int-iret-execution/static-admission-config.stdout": {
+      "bytes": 513,
+      "sha256": "9b7cca9b4429f867fdc95e2acec9ce53d2117a9d4257122117fd73dc90bb49bb"
+    },
+    "_temp/paged-int-iret-execution/worker-launch.json": {
+      "bytes": 81,
+      "sha256": "f5289be4bfc6260cadafa713d63dadab55f15731ae174caea48c2785638504ce"
+    },
+    "_temp/paged-int-iret-execution/worker.exit.json": {
+      "bytes": 1445,
+      "sha256": "565e4f524cc84fc69c14fea194ed5c6dafb569a2deee8ac57d9ddb44e287986c"
+    },
+    "_temp/paged-int-iret-execution/worker.invocation.json": {
+      "bytes": 644,
+      "sha256": "b9c5b7fcc7f8058b54e3bb8d86f8b7ecde09fda9a227a19ead3d77816eea831b"
+    },
+    "_temp/paged-int-iret-execution/worker.stderr": {
+      "bytes": 369,
+      "sha256": "9a0e78afc3a7ae0616b624f02fec7eb3aed72cf2e255865ee8f021c33985ed45"
+    },
+    "_temp/paged-int-iret-execution/worker.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/paged-int-iret-execution-context/parent.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/paged-int-iret-execution-context/parent.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/paged-int-iret-execution-context/source.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/paged-int-iret-execution-context/source.stdout": {
+      "bytes": 182,
+      "sha256": "55e89c15574b2b77c83f30c017537700b2f60c6cd5877188c6ffd53ffbaa7ff1"
+    },
+    "_temp/paged-int-iret-build-evidence/architecture.exit.json": {
+      "bytes": 392,
+      "sha256": "b832b2fd4b3ae215a0a2c85eb42b1d0050bf11d06cd611d4f075b0d2ad698e9c"
+    },
+    "_temp/paged-int-iret-build-evidence/architecture.invocation.json": {
+      "bytes": 397,
+      "sha256": "7ba51c53b86b6bdad14e0096e7b16378b6b99c48dbd1e73919952950b075ae82"
+    },
+    "_temp/paged-int-iret-build-evidence/architecture.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/paged-int-iret-build-evidence/architecture.stdout": {
+      "bytes": 7,
+      "sha256": "aaf631698ae5160ceb04a97681a14887fdcab47cd6e0f163c87485b3b1340b62"
+    },
+    "_temp/paged-int-iret-build-evidence/artifact-inventory.json": {
+      "bytes": 8255,
+      "sha256": "c55cf50d2d220b36e191794fabb3ef4a35e10dc73ac36c64270dce94540616c8"
+    },
+    "_temp/paged-int-iret-build-evidence/build-context.json": {
+      "bytes": 29010,
+      "sha256": "a40badb31d7c6df17f46740d1ac4336726c77ad8f35ca58810332824009acbfe"
+    },
+    "_temp/paged-int-iret-build-evidence/build-static-preflight.json": {
+      "bytes": 27420,
+      "sha256": "cefafcb47bc0358d3ffc692dad4d04cd5fbc7ec54d10c4cf28fa9c3276d879f4"
+    },
+    "_temp/paged-int-iret-build-evidence/bw_direct.node": {
+      "bytes": 2074512,
+      "sha256": "92a5121df194c6675303913ebd527e7d0253e29e686b2cbd8dd91fb579489b6f"
+    },
+    "_temp/paged-int-iret-build-evidence/compiler.exit.json": {
+      "bytes": 399,
+      "sha256": "38e0e265109e85f8aa5d33aca565bdec9282be0fde3ec53a820182f586a77498"
+    },
+    "_temp/paged-int-iret-build-evidence/compiler.invocation.json": {
+      "bytes": 402,
+      "sha256": "c3d619c57844417beccf0aec4e4e5e31161b0b5c691f0114a1c43a5fdc93ec4f"
+    },
+    "_temp/paged-int-iret-build-evidence/compiler.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/paged-int-iret-build-evidence/config.h": {
+      "bytes": 28122,
+      "sha256": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe"
+    },
+    "_temp/paged-int-iret-build-evidence/compiler.stdout": {
+      "bytes": 246,
+      "sha256": "59d1cbef41d4ae78d5063d525b7aa13d18dc0493ea00537efc19b2ee398cb5a8"
+    },
+    "_temp/paged-int-iret-build-evidence/configure.exit.json": {
+      "bytes": 656,
+      "sha256": "65ef763977b9030b0af6e60448c3a5d99f9b917b27593fed4f8ba598064de110"
+    },
+    "_temp/paged-int-iret-build-evidence/configure.invocation.json": {
+      "bytes": 672,
+      "sha256": "25933d107926d75906ad188a868c9fc0783637f04f9432e002d9728da5b7c056"
+    },
+    "_temp/paged-int-iret-build-evidence/configure.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/paged-int-iret-build-evidence/configure.stdout": {
+      "bytes": 13400,
+      "sha256": "04159c51f76491a09845ba3d9fbc707ec6770a052b4db1fbf54d12cef3cae7da"
+    },
+    "_temp/paged-int-iret-build-evidence/final-status.json": {
+      "bytes": 1182,
+      "sha256": "ce782d31320d7d8a2ee1f0a011eb487bb631996b690b32528d0a88a6e4e399af"
+    },
+    "_temp/paged-int-iret-build-evidence/identity-after.exit.json": {
+      "bytes": 639,
+      "sha256": "4fe0917cbd093b22a0c872011e6c0b17c660fc17b892636d5b8c3cfde5ec141c"
+    },
+    "_temp/paged-int-iret-build-evidence/identity-after.invocation.json": {
+      "bytes": 643,
+      "sha256": "199cfcaea8b69d4a3640ae60ed35da71512af1320445d18121e25d7131d3cee7"
+    },
+    "_temp/paged-int-iret-build-evidence/identity-after.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/paged-int-iret-build-evidence/identity-after.stdout": {
+      "bytes": 23854,
+      "sha256": "74667a217f54d2a99c0aefc99815482a080061a81e3ab75cee1b8a8757e0128e"
+    },
+    "_temp/paged-int-iret-build-evidence/identity-before.exit.json": {
+      "bytes": 640,
+      "sha256": "f9e5ac31074f676a8a5ffc2e7c9df7e7a62cb35707e11e7c2cfddb98b302ec03"
+    },
+    "_temp/paged-int-iret-build-evidence/identity-before.invocation.json": {
+      "bytes": 642,
+      "sha256": "69a5afae47f706d97d405a9f7ded7ed03ab738fb15515922700aa8098fad6c3e"
+    },
+    "_temp/paged-int-iret-build-evidence/identity-before.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/paged-int-iret-build-evidence/identity-before.stdout": {
+      "bytes": 23854,
+      "sha256": "74667a217f54d2a99c0aefc99815482a080061a81e3ab75cee1b8a8757e0128e"
+    },
+    "_temp/paged-int-iret-build-evidence/make.invocation.json": {
+      "bytes": 494,
+      "sha256": "f0b19a9aad8c472c54ab7b64588eb3ddc8fc11ef0441f59be911c8e822e0f13f"
+    },
+    "_temp/paged-int-iret-build-evidence/make.exit.json": {
+      "bytes": 480,
+      "sha256": "b0bba2f9a9afe39430c8325853a41a4ef85b89bc036dc47ae3f71fe99c2e326a"
+    },
+    "_temp/paged-int-iret-build-evidence/make.stderr": {
+      "bytes": 7894,
+      "sha256": "0eea62c1c80939697aa048376ee8dc9039f80a770a32aa99fac399f6d4339d8e"
+    },
+    "_temp/paged-int-iret-build-evidence/make.stdout": {
+      "bytes": 36428,
+      "sha256": "1804de4678894502d4758897cc50454be44e64d15bc52184400bc680a0623d2f"
+    },
+    "_temp/paged-int-iret-build-evidence/nm.exit.json": {
+      "bytes": 497,
+      "sha256": "38f2c18886891c5391eb2e48d4de6af5f6777e02ef6bb637c849e91009db0340"
+    },
+    "_temp/paged-int-iret-build-evidence/nm.invocation.json": {
+      "bytes": 498,
+      "sha256": "84149629b5c2293d2e95f28485a437e49cd31541f5141688e7a8fa00af6eefb9"
+    },
+    "_temp/paged-int-iret-build-evidence/nm.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/paged-int-iret-build-evidence/nm.stdout": {
+      "bytes": 188038,
+      "sha256": "da74b39d69f78242c870952c8f13c8a93da6200823536668d0a6222a79aeef51"
+    },
+    "_temp/paged-int-iret-build-evidence/platform.exit.json": {
+      "bytes": 394,
+      "sha256": "5b1f271efbfac3ab87ca43c54e765c804768114364fa88a55e2e0cbc12935390"
+    },
+    "_temp/paged-int-iret-build-evidence/platform.invocation.json": {
+      "bytes": 397,
+      "sha256": "b8798f871200afee09b18e7f91b2b9f191a1682fdd7b27248b16a6a18d757f3d"
+    },
+    "_temp/paged-int-iret-build-evidence/platform.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/paged-int-iret-build-evidence/platform.stdout": {
+      "bytes": 113,
+      "sha256": "6ecb75ce9d770bd2cfb6898b267dd8f29398821b25cb233675e182e0323ba0d2"
+    },
+    "_temp/paged-int-iret-build-evidence/prepare.exit.json": {
+      "bytes": 598,
+      "sha256": "2602182d6838bba43042ddbd4cde4ba49f493b73e5fa2d686fe44a0691d779a9"
+    },
+    "_temp/paged-int-iret-build-evidence/prepare.invocation.json": {
+      "bytes": 599,
+      "sha256": "fbad55b32d0c6c892cc337607acd370b5e585179dd00c0494d55efb3278447c3"
+    },
+    "_temp/paged-int-iret-build-evidence/prepare.json": {
+      "bytes": 1052065,
+      "sha256": "bc37a25c7eae18c5ef9e586de3df8317bd7375e3062e70dfda6e87dd610a28f2"
+    },
+    "_temp/paged-int-iret-build-evidence/prepare.stderr": {
+      "bytes": 664,
+      "sha256": "0f36516b349191872b6faeba04c7b45da786fa57ebd7d7dd8c8c84e091b11ee4"
+    },
+    "_temp/paged-int-iret-build-evidence/prepare.stdout": {
+      "bytes": 1052065,
+      "sha256": "bc37a25c7eae18c5ef9e586de3df8317bd7375e3062e70dfda6e87dd610a28f2"
+    },
+    "_temp/paged-int-iret-build-evidence/prepared-after-build.json": {
+      "bytes": 82912,
+      "sha256": "a071fdbceaeea85eb88ad051f7fe56969734452c677d1d45714fc01fffc9f0c6"
+    },
+    "_temp/paged-int-iret-build-evidence/prepared-before-build.json": {
+      "bytes": 79923,
+      "sha256": "3e34b21800a7d1c8a2a735d1502bc901f3ed9afadf790d924f4eeb41efb0e1f1"
+    },
+    "_temp/paged-int-iret-build-evidence/readelf.exit.json": {
+      "bytes": 478,
+      "sha256": "b85c35599be75821ae727f2f27f7762690f8be6eb69b4a36ae02ea15bd9457fd"
+    },
+    "_temp/paged-int-iret-build-evidence/readelf.invocation.json": {
+      "bytes": 481,
+      "sha256": "04140a0445b62c0666168ca552700063424fe9885c31550be47e3bbfa213bc37"
+    },
+    "_temp/paged-int-iret-build-evidence/readelf.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/paged-int-iret-build-evidence/readelf.stdout": {
+      "bytes": 1539,
+      "sha256": "6c9b864835d7ea0e32317e362fdc804d1cf48eb4cf2797559ceb23370a724f78"
+    },
+    "_temp/paged-int-iret-build-evidence/source-after.json": {
+      "bytes": 1766020,
+      "sha256": "6fafe00371f33ae48b664415c3c24e5d08d8ea1544d47a1d0b43b440eaba3912"
+    },
+    "_temp/paged-int-iret-build-evidence/source-before.json": {
+      "bytes": 1766020,
+      "sha256": "6fafe00371f33ae48b664415c3c24e5d08d8ea1544d47a1d0b43b440eaba3912"
+    },
+    "_temp/paged-int-iret-build-evidence/static-admission.exit.json": {
+      "bytes": 815,
+      "sha256": "3f429d6b3a6f3f6a233330e88f0abbfea5fa7f76aaf245709fba637eb904ca3a"
+    },
+    "_temp/paged-int-iret-build-evidence/static-admission.invocation.json": {
+      "bytes": 821,
+      "sha256": "316e76cb3dc128e5ce6d69ee90eb7e8b0a7213f7771e57174b2e00ce30e42fe3"
+    },
+    "_temp/paged-int-iret-build-evidence/static-admission.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/paged-int-iret-build-evidence/static-admission.stdout": {
+      "bytes": 1201,
+      "sha256": "fff55110ddc6085c465100bc3c3bdfd57673178b369d2e859ec3afdec7eefa92"
+    },
+    "_temp/paged-int-iret-build-evidence/static-input.json": {
+      "bytes": 555,
+      "sha256": "c8df20a8a682ad9fe2b33f6a7d57ad90f20f24cf4148c216963615e05b60b985"
+    },
+    "_temp/paged-int-iret-build-evidence/upstream-COPYING": {
+      "bytes": 26428,
+      "sha256": "c43e067abce73ca284383f4f905316e7cad6dd9aaf69f02ee961b6dfbc4de3c2"
+    },
+    "_temp/paged-int-iret-build-evidence/upstream-LICENSE": {
+      "bytes": 301,
+      "sha256": "c1e96db20d4598f889e24411a1a09e31a4411e3231c20d8cbff984de50a02884"
+    },
+    "bw-board/bw-board/paged-int-iret-wrapper/scripts/paged-int-iret-hosted/README.md": {
+      "bytes": 6413,
+      "sha256": "ec019dea69d1f768ad6deaec10c6efee448efc2ab9ee49545113a261fda02d76"
+    },
+    "bw-board/bw-board/paged-int-iret-wrapper/scripts/paged-int-iret-hosted/evidence.py": {
+      "bytes": 2657,
+      "sha256": "b0f43c4d6c9d0ea9a3ccc864f59e24c135153453149b5deb81b25d23ca9d5c81"
+    },
+    "bw-board/bw-board/paged-int-iret-wrapper/scripts/paged-int-iret-hosted/contract.json": {
+      "bytes": 182529,
+      "sha256": "8f3bd4c425884c48e7e1bd9b56d445cb00c9e9e7670ae88457622d317d16ecc9"
+    },
+    "bw-board/bw-board/paged-int-iret-wrapper/scripts/paged-int-iret-hosted/parent.py": {
+      "bytes": 4872,
+      "sha256": "ad65d71c0eebfa4da50d78be215e63635655a245376c1036fc5494a4d6913649"
+    },
+    "bw-board/bw-board/paged-int-iret-wrapper/scripts/paged-int-iret-hosted/test_source.py": {
+      "bytes": 8207,
+      "sha256": "2bc71d483c64b741b05350c1564a7bd72544cfb318d905aa429d4ac03e74385a"
+    },
+    "bw-board/bw-board/paged-int-iret-wrapper/scripts/cold-native-restore/archive.py": {
+      "bytes": 3772,
+      "sha256": "605ba070cd11baa0cbf4eff14d825bfd283a42f3fdea576ee26834329216f139"
+    },
+    "bw-board/bw-board/paged-int-iret-wrapper/scripts/cold-native-diagnostic/resources.py": {
+      "bytes": 2662,
+      "sha256": "7e968b306c522deee93169bb698c2a80dbb23af5380af2f1cadf4fcf3c1467dc"
+    },
+    "bw-board/bw-board/paged-int-iret-wrapper/scripts/protected-ram-hosted/parent.py": {
+      "bytes": 17086,
+      "sha256": "0723a9d6e6d171d4ea17e684be97e7413f235afff381e6e6a8fbb5bbdd57ec40"
+    },
+    "bw-board/bw-board/paged-int-iret-wrapper/scripts/protected-stack-hosted/parent.py": {
+      "bytes": 2940,
+      "sha256": "2ebfb2e1c550beca26860c1aa55b2da0159b04f6326b87868722d42ffbe80173"
+    },
+    "bw-board/bw-board/paged-int-iret-wrapper/scripts/nonidentity-paging-hosted/parent.py": {
+      "bytes": 2986,
+      "sha256": "6e4e1a3cf315c577ec4e6f73480c47558bcac6a6e3265c5fb4769907af23d1c4"
+    },
+    "bw-board/bw-board/paged-int-iret-wrapper/.github/workflows/i80386-paged-int-iret-execution.yml": {
+      "bytes": 4277,
+      "sha256": "67c246cb2475f7a98047d9352aa3c4eeb62c7e1f0f60879b7c955d1b3e5453b5"
+    }
+  },
+  "scope": "Sole existing ZIP read-only streaming; no extraction, restore, addon, guest or retry. Transport audit is not architectural PASS.",
+  "official": {
+    "status": "ROOT_SHARED_OFFICIAL_ARTIFACT",
+    "zip": "/tmp/native-paged-int-iret-post-persistence-20261005.zip",
+    "zipBytes": 10763002,
+    "zipSha256": "01fe2bd1bd151ad25328d294b7e50f24f7d27c2538994c896964980e578bab69",
+    "runId": 37247392133,
+    "artifactId": 11319662434,
+    "attempt": 1,
+    "hostedRevision": "d46b68c201628a05f5f9934ada7fdddd3a57e683",
+    "output": "/tmp/native-paged-int-iret-post-persistence-observation-20261005"
+  },
+  "parentStatus": {
+    "schema": "bw.paged-int-iret.hosted-correctness.v1",
+    "status": "PASS",
+    "scope": "One fixed trace-OFF paged INT/IRET differential child; complete lossless gzip evidence and independent outcome. Source/fixture only; no performance or broader software qualification.",
+    "workerStarted": true,
+    "originalProvenance": "Original build records retained unchanged; recreated filesystem is new materialization, not original build execution",
+    "workerAttempted": true,
+    "workerPid": 3790,
+    "workerOutcome": {
+      "schema": "bw.paged-int-iret.evidence-outcome.v1",
+      "status": "PASS",
+      "parityStatus": "PASS",
+      "primaryError": null,
+      "progress": {
+        "n": 41,
+        "q": 41,
+        "dn": 1,
+        "dq": 1,
+        "resumes": 41,
+        "zeroQ": 0
+      },
+      "bodyComplete": true,
+      "cleanup": {
+        "native": {
+          "text": "closed",
+          "utf8Bytes": 6,
+          "sha256": "c3eefb58d7c42440a9d4abec51d629544d635a6d936ff3c4d3fca96d611b3cf3",
+          "truncated": false
+        },
+        "provider": {
+          "text": "closed",
+          "utf8Bytes": 6,
+          "sha256": "c3eefb58d7c42440a9d4abec51d629544d635a6d936ff3c4d3fca96d611b3cf3",
+          "truncated": false
+        },
+        "javascript": {
+          "text": "closed",
+          "utf8Bytes": 6,
+          "sha256": "c3eefb58d7c42440a9d4abec51d629544d635a6d936ff3c4d3fca96d611b3cf3",
+          "truncated": false
+        }
+      },
+      "finalReadErrors": {},
+      "inputSha256Before": "5b713bfc5bae06d0c09c063f82a6bf66b38a887c4ed44e886745a7f662203cb7",
+      "inputSha256After": "5b713bfc5bae06d0c09c063f82a6bf66b38a887c4ed44e886745a7f662203cb7",
+      "lastNative": {
+        "state": [
+          2147532527,
+          0,
+          0,
+          0,
+          57344,
+          0,
+          0,
+          0,
+          28677,
+          2,
+          4294967281,
+          0,
+          4096,
+          24,
+          16,
+          16,
+          1536,
+          31,
+          12288,
+          391
+        ],
+        "extra": [
+          4294909936,
+          1024,
+          0,
+          0,
+          0,
+          3,
+          0,
+          0,
+          1,
+          1,
+          0,
+          1,
+          11,
+          0,
+          65535,
+          0,
+          0,
+          0,
+          0,
+          3904
+        ],
+        "segments": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          7,
+          1,
+          0,
+          1,
+          3,
+          0,
+          65535,
+          0,
+          0,
+          0,
+          1,
+          24,
+          3,
+          0,
+          0,
+          1,
+          1,
+          0,
+          1,
+          11,
+          0,
+          65535,
+          0,
+          0,
+          0,
+          2,
+          16,
+          2,
+          0,
+          0,
+          7,
+          1,
+          0,
+          1,
+          3,
+          0,
+          65535,
+          0,
+          0,
+          0,
+          3,
+          16,
+          2,
+          0,
+          0,
+          1,
+          1,
+          0,
+          1,
+          3,
+          0,
+          65535,
+          0,
+          0,
+          0,
+          4,
+          0,
+          0,
+          0,
+          0,
+          7,
+          1,
+          0,
+          1,
+          3,
+          0,
+          65535,
+          0,
+          0,
+          0,
+          5,
+          0,
+          0,
+          0,
+          0,
+          7,
+          1,
+          0,
+          1,
+          3,
+          0,
+          65535,
+          0,
+          0,
+          0
+        ],
+        "system": [
+          6,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0,
+          2,
+          0,
+          65535,
+          0,
+          0,
+          0,
+          7,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0,
+          11,
+          0,
+          65535,
+          0,
+          0,
+          0
+        ],
+        "debug": [
+          0,
+          0,
+          0,
+          0,
+          4294909936,
+          1024
+        ],
+        "nativeTicks": "41",
+        "successfulQuanta": "41",
+        "activityState": 0,
+        "chargedNativeTicks": 1,
+        "chargedQuanta": 1,
+        "reason": 1,
+        "execution": {
+          "attempts": "41",
+          "completed": "41",
+          "repIterations": "0",
+          "repPartial": "0",
+          "faults": "0",
+          "portCommits": "0",
+          "irqDeliveries": "0",
+          "haltIdleCuts": "0"
+        },
+        "fallback": {
+          "bochsRamReads": "0",
+          "bochsRamWrites": "0",
+          "bochsDirectPointers": "0",
+          "bochsPio": "0",
+          "bochsTimer": "0"
+        },
+        "mappingEpoch": 0,
+        "boardA20": 1
+      },
+      "lastJavascript": {
+        "q": 41,
+        "cpu": {
+          "eax": 2147532527,
+          "ecx": 0,
+          "edx": 0,
+          "ebx": 0,
+          "esp": 57344,
+          "ebp": 0,
+          "esi": 0,
+          "edi": 0,
+          "eip": 28677,
+          "eflags": 2,
+          "cr0": 4294967281,
+          "cr2": 0,
+          "cr3": 4096,
+          "cs": 24,
+          "ds": 16,
+          "ss": 16,
+          "es": 0,
+          "fs": 0,
+          "gs": 0,
+          "cr4": 0,
+          "pc": 28677,
+          "gdtr": {
+            "limit": 31,
+            "base": 1536
+          },
+          "idtr": {
+            "limit": 391,
+            "base": 12288
+          },
+          "ldtr": {
+            "selector": 0,
+            "base": 0,
+            "limit": 65535,
+            "present": true,
+            "type": 2
+          },
+          "tr": {
+            "selector": 0,
+            "base": 0,
+            "limit": 65535,
+            "present": true,
+            "type": 11
+          },
+          "segmentCaches": {
+            "0": {
+              "base": 0,
+              "limit": 65535,
+              "default32": false,
+              "present": true,
+              "code": false,
+              "writable": true
+            },
+            "1": {
+              "base": 0,
+              "limit": 65535,
+              "default32": false,
+              "code": true,
+              "readable": true,
+              "writable": false,
+              "access": 155,
+              "address": 1560,
+              "dpl": 0,
+              "conforming": false,
+              "present": true
+            },
+            "2": {
+              "base": 0,
+              "limit": 65535,
+              "default32": false,
+              "present": true,
+              "code": false,
+              "expandDown": false,
+              "readable": true,
+              "writable": true,
+              "access": 147,
+              "address": 1552
+            },
+            "3": {
+              "base": 0,
+              "limit": 65535,
+              "default32": false,
+              "present": true,
+              "code": false,
+              "expandDown": false,
+              "readable": true,
+              "writable": true,
+              "access": 147,
+              "address": 1552
+            },
+            "4": {
+              "base": 0,
+              "limit": 65535,
+              "default32": false,
+              "present": true,
+              "code": false,
+              "writable": true
+            },
+            "5": {
+              "base": 0,
+              "limit": 65535,
+              "default32": false,
+              "present": true,
+              "code": false,
+              "writable": true
+            }
+          },
+          "debugRegisters": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4294909936,
+            1024
+          ],
+          "halted": false,
+          "shutdown": false,
+          "interruptShadow": 0,
+          "nmiShadow": 0,
+          "debugShadow": 0,
+          "cycles": 41
+        }
+      },
+      "body": {
+        "filename": "capture.json.gz",
+        "decodedBytes": 23559031,
+        "storedBytes": 509752,
+        "decodedSha256": "8c4a059a86cf393a8dbba7254da2d9db52f6a1dc267a38ff5cd82dccef5d7c3d",
+        "storedSha256": "1a8ab0e64d714b0c7868fe91ad1ff50bae1daf74d1a88ba73ff4e16fc7b40024",
+        "encoding": "gzip-single-member-json",
+        "decodedCap": 67108864,
+        "storedCap": 16777216
+      },
+      "persistenceError": null
+    },
+    "progress": {
+      "n": 41,
+      "q": 41,
+      "dn": 1,
+      "dq": 1,
+      "resumes": 41,
+      "zeroQ": 0
+    }
+  },
+  "workerExit": {
+    "pid": 3790,
+    "exitCode": 0,
+    "timeout": false,
+    "wallSeconds": 8.667071641000007,
+    "wait4": {
+      "userSeconds": 4.302067,
+      "systemSeconds": 5.311814,
+      "maxRssKiB": 310512,
+      "minorFaults": 762866,
+      "majorFaults": 0,
+      "voluntaryContextSwitches": 10213,
+      "involuntaryContextSwitches": 894
+    },
+    "error": null,
+    "memoryEventsBefore": {
+      "available": true,
+      "path": "/sys/fs/cgroup/system.slice/hosted-compute-agent.service/memory.events",
+      "events": {
+        "low": 0,
+        "high": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "oom_group_kill": 0
+      },
+      "raw": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n",
+      "scope": "Cgroup aggregate events; concurrent processes may contribute"
+    },
+    "memoryEventsAfter": {
+      "available": true,
+      "path": "/sys/fs/cgroup/system.slice/hosted-compute-agent.service/memory.events",
+      "events": {
+        "low": 0,
+        "high": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "oom_group_kill": 0
+      },
+      "raw": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n",
+      "scope": "Cgroup aggregate events; concurrent processes may contribute"
+    },
+    "memoryDelta": {
+      "available": true,
+      "events": {
+        "low": 0,
+        "high": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "oom_group_kill": 0
+      },
+      "scope": "Cgroup aggregate deltas; not proof this child caused an event"
+    }
+  },
+  "workerStreams": {
+    "stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "prefix": "",
+      "tail": "",
+      "truncated": false
+    },
+    "stderr": {
+      "bytes": 369,
+      "sha256": "9a0e78afc3a7ae0616b624f02fec7eb3aed72cf2e255865ee8f021c33985ed45",
+      "prefix": "00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'\n00000000000i[      ] reading configuration from /home/runner/work/_temp/paged-int-iret-execution/protected-source.bochsrc\n00000000000i[      ] installing nogui module as the Bochs GUI\n00000000000i[      ] using log file /home/runner/work/_temp/paged-int-iret-execution/bochs.log\n",
+      "tail": "00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'\n00000000000i[      ] reading configuration from /home/runner/work/_temp/paged-int-iret-execution/protected-source.bochsrc\n00000000000i[      ] installing nogui module as the Bochs GUI\n00000000000i[      ] using log file /home/runner/work/_temp/paged-int-iret-execution/bochs.log\n",
+      "truncated": false
+    }
+  },
+  "outcome": {
+    "schema": "bw.paged-int-iret.evidence-outcome.v1",
+    "status": "PASS",
+    "parityStatus": "PASS",
+    "primaryError": null,
+    "progress": {
+      "n": 41,
+      "q": 41,
+      "dn": 1,
+      "dq": 1,
+      "resumes": 41,
+      "zeroQ": 0
+    },
+    "bodyComplete": true,
+    "cleanup": {
+      "native": {
+        "text": "closed",
+        "utf8Bytes": 6,
+        "sha256": "c3eefb58d7c42440a9d4abec51d629544d635a6d936ff3c4d3fca96d611b3cf3",
+        "truncated": false
+      },
+      "provider": {
+        "text": "closed",
+        "utf8Bytes": 6,
+        "sha256": "c3eefb58d7c42440a9d4abec51d629544d635a6d936ff3c4d3fca96d611b3cf3",
+        "truncated": false
+      },
+      "javascript": {
+        "text": "closed",
+        "utf8Bytes": 6,
+        "sha256": "c3eefb58d7c42440a9d4abec51d629544d635a6d936ff3c4d3fca96d611b3cf3",
+        "truncated": false
+      }
+    },
+    "finalReadErrors": {},
+    "inputSha256Before": "5b713bfc5bae06d0c09c063f82a6bf66b38a887c4ed44e886745a7f662203cb7",
+    "inputSha256After": "5b713bfc5bae06d0c09c063f82a6bf66b38a887c4ed44e886745a7f662203cb7",
+    "lastNative": {
+      "state": [
+        2147532527,
+        0,
+        0,
+        0,
+        57344,
+        0,
+        0,
+        0,
+        28677,
+        2,
+        4294967281,
+        0,
+        4096,
+        24,
+        16,
+        16,
+        1536,
+        31,
+        12288,
+        391
+      ],
+      "extra": [
+        4294909936,
+        1024,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        1,
+        1,
+        0,
+        1,
+        11,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        0,
+        3904
+      ],
+      "segments": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        7,
+        1,
+        0,
+        1,
+        3,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        1,
+        24,
+        3,
+        0,
+        0,
+        1,
+        1,
+        0,
+        1,
+        11,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        2,
+        16,
+        2,
+        0,
+        0,
+        7,
+        1,
+        0,
+        1,
+        3,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        3,
+        16,
+        2,
+        0,
+        0,
+        1,
+        1,
+        0,
+        1,
+        3,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0,
+        7,
+        1,
+        0,
+        1,
+        3,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        7,
+        1,
+        0,
+        1,
+        3,
+        0,
+        65535,
+        0,
+        0,
+        0
+      ],
+      "system": [
+        6,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        2,
+        0,
+        65535,
+        0,
+        0,
+        0,
+        7,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        11,
+        0,
+        65535,
+        0,
+        0,
+        0
+      ],
+      "debug": [
+        0,
+        0,
+        0,
+        0,
+        4294909936,
+        1024
+      ],
+      "nativeTicks": "41",
+      "successfulQuanta": "41",
+      "activityState": 0,
+      "chargedNativeTicks": 1,
+      "chargedQuanta": 1,
+      "reason": 1,
+      "execution": {
+        "attempts": "41",
+        "completed": "41",
+        "repIterations": "0",
+        "repPartial": "0",
+        "faults": "0",
+        "portCommits": "0",
+        "irqDeliveries": "0",
+        "haltIdleCuts": "0"
+      },
+      "fallback": {
+        "bochsRamReads": "0",
+        "bochsRamWrites": "0",
+        "bochsDirectPointers": "0",
+        "bochsPio": "0",
+        "bochsTimer": "0"
+      },
+      "mappingEpoch": 0,
+      "boardA20": 1
+    },
+    "lastJavascript": {
+      "q": 41,
+      "cpu": {
+        "eax": 2147532527,
+        "ecx": 0,
+        "edx": 0,
+        "ebx": 0,
+        "esp": 57344,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 28677,
+        "eflags": 2,
+        "cr0": 4294967281,
+        "cr2": 0,
+        "cr3": 4096,
+        "cs": 24,
+        "ds": 16,
+        "ss": 16,
+        "es": 0,
+        "fs": 0,
+        "gs": 0,
+        "cr4": 0,
+        "pc": 28677,
+        "gdtr": {
+          "limit": 31,
+          "base": 1536
+        },
+        "idtr": {
+          "limit": 391,
+          "base": 12288
+        },
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 65535,
+          "present": true,
+          "type": 2
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 65535,
+          "present": true,
+          "type": 11
+        },
+        "segmentCaches": {
+          "0": {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          "1": {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "code": true,
+            "readable": true,
+            "writable": false,
+            "access": 155,
+            "address": 1560,
+            "dpl": 0,
+            "conforming": false,
+            "present": true
+          },
+          "2": {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "expandDown": false,
+            "readable": true,
+            "writable": true,
+            "access": 147,
+            "address": 1552
+          },
+          "3": {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "expandDown": false,
+            "readable": true,
+            "writable": true,
+            "access": 147,
+            "address": 1552
+          },
+          "4": {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          "5": {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        },
+        "debugRegisters": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          4294909936,
+          1024
+        ],
+        "halted": false,
+        "shutdown": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "cycles": 41
+      }
+    },
+    "body": {
+      "filename": "capture.json.gz",
+      "decodedBytes": 23559031,
+      "storedBytes": 509752,
+      "decodedSha256": "8c4a059a86cf393a8dbba7254da2d9db52f6a1dc267a38ff5cd82dccef5d7c3d",
+      "storedSha256": "1a8ab0e64d714b0c7868fe91ad1ff50bae1daf74d1a88ba73ff4e16fc7b40024",
+      "encoding": "gzip-single-member-json",
+      "decodedCap": 67108864,
+      "storedCap": 16777216
+    },
+    "persistenceError": null
+  },
+  "availableMaps": {
+    "fixedBefore": true,
+    "fixedAfter": true,
+    "restoredBefore": true,
+    "restoredAfter": true,
+    "originalStaticZip": true
+  },
+  "body": {
+    "filename": "capture.json.gz",
+    "decodedBytes": 23559031,
+    "storedBytes": 509752,
+    "decodedSha256": "8c4a059a86cf393a8dbba7254da2d9db52f6a1dc267a38ff5cd82dccef5d7c3d",
+    "storedSha256": "1a8ab0e64d714b0c7868fe91ad1ff50bae1daf74d1a88ba73ff4e16fc7b40024",
+    "encoding": "gzip-single-member-json",
+    "decodedCap": 67108864,
+    "storedCap": 16777216
+  },
+  "logicalEvidenceAvailable": true
+}

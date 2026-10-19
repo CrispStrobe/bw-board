@@ -1,0 +1,171 @@
+name: x86 xv6 lane
+
+on:
+  push:
+    paths:
+      - 'src/experimental/**'
+      - 'test/i80386*'
+      - 'scripts/build-xv6-stock-4m.mjs'
+      - 'scripts/probe-xv6-stock.mjs'
+      - '.github/workflows/x86-xv6.yml'
+  # CI tiers (owner decision 2026-10-14, LANES "CI tiers"). The push above
+  # builds every commit once. This pull_request trigger exists ONLY for the
+  # thorough tier: its jobs run on a PR that carries the `ci:full` label and
+  # are skipped otherwise, while the fast jobs never run on pull_request, so
+  # no job builds one commit twice. ci-tier-gate.yml fails a code PR that
+  # lacks the label, so merge-on-all-green still requires the thorough tier.
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, ready_for_review]
+    paths:
+      - 'src/experimental/**'
+      - 'test/i80386*'
+      - 'scripts/build-xv6-stock-4m.mjs'
+      - 'scripts/probe-xv6-stock.mjs'
+      - '.github/workflows/x86-xv6.yml'
+  workflow_dispatch:
+
+concurrency:
+  # Per workflow, per event, per ref: a new push supersedes that branch's
+  # older run of THIS workflow only. Never cancelled on master.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+jobs:
+  x86-xv6:
+    # THOROUGH tier: master push, on demand, or a PR labelled ci:full.
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ci:full') && (github.event.action != 'labeled' || github.event.label.name == 'ci:full')) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Fetch fixed compatible historical source context
+        run: git fetch --no-tags --depth=1 origin c3ada315e9dfc51cd70ac6403d9e1ab18a0faf5c
+      - name: Fetch fixed retained units for consolidated source-only diagnostics
+        run: |
+          git fetch --no-tags --depth=1 origin 8f1be780b191176ff1d3789b38e2c73e48041198
+          git fetch --no-tags --depth=1 origin c9a22a1b173aa5f2fc41f8edf4a97a8fbfab5cc2
+      - name: Fetch exact pre-journal CPU for historical source-bound tests
+        run: git fetch --no-tags --depth=1 origin 41db7ba4a0c96076aa6a5e5c74cd70be2a0ad0d7
+      - name: Fetch exact compiled source of fixed PIC IMR profile
+        run: git fetch --no-tags --depth=1 origin a6f605280f778b2bc409ef97ac3b40e15874530c
+      - name: Fetch fixed native dispatch baseline for source reconstruction controls
+        run: git fetch --no-tags --depth=1 origin fe1eff2039520536350922a2164c8bbe29404c68
+      - name: Fetch exact source revision of dated FreeDOS evidence
+        run: git fetch --no-tags --depth=1 origin 46de3726abe68cb8ff106ddb4131f5d0b7bd7578
+      - name: Fetch exact source revision of Win16 I/O boundary oracle
+        run: git fetch --no-tags --depth=1 origin ccc6dcd8dab4caf7fa0010acf45ed341e6ad5389
+      - name: Fetch exact source revision of ES-cache output witness
+        run: git fetch --no-tags --depth=1 origin 39dbc822117fa3c3af5fe08901baed0081e09964
+      - name: Fetch exact source revision of native cold-reset capture
+        run: git fetch --no-tags --depth=1 origin dbc638038482c47c0b1924b43e24ea49adddc447
+      - name: Fetch exact source revision of published JavaScript cold-reset oracle
+        run: git fetch --no-tags --depth=1 origin 9896ba218102330a4990a2c6c8f0401880a0e920
+      - name: Fetch exact source revision of native RAM coherence test capture
+        run: git fetch --no-tags --depth=1 origin ef2a73594948dffde48df000f5c6a6bf70662755
+      - name: Fetch exact source revision of published JavaScript RAM coherence oracle
+        run: git fetch --no-tags --depth=1 origin a36c3687ebba1bfe541e7d33dfa63fbba399c5b2
+      - name: Fetch exact source revision of published JavaScript REP PF PIT oracle
+        run: git fetch --no-tags --depth=1 origin 7891a5c1f9ca242a86a6fcd39a61b5bc29e8d247
+      - name: Fetch exact source revision of native REP PF PIT test capture
+        run: git fetch --no-tags --depth=1 origin 59b528bf0a0dbc5dc7bbc0416c9ade035fca78d5
+      - name: Fetch exact source revision of published JavaScript combined paging RAM oracle
+        run: git fetch --no-tags --depth=1 origin 15f010c92b5227622b76da815bd47000e28a988c
+      - name: Fetch exact source revision of native combined paging RAM test capture
+        run: git fetch --no-tags --depth=1 origin 57548693306523025b43787b50337451cd0c6079
+      - name: Install 32-bit build toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc-multilib
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Bounded historical helper and owner controls
+        run: |
+          timeout --signal=KILL 45s /usr/bin/python3 -I -B scripts/i80386-historical-source-contexts/controls.py
+          timeout --signal=KILL 45s /usr/bin/python3 -I -B scripts/i80386-historical-source-contexts/materializer-controls.py
+          timeout --signal=KILL 45s /usr/bin/python3 -I -B scripts/i80386-historical-source-contexts/owner-controls.py
+          timeout --signal=KILL 45s node --test scripts/i80386-historical-source-contexts/bridge-controls.mjs
+      - name: Modern historical-context runtime observations
+        run: |
+          /usr/bin/python3 --version
+          git --version
+          node --version
+          as --version
+          ld --version
+          objcopy --version
+          nm --version
+      - name: Fetch pinned MIT xv6 source
+        run: |
+          git init /tmp/xv6-public
+          git -C /tmp/xv6-public remote add origin https://github.com/mit-pdos/xv6-public.git
+          git -C /tmp/xv6-public fetch --depth 1 origin eeb7b415dbcb12cc362d0783e41c3d1f44066b17
+          git -C /tmp/xv6-public checkout --detach FETCH_HEAD
+          test "$(git -C /tmp/xv6-public rev-parse HEAD)" = eeb7b415dbcb12cc362d0783e41c3d1f44066b17
+      - name: Historical contexts and separate current CPU tests
+        run: |
+          node --input-type=module <<'JS'
+          import {readdirSync} from 'node:fs';
+          import {spawnSync} from 'node:child_process';
+          import assert from 'node:assert/strict';
+          const historical=[
+            'i80386-native-cold-reset-report.test.mjs',
+            'i80386-native-combined-paging-ram-board-gate.test.mjs',
+            'i80386-native-owned-pic-imr-profile.test.mjs',
+            'i80386-native-ram-coherence-report.test.mjs',
+            'i80386-native-rep-pf-pit-board-gate.test.mjs',
+            'i80386-nonidentity-paging-source.test.mjs',
+            'i80386-paged-int-iret-source.test.mjs',
+            'i80386-paged-pagefault-source.test.mjs',
+            'i80386-protected-ram-source.test.mjs',
+            'i80386-protected-stack-source.test.mjs'];
+          const inventory=readdirSync('test').filter(name=>/^i80386.*\.test\.mjs$/.test(name)).sort();
+          assert.equal(new Set(historical).size,10);
+          for(const file of historical)assert.ok(inventory.includes(file));
+          const current=inventory.filter(name=>!historical.includes(name));
+          assert.deepEqual([...historical,...current].sort(),inventory);
+          console.log(JSON.stringify({scope:'separate historical/current source tests',historical,current,node:process.version}));
+          for(const [kind,files] of [['historical',historical],['current',current]]){
+            const env=kind==='historical'?{...process.env,GIT_CONFIG_GLOBAL:'/dev/null',GIT_CONFIG_SYSTEM:'/dev/null',GIT_CONFIG_NOSYSTEM:'1',GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0'}:process.env;
+            const result=spawnSync(process.execPath,['--max-old-space-size=1024','--test','--test-concurrency=1',...files.map(file=>'test/'+file)],{stdio:'inherit',env});
+            if(result.error)throw result.error;
+            assert.equal(result.signal,null);assert.equal(result.status,0,kind+' source tests');
+          }
+          JS
+      - run: node scripts/build-xv6-stock-4m.mjs
+        env:
+          XV6_SRC: /tmp/xv6-public
+          XV6_STOCK_4M_OUT: /tmp/xv6-stock-4m
+      - run: node scripts/build-xv6-stock-4m.mjs
+        env:
+          XV6_SRC: /tmp/xv6-public
+          XV6_PHYSTOP: '0xE00000'
+          XV6_STOCK_OUT: /tmp/xv6-stock-14m
+      - name: Boot stock xv6 with redistributable Bochs BIOS and exercise filesystem
+        run: |
+          XV6_FIRMWARE=bochs XV6_STEPS=30000000 XV6_STOP_ON_EXPECT=1 \
+            XV6_COMMAND=$'echo BW_XV6_FREE_BIOS_FS_OK > bwfile; cat bwfile; rm bwfile\r' \
+            XV6_EXPECT_SERIAL=$'\nBW_XV6_FREE_BIOS_FS_OK\n$ ' \
+            node scripts/probe-xv6-stock.mjs > /tmp/xv6-stock-free-bios-boot.json
+          node -e "let r=require('/tmp/xv6-stock-free-bios-boot.json'); if (r.firmware!=='bochs' || !r.milestones.exec || !r.userModeEntries.length || !r.postBootInterrupts.some(i=>i.irq===14)) process.exit(1)"
+      - name: Boot 14 MiB stock xv6 with redistributable Bochs BIOS
+        run: |
+          XV6_FIRMWARE=bochs XV6_PROFILE=14m XV6_STEPS=30000000 XV6_STOP_ON_EXPECT=1 \
+            XV6_COMMAND=$'echo BW_XV6_14M_FREE_OK\r' \
+            XV6_EXPECT_SERIAL=$'\nBW_XV6_14M_FREE_OK\n$ ' \
+            node scripts/probe-xv6-stock.mjs > /tmp/xv6-stock-14m-free-bios-boot.json
+          node -e "let r=require('/tmp/xv6-stock-14m-free-bios-boot.json'); if (r.firmware!=='bochs' || r.profile!=='14m' || !r.milestones.exec || !r.userModeEntries.length) process.exit(1)"
+      - name: Run stock xv6 process-exhaustion regression
+        run: |
+          XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 \
+            XV6_COMMAND=$'forktest\r' XV6_EXPECT_SERIAL=$'fork test OK\n$ ' \
+            node scripts/probe-xv6-stock.mjs > /tmp/xv6-stock-free-bios-forktest.json
+          node -e "let r=require('/tmp/xv6-stock-free-bios-forktest.json'); if (r.firmware!=='bochs' || !r.milestones.syscall || !r.userModeEntries.length) process.exit(1)"
+      - name: Upload build receipts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: xv6-stock-build-receipts
+          path: |
+            /tmp/xv6-stock-4m/bw-xv6-stock-4m-receipt.json
+            /tmp/xv6-stock-14m/bw-xv6-stock-14m-receipt.json
+            /tmp/xv6-stock-free-bios-boot.json
+            /tmp/xv6-stock-14m-free-bios-boot.json
+            /tmp/xv6-stock-free-bios-forktest.json

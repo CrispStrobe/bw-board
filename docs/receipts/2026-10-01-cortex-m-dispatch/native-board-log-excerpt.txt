@@ -1,0 +1,25 @@
+2026-10-01T08:30:01.0756358Z test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.07s
+2026-10-01T08:30:01.8556997Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.78s
+2026-10-01T08:30:01.9686244Z test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.11s
+2026-10-01T08:30:02.0353453Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+2026-10-01T08:30:03.1232699Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.09s
+2026-10-01T08:30:03.1630346Z test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+2026-10-01T08:31:25.7855901Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+2026-10-01T08:32:35.1978955Z test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+2026-10-01T08:38:08.9130411Z test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 4228 filtered out; finished in 0.00s
+2026-10-01T08:38:09.1076374Z test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 4225 filtered out; finished in 0.00s
+2026-10-01T08:38:09.2908411Z test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 4207 filtered out; finished in 0.00s
+2026-10-01T08:38:09.6179244Z test result: ok. 75 passed; 0 failed; 0 ignored; 0 measured; 4158 filtered out; finished in 0.14s
+2026-10-01T08:38:09.8074776Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 4230 filtered out; finished in 0.00s
+2026-10-01T08:38:09.9963665Z test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 4225 filtered out; finished in 0.00s
+2026-10-01T08:38:10.1826270Z test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 4217 filtered out; finished in 0.00s
+2026-10-01T08:38:10.3660194Z test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 4220 filtered out; finished in 0.00s
+2026-10-01T08:38:10.5491649Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 4232 filtered out; finished in 0.00s
+2026-10-01T08:38:11.3281456Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 4224 filtered out; finished in 0.60s
+2026-10-01T08:38:11.5294851Z test cpu::cortex_m::t16_discovery_tests::borrowed_cached_opcode_preserves_every_halfword_and_width_filter ... ok
+2026-10-01T08:38:11.5299387Z test cpu::cortex_m::t16_discovery_tests::dispatch_declines_cold_collided_and_wide_entries_without_side_effects ... ok
+2026-10-01T08:38:11.6307079Z test cpu::cortex_m::t16_discovery_tests::opcode_dispatch_matches_original_paths_at_rotated_entries_and_budgets ... ok
+2026-10-01T08:38:12.1411644Z test result: ok. 156 passed; 0 failed; 0 ignored; 0 measured; 4077 filtered out; finished in 0.63s
+2026-10-01T08:40:45.9992651Z test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 102 filtered out; finished in 0.00s
+2026-10-01T08:40:47.3142660Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 1.12s
+2026-10-01T08:40:51.7610953Z test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 4.21s

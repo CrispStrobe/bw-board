@@ -1,0 +1,15 @@
+{
+  "result": "ROOT_FIRST_INT_EXECUTION_FAILURE_RETAINED",
+  "run": 37242883561,
+  "artifact": 11316979309,
+  "visibleFailure": "Receipt serialization exceeds 16MiB in finalization; primary parity outcome not retained",
+  "workerPid": 3562,
+  "exitCode": 1,
+  "timedOut": false,
+  "workerWallSeconds": 6.937704404999998,
+  "fixedAndRestoredMapsUnchanged": true,
+  "addonInitializationObserved": true,
+  "nativeInstructionCount": "unobserved",
+  "parityQualification": false,
+  "repeatPerformed": false
+}

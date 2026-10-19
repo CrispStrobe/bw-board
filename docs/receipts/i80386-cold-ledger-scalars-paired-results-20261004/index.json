@@ -1,0 +1,56 @@
+{
+  "schema": "bw.exact-origin.compact-receipts.v1",
+  "files": {
+    "independent-scalar-paired-audit.json": {
+      "bytes": 976,
+      "sha256": "4f9b86de87093d69dbfbbc57d2dd56ce9dc2249578f003e97e44b02ff1311a46",
+      "origin": "/tmp/native-cold-ledger-scalars-paired-first-comparison-publication-20261004/independent-scalar-paired-audit.json"
+    },
+    "root-cross-check.json": {
+      "bytes": 929,
+      "sha256": "71ed84ed57f1d46ec8478c0ab180e1c3a8ec33b271349223bf7d6146cca69fd5",
+      "origin": "/tmp/native-cold-ledger-scalars-paired-first-comparison-publication-20261004/root-cross-check.json"
+    },
+    "official-metadata.json": {
+      "bytes": 312,
+      "sha256": "e6fded0b4644e35f48d3d92a1d89c49dcafe381530a74fe06e37991358bd9ff8",
+      "origin": "/tmp/native-cold-ledger-scalars-paired-first-comparison-publication-20261004/official-metadata.json"
+    },
+    "members.json": {
+      "bytes": 47800,
+      "sha256": "12212e8b5ade9920b0a7aabcfea0d49190d6d94dd9f63087ddf4534fc824cc2d",
+      "origin": "/tmp/native-cold-ledger-scalars-paired-first-comparison-publication-20261004/members.json"
+    },
+    "raw-result-summary.json": {
+      "bytes": 3206,
+      "sha256": "d8eb3049060440b2097205d542326941098f767f033c6682e829add90a7b904a",
+      "origin": "/tmp/native-cold-ledger-scalars-paired-first-comparison-publication-20261004/raw-result-summary.json"
+    },
+    "actual-18-child-series.json": {
+      "bytes": 4212,
+      "sha256": "5a3f8ae723c3e30652f345c6424b2ccfe245aa05f4ebbdeedc2552af0de11330",
+      "origin": "/tmp/native-cold-ledger-scalars-paired-first-comparison-publication-20261004/actual-18-child-series.json"
+    },
+    "actual-bridge-count-series.json": {
+      "bytes": 5979,
+      "sha256": "ee2cb4545f2ab8f0a6a01ff002e8cffc3d15761d9c2d9547da7a28cf141837fa",
+      "origin": "/tmp/native-cold-ledger-scalars-paired-first-comparison-publication-20261004/actual-bridge-count-series.json"
+    },
+    "host-before.json": {
+      "bytes": 8918,
+      "sha256": "64554ebbe4d8afdb406c8ebe0ac949bef3eaf3b7cec65dd9c6d43990bd8651a2",
+      "origin": "/tmp/native-cold-ledger-scalars-paired-first-comparison-publication-20261004/selected/cold-ledger-scalars-paired/pairs/host-before.json"
+    },
+    "independent-audit.py": {
+      "bytes": 6557,
+      "sha256": "6f2a8a56fd4f5cc67935eca034323c4d60b1698e83c879d53aaf6db052a66557",
+      "origin": "/tmp/native-cold-ledger-scalars-paired-first-comparison-publication-20261004/independent-paired-audit.py"
+    }
+  },
+  "officialRun": 37207816332,
+  "officialArtifact": 11305955756,
+  "zipBytes": 42577961,
+  "zipSha256": "0edf476f7c835a253c299f4e0f7e3bc73c4a7d0438470659003b5458e37b7075",
+  "canonicalZip": "/tmp/native-cold-ledger-scalars-paired-first-comparison-publication-20261004/official-artifact.zip",
+  "scope": "Small exact-origin records; full receipts/PIO/source maps remain in sole retained official ZIP"
+}

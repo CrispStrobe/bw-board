@@ -1,0 +1,32 @@
+{
+  "status": "PASS_ACTUAL_TWO_DIAGNOSTIC_CELLS_NOT_CPU_GATE",
+  "checks": 656,
+  "records": [
+    {
+      "cell": "timing-only",
+      "executionNs": 961630141,
+      "executionCpuUs": 581687,
+      "ipcResidualNs": 405068338,
+      "executionClockTransfers": 9203,
+      "profile": null
+    },
+    {
+      "cell": "timing-worker-profile",
+      "executionNs": 447753140,
+      "executionCpuUs": 535518,
+      "ipcResidualNs": 94843542,
+      "executionClockTransfers": 9203,
+      "profile": {
+        "samples": 374,
+        "sampledDeltaUs": 508077,
+        "startEndSpanUs": 508982,
+        "nativeExportLabelCloseUs": 77291,
+        "closeActualCaller": "worker native.resume; native.close afterprofilerstop",
+        "scope": "profile includes startup inspector andidle; sampled walltime not CPU percentages"
+      }
+    }
+  ],
+  "summarySha256": "47d8d77e610f56319fea5e2869f3a89ead4f514d615df18f2f37768390389bba",
+  "scriptSha256": "f81cb37cbbb7b37042791880af5ed007837d558eae92c0a925068316f3264e40",
+  "limits": "overlapping instrumented wall buckets nonsummable; residual includes queues/scheduling/transport; profile labels need callcontext; no CPU percentages or newperformanceclaim; priorABI3gateFAIL remains"
+}

@@ -1,0 +1,31 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "/tmp/native-cold-bios-preparation-readonly-preflight-r2-20261003/helper.mjs"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "wallSeconds": 7.703904300928116,
+  "beforeAfterUnchanged": true,
+  "limits": {
+    "cpuSeconds": 15,
+    "wallSeconds": 30,
+    "topNodeHeapMiB": 128,
+    "nice": 10,
+    "fileMiB": 256,
+    "core": 0
+  },
+  "emptyHooks": [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "LD_PRELOAD",
+    "LD_AUDIT",
+    "BW_HOT_NAPI_PROFILE",
+    "NODE_V8_COVERAGE"
+  ],
+  "bochsRoot": "/tmp/bw-bochs-pristine-in8-20261002",
+  "nestedHeldH4NodeHeap": "inherited source preparer invokes default Node heap; CPU/wall/group bounds retained",
+  "stdoutSha256": "04d72229ecfc84bbb23e8995a11fe4b2d1b99afa827ec4140ab82ffb527ec9d6",
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

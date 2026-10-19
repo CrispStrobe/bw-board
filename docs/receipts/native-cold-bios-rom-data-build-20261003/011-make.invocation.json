@@ -1,0 +1,26 @@
+{
+  "command": [
+    "make",
+    "-j1",
+    "-f",
+    "Makefile",
+    "-f",
+    "bw_direct_addon.mk",
+    "bw_direct.node"
+  ],
+  "cwd": "/home/runner/work/_temp/cold-bios-build-prepared/bochs",
+  "pid": 7703,
+  "cpuSeconds": 600,
+  "wallSeconds": 600,
+  "coreBytes": 0,
+  "fileBytes": 268435456,
+  "niceIncrement": 10,
+  "blankHooks": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  }
+}

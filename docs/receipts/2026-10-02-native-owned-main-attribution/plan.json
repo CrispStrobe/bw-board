@@ -1,0 +1,12 @@
+{
+ "status":"PREPARED_ONLY_NO_NATIVE_EXECUTION",
+ "cells":1,
+ "mode":"unprofiled execution-only wall timers, journals and nativeTrace OFF",
+ "sourceRevision":"bab751825473d55d8bf6da8c6ad5786921ffcfe1",
+ "compiledRevision":"7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+ "addonSha256":"144f3af7b906e46bfb68c10b991fef15847d81c60e7bb44820ee73653e723818",
+ "preserved":"439 full native resume snapshots, six board checkpoints, original scalar/tape order, caps, IRQ staging, finally end, terminal settlement and RAM; exact source inverse",
+ "buckets":"native.resume inclusive C+NAPI snapshot; clock inclusive/preflight/replay/reply/checkState; dispatch.nativeTick/quantum includes Reflect.apply plus original actual effect; observers and six board checkpoints",
+ "limits":"Timers allocate/timestamp per word and distort costs. Buckets overlap, scheduler wall effects remain, no additive CPU shares or speed gate. Native snapshot construction cannot be separated without native changes. Startup INIT and settlement excluded by active gating. Optional execution-scoped profile is separate future cell only if needed; not implemented.",
+ "containment":{"heapMiB":512,"cpuSeconds":120,"wallSeconds":120,"fileMiB":256,"coreBytes":0,"niceIncrement":10,"blankEnvironment":["NODE_OPTIONS","NODE_PATH","LD_PRELOAD","LD_AUDIT","BW_HOT_NAPI_PROFILE"]}
+}

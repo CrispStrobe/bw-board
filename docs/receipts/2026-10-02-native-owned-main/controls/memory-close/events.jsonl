@@ -1,0 +1,3 @@
+{"n":"0","q":"0","calls":1,"ordinal":1,"name":"initialized"}
+{"operation":"close","callback":"readPhysical","calls":69,"logical":117,"ordinal":2,"name":"attack-before-effect"}
+{"operation":"close","message":"direct concurrent, thread or reentry rejected","logical":117,"ordinal":3,"name":"nested-denied"}

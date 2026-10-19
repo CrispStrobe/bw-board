@@ -1,0 +1,200 @@
+{
+  "schema": "bw.i80386-cheap-entry-packed-ir-receipt.v1",
+  "date": "2026-09-28",
+  "scope": "Opt-in protected32 native dispatcher; already decoded blocks only; no opcode or WASM grammar change",
+  "source": {
+    "baselineCommit": "e30c74773b24bfd7df886b8750289be5ab7dbbaf",
+    "publicationBaseCommit": "55da2360a14e1aecb806d3867bd627351a48d115",
+    "candidateNativeByteRunnerSha256": "dfcd43bffbcf4cf42e044b60574ac0089421c5e63c1647cfd37b43d12ca78057",
+    "candidateBlockSpikeJsSha256": "88059aded9402f03db2046e9d5af460ddfc8fa1a17d665e29562c1d7f3d09be5",
+    "candidateFocusedTestSha256": "5e3d2fccb8fb1e2917b4c31c9bdd9806094db9d775c13e04788bd9d8c3b56566",
+    "wasmSha256": "0e6cb0789a33500b512ec1ec5fc778b78a0459aebd2b3a0f89a786411f87a9c7",
+    "preCodeHypothesisSha256": "0b9f32069e27f43fe422be21ec83dbe2610699b5a8b3c5fa98530d23484a7d31"
+  },
+  "preCodeHypothesis": "PR #88 profile attributed 1,196 runner position ticks to the setProgram call site (line 203) plus 655 direct setProgram self samples, 1,851 of 13,336 nonoverlapping positions (13.88%). V8 inlining means this is only an optimistic entry-cost envelope. Encode each decoded block once as 11-word-per-instruction Uint32Array and copy it on every admitted call with TypedArray.set, removing repeated JS object destructuring/scalar stores. Retain code-byte, data-window, page-table, privilege, event and fault validation unchanged.",
+  "priorNegativeContrast": "The earlier program-transfer cache skipped setProgram only while the same block remained loaded and measured just 0.8% over two pairs. This candidate still copies every entry, including block switches, but changes per-entry marshaling from JS object/scalar loops to a cached typed-array bulk copy.",
+  "cacheContract": "Decoded IR and its packedProgram are internal immutable cache data. The native runner's run() callers must not mutate block.instructions, its instruction objects, or packedProgram after decode/packing; guest self-modifying or DMA code writes change RAM and are still rejected by the existing byte/window validation before any packed program copy. A changed guest block must be decoded again.",
+  "host": {
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX), KVM, 4 vCPU",
+    "node": "v20.20.2",
+    "note": "Shared VPS load fluctuated; paired user CPU, not elapsed time, is the retention measure."
+  },
+  "workload": {
+    "name": "lean stock xv6-public forktest, 4 MiB, Bochs BIOS",
+    "env": "XV6_LEAN=1 XV6_RAM_HASH=1 XV6_NATIVE_DISPATCH=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' XV6_ROM=/tmp/bw386-cheapentry-20260928/roms/free-at-bios/BIOS-bochs-legacy",
+    "command": "/usr/bin/time -f \"%U %S %e\" node scripts/probe-xv6-stock.mjs",
+    "worktreeOrder": [
+      "baseline",
+      "candidate",
+      "candidate",
+      "baseline",
+      "baseline",
+      "candidate"
+    ],
+    "baselineWorktree": "detached baselineCommit at /tmp/bw386-cheapentry-base",
+    "candidateWorktree": "candidate files at /tmp/bw386-cheapentry-20260928",
+    "romSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "xv6ImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "filesystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f"
+  },
+  "gate": {
+    "predeclared": "At least 5% lower mean unprofiled user CPU across three serial adjacent baseline/candidate full xv6 pairs, every pair favorable, byte-identical complete guest/RAM reports, focused safety tests.",
+    "baselineUserCpuSeconds": [
+      18.32,
+      18.38,
+      18.07
+    ],
+    "candidateUserCpuSeconds": [
+      16.27,
+      16.18,
+      16.74
+    ],
+    "baselineMeanUserCpuSeconds": 18.256666666666664,
+    "candidateMeanUserCpuSeconds": 16.396666666666665,
+    "meanReductionPercent": 10.188059156472518,
+    "pairReductionPercent": [
+      11.189956331877738,
+      11.969532100108815,
+      7.360265633646934
+    ],
+    "result": "pass; retain candidate for audit, no merge yet"
+  },
+  "runs": [
+    {
+      "order": 1,
+      "kind": "B",
+      "loadBefore": [
+        8.16748046875,
+        8.49267578125,
+        7.1796875
+      ],
+      "loadAfter": [
+        7.3759765625,
+        8.296875,
+        7.1435546875
+      ],
+      "reportSha256": "e489234c299f716cf15a5cff02f386f9136f01723b1fca67073a06853ea20616",
+      "steps": 24338279,
+      "ramSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+      "userCpuSeconds": 18.32,
+      "systemCpuSeconds": 0.53,
+      "elapsedSeconds": 17.37
+    },
+    {
+      "order": 2,
+      "kind": "C",
+      "loadBefore": [
+        7.3759765625,
+        8.296875,
+        7.1435546875
+      ],
+      "loadAfter": [
+        6.74560546875,
+        8.1171875,
+        7.103515625
+      ],
+      "reportSha256": "e489234c299f716cf15a5cff02f386f9136f01723b1fca67073a06853ea20616",
+      "steps": 24338279,
+      "ramSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+      "userCpuSeconds": 16.27,
+      "systemCpuSeconds": 0.5,
+      "elapsedSeconds": 15.2
+    },
+    {
+      "order": 3,
+      "kind": "C",
+      "loadBefore": [
+        6.74560546875,
+        8.1171875,
+        7.103515625
+      ],
+      "loadAfter": [
+        6.2099609375,
+        7.931640625,
+        7.05859375
+      ],
+      "reportSha256": "e489234c299f716cf15a5cff02f386f9136f01723b1fca67073a06853ea20616",
+      "steps": 24338279,
+      "ramSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+      "userCpuSeconds": 16.18,
+      "systemCpuSeconds": 0.52,
+      "elapsedSeconds": 15.68
+    },
+    {
+      "order": 4,
+      "kind": "B",
+      "loadBefore": [
+        6.2099609375,
+        7.931640625,
+        7.05859375
+      ],
+      "loadAfter": [
+        6.41357421875,
+        7.857421875,
+        7.05224609375
+      ],
+      "reportSha256": "e489234c299f716cf15a5cff02f386f9136f01723b1fca67073a06853ea20616",
+      "steps": 24338279,
+      "ramSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+      "userCpuSeconds": 18.38,
+      "systemCpuSeconds": 0.5,
+      "elapsedSeconds": 22.13
+    },
+    {
+      "order": 5,
+      "kind": "B",
+      "loadBefore": [
+        6.41357421875,
+        7.857421875,
+        7.05224609375
+      ],
+      "loadAfter": [
+        6.94189453125,
+        7.8955078125,
+        7.08349609375
+      ],
+      "reportSha256": "e489234c299f716cf15a5cff02f386f9136f01723b1fca67073a06853ea20616",
+      "steps": 24338279,
+      "ramSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+      "userCpuSeconds": 18.07,
+      "systemCpuSeconds": 0.51,
+      "elapsedSeconds": 18.27
+    },
+    {
+      "order": 6,
+      "kind": "C",
+      "loadBefore": [
+        6.94189453125,
+        7.8955078125,
+        7.08349609375
+      ],
+      "loadAfter": [
+        7.54931640625,
+        7.982421875,
+        7.125
+      ],
+      "reportSha256": "e489234c299f716cf15a5cff02f386f9136f01723b1fca67073a06853ea20616",
+      "steps": 24338279,
+      "ramSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+      "userCpuSeconds": 16.74,
+      "systemCpuSeconds": 0.6,
+      "elapsedSeconds": 16.88
+    }
+  ],
+  "parity": {
+    "allCompleteReportSha256": "e489234c299f716cf15a5cff02f386f9136f01723b1fca67073a06853ea20616",
+    "completeReportsByteIdentical": true,
+    "completedGuestSteps": 24338279,
+    "finalPhysicalRamSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+    "nativeStatsIdentical": true,
+    "nativeBlockCalls": 4001848,
+    "nativeRetirements": 16428211,
+    "guestSerialEndsWith": "fork test OK\n$ "
+  },
+  "validation": {
+    "focusedTests": "48/48 pass: block-spike, native-byte-block, native-dispatch and write-window tests, including code edit, page remap, A20/permission, IRQ/NMI/PIC/IOAPIC and chip horizon; new packed-vs-scalar event-exit/state equality test.",
+    "sourceGuards": "Block validity, byte comparison, read/write windows, code-page/page-table exclusions, precise fallback and chip/LAPIC/PIC/IOAPIC/NMI gates are unchanged. Only IR transfer after successful admission changes.",
+    "pairLogSha256": "af6de0c788ed8e2ca80c05650d0ef85f2801887b5f44c1ad70b2dbeee80f0478"
+  },
+  "limits": "This is an opt-in 32-bit native path improvement on one xv6 workload and one VPS. It is not an overall 80386/Windows 10x result. Full guest report parity proves the measured run, not all possible protected32 programs."
+}

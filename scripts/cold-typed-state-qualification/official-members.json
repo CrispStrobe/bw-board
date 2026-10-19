@@ -1,0 +1,266 @@
+{
+  "members": {
+    "cold-bios-typed-state-build-context/build-helper.py": {
+      "sha256": "e2dd151b7bbef5bd963b6233f78d3f565ff0a502466a3b6a994204082aa1f8b7",
+      "bytes": 12777
+    },
+    "cold-bios-typed-state-build-context/parent.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-bios-typed-state-build-context/context.txt": {
+      "sha256": "277ed3af59ffb39933b9f63f829bca46594d4e0bafb697cc32c806609b743d03",
+      "bytes": 4362
+    },
+    "cold-bios-typed-state-build-context/parent.stdout": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-bios-typed-state-build-context/workflow.yml": {
+      "sha256": "ac4e6667215f5514e130b3df24cc05193519b590c3cbc33f593bb934d783c176",
+      "bytes": 4030
+    },
+    "cold-bios-typed-state-build-evidence/architecture.exit.json": {
+      "sha256": "6a8184785d325caaaa246e0a956123b8570a9ec83b51c89ed54c2dfde88397b7",
+      "bytes": 393
+    },
+    "cold-bios-typed-state-build-evidence/architecture.invocation.json": {
+      "sha256": "ff18f1f13ce584dc3acbe84abab5ac2f783710edf5804f1e3c8190cc3df05c83",
+      "bytes": 396
+    },
+    "cold-bios-typed-state-build-evidence/architecture.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-bios-typed-state-build-evidence/architecture.stdout": {
+      "sha256": "aaf631698ae5160ceb04a97681a14887fdcab47cd6e0f163c87485b3b1340b62",
+      "bytes": 7
+    },
+    "cold-bios-typed-state-build-evidence/artifact-inventory.json": {
+      "sha256": "1c0d23381b1ee011829b0751a6a528be0cffc44b887bd79ff9b9c928abbbb7a1",
+      "bytes": 8250
+    },
+    "cold-bios-typed-state-build-evidence/build-context.json": {
+      "sha256": "796ad2d30f6d941079aaf1d79e2923b768f14d77e86c2e8ffc6b57b21d0f42ca",
+      "bytes": 19230
+    },
+    "cold-bios-typed-state-build-evidence/build-static-preflight.json": {
+      "sha256": "216e6047c4d1bc92ceae897b91bca26ad357845e0c28191a13d89eddfe566f7c",
+      "bytes": 17673
+    },
+    "cold-bios-typed-state-build-evidence/bw_direct.node": {
+      "sha256": "d7fa1a7206afc8204d96fcd75d0130f17f39ade5c18fa32b3e25c7a62cb93993",
+      "bytes": 2069584
+    },
+    "cold-bios-typed-state-build-evidence/compiler.exit.json": {
+      "sha256": "23631592e430bb934863a13780e8d2290cb2542f02d4896b541f306e530c898f",
+      "bytes": 398
+    },
+    "cold-bios-typed-state-build-evidence/compiler.invocation.json": {
+      "sha256": "a86efc735a177487bfb1bfc49b16cf84a20cf7727495338110f564bbbb13b10a",
+      "bytes": 401
+    },
+    "cold-bios-typed-state-build-evidence/compiler.stdout": {
+      "sha256": "59d1cbef41d4ae78d5063d525b7aa13d18dc0493ea00537efc19b2ee398cb5a8",
+      "bytes": 246
+    },
+    "cold-bios-typed-state-build-evidence/compiler.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-bios-typed-state-build-evidence/config.h": {
+      "sha256": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe",
+      "bytes": 28122
+    },
+    "cold-bios-typed-state-build-evidence/configure.exit.json": {
+      "sha256": "84ca837b224bacf8c4b4696ab5591754b5c720e030ee2db0483988d5087d0a90",
+      "bytes": 650
+    },
+    "cold-bios-typed-state-build-evidence/configure.invocation.json": {
+      "sha256": "0f3f6c228c134978714e8a7c4dec54e1f16c99f52b655fdb7d2a8031f9bdebd0",
+      "bytes": 679
+    },
+    "cold-bios-typed-state-build-evidence/configure.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-bios-typed-state-build-evidence/configure.stdout": {
+      "sha256": "04159c51f76491a09845ba3d9fbc707ec6770a052b4db1fbf54d12cef3cae7da",
+      "bytes": 13400
+    },
+    "cold-bios-typed-state-build-evidence/final-status.json": {
+      "sha256": "0efd0e7356e2eae6c691fd186896c71f977172d8fa307f5607ba5770a9d601a3",
+      "bytes": 1172
+    },
+    "cold-bios-typed-state-build-evidence/frozen-source.tar.gz": {
+      "sha256": "c34e82121632c6605a0371cdb31db96556e441539efd4ffb5c4da9d08d2b5f42",
+      "bytes": 604473
+    },
+    "cold-bios-typed-state-build-evidence/identity-after.exit.json": {
+      "sha256": "83c351c307adb9f31eb8dd26bdaaece7f94ef0b74795785eba8a7799ab9320ce",
+      "bytes": 642
+    },
+    "cold-bios-typed-state-build-evidence/identity-after.invocation.json": {
+      "sha256": "88b2a34eb12b37ca0e48c89f43be8b8c05d8b93dd1e411d39311df4a8906b782",
+      "bytes": 643
+    },
+    "cold-bios-typed-state-build-evidence/identity-after.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-bios-typed-state-build-evidence/identity-after.stdout": {
+      "sha256": "7fcbc3faebcade176b8e40e19c911f63fd815102e2b9960dd7483ae5b2d51d37",
+      "bytes": 14674
+    },
+    "cold-bios-typed-state-build-evidence/identity-before.exit.json": {
+      "sha256": "997af4a556fc40dbc0df37fbc969a078e7f02f94544a33b992e5fb7ccf24240e",
+      "bytes": 641
+    },
+    "cold-bios-typed-state-build-evidence/identity-before.invocation.json": {
+      "sha256": "531c423cb9527c86ef03d987d6baa847e79053e70fc4acd58ad89ccb1de27998",
+      "bytes": 643
+    },
+    "cold-bios-typed-state-build-evidence/identity-before.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-bios-typed-state-build-evidence/identity-before.stdout": {
+      "sha256": "7fcbc3faebcade176b8e40e19c911f63fd815102e2b9960dd7483ae5b2d51d37",
+      "bytes": 14674
+    },
+    "cold-bios-typed-state-build-evidence/make.exit.json": {
+      "sha256": "c2c0bd2bc951fc4b82c8278813499f091f8a1ad366d2a779d06324c314872ae5",
+      "bytes": 481
+    },
+    "cold-bios-typed-state-build-evidence/make.invocation.json": {
+      "sha256": "c4f909acffca9122de6f9f2a6f94876a426ad778efa51bdc9a54d6f8cda31b9b",
+      "bytes": 501
+    },
+    "cold-bios-typed-state-build-evidence/make.stderr": {
+      "sha256": "0eea62c1c80939697aa048376ee8dc9039f80a770a32aa99fac399f6d4339d8e",
+      "bytes": 7894
+    },
+    "cold-bios-typed-state-build-evidence/make.stdout": {
+      "sha256": "a161c7bb9ceb55d60e0a25f7ce49adc0b414a5b7d9f1b32ffa0a227b9508780b",
+      "bytes": 36554
+    },
+    "cold-bios-typed-state-build-evidence/nm.exit.json": {
+      "sha256": "6bacbc68101806bf1b95ef254295cccf6c7c37cb14672dc523fc4381535c726c",
+      "bytes": 504
+    },
+    "cold-bios-typed-state-build-evidence/nm.invocation.json": {
+      "sha256": "af551f179a7012d3a745282837cab7be1b2275cb50afcc70d6e0b3304038ef1c",
+      "bytes": 504
+    },
+    "cold-bios-typed-state-build-evidence/nm.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-bios-typed-state-build-evidence/nm.stdout": {
+      "sha256": "b8210f3ac28965487c50f89d75e5e50480ff80f07ac86d0eab8d50537cdbc221",
+      "bytes": 188038
+    },
+    "cold-bios-typed-state-build-evidence/platform.exit.json": {
+      "sha256": "ede4347ec28dc535e96258c209f70e606b05d2b07171c25a3d00c9a145375042",
+      "bytes": 394
+    },
+    "cold-bios-typed-state-build-evidence/platform.invocation.json": {
+      "sha256": "7a2b23340c7a886884e6dfed4cafd410269242763f36e6b13336c2cc3d63bec2",
+      "bytes": 396
+    },
+    "cold-bios-typed-state-build-evidence/platform.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-bios-typed-state-build-evidence/platform.stdout": {
+      "sha256": "6ecb75ce9d770bd2cfb6898b267dd8f29398821b25cb233675e182e0323ba0d2",
+      "bytes": 113
+    },
+    "cold-bios-typed-state-build-evidence/prepare.invocation.json": {
+      "sha256": "c07c785f270cb54f45acbc238a33b40bddd322482b7244145b5ab223f18ebb3f",
+      "bytes": 613
+    },
+    "cold-bios-typed-state-build-evidence/prepare.exit.json": {
+      "sha256": "4c37155af0c41fa8430157856f9eee81a43a6529d65b2991599a5b6c330bcf59",
+      "bytes": 611
+    },
+    "cold-bios-typed-state-build-evidence/prepare.json": {
+      "sha256": "3ec74265302359beef62d8e5920a225cec8f81a8439a9288da6e9c5bde6f271f",
+      "bytes": 29727
+    },
+    "cold-bios-typed-state-build-evidence/prepare.stderr": {
+      "sha256": "0f36516b349191872b6faeba04c7b45da786fa57ebd7d7dd8c8c84e091b11ee4",
+      "bytes": 664
+    },
+    "cold-bios-typed-state-build-evidence/prepare.stdout": {
+      "sha256": "3ec74265302359beef62d8e5920a225cec8f81a8439a9288da6e9c5bde6f271f",
+      "bytes": 29727
+    },
+    "cold-bios-typed-state-build-evidence/prepared-after-build.json": {
+      "sha256": "d19f13fa9b0f439194e2c51eaf6dded13c021d4f3332e28914ffe97b39757c05",
+      "bytes": 81821
+    },
+    "cold-bios-typed-state-build-evidence/prepared-before-build.json": {
+      "sha256": "f7f3ae60be26e378d13b01310b5ce82592d094898d574c8cb3b919bc2b0ae710",
+      "bytes": 78832
+    },
+    "cold-bios-typed-state-build-evidence/prepared-source.tar.gz": {
+      "sha256": "8b8f6abd051793404082f60ac2bdb17bc9c526ab623582b9bc60a5df9e5c6bc2",
+      "bytes": 5330381
+    },
+    "cold-bios-typed-state-build-evidence/readelf.exit.json": {
+      "sha256": "74eb89729dacfc10e7a836c1060e366b0912461a787db147d6a47fe113ac1b45",
+      "bytes": 485
+    },
+    "cold-bios-typed-state-build-evidence/readelf.invocation.json": {
+      "sha256": "9e7eb12b90266eb40967eecbd4d7930982fabd2cfbe7db91a7f151a59ba8defe",
+      "bytes": 487
+    },
+    "cold-bios-typed-state-build-evidence/readelf.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-bios-typed-state-build-evidence/readelf.stdout": {
+      "sha256": "55660156bfdf626c3ecaab4541d0aadf0da236b577b8a6706f13ca1396d4e1ed",
+      "bytes": 1539
+    },
+    "cold-bios-typed-state-build-evidence/source-after.json": {
+      "sha256": "77e3ecd46b67236e287338ef5797708fbbaa80ae6de66c8b88a56702ff1be8a7",
+      "bytes": 1386618
+    },
+    "cold-bios-typed-state-build-evidence/source-before.json": {
+      "sha256": "77e3ecd46b67236e287338ef5797708fbbaa80ae6de66c8b88a56702ff1be8a7",
+      "bytes": 1386618
+    },
+    "cold-bios-typed-state-build-evidence/static-admission.exit.json": {
+      "sha256": "70bc2af39d7b626bc66103a013ecaf78cf7c8dc2e4d329cc9504b55c8899309c",
+      "bytes": 822
+    },
+    "cold-bios-typed-state-build-evidence/static-admission.invocation.json": {
+      "sha256": "d0b57f78382c15cb0423388605263b4e09c4ee1b1fec34010caa6438aa19b95e",
+      "bytes": 828
+    },
+    "cold-bios-typed-state-build-evidence/static-admission.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cold-bios-typed-state-build-evidence/static-admission.stdout": {
+      "sha256": "00fdd1af89ffc70ac66cd32d0690c693a61b19689dcb13af34160cddd1bf0a3a",
+      "bytes": 995
+    },
+    "cold-bios-typed-state-build-evidence/static-input.json": {
+      "sha256": "53a0190968606dde5925d0d8f7446d1ea08d348a10cdbee907f83456ce6002eb",
+      "bytes": 576
+    },
+    "cold-bios-typed-state-build-evidence/upstream-COPYING": {
+      "sha256": "c43e067abce73ca284383f4f905316e7cad6dd9aaf69f02ee961b6dfbc4de3c2",
+      "bytes": 26428
+    },
+    "cold-bios-typed-state-build-evidence/upstream-LICENSE": {
+      "sha256": "c1e96db20d4598f889e24411a1a09e31a4411e3231c20d8cbff984de50a02884",
+      "bytes": 301
+    }
+  },
+  "zipSha256": "06259925a4c2ab6e97b490f11cceb52000a24ac372e37e159e266be1d9daea36",
+  "zipBytes": 7512416
+}

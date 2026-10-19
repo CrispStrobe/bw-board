@@ -1,0 +1,33 @@
+{
+  "status": "ROOT_ACTUAL_18_DISPATCH_CAPTURE_PARITY_AND_CPU_MATH_PASS_GATE_FAIL_KEEP_FE1",
+  "checks": 307,
+  "samplesUs": {
+    "BASE": [
+      163701,
+      157539,
+      161480,
+      156715,
+      152524,
+      152765,
+      154625
+    ],
+    "DISPATCH": [
+      151196,
+      149251,
+      169815,
+      151345,
+      152567,
+      154095,
+      152174
+    ]
+  },
+  "meansUs": {
+    "BASE": 157049.85714285713,
+    "DISPATCH": 154349
+  },
+  "meanReductionPercent": 1.7197450491154287,
+  "favorableCount": 4,
+  "gatePassed": false,
+  "peerReceiptSha256": "6e9cea3ea7691d888619d3a5a8efa02aaf77f20e233affbcd502620f4ba1a7c1",
+  "scope": "Read-only actual18 captures whole11 semantic fields, exact arm provenance, CPU arithmetic and auth equality; no guest retry or adoption."
+}

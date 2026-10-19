@@ -1,0 +1,165 @@
+diff --git a/src/experimental/i80386-block-spike.c b/src/experimental/i80386-block-spike.c
+index 1c6d2740..464d71a5 100644
+--- a/src/experimental/i80386-block-spike.c
++++ b/src/experimental/i80386-block-spike.c
+@@ -12 +12 @@ enum { OP_NOP=0, OP_MOV=1, OP_CMP=2, OP_TEST=3,
+-       OP_REP_STOSB=21,
++       OP_REP_STOSB=21, OP_STORE_WINDOW=22, OP_MOVSB=23,
+@@ -30 +30 @@ static uint32_t ram_ptr, ram_capacity;
+-uint32_t block_spike_version(void) { return 12; }
++uint32_t block_spike_version(void) { return 13; }
+@@ -201,0 +202,46 @@ uint32_t block_spike_run(uint32_t start, uint32_t end, uint32_t event_budget) {
++    if (ins.op == OP_MOVSB) {
++      // Destination: base/disp/lo/hi. Source: dst/src/index/scale.
++      // Validate both RAM pages before touching either one.
++      const uint32_t source_offset = state.regs[6];
++      const uint32_t destination_offset = state.regs[7];
++      const uint32_t source_address = source_offset + ins.src;
++      const uint32_t destination_address = destination_offset + ins.disp;
++      if (ins.length != 1 || ins.width != 8 ||
++          ins.index >= ins.scale || ins.scale > ram_capacity ||
++          (source_offset & ~4095u) != ins.dst ||
++          source_address < ins.index || source_address >= ins.scale ||
++          ins.lo >= ins.hi || ins.hi > ram_capacity ||
++          (destination_offset & ~4095u) != ins.base ||
++          destination_address < ins.lo || destination_address >= ins.hi)
++        return (EXIT_FAULT_BOUNDARY << 24) | completed;
++      ((uint8_t *)(uintptr_t)(ram_ptr + destination_address))[0] =
++        ((uint8_t *)(uintptr_t)(ram_ptr + source_address))[0];
++      const uint32_t delta = (state.eflags & 0x400u) ? -1u : 1u;
++      state.regs[6] += delta;
++      state.regs[7] += delta;
++      state.eip++;
++      state.cycles++;
++      completed++;
++      pc++;
++      continue;
++    }
++    if (ins.op == OP_STORE_WINDOW) {
++      const uint32_t base = ins.base < 8 ? state.regs[ins.base] : 0;
++      const uint32_t index = ins.index < 8 ? state.regs[ins.index] : 0;
++      const uint32_t offset = base + (index << ins.scale) + ins.disp;
++      const uint32_t address = offset + ins.hi;
++      // dst is the proved linear page; hi carries the physical delta.
++      if (ins.length < 2 || ins.length > 7 || ins.width != 32 ||
++          ins.src >= 8 || ins.base > 8 || ins.index > 8 || ins.scale > 3 ||
++          (offset & ~4095u) != ins.dst || (offset & 4095u) > 4092u ||
++          ins.lo > ram_capacity - 4096u ||
++          address < ins.lo || address >= ins.lo + 4096u ||
++          4u > ins.lo + 4096u - address)
++        return (EXIT_FAULT_BOUNDARY << 24) | completed;
++      write_ram32(address, state.regs[ins.src]);
++      state.eip += ins.length;
++      state.cycles++;
++      completed++;
++      pc++;
++      continue;
++    }
+diff --git a/src/experimental/i80386-block-spike.js b/src/experimental/i80386-block-spike.js
+index 28e03253..8c214694 100644
+--- a/src/experimental/i80386-block-spike.js
++++ b/src/experimental/i80386-block-spike.js
+@@ -26 +26 @@ export async function createI80386BlockSpike({wasmBytes, ramBridge} = {}) {
+-  if (wasm.block_spike_version() !== 12) throw new Error('i80386 block spike ABI mismatch');
++  if (wasm.block_spike_version() !== 13) throw new Error('i80386 block spike ABI mismatch');
+diff --git a/src/experimental/i80386-native-byte-block.js b/src/experimental/i80386-native-byte-block.js
+index 7818b8e2..6da6361f 100644
+--- a/src/experimental/i80386-native-byte-block.js
++++ b/src/experimental/i80386-native-byte-block.js
+@@ -57,0 +58,13 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
++      } else if (op === 0xa4) {
++        if (!cpu.protectedMode || cpu.virtual8086) break;
++        const source=prevalidateI80386ReadWindow(machine,cpu.esi >>> 0,3);
++        const destination=prevalidateI80386WriteWindow(machine,cpu.edi >>> 0);
++        if (!source || !destination) break;
++        readWindows.push(source);
++        writeWindows.push(destination);
++        // One non-REP MOVSB; the runner checks both current offsets before
++        // each read/write, including after earlier instructions alter SI/DI.
++        ir={op:23,width:8,base:destination.linearPage,
++          disp:destination.delta,lo:destination.lo,hi:destination.hi,
++          dst:source.linearPage,src:source.delta,
++          index:source.lo,scale:source.hi};
+@@ -82,3 +95,15 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
+-      } else if (op === 0x74 || op === 0x75) {
+-        const displacement = (take() << 24) >> 24;
+-        const target = (eip + 2 + displacement) >>> 0;
++      } else if (op === 0x74 || op === 0x75 || op === 0x0f) {
++        let displacement, length, branch;
++        if (op === 0x0f) {
++          branch=take();
++          if (branch !== 0x84 && branch !== 0x85) break;
++          displacement=0;
++          for(let i=0;i<4;i++) displacement=(displacement | (take() << (8*i)))>>>0;
++          displacement |= 0;
++          length=6;
++        } else {
++          branch=op;
++          displacement=(take() << 24) >> 24;
++          length=2;
++        }
++        const target = (eip + length + displacement) >>> 0;
+@@ -88 +113 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
+-        ir = {op:op === 0x74 ? 4 : 5,
++        ir = {op:branch === 0x74 || branch === 0x84 ? 4 : 5,
+@@ -99 +124 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
+-          if (op !== 0x8b && op !== 0x8d && op !== 0x0b) break;
++          if (op !== 0x8b && op !== 0x8d && op !== 0x0b && op !== 0x89) break;
+@@ -116,5 +141,13 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
+-            const window=prevalidateI80386ReadWindow(machine,offset,segment);
+-            if (!window) break;
+-            readWindows.push(window);
+-            ir={op:op === 0x0b ? 19 : 8,dst:reg,width:32,...ea,
+-              disp:(disp+window.delta)>>>0,lo:window.lo,hi:window.hi};
++            if (op === 0x89) {
++              const window=prevalidateI80386WriteWindow(machine,offset,segment);
++              if (!window) break;
++              writeWindows.push(window);
++              ir={op:22,dst:window.linearPage,src:reg,width:32,...ea,
++                lo:window.lo,hi:window.delta};
++            } else {
++              const window=prevalidateI80386ReadWindow(machine,offset,segment);
++              if (!window) break;
++              readWindows.push(window);
++              ir={op:op === 0x0b ? 19 : 8,dst:reg,width:32,...ea,
++                disp:(disp+window.delta)>>>0,lo:window.lo,hi:window.hi};
++            }
+diff --git a/src/experimental/i80386-write-window.js b/src/experimental/i80386-write-window.js
+index 369438c8..e24d4660 100644
+--- a/src/experimental/i80386-write-window.js
++++ b/src/experimental/i80386-write-window.js
+@@ -1 +1 @@
+-// Side-effect-free admission of one ES page for a future native RAM writer.
++// Side-effect-free admission of one ES, SS, or DS page for a native RAM writer.
+@@ -9,0 +10,2 @@ const ES = 0;
++const SS = 2;
++const DS = 3;
+@@ -11 +13 @@ const ES = 0;
+-export function prevalidateI80386WriteWindow(machine, offset) {
++export function prevalidateI80386WriteWindow(machine, offset, segment = ES) {
+@@ -14,0 +17 @@ export function prevalidateI80386WriteWindow(machine, offset) {
++      (segment !== ES && segment !== SS && segment !== DS) ||
+@@ -19,4 +22,4 @@ export function prevalidateI80386WriteWindow(machine, offset) {
+-  const es = cpu.segmentCaches?.[ES];
+-  if (!es || es.null || !es.present || es.code || !es.writable ||
+-      es.base !== 0 || es.expandDown ||
+-      es.limit < linearPage + PAGE_BYTES - 1) return null;
++  const cache = cpu.segmentCaches?.[segment];
++  if (!cache || cache.null || !cache.present || cache.code || !cache.writable ||
++      cache.base !== 0 || cache.expandDown ||
++      cache.limit < linearPage + PAGE_BYTES - 1) return null;
+@@ -42 +45 @@ export function prevalidateI80386WriteWindow(machine, offset) {
+-  return Object.freeze({machine, cpu, es, translation, codeWindow, linearPage,
++  return Object.freeze({machine, cpu, segment, cache, translation, codeWindow, linearPage,
+@@ -51 +54,2 @@ export function isI80386WriteWindowValid(window) {
+-  const {machine, cpu, es, translation, codeWindow, linearPage, physicalPage} = window;
++  const {machine, cpu, segment, cache, translation, codeWindow, linearPage,
++    physicalPage} = window;
+@@ -59,3 +63,4 @@ export function isI80386WriteWindowValid(window) {
+-    cpu.segmentCaches[ES] === es && es.base === 0 && !es.null &&
+-    es.present && !es.code && es.writable && !es.expandDown &&
+-    es.limit >= linearPage + PAGE_BYTES - 1 &&
++    (segment === ES || segment === SS || segment === DS) &&
++    cpu.segmentCaches[segment] === cache && cache.base === 0 && !cache.null &&
++    cache.present && !cache.code && cache.writable && !cache.expandDown &&
++    cache.limit >= linearPage + PAGE_BYTES - 1 &&

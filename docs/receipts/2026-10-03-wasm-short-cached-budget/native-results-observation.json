@@ -1,0 +1,40 @@
+{
+  "source": "565dce2b35c67c4661055443ce9bb5d47039249e",
+  "nativeRun": 37136338904,
+  "wrapperSha256": "d1d1bf20092561cb194a9cac4e78cb73884fa9b51a36c98fc6ae4e9274aa3434",
+  "originalLogSha256": "d1dffecd96c432709384266da8113a040f1f55544bce65b2ce5da5c1a5300243",
+  "counts": [
+    [
+      13,
+      0
+    ],
+    [
+      13,
+      0
+    ],
+    [
+      4235,
+      3
+    ],
+    [
+      8,
+      0
+    ],
+    [
+      4,
+      0
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      2,
+      0
+    ]
+  ],
+  "newCasePassedInBothFeatureModesAndFullSuite": true,
+  "ignoredCasesUnchanged": 3,
+  "hostedOnly": true,
+  "noTimingConclusion": true
+}

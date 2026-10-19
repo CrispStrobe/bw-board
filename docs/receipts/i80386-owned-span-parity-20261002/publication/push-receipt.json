@@ -1,0 +1,7 @@
+{
+  "status": "GRANTED_FROZEN_HEAD_PUSHED_NO_HOSTED_CHILD_YET",
+  "head": "80d228ee5452f380655a16c4bc823beb76e781c1",
+  "branch": "lane/386-owned-span-native-parity-preparation-20261002",
+  "grant": "/mnt/volume1/tmp-astra/386-owned-span-hosted-first-three-cell-grant-20261002.json",
+  "recordedUtc": "2026-10-02T19:47:23.196193+00:00"
+}

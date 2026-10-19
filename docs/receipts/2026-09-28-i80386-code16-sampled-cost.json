@@ -1,0 +1,129 @@
+{
+  "schema": "bw.i80386-code16-sampled-cost.v1",
+  "profileRevision": "d482f9c94628823f59a009dcaeee1430d55e3450",
+  "priorRevision": "e7434073afc67aa5803c01502315609b49cd108e",
+  "observerSha256": "1be1504511de3170318807431a97ff6b9aee32ebe43dea87e94235242b50e931",
+  "probePatchSha256": "b0374a2cdc4b4a0cac15c4470a6fdae6d39d50e27ee325897c6e567357e33ec8",
+  "source": {
+    "filesChecked": 31,
+    "nonProbeSourceBlobsIdentical": true,
+    "originalDispatcherSha256": "d34e118b23f42ab24822bf9559bab11d723cb3ce65ad27246312589e511dc758",
+    "instrumentedDispatcherSha256": "d6e7753897abcb3f159172ee3d341fab963aacae045eadb4a2bab2bdbc8e6f7f"
+  },
+  "scope": "One sampled-timer 60M code16 WASM diagnostic run against the same private input and source-equivalent prior ordinary/opt-in pair",
+  "selectedReportedFields": [
+    "steps",
+    "stop",
+    "refusal",
+    "cpu",
+    "delivered",
+    "serial",
+    "textRam",
+    "vga"
+  ],
+  "selectedReportedFieldsSha256": "671373ced87f5d5307d01a498c7ef9f3fd835057356a9e604585465ce92b7511",
+  "privateInputsIdentical": true,
+  "host": {
+    "cpuModel": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "logicalCpus": 4,
+    "node": "v20.20.2"
+  },
+  "timing": {
+    "profile": {
+      "wall": 469.32,
+      "user": 371.36,
+      "system": 7.13,
+      "maxrss": 200132
+    },
+    "ordinary": {
+      "wall": 71.53,
+      "user": 78.52,
+      "system": 0.91,
+      "maxrss": 149520
+    },
+    "priorOptin": {
+      "wall": 408.58,
+      "user": 392.05,
+      "system": 4.42,
+      "maxrss": 218544
+    }
+  },
+  "exact": {
+    "steps": 60000000,
+    "dispatcherCalls": 57302806,
+    "eligibleAttempts": 39761006,
+    "decodedBlocks": 390473,
+    "nativeCalls": 2345288,
+    "nativeRetirements": 5042482,
+    "ordinaryFallbackCalls": 54957518
+  },
+  "sampling": {
+    "method": "multiplicative hash of dispatcher call ordinal; approximately one in 256 calls",
+    "sampleRate": 256,
+    "sampledCalls": 223839,
+    "expectedCalls": 223839.0859375,
+    "phases": {
+      "admission": {
+        "samples": 223839,
+        "sampledMs": 325.96047398750363,
+        "shareOfSampledInstrumentedCallTime": 0.11122995683152993
+      },
+      "cacheLookup": {
+        "samples": 155429,
+        "sampledMs": 187.52973899692552,
+        "shareOfSampledInstrumentedCallTime": 0.0639921905809223
+      },
+      "decodeAndCache": {
+        "samples": 155429,
+        "sampledMs": 1227.3351430104458,
+        "shareOfSampledInstrumentedCallTime": 0.41881284962208376
+      },
+      "prepare": {
+        "samples": 155429,
+        "sampledMs": 150.5172439931273,
+        "shareOfSampledInstrumentedCallTime": 0.05136213709272691
+      },
+      "fallbackSetup": {
+        "samples": 214660,
+        "sampledMs": 155.99659301295117,
+        "shareOfSampledInstrumentedCallTime": 0.053231896783171036
+      },
+      "fallbackStep": {
+        "samples": 214660,
+        "sampledMs": 582.6010390042079,
+        "shareOfSampledInstrumentedCallTime": 0.198805357059724
+      },
+      "tail": {
+        "samples": 223839,
+        "sampledMs": 137.3165859972254,
+        "shareOfSampledInstrumentedCallTime": 0.0468575767665315
+      },
+      "total": {
+        "samples": 223839,
+        "sampledMs": 2930.5097589960124,
+        "shareOfSampledInstrumentedCallTime": 1
+      },
+      "statePack": {
+        "samples": 9179,
+        "sampledMs": 24.86644100107219,
+        "shareOfSampledInstrumentedCallTime": 0.008485363655499782
+      },
+      "wasmRun": {
+        "samples": 9179,
+        "sampledMs": 5.319587999561463,
+        "shareOfSampledInstrumentedCallTime": 0.0018152432296911869
+      },
+      "stateCommit": {
+        "samples": 9179,
+        "sampledMs": 17.370675998436923,
+        "shareOfSampledInstrumentedCallTime": 0.005927527094940673
+      }
+    },
+    "naiveScaledTotalSeconds": 750.2104983029792,
+    "naiveExtrapolationValid": false,
+    "failureReason": "Naive 256x sampled-call total exceeds the observed whole-process wall time; timer/sample-path overhead and possible pause bias invalidate absolute attribution."
+  },
+  "retentionGate": "Predeclared: investigate a phase only if it is >=20% of sampled dispatcher time and a plausible 2x phase reduction implies >=10% whole-run potential. Retain executable changes only after two alternating 60M A/B pairs with matching selected reported guest fields, >=10% mean user-CPU gain, and no individual regression.",
+  "gateResult": "Inconclusive: sampling distortion invalidates the phase-share premise, so no optimization is selected by this gate.",
+  "limits": "Sampled monotonic wall time within one process is a ranking of instrumented calls, not whole-run or removable CPU cost. A single later instrumented run and earlier uninstrumented runs cannot isolate timer overhead from host drift. Prior report fields omit full RAM, disk state and hidden CPU state. No hardware 386DX RTx claim; private media identifiers and guest text omitted."
+}

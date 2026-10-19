@@ -1,0 +1,53 @@
+TAP version 13
+# {"scope":"tiny actual private JS INT/IRET control only","q":41,"cuts":[{"name":"reset","q":0},{"name":"after-LGDT","q":25},{"name":"after-LIDT","q":26},{"name":"CR3-ready","q":28},{"name":"PE-enabled","q":30},{"name":"DS-ready","q":32},{"name":"SS-loaded","q":33},{"name":"SP-ready","q":34},{"name":"PG-enabled","q":36},{"name":"entered-paged-code","q":37},{"name":"before-INT","q":38},{"name":"entered-handler","q":39},{"name":"after-handler-MOV","q":40},{"name":"returned-from-IRET-before-HLT","q":41}],"stores":23,"updates":7,"ramSha256":"0110baad6cfc99e56a04d07d0cf5cf9d8d7ab2e85f24721b980226cb79a674a6"}
+# Subtest: fixed ROM owns LGDT/LIDT pointers, MOVSS shadow successor, gate and exact code bytes
+ok 1 - fixed ROM owns LGDT/LIDT pointers, MOVSS shadow successor, gate and exact code bytes
+  ---
+  duration_ms: 6.016352
+  type: 'test'
+  ...
+# Subtest: nonidentity fetch rejects poisoned aliases and executed HLT sentinel
+ok 2 - nonidentity fetch rejects poisoned aliases and executed HLT sentinel
+  ---
+  duration_ms: 18.082275
+  type: 'test'
+  ...
+# Subtest: exact boot and authentic six-byte frame owners reject every changed byte or address
+ok 3 - exact boot and authentic six-byte frame owners reject every changed byte or address
+  ---
+  duration_ms: 16.26461
+  type: 'test'
+  ...
+# Subtest: JS-owned A/D transitions keep code and IDT clean, stack dirty, with exact instruction owners
+ok 4 - JS-owned A/D transitions keep code and IDT clean, stack dirty, with exact instruction owners
+  ---
+  duration_ms: 4.19027
+  type: 'test'
+  ...
+# Subtest: manufactured terminal proof refuses wrong full EAX, frame, gate, cache, shadow and any page byte
+ok 5 - manufactured terminal proof refuses wrong full EAX, frame, gate, cache, shadow and any page byte
+  ---
+  duration_ms: 364.314483
+  type: 'test'
+  ...
+# Subtest: private factory/reset/stage exposes only detached state and refuses caller inputs/early settle
+ok 6 - private factory/reset/stage exposes only detached state and refuses caller inputs/early settle
+  ---
+  duration_ms: 37.489553
+  type: 'test'
+  ...
+# Subtest: bounded actual private JS INT30/IRET run retains genuine frame, shadows, all ten pages and read order
+ok 7 - bounded actual private JS INT30/IRET run retains genuine frame, shadows, all ten pages and read order
+  ---
+  duration_ms: 480.725512
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1177.747645

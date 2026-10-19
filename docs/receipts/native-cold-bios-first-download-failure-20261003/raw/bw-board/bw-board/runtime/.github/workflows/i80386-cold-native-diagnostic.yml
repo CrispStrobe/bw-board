@@ -1,0 +1,99 @@
+name: Cold BIOS one-cell diagnostic (manual, disabled by default)
+on:
+  workflow_dispatch:
+    inputs:
+      enable_guest:
+        description: Root-reviewed first trace-OFF diagnostic only
+        type: boolean
+        required: true
+        default: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: cold-native-single-diagnostic
+  cancel-in-progress: false
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          path: runtime
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Synthetic parent refusal controls only
+        run: python3 -B runtime/scripts/cold-native-diagnostic/test_parent.py
+      - name: Require frozen reviewed driver pins
+        if: inputs.enable_guest
+        id: pins
+        run: |
+          python3 -B - <<'PY'
+          import sys,os,json
+          sys.path.insert(0,'runtime/scripts/cold-native-diagnostic')
+          from parent import validate_contract
+          c=json.load(open('runtime/scripts/cold-native-diagnostic/contract.json'))
+          validate_contract(c)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('driver='+c['driverRevision']+'\n')
+          PY
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_guest
+        with:
+          ref: a6fae61a549d595c88a324f50589d92497040c07
+          path: publication
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: inputs.enable_guest
+        with:
+          ref: ${{ steps.pins.outputs.driver }}
+          path: driver
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: inputs.enable_guest
+        with:
+          node-version: 22.23.3
+      - name: Materialize exact sparse source inputs and pinned pristine metadata
+        if: inputs.enable_guest
+        env:
+          BW_COLD_SETUP_OUTPUT: ${{ runner.temp }}/cold-native-setup
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/cold-native-parent-context"
+          python3 -B runtime/scripts/cold-native-diagnostic/setup.py > "$RUNNER_TEMP/cold-native-parent-context/setup.stdout" 2> "$RUNNER_TEMP/cold-native-parent-context/setup.stderr"
+      - name: One bounded restore and trace-OFF native diagnostic
+        if: inputs.enable_guest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BW_COLD_DIAGNOSTIC_OUTPUT: ${{ runner.temp }}/cold-native-diagnostic
+          NODE_OPTIONS: ''
+          NODE_PATH: ''
+          LD_PRELOAD: ''
+          LD_AUDIT: ''
+          BW_HOT_NAPI_PROFILE: ''
+          NODE_V8_COVERAGE: ''
+        run: |
+          set -euo pipefail
+          export BW_COLD_NODE="$(command -v node)"
+          python3 -B runtime/scripts/cold-native-diagnostic/parent.py enabled > "$RUNNER_TEMP/cold-native-parent-context/parent.stdout" 2> "$RUNNER_TEMP/cold-native-parent-context/parent.stderr"
+      - name: Retain first failure and all diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cold-native-one-cell-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/cold-native-diagnostic
+            ${{ runner.temp }}/cold-native-setup
+            ${{ runner.temp }}/cold-native-parent-context
+            ${{ github.workspace }}/runtime/scripts/cold-native-diagnostic
+            ${{ github.workspace }}/runtime/scripts/cold-native-restore
+            ${{ runner.temp }}/cold-bios-build-evidence
+            ${{ github.workspace }}/runtime/.github/workflows/i80386-cold-native-diagnostic.yml
+          include-hidden-files: true
+          if-no-files-found: error

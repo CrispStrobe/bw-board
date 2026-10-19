@@ -1,0 +1,71 @@
+{
+  "schema": "bw.i80386-native-coverage-no-go.v1",
+  "date": "2026-09-28",
+  "baseCommit": "e7434073afc67aa5803c01502315609b49cd108e",
+  "scope": "Opt-in protected-32 native dispatcher, stock xv6-public forktest; no 386DX real-time or general Windows speed claim",
+  "host": {
+    "place": "shared VPS",
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX), KVM, 4 vCPU",
+    "node": "v20.20.2",
+    "clang": "Ubuntu clang 18.1.3 (1ubuntu1)",
+    "wasmLd": "Ubuntu LLD 18.1.3",
+    "timingMetric": "process user CPU seconds from /usr/bin/time, serial adjacent A/B pairs; wall time was not used"
+  },
+  "workload": {
+    "name": "stock xv6-public forktest, 4 MiB, Bochs BIOS",
+    "command": "XV6_LEAN=1 XV6_RAM_HASH=1 XV6_NATIVE_DISPATCH=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+    "xv6ImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "fileSystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "kernelSha256": "025cef15636863063e4101aa0cfc424e556f70ad43b6a80d57581c05b465202d"
+  },
+  "eligibility": {
+    "observerSource": "scripts/observe-i80386-native-coverage-eligibility.mjs",
+    "observerSha256": "e87cdcb819a22546e248242a81a2431b35c60c986014c1d6c1c34dbca39d6929",
+    "invocation": "XV6_LEAN=1 XV6_RAM_HASH=1 XV6_NATIVE_DISPATCH=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node --import ./scripts/observe-i80386-native-coverage-eligibility.mjs scripts/probe-xv6-stock.mjs > /tmp/eligibility-report.json 2> /tmp/eligibility-counts.txt",
+    "plainAndObservedCompleteReportSha256": "a2950a3f440394930022806fff5ab04d3d872eb22fbaa1ec74c178c1ce2bae42",
+    "protected32JsFallbackEntryAttempts": 6379836,
+    "cachedCodeWindowEntryAttempts": 6315125,
+    "opcode89AtCachedCodeWindowEntries": 712726,
+    "opcode89MemoryDecodedEntries": 549046,
+    "opcode89MemoryReadyForCachedDirtyWritableRamPageEntries": 548863,
+    "singleMovsbAtCachedCodeWindowEntries": 632108,
+    "singleMovsbBothCachedRamPagesReadyEntries": 609722,
+    "nearJnzAtCachedCodeWindowAndSamePageEntries": 493931,
+    "limit": "The observer runs before machine.step() and makes only direct reads of previously cached code bytes and cached TLB/page metadata; it makes no guest fetch, page walk, or write. These are first-instruction entry-attempt upper bounds, not verified retired forms or dynamic block admissions. A fault or interrupt can prevent the expected instruction from retiring at that CS:EIP. The earlier fetched-byte completed-step census in docs/receipts/2026-09-28-i80386-native-entry-negative.json has a different, retired-instruction denominator. The entry probe excludes code pages without an existing read window and does not predict event, block-length, or later effective-address exits. The unobserved and observer full JSON guest reports are byte-for-byte equal."
+  },
+  "discardedTrial": {
+    "patch": "docs/receipts/2026-09-28-i80386-native-coverage-discarded.patch",
+    "patchSha256": "1ae8bcccd05349fd6f8a949f5adfaec082389df251d097647cfeefed8630d924",
+    "changes": "Generic cached writable ES/SS/DS page guard; page-bounded 89 memory stores and single A4 MOVSB; same-page 0F84/85 conditional branch decoding; WASM ABI 12 to 13. The preflight exits before any access outside proved RAM pages. The existing chip/LAPIC batch clipping was unchanged.",
+    "reproduce": "In a clean worktree at baseCommit, run git apply --unidiff-zero on the zero-context patch, then run: clang --target=wasm32 -O3 -Wall -Wextra -Werror -nostdlib -fuse-ld=/usr/bin/wasm-ld -Wl,--no-entry -Wl,--export-all -Wl,--export-memory -Wl,--import-memory -Wl,--global-base=16779264 -Wl,--initial-memory=16908288 -Wl,--max-memory=16908288 -o wasm/i80386-block-spike.wasm src/experimental/i80386-block-spike.c",
+    "wasmSha256": "8d0ed47de113daaf85db581cb20e3f00f63180d1cc26074148014",
+    "cleanWorktreeRebuildMatchedWasmSha256": true,
+    "reconstructedTrialCompleteReportSha256": "d26c23fd23253875941778255c3a7d4c52ccde1915096fa16323fab6847f92e6",
+    "reconstructedTrialReportMatchedMeasuredTrialByteForByte": true,
+    "focusedExistingTests": "42 passed, 0 failed across native byte block, write-window and WASM block-spike suites; no new form-specific fault tests were retained because the trial failed the performance gate and executable code was discarded",
+    "baselineNativeRetirements": 16428211,
+    "trialNativeRetirements": 17007235,
+    "addedNativeRetirements": 579024,
+    "baselineNativeBlockCalls": 4001848,
+    "trialNativeBlockCalls": 3996570
+  },
+  "guestParity": {
+    "steps": 24338279,
+    "finalPhysicalRamSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+    "normalizedCompleteReportSha256": "bf5d8eb65dda68b4e21071dad125d9fa70790029c71841052a7be01b1f47255c",
+    "normalization": "Baseline and trial reports were from the same worktree. Remove only nativeStats, which necessarily changes with dispatch coverage, then sort JSON keys and use compact separators. All other fields, including serial, RAM, CPU/device state, and step count, match exactly."
+  },
+  "pairedTiming": {
+    "order": ["baseline-candidate", "candidate-baseline", "baseline-candidate"],
+    "baselineUserCpuSeconds": [18.01, 17.78, 17.65],
+    "trialUserCpuSeconds": [17.84, 17.58, 17.90],
+    "baselineMeanUserCpuSeconds": 17.813,
+    "trialMeanUserCpuSeconds": 17.773,
+    "meanReductionFraction": 0.00225,
+    "retentionGate": "At least 5% reduction in paired user CPU time and consistent direction across three pairs, plus focused fault tests and protected-mode regression before retaining code",
+    "result": "0.22% mean user-CPU reduction; third pair reversed. Trial fails the predeclared gate and is discarded. Added native retirements are not a speed gain."
+  },
+  "limits": "The trial passed full xv6 guest/RAM parity, but form-specific store preflight/rollback, MOVSB alias/DF/page-boundary, and near-Jcc wrap/fault tests were not completed after the decisive speed no-go. FreeDOS/Windows were not rerun because no executable change was retained. Ordinary kind-1 RAM writes use _write and notePhysicalWrite; the trial excluded current code and known page-table pages, while another cached code block would rely on entry-byte revalidation. This was not promoted as a general correctness proof.",
+  "nextArchitectureExperiment": "Explore an opt-in WASM dynamic-memory slow-exit contract: cached-TLB same-page RAM reads/writes inside a block, explicit exit before any guest-visible page walk/fault/MMIO, and immediate code/page-table write invalidation. That could remove per-block static data-window admission and permit dependent or multi-page accesses currently refused. The 6.38 million protected-32 fallback steps and profile's static-window/entry cost make a >5% gain plausible, not measured; require focused differential tests, bounded workload parity, full xv6 guest/RAM equality, and paired user-CPU A/B before a speed claim.",
+  "conclusion": "No executable source or WASM from the trial is retained in this PR. The opt-in native dispatcher remains at baseCommit behavior."
+}

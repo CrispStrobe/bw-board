@@ -1,0 +1,8 @@
+{
+  "addon": "/home/runner/work/_temp/cold-bios-build-prepared/bochs/bw_direct.node",
+  "sha256": "40179a4f0bc2456e59bc2ea49303e17e29be72ef564adb1fe1a6879abb015ab0",
+  "preparedManifest": "/home/runner/work/_temp/cold-bios-build-evidence/prepare.json",
+  "preparedManifestSha256": "42769b5d8b266ed0d29cbc4d5e40c94d12e090c1b2d86bfdde0785ee7b3a7717",
+  "buildReceipt": "/home/runner/work/_temp/cold-bios-build-evidence/build-static-preflight.json",
+  "buildReceiptSha256": "a9d95d94da47755102c8ff5c62d5481162fd1b15e642a26ff940404a86461a7c"
+}

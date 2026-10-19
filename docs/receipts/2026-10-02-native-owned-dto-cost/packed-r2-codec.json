@@ -1,0 +1,110 @@
+{
+  "status": "SOURCE_ONLY_MESSAGECHANNEL_REPLY_PIPELINE_NOT_NATIVE_BENCHMARK",
+  "input": {
+    "path": "/mnt/volume1/tmp-astra/native-owned-clock-cpu-benchmark-20261002/8-ABI3/capture.json",
+    "sha256": "246193ed7da4c872df55ddf7593b189f3966f55c45a8e06ef40382efc1b840fe"
+  },
+  "records": [
+    {
+      "protocol": "json",
+      "round": 0,
+      "operations": 200,
+      "ns": 84556764,
+      "cpuMicroseconds": {
+        "user": 33244,
+        "system": 3139,
+        "total": 36383
+      }
+    },
+    {
+      "protocol": "dto",
+      "round": 0,
+      "operations": 200,
+      "ns": 157599329,
+      "cpuMicroseconds": {
+        "user": 51682,
+        "system": 6883,
+        "total": 58565
+      }
+    },
+    {
+      "protocol": "packed",
+      "round": 0,
+      "operations": 200,
+      "ns": 73134261,
+      "cpuMicroseconds": {
+        "user": 64207,
+        "system": 1278,
+        "total": 65485
+      }
+    },
+    {
+      "protocol": "packed",
+      "round": 1,
+      "operations": 200,
+      "ns": 171759335,
+      "cpuMicroseconds": {
+        "user": 95391,
+        "system": 6921,
+        "total": 102312
+      }
+    },
+    {
+      "protocol": "json",
+      "round": 1,
+      "operations": 200,
+      "ns": 30783790,
+      "cpuMicroseconds": {
+        "user": 29044,
+        "system": 1483,
+        "total": 30527
+      }
+    },
+    {
+      "protocol": "dto",
+      "round": 1,
+      "operations": 200,
+      "ns": 31251769,
+      "cpuMicroseconds": {
+        "user": 27296,
+        "system": 3033,
+        "total": 30329
+      }
+    },
+    {
+      "protocol": "dto",
+      "round": 2,
+      "operations": 200,
+      "ns": 46037548,
+      "cpuMicroseconds": {
+        "user": 40387,
+        "system": 901,
+        "total": 41288
+      }
+    },
+    {
+      "protocol": "packed",
+      "round": 2,
+      "operations": 200,
+      "ns": 56372656,
+      "cpuMicroseconds": {
+        "user": 48620,
+        "system": 3561,
+        "total": 52181
+      }
+    },
+    {
+      "protocol": "json",
+      "round": 2,
+      "operations": 200,
+      "ns": 42390241,
+      "cpuMicroseconds": {
+        "user": 24719,
+        "system": 1456,
+        "total": 26175
+      }
+    }
+  ],
+  "scope": "200 repeated authentic zero-work terminal payloads per round; request JSON creation/parse, actual MessageChannel roundtrip, sender JSON-or-DTO-or-packed encode response, receive packed decode plus envelope/value schema and DTO requested-cap/delta/primitive ledger included",
+  "limits": "Same-process MessageChannel, not actual private Worker scheduling, native CPU, board progression or full factory infrastructure. Repeated terminal payload is not guest chronology. Every round retained; no speed/admission claim."
+}

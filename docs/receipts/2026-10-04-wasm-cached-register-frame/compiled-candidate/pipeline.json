@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "toolHead": "ad05b8ec01309dba79e7cf9435c6b0b5424d50fc",
+  "toolRef": "perf/wasm-cpu-hotpath-inspection-20261003",
+  "hostedOnly": true,
+  "diagnosticOnly": true,
+  "engineExecution": false,
+  "enginePromotion": false,
+  "localEngineDownloads": false,
+  "targets": [
+    {
+      "label": "candidate",
+      "buildRun": 37183167316,
+      "core": "098c99cf6b6a176a44c83b37ce77a1881909c767",
+      "wasm": "eaebf1fb256f289f8b352612748a2768d485ce64995d85741edb0e337ef09b1c",
+      "glue": "785e741ac0d05a73f81ef4da867c8934bb71fd203e88479d98874b6fa9dc2be9",
+      "buildInfo": {
+        "ref": "098c99cf6b6a176a44c83b37ce77a1881909c767",
+        "wasmBindgen": "0.2.121",
+        "rustflags": "--remap-path-prefix=/tmp/labwired-wasm-build/src=/labwired --remap-path-prefix=/tmp/labwired-wasm-build/target=/labwired-target --remap-path-prefix=/home/runner/.cargo=/cargo",
+        "builtAt": "2026-10-04T06:37:14.557Z",
+        "targets": {
+          "nodejs": {
+            "labwired_wasm.js": {
+              "bytes": 135762,
+              "brotliBytes": 25390,
+              "sha256": "785e741ac0d05a73f81ef4da867c8934bb71fd203e88479d98874b6fa9dc2be9"
+            },
+            "labwired_wasm_bg.wasm": {
+              "bytes": 27555097,
+              "brotliBytes": 3059241,
+              "sha256": "eaebf1fb256f289f8b352612748a2768d485ce64995d85741edb0e337ef09b1c"
+            }
+          },
+          "web": {
+            "labwired_wasm.js": {
+              "bytes": 138392,
+              "brotliBytes": 25954,
+              "sha256": "9ca209a2fa470a6bf879c20f719bc47b5cbf63fd1d230b1856a769cca2235002"
+            },
+            "labwired_wasm_bg.wasm": {
+              "bytes": 27555097,
+              "brotliBytes": 3059241,
+              "sha256": "eaebf1fb256f289f8b352612748a2768d485ce64995d85741edb0e337ef09b1c"
+            }
+          }
+        },
+        "rawBytes": 136590424
+      },
+      "dispatchAttemptedAt": "2026-10-04T06:41:06.982Z",
+      "dispatchReturnedAt": "2026-10-04T06:41:08.721Z",
+      "run": 37183521683,
+      "artifact": {
+        "id": 11296495304,
+        "node_id": "MDg6QXJ0aWZhY3QxMTI5NjQ5NTMwNA==",
+        "name": "compiled-cpu-hotpath-inspection",
+        "size_in_bytes": 208211,
+        "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11296495304",
+        "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11296495304/zip",
+        "expired": false,
+        "digest": "sha256:e36feb74065146fe186eee480ce8eb9b609e22520a286774acc003adbd2bb614",
+        "created_at": "2026-10-04T06:42:09Z",
+        "updated_at": "2026-10-04T06:42:09Z",
+        "expires_at": "2026-10-18T06:42:08Z",
+        "workflow_run": {
+          "id": 37183521683,
+          "repository_id": 1327885818,
+          "head_repository_id": 1327885818,
+          "head_branch": "perf/wasm-cpu-hotpath-inspection-20261003",
+          "head_sha": "ad05b8ec01309dba79e7cf9435c6b0b5424d50fc"
+        }
+      },
+      "fullWat": {
+        "bytes": 195744683,
+        "sha256": "ea8b3245aca5a7153463cce2d6674be83a8d7df757808ac1f9b71566854fb164"
+      },
+      "selectedSha256": "9a49a04ab1fa8dcb00b593059076c6bdd11835ce58c4f06b5b660efcff502510",
+      "completedAt": "2026-10-04T06:42:52.016Z"
+    }
+  ],
+  "startedAt": "2026-10-04T06:27:35.698Z",
+  "completedAt": "2026-10-04T06:42:52.036Z"
+}

@@ -1,0 +1,8 @@
+{
+  "workflow": "i80386-cold-native-diagnostic.yml",
+  "ref": "lane/386-cold-native-git-metadata-fix-20261003",
+  "head": "0f9f02eff01589ad7d8252dfd295e5c35ff8937d",
+  "enable_guest": true,
+  "run": 37109006890,
+  "scope": "ONE_AUTHORIZED_ATTEMPT_NO_RETRY"
+}

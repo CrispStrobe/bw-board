@@ -1,0 +1,16 @@
+{
+  "head": "3a6562ff588b65293bcae5afeafea0d59b63bc14",
+  "ref": "diag/wasm-isolated-gpio-profile-20261002",
+  "workflow": "labwired-f0-profile.yml",
+  "reason": "Retry with raw profile hash/error persistence, retaining the failed second capture",
+  "inputs": {
+    "build_run": "36915940413",
+    "core_commit": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+    "profile": "false",
+    "gpio_profile": "true"
+  },
+  "dispatchIntentRecordedBeforeWrite": true,
+  "hostedOnly": true,
+  "promotion": false,
+  "localEngineDownloads": false
+}

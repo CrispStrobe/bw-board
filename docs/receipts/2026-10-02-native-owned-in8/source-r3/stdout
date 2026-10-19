@@ -1,0 +1,196 @@
+TAP version 13
+# Subtest: distinct ABI4 and exact source inverse seams
+ok 1 - distinct ABI4 and exact source inverse seams
+  ---
+  duration_ms: 225.609345
+  type: 'test'
+  ...
+# Subtest: new fixture is a separate exact bounded hot derivative
+ok 2 - new fixture is a separate exact bounded hot derivative
+  ---
+  duration_ms: 6171.420255
+  type: 'test'
+  ...
+# Subtest: actual PIT latch low/high reads consume phase and preserve clock/mapping ledgers
+ok 3 - actual PIT latch low/high reads consume phase and preserve clock/mapping ledgers
+  ---
+  duration_ms: 2845.85354
+  type: 'test'
+  ...
+# Subtest: IN rejects wide before device event
+ok 4 - IN rejects wide before device event
+  ---
+  duration_ms: 2063.978175
+  type: 'test'
+  ...
+# Subtest: IN rejects port before device event
+ok 5 - IN rejects port before device event
+  ---
+  duration_ms: 1327.969508
+  type: 'test'
+  ...
+# Subtest: IN rejects operand before device event
+ok 6 - IN rejects operand before device event
+  ---
+  duration_ms: 3524.345655
+  type: 'test'
+  ...
+# Subtest: IN rejects fraction before device event
+ok 7 - IN rejects fraction before device event
+  ---
+  duration_ms: 2995.886976
+  type: 'test'
+  ...
+# Subtest: PIC data 33 denies armed poll without PIC read effect
+ok 8 - PIC data 33 denies armed poll without PIC read effect
+  ---
+  duration_ms: 5332.760474
+  type: 'test'
+  ...
+# Subtest: PIC data 161 denies armed poll without PIC read effect
+ok 9 - PIC data 161 denies armed poll without PIC read effect
+  ---
+  duration_ms: 4097.029595
+  type: 'test'
+  ...
+# Subtest: IN requires post-PIO query and closed callback lease
+ok 10 - IN requires post-PIO query and closed callback lease
+  ---
+  duration_ms: 4210.029467
+  type: 'test'
+  ...
+# Subtest: sink exception keeps prior read effect and releases active guard
+ok 11 - sink exception keeps prior read effect and releases active guard
+  ---
+  duration_ms: 2651.686764
+  type: 'test'
+  ...
+# Subtest: unarmed PIC data read 33 returns byte without clocks
+ok 12 - unarmed PIC data read 33 returns byte without clocks
+  ---
+  duration_ms: 1070.915586
+  type: 'test'
+  ...
+# Subtest: unarmed PIC data read 161 returns byte without clocks
+ok 13 - unarmed PIC data read 161 returns byte without clocks
+  ---
+  duration_ms: 2315.155249
+  type: 'test'
+  ...
+# Subtest: IN event sink reentry is denied after exactly one device read
+ok 14 - IN event sink reentry is denied after exactly one device read
+  ---
+  duration_ms: 3361.118334
+  type: 'test'
+  ...
+# Subtest: mapping publication must precede IN
+ok 15 - mapping publication must precede IN
+  ---
+  duration_ms: 5682.676568
+  type: 'test'
+  ...
+# Subtest: baseline admits only bounded IN8 profile before native loading
+ok 16 - baseline admits only bounded IN8 profile before native loading
+  ---
+  duration_ms: 66.827689
+  type: 'test'
+  ...
+# Subtest: baseline rejects ROM
+ok 17 - baseline rejects ROM
+  ---
+  duration_ms: 142.582404
+  type: 'test'
+  ...
+# Subtest: baseline rejects halt
+ok 18 - baseline rejects halt
+  ---
+  duration_ms: 46.43109
+  type: 'test'
+  ...
+# Subtest: baseline rejects N
+ok 19 - baseline rejects N
+  ---
+  duration_ms: 0.765004
+  type: 'test'
+  ...
+# Subtest: baseline rejects Q
+ok 20 - baseline rejects Q
+  ---
+  duration_ms: 0.629115
+  type: 'test'
+  ...
+# Subtest: baseline rejects RAM
+ok 21 - baseline rejects RAM
+  ---
+  duration_ms: 52.486559
+  type: 'test'
+  ...
+# Subtest: baseline rejects witness
+ok 22 - baseline rejects witness
+  ---
+  duration_ms: 0.731475
+  type: 'test'
+  ...
+# Subtest: baseline rejects cut
+ok 23 - baseline rejects cut
+  ---
+  duration_ms: 114.2002
+  type: 'test'
+  ...
+# Subtest: baseline rejects EIP
+ok 24 - baseline rejects EIP
+  ---
+  duration_ms: 1.305053
+  type: 'test'
+  ...
+# Subtest: baseline rejects CS
+ok 25 - baseline rejects CS
+  ---
+  duration_ms: 75.668042
+  type: 'test'
+  ...
+# Subtest: baseline rejects name
+ok 26 - baseline rejects name
+  ---
+  duration_ms: 9.260834
+  type: 'test'
+  ...
+# Subtest: input pins actual historical JS reference SHA before addon read
+ok 27 - input pins actual historical JS reference SHA before addon read
+  ---
+  duration_ms: 0.877917
+  type: 'test'
+  ...
+# Subtest: native initializer admits exactly the actual assembled IN8 ROM before lifetime/bootstrap/query
+ok 28 - native initializer admits exactly the actual assembled IN8 ROM before lifetime/bootstrap/query
+  ---
+  duration_ms: 8326.753645
+  type: 'test'
+  ...
+# Subtest: reset witnesses require exact raw profile and own CPU reset
+ok 29 - reset witnesses require exact raw profile and own CPU reset
+  ---
+  duration_ms: 90.028339
+  type: 'test'
+  ...
+# Subtest: canonical RAM changes only inside exact eight-byte witness range
+ok 30 - canonical RAM changes only inside exact eight-byte witness range
+  ---
+  duration_ms: 3245.935578
+  type: 'test'
+  ...
+# Subtest: CPU profile comparison retains exact raw EDX and CR0 and denies semantic changes
+ok 31 - CPU profile comparison retains exact raw EDX and CR0 and denies semantic changes
+  ---
+  duration_ms: 193.054185
+  type: 'test'
+  ...
+1..31
+# tests 31
+# suites 0
+# pass 31
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 66146.127563

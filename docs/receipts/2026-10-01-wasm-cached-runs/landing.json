@@ -1,0 +1,180 @@
+{
+  "repository": "CrispStrobe/labwired-core",
+  "pullRequest": 146,
+  "url": "https://github.com/CrispStrobe/labwired-core/pull/146",
+  "sourceHead": "d10aa88255fd1e093cc1f424c26260341c9322fa",
+  "baseBeforeMerge": "c05e8de37f8837148c3066c5e5f1d715a6dbd0f8",
+  "mergeCommit": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+  "mergedAt": "2026-10-01T19:19:44Z",
+  "enabledChecksPassed": 19,
+  "checks": [
+    {
+      "name": "actionlint (+ shellcheck on run: blocks)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709515/job/110502203531",
+      "completedAt": "2026-10-01T18:21:36Z"
+    },
+    {
+      "name": "board",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709298/job/110502202436",
+      "completedAt": "2026-10-01T18:13:08Z"
+    },
+    {
+      "name": "browser-layer",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110502204042",
+      "completedAt": "2026-10-01T18:34:54Z"
+    },
+    {
+      "name": "ci-runner-image",
+      "status": "COMPLETED",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110502205646",
+      "completedAt": "2026-10-01T17:45:17Z"
+    },
+    {
+      "name": "compare",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709895/job/110502203784",
+      "completedAt": "2026-10-01T17:53:43Z"
+    },
+    {
+      "name": "compare-script-unit",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709352/job/110502201645",
+      "completedAt": "2026-10-01T18:36:20Z"
+    },
+    {
+      "name": "core-full",
+      "status": "COMPLETED",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110502205824",
+      "completedAt": "2026-10-01T17:45:17Z"
+    },
+    {
+      "name": "core-integrity",
+      "status": "COMPLETED",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110502205965",
+      "completedAt": "2026-10-01T17:45:17Z"
+    },
+    {
+      "name": "fmt-autofix",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110502204110",
+      "completedAt": "2026-10-01T18:34:33Z"
+    },
+    {
+      "name": "labwired-vs-renode-hello",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709352/job/110502201921",
+      "completedAt": "2026-10-01T18:37:30Z"
+    },
+    {
+      "name": "pr-default-members",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110502203695",
+      "completedAt": "2026-10-01T18:15:05Z"
+    },
+    {
+      "name": "pr-feature-off",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110502204058",
+      "completedAt": "2026-10-01T18:43:29Z"
+    },
+    {
+      "name": "pr-gate",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110526514458",
+      "completedAt": "2026-10-01T19:01:52Z"
+    },
+    {
+      "name": "pr-gate-warm",
+      "status": "COMPLETED",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110502205770",
+      "completedAt": "2026-10-01T17:45:17Z"
+    },
+    {
+      "name": "pr-scheduler-observable",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110502204316",
+      "completedAt": "2026-10-01T18:43:55Z"
+    },
+    {
+      "name": "pr-workspace-tests",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110541151355",
+      "completedAt": "2026-10-01T19:19:02Z"
+    },
+    {
+      "name": "pr-workspace-tests (shard 1)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110502204471",
+      "completedAt": "2026-10-01T19:18:40Z"
+    },
+    {
+      "name": "pr-workspace-tests (shard 2)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110502204442",
+      "completedAt": "2026-10-01T19:11:02Z"
+    },
+    {
+      "name": "pr-workspace-tests (shard 3)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110502204147",
+      "completedAt": "2026-10-01T18:27:30Z"
+    },
+    {
+      "name": "python-sdk (wheel + pytest, 0 skipped)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709482/job/110502202410",
+      "completedAt": "2026-10-01T17:53:28Z"
+    },
+    {
+      "name": "release-runner-contract",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110502205024",
+      "completedAt": "2026-10-01T18:57:46Z"
+    },
+    {
+      "name": "shellcheck (tracked *.sh)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709515/job/110502202912",
+      "completedAt": "2026-10-01T18:06:47Z"
+    },
+    {
+      "name": "xtensa-flash-boot",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/CrispStrobe/labwired-core/actions/runs/36901709540/job/110502204357",
+      "completedAt": "2026-10-01T18:42:11Z"
+    }
+  ],
+  "measuredFixedRuntimeSource": "2f5d9355fc5764fde460252ae04bf13d62902bf6",
+  "measuredWasmSha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d",
+  "freshEveryWindowFloorPassed": false,
+  "appPinsChanged": false,
+  "wasmReleasePublished": false,
+  "physicalCaptureEvidenceChanged": false,
+  "hardwareAcknowledgementExpiry": "2026-10-31"
+}

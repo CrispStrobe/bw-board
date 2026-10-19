@@ -1,0 +1,49 @@
+{
+  "schema": "bw.source-control.receipts.v1",
+  "testedRevision": "52ceafdd3b116fecf52d599d5bae3ff1c0371350",
+  "scope": "Seven Node methods including six forwarded Python mocks; no live tool/addon/guest or sampling proof",
+  "records": {
+    "independent-audit.json": {
+      "bytes": 518,
+      "sha256": "5944c346df8e2ba2ce2c9f3c792dae711fc09135089346e12e3241c25ac47ca8",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-pure-controls-20261004/independent-audit.json"
+    },
+    "exit.json": {
+      "bytes": 144,
+      "sha256": "4a90cb241c5fb87025de8b71b08a7a94a15ee19f335d9630617b4a78a672f587",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-pure-controls-20261004/exit.json"
+    },
+    "invocation.json": {
+      "bytes": 802,
+      "sha256": "da593b6e56f3a22c65ee7a91c14aa38c8ba73d3b7b4e0454476887c56c341be9",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-pure-controls-20261004/invocation.json"
+    },
+    "controls.tap": {
+      "bytes": 1837,
+      "sha256": "cc14aac60eee8ba44cb158da14def9640e31bcb61a2ed18f87f5cbdcf40a9c81",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-pure-controls-20261004/stdout"
+    },
+    "ci-fix-independent-audit.json": {
+      "bytes": 490,
+      "sha256": "9bd3a4c9209629bc942adbdabc275fa6aefa99fa7a4272dc7df57e8058ce63e2",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-ci-lint-fix-controls-20261004/independent-audit.json"
+    },
+    "ci-fix-exit.json": {
+      "bytes": 143,
+      "sha256": "569d9bca258b757d69ab39428a858471f26a8e5fa29507512e8e2f2cebc73daf",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-ci-lint-fix-controls-20261004/exit.json"
+    },
+    "ci-fix-controls.tap": {
+      "bytes": 899,
+      "sha256": "e7481bb74f7f6a242b469d1af386b4f001bd34dc748bff2e2b7e6834a0013cde",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-ci-lint-fix-controls-20261004/stdout"
+    },
+    "ci-fix-invocation.json": {
+      "bytes": 1070,
+      "sha256": "a71f8bee19b688562f0aa524cb802fc3045c5ca18a129cb0c507f08b5ad7c0ec",
+      "origin": "/tmp/native-cold-ledger-scalars-native-symbol-ci-lint-fix-controls-20261004/invocation.json"
+    }
+  },
+  "affectedRevision": "e36e5f6ac6382cb225579b6b48d0b1ea853ac051",
+  "affectedScope": "Three selected affected inverse/census/sibling-lint Node methods only;1073 pinned inputs/982 tracked scan files; original7Node/6Python packet and failedCI remain separate"
+}

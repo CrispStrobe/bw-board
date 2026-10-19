@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+    "--max-old-space-size=128",
+    "--input-type=module",
+    "-e",
+    "import {canonicalConfiguration}from './scripts/bochs-cpu3-native-owned-8042-interface/identity.mjs';process.stdout.write(canonicalConfiguration(\"/home/runner/work/_temp/fixed-8042-interface-evidence/guest.bochs.log\"))"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 0.06532691799998247,
+  "streams": {
+    "stdout": {
+      "bytes": 519,
+      "sha256": "a1ee66ae1698c3bcdee134babb66beac2988fc4d90f48bb8d2216fdf16c62da6"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

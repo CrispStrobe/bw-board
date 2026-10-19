@@ -1,0 +1,1019 @@
+Current runner version: '2.337.0'
+##[group]Runner Image Provisioner
+Hosted Compute Agent
+Version: 20260901.588
+Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b
+Build Date: 2026-09-01T19:56:44Z
+Worker ID: {ec283185-9d1d-43d7-aa4b-096d7fbf5bd3}
+Azure Region: centralus
+##[endgroup]
+##[group]Operating System
+Ubuntu
+24.04.5
+LTS
+##[endgroup]
+##[group]Runner Image
+Image: ubuntu-24.04
+Version: 20260927.320.1
+Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260927.320
+##[endgroup]
+##[group]GITHUB_TOKEN Permissions
+Actions: read
+Contents: read
+Metadata: read
+##[endgroup]
+Secret source: Actions
+Cache mode: write
+Prepare workflow directory
+Prepare all required actions
+Getting action download info
+Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+Download action repository 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+Download action repository 'actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+Complete job name: test
+##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+with:
+  repository: CrispStrobe/bw-board
+  token: ***
+  ssh-strict: true
+  ssh-user: git
+  persist-credentials: true
+  clean: true
+  sparse-checkout-cone-mode: true
+  fetch-depth: 1
+  fetch-tags: false
+  show-progress: true
+  lfs: false
+  submodules: false
+  set-safe-directory: true
+  allow-unsafe-pr-checkout: false
+##[endgroup]
+Syncing repository: CrispStrobe/bw-board
+##[group]Getting Git version info
+Working directory is '/home/runner/work/bw-board/bw-board'
+[command]/usr/bin/git version
+git version 2.55.0
+##[endgroup]
+Temporarily overriding HOME='/home/runner/work/_temp/edadf577-827a-4fe1-9a3f-6aa5bf7c583a' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+[command]/usr/bin/git config --global --add safe.directory /home/runner/work/bw-board/bw-board
+Deleting the contents of '/home/runner/work/bw-board/bw-board'
+##[group]Initializing the repository
+[command]/usr/bin/git init /home/runner/work/bw-board/bw-board
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: will change to "main" in Git 3.0. To configure the initial branch name
+hint: to use in all of your new repositories, which will suppress this warning,
+hint: call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+hint:
+hint: Disable this message with "git config set advice.defaultBranchName false"
+Initialized empty Git repository in /home/runner/work/bw-board/bw-board/.git/
+[command]/usr/bin/git remote add origin https://github.com/CrispStrobe/bw-board
+##[endgroup]
+##[group]Disabling automatic garbage collection
+[command]/usr/bin/git config --local gc.auto 0
+##[endgroup]
+##[group]Setting up auth
+[command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+[command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+[command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+##[endgroup]
+##[group]Fetching the repository
+[command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +d46e006696b6f10f693069eb07b19e9854b34dd0:refs/remotes/origin/perf/wasm-targeted-postopt-20261002
+From https://github.com/CrispStrobe/bw-board
+ * [new ref]         d46e006696b6f10f693069eb07b19e9854b34dd0 -> origin/perf/wasm-targeted-postopt-20261002
+##[endgroup]
+##[group]Determining the checkout info
+##[endgroup]
+[command]/usr/bin/git sparse-checkout disable
+[command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+##[group]Checking out the ref
+[command]/usr/bin/git checkout --progress --force -B perf/wasm-targeted-postopt-20261002 refs/remotes/origin/perf/wasm-targeted-postopt-20261002
+Switched to a new branch 'perf/wasm-targeted-postopt-20261002'
+branch 'perf/wasm-targeted-postopt-20261002' set up to track 'origin/perf/wasm-targeted-postopt-20261002'.
+##[endgroup]
+[command]/usr/bin/git log -1 --format=%H
+d46e006696b6f10f693069eb07b19e9854b34dd0
+##[group]Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+with:
+  node-version: 22.23.3
+  always-auth: false
+  check-latest: false
+  token: ***
+##[endgroup]
+Found in cache @ /opt/hostedtoolcache/node/22.23.3/x64
+(node:2095) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+##[group]Environment details
+node: v22.23.3
+npm: 10.9.9
+yarn: 1.22.22
+##[endgroup]
+##[group]Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+with:
+  name: labwired-wasm-b
+  path: optimized
+  merge-multiple: false
+  repository: CrispStrobe/bw-board
+  run-id: 36997847752
+##[endgroup]
+Downloading single artifact
+(node:2126) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Preparing to download the following artifacts:
+- labwired-wasm-b (ID: 11221838487, Size: 9143858, Expected Digest: sha256:4800b668806293f0f0761acb333b47953314769cb33fba69c44ae25563250e64)
+Redirecting to blob download url: https://productionresultssa18.blob.core.windows.net/actions-results/4938c66a-ab32-4c2f-837c-5129041bc718/workflow-job-run-b12bb166-a270-5169-85db-ff19fcd69f84/artifacts/fbe6904fd1effbdb4737d62057f3f94b402d65a033f6feaf05bdf19478005a75.zip
+Starting download of artifact to: /home/runner/work/bw-board/bw-board/optimized
+(node:2126) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+SHA256 digest of downloaded artifact is 4800b668806293f0f0761acb333b47953314769cb33fba69c44ae25563250e64
+Artifact download completed successfully.
+Total of 1 artifact(s) downloaded
+Download artifact has finished successfully
+##[group]Run npm ci --ignore-scripts --no-audit --no-fund
+[36;1mnpm ci --ignore-scripts --no-audit --no-fund[0m
+[36;1msudo apt-get update -qq[0m
+[36;1msudo apt-get install -y -qq --no-install-recommends gcc-arm-none-eabi binutils-arm-none-eabi[0m
+shell: /usr/bin/bash -e {0}
+##[endgroup]
+
+added 2 packages in 556ms
+Selecting previously unselected package binutils-arm-none-eabi.
+(Reading database ... 
+(Reading database ... 5%
+(Reading database ... 10%
+(Reading database ... 15%
+(Reading database ... 20%
+(Reading database ... 25%
+(Reading database ... 30%
+(Reading database ... 35%
+(Reading database ... 40%
+(Reading database ... 45%
+(Reading database ... 50%
+(Reading database ... 55%
+(Reading database ... 60%
+(Reading database ... 65%
+(Reading database ... 70%
+(Reading database ... 75%
+(Reading database ... 80%
+(Reading database ... 85%
+(Reading database ... 90%
+(Reading database ... 95%
+(Reading database ... 100%
+(Reading database ... 202296 files and directories currently installed.)
+Preparing to unpack .../binutils-arm-none-eabi_2.42-1ubuntu1+23_amd64.deb ...
+Unpacking binutils-arm-none-eabi (2.42-1ubuntu1+23) ...
+Selecting previously unselected package gcc-arm-none-eabi.
+Preparing to unpack .../gcc-arm-none-eabi_15%3a13.2.rel1-2_amd64.deb ...
+Unpacking gcc-arm-none-eabi (15:13.2.rel1-2) ...
+Setting up binutils-arm-none-eabi (2.42-1ubuntu1+23) ...
+Setting up gcc-arm-none-eabi (15:13.2.rel1-2) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+Not building database; man-db/auto-update is not 'true'.
+Processing triggers for libc-bin (2.39-0ubuntu8.9) ...
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+##[group]Run node --input-type=module -e 'import {writeFileSync} from "node:fs"; writeFileSync("optimized/nodejs/package.json", JSON.stringify({type:"commonjs"}));'
+[36;1mnode --input-type=module -e 'import {writeFileSync} from "node:fs"; writeFileSync("optimized/nodejs/package.json", JSON.stringify({type:"commonjs"}));'[0m
+shell: /usr/bin/bash -e {0}
+##[endgroup]
+##[group]Run set -euo pipefail
+[36;1mset -euo pipefail[0m
+[36;1mnode --test test/labwired-adapter.test.mjs test/labwired-bridge.test.mjs \[0m
+[36;1m  test/labwired-roundtrip.test.mjs test/pad-drive-parity.test.mjs \[0m
+[36;1m  test/labwired-firmware-only.test.mjs test/labwired-microbit-matrix.test.mjs \[0m
+[36;1m  test/labwired-input-boundary.test.mjs 2>&1 | tee integration.txt[0m
+[36;1mtests=$(sed -n 's/^# tests \([0-9]*\)$/\1/p' integration.txt | tail -1)[0m
+[36;1mfails=$(sed -n 's/^# fail \([0-9]*\)$/\1/p' integration.txt | tail -1)[0m
+[36;1mskips=$(sed -n 's/^# skipped \([0-9]*\)$/\1/p' integration.txt | tail -1)[0m
+[36;1mecho "tests=${tests:-?} fail=${fails:-?} skipped=${skips:-?}"[0m
+[36;1m[ "${tests:-0}" -ge 101 ] && [ "${fails:-1}" = 0 ] && [ "${skips:-1}" = 0 ][0m
+shell: /usr/bin/bash -e {0}
+env:
+  LABWIRED_WASM: /home/runner/work/bw-board/bw-board/optimized/nodejs
+##[endgroup]
+TAP version 13
+# Subtest: labwired-wasm boundary-A adapter
+    # Subtest: generates one input binding per pin, so every pad is drivable
+    ok 1 - generates one input binding per pin, so every pad is drivable
+      ---
+      duration_ms: 0.913652
+      type: 'test'
+      ...
+    # Subtest: pillar 1: attach SEATS every pin, before any edge exists
+    ok 2 - pillar 1: attach SEATS every pin, before any edge exists
+      ---
+      duration_ms: 43.106392
+      type: 'test'
+      ...
+    # Subtest: the firmware's BSRR writes arrive as pin edges, time before edge
+    ok 3 - the firmware's BSRR writes arrive as pin edges, time before edge
+      ---
+      duration_ms: 172.835695
+      type: 'test'
+      ...
+    # Subtest: PA5 is reported as an output once the firmware configures MODER
+    ok 4 - PA5 is reported as an output once the firmware configures MODER
+      ---
+      duration_ms: 19.373194
+      type: 'test'
+      ...
+    # Subtest: pillar 2: an undriven pin takes its level from the board
+    ok 5 - pillar 2: an undriven pin takes its level from the board
+      ---
+      duration_ms: 3.509278
+      type: 'test'
+      ...
+    # Subtest: a RAW flash image runs too — the form lite actually compiles
+    ok 6 - a RAW flash image runs too — the form lite actually compiles
+      ---
+      duration_ms: 89.962402
+      type: 'test'
+      ...
+    # Subtest: the adapter wraps a raw image for you
+    ok 7 - the adapter wraps a raw image for you
+      ---
+      duration_ms: 48.761656
+      type: 'test'
+      ...
+    # Subtest: time advances at the configured clock rate
+    ok 8 - time advances at the configured clock rate
+      ---
+      duration_ms: 14.289417
+      type: 'test'
+      ...
+    # Subtest: the released AVR core publishes DDR output and PORT pull-up modes
+    ok 9 - the released AVR core publishes DDR output and PORT pull-up modes
+      ---
+      duration_ms: 29.502329
+      type: 'test'
+      ...
+    # Subtest: the debug target, over the same engine
+        # Subtest: declares only what labwired can actually do
+        ok 1 - declares only what labwired can actually do
+          ---
+          duration_ms: 10.539118
+          type: 'test'
+          ...
+        # Subtest: a memory and a register write land in the engine, when it has them
+        ok 2 - a memory and a register write land in the engine, when it has them
+          ---
+          duration_ms: 7.009059
+          type: 'test'
+          ...
+        # Subtest: single-steps, and the PC moves
+        ok 3 - single-steps, and the PC moves
+          ---
+          duration_ms: 6.555495
+          type: 'test'
+          ...
+        # Subtest: an odd Thumb breakpoint address is refused, not silently never hit
+        ok 4 - an odd Thumb breakpoint address is refused, not silently never hit
+          ---
+          duration_ms: 4.262965
+          type: 'test'
+          ...
+        # Subtest: a code breakpoint halts, and reports where
+        ok 5 - a code breakpoint halts, and reports where
+          ---
+          duration_ms: 6.570076
+          type: 'test'
+          ...
+        # Subtest: reading memory works, and an unknown space says so
+        ok 6 - reading memory works, and an unknown space says so
+          ---
+          duration_ms: 4.362868
+          type: 'test'
+          ...
+        # Subtest: free-running still drives the board
+        ok 7 - free-running still drives the board
+          ---
+          duration_ms: 45.016953
+          type: 'test'
+          ...
+        1..7
+    ok 10 - the debug target, over the same engine
+      ---
+      duration_ms: 84.813297
+      type: 'suite'
+      ...
+    1..10
+ok 1 - labwired-wasm boundary-A adapter
+  ---
+  duration_ms: 508.735565
+  type: 'suite'
+  ...
+# Subtest: labwired bridge: our netlist → their system manifest
+    # Subtest: every header pin gets an injection binding, whatever it is wired to
+    ok 1 - every header pin gets an injection binding, whatever it is wired to
+      ---
+      duration_ms: 1.170721
+      type: 'test'
+      ...
+    # Subtest: the classifier walks THROUGH the series resistor to the LED
+    ok 2 - the classifier walks THROUGH the series resistor to the LED
+      ---
+      duration_ms: 0.365008
+      type: 'test'
+      ...
+    # Subtest: an output binding is named with OUR part id, so a consumer can join on it
+    ok 3 - an output binding is named with OUR part id, so a consumer can join on it
+      ---
+      duration_ms: 1.413903
+      type: 'test'
+      ...
+    # Subtest: the manifest declares NO external_devices — one board, one truth
+    ok 4 - the manifest declares NO external_devices — one board, one truth
+      ---
+      duration_ms: 0.251515
+      type: 'test'
+      ...
+    # Subtest: a pull-up + button pad is a contact, and gets ONE input binding
+    ok 5 - a pull-up + button pad is a contact, and gets ONE input binding
+      ---
+      duration_ms: 0.467183
+      type: 'test'
+      ...
+    # Subtest: an analog pad is NAMED and its injection is REFUSED, not silently booleanised
+    ok 6 - an analog pad is NAMED and its injection is REFUSED, not silently booleanised
+      ---
+      duration_ms: 0.301099
+      type: 'test'
+      ...
+    # Subtest: a connection on a pad outside the header map is refused BY NAME
+    ok 7 - a connection on a pad outside the header map is refused BY NAME
+      ---
+      duration_ms: 0.203411
+      type: 'test'
+      ...
+    # Subtest: the controller's OWN supply terminals are not refusals
+    ok 8 - the controller's OWN supply terminals are not refusals
+      ---
+      duration_ms: 0.227448
+      type: 'test'
+      ...
+    # Subtest: a chip with no heavy-tier descriptor refuses, and names what does ship
+    ok 9 - a chip with no heavy-tier descriptor refuses, and names what does ship
+      ---
+      duration_ms: 0.287738
+      type: 'test'
+      ...
+    # Subtest: maps Arduino Uno headers to LabWired AVR ports without claiming ATtiny support
+    ok 10 - maps Arduino Uno headers to LabWired AVR ports without claiming ATtiny support
+      ---
+      duration_ms: 0.435264
+      type: 'test'
+      ...
+    # Subtest: bridges micro:bit v2 and PyBadge at their zero-based flash geometry
+    ok 11 - bridges micro:bit v2 and PyBadge at their zero-based flash geometry
+      ---
+      duration_ms: 0.484532
+      type: 'test'
+      ...
+    # Subtest: no controller, or two, refuses rather than guessing
+    ok 12 - no controller, or two, refuses rather than guessing
+      ---
+      duration_ms: 0.162939
+      type: 'test'
+      ...
+    # Subtest: classifyAttachment orders analog before contact before indicator
+    ok 13 - classifyAttachment orders analog before contact before indicator
+      ---
+      duration_ms: 0.089257
+      type: 'test'
+      ...
+    # Subtest: adapter options come out ready to hand to createLabwiredAdapter
+    ok 14 - adapter options come out ready to hand to createLabwiredAdapter
+      ---
+      duration_ms: 0.2021
+      type: 'test'
+      ...
+    # Subtest: a board the bridge cannot carry throws with the reasons attached
+    ok 15 - a board the bridge cannot carry throws with the reasons attached
+      ---
+      duration_ms: 0.419284
+      type: 'test'
+      ...
+    1..15
+ok 2 - labwired bridge: our netlist → their system manifest
+  ---
+  duration_ms: 7.587981
+  type: 'suite'
+  ...
+# Subtest: labwired bridge census: the shipped F030 gallery
+    # Subtest: the fixture is the corpus, and says where it came from
+    ok 1 - the fixture is the corpus, and says where it came from
+      ---
+      duration_ms: 0.156804
+      type: 'test'
+      ...
+    # Subtest: every shipped bench bridges — no chip, mcu or pin refusal anywhere
+    ok 2 - every shipped bench bridges — no chip, mcu or pin refusal anywhere
+      ---
+      duration_ms: 21.900204
+      type: 'test'
+      ...
+    # Subtest: THE LEDGER IS EMPTY for every bench with no analog pad
+    ok 3 - THE LEDGER IS EMPTY for every bench with no analog pad
+      ---
+      duration_ms: 9.44321
+      type: 'test'
+      ...
+    # Subtest: the analog refusals are exactly the ADC pads, one per pad
+    ok 4 - the analog refusals are exactly the ADC pads, one per pad
+      ---
+      duration_ms: 11.595583
+      type: 'test'
+      ...
+    # Subtest: the pad-role census matches what the corpus actually wires
+    ok 5 - the pad-role census matches what the corpus actually wires
+      ---
+      duration_ms: 4.602854
+      type: 'test'
+      ...
+    1..5
+ok 3 - labwired bridge census: the shipped F030 gallery
+  ---
+  duration_ms: 47.897537
+  type: 'suite'
+  ...
+# Subtest: labwired catalog
+    # Subtest: is generated at the wasm build PIN — regenerate after a PIN bump
+    ok 1 - is generated at the wasm build PIN — regenerate after a PIN bump
+      ---
+      duration_ms: 0.944814
+      type: 'test'
+      ...
+    # Subtest: holds exactly the generator's chips, each with the arch and clock its own YAML declares
+    ok 2 - holds exactly the generator's chips, each with the arch and clock its own YAML declares
+      ---
+      duration_ms: 35.429237
+      type: 'test'
+      ...
+    1..2
+ok 4 - labwired catalog
+  ---
+  duration_ms: 37.278869
+  type: 'suite'
+  ...
+# Subtest: firmware-only construction (no engine)
+    # Subtest: the factory builds from a catalog chip with no board, and no board_io
+    ok 1 - the factory builds from a catalog chip with no board, and no board_io
+      ---
+      duration_ms: 13.329534
+      type: 'test'
+      ...
+    # Subtest: a raw .bin is refused by name instead of loaded at a guessed address
+    ok 2 - a raw .bin is refused by name instead of loaded at a guessed address
+      ---
+      duration_ms: 3.390735
+      type: 'test'
+      ...
+    # Subtest: the bench path still requires a header map
+    ok 3 - the bench path still requires a header map
+      ---
+      duration_ms: 0.211136
+      type: 'test'
+      ...
+    1..3
+ok 5 - firmware-only construction (no engine)
+  ---
+  duration_ms: 17.156168
+  type: 'suite'
+  ...
+# Subtest: UF2 → ELF
+    # Subtest: merges contiguous blocks, keeps a gap as a second segment, skips non-flash blocks
+    ok 1 - merges contiguous blocks, keeps a gap as a second segment, skips non-flash blocks
+      ---
+      duration_ms: 0.805247
+      type: 'test'
+      ...
+    # Subtest: refuses a corrupt block by position instead of loading half an image
+    ok 2 - refuses a corrupt block by position instead of loading half an image
+      ---
+      duration_ms: 7.361584
+      type: 'test'
+      ...
+    # Subtest: firmware-only accepts a UF2 (converted), and hands the engine an ELF
+    ok 3 - firmware-only accepts a UF2 (converted), and hands the engine an ELF
+      ---
+      duration_ms: 0.402584
+      type: 'test'
+      ...
+    1..3
+ok 6 - UF2 → ELF
+  ---
+  duration_ms: 8.876726
+  type: 'suite'
+  ...
+# Subtest: RP2040 bootrom as a named blob
+    # Subtest: firmware-only rp2040 hands the engine this repo's clean-room ROM as `bootrom`
+    ok 1 - firmware-only rp2040 hands the engine this repo's clean-room ROM as `bootrom`
+      ---
+      duration_ms: 7.502117
+      type: 'test'
+      ...
+    # Subtest: no other chip gets a blob
+    ok 2 - no other chip gets a blob
+      ---
+      duration_ms: 0.62456
+      type: 'test'
+      ...
+    1..2
+ok 7 - RP2040 bootrom as a named blob
+  ---
+  duration_ms: 8.278622
+  type: 'suite'
+  ...
+# Subtest: Thumb bit is ARM's alone
+    # Subtest: xtensa: an odd PC is reported and breakable as-is
+    ok 1 - xtensa: an odd PC is reported and breakable as-is
+      ---
+      duration_ms: 0.430273
+      type: 'test'
+      ...
+    # Subtest: arm: the Thumb bit is masked and an odd breakpoint refused
+    ok 2 - arm: the Thumb bit is masked and an odd breakpoint refused
+      ---
+      duration_ms: 1.403736
+      type: 'test'
+      ...
+    # Subtest: xtensa: a breakpoint on an odd address halts there
+    ok 3 - xtensa: a breakpoint on an odd address halts there
+      ---
+      duration_ms: 0.928826
+      type: 'test'
+      ...
+    1..3
+ok 8 - Thumb bit is ARM's alone
+  ---
+  duration_ms: 2.979656
+  type: 'suite'
+  ...
+# Subtest: firmware-only on the real engine
+    # Subtest: stm32f103: a user ELF boots, runs, and stops on a breakpoint at its loop
+    ok 1 - stm32f103: a user ELF boots, runs, and stops on a breakpoint at its loop
+      ---
+      duration_ms: 831.512359
+      type: 'test'
+      ...
+    # Subtest: nrf52840: a user ELF boots, runs, and stops on a breakpoint at its loop
+    ok 2 - nrf52840: a user ELF boots, runs, and stops on a breakpoint at its loop
+      ---
+      duration_ms: 186.754041
+      type: 'test'
+      ...
+    # Subtest: stm32f103: record, restore the checkpoint, and replay reproduces every retire event
+    ok 3 - stm32f103: record, restore the checkpoint, and replay reproduces every retire event
+      ---
+      duration_ms: 91.465324
+      type: 'test'
+      ...
+    # Subtest: esp32: a hand-assembled Xtensa loop runs, and stops on its odd-address branch
+    ok 4 - esp32: a hand-assembled Xtensa loop runs, and stops on its odd-address branch
+      ---
+      duration_ms: 23.676481
+      type: 'test'
+      ...
+    # Subtest: esp32s3: a hand-assembled Xtensa loop runs, and stops on its odd-address branch
+    ok 5 - esp32s3: a hand-assembled Xtensa loop runs, and stops on its odd-address branch
+      ---
+      duration_ms: 15.013039
+      type: 'test'
+      ...
+    # Subtest: rp2040: pico-sdk ROM lookup finds popcount32 in the clean-room bootrom
+    ok 6 - rp2040: pico-sdk ROM lookup finds popcount32 in the clean-room bootrom
+      ---
+      duration_ms: 102.792204
+      type: 'test'
+      ...
+    1..6
+ok 9 - firmware-only on the real engine
+  ---
+  duration_ms: 1251.578225
+  type: 'suite'
+  ...
+# Subtest: RTT / semihosting / ITM reach a listener
+    # Subtest: each stream is drained on the pump and labelled by channel; the UART listener is untouched
+    ok 1 - each stream is drained on the pump and labelled by channel; the UART listener is untouched
+      ---
+      duration_ms: 0.399154
+      type: 'test'
+      ...
+    1..1
+ok 10 - RTT / semihosting / ITM reach a listener
+  ---
+  duration_ms: 0.478598
+  type: 'suite'
+  ...
+# Subtest: engineering input JS call contract (backend doubles, not model proof)
+    # Subtest: missing APIs refuse explicitly, never use sequential set_input fallback
+    ok 1 - missing APIs refuse explicitly, never use sequential set_input fallback
+      ---
+      duration_ms: 1.391883
+      type: 'test'
+      ...
+    # Subtest: discovery normalizes actual serde Map shapes and rejects malformed top level
+    ok 2 - discovery normalizes actual serde Map shapes and rejects malformed top level
+      ---
+      duration_ms: 1.198317
+      type: 'test'
+      ...
+    # Subtest: validates every row before one copied atomic call, without trimming identities
+    ok 3 - validates every row before one copied atomic call, without trimming identities
+      ---
+      duration_ms: 0.668778
+      type: 'test'
+      ...
+    # Subtest: bad later rows, nonfinite values and unknown fields never reach the backend
+    ok 4 - bad later rows, nonfinite values and unknown fields never reach the backend
+      ---
+      duration_ms: 0.573064
+      type: 'test'
+      ...
+    # Subtest: backend transaction errors propagate without a success receipt
+    ok 5 - backend transaction errors propagate without a success receipt
+      ---
+      duration_ms: 0.329457
+      type: 'test'
+      ...
+    # Subtest: reset uses the new backend for both discovery and writes
+    ok 6 - reset uses the new backend for both discovery and writes
+      ---
+      duration_ms: 0.408608
+      type: 'test'
+      ...
+    # Subtest: debug boundary refuses missing input methods and detached targets
+    ok 7 - debug boundary refuses missing input methods and detached targets
+      ---
+      duration_ms: 0.833262
+      type: 'test'
+      ...
+    1..7
+ok 11 - engineering input JS call contract (backend doubles, not model proof)
+  ---
+  duration_ms: 6.478653
+  type: 'suite'
+  ...
+# Subtest: actual WASM engineering-input transaction proof
+    # Subtest: discovers both scoped ids and drives real analog-kit ADC inputs in one transaction
+    ok 1 - discovers both scoped ids and drives real analog-kit ADC inputs in one transaction
+      ---
+      duration_ms: 160.760253
+      type: 'test'
+      ...
+    # Subtest: backend rejects ambiguous or unknown identities and bad later ranges atomically
+    ok 2 - backend rejects ambiguous or unknown identities and bad later ranges atomically
+      ---
+      duration_ms: 2.092438
+      type: 'test'
+      ...
+    # Subtest: debug success emits one isolated input fact; replay routes atomically without re-emitting
+    ok 3 - debug success emits one isolated input fact; replay routes atomically without re-emitting
+      ---
+      duration_ms: 1.592763
+      type: 'test'
+      ...
+    # Subtest: a circuit-bound target refuses input replay rather than half-rewinding its board
+    ok 4 - a circuit-bound target refuses input replay rather than half-rewinding its board
+      ---
+      duration_ms: 0.892302
+      type: 'test'
+      ...
+    1..4
+ok 12 - actual WASM engineering-input transaction proof
+  ---
+  duration_ms: 165.861126
+  type: 'suite'
+  ...
+# Subtest: the micro:bit matrix, without an engine
+    # Subtest: gray8 draws red LEDs by brightness, a dark one as a dim body
+    ok 1 - gray8 draws red LEDs by brightness, a dark one as a dim body
+      ---
+      duration_ms: 1.24888
+      type: 'test'
+      ...
+    # Subtest: a micro:bit bench declares its on-module matrix; other benches declare no devices
+    ok 2 - a micro:bit bench declares its on-module matrix; other benches declare no devices
+      ---
+      duration_ms: 1.638718
+      type: 'test'
+      ...
+    # Subtest: Board.setPartMatrix: an mcu part (no model) gets an overlay; a rebuild clears it
+    ok 3 - Board.setPartMatrix: an mcu part (no model) gets an overlay; a rebuild clears it
+      ---
+      duration_ms: 2.269095
+      type: 'test'
+      ...
+    # Subtest: Board.setPartMatrix: a part with a registered model gets it on its own state
+    ok 4 - Board.setPartMatrix: a part with a registered model gets it on its own state
+      ---
+      duration_ms: 3.156828
+      type: 'test'
+      ...
+    # Subtest: binToElf carries extra records (an nRF .hex UICR) as their own PT_LOADs
+    ok 5 - binToElf carries extra records (an nRF .hex UICR) as their own PT_LOADs
+      ---
+      duration_ms: 0.630832
+      type: 'test'
+      ...
+    1..5
+ok 13 - the micro:bit matrix, without an engine
+  ---
+  duration_ms: 10.77911
+  type: 'suite'
+  ...
+# Subtest: the micro:bit matrix on the real engine
+    # Subtest: the catalog offers microbit-v2 with its matrix as a drawable display
+    ok 1 - the catalog offers microbit-v2 with its matrix as a drawable display
+      ---
+      duration_ms: 0.139813
+      type: 'test'
+      ...
+    # Subtest: the engine's picture reaches the micro:bit part's device state
+    ok 2 - the engine's picture reaches the micro:bit part's device state
+      ---
+      duration_ms: 206.234337
+      type: 'test'
+      ...
+    1..2
+ok 14 - the micro:bit matrix on the real engine
+  ---
+  duration_ms: 206.881201
+  type: 'suite'
+  ...
+#     [round trip] polled UIF: light 20.001 ms, heavy 20.000 ms
+#     [round trip] TIM3 handler entries per update event over 40 ms: light 0.97, heavy 0.97
+# Subtest: labwired round trip: a gallery bench on both tiers
+    # Subtest: 01-blink: the bridged manifest runs the bench, and both tiers agree
+    ok 1 - 01-blink: the bridged manifest runs the bench, and both tiers agree
+      ---
+      duration_ms: 481.011918
+      type: 'test'
+      ...
+    # Subtest: POLLED off UIF, the two timelines agree — so the COUNTER is not the difference
+    ok 2 - POLLED off UIF, the two timelines agree — so the COUNTER is not the difference
+      ---
+      duration_ms: 530.544718
+      type: 'test'
+      ...
+    # Subtest: REPAIRED: labwired enters the TIM3 handler once per update event
+    ok 3 - REPAIRED: labwired enters the TIM3 handler once per update event
+      ---
+      duration_ms: 72.636402
+      type: 'test'
+      ...
+    # Subtest: 11-toggle-button: the board drives the pad, and the firmware sees it
+    ok 4 - 11-toggle-button: the board drives the pad, and the firmware sees it
+      ---
+      duration_ms: 206.841599
+      type: 'test'
+      ...
+    # Subtest: the debug factory derives the manifest from the board it was given
+    ok 5 - the debug factory derives the manifest from the board it was given
+      ---
+      duration_ms: 5.357044
+      type: 'test'
+      ...
+    # Subtest: a bench the bridge refuses does not quietly half-run
+    ok 6 - a bench the bridge refuses does not quietly half-run
+      ---
+      duration_ms: 0.382823
+      type: 'test'
+      ...
+    1..6
+ok 15 - labwired round trip: a gallery bench on both tiers
+  ---
+  duration_ms: 1297.895793
+  type: 'suite'
+  ...
+#     [pad parity] DC high: light 0.078193  heavy 0.078193  hand 0.078192
+#     [pad parity] polled blink: light peak 0.078191 mean 0.035383  heavy peak 0.078188 mean 0.035382
+#     [pad parity] open-drain high: light 0.000000  heavy 0.000000
+#     [pad parity] open-drain low (active-low bench): light 0.078193  heavy 0.078193  hand 0.078192
+# Subtest: pad drive: the inferred blink bench, solved by hand
+    # Subtest: the improvised bench is the one the arithmetic describes
+    ok 1 - the improvised bench is the one the arithmetic describes
+      ---
+      duration_ms: 0.764513
+      type: 'test'
+      ...
+    # Subtest: 0.0712, not 0.33: the board reproduces the hand-computed on-state
+    ok 2 - 0.0712, not 0.33: the board reproduces the hand-computed on-state
+      ---
+      duration_ms: 12.069284
+      type: 'test'
+      ...
+    # Subtest: the same bench on a 5 V rail reads 0.1546 — the rail is why it is dim
+    ok 3 - the same bench on a 5 V rail reads 0.1546 — the rail is why it is dim
+      ---
+      duration_ms: 1.998421
+      type: 'test'
+      ...
+    # Subtest: a 50 % blink far slower than the window PEAKS at the on-state value
+    ok 4 - a 50 % blink far slower than the window PEAKS at the on-state value
+      ---
+      duration_ms: 43.340876
+      type: 'test'
+      ...
+    # Subtest: a blink FASTER than the window reads a steady duty-weighted 0.0356
+    ok 5 - a blink FASTER than the window reads a steady duty-weighted 0.0356
+      ---
+      duration_ms: 49.910596
+      type: 'test'
+      ...
+    1..5
+ok 16 - pad drive: the inferred blink bench, solved by hand
+  ---
+  duration_ms: 109.067029
+  type: 'suite'
+  ...
+# Subtest: open drain: the pad that lets go
+    # Subtest: od LOW is a real pull to ground — the SAME Thevenin as push-pull low
+    ok 1 - od LOW is a real pull to ground — the SAME Thevenin as push-pull low
+      ---
+      duration_ms: 2.17373
+      type: 'test'
+      ...
+    # Subtest: od HIGH is high-Z: the LED is DARK and the pad is not a source
+    ok 2 - od HIGH is high-Z: the LED is DARK and the pad is not a source
+      ---
+      duration_ms: 0.454853
+      type: 'test'
+      ...
+    # Subtest: od HIGH + an external 10 kΩ pull-up: the RESISTOR sets the pad
+    ok 3 - od HIGH + an external 10 kΩ pull-up: the RESISTOR sets the pad
+      ---
+      duration_ms: 6.249211
+      type: 'test'
+      ...
+    # Subtest: od HIGH with the INTERNAL pull-up is `quasi`, not floating
+    ok 4 - od HIGH with the INTERNAL pull-up is `quasi`, not floating
+      ---
+      duration_ms: 0.808363
+      type: 'test'
+      ...
+    1..4
+ok 17 - open drain: the pad that lets go
+  ---
+  duration_ms: 10.163099
+  type: 'suite'
+  ...
+# Subtest: open drain: the two publishers, at register level
+    # Subtest: OTYPER before MODER still reaches the board
+    ok 1 - OTYPER before MODER still reaches the board
+      ---
+      duration_ms: 1.321195
+      type: 'test'
+      ...
+    # Subtest: the light tier maps the register combinations
+    ok 2 - the light tier maps the register combinations
+      ---
+      duration_ms: 0.331403
+      type: 'test'
+      ...
+    # Subtest: the heavy tier derives the same modes from the same registers
+    ok 3 - the heavy tier derives the same modes from the same registers
+      ---
+      duration_ms: 1.667858
+      type: 'test'
+      ...
+    # Subtest: OTYPER flipped on an ALREADY-configured output still reaches the board
+    ok 4 - OTYPER flipped on an ALREADY-configured output still reaches the board
+      ---
+      duration_ms: 0.946196
+      type: 'test'
+      ...
+    # Subtest: a family whose snapshot has no OTYPER stays push-pull, not invented
+    ok 5 - a family whose snapshot has no OTYPER stays push-pull, not invented
+      ---
+      duration_ms: 0.213383
+      type: 'test'
+      ...
+    # Subtest: the two publishers agree on every combination, cell by cell
+    ok 6 - the two publishers agree on every combination, cell by cell
+      ---
+      duration_ms: 0.709622
+      type: 'test'
+      ...
+    1..6
+ok 18 - open drain: the two publishers, at register level
+  ---
+  duration_ms: 5.439302
+  type: 'suite'
+  ...
+# Subtest: pad drive: heavy and light tier, same firmware, same bench
+    # Subtest: the improvised bench bridges to the heavy tier with an empty ledger
+    ok 1 - the improvised bench bridges to the heavy tier with an empty ledger
+      ---
+      duration_ms: 352.269362
+      type: 'test'
+      ...
+    # Subtest: DC high: both tiers land on the hand-computed 0.0712
+    ok 2 - DC high: both tiers land on the hand-computed 0.0712
+      ---
+      duration_ms: 0.981332
+      type: 'test'
+      ...
+    # Subtest: DC high: both tiers publish the pad as a driven push-pull output
+    ok 3 - DC high: both tiers publish the pad as a driven push-pull output
+      ---
+      duration_ms: 0.241333
+      type: 'test'
+      ...
+    # Subtest: polled 20 ms blink: peaks and duty-weighted means agree
+    ok 4 - polled 20 ms blink: peaks and duty-weighted means agree
+      ---
+      duration_ms: 763.260412
+      type: 'test'
+      ...
+    # Subtest: REPAIRED: an open-drain pad driving 1 is DARK on both tiers
+    ok 5 - REPAIRED: an open-drain pad driving 1 is DARK on both tiers
+      ---
+      duration_ms: 128.173097
+      type: 'test'
+      ...
+    # Subtest: REPAIRED: the same open-drain pad driving 0 still DRIVES, on both
+    ok 6 - REPAIRED: the same open-drain pad driving 0 still DRIVES, on both
+      ---
+      duration_ms: 128.61848
+      type: 'test'
+      ...
+    1..6
+ok 19 - pad drive: heavy and light tier, same firmware, same bench
+  ---
+  duration_ms: 1373.910322
+  type: 'suite'
+  ...
+1..19
+# tests 101
+# suites 20
+# pass 101
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2598.404383
+tests=101 fail=0 skipped=0
+##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+with:
+  name: postopt-integration
+  path: integration.txt
+  if-no-files-found: warn
+  retention-days: 7
+  compression-level: 6
+  overwrite: false
+  include-hidden-files: false
+##[endgroup]
+(node:2761) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+With the provided path, there will be 1 file uploaded
+Artifact name is valid!
+Root directory input is valid!
+Beginning upload of artifact content to blob storage
+(node:2761) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+Uploaded bytes 5897
+Finished uploading artifact content to blob storage!
+SHA256 digest of uploaded artifact zip is 0d1deaab6ca753935df040b642f6f61ffb09e5b0b40688fe5d5224127bca385e
+Finalizing artifact upload
+Artifact postopt-integration.zip successfully finalized. Artifact ID 11222756873
+Artifact postopt-integration has been successfully uploaded! Final size is 5897 bytes. Artifact ID is 11222756873
+Artifact download URL: https://github.com/CrispStrobe/bw-board/actions/runs/36997847752/artifacts/11222756873
+Post job cleanup.
+(node:2773) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Post job cleanup.
+[command]/usr/bin/git version
+git version 2.55.0
+Temporarily overriding HOME='/home/runner/work/_temp/fcb6d8a8-a89b-4c10-8b1f-36883daedf91' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+[command]/usr/bin/git config --global --add safe.directory /home/runner/work/bw-board/bw-board
+[command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+http.https://github.com/.extraheader
+[command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+[command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Cleaning up orphan processes
+##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

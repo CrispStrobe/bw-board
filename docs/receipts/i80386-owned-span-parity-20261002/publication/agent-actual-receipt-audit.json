@@ -1,0 +1,43 @@
+{
+  "status": "ACTUAL_HOSTED_RECEIPTS_AND_DUAL_PROVENANCE_PASS_FULL_TRACE_AWAITING_INDEPENDENT_AUDITS",
+  "runId": 37056398077,
+  "artifactId": 11248833105,
+  "head": "80d228ee5452f380655a16c4bc823beb76e781c1",
+  "artifactCount": 212,
+  "cells": [
+    {
+      "label": "smoke-off",
+      "status": "SPAN_CAPTURE_OFF_EXACT_PARITY_PASS_NOT_SPEED_GATE",
+      "checks": 1408,
+      "canonicalRows": 0,
+      "logicalClockRows": 0,
+      "captureSha256": "683e2936d6d602173a4eac8623a9119f121f80e980f3d2b5b620d9cdf5f71561",
+      "journalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "resumes": 445,
+      "wallNs": 8182856593
+    },
+    {
+      "label": "fulltrace-on",
+      "status": "SPAN_CAPTURE_ON_EXACT_PARITY_PASS",
+      "checks": 1408,
+      "canonicalRows": 1649271,
+      "logicalClockRows": 201390,
+      "captureSha256": "2705456dda873e6c245e734f7d2e2747ca5b60bea676ad19316a9940e20bc6ca",
+      "journalSha256": "6e130c37266188258be29fe21f4e165b0c2d75a5c6b79347964a6d509fb55946",
+      "resumes": 445,
+      "wallNs": 14458121839
+    },
+    {
+      "label": "trace-fast",
+      "status": "SPAN_FULL_CANONICAL_TRACE_NULLSINK_PARITY_PASS",
+      "checks": 1408,
+      "canonicalRows": 1649271,
+      "logicalClockRows": 0,
+      "captureSha256": "8148fb8e23a0be57ea221f5da4fa2233bd65e108e32e8150f380a974d3e03274",
+      "journalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "resumes": 445,
+      "wallNs": 13651992519
+    }
+  ],
+  "scope": "Read-only actualreceipt/mode/source/provenance/prepost authentication; root/peer independent full canonical trace audit pending."
+}

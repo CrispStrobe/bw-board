@@ -1,0 +1,37 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "test/i80386-native-compact-progress-build-source.test.mjs",
+    "test/i80386-native-compact-progress-worker-source.test.mjs"
+  ],
+  "cwd": "/tmp/bw-native-compact-progress-build-source-20261005",
+  "revision": "7e0a4b7bafc3834f95c5c60b9562c5709ecb6130",
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "niceIncrement": 10,
+    "compilerMemoryLimit": "not imposed; tiny C++ mock compiler inherits CPU/file limits; Node heap cap applies only to Node"
+  },
+  "blankHooks": [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "LD_PRELOAD",
+    "LD_AUDIT",
+    "BW_HOT_NAPI_PROFILE",
+    "NODE_V8_COVERAGE"
+  ],
+  "absentCompilerOverrides": [
+    "CPATH",
+    "CPLUS_INCLUDE_PATH",
+    "C_INCLUDE_PATH",
+    "GCC_EXEC_PREFIX",
+    "COMPILER_PATH",
+    "LIBRARY_PATH"
+  ],
+  "scope": "Exactly seven Node pure metadata/protocol/source cases: build metadata/context/manual wiring and worker pending refusal/progress mutation/full counted inverse and real-format final composition/mutations. No compiler/addon/provider/guest/build/profile"
+}

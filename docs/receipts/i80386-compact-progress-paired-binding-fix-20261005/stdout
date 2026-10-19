@@ -1,0 +1,20 @@
+TAP version 13
+# test_retained_setup_binding_reaches_production_assembly_and_admission (test_policy.PureControls.test_retained_setup_binding_reaches_production_assembly_and_admission) ... ok
+# ----------------------------------------------------------------------
+# Ran 1 test in 0.322s
+# OK
+# Subtest: real retained setup binding assembly and complete admission; no guest
+ok 1 - real retained setup binding assembly and complete admission; no guest
+  ---
+  duration_ms: 679.664034
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 842.827576

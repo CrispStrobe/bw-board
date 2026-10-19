@@ -1,0 +1,13 @@
+{
+  "status": "PASS_INDEPENDENT_FIXED_8042_INTERFACE_BUILD_OFF_ON_AND_JS_REFERENCE",
+  "checks": 8375,
+  "head": "c7efff26f6d0ace3a29e2f9bcda7bc0f96d40129",
+  "artifactId": 11264256418,
+  "addonSha256": "4b877e6d83189149f1f365f4e541721ba796362db0f4360b0f6b273149f95432",
+  "sourceFiles": 123,
+  "completedInstructions": 38,
+  "full166BoundariesEachMode": 40,
+  "pioEvents": 11,
+  "wholeRawRamSha256": "de07920708e587fbe3034d6a7bb8ffd0ddd1901b5eaedc6ac0a876a63d82f854",
+  "scope": "Exact fixed-ROM semantic evidence; literal Bochs/JS reset model deviations retained, no hardware correctness/generalAT/performance/adoption claim. Genuine ZIP/source/prepared TAR hashes authenticated by streaming without extraction."
+}

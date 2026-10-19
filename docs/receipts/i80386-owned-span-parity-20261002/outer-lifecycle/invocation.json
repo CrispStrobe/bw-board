@@ -1,0 +1,19 @@
+{
+  "pinsBefore": {
+    "control.py": "83e04aa9933a6480453d28ff69caae9200d65febb448f61510b78916c4698e68",
+    "run-cells.py": "2e323bda0025f96fd909dd37d52ed39cb52172a0fe012f03a3e2d9c9dce8bca7"
+  },
+  "command": [
+    "/opt/miniconda/bin/python3",
+    "-I",
+    "/mnt/volume1/tmp-astra/386-owned-span-hosted-outer-lifecycle-control-20261002/control.py"
+  ],
+  "limits": {
+    "cpu": 5,
+    "wall": 30,
+    "memory": 134217728,
+    "file": 8388608,
+    "core": 0,
+    "nice": 10
+  }
+}

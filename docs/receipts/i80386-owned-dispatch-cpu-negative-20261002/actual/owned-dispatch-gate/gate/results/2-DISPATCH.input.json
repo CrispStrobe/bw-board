@@ -1,0 +1,14 @@
+{
+  "preparedManifest": "/home/runner/work/_temp/owned-dispatch-gate/restored/derived-prepare.json",
+  "preparedManifestSha256": "a7fc02435dfb61cacd8da9a56d28efe904230397d88da34dc4cccd15fa2a5dd2",
+  "buildReceipt": "/home/runner/work/_temp/owned-dispatch-gate/restored/derived-build-receipt.json",
+  "buildReceiptSha256": "1c2ce1a7da79a1459dd0cfdcde983614afea6ce76d39cf5d945e2771d44ef59e",
+  "addon": "/home/runner/work/_temp/owned-dispatch-gate/restored/prepared/bochs/bw_direct.node",
+  "sha256": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841",
+  "configuration": "/home/runner/work/_temp/owned-dispatch-gate/gate/guest.bochsrc",
+  "baseline": "/home/runner/work/_temp/owned-dispatch-gate/gate/js-reference.json",
+  "baselineSha256": "bf026d23f0c51d63a9744dc4facb4d58809c50f1d35747ffc6ea5873b518e45e",
+  "output": "/home/runner/work/_temp/owned-dispatch-gate/gate/results/2-DISPATCH/guest",
+  "nativeTrace": false,
+  "hostJournal": false
+}

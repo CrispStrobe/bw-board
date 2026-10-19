@@ -1,0 +1,51 @@
+{
+  "schema": "bw.i80386-ordinary-windows-profile-attribution.v1",
+  "date": "2026-09-27",
+  "scope": "Read-only attribution of existing ordinary Windows 3.11 60M V8 and mode-clock profiles. No new run or emulator change.",
+  "ordinaryV8Evidence": {
+    "measuredRevision": "0c3e17e169185a241e88a1b4b1b4154a8fc9f2dc",
+    "profileSha256": "83e24f29c2ba3cf3c1f59af3c1893368530ffed429bf9ca0045e0b63d7f10c8f",
+    "profileArchiveSha256": "c8febcdae30778be56b26e3ef46111aa13575101ab96c01290c58685e5de564a",
+    "privateProfileReceiptSha256": "332cb5bc3adae4fbb7ae50297284011bb6a79bc646add7191942db5b845b5dad",
+    "sourceSha256": {
+      "src/experimental/i80386.js": "26d812a31ac63020d3f5ed899b441ae474c74c7f72c8a3ed4fadfe382d99ad19",
+      "src/experimental/i80386-at-machine.js": "0c15e925ec521be49ae82ecaeead74af3f2700eabc5f4c240a544b7fe554433c",
+      "scripts/run-i80386-at-console.mjs": "2ba4a4cd5e945a32e3234012c99cd429817b177ca1b95dc6449666d04a0982bd"
+    },
+    "sampleDenominator": 66196,
+    "disjointFileSelfSamples": {
+      "i80386Core": 52722,
+      "atMachine": 6746,
+      "consoleScript": 2146,
+      "allOtherIncludingGc": 4582
+    },
+    "topDisjointCoreFunctionSelfSamples": {
+      "stepInstruction": 12068,
+      "step": 8875,
+      "translate": 4904,
+      "decodeEa": 3002,
+      "fetchN": 2393,
+      "linear": 2160,
+      "fetch8": 1226
+    },
+    "derivedSharesOfAllSamplesPercent": {
+      "core": 79.645,
+      "atMachine": 10.191,
+      "consoleScript": 3.242,
+      "stepInstructionPlusStep": 31.64,
+      "translatePlusDecodeEaPlusFetchNPlusFetch8": 17.41
+    }
+  },
+  "separateModeClockEvidence": {
+    "privateReceiptSha256": "af54ee26b5e8e82e768072c5e1698a706484e590264a7b1f3807fd4a9183be75",
+    "entryModeSteps": {
+      "real": 13438404,
+      "protected16": 10043132,
+      "vm86": 21240957,
+      "protected32": 15277507
+    },
+    "realProtected16Vm86UserCpuShareOfAttributedTime": [0.6980301285635514, 0.7018679408684896],
+    "zeroCost16BitCeiling": "About 3.31x to 3.35x for this workload, before profiler overhead."
+  },
+  "interpretation": "The V8 self-sample totals are not mode-specific. The separate mode-clock runs show that about 70% of attributed user CPU belongs to real, protected16, or VM86 entry-mode step calls. A broad 16-bit block path needs to retire useful multi-instruction work while amortizing ordinary per-instruction step, decode, fetch, and translation work, with exact fault and device-event boundaries. The two profile percentages must not be multiplied or presented as a measured backend speedup; mode-clock attribution also includes board work."
+}

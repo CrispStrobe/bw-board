@@ -1,0 +1,458 @@
+{
+  "raw/_temp/cold-native-parent-context/parent.stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-parent-context/parent.stdout",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "raw/_temp/cold-native-parent-context/parent.stderr": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-parent-context/parent.stderr",
+    "sha256": "f564a232883f812870306f46043998522d2c073c2769307a972caa8916f236c2"
+  },
+  "raw/_temp/cold-native-parent-context/setup.stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-parent-context/setup.stdout",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "raw/_temp/cold-native-parent-context/setup.stderr": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-parent-context/setup.stderr",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "raw/_temp/cold-native-setup/compiled-sparse-patterns.txt": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/compiled-sparse-patterns.txt",
+    "sha256": "391509727d636653d4007b4ab5ba105de5abd1a5f3d979325dedcd27dd1049c3"
+  },
+  "raw/_temp/cold-native-setup/upstream-1.stderr": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-1.stderr",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "raw/_temp/cold-native-setup/driver-sparse.stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/driver-sparse.stdout",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "raw/_temp/cold-native-setup/upstream-3.stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-3.stdout",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "raw/_temp/cold-native-setup/upstream-1.exit.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-1.exit.json",
+    "sha256": "e386c1d7d462f948288f4711955519a8a26e1549f14ac7a4051b9c466e6cdc67"
+  },
+  "raw/_temp/cold-native-setup/compiled-sparse.stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/compiled-sparse.stdout",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "raw/_temp/cold-native-setup/upstream-0.stderr": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-0.stderr",
+    "sha256": "3e70934f1909b0f5a846d62237fcc1509d733b9fb0321187024723dfc67176d3"
+  },
+  "raw/_temp/cold-native-setup/driver-sparse.invocation.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/driver-sparse.invocation.json",
+    "sha256": "321b8335e3cc7be82c2a2b6502a20313b4522c5f41a926e96af895f6f591382f"
+  },
+  "raw/_temp/cold-native-setup/upstream-3.invocation.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-3.invocation.json",
+    "sha256": "0b0a9071f2765fb323aab6168214a901296373f41cdd171d10e1e8974bf199fc"
+  },
+  "raw/_temp/cold-native-setup/compiled-sparse.exit.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/compiled-sparse.exit.json",
+    "sha256": "3a65526992ce5306d87614383f6936d32ad29d1114a657a2fdc302b60529a8f0"
+  },
+  "raw/_temp/cold-native-setup/upstream-2.stderr": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-2.stderr",
+    "sha256": "5d9e7d35ab19a5b68b608b47b0b6b4a3d5e115caa23d7cebd4ee589da180975a"
+  },
+  "raw/_temp/cold-native-setup/upstream-2.stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-2.stdout",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "raw/_temp/cold-native-setup/upstream-0.stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-0.stdout",
+    "sha256": "b1eec07029156fa00f9624b1336c0a3cdea3ecf8b506ea401ce749785e7bff63"
+  },
+  "raw/_temp/cold-native-setup/upstream-3.exit.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-3.exit.json",
+    "sha256": "60ac7619aa2311c8ff41974b3da8b537ca0957f1cfe86c498d7f6375e0d70685"
+  },
+  "raw/_temp/cold-native-setup/upstream-0.exit.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-0.exit.json",
+    "sha256": "1fa3c2f63c867b891ebc62d8d85b72b70ab45e447860bc2c2059b1a475fd2ed9"
+  },
+  "raw/_temp/cold-native-setup/compiled-sparse.invocation.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/compiled-sparse.invocation.json",
+    "sha256": "8e27f1ace8f42f90aa1a3edc77b8315717cdf2aab3e093ed66ec6d105d474585"
+  },
+  "raw/_temp/cold-native-setup/upstream-3.stderr": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-3.stderr",
+    "sha256": "188a01a344b2dffbbfed4263e3f63af7b9836ca545e76580cab3f3ef84b88e03"
+  },
+  "raw/_temp/cold-native-setup/driver-sparse.exit.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/driver-sparse.exit.json",
+    "sha256": "21ab8abaef12c89bf1d8710c96e2eac43c12edfc85132a101da2f5300935e83f"
+  },
+  "raw/_temp/cold-native-setup/final-status.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/final-status.json",
+    "sha256": "7c1565e35df1838ae055e3a91659b0ab4da50365f328e9f2b283cf271bedf67d"
+  },
+  "raw/_temp/cold-native-setup/driver-sparse.stderr": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/driver-sparse.stderr",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "raw/_temp/cold-native-setup/upstream-2.invocation.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-2.invocation.json",
+    "sha256": "20e5356b26aef594253d16d7386fc53d53449bd9ac82183ba7ba41d770366ff2"
+  },
+  "raw/_temp/cold-native-setup/driver-sparse-patterns.txt": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/driver-sparse-patterns.txt",
+    "sha256": "4e1d512772eb4a9450b4f8f3c23cba198b76d17168c7012003ed1c5ab48ea6e7"
+  },
+  "raw/_temp/cold-native-setup/upstream-1.stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-1.stdout",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "raw/_temp/cold-native-setup/upstream-0.invocation.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-0.invocation.json",
+    "sha256": "94acc95f228fc84b6e0db85660b165c38a7a303673bfb961aa22fd4d68438b9f"
+  },
+  "raw/_temp/cold-native-setup/upstream-1.invocation.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-1.invocation.json",
+    "sha256": "45e4eccb1c6ddba74ac2debb34ee16a0969795eb493d7f19ebbf801be2e3676f"
+  },
+  "raw/_temp/cold-native-setup/upstream-2.exit.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/upstream-2.exit.json",
+    "sha256": "3aefe28e0a8aca7ac8ac73e65e8f862f55745cf70a507a7b0b53fae532bd2c4b"
+  },
+  "raw/_temp/cold-native-setup/compiled-sparse.stderr": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-setup/compiled-sparse.stderr",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "raw/_temp/cold-native-diagnostic/official-artifact-metadata.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/official-artifact-metadata.json",
+    "sha256": "44924fa325a2a29b9b38dbcbf0b27016a0f06a4bf741e194768fb97ca53c68ae"
+  },
+  "raw/_temp/cold-native-diagnostic/partial-restored-inventory.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/partial-restored-inventory.json",
+    "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+  },
+  "raw/_temp/cold-native-diagnostic/after.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/after.json",
+    "sha256": "9ec364f1df4161d2bcb39372b0a60ea1b91cd268ddd9ca022debd3466ec4581f"
+  },
+  "raw/_temp/cold-native-diagnostic/before.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/before.json",
+    "sha256": "9ec364f1df4161d2bcb39372b0a60ea1b91cd268ddd9ca022debd3466ec4581f"
+  },
+  "raw/_temp/cold-native-diagnostic/final-status.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/final-status.json",
+    "sha256": "b534ce20d69129645516e832a4a3f4e0c1efcbf905e1cde0816c47ae2a7444c2"
+  },
+  "raw/bw-board/bw-board/runtime/.github/workflows/i80386-cold-native-diagnostic.yml": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/.github/workflows/i80386-cold-native-diagnostic.yml",
+    "sha256": "515e3991ba32659a901f5cdec4165895f0256945b3e173b76083343b27f923dd"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/archive.py.txt": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/archive.py",
+    "sha256": "683f4c2086e9039e289db19175f6a92bcbb71a48173639d8162f0fc5ffd5e370"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/prepared-members.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/prepared-members.json",
+    "sha256": "69f139ff9196b958523af8e1905362734b3248088678526a3f753d0884eac302"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/frozen-members.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/frozen-members.json",
+    "sha256": "a6e9e9bc96eaf8237d2524719338e78d1d631d37c93085e6407976b1e203cd9c"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/restore.py.txt": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/restore.py",
+    "sha256": "35148eadcf9878923c093e25ebe39c5dcc92110e60ea95c426f4f58a9de791ed"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/README.md": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/README.md",
+    "sha256": "bfda73fe9fdfddd7eac2c411c2ed9570f97bbb71458d79f1040d29cbf87e20a4"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/official-members.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/official-members.json",
+    "sha256": "d2df0987fe9bda0d956f1ed7c0c8c49020e4046cd06e7cf53358d9a4a4651dec"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/test_archive.py.txt": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/test_archive.py",
+    "sha256": "1ab03e011353249976ac9916963557b47380c95a9e18d7bfbcad386896658297"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/admission.py.txt": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/admission.py",
+    "sha256": "f3f7023c5f73c18b0a3c908aa2c5269dbef98003795a079e0d9a3cc205035bb3"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/setup.py.txt": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/setup.py",
+    "sha256": "4522a39573d344c7eccc2b96672d084266d9443ea5daaf6477c899e8715d7bcd"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/README.md": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/README.md",
+    "sha256": "c8df6e01730f5fca85325ae98e39588139b61f4c29ee4f1072dd2a561e8206a6"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/test_parent.py.txt": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/test_parent.py",
+    "sha256": "12d2a3d77640f94fa1ad0f097c27356fb65af578b6d5bedce0f3da3ba6741164"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/contract.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/contract.json",
+    "sha256": "11c070c00f3bca420449714ce25e07560d0951d5fff617f376f96461381d00ac"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/parent.py.txt": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/parent.py",
+    "sha256": "c5fb2abbe48d13a01c41b9c907c73e4640f87b0cc2f49031a07e0ceb33a922fc"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/index.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/index.json",
+    "sha256": "483071793b123b1c25eb69fd868b482ecf0f4ce2ed39201b9c35253ebdaf6857"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/origins.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/origins.json",
+    "sha256": "5b7ee8f254244ccc8cb15440dee6fb5c22385e0fe2737c94eeb0c7a7905791e6"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/stderr": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/stderr",
+    "sha256": "12430c102a76303f29231e12d9e7dcd57d28ce77324105c1189a39624a71bc99"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/after.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/after.json",
+    "sha256": "119e5297d3abcbcb6abd6e2f1aaad4fac74456eefb68e6effa1c54042f6967b7"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/invocation.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/invocation.json",
+    "sha256": "d72843dabe71db149d6287eb4a96f0713b060399687f73e063d0a468d2a75545"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/exit.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/exit.json",
+    "sha256": "5830102f548fa6150e6e87a1313126beab5b04bd98214da5574956e3d2444c1b"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/before.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/before.json",
+    "sha256": "119e5297d3abcbcb6abd6e2f1aaad4fac74456eefb68e6effa1c54042f6967b7"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/stdout",
+    "sha256": "75f3c7ef7561280c9e0367d609b32216a6a3c47628a1146cc8a80fc78e96b41c"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/stderr": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/stderr",
+    "sha256": "eb469b51b10ae0f407fce112f45fcdf9cbd56ab5e8ef9731ff69dee8adc9e55e"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/after.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/after.json",
+    "sha256": "e578f8d0a3a55390fc0b058d5bfa055006fd0df19ed8e9613082bc03cb97e362"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/invocation.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/invocation.json",
+    "sha256": "d72843dabe71db149d6287eb4a96f0713b060399687f73e063d0a468d2a75545"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/exit.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/exit.json",
+    "sha256": "1c352c82d0d957dc287314b262abb0adc572020454f1a348293c1833eb73a225"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/before.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/before.json",
+    "sha256": "e578f8d0a3a55390fc0b058d5bfa055006fd0df19ed8e9613082bc03cb97e362"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/stdout",
+    "sha256": "75f3c7ef7561280c9e0367d609b32216a6a3c47628a1146cc8a80fc78e96b41c"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/stderr": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/stderr",
+    "sha256": "7e9f2780f9656d9890852c80088e3c2cc7adf086d162bc5957d00b9be24bf445"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/after.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/after.json",
+    "sha256": "8305eb9187fcbcb424fc048dd956b57b66789f10c5c1ca4e1df61e93e722a863"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/invocation.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/invocation.json",
+    "sha256": "a4db7e1916960e731a4af6c4e7afd1126dc831034ef37a87c7f90b9d6a7fdbd2"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/exit.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/exit.json",
+    "sha256": "a3407b43daed6edb9429bdd6a2ddacc6a290ffe1b8291a575a2c83f52e9e79a3"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/before.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/before.json",
+    "sha256": "8305eb9187fcbcb424fc048dd956b57b66789f10c5c1ca4e1df61e93e722a863"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/stdout",
+    "sha256": "fb36edd9d9c1ae464808cc0391bf7c8fe9118bbcd1d45ed3f0fdfa31baa9f44e"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/index.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/index.json",
+    "sha256": "63c2d47bc7492d6dae93869ebb7c68d9be63609c16844badf75380adbe016565"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/origins.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/origins.json",
+    "sha256": "21396b44fc42495d23ef130757d22796461066632eb704434647ce8d7af3b9d9"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/stderr": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/stderr",
+    "sha256": "38bf320bde0206302c1e57a1b42621b895232f0c74ebfec8c7b81ec6681fa5a0"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/after.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/after.json",
+    "sha256": "ff9062f583fff86326043dd6dffb00a2a376ac723a8b48ffa21a480074e1b7e1"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/invocation.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/invocation.json",
+    "sha256": "c971608087ed70d2ff16e36e8f3a9c5a769f249dcbebf405b8d43ac78195bfa0"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/exit.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/exit.json",
+    "sha256": "125c1c0f3964aeee89580de6a885aca22b74f1cc113f88b53f858da1e12cd3d4"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/before.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/before.json",
+    "sha256": "ff9062f583fff86326043dd6dffb00a2a376ac723a8b48ffa21a480074e1b7e1"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/stdout",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/primitive3/stderr": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/primitive3/stderr",
+    "sha256": "7ba600c131d14938fa296eb6eb208c575bf239a15b65439f37d0578df0fff9bf"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/primitive3/after.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/primitive3/after.json",
+    "sha256": "48ddc06362e09c62b98a4a49b3eec6eaf4361525bbabc3282ed76cb70180916d"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/primitive3/exit.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/primitive3/exit.json",
+    "sha256": "f0a3977bfad64730a7f2fa34d52854ebbe374244f5c7f4726bb7dee28f1af2ed"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/primitive3/before.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/primitive3/before.json",
+    "sha256": "48ddc06362e09c62b98a4a49b3eec6eaf4361525bbabc3282ed76cb70180916d"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/primitive3/stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/primitive3/stdout",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/stderr": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/stderr",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/after.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/after.json",
+    "sha256": "aaebd312d03447c4413058c557fa9c74759748bb81aa189da53011efd967a76a"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/invocation.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/invocation.json",
+    "sha256": "539a24f200ad5e07865a0de307871c06e9d69469c70f56279601e869eb898634"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/exit.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/exit.json",
+    "sha256": "24da40561fb7856141728495eb6bbc20873d8f11fa0675453fc9022e51b153e6"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/check.py.txt": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/check.py.txt",
+    "sha256": "6d9a49317e211018cc9ba2b40f042aa900a6484dd618e30fa5c19e02fe6d2b68"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/before.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/before.json",
+    "sha256": "aaebd312d03447c4413058c557fa9c74759748bb81aa189da53011efd967a76a"
+  },
+  "raw/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/stdout",
+    "sha256": "55babcb54c99e102b5533bbb5f914735803a1b46d2301d26d998062a3018d73b"
+  },
+  "raw/_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/parent.py.txt": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/selected/_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/parent.py",
+    "sha256": "c5fb2abbe48d13a01c41b9c907c73e4640f87b0cc2f49031a07e0ceb33a922fc"
+  },
+  "review/dispatch-request.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/dispatch-request.json",
+    "sha256": "9b7a7a7d4a0b5840aec57e63422fca1e9c9ced67b026babd0b5979edda21e72b"
+  },
+  "review/dispatch.stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/dispatch.stdout",
+    "sha256": "6cf7e95c9d2c11545bc14aaae06244af30c4fc5051300cdd2fae0ddc5010fbbd"
+  },
+  "review/dispatch.stderr": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/dispatch.stderr",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "review/dispatch-exit.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/dispatch-exit.json",
+    "sha256": "c365161d39236fe0f1d32937fbc549796b8487d8faf65ed3879b96897c78ea5d"
+  },
+  "review/branch-head.stdout": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/branch-head.stdout",
+    "sha256": "5c2794973f15186dcbe139b420bbdc07ef9d45b9cf04ab54bce0d3b82c59a4b7"
+  },
+  "review/run-initial.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/run-initial.json",
+    "sha256": "8955b3689ef649ffd9de3609c2a3ea46e37248f3d6132be0dfe4ccfcffbe1179"
+  },
+  "review/run-final.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/run-final.json",
+    "sha256": "7f97732bced24e1919860968457ddf0c03431eefcf8d0bdb6383e7375ff0eb0d"
+  },
+  "review/jobs-initial.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/jobs-initial.json",
+    "sha256": "b19c11019d596c00e50722d5b09726352bf48213a3eece12d136e34a6284feff"
+  },
+  "review/jobs-progress-1.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/jobs-progress-1.json",
+    "sha256": "94c966ce2905c1932da21c5c34b613db85f9f2be768194e892aea642f184264d"
+  },
+  "review/artifacts.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/artifacts.json",
+    "sha256": "d2a21ea0380446a95855b85e2116d46cf0dcccdd05585f9a92600ddbcaef2a11"
+  },
+  "review/zip-verification.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/zip-verification.json",
+    "sha256": "38875545ebf0a94ed2b2f5ccc1bc87fb3b0302cbcc3341bf82a7ef22ad341c48"
+  },
+  "review/audit.py.txt": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/audit.py",
+    "sha256": "190f50c51e654a5b4507aab9dfa1f7120f431489a5dabc5a95825e577424d809"
+  },
+  "review/coder-first-failure-audit.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/coder-first-failure-audit.json",
+    "sha256": "b9484135848296ba0ed178ed9ed2dba0bc8dad754afe71ee915ee3126b4f5dbd"
+  },
+  "review/independent-first-attempt-audit.py.txt": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/independent-first-attempt-audit.py",
+    "sha256": "f51a279e1611dd85019a5f64a99c0685d5f3f359687ddfbe5bc8a20cf4ffb4bc"
+  },
+  "review/independent-first-attempt-audit.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/independent-first-attempt-audit.json",
+    "sha256": "1fbd76f391c002e07db78a4a2cbf09756236f0e7d1a32826332089d3ec776142"
+  },
+  "review/local-stdlib-redirect-proof.json": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/local-stdlib-redirect-proof.json",
+    "sha256": "f17875e43718589d784353d04e1010a5ba5dd736f49ae6dc3810879c53b51ed9"
+  },
+  "review/local-stdlib-redirect-source.txt": {
+    "source": "/tmp/native-cold-native-first-diagnostic-publication-20261003/local-stdlib-redirect-source.txt",
+    "sha256": "0a985d40d20650497693eb38eaace43eb7f195e1df24867352c89aca8b08d244"
+  },
+  "redirect-controls/stderr": {
+    "source": "/tmp/native-cold-native-redirect-source-controls-20261003/stderr",
+    "sha256": "471b3ec7e55d9474410674b512246277a15b5b6bb3b444fc02b7d14305524567"
+  },
+  "redirect-controls/after.json": {
+    "source": "/tmp/native-cold-native-redirect-source-controls-20261003/after.json",
+    "sha256": "9feec2f5c35581c354907c8b916476fb9f33a0922881bca5a9054295ef0009d1"
+  },
+  "redirect-controls/invocation.json": {
+    "source": "/tmp/native-cold-native-redirect-source-controls-20261003/invocation.json",
+    "sha256": "a667ae8a6ee3fc84325a7075ac14a12e579b1ccccffa1d0efe567c7cac80a320"
+  },
+  "redirect-controls/exit.json": {
+    "source": "/tmp/native-cold-native-redirect-source-controls-20261003/exit.json",
+    "sha256": "268a645b0a45d47da88b2e16e5f306c82325941e77e26205b1120e0d138b4823"
+  },
+  "redirect-controls/before.json": {
+    "source": "/tmp/native-cold-native-redirect-source-controls-20261003/before.json",
+    "sha256": "9feec2f5c35581c354907c8b916476fb9f33a0922881bca5a9054295ef0009d1"
+  },
+  "redirect-controls/stdout": {
+    "source": "/tmp/native-cold-native-redirect-source-controls-20261003/stdout",
+    "sha256": "becb6796631fa90ec5c8c720895f7f5d33936fd9e01b876bbd6fedf60d2e7d15"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schema": "astra.i80386-same-page-read.v1",
+  "date": "2026-09-27",
+  "nodeVersion": "v20.20.2",
+  "baselineMeasuredRevision": "9a7f8ac824012d3fc810415dd4c21b693f93d232",
+  "branchBaseRevision": "cb399e02",
+  "workload": "stock xv6-public eeb7b415dbcb12cc362d0783e41c3d1f44066b17 forktest, 4 MiB, bundled Bochs BIOS",
+  "command": "XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+  "inputSha256": {
+    "xv6.img": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "fs.img": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "kernel": "025cef15636863063e4101aa0cfc424e556f70ad43b6a80d57581c05b465202d"
+  },
+  "sourceSha256": {
+    "baselineI80386": "e93db862fb236f4121e31c344e439cfc620c26a8c364552c18fb619d1a13a8d3",
+    "optimizedI80386": "727f652153ecbee33c18141c93ef9893dc8a2d35ed52156a4eabe6833cad14d5"
+  },
+  "change": "Same-page 16/32-bit linear reads translate once; 32-bit reads use the bus read32 hook, whose AT implementation coalesces RAM and preserves ordered per-byte device reads. Cross-page accesses retain their original bytewise translation and fault order.",
+  "userCpuSeconds": {
+    "baseline": [32.81, 32.44],
+    "optimized": [31.48, 29.53]
+  },
+  "meanUserCpuSeconds": {
+    "baseline": 32.625,
+    "optimized": 30.505
+  },
+  "userCpuSpeedup": 1.0694968,
+  "guest": {
+    "steps": 24338279,
+    "baselineReportSha256": "94f776d8362c7fb53042a41d20bb7268779f6f4befeba82d08c6e061853a8a5f",
+    "optimizedReportSha256": "35ec2e36b5d299fa5d34bd2ebbee67e2c13cc3306fec5e6b13096af352aafede",
+    "difference": "Only the absolute worktree-local ROM path in the report differs; ROM SHA and every guest-state field are identical."
+  },
+  "validation": "47 focused paging/string/I-O/task tests and 28 Windows/VGA/AT tests passed; one additional scalar bus-order test passed.",
+  "limits": "Incremental 1.07x CPU-time gain on this forktest; the 10x overall target remains open. Wall time is not treated as performance evidence."
+}

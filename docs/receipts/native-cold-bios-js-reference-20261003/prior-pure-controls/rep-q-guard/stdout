@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: all four REP entry and every element metadata/effect mutations refuse
+ok 1 - all four REP entry and every element metadata/effect mutations refuse
+  ---
+  duration_ms: 1445.51324
+  type: 'test'
+  ...
+# Subtest: named cuts bind ordered names Q CPU and REP records, never orphan snapshots
+ok 2 - named cuts bind ordered names Q CPU and REP records, never orphan snapshots
+  ---
+  duration_ms: 18.390744
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1748.636841

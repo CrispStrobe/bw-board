@@ -1,0 +1,22 @@
+{
+  "native-owned-dispatch-parity-prepared-20261002/fulltrace-on/child.stderr": {
+    "path": "/mnt/volume1/tmp-astra/native-owned-dispatch-parity-prepared-20261002/fulltrace-on/child.stderr",
+    "sha256": "a0c7faf726342fbd1a36390f97de1ebcb9ac0467618a24ee63601aa91b3d94c3",
+    "bytes": 149884566
+  },
+  "native-owned-dispatch-parity-prepared-20261002/fulltrace-on/guest/callbacks.jsonl": {
+    "path": "/mnt/volume1/tmp-astra/native-owned-dispatch-parity-prepared-20261002/fulltrace-on/guest/callbacks.jsonl",
+    "sha256": "6e130c37266188258be29fe21f4e165b0c2d75a5c6b79347964a6d509fb55946",
+    "bytes": 11730929
+  },
+  "native-owned-dispatch-parity-prepared-20261002/smoke-off/child.stderr": {
+    "path": "/mnt/volume1/tmp-astra/native-owned-dispatch-parity-prepared-20261002/smoke-off/child.stderr",
+    "sha256": "17113488c0f878f2b2e541710a78d31569af64196b7e7c4fea9e89ab8996c2bf",
+    "bytes": 438
+  },
+  "native-owned-dispatch-parity-prepared-20261002/trace-fast/child.stderr": {
+    "path": "/mnt/volume1/tmp-astra/native-owned-dispatch-parity-prepared-20261002/trace-fast/child.stderr",
+    "sha256": "fff770b740838158adb31d0b013749c2801ad98709fac301b68fd036ab099379",
+    "bytes": 149884562
+  }
+}

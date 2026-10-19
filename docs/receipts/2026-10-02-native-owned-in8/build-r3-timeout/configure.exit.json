@@ -1,0 +1,27 @@
+{
+  "command": [
+    "./configure",
+    "--enable-cpu-level=3",
+    "--with-nogui",
+    "--disable-plugins",
+    "--disable-debugger",
+    "--disable-repeat-speedups",
+    "--disable-handlers-chaining",
+    "--enable-instrumentation=instrument/stubs",
+    "CFLAGS=-O2 -fPIC",
+    "CXXFLAGS=-O2 -fPIC"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 178.60586478561163,
+  "streams": {
+    "stdout": {
+      "bytes": 13403,
+      "sha256": "e32342ec07ad4023b8ebdf5283e4334d08cd10ca812ccf2ecf3e967a3119cc23"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

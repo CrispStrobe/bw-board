@@ -1,0 +1,120 @@
+name: 386 CWSDPMI/DJGPP missing notice bytes
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x86-cwsdpmi-notice-completion-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  notices:
+    if: >-
+      github.event.label.name == 'x86-cwsdpmi-notice-completion' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Authenticate exact source and synthetic controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cwsdpmi-notice-evidence"
+          mkdir "$evidence"
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          timeout 20s python3 -B scripts/i80386-cwsdpmi-notice-completion/source.py \
+            "$BW_EXPECTED_HEAD" "$evidence/source-before.json"
+          timeout 20s python3 -B scripts/i80386-cwsdpmi-notice-completion/notice-control.py \
+            > "$evidence/notice-control.stdout" 2> "$evidence/notice-control.stderr"
+          {
+            printf 'run=%s attempt=%s event=%s expected_head=%s\n' \
+              "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_EVENT_NAME" "$BW_EXPECTED_HEAD"
+            python3 --version
+            uname -a
+          } > "$evidence/host.txt"
+      - name: Acquire only the three pinned small source archives and GCC notices
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          evidence="$RUNNER_TEMP/cwsdpmi-notice-evidence"
+          inputs="$RUNNER_TEMP/cwsdpmi-notice-inputs"
+          mkdir "$inputs"
+          phase=setup
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$evidence/notice-step-status.txt"' EXIT
+          fetch() {
+            phase="$1"
+            timeout "$2" curl --fail --location --silent --show-error --retry 1 \
+              --max-time "$3" --max-filesize "$4" -o "$inputs/$5" "$6" \
+              > "$evidence/$1-fetch.stdout" 2> "$evidence/$1-fetch.stderr"
+          }
+          fetch djcrx 90s 75 3000000 djcrx205.zip \
+            https://www.delorie.com/pub/djgpp/current/v2/djcrx205.zip
+          fetch djdev 90s 75 3000000 djdev205.zip \
+            https://www.delorie.com/pub/djgpp/current/v2/djdev205.zip
+          fetch djlsr 90s 75 3000000 djlsr205.zip \
+            https://www.delorie.com/pub/djgpp/current/v2/djlsr205.zip
+          phase=gcc-tag-ref
+          timeout 30s git ls-remote https://gcc.gnu.org/git/gcc.git \
+            refs/tags/releases/gcc-12.2.0 'refs/tags/releases/gcc-12.2.0^{}' \
+            > "$inputs/tag-ref.txt" 2> "$evidence/gcc-tag-ref.stderr"
+          fetch gcc-runtime 45s 35 100000 COPYING.RUNTIME \
+            'https://gcc.gnu.org/git/?p=gcc.git&a=blob_plain&f=COPYING.RUNTIME&hb=2ee5e4300186a92ad73f1a1a64cb918dc76c8d67'
+          fetch gcc-gpl3 45s 35 100000 COPYING3 \
+            'https://gcc.gnu.org/git/?p=gcc.git&a=blob_plain&f=COPYING3&hb=2ee5e4300186a92ad73f1a1a64cb918dc76c8d67'
+          phase=inventory
+          timeout 180s python3 -B scripts/i80386-cwsdpmi-notice-completion/notice.py \
+            "$inputs/djcrx205.zip" "$inputs/djdev205.zip" "$inputs/djlsr205.zip" \
+            "$inputs/tag-ref.txt" "$inputs/COPYING.RUNTIME" "$inputs/COPYING3" \
+            "$evidence/audit" > "$evidence/audit.stdout" 2> "$evidence/audit.stderr"
+          phase=complete
+      - name: Recheck source and report-only artifact inventory
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/cwsdpmi-notice-evidence"
+          mkdir -p "$evidence"
+          python3 -B scripts/i80386-cwsdpmi-notice-completion/source.py \
+            "$BW_EXPECTED_HEAD" "$evidence/source-after.json" \
+            > "$evidence/source-after.stdout" 2> "$evidence/source-after.stderr"
+          if test -f "$evidence/source-before.json"; then
+            cmp "$evidence/source-before.json" "$evidence/source-after.json"
+          fi
+          python3 -B - "$evidence" <<'PY'
+          import hashlib,json,pathlib,sys
+          root=pathlib.Path(sys.argv[1]);files={};total=0
+          for path in sorted(root.rglob('*')):
+              if path.is_symlink():raise ValueError('artifact symlink')
+              if path.is_file() and path.name!='artifact-inventory.json':
+                  raw=path.read_bytes();total+=len(raw)
+                  if len(raw)>4<<20 or total>8<<20:raise ValueError('report-only artifact cap')
+                  files[str(path.relative_to(root))]={'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
+          (root/'artifact-inventory.json').write_text(json.dumps({'files':files},indent=2)+'\n')
+          PY
+      - name: Retain exact small notices and reports, never source archives
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-cwsdpmi-notice-completion-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cwsdpmi-notice-evidence/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

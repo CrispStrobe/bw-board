@@ -1,0 +1,14 @@
+{
+  "parity.py": {
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-dispatch-parity-prepared-20261002/parity.py",
+    "originalSha256": "1e4a1828c82bf01c9c545f72eb4b9b5908a5ebebe46c2a8960bb8ecbdbf0c75c",
+    "derivedSha256": "8ebf2d12a2d88f6a1099ad87b437e1c8eefe4441a954370152a68fe7fef20cf2",
+    "exactInverse": "Replace SPAN_ status prefixes with DISPATCH_ only; complete comparison body unchanged."
+  },
+  "bounded.py": {
+    "originalPath": "/mnt/volume1/tmp-astra/native-owned-dispatch-parity-prepared-20261002/bounded.py",
+    "originalSha256": "77758628414540ff4fdc04eb47d83df2ca92b8ab47c84e9e0c99c5fef015ed9b",
+    "derivedSha256": "cb6cf966f9fd47b0b500753c0eca33a0bf1249b8989d8ec47b2760ba5d426183",
+    "exactInverse": "Remove appended NODE_V8_COVERAGE from two blank-environment lists only; original resource caps and regular-file transport unchanged."
+  }
+}

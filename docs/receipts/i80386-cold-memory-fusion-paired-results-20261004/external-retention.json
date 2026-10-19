@@ -1,0 +1,15 @@
+{
+  "officialArtifact": {
+    "runId": 37187325276,
+    "head": "b3e29ad322ccb723d971a0841ad89777f7e07a73",
+    "attempt": 1,
+    "artifactId": 11297715775,
+    "zipBytes": 42490189,
+    "zipSha256": "b56b9dabb5ac6849f2532f37ddf1bf9807164cdfbb9888813ad232053d45d546",
+    "expiresAt": "2026-10-18T07:58:43Z",
+    "downloadSeconds": 12.163316255435348
+  },
+  "canonicalZip": "/tmp/native-cold-memory-fusion-paired-first-comparison-publication-20261004/official-artifact.zip",
+  "upstreamComment": "https://github.com/CrispStrobe/bw-board/pull/345#issuecomment-5977941393",
+  "scope": "GitHub download expires as recorded. Genuine ZIP retained locally; no embedded archives, full PIO tapes, binaries or source inventories duplicated in this prose archive."
+}

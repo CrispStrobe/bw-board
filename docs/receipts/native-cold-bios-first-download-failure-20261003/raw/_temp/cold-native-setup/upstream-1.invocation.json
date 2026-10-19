@@ -1,0 +1,26 @@
+{
+  "command": [
+    "git",
+    "-C",
+    "/home/runner/work/_temp/cold-bios-build-pristine",
+    "remote",
+    "add",
+    "origin",
+    "https://github.com/bochs-emu/Bochs.git"
+  ],
+  "cwd": "/home/runner/work/bw-board/bw-board/runtime",
+  "cpuSeconds": 60,
+  "wallSeconds": 90,
+  "heapMiB": null,
+  "fileBytes": 16777216,
+  "coreBytes": 0,
+  "niceIncrement": 10,
+  "blankHooks": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  }
+}

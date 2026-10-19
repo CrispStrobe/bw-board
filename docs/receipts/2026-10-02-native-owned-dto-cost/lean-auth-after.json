@@ -1,0 +1,17 @@
+{
+  "status": "SOURCE_ONLY_BEFORE_EXECUTION_IDENTITY",
+  "sourceHashes": {
+    "scripts/compare-i80386-owned-dto-codecs.mjs": "d57c887980f9add9dcc03a7b1a1b6dc444d2adad848e9ba9f28665759b1f41fb",
+    "scripts/bochs-cpu3-native-owned-dto/response.mjs": "d4f7fee0ac0b58072f1ecb1c5cb40a1e52a712c04805ac0d755bff2de186705e",
+    "scripts/bochs-cpu3-native-owned-dto/ipc-response.mjs": "6e119774c7b65e5cc5884ae1a4c0f1e636a1ad3737e7c5e8148879dc5fc74712",
+    "scripts/bochs-cpu3-native-owned-dto/board-schema.json": "63c19323e0e955a7bbec40d394dba43bedaad10a79a5e2613e4cc38cf5262f93",
+    "test/i80386-owned-dto-response.test.mjs": "b81019edd74395cabce6720cc66921c6a01091a507c0d9227de247a923e31285",
+    "test/i80386-owned-dto-message-channel.test.mjs": "3b26f83afe535dc9b8ba440b1e49960beb0d466103a0227833ad611e832ece2e",
+    "test/fixtures/i80386-owned-dto-snapshots.json": "ed4d5e592db186edf90464a0250cde308f083e12ad701e528a7030a8eb46731d"
+  },
+  "helperSha256": "ac630035f96d3fb127ee2e3d5a0b4c9794624d2867148e28b19ba42209a87b46",
+  "input": {
+    "path": "/mnt/volume1/tmp-astra/native-owned-clock-cpu-benchmark-20261002/8-ABI3/capture.json",
+    "sha256": "246193ed7da4c872df55ddf7593b189f3966f55c45a8e06ef40382efc1b840fe"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "revision": "b2fa93096b0a05ffc5b52e38eea7136edd4a65b5",
+  "sourceCount": 92,
+  "parentSha256": "d835dc1b2e387894118594a1930447e78d2e8152b3ed099ba929961ab9f4eadc",
+  "fullPrePostEqual": true,
+  "frozenGitSourcesVerified": true,
+  "rawCoverage": "1 Node wrapper with retained Ran7/OK Python mocks",
+  "exitCode": 0,
+  "timeout": false,
+  "rawExitWallSeconds": 1.8088970482349396,
+  "scope": "source/read-only/mock evidence only; no addon, emulated CPU or live profiler"
+}

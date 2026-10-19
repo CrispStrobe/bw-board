@@ -1,0 +1,95 @@
+{
+  "scope": "SOURCE_ONLY_PIC_HELPER_DERIVATION_NO_NATIVE_EXECUTION",
+  "files": {
+    "run.py": {
+      "seams": [
+        {
+          "before": "/tmp/bw-board-386-native-owned-in8-r3-20261002",
+          "after": "/tmp/bw-board-386-owned-pic-imr-native-profile-20261002"
+        },
+        {
+          "before": "'bf026d23f0c51d63a9744dc4facb4d58809c50f1d35747ffc6ea5873b518e45e'",
+          "after": "'fdca8f8fa92952cd9cd5f4447e66b194a5f691025bcf925f7ddd443290143346'"
+        },
+        {
+          "before": "W/'scripts/run-i80386-native-owned-in8.mjs'",
+          "after": "W/'scripts/run-i80386-native-owned-pic-imr.mjs'"
+        },
+        {
+          "before": "before=auth();R.mkdir();",
+          "after": "assert approved['revision']=='3792a908d81e04903974aa7d2bdc545e0713a290' and len(approved['sourceHashes'])==122\nassert approved['compiledRevision']=='a6f605280f778b2bc409ef97ac3b40e15874530c' and len(approved['compiledSourceHashes'])==111\nCW=pathlib.Path(approved['compiledWorktree'])\nassert approved['buildInput'] and approved['expectedProvenance'] and approved['restorationProof']\nbefore=auth();R.mkdir();"
+        },
+        {
+          "before": " for p,h in approved['artifactHashes'].items():",
+          "after": " assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=CW,text=True).strip()==approved['compiledRevision'];assert not subprocess.check_output(['git','status','--porcelain'],cwd=CW).strip()\n for p,h in approved['compiledSourceHashes'].items():assert approved['sourceHashes'][p]==h==sha((CW/p).read_bytes())==sha(subprocess.check_output(['git','show',approved['compiledRevision']+':'+p],cwd=CW))\n for p,h in approved['artifactHashes'].items():"
+        },
+        {
+          "before": "'sourceHashes':approved['sourceHashes'],'artifactHashes':",
+          "after": "'sourceHashes':approved['sourceHashes'],'compiledRevision':approved['compiledRevision'],'compiledSourceHashes':approved['compiledSourceHashes'],'artifactHashes':"
+        },
+        {
+          "before": " for p,h in approved['artifactHashes'].items():assert sha(pathlib.Path(p).read_bytes())==h",
+          "after": " for p,h in approved['artifactHashes'].items():assert sha(pathlib.Path(p).read_bytes())==h\n for field in ['restorationProof','staticAdmission','staticInput']:assert approved[field]in approved['artifactHashes']\n proof=json.loads(pathlib.Path(approved['restorationProof']).read_bytes());assert proof['status']=='DERIVED_RELOCATED_CI_BUILD' and proof['original']['sourceRevision']==approved['compiledRevision'] and proof['original']['sourceHashes']==approved['compiledSourceHashes'] and proof['original']['runtimeRevision']==approved['revision'] and proof['original']['runtimeSourceHashes']==approved['sourceHashes']\n admission=json.loads(pathlib.Path(approved['staticAdmission']).read_bytes());assert admission['status']=='STATIC_PIC_SOURCE_ONLY_NO_ADDON_LOAD' and admission['source']=={'revision':approved['revision'],'hashes':approved['sourceHashes']} and admission['provenance']==approved['expectedProvenance']\n assert json.loads(pathlib.Path(approved['staticInput']).read_bytes())['input']==approved['buildInput']"
+        }
+      ],
+      "inverseExact": true,
+      "originalSha256": "89d75c4fe3552292f2eebb3956bed6411094cc1c3aed16921bc395d405705bec",
+      "derivedSha256": "f1273bfbd0a8c2530fd9c70202181426acccb3d9cfe3661a634a7e7f5b0b95ad"
+    },
+    "parity.py": {
+      "seams": [
+        {
+          "before": "bf026d23f0c51d63a9744dc4facb4d58809c50f1d35747ffc6ea5873b518e45e",
+          "after": "fdca8f8fa92952cd9cd5f4447e66b194a5f691025bcf925f7ddd443290143346"
+        },
+        {
+          "before": "assert a['source']=={'revision':approved['revision'],'hashes':approved['sourceHashes']}",
+          "after": "assert a['source']=={'revision':approved['revision'],'hashes':approved['sourceHashes']};assert a['provenance']==approved['expectedProvenance'];assert a['provenance']['compiled']['revision']==approved['compiledRevision'] and a['provenance']['compiled']['hashes']==approved['compiledSourceHashes'];assert a['provenance']['runtime']==a['source'];assert js['attempts']==100702 and js['q']==100700 and len(js['ports'])==35"
+        },
+        {
+          "before": "assert a['ramSha256']=='ecb57a4b83090fcf232c4bd2f7019cdfde992bdc8ecf708e04bdc1de9272733a';",
+          "after": "assert len(a['ramSha256'])==64 and all(c in '0123456789abcdef'for c in a['ramSha256']);"
+        },
+        {
+          "before": "8bbabd33892728f64bae9b9a558ba106112aef5024196e10aa037e45d0ca7344",
+          "after": "887b7eb9959044f45868a71c29c5c013d65ec0ad3e0205c738719757e63b0ffb"
+        },
+        {
+          "before": "588f9bfd1292b8405d0e42552147fb2d8d082a8253b52771291ca0a603eaf18f",
+          "after": "e5f3f9f0ee95f1828b6dd6b28149d7d1e1dbaa77cb79268918b5c7b469601cfd"
+        },
+        {
+          "before": "assert a['in8Witness']==js['final']['in8Witness'];",
+          "after": "assert a['in8Witness']==js['final']['in8Witness']==[50,18];assert a['picImrWitness']==js['final']['picImrWitness']==[255,255];"
+        },
+        {
+          "before": "'settled','in8Witness','ramSha256'",
+          "after": "'settled','in8Witness','picImrWitness','ramSha256'"
+        },
+        {
+          "before": "assert len(ins)==2",
+          "after": "assert len(ins)==4"
+        },
+        {
+          "before": "assert len(portIns)==2",
+          "after": "assert len(portIns)==4"
+        },
+        {
+          "before": "'IN8_FULL_NATIVE_CAPTURE_PARITY_PASS'if label=='fulltrace-on'else'IN8_JS_REFERENCE_CAPTURE_OFF_PARITY_PASS_NOT_SPEED_GATE'",
+          "after": "'PIC_IMR_FULL_NATIVE_CAPTURE_PARITY_PASS'if label=='fulltrace-on'else'PIC_IMR_JS_REFERENCE_CAPTURE_OFF_PARITY_PASS_NOT_SPEED_GATE'"
+        },
+        {
+          "before": "Fullboard/IN witness checked.",
+          "after": "Fullboard/PIT and PIC IMR witnesses checked. Direct native PIC state immediately before/after each read is not exported and is not claimed here."
+        },
+        {
+          "before": "# PIO occurs within current JS attempt before native postinstruction tick: completedN=attempts-1.",
+          "after": "assert [(e['port'],e['value'],e['attempts'],e['q'])for e in js['ports']if e['dir']=='in']==[(0x40,50,18,17),(0x40,18,20,19),(0x21,255,96,95),(0xa1,255,98,97)]\n# PIO occurs within current JS attempt before native postinstruction tick: completedN=attempts-1."
+        }
+      ],
+      "inverseExact": true,
+      "originalSha256": "25f92a0d3cb2d9ea00b9444b0087fc810812269b46f03ea3845cf7aa9f90c6de",
+      "derivedSha256": "5ec20deb3d68418fc357a20117a4c5583c6009c378a98a6953dbec7af00bb075"
+    }
+  }
+}

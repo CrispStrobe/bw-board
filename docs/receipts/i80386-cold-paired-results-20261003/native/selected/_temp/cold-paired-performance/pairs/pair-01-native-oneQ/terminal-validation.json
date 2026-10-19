@@ -1,0 +1,32 @@
+{
+  "execution": {
+    "cpuSeconds": 10.937375,
+    "cpuMicrosecondsSum": 10937375,
+    "wallSeconds": 10.341681277,
+    "configuredVirtualSeconds": 0.316562,
+    "configuredVirtualRTx": 0.03061030324963089
+  },
+  "wholeChild": {
+    "pid": 11992,
+    "exitCode": 0,
+    "rawWaitStatus": 0,
+    "timedOut": false,
+    "wallSeconds": 14.305772256000012,
+    "terminatedPids": [],
+    "interrupted": null,
+    "rusage": {
+      "ru_utime": 12.653984,
+      "ru_stime": 2.60845,
+      "ru_maxrss": 267548,
+      "ru_minflt": 383250,
+      "ru_majflt": 0,
+      "ru_inblock": 0,
+      "ru_oublock": 3776,
+      "ru_nvcsw": 6680,
+      "ru_nivcsw": 347
+    },
+    "cpuSeconds": 15.262433999999999
+  },
+  "rawReceipt": "/home/runner/work/_temp/cold-paired-performance/pairs/pair-01-native-oneQ/receipt/receipt.json",
+  "rawReceiptSha256": "bc782101c75478f3c2a7889df294f97c9cfb7201aa3e9601a9b8281acc646ff3"
+}

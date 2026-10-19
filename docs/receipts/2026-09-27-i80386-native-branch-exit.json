@@ -1,0 +1,63 @@
+{
+  "schema": "bw.i80386-native-branch-exit.v1",
+  "date": "2026-09-27",
+  "baseRevision": "7f415583dc4b1cd278e1a736916e3dfba8ae7aaa",
+  "workload": "stock xv6 4 MiB forktest with vendored Bochs BIOS",
+  "sourceSha256": {
+    "src/experimental/i80386-block-spike.c": "bfcb0b1b10c3c7014497563d0741d7e70df501c7b414ceb800ecfc94762655bd",
+    "src/experimental/i80386-block-spike.js": "f27479d50103a203d5e9f4171b9b2e6a61222dec938926b4668d6e8e7bf23a36",
+    "src/experimental/i80386-native-byte-block.js": "fb78ccc0ac0f9cf3aeaf6e3be60feaebc62c3c0a086ff4cfa83dd970666e36a8",
+    "wasm/i80386-block-spike.wasm": "c126f716b2f4c842aecc9f0ac8bf82c5098ba3aeadec4697b22eb35c02aa714f"
+  },
+  "matchingFields": [
+    "profile",
+    "lean",
+    "ramSha256",
+    "firmware",
+    "rom",
+    "image",
+    "slaveImage",
+    "steps",
+    "first32",
+    "serial",
+    "inputSent",
+    "interrupts",
+    "postBootInterrupts",
+    "lapicIdReads",
+    "milestones",
+    "userModeEntries",
+    "screen",
+    "lapic",
+    "ioapic",
+    "cpu"
+  ],
+  "steps": 24338279,
+  "ramSha256": "484d88025e63cccef5dd22ec8f6af885cb11639b91e4735e270ba752642797f9",
+  "previousNativeInstructions": 11406107,
+  "nativeStats": {
+    "attempts": 12400434,
+    "decoded": 23296,
+    "blockCalls": 3513613,
+    "instructions": 15451458,
+    "repStosDecoded": 2154,
+    "repStosBlockCalls": 136188,
+    "repStosIterations": 2145309
+  },
+  "additionalNativeInstructions": 4045351,
+  "timingSeconds": {
+    "priorNative": {
+      "user": 20.52
+    },
+    "ordinary": {
+      "user": 27,
+      "elapsed": 57.28
+    },
+    "native": {
+      "user": 18.68,
+      "elapsed": 35.19
+    }
+  },
+  "priorNativeUserCpuRatio": 1.098,
+  "userCpuRatio": 1.445,
+  "scope": "A fresh single A/B pair on a shared host; exact guest equality, bounded branch exit, no real-time/10x claim. Timings are variable."
+}

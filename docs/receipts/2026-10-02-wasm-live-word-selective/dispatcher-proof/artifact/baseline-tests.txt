@@ -1,0 +1,59 @@
+TAP version 13
+# WASM_WORD_DISPATCH_PROOF {"budget":1,"imageSha256":"60fcba1c8ab4b3bfb835acd755d10253acaf817bfb7a9c979928e316f8d2427f","storePc":134217824,"loadPc":134217826,"safeInterval":1024,"phases":5,"loops":1572}
+# WASM_WORD_DISPATCH_PROOF {"budget":7,"imageSha256":"60fcba1c8ab4b3bfb835acd755d10253acaf817bfb7a9c979928e316f8d2427f","storePc":134217824,"loadPc":134217826,"safeInterval":1024,"phases":5,"loops":1572}
+# WASM_WORD_DISPATCH_PROOF {"budget":8,"imageSha256":"60fcba1c8ab4b3bfb835acd755d10253acaf817bfb7a9c979928e316f8d2427f","storePc":134217824,"loadPc":134217826,"safeInterval":1024,"phases":5,"loops":1572}
+# WASM_WORD_DISPATCH_PROOF {"budget":16,"imageSha256":"60fcba1c8ab4b3bfb835acd755d10253acaf817bfb7a9c979928e316f8d2427f","storePc":134217824,"loadPc":134217826,"safeInterval":1024,"phases":5,"loops":1572}
+# WASM_WORD_DISPATCH_PROOF {"budget":31,"imageSha256":"60fcba1c8ab4b3bfb835acd755d10253acaf817bfb7a9c979928e316f8d2427f","storePc":134217824,"loadPc":134217826,"safeInterval":1024,"phases":5,"loops":1572}
+# WASM_WORD_DISPATCH_PROOF {"budget":64,"imageSha256":"60fcba1c8ab4b3bfb835acd755d10253acaf817bfb7a9c979928e316f8d2427f","storePc":134217824,"loadPc":134217826,"safeInterval":1024,"phases":5,"loops":1572}
+# WASM_WORD_DISPATCH_PROOF {"budget":257,"imageSha256":"60fcba1c8ab4b3bfb835acd755d10253acaf817bfb7a9c979928e316f8d2427f","storePc":134217824,"loadPc":134217826,"safeInterval":1024,"phases":5,"loops":1572}
+# Subtest: actual WASM same-PC word RAM/MMIO/RAM, alignment and bounds; budget=1
+ok 1 - actual WASM same-PC word RAM/MMIO/RAM, alignment and bounds; budget=1
+  ---
+  duration_ms: 86.666922
+  type: 'test'
+  ...
+# Subtest: actual WASM same-PC word RAM/MMIO/RAM, alignment and bounds; budget=7
+ok 2 - actual WASM same-PC word RAM/MMIO/RAM, alignment and bounds; budget=7
+  ---
+  duration_ms: 14.675552
+  type: 'test'
+  ...
+# Subtest: actual WASM same-PC word RAM/MMIO/RAM, alignment and bounds; budget=8
+ok 3 - actual WASM same-PC word RAM/MMIO/RAM, alignment and bounds; budget=8
+  ---
+  duration_ms: 25.419508
+  type: 'test'
+  ...
+# Subtest: actual WASM same-PC word RAM/MMIO/RAM, alignment and bounds; budget=16
+ok 4 - actual WASM same-PC word RAM/MMIO/RAM, alignment and bounds; budget=16
+  ---
+  duration_ms: 23.3684
+  type: 'test'
+  ...
+# Subtest: actual WASM same-PC word RAM/MMIO/RAM, alignment and bounds; budget=31
+ok 5 - actual WASM same-PC word RAM/MMIO/RAM, alignment and bounds; budget=31
+  ---
+  duration_ms: 17.829996
+  type: 'test'
+  ...
+# Subtest: actual WASM same-PC word RAM/MMIO/RAM, alignment and bounds; budget=64
+ok 6 - actual WASM same-PC word RAM/MMIO/RAM, alignment and bounds; budget=64
+  ---
+  duration_ms: 4.24337
+  type: 'test'
+  ...
+# Subtest: actual WASM same-PC word RAM/MMIO/RAM, alignment and bounds; budget=257
+ok 7 - actual WASM same-PC word RAM/MMIO/RAM, alignment and bounds; budget=257
+  ---
+  duration_ms: 6.56208
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 375.626583

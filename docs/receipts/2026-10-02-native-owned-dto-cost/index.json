@@ -1,0 +1,383 @@
+{
+  "schema": "bw.owned-dto-cost-receipts.v1",
+  "status": "OBJECT_AND_PACKED_MESSAGE_CODEC_REJECTED_NO_NATIVE_GATE",
+  "artifacts": [
+    {
+      "path": "codec.json",
+      "bytes": 3786,
+      "sha256": "d9d80cc8f8192cf07e7373668092121ab4da139061b4ccdb8b5c0e076a44586f",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/codec.json"
+    },
+    {
+      "path": "codec.stdout",
+      "bytes": 1936,
+      "sha256": "8681059455296d0cf3ef75511bb044a7df87509d572b0fc5dc711aa50e95a969",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/codec.stdout"
+    },
+    {
+      "path": "codec.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/codec.stderr"
+    },
+    {
+      "path": "codec-validated.json",
+      "bytes": 5558,
+      "sha256": "37216af9b27397441b799ebbfa41b9c9b369630c4203f740d0ac0d61cef8462b",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/codec-validated.json"
+    },
+    {
+      "path": "codec-validated.stdout",
+      "bytes": 2963,
+      "sha256": "798f48e00c1941a7a305611ed4626fb571e27a132cfa2b8f1b5c3b7d8bb79849",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/codec-validated.stdout"
+    },
+    {
+      "path": "codec-validated.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/codec-validated.stderr"
+    },
+    {
+      "path": "independent-codec-audit.json",
+      "bytes": 2082,
+      "sha256": "eb46d4c6f28c438e60f69d9f37c4759ae49642318d1341474bed5dab33b2194d",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/independent-codec-audit.json"
+    },
+    {
+      "path": "independent-saved-positives.stdout",
+      "bytes": 120,
+      "sha256": "f58984e42b87f78e6261dd3659f8a1e943781b7c07c81aec8911a29acc492913",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/independent-saved-positives.stdout"
+    },
+    {
+      "path": "rejected-design-audit.json",
+      "bytes": 3184,
+      "sha256": "22543782f9246c006525de1012a9f60174169212401db4fb9b8f2e28f6ada17c",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/rejected-design-audit.json"
+    },
+    {
+      "path": "rejected-codec-current-at-audit.mjs",
+      "bytes": 3131,
+      "sha256": "a77fcbdbed5e35b0c2e974b7e49f643fdbf98b30c42c93c115dfd45e35b4615e",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/rejected-codec-current-at-audit.mjs"
+    },
+    {
+      "path": "rejected-response-current-at-audit.mjs",
+      "bytes": 7923,
+      "sha256": "d4f7fee0ac0b58072f1ecb1c5cb40a1e52a712c04805ac0d755bff2de186705e",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/rejected-response-current-at-audit.mjs"
+    },
+    {
+      "path": "rejected-board-schema-current-at-audit.json",
+      "bytes": 69668,
+      "sha256": "63c19323e0e955a7bbec40d394dba43bedaad10a79a5e2613e4cc38cf5262f93",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/rejected-board-schema-current-at-audit.json"
+    },
+    {
+      "path": "lean-auth-before.json",
+      "bytes": 1223,
+      "sha256": "7a978e3bad1289c4024c2a87eeb5bb97309f4bf0988d379b1314f0d75c4e3073",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/lean-auth-before.json"
+    },
+    {
+      "path": "lean-auth-after.json",
+      "bytes": 1223,
+      "sha256": "7a978e3bad1289c4024c2a87eeb5bb97309f4bf0988d379b1314f0d75c4e3073",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/lean-auth-after.json"
+    },
+    {
+      "path": "lean-execution-receipt.json",
+      "bytes": 2989,
+      "sha256": "cb670deded8cdb8519e0d463e705cd9b82f0b52b468f225bf994c5e1d706f682",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/lean-execution-receipt.json"
+    },
+    {
+      "path": "lean-codec.json",
+      "bytes": 5645,
+      "sha256": "914bf475b54c6441350b1cf04034140b558be4319558c35681cbc55abd15e141",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/lean-codec.json"
+    },
+    {
+      "path": "lean-codec.stdout",
+      "bytes": 2985,
+      "sha256": "11c0d399e09614c0991af91834df6906cd880c66581c57e9ceb49d5ec12ca2be",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/lean-codec.stdout"
+    },
+    {
+      "path": "lean-codec.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/lean-codec.stderr"
+    },
+    {
+      "path": "lean-focused.stdout",
+      "bytes": 6113,
+      "sha256": "552645aa97eff0145cfe927b792034f7bc961ae9f84191265cca8f2c1bcbe5ec",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/lean-focused.stdout"
+    },
+    {
+      "path": "lean-focused.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/lean-focused.stderr"
+    },
+    {
+      "path": "run-lean-source-diagnostic.py",
+      "bytes": 2669,
+      "sha256": "ac630035f96d3fb127ee2e3d5a0b4c9794624d2867148e28b19ba42209a87b46",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/run-lean-source-diagnostic.py"
+    },
+    {
+      "path": "independent-lean-audit.json",
+      "bytes": 2109,
+      "sha256": "b3cdcef8e092200ba6e92f6bd54e9e5de44d3d4a4b3208d5b08e884ab6d28795",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/independent-lean-audit.json"
+    },
+    {
+      "path": "message-auth-before.json",
+      "bytes": 864,
+      "sha256": "7a89cc719e28d418d0100a6f7042821abfd25d24a01d01f871ad91e8ccd3f354",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/message-auth-before.json"
+    },
+    {
+      "path": "message-auth-after.json",
+      "bytes": 864,
+      "sha256": "7a89cc719e28d418d0100a6f7042821abfd25d24a01d01f871ad91e8ccd3f354",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/message-auth-after.json"
+    },
+    {
+      "path": "message-execution-receipt.json",
+      "bytes": 1743,
+      "sha256": "603713420a02fed31d1be33c23f0f907e419ad340a6b8fd4f4be746d687234ad",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/message-execution-receipt.json"
+    },
+    {
+      "path": "message-codec.json",
+      "bytes": 2045,
+      "sha256": "10194c46573e731dc503d516a4a5e4682fe9f7cb750555612cbb8203a46d3904",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/message-codec.json"
+    },
+    {
+      "path": "message-codec.stdout",
+      "bytes": 732,
+      "sha256": "6355ac57b18b3034b9915dd286362142cf6f04a92dac3250bb157ddced9246c5",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/message-codec.stdout"
+    },
+    {
+      "path": "message-codec.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/message-codec.stderr"
+    },
+    {
+      "path": "run-message-source-diagnostic.py",
+      "bytes": 2034,
+      "sha256": "3ad417ed303400050a5623c38beea2c3c425be00f4b494b3f92a86d60cc68746",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/run-message-source-diagnostic.py"
+    },
+    {
+      "path": "independent-message-audit.json",
+      "bytes": 1545,
+      "sha256": "a912dc890364d92e00929dd38466211fa843209fffc48ab0ef3efd82d7e8f657",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/independent-message-audit.json"
+    },
+    {
+      "path": "source/scripts/compare-i80386-owned-dto-codecs.mjs",
+      "bytes": 3268,
+      "sha256": "d57c887980f9add9dcc03a7b1a1b6dc444d2adad848e9ba9f28665759b1f41fb",
+      "sourcePath": "/tmp/bw-board-386-native-owned-dto-20261002/scripts/compare-i80386-owned-dto-codecs.mjs"
+    },
+    {
+      "path": "source/scripts/bochs-cpu3-native-owned-dto/response.mjs",
+      "bytes": 7923,
+      "sha256": "d4f7fee0ac0b58072f1ecb1c5cb40a1e52a712c04805ac0d755bff2de186705e",
+      "sourcePath": "/tmp/bw-board-386-native-owned-dto-20261002/scripts/bochs-cpu3-native-owned-dto/response.mjs"
+    },
+    {
+      "path": "source/scripts/bochs-cpu3-native-owned-dto/ipc-response.mjs",
+      "bytes": 7691,
+      "sha256": "6e119774c7b65e5cc5884ae1a4c0f1e636a1ad3737e7c5e8148879dc5fc74712",
+      "sourcePath": "/tmp/bw-board-386-native-owned-dto-20261002/scripts/bochs-cpu3-native-owned-dto/ipc-response.mjs"
+    },
+    {
+      "path": "source/scripts/bochs-cpu3-native-owned-dto/board-schema.json",
+      "bytes": 69668,
+      "sha256": "63c19323e0e955a7bbec40d394dba43bedaad10a79a5e2613e4cc38cf5262f93",
+      "sourcePath": "/tmp/bw-board-386-native-owned-dto-20261002/scripts/bochs-cpu3-native-owned-dto/board-schema.json"
+    },
+    {
+      "path": "source/test/i80386-owned-dto-response.test.mjs",
+      "bytes": 4499,
+      "sha256": "b81019edd74395cabce6720cc66921c6a01091a507c0d9227de247a923e31285",
+      "sourcePath": "/tmp/bw-board-386-native-owned-dto-20261002/test/i80386-owned-dto-response.test.mjs"
+    },
+    {
+      "path": "source/test/i80386-owned-dto-message-channel.test.mjs",
+      "bytes": 4187,
+      "sha256": "3b26f83afe535dc9b8ba440b1e49960beb0d466103a0227833ad611e832ece2e",
+      "sourcePath": "/tmp/bw-board-386-native-owned-dto-20261002/test/i80386-owned-dto-message-channel.test.mjs"
+    },
+    {
+      "path": "source/test/fixtures/i80386-owned-dto-snapshots.json",
+      "bytes": 203560,
+      "sha256": "ed4d5e592db186edf90464a0250cde308f083e12ad701e528a7030a8eb46731d",
+      "sourcePath": "/tmp/bw-board-386-native-owned-dto-20261002/test/fixtures/i80386-owned-dto-snapshots.json"
+    },
+    {
+      "path": "source/scripts/compare-i80386-owned-dto-message-codecs.mjs",
+      "bytes": 3942,
+      "sha256": "022ef2ff5d76b5fe5fb4aa9666445c1114c75bf70c83f6058a413b8dce8edbf4",
+      "sourcePath": "/tmp/bw-board-386-native-owned-dto-20261002/scripts/compare-i80386-owned-dto-message-codecs.mjs"
+    },
+    {
+      "path": "independent-packed-r3-audit.json",
+      "bytes": 1098,
+      "sha256": "3f2eb84ccb29ff28cfb9f7c197bfc4502a2cbad3ebfaaae2682286f43c2e294d",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/independent-packed-r3-audit.json"
+    },
+    {
+      "path": "packed-auth-before.json",
+      "bytes": 1221,
+      "sha256": "dc9bdfa7786883bd3f0a9725dfb42ffb5065a069218ff38f1079c668472f5df4",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-auth-before.json"
+    },
+    {
+      "path": "packed-codec.stderr",
+      "bytes": 6623,
+      "sha256": "1c73696725ece0a9d5cc45226295ef31928e138908902c54388f8ce127d724fd",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-codec.stderr"
+    },
+    {
+      "path": "packed-codec.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-codec.stdout"
+    },
+    {
+      "path": "packed-experiment-disposition.json",
+      "bytes": 1478,
+      "sha256": "36c888c9ac55558899f7af28dbc4360f82bd0599cd01b759c3463868cd0f8c28",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-experiment-disposition.json"
+    },
+    {
+      "path": "packed-failed-receipt.json",
+      "bytes": 279,
+      "sha256": "8bcd0d3fc88ffc7d952cac0c1342aa8b1f871613f30d2fd47871b143fba5d1c8",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-failed-receipt.json"
+    },
+    {
+      "path": "packed-r2-auth-after.json",
+      "bytes": 1221,
+      "sha256": "102221581b06f893af1cfb3a01de6affe939c7492a58a70da6ff27b8d0e76a23",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-r2-auth-after.json"
+    },
+    {
+      "path": "packed-r2-auth-before.json",
+      "bytes": 1221,
+      "sha256": "102221581b06f893af1cfb3a01de6affe939c7492a58a70da6ff27b8d0e76a23",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-r2-auth-before.json"
+    },
+    {
+      "path": "packed-r2-codec.json",
+      "bytes": 2715,
+      "sha256": "b0a5f148bcd6c6eccbfa24282aa2348e3454dbb8d1afb0d823dad36ffcd95d94",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-r2-codec.json"
+    },
+    {
+      "path": "packed-r2-codec.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-r2-codec.stderr"
+    },
+    {
+      "path": "packed-r2-codec.stdout",
+      "bytes": 1105,
+      "sha256": "80846c1df797be0adc22d4d0fa549014036401dc2f5b689e8a793f759daa0748",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-r2-codec.stdout"
+    },
+    {
+      "path": "packed-r2-execution-receipt.json",
+      "bytes": 2112,
+      "sha256": "ed952e3ae73fe0810dbcad1aeedc2f0249c0b883f1ec473a5d072400595fa52c",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-r2-execution-receipt.json"
+    },
+    {
+      "path": "packed-r3-auth-after.json",
+      "bytes": 1221,
+      "sha256": "13e95ce43fd50f8e1d042de2afe9b3383c61507cbddbe2761a23ca0c9b391a3f",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-r3-auth-after.json"
+    },
+    {
+      "path": "packed-r3-auth-before.json",
+      "bytes": 1221,
+      "sha256": "13e95ce43fd50f8e1d042de2afe9b3383c61507cbddbe2761a23ca0c9b391a3f",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-r3-auth-before.json"
+    },
+    {
+      "path": "packed-r3-codec.json",
+      "bytes": 2717,
+      "sha256": "4f391f4319156f4594dceafe6be745f251fc602bee9d5fe7e160d58594efc94a",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-r3-codec.json"
+    },
+    {
+      "path": "packed-r3-codec.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-r3-codec.stderr"
+    },
+    {
+      "path": "packed-r3-codec.stdout",
+      "bytes": 1107,
+      "sha256": "f3e96250579840b82e8543ec7e865616a2a9434fe4c5ef3f1a2edd0c9395fed4",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-r3-codec.stdout"
+    },
+    {
+      "path": "packed-r3-execution-receipt.json",
+      "bytes": 2112,
+      "sha256": "28f24f0e90027edaacc3339adc8e24141572b122913efdcec90e596878efe707",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/packed-r3-execution-receipt.json"
+    },
+    {
+      "path": "run-packed-r2-source-diagnostic.py",
+      "bytes": 2193,
+      "sha256": "6e06352a9f3c70dec05bed2f53a58b503a28c365741ff6d0f68590554fc6da6d",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/run-packed-r2-source-diagnostic.py"
+    },
+    {
+      "path": "run-packed-r3-source-diagnostic.py",
+      "bytes": 2193,
+      "sha256": "781b44951c8c9e133c4ff65fcaa62aaa44896117807b55fb17cfe01db9d91e37",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/run-packed-r3-source-diagnostic.py"
+    },
+    {
+      "path": "run-packed-source-diagnostic.py",
+      "bytes": 2166,
+      "sha256": "3ef7d62f638a71e48b447d25ae660976a81035f23412cb0d0d0bc8a368707fb6",
+      "sourcePath": "/mnt/volume1/tmp-astra/native-owned-dto-source-20261002/run-packed-source-diagnostic.py"
+    },
+    {
+      "path": "source/scripts/bochs-cpu3-native-owned-packed/codec.mjs",
+      "bytes": 4052,
+      "sha256": "27d2cef0b2a58e3e9a6b46026dbe14cc917caef5977e5d07300989e08cb72457",
+      "sourcePath": "/tmp/bw-board-386-native-owned-dto-20261002/scripts/bochs-cpu3-native-owned-packed/codec.mjs"
+    },
+    {
+      "path": "source/test/i80386-owned-packed.test.mjs",
+      "bytes": 2568,
+      "sha256": "38922232cae6bce4e98ed994bbef6363c34dd823e3163cf0a3a07690f16d1bf0",
+      "sourcePath": "/tmp/bw-board-386-native-owned-dto-20261002/test/i80386-owned-packed.test.mjs"
+    },
+    {
+      "path": "source/scripts/compare-i80386-owned-packed-message-codecs.mjs",
+      "bytes": 4249,
+      "sha256": "49a0098780f06ff71fe69a88c6e120809f55e6391593ca23710019fae955d402",
+      "sourcePath": "/tmp/bw-board-386-native-owned-dto-20261002/scripts/compare-i80386-owned-packed-message-codecs.mjs"
+    }
+  ],
+  "input": {
+    "path": "../2026-10-02-native-owned-clock/cpu/8-ABI3/capture.json",
+    "sha256": "246193ed7da4c872df55ddf7593b189f3966f55c45a8e06ef40382efc1b840fe"
+  },
+  "provenanceLimit": "Original comparison did not record execution-time helper pins or an exit receipt. Input SHA and actual stdout match results; current reviewed source hashes in independent audit are post-hoc, not proof of exact executed bytes."
+}

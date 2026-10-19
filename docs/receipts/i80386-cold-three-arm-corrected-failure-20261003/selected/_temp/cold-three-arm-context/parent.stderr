@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-three-arm-qualification/qualify.py", line 119, in <module>
+    require(len(sys.argv)==2,'one explicit manual mode');main(sys.argv[1])
+                                                         ^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-three-arm-qualification/qualify.py", line 96, in main
+    require(lifecycle['exitCode']==0 and not lifecycle['timedOut'] and not lifecycle['interrupted'],'first worker failure stops remaining arms; no retry');require(after==before and fingerprint(inp)==input_pin,'exact immutable post-child source/artifact/input')
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-three-arm-qualification/policy.py", line 16, in require
+    if not condition:raise ValueError(message)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: first worker failure stops remaining arms; no retry

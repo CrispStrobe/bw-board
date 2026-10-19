@@ -1,0 +1,92 @@
+{
+  "benchmark": "wired-POST-first-10000-clocks",
+  "baselineSHA": "068fe702cede16fd339f5824082fe8f91b70e4be",
+  "node": "v20.20.2",
+  "sourceHashes": {
+    "src/experimental/digital-circuit.js": {
+      "previous": "ebf7e278921601737fe993e43f9f1a8db3ea7a6800b8684f7fa4d2e0ee19d3f0",
+      "current": "25706053494e30bab3ec65be15008c961bcbe61d5080b386afede66d5fda91d8"
+    },
+    "src/experimental/latched-memory-components.js": {
+      "previous": "24f0bb87cfaec18151de1816f2a345220e943464f2f0cffd180aaa74164a3ae2",
+      "current": "ddfa98e558695044e5c5c437e58c9d89241a75f628c1e5c0f5969cbb0d1838ec"
+    },
+    "src/experimental/harris-80c286-bus.js": {
+      "previous": "d7b3d07c950743bfb74a26a82a017db39429cb571902b2975dac82ea0ed53270",
+      "current": "76a54ed942aade252bae930aa53a33827e6ea7c2296b0a93a491d3c977a1c5ff"
+    },
+    "src/experimental/harris-dma-adapter.js": {
+      "previous": "7ad3aab6fc85698ee82fcaf925bfedf4e5fc53252947e1750bb7b381604d400d",
+      "current": "a43239174f83ed665edb21cb388b45ba98a846d5f2f54b1564ddbbcfe55cb02c"
+    },
+    "src/experimental/harris-fdc-adapter.js": {
+      "previous": "a4072d59771fe0efe6f3ff516631bf8405f449263b34eebd96408b84bed4f701",
+      "current": "a850e48da0e479c7e484cbb78ba1ea953d41ae4606abfb8e74405dff4913251c"
+    },
+    "src/experimental/harris-keyboard-adapter.js": {
+      "previous": "d5583daf1cd143f1a525dc0feccf0780922e9ec604aa4491f6319f6d7dcf93ab",
+      "current": "d389d04d94519291043bb37ca9e73613f97b21dd2aed82df8752660ddfb886c2"
+    },
+    "src/experimental/harris-8259-adapter.js": {
+      "previous": "43ebef88cd6843c874c79eb9b4b4d8d573ee3f97790429ce904156ac4cdca934",
+      "current": "702bc90387e706ffeb886c6acf1c0c1aa32943556564ea6b092adcb2c59dccb8"
+    },
+    "src/experimental/harris-8254-adapter.js": {
+      "previous": "60b19b100e0e2fc6f4d1612af4212b1c40760cff1efe18037bfbbdba73697878",
+      "current": "00670920fdf1c161e42403b1757f54fae7bf6b2507547a24db2956340618611a"
+    }
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "previous": {
+        "elapsedMS": 17747,
+        "stateSHA256": "d75a6b4107ebf8a7faff745c6b23986a1f3a4eaf8a064d0cac7c0564311a5748"
+      },
+      "current": {
+        "elapsedMS": 7453,
+        "stateSHA256": "d75a6b4107ebf8a7faff745c6b23986a1f3a4eaf8a064d0cac7c0564311a5748"
+      }
+    },
+    {
+      "round": 1,
+      "current": {
+        "elapsedMS": 8069,
+        "stateSHA256": "d75a6b4107ebf8a7faff745c6b23986a1f3a4eaf8a064d0cac7c0564311a5748"
+      },
+      "previous": {
+        "elapsedMS": 12241,
+        "stateSHA256": "d75a6b4107ebf8a7faff745c6b23986a1f3a4eaf8a064d0cac7c0564311a5748"
+      }
+    },
+    {
+      "round": 2,
+      "previous": {
+        "elapsedMS": 13185,
+        "stateSHA256": "d75a6b4107ebf8a7faff745c6b23986a1f3a4eaf8a064d0cac7c0564311a5748"
+      },
+      "current": {
+        "elapsedMS": 7555,
+        "stateSHA256": "d75a6b4107ebf8a7faff745c6b23986a1f3a4eaf8a064d0cac7c0564311a5748"
+      }
+    },
+    {
+      "round": 3,
+      "current": {
+        "elapsedMS": 6980,
+        "stateSHA256": "d75a6b4107ebf8a7faff745c6b23986a1f3a4eaf8a064d0cac7c0564311a5748"
+      },
+      "previous": {
+        "elapsedMS": 10930,
+        "stateSHA256": "d75a6b4107ebf8a7faff745c6b23986a1f3a4eaf8a064d0cac7c0564311a5748"
+      }
+    }
+  ],
+  "fullBoot": false,
+  "environmentNote": "Shared host; original long wired boot and unrelated CPU-heavy jobs ran concurrently. No targeted test suite overlapped these four pairs. Startup only; no full-boot speed claim.",
+  "summary": {
+    "previousMedianMS": 12713,
+    "currentMedianMS": 7504,
+    "medianThroughputRatio": 1.6941631130063965
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "status": "PASS",
+  "head": "c7efff26f6d0ace3a29e2f9bcda7bc0f96d40129",
+  "zipSha256": "4ef2d5790ef19bb9122088532b4f44f15f95707ceb235441a9300792b476d0f6",
+  "scope": "Genuine ZIP all68 members/DSO, all40 crossmode CPU+boards, raw RAM/witness, exits and immutable source/preparation; supplements peer architecture/PIO/trace audit."
+}

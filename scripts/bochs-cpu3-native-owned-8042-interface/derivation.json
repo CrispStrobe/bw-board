@@ -1,0 +1,61 @@
+{
+  "baseSha256": "2ba01a1310e892ea2dd079aa9c9e66ffd62a37ddeaaff2c60a7d3aa4f5be3dc2",
+  "derivedSha256": "6c5387e4634d8503b9daa2aab203d2aa304ca11f9fa8c8f3953cad578edd6ca0",
+  "edits": [
+    {
+      "old": "export class Source8042Board extends HotDirectBoardFacade {\n",
+      "next": "export class Source8042InterfaceBoard extends HotDirectBoardFacade {\n",
+      "label": "interface provider 0"
+    },
+    {
+      "old": "  this.selfTestPhase='idle';this.statusReads=0;this.dataReads=0;\n",
+      "next": "  this.selfTestPhase='idle';this.statusReads=0;this.phaseStatusReads=0;this.dataReads=0;\n",
+      "label": "interface provider 1"
+    },
+    {
+      "old": " inspect(){return {...super.inspect(),selfTest:{phase:this.selfTestPhase,statusReads:this.statusReads,dataReads:this.dataReads}};}\n",
+      "next": " inspect(){return {...super.inspect(),selfTest:{phase:this.selfTestPhase,statusReads:this.statusReads,dataReads:this.dataReads,phaseStatusReads:this.phaseStatusReads}};}\n",
+      "label": "interface provider 2"
+    },
+    {
+      "old": "  assert.ok(c.outputQueue.length<=1&&c.outputQueue.every(e=>e.value===0x55&&e.keyboard===false&&!e.aux),'8042 keyboard/aux/foreign queue before device consumption');\n  assert.ok(c.delayedResponse===null||this.selfTestPhase==='waiting'&&c.delayedResponse.value===0x55,'8042 foreign delayed response');\n",
+      "next": "  assert.ok(c.outputQueue.length<=1&&c.outputQueue.every(e=>e.value===(this.selfTestPhase==='interface-waiting'?0x00:0x55)&&e.keyboard===false&&!e.aux),'8042 keyboard/aux/foreign queue before device consumption');\n  assert.ok(c.delayedResponse===null||(this.selfTestPhase==='waiting'&&c.delayedResponse.value===0x55||this.selfTestPhase==='interface-waiting'&&c.delayedResponse.value===0x00),'8042 foreign delayed response');\n",
+      "label": "interface provider 3"
+    },
+    {
+      "old": "  if(port!==0x64||value!==0xaa)return super.outPort(port,width,value); // Exact original D1/OUT60 1-or3 path.\n",
+      "next": "  if(port!==0x64||(value!==0xaa&&value!==0xab))return super.outPort(port,width,value); // Exact original D1/OUT60 1-or3 path.\n",
+      "label": "interface provider 4"
+    },
+    {
+      "old": "   assert.ok(Number.isInteger(port)&&width===1&&value===0xaa,'8042 AA byte admission');\n",
+      "next": "   assert.ok(Number.isInteger(port)&&width===1&&(value===0xaa||value===0xab),'8042 AA/AB byte admission');\n",
+      "label": "interface provider 5"
+    },
+    {
+      "old": "   const c=this._controllerSafe();assert.ok(this.selfTestPhase==='idle'&&!c.delayedResponse&&c.outputQueue.length===0&&c.inputBusyCyclesRemaining===0,'one AA from an empty idle controller');\n   const epoch=this.mappingEpoch,a20=Number(this.machine._a20Enabled);this.machine._out386(port,value,8);this.selfTestPhase='waiting';\n",
+      "next": "   const c=this._controllerSafe();assert.ok(this.selfTestPhase===(value===0xaa?'idle':'consumed')&&!c.delayedResponse&&c.outputQueue.length===0&&c.inputBusyCyclesRemaining===0,'ordered AA then AB from empty nonbusy controller');\n   const epoch=this.mappingEpoch,a20=Number(this.machine._a20Enabled);this.machine._out386(port,value,8);this.selfTestPhase=value===0xaa?'waiting':'interface-waiting';this.phaseStatusReads=0;\n",
+      "label": "interface provider 6"
+    },
+    {
+      "old": "   this.machine._catchUpChips();const c=this._controllerSafe();assert.ok(this.selfTestPhase!=='idle','8042 read requires owned AA');\n   if(port===0x64)assert.ok(this.statusReads<selfTestProfile.maxStatusReads,'bounded status polling');\n   else {assert.ok(this.dataReads<selfTestProfile.maxDataReads,'bounded self-test data reads');assert.ok(this.dataReads===0?this.selfTestPhase==='waiting'&&c.delayedResponse===null&&c.outputQueue.length===1:this.selfTestPhase==='consumed'&&c.outputQueue.length===0&&c.delayedResponse===null,'8042 ready55 then emptyFF only');}\n",
+      "next": "   this.machine._catchUpChips();const c=this._controllerSafe();assert.ok((this.selfTestPhase==='waiting'||this.selfTestPhase==='interface-waiting'),'8042 read requires owned response phase');\n   if(port===0x64)assert.ok(this.phaseStatusReads<selfTestProfile.maxStatusReads,'bounded status polling');\n   else {assert.ok(this.dataReads<selfTestProfile.maxDataReads,'bounded self-test data reads');assert.ok(this.selfTestPhase===(this.dataReads===0?'waiting':'interface-waiting')&&c.delayedResponse===null&&c.outputQueue.length===1,'8042 ready55 then ready00 only');}\n",
+      "label": "interface provider 7"
+    },
+    {
+      "old": "  if(port===0x64)this.statusReads++;\n  if(port===0x60){assert.equal(value,this.dataReads===0?0x55:0xff);this.dataReads++;this.selfTestPhase=this.dataReads===1?'consumed':'complete';}\n",
+      "next": "  if(port===0x64){this.statusReads++;this.phaseStatusReads++;}\n  if(port===0x60){assert.equal(value,this.dataReads===0?0x55:0x00);this.dataReads++;this.selfTestPhase=this.dataReads===1?'consumed':'complete';}\n",
+      "label": "interface provider 8"
+    },
+    {
+      "old": "export function createOwned8042Provider(...args){\n",
+      "next": "export function createOwned8042InterfaceProvider(...args){\n",
+      "label": "interface provider 9"
+    },
+    {
+      "old": " const board=new Source8042Board();\n",
+      "next": " const board=new Source8042InterfaceBoard();\n",
+      "label": "interface provider 10"
+    }
+  ]
+}

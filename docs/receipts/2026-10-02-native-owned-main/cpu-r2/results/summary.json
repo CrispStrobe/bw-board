@@ -1,0 +1,860 @@
+{
+  "status": "ACTUAL_ABI3_MAIN_PROCESS_CPU_GATE_PASS",
+  "planSha256": "7347637c20402f4c1c7891b1c5a99880093b792d0ca32d60faf654932f8bb3a6",
+  "records": [
+    {
+      "pair": 0,
+      "arm": "H4",
+      "warmup": true,
+      "executionCpuTotalUs": 454376,
+      "executionNs": 554029433,
+      "captureSha256": "21883f61c6dd74c1b35b51101e8dcef98b2bb37eeff9f248e8c466145850a300",
+      "inputSha256": "8705c3d7748027d82673a19fbae9eee4e814f34833642de90b810785be787a39",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-hot-h3-vs-h4-cpu-benchmark-20261001/H4-cpu-child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/0-H4.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 6.092154819518328,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 416,
+            "sha256": "11180160178e375229a03ffbd3fb08eb27c2a3e9004b0b312340657445594f4f"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 0,
+      "arm": "MAIN",
+      "warmup": true,
+      "executionCpuTotalUs": 330463,
+      "executionNs": 469682544,
+      "captureSha256": "59e7a1d7f0e53bec6d5c0be63e7e740064f82be5bcbea0a658fd551e207af508",
+      "inputSha256": "90aaac4fb53f34f03bc2825dcfb4d5d4829777a1bb2013ccc801ffc65c2b814a",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/0-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 9.686701707541943,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 420,
+            "sha256": "0e1f47375fd105fa83947f5a1b912446777c87a561aed8af9d929a1440b6ccfd"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 1,
+      "arm": "MAIN",
+      "warmup": true,
+      "executionCpuTotalUs": 342214,
+      "executionNs": 1066683316,
+      "captureSha256": "2adefcd2428a35504a0ef45ac5aab8b79332ea0a243e0bc9bc98ff9c55684a0e",
+      "inputSha256": "70df26dee473b0955d693e4671d6f335bfacfa74695179b95db9dc5f839f11be",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/1-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 12.1324989721179,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 420,
+            "sha256": "cd19ec2eb77853112966354889e8b6ab7e798fb33565b4136b1206969a4787c9"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 1,
+      "arm": "H4",
+      "warmup": true,
+      "executionCpuTotalUs": 453059,
+      "executionNs": 641999023,
+      "captureSha256": "8610f530d07fcea953d999e0cefb9f194d016a8032bc4d8d7d96d6c05f35cca8",
+      "inputSha256": "e699f73f446a7a905a7c89997483beb4476db3f1d40d222eebbbe7bc42212752",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-hot-h3-vs-h4-cpu-benchmark-20261001/H4-cpu-child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/1-H4.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 5.119589067995548,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 416,
+            "sha256": "cd77df7539afd65ba7952688e86b6e9f732c5a7d3e619494e0eca04f6b7014ca"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 2,
+      "arm": "H4",
+      "warmup": false,
+      "executionCpuTotalUs": 532129,
+      "executionNs": 1563851751,
+      "captureSha256": "efbeef6882cfbe344821245b073f39b7f450f0bb202bb387b8a45439a34f8366",
+      "inputSha256": "13a1fefd9e6c1b5957ccded3b74c6c159569a5589230f74c0cd22849409c7c07",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-hot-h3-vs-h4-cpu-benchmark-20261001/H4-cpu-child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/2-H4.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 9.68661255761981,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 416,
+            "sha256": "9210c0f5bc18d0422e8ab6cbb83ae57b5eccaaa3859f191e829e56e29895f460"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 2,
+      "arm": "MAIN",
+      "warmup": false,
+      "executionCpuTotalUs": 349951,
+      "executionNs": 1408464861,
+      "captureSha256": "10e0d787171f38f6af9b982cc4267c79c2fd4c1073d8cf1904bb25b0ecdb22fc",
+      "inputSha256": "34b91a0583665b940062a121bf61ec8387f76f7048c258d353d57060bb10435b",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/2-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 22.027239266783,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 420,
+            "sha256": "143f3890d3ddcd9402dacd3081788dbb208df9d16c0ada922d2ec71a006fbbb7"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 3,
+      "arm": "MAIN",
+      "warmup": false,
+      "executionCpuTotalUs": 388638,
+      "executionNs": 1138486731,
+      "captureSha256": "9ac45d885b7d0a94251782296182c9a4f29755d0a3e80674577c48ec97f269eb",
+      "inputSha256": "9b5de9a97af39757ce6ff40fe5fd8b0733a868cc59f9bf433859d12823e35734",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/3-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 22.07803756929934,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 420,
+            "sha256": "db8e6a159fb43dbe73c2c1b5d3f95de3daf2a7b1cba8ab6b3023e6448619af2a"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 3,
+      "arm": "H4",
+      "warmup": false,
+      "executionCpuTotalUs": 483586,
+      "executionNs": 3656808536,
+      "captureSha256": "abe7fa78fce02d1ab263385f7b1ce0d47e7d392b9a7e3e1cc7a29ec8a8b962c9",
+      "inputSha256": "aa90c08e8f5724c175a3cfea1be8f6decd7610df32190c7ee532ba947721ea5b",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-hot-h3-vs-h4-cpu-benchmark-20261001/H4-cpu-child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/3-H4.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 12.616941712796688,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 416,
+            "sha256": "32c6af37709e7d23f62ab247408b71cb9fc9715d681902e4b12dec3880a0a24a"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 4,
+      "arm": "H4",
+      "warmup": false,
+      "executionCpuTotalUs": 509866,
+      "executionNs": 1853197464,
+      "captureSha256": "7a2826d8925670135a0408b2e6c3358b0a67326c03d9b9858c2cd4efe7fe8e41",
+      "inputSha256": "d276d802aece66ca2fc7a19aa4fa3102f9b2e141f0e00b2cee0687644245e3fe",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-hot-h3-vs-h4-cpu-benchmark-20261001/H4-cpu-child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/4-H4.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 16.53911593556404,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 416,
+            "sha256": "dec17561dc76f058026995cf4c018688621bea375b570a0ed70387a681550b7e"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 4,
+      "arm": "MAIN",
+      "warmup": false,
+      "executionCpuTotalUs": 368613,
+      "executionNs": 1742994472,
+      "captureSha256": "ac05b27dbb240f68e4798b3114269dbe496ad4b72b2261f5c477041d9118541e",
+      "inputSha256": "8c96c0af23ad0954a294c8b533857d0c52307adfe3230a146c641b8b3d69e319",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/4-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 25.782271821051836,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 420,
+            "sha256": "271a64df22addbfea75a0d73743048378c473d4f8eb737f4419e5906f5338c29"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 5,
+      "arm": "MAIN",
+      "warmup": false,
+      "executionCpuTotalUs": 337547,
+      "executionNs": 1342552273,
+      "captureSha256": "073601a11e0d1706964b3b22fd25eecf10ee8ff1b1e77d3d344549a20fc831d2",
+      "inputSha256": "0fb4e25eea495d504123e0d855feab2d64c70daf2e02eb29eb1d5e210360de80",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/5-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 27.335371628403664,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 420,
+            "sha256": "83ec99e62f9da14a157e79ca9cb4a6fbc965ca6e5d998dbe5e6a008acf6f8713"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 5,
+      "arm": "H4",
+      "warmup": false,
+      "executionCpuTotalUs": 472077,
+      "executionNs": 3369504562,
+      "captureSha256": "74b97e5857956c2d1349fdc26087b4db03de68f62901e72dffe3b392eda7077e",
+      "inputSha256": "b9d48b8788a240d1916cca1f6d95022eec11d03a9e62388fbf9ed8e71952334c",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-hot-h3-vs-h4-cpu-benchmark-20261001/H4-cpu-child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/5-H4.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 27.375406311824918,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 416,
+            "sha256": "b1111a73cd04b1df4124d5be14be6633deea32ba0b58ced69f71e29bc3add48d"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 6,
+      "arm": "H4",
+      "warmup": false,
+      "executionCpuTotalUs": 518104,
+      "executionNs": 1919340959,
+      "captureSha256": "79f1cdf504c9c93a84ae468d100a095d97044b54cf932d33fe9c2633493ce422",
+      "inputSha256": "d87f8d622459d2d8277f4994922b2bb92f56ed5fb2191153369289d10f71df1a",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-hot-h3-vs-h4-cpu-benchmark-20261001/H4-cpu-child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/6-H4.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 17.496969195082784,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 416,
+            "sha256": "73844665d0d103a579dc09991a1d37063aaf9d7260f4c70bdb14df988007ffcc"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 6,
+      "arm": "MAIN",
+      "warmup": false,
+      "executionCpuTotalUs": 368425,
+      "executionNs": 1425974768,
+      "captureSha256": "9d3a991dc01cba6894c45c781ec28c656c3acdc87b9689d59a9380c18969a233",
+      "inputSha256": "8dac395803d726ea4340c7f9e252635a54899ed64ecc29d5137662e372451f4a",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/6-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 46.894568582996726,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 420,
+            "sha256": "ea4b646dca214fd45e2e20e58abbfc071774be6ff7c0aa5ec5779cf92ff84dcd"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 7,
+      "arm": "MAIN",
+      "warmup": false,
+      "executionCpuTotalUs": 408741,
+      "executionNs": 4211196636,
+      "captureSha256": "1d203988c32c989a7d8e5709b76265421b88aaf9230485f0d4fdeec91aa416a4",
+      "inputSha256": "fda09d4570e0c855bae9e365117b20fd4fa55e744da9f20c1faf09ad557dd2a2",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/7-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 41.31870015151799,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 420,
+            "sha256": "9520ed7e9b29f84ec2421e31550f382c69075da3a0af45d967f30702729e44ab"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 7,
+      "arm": "H4",
+      "warmup": false,
+      "executionCpuTotalUs": 485925,
+      "executionNs": 2744294517,
+      "captureSha256": "2058b65145ca56eef6c07e25eb87ed1bef13fee9c400b9efde6a64f9d8f038a2",
+      "inputSha256": "ceefd0e7832b24632791927f01c4573cc23daba147de00c350ce60577f07c443",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-hot-h3-vs-h4-cpu-benchmark-20261001/H4-cpu-child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/7-H4.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 19.810959776863456,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 416,
+            "sha256": "eb439db274c22fd455d83f5cc545fbca1f33d8b5d236a51b24ca1c462f1d8517"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 8,
+      "arm": "H4",
+      "warmup": false,
+      "executionCpuTotalUs": 519884,
+      "executionNs": 2544140847,
+      "captureSha256": "eb6a2bc58edc48d58b1261eeba3a31521ab090a6d021ade69d269ef7a566100f",
+      "inputSha256": "e43406e798ad6685728836454d1961f1deaf08d15ff3e8bce8d39706d3ace798",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/mnt/volume1/tmp-astra/native-hot-h3-vs-h4-cpu-benchmark-20261001/H4-cpu-child.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/8-H4.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 13.62431674823165,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 416,
+            "sha256": "21492916e53ddade02337b93baec32f472653dbe56b7cd243ff9694dd80a33c5"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    },
+    {
+      "pair": 8,
+      "arm": "MAIN",
+      "warmup": false,
+      "executionCpuTotalUs": 372465,
+      "executionNs": 1017474120,
+      "captureSha256": "d16c71bafe5ab5ff9c2ff437044e86292ca8c108befd5c74678f852ba929c709",
+      "inputSha256": "8fe383f97b1a6e630029e7d298bcb3444e796d29c4674ca2525983cda6009a8a",
+      "exit": {
+        "command": [
+          "/tmp/node-v22.23.3-linux-x64/bin/node",
+          "--max-old-space-size=512",
+          "/tmp/bw-board-386-native-owned-main-20261002/scripts/run-i80386-native-owned-main.mjs",
+          "/mnt/volume1/tmp-astra/native-owned-main-cpu-gate-r2-20261002/results/8-MAIN.input.json"
+        ],
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 14.371454460546374,
+        "limits": {
+          "heapMiB": 512,
+          "wallSeconds": 120,
+          "cpuSeconds": 120,
+          "niceIncrement": 10,
+          "fileMiB": 256,
+          "coreBytes": 0
+        },
+        "blankEnvironment": {
+          "NODE_OPTIONS": "",
+          "NODE_PATH": "",
+          "LD_PRELOAD": "",
+          "LD_AUDIT": "",
+          "BW_HOT_NAPI_PROFILE": ""
+        },
+        "streams": {
+          "stdout": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "bytes": 420,
+            "sha256": "21286ca07250fb2197faeac622a65c0b479e85afeca5f8f610f6d4c1d0a07fa2"
+          }
+        }
+      },
+      "fullLogicalParity": true
+    }
+  ],
+  "h4SamplesUs": [
+    532129,
+    483586,
+    509866,
+    472077,
+    518104,
+    485925,
+    519884
+  ],
+  "ownedSamplesUs": [
+    349951,
+    388638,
+    368613,
+    337547,
+    368425,
+    408741,
+    372465
+  ],
+  "h4MeanUs": 503081.5714285714,
+  "ownedMeanUs": 370625.71428571426,
+  "meanReductionPercent": 26.32890264032729,
+  "allSevenFavorable": true,
+  "gatePassed": true,
+  "scope": "process.cpuUsage user+system whole execution delta, H4 retained main-thread helper vs new closed-main ABI3, all439 full native snapshots and six full board checkpoints; excludes startup/settlement/final serialization consistently. Includes local callbacks/scheduler/GC. No timing/profile/Inspector/nativeTrace/journal.",
+  "physicalRTxMeasured": false,
+  "broaderGuestQualification": false
+}

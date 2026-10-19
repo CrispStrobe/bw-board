@@ -1,0 +1,212 @@
+{
+  "accepted": false,
+  "diagnosticOnly": true,
+  "maxClocks": 110000,
+  "completedClocks": 110000,
+  "outcome": {
+    "status": "budget-exhausted"
+  },
+  "configuration": {
+    "ramBytes": 65536,
+    "textRAM": true,
+    "romLowAlias": true,
+    "picMode": "single-unbuffered",
+    "timerClockHalfPeriod": 8
+  },
+  "romSHA256": "de2af892077af637fc90f5203353382ec1fac60dfd1470db63e9bf098363b5c1",
+  "sourceHashes": {
+    "../rom/bios.asm": "c9cbc1fb86c24d97d7f5c679c85b03df6024d62c33ae6931c2df3ce69fd02a35",
+    "../src/experimental/harris-80c286-boot-cpu.js": "c32d2c9438fb0de5c2ed1506a60aa556c3298bfeb407f66a43f9c421319a6b59",
+    "../src/experimental/digital-circuit.js": "8826947ba763e30ed5acb77f3fdaca24881b21b188469cccb4e09d13ad261c1e",
+    "../src/experimental/harris-80c286-memory-board.js": "9decf6a959c97a3eff80d752b14fc253acafb829d1fa90e44c384974d01b32da",
+    "../src/experimental/harris-8259-adapter.js": "43ebef88cd6843c874c79eb9b4b4d8d573ee3f97790429ce904156ac4cdca934",
+    "../src/experimental/harris-8254-adapter.js": "60b19b100e0e2fc6f4d1612af4212b1c40760cff1efe18037bfbbdba73697878",
+    "./build-bios.mjs": "1b263f1cb3579994b0f5147efcd44ce0c5e5eaf913c372eeae3b5d6a65b08fbb",
+    "./probe-harris-bios.mjs": "4a9ff7d1edb134cd7d8d40c392f150840b7b9f541b2fe529d28758a9a5fed3f9"
+  },
+  "cs": 61440,
+  "ip": 1107,
+  "retired": 7511,
+  "registers": {
+    "ax": 3632,
+    "cx": 0,
+    "dx": 4284,
+    "bx": 7,
+    "sp": 31712,
+    "bp": 31712,
+    "si": 1132,
+    "di": 256
+  },
+  "pic": {
+    "initialized": true,
+    "initPhase": 0,
+    "irr": 1,
+    "isr": 0,
+    "imr": 188,
+    "vectorBase": 8,
+    "pulse": 0,
+    "vector": null,
+    "writes": 4,
+    "reads": 0,
+    "pairs": 0
+  },
+  "timer": {
+    "configured": true,
+    "mode": 3,
+    "divisor": 65536,
+    "count": 53490,
+    "out": 1,
+    "loaded": true,
+    "loadPending": false,
+    "lowByte": null,
+    "latched": null,
+    "writes": 3,
+    "reads": 0,
+    "ticks": 6878
+  },
+  "recentTransfers": [
+    {
+      "kind": "code-read",
+      "address": 984152,
+      "width": 1,
+      "data": 198,
+      "waits": 0,
+      "last": true,
+      "operand": 198
+    },
+    {
+      "kind": "code-read",
+      "address": 984153,
+      "width": 1,
+      "data": 3,
+      "waits": 0,
+      "last": true,
+      "operand": 3
+    },
+    {
+      "kind": "code-read",
+      "address": 984154,
+      "width": 1,
+      "data": 235,
+      "waits": 0,
+      "last": true,
+      "operand": 235
+    },
+    {
+      "kind": "code-read",
+      "address": 984155,
+      "width": 1,
+      "data": 240,
+      "waits": 0,
+      "last": true,
+      "operand": 240
+    },
+    {
+      "kind": "code-read",
+      "address": 984140,
+      "width": 1,
+      "data": 46,
+      "waits": 0,
+      "last": true,
+      "operand": 46
+    },
+    {
+      "kind": "code-read",
+      "address": 984141,
+      "width": 1,
+      "data": 58,
+      "waits": 0,
+      "last": true,
+      "operand": 58
+    },
+    {
+      "kind": "code-read",
+      "address": 984142,
+      "width": 1,
+      "data": 36,
+      "waits": 0,
+      "last": true,
+      "operand": 36
+    },
+    {
+      "kind": "memory-read",
+      "address": 984172,
+      "width": 1,
+      "data": 5,
+      "waits": 0,
+      "last": true,
+      "operand": 5
+    },
+    {
+      "kind": "code-read",
+      "address": 984143,
+      "width": 1,
+      "data": 116,
+      "waits": 0,
+      "last": true,
+      "operand": 116
+    },
+    {
+      "kind": "code-read",
+      "address": 984144,
+      "width": 1,
+      "data": 11,
+      "waits": 0,
+      "last": true,
+      "operand": 11
+    },
+    {
+      "kind": "code-read",
+      "address": 984145,
+      "width": 1,
+      "data": 46,
+      "waits": 0,
+      "last": true,
+      "operand": 46
+    },
+    {
+      "kind": "code-read",
+      "address": 984146,
+      "width": 1,
+      "data": 128,
+      "waits": 0,
+      "last": true,
+      "operand": 128
+    }
+  ],
+  "date": "2026-09-08",
+  "sourceCommit": "e6fbc0de756f44dc9809198e78bd674a14dc711d",
+  "note": "Reduced 64 KiB fixture; firmware still declares 640 KiB. Stopped in the video dispatcher during banner handling. No POST/DOS completion, next peripheral fault or overall speed claim.",
+  "progressCheckpoints": [
+    {
+      "clocks": 48000,
+      "retired": 1763,
+      "cs": 61440,
+      "ip": 1374
+    },
+    {
+      "clocks": 50000,
+      "retired": 1882,
+      "cs": 61440,
+      "ip": 1109
+    },
+    {
+      "clocks": 64000,
+      "retired": 3191,
+      "cs": 61440,
+      "ip": 1111
+    },
+    {
+      "clocks": 100000,
+      "retired": 6569,
+      "cs": 61440,
+      "ip": 1103
+    },
+    {
+      "clocks": 110000,
+      "retired": 7511,
+      "cs": 61440,
+      "ip": 1107
+    }
+  ]
+}

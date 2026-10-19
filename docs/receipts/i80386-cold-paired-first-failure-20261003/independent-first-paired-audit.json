@@ -1,0 +1,13 @@
+{
+  "status": "PASS_INDEPENDENT_INCOMPLETE_FIRST_PAIRED_AUDIT",
+  "officialMembers": 91,
+  "completedChildren": 1,
+  "completedWarmupArms": [
+    "native-oneQ"
+  ],
+  "measuredPairs": 0,
+  "cause": "Parent progress filename joins Path then adds str; fails after first warmup child terminal validation.",
+  "terminalSemanticEvidence": "FirstoneQ full166/NQ/board/RAMhash/full16475PIO exact to eighth",
+  "finalAuthenticationExact": true,
+  "scope": "No complete warmup pair or measured speed result. No retry or secondcomparison."
+}

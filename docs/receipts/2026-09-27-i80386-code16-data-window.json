@@ -1,0 +1,19 @@
+{
+  "date": "2026-09-27",
+  "baseCommit": "2c1ab7c6f9343cc15948f36816f35ad249ef16d2",
+  "scope": "Admission-only scalar 16-bit-code data read/write window proof; no guest execution wiring or speed claim",
+  "sources": {
+    "src/experimental/i80386-code16-data-window.js": "sha256:e3913610a8b8594e196d0756d7b3c499b0c39b75a08d48acd7047841d4e1505e",
+    "test/i80386-code16-data-window.test.mjs": "sha256:f582ea3c8dac8d18b9e5a464f57b1c5ec058b62289470cf030b65563764d90c0",
+    "docs/I80386-CODE16-DATA-WINDOW.md": "sha256:be84144d8d8876dbdcf5faa61d54b753152d4e942f4d0dbb90c9087ced8d1980"
+  },
+  "validation": {
+    "command": "node --test test/i80386*.test.mjs",
+    "tests": 404,
+    "passed": 400,
+    "failed": 0,
+    "skipped": 4,
+    "focusedDataWindowTests": 8
+  },
+  "proofBoundary": "A future runner must validate immediately before each access and translate every crossing-write byte before any store. The proof does not perform reads, writes, or instruction execution."
+}

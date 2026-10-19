@@ -1,0 +1,17 @@
+{
+  "artifacts.json": "700f599f4e54f5ab6e653b902fc37e6ced3d506a3c6ec193b987b42007160cc2",
+  "branch-head.json": "812e606b0a9e659edb31d7d8c7d93b59ba5f99ae2f20115f2c0a1c5f805a6b16",
+  "coder-actual-outcome-audit.json": "9c92c10c4ef2db5637865d1f016fec9dc291600368f4cedf766e1148fb732762",
+  "dispatch-request.json": "a4107ba1b54f8c6be27eeb29817fed00912f16fbe95e7b595db10598e5804203",
+  "final-status.json": "c24807e3fc29f10c280144df201564b3047045009de7503c12da0b24f08b2ba8",
+  "guest/admission.json": "e5a212e4a843ccef18c804f7a9e8110dcedda7f8b2c26b7821b541fa50c29914",
+  "independent-seventh-attempt-audit.json": "eb3927daf2c719e89412908e59d379f4af687cb27a406076ce6c290bbb41552f",
+  "native.exit.json": "74f66caca2262ca38bf701cead5c19b31cfb59db3436fa02e0f0e0e893808053",
+  "native.invocation.json": "cbd632fc59a0c3b27b9bb616a408a90e4f1dece9cc2d1c6118bd372c210ac13e",
+  "native.stderr": "bdace5bf396aff198c8f053f925c9070ca8f55f11fb697c65415b1e8d650a731",
+  "native.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "origins.json": "b3d5833f9fb3d46158c0cc8340f48c280c6a06a76357a1d39c2314aa7269b7e9",
+  "retention.json": "81b1d3f43d2914da652738f29d97dbca6fbdee6c117c4bdf5df2bc141ac23315",
+  "run.json": "27a1c174e6d09529e4ceaac8208c81bcc874fe0b546eeb85a218263340969dc2",
+  "zip-verification.json": "e54e48389c2eb574c77dc58ecc3605129899898676104c12f0f832b3c7cc0eac"
+}

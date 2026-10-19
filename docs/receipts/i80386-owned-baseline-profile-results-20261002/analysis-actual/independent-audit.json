@@ -1,0 +1,15 @@
+{
+  "status": "PASS_INDEPENDENT_RECONSTRUCTION_READONLY_PROFILE_ANALYSIS",
+  "checks": 102,
+  "selectedSamples": 111,
+  "rawSamples": 112,
+  "leafCategories": {
+    "javascript-frame": 78,
+    "native-shared-invoke-alias-under-resume": 28,
+    "garbage-collector": 4,
+    "program": 1
+  },
+  "analysisSha256": "3d67c37eb3673ef4c292ab1ee2af7c21f39d510563fc4b01df44fc6f8409c796",
+  "scope": "Full cumulative sample tape/window/leaf partition/inclusive recursion-dedup and stacks independently reconstructed without analyzer imports; actual inputs/helpers/exit/streams/auth pins unchanged. Shared close alias under exact hosted resume ancestry verified. Qualitative samples only, no all-thread CPU fractions/speed/core-vs-NAPI split.",
+  "nextTarget": "Source-only review of NAPI snapshot materialization / resume wrapper is a defensible next hypothesis: shared native invoke alias has28 leaf samples, JS resume15; exact preserved full166 output semantics must remain. Alias cannot distinguish native CPU execution from snapshot construction. Clock dispatch also appears10 leaf samples, but rejected bulk gate remains failed; no presumed gain."
+}

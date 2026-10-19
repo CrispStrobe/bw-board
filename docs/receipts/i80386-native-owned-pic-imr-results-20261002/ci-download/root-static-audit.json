@@ -1,0 +1,23 @@
+{
+  "status": "ROOT_COMPILED111_TOOL3_GENERATED_FILES_AND_DSO_STATIC_PASS_NO_LOAD",
+  "checks": 138,
+  "addonSha256": "baaf3ba0b39f8ffeb001837c30a5f682ced39a75be87cbaf0ed55c8844ae660b",
+  "addonBytes": 2069608,
+  "compiledSource": "a6f605280f778b2bc409ef97ac3b40e15874530c",
+  "toolingRevision": "a45fc6f60cabf97e8230ff1bf49a0394bbaef622",
+  "profile": {
+    "kind": "PIC_IMR_FIXED_FREE_ROM",
+    "sourceRevision": "a6f605280f778b2bc409ef97ac3b40e15874530c",
+    "sourceCount": 111,
+    "romSha256": "8a7380f01bbc40985d377fe9764667749c36b05d45ee602b28c7e68556bd509f",
+    "expectedPicWitness": [
+      255,
+      255
+    ],
+    "witnessAddresses": [
+      1426,
+      1427
+    ],
+    "status": "SOURCE_PREPARATION_ONLY_NO_BUILD_OR_GUEST"
+  }
+}

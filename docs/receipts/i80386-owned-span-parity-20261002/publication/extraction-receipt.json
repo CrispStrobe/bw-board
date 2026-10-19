@@ -1,0 +1,612 @@
+{
+  "status": "OFFICIAL_ARTIFACT_EXACT_PIN_SAFE_ZIP_EXTRACT_PASS_NO_CHILD",
+  "artifactId": 11248833105,
+  "runId": 37056398077,
+  "attempt": 1,
+  "event": "pull_request",
+  "head": "80d228ee5452f380655a16c4bc823beb76e781c1",
+  "zipPath": "/mnt/volume1/tmp-astra/386-owned-span-hosted-native-parity-publication-20261002/official-artifact-11248833105.zip",
+  "zipBytes": 44331598,
+  "zipSha256": "7cae79af646feba252df601a811098a92614cc334a8a29b0d90d5d51d552f41e",
+  "extractionPath": "/mnt/volume1/tmp-astra/386-owned-span-hosted-native-parity-publication-20261002/artifact",
+  "totalExtractedBytes": 350488886,
+  "files": {
+    "home/runner/work/_temp/owned-span-native-parity/context/cells.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/cells.stdout": {
+      "bytes": 350,
+      "sha256": "c1a1cf20288858a2e6920ce5b9cf05a3c3dcd183bb634e0b8b99a493280806fd"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/cells.json": {
+      "bytes": 134487,
+      "sha256": "86ddd2371df44713f05fc950a6441d760ea99fe9150e7d97cd6947410a90a167"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/fulltrace-on.audit.exit.json": {
+      "bytes": 322,
+      "sha256": "c652e8bb5f9bdbb734f92f0794117f51fafee59793ce7e7a8291e9740ac2e5e6"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/fulltrace-on.audit.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/fulltrace-on.audit.stdout": {
+      "bytes": 917,
+      "sha256": "d535c61e2741dafe242f1e74b8b8ad290593ffe0e964a0142e01398babeee22d"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/fulltrace-on.wrapper.exit.json": {
+      "bytes": 320,
+      "sha256": "00729a69373ea902954e7181dff25af93c2ac209efda6ecada20a8f31863089f"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/fulltrace-on.wrapper.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/fulltrace-on.wrapper.stdout": {
+      "bytes": 964,
+      "sha256": "c9d64f47ab05537287eb6b6b38a817478f9b882dd2a447bebda6a4cf6133dee3"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/materialization.json": {
+      "bytes": 160051,
+      "sha256": "f9b38c1732be4a14d224bae24d34fbc75af4d8be71a2a776c32158e8baaf0d47"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/new-materialization-proof.json": {
+      "bytes": 96868,
+      "sha256": "33e056d8a7ec5cae76fb7ef21815bf1f5d88ea710684ab0ffd03a990b1145e2c"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-artifact-metadata.json": {
+      "bytes": 741,
+      "sha256": "0ece3110fc76ec138ad12c107a741b6688420122cdada1b9020547cd33318c26"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-artifact.zip": {
+      "bytes": 6711552,
+      "sha256": "0335f4c5088280cfcdf00186f5e0ca59ff431442edc3a978dd26b7dc2341a0e0"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-context/context.txt": {
+      "bytes": 4124,
+      "sha256": "8188c080f529817c5817e975f6fd1767dd0236a95ccf220adb7a7224b631f052"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-context/parent.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-context/parent.stdout": {
+      "bytes": 15251,
+      "sha256": "ac9d674fa57d9543a36eaa06802d9dffda27f57587c87a125dd88ea6acaaf6e2"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/addon-ldd.txt": {
+      "bytes": 374,
+      "sha256": "c394692e00f854d0c0b26305196a1270315721139199c736e020385159550c3f"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/addon-nm-defined.txt": {
+      "bytes": 188038,
+      "sha256": "0c5943c5d2e1e2808ee86c182e17f6ae5dbd3f7ec2913d89dba0a5b47370bb56"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/artifact-inventory.json": {
+      "bytes": 2695,
+      "sha256": "1b880f0b37b02432743bed4ead8b7544a027d36ce3a9e935161ae38f17d2cd87"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/build-static-preflight.json": {
+      "bytes": 13254,
+      "sha256": "7b798173e3326c64f855d12c98bdda91f984bd49eade9717672d88f87e54a4ba"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/bw_direct.node": {
+      "bytes": 2069608,
+      "sha256": "8d9c83fcc3c42c2c94d17782ae42c152c52fcb2e833c31decc4bfee2af5aa841"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/config.h": {
+      "bytes": 28122,
+      "sha256": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/configure.exit.json": {
+      "bytes": 656,
+      "sha256": "0f66cb1509295bd3453d7cfb369af0163eefbdfdc74139f23f3f45aa6cb59a06"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/configure.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/configure.stdout": {
+      "bytes": 13400,
+      "sha256": "04159c51f76491a09845ba3d9fbc707ec6770a052b4db1fbf54d12cef3cae7da"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/free-assets.json": {
+      "bytes": 295,
+      "sha256": "20e9b85ab30da79de3c6761440d434de1498f99d4ac4b8cf88cadcbd11780072"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/frozen-source103.tar.gz": {
+      "bytes": 554518,
+      "sha256": "ea67eff31f56d98b8e1aaf611d3de1eff502c25821deff0d32502d1bb3a4cdfb"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/identity-before.exit.json": {
+      "bytes": 630,
+      "sha256": "6a3eecd209dcc0c88896b001aa0c4df8300b3adf5a6a8ab81bb8a461cc825a43"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/identity-before.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/identity-before.stdout": {
+      "bytes": 10964,
+      "sha256": "7a82a6a35b6749707ff097cdaa576dde3f5d424c2c2070aef134da14cf923ec9"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/identity.exit.json": {
+      "bytes": 630,
+      "sha256": "8ed14ecf9310011283cd2a5741fc1a433118e1b7717166de1150e56baa59c5f1"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/identity.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/identity.stdout": {
+      "bytes": 10964,
+      "sha256": "7a82a6a35b6749707ff097cdaa576dde3f5d424c2c2070aef134da14cf923ec9"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/make.exit.json": {
+      "bytes": 481,
+      "sha256": "d228c614f15f4f1c30975538e6f9e6018f9d381496cb59faeec7d1d2f8704d7f"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/make.stderr": {
+      "bytes": 7894,
+      "sha256": "0eea62c1c80939697aa048376ee8dc9039f80a770a32aa99fac399f6d4339d8e"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/make.stdout": {
+      "bytes": 36230,
+      "sha256": "9de8a9690fa6fcec055072404c4af8eacb1de68024e93883d843d819380f7a3a"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/prepare.exit.json": {
+      "bytes": 580,
+      "sha256": "e3fab706469807a3a7a48ab74c16c982726040ad2f1cd500572ca40dd1bdb6e0"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/prepare.json": {
+      "bytes": 27392,
+      "sha256": "b34e2894d78f9ee491c6033e271e05fff311caedb3bafbfc1d3eaf08c4f607dd"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/prepare.stdout": {
+      "bytes": 27392,
+      "sha256": "b34e2894d78f9ee491c6033e271e05fff311caedb3bafbfc1d3eaf08c4f607dd"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/prepare.stderr": {
+      "bytes": 664,
+      "sha256": "0f36516b349191872b6faeba04c7b45da786fa57ebd7d7dd8c8c84e091b11ee4"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/prepared-source.tar.gz": {
+      "bytes": 5329158,
+      "sha256": "40dcddcd190a836aa89f164b3db0023fb193c6980965d0a6431e45156043711e"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/source-before.json": {
+      "bytes": 197379,
+      "sha256": "3b02c9fec32b3f89aabc1282d298452ad46d9461ee25a594805f72cd5ec7c6c0"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/upstream-COPYING": {
+      "bytes": 26428,
+      "sha256": "c43e067abce73ca284383f4f905316e7cad6dd9aaf69f02ee961b6dfbc4de3c2"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/official-extract/owned-in8-evidence/upstream-LICENSE": {
+      "bytes": 301,
+      "sha256": "c1e96db20d4598f889e24411a1a09e31a4411e3231c20d8cbff984de50a02884"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/preparation.stderr": {
+      "bytes": 86,
+      "sha256": "771cf72c22875d19ddfa32933620c22cb9af1b62b68da0a4ee9aa2260a9dc19c"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/preparation.stdout": {
+      "bytes": 497,
+      "sha256": "240e4f55764e3f907ae8c5e0ab951f425bc78c0297627026a87614db98850b77"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/reconstruction.json": {
+      "bytes": 1680,
+      "sha256": "8002cc5ce8cd041c33802a0dd0df2bd3c238ba9fb2721cbbcb527e40889b4d8a"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/runtime-reconstruction.index": {
+      "bytes": 475779,
+      "sha256": "1da510126084b6b49c3251a622a000ac4e5316c35dc8caa9148050aad45c72da"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/smoke-off.audit.exit.json": {
+      "bytes": 321,
+      "sha256": "422619c4e96725400296d9e80c6b08c90370e00c00bed119686b9b9382ec630b"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/smoke-off.audit.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/smoke-off.audit.stdout": {
+      "bytes": 922,
+      "sha256": "03b824cec6893a4a60ed738d759aeec8e6aea40be8d82b35e2404f46cd48aab1"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/smoke-off.wrapper.exit.json": {
+      "bytes": 316,
+      "sha256": "07ed11f2f4189567ac3aaeeb1f479fd7cab446625c6211dcda17d4d37b1e03c1"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/smoke-off.wrapper.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/smoke-off.wrapper.stdout": {
+      "bytes": 951,
+      "sha256": "e3aae1eb0e7e5c7aa86624713d1058faac96a3cdc8f8becb1510f3bfbae9593e"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/source-before.json": {
+      "bytes": 50474,
+      "sha256": "2c4cc785a499541c2f050f5bfead867bd1e7d7a8d545ec40fe92d9bf69978ee6"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/trace-fast.audit.exit.json": {
+      "bytes": 321,
+      "sha256": "c7a39a32c8b136b62e30cede93fbe55637608e59af68e4984afabaf427389d58"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/trace-fast.audit.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/trace-fast.audit.stdout": {
+      "bytes": 925,
+      "sha256": "c42afab16e26a0db56621c367f4a63862d06f78ad2e7cd49e9d1bca6f47304fd"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/trace-fast.wrapper.exit.json": {
+      "bytes": 312,
+      "sha256": "452ae8bf25b4f732a53beafe4ec46175c3d3e4166995dcd8047f8649b6f43658"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/trace-fast.wrapper.stdout": {
+      "bytes": 960,
+      "sha256": "3a2aee31b81dbd38c63bc54c744db09aeb5c1530b2a3ce86045366546bc6931d"
+    },
+    "home/runner/work/_temp/owned-span-native-parity/context/trace-fast.wrapper.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/approved-bindings.json": {
+      "bytes": 106558,
+      "sha256": "8c45a44a5767ded73458010fc0ce588f2878232204c9bd93de67462cd15d85d7"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/bounded.py": {
+      "bytes": 3644,
+      "sha256": "cb6cf966f9fd47b0b500753c0eca33a0bf1249b8989d8ec47b2760ba5d426183"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/auth-after.json": {
+      "bytes": 118865,
+      "sha256": "fb2c1c925220b610cae699d0dec7b6e3cf88e11975d8019bac9c8817284f8d31"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/auth-before.json": {
+      "bytes": 118865,
+      "sha256": "fb2c1c925220b610cae699d0dec7b6e3cf88e11975d8019bac9c8817284f8d31"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/child.exit.json": {
+      "bytes": 926,
+      "sha256": "c286fe3b1de484241a1d36d84f1b81b829f0cc7381a65c31da13fb9861b36c8f"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/child.stderr": {
+      "bytes": 149884558,
+      "sha256": "6d4d04901a68bf73b62e125f87f29e222fd3543cb9ddf831003cdb4816743a9f"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/child.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/execution.json": {
+      "bytes": 250101,
+      "sha256": "c6d7642f4e0d549abba7e7f80af038bec58c1cfa65a24d2629dfcf4bbdb05a07"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/guest/callbacks.jsonl": {
+      "bytes": 11730929,
+      "sha256": "6e130c37266188258be29fe21f4e165b0c2d75a5c6b79347964a6d509fb55946"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/guest/capture.json": {
+      "bytes": 257335,
+      "sha256": "2705456dda873e6c245e734f7d2e2747ca5b60bea676ad19316a9940e20bc6ca"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/guest/guest.bochs.log": {
+      "bytes": 7425,
+      "sha256": "0975868ce1e81cac3a3cf4a528a7467a289f5be0482618d15173ccf9ce39ffd4"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/guest/guest.bochsrc": {
+      "bytes": 548,
+      "sha256": "3e9ce7d07c3a6d0ec6b2b1e626e7be049692876ba66ff62ca11469b2a8a5df52"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/input.json": {
+      "bytes": 1038,
+      "sha256": "e9fa2bea55007e23615bf2927a8bd70fa2e042ffbc8a3d594dddd844f1d81eac"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/invocation.json": {
+      "bytes": 124841,
+      "sha256": "523ec3161fe72b51c5b595e726845f428a2b5e8389a263071db09a9419981ac0"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/fulltrace-on/parity.json": {
+      "bytes": 939,
+      "sha256": "a447d897fa340ae2865fce7b2c9075c5f98317bfde04b0d212d44023e0e7a712"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/helper-derivation.json": {
+      "bytes": 877,
+      "sha256": "46bef98ad3f9eaa6ee161f2c2232ee56fc133339ab7b66fa9f195d60471eee89"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/parity.py": {
+      "bytes": 8708,
+      "sha256": "8ebf2d12a2d88f6a1099ad87b437e1c8eefe4441a954370152a68fe7fef20cf2"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/plan.json": {
+      "bytes": 1872,
+      "sha256": "d3d950d5278c51b23ed268fe9435ea3a0a0fee4c2df22d1f30bc3ea4c239ad1b"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/run.py": {
+      "bytes": 6543,
+      "sha256": "d0d036fa535344af35aacf8835500feeb90f23425ffb030e213eacc8d73d321e"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/smoke-off/auth-before.json": {
+      "bytes": 118865,
+      "sha256": "fb2c1c925220b610cae699d0dec7b6e3cf88e11975d8019bac9c8817284f8d31"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/smoke-off/auth-after.json": {
+      "bytes": 118865,
+      "sha256": "fb2c1c925220b610cae699d0dec7b6e3cf88e11975d8019bac9c8817284f8d31"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/smoke-off/child.exit.json": {
+      "bytes": 916,
+      "sha256": "0a5e2c226abe9cf99eaae6053c2c8795db10d1a081b3bf17c436339e6f5e9174"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/smoke-off/child.stderr": {
+      "bytes": 430,
+      "sha256": "c54d723498616f0e1f400c42555d538ade91dc0f34b5bd08e7edf486bd09dec5"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/smoke-off/child.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/smoke-off/execution.json": {
+      "bytes": 250088,
+      "sha256": "a38285cb6979d570f87c530e2e70399a720e9f3ace3e8516f04dfaa9b9ac5756"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/smoke-off/guest/callbacks.jsonl": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/smoke-off/guest/capture.json": {
+      "bytes": 257308,
+      "sha256": "683e2936d6d602173a4eac8623a9119f121f80e980f3d2b5b620d9cdf5f71561"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/smoke-off/guest/guest.bochs.log": {
+      "bytes": 7425,
+      "sha256": "6fa72c4be3f5638f4d684f8a7047e2eadf5185607c729307ff5aa4b0268f5f28"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/smoke-off/guest/guest.bochsrc": {
+      "bytes": 545,
+      "sha256": "57aaf57ed112924961da9fdaa7e4ce99378241a4879c6b089a1d9bd97cbbfa00"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/smoke-off/input.json": {
+      "bytes": 1037,
+      "sha256": "e4f3306cf5a1cb56b0b05bdfe10f1a5783de0a467530f1e39e47e16c4917d187"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/smoke-off/invocation.json": {
+      "bytes": 124838,
+      "sha256": "4c705f21176c6a9eb8631aac98331c27494d97610de7e474c280e0a47fe3d0fe"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/smoke-off/parity.json": {
+      "bytes": 944,
+      "sha256": "50c737f6b55cfd9b180debe62b75ca466d83cfacd90c577d8de917f476486a3a"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/auth-after.json": {
+      "bytes": 118865,
+      "sha256": "fb2c1c925220b610cae699d0dec7b6e3cf88e11975d8019bac9c8817284f8d31"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/auth-before.json": {
+      "bytes": 118865,
+      "sha256": "fb2c1c925220b610cae699d0dec7b6e3cf88e11975d8019bac9c8817284f8d31"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/child.exit.json": {
+      "bytes": 924,
+      "sha256": "c3ed2c18917592ea8162ebe0d6aee22e456edc8ec32ebcf284ad5a7512d91127"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/child.stderr": {
+      "bytes": 149884554,
+      "sha256": "a4f540282dcdc8b6e9e3b00b63d3cdb0eec3c769c6e17bfe96110c4bdfd98992"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/child.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/execution.json": {
+      "bytes": 250097,
+      "sha256": "9adb2c074850aae4a99264b862532b976c23142072b8e4e4cd367f136662df46"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/guest/callbacks.jsonl": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/guest/capture.json": {
+      "bytes": 257317,
+      "sha256": "8148fb8e23a0be57ea221f5da4fa2233bd65e108e32e8150f380a974d3e03274"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/guest/guest.bochs.log": {
+      "bytes": 7425,
+      "sha256": "cfd8750deb6738b40ee5b730f785de27f92c68cb4e6a573bab538b16f9f17631"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/guest/guest.bochsrc": {
+      "bytes": 546,
+      "sha256": "26ec4f4e4f8599328491fc3361ce479d2d6ffaa0ac805ecf895e1f84d90cb099"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/input.json": {
+      "bytes": 1037,
+      "sha256": "85cbd8d052f5e8c36df9f12cfbf9a30d8a3d63cb119c5f524f4312f8fe79f64b"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/invocation.json": {
+      "bytes": 124839,
+      "sha256": "f903eee0ce317450156f00d342c572d7c576eab92af1ad0228ea41455bac76ff"
+    },
+    "mnt/volume1/tmp-astra/native-owned-span-parity-prepared-20261002/trace-fast/parity.json": {
+      "bytes": 947,
+      "sha256": "c6cfec01b2fd77f3dc1f42d5187677e3e9ee172a0b7be94454048b9698cbc7d4"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/README.md": {
+      "bytes": 2315,
+      "sha256": "0a8a129539ce30a5f3e3843485d19372a170e26f54a40cde06ae5a74ce76ed35"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/bindings-template.json": {
+      "bytes": 101653,
+      "sha256": "bf269ade7c912e8276d39b96003f3160010935f356fafbe3416f8ee5e3097106"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/bounded.py": {
+      "bytes": 3644,
+      "sha256": "cb6cf966f9fd47b0b500753c0eca33a0bf1249b8989d8ec47b2760ba5d426183"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/common.py": {
+      "bytes": 2593,
+      "sha256": "ccff147b85263cd457763af90603a80feeea213b0197aedd32b22d0af617cde9"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/helper-derivation.json": {
+      "bytes": 877,
+      "sha256": "46bef98ad3f9eaa6ee161f2c2232ee56fc133339ab7b66fa9f195d60471eee89"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/materialize.py": {
+      "bytes": 7303,
+      "sha256": "e56781c0f98c2afe1faf9fec3cf7a567ff350aeb20574474b38a35ffd09e82df"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/artifact-metadata.json": {
+      "bytes": 949,
+      "sha256": "2322640e265ba09147fc1b00b24336f2f708f2c29a84d515bb86fc4b45b7a88a"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/compression-independent-audit.json": {
+      "bytes": 1103,
+      "sha256": "1b716801c85f7bbb1f99a1808d6b9a7e0bf9316acb8a09d3f35fbc1ae6d4f417"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/compression-result.json": {
+      "bytes": 2421,
+      "sha256": "1994515656cafdea1257741d9d4284c6aeafe332f4f527a714c80950eafed457"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/derived-build-receipt.json": {
+      "bytes": 26823,
+      "sha256": "33809d68e99497f957905b5d3ab5e119bf90a5de87c52d65e91715dc995fdb10"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/derived-prepare.json": {
+      "bytes": 27422,
+      "sha256": "b3c606e3bd5a2dc9f536116dbefa4f347efb2f6316239d6f7162d134c00f4c3a"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/guest-source.bochsrc": {
+      "bytes": 510,
+      "sha256": "5683c4731d60804502b17ee0653085ef761137199878880b3b5ed64fd0a49d3d"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/js-capture.json": {
+      "bytes": 200943,
+      "sha256": "bf026d23f0c51d63a9744dc4facb4d58809c50f1d35747ffc6ea5873b518e45e"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/native-capture.json": {
+      "bytes": 216361,
+      "sha256": "86bc14cab1d0fe883a1f7f3e7511aec82a026e45133b362c3b1826b57b9d3969"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/reference-callbacks.jsonl.gz": {
+      "bytes": 2335024,
+      "sha256": "978f9e9c6b957da0d99faf600e590fb44ad44941cb3e4b7808ad5047a3079087"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/reference-child.stderr.gz": {
+      "bytes": 14849895,
+      "sha256": "5df5a5b4de1afe0c317284a269636dd9c1c72c41787c8f282b420a962ef360af"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/reference-events.jsonl.gz": {
+      "bytes": 2024136,
+      "sha256": "745960866f10f12ba78a097f7b083296b24d58ec9e8c107a8bc29d808dd3b6c4"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/relocation-proof.json": {
+      "bytes": 13155,
+      "sha256": "ab914d76203463a5d5721ab4f6fe41039f409e342826a4a66e81b0d0d74d91f3"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/span-readonly-auth-audit.json": {
+      "bytes": 2248,
+      "sha256": "e1994ba1d8e1a96116b8c0fec1e431fbf4f5cef6d4f75824b1f72ff11118fce6"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/original/span-readonly-auth.json": {
+      "bytes": 53955,
+      "sha256": "79a0717246c41f9d7eff32c649b4709af029a055401f4c7f67f17e28133948e8"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/packet-files.json": {
+      "bytes": 6215,
+      "sha256": "e94c31bfb46a6057aa3e140c42bc5a0bf3334dda222ce4643e799844ca4971a7"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/parity.py": {
+      "bytes": 8708,
+      "sha256": "8ebf2d12a2d88f6a1099ad87b437e1c8eefe4441a954370152a68fe7fef20cf2"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/payload/scripts/bochs-cpu3-native-owned-span/baseline-source.json.payload": {
+      "bytes": 12054,
+      "sha256": "52c0a2805f6b26eaad9380b86239cd7fe2a1df1be237775c521cb3ae9f811be5"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/payload/scripts/bochs-cpu3-native-owned-span/controls.mjs.payload": {
+      "bytes": 17987,
+      "sha256": "22a406cc0af13d8e87c9a24a07c45dcbbdd2260c0bc1ba9fa4c1a820a24d577c"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/payload/scripts/bochs-cpu3-native-owned-span/derivation.json.payload": {
+      "bytes": 3510,
+      "sha256": "2177eca4e3fa01874ca5d66a59404b98563a455ea5d32d02c585ddcae873a168"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/payload/scripts/bochs-cpu3-native-owned-span/derive.mjs.payload": {
+      "bytes": 2182,
+      "sha256": "20735787a09b59867782a4530c7e62068db63fb22681d03256539089065d80d3"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/payload/scripts/bochs-cpu3-native-owned-span/plan.md.payload": {
+      "bytes": 3030,
+      "sha256": "2cf6714757c048c7c57cd2db9f8a0440ceda2a1c262f945eef7eaf007446a395"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/payload/scripts/bochs-cpu3-native-owned-span/provider.mjs.payload": {
+      "bytes": 8524,
+      "sha256": "c0194f3d39a59d79d5875d9ff25dd32900eace493257cc6a092f5f840a169d7d"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/payload/scripts/bochs-cpu3-native-owned-span/span-method.txt.payload": {
+      "bytes": 1815,
+      "sha256": "a3760c895904a5683b6244fb162e593e67fac7c51551bc0b60fdf7d2e4b63149"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/payload/scripts/bochs-cpu3-native-owned-span-runtime/admission.mjs.payload": {
+      "bytes": 283,
+      "sha256": "c2d4d8b4fe00f2a39649a67e2f540583a1d08c2e5a841d9abef1a2610a04ba43"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/payload/scripts/bochs-cpu3-native-owned-span-runtime/derive.mjs.payload": {
+      "bytes": 1385,
+      "sha256": "fdf5d911c0990c0b980943c2a3970a74b843b52f98d969e1da70450769d0f2cf"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/payload/scripts/bochs-cpu3-native-owned-span-runtime/frozen-source.json.payload": {
+      "bytes": 24544,
+      "sha256": "255f6552e49b5b36dcfe6acd956440deee2345ce19c9d564d18880b7605e0aa3"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/payload/scripts/bochs-cpu3-native-owned-span-runtime/identity.mjs.payload": {
+      "bytes": 4456,
+      "sha256": "193278256bf6c6914ec7a0a61e0d6a13f25d90308ebec60872cf1b0f766bc51d"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/payload/scripts/run-i80386-native-owned-span.mjs.payload": {
+      "bytes": 7692,
+      "sha256": "7f276f853b7b4f483344040c3aa4fb7d0102e05f82e9f97cdf7c1cdb3aaa93bc"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/payload/test/i80386-owned-span-runtime.test.mjs.payload": {
+      "bytes": 5728,
+      "sha256": "77a396b299cbacf3afbbe481ae43c27e7e196e67dd5ad7bc827d1193fc4613ca"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/prepare.py": {
+      "bytes": 7808,
+      "sha256": "1f5172fed1e0519e3d917d80214ca2d480817f11852861a308e0ad1df0065f79"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/plan.json": {
+      "bytes": 1872,
+      "sha256": "d3d950d5278c51b23ed268fe9435ea3a0a0fee4c2df22d1f30bc3ea4c239ad1b"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/reconstruct.py": {
+      "bytes": 2322,
+      "sha256": "15358ec0d057a790b9757965530be1b0408abf2d99dba5b632085c8a746a4630"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/run-cells.py": {
+      "bytes": 6408,
+      "sha256": "2e323bda0025f96fd909dd37d52ed39cb52172a0fe012f03a3e2d9c9dce8bca7"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/run.py": {
+      "bytes": 6543,
+      "sha256": "d0d036fa535344af35aacf8835500feeb90f23425ffb030e213eacc8d73d321e"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/runtime116.commit.raw": {
+      "bytes": 291,
+      "sha256": "817a63f130fa562ed081fffd7ff1e0ff7babc2293d76fe5bd5be5669cc24e4b3"
+    },
+    "home/runner/work/bw-board/bw-board/scripts/owned-span-parity-ci/source110.commit.raw": {
+      "bytes": 281,
+      "sha256": "f79914cff896ccbe5049415120b9ad3a1065fff2e64c91e59239c1e020448f3f"
+    },
+    "home/runner/work/bw-board/bw-board/.github/workflows/i80386-owned-span-native-parity.yml": {
+      "bytes": 3131,
+      "sha256": "66e8b98ac5b94b6d5a8759fd10f81896f73f41574015ac68865ac7e38d18cb7e"
+    }
+  },
+  "retainedUtc": "2026-10-02T19:51:05.465658+00:00"
+}

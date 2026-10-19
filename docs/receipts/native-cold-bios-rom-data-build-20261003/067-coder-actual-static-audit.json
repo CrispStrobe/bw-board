@@ -1,0 +1,10 @@
+{
+  "status": "PASS_STATIC_ONLY_NO_ADDON_LOAD_OR_GUEST",
+  "checks": 1009,
+  "sourceCount": 125,
+  "preparedFiles": 810,
+  "compiledRevision": "d4281b28aa4b2e5913c006fb7b9e7b9f0773c1e3",
+  "addonSha256": "40179a4f0bc2456e59bc2ea49303e17e29be72ef564adb1fe1a6879abb015ab0",
+  "addonBytes": 2069552,
+  "zipSha256": "260bcaf91b360df209d7b1245bf6ae013ae069a0c1f2737a4e70c503cedd6931"
+}

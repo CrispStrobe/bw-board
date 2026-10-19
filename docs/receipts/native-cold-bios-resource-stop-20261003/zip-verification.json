@@ -1,0 +1,1646 @@
+{
+  "sha256": "9f879b6c9113e51c1b2ff3372dde0bba1ca4373814634c89caba7d8e49d2639f",
+  "bytes": 9916479,
+  "members": {
+    "_temp/cold-native-diagnostic/after.json": {
+      "bytes": 27357,
+      "sha256": "b1214c3307df1f90624e4d66d98617d087d2d060572e74a80d18197386d2592b"
+    },
+    "_temp/cold-native-diagnostic/artifacts-after-native.json": {
+      "bytes": 174838,
+      "sha256": "d5559137fe802c3755c19f75fa6d10ecf54fb79f87677444d4df5f72ea182b2c"
+    },
+    "_temp/cold-native-diagnostic/artifacts-before-native.json": {
+      "bytes": 174838,
+      "sha256": "d5559137fe802c3755c19f75fa6d10ecf54fb79f87677444d4df5f72ea182b2c"
+    },
+    "_temp/cold-native-diagnostic/before.json": {
+      "bytes": 27357,
+      "sha256": "b1214c3307df1f90624e4d66d98617d087d2d060572e74a80d18197386d2592b"
+    },
+    "_temp/cold-native-diagnostic/bochs.log": {
+      "bytes": 7372,
+      "sha256": "9a99ef3d0073463e524a88aa747682b29b3a0fbf64e19fb70faa883054136c3c"
+    },
+    "_temp/cold-native-diagnostic/configuration.exit.json": {
+      "bytes": 128,
+      "sha256": "6b357d53218ce6e6860a23282ac41731de8daa4873fe8b15761c901af5252876"
+    },
+    "_temp/cold-native-diagnostic/configuration.invocation.json": {
+      "bytes": 1002,
+      "sha256": "1fde9353bd5c222be5f5000e35375af792255632cb2e678043a7e34def51bb25"
+    },
+    "_temp/cold-native-diagnostic/configuration.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-diagnostic/configuration.stdout": {
+      "bytes": 688,
+      "sha256": "c2add8896c51a18eb833750f9ac10e94f9b8e238dfda3ee10e74c45c84074e8c"
+    },
+    "_temp/cold-native-diagnostic/final-status.json": {
+      "bytes": 1203,
+      "sha256": "c24807e3fc29f10c280144df201564b3047045009de7503c12da0b24f08b2ba8"
+    },
+    "_temp/cold-native-diagnostic/guest/admission.json": {
+      "bytes": 23791,
+      "sha256": "e5a212e4a843ccef18c804f7a9e8110dcedda7f8b2c26b7821b541fa50c29914"
+    },
+    "_temp/cold-native-diagnostic/guest-source.bochsrc": {
+      "bytes": 506,
+      "sha256": "534ff24f73da7d9f6a75a2f4ad06c0be50edeeaab9ae7d969462ee930783886f"
+    },
+    "_temp/cold-native-diagnostic/immutable-inputs-after.json": {
+      "bytes": 43481,
+      "sha256": "872166b50911dc2806444bdd0666c75eb4f1da2c8a7392c51f789a105cc4e2ab"
+    },
+    "_temp/cold-native-diagnostic/immutable-inputs-before-restore.json": {
+      "bytes": 43481,
+      "sha256": "872166b50911dc2806444bdd0666c75eb4f1da2c8a7392c51f789a105cc4e2ab"
+    },
+    "_temp/cold-native-diagnostic/input.json": {
+      "bytes": 1013,
+      "sha256": "983ae2766798d336c165959cdcb1e34b17c7a7c7fecb3fef9a1bc2144a2c76e4"
+    },
+    "_temp/cold-native-diagnostic/materialization/admission-command.json": {
+      "bytes": 508,
+      "sha256": "e458950f8764e21edb2ad35770101fd388f3cb816f4f8081b549f40b2168f242"
+    },
+    "_temp/cold-native-diagnostic/materialization/admission-exit.json": {
+      "bytes": 164,
+      "sha256": "325fc184e18ddcff52ae694d8509d44466e5f437c4178f1532353e2aa19b9fc7"
+    },
+    "_temp/cold-native-diagnostic/materialization/admission.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-diagnostic/materialization/admission.stdout": {
+      "bytes": 14531,
+      "sha256": "fde6e7fdb7fbfc2302db3c313be1829ac6c7bb08a9bc2294ade9a6fa34942d37"
+    },
+    "_temp/cold-native-diagnostic/materialization/driver-identity-command.json": {
+      "bytes": 311,
+      "sha256": "624861085cdb9932d50b96daf6d188337b22279cd5b8ffe717c25e6489a8b2d3"
+    },
+    "_temp/cold-native-diagnostic/materialization/driver-identity-exit.json": {
+      "bytes": 165,
+      "sha256": "8cb0d1a6ea0bf20652b473ef791c896222b4b84cb0d8881146fac60cf1a0cd10"
+    },
+    "_temp/cold-native-diagnostic/materialization/driver-identity.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-diagnostic/materialization/driver-identity.stdout": {
+      "bytes": 5220,
+      "sha256": "095ec047c24c674fa63eb2feaa1a02aa348a138b6c4721bcfd7749018f04b31f"
+    },
+    "_temp/cold-native-diagnostic/native.exit.json": {
+      "bytes": 127,
+      "sha256": "74f66caca2262ca38bf701cead5c19b31cfb59db3436fa02e0f0e0e893808053"
+    },
+    "_temp/cold-native-diagnostic/materialization/materialization-proof.json": {
+      "bytes": 34097,
+      "sha256": "f4dd993b51d087e88fcd5bd6b3b6105784f1bcae7d99162ab3be361c00c4e184"
+    },
+    "_temp/cold-native-diagnostic/native.invocation.json": {
+      "bytes": 628,
+      "sha256": "cbd632fc59a0c3b27b9bb616a408a90e4f1dece9cc2d1c6118bd372c210ac13e"
+    },
+    "_temp/cold-native-diagnostic/native.stderr": {
+      "bytes": 361,
+      "sha256": "bdace5bf396aff198c8f053f925c9070ca8f55f11fb697c65415b1e8d650a731"
+    },
+    "_temp/cold-native-diagnostic/native.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-diagnostic/official-artifact-metadata.json": {
+      "bytes": 744,
+      "sha256": "e5f56e38f54c1e1558cdde17e06e2e44fd18f9ad502f3b3c8ee9ef7ba73ded86"
+    },
+    "_temp/cold-native-diagnostic/official-artifact.zip": {
+      "bytes": 7452841,
+      "sha256": "98063e7c7a429408d02096b0d9ac42be57114ec16d940d2d19d05b8692af3156"
+    },
+    "_temp/cold-native-diagnostic/partial-restored-inventory.json": {
+      "bytes": 165611,
+      "sha256": "97225b8180b6e9b2a430074d000645eaff4aa61c7003133e2aff3eda9251ffb4"
+    },
+    "_temp/cold-native-diagnostic/restore-binding.json": {
+      "bytes": 8652,
+      "sha256": "2fb634e9e6bdfc101df8450a9d103714333ff21b51af11f9dd660306a2d4295f"
+    },
+    "_temp/cold-native-diagnostic/restore.exit.json": {
+      "bytes": 126,
+      "sha256": "75d79515f9a38566c444426485c6d83994092bf84c2a29c38c13fd3bcfcbb6db"
+    },
+    "_temp/cold-native-diagnostic/restore.invocation.json": {
+      "bytes": 563,
+      "sha256": "9ae9f07c601f14d90bd7e8ad775acb9bac0a8b644d7c1147ad4515f01ff6e449"
+    },
+    "_temp/cold-native-diagnostic/restore.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-diagnostic/restore.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/.github/workflows/i80386-native-cold-bios-build.yml": {
+      "bytes": 3990,
+      "sha256": "f7ff9624b5a75a27470d592f42f36c1539ce1f5f27d20e1a152ed93e898ae1a3"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/package.json": {
+      "bytes": 2820,
+      "sha256": "29706d10ae264677b8fcaecce5929acee945f9d27ece8cb3347bdff16431f0ee"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/roms/free-at-bios/BIOS-bochs-legacy": {
+      "bytes": 65536,
+      "sha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/roms/free-at-bios/LICENSE": {
+      "bytes": 26530,
+      "sha256": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/roms/free-at-bios/README.md": {
+      "bytes": 2189,
+      "sha256": "fee2d8555b1c003aa5eabd263da61b30f8f861a1cd67ff5fe4cc95647740b3ff"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/roms/free-at-bios/vgabios-lgpl.bin": {
+      "bytes": 38400,
+      "sha256": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/audit-i80386-native-direct-board-adapter.mjs": {
+      "bytes": 20358,
+      "sha256": "6b905d485bac7f965beef4c10a6a33ee0f53bd7029690fbcc7677ac4b9241343"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-cold-bios/NATIVE-SOURCE-PREPARATION.md": {
+      "bytes": 2929,
+      "sha256": "398683c1662ff7b692e80fc6a5d1bbf239494e83b6d0436ddcf7be6ab77fa12f"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-cold-bios/README.md": {
+      "bytes": 1350,
+      "sha256": "cd51dbb39c7227a59014f999939f4c3c329892aea754536c4b503f95a74a3477"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-cold-bios/board-profile.mjs": {
+      "bytes": 1454,
+      "sha256": "6ea848b7a97eea178926fc2c966e3ad4e8b76a60da6ba8cefe07f47e4d5922e3"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-cold-bios/board-provider.mjs": {
+      "bytes": 11919,
+      "sha256": "19bb6335c40feeacf12be2dc19d5bd7abbc90ffcb26580785f1ffda98332e107"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-cold-bios/fetch-policy.mjs": {
+      "bytes": 1273,
+      "sha256": "59c28bc3e5a29d27a06599094f9a7f7c152c081499a46b2df19d278099ae4369"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-cold-bios/identity.mjs": {
+      "bytes": 12223,
+      "sha256": "1978141aec85057a17bde07ea62b4c2b54743d86eed4143f3fe4c56d22356c75"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-cold-bios/napi.mjs": {
+      "bytes": 835,
+      "sha256": "e9e43dc0c71b0603b09164cc5093f45ce68e9eee434d5df88669f81ea2439a01"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-cold-bios/rep-policy.mjs": {
+      "bytes": 1729,
+      "sha256": "411b8fdfe5a31193bd09c5f874eb397d7ce46684f26e3366e528f318ce4f3c80"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-cold-bios/rom-data-policy.mjs": {
+      "bytes": 621,
+      "sha256": "39e6b1c471a9804a0ab89fbcc3afa5e948ab278aa433db861d7ca6f1a1c4b9b2"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-cold-bios/runtime-rep.mjs": {
+      "bytes": 3467,
+      "sha256": "d79b652a3120da61e99f08a2a5844bba4fd372a3c4221073f2626661949abb5d"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-cold-bios/runtime.mjs": {
+      "bytes": 6815,
+      "sha256": "4577806b3a1cea0e1fb02df73843576fb5a2e0aec616a64a3d015c28f57e600a"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-combined-paging-ram/host.mjs": {
+      "bytes": 18738,
+      "sha256": "80b2022f5b460e4a5a423d47bc0a3d3f81c9f09b6a2654a7f9dd87e9086b0446"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-combined-paging-ram/patch.mjs": {
+      "bytes": 1061,
+      "sha256": "4c4d41c5248fd4610669fa192d625c944721058f00fbb5499d831b6d37eb4ada"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-direct-board/abi.h": {
+      "bytes": 6372,
+      "sha256": "04f7030ab482caaffa510bd83681f96a3cd3a2a0b900ff9304acefa8d1623a2d"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-direct-board/addon.mk": {
+      "bytes": 912,
+      "sha256": "b48992c8a80bdc6fa87b68123cff0c16684802f847f82b02a0fc4d8d40520405"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-device-quanta/patch.mjs": {
+      "bytes": 1864,
+      "sha256": "c737fed6621e2cc79388c1f9af102f3a8e7eac8503f3ef836b69c898ccf5cb37"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-direct-board/board.mjs": {
+      "bytes": 7105,
+      "sha256": "02102c01ffce3d12310cffdeb2e16129d4419971d95ce0503d551b822078e2dc"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-direct-board/patch.mjs": {
+      "bytes": 2574,
+      "sha256": "4fd80b72490bd317fb1da9fa7acdd0860235c0df8b4ed0cc9114150de4065c7f"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-direct-board/runtime.h": {
+      "bytes": 1583,
+      "sha256": "58cf1014f613c450654ec885e2dfc6b0da53581cc5d8883c4dd66aec914f9ea3"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-direct-board/runtime.inc": {
+      "bytes": 47814,
+      "sha256": "1c0e7b6f58016e875a4e8d53e4dc0427ef519f7b0c64797bdff750089bd8f9c4"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-direct-board-adapter/loader.mjs": {
+      "bytes": 1820,
+      "sha256": "31d15eba7ac5521f94db600a37877fce5befb5e97f581e037bb6d76b30e430fa"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-events/patch.mjs": {
+      "bytes": 3291,
+      "sha256": "cd2e4d1a357dce4d59420526cd8176e554ecd2e9acd12e797a6653201dd787c5"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-hot-direct/board.mjs": {
+      "bytes": 2001,
+      "sha256": "95a268d026ee06ceac81e29e2f4c66151f497502bdf1f87483d2c3a0aefefe8b"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-direct-board-adapter/napi.cc": {
+      "bytes": 9569,
+      "sha256": "a131583191a71a4a675c66339440d5ce6b4ae1332d5b14bef10d7a8d47e36c40"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-hot-direct/journal.mjs": {
+      "bytes": 515,
+      "sha256": "e2b9b6f873703703b118ee783f547b521a8bbd3fb162c3a823c69190c8e6f264"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-hot-direct/loader.mjs": {
+      "bytes": 490,
+      "sha256": "32ba984e07c92a04d1980e34847e44a55038f7910072eab0aba8f5eb3b29e085"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-hot-direct/runtime.mjs": {
+      "bytes": 1939,
+      "sha256": "e668548dbc56ae9835cc341a1efec6ef9acea4ef523ef1852f1d914885441264"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-hot-direct/profile.mjs": {
+      "bytes": 394,
+      "sha256": "3f2c0b2773cc3e4e27a71ba1e5c0c154d37f2e2ae20005506f4c3da7f9499117"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-hot-packed-scalar/napi.mjs": {
+      "bytes": 2088,
+      "sha256": "62ae4a4371e9446136dac60c8bcc63b2abf29d2eb9445e0092ac16e2d4621123"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-memory-map/patch.mjs": {
+      "bytes": 1893,
+      "sha256": "71d6cf78d93dd083b97af462b9df44d7688b66e81c9eb85d7a1af1a70cecfa66"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-clock/abi.h": {
+      "bytes": 7013,
+      "sha256": "8cb93c00c24ca088184f4201fcf97a97a9cf508b7c3a2048ca532848dba7a9bc"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-8042/profile.mjs": {
+      "bytes": 2430,
+      "sha256": "e7c3e0127f4363dc68b23f542132b5c388b4e78f198d733bc44c5f3e3a1aa546"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-clock/clock.inc": {
+      "bytes": 3247,
+      "sha256": "861080333e8e656005d1919bc55191710f98d9af6ef375642ec50efebc0ff0ab"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-clock/contract.md": {
+      "bytes": 3572,
+      "sha256": "cc844b41da68e3a2a9f3a7ae731dfba77eb6616cd072ff30666968c6604f62df"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-clock/derive.mjs": {
+      "bytes": 417,
+      "sha256": "14413e740b13d0fb0b78aea26054578a652c59237aca4ecf807937f7e78459f6"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-clock/factory.mjs": {
+      "bytes": 4325,
+      "sha256": "2afd7b6434d037d7b568a4af6aeba410f68030ee024220f05ba5d3d68323a0e2"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-clock/identity.mjs": {
+      "bytes": 6213,
+      "sha256": "8d867c0c3d05c72b6e3b89d7349a99ee2575008c8706d08ecb04db65b9523c71"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-clock/loader.mjs": {
+      "bytes": 1182,
+      "sha256": "d0b8fa7790a6038150f82c3f932638156164005f08d1b4f4bfc37e9bd7dd7b59"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-clock/napi.mjs": {
+      "bytes": 4611,
+      "sha256": "a415282d123066a896297388c1f44ee9fcec0d567d721b6ec5878883afa4b292"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-clock/provider.mjs": {
+      "bytes": 4808,
+      "sha256": "635e6c9f27fb6a86018af987c50d7f958d85134f4475ab6b5ca5806b85b499f5"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-clock/runtime.mjs": {
+      "bytes": 4665,
+      "sha256": "2a7865f992199397a16fc0989e1c6fb620f1e02c41b66b5e758095302f11af9f"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-clock/worker.mjs": {
+      "bytes": 3229,
+      "sha256": "b088b4557fb0540b61da29030a137916d61d4fe02152a0a3e65547ed15b66066"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-in8/abi.h": {
+      "bytes": 7038,
+      "sha256": "3cb214dfa1a1cf74c5aea4ef3642d73d8ca1cc9e9c8362d2513dc3483f284990"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-in8/bootstrap.mjs": {
+      "bytes": 687,
+      "sha256": "13868ff311ae46e488047cca858e3c7fca14cd0d816edff0fee8c867d23b88fb"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-in8/admission.mjs": {
+      "bytes": 3650,
+      "sha256": "f844e844d6460bac1c0fe00746f44243f75e0cf79eef79b1f7ef501685544bbb"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-in8/contract.md": {
+      "bytes": 2050,
+      "sha256": "a023a30740389553dced4da1a49f9e3ad4212a227c7f7691abf98e997e2183e3"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-in8/identity.mjs": {
+      "bytes": 6831,
+      "sha256": "a01eef0e61ec4947cc7de89b60005d9a73d3a4974ad491aef20aaccc61dff703"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-in8/napi.mjs": {
+      "bytes": 1133,
+      "sha256": "0bde7031426c5dfcd1caf44938854edf687ada5e5cc69557afec9ea575f61741"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-in8/provider.mjs": {
+      "bytes": 6186,
+      "sha256": "fc2dda9353edd0f28d7bac26bb5336ee2f946a63b405be33d7ba14099ac8c1c0"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-in8/runtime.mjs": {
+      "bytes": 2057,
+      "sha256": "b20b0af4322cb3f71c97e7ce04297196bd316750b48ec1bb7213c4ce0f59af73"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-owned-in8/reset-witness.mjs": {
+      "bytes": 2320,
+      "sha256": "9013e108b8d8456cb01bcdcacd40d12bb7d08444b395f28d067ae36195c8bf03"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-ram-coherence/patch.mjs": {
+      "bytes": 2894,
+      "sha256": "88305e91af67102eb633fa7946a0d9941acd7b14bd69df57ddfb98815616e45f"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-rep-pf-pit/patch.mjs": {
+      "bytes": 563,
+      "sha256": "fd5ce0da16e6873a2c6dcc530e7e76dc66e597b74553de8febef9d32d620a013"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/ci-build-i80386-native-cold-bios.py": {
+      "bytes": 12525,
+      "sha256": "0c951ee68c227fc290287170ad87b53a5370641c77b691e38278b86486f42a47"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/bochs-cpu3-native-slice/patch.mjs": {
+      "bytes": 10305,
+      "sha256": "c68eed54f117d3285134af787d09242a257d428dc84e7bc29f8ab3ad7bb125b3"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/i80386-combined-paging-ram-oracle.mjs": {
+      "bytes": 29357,
+      "sha256": "e28c213af5e374a7680b82756dc64fb7a97956bbb36005c24aaefdeb4c98fceb"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/i80386-free-combined-hot.mjs": {
+      "bytes": 1898,
+      "sha256": "3b9e78fa2383b83fbaec953765bab98da46fd452197586cb2e8b36e03b84be34"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/i80386-free-owned-in8.mjs": {
+      "bytes": 2048,
+      "sha256": "49638e1f07a31f53eadc4ecf2c15e360bf232642c4e9f87effe6eb0bd05ce100"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/i80386-native-combined-paging-ram-board-gate.mjs": {
+      "bytes": 81770,
+      "sha256": "7e0e799d56d004652f6971d8af1fbee385aec56e194741461b45d630a5027389"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/lib/i80386-source-inventory.mjs": {
+      "bytes": 1256,
+      "sha256": "96188430556fb724fbea8197e0fdfd280e7f52d9f63632c3371779fb3f740604"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/prepare-bochs-cpu3-native-cold-bios.mjs": {
+      "bytes": 4714,
+      "sha256": "1ad5d49bb92c1a7e9761e8c068d10785e298bcba202c0e7744ab9c0d992298f4"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/prepare-bochs-cpu3-native-direct-board.mjs": {
+      "bytes": 5210,
+      "sha256": "4d466140149cac91e3ae99422f190df3151b9d5277ae9c2110306faa47c7e572"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/prepare-bochs-cpu3-native-owned-clock.mjs": {
+      "bytes": 3053,
+      "sha256": "84dfb43c82fcbe10d3f8f32dda8b3da210bcdbe04d7b5bcb62b361b8f1c99dc4"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/prepare-bochs-cpu3-native-hot-direct.mjs": {
+      "bytes": 5933,
+      "sha256": "6942a881c72151ad075cd757fe4ec39bef793675defebb250f41395dd05c24bb"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/prepare-bochs-cpu3-native-owned-in8.mjs": {
+      "bytes": 3104,
+      "sha256": "7bc6b3fb342ea2e90f8570d8b7f2d1bd4fef92ade8e224f46dbc873fa7760a2f"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/run-i80386-free-owned-in8.mjs": {
+      "bytes": 6255,
+      "sha256": "258fe8a78c472f00750fec450d1920e441f424802620794268c6fd1adf3ed3e5"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/run-i80386-native-owned-clock.mjs": {
+      "bytes": 4570,
+      "sha256": "d9a24d9ac044ae41117bd47bd02768a0b07abe549daf575977e1e58b8dbff0ff"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/scripts/run-i80386-native-owned-in8.mjs": {
+      "bytes": 7654,
+      "sha256": "68f85005a471c2ccade1d4dcfbbf2794fb0161fc7536e9c4b9bcb1dc05c9578b"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/adc0809.js": {
+      "bytes": 6267,
+      "sha256": "92926d8bd4315fa837d6cce7bc3770148960d181802eb52ba5d9aa013e5f64af"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/at-8042-a20.js": {
+      "bytes": 19631,
+      "sha256": "c604c8a272034a9a80eeb30abe1c5d6ab09ebe6c816b3f3c778874f6b9a9f6b8"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/at-ps2-mouse.js": {
+      "bytes": 2891,
+      "sha256": "b75f93e3a4473e21568af438d658941e9a9703ab330147b8f444baba278281ea"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/at-system-control.js": {
+      "bytes": 2682,
+      "sha256": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/audio-bus.js": {
+      "bytes": 10590,
+      "sha256": "95a263b2432f8309b76a64a0b6dcf0ddcc1dd61aeabb7a8727505f343e26ba08"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/cga-card.js": {
+      "bytes": 10416,
+      "sha256": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/chip-ledger.js": {
+      "bytes": 6217,
+      "sha256": "b12b5d635086636f0f9f405e4a06816943b74c03c1b036fcbd3ffe813055ac3a"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/dac0832.js": {
+      "bytes": 5848,
+      "sha256": "81b24b9c8f461cbd2f4a9bcd1aceda3e366062841d1c530440eccdb8cbeae787"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/ega-card.js": {
+      "bytes": 6552,
+      "sha256": "5b93057ca256f7a43046b477127862278c80bb9849e062528c1cd603f7e3d2f5"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/experimental/ata16.js": {
+      "bytes": 13489,
+      "sha256": "bcf08d6e5e2316cfefe7e264c587e6d23e94b5a4f4e5099c8aace162164a88b7"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/experimental/i80286-protected.js": {
+      "bytes": 73806,
+      "sha256": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/experimental/i80386-at-machine.js": {
+      "bytes": 26851,
+      "sha256": "6c5f12cc92ba7219ed4b53f6237622f6ce58269402ee14770791e04c68f93cb0"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/experimental/i80386.js": {
+      "bytes": 133968,
+      "sha256": "6fba681208e1443cc9eff00ae6aba444903d23e5feafe62527b25428e72d60ed"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/experimental/vga-memory.js": {
+      "bytes": 7229,
+      "sha256": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/hercules-card.js": {
+      "bytes": 4798,
+      "sha256": "6e3af9bce88edbc609b2f8a07dc464b8a1fb60ce5fd800a4d345dac61367752b"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/i8086-machine.js": {
+      "bytes": 128619,
+      "sha256": "7cf7fdf4e6de451071809e32e128aa0ac663524eaf8b2e08581780b0ec4f167c"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/i8086-ram-words.js": {
+      "bytes": 1656,
+      "sha256": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/i8086.js": {
+      "bytes": 107519,
+      "sha256": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/i8088-cycles.js": {
+      "bytes": 974864,
+      "sha256": "402d869be7c7ca79f1f6116d0861c85887112e46f1f1ba20f59d7e3031ce1477"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/i8088-timing.js": {
+      "bytes": 7947,
+      "sha256": "b1f85cab54484119016e57b954505dfb90821c0b47b5b7851a3d5d787977dc95"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/i8237.js": {
+      "bytes": 26099,
+      "sha256": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/i8251.js": {
+      "bytes": 9962,
+      "sha256": "45a2df29bc0920e7d57188a365e8c05addab0805efc1eb02d8df72a41d4dca2b"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/i8254.js": {
+      "bytes": 18502,
+      "sha256": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/i8255.js": {
+      "bytes": 8295,
+      "sha256": "3445ac6676005f225db542031be51b6d1561045d2be76be339e5853a50f6ff7f"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/i8259.js": {
+      "bytes": 19093,
+      "sha256": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/machine-checkpoint.js": {
+      "bytes": 8280,
+      "sha256": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/mc146818.js": {
+      "bytes": 12655,
+      "sha256": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/mc6845.js": {
+      "bytes": 11052,
+      "sha256": "30c369c37fc4030162dde6d46bea388ce9acbf489141195ab166f3c0cab5c599"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/mc6850.js": {
+      "bytes": 2854,
+      "sha256": "e987c5243a92a7b43533a99ff9bf2da29e0bd608a2417162c7b5dfeb1cb75889"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/ne2000.js": {
+      "bytes": 17462,
+      "sha256": "12a97f87807aaf74a94245d81acddfb10f43748c09a1d4633e0ba7959b7a1244"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/ns16c550.js": {
+      "bytes": 8784,
+      "sha256": "34633ec3bec4d0826998fadde5e11bf88f20dfd32fc5a09144c6bad64461f41b"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/pc-speaker.js": {
+      "bytes": 6434,
+      "sha256": "50260dcd04eaedd84373e5c2b1e42faa2f1bc924833b6bdf0aa7d23a80ea9499"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/sb-dsp.js": {
+      "bytes": 13475,
+      "sha256": "901fc1d6536e19a552380d226b8e285ff4ab29f871a319d552701c2100044f71"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/upd765.js": {
+      "bytes": 53603,
+      "sha256": "b5a066fd577ee358f40c13682015d28be490acbeb00a50d8c7199671523fcde4"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/vga-card.js": {
+      "bytes": 10652,
+      "sha256": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/src/ym3812.js": {
+      "bytes": 15069,
+      "sha256": "c78833b8efb3048143e7fac898a7af5374ce3f00f1b9e5b55baa6d212a51df04"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/test/fixtures/i80386-free-combined-hot.S": {
+      "bytes": 4513,
+      "sha256": "6250214b966fb43da511def64e74c34418b3faa1d128ed31d097872a7f6e2055"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/test/fixtures/i80386-free-combined-paging-ram.S": {
+      "bytes": 4057,
+      "sha256": "0be1a177c4f59649d90653bf524b8b88c561d00fbb0b05d6b7dd792f966d27ad"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/test/fixtures/i80386-free-owned-in8.S": {
+      "bytes": 4784,
+      "sha256": "05c26591c4cdd11969307b00cb60bda741568dd6b0d75ffa448b1cb84b5b265e"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/test/fixtures/i80386-owned-clock-harness.cc": {
+      "bytes": 4311,
+      "sha256": "88c06dbda169a87f929f02e57657fc020a8948ce04af8c46cb167d3b6a58825f"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/test/i80386-cold-bios-board-source.test.mjs": {
+      "bytes": 4944,
+      "sha256": "015411b2fe542c0cfda15966a080a09a3c2e25d612655280b3077fef04cf8d82"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/test/i80386-cold-bios-build-source.test.mjs": {
+      "bytes": 3076,
+      "sha256": "4b84590a5bf5d2562ce84aa8c8cd187da9d1b5474a26937cdd8398fc1307729e"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/test/i80386-cold-bios-preparation-source.test.mjs": {
+      "bytes": 7066,
+      "sha256": "9079ae59ec62f2b117947d57f0385e03159b1c7cb6b03e13e87b38973dd2792f"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/test/i80386-cold-bios-rep-source.test.mjs": {
+      "bytes": 2816,
+      "sha256": "1fe54572a641537b1eb5bbdfebf201e35410dd9812b48881044c1432d264434d"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/test/i80386-cold-bios-runtime-source.test.mjs": {
+      "bytes": 7287,
+      "sha256": "06a474aa642e781206c419060a0d1e3ce90a2a3f9904617ca8b1e708e6588c48"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/test/i80386-native-direct-board.test.mjs": {
+      "bytes": 7653,
+      "sha256": "794e3032c615a06353da57aba909ec5d95e73e30e71f376f5d2c51f4673f0681"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/test/i80386-native-hot-direct.test.mjs": {
+      "bytes": 4219,
+      "sha256": "3152f6ed5cc2bb7de5ad917e135736f9eb63d086c7015d8f03789cd086f0bded"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/test/i80386-native-owned-clock-c-harness.test.mjs": {
+      "bytes": 1831,
+      "sha256": "50d484bc15339ea70d9fbc6f2b7db54836cc8991f3a064d162266e16639e4ba2"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/test/i80386-native-owned-clock.test.mjs": {
+      "bytes": 8555,
+      "sha256": "29cbb6fca8bbf1877eee26e29765c8891d08cc03609a228acce89c8e6654a755"
+    },
+    "_temp/cold-native-diagnostic/source-packet/compiled125/test/i80386-native-owned-in8.test.mjs": {
+      "bytes": 10699,
+      "sha256": "06ef235f38b322a6e9a43aaec22f2d31a6df7cb1aa806fc4ed106ab74e4c45cc"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/package.json": {
+      "bytes": 2820,
+      "sha256": "29706d10ae264677b8fcaecce5929acee945f9d27ece8cb3347bdff16431f0ee"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/roms/free-at-bios/BIOS-bochs-legacy": {
+      "bytes": 65536,
+      "sha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/roms/free-at-bios/LICENSE": {
+      "bytes": 26530,
+      "sha256": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/scripts/bochs-cpu3-native-cold-bios/DRIVER-SOURCE.md": {
+      "bytes": 5933,
+      "sha256": "08f31ddea8c614e1994ac2e853ef81124afd8f256afa5f9cb6f835dd288060e5"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/scripts/bochs-cpu3-native-cold-bios/board-profile.mjs": {
+      "bytes": 1454,
+      "sha256": "6ea848b7a97eea178926fc2c966e3ad4e8b76a60da6ba8cefe07f47e4d5922e3"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/scripts/bochs-cpu3-native-cold-bios/bochs-reference.mjs": {
+      "bytes": 6935,
+      "sha256": "1f9260893f5d4fbc967e0104e02937d3f88bda698d39f2ac0df0e9fee8e58c24"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/scripts/bochs-cpu3-native-cold-bios/external-runner.mjs": {
+      "bytes": 13094,
+      "sha256": "3c13abf31d5a0821b75c83fcc867ec050ee628919b21b30dac9ea85ffd10920d"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/scripts/bochs-cpu3-native-cold-bios/driver-auth.mjs": {
+      "bytes": 3525,
+      "sha256": "b7245d8c88aa4b70bf845366026fe5e64e4aabfe3eda833975e6d7f88ef98eb6"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/scripts/bochs-cpu3-native-cold-bios/parity.mjs": {
+      "bytes": 7768,
+      "sha256": "5943e3bbb6225e224cbaa4555782fa320f8e4637323c8f16c63d42e851704ff0"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/scripts/bochs-cpu3-native-cold-bios/reference.mjs": {
+      "bytes": 14714,
+      "sha256": "49654b942878e01dcc9824fd78fe7509750fd896a5fd43b456828bc8791c476a"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/scripts/bochs-cpu3-native-cold-bios/rep-policy.mjs": {
+      "bytes": 1729,
+      "sha256": "411b8fdfe5a31193bd09c5f874eb397d7ce46684f26e3366e528f318ce4f3c80"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/scripts/bochs-cpu3-native-cold-bios/undefined-of.mjs": {
+      "bytes": 3148,
+      "sha256": "99bae79696c73b6ede31136659ddde8a876a5417b00a1c82b9242c40297e6840"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/scripts/bochs-cpu3-native-combined-paging-ram/host.mjs": {
+      "bytes": 18738,
+      "sha256": "80b2022f5b460e4a5a423d47bc0a3d3f81c9f09b6a2654a7f9dd87e9086b0446"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/scripts/bochs-cpu3-native-owned-8042/profile.mjs": {
+      "bytes": 2430,
+      "sha256": "e7c3e0127f4363dc68b23f542132b5c388b4e78f198d733bc44c5f3e3a1aa546"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/scripts/bochs-cpu3-native-owned-8042-interface/profile.mjs": {
+      "bytes": 2621,
+      "sha256": "d663126cf2a4cae6fb9fea1b816576237fd03482201fbefd954784a4edb53f0e"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/scripts/bochs-cpu3-native-owned-8042-interface/reference.mjs": {
+      "bytes": 12844,
+      "sha256": "381f1c233bddd27c73dc19cb144c3308d4b4b8fe5ae0b4bf952351fbc5945757"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/adc0809.js": {
+      "bytes": 6267,
+      "sha256": "92926d8bd4315fa837d6cce7bc3770148960d181802eb52ba5d9aa013e5f64af"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/at-8042-a20.js": {
+      "bytes": 19631,
+      "sha256": "c604c8a272034a9a80eeb30abe1c5d6ab09ebe6c816b3f3c778874f6b9a9f6b8"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/at-ps2-mouse.js": {
+      "bytes": 2891,
+      "sha256": "b75f93e3a4473e21568af438d658941e9a9703ab330147b8f444baba278281ea"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/at-system-control.js": {
+      "bytes": 2682,
+      "sha256": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/audio-bus.js": {
+      "bytes": 10590,
+      "sha256": "95a263b2432f8309b76a64a0b6dcf0ddcc1dd61aeabb7a8727505f343e26ba08"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/cga-card.js": {
+      "bytes": 10416,
+      "sha256": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/chip-ledger.js": {
+      "bytes": 6217,
+      "sha256": "b12b5d635086636f0f9f405e4a06816943b74c03c1b036fcbd3ffe813055ac3a"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/dac0832.js": {
+      "bytes": 5848,
+      "sha256": "81b24b9c8f461cbd2f4a9bcd1aceda3e366062841d1c530440eccdb8cbeae787"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/ega-card.js": {
+      "bytes": 6552,
+      "sha256": "5b93057ca256f7a43046b477127862278c80bb9849e062528c1cd603f7e3d2f5"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/experimental/ata16.js": {
+      "bytes": 13489,
+      "sha256": "bcf08d6e5e2316cfefe7e264c587e6d23e94b5a4f4e5099c8aace162164a88b7"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/experimental/i80286-protected.js": {
+      "bytes": 73806,
+      "sha256": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/experimental/i80386-at-machine.js": {
+      "bytes": 26851,
+      "sha256": "6c5f12cc92ba7219ed4b53f6237622f6ce58269402ee14770791e04c68f93cb0"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/experimental/i80386.js": {
+      "bytes": 133968,
+      "sha256": "6fba681208e1443cc9eff00ae6aba444903d23e5feafe62527b25428e72d60ed"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/experimental/vga-memory.js": {
+      "bytes": 7229,
+      "sha256": "966109bdc8c55992474175dae31dcff4a6d609a64a0cbf2db7b6976e16ee001a"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/hercules-card.js": {
+      "bytes": 4798,
+      "sha256": "6e3af9bce88edbc609b2f8a07dc464b8a1fb60ce5fd800a4d345dac61367752b"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/i8086-machine.js": {
+      "bytes": 128619,
+      "sha256": "7cf7fdf4e6de451071809e32e128aa0ac663524eaf8b2e08581780b0ec4f167c"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/i8086-ram-words.js": {
+      "bytes": 1656,
+      "sha256": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/i8088-cycles.js": {
+      "bytes": 974864,
+      "sha256": "402d869be7c7ca79f1f6116d0861c85887112e46f1f1ba20f59d7e3031ce1477"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/i8086.js": {
+      "bytes": 107519,
+      "sha256": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/i8088-timing.js": {
+      "bytes": 7947,
+      "sha256": "b1f85cab54484119016e57b954505dfb90821c0b47b5b7851a3d5d787977dc95"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/i8237.js": {
+      "bytes": 26099,
+      "sha256": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/i8251.js": {
+      "bytes": 9962,
+      "sha256": "45a2df29bc0920e7d57188a365e8c05addab0805efc1eb02d8df72a41d4dca2b"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/i8254.js": {
+      "bytes": 18502,
+      "sha256": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/i8255.js": {
+      "bytes": 8295,
+      "sha256": "3445ac6676005f225db542031be51b6d1561045d2be76be339e5853a50f6ff7f"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/i8259.js": {
+      "bytes": 19093,
+      "sha256": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/machine-checkpoint.js": {
+      "bytes": 8280,
+      "sha256": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/mc146818.js": {
+      "bytes": 12655,
+      "sha256": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/mc6845.js": {
+      "bytes": 11052,
+      "sha256": "30c369c37fc4030162dde6d46bea388ce9acbf489141195ab166f3c0cab5c599"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/mc6850.js": {
+      "bytes": 2854,
+      "sha256": "e987c5243a92a7b43533a99ff9bf2da29e0bd608a2417162c7b5dfeb1cb75889"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/ne2000.js": {
+      "bytes": 17462,
+      "sha256": "12a97f87807aaf74a94245d81acddfb10f43748c09a1d4633e0ba7959b7a1244"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/ns16c550.js": {
+      "bytes": 8784,
+      "sha256": "34633ec3bec4d0826998fadde5e11bf88f20dfd32fc5a09144c6bad64461f41b"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/sb-dsp.js": {
+      "bytes": 13475,
+      "sha256": "901fc1d6536e19a552380d226b8e285ff4ab29f871a319d552701c2100044f71"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/pc-speaker.js": {
+      "bytes": 6434,
+      "sha256": "50260dcd04eaedd84373e5c2b1e42faa2f1bc924833b6bdf0aa7d23a80ea9499"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/upd765.js": {
+      "bytes": 53603,
+      "sha256": "b5a066fd577ee358f40c13682015d28be490acbeb00a50d8c7199671523fcde4"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/vga-card.js": {
+      "bytes": 10652,
+      "sha256": "245d777aeae5513a5cae02e943d1e18a5b333bd03352dd2717eee51b8c3e5d71"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/src/ym3812.js": {
+      "bytes": 15069,
+      "sha256": "c78833b8efb3048143e7fac898a7af5374ce3f00f1b9e5b55baa6d212a51df04"
+    },
+    "_temp/cold-native-diagnostic/source-packet/driver53/test/i80386-cold-bios-parity-source.test.mjs": {
+      "bytes": 19003,
+      "sha256": "7bc31cf4dd93935a2b7549bb181e5a5d52c3a5e14fde8de9c943c12c00e6028d"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/.github/workflows/i80386-cold-native-diagnostic.yml": {
+      "bytes": 4126,
+      "sha256": "7a3c3f47db3a2117f934ef6b0504a2668d2b0b72133367a418ee89a48c75ae47"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/README.md": {
+      "bytes": 2783,
+      "sha256": "33985c6e17490df3c814f28f1f636dc3ad1ecf6d3ddff7c99d5f7ec68ccf21ef"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/contract.json": {
+      "bytes": 8828,
+      "sha256": "ca7c23a87a912cfaec37785793a5bc19a7aea6296b9b662829925fd8be41737b"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/parent.py": {
+      "bytes": 17455,
+      "sha256": "b3f50ddf6c315267f87bf18d8ea30c2cfda7898b90e1302d8fb4e070f8246306"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/index.json": {
+      "bytes": 1994,
+      "sha256": "483071793b123b1c25eb69fd868b482ecf0f4ce2ed39201b9c35253ebdaf6857"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/origins.json": {
+      "bytes": 3879,
+      "sha256": "5b7ee8f254244ccc8cb15440dee6fb5c22385e0fe2737c94eeb0c7a7905791e6"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/after.json": {
+      "bytes": 1638,
+      "sha256": "e578f8d0a3a55390fc0b058d5bfa055006fd0df19ed8e9613082bc03cb97e362"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/exit.json": {
+      "bytes": 100,
+      "sha256": "1c352c82d0d957dc287314b262abb0adc572020454f1a348293c1833eb73a225"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/before.json": {
+      "bytes": 1638,
+      "sha256": "e578f8d0a3a55390fc0b058d5bfa055006fd0df19ed8e9613082bc03cb97e362"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/invocation.json": {
+      "bytes": 498,
+      "sha256": "d72843dabe71db149d6287eb4a96f0713b060399687f73e063d0a468d2a75545"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/stderr": {
+      "bytes": 1583,
+      "sha256": "eb469b51b10ae0f407fce112f45fcdf9cbd56ab5e8ef9731ff69dee8adc9e55e"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/stdout": {
+      "bytes": 53,
+      "sha256": "75f3c7ef7561280c9e0367d609b32216a6a3c47628a1146cc8a80fc78e96b41c"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/after.json": {
+      "bytes": 1638,
+      "sha256": "119e5297d3abcbcb6abd6e2f1aaad4fac74456eefb68e6effa1c54042f6967b7"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/before.json": {
+      "bytes": 1638,
+      "sha256": "119e5297d3abcbcb6abd6e2f1aaad4fac74456eefb68e6effa1c54042f6967b7"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/invocation.json": {
+      "bytes": 498,
+      "sha256": "d72843dabe71db149d6287eb4a96f0713b060399687f73e063d0a468d2a75545"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/exit.json": {
+      "bytes": 100,
+      "sha256": "5830102f548fa6150e6e87a1313126beab5b04bd98214da5574956e3d2444c1b"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/stderr": {
+      "bytes": 1457,
+      "sha256": "12430c102a76303f29231e12d9e7dcd57d28ce77324105c1189a39624a71bc99"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/stdout": {
+      "bytes": 53,
+      "sha256": "75f3c7ef7561280c9e0367d609b32216a6a3c47628a1146cc8a80fc78e96b41c"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r3-four-pass/after.json": {
+      "bytes": 1638,
+      "sha256": "8305eb9187fcbcb424fc048dd956b57b66789f10c5c1ca4e1df61e93e722a863"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r3-four-pass/before.json": {
+      "bytes": 1638,
+      "sha256": "8305eb9187fcbcb424fc048dd956b57b66789f10c5c1ca4e1df61e93e722a863"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r3-four-pass/exit.json": {
+      "bytes": 99,
+      "sha256": "a3407b43daed6edb9429bdd6a2ddacc6a290ffe1b8291a575a2c83f52e9e79a3"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r3-four-pass/invocation.json": {
+      "bytes": 501,
+      "sha256": "a4db7e1916960e731a4af6c4e7afd1126dc831034ef37a87c7f90b9d6a7fdbd2"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r3-four-pass/stderr": {
+      "bytes": 102,
+      "sha256": "7e9f2780f9656d9890852c80088e3c2cc7adf086d162bc5957d00b9be24bf445"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/receipts/r3-four-pass/stdout": {
+      "bytes": 250,
+      "sha256": "fb36edd9d9c1ae464808cc0391bf7c8fe9118bbcd1d45ed3f0fdfa31baa9f44e"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/setup.py": {
+      "bytes": 2405,
+      "sha256": "99ff9b694dc2d3cab9987735e83b161e5f81ad3f9a6a7b809ffb96fc9122292e"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-diagnostic/test_parent.py": {
+      "bytes": 5151,
+      "sha256": "ab5f56c5a226b2cc8816252a40c06d736816a63e0efd01b16b83e68d5dab251e"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/README.md": {
+      "bytes": 3058,
+      "sha256": "bfda73fe9fdfddd7eac2c411c2ed9570f97bbb71458d79f1040d29cbf87e20a4"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/admission.py": {
+      "bytes": 922,
+      "sha256": "f3f7023c5f73c18b0a3c908aa2c5269dbef98003795a079e0d9a3cc205035bb3"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/archive.py": {
+      "bytes": 3772,
+      "sha256": "605ba070cd11baa0cbf4eff14d825bfd283a42f3fdea576ee26834329216f139"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/frozen-members.json": {
+      "bytes": 18868,
+      "sha256": "5f36d19304ca2f5ea76d819a20c08466f5d14527e0c8be9d9ab97443abc03778"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/prepared-members.json": {
+      "bytes": 113680,
+      "sha256": "ef0ee970baee93edae2d4c232be07f5ab942eab24767a8e5faa749786fd68778"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/official-members.json": {
+      "bytes": 10893,
+      "sha256": "230fd48c8998aa17fd5627dd1e78f13783ed2e5e04112be094224e3b1c4fbee6"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/expanded5/after.json": {
+      "bytes": 1064,
+      "sha256": "ff9062f583fff86326043dd6dffb00a2a376ac723a8b48ffa21a480074e1b7e1"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/expanded5/before.json": {
+      "bytes": 1064,
+      "sha256": "ff9062f583fff86326043dd6dffb00a2a376ac723a8b48ffa21a480074e1b7e1"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/expanded5/exit.json": {
+      "bytes": 100,
+      "sha256": "125c1c0f3964aeee89580de6a885aca22b74f1cc113f88b53f858da1e12cd3d4"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/expanded5/invocation.json": {
+      "bytes": 296,
+      "sha256": "c971608087ed70d2ff16e36e8f3a9c5a769f249dcbebf405b8d43ac78195bfa0"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/expanded5/stderr": {
+      "bytes": 103,
+      "sha256": "38bf320bde0206302c1e57a1b42621b895232f0c74ebfec8c7b81ec6681fa5a0"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/expanded5/stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/genuine-readonly/after.json": {
+      "bytes": 1636,
+      "sha256": "aaebd312d03447c4413058c557fa9c74759748bb81aa189da53011efd967a76a"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/genuine-readonly/before.json": {
+      "bytes": 1636,
+      "sha256": "aaebd312d03447c4413058c557fa9c74759748bb81aa189da53011efd967a76a"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/genuine-readonly/check.py.txt": {
+      "bytes": 1219,
+      "sha256": "6d9a49317e211018cc9ba2b40f042aa900a6484dd618e30fa5c19e02fe6d2b68"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/genuine-readonly/exit.json": {
+      "bytes": 100,
+      "sha256": "24da40561fb7856141728495eb6bbc20873d8f11fa0675453fc9022e51b153e6"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/genuine-readonly/invocation.json": {
+      "bytes": 233,
+      "sha256": "539a24f200ad5e07865a0de307871c06e9d69469c70f56279601e869eb898634"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/genuine-readonly/stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/genuine-readonly/stdout": {
+      "bytes": 183,
+      "sha256": "55babcb54c99e102b5533bbb5f914735803a1b46d2301d26d998062a3018d73b"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/origins.json": {
+      "bytes": 3636,
+      "sha256": "21396b44fc42495d23ef130757d22796461066632eb704434647ce8d7af3b9d9"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/index.json": {
+      "bytes": 1823,
+      "sha256": "63c2d47bc7492d6dae93869ebb7c68d9be63609c16844badf75380adbe016565"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/primitive3/after.json": {
+      "bytes": 594,
+      "sha256": "48ddc06362e09c62b98a4a49b3eec6eaf4361525bbabc3282ed76cb70180916d"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/primitive3/before.json": {
+      "bytes": 594,
+      "sha256": "48ddc06362e09c62b98a4a49b3eec6eaf4361525bbabc3282ed76cb70180916d"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/primitive3/exit.json": {
+      "bytes": 154,
+      "sha256": "f0a3977bfad64730a7f2fa34d52854ebbe374244f5c7f4726bb7dee28f1af2ed"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/primitive3/stderr": {
+      "bytes": 101,
+      "sha256": "7ba600c131d14938fa296eb6eb208c575bf239a15b65439f37d0578df0fff9bf"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/receipts/primitive3/stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/restore.py": {
+      "bytes": 9961,
+      "sha256": "84456fef7ca890530925cfade3ed3e0ecfc1806ee0f3ae00e5bc64ad73df5645"
+    },
+    "_temp/cold-native-diagnostic/source-packet/tooling/scripts/cold-native-restore/test_archive.py": {
+      "bytes": 5568,
+      "sha256": "a55a72d75df4b420f422f558eda98bdd5b9c5a0c70a67e73d605c63c91f10745"
+    },
+    "_temp/cold-native-setup/compiled-sparse-patterns.txt": {
+      "bytes": 4962,
+      "sha256": "95a57d4d716d60faea66deef398c35ee87a7f1881ae9cb726f90aec307064958"
+    },
+    "_temp/cold-native-setup/compiled-sparse.exit.json": {
+      "bytes": 127,
+      "sha256": "83fcf1d1463664d36b5a02293d646ab810e6d932b8823034e4fbed063acaa11e"
+    },
+    "_temp/cold-native-setup/compiled-sparse.invocation.json": {
+      "bytes": 720,
+      "sha256": "8e27f1ace8f42f90aa1a3edc77b8315717cdf2aab3e093ed66ec6d105d474585"
+    },
+    "_temp/cold-native-setup/compiled-sparse.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-setup/compiled-sparse.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-setup/driver-sparse-patterns.txt": {
+      "bytes": 1549,
+      "sha256": "73073ade12e14c049b62f974f38da3fe764952db7da0ed073bf9b1a022b1927a"
+    },
+    "_temp/cold-native-setup/driver-sparse.invocation.json": {
+      "bytes": 713,
+      "sha256": "321b8335e3cc7be82c2a2b6502a20313b4522c5f41a926e96af895f6f591382f"
+    },
+    "_temp/cold-native-setup/driver-sparse.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-setup/driver-sparse.exit.json": {
+      "bytes": 127,
+      "sha256": "86493740a2b178f6834f3568613e990d0a3ed9c6b772b97e8d21bbf83066e571"
+    },
+    "_temp/cold-native-setup/driver-sparse.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-setup/final-status.json": {
+      "bytes": 69,
+      "sha256": "7c1565e35df1838ae055e3a91659b0ab4da50365f328e9f2b283cf271bedf67d"
+    },
+    "_temp/cold-native-setup/upstream-0.invocation.json": {
+      "bytes": 451,
+      "sha256": "94acc95f228fc84b6e0db85660b165c38a7a303673bfb961aa22fd4d68438b9f"
+    },
+    "_temp/cold-native-setup/upstream-0.exit.json": {
+      "bytes": 128,
+      "sha256": "67b80d260af3f3434831b9360557f500d0b994990d5d24ca5bb9349bdf99d83e"
+    },
+    "_temp/cold-native-setup/upstream-0.stderr": {
+      "bytes": 586,
+      "sha256": "3e70934f1909b0f5a846d62237fcc1509d733b9fb0321187024723dfc67176d3"
+    },
+    "_temp/cold-native-setup/upstream-0.stdout": {
+      "bytes": 91,
+      "sha256": "b1eec07029156fa00f9624b1336c0a3cdea3ecf8b506ea401ce749785e7bff63"
+    },
+    "_temp/cold-native-setup/upstream-1.exit.json": {
+      "bytes": 128,
+      "sha256": "32ccc93a5a6fda0c95d4560038f76e018a17f756593c68df10611793124b115a"
+    },
+    "_temp/cold-native-setup/upstream-1.invocation.json": {
+      "bytes": 534,
+      "sha256": "45e4eccb1c6ddba74ac2debb34ee16a0969795eb493d7f19ebbf801be2e3676f"
+    },
+    "_temp/cold-native-setup/upstream-1.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-setup/upstream-1.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-setup/upstream-2.exit.json": {
+      "bytes": 127,
+      "sha256": "fcf2960bb50307c6566f8b7aab2effd252560c2d45bbaa28b210e88dd35f1a05"
+    },
+    "_temp/cold-native-setup/upstream-2.stderr": {
+      "bytes": 116,
+      "sha256": "5d9e7d35ab19a5b68b608b47b0b6b4a3d5e115caa23d7cebd4ee589da180975a"
+    },
+    "_temp/cold-native-setup/upstream-2.invocation.json": {
+      "bytes": 558,
+      "sha256": "20e5356b26aef594253d16d7386fc53d53449bd9ac82183ba7ba41d770366ff2"
+    },
+    "_temp/cold-native-setup/upstream-2.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-setup/upstream-3.exit.json": {
+      "bytes": 128,
+      "sha256": "7903693d229f201c843aa1d992d004550650596a00d65d96ad73127fa6ed4139"
+    },
+    "_temp/cold-native-setup/upstream-3.invocation.json": {
+      "bytes": 499,
+      "sha256": "0b0a9071f2765fb323aab6168214a901296373f41cdd171d10e1e8974bf199fc"
+    },
+    "_temp/cold-native-setup/upstream-3.stderr": {
+      "bytes": 60,
+      "sha256": "188a01a344b2dffbbfed4263e3f63af7b9836ca545e76580cab3f3ef84b88e03"
+    },
+    "_temp/cold-native-setup/upstream-3.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-parent-context/parent.stderr": {
+      "bytes": 792,
+      "sha256": "84763aa49845718ed08020e087b1b29b74d1987f9c24d87eb2b96a80f7f13176"
+    },
+    "_temp/cold-native-parent-context/parent.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-parent-context/setup.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-native-parent-context/setup.stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/README.md": {
+      "bytes": 2783,
+      "sha256": "33985c6e17490df3c814f28f1f636dc3ad1ecf6d3ddff7c99d5f7ec68ccf21ef"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/contract.json": {
+      "bytes": 8828,
+      "sha256": "ca7c23a87a912cfaec37785793a5bc19a7aea6296b9b662829925fd8be41737b"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/parent.py": {
+      "bytes": 17455,
+      "sha256": "b3f50ddf6c315267f87bf18d8ea30c2cfda7898b90e1302d8fb4e070f8246306"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/index.json": {
+      "bytes": 1994,
+      "sha256": "483071793b123b1c25eb69fd868b482ecf0f4ce2ed39201b9c35253ebdaf6857"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/origins.json": {
+      "bytes": 3879,
+      "sha256": "5b7ee8f254244ccc8cb15440dee6fb5c22385e0fe2737c94eeb0c7a7905791e6"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/after.json": {
+      "bytes": 1638,
+      "sha256": "e578f8d0a3a55390fc0b058d5bfa055006fd0df19ed8e9613082bc03cb97e362"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/before.json": {
+      "bytes": 1638,
+      "sha256": "e578f8d0a3a55390fc0b058d5bfa055006fd0df19ed8e9613082bc03cb97e362"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/exit.json": {
+      "bytes": 100,
+      "sha256": "1c352c82d0d957dc287314b262abb0adc572020454f1a348293c1833eb73a225"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/invocation.json": {
+      "bytes": 498,
+      "sha256": "d72843dabe71db149d6287eb4a96f0713b060399687f73e063d0a468d2a75545"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/stderr": {
+      "bytes": 1583,
+      "sha256": "eb469b51b10ae0f407fce112f45fcdf9cbd56ab5e8ef9731ff69dee8adc9e55e"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/after.json": {
+      "bytes": 1638,
+      "sha256": "119e5297d3abcbcb6abd6e2f1aaad4fac74456eefb68e6effa1c54042f6967b7"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r1-preexec-fixture-failure/stdout": {
+      "bytes": 53,
+      "sha256": "75f3c7ef7561280c9e0367d609b32216a6a3c47628a1146cc8a80fc78e96b41c"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/before.json": {
+      "bytes": 1638,
+      "sha256": "119e5297d3abcbcb6abd6e2f1aaad4fac74456eefb68e6effa1c54042f6967b7"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/exit.json": {
+      "bytes": 100,
+      "sha256": "5830102f548fa6150e6e87a1313126beab5b04bd98214da5574956e3d2444c1b"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/invocation.json": {
+      "bytes": 498,
+      "sha256": "d72843dabe71db149d6287eb4a96f0713b060399687f73e063d0a468d2a75545"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/stderr": {
+      "bytes": 1457,
+      "sha256": "12430c102a76303f29231e12d9e7dcd57d28ce77324105c1189a39624a71bc99"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r2-startup-fixture-failure/stdout": {
+      "bytes": 53,
+      "sha256": "75f3c7ef7561280c9e0367d609b32216a6a3c47628a1146cc8a80fc78e96b41c"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/after.json": {
+      "bytes": 1638,
+      "sha256": "8305eb9187fcbcb424fc048dd956b57b66789f10c5c1ca4e1df61e93e722a863"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/before.json": {
+      "bytes": 1638,
+      "sha256": "8305eb9187fcbcb424fc048dd956b57b66789f10c5c1ca4e1df61e93e722a863"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/exit.json": {
+      "bytes": 99,
+      "sha256": "a3407b43daed6edb9429bdd6a2ddacc6a290ffe1b8291a575a2c83f52e9e79a3"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/invocation.json": {
+      "bytes": 501,
+      "sha256": "a4db7e1916960e731a4af6c4e7afd1126dc831034ef37a87c7f90b9d6a7fdbd2"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/stderr": {
+      "bytes": 102,
+      "sha256": "7e9f2780f9656d9890852c80088e3c2cc7adf086d162bc5957d00b9be24bf445"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/receipts/r3-four-pass/stdout": {
+      "bytes": 250,
+      "sha256": "fb36edd9d9c1ae464808cc0391bf7c8fe9118bbcd1d45ed3f0fdfa31baa9f44e"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/setup.py": {
+      "bytes": 2405,
+      "sha256": "99ff9b694dc2d3cab9987735e83b161e5f81ad3f9a6a7b809ffb96fc9122292e"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-diagnostic/test_parent.py": {
+      "bytes": 5151,
+      "sha256": "ab5f56c5a226b2cc8816252a40c06d736816a63e0efd01b16b83e68d5dab251e"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/README.md": {
+      "bytes": 3058,
+      "sha256": "bfda73fe9fdfddd7eac2c411c2ed9570f97bbb71458d79f1040d29cbf87e20a4"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/admission.py": {
+      "bytes": 922,
+      "sha256": "f3f7023c5f73c18b0a3c908aa2c5269dbef98003795a079e0d9a3cc205035bb3"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/archive.py": {
+      "bytes": 3772,
+      "sha256": "605ba070cd11baa0cbf4eff14d825bfd283a42f3fdea576ee26834329216f139"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/frozen-members.json": {
+      "bytes": 18868,
+      "sha256": "5f36d19304ca2f5ea76d819a20c08466f5d14527e0c8be9d9ab97443abc03778"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/official-members.json": {
+      "bytes": 10893,
+      "sha256": "230fd48c8998aa17fd5627dd1e78f13783ed2e5e04112be094224e3b1c4fbee6"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/prepared-members.json": {
+      "bytes": 113680,
+      "sha256": "ef0ee970baee93edae2d4c232be07f5ab942eab24767a8e5faa749786fd68778"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/after.json": {
+      "bytes": 1064,
+      "sha256": "ff9062f583fff86326043dd6dffb00a2a376ac723a8b48ffa21a480074e1b7e1"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/before.json": {
+      "bytes": 1064,
+      "sha256": "ff9062f583fff86326043dd6dffb00a2a376ac723a8b48ffa21a480074e1b7e1"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/exit.json": {
+      "bytes": 100,
+      "sha256": "125c1c0f3964aeee89580de6a885aca22b74f1cc113f88b53f858da1e12cd3d4"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/invocation.json": {
+      "bytes": 296,
+      "sha256": "c971608087ed70d2ff16e36e8f3a9c5a769f249dcbebf405b8d43ac78195bfa0"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/stderr": {
+      "bytes": 103,
+      "sha256": "38bf320bde0206302c1e57a1b42621b895232f0c74ebfec8c7b81ec6681fa5a0"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/expanded5/stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/after.json": {
+      "bytes": 1636,
+      "sha256": "aaebd312d03447c4413058c557fa9c74759748bb81aa189da53011efd967a76a"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/before.json": {
+      "bytes": 1636,
+      "sha256": "aaebd312d03447c4413058c557fa9c74759748bb81aa189da53011efd967a76a"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/check.py.txt": {
+      "bytes": 1219,
+      "sha256": "6d9a49317e211018cc9ba2b40f042aa900a6484dd618e30fa5c19e02fe6d2b68"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/exit.json": {
+      "bytes": 100,
+      "sha256": "24da40561fb7856141728495eb6bbc20873d8f11fa0675453fc9022e51b153e6"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/invocation.json": {
+      "bytes": 233,
+      "sha256": "539a24f200ad5e07865a0de307871c06e9d69469c70f56279601e869eb898634"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/genuine-readonly/stdout": {
+      "bytes": 183,
+      "sha256": "55babcb54c99e102b5533bbb5f914735803a1b46d2301d26d998062a3018d73b"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/origins.json": {
+      "bytes": 3636,
+      "sha256": "21396b44fc42495d23ef130757d22796461066632eb704434647ce8d7af3b9d9"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/index.json": {
+      "bytes": 1823,
+      "sha256": "63c2d47bc7492d6dae93869ebb7c68d9be63609c16844badf75380adbe016565"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/primitive3/after.json": {
+      "bytes": 594,
+      "sha256": "48ddc06362e09c62b98a4a49b3eec6eaf4361525bbabc3282ed76cb70180916d"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/primitive3/before.json": {
+      "bytes": 594,
+      "sha256": "48ddc06362e09c62b98a4a49b3eec6eaf4361525bbabc3282ed76cb70180916d"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/primitive3/exit.json": {
+      "bytes": 154,
+      "sha256": "f0a3977bfad64730a7f2fa34d52854ebbe374244f5c7f4726bb7dee28f1af2ed"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/primitive3/stderr": {
+      "bytes": 101,
+      "sha256": "7ba600c131d14938fa296eb6eb208c575bf239a15b65439f37d0578df0fff9bf"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/receipts/primitive3/stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/restore.py": {
+      "bytes": 9961,
+      "sha256": "84456fef7ca890530925cfade3ed3e0ecfc1806ee0f3ae00e5bc64ad73df5645"
+    },
+    "bw-board/bw-board/runtime/scripts/cold-native-restore/test_archive.py": {
+      "bytes": 5568,
+      "sha256": "a55a72d75df4b420f422f558eda98bdd5b9c5a0c70a67e73d605c63c91f10745"
+    },
+    "_temp/cold-bios-build-evidence/architecture.exit.json": {
+      "bytes": 390,
+      "sha256": "4b260a0cf9e9b02d1d2860daa9e995e8c1c1e8f65fb325e9960a5bd4f7a79117"
+    },
+    "_temp/cold-bios-build-evidence/architecture.invocation.json": {
+      "bytes": 396,
+      "sha256": "9663ff3a178f1f85bcce10de2a943ade232acf545e9bf68c77d400ef98c571ef"
+    },
+    "_temp/cold-bios-build-evidence/architecture.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-bios-build-evidence/architecture.stdout": {
+      "bytes": 7,
+      "sha256": "aaf631698ae5160ceb04a97681a14887fdcab47cd6e0f163c87485b3b1340b62"
+    },
+    "_temp/cold-bios-build-evidence/artifact-inventory.json": {
+      "bytes": 8250,
+      "sha256": "3a5c424963133855d8d89d7b0af396feb40c67ac8f5e1deeddd20c59671ad2d1"
+    },
+    "_temp/cold-bios-build-evidence/build-context.json": {
+      "bytes": 17957,
+      "sha256": "1130581c19a14153000702466dc73b0bd3c9c4c222ee50d40cd61583076d48aa"
+    },
+    "_temp/cold-bios-build-evidence/compiler.exit.json": {
+      "bytes": 399,
+      "sha256": "c6a14e05637186ffd7b322268bdd39406dbfc936d38f40b3dbcd23c20567633c"
+    },
+    "_temp/cold-bios-build-evidence/build-static-preflight.json": {
+      "bytes": 16352,
+      "sha256": "471c906511aa3b13367e5d50b58bc2df72ea58dbf37ade137457dd34e1d401af"
+    },
+    "_temp/cold-bios-build-evidence/compiler.invocation.json": {
+      "bytes": 401,
+      "sha256": "717e2b313fa5d90728b56207796bdbbcaba9f29af63f0d74bce3c92565b92663"
+    },
+    "_temp/cold-bios-build-evidence/compiler.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-bios-build-evidence/compiler.stdout": {
+      "bytes": 246,
+      "sha256": "59d1cbef41d4ae78d5063d525b7aa13d18dc0493ea00537efc19b2ee398cb5a8"
+    },
+    "_temp/cold-bios-build-evidence/config.h": {
+      "bytes": 28122,
+      "sha256": "80f5c383e0ad52885dae56e339b81acc4ef33a53f7712e4dd0ff8b4c12c1c0fe"
+    },
+    "_temp/cold-bios-build-evidence/configure.exit.json": {
+      "bytes": 656,
+      "sha256": "eff5abc6a5341b60000b0e5fb944127f8b96692ad97f73afc28a5ba3bab7bb3a"
+    },
+    "_temp/cold-bios-build-evidence/configure.invocation.json": {
+      "bytes": 667,
+      "sha256": "2227e391b16ea843e0bc293a08952586ad53576f1d9c11df4d850430d69b7e24"
+    },
+    "_temp/cold-bios-build-evidence/configure.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-bios-build-evidence/configure.stdout": {
+      "bytes": 13400,
+      "sha256": "04159c51f76491a09845ba3d9fbc707ec6770a052b4db1fbf54d12cef3cae7da"
+    },
+    "_temp/cold-bios-build-evidence/final-status.json": {
+      "bytes": 1172,
+      "sha256": "3016d913814f231b490f4764b313803bd2cc654e34a95b1352ba275f72585fc4"
+    },
+    "_temp/cold-bios-build-evidence/identity-after.exit.json": {
+      "bytes": 629,
+      "sha256": "c66ac965e4ab44568f4e74b8bf5e73ddbe65c5904bf6325941635a3bdcd47b41"
+    },
+    "_temp/cold-bios-build-evidence/identity-after.invocation.json": {
+      "bytes": 631,
+      "sha256": "fdc19d224efb15ca3043f2592cdab8fa104761dee339e14ab7afd236a1b90c32"
+    },
+    "_temp/cold-bios-build-evidence/identity-after.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-bios-build-evidence/identity-after.stdout": {
+      "bytes": 13529,
+      "sha256": "79181303dde158ba2ee2f2d69a402563363005af216f0c0ffdc21f99eb288775"
+    },
+    "_temp/cold-bios-build-evidence/identity-before.exit.json": {
+      "bytes": 629,
+      "sha256": "ff61c936c4b3eb7ba582249d16e3e4bdff22f13fa648d9382596e005914be8cb"
+    },
+    "_temp/cold-bios-build-evidence/identity-before.invocation.json": {
+      "bytes": 631,
+      "sha256": "5c4a94ba578e10f97079ecbe6e5360ef81a2759eb119c6e06064d4c7d3932b0c"
+    },
+    "_temp/cold-bios-build-evidence/identity-before.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-bios-build-evidence/identity-before.stdout": {
+      "bytes": 13529,
+      "sha256": "79181303dde158ba2ee2f2d69a402563363005af216f0c0ffdc21f99eb288775"
+    },
+    "_temp/cold-bios-build-evidence/make.exit.json": {
+      "bytes": 481,
+      "sha256": "499dfbd2bddca163e67c302f2b486245d476408955350f3ed622378b1d4148a3"
+    },
+    "_temp/cold-bios-build-evidence/make.invocation.json": {
+      "bytes": 489,
+      "sha256": "1330160cf77518287abf8e5be88aa808346f7ff9edb36825b24f583d3475c340"
+    },
+    "_temp/cold-bios-build-evidence/make.stderr": {
+      "bytes": 7894,
+      "sha256": "0eea62c1c80939697aa048376ee8dc9039f80a770a32aa99fac399f6d4339d8e"
+    },
+    "_temp/cold-bios-build-evidence/nm.exit.json": {
+      "bytes": 492,
+      "sha256": "9361800cbb92728d3e019f08224d9aeb9c3d2126b16b9e2a5c9134813a656d47"
+    },
+    "_temp/cold-bios-build-evidence/make.stdout": {
+      "bytes": 36338,
+      "sha256": "6a70466d2c8dfae65204278cd022ccb9e2bd99ee74927d2fd4135aa3cf116c6d"
+    },
+    "_temp/cold-bios-build-evidence/nm.invocation.json": {
+      "bytes": 492,
+      "sha256": "f3a95bbff31bf2f77a4d0ad0f0e7b9d51490c6b6c75c0b2e27db32f5d2831a1a"
+    },
+    "_temp/cold-bios-build-evidence/nm.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-bios-build-evidence/nm.stdout": {
+      "bytes": 188038,
+      "sha256": "ab0cd25d211bfd1e4f12f326f07e388e71466731f7112fd104697437873a98a6"
+    },
+    "_temp/cold-bios-build-evidence/platform.exit.json": {
+      "bytes": 395,
+      "sha256": "7f1a732e61a29f3c59a05597d81808e7a00c454ee78455782ecc59f1443398d9"
+    },
+    "_temp/cold-bios-build-evidence/platform.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-bios-build-evidence/platform.invocation.json": {
+      "bytes": 396,
+      "sha256": "f53ed18fc47f5be889a05d8dd8788840a002a06c53f5ca4b207bf1927590bb13"
+    },
+    "_temp/cold-bios-build-evidence/platform.stdout": {
+      "bytes": 113,
+      "sha256": "6ecb75ce9d770bd2cfb6898b267dd8f29398821b25cb233675e182e0323ba0d2"
+    },
+    "_temp/cold-bios-build-evidence/prepare.exit.json": {
+      "bytes": 587,
+      "sha256": "b699f9261bf3f675f0279234aa1b4003f672b5b04fc28eb1f064e3137edec58f"
+    },
+    "_temp/cold-bios-build-evidence/prepare.invocation.json": {
+      "bytes": 589,
+      "sha256": "754fc1aa0b5d08c3e9c496dca9268baa750d6cb3b731bc840af5d682c10aad60"
+    },
+    "_temp/cold-bios-build-evidence/prepare.json": {
+      "bytes": 28304,
+      "sha256": "8b43eb0ef3573c239688d365b6e11be8ba3523a0553f0dd86ded5255a69adf1c"
+    },
+    "_temp/cold-bios-build-evidence/prepare.stderr": {
+      "bytes": 664,
+      "sha256": "0f36516b349191872b6faeba04c7b45da786fa57ebd7d7dd8c8c84e091b11ee4"
+    },
+    "_temp/cold-bios-build-evidence/prepare.stdout": {
+      "bytes": 28304,
+      "sha256": "8b43eb0ef3573c239688d365b6e11be8ba3523a0553f0dd86ded5255a69adf1c"
+    },
+    "_temp/cold-bios-build-evidence/prepared-after-build.json": {
+      "bytes": 81821,
+      "sha256": "e3133753d53f38e7511f5be6a52c1ce3cffe987b1fca25bee0a92ac0e057f8cc"
+    },
+    "_temp/cold-bios-build-evidence/prepared-before-build.json": {
+      "bytes": 78832,
+      "sha256": "cbd0eea6d6daf4df7c25b55dddc6cb509925c1c2323ad351dc6f8cc155afa86a"
+    },
+    "_temp/cold-bios-build-evidence/readelf.exit.json": {
+      "bytes": 473,
+      "sha256": "3e42da95884801e06512dad380f262278ee8214ebb4189c5a2bab94f7ccd1378"
+    },
+    "_temp/cold-bios-build-evidence/readelf.invocation.json": {
+      "bytes": 475,
+      "sha256": "0fe735925c39c842bbdbb4989ee9c3eee57c4691b1533ceee01d007743e72ea6"
+    },
+    "_temp/cold-bios-build-evidence/readelf.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-bios-build-evidence/readelf.stdout": {
+      "bytes": 1539,
+      "sha256": "bdfa449c87e7500c3b0a628da3b128647425342c8a9499a05f066f14bcfa98dd"
+    },
+    "_temp/cold-bios-build-evidence/source-after.json": {
+      "bytes": 1283323,
+      "sha256": "04e8a1b5d143ebd8aba85dfd1e9b3de8dd2c0e28ecdaf11562d90426ee9b36d7"
+    },
+    "_temp/cold-bios-build-evidence/source-before.json": {
+      "bytes": 1283323,
+      "sha256": "04e8a1b5d143ebd8aba85dfd1e9b3de8dd2c0e28ecdaf11562d90426ee9b36d7"
+    },
+    "_temp/cold-bios-build-evidence/static-admission.exit.json": {
+      "bytes": 798,
+      "sha256": "b30ec2cd4535d9afe9e62887adbc29bc340d5678a3cb2471d73e9f8a9622e119"
+    },
+    "_temp/cold-bios-build-evidence/static-admission.invocation.json": {
+      "bytes": 804,
+      "sha256": "edd7395dc4bec15c16379ccef9d2b16f8aab634b4ef272db9d79b6fb4999c00f"
+    },
+    "_temp/cold-bios-build-evidence/static-admission.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "_temp/cold-bios-build-evidence/static-admission.stdout": {
+      "bytes": 983,
+      "sha256": "57e242d38d358fe06243d0bd49d7389bfbcc736511db4ec65a32a50cace405f2"
+    },
+    "_temp/cold-bios-build-evidence/static-input.json": {
+      "bytes": 540,
+      "sha256": "c619bbe9d1137716fea9a6530e6f1c4c30b1382d8ae47dc56232eb747f0344e2"
+    },
+    "_temp/cold-bios-build-evidence/upstream-COPYING": {
+      "bytes": 26428,
+      "sha256": "c43e067abce73ca284383f4f905316e7cad6dd9aaf69f02ee961b6dfbc4de3c2"
+    },
+    "_temp/cold-bios-build-evidence/upstream-LICENSE": {
+      "bytes": 301,
+      "sha256": "c1e96db20d4598f889e24411a1a09e31a4411e3231c20d8cbff984de50a02884"
+    },
+    "bw-board/bw-board/runtime/.github/workflows/i80386-cold-native-diagnostic.yml": {
+      "bytes": 4126,
+      "sha256": "7a3c3f47db3a2117f934ef6b0504a2668d2b0b72133367a418ee89a48c75ae47"
+    }
+  }
+}

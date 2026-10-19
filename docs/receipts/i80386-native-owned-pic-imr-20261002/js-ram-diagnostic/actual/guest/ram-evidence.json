@@ -1,0 +1,19 @@
+{
+  "resetWitness": [
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "ramCanonicalSha256": "e5f3f9f0ee95f1828b6dd6b28149d7d1e1dbaa77cb79268918b5c7b469601cfd",
+  "rawRamSha256": "887b7eb9959044f45868a71c29c5c013d65ec0ad3e0205c738719757e63b0ffb",
+  "ownReset": {
+    "edx": 768,
+    "cr0": 0
+  },
+  "scope": "Distinct diagnostic observer; canonical comparison changes only510..517 in hash stream"
+}

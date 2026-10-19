@@ -1,0 +1,53 @@
+# Third-party code and references
+
+## Shipped third-party code
+
+| project | licence | relationship |
+|---|---|---|
+| janroesner/sixty5o2 | MIT | Bootloader + hello_world ROM for EATER6502 preset, ported to ca65. Source and binaries in `rom/sixty5o2/` |
+| mike42/6502-computer | CC-BY-4.0 | HB6502 machine preset derived from hardware design (address decode, clock, chip selection). No code copied; wiring facts only |
+| treideme/stc89c52-demos | Apache-2.0 | 16 SDCC demos for HC6800-ES learning board, compiled to IHX in `rom/stc89c52-demos/`. Cross-check corpus for 8051 device models |
+
+## Runtime dependencies
+
+| project | licence | relationship |
+|---|---|---|
+| wokwi/avr8js | MIT | AVR MCU emulator (npm dependency) |
+
+## Shipped compiled binaries (source not vendored, build-time only)
+
+| project | licence | relationship |
+|---|---|---|
+| arduino-libraries/LiquidCrystal | LGPL-2.1 | Compiled to HEX for avr8js HD44780 cross-check; LGPL stays in compiled binary only, no source vendored |
+| PaulStoffregen/OneWire | MIT (compatible) | Compiled to HEX for DS18B20 cross-check |
+| milesburton/DallasTemperature | MIT | Compiled to HEX for DS18B20 cross-check |
+| olikraus/u8g2 | BSD-2-Clause | Compiled to HEX for ST7920 cross-check |
+| adafruit/RTClib | MIT | Compiled to HEX for DS3231 TWI bridge cross-check |
+| jrowberg/i2cdevlib | MIT | I2Cdev + MPU6050 compiled to HEX for TWI bridge cross-check |
+| adafruit/Adafruit_SSD1306 | BSD-2-Clause | Compiled to HEX for SSD1306 TWI bridge cross-check |
+| adafruit/Adafruit-GFX-Library | BSD-2-Clause | Compiled to HEX as SSD1306 dependency |
+| adafruit/Adafruit_BusIO | MIT | Compiled to HEX as RTClib/SSD1306 dependency |
+| arduino/ArduinoCore-avr | LGPL-2.1 | Core + Wire library compiled to HEX for TWI bridge tests; LGPL stays in compiled binary only |
+| FreeRTOS/FreeRTOS-Kernel | MIT | Kernel V11.1.0 (pinned `dbf70559`) cross-built with clang+lld to a riscv32 ELF at `test/fixtures/riscv-freertos/freertos-demo.elf.b64` for the RISC-V SoC boot test (`test/riscv32-freertos.test.mjs`). Only the compiled image is committed; the kernel source is fetched by `build.sh`, not vendored. The demo sources, linker script and config in that directory are original bw-board code |
+| RT-Thread/rtthread-nano | Apache-2.0 | RT-Thread Nano (pinned `8afd0416`) cross-built with clang+lld to a riscv32 ELF at `test/fixtures/riscv-rtthread/rtthread-demo.elf.b64` for the RISC-V SoC boot test (`test/riscv32-rtthread.test.mjs`). Only the compiled image is committed; the kernel source is fetched by `build.sh`, not vendored. The board layer (`board.c`, `start.S`, `main.c`, `rtconfig.h`, `riscv.ld`) is original bw-board code |
+
+## Test-time references (not shipped)
+
+| project | licence | relationship |
+|---|---|---|
+| blinkenrocket-firmware | LGPL-3 OR BSD-3 per file | Built (avr-gcc) for ATtiny88 smoke tests; BSD-3 licence elected; binary loaded at test time only, not shipped |
+| mike42/6502-computer ehBASIC | NC (Lee Davidson) | Boot script in test/hb6502-ehbasic-boot.mjs; ROM never committed or shipped |
+
+## References studied (not copied)
+
+| project | licence | relationship |
+|---|---|---|
+| wokwi/avr8js | MIT | Reference architecture for MCU ⇄ board coupling |
+| wokwi/wokwi-elements | MIT | Potential source of part visuals (future) |
+| pfalstad/circuitjs1 | GPL-2.0 | Studied interaction design only; no code taken |
+| jarikomppa/emu8051 | MIT | logicboard.c studied for board-view concept |
+
+## Licence constraint
+
+Everything in this repository is MIT-licensed. No GPL/LGPL/copyleft code
+may be incorporated. See `CLAUDE.md` for the full policy.

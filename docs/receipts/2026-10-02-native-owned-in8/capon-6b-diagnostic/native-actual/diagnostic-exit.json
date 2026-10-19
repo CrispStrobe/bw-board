@@ -1,0 +1,29 @@
+{
+  "returncode": 1,
+  "signal": null,
+  "timedOut": false,
+  "fileLimitReached": false,
+  "error": null,
+  "stderrBytes": 149885500,
+  "stderrSha256": "80aee696c9300aa7bd220247c4d0a8333acd8cd20e930f99423ec705e847e0c2",
+  "wallNs": 68871156894,
+  "transport": "regular file descriptors, no nonblocking pipe",
+  "RLIMIT_FSIZE": 268435456,
+  "heapMiB": 512,
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "/mnt/volume1/tmp-astra/native-owned-in8-capon-terminal-diagnostic-20261002/runner.mjs",
+    "/mnt/volume1/tmp-astra/native-owned-in8-capon-terminal-diagnostic-20261002/native-actual/input.json"
+  ],
+  "RLIMIT_CPU": 120,
+  "niceIncrement": 10,
+  "blankEnvironment": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": ""
+  },
+  "status": "ACTUAL_CHILD_FAILURE_PRESERVED"
+}

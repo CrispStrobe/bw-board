@@ -1,0 +1,15 @@
+{
+  "status": "PASS_INDEPENDENT_PLAIN_JS_V_BATCHED_NEGATIVE_PAIRED_AUDIT",
+  "officialMembers": 279,
+  "children": 18,
+  "discardedWarmupPairs": 2,
+  "measuredPairs": 7,
+  "baselineMeanExecutionCpuSeconds": 0.24268085714285714,
+  "candidateMeanExecutionCpuSeconds": 0.9989317142857143,
+  "meanReduction": -3.1162361384675696,
+  "executionCpuSpeedRatio": 0.2429403868875922,
+  "favorablePairs": 0,
+  "gatePassed": false,
+  "semanticProof": "All18 fullterminal166/NQ/wholeboard/rawRAMhash/full16475PIO/source-input-finalmaps exact",
+  "scope": "PlainJS beats nativebatched in all7 measured pairs. Separate nativeoneQ batchinggain unchanged. No physical386/fullboot/adoption."
+}

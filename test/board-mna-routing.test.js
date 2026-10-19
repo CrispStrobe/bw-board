@@ -1,0 +1,182 @@
+// Stage 2: BoardImpl routes _solve()/advanceTo through MNA whenever the
+// netlist contains parts the closed-form walker cannot represent.
+// Before this, nodeVoltage() on any diode/transistor/op-amp/vsource circuit
+// reported the walker's answer — computed as if those parts were absent.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { BoardImpl } from '../src/board.js';
+
+const vcc = { id: 'V1', kind: 'vcc', params: {}, terminals: ['vcc'] };
+const gnd = { id: 'G1', kind: 'gnd', params: {}, terminals: ['gnd'] };
+const r = (id, ohms) => ({ id, kind: 'resistor', params: { ohms }, terminals: ['a', 'b'] });
+
+test('nodeVoltage sees a diode load (walker used to report 5 V)', () => {
+  // 5 V → 1 kΩ → diode (Vf 0.7, rd 10) → GND. PWL default:
+  // i = (5 − 0.7)/1010 = 4.257 mA; anode node = 0.7 + 0.010·i·1000 = 0.7426 V.
+  const b = new BoardImpl();
+  b.setNetlist(
+    [vcc, gnd, r('R1', 1000), { id: 'D1', kind: 'diode', params: { vf: 0.7 }, terminals: ['anode', 'cathode'] }],
+    [
+      { id: 'vcc', terminals: [{ part: 'V1', terminal: 'vcc' }, { part: 'R1', terminal: 'a' }] },
+      { id: 'n1', terminals: [{ part: 'R1', terminal: 'b' }, { part: 'D1', terminal: 'anode' }] },
+      { id: 'gnd', terminals: [{ part: 'G1', terminal: 'gnd' }, { part: 'D1', terminal: 'cathode' }] },
+    ]);
+  const v = b.nodeVoltage('n1');
+  // NOT 0.7 + 10*((5-0.7)/1010). That read vf as the knee AND used the LED's
+  // rd for a silicon part. vf is the datasheet drop at the rated current, and
+  // silicon bulk is SILICON_RD = 0.568 (our own D1N4148 reference), not 10.
+  // ngspice for this exact loop -- V1 5, R1 1k, D(IS=2.52e-9 RS=0.568 N=1.752)
+  // -- gives 0.6532 V; this solver reads 0.6793, +4.0 %. Anchored on the
+  // oracle with a tolerance that covers the piecewise model's own error, the
+  // same way test/gallery-kind-models.test.mjs does for the same circuit.
+  const expected = 0.6532;  // ngspice
+  assert.ok(Math.abs(v - expected) < 0.08, `n1 = ${v}, expected ~${expected} (ngspice)`);
+});
+
+test('an NPN switch: collector voltage from one coherent solve', () => {
+  // Base: MCU P1.0 push-pull HIGH (5 V behind 25 Ω) → 100 kΩ → base.
+  // ib = (5 − 0.7)/(25 + 100k + 10) ≈ 42.98 µA; ic = 100·ib ≈ 4.298 mA.
+  // Collector: 5 V − 1 kΩ·ic ≈ 0.702 V (active region — chosen to stay there).
+  const b = new BoardImpl();
+  b.setNetlist(
+    [vcc, gnd, { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0'] },
+      r('RB', 100000), r('RC', 1000),
+      { id: 'Q1', kind: 'npn', params: { beta: 100, vbe: 0.7 }, terminals: ['base', 'collector', 'emitter'] }],
+    [
+      { id: 'vcc', terminals: [{ part: 'V1', terminal: 'vcc' }, { part: 'RC', terminal: 'a' }] },
+      { id: 'drive', terminals: [{ part: 'MCU', terminal: 'P1.0' }, { part: 'RB', terminal: 'a' }] },
+      { id: 'base', terminals: [{ part: 'RB', terminal: 'b' }, { part: 'Q1', terminal: 'base' }] },
+      { id: 'coll', terminals: [{ part: 'RC', terminal: 'b' }, { part: 'Q1', terminal: 'collector' }] },
+      { id: 'gnd', terminals: [{ part: 'G1', terminal: 'gnd' }, { part: 'Q1', terminal: 'emitter' }] },
+    ]);
+  b.setPin('P1.0', 'pushpull', true);
+  const ib = (5 - 0.7) / (25 + 100000 + 10);
+  const expected = 5 - 1000 * 100 * ib; // ≈ 0.702 V
+  const v = b.nodeVoltage('coll');
+  assert.ok(Math.abs(v - expected) < 0.05, `coll = ${v}, expected ≈ ${expected}`);
+  // And driven LOW, the transistor is off: collector floats up to 5 V.
+  b.setPin('P1.0', 'pushpull', false);
+  assert.ok(Math.abs(b.nodeVoltage('coll') - 5) < 0.01, `off coll = ${b.nodeVoltage('coll')}`);
+});
+
+test('a function generator runs the board through advanceTo', () => {
+  // Sine 1 kHz, amplitude 2, offset 2.5 across a 1 kΩ load.
+  const b = new BoardImpl();
+  b.setNetlist(
+    [gnd, { id: 'FG', kind: 'vsource', params: { wave: 'sine', freq: 1000, amplitude: 2, offset: 2.5 }, terminals: ['pos', 'neg'] },
+      r('RL', 1000)],
+    [
+      { id: 'sig', terminals: [{ part: 'FG', terminal: 'pos' }, { part: 'RL', terminal: 'a' }] },
+      { id: 'gnd', terminals: [{ part: 'G1', terminal: 'gnd' }, { part: 'FG', terminal: 'neg' }, { part: 'RL', terminal: 'b' }] },
+    ]);
+  b.advanceTo(250_000n);            // 250 µs = T/4 → peak
+  assert.ok(Math.abs(b.nodeVoltage('sig') - 4.5) < 0.05, `T/4: ${b.nodeVoltage('sig')}`);
+  b.advanceTo(750_000n);            // 3T/4 → trough
+  assert.ok(Math.abs(b.nodeVoltage('sig') - 0.5) < 0.05, `3T/4: ${b.nodeVoltage('sig')}`);
+});
+
+test('a LOADED pot wiper routes to MNA; an ADC wiper stays on the walker', () => {
+  // 5 V → 10 kΩ pot at 50 % → wiper → 220 Ω → LED → GND.
+  // The walker used to stitch two half-answers: _solvePot said the
+  // UNLOADED midpoint (2.5000 V) while _solveLedChain drew 2.174 mA from
+  // it as an ideal source — a KCL violation of exactly that 2.174 mA at
+  // the wiper, found by the examples owner's residual check (2026-08-23).
+  // MNA hand oracle with the C1 knee: the LED lands in the blend band at
+  // v = 1.9887 (u = 0.0137, i = u²/(4·0.025·10) = 0.188 mA), so
+  // wiper = 2.0301 and KCL closes exactly.
+  const b = new BoardImpl();
+  b.setNetlist(
+    [vcc, gnd,
+      { id: 'P1', kind: 'potentiometer', params: { ohms: 10000 }, terminals: ['a', 'wiper', 'b'] },
+      r('R1', 220),
+      { id: 'D1', kind: 'led', params: { vf: 2.0 }, terminals: ['anode', 'cathode'] }],
+    [
+      { id: 'top', terminals: [{ part: 'V1', terminal: 'vcc' }, { part: 'P1', terminal: 'a' }] },
+      { id: 'wip', terminals: [{ part: 'P1', terminal: 'wiper' }, { part: 'R1', terminal: 'a' }] },
+      { id: 'led', terminals: [{ part: 'R1', terminal: 'b' }, { part: 'D1', terminal: 'anode' }] },
+      { id: 'gnd', terminals: [
+        { part: 'G1', terminal: 'gnd' }, { part: 'D1', terminal: 'cathode' }, { part: 'P1', terminal: 'b' },
+      ] },
+    ]);
+  const vW = b.nodeVoltage('wip');
+  const vL = b.nodeVoltage('led');
+  // 1.8485, not 2.0301. The only thing that moved is the DIODE in the load:
+  // its knee is now vf - I_RATED*SILICON_RD and its bulk 0.568 rather than 10.
+  // EVIDENCE TIER: this one is CHARACTERISED, not oracled -- I did not build an
+  // ngspice deck for the loaded-pot topology. It is pinned so a further change
+  // is noticed; the diode itself is oracled in the two tests above, and if this
+  // number ever needs defending it needs its own deck first.
+  assert.ok(Math.abs(vW - 1.8485) < 0.005, `loaded wiper sags to 1.8485, got ${vW.toFixed(4)}`);
+  const residual = (5 - vW) / 5000 - vW / 5000 - (vW - vL) / 220;
+  assert.ok(Math.abs(residual) < 1e-6,
+    `KCL closes at the wiper: residual ${(residual * 1e3).toFixed(4)} mA`);
+
+  // The canonical ADC bench (wiper → MCU pin only) keeps the walker and
+  // its exact unloaded midpoint — an input pin is high-Z.
+  const adc = new BoardImpl();
+  adc.setNetlist(
+    [vcc, gnd,
+      { id: 'P1', kind: 'potentiometer', params: { ohms: 10000 }, terminals: ['a', 'wiper', 'b'] },
+      { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.3'] }],
+    [
+      { id: 'top', terminals: [{ part: 'V1', terminal: 'vcc' }, { part: 'P1', terminal: 'a' }] },
+      { id: 'wip', terminals: [{ part: 'P1', terminal: 'wiper' }, { part: 'MCU', terminal: 'P1.3' }] },
+      { id: 'gnd', terminals: [{ part: 'G1', terminal: 'gnd' }, { part: 'P1', terminal: 'b' }] },
+    ]);
+  assert.ok(Math.abs(adc.nodeVoltage('wip') - 2.5) < 1e-9, 'unloaded midpoint stays exact');
+});
+
+test('every net answers nodeVoltage — walker gaps fall through to MNA', () => {
+  // Active-low LED off a quasi pin, pin driving HIGH: the LED is off and
+  // the cathode-side net is reachable only through the dead junction.
+  // The walker used to leave such nets ABSENT from nodeVoltages —
+  // undefined, not zero — so a UI probe read blank and a corpus
+  // instrument misread the gap as "not conducting" (116 nets across the
+  // three quasi-pin benches). The coverage check now routes any solve
+  // the walker cannot complete through MNA, where the floating net gets
+  // its gmin-defined level.
+  const b = new BoardImpl();
+  b.setNetlist(
+    [vcc, gnd,
+      { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0'] },
+      r('R1', 1000),
+      { id: 'D1', kind: 'led', params: { vf: 2.0 }, terminals: ['anode', 'cathode'] }],
+    [
+      { id: 'vcc', terminals: [{ part: 'V1', terminal: 'vcc' }, { part: 'D1', terminal: 'anode' }] },
+      { id: 'mid', terminals: [{ part: 'D1', terminal: 'cathode' }, { part: 'R1', terminal: 'a' }] },
+      { id: 'pin', terminals: [{ part: 'R1', terminal: 'b' }, { part: 'MCU', terminal: 'P1.0' }] },
+      { id: 'gnd', terminals: [{ part: 'G1', terminal: 'gnd' }] },
+    ]);
+  b.setPin('P1.0', 'quasi', true); // active-low convention: HIGH = LED off
+  for (const netId of ['vcc', 'mid', 'pin', 'gnd']) {
+    const v = b.nodeVoltage(netId);
+    assert.ok(Number.isFinite(v),
+      `net ${netId} must answer with a number, got ${v}`);
+    assert.ok(v >= -0.1 && v <= 5.2, `net ${netId} inside the rails: ${v}`);
+  }
+  // And the LED is indeed off in this state.
+  assert.ok(Math.abs(b.branchCurrent('D1', 'anode')) < 1e-5, 'LED off');
+});
+
+test('RC charging beside a diode: transient MNA carries the cap forward', () => {
+  // 5 V → 1 kΩ → n1 → cap 1 µF → GND, plus a diode from n1 to GND (Vf 0.7)
+  // that clamps the node: the cap charges toward min(5 V target, clamp ≈ 0.74 V).
+  // Walker's closed-form integrator cannot see the diode at all.
+  const b = new BoardImpl();
+  b.setNetlist(
+    [vcc, gnd, r('R1', 1000),
+      { id: 'C1', kind: 'capacitor', params: { farads: 1e-6 }, terminals: ['a', 'b'] },
+      { id: 'D1', kind: 'diode', params: { vf: 0.7 }, terminals: ['anode', 'cathode'] }],
+    [
+      { id: 'vcc', terminals: [{ part: 'V1', terminal: 'vcc' }, { part: 'R1', terminal: 'a' }] },
+      { id: 'n1', terminals: [{ part: 'R1', terminal: 'b' }, { part: 'C1', terminal: 'a' }, { part: 'D1', terminal: 'anode' }] },
+      { id: 'gnd', terminals: [{ part: 'G1', terminal: 'gnd' }, { part: 'C1', terminal: 'b' }, { part: 'D1', terminal: 'cathode' }] },
+    ]);
+  // 10 ms ≫ τ: fully settled at the diode clamp, NOT at 5 V.
+  b.advanceTo(10_000_000n);
+  const vClamp = 0.6532; // same loop as the diode test above: ngspice, not a
+                         // knee formula -- see the note there
+  const v = b.getCapVoltage('C1');
+  assert.ok(Math.abs(v - vClamp) < 0.08, `cap settled at ${v}, expected clamp ~${vClamp} (ngspice)`);
+  assert.ok(v < 1.0, 'the diode clamp held — without MNA routing this reads ~5 V');
+});

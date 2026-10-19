@@ -1,0 +1,4 @@
+00000000000i[      ] BXSHARE not set. using compile time default '/usr/local/share/bochs'
+00000000000i[      ] reading configuration from /mnt/volume1/tmp-astra/native-hot-h2-cost-pairs-20261001/0-False/guest.bochsrc
+00000000000i[      ] installing nogui module as the Bochs GUI
+00000000000i[      ] using log file /mnt/volume1/tmp-astra/native-hot-h2-cost-pairs-20261001/0-False/guest.bochs.log

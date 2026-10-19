@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "--test",
+    "test/i80386-native-owned-clock-alloc.test.mjs"
+  ],
+  "exitCode": 0,
+  "prePostTestSha256": "3ba68acf2d98d9bbcb8d61a64b95879ed67da4bf16683dc8fc9fa0d0fc79eaa5",
+  "revision": "5da2a4c513a8c35153fd39fb55f73b386560ea80",
+  "streams": {
+    "stdout": "592852c3eec20a231f6da1a95ed8b401eb0f10c4b09d41e95ce21a1276ca3021",
+    "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

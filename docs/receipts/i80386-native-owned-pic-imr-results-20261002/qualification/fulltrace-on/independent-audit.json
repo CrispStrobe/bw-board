@@ -1,0 +1,19 @@
+{
+  "status": "PASS_ACTUAL_PIC_CAPON_CROSS_MODE_CANONICAL_JOURNAL_AND_PROFILE_STATE",
+  "checks": 1134435,
+  "canonicalRows": 1649374,
+  "journalRows": 209888,
+  "orderedClockRows": 201402,
+  "PIOrows": 35,
+  "INrows": 4,
+  "captureSha256": "dac00973bb24adb23990bdc2db68c210b17177471d5595e1b54f5dbc0bc29430",
+  "traceSha256": "219e6c61456434d676f509f1e2149ffe5a621e7306dd01cff82c16ade8a8e1eb",
+  "journalSha256": "239f2e7576e4e946f5aab83b82bf27fc0cf0b5c6cc1b1fc7d0c4dff48184f887",
+  "runtimeInputs": 122,
+  "compiledInputs": 111,
+  "artifactPins": 975,
+  "resumes": 448,
+  "rawRamSha256": "19e8a7ebcd8260e1a33d7ebc5d11027e04d037b735e2f50f0ab53a4092d827ee",
+  "canonicalRamSha256": "e5f3f9f0ee95f1828b6dd6b28149d7d1e1dbaa77cb79268918b5c7b469601cfd",
+  "scope": "Full stored166 native words and entire reset/final/six snapshots/counters/boards/rawRAM exact across CAP modes. Eight recorded JS CPU fields exact plus two precise EDX/CR0 profiles and own reset witness. Every ordered canonical N/Q kind tuple equals host journal; source-bound successful STEP Q then N reconstruction separately verified, all35PIO/fourIN attempt-minus-one values exact. No direct per-read native PIC state exports, speed or general AT proof claimed. No additional guest executed."
+}

@@ -1,0 +1,14 @@
+test	Test	2026-10-03T04:20:07.2929700Z # Subtest: fixed cold ROM/config plus exact census byte argument domains
+test	Test	2026-10-03T04:20:07.2930306Z ok 2060 - fixed cold ROM/config plus exact census byte argument domains
+test	Test	2026-10-03T04:20:07.2931590Z # Subtest: actual DMA CMOS PIT and diagnostic/debug effects retain actual ordered port records
+test	Test	2026-10-03T04:20:07.2932184Z ok 2061 - actual DMA CMOS PIT and diagnostic/debug effects retain actual ordered port records
+test	Test	2026-10-03T04:20:07.2933435Z # Subtest: idle KBC64 flush reads and delayed AA55/AB00 consume without artificial PIC masks
+test	Test	2026-10-03T04:20:07.2934142Z ok 2062 - idle KBC64 flush reads and delayed AA55/AB00 consume without artificial PIC masks
+test	Test	2026-10-03T04:20:07.2935359Z # Subtest: real PIC line may be staged while ACK refuses before PIC read effects
+test	Test	2026-10-03T04:20:07.2935872Z ok 2063 - real PIC line may be staged while ACK refuses before PIC read effects
+test	Test	2026-10-03T04:20:07.2937094Z # Subtest: ordinary RAM data/stack and ROM execute accepted; RAM execute and malformed port deny
+test	Test	2026-10-03T04:20:07.2937700Z ok 2064 - ordinary RAM data/stack and ROM execute accepted; RAM execute and malformed port deny
+test	Test	2026-10-03T04:20:07.2938969Z # Subtest: private closed lease preserves complete tape refusal and mandatory POSTPIO even zero debt
+test	Test	2026-10-03T04:20:07.2939576Z ok 2065 - private closed lease preserves complete tape refusal and mandatory POSTPIO even zero debt
+test	Test	2026-10-03T04:20:07.2940398Z # Subtest: clock reason domain refuses before effects; ordinary and REP transfers remain valid
+test	Test	2026-10-03T04:20:07.2940754Z ok 2066 - clock reason domain refuses before effects; ordinary and REP transfers remain valid

@@ -1,0 +1,27 @@
+{
+  "qualification": "ORIGINAL_HOSTED_SYNTHETIC_RUNTIME_TEST_REPORT_ONLY",
+  "head": "2275fc5eb9d0c27a197a5256239cbbefa8d8cabe",
+  "run": 38164113871,
+  "attempt": 1,
+  "event": "push",
+  "job": 114542978003,
+  "testCount": 16,
+  "targetSkipped": 0,
+  "targetFailed": 0,
+  "sourceRoles": {
+    "scripts/xv6-js-rollback-direct-v8-guest-site-runtime/runtime-ports.mjs": "f02e756d9df185b020e7ea7a6ca01e90e4fbf3233b270a53f5e3f127f675a9fe",
+    "test/xv6-guest-site-runtime.test.mjs": "59b612ac65c70d72ea3a3de8d9cc8b111a7a862bd5765c578a6795c338f921a2",
+    ".github/workflows/ci.yml": "c49ec1448788f714930bf9f5f34361206bfa4a89310ccc96549f34e4c10413f3",
+    "package.json": "ad3b4abb2d0c4ea8ee699c32210a0887ff812b822301ed31e804c14b3ece5c32",
+    "scripts/run-ci-tests-serial.mjs": "b544d6711fcaf9d4a55e4447290b1e06f49b759ef3b5b02bec00e825b7ff5572"
+  },
+  "origin": "https://api.github.com/repos/CrispStrobe/bw-board/actions/jobs/114542978003/logs",
+  "originalBytes": 3935878,
+  "originalSha256": "1c67dd7350354442d7d9b97f63cf8e28035000a33c8412e6ea825ee84327be7d",
+  "excerptFirstLine": 60394,
+  "excerptLastLine": 60489,
+  "excerptSha256": "e4000e4c2d56abe651ad46e8b8d8e743ce85c49cbc7990a325385eaccceaa8a9",
+  "guestQualified": false,
+  "runtimeIntegrityQualified": false,
+  "performanceQualified": false
+}

@@ -1,0 +1,49 @@
+{
+  "originalContract": {
+    "schema": "bw.property-key.real-napi-qualification.source.v1",
+    "status": "PENDING_ROOT_REVIEWED_HELPER_LIFECYCLE_AND_BUILD",
+    "sourceOnly": true,
+    "candidateRevision": "07a1cdb4db7d10d70ecd7caee1ac6b81ce4abd2f",
+    "heldGeneratedNapiSha256": "052dfe2d8bbcf37b2abd621dbd78c5f2078026f34cb02fa1afd40ee1c9cb15ac",
+    "nodeVersion": "22.23.3",
+    "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+    "addonPath": "./owned-build/key_fixture.node",
+    "addonSha256": null,
+    "generatedHelperSha256": null,
+    "buildReceiptSha256": null,
+    "guestEnabled": false,
+    "performanceQualification": false,
+    "teardownConcurrencyQualified": false
+  },
+  "admittedContract": {
+    "schema": "bw.property-key.real-napi-qualification.source.v1",
+    "status": "ROOT_REVIEWED_REAL_NAPI_FIXTURE_READY",
+    "sourceOnly": true,
+    "candidateRevision": "07a1cdb4db7d10d70ecd7caee1ac6b81ce4abd2f",
+    "heldGeneratedNapiSha256": "052dfe2d8bbcf37b2abd621dbd78c5f2078026f34cb02fa1afd40ee1c9cb15ac",
+    "nodeVersion": "22.23.3",
+    "nodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+    "addonPath": "./owned-build/key_fixture.node",
+    "addonSha256": "0416987e348f6a3269428ec5b39e2637d76f5532412d6d540e2a751b476eaa53",
+    "generatedHelperSha256": "3ad4cfd4b8c07c8350620f1da39b7e480b064597194d2e67a21a78cbfde634a1",
+    "buildReceiptSha256": "89109ff231ac4e3b354471f014b2aebdb78f78b42773e0327f7618c8b0cd1ae6",
+    "guestEnabled": false,
+    "performanceQualification": false,
+    "teardownConcurrencyQualified": false
+  },
+  "changedFields": [
+    "status",
+    "addonSha256",
+    "generatedHelperSha256",
+    "buildReceiptSha256"
+  ],
+  "sourceRevision": "6f021f61523c2544dabffb3d5eeaf377a4e2583d",
+  "buildPacket": {
+    "/tmp/property-key-real-napi-build-proposal-20261005/exit.json": "51c2424a11c6a775ee238e579751394b7b3eb53ac3d519d5b870b0c058b654c4",
+    "/tmp/property-key-real-napi-build-proposal-20261005/before.json": "40342388c4f4a3e8198a2257c5b8a8ee3d470c2df674606383469216e2a70ae3",
+    "/tmp/property-key-real-napi-build-proposal-20261005/after.json": "40342388c4f4a3e8198a2257c5b8a8ee3d470c2df674606383469216e2a70ae3",
+    "/tmp/property-key-real-napi-build-proposal-20261005/input/scripts/property-key-real-napi-qualification/owned-build/build-receipt.json": "89109ff231ac4e3b354471f014b2aebdb78f78b42773e0327f7618c8b0cd1ae6",
+    "/tmp/property-key-real-napi-build-proposal-20261005/input/scripts/property-key-real-napi-qualification/owned-build/generated-helper.inc": "3ad4cfd4b8c07c8350620f1da39b7e480b064597194d2e67a21a78cbfde634a1",
+    "/tmp/property-key-real-napi-build-proposal-20261005/input/scripts/property-key-real-napi-qualification/owned-build/key_fixture.node": "0416987e348f6a3269428ec5b39e2637d76f5532412d6d540e2a751b476eaa53"
+  }
+}

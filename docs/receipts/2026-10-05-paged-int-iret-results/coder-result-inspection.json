@@ -1,0 +1,37 @@
+{
+  "status": "CODER_SAVED_RESULT_INSPECTION_PASS",
+  "runId": 37247392133,
+  "artifactId": 11319662434,
+  "officialMembers": 101,
+  "progress": {
+    "n": 41,
+    "q": 41,
+    "dn": 1,
+    "dq": 1,
+    "resumes": 41,
+    "zeroQ": 0
+  },
+  "raw166Boundaries": 43,
+  "comparable": 41,
+  "unmatched": 2,
+  "stagesExplicitlyUnmatched": 41,
+  "cuts": 14,
+  "callbacks": 52,
+  "bootWrites": 20,
+  "frameWrites": 3,
+  "nativeAdWrites": 6,
+  "javascriptAdUpdates": 7,
+  "framePhysicalBytes": "057018000200",
+  "terminal": {
+    "eax": "8000beef",
+    "esp": "e000",
+    "cs": "18",
+    "eip": "7005",
+    "eflags": "2"
+  },
+  "logicalBodyBytes": 23559031,
+  "compressedBodyBytes": 509752,
+  "governingIndependentAuditSha256": "dda45a49db8e68cc1be0d798be11335d26e85c791e59f1097f00688ac7ac7597",
+  "rootAuditSha256": "da2d6f3091f5155bd1587fdb0abd2199244d82b7e21d1d845f8f0a0ab5d1a0fa",
+  "scope": "Read-only inspection of raw outcome/worker/member bytes and lossless compact logical projection plus actual saved-parity reports. No parity/CPU replay, addon, guest, download, build or tree extraction. Original failed run remains unknown."
+}

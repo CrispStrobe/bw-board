@@ -1,0 +1,19 @@
+{
+  "status": "PASS_TWO_ACTUAL_MODES_FASTPATH_NATIVE_CHRONOLOGY_PENDING",
+  "checks": 1894527,
+  "outputs": [
+    {
+      "mode": "smoke-off",
+      "captureSha256": "15742b1125015d6c2a6ec1e108702673862ed889c31f63a3d03fb76f3f0f5f34",
+      "rawStderrSha256": "155cde511746cad827793997dba711427675fd02ca326029e3772fe6dc884015",
+      "nativeRows": 0
+    },
+    {
+      "mode": "fulltrace-on",
+      "captureSha256": "7c452a6b74a0f9072930bb569618f9a510710130fe1e1a04d932efdfb0ebb307",
+      "rawStderrSha256": "fba20ae9e6399ffecf5179ec1c1e37fbb5e0f54aa7194e0add1756f73436b4e5",
+      "nativeRows": 1649067
+    }
+  ],
+  "scope": "CAPOFF exactwholegueststates proves newclass snapshot parity; journalON native1649067+host209839 exact but delegatesoriginalclockmethods. NativeTraceON/journalOFF thirdcell required for newfastpath native chronology."
+}

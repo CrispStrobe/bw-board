@@ -1,0 +1,55 @@
+{
+  "schema": "bw.i80386-broad-refusal-opcodes-receipt.v1",
+  "date": "2026-09-28",
+  "scope": "Observed fetched-opcode histogram at broad-census unsupported cuts and conditional-Jcc successor cuts; pinned Windows 3.11 60M and lean stock xv6 forktest",
+  "grammarAndLimits": "docs/I80386-BROAD-BLOCK-CENSUS.md",
+  "source": {
+    "measuredCommit": "7663285e102deac0bf14102a26715596f8c654e3",
+    "baseCommit": "54a36ee968e097c965fbdb6c59e4ccaccc259c50",
+    "censusSha256": "43e3a49570be20dce89cb26ed10a48fc22d6bd568d85b0b7c6cf20328994eb68",
+    "atCliSha256": "e55b9c01a5ff7f1c8dbe062001a458c6adb055bbb955a03c5e65273a5e4e2411",
+    "xv6ProbeSha256": "a3238129d27bb35818e2389706c80de379dcc3817d03d6a501f984ebd18fb8ab"
+  },
+  "validation": {
+    "focusedTests": "17/17 pass, including prefix, fetched group extension, refusal partitions, unchanged prior counters and guest parity",
+    "windowsNormalizedGuestSha256": "0dbb2b2c01b87a109fdaea6b05631941ba589aab1b96da4185466db95701ded6",
+    "xv6NormalizedGuestSha256": "bfa900396b4123b3b10758d5e91b310302c6dcc4ada599c76afea3ae3041ff3e",
+    "existingCounters": "Both full workloads have byte-identical unlinked mode and Jcc-linked objects compared with the preceding census. For every mode, the primary and canonical-prefix histograms each partition unsupported-opcode plus unsupported-0f first refusals; 0F second-byte histograms partition unsupported-0f. Jcc successor counterparts partition the corresponding link refusals. Group-extension buckets are subsets, not additive totals."
+  },
+  "windows60m": {
+    "rawReportSha256": "778f2394c88a51b686f8cbbcafa307abe21348080baaab68410e87c20ee83b93",
+    "steps": 60000000,
+    "protected16": {
+      "generalUnsupportedPrimary": {"3a": 487571, "3c": 308061, "ff": 285748, "8e": 235293},
+      "generalPrefixForm": {"26:3a": 466642},
+      "jccSuccessorUnsupportedPrimary": {"3a": 468629, "3c": 170809, "8e": 64902, "f6": 40726},
+      "jccSuccessorPrefixForm": {"26:3a": 466083},
+      "jccSuccessorUnsupportedOpcodeDenominator": 993765,
+      "topTwoJccSuccessorShare": 0.64345
+    },
+    "vm86": {
+      "generalUnsupportedPrimary": {"8e": 813402, "07": 346210, "06": 325499},
+      "interpretation": "Segment reload and stack/segment operations dominate these mode cuts; opcode counts are not a safe executable block contract."
+    },
+    "protected32": {
+      "generalUnsupportedPrimary": {"0f": 792150, "ff": 526700, "f6": 334195, "87": 332991},
+      "general0fSecond": {"b6": 243123, "b3": 160376, "ba": 127148, "b7": 108452},
+      "generalGroupExtension": {"f6/0": 334167, "ff/2": 214837, "ff/4": 178857, "ff/0": 54762},
+      "jccSuccessorGroupExtension": {"f6/0": 119675, "ff/2": 68515, "ff/4": 30994}
+    }
+  },
+  "xv6Forktest": {
+    "rawReportSha256": "a96a319a0845f2a81f63b749d200be07e9023db7c7ad7c0626a576f8066eeb7c",
+    "steps": 24338279,
+    "protected32": {
+      "generalUnsupportedPrimary": {"f6": 649280, "a8": 619077, "25": 541218, "0f": 97644},
+      "generalGroupExtension": {"f6/0": 649280},
+      "general0fSecond": {"b6": 95557},
+      "jccSuccessorUnsupportedPrimary": {"25": 538858, "f6": 487617, "05": 91661},
+      "jccSuccessorGroupExtension": {"f6/0": 487617},
+      "jccSuccessorUnsupportedOpcodeDenominator": 1155632,
+      "topTwoJccSuccessorShare": 0.888237
+    }
+  },
+  "interpretation": "Missing successor cuts concentrate in different small syntax sets: Windows protected16 3A/3C account for 639,438 of 993,765 unsupported Jcc successors, and xv6 protected32 25/F6 /0 account for 1,026,475 of 1,155,632. FF is mixed: its /2, /4, /0 and other extensions have different control/data semantics. This histogram justifies a later opt-in syntactic grammar trial, not an inferred coverage increment, native safety proof or speed claim. No grammar or guest execution changed in this experiment."
+}

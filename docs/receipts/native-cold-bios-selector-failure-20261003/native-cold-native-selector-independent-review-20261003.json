@@ -1,0 +1,9 @@
+{
+  "status": "PASS_FROZEN_DRIVER_SELECTOR_POLICY_REVIEW",
+  "head": "ad1bb6a2ab1052a88ac4edc1479b3478ebc1e5a3",
+  "sourceFilesCurrentGit": 52,
+  "identityCanonicalSha256": "0f0d8cd6bf3c2075218dbf0d3b1d245bf4dcf13d4a03f024a1ab962b1be39938",
+  "pureControls": 8,
+  "actualQ182FixtureExact": true,
+  "scope": "Only cached decomposition counterpart removed; architectural fields remain strict, native CS duplicated cache consistency retained, raw166 digest unchanged. Parent contract still requires separate update. No native execution."
+}

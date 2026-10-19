@@ -1,0 +1,13 @@
+{
+  "result": "ROOT_EXPORTER_MANUFACTURED_CONTROLS_PASS",
+  "sourceHead": "d35b10efabd2d66eb491a3620db1cc7b427b6223",
+  "nodeCases": 1,
+  "namedPythonMethods": 8,
+  "sourcePins": 409,
+  "materializedRoleSnapshotScope": "Read-only source copies authenticated against committed Git, not runtime checkouts",
+  "rawWaitStatus": 0,
+  "recordedParentWallSeconds": 8.525128159672022,
+  "actualRootExporterExecuted": false,
+  "recorderOrGuestExecuted": false,
+  "originalObserverCause": "unknown; first run artifacts absent"
+}

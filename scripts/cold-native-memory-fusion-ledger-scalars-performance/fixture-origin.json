@@ -1,0 +1,13 @@
+{
+  "sourceRevision": "b01c922c2d634aba9367f6e2a70d109370e4adee",
+  "sourcePath": "scripts/cold-native-performance/actual-snapshot-fixtures.json",
+  "sourceSha256": "55656ad72b4aa5cc890cc32ebc0405d2b7317a98345c0a4b48b5e4d0dc33c080",
+  "rawCaptureSha256": "b4dd71749cb8c51db0ae4981bdd87e9485b8f658208b6d7d2a53f1f19fa41cbf",
+  "rawCaptureRunId": 37116448106,
+  "projections": [
+    "reset",
+    "finalInspect",
+    "earlier-resume-Q32"
+  ],
+  "candidateTypeReconstruction": "Pure manufactured Uint32Array reconstruction of genuine ordinary-array baseline words; no candidate native execution"
+}

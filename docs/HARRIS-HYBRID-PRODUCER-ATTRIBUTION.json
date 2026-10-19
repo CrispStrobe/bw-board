@@ -1,0 +1,760 @@
+{
+  "scope": "Hosted cooperative owned Harris memory-only attribution; broad hotspot selection, not throughput acceptance.",
+  "hostedRun": 34696776443,
+  "sourceHead": "1144fd88d8098f70888c64a1e31f32ebb732dc23",
+  "rawSHA256": {
+    "measurement": "1375ecf2f8fdcdea3126a269cd1f7806d7f3383a93cdc7f639fd1e8921cdf45d",
+    "cpuProfile": "691666019d62cd26de825cf8bec80f862a6c1eaf4739554df7b06fc98cc591ce",
+    "heapProfile": "c71af8c483b7988a6ee83f40f7660a24992239da214a875f569c9ec8a381cf3e"
+  },
+  "measurement": {
+    "options": {
+      "iterations": 2048,
+      "rounds": 3,
+      "batchPeriods": 256,
+      "wallBudgetMS": 8
+    },
+    "wasmSHA256": "ea801e3d0afc81208659791da80cee82902206b4fa245e959c633341075a9e60",
+    "sourceHashes": {
+      "scripts/measure-harris-hybrid-producers.mjs": "2260b4274a53c1ee947a1bcdb12589e1a25d9e0256688c7a01283d0e0a683361",
+      "src/experimental/harris-run-transactions.js": "5ab3e87715ac7f6092399a1b353d14d0a96060c3c6a437ab6e7b4d0545548d84",
+      "src/experimental/harris-native-memory-board.js": "3a4cb1e85bb4e154a5c6ad942a637105e6969dd2dcf4465f0178e14c31b7b525",
+      "src/experimental/wired-kernel/bus-circuit-image.js": "929b8247640734171aaa43470da9a0d3ea12ede77bf9efb35ba147ead8fcc9d1",
+      "src/experimental/harris-80c286-boot-cpu.js": "e44f66cbd032e5887fae4f33a03b3100d910cffbfcbc88e354eaf7d1cbe9b5ab",
+      "src/experimental/harris-80c286-memory-board.js": "6a15855cd9da71c3197fea426353b8118e2bdac4b170b1e5bc36f45ec7225aaf",
+      "src/experimental/harris-boot-rom.js": "7e184ed31af43f90775a7caa8f9c2de532abc57c9d42b1be590bb9ebc585c51b",
+      "src/experimental/wired-kernel/net-resolver.c": "9cbd5c28e6c7fbbf704906495ea4fb126ab3bdb3ca2e9a42d22c44dd807b7e28",
+      "src/experimental/wired-kernel/memory-banks.c": "98baf316c856a1c65b18527bd545ce1af61c273759f4f5f149c1ef5e208e5579",
+      "src/experimental/wired-kernel/memory-circuit.c": "d67debb7c80dc839be962701d67592a16eeb18f4e0d466a1d485b270d9604cc9",
+      "src/experimental/wired-kernel/phase-components.c": "3f4c4f432ab0bf7c2f7cae356b1fc89f2ce30a179c67a942c2f630e59bd4dfa7",
+      "src/experimental/wired-kernel/phase-circuit.c": "09ab60c2c068079890c179bf68787c5ba0979ac0f23169cd5344920b7816970a",
+      "src/experimental/wired-kernel/phase-schedule.c": "ab83285145df56e6d43bf501d2311df951e014bc3fda89a51a11cc9ef8d12852",
+      "src/experimental/wired-kernel/incremental-nets.c": "255a3f6b3b751915a67fc6b1eb55b3d6e73821a5ed7e5d4b7cdc380027006161",
+      "src/experimental/wired-kernel/bus-sequencer.c": "c472dbd15d3006c97c8d90599f8012895e7bf160f9210bbb5e705b7ded031656",
+      "src/experimental/wired-kernel/bus-circuit.c": "cb4836814c31edd4a659c7ba845a8f43e43fa3c8cd188c0a31176b87d9a5156e"
+    },
+    "expected": {
+      "stateHash": "ff0819c0e9a86f33b006bb96d4a927b140fe89b448b4b157c1530b6b5bba64d1",
+      "periods": 57392,
+      "retired": 6148,
+      "physicalClock": 57459,
+      "writes": [
+        2048,
+        2048
+      ],
+      "work": {
+        "driverComparisons": 5749404,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      }
+    },
+    "modes": {
+      "control": {
+        "medianActivePeriodsPerSecond": 306415.40980351524,
+        "medianWallPeriodsPerSecond": 265316.9452966127
+      },
+      "instrumented": {
+        "medianActivePeriodsPerSecond": 262402.94675509946,
+        "medianWallPeriodsPerSecond": 230437.50985593937
+      }
+    },
+    "instrumentationActiveThroughputRatio": 0.8563634150232908,
+    "producerMedianMS": {
+      "instructionPumpMS": 20.872635000032233,
+      "busSubmitMS": 7.159599000004846,
+      "nativeAndReceiptMS": 176.1874769999987,
+      "cpuReceiptControlMS": 10.857438999970327,
+      "cooperativeControlMS": 0.6732809999997471
+    },
+    "samples": [
+      {
+        "round": 1,
+        "mode": "instrumented",
+        "constructionMS": 14.019068999999945,
+        "initializationMS": 0.48452800000006846,
+        "result": {
+          "status": "halted",
+          "periods": 57392,
+          "chunks": 26,
+          "activeMS": 218.71705599999962,
+          "maxChunkMS": 10.733250999999996
+        },
+        "wallMS": 249.05667500000004,
+        "yields": 25,
+        "yieldWaitMS": 30.032162000000085,
+        "wallOutsideActiveAndYieldMS": 0.3074570000003405,
+        "activePeriodsPerSecond": 262402.94675509946,
+        "wallPeriodsPerSecond": 230437.50985593937,
+        "heapDeltaBytes": 1902608,
+        "gc": {
+          "events": 8,
+          "durationMS": 5.359083000104874,
+          "entries": [
+            {
+              "kind": 1,
+              "durationMS": 0.22394599998369813
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.2052089999197051
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.23030599998310208
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.24968500004615635
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.20147199998609722
+            },
+            {
+              "kind": 1,
+              "durationMS": 1.7740560000529513
+            },
+            {
+              "kind": 1,
+              "durationMS": 2.2869570000329986
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.1874520001001656
+            }
+          ]
+        },
+        "work": {
+          "driverComparisons": 5749404,
+          "valueChangingDriverWrites": 508310,
+          "dirtyNetResolutions": 508310,
+          "netDriverVisits": 1032982,
+          "evaluatorRows": 90184,
+          "dependencyProbes": 0,
+          "stagedDriverCopies": 0,
+          "committedEvaluatorOutputs": 32792,
+          "publishNetCopies": 508310,
+          "deltas": 483735,
+          "reverseIndexVisits": 278828,
+          "operationBitsetWordVisits": 28695
+        },
+        "stateHash": "ff0819c0e9a86f33b006bb96d4a927b140fe89b448b4b157c1530b6b5bba64d1",
+        "physicalClock": 57459,
+        "status": "halted",
+        "retired": 6148,
+        "writes": [
+          2048,
+          2048
+        ],
+        "timings": {
+          "cpuRunMS": 218.04377499999987,
+          "nativeAndReceiptMS": 176.1874769999987,
+          "pumpMS": 30.844490000002907,
+          "submitMS": 9.927749999999946,
+          "cpuCalls": 225,
+          "nativeCalls": 14348,
+          "pumpCalls": 14348,
+          "submitCalls": 14347,
+          "inspectBusCalls": 0,
+          "physicalCompletions": 14348,
+          "returnedPeriods": 57392,
+          "requestedPeriods": 1866488
+        },
+        "completionSHA256": "d530c6365b93e8776850e1262aadb373dc516fa7104a0c3c108893ff620435fd",
+        "lastCompletion": {
+          "kind": "code-read",
+          "address": 983308,
+          "width": 1,
+          "data": 244,
+          "waits": 0,
+          "last": true,
+          "operand": 244
+        },
+        "producers": {
+          "instructionPumpMS": 20.91674000000296,
+          "busSubmitMS": 9.927749999999946,
+          "nativeAndReceiptMS": 176.1874769999987,
+          "cpuReceiptControlMS": 11.011807999998268,
+          "cooperativeControlMS": 0.6732809999997471
+        },
+        "categorizedActiveMS": 218.71705599999962
+      },
+      {
+        "round": 1,
+        "mode": "control",
+        "constructionMS": 12.669675999999981,
+        "initializationMS": 0.43218899999999394,
+        "result": {
+          "status": "halted",
+          "periods": 57392,
+          "chunks": 23,
+          "activeMS": 187.11414199999967,
+          "maxChunkMS": 8.796330000000125
+        },
+        "wallMS": 216.31486800000005,
+        "yields": 22,
+        "yieldWaitMS": 28.959290000000237,
+        "wallOutsideActiveAndYieldMS": 0.2414360000001352,
+        "activePeriodsPerSecond": 306721.87247076223,
+        "wallPeriodsPerSecond": 265316.9452966127,
+        "heapDeltaBytes": 4273632,
+        "gc": {
+          "events": 3,
+          "durationMS": 0.8378890000749379,
+          "entries": [
+            {
+              "kind": 1,
+              "durationMS": 0.2700850000837818
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.2870620000176132
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.280741999973543
+            }
+          ]
+        },
+        "work": {
+          "driverComparisons": 5749404,
+          "valueChangingDriverWrites": 508310,
+          "dirtyNetResolutions": 508310,
+          "netDriverVisits": 1032982,
+          "evaluatorRows": 90184,
+          "dependencyProbes": 0,
+          "stagedDriverCopies": 0,
+          "committedEvaluatorOutputs": 32792,
+          "publishNetCopies": 508310,
+          "deltas": 483735,
+          "reverseIndexVisits": 278828,
+          "operationBitsetWordVisits": 28695
+        },
+        "stateHash": "ff0819c0e9a86f33b006bb96d4a927b140fe89b448b4b157c1530b6b5bba64d1",
+        "physicalClock": 57459,
+        "status": "halted",
+        "retired": 6148,
+        "writes": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "round": 2,
+        "mode": "control",
+        "constructionMS": 12.480446000000029,
+        "initializationMS": 0.46968599999991056,
+        "result": {
+          "status": "halted",
+          "periods": 57392,
+          "chunks": 23,
+          "activeMS": 188.8788179999999,
+          "maxChunkMS": 9.246957000000066
+        },
+        "wallMS": 212.391707,
+        "yields": 22,
+        "yieldWaitMS": 23.262872000000925,
+        "wallOutsideActiveAndYieldMS": 0.25001699999916127,
+        "activePeriodsPerSecond": 303856.20054017927,
+        "wallPeriodsPerSecond": 270217.70675820217,
+        "heapDeltaBytes": 4274848,
+        "gc": {
+          "events": 3,
+          "durationMS": 0.8787299999967217,
+          "entries": [
+            {
+              "kind": 1,
+              "durationMS": 0.2802110000047833
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.3287939999718219
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.26972500002011657
+            }
+          ]
+        },
+        "work": {
+          "driverComparisons": 5749404,
+          "valueChangingDriverWrites": 508310,
+          "dirtyNetResolutions": 508310,
+          "netDriverVisits": 1032982,
+          "evaluatorRows": 90184,
+          "dependencyProbes": 0,
+          "stagedDriverCopies": 0,
+          "committedEvaluatorOutputs": 32792,
+          "publishNetCopies": 508310,
+          "deltas": 483735,
+          "reverseIndexVisits": 278828,
+          "operationBitsetWordVisits": 28695
+        },
+        "stateHash": "ff0819c0e9a86f33b006bb96d4a927b140fe89b448b4b157c1530b6b5bba64d1",
+        "physicalClock": 57459,
+        "status": "halted",
+        "retired": 6148,
+        "writes": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "round": 2,
+        "mode": "instrumented",
+        "constructionMS": 11.948077000000012,
+        "initializationMS": 0.5712080000000697,
+        "result": {
+          "status": "halted",
+          "periods": 57392,
+          "chunks": 27,
+          "activeMS": 220.37369600000056,
+          "maxChunkMS": 9.151544000000058
+        },
+        "wallMS": 250.7746619999998,
+        "yields": 26,
+        "yieldWaitMS": 30.067162999999937,
+        "wallOutsideActiveAndYieldMS": 0.33380299999930685,
+        "activePeriodsPerSecond": 260430.35553571625,
+        "wallPeriodsPerSecond": 228858.8469914877,
+        "heapDeltaBytes": 2372160,
+        "gc": {
+          "events": 4,
+          "durationMS": 1.0437289999099448,
+          "entries": [
+            {
+              "kind": 1,
+              "durationMS": 0.2506069999653846
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.25098699994850904
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.2901860000565648
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.2519489999394864
+            }
+          ]
+        },
+        "work": {
+          "driverComparisons": 5749404,
+          "valueChangingDriverWrites": 508310,
+          "dirtyNetResolutions": 508310,
+          "netDriverVisits": 1032982,
+          "evaluatorRows": 90184,
+          "dependencyProbes": 0,
+          "stagedDriverCopies": 0,
+          "committedEvaluatorOutputs": 32792,
+          "publishNetCopies": 508310,
+          "deltas": 483735,
+          "reverseIndexVisits": 278828,
+          "operationBitsetWordVisits": 28695
+        },
+        "stateHash": "ff0819c0e9a86f33b006bb96d4a927b140fe89b448b4b157c1530b6b5bba64d1",
+        "physicalClock": 57459,
+        "status": "halted",
+        "retired": 6148,
+        "writes": [
+          2048,
+          2048
+        ],
+        "timings": {
+          "cpuRunMS": 219.6709550000005,
+          "nativeAndReceiptMS": 180.7812819999931,
+          "pumpMS": 28.03223400003708,
+          "submitMS": 7.159599000004846,
+          "cpuCalls": 225,
+          "nativeCalls": 14348,
+          "pumpCalls": 14348,
+          "submitCalls": 14347,
+          "inspectBusCalls": 0,
+          "physicalCompletions": 14348,
+          "returnedPeriods": 57392,
+          "requestedPeriods": 1866488
+        },
+        "completionSHA256": "d530c6365b93e8776850e1262aadb373dc516fa7104a0c3c108893ff620435fd",
+        "lastCompletion": {
+          "kind": "code-read",
+          "address": 983308,
+          "width": 1,
+          "data": 244,
+          "waits": 0,
+          "last": true,
+          "operand": 244
+        },
+        "producers": {
+          "instructionPumpMS": 20.872635000032233,
+          "busSubmitMS": 7.159599000004846,
+          "nativeAndReceiptMS": 180.7812819999931,
+          "cpuReceiptControlMS": 10.857438999970327,
+          "cooperativeControlMS": 0.70274100000006
+        },
+        "categorizedActiveMS": 220.37369600000056
+      },
+      {
+        "round": 3,
+        "mode": "instrumented",
+        "constructionMS": 12.397461999999905,
+        "initializationMS": 0.36926500000004125,
+        "result": {
+          "status": "halted",
+          "periods": 57392,
+          "chunks": 26,
+          "activeMS": 208.5034149999999,
+          "maxChunkMS": 8.931842999999844
+        },
+        "wallMS": 236.57963400000017,
+        "yields": 25,
+        "yieldWaitMS": 27.819233000000395,
+        "wallOutsideActiveAndYieldMS": 0.2569859999998698,
+        "activePeriodsPerSecond": 275256.8824831959,
+        "wallPeriodsPerSecond": 242590.61961352074,
+        "heapDeltaBytes": 3470360,
+        "gc": {
+          "events": 4,
+          "durationMS": 0.991150000016205,
+          "entries": [
+            {
+              "kind": 1,
+              "durationMS": 0.24301500001456589
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.22975599998608232
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.2818439999828115
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.2365350000327453
+            }
+          ]
+        },
+        "work": {
+          "driverComparisons": 5749404,
+          "valueChangingDriverWrites": 508310,
+          "dirtyNetResolutions": 508310,
+          "netDriverVisits": 1032982,
+          "evaluatorRows": 90184,
+          "dependencyProbes": 0,
+          "stagedDriverCopies": 0,
+          "committedEvaluatorOutputs": 32792,
+          "publishNetCopies": 508310,
+          "deltas": 483735,
+          "reverseIndexVisits": 278828,
+          "operationBitsetWordVisits": 28695
+        },
+        "stateHash": "ff0819c0e9a86f33b006bb96d4a927b140fe89b448b4b157c1530b6b5bba64d1",
+        "physicalClock": 57459,
+        "status": "halted",
+        "retired": 6148,
+        "writes": [
+          2048,
+          2048
+        ],
+        "timings": {
+          "cpuRunMS": 207.88226100000202,
+          "nativeAndReceiptMS": 173.09202700002925,
+          "pumpMS": 24.405193999988796,
+          "submitMS": 5.300345000011021,
+          "cpuCalls": 225,
+          "nativeCalls": 14348,
+          "pumpCalls": 14348,
+          "submitCalls": 14347,
+          "inspectBusCalls": 0,
+          "physicalCompletions": 14348,
+          "returnedPeriods": 57392,
+          "requestedPeriods": 1866488
+        },
+        "completionSHA256": "d530c6365b93e8776850e1262aadb373dc516fa7104a0c3c108893ff620435fd",
+        "lastCompletion": {
+          "kind": "code-read",
+          "address": 983308,
+          "width": 1,
+          "data": 244,
+          "waits": 0,
+          "last": true,
+          "operand": 244
+        },
+        "producers": {
+          "instructionPumpMS": 19.104848999977776,
+          "busSubmitMS": 5.300345000011021,
+          "nativeAndReceiptMS": 173.09202700002925,
+          "cpuReceiptControlMS": 10.385039999983974,
+          "cooperativeControlMS": 0.6211539999978868
+        },
+        "categorizedActiveMS": 208.5034149999999
+      },
+      {
+        "round": 3,
+        "mode": "control",
+        "constructionMS": 12.551233000000138,
+        "initializationMS": 0.426010000000133,
+        "result": {
+          "status": "halted",
+          "periods": 57392,
+          "chunks": 23,
+          "activeMS": 187.301285,
+          "maxChunkMS": 9.077882999999929
+        },
+        "wallMS": 217.46383400000013,
+        "yields": 22,
+        "yieldWaitMS": 29.93151399999806,
+        "wallOutsideActiveAndYieldMS": 0.23103500000206623,
+        "activePeriodsPerSecond": 306415.40980351524,
+        "wallPeriodsPerSecond": 263915.14830001554,
+        "heapDeltaBytes": 2730912,
+        "gc": {
+          "events": 3,
+          "durationMS": 1.0503399999579415,
+          "entries": [
+            {
+              "kind": 1,
+              "durationMS": 0.28254499996546656
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.46606100001372397
+            },
+            {
+              "kind": 1,
+              "durationMS": 0.30173399997875094
+            }
+          ]
+        },
+        "work": {
+          "driverComparisons": 5749404,
+          "valueChangingDriverWrites": 508310,
+          "dirtyNetResolutions": 508310,
+          "netDriverVisits": 1032982,
+          "evaluatorRows": 90184,
+          "dependencyProbes": 0,
+          "stagedDriverCopies": 0,
+          "committedEvaluatorOutputs": 32792,
+          "publishNetCopies": 508310,
+          "deltas": 483735,
+          "reverseIndexVisits": 278828,
+          "operationBitsetWordVisits": 28695
+        },
+        "stateHash": "ff0819c0e9a86f33b006bb96d4a927b140fe89b448b4b157c1530b6b5bba64d1",
+        "physicalClock": 57459,
+        "status": "halted",
+        "retired": 6148,
+        "writes": [
+          2048,
+          2048
+        ]
+      }
+    ]
+  },
+  "profiles": {
+    "cpu": {
+      "totalSamples": 1126,
+      "totalTimeDeltaMicroseconds": 1222805,
+      "topSelfSamples": [
+        [
+          "settle_memory_circuit (native)",
+          161
+        ],
+        [
+          "(idle) (host)",
+          129
+        ],
+        [
+          "preview_memory_banks (native)",
+          71
+        ],
+        [
+          "settle_incremental_context (native)",
+          61
+        ],
+        [
+          "(anonymous) (scripts/measure-harris-hybrid-producers.mjs)",
+          59
+        ],
+        [
+          "write_owned_driver (native)",
+          52
+        ],
+        [
+          "begin_bus_memory_clock (native)",
+          45
+        ],
+        [
+          "_pump (src/experimental/harris-80c286-boot-cpu.js)",
+          45
+        ],
+        [
+          "runUntilCompletion (src/experimental/wired-kernel/bus-circuit-image.js)",
+          43
+        ],
+        [
+          "_instructions (src/experimental/harris-80c286-boot-cpu.js)",
+          32
+        ],
+        [
+          "(garbage collector) (host)",
+          31
+        ],
+        [
+          "runTransactions (src/experimental/harris-80c286-boot-cpu.js)",
+          27
+        ],
+        [
+          "compileForInternalLoader (node:internal/bootstrap/realm)",
+          21
+        ],
+        [
+          "begin_latched_memory_clock (native)",
+          19
+        ],
+        [
+          "(anonymous) (src/experimental/harris-native-memory-board.js)",
+          16
+        ],
+        [
+          "createHarrisMemoryBoard (src/experimental/harris-80c286-memory-board.js)",
+          15
+        ],
+        [
+          "update (node:internal/crypto/hash)",
+          14
+        ],
+        [
+          "validProgress (src/experimental/harris-80c286-boot-cpu.js)",
+          12
+        ],
+        [
+          "update (src/experimental/wired-kernel/bus-circuit-image.js)",
+          12
+        ],
+        [
+          "submit (src/experimental/wired-kernel/bus-circuit-image.js)",
+          11
+        ]
+      ]
+    },
+    "heap": {
+      "sampleCount": 90,
+      "topSampledSelfBytes": [
+        [
+          "compileForInternalLoader (node:internal/bootstrap/realm)",
+          395816
+        ],
+        [
+          "_instructions (src/experimental/harris-80c286-boot-cpu.js)",
+          289112
+        ],
+        [
+          "runUntilCompletion (src/experimental/wired-kernel/bus-circuit-image.js)",
+          199968
+        ],
+        [
+          "(anonymous) (scripts/measure-harris-hybrid-producers.mjs)",
+          169808
+        ],
+        [
+          "compileSourceTextModule (node:internal/modules/esm/utils)",
+          164184
+        ],
+        [
+          "decode (node:internal/encoding)",
+          161656
+        ],
+        [
+          "internalBinding (node:internal/bootstrap/realm)",
+          98544
+        ],
+        [
+          "sample (scripts/measure-harris-hybrid-producers.mjs)",
+          67240
+        ],
+        [
+          "Timeout (node:internal/timers)",
+          65912
+        ],
+        [
+          "set (node:internal/modules/esm/module_map)",
+          65600
+        ],
+        [
+          "createNativeMemoryCircuit (src/experimental/wired-kernel/memory-circuit.js)",
+          52224
+        ],
+        [
+          "_initialize (src/experimental/harris-80c286-boot-cpu.js)",
+          47872
+        ],
+        [
+          "normalizeSpawnArguments (node:child_process)",
+          41984
+        ],
+        [
+          "preparePhaseCircuit (src/experimental/wired-kernel/phase-circuit-image.js)",
+          40640
+        ],
+        [
+          "createHarrisNativeMemoryBoard (src/experimental/harris-native-memory-board.js)",
+          39712
+        ],
+        [
+          "(anonymous) (src/experimental/wired-kernel/memory-circuit.js)",
+          34560
+        ],
+        [
+          "validProgress (src/experimental/harris-80c286-boot-cpu.js)",
+          34112
+        ],
+        [
+          "(anonymous) (node:internal/crypto/x509)",
+          33600
+        ],
+        [
+          "get hostname (node:internal/url)",
+          33600
+        ],
+        [
+          "#resolveLevels (src/experimental/digital-circuit.js)",
+          33600
+        ]
+      ],
+      "sampledAllocationBytes": 3387912,
+      "attributedTreeSelfBytes": 2825736,
+      "unattributedSampleBytes": 562176
+    }
+  },
+  "verdict": {
+    "selection": "measure native producer attempted-versus-changing writes before a sparse publication candidate",
+    "reason": "Native settle/preview/incremental/write frames remain the largest current CPU sample group. Completion/result allocation is material but secondary, and nativeAndReceiptMS cannot separate the two.",
+    "excluded": "No sparse producer implementation is selected without causal per-producer counters."
+  },
+  "limitations": [
+    "Timer wrappers perturb wall-budget cutoffs; compare the paired control before using instrumented timings.",
+    "nativeAndReceiptMS combines native execution with JavaScript completion/result materialization; CPU and heap profiles must resolve that split.",
+    "GC duration and heap delta are non-additive diagnostics, not exclusive producer time.",
+    "One pending fetch is submitted during initialization, so its measured native completion has no measured submit/pump counterpart.",
+    "The counted yield uses the production setTimeout(0) primitive; yieldWaitMS remains scheduler and host dependent.",
+    "Native work counters wrap modulo 2^32 and driverComparisons excludes the JavaScript bulk-image scan.",
+    "Initialization consumes 67 physical periods outside both the measured period numerator and timers.",
+    "Memory-only owned workload; not DOS, peripherals, full-native CPU or browser capacity.",
+    "Shared-host measurements are selection evidence, not a stable performance guarantee.",
+    "CPU and heap profiles cover the complete process, including setup, warmup, control, instrumentation and reporting.",
+    "CPU self samples and heap sampled bytes are broad attribution rather than exclusive active-path time.",
+    "The raw profiles remain attached to hosted run 34696776443; their digests above bind this summary."
+  ]
+}

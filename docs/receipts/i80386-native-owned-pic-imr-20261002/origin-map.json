@@ -1,0 +1,330 @@
+{
+  "scope": "Lossless selected source and JS evidence; no native PIC qualification.",
+  "files": {
+    "source111/after.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/after.json",
+      "bytes": 961,
+      "sha256": "8098d9239dd5b6b204f8da8001a4b2b1de0241f229843094f8ab2bf4c34cc34f"
+    },
+    "source111/approved-js-bindings.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/approved-js-bindings.json",
+      "bytes": 13706,
+      "sha256": "9d3c1fd92e29280626549b4537dbe8bc11fd1cc00e714e6f938ccbed848ac0e7"
+    },
+    "source111/approved-js-bindings.template.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/approved-js-bindings.template.json",
+      "bytes": 13477,
+      "sha256": "eb972c4465146a575eacd6930e99505ece30b1f6d1af3955a77a25d64317e0f1"
+    },
+    "source111/before.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/before.json",
+      "bytes": 961,
+      "sha256": "8098d9239dd5b6b204f8da8001a4b2b1de0241f229843094f8ab2bf4c34cc34f"
+    },
+    "source111/exit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/exit.json",
+      "bytes": 1360,
+      "sha256": "28c4d9d58f401886958940cce75822f1a1ec5f50c73a473614bb71b570d763e8"
+    },
+    "source111/identity.exit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/identity.exit.json",
+      "bytes": 389,
+      "sha256": "d7617dc3d5336294a1815ec786ff217214c663598359564c52679cbf7132f2dd"
+    },
+    "source111/identity.stderr": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/identity.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "source111/identity.stdout": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/identity.stdout",
+      "bytes": 11890,
+      "sha256": "b0cd078d9314a89e982b0759e36cbb746e42d0d162af194a1fa2dc20e4dde657"
+    },
+    "source111/independent-source-audit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/independent-source-audit.json",
+      "bytes": 811,
+      "sha256": "91866aa92d9d4a6cb670c6520d79d3271012d6ee5a8c5705bd1cdd8c396919a8"
+    },
+    "source111/js-parent.stderr": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/js-parent.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "source111/js-parent.stdout": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/js-parent.stdout",
+      "bytes": 205,
+      "sha256": "21c8a2034a906b3860f5bf97fd2fe479eccbf19c5326d6bcb31510be3083da25"
+    },
+    "source111/js-reference-plan-frozen.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/js-reference-plan-frozen.json",
+      "bytes": 1823,
+      "sha256": "67f0a0c05d0eaa99f13d74eb8a271cda6622987ebf3ba43fae835f788ed1409b"
+    },
+    "source111/js-reference-plan.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/js-reference-plan.json",
+      "bytes": 1382,
+      "sha256": "faa159276ca780ca83b3f47af28e2cd2614189bf41ae81700a8329fa37c1841b"
+    },
+    "source111/js-reference.py": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/js-reference.py",
+      "bytes": 2855,
+      "sha256": "4228eccdb6fcefdc785b58fc20c712b2c47a30c660df281069ff6ea6c8607249"
+    },
+    "source111/prepared-source.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/prepared-source.json",
+      "bytes": 13792,
+      "sha256": "c822f79810f86f041dcc3085b0c96b6674ea8dfb8f7e6a0a9825a2053de96ae2"
+    },
+    "source111/source-freeze.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/source-freeze.json",
+      "bytes": 15085,
+      "sha256": "578863a4b51ad2d7d0e16df37dc5050f1d36fcb6bb08195e50c3a038002930f9"
+    },
+    "source111/stderr": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "source111/stdout": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-source-20261002/stdout",
+      "bytes": 2440,
+      "sha256": "acf99294ba26b7d897975a207ce49c8da573a8907b8e2915b0779ebcb60dd091"
+    },
+    "js-reference/auth-after.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-reference-20261002/auth-after.json",
+      "bytes": 12800,
+      "sha256": "66281abe509d3eb7825b6af3238321ea275c5cb0d685dcdf75c6921b365d0ead"
+    },
+    "js-reference/auth-before.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-reference-20261002/auth-before.json",
+      "bytes": 12800,
+      "sha256": "66281abe509d3eb7825b6af3238321ea275c5cb0d685dcdf75c6921b365d0ead"
+    },
+    "js-reference/child.stderr": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-reference-20261002/child.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "js-reference/child.stdout": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-reference-20261002/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "js-reference/exit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-reference-20261002/exit.json",
+      "bytes": 617,
+      "sha256": "772c1a1c8db8a9346219a90fbad10280fdefe08c777f64e420c3dbfa1dcdc096"
+    },
+    "js-reference/guest/capture.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-reference-20261002/guest/capture.json",
+      "bytes": 210135,
+      "sha256": "fdca8f8fa92952cd9cd5f4447e66b194a5f691025bcf925f7ddd443290143346"
+    },
+    "js-reference/guest/result.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-reference-20261002/guest/result.json",
+      "bytes": 232,
+      "sha256": "0d78e976ee991da618b5e1511a12371acb19f7f4e0d4bbf8daa0dc6ce3f3c75c"
+    },
+    "js-reference/independent-js-reference-audit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-reference-20261002/independent-js-reference-audit.json",
+      "bytes": 597,
+      "sha256": "107467e149b7dbdf781662205b8d60ec44ef9eeab6f2354e97f1c5410b8aa111"
+    },
+    "js-reference/independent-js-reference-audit.py": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-reference-20261002/independent-js-reference-audit.py",
+      "bytes": 2769,
+      "sha256": "fb4a0f1eb7d5dfdc07861e14fe7558c3b992a2a266a344ddf03f28ff725f2ce6"
+    },
+    "js-ram-diagnostic/actual/auth-after.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/actual/auth-after.json",
+      "bytes": 12863,
+      "sha256": "703a91e248d9786aad7c8551e49ffed5bfdedc8b2f1f7122ba30cdaeef25b67b"
+    },
+    "js-ram-diagnostic/actual/auth-before.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/actual/auth-before.json",
+      "bytes": 12863,
+      "sha256": "703a91e248d9786aad7c8551e49ffed5bfdedc8b2f1f7122ba30cdaeef25b67b"
+    },
+    "js-ram-diagnostic/actual/canonical-proof.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/actual/canonical-proof.json",
+      "bytes": 838,
+      "sha256": "1e88f8b2883bbc48367be6866152a34468ad7e4fa14bebcccea72ecc057f4e14"
+    },
+    "js-ram-diagnostic/actual/child.stderr": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/actual/child.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "js-ram-diagnostic/actual/child.stdout": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/actual/child.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "js-ram-diagnostic/actual/exit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/actual/exit.json",
+      "bytes": 621,
+      "sha256": "229dbf416433058e2f4f523da7e31031998746ddbd488f4623873430a30f041f"
+    },
+    "js-ram-diagnostic/actual/guest/capture.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/actual/guest/capture.json",
+      "bytes": 210135,
+      "sha256": "fdca8f8fa92952cd9cd5f4447e66b194a5f691025bcf925f7ddd443290143346"
+    },
+    "js-ram-diagnostic/actual/guest/ram-evidence.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/actual/guest/ram-evidence.json",
+      "bytes": 411,
+      "sha256": "71a8fd056b4a08ebb73524a65325e44a5d4ca34859bd2f53bcb406db59f94011"
+    },
+    "js-ram-diagnostic/actual/guest/result.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/actual/guest/result.json",
+      "bytes": 232,
+      "sha256": "0d78e976ee991da618b5e1511a12371acb19f7f4e0d4bbf8daa0dc6ce3f3c75c"
+    },
+    "js-ram-diagnostic/approved-bindings.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/approved-bindings.json",
+      "bytes": 13805,
+      "sha256": "9f49b82cc1965985f25494d5aff6d5a093fbde484c26091231d8ee3e5dccf28e"
+    },
+    "js-ram-diagnostic/binding-template.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/binding-template.json",
+      "bytes": 13564,
+      "sha256": "4ad15cbe5adfdbe1a8de58df4cb95518d631775fdf5621c42c3f22ad68ff64f3"
+    },
+    "js-ram-diagnostic/derivation.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/derivation.json",
+      "bytes": 3334,
+      "sha256": "683e4c8ec0b136f90e281d3fdafab9aacd99a2384b71c0b7f2c9725033e2e358"
+    },
+    "js-ram-diagnostic/independent-actual-audit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/independent-actual-audit.json",
+      "bytes": 714,
+      "sha256": "dc0bd670f28e0e8a4fc911c537485a7ebc5369bdcbf6a18f8dc5362e47b655c5"
+    },
+    "js-ram-diagnostic/independent-readiness-audit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/independent-readiness-audit.json",
+      "bytes": 901,
+      "sha256": "a3e3f3a5a5cb496defd3d0e9d36350133f7d19f78f9421a150c29b3af5ea85b9"
+    },
+    "js-ram-diagnostic/parent.stderr": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/parent.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "js-ram-diagnostic/parent.stdout": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/parent.stdout",
+      "bytes": 959,
+      "sha256": "1b3da77071231d14fc8e7f2ccdd57da34eb8502c218af0a8ce5ccc21191b0469"
+    },
+    "js-ram-diagnostic/run.py": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/run.py",
+      "bytes": 4159,
+      "sha256": "c2a89b4373b4e88670b36ff10c764495760b75c330febcbc6b8a3c5f12f198fc"
+    },
+    "js-ram-diagnostic/runner.mjs": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/runner.mjs",
+      "bytes": 7228,
+      "sha256": "fdf934229793dad3619e9e842b9cd43ea1ff2d33b249a9b2f4d84a85b987624b"
+    },
+    "support-sourcecheck/after.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-sourcecheck-20261002/after.json",
+      "bytes": 1414,
+      "sha256": "110ff5de4859d6f01202823fe0e2ef95ea21d8cd60dafc29ea685492aa05a825"
+    },
+    "support-sourcecheck/before.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-sourcecheck-20261002/before.json",
+      "bytes": 1414,
+      "sha256": "110ff5de4859d6f01202823fe0e2ef95ea21d8cd60dafc29ea685492aa05a825"
+    },
+    "support-sourcecheck/exit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-sourcecheck-20261002/exit.json",
+      "bytes": 430,
+      "sha256": "0462f3c03d64143e849a1a695af86f10593c64b832dfb0d082d6b8ce4fcc3856"
+    },
+    "support-sourcecheck/independent-source-review.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-sourcecheck-20261002/independent-source-review.json",
+      "bytes": 2317,
+      "sha256": "7538c8f88d1a3ddfa506103da418dde49ce2a350fedac93516d6bddc71cfd99b"
+    },
+    "support-sourcecheck/stderr": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-sourcecheck-20261002/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "support-sourcecheck/stdout": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-sourcecheck-20261002/stdout",
+      "bytes": 3706,
+      "sha256": "3665d2b9478bb34407361d14d07f01fb7123fed012d88797fa3034fa10107820"
+    },
+    "support-static/after.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-static-20261002/after.json",
+      "bytes": 1414,
+      "sha256": "110ff5de4859d6f01202823fe0e2ef95ea21d8cd60dafc29ea685492aa05a825"
+    },
+    "support-static/before.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-static-20261002/before.json",
+      "bytes": 1414,
+      "sha256": "110ff5de4859d6f01202823fe0e2ef95ea21d8cd60dafc29ea685492aa05a825"
+    },
+    "support-static/identity.exit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-static-20261002/identity.exit.json",
+      "bytes": 402,
+      "sha256": "5dcb42d122632f27cbbad6f1d4a18b55eb2a8d9a81fea3ec9a14271fdc65e07f"
+    },
+    "support-static/identity.stderr": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-static-20261002/identity.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "support-static/identity.stdout": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-static-20261002/identity.stdout",
+      "bytes": 13257,
+      "sha256": "b8a0db827eaf2fe09d8a21d0e3bca2cbd103e4636aaaa4555288242b7cbe537d"
+    },
+    "support-static/independent-final-source-audit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-static-20261002/independent-final-source-audit.json",
+      "bytes": 936,
+      "sha256": "a54ba7e8d418b63ec0b4d3f9ab11c5fb5872be3386ac17a5b1816e3d72510777"
+    },
+    "support-static/prepare-check.exit.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-static-20261002/prepare-check.exit.json",
+      "bytes": 405,
+      "sha256": "8568e1bdf7f5e4757f0ac93a96cfd67aabc748e75299b70c3c8b4300eeb2fe73"
+    },
+    "support-static/prepare-check.stderr": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-static-20261002/prepare-check.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "support-static/prepare-check.stdout": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-static-20261002/prepare-check.stdout",
+      "bytes": 51324,
+      "sha256": "510e9e77fd5caf5cf5bf354d97e399619a78d3eece7e84f70e6089a7f50aba38"
+    },
+    "support-static/source-freeze.json": {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-profile-static-20261002/source-freeze.json",
+      "bytes": 30299,
+      "sha256": "9def969e0ec3d23a80a320979e614094506c38a6424d2491cd89723d4f6df107"
+    }
+  },
+  "retainedExternal": [
+    {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-reference-20261002/guest/events.jsonl",
+      "bytes": 7050351,
+      "sha256": "70936e64ab19b6b9cd1e4f69fdf852d3e7d86f8c3852cb82e520180a695f78c0",
+      "reason": "Large raw stream retained externally; not vendored."
+    },
+    {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/actual/guest/events.jsonl",
+      "bytes": 7050351,
+      "sha256": "70936e64ab19b6b9cd1e4f69fdf852d3e7d86f8c3852cb82e520180a695f78c0",
+      "reason": "Large raw stream retained externally; not vendored."
+    },
+    {
+      "origin": "/mnt/volume1/tmp-astra/native-owned-pic-imr-js-ram-diagnostic-20261002/actual/guest/ram.bin",
+      "bytes": 16777216,
+      "sha256": "887b7eb9959044f45868a71c29c5c013d65ec0ad3e0205c738719757e63b0ffb",
+      "reason": "Large raw stream retained externally; not vendored."
+    }
+  ]
+}

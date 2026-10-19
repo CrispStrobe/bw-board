@@ -1,0 +1,74 @@
+{
+  "accepted": true,
+  "kills": 9,
+  "results": [
+    {
+      "name": "schedule",
+      "testName": "incremental schedule oracle",
+      "testFile": "test/harris-native-incremental-nets.test.mjs",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "controller",
+      "testName": "incremental phase oracle",
+      "testFile": "test/harris-native-incremental-nets.test.mjs",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "latch",
+      "testName": "incremental phase oracle",
+      "testFile": "test/harris-native-incremental-nets.test.mjs",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "memory",
+      "testName": "incremental memory oracle",
+      "testFile": "test/harris-native-incremental-nets.test.mjs",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "evaluator",
+      "testName": "incremental resolver matches",
+      "testFile": "test/harris-native-incremental-nets.test.mjs",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "four-state",
+      "testName": "driver seam validates",
+      "testFile": "test/harris-native-incremental-nets.test.mjs",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "duplicate-order",
+      "testName": "driver seam validates",
+      "testFile": "test/harris-native-incremental-nets.test.mjs",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "bus-inputs",
+      "testName": "same-instance bus/actual-net/controller/memory oracle",
+      "testFile": "test/harris-native-bus-circuit.test.mjs",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "bus-outputs",
+      "testName": "same-instance bus/actual-net/controller/memory oracle",
+      "testFile": "test/harris-native-bus-circuit.test.mjs",
+      "status": 1,
+      "namedRed": true
+    }
+  ],
+  "revision": "e81c8e2db1a527dc291228766999beffd09779cb",
+  "tree": "e35f58b91834b407ab7b359d248c342b08f0ab30",
+  "worktreeCleanAfter": true,
+  "scope": "Nine separately rebuilt mutations; named differential failures, not a performance or full CPU qualification.",
+  "command": "WASM_LD=/tmp/harris-net-kernel.nhKEjD/wasm-ld node scripts/verify-harris-native-dirty-frontier-mutations.mjs"
+}

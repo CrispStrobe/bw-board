@@ -1,0 +1,3 @@
+{"n":"0","q":"0","calls":1,"ordinal":1,"name":"initialized"}
+{"operations":["create","resume","inspect","close","setIRQ"],"ordinal":2,"name":"wrong-thread-denied"}
+{"ordinal":3,"name":"done"}

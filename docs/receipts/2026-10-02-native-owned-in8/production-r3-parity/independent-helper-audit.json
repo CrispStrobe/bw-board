@@ -1,0 +1,17 @@
+{
+  "status": "PASS_IN8_R3_CI_TWO_GUEST_BINDINGS_STATIC_READY_NOT_EXECUTED",
+  "checks": 607,
+  "revision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "compiledSourceInputs": 103,
+  "runtimeInputs": 103,
+  "artifactCount": 187,
+  "helperHashes": {
+    "run.py": "89d75c4fe3552292f2eebb3956bed6411094cc1c3aed16921bc395d405705bec",
+    "parity.py": "25f92a0d3cb2d9ea00b9444b0087fc810812269b46f03ea3845cf7aa9f90c6de",
+    "bounded.py": "77758628414540ff4fdc04eb47d83df2ca92b8ab47c84e9e0c99c5fef015ed9b",
+    "bounded-derivation.json": "baa432e9868ab488e941860daca02914be7b3b71f5b2b4a443e215f9e3766ae9",
+    "plan.json": "38901ec86dab0ad1e2f44943d8f3a5ac17e64a52a842dedff4a0ffd61b9b81fe"
+  },
+  "bindingDraftSha256": "8456f20889e5c7405aecc04ba018108e724cfbfc6cce1e11d7dd7427f2e8b8e2",
+  "scope": "RestoredCIcompiledfe1/source103/config80f5/DSO8d with explicitderivedreceipt; guestconfig5683/BIOS/freeROM pinned, historicalJSbf026 unchanged; exact8CPUfields+2profile/rawresetwitness/canonicalRAM only510..517 policy, fullnativeCAPmodeequality/chronology. Resourcebounds/env and sourceclosure authentic; no native execution."
+}

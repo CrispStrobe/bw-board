@@ -1,0 +1,145 @@
+{
+  "scope": "Lossless raw cold JS reference; named snapshots only, complete PIO and four400-element REP records. Original external namespace is also retained.",
+  "files": {
+    "actual-cut-rep-pic-summary.json": {
+      "bytes": 4974,
+      "sha256": "c870342cd54ee1106ef4a5826bd1e8cb404932597c3265bac1b3ded5c181055d"
+    },
+    "baseline-helper.py": {
+      "bytes": 4946,
+      "sha256": "6be76ef248bb34d343d69940563434bf5d03957576cf76e1310cc5e3b68fa305"
+    },
+    "baseline.json": {
+      "bytes": 1643253,
+      "sha256": "92e2fd339115d97e84eae28d09f00f1a4a4d5c1178fad38ada17ab79b8eec8ce"
+    },
+    "executed-REFERENCE-SOURCE.md": {
+      "bytes": 3576,
+      "sha256": "d6cf417916480a6618d3d196fbad0b1adbcdee89d853063038b60b2a0ff61967"
+    },
+    "exit.json": {
+      "bytes": 10768,
+      "sha256": "3ca289327f2157897ea94eee43d652693f88253296b9590001a342aa6bbc44e7"
+    },
+    "identity-helper.py": {
+      "bytes": 4469,
+      "sha256": "1010a2a7b24c2a3e38b4d56698a7c208f168579b8315a954b0a71294af91f73f"
+    },
+    "independent-audit-r2.py": {
+      "bytes": 3806,
+      "sha256": "5e6f23263760f6f3c717350bba3b1e246c7c572d0564a04d9d9d41fe27341dbd"
+    },
+    "independent-audit.json": {
+      "bytes": 347,
+      "sha256": "3ee3fd510c96331be2b71aade3ab05827a31f2801801e4165e8a1cf4ec8baab7"
+    },
+    "independent-audit.py": {
+      "bytes": 3716,
+      "sha256": "2a97ef26a2ceb8399fddeb3bf0712b398f5d562e6d29ebe81d6fbd72d71c9b9a"
+    },
+    "invocation.json": {
+      "bytes": 10892,
+      "sha256": "a2d894a8f1a72f1b35d304535ddbe77d3e6fbaa4ba3b1bb43a93a606736b2d82"
+    },
+    "metadata-only-preflight/exit.json": {
+      "bytes": 10768,
+      "sha256": "f56bc915e0d991c26f60f145efa6cd64e6c2926d98f6849f478e397835183c47"
+    },
+    "metadata-only-preflight/invocation.json": {
+      "bytes": 10943,
+      "sha256": "f3f77a0a6ef8c0b04a6bd2a2b7ab9095de62ed41eace7987c266fcdde8fd7d61"
+    },
+    "metadata-only-preflight/stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "metadata-only-preflight/stdout.json": {
+      "bytes": 4900,
+      "sha256": "0cbdc9b3ff6daa7f251cba14144441d79b5873158007c6faeaa51df5747f360c"
+    },
+    "metadata-only-preflight/summary.json": {
+      "bytes": 337,
+      "sha256": "4348c2528ef5ac2a9f227150f0c8282dae11b1ebe19979165f7e18ff5cbeeed5"
+    },
+    "origins.json": {
+      "bytes": 9872,
+      "sha256": "70e0a9ad26f1883629cea67eee988623ed1162b5f446c3e12239d471bf5489fa"
+    },
+    "prior-pure-controls/initial/exit.json": {
+      "bytes": 5258,
+      "sha256": "3f3ff956868738171159e606e426b9347d56edfdd1e2038993288ff50b2d21e9"
+    },
+    "prior-pure-controls/initial/invocation.json": {
+      "bytes": 5481,
+      "sha256": "dad6e651b291bf097c5adf02872005fb0f91c98e0ffdfedd215b24b1d27c9bf7"
+    },
+    "prior-pure-controls/initial/stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "prior-pure-controls/initial/stdout": {
+      "bytes": 1859,
+      "sha256": "40c1f501dc7c531ddc0885b3e52e47a51d99bfe01cd1c605c00c66d65784861c"
+    },
+    "prior-pure-controls/r2-uint32/exit.json": {
+      "bytes": 5258,
+      "sha256": "4150fc4910e2131c493c1de6688a0f4289c0488e744645d3fc50130bdc0210a0"
+    },
+    "prior-pure-controls/r2-uint32/invocation.json": {
+      "bytes": 5575,
+      "sha256": "4daf3df89585342111613f0ba9e14533124aacb2e3a18b70cb1773b0343efa16"
+    },
+    "prior-pure-controls/r2-uint32/stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "prior-pure-controls/r2-uint32/stdout": {
+      "bytes": 1858,
+      "sha256": "9a823162fe9605753ec0f5e65fb0a9f79444caa5df4152d967b001bd9ff7c325"
+    },
+    "prior-pure-controls/redundant-unchanged-r3/exit.json": {
+      "bytes": 5258,
+      "sha256": "eb56c5fa0e08b02a770e2150b97501af8d1832ff705ec0866470b720799d05ba"
+    },
+    "prior-pure-controls/redundant-unchanged-r3/invocation.json": {
+      "bytes": 5562,
+      "sha256": "58f8aa324987c183a8fcc5e5f65602beeda516aabc22f42cf5f71bd80603edac"
+    },
+    "prior-pure-controls/redundant-unchanged-r3/stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "prior-pure-controls/redundant-unchanged-r3/stdout": {
+      "bytes": 1857,
+      "sha256": "565ee235adeb49fc2d47a904b5272d2a9e9a4d666ef549af7b1a4edb5cef3bb1"
+    },
+    "prior-pure-controls/rep-q-guard/exit.json": {
+      "bytes": 5258,
+      "sha256": "2764e7293935a7929a4f4f587e14af6b2b2b1764657e697c855a53dd4e59ce87"
+    },
+    "prior-pure-controls/rep-q-guard/invocation.json": {
+      "bytes": 5637,
+      "sha256": "0044c8d9f481a77b0688f527d8cc2564200c8dea96f980e8b3989f59e2606669"
+    },
+    "prior-pure-controls/rep-q-guard/stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "prior-pure-controls/rep-q-guard/stdout": {
+      "bytes": 553,
+      "sha256": "40eeedd1585c1649ff2f90c034fbbeccf6bd22f024efafc0e33ac8ebc2587ad4"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout.txt": {
+      "bytes": 1854,
+      "sha256": "ca474e6dcbeaec31a5196318e57dedf1570554dee00a8d77be7ffc2e37b19c39"
+    },
+    "summary.json": {
+      "bytes": 864,
+      "sha256": "0b8199abfd9fdcf782bd72e2d4d8264b244e7789b93fa11f6705b4a626e03393"
+    }
+  }
+}

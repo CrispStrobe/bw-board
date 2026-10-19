@@ -1,0 +1,18 @@
+{
+  "status": "PASS_INDEPENDENT_GUEST_PARITY_AND_RAW_PROFILE_AUDIT_OVERALL_HOSTED_FAIL",
+  "runId": 37199774878,
+  "artifactId": 11302433146,
+  "members": 68,
+  "sourceGitChecks": 377,
+  "nativeN": 316562,
+  "successfulQuanta": 316562,
+  "orderedPio": 16475,
+  "rawWords": 166,
+  "profileNodes": 145,
+  "profileSamples": 1793,
+  "profileSha256": "c978f0721edfcc13ee9483283414be59379a0aeb82ece9f5ea3650a9444d45d0",
+  "profileDurationMicroseconds": 1972190,
+  "sampleDeltaMicroseconds": 1971273,
+  "overallFailure": "Post-child held terminal validator missing worker binding pathname metadata: KeyError binding. Original overall FAIL preserved.",
+  "scope": "Single observer-active main-isolate diagnostic. Guest reset/final/last166, terminalboard/RAMhash/PIO and source/input/restored guards verified. No speed qualification, C++ CPU share or removable-cost claim; clocks kept separate."
+}

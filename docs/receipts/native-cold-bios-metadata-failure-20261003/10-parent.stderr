@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/parent.py", line 243, in <module>
+    require(len(sys.argv)==2,'explicit disabled/enabled argument required');main(sys.argv[1])
+                                                                            ^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-native-diagnostic/parent.py", line 205, in main
+    require(restore['returncode']==0 and not restore['timedOut'],'restore failed; no guest launched')
+  File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-native-restore/archive.py", line 14, in require
+    raise ValueError(message)
+ValueError: restore failed; no guest launched

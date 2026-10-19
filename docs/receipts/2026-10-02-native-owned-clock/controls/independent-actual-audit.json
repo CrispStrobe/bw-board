@@ -1,0 +1,10 @@
+{
+  "status": "PASS_ACTUAL_33_CONTROLS_AUDIT_NOT_PERFORMANCE_QUALIFICATION",
+  "checks": 546,
+  "cases": 33,
+  "sourceRevision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "summarySha256": "a01f8efb5592af0ead601d66ae6cd47dec94383f41621024c32527565c462731",
+  "approvedBindingsSha256": "8204f75578a0717cee22d589dc569164d3f304b073d98517d52bb0226185d7f3",
+  "scriptSha256": "7b1bef5c37cdfa53655fd1ba046a61dc3485809b746e8784edf787393f795e73",
+  "scope": "actual bounded fresh children; private provider effects before deliberate unsupported tuple failures, no rollback; denial stops all later observers"
+}

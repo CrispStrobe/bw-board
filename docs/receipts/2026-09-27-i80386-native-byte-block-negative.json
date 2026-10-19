@@ -1,0 +1,36 @@
+{
+  "schema": "astra.i80386-native-byte-block-negative.v1",
+  "date": "2026-09-27",
+  "sourceBaselineCommit": "bb51e5fb594e7f2ce940bde78fb6775cce38002b",
+  "workload": {
+    "name": "stock xv6-public forktest, 4 MiB, Bochs BIOS",
+    "commandBase": "XV6_LEAN=1 XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+    "commandNativeAddition": "XV6_NATIVE_BYTE=1",
+    "guestSteps": 24338279,
+    "serialEndsWith": "fork test OK\n$ ",
+    "xv6ImageSha256": "b98a1ff75644e630a23f359b5d07ab9d5e9dc01e9fd64cdf4c4855328fb52cf0",
+    "fileSystemImageSha256": "24ef7cd95e2d13ad95727618088f9b4c71ae9690f8ffaf0cdd9d59dfdbc4643f",
+    "normalizedGuestReportSha256": "29ea533f6d2bfa93919d744fe5c3e9e35bdd660aac337c16e6161e2bcbfbef34",
+    "normalization": "Remove nativeByte, nativeStats and sharedRam fields; replace rom, image and slaveImage absolute paths with <media>; retain all other report fields in original JSON order.",
+    "guestReportsMatch": true
+  },
+  "implementation": {
+    "nativeByteSourceSha256": "f11595327a9b905b39d419e1b427e1527a9c54471c6955965489bd2b49cda15b",
+    "readWindowSourceSha256": "4df76257e53f4b8e77da380b2748292743a47d4a9bf3fe6ce5e74882f50c9f5e",
+    "probeSourceSha256": "382b32b165a918a7844e2b883f3acfd4d2f99e84c3b34626809cdffae419316c",
+    "scope": "Opt-in probe only; paged flat 32-bit CS code in plain high RAM, register MOV/CMP/TEST, memory MOV, LEA, NOP, and backward JZ/JNZ. Rechecks code bytes, cached mappings and event bounds; falls back to the JavaScript CPU at unsupported or unsafe entries."
+  },
+  "native": {
+    "attempts": 21282922,
+    "decodedBlocks": 109720,
+    "blockCalls": 2076324,
+    "retiredInstructions": 5131681,
+    "retiredFraction": 0.210848,
+    "instructionsPerCall": 2.4715,
+    "userCpuSeconds": 46.31
+  },
+  "ordinary": {"userCpuSeconds": 25.82},
+  "nativeToOrdinaryUserCpuRatio": 1.7936,
+  "validation": "node --test test/i80386*.test.mjs: 351 passed, 4 skipped, 0 failed. The full ordinary and native guest reports match after removing opt-in metadata; CPU, serial, interrupts, screen, milestones and steps are included in the comparison.",
+  "conclusion": "Real-byte decode and bounded native execution work for a narrow subset without changing this xv6 guest result, but the full workload is substantially slower. No 10x gain or production readiness is claimed."
+}

@@ -1,0 +1,68 @@
+{
+  "verdict": "FINITE_XV6_AND_FOCUSED_CPU_REGRESSIONS_PASS",
+  "source": "1ecb987b86217c7c549fffc1d3b7ff498898b9dd",
+  "executedRevision": "1ecb987b86217c7c549fffc1d3b7ff498898b9dd",
+  "event": "push",
+  "run": 37850270611,
+  "attempt": 1,
+  "runUrl": "https://github.com/CrispStrobe/bw-board/actions/runs/37850270611",
+  "artifact": 11581853188,
+  "artifactUrl": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11581853188",
+  "zipBytes": 21030,
+  "zipSha256": "cb0f82361a3db1c3fa72ae47b89632c69dc74d744961f1541b718cf0d29c61c0",
+  "rawLogBytes": 1563285,
+  "rawLogSha256": "155b8db1e1d471e61c65cd3eedcf8f5021c9a693badef169fd38d679810b17e7",
+  "listedGitRolesVerified": 71,
+  "scenarios": [
+    {
+      "member": "xv6-stock-free-bios-boot.json",
+      "profile": "4m",
+      "steps": 14643086,
+      "sourceRoles": 70,
+      "userModeEntries": 16,
+      "serialResponse": "BW_XV6_FREE_BIOS_FS_OK",
+      "cr4": 16,
+      "profileBoundary": "existing compatibility profile; not strict physical 386DX qualification"
+    },
+    {
+      "member": "xv6-stock-14m-free-bios-boot.json",
+      "profile": "14m",
+      "steps": 10962834,
+      "sourceRoles": 70,
+      "userModeEntries": 16,
+      "serialResponse": "BW_XV6_14M_FREE_OK",
+      "cr4": 16,
+      "profileBoundary": "existing compatibility profile; not strict physical 386DX qualification"
+    },
+    {
+      "member": "xv6-stock-free-bios-forktest.json",
+      "profile": "4m",
+      "steps": 24338279,
+      "sourceRoles": 70,
+      "userModeEntries": 16,
+      "serialResponse": "fork test OK",
+      "cr4": 16,
+      "profileBoundary": "existing compatibility profile; not strict physical 386DX qualification"
+    }
+  ],
+  "focusedTests": 69,
+  "current": {
+    "tests": 1644,
+    "pass": 1633,
+    "fail": 0,
+    "skip": 11
+  },
+  "historical": {
+    "tests": 288,
+    "pass": 288,
+    "fail": 0,
+    "skip": 0
+  },
+  "audit": "Root and independent peer original ZIP/log and immutable Git audits; no producer-parser import or guest replay",
+  "limits": [
+    "Existing compatibility profile, not strict physical 386DX",
+    "No new CWSDPMI AT frame pair",
+    "Other exact-head required checks remain pending",
+    "No speed measurement or default adoption"
+  ]
+}

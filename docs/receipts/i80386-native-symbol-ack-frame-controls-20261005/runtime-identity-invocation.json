@@ -1,0 +1,29 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--input-type=module",
+    "-e",
+    "import {nativeWorkerSourceIdentity} from './scripts/cold-native-ledger-scalars-symbol-profile/admission.mjs';console.log(JSON.stringify(nativeWorkerSourceIdentity()));"
+  ],
+  "cwd": "/tmp/bw-cold-native-symbol-ack-frame-source-20261005",
+  "revision": "428839a2ed79b43056a72ba3059a699ab988d7ba",
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "nodeHeapMiB": 128,
+    "fileBytes": 8388608,
+    "coreBytes": 0,
+    "niceIncrement": 10,
+    "pythonMemoryLimit": "not imposed; no Python child; Node heap cap applies only to Node"
+  },
+  "blankHooks": [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "LD_PRELOAD",
+    "LD_AUDIT",
+    "BW_HOT_NAPI_PROFILE",
+    "NODE_V8_COVERAGE"
+  ],
+  "scope": "Separate read-only actual92 identity plus96 source-proof pins; no provider/addon/setup/perf/guest/build"
+}

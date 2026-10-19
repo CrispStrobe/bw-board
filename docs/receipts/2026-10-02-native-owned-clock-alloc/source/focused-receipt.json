@@ -1,0 +1,30 @@
+{
+  "status": "SOURCE_ONLY_FOCUSED_EXIT0",
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "--test",
+    "test/i80386-native-owned-clock-alloc.test.mjs"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "elapsedSeconds": 7.85796707496047,
+  "prePostSourceHashes": {
+    "scripts/run-i80386-native-owned-clock-alloc.mjs": "65ac1fb1914328d6e27bdcbfb331d1d1cc84260a569a83336df1a63cf8a76162",
+    "scripts/bochs-cpu3-native-owned-clock-alloc/provider.mjs": "9b6baee32c215f9074399fe0d322fb0ed0bd42dc221690ae0a937959388ddb33",
+    "scripts/bochs-cpu3-native-owned-clock-alloc/identity.mjs": "14672a08616f14f0108154f63f60bee3dab43122518ab7ef095e2df96639e688",
+    "scripts/bochs-cpu3-native-owned-clock-alloc/contract.md": "252691627c26f582664cd727c413d0b054a02ecbd53331d167958a169f47e6c9",
+    "test/i80386-native-owned-clock-alloc.test.mjs": "7686b77db8b7668d3f727b5c49fa03bb4cc6cba5da35d41ff3c2d2680be61d8c"
+  },
+  "oldBab95CurrentHashMatches": 95,
+  "streams": {
+    "stdout": {
+      "bytes": 5892,
+      "sha256": "d4b2b78fbc005c93660dfdc53f07f8b8afe469294070603029c65c562acac108"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "benchmark": "wired-POST-net-backends",
+  "node": "v20.20.2",
+  "clocks": 10000,
+  "rounds": 4,
+  "sourceHashes": {
+    "./probe-harris-dos.mjs": "f69ba87c73f42fe5c57a996116e033ca1cb7705e347aa17f8cf510b45af86e69",
+    "./build-bios.mjs": "1b263f1cb3579994b0f5147efcd44ce0c5e5eaf913c372eeae3b5d6a65b08fbb",
+    "./build-dos-image.mjs": "7073f065ea11b10e25ddd6ded1358abbd66ef3475582865f5d456b4c3e187ec7",
+    "../src/experimental/harris-80c286-boot-cpu.js": "4a57426bf51f8971ed5890a4717618181a0900a3cb69f8683c0d877c9474b007",
+    "../src/experimental/harris-80c286-bus.js": "f2576bda64d3cb2d6dedfcc50bc9f7bd923f33ec22a2ca770957882d16ef8ab0",
+    "../src/experimental/harris-80c286-memory-board.js": "c570c9cb68cc09e4dbe895f0cf2203f821b88a1ded1d1cc30da694ed5e31670d",
+    "../src/experimental/digital-circuit.js": "25706053494e30bab3ec65be15008c961bcbe61d5080b386afede66d5fda91d8",
+    "../src/experimental/compiled-digital-circuit.js": "515ead1d577d8ecb45315b2225f200c1d224b985a2ac14a1792bb78475941eaa",
+    "../src/experimental/latched-memory-components.js": "14ad80650c64b940804d9a0d81d36072d1a6cfa09810009d6217d072e6338f9a",
+    "../src/experimental/harris-fdc-adapter.js": "a850e48da0e479c7e484cbb78ba1ea953d41ae4606abfb8e74405dff4913251c",
+    "../src/experimental/harris-dma-adapter.js": "a43239174f83ed665edb21cb388b45ba98a846d5f2f54b1564ddbbcfe55cb02c",
+    "../src/experimental/harris-keyboard-adapter.js": "d389d04d94519291043bb37ca9e73613f97b21dd2aed82df8752660ddfb886c2",
+    "../src/experimental/harris-8259-adapter.js": "702bc90387e706ffeb886c6acf1c0c1aa32943556564ea6b092adcb2c59dccb8",
+    "../src/experimental/harris-8254-adapter.js": "00670920fdf1c161e42403b1757f54fae7bf6b2507547a24db2956340618611a",
+    "../src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874",
+    "../src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+    "../src/i8255.js": "3445ac6676005f225db542031be51b6d1561045d2be76be339e5853a50f6ff7f",
+    "../src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+    "../src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+    "../rom/bios.asm": "c9cbc1fb86c24d97d7f5c679c85b03df6024d62c33ae6931c2df3ce69fd02a35"
+  },
+  "busTraceEnabled": false,
+  "initializationIncluded": true,
+  "fullBoot": false,
+  "medians": {
+    "reference": 6387.5,
+    "compiled": 5390.5
+  },
+  "throughputRatio": 1.1849550134495872,
+  "samples": [
+    {
+      "round": 0,
+      "reference": {
+        "elapsedMS": 5980,
+        "stateSHA256": "e285ccab7f1dc22bb775906f85e9581d633c7b5e320e73349f73a7e7bac37648",
+        "periodsPerSecond": 1672.2408026755852
+      },
+      "compiled": {
+        "elapsedMS": 4787,
+        "stateSHA256": "e285ccab7f1dc22bb775906f85e9581d633c7b5e320e73349f73a7e7bac37648",
+        "periodsPerSecond": 2088.9910173386256
+      }
+    },
+    {
+      "round": 1,
+      "compiled": {
+        "elapsedMS": 4582,
+        "stateSHA256": "e285ccab7f1dc22bb775906f85e9581d633c7b5e320e73349f73a7e7bac37648",
+        "periodsPerSecond": 2182.453077258839
+      },
+      "reference": {
+        "elapsedMS": 5924,
+        "stateSHA256": "e285ccab7f1dc22bb775906f85e9581d633c7b5e320e73349f73a7e7bac37648",
+        "periodsPerSecond": 1688.048615800135
+      }
+    },
+    {
+      "round": 2,
+      "reference": {
+        "elapsedMS": 6795,
+        "stateSHA256": "e285ccab7f1dc22bb775906f85e9581d633c7b5e320e73349f73a7e7bac37648",
+        "periodsPerSecond": 1471.6703458425313
+      },
+      "compiled": {
+        "elapsedMS": 5994,
+        "stateSHA256": "e285ccab7f1dc22bb775906f85e9581d633c7b5e320e73349f73a7e7bac37648",
+        "periodsPerSecond": 1668.335001668335
+      }
+    },
+    {
+      "round": 3,
+      "compiled": {
+        "elapsedMS": 6319,
+        "stateSHA256": "e285ccab7f1dc22bb775906f85e9581d633c7b5e320e73349f73a7e7bac37648",
+        "periodsPerSecond": 1582.528881152081
+      },
+      "reference": {
+        "elapsedMS": 8399,
+        "stateSHA256": "e285ccab7f1dc22bb775906f85e9581d633c7b5e320e73349f73a7e7bac37648",
+        "periodsPerSecond": 1190.6179307060365
+      }
+    }
+  ],
+  "notes": [
+    "Shared host; no targeted tests or original DOS boot running during these samples. Other host workloads uncontrolled.",
+    "Both backends use cached bindings and bus tracing off; this is not an isolated trace-on/off speed comparison.",
+    "CPU instruction history remains enabled; 10000-period POST only, not whole DOS boot."
+  ]
+}

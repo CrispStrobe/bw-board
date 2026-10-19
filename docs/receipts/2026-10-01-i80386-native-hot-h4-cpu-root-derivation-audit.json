@@ -1,0 +1,9 @@
+{
+  "status": "ROOT_CPU_TIMING_ONLY_DERIVATION_PASS_NO_EXECUTION",
+  "checks": 37,
+  "revision": "15631beb63d7c1f17e693de7c86d4ed37b96a768",
+  "generatorSha256": "1ccf22ba087a4722a28744550fa125dacde1c6fd4004e5d4c2296f9fcb39661c",
+  "derivationSha256": "f63934fbd8f1b0a75309e23b9a4d7ac5fe181eb8d72c115e7874f842518d9194",
+  "helperSha256": "6a0da47b76592237a1dfdaf61f8304d8a6774097adc811addf6a3dfba6049142",
+  "scope": "Exact original drivers recovered; only admitted import/root/timer/metadata substitutions. Process-wide execution CPU includes all threads and measurement calls; not pure core."
+}

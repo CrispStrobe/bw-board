@@ -1,0 +1,9 @@
+{
+  "status": "ROOT_SOURCE_AND_THREE_CELL_BINDING_READINESS_PASS",
+  "bindingSha256": "9a2ade3a06cb974ffd451f6ac80dcc9e8d11e6078553b2ef47a88066326b1e5c",
+  "runtimeCount": 112,
+  "compiledCount": 103,
+  "artifactCount": 223,
+  "helperCount": 5,
+  "nativeExecuted": false
+}

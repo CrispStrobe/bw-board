@@ -1,0 +1,16 @@
+{
+  "status": "ROOT_APPROVES_ONE_TINY_BOUNDED_PURE_RUNTIME24_TEST_CHILD",
+  "helper": "/mnt/volume1/tmp-astra/run-386-owned-span-runtime-pure-controls-20261002.py",
+  "helperSha256": "ed101f2dddfd2c508dcbf38c72bda16c6a018a7f0d7e25d2d33268e09880c90f",
+  "runtimeHead": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+  "compiledHead": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "limits": {
+    "cpuSeconds": 5,
+    "wallSeconds": 30,
+    "heapMiB": 128,
+    "fileBytes": 8388608,
+    "coreBytes": 0,
+    "niceIncrement": 10
+  },
+  "scope": "Exactly ONE pure test24 child. No provider/ROM/addon/build/authenticateBuild/guest/native/performance operation. Retain failures; no blind retry."
+}

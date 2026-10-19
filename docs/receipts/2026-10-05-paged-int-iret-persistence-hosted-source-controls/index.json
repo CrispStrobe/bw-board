@@ -1,0 +1,76 @@
+{
+  "schema": "bw.exact-origin.receipts.v1",
+  "scope": "Actual four affected direct Python source/decoder fixtures at36c; no Node call, restore, worker, addon, CPU or guest. Five other methods remain historical.",
+  "files": {
+    "parent.py": {
+      "bytes": 77736,
+      "sha256": "334bceb6a6224f373d817076a055870e73308d8dd04ca0adea2d546b199b27ea",
+      "origin": "/tmp/native-paged-int-iret-persistence-hosted-source-controls-20261004/parent.py"
+    },
+    "before.json": {
+      "bytes": 76129,
+      "sha256": "5e14c492995caf2dd6deed55fffc574d2024e94a2b13b3e7d95d197199724086",
+      "origin": "/tmp/native-paged-int-iret-persistence-hosted-source-controls-20261004/before.json"
+    },
+    "after.json": {
+      "bytes": 76129,
+      "sha256": "5e14c492995caf2dd6deed55fffc574d2024e94a2b13b3e7d95d197199724086",
+      "origin": "/tmp/native-paged-int-iret-persistence-hosted-source-controls-20261004/after.json"
+    },
+    "invocation.json": {
+      "bytes": 1467,
+      "sha256": "bd47c4ee6c6f283d5ad299e4f87a62178f83b694a65fa2755419662faa73df52",
+      "origin": "/tmp/native-paged-int-iret-persistence-hosted-source-controls-20261004/invocation.json"
+    },
+    "exit.json": {
+      "bytes": 404,
+      "sha256": "b0f4d2544b301b8c8048f6cc6ad1396c6eb7b2e66d5ea73d68ce6af17eaa3b0d",
+      "origin": "/tmp/native-paged-int-iret-persistence-hosted-source-controls-20261004/exit.json"
+    },
+    "stdout": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-paged-int-iret-persistence-hosted-source-controls-20261004/stdout"
+    },
+    "stderr": {
+      "bytes": 740,
+      "sha256": "520608b582dd51ec7e9730c095b8cc76ba4d55a2cb4f2519fe6d505aadfe1cb2",
+      "origin": "/tmp/native-paged-int-iret-persistence-hosted-source-controls-20261004/stderr"
+    },
+    "result.json": {
+      "bytes": 332,
+      "sha256": "8d2590d025c2064f816e0368bf476bdef1d1442179689445d2a2f4db61cb7874",
+      "origin": "/tmp/native-paged-int-iret-persistence-hosted-source-controls-20261004/result.json"
+    },
+    "root-actual-audit.json": {
+      "bytes": 364,
+      "sha256": "0774d83917abee7bc9f4e765115a86c0e80bd5b7e6316444ce731facd21a6e11",
+      "origin": "/tmp/native-paged-int-iret-persistence-hosted-source-controls-20261004/root-actual-audit.json"
+    },
+    "independent-audit.json": {
+      "bytes": 442,
+      "sha256": "d2bfa5110c6975c4d3b59360d8ba737a451a60bf260d4c9fac5fc08d9bd04adf",
+      "origin": "/tmp/native-paged-int-iret-persistence-hosted-source-controls-20261004/independent-audit.json"
+    },
+    "coder-audit.json": {
+      "bytes": 971,
+      "sha256": "d659a011495d84459238c6567ab2cfb9b97a3847ccba93a68faac94f301578f7",
+      "origin": "/tmp/native-paged-int-iret-persistence-hosted-source-controls-20261004/coder-audit.json"
+    },
+    "coder-audit.py": {
+      "bytes": 2929,
+      "sha256": "8855aaa88e92753ca985d9c3b47b5d236b5fd242874de86fb5d204314915d49e",
+      "origin": "/tmp/audit-int-persistence-hosted-controls-20261004.py"
+    },
+    "source-freeze.json": {
+      "bytes": 2147,
+      "sha256": "78474543f9eb1c6e4685e29a1f66957242a542444798ba3df183021a710c8d70",
+      "origin": "/tmp/native-paged-int-iret-persistence-hosted-source-freeze-20261004/source-freeze.json"
+    },
+    "proposal.json": {
+      "bytes": 1470,
+      "sha256": "44a56ae10fd3810807e1b1cf4983e80c7911043c29efbb4917330431550b8d64",
+      "origin": "/tmp/native-paged-int-iret-persistence-hosted-source-freeze-20261004/proposal.json"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "files": {
+    "exit.json": {
+      "bytes": 104205,
+      "sha256": "a085a293209ed576fa328f6cfb95edfe38da887159877bfa9891d038677a4b6c"
+    },
+    "first-ci-failure-excerpt.log": {
+      "bytes": 2554,
+      "sha256": "d53b314067e21c5ab60064bbe58e2083d694ebd4b2ae4ae8dfe8fac4f172da0e"
+    },
+    "helper.py": {
+      "bytes": 3547,
+      "sha256": "f0b48940e27419c4b1200443bde365022e762f8fe158c7a21e0e6db522a5cc86"
+    },
+    "invocation.json": {
+      "bytes": 104704,
+      "sha256": "425de54c89671527c8dc33372e61f287d3fb2f7254faf6ba0933d049072f18c4"
+    },
+    "origins.json": {
+      "bytes": 1600,
+      "sha256": "e5e001b4a6d1d8fd8cf727de027a2e7017394d9246585e1329bd20a52753c458"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8692,
+      "sha256": "98e63bc84360a3cccfb50b56a2aa6a2ed237369dba7397452dfbe841c6797104"
+    }
+  }
+}

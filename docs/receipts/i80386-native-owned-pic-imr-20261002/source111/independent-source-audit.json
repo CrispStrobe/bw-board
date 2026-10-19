@@ -1,0 +1,14 @@
+{
+  "status": "PASS_FROZEN_PIC_SOURCE_JS_REFERENCE_STATIC_READY_NOT_EXECUTED",
+  "checks": 336,
+  "sourceRevision": "a6f605280f778b2bc409ef97ac3b40e15874530c",
+  "sourceInputs": 111,
+  "inheritedFe1Exact": 103,
+  "sourceTests": 11,
+  "templateSha256": "eb972c4465146a575eacd6930e99505ece30b1f6d1af3955a77a25d64317e0f1",
+  "helperHashes": {
+    "js-reference.py": "4228eccdb6fcefdc785b58fc20c712b2c47a30c660df281069ff6ea6c8607249",
+    "js-reference-plan-frozen.json": "67f0a0c05d0eaa99f13d74eb8a271cda6622987ebf3ba43fae835f788ed1409b"
+  },
+  "scope": "Actual111currentgit/103inherited/identity/test11 exact; PICfullstate/noACK/pollafterclockflushguard sourcecontrols; JSreference bounded120/env5blank/prepost+fullPICreadstateassertions reviewed. Rootapprovaltemplate/outputfresh. No JSguest/nativeexecution."
+}

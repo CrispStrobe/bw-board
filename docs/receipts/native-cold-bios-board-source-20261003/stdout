@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: fixed cold ROM/config plus exact census byte argument domains
+ok 1 - fixed cold ROM/config plus exact census byte argument domains
+  ---
+  duration_ms: 5.144312
+  type: 'test'
+  ...
+# Subtest: actual DMA CMOS PIT and diagnostic/debug effects retain actual ordered port records
+ok 2 - actual DMA CMOS PIT and diagnostic/debug effects retain actual ordered port records
+  ---
+  duration_ms: 43.368126
+  type: 'test'
+  ...
+# Subtest: idle KBC64 flush reads and delayed AA55/AB00 consume without artificial PIC masks
+ok 3 - idle KBC64 flush reads and delayed AA55/AB00 consume without artificial PIC masks
+  ---
+  duration_ms: 89.425663
+  type: 'test'
+  ...
+# Subtest: real PIC line may be staged while ACK refuses before PIC read effects
+ok 4 - real PIC line may be staged while ACK refuses before PIC read effects
+  ---
+  duration_ms: 20.404229
+  type: 'test'
+  ...
+# Subtest: ordinary RAM data/stack and ROM execute accepted; RAM execute and malformed port deny
+ok 5 - ordinary RAM data/stack and ROM execute accepted; RAM execute and malformed port deny
+  ---
+  duration_ms: 40.359979
+  type: 'test'
+  ...
+# Subtest: private closed lease preserves complete tape refusal and mandatory POSTPIO even zero debt
+ok 6 - private closed lease preserves complete tape refusal and mandatory POSTPIO even zero debt
+  ---
+  duration_ms: 45.702355
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 494.166441

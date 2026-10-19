@@ -1,0 +1,9 @@
+{
+  "runId": 37247392133,
+  "artifactId": 11319662434,
+  "headSha": "d46b68c201628a05f5f9934ada7fdddd3a57e683",
+  "attempt": 1,
+  "zipBytes": 10763002,
+  "zipSha256": "01fe2bd1bd151ad25328d294b7e50f24f7d27c2538994c896964980e578bab69",
+  "path": "/tmp/native-paged-int-iret-post-persistence-20261005.zip"
+}

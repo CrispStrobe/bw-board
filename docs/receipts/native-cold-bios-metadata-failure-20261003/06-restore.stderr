@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-native-restore/restore.py", line 129, in <module>
+    main(sys.argv[1])
+  File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-native-restore/restore.py", line 115, in main
+    admission=json.loads(run_logged(command,out,'admission'))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-native-restore/restore.py", line 52, in run_logged
+    require(not timed_out and proc.returncode==0,'readonly subprocess failed; raw evidence retained')
+  File "/home/runner/work/bw-board/bw-board/runtime/scripts/cold-native-restore/archive.py", line 14, in require
+    raise ValueError(message)
+ValueError: readonly subprocess failed; raw evidence retained

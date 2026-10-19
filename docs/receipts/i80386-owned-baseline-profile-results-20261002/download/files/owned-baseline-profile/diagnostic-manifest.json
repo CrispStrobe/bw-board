@@ -1,0 +1,13 @@
+{
+  "kind": "SOURCE_OWNED_BASELINE_INSPECTOR_DIAGNOSTIC",
+  "publicationRevision": "6ccb89042c601bdd9c6598adf642a8b06a1cfcd1",
+  "files": {
+    "/home/runner/work/bw-board/bw-board/publication/scripts/ci-profile-i80386-owned-baseline.py": "3a390779e73c80669bded8b3e6ac6ea88b12e2a54e13e0f2b2e1a4fcc9280d57",
+    "/home/runner/work/bw-board/bw-board/publication/scripts/owned-baseline-profile/derive.mjs": "f8fc837d24b3633ff0e471a28694dc0997b230fb49fe1e67e00df01f4cb26fa7",
+    "/home/runner/work/bw-board/bw-board/publication/scripts/owned-baseline-profile/alignment.mjs": "8a27b87b475caebb0b520a45b761b2fa5952ad878a1bc2c0d89ea6a83a58b4d7",
+    "/home/runner/work/bw-board/bw-board/publication/scripts/owned-baseline-profile/plan.json": "40fffc8104466ec3ac3c403ce6b1a60618862ffac14178d4e5e561ec03e5d6dd",
+    "/home/runner/work/bw-board/bw-board/publication/.github/workflows/i80386-owned-baseline-profile.yml": "d0e8000751105a34191491536aebf2756bfc4264edfb064a87bd36a4360d6ffc",
+    "/home/runner/work/bw-board/bw-board/publication/test/i80386-owned-baseline-profile.test.mjs": "5b4a3aabbd4dac7b0c5a72099a775206055af2d081d1fcc78b525e9fb49f8b9b"
+  },
+  "alignmentSha256": "7feb6ac4e4443d92d2065c199c6c12b6ef5880b44b04ff654b58abd300d77afc"
+}

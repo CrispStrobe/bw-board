@@ -1,0 +1,13 @@
+{
+  "status": "PASS_SOURCE_ONLY_DIAGNOSTIC_READINESS_NOT_EXECUTION",
+  "checks": 239,
+  "sourceRevision": "a6f605280f778b2bc409ef97ac3b40e15874530c",
+  "sourceCount": 111,
+  "bindingTemplateSha256": "4ad15cbe5adfdbe1a8de58df4cb95518d631775fdf5621c42c3f22ad68ff64f3",
+  "helperHashes": {
+    "run.py": "c2a89b4373b4e88670b36ff10c764495760b75c330febcbc6b8a3c5f12f198fc",
+    "runner.mjs": "fdf934229793dad3619e9e842b9cd43ea1ff2d33b249a9b2f4d84a85b987624b",
+    "derivation.json": "683e4c8ec0b136f90e281d3fdafab9aacd99a2384b71c0b7f2c9725033e2e358"
+  },
+  "scope": "Exact inverse; frozen source/current/git pins; original capture anchor; raw 16MiB SHA and own-reset eight-byte witness checked before acceptance; only 510..517 canonicalized in copied hash stream. CPU/wall120 heap512 nice10 file256MiB core0 five blank hook variables, fresh output, exit0/non-timeout required. No guest/addon execution."
+}

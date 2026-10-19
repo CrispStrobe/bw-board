@@ -1,0 +1,19 @@
+import pathlib,zipfile,json,hashlib,tarfile,io,subprocess
+P=pathlib.Path(__file__).parent;W=pathlib.Path('/tmp/bw-cold-native-diagnostic-source-20261003');sha=lambda b:hashlib.sha256(b).hexdigest();count=0
+with zipfile.ZipFile(P/'official-artifact.zip') as z:
+ members={n:z.read(n) for n in z.namelist() if not n.endswith('/')};prefix='cold-bios-build-evidence/';r=json.loads(members[prefix+'build-static-preflight.json']);f=json.loads(members[prefix+'final-status.json']);inv=json.loads(members[prefix+'artifact-inventory.json'])['files']
+ for n,v in inv.items():b=members[prefix+n];assert sha(b)==v['sha256'] and len(b)==v['bytes'];count+=1
+ assert r['sourceRevision']=='d4281b28aa4b2e5913c006fb7b9e7b9f0773c1e3' and len(r['sourceHashes'])==125
+ with tarfile.open(fileobj=io.BytesIO(members[prefix+'frozen-source.tar.gz']),mode='r:gz') as t:
+  files={m.name:t.extractfile(m).read() for m in t if m.isfile()};assert set(files)==set(r['sourceHashes'])
+  for n,b in files.items():assert sha(b)==r['sourceHashes'][n] and b==subprocess.check_output(['git','-C',str(W),'show',r['sourceRevision']+':'+n]);count+=1
+ prepared=json.loads(members[prefix+'prepared-after-build.json'])
+ with tarfile.open(fileobj=io.BytesIO(members[prefix+'prepared-source.tar.gz']),mode='r:gz') as t:
+  files={m.name:t.extractfile(m).read() for m in t if m.isfile()}
+  for n,b in files.items():v=prepared[n];assert sha(b)==v;count+=1
+  for n,h in r['preparedHashes'].items():assert sha(files[n])==h;count+=1
+  assert b'return memcmp(bw_direct_rom+(address&65535U),bytes,length)==0;' in files['bochs/cpu/bw_slice_runtime.inc']
+ assert sha(members[prefix+'bw_direct.node'])==r['addonSha256'];assert f['sourceBeforeAfterEqual'] and f['frozenInputsBeforeAfterEqual'] and f['preparedInputsBeforeAfterEqual'];assert f['errors']=={}
+ for n,b in members.items():
+  if n.startswith(prefix) and n.endswith('.exit.json'):o=json.loads(b);assert o['exitCode']==0 and not o['timedOut'];count+=1
+(P/'coder-actual-static-audit.json').write_text(json.dumps({'status':'PASS_STATIC_ONLY_NO_ADDON_LOAD_OR_GUEST','checks':count,'sourceCount':125,'preparedFiles':len(files),'compiledRevision':r['sourceRevision'],'addonSha256':r['addonSha256'],'addonBytes':r['addonBytes'],'zipSha256':sha((P/'official-artifact.zip').read_bytes())},indent=2)+'\n');print(count)

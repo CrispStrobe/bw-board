@@ -1,0 +1,721 @@
+/**
+ * True small-signal AC analysis (spec-updates/ac-small-signal.md).
+ *
+ * Every nonlinear device is linearized at the DC operating point; C and L
+ * stamp complex admittances (jωC, 1/jωL); every independent source, MCU
+ * pin drive, and device drive is KILLED (its Thévenin collapses to its
+ * output conductance) except the one swept source, which drives a unit
+ * phasor. The complex system G + jB is solved as the real-equivalent
+ * bordered form
+ *
+ *     [ G  −B ] [xr]   [br]
+ *     [ B   G ] [xi] = [bi]
+ *
+ * so the EXISTING sparse LU does the complex solve — and since only the
+ * VALUES change with ω (never the pattern), every frequency point after
+ * the first is a numeric refactor.
+ *
+ * The linearizations evaluate the same model functions the DC stamps use
+ * (imported from mna.js) — an AC answer computed from a different model
+ * than the operating point is a plausible wrong Bode plot.
+ *
+ * @module
+ */
+
+import {
+  findNet, junctionOpts, pwlKneeCurrent, smoothVov, MOS_GDS_FLOOR, MOS_SMOOTH_DELTA,
+  ebersMollChargeCompanion, ebersMollCompanion, ebersMollParams, mosGds, mosK, mosTriode, mosVth,
+  shockleyParams, shockleyEval, shockleyJunctionFromTotal, kneeFromVf, JUNCTION_RD, junctionRd } from './mna.js';
+import { CooMatrix, SparseLU, toCSC } from './sparse.js';
+import { getDevice } from './devices.js';
+
+const VT = 0.02585;
+
+/**
+ * Small-signal junction conductance at the operating voltage — the exact
+ * derivative of the model the DC stamp used (C1 knee or Shockley).
+ */
+function junctionG(part, vAcross, vf, rd) {
+  const opts = junctionOpts(part);
+  if (!opts) {
+    // C1 PWL knee: derivative of pwlKneeCurrent, at the SAME knee the DC
+    // stamp used. `vf` arrives here already converted for led/diode (see the
+    // call site); BJT callers pass vbe, which is a knee and stays one.
+    const EPS = 0.025;
+    if (vAcross < vf - EPS) return 1e-9;
+    if (vAcross > vf + EPS) return 1 / rd;
+    return (vAcross - vf + EPS) / (2 * EPS * rd);
+  }
+  // Composite small-signal conductance: junction gj behind rs, evaluated
+  // at the operating TOTAL voltage — the same composite the DC stamp uses.
+  const p = shockleyParams(opts, vf);
+  const vJ = shockleyJunctionFromTotal(vAcross, Math.min(vAcross, vf), p);
+  const { gj } = shockleyEval(vJ, p);
+  return gj / (1 + gj * p.rs);
+}
+
+/**
+ * Run a small-signal sweep.
+ *
+ * @param {object} args
+ * @param {import('./types.js').Part[]} args.parts - SOLVER-view parts
+ * @param {import('./types.js').Net[]} args.nets - SOLVER-view nets
+ * @param {Map<string, any>} args.pinSources
+ * @param {Map<string, number>} args.controls
+ * @param {number} args.vcc
+ * @param {Map<string, number>} args.opVoltages - converged DC node voltages
+ * @param {Map<string, Map<string, number>>} [args.opBranchCurrents] - converged
+ *   DC terminal currents, positive into each part
+ * @param {Map<string, object>} [args.deviceStates]
+ * @param {Map<string, string>} [args.opRegions] - solveMNA's settled
+ *   `opampRegions`: the region each op-amp / railed vcvs converged in at the
+ *   DC bias. Without it the rows below assume `linear`, which is what this
+ *   file did for op-amps unconditionally until
+ *   spec-updates/ac-operating-region.md.
+ * @param {string} args.sourceId - the swept vsource/isource part id (unit phasor)
+ * @param {number[]} args.freqs - Hz, each > 0
+ * @param {number} [args.nodeRegularizationSiemens=1e-12]
+ * @param {string} [args.analysisProfile='interactive-v1']
+ * @param {string} [args.sourceBiasPolicy='waveform-at-current-board-time']
+ * @param {string[]} [args.probes] - net ids to report (default: all)
+ * @returns {Array<{hz: number, results: Map<string, {mag: number, phaseDeg: number}>,
+ *   outOfLinear?: Array<{part: string, kind: string, region: string}>}>}
+ */
+export function acSweep(args) {
+  const {
+    parts, nets, pinSources, controls, vcc, opVoltages, opBranchCurrents,
+    deviceStates, opRegions, sourceId, freqs, probes,
+    nodeRegularizationSiemens = 1e-12, analysisProfile = 'interactive-v1',
+    sourceBiasPolicy = 'waveform-at-current-board-time',
+  } = args;
+  if (!Number.isFinite(nodeRegularizationSiemens) || nodeRegularizationSiemens < 0) {
+    throw new Error('acSweep: nodeRegularizationSiemens must be finite and >= 0');
+  }
+  if (!['interactive-v1', 'source-analysis-v1'].includes(analysisProfile)) {
+    throw new Error('acSweep: unsupported analysisProfile');
+  }
+
+  // Small-signal validity, per part. A stage at a rail cannot move its output
+  // (its VOLTAGE is pinned); a stage at its short-circuit current cannot move
+  // its current (its CURRENT is pinned). Those are two different rows, and
+  // collapsing them into one is how a plausible wrong Bode plot gets made —
+  // see spec-updates/ac-operating-region.md.
+  const regionOf = (partId) => opRegions?.get(partId) ?? 'linear';
+  const isRailed = (r) => r === 'high' || r === 'low';
+  const isLimited = (r) => r === 'ilim+' || r === 'ilim-';
+
+  const partById = new Map(parts.map(p => [p.id, p]));
+  const source = partById.get(sourceId);
+  if (!source || !['vsource', 'isource'].includes(source.kind)) {
+    throw new Error(`acSweep: "${sourceId}" is not a vsource or isource on this bench`);
+  }
+
+  // ── Node indexing ───────────────────────────────────────────────────
+  // AC ground comes only from actual reference/rail parts. Independent
+  // voltage sources, including killed sources, remain differential MNA
+  // constraints: grounding both terminals destroys floating bridges.
+  const grounded = new Set();
+  for (const net of nets) {
+    for (const t of net.terminals) {
+      const p = partById.get(t.part);
+      if (!p) continue;
+      if (p.kind === 'gnd') grounded.add(net.id);
+      if (p.kind === 'vcc' && t.terminal === 'vcc') grounded.add(net.id);
+    }
+  }
+
+  /** @type {Map<string, number>} */
+  const nodeIndex = new Map();
+  let nodeCount = 0;
+  for (const net of nets) {
+    if (!grounded.has(net.id)) nodeIndex.set(net.id, nodeCount++);
+  }
+
+  // An explicit positive SPICE RB sits between the authored base terminal and
+  // the intrinsic Ebers-Moll base. DC gives it a real hidden node; AC must do
+  // the same or it linearises a different circuit. Explicit Shockley NPNs
+  // without RB reuse the external base index and add no matrix row.
+  const exactNpn = new Map();
+  const bjtBaseIndex = new Map();
+  const bjtCollectorIndex = new Map();
+  for (const part of parts) {
+    if (part.kind !== 'npn' || part.params?.model !== 'shockley') continue;
+    const params = ebersMollParams(part);
+    if (!params) continue;
+    exactNpn.set(part.id, params);
+    if (params.rb > 0) bjtBaseIndex.set(part.id, nodeCount++);
+    if (params.rc > 0) bjtCollectorIndex.set(part.id, nodeCount++);
+  }
+  const idxOf = (netId) => (netId && !grounded.has(netId)) ? nodeIndex.get(netId) : undefined;
+  const vOp = (netId) => netId ? (opVoltages.get(netId) ?? 0) : 0;
+  const netOf = (partId, terminal) => findNet(nets, partId, terminal);
+
+  const sourcePos = netOf(sourceId, 'pos');
+  const sourceNeg = netOf(sourceId, 'neg');
+  if (!sourcePos || !sourceNeg) {
+    throw new Error('acSweep: the swept source must have both terminals connected');
+  }
+
+  // Extra rows: every ideal voltage source and each op-amp output. A killed
+  // source has a zero RHS but still constrains its two authored terminals.
+  let acRows = 0;
+  const rowIndex = new Map();
+  for (const p of parts) {
+    if (p.kind === 'vsource'
+        && (idxOf(netOf(p.id, 'pos')) !== undefined || idxOf(netOf(p.id, 'neg')) !== undefined)) {
+      rowIndex.set(p.id, acRows++);
+    }
+    if (p.kind === 'inductor'
+        && (idxOf(netOf(p.id, 'a')) !== undefined || idxOf(netOf(p.id, 'b')) !== undefined)) {
+      rowIndex.set(p.id, acRows++);
+    }
+    if (p.kind === 'opamp' && idxOf(netOf(p.id, 'out')) !== undefined) {
+      rowIndex.set(p.id, acRows++);
+    }
+    if (p.kind === 'vcvs' && idxOf(netOf(p.id, 'outp')) !== undefined) {
+      rowIndex.set(p.id, acRows++);
+    }
+  }
+  if (source.kind === 'vsource' && !rowIndex.has(sourceId)
+      || source.kind === 'isource'
+        && idxOf(sourcePos) === undefined && idxOf(sourceNeg) === undefined) {
+    throw new Error('acSweep: the swept source drives only AC-grounded nets');
+  }
+
+  const N = nodeCount + acRows;
+  const dim = 2 * N; // real-equivalent bordered system
+  const profile = { id: analysisProfile, nodeRegularizationSiemens, sourceBiasPolicy };
+  if (nodeCount === 0) return freqs.map(hz => ({ hz, results: new Map(), profile }));
+
+  const A = new CooMatrix(dim);
+  const b = new Float64Array(dim);
+
+  // Complex entry: value g + j·susceptance at (i, j).
+  const addC = (i, j, g, susc) => {
+    if (g !== 0) { A.add(i, j, g); A.add(i + N, j + N, g); }
+    if (susc !== 0) { A.add(i, j + N, -susc); A.add(i + N, j, susc); }
+  };
+  const addG2 = (na, nb, g, susc = 0) => {
+    const ia = idxOf(na);
+    const ib = idxOf(nb);
+    if (ia !== undefined) addC(ia, ia, g, susc);
+    if (ib !== undefined) addC(ib, ib, g, susc);
+    if (ia !== undefined && ib !== undefined) {
+      addC(ia, ib, -g, -susc);
+      addC(ib, ia, -g, -susc);
+    }
+  };
+  const addGIndexes = (ia, ib, g) => {
+    if (ia !== undefined) addC(ia, ia, g, 0);
+    if (ib !== undefined) addC(ib, ib, g, 0);
+    if (ia !== undefined && ib !== undefined) {
+      addC(ia, ib, -g, 0);
+      addC(ib, ia, -g, 0);
+    }
+  };
+
+  // ── Frequency-independent stamps, collected as closures ─────────────
+  // The susceptance parts get scaled by ω each point; conductances are
+  // stamped once per fill. We simply re-fill per point (reset keeps the
+  // pattern, so the LU refactors).
+  const fill = (omega) => {
+    A.reset();
+    b.fill(0);
+
+    for (const part of parts) {
+      const P = part.params ?? {};
+      switch (part.kind) {
+        case 'resistor':
+          addG2(netOf(part.id, 'a'), netOf(part.id, 'b'), 1 / (P.ohms ?? 1000));
+          break;
+        case 'buzzer':
+          addG2(netOf(part.id, 'a'), netOf(part.id, 'b'), 1 / 100);
+          break;
+        case 'button':
+        case 'switch': {
+          const closed = (controls.get(part.id) ?? 0) === 1;
+          addG2(netOf(part.id, 'a'), netOf(part.id, 'b'), closed ? 1 / 0.001 : 1e-12);
+          break;
+        }
+        case 'potentiometer': {
+          const pos = controls.get(part.id) ?? (Number.isFinite(P.position) ? P.position : 0.5);
+          const total = P.ohms ?? 10000;
+          addG2(netOf(part.id, 'a'), netOf(part.id, 'wiper'), 1 / Math.max(1, total * (1 - pos)));
+          addG2(netOf(part.id, 'wiper'), netOf(part.id, 'b'), 1 / Math.max(1, total * pos));
+          break;
+        }
+        case 'ldr':
+        case 'ntc': {
+          const hi = part.kind === 'ldr' ? (P.rDark ?? 1e6) : (P.rCold ?? 1e5);
+          const lo = part.kind === 'ldr' ? (P.rLight ?? 100) : (P.rHot ?? 1000);
+          const x = controls.get(part.id) ?? 0;
+          addG2(netOf(part.id, 'a'), netOf(part.id, 'b'),
+            1 / Math.max(0.001, hi * Math.pow(lo / hi, x)));
+          break;
+        }
+        case 'capacitor':
+          addG2(netOf(part.id, 'a'), netOf(part.id, 'b'), 0, omega * (P.farads ?? 1e-4));
+          break;
+        case 'inductor':
+          // Branch-current MNA form: Va - Vb = jωL·I.  The equivalent
+          // admittance 1/(jωL) is mathematically correct but becomes enormous
+          // for a small L at low frequency; combining it with a small
+          // capacitor in the real-equivalent matrix loses useful digits.
+          // Keeping I as an unknown avoids that ill-conditioning.
+          {
+            if (!rowIndex.has(part.id)) break; // both terminals are AC ground
+            const row = nodeCount + rowIndex.get(part.id);
+            const iA = idxOf(netOf(part.id, 'a'));
+            const iB = idxOf(netOf(part.id, 'b'));
+            if (iA !== undefined) { addC(iA, row, 1, 0); addC(row, iA, 1, 0); }
+            if (iB !== undefined) { addC(iB, row, -1, 0); addC(row, iB, -1, 0); }
+            const henrys = Math.max(P.henrys ?? P.henries ?? 1e-3, 1e-12);
+            addC(row, row, 0, -omega * henrys);
+          }
+          break;
+        case 'transformer': {
+          // Coupled pair (spec-updates/coupled-inductors.md): Y(ω) =
+          // Γ/(jω) — pure susceptance B = −Γ/ω with the full 2×2
+          // pattern; the diagonal entries reduce to the lone inductor's.
+          const n = Number(P.ratio) || 0;
+          const lm = Number(P.lm ?? 10);
+          const l1 = Number(P.l1 ?? (n ? lm : 1));
+          const l2 = Number(P.l2 ?? (n ? lm / (n * n) : 1));
+          const k = Math.min(Math.max(Number(P.k ?? 0.999), 1e-6), 0.999999);
+          const m = k * Math.sqrt(l1 * l2);
+          const det = l1 * l2 - m * m;
+          const p1 = netOf(part.id, 'p1'); const p2 = netOf(part.id, 'p2');
+          const s1 = netOf(part.id, 's1'); const s2 = netOf(part.id, 's2');
+          const addPort = (rA, rB, cA, cB, susc) => {
+            const ra = idxOf(rA); const rb = idxOf(rB);
+            const ca = idxOf(cA); const cb = idxOf(cB);
+            if (ra !== undefined && ca !== undefined) addC(ra, ca, 0, susc);
+            if (ra !== undefined && cb !== undefined) addC(ra, cb, 0, -susc);
+            if (rb !== undefined && ca !== undefined) addC(rb, ca, 0, -susc);
+            if (rb !== undefined && cb !== undefined) addC(rb, cb, 0, susc);
+          };
+          addPort(p1, p2, p1, p2, -(l2 / det) / omega);
+          addPort(p1, p2, s1, s2, -(-m / det) / omega);
+          addPort(s1, s2, p1, p2, -(-m / det) / omega);
+          addPort(s1, s2, s1, s2, -(l1 / det) / omega);
+          break;
+        }
+        case 'led':
+        case 'diode': {
+          const na = netOf(part.id, 'anode');
+          const nc = netOf(part.id, 'cathode');
+          const vf = P.vf ?? (part.kind === 'diode' ? 0.7 : 2.0);
+          // Datasheet drop -> knee, matching the DC stamp. The small-signal
+          // answer must be the derivative of the model that was stamped, so
+          // this conversion is not optional: skipping it would linearise a
+          // different device than the one the operating point came from.
+          const acOpts = junctionOpts(part);
+          const acRd = junctionRd(part);
+          addG2(na, nc, junctionG(part, vOp(na) - vOp(nc),
+            acOpts ? vf : kneeFromVf(vf, acRd), acRd));
+          break;
+        }
+        case 'zener': {
+          const na = netOf(part.id, 'anode');
+          const nc = netOf(part.id, 'cathode');
+          const v = vOp(na) - vOp(nc);
+          const vf = P.vf ?? 0.7;
+          const vz = P.vz ?? 5.1;
+          let g = 1e-9;
+          if (v >= vf) g = 1 / 10;
+          else if (v <= -vz) g = 1 / (P.rz ?? 5);
+          addG2(na, nc, g);
+          break;
+        }
+        case 'npn':
+        case 'pnp': {
+          const nB = netOf(part.id, 'base');
+          const nC = netOf(part.id, 'collector');
+          const nE = netOf(part.id, 'emitter');
+          const em = part.kind === 'npn' ? exactNpn.get(part.id) : null;
+          if (em) {
+            const iExternalBase = idxOf(nB);
+            const iB = bjtBaseIndex.get(part.id) ?? iExternalBase;
+            const iExternalCollector = idxOf(nC);
+            const iC = bjtCollectorIndex.get(part.id) ?? iExternalCollector;
+            const iE = idxOf(nE);
+            let vB = vOp(nB);
+            let vC = vOp(nC);
+            if (em.rb > 0) {
+              const baseCurrent = opBranchCurrents?.get(part.id)?.get('base');
+              if (!Number.isFinite(baseCurrent)) {
+                throw new Error(`acSweep: ${part.id} is missing its converged base current for RB`);
+              }
+              vB -= baseCurrent * em.rb;
+              addGIndexes(iExternalBase, iB, 1 / em.rb);
+            }
+            if (em.rc > 0) {
+              const collectorCurrent = opBranchCurrents?.get(part.id)?.get('collector');
+              if (!Number.isFinite(collectorCurrent)) {
+                throw new Error(`acSweep: ${part.id} is missing its converged collector current for RC`);
+              }
+              vC -= collectorCurrent * em.rc;
+              addGIndexes(iExternalCollector, iC, 1 / em.rc);
+            }
+            const c = ebersMollCompanion(vB - vOp(nE), vB - vC, em);
+            const add = (row, col, value) => {
+              if (row !== undefined && col !== undefined) addC(row, col, value, 0);
+            };
+            // Vbe = Vb - Ve; Vbc = Vb - Vc. These are exactly the
+            // conductance rows of stampEbersMoll, without its DC offsets.
+            add(iB, iB, c.gpi + c.gmu);
+            add(iB, iE, -c.gpi);
+            add(iB, iC, -c.gmu);
+            add(iC, iB, c.gcF + c.gcR);
+            add(iC, iE, -c.gcF);
+            add(iC, iC, -c.gcR);
+            add(iE, iB, -(c.gpi + c.gmu + c.gcF + c.gcR));
+            add(iE, iE, c.gpi + c.gcF);
+            add(iE, iC, c.gmu + c.gcR);
+
+            // Charge derivatives use the intrinsic junction voltages and
+            // therefore the same hidden RB/RC nodes as the conductance stamp.
+            // CBE and CBC are ordinary two-terminal terms. TF also makes Qbe
+            // depend on Vbc through VAF/IKF base charge; that cross derivative
+            // is the four-entry non-reciprocal stamp below.
+            const q = ebersMollChargeCompanion(vB - vOp(nE), vB - vC, em);
+            const addSusc = (row, col, capacitance) => {
+              if (row !== undefined && col !== undefined && capacitance !== 0) {
+                addC(row, col, 0, omega * capacitance);
+              }
+            };
+            addSusc(iB, iB, q.cbe + q.cbeVbc);
+            addSusc(iB, iE, -q.cbe);
+            addSusc(iB, iC, -q.cbeVbc);
+            addSusc(iE, iB, -(q.cbe + q.cbeVbc));
+            addSusc(iE, iE, q.cbe);
+            addSusc(iE, iC, q.cbeVbc);
+            addSusc(iB, iB, q.cbc);
+            addSusc(iB, iC, -q.cbc);
+            addSusc(iC, iB, -q.cbc);
+            addSusc(iC, iC, q.cbc);
+            break;
+          }
+          const vJ = part.kind === 'npn'
+            ? vOp(nB) - vOp(nE)
+            : vOp(nE) - vOp(nB);
+          const gpi = junctionG(part, vJ, P.vbe ?? 0.7, 10);
+          // Junction between B and E regardless of polarity.
+          addG2(nB, nE, gpi);
+          // Saturated at the OP? Then the output is a stiff clamp, not a
+          // VCCS — same region logic as the DC stamp, read off the OP.
+          const vOut = part.kind === 'npn'
+            ? vOp(nC) - vOp(nE)
+            : vOp(nE) - vOp(nC);
+          const conducting = pwlKneeCurrent(vJ, P.vbe ?? 0.7, 10) > 1e-9;
+          if (conducting && vOut < (P.vceSat ?? 0.2) * 1.5) {
+            addG2(nC, nE, 10);
+            break;
+          }
+          const gm = (P.beta ?? 100) * gpi;
+          const iC = idxOf(nC);
+          const iB = idxOf(nB);
+          const iE = idxOf(nE);
+          // VCCS: i(C→E) = gm·(vB − vE) for BOTH polarities — the pnp's
+          // reversed junction sense and reversed current direction cancel.
+          if (iC !== undefined && iB !== undefined) addC(iC, iB, gm, 0);
+          if (iC !== undefined && iE !== undefined) addC(iC, iE, -gm, 0);
+          if (iE !== undefined && iB !== undefined) addC(iE, iB, -gm, 0);
+          if (iE !== undefined) addC(iE, iE, gm, 0);
+          break;
+        }
+        case 'nmos':
+        case 'pmos': {
+          const nG = netOf(part.id, 'gate');
+          const nD = netOf(part.id, 'drain');
+          const nS = netOf(part.id, 'source');
+          const vgs = part.kind === 'nmos'
+            ? vOp(nG) - vOp(nS)
+            : vOp(nS) - vOp(nG);
+          let gm;
+          let gds;
+          const exactGroundedLevel1Base = part.kind === 'nmos' && P.model === 'level1'
+            && P.bulkAtGround === true
+            && Number.isFinite(P.vth) && Number.isFinite(P.kp) && P.kp > 0
+            && Number.isFinite(P.w) && P.w > 0 && Number.isFinite(P.l) && P.l > 0
+            && Number.isFinite(P.lambda) && P.lambda >= 0;
+          const hasGamma = Object.hasOwn(P, 'gamma');
+          const hasPhi = Object.hasOwn(P, 'phi');
+          if (exactGroundedLevel1Base && (hasGamma !== hasPhi
+              || (hasGamma && (!Number.isFinite(P.gamma) || P.gamma < 0
+                || !Number.isFinite(P.phi) || P.phi <= 0)))) {
+            throw new Error(`acSweep: ${part.id} gamma and phi must be a finite nonnegative/positive pair`);
+          }
+          const exactGroundedLevel1Nmos = exactGroundedLevel1Base;
+          let gmb = 0;
+          if (exactGroundedLevel1Nmos) {
+            // The strict DC domain already proves the bulk is the reference.
+            // Linearise the SAME Level-1 law at that converged point instead
+            // of substituting the old generic k=0.5 / flat-gds approximation.
+            const vth = mosVth(P, vOp(nS));
+            const k = mosK(P);
+            const [vovS, dVovS] = smoothVov(vgs - vth);
+            const vds = vOp(nD) - vOp(nS);
+            const vdsEff = Math.min(Math.max(vds, 0), Math.max(vovS, 0));
+            if (vds < vovS) {
+              ({ gm, gds } = mosTriode(k, vovS, vdsEff, dVovS, P));
+              gds += MOS_GDS_FLOOR;
+            } else {
+              const id0 = k * vovS * vovS;
+              const lambda = P.lambda > 0 ? P.lambda : 0;
+              gm = 2 * k * vovS * dVovS * (1 + lambda * vds);
+              gds = mosGds(P, id0, dVovS);
+            }
+            // Vth = Vth0 + gamma*(sqrt(phi + Vsb) - sqrt(phi)). With the
+            // bulk fixed at ground, dId/dVb = gm*dVth/dVsb and therefore
+            // dId/dVs gains the equal-and-opposite body term. The DC model
+            // clamps reverse Vsb to zero, so its derivative is zero there.
+            const vsb = vOp(nS);
+            if (hasGamma && P.gamma > 0 && vsb > 0) {
+              gmb = gm * P.gamma / (2 * Math.sqrt(P.phi + vsb));
+            }
+          } else {
+            // Compatibility model for generic interactive MOS parts. Its
+            // behavior predates the strict Level-1 source-analysis contract.
+            const vth = P.vth ?? (part.kind === 'nmos' ? 2.0 : -2.0);
+            const k = P.k ?? 0.5;
+            const [vovS, dVovS] = smoothVov(vgs - Math.abs(vth));
+            gm = 2 * k * vovS * dVovS;
+            const taper = vovS / (vovS + MOS_SMOOTH_DELTA);
+            gds = 0.001 * taper * taper + 1e-9;
+          }
+          addG2(nD, nS, gds);
+          const iD = idxOf(nD);
+          const iG = idxOf(nG);
+          const iS = idxOf(nS);
+          // i(D→S) = gm·(vG − vS) for both channel types (senses cancel).
+          if (iD !== undefined && iG !== undefined) addC(iD, iG, gm, 0);
+          if (iD !== undefined && iS !== undefined) addC(iD, iS, -gm, 0);
+          if (iS !== undefined && iG !== undefined) addC(iS, iG, -gm, 0);
+          if (iS !== undefined) addC(iS, iS, gm, 0);
+          // Grounded bulk: i(D->S) += gmb*(vB-vS), with vB = 0.
+          if (iD !== undefined && iS !== undefined) addC(iD, iS, -gmb, 0);
+          if (iS !== undefined) addC(iS, iS, gmb, 0);
+          break;
+        }
+        case 'opamp': {
+          if (!rowIndex.has(part.id)) break;
+          const row = nodeCount + rowIndex.get(part.id);
+          const iO = idxOf(netOf(part.id, 'out'));
+          if (iO === undefined) break;
+          const iP = idxOf(netOf(part.id, 'inp'));
+          const iN = idxOf(netOf(part.id, 'inn'));
+          const gain = P.gain ?? 1e6;
+          const region = regionOf(part.id);
+          // The branch current reaches the output node's KCL whatever the
+          // region — it is what the branch injects, and pinning it to zero is
+          // how a current limit is expressed.
+          addC(iO, row, 1, 0);
+          if (isLimited(region)) {
+            // Pinned at iShort: a fixed current, so the SMALL-SIGNAL current
+            // is zero and the output voltage floats to whatever the load
+            // makes of it. Infinite output impedance — which is what a
+            // current limit is. Not `V(out) = 0`: that is the rail's row, and
+            // the two differ on any load that is not a resistor to AC ground.
+            addC(row, row, 1, 0);
+            break;
+          }
+          addC(row, iO, 1, 0);
+          // Finite output resistance (spec-updates/opamp-output-limit.md).
+          // The DC/transient row carries it, so the AC row must too — a
+          // parameter that one solver honours and another drops is the
+          // two-truths shape this engine keeps paying for. rout = 0 (the
+          // default) leaves this row exactly as it was.
+          const rout = P.rout ?? 0;
+          if (rout !== 0) addC(row, row, -rout, 0);
+          // Saturated: the output is clamped to a rail, so it cannot move and
+          // the gain terms drop. This is the row the `vcvs` case below has
+          // always used; the op-amp row did not have it, so a railed op-amp
+          // reported its full ideal gain at every frequency
+          // (spec-updates/ac-operating-region.md).
+          if (isRailed(region)) break;
+          if (iP !== undefined) addC(row, iP, -gain, 0);
+          if (iN !== undefined) addC(row, iN, gain, 0);
+          break;
+        }
+        case 'vcvs': {
+          if (!rowIndex.has(part.id)) break;
+          const row = nodeCount + rowIndex.get(part.id);
+          const iOp = idxOf(netOf(part.id, 'outp'));
+          if (iOp === undefined) break;
+          const iOn = idxOf(netOf(part.id, 'outn'));
+          addC(iOp, row, 1, 0);
+          if (iOn !== undefined) addC(iOn, row, -1, 0);
+          const gain = P.gain ?? 1;
+          // Region at the OP. Prefer the region solveMNA actually settled on;
+          // fall back to recomputing the RAIL test from the operating-point
+          // voltages, which is what this row did before opRegions existed and
+          // is still right for a caller that passes none. The fallback cannot
+          // see a current limit at all — whether iShort binds is a fact about
+          // the branch current, not the input voltage.
+          const region = regionOf(part.id);
+          if (isLimited(region)) {
+            // Fixed current at the OP: small-signal current is zero.
+            addC(row, row, 1, 0);
+            break;
+          }
+          addC(row, iOp, 1, 0);
+          if (iOn !== undefined) addC(row, iOn, -1, 0);
+          const vinOp = vOp(netOf(part.id, 'inp')) - vOp(netOf(part.id, 'inn'));
+          const railLow = P.railLow;
+          const railHigh = P.railHigh;
+          const railed = opRegions?.has(part.id)
+            ? isRailed(region)
+            : ((railHigh !== undefined && gain * vinOp > railHigh)
+              || (railLow !== undefined && gain * vinOp < railLow));
+          const routE = P.rout ?? 0;
+          if (routE !== 0) addC(row, row, -routE, 0);
+          if (!railed) {
+            const iIp = idxOf(netOf(part.id, 'inp'));
+            const iIn = idxOf(netOf(part.id, 'inn'));
+            if (iIp !== undefined) addC(row, iIp, -gain, 0);
+            if (iIn !== undefined) addC(row, iIn, gain, 0);
+          }
+          break;
+        }
+        case 'vccs': {
+          const gm = P.gm ?? 1e-3;
+          // Clamped at the OP → the output is a fixed current: small-signal 0.
+          if (P.iMax > 0) {
+            const vinOp = vOp(netOf(part.id, 'inp')) - vOp(netOf(part.id, 'inn'));
+            if (Math.abs(gm * vinOp) >= P.iMax) break;
+          }
+          const iOp = idxOf(netOf(part.id, 'outp'));
+          const iOn = idxOf(netOf(part.id, 'outn'));
+          const iIp = idxOf(netOf(part.id, 'inp'));
+          const iIn = idxOf(netOf(part.id, 'inn'));
+          if (iOp !== undefined && iIp !== undefined) addC(iOp, iIp, -gm, 0);
+          if (iOp !== undefined && iIn !== undefined) addC(iOp, iIn, gm, 0);
+          if (iOn !== undefined && iIp !== undefined) addC(iOn, iIp, gm, 0);
+          if (iOn !== undefined && iIn !== undefined) addC(iOn, iIn, -gm, 0);
+          break;
+        }
+        case 'mcu': {
+          for (const terminal of part.terminals) {
+            const src = pinSources.get(terminal);
+            if (!src || src === 'high-z') continue;
+            const i = idxOf(netOf(part.id, terminal));
+            if (i !== undefined) addC(i, i, 1 / src.rTh, 0);
+          }
+          break;
+        }
+        case 'vsource': {
+          if (!rowIndex.has(part.id)) break; // redundant zero-volt constraint between AC grounds
+          const row = nodeCount + rowIndex.get(part.id);
+          const iP = idxOf(netOf(part.id, 'pos'));
+          const iN = idxOf(netOf(part.id, 'neg'));
+          if (iP !== undefined) { addC(iP, row, 1, 0); addC(row, iP, 1, 0); }
+          if (iN !== undefined) { addC(iN, row, -1, 0); addC(row, iN, -1, 0); }
+          const rInt = Number(part.params?.rInternal) || 0;
+          if (rInt > 0) addC(row, row, -rInt, 0); // series source resistance
+          b[row] = part.id === sourceId ? 1 : 0;
+          break;
+        }
+        case 'vcc':
+        case 'gnd':
+          break;
+        case 'isource': {
+          if (part.id !== sourceId) break; // every non-selected current source is AC-open
+          const iP = idxOf(netOf(part.id, 'pos'));
+          const iN = idxOf(netOf(part.id, 'neg'));
+          // Positive current follows the native/SPICE neg -> pos convention.
+          if (iP !== undefined) b[iP] += 1;
+          if (iN !== undefined) b[iN] -= 1;
+          break;
+        }
+        default: {
+          // Registered devices: their PASSIVE loading only. Drives collapse
+          // to their output conductance (a killed Thévenin); stamp() runs
+          // against a g-only ctx so behavioral models contribute their
+          // input impedance without injecting bias.
+          const model = getDevice(part.kind);
+          if (!model) break;
+          const state = deviceStates?.get(part.id) ?? { drives: {} };
+          for (const [terminal, drive] of Object.entries(state.drives ?? {})) {
+            if (!drive) continue;
+            const g = 1 / Math.max(drive.rTh, 1e-3);
+            if (drive.ref) {
+              addG2(netOf(part.id, terminal), netOf(part.id, drive.ref), g);
+            } else {
+              const i = idxOf(netOf(part.id, terminal));
+              if (i !== undefined) addC(i, i, g, 0);
+            }
+          }
+          if (model.stamp) {
+            const ctx = {
+              netFor: (t) => netOf(part.id, t),
+              conductance: (tA, tB, g) => addG2(netOf(part.id, tA),
+                tB ? netOf(part.id, tB) : undefined, g),
+              thevenin: (t, _v, rTh) => {
+                const i = idxOf(netOf(part.id, t));
+                if (i !== undefined) addC(i, i, 1 / Math.max(rTh, 1e-3), 0);
+              },
+              theveninBetween: (tP, tN, _v, rTh) =>
+                addG2(netOf(part.id, tP), netOf(part.id, tN), 1 / Math.max(rTh, 1e-3)),
+              current: () => {},
+              vcc,
+              tSeconds: 0,
+              control: controls.get(part.id),
+            };
+            model.stamp(ctx, part, state);
+          }
+          break;
+        }
+      }
+    }
+    // Historical interactive runs retain 1e-12 S by default. Strict source
+    // analysis can request zero after its own topology qualification.
+    for (let i = 0; i < nodeCount; i++) addC(i, i, nodeRegularizationSiemens, 0);
+  };
+
+  // A correct 0 where the caller expected gain is still a mystery unless the
+  // sweep explains itself, so it names the stages whose operating point puts
+  // them outside their linear region. Absent (not empty) when every part is
+  // linear, so a bench that was fine keeps the shape it had.
+  const outOfLinear = [];
+  for (const p of parts) {
+    if (p.kind !== 'opamp' && p.kind !== 'vcvs') continue;
+    if (!rowIndex.has(p.id)) continue;
+    const region = regionOf(p.id);
+    if (region !== 'linear') outOfLinear.push({ part: p.id, kind: p.kind, region });
+  }
+
+  // ── Sweep: factor once, refactor per point ──────────────────────────
+  const out = [];
+  let lu = null;
+  for (const hz of freqs) {
+    const omega = 2 * Math.PI * hz;
+    fill(omega);
+    const csc = toCSC(A);
+    if (lu && lu.samePattern(csc) && lu.refactor(csc)) {
+      // reused
+    } else {
+      lu = new SparseLU();
+      lu.factor(csc); // throws the singular contract
+    }
+    const x = lu.solve(b);
+    const results = new Map();
+    const report = probes ?? [...nodeIndex.keys()];
+    for (const netId of report) {
+      if (grounded.has(netId)) {
+        results.set(netId, { mag: 0, phaseDeg: 0 });
+        continue;
+      }
+      const i = nodeIndex.get(netId);
+      if (i === undefined) continue;
+      const re = x[i];
+      const im = x[i + N];
+      results.set(netId, {
+        mag: Math.hypot(re, im),
+        phaseDeg: Math.atan2(im, re) * 180 / Math.PI,
+      });
+    }
+    out.push(outOfLinear.length ? { hz, results, profile, outOfLinear } : { hz, results, profile });
+  }
+  return out;
+}

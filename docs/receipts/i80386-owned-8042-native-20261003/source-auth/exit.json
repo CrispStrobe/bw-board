@@ -1,0 +1,34 @@
+{
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 5.1185228787362576,
+  "sourceBefore": {
+    ".github/workflows/i80386-native-owned-8042-build.yml": "b8251be32fbf84bdec6f066a19d5655b9b8491bd62e808975d3eb2ba09f04cf9",
+    "scripts/bochs-cpu3-native-owned-8042/identity.mjs": "ab9b55241ac4519bdeaa2700e450f3e72535df8f9048145eec7f5adbde0cc553",
+    "scripts/bochs-cpu3-native-owned-8042/napi.mjs": "5af49b0c503141618afe750b242df42e2e29af22150db6e46fda1a9fed54dedc",
+    "scripts/bochs-cpu3-native-owned-8042/native-qualification.md": "742dd42a17dce9b83352a05f60bc2f06ac4dba4c3dc4739b62d506e4f9f54f0f",
+    "scripts/bochs-cpu3-native-owned-8042/reference.mjs": "551907a8c9955f25c6b56e6dd85a6d40d0bb7d7e39857cccfaf9e8a0fc91dce5",
+    "scripts/bochs-cpu3-native-owned-8042/runtime.mjs": "d14de53f5bc7076536de1eb01d6c4126cf010aaa2a728de6dbc5ec9ff3ff6eba",
+    "scripts/ci-build-i80386-native-owned-8042.py": "6abe631e5a3abeca56a8754457225a61c47f32d92bf0db411b2ace7cf9ea0d51",
+    "scripts/prepare-bochs-cpu3-native-owned-8042.mjs": "7c535d4b14d6653e7460d98bdfc558389cf6e75af4e2c27808fc22964cc3f301",
+    "scripts/run-i80386-native-owned-8042.mjs": "29cadfdc6546b21ccb27aa22e2b77e2e7e072bb383fa7d97cf741ab6deeed270",
+    "test/i80386-native-owned-8042-derivation.test.mjs": "cd4a9b95f8be25a47ce75424accae4a3e40fdd6ec6bba9e3468835d4470148b2",
+    "test/i80386-native-owned-8042-reference.test.mjs": "7cf2adfbd55c36f467e6ba04791819f9273eab1ba2485e4b49ef377d6b9c8533"
+  },
+  "sourceAfter": {
+    ".github/workflows/i80386-native-owned-8042-build.yml": "b8251be32fbf84bdec6f066a19d5655b9b8491bd62e808975d3eb2ba09f04cf9",
+    "scripts/bochs-cpu3-native-owned-8042/identity.mjs": "ab9b55241ac4519bdeaa2700e450f3e72535df8f9048145eec7f5adbde0cc553",
+    "scripts/bochs-cpu3-native-owned-8042/napi.mjs": "5af49b0c503141618afe750b242df42e2e29af22150db6e46fda1a9fed54dedc",
+    "scripts/bochs-cpu3-native-owned-8042/native-qualification.md": "742dd42a17dce9b83352a05f60bc2f06ac4dba4c3dc4739b62d506e4f9f54f0f",
+    "scripts/bochs-cpu3-native-owned-8042/reference.mjs": "551907a8c9955f25c6b56e6dd85a6d40d0bb7d7e39857cccfaf9e8a0fc91dce5",
+    "scripts/bochs-cpu3-native-owned-8042/runtime.mjs": "d14de53f5bc7076536de1eb01d6c4126cf010aaa2a728de6dbc5ec9ff3ff6eba",
+    "scripts/ci-build-i80386-native-owned-8042.py": "6abe631e5a3abeca56a8754457225a61c47f32d92bf0db411b2ace7cf9ea0d51",
+    "scripts/prepare-bochs-cpu3-native-owned-8042.mjs": "7c535d4b14d6653e7460d98bdfc558389cf6e75af4e2c27808fc22964cc3f301",
+    "scripts/run-i80386-native-owned-8042.mjs": "29cadfdc6546b21ccb27aa22e2b77e2e7e072bb383fa7d97cf741ab6deeed270",
+    "test/i80386-native-owned-8042-derivation.test.mjs": "cd4a9b95f8be25a47ce75424accae4a3e40fdd6ec6bba9e3468835d4470148b2",
+    "test/i80386-native-owned-8042-reference.test.mjs": "7cf2adfbd55c36f467e6ba04791819f9273eab1ba2485e4b49ef377d6b9c8533"
+  },
+  "headAfter": "5b182d4147020931a4c19c380a088a1587d7d31c",
+  "cleanAfter": true,
+  "nodeSha256After": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48"
+}

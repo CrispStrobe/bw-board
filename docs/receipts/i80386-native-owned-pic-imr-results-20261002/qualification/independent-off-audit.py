@@ -1,0 +1,20 @@
+from pathlib import Path
+import json,hashlib
+P=Path(__file__).resolve().parent;R=P/'smoke-off';j=lambda p:json.loads(p.read_bytes());sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();a=j(P/'approved-bindings.json');c=j(R/'guest/capture.json');ref=j(Path(a['baseline']));checks=0
+def ck(v):
+ global checks
+ assert v;checks+=1
+ck(sha(P/'approved-bindings.json')=='a746b53c7c5b89c58f1857e63689e39faa77fc73e6eddf93004fa6885416a894');ck(j(R/'auth-before.json')==j(R/'auth-after.json'))
+for n,h in a['artifactHashes'].items():ck(sha(Path(n))==h)
+for n,h in a['helperHashes'].items():ck(sha(P/n)==h)
+ex=j(R/'child.exit.json');ck(ex['returncode']==0 and ex['signal'] is None and not ex['timedOut'] and not ex['fileLimitReached'] and ex['error'] is None);ck(sha(R/'child.stderr')==ex['stderrSha256']);ck((R/'child.stderr').stat().st_size==ex['stderrBytes']);ck(ex['RLIMIT_CPU']==120 and ex['heapMiB']==512 and ex['RLIMIT_FSIZE']==268435456 and ex['niceIncrement']==10);ck(all(v==''for v in ex['blankEnvironment'].values()))
+inp=j(R/'input.json');ck(inp['nativeTrace']is False and inp['hostJournal']is False);ck(c['source']=={'revision':a['revision'],'hashes':a['sourceHashes']});ck(c['provenance']==a['expectedProvenance']);ck(c['provenance']['compiled']['hashes']==a['compiledSourceHashes']);ck(c['closed'] and c['terminal']);ck((R/'guest/callbacks.jsonl').stat().st_size==0)
+def cpu(n,s,reset=False):
+ for field,count in [('state',20),('extra',20),('segments',90),('system',30),('debug',6)]:ck(len(n[field])==count);ck(all(type(v)is int and 0<=v<=0xffffffff for v in n[field]))
+ for k,i in {'eax':0,'ecx':1,'ebx':3,'esp':4,'eip':8,'cr2':11,'cr3':12,'cs':13}.items():ck(n['state'][i]==s[k])
+ ck(n['state'][2]==0 and s['edx']==768);ck(n['state'][10]==((s['cr0']|0x7ffffff0)&0xffffffff));ck(s['cr0']==(0 if reset else 0x80000011));ck(all(int(v)==0 for v in n['fallback'].values()))
+cpu(c['reset'],ref['reset']['cpu'],True);cpu(c['final'],ref['final']['cpu']);ck([x['name']for x in c['checkpoints']]==['hot_profile_start','hot_register_loop','hot_register_end','hot_memory_loop','hot_memory_end','terminal_hlt'])
+for x in c['checkpoints']:
+ s=ref['boundaries'][x['name']];cpu(x['native'],s['cpu']);ck(x['q']==s['q']);ck(int(x['native']['nativeTicks'])==s['attempts'] and int(x['native']['successfulQuanta'])==s['q']);ck(x['board']['board']==s['board']);ck(x['board']['javascriptCpuCycles']==0)
+ck(int(c['final']['nativeTicks'])==ref['attempts']==100702);ck(int(c['final']['successfulQuanta'])==ref['q']==100700);ck(c['settled']['board']==ref['final']['board']);ck(c['resetWitness']==[0,0,0,0,240,255,255,127]);ck(int.from_bytes(bytes(c['resetWitness'][:4]),'little')==c['reset']['state'][2]);ck(int.from_bytes(bytes(c['resetWitness'][4:]),'little')==c['reset']['state'][10]);ck(c['ramCanonicalSha256']=='e5f3f9f0ee95f1828b6dd6b28149d7d1e1dbaa77cb79268918b5c7b469601cfd');ck(c['in8Witness']==[50,18] and c['picImrWitness']==[255,255]);ph=c['final']['clockTransfers'];ck(int(ph['words'])==201402);ck(int(ph['transfers'])==int(ph['commits'])+1+c['resumes']+35);ck(int(c['final']['execution']['faults'])==2 and int(c['final']['execution']['irqDeliveries'])==1)
+out={'status':'PASS_ACTUAL_PIC_CAPOFF_REFERENCE_STATE_NO_SPEED_CLAIM','checks':checks,'captureSha256':sha(R/'guest/capture.json'),'sourceRevision':a['revision'],'compiledRevision':a['compiledRevision'],'sourceInputs':122,'compiledInputs':111,'artifactPins':975,'resumes':c['resumes'],'rawRamSha256':c['ramSha256'],'canonicalRamSha256':c['ramCanonicalSha256'],'scope':'All actual bindings/streams/exit/containment and stored166 native domains; six cuts/fullboards, eight mapped JS fields plus precise EDX/CR0 profile, own reset witness/canonicalRAM/PIT/PIC/totals/physicalcounts and empty journal independently verified. Entire166 native cross-mode equality pending CAPON; no speed/general AT claim. No additional guest executed.'};q=R/'independent-audit.json';assert not q.exists();q.write_text(json.dumps(out,indent=2)+'\n');print(json.dumps(out))

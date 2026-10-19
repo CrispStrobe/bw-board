@@ -1,0 +1,58 @@
+{
+  "schema": "bw.i80386-dos32a-owned-le-result.v1",
+  "result": "PASS_FINITE_APPLICATION",
+  "testedSource": "f8748bcf8dc5c20b37fe62340b7ea42a048cb144",
+  "run": "https://github.com/CrispStrobe/bw-board/actions/runs/37648932918",
+  "artifact": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11495396917",
+  "artifactZip": {
+    "bytes": 68182,
+    "sha256": "c04b99d1faaf4cb2f710fb86e5297b0a71927bebef1768009bf0ea685d5b06b8",
+    "members": 60,
+    "inventoryEntries": 59
+  },
+  "sourceRolesVerifiedAgainstGit": 344,
+  "input": {
+    "freedosFloppySha256": "03df6088be016e57a6c44275f5bb9ab0244db71de1360957fd76ba83243b6a77",
+    "initialDiskSha256": "2e0d20b55e2fde2b26cd841c4c01812dea88af80a76a83bd4bc684f522bc9164",
+    "ownedLeSha256": "7b8e9545b05d6697e934cffc69bfdf4ec0442147382948db9535a262d2a2a23a",
+    "dos32aSha256": "d189be603e72f79d3c2f68114eb34d0cab8bd9744ef0f327497d57bcd8e16817",
+    "dos32aLicenseSha256": "116fded3b2c68e4884dae6cdfe420d5df03807cc2e06bd888a3a74f02e5975b0"
+  },
+  "target": {
+    "cpuProfile": "compatibility",
+    "installedGuestRamBytes": 4194304,
+    "backingAddressBytes": 16777216,
+    "backingSha256": "007d454aacde917894d5bba306f3a4bc02908fe9db80490d37236b056634b8e6",
+    "steps": 43500000,
+    "protectedEntryLinear": 1048592,
+    "arithmeticResult": 591751049,
+    "orderedScanOffersAccepted": 64,
+    "finalDiskSha256": "93f6ac4cf0fdd5c62fa72019600b03853c6f48a7d34672182aed01fb70acc284",
+    "shutdown": false,
+    "checksPassed": 10
+  },
+  "oracle": {
+    "profile": "QEMU TCG pc/486, 4 MiB, SeaBIOS/VGA",
+    "version": "8.2.2",
+    "exitStatus": 0,
+    "processGroupEmpty": true,
+    "rawVgaTextSnapshots": 3,
+    "finalDiskSha256": "273dc7de42de945879e922a8bc4453d0f5dda8c5262c10a92fbbf67c432685df"
+  },
+  "sameGuestFiles": {
+    "output": {
+      "bytes": 75,
+      "sha256": "de97cf429192a400c5d9a5932c14ddbb9c02dcbd129d0beff6f56bace42045c7"
+    },
+    "zeroExit": {
+      "bytes": 14,
+      "sha256": "9032ccbd25b3891d017abfb0a96cdbdae1694ac91a3058b81d1660a07f0144b6"
+    },
+    "shellReturn": {
+      "bytes": 20,
+      "sha256": "910c1d86fa9a26dbe0bfebeabd1f86a6afedb122e39b6d1cd3e831f1dad628ec"
+    }
+  },
+  "independentRawAudits": 2,
+  "limits": "One finite existing-compatibility-profile LE client; no strict386, mouse-function, DPMI, IRQ, broad application, complete disk-state, full architectural-state, or speed qualification."
+}

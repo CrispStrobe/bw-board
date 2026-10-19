@@ -1,0 +1,10 @@
+{
+  "status": "PASS_IN8_CAPON_DIAGNOSTIC_FULL_STATE_AND_LOGICAL_CHRONOLOGY_NOT_PRODUCTION_QUALIFICATION",
+  "checks": 520666,
+  "canonicalRows": 1649271,
+  "journalRows": 209871,
+  "clockRows": 201390,
+  "rawTraceSha256": "80aee696c9300aa7bd220247c4d0a8333acd8cd20e930f99423ec705e847e0c2",
+  "sourceRevision": "6b975da14342bc040082142568a539605f580fd7",
+  "scope": "Whole stored166-native-word snapshots/descriptors/physicalcounts andRAM exact vsCAPOFF diagnostic; nativecanonical\u2194journal ordered clock/kind tuples exact; source-boundQthenN outcomes and32PIO currentattempt-minus1 exactJS. OriginalRAMassertionexit1 preserved; explicitresetprofile95check separate. No rerun."
+}

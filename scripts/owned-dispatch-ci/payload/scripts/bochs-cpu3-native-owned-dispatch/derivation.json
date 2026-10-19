@@ -1,0 +1,29 @@
+{
+  "status": "SOURCE_ONLY_EXACT_PROVIDER_DISPATCH_DERIVATIVE",
+  "baseRevision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "baseSha256": "fc2dda9353edd0f28d7bac26bb5336ee2f946a63b405be33d7ba14099ac8c1c0",
+  "derivedSha256": "3757c51ef9e84f5ff3cfc67b3536bfe5fa8aa4d7c82a0fb6d05c6a51e76e2e6e",
+  "seams": [
+    {
+      "before": "from './reset-witness.mjs'",
+      "after": "from '../bochs-cpu3-native-owned-in8/reset-witness.mjs'"
+    },
+    {
+      "before": "export function createOwnedIn8Provider",
+      "after": "export function createOwnedDispatchProvider"
+    },
+    {
+      "before": "const apply=Reflect.apply;",
+      "after": "const apply=Reflect.apply;\nconst bind=Function.prototype.bind;"
+    },
+    {
+      "before": " const call=(k,args=[])=>apply(methods[k],board,args);",
+      "after": " const call=(k,args=[])=>apply(methods[k],board,args);\n // Setup-only binding captures the factory-owned receiver; no mutable builtin hot-loop lookup.\n const tick=apply(bind,methods.nativeTick,[board]);\n const quantum=apply(bind,methods.quantum,[board]);"
+    },
+    {
+      "before": "    for(const word of words)call(word===1?'nativeTick':'quantum',word===1?[]:[word===3?1:0]);",
+      "after": "    if(compactSink===null){for(const word of words){if(word===1)tick();else quantum(word===3?1:0);}}\n    else for(const word of words)call(word===1?'nativeTick':'quantum',word===1?[]:[word===3?1:0]);"
+    }
+  ],
+  "limits": "No native build/load/guest/performance proof. Frozen103 native-generating inputs and full snapshot API untouched."
+}

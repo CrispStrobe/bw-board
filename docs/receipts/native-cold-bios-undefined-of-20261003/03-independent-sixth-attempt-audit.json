@@ -1,0 +1,18 @@
+{
+  "status": "PASS_INDEPENDENT_SIXTH_UNDEFINED_OF_DIVERGENCE_AUDIT",
+  "artifactId": 11270800331,
+  "head": "26b540e08b787d9e834aa3f58bd72655fd48c3d9",
+  "zipSha256": "sha256:216f9749a35766e297f2514115a1bcb17e2846b8eb141dc60d258a5145196881",
+  "members": 410,
+  "n": 4709,
+  "q": 4709,
+  "nextEip": "9dab",
+  "nativeEflags": "886",
+  "jsEflags": "86",
+  "difference": "OF only, architecturally undefined after count16 SHL",
+  "sourceAndArtifactsUnchanged": true,
+  "definedFlagPolicy": "CF/SF/ZF/PF and all other represented flags remain strict; no broad AF exemption needed for observed equal AF",
+  "lifetime": "Fixed9da7 SHL only; successors9dab,9dae,9daf REP120,9db2,9db5,9db7,9dba preserve OF; ADD9dbc defines OF, strict resumes at9dbf. No prior OF read/store. Must guard exact ROM/opcode/control path/REP progress and retain raw flags.",
+  "authority": "https://cdrdv2-public.intel.com/782151/253667-sdm-vol-2b.pdf SAL/SAR/SHL/SHR Flags Affected",
+  "scope": "No E16/final RAM/close or retry; unretained prior per-return snapshots only source-attested."
+}

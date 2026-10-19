@@ -1,0 +1,10 @@
+{
+  "addon": "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-hot-h4-20261001/bochs/bw_direct.node",
+  "sha256": "5257a116734fb813b3ef9df31666eea0b41753d344f5c928b312765c0c497cd4",
+  "configuration": "/mnt/volume1/tmp-astra/native-owned-clock-build-20261002/guest-source.bochsrc",
+  "baseline": "/mnt/volume1/tmp-astra/js-hot-formal-final-20261001/capture.json",
+  "output": "/mnt/volume1/tmp-astra/native-owned-clock-cpu-benchmark-20261002/1-H4",
+  "hostJournal": false,
+  "nativeTrace": false,
+  "profile": false
+}

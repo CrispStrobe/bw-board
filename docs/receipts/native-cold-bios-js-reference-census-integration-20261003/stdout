@@ -1,0 +1,104 @@
+TAP version 13
+# Subtest: every guard-then-skip test is in the census or named as debt
+ok 1 - every guard-then-skip test is in the census or named as debt
+  ---
+  duration_ms: 605.69108
+  type: 'test'
+  ...
+# Subtest: the debt list does not outlive the debt
+ok 2 - the debt list does not outlive the debt
+  ---
+  duration_ms: 485.609287
+  type: 'test'
+  ...
+# Subtest: the debt list is not a way to exempt the whole tree
+ok 3 - the debt list is not a way to exempt the whole tree
+  ---
+  duration_ms: 797.238087
+  type: 'test'
+  ...
+# INPUT               KIND     STATE    GATES  DETECTED VIA
+# 386-cold-bios-js-capturefixture  ABSENT   1      tried $BW_COLD_REFERENCE_OUTPUT; full capture not requested
+# 386-native-ram-coherence-reportfixture  ABSENT   1      tried test/fixtures/i80386-native-ram-coherence-capture.json.gz
+# 386-native-cold-reset-reportfixture  ABSENT   1      tried test/fixtures/i80386-native-cold-reset-capture.json.gz
+# 386-native-device-quanta-pilotfixture  ABSENT   1      tried $BW_DEVICE_QUANTA_ACTUAL_PILOT
+# i80386-win16-qemu   oracle   present  1      /usr/bin/qemu-system-i386
+#                     sha256:28fa14f1c45fca74
+# 386-es-cache-qemu   oracle   present  1      /usr/bin/qemu-system-i386
+#                     sha256:28fa14f1c45fca74
+# 386-es-cache-bochs  oracle   ABSENT   1      tried $BOCHS_386_ROOT
+# harris-native-wasm  fixture  ABSENT   16     tried $HARRIS_NET_WASM
+# 8086-vectors        oracle   present  5      /home/claudeuser/code/8086-vectors/v1_binary
+# 80286-vectors       oracle   ABSENT   2      tried $I80286_VECTORS, /home/claudeuser/code/80286-vectors/v1_real_mode
+# 80386ex-moo-vectors oracle   ABSENT   2      tried $SST386_ROOT
+# 8088-vectors        oracle   present  1      /home/claudeuser/code/8088-vectors/v2
+# z80-vectors         oracle   present  2      /home/claudeuser/code/z80-vectors/v1
+# 65c02-vectors       oracle   present  3      /home/claudeuser/code/65x02-vectors/wdc65c02/v1
+# lcapy               oracle   ABSENT   1      tried $LCAPY_PYTHON, /home/claudeuser/.local/pipx/venvs/lcapy/bin/python
+# ngspice             oracle   present  6      ngspice on $PATH at /usr/bin/ngspice
+#                     sha256:820658317b0b5403
+# emu8051             oracle   present  11     /mnt/volume1/code/emu8051-stc
+# stc-examples        fixture  present  1      /mnt/volume1/code/stc/examples
+# labwired-wasm       oracle   ABSENT   8      tried $LABWIRED_WASM
+# labwired-cli        oracle   ABSENT   1      tried $LABWIRED_CLI
+# v86                 oracle   ABSENT   1      tried $V86_ORACLE_DIR
+# elks-image          fixture  present  1      /mnt/volume1/code/elks-images/fd1440-fat.img
+#                     sha256:5aced0f2e39eee87
+# amey-corpus         fixture  ABSENT   1      tried /tmp/amey/Source Code
+# retro-corpus-8086   fixture  present  1      /mnt/volume1/code/retro-corpus-8086
+# ehbasic-rom         fixture  ABSENT   1      tried /tmp/mike42-6502/rom/basic/basic.bin
+# zx-roms             fixture  ABSENT   4      tried $ZX_ROM
+# ucsim-stc12-trace   oracle   present  1      /mnt/volume1/code/ucsim-stc/ucsim/src/sims/s51.src/stc12_trace
+#                     sha256:8274586c6b167fa4
+# blinkenrocket-fw    fixture  present  2      /mnt/volume1/code/blinkenrocket-firmware/build/main.hex
+#                     sha256:f07cd0f0d6aa8a59
+# smlrc               oracle   ABSENT   1      tried $SMLRC
+# avr-compile-service service  ABSENT   1      tried $AVR_COMPILE_URL
+# nasm                oracle   ABSENT   1      tried $NASM, /usr/bin/nasm
+# masm                oracle   present  5      $MSDOS_BIN_DIR=/mnt/volume1/code/msdos-v2-bin
+# doom-vga-report     fixture  ABSENT   1      tried $I80386_DOOM_SNAPSHOT_REPORT
+# doom-short-report   fixture  ABSENT   1      tried $ASTRA_DOOM_SHORT_REPORT
+# ibm-5170-at-rom     oracle   ABSENT   3      tried $AT_BIOS_ROM
+# 14/35 present. 21 absent, gating 50 file(s) that therefore did not run.
+#   386-cold-bios-js-capture: Use an exclusive new absolute output path as BW_COLD_REFERENCE_OUTPUT only inside a reviewed single-child harness: Node22.23.3, heap128MiB, CPU15s/wall30s/file8MiB/core0/nice10 and six empty hook variables. This variable requests capture output; it is not an external firmware input or an authenticated receipt. See docs/I80386-NATIVE-COLD-BIOS-JS-REFERENCE.md for the existing immutable raw baseline and its source/Node/helper receipts.
+#   386-native-ram-coherence-report: Included in the repository. The test authenticates the decompressed actual ef2a7359 capture by its full SHA-256 and historical source revision.
+#   386-native-cold-reset-report: Included in the repository. The test authenticates the decompressed actual dbc63803 capture by its full SHA-256 and historical source revision.
+#   386-native-device-quanta-pilot: Provide the retained single-diagnostic.json from the ef157ce7 continuous pilot and set BW_DEVICE_QUANTA_ACTUAL_PILOT to that file. Its SHA-256 must be 6a5071f8feb9859f64da09386f0f2245ea7de1f9346466881eed7a561571e6f5. The published final proof and the separately committed four-arm mutation fixture are different inputs; see docs/I80386-NATIVE-DEVICE-QUANTA-SELF-PARITY.md.
+#   386-es-cache-bochs: Build the pinned Bochs REL_2_7_FINAL CPU-level-3 revision and set BOCHS_386_ROOT to its source/build root. See docs/I80386-ES-CACHE-ORACLE.md.
+#   harris-native-wasm: With wasm32-capable clang and wasm-ld, run node scripts/build-wired-net-kernel.mjs EXISTING_EMPTY_DIRECTORY, then set HARRIS_NET_WASM to its wired-net-kernel.wasm. WASM_LD may select the linker. Rebuild when kernel sources change.
+#   80286-vectors: git clone --depth 1 https://github.com/SingleStepTests/80286 ~/code/80286-vectors
+#   80386ex-moo-vectors: Check out https://github.com/SingleStepTests/80386 at 459d49fbe6280e9ed46fee887b58dacd9cb880ab and set SST386_ROOT to that clean checkout.
+#   lcapy: pipx install lcapy
+#   labwired-wasm: point LABWIRED_WASM at a wasm-bindgen NODEJS out-dir (the web target will not load under node); for active F0 timing also install arm-none-eabi-gcc and arm-none-eabi-objcopy
+#   labwired-cli: build labwired and point LABWIRED_CLI at it
+#   v86: download libv86.mjs + v86.wasm from a v86 release and point V86_ORACLE_DIR at them
+#   amey-corpus: git clone https://github.com/Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS and point the test CORPUS at its "Source Code" directory (default /tmp/amey/Source Code)
+#   ehbasic-rom: git clone https://github.com/mike42/6502-computer /tmp/mike42-6502 && cd /tmp/mike42-6502/rom/basic && make
+#   zx-roms: supply 48.ROM / 128.ROM locally, or rebuild from z00m128/zxs-rom with sjasmplus — never vendored; see the STECCY provenance note and the licence reasoning above
+#   smlrc: gcc -w -o smlrc <SmallerC>/v0100/smlrc.c, then point $SMLRC at it
+#   avr-compile-service: run the avr-compile service and point $AVR_COMPILE_URL at it (default http://localhost:8321/compile)
+#   nasm: no root needed: apt-get download nasm && dpkg-deb -x nasm_*.deb DIR, then NASM=DIR/usr/bin/nasm; or apt-get install nasm
+#   doom-vga-report: Generate the private raw Doom short-demo report from the externally held IBM AT BIOS, SeaVGABIOS, FreeDOS and shareware media described by docs/receipts/2026-09-20-386-doom-short-demo.json. Set I80386_DOOM_SNAPSHOT_REPORT to the local JSON file whose SHA-256 is 4d109a1ffb5c132f48839341f4a3ab9c32d50f04e429b709a7d8b033f321d363. The repository does not publish the report or media.
+#   doom-short-report: Generate the raw report locally with the externally held IBM AT BIOS, SeaVGABIOS, FreeDOS floppy and Doom shareware inputs documented by docs/receipts/2026-09-20-386-doom-short-demo.json, then set ASTRA_DOOM_SHORT_REPORT to that JSON file. The repository does not fetch or publish the ROM, disk images, game payloads or raw report.
+#   ibm-5170-at-rom: Provide the externally held 64KiB IBM 5170 Rev1 ROM as AT_BIOS_ROM (and the VGA option ROM as VGA_BIOS_ROM). The repository never fetches, stores, or publishes this copyrighted firmware. When AT_BIOS_ROM is absent these fidelity oracles skip loudly by name; when present, a maintainer regenerates the bound fixtures.
+# Subtest: cold BIOS capture has a dedicated census row for bounded output opt-in
+ok 4 - cold BIOS capture has a dedicated census row for bounded output opt-in
+  ---
+  duration_ms: 9.089982
+  type: 'test'
+  ...
+# Subtest: capture-output census resolution reports activation without reading or authenticating output
+ok 5 - capture-output census resolution reports activation without reading or authenticating output
+  ---
+  duration_ms: 0.533665
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2347.047767

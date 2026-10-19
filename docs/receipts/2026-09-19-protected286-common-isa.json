@@ -1,0 +1,41 @@
+{
+  "oracle": "PCjs",
+  "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+  "node": "v22.23.2",
+  "scope": "owned ring-0 MUL/DIV/immediate-IMUL/PUSHA/POPA/ENTER/LEAVE/XLAT guest; architectural state only",
+  "sourceHashes": {
+    "./compare-pcjs-protected286-common-isa.mjs": "4c30b349053678e4fa1e4594e12cec0c4e747ff5f611163a90686a81dfdabc92",
+    "../src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+    "../src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70"
+  },
+  "mutation": null,
+  "status": "pass",
+  "reference": {
+    "ax": 858,
+    "bx": 32,
+    "cx": 65530,
+    "dx": 0,
+    "bp": 384,
+    "sp": 512,
+    "cs": 8,
+    "ds": 16,
+    "ip": 52,
+    "flags": 0,
+    "halted": true
+  },
+  "actual": {
+    "ax": 858,
+    "bx": 32,
+    "cx": 65530,
+    "dx": 0,
+    "bp": 384,
+    "sp": 512,
+    "cs": 8,
+    "ds": 16,
+    "ip": 52,
+    "flags": 0,
+    "halted": true
+  },
+  "differences": [],
+  "executionRevision": "da0a27a61befe1a9751ed64082244a896cd6b3a4"
+}

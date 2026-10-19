@@ -1,0 +1,17 @@
+{
+  "status": "PREPARED_SOURCE_ONLY_NO_ACTUAL_CI_ARTIFACT_ADMISSION",
+  "files": {
+    "restore.py": "f234663e802caf2e03de46c8bb3ac795c440fabbbbf329ee92f3bd6d928ac6be",
+    "authenticate.mjs": "56790352c05a15aedbba1d49ce6a6976b94d5d92ce6ec24fd928d4892a52d00a",
+    "original-restore.py": "e2917db0212d5aa8cf562750675fc2d0729d610eb1bf62b581da5f369f5d47b7",
+    "original-authenticate.mjs": "7cab0626cd02006548c7651efe671271594cff17fe4050e9f9e1400e92fb81df",
+    "derivation.json": "a46300b062f49896992ecf1d65134a9fcc8c4ea6a779938a935432ac27ca1838",
+    "binding-template.json": "3a14e8c8f5b263e78fb63330d4a0ab5e09be4c1f4142d1534b3d11c9ac548b47",
+    "plan.json": "4bf0f53c9d6aac0df2c0309fb3fc2e2a9e5a89f9363565c735d72eea9f86ce28",
+    "source-controls.py": "f2bea44ceecb2c51fbbd0302ce51ee2e597f0a20d8568b36d20d0f059dacc32c"
+  },
+  "controls": 13,
+  "nullCiMetadataPreventsExecution": true,
+  "previousReviewBytes": "reviewed-v1",
+  "sourceCheck": "source-check-r2"
+}

@@ -1,0 +1,12 @@
+{
+  "status": "OFFICIAL_DISPATCH_GATE_DOWNLOAD_DIGEST_SAFE_EXTRACTION_PASS",
+  "run": 37042592639,
+  "attempt": 1,
+  "head": "7a24f7d4f1057e5e9523d0f2f23d426bb3b40476",
+  "artifact": 11243860198,
+  "zipSha256": "73b99f1a5328707e3a613570f588548d66057fb6f4ff6f309d87660a3eb3c5d8",
+  "compressedBytes": 14841836,
+  "entries": 1131,
+  "uncompressedBytes": 39900789,
+  "summaryRelativePath": "owned-dispatch-gate/gate/results/summary.json"
+}

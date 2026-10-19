@@ -1,0 +1,68 @@
+{
+  "schema": "bw.compact-progress.paired-result-origins.v1",
+  "runId": 37267527701,
+  "artifactId": 11327261646,
+  "scope": "Small exact audit/series/host/official metadata origins; original43MB ZIP retained once externally, no duplicate binary or raw guest tapes",
+  "records": {
+    "run.json": {
+      "bytes": 14656,
+      "sha256": "46383b3882f9b81a70efdd8d23a4ecbcafcb1f14a38ea5bc1efa79d69635de80",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-audit-20261005/run.json"
+    },
+    "artifacts.json": {
+      "bytes": 976,
+      "sha256": "5ebadd9437ee1d109ec873526914ca18e542926e8bac47f8d78b6299c5cc3b51",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-audit-20261005/artifacts.json"
+    },
+    "coder-actual-audit.json": {
+      "bytes": 4616,
+      "sha256": "fb64078619b298d295e0ce1d386b16c63bc325174b3015cc1dcd08485b060005",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-audit-20261005/coder-actual-audit.json"
+    },
+    "root-actual-audit.json": {
+      "bytes": 1080,
+      "sha256": "15d8055d287597c43e85abad603e35200443c52ea21fb98321e26ab80f03dd41",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-audit-20261005/root-actual-audit.json"
+    },
+    "independent-actual-audit.json": {
+      "bytes": 3181,
+      "sha256": "0183e9effc2637f0c89fb9f75eab60b54f85f1fd93eff9a71eb022e6a6591dc8",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-audit-20261005/independent-actual-audit.json"
+    },
+    "actual-18-child-series.json": {
+      "bytes": 4257,
+      "sha256": "33c15b47153aaf88bf050226dfa583db59710a006a789d6ed338c6f8620f0096",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-audit-20261005/actual-18-child-series.json"
+    },
+    "host-before.json": {
+      "bytes": 9524,
+      "sha256": "822d48bad66c8f1d46b83fab13124ec17802d568b57b6bb6dba417070032d6ad",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-audit-20261005/host-before.json"
+    },
+    "host-after.json": {
+      "bytes": 9532,
+      "sha256": "cbce458643fb073107f7b4d3f6a7f20f49cb321be44304f110aa39515374f95e",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-audit-20261005/host-after.json"
+    },
+    "members.json": {
+      "bytes": 48532,
+      "sha256": "bc681a5fe37dd497dff5c51216e40b68abf291f2ec27735d42aa8aa3f2b9f901",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-audit-20261005/members.json"
+    },
+    "selected-members.json": {
+      "bytes": 835,
+      "sha256": "8f507b9b3f946368d639fa383ef6f729f931e68f0d77bbeb20160c152c66cf01",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-audit-20261005/selected-members.json"
+    },
+    "actual-artifact-input.json": {
+      "bytes": 373,
+      "sha256": "c7cff1a968962b971e11d91d45b6b1e31b00999d2702fccae0c685e41a92ba2c",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-audit-20261005/actual-artifact-input.json"
+    },
+    "coder-audit.py": {
+      "bytes": 25067,
+      "sha256": "8a3d144221b36c1bdab5669b5951cccdc9517e5b7745d3b37e51e4882bc9dec1",
+      "origin": "/tmp/native-cold-compact-progress-paired-binding-fix-audit-20261005/coder-audit.py"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "status": "EXACT_SOURCE_INVERSE_PASS_NO_EXECUTION",
+  "originalPath": "scripts/run-i80386-native-hot-regular-file.py",
+  "originalSha256": "4b0d7e7e2466f2ca84660171a8e8f8656bb04b0b47cab13fa5a8d93f8c89dfa8",
+  "derivedSha256": "2cb92b11da85a71561605cda251e9944503d055609dd53a6095589865e9fd903",
+  "seams": [
+    [
+      "import argparse,hashlib,json,pathlib,resource,subprocess,time",
+      "import argparse,hashlib,json,pathlib,resource,subprocess,time,os"
+    ],
+    [
+      "        resource.setrlimit(resource.RLIMIT_CORE,(0,0))",
+      "        resource.setrlimit(resource.RLIMIT_CORE,(0,0))\n        resource.setrlimit(resource.RLIMIT_CPU,(120,120))\n        os.nice(10)"
+    ],
+    [
+      "    start=time.monotonic_ns();timed_out=False;status=None;error=None",
+      "    execution_env={**os.environ,**{k:'' for k in ['NODE_OPTIONS','NODE_PATH','LD_PRELOAD','LD_AUDIT','BW_HOT_NAPI_PROFILE']}}\n    start=time.monotonic_ns();timed_out=False;status=None;error=None"
+    ],
+    [
+      "preexec_fn=limits,timeout=timeout_seconds)",
+      "preexec_fn=limits,timeout=timeout_seconds,env=execution_env)"
+    ],
+    [
+      "'command':[str(node),str(entry),str(input_path)]",
+      "'command':[str(node),'--max-old-space-size='+str(heap_mib),str(entry),str(input_path)],'RLIMIT_CPU':120,'niceIncrement':10,'blankEnvironment':{k:execution_env[k]for k in ['NODE_OPTIONS','NODE_PATH','LD_PRELOAD','LD_AUDIT','BW_HOT_NAPI_PROFILE']}"
+    ]
+  ],
+  "scope": "regularfilesheap512wall120file256core0 plusperchildCPU120/niceincrement10/sanitizedenv/fullcommandreceipt; no PythonparentCPUlimit"
+}

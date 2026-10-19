@@ -1,0 +1,13 @@
+{
+  "status": "PASS_EXTRACTED_READONLY_CPU_PREFLIGHT_NO_CHILD",
+  "helperSha256": "67adef2a40774ef906ac59248cf8415d35625593581fa3b990fede0bac87ec07",
+  "planSha256": "6e2f828daad268f1d8c81932ee778814871136449634118991b7b8d36a1d1c33",
+  "artifactCount": 53,
+  "runtimeSourceCounts": {
+    "MAIN": 95,
+    "ALLOC": 100
+  },
+  "compiledSourceCount": 86,
+  "fastPathAuditSha256": "7b7113b95d6a405c25d98372cef322690d6c4116693879c7a4ab029651b3e616",
+  "scope": "Executed exactprefix+auth only withdraftfilename substituted; stopped before resultmkdir/childloop;18pairplan/windows/fullparity/sums reviewed. No native or benchmark executed."
+}

@@ -1,0 +1,3351 @@
+{
+  "schema": "labwired.f0-window-profile.v1",
+  "diagnosticOnly": true,
+  "startedAt": "2026-10-03T08:55:12.101Z",
+  "node": "v22.23.3",
+  "cpu": "AMD EPYC 9V45 96-Core Processor",
+  "logicalCpus": 4,
+  "buildInfo": {
+    "ref": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+    "wasmBindgen": "0.2.121",
+    "rustflags": "--remap-path-prefix=/tmp/labwired-wasm-build/src=/labwired --remap-path-prefix=/tmp/labwired-wasm-build/target=/labwired-target --remap-path-prefix=/home/runner/.cargo=/cargo",
+    "builtAt": "2026-10-01T19:57:59.544Z",
+    "targets": {
+      "nodejs": {
+        "labwired_wasm.js": {
+          "bytes": 135762,
+          "brotliBytes": 25386,
+          "sha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73"
+        },
+        "labwired_wasm_bg.wasm": {
+          "bytes": 27556189,
+          "brotliBytes": 3056678,
+          "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+        }
+      },
+      "web": {
+        "labwired_wasm.js": {
+          "bytes": 138392,
+          "brotliBytes": 25941,
+          "sha256": "4d7b80824057f8bbffa2b6953d3a15918a1d58e496cdb25fc1f26f537db5c846"
+        },
+        "labwired_wasm_bg.wasm": {
+          "bytes": 27556189,
+          "brotliBytes": 3056678,
+          "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+        }
+      }
+    },
+    "rawBytes": 136668412
+  },
+  "files": {
+    "test/labwired-f0-gpio-profile.test.mjs": "8a59d4246094953d93f0dd278b869f7b81ecf4bdc642db9c725aab343599284e",
+    "test/labwired-f0-gpio-window-profile.test.mjs": "8ac18faf988b758bd34a72fbe9c2ea7b740393a5b2ffada67ba4ca10e1679b35",
+    "scripts/profile-labwired-f0-windows.mjs": "fa516e9d55f25703f3662bc1addc089efef7a097fcf3516ad9d8b46199141c87",
+    "scripts/lib/window-cpu-profiler.mjs": "43c61a4037f7acc8b9f94573ecbab8611839a648884fe6b9af4afe0a657ed288",
+    "scripts/lib/wasm-motion-profile.mjs": "f1de7785b1aa3b5f10c496bc87b4b894771f0ecb161ea4b8cf6b01301cf03e1e",
+    "scripts/lib/f0-gpio-profile-receipt.mjs": "1422c48d42bf905b1f42f718602d95b3447314e07722ed6459b26cf505b34c0a",
+    "test/fixtures/labwired/f0-timing/active.S": "48b9a92d1b3e82f20b944312634e13e9048a64163cb6483b0993aa615a3309c5",
+    "test/fixtures/labwired/f0-timing/active.ld": "fb2065445ff60036572f85b1b6d0eb15f7445b674a3f43bbea0cdc4ab0af7efc"
+  },
+  "compiler": "arm-none-eabi-gcc (15:13.2.rel1-2) 13.2.1 20231009\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+  "limitations": [
+    "GPIO guest only; not all chips, firmware, silicon CPI or browser/UI performance",
+    "ordinary and profiled timings are separate processes, not a speedup A/B",
+    "warm-up precedes sampling but does not prove JIT tiering has finished",
+    "profiles cover each warmed cycle window plus profiler boundary/JS validation overhead",
+    "guest compilation, initialization, warm-up, board input changes, observations and logging are outside sampling",
+    "profiled RTx includes sampling overhead; shares are attribution, not removable-cost estimates",
+    "no forced tiers, engine mutation, promotion, app pins or physical acknowledgement changes"
+  ],
+  "ordinary": {
+    "flags": [],
+    "harness": "test/labwired-f0-gpio-profile.test.mjs",
+    "loadBefore": [
+      0.9,
+      0.22,
+      0.07
+    ],
+    "loadAfter": [
+      0.99,
+      0.25,
+      0.08
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "workloads": {
+      "gpio": {
+        "guest": {
+          "workload": "gpio",
+          "elfSha256": "71fa9349644285900f4fb774d9573200fc2b6f35f422c3d896ce1a2527e974e7",
+          "imageSha256": "cee1c14b0a4b6b7bbfea8b7987742d9c6a78b8d87d1dd2e677571b7eed1b4a6c"
+        },
+        "samples": [
+          {
+            "workload": "gpio",
+            "index": 0,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 0.8297048100000001,
+            "rtx": 1.2052479242587493,
+            "iterations": 3000000,
+            "checksum": 2999872,
+            "input": 0,
+            "mirror": 2999999,
+            "output": 0
+          },
+          {
+            "workload": "gpio",
+            "index": 1,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 0.6923045,
+            "rtx": 1.444451104968984,
+            "iterations": 5526315,
+            "checksum": 5526484,
+            "input": 2,
+            "mirror": 5526315,
+            "output": 1
+          },
+          {
+            "workload": "gpio",
+            "index": 2,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 0.7729945970000001,
+            "rtx": 1.2936701031042264,
+            "iterations": 8192982,
+            "checksum": 8192809,
+            "input": 0,
+            "mirror": 8192981,
+            "output": 0
+          },
+          {
+            "workload": "gpio",
+            "index": 3,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 0.6779766919999998,
+            "rtx": 1.474976959827404,
+            "iterations": 10719298,
+            "checksum": 10719421,
+            "input": 2,
+            "mirror": 10719297,
+            "output": 1
+          },
+          {
+            "workload": "gpio",
+            "index": 4,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 0.7688519799999999,
+            "rtx": 1.3006404691836784,
+            "iterations": 13385965,
+            "checksum": 13385747,
+            "input": 0,
+            "mirror": 13385964,
+            "output": 0
+          }
+        ],
+        "allWindowsMeet1x": true,
+        "medianRtx": 1.3006404691836784,
+        "minimumRtx": 1.2052479242587493,
+        "guestObservations": [
+          {
+            "checksum": 2999872,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 0,
+            "input": 0,
+            "iterations": 3000000,
+            "mirror": 2999999,
+            "output": 0,
+            "workload": "gpio"
+          },
+          {
+            "checksum": 5526484,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 1,
+            "input": 2,
+            "iterations": 5526315,
+            "mirror": 5526315,
+            "output": 1,
+            "workload": "gpio"
+          },
+          {
+            "checksum": 8192809,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 2,
+            "input": 0,
+            "iterations": 8192982,
+            "mirror": 8192981,
+            "output": 0,
+            "workload": "gpio"
+          },
+          {
+            "checksum": 10719421,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 3,
+            "input": 2,
+            "iterations": 10719298,
+            "mirror": 10719297,
+            "output": 1,
+            "workload": "gpio"
+          },
+          {
+            "checksum": 13385747,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 4,
+            "input": 0,
+            "iterations": 13385965,
+            "mirror": 13385964,
+            "output": 0,
+            "workload": "gpio"
+          }
+        ]
+      }
+    },
+    "allWindowsMeet1x": true
+  },
+  "profiled": {
+    "flags": [],
+    "harness": "test/labwired-f0-gpio-window-profile.test.mjs",
+    "loadBefore": [
+      0.99,
+      0.25,
+      0.08
+    ],
+    "loadAfter": [
+      1.07,
+      0.28,
+      0.1
+    ],
+    "exitCode": 0,
+    "signal": null,
+    "workloads": {
+      "gpio": {
+        "guest": {
+          "workload": "gpio",
+          "elfSha256": "f7d4d10b560959dd3ac86f5fbe2e3a87aa397a002acaabed2bec1399e58ed5b1",
+          "imageSha256": "cee1c14b0a4b6b7bbfea8b7987742d9c6a78b8d87d1dd2e677571b7eed1b4a6c"
+        },
+        "samples": [
+          {
+            "workload": "gpio",
+            "index": 0,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 0.7717913020000001,
+            "rtx": 1.2956870560844955,
+            "iterations": 3000000,
+            "checksum": 2999872,
+            "input": 0,
+            "mirror": 2999999,
+            "output": 0
+          },
+          {
+            "workload": "gpio",
+            "index": 1,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 0.6867570439999999,
+            "rtx": 1.456119028900707,
+            "iterations": 5526315,
+            "checksum": 5526484,
+            "input": 2,
+            "mirror": 5526315,
+            "output": 1
+          },
+          {
+            "workload": "gpio",
+            "index": 2,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 0.762124354,
+            "rtx": 1.3121218272995905,
+            "iterations": 8192982,
+            "checksum": 8192809,
+            "input": 0,
+            "mirror": 8192981,
+            "output": 0
+          },
+          {
+            "workload": "gpio",
+            "index": 3,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 0.6739528269999996,
+            "rtx": 1.4837833746485651,
+            "iterations": 10719298,
+            "checksum": 10719421,
+            "input": 2,
+            "mirror": 10719297,
+            "output": 1
+          },
+          {
+            "workload": "gpio",
+            "index": 4,
+            "cycles": 48000000,
+            "cpuHz": 48000000,
+            "wallSeconds": 0.762882756,
+            "rtx": 1.3108174121581535,
+            "iterations": 13385965,
+            "checksum": 13385747,
+            "input": 0,
+            "mirror": 13385964,
+            "output": 0
+          }
+        ],
+        "allWindowsMeet1x": true,
+        "medianRtx": 1.3121218272995905,
+        "minimumRtx": 1.2956870560844955,
+        "guestObservations": [
+          {
+            "checksum": 2999872,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 0,
+            "input": 0,
+            "iterations": 3000000,
+            "mirror": 2999999,
+            "output": 0,
+            "workload": "gpio"
+          },
+          {
+            "checksum": 5526484,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 1,
+            "input": 2,
+            "iterations": 5526315,
+            "mirror": 5526315,
+            "output": 1,
+            "workload": "gpio"
+          },
+          {
+            "checksum": 8192809,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 2,
+            "input": 0,
+            "iterations": 8192982,
+            "mirror": 8192981,
+            "output": 0,
+            "workload": "gpio"
+          },
+          {
+            "checksum": 10719421,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 3,
+            "input": 2,
+            "iterations": 10719298,
+            "mirror": 10719297,
+            "output": 1,
+            "workload": "gpio"
+          },
+          {
+            "checksum": 13385747,
+            "cpuHz": 48000000,
+            "cycles": 48000000,
+            "index": 4,
+            "input": 0,
+            "iterations": 13385965,
+            "mirror": 13385964,
+            "output": 0,
+            "workload": "gpio"
+          }
+        ]
+      }
+    },
+    "allWindowsMeet1x": true
+  },
+  "guestObservationsMatch": true,
+  "windows": [
+    {
+      "index": 0,
+      "profileFile": "gpio-0.cpuprofile",
+      "profileSha256": "7ffce89cdd91f14f0ef0aec5bd9421feb2952a6e687193705dc4de1ef1aabaf9",
+      "samplingIntervalMicros": 1000,
+      "warmupCycles": 6000000,
+      "cycles": 48000000,
+      "scope": "warmed-cycle-window-with-profiler-boundary-overhead",
+      "bytes": 35379,
+      "summary": {
+        "samples": 728,
+        "sampledMicros": 791426,
+        "wasmSamples": 727,
+        "wasmSelfShare": 0.9750500994407563,
+        "topFrames": [
+          {
+            "functionName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 164,
+            "selfMicros": 174211,
+            "processSelfShare": 0.22012291736687953
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 140,
+            "selfMicros": 148447,
+            "processSelfShare": 0.18756902098237865
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 79,
+            "selfMicros": 83971,
+            "processSelfShare": 0.10610088624836687
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::write_u32::h0cd6ebd0b6ddd470",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 44,
+            "selfMicros": 46662,
+            "processSelfShare": 0.05895939734100219
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::read_u32::h10ceaa7191c24810",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 39,
+            "selfMicros": 41372,
+            "processSelfShare": 0.05227526010012307
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::collect_scheduled_events::h0c1d52a3df2e88a3",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 31,
+            "selfMicros": 32901,
+            "processSelfShare": 0.041571795720635914
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice as labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 27,
+            "selfMicros": 28651,
+            "processSelfShare": 0.03620174217172547
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 26,
+            "selfMicros": 27589,
+            "processSelfShare": 0.03485986055550361
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::V2Gpio::read_reg::h88ce8ff915e38ed4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 23,
+            "selfMicros": 24416,
+            "processSelfShare": 0.030850641752987646
+          },
+          {
+            "functionName": "post",
+            "url": "node:inspector",
+            "lineNumber": 117,
+            "wasm": false,
+            "samples": 1,
+            "selfMicros": 19746,
+            "processSelfShare": 0.024949900559243694
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::read_reg::h29701eae6000759a",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 15,
+            "selfMicros": 15985,
+            "processSelfShare": 0.020197719053960825
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_latch_dc::hbfd68fd98f328a22",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 14,
+            "selfMicros": 14854,
+            "processSelfShare": 0.018768653038944892
+          },
+          {
+            "functionName": "labwired_core::machine::advance::<impl labwired_core::Machine<C>>::advance_inner::hb4bb246d6bfa3b66",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 13,
+            "selfMicros": 13793,
+            "processSelfShare": 0.01742803496473454
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_bus_tick_index::h6ef86e836e048187",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 9,
+            "selfMicros": 9553,
+            "processSelfShare": 0.012070616835939178
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::find_peripheral_index::h42906654024670bd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 9,
+            "selfMicros": 9551,
+            "processSelfShare": 0.012068089751916162
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::is_peripheral_clocked::hd1a01c00e34da729",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 9,
+            "selfMicros": 9545,
+            "processSelfShare": 0.012060508499847111
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_report::hc92756cb1ec77289",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8488,
+            "processSelfShare": 0.010724944593682796
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8485,
+            "processSelfShare": 0.010721153967648271
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::write_u32::hd1269e8403ee8372",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8484,
+            "processSelfShare": 0.010719890425636761
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::write_reg::h2f43d0bdd83b1d5a",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6365,
+            "processSelfShare": 0.008042444903250588
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6363,
+            "processSelfShare": 0.008039917819227572
+          },
+          {
+            "functionName": "labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6363,
+            "processSelfShare": 0.008039917819227572
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::sync_scheduler_peripheral::hf72be508efb310e2",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5305,
+            "processSelfShare": 0.006703090371051747
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::sync_esp32c3_irq_cache_write::hfdcbd155df4755b4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4244,
+            "processSelfShare": 0.005362472296841398
+          },
+          {
+            "functionName": "labwired_core::bus::mmio_activity::<impl labwired_core::bus::SystemBus>::note_mmio_activities::h7997c01a00da4782",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4242,
+            "processSelfShare": 0.005359945212818381
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_snapshot::h13947fda99e08389",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3190,
+            "processSelfShare": 0.0040306990167116065
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::button::Button as labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3186,
+            "processSelfShare": 0.004025644848665574
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_resident_scheduled_edges::h1acf3818729cec7e",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3184,
+            "processSelfShare": 0.004023117764642556
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_legacy_tick_index::h8f9435a782e451c9",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3183,
+            "processSelfShare": 0.004021854222631048
+          },
+          {
+            "functionName": "labwired_core::bus::resident_device::BusResidentDevice::service_scheduled_edges::h36c8741f82341c2d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3182,
+            "processSelfShare": 0.00402059068061954
+          }
+        ],
+        "topWasmFrames": [
+          {
+            "functionName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 164,
+            "selfMicros": 174211,
+            "processSelfShare": 0.22012291736687953,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 140,
+            "selfMicros": 148447,
+            "processSelfShare": 0.18756902098237865,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 79,
+            "selfMicros": 83971,
+            "processSelfShare": 0.10610088624836687,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::write_u32::h0cd6ebd0b6ddd470",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 44,
+            "selfMicros": 46662,
+            "processSelfShare": 0.05895939734100219,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::read_u32::h10ceaa7191c24810",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 39,
+            "selfMicros": 41372,
+            "processSelfShare": 0.05227526010012307,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::collect_scheduled_events::h0c1d52a3df2e88a3",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 31,
+            "selfMicros": 32901,
+            "processSelfShare": 0.041571795720635914,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice as labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 27,
+            "selfMicros": 28651,
+            "processSelfShare": 0.03620174217172547,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 26,
+            "selfMicros": 27589,
+            "processSelfShare": 0.03485986055550361,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::V2Gpio::read_reg::h88ce8ff915e38ed4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 23,
+            "selfMicros": 24416,
+            "processSelfShare": 0.030850641752987646,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::read_reg::h29701eae6000759a",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 15,
+            "selfMicros": 15985,
+            "processSelfShare": 0.020197719053960825,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_latch_dc::hbfd68fd98f328a22",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 14,
+            "selfMicros": 14854,
+            "processSelfShare": 0.018768653038944892,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::machine::advance::<impl labwired_core::Machine<C>>::advance_inner::hb4bb246d6bfa3b66",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 13,
+            "selfMicros": 13793,
+            "processSelfShare": 0.01742803496473454,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_bus_tick_index::h6ef86e836e048187",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 9,
+            "selfMicros": 9553,
+            "processSelfShare": 0.012070616835939178,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::find_peripheral_index::h42906654024670bd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 9,
+            "selfMicros": 9551,
+            "processSelfShare": 0.012068089751916162,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::is_peripheral_clocked::hd1a01c00e34da729",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 9,
+            "selfMicros": 9545,
+            "processSelfShare": 0.012060508499847111,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_report::hc92756cb1ec77289",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8488,
+            "processSelfShare": 0.010724944593682796,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8485,
+            "processSelfShare": 0.010721153967648271,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::write_u32::hd1269e8403ee8372",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8484,
+            "processSelfShare": 0.010719890425636761,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::write_reg::h2f43d0bdd83b1d5a",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6365,
+            "processSelfShare": 0.008042444903250588,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6363,
+            "processSelfShare": 0.008039917819227572,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6363,
+            "processSelfShare": 0.008039917819227572,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::sync_scheduler_peripheral::hf72be508efb310e2",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5305,
+            "processSelfShare": 0.006703090371051747,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::sync_esp32c3_irq_cache_write::hfdcbd155df4755b4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4244,
+            "processSelfShare": 0.005362472296841398,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::mmio_activity::<impl labwired_core::bus::SystemBus>::note_mmio_activities::h7997c01a00da4782",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4242,
+            "processSelfShare": 0.005359945212818381,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_snapshot::h13947fda99e08389",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3190,
+            "processSelfShare": 0.0040306990167116065,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::button::Button as labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3186,
+            "processSelfShare": 0.004025644848665574,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_resident_scheduled_edges::h1acf3818729cec7e",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3184,
+            "processSelfShare": 0.004023117764642556,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_legacy_tick_index::h8f9435a782e451c9",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3183,
+            "processSelfShare": 0.004021854222631048,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::resident_device::BusResidentDevice::service_scheduled_edges::h36c8741f82341c2d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3182,
+            "processSelfShare": 0.00402059068061954,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::tick_peripherals_fully_into::haebd26218ff7e9aa",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3180,
+            "processSelfShare": 0.004018063596596524,
+            "wasmName": null
+          }
+        ],
+        "limitations": [
+          "warm-up precedes sampling but does not prove JIT tiering has finished",
+          "profiles cover each warmed cycle window plus profiler boundary/JS validation overhead",
+          "guest compilation, initialization, warm-up, board input changes, observations and logging are outside sampling",
+          "profiled RTx includes sampling overhead; shares are attribution, not removable-cost estimates"
+        ]
+      }
+    },
+    {
+      "index": 1,
+      "profileFile": "gpio-1.cpuprofile",
+      "profileSha256": "182ea505eb324d55b32031ebfaeb84e1f767503800053d53f2c1b3f457902051",
+      "samplingIntervalMicros": 1000,
+      "warmupCycles": 6000000,
+      "cycles": 48000000,
+      "scope": "warmed-cycle-window-with-profiler-boundary-overhead",
+      "bytes": 27372,
+      "summary": {
+        "samples": 647,
+        "sampledMicros": 698119,
+        "wasmSamples": 645,
+        "wasmSelfShare": 0.9824757670253925,
+        "topFrames": [
+          {
+            "functionName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 159,
+            "selfMicros": 169432,
+            "processSelfShare": 0.24269787815544341
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 140,
+            "selfMicros": 148713,
+            "processSelfShare": 0.2130195568377311
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 43,
+            "selfMicros": 45682,
+            "processSelfShare": 0.06543583543779785
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::write_u32::h0cd6ebd0b6ddd470",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 40,
+            "selfMicros": 42519,
+            "processSelfShare": 0.060905089246962196
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::collect_scheduled_events::h0c1d52a3df2e88a3",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 28,
+            "selfMicros": 29738,
+            "processSelfShare": 0.04259732223302904
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::V2Gpio::read_reg::h88ce8ff915e38ed4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 27,
+            "selfMicros": 28750,
+            "processSelfShare": 0.0411820907323823
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::read_u32::h10ceaa7191c24810",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 27,
+            "selfMicros": 28686,
+            "processSelfShare": 0.04109041581736065
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 20,
+            "selfMicros": 21262,
+            "processSelfShare": 0.030456125674849132
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice as labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 19,
+            "selfMicros": 20213,
+            "processSelfShare": 0.02895351652082238
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::is_peripheral_clocked::hd1a01c00e34da729",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 13,
+            "selfMicros": 13809,
+            "processSelfShare": 0.019780295336468426
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_latch_dc::hbfd68fd98f328a22",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 12,
+            "selfMicros": 12753,
+            "processSelfShare": 0.01826765923861118
+          },
+          {
+            "functionName": "post",
+            "url": "node:inspector",
+            "lineNumber": 117,
+            "wasm": false,
+            "samples": 1,
+            "selfMicros": 11171,
+            "processSelfShare": 0.016001569932919745
+          },
+          {
+            "functionName": "labwired_core::bus::mmio_activity::<impl labwired_core::bus::SystemBus>::note_mmio_activities::h7997c01a00da4782",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 9,
+            "selfMicros": 9569,
+            "processSelfShare": 0.013706832216284043
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::read_u32::hbb09a7faec294d99",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 9,
+            "selfMicros": 9568,
+            "processSelfShare": 0.01370539979573683
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8499,
+            "processSelfShare": 0.012174142230765815
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8497,
+            "processSelfShare": 0.012171277389671388
+          },
+          {
+            "functionName": "labwired_core::machine::advance::<impl labwired_core::Machine<C>>::advance_inner::hb4bb246d6bfa3b66",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 7,
+            "selfMicros": 7439,
+            "processSelfShare": 0.010655776450719719
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_bus_tick_index::h6ef86e836e048187",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 7,
+            "selfMicros": 7436,
+            "processSelfShare": 0.01065147918907808
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::write_u32::hd1269e8403ee8372",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6386,
+            "processSelfShare": 0.009147437614504117
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::sync_esp32c3_irq_cache_write::hfdcbd155df4755b4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6380,
+            "processSelfShare": 0.009138843091220837
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_resident_scheduled_edges::h1acf3818729cec7e",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6372,
+            "processSelfShare": 0.009127383726843132
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::read_reg::h29701eae6000759a",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5313,
+            "processSelfShare": 0.007610450367344249
+          },
+          {
+            "functionName": "labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5312,
+            "processSelfShare": 0.007609017946797036
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::sync_esp32s3_irq_write::hb884dd100a7933f0",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5312,
+            "processSelfShare": 0.007609017946797036
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_report::hc92756cb1ec77289",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4254,
+            "processSelfShare": 0.006093517007845367
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::find_peripheral_index::h42906654024670bd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4254,
+            "processSelfShare": 0.006093517007845367
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::reconcile_level_after_read::h8a0442aee15629fd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4249,
+            "processSelfShare": 0.0060863549051093
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::button::Button as labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4247,
+            "processSelfShare": 0.0060834900640148746
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::sync_scheduler_peripheral::hf72be508efb310e2",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3192,
+            "processSelfShare": 0.004572286386704845
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_legacy_tick_index::h8f9435a782e451c9",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2125,
+            "processSelfShare": 0.003043893662828257
+          }
+        ],
+        "topWasmFrames": [
+          {
+            "functionName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 159,
+            "selfMicros": 169432,
+            "processSelfShare": 0.24269787815544341,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 140,
+            "selfMicros": 148713,
+            "processSelfShare": 0.2130195568377311,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 43,
+            "selfMicros": 45682,
+            "processSelfShare": 0.06543583543779785,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::write_u32::h0cd6ebd0b6ddd470",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 40,
+            "selfMicros": 42519,
+            "processSelfShare": 0.060905089246962196,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::collect_scheduled_events::h0c1d52a3df2e88a3",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 28,
+            "selfMicros": 29738,
+            "processSelfShare": 0.04259732223302904,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::V2Gpio::read_reg::h88ce8ff915e38ed4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 27,
+            "selfMicros": 28750,
+            "processSelfShare": 0.0411820907323823,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::read_u32::h10ceaa7191c24810",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 27,
+            "selfMicros": 28686,
+            "processSelfShare": 0.04109041581736065,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 20,
+            "selfMicros": 21262,
+            "processSelfShare": 0.030456125674849132,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice as labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 19,
+            "selfMicros": 20213,
+            "processSelfShare": 0.02895351652082238,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::is_peripheral_clocked::hd1a01c00e34da729",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 13,
+            "selfMicros": 13809,
+            "processSelfShare": 0.019780295336468426,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_latch_dc::hbfd68fd98f328a22",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 12,
+            "selfMicros": 12753,
+            "processSelfShare": 0.01826765923861118,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::mmio_activity::<impl labwired_core::bus::SystemBus>::note_mmio_activities::h7997c01a00da4782",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 9,
+            "selfMicros": 9569,
+            "processSelfShare": 0.013706832216284043,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::read_u32::hbb09a7faec294d99",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 9,
+            "selfMicros": 9568,
+            "processSelfShare": 0.01370539979573683,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8499,
+            "processSelfShare": 0.012174142230765815,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8497,
+            "processSelfShare": 0.012171277389671388,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::machine::advance::<impl labwired_core::Machine<C>>::advance_inner::hb4bb246d6bfa3b66",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 7,
+            "selfMicros": 7439,
+            "processSelfShare": 0.010655776450719719,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_bus_tick_index::h6ef86e836e048187",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 7,
+            "selfMicros": 7436,
+            "processSelfShare": 0.01065147918907808,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::write_u32::hd1269e8403ee8372",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6386,
+            "processSelfShare": 0.009147437614504117,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::sync_esp32c3_irq_cache_write::hfdcbd155df4755b4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6380,
+            "processSelfShare": 0.009138843091220837,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_resident_scheduled_edges::h1acf3818729cec7e",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6372,
+            "processSelfShare": 0.009127383726843132,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::read_reg::h29701eae6000759a",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5313,
+            "processSelfShare": 0.007610450367344249,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5312,
+            "processSelfShare": 0.007609017946797036,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::sync_esp32s3_irq_write::hb884dd100a7933f0",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5312,
+            "processSelfShare": 0.007609017946797036,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_report::hc92756cb1ec77289",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4254,
+            "processSelfShare": 0.006093517007845367,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::find_peripheral_index::h42906654024670bd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4254,
+            "processSelfShare": 0.006093517007845367,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::reconcile_level_after_read::h8a0442aee15629fd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4249,
+            "processSelfShare": 0.0060863549051093,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::button::Button as labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4247,
+            "processSelfShare": 0.0060834900640148746,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::sync_scheduler_peripheral::hf72be508efb310e2",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3192,
+            "processSelfShare": 0.004572286386704845,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_legacy_tick_index::h8f9435a782e451c9",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2125,
+            "processSelfShare": 0.003043893662828257,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::write_reg::h81301c92af38bb39",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2125,
+            "processSelfShare": 0.003043893662828257,
+            "wasmName": null
+          }
+        ],
+        "limitations": [
+          "warm-up precedes sampling but does not prove JIT tiering has finished",
+          "profiles cover each warmed cycle window plus profiler boundary/JS validation overhead",
+          "guest compilation, initialization, warm-up, board input changes, observations and logging are outside sampling",
+          "profiled RTx includes sampling overhead; shares are attribution, not removable-cost estimates"
+        ]
+      }
+    },
+    {
+      "index": 2,
+      "profileFile": "gpio-2.cpuprofile",
+      "profileSha256": "cafec888590ff75cc2fa4ee16c0a1d1f4a145bd38f3d27876986f5b5bcb1c103",
+      "samplingIntervalMicros": 1000,
+      "warmupCycles": 6000000,
+      "cycles": 48000000,
+      "scope": "warmed-cycle-window-with-profiler-boundary-overhead",
+      "bytes": 25895,
+      "summary": {
+        "samples": 718,
+        "sampledMicros": 772940,
+        "wasmSamples": 716,
+        "wasmSelfShare": 0.9849237974487024,
+        "topFrames": [
+          {
+            "functionName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 203,
+            "selfMicros": 215719,
+            "processSelfShare": 0.27908893316428185
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 167,
+            "selfMicros": 177430,
+            "processSelfShare": 0.2295520997748855
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 80,
+            "selfMicros": 85008,
+            "processSelfShare": 0.10998007607317514
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::write_u32::h0cd6ebd0b6ddd470",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 32,
+            "selfMicros": 34390,
+            "processSelfShare": 0.044492457370559166
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice as labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 28,
+            "selfMicros": 29758,
+            "processSelfShare": 0.0384997541853184
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::V2Gpio::read_reg::h88ce8ff915e38ed4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 26,
+            "selfMicros": 27705,
+            "processSelfShare": 0.03584366186249903
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 26,
+            "selfMicros": 27619,
+            "processSelfShare": 0.03573239837503558
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::read_u32::h10ceaa7191c24810",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 19,
+            "selfMicros": 20190,
+            "processSelfShare": 0.02612104432426838
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::collect_scheduled_events::h0c1d52a3df2e88a3",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 19,
+            "selfMicros": 20183,
+            "processSelfShare": 0.026111987993893446
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::write_u32::hd1269e8403ee8372",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 12,
+            "selfMicros": 12759,
+            "processSelfShare": 0.01650710275053691
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 10,
+            "selfMicros": 10625,
+            "processSelfShare": 0.01374621574766476
+          },
+          {
+            "functionName": "post",
+            "url": "node:inspector",
+            "lineNumber": 117,
+            "wasm": false,
+            "samples": 1,
+            "selfMicros": 10585,
+            "processSelfShare": 0.013694465288379434
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_bus_tick_index::h6ef86e836e048187",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8498,
+            "processSelfShare": 0.010994385075167543
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::find_peripheral_index::h42906654024670bd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 7,
+            "selfMicros": 7443,
+            "processSelfShare": 0.009629466711517065
+          },
+          {
+            "functionName": "labwired_core::bus::mmio_activity::<impl labwired_core::bus::SystemBus>::note_mmio_activities::h7997c01a00da4782",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6393,
+            "processSelfShare": 0.008271017155277253
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::read_reg::h29701eae6000759a",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6378,
+            "processSelfShare": 0.008251610733045256
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_latch_dc::hbfd68fd98f328a22",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6373,
+            "processSelfShare": 0.00824514192563459
+          },
+          {
+            "functionName": "labwired_core::machine::advance::<impl labwired_core::Machine<C>>::advance_inner::hb4bb246d6bfa3b66",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5313,
+            "processSelfShare": 0.006873754754573446
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::sync_esp32c3_irq_cache_write::hfdcbd155df4755b4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5313,
+            "processSelfShare": 0.006873754754573446
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_report::hc92756cb1ec77289",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5312,
+            "processSelfShare": 0.0068724609930913136
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::write_reg::h2f43d0bdd83b1d5a",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5311,
+            "processSelfShare": 0.006871167231609181
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::sync_esp32s3_irq_write::hb884dd100a7933f0",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5311,
+            "processSelfShare": 0.006871167231609181
+          },
+          {
+            "functionName": "labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4255,
+            "processSelfShare": 0.00550495510647657
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::is_peripheral_clocked::hd1a01c00e34da729",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4252,
+            "processSelfShare": 0.005501073822030171
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4246,
+            "processSelfShare": 0.005493311253137371
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::reconcile_level_after_read::h8a0442aee15629fd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3188,
+            "processSelfShare": 0.004124511605040495
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::read_u32::hbb09a7faec294d99",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3187,
+            "processSelfShare": 0.004123217843558361
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_snapshot::h13947fda99e08389",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2127,
+            "processSelfShare": 0.0027518306724972183
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_legacy_tick_index::h8f9435a782e451c9",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2126,
+            "processSelfShare": 0.0027505369110150855
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::write_reg::h81301c92af38bb39",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2126,
+            "processSelfShare": 0.0027505369110150855
+          }
+        ],
+        "topWasmFrames": [
+          {
+            "functionName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 203,
+            "selfMicros": 215719,
+            "processSelfShare": 0.27908893316428185,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 167,
+            "selfMicros": 177430,
+            "processSelfShare": 0.2295520997748855,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 80,
+            "selfMicros": 85008,
+            "processSelfShare": 0.10998007607317514,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::write_u32::h0cd6ebd0b6ddd470",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 32,
+            "selfMicros": 34390,
+            "processSelfShare": 0.044492457370559166,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice as labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 28,
+            "selfMicros": 29758,
+            "processSelfShare": 0.0384997541853184,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::V2Gpio::read_reg::h88ce8ff915e38ed4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 26,
+            "selfMicros": 27705,
+            "processSelfShare": 0.03584366186249903,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 26,
+            "selfMicros": 27619,
+            "processSelfShare": 0.03573239837503558,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::read_u32::h10ceaa7191c24810",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 19,
+            "selfMicros": 20190,
+            "processSelfShare": 0.02612104432426838,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::collect_scheduled_events::h0c1d52a3df2e88a3",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 19,
+            "selfMicros": 20183,
+            "processSelfShare": 0.026111987993893446,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::write_u32::hd1269e8403ee8372",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 12,
+            "selfMicros": 12759,
+            "processSelfShare": 0.01650710275053691,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 10,
+            "selfMicros": 10625,
+            "processSelfShare": 0.01374621574766476,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_bus_tick_index::h6ef86e836e048187",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8498,
+            "processSelfShare": 0.010994385075167543,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::find_peripheral_index::h42906654024670bd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 7,
+            "selfMicros": 7443,
+            "processSelfShare": 0.009629466711517065,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::mmio_activity::<impl labwired_core::bus::SystemBus>::note_mmio_activities::h7997c01a00da4782",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6393,
+            "processSelfShare": 0.008271017155277253,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::read_reg::h29701eae6000759a",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6378,
+            "processSelfShare": 0.008251610733045256,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_latch_dc::hbfd68fd98f328a22",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6373,
+            "processSelfShare": 0.00824514192563459,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::machine::advance::<impl labwired_core::Machine<C>>::advance_inner::hb4bb246d6bfa3b66",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5313,
+            "processSelfShare": 0.006873754754573446,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::sync_esp32c3_irq_cache_write::hfdcbd155df4755b4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5313,
+            "processSelfShare": 0.006873754754573446,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_report::hc92756cb1ec77289",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5312,
+            "processSelfShare": 0.0068724609930913136,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::write_reg::h2f43d0bdd83b1d5a",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5311,
+            "processSelfShare": 0.006871167231609181,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::sync_esp32s3_irq_write::hb884dd100a7933f0",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5311,
+            "processSelfShare": 0.006871167231609181,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4255,
+            "processSelfShare": 0.00550495510647657,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::is_peripheral_clocked::hd1a01c00e34da729",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4252,
+            "processSelfShare": 0.005501073822030171,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4246,
+            "processSelfShare": 0.005493311253137371,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::reconcile_level_after_read::h8a0442aee15629fd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3188,
+            "processSelfShare": 0.004124511605040495,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::read_u32::hbb09a7faec294d99",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3187,
+            "processSelfShare": 0.004123217843558361,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_snapshot::h13947fda99e08389",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2127,
+            "processSelfShare": 0.0027518306724972183,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_legacy_tick_index::h8f9435a782e451c9",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2126,
+            "processSelfShare": 0.0027505369110150855,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::write_reg::h81301c92af38bb39",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2126,
+            "processSelfShare": 0.0027505369110150855,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::Peripheral::wire_lines::h0aea87251b6084ae[1]",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2126,
+            "processSelfShare": 0.0027505369110150855,
+            "wasmName": null
+          }
+        ],
+        "limitations": [
+          "warm-up precedes sampling but does not prove JIT tiering has finished",
+          "profiles cover each warmed cycle window plus profiler boundary/JS validation overhead",
+          "guest compilation, initialization, warm-up, board input changes, observations and logging are outside sampling",
+          "profiled RTx includes sampling overhead; shares are attribution, not removable-cost estimates"
+        ]
+      }
+    },
+    {
+      "index": 3,
+      "profileFile": "gpio-3.cpuprofile",
+      "profileSha256": "781f072517b5cc4e7f294a139ff7b96ef7feabd122ddd3c33ffaa4f88eba9bcf",
+      "samplingIntervalMicros": 1000,
+      "warmupCycles": 6000000,
+      "cycles": 48000000,
+      "scope": "warmed-cycle-window-with-profiler-boundary-overhead",
+      "bytes": 25839,
+      "summary": {
+        "samples": 635,
+        "sampledMicros": 684531,
+        "wasmSamples": 634,
+        "wasmSelfShare": 0.984341103616929,
+        "topFrames": [
+          {
+            "functionName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 164,
+            "selfMicros": 174255,
+            "processSelfShare": 0.254561152088072
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 144,
+            "selfMicros": 153068,
+            "processSelfShare": 0.22361003373112393
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 57,
+            "selfMicros": 60582,
+            "processSelfShare": 0.08850147034977232
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::write_u32::h0cd6ebd0b6ddd470",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 37,
+            "selfMicros": 39317,
+            "processSelfShare": 0.05743640536367235
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::V2Gpio::read_reg::h88ce8ff915e38ed4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 32,
+            "selfMicros": 34019,
+            "processSelfShare": 0.04969679970666047
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::collect_scheduled_events::h0c1d52a3df2e88a3",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 31,
+            "selfMicros": 32917,
+            "processSelfShare": 0.048086938356334485
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 25,
+            "selfMicros": 26569,
+            "processSelfShare": 0.038813435768431236
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice as labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 20,
+            "selfMicros": 21252,
+            "processSelfShare": 0.031046073881241316
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::write_u32::hd1269e8403ee8372",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 16,
+            "selfMicros": 16994,
+            "processSelfShare": 0.02482575661292184
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::read_u32::h10ceaa7191c24810",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 12,
+            "selfMicros": 12752,
+            "processSelfShare": 0.018628813012120708
+          },
+          {
+            "functionName": "post",
+            "url": "node:inspector",
+            "lineNumber": 117,
+            "wasm": false,
+            "samples": 1,
+            "selfMicros": 10719,
+            "processSelfShare": 0.015658896383071035
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_bus_tick_index::h6ef86e836e048187",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 10,
+            "selfMicros": 10638,
+            "processSelfShare": 0.015540567191259416
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8497,
+            "processSelfShare": 0.01241287830646092
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_latch_dc::hbfd68fd98f328a22",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 7,
+            "selfMicros": 7439,
+            "processSelfShare": 0.010867294541810377
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::is_peripheral_clocked::hd1a01c00e34da729",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 7,
+            "selfMicros": 7436,
+            "processSelfShare": 0.010862911979150689
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::read_u32::hbb09a7faec294d99",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6373,
+            "processSelfShare": 0.009310023943400664
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_legacy_tick_index::h8f9435a782e451c9",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5312,
+            "processSelfShare": 0.007760057616090433
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::find_peripheral_index::h42906654024670bd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5311,
+            "processSelfShare": 0.007758596761870536
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_report::hc92756cb1ec77289",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4254,
+            "processSelfShare": 0.006214473851439891
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::read_reg::h29701eae6000759a",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4253,
+            "processSelfShare": 0.0062130129972199945
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::reconcile_level_after_read::h8a0442aee15629fd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4251,
+            "processSelfShare": 0.006210091288780201
+          },
+          {
+            "functionName": "labwired_core::bus::mmio_activity::<impl labwired_core::bus::SystemBus>::note_mmio_activities::h7997c01a00da4782",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3190,
+            "processSelfShare": 0.00466012496146997
+          },
+          {
+            "functionName": "labwired_core::machine::advance::<impl labwired_core::Machine<C>>::advance_inner::hb4bb246d6bfa3b66",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3188,
+            "processSelfShare": 0.004657203253030177
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::sync_scheduler_peripheral::hf72be508efb310e2",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3188,
+            "processSelfShare": 0.004657203253030177
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::sync_esp32s3_irq_write::hb884dd100a7933f0",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3187,
+            "processSelfShare": 0.00465574239881028
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::write_reg::h81301c92af38bb39",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2193,
+            "processSelfShare": 0.0032036533042331173
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2127,
+            "processSelfShare": 0.0031072369257199453
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::button::Button as labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2126,
+            "processSelfShare": 0.003105776071500049
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_snapshot::h13947fda99e08389",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2125,
+            "processSelfShare": 0.0031043152172801525
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::tick_peripherals_fully_into::haebd26218ff7e9aa",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2124,
+            "processSelfShare": 0.003102854363060256
+          }
+        ],
+        "topWasmFrames": [
+          {
+            "functionName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 164,
+            "selfMicros": 174255,
+            "processSelfShare": 0.254561152088072,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 144,
+            "selfMicros": 153068,
+            "processSelfShare": 0.22361003373112393,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 57,
+            "selfMicros": 60582,
+            "processSelfShare": 0.08850147034977232,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::write_u32::h0cd6ebd0b6ddd470",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 37,
+            "selfMicros": 39317,
+            "processSelfShare": 0.05743640536367235,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::V2Gpio::read_reg::h88ce8ff915e38ed4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 32,
+            "selfMicros": 34019,
+            "processSelfShare": 0.04969679970666047,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::collect_scheduled_events::h0c1d52a3df2e88a3",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 31,
+            "selfMicros": 32917,
+            "processSelfShare": 0.048086938356334485,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 25,
+            "selfMicros": 26569,
+            "processSelfShare": 0.038813435768431236,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice as labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 20,
+            "selfMicros": 21252,
+            "processSelfShare": 0.031046073881241316,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::write_u32::hd1269e8403ee8372",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 16,
+            "selfMicros": 16994,
+            "processSelfShare": 0.02482575661292184,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::read_u32::h10ceaa7191c24810",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 12,
+            "selfMicros": 12752,
+            "processSelfShare": 0.018628813012120708,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_bus_tick_index::h6ef86e836e048187",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 10,
+            "selfMicros": 10638,
+            "processSelfShare": 0.015540567191259416,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8497,
+            "processSelfShare": 0.01241287830646092,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_latch_dc::hbfd68fd98f328a22",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 7,
+            "selfMicros": 7439,
+            "processSelfShare": 0.010867294541810377,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::is_peripheral_clocked::hd1a01c00e34da729",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 7,
+            "selfMicros": 7436,
+            "processSelfShare": 0.010862911979150689,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::read_u32::hbb09a7faec294d99",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6373,
+            "processSelfShare": 0.009310023943400664,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_legacy_tick_index::h8f9435a782e451c9",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5312,
+            "processSelfShare": 0.007760057616090433,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::find_peripheral_index::h42906654024670bd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5311,
+            "processSelfShare": 0.007758596761870536,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_report::hc92756cb1ec77289",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4254,
+            "processSelfShare": 0.006214473851439891,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::read_reg::h29701eae6000759a",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4253,
+            "processSelfShare": 0.0062130129972199945,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::reconcile_level_after_read::h8a0442aee15629fd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4251,
+            "processSelfShare": 0.006210091288780201,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::mmio_activity::<impl labwired_core::bus::SystemBus>::note_mmio_activities::h7997c01a00da4782",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3190,
+            "processSelfShare": 0.00466012496146997,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::machine::advance::<impl labwired_core::Machine<C>>::advance_inner::hb4bb246d6bfa3b66",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3188,
+            "processSelfShare": 0.004657203253030177,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::sync_scheduler_peripheral::hf72be508efb310e2",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3188,
+            "processSelfShare": 0.004657203253030177,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::sync_esp32s3_irq_write::hb884dd100a7933f0",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3187,
+            "processSelfShare": 0.00465574239881028,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::write_reg::h81301c92af38bb39",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2193,
+            "processSelfShare": 0.0032036533042331173,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2127,
+            "processSelfShare": 0.0031072369257199453,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::button::Button as labwired_core::bus::resident_device::BusResidentDevice>::needs_per_cycle_service::h6c93f3c4c39734a0",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2126,
+            "processSelfShare": 0.003105776071500049,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_snapshot::h13947fda99e08389",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2125,
+            "processSelfShare": 0.0031043152172801525,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::tick_peripherals_fully_into::haebd26218ff7e9aa",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2124,
+            "processSelfShare": 0.003102854363060256,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_resident_scheduled_edges::h1acf3818729cec7e",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2124,
+            "processSelfShare": 0.003102854363060256,
+            "wasmName": null
+          }
+        ],
+        "limitations": [
+          "warm-up precedes sampling but does not prove JIT tiering has finished",
+          "profiles cover each warmed cycle window plus profiler boundary/JS validation overhead",
+          "guest compilation, initialization, warm-up, board input changes, observations and logging are outside sampling",
+          "profiled RTx includes sampling overhead; shares are attribution, not removable-cost estimates"
+        ]
+      }
+    },
+    {
+      "index": 4,
+      "profileFile": "gpio-4.cpuprofile",
+      "profileSha256": "ef0112dc71019b836ea5bf21f27bf45d9087a23544fb53eccfe22323b3a1e11c",
+      "samplingIntervalMicros": 1000,
+      "warmupCycles": 6000000,
+      "cycles": 48000000,
+      "scope": "warmed-cycle-window-with-profiler-boundary-overhead",
+      "bytes": 24624,
+      "summary": {
+        "samples": 719,
+        "sampledMicros": 773228,
+        "wasmSamples": 718,
+        "wasmSelfShare": 0.9857933235733832,
+        "topFrames": [
+          {
+            "functionName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 198,
+            "selfMicros": 210217,
+            "processSelfShare": 0.2718693580677368
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 164,
+            "selfMicros": 174116,
+            "processSelfShare": 0.22518067116038218
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 51,
+            "selfMicros": 54135,
+            "processSelfShare": 0.07001169124760097
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::write_u32::h0cd6ebd0b6ddd470",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 44,
+            "selfMicros": 46692,
+            "processSelfShare": 0.06038581117083189
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::collect_scheduled_events::h0c1d52a3df2e88a3",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 37,
+            "selfMicros": 39284,
+            "processSelfShare": 0.0508051958801285
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::V2Gpio::read_reg::h88ce8ff915e38ed4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 29,
+            "selfMicros": 30790,
+            "processSelfShare": 0.0398200789417869
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 27,
+            "selfMicros": 28659,
+            "processSelfShare": 0.037064100110187424
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::read_u32::h10ceaa7191c24810",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 25,
+            "selfMicros": 26546,
+            "processSelfShare": 0.03433140031142173
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice as labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 20,
+            "selfMicros": 21242,
+            "processSelfShare": 0.027471845303067143
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::is_peripheral_clocked::hd1a01c00e34da729",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 13,
+            "selfMicros": 13799,
+            "processSelfShare": 0.017845965226298065
+          },
+          {
+            "functionName": "post",
+            "url": "node:inspector",
+            "lineNumber": 117,
+            "wasm": false,
+            "samples": 1,
+            "selfMicros": 10985,
+            "processSelfShare": 0.01420667642661673
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_bus_tick_index::h6ef86e836e048187",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 10,
+            "selfMicros": 10630,
+            "processSelfShare": 0.013747562167950462
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::find_peripheral_index::h42906654024670bd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8487,
+            "processSelfShare": 0.010976063981128464
+          },
+          {
+            "functionName": "labwired_core::machine::advance::<impl labwired_core::Machine<C>>::advance_inner::hb4bb246d6bfa3b66",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 7,
+            "selfMicros": 7431,
+            "processSelfShare": 0.009610360721546555
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::read_reg::h29701eae6000759a",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 7,
+            "selfMicros": 7428,
+            "processSelfShare": 0.009606480882740924
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::read_u32::hbb09a7faec294d99",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6373,
+            "processSelfShare": 0.008242070902760893
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_latch_dc::hbfd68fd98f328a22",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6368,
+            "processSelfShare": 0.008235604504751508
+          },
+          {
+            "functionName": "labwired_core::bus::mmio_activity::<impl labwired_core::bus::SystemBus>::note_mmio_activities::h7997c01a00da4782",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6366,
+            "processSelfShare": 0.008233017945547755
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_report::hc92756cb1ec77289",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6365,
+            "processSelfShare": 0.00823172466594588
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5306,
+            "processSelfShare": 0.00686214156755834
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::write_u32::hd1269e8403ee8372",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5305,
+            "processSelfShare": 0.006860848287956463
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::sync_scheduler_peripheral::hf72be508efb310e2",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5304,
+            "processSelfShare": 0.006859555008354586
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::sync_esp32c3_irq_cache_write::hfdcbd155df4755b4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4253,
+            "processSelfShare": 0.005500318146782062
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::write_reg::h81301c92af38bb39",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4243,
+            "processSelfShare": 0.005487385350763293
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4243,
+            "processSelfShare": 0.005487385350763293
+          },
+          {
+            "functionName": "labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3183,
+            "processSelfShare": 0.004116508972773878
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::reconcile_level_after_read::h8a0442aee15629fd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3182,
+            "processSelfShare": 0.004115215693172001
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_resident_scheduled_edges::h1acf3818729cec7e",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2126,
+            "processSelfShare": 0.0027495124335900926
+          },
+          {
+            "functionName": "labwired_core::Peripheral::wire_lines::h0aea87251b6084ae[1]",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2126,
+            "processSelfShare": 0.0027495124335900926
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_snapshot::h13947fda99e08389",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2125,
+            "processSelfShare": 0.0027482191539882155
+          }
+        ],
+        "topWasmFrames": [
+          {
+            "functionName": "<labwired_core::cpu::cortex_m::CortexM as labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 198,
+            "selfMicros": 210217,
+            "processSelfShare": 0.2718693580677368,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 164,
+            "selfMicros": 174116,
+            "processSelfShare": 0.22518067116038218,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_edge_driven_gpio_devices_cold::hb9c6101767180f23",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 51,
+            "selfMicros": 54135,
+            "processSelfShare": 0.07001169124760097,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::write_u32::h0cd6ebd0b6ddd470",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 44,
+            "selfMicros": 46692,
+            "processSelfShare": 0.06038581117083189,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::collect_scheduled_events::h0c1d52a3df2e88a3",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 37,
+            "selfMicros": 39284,
+            "processSelfShare": 0.0508051958801285,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::V2Gpio::read_reg::h88ce8ff915e38ed4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 29,
+            "selfMicros": 30790,
+            "processSelfShare": 0.0398200789417869,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::run_t16_fast_block::hf695bf764198340d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 27,
+            "selfMicros": 28659,
+            "processSelfShare": 0.037064100110187424,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::accessors::<impl labwired_core::Bus for labwired_core::bus::SystemBus>::read_u32::h10ceaa7191c24810",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 25,
+            "selfMicros": 26546,
+            "processSelfShare": 0.03433140031142173,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::components::declarative_logic::DeclarativeLogicDevice as labwired_core::sim_input::SimInput>::input_channels::h825421b3fdac9d0d",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 20,
+            "selfMicros": 21242,
+            "processSelfShare": 0.027471845303067143,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::is_peripheral_clocked::hd1a01c00e34da729",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 13,
+            "selfMicros": 13799,
+            "processSelfShare": 0.017845965226298065,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::refresh_bus_tick_index::h6ef86e836e048187",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 10,
+            "selfMicros": 10630,
+            "processSelfShare": 0.013747562167950462,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::find_peripheral_index::h42906654024670bd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 8,
+            "selfMicros": 8487,
+            "processSelfShare": 0.010976063981128464,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::machine::advance::<impl labwired_core::Machine<C>>::advance_inner::hb4bb246d6bfa3b66",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 7,
+            "selfMicros": 7431,
+            "processSelfShare": 0.009610360721546555,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::read_reg::h29701eae6000759a",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 7,
+            "selfMicros": 7428,
+            "processSelfShare": 0.009606480882740924,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::read_u32::hbb09a7faec294d99",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6373,
+            "processSelfShare": 0.008242070902760893,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_latch_dc::hbfd68fd98f328a22",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6368,
+            "processSelfShare": 0.008235604504751508,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::mmio_activity::<impl labwired_core::bus::SystemBus>::note_mmio_activities::h7997c01a00da4782",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6366,
+            "processSelfShare": 0.008233017945547755,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_report::hc92756cb1ec77289",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 6,
+            "selfMicros": 6365,
+            "processSelfShare": 0.00823172466594588,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::cpu::cortex_m::CortexM::read_reg::hc29215b880847591",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5306,
+            "processSelfShare": 0.00686214156755834,
+            "wasmName": null
+          },
+          {
+            "functionName": "<labwired_core::peripherals::gpio::GpioPort as labwired_core::Peripheral>::write_u32::hd1269e8403ee8372",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5305,
+            "processSelfShare": 0.006860848287956463,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::tick::<impl labwired_core::bus::SystemBus>::sync_scheduler_peripheral::hf72be508efb310e2",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 5,
+            "selfMicros": 5304,
+            "processSelfShare": 0.006859555008354586,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::routing::<impl labwired_core::bus::SystemBus>::sync_esp32c3_irq_cache_write::hfdcbd155df4755b4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4253,
+            "processSelfShare": 0.005500318146782062,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::write_reg::h81301c92af38bb39",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4243,
+            "processSelfShare": 0.005487385350763293,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::maybe_service_edge_driven_gpio_devices::h8406de1f56daa4a4",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 4,
+            "selfMicros": 4243,
+            "processSelfShare": 0.005487385350763293,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::Peripheral::bus_trace_handle::h1b76dfac43289106",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3183,
+            "processSelfShare": 0.004116508972773878,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::reconcile_level_after_read::h8a0442aee15629fd",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 3,
+            "selfMicros": 3182,
+            "processSelfShare": 0.004115215693172001,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::service_resident_scheduled_edges::h1acf3818729cec7e",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2126,
+            "processSelfShare": 0.0027495124335900926,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::Peripheral::wire_lines::h0aea87251b6084ae[1]",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2126,
+            "processSelfShare": 0.0027495124335900926,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::peripherals::gpio::GpioPort::tap_snapshot::h13947fda99e08389",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2125,
+            "processSelfShare": 0.0027482191539882155,
+            "wasmName": null
+          },
+          {
+            "functionName": "labwired_core::bus::device_hooks::<impl labwired_core::bus::SystemBus>::next_resident_edge_deadline_cycle::h197350e53eb1398b",
+            "url": "wasm://wasm/labwired_wasm.wasm-0691e576",
+            "lineNumber": 0,
+            "wasm": true,
+            "samples": 2,
+            "selfMicros": 2125,
+            "processSelfShare": 0.0027482191539882155,
+            "wasmName": null
+          }
+        ],
+        "limitations": [
+          "warm-up precedes sampling but does not prove JIT tiering has finished",
+          "profiles cover each warmed cycle window plus profiler boundary/JS validation overhead",
+          "guest compilation, initialization, warm-up, board input changes, observations and logging are outside sampling",
+          "profiled RTx includes sampling overhead; shares are attribution, not removable-cost estimates"
+        ]
+      }
+    }
+  ],
+  "completedAt": "2026-10-03T08:55:20.371Z"
+}

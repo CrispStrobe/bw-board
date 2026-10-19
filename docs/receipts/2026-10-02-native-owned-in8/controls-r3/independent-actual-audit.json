@@ -1,0 +1,8 @@
+{
+  "status": "PASS_IN8_R3_24_ACTUAL_GUARD_CONTROLS_NOT_FULL_GUEST_QUALIFICATION",
+  "checks": 524,
+  "sourceRevision": "6b975da14342bc040082142568a539605f580fd7",
+  "summarySha256": "42f01f5c3c3d221aa0eee0ab7d2628ca88c27495f6b69b41e9468abdc521b5ed",
+  "controls": 24,
+  "scope": "Actual fresh children,19 expected SIGABRT denials and5 normal denials; all9 corrupted replies follow real PIT byte50 completedN17/Q17 before noPORT/noQ fatal. No rollback/native guest or speed claim."
+}

@@ -1,0 +1,40 @@
+{
+  "status": "PASS_INDEPENDENT_ROOT_COMPACT_PROGRESS_SEMANTIC_AUDIT",
+  "runId": 37263077732,
+  "artifactId": 11325228966,
+  "artifactBytes": 18739693,
+  "artifactSha256": "368b91dbd428ca16df45f4167612aa28e66ec42bec1653ce242c4f5f8afd9ac6",
+  "sourceRevision": "95c3ae6cb0504c3e86007a28bf25ad31dbbd5d4c",
+  "sourceInputs": 308,
+  "sourceGitEqual": true,
+  "allFinalGuardsEqual": true,
+  "restoredRecordCount": 903,
+  "childExit": 0,
+  "rawCompactFields": 9,
+  "sliceBytes": 160,
+  "resetLastFinalWords": 166,
+  "nativeTicks": 316562,
+  "successfulQuanta": 316562,
+  "resumes": 16524,
+  "ports": 16475,
+  "rawFinalMatchesReference": true,
+  "fullBoardMatchesReference": true,
+  "ramSha256": "af0c07fc87959f6481ab7611967ac40a2c8d3d5fa14beac0979cc99e95913f02",
+  "orderedPioMatchesReference": true,
+  "bridgeMemoryOuterEntries": 167123,
+  "nativeAndProviderClosed": true,
+  "receiptBytes": 1938608,
+  "receiptSha256": "fbd587f5d931cb9433528033f9851defdd0b25cce551460848fd99d2f7c534a2",
+  "hostCpuModel": "AMD EPYC 9V74 80-Core Processor",
+  "hostLogicalCpus": 4,
+  "executionTimingInformationalOnly": {
+    "cpuMicroseconds": {
+      "user": 1262734,
+      "system": 15852
+    },
+    "wallNanoseconds": "1025095344",
+    "scope": "Native-only loop: actual stage/IRQ/begin/resume/end, owned PIO/device/deadline work, compact progress construction; full inspect only on actual zero-progress events, cheap budget/progress guards and counters; full inspect at IRQ staging/actual zero events, none on ordinary resumes; no JS oracle/hash/disk or snapshot serialization; terminal copying/comparisons outside timing"
+  },
+  "performanceMeasured": false,
+  "physical386Calibration": false
+}

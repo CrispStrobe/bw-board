@@ -1,0 +1,56 @@
+TAP version 13
+# ......
+# ----------------------------------------------------------------------
+# Ran 6 tests in 0.010s
+# OK
+# Subtest: count-bound complete worker inverse preserves exact held timer and while
+ok 1 - count-bound complete worker inverse preserves exact held timer and while
+  ---
+  duration_ms: 3.194662
+  type: 'test'
+  ...
+# Subtest: owned source metadata is pending; manufactured READY cannot change fixed pins
+ok 2 - owned source metadata is pending; manufactured READY cannot change fixed pins
+  ---
+  duration_ms: 4.826266
+  type: 'test'
+  ...
+# Subtest: manufactured disabled-ready ACK precedes enable and stop retains separate clocks
+ok 3 - manufactured disabled-ready ACK precedes enable and stop retains separate clocks
+  ---
+  duration_ms: 3.659446
+  type: 'test'
+  ...
+# Subtest: wrong sequence, PID, proof, nonce and extra ACK fields refuse before enable
+ok 4 - wrong sequence, PID, proof, nonce and extra ACK fields refuse before enable
+  ---
+  duration_ms: 4.134179
+  type: 'test'
+  ...
+# Subtest: actual mocked guest throw retains original Error through stop and disconnect failure
+ok 5 - actual mocked guest throw retains original Error through stop and disconnect failure
+  ---
+  duration_ms: 0.978238
+  type: 'test'
+  ...
+# Subtest: stop failure permits attainable terminal proof before observer completion refuses
+ok 6 - stop failure permits attainable terminal proof before observer completion refuses
+  ---
+  duration_ms: 0.739262
+  type: 'test'
+  ...
+# Subtest: six Python controller methods use manufactured dependencies; raw nested tape retained
+ok 7 - six Python controller methods use manufactured dependencies; raw nested tape retained
+  ---
+  duration_ms: 264.985742
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 457.714928

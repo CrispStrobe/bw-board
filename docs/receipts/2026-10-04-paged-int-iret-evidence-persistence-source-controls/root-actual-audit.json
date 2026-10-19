@@ -1,0 +1,20 @@
+{
+  "result": "ROOT_PERSISTENCE_SOURCE_CONTROLS_AND_81_IDENTITY_PASS",
+  "sourceHead": "b12e8d50bd90dcb503dd186890ed11483cc2eca3",
+  "actualPackets": {
+    "controls": {
+      "result": "SOURCE_CONTROLS_PASS",
+      "rawExitScopeWallSeconds": 6.52008780092001,
+      "sourcePaths": 81
+    },
+    "auth": {
+      "result": "READONLY_SOURCE_AUTH_PASS",
+      "rawExitScopeWallSeconds": 2.411032184958458,
+      "sourcePaths": 81,
+      "actualCanonicalIdentitySha256": "928a345174367a9878cecd8de9f76f080bcd7262b7aaecaf4c5c331c19cc23ac"
+    }
+  },
+  "manufacturedTransportControls": 6,
+  "nativeInstructionsRun": 0,
+  "ordinaryCpuUnchangedSha256": "6fba681208e1443cc9eff00ae6aba444903d23e5feafe62527b25428e72d60ed"
+}

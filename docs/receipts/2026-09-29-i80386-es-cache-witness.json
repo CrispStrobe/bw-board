@@ -1,0 +1,60 @@
+{
+  "schema": "bw.i80386-es-cache-witness.v1",
+  "revision": "39dbc822117fa3c3af5fe08901baed0081e09964",
+  "sourceHashes": {
+    "test/fixtures/i80386-es-cache-witness.S": "7ad215345509ea5944b925090b7b913bb25eae9f5f89acfb0ae6edf044b88b1e",
+    "scripts/compare-qemu-i80386-es-cache-witness.mjs": "5d32fc3de85f747fa43fc99ca0d83c3bd47c5d2005379e92aab2a625e77ea8fa",
+    "src/experimental/i80386.js": "1cbbe3921864c0e2ff71f2d99c7f2a05b840d606f4b9f7a43fe8f156704c089d"
+  },
+  "imageSha256": "8b284caad20e45f344e083ee5c5d6be12bf213edcef6225b6884a951b11bc467",
+  "reference": {
+    "name": "QEMU TCG 8.2.2, 486 CPU output witness",
+    "qemuVersion": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)",
+    "qemuSha256": "28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5",
+    "biosSha256": "4d597f68e06a0e28498e12e96e1f2ce64aee88a519685c61da92eb775c95a445",
+    "exitStatus": 3,
+    "outputHex": "93a1b24b"
+  },
+  "bochs": {
+    "name": "Bochs REL_2_7_FINAL CPU level 3 output witness",
+    "bochsRevision": "0e45b736ef9792eb9b752b0a35db49eaf2faea47",
+    "bochsSha256": "2282de6986025228b177e648f3ca41957aad4bf276438fa2501afda0af802ff9",
+    "configHeaderSha256": "793a8ce99efadd1d34defb8746d9b211535677368a6900096abd933044f3bdd2",
+    "biosSha256": "6481181809b58a9f805346a7ecf9bebdaf5b322c32825fb49ee89da51552c4ac",
+    "vgaBiosSha256": "76af53f14955df3edd6365daa64393e91fafe55241c2c00384ff05b740431da1",
+    "floppySha256": "624b11ded9aeaa72921d17aaab25ed3d6b398e0ea380fd0f8efd0f9374d7a87c",
+    "outputHex": "93a1b24b",
+    "booted": true,
+    "panic": false,
+    "stop": "process terminated immediately after owned output marker"
+  },
+  "local": {
+    "core": "ExperimentalI80386 protected16",
+    "outputHex": "93a1b24b",
+    "exitValue": 1,
+    "accessedByte": 147,
+    "modifiedBaseByte": 160,
+    "trail": [
+      31794,
+      31798,
+      31801,
+      31803,
+      31808,
+      31812,
+      31814,
+      31818,
+      31822,
+      31824,
+      31826,
+      31828,
+      31830
+    ]
+  },
+  "contract": {
+    "output": "93 = Accessed, a1 = retained ES base after GDT edit, b2 = new base after ES reload, 4b = completion",
+    "scope": "QEMU 486 and optional Bochs CPU-level-3 observe output behavior; external bus ordering is not claimed"
+  },
+  "mutation": null,
+  "status": "pass",
+  "differences": []
+}

@@ -1,0 +1,11 @@
+{
+  "status": "PASS_READ_ONLY_LOCAL_SPAN_CAPTURE_OFF_READINESS_NO_CHILD",
+  "runtime116": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+  "compiled103": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "artifactCount": 186,
+  "helperCount": 5,
+  "bindingSha256": "bf269ade7c912e8276d39b96003f3160010935f356fafbe3416f8ee5e3097106",
+  "runSha256": "d0d036fa535344af35aacf8835500feeb90f23425ffb030e213eacc8d73d321e",
+  "expectedProvenanceExactActualReadOnly": true,
+  "scope": "Extracted snapshot/authenticate only; no R.mkdir/main/bounded/native/guest execution. Native semantics remain unqualified until actual cell audit."
+}

@@ -1,0 +1,11 @@
+{
+  "status": "INDEPENDENT_READONLY_RUNTIME_IDENTITY_PASS",
+  "revision": "428839a2ed79b43056a72ba3059a699ab988d7ba",
+  "returnedRuntimeFiles": 92,
+  "auditedSourceProofFiles": 96,
+  "fullBeforeAfterEqual": true,
+  "identityMapExact": true,
+  "childExitWallSeconds": 1.1573861837387085,
+  "parentFinalAuthInclusiveWallSeconds": 2.494606737047434,
+  "scope": "One saved read-only identity query, distinct earlier6b6 ten Python mocks. No query replay/provider/addon/setup/perf/guest."
+}

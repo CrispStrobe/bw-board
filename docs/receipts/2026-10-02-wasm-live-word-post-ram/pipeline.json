@@ -1,0 +1,2353 @@
+{
+  "schema": 1,
+  "diagnosticOnly": true,
+  "hostedOnly": true,
+  "localEngineArtifactDownloads": false,
+  "startedAt": "2026-10-02T17:47:17.307Z",
+  "toolHead": "fb13d48b7bc377bceb5da5a1d4ed5cd11555e162",
+  "sources": {
+    "baseline": {
+      "run": 36915940413,
+      "commit": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+      "toolHead": "1cac10ba28ddd5e71c5a7e32437a3b0080d47f14",
+      "integrationTests": 101
+    },
+    "candidate": {
+      "run": 37042450045,
+      "commit": "ea0919b1923433f46c7d3a0399727b37ec152937",
+      "toolHead": "d1f2c8ebfc5e4e76d5fc81f930588c13de13e974",
+      "integrationTests": 108
+    }
+  },
+  "verifications": {
+    "baseline": {
+      "run": {
+        "conclusion": "failure",
+        "headSha": "1cac10ba28ddd5e71c5a7e32437a3b0080d47f14",
+        "jobs": [
+          {
+            "completedAt": "2026-10-01T19:59:29Z",
+            "conclusion": "success",
+            "databaseId": 110549802407,
+            "name": "build (b)",
+            "startedAt": "2026-10-01T19:52:59Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-01T19:53:02Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-01T19:53:00Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T19:53:05Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-01T19:53:02Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T19:53:05Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 3,
+                "startedAt": "2026-10-01T19:53:05Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T19:53:16Z",
+                "conclusion": "success",
+                "name": "Run dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c",
+                "number": 4,
+                "startedAt": "2026-10-01T19:53:05Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T19:59:23Z",
+                "conclusion": "success",
+                "name": "Build",
+                "number": 5,
+                "startedAt": "2026-10-01T19:53:16Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T19:59:23Z",
+                "conclusion": "success",
+                "name": "Report what came out",
+                "number": 6,
+                "startedAt": "2026-10-01T19:59:23Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T19:59:26Z",
+                "conclusion": "success",
+                "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+                "number": 7,
+                "startedAt": "2026-10-01T19:59:23Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T19:59:26Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 13,
+                "startedAt": "2026-10-01T19:59:26Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T19:59:26Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 14,
+                "startedAt": "2026-10-01T19:59:26Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T19:59:27Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 15,
+                "startedAt": "2026-10-01T19:59:26Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/36915940413/job/110549802407"
+          },
+          {
+            "completedAt": "2026-10-01T20:04:22Z",
+            "conclusion": "success",
+            "databaseId": 110549802690,
+            "name": "build (a)",
+            "startedAt": "2026-10-01T19:57:52Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-01T19:57:54Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-01T19:57:53Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T19:57:56Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-01T19:57:54Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T19:57:57Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 3,
+                "startedAt": "2026-10-01T19:57:56Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T19:58:07Z",
+                "conclusion": "success",
+                "name": "Run dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c",
+                "number": 4,
+                "startedAt": "2026-10-01T19:57:57Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:04:18Z",
+                "conclusion": "success",
+                "name": "Build",
+                "number": 5,
+                "startedAt": "2026-10-01T19:58:07Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:04:18Z",
+                "conclusion": "success",
+                "name": "Report what came out",
+                "number": 6,
+                "startedAt": "2026-10-01T20:04:18Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:04:20Z",
+                "conclusion": "success",
+                "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+                "number": 7,
+                "startedAt": "2026-10-01T20:04:18Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:04:20Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 13,
+                "startedAt": "2026-10-01T20:04:20Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:04:20Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 14,
+                "startedAt": "2026-10-01T20:04:20Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:04:20Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 15,
+                "startedAt": "2026-10-01T20:04:20Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/36915940413/job/110549802690"
+          },
+          {
+            "completedAt": "2026-10-01T20:16:37Z",
+            "conclusion": "failure",
+            "databaseId": 110559707169,
+            "name": "motion",
+            "startedAt": "2026-10-01T20:05:49Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-01T20:05:50Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-01T20:05:49Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:05:52Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-01T20:05:50Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:05:53Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 3,
+                "startedAt": "2026-10-01T20:05:52Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:05:54Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 4,
+                "startedAt": "2026-10-01T20:05:53Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:16:27Z",
+                "conclusion": "success",
+                "name": "Install ARM guest compiler",
+                "number": 5,
+                "startedAt": "2026-10-01T20:05:54Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:16:27Z",
+                "conclusion": "success",
+                "name": "Mark NODEJS glue and capture actual provenance",
+                "number": 6,
+                "startedAt": "2026-10-01T20:16:27Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:16:34Z",
+                "conclusion": "failure",
+                "name": "Actual sensor guest and all five unchanged 1x windows",
+                "number": 7,
+                "startedAt": "2026-10-01T20:16:27Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:16:35Z",
+                "conclusion": "success",
+                "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+                "number": 8,
+                "startedAt": "2026-10-01T20:16:34Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:16:35Z",
+                "conclusion": "skipped",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 15,
+                "startedAt": "2026-10-01T20:16:35Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:16:35Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 16,
+                "startedAt": "2026-10-01T20:16:35Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:16:35Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 17,
+                "startedAt": "2026-10-01T20:16:35Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/36915940413/job/110559707169"
+          },
+          {
+            "completedAt": "2026-10-01T20:22:17Z",
+            "conclusion": "success",
+            "databaseId": 110559707197,
+            "name": "test",
+            "startedAt": "2026-10-01T20:21:26Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-01T20:21:28Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-01T20:21:27Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:21:31Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-01T20:21:28Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:21:34Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 3,
+                "startedAt": "2026-10-01T20:21:31Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:21:36Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 4,
+                "startedAt": "2026-10-01T20:21:34Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:21:40Z",
+                "conclusion": "success",
+                "name": "Install dependencies",
+                "number": 5,
+                "startedAt": "2026-10-01T20:21:36Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:21:40Z",
+                "conclusion": "success",
+                "name": "Mark the engine glue as CommonJS",
+                "number": 6,
+                "startedAt": "2026-10-01T20:21:40Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:22:11Z",
+                "conclusion": "success",
+                "name": "ARM toolchain (the tests build a real F0 ELF and its raw image)",
+                "number": 7,
+                "startedAt": "2026-10-01T20:21:40Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:22:15Z",
+                "conclusion": "success",
+                "name": "Adapter, bridge and round trip, against the freshly built engine",
+                "number": 8,
+                "startedAt": "2026-10-01T20:22:11Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:22:15Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 15,
+                "startedAt": "2026-10-01T20:22:15Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:22:15Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 16,
+                "startedAt": "2026-10-01T20:22:15Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:22:15Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 17,
+                "startedAt": "2026-10-01T20:22:15Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/36915940413/job/110559707197"
+          },
+          {
+            "completedAt": "2026-10-01T20:28:28Z",
+            "conclusion": "success",
+            "databaseId": 110559707200,
+            "name": "determinism",
+            "startedAt": "2026-10-01T20:28:21Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-01T20:28:23Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-01T20:28:22Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:28:24Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 2,
+                "startedAt": "2026-10-01T20:28:23Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:28:26Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 3,
+                "startedAt": "2026-10-01T20:28:24Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:28:26Z",
+                "conclusion": "success",
+                "name": "Two independent builds must agree byte for byte",
+                "number": 4,
+                "startedAt": "2026-10-01T20:28:26Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-01T20:28:26Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 5,
+                "startedAt": "2026-10-01T20:28:26Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/36915940413/job/110559707200"
+          },
+          {
+            "completedAt": "2026-10-01T20:28:28Z",
+            "conclusion": "skipped",
+            "databaseId": 110569474715,
+            "name": "publish",
+            "startedAt": "2026-10-01T20:28:28Z",
+            "status": "completed",
+            "steps": [],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/36915940413/job/110569474715"
+          }
+        ],
+        "status": "completed",
+        "url": "https://github.com/CrispStrobe/bw-board/actions/runs/36915940413"
+      },
+      "buildInfo": {
+        "ref": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+        "wasmBindgen": "0.2.121",
+        "rustflags": "--remap-path-prefix=/tmp/labwired-wasm-build/src=/labwired --remap-path-prefix=/tmp/labwired-wasm-build/target=/labwired-target --remap-path-prefix=/home/runner/.cargo=/cargo",
+        "builtAt": "2026-10-01T19:57:59.544Z",
+        "targets": {
+          "nodejs": {
+            "labwired_wasm.js": {
+              "bytes": 135762,
+              "brotliBytes": 25386,
+              "sha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73"
+            },
+            "labwired_wasm_bg.wasm": {
+              "bytes": 27556189,
+              "brotliBytes": 3056678,
+              "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+            }
+          },
+          "web": {
+            "labwired_wasm.js": {
+              "bytes": 138392,
+              "brotliBytes": 25941,
+              "sha256": "4d7b80824057f8bbffa2b6953d3a15918a1d58e496cdb25fc1f26f537db5c846"
+            },
+            "labwired_wasm_bg.wasm": {
+              "bytes": 27556189,
+              "brotliBytes": 3056678,
+              "sha256": "7bd66fe4e926fbf14322621499f3fbddefefae763f61742c4c8c7312113b7a3d"
+            }
+          }
+        },
+        "rawBytes": 136668412
+      },
+      "integrationTests": 101,
+      "qualification": {
+        "samples": [
+          {
+            "index": 0,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.2992859669999999,
+            "rtx": 0.7696535061553544,
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "accelSamples": 112,
+            "magSamples": 112,
+            "scans": 2145
+          },
+          {
+            "index": 1,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.2677851150000001,
+            "rtx": 0.7887772053547102,
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "accelSamples": 212,
+            "magSamples": 212,
+            "scans": 4053
+          },
+          {
+            "index": 2,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.274304579,
+            "rtx": 0.784741745795767,
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "accelSamples": 312,
+            "magSamples": 312,
+            "scans": 5960
+          },
+          {
+            "index": 3,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.2918256780000001,
+            "rtx": 0.7740982525972052,
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "accelSamples": 412,
+            "magSamples": 412,
+            "scans": 7867
+          },
+          {
+            "index": 4,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.2896296279999997,
+            "rtx": 0.7754164283204574,
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "accelSamples": 512,
+            "magSamples": 512,
+            "scans": 9774
+          }
+        ],
+        "guestSha256": "9c6df4457cc0c9d492ce32dcee50ec6045d97bc492ca3ba87e5869a413555c4f",
+        "guestObservations": [
+          {
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "accelSamples": 112,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 0,
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "magSamples": 112,
+            "scans": 2145
+          },
+          {
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "accelSamples": 212,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 1,
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "magSamples": 212,
+            "scans": 4053
+          },
+          {
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "accelSamples": 312,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 2,
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "magSamples": 312,
+            "scans": 5960
+          },
+          {
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "accelSamples": 412,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 3,
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "magSamples": 412,
+            "scans": 7867
+          },
+          {
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "accelSamples": 512,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 4,
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "magSamples": 512,
+            "scans": 9774
+          }
+        ],
+        "allWindowsMeet1x": false,
+        "medianRtx": 0.7754164283204574,
+        "minimumRtx": 0.7696535061553544
+      },
+      "byteVerification": "independent-build CI determinism; paired runner verifies original bytes before timing"
+    },
+    "candidate": {
+      "run": {
+        "conclusion": "failure",
+        "headSha": "d1f2c8ebfc5e4e76d5fc81f930588c13de13e974",
+        "jobs": [
+          {
+            "completedAt": "2026-10-02T17:51:19Z",
+            "conclusion": "success",
+            "databaseId": 110955630595,
+            "name": "build (a)",
+            "startedAt": "2026-10-02T17:44:59Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-02T17:45:02Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-02T17:45:00Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:45:05Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-02T17:45:02Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:45:08Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 3,
+                "startedAt": "2026-10-02T17:45:05Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:45:18Z",
+                "conclusion": "success",
+                "name": "Run dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c",
+                "number": 4,
+                "startedAt": "2026-10-02T17:45:08Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:51:12Z",
+                "conclusion": "success",
+                "name": "Build",
+                "number": 5,
+                "startedAt": "2026-10-02T17:45:18Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:51:12Z",
+                "conclusion": "success",
+                "name": "Report what came out",
+                "number": 6,
+                "startedAt": "2026-10-02T17:51:12Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:51:15Z",
+                "conclusion": "success",
+                "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+                "number": 7,
+                "startedAt": "2026-10-02T17:51:12Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:51:15Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 13,
+                "startedAt": "2026-10-02T17:51:15Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:51:15Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 14,
+                "startedAt": "2026-10-02T17:51:15Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:51:15Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 15,
+                "startedAt": "2026-10-02T17:51:15Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37042450045/job/110955630595"
+          },
+          {
+            "completedAt": "2026-10-02T17:50:41Z",
+            "conclusion": "success",
+            "databaseId": 110955630890,
+            "name": "build (b)",
+            "startedAt": "2026-10-02T17:45:50Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-02T17:45:52Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-02T17:45:51Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:45:55Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-02T17:45:52Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:45:56Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 3,
+                "startedAt": "2026-10-02T17:45:55Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:46:05Z",
+                "conclusion": "success",
+                "name": "Run dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c",
+                "number": 4,
+                "startedAt": "2026-10-02T17:45:56Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:50:37Z",
+                "conclusion": "success",
+                "name": "Build",
+                "number": 5,
+                "startedAt": "2026-10-02T17:46:05Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:50:37Z",
+                "conclusion": "success",
+                "name": "Report what came out",
+                "number": 6,
+                "startedAt": "2026-10-02T17:50:37Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:50:39Z",
+                "conclusion": "success",
+                "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+                "number": 7,
+                "startedAt": "2026-10-02T17:50:37Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:50:39Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 13,
+                "startedAt": "2026-10-02T17:50:39Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:50:39Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 14,
+                "startedAt": "2026-10-02T17:50:39Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:50:39Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 15,
+                "startedAt": "2026-10-02T17:50:39Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37042450045/job/110955630890"
+          },
+          {
+            "completedAt": "2026-10-02T17:53:38Z",
+            "conclusion": "success",
+            "databaseId": 110959205628,
+            "name": "determinism",
+            "startedAt": "2026-10-02T17:53:29Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-02T17:53:30Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-02T17:53:29Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:53:33Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 2,
+                "startedAt": "2026-10-02T17:53:30Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:53:35Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 3,
+                "startedAt": "2026-10-02T17:53:33Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:53:35Z",
+                "conclusion": "success",
+                "name": "Two independent builds must agree byte for byte",
+                "number": 4,
+                "startedAt": "2026-10-02T17:53:35Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:53:35Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 5,
+                "startedAt": "2026-10-02T17:53:35Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37042450045/job/110959205628"
+          },
+          {
+            "completedAt": "2026-10-02T17:54:48Z",
+            "conclusion": "failure",
+            "databaseId": 110959205702,
+            "name": "motion",
+            "startedAt": "2026-10-02T17:54:17Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-02T17:54:19Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-02T17:54:17Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:54:22Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-02T17:54:19Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:54:24Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 3,
+                "startedAt": "2026-10-02T17:54:22Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:54:26Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 4,
+                "startedAt": "2026-10-02T17:54:24Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:54:38Z",
+                "conclusion": "success",
+                "name": "Install ARM guest compiler",
+                "number": 5,
+                "startedAt": "2026-10-02T17:54:26Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:54:38Z",
+                "conclusion": "success",
+                "name": "Mark NODEJS glue and capture actual provenance",
+                "number": 6,
+                "startedAt": "2026-10-02T17:54:38Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:54:45Z",
+                "conclusion": "failure",
+                "name": "Actual sensor guest and all five unchanged 1x windows",
+                "number": 7,
+                "startedAt": "2026-10-02T17:54:38Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:54:46Z",
+                "conclusion": "success",
+                "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+                "number": 8,
+                "startedAt": "2026-10-02T17:54:45Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:54:46Z",
+                "conclusion": "skipped",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 15,
+                "startedAt": "2026-10-02T17:54:46Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:54:46Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 16,
+                "startedAt": "2026-10-02T17:54:46Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:54:46Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 17,
+                "startedAt": "2026-10-02T17:54:46Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37042450045/job/110959205702"
+          },
+          {
+            "completedAt": "2026-10-02T17:57:21Z",
+            "conclusion": "success",
+            "databaseId": 110959205828,
+            "name": "test",
+            "startedAt": "2026-10-02T17:56:23Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-02T17:56:25Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-02T17:56:24Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:56:28Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-02T17:56:25Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:56:28Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 3,
+                "startedAt": "2026-10-02T17:56:28Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:56:29Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 4,
+                "startedAt": "2026-10-02T17:56:28Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:56:30Z",
+                "conclusion": "success",
+                "name": "Install dependencies",
+                "number": 5,
+                "startedAt": "2026-10-02T17:56:29Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:56:30Z",
+                "conclusion": "success",
+                "name": "Mark the engine glue as CommonJS",
+                "number": 6,
+                "startedAt": "2026-10-02T17:56:30Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:57:15Z",
+                "conclusion": "success",
+                "name": "ARM toolchain (the tests build a real F0 ELF and its raw image)",
+                "number": 7,
+                "startedAt": "2026-10-02T17:56:30Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:57:19Z",
+                "conclusion": "success",
+                "name": "Adapter, bridge and round trip, against the freshly built engine",
+                "number": 8,
+                "startedAt": "2026-10-02T17:57:15Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:57:19Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 15,
+                "startedAt": "2026-10-02T17:57:19Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:57:20Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 16,
+                "startedAt": "2026-10-02T17:57:19Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:57:20Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 17,
+                "startedAt": "2026-10-02T17:57:20Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37042450045/job/110959205828"
+          },
+          {
+            "completedAt": "2026-10-02T17:57:21Z",
+            "conclusion": "skipped",
+            "databaseId": 110961410648,
+            "name": "publish",
+            "startedAt": "2026-10-02T17:57:21Z",
+            "status": "completed",
+            "steps": [],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37042450045/job/110961410648"
+          }
+        ],
+        "status": "completed",
+        "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37042450045"
+      },
+      "buildInfo": {
+        "ref": "ea0919b1923433f46c7d3a0399727b37ec152937",
+        "wasmBindgen": "0.2.121",
+        "rustflags": "--remap-path-prefix=/tmp/labwired-wasm-build/src=/labwired --remap-path-prefix=/tmp/labwired-wasm-build/target=/labwired-target --remap-path-prefix=/home/runner/.cargo=/cargo",
+        "builtAt": "2026-10-02T17:49:35.450Z",
+        "targets": {
+          "nodejs": {
+            "labwired_wasm.js": {
+              "bytes": 135762,
+              "brotliBytes": 25380,
+              "sha256": "339deaca58b4c5a5319f95168b8356a9d0b495905383d1d2166e527c8f2cb3cd"
+            },
+            "labwired_wasm_bg.wasm": {
+              "bytes": 27557336,
+              "brotliBytes": 3058062,
+              "sha256": "f5231e69301de1be22426adf7ff31f4515df1698d4bbccad8c4f5628d0a66f63"
+            }
+          },
+          "web": {
+            "labwired_wasm.js": {
+              "bytes": 138392,
+              "brotliBytes": 25939,
+              "sha256": "4f400672ebc10bfeedd361676dd97fa564bce8cb686dd3a321352d356a1acc02"
+            },
+            "labwired_wasm_bg.wasm": {
+              "bytes": 27557336,
+              "brotliBytes": 3058062,
+              "sha256": "f5231e69301de1be22426adf7ff31f4515df1698d4bbccad8c4f5628d0a66f63"
+            }
+          }
+        },
+        "rawBytes": 136649339
+      },
+      "integrationTests": 108,
+      "qualification": {
+        "samples": [
+          {
+            "index": 0,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.313659391,
+            "rtx": 0.7612323307328299,
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "accelSamples": 112,
+            "magSamples": 112,
+            "scans": 2145
+          },
+          {
+            "index": 1,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.294248611,
+            "rtx": 0.7726490810968311,
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "accelSamples": 212,
+            "magSamples": 212,
+            "scans": 4053
+          },
+          {
+            "index": 2,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.3241048779999995,
+            "rtx": 0.7552271852592634,
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "accelSamples": 312,
+            "magSamples": 312,
+            "scans": 5960
+          },
+          {
+            "index": 3,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.3349623060000004,
+            "rtx": 0.7490848209762109,
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "accelSamples": 412,
+            "magSamples": 412,
+            "scans": 7867
+          },
+          {
+            "index": 4,
+            "cycles": 64000000,
+            "cpuHz": 64000000,
+            "wallSeconds": 1.317727855,
+            "rtx": 0.7588820379000033,
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "accelSamples": 512,
+            "magSamples": 512,
+            "scans": 9774
+          }
+        ],
+        "guestSha256": "81a5082d89f8d9aa3fa015c4ce02a2b113418c69fa9d9b9573dd388ea2899f7a",
+        "guestObservations": [
+          {
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "accelSamples": 112,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 0,
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "magSamples": 112,
+            "scans": 2145
+          },
+          {
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "accelSamples": 212,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 1,
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "magSamples": 212,
+            "scans": 4053
+          },
+          {
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "accelSamples": 312,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 2,
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "magSamples": 312,
+            "scans": 5960
+          },
+          {
+            "accelRaw": [
+              -4096,
+              2048,
+              -12288
+            ],
+            "accelSamples": 412,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 3,
+            "magRaw": [
+              -200,
+              0,
+              400
+            ],
+            "magSamples": 412,
+            "scans": 7867
+          },
+          {
+            "accelRaw": [
+              16384,
+              -8192,
+              4096
+            ],
+            "accelSamples": 512,
+            "cpuHz": 64000000,
+            "cycles": 64000000,
+            "index": 4,
+            "magRaw": [
+              200,
+              -100,
+              50
+            ],
+            "magSamples": 512,
+            "scans": 9774
+          }
+        ],
+        "allWindowsMeet1x": false,
+        "medianRtx": 0.7588820379000033,
+        "minimumRtx": 0.7490848209762109
+      },
+      "byteVerification": "independent-build CI determinism; paired runner verifies original bytes before timing"
+    }
+  },
+  "comparisons": [
+    {
+      "repeat": 1,
+      "nodeVersion": "20.20.2",
+      "reverse": false,
+      "run": 37044289314,
+      "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37044289314",
+      "summary": {
+        "baseline": {
+          "samples": 10,
+          "medianRtx": 0.5953887549630881,
+          "minimumRtx": 0.5481906122436593,
+          "allWindowsMeet1x": false
+        },
+        "candidate": {
+          "samples": 10,
+          "medianRtx": 0.6550274321271601,
+          "minimumRtx": 0.6452841203630478,
+          "allWindowsMeet1x": false
+        },
+        "candidateMedianRatio": 1.1001676243747154
+      },
+      "f0Summary": {
+        "ram": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 2.829984857801616,
+            "minimumRtx": 2.722515359383489,
+            "allWindowsMeet1x": true
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 2.8414640685047874,
+            "minimumRtx": 2.7650646021536702,
+            "allWindowsMeet1x": true
+          },
+          "candidateMedianRatio": 1.0040562799025323
+        },
+        "gpio": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.5613568724954917,
+            "minimumRtx": 0.5549739542592899,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.6073898701422451,
+            "minimumRtx": 0.5892090351795205,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 1.082003089126023
+        }
+      },
+      "runReceipt": {
+        "conclusion": "success",
+        "headSha": "fb13d48b7bc377bceb5da5a1d4ed5cd11555e162",
+        "jobs": [
+          {
+            "completedAt": "2026-10-02T18:01:06Z",
+            "conclusion": "success",
+            "databaseId": 110961751813,
+            "name": "Same-runner A/B/B/A diagnostic (not qualification)",
+            "startedAt": "2026-10-02T17:59:20Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-02T17:59:21Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-02T17:59:20Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:59:24Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-02T17:59:21Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:59:28Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 3,
+                "startedAt": "2026-10-02T17:59:24Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:59:29Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 4,
+                "startedAt": "2026-10-02T17:59:28Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:59:30Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 5,
+                "startedAt": "2026-10-02T17:59:29Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:59:30Z",
+                "conclusion": "success",
+                "name": "Verify declared sources and actual artifact hashes",
+                "number": 6,
+                "startedAt": "2026-10-02T17:59:30Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:59:44Z",
+                "conclusion": "success",
+                "name": "Install unchanged guest compiler",
+                "number": 7,
+                "startedAt": "2026-10-02T17:59:30Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T17:59:44Z",
+                "conclusion": "success",
+                "name": "Preserve source and runner provenance",
+                "number": 8,
+                "startedAt": "2026-10-02T17:59:44Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:00:19Z",
+                "conclusion": "success",
+                "name": "Complete diagnostic without relabelling failed qualification windows",
+                "number": 9,
+                "startedAt": "2026-10-02T17:59:44Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:00:19Z",
+                "conclusion": "skipped",
+                "name": "Test sampling and tier-trace parsing",
+                "number": 10,
+                "startedAt": "2026-10-02T18:00:19Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:01:03Z",
+                "conclusion": "success",
+                "name": "Verify and compare active F0 workloads without weakening their floor",
+                "number": 11,
+                "startedAt": "2026-10-02T18:00:19Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:01:03Z",
+                "conclusion": "skipped",
+                "name": "Collect independent sampling and forced-tier evidence",
+                "number": 12,
+                "startedAt": "2026-10-02T18:01:03Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:01:04Z",
+                "conclusion": "success",
+                "name": "Retain raw results even if the diagnostic itself fails",
+                "number": 13,
+                "startedAt": "2026-10-02T18:01:03Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:01:04Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 25,
+                "startedAt": "2026-10-02T18:01:04Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:01:04Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 26,
+                "startedAt": "2026-10-02T18:01:04Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:01:04Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 27,
+                "startedAt": "2026-10-02T18:01:04Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37044289314/job/110961751813"
+          }
+        ],
+        "status": "completed",
+        "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37044289314"
+      },
+      "artifact": {
+        "id": 11243003581,
+        "node_id": "MDg6QXJ0aWZhY3QxMTI0MzAwMzU4MQ==",
+        "name": "motion-artifact-ab-diagnostic",
+        "size_in_bytes": 30660,
+        "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11243003581",
+        "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11243003581/zip",
+        "expired": false,
+        "digest": "sha256:61f4e0021c5003c4d46e1b85b82b94ce97fa2066625bf8f8f1566bbee7b0514f",
+        "created_at": "2026-10-02T18:01:04Z",
+        "updated_at": "2026-10-02T18:01:04Z",
+        "expires_at": "2026-10-09T18:01:03Z",
+        "workflow_run": {
+          "id": 37044289314,
+          "repository_id": 1327885818,
+          "head_repository_id": 1327885818,
+          "head_branch": "perf/register-inline-node-control-20261002",
+          "head_sha": "fb13d48b7bc377bceb5da5a1d4ed5cd11555e162"
+        }
+      }
+    },
+    {
+      "repeat": 2,
+      "nodeVersion": "20.20.2",
+      "reverse": true,
+      "run": 37044647612,
+      "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37044647612",
+      "summary": {
+        "baseline": {
+          "samples": 10,
+          "medianRtx": 0.8636575660869554,
+          "minimumRtx": 0.8376175769237241,
+          "allWindowsMeet1x": false
+        },
+        "candidate": {
+          "samples": 10,
+          "medianRtx": 0.8450940527011558,
+          "minimumRtx": 0.7589871781821692,
+          "allWindowsMeet1x": false
+        },
+        "candidateMedianRatio": 0.9785059332370504
+      },
+      "f0Summary": {
+        "ram": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 3.8454170716844134,
+            "minimumRtx": 3.65359933845592,
+            "allWindowsMeet1x": true
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 3.810556240508304,
+            "minimumRtx": 3.772580075398256,
+            "allWindowsMeet1x": true
+          },
+          "candidateMedianRatio": 0.9909344472845857
+        },
+        "gpio": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.7205375968911484,
+            "minimumRtx": 0.7177140358382479,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.7580831893552071,
+            "minimumRtx": 0.7540588397149747,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 1.0521077493055935
+        }
+      },
+      "runReceipt": {
+        "conclusion": "success",
+        "headSha": "fb13d48b7bc377bceb5da5a1d4ed5cd11555e162",
+        "jobs": [
+          {
+            "completedAt": "2026-10-02T18:03:36Z",
+            "conclusion": "success",
+            "databaseId": 110962934723,
+            "name": "Same-runner A/B/B/A diagnostic (not qualification)",
+            "startedAt": "2026-10-02T18:01:59Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-02T18:02:01Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-02T18:02:00Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:02:06Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-02T18:02:01Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:02:10Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 3,
+                "startedAt": "2026-10-02T18:02:06Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:02:12Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 4,
+                "startedAt": "2026-10-02T18:02:10Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:02:14Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 5,
+                "startedAt": "2026-10-02T18:02:12Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:02:14Z",
+                "conclusion": "success",
+                "name": "Verify declared sources and actual artifact hashes",
+                "number": 6,
+                "startedAt": "2026-10-02T18:02:14Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:02:32Z",
+                "conclusion": "success",
+                "name": "Install unchanged guest compiler",
+                "number": 7,
+                "startedAt": "2026-10-02T18:02:14Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:02:32Z",
+                "conclusion": "success",
+                "name": "Preserve source and runner provenance",
+                "number": 8,
+                "startedAt": "2026-10-02T18:02:32Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:02:58Z",
+                "conclusion": "success",
+                "name": "Complete diagnostic without relabelling failed qualification windows",
+                "number": 9,
+                "startedAt": "2026-10-02T18:02:32Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:02:58Z",
+                "conclusion": "skipped",
+                "name": "Test sampling and tier-trace parsing",
+                "number": 10,
+                "startedAt": "2026-10-02T18:02:58Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:03:32Z",
+                "conclusion": "success",
+                "name": "Verify and compare active F0 workloads without weakening their floor",
+                "number": 11,
+                "startedAt": "2026-10-02T18:02:58Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:03:32Z",
+                "conclusion": "skipped",
+                "name": "Collect independent sampling and forced-tier evidence",
+                "number": 12,
+                "startedAt": "2026-10-02T18:03:32Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:03:34Z",
+                "conclusion": "success",
+                "name": "Retain raw results even if the diagnostic itself fails",
+                "number": 13,
+                "startedAt": "2026-10-02T18:03:32Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:03:34Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 25,
+                "startedAt": "2026-10-02T18:03:34Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:03:34Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 26,
+                "startedAt": "2026-10-02T18:03:34Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:03:34Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 27,
+                "startedAt": "2026-10-02T18:03:34Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37044647612/job/110962934723"
+          }
+        ],
+        "status": "completed",
+        "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37044647612"
+      },
+      "artifact": {
+        "id": 11243068987,
+        "node_id": "MDg6QXJ0aWZhY3QxMTI0MzA2ODk4Nw==",
+        "name": "motion-artifact-ab-diagnostic",
+        "size_in_bytes": 30687,
+        "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11243068987",
+        "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11243068987/zip",
+        "expired": false,
+        "digest": "sha256:ccd8226ba10328c2dadd623929c7387c20f0b75bd396b616ca604752610c9b65",
+        "created_at": "2026-10-02T18:03:34Z",
+        "updated_at": "2026-10-02T18:03:34Z",
+        "expires_at": "2026-10-09T18:03:33Z",
+        "workflow_run": {
+          "id": 37044647612,
+          "repository_id": 1327885818,
+          "head_repository_id": 1327885818,
+          "head_branch": "perf/register-inline-node-control-20261002",
+          "head_sha": "fb13d48b7bc377bceb5da5a1d4ed5cd11555e162"
+        }
+      }
+    },
+    {
+      "repeat": 3,
+      "nodeVersion": "22.23.3",
+      "reverse": false,
+      "run": 37045021314,
+      "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37045021314",
+      "summary": {
+        "baseline": {
+          "samples": 10,
+          "medianRtx": 1.5618238661937702,
+          "minimumRtx": 1.4086337809850817,
+          "allWindowsMeet1x": true
+        },
+        "candidate": {
+          "samples": 10,
+          "medianRtx": 1.608082808525189,
+          "minimumRtx": 1.4899863100951822,
+          "allWindowsMeet1x": true
+        },
+        "candidateMedianRatio": 1.0296185397935773
+      },
+      "f0Summary": {
+        "ram": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 5.244253696585595,
+            "minimumRtx": 5.134191358366305,
+            "allWindowsMeet1x": true
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 4.827674363273032,
+            "minimumRtx": 4.320929839212843,
+            "allWindowsMeet1x": true
+          },
+          "candidateMedianRatio": 0.9205646108265534
+        },
+        "gpio": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 1.292341052022563,
+            "minimumRtx": 1.1582043216874696,
+            "allWindowsMeet1x": true
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 1.3294252822588746,
+            "minimumRtx": 1.2475798992865927,
+            "allWindowsMeet1x": true
+          },
+          "candidateMedianRatio": 1.0286953897953433
+        }
+      },
+      "runReceipt": {
+        "conclusion": "success",
+        "headSha": "fb13d48b7bc377bceb5da5a1d4ed5cd11555e162",
+        "jobs": [
+          {
+            "completedAt": "2026-10-02T18:06:39Z",
+            "conclusion": "success",
+            "databaseId": 110964197875,
+            "name": "Same-runner A/B/B/A diagnostic (not qualification)",
+            "startedAt": "2026-10-02T18:04:56Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-02T18:04:59Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-02T18:04:56Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:05:03Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-02T18:04:59Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:05:05Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 3,
+                "startedAt": "2026-10-02T18:05:03Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:05:06Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 4,
+                "startedAt": "2026-10-02T18:05:05Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:05:07Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 5,
+                "startedAt": "2026-10-02T18:05:06Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:05:08Z",
+                "conclusion": "success",
+                "name": "Verify declared sources and actual artifact hashes",
+                "number": 6,
+                "startedAt": "2026-10-02T18:05:07Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:05:59Z",
+                "conclusion": "success",
+                "name": "Install unchanged guest compiler",
+                "number": 7,
+                "startedAt": "2026-10-02T18:05:08Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:05:59Z",
+                "conclusion": "success",
+                "name": "Preserve source and runner provenance",
+                "number": 8,
+                "startedAt": "2026-10-02T18:05:59Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:06:14Z",
+                "conclusion": "success",
+                "name": "Complete diagnostic without relabelling failed qualification windows",
+                "number": 9,
+                "startedAt": "2026-10-02T18:05:59Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:06:14Z",
+                "conclusion": "skipped",
+                "name": "Test sampling and tier-trace parsing",
+                "number": 10,
+                "startedAt": "2026-10-02T18:06:14Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:06:35Z",
+                "conclusion": "success",
+                "name": "Verify and compare active F0 workloads without weakening their floor",
+                "number": 11,
+                "startedAt": "2026-10-02T18:06:14Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:06:35Z",
+                "conclusion": "skipped",
+                "name": "Collect independent sampling and forced-tier evidence",
+                "number": 12,
+                "startedAt": "2026-10-02T18:06:35Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:06:36Z",
+                "conclusion": "success",
+                "name": "Retain raw results even if the diagnostic itself fails",
+                "number": 13,
+                "startedAt": "2026-10-02T18:06:35Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:06:37Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 25,
+                "startedAt": "2026-10-02T18:06:36Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:06:37Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 26,
+                "startedAt": "2026-10-02T18:06:37Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:06:37Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 27,
+                "startedAt": "2026-10-02T18:06:37Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37045021314/job/110964197875"
+          }
+        ],
+        "status": "completed",
+        "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37045021314"
+      },
+      "artifact": {
+        "id": 11243988200,
+        "node_id": "MDg6QXJ0aWZhY3QxMTI0Mzk4ODIwMA==",
+        "name": "motion-artifact-ab-diagnostic",
+        "size_in_bytes": 28762,
+        "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11243988200",
+        "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11243988200/zip",
+        "expired": false,
+        "digest": "sha256:078a5cd451024c76d5259e0aed95b0b1835c213e804174a36ea03e27072311f9",
+        "created_at": "2026-10-02T18:06:36Z",
+        "updated_at": "2026-10-02T18:06:36Z",
+        "expires_at": "2026-10-09T18:06:36Z",
+        "workflow_run": {
+          "id": 37045021314,
+          "repository_id": 1327885818,
+          "head_repository_id": 1327885818,
+          "head_branch": "perf/register-inline-node-control-20261002",
+          "head_sha": "fb13d48b7bc377bceb5da5a1d4ed5cd11555e162"
+        }
+      }
+    },
+    {
+      "repeat": 4,
+      "nodeVersion": "22.23.3",
+      "reverse": true,
+      "run": 37045248021,
+      "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37045248021",
+      "summary": {
+        "baseline": {
+          "samples": 10,
+          "medianRtx": 0.7769541227301398,
+          "minimumRtx": 0.756411127407972,
+          "allWindowsMeet1x": false
+        },
+        "candidate": {
+          "samples": 10,
+          "medianRtx": 0.7678542140907311,
+          "minimumRtx": 0.5093966702373811,
+          "allWindowsMeet1x": false
+        },
+        "candidateMedianRatio": 0.9882877143280577
+      },
+      "f0Summary": {
+        "ram": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 3.0686359176872804,
+            "minimumRtx": 2.996215100187635,
+            "allWindowsMeet1x": true
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 3.0624020421294005,
+            "minimumRtx": 2.9248485294799016,
+            "allWindowsMeet1x": true
+          },
+          "candidateMedianRatio": 0.9979685190015706
+        },
+        "gpio": {
+          "baseline": {
+            "samples": 10,
+            "medianRtx": 0.6111271354432724,
+            "minimumRtx": 0.6005870082164302,
+            "allWindowsMeet1x": false
+          },
+          "candidate": {
+            "samples": 10,
+            "medianRtx": 0.6572774481899313,
+            "minimumRtx": 0.6053083394950338,
+            "allWindowsMeet1x": false
+          },
+          "candidateMedianRatio": 1.0755167134137882
+        }
+      },
+      "runReceipt": {
+        "conclusion": "success",
+        "headSha": "fb13d48b7bc377bceb5da5a1d4ed5cd11555e162",
+        "jobs": [
+          {
+            "completedAt": "2026-10-02T18:08:27Z",
+            "conclusion": "success",
+            "databaseId": 110964956536,
+            "name": "Same-runner A/B/B/A diagnostic (not qualification)",
+            "startedAt": "2026-10-02T18:06:55Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-02T18:06:57Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-02T18:06:55Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:06:59Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 2,
+                "startedAt": "2026-10-02T18:06:57Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:07:00Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 3,
+                "startedAt": "2026-10-02T18:06:59Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:07:01Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 4,
+                "startedAt": "2026-10-02T18:07:00Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:07:02Z",
+                "conclusion": "success",
+                "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+                "number": 5,
+                "startedAt": "2026-10-02T18:07:01Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:07:02Z",
+                "conclusion": "success",
+                "name": "Verify declared sources and actual artifact hashes",
+                "number": 6,
+                "startedAt": "2026-10-02T18:07:02Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:07:14Z",
+                "conclusion": "success",
+                "name": "Install unchanged guest compiler",
+                "number": 7,
+                "startedAt": "2026-10-02T18:07:02Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:07:14Z",
+                "conclusion": "success",
+                "name": "Preserve source and runner provenance",
+                "number": 8,
+                "startedAt": "2026-10-02T18:07:14Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:07:43Z",
+                "conclusion": "success",
+                "name": "Complete diagnostic without relabelling failed qualification windows",
+                "number": 9,
+                "startedAt": "2026-10-02T18:07:14Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:07:43Z",
+                "conclusion": "skipped",
+                "name": "Test sampling and tier-trace parsing",
+                "number": 10,
+                "startedAt": "2026-10-02T18:07:43Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:08:24Z",
+                "conclusion": "success",
+                "name": "Verify and compare active F0 workloads without weakening their floor",
+                "number": 11,
+                "startedAt": "2026-10-02T18:07:43Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:08:24Z",
+                "conclusion": "skipped",
+                "name": "Collect independent sampling and forced-tier evidence",
+                "number": 12,
+                "startedAt": "2026-10-02T18:08:24Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:08:25Z",
+                "conclusion": "success",
+                "name": "Retain raw results even if the diagnostic itself fails",
+                "number": 13,
+                "startedAt": "2026-10-02T18:08:24Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:08:25Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+                "number": 25,
+                "startedAt": "2026-10-02T18:08:25Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:08:25Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+                "number": 26,
+                "startedAt": "2026-10-02T18:08:25Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-02T18:08:25Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 27,
+                "startedAt": "2026-10-02T18:08:25Z",
+                "status": "completed"
+              }
+            ],
+            "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37045248021/job/110964956536"
+          }
+        ],
+        "status": "completed",
+        "url": "https://github.com/CrispStrobe/bw-board/actions/runs/37045248021"
+      },
+      "artifact": {
+        "id": 11244300121,
+        "node_id": "MDg6QXJ0aWZhY3QxMTI0NDMwMDEyMQ==",
+        "name": "motion-artifact-ab-diagnostic",
+        "size_in_bytes": 30701,
+        "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11244300121",
+        "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11244300121/zip",
+        "expired": false,
+        "digest": "sha256:5c834a2f263fe1d7b29f205ef866efe07a66336b78f4d921a867f484a982d34f",
+        "created_at": "2026-10-02T18:08:25Z",
+        "updated_at": "2026-10-02T18:08:25Z",
+        "expires_at": "2026-10-09T18:08:24Z",
+        "workflow_run": {
+          "id": 37045248021,
+          "repository_id": 1327885818,
+          "head_repository_id": 1327885818,
+          "head_branch": "perf/register-inline-node-control-20261002",
+          "head_sha": "fb13d48b7bc377bceb5da5a1d4ed5cd11555e162"
+        }
+      }
+    }
+  ],
+  "automaticMerge": false,
+  "publication": false,
+  "appPinChanges": false,
+  "nativeCorrectness": {
+    "conclusion": "success",
+    "headSha": "ea0919b1923433f46c7d3a0399727b37ec152937",
+    "jobs": [
+      {
+        "completedAt": "2026-10-02T17:41:18Z",
+        "conclusion": "success",
+        "databaseId": 110948028989,
+        "name": "correctness",
+        "startedAt": "2026-10-02T17:34:39Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-10-02T17:34:40Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-10-02T17:34:39Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-02T17:34:44Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 2,
+            "startedAt": "2026-10-02T17:34:40Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-02T17:34:55Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@1.95.0",
+            "number": 3,
+            "startedAt": "2026-10-02T17:34:44Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-02T17:41:15Z",
+            "conclusion": "success",
+            "name": "Test live address bounds, dynamic admission and existing T16 differential invariants",
+            "number": 4,
+            "startedAt": "2026-10-02T17:34:55Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-02T17:41:15Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+            "number": 8,
+            "startedAt": "2026-10-02T17:41:15Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-02T17:41:15Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 9,
+            "startedAt": "2026-10-02T17:41:15Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37040163648/job/110948028989"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/CrispStrobe/labwired-core/actions/runs/37040163648"
+  },
+  "completedAt": "2026-10-02T18:09:08.705Z"
+}

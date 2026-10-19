@@ -1,0 +1,6 @@
+{
+  "status": "AUDIT_HELPER_PATH_ERROR_NO_GUEST",
+  "exitCode": 1,
+  "error": "Unused invocation.json load referenced absent per-child file; real bounds/commands retained in child.exit.json",
+  "scope": "Tool output retained in session; no actualguest retry or result change."
+}

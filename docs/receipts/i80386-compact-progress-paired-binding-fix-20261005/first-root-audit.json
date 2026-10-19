@@ -1,0 +1,17 @@
+{
+  "status": "FIRST_FAILURE_EXTENT_AUTHENTICATED",
+  "runId": 37265269904,
+  "artifactId": 11326327099,
+  "head": "6928a5d8a5ec0b076492ea1b49e3de82906ffb4b",
+  "zipBytes": 37068489,
+  "zipSha256": "32379ea76e219c04272b950a99843193fd7560aa2b0ae001b9db3a8a74cba198",
+  "members": 61,
+  "decodedBytes": 41747524,
+  "sourceGitChecks": 374,
+  "sourceCountScope": "17 actual parent record plus357 inherited role paths; source-controls tooling had18 including workflow",
+  "originalError": "KeyError('targetQ')",
+  "setupStatus": "SETUP_STATIC_AUTHENTICATION_PASS_NO_ARMS_EXECUTED",
+  "guestReceipts": 0,
+  "pairs": 0,
+  "scope": "Source/setup restoration completed; missing timing-binding targetQ blocked parent before first guest. No timing/RTx result."
+}

@@ -1,0 +1,31 @@
+TAP version 13
+# test_actual_main_missing_worker_and_no_out_retains_parent_evidence (test_export.ExportControls.test_actual_main_missing_worker_and_no_out_retains_parent_evidence) ... {"status": "READABLE_EVIDENCE_COPY_COMPLETE_NOT_OBSERVATION_SUCCESS", "originalExportError": null, "manifestError": null, "destinationError": null, "copiedFiles": 1, "bytes": 45}
+# ok
+# test_actual_main_partial_manifest_and_cleanup_before_copy (test_export.ExportControls.test_actual_main_partial_manifest_and_cleanup_before_copy) ... {"status": "FAIL", "originalExportError": "ValueError('regular single-link evidence only: out/z-bad')", "manifestError": null, "destinationError": null, "copiedFiles": 1, "bytes": 8}
+# ok
+# test_cleanup_gate_requires_reaped_absent_groups_and_no_active_users (test_export.ExportControls.test_cleanup_gate_requires_reaped_absent_groups_and_no_active_users) ... ok
+# test_exact_socket_exception_and_directory_nofollow (test_export.ExportControls.test_exact_socket_exception_and_directory_nofollow) ... ok
+# test_primary_error_log_survives_unreadable_observer_stream (test_export.ExportControls.test_primary_error_log_survives_unreadable_observer_stream) ... ok
+# test_regular_copy_preserves_original_and_partial_refusal (test_export.ExportControls.test_regular_copy_preserves_original_and_partial_refusal) ... ok
+# test_special_hardlink_bounds_and_changed_source_refused (test_export.ExportControls.test_special_hardlink_bounds_and_changed_source_refused) ... ok
+# test_root_failure_keeps_original_and_watchdog_cleanup (test_hosted.Controls.test_root_failure_keeps_original_and_watchdog_cleanup) ... {"scope": "Original root recorder exception, no inferred guest extent", "primary": "RuntimeError('manufactured recorder failure')"}
+# {"scope": "Original root recorder exception, no inferred guest extent", "primary": "RuntimeError('manufactured recorder failure')"}
+# ok
+# ----------------------------------------------------------------------
+# Ran 8 tests in 0.132s
+# OK
+# Subtest: seven evidence-export filesystem and failure controls plus owned root cleanup mock
+ok 1 - seven evidence-export filesystem and failure controls plus owned root cleanup mock
+  ---
+  duration_ms: 1092.357501
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1738.017098

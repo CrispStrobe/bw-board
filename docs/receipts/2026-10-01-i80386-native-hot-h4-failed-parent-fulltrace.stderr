@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/fulltrace.py", line 11, in <module>
+    os.environ['BW_HOT_NAPI_PROFILE']='0';os.chdir(W);ex=bounded.run_child('/tmp/node-v22.23.3-linux-x64/bin/node',W/'scripts/run-i80386-native-hot-packed-scalar.mjs',ip,stem);assert ex['status']=='CHILD_EXIT_PASS_NOT_QUALIFICATION',ex
+                                                         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/bw-board-386-native-hot-packed-scalar-20261001/scripts/run-i80386-native-hot-regular-file.py", line 10, in run_child
+    if pathlib.Path(str(stem)+suffix).exists():raise FileExistsError(str(stem)+suffix)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileExistsError: /mnt/volume1/tmp-astra/native-hot-h4-runtime-controls-20261001/fulltrace.stdout

@@ -1,0 +1,224 @@
+/**
+ * Device model registry — the extension point for part kinds beyond the
+ * built-in electrical set (logic gates, shift registers, relays, motors,
+ * servos, timer ICs, …).
+ *
+ * A device model is registered once per kind and contributes three things:
+ *
+ *  1. `terminals` (required) — names, consumed by netlist validation.
+ *  2. Analog presence — optional `stamp(ctx, part, state)`, called on every
+ *     Newton–Raphson iteration to add input impedance or other passive
+ *     loading, plus GENERIC stamping of `state.drives`: any terminal the
+ *     device currently drives is stamped as a Thévenin source, exactly like
+ *     an MCU pin. A device that drives nothing and loads nothing is invisible
+ *     to the network — often right for a purely mechanical state.
+ *  3. Digital/behavioral step — optional `update(part, state, read, tNs)`,
+ *     called by the board AFTER each solve with `read(terminal) → volts`.
+ *     The model inspects its inputs, mutates its own `state` (including
+ *     `state.drives`), and returns `true` if anything changed that requires
+ *     re-solving the network. The board iterates solve → update to a
+ *     fixpoint (bounded), which lets gate chains settle within one event.
+ *
+ * The honesty rule applies here as everywhere: a model that cannot represent
+ * something reports it (a refusal string, a warning) — it never invents a
+ * plausible number.
+ *
+ * @module
+ */
+
+/**
+ * @typedef {object} DeviceModel
+ * @property {string[]} terminals - terminal names, for validation
+ * @property {string[]} [requiredParams] - params validation should insist on
+ * @property {Set<string>} [automaticSupplyFallbackTerminals]
+ *   Static positive-supply terminals whose model drive is only an automatic
+ *   fallback and may yield to an explicit ideal `vcc` rail. Omitted by
+ *   default: physical sources, ground, and GPIO must retain their currents.
+ * @property {(part: import('./types.js').Part) => object} [init]
+ * @property {(part: import('./types.js').Part, state: object) => void} [reset]
+ *   Return the model's time-integrated state to its t = 0 values when the board
+ *   clock resets (BoardImpl.reset()). A model without the hook keeps its state.
+ *   Create per-part persistent state. Default: `{ drives: {} }`.
+ *   `state.drives` maps terminal → {vTh, rTh} | null (null = high-Z).
+ * @property {boolean} [transientUpdateContext]
+ *   Opt in to `read.transient` on update callbacks: true only for an
+ *   accepted adaptive transient substep, false for ordinary endpoint or
+ *   instantaneous updates. Non-opt-in models retain the original read shape
+ *   and all models retain the four-argument update callback. Stamping must
+ *   not mutate live device state to discover which solve route is observing it.
+ * @property {(ctx: DeviceStampCtx, part: import('./types.js').Part, state: object) => void} [stamp]
+ *   Add passive/analog loading each NR iteration (input impedance etc.).
+ * @property {(part: import('./types.js').Part, state: object,
+ *             read: (terminal: string) => number, tSeconds: number) => void} [validateSolution]
+ *   Optional pure admission check of the final converged physical solution,
+ *   after Newton/continuation/refinement and before results are published.
+ *   Never called on trial linearization points or nonconverged results.
+ *   Throw a named refusal when unsupported; the original error propagates.
+ *   Must not mutate device state or retain trial state.
+ * @property {(part: import('./types.js').Part, state: object,
+ *             read: (terminal: string) => number, tNs: bigint) => boolean} [update]
+ *   Behavioral step; return true if the network must be re-solved.
+ * @property {(part: import('./types.js').Part, state: object,
+ *             read: (terminal: string) => number) => Map<string, number>} [branchCurrents] Terminal amperes OUT of the part into its net, matching solveMNA and Board.branchCurrent.
+ *   Optional terminal currents for the instruments.
+ * Scheduled events: `update()` may set `state._wakeNs` (BigInt, absolute
+ * sim time) and the board sub-steps advanceTo TO that instant exactly —
+ * the canonical deadline field (spec-updates/scheduled-device-events.md);
+ * clear it (null) when consumed. Legacy per-device deadline fields keep
+ * working.
+ * @property {(part: import('./types.js').Part, state: object,
+ *             verb: string, value: *) => boolean} [control]
+ *   High-level user/program intent — the write counterpart of
+ *   getDeviceState (boundary B setDeviceControl,
+ *   spec-updates/set-device-control.md). Return true if the verb was
+ *   handled (the board re-solves and notifies); anything else means "not
+ *   a verb this device understands" and the board records a visible
+ *   refusal warning rather than dropping it silently.
+ */
+
+/**
+ * @typedef {object} DeviceStampCtx
+ * @property {(terminal: string) => string | undefined} netFor
+ * @property {DeviceTopology} topology
+ *   Lazy immutable inspection of this solve's canonical, ground-merged nets.
+ *   No snapshot/index work occurs until this property is accessed. Snapshots
+ *   contain copied scalar electrical fields, never caller-owned objects.
+ *   Inspection refuses duplicate part or canonical net IDs: a last-ID view
+ *   cannot certify a matrix assembled from multiple conflicting elements.
+ * @property {(tA: string, tB: string | null, g: number) => void} conductance
+ *   Conductance between two terminals' nets (tB null = to reference).
+ * @property {(terminal: string, vTh: number, rTh: number) => void} thevenin
+ *   Norton-stamp a Thévenin source driving this terminal.
+ * @property {(terminal: string, amps: number) => void} current
+ *   Inject a current into this terminal's net.
+ * @property {(key: string, evaluate: (read: (terminal: string) => number,
+ *   sourceScale: number) => {region: string, currents: Map<string, number>,
+ *   jacobian: Map<string, Map<string, number>>, residualOhms: number}) => void} nonlinearCurrents
+ *   Stamp simultaneous nonlinear terminal currents, positive OUT into the net.
+ *   Each current row needs a Jacobian row (an empty Map for a constant current).
+ *   Keys and regions are nonempty strings; keys are unique within this stamp
+ *   and the part's authority key set must remain constant within a solve.
+ *   All referenced terminals must be declared and connected. Values must be
+ *   finite, and residualOhms must be positive: current residuals times this
+ *   resistance are checked against the existing Newton voltage tolerance.
+ *   This resistance must remain constant during checks of a stamped candidate.
+ *   evaluate is a pure callback: it must not mutate device state, retain trial
+ *   operating points, or change its terminal-current dimensions. It can be
+ *   called repeatedly for Newton candidates and refinement. It owns coherent
+ *   sourceScale homotopy (1 is the physical law); the solver does not scale its
+ *   returned currents again. Its solve-local companions participate in
+ *   convergence and protect their currents from branchCurrents overrides.
+ * @property {number} vcc
+ * @property {number} tSeconds
+ * @property {number} [dtSec] - present during transient sub-steps
+ * @property {number | undefined} control - this part's control value
+ */
+
+/**
+ * @typedef {object} DeviceTopology
+ * @property {string | null} referenceNet
+ * @property {boolean} powerOff
+ * @property {boolean} dcSources
+ * @property {(netId: string) => object | undefined} net
+ *   Cached frozen {id, terminals, extraSources}, undefined for unknown nets.
+ *   Merged ground aliases return the canonical snapshot. Each terminal is
+ *   {partId, kind, terminal, connections, electrical}; connections is a frozen
+ *   plain terminal-to-net object. electrical contains only copied ohms,
+ *   farads, wave, authoredVolts, effectiveVolts, controlPresent, rInternal,
+ *   iLimit, ccClampPresent and a frozen parameterKeys array. Absent fields are
+ *   undefined; malformed nonscalar values are null. effectiveVolts uses the
+ *   solver's actual control/clamp precedence for absent/exact 'dc' wave only;
+ *   waveforms remain visible but unevaluated. Values are unscaled physical
+ *   source values, not continuation rungs. Unknown kinds remain visible.
+ *   extraSources lists actual additional matrix sources at this net:
+ *   {kind:'pin'|'qualified',partId,terminal,vTh,rTh} or {kind:'test',amps}.
+ *   Pin entries preserve MCU declared-terminal multiplicity; qualified entries
+ *   follow their source Map once, regardless of repeated net memberships.
+ */
+
+/** @type {Map<string, DeviceModel>} */
+const REGISTRY = new Map();
+
+/**
+ * Register a device model for a part kind. Re-registering a kind replaces the
+ * model (useful in tests); registering over a BUILT-IN kind is refused — the
+ * built-ins are the shared contract, not a default.
+ *
+ * @param {string} kind
+ * @param {DeviceModel} model
+ */
+export function registerDevice(kind, model) {
+  if (BUILTIN_KINDS.has(kind)) {
+    throw new Error(`Cannot register device over built-in kind "${kind}"`);
+  }
+  if (!model || !Array.isArray(model.terminals) || model.terminals.length === 0) {
+    throw new Error(`Device model for "${kind}" must declare its terminals`);
+  }
+  REGISTRY.set(kind, model);
+}
+
+/**
+ * Whether a device model is registered for this kind. The circuit UI asks
+ * this before deciding whether a board-level kind (arduino_uno, attiny85,
+ * ...) keeps its identity in the engine netlist or collapses to the
+ * generic 'mcu' surface — a registered model is strictly more truthful
+ * (power rails source, gpioFollowsPinStates, readPin works).
+ * @param {string} kind
+ * @returns {boolean}
+ */
+export function hasDevice(kind) {
+  return REGISTRY.has(kind);
+}
+
+/** @param {string} kind @returns {DeviceModel | undefined} */
+export function getDevice(kind) {
+  return REGISTRY.get(kind);
+}
+
+/** @returns {string[]} */
+export function registeredKinds() {
+  return [...REGISTRY.keys()];
+}
+
+/** @param {string} kind */
+export function unregisterDevice(kind) {
+  REGISTRY.delete(kind);
+}
+
+/**
+ * Clock reset for one part's state: the model's `reset` hook, if it has one.
+ * @returns {boolean} whether the model reset anything
+ */
+export function resetDeviceState(part, state) {
+  const model = REGISTRY.get(part.kind);
+  if (!model || !model.reset || !state) return false;
+  model.reset(part, state);
+  return true;
+}
+
+/** Create a part's initial state via the model (or the default shape). */
+export function initDeviceState(part) {
+  const model = REGISTRY.get(part.kind);
+  if (!model) return null;
+  const state = model.init ? model.init(part) : {};
+  if (!state.drives) state.drives = {};
+  return state;
+}
+
+/**
+ * Part kinds owned by the core engine. The registry may not shadow them.
+ * (Kept here, not imported from board.js, to avoid a dependency cycle.)
+ */
+const BUILTIN_KINDS = new Set([
+  'vcc', 'gnd', 'resistor', 'capacitor', 'inductor', 'transformer', 'diode', 'led', 'zener',
+  'potentiometer', 'button', 'switch', 'buzzer', 'ldr', 'ntc',
+  'npn', 'pnp', 'nmos', 'pmos', 'opamp', 'vsource', 'isource', 'mcu',
+  'seven_segment', 'rgb_led', 'led_matrix', 'led_cube',
+  // char_lcd moved OUT of the built-ins 2026-08-14: it was a
+  // validation-only entry with no board behavior, while the registry
+  // has the real HD44780 silicon — registerHD44780() provides the
+  // kind under the designer catalog's terminal names.
+  'shift_register', 'ir_receiver', 'temp_sensor', 'eeprom',
+]);
+
+export { BUILTIN_KINDS };

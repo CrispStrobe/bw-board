@@ -1,0 +1,78 @@
+{
+  "schema": "bw.property-key.real-napi.build-proposal.v1",
+  "status": "PENDING_ROOT_SOURCE_REVIEW_NO_INVOCATION",
+  "scope": "One small test-only key helper addon; no CPU/core/provider/guest/benchmark",
+  "sourcePreparationPrerequisite": "Separately reviewed fixed SOURCE_PREPARATION contract status; no READY addon authority inferred",
+  "materializeCommand": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "scripts/property-key-real-napi-qualification/prepare.mjs"
+  ],
+  "compileCommand": [
+    "/usr/bin/x86_64-linux-gnu-g++-13",
+    "-std=c++17",
+    "-O0",
+    "-fPIC",
+    "-fvisibility=hidden",
+    "-shared",
+    "-pthread",
+    "-DNODE_GYP_MODULE_NAME=key_fixture",
+    "-DNAPI_VERSION=9",
+    "-Iinclude/node",
+    "fixture.cc",
+    "-o",
+    "key_fixture.node"
+  ],
+  "compileCwd": "scripts/property-key-real-napi-qualification/owned-build",
+  "staticInspectionCommands": [
+    [
+      "/usr/bin/x86_64-linux-gnu-nm",
+      "-D",
+      "--defined-only",
+      "key_fixture.node"
+    ],
+    [
+      "/usr/bin/x86_64-linux-gnu-readelf",
+      "-h",
+      "-d",
+      "-s",
+      "key_fixture.node"
+    ]
+  ],
+  "toolFiles": {
+    "/tmp/node-v22.23.3-linux-x64/bin/node": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+    "/usr/bin/python3.12": "e1efa562c2cc2e35521a5c9c9b9939921001ff8ca9708a13ef15ace68cc2ccd7",
+    "/usr/bin/git": "2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668",
+    "/usr/bin/x86_64-linux-gnu-g++-13": "1353e9bdd29a7295c7226bf6c63abccce056d8cac31f112e5cdbecc3f28c2769",
+    "/usr/libexec/gcc/x86_64-linux-gnu/13/cc1plus": "840b332fb62ec6f694ac77d91fe69ef7f80b0d69512ed89374af0ee7a506255d",
+    "/usr/libexec/gcc/x86_64-linux-gnu/13/collect2": "4d1f341ae5b763b513258ee2812422a45e063c30a2f1924a0cf63d3699f3a158",
+    "/usr/bin/x86_64-linux-gnu-as": "21aff249b692b5c31a44007491f922dcb49f41323e362c57d2ada3f52eddb7f0",
+    "/usr/bin/x86_64-linux-gnu-ld.bfd": "e9ceb054c12207970f2726dfc07e9a66b411602748628baf27399f02a9bbb31b",
+    "/usr/bin/x86_64-linux-gnu-nm": "3708df3d7ce16e2c1dcdcd722784ae382d4d582276a71ab7bbe2d542f5621202",
+    "/usr/bin/x86_64-linux-gnu-readelf": "64c58e15274bbbb5153f31078e455e9e77ee5f51489e709bba5bb788ce9df2b0"
+  },
+  "bounds": {
+    "cpuSeconds": 10,
+    "wallSeconds": 30,
+    "fileBytes": 16777216,
+    "coreBytes": 0,
+    "niceIncrement": 10,
+    "NodeHeapMiB": 128,
+    "compilerMemoryLimit": "No separate address-space cap; system headers/libraries are host toolchain inputs"
+  },
+  "environment": "Literal PATH/usr/bin:/bin; LC_ALL C; hook6 blank; compiler overrides absent; isolated HOME/TMPDIR; credentials absent",
+  "lifecycle": "One root-reviewed external group-owning parent; absolute wall deadline, wait4 raw status/rusage, unconditional groupkill/reap5, separate primary/cleanup/final errors and source/header/tool/input/output hashes beforeafter",
+  "actualOutputRequirements": [
+    "Exact generated helper and fixed fixture SHA",
+    "Addon byte length/SHA retained only after actual build",
+    "Raw compiler exit/streams and static nm/readelf exit/streams",
+    "NAPI module entrypoints reviewed; no unexpected CPU/core/bw exports; do not guess actual symbol list",
+    "No addon load in build phase"
+  ],
+  "hostToolchainScope": "Compiler/cc1plus/collect2/as/ld images pinned; system C++ headers, startup objects and libraries remain named host-toolchain inputs, not complete Bochs source closure",
+  "runProposalAfterSeparateAuthority": [
+    "Pinned Node22.23.3 --max-old-space-size=128 --expose-gc scripts/property-key-real-napi-qualification/qualify.mjs under separately reviewed addon/helper/buildreceipt SHA+READY source",
+    "Worker execArgv empty and owned resourceLimits; raw errors+cleanup+env outcomes retained",
+    "Actual helper plus fixture glue qualification only; not held invoke/fail, no GC leak accounting/performance"
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "schema": "bw.i80386-win16-hot-site-audit.v1",
+  "baseCommit": "c88b609bc719670ed775fb3652389baf04cff7f9",
+  "observedSourceCommit": "cc8c2080aa2293c60e6732807a1439e712c86192",
+  "scope": "Read-only audit of the strongest retained protected-16 >=8-step Windows backward-Jcc site; no guest executor change",
+  "sourceSha256": {
+    "src/experimental/i80386.js": "26d812a31ac63020d3f5ed899b441ae474c74c7f72c8a3ed4fadfe382d99ad19",
+    "src/experimental/i80386-at-machine.js": "0c15e925ec521be49ae82ecaeead74af3f2700eabc5f4c240a544b7fe554433c",
+    "src/i8086-machine.js": "90f6ad69ae6a23b4412e2632232461be0c4505a05d4e272650790cf941d45731",
+    "src/ns16c550.js": "34633ec3bec4d0826998fadde5e11bf88f20dfd32fc5a09144c6bad64461f41b",
+    "src/experimental/i80386-hot-loop-locator.js": "5bdf2dfdd99b91e032f7bcde6d72f58e1faa81eb61811098f4bb3329aa59f7ca",
+    "src/experimental/i80386-code16-wasm-block.js": "d34e118b23f42ab24822bf9559bab11d723cb3ce65ad27246312589e511dc758",
+    "scripts/run-i80386-at-console.mjs": "3923895ca14256d838bd65331126b1df06ed37d6bfed2797a32ec68f657957bb"
+  },
+  "privateEvidenceSha256": {
+    "locatorRawReport": "b2bd10a937747123e07a2ba0bc0c464e34135f25bca12ce80443c353d33ddef5",
+    "targetedObserverSource": "747c3be4e08528621e4819e24ed36798b327922141aca06dfd94c1109906283b",
+    "sourceBoundBodyTrace": "9d886f46947de27105b8fed94e0f9d02ce94c40ac269e3aabc4b1fdfb8a7f03d",
+    "privateAuditNote": "88e6f6b628ceea12707a02a2ce433ee2897658d4fe0d8301f8de64cddc4b6d96"
+  },
+  "observation": {
+    "locatorBudgetSteps": 60000000,
+    "protected16CompletedSteps": 10036060,
+    "retainedSiteTraversals": 6580,
+    "retainedSiteSteps": 52640,
+    "targetedReplayStoppedAtStep": 29349402,
+    "targetedTraversals": 3,
+    "targetedTraversalLengths": [8, 8, 8],
+    "forms": [
+      "short JMP with zero displacement",
+      "short JMP with zero displacement",
+      "short JMP with zero displacement",
+      "IN AL,DX from UART line-status register",
+      "TEST AL,imm8",
+      "forward JNE",
+      "ES-override byte CMP against fixed displacement",
+      "backward JE"
+    ],
+    "memoryAccess": "One ES byte read from plain low RAM under paging per captured traversal; no guest memory write",
+    "decision": "No-go for current code16 WASM block grammar because the UART read has I/O privilege, chip-timing, IRQ and device-state effects"
+  },
+  "limits": "Candidate count is a lower bound after locator evictions. Three matching captured traversals do not prove future body stability or alternate-branch safety. Mode-wide traversal steps overlap nested loops and are not disjoint executable coverage. No timing A/B or speed claim."
+}

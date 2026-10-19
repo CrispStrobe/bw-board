@@ -1,0 +1,23 @@
+{
+  "schema": "bw.bochs-cpu3-native-device-events-result.v1",
+  "status": "native-device-events-self-parity",
+  "sourceRevision": "5501fa3e0f7572c4747aa7ce093136ecccdcbb61",
+  "nativeTicks": 92,
+  "successfulQuanta": 92,
+  "boardCycles": 21044,
+  "idleBoardCycles": 20492,
+  "picVector": 32,
+  "slices": {
+    "continuous": 20,
+    "budget1": 95,
+    "budget2": 50,
+    "budget257": 20
+  },
+  "limitations": [
+    "one free strict-386 CPU3 PIT0/single-PIC fixture",
+    "fresh host model ownership begins after BIOS at 7e00",
+    "six board clocks per ordinary successful quantum are functional, not physical timings",
+    "no REP, fault, dual PIC, APIC, DMA, full AT, WASM, or speed qualification"
+  ],
+  "transportGuards": 7
+}

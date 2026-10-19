@@ -1,0 +1,34 @@
+{
+  "status": "ROOT_ACTUAL_HOSTED_SPAN_OFFICIAL_ZIP_STREAM_AND_RECORDED_CLOSURE_PASS",
+  "head": "80d228ee5452f380655a16c4bc823beb76e781c1",
+  "runId": 37056398077,
+  "artifactId": 11248833105,
+  "zipSha256": "7cae79af646feba252df601a811098a92614cc334a8a29b0d90d5d51d552f41e",
+  "zipBytes": 44331598,
+  "zipEntriesIndependentlyStreamedAndExtractedHashed": 149,
+  "totalExtractedBytes": 350488886,
+  "sourceRevision": "bbf2a73e3d9090e73fe7037f4b8dbd4f6248aaa1",
+  "compiledRevision": "fe1eff2039520536350922a2164c8bbe29404c68",
+  "artifactBindings": 212,
+  "cells": [
+    {
+      "mode": "smoke-off",
+      "captureSha256": "683e2936d6d602173a4eac8623a9119f121f80e980f3d2b5b620d9cdf5f71561",
+      "canonicalRows": 0,
+      "journalRows": 0
+    },
+    {
+      "mode": "fulltrace-on",
+      "captureSha256": "2705456dda873e6c245e734f7d2e2747ca5b60bea676ad19316a9940e20bc6ca",
+      "canonicalRows": 1649271,
+      "journalRows": 209871
+    },
+    {
+      "mode": "trace-fast",
+      "captureSha256": "8148fb8e23a0be57ea221f5da4fa2233bd65e108e32e8150f380a974d3e03274",
+      "canonicalRows": 1649271,
+      "journalRows": 0
+    }
+  ],
+  "scope": "Officialmetadata exactevent/head/attempt and everyZIPentry+extractedfile byte verified, recorded cellboundaries andfullprovenance checked. Independentcanonical/fullstate audit separate; no guest/performance/adoption."
+}

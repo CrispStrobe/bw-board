@@ -1,0 +1,25 @@
+{
+  "status": "INDEPENDENT_ACTUAL_OWNED_WORKER_HISTORICAL_REPLAY_RECEIPT_AND_SOURCE_AUDIT_PASS",
+  "checks": 420697,
+  "auditScriptSha256": "abb69887ff7572d6b99a1cbd4845e97e0eaad8fff6db0283d563c146c4e5d24b",
+  "sourceRevision": "a46083c0e7792aa4e9ee1923bcaf6a2eb5870e0d",
+  "sourceClosureCount": 51,
+  "resumes": 439,
+  "logicalRows": 209839,
+  "independentNativeTicks": 100684,
+  "independentSuccessfulQuanta": 100682,
+  "orderedReplayClockGroups": 8738,
+  "checkpoints": [
+    "hot_profile_start",
+    "hot_register_loop",
+    "hot_register_end",
+    "hot_memory_loop",
+    "hot_memory_end",
+    "terminal_hlt"
+  ],
+  "stdoutSha256": "6e3ca34a556644f48dd726f24892ff357e491e84cce4e002292d8659838544d5",
+  "journalSha256": "bf1224a77fed44aaabe0e2e00cb2319e25084aca71601d215930f3362722f3f1",
+  "ramSha256": "7aecf019a32f109760267d6ac1c60ef3d8793661910226cca3bcf5661189c38d",
+  "referenceTraceBytes": 149865650,
+  "scope": "Read-only artifact/source/calculation audit of ONE prior root real-board replay; no replay repeat, native addon/CPU/guest/build/benchmark. Source-owned real host effects, not legal native span/crossing/CPU/performance evidence."
+}

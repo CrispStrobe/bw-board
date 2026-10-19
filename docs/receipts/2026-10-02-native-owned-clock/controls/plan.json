@@ -1,0 +1,66 @@
+{
+  "status": "PREPARED_NOT_EXECUTED_REQUIRES_ROOT_GRANT",
+  "revision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "children": 33,
+  "controls": [
+    "positive-n1",
+    "positive-n2",
+    "positive-q1",
+    "positive-q2",
+    "positive-deadline0",
+    "positive-bounded",
+    "invalid-n0",
+    "invalid-n601",
+    "invalid-q0",
+    "invalid-q301",
+    "invalid-deadline",
+    "reentry",
+    "thread-owner",
+    "second-worker",
+    "same-worker-reinit",
+    "phase-entry-as-postpio",
+    "field-n",
+    "field-q",
+    "field-cycles",
+    "field-debt",
+    "field-deadline",
+    "field-epoch",
+    "field-a20",
+    "tuple-number",
+    "tuple-array",
+    "tuple-float",
+    "tuple-short",
+    "tuple-long",
+    "tuple-offset",
+    "tuple-backing",
+    "tuple-shared",
+    "tuple-detached",
+    "tuple-throw"
+  ],
+  "resourceLimits": {
+    "node": "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "heapMiB": 512,
+    "seconds": 120,
+    "fileMiB": 256,
+    "core": 0,
+    "regularFiles": true
+  },
+  "positiveScope": "bounded CPU cuts and deadline0; this does not replace full canonical/BF12 proof",
+  "negativeScope": "external unsupported callback wrappers; actual private provider applies correct tape before tuple mutations; rejection is native acceptance denial, not device rollback",
+  "beforeEffectDenials": [
+    "invalid caps/deadline before ENTRY query",
+    "wrong-thread and second-worker before callback",
+    "wrong ENTRY provider query phase before clocks"
+  ],
+  "afterEffectDenials": [
+    "all field/tuple mutations occur after actual private provider clock effects; no following external observer may occur"
+  ],
+  "fatalExpected": {
+    "fields": "BWSD1 FAIL owned-state-reply except debt/deadline owned-clock-reply",
+    "tuples": "BWSD1 FAIL owned-transfer-callback",
+    "phase": "BWSD1 FAIL owned-transfer-callback"
+  },
+  "sourceBinding": "actual sourceIdentity86 + manifest/build receipt actual headers/runtime/NAPI/config/DSO before/after",
+  "stopOnFailure": true,
+  "noOverlap": "No formal capture or CPU benchmark during controls"
+}

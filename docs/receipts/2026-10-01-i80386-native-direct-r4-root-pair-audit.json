@@ -1,0 +1,107 @@
+{
+  "status": "ROOT_INDEPENDENT_ACTUAL_RAW_CPU_COUNTERS_BUS_A20_AND_WHOLE_RAM_AUDIT_PASS",
+  "sourceRevision": "9a38479c24ac3200405f18913124d691b6c959d9",
+  "assertions": 20256,
+  "modes": {
+    "continuous": {
+      "byteBusRecords": 952,
+      "fullCpuRecords": 2192,
+      "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39",
+      "callbacks": {
+        "page": 8,
+        "quantum": 192,
+        "nativeTick": 194,
+        "write": 104,
+        "read": 139,
+        "outPort": 25,
+        "ack": 1
+      },
+      "native": {
+        "attempts": "192",
+        "completed": "189",
+        "repIterations": "5",
+        "repPartial": "1",
+        "faults": "2",
+        "portCommits": "25",
+        "irqDeliveries": "1",
+        "haltIdleCuts": "2"
+      }
+    },
+    "budget1": {
+      "byteBusRecords": 952,
+      "fullCpuRecords": 2192,
+      "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39",
+      "callbacks": {
+        "page": 8,
+        "quantum": 192,
+        "nativeTick": 194,
+        "write": 104,
+        "read": 139,
+        "outPort": 25,
+        "ack": 1
+      },
+      "native": {
+        "attempts": "194",
+        "completed": "189",
+        "repIterations": "5",
+        "repPartial": "3",
+        "faults": "2",
+        "portCommits": "25",
+        "irqDeliveries": "1",
+        "haltIdleCuts": "1"
+      }
+    },
+    "budget2": {
+      "byteBusRecords": 952,
+      "fullCpuRecords": 2192,
+      "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39",
+      "callbacks": {
+        "page": 8,
+        "quantum": 192,
+        "nativeTick": 194,
+        "write": 104,
+        "read": 139,
+        "outPort": 25,
+        "ack": 1
+      },
+      "native": {
+        "attempts": "192",
+        "completed": "189",
+        "repIterations": "5",
+        "repPartial": "1",
+        "faults": "2",
+        "portCommits": "25",
+        "irqDeliveries": "1",
+        "haltIdleCuts": "2"
+      }
+    },
+    "budget257": {
+      "byteBusRecords": 952,
+      "fullCpuRecords": 2192,
+      "memorySha256": "d57dc6ebcb6cb67cc8cbcc362ef7a866a0118f553d43a7069b651d32dac38f39",
+      "callbacks": {
+        "page": 8,
+        "quantum": 192,
+        "nativeTick": 194,
+        "write": 104,
+        "read": 139,
+        "outPort": 25,
+        "ack": 1
+      },
+      "native": {
+        "attempts": "192",
+        "completed": "189",
+        "repIterations": "5",
+        "repPartial": "1",
+        "faults": "2",
+        "portCommits": "25",
+        "irqDeliveries": "1",
+        "haltIdleCuts": "2"
+      }
+    }
+  },
+  "controls": 8,
+  "sourceUnchanged": true,
+  "newRtxMeasured": false,
+  "productionBackend": false
+}

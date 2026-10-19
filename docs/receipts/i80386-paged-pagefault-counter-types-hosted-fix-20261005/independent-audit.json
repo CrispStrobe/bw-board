@@ -1,0 +1,27 @@
+{
+  "status": "INDEPENDENT_PF_HOSTED_COUNTER_BINDING_TWO_AFFECTED_CONTROLS_PASS_NO_GUEST",
+  "head": "3d5929fe79487d9ff9551a846ba35374737f261c",
+  "ownSources": 13,
+  "compiledSources": 243,
+  "driverSources": 107,
+  "beforeAfterEqual": true,
+  "pythonMethods": 2,
+  "exit": {
+    "childStarted": true,
+    "exitCode": 0,
+    "finalizationErrors": [],
+    "leaderReaped": true,
+    "pid": 3925119,
+    "primaryError": null,
+    "rawWaitStatus": 0,
+    "rusage": {
+      "maxRSSKiB": 29184,
+      "scope": "wait4 leader plus descendants reaped by it; not every orphan process",
+      "systemSeconds": 0.046526,
+      "userSeconds": 0.48308799999999996
+    },
+    "timeout": false,
+    "wallSeconds": 5.93792512267828
+  },
+  "scope": "Exact held inverse and fixed new driver107/ref/reset-fixture admission; normal unittest stderr, no Node invocation/Python heap cap, no setup/restore/addon/CPU or guest."
+}

@@ -1,0 +1,242 @@
+{
+  "pending-controls-parent.py": {
+    "path": "/tmp/native-paged-int-iret-driver-source-controls-20261004/parent.py",
+    "bytes": 16133,
+    "sha256": "3836a2e9f41f46a36d409a0a58e9b5cf546808258b87d8a616bf30d31b19f485"
+  },
+  "pending-controls-paths.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-controls-20261004/paths.json",
+    "bytes": 3567,
+    "sha256": "18262ed46f24e40c3e52ba54b13f1d511c60ed5ff116cf00d265dfb62bd8d402"
+  },
+  "pending-controls-before.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-controls-20261004/before.json",
+    "bytes": 19549,
+    "sha256": "a3ef24aef2d8aae02fd42930ff663c77945e5c876cbeaaa2c99fcf72b880a9aa"
+  },
+  "pending-controls-after.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-controls-20261004/after.json",
+    "bytes": 19549,
+    "sha256": "a3ef24aef2d8aae02fd42930ff663c77945e5c876cbeaaa2c99fcf72b880a9aa"
+  },
+  "pending-controls-invocation.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-controls-20261004/invocation.json",
+    "bytes": 1026,
+    "sha256": "86a32cfdc9f4abe4dcd57d0f4ed265852dc68acdb0e5e62360a1f9ccc8d1b685"
+  },
+  "pending-controls-stdout": {
+    "path": "/tmp/native-paged-int-iret-driver-source-controls-20261004/stdout",
+    "bytes": 2164,
+    "sha256": "d65b2616884d5c8f0aefc9f04489418ed8329388b8483aaf782614e96e3a3c27"
+  },
+  "pending-controls-stderr": {
+    "path": "/tmp/native-paged-int-iret-driver-source-controls-20261004/stderr",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pending-controls-exit.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-controls-20261004/exit.json",
+    "bytes": 413,
+    "sha256": "3bead3977bc2a15559729d0c5b4c13cb2f6e84ae3da83b89160e3e649b17dc58"
+  },
+  "pending-controls-result.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-controls-20261004/result.json",
+    "bytes": 273,
+    "sha256": "93093abb70c70cf2f5570574ad14e23558a1115eb0d00150582c308a69c7625f"
+  },
+  "pending-controls-independent-audit.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-controls-20261004/independent-audit.json",
+    "bytes": 469,
+    "sha256": "6dc2a405614b424255ce098789e263b8dc2c5f3e5ba68789c63848a2faf0556b"
+  },
+  "pending-controls-coder-audit.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-controls-20261004/coder-audit.json",
+    "bytes": 1318,
+    "sha256": "cf77c73af9b5e3eeb219e9486e9ce35b5b7fe169a79000e6a68ad16b00f9c0c4"
+  },
+  "pending-auth-parent.py": {
+    "path": "/tmp/native-paged-int-iret-driver-source-auth-20261004/parent.py",
+    "bytes": 18091,
+    "sha256": "aabbb3a6fdb369fede0fa6d822081be04d01b429880b7f8d107af1a8ed9a5ce6"
+  },
+  "pending-auth-paths.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-auth-20261004/paths.json",
+    "bytes": 3567,
+    "sha256": "18262ed46f24e40c3e52ba54b13f1d511c60ed5ff116cf00d265dfb62bd8d402"
+  },
+  "pending-auth-before.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-auth-20261004/before.json",
+    "bytes": 20234,
+    "sha256": "e622df9be85c77c2e45cafcf7f7e4ea938a1f706a4bdbc67a08f7af6a1b95ff8"
+  },
+  "pending-auth-after.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-auth-20261004/after.json",
+    "bytes": 20234,
+    "sha256": "e622df9be85c77c2e45cafcf7f7e4ea938a1f706a4bdbc67a08f7af6a1b95ff8"
+  },
+  "pending-auth-invocation.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-auth-20261004/invocation.json",
+    "bytes": 1155,
+    "sha256": "9fab34fa10424ed80391ae64aa71d3285d8dc9b52941ff5da5f4dfeff8f55792"
+  },
+  "pending-auth-stdout": {
+    "path": "/tmp/native-paged-int-iret-driver-source-auth-20261004/stdout",
+    "bytes": 8751,
+    "sha256": "c4a4b77859d1a7bd31e75c496a76c25582fceac313b2a3f6b5ddc245735fe062"
+  },
+  "pending-auth-stderr": {
+    "path": "/tmp/native-paged-int-iret-driver-source-auth-20261004/stderr",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pending-auth-exit.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-auth-20261004/exit.json",
+    "bytes": 414,
+    "sha256": "011c7f61df77d38652796773e4a1c965a8074fe437f2837596b4896b35e74d78"
+  },
+  "pending-auth-result.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-auth-20261004/result.json",
+    "bytes": 286,
+    "sha256": "b9f0c8bdc738ab72ff162307b102aa0c74b4573956c7e2c74ef415eafd0992c3"
+  },
+  "pending-auth-independent-audit.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-auth-20261004/independent-audit.json",
+    "bytes": 495,
+    "sha256": "d3d85b32341b5babd6c29e8f65d65b9ab8a1aa861b8cce136720473e2967084d"
+  },
+  "pending-auth-source-identity.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-auth-20261004/source-identity.json",
+    "bytes": 9243,
+    "sha256": "ad3857c36da1cddafc251fb94f4bdf71f426fb43b4a264c17ab84ba8c521ad00"
+  },
+  "pending-auth-source-identity-pin.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-auth-20261004/source-identity-pin.json",
+    "bytes": 181,
+    "sha256": "d35687cfd3a243204919c6809dc1602010483d299dcbcddb74fde2c48dec7ee2"
+  },
+  "ready-controls-parent.py": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-controls-20261004/parent.py",
+    "bytes": 16238,
+    "sha256": "1890aae2b5a7f4a67343f8a5d102c5c0d59c4ad3b8df836a2e7549a4f1a6145b"
+  },
+  "ready-controls-paths.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-controls-20261004/paths.json",
+    "bytes": 3567,
+    "sha256": "18262ed46f24e40c3e52ba54b13f1d511c60ed5ff116cf00d265dfb62bd8d402"
+  },
+  "ready-controls-before.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-controls-20261004/before.json",
+    "bytes": 19549,
+    "sha256": "cc2e153540de38178b97b09d7b7ad634c7574836fe0b1a3a1a18d5e0e212df27"
+  },
+  "ready-controls-after.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-controls-20261004/after.json",
+    "bytes": 19549,
+    "sha256": "cc2e153540de38178b97b09d7b7ad634c7574836fe0b1a3a1a18d5e0e212df27"
+  },
+  "ready-controls-invocation.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-controls-20261004/invocation.json",
+    "bytes": 1120,
+    "sha256": "39ae8137aac69a6a133c658068fb4f6c8fb5ab819d05fa64404c19961da5069e"
+  },
+  "ready-controls-stdout": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-controls-20261004/stdout",
+    "bytes": 11095,
+    "sha256": "ca65a69968769ceb1acd418907a297a02bf252d3e9af89c47ea8b1d3506da3e0"
+  },
+  "ready-controls-stderr": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-controls-20261004/stderr",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "ready-controls-exit.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-controls-20261004/exit.json",
+    "bytes": 402,
+    "sha256": "d3623feee468278bf0f57fc49f9ca630c5f5ac088fe3b6e5195fc05c5c07b635"
+  },
+  "ready-controls-result.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-controls-20261004/result.json",
+    "bytes": 280,
+    "sha256": "525d005574fee32ab56dcd3cd328477e23d2be8018db8e00fe89db4b1c933e5b"
+  },
+  "ready-controls-independent-audit.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-controls-20261004/independent-audit.json",
+    "bytes": 466,
+    "sha256": "797dfc2633e0811702bb1d6fa6c9b3cc6ee7eaf797cf90f2d769b39807dce509"
+  },
+  "ready-controls-coder-audit.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-controls-20261004/coder-audit.json",
+    "bytes": 12663,
+    "sha256": "8d7fa14e5123755ea1cf71ec161f9e635f33ff49fa1189b3420f3f680e7028db"
+  },
+  "ready-auth-parent.py": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-auth-20261004/parent.py",
+    "bytes": 18195,
+    "sha256": "9cb5d760cf0d14c90449c6efb4fed0daf2cb7a9ec7c10b60c9df3a8e0bc25bec"
+  },
+  "ready-auth-paths.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-auth-20261004/paths.json",
+    "bytes": 3567,
+    "sha256": "18262ed46f24e40c3e52ba54b13f1d511c60ed5ff116cf00d265dfb62bd8d402"
+  },
+  "ready-auth-before.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-auth-20261004/before.json",
+    "bytes": 20234,
+    "sha256": "fb4e010cc18433cd1d03d7ca7cc51f26e2b00ad8f19d52120fac7ed27e7f0b2b"
+  },
+  "ready-auth-after.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-auth-20261004/after.json",
+    "bytes": 20234,
+    "sha256": "fb4e010cc18433cd1d03d7ca7cc51f26e2b00ad8f19d52120fac7ed27e7f0b2b"
+  },
+  "ready-auth-invocation.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-auth-20261004/invocation.json",
+    "bytes": 1161,
+    "sha256": "6cc71ad51caf3b783fec1d9b6ca535d6a0ea414ae2f8ba6c611649e67a3ef87b"
+  },
+  "ready-auth-stdout": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-auth-20261004/stdout",
+    "bytes": 8751,
+    "sha256": "4cdb82f0779d72b47402ccda4a4b776a19d39a00b6c281e852dba43cf9c21191"
+  },
+  "ready-auth-stderr": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-auth-20261004/stderr",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "ready-auth-exit.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-auth-20261004/exit.json",
+    "bytes": 415,
+    "sha256": "bbe17ccfae5558969bb98ad71089f7c83c2f211c26347051bdb52c972b3d4002"
+  },
+  "ready-auth-result.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-auth-20261004/result.json",
+    "bytes": 286,
+    "sha256": "b9f0c8bdc738ab72ff162307b102aa0c74b4573956c7e2c74ef415eafd0992c3"
+  },
+  "ready-auth-independent-audit.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-auth-20261004/independent-audit.json",
+    "bytes": 494,
+    "sha256": "74312e1f5d996e6606fdd32daea508c91ef347453801869ef38b09af01b46478"
+  },
+  "ready-auth-source-identity.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-auth-20261004/source-identity.json",
+    "bytes": 9243,
+    "sha256": "cacb04fc8ec7ae4711fed8be0f8ba832a8b2d784880822c28c2965b33ff3b71e"
+  },
+  "ready-auth-source-identity-pin.json": {
+    "path": "/tmp/native-paged-int-iret-ready-driver-source-auth-20261004/source-identity-pin.json",
+    "bytes": 181,
+    "sha256": "816febca4bc1991565128672f2a36925f0e56d6de8cdd2c68aca4db96a5aa962"
+  },
+  "root-pending-audit.json": {
+    "path": "/tmp/native-paged-int-iret-driver-source-root-audit-20261004.json",
+    "bytes": 2078,
+    "sha256": "60a287232366025493d957f51f81286ddf95fd8260ccc583a78dbaafc808b7c4"
+  },
+  "root-ready-audit.json": {
+    "path": "/tmp/native-ready-driver-source-root-audit-20261004.json",
+    "bytes": 1516,
+    "sha256": "757e8886303ec072f4b666c38687724a092ca83494f91ba2718f2b3e86141448"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "qualificationStatus": "QUALIFIED",
+  "claim": "native-actual-board-bounded-combined-paging-ram-rep-pf-pit-only",
+  "budgetProof": {
+    "logicalRecords": 6192,
+    "rawPreserved": true,
+    "scopedRepResumeDecodes": 2,
+    "fullRawInstructionFetchParity": false,
+    "nativeBudgetByteBusOrderParity": true
+  },
+  "arms": {
+    "continuous": {
+      "successfulQuanta": 192,
+      "nativeTicks": 194,
+      "boardClocks": 1156
+    },
+    "budget1": {
+      "successfulQuanta": 192,
+      "nativeTicks": 194,
+      "boardClocks": 1156
+    },
+    "budget2": {
+      "successfulQuanta": 192,
+      "nativeTicks": 194,
+      "boardClocks": 1156
+    },
+    "budget257": {
+      "successfulQuanta": 192,
+      "nativeTicks": 194,
+      "boardClocks": 1156
+    }
+  },
+  "fullResetParity": false,
+  "fullByteBusOrderParity": false,
+  "nativeBudgetByteBusOrderParity": true
+}

@@ -1,0 +1,165 @@
+{
+  "status": "PASS_INDEPENDENT_ACTUAL_18_DISPATCH_GATE_AUDIT_GATE_FAIL_KEEP_FE1",
+  "checks": 3914,
+  "samplesUs": {
+    "BASE": [
+      163701,
+      157539,
+      161480,
+      156715,
+      152524,
+      152765,
+      154625
+    ],
+    "DISPATCH": [
+      151196,
+      149251,
+      169815,
+      151345,
+      152567,
+      154095,
+      152174
+    ]
+  },
+  "meansUs": {
+    "BASE": 157049.85714285713,
+    "DISPATCH": 154349.0
+  },
+  "meanReductionPercent": 1.7197450491154287,
+  "favorablePairs": [
+    true,
+    true,
+    false,
+    true,
+    false,
+    false,
+    true
+  ],
+  "favorableCount": 4,
+  "gatePassed": false,
+  "tarAuthenticatedMissingUploadFiles": [
+    {
+      "originalPath": "/home/runner/work/_temp/owned-dispatch-gate/restored/prepared/bochs/.bochsrc",
+      "sha256": "bffe51636b87faf5055ee1101f06afeb2c1eb03db08af35ab4bdd37fe8e4dbe1",
+      "retainedMembers": [
+        [
+          "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/download/owned-in8-evidence/prepared-source.tar.gz",
+          "bochs/.bochsrc"
+        ]
+      ]
+    },
+    {
+      "originalPath": "/home/runner/work/_temp/owned-dispatch-gate/restored/prepared/bochs/.conf.everything",
+      "sha256": "5d495f68a04e719fdd3e5ce10da48248631786b45122a433e6321141e074b9d8",
+      "retainedMembers": [
+        [
+          "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/download/owned-in8-evidence/prepared-source.tar.gz",
+          "bochs/.conf.everything"
+        ]
+      ]
+    },
+    {
+      "originalPath": "/home/runner/work/_temp/owned-dispatch-gate/restored/prepared/bochs/.conf.win64-vcpp",
+      "sha256": "3f08d38a24f12b67244dd6bc86d15108a80c6366330a92e5c7cafbd6d0bdf38f",
+      "retainedMembers": [
+        [
+          "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/download/owned-in8-evidence/prepared-source.tar.gz",
+          "bochs/.conf.win64-vcpp"
+        ]
+      ]
+    },
+    {
+      "originalPath": "/home/runner/work/_temp/owned-dispatch-gate/restored/prepared/bochs/.conf.macos",
+      "sha256": "68bf8e112eb757652aa0664450151168dc5422df685de2edf53c1e1db806d86c",
+      "retainedMembers": [
+        [
+          "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/download/owned-in8-evidence/prepared-source.tar.gz",
+          "bochs/.conf.macos"
+        ]
+      ]
+    },
+    {
+      "originalPath": "/home/runner/work/_temp/owned-dispatch-gate/restored/prepared/bochs/.conf.win32-vcpp",
+      "sha256": "245cd37a10691b1c0fc3f98edf75cf4a095e07ea43ec2e103a2dbff760baf3c3",
+      "retainedMembers": [
+        [
+          "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/download/owned-in8-evidence/prepared-source.tar.gz",
+          "bochs/.conf.win32-vcpp"
+        ]
+      ]
+    },
+    {
+      "originalPath": "/home/runner/work/_temp/owned-dispatch-gate/restored/prepared/bochs/.conf.win64-cross-mingw32",
+      "sha256": "aa1e2fa29d2859c836cf8acb457569d77d28a9c25053aa3843cf9bed952acc18",
+      "retainedMembers": [
+        [
+          "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/download/owned-in8-evidence/prepared-source.tar.gz",
+          "bochs/.conf.win64-cross-mingw32"
+        ]
+      ]
+    },
+    {
+      "originalPath": "/home/runner/work/_temp/owned-dispatch-gate/restored/prepared/bochs/.conf.sparc",
+      "sha256": "4c914c7cfa8708e9848040134d6649b27c7bc13e84a57e0096b4780b3a9d89eb",
+      "retainedMembers": [
+        [
+          "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/download/owned-in8-evidence/prepared-source.tar.gz",
+          "bochs/.conf.sparc"
+        ]
+      ]
+    },
+    {
+      "originalPath": "/home/runner/work/_temp/owned-dispatch-gate/restored/prepared/bochs/.conf.amigaos",
+      "sha256": "8e01f3ea23ce0e5d9e300172d3bd9773f76ffe404a99027a9c91c9048628f988",
+      "retainedMembers": [
+        [
+          "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/download/owned-in8-evidence/prepared-source.tar.gz",
+          "bochs/.conf.amigaos"
+        ]
+      ]
+    },
+    {
+      "originalPath": "/home/runner/work/_temp/owned-dispatch-gate/restored/prepared/bochs/.conf.win32-cygwin",
+      "sha256": "9bc0b4989c1f5ff07c1f38a01794a060a300b256319c124e2451727f0117748f",
+      "retainedMembers": [
+        [
+          "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/download/owned-in8-evidence/prepared-source.tar.gz",
+          "bochs/.conf.win32-cygwin"
+        ]
+      ]
+    },
+    {
+      "originalPath": "/home/runner/work/_temp/owned-dispatch-gate/restored/prepared/bochs/.conf.nothing",
+      "sha256": "faad2a00e87fb890493d8bf1a3322f1765d5cb97493b7c68106b0fd19e56fb1b",
+      "retainedMembers": [
+        [
+          "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/download/owned-in8-evidence/prepared-source.tar.gz",
+          "bochs/.conf.nothing"
+        ]
+      ]
+    },
+    {
+      "originalPath": "/home/runner/work/_temp/owned-dispatch-gate/restored/prepared/bochs/.conf.linux",
+      "sha256": "7a2011390b0a16b20775f0cc1fa7fb789b177a4142cb06e307b0db1a258ed1d4",
+      "retainedMembers": [
+        [
+          "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/download/owned-in8-evidence/prepared-source.tar.gz",
+          "bochs/.conf.linux"
+        ]
+      ]
+    },
+    {
+      "originalPath": "/home/runner/work/_temp/owned-dispatch-gate/restored/prepared/bochs/.conf.macosx",
+      "sha256": "e53ea4d19c695bd7081e8972b3d774390e2056e98bac248d5300ad945f216307",
+      "retainedMembers": [
+        [
+          "/mnt/volume1/tmp-astra/native-owned-dispatch-cpu-ghci-download-20261002/files/owned-dispatch-gate/download/owned-in8-evidence/prepared-source.tar.gz",
+          "bochs/.conf.macosx"
+        ]
+      ]
+    }
+  ],
+  "artifactCount": 1027,
+  "hardwareContextSha256": "70e480c3197db41e562a5e5dd5ceaa32e8c2c33d1789d0fa0e4bec6f9f94a502",
+  "scope": "All18 recorded full semantic fields including stored166-word snapshots/boards/raw+canonical RAM/physical counters, exact provenance, source Git records and process CPU. Source creates full snapshots each445 resumes; report retains reset/final/six cuts. No execution/retry/adoption or cumulative speed claim."
+}

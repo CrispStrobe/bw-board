@@ -1,0 +1,55 @@
+{
+  "status": "PASS_INDEPENDENT_ACTUAL_SOURCE_ONLY_SPAN_CONTROLS",
+  "auditChecks": 185,
+  "actualChecks": 232337,
+  "actualCases": [
+    {
+      "name": "private factory API and original method preservation",
+      "checks": 19
+    },
+    {
+      "name": "every actual page certificate and bounded edge spans in both A20 states",
+      "checks": 230500
+    },
+    {
+      "name": "seeded bounded span cross-check and exact invalid argument errors",
+      "checks": 1362
+    },
+    {
+      "name": "actual read/write replies, complete operands and immutable PAGE bytes",
+      "checks": 52
+    },
+    {
+      "name": "slow/mixed/MMIO/overlay and nonaffine decoders use original fallback",
+      "checks": 27
+    },
+    {
+      "name": "all 64 PAGE slots, generation slots and first failing guards",
+      "checks": 308
+    },
+    {
+      "name": "lease, mapping, complete tape preflight and independent caps",
+      "checks": 13
+    },
+    {
+      "name": "fresh actual factory independent slice/total caps and due guard",
+      "checks": 22
+    },
+    {
+      "name": "unmodified production factories: sink reentry and exception effects",
+      "checks": 10
+    },
+    {
+      "name": "unmodified production CAPOFF factories retain actual callback results",
+      "checks": 23
+    }
+  ],
+  "head": "6422a7824a1143f99d8ad206a41fb10146933840",
+  "runId": 37047476650,
+  "artifactId": 11244763075,
+  "sourceCount": 110,
+  "gitBaselineCount": 103,
+  "nodeWrapperBindingUnchanged": true,
+  "elapsedWallResourceOnly": 9.266217691999998,
+  "scope": "Actual source-only board differential controls; no addon, native CPU guest, profile, performance or adoption qualification. Hidden workflow omitted from upload authenticated exact actualhead Git/context hash."
+}

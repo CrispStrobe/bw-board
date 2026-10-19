@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python3",
+    "/mnt/volume1/tmp-astra/native-owned-pic-imr-parity-prepared-20261002/source-controls.py"
+  ],
+  "returncode": 1,
+  "timedOut": false,
+  "wallSeconds": 0.5764243118464947,
+  "sourcePinsUnchanged": true,
+  "scope": "PURE_SOURCE_EXTRACTED_SYNTHETIC_PROFILE_CHECKS_NOT_NATIVE_EVIDENCE"
+}

@@ -1,0 +1,49 @@
+{
+  "source": "43b2d62f5a0fa24ae0b38a645069f5aaa78af685",
+  "tool": "ad05b8ec01309dba79e7cf9435c6b0b5424d50fc",
+  "run": 37142446921,
+  "functions": [
+    {
+      "name": "$<labwired_core::cpu::cortex_m::CortexM_as_labwired_core::Cpu>::step_batch::hf6c8ffd877838981",
+      "watSha256": "982bd4e12d2c525f20f6be9e7dc6206c9320320a8f3a5981efe8b7a91027008a",
+      "watBytes": 7673574,
+      "lines": 36294,
+      "nonWhitespaceBytes": 495684,
+      "branchTableTargetHistogram": {
+        "4": 19,
+        "5": 5,
+        "6": 4,
+        "7": 8,
+        "9": 3,
+        "11": 2,
+        "12": 2,
+        "14": 3,
+        "15": 2,
+        "16": 12,
+        "17": 10,
+        "18": 8,
+        "22": 2,
+        "157": 2
+      }
+    },
+    {
+      "name": "$labwired_core::cpu::cortex_m::CortexM::run_t16_cached_run::h0027ec916eb66505",
+      "watSha256": "c5ca23e63ba5239c134e398777713955ce908ee5c53d2c8bfd3c474b90aebfc4",
+      "watBytes": 7252781,
+      "lines": 14516,
+      "nonWhitespaceBytes": 169856,
+      "branchTableTargetHistogram": {
+        "16": 1,
+        "18": 107,
+        "84": 1
+      }
+    }
+  ],
+  "limitations": [
+    "Text size is not binary size",
+    "Whitespace removal is analysis only; originals remain unchanged",
+    "Tables are static syntactic counts, not hit frequencies or removable cost",
+    "Eighteen targets fit 17 register cases plus default, but counts alone do not identify every table",
+    "No performance, causality or source-promotion claim"
+  ]
+}

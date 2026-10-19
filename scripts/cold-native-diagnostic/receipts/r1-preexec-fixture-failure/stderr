@@ -1,0 +1,27 @@
+..E.
+======================================================================
+ERROR: test_nested_session_timeout_cleanup (__main__.Controls.test_nested_session_timeout_cleanup)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-diagnostic/test_parent.py", line 21, in test_nested_session_timeout_cleanup
+    r=bounded([sys.executable,'-B','-c',code,str(pid)],out,out,'synthetic-timeout',cpu=2,wall=.4)
+  File "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/cold-native-diagnostic/parent.py", line 90, in bounded
+    proc=subprocess.Popen(command,cwd=cwd,env=env,preexec_fn=limits,start_new_session=True,stdout=so,stderr=se)
+  File "/opt/miniconda/lib/python3.13/subprocess.py", line 1039, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        pass_fds, cwd, env,
+                        ^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+                        gid, gids, uid, umask,
+                        ^^^^^^^^^^^^^^^^^^^^^^
+                        start_new_session, process_group)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/miniconda/lib/python3.13/subprocess.py", line 1994, in _execute_child
+    raise child_exception_type(err_msg)
+subprocess.SubprocessError: Exception occurred in preexec_fn.
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.025s
+
+FAILED (errors=1)

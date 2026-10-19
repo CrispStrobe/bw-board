@@ -1,0 +1,5 @@
+{
+  "scripts/bochs-cpu3-native-cold-bios/identity.mjs": "ac793271dee8dbef9df1a3bd9ec2c5b85168582d2d951bc0c2dc2ae18027c2f0",
+  "scripts/prepare-bochs-cpu3-native-cold-bios.mjs": "1ad5d49bb92c1a7e9761e8c068d10785e298bcba202c0e7744ab9c0d992298f4",
+  "test/i80386-cold-bios-preparation-source.test.mjs": "9079ae59ec62f2b117947d57f0385e03159b1c7cb6b03e13e87b38973dd2792f"
+}

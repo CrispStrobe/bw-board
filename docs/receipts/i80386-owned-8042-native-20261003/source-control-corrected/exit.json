@@ -1,0 +1,16 @@
+{
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 1.2315843626856804,
+  "sourceBefore": {
+    "scripts/bochs-cpu3-native-owned-8042/reference.mjs": "551907a8c9955f25c6b56e6dd85a6d40d0bb7d7e39857cccfaf9e8a0fc91dce5",
+    "scripts/run-i80386-native-owned-8042.mjs": "29cadfdc6546b21ccb27aa22e2b77e2e7e072bb383fa7d97cf741ab6deeed270",
+    "test/i80386-native-owned-8042-reference.test.mjs": "7cf2adfbd55c36f467e6ba04791819f9273eab1ba2485e4b49ef377d6b9c8533"
+  },
+  "sourceAfter": {
+    "scripts/bochs-cpu3-native-owned-8042/reference.mjs": "551907a8c9955f25c6b56e6dd85a6d40d0bb7d7e39857cccfaf9e8a0fc91dce5",
+    "scripts/run-i80386-native-owned-8042.mjs": "29cadfdc6546b21ccb27aa22e2b77e2e7e072bb383fa7d97cf741ab6deeed270",
+    "test/i80386-native-owned-8042-reference.test.mjs": "7cf2adfbd55c36f467e6ba04791819f9273eab1ba2485e4b49ef377d6b9c8533"
+  },
+  "nodeSha256After": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48"
+}

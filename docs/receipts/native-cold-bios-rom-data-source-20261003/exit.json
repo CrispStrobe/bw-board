@@ -1,0 +1,27 @@
+{
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=128",
+    "--test",
+    "test/i80386-cold-bios-runtime-source.test.mjs"
+  ],
+  "cwd": "/tmp/bw-cold-native-diagnostic-source-20261003",
+  "returncode": 0,
+  "timedOut": false,
+  "wallSeconds": 0.9719538521021605,
+  "pinsEqual": true,
+  "cpuSeconds": 10,
+  "wallLimitSeconds": 30,
+  "fileBytes": 8388608,
+  "coreBytes": 0,
+  "niceIncrement": 10,
+  "blankHooks": {
+    "NODE_OPTIONS": "",
+    "NODE_PATH": "",
+    "LD_PRELOAD": "",
+    "LD_AUDIT": "",
+    "BW_HOT_NAPI_PROFILE": "",
+    "NODE_V8_COVERAGE": ""
+  },
+  "scope": "PURE_EXACT_C_HELPER_CONTROLS_NO_BOCHS_BUILD_GUEST_OR_NETWORK"
+}

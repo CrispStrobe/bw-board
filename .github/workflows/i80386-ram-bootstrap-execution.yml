@@ -1,0 +1,92 @@
+name: RAM bootstrap one correctness run (manual, disabled by default)
+on:
+  workflow_dispatch:
+    inputs:
+      enable_ram_execution:
+        description: Root-reviewed first RAM/SMC execution only
+        type: boolean
+        required: true
+        default: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: i80386-ram-bootstrap-single-correctness
+  cancel-in-progress: false
+jobs:
+  correctness:
+    if: inputs.enable_ram_execution
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      BW_HOT_NAPI_PROFILE: ''
+      NODE_V8_COVERAGE: ''
+      PYTHONPATH: ''
+      PYTHONHOME: ''
+      PYTHONSTARTUP: ''
+      PYTHONINSPECT: ''
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          path: ram-wrapper
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Record source context and require reviewed fixed bindings
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/ram-bootstrap-execution-context"
+          python3 -B - <<'PY' > "$RUNNER_TEMP/ram-bootstrap-execution-context/source.stdout" 2> "$RUNNER_TEMP/ram-bootstrap-execution-context/source.stderr"
+          import json,sys,os
+          sys.path.insert(0,'ram-wrapper/scripts/ram-bootstrap-hosted')
+          from parent import validate_contract,HERE
+          validate_contract(json.load(open(HERE/'contract.json')))
+          print(json.dumps({k:os.environ.get(k)for k in ['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_EVENT_NAME','RUNNER_OS']}))
+          PY
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: 81694d0d19a86ded0449ab56b3554020ffc344ca
+          path: publication
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: 368ad8b61bb80f49380ed91b8ea1db442712e083
+          path: ram-driver
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: bochs-emu/Bochs
+          ref: 0e45b736ef9792eb9b752b0a35db49eaf2faea47
+          path: ram-pristine
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Restore exact build and run one bounded correctness child
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          export BW_RAM_NODE="$(command -v node)"
+          python3 -B ram-wrapper/scripts/ram-bootstrap-hosted/parent.py enabled > "$RUNNER_TEMP/ram-bootstrap-execution-context/parent.stdout" 2> "$RUNNER_TEMP/ram-bootstrap-execution-context/parent.stderr"
+      - name: Retain first failure and all raw maps and streams
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ram-bootstrap-one-correctness-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/ram-bootstrap-execution
+            ${{ runner.temp }}/ram-bootstrap-execution-context
+            ${{ runner.temp }}/ram-bootstrap-build-evidence
+            ${{ github.workspace }}/ram-wrapper/scripts/ram-bootstrap-hosted
+            ${{ github.workspace }}/ram-wrapper/scripts/cold-native-restore/archive.py
+            ${{ github.workspace }}/ram-wrapper/scripts/cold-native-diagnostic/resources.py
+            ${{ github.workspace }}/ram-wrapper/.github/workflows/i80386-ram-bootstrap-execution.yml
+          include-hidden-files: true
+          if-no-files-found: error

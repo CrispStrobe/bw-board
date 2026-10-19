@@ -1,0 +1,6 @@
+{
+  "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/bochs-cpu3-native-cold-bios/runtime.mjs": "4577806b3a1cea0e1fb02df73843576fb5a2e0aec616a64a3d015c28f57e600a",
+  "/tmp/bw-cold-native-diagnostic-source-20261003/scripts/bochs-cpu3-native-cold-bios/rom-data-policy.mjs": "39e6b1c471a9804a0ab89fbcc3afa5e948ab278aa433db861d7ca6f1a1c4b9b2",
+  "/tmp/bw-cold-native-diagnostic-source-20261003/test/i80386-cold-bios-runtime-source.test.mjs": "06a474aa642e781206c419060a0d1e3ce90a2a3f9904617ca8b1e708e6588c48",
+  "/tmp/native-cold-native-rom-data-source-controls-20261003/run.py": "e9e805ab4740f4a00294e09e2fed76dab8adf588494165debce90c439c8b0f8c"
+}

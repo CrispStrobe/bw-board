@@ -1,0 +1,48 @@
+{
+  "status": "INDEPENDENT_OFFLINE_LEAF_RETENTION_AUDIT_PASS_NOT_SAMPLE_QUALITY_OR_COST_SHARE",
+  "samples": 165,
+  "tids": {
+    "6955": 136,
+    "6958": 6,
+    "6957": 8,
+    "6959": 7,
+    "6960": 8
+  },
+  "dsoLeafCounts": {
+    "/opt/hostedtoolcache/node/22.23.3/x64/bin/node": 104,
+    "/usr/lib/x86_64-linux-gnu/libc.so.6": 32,
+    "/home/runner/work/_temp/cold-memory-fusion-build-prepared/bochs/bw_direct.node": 14,
+    "/tmp/perf-6955.map": 11,
+    "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33": 1,
+    "[kernel.kallsyms]": 3
+  },
+  "unknownLeafCount": 47,
+  "firstSampleSeconds": 57.833848384,
+  "lastSampleSeconds": 59.200098121,
+  "explicitLostRecordLines": 0,
+  "limitations": [
+    "No explicit LOST record is not proof of zero loss.",
+    "Leaf symbol resolution does not validate callchain unwind.",
+    "All threads retained; main-thread execution window requires independent clock/marker validation.",
+    "Unknown JIT/libc/kernel bins retained; no native CPU-share or removable-cost claim."
+  ],
+  "outer": {
+    "exitCode": 0,
+    "rawWait4Status": 0,
+    "leaderRusage": {
+      "userSeconds": 3.487886,
+      "systemSeconds": 0.537005,
+      "maxRSSKiB": 82176
+    },
+    "childExitWallSeconds": 4.007654830813408,
+    "finalAuthInclusiveWallSeconds": 4.588908676058054,
+    "timeout": false,
+    "originalError": null,
+    "cleanupError": null,
+    "finalizationError": null,
+    "pinsEqual": true
+  },
+  "decodedStdoutSha256": "4d0e474f4627928683c55a8675a12c9d442f31492f091180d038e28707a91ee5",
+  "decodedStderrBytes": 0,
+  "sourceToolAndControlledCopiesFinalGuards": "PASS"
+}

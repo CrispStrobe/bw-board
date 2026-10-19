@@ -1,0 +1,34 @@
+{
+  "status": "SOURCE_ONLY_TEST_WALL_TIMEOUT_NOT_NATIVE_FAILURE",
+  "wallLimitSeconds": 30,
+  "command": [
+    "/tmp/node-v22.23.3-linux-x64/bin/node",
+    "--max-old-space-size=512",
+    "--test",
+    "/mnt/volume1/tmp-astra/native-owned-main-attribution-20261002/source.test.mjs"
+  ],
+  "prePostHelperHashes": {
+    "generate.mjs": "8ae2e75e372c496f505d86db8566b6e48206ca574e25739f335f9d60f067f119",
+    "timing.mjs": "c501b50ec399f640b1fb48804bbd42a83e711a1ee71d16bdcae11ac19e69de2e",
+    "identity.mjs": "bf1f4f8243c65b200e63068b13c316499809f4f1e9c95605bd0d94de943cc79d",
+    "provider.mjs": "1aff240725a7c39bcefd22be77a41f7de51b2d6bcaf81552b669f4a225148ba8",
+    "driver.mjs": "0609de41452696cb0fdd01a67352c9d1f1c3b80a70f6f67f128e8fe2c9821387",
+    "derivation.json": "206c64c5e0b4f9a7c4bb4067c7df5cb3c8904956fb5dfd70ed6c78c0c847e50a",
+    "plan.json": "1557d4c21c39d80f67ee4699ab647de77052e0a87aefbca5519ec5d9f97a0586",
+    "source.test.mjs": "196675464acebe73d091a5bac4f4eb8428f1c074e9ddee761a022bf02884937d",
+    "bounded.py": "2cb92b11da85a71561605cda251e9944503d055609dd53a6095589865e9fd903",
+    "bounded-derivation.json": "78edeaf543f16d3f2b97af30a5fcb67dee4b43f2c5106ca7da8afd80669ed3f3",
+    "run.py": "c6c815b5b4a44a70906e543a2bbc1923669813757a8bf8fdbaada31b9b05420d"
+  },
+  "streams": {
+    "stdout": {
+      "bytes": 15,
+      "sha256": "7cb03ab03edf5190a8aa546c78285344395fad3d42d4011cd224f934aef96b3f"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "prior": "Initial identical6test tool execution passed in4500ms; this logged follow-up timed out before first test output, all helpers unchanged; no addon/native execution"
+}

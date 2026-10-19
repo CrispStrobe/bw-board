@@ -1,0 +1,20 @@
+{
+  "id": 11232663641,
+  "node_id": "MDg6QXJ0aWZhY3QxMTIzMjY2MzY0MQ==",
+  "name": "owned-clock-bulk-gate-37019813658-1",
+  "size_in_bytes": 14667298,
+  "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11232663641",
+  "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11232663641/zip",
+  "expired": false,
+  "digest": "sha256:18ecd75342d8d2c6d417f6412cd349043682a8ffe4d2a3628aae4270c7c9a6f9",
+  "created_at": "2026-10-02T14:30:53Z",
+  "updated_at": "2026-10-02T14:30:53Z",
+  "expires_at": "2026-10-16T14:30:50Z",
+  "workflow_run": {
+    "id": 37019813658,
+    "repository_id": 1327885818,
+    "head_repository_id": 1327885818,
+    "head_branch": "lane/386-bulk-context-fix-20261002",
+    "head_sha": "edca15eea1414baf04f36d66a13444654163eb44"
+  }
+}

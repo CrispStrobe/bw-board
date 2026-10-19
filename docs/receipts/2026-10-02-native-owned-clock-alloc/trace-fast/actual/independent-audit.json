@@ -1,0 +1,11 @@
+{
+  "status": "PASS_ALLOC_FAST_PATH_NATIVE_CANONICAL_AND_STATE",
+  "checks": 1666954,
+  "canonicalRows": 1649067,
+  "captureSha256": "aec02bab81f1248229975f38b7a1c5cd8ee20f91f35ed572b7a9541f7ba16091",
+  "rawStderrBytes": 149865670,
+  "rawStderrSha256": "85bb803a7db2189196de867ab5c31a1cd9dcd2a9894526b858886cf1ee035bb8",
+  "approvedBindingsSha256": "423665760b3371f0105bfbe692942639eb8f35c2a02da2d1daac2663b7d678f6",
+  "scriptSha256": "4a5b590218b7f1339ea35ba6870d6fe85e908426a066d1c00b5103280183ca44",
+  "scope": "Allnative1649067 exactMAINON; allfullguestfields/physical/RAM exactMAINOFF; source100vscompiled86 separatelybound; nativeTraceTRUE/journalFALSE selects literalnullCAPOFFclass by authenticatedsource inference, no separateinstrumentedbranchcounter. Not speedgate/fullguestclaim."
+}

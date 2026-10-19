@@ -1,0 +1,139 @@
+{
+  "heldRevision": "f4a2f2ceae48dde3e4585d84e6c759e13ebadc53",
+  "scope": "exact source derivatives only; no build invoked",
+  "files": [
+    {
+      "heldPath": "scripts/bochs-cpu3-native-cold-bios-typed-state/identity.mjs",
+      "heldSha256": "81b2b67f76968ab9481729d15742e37a00397e95cf9728825fa737a613daada4",
+      "candidatePath": "scripts/bochs-cpu3-native-cold-memory-fusion/identity.mjs",
+      "edits": [
+        {
+          "old": "native-cold-bios-typed-state-build-receipt.v1",
+          "next": "native-cold-memory-fusion-build-receipt.v1",
+          "count": 1
+        },
+        {
+          "old": "native-cold-bios-typed-state-build-context.v1",
+          "next": "native-cold-memory-fusion-build-context.v1",
+          "count": 1
+        },
+        {
+          "old": "import {deriveColdBiosRuntime,coldNativeProfile} from '../bochs-cpu3-native-cold-bios/runtime.mjs';",
+          "next": "import {coldNativeProfile} from '../bochs-cpu3-native-cold-bios/runtime.mjs';\nimport {deriveMemoryFusionRuntime as deriveColdBiosRuntime} from './runtime.mjs';",
+          "count": 1
+        },
+        {
+          "old": "import {deriveTypedStateNapi as deriveColdBiosNapi,STATE_EXPORT_PROFILE} from './napi.mjs';",
+          "next": "import {deriveMemoryFusionNapi as deriveColdBiosNapi} from './napi.mjs';\nimport {STATE_EXPORT_PROFILE} from '../bochs-cpu3-native-cold-bios-typed-state/napi.mjs';\nimport {MEMORY_FUSION_PROFILE} from './provider.mjs';",
+          "count": 1
+        },
+        {
+          "old": "'napi_register_module_v1']);",
+          "next": "'napi_register_module_v1','bw_memory_fusion']);",
+          "count": 1
+        },
+        {
+          "old": "'test/i80386-cold-bios-typed-state-build-source.test.mjs']));",
+          "next": "'test/i80386-cold-bios-typed-state-build-source.test.mjs'],['identity.mjs','runtime.mjs','napi.mjs','provider.mjs','factory.mjs','bridge.inc','preflight.inc','README.md','DESIGN.md','BUILD-PREPARATION.md'].map(p=>'scripts/bochs-cpu3-native-cold-memory-fusion/'+p),['scripts/prepare-bochs-cpu3-native-cold-memory-fusion.mjs','scripts/ci-build-i80386-native-cold-memory-fusion.py','.github/workflows/i80386-native-cold-memory-fusion-build.yml','scripts/bochs-cpu3-native-cold-memory-fusion/build-derivation.json','test/i80386-cold-memory-fusion-source.test.mjs','test/i80386-cold-memory-fusion-preparation-source.test.mjs','test/i80386-cold-memory-fusion-build-source.test.mjs']));",
+          "count": 1
+        },
+        {
+          "old": " assert.equal(manifest.stateExportProfile,STATE_EXPORT_PROFILE);",
+          "next": " assert.equal(manifest.memoryFusionProfile,MEMORY_FUSION_PROFILE);assert.equal(receipt.memoryFusionProfile,MEMORY_FUSION_PROFILE);assert.equal(manifest.stateExportProfile,STATE_EXPORT_PROFILE);",
+          "count": 1
+        },
+        {
+          "old": " assert.equal(context.stateExportProfile,STATE_EXPORT_PROFILE);",
+          "next": " assert.equal(context.memoryFusionProfile,MEMORY_FUSION_PROFILE);assert.equal(context.stateExportProfile,STATE_EXPORT_PROFILE);",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "heldPath": "scripts/prepare-bochs-cpu3-native-cold-bios-typed-state.mjs",
+      "heldSha256": "a413c8bb12ce5e4c5cf9a3794bbf474993a3b95c9a3f3970fbe466d3d81eeeda",
+      "candidatePath": "scripts/prepare-bochs-cpu3-native-cold-memory-fusion.mjs",
+      "edits": [
+        {
+          "old": "./bochs-cpu3-native-cold-bios-typed-state/identity.mjs",
+          "next": "./bochs-cpu3-native-cold-memory-fusion/identity.mjs",
+          "count": 1
+        },
+        {
+          "old": "import {deriveColdBiosRuntime,coldNativeProfile} from './bochs-cpu3-native-cold-bios/runtime.mjs';",
+          "next": "import {coldNativeProfile} from './bochs-cpu3-native-cold-bios/runtime.mjs';\nimport {deriveMemoryFusionRuntime as deriveColdBiosRuntime} from './bochs-cpu3-native-cold-memory-fusion/runtime.mjs';",
+          "count": 1
+        },
+        {
+          "old": "import {deriveTypedStateNapi as deriveColdBiosNapi,STATE_EXPORT_PROFILE} from './bochs-cpu3-native-cold-bios-typed-state/napi.mjs';",
+          "next": "import {deriveMemoryFusionNapi as deriveColdBiosNapi} from './bochs-cpu3-native-cold-memory-fusion/napi.mjs';\nimport {STATE_EXPORT_PROFILE} from './bochs-cpu3-native-cold-bios-typed-state/napi.mjs';\nimport {MEMORY_FUSION_PROFILE} from './bochs-cpu3-native-cold-memory-fusion/provider.mjs';",
+          "count": 1
+        },
+        {
+          "old": "out.stateExportProfile=STATE_EXPORT_PROFILE;",
+          "next": "out.memoryFusionProfile=MEMORY_FUSION_PROFILE;out.stateExportProfile=STATE_EXPORT_PROFILE;",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "heldPath": "scripts/ci-build-i80386-native-cold-bios-typed-state.py",
+      "heldSha256": "e2dd151b7bbef5bd963b6233f78d3f565ff0a502466a3b6a994204082aa1f8b7",
+      "candidatePath": "scripts/ci-build-i80386-native-cold-memory-fusion.py",
+      "edits": [
+        {
+          "old": "native-cold-bios-typed-state-build-receipt.v1",
+          "next": "native-cold-memory-fusion-build-receipt.v1",
+          "count": 1
+        },
+        {
+          "old": "native-cold-bios-typed-state-build-context.v1",
+          "next": "native-cold-memory-fusion-build-context.v1",
+          "count": 1
+        },
+        {
+          "old": "native-cold-bios-typed-state",
+          "next": "native-cold-memory-fusion",
+          "count": 6
+        },
+        {
+          "old": "'napi_register_module_v1']",
+          "next": "'napi_register_module_v1','bw_memory_fusion']",
+          "count": 1
+        },
+        {
+          "old": "M['stateExportProfile']=='bw.cold-native.copied-u32-state.v1'",
+          "next": "M['stateExportProfile']=='bw.cold-native.copied-u32-state.v1' and M['memoryFusionProfile']=='bw.cold-native.memory-clock-fusion.v1'",
+          "count": 1
+        },
+        {
+          "old": "{'stateExportProfile':M['stateExportProfile']",
+          "next": "{'memoryFusionProfile':M['memoryFusionProfile'],'stateExportProfile':M['stateExportProfile']",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "heldPath": ".github/workflows/i80386-native-cold-bios-typed-state-build.yml",
+      "heldSha256": "ac4e6667215f5514e130b3df24cc05193519b590c3cbc33f593bb934d783c176",
+      "candidatePath": ".github/workflows/i80386-native-cold-memory-fusion-build.yml",
+      "edits": [
+        {
+          "old": "Cold BIOS copied typed-state build",
+          "next": "Cold BIOS MEMORY clock fusion build",
+          "count": 1
+        },
+        {
+          "old": "cold-bios-typed-state",
+          "next": "cold-memory-fusion",
+          "count": 21
+        },
+        {
+          "old": "typed-state",
+          "next": "memory-fusion",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

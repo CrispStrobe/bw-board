@@ -1,0 +1,156 @@
+{
+  "criterion": {
+    "minimumMeanCpuReduction": 0.03,
+    "allSevenFavorableRequired": true,
+    "warmupPairs": 2,
+    "measuredPairs": 7
+  },
+  "generatorSha256": "c301135a6e8fc9449645b00775633590004fb27b3542273f3f35c44a7274d394",
+  "children": {
+    "H4": {
+      "originalPath": "scripts/run-i80386-native-hot-packed-scalar.mjs",
+      "originalRoot": "/tmp/bw-board-386-native-hot-packed-scalar-20261001",
+      "originalRevision": "15631beb63d7c1f17e693de7c86d4ed37b96a768",
+      "originalSha256": "279152f53b3a335e7f8b319f2be4cd74db6d7a90b7f4f4367b74666044ec2106",
+      "generatedPath": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/H4-cpu-child.mjs",
+      "generatedSha256": "b9dc6b91c183f9cd27ccd755a7a42ca3f7a295e98d502a61e87f6bd500b83973",
+      "reversibleExactChanges": [
+        {
+          "old": "from './profile-i80386-native-direct-board-adapter.mjs'",
+          "new": "from '/tmp/bw-board-386-native-hot-packed-scalar-20261001/scripts/profile-i80386-native-direct-board-adapter.mjs'",
+          "occurrences": 1
+        },
+        {
+          "old": "from './bochs-cpu3-native-hot-direct/journal.mjs'",
+          "new": "from '/tmp/bw-board-386-native-hot-packed-scalar-20261001/scripts/bochs-cpu3-native-hot-direct/journal.mjs'",
+          "occurrences": 1
+        },
+        {
+          "old": "from './i80386-free-combined-hot.mjs'",
+          "new": "from '/tmp/bw-board-386-native-hot-packed-scalar-20261001/scripts/i80386-free-combined-hot.mjs'",
+          "occurrences": 1
+        },
+        {
+          "old": "from './bochs-cpu3-native-hot-direct/board.mjs'",
+          "new": "from '/tmp/bw-board-386-native-hot-packed-scalar-20261001/scripts/bochs-cpu3-native-hot-direct/board.mjs'",
+          "occurrences": 1
+        },
+        {
+          "old": "from './bochs-cpu3-native-hot-packed-scalar/loader.mjs'",
+          "new": "from '/tmp/bw-board-386-native-hot-packed-scalar-20261001/scripts/bochs-cpu3-native-hot-packed-scalar/loader.mjs'",
+          "occurrences": 1
+        },
+        {
+          "old": "from './bochs-cpu3-native-hot-direct/profile.mjs'",
+          "new": "from '/tmp/bw-board-386-native-hot-packed-scalar-20261001/scripts/bochs-cpu3-native-hot-direct/profile.mjs'",
+          "occurrences": 1
+        },
+        {
+          "old": "from './audit-i80386-native-direct-board-adapter.mjs'",
+          "new": "from '/tmp/bw-board-386-native-hot-packed-scalar-20261001/scripts/audit-i80386-native-direct-board-adapter.mjs'",
+          "occurrences": 1
+        },
+        {
+          "old": "const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),",
+          "new": "const root=\"/tmp/bw-board-386-native-hot-packed-scalar-20261001\",",
+          "occurrences": 1
+        },
+        {
+          "old": "const executionStart=process.hrtime.bigint();",
+          "new": "const executionCpuStart=capturedCpuUsage();const executionStart=process.hrtime.bigint();",
+          "occurrences": 1
+        },
+        {
+          "old": " const executionNs=Number(process.hrtime.bigint()-executionStart);",
+          "new": " const executionNs=Number(process.hrtime.bigint()-executionStart);const executionCpuDelta=capturedCpuUsage(executionCpuStart);const executionCpuUserUs=executionCpuDelta.user,executionCpuSystemUs=executionCpuDelta.system,executionCpuTotalUs=executionCpuUserUs+executionCpuSystemUs;",
+          "occurrences": 1
+        },
+        {
+          "old": "startupNs,executionNs,settlementNs,scope:",
+          "new": "startupNs,executionNs,executionCpuUserUs,executionCpuSystemUs,executionCpuTotalUs,executionCpuScope:'process-wide all-thread CPU delta; start cpuUsage then hrtime, end hrtime then cpuUsage; includes tiny timer/usage overhead; excludes startup and settlement',settlementNs,scope:",
+          "occurrences": 1
+        },
+        {
+          "old": "import assert from 'node:assert/strict';",
+          "new": "import assert from 'node:assert/strict';\nconst capturedCpuUsage=process.cpuUsage.bind(process);",
+          "occurrences": 1
+        }
+      ],
+      "restoredOriginalIdentical": true,
+      "identitySeedsUnchanged": true
+    },
+    "H5": {
+      "originalPath": "scripts/run-i80386-native-hot-packed-args.mjs",
+      "originalRoot": "/tmp/bw-board-386-native-hot-packed-args-20261001",
+      "originalRevision": "ef106b4ae3a2ca55e9cc3253597ec66773e07847",
+      "originalSha256": "434d7c9d49f610b6955c53b0da39c556410b48aa909c4ddd3772a51a404c3946",
+      "generatedPath": "/mnt/volume1/tmp-astra/native-hot-h4-vs-h5-cpu-benchmark-20261001/H5-cpu-child.mjs",
+      "generatedSha256": "73cf3a822f5f5c4fc32853fdb1c240c7e53cf46b976ab9e9ee16e41cfd5f663e",
+      "reversibleExactChanges": [
+        {
+          "old": "from './profile-i80386-native-direct-board-adapter.mjs'",
+          "new": "from '/tmp/bw-board-386-native-hot-packed-args-20261001/scripts/profile-i80386-native-direct-board-adapter.mjs'",
+          "occurrences": 1
+        },
+        {
+          "old": "from './bochs-cpu3-native-hot-direct/journal.mjs'",
+          "new": "from '/tmp/bw-board-386-native-hot-packed-args-20261001/scripts/bochs-cpu3-native-hot-direct/journal.mjs'",
+          "occurrences": 1
+        },
+        {
+          "old": "from './i80386-free-combined-hot.mjs'",
+          "new": "from '/tmp/bw-board-386-native-hot-packed-args-20261001/scripts/i80386-free-combined-hot.mjs'",
+          "occurrences": 1
+        },
+        {
+          "old": "from './bochs-cpu3-native-hot-direct/board.mjs'",
+          "new": "from '/tmp/bw-board-386-native-hot-packed-args-20261001/scripts/bochs-cpu3-native-hot-direct/board.mjs'",
+          "occurrences": 1
+        },
+        {
+          "old": "from './bochs-cpu3-native-hot-packed-scalar/loader.mjs'",
+          "new": "from '/tmp/bw-board-386-native-hot-packed-args-20261001/scripts/bochs-cpu3-native-hot-packed-scalar/loader.mjs'",
+          "occurrences": 1
+        },
+        {
+          "old": "from './bochs-cpu3-native-hot-direct/profile.mjs'",
+          "new": "from '/tmp/bw-board-386-native-hot-packed-args-20261001/scripts/bochs-cpu3-native-hot-direct/profile.mjs'",
+          "occurrences": 1
+        },
+        {
+          "old": "from './audit-i80386-native-direct-board-adapter.mjs'",
+          "new": "from '/tmp/bw-board-386-native-hot-packed-args-20261001/scripts/audit-i80386-native-direct-board-adapter.mjs'",
+          "occurrences": 1
+        },
+        {
+          "old": "const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),",
+          "new": "const root=\"/tmp/bw-board-386-native-hot-packed-args-20261001\",",
+          "occurrences": 1
+        },
+        {
+          "old": "const executionStart=process.hrtime.bigint();",
+          "new": "const executionCpuStart=capturedCpuUsage();const executionStart=process.hrtime.bigint();",
+          "occurrences": 1
+        },
+        {
+          "old": " const executionNs=Number(process.hrtime.bigint()-executionStart);",
+          "new": " const executionNs=Number(process.hrtime.bigint()-executionStart);const executionCpuDelta=capturedCpuUsage(executionCpuStart);const executionCpuUserUs=executionCpuDelta.user,executionCpuSystemUs=executionCpuDelta.system,executionCpuTotalUs=executionCpuUserUs+executionCpuSystemUs;",
+          "occurrences": 1
+        },
+        {
+          "old": "startupNs,executionNs,settlementNs,scope:",
+          "new": "startupNs,executionNs,executionCpuUserUs,executionCpuSystemUs,executionCpuTotalUs,executionCpuScope:'process-wide all-thread CPU delta; start cpuUsage then hrtime, end hrtime then cpuUsage; includes tiny timer/usage overhead; excludes startup and settlement',settlementNs,scope:",
+          "occurrences": 1
+        },
+        {
+          "old": "import assert from 'node:assert/strict';",
+          "new": "import assert from 'node:assert/strict';\nconst capturedCpuUsage=process.cpuUsage.bind(process);",
+          "occurrences": 1
+        }
+      ],
+      "restoredOriginalIdentical": true,
+      "identitySeedsUnchanged": true
+    }
+  },
+  "noExecution": true
+}

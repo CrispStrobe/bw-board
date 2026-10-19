@@ -1,0 +1,26 @@
+{
+  "schema": "astra.i80386-discarded-reg-cache.v1",
+  "date": "2026-09-27",
+  "nodeVersion": "v20.20.2",
+  "baselineRevision": "ab1428b408b79f72b6bcde0fcb95aad1af80c115",
+  "workload": "stock xv6-public eeb7b415dbcb12cc362d0783e41c3d1f44066b17 forktest, 4 MiB, bundled Bochs BIOS",
+  "command": "XV6_FIRMWARE=bochs XV6_STEPS=40000000 XV6_STOP_ON_EXPECT=1 XV6_COMMAND=$'forktest\\r' XV6_EXPECT_SERIAL=$'fork test OK\\n$ ' node scripts/probe-xv6-stock.mjs",
+  "candidate": "Discarded opt-in direct-mapped templates for register-form MOV 89, CMP 39 and TEST 85 on extended RAM code pages, with physical-page versions for CPU/host/DMA writes and keys for CR0/CR3/CR4, TLB generation, CS and segment bounds.",
+  "userCpuSeconds": {
+    "baseline": [27.91, 27.94],
+    "candidate": [27.23, 27.27]
+  },
+  "meanUserCpuSeconds": {
+    "baseline": 27.925,
+    "candidate": 27.25
+  },
+  "userCpuSpeedup": 1.024770642201835,
+  "guest": {
+    "steps": 24338279,
+    "baselineReportSha256": "9882a726e30331903ec654314bd56a473f2190f84f9bea01192d84027dccbca3",
+    "candidateReportSha256": "bb2703b7aa91462e2af8e3790630fe5defe9d710de2760b6528b60baba9abb30",
+    "difference": "Only the absolute worktree-local ROM path differs; all guest-state fields and ROM SHA match."
+  },
+  "validation": "76 focused tests passed with the candidate, including self-modifying guest code, host/DMA code writes, CR3, 16-bit CS limit/prefix, flags, and a later-instruction page fault.",
+  "decision": "Below the predeclared 10% throughput threshold. Candidate source was discarded; general cache-contract tests and architecture analysis are retained. No production speedup is claimed."
+}

@@ -1,0 +1,176 @@
+{
+  "schema": "bw.paged-pagefault.ready-driver.source-receipts.v1",
+  "scope": "Static build binding and manufactured/read-only affected source controls only; no native execution. First2PASS2FAIL preserved; repaired2PASS; no full-suite rerun.",
+  "records": [
+    {
+      "path": "first-parent.py",
+      "bytes": 7559,
+      "sha256": "7d9114c09c0369d329ad73d2551f0731fb569740037ccc9a2303ea77d2de0502",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-20261005/parent.py",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "first-invocation.json",
+      "bytes": 1967,
+      "sha256": "bb4e15e42534672fe14675f778c86dafbdadeca24074184b212ca411a063b5ec",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-20261005/invocation.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "first-stdout",
+      "bytes": 60395,
+      "sha256": "213369a379188be6711b35409ae4b53575e97fb82a83fee56dbb8987b0bd1c58",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-20261005/stdout",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "first-stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-20261005/stderr",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "first-exit.json",
+      "bytes": 524,
+      "sha256": "47071921a74be5de4d517aba56d2e3fdcd4f60b2e52b58d825e88b191fff854a",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-20261005/exit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "first-before.json",
+      "bytes": 18915,
+      "sha256": "83d35f62c607e02f74051e68edddea9a98ed4a8052d1d4f44ff649ba6f1c9c1f",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-20261005/before.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "first-after.json",
+      "bytes": 18915,
+      "sha256": "83d35f62c607e02f74051e68edddea9a98ed4a8052d1d4f44ff649ba6f1c9c1f",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-20261005/after.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "first-independent-audit.json",
+      "bytes": 640,
+      "sha256": "95027f77023f91c55f2133196fe31d9f2be7beab3346d200f58284365721ba67",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-20261005/independent-audit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "r2-parent.py",
+      "bytes": 8389,
+      "sha256": "552dec70afa17045986c203001a6adec5d557556662ab4c26b5f20e08b868294",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-r2-20261005/parent.py",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "r2-invocation.json",
+      "bytes": 1824,
+      "sha256": "2c59f5462a7e9b3a42124849688c2a489b8ab0960af90556118eef7c8dbd86df",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-r2-20261005/invocation.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "r2-stdout",
+      "bytes": 609,
+      "sha256": "f2168730d9e5b9bff490709666fe611fff7505ddc0c514d0116d2d8c3b26947e",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-r2-20261005/stdout",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "r2-stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-r2-20261005/stderr",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "r2-exit.json",
+      "bytes": 570,
+      "sha256": "9f28dfe1d1749729e45c13a0eb1dbb14e2c68de846be0e35906225ac56a47ad2",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-r2-20261005/exit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "r2-before.json",
+      "bytes": 20005,
+      "sha256": "f2cee00f92d589ae360f93ea70932c7b41df3f3e00d4cb4d506f899079b2984d",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-r2-20261005/before.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "r2-after.json",
+      "bytes": 20005,
+      "sha256": "f2cee00f92d589ae360f93ea70932c7b41df3f3e00d4cb4d506f899079b2984d",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-r2-20261005/after.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "r2-independent-audit.json",
+      "bytes": 744,
+      "sha256": "368506137c2867d0cef851013c832de870296a1e0fe77db16eec13bf15b55222",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-r2-20261005/independent-audit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "r2-root-audit.json",
+      "bytes": 788,
+      "sha256": "d0242026e433ab5fa37277d88e6c11b92456fd7cbaa4afbe94aa221e64b45a3d",
+      "origin": "/tmp/native-paged-pagefault-ready-driver-source-controls-r2-20261005/root-audit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "static-official-metadata.json",
+      "bytes": 834,
+      "sha256": "c3981e9e733d0666b3d68fd299172b7198692e23c679286b596cac9f7c635e14",
+      "origin": "/tmp/native-paged-pagefault-static-build-audit-20261005/official-metadata.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "static-root-audit.json",
+      "bytes": 2462,
+      "sha256": "1edc6c22c9225241be5555c298d8eb5d117251f92a5cb03f52d73d7e1abf1b7e",
+      "origin": "/tmp/native-paged-pagefault-static-build-audit-20261005/root-audit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "static-independent-audit.json",
+      "bytes": 2429,
+      "sha256": "855dc0b9a95a3f803b798d166705c9894da4a65dcfa40f28bd3612f931ff8ab2",
+      "origin": "/tmp/native-paged-pagefault-static-build-audit-20261005/independent-audit.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "static-build-static-preflight.json",
+      "bytes": 32108,
+      "sha256": "ab8f0ea6a07ca27508413dd01932b4ae7c88bdca22db17670e2dcc42fd31dd2c",
+      "origin": "/tmp/native-paged-pagefault-static-build-audit-20261005/build-static-preflight.json",
+      "relation": "byte-exact original"
+    },
+    {
+      "path": "static-final-status.json",
+      "bytes": 1184,
+      "sha256": "fd70aa724308ca8c82eb79f631f1d91c6ea835e89acbbe590496d1beecb17ac8",
+      "origin": "/tmp/native-paged-pagefault-static-build-audit-20261005/final-status.json",
+      "relation": "byte-exact original"
+    }
+  ],
+  "externalArtifact": {
+    "path": "/tmp/native-paged-pagefault-static-build-37262460989.zip",
+    "artifactId": 11324707742,
+    "runId": 37262460989,
+    "bytes": 8578008,
+    "sha256": "c74915df6046cb6c6a92b4830dfe9b6cf8b2110f57717d8a9142bee99c6bbac8"
+  },
+  "losslessSourceFixture": {
+    "path": "../../../scripts/bochs-cpu3-native-paged-pagefault/actual-first-pf-build-prepare.json.gz",
+    "encoding": "gzip level9 mtime0; new encoded source fixture, not byte-identical to ZIP member",
+    "bytes": 298502,
+    "sha256": "fda019035d9bc8df07cc1578abb9cb4ecbd79be4f556ab01bc6d0bf9707a66b8",
+    "decodedBytes": 2135534,
+    "decodedSha256": "b1268ecffc11ae4704f3df95bb92fa3bbf60a18111e74383f99ff8ce58503d53",
+    "originMember": "paged-pagefault-build-evidence/prepare.json"
+  }
+}

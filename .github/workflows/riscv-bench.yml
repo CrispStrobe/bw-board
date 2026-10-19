@@ -1,0 +1,96 @@
+# RISC-V core throughput on a quiet runner, with the reference simulators
+# measured on the same runner in the same job: Spike and rv32emu (native,
+# built at pinned commits) on the same CoreMark/Dhrystone instruction streams,
+# our core in Node 22 and in headless Chromium, and an interleaved A/B of this
+# tree's core against master's.
+name: RISC-V bench
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - 'src/riscv32*.js'
+      - 'scripts/bench-riscv32*.mjs'
+      - 'scripts/riscv-bench/**'
+      - '.github/workflows/riscv-bench.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      SPIKE_SHA: 5f2a1d48752121ab09dd0f1932884808c2e6c081
+      RV32EMU_SHA: 19f5a7984e54292df025d747f87a7728e7cfb3eb
+      RV_BENCH_DIR: ${{ github.workspace }}/bench-elf
+      XV6_KERNEL: ${{ github.workspace }}/test/xv6-riscv/xv6-rv32/kernel/kernel
+      XV6_FS: ${{ github.workspace }}/test/xv6-riscv/xv6-rv32/fs.img
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: master
+          path: ext/master
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-unknown-elf picolibc-riscv64-unknown-elf device-tree-compiler
+      - name: Spike source (pinned)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: riscv-software-src/riscv-isa-sim
+          ref: 5f2a1d48752121ab09dd0f1932884808c2e6c081
+          path: ext/riscv-isa-sim
+      - name: rv32emu source (pinned)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: sysprog21/rv32emu
+          ref: 19f5a7984e54292df025d747f87a7728e7cfb3eb
+          path: ext/rv32emu
+      - name: Spike build cache
+        id: spike-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ext/spike-install
+          key: spike-${{ env.SPIKE_SHA }}-ubuntu-24.04
+      - name: Build Spike
+        if: steps.spike-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ext/riscv-isa-sim/build && cd ext/riscv-isa-sim/build
+          ../configure --prefix="$GITHUB_WORKSPACE/ext/spike-install" --without-boost --without-boost-asio --without-boost-regex
+          make -j"$(nproc)" && make install
+      - name: Build rv32emu (interpreter, no SDL)
+        run: |
+          cd ext/rv32emu
+          make defconfig
+          sed -i 's/^CONFIG_SDL=y/# CONFIG_SDL is not set/; s/^CONFIG_SDL_MIXER=y/# CONFIG_SDL_MIXER is not set/' .config
+          make -j"$(nproc)"
+      - name: Build the workloads (CoreMark, Dhrystone, xv6)
+        run: |
+          bash scripts/riscv-bench/build.sh "$RV_BENCH_DIR"
+          bash test/xv6-riscv/build.sh
+      - name: Reference simulators, same runner
+        run: |
+          for w in dhrystone coremark; do
+            echo "== $w"
+            /usr/bin/time -f "spike $w %e s" ext/spike-install/bin/spike --isa=rv32im_zicsr_zicntr "$RV_BENCH_DIR/$w-htif.elf" 2>&1 | grep -E 'minstret|Correct|spike '
+            /usr/bin/time -f "rv32emu $w %e s" ext/rv32emu/build/rv32emu "$RV_BENCH_DIR/$w-ecall.elf" 2>&1 | grep -E 'instret|Correct|rv32emu '
+          done
+      - name: Ours, Node 22
+        run: for w in alu alu-noclint dhrystone coremark xv6; do node scripts/bench-riscv32.mjs $w | tail -1; done
+      - name: Ours, headless Chromium
+        run: |
+          mkdir -p ext/pw && cd ext/pw && echo '{}' > package.json
+          npm i --no-audit --no-fund playwright@1.62.1 >/dev/null && npx playwright install --with-deps chromium >/dev/null
+          cd "$GITHUB_WORKSPACE"
+          PLAYWRIGHT_DIR="$GITHUB_WORKSPACE/ext/pw" node scripts/bench-riscv32-browser.mjs
+      - name: Master's core, same workloads (one run each)
+        run: for w in alu coremark xv6; do node scripts/bench-riscv32.mjs $w --src ext/master/src | tail -1; done
+      # xv6, not Dhrystone: master's core has no Zicntr counters (cycle reads 0),
+      # so this Dhrystone build never exits on it.
+      - name: A/B, master's core vs this tree's (interleaved, 3 trials)
+        timeout-minutes: 20
+        run: node scripts/bench-riscv32-ab.mjs xv6 ext/master/src src 3

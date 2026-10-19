@@ -1,0 +1,41 @@
+{
+  "status": "SEMANTIC_TIMING_AUDIT_PASS_QUANTITATIVE_GATE_FAIL",
+  "runId": 37267527701,
+  "artifactId": 11327261646,
+  "sourceGitChecks": 377,
+  "zipSha256": "d162ded8f4ad21e71a5f0728167d57a7cde368e9ce80896b916f6d2c758a4864",
+  "members": 266,
+  "children": 18,
+  "warmupPairs": 2,
+  "measuredPairs": 7,
+  "favorablePairs": 0,
+  "means": {
+    "plain-JS": {
+      "cpu": 0.2968657142857143,
+      "wall": 0.14199422685714286,
+      "wholeCpu": 1.120618,
+      "wholeWall": 0.8655342564285705
+    },
+    "compact-progress-batched": {
+      "cpu": 1.3053895714285715,
+      "wall": 1.0467786964285715,
+      "wholeCpu": 5.077412571428571,
+      "wholeWall": 4.513027182857139
+    }
+  },
+  "configuredVirtualRTx": {
+    "plain-JS": 2.229400497518014,
+    "compact-progress-batched": 0.3024154017272753
+  },
+  "cpuModels": [
+    "AMD EPYC 9V74 80-Core Processor"
+  ],
+  "logicalCpus": 4,
+  "allowedCpuSet": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "scope": "Exact cold workload, configured6MHz/6cycles perQ; not physical16MHz386 calibration or VPS/Kaggle data; preserve JS baseline."
+}

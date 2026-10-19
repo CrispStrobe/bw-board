@@ -1,0 +1,14 @@
+{
+  "status": "PASS_ACTUAL_JS_RAM_DIAGNOSTIC_NOT_NATIVE_QUALIFICATION",
+  "checks": 241,
+  "sourceInputs": 111,
+  "sourceRevision": "a6f605280f778b2bc409ef97ac3b40e15874530c",
+  "captureSha256": "fdca8f8fa92952cd9cd5f4447e66b194a5f691025bcf925f7ddd443290143346",
+  "rawRamSha256": "887b7eb9959044f45868a71c29c5c013d65ec0ad3e0205c738719757e63b0ffb",
+  "canonicalRamSha256": "e5f3f9f0ee95f1828b6dd6b28149d7d1e1dbaa77cb79268918b5c7b469601cfd",
+  "ownReset": {
+    "edx": 768,
+    "cr0": 0
+  },
+  "scope": "Entire original capture/journal exact; full raw16MiB authenticated; own raw reset witness validated before independent zero-only510..517 hash. Diagnostic entry identity separate, no native/performance claim."
+}

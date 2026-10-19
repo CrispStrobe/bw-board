@@ -1,0 +1,9 @@
+{
+  "buildRun": "37177028224",
+  "coreCommit": "5fed1f735dd48c899395a74f0565451c38a03716",
+  "wasmSha256": "e1558d973c48b8d78173d321b2839cb07ff36b8d2affa9ff93502abdc65e3de9",
+  "glueSha256": "b93d7f484286d64ae8f19d86bf67eb8d4309cf49720cbb06f59557c401b7ad73",
+  "toolCommit": "ad05b8ec01309dba79e7cf9435c6b0b5424d50fc",
+  "diagnosticOnly": true,
+  "engineExecution": false
+}

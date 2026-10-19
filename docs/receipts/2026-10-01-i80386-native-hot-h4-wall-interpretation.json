@@ -1,0 +1,22 @@
+{
+  "status": "SEMANTIC_PARITY_PASS_SPEED_EFFECT_INCONCLUSIVE_UNDER_HIGH_CONTENTION",
+  "actualSummarySha256": "85710a7b346a71f673af6982ef2590c8bdb1167850aafb6bcda4049ad95e38e6",
+  "sourceRevision": "15631beb63d7c1f17e693de7c86d4ed37b96a768",
+  "samplePairs": 7,
+  "discardedWarmupPairs": 2,
+  "hostVcpu": 4,
+  "loadBefore": "5.95 9.10 11.19 6/1434 6084\n",
+  "loadAfter": "9.87 9.36 11.05 3/1440 10142\n",
+  "observedMedianReductionPercent": 42.82874405317334,
+  "pairedRatioRange": [
+    0.2412944043759679,
+    1.8038825348927419
+  ],
+  "higherH4Pairs": 2,
+  "limitations": [
+    "All samples preserve exact accepted guest semantics; this establishes behavior, not a stable speed effect.",
+    "H3 distribution486\u20132082ms andH4472\u20131585ms under loadabove4vCPU; ratios.241\u20131.804. Do not present42.8% observedmedian as isolated optimization gain.",
+    "Candidate changes packed host protocol+unprofiled a131 bridge+JSdriver versusH3disabledprofilingscaffold/keycache.",
+    "No historical cross-load ratio, purecore speed, physicalRTx or application-wide claim."
+  ]
+}

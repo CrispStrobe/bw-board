@@ -1,0 +1,30 @@
+{
+  "status": "PREPARED_ONLY_NO_ADDON_EXECUTION",
+  "helperHashes": {
+    "run.py": "c04fae98c0f5a52d5034161a02ddc7b6bcf371eb657eb901581ea7d68db793bc",
+    "child.mjs": "ed7d97cea8e081895b6b3443ecb17a289a9f7c6cfa2d31db518b8ffd67dc3190",
+    "wrong-thread.mjs": "10d2be4428e5b4335036c0ded7995bb437fe68c41e66015208d55165ba69b59c",
+    "plan.json": "3845b3a4f006ef92300f29870589c6da5c5dffaff20690fd01639d9dc726d3d5",
+    "bounded.py": "2cb92b11da85a71561605cda251e9944503d055609dd53a6095589865e9fd903",
+    "bounded-derivation.json": "78edeaf543f16d3f2b97af30a5fcb67dee4b43f2c5106ca7da8afd80669ed3f3"
+  },
+  "productionSourceRevision": "bab751825473d55d8bf6da8c6ad5786921ffcfe1",
+  "compiledSourceRevision": "7df84bc2c367aff1cadec7cecdde69cf0e904ace",
+  "addonSha256": "144f3af7b906e46bfb68c10b991fef15847d81c60e7bb44820ee73653e723818",
+  "identity": "external diagnostic helpers, NOT frozen production runner",
+  "containment": {
+    "heapMiB": 512,
+    "wallSeconds": 120,
+    "cpuSeconds": 120,
+    "fileMiB": 256,
+    "coreBytes": 0,
+    "niceIncrement": 10,
+    "blankEnvironment": {
+      "NODE_OPTIONS": "",
+      "NODE_PATH": "",
+      "LD_PRELOAD": "",
+      "LD_AUDIT": "",
+      "BW_HOT_NAPI_PROFILE": ""
+    }
+  }
+}

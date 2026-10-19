@@ -1,0 +1,8 @@
+{
+  "status": "TOOL_PROCESS_CREATION_FAILURE_BEFORE_CONFIGURE_EXECUTION",
+  "observedError": "CreateProcess: Rejected: Failed to create unified exec process: No such file or directory (os error 2)",
+  "attemptedWorkingDirectory": "/mnt/volume1/tmp-astra/bw-bochs-cpu3-native-hot-h4-20261001/bochs",
+  "cause": "Dependent configure launch was attempted while preparation session86375 was still running; working directory did not yet exist",
+  "followup": "Preparation session86375 was awaited to exit0; actual configuration session66142 then exited0; only then make session48693 started",
+  "receiptScope": "Record of observed tool-launch failure, not native/configure execution evidence"
+}

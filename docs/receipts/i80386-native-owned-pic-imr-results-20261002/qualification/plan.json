@@ -1,0 +1,63 @@
+{
+  "scope": "PREPARED_ONLY_NO_NATIVE_EXECUTION_OR_SPEED_GATE",
+  "compiled": {
+    "revision": "a6f605280f778b2bc409ef97ac3b40e15874530c",
+    "count": 111
+  },
+  "runtime": {
+    "revision": "3792a908d81e04903974aa7d2bdc545e0713a290",
+    "count": 122
+  },
+  "toolingCount": 3,
+  "reference": {
+    "captureSha256": "fdca8f8fa92952cd9cd5f4447e66b194a5f691025bcf925f7ddd443290143346",
+    "attempts": 100702,
+    "successfulQuanta": 100700,
+    "PIOevents": 35,
+    "INevents": 4,
+    "rawJsRamSha256": "887b7eb9959044f45868a71c29c5c013d65ec0ad3e0205c738719757e63b0ffb",
+    "canonicalRamSha256": "e5f3f9f0ee95f1828b6dd6b28149d7d1e1dbaa77cb79268918b5c7b469601cfd",
+    "PICwitness": [
+      255,
+      255
+    ],
+    "PITwitness": [
+      50,
+      18
+    ]
+  },
+  "cells": [
+    "smoke-off",
+    "fulltrace-on"
+  ],
+  "require": [
+    "Actual reviewed CI/restoration evidence before root grant",
+    "Full166 native words/descriptors/full snapshots/counters exact between modes",
+    "Six named cuts and fullboards against actual JS reference",
+    "Eight JS CPU fields exact and EDX/CR0 documented source profile",
+    "Own eight reset witness bytes checked before canonicalRAM compare",
+    "All ordered N/Q Qkind tuples canonical to journal exact",
+    "JS STEP reconstruction Q(if completion),N from native generatedCPU ordering; not claimed actual JS callback order",
+    "All35PIO and fourIN values/attempt-minus-one native chronology"
+  ],
+  "limitations": [
+    "No fixed old445/resume/trace-row count",
+    "Native PIC state immediately around each read is not exported; source/device semantics and endpoint/reference states are separate evidence",
+    "No performance or general AT qualification"
+  ],
+  "containment": {
+    "heapMiB": 512,
+    "cpuSeconds": 120,
+    "wallSeconds": 120,
+    "niceIncrement": 10,
+    "fileMiB": 256,
+    "core": 0,
+    "blankEnvironment": {
+      "NODE_OPTIONS": "",
+      "NODE_PATH": "",
+      "LD_PRELOAD": "",
+      "LD_AUDIT": "",
+      "BW_HOT_NAPI_PROFILE": ""
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "oracle": "PCjs",
+  "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+  "node": "v22.23.2",
+  "scope": "owned ring-0 REP MOVSW with a delivered #GP, descriptor repair, IRET restart, and completion; architectural state only",
+  "sourceHashes": {
+    "./compare-pcjs-protected286-rep.mjs": "6278f582a4eb180966548c68f01847e4a1bd7e2d7e63c0dbe1e25b62e1a67ac4",
+    "../src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+    "../src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70"
+  },
+  "mutation": null,
+  "status": "pass",
+  "reference": {
+    "ax": 16,
+    "cx": 0,
+    "si": 20,
+    "di": 36,
+    "sp": 512,
+    "cs": 8,
+    "ds": 16,
+    "ip": 30,
+    "halted": true,
+    "recovered": true,
+    "destination": [
+      17,
+      34,
+      51,
+      68
+    ]
+  },
+  "actual": {
+    "ax": 16,
+    "cx": 0,
+    "si": 20,
+    "di": 36,
+    "sp": 512,
+    "cs": 8,
+    "ds": 16,
+    "ip": 30,
+    "halted": true,
+    "recovered": true,
+    "destination": [
+      17,
+      34,
+      51,
+      68
+    ]
+  },
+  "differences": [],
+  "executionRevision": "da0a27a61befe1a9751ed64082244a896cd6b3a4"
+}

@@ -1,0 +1,32 @@
+{
+  "execution": {
+    "cpuSeconds": 1.824441,
+    "cpuMicrosecondsSum": 1824441,
+    "wallSeconds": 1.563058348,
+    "configuredVirtualSeconds": 0.316562,
+    "configuredVirtualRTx": 0.20252730834076324
+  },
+  "wholeChild": {
+    "pid": 21554,
+    "exitCode": 0,
+    "rawWaitStatus": 0,
+    "timedOut": false,
+    "wallSeconds": 5.027066546000015,
+    "terminatedPids": [],
+    "interrupted": null,
+    "rusage": {
+      "ru_utime": 3.312756,
+      "ru_stime": 2.297371,
+      "ru_maxrss": 264376,
+      "ru_minflt": 372471,
+      "ru_majflt": 0,
+      "ru_inblock": 0,
+      "ru_oublock": 3776,
+      "ru_nvcsw": 5051,
+      "ru_nivcsw": 252
+    },
+    "cpuSeconds": 5.610127
+  },
+  "rawReceipt": "/home/runner/work/_temp/cold-paired-performance/pairs/pair-04-native-batched/receipt/receipt.json",
+  "rawReceiptSha256": "4ddb8ed0f95d39f37d67bcaceb4212cfa259576000b68260a32519de63c2c69f"
+}

@@ -1,0 +1,35 @@
+{
+  "status": "PASS_ACTUAL_18_CHILD_AUDIT_CPU_GATE_FAIL_KEEP_H4",
+  "checks": 318485,
+  "h4SamplesUs": [
+    489921,
+    527068,
+    458887,
+    496814,
+    504630,
+    438382,
+    428702
+  ],
+  "ownedSamplesUs": [
+    502947,
+    523670,
+    545405,
+    522208,
+    554197,
+    527298,
+    479700
+  ],
+  "h4MeanUs": 477772.0,
+  "ownedMeanUs": 522203.5714285714,
+  "meanReductionPercent": -9.299743691252612,
+  "favorablePairs": 1,
+  "gatePassed": false,
+  "all18SemanticParity": true,
+  "summarySha256": "113da86aeb1ddc5ab59beb6df5d64bd91de4d23a3b132f1ad9b3e39d8de62698",
+  "scriptSha256": "bcf62c45dd8aa5877effbab57c51952174a921659d622c819033e414bfb6a99f",
+  "sourceClosureCounts": {
+    "H4": 61,
+    "ABI3": 86
+  },
+  "scope": "single predeclared allthread execution CPU gate; warmup discard and exact pairing; synthetic fixed free ROM and shared system load; no adoption/retry"
+}

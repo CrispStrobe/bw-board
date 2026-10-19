@@ -1,0 +1,106 @@
+name: Harris native immutable memory admission evidence
+
+on:
+  push:
+    branches: ['perf/native-owned-system-admission', 'perf/native-owned-system-admission-*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Prepare exact base and production candidate trees
+        run: |
+          set -euo pipefail
+          BASE_SHA=208710e006af1e5007fe31e37fb472ce9587255f
+          CANDIDATE_SHA=7e8941254ac72ff7a9add2aa061528c0f41768c6
+          test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
+          git cat-file -e "$BASE_SHA^{commit}"
+          git cat-file -e "$CANDIDATE_SHA^{commit}"
+          git merge-base --is-ancestor "$CANDIDATE_SHA" "$GITHUB_SHA"
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/harris-system-admission.XXXXXX")
+          TREE_DIR=$(mktemp -d "$RUNNER_TEMP/harris-system-admission-trees.XXXXXX")
+          BASE_TREE="$TREE_DIR/base"
+          CANDIDATE_TREE="$TREE_DIR/candidate"
+          git worktree add --detach "$BASE_TREE" "$BASE_SHA"
+          git worktree add --detach "$CANDIDATE_TREE" "$CANDIDATE_SHA"
+          test "$(git -C "$BASE_TREE" rev-parse HEAD)" = "$BASE_SHA"
+          test "$(git -C "$CANDIDATE_TREE" rev-parse HEAD)" = "$CANDIDATE_SHA"
+          if ! command -v clang >/dev/null || ! command -v wasm-ld >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y clang lld
+          fi
+          {
+            echo "CLANG=$(command -v clang)"
+            echo "WASM_LD=$(command -v wasm-ld)"
+            echo "RECEIPT_DIR=$RECEIPT_DIR"
+            echo "BASE_TREE=$BASE_TREE"
+            echo "CANDIDATE_TREE=$CANDIDATE_TREE"
+          } >> "$GITHUB_ENV"
+
+      - name: Build exact base and candidate modules independently
+        run: |
+          set -euo pipefail
+          mkdir "$RECEIPT_DIR/base-build" "$RECEIPT_DIR/candidate-build" "$RECEIPT_DIR/attribution-build"
+          node "$BASE_TREE/scripts/build-wired-net-kernel.mjs" "$RECEIPT_DIR/base-build" | tee "$RECEIPT_DIR/base-build.log"
+          node "$CANDIDATE_TREE/scripts/build-wired-net-kernel.mjs" "$RECEIPT_DIR/candidate-build" | tee "$RECEIPT_DIR/candidate-build.log"
+          NATIVE_STAGE_ATTRIBUTION=1 node "$CANDIDATE_TREE/scripts/build-wired-net-kernel.mjs" "$RECEIPT_DIR/attribution-build" | tee "$RECEIPT_DIR/attribution-build.log"
+          test -s "$RECEIPT_DIR/base-build/wired-net-kernel.wasm"
+          test -s "$RECEIPT_DIR/candidate-build/wired-net-kernel.wasm"
+          test -s "$RECEIPT_DIR/attribution-build/wired-net-kernel.wasm"
+
+      - name: Measure same-runner immutable memory-map admission
+        run: |
+          set -euo pipefail
+          node --expose-gc scripts/measure-harris-native-system-admission.mjs --experimental \
+            --base-dir="$BASE_TREE" --candidate-dir="$CANDIDATE_TREE" \
+            --base-wasm="$RECEIPT_DIR/base-build/wired-net-kernel.wasm" \
+            --candidate-wasm="$RECEIPT_DIR/candidate-build/wired-net-kernel.wasm" \
+            --attribution-wasm="$RECEIPT_DIR/attribution-build/wired-net-kernel.wasm" \
+            --iterations=4096 --warmup-rounds=2 --rounds=12 \
+            --batch-periods=8192 --wall-budget-ms=1000 \
+            > "$RECEIPT_DIR/native-system-admission.json"
+          node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const r=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+"/native-system-admission.json")); assert.equal(r.measurementRevision,process.env.GITHUB_SHA); assert.equal(r.variants.base.revision,"208710e006af1e5007fe31e37fb472ce9587255f"); assert.equal(r.variants.candidate.revision,"7e8941254ac72ff7a9add2aa061528c0f41768c6"); assert.equal(r.variants.attribution.revision,"7e8941254ac72ff7a9add2aa061528c0f41768c6"); assert.equal(r.attributionProof.stage.native.memoryMappingCalls,r.attributionProof.semantic.producerWork.memory.settleCalls); assert.equal(r.attributionProof.stage.native.memoryMappingVisits,r.attributionProof.stage.native.memoryMappingCalls*640); assert.deepEqual(r.removedWork,{baseSettleCalls:143420,visitsPerSettle:640,baseRepeatedMapVisits:91788800,candidateAdmissionVisits:644,candidateRuntimeMapVisits:0,unit:"validation visits; not elapsed-time attribution"}); assert.equal(r.warmups.length,4); assert.equal(r.samples.length,24); assert.equal(r.paired.length,12); assert.ok(r.activeRatio.median>=1.10); assert.ok(r.activeRatio.q1>=1.05); assert.ok(r.activeRatio.min>=1); assert.equal(r.decision.capacityLeverAccepted,true);'
+
+      - name: Inventory every evidence payload before acceptance
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          import crypto from 'node:crypto';
+          import assert from 'node:assert/strict';
+          const root=process.env.RECEIPT_DIR,expected=[
+            'base-build.log','base-build/wired-net-kernel-build.json','base-build/wired-net-kernel.wasm',
+            'candidate-build.log','candidate-build/wired-net-kernel-build.json','candidate-build/wired-net-kernel.wasm',
+            'attribution-build.log','attribution-build/wired-net-kernel-build.json','attribution-build/wired-net-kernel.wasm',
+            'native-system-admission.json'];
+          const walk=directory=>fs.readdirSync(directory,{withFileTypes:true}).flatMap(entry=>{
+            const absolute=path.join(directory,entry.name);return entry.isDirectory()?walk(absolute):[path.relative(root,absolute)];});
+          const actual=walk(root).sort(),missing=expected.filter(name=>!actual.includes(name)),unexpected=actual.filter(name=>!expected.includes(name));
+          const files=Object.fromEntries(actual.map(name=>{const bytes=fs.readFileSync(path.join(root,name));return [name,{bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex')}];}));
+          fs.writeFileSync(path.join(root,'artifact-manifest.json'),JSON.stringify({schemaVersion:1,expected:[...expected].sort(),actual,missing,unexpected,files},null,2)+'\n',{flag:'wx'});
+          assert.deepEqual(missing,[]);assert.deepEqual(unexpected,[]);for(const name of expected)assert.ok(files[name].bytes>0,name);
+          NODE
+          test -s "$RECEIPT_DIR/artifact-manifest.json"
+
+      - name: Upload exact A/B evidence and both builds
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: harris-native-system-admission-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 14

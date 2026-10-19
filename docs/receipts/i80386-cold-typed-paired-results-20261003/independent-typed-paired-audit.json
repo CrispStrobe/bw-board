@@ -1,0 +1,25 @@
+{
+  "status": "PASS_INDEPENDENT_TYPED_NEGATIVE_PAIRED_AUDIT",
+  "officialMembers": 267,
+  "children": 18,
+  "discardedWarmupPairs": 2,
+  "measuredPairs": 7,
+  "baselineMeanExecutionCpuSeconds": 0.40361857142857144,
+  "candidateMeanExecutionCpuSeconds": 1.6400919999999999,
+  "meanReduction": -3.063470107916597,
+  "executionCpuSpeedRatio": 0.24609507968368327,
+  "favorablePairs": 0,
+  "gatePassed": false,
+  "semanticProof": "Nine native children reset/final/last-return166 and N/Q; nine JS representedCPU/Q; all18 fullboard/RAMhash/16475PIO/source-input-finalmaps exact",
+  "scope": "Typed batched native is slower than plain JS in all seven measured pairs; keep plain baseline. This is distinct hardware/run from earlier ordinary-array measurements, not a paired typed-v-array comparison. No physical 386/fullboot/adoption claim. Serialized ownership proof is instrumented source-attested.",
+  "runId": 37149610856,
+  "sourceRevision": "9f3042810d59fa6911e33c5cc480a6c405c5a618",
+  "sourceGitChecks": 280,
+  "hostCpuModels": [
+    "AMD EPYC 7763 64-Core Processor"
+  ],
+  "logicalCpus": 4,
+  "typedOverPlainExecutionCpu": 4.063470107916597,
+  "baselineMedianExecutionCpuSeconds": 0.404506,
+  "candidateMedianExecutionCpuSeconds": 1.623479
+}

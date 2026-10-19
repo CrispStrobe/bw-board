@@ -1,0 +1,39 @@
+{
+  "status": "INDEPENDENT_SEVEN_ACTUAL_TEST_PASS_WRAPPER_COUNT_FAILURE_CONFIRMED",
+  "sourceCount": 51,
+  "head": "75be9c4aaa9fe08ff2adbffa47ff8cc1335b19d2",
+  "sourceToolsPrepostEqual": true,
+  "rawTests": 7,
+  "rawPass": 7,
+  "rawFailures": 0,
+  "rawSkips": 0,
+  "wrapperStatusPreserved": "FAIL",
+  "failureCause": "Expected six tests; negative-lookahead selection also selected the actual oracle through ancestor matching.",
+  "actualOracleScope": "Retained TAP and summary attest57 attempts/56 successful Q; full capture absent because output path was not configured.",
+  "fullCapturePresent": false,
+  "rawExit": {
+    "status": "FAIL",
+    "mode": "controls",
+    "pid": 3772418,
+    "exitCode": 0,
+    "rawWaitStatus": 0,
+    "reaped": true,
+    "timeout": false,
+    "primaryError": "AssertionError()",
+    "finalizationErrors": [],
+    "pinsEqual": true,
+    "rusage": {
+      "userSeconds": 1.222429,
+      "systemSeconds": 0.19123099999999998,
+      "maxRssKiB": 124436,
+      "scope": "wait4 leader plus descendants already reaped by it; not cgroup attribution"
+    },
+    "rawExitWallSeconds": 2.672603700309992,
+    "tests": 7,
+    "passes": 7,
+    "failures": 0,
+    "skips": 0,
+    "cleanupGroupKill": "already absent",
+    "finalAuthInclusiveWallSeconds": 4.013883542269468
+  }
+}

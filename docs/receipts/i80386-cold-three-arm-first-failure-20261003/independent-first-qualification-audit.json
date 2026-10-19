@@ -1,0 +1,12 @@
+{
+  "status": "PASS_INDEPENDENT_INCOMPLETE_THREE_ARM_FAILURE_AUDIT",
+  "members": 180,
+  "qualifiedArms": [
+    "plain-JS"
+  ],
+  "nativeOneQResumes": 0,
+  "nativeBatchedExecuted": false,
+  "cause": "Worker terminal guard applies return-only activityState field to retained final cut lacking it during reset prerequisite validation. Native initialized/reset; no instruction resumed.",
+  "finalAuthenticationExact": true,
+  "scope": "Not three-arm qualification or performance. PlainJS final CPU/board/RAM hash/full16475PIO exact to eighth; native reset schema failure preserved."
+}

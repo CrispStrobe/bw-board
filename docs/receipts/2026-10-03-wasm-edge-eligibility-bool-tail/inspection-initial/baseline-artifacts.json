@@ -1,0 +1,25 @@
+{
+  "total_count": 1,
+  "artifacts": [
+    {
+      "id": 11274122656,
+      "node_id": "MDg6QXJ0aWZhY3QxMTI3NDEyMjY1Ng==",
+      "name": "compiled-edge-layout-inspection",
+      "size_in_bytes": 363082,
+      "url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11274122656",
+      "archive_download_url": "https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/11274122656/zip",
+      "expired": false,
+      "digest": "sha256:254aed7f121b7b1292ba9c65173cc7edf44a5dce70de82e1f4bf4f519056f098",
+      "created_at": "2026-10-03T12:36:11Z",
+      "updated_at": "2026-10-03T12:36:11Z",
+      "expires_at": "2026-10-17T12:36:11Z",
+      "workflow_run": {
+        "id": 37123288945,
+        "repository_id": 1327885818,
+        "head_repository_id": 1327885818,
+        "head_branch": "perf/wasm-edge-layout-inspection-20261003",
+        "head_sha": "43b82467b25b7913df46dab4c15d177b7e0c3281"
+      }
+    }
+  ]
+}

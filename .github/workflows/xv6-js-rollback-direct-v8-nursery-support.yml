@@ -1,0 +1,142 @@
+name: direct V8 nursery four-case support staging correction
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    paths:
+      - scripts/pr-backlog-current-source.py
+      - test/pr-backlog-current-source.test.py
+      - scripts/xv6-js-rollback-direct-v8-nursery-support/**
+      - .github/workflows/xv6-js-rollback-direct-v8-nursery-support.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xv6-js-rollback-direct-v8-nursery-support-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  mock-controls:
+    if: >-
+      github.event.action != 'labeled' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      GIT_NO_REPLACE_OBJECTS: '1'
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Admit source and run synthetic controls only
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          ulimit -f 2048
+          evidence="$RUNNER_TEMP/direct-v8-nursery-mock-evidence"
+          mkdir -m 700 "$evidence"
+          phase=source-admission
+          trap 'code=$?; printf "phase=%s exit=%s\n" "$phase" "$code" > "$evidence/status.txt"' EXIT
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          git --no-replace-objects cat-file -e 79f1f13b6037265785e18342ca06b04eec2ab475^{commit}
+          git --no-replace-objects merge-base --is-ancestor 79f1f13b6037265785e18342ca06b04eec2ab475 HEAD
+          timeout 30s python3 -I -B scripts/pr-backlog-current-source.py nursery-support > "$evidence/source.json" 2> "$evidence/source.stderr"
+          phase=mock-controls
+          for script in source-control.py grade-control.py control.py inventory-control.py; do
+            timeout --signal=TERM --kill-after=5s 30s python3 -B "scripts/xv6-js-rollback-direct-v8-nursery-support/$script" >> "$evidence/control.stdout" 2>> "$evidence/control.stderr"
+          done
+          node_bin="$(command -v node)"
+          timeout --signal=TERM --kill-after=5s 30s env -i PATH=/usr/bin:/bin TMPDIR="$RUNNER_TEMP" LANG=C LC_ALL=C TZ=UTC NODE_OPTIONS= NODE_PATH= LD_PRELOAD= LD_AUDIT= "$node_bin" scripts/xv6-js-rollback-direct-v8-target-site-nursery/control.mjs >> "$evidence/control.stdout" 2>> "$evidence/control.stderr"
+          test -z "$(git --no-replace-objects status --porcelain=v1 -uall)"
+          phase=complete
+      - name: Inventory synthetic report-only evidence
+        id: mock_inventory
+        if: always()
+        shell: bash
+        run: |
+          timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8-nursery-support/inventory.py "$RUNNER_TEMP/direct-v8-nursery-mock-evidence"
+      - name: Retain synthetic reports only
+        if: always() && steps.mock_inventory.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: direct-v8-nursery-support-mock-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/direct-v8-nursery-mock-evidence/
+          if-no-files-found: error
+          retention-days: 7
+  nursery-support:
+    if: >-
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'xv6-js-v8-nursery-support-staging-correction' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      GIT_NO_REPLACE_OBJECTS: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 8
+          persist-credentials: false
+      - name: Admit exact four-case support source and pure controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          ulimit -f 16384
+          evidence="$RUNNER_TEMP/direct-v8-nursery-support-evidence"
+          mkdir -m 700 "$evidence"
+          test "$(git --no-replace-objects rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          git --no-replace-objects cat-file -e 79f1f13b6037265785e18342ca06b04eec2ab475^{commit}
+          git --no-replace-objects merge-base --is-ancestor 79f1f13b6037265785e18342ca06b04eec2ab475 HEAD
+          test -z "$(git --no-replace-objects status --porcelain=v1 -uall)"
+          timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8-nursery-support/source-control.py > "$evidence/control.stdout" 2> "$evidence/control.stderr"
+          timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8-nursery-support/grade-control.py >> "$evidence/control.stdout" 2>> "$evidence/control.stderr"
+          timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8-nursery-support/control.py >> "$evidence/control.stdout" 2>> "$evidence/control.stderr"
+          timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8-nursery-support/inventory-control.py >> "$evidence/control.stdout" 2>> "$evidence/control.stderr"
+          node_bin="$(command -v node)"
+          test -x "$node_bin"
+          timeout 30s env -i PATH=/usr/bin:/bin TMPDIR="$RUNNER_TEMP" LANG=C LC_ALL=C TZ=UTC NODE_OPTIONS= NODE_PATH= LD_PRELOAD= LD_AUDIT= "$node_bin" scripts/xv6-js-rollback-direct-v8-target-site-nursery/control.mjs >> "$evidence/control.stdout" 2>> "$evidence/control.stderr"
+          timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8-nursery-support/source.py "$evidence/source.json" > "$evidence/source.stdout" 2> "$evidence/source.stderr"
+      - name: Build and run four fresh support cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          # Restore the text/child soft cap after the sole admitted Node write.
+          # Finite hard cap: ceil(98932688 pinned executable bytes / 1024).
+          ulimit -S -f 16384
+          ulimit -H -f 96614
+          evidence="$RUNNER_TEMP/direct-v8-nursery-support-evidence"
+          timeout 23m python3 -B scripts/xv6-js-rollback-direct-v8-nursery-support/run.py "$RUNNER_TEMP/direct-v8-nursery-support-work" "$evidence" > "$evidence/run.stdout" 2> "$evidence/run.stderr"
+          python3 -B -c 'import json,sys; r=json.load(open(sys.argv[1])); assert r["schema"] == "bw.direct-v8.nursery-support.v1" and r["status"] == "FOUR_CASE_NURSERY_SUPPORT_ONLY" and r["firstFailure"] is None and r["support"]["supported"] is True and len(r["cases"]) == 4' "$evidence/nursery-support.json"
+      - name: Admit closed report-only inventory
+        id: inventory
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          timeout 30s python3 -B scripts/xv6-js-rollback-direct-v8-nursery-support/inventory.py "$RUNNER_TEMP/direct-v8-nursery-support-evidence"
+      - name: Upload bounded original support reports
+        if: always() && steps.inventory.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: direct-v8-nursery-support-${{ github.run_id }}
+          path: ${{ runner.temp }}/direct-v8-nursery-support-evidence/
+          if-no-files-found: error
+          retention-days: 7

@@ -1,0 +1,1044 @@
+﻿2026-10-02T16:11:08.3308695Z Current runner version: '2.337.0'
+2026-10-02T16:11:08.3336287Z ##[group]Runner Image Provisioner
+2026-10-02T16:11:08.3337227Z Hosted Compute Agent
+2026-10-02T16:11:08.3337917Z Version: 20260901.588
+2026-10-02T16:11:08.3338613Z Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b
+2026-10-02T16:11:08.3339361Z Build Date: 2026-09-01T19:56:44Z
+2026-10-02T16:11:08.3340155Z Worker ID: {bff7eb44-9279-4a60-8598-3b5aab307e3e}
+2026-10-02T16:11:08.3340908Z Azure Region: westcentralus
+2026-10-02T16:11:08.3341586Z ##[endgroup]
+2026-10-02T16:11:08.3343560Z ##[group]Operating System
+2026-10-02T16:11:08.3344226Z Ubuntu
+2026-10-02T16:11:08.3344891Z 24.04.5
+2026-10-02T16:11:08.3345484Z LTS
+2026-10-02T16:11:08.3346058Z ##[endgroup]
+2026-10-02T16:11:08.3346688Z ##[group]Runner Image
+2026-10-02T16:11:08.3347327Z Image: ubuntu-24.04
+2026-10-02T16:11:08.3347971Z Version: 20260927.320.1
+2026-10-02T16:11:08.3349286Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+2026-10-02T16:11:08.3350979Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260927.320
+2026-10-02T16:11:08.3352126Z ##[endgroup]
+2026-10-02T16:11:08.3353354Z ##[group]GITHUB_TOKEN Permissions
+2026-10-02T16:11:08.3355678Z Contents: write
+2026-10-02T16:11:08.3356438Z Metadata: read
+2026-10-02T16:11:08.3357033Z ##[endgroup]
+2026-10-02T16:11:08.3359644Z Secret source: Actions
+2026-10-02T16:11:08.3360660Z Cache mode: write
+2026-10-02T16:11:08.3361475Z Prepare workflow directory
+2026-10-02T16:11:08.3710168Z Prepare all required actions
+2026-10-02T16:11:08.3758565Z Getting action download info
+2026-10-02T16:11:08.6931269Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-10-02T16:11:08.7701235Z Download action repository 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-10-02T16:11:08.8632794Z Download action repository 'actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+2026-10-02T16:11:09.6119014Z Complete job name: test
+2026-10-02T16:11:09.6956921Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-10-02T16:11:09.6958036Z with:
+2026-10-02T16:11:09.6958539Z   repository: CrispStrobe/bw-board
+2026-10-02T16:11:09.6964004Z   token: ***
+2026-10-02T16:11:09.6964820Z   ssh-strict: true
+2026-10-02T16:11:09.6965625Z   ssh-user: git
+2026-10-02T16:11:09.6966412Z   persist-credentials: true
+2026-10-02T16:11:09.6967184Z   clean: true
+2026-10-02T16:11:09.6967682Z   sparse-checkout-cone-mode: true
+2026-10-02T16:11:09.6968259Z   fetch-depth: 1
+2026-10-02T16:11:09.6968854Z   fetch-tags: false
+2026-10-02T16:11:09.6969458Z   show-progress: true
+2026-10-02T16:11:09.6969959Z   lfs: false
+2026-10-02T16:11:09.6970443Z   submodules: false
+2026-10-02T16:11:09.6970949Z   set-safe-directory: true
+2026-10-02T16:11:09.6971504Z   allow-unsafe-pr-checkout: false
+2026-10-02T16:11:09.6972765Z ##[endgroup]
+2026-10-02T16:11:09.8029461Z Syncing repository: CrispStrobe/bw-board
+2026-10-02T16:11:09.8032308Z ##[group]Getting Git version info
+2026-10-02T16:11:09.8033153Z Working directory is '/home/runner/work/bw-board/bw-board'
+2026-10-02T16:11:09.8034442Z [command]/usr/bin/git version
+2026-10-02T16:11:09.8077843Z git version 2.55.0
+2026-10-02T16:11:09.8101207Z ##[endgroup]
+2026-10-02T16:11:09.8118172Z Temporarily overriding HOME='/home/runner/work/_temp/5f0ecc47-e5f0-425a-838c-320d47ec7932' before making global git config changes
+2026-10-02T16:11:09.8120785Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-02T16:11:09.8124170Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/bw-board/bw-board
+2026-10-02T16:11:09.8178432Z Deleting the contents of '/home/runner/work/bw-board/bw-board'
+2026-10-02T16:11:09.8188936Z ##[group]Initializing the repository
+2026-10-02T16:11:09.8199004Z [command]/usr/bin/git init /home/runner/work/bw-board/bw-board
+2026-10-02T16:11:09.8270731Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-02T16:11:09.8273153Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-02T16:11:09.8275267Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-02T16:11:09.8277307Z hint: call:
+2026-10-02T16:11:09.8277969Z hint:
+2026-10-02T16:11:09.8278746Z hint: 	git config --global init.defaultBranch <name>
+2026-10-02T16:11:09.8279608Z hint:
+2026-10-02T16:11:09.8280433Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-02T16:11:09.8281642Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-02T16:11:09.8283360Z hint:
+2026-10-02T16:11:09.8284308Z hint: 	git branch -m <name>
+2026-10-02T16:11:09.8285436Z hint:
+2026-10-02T16:11:09.8286647Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-02T16:11:09.8287783Z Initialized empty Git repository in /home/runner/work/bw-board/bw-board/.git/
+2026-10-02T16:11:09.8289891Z [command]/usr/bin/git remote add origin https://github.com/CrispStrobe/bw-board
+2026-10-02T16:11:09.8331200Z ##[endgroup]
+2026-10-02T16:11:09.8332306Z ##[group]Disabling automatic garbage collection
+2026-10-02T16:11:09.8335284Z [command]/usr/bin/git config --local gc.auto 0
+2026-10-02T16:11:09.8370050Z ##[endgroup]
+2026-10-02T16:11:09.8370909Z ##[group]Setting up auth
+2026-10-02T16:11:09.8377113Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-02T16:11:09.8412898Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-02T16:11:09.8767527Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-02T16:11:09.8811458Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-02T16:11:09.9067949Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-02T16:11:09.9106811Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-02T16:11:09.9348549Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-02T16:11:09.9390687Z ##[endgroup]
+2026-10-02T16:11:09.9391638Z ##[group]Fetching the repository
+2026-10-02T16:11:09.9400984Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +fb13d48b7bc377bceb5da5a1d4ed5cd11555e162:refs/remotes/origin/perf/register-inline-node-control-20261002
+2026-10-02T16:11:12.1615126Z From https://github.com/CrispStrobe/bw-board
+2026-10-02T16:11:12.1617277Z  * [new ref]         fb13d48b7bc377bceb5da5a1d4ed5cd11555e162 -> origin/perf/register-inline-node-control-20261002
+2026-10-02T16:11:12.1619959Z ##[endgroup]
+2026-10-02T16:11:12.1620735Z ##[group]Determining the checkout info
+2026-10-02T16:11:12.1621687Z ##[endgroup]
+2026-10-02T16:11:12.1628473Z [command]/usr/bin/git sparse-checkout disable
+2026-10-02T16:11:12.1683324Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-02T16:11:12.1718225Z ##[group]Checking out the ref
+2026-10-02T16:11:12.1723372Z [command]/usr/bin/git checkout --progress --force -B perf/register-inline-node-control-20261002 refs/remotes/origin/perf/register-inline-node-control-20261002
+2026-10-02T16:11:12.6672969Z Switched to a new branch 'perf/register-inline-node-control-20261002'
+2026-10-02T16:11:12.6675621Z branch 'perf/register-inline-node-control-20261002' set up to track 'origin/perf/register-inline-node-control-20261002'.
+2026-10-02T16:11:12.6694347Z ##[endgroup]
+2026-10-02T16:11:12.6747478Z [command]/usr/bin/git log -1 --format=%H
+2026-10-02T16:11:12.6778205Z fb13d48b7bc377bceb5da5a1d4ed5cd11555e162
+2026-10-02T16:11:12.7094964Z ##[group]Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+2026-10-02T16:11:12.7095400Z with:
+2026-10-02T16:11:12.7095627Z   node-version: 22
+2026-10-02T16:11:12.7095857Z   always-auth: false
+2026-10-02T16:11:12.7096085Z   check-latest: false
+2026-10-02T16:11:12.7098443Z   token: ***
+2026-10-02T16:11:12.7098664Z ##[endgroup]
+2026-10-02T16:11:12.8686501Z Found in cache @ /opt/hostedtoolcache/node/22.23.3/x64
+2026-10-02T16:11:12.8691435Z (node:2356) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-02T16:11:12.8692854Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-02T16:11:12.8694732Z ##[group]Environment details
+2026-10-02T16:11:13.2280566Z node: v22.23.3
+2026-10-02T16:11:13.2281021Z npm: 10.9.9
+2026-10-02T16:11:13.2281327Z yarn: 1.22.22
+2026-10-02T16:11:13.2282773Z ##[endgroup]
+2026-10-02T16:11:13.2447536Z ##[group]Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+2026-10-02T16:11:13.2448034Z with:
+2026-10-02T16:11:13.2448251Z   name: labwired-wasm-a
+2026-10-02T16:11:13.2448486Z   path: lw
+2026-10-02T16:11:13.2448697Z   merge-multiple: false
+2026-10-02T16:11:13.2448962Z   repository: CrispStrobe/bw-board
+2026-10-02T16:11:13.2449232Z   run-id: 37027849668
+2026-10-02T16:11:13.2449454Z ##[endgroup]
+2026-10-02T16:11:13.3963044Z Downloading single artifact
+2026-10-02T16:11:13.4101255Z (node:2387) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-02T16:11:13.4102776Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-02T16:11:13.6088786Z Preparing to download the following artifacts:
+2026-10-02T16:11:13.6089751Z - labwired-wasm-a (ID: 11236079767, Size: 10055424, Expected Digest: sha256:637c0f2b869a109d3406425e20982d6f4fafd6258f44f77f9ef6581623d498c7)
+2026-10-02T16:11:13.8063182Z Redirecting to blob download url: https://productionresultssa18.blob.core.windows.net/actions-results/4e0e7b30-3a4e-41e3-b738-768c99143cbd/workflow-job-run-e25834d1-bd5e-50ab-b74f-3ede14fb2dd7/artifacts/1bca951d666cf3b0cfc5fd51668238c848d1c3b393365a14975a1fe724170225.zip
+2026-10-02T16:11:13.8065696Z Starting download of artifact to: /home/runner/work/bw-board/bw-board/lw
+2026-10-02T16:11:14.0599630Z (node:2387) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+2026-10-02T16:11:14.9567450Z SHA256 digest of downloaded artifact is 637c0f2b869a109d3406425e20982d6f4fafd6258f44f77f9ef6581623d498c7
+2026-10-02T16:11:14.9568434Z Artifact download completed successfully.
+2026-10-02T16:11:14.9568987Z Total of 1 artifact(s) downloaded
+2026-10-02T16:11:14.9572273Z Download artifact has finished successfully
+2026-10-02T16:11:14.9727852Z ##[group]Run npm ci || npm install
+2026-10-02T16:11:14.9728245Z [36;1mnpm ci || npm install[0m
+2026-10-02T16:11:14.9983807Z shell: /usr/bin/bash -e {0}
+2026-10-02T16:11:14.9984108Z ##[endgroup]
+2026-10-02T16:11:15.7931049Z 
+2026-10-02T16:11:15.7932132Z added 2 packages, and audited 3 packages in 731ms
+2026-10-02T16:11:15.7940041Z 
+2026-10-02T16:11:15.7940282Z found 0 vulnerabilities
+2026-10-02T16:11:15.8374109Z ##[group]Run echo '{"type":"commonjs"}' > lw/nodejs/package.json
+2026-10-02T16:11:15.8374596Z [36;1mecho '{"type":"commonjs"}' > lw/nodejs/package.json[0m
+2026-10-02T16:11:15.8443159Z shell: /usr/bin/bash -e {0}
+2026-10-02T16:11:15.8443429Z ##[endgroup]
+2026-10-02T16:11:15.8559326Z ##[group]Run sudo apt-get update -qq && sudo apt-get install -y -qq gcc-arm-none-eabi binutils-arm-none-eabi
+2026-10-02T16:11:15.8560044Z [36;1msudo apt-get update -qq && sudo apt-get install -y -qq gcc-arm-none-eabi binutils-arm-none-eabi[0m
+2026-10-02T16:11:15.8622752Z shell: /usr/bin/bash -e {0}
+2026-10-02T16:11:15.8623030Z ##[endgroup]
+2026-10-02T16:11:39.0527061Z Selecting previously unselected package binutils-arm-none-eabi.
+2026-10-02T16:11:39.0749785Z (Reading database ... 
+2026-10-02T16:11:39.0750268Z (Reading database ... 5%
+2026-10-02T16:11:39.0750795Z (Reading database ... 10%
+2026-10-02T16:11:39.0752840Z (Reading database ... 15%
+2026-10-02T16:11:39.0753662Z (Reading database ... 20%
+2026-10-02T16:11:39.0754281Z (Reading database ... 25%
+2026-10-02T16:11:39.0754792Z (Reading database ... 30%
+2026-10-02T16:11:39.0755612Z (Reading database ... 35%
+2026-10-02T16:11:39.0756463Z (Reading database ... 40%
+2026-10-02T16:11:39.0757244Z (Reading database ... 45%
+2026-10-02T16:11:39.0758144Z (Reading database ... 50%
+2026-10-02T16:11:39.0795714Z (Reading database ... 55%
+2026-10-02T16:11:39.1478923Z (Reading database ... 60%
+2026-10-02T16:11:39.2427699Z (Reading database ... 65%
+2026-10-02T16:11:39.3383701Z (Reading database ... 70%
+2026-10-02T16:11:39.4520546Z (Reading database ... 75%
+2026-10-02T16:11:39.5426950Z (Reading database ... 80%
+2026-10-02T16:11:39.6467683Z (Reading database ... 85%
+2026-10-02T16:11:39.7035760Z (Reading database ... 90%
+2026-10-02T16:11:39.7954816Z (Reading database ... 95%
+2026-10-02T16:11:39.7956458Z (Reading database ... 100%
+2026-10-02T16:11:39.7957682Z (Reading database ... 202296 files and directories currently installed.)
+2026-10-02T16:11:39.8008873Z Preparing to unpack .../0-binutils-arm-none-eabi_2.42-1ubuntu1+23_amd64.deb ...
+2026-10-02T16:11:39.8034817Z Unpacking binutils-arm-none-eabi (2.42-1ubuntu1+23) ...
+2026-10-02T16:11:39.8967766Z Selecting previously unselected package gcc-arm-none-eabi.
+2026-10-02T16:11:39.9100431Z Preparing to unpack .../1-gcc-arm-none-eabi_15%3a13.2.rel1-2_amd64.deb ...
+2026-10-02T16:11:39.9120538Z Unpacking gcc-arm-none-eabi (15:13.2.rel1-2) ...
+2026-10-02T16:11:41.4734165Z Selecting previously unselected package libstdc++-arm-none-eabi-dev.
+2026-10-02T16:11:41.4869124Z Preparing to unpack .../2-libstdc++-arm-none-eabi-dev_15%3a13.2.rel1-2+26_all.deb ...
+2026-10-02T16:11:41.4876278Z Unpacking libstdc++-arm-none-eabi-dev (15:13.2.rel1-2+26) ...
+2026-10-02T16:11:41.7792267Z Selecting previously unselected package libnewlib-dev.
+2026-10-02T16:11:41.7933809Z Preparing to unpack .../3-libnewlib-dev_4.4.0.20231231-2_all.deb ...
+2026-10-02T16:11:41.7945282Z Unpacking libnewlib-dev (4.4.0.20231231-2) ...
+2026-10-02T16:11:41.8346060Z Selecting previously unselected package libnewlib-arm-none-eabi.
+2026-10-02T16:11:41.8478114Z Preparing to unpack .../4-libnewlib-arm-none-eabi_4.4.0.20231231-2_all.deb ...
+2026-10-02T16:11:41.8483535Z Unpacking libnewlib-arm-none-eabi (4.4.0.20231231-2) ...
+2026-10-02T16:11:43.2544779Z Selecting previously unselected package libstdc++-arm-none-eabi-newlib.
+2026-10-02T16:11:43.2685833Z Preparing to unpack .../5-libstdc++-arm-none-eabi-newlib_15%3a13.2.rel1-2+26_all.deb ...
+2026-10-02T16:11:43.2692594Z Unpacking libstdc++-arm-none-eabi-newlib (15:13.2.rel1-2+26) ...
+2026-10-02T16:11:50.4578912Z Setting up binutils-arm-none-eabi (2.42-1ubuntu1+23) ...
+2026-10-02T16:11:50.4598632Z Setting up gcc-arm-none-eabi (15:13.2.rel1-2) ...
+2026-10-02T16:11:50.4613396Z Setting up libnewlib-dev (4.4.0.20231231-2) ...
+2026-10-02T16:11:50.4688823Z Setting up libnewlib-arm-none-eabi (4.4.0.20231231-2) ...
+2026-10-02T16:11:50.4762082Z Setting up libstdc++-arm-none-eabi-dev (15:13.2.rel1-2+26) ...
+2026-10-02T16:11:50.4833764Z Setting up libstdc++-arm-none-eabi-newlib (15:13.2.rel1-2+26) ...
+2026-10-02T16:11:50.4852393Z Processing triggers for man-db (2.12.0-4build2) ...
+2026-10-02T16:11:50.4880061Z Not building database; man-db/auto-update is not 'true'.
+2026-10-02T16:11:50.4892479Z Processing triggers for libc-bin (2.39-0ubuntu8.9) ...
+2026-10-02T16:11:51.1128282Z 
+2026-10-02T16:11:51.1128950Z Running kernel seems to be up-to-date.
+2026-10-02T16:11:51.1129335Z 
+2026-10-02T16:11:51.1129567Z No services need to be restarted.
+2026-10-02T16:11:51.1129855Z 
+2026-10-02T16:11:51.1130091Z No containers need to be restarted.
+2026-10-02T16:11:51.1130376Z 
+2026-10-02T16:11:51.1130668Z No user sessions are running outdated binaries.
+2026-10-02T16:11:51.1131354Z 
+2026-10-02T16:11:51.1132016Z No VM guests are running outdated hypervisor (qemu) binaries on this host.
+2026-10-02T16:11:52.0993792Z ##[group]Run set -euo pipefail
+2026-10-02T16:11:52.0994144Z [36;1mset -euo pipefail[0m
+2026-10-02T16:11:52.0994524Z [36;1m# The round-trip suite is the one that runs a real gallery bench[0m
+2026-10-02T16:11:52.0995052Z [36;1m# through the netlist → manifest bridge on BOTH tiers, so it is the[0m
+2026-10-02T16:11:52.0995571Z [36;1m# only place a wrong port, a dropped pad or a mislabelled binding[0m
+2026-10-02T16:11:52.0996035Z [36;1m# shows up: the adapter suite uses a hand-written pin map and a[0m
+2026-10-02T16:11:52.0996459Z [36;1m# recording stub, and cannot see any of that.[0m
+2026-10-02T16:11:52.0996762Z [36;1m#[0m
+2026-10-02T16:11:52.0997096Z [36;1m# pad-drive-parity is the second both-tiers suite: it answers whether[0m
+2026-10-02T16:11:52.0997583Z [36;1m# the two tiers drive a pad to the same LED brightness (they do, to[0m
+2026-10-02T16:11:52.0998070Z [36;1m# 0 on a DC pad and 2.4e-6 across a blink) and pins the hand-computed[0m
+2026-10-02T16:11:52.0998558Z [36;1m# 0.0628 that answer rests on. Its ORACLE half needs neither the wasm[0m
+2026-10-02T16:11:52.0999011Z [36;1m# nor gcc and therefore also runs in ordinary CI — what only runs[0m
+2026-10-02T16:11:52.0999472Z [36;1m# here is the tier COMPARISON. Since 2026-08-30 that comparison also[0m
+2026-10-02T16:11:52.0999946Z [36;1m# carries OTYPER: an open-drain pad driving 1 must be DARK on both[0m
+2026-10-02T16:11:52.1000357Z [36;1m# tiers and driving 0 must still sink on both.[0m
+2026-10-02T16:11:52.1000817Z [36;1mnode --test test/labwired-adapter.test.mjs test/labwired-bridge.test.mjs \[0m
+2026-10-02T16:11:52.1001272Z [36;1m            test/labwired-roundtrip.test.mjs \[0m
+2026-10-02T16:11:52.1001616Z [36;1m            test/pad-drive-parity.test.mjs \[0m
+2026-10-02T16:11:52.1002172Z [36;1m            test/labwired-firmware-only.test.mjs \[0m
+2026-10-02T16:11:52.1002557Z [36;1m            test/labwired-microbit-matrix.test.mjs \[0m
+2026-10-02T16:11:52.1002988Z [36;1m            test/labwired-input-boundary.test.mjs 2>&1 | tee out.txt[0m
+2026-10-02T16:11:52.1003466Z [36;1m# A suite that does not RUN is not a suite that passes, and these skip[0m
+2026-10-02T16:11:52.1003949Z [36;1m# themselves whenever LABWIRED_WASM or the ARM toolchain is missing —[0m
+2026-10-02T16:11:52.1004421Z [36;1m# which in this job would mean the wiring broke, not that there is[0m
+2026-10-02T16:11:52.1004794Z [36;1m# nothing to check.[0m
+2026-10-02T16:11:52.1005037Z [36;1m#[0m
+2026-10-02T16:11:52.1005329Z [36;1m# `# skipped 0` alone was NOT that check. These suites gate at the[0m
+2026-10-02T16:11:52.1005752Z [36;1m# `describe(..., { skip })` level, and node then reports[0m
+2026-10-02T16:11:52.1006193Z [36;1m# `# tests 0 / # skipped 0` — so the old guard passed cleanly on a run[0m
+2026-10-02T16:11:52.1006656Z [36;1m# where the engine never loaded and not one assertion executed. A gate[0m
+2026-10-02T16:11:52.1007119Z [36;1m# that cannot fail is not a gate. The floor below is the count the[0m
+2026-10-02T16:11:52.1007582Z [36;1m# three suites produce together; raise it when they grow. 60 -> 88[0m
+2026-10-02T16:11:52.1008049Z [36;1m# when labwired-microbit-matrix joined (83 + its 7, less a margin[0m
+2026-10-02T16:11:52.1008502Z [36;1m# for no suite: a skipped micro:bit half now drops below it).[0m
+2026-10-02T16:11:52.1008936Z [36;1mtests=$(sed -n 's/^# tests \([0-9]*\)$/\1/p' out.txt | tail -1)[0m
+2026-10-02T16:11:52.1009352Z [36;1mfails=$(sed -n 's/^# fail \([0-9]*\)$/\1/p' out.txt | tail -1)[0m
+2026-10-02T16:11:52.1009766Z [36;1mskips=$(sed -n 's/^# skipped \([0-9]*\)$/\1/p' out.txt | tail -1)[0m
+2026-10-02T16:11:52.1010186Z [36;1mecho "tests=${tests:-?} fail=${fails:-?} skipped=${skips:-?}"[0m
+2026-10-02T16:11:52.1010848Z [36;1m[ "${tests:-0}" -ge 88 ] || { echo "::error::only ${tests:-0} tests ran — LABWIRED_WASM or arm-none-eabi-gcc did not reach the suites"; exit 1; }[0m
+2026-10-02T16:11:52.1012116Z [36;1m[ "${fails:-1}" = 0 ]    || { echo "::error::${fails} labwired tests failed"; exit 1; }[0m
+2026-10-02T16:11:52.1012640Z [36;1m[ "${skips:-1}" = 0 ]    || { echo "::error::${skips} labwired tests skipped"; exit 1; }[0m
+2026-10-02T16:11:52.1080214Z shell: /usr/bin/bash -e {0}
+2026-10-02T16:11:52.1080480Z env:
+2026-10-02T16:11:52.1080773Z   LABWIRED_WASM: /home/runner/work/bw-board/bw-board/lw/nodejs
+2026-10-02T16:11:52.1081122Z ##[endgroup]
+2026-10-02T16:11:52.1720625Z TAP version 13
+2026-10-02T16:11:53.1860732Z # Subtest: labwired-wasm boundary-A adapter
+2026-10-02T16:11:53.1868155Z     # Subtest: generates one input binding per pin, so every pad is drivable
+2026-10-02T16:11:53.1875997Z     ok 1 - generates one input binding per pin, so every pad is drivable
+2026-10-02T16:11:53.1876937Z       ---
+2026-10-02T16:11:53.1910547Z       duration_ms: 1.445536
+2026-10-02T16:11:53.1948147Z       type: 'test'
+2026-10-02T16:11:53.1960923Z       ...
+2026-10-02T16:11:53.1990751Z     # Subtest: pillar 1: attach SEATS every pin, before any edge exists
+2026-10-02T16:11:53.1997076Z     ok 2 - pillar 1: attach SEATS every pin, before any edge exists
+2026-10-02T16:11:53.1997636Z       ---
+2026-10-02T16:11:53.1998008Z       duration_ms: 56.580535
+2026-10-02T16:11:53.1998405Z       type: 'test'
+2026-10-02T16:11:53.1998786Z       ...
+2026-10-02T16:11:53.1999310Z     # Subtest: the firmware's BSRR writes arrive as pin edges, time before edge
+2026-10-02T16:11:53.2000018Z     ok 3 - the firmware's BSRR writes arrive as pin edges, time before edge
+2026-10-02T16:11:53.2001697Z       ---
+2026-10-02T16:11:53.2002394Z       duration_ms: 270.700075
+2026-10-02T16:11:53.2002953Z       type: 'test'
+2026-10-02T16:11:53.2003409Z       ...
+2026-10-02T16:11:53.2003960Z     # Subtest: PA5 is reported as an output once the firmware configures MODER
+2026-10-02T16:11:53.2004814Z     ok 4 - PA5 is reported as an output once the firmware configures MODER
+2026-10-02T16:11:53.2005385Z       ---
+2026-10-02T16:11:53.2005723Z       duration_ms: 40.445479
+2026-10-02T16:11:53.2006112Z       type: 'test'
+2026-10-02T16:11:53.2006438Z       ...
+2026-10-02T16:11:53.2006973Z     # Subtest: pillar 2: an undriven pin takes its level from the board
+2026-10-02T16:11:53.2007755Z     ok 5 - pillar 2: an undriven pin takes its level from the board
+2026-10-02T16:11:53.2008125Z       ---
+2026-10-02T16:11:53.2008333Z       duration_ms: 5.357141
+2026-10-02T16:11:53.2008581Z       type: 'test'
+2026-10-02T16:11:53.2008789Z       ...
+2026-10-02T16:11:53.2009405Z     # Subtest: a RAW flash image runs too — the form lite actually compiles
+2026-10-02T16:11:53.2009973Z     ok 6 - a RAW flash image runs too — the form lite actually compiles
+2026-10-02T16:11:53.2010315Z       ---
+2026-10-02T16:11:53.2010526Z       duration_ms: 131.945003
+2026-10-02T16:11:53.2010774Z       type: 'test'
+2026-10-02T16:11:53.2010998Z       ...
+2026-10-02T16:11:53.2011279Z     # Subtest: the adapter wraps a raw image for you
+2026-10-02T16:11:53.2011662Z     ok 7 - the adapter wraps a raw image for you
+2026-10-02T16:11:53.2012270Z       ---
+2026-10-02T16:11:53.2012593Z       duration_ms: 122.516965
+2026-10-02T16:11:53.2012949Z       type: 'test'
+2026-10-02T16:11:53.2013252Z       ...
+2026-10-02T16:11:53.2013664Z     # Subtest: time advances at the configured clock rate
+2026-10-02T16:11:53.2014229Z     ok 8 - time advances at the configured clock rate
+2026-10-02T16:11:53.2014664Z       ---
+2026-10-02T16:11:53.2014947Z       duration_ms: 22.99336
+2026-10-02T16:11:53.2015283Z       type: 'test'
+2026-10-02T16:11:53.2015593Z       ...
+2026-10-02T16:11:53.2016124Z     # Subtest: the released AVR core publishes DDR output and PORT pull-up modes
+2026-10-02T16:11:53.2016681Z     ok 9 - the released AVR core publishes DDR output and PORT pull-up modes
+2026-10-02T16:11:53.2017064Z       ---
+2026-10-02T16:11:53.2017280Z       duration_ms: 37.495811
+2026-10-02T16:11:53.2017526Z       type: 'test'
+2026-10-02T16:11:53.2017747Z       ...
+2026-10-02T16:11:53.2018012Z     # Subtest: the debug target, over the same engine
+2026-10-02T16:11:53.2018763Z         # Subtest: declares only what labwired can actually do
+2026-10-02T16:11:53.2019371Z         ok 1 - declares only what labwired can actually do
+2026-10-02T16:11:53.2019701Z           ---
+2026-10-02T16:11:53.2019954Z           duration_ms: 3.531198
+2026-10-02T16:11:53.2020219Z           type: 'test'
+2026-10-02T16:11:53.2020450Z           ...
+2026-10-02T16:11:53.2020853Z         # Subtest: a memory and a register write land in the engine, when it has them
+2026-10-02T16:11:53.2021413Z         ok 2 - a memory and a register write land in the engine, when it has them
+2026-10-02T16:11:53.2022011Z           ---
+2026-10-02T16:11:53.2022367Z           duration_ms: 3.553962
+2026-10-02T16:11:53.2022654Z           type: 'test'
+2026-10-02T16:11:53.2022870Z           ...
+2026-10-02T16:11:53.2023143Z         # Subtest: single-steps, and the PC moves
+2026-10-02T16:11:53.2023497Z         ok 3 - single-steps, and the PC moves
+2026-10-02T16:11:53.2023817Z           ---
+2026-10-02T16:11:53.2024058Z           duration_ms: 4.313984
+2026-10-02T16:11:53.2024311Z           type: 'test'
+2026-10-02T16:11:53.2024537Z           ...
+2026-10-02T16:11:53.2024915Z         # Subtest: an odd Thumb breakpoint address is refused, not silently never hit
+2026-10-02T16:11:53.2025476Z         ok 4 - an odd Thumb breakpoint address is refused, not silently never hit
+2026-10-02T16:11:53.2025862Z           ---
+2026-10-02T16:11:53.2026093Z           duration_ms: 1.664166
+2026-10-02T16:11:53.2026351Z           type: 'test'
+2026-10-02T16:11:53.2026577Z           ...
+2026-10-02T16:11:53.2027159Z         # Subtest: a code breakpoint halts, and reports where
+2026-10-02T16:11:53.2027799Z         ok 5 - a code breakpoint halts, and reports where
+2026-10-02T16:11:53.2028294Z           ---
+2026-10-02T16:11:53.2028645Z           duration_ms: 3.389631
+2026-10-02T16:11:53.2029038Z           type: 'test'
+2026-10-02T16:11:53.2029394Z           ...
+2026-10-02T16:11:53.2029949Z         # Subtest: reading memory works, and an unknown space says so
+2026-10-02T16:11:53.2030456Z         ok 6 - reading memory works, and an unknown space says so
+2026-10-02T16:11:53.2030799Z           ---
+2026-10-02T16:11:53.2031025Z           duration_ms: 1.671046
+2026-10-02T16:11:53.2031271Z           type: 'test'
+2026-10-02T16:11:53.2031489Z           ...
+2026-10-02T16:11:53.2032033Z         # Subtest: free-running still drives the board
+2026-10-02T16:11:53.2032631Z         ok 7 - free-running still drives the board
+2026-10-02T16:11:53.2033115Z           ---
+2026-10-02T16:11:53.2033482Z           duration_ms: 75.762646
+2026-10-02T16:11:53.2033880Z           type: 'test'
+2026-10-02T16:11:53.2034212Z           ...
+2026-10-02T16:11:53.2034523Z         1..7
+2026-10-02T16:11:53.2034944Z     ok 10 - the debug target, over the same engine
+2026-10-02T16:11:53.2035405Z       ---
+2026-10-02T16:11:53.2035723Z       duration_ms: 94.614819
+2026-10-02T16:11:53.2036113Z       type: 'suite'
+2026-10-02T16:11:53.2036434Z       ...
+2026-10-02T16:11:53.2036785Z     1..10
+2026-10-02T16:11:53.2037241Z ok 1 - labwired-wasm boundary-A adapter
+2026-10-02T16:11:53.2037731Z   ---
+2026-10-02T16:11:53.2038010Z   duration_ms: 790.961516
+2026-10-02T16:11:53.2038284Z   type: 'suite'
+2026-10-02T16:11:53.2038512Z   ...
+2026-10-02T16:11:53.2313817Z # Subtest: labwired bridge: our netlist → their system manifest
+2026-10-02T16:11:53.2353746Z     # Subtest: every header pin gets an injection binding, whatever it is wired to
+2026-10-02T16:11:53.2392116Z     ok 1 - every header pin gets an injection binding, whatever it is wired to
+2026-10-02T16:11:53.2452860Z       ---
+2026-10-02T16:11:53.2463541Z       duration_ms: 1.739085
+2026-10-02T16:11:53.2522338Z       type: 'test'
+2026-10-02T16:11:53.2562265Z       ...
+2026-10-02T16:11:53.2612763Z     # Subtest: the classifier walks THROUGH the series resistor to the LED
+2026-10-02T16:11:53.2642532Z     ok 2 - the classifier walks THROUGH the series resistor to the LED
+2026-10-02T16:11:53.2702367Z       ---
+2026-10-02T16:11:53.2749609Z       duration_ms: 0.585687
+2026-10-02T16:11:53.2792346Z       type: 'test'
+2026-10-02T16:11:53.2802266Z       ...
+2026-10-02T16:11:53.2803359Z     # Subtest: an output binding is named with OUR part id, so a consumer can join on it
+2026-10-02T16:11:53.2832517Z     ok 3 - an output binding is named with OUR part id, so a consumer can join on it
+2026-10-02T16:11:53.2833259Z       ---
+2026-10-02T16:11:53.2833616Z       duration_ms: 1.904117
+2026-10-02T16:11:53.2834048Z       type: 'test'
+2026-10-02T16:11:53.2834422Z       ...
+2026-10-02T16:11:53.2835451Z     # Subtest: the manifest declares NO external_devices — one board, one truth
+2026-10-02T16:11:53.2836536Z     ok 4 - the manifest declares NO external_devices — one board, one truth
+2026-10-02T16:11:53.2837213Z       ---
+2026-10-02T16:11:53.2837562Z       duration_ms: 0.187474
+2026-10-02T16:11:53.2838030Z       type: 'test'
+2026-10-02T16:11:53.2838381Z       ...
+2026-10-02T16:11:53.2839007Z     # Subtest: a pull-up + button pad is a contact, and gets ONE input binding
+2026-10-02T16:11:53.2839956Z     ok 5 - a pull-up + button pad is a contact, and gets ONE input binding
+2026-10-02T16:11:53.2840609Z       ---
+2026-10-02T16:11:53.2840971Z       duration_ms: 0.480323
+2026-10-02T16:11:53.2841392Z       type: 'test'
+2026-10-02T16:11:53.2871966Z       ...
+2026-10-02T16:11:53.2872789Z     # Subtest: an analog pad is NAMED and its injection is REFUSED, not silently booleanised
+2026-10-02T16:11:53.2873852Z     ok 6 - an analog pad is NAMED and its injection is REFUSED, not silently booleanised
+2026-10-02T16:11:53.2874531Z       ---
+2026-10-02T16:11:53.2874862Z       duration_ms: 0.354689
+2026-10-02T16:11:53.2875263Z       type: 'test'
+2026-10-02T16:11:53.2875593Z       ...
+2026-10-02T16:11:53.2876167Z     # Subtest: a connection on a pad outside the header map is refused BY NAME
+2026-10-02T16:11:53.2877064Z     ok 7 - a connection on a pad outside the header map is refused BY NAME
+2026-10-02T16:11:53.2877658Z       ---
+2026-10-02T16:11:53.2877982Z       duration_ms: 0.263976
+2026-10-02T16:11:53.2878405Z       type: 'test'
+2026-10-02T16:11:53.2878718Z       ...
+2026-10-02T16:11:53.2879283Z     # Subtest: the controller's OWN supply terminals are not refusals
+2026-10-02T16:11:53.2880104Z     ok 8 - the controller's OWN supply terminals are not refusals
+2026-10-02T16:11:53.2880699Z       ---
+2026-10-02T16:11:53.2881033Z       duration_ms: 0.31393
+2026-10-02T16:11:53.2881434Z       type: 'test'
+2026-10-02T16:11:53.2881935Z       ...
+2026-10-02T16:11:53.2882566Z     # Subtest: a chip with no heavy-tier descriptor refuses, and names what does ship
+2026-10-02T16:11:53.2883624Z     ok 9 - a chip with no heavy-tier descriptor refuses, and names what does ship
+2026-10-02T16:11:53.2884250Z       ---
+2026-10-02T16:11:53.2884548Z       duration_ms: 0.305557
+2026-10-02T16:11:53.2884917Z       type: 'test'
+2026-10-02T16:11:53.2885234Z       ...
+2026-10-02T16:11:53.2885929Z     # Subtest: maps Arduino Uno headers to LabWired AVR ports without claiming ATtiny support
+2026-10-02T16:11:53.2887054Z     ok 10 - maps Arduino Uno headers to LabWired AVR ports without claiming ATtiny support
+2026-10-02T16:11:53.2887829Z       ---
+2026-10-02T16:11:53.2888167Z       duration_ms: 0.511259
+2026-10-02T16:11:53.2888579Z       type: 'test'
+2026-10-02T16:11:53.2888931Z       ...
+2026-10-02T16:11:53.2889589Z     # Subtest: bridges micro:bit v2 and PyBadge at their zero-based flash geometry
+2026-10-02T16:11:53.2890568Z     ok 11 - bridges micro:bit v2 and PyBadge at their zero-based flash geometry
+2026-10-02T16:11:53.2891258Z       ---
+2026-10-02T16:11:53.2891600Z       duration_ms: 0.469326
+2026-10-02T16:11:53.2892321Z       type: 'test'
+2026-10-02T16:11:53.2892601Z       ...
+2026-10-02T16:11:53.2893059Z     # Subtest: no controller, or two, refuses rather than guessing
+2026-10-02T16:11:53.2893694Z     ok 12 - no controller, or two, refuses rather than guessing
+2026-10-02T16:11:53.2894143Z       ---
+2026-10-02T16:11:53.2894437Z       duration_ms: 0.187705
+2026-10-02T16:11:53.2894768Z       type: 'test'
+2026-10-02T16:11:53.2895445Z       ...
+2026-10-02T16:11:53.2896270Z     # Subtest: classifyAttachment orders analog before contact before indicator
+2026-10-02T16:11:53.2897296Z     ok 13 - classifyAttachment orders analog before contact before indicator
+2026-10-02T16:11:53.2898062Z       ---
+2026-10-02T16:11:53.2898412Z       duration_ms: 0.126986
+2026-10-02T16:11:53.2898827Z       type: 'test'
+2026-10-02T16:11:53.2899170Z       ...
+2026-10-02T16:11:53.2899797Z     # Subtest: adapter options come out ready to hand to createLabwiredAdapter
+2026-10-02T16:11:53.2900778Z     ok 14 - adapter options come out ready to hand to createLabwiredAdapter
+2026-10-02T16:11:53.2901432Z       ---
+2026-10-02T16:11:53.2901954Z       duration_ms: 0.262384
+2026-10-02T16:11:53.2902412Z       type: 'test'
+2026-10-02T16:11:53.2902769Z       ...
+2026-10-02T16:11:53.2903378Z     # Subtest: a board the bridge cannot carry throws with the reasons attached
+2026-10-02T16:11:53.2904300Z     ok 15 - a board the bridge cannot carry throws with the reasons attached
+2026-10-02T16:11:53.2904965Z       ---
+2026-10-02T16:11:53.2905301Z       duration_ms: 0.404302
+2026-10-02T16:11:53.2905726Z       type: 'test'
+2026-10-02T16:11:53.2906069Z       ...
+2026-10-02T16:11:53.2906391Z     1..15
+2026-10-02T16:11:53.2907171Z ok 2 - labwired bridge: our netlist → their system manifest
+2026-10-02T16:11:53.2907755Z   ---
+2026-10-02T16:11:53.2908099Z   duration_ms: 9.595835
+2026-10-02T16:11:53.2908499Z   type: 'suite'
+2026-10-02T16:11:53.2908867Z   ...
+2026-10-02T16:11:53.2909448Z # Subtest: labwired bridge census: the shipped F030 gallery
+2026-10-02T16:11:53.2910287Z     # Subtest: the fixture is the corpus, and says where it came from
+2026-10-02T16:11:53.2942315Z     ok 1 - the fixture is the corpus, and says where it came from
+2026-10-02T16:11:53.2943010Z       ---
+2026-10-02T16:11:53.2943355Z       duration_ms: 0.193283
+2026-10-02T16:11:53.2943777Z       type: 'test'
+2026-10-02T16:11:53.2944137Z       ...
+2026-10-02T16:11:53.2945003Z     # Subtest: every shipped bench bridges — no chip, mcu or pin refusal anywhere
+2026-10-02T16:11:53.2946155Z     ok 2 - every shipped bench bridges — no chip, mcu or pin refusal anywhere
+2026-10-02T16:11:53.2946834Z       ---
+2026-10-02T16:11:53.2947199Z       duration_ms: 34.377367
+2026-10-02T16:11:53.2947623Z       type: 'test'
+2026-10-02T16:11:53.2947980Z       ...
+2026-10-02T16:11:53.2948555Z     # Subtest: THE LEDGER IS EMPTY for every bench with no analog pad
+2026-10-02T16:11:53.2949398Z     ok 3 - THE LEDGER IS EMPTY for every bench with no analog pad
+2026-10-02T16:11:53.2949992Z       ---
+2026-10-02T16:11:53.2950353Z       duration_ms: 16.258517
+2026-10-02T16:11:53.2950752Z       type: 'test'
+2026-10-02T16:11:53.2951095Z       ...
+2026-10-02T16:11:53.2951653Z     # Subtest: the analog refusals are exactly the ADC pads, one per pad
+2026-10-02T16:11:53.2982840Z     ok 4 - the analog refusals are exactly the ADC pads, one per pad
+2026-10-02T16:11:53.2983456Z       ---
+2026-10-02T16:11:53.2983815Z       duration_ms: 13.203125
+2026-10-02T16:11:53.2984239Z       type: 'test'
+2026-10-02T16:11:53.2984569Z       ...
+2026-10-02T16:11:53.2985172Z     # Subtest: the pad-role census matches what the corpus actually wires
+2026-10-02T16:11:53.2986047Z     ok 5 - the pad-role census matches what the corpus actually wires
+2026-10-02T16:11:53.2986629Z       ---
+2026-10-02T16:11:53.2986982Z       duration_ms: 11.44373
+2026-10-02T16:11:53.2987406Z       type: 'test'
+2026-10-02T16:11:53.2987756Z       ...
+2026-10-02T16:11:53.2988069Z     1..5
+2026-10-02T16:11:53.2988602Z ok 3 - labwired bridge census: the shipped F030 gallery
+2026-10-02T16:11:53.2989168Z   ---
+2026-10-02T16:11:53.2989499Z   duration_ms: 75.835048
+2026-10-02T16:11:53.2989909Z   type: 'suite'
+2026-10-02T16:11:53.2990249Z   ...
+2026-10-02T16:11:53.8373113Z # Subtest: labwired catalog
+2026-10-02T16:11:53.8459744Z     # Subtest: is generated at the wasm build PIN — regenerate after a PIN bump
+2026-10-02T16:11:53.8573684Z     ok 1 - is generated at the wasm build PIN — regenerate after a PIN bump
+2026-10-02T16:11:53.8644572Z       ---
+2026-10-02T16:11:53.8752832Z       duration_ms: 1.244341
+2026-10-02T16:11:53.8823262Z       type: 'test'
+2026-10-02T16:11:53.8925634Z       ...
+2026-10-02T16:11:53.8982856Z     # Subtest: holds exactly the generator's chips, each with the arch and clock its own YAML declares
+2026-10-02T16:11:53.8992943Z     ok 2 - holds exactly the generator's chips, each with the arch and clock its own YAML declares
+2026-10-02T16:11:53.8994243Z       ---
+2026-10-02T16:11:53.8994746Z       duration_ms: 36.741412
+2026-10-02T16:11:53.8995239Z       type: 'test'
+2026-10-02T16:11:53.8995792Z       ...
+2026-10-02T16:11:53.8996196Z     1..2
+2026-10-02T16:11:53.8996685Z ok 4 - labwired catalog
+2026-10-02T16:11:53.8997158Z   ---
+2026-10-02T16:11:53.8997628Z   duration_ms: 39.41837
+2026-10-02T16:11:53.8998114Z   type: 'suite'
+2026-10-02T16:11:53.8998627Z   ...
+2026-10-02T16:11:53.8999231Z # Subtest: firmware-only construction (no engine)
+2026-10-02T16:11:53.9000209Z     # Subtest: the factory builds from a catalog chip with no board, and no board_io
+2026-10-02T16:11:53.9001347Z     ok 1 - the factory builds from a catalog chip with no board, and no board_io
+2026-10-02T16:11:53.9002306Z       ---
+2026-10-02T16:11:53.9002792Z       duration_ms: 2.187752
+2026-10-02T16:11:53.9003352Z       type: 'test'
+2026-10-02T16:11:53.9003788Z       ...
+2026-10-02T16:11:53.9004532Z     # Subtest: a raw .bin is refused by name instead of loaded at a guessed address
+2026-10-02T16:11:53.9005576Z     ok 2 - a raw .bin is refused by name instead of loaded at a guessed address
+2026-10-02T16:11:53.9006337Z       ---
+2026-10-02T16:11:53.9006756Z       duration_ms: 0.585257
+2026-10-02T16:11:53.9007290Z       type: 'test'
+2026-10-02T16:11:53.9007722Z       ...
+2026-10-02T16:11:53.9008302Z     # Subtest: the bench path still requires a header map
+2026-10-02T16:11:53.9009051Z     ok 3 - the bench path still requires a header map
+2026-10-02T16:11:53.9009706Z       ---
+2026-10-02T16:11:53.9010183Z       duration_ms: 0.345526
+2026-10-02T16:11:53.9010796Z       type: 'test'
+2026-10-02T16:11:53.9011250Z       ...
+2026-10-02T16:11:53.9011892Z     1..3
+2026-10-02T16:11:53.9012496Z ok 5 - firmware-only construction (no engine)
+2026-10-02T16:11:53.9013166Z   ---
+2026-10-02T16:11:53.9013596Z   duration_ms: 3.417091
+2026-10-02T16:11:53.9014101Z   type: 'suite'
+2026-10-02T16:11:53.9014524Z   ...
+2026-10-02T16:11:53.9015364Z # Subtest: UF2 → ELF
+2026-10-02T16:11:53.9016266Z     # Subtest: merges contiguous blocks, keeps a gap as a second segment, skips non-flash blocks
+2026-10-02T16:11:53.9017564Z     ok 1 - merges contiguous blocks, keeps a gap as a second segment, skips non-flash blocks
+2026-10-02T16:11:53.9018392Z       ---
+2026-10-02T16:11:53.9018871Z       duration_ms: 3.612488
+2026-10-02T16:11:53.9019371Z       type: 'test'
+2026-10-02T16:11:53.9019843Z       ...
+2026-10-02T16:11:53.9020580Z     # Subtest: refuses a corrupt block by position instead of loading half an image
+2026-10-02T16:11:53.9021691Z     ok 2 - refuses a corrupt block by position instead of loading half an image
+2026-10-02T16:11:53.9022714Z       ---
+2026-10-02T16:11:53.9023202Z       duration_ms: 0.468336
+2026-10-02T16:11:53.9023700Z       type: 'test'
+2026-10-02T16:11:53.9024173Z       ...
+2026-10-02T16:11:53.9024912Z     # Subtest: firmware-only accepts a UF2 (converted), and hands the engine an ELF
+2026-10-02T16:11:53.9026026Z     ok 3 - firmware-only accepts a UF2 (converted), and hands the engine an ELF
+2026-10-02T16:11:53.9026798Z       ---
+2026-10-02T16:11:53.9027268Z       duration_ms: 0.618886
+2026-10-02T16:11:53.9027753Z       type: 'test'
+2026-10-02T16:11:53.9028230Z       ...
+2026-10-02T16:11:53.9028628Z     1..3
+2026-10-02T16:11:53.9029138Z ok 6 - UF2 → ELF
+2026-10-02T16:11:53.9029573Z   ---
+2026-10-02T16:11:53.9030026Z   duration_ms: 5.079355
+2026-10-02T16:11:53.9030489Z   type: 'suite'
+2026-10-02T16:11:53.9030960Z   ...
+2026-10-02T16:11:53.9031588Z # Subtest: RP2040 bootrom as a named blob
+2026-10-02T16:11:53.9032686Z     # Subtest: firmware-only rp2040 hands the engine this repo's clean-room ROM as `bootrom`
+2026-10-02T16:11:53.9034543Z     ok 1 - firmware-only rp2040 hands the engine this repo's clean-room ROM as `bootrom`
+2026-10-02T16:11:53.9035360Z       ---
+2026-10-02T16:11:53.9035865Z       duration_ms: 14.139115
+2026-10-02T16:11:53.9036401Z       type: 'test'
+2026-10-02T16:11:53.9036938Z       ...
+2026-10-02T16:11:53.9037431Z     # Subtest: no other chip gets a blob
+2026-10-02T16:11:53.9038102Z     ok 2 - no other chip gets a blob
+2026-10-02T16:11:53.9038628Z       ---
+2026-10-02T16:11:53.9039087Z       duration_ms: 1.010329
+2026-10-02T16:11:53.9039594Z       type: 'test'
+2026-10-02T16:11:53.9040063Z       ...
+2026-10-02T16:11:53.9040464Z     1..2
+2026-10-02T16:11:53.9041027Z ok 7 - RP2040 bootrom as a named blob
+2026-10-02T16:11:53.9041568Z   ---
+2026-10-02T16:11:53.9042200Z   duration_ms: 15.368254
+2026-10-02T16:11:53.9042697Z   type: 'suite'
+2026-10-02T16:11:53.9043160Z   ...
+2026-10-02T16:11:53.9043687Z # Subtest: Thumb bit is ARM's alone
+2026-10-02T16:11:53.9044496Z     # Subtest: xtensa: an odd PC is reported and breakable as-is
+2026-10-02T16:11:53.9051129Z     ok 1 - xtensa: an odd PC is reported and breakable as-is
+2026-10-02T16:11:53.9051996Z       ---
+2026-10-02T16:11:53.9052444Z       duration_ms: 0.666054
+2026-10-02T16:11:53.9052987Z       type: 'test'
+2026-10-02T16:11:53.9053420Z       ...
+2026-10-02T16:11:53.9054110Z     # Subtest: arm: the Thumb bit is masked and an odd breakpoint refused
+2026-10-02T16:11:53.9055028Z     ok 2 - arm: the Thumb bit is masked and an odd breakpoint refused
+2026-10-02T16:11:53.9055725Z       ---
+2026-10-02T16:11:53.9056159Z       duration_ms: 0.459061
+2026-10-02T16:11:53.9056700Z       type: 'test'
+2026-10-02T16:11:53.9057135Z       ...
+2026-10-02T16:11:53.9057789Z     # Subtest: xtensa: a breakpoint on an odd address halts there
+2026-10-02T16:11:53.9058647Z     ok 3 - xtensa: a breakpoint on an odd address halts there
+2026-10-02T16:11:53.9059310Z       ---
+2026-10-02T16:11:53.9059740Z       duration_ms: 1.346922
+2026-10-02T16:11:53.9060270Z       type: 'test'
+2026-10-02T16:11:53.9060695Z       ...
+2026-10-02T16:11:53.9061134Z     1..3
+2026-10-02T16:11:53.9061629Z ok 8 - Thumb bit is ARM's alone
+2026-10-02T16:11:53.9062421Z   ---
+2026-10-02T16:11:53.9062855Z   duration_ms: 2.805847
+2026-10-02T16:11:53.9063362Z   type: 'suite'
+2026-10-02T16:11:53.9063787Z   ...
+2026-10-02T16:11:53.9064369Z # Subtest: firmware-only on the real engine
+2026-10-02T16:11:53.9065279Z     # Subtest: stm32f103: a user ELF boots, runs, and stops on a breakpoint at its loop
+2026-10-02T16:11:53.9066354Z     ok 1 - stm32f103: a user ELF boots, runs, and stops on a breakpoint at its loop
+2026-10-02T16:11:53.9067116Z       ---
+2026-10-02T16:11:53.9092438Z       duration_ms: 786.102884
+2026-10-02T16:11:53.9093362Z       type: 'test'
+2026-10-02T16:11:53.9093921Z       ...
+2026-10-02T16:11:53.9094797Z     # Subtest: nrf52840: a user ELF boots, runs, and stops on a breakpoint at its loop
+2026-10-02T16:11:53.9095984Z     ok 2 - nrf52840: a user ELF boots, runs, and stops on a breakpoint at its loop
+2026-10-02T16:11:53.9096885Z       ---
+2026-10-02T16:11:53.9097466Z       duration_ms: 205.39472
+2026-10-02T16:11:53.9098185Z       type: 'test'
+2026-10-02T16:11:53.9098769Z       ...
+2026-10-02T16:11:53.9099716Z     # Subtest: stm32f103: record, restore the checkpoint, and replay reproduces every retire event
+2026-10-02T16:11:53.9101137Z     ok 3 - stm32f103: record, restore the checkpoint, and replay reproduces every retire event
+2026-10-02T16:11:53.9102313Z       ---
+2026-10-02T16:11:53.9102842Z       duration_ms: 137.546042
+2026-10-02T16:11:53.9103562Z       type: 'test'
+2026-10-02T16:11:53.9104192Z       ...
+2026-10-02T16:11:53.9105230Z     # Subtest: esp32: a hand-assembled Xtensa loop runs, and stops on its odd-address branch
+2026-10-02T16:11:53.9106679Z     ok 4 - esp32: a hand-assembled Xtensa loop runs, and stops on its odd-address branch
+2026-10-02T16:11:53.9107728Z       ---
+2026-10-02T16:11:53.9108307Z       duration_ms: 39.734548
+2026-10-02T16:11:53.9109664Z       type: 'test'
+2026-10-02T16:11:53.9110259Z       ...
+2026-10-02T16:11:53.9111492Z     # Subtest: esp32s3: a hand-assembled Xtensa loop runs, and stops on its odd-address branch
+2026-10-02T16:11:53.9113162Z     ok 5 - esp32s3: a hand-assembled Xtensa loop runs, and stops on its odd-address branch
+2026-10-02T16:11:53.9114148Z       ---
+2026-10-02T16:11:53.9114708Z       duration_ms: 25.345347
+2026-10-02T16:11:53.9115346Z       type: 'test'
+2026-10-02T16:11:53.9115908Z       ...
+2026-10-02T16:11:53.9116797Z     # Subtest: rp2040: pico-sdk ROM lookup finds popcount32 in the clean-room bootrom
+2026-10-02T16:11:53.9118101Z     ok 6 - rp2040: pico-sdk ROM lookup finds popcount32 in the clean-room bootrom
+2026-10-02T16:11:53.9119035Z       ---
+2026-10-02T16:11:53.9119605Z       duration_ms: 203.670086
+2026-10-02T16:11:53.9120319Z       type: 'test'
+2026-10-02T16:11:53.9120913Z       ...
+2026-10-02T16:11:53.9121444Z     1..6
+2026-10-02T16:11:53.9122340Z ok 9 - firmware-only on the real engine
+2026-10-02T16:11:53.9122974Z   ---
+2026-10-02T16:11:53.9123465Z   duration_ms: 1403.395506
+2026-10-02T16:11:53.9124041Z   type: 'suite'
+2026-10-02T16:11:53.9124577Z   ...
+2026-10-02T16:11:53.9125247Z # Subtest: RTT / semihosting / ITM reach a listener
+2026-10-02T16:11:53.9126432Z     # Subtest: each stream is drained on the pump and labelled by channel; the UART listener is untouched
+2026-10-02T16:11:53.9127905Z     ok 1 - each stream is drained on the pump and labelled by channel; the UART listener is untouched
+2026-10-02T16:11:53.9128935Z       ---
+2026-10-02T16:11:53.9129589Z       duration_ms: 0.652896
+2026-10-02T16:11:53.9130220Z       type: 'test'
+2026-10-02T16:11:53.9130813Z       ...
+2026-10-02T16:11:53.9131395Z     1..1
+2026-10-02T16:11:53.9132326Z ok 10 - RTT / semihosting / ITM reach a listener
+2026-10-02T16:11:53.9133504Z   ---
+2026-10-02T16:11:53.9134076Z   duration_ms: 0.786972
+2026-10-02T16:11:53.9134650Z   type: 'suite'
+2026-10-02T16:11:53.9135131Z   ...
+2026-10-02T16:11:53.9430616Z # Subtest: engineering input JS call contract (backend doubles, not model proof)
+2026-10-02T16:11:53.9432265Z     # Subtest: missing APIs refuse explicitly, never use sequential set_input fallback
+2026-10-02T16:11:53.9433596Z     ok 1 - missing APIs refuse explicitly, never use sequential set_input fallback
+2026-10-02T16:11:53.9434493Z       ---
+2026-10-02T16:11:53.9434991Z       duration_ms: 2.121866
+2026-10-02T16:11:53.9435554Z       type: 'test'
+2026-10-02T16:11:53.9436053Z       ...
+2026-10-02T16:11:53.9436880Z     # Subtest: discovery normalizes actual serde Map shapes and rejects malformed top level
+2026-10-02T16:11:53.9438141Z     ok 2 - discovery normalizes actual serde Map shapes and rejects malformed top level
+2026-10-02T16:11:53.9439020Z       ---
+2026-10-02T16:11:53.9439523Z       duration_ms: 1.301916
+2026-10-02T16:11:53.9440107Z       type: 'test'
+2026-10-02T16:11:53.9440605Z       ...
+2026-10-02T16:11:53.9441505Z     # Subtest: validates every row before one copied atomic call, without trimming identities
+2026-10-02T16:11:53.9472913Z     ok 3 - validates every row before one copied atomic call, without trimming identities
+2026-10-02T16:11:53.9502586Z       ---
+2026-10-02T16:11:53.9503092Z       duration_ms: 0.510608
+2026-10-02T16:11:53.9503635Z       type: 'test'
+2026-10-02T16:11:53.9504081Z       ...
+2026-10-02T16:11:53.9504887Z     # Subtest: bad later rows, nonfinite values and unknown fields never reach the backend
+2026-10-02T16:11:53.9506116Z     ok 4 - bad later rows, nonfinite values and unknown fields never reach the backend
+2026-10-02T16:11:53.9506910Z       ---
+2026-10-02T16:11:53.9507400Z       duration_ms: 0.561502
+2026-10-02T16:11:53.9507819Z       type: 'test'
+2026-10-02T16:11:53.9508143Z       ...
+2026-10-02T16:11:53.9508721Z     # Subtest: backend transaction errors propagate without a success receipt
+2026-10-02T16:11:53.9509336Z     ok 5 - backend transaction errors propagate without a success receipt
+2026-10-02T16:11:53.9509713Z       ---
+2026-10-02T16:11:53.9509929Z       duration_ms: 0.318216
+2026-10-02T16:11:53.9510503Z       type: 'test'
+2026-10-02T16:11:53.9510731Z       ...
+2026-10-02T16:11:53.9511210Z     # Subtest: reset uses the new backend for both discovery and writes
+2026-10-02T16:11:53.9511720Z     ok 6 - reset uses the new backend for both discovery and writes
+2026-10-02T16:11:53.9512464Z       ---
+2026-10-02T16:11:53.9512780Z       duration_ms: 0.41704
+2026-10-02T16:11:53.9513115Z       type: 'test'
+2026-10-02T16:11:53.9513441Z       ...
+2026-10-02T16:11:53.9514005Z     # Subtest: debug boundary refuses missing input methods and detached targets
+2026-10-02T16:11:53.9514858Z     ok 7 - debug boundary refuses missing input methods and detached targets
+2026-10-02T16:11:53.9515480Z       ---
+2026-10-02T16:11:53.9515779Z       duration_ms: 0.845337
+2026-10-02T16:11:53.9516150Z       type: 'test'
+2026-10-02T16:11:53.9516464Z       ...
+2026-10-02T16:11:53.9516745Z     1..7
+2026-10-02T16:11:53.9517363Z ok 11 - engineering input JS call contract (backend doubles, not model proof)
+2026-10-02T16:11:53.9517977Z   ---
+2026-10-02T16:11:53.9518271Z   duration_ms: 7.448452
+2026-10-02T16:11:53.9518616Z   type: 'suite'
+2026-10-02T16:11:53.9518930Z   ...
+2026-10-02T16:11:53.9519449Z # Subtest: actual WASM engineering-input transaction proof
+2026-10-02T16:11:53.9520370Z     # Subtest: discovers both scoped ids and drives real analog-kit ADC inputs in one transaction
+2026-10-02T16:11:53.9521404Z     ok 1 - discovers both scoped ids and drives real analog-kit ADC inputs in one transaction
+2026-10-02T16:11:53.9522286Z       ---
+2026-10-02T16:11:53.9522615Z       duration_ms: 224.679807
+2026-10-02T16:11:53.9523005Z       type: 'test'
+2026-10-02T16:11:53.9523306Z       ...
+2026-10-02T16:11:53.9524936Z     # Subtest: backend rejects ambiguous or unknown identities and bad later ranges atomically
+2026-10-02T16:11:53.9526855Z     ok 2 - backend rejects ambiguous or unknown identities and bad later ranges atomically
+2026-10-02T16:11:53.9527504Z       ---
+2026-10-02T16:11:53.9527806Z       duration_ms: 3.396321
+2026-10-02T16:11:53.9528183Z       type: 'test'
+2026-10-02T16:11:53.9528508Z       ...
+2026-10-02T16:11:53.9529233Z     # Subtest: debug success emits one isolated input fact; replay routes atomically without re-emitting
+2026-10-02T16:11:53.9530336Z     ok 3 - debug success emits one isolated input fact; replay routes atomically without re-emitting
+2026-10-02T16:11:53.9531033Z       ---
+2026-10-02T16:11:53.9531330Z       duration_ms: 2.191587
+2026-10-02T16:11:53.9531693Z       type: 'test'
+2026-10-02T16:11:53.9532171Z       ...
+2026-10-02T16:11:53.9532827Z     # Subtest: a circuit-bound target refuses input replay rather than half-rewinding its board
+2026-10-02T16:11:53.9533852Z     ok 4 - a circuit-bound target refuses input replay rather than half-rewinding its board
+2026-10-02T16:11:53.9534518Z       ---
+2026-10-02T16:11:53.9534818Z       duration_ms: 1.16864
+2026-10-02T16:11:53.9535166Z       type: 'test'
+2026-10-02T16:11:53.9551524Z       ...
+2026-10-02T16:11:53.9552122Z     1..4
+2026-10-02T16:11:53.9552693Z ok 12 - actual WASM engineering-input transaction proof
+2026-10-02T16:11:53.9553263Z   ---
+2026-10-02T16:11:53.9553610Z   duration_ms: 232.004127
+2026-10-02T16:11:53.9553994Z   type: 'suite'
+2026-10-02T16:11:53.9554324Z   ...
+2026-10-02T16:11:53.9554826Z # Subtest: the micro:bit matrix, without an engine
+2026-10-02T16:11:53.9555603Z     # Subtest: gray8 draws red LEDs by brightness, a dark one as a dim body
+2026-10-02T16:11:53.9556470Z     ok 1 - gray8 draws red LEDs by brightness, a dark one as a dim body
+2026-10-02T16:11:53.9557072Z       ---
+2026-10-02T16:11:53.9557397Z       duration_ms: 3.086718
+2026-10-02T16:11:53.9557783Z       type: 'test'
+2026-10-02T16:11:53.9558118Z       ...
+2026-10-02T16:11:53.9558823Z     # Subtest: a micro:bit bench declares its on-module matrix; other benches declare no devices
+2026-10-02T16:11:53.9559915Z     ok 2 - a micro:bit bench declares its on-module matrix; other benches declare no devices
+2026-10-02T16:11:53.9560618Z       ---
+2026-10-02T16:11:53.9560934Z       duration_ms: 2.293026
+2026-10-02T16:11:53.9561578Z       type: 'test'
+2026-10-02T16:11:53.9562049Z       ...
+2026-10-02T16:11:53.9562920Z     # Subtest: Board.setPartMatrix: an mcu part (no model) gets an overlay; a rebuild clears it
+2026-10-02T16:11:53.9564026Z     ok 3 - Board.setPartMatrix: an mcu part (no model) gets an overlay; a rebuild clears it
+2026-10-02T16:11:53.9564719Z       ---
+2026-10-02T16:11:53.9565044Z       duration_ms: 2.744557
+2026-10-02T16:11:53.9565422Z       type: 'test'
+2026-10-02T16:11:53.9565747Z       ...
+2026-10-02T16:11:53.9566440Z     # Subtest: Board.setPartMatrix: a part with a registered model gets it on its own state
+2026-10-02T16:11:53.9567480Z     ok 4 - Board.setPartMatrix: a part with a registered model gets it on its own state
+2026-10-02T16:11:53.9568176Z       ---
+2026-10-02T16:11:53.9568500Z       duration_ms: 4.625911
+2026-10-02T16:11:53.9568898Z       type: 'test'
+2026-10-02T16:11:53.9569220Z       ...
+2026-10-02T16:11:53.9569865Z     # Subtest: binToElf carries extra records (an nRF .hex UICR) as their own PT_LOADs
+2026-10-02T16:11:53.9570880Z     ok 5 - binToElf carries extra records (an nRF .hex UICR) as their own PT_LOADs
+2026-10-02T16:11:53.9571536Z       ---
+2026-10-02T16:11:53.9572015Z       duration_ms: 0.736227
+2026-10-02T16:11:53.9572361Z       type: 'test'
+2026-10-02T16:11:53.9572641Z       ...
+2026-10-02T16:11:53.9572895Z     1..5
+2026-10-02T16:11:53.9573344Z ok 13 - the micro:bit matrix, without an engine
+2026-10-02T16:11:53.9573780Z   ---
+2026-10-02T16:11:53.9574075Z   duration_ms: 15.590499
+2026-10-02T16:11:53.9574433Z   type: 'suite'
+2026-10-02T16:11:53.9574748Z   ...
+2026-10-02T16:11:53.9575220Z # Subtest: the micro:bit matrix on the real engine
+2026-10-02T16:11:53.9576047Z     # Subtest: the catalog offers microbit-v2 with its matrix as a drawable display
+2026-10-02T16:11:53.9577013Z     ok 1 - the catalog offers microbit-v2 with its matrix as a drawable display
+2026-10-02T16:11:53.9577631Z       ---
+2026-10-02T16:11:53.9577961Z       duration_ms: 0.209437
+2026-10-02T16:11:53.9578353Z       type: 'test'
+2026-10-02T16:11:53.9578669Z       ...
+2026-10-02T16:11:53.9579225Z     # Subtest: the engine's picture reaches the micro:bit part's device state
+2026-10-02T16:11:53.9580081Z     ok 2 - the engine's picture reaches the micro:bit part's device state
+2026-10-02T16:11:53.9580647Z       ---
+2026-10-02T16:11:53.9580951Z       duration_ms: 377.80418
+2026-10-02T16:11:53.9581329Z       type: 'test'
+2026-10-02T16:11:53.9581626Z       ...
+2026-10-02T16:11:53.9582053Z     1..2
+2026-10-02T16:11:53.9582492Z ok 14 - the micro:bit matrix on the real engine
+2026-10-02T16:11:53.9582934Z   ---
+2026-10-02T16:11:53.9583231Z   duration_ms: 378.464106
+2026-10-02T16:11:53.9583597Z   type: 'suite'
+2026-10-02T16:11:53.9583896Z   ...
+2026-10-02T16:11:55.0772605Z #     [round trip] polled UIF: light 20.001 ms, heavy 20.000 ms
+2026-10-02T16:11:55.1834756Z #     [round trip] TIM3 handler entries per update event over 40 ms: light 0.97, heavy 0.97
+2026-10-02T16:11:55.5584600Z # Subtest: labwired round trip: a gallery bench on both tiers
+2026-10-02T16:11:55.5590845Z     # Subtest: 01-blink: the bridged manifest runs the bench, and both tiers agree
+2026-10-02T16:11:55.5592135Z     ok 1 - 01-blink: the bridged manifest runs the bench, and both tiers agree
+2026-10-02T16:11:55.5592903Z       ---
+2026-10-02T16:11:55.5593276Z       duration_ms: 799.832375
+2026-10-02T16:11:55.5593698Z       type: 'test'
+2026-10-02T16:11:55.5594125Z       ...
+2026-10-02T16:11:55.5595225Z     # Subtest: POLLED off UIF, the two timelines agree — so the COUNTER is not the difference
+2026-10-02T16:11:55.5596551Z     ok 2 - POLLED off UIF, the two timelines agree — so the COUNTER is not the difference
+2026-10-02T16:11:55.5622435Z       ---
+2026-10-02T16:11:55.5622841Z       duration_ms: 797.316858
+2026-10-02T16:11:55.5623289Z       type: 'test'
+2026-10-02T16:11:55.5623648Z       ...
+2026-10-02T16:11:55.5624308Z     # Subtest: REPAIRED: labwired enters the TIM3 handler once per update event
+2026-10-02T16:11:55.5625301Z     ok 3 - REPAIRED: labwired enters the TIM3 handler once per update event
+2026-10-02T16:11:55.5626319Z       ---
+2026-10-02T16:11:55.5626846Z       duration_ms: 105.860128
+2026-10-02T16:11:55.5627262Z       type: 'test'
+2026-10-02T16:11:55.5627609Z       ...
+2026-10-02T16:11:55.5628270Z     # Subtest: 11-toggle-button: the board drives the pad, and the firmware sees it
+2026-10-02T16:11:55.5629288Z     ok 4 - 11-toggle-button: the board drives the pad, and the firmware sees it
+2026-10-02T16:11:55.5629944Z       ---
+2026-10-02T16:11:55.5630286Z       duration_ms: 361.918159
+2026-10-02T16:11:55.5630696Z       type: 'test'
+2026-10-02T16:11:55.5631044Z       ...
+2026-10-02T16:11:55.5631668Z     # Subtest: the debug factory derives the manifest from the board it was given
+2026-10-02T16:11:55.5632825Z     ok 5 - the debug factory derives the manifest from the board it was given
+2026-10-02T16:11:55.5633484Z       ---
+2026-10-02T16:11:55.5633816Z       duration_ms: 6.912408
+2026-10-02T16:11:55.5634228Z       type: 'test'
+2026-10-02T16:11:55.5634579Z       ...
+2026-10-02T16:11:55.5635111Z     # Subtest: a bench the bridge refuses does not quietly half-run
+2026-10-02T16:11:55.5635904Z     ok 6 - a bench the bridge refuses does not quietly half-run
+2026-10-02T16:11:55.5636591Z       ---
+2026-10-02T16:11:55.5637133Z       duration_ms: 0.442357
+2026-10-02T16:11:55.5637677Z       type: 'test'
+2026-10-02T16:11:55.5638316Z       ...
+2026-10-02T16:11:55.5638832Z     1..6
+2026-10-02T16:11:55.5639638Z ok 15 - labwired round trip: a gallery bench on both tiers
+2026-10-02T16:11:55.5640328Z   ---
+2026-10-02T16:11:55.5640911Z   duration_ms: 2073.793227
+2026-10-02T16:11:55.5641484Z   type: 'suite'
+2026-10-02T16:11:55.5642155Z   ...
+2026-10-02T16:11:55.7423450Z #     [pad parity] DC high: light 0.078193  heavy 0.078193  hand 0.078192
+2026-10-02T16:11:55.7424561Z #     [pad parity] polled blink: light peak 0.078191 mean 0.035383  heavy peak 0.078188 mean 0.035382
+2026-10-02T16:11:55.9389111Z #     [pad parity] open-drain high: light 0.000000  heavy 0.000000
+2026-10-02T16:11:56.1244664Z #     [pad parity] open-drain low (active-low bench): light 0.078193  heavy 0.078193  hand 0.078192
+2026-10-02T16:11:56.1278154Z # Subtest: pad drive: the inferred blink bench, solved by hand
+2026-10-02T16:11:56.1279056Z     # Subtest: the improvised bench is the one the arithmetic describes
+2026-10-02T16:11:56.1282583Z     ok 1 - the improvised bench is the one the arithmetic describes
+2026-10-02T16:11:56.1283455Z       ---
+2026-10-02T16:11:56.1283973Z       duration_ms: 1.186536
+2026-10-02T16:11:56.1284548Z       type: 'test'
+2026-10-02T16:11:56.1285064Z       ...
+2026-10-02T16:11:56.1293920Z     # Subtest: 0.0712, not 0.33: the board reproduces the hand-computed on-state
+2026-10-02T16:11:56.1294520Z     ok 2 - 0.0712, not 0.33: the board reproduces the hand-computed on-state
+2026-10-02T16:11:56.1294921Z       ---
+2026-10-02T16:11:56.1295149Z       duration_ms: 34.238173
+2026-10-02T16:11:56.1295615Z       type: 'test'
+2026-10-02T16:11:56.1295978Z       ...
+2026-10-02T16:11:56.1296951Z     # Subtest: the same bench on a 5 V rail reads 0.1546 — the rail is why it is dim
+2026-10-02T16:11:56.1297952Z     ok 3 - the same bench on a 5 V rail reads 0.1546 — the rail is why it is dim
+2026-10-02T16:11:56.1298538Z       ---
+2026-10-02T16:11:56.1299068Z       duration_ms: 5.693113
+2026-10-02T16:11:56.1299546Z       type: 'test'
+2026-10-02T16:11:56.1299928Z       ...
+2026-10-02T16:11:56.1315121Z     # Subtest: a 50 % blink far slower than the window PEAKS at the on-state value
+2026-10-02T16:11:56.1316361Z     ok 4 - a 50 % blink far slower than the window PEAKS at the on-state value
+2026-10-02T16:11:56.1317187Z       ---
+2026-10-02T16:11:56.1317789Z       duration_ms: 79.966054
+2026-10-02T16:11:56.1318463Z       type: 'test'
+2026-10-02T16:11:56.1319009Z       ...
+2026-10-02T16:11:56.1319831Z     # Subtest: a blink FASTER than the window reads a steady duty-weighted 0.0356
+2026-10-02T16:11:56.1320941Z     ok 5 - a blink FASTER than the window reads a steady duty-weighted 0.0356
+2026-10-02T16:11:56.1322376Z       ---
+2026-10-02T16:11:56.1322922Z       duration_ms: 89.028318
+2026-10-02T16:11:56.1323854Z       type: 'test'
+2026-10-02T16:11:56.1324402Z       ...
+2026-10-02T16:11:56.1324898Z     1..5
+2026-10-02T16:11:56.1325639Z ok 16 - pad drive: the inferred blink bench, solved by hand
+2026-10-02T16:11:56.1326368Z   ---
+2026-10-02T16:11:56.1326904Z   duration_ms: 211.497443
+2026-10-02T16:11:56.1327482Z   type: 'suite'
+2026-10-02T16:11:56.1328009Z   ...
+2026-10-02T16:11:56.1328656Z # Subtest: open drain: the pad that lets go
+2026-10-02T16:11:56.1343233Z     # Subtest: od LOW is a real pull to ground — the SAME Thevenin as push-pull low
+2026-10-02T16:11:56.1344357Z     ok 1 - od LOW is a real pull to ground — the SAME Thevenin as push-pull low
+2026-10-02T16:11:56.1345025Z       ---
+2026-10-02T16:11:56.1345370Z       duration_ms: 6.458633
+2026-10-02T16:11:56.1345775Z       type: 'test'
+2026-10-02T16:11:56.1346134Z       ...
+2026-10-02T16:11:56.1346726Z     # Subtest: od HIGH is high-Z: the LED is DARK and the pad is not a source
+2026-10-02T16:11:56.1347621Z     ok 2 - od HIGH is high-Z: the LED is DARK and the pad is not a source
+2026-10-02T16:11:56.1348218Z       ---
+2026-10-02T16:11:56.1348550Z       duration_ms: 0.745531
+2026-10-02T16:11:56.1348953Z       type: 'test'
+2026-10-02T16:11:56.1349287Z       ...
+2026-10-02T16:11:56.1350571Z     # Subtest: od HIGH + an external 10 kΩ pull-up: the RESISTOR sets the pad
+2026-10-02T16:11:56.1351588Z     ok 3 - od HIGH + an external 10 kΩ pull-up: the RESISTOR sets the pad
+2026-10-02T16:11:56.1352372Z       ---
+2026-10-02T16:11:56.1352722Z       duration_ms: 9.710233
+2026-10-02T16:11:56.1353115Z       type: 'test'
+2026-10-02T16:11:56.1353452Z       ...
+2026-10-02T16:11:56.1354015Z     # Subtest: od HIGH with the INTERNAL pull-up is `quasi`, not floating
+2026-10-02T16:11:56.1354838Z     ok 4 - od HIGH with the INTERNAL pull-up is `quasi`, not floating
+2026-10-02T16:11:56.1355402Z       ---
+2026-10-02T16:11:56.1355742Z       duration_ms: 1.068534
+2026-10-02T16:11:56.1356146Z       type: 'test'
+2026-10-02T16:11:56.1356479Z       ...
+2026-10-02T16:11:56.1356782Z     1..4
+2026-10-02T16:11:56.1357236Z ok 17 - open drain: the pad that lets go
+2026-10-02T16:11:56.1357684Z   ---
+2026-10-02T16:11:56.1358005Z   duration_ms: 18.69265
+2026-10-02T16:11:56.1358387Z   type: 'suite'
+2026-10-02T16:11:56.1358706Z   ...
+2026-10-02T16:11:56.1359256Z # Subtest: open drain: the two publishers, at register level
+2026-10-02T16:11:56.1359985Z     # Subtest: OTYPER before MODER still reaches the board
+2026-10-02T16:11:56.1360652Z     ok 1 - OTYPER before MODER still reaches the board
+2026-10-02T16:11:56.1361159Z       ---
+2026-10-02T16:11:56.1361486Z       duration_ms: 1.572321
+2026-10-02T16:11:56.1362077Z       type: 'test'
+2026-10-02T16:11:56.1362411Z       ...
+2026-10-02T16:11:56.1362914Z     # Subtest: the light tier maps the register combinations
+2026-10-02T16:11:56.1363625Z     ok 2 - the light tier maps the register combinations
+2026-10-02T16:11:56.1364141Z       ---
+2026-10-02T16:11:56.1364473Z       duration_ms: 0.387757
+2026-10-02T16:11:56.1364880Z       type: 'test'
+2026-10-02T16:11:56.1365218Z       ...
+2026-10-02T16:11:56.1365806Z     # Subtest: the heavy tier derives the same modes from the same registers
+2026-10-02T16:11:56.1366680Z     ok 3 - the heavy tier derives the same modes from the same registers
+2026-10-02T16:11:56.1367278Z       ---
+2026-10-02T16:11:56.1367604Z       duration_ms: 2.204417
+2026-10-02T16:11:56.1368012Z       type: 'test'
+2026-10-02T16:11:56.1368342Z       ...
+2026-10-02T16:11:56.1368996Z     # Subtest: OTYPER flipped on an ALREADY-configured output still reaches the board
+2026-10-02T16:11:56.1369988Z     ok 4 - OTYPER flipped on an ALREADY-configured output still reaches the board
+2026-10-02T16:11:56.1370623Z       ---
+2026-10-02T16:11:56.1370949Z       duration_ms: 1.155531
+2026-10-02T16:11:56.1371343Z       type: 'test'
+2026-10-02T16:11:56.1371681Z       ...
+2026-10-02T16:11:56.1372488Z     # Subtest: a family whose snapshot has no OTYPER stays push-pull, not invented
+2026-10-02T16:11:56.1373789Z     ok 5 - a family whose snapshot has no OTYPER stays push-pull, not invented
+2026-10-02T16:11:56.1374582Z       ---
+2026-10-02T16:11:56.1374898Z       duration_ms: 0.257137
+2026-10-02T16:11:56.1375258Z       type: 'test'
+2026-10-02T16:11:56.1375603Z       ...
+2026-10-02T16:11:56.1376169Z     # Subtest: the two publishers agree on every combination, cell by cell
+2026-10-02T16:11:56.1377018Z     ok 6 - the two publishers agree on every combination, cell by cell
+2026-10-02T16:11:56.1377611Z       ---
+2026-10-02T16:11:56.1377942Z       duration_ms: 1.146378
+2026-10-02T16:11:56.1378327Z       type: 'test'
+2026-10-02T16:11:56.1378673Z       ...
+2026-10-02T16:11:56.1378974Z     1..6
+2026-10-02T16:11:56.1379505Z ok 18 - open drain: the two publishers, at register level
+2026-10-02T16:11:56.1380679Z   ---
+2026-10-02T16:11:56.1380962Z   duration_ms: 7.026024
+2026-10-02T16:11:56.1381320Z   type: 'suite'
+2026-10-02T16:11:56.1381655Z   ...
+2026-10-02T16:11:56.1382484Z # Subtest: pad drive: heavy and light tier, same firmware, same bench
+2026-10-02T16:11:56.1383452Z     # Subtest: the improvised bench bridges to the heavy tier with an empty ledger
+2026-10-02T16:11:56.1384416Z     ok 1 - the improvised bench bridges to the heavy tier with an empty ledger
+2026-10-02T16:11:56.1385066Z       ---
+2026-10-02T16:11:56.1385403Z       duration_ms: 409.952154
+2026-10-02T16:11:56.1385811Z       type: 'test'
+2026-10-02T16:11:56.1386162Z       ...
+2026-10-02T16:11:56.1386686Z     # Subtest: DC high: both tiers land on the hand-computed 0.0712
+2026-10-02T16:11:56.1387375Z     ok 2 - DC high: both tiers land on the hand-computed 0.0712
+2026-10-02T16:11:56.1387894Z       ---
+2026-10-02T16:11:56.1388201Z       duration_ms: 1.34591
+2026-10-02T16:11:56.1388563Z       type: 'test'
+2026-10-02T16:11:56.1388893Z       ...
+2026-10-02T16:11:56.1389469Z     # Subtest: DC high: both tiers publish the pad as a driven push-pull output
+2026-10-02T16:11:56.1390345Z     ok 3 - DC high: both tiers publish the pad as a driven push-pull output
+2026-10-02T16:11:56.1390979Z       ---
+2026-10-02T16:11:56.1391326Z       duration_ms: 0.297956
+2026-10-02T16:11:56.1391725Z       type: 'test'
+2026-10-02T16:11:56.1392318Z       ...
+2026-10-02T16:11:56.1392880Z     # Subtest: polled 20 ms blink: peaks and duty-weighted means agree
+2026-10-02T16:11:56.1393691Z     ok 4 - polled 20 ms blink: peaks and duty-weighted means agree
+2026-10-02T16:11:56.1394263Z       ---
+2026-10-02T16:11:56.1394626Z       duration_ms: 1332.050952
+2026-10-02T16:11:56.1395041Z       type: 'test'
+2026-10-02T16:11:56.1395382Z       ...
+2026-10-02T16:11:56.1395956Z     # Subtest: REPAIRED: an open-drain pad driving 1 is DARK on both tiers
+2026-10-02T16:11:56.1396830Z     ok 5 - REPAIRED: an open-drain pad driving 1 is DARK on both tiers
+2026-10-02T16:11:56.1397414Z       ---
+2026-10-02T16:11:56.1397741Z       duration_ms: 196.78624
+2026-10-02T16:11:56.1398145Z       type: 'test'
+2026-10-02T16:11:56.1398489Z       ...
+2026-10-02T16:11:56.1399080Z     # Subtest: REPAIRED: the same open-drain pad driving 0 still DRIVES, on both
+2026-10-02T16:11:56.1399997Z     ok 6 - REPAIRED: the same open-drain pad driving 0 still DRIVES, on both
+2026-10-02T16:11:56.1400624Z       ---
+2026-10-02T16:11:56.1400953Z       duration_ms: 185.194834
+2026-10-02T16:11:56.1401359Z       type: 'test'
+2026-10-02T16:11:56.1401687Z       ...
+2026-10-02T16:11:56.1402181Z     1..6
+2026-10-02T16:11:56.1402747Z ok 19 - pad drive: heavy and light tier, same firmware, same bench
+2026-10-02T16:11:56.1403325Z   ---
+2026-10-02T16:11:56.1403640Z   duration_ms: 2125.998108
+2026-10-02T16:11:56.1404021Z   type: 'suite'
+2026-10-02T16:11:56.1404349Z   ...
+2026-10-02T16:11:56.1535211Z 1..19
+2026-10-02T16:11:56.1535544Z # tests 101
+2026-10-02T16:11:56.1544559Z # suites 20
+2026-10-02T16:11:56.1544914Z # pass 101
+2026-10-02T16:11:56.1545132Z # fail 0
+2026-10-02T16:11:56.1545344Z # cancelled 0
+2026-10-02T16:11:56.1545582Z # skipped 0
+2026-10-02T16:11:56.1545799Z # todo 0
+2026-10-02T16:11:56.1546047Z # duration_ms 4007.318415
+2026-10-02T16:11:56.1716920Z tests=101 fail=0 skipped=0
+2026-10-02T16:11:56.1799472Z Post job cleanup.
+2026-10-02T16:11:56.3019976Z (node:3049) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-02T16:11:56.3020787Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-02T16:11:56.3200420Z Post job cleanup.
+2026-10-02T16:11:56.4086566Z [command]/usr/bin/git version
+2026-10-02T16:11:56.4129776Z git version 2.55.0
+2026-10-02T16:11:56.4168817Z Temporarily overriding HOME='/home/runner/work/_temp/78f44301-e7c1-49f4-a8f1-914a63e9b7db' before making global git config changes
+2026-10-02T16:11:56.4170313Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-02T16:11:56.4175009Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/bw-board/bw-board
+2026-10-02T16:11:56.4215889Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-02T16:11:56.4251404Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-02T16:11:56.4518481Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-02T16:11:56.4549949Z http.https://github.com/.extraheader
+2026-10-02T16:11:56.4563193Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-10-02T16:11:56.4602895Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-02T16:11:56.4890978Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-02T16:11:56.4940591Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-02T16:11:56.5483400Z Cleaning up orphan processes
+2026-10-02T16:11:56.5854102Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

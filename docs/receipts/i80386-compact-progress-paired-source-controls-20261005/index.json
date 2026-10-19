@@ -1,0 +1,57 @@
+{
+  "schema": "bw.compact-progress.paired-source-control-origins.v1",
+  "testedRevision": "530376bb144e649b23d2174eb098aefaf96653b6",
+  "scope": "One Node wrapper/six named Python pure methods; no actual comparison",
+  "records": {
+    "parent.py": {
+      "bytes": 5402,
+      "sha256": "45ae7f5e8e7db5a6376a670f82e1fb571edee668d3b9c8609111087ad73b1d20",
+      "origin": "/tmp/native-cold-compact-progress-paired-source-controls-20261005/parent.py"
+    },
+    "context.json": {
+      "bytes": 46889,
+      "sha256": "077dcfb2e08cf5aad8944a0b77e448f90fa9b6dba9ab223736ed707ed829d145",
+      "origin": "/tmp/native-cold-compact-progress-paired-source-controls-20261005/context.json"
+    },
+    "before.json": {
+      "bytes": 46627,
+      "sha256": "b0be754bd0df7ad6f45b4ddf317f5d377b9a735352246d1642a86f438285bcbf",
+      "origin": "/tmp/native-cold-compact-progress-paired-source-controls-20261005/before.json"
+    },
+    "after.json": {
+      "bytes": 46627,
+      "sha256": "b0be754bd0df7ad6f45b4ddf317f5d377b9a735352246d1642a86f438285bcbf",
+      "origin": "/tmp/native-cold-compact-progress-paired-source-controls-20261005/after.json"
+    },
+    "invocation.json": {
+      "bytes": 1215,
+      "sha256": "b50be5f34f1d7cb66f95334c8ecb556df3a4bce8a5cd478bd44a074279a584ac",
+      "origin": "/tmp/native-cold-compact-progress-paired-source-controls-20261005/invocation.json"
+    },
+    "exit.json": {
+      "bytes": 517,
+      "sha256": "b3f1a13b76f06211fb6c6369499ad856dd8c4e31d759b9fcfd97bbf7c7383f72",
+      "origin": "/tmp/native-cold-compact-progress-paired-source-controls-20261005/exit.json"
+    },
+    "stdout": {
+      "bytes": 1294,
+      "sha256": "e7323af24d46a6bd98635035160ce46f2d0ecf31b1e5795a3abfda05048adab5",
+      "origin": "/tmp/native-cold-compact-progress-paired-source-controls-20261005/stdout"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin": "/tmp/native-cold-compact-progress-paired-source-controls-20261005/stderr"
+    },
+    "root-audit.json": {
+      "bytes": 722,
+      "sha256": "2c709f4d7ce70b5e003a6a1d1e2b54f9937345262b3ee0d7c77b15e30f06b6b1",
+      "origin": "/tmp/native-cold-compact-progress-paired-source-controls-20261005/root-audit.json"
+    },
+    "independent-audit.json": {
+      "bytes": 749,
+      "sha256": "7b100ea5b1fb878c0392ae42001750bbf9767ca8cd0872cd633d4b878c287a90",
+      "origin": "/tmp/native-cold-compact-progress-paired-source-controls-20261005/independent-audit.json"
+    }
+  }
+}

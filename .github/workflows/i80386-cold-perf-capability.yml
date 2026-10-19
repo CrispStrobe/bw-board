@@ -1,0 +1,45 @@
+name: Cold native nonguest perf capability
+on:
+  workflow_dispatch:
+    inputs:
+      enable_control:
+        description: Run the reviewed fixed nonguest capability control
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: cold-perf-capability-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  capability:
+    if: inputs.enable_control
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Fixed nonguest control only
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          NODE_OPTIONS: ''
+          NODE_PATH: ''
+          LD_PRELOAD: ''
+          LD_AUDIT: ''
+          BW_HOT_NAPI_PROFILE: ''
+          NODE_V8_COVERAGE: ''
+        run: python3 -I -B scripts/cold-perf-capability/control.py "$RUNNER_TEMP/cold-perf-capability"
+      - name: Retain refusal or fixed workload samples
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cold-perf-capability-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/cold-perf-capability
+            scripts/cold-perf-capability
+            .github/workflows/i80386-cold-perf-capability.yml
+          include-hidden-files: true
+          if-no-files-found: warn

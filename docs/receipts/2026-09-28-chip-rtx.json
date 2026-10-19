@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "ea299d511ceb2e7ce7ad9170c467796ed41b104d",
+  "workflowRun": "https://github.com/CrispStrobe/bw-board/actions/runs/36384508630",
+  "runner": "ubuntu-24.04 GitHub-hosted runner",
+  "node": 22,
+  "instructionsPerPass": 40000000,
+  "passes": 3,
+  "metric": "emulated cycles per wall-second divided by nominal chip clock",
+  "results": [
+    { "core": "Z80", "clockHz": 4000000, "rtx": [186, 183, 188], "medianRtx": 186 },
+    { "core": "6502", "clockHz": 1000000, "rtx": [150, 154, 150], "medianRtx": 150 },
+    { "core": "AVR ATmega328P (avr8js fork)", "clockHz": 16000000, "rtx": [13.3, 13.4, 13.3], "medianRtx": 13.3 },
+    { "core": "RP2040 Cortex-M0+ (rp2040js fork)", "clockHz": 125000000, "rtx": [1.63, 1.66, 1.66], "medianRtx": 1.66 },
+    { "core": "8051 (emu8051 STC)", "rtx": [5.15, 5.39, 5.23], "medianRtx": 5.23 },
+    { "core": "LabWired STM32F0", "clockHz": 48000000, "rtx": [22.5, 24.2, 25.4], "medianRtx": 24.2 }
+  ],
+  "minimumMedianRtx": 1.0,
+  "allMeetMinimum": true
+}

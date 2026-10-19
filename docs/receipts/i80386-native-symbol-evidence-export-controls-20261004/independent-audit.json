@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "revision": "d35b10efabd2d66eb491a3620db1cc7b427b6223",
+  "sourcePins": {
+    "ownRuntimeTests": 15,
+    "firstFailureArchive": 4,
+    "materializedFrozenRoles": 390,
+    "total": 409
+  },
+  "frozenGitAndToolsVerified": true,
+  "fullPrePostEqual": true,
+  "coverage": "one selected Node wrapper; eight named Python mocks (five inline ok, three ok after diagnostic output); zero skips",
+  "exitCode": 0,
+  "rawWaitStatus": 0,
+  "timeout": false,
+  "wallSeconds": 8.525128159672022,
+  "scope": "No actual root exporter, sudo, recorder, addon or guest; filesystem fixtures and mocks only"
+}

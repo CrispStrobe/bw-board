@@ -1,0 +1,22 @@
+{
+  "exitCode": 0,
+  "rawWaitStatus": 0,
+  "rusage": {
+    "ru_utime": 0.465041,
+    "ru_stime": 0.10557699999999999,
+    "ru_maxrss": 51328,
+    "ru_minflt": 12044,
+    "ru_majflt": 4,
+    "ru_inblock": 3288,
+    "ru_oublock": 152,
+    "ru_nvcsw": 135,
+    "ru_nivcsw": 684
+  },
+  "rusageScope": "Raw wait4 leader exit accounting; descendant inclusion follows kernel semantics, not execution-only worker CPU",
+  "timeout": false,
+  "wallSeconds": 8.525128159672022,
+  "error": null,
+  "cleanupError": null,
+  "finalizationError": null,
+  "pinsEqual": true
+}
