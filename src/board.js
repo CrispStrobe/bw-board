@@ -4599,7 +4599,7 @@ export class BoardImpl {
       'relay', 'dc_motor', 'servo', 'timer_555',
       'battery', 'vreg', 'fuse',
       'h_bridge', 'stepper', 'solenoid',
-      'ultrasonic', 'pir', 'tilt_sensor', 'flex_sensor', 'force_sensor', 'phototransistor',
+      'ultrasonic', 'pir', 'tilt_sensor', 'flex_sensor', 'force_sensor', 'phototransistor', 'light_sensor',
       'neopixel', 'bargraph',
       'decade_counter', 'dff', 'jkff', 'darlington_driver', 'piezo',
       // Analog ICs + discrete
@@ -4660,7 +4660,7 @@ export class BoardImpl {
     // The rail is edited through its own `volts` param instead (bw-circuit-ui's
     // inline editor offers it), which `_railVolts` honours either way, so a
     // control set by some other route still works and nothing is lost.
-    const controllable = ['potentiometer', 'button', 'switch', 'ldr', 'ntc', 'vsource'];
+    const controllable = ['potentiometer', 'button', 'switch', 'ldr', 'ntc', 'light_sensor', 'vsource'];
     return this.parts
       .filter(p => controllable.includes(p.kind))
       .map(p => ({

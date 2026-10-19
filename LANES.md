@@ -1,3 +1,13 @@
+2026-10-19 light_sensor photoresistor module model — CLAIM+CHANGE, VPS Claude (opus).
+Branch lane/light-sensor-module-20261019 (circuit-editor lane; owner approved
+claim and change in one PR). Owns this row, a new `light_sensor` registry device
+in src/devices/sensors.js, its kind listing in src/board.js (getControls,
+getPartKinds), src/types.js and the labwired-bridge ANALOG_SOURCE set, and new
+test/light-sensor-module.test.mjs. Circuit: LDR vcc→out (the built-in `ldr`
+law via controlledResistance, same 0..1 light control) plus fixed rLoad
+(default 10 kOhm) out→gnd, so out rises with light. No comparator/DO pin,
+spectral or time-constant model; no physical-accuracy claim beyond that divider.
+
 2026-10-11 bounded compiler tool boundary receipts — CLAIM, Codex.
 Branch lane/386-tool-boundary-receipts-20261011, exact base
 `e1f44e70bd21e4f3b146d0c0e00da141eb045182`. Owns this row and only new

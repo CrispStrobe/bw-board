@@ -107,7 +107,7 @@ const RAIL = new Set(['vcc', 'gnd', 'battery', 'battery_9v', 'battery_aa',
  */
 const ANALOG_SOURCE = new Set(['potentiometer', 'ldr', 'ntc', 'thermistor',
   'photodiode', 'phototransistor', 'tmp36', 'joystick', 'soil_moisture',
-  'force_sensor', 'flex_sensor', 'hall_analog', 'ambient_light', 'flame_sensor',
+  'force_sensor', 'flex_sensor', 'hall_analog', 'ambient_light', 'light_sensor', 'flame_sensor',
   'analog_meter', 'voltmeter', 'ammeter', 'adxl335', 'memsic2125', 'msgeq7']);
 
 /** Passive contacts: the thing `kind: button` was invented for. */
