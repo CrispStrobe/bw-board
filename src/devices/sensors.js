@@ -14,6 +14,7 @@
 
 import { registerDevice } from '../devices.js';
 import { ambient, surfaceDistanceCm } from '../world.js';
+import { controlledResistance } from '../mna.js';
 
 // Input pins draw nothing here, on purpose. These models used to declare
 // `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
@@ -186,6 +187,28 @@ export function registerSensors() {
   // ─── Phototransistor ───────────────────────────────────────────────
   // Current source proportional to light (control = 0..1).
   // Collector-emitter, like a transistor but light-controlled.
+  // ─── Photoresistor module (light_sensor) ──────────────────────────
+  // A three-pin LDR module modelled as the divider it is: the LDR from VCC
+  // to OUT and a fixed load resistor (params.rLoad, default 10 kOhm) from
+  // OUT to GND, so OUT RISES with light. The LDR is the SAME model as the
+  // built-in `ldr` kind — controlledResistance(), driven by this part's own
+  // control (board.setControl(id, 0..1), 0 = dark) with params.rDark /
+  // params.rLight — so one light number means one resistance on both kinds.
+  // Only this two-resistor network is modelled: no comparator/DO pin, no
+  // spectral response, no LDR time constant.
+  registerDevice('light_sensor', {
+    terminals: ['vcc', 'gnd', 'out'],
+
+    stamp(ctx, part) {
+      const ohms = /** @type {number} */ (controlledResistance(
+        { id: part.id, kind: 'ldr', params: { rDark: part.params?.rDark, rLight: part.params?.rLight } },
+        new Map([[part.id, ctx.control ?? 0]])));
+      const rLoad = /** @type {number} */ (part.params?.rLoad ?? 10000);
+      ctx.conductance('vcc', 'out', 1 / ohms);
+      ctx.conductance('out', 'gnd', 1 / rLoad);
+    },
+  });
+
   registerDevice('phototransistor', {
     terminals: ['collector', 'emitter'],
 
