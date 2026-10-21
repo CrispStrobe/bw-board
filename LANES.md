@@ -1,3 +1,18 @@
+2026-10-21 passive open-terminal current readback — CLAIM, Codex circuit projects.
+Own only passive branch-current extraction in src/mna.js, focused regressions
+in test/dangling-terminal.test.mjs and the school fixture current checks.
+Base 3f00a6560361 (refresh actual parent before source composition).
+The resistor readback repair exposed the same missing-net-as-ground error
+in diode/LED/buzzer/button/controlled-resistance readers and each leg of a
+potentiometer. Correct readers only where the existing matrix stamp already
+omits an open path. Preserve connected-path signs, partial potentiometer
+conduction and genuine ground. Audit, do not hide, any separate stamping or
+reactive-state defect discovered by negative controls. No generic zeroing of
+arbitrary multi-terminal devices, no solver/threshold/budget changes and no
+workflow/dependency updates. This composes with the same owner's transistor
+transient lane, with fresh focused and hosted qualification before landing.
+Merge before implementation. Status CLAIMED.
+
 2026-10-21 matched SPICE transistor transient audit and repair — CLAIM, Codex circuit projects.
 Base 00fe324f3f03cfb9c92f9ea94a99cbf6ee43bb7d. Own src/mna.js
 and the corresponding transient state/step bookkeeping in src/board.js only
