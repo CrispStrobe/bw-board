@@ -52,3 +52,20 @@ point. Across 801 matched samples the local comparison had about 40.9 µV maximu
 and 24.8 µV RMS output error; peak-to-peak gains were 41.851 versus 41.817.
 Those results qualify the stated model, not the real kit's gain, acoustic
 speaker/microphone response, battery dynamics or speech intelligibility.
+
+Rejected Newton trials are refined without publishing their state or latching
+a measurement failure. Accepted failed steps and a failure at the existing
+minimum step still invalidate measurements. The oracle also requires healthy
+transient analysis status; matching numbers alone cannot qualify a failed run.
+
+The open-terminal audit additionally guards diode/LED/zener stamps and Newton
+bookkeeping, two-terminal passive current readback, and each potentiometer leg
+independently. An absent terminal contributes neither a ground load nor phantom
+current. Twenty controls exercise both orientations and connected rheostat legs.
+
+A browser integration check ran the native organ through the live Board clock,
+the actual ScopePanel and Web Audio capture replay, stop and WAV export. The
+time-domain pulse repetition was 255.700 Hz with nonzero rendered audio. The
+largest FFT peak can be a harmonic of this narrow-pulse waveform; it must not
+be reported as the fundamental pitch. Replay is a finite electrical capture,
+not a real-time acoustic speaker model.

@@ -19,7 +19,10 @@ transient charge and terminal current, PNP honors RB/RC, and non-UIC startup
 seeds intrinsic state. Zero-time reads defer explicitly until an accepted
 step without poisoning scope history. Six primitive plus five matched school
 SPICE comparisons pass; organ 255.700 versus 255.663 Hz and amplifier maximum
-waveform error 40.9 microvolt. Full hosted exact-head qualification pending.
+waveform error 40.9 microvolt. 194 regression checks and eleven healthy matched oracle comparisons pass.
+Live Board/ScopePanel audio replay, stop and WAV export pass in Chromium.
+Rejected Newton trials refine without poisoning accepted history; genuine
+minimum-step failures still refuse measurements. Hosted qualification pending.
 
 2026-10-21 open resistor current readback — SOURCE CANDIDATE, Codex circuit projects.
 Owns the resistor branch-current extraction in src/mna.js and focused

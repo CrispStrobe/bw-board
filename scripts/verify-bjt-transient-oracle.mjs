@@ -31,7 +31,7 @@ try{
   const board=new BoardImpl(5);board.setNetlist(parts,nets);
   const samples=[];
   for(const ns of [1000n,5000n,10000n]){
-   board.advanceTo(ns);const actual=board.nodeVoltage('signal'),expected=at(Number(ns)/1e9);
+   board.advanceTo(ns);assert.equal(board.transientAnalysisStatus().accuracyMet,true);const actual=board.nodeVoltage('signal'),expected=at(Number(ns)/1e9);
    const tolerance=1e-7+.003*Math.abs(expected);
    assert.ok(Math.abs(actual-expected)<=tolerance,`${kind} ${junction} ${ns} ns: ${actual} vs ${expected}`);
    const kcl=['base','collector','emitter'].reduce((sum,t)=>sum+board.branchCurrent('Q',t),0);
@@ -50,7 +50,7 @@ try{
   };
   for(const [trim,key] of [[1000000,1],[500000,1],[150000,1],[500000,0]]) {
    const b=organBench({trim,key}),ch=b.addScopeChannel({type:'voltage',netId:'out',sampleRateHz:100000,depth:4096});
-   b.advanceTo(20_000_000n);const data=b.getScopeData(ch),nativeEdges=envelopeEdges(data);
+   b.advanceTo(20_000_000n);assert.equal(b.transientAnalysisStatus().accuracyMet,true);const data=b.getScopeData(ch),nativeEdges=envelopeEdges(data);
    const rows=runDeck(`Matched OPITEC oscillator\nV vcc 0 PWL(0 0 10u 9)\nQN drive base 0 QN\nQP out drive vcc QP\nRbleed base 0 1meg\nRseries base keys 180k\nRtrim keys contact ${trim}\nRkey contact vcc ${key?.001:1e12}\nRload out 0 8\nCsmall drive out 3.3n\nCfeedback out base 10n\n${model}\n.options method=trap reltol=1e-6 abstol=1e-13\n.control\nset filetype=ascii\ntran .2u 20m\nwrdata trace.dat v(out)\n.endc\n.end\n`);
    assert.ok(rows.at(-1)[0]>=.02*(1-1e-6));
    const edges=[];for(let i=1;i<rows.length;i++)if(rows[i][0]>=.004&&rows[i-1][1]<4&&rows[i][1]>=4)edges.push(rows[i][0]);
@@ -64,7 +64,7 @@ try{
   }
   const board=amplifierBench();board.initializeTransientFromOperatingPoint();
   const h=board.addScopeChannel({type:'voltage',netId:'out',capture:'sample',sampleRateHz:20000,depth:1024});
-  board.advanceTo(60_000_000n);const data=board.getScopeData(h),depth=data.samples.length/2,count=Math.min(data.count,depth),oldest=(data.writeIndex-count+depth)%depth;
+  board.advanceTo(60_000_000n);assert.equal(board.transientAnalysisStatus().accuracyMet,true);const data=board.getScopeData(h),depth=data.samples.length/2,count=Math.min(data.count,depth),oldest=(data.writeIndex-count+depth)%depth;
   const rows=runDeck(`Matched Winkler 101455 amplifier\nV vcc 0 9\nVin mic 0 SIN(0 1m 1k)\nRmic mic input 8\nR1 vcc u 10k\nR2 u 0 10k\nR3 vcc c1 4.7k\nR4 c1 b1 1meg\nR5 b1 0 1meg\nR6 vcc c2 1k\nR7 c2 b2 100k\nR8 b2 0 47k\nR9 e2 0 100\nR10 vcc c3 10\nR11 c3 b3 47k\nRpTop volume wiper 50k\nRpBottom wiper 0 50k\nC1 input 0 10n\nC2 input b1 1u\nC3 c1 volume 4.7u\nC4 wiper b2 4.7u\nC5 e2 0 4.7u\nC6 c2 b3 10u\nC7 vcc 0 47u\nQ1 c1 b1 0 QN\nQ2 c2 b2 e2 QN\nQ3 c3 b3 out QN\nRload out 0 8\n${model}\n.options method=trap reltol=1e-6 abstol=1e-13\n.control\nset filetype=ascii\ntran 1u 60m\nwrdata trace.dat v(out)\n.endc\n.end\n`);
   let index=1,maxError=0,sumError=0,points=0;const actual=[],expected=[];
   for(let i=0;i<count;i++){

@@ -1760,6 +1760,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   /** vccs iMax clamp state: 'linear' | 'clamp+' | 'clamp-' */
   const vccsClamps = new Map();
   for (const part of parts) {
+    if (['diode','led','zener'].includes(part.kind)
+      && (!findNet(nets, part.id, 'anode') || !findNet(nets, part.id, 'cathode'))) continue;
     if (part.kind === 'led' || part.kind === 'diode' || part.kind === 'npn'
         || part.kind === 'pnp' || part.kind === 'zener'
         || part.kind === 'nmos' || part.kind === 'pmos') {
@@ -3110,12 +3112,20 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // Compute branch currents for each part
   /** @type {Map<string, Map<string, number>>} part id → terminal → current */
   const branchCurrents = new Map();
+  const passiveTerminals = {resistor:['a','b'], button:['a','b'], switch:['a','b'],
+    buzzer:['a','b'], ldr:['a','b'], ntc:['a','b'],
+    diode:['anode','cathode'], led:['anode','cathode'], zener:['anode','cathode']};
   /** Total amperes leaving each ideal supply rail into its net. */
   const railCurrents = new Map();
 
   for (const part of parts) {
     const currents = new Map();
     branchCurrents.set(part.id, currents);
+    const passivePins = passiveTerminals[part.kind];
+    if (passivePins && passivePins.some(t => !findNet(nets, part.id, t))) {
+      for (const terminal of passivePins) currents.set(terminal, 0);
+      continue;
+    }
 
     if (part.kind === 'resistor') {
       const netA = findNet(nets, part.id, 'a');
@@ -3167,9 +3177,10 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         return n ? (nodeVoltages.get(n) ?? 0) : 0;
       };
       const vA = vAt('a'), vW = vAt('wiper'), vB = vAt('b');
-      const iAW = (vA - vW) / rAW;   // into `a`, on toward the wiper
-      const iWB = (vW - vB) / rWB;   // out of the wiper, on toward `b`
-      currents.set('a', -iAW);
+      const nA = findNet(nets, part.id, 'a'), nW = findNet(nets, part.id, 'wiper'), nB = findNet(nets, part.id, 'b');
+      const iAW = nA && nW ? (vA - vW) / rAW : 0;
+      const iWB = nW && nB ? (vW - vB) / rWB : 0;
+      currents.set('a', iAW === 0 ? 0 : -iAW);
       currents.set('b', iWB);
       // Out of the wiper is internal current arriving from a minus that to b.
       currents.set('wiper', iAW - iWB);
@@ -3887,6 +3898,7 @@ function stampResistor(A, b, part, nets, nodeIndex, groundNetId) {
 function stampDiode(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
   const anodeNet = findNet(nets, part.id, 'anode');
   const cathodeNet = findNet(nets, part.id, 'cathode');
+  if (!anodeNet || !cathodeNet) return;
   const vf = effVf(/** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0)));
   const rd = junctionRd(part);
 
@@ -4672,6 +4684,7 @@ export function zenerBreakdown(vRev, bv, ibv, rs, nVt) {
  * Terminals: anode, cathode.
  */
 function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
+  if (!findNet(nets, part.id, 'anode') || !findNet(nets, part.id, 'cathode')) return;
   const vf = effVf(/** @type {number} */ (part.params.vf ?? 0.7)); // vz stays put (see the branch-current twin)
   const vz = /** @type {number} */ (part.params.vz ?? 5.1);
   const rd = 10;

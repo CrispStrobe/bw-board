@@ -22,3 +22,10 @@ test('amplifier can start from its actual DC charge state without inventing a st
  const initial=b.nodeVoltage('out');assert.ok(initial>.05&&initial<.3);
  b.advanceTo(1000n);assert.ok(Math.abs(b.nodeVoltage('out')-initial)<.002);
 });
+
+test('organ live stepping rejects and refines Newton trials without poisoning accepted history',()=>{
+ const b=organBench();let calls=0;
+ while(b.timeNs<20_000_000n&&calls++<200)b.advanceToLive(b.timeNs+1_000_000n,{maxSteps:4});
+ assert.ok(b.timeNs>=20_000_000n);assert.equal(b.transientAnalysisStatus().accuracyMet,true);
+ assert.equal(b.transientAnalysisStatus().failure,null);
+});

@@ -108,3 +108,22 @@ test('the designer live clock may advance a not-ready charge state into a valid 
  b.setPartParam('V','volts',.1);const next=b.advanceToLive(2000n,{maxSteps:16});assert.equal(next.completed,true);
  assert.ok(b.nodeVoltage('signal')<.001);
 });
+
+test('registered devices receive the first accepted charge step, not a stale pending cache',async()=>{
+ const {registerDevice}=await import('../src/devices.js');let accepted=0;
+ registerDevice('test_bjt_charge_observer',{terminals:['sense'],transientUpdateContext:true,
+  init:()=>({drives:{}}),stamp(){},update(_part,_state,read){if(read.transient)accepted++;return false;}});
+ const {b}=bench('npn');
+ b.setNetlist([...b.parts,part('Observer','test_bjt_charge_observer',{},['sense'])],
+  b.getNets().map(n=>({id:n.id,terminals:[...n.terminals,...(n.id==='signal'?[{part:'Observer',terminal:'sense'}]:[])]})));
+ b.advanceToLive(1000n,{maxSteps:16});assert.ok(accepted>0,'accepted solver state must reach the device model');
+});
+
+test('a Newton trial which still fails at the minimum step invalidates measurements',()=>{
+ const {b}=bench('npn');const real=b._solveLiveMNA.bind(b);
+ b._solveLiveMNA=(pins,opts)=>{const r=real(pins,opts);return opts.transient?.method==='trap'?{...r,converged:false}:r;};
+ const ch=b.addScopeChannel({type:'voltage',netId:'signal',capture:'sample',sampleRateHz:100000,depth:64});
+ assert.throws(()=>b.advanceToLive(10000n,{maxSteps:16}),/minimum step/);
+ assert.equal(b.transientAnalysisStatus().accuracyMet,false);
+ assert.throws(()=>b.getScopeData(ch),/solve failed/);
+});

@@ -1917,17 +1917,19 @@ export class BoardImpl {
 
   /** Instrument validity, not a change to the solver or nodeVoltage API. */
   _assertMeasurementSolution(solution = this._mnaCache, {allowPendingCharge = false} = {}) {
-    if (!allowPendingCharge && solution?.deferredBjtChargeIds?.length) {
-      const error = new Error(`measurement not ready: BJT junction charge needs an accepted transient step (${solution.deferredBjtChargeIds.join(', ')})`);
-      error.code = 'TRANSIENT_CHARGE_NOT_READY';
-      throw error;
-    }
     if (this._deviceSubstepOverflow) {
       const error = new Error('measurement unavailable: device sub-step budget exhausted; initialize a fresh Board');
       error.code = 'SOLVE_FAILED_MEASUREMENT';
       throw error;
     }
-    if (!this._liveSolveError && solution?.converged !== false && !solution?.railConflicts?.length) return;
+    if (!this._liveSolveError && solution?.converged !== false && !solution?.railConflicts?.length) {
+      if (!allowPendingCharge && solution?.deferredBjtChargeIds?.length) {
+        const error = new Error(`measurement not ready: BJT junction charge needs an accepted transient step (${solution.deferredBjtChargeIds.join(', ')})`);
+        error.code = 'TRANSIENT_CHARGE_NOT_READY';
+        throw error;
+      }
+      return;
+    }
     const detail = this._liveSolveError ? `: ${this._liveSolveError.message}` : ' or rail conflict';
     const error = new Error(`measurement unavailable: circuit solve failed${detail}`);
     error.code = 'SOLVE_FAILED_MEASUREMENT';
@@ -6066,7 +6068,7 @@ export class BoardImpl {
    *   exposed only to models opting into transientUpdateContext.
    */
   _updateDevices(atNs = this.timeNs, solution = this._mnaCache, measurementOnly = false, acceptedTransient = false) {
-    if (this._mnaCache?.deferredBjtChargeIds?.length) return false;
+    if (solution?.deferredBjtChargeIds?.length) return false;
     let changed = false;
     // Built-in shift registers
     if (!measurementOnly && this._shiftRegisters.size > 0) {
@@ -6205,15 +6207,17 @@ export class BoardImpl {
       return;
     }
 
-    const markSolveFailure = (r, stage, atSec) => {
-      if (this._transientAccuracyUnmet) return;
+    const validTransientSolution = r => {
       const maps = [r?.nodeVoltages, r?.branchCurrents, r?.capVoltagesNext,
         r?.capCurrentsNext, r?.inductorCurrentsNext, r?.inductorVoltagesNext];
       const finiteMap = map => map instanceof Map && [...map.values()].every(value =>
         value instanceof Map
           ? [...value.values()].every(Number.isFinite)
           : Number.isFinite(value));
-      if (r?.converged === true && maps.every(finiteMap)) return;
+      return r?.converged === true && maps.every(finiteMap);
+    };
+    const markSolveFailure = (r, stage, atSec) => {
+      if (this._transientAccuracyUnmet || validTransientSolution(r)) return;
       this._transientAccuracyUnmet = {
         code: r?.converged === true ? 'non-finite-solve-state' : 'transient-solve-not-converged',
         stage, timeSec: atSec,
@@ -6234,7 +6238,6 @@ export class BoardImpl {
         // every discharge-on-power-loss demo frozen instead).
         powerOff: !this.powered,
       });
-      markSolveFailure(r, method, tStart + hs);
       return r;
     };
 
@@ -6258,7 +6261,8 @@ export class BoardImpl {
         this._updateScopeChannels(this.timeNs - remNs, atSec, r);
       }
     };
-    const accept = (r, atSec,quadratic = null) => {
+    const accept = (r, atSec,quadratic = null, stage = 'trap') => {
+      markSolveFailure(r, stage, atSec);
       cv = r.capVoltagesNext ?? cv;
       il = r.inductorCurrentsNext ?? il;
       cc = r.capCurrentsNext ?? cc;
@@ -6293,7 +6297,7 @@ export class BoardImpl {
       // storage, BE and trapezoidal stamp the identical algebraic system.
       const direct = solveStep(t0, dtSec, 'be', cv, il, cc, lv);
       t = tEnd;
-      accept(direct, t);
+      accept(direct, t, null, 'be');
       trapReady = true;
     }
 
@@ -6327,17 +6331,35 @@ export class BoardImpl {
         const hSeed = Math.min(hEff, H_SEED, featureSeed);
         const r = solveStep(t, hSeed, 'be', cv, il, cc, lv);
         t += hSeed;
-        accept(r, t);
+        accept(r, t, null, 'be');
         // Only a seed that reached the edge crossed it.
         trapReady = !(atEdge && hSeed >= hEff - 1e-18);
         continue;
       }
 
+      // Newton failure belongs to a trial, not to accepted history. Refine
+      // without publishing its state. A failure at the existing minimum step
+      // is fatal; neither the controller's limits nor error scales change.
+      const rejectTrial = r => {
+        if (validTransientSolution(r)) return false;
+        if (hEff > H_MIN * 1.000001) {
+          h = Math.max(H_MIN, hEff / 2);
+          return true;
+        }
+        markSolveFailure(r, 'trap', t + hEff);
+        const error = new Error('transient Newton solve failed at minimum step');
+        error.code = 'TRANSIENT_MINIMUM_STEP_SOLVE_FAILED';
+        this._invalidateLiveMeasurements(error);
+        throw error;
+      };
       const full = solveStep(t, hEff, 'trap', cv, il, cc, lv);
+      if (rejectTrial(full)) continue;
       const h1 = solveStep(t, hEff / 2, 'trap', cv, il, cc, lv);
+      if (rejectTrial(h1)) continue;
       const h2 = solveStep(t + hEff / 2, hEff / 2, 'trap',
         h1.capVoltagesNext ?? cv, h1.inductorCurrentsNext ?? il,
         h1.capCurrentsNext ?? cc, h1.inductorVoltagesNext ?? lv);
+      if (rejectTrial(h2)) continue;
 
       let err = 0;
       // The accepted public observables include node voltages, not only the
@@ -6410,7 +6432,7 @@ export class BoardImpl {
       // Backstop hit: finish with one BE step so board time and element
       // state agree (this.timeNs has already advanced), and say so.
       const r = solveStep(t, tEnd - t, 'be', cv, il, cc, lv);
-      accept(r, tEnd);
+      accept(r, tEnd, null, 'be');
       trapReady = false;
       this._transientAttemptOverflow = true;
       if (!this._transientAccuracyUnmet) {
