@@ -890,6 +890,54 @@ export function ebersMollChargeCompanion(vbe, vbc, p) {
   };
 }
 
+/** Stored junction charge whose derivatives are ebersMollChargeCompanion. */
+export function ebersMollCharges(vbe, vbc, p) {
+  const depletion = (v, c0 = 0) => {
+    const phi = .75, m = .33, fc = .5, corner = fc * phi;
+    const q = x => c0 * phi / (1 - m) * (1 - Math.pow(1 - x / phi, 1 - m));
+    if (v < corner) return q(v);
+    const f2 = Math.pow(1 - fc, 1 + m), f3 = 1 - fc * (1 + m);
+    return q(corner) + c0 / f2 * (f3 * (v - corner) + m / (2 * phi) * (v * v - corner * corner));
+  };
+  const iF = p.is * (Math.exp(Math.min(vbe, 80 * p.nVt) / p.nVt) - 1);
+  const early = 1 - vbc / (p.vaf ?? Infinity);
+  const rolloff = Number.isFinite(p.ikf)
+    ? 2 / (1 + Math.sqrt(Math.max(0, 1 + 4 * iF / p.ikf))) : 1;
+  return {qbe: depletion(vbe, p.cje) + (p.tf ?? 0) * iF * early * rolloff,
+    qbc: depletion(vbc, p.cjc)};
+}
+
+const bjtHistoryKey = (id, junction) => `@bjt:${id}:${junction}`;
+
+function bjtTransientCharge(part, vbe, vbc, em, transient) {
+  if (!transient || !(em.cje || em.cjc || em.tf)) return null;
+  const be = bjtHistoryKey(part.id, 'be'), bc = bjtHistoryKey(part.id, 'bc');
+  const previous = ebersMollCharges(transient.capVoltages.get(be) ?? 0,
+    transient.capVoltages.get(bc) ?? 0, em);
+  const charge = ebersMollCharges(vbe, vbc, em);
+  const slope = ebersMollChargeCompanion(vbe, vbc, em);
+  const trap = transient.method === 'trap';
+  const rate = (trap ? 2 : 1) / Math.max(transient.dtSec, 1e-15);
+  const ibe = rate * (charge.qbe - previous.qbe) - (trap ? transient.capCurrents?.get(be) ?? 0 : 0);
+  const ibc = rate * (charge.qbc - previous.qbc) - (trap ? transient.capCurrents?.get(bc) ?? 0 : 0);
+  const gpi = rate * slope.cbe, gmu = rate * (slope.cbc + slope.cbeVbc), gcR = -rate * slope.cbc;
+  return {ibe, ibc, gpi, gmu, gcF: 0, gcR,
+    ieqB: ibe + ibc - gpi * vbe - gmu * vbc,
+    ieqC: -ibc - gcR * vbc};
+}
+
+function stampBjtTransientCharge(A, b, part, nets, nodeIndex, intrinsicB, intrinsicC,
+  diodeVoltages, bjtVbc, transient) {
+  const em = ebersMollParams(part);
+  if (!em) return;
+  const dyn = bjtTransientCharge(part, diodeVoltages.get(part.id) ?? 0,
+    bjtVbc.get(part.id) ?? 0, em, transient);
+  if (!dyn) return;
+  const index = t => nodeIndex.get(findNet(nets, part.id, t));
+  stampEbersMoll(A, b, intrinsicB.get(part.id) ?? index('base'),
+    intrinsicC.get(part.id) ?? index('collector'), index('emitter'), dyn, part.kind === 'npn' ? 1 : -1);
+}
+
 /**
  * Linearise Ebers-Moll at a stored (Vbe, Vbc) and return the stamp.
  *
@@ -1311,6 +1359,22 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   benchTemperatureC = opts.temperatureC ?? 25;
   tempVfShiftV = (benchTemperatureC - 25) * -0.002;
   const transient = opts.transient ?? null;
+  const chargedBjtIds = [];
+  for (const part of parts) {
+    if (part.kind !== 'npn' && part.kind !== 'pnp') continue;
+    const fields = ['cje', 'cjc', 'tf'];
+    for (const field of fields) if (transient && part.params?.[field] !== undefined
+      && (!Number.isFinite(part.params[field]) || part.params[field] < 0)) {
+      throw new Error(`BJT ${part.id}: ${field} must be a finite nonnegative number`);
+    }
+    if (!fields.some(field => part.params?.[field] > 0)) continue;
+    if (!ebersMollParams(part)) {
+      if (transient) throw new Error(`BJT ${part.id}: junction charge requires a valid explicit exponential model`);
+      continue;
+    }
+    chargedBjtIds.push(part.id);
+  }
+
   // A BIAS POINT AND AN INSTANT ARE DIFFERENT QUESTIONS, AND ONLY ONE WAS
   // REACHABLE.
   //
@@ -1511,7 +1575,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   /** @type {Map<string, number>} part id → intrinsic collector node index */
   const bjtCollectorIndex = new Map();
   for (const part of parts) {
-    const em = part.kind === 'npn' ? ebersMollParams(part) : null;
+    const em = (part.kind === 'npn' || part.kind === 'pnp') ? ebersMollParams(part) : null;
     if (!em) continue;
     if (em.rb > 0) {
       const key = `\u0000intrinsic-base:${part.id}`;
@@ -2163,10 +2227,15 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages,
             bjtRegions.get(part.id), bjtVceSat.get(part.id), bjtVbc,
             bjtBaseIndex, bjtCollectorIndex);
+          stampBjtTransientCharge(A, b, part, nets, nodeIndex, bjtBaseIndex, bjtCollectorIndex,
+            diodeVoltages, bjtVbc, transient);
           break;
 
         case 'pnp':
-          stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, bjtRegions.get(part.id), bjtVceSat.get(part.id), bjtVbc);
+          stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages,
+            bjtRegions.get(part.id), bjtVceSat.get(part.id), bjtVbc, bjtBaseIndex, bjtCollectorIndex);
+          stampBjtTransientCharge(A, b, part, nets, nodeIndex, bjtBaseIndex, bjtCollectorIndex,
+            diodeVoltages, bjtVbc, transient);
           break;
 
         case 'nmos':
@@ -2456,7 +2525,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         const netE = findNet(nets, part.id, 'emitter');
         const netB = findNet(nets, part.id, 'base');
         const idxE = netE ? nodeIndex.get(netE) : undefined;
-        const idxB = netB ? nodeIndex.get(netB) : undefined;
+        const idxB = bjtBaseIndex.get(part.id) ?? (netB ? nodeIndex.get(netB) : undefined);
         vNew = (idxE !== undefined ? solution[idxE] : 0) - (idxB !== undefined ? solution[idxB] : 0);
       } else if (part.kind === 'nmos' || part.kind === 'pmos') {
         // Track Vgs
@@ -3222,6 +3291,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         const vbcX = part.kind === 'npn'
           ? vModelBase - vModelCollector : vModelCollector - vModelBase;
         const c = ebersMollCompanion(vbeX, vbcX, emX);
+        const dynamic = bjtTransientCharge(part, vbeX, vbcX, emX, transient);
+        if (dynamic) { c.ib += dynamic.ibe + dynamic.ibc; c.ic -= dynamic.ibc; }
         const sgn = part.kind === 'npn' ? 1 : -1;
         if (idxIntrinsicBase !== undefined || idxIntrinsicCollector !== undefined) {
           // Read each explicit terminal resistor from the voltage that was
@@ -3628,6 +3699,19 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     const inductorCurrentsNext = new Map();
     const inductorVoltagesNext = new Map();
     for (const part of parts) {
+      const em = (part.kind === 'npn' || part.kind === 'pnp') ? ebersMollParams(part) : null;
+      if (em && (em.cje || em.cjc || em.tf)) {
+        const voltage = t => nodeVoltages.get(findNet(nets, part.id, t)) ?? 0;
+        const vb = bjtBaseIndex.has(part.id) ? solution[bjtBaseIndex.get(part.id)] : voltage('base');
+        const vc = bjtCollectorIndex.has(part.id) ? solution[bjtCollectorIndex.get(part.id)] : voltage('collector');
+        const sign = part.kind === 'npn' ? 1 : -1;
+        const vbe = sign * (vb - voltage('emitter')), vbc = sign * (vb - vc);
+        const dyn = bjtTransientCharge(part, vbe, vbc, em, transient);
+        capVoltagesNext.set(bjtHistoryKey(part.id, 'be'), vbe);
+        capVoltagesNext.set(bjtHistoryKey(part.id, 'bc'), vbc);
+        capCurrentsNext.set(bjtHistoryKey(part.id, 'be'), dyn.ibe);
+        capCurrentsNext.set(bjtHistoryKey(part.id, 'bc'), dyn.ibc);
+      }
       if (part.kind === 'capacitor') {
         const netA = findNet(nets, part.id, 'a');
         const netB = findNet(nets, part.id, 'b');
@@ -3668,6 +3752,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   }
 
   return { nodeVoltages, branchCurrents, indeterminateBranchCurrents, railCurrents,
+    ...(opts.capVoltages && chargedBjtIds.length ? {deferredBjtChargeIds: chargedBjtIds} : {}),
     converged, opampRegions, deviceStamps, ...regionDiagnostics,
     railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
 }
@@ -4370,7 +4455,7 @@ function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages,
  * Stamp a PNP transistor. Mirror of NPN with reversed polarities.
  * Terminals: base, collector, emitter.
  */
-function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'active', vceSatEff = undefined, bjtVbc) {
+function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'active', vceSatEff = undefined, bjtVbc, bjtBaseIndex, bjtCollectorIndex) {
   const beta = /** @type {number} */ (part.params.beta ?? 100);
   const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
   const rd = 10;
@@ -4391,7 +4476,17 @@ function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regio
   if (em && bjtVbc) {
     const veb = diodeVoltages.get(part.id) ?? 0;   // vE - vB, as the loop stores it
     const vcb = bjtVbc.get(part.id) ?? 0;          // vC - vB
-    stampEbersMoll(A, b, idxB, idxC, idxE, ebersMollCompanion(veb, vcb, em), -1);
+    const base = bjtBaseIndex?.get(part.id) ?? idxB;
+    const collector = bjtCollectorIndex?.get(part.id) ?? idxC;
+    const resistor = (a, z, ohms) => {
+      if (!(ohms > 0)) return;
+      const g = 1 / ohms;
+      if (a !== undefined) A.add(a, a, g);
+      if (z !== undefined) A.add(z, z, g);
+      if (a !== undefined && z !== undefined) { A.add(a, z, -g); A.add(z, a, -g); }
+    };
+    resistor(idxB, base, em.rb); resistor(idxC, collector, em.rc);
+    stampEbersMoll(A, b, base, collector, idxE, ebersMollCompanion(veb, vcb, em), -1);
     return;
   }
 

@@ -21,7 +21,7 @@
 import { pinThevenin } from './pin-model.js';
 import { buildPinAliasTable } from './pin-aliases.js';
 import {
-  solveMNA, OPAMP_ISHORT_DEFAULT, JUNCTION_THERMAL_VOLTAGE, MOS_BULK_THERMAL_VOLTAGE, kneeFromVf,
+  solveMNA, ebersMollParams, OPAMP_ISHORT_DEFAULT, JUNCTION_THERMAL_VOLTAGE, MOS_BULK_THERMAL_VOLTAGE, kneeFromVf,
   sourceDcValue, sourceVoltage, sourceCurrent,
 } from './mna.js';
 import { resolveParams, classDefaults } from './parts-library.js';
@@ -1856,6 +1856,7 @@ export class BoardImpl {
     // A net not in the overlay but with a dirty solve needs flushing —
     // shift register outputs depend on latchReg updated by the fast path.
     if (this._solveDirty) this._flushSolve();
+    if (this._mnaCache?.deferredBjtChargeIds?.length) this._assertMeasurementSolution(this._mnaCache);
     const v = this.nodeVoltages.get(netId) ?? 0;
     return Number.isFinite(v) ? v : 0;
   }
@@ -1914,6 +1915,11 @@ export class BoardImpl {
 
   /** Instrument validity, not a change to the solver or nodeVoltage API. */
   _assertMeasurementSolution(solution = this._mnaCache) {
+    if (solution?.deferredBjtChargeIds?.length) {
+      const error = new Error(`measurement not ready: BJT junction charge needs an accepted transient step (${solution.deferredBjtChargeIds.join(', ')})`);
+      error.code = 'TRANSIENT_CHARGE_NOT_READY';
+      throw error;
+    }
     if (this._deviceSubstepOverflow) {
       const error = new Error('measurement unavailable: device sub-step budget exhausted; initialize a fresh Board');
       error.code = 'SOLVE_FAILED_MEASUREMENT';
@@ -1956,6 +1962,7 @@ export class BoardImpl {
 
   /** Keep an invalid analog capture invalid even if a later solve recovers. */
   _scopeMeasurementFailed(ch, solution = this._mnaCache) {
+    if (solution?.deferredBjtChargeIds?.length) return false; // not a failed capture
     if (ch.type === 'digital') return false;
     if (!ch.failure) {
       try { this._assertMeasurementSolution(solution); }
@@ -2450,6 +2457,7 @@ export class BoardImpl {
    *            writeIndex: number, count: number, channelType: string} | null}
    */
   getScopeData(handle) {
+    if (this._mnaCache?.deferredBjtChargeIds?.length) this._assertMeasurementSolution(this._mnaCache);
     const ch = this._scopeChannels.get(handle);
     if (!ch) return null;
     if (this._scopeMeasurementFailed(ch)) {
@@ -3715,6 +3723,19 @@ export class BoardImpl {
     const capacitorVoltages = new Map();
     const inductorCurrents = new Map();
     for (const part of this._solveParts) {
+      if (part.kind === 'npn' || part.kind === 'pnp') {
+        const em = ebersMollParams(part);
+        if (em && (em.cje || em.cjc || em.tf)) {
+          const at = t => point.nodeVoltages.get(this._netForTerminal(part.id, t));
+          const vb = at('base') - (point.branchCurrents.get(part.id)?.get('base') ?? 0) * em.rb;
+          const vc = at('collector') - (point.branchCurrents.get(part.id)?.get('collector') ?? 0) * em.rc;
+          const sign = part.kind === 'npn' ? 1 : -1;
+          for (const [junction, value] of [['be', sign * (vb - at('emitter'))], ['bc', sign * (vb - vc)]]) {
+            if (!Number.isFinite(value)) throw new Error(`initializeTransientFromOperatingPoint: missing BJT charge state ${part.id}`);
+            capacitorVoltages.set(`@bjt:${part.id}:${junction}`, value);
+          }
+        }
+      }
       if (part.kind === 'capacitor') {
         const a = this._netForTerminal(part.id, 'a');
         const b = this._netForTerminal(part.id, 'b');
@@ -5697,6 +5718,12 @@ export class BoardImpl {
     // follower sat at 0 V forever.
     for (const p of (this._solveParts ?? this.parts)) {
       if (p.kind === 'capacitor' || p.kind === 'inductor' || p.kind === 'transformer') return true;
+      if (p.kind === 'npn' || p.kind === 'pnp') {
+        // Declared nonzero or invalid charge must reach the transient validator,
+        // including a piecewise card which cannot implement it.
+        if (['cje', 'cjc', 'tf'].some(field => p.params?.[field] !== undefined
+          && (!Number.isFinite(p.params[field]) || p.params[field] !== 0))) return true;
+      }
     }
     return false;
   }
@@ -5899,7 +5926,7 @@ export class BoardImpl {
     // form of the silent-degradation bug.
     this._lastSolveConverged = res.converged !== false;
     for (const ch of this._scopeChannels.values()) this._scopeMeasurementFailed(ch, res);
-    if (this._meterWatches.size > 0) this._recordMeterSamples();
+    if (this._meterWatches.size > 0 && !res.deferredBjtChargeIds?.length) this._recordMeterSamples();
   }
 
   /**
@@ -6037,6 +6064,7 @@ export class BoardImpl {
    *   exposed only to models opting into transientUpdateContext.
    */
   _updateDevices(atNs = this.timeNs, solution = this._mnaCache, measurementOnly = false, acceptedTransient = false) {
+    if (this._mnaCache?.deferredBjtChargeIds?.length) return false;
     let changed = false;
     // Built-in shift registers
     if (!measurementOnly && this._shiftRegisters.size > 0) {
