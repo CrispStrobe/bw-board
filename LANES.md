@@ -1,13 +1,16 @@
 2026-10-21 passive open-terminal current readback — CLAIM, Codex circuit projects.
-Own only passive branch-current extraction in src/mna.js, focused regressions
+Own passive open-terminal stamps and branch-current extraction in src/mna.js,
+focused regressions
 in test/dangling-terminal.test.mjs and the school fixture current checks.
 Base 3f00a6562706cf5454d3442839c240e784d1f6a6.
 The resistor readback repair exposed the same missing-net-as-ground error
 in diode/LED/buzzer/button/controlled-resistance readers and each leg of a
-potentiometer. Correct readers only where the existing matrix stamp already
-omits an open path. Preserve connected-path signs, partial potentiometer
-conduction and genuine ground. Audit, do not hide, any separate stamping or
-reactive-state defect discovered by negative controls. No generic zeroing of
+potentiometer. Also correct diode/LED/zener open-terminal stamps and inactive Newton
+participation: unlike the guarded resistor helper, these junction stamps
+still treat an absent lead as ground. Readers must match the corrected
+physical connectivity. Preserve connected-path signs, partial potentiometer
+conduction and genuine ground. Do not hide any separate reactive-state defect discovered by negative
+controls; capacitor/inductor history remains outside this envelope. No generic zeroing of
 arbitrary multi-terminal devices, no solver/threshold/budget changes and no
 workflow/dependency updates. This composes with the same owner's transistor
 transient lane, with fresh focused and hosted qualification before landing.
