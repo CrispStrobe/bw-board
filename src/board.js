@@ -1444,7 +1444,9 @@ export class BoardImpl {
       throw new Error('advanceToLive refuses finite or precision analysis reuse');
     }
     const assertHealthy = () => {
-      this._assertMeasurementSolution();
+      // A pending charge state needs this first accepted step; it is not a
+      // failed history. All convergence and budget failures still refuse.
+      this._assertMeasurementSolution(this._mnaCache, {allowPendingCharge: true});
       if (this._transientAttemptOverflow || this._transientAccuracyUnmet) {
         throw new Error('advanceToLive refuses failed transient history');
       }
@@ -1914,8 +1916,8 @@ export class BoardImpl {
   }
 
   /** Instrument validity, not a change to the solver or nodeVoltage API. */
-  _assertMeasurementSolution(solution = this._mnaCache) {
-    if (solution?.deferredBjtChargeIds?.length) {
+  _assertMeasurementSolution(solution = this._mnaCache, {allowPendingCharge = false} = {}) {
+    if (!allowPendingCharge && solution?.deferredBjtChargeIds?.length) {
       const error = new Error(`measurement not ready: BJT junction charge needs an accepted transient step (${solution.deferredBjtChargeIds.join(', ')})`);
       error.code = 'TRANSIENT_CHARGE_NOT_READY';
       throw error;

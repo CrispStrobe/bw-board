@@ -100,3 +100,11 @@ test('charge integration converges when the maximum step is reduced',()=>{
  }
  assert.ok(Math.abs(values[0]-values[1])<1e-7,`${values}`);
 });
+
+test('the designer live clock may advance a not-ready charge state into a valid capture',()=>{
+ const {b}=bench('npn');assert.throws(()=>b.nodeVoltage('signal'),/accepted transient step/);
+ const receipt=b.advanceToLive(1000n,{maxSteps:16});assert.equal(receipt.completed,true);
+ assert.ok(b.nodeVoltage('signal')<.001);
+ b.setPartParam('V','volts',.1);const next=b.advanceToLive(2000n,{maxSteps:16});assert.equal(next.completed,true);
+ assert.ok(b.nodeVoltage('signal')<.001);
+});
