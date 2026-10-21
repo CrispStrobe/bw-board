@@ -1,3 +1,21 @@
+2026-10-21 matched SPICE transistor transient audit and repair — CLAIM, Codex circuit projects.
+Base 00fe324f3f03cfb9c92f9ea94a99cbf6ee43bb7d. Own src/mna.js
+and the corresponding transient state/step bookkeeping in src/board.js only
+for explicit NPN/PNP junction charge and resistance parameter authority,
+focused test/bjt-transient-*.test.mjs controls, an isolated school-circuit
+SPICE comparison script/fixtures, and this lane record. Compare identical
+netlists, models, parameter sets, initial conditions and sample times against
+ngspice. Separate default piecewise models from explicit exponential models;
+do not tune expected values or solver thresholds to force an oracle pass.
+Confirmed silent model omissions must be implemented with current/KCL/charge
+and time-step convergence proof, or explicitly refused until supported.
+Preserve existing DC/AC and omitted-parameter behavior, integration budgets,
+model identity, all CPU/device work and package pins. No broad solver rewrite,
+workflow change, lowered gate or invented oscillator is authorized by this claim.
+Qualify organ key/no-key startup and amplifier gain/phase/waveform on a stated
+matched model; real kit fidelity remains a separate physical measurement.
+Status CLAIMED; merge before implementation.
+
 2026-10-21 open resistor current readback — SOURCE CANDIDATE, Codex circuit projects.
 Owns the resistor branch-current extraction in src/mna.js and focused
 regressions in test/dangling-terminal.test.mjs. Base 5cc84a8413bd5a89878c6bb90fc441b860cc34ee.
