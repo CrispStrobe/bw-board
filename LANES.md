@@ -1,4 +1,4 @@
-2026-10-21 open resistor current readback — CLAIM, Codex circuit projects.
+2026-10-21 open resistor current readback — SOURCE CANDIDATE, Codex circuit projects.
 Owns the resistor branch-current extraction in src/mna.js and focused
 regressions in test/dangling-terminal.test.mjs. Base 5cc84a8413bd5a89878c6bb90fc441b860cc34ee.
 A resistor with one terminal on no net is correctly omitted from the matrix
@@ -8,7 +8,8 @@ currents, and connected circuit solutions. Prove both open orientations,
 both-open and actual grounded current, including BoardImpl measurement.
 No other device model, solver stamps, CPU, workflow or dependency changes.
 Downstream Lite circuit-project adoption owns an exact reviewed supplier pin;
-no private engine patch in Lite. Status CLAIMED; merge before implementation.
+no private engine patch in Lite. Claim f7a38bba landed before implementation. Focused 39/39 checks pass;
+four new baseline cases fail before the fix. Hosted qualification pending.
 
 2026-10-19 light_sensor photoresistor module model — CLAIM+CHANGE, VPS Claude (opus).
 Branch lane/light-sensor-module-20261019 (circuit-editor lane; owner approved

@@ -3054,10 +3054,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vA = netA ? (nodeVoltages.get(netA) ?? 0) : 0;
       const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
       const ohms = /** @type {number} */ (part.params.ohms ?? 1000);
-      const i = (vA - vB) / ohms; // current from a to b, INSIDE the part
+      // Match stampTwoTerminal: an absent net is an open lead, not ground.
+      const i = netA && netB ? (vA - vB) / ohms : 0; // inside, a to b
       // Every raw terminal reading is OUT-OF-PART positive. `i` enters at a
       // and leaves at b. OP adapts this once to its explicit INTO contract.
-      currents.set('a', -i); // out of terminal a
+      currents.set('a', i === 0 ? 0 : -i); // out of terminal a
       currents.set('b', i);  // out of terminal b
     }
 
