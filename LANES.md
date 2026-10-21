@@ -1,4 +1,4 @@
-2026-10-21 passive open-terminal current readback — CLAIM, Codex circuit projects.
+2026-10-21 passive open-terminal current readback — SOURCE CANDIDATE, Codex circuit projects.
 Own passive open-terminal stamps and branch-current extraction in src/mna.js,
 focused regressions
 in test/dangling-terminal.test.mjs and the school fixture current checks.
@@ -14,9 +14,10 @@ controls; capacitor/inductor history remains outside this envelope. No generic z
 arbitrary multi-terminal devices, no solver/threshold/budget changes and no
 workflow/dependency updates. This composes with the same owner's transistor
 transient lane, with fresh focused and hosted qualification before landing.
-Merge before implementation. Status CLAIMED.
+Claims f3f09594/cfc6ae8b/125a6c3e landed before corresponding implementation.
+Twenty additional open-terminal controls pass; hosted qualification pending.
 
-2026-10-21 matched SPICE transistor transient audit and repair — CLAIM, Codex circuit projects.
+2026-10-21 matched SPICE transistor transient audit and repair — SOURCE CANDIDATE, Codex circuit projects.
 Base 00fe324f3f03cfb9c92f9ea94a99cbf6ee43bb7d. Own src/mna.js
 and the corresponding transient state/step bookkeeping in src/board.js only
 for explicit NPN/PNP junction charge and resistance parameter authority,
@@ -32,7 +33,15 @@ model identity, all CPU/device work and package pins. No broad solver rewrite,
 workflow change, lowered gate or invented oscillator is authorized by this claim.
 Qualify organ key/no-key startup and amplifier gain/phase/waveform on a stated
 matched model; real kit fidelity remains a separate physical measurement.
-Status CLAIMED; merge before implementation.
+Claim 3f00a656 landed before implementation. CJE/CJC/TF now contribute
+transient charge and terminal current, PNP honors RB/RC, and non-UIC startup
+seeds intrinsic state. Zero-time reads defer explicitly until an accepted
+step without poisoning scope history. Six primitive plus five matched school
+SPICE comparisons pass; organ 255.700 versus 255.663 Hz and amplifier maximum
+waveform error 40.9 microvolt. 194 regression checks and eleven healthy matched oracle comparisons pass.
+Live Board/ScopePanel audio replay, stop and WAV export pass in Chromium.
+Rejected Newton trials refine without poisoning accepted history; genuine
+minimum-step failures still refuse measurements. Hosted qualification pending.
 
 2026-10-21 open resistor current readback — SOURCE CANDIDATE, Codex circuit projects.
 Owns the resistor branch-current extraction in src/mna.js and focused
