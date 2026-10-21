@@ -6301,6 +6301,7 @@ export class BoardImpl {
       trapReady = true;
     }
 
+    let fatalTrialFailure = false;
     while (t < tEnd - 1e-15 && attempts < MAX_ATTEMPTS) {
       this._chargeBoundedAdvanceWork('attempts');
       attempts++;
@@ -6350,16 +6351,18 @@ export class BoardImpl {
         const error = new Error('transient Newton solve failed at minimum step');
         error.code = 'TRANSIENT_MINIMUM_STEP_SOLVE_FAILED';
         this._invalidateLiveMeasurements(error);
-        throw error;
+        fatalTrialFailure = true;
+        trapReady = false;
+        return true;
       };
       const full = solveStep(t, hEff, 'trap', cv, il, cc, lv);
-      if (rejectTrial(full)) continue;
+      if (rejectTrial(full)) { if (fatalTrialFailure) break; continue; }
       const h1 = solveStep(t, hEff / 2, 'trap', cv, il, cc, lv);
-      if (rejectTrial(h1)) continue;
+      if (rejectTrial(h1)) { if (fatalTrialFailure) break; continue; }
       const h2 = solveStep(t + hEff / 2, hEff / 2, 'trap',
         h1.capVoltagesNext ?? cv, h1.inductorCurrentsNext ?? il,
         h1.capCurrentsNext ?? cc, h1.inductorVoltagesNext ?? lv);
-      if (rejectTrial(h2)) continue;
+      if (rejectTrial(h2)) { if (fatalTrialFailure) break; continue; }
 
       let err = 0;
       // The accepted public observables include node voltages, not only the
@@ -6428,7 +6431,7 @@ export class BoardImpl {
       }
     }
 
-    if (t < tEnd - 1e-15) {
+    if (!fatalTrialFailure && t < tEnd - 1e-15) {
       // Backstop hit: finish with one BE step so board time and element
       // state agree (this.timeNs has already advanced), and say so.
       const r = solveStep(t, tEnd - t, 'be', cv, il, cc, lv);

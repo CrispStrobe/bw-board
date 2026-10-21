@@ -69,3 +69,10 @@ time-domain pulse repetition was 255.700 Hz with nonzero rendered audio. The
 largest FFT peak can be a harmonic of this narrow-pulse waveform; it must not
 be reported as the fundamental pitch. Replay is a finite electrical capture,
 not a real-time acoustic speaker model.
+
+The ordinary advanceTo diagnostic API retains its existing finite-read
+behavior on a fatal trial, while recording unhealthy analysis and invalidating
+instruments. advanceToLive refuses that history. This preserves the unchanged
+random-netlist invariant suite without accepting failed trials as measurements.
+The final API regression sweep passes 167 tests and the eleven healthy matched
+oracle comparisons.

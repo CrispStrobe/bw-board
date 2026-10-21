@@ -127,3 +127,14 @@ test('a Newton trial which still fails at the minimum step invalidates measureme
  assert.equal(b.transientAnalysisStatus().accuracyMet,false);
  assert.throws(()=>b.getScopeData(ch),/solve failed/);
 });
+
+
+test('ordinary advance retains diagnostic API on fatal trials while instruments and live clock refuse',()=>{
+ const {b}=bench('npn');const real=b._solveLiveMNA.bind(b);
+ b._solveLiveMNA=(pins,opts)=>{const r=real(pins,opts);return opts.transient?.method==='trap'?{...r,converged:false}:r;};
+ b.advanceTo(10000n);assert.equal(b.transientAnalysisStatus().accuracyMet,false);
+ assert.ok(Number.isFinite(b.nodeVoltage('signal')));
+ assert.throws(()=>b.meterVoltage('signal'),/solve failed/);
+ assert.throws(()=>b.advanceToLive(11000n),/minimum step/);
+ assert.ok(b.transientAnalysisStatus().work.solves>0);
+});
