@@ -1,7 +1,7 @@
 2026-10-21 passive open-terminal current readback — CLAIM, Codex circuit projects.
 Own only passive branch-current extraction in src/mna.js, focused regressions
 in test/dangling-terminal.test.mjs and the school fixture current checks.
-Base 3f00a6560361 (refresh actual parent before source composition).
+Base 3f00a6562706cf5454d3442839c240e784d1f6a6.
 The resistor readback repair exposed the same missing-net-as-ground error
 in diode/LED/buzzer/button/controlled-resistance readers and each leg of a
 potentiometer. Correct readers only where the existing matrix stamp already
