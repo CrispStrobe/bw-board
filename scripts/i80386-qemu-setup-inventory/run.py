@@ -10,7 +10,7 @@ import sys
 import time
 import zlib
 
-INVT_ENABLED = False
+INVT_ENABLED = True
 ROOT = Path(__file__).parents[2]
 SCHEMA = 'bw.i80386-qemu-setup-inventory-'
 SOURCE5 = (
