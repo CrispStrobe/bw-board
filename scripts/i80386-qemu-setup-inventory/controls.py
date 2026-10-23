@@ -228,8 +228,8 @@ def workflow_contract(raw):
     guard_start='    if: >-\n';guard_end='    runs-on: ubuntu-24.04\n'
     if not job.startswith(guard_start) or guard_end not in job:raise AssertionError('metadata guard')
     guard=' '.join(job[len(guard_start):job.index(guard_end)].split())
-    expected="${{ false && github.event_name == 'workflow_dispatch' && github.repository == 'CrispStrobe/bw-board' && github.actor == 'CrispStrobe' && github.run_attempt == 1 && github.event.repository.fork == false }}"
-    if guard!=expected:raise AssertionError('literal false closed guard')
+    expected="${{ true && github.event_name == 'workflow_dispatch' && github.repository == 'CrispStrobe/bw-board' && github.actor == 'CrispStrobe' && github.run_attempt == 1 && github.event.repository.fork == false && inputs.expected_head == github.sha }}"
+    if guard!=expected:raise AssertionError('closed metadata activation guard')
     required=('timeout-minutes: 5','ref: ${{ inputs.expected_head }}',
       'persist-credentials: false','assert base64.b64encode(raw).decode() == encoded',
       "assert hashlib.sha256(raw).hexdigest() == digest",
@@ -260,15 +260,16 @@ def workflow_contract(raw):
         raise AssertionError('controls event split')
 
 class WorkflowPolicyControls(unittest.TestCase):
-    def test_disabled_metadata_workflow_and_cuts(self):
+    def test_explicit_metadata_activation_and_cuts(self):
         path=Path(__file__).parents[2]/'.github/workflows/i80386-qemu-setup-inventory.yml'
         raw=path.read_bytes();workflow_contract(raw)
         value=raw.decode()
         cuts=(
-          ('${{ false && github.event_name','${{ true && github.event_name'),
-          ("false && github.event_name == 'workflow_dispatch'", "false || github.event_name == 'workflow_dispatch'"),
+          ('${{ true && github.event_name','${{ false && github.event_name'),
+          ("true && github.event_name == 'workflow_dispatch'", "true || github.event_name == 'workflow_dispatch'"),
           ('github.event.repository.fork == false','github.event.repository.fork == true'),
           ('github.run_attempt == 1','github.run_attempt == 2'),
+          ('inputs.expected_head == github.sha','inputs.expected_head != github.sha'),
           ('ref: ${{ inputs.expected_head }}','ref: ${{ github.ref }}'),
           ('assert hashlib.sha256(raw).hexdigest() == digest','assert raw'),
           ('assert actual_head == head and actual_tree == tree','assert actual_head == head'),
@@ -284,5 +285,10 @@ class WorkflowPolicyControls(unittest.TestCase):
             changed=value.replace(old,new,1)
             with self.subTest(cut=old):
                 with self.assertRaises(AssertionError):workflow_contract(changed.encode())
+
+class ActivationSourceControls(unittest.TestCase):
+    def test_only_collector_guard_is_enabled(self):
+        self.assertIs(r.INVT_ENABLED,True)
+        self.assertTrue(all(value is False for value in r.FLAGS.values()))
 
 if __name__=='__main__':unittest.main()

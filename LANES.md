@@ -5861,3 +5861,13 @@ and explicit source/request/workflow selection; no old event or successful
 original is repeated. Claim PR668 merged before implementation; source PR669
 keeps collector and metadata job disabled. No dependency,
 CPU/device, other workflow, numerical threshold or existing guard change.
+
+A separate review-only activation candidate, based on the exact PR669 source,
+sets only this collector and its metadata job active for explicit owned
+`workflow_dispatch` at attempt one, nonfork, with selected expected head equal
+to the workflow commit. Immutable request SHA, source HEAD/tree/files, caps and
+independent original reader stay in force. The existing guard-off mock refusal
+remains a control. PR645 source12 and all setup/actual/compiler/QEMU/guest
+routes remain unchanged and disabled. Source qualification, final-head checks,
+external event admission and once-only original audit precede any dispatch;
+this candidate itself records no hosted observation or setup approval.
