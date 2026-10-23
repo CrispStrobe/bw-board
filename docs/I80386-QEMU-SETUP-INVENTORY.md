@@ -43,6 +43,21 @@ aliases, changed identities, read/close errors, output limits and coherent packe
 mutations. Refuse before unadmitted processes or writes; never invent a guest.
 The independent reader imports no producer and supplies no approval capability.
 
+The proposed first wire contract limits the immutable request to 64 KiB and the
+entire original, including its optional final newline, to 2 MiB. It bounds each
+source/host file at 8 MiB, cumulative selected-file hashing at 64 MiB and the
+Debian status census at 5,000 unique package/architecture records. CPU10seconds
+and wall30seconds are cooperative collector checks; the outer metadata step is
+two minutes in a five-minute job. These are not syscall-preemption, continuous
+ownership or machine-wide containment claims. Text and binary observations have
+separate roles; executable bytes are not included in the report.
+
+Image fields remain attributed environment observations, and official numeric
+job identity remains externally selected. The inner reader establishes packet
+consistency without authenticating those external facts. Independent official
+run/job/artifact admission and, where needed, a retained job-setup log must
+corroborate them before any later setup decision.
+
 After source review and all enabled exact-head checks, separately select and
 admit one hosted metadata-only event. Retain each official original once after
 metadata admission and audit the retained bytes independently. Metadata success
