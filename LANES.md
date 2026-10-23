@@ -1,3 +1,28 @@
+2026-10-23 selected QEMU setup-input inventory — CLAIMED, Codex x86 setup preflight.
+Base a2d49e419d93e45563eb9449586b61b06ea617e8. Add a separate, initially
+DISABLED read-only hosted preflight for exact runner/image, installed package
+and service-helper inputs needed by the selected QEMU setup. This does not
+transfer PR645 ownership or change its workflow, source12, pins, runtime
+selection, consumed failures or disabled actual/compiler entries.
+
+Own ONLY new scripts/i80386-qemu-setup-inventory/{run.py,reader.py,controls.py,README.md},
+new .github/workflows/i80386-qemu-setup-inventory.yml, this claim and
+[the setup-input contract](docs/I80386-QEMU-SETUP-INVENTORY.md). Existing ring3
+run.py/reader.py/controls.py, the PR645 branch and all other lanes remain owned
+by their current owners. Any later integration or setup architecture change
+requires its own explicit scope and qualification.
+
+Record source/workflow/job identities, selected environment fields, bounded
+installed-package/control metadata and exact named/held helper-byte witnesses.
+No apt/dpkg install, service-helper execution, QEMU invocation, guest, privileged
+operation or platform mutation. Preserve absent/unknown/partial states; the
+independent reader must never emit setup, runtime-candidate or execution approval.
+Require pure hostile-input/refusal controls and independent original-only audit.
+One separately admitted hosted metadata event follows final exact-head source CI
+and explicit source/request/workflow selection; no old event or successful
+original is repeated. Merge this claim before implementation. No dependency,
+CPU/device, other workflow, numerical threshold or existing guard change.
+
 2026-10-23 versioned literal-PULSE oracle environment — CLAIMED, same circuit owner.
 Base b9d12289; follow-up to normally merged literal-PULSE claim #664 and source
 candidate #665. Actual CI installs ngspice42 and interprets PW=0 as a default
