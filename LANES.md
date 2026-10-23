@@ -5836,7 +5836,7 @@ review and all enabled CI before any fresh qualification. The detailed sequence
 and completion criteria are in the [task contract](docs/X86-NEXT-LANES.md#selected-qemu-availability--2026-10-19).
 
 
-2026-10-23 selected QEMU setup-input inventory — CLAIMED, Codex x86 setup preflight.
+2026-10-23 selected QEMU setup-input inventory — SOURCE CANDIDATE, Codex x86 setup preflight.
 Base a2d49e419d93e45563eb9449586b61b06ea617e8. Add a separate, initially
 DISABLED read-only hosted preflight for exact runner/image, installed package
 and service-helper inputs needed by the selected QEMU setup. This does not
@@ -5858,5 +5858,6 @@ independent reader must never emit setup, runtime-candidate or execution approva
 Require pure hostile-input/refusal controls and independent original-only audit.
 One separately admitted hosted metadata event follows final exact-head source CI
 and explicit source/request/workflow selection; no old event or successful
-original is repeated. Merge this claim before implementation. No dependency,
+original is repeated. Claim PR668 merged before implementation; source PR669
+keeps collector and metadata job disabled. No dependency,
 CPU/device, other workflow, numerical threshold or existing guard change.
