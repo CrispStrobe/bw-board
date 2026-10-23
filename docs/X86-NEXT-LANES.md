@@ -3032,3 +3032,64 @@ controls/CI with unchanged selections. Runtime readiness requires the fresh
 complete inventory and candidate review; actual guest qualification remains
 separate. This documentation claims no setup implementation, new event, QEMU
 observation or guest result.
+
+## Current x86 handoff — 2026-10-23
+
+This is a portable work list for separate owners. The [selected-QEMU setup
+contract](I80386-QEMU-SETUP-INVENTORY.md) and [source candidate PR669](https://github.com/CrispStrobe/bw-board/pull/669)
+provide a bounded, read-only setup-input observer. The collector and metadata
+job remain inactive in that published candidate. Source controls exercise mocked
+boundaries; only a separately admitted metadata observation can identify a
+runner's package/helper state. Neither result selects a package transaction or
+establishes the selected executable's installed bytes.
+Preserve the earlier absent-tool failure and consumed source/event bindings;
+new metadata cannot repair the old null runtime candidate.
+After independently admitted metadata, the remaining gates are an explicit
+exact setup policy, verified resulting runtime identity, and a separately
+admitted clean guest/oracle run. Keep those gates distinct from this observer.
+
+1. **Close the selected-tool lane under the existing ring3 ownership.** Continue
+   [the ring3/selected-QEMU contract](#selected-qemu-availability--2026-10-19) and its
+   existing claim [PR660](https://github.com/CrispStrobe/bw-board/pull/660).
+   Use the read-only observer to review current helper, installed-package and
+   transaction inputs; specify the complete dependency/service/privilege policy
+   and exact selected executable identity before any setup activation. Preserve
+   historical source12 and the absent-tool failure. Actual guest and compiler
+   guards remain false until distinct source, setup, runtime and original-only
+   admission. Acceptance is a fresh, independently checked setup/result chain,
+   then the existing owned oracle comparison on a clean hosted guest.
+2. **Admit the Lite GUI consumer separately.** The [Lite GUI claim PR1305](https://github.com/CrispStrobe/brickwright-lite/pull/1305)
+   covers current frontend/source/runtime/request/event/original admission for
+   the existing [HDD persistence and forward-debug scenarios](https://github.com/CrispStrobe/brickwright-lite/blob/main/docs/X86-NEXT-LANES.md).
+   Coordinate with [Arcade PR1128](https://github.com/CrispStrobe/brickwright-lite/pull/1128)
+   and the D7 supplier owner; preserve their active ownership and dependency
+   pins. Do not treat a selected Board API or unit pass as an installed GUI
+   result. Acceptance requires exact current source and supplier joins, a
+   qualified installed browser/guest run for each scenario, and an independent
+   audit of its original output before a consumer merge.
+3. **Advance the free protected-mode ladder with finite claims.** Start from
+   the existing authored [protected-stack](I80386-PROTECTED-STACK-RESULTS.md),
+   [FreeDOS/CWSDPMI](../scripts/i80386-cwsdpmi-0501-far-at/README.md) and
+   [xv6 continuation](I80386-XV6-10B-CONTINUATION.md) fixtures. Claim one
+   missing transition or observable at a time. Preserve the existing AX=0501
+   task-switch refusal and null return: attribution is not a frame-return pass.
+   Use independent source/input and clean guest evidence, and report the exact
+   instruction/device boundary reached. PSE/APIC or later-CPU compatibility evidence does not establish a
+   strict 386DX machine, complete DOS/OS behavior or physical timing.
+4. **Measure current ordinary-JS cost before optimizing.** Propose a separate
+   claim owning new `scripts/i80386-current-at-cost/`,
+   `.github/workflows/i80386-current-at-cost.yml`,
+   `test/i80386-current-at-cost.test.mjs` and
+   `docs/I80386-CURRENT-AT-COST.md`; leave the earlier
+   [AT profiling result](#ordinary-js-386-at-platform-profiling) intact. Freeze
+   current source/imports, the authored five-operation loop, runner/Node identity
+   and resource limits. First preserve its independent one-million-instruction
+   AX65534/BX65535/IP0/memory-word65535 golden, with one million core and six
+   million AT **synthetic scheduling charges**. Then measure fresh hosted Node
+   CPU time, wall time and bounded V8 profiles. Separate warmed loop time from
+   startup and whole-child time. Fix one CPU, 1 GiB without swap, 60-second
+   children and 8 MiB profile caps; preserve original process/resource facts. An independent byte reader
+   must join exact source, workflow, semantics and profiles without replay.
+   Profile attribution selects a measurable bottleneck for a *later* narrow
+   optimization claim and paired semantic/performance qualification. The model
+   charges alone grant no measured speedup, physical RTx or hardware frequency.
