@@ -82,38 +82,82 @@ describe('exact seven-argument SPICE PULSE voltage source', () => {
       'V2 below V1 is a falling authored rise, not an absolute amplitude');
   });
 
-  it('treats zero PW as a held default width and aligns its period restart', () => {
+  it('preserves the finite fall after an explicitly zero PW and repeats all corners', () => {
     const p = pulse({ td: 1, tr: 2, pw: 0, tf: 3, per: 10 });
     const at = t => sourceVoltage(source(p), t, 5);
     assert.equal(at(1), -2);
     assert.equal(at(2), 1, 'the finite rise remains authored');
     assert.equal(at(3), 4);
-    assert.equal(at(10.999), 4, 'zero PW holds V2 through the cycle');
-    assert.equal(at(11), 4, 'the exact reset solve point exposes the left limit');
+    assert.equal(at(4.5), 1, 'zero plateau falls immediately after TR');
+    assert.equal(at(6), -2, 'the finite fall returns to V1');
+    assert.equal(at(10.999), -2);
+    assert.equal(at(11), -2, 'the next period starts from V1');
     assert.ok(Math.abs(at(11.001) - (-1.997)) < 1e-12,
       'the far side restarts the finite rise from V1');
     assert.equal(at(13), 4);
 
     assert.equal(nextSpicePulseCorner(p, 0), 1);
     assert.equal(nextSpicePulseCorner(p, 1), 3);
-    assert.equal(nextSpicePulseCorner(p, 3), 11,
-      'the nonexistent fall contributes no corner');
+    assert.equal(nextSpicePulseCorner(p, 3), 6,
+      'the authored finite fall contributes its endpoint');
+    assert.equal(nextSpicePulseCorner(p, 6), 11);
     assert.equal(nextSpicePulseCorner(p, 11), 13,
       'the next rise end follows the period restart');
+  });
+
+  it('matches ngspice and independent triangle interpolation for literal zero PW', {
+    skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
+  }, () => {
+    // Explicit seven-value PULSE interpolation, independently tabulated:
+    // rise 1..3, fall 3..6, low 6..11, then repeat. PW is not omitted.
+    const times = [0.5, 1, 2, 3, 4.5, 6, 10.5, 11, 12, 13, 14.5, 16];
+    const fractions = [0, 0, .5, 1, .5, 0, 0, 0, .5, 1, .5, 0];
+    for (const [v1, v2] of [[-2, 4], [3, -5]]) {
+      const p = pulse({v1, v2, td: 1, tr: 2, pw: 0, tf: 3, per: 10});
+      const deck = `literal-zero PULSE independent voltage oracle
+V1 out 0 PULSE(${v1} ${v2} 1 2 3 0 10)
+R1 out 0 1k
+.tran .01 16.1 0 .01
+${times.map((t, i) => `.meas tran point${i} FIND v(out) AT=${t}`).join('\n')}
+.end
+`;
+      const ng = spawnSync('ngspice', ['-n', '-b'], {input: deck, encoding: 'utf8'});
+      assert.equal(ng.status, 0, ng.stderr || ng.stdout);
+      const values = new Map([...ng.stdout.matchAll(/^\s*point(\d+)\s*=\s*([-+0-9.e]+)/gmi)]
+        .map(m => [Number(m[1]), Number(m[2])]));
+      assert.equal(values.size, times.length, ng.stdout);
+      for (let i = 0; i < times.length; i++) {
+        const expected = v1 + (v2-v1)*fractions[i];
+        assert.ok(Math.abs(values.get(i)-expected) < 1e-8,
+          `independent ngspice triangle at ${times[i]}s: ${values.get(i)} vs ${expected}`);
+        assert.ok(Math.abs(sourceVoltage(source(p), times[i], 5)-expected) < 1e-12,
+          `authored triangle at ${times[i]}s must be ${expected}`);
+      }
+    }
   });
 
   it('completes the imported zero-PW current-source RC across two periods', () => {
     const board = zeroWidthCurrentBoard();
     const samples = [0.1, 2.5, 4.9, 5.1, 7.5, 9.9];
     const observed = [];
-    for (const t of samples) {
+    const currents = [24.5e-6, 132.5e-6, 38e-6, 24.5e-6, 132.5e-6, 38e-6];
+    for (const [index, t] of samples.entries()) {
       board.advanceTo(BigInt(Math.round(t * 1e9)));
       observed.push(board.nodeVoltage('out'));
+      const output = board.branchCurrent('I1', 'pos');
+      assert.ok(Math.abs(output-currents[index]) < 1e-12,
+        `current-source OUT sign and authored value at ${t}s (${output})`);
+      assert.ok(Math.abs(board.branchCurrent('I1', 'neg')+output) < 1e-12);
+      const kcl = output + board.branchCurrent('R1', 'a') +
+        board.branchCurrent('R4', 'a') + board.branchCurrent('C2', 'a');
+      assert.ok(Math.abs(kcl) < 1e-9, `output node conserves current at ${t}s (${kcl})`);
     }
-    assert.ok(observed[2] > 4.68, `the first held plateau reaches V2 (${observed[2]})`);
+    assert.ok(Math.abs(observed[2] - 38e-6 / (1/24e3 + 1/1e6)) < 2e-4,
+      `the zero plateau falls during TF (${observed[2]})`);
     assert.ok(observed[3] > 0.57 && observed[3] < 0.58,
       `the period restart returns to the next finite rise (${observed[3]})`);
-    assert.ok(observed[5] > 4.68, `the second held plateau repeats (${observed[5]})`);
+    assert.ok(Math.abs(observed[5] - 38e-6 / (1/24e3 + 1/1e6)) < 2e-4,
+      `the finite fall repeats in the second period (${observed[5]})`);
     const status = board.transientAnalysisStatus();
     assert.equal(status.accuracyMet, true);
     assert.equal(status.failure, null);
@@ -157,6 +201,7 @@ ${measures}
   it('refuses absent, non-finite, ambiguous zero-edge, negative, and overlapping parameters', () => {
     const bad = [
       [{ per: undefined }, /per must be a finite authored number/],
+      [{ pw: undefined }, /pw must be a finite authored number/],
       [{ v1: '{supply}' }, /v1 must be a finite authored number/],
       [{ v2: Number.NaN }, /v2 must be a finite authored number/],
       [{ td: -1 }, /td must be non-negative/],

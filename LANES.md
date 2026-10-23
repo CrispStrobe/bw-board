@@ -1,4 +1,4 @@
-2026-10-23 literal-zero SPICE PULSE correction — CLAIMED, Codex circuit owner.
+2026-10-23 literal-zero SPICE PULSE correction — DONE (source candidate), Codex circuit owner.
 Base236ba67f; isolated follow-up to the downstream independent-oracle audit.
 Own only src/source-waveforms.js, focused pulse-source tests and this claim.
 The exact seven-authored-value contract admits PW=0, but currently substitutes
@@ -19,6 +19,21 @@ No parser, generic integration, MNA/device model, scheduler, CPU, dependency pin
 CUI/Lite, workflow, corpus or unrelated source edits. A separately claimed CUI
 follow-up owns full-precision oracle reads and qualified immutable adoption.
 Merge the claim before implementation; require affected and exact-head checks.
+
+Claim #664 merged normally as b9d12289 before implementation. Remove only the
+zero-PW high-hold exception and use the same authored corner list for all widths;
+duplicate zero-width corners still collapse. Literal zero retains its finite
+fall and repeats from V1. Omitted PW and zero rise/fall remain refused.
+Four prior-source pulse assertions fail, including the unchanged ngspice current
+RC comparison. All 39 focused pulse/transient/KCL/current-contract/inductor
+controls pass without skips. Independent ngspice 47 -n voltage samples match
+explicit triangle interpolation for both swing directions and two periods;
+existing positive-width RC oracle bounds are unchanged. Both restoring the old
+hold and omitting the falling corner independently fail by assertion. The
+broader six-file run is 44/45: the separate EXP waveform oracle assertion also
+fails against the pre-repair source. Retain that inherited failure and its
+unchanged bound; do not generalise this qualification to all source families.
+Exact-head hosted checks and downstream immutable adoption remain required.
 
 2026-10-21 passive open-terminal current readback — SOURCE CANDIDATE, Codex circuit projects.
 Own passive open-terminal stamps and branch-current extraction in src/mna.js,
