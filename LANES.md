@@ -1,3 +1,150 @@
+2026-10-23 voltage scope aperture capture — CLAIMED, Codex circuit owner.
+Base a2d49e41; additive producer for the same owner's actual sampled-audio work.
+A real 90ms saved miniorgan capture at 100kHz has 18 post-startup envelope
+pulses but only 5 point-sampled pulses. The qualified solver reports no failure;
+uniform point acquisition aliases narrow pulses. Preserve that negative evidence
+and the existing point/envelope meanings rather than infer or synthesize notes.
+
+Own only scope registration/reset/update/readout sections in src/board.js,
+a pure src/scope-aperture.js helper if needed, corresponding scope option/data
+JSDoc in src/types.js, focused scope aperture/current/envelope/reset/refusal
+controls, docs/SCOPE-SAMPLING.md and this claim. Add an explicitly requested
+voltage capture mode which averages the actual piecewise-linear accepted-solve
+waveform across each authored sample aperture, including partial intervals and
+multiple crossed buckets. Publish two equal sample slots plus explicit capture/
+aperture metadata; preserve actual cadence/epochs/ring ordering and voltage units.
+No measurement from rejected solves, failed history or unfilled apertures.
+
+Preserve default envelope and instantaneous point captures byte-for-behavior,
+current channels, references/probe loads, scope rate/depth bounds, accuracy
+qualification and all model/integration formulas, breakpoints, tolerances, work
+budgets, scheduler, CPU, source-family semantics, pins and workflows. Do not
+claim a boxcar aperture is an ideal brick-wall anti-alias filter or infer a tone.
+CUI audio consumption and canonical adoption need their own claim/qualified pin.
+Require independent ramp/constant/impulse-area controls at varied substep/sample
+phases, repeated partial buckets/ring wrap/reset, refusal/rejected-step exclusion,
+unchanged point/envelope/current controls and actual organ captures. Retain
+source qualification and enabled exact-head checks. Merge before implementation.
+
+2026-10-23 versioned literal-PULSE oracle environment — CLAIMED, same circuit owner.
+Base b9d12289; follow-up to normally merged literal-PULSE claim #664 and source
+candidate #665. Actual CI installs ngspice42 and interprets PW=0 as a default
+high hold, while independently measured ngspice47 preserves the literal zero.
+Official release47 source VSRC/ISRC loaders admit coefficient PW >= 0; its NEWS
+records changed PULSE parameterization in release46. Keep the original failure:
+matching one executable is not proof of version-independent SPICE semantics.
+
+Own only a versioned oracle installer/identity record and its focused controls,
+the narrow additional ngspice47 install/admission steps in .github/workflows/ci.yml,
+the same owner's test/spice-pulse-source.test.mjs oracle selection/identity, and
+this claim. Pin official release47 archive by URL plus SHA256
+894e649651f1838a14095e5a5439e7d3aa63e87ede14d283173fda4fcdef675f.
+Build/install a separate headless binary; preserve the existing ngspice42 binary,
+other source-family oracles, workflow triggers/tiers/required checks and budgets.
+Use the qualified47 binary only for tests whose explicit contract is the modern
+literal-zero PULSE behavior. Positive-width controls must retain their original
+42 comparison and independently establish agreement with the admitted47 oracle.
+Record actual version, immutable source identity, invocation and compatibility
+mode; reject missing/wrong version, altered archive, failed build or bad output.
+No engine/parser/MNA changes, no PULSE-to-PWL fixture substitution, numerical
+bound change, gate skip, default oracle replacement or unrelated source change.
+
+Merge before implementation. Require installer admission/refusal controls,
+actual source-verified headless build, the original pulse cases unchanged in
+sample times and error bounds, both swing directions/periods/current signs/KCL,
+existing42 positive-width comparisons and full enabled exact-head qualification.
+Do not merge #665 or adopt its source while oracle qualification remains red.
+
+2026-10-23 literal-zero SPICE PULSE correction — CLAIMED, Codex circuit owner.
+Base236ba67f; isolated follow-up to the downstream independent-oracle audit.
+Own only src/source-waveforms.js, focused pulse-source tests and this claim.
+The exact seven-authored-value contract admits PW=0, but currently substitutes
+a high plateau until the next period and omits the finite falling edge. Actual
+ngspice47 with and without personal initialization instead follows the authored
+zero plateau and finite fall; the documented seven-value interpolation also
+places that fall immediately after TR. Preserve the old source and failed
+comparison as evidence, rather than reinterpret the oracle to match the engine.
+
+Remove the literal-zero/default-width confusion only after independent source,
+RC and corner controls establish the intended authored waveform. Omitted PW and
+zero rise/fall remain refused; every positive-width case must stay unchanged.
+Retain exact sample times, current signs, KCL, transient qualification and all
+existing work budgets and numerical tolerances. Prove voltage/current-source
+consequences, repeated periods and independent ngspice agreement. Mutants that
+restore the held plateau or omit the falling corner must red by assertion.
+No parser, generic integration, MNA/device model, scheduler, CPU, dependency pin,
+CUI/Lite, workflow, corpus or unrelated source edits. A separately claimed CUI
+follow-up owns full-precision oracle reads and qualified immutable adoption.
+Merge the claim before implementation; require affected and exact-head checks.
+
+2026-10-21 passive open-terminal current readback — SOURCE CANDIDATE, Codex circuit projects.
+Own passive open-terminal stamps and branch-current extraction in src/mna.js,
+focused regressions
+in test/dangling-terminal.test.mjs and the school fixture current checks.
+Base 3f00a6562706cf5454d3442839c240e784d1f6a6.
+The resistor readback repair exposed the same missing-net-as-ground error
+in diode/LED/buzzer/button/controlled-resistance readers and each leg of a
+potentiometer. Also correct diode/LED/zener open-terminal stamps and inactive Newton
+participation: unlike the guarded resistor helper, these junction stamps
+still treat an absent lead as ground. Readers must match the corrected
+physical connectivity. Preserve connected-path signs, partial potentiometer
+conduction and genuine ground. Do not hide any separate reactive-state defect discovered by negative
+controls; capacitor/inductor history remains outside this envelope. No generic zeroing of
+arbitrary multi-terminal devices, no solver/threshold/budget changes and no
+workflow/dependency updates. This composes with the same owner's transistor
+transient lane, with fresh focused and hosted qualification before landing.
+Claims f3f09594/cfc6ae8b/125a6c3e landed before corresponding implementation.
+Twenty additional open-terminal controls pass; hosted qualification pending.
+
+2026-10-21 matched SPICE transistor transient audit and repair — SOURCE CANDIDATE, Codex circuit projects.
+Base 00fe324f3f03cfb9c92f9ea94a99cbf6ee43bb7d. Own src/mna.js
+and the corresponding transient state/step bookkeeping in src/board.js only
+for explicit NPN/PNP junction charge and resistance parameter authority,
+focused test/bjt-transient-*.test.mjs controls, an isolated school-circuit
+SPICE comparison script/fixtures, and this lane record. Compare identical
+netlists, models, parameter sets, initial conditions and sample times against
+ngspice. Separate default piecewise models from explicit exponential models;
+do not tune expected values or solver thresholds to force an oracle pass.
+Confirmed silent model omissions must be implemented with current/KCL/charge
+and time-step convergence proof, or explicitly refused until supported.
+Preserve existing DC/AC and omitted-parameter behavior, integration budgets,
+model identity, all CPU/device work and package pins. No broad solver rewrite,
+workflow change, lowered gate or invented oscillator is authorized by this claim.
+Qualify organ key/no-key startup and amplifier gain/phase/waveform on a stated
+matched model; real kit fidelity remains a separate physical measurement.
+Claim 3f00a656 landed before implementation. CJE/CJC/TF now contribute
+transient charge and terminal current, PNP honors RB/RC, and non-UIC startup
+seeds intrinsic state. Zero-time reads defer explicitly until an accepted
+step without poisoning scope history. Six primitive plus five matched school
+SPICE comparisons pass; organ 255.700 versus 255.663 Hz and amplifier maximum
+waveform error 40.9 microvolt. 194 regression checks and eleven healthy matched oracle comparisons pass.
+Live Board/ScopePanel audio replay, stop and WAV export pass in Chromium.
+Rejected Newton trials refine without poisoning accepted history; genuine
+minimum-step failures still refuse measurements. Hosted qualification pending.
+
+2026-10-21 open resistor current readback — SOURCE CANDIDATE, Codex circuit projects.
+Owns the resistor branch-current extraction in src/mna.js and focused
+regressions in test/dangling-terminal.test.mjs. Base 5cc84a8413bd5a89878c6bb90fc441b860cc34ee.
+A resistor with one terminal on no net is correctly omitted from the matrix
+but its current readback substitutes ground for the absent terminal and
+reports phantom current. Preserve real-ground conductance, signed terminal
+currents, and connected circuit solutions. Prove both open orientations,
+both-open and actual grounded current, including BoardImpl measurement.
+No other device model, solver stamps, CPU, workflow or dependency changes.
+Downstream Lite circuit-project adoption owns an exact reviewed supplier pin;
+no private engine patch in Lite. Claim f7a38bba landed before implementation. Focused 39/39 checks pass;
+four new baseline cases fail before the fix. Hosted qualification pending.
+
+2026-10-19 light_sensor photoresistor module model — CLAIM+CHANGE, VPS Claude (opus).
+Branch lane/light-sensor-module-20261019 (circuit-editor lane; owner approved
+claim and change in one PR). Owns this row, a new `light_sensor` registry device
+in src/devices/sensors.js, its kind listing in src/board.js (getControls,
+getPartKinds), src/types.js and the labwired-bridge ANALOG_SOURCE set, and new
+test/light-sensor-module.test.mjs. Circuit: LDR vcc→out (the built-in `ldr`
+law via controlledResistance, same 0..1 light control) plus fixed rLoad
+(default 10 kOhm) out→gnd, so out rises with light. No comparator/DO pin,
+spectral or time-constant model; no physical-accuracy claim beyond that divider.
+
 2026-10-11 bounded compiler tool boundary receipts — CLAIM, Codex.
 Branch lane/386-tool-boundary-receipts-20261011, exact base
 `e1f44e70bd21e4f3b146d0c0e00da141eb045182`. Owns this row and only new
@@ -5669,3 +5816,62 @@ failure remain retained; no CPU change or consumer pin is adopted. See the
 PR645 remains an active owner lane requiring its own actual qualification.
 Source-only landing does not qualify inactive compiler/native diagnostics or
 the ring3 guest path; activation guards and remaining contracts are preserved.
+
+
+### Selected QEMU availability follow-up — 2026-10-19
+
+Owner: ring3 runtime qualification. Claim the source proposal for explicit
+provisioning of the already selected QEMU before a new staged metadata observer.
+The consumed [run 39204174598](https://github.com/CrispStrobe/bw-board/actions/runs/39204174598)
+failed with the selected executable absent. Its retained originals join the
+reviewed request, event, source and executing workflow; Node staging/readback
+observed the fixed bytes, but no complete runtime candidate or probes qualified.
+PR645 remains draft and unqualified for master. All 11 enabled checks before
+that event passed, with nine reviewed skips; the failed event is retained.
+
+Scope: establish availability/provenance of `qemu-system-x86=1:8.2.2+ds-0ubuntu1.18`,
+then propose a separately reviewed setup step and controls for missing package,
+wrong version/hash, failed setup and unchanged disabled actual entry. Preserve
+QEMU's 26,359,752-byte selection and existing SHA256, all Node/runtime pins,
+observer boundaries and prior failures. No latest-version fallback, pin change,
+local tool/guest execution or rerun/relabel of the consumed event is included.
+A new source/request/workflow and distinct metadata-event boundary require
+review and all enabled CI before any fresh qualification. The detailed sequence
+and completion criteria are in the [task contract](docs/X86-NEXT-LANES.md#selected-qemu-availability--2026-10-19).
+
+
+2026-10-23 selected QEMU setup-input inventory — SOURCE CANDIDATE, Codex x86 setup preflight.
+Base a2d49e419d93e45563eb9449586b61b06ea617e8. Add a separate, initially
+DISABLED read-only hosted preflight for exact runner/image, installed package
+and service-helper inputs needed by the selected QEMU setup. This does not
+transfer PR645 ownership or change its workflow, source12, pins, runtime
+selection, consumed failures or disabled actual/compiler entries.
+
+Own ONLY new scripts/i80386-qemu-setup-inventory/{run.py,reader.py,controls.py,README.md},
+new .github/workflows/i80386-qemu-setup-inventory.yml, this claim and
+[the setup-input contract](docs/I80386-QEMU-SETUP-INVENTORY.md). Existing ring3
+run.py/reader.py/controls.py, the PR645 branch and all other lanes remain owned
+by their current owners. Any later integration or setup architecture change
+requires its own explicit scope and qualification.
+
+Record source/workflow/job identities, selected environment fields, bounded
+installed-package/control metadata and exact named/held helper-byte witnesses.
+No apt/dpkg install, service-helper execution, QEMU invocation, guest, privileged
+operation or platform mutation. Preserve absent/unknown/partial states; the
+independent reader must never emit setup, runtime-candidate or execution approval.
+Require pure hostile-input/refusal controls and independent original-only audit.
+One separately admitted hosted metadata event follows final exact-head source CI
+and explicit source/request/workflow selection; no old event or successful
+original is repeated. Claim PR668 merged before implementation; source PR669
+keeps collector and metadata job disabled. No dependency,
+CPU/device, other workflow, numerical threshold or existing guard change.
+
+A separate review-only activation candidate, based on the exact PR669 source,
+sets only this collector and its metadata job active for explicit owned
+`workflow_dispatch` at attempt one, nonfork, with selected expected head equal
+to the workflow commit. Immutable request SHA, source HEAD/tree/files, caps and
+independent original reader stay in force. The existing guard-off mock refusal
+remains a control. PR645 source12 and all setup/actual/compiler/QEMU/guest
+routes remain unchanged and disabled. Source qualification, final-head checks,
+external event admission and once-only original audit precede any dispatch;
+this candidate itself records no hosted observation or setup approval.

@@ -2987,3 +2987,114 @@ actual delivery mapping select this same staged path across generator, GEN and
 guest descriptors on a fresh VM, preserving historical pins, V8 defaults and
 all twenty architectural roles. Clean affected hosted guest qualification and
 every enabled final-head check remain necessary before source merge.
+
+
+## Selected QEMU availability — 2026-10-19
+
+The independently audited originals of [run 39204174598](https://github.com/CrispStrobe/bw-board/actions/runs/39204174598)
+join PR645 source `200b8d14`, tree `323bd211`, the V3 request and executing
+workflow `456edafa`. The first failure was `FileNotFoundError` for the selected
+`/usr/bin/qemu-system-i386`. The workflow provided Node but did not provision
+QEMU. The observed Node copy and independent before/after readbacks matched the
+historical bytes with root ownership and mode0555. This remains a failed
+inventory: candidate is null; no metadata probes/processes or complete runtime
+graph qualified. Do not turn the Node observation into runtime approval.
+
+The selection remains `qemu-system-x86=1:8.2.2+ds-0ubuntu1.18`, binary extent
+26,359,752 bytes and SHA256
+`28fa14f1c45fca7422e3ec5737768b33b705de2f31014a76e658d4263464a6a5`.
+[Ubuntu's package catalog](https://packages.ubuntu.com/en/noble-updates/qemu-system-x86)
+lists that version. Catalog presence is not archive retrieval, binary digest,
+dependency closure or hosted qualification evidence. The current observer has no
+installer or apt fallback; do not silently change that contract.
+
+Follow-up, in order:
+
+1. Verify exact official package provenance/availability, archive and selected
+   binary identity, dependencies and trusted path ownership. Preserve the
+   evidence; do not execute a downloaded tool locally or substitute a newer
+   version. If unavailable or mismatched, record the blocker without loosening
+   the historical selection.
+2. Under the separately merged claim, propose explicit platform setup before a
+   new metadata observer, with fixed version and binary checks. Keep installation
+   outside the observer and actual execution disabled. Add meaningful controls
+   for absent package, wrong version/hash, failed setup and preserved event,
+   privilege and refusal boundaries. Review the setup trust boundary and changed
+   workflow policy explicitly.
+3. Freeze new source12/request/executing workflow; review every enabled final-head
+   check and declared skip, then separately admit a distinct metadata event and
+   request binding. Run39204174598 and its label are consumed: never rerun it,
+   remove/readd the label or reinterpret its originals.
+4. Acquire each admitted original once, including the artifact containing
+   `inventory.original.log` and `controller.stderr`; job logs alone do not contain
+   that redirected stream. Audit through a standalone original reader and review
+   the complete runtime candidate independently. Only then separately map actual
+   generator/GEN/argv and qualify the affected clean hosted guest before PR645
+   adoption to master.
+
+Done for the setup source slice means reviewed implementation and relevant
+controls/CI with unchanged selections. Runtime readiness requires the fresh
+complete inventory and candidate review; actual guest qualification remains
+separate. This documentation claims no setup implementation, new event, QEMU
+observation or guest result.
+
+## Current x86 handoff — 2026-10-23
+
+This is a portable work list for separate owners. The [selected-QEMU setup
+contract](I80386-QEMU-SETUP-INVENTORY.md) and [source candidate PR669](https://github.com/CrispStrobe/bw-board/pull/669)
+provide a bounded, read-only setup-input observer. The collector and metadata
+job remain inactive in that published candidate. Source controls exercise mocked
+boundaries; only a separately admitted metadata observation can identify a
+runner's package/helper state. Neither result selects a package transaction or
+establishes the selected executable's installed bytes.
+Preserve the earlier absent-tool failure and consumed source/event bindings;
+new metadata cannot repair the old null runtime candidate.
+After independently admitted metadata, the remaining gates are an explicit
+exact setup policy, verified resulting runtime identity, and a separately
+admitted clean guest/oracle run. Keep those gates distinct from this observer.
+
+1. **Close the selected-tool lane under the existing ring3 ownership.** Continue
+   [the ring3/selected-QEMU contract](#selected-qemu-availability--2026-10-19) and its
+   existing claim [PR660](https://github.com/CrispStrobe/bw-board/pull/660).
+   Use the read-only observer to review current helper, installed-package and
+   transaction inputs; specify the complete dependency/service/privilege policy
+   and exact selected executable identity before any setup activation. Preserve
+   historical source12 and the absent-tool failure. Actual guest and compiler
+   guards remain false until distinct source, setup, runtime and original-only
+   admission. Acceptance is a fresh, independently checked setup/result chain,
+   then the existing owned oracle comparison on a clean hosted guest.
+2. **Admit the Lite GUI consumer separately.** The [Lite GUI claim PR1305](https://github.com/CrispStrobe/brickwright-lite/pull/1305)
+   covers current frontend/source/runtime/request/event/original admission for
+   the existing [HDD persistence and forward-debug scenarios](https://github.com/CrispStrobe/brickwright-lite/blob/main/docs/X86-NEXT-LANES.md).
+   Coordinate with [Arcade PR1128](https://github.com/CrispStrobe/brickwright-lite/pull/1128)
+   and the D7 supplier owner; preserve their active ownership and dependency
+   pins. Do not treat a selected Board API or unit pass as an installed GUI
+   result. Acceptance requires exact current source and supplier joins, a
+   qualified installed browser/guest run for each scenario, and an independent
+   audit of its original output before a consumer merge.
+3. **Advance the free protected-mode ladder with finite claims.** Start from
+   the existing authored [protected-stack](I80386-PROTECTED-STACK-RESULTS.md),
+   [FreeDOS/CWSDPMI](../scripts/i80386-cwsdpmi-0501-far-at/README.md) and
+   [xv6 continuation](I80386-XV6-10B-CONTINUATION.md) fixtures. Claim one
+   missing transition or observable at a time. Preserve the existing AX=0501
+   task-switch refusal and null return: attribution is not a frame-return pass.
+   Use independent source/input and clean guest evidence, and report the exact
+   instruction/device boundary reached. PSE/APIC or later-CPU compatibility evidence does not establish a
+   strict 386DX machine, complete DOS/OS behavior or physical timing.
+4. **Measure current ordinary-JS cost before optimizing.** Propose a separate
+   claim owning new `scripts/i80386-current-at-cost/`,
+   `.github/workflows/i80386-current-at-cost.yml`,
+   `test/i80386-current-at-cost.test.mjs` and
+   `docs/I80386-CURRENT-AT-COST.md`; leave the earlier
+   [AT profiling result](#ordinary-js-386-at-platform-profiling) intact. Freeze
+   current source/imports, the authored five-operation loop, runner/Node identity
+   and resource limits. First preserve its independent one-million-instruction
+   AX65534/BX65535/IP0/memory-word65535 golden, with one million core and six
+   million AT **synthetic scheduling charges**. Then measure fresh hosted Node
+   CPU time, wall time and bounded V8 profiles. Separate warmed loop time from
+   startup and whole-child time. Fix one CPU, 1 GiB without swap, 60-second
+   children and 8 MiB profile caps; preserve original process/resource facts. An independent byte reader
+   must join exact source, workflow, semantics and profiles without replay.
+   Profile attribution selects a measurable bottleneck for a *later* narrow
+   optimization claim and paired semantic/performance qualification. The model
+   charges alone grant no measured speedup, physical RTx or hardware frequency.

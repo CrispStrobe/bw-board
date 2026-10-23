@@ -68,7 +68,7 @@
  *   | 'relay' | 'dc_motor' | 'servo' | 'timer_555'
  *   | 'battery' | 'vreg' | 'fuse'
  *   | 'h_bridge' | 'stepper' | 'solenoid'
- *   | 'ultrasonic' | 'pir' | 'tilt_sensor' | 'flex_sensor' | 'force_sensor' | 'phototransistor'
+ *   | 'ultrasonic' | 'pir' | 'tilt_sensor' | 'flex_sensor' | 'force_sensor' | 'phototransistor' | 'light_sensor'
  *   | 'neopixel' | 'bargraph'
  *   | 'decade_counter' | 'dff' | 'jkff' | 'darlington_driver' | 'piezo'} PartKind
  */

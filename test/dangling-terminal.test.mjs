@@ -37,7 +37,12 @@ function solve(tail) {
 
 describe('a dangling terminal is not a grounded one', () => {
     test('a resistor with one leg in the air carries no current', () => {
-        const v = solve([]).nodeVoltages.get('mid');
+        const result = solve([]);
+        for (const terminal of ['a', 'b']) {
+            assert.equal(result.branchCurrents.get('Rx').get(terminal), 0,
+                `open Rx.${terminal} carries no current`);
+        }
+        const v = result.nodeVoltages.get('mid');
         assert.ok(Math.abs(v - 5) < 1e-5,
             `mid should sit at the rail (5 V) because Rx conducts nowhere; got ${v}. `
             + '2.5 V means the loose leg was treated as ground.');
@@ -72,4 +77,60 @@ describe('a dangling terminal is not a grounded one', () => {
         // way to ground by pins that are not connected to anything.
         assert.ok(v > 4, `an unwired 555 should not drag its supply to ${v} V through R1`);
     });
+});
+
+for (const floating of ['a', 'b', 'both']) {
+    test(`resistor current with ${floating} unconnected is zero`, () => {
+        const parts = [VCC, GND, R('Rx', 220)];
+        const attached = floating === 'both' ? [] : [{part: 'Rx', terminal: floating === 'a' ? 'b' : 'a'}];
+        const result = solveMNA(parts, [
+            {id: 'sup', terminals: [{part: 'V1', terminal: 'vcc'}, ...attached]},
+            {id: 'gnd', terminals: [{part: 'G1', terminal: 'gnd'}]},
+        ], new Map(), new Map(), 4.5);
+        assert.equal(result.converged, true);
+        for (const terminal of ['a', 'b']) assert.equal(result.branchCurrents.get('Rx').get(terminal), 0);
+    });
+}
+
+test('grounded resistor reports signed physical current at both ends', () => {
+    const result = solve([{part: 'Rx', terminal: 'b'}]);
+    assert.ok(Math.abs(result.branchCurrents.get('Rx').get('a') + .0025) < 1e-9);
+    assert.ok(Math.abs(result.branchCurrents.get('Rx').get('b') - .0025) < 1e-9);
+});
+
+test('BoardImpl public current measurement preserves an open resistor', async () => {
+    const {BoardImpl} = await import('../src/board.js');
+    const board = new BoardImpl(4.5);
+    board.setNetlist([VCC, GND, R('Rx', 220)], [
+        {id: 'sup', terminals: [{part: 'V1', terminal: 'vcc'}, {part: 'Rx', terminal: 'a'}]},
+        {id: 'gnd', terminals: [{part: 'G1', terminal: 'gnd'}]},
+    ]);
+    board.advanceTo(25_000_000n);
+    assert.equal(board.branchCurrent('Rx', 'a'), 0);
+    assert.equal(board.branchCurrent('Rx', 'b'), 0);
+    assert.ok(Math.abs(board.nodeVoltage('sup') - 4.5) < 1e-9);
+});
+
+for (const [kind,terminals,params] of [
+  ['resistor',['a','b'],{ohms:220}],['button',['a','b'],{}],['switch',['a','b'],{}],
+  ['buzzer',['a','b'],{}],['ldr',['a','b'],{}],['ntc',['a','b'],{}],
+  ['diode',['anode','cathode'],{vf:.7}],['led',['anode','cathode'],{vf:2}],['zener',['anode','cathode'],{vz:5.1}],
+]) for(const open of [0,1]) test(`${kind}: loose ${terminals[open]} neither loads the circuit nor reports current`,()=>{
+  const live=terminals[1-open],parts=[VCC,GND,R('Rfeed',1000),{id:'Open',kind,params,terminals}];
+  const result=solveMNA(parts,[
+    {id:'sup',terminals:[{part:'V1',terminal:'vcc'},{part:'Rfeed',terminal:'a'}]},
+    {id:'mid',terminals:[{part:'Rfeed',terminal:'b'},{part:'Open',terminal:live}]},
+    {id:'gnd',terminals:[{part:'G1',terminal:'gnd'}]},
+  ],new Map(),new Map([['Open',1]]),4.5);
+  assert.equal(result.converged,true);assert.ok(Math.abs(result.nodeVoltages.get('mid')-4.5)<1e-6,'an open component cannot shunt the feed resistor');
+  for(const terminal of terminals)assert.equal(result.branchCurrents.get('Open').get(terminal),0);
+});
+
+for(const free of ['a','b'])test(`potentiometer: free ${free} reports zero while the connected rheostat leg conducts`,()=>{
+ const other=free==='a'?'b':'a',parts=[VCC,GND,{id:'P',kind:'potentiometer',params:{ohms:10000,position:.25},terminals:['a','b','wiper']}];
+ const result=solveMNA(parts,[{id:'sup',terminals:[{part:'V1',terminal:'vcc'},{part:'P',terminal:'wiper'}]},
+  {id:'gnd',terminals:[{part:'G1',terminal:'gnd'},{part:'P',terminal:other}]}],new Map(),new Map(),4.5);
+ const currents=result.branchCurrents.get('P'),expected=4.5/(other==='a'?7500:2500);
+ assert.equal(currents.get(free),0);assert.ok(Math.abs(currents.get(other)-expected)<1e-12);
+ assert.ok(Math.abs(currents.get('wiper')+expected)<1e-12);
 });
