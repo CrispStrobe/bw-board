@@ -1,3 +1,31 @@
+2026-10-23 voltage scope aperture capture — CLAIMED, Codex circuit owner.
+Base a2d49e41; additive producer for the same owner's actual sampled-audio work.
+A real 90ms saved miniorgan capture at 100kHz has 18 post-startup envelope
+pulses but only 5 point-sampled pulses. The qualified solver reports no failure;
+uniform point acquisition aliases narrow pulses. Preserve that negative evidence
+and the existing point/envelope meanings rather than infer or synthesize notes.
+
+Own only scope registration/reset/update/readout sections in src/board.js,
+a pure src/scope-aperture.js helper if needed, corresponding scope option/data
+JSDoc in src/types.js, focused scope aperture/current/envelope/reset/refusal
+controls, docs/SCOPE-SAMPLING.md and this claim. Add an explicitly requested
+voltage capture mode which averages the actual piecewise-linear accepted-solve
+waveform across each authored sample aperture, including partial intervals and
+multiple crossed buckets. Publish two equal sample slots plus explicit capture/
+aperture metadata; preserve actual cadence/epochs/ring ordering and voltage units.
+No measurement from rejected solves, failed history or unfilled apertures.
+
+Preserve default envelope and instantaneous point captures byte-for-behavior,
+current channels, references/probe loads, scope rate/depth bounds, accuracy
+qualification and all model/integration formulas, breakpoints, tolerances, work
+budgets, scheduler, CPU, source-family semantics, pins and workflows. Do not
+claim a boxcar aperture is an ideal brick-wall anti-alias filter or infer a tone.
+CUI audio consumption and canonical adoption need their own claim/qualified pin.
+Require independent ramp/constant/impulse-area controls at varied substep/sample
+phases, repeated partial buckets/ring wrap/reset, refusal/rejected-step exclusion,
+unchanged point/envelope/current controls and actual organ captures. Retain
+source qualification and enabled exact-head checks. Merge before implementation.
+
 2026-10-23 versioned literal-PULSE oracle environment — CLAIMED, same circuit owner.
 Base b9d12289; follow-up to normally merged literal-PULSE claim #664 and source
 candidate #665. Actual CI installs ngspice42 and interprets PW=0 as a default
