@@ -5880,7 +5880,9 @@ Freeze the current ordinary-JS source/import closure and an authored, media-free
 five-operation loop. Independently check one million retired instructions and
 the AX65534/BX65535/IP0/memory-word65535 golden before measurement. Keep one
 million core and six million AT synthetic scheduling charges distinct from
-elapsed CPU and wall time; pending device state does not prove IRQ delivery.
+elapsed CPU and wall time. Check AT PIT channel, PIC request/mask/in-service
+state and CPU IF eligibility against a source-derived golden; pending device
+state does not prove IRQ delivery.
 Use one bounded hosted workflow with serial core/AT arms and separate unprofiled
 timing and profiled attribution children per arm. Record warmed loop, startup
 and whole-child CPU/wall time, resource and cleanup facts, and at most 8 MiB
