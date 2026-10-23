@@ -5860,4 +5860,3 @@ One separately admitted hosted metadata event follows final exact-head source CI
 and explicit source/request/workflow selection; no old event or successful
 original is repeated. Merge this claim before implementation. No dependency,
 CPU/device, other workflow, numerical threshold or existing guard change.
-
