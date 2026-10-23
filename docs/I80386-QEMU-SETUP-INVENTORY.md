@@ -8,9 +8,10 @@ its null candidate remain valid failures. It must never be replayed.
 ## Scope and ownership
 
 The merged claim owns only the new `scripts/i80386-qemu-setup-inventory/`
-controller, independent reader, controls and README, a dedicated initially
-false-guarded workflow, and its own documentation/ledger section. PR645 and its
-existing sources, workflow and source12 remain with their existing owner.
+controller, independent reader, controls and README, a dedicated workflow
+initially published with a false metadata guard, and its own documentation and
+ledger section. PR645 and its existing sources, workflow and source12 remain
+with their existing owner.
 No current helper, package, CPU or device implementation is edited by this lane.
 
 ## Required bounded observation
@@ -37,14 +38,15 @@ No current helper, package, CPU or device implementation is edited by this lane.
 
 ## Qualification
 
-The disabled observer source landed in PR669 at `3191cecbe4befc543b9374501f2a1b05a74bbab5`.
-The next source proposal is a separately reviewed metadata-only activation of
-this existing collector and workflow. Until that proposal qualifies, both
-entry guards remain false and no hosted metadata event is admitted. Activation
-does not authorize package setup, QEMU, a guest or PR645 runtime execution.
+The disabled observer source landed in PR669 at
+`3191cecbe4befc543b9374501f2a1b05a74bbab5`. This separately reviewed
+candidate enables only its collector and metadata job for a later admitted
+event. No hosted metadata event is admitted by the source change. Package setup,
+QEMU, a guest and PR645 runtime execution remain disabled.
 
-The controller and workflow start disabled. Tiny mocked controls exercise valid
-observations, wrong source/job/host inputs, absent fields, duplicate packages,
+The first source candidate kept the controller and metadata job disabled. Tiny
+mocked controls exercise valid observations, wrong source/job/host inputs,
+absent fields, duplicate packages,
 aliases, changed identities, read/close errors, output limits and coherent packet
 mutations. Refuse before unadmitted processes or writes; never invent a guest.
 The independent reader imports no producer and supplies no approval capability.
@@ -64,8 +66,9 @@ consistency without authenticating those external facts. Independent official
 run/job/artifact admission and, where needed, a retained job-setup log must
 corroborate them before any later setup decision.
 
-After source review and all enabled exact-head checks, separately select and
-admit one hosted metadata-only event. Retain each official original once after
+After the source PR and this activation candidate are separately reviewed and
+all enabled exact-head checks pass, separately select and admit one hosted
+metadata-only event. Retain each official original once after
 metadata admission and audit the retained bytes independently. Metadata success
 establishes only observed inputs; setup policy, complete archive/dependency
 closure, privilege and service behavior remain separate decisions. No source-only
