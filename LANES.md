@@ -41,7 +41,7 @@ point pulses, with a qualified unchanged solver. Final exact-source eight-key
 producer capture remains a local landing gate. No consumer/audio-hardware or
 ideal anti-aliasing claim follows; CUI adoption has its own scope.
 
-2026-10-23 versioned literal-PULSE oracle environment — CLAIMED, same circuit owner.
+2026-10-23 versioned literal-PULSE oracle environment — DONE (source candidate), same circuit owner.
 Base b9d12289; follow-up to normally merged literal-PULSE claim #664 and source
 candidate #665. Actual CI installs ngspice42 and interprets PW=0 as a default
 high hold, while independently measured ngspice47 preserves the literal zero.
@@ -70,7 +70,24 @@ sample times and error bounds, both swing directions/periods/current signs/KCL,
 existing42 positive-width comparisons and full enabled exact-head qualification.
 Do not merge #665 or adopt its source while oracle qualification remains red.
 
-2026-10-23 literal-zero SPICE PULSE correction — CLAIMED, Codex circuit owner.
+Claim #666 merged normally as a2d49e41 before implementation. The installer
+verifies the pinned official archive, builds a separate headless single-thread
+binary and records source/configuration/platform/binary hashes and version.
+Existing prefixes must pass admission; altered bytes, wrong/duplicate versions,
+changed identity, failed processes and unknown flags refuse. The CI system
+ngspice and PATH stay unchanged. Only literal-PULSE comparisons select the
+admitted47; positive-width RC bounds run against both binaries. No authored
+measurement time, waveform fixture or error bound changed.
+The real admitted47 build and idempotent reuse pass, as does an actual Node
+HTTPS download/hash check. The initial Mac build rejected missing OpenMP headers;
+the explicit single-thread configuration resolves that build failure. All 50
+focused installer/pulse/profile/current/inductor controls pass without skips.
+Local positive-width controls compare Homebrew47 and the independent source47
+build; CI retains the distribution42 comparison and adds admitted47. The
+canonical npm package contains the installer and identity contract. Enabled
+exact-head hosted qualification remains required before merge/adoption.
+
+2026-10-23 literal-zero SPICE PULSE correction — DONE (source candidate), Codex circuit owner.
 Base236ba67f; isolated follow-up to the downstream independent-oracle audit.
 Own only src/source-waveforms.js, focused pulse-source tests and this claim.
 The exact seven-authored-value contract admits PW=0, but currently substitutes
@@ -91,6 +108,21 @@ No parser, generic integration, MNA/device model, scheduler, CPU, dependency pin
 CUI/Lite, workflow, corpus or unrelated source edits. A separately claimed CUI
 follow-up owns full-precision oracle reads and qualified immutable adoption.
 Merge the claim before implementation; require affected and exact-head checks.
+
+Claim #664 merged normally as b9d12289 before implementation. Remove only the
+zero-PW high-hold exception and use the same authored corner list for all widths;
+duplicate zero-width corners still collapse. Literal zero retains its finite
+fall and repeats from V1. Omitted PW and zero rise/fall remain refused.
+Four prior-source pulse assertions fail, including the unchanged ngspice current
+RC comparison. All 39 focused pulse/transient/KCL/current-contract/inductor
+controls pass without skips. Independent ngspice 47 -n voltage samples match
+explicit triangle interpolation for both swing directions and two periods;
+existing positive-width RC oracle bounds are unchanged. Both restoring the old
+hold and omitting the falling corner independently fail by assertion. The
+broader six-file run is 44/45: the separate EXP waveform oracle assertion also
+fails against the pre-repair source. Retain that inherited failure and its
+unchanged bound; do not generalise this qualification to all source families.
+Exact-head hosted checks and downstream immutable adoption remain required.
 
 2026-10-21 passive open-terminal current readback — SOURCE CANDIDATE, Codex circuit projects.
 Own passive open-terminal stamps and branch-current extraction in src/mna.js,

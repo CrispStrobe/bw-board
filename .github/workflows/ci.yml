@@ -237,6 +237,15 @@ jobs:
             -o Acquire::Retries=2 \
             -o DPkg::Lock::Timeout=30 install -y nasm ngspice
 
+      # Literal PW=0 changed after the distribution's ngspice42. Keep that
+      # oracle for all existing families; admit a separate source-pinned47.
+      - name: Build and admit literal-PULSE ngspice47 oracle
+        run: |
+          set -euo pipefail
+          node --test test/ngspice-oracle-install.test.mjs
+          node scripts/install-ngspice-oracle.mjs --prefix "$RUNNER_TEMP/bw-ngspice47"
+          printf 'NGSPICE_LITERAL_ORACLE=%s/bin/ngspice\n' "$RUNNER_TEMP/bw-ngspice47" >> "$GITHUB_ENV"
+
       # AND ASSERT IT ARRIVED. Without this, a failed or silently-skipped
       # install leaves nasm absent, oracle-nasm skips all six tests, and the
       # job goes green having verified nothing -- which is precisely the
