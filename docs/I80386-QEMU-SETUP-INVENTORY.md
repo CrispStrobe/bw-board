@@ -37,6 +37,12 @@ No current helper, package, CPU or device implementation is edited by this lane.
 
 ## Qualification
 
+The disabled observer source landed in PR669 at `3191cecbe4befc543b9374501f2a1b05a74bbab5`.
+The next source proposal is a separately reviewed metadata-only activation of
+this existing collector and workflow. Until that proposal qualifies, both
+entry guards remain false and no hosted metadata event is admitted. Activation
+does not authorize package setup, QEMU, a guest or PR645 runtime execution.
+
 The controller and workflow start disabled. Tiny mocked controls exercise valid
 observations, wrong source/job/host inputs, absent fields, duplicate packages,
 aliases, changed identities, read/close errors, output limits and coherent packet
