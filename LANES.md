@@ -1,4 +1,4 @@
-2026-10-23 versioned literal-PULSE oracle environment — CLAIMED, same circuit owner.
+2026-10-23 versioned literal-PULSE oracle environment — DONE (source candidate), same circuit owner.
 Base b9d12289; follow-up to normally merged literal-PULSE claim #664 and source
 candidate #665. Actual CI installs ngspice42 and interprets PW=0 as a default
 high hold, while independently measured ngspice47 preserves the literal zero.
@@ -26,6 +26,23 @@ actual source-verified headless build, the original pulse cases unchanged in
 sample times and error bounds, both swing directions/periods/current signs/KCL,
 existing42 positive-width comparisons and full enabled exact-head qualification.
 Do not merge #665 or adopt its source while oracle qualification remains red.
+
+Claim #666 merged normally as a2d49e41 before implementation. The installer
+verifies the pinned official archive, builds a separate headless single-thread
+binary and records source/configuration/platform/binary hashes and version.
+Existing prefixes must pass admission; altered bytes, wrong/duplicate versions,
+changed identity, failed processes and unknown flags refuse. The CI system
+ngspice and PATH stay unchanged. Only literal-PULSE comparisons select the
+admitted47; positive-width RC bounds run against both binaries. No authored
+measurement time, waveform fixture or error bound changed.
+The real admitted47 build and idempotent reuse pass, as does an actual Node
+HTTPS download/hash check. The initial Mac build rejected missing OpenMP headers;
+the explicit single-thread configuration resolves that build failure. All 50
+focused installer/pulse/profile/current/inductor controls pass without skips.
+Local positive-width controls compare Homebrew47 and the independent source47
+build; CI retains the distribution42 comparison and adds admitted47. The
+canonical npm package contains the installer and identity contract. Enabled
+exact-head hosted qualification remains required before merge/adoption.
 
 2026-10-23 literal-zero SPICE PULSE correction — DONE (source candidate), Codex circuit owner.
 Base236ba67f; isolated follow-up to the downstream independent-oracle audit.

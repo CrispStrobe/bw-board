@@ -4,6 +4,15 @@ import { spawnSync } from 'node:child_process';
 import { BoardImpl } from '../src/board.js';
 import { sourceVoltage } from '../src/mna.js';
 import { nextSpicePulseCorner } from '../src/source-waveforms.js';
+import {admitOracle} from '../scripts/install-ngspice-oracle.mjs';
+
+function literalOracle(t) {
+  const binary = process.env.NGSPICE_LITERAL_ORACLE;
+  assert.ok(binary, 'Build the admitted47 oracle and set NGSPICE_LITERAL_ORACLE');
+  const identity = admitOracle(binary);
+  t.diagnostic(JSON.stringify({oracle: binary, version: identity.version, archiveSha256: identity.archiveSha256, binarySha256: identity.binarySha256, compatibility: 'ngspice -n (no personal init)'}));
+  return binary;
+}
 
 const pulse = (overrides = {}) => ({
   wave: 'spice-pulse',
@@ -105,11 +114,8 @@ describe('exact seven-argument SPICE PULSE voltage source', () => {
       'the next rise end follows the period restart');
   });
 
-  it('matches ngspice and independent triangle interpolation for literal zero PW', {
-    skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
-  }, () => {
-    // Explicit seven-value PULSE interpolation, independently tabulated:
-    // rise 1..3, fall 3..6, low 6..11, then repeat. PW is not omitted.
+  it('matches ngspice and independent triangle interpolation for literal zero PW', (t) => {
+    const oracle = literalOracle(t);
     const times = [0.5, 1, 2, 3, 4.5, 6, 10.5, 11, 12, 13, 14.5, 16];
     const fractions = [0, 0, .5, 1, .5, 0, 0, 0, .5, 1, .5, 0];
     for (const [v1, v2] of [[-2, 4], [3, -5]]) {
@@ -121,7 +127,7 @@ R1 out 0 1k
 ${times.map((t, i) => `.meas tran point${i} FIND v(out) AT=${t}`).join('\n')}
 .end
 `;
-      const ng = spawnSync('ngspice', ['-n', '-b'], {input: deck, encoding: 'utf8'});
+      const ng = spawnSync(oracle, ['-n', '-b'], {input: deck, encoding: 'utf8'});
       assert.equal(ng.status, 0, ng.stderr || ng.stdout);
       const values = new Map([...ng.stdout.matchAll(/^\s*point(\d+)\s*=\s*([-+0-9.e]+)/gmi)]
         .map(m => [Number(m[1]), Number(m[2])]));
@@ -165,9 +171,8 @@ ${times.map((t, i) => `.meas tran point${i} FIND v(out) AT=${t}`).join('\n')}
       `the unchanged precision budget should contain both periods (${status.work.attempts})`);
   });
 
-  it('matches ngspice off-edge on the imported zero-PW current-source RC', {
-    skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
-  }, () => {
+  it('matches ngspice off-edge on the imported zero-PW current-source RC', (t) => {
+    const oracle = literalOracle(t);
     const samples = [0.1, 2.5, 4.9, 5.1, 7.5, 9.9];
     const measures = samples.map((t, index) =>
       `.meas tran out${index} FIND v(out) AT=${t}`).join('\n');
@@ -181,7 +186,7 @@ C2 out 0 14p
 ${measures}
 .end
 `;
-    const ng = spawnSync('ngspice', ['-b'], { input: deck, encoding: 'utf8' });
+    const ng = spawnSync(oracle, ['-n', '-b'], { input: deck, encoding: 'utf8' });
     assert.equal(ng.status, 0, ng.stderr || ng.stdout);
     const measured = new Map();
     for (const match of ng.stdout.matchAll(/^\s*out(\d+)\s*=\s*([-+0-9.e]+)/gmi)) {
@@ -251,7 +256,7 @@ ${measures}
 
   it('matches ngspice at source and RC nodes around finite corners', {
     skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
-  }, () => {
+  }, (t) => {
     const p = pulse({ v1: 0, v2: -4, td: 0.4e-3, tr: 0.2e-3,
       tf: 0.35e-3, pw: 0.45e-3, per: 1.5e-3 });
     const samples = [0.2e-3, 0.5e-3, 0.65e-3, 1e-3, 1.225e-3, 1.55e-3, 1.9e-3, 2e-3];
@@ -267,23 +272,25 @@ C1 out 0 100n
 ${measures}
 .end
 `;
-    const ng = spawnSync('ngspice', ['-b'], { input: deck, encoding: 'utf8' });
-    assert.equal(ng.status, 0, ng.stderr || ng.stdout);
-    const measured = new Map();
-    for (const match of ng.stdout.matchAll(/^\s*(src|out)(\d+)\s*=\s*([-+0-9.e]+)/gmi)) {
-      measured.set(`${match[1].toLowerCase()}${match[2]}`, Number(match[3]));
-    }
-    assert.equal(measured.size, samples.length * 2,
-      `ngspice returned ${measured.size}/${samples.length * 2} requested samples`);
+    for (const oracle of ['ngspice', literalOracle(t)]) {
+      const ng = spawnSync(oracle, oracle === 'ngspice' ? ['-b'] : ['-n', '-b'], { input: deck, encoding: 'utf8' });
+      assert.equal(ng.status, 0, ng.stderr || ng.stdout);
+      const measured = new Map();
+      for (const match of ng.stdout.matchAll(/^\s*(src|out)(\d+)\s*=\s*([-+0-9.e]+)/gmi)) {
+        measured.set(`${match[1].toLowerCase()}${match[2]}`, Number(match[3]));
+      }
+      assert.equal(measured.size, samples.length * 2,
+        `ngspice returned ${measured.size}/${samples.length * 2} requested samples`);
 
-    const board = rcBoard(p);
-    for (let i = 0; i < samples.length; i++) {
-      const t = samples[i];
-      board.advanceTo(BigInt(Math.round(t * 1e9)));
-      assert.ok(Math.abs(board.nodeVoltage('src') - measured.get(`src${i}`)) < 1e-7,
-        `source sample ${i} matches ngspice`);
-      assert.ok(Math.abs(board.nodeVoltage('out') - measured.get(`out${i}`)) < 2e-3,
-        `RC sample ${i}: board ${board.nodeVoltage('out')} vs ngspice ${measured.get(`out${i}`)}`);
+      const board = rcBoard(p);
+      for (let i = 0; i < samples.length; i++) {
+        const t = samples[i];
+        board.advanceTo(BigInt(Math.round(t * 1e9)));
+        assert.ok(Math.abs(board.nodeVoltage('src') - measured.get(`src${i}`)) < 1e-7,
+          `source sample ${i} matches ngspice`);
+        assert.ok(Math.abs(board.nodeVoltage('out') - measured.get(`out${i}`)) < 2e-3,
+          `RC sample ${i}: board ${board.nodeVoltage('out')} vs ngspice ${measured.get(`out${i}`)}`);
+      }
     }
   });
 });
