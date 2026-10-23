@@ -1,3 +1,32 @@
+2026-10-23 versioned literal-PULSE oracle environment — CLAIMED, same circuit owner.
+Base b9d12289; follow-up to normally merged literal-PULSE claim #664 and source
+candidate #665. Actual CI installs ngspice42 and interprets PW=0 as a default
+high hold, while independently measured ngspice47 preserves the literal zero.
+Official release47 source VSRC/ISRC loaders admit coefficient PW >= 0; its NEWS
+records changed PULSE parameterization in release46. Keep the original failure:
+matching one executable is not proof of version-independent SPICE semantics.
+
+Own only a versioned oracle installer/identity record and its focused controls,
+the narrow additional ngspice47 install/admission steps in .github/workflows/ci.yml,
+the same owner's test/spice-pulse-source.test.mjs oracle selection/identity, and
+this claim. Pin official release47 archive by URL plus SHA256
+894e649651f1838a14095e5a5439e7d3aa63e87ede14d283173fda4fcdef675f.
+Build/install a separate headless binary; preserve the existing ngspice42 binary,
+other source-family oracles, workflow triggers/tiers/required checks and budgets.
+Use the qualified47 binary only for tests whose explicit contract is the modern
+literal-zero PULSE behavior. Positive-width controls must retain their original
+42 comparison and independently establish agreement with the admitted47 oracle.
+Record actual version, immutable source identity, invocation and compatibility
+mode; reject missing/wrong version, altered archive, failed build or bad output.
+No engine/parser/MNA changes, no PULSE-to-PWL fixture substitution, numerical
+bound change, gate skip, default oracle replacement or unrelated source change.
+
+Merge before implementation. Require installer admission/refusal controls,
+actual source-verified headless build, the original pulse cases unchanged in
+sample times and error bounds, both swing directions/periods/current signs/KCL,
+existing42 positive-width comparisons and full enabled exact-head qualification.
+Do not merge #665 or adopt its source while oracle qualification remains red.
+
 2026-10-23 literal-zero SPICE PULSE correction — CLAIMED, Codex circuit owner.
 Base236ba67f; isolated follow-up to the downstream independent-oracle audit.
 Own only src/source-waveforms.js, focused pulse-source tests and this claim.
