@@ -35,3 +35,24 @@ Next consumer work: independently compare both probe loads with ngspice through
 the pinned CLI, and expose precision capture only with explicit initialization
 semantics and total-work limits. No passive-probe model claims compensated
 bandwidth, ADC quantization, noise or earth-bond safety merely from R/C loading.
+
+## Opt-in voltage aperture capture
+
+`addScopeChannel({type: 'voltage', netId, capture: 'average', sampleRateHz})`
+records the mean voltage over each complete sample interval. It integrates the
+piecewise-linear path between actual accepted observations, including partial
+intervals and multiple sample boundaries. Point and envelope acquisition retain
+their existing behavior. Current and digital channels refuse this voltage-only
+mode. Reference/probe loading and all existing solver qualification, sample-rate,
+work and history-failure rules remain in force.
+
+`getScopeData` returns `capture: 'average'`, `channelType: 'voltage'` and explicit
+`apertureNs`. Both ring slots contain the mean in volts. Sample times label the
+**end** of each aperture; its covered interval is `[end - apertureNs, end]`.
+An unobserved prefix is never published as a guessed sample. Reset discards both
+partial area and prior observation state. Reading the ring does not acquire data.
+
+This finite aperture retains narrow pulse area which instantaneous point samples
+can miss. It is a boxcar response, not an ideal brick-wall anti-alias filter, and
+must not be labelled as an instantaneous voltage or used to infer an oscillator.
+The existing instantaneous mode remains appropriate for point-sampled analyses.

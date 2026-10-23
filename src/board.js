@@ -18,6 +18,7 @@
 /** @typedef {import('./types.js').PinMode} PinMode */
 /** @typedef {import('./types.js').TheveninSource} TheveninSource */
 
+import {createScopeAperture, advanceScopeAperture, edgeScopeAperture} from './scope-aperture.js';
 import { pinThevenin } from './pin-model.js';
 import { buildPinAliasTable } from './pin-aliases.js';
 import {
@@ -2276,6 +2277,7 @@ export class BoardImpl {
    * @param {string} [opts.netId] - Net to probe (voltage/digital channels)
    * @param {string} [opts.partId] - Part to probe (for current channels)
    * @param {string} [opts.terminal] - Terminal to probe (for current channels)
+   * @param {'envelope'|'sample'|'average'} [opts.capture='envelope'] - Average is an opt-in voltage aperture mean.
    * @param {number} [opts.sampleRateHz=100000] - Sim-time sample rate
    * @param {number} [opts.depth=8192] - Ring buffer depth in (min,max) pairs
    *   (voltage) or transitions (digital, default 4096)
@@ -2294,6 +2296,7 @@ export class BoardImpl {
    * @returns {number} Channel handle
    */
   addScopeChannel(opts) {
+    if (opts.capture === 'average' && opts.type !== 'voltage') throw new Error('Aperture capture requires a voltage channel');
     if (opts.currentClock !== undefined && (opts.type !== 'current'
       || !['display', 'simulation'].includes(opts.currentClock))) {
       throw new Error('scope currentClock requires current type and display or simulation');
@@ -2377,7 +2380,8 @@ export class BoardImpl {
     // with E4.1 every source edge is already a solve point.
     // Legacy current channels are display sampled. The explicit simulation
     // clock instead records accepted-solve samples through the shared grid.
-    const capture = opts.capture === 'sample' || opts.type === 'current' ? 'sample' : 'envelope';
+    const capture = opts.capture === 'average' ? 'average' : opts.capture === 'sample' || opts.type === 'current' ? 'sample' : 'envelope';
+    if (capture === 'average' && (!Number.isInteger(depth) || depth < 1)) throw new Error('Aperture capture requires a positive integer depth');
 
     const ch = {
       type: opts.type,
@@ -2410,6 +2414,7 @@ export class BoardImpl {
       _prevVal: null,
     };
 
+    if (capture === 'average') ch._aperture = createScopeAperture(intervalNs, this.timeNs);
     this._scopeChannels.set(handle, ch);
     // A passive DC board may have used the closed-form walker before this
     // observer selected MNA. Acquire its static snapshot once at attachment,
@@ -2424,6 +2429,10 @@ export class BoardImpl {
     if (loadsCircuit) {
       this._rebuildScopeLoadView();
       this._solve();
+    }
+    if (capture === 'average' && !this._scopeMeasurementFailed(ch)) {
+      const initial = this._apertureVoltage(ch);
+      if (initial !== null) advanceScopeAperture(ch._aperture, Number(this.timeNs)/1e9, initial, () => {});
     }
     return handle;
   }
@@ -2489,6 +2498,7 @@ export class BoardImpl {
       // Which of the two things the pairs are. A consumer that transforms the
       // buffer must be able to ASK, rather than assume — assuming was D24.
       capture: ch.capture ?? 'envelope',
+      ...(ch.capture === 'average' ? {apertureNs: ch.intervalNs} : {}),
       ...(ch.currentClock === 'simulation' ? {currentClock: 'simulation'} : {}),
     };
   }
@@ -2537,6 +2547,9 @@ export class BoardImpl {
       if (ch.type === 'digital') { this._feedDigital(ch, this.timeNs); continue; }
       if (ch.type !== 'voltage' && ch.currentClock !== 'simulation') continue;
       if (this._scopeMeasurementFailed(ch)) continue;
+      if (ch.capture === 'average') {
+        this._feedAperture(ch, this.timeNs, null, true); continue;
+      }
       const val = ch.currentClock === 'simulation' ? this._scopeCurrentSample(ch, this._mnaCache) : this._scopeVoltage(ch);
       if (val === null) continue;
       if (val < ch._bucketMin) ch._bucketMin = val;
@@ -2576,6 +2589,10 @@ export class BoardImpl {
       if (ch.type === 'digital') { this._feedDigital(ch, tNs); continue; }
       if (ch.type !== 'voltage' && ch.currentClock !== 'simulation') continue;
       if (this._scopeMeasurementFailed(ch, solution)) continue;
+
+      if (ch.capture === 'average') {
+        this._feedAperture(ch, tNs, exactTimeSec, false); continue;
+      }
 
       // Accepted analog value, with OUT-of-terminal polarity for currents.
       const val = ch.currentClock === 'simulation' ? this._scopeCurrentSample(ch, solution) : this._scopeVoltage(ch);
@@ -2630,6 +2647,32 @@ export class BoardImpl {
         ch._prevTNs = tNs; ch._prevExactTimeSec = exactTimeSec; ch._prevVal = val;
       }
     }
+  }
+
+  /** The opt-in aperture path never substitutes zero for an absent value. */
+  _apertureVoltage(ch) {
+    const tip=this.nodeVoltages.get(ch.netId);
+    const reference=ch.referenceNetId === null ? 0 : this.nodeVoltages.get(ch.referenceNetId);
+    if (!Number.isFinite(tip) || !Number.isFinite(reference)) return null;
+    const value=tip-reference;
+    return Number.isFinite(value) ? value : null;
+  }
+
+  _feedAperture(ch, tNs, exactTimeSec, edge) {
+    const value=this._apertureVoltage(ch);
+    if (value === null) {ch.failure ||= 'Scope aperture voltage unavailable'; return;}
+    const emit=(endNs, mean) => {
+      const idx=ch.writeIndex*2;
+      ch.samples[idx]=mean; ch.samples[idx+1]=mean;
+      ch.writeIndex=(ch.writeIndex+1)%ch.depth; ch.count++;
+      // Means are labelled by their aperture END, with its duration explicit.
+      ch.startTNs=endNs-ch.intervalNs*BigInt(Math.min(ch.count,ch.depth)-1);
+    };
+    try {
+      (edge ? edgeScopeAperture : advanceScopeAperture)(ch._aperture,
+        exactTimeSec ?? Number(tNs)/1e9,value,emit);
+      ch._nextSampleNs=ch._aperture.endNs;
+    } catch (error) {ch.failure ||= error.message;}
   }
 
   /** Accepted-solve snapshot only: do not flush a later endpoint into a sample. */
@@ -5156,6 +5199,7 @@ export class BoardImpl {
         ch._prevTNs = 0n;
         ch._prevExactTimeSec = null;
         ch._prevVal = null;
+        if (ch.capture === 'average') ch._aperture = createScopeAperture(ch.intervalNs, 0n);
       }
     }
 
@@ -5170,6 +5214,10 @@ export class BoardImpl {
     this._recordLedSamples();
     for (const ch of this._scopeChannels.values()) {
       if (ch.type === 'digital') this._feedDigital(ch, 0n);
+      if (ch.capture === 'average' && !this._scopeMeasurementFailed(ch)) {
+        const initial = this._apertureVoltage(ch);
+        if (initial !== null) advanceScopeAperture(ch._aperture, 0, initial, () => {});
+      }
     }
     this._notifyChange('reset');
   }

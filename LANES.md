@@ -1,4 +1,4 @@
-2026-10-23 voltage scope aperture capture — CLAIMED, Codex circuit owner.
+2026-10-23 voltage scope aperture capture — DONE (source candidate), Codex circuit owner.
 Base a2d49e41; additive producer for the same owner's actual sampled-audio work.
 A real 90ms saved miniorgan capture at 100kHz has 18 post-startup envelope
 pulses but only 5 point-sampled pulses. The qualified solver reports no failure;
@@ -25,6 +25,21 @@ Require independent ramp/constant/impulse-area controls at varied substep/sample
 phases, repeated partial buckets/ring wrap/reset, refusal/rejected-step exclusion,
 unchanged point/envelope/current controls and actual organ captures. Retain
 source qualification and enabled exact-head checks. Merge before implementation.
+
+Claim667 merged normally as baa9da14 before implementation, with matched head,
+parents and exact tree verified through the GitHub API when git fetch stalled.
+The new average mode integrates accepted piecewise-linear observations, labels
+complete apertures by their end and exposes apertureNs. Partial/unobserved area,
+nonfinite values and failed histories cannot become plausible samples. Reset
+re-seeds from the reset solution, and readout stays acquisition-free.
+All 47 focused aperture/point/envelope/current/fractional/reset controls pass
+without skips. Endpoint substitution, unobserved-prefix publication and bypassed
+failed-solve exclusion each fail by assertion. The initial reset regression
+failed until the initial observation was restored. A pre-final actual organ C4
+candidate retained 18 aperture pulses versus 18 envelope pulses and only five
+point pulses, with a qualified unchanged solver. Final exact-source eight-key
+producer capture remains a local landing gate. No consumer/audio-hardware or
+ideal anti-aliasing claim follows; CUI adoption has its own scope.
 
 2026-10-23 versioned literal-PULSE oracle environment — CLAIMED, same circuit owner.
 Base b9d12289; follow-up to normally merged literal-PULSE claim #664 and source
