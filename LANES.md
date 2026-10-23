@@ -1,27 +1,30 @@
-2026-10-23 selected QEMU setup-input inventory — CLAIMED, Codex x86 setup preflight.
-Base a2d49e419d93e45563eb9449586b61b06ea617e8. Add a separate, initially
-DISABLED read-only hosted preflight for exact runner/image, installed package
-and service-helper inputs needed by the selected QEMU setup. This does not
-transfer PR645 ownership or change its workflow, source12, pins, runtime
-selection, consumed failures or disabled actual/compiler entries.
+2026-10-23 voltage scope aperture capture — CLAIMED, Codex circuit owner.
+Base a2d49e41; additive producer for the same owner's actual sampled-audio work.
+A real 90ms saved miniorgan capture at 100kHz has 18 post-startup envelope
+pulses but only 5 point-sampled pulses. The qualified solver reports no failure;
+uniform point acquisition aliases narrow pulses. Preserve that negative evidence
+and the existing point/envelope meanings rather than infer or synthesize notes.
 
-Own ONLY new scripts/i80386-qemu-setup-inventory/{run.py,reader.py,controls.py,README.md},
-new .github/workflows/i80386-qemu-setup-inventory.yml, this claim and
-[the setup-input contract](docs/I80386-QEMU-SETUP-INVENTORY.md). Existing ring3
-run.py/reader.py/controls.py, the PR645 branch and all other lanes remain owned
-by their current owners. Any later integration or setup architecture change
-requires its own explicit scope and qualification.
+Own only scope registration/reset/update/readout sections in src/board.js,
+a pure src/scope-aperture.js helper if needed, corresponding scope option/data
+JSDoc in src/types.js, focused scope aperture/current/envelope/reset/refusal
+controls, docs/SCOPE-SAMPLING.md and this claim. Add an explicitly requested
+voltage capture mode which averages the actual piecewise-linear accepted-solve
+waveform across each authored sample aperture, including partial intervals and
+multiple crossed buckets. Publish two equal sample slots plus explicit capture/
+aperture metadata; preserve actual cadence/epochs/ring ordering and voltage units.
+No measurement from rejected solves, failed history or unfilled apertures.
 
-Record source/workflow/job identities, selected environment fields, bounded
-installed-package/control metadata and exact named/held helper-byte witnesses.
-No apt/dpkg install, service-helper execution, QEMU invocation, guest, privileged
-operation or platform mutation. Preserve absent/unknown/partial states; the
-independent reader must never emit setup, runtime-candidate or execution approval.
-Require pure hostile-input/refusal controls and independent original-only audit.
-One separately admitted hosted metadata event follows final exact-head source CI
-and explicit source/request/workflow selection; no old event or successful
-original is repeated. Merge this claim before implementation. No dependency,
-CPU/device, other workflow, numerical threshold or existing guard change.
+Preserve default envelope and instantaneous point captures byte-for-behavior,
+current channels, references/probe loads, scope rate/depth bounds, accuracy
+qualification and all model/integration formulas, breakpoints, tolerances, work
+budgets, scheduler, CPU, source-family semantics, pins and workflows. Do not
+claim a boxcar aperture is an ideal brick-wall anti-alias filter or infer a tone.
+CUI audio consumption and canonical adoption need their own claim/qualified pin.
+Require independent ramp/constant/impulse-area controls at varied substep/sample
+phases, repeated partial buckets/ring wrap/reset, refusal/rejected-step exclusion,
+unchanged point/envelope/current controls and actual organ captures. Retain
+source qualification and enabled exact-head checks. Merge before implementation.
 
 2026-10-23 versioned literal-PULSE oracle environment — CLAIMED, same circuit owner.
 Base b9d12289; follow-up to normally merged literal-PULSE claim #664 and source
@@ -5831,3 +5834,30 @@ local tool/guest execution or rerun/relabel of the consumed event is included.
 A new source/request/workflow and distinct metadata-event boundary require
 review and all enabled CI before any fresh qualification. The detailed sequence
 and completion criteria are in the [task contract](docs/X86-NEXT-LANES.md#selected-qemu-availability--2026-10-19).
+
+
+2026-10-23 selected QEMU setup-input inventory — CLAIMED, Codex x86 setup preflight.
+Base a2d49e419d93e45563eb9449586b61b06ea617e8. Add a separate, initially
+DISABLED read-only hosted preflight for exact runner/image, installed package
+and service-helper inputs needed by the selected QEMU setup. This does not
+transfer PR645 ownership or change its workflow, source12, pins, runtime
+selection, consumed failures or disabled actual/compiler entries.
+
+Own ONLY new scripts/i80386-qemu-setup-inventory/{run.py,reader.py,controls.py,README.md},
+new .github/workflows/i80386-qemu-setup-inventory.yml, this claim and
+[the setup-input contract](docs/I80386-QEMU-SETUP-INVENTORY.md). Existing ring3
+run.py/reader.py/controls.py, the PR645 branch and all other lanes remain owned
+by their current owners. Any later integration or setup architecture change
+requires its own explicit scope and qualification.
+
+Record source/workflow/job identities, selected environment fields, bounded
+installed-package/control metadata and exact named/held helper-byte witnesses.
+No apt/dpkg install, service-helper execution, QEMU invocation, guest, privileged
+operation or platform mutation. Preserve absent/unknown/partial states; the
+independent reader must never emit setup, runtime-candidate or execution approval.
+Require pure hostile-input/refusal controls and independent original-only audit.
+One separately admitted hosted metadata event follows final exact-head source CI
+and explicit source/request/workflow selection; no old event or successful
+original is repeated. Merge this claim before implementation. No dependency,
+CPU/device, other workflow, numerical threshold or existing guard change.
+
