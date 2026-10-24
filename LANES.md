@@ -6202,6 +6202,66 @@ originals; pure mock controls provide no hosted setup or guest result. Source
 review and exact-head checks, then an externally selected request and one original-only
 metadata event are still required.
 
+## Ring3 selected-QEMU v7 metadata and v6 failure audit — claim, 2026-10-24
+
+Owner: Codex x86 ring3. Base `f3c72880b8d31667175d3e9cc42e90b161b05908`.
+Own only `scripts/i80386-ring3-int-iret/{run.py,reader.py,controls.py,README.md}`,
+`.github/workflows/i80386-ring3-int-iret.yml`, this entry and the matching
+`docs/X86-NEXT-LANES.md` section. This claim is documentation only; merge it
+before implementation. Keep all other owners' source and registry entries.
+
+The one selected [v6 metadata event](https://github.com/CrispStrobe/bw-board/actions/runs/40074329886)
+failed after its `package-files` inventory child reached the existing 16 KiB
+stdout cap. Its captured prefix and first failure are retained. The complete
+v6 runtime packet carries that failure; the existing standalone v6 failure
+reader refuses that packet class. Preserve the reader refusal and the event as
+consumed. Stage readbacks and raw package-status delta are partial observations,
+not a complete runtime graph, setup approval or guest qualification.
+
+Add a **separate, negative-only** reader entry for this retained v6 runtime
+failure. It must independently bind the original packet and raw request/event,
+selected source twelve and executing workflow, run/job/artifact identities,
+pre/post raw status originals, stage before/after observations, exact partial
+probe roster and first/secondary failure, outer exit and outside cleanup.
+Accept only a bounded failed-attempt report with all approval flags false;
+retain the explicitly cap-clipped stdout prefix, and refuse missing or
+truncated packet roles or incoherent prefix metadata. Leave the existing
+v6 success and failure entries, their refusal and all consumed inputs intact.
+
+For a fresh metadata attempt, add a distinct **v7** label, job, canonical
+request, repository input, body marker, packet schema and independent reader
+path. Replace only the one combined `dpkg-query -L` over five selected packages
+with five serial fixed-name `dpkg-query -L` calls: `qemu-system-x86`,
+`qemu-system-common`, `qemu-system-data`, `seabios` and `ipxe-qemu`. Retain the
+16 KiB stdout and stderr cap and 10-second wall bound **per child**, exact
+argv/order/exit/partial-output witnesses and an explicit fifteen-probe roster
+in the new route; the old eleven-probe route remains unchanged. Reconstruct
+the same sorted, unique package-path union only from all five complete raw
+outputs. Close the aggregate byte/chunk budget under the existing 6 MiB
+runtime component and 8 MiB job log caps before event selection. Independently
+review finite service/job time margin and unchanged outside cleanup.
+
+A data-only inspection of all fifteen retained signed archive DATA members
+found projected path-list byte counts below 16 KiB for each of the five
+selected packages; the largest projection is 9,766 bytes for
+`qemu-system-common`. This does not measure `dpkg-query` output on a future
+host or qualify a result. Refuse any actual larger output without changing
+the cap or replaying an event. Do not execute a package, helper, QEMU or guest
+in source controls.
+
+Preserve exact fifteen package/payload/image/status/helper pins, installer
+PATH, old v4/v5/v6 source routes, requests, event identities, thresholds,
+resource bounds, raw failures and the twelve-source roster, with freshly
+frozen v7 hashes. Keep fixture, CPU/AT, Node
+and QEMU identities unchanged; compiler and actual guest guards remain false.
+Require pure positive and coherent negative controls for the five-child union,
+wrong package/order, missing/truncated/oversize output, resource/cleanup
+failure, wrong v7 source/event and v6 negative-only audit. After the claim
+merges, qualify source on every enabled exact-head check, externally select
+one fresh v7 request/event, acquire each original once, and independently
+audit an entire setup and runtime graph before any separate same-job guest
+adapter is considered. No approval follows from this claim.
+
 ## Ordered ordinary-JS 16-bit scalar read — claim, 2026-10-24
 
 Owner: Codex x86 profiling, with Sol implementation after this claim merges.
@@ -6230,3 +6290,17 @@ every CPU ratio greater than 1 and median wall ratio at most 1.02. Preserve
 failed measurements; do not replay or weaken the gate. A failed performance
 gate leaves the candidate unadopted. No physical 386 timing, general workload
 speedup or full OS claim follows from this authored workload.
+
+Result checkpoint, 2026-10-24: the one selected paired capture at
+[source `55917c48`](https://github.com/CrispStrobe/bw-board/commit/55917c48dffe0c7c743388024481ef0a47a7c76c)
+completed all eighteen children but its unchanged reader refused the final
+inactive-unit readback. An independent calculation from retained measurements
+gives median whole-child CPU A/B 1.06475, minimum 0.99946 and median wall
+B/A 0.94318 across seven measured pairs. The minimum fails the predeclared
+requirement that **every** CPU ratio exceed 1. The candidate is unadopted;
+this result does not authorize a replay, a gate change or a merge. The
+reader's cleanup refusal also remains unresolved. Follow-up work needs a
+separately scoped failure-only reader correction, a newly reviewed workload
+before any different paired event, actual host hardware identity capture,
+and an independently qualified optimization proposal. Preserve the original
+failure and the clean protected guest requirement.

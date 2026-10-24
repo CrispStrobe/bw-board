@@ -60,3 +60,32 @@ arm while preserving ordered callbacks and faults. Its
 require semantic controls, an unchanged strict paired CPU/wall gate and
 affected clean protected guest qualification before adoption. The capture
 provides a baseline and attribution evidence; it proves no optimization gain.
+
+## Ordered word-read candidate: unadopted
+
+The one selected [paired run](https://github.com/CrispStrobe/bw-board/actions/runs/40067572890)
+tested source `55917c48dffe0c7c743388024481ef0a47a7c76c` with pinned
+Node 22.23.3, one effective CPU and all eighteen children. The job failed.
+The unchanged independent reader refused the final inactive-unit readback:
+the stop command returned zero, but the later unit status still reported a
+failed state with an old main PID while the cgroup and PID censuses were empty.
+That terminal observation has not been resolved, and the reader result is not
+an admission.
+
+An independent diagnostic calculation from the retained measurements shows
+median whole-child CPU A/B **1.06475**, minimum CPU A/B **0.99946**, and median
+wall B/A **0.94318** over the seven measured pairs. The unchanged gate requires
+median CPU at least 1.03, **all seven** CPU ratios greater than 1, and median
+wall at most 1.02. One CPU pair fails, so the candidate is **unadopted** even
+apart from the reader refusal. Its median warmed-loop ratio of 1.07285 is a
+diagnostic, not a substitute for the whole-child gate.
+
+This run did not capture the physical CPU model. The earlier baseline's host
+model cannot be assigned to this paired job. No physical 386 RTx, general
+workload speedup, guest qualification or merge approval follows from these
+measurements. The one-shot run will not be replayed. A follow-up should retain
+the failed original while separately reviewing the reader's failure-only
+terminal handling, select a larger workload before any different paired
+measurement, capture the actual host hardware identity, and profile a new
+narrow optimization proposal. Its gates and affected clean guest checks remain
+required.

@@ -3229,29 +3229,91 @@ setup/runtime graph original and a failed preflight original; they do not
 establish hosted setup or guest qualification. No v6 event is selected. External source, event, job,
 original and runtime graph admission remain pending.
 
+### V6 failure retention and a distinct v7 metadata attempt — 2026-10-24
+
+The single selected [v6 metadata run](https://github.com/CrispStrobe/bw-board/actions/runs/40074329886)
+failed when the combined five-package `dpkg-query -L` reached the existing
+16 KiB stdout cap. Its first failure and bounded prefix were retained. The
+standalone full v6 failure reader refused this complete runtime-failure packet
+class. Preserve both originals and refusal; the separately checked stage and
+raw status facts do not form an admitted runtime graph or guest result.
+
+The [v7 ownership claim](../LANES.md) first adds a negative-only reader for
+the consumed v6 packet, with exact original/source/event/status/stage/probe/
+outside-cleanup joins and every approval false. A new v7 metadata label,
+request, marker, job and packet family then use five ordered, fixed-package
+listing children in place of the one combined listing. Keep 16 KiB per stream
+and 10 seconds per child, independently close the fifteen-probe roster and
+the existing aggregate log/resource bounds, and require all five complete
+outputs before forming the same package-path union. Archive DATA path lengths
+make this a bounded proposal, not a measured hosted `dpkg-query` result.
+
+Keep old routes and consumed event identities, the twelve-source roster with
+freshly frozen v7 hashes, exact package and runtime pins, compiler/guest
+guards, first failures and cleanup policy unchanged. Merge the
+docs-only claim before source implementation. Exact-head source CI, one fresh
+externally selected v7 event, one acquisition of each official original and a
+standalone complete-graph audit are required before any same-job guest work.
+
 ## Ordered 16-bit scalar read candidate
 
-Claim status: source implementation has not begun. The
+Claim status: the narrow source candidate was implemented and measured once,
+but remains **unadopted**. The
 [current profile](https://github.com/CrispStrobe/bw-board/actions/runs/40057621920)
 measured a warmed authored five-operation loop at about 4.52 million
 instructions/s for the core and 3.48 million instructions/s for AT on an
 AMD EPYC 9V74 hosted CPU using Node 22.23.3. These are loop throughput, not
 physical 16 MHz 386 RTx, an optimization gain or an OS workload measurement.
 
-The next candidate specializes only the contiguous-page two-byte branch in
-`_readLinear`: one translation followed by the same ordered pair of byte
-callbacks, removing the small loop and power calculation. Leave the four-byte
-and page-crossing paths intact. The owning registry entry defines exact paths.
+The measured candidate specializes only the contiguous-page two-byte branch
+in `_readLinear`: one translation followed by the same ordered pair of byte
+callbacks, removing the small loop and power calculation. Its four-byte and
+page-crossing paths stay unchanged. The owning registry entry defines exact
+paths.
 
-A fresh agent should first confirm the claim landed and refresh base/head
-checks, then implement the narrow arm and focused callback/order/fault tests.
-Prove byte masking, physical wrap, translation options, exceptions on either
-callback, page-crossing fallback and unaffected four-byte behavior; mutation
-controls must detect reversed reads or skipped translation. Prepare a disabled
-paired workflow and standalone original-only reader before selecting its one
-actual event. Freeze base/candidate import graphs and Node/resource facts, retain
-all eighteen original children and cleanup, and preserve the unchanged
-1.03 median CPU / all CPU ratios greater than 1 / 1.02 median wall gate.
-Require affected clean protected guest results and all enabled final-head
-checks before merge. If the gate fails, record it and keep the candidate
-unadopted rather than repeating the same measurement.
+The [selected paired job](https://github.com/CrispStrobe/bw-board/actions/runs/40067572890)
+completed all eighteen children at source `55917c48` under pinned Node
+22.23.3 and one effective CPU. Its unchanged reader refused the inactive-unit
+readback after stop. A separate calculation of the retained seven pairs found
+median whole-child CPU A/B 1.06475, minimum 0.99946, and median wall B/A
+0.94318. The minimum violates the predeclared **every CPU ratio greater than
+1** rule. The warmed-loop median 1.07285 is diagnostic only. No physical CPU
+model was captured for that job, and its candidate must not be merged or
+called a speedup. Preserve the original failure; do not replay the one-shot
+event or change the gate to admit this result.
+
+The next work is four separately reviewed tasks. The paired source files are
+in [source `55917c48`](https://github.com/CrispStrobe/bw-board/tree/55917c48dffe0c7c743388024481ef0a47a7c76c/scripts/i80386-read16-paired),
+which is not the adopted mainline CPU source. Claim any new paths before
+implementation.
+
+1. **Retain the failed terminal result.** Claim a failure-only reader and
+   focused controls beside the frozen `scripts/i80386-read16-paired/reader.py`
+   and `controls.py`; leave those original bytes and their refusal intact.
+   Accept a bounded failed original with stop exit zero, empty direct and
+   nested cgroup/PID censuses, and a stale failed unit status as a *failed
+   attempt*, with adoption always false. Refuse populated or nested descendants,
+   wrong unit identity and unknown terminal facts. Prove each cut using
+   independent raw-original inputs; never reinterpret failure as success.
+2. **Predeclare a longer authored comparison.** Claim a new versioned fixture,
+   controller, independent reader, controls and workflow under a new
+   `scripts/i80386-read16-paired-v2/` envelope before selecting any event.
+   Freeze the larger workload, semantic/device goldens, imports, resources and
+   one-run transport first. Keep two warm pairs and seven measured pairs, the
+   whole-child median CPU threshold 1.03, every CPU ratio greater than 1,
+   median wall B/A at most 1.02 and finite child/output caps. Preserve the old
+   one-million-instruction failure; no outlier deletion or same-event replay.
+3. **Bind the actual parent host.** In that new controller and independent
+   reader, collect bounded parent CPU model, effective affinity, CPU quota,
+   OS/image and pinned Node identity before child timing, then join them to
+   the selected official run. Exclude hostnames and private identifiers from
+   public originals. The old paired job's hardware model remains unknown;
+   the earlier baseline model cannot fill it.
+4. **Profile the next narrow CPU proposal.** Use a separately selected profile
+   to choose one exact arm in `src/experimental/i80386.js`; claim only that
+   arm and a focused new test before editing. Preserve callback order,
+   translation/fault behavior, self-modifying-code invalidation and mode
+   transitions with nonvacuous mutation cuts. Require fresh affected clean
+   protected guest results, the unchanged new paired gate and all enabled
+   exact-head source checks before adoption. Do not infer physical RTx or a
+   general workload gain from the authored loop.
