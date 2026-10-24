@@ -1,5 +1,5 @@
 """Independent byte-only original reader; imports no producer/helpers."""
-import hashlib,json,math,re
+import hashlib,json,math,os,re,stat
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]
 PROFILE_CAP=8388608
@@ -17,6 +17,29 @@ def unique(items):
 def parse(raw,cap):
     need(type(raw) is bytes and len(raw)<=cap,'original byte cap')
     return json.loads(raw,object_pairs_hook=unique,parse_constant=lambda v:(_ for _ in ()).throw(Refusal('nonfinite')))
+def read_manifest(path,cap=65536):
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC)
+    primary=None;parts=[];count=0
+    try:
+        before=os.fstat(fd)
+        need(stat.S_ISREG(before.st_mode) and before.st_nlink==1 and
+             0<before.st_size<=cap,'bounded independent manifest')
+        while True:
+            piece=os.read(fd,min(65536,cap+1-count));count+=len(piece)
+            need(count<=cap,'independent manifest cap')
+            if not piece:break
+            parts.append(piece)
+        after=os.fstat(fd);named=os.stat(path,follow_symlinks=False)
+        identity=lambda s:(s.st_dev,s.st_ino,s.st_mode,s.st_nlink,s.st_size,s.st_mtime_ns)
+        need(count==before.st_size and identity(before)==identity(after)==identity(named),
+             'held independent manifest identity')
+    except BaseException as error:primary=error
+    finally:
+        try:os.close(fd)
+        except BaseException as error:
+            if primary is None:primary=error
+    if primary is not None:raise primary
+    return b''.join(parts)
 def profile_summary(raw,arm,source_uri,fixture_uri):
     data=parse(raw,PROFILE_CAP)
     need(type(data) is dict and set(data)=={'nodes','startTime','endTime','samples','timeDeltas'},'complete profile fields')
@@ -86,7 +109,7 @@ def semantic(raw,kind):
     exact(d['keyboard'],{'commandByte':0,'queue':[{'value':170,'keyboard':True}],'scheduled':0},'keyboard BAT without enabled IRQ')
     return v
 
-SOURCE_ROWS_BYTES=(ROOT/'scripts/i80386-current-at-cost/source-rows.json').read_bytes()
+SOURCE_ROWS_BYTES=read_manifest(ROOT/'scripts/i80386-current-at-cost/source-rows.json')
 need(hashlib.sha256(SOURCE_ROWS_BYTES).hexdigest()==
      'ba3039a9866105933db4c2877e948758770c59ffc6a37d0e0a82b752b3c7180d',
      'frozen current import-closure manifest')
@@ -312,6 +335,12 @@ def controls():
         def test_duplicate_and_bool_refused(self):
             with self.assertRaises(Refusal):parse(b'{"a":1,"a":2}',100)
             with self.assertRaises(Refusal):exact(True,1,'count')
+        def test_independent_manifest_is_bounded_before_read(self):
+            import tempfile
+            with tempfile.TemporaryDirectory(prefix='bw-profile-reader-manifest-') as temporary:
+                path=Path(temporary)/'source-rows.json'
+                path.write_bytes(b'x'*65537)
+                with self.assertRaises(Refusal):read_manifest(path)
         def packet_fixture(self):
             encode=lambda value:json.dumps(value,sort_keys=True,allow_nan=False).encode()
             source={'schema':'bw.current-at-cost-source.v1',
