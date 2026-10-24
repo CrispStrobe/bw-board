@@ -7617,7 +7617,7 @@ def setup_v9_controls():
                 self.assertTrue(verdict['setupObserved']);self.assertTrue(verdict['outsideTerminalObserved'])
                 self.assertFalse(verdict['actualGuestApproved']);self.assertFalse(verdict['officialJobAuthenticated'])
                 official_log=(b'2026-10-24T12:00:00Z ##[group]Runner Image\n'
-                    b'2026-10-24T12:00:01Z Image: ubuntu24\n'
+                    b'2026-10-24T12:00:01Z Image: ubuntu-24.04\n'
                     b'2026-10-24T12:00:02Z Version: 20261012.334.1\n'
                     b'2026-10-24T12:00:03Z ##[endgroup]\n'
                     b'2026-10-24T12:00:04Z Complete job name: setup-runtime-inventory-v9\n'
@@ -7676,14 +7676,16 @@ def setup_v9_controls():
                 wrong_artifact=reader.parse(artifacts_metadata)
                 wrong_artifact['artifacts'][0]['digest']='sha256:'+'b'*64
                 official_cut('artifacts',wrong_artifact)
-                changed_image=official_log.replace(b'Version: 20261012.334.1',b'Version: 20261023.334.3')
-                changed_external=dict(full_external,officialLogBytes=len(changed_image),
-                    officialLogSha256=sha(changed_image))
-                with patch.object(reader,'SETUP_V9_READER_ENABLED',True):
-                    image_grade=reader.verify_setup_v9_originals(log,changed_external,outer,cleanup,shell,
-                        changed_image,run_metadata,jobs_metadata,artifacts_metadata)
-                self.assertFalse(image_grade['officialImageMatchesReported'])
-                self.assertFalse(image_grade['imageFieldsAuthenticated'])
+                for changed_image in (
+                    official_log.replace(b'Version: 20261012.334.1',b'Version: 20261023.334.3'),
+                    official_log.replace(b'Image: ubuntu-24.04',b'Image: ubuntu-22.04')):
+                    changed_external=dict(full_external,officialLogBytes=len(changed_image),
+                        officialLogSha256=sha(changed_image))
+                    with patch.object(reader,'SETUP_V9_READER_ENABLED',True):
+                        image_grade=reader.verify_setup_v9_originals(log,changed_external,outer,cleanup,shell,
+                            changed_image,run_metadata,jobs_metadata,artifacts_metadata)
+                    self.assertFalse(image_grade['officialImageMatchesReported'])
+                    self.assertFalse(image_grade['imageFieldsAuthenticated'])
                 self.assertEqual(set(reader.decode_setup_v9_log(log)),set(reader.SETUP_V9_LOG_ROLES))
                 self.assertEqual(len(value['inventory']['processes']),15)
                 self.assertEqual([row['role'] for row in value['inventory']['probes']],list(reader.SETUP_V9_PROBE_ORDER))

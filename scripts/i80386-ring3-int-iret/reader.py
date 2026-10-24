@@ -11834,7 +11834,8 @@ def verify_setup_v9_originals(raw,external,outer_raw,cleanup_raw,shell_raw,offic
         need(request['pullRequest']==external['pullRequest'],
              'official run pull request joins selected V9 request')
     service=result.get('serviceImageFields')
-    reported=(service is not None and service.get('ImageOS')=={'present':True,'value':official['Image']} and
+    reported=(service is not None and official['Image']=='ubuntu-24.04' and
+              service.get('ImageOS')=={'present':True,'value':'ubuntu24'} and
               service.get('ImageVersion')=={'present':True,'value':official['Version']})
     return dict(result,officialRunnerImage=official,officialImageMatchesReported=reported,
         officialMetadata=metadata,
