@@ -6355,13 +6355,148 @@ def setup_v5_outside_cleanup(environ):
     return 0 if failure.first is None and failure.secondary==[] else 1
 
 
+# A separate read-only route for the first v5 image-label refusal. It never
+# calls setup_v5_sequence, package acquisition, helper inspection or Node stage.
+IMAGE_ENV_DIAGNOSTIC_ENABLED=False
+IMAGE_ENV_DIAGNOSTIC_MARKER=b'RING3_IMAGE_ENV_DIAGNOSTIC_V1 '
+IMAGE_ENV_DIAGNOSTIC_LABEL='x86-ring3-image-env-diagnostic-v1'
+IMAGE_ENV_DIAGNOSTIC_JOB='image-env-diagnostic-v1'
+IMAGE_ENV_DIAGNOSTIC_PIN='BW_RING3_IMAGE_ENV_DIAGNOSTIC_REQUEST_SHA256'
+IMAGE_ENV_DIAGNOSTIC_B64='BW_RING3_IMAGE_ENV_DIAGNOSTIC_REQUEST_B64'
+
+
+def image_env_fields(environ):
+    """Preserve absent, empty and different values; refuse unsafe text boundedly."""
+    values={};errors=[]
+    for name in ('ImageOS','ImageVersion'):
+        present=name in environ;value=environ.get(name)
+        if not present:values[name]={'present':False,'value':None};continue
+        if type(value) is not str:
+            values[name]={'present':True,'value':None};errors.append(name+':type');continue
+        try:raw=value.encode('utf-8','strict')
+        except UnicodeError:
+            values[name]={'present':True,'value':None};errors.append(name+':encoding');continue
+        if len(raw)>256 or any(not 32<=ord(ch)<127 for ch in value):
+            values[name]={'present':True,'value':None};errors.append(name+':unsafe-or-oversize');continue
+        values[name]={'present':True,'value':value}
+    return values,errors
+
+
+def image_env_diagnostic_request(raw,pin):
+    need(type(raw) is bytes and 0<len(raw)<=65536 and type(pin) is str and
+         re.fullmatch('[0-9a-f]{64}',pin) and sha(raw)==pin,'externally selected image diagnostic request')
+    value=final_json(raw);require_fields(value,'schema repository pullRequest head tree source','closed image diagnostic request')
+    need(raw==encode(value) and value['schema']=='bw.ring3.image-env-request.v1' and
+         value['repository']==APPROVAL_REPOSITORY and type(value['pullRequest']) is int and
+         0<value['pullRequest']<2**31 and
+         all(type(value[k]) is str and re.fullmatch('[0-9a-f]{40}',value[k]) for k in ('head','tree')),
+         'canonical own image diagnostic request')
+    source=admitted_original(value['source'],JSON_CAP,'image diagnostic source twelve')
+    admit_generation_source(source,value['source']['sha256'],value['head'],value['tree'])
+    return value
+
+
+def image_env_diagnostic_event(event_raw,environ):
+    event=final_json(event_raw);pr=event.get('pull_request',{});body=pr.get('body')
+    start='<!-- BW_RING3_IMAGE_ENV_DIAGNOSTIC_V1\n';end='\nBW_RING3_IMAGE_ENV_DIAGNOSTIC_V1 -->'
+    need(type(body) is str and body.count(start)==body.count(end)==1 and body.index(start)<body.index(end),
+         'one separate immutable image diagnostic block')
+    block=body.split(start,1)[1].split(end,1)[0]
+    pin=environ.get(IMAGE_ENV_DIAGNOSTIC_PIN)
+    need(type(pin) is str and re.fullmatch('[0-9a-f]{64}',pin) and block==pin,
+         'one exact separate body SHA marker')
+    encoded=environ.get(IMAGE_ENV_DIAGNOSTIC_B64)
+    need(type(encoded) is str and 0<len(encoded)<=87384,'bounded separate request base64 variable')
+    raw=base64.b64decode(encoded,validate=True)
+    need(base64.b64encode(raw).decode('ascii')==encoded and 0<len(raw)<=65536,
+         'strict canonical external request base64')
+    request=image_env_diagnostic_request(raw,environ.get(IMAGE_ENV_DIAGNOSTIC_PIN))
+    need(event.get('action')=='labeled' and event.get('label',{}).get('name')==IMAGE_ENV_DIAGNOSTIC_LABEL and
+         event.get('repository',{}).get('full_name')==APPROVAL_REPOSITORY and
+         event.get('sender',{}).get('login')=='CrispStrobe' and type(event.get('number')) is int and
+         event['number']==request['pullRequest'] and type(pr.get('number')) is int and
+         pr['number']==request['pullRequest'] and pr.get('state')=='open' and
+         pr.get('head',{}).get('sha')==request['head'] and
+         pr.get('head',{}).get('repo',{}).get('full_name')==APPROVAL_REPOSITORY and
+         pr['head']['repo'].get('fork') is False and pr.get('base',{}).get('ref')=='master' and
+         pr['base'].get('repo',{}).get('full_name')==APPROVAL_REPOSITORY,
+         'closed own separate image diagnostic event')
+    need(all(environ.get(k)==v for k,v in {
+        'GITHUB_REPOSITORY':APPROVAL_REPOSITORY,'GITHUB_EVENT_NAME':'pull_request',
+        'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':IMAGE_ENV_DIAGNOSTIC_JOB,
+        'GITHUB_RUN_ATTEMPT':'1','BW_EXPECTED_HEAD':request['head'],
+        'BW_EXPECTED_TREE':request['tree'],
+        'GITHUB_WORKFLOW_REF':APPROVAL_REPOSITORY+'/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request['pullRequest'])+'/merge',
+    }.items()) and type(environ.get('GITHUB_RUN_ID')) is str and
+         re.fullmatch('[1-9][0-9]{0,19}',environ['GITHUB_RUN_ID']) and
+         type(environ.get('GITHUB_WORKFLOW_SHA')) is str and
+         re.fullmatch('[0-9a-f]{40}',environ['GITHUB_WORKFLOW_SHA']),
+         'first own image diagnostic source and run context')
+    return raw,request
+
+
+def image_env_shell_original(environ):
+    fields,errors=image_env_fields(environ)
+    return {'schema':'bw.ring3.image-env-shell.v1','fields':fields,
+            'firstFailure':None if not errors else {'phase':'shell-image-fields','code':errors[0]},
+            'secondary':[{'phase':'shell-image-fields','code':code} for code in errors[1:]],
+            'setupAttempted':False,'guestAttempted':False}
+
+
+def image_env_service_original(environ,observer_factory=HostedEnvelopeInstaller):
+    fields,errors=image_env_fields(environ);failure=FirstFailure()
+    result={'schema':'bw.ring3.image-env-service.v1','fields':fields,'fieldErrors':errors,
+            'expected':{'ImageOS':'ubuntu24','ImageVersion':SETUP_V5_IMAGE},
+            'request':None,'event':None,'source':None,'sourceCommands':[],
+            'platform':{name:environ.get(name) for name in (
+                'GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_REPOSITORY','GITHUB_EVENT_NAME',
+                'GITHUB_ACTOR','GITHUB_JOB','GITHUB_WORKFLOW_SHA','GITHUB_WORKFLOW_REF',
+            'BW_EXPECTED_HEAD','BW_EXPECTED_TREE',IMAGE_ENV_DIAGNOSTIC_PIN,
+            IMAGE_ENV_DIAGNOSTIC_B64)},
+            'eventIdentity':None,'resource':None,'firstFailure':None,'secondary':[],
+            'setupAttempted':False,'guestAttempted':False,'imageFieldsAuthenticated':False}
+    try:
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root image diagnostic service identity')
+        run_id=environ.get('GITHUB_RUN_ID','')
+        need(re.fullmatch('[1-9][0-9]{0,19}',run_id) is not None,'fixed diagnostic run ID')
+        membership=Cgroups.text(None,Path('/proc/self/cgroup'))
+        need(membership=='0::/system.slice/bw-ring3-image-env-'+run_id+'-1.service\n',
+             'actual owned image diagnostic service membership')
+        unit=Path('/sys/fs/cgroup')/membership[4:-1]
+        limits={key:Cgroups.text(None,unit/name).strip() for key,name in
+            (('cpuMax','cpu.max'),('memoryMax','memory.max'),('swapMax','memory.swap.max'),('pidsMax','pids.max'))}
+        need(limits==LIMITS,'same bounded diagnostic service limits')
+        result['resource']={'membership':membership,'limits':limits}
+        observer=observer_factory(environ)
+        event=observer.event();result['event']=original_bytes(event)
+        result['eventIdentity']=observer.facts['eventIdentity']
+        request_raw,request=image_env_diagnostic_event(event,environ)
+        result['request']=original_bytes(request_raw)
+        need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,'held diagnostic source path')
+        observer.source(request)
+        result['source']=observer.facts['source'];result['sourceCommands']=observer.facts['sourceCommands']
+        need(not errors,'bounded safe image field text')
+    except BaseException as error:failure.add(error,'image-env-diagnostic')
+    result['firstFailure'],result['secondary']=failure.first,failure.secondary
+    raw=encode(result);need(len(raw)<=JSON_CAP,'bounded image diagnostic original')
+    return result
+
+
+def emit_image_env_diagnostic(result,emit=None,flush=None):
+    raw=IMAGE_ENV_DIAGNOSTIC_MARKER+encode(result)
+    need(len(raw)<=JSON_CAP,'bounded image diagnostic wire')
+    emit=sys.stdout.buffer.write if emit is None else emit
+    flush=sys.stdout.buffer.flush if flush is None else flush
+    need(emit(raw)==len(raw),'complete image diagnostic original');flush()
+
+
 ACTUAL_ENTRY_ENABLED=False  # Activation requires a separate reviewed source/workflow change.
 
 
 def dispatch_cli(argv=None,environ=None):
     parser=argparse.ArgumentParser(description=__doc__,allow_abbrev=False)
     modes=parser.add_mutually_exclusive_group(required=True)
-    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy'):
+    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy','image-env-shell-v1','image-env-service-v1'):
         modes.add_argument('--'+name,action='store_const',const=name,dest='mode')
     argv=list(sys.argv[1:] if argv is None else argv)
     if len(argv)!=1:parser.error('exactly one fixed mode argument required')
@@ -6369,6 +6504,17 @@ def dispatch_cli(argv=None,environ=None):
     failure=FirstFailure();result=None
     try:
         if args.mode=='controls':controls();return 0
+        if args.mode=='image-env-shell-v1':
+            need(IMAGE_ENV_DIAGNOSTIC_ENABLED is True,'image diagnostic disabled')
+            result=image_env_shell_original(dict(os.environ if environ is None else environ))
+            raw=encode(result);need(len(raw)<=4096 and sys.stdout.buffer.write(raw)==len(raw),
+                                    'complete bounded shell image original')
+            sys.stdout.buffer.flush();return 0 if result['firstFailure'] is None else 1
+        if args.mode=='image-env-service-v1':
+            need(IMAGE_ENV_DIAGNOSTIC_ENABLED is True,'image diagnostic disabled')
+            result=image_env_service_original(dict(os.environ if environ is None else environ))
+            emit_image_env_diagnostic(result)
+            return 0 if result['firstFailure'] is None else 1
         if args.mode=='setup-runtime-inventory-v4':
             need(SETUP_V4_ENABLED is True,'v4 setup path disabled pending reviewed source and event')
             return setup_v4_entry(dict(os.environ if environ is None else environ))

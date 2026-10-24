@@ -4874,7 +4874,235 @@ def verify_setup_v5_failure_log(raw,external,outer_raw,cleanup_raw):
         'candidateReviewed':False,'actualRunApproved':False}
 
 
+IMAGE_DIAG_LABEL='x86-ring3-image-env-diagnostic-v1'
+IMAGE_DIAG_JOB='image-env-diagnostic-v1'
+IMAGE_DIAG_PIN='BW_RING3_IMAGE_ENV_DIAGNOSTIC_REQUEST_SHA256'
+IMAGE_DIAG_B64='BW_RING3_IMAGE_ENV_DIAGNOSTIC_REQUEST_B64'
+IMAGE_DIAG_MARKER=b'RING3_IMAGE_ENV_DIAGNOSTIC_V1 '
+
+
+def image_diag_fields(fields,allow_refused=False):
+    keys(fields,'ImageOS ImageVersion')
+    for name in ('ImageOS','ImageVersion'):
+        row=fields[name];keys(row,'present value')
+        need(type(row['present']) is bool,'image field presence type')
+        value=row['value']
+        if not row['present']:
+            need(value is None,'absent image field remains null')
+        else:
+            if allow_refused and value is None:continue
+            need(type(value) is str and len(value.encode('utf-8'))<=256 and
+                 all(32<=ord(ch)<127 for ch in value),'bounded observed image field')
+    return fields
+
+
+def image_diag_request(raw,pin):
+    need(type(raw) is bytes and 0<len(raw)<=65536 and digest(pin)==sha(raw),
+         'externally selected image diagnostic request')
+    value=parse(raw);keys(value,'schema repository pullRequest head tree source')
+    need(raw==canonical(value) and value['schema']=='bw.ring3.image-env-request.v1' and
+         value['repository']=='CrispStrobe/bw-board' and type(value['pullRequest']) is int and
+         0<value['pullRequest']<2**31,'canonical own image diagnostic request')
+    digest(value['head'],40);digest(value['tree'],40)
+    source_raw=prerequisite_original(canonical(value['source']))
+    source=parse(source_raw);keys(source,'schema head tree files')
+    need(source_raw==canonical(source) and source['schema']=='bw.ring3.source.v1' and
+         source['head']==value['head'] and source['tree']==value['tree'] and
+         type(source['files']) is dict and set(source['files'])==SETUP_SOURCE_PATHS,
+         'closed exact image diagnostic source twelve')
+    for row in source['files'].values():
+        keys(row,'mode blob bytes sha256')
+        need(row['mode']=='100644','regular source role');integer(row['bytes'],0,4<<20)
+        digest(row['sha256']);digest(row['blob'],40)
+    return value,source
+
+
+def image_diag_event(raw,request,pin,environment):
+    event=parse(raw);pr=event.get('pull_request',{});body=pr.get('body')
+    start='<!-- BW_RING3_IMAGE_ENV_DIAGNOSTIC_V1\n';end='\nBW_RING3_IMAGE_ENV_DIAGNOSTIC_V1 -->'
+    need(type(body) is str and body.count(start)==body.count(end)==1 and body.index(start)<body.index(end),
+         'one distinct image diagnostic block')
+    block=body.split(start,1)[1].split(end,1)[0]
+    need(block==pin and type(environment.get(IMAGE_DIAG_B64)) is str and
+         environment[IMAGE_DIAG_B64]==base64.b64encode(canonical(request)).decode('ascii'),
+         'exact SHA-only body marker and external canonical request base64')
+    need(event.get('action')=='labeled' and event.get('label',{}).get('name')==IMAGE_DIAG_LABEL and
+         event.get('repository',{}).get('full_name')=='CrispStrobe/bw-board' and
+         event.get('sender',{}).get('login')=='CrispStrobe' and type(event.get('number')) is int and
+         event['number']==request['pullRequest'] and type(pr.get('number')) is int and
+         pr['number']==request['pullRequest'] and pr.get('state')=='open' and
+         pr.get('head',{}).get('sha')==request['head'] and
+         pr.get('head',{}).get('repo',{}).get('full_name')=='CrispStrobe/bw-board' and
+         pr['head']['repo'].get('fork') is False and pr.get('base',{}).get('ref')=='master' and
+         pr['base'].get('repo',{}).get('full_name')=='CrispStrobe/bw-board',
+         'one own image diagnostic event')
+    need(type(environment) is dict and all(environment.get(k)==v for k,v in {
+        'GITHUB_REPOSITORY':'CrispStrobe/bw-board','GITHUB_EVENT_NAME':'pull_request',
+        'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':IMAGE_DIAG_JOB,'GITHUB_RUN_ATTEMPT':'1',
+        'BW_EXPECTED_HEAD':request['head'],'BW_EXPECTED_TREE':request['tree'],
+        IMAGE_DIAG_PIN:pin,
+        'GITHUB_WORKFLOW_REF':'CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request['pullRequest'])+'/merge',
+    }.items()),'exact image diagnostic environment')
+    need(type(environment.get('GITHUB_RUN_ID')) is str and
+         re.fullmatch('[1-9][0-9]{0,19}',environment['GITHUB_RUN_ID']),
+         'first image diagnostic run');digest(environment.get('GITHUB_WORKFLOW_SHA'),40)
+
+
+def image_diag_source_witness(commands,event_meta,event_raw,request,source):
+    need(type(commands) is list and len(commands)==3,'three held source Git observations')
+    git=['--no-replace-objects','-c','gc.auto=0','-c','maintenance.auto=false']
+    tails=[['rev-parse','HEAD'],['rev-parse','HEAD^{tree}'],
+           ['ls-tree','-r','HEAD','--',*sorted(SETUP_SOURCE_PATHS)]]
+    outputs=[(request['head']+'\n').encode(),(request['tree']+'\n').encode(),
+        ''.join(source['files'][path]['mode']+' blob '+source['files'][path]['blob']+'\t'+path+'\n'
+                for path in sorted(SETUP_SOURCE_PATHS)).encode()]
+    previous=0;parent=None;safe=None
+    for index,command in enumerate(commands):
+        keys(command,'argv process stdout stderr');argv=command['argv']
+        need(type(argv) is list and len(argv)>3 and argv[:2]==['/usr/bin/git','-c'] and
+             type(argv[2]) is str and argv[2].startswith('safe.directory=/'),
+             'scoped image diagnostic Git checkout')
+        if safe is None:safe=argv[2]
+        need(argv==['/usr/bin/git','-c',safe,*git,*tails[index]],'fixed source Git command')
+        process=command['process'];start,end=v8_process(process,'discovery',argv,
+            {'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin',
+             'GIT_NO_LAZY_FETCH':'1','GIT_CONFIG_NOSYSTEM':'1'},10000)
+        if parent is None:parent=process['parentPid']
+        need(start>=previous and process['parentPid']==parent,'sequential source Git children')
+        previous=end
+        need(prerequisite_original(canonical(command['stdout']))==outputs[index] and
+             command['stderr'] is None,'exact held source Git bytes')
+    keys(event_meta,'st_dev st_ino st_mode st_uid st_gid st_nlink st_size st_mtime_ns')
+    need(all(type(x) is int for x in event_meta.values()) and
+         event_meta['st_size']==len(event_raw) and stat.S_ISREG(event_meta['st_mode']),
+         'held official event snapshot extent')
+    return parent,previous
+
+
+def verify_image_diag(shell_raw,service_log,outside_raw,external):
+    keys(external,'schema runId attempt head tree requestSha256 workflowSha jobName conclusion')
+    need(external['schema']=='bw.ring3.image-env-expectation.v1' and
+         external['jobName']==IMAGE_DIAG_JOB and external['attempt']=='1' and
+         external['conclusion'] in ('success','failure'),'external selected image diagnostic job')
+    digest(external['head'],40);digest(external['tree'],40);digest(external['requestSha256'])
+    digest(external['workflowSha'],40)
+    need(type(external['runId']) is str and re.fullmatch('[1-9][0-9]{0,19}',external['runId']),
+         'external exact run')
+    need(type(shell_raw) is bytes and 0<len(shell_raw)<=4096 and
+         shell_raw==canonical(parse(shell_raw)),'canonical bounded shell original')
+    shell=parse(shell_raw);keys(shell,'schema fields firstFailure secondary setupAttempted guestAttempted')
+    need(shell['schema']=='bw.ring3.image-env-shell.v1' and shell['setupAttempted'] is False and
+         shell['guestAttempted'] is False,'read-only shell original')
+    image_diag_fields(shell['fields'],shell['firstFailure'] is not None)
+    shell_refused={name for name in ('ImageOS','ImageVersion')
+        if shell['fields'][name]=={'present':True,'value':None}}
+    shell_codes=[] if shell['firstFailure'] is None else [shell['firstFailure'],*shell['secondary']]
+    need(type(shell['secondary']) is list and len(shell_codes)<=2 and
+         all(type(item) is dict and set(item)=={'phase','code'} and
+             item['phase']=='shell-image-fields' and type(item['code']) is str and
+             item['code'] in {name+':'+reason for name in ('ImageOS','ImageVersion')
+                 for reason in ('type','encoding','unsafe-or-oversize')} for item in shell_codes) and
+         {item['code'].split(':')[0] for item in shell_codes}==shell_refused and
+         len(shell_codes)==len(shell_refused),'shell malformed field refusal joins null values')
+    need(type(service_log) is bytes and 0<len(service_log)<=1<<20,'bounded service original log')
+    lines=[]
+    for line in service_log.splitlines():
+        at=line.find(IMAGE_DIAG_MARKER)
+        if at>=0:
+            need(line[:at]==b'' or re.fullmatch(rb'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ',line[:at]),
+                 'bounded service log timestamp prefix')
+            lines.append(line[at+len(IMAGE_DIAG_MARKER):])
+    need(len(lines)==1,'one complete image diagnostic service original')
+    service=parse(lines[0]);need(lines[0]+b'\n'==canonical(service),'canonical service original')
+    keys(service,'schema fields fieldErrors expected request event source sourceCommands eventIdentity resource platform firstFailure secondary setupAttempted guestAttempted imageFieldsAuthenticated')
+    need(service['schema']=='bw.ring3.image-env-service.v1' and
+         service['expected']=={'ImageOS':'ubuntu24','ImageVersion':'20261012.334.1'} and
+         service['setupAttempted'] is False and service['guestAttempted'] is False and
+         service['imageFieldsAuthenticated'] is False,'no setup or guest authority')
+    image_diag_fields(service['fields'],service['firstFailure'] is not None)
+    need(type(service['fieldErrors']) is list and len(service['fieldErrors'])<=2 and
+         all(type(item) is str and item in {name+':'+reason for name in ('ImageOS','ImageVersion')
+             for reason in ('type','encoding','unsafe-or-oversize')} for item in service['fieldErrors']),
+         'bounded malformed image field classes')
+    service_refused={name for name in ('ImageOS','ImageVersion')
+        if service['fields'][name]=={'present':True,'value':None}}
+    need({item.split(':')[0] for item in service['fieldErrors']}==service_refused and
+         len(service['fieldErrors'])==len(service_refused) and
+         (not service_refused or service['firstFailure'] is not None),
+         'malformed fields retained without raw unsafe text')
+    need(type(outside_raw) is bytes and 0<len(outside_raw)<=4096 and
+         outside_raw==canonical(parse(outside_raw)),'canonical bounded outside original')
+    outside=parse(outside_raw);keys(outside,'schema runId unit shellExitCode serviceExitCode cgroupAfter cleanupAction')
+    need(outside['schema']=='bw.ring3.image-env-outside.v1' and outside['runId']==external['runId'] and
+         outside['unit']=='/sys/fs/cgroup/system.slice/bw-ring3-image-env-'+external['runId']+'-1.service' and
+         outside['cgroupAfter'] in ('absent','present') and outside['cleanupAction']=='none' and
+         type(outside['shellExitCode']) is int and type(outside['serviceExitCode']) is int and
+         0<=outside['shellExitCode']<=255 and 0<=outside['serviceExitCode']<=255,
+         'outside finite terminal observation without mutation')
+    complete=service['firstFailure'] is None and shell['firstFailure'] is None
+    if complete:
+        need(service['secondary']==[] and shell['secondary']==[] and outside['shellExitCode']==0 and
+             outside['serviceExitCode']==0 and
+             outside['cgroupAfter']=='absent' and external['conclusion']=='success',
+             'complete diagnostic and absent owned cgroup')
+        request_raw=prerequisite_original(canonical(service['request']))
+        request,source=image_diag_request(request_raw,external['requestSha256'])
+        need(request['head']==external['head'] and request['tree']==external['tree'] and
+             service['source']==source,'reported exact source twelve')
+        event_raw=prerequisite_original(canonical(service['event']))
+        image_diag_source_witness(service['sourceCommands'],service['eventIdentity'],event_raw,
+                                  request,source)
+        environment={'GITHUB_RUN_ID':external['runId'],'GITHUB_RUN_ATTEMPT':'1',
+            'GITHUB_REPOSITORY':'CrispStrobe/bw-board','GITHUB_EVENT_NAME':'pull_request',
+            'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':IMAGE_DIAG_JOB,
+            'GITHUB_WORKFLOW_SHA':external['workflowSha'],
+            'GITHUB_WORKFLOW_REF':'CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request['pullRequest'])+'/merge',
+            'BW_EXPECTED_HEAD':external['head'],'BW_EXPECTED_TREE':external['tree'],
+            IMAGE_DIAG_PIN:external['requestSha256'],
+            IMAGE_DIAG_B64:base64.b64encode(request_raw).decode('ascii')}
+        need(service['platform']==environment,'reported service context joins external selection')
+        image_diag_event(event_raw,request,external['requestSha256'],environment)
+        need(service['resource']=={'membership':'0::/system.slice/bw-ring3-image-env-'+external['runId']+'-1.service\n',
+            'limits':{'cpuMax':'100000 100000','memoryMax':'1073741824','swapMax':'0','pidsMax':'64'}},
+            'same owned bounded service resource report')
+    else:
+        need(external['conclusion']=='failure' and type(service['secondary']) is list and
+             type(shell['secondary']) is list and
+             (outside['shellExitCode']!=0 or outside['serviceExitCode']!=0 or
+              outside['cgroupAfter']!='absent'),'bounded failed image diagnostic original')
+    expected_forwarded={name:{'present':True,
+        'value':shell['fields'][name]['value'] if shell['fields'][name]['present'] else ''}
+        for name in ('ImageOS','ImageVersion')}
+    forwarding_matches=service['fields']==expected_forwarded
+    return {'schema':'bw.ring3.image-env-reader.v1',
+            'reportedConsistent':complete and forwarding_matches,
+            'completeDiagnosticObserved':complete,
+            'shellFields':shell['fields'],'serviceFields':service['fields'],
+            'shellEqualsService':shell['fields']==service['fields'],
+            'expectedForwardedFields':expected_forwarded,
+            'forwardingMatchesExpected':forwarding_matches,
+            'serviceMatchesPinnedImage':service['fields']=={
+                'ImageOS':{'present':True,'value':'ubuntu24'},
+                'ImageVersion':{'present':True,'value':'20261012.334.1'}},
+            'firstFailure':service['firstFailure'] or shell['firstFailure'],
+            'outsideCgroupAfter':outside['cgroupAfter'],
+            'officialJobAuthenticated':False,'setupApproved':False,'actualGuestApproved':False,
+            'runtimeCandidateApproved':False}
+
+
 def main():
+    if sys.argv[1:2]==['--image-env-diagnostic-log']:
+        parser=argparse.ArgumentParser(description='Independent image environment original-only reader',allow_abbrev=False)
+        for name in ('image-env-diagnostic-log','shell-original','outside-original','external-admission'):
+            parser.add_argument('--'+name,required=True)
+        need(len(sys.argv)==9,'exact image diagnostic original CLI')
+        args=parser.parse_args()
+        def read(path,cap):
+            with Path(path).open('rb') as stream:return stream.read(cap+1)
+        result=verify_image_diag(read(args.shell_original,4096),
+             read(args.image_env_diagnostic_log,1<<20),read(args.outside_original,4096),
+             parse(read(args.external_admission,65536)))
+        print(json.dumps(result,sort_keys=True));return
     if '--inventory-setup-v5' in sys.argv[1:]:
         need(sys.argv[1:]==['--inventory-setup-v5'],'exact single v5 inventory mode')
         need(SETUP_V5_READER_ENABLED is True,'v5 setup reader disabled pending reviewed source/event')

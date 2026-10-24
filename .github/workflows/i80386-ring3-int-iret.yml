@@ -52,6 +52,7 @@ jobs:
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --staged-runtime-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v4-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v5-only
+          /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --image-env-diagnostic-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/run.py --controls
   # Closed V8 source path only. BOTH this literal guard and the source guard
   # require separate runtime/source/event review before one official run.
@@ -454,6 +455,94 @@ jobs:
         with:
           name: i80386-ring3-setup-runtime-inventory-v5-originals
           path: build/i80386-ring3-setup-runtime-inventory-v5/
+          if-no-files-found: error
+          include-hidden-files: false
+          retention-days: 1
+
+  # Separate read-only diagnosis of the consumed v5 preflight refusal.
+  image-env-diagnostic-v1:
+    if: ${{ false && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-image-env-diagnostic-v1' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      BW_RING3_IMAGE_ENV_DIAGNOSTIC_REQUEST_SHA256: ${{ vars.BW_RING3_IMAGE_ENV_DIAGNOSTIC_REQUEST_SHA256 }}
+      BW_RING3_IMAGE_ENV_DIAGNOSTIC_REQUEST_B64: ${{ vars.BW_RING3_IMAGE_ENV_DIAGNOSTIC_REQUEST_B64 }}
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      PYTHONPATH: ''
+      PYTHONHOME: ''
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Retain shell and bounded root service image environment only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git --no-replace-objects -c gc.auto=0 -c maintenance.auto=false rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          git diff --quiet
+          git diff --cached --quiet
+          BW_EXPECTED_TREE="$(git --no-replace-objects -c gc.auto=0 -c maintenance.auto=false rev-parse 'HEAD^{tree}')"
+          export BW_EXPECTED_TREE
+          mkdir -p build
+          mkdir -m 700 build/i80386-ring3-image-env-diagnostic-v1
+          set +e
+          /usr/bin/python3 -I -S -B scripts/i80386-ring3-int-iret/run.py --image-env-shell-v1 \
+            > build/i80386-ring3-image-env-diagnostic-v1/shell.original.json
+          ring3_shell_exit="$?"
+          set -e
+          ring3_image_uid="$(id -u)"
+          ring3_image_gid="$(id -g)"
+          ring3_image_service() {
+            sudo -- /usr/bin/systemd-run --wait --pipe \
+            --unit="bw-ring3-image-env-${GITHUB_RUN_ID}-1" \
+            --property=CPUQuota=100% --property=MemoryMax=1073741824 \
+            --property=MemorySwapMax=0 --property=TasksMax=64 \
+            --property=RuntimeMaxSec=30 --property=TimeoutStopSec=5 \
+            --working-directory="$PWD" \
+            /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+            SUDO_UID="$ring3_image_uid" SUDO_GID="$ring3_image_gid" \
+            BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+            BW_RING3_IMAGE_ENV_DIAGNOSTIC_REQUEST_SHA256="$BW_RING3_IMAGE_ENV_DIAGNOSTIC_REQUEST_SHA256" \
+            BW_RING3_IMAGE_ENV_DIAGNOSTIC_REQUEST_B64="$BW_RING3_IMAGE_ENV_DIAGNOSTIC_REQUEST_B64" \
+            GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+            GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+            GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+            GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" ImageOS="${ImageOS-}" ImageVersion="${ImageVersion-}" \
+            /usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/run.py --image-env-service-v1
+          }
+          set +e
+          ring3_image_service \
+            > build/i80386-ring3-image-env-diagnostic-v1/service.original.log \
+            2> build/i80386-ring3-image-env-diagnostic-v1/controller.stderr
+          ring3_image_exit="$?"
+          set -e
+          ring3_image_unit="/sys/fs/cgroup/system.slice/bw-ring3-image-env-${GITHUB_RUN_ID}-1.service"
+          ring3_image_after=absent
+          if test -e "$ring3_image_unit"; then ring3_image_after=present; fi
+          /usr/bin/python3 -I -S -B -c 'import json,sys; print(json.dumps({"schema":"bw.ring3.image-env-outside.v1","runId":sys.argv[1],"unit":sys.argv[2],"shellExitCode":int(sys.argv[3]),"serviceExitCode":int(sys.argv[4]),"cgroupAfter":sys.argv[5],"cleanupAction":"none"},sort_keys=True,separators=(",",":")))' \
+            "$GITHUB_RUN_ID" "$ring3_image_unit" "$ring3_shell_exit" "$ring3_image_exit" "$ring3_image_after" \
+            > build/i80386-ring3-image-env-diagnostic-v1/outside.original.json
+          test "$(stat -c %s build/i80386-ring3-image-env-diagnostic-v1/shell.original.json)" -le 4096
+          test "$(stat -c %s build/i80386-ring3-image-env-diagnostic-v1/service.original.log)" -le 1048576
+          test "$(stat -c %s build/i80386-ring3-image-env-diagnostic-v1/controller.stderr)" -le 131072
+          test "$(stat -c %s build/i80386-ring3-image-env-diagnostic-v1/outside.original.json)" -le 4096
+          test "$ring3_shell_exit" -eq 0
+          test "$ring3_image_exit" -eq 0
+          test "$ring3_image_after" = absent
+      - name: Retain image diagnostic originals
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-ring3-image-env-diagnostic-v1-originals
+          path: build/i80386-ring3-image-env-diagnostic-v1/
           if-no-files-found: error
           include-hidden-files: false
           retention-days: 1

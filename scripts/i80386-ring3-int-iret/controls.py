@@ -6,6 +6,7 @@ runtime and kernel records below are manufactured and never actual admission.
 The full positive includes independently assembled register/frame/RAM goldens.
 """
 import copy
+import base64
 import contextlib
 import importlib.util
 import io
@@ -3074,8 +3075,193 @@ def setup_v5_controls(export_sample=False):
         'guest':False,'actualRunApproved':False,'pass':True}))
 
 
+def image_env_diagnostic_controls():
+    """Pure event/source/wire controls; all hosted APIs are mocked."""
+    p,_=producer_fixture_case()
+    source={'schema':'bw.ring3.source.v1','head':'a'*40,'tree':'b'*40,
+        'files':{name:{'mode':'100644','blob':'c'*40,'bytes':1,'sha256':'d'*64}
+                 for name in p.SOURCE_PATHS}}
+    request={'schema':'bw.ring3.image-env-request.v1','repository':'CrispStrobe/bw-board',
+        'pullRequest':645,'head':'a'*40,'tree':'b'*40,'source':p.original_bytes(p.encode(source))}
+    raw=p.encode(request);pin=p.sha(raw)
+    event={'action':'labeled','label':{'name':p.IMAGE_ENV_DIAGNOSTIC_LABEL},
+        'repository':{'full_name':'CrispStrobe/bw-board'},'sender':{'login':'CrispStrobe'},
+        'number':645,'pull_request':{'number':645,'state':'open','body':
+            '<!-- BW_RING3_IMAGE_ENV_DIAGNOSTIC_V1\n'+pin+'\nBW_RING3_IMAGE_ENV_DIAGNOSTIC_V1 -->',
+            'head':{'sha':'a'*40,'repo':{'full_name':'CrispStrobe/bw-board','fork':False}},
+            'base':{'ref':'master','repo':{'full_name':'CrispStrobe/bw-board'}}}}
+    event_raw=p.encode(event)
+    git_environment={'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin',
+                     'GIT_NO_LAZY_FETCH':'1','GIT_CONFIG_NOSYSTEM':'1'}
+    git=['/usr/bin/git','-c','safe.directory=/checkout','--no-replace-objects',
+         '-c','gc.auto=0','-c','maintenance.auto=false']
+    git_tails=[['rev-parse','HEAD'],['rev-parse','HEAD^{tree}'],
+               ['ls-tree','-r','HEAD','--',*sorted(p.SOURCE_PATHS)]]
+    git_outputs=[b'a'*40+b'\n',b'b'*40+b'\n',
+        ''.join(source['files'][name]['mode']+' blob '+source['files'][name]['blob']+'\t'+name+'\n'
+                for name in sorted(p.SOURCE_PATHS)).encode()]
+    def source_commands():
+        result=[]
+        for index,(tail,output) in enumerate(zip(git_tails,git_outputs)):
+            argv=git+tail;pid=201+index;start=1+2*index;end=start+1
+            process={'schema':'bw.ring3.process.v1','role':'discovery','argv':argv,
+                'cwdRole':'checkout','environment':git_environment,'pid':pid,'pgid':pid,
+                'parentPid':100,'startTicks':pid,'spawnMonoNs':start,'reapMonoNs':end,
+                'exitCode':0,'signal':None,'waitStatus':0,'timedOut':False,
+                'rusage':{'userSeconds':0.001,'systemSeconds':0.001,'maxRssKiB':1024},
+                'firstFailure':None,'secondary':[]}
+            result.append({'argv':argv,'process':process,'stdout':p.original_bytes(output),
+                           'stderr':None})
+        return result
+    env={'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1','GITHUB_REPOSITORY':'CrispStrobe/bw-board',
+        'GITHUB_EVENT_NAME':'pull_request','GITHUB_ACTOR':'CrispStrobe',
+        'GITHUB_JOB':p.IMAGE_ENV_DIAGNOSTIC_JOB,'GITHUB_WORKFLOW_SHA':'e'*40,
+        'GITHUB_WORKFLOW_REF':'CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/645/merge',
+        'BW_EXPECTED_HEAD':'a'*40,'BW_EXPECTED_TREE':'b'*40,p.IMAGE_ENV_DIAGNOSTIC_PIN:pin,
+        p.IMAGE_ENV_DIAGNOSTIC_B64:base64.b64encode(raw).decode('ascii'),
+        'ImageOS':'ubuntu24','ImageVersion':'20261012.334.1'}
+    class FakeObserver:
+        def __init__(self,environ):
+            self.facts={'eventIdentity':{'st_dev':1,'st_ino':2,'st_mode':stat.S_IFREG|0o600,
+                'st_uid':1001,'st_gid':1001,'st_nlink':1,'st_size':len(event_raw),'st_mtime_ns':1},
+                'sourceCommands':[]}
+        def event(self):return event_raw
+        def source(self,request):
+            self.facts['source']=source
+            self.facts['sourceCommands']=source_commands()
+    def cgroup(_,path):
+        if str(path)=='/proc/self/cgroup':return '0::/system.slice/bw-ring3-image-env-123-1.service\n'
+        return {'cpu.max':'100000 100000','memory.max':'1073741824',
+                'memory.swap.max':'0','pids.max':'64'}[Path(path).name]+'\n'
+    external={'schema':'bw.ring3.image-env-expectation.v1','runId':'123','attempt':'1',
+        'head':'a'*40,'tree':'b'*40,'requestSha256':pin,'workflowSha':'e'*40,
+        'jobName':p.IMAGE_ENV_DIAGNOSTIC_JOB,'conclusion':'success'}
+    outside={'schema':'bw.ring3.image-env-outside.v1','runId':'123',
+        'unit':'/sys/fs/cgroup/system.slice/bw-ring3-image-env-123-1.service',
+        'shellExitCode':0,'serviceExitCode':0,'cgroupAfter':'absent','cleanupAction':'none'}
+    def captured(fields=None,ev=None):
+        if fields is None:fields=env
+        with patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+             patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+             patch.object(p.Cgroups,'text',side_effect=cgroup),\
+             patch.object(p,'setup_v5_sequence',side_effect=AssertionError('setup forbidden')),\
+             patch.object(p,'setup_v5_helper_witness',side_effect=AssertionError('helper forbidden')):
+            return p.image_env_service_original(fields,FakeObserver)
+    class Tests(unittest.TestCase):
+        def test_full_entry_and_independent_reader(self):
+            shell=p.image_env_shell_original(env);service=captured()
+            self.assertIsNone(service['firstFailure']);self.assertEqual(service['source'],source)
+            self.assertEqual(service['fields'],shell['fields'])
+            self.assertFalse(service['setupAttempted']);self.assertFalse(service['guestAttempted'])
+            grade=reader.verify_image_diag(p.encode(shell),p.IMAGE_ENV_DIAGNOSTIC_MARKER+p.encode(service),
+                                           reader.canonical(outside),external)
+            self.assertTrue(grade['reportedConsistent']);self.assertTrue(grade['serviceMatchesPinnedImage'])
+            self.assertFalse(grade['officialJobAuthenticated']);self.assertFalse(grade['setupApproved'])
+        def test_different_empty_missing_are_data(self):
+            for change in ('different','empty','missing'):
+                current=dict(env)
+                if change=='different':current['ImageOS']='different'
+                elif change=='empty':current['ImageOS']=''
+                else:current.pop('ImageOS')
+                shell=p.image_env_shell_original(current)
+                forwarded=dict(current)
+                if change=='missing':forwarded['ImageOS']=''
+                service=captured(forwarded)
+                grade=reader.verify_image_diag(p.encode(shell),p.IMAGE_ENV_DIAGNOSTIC_MARKER+p.encode(service),
+                                               reader.canonical(outside),external)
+                self.assertFalse(grade['serviceMatchesPinnedImage'])
+                self.assertTrue(grade['reportedConsistent']);self.assertTrue(grade['forwardingMatchesExpected'])
+                self.assertTrue(grade['serviceFields']['ImageOS']['present'])
+                if change=='missing':self.assertEqual(grade['serviceFields']['ImageOS']['value'],'')
+        def test_wrong_source_event_and_context_refuse(self):
+            shell=p.image_env_shell_original(env);service=captured()
+            for key,value in (('source',{}),('event',p.original_bytes(p.encode(dict(event,number=646)))),
+                              ('platform',dict(service['platform'],GITHUB_RUN_ID='124'))):
+                bad=copy.deepcopy(service);bad[key]=value
+                with self.assertRaises(Exception):
+                    reader.verify_image_diag(p.encode(shell),p.IMAGE_ENV_DIAGNOSTIC_MARKER+p.encode(bad),
+                                             reader.canonical(outside),external)
+            for change in ('argv','stdout','exit','order','eventExtent'):
+                bad=copy.deepcopy(service)
+                if change=='argv':bad['sourceCommands'][0]['argv'][-1]='different'
+                elif change=='stdout':bad['sourceCommands'][0]['stdout']['sha256']='0'*64
+                elif change=='exit':bad['sourceCommands'][0]['process']['exitCode']=1
+                elif change=='order':bad['sourceCommands'][1]['process']['spawnMonoNs']=1
+                else:bad['eventIdentity']['st_size']+=1
+                with self.assertRaises(Exception):
+                    reader.verify_image_diag(p.encode(shell),p.IMAGE_ENV_DIAGNOSTIC_MARKER+p.encode(bad),
+                                             reader.canonical(outside),external)
+            with self.assertRaises(Exception):p.image_env_diagnostic_event(p.encode(dict(event,action='opened')),env)
+            with self.assertRaises(Exception):p.image_env_diagnostic_event(event_raw,dict(env,GITHUB_RUN_ATTEMPT='2'))
+            for changed in (dict(env,**{p.IMAGE_ENV_DIAGNOSTIC_B64:'AA=='}),
+                            dict(env,**{p.IMAGE_ENV_DIAGNOSTIC_B64:env[p.IMAGE_ENV_DIAGNOSTIC_B64]+'='}),
+                            dict(env,**{p.IMAGE_ENV_DIAGNOSTIC_PIN:'0'*64})):
+                with self.assertRaises(Exception):p.image_env_diagnostic_event(event_raw,changed)
+            wrong_event=copy.deepcopy(event)
+            wrong_event['pull_request']['body']=wrong_event['pull_request']['body'].replace(pin,'0'*64)
+            with self.assertRaises(Exception):p.image_env_diagnostic_event(p.encode(wrong_event),env)
+        def test_oversize_malformed_retains_bounded_failure(self):
+            bad=dict(env,ImageOS='x'*257)
+            shell=p.image_env_shell_original(bad);service=captured(bad)
+            self.assertIsNotNone(shell['firstFailure']);self.assertIsNotNone(service['firstFailure'])
+            self.assertEqual(service['fields']['ImageOS'],{'present':True,'value':None})
+            failed=dict(external,conclusion='failure');outer=dict(outside,shellExitCode=1,serviceExitCode=1)
+            grade=reader.verify_image_diag(p.encode(shell),p.IMAGE_ENV_DIAGNOSTIC_MARKER+p.encode(service),
+                                           reader.canonical(outer),failed)
+            self.assertFalse(grade['reportedConsistent']);self.assertFalse(grade['setupApproved'])
+            for row in (dict(shell,fields={'ImageOS':{'present':True,'value':'x'*257},
+                                                'ImageVersion':shell['fields']['ImageVersion']}),
+                        dict(shell,fields={'ImageOS':{'present':1,'value':None},
+                                                'ImageVersion':shell['fields']['ImageVersion']})):
+                with self.assertRaises(Exception):
+                    reader.verify_image_diag(p.encode(row),p.IMAGE_ENV_DIAGNOSTIC_MARKER+p.encode(service),
+                                             reader.canonical(outer),failed)
+        def test_cli_disabled_by_default(self):
+            self.assertFalse(p.IMAGE_ENV_DIAGNOSTIC_ENABLED)
+            self.assertFalse(reader.verify_image_diag(p.encode(p.image_env_shell_original(env)),
+                p.IMAGE_ENV_DIAGNOSTIC_MARKER+p.encode(captured()),reader.canonical(outside),external)['actualGuestApproved'])
+        def test_forwarding_difference_and_resource_mutation_visible(self):
+            shell=p.image_env_shell_original(env)
+            current=dict(env,ImageOS='')
+            service=captured(current)
+            grade=reader.verify_image_diag(p.encode(shell),p.IMAGE_ENV_DIAGNOSTIC_MARKER+p.encode(service),
+                                           reader.canonical(outside),external)
+            self.assertFalse(grade['shellEqualsService'])
+            self.assertFalse(grade['forwardingMatchesExpected']);self.assertFalse(grade['reportedConsistent'])
+            self.assertTrue(grade['completeDiagnosticObserved'])
+            self.assertFalse(grade['serviceMatchesPinnedImage'])
+            missing=copy.deepcopy(service);missing['fields']['ImageOS']={'present':False,'value':None}
+            grade=reader.verify_image_diag(p.encode(shell),p.IMAGE_ENV_DIAGNOSTIC_MARKER+p.encode(missing),
+                                           reader.canonical(outside),external)
+            self.assertFalse(grade['forwardingMatchesExpected']);self.assertFalse(grade['reportedConsistent'])
+            wrong=copy.deepcopy(service);wrong['resource']['limits']['cpuMax']='max'
+            with self.assertRaises(Exception):
+                reader.verify_image_diag(p.encode(shell),p.IMAGE_ENV_DIAGNOSTIC_MARKER+p.encode(wrong),
+                                         reader.canonical(outside),external)
+        def test_workflow_is_inactive_and_forwards_through_env_i(self):
+            workflow=(HERE.parent.parent/'.github/workflows/i80386-ring3-int-iret.yml').read_text()
+            route=workflow.split('  image-env-diagnostic-v1:\n',1)[1]
+            self.assertIn("if: ${{ false && github.event.action == 'labeled'",route)
+            self.assertIn('--image-env-shell-v1',route)
+            self.assertIn('/usr/bin/systemd-run --wait --pipe',route)
+            self.assertIn('/usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin',route)
+            self.assertIn('ImageOS="${ImageOS-}" ImageVersion="${ImageVersion-}"',route)
+            self.assertIn('BW_RING3_IMAGE_ENV_DIAGNOSTIC_REQUEST_B64="$BW_RING3_IMAGE_ENV_DIAGNOSTIC_REQUEST_B64"',route)
+            self.assertIn('/usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/run.py --image-env-service-v1',route)
+            v5=workflow.split('  setup-runtime-inventory-v5:\n',1)[1].split('  image-env-diagnostic-v1:\n',1)[0]
+            self.assertIn('/usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/run.py --setup-runtime-inventory-v5',v5)
+            self.assertIn('ImageOS="$ImageOS" ImageVersion="$ImageVersion"',v5)
+            self.assertNotIn('--setup-runtime-inventory-v5',route)
+    suite=unittest.defaultTestLoader.loadTestsFromTestCase(Tests)
+    result=unittest.TextTestRunner(verbosity=1).run(suite)
+    assert result.wasSuccessful(),'pure image diagnostic controls failed'
+    print(json.dumps({'testOnly':True,'tests':result.testsRun,'network':False,
+                      'installer':False,'guest':False,'pass':True}))
+
+
 if __name__=='__main__':
-    if sys.argv[1:]==['--setup-v5-only']:setup_v5_controls()
+    if sys.argv[1:]==['--image-env-diagnostic-only']:image_env_diagnostic_controls()
+    elif sys.argv[1:]==['--setup-v5-only']:setup_v5_controls()
     elif sys.argv[1:]==['--setup-v4-only']:setup_v4_controls()
     elif sys.argv[1:]==['--staged-runtime-only']:staged_runtime_controls()
     elif sys.argv[1:]==['--node-stage-only']:node_stage_controls()

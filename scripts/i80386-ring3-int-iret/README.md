@@ -1345,3 +1345,36 @@ This source change authorizes no label application by itself. Require every
 enabled final-head source check and separate external review of one fresh v5
 metadata request before its one event. Guest and compiler entries stay false;
 the consumed v4 failure and event remain untouched.
+
+## Image environment diagnostic v1 (inactive source candidate)
+
+The first repaired v5 metadata event refused at the exact hosted image-label
+preflight before status, helper, archive, policy, or guest work. Its original
+retains the refusal but omits the service's actual `ImageOS` and `ImageVersion`
+values. The runner image line alone cannot identify which environment field
+failed. The consumed v5 event is not replayed.
+
+The distinct `x86-ring3-image-env-diagnostic-v1` route is disabled by a literal
+workflow guard and `IMAGE_ENV_DIAGNOSTIC_ENABLED = False`. A new exact-head,
+source-twelve-bound canonical request is carried in a separate strict base64
+repository variable with an independently selected SHA variable. Its distinct
+PR-body block carries only that 64-character SHA so older consumed blocks fit
+verbatim under the event-body cap. Both variables need external readback before
+any later one-shot activation. Its shell original records whether each
+field was present and its bounded value before forwarding. The root service
+uses the same `systemd-run` and `/usr/bin/env -i` forwarding topology as v5,
+including the exact `python3 -I -B` service startup flags. The separate shell
+and outside recorders use `-I -S -B`; they do not stand in for the service.
+The service records its actual dictionary, source/event facts and resource
+snapshot without comparing image labels or invoking setup. Missing, empty and
+different safe values are data. Unsafe or oversized values retain a bounded
+failure with no raw unsafe text. The outside original records the service exit
+and finite cgroup absence/presence; it does not mutate a policy or unit.
+
+The independent reader joins the two observations to a separately selected
+request/event/official job expectation. Its `officialJobAuthenticated`,
+`setupApproved`, `runtimeCandidateApproved`, and `actualGuestApproved` fields
+are always false. Official job and artifact admission remains external. No
+package status, helper, archive, installer, Node stage, QEMU or guest path is
+reachable from this diagnostic. The old v4/v5 guards, pins and failed originals
+remain intact.

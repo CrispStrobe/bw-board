@@ -45,3 +45,14 @@ applications, physical timing and performance remain outside this fixture's clai
 Product repairs
 need their own reviewed ownership scope. Preserve every original failure and
 keep raw evidence outside public documentation.
+
+### Image-label diagnostic candidate — 2026-10-24
+
+A selected v5 setup metadata attempt refused at its exact hosted image-label
+check before package acquisition or setup. The retained packet did not contain
+the service-observed image environment values, so the mismatch is unresolved.
+A separate disabled, source-bound diagnostic route is proposed to retain the
+shell and root-service `ImageOS`/`ImageVersion` values under the same forwarding
+topology, with an independent original reader and no setup or guest authority.
+Its future observation requires a fresh reviewed source and distinct official
+event; the consumed setup event is preserved.
