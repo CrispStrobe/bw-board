@@ -7331,12 +7331,16 @@ def host_baseline_controls():
             self.assertEqual(failed['firstFailure']['phase'],'earlier')
             self.assertEqual(failed['secondary'][-1]['phase'],'host-baseline-wire')
         def test_disabled_guard_precedes_host_edges(self):
-            self.assertFalse(p.HOST_BASELINE_ENABLED)
-            for mode in ('--host-baseline-shell-v1','--host-baseline-service-v1'):
-                with patch.object(p,'host_baseline_shell') as shell_edge,\
-                     patch.object(p,'host_baseline_collect') as service_edge:
+            self.assertTrue(p.HOST_BASELINE_ENABLED)
+            for mode in ('--host-baseline-shell-v1','--host-baseline-service-v1',
+                         '--host-baseline-outside-v1'):
+                with patch.object(p,'HOST_BASELINE_ENABLED',False),\
+                     patch.object(p,'host_baseline_shell') as shell_edge,\
+                     patch.object(p,'host_baseline_collect') as service_edge,\
+                     patch.object(p,'host_baseline_outside') as outside_edge:
                     self.assertEqual(p.dispatch_cli([mode],env),1)
                     shell_edge.assert_not_called();service_edge.assert_not_called()
+                    outside_edge.assert_not_called()
     result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
     assert result.wasSuccessful(),'pure baseline controls failed'
     print(json.dumps({'testOnly':True,'tests':result.testsRun,'network':False,'hostFiles':False,

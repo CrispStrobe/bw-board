@@ -8750,7 +8750,7 @@ def emit_image_env_diagnostic(result,emit=None,flush=None):
 
 
 # Distinct, data-only hosted baseline. Historical setup routes remain closed to it.
-HOST_BASELINE_ENABLED=False
+HOST_BASELINE_ENABLED=True
 HOST_BASELINE_MARKER=b'RING3_HOST_BASELINE_V1 '
 HOST_BASELINE_LABEL='x86-ring3-host-baseline-v1'
 HOST_BASELINE_JOB='host-baseline-v1'

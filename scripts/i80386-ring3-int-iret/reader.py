@@ -10043,7 +10043,7 @@ def consumed_v7_path_failure_audit(raw,external,outer_raw,cleanup_raw,shell_raw)
 
 
 # Independent, read-only baseline original audit. No producer imports.
-HOST_BASELINE_READER_ENABLED=False
+HOST_BASELINE_READER_ENABLED=True
 HOST_BASELINE_MARKER=b'RING3_HOST_BASELINE_V1 '
 HOST_BASELINE_JOB='host-baseline-v1'
 HOST_BASELINE_LABEL='x86-ring3-host-baseline-v1'

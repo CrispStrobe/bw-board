@@ -1597,7 +1597,8 @@ reader to the already retained originals without reacquiring them. No new
 event, native probe, package operation, QEMU or guest is part of this route.
 ## Read-only hosted baseline candidate
 
-The `host-baseline-v1` metadata job is disabled pending source review. It uses
+The `host-baseline-v1` metadata job is active as a source candidate and its
+one-shot event remains unselected. It uses
 a distinct one-shot request and label to observe the runner shell and bounded
 root service image fields, raw package status, ten selected helper files, three
 shell aliases, policy-file presence and outside unit termination. It runs no

@@ -6437,3 +6437,8 @@ service timeout and outside cleanup. A baseline original never grants setup,
 runtime, package, guest or image approval. Freeze the new source, pass all
 enabled exact-head checks, select at most one new event, acquire originals once
 and independently audit them before proposing any new setup admission policy.
+
+Source checkpoint, 2026-10-24: the read-only baseline metadata guard is
+enabled in the reviewed source candidate. Its one-shot event is unselected;
+all setup, runtime, image and guest approvals remain false. Exact-head source
+CI and an independent original-only audit still precede any setup policy.
