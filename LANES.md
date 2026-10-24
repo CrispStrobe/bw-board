@@ -6390,3 +6390,50 @@ separately scoped failure-only reader correction, a newly reviewed workload
 before any different paired event, actual host hardware identity capture,
 and an independently qualified optimization proposal. Preserve the original
 failure and the clean protected guest requirement.
+
+## Read-only hosted Ring 3 baseline — claim, 2026-10-24
+
+Owner: Codex x86 Ring 3, extending the existing PR645 lane. Own only
+`.github/workflows/i80386-ring3-int-iret.yml`,
+`scripts/i80386-ring3-int-iret/{run.py,reader.py,controls.py,README.md}`,
+this registry entry and `docs/X86-NEXT-LANES.md`. Merge this claim before
+implementation. Preserve all v4–v8 routes, schemas, source and request guards,
+caps, pins, original failures and one-shot events byte-for-byte; preserve the
+compiler and actual guest guards as false.
+
+The one selected v8 metadata attempt failed at its image-label preflight,
+before status, helper, archive, installer or runtime observation. Its shell and
+service reported `ubuntu24` / `20261023.334.3`; the official job's Runner Image
+block reported `ubuntu-24.04` / `20261012.334.1`. The unchanged failure reader
+retains this as a failed attempt with no setup, runtime or guest approval. The
+cause of the label disagreement is unestablished. Do not change the pinned
+image constant from either reported value or replay the consumed event.
+
+Add a **distinct read-only hosted baseline** label, job, request, body marker,
+packet schema, source guard and independent original reader. Bind one attempt
+to the exact owned repository, actor, source twelve, workflow bytes, head/tree,
+official event/job/artifact metadata and outside cleanup. Capture bounded raw
+shell and root-service `ImageOS`/`ImageVersion` fields, and compare those fields
+with the separately admitted official Runner Image log block. Record any
+discordance as data; neither source is an image-authentication shortcut.
+Do not assume the next setup job will receive the same image.
+
+Within a finite owned service, read only the exact `/var/lib/dpkg/status`
+bytes, selected regular helper file identities, bytes and readbacks, the three
+selected shell aliases, and whether the policy file already exists. Bound
+status input to 8 MiB, each helper to 2 MiB, the combined helper input to
+8 MiB, a canonical original packet to 4 MiB, and retained artifact input to
+8 MiB; refuse partial, changed, duplicate or over-limit observations. Preserve
+primary and secondary errors and finite outside cgroup facts. Parse the status
+with a bounded independent reader; report actual package counts and states as
+data, without requiring the old 1,211-row census or matching old helper/image
+pins. These caps are for the new route only.
+
+Do not run Node, helper binaries, package tools, archive GET, installer, QEMU,
+guest or other mutation in this route. Source mocks must cover valid and
+missing/mismatched image fields, official-log disagreement, status caps and
+parsing, helper alias/read/close drift, policy presence, source/event identity,
+service timeout and outside cleanup. A baseline original never grants setup,
+runtime, package, guest or image approval. Freeze the new source, pass all
+enabled exact-head checks, select at most one new event, acquire originals once
+and independently audit them before proposing any new setup admission policy.
