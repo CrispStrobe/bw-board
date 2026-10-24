@@ -5806,6 +5806,33 @@ native backend, sampler/provisioner or consumer changes are included. A product
 repair requires a separate reviewed ownership extension. No hardware IRQ, IOPL
 isolation, paging, task switch, general DPMI, full386DX/OS or timing claim.
 
+### Selected QEMU exact setup/runtime v4 — 2026-10-24
+
+Within the merged [selected-QEMU claim PR660](https://github.com/CrispStrobe/bw-board/pull/660),
+Codex x86 owns only `scripts/i80386-ring3-int-iret/{run.py,reader.py,controls.py,README.md}`,
+`.github/workflows/i80386-ring3-int-iret.yml`, this claim entry and
+`docs/X86-NEXT-LANES.md` for a new **v4** setup/runtime candidate. The historical
+source12 roster, selected Node/QEMU bytes, old v3 body/label/request/event,
+guest/compiler guards, caps and failures remain in force. The new v4 label,
+request, job and reader are distinct and initially disabled in source/workflow.
+
+The source pins fifteen signed archive selections and the observed runner
+image/status/helper values. A reviewed, externally selected payload/control
+witness is required in the canonical request before activation. The bounded
+transaction uses fixed local archives, `dpkg --no-triggers --unpack` then
+`--no-triggers --configure` in the fixed order, no apt resolver, Recommends,
+force flags or upgrades. It creates only an absent owned policy101 file and
+removes only its exact identity after a finite no-descendant census. A
+separately bounded outside cleanup handles a retained policy after service
+terminal; unknown ownership refuses deletion. Complete pre/post dpkg status
+bytes are retained as bounded compressed originals and parsed independently.
+Partial package/service effects and deferred host triggers remain explicit.
+Node staging, irreversible drop and the old
+selected runtime graph follow only clean setup and cleanup. A reader of one
+official original joins the event/source/setup/stage/graph facts; it grants no
+host-configuration, guest, physical timing or general OS approval. Only a
+separately reviewed hosted event after exact-head CI can qualify this path.
+
 ## Open-PR backlog reconciliation — 2026-10-18
 
 CLAIM — Codex root, branch `lane/pr-backlog-integration-20261018`, initial
@@ -5868,10 +5895,14 @@ runtime expectation v2, all eleven metadata probes and independent final stage,
 source, file and typed-empty Python-source readbacks. Its standalone reader
 retains `candidateReviewed=false` and `actualRunApproved=false`; it cannot
 approve an actual run. Eight full-chain mocked controls pass; 20 source mutations
-and 14 independent packet counterexamples are detected. New entry,
-observer and job guards remain false. Next independently review fresh source,
-runtime-selection policy, request/workflow and one distinct hosted metadata
-event; audit its originals and review the resulting complete runtime candidate.
+and 14 independent packet counterexamples are detected. The separate review
+candidate enables only the staged metadata entry, observer and job. Its
+phase-specific control preserves both disabled refusal paths; eight affected
+mocked controls pass. It targets the existing PR645 branch for coordination and
+does not change that branch or admit an event by itself. Require final exact-head
+CI and reviewed skips, then independently rebind source12, the fresh request,
+runtime-selection policy and executing workflow before one distinct metadata
+event. Retain and audit its originals once, then review the complete candidate.
 Actual guards remain false. Runtime-expectation and actual argv adoption are a
 separate explicit follow-up, with affected clean guest qualification and every
 enabled final-head check required before source merge. The linked contract
@@ -6017,6 +6048,26 @@ physical RTx claim is part of this capture. A separate narrow claim governs
 any follow-up implementation.
 
 
+### Selected QEMU v4 activation candidate — 2026-10-24
+
+**Historical, consumed attempt:** the selected v4 event failed during package
+unpack. Its original failure is retained; never repeat its label or treat the
+following activation snapshot as permission for another v4 event. The current
+continuation uses a distinct reviewed diagnostic and request.
+
+This follow-up enables only the distinct setup/runtime **metadata** entry, reader
+and label job from the reviewed disabled source candidate in PR645. Guest and
+compiler execution remain disabled. The exact request, source12, selected bytes,
+payload witness, package/helper/status/image policy and resource/output limits
+remain mandatory. A runner that differs from the selected finite observation
+refuses before archive acquisition or package changes; no future image match is
+promised. Source enablement is not setup, runtime-candidate or guest approval.
+Require all final-head source checks and separate external review of one fresh
+v4 request and event before applying its distinct label once. Preserve consumed
+v3 requests/events and all first failures. Independently acquire and audit the
+new official originals once, including raw status and outside cleanup.
+
+
 ## Ring3 selected-QEMU same-job guest continuation — claim, 2026-10-24
 
 Owner: Codex x86 ring3. Base `ef199ba9ef3a2a8adec06751510499fc9aabbe68`;
@@ -6085,6 +6136,21 @@ admission. Acquire each official original once and audit it with a standalone
 reader before a source merge. No guest, setup success or approval is inferred
 from this claim.
 
+The first v5 implementation candidate adds only the disabled repaired
+metadata route and its independent original reader inside the owned seven
+paths. It adds the selected `/sbin` alias and exact `start-stop-daemon`,
+`ldconfig`, and `ldconfig.real` live helper readback before archive GET, plus
+the dedicated installer PATH. Its pure controls do not qualify a hosted
+transaction or runtime graph. Source review, exact-head checks and external
+one-event admission remain pending; the separate v5 guest route has no source
+implementation yet.
+
+The v5 metadata activation candidate changes only its three guarded
+producer/reader/job selectors and corresponding pure controls and status
+prose. Its own labeled event still requires a separately selected request,
+source and official job; no guest route or prior label is activated. A new
+runner may refuse on image, status, helper or resource drift before any GET.
+
 ## Ring3 selected-QEMU observed-image v6 metadata — claim, 2026-10-24
 
 Owner: Codex x86 ring3. This narrowly amends the merged
@@ -6130,6 +6196,11 @@ metadata setup and runtime graph** can become a candidate for a later,
 separately claimed and qualified same-job guest adapter. The v5 guest route
 remains unimplemented; no compiler or guest event is selected here.
 
+The first v6 metadata implementation is enabled but unselected. It adds a distinct
+metadata-only route and standalone reader with shell and service image-field
+originals; pure mock controls provide no hosted setup or guest result. Source
+review and exact-head checks, then an externally selected request and one original-only
+metadata event are still required.
 
 ## Ring3 selected-QEMU v7 metadata and v6 failure audit — claim, 2026-10-24
 
@@ -6191,6 +6262,16 @@ one fresh v7 request/event, acquire each original once, and independently
 audit an entire setup and runtime graph before any separate same-job guest
 adapter is considered. No approval follows from this claim.
 
+Dated pre-v7-event implementation status: [PR683](https://github.com/CrispStrobe/bw-board/pull/683)
+merged the claim. The source candidate for [PR645](https://github.com/CrispStrobe/bw-board/pull/645)
+adds the distinct v7 fifteen-probe metadata route and the separate consumed-v6
+negative-only reader. The v7 workflow, producer and reader are active metadata
+source candidates; they then required exact-head CI and external event selection.
+Pure mock controls, including
+coherent order, package-version and clipped-prefix cuts, are source checks only.
+The consumed v6 event remains a failure. This paragraph predates the later
+consumed v7 failure recorded in the v8 claim below. No guest was qualified.
+
 ## Ring3 selected-QEMU v8 package path admission — claim, 2026-10-24
 
 Owner: Codex x86 ring3, continuing the existing PR645 source lane. Base
@@ -6245,6 +6326,27 @@ official original once, and independently audit the **complete** setup,
 runtime, Node and QEMU graph with official event/job/artifact/source joins.
 Only then consider a separately claimed truthful same-job setup-plus-guest
 adapter. This claim grants no setup, guest, strict 386DX or performance result.
+
+Implementation checkpoint: claim PR684 merged as `606b7640`. The isolated
+PR645 source candidate adds an initially inactive v8 metadata route and
+standalone positive/failure reader with only the three exact selected DATA
+path exceptions. Pure mocked controls are source checks. The consumed v7
+failure and old refusal remain unchanged; no v8 event or guest was selected.
+
+### V8 metadata activation source checkpoint — 2026-10-24
+
+The composed source enables only the distinct v8 metadata producer, reader
+and job guards. The compiler and actual guest guards remain false. The
+combined pure checks cover the connected mocked observer/inventory entry,
+complete original log and six ZIP roles, selected DATA readback, coherent
+packet mutations and the separate consumed-v7 failure-only reader. Raw event
+JSON keeps its original bytes and uses bounded duplicate-safe finite-number
+validation. These controls do not qualify an installation or runtime graph.
+
+Every enabled final-head source check must pass before one separately admitted
+v8 metadata event. Retain and independently audit its official originals once.
+Only a complete graph can support the separate same-job authored guest route;
+no v8 request, label or event has been selected by this source checkpoint.
 
 ## Ordered ordinary-JS 16-bit scalar read — claim, 2026-10-24
 
@@ -6335,3 +6437,15 @@ service timeout and outside cleanup. A baseline original never grants setup,
 runtime, package, guest or image approval. Freeze the new source, pass all
 enabled exact-head checks, select at most one new event, acquire originals once
 and independently audit them before proposing any new setup admission policy.
+
+Source checkpoint, 2026-10-24: capture source `8b8c108d` ran the one-shot
+[read-only baseline job](https://github.com/CrispStrobe/bw-board/actions/runs/40101137447).
+Its label is consumed and must not be replayed. The original reader refused
+empty first lines of multiline `Conffiles:` fields. Separate corrected auditor
+`a41bd237` accepted the **same retained originals** and counted 1,211 status
+rows. An independent byte review confirmed all ten selected helper hashes
+match the held V8 helper pins.
+This did not run a package tool, installer, QEMU or guest, authenticate an
+image, or grant setup/runtime approval. Exact-head CI for the corrected
+auditor is pending. Any setup metadata authorization needs a separate claim
+and must preserve existing pins and failure records.

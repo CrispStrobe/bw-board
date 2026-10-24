@@ -2928,8 +2928,9 @@ HEAD/tree, workflow/run and invoker. This verifies only a completed stage
 observation and its explicit boundary refusal. See the
 [fixture README](../scripts/i80386-ring3-int-iret/README.md) for schemas and
 mocked control commands. The separate complete-inventory source candidate below
-now supplies the next metadata path; no job is activated. Independently review
-its fresh immutable source, request and official event before one observation.
+now supplies the next metadata path. This review candidate enables only that
+metadata source/job; it admits no event. Independently review its fresh immutable
+source12, rebuilt request and executing workflow before one observation.
 Runtime-expectation and actual argv adoption remain a separate follow-up after
 that metadata result.
 
@@ -2950,8 +2951,12 @@ probes. Executables, libraries and all generic file reads keep their positive
 extent requirements. Full-inventory source controls must reach all eleven
 fixed metadata probes, then independent final readback and the standalone
 original reader; coherent source/event/stage/process/census mutations must
-refuse. All new entry, observer and job guards stay false during source work.
-The later actual runtime-expectation and argv adoption remain separate.
+refuse. Initial source work kept the metadata guards false; this review
+candidate enables only the staged metadata entry, observer and job. Actual and
+older-stage guards remain false. Final exact-head CI and individually reviewed
+skips, a fresh request/source12 binding, executing workflow proof and separate
+event admission remain required. The later actual runtime-expectation and argv
+adoption remain separate.
 
 The complete-inventory original-only audit is:
 
@@ -3094,6 +3099,48 @@ admitted clean guest/oracle run. Keep those gates distinct from this observer.
    optimization claim and paired semantic/performance qualification. The model
    charges alone grant no measured speedup, physical RTx or hardware frequency.
 
+## Exact selected-QEMU setup/runtime candidate — 2026-10-24
+
+Under merged [claim PR660](https://github.com/CrispStrobe/bw-board/pull/660),
+the new [v4 source contract](../scripts/i80386-ring3-int-iret/README.md#exact-selected-qemu-setupruntime-v4-candidate--2026-10-24)
+adds a distinct, initially inactive hosted setup/runtime path. It preserves
+the consumed v3 event, source12, selected Node/QEMU pins, old caps, failed
+absent-tool original and disabled actual/compiler routes. The v4 request
+requires exact signed fifteen-archive selection, the fresh image/status/helper
+pre-state and a separately reviewed payload/control witness. A failed or
+unknown witness must refuse before acquisition or setup.
+
+The finite setup candidate uses one exact archive per row, a new owned
+snapshot archive per row, a new owned policy101 service gate, no-trigger
+unpack/configure in fixed order, and records partial mutations, retained raw
+pre/post package status, selected states and deferred host triggers. Policy
+removal requires a finite no-descendant census or separate terminal cleanup.
+It permits Node staging, irreversible drop and the existing metadata graph
+only after clean allowed setup and exact owned-policy cleanup. `installed` or
+pending trigger state does not establish complete host configuration. Source
+controls use injected edges; the workflow and source entries stay false until
+separate review. Before any hosted event, freeze the reviewed payload witness,
+all exact-head checks, event/request/source/workflow selection, resource and
+service policy, and the official one-shot admission. Acquire the official
+original once, audit it with the independent v4 reader and separately join
+the setup log's image fields and producing job. Clean guest/oracle execution
+remains a later, distinct qualification; no actual 386 or physical timing
+result follows from this metadata candidate.
+
+### Selected QEMU v4 activation candidate — 2026-10-24
+
+This follow-up enables only the distinct setup/runtime **metadata** entry, reader
+and label job from the reviewed disabled source candidate in PR645. Guest and
+compiler execution remain disabled. The exact request, source12, selected bytes,
+payload witness, package/helper/status/image policy and resource/output limits
+remain mandatory. A runner that differs from the selected finite observation
+refuses before archive acquisition or package changes; no future image match is
+promised. Source enablement is not setup, runtime-candidate or guest approval.
+Require all final-head source checks and separate external review of one fresh
+v4 request and event before applying its distinct label once. Preserve consumed
+v3 requests/events and all first failures. Independently acquire and audit the
+new official originals once, including raw status and outside cleanup.
+
    The [current source candidate](I80386-CURRENT-AT-COST.md) now prepares four
    serial timing/profile children under that merged claim. Its hosted capture
    job awaits a separately admitted event. Five-operation pure controls and mocked original readers
@@ -3140,6 +3187,18 @@ then require fresh affected own-fixture hosted JS/QEMU qualification. Each
 official run/job/step/artifact and original set is admitted and audited once.
 Source controls alone approve neither route.
 
+The first repaired v5 **metadata** source candidate is disabled. It records
+the selected three additional helper bytes and `/sbin` alias before download,
+uses `/usr/sbin:/usr/bin:/bin` only for new installer children, and binds a
+new request, event, job and standalone original reader. It needs source
+review, exact-head checks and one separately admitted official observation.
+The guest route still awaits that complete, independently reviewed graph.
+
+The v5 metadata activation candidate enables only the exact new producer,
+reader and labeled job. It still needs all final-head checks and an externally
+admitted fresh request/event, followed by one independently audited official
+metadata original. The guest path remains disabled pending a complete graph.
+
 ### Observed-image v6 metadata follow-up — 2026-10-24
 
 The single v5 metadata event refused at image-label preflight before archive
@@ -3163,6 +3222,12 @@ then require full exact-head source CI, externally selected one-shot v6 event
 and independent original audit. Prepare a separate same-job guest adapter
 only after a complete v6 setup and runtime graph is admitted.
 
+The first v6 source candidate enables its metadata job and independent
+reader. It records the shell image fields and service preflight prefix before
+the existing exact-image comparison. Pure mock controls include a complete
+setup/runtime graph original and a failed preflight original; they do not
+establish hosted setup or guest qualification. No v6 event is selected. External source, event, job,
+original and runtime graph admission remain pending.
 
 ### V6 failure retention and a distinct v7 metadata attempt — 2026-10-24
 
@@ -3190,6 +3255,15 @@ docs-only claim before source implementation. Exact-head source CI, one fresh
 externally selected v7 event, one acquisition of each official original and a
 standalone complete-graph audit are required before any same-job guest work.
 
+The claim merged as [PR683](https://github.com/CrispStrobe/bw-board/pull/683).
+The [PR645](https://github.com/CrispStrobe/bw-board/pull/645) source candidate
+enabled the separate v7 fifteen-probe metadata route and a negative-only
+reader for the consumed v6 failure. Its pure controls check per-package path
+projection, fixed probe order, exact five package versions, bounded partial
+failure and cleanup. The v7 job and reader were enabled only for the distinct
+admitted metadata route. This paragraph predates the later consumed v7 failure described below.
+Neither reader grants setup or guest approval.
+
 ### Consumed v7 package-path refusal and a distinct v8 metadata claim — 2026-10-24
 
 The one selected [v7 metadata run](https://github.com/CrispStrobe/bw-board/actions/runs/40085495608)
@@ -3214,6 +3288,28 @@ Full exact-head source CI, a separately admitted one-shot v8 metadata event,
 one official acquisition per original and an independent complete-graph
 audit must precede any separately claimed same-job guest work. Compiler and
 actual guest guards remain false.
+
+Claim PR684 merged at `606b7640`. A distinct v8 source candidate is present
+under the existing PR645 lane with metadata guards initially false. Its
+selected-package exception is limited to the three reviewed DATA names above;
+the old v7 path grammar and consumed failure stay held. Source controls do not
+qualify a complete runtime graph. Exact-head CI, external one-shot selection,
+once-only originals and independent graph admission remain next.
+
+### V8 metadata activation source checkpoint — 2026-10-24
+
+The composed source enables only the distinct v8 metadata producer, reader
+and job guards. The compiler and actual guest guards remain false. The
+combined pure checks cover the connected mocked observer/inventory entry,
+complete original log and six ZIP roles, selected DATA readback, coherent
+packet mutations and the separate consumed-v7 failure-only reader. Raw event
+JSON keeps its original bytes and uses bounded duplicate-safe finite-number
+validation. These controls do not qualify an installation or runtime graph.
+
+Every enabled final-head source check must pass before one separately admitted
+v8 metadata event. Retain and independently audit its official originals once.
+Only a complete graph can support the separate same-job authored guest route;
+no v8 request, label or event has been selected by this source checkpoint.
 
 ## Ordered 16-bit scalar read candidate
 
@@ -3297,3 +3393,62 @@ or package transaction. The old image/status census is not assumed for the
 new job. No Node, helper, installer, QEMU or guest execution belongs to this
 route. Implement only after the claim merges, then require exact-head source
 CI and a separately reviewed one-shot original audit before any setup proposal.
+Source checkpoint: capture source `8b8c108d` completed the one-shot
+[read-only baseline run](https://github.com/CrispStrobe/bw-board/actions/runs/40101137447).
+Its label is consumed; no replay is authorized. The original reader refused
+empty first lines of multiline `Conffiles:` fields. Separate corrected
+auditor `a41bd237` accepted those same retained originals and counted 1,211
+status rows. An independent byte review confirmed all ten selected helper
+hashes match the held V8 helper pins. No package tool, installer, QEMU or guest
+ran; no later runner image is authenticated. The selected V8 attempt remains
+failed; this read-only observation adds no setup attempt.
+Setup/runtime/guest approvals are false. Exact-head CI for the auditor is
+pending. Next is separately claimed setup metadata authorization that
+preserves existing pins and failures.
+
+### Conditional setup metadata and authored guest handoff — unclaimed
+
+**1. Distinct setup metadata authorization.** Merge a new ownership claim
+before changing the [Ring 3 producer, reader and controls](../scripts/i80386-ring3-int-iret/README.md)
+or its workflow. Add a V9 request, PR-body marker, label, job and independent
+original reader; keep the consumed V8 event, request and reader outcomes
+unchanged. The pre-event request must bind source12, head, tree, workflow and
+attempt-one policy, not future run or job IDs. Preserve all fifteen selected
+archive rows, raw status SHA, ten helper hashes and aliases, signed DATA
+payload witnesses, policy101, no-trigger order and existing caps. Choose an
+explicit closed policy for observed image labels. The root service
+checks its own label and freshly reads exact status and helper fingerprints
+before the first archive GET. The independent reader later joins bounded shell
+and service observations, requires their agreement for a positive setup grade,
+and reports any disagreement with the official Runner Image block as diagnostic
+data, not image authentication. `admit_setup_v8_request`,
+`admit_setup_v8_event`, `setup_v8_sequence`, `SetupV8Host` and
+`setup_v8_entry` in `run.py` show the current seam; a versioned adapter may
+reuse shared operations only if V8 defaults and its failed-reader verdict stay
+unchanged. `verify_setup_v8_log` in `reader.py` remains V8-only. Source
+controls must cut wrong event/source, unknown root label, changed pin,
+archive, policy, stage, graph and terminal cleanup, with a manufactured
+original independently decoded. Require every enabled exact-head check, one
+separately admitted official event and one acquisition per original. No compiler
+or guest activation belongs to this metadata task.
+
+**2. Same-job authored guest, only after a complete graph.** Claim a separate
+actual route after independent setup, installed-state, Node and QEMU graph
+admission. A proposed 35-minute job uses two serial owned services: setup
+finishes and its unit reaches a terminal census; then a fresh actual service
+admits that same job's setup originals and current runtime graph before any
+guest. `NodeStageCopy.copy` and `SetupV8Host.stage_drop_inventory` in `run.py`
+already consume one exclusive staged Node copy and exec the inventory reader.
+The second service must read back that copy and record; the first process does
+not return to root or stage Node again. Reuse internal boundaries in
+`controller_execute`, `RuntimeEntryComposition`, `finalize_runtime_packet`
+and `reader.py`'s `v8_packet_predicates`, under a truthful new actual event and
+reader. Retain the fixed JS then QEMU descriptors, all twenty architectural
+packet roles, source/runtime before-and-after reads, serial child limits,
+original first/secondary failures and outside cleanup. Pure cuts must reject
+an incomplete graph, a second copy, changed input/source, missing packet role,
+child failure and populated or uncertain terminal cgroup. A 660-second setup
+service plus a separate service enclosing the existing 600-second controller
+is a **budget proposal**, not measured sufficiency. Require fresh exact-head
+source checks and independently audited hosted originals before any result.
+This fixture grants no strict 386DX, physical RTx or full-OS claim.

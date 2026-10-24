@@ -488,7 +488,7 @@ resource operation or guest ran in these controls. Bounded read loops cannot
 preempt blocking kernel calls; the separately reviewed job backstop is still
 required.
 
-The fixed CLI now recognizes exactly one of eight modes, without option
+The fixed CLI now recognizes exactly one of eleven modes, without option
 abbreviations. The static source constant `ACTUAL_ENTRY_ENABLED=False` refuses
 every mode except `--controls` before reading its environment, checking IDs,
 constructing a handler or opening a resource. Neither a plan field, command
@@ -502,10 +502,13 @@ status through `SystemExit`.
 | `--prepare-admitted-generated` | Requires the actual dropped invoker in the preparation sibling; stdout contains only the existing original GEN/PRE frame. |
 | `--bootstrap` | Starts as root, validates entry facts, migrates itself into the controller leaf, drops IDs/groups/capabilities, then executes the fixed `--controller` descriptor. Any return from bootstrap is failure. |
 | `--controller` | Starts dropped in the controller leaf; requires both complete local capture facts and an empty authoritative failure object. |
-| `--controller-runtime-admitted` | Explicit dropped controller selection. Reads the separately pinned installed request/runtime input, hashes the entire admitted stable superset before any probe factory, and joins unchanged raw runtime observations. Closed preparation/bootstrap delivery and final original-reader integration remain pending. |
+| `--controller-runtime-admitted` | Explicit dropped controller selection. Gates the complete selected stable runtime before probes, retains process originals and rereads the superset after probes and guests. |
+| `--prepare-runtime-admitted` | Starts dropped in the preparation sibling; joins the plan to the prior request and gates the full selected runtime before fixed Node generation and after PRE capture. |
+| `--bootstrap-runtime-admitted` | Starts as root; validates entry/request/source, migrates, drops IDs and executes the runtime-admitted controller with the prior request pin and no SUDO fields. Any return fails. |
 | `--hosted-actual` | Performs fresh fixed setup, admitted preparation, outside observation and dropped finalization. Its external event and runtime authority remain pending. |
 | `--install-hosted-envelope` | Disabled input-installation scaffold. Even complete installation returns nonzero before resource setup or guests because independent runtime, observer and reader gates remain pending. |
 | `--hosted-prerequisites` | Disabled installation/setup/independent-observer/dropped-collector path. Its new reader can admit prerequisite observations only; missing full runtime admission still returns nonzero before preparation, probes or guests. |
+| `--hosted-runtime-actual` | Disabled complete V8 source route: actual-job request admission, stable runtime gate, fresh setup, independent observer, versioned execution, outside terminal collection and dropped standalone execution reader. Official qualification is separate. |
 
 Preparation and hosted success require `pass` to be the boolean `true` and
 the same authoritative `FirstFailure` to have neither primary nor secondary
@@ -648,12 +651,11 @@ unchanged. These new prerequisites are not silently accepted by V7 or emitted
 as a qualified original bundle.
 
 The legacy install-only endpoint still returns failure before resource setup.
-The new prerequisite endpoint below connects independent observation and
-collection. Full runtime admission, versioned preparation/controller delivery,
-complete guest-provenance reader integration, executing-workflow admission,
-official installation/event API joins and a separately authorized hosted run
-remain required. The disabled 15 minute job supplies no measured backstop or
-guest qualification.
+The prerequisite endpoint below connects independent observation and collection.
+The later V8 source route adds stable runtime admission and closed execution
+delivery. Independently reviewed runtime inputs, official event/API joins and
+one authorized hosted run remain required. The disabled 15 minute job supplies
+no measured backstop or guest qualification.
 
 `--hosted-prerequisites` connects the admitted input installer to fresh
 `HostedSetupOps`, then launches the separate fixed command
@@ -757,12 +759,14 @@ The standalone reader implements the stable expectation independently, without
 producer imports. Its new explicit stable-policy entry preserves the existing
 runtime.v2 raw predicates and default original equality. Raw `ldd` streams stay
 originals; independently parsed paths join the pinned graph, while ASLR addresses
-are not portable identity pins. The new controller selection is guarded and
-does not yet supply the complete preparation/bootstrap/finalizer V8 chain.
+are not portable identity pins. The guarded V8 route below connects preparation,
+bootstrap, finalizer and independent original-reader delivery.
 
 A separate metadata-only `runtime-inventory` job and reader endpoint
-`--inventory-runtime` provide a concrete candidate acquisition path. Both the
-job literal and independent source constant `INVENTORY_ENTRY_ENABLED` are false.
+`--inventory-runtime` provide a concrete candidate acquisition path. The
+metadata-only job literal and `INVENTORY_ENTRY_ENABLED` switch are enabled.
+The closed label and separately reviewed request pin are still required;
+actual execution remains disabled.
 The job has a literal 15 minute timeout, uses the existing fixed checkout and
 Node setup actions, and installs no QEMU or fallback packages. It runs without
 sudo, resource creation or guests. A historical tool mismatch refuses before
@@ -821,7 +825,819 @@ Seventeen targeted runtime gate/inventory mutations are detected, including
 pre-factory hashing, graph joins, retained mismatch facts, repeated observation,
 raw maps/census/process joins, stream caps and no signaling after leader reap.
 
-The complete approved runtime graph is still absent. Closed versioned execution
-delivery, V8 originals and the separately reviewed actual event remain required.
+The complete approved runtime graph is still absent. Separately reviewed
+inventory and actual events remain required.
 No inventory event, runtime probe, resource operation or guest execution is
 qualified by these inert controls.
+
+The disabled `actual` job now selects the concrete V8 route. It has its own
+fixed Node setup step, using the existing action commit and version. The
+repo-existing upload-artifact commit `ea165f8d65b6e75b540449e92b4886f43607fa02`
+retains only the existing export directory as `i80386-ring3-int-iret-originals`,
+with hidden files excluded, one-day retention and missing files treated as
+error. It runs even after an earlier step fails: an absent export remains an
+upload failure, never an invented complete packet. The literal 15 minute
+budget includes setup and upload. Job and source activation guards remain false.
+
+`RuntimeInstaller` admits only the closed `actual` job; legacy installer
+selection stays unchanged. Root validates the prior request/source/runtime
+bytes and gates the entire stable graph before setup/preparation factories.
+Fresh setup precedes the independent observer, whose terminal must precede
+preparation. A fresh runtime-original sibling directory uses held nofollow
+directory descriptors and descriptor ownership assignment, with no recursive
+ownership changes, adoption, deletion or retry.
+
+Dropped preparation checks actual IDs before JSON, joins the delivery plan to
+the prior request source, gates the entire selected runtime before fixed Node
+generation and rereads it after PRE. The bootstrap preserves root migration,
+drop and exec order. Its clean controller environment deliberately adds the
+prior request digest and removes SUDO fields. Root retains GEN/PRE as opaque
+bytes. Phase.v4 records the new descriptor; phase.v3 and V7 stay separate.
+Controller runtime originals retain all eleven process records and terminal
+censuses, plus full readbacks before probes, after probes and after guests.
+Runtime.v2 raw equality and existing architecture predicates remain fixed.
+
+After genuine controller terminal observations, the outside owner drops before
+retaining or decoding originals. The collector records actual UID/GID,
+capability and membership observations, platform event/job/workflow context,
+first errors and partial setup/installation facts. Unknown invoker or failed
+drop keeps partials in memory and cannot publish root originals. Publication
+does not retry a failed drop. The prerequisite reader derives preparation
+identity from the independent observer. A second fixed dropped process invokes
+reader.py `--admit-hosted-runtime`, reads closed readonly original and packet
+rosters through bounded descriptors, and checks the complete V8 chain. Its
+verdict distinguishes `guestPredicatesObserved=true` and `officialQualified=false`.
+
+New runtime originals use separate sibling sinks. The
+`RING3_V8`/`bw.ring3.execution-log.v8` stream combines phase, installation,
+observer, runtime and reader originals under the same aggregate 5 MiB raw,
+8 MiB encoded, JSON and chunk caps. The positive roster has 22 originals,
+including `execution.outer.json` and the final reader process. Failure-only
+entry originals can be retained but cannot qualify. No extra becomes a sixth
+old internal name or a twenty-first packet role. New-mode fields are validated
+before local projections select held finite provenance rules; projected data
+is never emitted as an original. The packet still has exactly twenty roles.
+
+The independent official V8 audit is:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/reader.py \
+  --execution-log retained-actual.log --artifact retained-originals.zip \
+  --external-admission reviewed-execution-expectation.json
+```
+
+Its external `bw.ring3.execution-official-expectation.v8` contains exactly
+`schema`, `runId`, `attempt`, `head`, `tree`, `requestSha256`, `invoker`,
+`official`, `workflowSha`, `logBytes` and `logSha256`. `official` keeps the
+existing closed event/job/step/artifact admission fields. The prior request
+transitively selects source12 and immutable runtime input; the dynamic plan
+hash supplies delivery integrity. The official workflow revision, source bytes,
+one attempt, successful required steps, artifact and log originals must be
+admitted separately. An online verdict cannot authenticate their official origin.
+
+Seven node-free delivery controls cover the mocked CLI/collector path,
+independent provenance, coherent rehash conflicts, actual versus legacy job
+selection, bootstrap descriptors, pre-generator refusal, readonly descriptor
+closure and preserved first errors. Architectural predicates are an explicit
+separate boundary in those routing controls. `--delivery-full` runs only the
+existing pure Node fixture byte builder, then the unmocked twenty-role
+architecture and V8 original-log/artifact reader over manufactured observations.
+It executes no CPU or QEMU guest:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --delivery-only
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --delivery-full
+```
+
+The selected graph does not authenticate interpreter/system startup before
+admission. Python `-I -B` startup, fixed source-metadata Git processes,
+checkout/setup actions, sudo and env remain trusted hosted-platform boundaries.
+Git descriptors and raw streams remain closed and retained. Later observations
+supply no whole-host executable authenticity claim.
+
+Current hosted QEMU bytes/package availability and pre-enabled parent
+cpu/memory/pids controllers remain external hard blockers. There is no QEMU
+installer, apt fallback or parent-controller repair. Historical mismatch,
+missing controllers and graph/census cap overflow refuse and require explicit
+review. Node setup or inventory on another VM does not establish actual-VM
+availability. Independently reviewed runtime inventory/publication, final
+source12/event admission, actual guard activation and one affected clean hosted guest
+qualification remain outstanding.
+
+Failed metadata inventory can additionally retain `inventory.rejectedFiles`.
+Each rejected-file record contains the bounded selected path, canonical-path
+check, available named and held stat observations in the existing eight-field
+metadata order, bytes read, close outcome, exact first error and secondary
+readback or close errors. A stat observation precedes the unchanged regular-file,
+positive extent, 256 MiB and non-group/world-writable mode guard. A refused
+guard permits no file-content read or tool execution. These failure-only facts
+do not populate admitted files, produce a candidate or change successful
+inventory and runtime-expectation schemas. Nine mocked runtime controls include
+regularity/mode/extent refusal, open/read/readback/close errors and the enabled
+CLI's retained failed original; no real resource or guest operation is involved.
+
+The additive Node-stage checkpoint addresses the observed cache mode0777
+without changing the runtime mode guard. Its new `node-stage-inventory` job,
+`NODE_STAGE_ENTRY_ENABLED` and independent `NODE_STAGE_OBSERVER_ENABLED` guards
+are all false. Existing metadata request v1 and its enabled inventory route,
+actual guards, historical Node/QEMU pins, V8, twenty packet roles and caps stay
+unchanged. This checkpoint executes no runtime probes or guests.
+
+A separately selected request digest is transported as
+`BW_RING3_NODE_STAGE_REQUEST_SHA256`; the variable alone is not approval.
+The immutable labeled event contains exactly one `BW_RING3_NODE_STAGE_V2` block
+with a canonical bytes/SHA256/base64 wrapper. Its
+`bw.ring3.inventory-request.v2` has the previous seven request fields plus
+`nodeStage`: fixed cache `source`, fixed `destination`
+`/run/bw-ring3-node-22.23.3/node`, `owner=[0,0]`, integer `fileMode=365` and
+integer `directoryMode=365`. Selection remains the historical124827920 bytes
+and SHA256 `fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48`.
+The closed actor/repository/PR/head/tree/workflow/attempt-one joins use label
+`x86-ring3-node-stage-inventory` and job `node-stage-inventory`. Fresh source12
+and request expectations must be reviewed after the source commit.
+
+The root `--stage-inventory-node` entry establishes a positive invoking UID/GID,
+reads the bounded event and admits actual Git HEAD/tree plus all twelve live
+source files before staging writes. Held root-owned nonwritable `/` and `/run`
+ancestors lead to one exclusive0700 directory and0600 output. The cached Node
+is untrusted data: staging never executes or chmods it. Bounded streaming checks
+length, ELF prefix, historical SHA256 and held/named source identity. Independent
+reopen and complete hash/readback precede0555 file publication. The root-owned
+readonly `installation.original.json` retains exact request/event originals,
+Git process/stream observations, source manifest, raw source/output stat facts
+and copy hashes. Its declared boundary precedes directory publication and
+ancestor close; it is not a terminal success record.
+
+The copy refuses short writes; `bytesCopied` counts only returned write bytes,
+while `sourceBytesRead` records acquired data. An exception without a write
+return leaves confirmed bytes unchanged and marks uncertainty. Publication
+attempts and confirmed returns are separate facts; available post-error stats,
+primary/secondary failures and close errors survive. No partial output is
+adopted, deleted or retried. A failure after executable publication reports that
+state or uncertainty. After a verified irreversible drop, bounded failure output
+can include admitted input originals and copy partials. Unknown or failed drop
+suppresses acquired stdout and stderr while preserving in-memory failures.
+
+Successful root staging drops and execs only the fixed Python reader
+`--observe-staged-node`. Before reading JSON, this separate implementation derives
+actual UID/GID/groups, zero capabilities and outside-tree membership. It
+independently reads root-owned0555 ancestors and Node, the0444 installation
+original and live source12 through bounded nofollow descriptors, checking full
+hashes and held/named identity. Even a complete observation has
+`stageObserved=true`, `runtimeCandidate=false`, `qualified=false` and a deliberate
+nonzero refusal: full staged runtime inventory and actual argv mapping remain
+unconnected. Python startup, the fixed source Git processes, checkout/setup
+Node actions, sudo and env remain trusted hosted-platform boundaries. No cache
+hash or staged availability has yet been observed on a hosted VM.
+
+The disabled job retains only observation JSON and controller stderr using the
+existing upload action pin, one-day retention and hidden-file exclusion, within
+its literal15 minute budget. It never uploads the executable. A separately
+admitted official run/job/workflow/artifact remains required; an empty export
+or missing artifact is not a positive record. Job deadlines do not preempt
+blocked kernel operations in the copy loop.
+
+The standalone original-only audit is:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/reader.py \
+  --node-stage-observation observation.original.json \
+  --stage-expected reviewed-stage-expectation.json
+```
+
+The external `bw.ring3.node-stage-expectation.v1` closes `schema`,
+`requestSha256`, `head`, `tree`, `runId`, `workflowSha`, `invoker` and
+`observation` (exact bytes/SHA256). It checks a completed stage observation and
+its deliberate boundary refusal; it cannot approve a runtime candidate or an
+actual run. Official provenance must be admitted independently before these
+inputs are selected.
+
+Seven `--node-stage-only` controls exercise real source admission/copy/drop and
+the separate observer CLI/export/original reader with every OS edge mocked.
+Compact authored ELF-prefix bytes replace the Node pin only inside the control
+context; production historical pins are asserted and restored. Cases cover
+pre-write refusal, foreign parents, existing partials, regularity/link/hash
+failure, independent reopen drift, short/unknown writes, late publication and
+close failures, typed policy and unverified-drop publication suppression. They
+qualify source behavior only. Full staged graph admission, explicit actual
+mapping, separately reviewed activation and clean guest qualification remain
+required.
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --node-stage-only
+```
+
+The separate staged-runtime inventory route now connects copying to a complete
+metadata candidate. The prior stage-only observer and its explicit boundary
+refusal stay unchanged. This review candidate enables only
+`STAGED_RUNTIME_ENTRY_ENABLED`, `STAGED_RUNTIME_INVENTORY_ENABLED` and the
+`staged-runtime-inventory` job guard. Actual execution and the older stage-only
+route remain disabled. No event is admitted by these source literals. After
+final exact-head CI and reviewed skips, independently bind the complete source12,
+fresh v3 request and executing workflow before selecting one fresh metadata
+event. Do not reuse an earlier request or consumed event. This route does not
+adopt a staged Node in generator, GEN, guest argv or V8 actual delivery.
+
+Its immutable request is `bw.ring3.inventory-request.v3`, with the v2 fields
+plus `emptyPythonSources`. `selected.node.path` explicitly names
+`/run/bw-ring3-node-22.23.3/node`; `nodeStage.source` still names the writable
+cache only as untrusted copy input. Both selections retain the same historical
+Node bytes/hash. The closed marker is `BW_RING3_STAGED_RUNTIME_INVENTORY_V3`,
+label `x86-ring3-staged-runtime-inventory`, job `staged-runtime-inventory` and
+external digest transport `BW_RING3_STAGED_INVENTORY_REQUEST_SHA256`. A variable
+is transport, not approval. Root validates request/event/source12/invoker before
+copying, retains `bw.ring3.node-stage-original.v2`, drops irreversibly and execs
+only the fixed independent reader `--inventory-staged-runtime`. Failed or
+unknown drop suppresses acquired stdout and stderr. Existing v2 stage requests
+and v1 inventory requests are not reinterpreted.
+
+The dropped reader independently observes the stage, raw PID/UID/GID/group/cap
+identity, immutable input, source12 and parent-controller availability before
+metadata tools. A staged subclass selects the fixed staged Node from its first
+file observation and every Node probe. Three explicit default-preserving hooks
+in `RuntimeInventory` select the node path, candidate decoration and validator;
+the old route still emits its original v1 candidate bytes. No runtime globals
+are rebound and no original path is renamed after execution. Staged files and
+tools reject setuid/setgid and group/world-write modes before any metadata
+process. Historical QEMU identity must match before probes; no apt, alternate
+binary, permission repair or parent-controller write is provided.
+
+Only `/usr/lib/python3.12/urllib/__init__.py` has the separate selected
+`python-source-empty` role. The v3 request and new candidate declare exactly
+`kind`, zero `bytes`, the empty SHA256, integer0644 `mode`, `owner=[0,0]` and
+`links=1`. Positive `files` and this typed roster are disjoint from each other
+and aliases, including aliases in ancestors. Together they share the512-file
+cap; alias256, Python census256, probe11 and every byte/time/output cap stay
+held. Generic files, binaries and libraries retain positive extent rules.
+
+A separate readonly implementation opens the fixed empty source with nofollow
+flags, verifies canonical root-owned single-link0644/zero extent, reads one
+byte to establish EOF and the empty digest, retains all four named/held raw stat
+observations, and closes. It repeats after the complete inventory, with exact
+identity equality. EOF, readback and close errors preserve primary/secondary
+facts; nonempty substitution, another path or role and missing actual Python
+census membership refuse. Other empty files remain failures until separately
+reviewed policy changes; none are dropped from the census to produce a candidate.
+
+All eleven original metadata process/stream records, libraries, aliases,
+packages, Python files and raw maps are retained under the existing finite
+limits. Probe parent PIDs join the dropped observer, and their monotonic windows
+follow the terminal root Git observations. Positive files and aliases are reread. Independent stage/source/input
+observations repeat after all probes, joining full Node hash, inode, ownership
+and mode to the actual inventory. The new `bw.ring3.runtime-expectation.v2`
+candidate explicitly includes the typed-empty partition and staged executable;
+its metadata does not supply independent runtime approval. Legacy runtime.v2
+positive-graph predicates are reused only as local finite checks; the typed
+partition is checked separately. No projected object is emitted as an original.
+
+The distinct `RING3_STAGED_RUNTIME_INVENTORY` stream has exactly
+`staged.request.json`, `staged.event.json` and `runtime.staged-inventory.json`.
+Its new log/original versions retain complete stage-before/after observations,
+copy original, graph, typed-source EOF/close facts and process originals. JSON
+1 MiB, total raw5 MiB, encoded8 MiB, chunk and candidate limits stay unchanged.
+Overflow retains the bounded failure prefix and cannot qualify. The
+15 minute metadata job uses the same checkout/setup-node/upload action pins and
+exports only bounded log/stderr, never the executable. This budget is a
+backstop, not evidence of hosted sufficiency or preemption of blocked syscalls.
+
+The independent original-only audit is:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/reader.py \
+  --staged-runtime-inventory-log retained-staged-inventory.log \
+  --external-admission reviewed-staged-inventory-expectation.json
+```
+
+Its external `bw.ring3.staged-inventory-expectation.v1` closes `schema`,
+`requestSha256`, `runId`, `attempt`, `head`, `tree`, `workflowSha`,
+`workflowFileSha256`, `jobId`, `jobName`, `conclusion`, `logBytes`, `logSha256`
+and `invoker`. It joins separately admitted official metadata and exact original
+bytes to source, event, stage and all graph/probe facts. A positive verdict
+still has `candidateReviewed=false` and `actualRunApproved=false`. Runtime graph
+review/publication, separate activation and explicit actual mapping on a fresh
+VM remain necessary before the affected hosted guest qualification. Python
+startup and fixed platform setup/Git boundaries remain as stated above.
+
+Eight `--staged-runtime-only` controls execute the full root-copy/drop/observer,
+eleven metadata probes, all readbacks, log export and standalone audit over
+mocked OS/process edges and compact authored Node fixture bytes. They cover
+request/event/source joins, typed EOF and close failures, coherent rewritten
+originals, alias substitution, early privilege-mode refusal, shared cap512,
+no retry, fixed CLI arity and unknown-drop publication suppression. Historical
+production pins are asserted and restored; no tool, resource operation or guest
+runs locally.
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --staged-runtime-only
+```
+
+The phase-specific control asserts the reviewed metadata guards enabled while
+retaining actual and older-stage guards false. It also explicitly disables each
+metadata guard and checks refusal before its factory or observer, including
+environment strings that attempt to enable it. The other
+full-chain controls are unchanged. Eight affected mocked controls pass; they do
+not qualify a hosted stage, runtime candidate, resource operation or guest.
+
+## Exact selected-QEMU setup/runtime v4 candidate — 2026-10-24
+
+V4 is a distinct path from the consumed staged-runtime v3 event. Its label is
+`x86-ring3-setup-runtime-inventory-v1`; the immutable PR body block is
+`BW_RING3_SETUP_RUNTIME_INVENTORY_V4`; the job is `setup-runtime-inventory`.
+The single externally selected repository variable is
+`BW_RING3_SETUP_INVENTORY_REQUEST_SHA256`. The request is canonical compact
+JSON with a newline, schema `bw.ring3.inventory-request.v4`, and exactly the
+v3 `repository`, `pullRequest`, `head`, `tree`, `source`, `selected`, `nodeStage`
+and `emptyPythonSources` fields plus `setup` and `payloadWitness`. The source
+and selected Node/QEMU pins remain exact. The workflow and both source entry
+guards are initially false; no old v3 label, body or variable is reused.
+
+The closed `setup` policy pins the observed Ubuntu image label, full dpkg
+status SHA, seven relevant helper SHAs, fifteen signed Filename/Size/SHA
+archive rows, fixed configure order and `--no-triggers` phases. The request's
+payload witness must match the separately reviewed source literal; a request
+cannot self-approve unknown payload effects. Source12 Git/live/head/tree and
+the exact event are checked before any GET or mutation. Fresh runner status,
+helper bytes, selected package absence and policy path absence must match the
+selected observation before any archive acquisition. Image strings remain
+observed provider claims; independent image authenticity still requires the
+official setup-log join outside this inner reader.
+
+The fixed payload witness binds all fifteen archive, CONTROL tar, data tar
+and canonical payload-manifest digests. Its reviewed QEMU service unit is
+367 bytes with SHA256 `da0544deed8c3e9f9f8221c99f5e1ca67135f15f1f3f070767cb8966f705304a`;
+the unit's init script is 2,496 bytes with SHA256
+`c769a6a149897575767c5a4377cc7cb15dcbb586a9a1eec1d6248dba098b08f2`.
+Both service start and service reload invoke that init script. The mediated
+start is denied by policy101; **no service start or service reload is
+permitted**. The reviewed common package's direct `daemon-reload` refreshes
+the manager and may rerun host generators; this is an explicit trusted-host
+mutation, not a claim that all host state stays unchanged. Enabling without
+`--now` does not itself start the unit. The reader rechecks both resulting
+unit/init bytes after setup and never claims service execution or host-wide
+immutability.
+
+The hosted v4 service proposes one CPU, 1 GiB, no swap, 64 tasks, a 660 second
+runtime and five second stop bound under a 15 minute job. One exact HTTPS
+archive attempt per signed row uses a 30 second connection/read timeout and
+180 second aggregate deadline, with a 12 MiB per file and 16 MiB total cap.
+The URL prefix is fixed to the signed Ubuntu snapshot
+`https://snapshot.ubuntu.com/ubuntu/20261019T000000Z/`; moving archive
+mirrors and redirects refuse.
+Each archive is exclusively written, read back, hashed, and closed before the
+next; failures and partial files are never retried. Root creates an absent
+`/usr/sbin/policy-rc.d` exclusively with exact `#!/bin/sh\nexit 101\n` bytes and
+mode0755. It performs only the fixed no-trigger unpack and configure phases,
+each limited to 120 seconds and 128 KiB per raw stream. No apt, resolver,
+Recommends, force flag, fallback package or upgrade is used. Successful phase
+exit is followed by fresh selected package Status/Version/Architecture and
+trigger-field observation; `installed`, `triggers-pending` and
+`triggers-awaited` are distinguished. Host triggers remain deferred and
+complete host configuration stays false. On any setup failure the original
+primary and cleanup secondary facts remain. The root observer emits bounded
+zlib originals of the complete pre/post dpkg status bytes into the retained
+log, with exact SHA/extent/encoding. The standalone reader decompresses each
+once under an 8 MiB output cap, independently parses the 1,211-row pre-state
+and reconstructs all selected and pending post-state rows. Missing, duplicate,
+truncated, tailed or oversized originals refuse. The stage record retains
+their digest/extent summaries under its unchanged 1 MiB cap.
+
+Before archive GET, preflight reads the three selected root-owned
+interpreter aliases `/bin`, `/bin/sh` and `/usr/bin/sh`, including bounded
+link text, resolved target, owner, link count, size and finite readback.
+They must resolve through `dash` to the pinned `/usr/bin/dash` bytes.
+An unexpected alias refuses before package acquisition.
+
+Each dpkg phase is followed by a finite service-cgroup census. The global
+policy is removed inside the service only after the cgroup contains its root
+controller alone. If descendants remain or census is uncertain, the policy
+stays in place and source records a failure. After `systemd-run --wait`, a
+separate bounded outside cleanup mode may remove it only when the exact unit
+is empty or absent and the retained failure packet, policy inode/mode/owner
+and exact bytes all match. Unknown identity refuses deletion; cleanup errors
+remain secondary to the first setup failure. Failed setup packets carry the
+raw request/event, source observations and selected official platform fields
+even when Node staging never starts. Default dpkg collision or maintainer
+script failure can leave partial host mutations; no rollback is claimed.
+
+Only clean setup and exact policy cleanup permit the historical Node copy,
+irreversible invoker drop and selected runtime graph census. The new dropped
+reader repeats source12 and staged-file readback before and after all eleven
+metadata probes. The runtime candidate still needs separate stable-graph
+review and guest admission. V4 uses a versioned 4 MiB setup/graph wrapper and
+8 MiB combined log: each raw status frame is at most 1 MiB including marker
+and newline, and all runtime role frames together are at most 6 MiB including
+their framing. The failed-entry packet is at most 4 MiB. Historical v3,
+request and Node leaf caps remain unchanged. The official
+reader requires a separately reviewed external expectation for the exact
+one-run job, source/workflow, request and log bytes:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/reader.py \
+  --setup-v4-inventory-log retained-v4-inventory.log \
+  --outer-resource-original retained-v4-outer.json \
+  --outside-cleanup-original retained-v4-cleanup.json \
+  --external-admission reviewed-v4-expectation.json
+```
+
+The expectation schema is `bw.ring3.setup-inventory-expectation.v4` with
+`requestSha256`, `runId`, `attempt`, `head`, `tree`, `workflowSha`,
+`workflowFileSha256`, `jobId`, `jobName`, `conclusion`, `logBytes`, `logSha256`,
+`outerBytes`, `outerSha256`, `cleanupBytes`, `cleanupSha256`
+and `invoker`. Inner consistency does not authenticate the official job or
+image. The external audit must also join the exact official job/steps/artifact,
+workflow file and runner setup log before treating a result as a hosted
+observation. A positive metadata verdict leaves `candidateReviewed`,
+`actualRunApproved`, `actualGuestApproved` and
+`completeHostConfiguration` false.
+
+For an externally selected failed job, the same CLI uses a distinct closed
+failure reader. It requires one canonical failed setup packet, the pinned
+request/event/source/official context, retained first and secondary errors,
+and exact outside terminal/cleanup originals. Any retained raw dpkg status
+roles are decoded; roles reported in partial setup facts must match the raw
+bytes exactly. A role emitted before the collector could finish its setup
+fact remains visibly unjoined. Missing reported roles and truncated streams
+refuse. Its verdict only says that the failed attempt was retained.
+It never admits a runtime candidate or setup. The successful reader verifies
+the raw pre/post status bytes independently; archive bytes downloaded during
+CI are reported and hashed by the trusted hosted collector, not rehashed by
+this reader from separately retained archive originals.
+
+The transient service is **not** requested with `--collect`. The root entry
+records its exact current `/system.slice/` membership and CPU/memory/swap/PID
+control values before any package operation. The outside job retains
+`systemd-run --wait` output/exit, outside policy-cleanup original and a
+bounded terminal readback of the exact unit cgroup path. The independent
+reader requires zero service/cleanup exits and an absent cgroup at that finite
+readback. A failed unit remains inspectable for its first failure; absence
+does not establish continuous ownership.
+
+The finite service census includes direct `cgroup.procs`, `cgroup.events`
+and `cgroup.stat` nested and dying descendant counters after each dpkg phase
+and before policy removal. Outside cleanup checks the same raw counters for
+an existing unit. Direct or nested descendants keep the deny policy in place.
+The post-status reader compares every original package key/version/status
+with the pre-status original: only the selected fifteen may appear, existing
+packages cannot upgrade or disappear, and an existing partial status remains
+unchanged. This is a finite status-file observation, not whole-host
+configuration or continuing ownership.
+
+The isolated `--setup-v4-only` controls inject all host, network, process and
+stage edges. They cover one full sequence and coherent pre-state, archive,
+policy, dpkg, cleanup, drop and graph cuts without package, helper or guest
+execution. They are source controls only.
+
+## V4 activation candidate — 2026-10-24
+
+This follow-up enables only the distinct setup/runtime **metadata** entry, reader
+and label job from the reviewed disabled source candidate in PR645. Guest and
+compiler execution remain disabled. The exact request, source12, selected bytes,
+payload witness, package/helper/status/image policy and resource/output limits
+remain mandatory. A runner that differs from the selected finite observation
+refuses before archive acquisition or package changes; no future image match is
+promised. Source enablement is not setup, runtime-candidate or guest approval.
+Require all final-head source checks and separate external review of one fresh
+v4 request and event before applying its distinct label once. Preserve consumed
+v3 requests/events and all first failures. Independently acquire and audit the
+new official originals once, including raw status and outside cleanup.
+
+## Repaired v5 metadata source candidate — 2026-10-24
+
+The new v5 request, event marker, label, job and independent original reader
+are separate from the consumed v4 event. All three v5 execution guards in
+the producer, reader and workflow start false. The v5 request binds the same
+fifteen archive and payload pins plus a dedicated installer `PATH` of
+`/usr/sbin:/usr/bin:/bin`. Before an archive GET, the root service requires
+the selected image and raw dpkg status, three exact additional helper files
+(`/usr/sbin/start-stop-daemon`, `/usr/sbin/ldconfig`, and
+`/usr/sbin/ldconfig.real`), and the `/sbin` to `/usr/sbin` alias. Each helper
+has a bounded named-before, held-before, held-after and named-after identity
+and SHA observation with an explicit close result. These finite live
+byte/readlink observations join independently reviewed
+official package DATA selection, not a whole-host attestation. The historical
+global environment and v4 route remain unchanged.
+
+Only v5 dpkg children receive the repaired `PATH`. They still use fixed
+`--no-triggers` unpack/configure phases, exact fifteen archives, policy101,
+per-phase cgroup census, bounded originals and exact owned cleanup. The v5
+reader independently checks the distinct request/event/source/job joins,
+reported helper hashes and interpreter aliases, original pre/post status bytes, process
+environment, Node stage and selected runtime graph. Its positive output
+remains metadata-only: no actual guest, complete host configuration or
+automatic approval. A changed hosted image or status refuses before archive
+GET, and a failed setup retains first and secondary failures. Pure
+`--setup-v5-only` controls execute no host installer, network or guest edge.
+The reader does not receive helper file bytes from CI; live helper hashing is
+within the trusted hosted collector boundary.
+If preflight refuses partway through the helper list, its failed packet keeps
+the raw pre-status summary, the ordered prefix of successfully checked helper
+witnesses, and the failing helper's partial identity/read/close facts. The
+failure reader joins that summary to any retained raw status line and checks
+the closed helper prefix; it never promotes partial setup to a candidate.
+
+### V5 metadata activation candidate
+
+Only the v5 producer, metadata reader and exact owned label job are enabled
+by this follow-up. The current request SHA, immutable PR body, selected
+source12 and official workflow context still must agree, and exact hosted
+image, status, helper and resource preflight can refuse before archive GET.
+This source change authorizes no label application by itself. Require every
+enabled final-head source check and separate external review of one fresh v5
+metadata request before its one event. Guest and compiler entries stay false;
+the consumed v4 failure and event remain untouched.
+
+## Image environment diagnostic v1 (source activation candidate)
+
+The first repaired v5 metadata event refused at the exact hosted image-label
+preflight before status, helper, archive, policy, or guest work. Its original
+retains the refusal but omits the service's actual `ImageOS` and `ImageVersion`
+values. The runner image line alone cannot identify which environment field
+failed. The consumed v5 event is not replayed.
+
+The diagnostic runs the same pinned checkout and setup-node 22.23.3 actions
+in the same order as that v5 job before it captures the shell environment.
+The setup action is part of the trusted hosted action boundary; the diagnostic
+does not run a Node workload or perform package, helper, QEMU, or guest work.
+
+The distinct `x86-ring3-image-env-diagnostic-v1` route has its producer and
+workflow selectors enabled for only a separately admitted own labeled event
+and first run attempt. A new exact-head,
+source-twelve-bound canonical request is carried in a separate strict base64
+repository variable with an independently selected SHA variable. Its distinct
+PR-body block carries only that 64-character SHA so older consumed blocks fit
+verbatim under the event-body cap. Both variables need external readback before
+the one-shot diagnostic event. Its shell original records whether each
+field was present and its bounded value before forwarding. The root service
+uses the same `systemd-run` and `/usr/bin/env -i` forwarding topology as v5,
+including the exact `python3 -I -B` service startup flags. The separate shell
+and outside recorders use `-I -S -B`; they do not stand in for the service.
+The service records its actual dictionary, source/event facts and resource
+snapshot without comparing image labels or invoking setup. Missing, empty and
+different safe values are data. Unsafe or oversized values retain a bounded
+failure with no raw unsafe text. The outside original records the service exit
+and finite cgroup absence/presence; it does not mutate a policy or unit.
+
+The independent reader joins the two observations to a separately selected
+request/event/official job expectation. Its `officialJobAuthenticated`,
+`setupApproved`, `runtimeCandidateApproved`, and `actualGuestApproved` fields
+are always false. Official job and artifact admission remains external. No
+package status, helper, archive, installer, Node stage, QEMU or guest path is
+reachable from this diagnostic. The old v4/v5 guards, pins and failed originals
+remain intact.
+
+## Distinct v6 observed-image metadata candidate
+
+The v6 metadata route is enabled for a separately selected first event; no
+v6 request, label, hosted run, or original has been selected here. It has its own
+`setup-runtime-inventory-v6` job, labeled event, request SHA/body marker,
+repository variable `BW_RING3_SETUP_INVENTORY_V6_REQUEST_B64`, setup service,
+packet schemas, and standalone reader entry. The old v4/v5 jobs, packet
+schemas, requests, guards, failure originals, and label semantics remain
+available as historical routes; consumed labels are never selected again.
+
+The v6 PR body carries only the lowercase 64-character request SHA between
+its unique markers. The repository variable carries the canonical request
+bytes as strict base64 (at most 32,768 decoded bytes). Source and reader
+independently require exact SHA, canonical JSON, selected source12, first
+attempt, repository, owner, job, workflow, and PR head/tree joins before
+privileged setup. The shell writes one bounded `setup-image-shell.v6` original
+before launching the service. The service records typed, bounded actual
+`ImageOS` and `ImageVersion` fields in the preflight prefix before comparing
+them with the unchanged selected image. Absent, empty, invalid, and different
+values remain in a failed original; mismatch refuses before package GET or
+policy creation. The shell original is separately bound by bytes and SHA in
+the external expectation; the independent reader checks shell/service
+forwarding and reports a difference without granting setup authority.
+
+The success reader still requires exact fifteen-package setup, raw status,
+helper witnesses, Node stage, current runtime graph, outside cleanup, and
+retained first/secondary failure ordering. Its v6 external expectation adds
+`shellBytes` and `shellSha256` to the prior metadata roles. A failed attempt
+can be graded as retained with `setupObserved=false`; a valid image-field
+observation alone does not qualify setup, QEMU, guest execution, immutable
+image identity, or future runner state. Full exact-head CI, external request
+and official metadata admission, and one original-only audit are required
+before any v6 metadata candidate can be considered. Compiler and actual guest
+routes remain disabled.
+
+The v6 service client has a separate 720-second GNU timeout with a five-second
+kill period outside the service's 660-second runtime and five-second stop
+limits. Its exact exit, including timeout exits, is retained before outside
+cleanup. After source, request, event, and exact unit admission, cleanup takes
+bounded cgroup censuses and can stop only that run's owned unit with a finite
+timer. An active or uncertain unit keeps the global deny policy in place; its
+stop and census errors remain secondary to an earlier client failure. The
+independent failure reader also retains a complete inner metadata packet when
+the outer client fails. If a 124/137 timeout leaves only an incomplete inner
+wire, it retains the exact externally selected log extent and hash as opaque
+data and reports all inner facts unknown. Neither case grants setup or guest
+approval. These are finite point observations, not continuous ownership proof.
+
+## Distinct v7 package listing metadata candidate
+
+The v7 metadata route and reader are active source candidates; no v7 event has
+been selected. It uses a new label, job,
+request SHA marker, repository base64 request, and packet family. Earlier v4,
+v5, and v6 routes and their consumed events remain historical. The exact
+fifteen-package setup policy, helper and image pins, bounded service, raw
+status, staged Node, outside cleanup, and false guest/compiler authority are
+unchanged. A future v7 event requires exact-head source checks and separate
+external request, job, artifact, and original admission.
+
+The v7 dropped metadata observer runs fifteen fixed serial children. It
+replaces the one combined five-package `dpkg-query -L` child with one fixed
+`dpkg-query -L NAME` child for each selected package. Each child retains its
+own argv, process terminal facts, stdout/stderr bytes and hashes, first and
+secondary failures, ten-second wall bound, and 16,384-byte cap per stream.
+The new candidate uses a v3 runtime expectation with an explicit sorted
+`packagePathsByPackage` map and sorted non-root `packagePaths` union. No old
+combined process record or stdout is projected into this profile.
+
+A complete listing begins with the literal `/.` root marker, ends in LF, and
+has finite, unique canonical absolute non-root paths. At most one final empty
+format separator is allowed; interior separators, repeated roots, unsafe
+components, invalid encoding, or clipped output refuse. The independent
+original reader reparses each retained per-package stream and checks each
+map row and the union against the selected candidate and graph. The prior
+single combined stdout was clipped and did not establish five successful
+hosted child observations. The selected setup and runtime graph still need
+one fresh hosted v7 original and external admission; no actual guest is
+enabled by this metadata path.
+
+The v7 failure reader has a narrow complete-packet path for a final metadata
+child that reaches the stdout cap. It keeps the last 16,384-byte stream as a
+prefix with an incomplete listing, binds earlier named child originals and
+raw setup status, and returns every approval flag false. Other complete
+runtime failures remain refused pending a separate closed reader extension;
+a timed incomplete wire can retain only an opaque bounded original. A
+failure packet cannot be promoted by the success reader.
+
+The v7 setup and original-reader functions are intentionally separate from
+the consumed v4/v5/v6 entry points. This duplicates bounded setup checks and
+creates maintenance work; a future claimed lane may consolidate versions
+only after exact v7 originals and affected guest qualification. This source
+candidate does not alter historical packet decoders or their thresholds.
+
+### Consumed v6 failure audit
+
+The separate `reader.py --consumed-v6-failure` entry retains only a complete
+failed v6 packet whose seventh probe reached the 16 KiB stdout cap. It checks
+source12, the raw request/event, executing-workflow selection, staged files
+before and after, both raw package-status originals and their exact allowed
+change, the seven ordered child originals, outer exit 1 and absent outside
+cgroup. The clipped listing remains an opaque prefix. No complete package path
+union, runtime graph, setup approval or guest qualification follows from it.
+The existing v6 success/failure entries and their refusals remain unchanged.
+
+Use the same `--external-admission`, `--outer-resource-original`,
+`--outside-cleanup-original` and `--shell-image-original` arguments as the old
+v6 reader, replacing its first flag with `--consumed-v6-failure`. The new closed
+external schema is `bw.ring3.consumed-v6-failure-expectation.v1`. In addition to
+the old selection fields it requires independently selected
+`clippedStdout: {bytes, sha256}`, `artifactId`, `archiveBytes` and
+`archiveSha256`. Packet and delivery checksums cannot replace that prefix pin.
+The report identifies the externally selected archive; it does not authenticate
+GitHub metadata or read/check the ZIP. The operator must separately bind the
+owner's official event, run, job, artifact identity and exact extracted role
+copies to that archive. All approval and official-authentication flags remain
+false, including when this negative audit completes.
+
+Run `/usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py
+--consumed-v6-failure-only` for focused pure controls. They reuse the existing
+manufactured fixture under mocked process/kernel/package edges; the standalone
+reader imports no producer and the controls use no consumed original as a
+fixture. Coherent prefix and raw-status mutations refresh their internal and
+delivery hashes and still refuse. This audit does not consume a new hosted
+event or repeat any child or guest execution.
+## Distinct v8 package DATA path admission (metadata source candidate)
+
+The consumed v7 metadata attempt failed after its ninth probe because the
+historical runtime path grammar excludes commas. Its original and unchanged
+v7 reader refusal remain failures. V8 has a new request schema, SHA-only PR
+body marker, repository request variables, label, job, service unit, original
+markers and standalone success/failure reader mode. Only the three v8 metadata
+guards are enabled. Exact-head source checks and a separately admitted single
+metadata event remain required; compiler and actual guest entry remain false.
+
+The V8 inventory permits exactly
+`/usr/share/qemu/QEMU,VGA.bin`,
+`/usr/share/qemu/QEMU,cgthree.bin`, and
+`/usr/share/qemu/QEMU,tcx.bin` only as regular qemu-system-data DATA files.
+The three selected names must occur in that package's complete listing and
+no other package's listing. Their signed archive, DATA tar and payload
+manifest pins are fixed in source; installed file bytes, SHA256, root
+ownership, link count, mode 0644, canonical path, absence of aliases and
+readback are checked separately. Every other path uses the previous strict
+grammar, including other comma names and those three names in another role.
+These source pins and hosted observations do not independently rehash the
+retained archive inside CI and do not grant transaction, runtime or guest
+approval.
+
+V8 keeps a separate versioned family because V7 request, event, service,
+status, inventory and failure decoders embed literal historical identities.
+Copying that closed family leaves V4–V7 original graders and consumed-event
+semantics intact; the narrow V8 inventory path method is scoped to the
+selected DATA package. This duplication is a maintenance cost. Any future
+consolidation needs a separate claim and fresh affected qualification after
+the historical route and new actual results are independently admitted.
+
+Pure V8 controls: `/usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v8-only`.
+The original-only V8 CLI is `reader.py --setup-v8-inventory-log LOG
+--external-admission JSON --outer-resource-original JSON
+--outside-cleanup-original JSON --shell-image-original JSON`; it requires
+externally admitted exact official bytes and never authenticates a job by
+inner packet consistency alone. No V8 request or event has been selected.
+
+
+### Consumed v7 package-path failure audit
+
+`reader.py --consumed-v7-failure` is a separate, negative-only reader for the
+consumed v7 packet whose ninth fixed `dpkg-query -L qemu-system-data` child
+returned exit zero and a complete listing before the old canonical path check
+refused it. The three observed comma-bearing names are
+`/usr/share/qemu/QEMU,VGA.bin`, `/usr/share/qemu/QEMU,cgthree.bin`, and
+`/usr/share/qemu/QEMU,tcx.bin`. This route checks them only as returned data;
+it does not make them accepted runtime paths. Every other listing row retains
+the old strict grammar. Missing, extra or differently cased comma names
+refuse. The old v7 failure/success CLI behavior is unchanged and still
+refuses this nonstream failure class.
+
+The five required inputs are `--consumed-v7-failure` (the retained official
+job log), `--external-admission` (the existing independently selected
+`bw.ring3.setup-inventory-expectation.v7`), `--outer-resource-original`,
+`--outside-cleanup-original`, and `--shell-image-original`. Each file is
+read once with its old byte cap. The reader independently joins the three
+log-carried request/event/runtime originals, source twelve and executing
+workflow, two raw package-status originals and permitted delta, finite
+before/after Node stage, nine ordered zero-exit child streams, the exact
+path-refusal first error, outer exit 1 and absent outside unit.
+It parses the raw event under the historical 1 MiB event limit with duplicate
+keys and nonfinite numbers refused, and requires an object. Pretty formatting
+and a final LF remain valid; it does not require canonical event bytes.
+The five returned package version/architecture rows must match both the
+fixed selected package pins and independently reparsed post-status. The
+partial file witnesses bind Node and QEMU to their existing fixed hashes,
+and bind Python to this consumed original's exact bytes/hash, with executable
+kind, mode and staged Node readback. Integer exit and wait fields refuse
+Boolean substitutes.
+
+It returns `bw.ring3.consumed-v7-path-failure-audit.v1` only with all candidate, setup,
+guest and official-authentication approvals false and
+`partialMutationPossible: true`. A returned ninth listing is a failed
+attempt, not a complete runtime graph or installation approval. The external
+expectation is a trust input; the report does not independently authenticate
+GitHub job or artifact metadata.
+
+`/usr/bin/python3 -I -S -B scripts/i80386-ring3-int-iret/controls.py
+--consumed-v7-failure-only` runs the focused pure controls. They manufacture
+their packet under mocked process edges, reject coherent failure, source,
+status, path and outside-cleanup mutations, and do not use an official
+original as a fixture. A separate operator audit may apply the standalone
+reader to the already retained originals without reacquiring them. No new
+event, native probe, package operation, QEMU or guest is part of this route.
+## Read-only hosted baseline observation
+
+The `host-baseline-v1` metadata job uses a distinct one-shot request and label
+to observe the runner shell and bounded
+root service image fields, raw package status, ten selected helper files, three
+shell aliases, policy-file presence and outside unit termination. It runs no
+Node workload, helper binary, package tool, installer, QEMU or guest. The
+observer compares no old image, status or helper pin to decide completeness.
+
+Complete raw status and helper bytes are retained as individually compressed
+base64 roles in a canonical packet. Input limits are 8 MiB status, 2 MiB per
+helper and 8 MiB across helpers; the packet including newline is at most 4 MiB
+and the artifact at most 8 MiB. Overflow is an explicit failed original, not
+a truncated complete one. The independent reader decompresses each exact role,
+checks extent, SHA, identity and close facts, and reparses package status. It
+also compares both observed environment fields with the separately selected
+official Runner Image log block. A mismatch is retained diagnostic data. None
+of these observations authenticates a VM image or approves setup or a guest.
+
+All earlier V4–V8 routes, originals and failures remain separately versioned.
+Capture source `8b8c108d` completed one
+[read-only hosted run](https://github.com/CrispStrobe/bw-board/actions/runs/40101137447);
+its label is consumed. The original reader refused empty first lines of
+multiline `Conffiles:` fields. Corrected auditor `a41bd237` accepts the same
+retained originals and reports 1,211 status rows. An independent byte review
+confirmed all ten selected helper hashes match the held V8 helper pins. No
+package tool, installer, QEMU or guest ran. The observed runner image is not
+authenticated for a later job. Setup, runtime and guest approvals remain false.
+Exact-head CI for this separate auditor is
+pending; setup metadata authorization requires a separate claim and held pins.
+
+[Debian Policy §5.1](https://www.debian.org/doc/debian-policy/ch-controlfields#syntax-of-control-files)
+allows a multiline field to have an empty first line. This reader accepts that
+shape for `Conffiles:` only when a nonempty continuation follows, and retains
+the raw bytes of a valid ` .` continuation. It refuses whitespace-only folds,
+folds or empty values of status authority fields, and case-insensitive duplicate
+field names.
+Parsing the retained status is an observation; it does not approve package
+setup, a runtime graph or guest execution.
+
+The alias `target` field is a lexical normalized link destination. The route
+does not dereference it or claim that its final target is trusted. The service
+manager owns the finite service lifetime; a bounded read-only outside census
+records absent, empty or still populated cgroup facts. The observer runs no
+explicit stop action or selected helper binary. An uncertain terminal unit
+keeps the attempt negative.
