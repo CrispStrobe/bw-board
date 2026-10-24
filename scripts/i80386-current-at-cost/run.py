@@ -76,7 +76,7 @@ def held_modules():
     exec(compile(bodies['run.py'],runner.__file__,'exec'),runner.__dict__)
     return runner,policy
 
-SOURCE_ROWS_BYTES=(ROOT/'scripts/i80386-current-at-cost/source-rows.json').read_bytes()
+SOURCE_ROWS_BYTES=read_file(ROOT/'scripts/i80386-current-at-cost/source-rows.json',65536)
 need(hashlib.sha256(SOURCE_ROWS_BYTES).hexdigest()==
      'ba3039a9866105933db4c2877e948758770c59ffc6a37d0e0a82b752b3c7180d',
      'frozen current import-closure manifest')
@@ -165,7 +165,20 @@ def capture(held,node,arm,mode,directory,unit,before):
     finally:
         if process is not None and not reaped:
             try:
-                os.killpg(process.pid,signal.SIGKILL);pid,status,usage=os.wait4(process.pid,0);need(pid==process.pid,'owned cleanup wait4');reaped=True;code=os.waitstatus_to_exitcode(status);process.returncode=code;ended=time.monotonic()
+                os.killpg(process.pid,signal.SIGKILL)
+            except BaseException as error:
+                secondary.append('owned-killpg:'+type(error).__name__)
+                if primary is None:primary=error
+            try:
+                deadline=time.monotonic()+5
+                while not reaped:
+                    pid,status,candidate_usage=os.wait4(process.pid,os.WNOHANG)
+                    if pid:
+                        need(pid==process.pid,'owned cleanup wait4')
+                        reaped=True;usage=candidate_usage;code=os.waitstatus_to_exitcode(status)
+                        process.returncode=code;ended=time.monotonic()
+                    elif time.monotonic()>=deadline:raise Refusal('owned cleanup reap deadline')
+                    else:time.sleep(.01)
             except BaseException as error:
                 secondary.append('owned-reap:'+type(error).__name__)
                 if primary is None:primary=error
@@ -239,7 +252,13 @@ def controls():
             buf=bytearray(b'ab')
             with self.assertRaises(Refusal):append_bounded(buf,b'cde',4)
             self.assertEqual(buf,b'abcd')
-        def mocked_capture(self,read_error=None):
+        def test_bounded_source_manifest_refuses_oversize_before_read(self):
+            import tempfile
+            with tempfile.TemporaryDirectory(prefix='bw-profile-manifest-control-') as temporary:
+                path=Path(temporary)/'source-rows.json'
+                path.write_bytes(b'x'*65537)
+                with self.assertRaises(Refusal):read_file(path,65536)
+        def mocked_capture(self,read_error=None,kill_error=None):
             import tempfile
             from types import SimpleNamespace
             from unittest.mock import patch
@@ -258,7 +277,7 @@ def controls():
             usage=SimpleNamespace(ru_utime=0.1,ru_stime=0.1,ru_maxrss=1)
             with tempfile.TemporaryDirectory(prefix='bw-profile-pure-control-') as temporary:
                 directory=Path(temporary)/'A'
-                with patch.object(subprocess,'Popen',return_value=process),patch.object(selectors,'DefaultSelector',return_value=Selector()),patch.object(os,'set_blocking'),patch.object(os,'read',side_effect=read_error if read_error is not None else None,return_value=b'x'*8193),patch.object(os,'wait4',side_effect=[(0,0,None),(77,9,usage)]) as wait,patch.object(os,'killpg') as kill,patch.object(time,'monotonic',return_value=1):
+                with patch.object(subprocess,'Popen',return_value=process),patch.object(selectors,'DefaultSelector',return_value=Selector()),patch.object(os,'set_blocking'),patch.object(os,'read',side_effect=read_error if read_error is not None else None,return_value=b'x'*8193),patch.object(os,'wait4',side_effect=[(0,0,None),(77,9,usage)]) as wait,patch.object(os,'killpg',side_effect=kill_error) as kill,patch.object(time,'monotonic',return_value=1):
                     with self.assertRaises(Exception) as caught:capture(None,'/fixed/node','A','profile',directory,'unit',{})
                 kill.assert_called_once_with(77,signal.SIGKILL);self.assertEqual(wait.call_count,2)
                 self.assertTrue(stdout.closed and stderr.closed)
@@ -267,9 +286,15 @@ def controls():
                     self.assertEqual(len((directory/'stderr.original').read_bytes()),8192)
                     facts=parse((directory/'usage.original.json').read_bytes(),8192)
                     self.assertEqual(facts['observedStreamBytes'][1],8193)
+                if kill_error is not None:
+                    facts=parse((directory/'usage.original.json').read_bytes(),8192)
+                    self.assertTrue(facts['reaped'])
+                    self.assertIn('owned-killpg:ProcessLookupError',facts['cleanupErrors'])
             return caught.exception
         def test_overflow_stops_and_preserves_exact_prefix(self):self.mocked_capture()
         def test_original_read_error_survives_selector_cleanup(self):self.mocked_capture(OSError('authored original read'))
+        def test_killpg_esrch_still_reaps_exact_child_and_preserves_first(self):
+            self.mocked_capture(OSError('authored original read'),ProcessLookupError())
         def test_owned_cgroup_nested_and_dying_refusals(self):
             from unittest.mock import patch
             class Held:
