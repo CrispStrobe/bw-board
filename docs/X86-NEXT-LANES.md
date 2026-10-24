@@ -3166,27 +3166,35 @@ only after a complete v6 setup and runtime graph is admitted.
 
 ## Ordered 16-bit scalar read candidate
 
-Claim status: source implementation has not begun. The
+Claim status: the narrow source candidate was implemented and measured once,
+but remains **unadopted**. The
 [current profile](https://github.com/CrispStrobe/bw-board/actions/runs/40057621920)
 measured a warmed authored five-operation loop at about 4.52 million
 instructions/s for the core and 3.48 million instructions/s for AT on an
 AMD EPYC 9V74 hosted CPU using Node 22.23.3. These are loop throughput, not
 physical 16 MHz 386 RTx, an optimization gain or an OS workload measurement.
 
-The next candidate specializes only the contiguous-page two-byte branch in
-`_readLinear`: one translation followed by the same ordered pair of byte
-callbacks, removing the small loop and power calculation. Leave the four-byte
-and page-crossing paths intact. The owning registry entry defines exact paths.
+The measured candidate specializes only the contiguous-page two-byte branch
+in `_readLinear`: one translation followed by the same ordered pair of byte
+callbacks, removing the small loop and power calculation. Its four-byte and
+page-crossing paths stay unchanged. The owning registry entry defines exact
+paths.
 
-A fresh agent should first confirm the claim landed and refresh base/head
-checks, then implement the narrow arm and focused callback/order/fault tests.
-Prove byte masking, physical wrap, translation options, exceptions on either
-callback, page-crossing fallback and unaffected four-byte behavior; mutation
-controls must detect reversed reads or skipped translation. Prepare a disabled
-paired workflow and standalone original-only reader before selecting its one
-actual event. Freeze base/candidate import graphs and Node/resource facts, retain
-all eighteen original children and cleanup, and preserve the unchanged
-1.03 median CPU / all CPU ratios greater than 1 / 1.02 median wall gate.
-Require affected clean protected guest results and all enabled final-head
-checks before merge. If the gate fails, record it and keep the candidate
-unadopted rather than repeating the same measurement.
+The [selected paired job](https://github.com/CrispStrobe/bw-board/actions/runs/40067572890)
+completed all eighteen children at source `55917c48` under pinned Node
+22.23.3 and one effective CPU. Its unchanged reader refused the inactive-unit
+readback after stop. A separate calculation of the retained seven pairs found
+median whole-child CPU A/B 1.06475, minimum 0.99946, and median wall B/A
+0.94318. The minimum violates the predeclared **every CPU ratio greater than
+1** rule. The warmed-loop median 1.07285 is diagnostic only. No physical CPU
+model was captured for that job, and its candidate must not be merged or
+called a speedup. Preserve the original failure; do not replay the one-shot
+event or change the gate to admit this result.
+
+A fresh agent should scope any failure-only reader correction separately and
+retain the old reader's refusal. Review and freeze a larger authored workload
+before proposing any different paired event; capture that event's hardware
+identity and exact resources rather than borrowing the baseline host model.
+Profile a new narrow optimization with independent semantic controls and an
+unchanged whole-child paired gate. Require affected clean protected guest
+qualification and all exact-head source checks before adopting any candidate.

@@ -6159,3 +6159,17 @@ every CPU ratio greater than 1 and median wall ratio at most 1.02. Preserve
 failed measurements; do not replay or weaken the gate. A failed performance
 gate leaves the candidate unadopted. No physical 386 timing, general workload
 speedup or full OS claim follows from this authored workload.
+
+Result checkpoint, 2026-10-24: the one selected paired capture at
+[source `55917c48`](https://github.com/CrispStrobe/bw-board/commit/55917c48dffe0c7c743388024481ef0a47a7c76c)
+completed all eighteen children but its unchanged reader refused the final
+inactive-unit readback. An independent calculation from retained measurements
+gives median whole-child CPU A/B 1.06475, minimum 0.99946 and median wall
+B/A 0.94318 across seven measured pairs. The minimum fails the predeclared
+requirement that **every** CPU ratio exceed 1. The candidate is unadopted;
+this result does not authorize a replay, a gate change or a merge. The
+reader's cleanup refusal also remains unresolved. Follow-up work needs a
+separately scoped failure-only reader correction, a newly reviewed workload
+before any different paired event, actual host hardware identity capture,
+and an independently qualified optimization proposal. Preserve the original
+failure and the clean protected guest requirement.
