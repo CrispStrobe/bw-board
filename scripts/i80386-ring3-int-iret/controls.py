@@ -8810,6 +8810,55 @@ def same_job_actual_controls():
                 self.assertTrue(all(path in value['files'] for path in reader.SETUP_V9_SIGNED_DATA))
                 self.assertEqual((len(value['files']),len(value['aliases'])),(327,55))
                 self.assertEqual(sum(item['kind']=='qemu-data' for item in value['files'].values()),75)
+
+        def test_root_plan_directory_becomes_traversable_before_dropped_read(self):
+            plan=Path('/run/bw-ring3-123-1-admission/launch-plan.json')
+            selection={'request':{'head':'a'*40,'tree':'b'*40,
+                'source':{'schema':'manufactured-source'}}}
+            for withheld in (False,True):
+                modes={40:stat.S_IFDIR|0o700,41:stat.S_IFREG|0o600}
+                events=[];held={'raw':b''}
+                def info(fd):
+                    return SimpleNamespace(st_mode=modes[fd],st_uid=0,st_gid=0,
+                        st_dev=1,st_ino=fd)
+                def named(path):
+                    return info(40 if Path(path)==plan.parent else 41)
+                def opened(path,flags,*args,**kwargs):
+                    if Path(path)==plan.parent:events.append('open-directory');return 40
+                    self.assertEqual((path,kwargs.get('dir_fd')),('launch-plan.json',40))
+                    events.append('open-file');return 41
+                def chmod(fd,mode):
+                    events.append(('chmod',fd,mode))
+                    if fd!=40 or not withheld:modes[fd]=(modes[fd]&stat.S_IFMT(modes[fd]))|mode
+                def readback(environ,pin):
+                    self.assertEqual(stat.S_IMODE(modes[40]),0o755)
+                    self.assertEqual(stat.S_IMODE(modes[41]),0o444)
+                    events.append('dropped-readback');return held['raw']
+                with patch.object(p,'launch_plan_path',return_value=plan),\
+                     patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+                     patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+                     patch.object(p.os,'mkdir',side_effect=lambda *a,**kw:events.append('mkdir')),\
+                     patch.object(p.os,'open',side_effect=opened),\
+                     patch.object(p.os,'fstat',side_effect=info),\
+                     patch.object(p.os,'write',side_effect=lambda fd,raw:
+                         held.update(raw=raw) or len(raw)),\
+                     patch.object(p.os,'fchmod',side_effect=chmod),\
+                     patch.object(p.os,'fsync',return_value=None),\
+                     patch.object(p.os,'close',side_effect=lambda fd:events.append(('close',fd))),\
+                     patch.object(Path,'lstat',autospec=True,side_effect=named),\
+                     patch.object(Path,'resolve',autospec=True,side_effect=lambda path,**kw:path),\
+                     patch.object(p,'read_launch_plan',side_effect=readback):
+                    if withheld:
+                        with self.assertRaisesRegex(ValueError,'traversable plan directory'):
+                            p.same_job_create_launch_plan(selection,{'GITHUB_RUN_ID':'123'})
+                        self.assertNotIn('dropped-readback',events)
+                    else:
+                        raw,selected=p.same_job_create_launch_plan(selection,
+                            {'GITHUB_RUN_ID':'123'})
+                        self.assertEqual(raw,held['raw'])
+                        self.assertEqual(selected['BW_LAUNCH_PLAN_SHA256'],sha(raw))
+                        self.assertLess(events.index(('chmod',40,0o755)),
+                            events.index('dropped-readback'))
         def test_new_request_event_and_default_refusal(self):
             self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,False)
             self.assertIs(reader.SAME_JOB_ACTUAL_READER_ENABLED,False)
