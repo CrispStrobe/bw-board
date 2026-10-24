@@ -6822,7 +6822,7 @@ Board CPU/fixture/goldens, substitute native-addon profiles or broaden a
 historical successful result. Keep the fixed ROM SHA256
 `d1aa0e35a81c68bc61621309589c8f4afa12ce2e7369af43879c718d109e2529`
 and exact 1730-byte wire/comparison semantics. The older profile-locked Bochs
-addons and historical standalone VPS binary are not admitted build artifacts
+addons and historical standalone binary are not admitted build artifacts
 for this new source/fixture.
 
 New source/metadata/build/runtime requests, schemas, SHA-only body markers,
