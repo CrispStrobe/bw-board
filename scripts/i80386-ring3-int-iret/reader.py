@@ -13259,7 +13259,7 @@ def main():
             packet[name]=read(Path(args.packet_dir)/name,cap)
         external=parse(read(args.external,1<<20))
         result=verify_same_job_actual_official(packet,read(args.handoff,1<<20),
-            read(args.service,1<<20),read(args.cleanup,1<<20),
+            read(args.service,1<<20),read(args.cleanup,16384 if version==3 else 1<<20),
             read(args.guest_outer,4096),read(args.controller_runtime,1<<20),
             read(args.setup_log,8<<20),read(args.setup_outer,4096),
             read(args.setup_cleanup,16384),read(args.setup_shell,4096),
@@ -13290,7 +13290,7 @@ def main():
                  65536 if name.endswith('.rom') else 128<<10)
             packet[name]=read(Path(args.packet_dir)/name,cap)
         result=verify_same_job_actual_packet(packet,read(args.handoff,1<<20),
-            read(args.service,1<<20),read(args.cleanup,1<<20),
+            read(args.service,1<<20),read(args.cleanup,16384 if version==3 else 1<<20),
             read(args.guest_outer,4096),read(args.controller_runtime,1<<20),version)
         print(json.dumps(result,sort_keys=True));return
     if any(mode in sys.argv[1:] for mode in
