@@ -14,6 +14,101 @@ concurrency:
   group: ring3-source-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
   cancel-in-progress: false
 jobs:
+  # Distinct data-only host observation. Disabled until separate source review.
+  host-baseline-v1:
+    if: ${{ false && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-host-baseline-v1' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      BW_RING3_HOST_BASELINE_V1_REQUEST_SHA256: ${{ vars.BW_RING3_HOST_BASELINE_V1_REQUEST_SHA256 }}
+      BW_RING3_HOST_BASELINE_V1_REQUEST_B64: ${{ vars.BW_RING3_HOST_BASELINE_V1_REQUEST_B64 }}
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      PYTHONPATH: ''
+      PYTHONHOME: ''
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Retain read-only status, helper and image baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git --no-replace-objects -c gc.auto=0 -c maintenance.auto=false rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          git diff --quiet
+          git diff --cached --quiet
+          BW_EXPECTED_TREE="$(git --no-replace-objects -c gc.auto=0 -c maintenance.auto=false rev-parse 'HEAD^{tree}')"
+          export BW_EXPECTED_TREE
+          mkdir -p build
+          mkdir -m 700 build/i80386-ring3-host-baseline-v1
+          set +e
+          /usr/bin/python3 -I -S -B scripts/i80386-ring3-int-iret/run.py --host-baseline-shell-v1 \
+            > build/i80386-ring3-host-baseline-v1/shell.original.json
+          baseline_shell_exit="$?"
+          set -e
+          baseline_uid="$(id -u)"
+          baseline_gid="$(id -g)"
+          baseline_image_args=()
+          if [[ ${ImageOS+x} ]]; then baseline_image_args+=("ImageOS=$ImageOS"); fi
+          if [[ ${ImageVersion+x} ]]; then baseline_image_args+=("ImageVersion=$ImageVersion"); fi
+          baseline_service() {
+            sudo -- /usr/bin/timeout --kill-after=5s 180s /usr/bin/systemd-run --wait --pipe \
+              --unit="bw-ring3-host-baseline-${GITHUB_RUN_ID}-1" \
+              --property=CPUQuota=100% --property=MemoryMax=1073741824 \
+              --property=MemorySwapMax=0 --property=TasksMax=64 \
+              --property=RuntimeMaxSec=120 --property=TimeoutStopSec=5 \
+              --working-directory="$PWD" \
+              /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+              SUDO_UID="$baseline_uid" SUDO_GID="$baseline_gid" \
+              BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+              BW_RING3_HOST_BASELINE_V1_REQUEST_SHA256="$BW_RING3_HOST_BASELINE_V1_REQUEST_SHA256" \
+              BW_RING3_HOST_BASELINE_V1_REQUEST_B64="$BW_RING3_HOST_BASELINE_V1_REQUEST_B64" \
+              GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+              GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+              GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+              GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+              GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" "${baseline_image_args[@]}" \
+              /usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/run.py --host-baseline-service-v1
+          }
+          set +e
+          baseline_service \
+            > build/i80386-ring3-host-baseline-v1/service.original.log \
+            2> build/i80386-ring3-host-baseline-v1/controller.stderr
+          baseline_service_exit="$?"
+          set -e
+          set +e
+          /usr/bin/timeout --kill-after=5s 40s /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+            GITHUB_RUN_ID="$GITHUB_RUN_ID" BW_BASELINE_SHELL_EXIT="$baseline_shell_exit" \
+            BW_BASELINE_SERVICE_EXIT="$baseline_service_exit" \
+            /usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/run.py --host-baseline-outside-v1 \
+            > build/i80386-ring3-host-baseline-v1/outside.original.json \
+            2> build/i80386-ring3-host-baseline-v1/outside.stderr
+          baseline_outside_exit="$?"
+          set -e
+          test "$(stat -c %s build/i80386-ring3-host-baseline-v1/shell.original.json)" -le 4096
+          test "$(stat -c %s build/i80386-ring3-host-baseline-v1/service.original.log)" -le 4194304
+          test "$(stat -c %s build/i80386-ring3-host-baseline-v1/controller.stderr)" -le 131072
+          test "$(stat -c %s build/i80386-ring3-host-baseline-v1/outside.original.json)" -le 16384
+          test "$(stat -c %s build/i80386-ring3-host-baseline-v1/outside.stderr)" -le 131072
+          test "$baseline_shell_exit" -eq 0
+          test "$baseline_service_exit" -eq 0
+          test "$baseline_outside_exit" -eq 0
+      - name: Retain read-only baseline originals
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-ring3-host-baseline-v1-originals
+          path: build/i80386-ring3-host-baseline-v1/
+          if-no-files-found: error
+          include-hidden-files: false
+          retention-days: 1
+
   setup-runtime-inventory-v8:
     if: ${{ github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-setup-runtime-inventory-v8' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
     runs-on: ubuntu-24.04
@@ -385,6 +480,7 @@ jobs:
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v7-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v8-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --image-env-diagnostic-only
+          /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --host-baseline-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/run.py --controls
   # Closed V8 source path only. BOTH this literal guard and the source guard
   # require separate runtime/source/event review before one official run.

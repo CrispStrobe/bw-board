@@ -8749,13 +8749,336 @@ def emit_image_env_diagnostic(result,emit=None,flush=None):
     need(emit(raw)==len(raw),'complete image diagnostic original');flush()
 
 
+# Distinct, data-only hosted baseline. Historical setup routes remain closed to it.
+HOST_BASELINE_ENABLED=False
+HOST_BASELINE_MARKER=b'RING3_HOST_BASELINE_V1 '
+HOST_BASELINE_LABEL='x86-ring3-host-baseline-v1'
+HOST_BASELINE_JOB='host-baseline-v1'
+HOST_BASELINE_PIN='BW_RING3_HOST_BASELINE_V1_REQUEST_SHA256'
+HOST_BASELINE_B64='BW_RING3_HOST_BASELINE_V1_REQUEST_B64'
+HOST_BASELINE_HELPERS=(
+    '/usr/bin/dash','/usr/bin/deb-systemd-helper','/usr/bin/deb-systemd-invoke',
+    '/usr/bin/dpkg-maintscript-helper','/usr/bin/systemctl','/usr/sbin/invoke-rc.d',
+    '/usr/sbin/update-rc.d','/usr/sbin/start-stop-daemon','/usr/sbin/ldconfig',
+    '/usr/sbin/ldconfig.real')
+HOST_BASELINE_ALIASES=('/bin','/bin/sh','/usr/bin/sh')
+HOST_BASELINE_STATUS='/var/lib/dpkg/status'
+HOST_BASELINE_POLICY='/usr/sbin/policy-rc.d'
+HOST_BASELINE_WIRE_CAP=4<<20
+
+
+def host_baseline_request(raw,pin):
+    need(type(raw) is bytes and 0<len(raw)<=65536 and type(pin) is str and
+         re.fullmatch('[0-9a-f]{64}',pin) and sha(raw)==pin,'external baseline request SHA')
+    value=final_json(raw,65536)
+    require_fields(value,'schema repository pullRequest head tree source','closed baseline request')
+    need(raw==encode(value) and value['schema']=='bw.ring3.host-baseline-request.v1' and
+         value['repository']==APPROVAL_REPOSITORY and type(value['pullRequest']) is int and
+         0<value['pullRequest']<2**31 and
+         all(type(value[k]) is str and re.fullmatch('[0-9a-f]{40}',value[k])
+             for k in ('head','tree')),'canonical owned baseline request')
+    source=admitted_original(value['source'],JSON_CAP,'baseline source twelve')
+    admit_generation_source(source,value['source']['sha256'],value['head'],value['tree'])
+    return value
+
+
+def host_baseline_event(event_raw,environ):
+    event=final_json(event_raw);pr=event.get('pull_request',{});body=pr.get('body')
+    start='<!-- BW_RING3_HOST_BASELINE_V1\n';end='\nBW_RING3_HOST_BASELINE_V1 -->'
+    need(type(body) is str and body.count(start)==body.count(end)==1 and
+         body.index(start)<body.index(end),'single baseline body marker')
+    pin=environ.get(HOST_BASELINE_PIN)
+    need(type(pin) is str and re.fullmatch('[0-9a-f]{64}',pin) and
+         body.split(start,1)[1].split(end,1)[0]==pin,'externally selected baseline SHA')
+    encoded=environ.get(HOST_BASELINE_B64)
+    need(type(encoded) is str and 0<len(encoded)<=87384,'bounded baseline request transport')
+    raw=base64.b64decode(encoded,validate=True)
+    need(base64.b64encode(raw).decode('ascii')==encoded and 0<len(raw)<=65536,
+         'canonical baseline request transport')
+    request=host_baseline_request(raw,pin)
+    need(event.get('action')=='labeled' and event.get('label',{}).get('name')==HOST_BASELINE_LABEL and
+         event.get('repository',{}).get('full_name')==APPROVAL_REPOSITORY and
+         event.get('sender',{}).get('login')=='CrispStrobe' and
+         type(event.get('number')) is int and event['number']==request['pullRequest'] and
+         type(pr.get('number')) is int and pr['number']==request['pullRequest'] and
+         pr.get('state')=='open' and pr.get('head',{}).get('sha')==request['head'] and
+         pr.get('head',{}).get('repo',{}).get('full_name')==APPROVAL_REPOSITORY and
+         pr['head']['repo'].get('fork') is False and pr.get('base',{}).get('ref')=='master' and
+         pr['base'].get('repo',{}).get('full_name')==APPROVAL_REPOSITORY,
+         'closed baseline own event')
+    need(all(environ.get(k)==v for k,v in {
+        'GITHUB_REPOSITORY':APPROVAL_REPOSITORY,'GITHUB_EVENT_NAME':'pull_request',
+        'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':HOST_BASELINE_JOB,
+        'GITHUB_RUN_ATTEMPT':'1','BW_EXPECTED_HEAD':request['head'],
+        'BW_EXPECTED_TREE':request['tree'],
+        'GITHUB_WORKFLOW_REF':APPROVAL_REPOSITORY+'/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request['pullRequest'])+'/merge',
+    }.items()) and type(environ.get('GITHUB_RUN_ID')) is str and
+         re.fullmatch('[1-9][0-9]{0,19}',environ['GITHUB_RUN_ID']) and
+         type(environ.get('GITHUB_WORKFLOW_SHA')) is str and
+         re.fullmatch('[0-9a-f]{40}',environ['GITHUB_WORKFLOW_SHA']),
+         'bound first own baseline source and run')
+    return raw,request
+
+
+def host_baseline_identity(info):
+    return {key:getattr(info,'st_'+key) for key in
+            ('dev','ino','mode','uid','gid','nlink','size','mtime_ns')}
+
+
+def host_baseline_file(path,cap):
+    """Read only a fixed regular path, preserving partial and close facts."""
+    need(path in (HOST_BASELINE_STATUS,*HOST_BASELINE_HELPERS) and
+         type(cap) is int and 0<cap<=8<<20,'fixed baseline data role')
+    item={'path':path,'kind':'error','namedBefore':None,'heldBefore':None,
+          'heldAfter':None,'namedAfter':None,'bytesRead':0,
+          'prefixSha256':sha(b''),'zlibBase64':None,
+          'closeAttempted':False,'closed':False,'firstFailure':None,'secondary':[]}
+    fd=None;data=bytearray();failure=FirstFailure()
+    try:
+        before=os.lstat(path);item['namedBefore']=host_baseline_identity(before)
+        need(stat.S_ISREG(before.st_mode),'baseline role regular, no alias')
+        need(before.st_uid==0 and before.st_gid==0 and before.st_nlink==1,
+             'baseline role root-owned single link')
+        need(before.st_size<=cap,'baseline role known size cap')
+        fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+        held=os.fstat(fd);item['heldBefore']=host_baseline_identity(held)
+        need(item['heldBefore']==item['namedBefore'],'baseline held opening identity')
+        while True:
+            chunk=os.read(fd,min(65536,cap+1-len(data)))
+            if not chunk:break
+            data.extend(chunk)
+            need(len(data)<=cap,'baseline read cap')
+        item['heldAfter']=host_baseline_identity(os.fstat(fd))
+        need(item['heldAfter']==item['heldBefore'] and len(data)==before.st_size,
+             'baseline held readback and extent')
+    except BaseException as error:failure.add(error,'baseline-file-'+path)
+    finally:
+        if fd is not None:
+            item['closeAttempted']=True
+            try:os.close(fd);item['closed']=True
+            except BaseException as error:failure.add(error,'baseline-file-close-'+path)
+        try:item['namedAfter']=host_baseline_identity(os.lstat(path))
+        except BaseException as error:failure.add(error,'baseline-file-named-after-'+path)
+    item['bytesRead']=len(data);item['prefixSha256']=sha(data)
+    if item['namedBefore']!=item['namedAfter']:
+        failure.add(ValueError('baseline named readback drift'),'baseline-file-'+path)
+    if failure.first is None:
+        item['kind']='regular'
+        compressed=zlib.compress(bytes(data),9)
+        item['zlibBase64']=base64.b64encode(compressed).decode('ascii')
+    item['firstFailure'],item['secondary']=failure.first,failure.secondary
+    return item
+
+
+def host_baseline_alias(path):
+    need(path in HOST_BASELINE_ALIASES,'fixed baseline alias role')
+    item={'path':path,'kind':'error','namedBefore':None,'namedAfter':None,
+          'linkText':None,'target':None,'firstFailure':None,'secondary':[]}
+    failure=FirstFailure()
+    try:
+        before=os.lstat(path);item['namedBefore']=host_baseline_identity(before)
+        need(stat.S_ISLNK(before.st_mode),'baseline alias symlink')
+        text=os.readlink(path)
+        need(type(text) is str and 0<len(text.encode('utf-8'))<=256 and
+             '\x00' not in text,'bounded baseline alias text')
+        item['linkText']=text
+        item['target']=os.path.normpath(os.path.join(os.path.dirname(path),text))
+        need(item['target'].startswith('/'),'absolute normalized alias target')
+    except BaseException as error:failure.add(error,'baseline-alias-'+path)
+    finally:
+        try:item['namedAfter']=host_baseline_identity(os.lstat(path))
+        except BaseException as error:failure.add(error,'baseline-alias-readback-'+path)
+    if item['namedBefore']!=item['namedAfter']:
+        failure.add(ValueError('baseline alias drift'),'baseline-alias-'+path)
+    if failure.first is None:item['kind']='alias'
+    item['firstFailure'],item['secondary']=failure.first,failure.secondary
+    return item
+
+
+def host_baseline_policy():
+    item={'path':HOST_BASELINE_POLICY,'kind':'error','identity':None,'linkText':None,
+          'firstFailure':None,'secondary':[]}
+    failure=FirstFailure()
+    try:
+        try:info=os.lstat(HOST_BASELINE_POLICY)
+        except FileNotFoundError:item['kind']='absent'
+        else:
+            item['kind']='present';item['identity']=host_baseline_identity(info)
+            if stat.S_ISLNK(info.st_mode):
+                text=os.readlink(HOST_BASELINE_POLICY)
+                need(0<len(text.encode('utf-8'))<=256,'bounded policy alias text')
+                item['linkText']=text
+    except BaseException as error:failure.add(error,'baseline-policy')
+    item['firstFailure'],item['secondary']=failure.first,failure.secondary
+    return item
+
+
+def host_baseline_collect(environ,observer_factory=HostedEnvelopeInstaller,
+                          file_reader=host_baseline_file,alias_reader=host_baseline_alias,
+                          policy_reader=host_baseline_policy):
+    fields,field_errors=image_env_fields(environ);failure=FirstFailure()
+    result={'schema':'bw.ring3.host-baseline-original.v1','fields':fields,
+        'fieldErrors':field_errors,'context':{'request':None,'event':None,
+        'platform':{name:environ.get(name) for name in (
+            'GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_REPOSITORY','GITHUB_EVENT_NAME',
+            'GITHUB_ACTOR','GITHUB_JOB','GITHUB_WORKFLOW_SHA','GITHUB_WORKFLOW_REF',
+            'BW_EXPECTED_HEAD','BW_EXPECTED_TREE',HOST_BASELINE_PIN)},
+        'source':None,'sourceCommands':[],'eventIdentity':None,'resource':None},
+        'status':None,'helpers':{},'helperOrder':[],'aliases':{},'aliasOrder':[],
+        'policy':None,'firstFailure':None,'secondary':[],'complete':False,
+        'setupApproved':False,'runtimeApproved':False,'guestApproved':False,
+        'imageAuthenticated':False,'hostConfigurationApproved':False}
+    try:
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,
+             'root baseline observer identity')
+        run_id=environ.get('GITHUB_RUN_ID','')
+        need(re.fullmatch('[1-9][0-9]{0,19}',run_id) is not None,'fixed baseline run ID')
+        membership=Cgroups.text(None,Path('/proc/self/cgroup'))
+        need(membership=='0::/system.slice/bw-ring3-host-baseline-'+run_id+'-1.service\n',
+             'actual owned baseline service membership')
+        unit=Path('/sys/fs/cgroup')/membership[4:-1]
+        limits={key:Cgroups.text(None,unit/name).strip() for key,name in
+            (('cpuMax','cpu.max'),('memoryMax','memory.max'),
+             ('swapMax','memory.swap.max'),('pidsMax','pids.max'))}
+        need(limits==LIMITS,'bounded baseline service limits')
+        result['context']['resource']={'membership':membership,'limits':limits}
+        observer=observer_factory(environ)
+        event=observer.event()
+        result['context']['event']=original_bytes(event)
+        result['context']['eventIdentity']=observer.facts['eventIdentity']
+        request_raw,request=host_baseline_event(event,environ)
+        result['context']['request']=original_bytes(request_raw)
+        need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,'held baseline source path')
+        observer.source(request)
+        result['context']['source']=observer.facts['source']
+        result['context']['sourceCommands']=observer.facts['sourceCommands']
+        need(not field_errors,'bounded baseline image text')
+        status=file_reader(HOST_BASELINE_STATUS,8<<20)
+        result['status']=status
+        if status['kind']!='regular':
+            raise ObservedFailure(status['firstFailure'],status['secondary'])
+        aggregate=0
+        for path in HOST_BASELINE_HELPERS:
+            item=file_reader(path,2<<20)
+            result['helpers'][path]=item
+            result['helperOrder'].append(path)
+            if item['kind']!='regular':
+                raise ObservedFailure(item['firstFailure'],item['secondary'])
+            aggregate+=item['bytesRead'];need(aggregate<=8<<20,'baseline helper aggregate cap')
+        for path in HOST_BASELINE_ALIASES:
+            item=alias_reader(path);result['aliases'][path]=item
+            result['aliasOrder'].append(path)
+            if item['kind']!='alias':
+                raise ObservedFailure(item['firstFailure'],item['secondary'])
+        result['policy']=policy_reader()
+        if result['policy']['kind'] not in ('absent','present'):
+            raise ObservedFailure(result['policy']['firstFailure'],result['policy']['secondary'])
+        result['complete']=True
+    except BaseException as error:failure.add(error,'host-baseline')
+    if 'observer' in locals():
+        result['context']['source']=observer.facts.get('source')
+        result['context']['sourceCommands']=observer.facts['sourceCommands']
+    result['firstFailure'],result['secondary']=failure.first,failure.secondary
+    return result
+
+
+def host_baseline_emit(result,emit=None,flush=None):
+    emit=sys.stdout.buffer.write if emit is None else emit
+    flush=sys.stdout.buffer.flush if flush is None else flush
+    raw=HOST_BASELINE_MARKER+encode(result)
+    if len(raw)>HOST_BASELINE_WIRE_CAP:
+        # Incompressible data cannot be silently truncated or hash-substituted.
+        wire={'phase':'host-baseline-wire','name':'ValueError',
+              'message':'bounded complete original exceeds 4 MiB'}
+        result=dict(result,status=None,helpers={},helperOrder=[],aliases={},aliasOrder=[],
+            policy=None,complete=False,
+            firstFailure=result['firstFailure'] if result['firstFailure'] is not None else wire,
+            secondary=result['secondary']+[wire] if result['firstFailure'] is not None
+                      else result['secondary'])
+        raw=HOST_BASELINE_MARKER+encode(result)
+    need(len(raw)<=HOST_BASELINE_WIRE_CAP and emit(raw)==len(raw),
+         'complete bounded baseline original')
+    flush()
+    return result
+
+
+def host_baseline_shell(environ):
+    fields,errors=image_env_fields(environ)
+    result={'schema':'bw.ring3.host-baseline-shell.v1','fields':fields,
+            'fieldErrors':errors,'setupAttempted':False,'guestAttempted':False,
+            'setupApproved':False}
+    raw=encode(result)
+    need(len(raw)<=4096 and sys.stdout.buffer.write(raw)==len(raw),
+         'bounded baseline shell original')
+    sys.stdout.buffer.flush()
+    return 0 if not errors else 1
+
+
+
+def host_baseline_outside(environ,census_reader=None,sleeper=time.sleep):
+    """Read-only finite owned-unit readback; service manager owns timeout cleanup."""
+    failure=FirstFailure();value={'schema':'bw.ring3.host-baseline-outside.v1',
+        'runId':None,'unit':None,'shellExitCode':None,'serviceExitCode':None,
+        'cgroupAfter':'unknown','cleanupAction':'none','polls':[],
+        'firstFailure':None,'secondary':[],'setupApproved':False}
+    try:
+        run_id=environ.get('GITHUB_RUN_ID');shell_exit=environ.get('BW_BASELINE_SHELL_EXIT')
+        service_exit=environ.get('BW_BASELINE_SERVICE_EXIT')
+        need(type(run_id) is str and re.fullmatch('[1-9][0-9]{0,19}',run_id),
+             'fixed outside baseline run')
+        need(type(shell_exit) is str and re.fullmatch('(?:0|[1-9][0-9]{0,2})',shell_exit) and
+             type(service_exit) is str and re.fullmatch('(?:0|[1-9][0-9]{0,2})',service_exit) and
+             max(int(shell_exit),int(service_exit))<=255,'finite shell/service exits')
+        value['runId']=run_id;value['shellExitCode']=int(shell_exit)
+        value['serviceExitCode']=int(service_exit)
+        unit=Path('/sys/fs/cgroup/system.slice')/('bw-ring3-host-baseline-'+run_id+'-1.service')
+        value['unit']=str(unit)
+        if int(shell_exit)!=0:failure.add(ValueError('bounded shell observer exit '+shell_exit),'baseline-shell-exit')
+        if int(service_exit)!=0:failure.add(ValueError('bounded service client exit '+service_exit),'baseline-service-exit')
+        def read_census():
+            need(not unit.is_symlink(),'no aliased owned baseline unit')
+            if not unit.exists():return {'terminal':'absent','cgroupProcs':None,
+                                          'cgroupEvents':None,'cgroupStat':None}
+            info=unit.lstat()
+            need(stat.S_ISDIR(info.st_mode) and info.st_uid==info.st_gid==0 and
+                 unit.resolve(strict=True)==unit,'exact root-owned baseline unit')
+            procs=Cgroups.text(None,unit/'cgroup.procs')
+            events=Cgroups.text(None,unit/'cgroup.events')
+            stat_text=Cgroups.text(None,unit/'cgroup.stat')
+            need(all(len(x.encode())<=1024 for x in (procs,events,stat_text)),
+                 'bounded baseline outside cgroup texts')
+            return {'terminal':'empty' if setup_v8_cgroup_quiet(procs,events,stat_text)
+                    else 'populated','cgroupProcs':procs,'cgroupEvents':events,
+                    'cgroupStat':stat_text}
+        read_census=read_census if census_reader is None else census_reader
+        for attempt in range(6):
+            item=read_census();value['polls'].append(item)
+            if item['terminal'] in ('absent','empty'):break
+            if attempt<5:sleeper(1)
+        value['cgroupAfter']=value['polls'][-1]['terminal']
+        if value['cgroupAfter'] not in ('absent','empty'):
+            failure.add(ValueError('owned baseline unit not terminal after finite census'),
+                        'baseline-outside-cgroup')
+    except BaseException as error:failure.add(error,'baseline-outside')
+    value['firstFailure'],value['secondary']=failure.first,failure.secondary
+    return value
+
+
+def host_baseline_outside_emit(value):
+    raw=encode(value)
+    need(len(raw)<=16384 and sys.stdout.buffer.write(raw)==len(raw),
+         'bounded baseline outside original')
+    sys.stdout.buffer.flush()
+    return 0 if value['firstFailure'] is None else 1
+
+
 ACTUAL_ENTRY_ENABLED=False  # Activation requires a separate reviewed source/workflow change.
 
 
 def dispatch_cli(argv=None,environ=None):
     parser=argparse.ArgumentParser(description=__doc__,allow_abbrev=False)
     modes=parser.add_mutually_exclusive_group(required=True)
-    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy','setup-runtime-inventory-v6','cleanup-setup-v6-policy','setup-v6-image-shell','setup-runtime-inventory-v7','cleanup-setup-v7-policy','setup-v7-image-shell','setup-runtime-inventory-v8','cleanup-setup-v8-policy','setup-v8-image-shell','image-env-shell-v1','image-env-service-v1'):
+    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy','setup-runtime-inventory-v6','cleanup-setup-v6-policy','setup-v6-image-shell','setup-runtime-inventory-v7','cleanup-setup-v7-policy','setup-v7-image-shell','setup-runtime-inventory-v8','cleanup-setup-v8-policy','setup-v8-image-shell','image-env-shell-v1','image-env-service-v1','host-baseline-shell-v1','host-baseline-service-v1','host-baseline-outside-v1'):
         modes.add_argument('--'+name,action='store_const',const=name,dest='mode')
     argv=list(sys.argv[1:] if argv is None else argv)
     if len(argv)!=1:parser.error('exactly one fixed mode argument required')
@@ -8763,6 +9086,18 @@ def dispatch_cli(argv=None,environ=None):
     failure=FirstFailure();result=None
     try:
         if args.mode=='controls':controls();return 0
+        if args.mode=='host-baseline-shell-v1':
+            need(HOST_BASELINE_ENABLED is True,'baseline shell disabled')
+            return host_baseline_shell(dict(os.environ if environ is None else environ))
+        if args.mode=='host-baseline-outside-v1':
+            need(HOST_BASELINE_ENABLED is True,'baseline outside disabled')
+            return host_baseline_outside_emit(host_baseline_outside(
+                dict(os.environ if environ is None else environ)))
+        if args.mode=='host-baseline-service-v1':
+            need(HOST_BASELINE_ENABLED is True,'baseline service disabled')
+            result=host_baseline_collect(dict(os.environ if environ is None else environ))
+            result=host_baseline_emit(result)
+            return 0 if result['complete'] and result['firstFailure'] is None else 1
         if args.mode=='image-env-shell-v1':
             need(IMAGE_ENV_DIAGNOSTIC_ENABLED is True,'image diagnostic disabled')
             result=image_env_shell_original(dict(os.environ if environ is None else environ))

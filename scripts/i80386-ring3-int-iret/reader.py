@@ -10042,7 +10042,401 @@ def consumed_v7_path_failure_audit(raw,external,outer_raw,cleanup_raw,shell_raw)
         'completeHostConfiguration':False,'partialMutationPossible':True}
 
 
+# Independent, read-only baseline original audit. No producer imports.
+HOST_BASELINE_READER_ENABLED=False
+HOST_BASELINE_MARKER=b'RING3_HOST_BASELINE_V1 '
+HOST_BASELINE_JOB='host-baseline-v1'
+HOST_BASELINE_LABEL='x86-ring3-host-baseline-v1'
+HOST_BASELINE_PIN='BW_RING3_HOST_BASELINE_V1_REQUEST_SHA256'
+HOST_BASELINE_B64='BW_RING3_HOST_BASELINE_V1_REQUEST_B64'
+HOST_BASELINE_HELPERS=(
+    '/usr/bin/dash','/usr/bin/deb-systemd-helper','/usr/bin/deb-systemd-invoke',
+    '/usr/bin/dpkg-maintscript-helper','/usr/bin/systemctl','/usr/sbin/invoke-rc.d',
+    '/usr/sbin/update-rc.d','/usr/sbin/start-stop-daemon','/usr/sbin/ldconfig',
+    '/usr/sbin/ldconfig.real')
+HOST_BASELINE_ALIASES=('/bin','/bin/sh','/usr/bin/sh')
+
+
+def host_baseline_request(raw,pin):
+    need(type(raw) is bytes and 0<len(raw)<=65536 and digest(pin)==sha(raw),
+         'externally selected baseline request')
+    value=parse_setup_v8_outer(raw);keys(value,'schema repository pullRequest head tree source')
+    need(raw==canonical(value) and value['schema']=='bw.ring3.host-baseline-request.v1' and
+         value['repository']=='CrispStrobe/bw-board' and
+         type(value['pullRequest']) is int and 0<value['pullRequest']<2**31,
+         'canonical own baseline request')
+    digest(value['head'],40);digest(value['tree'],40)
+    source_raw=prerequisite_original(canonical(value['source']))
+    source=parse_setup_v8_outer(source_raw);keys(source,'schema head tree files')
+    need(source_raw==canonical(source) and source['schema']=='bw.ring3.source.v1' and
+         source['head']==value['head'] and source['tree']==value['tree'] and
+         type(source['files']) is dict and set(source['files'])==SETUP_SOURCE_PATHS,
+         'exact baseline source twelve')
+    for item in source['files'].values():
+        keys(item,'mode blob bytes sha256')
+        need(item['mode']=='100644','regular source role')
+        integer(item['bytes'],0,4<<20);digest(item['sha256']);digest(item['blob'],40)
+    return value,source
+
+
+def host_baseline_event(raw,request,pin,environment):
+    event=parse_setup_v8_outer(raw);pr=event.get('pull_request',{});body=pr.get('body')
+    start='<!-- BW_RING3_HOST_BASELINE_V1\n';end='\nBW_RING3_HOST_BASELINE_V1 -->'
+    need(type(body) is str and body.count(start)==body.count(end)==1 and
+         body.index(start)<body.index(end) and
+         body.split(start,1)[1].split(end,1)[0]==pin,
+         'one separate baseline body SHA marker')
+    need(type(environment.get(HOST_BASELINE_B64)) is str and
+         environment[HOST_BASELINE_B64]==base64.b64encode(canonical(request)).decode('ascii'),
+         'exact external baseline request transport')
+    need(event.get('action')=='labeled' and event.get('label',{}).get('name')==HOST_BASELINE_LABEL and
+         event.get('repository',{}).get('full_name')=='CrispStrobe/bw-board' and
+         event.get('sender',{}).get('login')=='CrispStrobe' and
+         type(event.get('number')) is int and event['number']==request['pullRequest'] and
+         type(pr.get('number')) is int and pr['number']==request['pullRequest'] and
+         pr.get('state')=='open' and pr.get('head',{}).get('sha')==request['head'] and
+         pr.get('head',{}).get('repo',{}).get('full_name')=='CrispStrobe/bw-board' and
+         pr['head']['repo'].get('fork') is False and pr.get('base',{}).get('ref')=='master' and
+         pr['base'].get('repo',{}).get('full_name')=='CrispStrobe/bw-board',
+         'bound first own baseline event')
+    need(all(environment.get(k)==v for k,v in {
+        'GITHUB_REPOSITORY':'CrispStrobe/bw-board','GITHUB_EVENT_NAME':'pull_request',
+        'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':HOST_BASELINE_JOB,'GITHUB_RUN_ATTEMPT':'1',
+        'BW_EXPECTED_HEAD':request['head'],'BW_EXPECTED_TREE':request['tree'],
+        HOST_BASELINE_PIN:pin,
+        'GITHUB_WORKFLOW_REF':'CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request['pullRequest'])+'/merge',
+    }.items()),'reported baseline service context')
+    need(type(environment.get('GITHUB_RUN_ID')) is str and
+         re.fullmatch('[1-9][0-9]{0,19}',environment['GITHUB_RUN_ID']),
+         'first baseline run')
+    digest(environment.get('GITHUB_WORKFLOW_SHA'),40)
+
+
+def host_baseline_identity(row):
+    keys(row,'dev ino mode uid gid nlink size mtime_ns')
+    for key in row:integer(row[key],0,2**64-1)
+    return row
+
+
+def host_baseline_bytes(item,path,cap):
+    keys(item,'path kind namedBefore heldBefore heldAfter namedAfter bytesRead prefixSha256 zlibBase64 closeAttempted closed firstFailure secondary')
+    need(item['path']==path and item['kind']=='regular' and item['firstFailure'] is None and
+         item['secondary']==[] and item['closeAttempted'] is True and item['closed'] is True,
+         'complete baseline regular role')
+    for name in ('namedBefore','heldBefore','heldAfter','namedAfter'):
+        host_baseline_identity(item[name])
+    need(item['namedBefore']==item['heldBefore']==item['heldAfter']==item['namedAfter'] and
+         item['namedBefore']['uid']==item['namedBefore']['gid']==0 and
+         item['namedBefore']['nlink']==1 and stat.S_ISREG(item['namedBefore']['mode']),
+         'root regular stable identity and readback')
+    integer(item['bytesRead'],0,cap)
+    need(item['bytesRead']==item['namedBefore']['size'],'complete original bytes')
+    digest(item['prefixSha256'])
+    encoded=item['zlibBase64']
+    need(type(encoded) is str and 0<len(encoded)<=4*(4<<20)//3+4,'bounded encoded role')
+    zipped=base64.b64decode(encoded,validate=True)
+    need(base64.b64encode(zipped).decode('ascii')==encoded,'canonical role base64')
+    decoder=zlib.decompressobj()
+    raw=decoder.decompress(zipped,cap+1)
+    need(len(raw)<=cap and decoder.eof and not decoder.unused_data and
+         not decoder.unconsumed_tail,'complete bounded zlib role')
+    need(len(raw)==item['bytesRead'] and sha(raw)==item['prefixSha256'],
+         'independent raw role extent and SHA')
+    return raw
+
+
+def host_baseline_status(raw):
+    need(type(raw) is bytes and 0<len(raw)<=8<<20 and raw.endswith(b'\n'),
+         'complete bounded status bytes')
+    text=raw.decode('utf-8','strict');rows={};counts={}
+    for paragraph in text.strip('\n').split('\n\n'):
+        need(paragraph and len(rows)<5000,'finite status paragraph roster')
+        fields={};last=None
+        for line in paragraph.split('\n'):
+            if line.startswith((' ', '\t')):
+                need(last is not None,'status fold has parent')
+                if last in ('Package','Version','Architecture','Status'):
+                    raise Refusal('folded status authority field')
+                continue
+            need(':' in line,'status field delimiter')
+            name,value=line.split(':',1)
+            need(re.fullmatch('[A-Za-z][A-Za-z0-9-]*',name) is not None and
+                 value.startswith(' '),'bounded Debian status field')
+            value=value[1:];last=name
+            if name in ('Package','Version','Architecture','Status'):
+                need(name not in fields and value!='','unique nonempty status authority')
+                fields[name]=value
+        need(set(fields)=={'Package','Version','Architecture','Status'},
+             'complete status authority quartet')
+        key=(fields['Package'],fields['Architecture'])
+        need(key not in rows,'duplicate package architecture')
+        rows[key]=fields
+        counts[fields['Status']]=counts.get(fields['Status'],0)+1
+    return {'records':len(rows),'statusCounts':counts,
+            'architectures':sorted({row['Architecture'] for row in rows.values()})}
+
+
+def host_baseline_official_image(raw,job_name):
+    need(type(raw) is bytes and 0<len(raw)<=8<<20,'bounded official job log bytes')
+    lines=raw.decode('utf-8','strict').splitlines();groups=[];inside=False;row={}
+    first_run_seen=False;job_name_seen=False;setup_region_seen=False
+    for line in lines:
+        need(len(line.encode('utf-8'))<=131072,'bounded official log line')
+        match=re.fullmatch(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z (.*)',line)
+        if not match:continue
+        value=match.group(1)
+        if value.startswith('Complete job name: '):
+            need(not first_run_seen and not job_name_seen and len(groups)==1 and
+                 value=='Complete job name: '+job_name,'official pre-step job identity')
+            job_name_seen=True
+        if value.startswith('##[group]Run '):
+            if not first_run_seen:
+                need(job_name_seen and value.startswith('##[group]Run actions/checkout@'),
+                     'checkout is first hosted step')
+            first_run_seen=True
+        if value=='##[group]Runner Image':
+            need(not inside and not first_run_seen and not job_name_seen,
+                 'Runner Image only in platform setup prefix')
+            inside=True;row={};setup_region_seen=True;continue
+        if not inside:continue
+        if value=='##[endgroup]':
+            need(set(row)=={'Image','Version'},'complete Runner Image group')
+            groups.append(row);inside=False;continue
+        for field in ('Image','Version'):
+            if value.startswith(field+': '):
+                need(field not in row,'duplicate official image field')
+                found=value[len(field)+2:]
+                need(0<len(found.encode('utf-8'))<=256 and
+                     all(32<=ord(ch)<127 for ch in found),
+                     'bounded official image field')
+                row[field]=found
+    need(not inside and len(groups)==1 and setup_region_seen and job_name_seen and first_run_seen,
+         'one complete pre-checkout official Runner Image block')
+    return groups[0]
+
+
+def host_baseline_context(context,external):
+    request_raw=prerequisite_original(canonical(context['request']))
+    request,source=host_baseline_request(request_raw,external['requestSha256'])
+    need(request['head']==external['head'] and request['tree']==external['tree'] and
+         context['source']==source and
+         source['files']['.github/workflows/i80386-ring3-int-iret.yml']['sha256']==external['workflowFileSha256'],
+         'exact baseline source and workflow bytes')
+    event_raw=prerequisite_original(canonical(context['event']))
+    image_diag_source_witness(context['sourceCommands'],context['eventIdentity'],
+                              event_raw,request,source)
+    environment={'GITHUB_RUN_ID':external['runId'],'GITHUB_RUN_ATTEMPT':'1',
+        'GITHUB_REPOSITORY':'CrispStrobe/bw-board','GITHUB_EVENT_NAME':'pull_request',
+        'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':HOST_BASELINE_JOB,
+        'GITHUB_WORKFLOW_SHA':external['workflowSha'],
+        'GITHUB_WORKFLOW_REF':'CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request['pullRequest'])+'/merge',
+        'BW_EXPECTED_HEAD':external['head'],'BW_EXPECTED_TREE':external['tree'],
+        HOST_BASELINE_PIN:external['requestSha256']}
+    need(context['platform']==environment,'exact reported baseline platform')
+    host_baseline_event(event_raw,request,external['requestSha256'],
+        dict(environment,**{HOST_BASELINE_B64:base64.b64encode(request_raw).decode('ascii')}))
+    need(context['resource']=={'membership':'0::/system.slice/bw-ring3-host-baseline-'+external['runId']+'-1.service\n',
+        'limits':{'cpuMax':'100000 100000','memoryMax':'1073741824','swapMax':'0','pidsMax':'64'}},
+        'bounded owned baseline service')
+    return request
+
+
+def host_baseline_failure(value):
+    keys(value,'phase name message')
+    need(all(type(value[k]) is str and 0<len(value[k].encode('utf-8'))<=256
+             for k in ('phase','name','message')),'bounded retained failure fact')
+
+
+def verify_host_baseline(service_log,shell_raw,outside_raw,official_log,external):
+    keys(external,'schema runId attempt head tree requestSha256 workflowSha workflowFileSha256 jobId jobName conclusion serviceBytes serviceSha256 shellBytes shellSha256 outsideBytes outsideSha256 officialLogBytes officialLogSha256')
+    need(external['schema']=='bw.ring3.host-baseline-expectation.v1' and
+         external['jobName']==HOST_BASELINE_JOB and external['attempt']=='1' and
+         type(external['jobId']) is int and 0<external['jobId']<2**63 and
+         external['conclusion'] in ('success','failure'),'externally selected baseline job')
+    for name,size in (('head',40),('tree',40),('workflowSha',40),('workflowFileSha256',64),('requestSha256',64),
+                      ('serviceSha256',64),('shellSha256',64),('outsideSha256',64),
+                      ('officialLogSha256',64)):
+        digest(external[name],size)
+    need(type(external['runId']) is str and re.fullmatch('[1-9][0-9]{0,19}',external['runId']),
+         'exact baseline run')
+    for raw,prefix,cap in ((service_log,'service',4<<20),(shell_raw,'shell',4096),
+                           (outside_raw,'outside',4096),(official_log,'officialLog',8<<20)):
+        need(type(raw) is bytes and 0<len(raw)<=cap and
+             integer(external[prefix+'Bytes'],1,cap)==len(raw) and
+             sha(raw)==external[prefix+'Sha256'],'external original SHA/extent '+prefix)
+    image=host_baseline_official_image(official_log,external['jobName'])
+    need(shell_raw==canonical(parse_setup_v8_outer(shell_raw)),'canonical baseline shell')
+    shell=parse_setup_v8_outer(shell_raw)
+    keys(shell,'schema fields fieldErrors setupAttempted guestAttempted setupApproved')
+    need(shell['schema']=='bw.ring3.host-baseline-shell.v1' and
+         all(shell[k] is False for k in ('setupAttempted','guestAttempted','setupApproved')),
+         'read-only baseline shell')
+    image_diag_fields(shell['fields'],bool(shell['fieldErrors']))
+    need(type(shell['fieldErrors']) is list and len(shell['fieldErrors'])<=2,
+         'bounded shell field errors')
+    lines=[]
+    for line in service_log.splitlines():
+        at=line.find(HOST_BASELINE_MARKER)
+        if at>=0:
+            need(line[:at]==b'' or re.fullmatch(rb'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ',line[:at]),
+                 'service log timestamp prefix')
+            lines.append(line[at+len(HOST_BASELINE_MARKER):])
+    need(len(lines)==1,'one retained baseline packet')
+    packet=parse_setup_v8_outer(lines[0])
+    need(lines[0]+b'\n'==canonical(packet),'canonical baseline service original')
+    keys(packet,'schema fields fieldErrors context status helpers helperOrder aliases aliasOrder policy firstFailure secondary complete setupApproved runtimeApproved guestApproved imageAuthenticated hostConfigurationApproved')
+    need(packet['schema']=='bw.ring3.host-baseline-original.v1' and
+         all(packet[k] is False for k in ('setupApproved','runtimeApproved','guestApproved',
+                                          'imageAuthenticated','hostConfigurationApproved')),
+         'all baseline authority false')
+    image_diag_fields(packet['fields'],bool(packet['fieldErrors']))
+    need(type(packet['fieldErrors']) is list and len(packet['fieldErrors'])<=2,
+         'bounded service field errors')
+    need(outside_raw==canonical(parse_setup_v8_outer(outside_raw)),'canonical outside')
+    outside=parse_setup_v8_outer(outside_raw)
+    keys(outside,'schema runId unit shellExitCode serviceExitCode cgroupAfter cleanupAction polls firstFailure secondary setupApproved')
+    need(outside['schema']=='bw.ring3.host-baseline-outside.v1' and
+         outside['runId']==external['runId'] and
+         outside['unit']=='/sys/fs/cgroup/system.slice/bw-ring3-host-baseline-'+external['runId']+'-1.service' and
+         outside['cgroupAfter'] in ('absent','empty','populated','unknown') and
+         type(outside['shellExitCode']) is int and type(outside['serviceExitCode']) is int and
+         0<=outside['shellExitCode']<=255 and 0<=outside['serviceExitCode']<=255 and
+         outside['cleanupAction']=='none' and outside['setupApproved'] is False and
+         type(outside['secondary']) is list and len(outside['secondary'])<=8 and
+         type(outside['polls']) is list and len(outside['polls'])<=6,
+         'bounded read-only outside terminal identity')
+    if outside['firstFailure'] is not None:host_baseline_failure(outside['firstFailure'])
+    for fact in outside['secondary']:host_baseline_failure(fact)
+    for index,item in enumerate(outside['polls']):
+        keys(item,'terminal cgroupProcs cgroupEvents cgroupStat')
+        need(item['terminal'] in ('absent','empty','populated'),'typed finite census')
+        if item['terminal']=='absent':
+            need(all(item[k] is None for k in ('cgroupProcs','cgroupEvents','cgroupStat')),
+                 'absent unit has no cgroup texts')
+        else:
+            procs,events,stats=(item[k] for k in ('cgroupProcs','cgroupEvents','cgroupStat'))
+            need(all(type(x) is str and len(x.encode())<=1024 for x in (procs,events,stats)) and
+                 (item['terminal']=='empty')==setup_v8_cgroup_quiet(procs,events,stats),
+                 'independent bounded nested cgroup census')
+        if index<len(outside['polls'])-1:
+            need(item['terminal']=='populated','only populated unit is repolled')
+    if outside['polls']:
+        need(outside['cgroupAfter']==outside['polls'][-1]['terminal'],
+             'last outside census is terminal report')
+    else:need(outside['cgroupAfter']=='unknown' and outside['firstFailure'] is not None,
+              'missing outside census remains failure')
+    context=packet['context']
+    keys(context,'request event platform source sourceCommands eventIdentity resource')
+    complete=(packet['complete'] is True and packet['firstFailure'] is None and
+             packet['secondary']==[] and not packet['fieldErrors'])
+    if complete:
+        host_baseline_context(context,external)
+        need(type(packet['helpers']) is dict and set(packet['helpers'])==set(HOST_BASELINE_HELPERS) and
+             packet['helperOrder']==list(HOST_BASELINE_HELPERS) and
+             type(packet['aliases']) is dict and set(packet['aliases'])==set(HOST_BASELINE_ALIASES) and
+             packet['aliasOrder']==list(HOST_BASELINE_ALIASES),
+             'closed helper/alias roles')
+        raw_status=host_baseline_bytes(packet['status'],'/var/lib/dpkg/status',8<<20)
+        census=host_baseline_status(raw_status)
+        total=0
+        for path in HOST_BASELINE_HELPERS:
+            raw=host_baseline_bytes(packet['helpers'][path],path,2<<20)
+            total+=len(raw);need(total<=8<<20,'helper aggregate decoded cap')
+        for path in HOST_BASELINE_ALIASES:
+            item=packet['aliases'][path]
+            keys(item,'path kind namedBefore namedAfter linkText target firstFailure secondary')
+            need(item['path']==path and item['kind']=='alias' and item['firstFailure'] is None and
+                 item['secondary']==[] and item['namedBefore']==item['namedAfter'],
+                 'complete stable alias')
+            before=host_baseline_identity(item['namedBefore'])
+            need(stat.S_ISLNK(before['mode']) and type(item['linkText']) is str and
+                 0<len(item['linkText'].encode('utf-8'))<=256 and '\x00' not in item['linkText'] and
+                 item['target']==posixpath.normpath(posixpath.join(posixpath.dirname(path),item['linkText'])),
+                 'bounded alias target')
+        policy=packet['policy'];keys(policy,'path kind identity linkText firstFailure secondary')
+        need(policy['path']=='/usr/sbin/policy-rc.d' and policy['kind'] in ('absent','present') and
+             policy['firstFailure'] is None and policy['secondary']==[],
+             'typed baseline policy observation')
+        if policy['kind']=='absent':need(policy['identity'] is None and policy['linkText'] is None,'absent policy')
+        else:
+            info=host_baseline_identity(policy['identity'])
+            if stat.S_ISLNK(info['mode']):
+                need(type(policy['linkText']) is str and
+                     0<len(policy['linkText'].encode('utf-8'))<=256 and
+                     '\x00' not in policy['linkText'],'bounded present policy link')
+            else:need(policy['linkText'] is None,'nonalias policy has no link text')
+    else:
+        need(type(packet['firstFailure']) is dict and packet['complete'] is False,
+             'bounded failed baseline inner attempt')
+        need(type(packet['helpers']) is dict and type(packet['aliases']) is dict and
+             type(packet['helperOrder']) is list and type(packet['aliasOrder']) is list and
+             packet['helperOrder']==list(HOST_BASELINE_HELPERS[:len(packet['helperOrder'])]) and
+             packet['aliasOrder']==list(HOST_BASELINE_ALIASES[:len(packet['aliasOrder'])]) and
+             set(packet['helpers'])==set(packet['helperOrder']) and
+             set(packet['aliases'])==set(packet['aliasOrder']),
+             'failed baseline ordered file prefix')
+        if packet['status'] is not None or packet['helpers'] or packet['aliases'] or packet['policy'] is not None:
+            host_baseline_context(context,external)
+        elif context['source'] is not None:
+            host_baseline_context(context,external)
+        census=None
+        if packet['status'] is not None:
+            status=packet['status']
+            if status['kind']=='regular':
+                census=host_baseline_status(host_baseline_bytes(status,'/var/lib/dpkg/status',8<<20))
+            else:
+                need(status['kind']=='error' and status['firstFailure'] is not None,
+                     'typed failed status read')
+        total=0
+        for path in packet['helperOrder']:
+            item=packet['helpers'][path]
+            if item['kind']=='regular':
+                total+=len(host_baseline_bytes(item,path,2<<20))
+                need(total<=8<<20,'failed helper prefix aggregate cap')
+            else:
+                need(path==packet['helperOrder'][-1] and item['kind']=='error' and
+                     item['firstFailure'] is not None,'only final helper may be partial')
+        if packet['policy'] is not None:
+            keys(packet['policy'],'path kind identity linkText firstFailure secondary')
+            need(packet['policy']['path']=='/usr/sbin/policy-rc.d',
+                 'fixed failed policy role')
+    terminal=(outside['shellExitCode']==0 and outside['serviceExitCode']==0 and
+              outside['cgroupAfter'] in ('absent','empty') and
+              outside['firstFailure'] is None and outside['secondary']==[])
+    reported_complete=complete and terminal and external['conclusion']=='success'
+    if not reported_complete:
+        need(external['conclusion']=='failure' and (not complete or not terminal),
+             'failed selected job retains inner or outer refusal')
+    forwarded=shell['fields']
+    return {'schema':'bw.ring3.host-baseline-reader.v1',
+        'completeObservation':reported_complete,'statusCensus':census,
+        'shellFields':shell['fields'],'serviceFields':packet['fields'],
+        'forwardingMatchesExpected':packet['fields']==forwarded,
+        'officialRunnerImage':image,
+        'runnerImageMatchesService':image['Version']==packet['fields']['ImageVersion']['value'] and
+            image['Image']=='ubuntu-24.04' and packet['fields']['ImageOS']['value']=='ubuntu24',
+        'firstFailure':packet['firstFailure'] or outside['firstFailure'],
+        'outsideCgroupAfter':outside['cgroupAfter'],
+        'officialJobAuthenticatedByInnerReader':False,'setupApproved':False,
+        'runtimeApproved':False,'guestApproved':False,'imageAuthenticated':False}
+
+
 def main():
+    if sys.argv[1:2]==['--host-baseline-originals']:
+        need(HOST_BASELINE_READER_ENABLED is True,'baseline reader inactive pending reviewed event')
+        parser=argparse.ArgumentParser(description='Independent read-only hosted baseline',allow_abbrev=False)
+        for name in ('host-baseline-originals','shell-original','outside-original',
+                     'official-job-log','external-admission'):
+            parser.add_argument('--'+name,required=True)
+        need(len(sys.argv)==11,'exact baseline originals CLI')
+        args=parser.parse_args()
+        def bounded(path,cap):
+            with Path(path).open('rb') as stream:return stream.read(cap+1)
+        external=parse_setup_v8_outer(bounded(args.external_admission,1<<20))
+        result=verify_host_baseline(bounded(args.host_baseline_originals,4<<20),
+            bounded(args.shell_original,4096),bounded(args.outside_original,4096),
+            bounded(args.official_job_log,8<<20),external)
+        print(json.dumps(result,sort_keys=True));return
     if sys.argv[1:2]==['--consumed-v7-failure']:
         parser=argparse.ArgumentParser(description='Negative-only consumed v7 path failure audit',allow_abbrev=False)
         for name in ('consumed-v7-failure','external-admission','outer-resource-original',

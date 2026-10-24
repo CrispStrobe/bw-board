@@ -6935,8 +6935,314 @@ def consumed_v7_failure_controls():
         'installer':False,'nativeProcess':False,'guest':False,'pass':True}))
 
 
+def host_baseline_controls():
+    """Data-only synthetic producer to independent reader; no host file is read."""
+    p,_=producer_fixture_case()
+    source={'schema':'bw.ring3.source.v1','head':'a'*40,'tree':'b'*40,
+        'files':{name:{'mode':'100644','blob':'c'*40,'bytes':1,'sha256':'d'*64}
+                 for name in p.SOURCE_PATHS}}
+    request={'schema':'bw.ring3.host-baseline-request.v1','repository':'CrispStrobe/bw-board',
+        'pullRequest':645,'head':'a'*40,'tree':'b'*40,'source':p.original_bytes(p.encode(source))}
+    raw=p.encode(request);pin=p.sha(raw)
+    event={'action':'labeled','label':{'name':p.HOST_BASELINE_LABEL},
+        'repository':{'full_name':'CrispStrobe/bw-board'},'sender':{'login':'CrispStrobe'},
+        'number':645,'pull_request':{'number':645,'state':'open','body':
+            '<!-- BW_RING3_HOST_BASELINE_V1\n'+pin+'\nBW_RING3_HOST_BASELINE_V1 -->',
+            'head':{'sha':'a'*40,'repo':{'full_name':'CrispStrobe/bw-board','fork':False}},
+            'base':{'ref':'master','repo':{'full_name':'CrispStrobe/bw-board'}}}}
+    event_raw=p.encode(event)
+    git_env={'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin',
+             'GIT_NO_LAZY_FETCH':'1','GIT_CONFIG_NOSYSTEM':'1'}
+    git=['/usr/bin/git','-c','safe.directory=/checkout','--no-replace-objects',
+         '-c','gc.auto=0','-c','maintenance.auto=false']
+    tails=[['rev-parse','HEAD'],['rev-parse','HEAD^{tree}'],
+           ['ls-tree','-r','HEAD','--',*sorted(p.SOURCE_PATHS)]]
+    outputs=[b'a'*40+b'\n',b'b'*40+b'\n',
+        ''.join(source['files'][name]['mode']+' blob '+source['files'][name]['blob']+'\t'+name+'\n'
+                for name in sorted(p.SOURCE_PATHS)).encode()]
+    commands=[]
+    for index,(tail,output) in enumerate(zip(tails,outputs)):
+        argv=git+tail;pid=201+index;start=1+2*index;end=start+1
+        process={'schema':'bw.ring3.process.v1','role':'discovery','argv':argv,
+            'cwdRole':'checkout','environment':git_env,'pid':pid,'pgid':pid,
+            'parentPid':100,'startTicks':pid,'spawnMonoNs':start,'reapMonoNs':end,
+            'exitCode':0,'signal':None,'waitStatus':0,'timedOut':False,
+            'rusage':{'userSeconds':0.001,'systemSeconds':0.001,'maxRssKiB':1024},
+            'firstFailure':None,'secondary':[]}
+        commands.append({'argv':argv,'process':process,'stdout':p.original_bytes(output),
+                         'stderr':None})
+    env={'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'1','GITHUB_REPOSITORY':'CrispStrobe/bw-board',
+        'GITHUB_EVENT_NAME':'pull_request','GITHUB_ACTOR':'CrispStrobe',
+        'GITHUB_JOB':p.HOST_BASELINE_JOB,'GITHUB_WORKFLOW_SHA':'e'*40,
+        'GITHUB_WORKFLOW_REF':'CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/645/merge',
+        'BW_EXPECTED_HEAD':'a'*40,'BW_EXPECTED_TREE':'b'*40,p.HOST_BASELINE_PIN:pin,
+        p.HOST_BASELINE_B64:base64.b64encode(raw).decode('ascii'),
+        'ImageOS':'ubuntu24','ImageVersion':'20261023.334.3'}
+    identity={'dev':1,'ino':2,'mode':stat.S_IFREG|0o755,'uid':0,'gid':0,
+        'nlink':1,'size':0,'mtime_ns':3}
+    status=b'Package: base\nVersion: 1\nArchitecture: amd64\nStatus: install ok installed\n'
+    import zlib
+    def file_item(path,cap):
+        data=status if path==p.HOST_BASELINE_STATUS else (b'helper:'+path.encode())
+        info=dict(identity,size=len(data),ino=10+len(path))
+        return {'path':path,'kind':'regular','namedBefore':info,'heldBefore':info,
+            'heldAfter':info,'namedAfter':info,'bytesRead':len(data),
+            'prefixSha256':sha(data),'zlibBase64':base64.b64encode(zlib.compress(data,9)).decode(),
+            'closeAttempted':True,'closed':True,'firstFailure':None,'secondary':[]}
+    def alias_item(path):
+        info=dict(identity,mode=stat.S_IFLNK|0o777,size=4)
+        text={'/bin':'usr/bin','/bin/sh':'dash','/usr/bin/sh':'dash'}[path]
+        target=os.path.normpath(os.path.join(os.path.dirname(path),text))
+        return {'path':path,'kind':'alias','namedBefore':info,'namedAfter':info,
+            'linkText':text,'target':target,'firstFailure':None,'secondary':[]}
+    policy=lambda:{'path':p.HOST_BASELINE_POLICY,'kind':'absent','identity':None,
+                   'linkText':None,'firstFailure':None,'secondary':[]}
+    class Observer:
+        def __init__(self,environ):
+            self.facts={'eventIdentity':{'st_dev':1,'st_ino':2,'st_mode':stat.S_IFREG|0o600,
+                'st_uid':1001,'st_gid':1001,'st_nlink':1,'st_size':len(event_raw),'st_mtime_ns':1},
+                'sourceCommands':[]}
+        def event(self):return event_raw
+        def source(self,selected):
+            self.facts['source']=source;self.facts['sourceCommands']=commands
+    def cgroup(_,path):
+        if str(path)=='/proc/self/cgroup':return '0::/system.slice/bw-ring3-host-baseline-123-1.service\n'
+        return {'cpu.max':'100000 100000','memory.max':'1073741824',
+                'memory.swap.max':'0','pids.max':'64'}[Path(path).name]+'\n'
+    log=b'2026-10-24T12:43:38.9737289Z ##[group]Runner Image\n'+\
+        b'2026-10-24T12:43:38.9738237Z Image: ubuntu-24.04\n'+\
+        b'2026-10-24T12:43:38.9739087Z Version: 20261012.334.1\n'+\
+        b'2026-10-24T12:43:38.9744422Z ##[endgroup]\n'+\
+        b'2026-10-24T12:43:39.7254404Z Complete job name: host-baseline-v1\n'+\
+        b'2026-10-24T12:43:39.7891376Z ##[group]Run actions/checkout@pinned\n'
+    outside={'schema':'bw.ring3.host-baseline-outside.v1','runId':'123',
+        'unit':'/sys/fs/cgroup/system.slice/bw-ring3-host-baseline-123-1.service',
+        'shellExitCode':0,'serviceExitCode':0,'cgroupAfter':'absent','cleanupAction':'none',
+        'polls':[{'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None}],
+        'firstFailure':None,'secondary':[],'setupApproved':False}
+    shell={'schema':'bw.ring3.host-baseline-shell.v1',
+        'fields':{'ImageOS':{'present':True,'value':'ubuntu24'},
+                  'ImageVersion':{'present':True,'value':'20261023.334.3'}},
+        'fieldErrors':[],'setupAttempted':False,'guestAttempted':False,'setupApproved':False}
+    def captured(current=env,file_reader=file_item,alias_reader=alias_item):
+        with patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+             patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+             patch.object(p.Cgroups,'text',side_effect=cgroup),\
+             patch.object(p,'setup_v8_sequence',side_effect=AssertionError('setup forbidden')):
+            return p.host_baseline_collect(current,Observer,file_reader,alias_reader,policy)
+    def originals(packet=None,sh=shell,out=outside,official=log,conclusion='success'):
+        packet=captured() if packet is None else packet
+        raw=p.HOST_BASELINE_MARKER+p.encode(packet);shell_raw=p.encode(sh)
+        outside_raw=reader.canonical(out)
+        external={'schema':'bw.ring3.host-baseline-expectation.v1','runId':'123',
+            'attempt':'1','head':'a'*40,'tree':'b'*40,'requestSha256':pin,
+            'workflowSha':'e'*40,'workflowFileSha256':'d'*64,'jobId':456,
+            'jobName':p.HOST_BASELINE_JOB,'conclusion':conclusion,
+            'serviceBytes':len(raw),'serviceSha256':sha(raw),
+            'shellBytes':len(shell_raw),'shellSha256':sha(shell_raw),
+            'outsideBytes':len(outside_raw),'outsideSha256':sha(outside_raw),
+            'officialLogBytes':len(official),'officialLogSha256':sha(official)}
+        return raw,shell_raw,outside_raw,official,external
+    class Tests(unittest.TestCase):
+        def test_full_producer_packet_reader_and_discordance(self):
+            packet=captured();self.assertTrue(packet['complete']);self.assertIsNone(packet['firstFailure'])
+            output=io.BytesIO();result=p.host_baseline_emit(packet,output.write,output.flush)
+            self.assertTrue(result['complete'])
+            raw,sh,out,official,external=originals(packet)
+            self.assertEqual(output.getvalue(),raw)
+            archive=io.BytesIO()
+            with zipfile.ZipFile(archive,'w',zipfile.ZIP_STORED) as stored:
+                for name,data in (('service.original.log',output.getvalue()),
+                                  ('shell.original.json',sh),('outside.original.json',out),
+                                  ('controller.stderr',b''),('outside.stderr',b'')):
+                    stored.writestr(name,data)
+            self.assertLessEqual(len(archive.getvalue()),8<<20)
+            with zipfile.ZipFile(io.BytesIO(archive.getvalue())) as held:
+                self.assertEqual(set(held.namelist()),{'service.original.log',
+                    'shell.original.json','outside.original.json','controller.stderr','outside.stderr'})
+                self.assertEqual(held.read('service.original.log'),output.getvalue())
+            workflow=Path('.github/workflows/i80386-ring3-int-iret.yml').read_text()
+            self.assertIn('name: i80386-ring3-host-baseline-v1-originals',workflow)
+            self.assertIn('path: build/i80386-ring3-host-baseline-v1/',workflow)
+            grade=reader.verify_host_baseline(raw,sh,out,official,external)
+            self.assertTrue(grade['completeObservation']);self.assertEqual(grade['statusCensus']['records'],1)
+            self.assertFalse(grade['runnerImageMatchesService']);self.assertFalse(grade['setupApproved'])
+            self.assertFalse(grade['guestApproved'])
+        def test_source_event_and_role_mutations_refuse(self):
+            packet=captured()
+            for change in ('source','event','context','status','helper','alias','policy'):
+                bad=copy.deepcopy(packet)
+                if change=='source':bad['context']['sourceCommands'][0]['argv'][-1]='wrong'
+                elif change=='event':bad['context']['event']['sha256']='0'*64
+                elif change=='context':bad['context']['platform']['GITHUB_RUN_ID']='124'
+                elif change=='status':bad['status']['prefixSha256']='0'*64
+                elif change=='helper':bad['helpers'][p.HOST_BASELINE_HELPERS[0]]['namedAfter']=dict(
+                    bad['helpers'][p.HOST_BASELINE_HELPERS[0]]['namedAfter'],ino=99)
+                elif change=='alias':bad['aliases']['/bin']['linkText']='elsewhere'
+                else:bad['policy']['kind']='present'
+                with self.subTest(change=change),self.assertRaises(Exception):
+                    reader.verify_host_baseline(*originals(bad))
+        def test_event_transport_and_caps_refuse_before_file_edge(self):
+            for change in ('label','pin','b64','attempt'):
+                current=copy.deepcopy(env);ev=copy.deepcopy(event)
+                if change=='label':ev['label']['name']='other'
+                elif change=='pin':current[p.HOST_BASELINE_PIN]='0'*64
+                elif change=='b64':current[p.HOST_BASELINE_B64]='AA=='
+                else:current['GITHUB_RUN_ATTEMPT']='2'
+                with self.subTest(change=change),self.assertRaises(Exception):
+                    p.host_baseline_event(p.encode(ev),current)
+            calls=[]
+            def nofile(*args):calls.append(args);raise AssertionError('file edge reached')
+            packet=captured(dict(env,GITHUB_RUN_ATTEMPT='2'),nofile)
+            self.assertFalse(packet['complete']);self.assertEqual(calls,[])
+            self.assertIsNotNone(packet['firstFailure'])
+            item=file_item(p.HOST_BASELINE_STATUS,8<<20)
+            item['zlibBase64']=base64.b64encode(zlib.compress(b'X'*100,9)).decode()
+            with self.assertRaises(Exception):reader.host_baseline_bytes(item,p.HOST_BASELINE_STATUS,8<<20)
+            with self.assertRaises(Exception):reader.host_baseline_bytes(file_item(p.HOST_BASELINE_STATUS,8<<20),p.HOST_BASELINE_STATUS,1)
+        def test_absent_image_and_policy_alias_parity(self):
+            current=dict(env);current.pop('ImageVersion')
+            packet=captured(current)
+            self.assertEqual(packet['fields']['ImageVersion'],{'present':False,'value':None})
+            sh=copy.deepcopy(shell);sh['fields']['ImageVersion']={'present':False,'value':None}
+            grade=reader.verify_host_baseline(*originals(packet,sh=sh))
+            self.assertTrue(grade['forwardingMatchesExpected'])
+            self.assertTrue(grade['completeObservation'])
+            packet=captured();packet['policy']={'path':p.HOST_BASELINE_POLICY,
+                'kind':'present','identity':dict(identity,mode=stat.S_IFLNK|0o777),
+                'linkText':'safe','firstFailure':None,'secondary':[]}
+            self.assertTrue(reader.verify_host_baseline(*originals(packet))['completeObservation'])
+            for change in ('policyNul','policyNonaliasText','aliasNul'):
+                bad=copy.deepcopy(packet)
+                if change=='policyNul':bad['policy']['linkText']='bad\x00'
+                elif change=='policyNonaliasText':bad['policy']['identity']['mode']=stat.S_IFREG|0o644
+                else:bad['aliases']['/bin']['linkText']='bad\x00'
+                with self.subTest(change=change),self.assertRaises(Exception):
+                    reader.verify_host_baseline(*originals(bad))
+        def test_official_log_and_outer_refusals(self):
+            packet=captured()
+            for changed in (log.replace(b'20261012.334.1\n',b'20261012.334.1\n2026-10-24T12:43:38.9739090Z Image: duplicate\n'),
+                            log.replace(b'##[endgroup]',b''),
+                            log.replace(b'Complete job name: host-baseline-v1',
+                                        b'Complete job name: other'),log+log,
+                            log[log.index(b'2026-10-24T12:43:39.7891376Z'):]+log[:log.index(b'2026-10-24T12:43:39.7891376Z')]):
+                with self.assertRaises(Exception):reader.verify_host_baseline(*originals(packet,official=changed))
+            with self.assertRaises(Exception):reader.verify_host_baseline(*originals(packet,out=dict(outside,cgroupAfter='populated')))
+        def test_real_file_reader_mocked_fd_edges_and_partials(self):
+            path=p.HOST_BASELINE_STATUS;data=b'Package: base\nVersion: 1\nArchitecture: amd64\nStatus: install ok installed\n'
+            info=SimpleNamespace(**{'st_'+k:v for k,v in dict(identity,size=len(data)).items()})
+            reads=[data,b'']
+            with patch.object(p.os,'lstat',return_value=info),\
+                 patch.object(p.os,'open',return_value=77),\
+                 patch.object(p.os,'fstat',return_value=info),\
+                 patch.object(p.os,'read',side_effect=lambda fd,n:reads.pop(0)),\
+                 patch.object(p.os,'close',return_value=None):
+                item=p.host_baseline_file(path,8<<20)
+            self.assertEqual(item['kind'],'regular')
+            self.assertEqual(reader.host_baseline_bytes(item,path,8<<20),data)
+            reads=[data,b'']
+            with patch.object(p.os,'lstat',return_value=info),\
+                 patch.object(p.os,'open',return_value=77),\
+                 patch.object(p.os,'fstat',return_value=info),\
+                 patch.object(p.os,'read',side_effect=lambda fd,n:reads.pop(0)),\
+                 patch.object(p.os,'close',side_effect=OSError('mock close failed')):
+                failed=p.host_baseline_file(path,8<<20)
+            self.assertEqual(failed['kind'],'error');self.assertTrue(failed['closeAttempted'])
+            self.assertFalse(failed['closed']);self.assertEqual(failed['bytesRead'],len(data))
+            self.assertIsNotNone(failed['firstFailure'])
+            with self.assertRaises(Exception):reader.host_baseline_bytes(failed,path,8<<20)
+            short=SimpleNamespace(**{'st_'+k:v for k,v in dict(identity,size=len(data)+1).items()})
+            reads=[data,b'']
+            with patch.object(p.os,'lstat',return_value=short),\
+                 patch.object(p.os,'open',return_value=77),\
+                 patch.object(p.os,'fstat',return_value=short),\
+                 patch.object(p.os,'read',side_effect=lambda fd,n:reads.pop(0)),\
+                 patch.object(p.os,'close',return_value=None):
+                failed=p.host_baseline_file(path,8<<20)
+            self.assertEqual(failed['kind'],'error');self.assertEqual(failed['bytesRead'],len(data))
+            self.assertIsNotNone(failed['firstFailure'])
+        def test_file_primary_and_secondary_reach_top_failed_packet(self):
+            first={'phase':'mock-read','name':'OSError','message':'read failed'}
+            second={'phase':'mock-close','name':'OSError','message':'close failed'}
+            def failed(path,cap):
+                item=file_item(path,cap)
+                if path==p.HOST_BASELINE_HELPERS[1]:
+                    item.update(kind='error',zlibBase64=None,closed=False,
+                                firstFailure=first,secondary=[second])
+                return item
+            packet=captured(file_reader=failed)
+            self.assertFalse(packet['complete'])
+            self.assertEqual(packet['firstFailure'],first)
+            self.assertEqual(packet['secondary'],[second])
+            self.assertEqual(packet['helperOrder'],list(p.HOST_BASELINE_HELPERS[:2]))
+            self.assertEqual(packet['status']['kind'],'regular')
+        def test_readonly_outside_poll_and_outer_failure_retention(self):
+            active={'terminal':'populated','cgroupProcs':'42\n','cgroupEvents':'populated 1\n',
+                    'cgroupStat':'nr_descendants 0\nnr_dying_descendants 0\n'}
+            absent={'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None}
+            seen=[];rows=[active,absent]
+            outside_ok=p.host_baseline_outside({'GITHUB_RUN_ID':'123',
+                'BW_BASELINE_SHELL_EXIT':'0','BW_BASELINE_SERVICE_EXIT':'0'},
+                lambda:rows.pop(0),lambda n:seen.append(n))
+            self.assertEqual(outside_ok['cgroupAfter'],'absent')
+            self.assertEqual(seen,[1]);self.assertIsNone(outside_ok['firstFailure'])
+            stalled=p.host_baseline_outside({'GITHUB_RUN_ID':'123',
+                'BW_BASELINE_SHELL_EXIT':'0','BW_BASELINE_SERVICE_EXIT':'124'},
+                lambda:active,lambda n:None)
+            self.assertEqual(len(stalled['polls']),6)
+            self.assertEqual(stalled['firstFailure']['phase'],'baseline-service-exit')
+            self.assertEqual(stalled['secondary'][-1]['phase'],'baseline-outside-cgroup')
+            self.assertEqual(stalled['cleanupAction'],'none')
+            self.assertEqual(stalled['cgroupAfter'],'populated')
+            timeout=p.host_baseline_outside({'GITHUB_RUN_ID':'123',
+                'BW_BASELINE_SHELL_EXIT':'0','BW_BASELINE_SERVICE_EXIT':'124'},
+                lambda:absent,lambda n:None)
+            grade=reader.verify_host_baseline(*originals(captured(),out=timeout,conclusion='failure'))
+            self.assertFalse(grade['completeObservation'])
+            self.assertEqual(grade['firstFailure']['phase'],'baseline-service-exit')
+            self.assertFalse(grade['guestApproved'])
+            bad=copy.deepcopy(timeout);bad['polls'][0]['cgroupStat']='nr_descendants 1\n'
+            with self.assertRaises(Exception):reader.verify_host_baseline(
+                *originals(captured(),out=bad,conclusion='failure'))
+        def test_status_fold_duplicate_and_wire_cap(self):
+            good=(b'Package: base\nVersion: 1\nArchitecture: amd64\n'
+                  b'Status: install ok installed\nDescription: text\n continuation\n')
+            self.assertEqual(reader.host_baseline_status(good)['records'],1)
+            for raw_status in (good.replace(b'Status: install ok installed\n',
+                     b'Status: install ok installed\nStatus: install ok installed\n'),
+                    good.replace(b'Package: base\n',b'Package: base\n folded\n'),
+                    good[:-1]):
+                with self.assertRaises(Exception):reader.host_baseline_status(raw_status)
+            packet=captured();packet['helpers'][p.HOST_BASELINE_HELPERS[0]]['zlibBase64']='X'*200000
+            output=io.BytesIO()
+            with patch.object(p,'HOST_BASELINE_WIRE_CAP',150000):
+                failed=p.host_baseline_emit(packet,output.write,output.flush)
+            self.assertFalse(failed['complete']);self.assertEqual(failed['firstFailure']['phase'],'host-baseline-wire')
+            self.assertLessEqual(len(output.getvalue()),150000)
+            packet=captured();packet['firstFailure']={'phase':'earlier','name':'ValueError','message':'first'}
+            packet['complete']=False
+            packet['helpers'][p.HOST_BASELINE_HELPERS[0]]['zlibBase64']='X'*200000
+            output=io.BytesIO()
+            with patch.object(p,'HOST_BASELINE_WIRE_CAP',150000):
+                failed=p.host_baseline_emit(packet,output.write,output.flush)
+            self.assertEqual(failed['firstFailure']['phase'],'earlier')
+            self.assertEqual(failed['secondary'][-1]['phase'],'host-baseline-wire')
+        def test_disabled_guard_precedes_host_edges(self):
+            self.assertFalse(p.HOST_BASELINE_ENABLED)
+            for mode in ('--host-baseline-shell-v1','--host-baseline-service-v1'):
+                with patch.object(p,'host_baseline_shell') as shell_edge,\
+                     patch.object(p,'host_baseline_collect') as service_edge:
+                    self.assertEqual(p.dispatch_cli([mode],env),1)
+                    shell_edge.assert_not_called();service_edge.assert_not_called()
+    result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
+    assert result.wasSuccessful(),'pure baseline controls failed'
+    print(json.dumps({'testOnly':True,'tests':result.testsRun,'network':False,'hostFiles':False,
+        'installer':False,'helperExecuted':False,'node':False,'qemu':False,'guest':False,'pass':True}))
+
+
 if __name__=='__main__':
-    if sys.argv[1:]==['--consumed-v7-failure-only']:consumed_v7_failure_controls()
+    if sys.argv[1:]==['--host-baseline-only']:host_baseline_controls()
+    elif sys.argv[1:]==['--consumed-v7-failure-only']:consumed_v7_failure_controls()
     elif sys.argv[1:]==['--consumed-v6-failure-only']:consumed_v6_failure_controls()
     elif sys.argv[1:]==['--image-env-diagnostic-only']:image_env_diagnostic_controls()
     elif sys.argv[1:]==['--setup-v6-only']:setup_v6_controls()

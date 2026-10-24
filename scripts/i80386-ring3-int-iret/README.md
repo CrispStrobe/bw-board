@@ -1595,3 +1595,32 @@ status, path and outside-cleanup mutations, and do not use an official
 original as a fixture. A separate operator audit may apply the standalone
 reader to the already retained originals without reacquiring them. No new
 event, native probe, package operation, QEMU or guest is part of this route.
+## Read-only hosted baseline candidate
+
+The `host-baseline-v1` metadata job is disabled pending source review. It uses
+a distinct one-shot request and label to observe the runner shell and bounded
+root service image fields, raw package status, ten selected helper files, three
+shell aliases, policy-file presence and outside unit termination. It runs no
+Node workload, helper binary, package tool, installer, QEMU or guest. The
+observer compares no old image, status or helper pin to decide completeness.
+
+Complete raw status and helper bytes are retained as individually compressed
+base64 roles in a canonical packet. Input limits are 8 MiB status, 2 MiB per
+helper and 8 MiB across helpers; the packet including newline is at most 4 MiB
+and the artifact at most 8 MiB. Overflow is an explicit failed original, not
+a truncated complete one. The independent reader decompresses each exact role,
+checks extent, SHA, identity and close facts, and reparses package status. It
+also compares both observed environment fields with the separately selected
+official Runner Image log block. A mismatch is retained diagnostic data. None
+of these observations authenticates a VM image or approves setup or a guest.
+
+All earlier V4–V8 routes, originals and failures remain separately versioned.
+The claim is merged; this inactive source still needs exact-head checks,
+reviewed one-shot input and an original-only audit before any setup proposal.
+
+The alias `target` field is a lexical normalized link destination. The route
+does not dereference it or claim that its final target is trusted. The service
+manager owns the finite service lifetime; a bounded read-only outside census
+records absent, empty or still populated cgroup facts. The observer runs no
+explicit stop action or selected helper binary. An uncertain terminal unit
+keeps the attempt negative.
