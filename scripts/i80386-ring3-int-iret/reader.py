@@ -6030,6 +6030,7 @@ def verify_setup_v7_stable_original(original,candidate_raw,pin):
     descriptors={item['role']:item for item in selected['probes']}
     probes=package['probes'];need(type(probes) is list and len(probes)==15,
         'fifteen real runtime metadata observations')
+    setup_v7_observed_order(probes)
     seen=set();module=resolve_alias(RUNTIME_TCG,selected['aliases'])
     for probe in probes:
         keys(probe,'role argv environment exitCode stdout stderr')
@@ -6096,6 +6097,7 @@ def verify_setup_v7_inventory_graph(value):
         'files':{path:{key:row[key] for key in ('bytes','sha256','kind')} for path,row in candidate['files'].items()},'aliases':candidate['aliases'],'probes':inventory['probes']}}
     verify_setup_v7_stable_original(runtime_original,candidate_raw,sha(candidate_raw))
     processes=inventory['processes'];need(type(processes) is list and len(processes)==15,'complete exact metadata probe process originals')
+    setup_v7_observed_order(inventory['probes'],processes)
     probe_by_role={probe['role']:probe for probe in inventory['probes']};seen=set();last=0;parent_pid=None
     for entry in processes:
         keys(entry,'role process stdout stderr');role=entry['role'];need(role in probe_by_role and role not in seen,'unique inventory process probe role');seen.add(role)
@@ -6143,6 +6145,20 @@ SETUP_V7_LOG_MARKER=b'RING3_SETUP_RUNTIME_INVENTORY_V7 '
 SETUP_V7_LOG_ROLES=SETUP_V4_LOG_ROLES
 SETUP_V7_PACKAGE_ROLES={name:'package-files-'+name for name in PACKAGE_NAMES}
 SETUP_V7_PROBE_ROLES=(RUNTIME_ROLES-{'package-files'})|set(SETUP_V7_PACKAGE_ROLES.values())
+SETUP_V7_PROBE_ORDER=('ldd-shell','ldd-dpkg-query','ldd-node','ldd-python',
+    'ldd-qemu','package-version',*(SETUP_V7_PACKAGE_ROLES[name] for name in PACKAGE_NAMES),
+    'ldd-tcg','node-version','python-version','qemu-version')
+assert len(SETUP_V7_PROBE_ORDER)==15 and set(SETUP_V7_PROBE_ORDER)==SETUP_V7_PROBE_ROLES
+
+
+def setup_v7_observed_order(probes,processes=None,partial=False):
+    need(type(probes) is list and (1<=len(probes)<=15 if partial else len(probes)==15) and
+         [item['role'] for item in probes]==list(SETUP_V7_PROBE_ORDER[:len(probes)]),
+         'exact serial fifteen-role v7 probe order')
+    if processes is not None:
+        need(type(processes) is list and len(processes)==len(probes) and
+             [item['role'] for item in processes]==list(SETUP_V7_PROBE_ORDER[:len(probes)]),
+             'each real child retains the same fixed v7 role order')
 
 
 def setup_v7_producer_listing(text):
@@ -6187,7 +6203,9 @@ class SetupV7Inventory(StagedRuntimeInventory):
         finally:self.partial['emptyPythonSources']=self.empty_originals
 
     def observe(self,role,argv):
-        need(role in SETUP_V7_PROBE_ROLES and role not in {row['role'] for row in self.probes} and len(self.probes)<16,'fixed unique inventory probe roster')
+        need(role in SETUP_V7_PROBE_ROLES and len(self.probes)<15 and
+             role==SETUP_V7_PROBE_ORDER[len(self.probes)],
+             'next fixed v7 serial metadata child before process factory')
         need(equal(argv,self.argv(role)),'exact fixed inventory metadata argv before process factory')
         # The caller constructs only the fixed named descriptors below, after
         # selected engine and tool identities have been read and retained.
@@ -7046,9 +7064,7 @@ def verify_setup_v7_failed_stream_inventory(raw,external,cleanup,shell,outer):
          len(inventory['aliases'])<=256 and
          type(inventory['probes']) is list and type(inventory['processes']) is list,
          'bounded partial graph reports no selected candidate')
-    roles=['ldd-shell','ldd-dpkg-query','ldd-node','ldd-python','ldd-qemu',
-           'package-version',*(SETUP_V7_PACKAGE_ROLES[name] for name in PACKAGE_NAMES),
-           'ldd-tcg','node-version','python-version','qemu-version']
+    roles=SETUP_V7_PROBE_ORDER
     aliases=inventory['aliases']
     need(type(aliases) is dict and len(aliases)<=256,
          'bounded failed alias census for fixed argv')
@@ -7067,10 +7083,7 @@ def verify_setup_v7_failed_stream_inventory(raw,external,cleanup,shell,outer):
     fixed.update({role:['/usr/bin/dpkg-query','-L',name]
                   for name,role in SETUP_V7_PACKAGE_ROLES.items()})
     entries=inventory['processes'];probes=inventory['probes']
-    need(1<=len(entries)==len(probes)<=15 and
-         [entry['role'] for entry in entries]==roles[:len(entries)] and
-         [probe['role'] for probe in probes]==roles[:len(probes)],
-         'actual fixed ordered prefix of fifteen v7 children')
+    setup_v7_observed_order(probes,entries,partial=True)
     last_end=0;parent=None
     for index,(entry,probe) in enumerate(zip(entries,probes)):
         keys(entry,'role process stdout stderr')
@@ -7112,7 +7125,7 @@ def verify_setup_v7_failed_stream_inventory(raw,external,cleanup,shell,outer):
     return {'schema':'bw.ring3.setup-failure-retention.v7',
         'failedAttemptRetained':True,'completeFailedInventoryOriginal':True,
         'firstFailure':first,'secondary':value['secondary'],
-        'retainedProbePrefixRoles':roles[:len(entries)],
+        'retainedProbePrefixRoles':list(roles[:len(entries)]),
         'lastStdoutPrefixBytes':entries[-1]['stdout']['bytes'],
         'lastPackageListingComplete':False,'candidateReviewed':False,
         'setupObserved':False,'actualGuestApproved':False,'actualRunApproved':False,

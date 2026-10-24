@@ -4578,6 +4578,32 @@ def setup_v7_controls(export_sample=False):
                              for path,row in candidate['files'].items()},
                     'probes':inventory.probes}}
             reader.verify_setup_v7_stable_original(original,raw,sha(raw))
+            empty_info=[1,777,0o100644,0,0,1,0,1700000000000000000]
+            empty_original={'path':empty,'namedBefore':empty_info,
+                'heldBefore':empty_info,'heldAfter':empty_info,
+                'namedAfter':empty_info,'bytesRead':0,'readHex':'',
+                'eof':True,'sha256':reader.STAGED_EMPTY_PYTHON_SOURCES[empty]['sha256'],
+                'closeAttempted':True,'closeSucceeded':True,
+                'firstFailure':None,'secondary':[]}
+            inventory.partial['emptyPythonSources']={
+                'before':copy.deepcopy(empty_original),
+                'after':copy.deepcopy(empty_original)}
+            snapshot={'candidate':{'bytes':len(raw),'sha256':sha(raw),
+                       'base64':base64.b64encode(raw).decode()},
+                      'inventory':copy.deepcopy(inventory.partial)}
+            reader.verify_setup_v7_inventory_graph(snapshot)
+            reordered=copy.deepcopy(snapshot)
+            for key in ('probes','processes'):
+                rows=reordered['inventory'][key]
+                rows[6],rows[7]=rows[7],rows[6]
+            for index,entry in enumerate(reordered['inventory']['processes']):
+                process=entry['process']
+                process['pid']=process['pgid']=201+index
+                process['startTicks']=index+1
+                process['spawnMonoNs']=100+index*10
+                process['reapMonoNs']=101+index*10
+            with self.assertRaises(reader.Refusal):
+                reader.verify_setup_v7_inventory_graph(reordered)
             for mutant in (b'/usr/bin/tool\n',b'/.\n/usr/bin/tool',
                            b'/.\n/usr/bin/../tool\n',b'/.\n/usr/bin/tool\n\n\n',
                            b'/.\n/usr/bin/tool\n/./x\n',b'/.\n/usr/bin/tool\r\n'):
