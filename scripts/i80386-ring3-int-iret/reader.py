@@ -12303,6 +12303,7 @@ def same_job_v3_manual_tree(value,packet,run_id):
     invoker=authority['invoker']
     parent=identity(value['parentIdentity'],[0,0])
     root=identity(value['rootIdentity'],invoker,identities['enclosing'])
+    initial_first_five={'enclosing':root}
     need(parent[0]==root[0],'held cgroup parent device')
     need(identity(value['parentIdentityAfter'],[0,0])==parent,
          'unchanged parent FD after exact root removal')
@@ -12333,7 +12334,9 @@ def same_job_v3_manual_tree(value,packet,run_id):
         previous_end=end
         held=identity(row['heldIdentity'],invoker,identities[role])
         named=identity(row['namedIdentity'],invoker,identities[role])
-        need(held==named,'held and named manual cgroup observation')
+        need(held==named and
+             (role not in initial_first_five or held==initial_first_five[role]),
+             'held, named and initially selected manual cgroup identity')
         raw=row['raw'];keys(raw,'cgroupProcs cgroupThreads cgroupEvents cgroupStat '
                          'pidsCurrent cpuMax memoryMax swapMax pidsMax')
         for text in raw.values():need(type(text) is str and text.isascii() and
@@ -12360,8 +12363,10 @@ def same_job_v3_manual_tree(value,packet,run_id):
                 parentIdentityAfter=None,finalAbsent=None)
     need(len(canonical(prefix))<=6144,
          'bounded complete four-role pre-removal census')
-    for role in roles:sample(before[role],role,
-                             ['controller','js','qemu'] if role=='enclosing' else [])
+    for role in roles:
+        sample(before[role],role,
+               ['controller','js','qemu'] if role=='enclosing' else [])
+        initial_first_five[role]=before[role]['heldIdentity'][:5]
     before_end=previous_end
     removals=value['removals']
     need(type(removals) is list and len(removals)==4,'four exact selected rmdir journals')
@@ -12377,8 +12382,9 @@ def same_job_v3_manual_tree(value,packet,run_id):
         observed_parent=identity(row['parentIdentityBefore'],
                                  invoker if role!='enclosing' else [0,0],
                                  identities['enclosing'] if role!='enclosing' else None)
-        need(held==named and observed_parent==selected_parent,
-             'immediate exact held/named/parent identity before rmdir')
+        need(held==named==initial_first_five[role] and
+             observed_parent==selected_parent,
+             'immediate initial held/named/parent identity before rmdir')
     samples=value['rootSamples']
     need(type(samples) is list and 1<=len(samples)<=6,
          'one to six retained post-leaf root samples')
