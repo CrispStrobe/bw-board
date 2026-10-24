@@ -6127,7 +6127,7 @@ def verify_setup_v7_inventory_graph(value):
 
 
 
-SETUP_V7_READER_ENABLED=False  # Original and official event admission remain external.
+SETUP_V7_READER_ENABLED=True  # Original and official event admission remain external.
 SETUP_V7_PACKAGES=SETUP_V4_PACKAGES
 SETUP_V7_ORDER=SETUP_V4_ORDER
 SETUP_V7_STATUS_SHA=SETUP_V4_STATUS_SHA

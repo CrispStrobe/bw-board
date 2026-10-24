@@ -7105,7 +7105,7 @@ def setup_v6_image_shell(environ):
 
 
 # Distinct v7 metadata family. Historical v4/v5/v6 routes remain byte-for-byte intact.
-SETUP_V7_ENABLED=False  # Source-only candidate; no event selected.
+SETUP_V7_ENABLED=True  # Metadata entry; external event admission remains required.
 SETUP_V7_PACKAGE_ROWS=SETUP_V4_PACKAGE_ROWS
 SETUP_V7_CONFIGURE_ORDER=SETUP_V4_CONFIGURE_ORDER
 SETUP_V7_IMAGE=SETUP_V4_IMAGE

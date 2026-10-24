@@ -1435,7 +1435,8 @@ approval. These are finite point observations, not continuous ownership proof.
 
 ## Distinct v7 package listing metadata candidate
 
-The v7 route is source only and remains inactive. It uses a new label, job,
+The v7 metadata route and reader are active source candidates; no v7 event has
+been selected. It uses a new label, job,
 request SHA marker, repository base64 request, and packet family. Earlier v4,
 v5, and v6 routes and their consumed events remain historical. The exact
 fifteen-package setup policy, helper and image pins, bounded service, raw

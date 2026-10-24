@@ -3256,13 +3256,14 @@ externally selected v7 event, one acquisition of each official original and a
 standalone complete-graph audit are required before any same-job guest work.
 
 The claim merged as [PR683](https://github.com/CrispStrobe/bw-board/pull/683).
-An inactive [PR645](https://github.com/CrispStrobe/bw-board/pull/645) source
-candidate now implements the separate v7 fifteen-probe route and a negative-only
+The [PR645](https://github.com/CrispStrobe/bw-board/pull/645) source candidate
+now enables the separate v7 fifteen-probe metadata route and a negative-only
 reader for the consumed v6 failure. Its pure controls check per-package path
 projection, fixed probe order, exact five package versions, bounded partial
-failure and cleanup. The v7 job and reader are still disabled; hosted source
-qualification, one externally admitted v7 metadata event and independent
-complete-graph audit remain ahead. Neither reader grants setup or guest approval.
+failure and cleanup. The v7 job and reader are enabled only for the distinct
+admitted metadata route. Hosted source qualification, one externally admitted
+v7 metadata event, and an independent complete-graph audit remain ahead.
+Neither reader grants setup or guest approval.
 
 ## Ordered 16-bit scalar read candidate
 
