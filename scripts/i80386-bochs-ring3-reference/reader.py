@@ -426,9 +426,15 @@ def vga_corresponding_source(raw, *, budget=None):
     require(type(raw) is bytes and len(raw) == VGA_SOURCE_BYTES and
             sha(raw) == VGA_SOURCE_SHA256,
             'exact independently reviewed complete LGPL VGA source archive')
-    members, budget = tar_members(raw, compressed_cap=VGA_SOURCE_BYTES,
-                                  expanded_cap=1 << 20, member_cap=31,
-                                  budget=budget)
+    members, source_budget = tar_members(raw,
+                                         compressed_cap=VGA_SOURCE_BYTES,
+                                         expanded_cap=1 << 20, member_cap=31)
+    if budget is not None:
+        budget.charge_bytes(source_budget.expanded)
+        for _ in range(source_budget.members):
+            budget.add(0)
+    else:
+        budget = source_budget
     require(len(members) == 31 and
             members.get('vgabios-0.8a/VGABIOS-lgpl-latest.bin') is not None and
             len(members['vgabios-0.8a/VGABIOS-lgpl-latest.bin']) ==
@@ -489,6 +495,9 @@ def compact_build_log(job_log, build_request, *, full_manifest=None,
             'one completed selected source/static Build compact witness')
     for key in ('sourceFilesSha256', 'runtimeMembersSha256', 'noticesSha256'):
         digest(value[key])
+    require(value['sourceFilesSha256'] ==
+            sha(canonical(build_request['source']['files'])),
+            'compact Build source-twelve digest matches selected request')
     for key, data in (('fullManifest', full_manifest),
                       ('runtimeZip', runtime_zip),
                       ('binary', binary),
@@ -501,10 +510,64 @@ def compact_build_log(job_log, build_request, *, full_manifest=None,
             require(type(data) is bytes and len(data) == row['bytes'] and
                     sha(data) == row['sha256'],
                     'retained Build source/full/ELF byte join')
+    if full_manifest is not None:
+        manifest = parse_json(full_manifest, 4 << 20, canonical_wire=True)
+        require(type(manifest.get('runtimeMembers')) is list and
+                type(manifest.get('notices')) in (dict, list) and
+                value['runtimeMembersSha256'] ==
+                sha(canonical(manifest['runtimeMembers'])) and
+                value['noticesSha256'] == sha(canonical(manifest['notices'])),
+                'compact Build complete runtime and notice table hashes')
+        binary_rows = [row for row in manifest['runtimeMembers']
+                       if type(row) is dict and row.get('path') == 'bin/bochs']
+        require(len(binary_rows) == 1, 'one selected Build executable')
+        fields(binary_rows[0], 'path role mode bytes sha256')
+        config_row = fields(manifest['configHeader'], 'path bytes sha256')
+        require(value['binary'] == {key: binary_rows[0][key]
+                                    for key in ('bytes', 'sha256')} and
+                value['configHeader'] == {key: config_row[key]
+                                          for key in ('bytes', 'sha256')},
+                'compact Build selected ELF and generated header identities')
     return value
 
 
-def runtime_assets(raw, selected_rows, selected_toolchain, *, budget=None):
+def generated_config(config_raw, version_raw):
+    require(type(config_raw) is bytes and 0 < len(config_raw) <= 1 << 20 and
+            type(version_raw) is bytes and 0 < len(version_raw) <= 16384,
+            'bounded actual generated config/version headers')
+    try:
+        config_text = config_raw.decode('ascii')
+        version_text = version_raw.decode('ascii')
+    except UnicodeError as error:
+        raise Refusal('ASCII generated configuration source') from error
+    definitions = {}
+    for name, value in re.findall(
+            r'^#define[ \t]+(BX_[A-Z0-9_]+)[ \t]+([0-9]+)[ \t]*$',
+            config_text, re.M):
+        require(name not in definitions,
+                'unique generated Bochs configuration definition')
+        definitions[name] = int(value)
+    require(all(definitions.get(name) == wanted for name, wanted in
+                (('BX_CPU_LEVEL', 3), ('BX_WITH_NOGUI', 1),
+                 ('BX_PLUGINS', 0), ('BX_DEBUGGER', 0))) and
+            all(definitions.get('BX_WITH_' + name, 0) == 0 for name in
+                ('X11', 'SDL', 'SDL2', 'WX', 'TERM', 'RFB', 'VNCSRV')),
+            'actual generated CPU3/nogui/no-plugin/no-debugger configuration')
+    expected_version = {
+        'VERSION': '"2.7"', 'VER_SVNFLAG': '0',
+        'REL_STRING': '"Built from SVN snapshot on August  1, 2021"',
+        'REL_TIMESTAMP': '"Sun Aug  1 10:07:00 CEST 2021"'}
+    rows = re.findall(
+        r'^#define[ \t]+(VERSION|VER_SVNFLAG|REL_STRING|REL_TIMESTAMP)'
+        r'[ \t]+(.+?)[ \t]*$', version_text, re.M)
+    require(len(rows) == 4 and dict(rows) == expected_version,
+            'exact source-derived generated Bochs version header')
+    return {'definitions': definitions, 'version': expected_version,
+            'headerSha256': HEADER_SHA256}
+
+
+def runtime_assets(raw, selected_rows, selected_toolchain, *, budget=None,
+                   selected_source=None):
     """Rehash nested Build runtime bytes and rederive each retained ELF graph."""
     require(type(selected_rows) is list and 5 <= len(selected_rows) <= 256,
             'finite selected complete runtime role manifest')
@@ -513,34 +576,50 @@ def runtime_assets(raw, selected_rows, selected_toolchain, *, budget=None):
         fields(row, 'path role mode bytes sha256')
         name = safe_member(row['path'])
         require(name not in selected and
-                row['mode'] in (0o444, 0o555) and
+                row['mode'] in (stat.S_IFREG | 0o444,
+                                stat.S_IFREG | 0o555) and
                 integer(row['bytes'], 0, 128 << 20) and
                 digest(row['sha256']) and
-                type(row['role']) is str and
-                0 < len(row['role']) <= 128,
+                row['role'] == ('executable' if name == 'bin/bochs' else
+                                'library' if name.startswith('lib/') else
+                                'notice' if name.startswith('notices/') else
+                                'config' if name == 'config/bochsrc.template' else
+                                'rom' if name == 'inputs/fixture.rom' else
+                                'fixture' if name == 'inputs/fixture.json' else
+                                'vga' if name == 'resources/vgabios.bin' else
+                                'manifest' if name == 'asset-manifest.json' else None),
                 'unique typed selected runtime member')
         selected[name] = row
     mandatory = {'bin/bochs', 'config/bochsrc.template',
                  'inputs/fixture.rom', 'inputs/fixture.json',
-                 'asset-manifest.json'}
+                 'resources/vgabios.bin', 'asset-manifest.json'}
     require(mandatory <= set(selected) and
             all(name in mandatory or name.startswith(('lib/', 'notices/'))
                 for name in selected),
             'closed selected executable, config, fixture and notice roles')
     metadata = {}
-    members, budget = archive_members(raw, RUNTIME_CAPS, budget=budget,
-                                      allowed=selected, metadata=metadata)
+    members, runtime_budget = archive_members(raw, RUNTIME_CAPS,
+                                              allowed=selected,
+                                              metadata=metadata)
+    if budget is not None:
+        budget.charge_bytes(runtime_budget.expanded)
+        for _ in range(runtime_budget.members):
+            budget.add(0)
+    else:
+        budget = runtime_budget
     runtime_elf = {}
     for name, data in members.items():
         row = selected[name]
         mode = metadata[name]['mode']
-        require(stat.S_IFMT(mode) == stat.S_IFREG and
-                stat.S_IMODE(mode) == row['mode'] and
+        require(mode == row['mode'] and
                 len(data) == row['bytes'] and sha(data) == row['sha256'],
                 'exact nested runtime mode/extent/byte readback')
         executable = name == 'bin/bochs' or name.startswith('lib/')
-        require(row['mode'] == (0o555 if executable else 0o444),
-                'read-only staged executable versus data mode')
+        expected_mode = (0o555 if name in ('bin/bochs',
+                                           'lib/ld-linux-x86-64.so.2')
+                         else 0o444)
+        require(row['mode'] == (stat.S_IFREG | expected_mode),
+                'exact read-only staged executable versus data mode')
         if executable:
             runtime_elf[name] = elf_static(data)
             require(runtime_elf[name]['rpath'] is None and
@@ -549,7 +628,91 @@ def runtime_assets(raw, selected_rows, selected_toolchain, *, budget=None):
     require(len(members['inputs/fixture.rom']) == 65536 and
             sha(members['inputs/fixture.rom']) == ROM_SHA256,
             'unchanged authored fixture ROM retained in runtime ZIP')
+    require(len(members['resources/vgabios.bin']) == VGA_SELECTED_BYTES and
+            sha(members['resources/vgabios.bin']) == VGA_SELECTED_SHA256,
+            'unchanged selected LGPL VGA resource retained in runtime ZIP')
+    require('notices/vgabios-corresponding-source.tar.gz' in members and
+            members['notices/vgabios-corresponding-source.tar.gz'] and
+            len(members['notices/vgabios-corresponding-source.tar.gz']) ==
+            VGA_SOURCE_BYTES,
+            'complete LGPL VGA corresponding source retained with runtime')
+    _, budget = vga_corresponding_source(
+        members['notices/vgabios-corresponding-source.tar.gz'],
+        budget=budget)
     authored_fixture(members)
+    asset = parse_json(members['asset-manifest.json'], 4 << 20,
+                       canonical_wire=True)
+    fields(asset, 'schema source bochsSource hostNode loader bindings files')
+    require(asset['schema'] == 'bw.bochs-ring3.runtime-assets.v1' and
+            type(asset['files']) is list and
+            strict_equal(asset['files'], [selected[name] for name in
+                                          sorted(selected) if name !=
+                                          'asset-manifest.json']),
+            'inner asset table excludes itself and binds every other ZIP member')
+    fields(asset['source'], 'head tree filesSha256')
+    digest(asset['source']['head'], 40)
+    digest(asset['source']['tree'], 40)
+    digest(asset['source']['filesSha256'])
+    if selected_source is not None:
+        require(asset['source'] == {
+                    'head': selected_source['head'],
+                    'tree': selected_source['tree'],
+                    'filesSha256': sha(canonical(selected_source['files']))},
+                'inner asset source matches independently selected checkout')
+    fields(asset['bochsSource'], 'commit tree sourceSelectionSha256')
+    require(asset['bochsSource'] == {
+                'commit': BOCHS_COMMIT, 'tree': BOCHS_TREE,
+                'sourceSelectionSha256': SOURCE_SELECTION_SHA256},
+            'inner runtime manifest fixed Bochs source selection')
+    node = fields(asset['hostNode'], 'path bytes sha256 elf')
+    require(node['path'] == '/opt/hostedtoolcache/node/22.23.3/x64/bin/node' and
+            node['bytes'] == 124827920 and
+            node['sha256'] ==
+            'fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48' and
+            strict_equal(node['elf'], selected_toolchain['files'][node['path']]['elf']),
+            'selected host Node is observed and never bundled')
+    loader = fields(asset['loader'], 'path member bytes sha256 elf')
+    require(type(loader['path']) is str and
+            loader['path'] in selected_toolchain['files'] and
+            type(loader['member']) is str and
+            loader['member'] in runtime_elf and
+            loader['member'] == 'lib/ld-linux-x86-64.so.2' and
+            loader['bytes'] == len(members[loader['member']]) and
+            loader['sha256'] == sha(members[loader['member']]) and
+            strict_equal(loader['elf'], runtime_elf[loader['member']]) and
+            loader['bytes'] == selected_toolchain['files'][loader['path']]['bytes'] and
+            loader['sha256'] == selected_toolchain['files'][loader['path']]['sha256'],
+            'exact selected interpreter copied into nested runtime')
+    require(type(asset['bindings']) is dict and
+            1 <= len(asset['bindings']) <= 128,
+            'finite source-selected runtime library binding map')
+    copied = set()
+    for original, row in asset['bindings'].items():
+        fields(row, 'members bytes sha256 elf')
+        require(type(original) is str and
+                original in selected_toolchain['files'] and
+                type(row['members']) is list and
+                1 <= len(row['members']) <= 8 and
+                all(type(name) is str and
+                    re.fullmatch(r'lib/[A-Za-z0-9+_.-]+', name) and
+                    name in runtime_elf for name in row['members']) and
+                len(row['members']) == len(set(row['members'])) and
+                row['bytes'] == selected_toolchain['files'][original]['bytes'] and
+                row['sha256'] == selected_toolchain['files'][original]['sha256'] and
+                strict_equal(row['elf'], selected_toolchain['files'][original]['elf']),
+                'selected original runtime library identity and aliases')
+        for name in row['members']:
+            require(name not in copied and
+                    len(members[name]) == row['bytes'] and
+                    sha(members[name]) == row['sha256'] and
+                    strict_equal(runtime_elf[name], row['elf']),
+                    'nested library copy rederived from selected original bytes')
+            copied.add(name)
+    require(copied == {name for name in runtime_elf if name.startswith('lib/')},
+            'every nested runtime library has an exact selected original')
+    require(loader['path'] in asset['bindings'] and
+            loader['member'] in asset['bindings'][loader['path']]['members'],
+            'selected staged loader belongs to its original library binding')
     for name, elf in runtime_elf.items():
         for soname in elf['needed']:
             if 'lib/' + soname in runtime_elf:
@@ -1649,12 +1812,21 @@ def common_original(route, raw, request_raw, event_raw):
     authority = fields(value['authority'], 'compilerExecuted guestExecuted '
                        'actualRunApproved guestApproved wholeHostAttested '
                        'physicalTimingProved')
-    require(all(type(x) is bool for x in authority.values()) and
-            all(authority[key] is False for key in
+    require(all(authority[key] is False for key in
                 ('actualRunApproved', 'guestApproved', 'wholeHostAttested',
                  'physicalTimingProved')) and
-            (route != 'toolchain' or all(x is False for x in authority.values())) and
-            (route != 'build' or authority['guestExecuted'] is False),
+            (type(authority['compilerExecuted']) is bool or
+             authority['compilerExecuted'] is None) and
+            (type(authority['guestExecuted']) is bool or
+             authority['guestExecuted'] is None) and
+            (route != 'toolchain' or
+             (authority['compilerExecuted'] is False and
+              authority['guestExecuted'] is False)) and
+            (route != 'build' or authority['guestExecuted'] is False) and
+            (route != 'reference' or authority['compilerExecuted'] is False) and
+            (not value['complete'] or
+             ((route != 'build' or authority['compilerExecuted'] is True) and
+              (route != 'reference' or authority['guestExecuted'] is True))),
             'retained observation cannot self-approve')
     expected = {'toolchain': 'inventoryBefore inventoryAfter status '
                  'sourceSelection reportedReadbackOnly notices',
@@ -1806,6 +1978,193 @@ def toolchain_original(packet, request_raw, event_raw):
             'officialMetadataBound': False,
             'compilerExecuted': False, 'guestExecuted': False,
             'actualRunApproved': False, 'guestApproved': False}
+
+
+def build_original(packet, request_raw, event_raw, *, job_log=None,
+                   budget=None):
+    """Read one complete Build artifact, with no local official API authority."""
+    require(set(packet) == BUILD_FIXED_ROLES,
+            'exact complete retained Build artifact role roster')
+    artifact_manifest(packet, required=BUILD_FIXED_ROLES)
+    request, _event = request_event('build', request_raw, event_raw)
+    require(packet['request.original.json'] == request_raw and
+            packet['event.original.json'] == event_raw,
+            'exact raw Build request and selected event')
+    value = common_original('build', packet['build.original.json'],
+                            request_raw, event_raw)
+    require(value['complete'] is True and
+            value['authority']['compilerExecuted'] is True and
+            value['authority']['guestExecuted'] is False and
+            len(value['phases']) == 2,
+            'complete real Build compiler path without guest execution')
+    before = source_facts(parse_json(packet['source.before.json'], 4 << 20,
+                                     canonical_wire=True), request['source'])
+    after = source_facts(parse_json(packet['source.after.json'], 4 << 20,
+                                    canonical_wire=True), request['source'])
+    require(strict_equal(before, after) and
+            strict_equal(value['sourceBefore'], before) and
+            strict_equal(value['sourceAfter'], after),
+            'complete selected Build checkout before/after')
+    upstream_before = parse_json(packet['upstream.before.json'], 4 << 20,
+                                 canonical_wire=True)
+    upstream_after = parse_json(packet['upstream.after.json'], 4 << 20,
+                                canonical_wire=True)
+    require(strict_equal(upstream_before, upstream_after) and
+            strict_equal(value['observations']['upstream'], upstream_before),
+            'complete pinned upstream source before/after')
+    selected, source_rows = source_selection(
+        packet['source-selection.original.json'])
+    require(strict_equal(value['observations']['sourceSelection'], source_rows),
+            'reviewed complete selected source manifest joined to Build')
+    _, budget = selected_source_tar(
+        packet['source-selected.original.tar.gz'], selected, budget=budget)
+    _, budget = vga_corresponding_source(
+        packet['notices/vgabios-corresponding-source.tar.gz'], budget=budget)
+    tool_before = parse_json(packet['toolchain.before.json'], 4 << 20,
+                             canonical_wire=True)
+    tool_after = parse_json(packet['toolchain.after.json'], 4 << 20,
+                            canonical_wire=True)
+    tool_graph(tool_before)
+    tool_graph(tool_after)
+    selected = {name: request['toolchain'][name] for name in
+                ('files', 'aliases', 'directoryAliases')}
+    require(strict_equal(tool_before, tool_after) and
+            strict_equal(tool_before, value['observations']['toolchainBefore'])
+            and strict_equal(tool_after,
+                             value['observations']['toolchainAfter']) and
+            strict_equal(selected_tool_projection(tool_before), selected),
+            'reported Build toolchain before/after equals selected byte graph')
+    config_raw = packet['config.h.original']
+    version_raw = packet['bxversion.h.original']
+    config = generated_config(config_raw, version_raw)
+    require(strict_equal(value['observations']['configure'], config),
+            'independently decoded actual generated CPU3 configuration')
+    for name, argv, wall in (
+            ('configure', ['/bin/sh', './configure', '--enable-cpu-level=3',
+                            '--with-nogui', '--disable-plugins',
+                            '--disable-debugger', '--enable-all-optimizations'],
+             900),
+            ('make', ['/usr/bin/make', '-j1', 'bochs'], 900)):
+        process = parse_json(packet[name + '.process.json'], 65536,
+                             canonical_wire=True)
+        phase_fact(process, packet[name + '.stdout'],
+                   packet[name + '.stderr'], name=name,
+                   wall_seconds=wall)
+        require(process['argv'] == argv and
+                strict_equal(value['phases'][0 if name == 'configure' else 1],
+                             process),
+                'selected actual Configure/Make argv and ordered phase originals')
+    manifest_raw = packet['build-manifest.json']
+    manifest = parse_json(manifest_raw, 4 << 20, canonical_wire=True)
+    fields(manifest, 'schema source bochsSource sourceInventory '
+           'toolchainInventory configure configHeader compilerCommands elf '
+           'runtimeMembers notices sourceAfter firstFailure secondary '
+           'buildCompleted guestExecuted')
+    selected_inventory = fields(manifest['toolchainInventory'],
+                                'selected before after')
+    configure_manifest = fields(manifest['configure'],
+                                'argv makeArgv facts versionHeader')
+    require(manifest['schema'] == 'bw.bochs-ring3.build-manifest.v1' and
+            manifest['buildCompleted'] is True and
+            manifest['guestExecuted'] is False and
+            manifest['firstFailure'] is None and
+            manifest['secondary'] == [] and
+            strict_equal(manifest['source'], request['source']) and
+            strict_equal(manifest['bochsSource'], upstream_before) and
+            strict_equal(manifest['sourceAfter'], after) and
+            strict_equal(selected_inventory['before'], tool_before) and
+            strict_equal(selected_inventory['after'], tool_after),
+            'complete source-selected Build full manifest joins')
+    source_inventory = fields(manifest['sourceInventory'],
+                              'selection before after archive')
+    source_archive = fields(source_inventory['archive'],
+                            'path bytes sha256')
+    require(strict_equal(source_inventory['selection'], source_rows) and
+            strict_equal(source_inventory['before'], upstream_before) and
+            strict_equal(source_inventory['after'], upstream_after) and
+            source_archive == {
+                'path': 'source-selected.original.tar.gz',
+                'bytes': len(packet['source-selected.original.tar.gz']),
+                'sha256': sha(packet['source-selected.original.tar.gz'])},
+            'complete selected upstream archive and before/after manifest')
+    require(strict_equal(selected_inventory['selected'], request['toolchain']) and
+            strict_equal(configure_manifest['facts'], config) and
+            configure_manifest['argv'] ==
+            ['/bin/sh', './configure', '--enable-cpu-level=3', '--with-nogui',
+             '--disable-plugins', '--disable-debugger',
+             '--enable-all-optimizations'] and
+            configure_manifest['makeArgv'] ==
+            ['/usr/bin/make', '-j1', 'bochs'] and
+            configure_manifest['versionHeader'] == {
+                'path': 'bxversion.h.original',
+                'bytes': len(version_raw), 'sha256': sha(version_raw)} and
+            manifest['configHeader'] == {
+                'path': 'config.h.original',
+                'bytes': len(config_raw), 'sha256': sha(config_raw)},
+            'fixed Configure/Make and generated header byte joins')
+    require(type(manifest['compilerCommands']) is list and
+            1 <= len(manifest['compilerCommands']) <= 8192 and
+            strict_equal(manifest['compilerCommands'],
+                         value['observations']['compilerCommands']) and
+            strict_equal(manifest['notices'],
+                         value['observations']['notices']) and
+            strict_equal(manifest['notices'],
+                         [row for row in manifest['runtimeMembers']
+                          if type(row) is dict and row.get('role') == 'notice']),
+            'retained actual compiler commands and source-selected notices')
+    try:
+        make_text = packet['make.stdout'].decode('utf-8')
+    except UnicodeError as error:
+        raise Refusal('UTF-8 retained Make stdout') from error
+    observed_commands = [line for line in make_text.splitlines()
+                         if ('/usr/bin/x86_64-linux-gnu-gcc-13' in line or
+                             '/usr/bin/x86_64-linux-gnu-g++-13' in line)]
+    require(manifest['compilerCommands'] == observed_commands and
+            all(type(line) is str and len(line) <= 8192
+                for line in observed_commands),
+            'compiler command summary rederived from retained Make stdout')
+    members, runtime_elf, budget = runtime_assets(
+        packet['runtime.original.zip'], manifest['runtimeMembers'],
+        request['toolchain'], selected_source=request['source'], budget=budget)
+    require(strict_equal(manifest['elf'], runtime_elf['bin/bochs']) and
+            strict_equal(value['observations']['binary']['elf'],
+                         runtime_elf['bin/bochs']) and
+            strict_equal(value['observations']['runtimeManifest'],
+                         parse_json(members['asset-manifest.json'], 4 << 20,
+                                    canonical_wire=True)),
+            'independently parsed retained Build ELF and asset table')
+    compact_raw = packet['compact-manifest.json']
+    compact = parse_json(compact_raw, 16384, canonical_wire=True)
+    internal_frame = (b'BW_BOCHS_RING3_BUILD_MANIFEST_V1=' +
+                      base64.b64encode(compact_raw) + b'\n')
+    require(strict_equal(compact_build_log(
+        internal_frame, request, full_manifest=manifest_raw,
+        runtime_zip=packet['runtime.original.zip'],
+        binary=members['bin/bochs'], config_header=config_raw), compact),
+        'complete internal compact Build fields and role byte joins')
+    if job_log is not None:
+        require(strict_equal(compact_build_log(
+            job_log, request, full_manifest=manifest_raw,
+            runtime_zip=packet['runtime.original.zip'],
+            binary=members['bin/bochs'], config_header=config_raw), compact),
+            'retained official Build log compact frame equals artifact role')
+    require(strict_equal(value['observations']['compactManifest'], compact),
+            'same completed compact Build witness in original and artifact')
+    return {'schema': 'bw.bochs-ring3.build-admission.v1',
+            'selectedBuildBytesObserved': True,
+            'runtimeMemberCount': len(members),
+            'officialMetadataBound': False,
+            'compilerExecuted': True, 'guestExecuted': False,
+            'actualRunApproved': False, 'guestApproved': False}
+
+
+def build_archive(raw, *, job_log=None):
+    """Decode exact outer ZIP once, then account for every nested payload."""
+    packet, budget = archive_members(raw, BUILD_CAPS,
+                                     allowed=BUILD_FIXED_ROLES)
+    return build_original(packet, packet['request.original.json'],
+                          packet['event.original.json'], job_log=job_log,
+                          budget=budget)
 
 
 def unit_fact(value, unit, *, absent=False):
