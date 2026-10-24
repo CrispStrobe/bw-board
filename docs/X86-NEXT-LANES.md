@@ -3096,14 +3096,23 @@ admitted clean guest/oracle run. Keep those gates distinct from this observer.
 
 ## Ring3 selected-QEMU same-job guest continuation — 2026-10-24
 
-The [new ownership claim](../LANES.md)
-extends the selected-QEMU lane after its distinct v4 metadata observation.
-That observation may qualify setup and a runtime candidate within its own
-hosted job; installed QEMU does not carry into another job. A later v5 source
-candidate must run exact setup, outside policy and service cleanup, and a
-separate bounded actual service **serially in one new job**. Use a new immutable
-request, body marker, label and job. Preserve the consumed earlier events and
-the disabled historical actual/compiler entries.
+The [new ownership claim](../LANES.md) extends the selected-QEMU lane. The
+first v4 metadata attempt acquired fifteen exact archives but stopped at
+`dpkg --unpack`: its dedicated PATH omitted `/usr/sbin`, leaving `ldconfig`
+and `start-stop-daemon` unavailable. It produced no complete setup or runtime
+graph. Preserve that failed original and consumed event. A distinct v5
+**metadata** request, body marker, label and job must first qualify a repair
+using a dedicated `/usr/sbin:/usr/bin:/bin` installer environment and exact
+official DATA and live-byte selection for those helpers before any archive
+GET or installer. Keep the old global environment and all package policy
+bounds unchanged. Independently audit one complete new metadata graph; never
+copy a candidate from an incomplete or self-asserted result.
+
+Only then prepare a separate v5 **guest** request, body marker, label and job.
+Installed QEMU cannot carry from the metadata job. The guest job must run
+exact setup and outside policy/service cleanup, followed by a bounded actual
+service **serially in that same job**. Preserve consumed earlier events and
+disabled historical actual/compiler entries.
 
 Before the actual service, independently admit the same-job setup original,
 selected package state, clean owned-policy cleanup, staged Node identity and
@@ -3117,8 +3126,10 @@ selects an execution model for this 386-instruction case; it does not qualify
 a strict 386DX machine or physical timing. Keep source12, fixture, CPU,
 selected pins, failure originals, bounds and other owners untouched.
 
-The first deliverable is a merged claim, then an initially guarded source
-adapter with meaningful wrong-event, setup, cleanup, graph and guest-result
-cuts. Exact-head CI and a fresh affected own-fixture hosted JS/QEMU run are
-required before source merge. External official run/job/step/artifact admission
-and one independent original-only audit remain separate from source controls.
+The first deliverable is a merged claim, then initially guarded metadata and
+guest adapters with meaningful wrong-route, missing-helper, setup, cleanup,
+graph and guest-result cuts. Require exact-head CI and separate external
+admission for the repaired metadata event before selecting the guest request;
+then require fresh affected own-fixture hosted JS/QEMU qualification. Each
+official run/job/step/artifact and original set is admitted and audited once.
+Source controls alone approve neither route.
