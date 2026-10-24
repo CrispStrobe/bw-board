@@ -11954,14 +11954,14 @@ def same_job_actual_packet_predicates(packet,handoff,controller_runtime_raw):
          live['firstFailure'] is None and live['secondary']==[] and
          type(live['pid']) is int and live['pid']>0,
          'closed same-job controller graph original')
-    observations=live['observations'];need(type(observations) is dict and
-         set(observations)=={'before-probes','after-probes','after-guests'},
+    live_observations=live['observations'];need(type(live_observations) is dict and
+         set(live_observations)=={'before-probes','after-probes','after-guests'},
          'all three independently retained live graph stages')
     expected_files={path:{key:item[key] for key in ('bytes','sha256','mode')}
         for path,item in candidate['files'].items()}
     previous=0
     for phase in ('before-probes','after-probes','after-guests'):
-        row=observations[phase];keys(row,'files aliases platform startMonoNs finishMonoNs')
+        row=live_observations[phase];keys(row,'files aliases platform startMonoNs finishMonoNs')
         need(equal(row['files'],expected_files) and
              equal(row['aliases'],candidate['aliases']) and
              equal(row['platform'],candidate['platform']) and
