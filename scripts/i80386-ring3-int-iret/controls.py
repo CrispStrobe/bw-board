@@ -9,6 +9,7 @@ import copy
 import base64
 import contextlib
 import importlib.util
+import inspect
 import io
 import json
 import os
@@ -6581,8 +6582,362 @@ def consumed_v6_failure_controls():
         'nativeProcess':False,'guest':False,'pass':True}))
 
 
+def consumed_v7_failure_fixture():
+    """Capture the existing manufactured v7 packet before its mutation loop."""
+    class Captured(BaseException):pass
+    snapshot={}
+    def capture(*args):
+        snapshot['args']=copy.deepcopy(args)
+        snapshot['stage']=copy.deepcopy(reader.verify_setup_v7_stage_observation(None,None))
+        raise Captured()
+    def selected(runner,suite):
+        case=next(case for case in suite if
+            case._testMethodName=='test_complete_failed_v7_inventory_packet_retains_clipped_last_child')
+        case.test_complete_failed_v7_inventory_packet_retains_clipped_last_child()
+    with patch.object(reader,'verify_setup_v7_failure_log',capture),\
+         patch.object(unittest.TextTestRunner,'run',selected),\
+         patch.object(subprocess,'Popen',side_effect=AssertionError('no real process')),\
+         patch.object(subprocess,'run',side_effect=AssertionError('no real process')):
+        try:setup_v7_controls()
+        except Captured:pass
+    assert set(snapshot)=={'args','stage'},'inert manufactured v7 packet captured'
+    return snapshot['args'],snapshot['stage']
+
+
+class ConsumedV7PathFailureControls(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):cls.base,cls.stage=consumed_v7_failure_fixture()
+
+    @staticmethod
+    def held(raw):return {'bytes':len(raw),'sha256':sha(raw),
+                           'base64':base64.b64encode(raw).decode()}
+
+    def setUp(self):
+        self.args=list(copy.deepcopy(self.base))
+        self.originals=reader.decode_setup_v7_log(self.args[0])
+        self.packet=reader.parse_setup_v7_outer(self.originals['runtime.setup-inventory.json'])
+        self.status_lines=b''.join(line+b'\n' for line in self.args[0].splitlines()
+            if reader.SETUP_V7_STATUS_MARKER in line)
+        value=self.packet;inventory=value['inventory']
+        self.request,self.source,self.record=copy.deepcopy(self.stage)
+        self.patches=contextlib.ExitStack();self.addCleanup(self.patches.close)
+        self.patches.enter_context(patch.object(reader,'verify_setup_v7_stage_observation',
+            return_value=(self.request,self.source,self.record)))
+        self.patches.enter_context(patch.object(subprocess,'Popen',
+            side_effect=AssertionError('no real process')))
+        self.patches.enter_context(patch.object(subprocess,'run',
+            side_effect=AssertionError('no real process')))
+        first={'phase':'setup-v7-runtime-inventory','name':'Refusal',
+               'message':'bounded canonical runtime path'}
+        value['firstFailure']=first;value['secondary']=[]
+        inventory['probes']=inventory['probes'][:9];inventory['processes']=inventory['processes'][:9]
+        inventory['pythonFiles']=[];inventory['mappedLibraries']=[];inventory['mapsOriginal']=None
+        path=next(iter(reader.STAGED_EMPTY_PYTHON_SOURCES));meta=[1,100,0o100644,0,0,1,0,100]
+        inventory['emptyPythonSources']={'before':{'path':path,'namedBefore':meta,
+            'heldBefore':meta,'heldAfter':meta,'namedAfter':meta,'bytesRead':0,
+            'readHex':'','eof':True,'sha256':sha(b''),'closeAttempted':True,
+            'closeSucceeded':True,'firstFailure':None,'secondary':[]}}
+        libc='/usr/lib/x86_64-linux-gnu/libc.so.6'
+        node=reader.NODE_STAGE_TARGET
+        python='/usr/bin/python3'
+        qemu=reader.RUNTIME_QEMU
+        inventory['files']={node:{'bytes':reader.RUNTIME_SELECTED['node']['bytes'],
+            'sha256':reader.RUNTIME_SELECTED['node']['sha256'],'mode':0o555,'kind':'node-binary'},
+            python:{'bytes':reader.CONSUMED_V7_PYTHON['bytes'],
+                'sha256':reader.CONSUMED_V7_PYTHON['sha256'],'mode':0o755,'kind':'python-binary'},
+            qemu:{'bytes':reader.RUNTIME_SELECTED['qemu']['bytes'],
+                'sha256':reader.RUNTIME_SELECTED['qemu']['sha256'],'mode':0o755,'kind':'qemu-binary'},
+            libc:{'bytes':1234,'sha256':'a'*64,'mode':0o644,'kind':'shared-library'}}
+        inventory['fileMetadata']={node:[1,200,0o100555,0,0,1,
+            reader.RUNTIME_SELECTED['node']['bytes'],100],
+            python:[1,202,0o100755,0,0,1,reader.CONSUMED_V7_PYTHON['bytes'],100],
+            qemu:[1,203,0o100755,0,0,1,reader.RUNTIME_SELECTED['qemu']['bytes'],100],
+            libc:[1,201,0o100644,0,0,1,1234,100]}
+        for stage in (value['stageBefore'],value['stageAfter']):
+            stage['files']['node']={'before':inventory['fileMetadata'][node],
+                'bytes':reader.RUNTIME_SELECTED['node']['bytes'],
+                'sha256':reader.RUNTIME_SELECTED['node']['sha256']}
+        inventory['aliases']={}
+        self.record['sourceCommands']=[{'process':{'reapMonoNs':0}}]
+        self.record['setup']['configure']={'process':{'reapMonoNs':0}}
+        statuses=reader.decode_setup_v7_status_log(self.args[0])
+        after=reader.setup_v7_status_rows(statuses['post']['raw'])
+        post=self.record['setup']['postStatus']
+        post['selected']={name:None if (name,arch) not in after else
+            {key:after[name,arch].get(key) for key in
+             ('Package','Version','Architecture','Status','Triggers-Pending','Triggers-Awaited')}
+             for name,version,arch,*_ in reader.SETUP_V7_PACKAGES}
+        post['pendingHostTriggers']={}
+        value['parent']={'meta':[1,300,0o40755,0,0,2,0,100],
+            'controls':{'cgroup.controllers':{'meta':[],'raw':'cpu memory pids\n'},
+                        'cgroup.subtree_control':{'meta':[],'raw':'cpu memory pids\n'}},
+            'alreadyEnabled':True}
+        env={'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'}
+        roles=list(reader.SETUP_V7_PROBE_ORDER[:9])
+        def add(role,argv,stdout,pid):
+            process={'schema':'bw.ring3.inventory-process.v1','argv':argv,
+                'environment':env,'pid':pid,'pgid':pid,'parentPid':101,
+                'startTicks':pid,'spawnMonoNs':pid*10,'reapMonoNs':pid*10+1,
+                'exitCode':0,'signal':None,'waitStatus':0,'timedOut':False,
+                'rusage':{'userSeconds':0,'systemSeconds':0,'maxRssKiB':0},
+                'firstFailure':None,'secondary':[]}
+            return {'role':role,'argv':argv,'environment':env,'exitCode':0,
+                'stdout':stdout.decode(),'stderr':''},\
+                {'role':role,'process':process,'stdout':self.held(stdout),
+                 'stderr':self.held(b'')}
+        argvs=[['/usr/bin/ldd','/usr/bin/bash'],
+            ['/usr/bin/ldd','/usr/bin/dpkg-query'],
+            ['/usr/bin/ldd',node],['/usr/bin/ldd','/usr/bin/python3'],
+            ['/usr/bin/ldd',reader.RUNTIME_QEMU],
+            ['/usr/bin/dpkg-query','-W',
+             '-f=${Package}\t${Version}\t${Architecture}\n',*reader.PACKAGE_NAMES],
+            ['/usr/bin/dpkg-query','-L','qemu-system-x86'],
+            ['/usr/bin/dpkg-query','-L','qemu-system-common'],
+            ['/usr/bin/dpkg-query','-L','qemu-system-data']]
+        streams=[(libc+' (0x1234)\n').encode()]*5 + [
+            b'qemu-system-x86\t1:8.2.2+ds-0ubuntu1.18\tamd64\n'
+            b'qemu-system-common\t1:8.2.2+ds-0ubuntu1.18\tamd64\n'
+            b'qemu-system-data\t1:8.2.2+ds-0ubuntu1.18\tall\n'
+            b'seabios\t1.16.3-2\tall\n'
+            b'ipxe-qemu\t1.21.1+git-20220113.fbbdc3926-0ubuntu2\tall\n',
+            b'/.\n/usr/bin/qemu-system-x86\n',
+            b'/.\n/usr/share/qemu/firmware.bin\n',
+            b'/.\n/usr/share/qemu/QEMU,VGA.bin\n'
+            b'/usr/share/qemu/QEMU,cgthree.bin\n'
+            b'/usr/share/qemu/QEMU,tcx.bin\n']
+        pairs=[add(role,argv,stream,201+i) for i,(role,argv,stream)
+               in enumerate(zip(roles,argvs,streams))]
+        inventory['probes']=[pair[0] for pair in pairs]
+        inventory['processes']=[pair[1] for pair in pairs]
+        self.record['setup']['postStatus']['records']=len(after)
+        self.set_packet_record()
+
+    def set_packet_record(self):
+        record_raw=reader.canonical(self.record)
+        for stage in (self.packet['stageBefore'],self.packet['stageAfter']):
+            stage['record']=self.held(record_raw)
+        self.originals['runtime.setup-inventory.json']=reader.canonical(self.packet)
+        out=io.BytesIO();out.write(self.status_lines)
+        reader.emit_setup_v7_inventory(self.originals,out.write,out.flush)
+        self.args[0]=out.getvalue()
+        self.args[1].update(logBytes=len(self.args[0]),logSha256=sha(self.args[0]))
+
+    def rebind_event(self,raw):
+        self.record['event']=self.held(raw)
+        self.originals['setup.event.json']=raw
+        cleanup=reader.parse(self.args[3])
+        cleanup['sourceAdmission']['eventSha256']=sha(raw)
+        self.args[3]=reader.canonical(cleanup)
+        self.args[1].update(cleanupBytes=len(self.args[3]),cleanupSha256=sha(self.args[3]))
+        self.set_packet_record()
+
+    def grade(self):return reader.consumed_v7_path_failure_audit(*self.args)
+
+    def refused(self):
+        self.set_packet_record()
+        with self.assertRaises((ValueError,UnicodeError)):self.grade()
+
+    def test_known_ninth_return_is_negative_only(self):
+        verdict=self.grade()
+        self.assertEqual(len(verdict['retainedProbePrefixRoles']),9)
+        self.assertEqual(verdict['returnedNinthListing']['commaPaths'],
+            sorted(reader.CONSUMED_V7_COMMA_PATHS))
+        for key in ('officialJobAuthenticated','setupObserved','setupApproved',
+                    'runtimeCandidateApproved','actualGuestApproved','actualRunApproved',
+                    'completeHostConfiguration'):
+            self.assertIs(verdict[key],False,key)
+        with self.assertRaises(reader.Refusal):
+            reader.setup_v7_listed_paths(self.packet['inventory']['probes'][-1]['stdout'].encode())
+        with self.assertRaises((ValueError,UnicodeError)):
+            reader.verify_setup_v7_failure_log(*self.args)
+
+    def test_listing_name_order_and_missing_return_refuse(self):
+        for mutation in ('missing','extra','case','role','exit','stderr'):
+            with self.subTest(mutation=mutation):
+                self.setUp()
+                probe=self.packet['inventory']['probes'][-1]
+                entry=self.packet['inventory']['processes'][-1]
+                if mutation in ('missing','extra','case'):
+                    data=probe['stdout']
+                    if mutation=='missing':data=data.replace('/usr/share/qemu/QEMU,tcx.bin\n','')
+                    elif mutation=='extra':data+= '/usr/share/qemu/QEMU,other.bin\n'
+                    else:data=data.replace('QEMU,tcx','qemu,tcx')
+                    probe['stdout']=data;entry['stdout']=self.held(data.encode())
+                elif mutation=='role':probe['argv'][-1]='seabios'
+                elif mutation=='exit':probe['exitCode']=1
+                else:probe['stderr']='x';entry['stderr']=self.held(b'x')
+                self.refused()
+
+    def test_status_source_outer_and_approval_cuts(self):
+        for mutation in ('status','source','outer','cleanup','candidate','poststage'):
+            with self.subTest(mutation=mutation):
+                self.setUp()
+                if mutation=='status':self.record['setup']['postStatus']['records']+=1
+                elif mutation=='source':self.args[1]['workflowFileSha256']='0'*64
+                elif mutation=='outer':
+                    row=reader.parse(self.args[2]);row['cgroupAfter']='present'
+                    self.args[2]=reader.canonical(row)
+                    self.args[1].update(outerBytes=len(self.args[2]),outerSha256=sha(self.args[2]))
+                elif mutation=='cleanup':
+                    row=reader.parse(self.args[3]);row['action']='removed-exact'
+                    self.args[3]=reader.canonical(row)
+                    self.args[1].update(cleanupBytes=len(self.args[3]),cleanupSha256=sha(self.args[3]))
+                elif mutation=='candidate':self.packet['candidate']={}
+                else:self.packet['stageAfter']['source']={}
+                self.refused()
+
+    def test_cli_consumes_only_supplied_originals(self):
+        paths=dict(zip(('log','external','outer','cleanup','shell'),
+            (self.args[0],reader.canonical(self.args[1]),*self.args[2:])))
+        argv=['reader.py','--consumed-v7-failure','log','--external-admission','external',
+            '--outer-resource-original','outer','--outside-cleanup-original','cleanup',
+            '--shell-image-original','shell']
+        with patch.object(reader.sys,'argv',argv),\
+             patch.object(reader.sys,'stdout',io.StringIO()) as output,\
+             patch.object(reader.Path,'open',lambda path,*a,**kw:io.BytesIO(paths[str(path)])),\
+             patch.object(reader.os,'open',side_effect=AssertionError('no kernel observation')):\
+            reader.main()
+        verdict=json.loads(output.getvalue())
+        self.assertTrue(verdict['failedAttemptRetained'])
+        self.assertFalse(verdict['setupApproved'])
+
+    def test_coherent_ignored_event_overflow_refuses_but_pretty_lf_accepts(self):
+        self.rebind_event(b'{\n  "syntheticEvent": true\n}\n')
+        self.assertTrue(self.grade()['failedAttemptRetained'])
+        self.rebind_event(b'{"syntheticEvent":true,"ignored":1e999}\n')
+        with self.assertRaisesRegex(reader.Refusal,'nonfinite v7 outer JSON'):
+            self.grade()
+        for raw,reason in ((b'{"syntheticEvent":true,"syntheticEvent":false}\n',
+                            'duplicate v7 outer JSON key'),
+                           (b'[]\n','raw event object')):
+            with self.subTest(reason=reason):
+                self.rebind_event(raw)
+                with self.assertRaisesRegex(reader.Refusal,reason):self.grade()
+
+    def test_bool_exit_and_wait_status_cuts(self):
+        for mutation in ('outer-service','outer-cleanup','cleanup-service',
+                         'stop-attempted','stop-timeout','process-exit','probe-exit','wait-status'):
+            with self.subTest(mutation=mutation):
+                self.setUp()
+                if mutation.startswith('outer-'):
+                    row=reader.parse(self.args[2]);row['systemdRunExitCode' if
+                        mutation=='outer-service' else 'outsideCleanupExitCode']=True
+                    self.args[2]=reader.canonical(row)
+                    self.args[1].update(outerBytes=len(self.args[2]),outerSha256=sha(self.args[2]))
+                elif mutation.startswith('cleanup-') or mutation.startswith('stop-'):
+                    row=reader.parse(self.args[3])
+                    if mutation=='cleanup-service':row['serviceExitCode']=True
+                    elif mutation=='stop-attempted':row['stop']['attempted']=0
+                    else:row['stop']['timedOut']=0
+                    self.args[3]=reader.canonical(row)
+                    self.args[1].update(cleanupBytes=len(self.args[3]),cleanupSha256=sha(self.args[3]))
+                else:
+                    probe=self.packet['inventory']['probes'][-1]
+                    process=self.packet['inventory']['processes'][-1]['process']
+                    if mutation=='process-exit':process['exitCode']=False
+                    elif mutation=='probe-exit':probe['exitCode']=False
+                    else:process['waitStatus']=False
+                self.refused()
+
+    def test_all_other_package_versions_coherently_refuse(self):
+        pins={name:(version,arch) for name,version,arch,*_ in reader.SETUP_V7_PACKAGES
+              if name in reader.PACKAGE_NAMES}
+        for name in sorted(set(reader.PACKAGE_NAMES)-{'qemu-system-x86'}):
+            with self.subTest(package=name):
+                self.setUp()
+                old,arch=pins[name];new='0:0.0-authored'
+                probe=self.packet['inventory']['probes'][5]
+                probe['stdout']=probe['stdout'].replace(name+'\t'+old+'\t'+arch,
+                    name+'\t'+new+'\t'+arch)
+                self.packet['inventory']['processes'][5]['stdout']=self.held(probe['stdout'].encode())
+                statuses=reader.decode_setup_v7_status_log(self.args[0])
+                post_raw=statuses['post']['raw']
+                before=('Package: '+name+'\nVersion: '+old+'\n').encode()
+                after=('Package: '+name+'\nVersion: '+new+'\n').encode()
+                self.assertEqual(post_raw.count(before),1)
+                post_raw=post_raw.replace(before,after)
+                p,_=producer_fixture_case();status=io.BytesIO()
+                pre_meta=p.emit_setup_v7_status('pre',statuses['pre']['raw'],status.write,status.flush)
+                post_meta=p.emit_setup_v7_status('post',post_raw,status.write,status.flush)
+                self.status_lines=status.getvalue()
+                self.record['setup']['preflight']['statusOriginal']=pre_meta
+                self.record['setup']['postStatus']['statusOriginal']=post_meta
+                self.record['setup']['postStatus']['selected'][name]['Version']=new
+                self.set_packet_record()
+                with self.assertRaisesRegex(reader.Refusal,'five exact installed package'):
+                    self.grade()
+
+    def test_executable_identity_coherent_cuts(self):
+        for role,path in (('node',reader.NODE_STAGE_TARGET),
+                          ('python','/usr/bin/python3'),('qemu',reader.RUNTIME_QEMU)):
+            for mutation in ('hash','bytes','kind'):
+                with self.subTest(role=role,mutation=mutation):
+                    self.setUp()
+                    row=self.packet['inventory']['files'][path]
+                    if mutation=='hash':
+                        row['sha256']='0'*64
+                        if role=='node':
+                            for stage in (self.packet['stageBefore'],self.packet['stageAfter']):
+                                stage['files']['node']['sha256']='0'*64
+                    elif mutation=='bytes':
+                        row['bytes']+=1
+                        self.packet['inventory']['fileMetadata'][path][6]+=1
+                        if role=='node':
+                            for stage in (self.packet['stageBefore'],self.packet['stageAfter']):
+                                stage['files']['node']['bytes']+=1
+                    else:row['kind']='shared-library'
+                    self.set_packet_record()
+                    with self.assertRaisesRegex(reader.Refusal,'exact consumed executable'):
+                        self.grade()
+
+    @staticmethod
+    def mutant(function,old,new):
+        source=inspect.getsource(function)
+        assert source.count(old)==1,'mutation anchor changed'
+        namespace=dict(reader.__dict__)
+        exec(compile(source.replace(old,new,1),'<inert source mutation>','exec'),namespace)
+        return namespace[function.__name__]
+
+    def test_source_guard_mutants_are_detected(self):
+        self.packet['firstFailure']={'phase':'other','name':'Refusal','message':'other'}
+        self.refused()
+        mutant=self.mutant(reader.consumed_v7_path_failure_audit,
+            "value['candidate'] is None and value['firstFailure']==first and",
+            "value['candidate'] is None and True and")
+        self.assertTrue(mutant(*self.args)['failedAttemptRetained'])
+        self.setUp()
+        probe=self.packet['inventory']['probes'][-1]
+        probe['stdout']=probe['stdout'].replace('/usr/share/qemu/QEMU,tcx.bin\n','')
+        self.packet['inventory']['processes'][-1]['stdout']=self.held(probe['stdout'].encode())
+        self.refused()
+        mutant=self.mutant(reader.consumed_v7_failed_listing,
+            "need(commas==CONSUMED_V7_COMMA_PATHS,'all three observed comma names retained')",
+            "need(True,'all three observed comma names retained')")
+        with patch.object(reader,'consumed_v7_failed_listing',mutant):
+            self.assertTrue(self.grade()['failedAttemptRetained'])
+        self.setUp()
+        outer=reader.parse(self.args[2]);outer['systemdRunExitCode']=True
+        self.args[2]=reader.canonical(outer)
+        self.args[1].update(outerBytes=len(self.args[2]),outerSha256=sha(self.args[2]))
+        with self.assertRaisesRegex(reader.Refusal,'exact failed outer1'):
+            self.grade()
+        mutant=self.mutant(reader.consumed_v7_path_failure_audit,
+            "type(outer['systemdRunExitCode']) is int and",
+            'True and')
+        self.assertTrue(mutant(*self.args)['failedAttemptRetained'])
+
+
+def consumed_v7_failure_controls():
+    result=unittest.TextTestRunner(verbosity=2).run(
+        unittest.defaultTestLoader.loadTestsFromTestCase(ConsumedV7PathFailureControls))
+    assert result.wasSuccessful(),'negative-only consumed v7 controls failed'
+    print(json.dumps({'testOnly':True,'tests':result.testsRun,'network':False,
+        'installer':False,'nativeProcess':False,'guest':False,'pass':True}))
+
+
 if __name__=='__main__':
-    if sys.argv[1:]==['--consumed-v6-failure-only']:consumed_v6_failure_controls()
+    if sys.argv[1:]==['--consumed-v7-failure-only']:consumed_v7_failure_controls()
+    elif sys.argv[1:]==['--consumed-v6-failure-only']:consumed_v6_failure_controls()
     elif sys.argv[1:]==['--image-env-diagnostic-only']:image_env_diagnostic_controls()
     elif sys.argv[1:]==['--setup-v6-only']:setup_v6_controls()
     elif sys.argv[1:]==['--setup-v8-only']:setup_v8_controls()

@@ -9741,7 +9741,322 @@ def v6_consumed_failure_audit(raw,external,outer_raw,cleanup_raw,shell_raw):
         'continuousOwnershipEstablished':False}
 
 
+CONSUMED_V7_COMMA_PATHS=frozenset((
+    '/usr/share/qemu/QEMU,VGA.bin',
+    '/usr/share/qemu/QEMU,cgthree.bin',
+    '/usr/share/qemu/QEMU,tcx.bin',
+))
+
+
+CONSUMED_V7_PYTHON={'bytes':8020928,
+    'sha256':'e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f'}
+
+
+def consumed_v7_failed_listing(raw):
+    """Grade the returned ninth listing as data; never admit it as a runtime graph."""
+    need(type(raw) is bytes and 0<len(raw)<=16384 and raw.endswith(b'\n') and
+         b'\r' not in raw and b'\0' not in raw,'complete bounded failed v7 listing bytes')
+    try:lines=raw.decode('utf-8','strict').split('\n')[:-1]
+    except UnicodeError as error:raise Refusal('failed v7 listing encoding') from error
+    need(lines and lines[0]=='/.','failed v7 listing root marker')
+    if lines and lines[-1]=='':lines.pop()
+    need(lines and all(line for line in lines),'no interior failed v7 listing separator')
+    paths=lines[1:]
+    need(0<len(paths)<=2048 and len(paths)==len(set(paths)) and '/.' not in paths,
+         'finite unique failed v7 listing rows')
+    commas=set()
+    for path in paths:
+        if ',' in path:
+            need(path in CONSUMED_V7_COMMA_PATHS,'only three observed failed package names')
+            commas.add(path)
+        else:runtime_path(path)
+    need(commas==CONSUMED_V7_COMMA_PATHS,'all three observed comma names retained')
+    return {'bytes':len(raw),'sha256':sha(raw),'rows':len(paths),
+            'commaPaths':sorted(commas)}
+
+
+def consumed_v7_path_failure_audit(raw,external,outer_raw,cleanup_raw,shell_raw):
+    """Negative-only audit of the consumed, complete ninth-probe path refusal."""
+    keys(external,'schema requestSha256 runId attempt head tree workflowSha workflowFileSha256 jobId jobName conclusion logBytes logSha256 outerBytes outerSha256 cleanupBytes cleanupSha256 shellBytes shellSha256 invoker')
+    need(external['schema']=='bw.ring3.setup-inventory-expectation.v7' and
+         external['conclusion']=='failure' and type(external['attempt']) is int and
+         external['attempt']==1 and external['jobName']=='setup-runtime-inventory-v7',
+         'selected failed v7 metadata job only')
+    integer(external['jobId'],1)
+    need(type(external['runId']) is str and re.fullmatch('[1-9][0-9]{0,19}',external['runId']),
+         'selected failed v7 run ID')
+    for name,size in (('head',40),('tree',40),('workflowSha',40),
+                      ('workflowFileSha256',64),('requestSha256',64)):
+        digest(external[name],size)
+    need(type(external['invoker']) is list and len(external['invoker'])==2 and
+         all(type(x) is int and 0<x<2**31 for x in external['invoker']),
+         'selected failed v7 invoker')
+    for name,body,cap in (('log',raw,8<<20),('outer',outer_raw,4096),
+                          ('cleanup',cleanup_raw,16384),('shell',shell_raw,4096)):
+        need(type(body) is bytes and integer(external[name+'Bytes'],1,cap)==len(body) and
+             digest(external[name+'Sha256'])==sha(body),
+             'exact externally selected failed '+name+' original')
+    shell=decode_setup_v7_shell(shell_raw,external)
+    outer=parse_setup_v7_outer(outer_raw)
+    keys(outer,'schema runId unit systemdRunExitCode outsideCleanupExitCode cgroupAfter')
+    need(outer_raw==canonical(outer) and outer['schema']=='bw.ring3.setup-outer-terminal.v7' and
+         outer['runId']==external['runId'] and outer['unit']==
+         '/sys/fs/cgroup/system.slice/bw-ring3-setup-v7-'+external['runId']+'-1.service' and
+         type(outer['systemdRunExitCode']) is int and
+         type(outer['outsideCleanupExitCode']) is int and
+         outer['systemdRunExitCode']==outer['outsideCleanupExitCode']==1 and
+         outer['cgroupAfter']=='absent','exact failed outer1/cleanup1 and absent unit')
+    cleanup=setup_v7_cleanup_original(cleanup_raw,external)
+    absent={'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None}
+    need(type(cleanup['serviceExitCode']) is int and cleanup['serviceExitCode']==1 and
+         cleanup['sourceAdmission'] is not None and
+         cleanup['preCensus']==cleanup['postCensus']==absent and
+         cleanup['cgroupTerminal']=='absent' and cleanup['unitCensus'] is None and
+         type(cleanup['stop']) is dict and
+         type(cleanup['stop'].get('attempted')) is bool and
+         type(cleanup['stop'].get('timedOut')) is bool and
+         cleanup['stop']=={'attempted':False,'argv':None,'exitCode':None,'timedOut':False} and
+         cleanup['policy'] is None and cleanup['action']=='not-needed' and
+         cleanup['firstFailure']=={'phase':'v7-outer-client','name':'ValueError',
+             'message':'bounded outer setup client exit 1'} and cleanup['secondary']==[] and
+         cleanup['setupApproved'] is False,
+         'failed service has exact source admission and absent outside cleanup')
+    originals=decode_setup_v7_log(raw)
+    event_original=originals['setup.event.json']
+    need(type(event_original) is bytes and 0<len(event_original)<=1<<20,
+         'bounded consumed v7 raw event snapshot')
+    event_value=parse_setup_v7_outer(event_original)
+    need(type(event_value) is dict,'finite duplicate-safe consumed v7 raw event object')
+    packet_raw=originals['runtime.setup-inventory.json']
+    value=parse_setup_v7_outer(packet_raw)
+    keys(value,'schema stageBefore stageAfter parent inventory candidate firstFailure secondary publicationSafe actualGuestApproved completeHostConfiguration')
+    first={'phase':'setup-v7-runtime-inventory','name':'Refusal',
+           'message':'bounded canonical runtime path'}
+    need(packet_raw==canonical(value) and
+         value['schema']=='bw.ring3.setup-runtime-inventory-original.v7' and
+         value['candidate'] is None and value['firstFailure']==first and
+         value['secondary']==[] and value['publicationSafe'] is True and
+         value['actualGuestApproved'] is False and
+         value['completeHostConfiguration'] is False,
+         'complete failed path-validation packet, no candidate')
+    request=None;source=None;record=None
+    for stage in (value['stageBefore'],value['stageAfter']):
+        current,selected,observed=verify_setup_v7_stage_observation(stage,external)
+        if request is None:request,source,record=current,selected,observed
+        else:need(equal(current,request) and equal(selected,source) and
+                  equal(observed,record),'same source12/request/stage record on both sides')
+    need(all(equal(value['stageBefore'][key],value['stageAfter'][key]) for key in
+             ('record','files','directories','source')),
+         'finite stage file and source readback')
+    request_raw=prerequisite_original(canonical(record['request']))
+    event_raw=prerequisite_original(canonical(record['event']))
+    need(request_raw==originals['setup.request.json'] and
+         event_raw==originals['setup.event.json'] and
+         source['files'][WORKFLOW]['sha256']==external['workflowFileSha256'] and
+         equal(cleanup['sourceAdmission']['source'],source) and
+         cleanup['sourceAdmission']['eventSha256']==sha(event_raw),
+         'raw request/event/source12/workflow/outside admission joins')
+    statuses=decode_setup_v7_status_log(raw)
+    pre,post=record['setup']['preflight'],record['setup']['postStatus']
+    need(equal(statuses['pre']['meta'],pre['statusOriginal']) and
+         equal(statuses['post']['meta'],post['statusOriginal']),
+         'separately retained pre/post raw status originals')
+    before=setup_v7_status_rows(statuses['pre']['raw'])
+    after=setup_v7_status_rows(statuses['post']['raw'])
+    need(len(before)==pre['statusRecords']==1211 and len(after)==post['records'] and
+         not any(name in {key[0] for key in before} for name,*_ in SETUP_V7_PACKAGES),
+         'independent selected pre-absence and post-status rows')
+    setup_v7_status_delta(before,after)
+    selected={name:None if (name,arch) not in after else
+        {key:after[name,arch].get(key) for key in
+         ('Package','Version','Architecture','Status','Triggers-Pending','Triggers-Awaited')}
+        for name,version,arch,*_ in SETUP_V7_PACKAGES}
+    pending={name+':'+arch:{'status':row.get('Status'),
+        'pending':row.get('Triggers-Pending'),'awaited':row.get('Triggers-Awaited')}
+        for (name,arch),row in after.items() if
+        row.get('Status') in ('install ok triggers-pending','install ok triggers-awaited') or
+        row.get('Triggers-Pending') is not None or row.get('Triggers-Awaited') is not None}
+    need(equal(selected,post['selected']) and equal(pending,post['pendingHostTriggers']) and
+         pre['imageFields']==setup_v7_expected_forwarded(shell['fields']),
+         'raw selected/pending status and shell image forwarding')
+    package_pins={name:(version,arch) for name,version,arch,*_ in SETUP_V7_PACKAGES
+                  if name in PACKAGE_NAMES}
+    need(set(package_pins)==set(PACKAGE_NAMES) and
+         all((selected[name]['Version'],selected[name]['Architecture'])==package_pins[name]
+             for name in PACKAGE_NAMES),
+         'five exact installed package version/architecture pairs')
+    parent=value['parent'];keys(parent,'meta controls alreadyEnabled')
+    info=parent['meta']
+    need(type(info) is list and len(info)==8 and all(type(x) is int for x in info) and
+         stat.S_ISDIR(info[2]) and info[3:5]==[0,0] and info[2]&0o022==0 and
+         type(parent['controls']) is dict and
+         set(parent['controls'])=={'cgroup.controllers','cgroup.subtree_control'},
+         'finite root-owned parent controls')
+    for row in parent['controls'].values():
+        keys(row,'meta raw');need(type(row['raw']) is str and
+             len(row['raw'].encode('ascii'))<=4096,'bounded parent control row')
+    need(parent['alreadyEnabled'] is all({'cpu','memory','pids'}<=set(row['raw'].split())
+         for row in parent['controls'].values()),'truthful readonly parent controls')
+    inventory=value['inventory']
+    keys(inventory,'files aliases probes processes fileMetadata pythonFiles mappedLibraries mapsOriginal emptyPythonSources')
+    files,aliases,metadata=inventory['files'],inventory['aliases'],inventory['fileMetadata']
+    need(type(files) is dict and 1<=len(files)<=512 and type(aliases) is dict and
+         len(aliases)<=256 and type(metadata) is dict and set(metadata)==set(files) and
+         inventory['pythonFiles']==[] and inventory['mappedLibraries']==[] and
+         inventory['mapsOriginal'] is None,
+         'finite partial graph with no later Python/map census')
+    empty=inventory['emptyPythonSources'];keys(empty,'before')
+    row=empty['before'];keys(row,'path namedBefore heldBefore heldAfter namedAfter bytesRead readHex eof sha256 closeAttempted closeSucceeded firstFailure secondary')
+    info=row['heldBefore']
+    need(row['path']==next(iter(STAGED_EMPTY_PYTHON_SOURCES)) and
+         row['bytesRead']==0 and row['readHex']=='' and row['eof'] is True and
+         row['sha256']==STAGED_EMPTY_PYTHON_SOURCES[row['path']]['sha256'] and
+         row['closeAttempted'] is True and row['closeSucceeded'] is True and
+         row['firstFailure'] is None and row['secondary']==[] and
+         type(info) is list and len(info)==8 and info[2]==0o100644 and
+         info[3:7]==[0,0,1,0] and
+         all(equal(row[key],info) for key in ('namedBefore','heldAfter','namedAfter')),
+         'typed pre-inventory empty Python source readback')
+    total=0
+    for path,entry in files.items():
+        runtime_path(path);keys(entry,'bytes sha256 mode kind');digest(entry['sha256'])
+        fact=metadata[path]
+        need(type(fact) is list and len(fact)==8 and all(type(x) is int for x in fact) and
+             all(0<=x<2**64 for x in fact[:7]) and -2**63<=fact[7]<2**63 and
+             fact[0]>0 and fact[1]>0 and stat.S_ISREG(fact[2]) and
+             type(entry['mode']) is int and 0<=entry['mode']<=0o7777 and
+             entry['mode']&0o022==0 and stat.S_IMODE(fact[2])==entry['mode'] and
+             integer(entry['bytes'],1,268435456)==fact[6] and entry['kind'] in
+             ('node-binary','python-binary','qemu-binary','observation-tool',
+              'tool-interpreter','elf-interpreter','shared-library'),
+             'bounded pre-failure file and held metadata')
+        total+=entry['bytes']
+    need(total<=1073741824,'partial file aggregate extent')
+    for path,entry in aliases.items():
+        runtime_path(path);keys(entry,'linkText target');runtime_path(entry['target'])
+        need(type(entry['linkText']) is str and
+             0<len(entry['linkText'].encode())<=256 and
+             re.fullmatch('[A-Za-z0-9_.+/-]+',entry['linkText']) and
+             resolve_alias(path,aliases)==entry['target'] and
+             any(name==entry['target'] or name.startswith(entry['target']+'/')
+                 for name in set(files)|set(aliases)),
+             'finite pre-failure alias target')
+    need(all(resolve_alias(path,aliases)==path for path in files) and
+         equal(metadata[NODE_STAGE_TARGET],value['stageAfter']['files']['node']['before']),
+         'selected Node and partial graph source readback')
+    for role,named in (('node',NODE_STAGE_TARGET),('python','/usr/bin/python3'),
+                       ('qemu',RUNTIME_QEMU)):
+        path=resolve_alias(named,aliases)
+        expected=CONSUMED_V7_PYTHON if role=='python' else RUNTIME_SELECTED[role]
+        need(path in files and files[path]['kind']==role+'-binary' and
+             {key:files[path][key] for key in ('bytes','sha256')}==expected and
+             files[path]['mode']&0o111!=0,
+             'exact consumed executable bytes/hash/kind/mode')
+    need(files[NODE_STAGE_TARGET]['bytes']==value['stageAfter']['files']['node']['bytes'] and
+         files[NODE_STAGE_TARGET]['sha256']==value['stageAfter']['files']['node']['sha256'],
+         'staged Node file hash and extent join')
+    probes,processes=inventory['probes'],inventory['processes']
+    setup_v7_observed_order(probes,processes,partial=True)
+    need(len(probes)==9,'exact nine-child failed prefix')
+    executables={'node':NODE_STAGE_TARGET,
+        'python':resolve_alias('/usr/bin/python3',aliases),
+        'qemu':resolve_alias(RUNTIME_QEMU,aliases)}
+    fixed={'ldd-shell':['/usr/bin/ldd','/usr/bin/bash'],
+        'ldd-dpkg-query':['/usr/bin/ldd','/usr/bin/dpkg-query'],
+        'ldd-tcg':['/usr/bin/ldd',resolve_alias(RUNTIME_TCG,aliases)],
+        'package-version':['/usr/bin/dpkg-query','-W',
+            '-f=${Package}\t${Version}\t${Architecture}\n',*PACKAGE_NAMES]}
+    fixed.update({'ldd-'+name:['/usr/bin/ldd',path] for name,path in executables.items()})
+    fixed.update({role:['/usr/bin/dpkg-query','-L',name]
+                  for name,role in SETUP_V7_PACKAGE_ROLES.items()})
+    last=record['sourceCommands'][-1]['process']['reapMonoNs'];pids=set();listed={}
+    for probe,entry in zip(probes,processes):
+        keys(probe,'role argv environment exitCode stdout stderr')
+        keys(entry,'role process stdout stderr')
+        process=entry['process']
+        keys(process,'schema argv environment pid pgid parentPid startTicks spawnMonoNs reapMonoNs exitCode signal waitStatus timedOut rusage firstFailure secondary')
+        role=probe['role'];argv=fixed[role]
+        need(entry['role']==role and probe['argv']==process['argv']==argv and
+             probe['environment']==process['environment']==
+             {'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'} and
+             process['schema']=='bw.ring3.inventory-process.v1' and
+             type(process['exitCode']) is int and type(probe['exitCode']) is int and
+             type(process['waitStatus']) is int and
+             process['exitCode']==probe['exitCode']==0 and process['waitStatus']==0 and
+             process['signal'] is None and process['timedOut'] is False and
+             process['firstFailure'] is None and process['secondary']==[] and
+             probe['stderr']=='' and
+             prerequisite_original(canonical(entry['stdout']))==
+               probe['stdout'].encode('utf-8','surrogateescape') and
+             prerequisite_original(canonical(entry['stderr']))==b'',
+             'exact complete zero-exit metadata child and raw streams')
+        pid=integer(process['pid'],1)
+        need(pid not in pids and integer(process['pgid'],1)==pid and
+             process['parentPid']==value['stageBefore']['identity']['pid'],
+             'distinct child of dropped observer');pids.add(pid)
+        integer(process['startTicks'],1)
+        start=integer(process['spawnMonoNs'],last)
+        end=integer(process['reapMonoNs'],start)
+        need(end-start<=10_000_000_000 and
+             start>=record['setup']['configure']['process']['reapMonoNs'],
+             'bounded ordered metadata children after setup');last=end
+        keys(process['rusage'],'userSeconds systemSeconds maxRssKiB')
+        for name in ('userSeconds','systemSeconds'):
+            need(type(process['rusage'][name]) in (int,float) and
+                 0<=process['rusage'][name]<=10,'bounded child CPU usage')
+        integer(process['rusage']['maxRssKiB'],0,1048576)
+        stdout=probe['stdout'].encode('utf-8','surrogateescape')
+        need(0<len(stdout)<=16384,'bounded returned child stream')
+        if role.startswith('ldd-'):
+            need(all(resolve_alias(path,aliases) in files for path in ldd_paths(probe['stdout'])),
+                 'complete early ldd paths join partial files')
+        elif role=='package-version':
+            rows=[line.split('\t') for line in probe['stdout'].splitlines()]
+            expected={(name,version,arch) for name,version,arch,*_ in SETUP_V7_PACKAGES
+                      if name in PACKAGE_NAMES}
+            need(len(rows)==5 and all(len(row)==3 for row in rows) and
+                 {tuple(row) for row in rows}==expected and
+                 all(tuple(row[1:])==package_pins[row[0]] and
+                     selected[row[0]]['Version']==row[1] and
+                     selected[row[0]]['Architecture']==row[2] for row in rows),
+                 'exact five returned package rows join selected post-status')
+        elif role=='package-files-qemu-system-data':
+            listed[role]=consumed_v7_failed_listing(stdout)
+        else:
+            listed[role]={'bytes':len(stdout),'sha256':sha(stdout),
+                          'rows':len(setup_v7_listed_paths(stdout))}
+    return {'schema':'bw.ring3.consumed-v7-path-failure-audit.v1',
+        'failedAttemptRetained':True,'failurePacketComplete':True,
+        'retainedProbePrefixRoles':list(SETUP_V7_PROBE_ORDER[:9]),
+        'returnedNinthListing':listed['package-files-qemu-system-data'],
+        'firstFailure':first,'secondary':[],'rawStatusBytesIndependentlyVerified':True,
+        'finiteStageReadbackObserved':True,'sourceHead':request['head'],
+        'sourceTree':request['tree'],'runId':external['runId'],'jobId':external['jobId'],
+        'workflowSha':external['workflowSha'],'retainedLogBytes':len(raw),
+        'retainedLogSha256':sha(raw),'outerClientExitCode':1,
+        'outsideCleanupExitCode':1,'outsideCgroupAfter':'absent',
+        'outsideFirstFailure':cleanup['firstFailure'],
+        'officialJobAuthenticated':False,'setupObserved':False,
+        'setupApproved':False,'runtimeCandidateApproved':False,
+        'actualGuestApproved':False,'actualRunApproved':False,
+        'completeHostConfiguration':False,'partialMutationPossible':True}
+
+
 def main():
+    if sys.argv[1:2]==['--consumed-v7-failure']:
+        parser=argparse.ArgumentParser(description='Negative-only consumed v7 path failure audit',allow_abbrev=False)
+        for name in ('consumed-v7-failure','external-admission','outer-resource-original',
+                     'outside-cleanup-original','shell-image-original'):
+            parser.add_argument('--'+name,required=True)
+        need(len(sys.argv)==11,'exact consumed v7 failure original CLI')
+        args=parser.parse_args()
+        def read(path,cap):
+            with Path(path).open('rb') as stream:return stream.read(cap+1)
+        result=consumed_v7_path_failure_audit(read(args.consumed_v7_failure,8<<20),
+            parse_setup_v7_outer(read(args.external_admission,1<<20)),
+            read(args.outer_resource_original,4096),
+            read(args.outside_cleanup_original,16384),read(args.shell_image_original,4096))
+        print(json.dumps(result,sort_keys=True));return
     if '--inventory-setup-v8' in sys.argv[1:]:
         need(sys.argv[1:]==['--inventory-setup-v8'],'exact single v8 inventory mode')
         need(SETUP_V8_READER_ENABLED is True,'v8 reader inactive pending reviewed source/event')
