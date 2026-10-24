@@ -6134,10 +6134,10 @@ metadata setup and runtime graph** can become a candidate for a later,
 separately claimed and qualified same-job guest adapter. The v5 guest route
 remains unimplemented; no compiler or guest event is selected here.
 
-The first v6 implementation candidate remains disabled. It adds a distinct
+The first v6 metadata implementation is enabled but unselected. It adds a distinct
 metadata-only route and standalone reader with shell and service image-field
 originals; pure mock controls provide no hosted setup or guest result. Source
-review, exact-head checks, externally selected request and one original-only
+review and exact-head checks, then an externally selected request and one original-only
 metadata event are still required.
 
 ## Ordered ordinary-JS 16-bit scalar read — claim, 2026-10-24

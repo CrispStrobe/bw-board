@@ -1387,7 +1387,8 @@ remain intact.
 
 ## Distinct v6 observed-image metadata candidate
 
-The v6 route is disabled in both the workflow and source. It has its own
+The v6 metadata route is enabled for a separately selected first event; no
+v6 request, label, hosted run, or original has been selected here. It has its own
 `setup-runtime-inventory-v6` job, labeled event, request SHA/body marker,
 repository variable `BW_RING3_SETUP_INVENTORY_V6_REQUEST_B64`, setup service,
 packet schemas, and standalone reader entry. The old v4/v5 jobs, packet

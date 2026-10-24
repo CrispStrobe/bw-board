@@ -6356,7 +6356,7 @@ def setup_v5_outside_cleanup(environ):
 
 
 # Distinct v6 metadata family. Historical v5 source and packet semantics stay intact.
-SETUP_V6_ENABLED=False  # Fresh source and event admission required.
+SETUP_V6_ENABLED=True  # Distinct v6 route; event and original admission remain external.
 SETUP_V6_PACKAGE_ROWS=SETUP_V4_PACKAGE_ROWS
 SETUP_V6_CONFIGURE_ORDER=SETUP_V4_CONFIGURE_ORDER
 SETUP_V6_IMAGE=SETUP_V4_IMAGE

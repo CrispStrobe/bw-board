@@ -4904,7 +4904,7 @@ def setup_v6_expected_forwarded(fields):
         for name,row in fields.items()}
 
 
-SETUP_V6_READER_ENABLED=False  # Fresh source and event admission required.
+SETUP_V6_READER_ENABLED=True  # Original and official event admission remain external.
 SETUP_V6_PACKAGES=SETUP_V4_PACKAGES
 SETUP_V6_ORDER=SETUP_V4_ORDER
 SETUP_V6_STATUS_SHA=SETUP_V4_STATUS_SHA

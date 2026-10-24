@@ -3420,7 +3420,7 @@ def setup_v6_controls(export_sample=False):
             workflow=(HERE.parent.parent/'.github/workflows/i80386-ring3-int-iret.yml').read_text()
             route=workflow.split('  setup-runtime-inventory-v6:\n',1)[1].split(
                 '  # Separate read-only diagnosis',1)[0]
-            self.assertIn("if: ${{ false && github.event.action == 'labeled'",route)
+            self.assertIn("if: ${{ github.event.action == 'labeled'",route)
             checkout='actions/checkout@11d5960a326750d5838078e36cf38b85af677262'
             node='actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020'
             self.assertEqual(route.count(checkout),1);self.assertEqual(route.count(node),1)
@@ -3451,15 +3451,45 @@ def setup_v6_controls(export_sample=False):
                  patch.object(reader,'setup_v6_inventory_entry',side_effect=AssertionError('no reader')):
                 with self.assertRaises(reader.Refusal):reader.main()
         def test_enabled_metadata_dispatch_still_uses_admission_entry(self):
-            self.assertIs(p.SETUP_V6_ENABLED,False);self.assertIs(reader.SETUP_V6_READER_ENABLED,False)
+            self.assertIs(p.SETUP_V6_ENABLED,True);self.assertIs(reader.SETUP_V6_READER_ENABLED,True)
             self.assertIs(p.ACTUAL_ENTRY_ENABLED,False)
             for mode,name in (('setup-runtime-inventory-v6','setup_v6_entry'),('cleanup-setup-v6-policy','setup_v6_outside_cleanup')):
-                with self.subTest(mode=mode),patch.object(p,'SETUP_V6_ENABLED',True),patch.object(p,name,return_value=17) as entry:
+                with self.subTest(mode=mode),patch.object(p,name,return_value=17) as entry:
                     self.assertEqual(p.dispatch_cli(['--'+mode],{'test':'inert'}),17)
                     entry.assert_called_once_with({'test':'inert'})
-            with patch.object(reader,'SETUP_V6_READER_ENABLED',True),patch.object(sys,'argv',['reader.py','--inventory-setup-v6']),patch.object(reader,'setup_v6_inventory_entry',return_value=({},False,False)) as entry:
+            with patch.object(sys,'argv',['reader.py','--inventory-setup-v6']),patch.object(reader,'setup_v6_inventory_entry',return_value=({},False,False)) as entry:
                 with self.assertRaises(SystemExit) as stopped: reader.main()
                 self.assertEqual(stopped.exception.code,1);entry.assert_called_once()
+        def test_active_invalid_event_refuses_before_setup_or_network(self):
+            class InvalidObserver:
+                def __init__(self,environ):
+                    self.facts={'eventIdentity':None,'sourceCommands':[],'source':None}
+                def event(self):return b'{}'
+                def source(self,request):raise AssertionError('invalid event reached source')
+            output=io.BytesIO()
+            with patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+                 patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+                 patch.object(p,'HostedEnvelopeInstaller',InvalidObserver),\
+                 patch.object(p,'SetupV6Host',side_effect=AssertionError('no setup')),\
+                 patch.object(p,'setup_v6_sequence',side_effect=AssertionError('no sequence')),\
+                 patch.object(p.sys,'stdout',SimpleNamespace(buffer=output)):
+                self.assertEqual(p.dispatch_cli(['--setup-runtime-inventory-v6'],{}),1)
+            failure=reader.parse_setup_v6_outer(output.getvalue())
+            self.assertEqual(failure['schema'],'bw.ring3.setup-entry-failure.v6')
+            self.assertIsNone(failure['setup'])
+            self.assertFalse(failure['actualGuestApproved'])
+            cleanup=io.BytesIO()
+            with patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+                 patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+                 patch.object(p,'HostedEnvelopeInstaller',side_effect=AssertionError('invalid context reached event')),\
+                 patch.object(p,'setup_v6_stop_unit',side_effect=AssertionError('no unit stop')),\
+                 patch.object(p.os,'unlink',side_effect=AssertionError('no policy unlink')),\
+                 patch.object(p.sys,'stdout',SimpleNamespace(buffer=cleanup)):
+                self.assertEqual(p.dispatch_cli(['--cleanup-setup-v6-policy'],{}),1)
+            partial=reader.parse(cleanup.getvalue())
+            self.assertIsNone(partial['sourceAdmission'])
+            self.assertIsNone(partial['stop'])
+            self.assertIsNone(partial['policy'])
         def test_exact_distinct_request_and_mutations(self):
             request=self.request();raw=reader.canonical(request)
             self.assertEqual(p.admit_setup_v6_request(raw,sha(raw)),request)
