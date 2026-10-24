@@ -9780,14 +9780,43 @@ def same_job_create_launch_plan(selection,environ):
     directory=launch_plan_path(environ).parent;path=directory/'launch-plan.json'
     need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,
          'root selected actual plan publication')
-    os.mkdir(directory,0o700);fd=None;first=None
+    # Keep the new directory private until the public-only plan has been
+    # written, made read-only and closed. The dropped preparation child must
+    # then be able to traverse it; an inherited umask cannot decide the mode.
+    os.mkdir(directory,0o700);directory_fd=None;fd=None;first=None
     try:
-        fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_NONBLOCK,0o600)
+        directory_fd=os.open(directory,os.O_RDONLY|os.O_DIRECTORY|
+            os.O_NOFOLLOW|os.O_NONBLOCK)
+        parent=os.fstat(directory_fd)
+        need(stat.S_ISDIR(parent.st_mode) and
+             (parent.st_uid,parent.st_gid)==(0,0) and
+             (parent.st_dev,parent.st_ino)==
+             (directory.lstat().st_dev,directory.lstat().st_ino) and
+             stat.S_IMODE(parent.st_mode)==0o700,
+             'fresh private root-owned launch-plan directory identity')
+        fd=os.open(path.name,os.O_WRONLY|os.O_CREAT|os.O_EXCL|
+            os.O_NOFOLLOW|os.O_NONBLOCK,0o600,dir_fd=directory_fd)
         need(os.write(fd,raw)==len(raw),'complete exact actual plan write')
         os.fchmod(fd,0o444);os.fsync(fd)
+        first=close_owned(fd,first,'same-job-plan-close');fd=None
+        if first is not None:raise first
+        os.fchmod(directory_fd,0o755)
+        held=os.fstat(directory_fd);named=directory.lstat()
+        need(stat.S_ISDIR(held.st_mode) and
+             (held.st_uid,held.st_gid)==(0,0) and
+             (held.st_dev,held.st_ino)==(named.st_dev,named.st_ino)==
+             (parent.st_dev,parent.st_ino) and
+             stat.S_IMODE(held.st_mode)==stat.S_IMODE(named.st_mode)==0o755 and
+             path.resolve(strict=True)==path and
+             stat.S_ISREG(path.lstat().st_mode) and
+             (path.lstat().st_uid,path.lstat().st_gid)==(0,0) and
+             stat.S_IMODE(path.lstat().st_mode)==0o444,
+             'published root-owned traversable plan directory and readonly file')
     except BaseException as error:first=error
     finally:
         if fd is not None:first=close_owned(fd,first,'same-job-plan-close')
+        if directory_fd is not None:
+            first=close_owned(directory_fd,first,'same-job-plan-directory-close')
     if first is not None:raise first
     selected=dict(environ,BW_LAUNCH_PLAN_SHA256=sha(raw))
     need(read_launch_plan(selected,sha(raw))==raw,
