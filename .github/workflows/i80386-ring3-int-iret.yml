@@ -161,6 +161,7 @@ jobs:
           set -e
           ring3_guest_cleanup() {
             sudo -- /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+              SUDO_UID="$ring3_setup_uid" SUDO_GID="$ring3_setup_gid" \
               GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
               GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
               GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
