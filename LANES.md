@@ -5971,6 +5971,15 @@ v4 request and event before applying its distinct label once. Preserve consumed
 v3 requests/events and all first failures. Independently acquire and audit the
 new official originals once, including raw status and outside cleanup.
 
+Candidate implementation, 2026-10-24: the owned folder, workflow, focused
+test and result guide are prepared in a separate source branch. The hosted
+four-child job requires separate final-head and one-shot event admission. Pure controls cover five authored
+operations and mocked original readers; no million-step workload, V8 profile
+or guest has been executed by this candidate. Before any source landing,
+review the exact source/import closure, resource and original-byte bindings,
+then require every enabled exact-head check. A later event requires separate
+external admission and one retained official original set.
+
 ## Ring3 selected-QEMU same-job guest continuation — claim, 2026-10-24
 
 Owner: Codex x86 ring3. Base `ef199ba9ef3a2a8adec06751510499fc9aabbe68`;
@@ -6053,3 +6062,32 @@ producer/reader/job selectors and corresponding pure controls and status
 prose. Its own labeled event still requires a separately selected request,
 source and official job; no guest route or prior label is activated. A new
 runner may refuse on image, status, helper or resource drift before any GET.
+
+## Ordered ordinary-JS 16-bit scalar read — claim, 2026-10-24
+
+Owner: Codex x86 profiling, with Sol implementation after this claim merges.
+Base `a556d0e8e96662f542dc88ea913fc5187d4a424d`. Own only the
+contiguous-page `size === 2` arm of `_readLinear` in
+`src/experimental/i80386.js`, new
+`test/i80386-read16-ordered-pair.test.mjs`, new
+`scripts/i80386-read16-paired/`,
+`.github/workflows/i80386-read16-paired.yml`, this registry entry and the
+matching roadmap contract. No implementation before claim merge.
+
+The [current authored-loop capture](https://github.com/CrispStrobe/bw-board/actions/runs/40057621920)
+places scalar reads among the sampled CPU paths; samples are not exact CPU
+cost shares. Replace only the two-byte loop and power assembly with two
+ordered, masked byte callbacks. Preserve one translation, physical wrapping,
+first/second callback side effects and faults, options, cross-page behavior,
+four-byte behavior, restart/rollback and all diagnostics. No direct RAM bypass,
+mode-specific feature removal, clock or package changes.
+
+Before adoption: authored arithmetic/device goldens, independent callback and
+fault controls with nonvacuous mutation cuts, complete exact-head CI including
+affected clean protected guest qualification, and a separately selected hosted
+paired comparison of the frozen base and candidate. Keep eighteen children
+(two warm pairs plus seven measured pairs), median CPU speedup at least 1.03,
+every CPU ratio greater than 1 and median wall ratio at most 1.02. Preserve
+failed measurements; do not replay or weaken the gate. A failed performance
+gate leaves the candidate unadopted. No physical 386 timing, general workload
+speedup or full OS claim follows from this authored workload.

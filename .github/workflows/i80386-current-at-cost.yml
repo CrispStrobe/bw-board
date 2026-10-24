@@ -1,0 +1,209 @@
+name: Current ordinary JS 386 AT cost capture
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    paths:
+      - '.github/workflows/i80386-current-at-cost.yml'
+      - 'scripts/i80386-current-at-cost/**'
+      - 'scripts/i80386-at-profile/fixture.mjs'
+      - 'test/i80386-current-at-cost.test.mjs'
+      - 'docs/I80386-CURRENT-AT-COST.md'
+      - 'package.json'
+      - 'src/**'
+permissions:
+  contents: read
+concurrency:
+  group: current-at-cost-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  source-controls:
+    if: ${{ github.event_name == 'pull_request' && github.repository == 'CrispStrobe/bw-board' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            package.json
+            src
+            scripts/i80386-at-profile/fixture.mjs
+            scripts/i80386-current-at-cost
+            test/i80386-current-at-cost.test.mjs
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Pure fixed-golden and original-parser controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/timeout 30s node --test test/i80386-current-at-cost.test.mjs
+          /usr/bin/timeout 30s /usr/bin/python3 -I -B scripts/i80386-current-at-cost/run.py --controls
+          /usr/bin/timeout 30s /usr/bin/python3 -I -B scripts/i80386-current-at-cost/reader.py --controls
+  profiles:
+    if: ${{ true && github.event.action == 'labeled' && github.event.label.name == 'x86-current-at-cost-profile-v1' && github.actor == 'CrispStrobe' && github.repository == 'CrispStrobe/bw-board' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: diagnostic
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/i80386-current-at-cost
+            scripts/i80386-at-profile/fixture.mjs
+            test/i80386-current-at-cost.test.mjs
+            docs/I80386-CURRENT-AT-COST.md
+            package.json
+            src
+            .github/workflows/i80386-current-at-cost.yml
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 7803a6341d319b30da2bcd4065e5c8005940687f
+          path: publication
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            package.json
+            scripts/i80386-code16-paired
+            test/i80386-code16-paired-fixture.test.mjs
+            .github/workflows/i80386-code16-paired.yml
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Tiny diagnostic parser and stream controls
+        working-directory: diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -c 0
+          /usr/bin/timeout 30s /usr/bin/python3 -I -B scripts/i80386-current-at-cost/reader.py --controls
+          /usr/bin/timeout 30s /usr/bin/python3 -I -B scripts/i80386-current-at-cost/run.py --controls
+          /usr/bin/timeout 30s node --test test/i80386-current-at-cost.test.mjs
+      - name: Fixed resource-owned V8 diagnostics
+        shell: bash
+        env:
+          BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$(git -C diagnostic rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          unit="bw-current-cost-${GITHUB_RUN_ID}-1.service"
+          context="$RUNNER_TEMP/current-at-cost-context-${GITHUB_RUN_ID}-1"
+          mkdir "$context"
+          cpu=$(/usr/bin/python3 -I -c 'import os;print(min(os.sched_getaffinity(0)))')
+          {
+            printf 'unit=%s cpu=%s\n' "$unit" "$cpu"
+            node --version
+            /usr/bin/python3 --version
+            /usr/bin/systemd-run --version
+            sha256sum "$(command -v node)" /usr/bin/python3 /usr/bin/systemd-run /usr/bin/taskset /usr/bin/timeout
+            uname -a
+            lscpu
+          } > "$context/runtime-original.txt"
+          # The service owns wrapper and children. Client timeout alone is not
+          # cleanup proof; RuntimeMaxSec and KillMode bind service cleanup.
+          /usr/bin/sudo -n /usr/bin/timeout --signal=TERM --kill-after=10s 9m \
+            /usr/bin/systemd-run --wait --pipe --collect --unit "$unit" \
+            --property "User=$(id -un)" --property "Group=$(id -gn)" \
+            --property "WorkingDirectory=$GITHUB_WORKSPACE/diagnostic" \
+            --property "AllowedCPUs=$cpu" \
+            --property CPUQuota=100% --property CPUQuotaPeriodSec=100ms \
+            --property MemoryMax=1073741824 --property MemorySwapMax=0 \
+            --property RuntimeMaxSec=8min --property KillMode=control-group \
+            --property TimeoutStopSec=5s --property TasksMax=64 \
+            --setenv "PATH=$PATH" --setenv LANG=C --setenv LC_ALL=C \
+            --setenv GITHUB_ACTIONS=true --setenv GITHUB_REPOSITORY=CrispStrobe/bw-board \
+            --setenv "GITHUB_RUN_ID=$GITHUB_RUN_ID" --setenv GITHUB_RUN_ATTEMPT=1 \
+            --setenv "RUNNER_TEMP=$RUNNER_TEMP" --setenv "BW_EXPECTED_HEAD=$BW_EXPECTED_HEAD" \
+            --setenv "BW_PROFILE_UNIT=$unit" \
+            /usr/bin/taskset --cpu-list "$cpu" /usr/bin/python3 -I -B \
+              "$GITHUB_WORKSPACE/diagnostic/scripts/i80386-current-at-cost/run.py" \
+            > "$context/parent.stdout" 2> "$context/parent.stderr"
+      - name: Observe exact owned service and cgroup cleanup
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          unit="bw-current-cost-${GITHUB_RUN_ID}-1.service"
+          context="$RUNNER_TEMP/current-at-cost-context-${GITHUB_RUN_ID}-1"
+          mkdir -p "$context"
+          set +e
+          /usr/bin/sudo -n /usr/bin/systemctl show "$unit" \
+            --property LoadState,ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,ExecMainPID \
+            > "$context/unit-before-cleanup.original" 2> "$context/unit-before-cleanup.stderr"
+          printf '%s\n' "$?" > "$context/unit-before-cleanup.exit"
+          /usr/bin/sudo -n /usr/bin/timeout --signal=KILL 10s /usr/bin/systemctl stop "$unit" \
+            > "$context/unit-stop.original" 2> "$context/unit-stop.stderr"
+          printf '%s\n' "$?" > "$context/unit-stop.exit"
+          /usr/bin/sudo -n /usr/bin/systemctl show "$unit" \
+            --property LoadState,ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,ExecMainPID \
+            > "$context/unit-after-cleanup.original" 2> "$context/unit-after-cleanup.stderr"
+          printf '%s\n' "$?" > "$context/unit-after-cleanup.exit"
+          set -e
+          /usr/bin/python3 -I - "$unit" "$context" <<'PYCODE'
+          import json,sys,stat
+          from pathlib import Path
+          unit,context=sys.argv[1],Path(sys.argv[2])
+          raw=(context/'unit-after-cleanup.original').read_bytes()
+          if len(raw)>8192:raise ValueError('unit state cap')
+          state={}
+          for line in raw.decode('utf8').splitlines():
+              key,value=line.split('=',1)
+              if key in state:raise ValueError('duplicate unit state')
+              state[key]=value
+          expected={'LoadState','ActiveState','SubState','Result','ExecMainCode','ExecMainStatus','ExecMainPID'}
+          if set(state)!=expected:raise ValueError('unit state fields absent')
+          directory=Path('/sys/fs/cgroup/system.slice')/unit
+          try:
+              observed=directory.lstat()
+          except FileNotFoundError:
+              observed=None
+          if observed is not None:
+              if not stat.S_ISDIR(observed.st_mode):raise ValueError('cgroup directory type')
+              body=(directory/'cgroup.procs').read_bytes()
+              (context/'cgroup-procs-after.original').write_bytes(body)
+              if len(body)>8192:raise ValueError('cgroup census cap')
+              stat_body=(directory/'cgroup.stat').read_bytes()
+              events_body=(directory/'cgroup.events').read_bytes()
+              if len(stat_body)>8192 or len(events_body)>8192:raise ValueError('cgroup facts cap')
+              (context/'cgroup-stat-after.original').write_bytes(stat_body)
+              (context/'cgroup-events-after.original').write_bytes(events_body)
+              def fields(raw):
+                  result={}
+                  for line in raw.decode('ascii').splitlines():
+                      pair=line.split()
+                      if len(pair)!=2 or pair[0] in result or not pair[1].isdigit():raise ValueError('cgroup field')
+                      result[pair[0]]=int(pair[1])
+                  return result
+              stat_fields=fields(stat_body);event_fields=fields(events_body)
+              if not {'nr_descendants','nr_dying_descendants'}<=stat_fields.keys() or 'populated' not in event_fields:raise ValueError('missing cgroup field')
+              empty=body==b'' and stat_fields['nr_descendants']==0 and stat_fields['nr_dying_descendants']==0 and event_fields['populated']==0
+              disposition='present-empty' if empty else 'present-nonempty'
+          else:
+              empty=True;disposition='absent'
+          terminal=state['LoadState']=='not-found' or (state['LoadState']=='loaded' and state['ActiveState'] in ('inactive','failed') and state['SubState'] in ('dead','failed','exited') and state['ExecMainPID']=='0')
+          result={'schema':'bw.code16-owned-service-cleanup.v1','unit':unit,'serviceState':state,'cgroupDisposition':disposition,'terminalOrAbsentObserved':terminal,'emptyOrAbsentCgroupObserved':empty,'complete':terminal and empty}
+          (context/'owned-service-cleanup.json').write_text(json.dumps(result,sort_keys=True)+'\n')
+          if not result['complete']:raise ValueError('owned service cleanup uncertain')
+          PYCODE
+      - name: Independent original-only packet reader
+        if: success()
+        shell: bash
+        run: |
+          /usr/bin/timeout 30s /usr/bin/python3 -I -B diagnostic/scripts/i80386-current-at-cost/reader.py --packet "$RUNNER_TEMP/current-at-cost-${GITHUB_RUN_ID}-1" "$RUNNER_TEMP/current-at-cost-context-${GITHUB_RUN_ID}-1"
+      - name: Retain four children or first failed diagnostic
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: current-at-cost-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/current-at-cost-context-${{ github.run_id }}-1
+            ${{ runner.temp }}/current-at-cost-${{ github.run_id }}-1
+          if-no-files-found: error
+          retention-days: 14
