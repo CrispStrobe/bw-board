@@ -5993,6 +5993,12 @@ def setup_v7_runtime_expectation(raw,expected_sha256):
         keys(row,'name version architecture');need(type(row['version']) is str and re.fullmatch('[A-Za-z0-9.+:~_-]{1,128}',row['version']) and
              row['architecture'] in ('amd64','all'),'stable selected package fields')
         if row['name']=='qemu-system-x86':need(row['version']=='1:8.2.2+ds-0ubuntu1.18' and row['architecture']=='amd64','historical selected QEMU package')
+    setup_pairs={name:(version,arch) for name,version,arch,*_ in SETUP_V7_PACKAGES
+                 if name in PACKAGE_NAMES}
+    need(set(setup_pairs)==set(PACKAGE_NAMES) and
+         all((row['version'],row['architecture'])==setup_pairs[row['name']]
+             for row in packages),
+         'independent five package-version rows match exact setup selection')
     paths=value['packagePaths'];need(type(paths) is list and 0<len(paths)<=2048 and paths==sorted(set(paths)),'bounded sorted stable package path union')
     for path in paths:runtime_path(path)
     by_package=value['packagePathsByPackage']
@@ -6243,6 +6249,12 @@ class SetupV7Inventory(StagedRuntimeInventory):
         rows=[line.split('\t') for line in self.observe('package-version',['/usr/bin/dpkg-query','-W','-f=${Package}\t${Version}\t${Architecture}\n',*PACKAGE_NAMES]).splitlines()]
         need(len(rows)==5 and all(len(row)==3 for row in rows) and {row[0] for row in rows}==set(PACKAGE_NAMES),'fixed original inventory packages')
         packages=[{'name':name,'version':version,'architecture':architecture} for name,version,architecture in sorted(rows)]
+        setup_pairs={name:(version,arch) for name,version,arch,*_ in SETUP_V7_PACKAGES
+                     if name in PACKAGE_NAMES}
+        need(set(setup_pairs)==set(PACKAGE_NAMES) and
+             all((row['version'],row['architecture'])==setup_pairs[row['name']]
+                 for row in packages),
+             'actual five package-version rows match selected exact setup packages')
         qemu=next(row for row in packages if row['name']=='qemu-system-x86')
         need(qemu['version']=='1:8.2.2+ds-0ubuntu1.18' and qemu['architecture']=='amd64','historical selected inventory package')
         self.package_listings={}
@@ -6942,6 +6954,13 @@ def setup_v7_inner_original(raw,external,shell):
     enabled=all({'cpu','memory','pids'}<=set(row['raw'].split()) for row in parent['controls'].values())
     need(parent['alreadyEnabled'] is enabled,'truthful cgroup parent availability')
     result=verify_setup_v7_inventory_graph(value)
+    candidate_raw=prerequisite_original(canonical(value['candidate']))
+    candidate=setup_v7_runtime_expectation(candidate_raw,sha(candidate_raw))
+    for package in candidate['packages']:
+        row=post['selected'][package['name']]
+        need(row['Version']==package['version'] and
+             row['Architecture']==package['architecture'],
+             'five named runtime versions independently join raw installed post-status')
     need(equal(value['inventory']['fileMetadata'][NODE_STAGE_TARGET],value['stageAfter']['files']['node']['before']),
          'graph Node file joins staged inode/mode/hash')
     need(all(entry['process']['parentPid']==value['stageBefore']['identity']['pid'] for entry in

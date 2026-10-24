@@ -4548,6 +4548,11 @@ def setup_v7_controls(export_sample=False):
                 process,streams=old_probe(argv)
                 if argv==[reader.NODE_STAGE_TARGET,'--version']:
                     streams['stdout']=b'v22.23.3\n'
+                if argv[:2]==['/usr/bin/dpkg-query','-W']:
+                    selected={name:(version,arch) for name,version,arch,*_ in
+                              reader.SETUP_V7_PACKAGES if name in reader.PACKAGE_NAMES}
+                    streams['stdout']=''.join(name+'\t'+selected[name][0]+'\t'+
+                        selected[name][1]+'\n' for name in reader.PACKAGE_NAMES).encode()
                 if argv[:2]==['/usr/bin/dpkg-query','-L']:
                     self.assertEqual(len(argv),3)
                     name=argv[2];observed.append(name)
@@ -4578,6 +4583,30 @@ def setup_v7_controls(export_sample=False):
                              for path,row in candidate['files'].items()},
                     'probes':inventory.probes}}
             reader.verify_setup_v7_stable_original(original,raw,sha(raw))
+            wrong_version=copy.deepcopy(candidate)
+            next(item for item in wrong_version['packages']
+                 if item['name']=='qemu-system-data')['version']='1:8.2.2+ds-0ubuntu1.19'
+            wrong_original=copy.deepcopy(original)
+            version_probe=next(item for item in wrong_original['qemuPackage']['probes']
+                               if item['role']=='package-version')
+            old_stdout=version_probe['stdout']
+            version_probe['stdout']=version_probe['stdout'].replace(
+                'qemu-system-data\t1:8.2.2+ds-0ubuntu1.18\t',
+                'qemu-system-data\t1:8.2.2+ds-0ubuntu1.19\t')
+            self.assertNotEqual(version_probe['stdout'],old_stdout)
+            wrong_raw=reader.canonical(wrong_version)
+            with self.assertRaises(reader.Refusal):
+                reader.verify_setup_v7_stable_original(wrong_original,
+                                                       wrong_raw,sha(wrong_raw))
+            def wrong_probe(argv):
+                process,streams=probe(argv)
+                if argv[:2]==['/usr/bin/dpkg-query','-W']:
+                    streams['stdout']=streams['stdout'].replace(
+                        b'qemu-system-data\t1:8.2.2+ds-0ubuntu1.18\t',
+                        b'qemu-system-data\t1:8.2.2+ds-0ubuntu1.19\t')
+                return process,streams
+            with self.assertRaises(reader.Refusal):
+                reader.SetupV7Inventory(stage,files,wrong_probe).discover_core()
             empty_info=[1,777,0o100644,0,0,1,0,1700000000000000000]
             empty_original={'path':empty,'namedBefore':empty_info,
                 'heldBefore':empty_info,'heldAfter':empty_info,
