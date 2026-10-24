@@ -12045,18 +12045,20 @@ def same_job_actual_packet_predicates(packet,handoff,controller_runtime_raw):
 
 
 def verify_same_job_actual_packet(packet,handoff_raw,service_raw,cleanup_raw,
-                                  controller_runtime_raw):
+                                  guest_outer_raw,controller_runtime_raw):
     """Independent local second-service grade; official artifact join remains separate."""
     need(type(handoff_raw) is bytes and 0<len(handoff_raw)<=1<<20 and
          type(service_raw) is bytes and 0<len(service_raw)<=CAPS['jsonBytes'] and
          type(cleanup_raw) is bytes and 0<len(cleanup_raw)<=CAPS['jsonBytes'] and
+         type(guest_outer_raw) is bytes and 0<len(guest_outer_raw)<=4096 and
          type(controller_runtime_raw) is bytes and
          0<len(controller_runtime_raw)<=CAPS['jsonBytes'],
          'bounded distinct actual originals')
     handoff=parse(handoff_raw)
     need(handoff_raw==canonical(handoff),'canonical selected first-service handoff')
-    service=parse(service_raw);cleanup=parse(cleanup_raw)
-    need(service_raw==canonical(service) and cleanup_raw==canonical(cleanup),
+    service=parse(service_raw);cleanup=parse(cleanup_raw);guest_outer=parse(guest_outer_raw)
+    need(service_raw==canonical(service) and cleanup_raw==canonical(cleanup) and
+         guest_outer_raw==canonical(guest_outer),
          'canonical actual service and outside cleanup originals')
     keys(service,'schema requestSha256 handoffSha256 guestPacketComposed firstFailure secondary')
     keys(cleanup,'schema runId unit serviceExitCode sourceAdmission preCensus stop '
@@ -12096,6 +12098,16 @@ def verify_same_job_actual_packet(packet,handoff_raw,service_raw,cleanup_raw,
              'finite selected unit has no populated/nested/dying descendants')
     need(cleanup['stop']=={'attempted':False,'argv':None,'exitCode':None,'timedOut':False},
          'successful guest needed no outside stop')
+    keys(guest_outer,'schema runId unit systemdRunExitCode outsideCleanupExitCode cgroupAfter')
+    need(guest_outer['schema']=='bw.ring3.same-job-guest-outer-terminal.v1' and
+         guest_outer['runId']==handoff['runId'] and
+         guest_outer['unit']=='/sys/fs/cgroup/system.slice/'+cleanup['unit'] and
+         type(guest_outer['systemdRunExitCode']) is int and
+         guest_outer['systemdRunExitCode']==cleanup['serviceExitCode']==0 and
+         type(guest_outer['outsideCleanupExitCode']) is int and
+         guest_outer['outsideCleanupExitCode']==0 and
+         guest_outer['cgroupAfter']=='absent',
+         'retained exact owned guest outer client and absent terminal join')
     graded=same_job_actual_packet_predicates(packet,handoff,controller_runtime_raw)
     live=parse(controller_runtime_raw)
     need(live['handoffSha256']==selected_sha and
@@ -12111,11 +12123,11 @@ def verify_same_job_actual_packet(packet,handoff_raw,service_raw,cleanup_raw,
 
 
 def verify_same_job_actual_official(packet,handoff_raw,service_raw,cleanup_raw,
-        controller_runtime_raw,run_raw,jobs_raw,artifacts_raw,job_log_raw,
+        guest_outer_raw,controller_runtime_raw,run_raw,jobs_raw,artifacts_raw,job_log_raw,
         artifact_raw,external):
     """Separately frozen official originals and exact uploaded bytes join local grade."""
     local=verify_same_job_actual_packet(packet,handoff_raw,service_raw,
-                                        cleanup_raw,controller_runtime_raw)
+                                        cleanup_raw,guest_outer_raw,controller_runtime_raw)
     keys(external,'schema runId jobId attempt head tree workflowSha '
         'workflowFileSha256 requestSha256 handoffSha256 jobName conclusion '
         'artifactId artifactName artifactBytes artifactSha256 artifactPaths artifactExtras '
@@ -12215,13 +12227,14 @@ def verify_same_job_actual_official(packet,handoff_raw,service_raw,cleanup_raw,
          'official selected artifact ID, digest, extent and run')
     expected={'packet/'+name:packet[name] for name in ROLES}
     expected.update({'handoff':handoff_raw,'service':service_raw,
-        'cleanup':cleanup_raw,'controllerRuntime':controller_runtime_raw})
+        'cleanup':cleanup_raw,'guestOuter':guest_outer_raw,
+        'controllerRuntime':controller_runtime_raw})
     paths=external['artifactPaths']
     extra_names={'shell-image.original.json','inventory.original.log',
         'controller.stderr','outside-cleanup.original.json',
         'outside-cleanup.stderr','outer.original.json','guest.stdout',
         'guest.stderr','guest-cleanup.stdout','guest-cleanup.stderr',
-        'guest-outer.original.json','guest-verdict.original.json'}
+        'guest-verdict.original.json'}
     extras=external['artifactExtras']
     need(type(extras) is dict and set(extras)==extra_names and
          all(type(row) is dict and set(row)=={'path','bytes','sha256'} and
@@ -12828,7 +12841,7 @@ def main():
         need(SAME_JOB_ACTUAL_READER_ENABLED is True,'same-job actual reader inactive')
         parser=argparse.ArgumentParser(description='Independent official same-job guest originals',
                                        allow_abbrev=False)
-        for name in ('packet-dir','handoff','service','cleanup','controller-runtime',
+        for name in ('packet-dir','handoff','service','cleanup','guest-outer','controller-runtime',
                      'official-run','official-jobs','official-artifacts','job-log',
                      'artifact-zip','external'):
             parser.add_argument('--'+name,required=True)
@@ -12845,7 +12858,7 @@ def main():
         external=parse(read(args.external,1<<20))
         result=verify_same_job_actual_official(packet,read(args.handoff,1<<20),
             read(args.service,1<<20),read(args.cleanup,1<<20),
-            read(args.controller_runtime,1<<20),read(args.official_run,1<<20),
+            read(args.guest_outer,4096),read(args.controller_runtime,1<<20),read(args.official_run,1<<20),
             read(args.official_jobs,1<<20),read(args.official_artifacts,1<<20),
             read(args.job_log,8<<20),read(args.artifact_zip,32<<20),external)
         print(json.dumps(result,sort_keys=True));return
@@ -12853,7 +12866,7 @@ def main():
         need(SAME_JOB_ACTUAL_READER_ENABLED is True,'same-job actual reader inactive')
         parser=argparse.ArgumentParser(description='Independent actual twenty-role packet',
                                        allow_abbrev=False)
-        for name in ('packet-dir','handoff','service','cleanup','controller-runtime'):
+        for name in ('packet-dir','handoff','service','cleanup','guest-outer','controller-runtime'):
             parser.add_argument('--'+name,required=True)
         args=parser.parse_args()
         def read(path,cap):
@@ -12868,7 +12881,7 @@ def main():
             packet[name]=read(Path(args.packet_dir)/name,cap)
         result=verify_same_job_actual_packet(packet,read(args.handoff,1<<20),
             read(args.service,1<<20),read(args.cleanup,1<<20),
-            read(args.controller_runtime,1<<20))
+            read(args.guest_outer,4096),read(args.controller_runtime,1<<20))
         print(json.dumps(result,sort_keys=True));return
     if '--inventory-same-job-actual-v1' in sys.argv[1:]:
         need(sys.argv[1:]==['--inventory-same-job-actual-v1'],
