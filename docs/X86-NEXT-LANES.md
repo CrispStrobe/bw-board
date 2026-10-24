@@ -3555,3 +3555,33 @@ hosted setup, architectural guest, full 386DX or physical timing approval.
 ### V2 actual source candidate is selectable — 2026-10-24
 
 The merged claim permits a distinct V2 job and finite post-reap census. Source controls now connect its V2 handoff, same-job controller, finalizer and independent readers using manufactured host and guest edges. The V1 extra cgroup member remains unidentified; this source work does not explain it. The V2 code and workflow guards are enabled, but no V2 event has been selected. The next step is exact-head CI, then a new canonical request and separately admitted one-shot V2 event only if those gates qualify. Preserve the V1 originals and do not repeat its consumed label.
+### Same-job V2 retained guest disagreement and outside cleanup failure; V3 claim
+
+The selected [V2 run](https://github.com/CrispStrobe/bw-board/actions/runs/40130461323)
+completed the fixed setup and ran the authored JavaScript and QEMU children.
+Its guest service composed a packet and exited zero, but outside cleanup
+reported the selected systemd unit absent while the separate run-owned manual
+cgroup root was still present. The retained cleanup does not identify a PID in
+that root. The unchanged positive reader refuses the overall result. The
+JavaScript and QEMU defined outputs also differ at two GDT access-byte
+positions; child exits and a complete packet do not approve the comparison.
+
+The [new V3 ownership claim](../LANES.md) is docs-only until merged. A distinct
+request, label, job and reader may add a finite outside finalizer for exactly
+the owned manual root and its `controller`, `js`, `qemu` leaves. It must bind
+NOFOLLOW directory identities, retain raw empty process/thread and descendant
+censuses, remove only those admitted empty leaves and then the root, and prove
+final absence. Linux may account an already removed child as dying for an
+undefined interval; the claim allows at most six read-only root observations
+over five seconds only for that otherwise empty post-removal state. Every raw
+sample and failure remains, with the existing cleanup limits and no PID kill,
+ignore list, failed-syscall retry or continuous ownership claim.
+
+The spent V2 execution gate may close, but its wire, originals and strict
+positive refusal remain. A separate negative-only reader may document the
+exact retained V2 disagreement and failed cleanup with all approval flags
+false. Even a future clean V3 outside census cannot turn a QEMU byte mismatch
+into an architectural pass. A QEMU reference change or alternate oracle needs
+its own claim. Next: qualify and merge the V3 docs claim, implement in a new
+owned source worktree, run connected pure controls and exact-head CI, then
+select at most one fresh V3 event after independent admission.

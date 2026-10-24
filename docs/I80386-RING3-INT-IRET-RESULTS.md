@@ -86,3 +86,21 @@ an official run or architectural result.
 The selected [V1 run](https://github.com/CrispStrobe/bw-board/actions/runs/40121786243) failed after the reaped unpack phase because its first cgroup census retained an additional, unidentified direct member. Configure, Node staging and guest execution did not follow. Its label is spent and its originals remain held.
 
 The new V2 source candidate records a bounded sequence of post-reap cgroup samples while keeping final acceptance controller-only with no nested or dying descendants. Mocked controls connect its independent first-service handoff to the second service, twenty-role packet and offline official reader. Those controls do not prove a hosted setup or guest result. The V2 source and workflow guards are enabled, but no V2 event has been selected; exact-head qualification and external one-shot admission remain pending.
+## Selected same-job V2 result and proposed V3 cleanup
+
+The selected [V2 actual run](https://github.com/CrispStrobe/bw-board/actions/runs/40130461323)
+failed. Its retained first service completed the fixed setup, and both authored
+guest children ran. The second service composed its packet, but outside cleanup
+found the selected systemd unit absent and the separately owned manual cgroup
+root still present; its original does not establish a PID identity there. The
+JavaScript and QEMU defined outputs also disagree at two selected GDT
+access-byte positions. The positive reader continues to refuse. No actual
+architectural pass, strict 386DX, physical timing or release result is claimed.
+
+The [V3 claim](../LANES.md) proposes a new, separately admitted same-job route
+with exact four-role manual-cgroup census and bounded descriptor-relative
+cleanup, plus an optional negative-only audit of the V2 failure. It does not
+change the fixture, expected bytes, CPU model, QEMU output or the V2 reader's
+refusal. V3 implementation, exact-head checks and one fresh independently
+audited event remain future work; clean cleanup alone would not resolve the
+observed JavaScript/QEMU disagreement.
