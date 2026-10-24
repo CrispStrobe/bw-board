@@ -1646,6 +1646,17 @@ records absent, empty or still populated cgroup facts. The observer runs no
 explicit stop action or selected helper binary. An uncertain terminal unit
 keeps the attempt negative.
 
+## Source qualification before metadata selection
+
+Code pull requests need the repository's `ci:full` label when they are opened
+(for example, include `--label ci:full` with `gh pr create`). Branch pushes run
+the fast tier; that result does not qualify the thorough tier. The CI tier gate
+refuses a code pull request without the label. Preserve any original failure
+and qualify every enabled check on the final source head before selecting a
+metadata request. Check active jobs before publishing a successor so a changed
+head does not obscure an earlier run's result. Source CI does not select the
+v9 label or approve setup, a runtime graph or architectural guest execution.
+
 ## Distinct V9 setup metadata candidate
 
 The V9 metadata route has its own request, label, job, stage, outside cleanup,
