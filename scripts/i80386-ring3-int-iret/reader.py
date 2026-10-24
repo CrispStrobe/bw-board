@@ -11747,6 +11747,8 @@ def same_job_actual_inner_original(raw,external,shell):
     enabled=all({'cpu','memory','pids'}<=set(row['raw'].split()) for row in parent['controls'].values())
     need(parent['alreadyEnabled'] is enabled,'truthful cgroup parent availability')
     result=verify_setup_v9_inventory_graph(value)
+    candidate_raw=prerequisite_original(canonical(value['candidate']))
+    candidate=setup_v9_runtime_expectation(candidate_raw,sha(candidate_raw))
     need(value['candidate']['bytes']==SAME_JOB_ACTUAL_REVIEWED_GRAPH['bytes'] and
          value['candidate']['sha256']==SAME_JOB_ACTUAL_REVIEWED_GRAPH['sha256'] and
          len(candidate_raw)==SAME_JOB_ACTUAL_REVIEWED_GRAPH['bytes'],
@@ -11755,8 +11757,6 @@ def same_job_actual_inner_original(raw,external,shell):
          sum(row['kind']=='qemu-data' for row in candidate['files'].values())==75 and
          SAME_JOB_ACTUAL_REVIEWED_GRAPH['selectedMismatches']==0,
          'fixed reviewed full graph and selected DATA comparison summary')
-    candidate_raw=prerequisite_original(canonical(value['candidate']))
-    candidate=setup_v9_runtime_expectation(candidate_raw,sha(candidate_raw))
     for package in candidate['packages']:
         row=post['selected'][package['name']]
         need(row['Version']==package['version'] and
@@ -11773,7 +11773,9 @@ def same_job_actual_inner_original(raw,external,shell):
          'all runtime probes follow completed no-trigger configure')
     need(record['setup']['preflight']['imageFields']==setup_v9_expected_forwarded(shell['fields']),
          'successful service image labels join shell forwarding')
-    return result,record,source,event_raw,request_raw
+    stage_copy={'copy':record['copy'],'nodeReadback':value['stageAfter']['files']['node'],
+                'nodeGraphFile':value['inventory']['fileMetadata'][NODE_STAGE_TARGET]}
+    return result,record,source,event_raw,request_raw,stage_copy,value['candidate']
 
 
 def verify_setup_v9_log(raw,external,outer_raw,cleanup_raw,shell_raw):
@@ -11875,12 +11877,17 @@ def verify_same_job_actual_setup_log(raw,external,outer_raw,cleanup_raw,shell_ra
          type(outer['systemdRunExitCode']) is int and outer['systemdRunExitCode']==0 and
          type(outer['outsideCleanupExitCode']) is int and outer['outsideCleanupExitCode']==0 and
          outer['cgroupAfter']=='absent','finite outside-owner successful service terminal and absent cgroup')
-    result,record,source,event_raw,request_raw=same_job_actual_inner_original(raw,external,shell)
+    result,record,source,event_raw,request_raw,stage_copy,candidate=same_job_actual_inner_original(raw,external,shell)
     if cleanup['sourceAdmission'] is not None:
         need(equal(cleanup['sourceAdmission']['source'],source) and
              cleanup['sourceAdmission']['eventSha256']==sha(event_raw),
              'outside source/event admission joins complete inner original')
     return dict(result,schema='bw.ring3.same-job-setup-admission.v1',setupObserved=True,
+        runId=external['runId'],head=external['head'],tree=external['tree'],
+        workflowSha=external['workflowSha'],
+        workflowFileSha256=external['workflowFileSha256'],
+        requestSha256=sha(request_raw),eventSha256=sha(event_raw),source=source,
+        stageCopy=stage_copy,runtimeCandidate=candidate,
         shellImageFields=shell['fields'],serviceImageFields=record['setup']['preflight']['imageFields'],
         forwardingMatchesExpected=True,
         deferredHostTriggers=True,completeHostConfiguration=False,actualGuestApproved=False,
@@ -11888,6 +11895,384 @@ def verify_same_job_actual_setup_log(raw,external,outer_raw,cleanup_raw,shell_ra
         localHandoffCompared=local,officialJobAuthenticated=False,imageFieldsAuthenticated=False,
         immutableImageIdentityEstablished=False,candidateReviewed=False,actualRunApproved=False,
         rawStatusBytesIndependentlyVerified=True,ciArchiveBytesIndependentlyVerified=False)
+
+
+def same_job_actual_packet_predicates(packet,handoff,controller_runtime_raw):
+    """Twenty raw roles plus selected V4 graph and independently retained live readbacks."""
+    need(type(packet) is dict and set(packet)==ROLES and
+         all(type(raw) is bytes for raw in packet.values()) and
+         sum(map(len,packet.values()))<=CAPS['packetBytes'],
+         'closed twenty-role same-job actual packet')
+    need(type(handoff) is dict and handoff.get('schema')==
+         'bw.ring3.same-job-setup-admission.v1' and
+         handoff.get('setupObserved') is True and
+         handoff.get('outsideTerminalObserved') is True and
+         handoff.get('cgroupAfterAbsent') is True and
+         handoff.get('localHandoffCompared') is True and
+         handoff.get('actualGuestApproved') is False,
+         'previous independently graded same-job setup handoff')
+    candidate_raw=prerequisite_original(canonical(handoff['runtimeCandidate']))
+    candidate=setup_v8_runtime_expectation(candidate_raw,sha(candidate_raw))
+    need(len(candidate_raw)==SAME_JOB_ACTUAL_REVIEWED_GRAPH['bytes'] and
+         sha(candidate_raw)==SAME_JOB_ACTUAL_REVIEWED_GRAPH['sha256'] and
+         handoff['candidateSha256']==sha(candidate_raw) and
+         handoff['candidateBytes']==len(candidate_raw),
+         'exact reviewed full V4 candidate bytes')
+    source=handoff['source'];keys(source,'schema head tree files')
+    need(source['schema']==SCHEMA+'source.v1' and
+         source['head']==handoff['head'] and source['tree']==handoff['tree'] and
+         set(source['files'])==SETUP_SOURCE_PATHS,
+         'same independently reviewed actual source12')
+    audit=parse(packet['audit.json'])
+    keys(audit,'schema head sourceTree workflowSha256 roles caps firstFailure secondary')
+    need(audit['schema']==SCHEMA+'audit.v1' and audit['head']==source['head'] and
+         audit['sourceTree']==source['tree'] and
+         audit['workflowSha256']==source['files'][WORKFLOW]['sha256'] and
+         equal(audit['caps'],CAPS) and audit['firstFailure'] is None and
+         audit['secondary']==[] and audit['roles']==[
+             {'path':name,'bytes':len(packet[name]),'sha256':sha(packet[name])}
+             for name in sorted(ROLES-{'audit.json'})],
+         'byte-exact original role census and held workflow')
+    qemu=next(row for row in candidate['packages'] if row['name']=='qemu-system-x86')
+    runtime_value={'schema':'bw.ring3.same-job-runtime.v1',
+        'observationPolicy':'first-service-v4-graph-and-fresh-before-after-byte-readback',
+        'platform':candidate['platform'],'executables':candidate['executables'],
+        'versions':candidate['versions'],
+        'qemuPackage':{'name':qemu['name'],'version':qemu['version'],
+            'architecture':qemu['architecture'],
+            'files':{path:{key:item[key] for key in ('bytes','sha256','kind')}
+                for path,item in candidate['files'].items()},
+            'aliases':candidate['aliases'],'probes':[]}}
+    for phase in ('before','after'):
+        need(equal(parse(packet['source.'+phase+'.json']),source) and
+             equal(parse(packet['runtime.'+phase+'.json']),runtime_value),
+             'unchanged actual source and selected V4 runtime at both packet stages')
+    live=parse(controller_runtime_raw)
+    keys(live,'schema handoffSha256 candidateSha256 observations pid firstFailure secondary')
+    need(live['schema']=='bw.ring3.same-job-controller-runtime.v1' and
+         live['candidateSha256']==sha(candidate_raw) and
+         live['firstFailure'] is None and live['secondary']==[] and
+         type(live['pid']) is int and live['pid']>0,
+         'closed same-job controller graph original')
+    observations=live['observations'];need(type(observations) is dict and
+         set(observations)=={'before-probes','after-probes','after-guests'},
+         'all three independently retained live graph stages')
+    expected_files={path:{key:item[key] for key in ('bytes','sha256','mode')}
+        for path,item in candidate['files'].items()}
+    previous=0
+    for phase in ('before-probes','after-probes','after-guests'):
+        row=observations[phase];keys(row,'files aliases platform startMonoNs finishMonoNs')
+        need(equal(row['files'],expected_files) and
+             equal(row['aliases'],candidate['aliases']) and
+             equal(row['platform'],candidate['platform']) and
+             type(row['startMonoNs']) is int and type(row['finishMonoNs']) is int and
+             previous<=row['startMonoNs']<=row['finishMonoNs'],
+             'complete selected V4 file/alias/platform live readback')
+        previous=row['finishMonoNs']
+    external={'runtime':runtime_value}
+    # The architectural section below applies the existing authored ROM,
+    # complete RAM, process, port and journal predicates to actual raw roles.
+    rom = packet['inputs/fixture.rom']; expected = expected_memory(rom)
+    fixture = parse(packet['inputs/fixture.json'])
+    need(sha(json.dumps(fixture, sort_keys=True, separators=(',', ':')).encode()) == FIXTURE_JSON_SHA,
+         'entire independently frozen fixture metadata')
+    need(fixture.get('schema') == 'bw.ring3.fixture.v1' and fixture.get('romSha256') == ROM_SHA and
+         fixture.get('romBytes') == 65536 and fixture.get('ramBytes') == 1048576 and fixture.get('symbols') == SYMBOLS and
+         fixture.get('selectorPaddingOffsets') == list(PADDING) and fixture.get('wireBytes') == 1730 and
+         fixture.get('cpuProfile') == 'strict386' and fixture.get('deliverFaults') is False and
+         fixture.get('ordinaryStepLimit') == CAPS['calls'], 'independent literal fixture contract')
+    processes = {role: parse(packet[role+'/process.json']) for role in ('js', 'qemu')}
+    js_start, js_end = process(processes['js'], 'js', external['runtime'])
+    q_start, q_end = process(processes['qemu'], 'qemu', external['runtime'])
+    need(js_end <= q_start and q_end-js_start <= CAPS['controllerMs']*1000000, 'two fresh serial finite engines')
+    resources(parse(packet['resources.json']), processes)
+    need(packet['js/stderr'] == b'' and packet['qemu/stderr'] == b'', 'unexpected engine diagnostics refuse')
+    js_memory = wire_memory(packet['js/stdout'], expected)
+    wire_memory(packet['qemu/stdout'], expected)
+    before, after = packet['js/memory.before.bin'], packet['js/memory.after.bin']
+    need(before == bytes(1048576) and len(after) == 1048576, 'fixed original owned RAM images')
+    # JS observes the full RAM bus, not just selected reporter ranges. Undefined
+    # selector padding remains ungraded; every other owned byte must match.
+    # The startup return frame at0xafec is made by authored PUSH imm32, so its
+    # selector high halves ARE defined zero. Only CPU-created selector padding
+    # in the first INT frame/copy and the terminal INT81 frame is ungraded.
+    ignored = {frame+i for frame in (0x70c0, 0x7fec, 0x9fec) for i in PADDING}
+    need(all(after[i] == expected[i] for i in range(len(after)) if i not in ignored), 'whole owned RAM architectural projection')
+    for address, count in RANGES:
+        need(after[address:address+count] == js_memory[address:address+count], 'raw reporter/original RAM join')
+    rows = parse(packet['js/observations.json']); last_call = observations(rows)
+    need(bytes(rows[1]['frame']) == after[0x7fec:0x8000], 'original observed/final copied frame join')
+    report = parse(packet['js/report.json'])
+    keys(report, 'schema finiteRoundTripPass firstFailure calls completed fixtureSha256 memoryBeforeSha256 memoryAfterSha256 outputSha256 ports observations')
+    calls = integer(report['calls'], last_call, CAPS['calls'])
+    need(report['schema'] == SCHEMA+'js-probe.v1' and report['firstFailure'] is None and report['completed'] is True and
+         report['finiteRoundTripPass'] is True and report['fixtureSha256'] == ROM_SHA and report['memoryBeforeSha256'] == sha(before) and
+         report['memoryAfterSha256'] == sha(after) and report['outputSha256'] == sha(packet['js/stdout']) and
+         type(report['observations']) is int and report['observations'] == 4, 'raw JS report joins')
+    need(type(report['ports']) is list and len(report['ports']) == 2, 'two actual PIC masks')
+    previous = 0
+    for row, port in zip(report['ports'], (0x21, 0xa1)):
+        keys(row, 'port value call'); need(row['port'] == port and row['value'] == 255, 'original PIC output')
+        previous = integer(row['call'], previous+1, rows[0]['beforeCall']-1)
+    writes = parse(packet['js/writes.json']); need(type(writes) is list and len(writes) <= CAPS['writes'], 'bounded original byte-write journal')
+    replay = bytearray(before); previous = 1; last_writes = {}; observation_index = 0
+    for index, row in enumerate(writes):
+        keys(row, 'index call address before after')
+        need(type(row['index']) is int and row['index'] == index, 'original write order'); previous = integer(row['call'], previous, calls)
+        # Observations precede step(call), so only writes with SMALLER call
+        # numbers can have affected their twenty raw frame bytes.
+        while observation_index < 4 and rows[observation_index]['beforeCall'] <= row['call']:
+            need(bytes(rows[observation_index]['frame']) == replay[0x7fec:0x8000], 'observed frame/original journal prefix')
+            observation_index += 1
+        address = integer(row['address'], 0, 0xeffff); integer(row['before'], 0, 255); integer(row['after'], 0, 255)
+        need(replay[address] == row['before'], 'original write before byte'); replay[address] = row['after']
+        last_writes[address] = row['call']
+    while observation_index < 4:
+        need(bytes(rows[observation_index]['frame']) == replay[0x7fec:0x8000], 'observed frame/original journal prefix')
+        observation_index += 1
+    need(bytes(replay) == after, 'whole RAM original write replay')
+    for address in range(0x7fec, 0x8000):
+        need(last_writes.get(address) == rows[0]['beforeCall'], 'actual INT80 frame write at observed instruction')
+    for start, count, low, high in ((0x7000,48,1,rows[0]['beforeCall']-1),
+            (0x7040,48,rows[1]['beforeCall'],rows[2]['beforeCall']-1),
+            (0x70c0,20,rows[1]['beforeCall'],rows[2]['beforeCall']-1),
+            (0x7080,48,rows[3]['beforeCall'],calls)):
+        need(all(low <= last_writes.get(address, -1) <= high for address in range(start,start+count)),
+             'original record writes inside observed instruction intervals')
+    qreport = parse(packet['qemu/report.json']); keys(qreport, 'schema fixtureSha256 outputSha256 firstFailure secondary')
+    need(qreport == {'schema': SCHEMA+'qemu.v1', 'fixtureSha256': ROM_SHA, 'outputSha256': sha(packet['qemu/stdout']), 'firstFailure': None, 'secondary': []}, 'QEMU raw report joins')
+    return {'guestPredicatesObserved':True,'officialQualified':False,'ordinaryCalls':calls,'roles':20}
+
+
+def verify_same_job_actual_packet(packet,handoff_raw,service_raw,cleanup_raw,
+                                  controller_runtime_raw):
+    """Independent local second-service grade; official artifact join remains separate."""
+    need(type(handoff_raw) is bytes and 0<len(handoff_raw)<=1<<20 and
+         type(service_raw) is bytes and 0<len(service_raw)<=CAPS['jsonBytes'] and
+         type(cleanup_raw) is bytes and 0<len(cleanup_raw)<=CAPS['jsonBytes'] and
+         type(controller_runtime_raw) is bytes and
+         0<len(controller_runtime_raw)<=CAPS['jsonBytes'],
+         'bounded distinct actual originals')
+    handoff=parse(handoff_raw)
+    need(handoff_raw==canonical(handoff),'canonical selected first-service handoff')
+    service=parse(service_raw);cleanup=parse(cleanup_raw)
+    need(service_raw==canonical(service) and cleanup_raw==canonical(cleanup),
+         'canonical actual service and outside cleanup originals')
+    keys(service,'schema requestSha256 handoffSha256 guestPacketComposed firstFailure secondary')
+    keys(cleanup,'schema runId unit serviceExitCode sourceAdmission preCensus stop '
+        'postCensus manualCgroupAbsent outsideTerminalObserved firstFailure secondary '
+        'actualGuestApproved')
+    selected_sha=sha(handoff_raw)
+    need(service['schema']=='bw.ring3.same-job-guest-service.v1' and
+         service['requestSha256']==handoff['requestSha256'] and
+         service['handoffSha256']==selected_sha and
+         service['guestPacketComposed'] is True and
+         service['firstFailure'] is None and service['secondary']==[],
+         'successfully retained same-job authored guest service')
+    need(cleanup['schema']=='bw.ring3.same-job-guest-outside-cleanup.v1' and
+         cleanup['runId']==handoff['runId'] and
+         cleanup['unit']=='bw-ring3-actual-guest-v1-'+handoff['runId']+'-1.service' and
+         type(cleanup['serviceExitCode']) is int and cleanup['serviceExitCode']==0 and
+         cleanup['manualCgroupAbsent'] is True and
+         cleanup['outsideTerminalObserved'] is True and
+         cleanup['firstFailure'] is None and cleanup['secondary']==[] and
+         cleanup['actualGuestApproved'] is False,
+         'known exact selected guest unit, manual tree and bounded outside terminal')
+    selected=cleanup['sourceAdmission']
+    keys(selected,'requestSha256 eventSha256 handoffSha256 head tree')
+    need(selected=={'requestSha256':handoff['requestSha256'],
+        'eventSha256':handoff['eventSha256'],'handoffSha256':selected_sha,
+        'head':handoff['head'],'tree':handoff['tree']},
+        'outside terminal joins same admitted actual request and source')
+    for phase in ('preCensus','postCensus'):
+        row=cleanup[phase]
+        keys(row,'terminal cgroupProcs cgroupEvents cgroupStat')
+        need(row['terminal'] in ('absent','empty') and
+             (all(row[key] is None for key in ('cgroupProcs','cgroupEvents','cgroupStat'))
+                 if row['terminal']=='absent' else
+              all(type(row[key]) is str and len(row[key].encode())<=1024 for key in
+                  ('cgroupProcs','cgroupEvents','cgroupStat')) and
+              setup_v9_cgroup_quiet(row['cgroupProcs'],row['cgroupEvents'],row['cgroupStat'])),
+             'finite selected unit has no populated/nested/dying descendants')
+    need(cleanup['stop']=={'attempted':False,'argv':None,'exitCode':None,'timedOut':False},
+         'successful guest needed no outside stop')
+    graded=same_job_actual_packet_predicates(packet,handoff,controller_runtime_raw)
+    live=parse(controller_runtime_raw)
+    need(live['handoffSha256']==selected_sha and
+         live['pid']==parse(packet['resources.json'])['controller']['pid'],
+         'retained controller graph owner joins actual handoff and packet')
+    return dict(graded,schema='bw.ring3.same-job-actual-packet-admission.v1',
+        requestSha256=handoff['requestSha256'],handoffSha256=selected_sha,
+        candidateSha256=handoff['candidateSha256'],
+        sourceHead=handoff['head'],runId=handoff['runId'],
+        setupObserved=True,outsideTerminalObserved=True,
+        actualRunApproved=False,officialMetadataBound=False,
+        strict386DXProved=False,physicalRTxProved=False)
+
+
+def verify_same_job_actual_official(packet,handoff_raw,service_raw,cleanup_raw,
+        controller_runtime_raw,run_raw,jobs_raw,artifacts_raw,job_log_raw,
+        artifact_raw,external):
+    """Separately frozen official originals and exact uploaded bytes join local grade."""
+    local=verify_same_job_actual_packet(packet,handoff_raw,service_raw,
+                                        cleanup_raw,controller_runtime_raw)
+    keys(external,'schema runId jobId attempt head tree workflowSha '
+        'workflowFileSha256 requestSha256 handoffSha256 jobName conclusion '
+        'artifactId artifactName artifactBytes artifactSha256 artifactPaths artifactExtras '
+        'runMetadataBytes runMetadataSha256 jobsMetadataBytes jobsMetadataSha256 '
+        'artifactsMetadataBytes artifactsMetadataSha256 jobLogBytes jobLogSha256 '
+        'pullRequest')
+    handoff=parse(handoff_raw)
+    need(external['schema']=='bw.ring3.same-job-actual-official-expectation.v1' and
+         external['runId']==handoff['runId']==local['runId'] and
+         external['head']==handoff['head'] and external['tree']==handoff['tree'] and
+         external['workflowSha']==handoff['workflowSha'] and
+         external['workflowFileSha256']==handoff['workflowFileSha256'] and
+         external['requestSha256']==handoff['requestSha256'] and
+         external['handoffSha256']==sha(handoff_raw) and
+         external['jobName']=='ring3-same-job-actual-v1' and
+         external['conclusion']=='success' and
+         type(external['attempt']) is int and external['attempt']==1 and
+         type(external['pullRequest']) is int and external['pullRequest']>0,
+         'externally frozen distinct actual run/job/source/event identifiers')
+    integer(external['jobId'],1);integer(external['artifactId'],1)
+    for name,raw in (('run',run_raw),('jobs',jobs_raw),('artifacts',artifacts_raw)):
+        need(type(raw) is bytes and
+             integer(external[name+'MetadataBytes'],1,1<<20)==len(raw) and
+             digest(external[name+'MetadataSha256'])==sha(raw),
+             'selected bounded official '+name+' metadata original')
+    need(type(job_log_raw) is bytes and
+         integer(external['jobLogBytes'],1,8<<20)==len(job_log_raw) and
+         digest(external['jobLogSha256'])==sha(job_log_raw),
+         'selected bounded official actual job log original')
+    need(type(artifact_raw) is bytes and
+         integer(external['artifactBytes'],1,32<<20)==len(artifact_raw) and
+         digest(external['artifactSha256'])==sha(artifact_raw),
+         'selected one-shot exact artifact ZIP bytes')
+    run,jobs,artifacts=(parse(raw) for raw in (run_raw,jobs_raw,artifacts_raw))
+    need(all(type(row) is dict for row in (run,jobs,artifacts)),
+         'official run/jobs/artifacts JSON objects')
+    need(integer(run.get('id'),1)==int(external['runId']) and
+         integer(run.get('run_attempt'),1,1)==1 and
+         run.get('head_sha')==external['head'] and
+         run.get('event')=='pull_request' and
+         run.get('status')=='completed' and run.get('conclusion')=='success' and
+         run.get('path')==WORKFLOW and
+         run.get('repository',{}).get('full_name')=='CrispStrobe/bw-board' and
+         run.get('head_repository',{}).get('full_name')=='CrispStrobe/bw-board' and
+         run.get('actor',{}).get('login')=='CrispStrobe' and
+         type(run.get('pull_requests')) is list and
+         len(run['pull_requests'])==1 and
+         integer(run['pull_requests'][0].get('number'),1)==external['pullRequest'] and
+         run['pull_requests'][0].get('head',{}).get('sha')==external['head'],
+         'one owned official actual run/head/attempt')
+    rows=jobs.get('jobs')
+    need(type(rows) is list and integer(jobs.get('total_count'),1,64)==len(rows) and
+         len({row.get('id') for row in rows if type(row) is dict})==len(rows),
+         'complete unique official job collection')
+    selected=[row for row in rows if type(row) is dict and
+              row.get('name')==external['jobName']]
+    need(len(selected)==1,'one selected same-job actual producer')
+    job=selected[0]
+    need(integer(job.get('id'),1)==external['jobId'] and
+         integer(job.get('run_id'),1)==int(external['runId']) and
+         job.get('head_sha')==external['head'] and
+         job.get('status')=='completed' and job.get('conclusion')=='success',
+         'official actual job/run/head terminal')
+    steps=job.get('steps')
+    need(type(steps) is list and 5<=len(steps)<=32 and
+         all(type(row) is dict and type(row.get('name')) is str and
+             row.get('status')=='completed' and row.get('conclusion') in
+             ('success','failure','skipped') for row in steps) and
+         len({row['name'] for row in steps})==len(steps),
+         'finite unique official actual step roster')
+    required=['Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262',
+        'Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020',
+        'Bounded same-job setup and authored guest',
+        'Bound retained same-job artifact after either outcome',
+        'Retain same-job setup and guest originals']
+    indices=[next((i for i,row in enumerate(steps) if row['name']==name),None)
+             for name in required]
+    need(all(type(i) is int for i in indices) and indices==sorted(indices) and
+         len(set(indices))==len(indices) and
+         all(steps[i]['conclusion']=='success' for i in indices),
+         'exact checkout/Node/workload/bind/upload official successful steps')
+    rows=artifacts.get('artifacts')
+    need(type(rows) is list and integer(artifacts.get('total_count'),1,64)==len(rows),
+         'complete bounded official artifact collection')
+    selected=[row for row in rows if type(row) is dict and
+              row.get('name')==external['artifactName']]
+    need(len(selected)==1 and external['artifactName']==
+         'i80386-ring3-same-job-actual-v1-originals','one selected guest artifact')
+    artifact=selected[0]
+    need(integer(artifact.get('id'),1)==external['artifactId'] and
+         integer(artifact.get('size_in_bytes'),1,32<<20)==len(artifact_raw) and
+         artifact.get('digest')=='sha256:'+sha(artifact_raw) and
+         artifact.get('expired') is False and
+         type(artifact.get('workflow_run')) is dict and
+         integer(artifact['workflow_run'].get('id'),1)==int(external['runId']) and
+         artifact['workflow_run'].get('head_sha')==external['head'],
+         'official selected artifact ID, digest, extent and run')
+    expected={'packet/'+name:packet[name] for name in ROLES}
+    expected.update({'handoff':handoff_raw,'service':service_raw,
+        'cleanup':cleanup_raw,'controllerRuntime':controller_runtime_raw})
+    paths=external['artifactPaths']
+    extra_names={'shell-image.original.json','inventory.original.log',
+        'controller.stderr','outside-cleanup.original.json',
+        'outside-cleanup.stderr','outer.original.json','guest.stdout',
+        'guest.stderr','guest-cleanup.stdout','guest-cleanup.stderr',
+        'guest-outer.original.json','guest-verdict.original.json'}
+    extras=external['artifactExtras']
+    need(type(extras) is dict and set(extras)==extra_names and
+         all(type(row) is dict and set(row)=={'path','bytes','sha256'} and
+             type(row['bytes']) is int and 0<=row['bytes']<=
+             ((8<<20) if name in ('inventory.original.log','guest.stdout')
+              else (1<<20)) and digest(row['sha256']) for name,row in extras.items()),
+         'closed bounded retained setup and guest diagnostic originals')
+    need(type(paths) is dict and set(paths)==set(expected) and
+         len(set(paths.values()))==len(paths) and
+         all(type(value) is str and len(value)<=256 and
+             re.fullmatch(r'[A-Za-z0-9_.+/-]+',value) and
+             not value.startswith('/') and not any(part in ('','.','..')
+                for part in value.split('/')) for value in paths.values()) and
+         all(type(row['path']) is str and len(row['path'])<=256 and
+             row['path'].endswith('/'+name) and
+             re.fullmatch(r'[A-Za-z0-9_.+/-]+',row['path']) and
+             not row['path'].startswith('/') and
+             not any(part in ('','.','..') for part in row['path'].split('/'))
+             for name,row in extras.items()) and
+         len(set(paths.values())|{row['path'] for row in extras.values()})==
+             len(paths)+len(extras),
+         'closed externally reviewed artifact entry names')
+    with zipfile.ZipFile(io.BytesIO(artifact_raw)) as archive:
+        infos=archive.infolist()
+        need(len(infos)<=128 and len({info.filename for info in infos})==len(infos) and
+             sum(info.file_size for info in infos)<=64<<20 and
+             all(info.file_size<=8<<20 and
+                 stat.S_IFMT(info.external_attr>>16)!=stat.S_IFLNK for info in infos),
+             'bounded non-symlink unique official ZIP entry census')
+        available={info.filename:info for info in infos if not info.is_dir()}
+        need(set(available)==set(paths.values())|
+             {row['path'] for row in extras.values()},
+             'exact closed successful actual artifact member roster')
+        for name,raw in expected.items():
+            info=available[paths[name]]
+            need(info.file_size==len(raw) and len(raw)<=8<<20,
+                 'exact selected artifact member extent')
+            with archive.open(info) as stream:observed=stream.read((8<<20)+1)
+            need(observed==raw,'official ZIP member equals independently graded original')
+        for name,row in extras.items():
+            info=available[row['path']]
+            need(info.file_size==row['bytes'],
+                 'externally frozen retained diagnostic member extent '+name)
+            with archive.open(info) as stream:observed=stream.read((8<<20)+1)
+            need(len(observed)==row['bytes'] and sha(observed)==row['sha256'],
+                 'externally frozen retained diagnostic member hash '+name)
+    return dict(local,officialMetadataBound=True,officialArtifactBytesBound=True,
+        officialRunId=external['runId'],officialJobId=external['jobId'],
+        officialArtifactId=external['artifactId'],
+        diagnosticMembersHashBound=True,diagnosticMembersSemanticallyGraded=False,
+        actualRunApproved=False)
 
 
 def verify_setup_v9_failed_stream_inventory(raw,external,cleanup,shell,outer):
@@ -12439,6 +12824,52 @@ def verify_setup_v9_originals(raw,external,outer_raw,cleanup_raw,shell_raw,offic
 
 
 def main():
+    if sys.argv[1:2]==['--same-job-actual-official-v1']:
+        need(SAME_JOB_ACTUAL_READER_ENABLED is True,'same-job actual reader inactive')
+        parser=argparse.ArgumentParser(description='Independent official same-job guest originals',
+                                       allow_abbrev=False)
+        for name in ('packet-dir','handoff','service','cleanup','controller-runtime',
+                     'official-run','official-jobs','official-artifacts','job-log',
+                     'artifact-zip','external'):
+            parser.add_argument('--'+name,required=True)
+        args=parser.parse_args()
+        def read(path,cap):
+            with Path(path).open('rb') as stream:raw=stream.read(cap+1)
+            need(len(raw)<=cap,'bounded official same-job original input')
+            return raw
+        packet={}
+        for name in sorted(ROLES):
+            cap=(1<<20 if name.endswith(('.json','.bin')) else
+                 65536 if name.endswith('.rom') else 128<<10)
+            packet[name]=read(Path(args.packet_dir)/name,cap)
+        external=parse(read(args.external,1<<20))
+        result=verify_same_job_actual_official(packet,read(args.handoff,1<<20),
+            read(args.service,1<<20),read(args.cleanup,1<<20),
+            read(args.controller_runtime,1<<20),read(args.official_run,1<<20),
+            read(args.official_jobs,1<<20),read(args.official_artifacts,1<<20),
+            read(args.job_log,8<<20),read(args.artifact_zip,32<<20),external)
+        print(json.dumps(result,sort_keys=True));return
+    if sys.argv[1:2]==['--same-job-actual-packet-v1']:
+        need(SAME_JOB_ACTUAL_READER_ENABLED is True,'same-job actual reader inactive')
+        parser=argparse.ArgumentParser(description='Independent actual twenty-role packet',
+                                       allow_abbrev=False)
+        for name in ('packet-dir','handoff','service','cleanup','controller-runtime'):
+            parser.add_argument('--'+name,required=True)
+        args=parser.parse_args()
+        def read(path,cap):
+            with Path(path).open('rb') as stream:
+                raw=stream.read(cap+1)
+            need(len(raw)<=cap,'bounded independently retained actual role')
+            return raw
+        packet={}
+        for name in sorted(ROLES):
+            cap=(1<<20 if name.endswith(('.json','.bin')) else
+                 65536 if name.endswith('.rom') else 128<<10)
+            packet[name]=read(Path(args.packet_dir)/name,cap)
+        result=verify_same_job_actual_packet(packet,read(args.handoff,1<<20),
+            read(args.service,1<<20),read(args.cleanup,1<<20),
+            read(args.controller_runtime,1<<20))
+        print(json.dumps(result,sort_keys=True));return
     if '--inventory-same-job-actual-v1' in sys.argv[1:]:
         need(sys.argv[1:]==['--inventory-same-job-actual-v1'],
              'exact distinct same-job inventory mode')

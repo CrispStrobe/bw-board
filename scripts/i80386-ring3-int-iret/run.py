@@ -9378,10 +9378,608 @@ def host_baseline_outside_emit(value):
 ACTUAL_ENTRY_ENABLED=False  # Activation requires a separate reviewed source/workflow change.
 
 
+SAME_JOB_HANDOFF_PATH=Path('build/i80386-ring3-same-job-actual-v1/handoff.original.json')
+SAME_JOB_HANDOFF_CAP=1<<20
+SAME_JOB_GUEST_UNIT_PREFIX='bw-ring3-actual-guest-v1-'
+SAME_JOB_GUEST_LIMITS={'cpu.max':'100000 100000','memory.max':'1073741824',
+    'memory.swap.max':'0','pids.max':'64'}
+
+
+def same_job_handoff(environ):
+    """One held local first-service verdict. Its reviewed digest is still required."""
+    pin=environ.get('BW_RING3_SAME_JOB_HANDOFF_SHA256')
+    need(type(pin) is str and re.fullmatch('[0-9a-f]{64}',pin),'selected same-job handoff SHA')
+    uid,gid=(environ.get('SUDO_'+key,'') for key in ('UID','GID'))
+    need(all(type(value) is str and re.fullmatch('[1-9][0-9]{0,9}',value) and
+        int(value)<2**31 for value in (uid,gid)),'trusted handoff invoker')
+    owner=(int(uid),int(gid));path=Path.cwd()/SAME_JOB_HANDOFF_PATH
+    for parent in (Path.cwd(),Path.cwd()/'build',path.parent):
+        info=parent.lstat()
+        need(parent.resolve(strict=True)==parent and stat.S_ISDIR(info.st_mode) and
+             (info.st_uid,info.st_gid)==owner and info.st_mode&0o022==0,
+             'fixed invoker-owned handoff ancestry')
+    def identity(info):return tuple(getattr(info,key) for key in
+        ('st_dev','st_ino','st_mode','st_uid','st_gid','st_nlink','st_size','st_mtime_ns'))
+    before=path.lstat()
+    need(path.resolve(strict=True)==path and stat.S_ISREG(before.st_mode) and
+         (before.st_uid,before.st_gid)==owner and stat.S_IMODE(before.st_mode)==0o400 and
+         before.st_nlink==1 and 0<before.st_size<=SAME_JOB_HANDOFF_CAP,
+         'exclusive bounded selected handoff original')
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK);first=None;raw=bytearray()
+    try:
+        need(identity(os.fstat(fd))==identity(before),'held handoff identity before read')
+        while True:
+            part=os.read(fd,min(65536,SAME_JOB_HANDOFF_CAP+1-len(raw)))
+            if not part:break
+            raw.extend(part);need(len(raw)<=SAME_JOB_HANDOFF_CAP,'bounded handoff bytes')
+        need(len(raw)==before.st_size and identity(os.fstat(fd))==identity(before) and
+             identity(path.lstat())==identity(before) and sha(raw)==pin,
+             'selected handoff named/held/readback byte identity')
+    except BaseException as error:first=error
+    finally:first=close_owned(fd,first,'same-job-handoff-close')
+    if first is not None:raise first
+    value=final_json(bytes(raw));need(encode(value)==bytes(raw),'canonical handoff original')
+    require_fields(value,'schema candidateSha256 candidateBytes setupObserved shellImageFields '
+        'serviceImageFields forwardingMatchesExpected deferredHostTriggers '
+        'completeHostConfiguration actualGuestApproved outsideTerminalObserved '
+        'cgroupAfterAbsent continuousOwnershipEstablished localHandoffCompared '
+        'officialJobAuthenticated imageFieldsAuthenticated immutableImageIdentityEstablished '
+        'candidateReviewed actualRunApproved rawStatusBytesIndependentlyVerified '
+        'ciArchiveBytesIndependentlyVerified runId head tree workflowSha workflowFileSha256 '
+        'requestSha256 eventSha256 source stageCopy runtimeCandidate',
+        'closed independently graded handoff fields')
+    need(value['schema']=='bw.ring3.same-job-setup-admission.v1' and
+         all(value[key] is True for key in ('setupObserved','outsideTerminalObserved',
+             'cgroupAfterAbsent','localHandoffCompared')) and
+         value['actualGuestApproved'] is False and value['officialJobAuthenticated'] is False and
+         value['candidateBytes']==SAME_JOB_REVIEWED_GRAPH['bytes'] and
+         value['candidateSha256']==SAME_JOB_REVIEWED_GRAPH['sha256'] and
+         value['runId']==environ.get('GITHUB_RUN_ID') and
+         value['head']==environ.get('BW_EXPECTED_HEAD') and
+         value['tree']==environ.get('BW_EXPECTED_TREE') and
+         value['workflowSha']==environ.get('GITHUB_WORKFLOW_SHA') and
+         value['workflowFileSha256']==
+             value['source']['files'][WORKFLOW]['sha256'] and
+         value['requestSha256']==environ.get('BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256'),
+         'exact prior terminal graph, source and actual event selected')
+    candidate=admitted_original(value['runtimeCandidate'],256<<10,'selected live v4 graph')
+    need(len(candidate)==SAME_JOB_REVIEWED_GRAPH['bytes'] and
+         sha(candidate)==SAME_JOB_REVIEWED_GRAPH['sha256'],'exact reviewed graph bytes')
+    graph=final_json(candidate)
+    need(encode(graph)==candidate and graph['schema']=='bw.ring3.runtime-expectation.v4' and
+         len(graph['files'])==327 and len(graph['aliases'])==55,
+         'closed reviewed runtime graph projection')
+    return bytes(raw),value,candidate,graph
+
+
+def same_job_actual_selection(environ,event_raw,*,handoff_reader=same_job_handoff):
+    """Distinct actual event and already graded first-service graph before effects."""
+    request_raw,request=admit_same_job_actual_event(event_raw,environ)
+    handoff_raw,handoff,candidate_raw,candidate=handoff_reader(environ)
+    source_raw=admitted_original(request['source'],JSON_CAP,'selected actual source')
+    need(source_raw==encode(handoff['source']) and
+         handoff['eventSha256']==sha(event_raw) and
+         handoff['requestSha256']==sha(request_raw),
+         'same selected actual event, source and local graph handoff')
+    stage=handoff['stageCopy'];require_fields(stage,'copy nodeReadback nodeGraphFile',
+        'closed selected staged Node readback')
+    node=stage['nodeReadback'];need(type(node) is dict and
+         node.get('sha256')==GENERATION_NODE_PIN[1] and
+         node.get('bytes')==GENERATION_NODE_PIN[0] and
+         same_json(stage['nodeGraphFile'],node.get('before')),
+         'same selected exclusive Node copy and complete graph')
+    return {'requestRaw':request_raw,'request':request,'eventSha256':sha(event_raw),
+        'handoffRaw':handoff_raw,'handoff':handoff,'candidateRaw':candidate_raw,'candidate':candidate}
+
+
+class SameJobRuntimeFiles(RuntimeAdmissionFiles):
+    """Exact selected V4 file keys, including the three reviewed comma names."""
+    def __init__(self,candidate):
+        self.selected=candidate['files'];self.aliases=candidate['aliases']
+
+    def fact(self,path):
+        need(path in self.selected and Path(path).is_absolute() and
+             '..' not in Path(path).parts and not any(ch.isspace() for ch in path),
+             'only selected canonical same-job runtime file')
+        fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK);first=None;count=0;digest=hashlib.sha256()
+        def identity(info):return tuple(getattr(info,key) for key in
+            ('st_dev','st_ino','st_mode','st_uid','st_gid','st_nlink','st_size','st_mtime_ns'))
+        try:
+            before=os.fstat(fd)
+            need(stat.S_ISREG(before.st_mode) and 0<before.st_size<=268435456 and
+                 before.st_mode&0o022==0 and str(Path(path).resolve(strict=True))==path,
+                 'selected same-job regular canonical runtime file')
+            while True:
+                part=os.read(fd,min(65536,268435457-count))
+                if not part:break
+                count+=len(part);need(count<=268435456,'bounded selected file extent');digest.update(part)
+            need(count==before.st_size and identity(os.fstat(fd))==identity(before) and
+                 identity(os.stat(path,follow_symlinks=False))==identity(before) and
+                 str(Path(path).resolve(strict=True))==path,
+                 'held selected file named/readback identity')
+            value={'bytes':count,'sha256':digest.hexdigest(),'mode':stat.S_IMODE(before.st_mode)}
+            need(same_json(value,{key:self.selected[path][key] for key in ('bytes','sha256','mode')}),
+                 'live exact selected V4 runtime file bytes and mode')
+        except BaseException as error:first=error
+        finally:first=close_owned(fd,first,'same-job-runtime-file-close')
+        if first is not None:raise first
+        return value
+
+    def alias(self,path):
+        need(path in self.aliases,'only selected same-job runtime alias')
+        value=super().alias(path)
+        need(same_json(value,self.aliases[path]),'live selected alias text/target')
+        return value
+
+
+class SameJobRuntimeGate(RuntimeExpectationGate):
+    """V4 exact-byte graph; inherited finite observations do not parse V8/V1."""
+    def __init__(self,raw,candidate):
+        need(type(raw) is bytes and len(raw)==SAME_JOB_REVIEWED_GRAPH['bytes'] and
+             sha(raw)==SAME_JOB_REVIEWED_GRAPH['sha256'] and encode(candidate)==raw and
+             candidate['schema']=='bw.ring3.runtime-expectation.v4',
+             'fixed independently graded selected V4 graph bytes')
+        self._raw=raw;self.files=SameJobRuntimeFiles(candidate)
+        self.observations={};self.before_complete=False;self._observed_stages=set()
+
+    def selected_runtime(self):
+        value=final_json(self._raw)
+        files={path:{key:item[key] for key in ('bytes','sha256','kind')}
+            for path,item in value['files'].items()}
+        qemu=next(item for item in value['packages'] if item['name']=='qemu-system-x86')
+        result={'schema':'bw.ring3.same-job-runtime.v1',
+            'observationPolicy':'first-service-v4-graph-and-fresh-before-after-byte-readback',
+            'platform':value['platform'],'executables':value['executables'],
+            'versions':value['versions'],
+            'qemuPackage':{'name':qemu['name'],'version':qemu['version'],
+                'architecture':qemu['architecture'],'files':files,
+                'aliases':value['aliases'],'probes':[]}}
+        need(len(encode(result))<=JSON_CAP,'bounded selected same-job guest runtime original')
+        return result
+
+    def join(self,runtime):
+        need(self.before_complete and same_json(runtime,self.selected_runtime()),
+             'complete distinct V4 same-job runtime; never V8 V1 probe projection')
+        return runtime
+
+
+SAME_JOB_CHILD_ENV=('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_REPOSITORY',
+    'GITHUB_EVENT_NAME','GITHUB_ACTOR','GITHUB_JOB','GITHUB_WORKFLOW_SHA',
+    'GITHUB_WORKFLOW_REF','GITHUB_EVENT_PATH','BW_EXPECTED_HEAD','BW_EXPECTED_TREE',
+    'BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256','BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64',
+    'BW_RING3_SAME_JOB_HANDOFF_SHA256','BW_LAUNCH_PLAN_SHA256')
+
+
+class SameJobFinalizerContext:
+    """Raw V1 actual descriptors with checked local views for old resource math."""
+    def __init__(self,selection,environ):
+        self.selection=selection;self.environ=dict(environ);self.originals={}
+
+    def generic_outer(self,value,entry,environ):
+        actual=final_json(encode(value));process=actual['process']
+        need(same_json(process['argv'],[entry['python']['path'],'-I','-B',RUN_FILE,
+            '--same-job-bootstrap-v1']) and
+             same_json(process['environment'],dict(ENV,**{name:environ[name] for name in
+                 SAME_JOB_CHILD_ENV},SUDO_UID=str(entry['uid']),SUDO_GID=str(entry['gid']))) and
+             process['environment']['BW_RING3_SAME_JOB_HANDOFF_SHA256']==
+                 sha(self.selection['handoffRaw']),
+             'retained distinct actual outside child descriptor and selected handoff')
+        process['argv'][-1]='--bootstrap'
+        process['environment']=dict(ENV,**{name:environ[name] for name in
+            ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')},
+            SUDO_UID=str(entry['uid']),SUDO_GID=str(entry['gid']))
+        return actual
+
+    def resources(self,internal,originals,outside,environ):
+        entry=internal['.entry.json'];local=final_json(encode(internal))
+        local['.outside.json']=self.generic_outer(local['.outside.json'],entry,environ)
+        selected=SameJobRuntimeGate(self.selection['candidateRaw'],self.selection['candidate']).selected_runtime()
+        need(all(same_json(final_json(originals['runtime.'+when+'.json']),selected)
+                 for when in ('before','after')),
+             'twice retained same-job exact selected V4 graph file readbacks')
+        return join_final_resources(local,originals,self.generic_outer(outside,entry,environ),environ)
+
+    def phases(self,phase_raw,generation_raw,pre_git,outside,entry,originals,environ):
+        phase=final_json(phase_raw)
+        need(phase_raw==encode(phase) and phase['schema']=='bw.ring3.preparation-original.v4' and
+             phase['process']['argv']==[entry['python']['path'],'-I','-B',RUN_FILE,
+                 '--same-job-prepare-v1'] and
+             phase['process']['environment'].get('BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256')==
+                 sha(self.selection['requestRaw']) and
+             phase['process']['environment'].get('BW_RING3_SAME_JOB_HANDOFF_SHA256')==
+                 sha(self.selection['handoffRaw']),
+             'own distinct actual preparation phase and selected admission')
+        need(same_json(phase['process']['environment'],dict(ENV,**{
+                name:environ[name] for name in SAME_JOB_CHILD_ENV},
+                SUDO_UID=str(entry['uid']),SUDO_GID=str(entry['gid']))),
+             'closed exact actual preparation child environment')
+        need(admitted_original(self.selection['request']['source'],JSON_CAP,
+                 'selected actual source')==originals['source.before.json'],
+             'twenty-role packet source joins actual source12')
+        phase['schema']='bw.ring3.preparation-original.v3'
+        phase['process']['argv'][-1]='--prepare-admitted-generated'
+        phase['process']['environment']=dict(ENV,**{name:environ[name] for name in
+            ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE',
+             'BW_LAUNCH_PLAN_SHA256')},SUDO_UID=str(entry['uid']),
+            SUDO_GID=str(entry['gid']))
+        plan_raw=encode({'schema':'bw.ring3.launch-plan.v1',
+            'runId':environ['GITHUB_RUN_ID'],'attempt':1,
+            'head':self.selection['request']['head'],'tree':self.selection['request']['tree'],
+            'source':self.selection['request']['source']})
+        need(sha(plan_raw)==environ['BW_LAUNCH_PLAN_SHA256'],
+             'actual generated plan selected only after source/handoff admission')
+        generation=final_json(generation_raw)
+        expected_node={'path':RUNTIME_EXECUTABLES['node'],
+            'bytes':GENERATION_NODE_PIN[0],'sha256':GENERATION_NODE_PIN[1]}
+        need(all(same_json(generation[when]['files']['node'],expected_node)
+                 for when in ('before','after')) and
+             self.selection['request']['nodeStage']['source']==expected_node['path'],
+             'separately selected and twice observed original staging Node input')
+        # The generator reads the selected source Node while guest runtime uses
+        # its one staged copy. This checked local view serves the older generator
+        # equation; the raw twenty-role V4 runtime original is never rewritten.
+        local=dict(originals)
+        before=final_json(local['runtime.before.json'])
+        need(expected_node['path'] not in before['qemuPackage']['files'],
+             'source Node is distinct from the staged runtime Node')
+        before['qemuPackage']['files'][expected_node['path']]={
+            'bytes':expected_node['bytes'],'sha256':expected_node['sha256'],
+            'kind':'node-binary'}
+        local['runtime.before.json']=encode(before)
+        return check_admitted_generated_originals(plan_raw,sha(plan_raw),encode(phase),
+            generation_raw,pre_git,self.generic_outer(outside,entry,environ),entry,local,environ)
+
+
+class LinuxSameJobPreparation(LinuxAdmittedGeneratedPreparation):
+    def __init__(self,parent):
+        super().__init__(parent);self.argv[-1]='--same-job-prepare-v1'
+        for name in SAME_JOB_CHILD_ENV:
+            self.environment[name]=parent.environ[name]
+
+
+class SameJobBootstrapOps(BootstrapOps):
+    def validate(self):
+        owner=super().validate()
+        _,handoff,candidate_raw,candidate=same_job_handoff(self.environ)
+        need(handoff['source']['head']==self.environ['BW_EXPECTED_HEAD'] and
+             len(candidate_raw)==SAME_JOB_REVIEWED_GRAPH['bytes'] and
+             candidate['schema']=='bw.ring3.runtime-expectation.v4',
+             'bootstrap independently selected actual graph and source')
+        return owner
+
+    def execute(self):
+        entry_ids(self.invoker['uid'],self.invoker['gid']);self.entered()
+        python=self.owner['python']['path']
+        environment=dict(ENV,**{name:self.environ[name] for name in SAME_JOB_CHILD_ENV},
+            SUDO_UID=str(self.invoker['uid']),SUDO_GID=str(self.invoker['gid']))
+        os.execve(python,[python,'-I','-B',RUN_FILE,'--same-job-controller-v1'],environment)
+        raise RuntimeError('same-job actual bootstrap exec unexpectedly returned')
+
+
+class LinuxSameJobController(LinuxController):
+    def __init__(self,bootstrap):
+        super().__init__(bootstrap);self.argv[-1]='--same-job-bootstrap-v1'
+        self.environment=dict(ENV,**{name:bootstrap.environ[name] for name in
+            SAME_JOB_CHILD_ENV},SUDO_UID=str(bootstrap.invoker['uid']),
+            SUDO_GID=str(bootstrap.invoker['gid']))
+
+
+class SameJobOutsideOwner(OutsideOwner):
+    def create_child(self):
+        need(self.admitted,'same-job outside owner admitted');self.outside()
+        self.child=LinuxSameJobController(self.bootstrap);return self.child
+
+
+class SameJobControllerOps(ControllerOps):
+    """New actual admission around unchanged serial JS and QEMU execution."""
+    def __init__(self,environ=None):
+        super().__init__(environ);self.same_job_gate=None;self.same_job_handoff=None
+
+    def admit(self):
+        handoff_raw,handoff,candidate_raw,candidate=same_job_handoff(self.environ)
+        need(handoff['eventSha256']==sha(HostedEnvelopeInstaller(self.environ).event()),
+             'dropped actual controller joins retained own event')
+        self.same_job_handoff=(handoff_raw,handoff,candidate_raw,candidate)
+        super().admit()
+        need(same_json(self.source_before,handoff['source']),
+             'prepared actual source12 joins independently graded setup handoff')
+        self.same_job_gate=SameJobRuntimeGate(candidate_raw,candidate)
+
+    def discover(self):
+        need(self.same_job_gate is not None,'admitted actual runtime gate before discovery')
+        self.same_job_gate.observe('before-probes')
+        self.runtime_before=self.same_job_gate.join(self.same_job_gate.selected_runtime())
+        self.same_job_gate.observe('after-probes')
+
+    def after_all(self,failure):
+        try:super().after_all(failure)
+        finally:
+            if self.same_job_gate is not None and self.same_job_gate.before_complete:
+                try:self.same_job_gate.observe('after-guests')
+                except BaseException as error:failure.add(error,'same-job-runtime-after')
+            if self.unprivileged and self.paths_admitted:
+                try:
+                    value={'schema':'bw.ring3.same-job-controller-runtime.v1',
+                        'handoffSha256':None if self.same_job_handoff is None else
+                            sha(self.same_job_handoff[0]),
+                        'candidateSha256':None if self.same_job_handoff is None else
+                            sha(self.same_job_handoff[2]),
+                        'observations':{} if self.same_job_gate is None else
+                            self.same_job_gate.observations,'pid':os.getpid(),
+                        'firstFailure':failure.first,'secondary':failure.secondary}
+                    runtime_delivery_original('controller.runtime.json',encode(value))
+                except BaseException as error:failure.add(error,'same-job-controller-original')
+
+
+class SameJobEntryComposition(RuntimeEntryComposition):
+    def create_preparation(self):
+        need(type(self._launch_plan_original) is bytes and
+             sha(self._launch_plan_original)==self._expected_launch_plan_sha256,
+             'own selected actual launch plan before preparation factory')
+        self.require_preparation_ownership()
+        self.pre_child=LinuxSameJobPreparation(self);return self.pre_child
+
+    def outside(self):
+        self.setup.verify()
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,
+             'same-job root remains privileged until outside child terminal')
+        return outside_controller(SameJobOutsideOwner(SameJobBootstrapOps(self.environ)))
+
+
+def same_job_preparation_child(environ=None,*,observer=None,emit=None,flush=None):
+    """Actual request/handoff and V4 graph precede authored fixture generation."""
+    environ=dict(os.environ if environ is None else environ);failure=FirstFailure()
+    gate=None;selection=None;result={'pass':False}
+    try:
+        ids=[environ.get('SUDO_'+key,'') for key in ('UID','GID')]
+        need(all(type(value) is str and re.fullmatch('[1-9][0-9]{0,9}',value)
+                 for value in ids),'selected actual preparation invoker')
+        entry_ids(*map(int,ids))
+        need(entry_proc('/proc/self/cgroup')=='0::/'+expected_cgroup(environ).name+
+             '-preparation\n','owned actual preparation sibling membership')
+        event_raw=HostedEnvelopeInstaller(environ).event()
+        selection=same_job_actual_selection(environ,event_raw)
+        plan_raw=read_launch_plan(environ,environ.get('BW_LAUNCH_PLAN_SHA256'))
+        plan,source=admit_launch_plan(plan_raw,environ['BW_LAUNCH_PLAN_SHA256'],environ)
+        need(same_json(plan['source'],selection['request']['source']) and
+             source==admitted_original(selection['request']['source'],JSON_CAP,
+                 'actual preparation selected source'),
+             'actual preparation plan/source joins distinct event and handoff')
+        gate=SameJobRuntimeGate(selection['candidateRaw'],selection['candidate'])
+        gate.observe('before-probes')
+        ops=PinnedRecordingStagingOps(source,plan['source']['sha256'],
+            plan['head'],plan['tree'],environ)
+        result,found=generated_preparation_child(environ,staging_ops=ops,
+            observer=observer,emit=emit,flush=flush)
+        failure.adopt(found.first,found.secondary)
+    except BaseException as error:failure.add(error,'same-job-preparation')
+    finally:
+        if gate is not None and gate.before_complete:
+            try:gate.observe('after-probes')
+            except BaseException as error:failure.add(error,'same-job-preparation-after')
+        try:
+            uid,gid=map(int,(environ.get('SUDO_UID',''),environ.get('SUDO_GID','')))
+            entry_ids(uid,gid)
+            value={'schema':'bw.ring3.same-job-preparation-runtime.v1',
+                'handoffSha256':None if selection is None else sha(selection['handoffRaw']),
+                'candidateSha256':None if selection is None else sha(selection['candidateRaw']),
+                'pid':os.getpid(),'observations':{} if gate is None else gate.observations,
+                'firstFailure':failure.first,'secondary':failure.secondary}
+            runtime_delivery_original('preparation.runtime.json',encode(value))
+        except BaseException as error:failure.add(error,'same-job-preparation-original')
+    result['pass']=result.get('pass') is True and failure.first is None and failure.secondary==[]
+    return result,failure
+
+
+def same_job_create_launch_plan(selection,environ):
+    """Fresh root-owned plan derived from admitted actual source, never V8 input."""
+    raw=encode({'schema':'bw.ring3.launch-plan.v1','runId':environ['GITHUB_RUN_ID'],
+        'attempt':1,'head':selection['request']['head'],
+        'tree':selection['request']['tree'],'source':selection['request']['source']})
+    need(len(raw)<=JSON_CAP,'bounded selected actual plan')
+    directory=launch_plan_path(environ).parent;path=directory/'launch-plan.json'
+    need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,
+         'root selected actual plan publication')
+    os.mkdir(directory,0o700);fd=None;first=None
+    try:
+        fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_NONBLOCK,0o600)
+        need(os.write(fd,raw)==len(raw),'complete exact actual plan write')
+        os.fchmod(fd,0o444);os.fsync(fd)
+    except BaseException as error:first=error
+    finally:
+        if fd is not None:first=close_owned(fd,first,'same-job-plan-close')
+    if first is not None:raise first
+    selected=dict(environ,BW_LAUNCH_PLAN_SHA256=sha(raw))
+    need(read_launch_plan(selected,sha(raw))==raw,
+         'actual plan exact held root-owned readback')
+    return raw,selected
+
+
+def same_job_create_runtime_sink(setup):
+    """One fresh invoker-owned phase-original sink before dropped preparation."""
+    setup.verify();uid,gid=setup.invoker['uid'],setup.invoker['gid']
+    checkout=Path.cwd();parent=checkout/'build';path=checkout/RUNTIME_DELIVERY_DIRECTORY
+    for directory in (checkout,parent):
+        info=directory.lstat()
+        need(directory.resolve(strict=True)==directory and
+             stat.S_ISDIR(info.st_mode) and (info.st_uid,info.st_gid)==(uid,gid) and
+             info.st_mode&0o022==0,'held actual runtime sink parents')
+    fd=os.open(parent,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK)
+    first=None;child=None
+    try:
+        before=os.fstat(fd)
+        os.mkdir(path.name,0o700,dir_fd=fd)
+        child=os.open(path.name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|
+                      os.O_NONBLOCK,dir_fd=fd)
+        os.fchown(child,uid,gid);os.fchmod(child,0o700)
+        held=os.fstat(child);named=path.lstat();after=os.fstat(fd)
+        need(stat.S_ISDIR(held.st_mode) and (held.st_uid,held.st_gid)==(uid,gid) and
+             stat.S_IMODE(held.st_mode)==0o700 and
+             (held.st_dev,held.st_ino,held.st_mode,held.st_uid,held.st_gid)==
+             (named.st_dev,named.st_ino,named.st_mode,named.st_uid,named.st_gid) and
+             (before.st_dev,before.st_ino,before.st_mode,before.st_uid,before.st_gid)==
+             (after.st_dev,after.st_ino,after.st_mode,after.st_uid,after.st_gid),
+             'exclusive actual runtime sink and parent identity readback')
+    except BaseException as error:first=error
+    finally:
+        if child is not None:first=close_owned(child,first,'same-job-runtime-sink-close')
+        first=close_owned(fd,first,'same-job-runtime-parent-close')
+    if first is not None:raise first
+
+
+def same_job_guest_service(environ=None,*,event_reader=None,handoff_reader=same_job_handoff):
+    """New actual job: terminal setup handoff, then one independent guest service."""
+    need(SAME_JOB_ACTUAL_ENABLED is True,'same-job actual route disabled')
+    environ=dict(os.environ if environ is None else environ);failure=FirstFailure()
+    result={'pass':False,'setup':None,'composition':None,'firstFailure':None,'secondary':[]}
+    setup=None;selection=None
+    try:
+        event_raw=(HostedEnvelopeInstaller(environ).event() if event_reader is None
+            else event_reader())
+        selection=same_job_actual_selection(environ,event_raw,handoff_reader=handoff_reader)
+        membership=entry_proc('/proc/self/cgroup')
+        unit=SAME_JOB_GUEST_UNIT_PREFIX+environ['GITHUB_RUN_ID']+'-1.service'
+        need(membership=='0::/system.slice/'+unit+'\n',
+             'actual second owned service membership before preparation')
+        cgroup=Path('/sys/fs/cgroup/system.slice')/unit
+        actual={name:Cgroups.text(None,cgroup/name).strip()
+                for name in SAME_JOB_GUEST_LIMITS}
+        need(actual==SAME_JOB_GUEST_LIMITS,'finite actual second-service cgroup limits')
+        source,found=source_facts(selection['handoff']['source'],stage='before')
+        failure.adopt(found.first,found.secondary)
+        need(source==selection['handoff']['source'] and failure.first is None,
+             'fresh second-service actual source12 before resource effects')
+        gate=SameJobRuntimeGate(selection['candidateRaw'],selection['candidate'])
+        gate.observe('before-probes')
+        plan_raw,environ=same_job_create_launch_plan(selection,environ)
+        setup=HostedSetupOps(sha(plan_raw),environ)
+        prepared,found=setup.prepare();failure.adopt(found.first,found.secondary)
+        result['setup']=prepared
+        need(prepared['pass'] is True and failure.first is None,
+             'complete distinct guest resource setup before controller')
+        same_job_create_runtime_sink(setup)
+        context=SameJobFinalizerContext(selection,environ)
+        composed,found=compose_entry(SameJobEntryComposition(setup,context))
+        failure.adopt(found.first,found.secondary)
+        result['composition']=composed
+        need(composed['pass'] is True and failure.first is None and failure.secondary==[],
+             'finite same-job authored JS/QEMU packet composition')
+    except BaseException as error:failure.add(error,'same-job-guest-service')
+    finally:
+        if setup is not None and setup.invoker is not None:
+            try:
+                bootstrap=BootstrapOps(environ);bootstrap.invoker=dict(setup.invoker)
+                if (os.getresuid()!=(setup.invoker['uid'],)*3 or
+                        os.getresgid()!=(setup.invoker['gid'],)*3 or os.getgroups()):
+                    bootstrap.drop()
+            except BaseException as error:failure.add(error,'same-job-service-drop')
+        result['firstFailure'],result['secondary']=failure.first,failure.secondary
+        result['pass']=(result['composition'] is not None and
+            result['composition'].get('pass') is True and failure.first is None and
+            failure.secondary==[])
+        if setup is not None and setup.invoker is not None:
+            try:
+                write_new(Path('build/i80386-ring3-same-job-actual-v1')/
+                    'guest.service.original.json',encode({'schema':'bw.ring3.same-job-guest-service.v1',
+                    'requestSha256':None if selection is None else sha(selection['requestRaw']),
+                    'handoffSha256':None if selection is None else sha(selection['handoffRaw']),
+                    'guestPacketComposed':result['pass'],'firstFailure':failure.first,
+                    'secondary':failure.secondary}),JSON_CAP)
+            except BaseException as error:failure.add(error,'same-job-service-retention')
+    result['pass']=result['pass'] and failure.first is None and failure.secondary==[]
+    return result,failure
+
+
+def same_job_guest_cleanup(environ=None,*,event_reader=None,handoff_reader=same_job_handoff):
+    """Outside exact-unit stop/census; it never upgrades a failed guest packet."""
+    need(SAME_JOB_ACTUAL_ENABLED is True,'same-job actual cleanup route disabled')
+    environ=dict(os.environ if environ is None else environ);failure=FirstFailure()
+    value={'schema':'bw.ring3.same-job-guest-outside-cleanup.v1',
+        'runId':None,'unit':None,'serviceExitCode':None,'sourceAdmission':None,
+        'preCensus':None,'stop':None,'postCensus':None,'manualCgroupAbsent':None,
+        'outsideTerminalObserved':False,'firstFailure':None,'secondary':[],
+        'actualGuestApproved':False}
+    selection=None
+    try:
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,
+             'root outside selected actual guest cleanup')
+        code=environ.get('BW_SYSTEMD_RUN_EXIT_CODE','')
+        need(type(code) is str and re.fullmatch('(?:0|[1-9][0-9]{0,2})',code) and
+             int(code)<=255,'bounded actual service client exit')
+        value['serviceExitCode']=int(code)
+        event_raw=(HostedEnvelopeInstaller(environ).event() if event_reader is None
+            else event_reader())
+        selection=same_job_actual_selection(environ,event_raw,handoff_reader=handoff_reader)
+        source,found=source_facts(selection['handoff']['source'],stage='after')
+        failure.adopt(found.first,found.secondary)
+        need(source==selection['handoff']['source'] and failure.first is None,
+             'outside exact selected actual source before stop')
+        run_id=environ['GITHUB_RUN_ID'];unit=SAME_JOB_GUEST_UNIT_PREFIX+run_id+'-1.service'
+        need(re.fullmatch(re.escape(SAME_JOB_GUEST_UNIT_PREFIX)+
+             r'[1-9][0-9]{0,19}-1\.service',unit),'only exact owned guest unit')
+        value.update(runId=run_id,unit=unit,sourceAdmission={
+            'requestSha256':sha(selection['requestRaw']),
+            'eventSha256':selection['eventSha256'],
+            'handoffSha256':sha(selection['handoffRaw']),
+            'head':selection['request']['head'],'tree':selection['request']['tree']})
+        path=Path('/sys/fs/cgroup/system.slice')/unit
+        def census():
+            try:info=path.lstat()
+            except FileNotFoundError:return {'terminal':'absent','cgroupProcs':None,
+                'cgroupEvents':None,'cgroupStat':None}
+            need(path.resolve(strict=True)==path and stat.S_ISDIR(info.st_mode),
+                 'selected actual unit directory identity')
+            rows={name:Cgroups.text(None,path/filename)
+                  for name,filename in (('cgroupProcs','cgroup.procs'),
+                      ('cgroupEvents','cgroup.events'),('cgroupStat','cgroup.stat'))}
+            need(all(len(row.encode())<=1024 for row in rows.values()),
+                 'bounded selected guest unit census')
+            return dict(rows,terminal='empty' if setup_v8_cgroup_quiet(
+                rows['cgroupProcs'],rows['cgroupEvents'],rows['cgroupStat']) else 'populated')
+        value['preCensus']=census()
+        if int(code)!=0:failure.add(ValueError('actual service client did not exit zero'),
+                                   'same-job-guest-client')
+        if value['preCensus']['terminal']=='populated':
+            argv=['/usr/bin/timeout','--kill-after=5s','20s','/usr/bin/systemctl',
+                  'stop','--',unit]
+            completed=subprocess.run(argv,stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
+                env=dict(ENV),check=False,timeout=30)
+            value['stop']={'attempted':True,'argv':argv,
+                'exitCode':completed.returncode,
+                'timedOut':completed.returncode in (124,137)}
+            need(type(completed.returncode) is int and completed.returncode==0,
+                 'bounded exact guest unit stop')
+        else:value['stop']={'attempted':False,'argv':None,'exitCode':None,
+                           'timedOut':False}
+        value['postCensus']=census()
+        try:expected_cgroup(environ).lstat();value['manualCgroupAbsent']=False
+        except FileNotFoundError:value['manualCgroupAbsent']=True
+        need(value['postCensus']['terminal'] in ('absent','empty') and
+             value['manualCgroupAbsent'] is True,
+             'selected unit and nested manual tree terminal before approval')
+        value['outsideTerminalObserved']=True
+    except BaseException as error:failure.add(error,'same-job-guest-outside')
+    finally:
+        value['firstFailure'],value['secondary']=failure.first,failure.secondary
+        value['outsideTerminalObserved']=(value['outsideTerminalObserved'] is True and
+            failure.first is None and failure.secondary==[])
+        if selection is not None:
+            try:
+                uid,gid=(int(environ['SUDO_'+name]) for name in ('UID','GID'))
+                bootstrap=BootstrapOps(environ);bootstrap.invoker={'uid':uid,'gid':gid}
+                if (os.getresuid()!=(uid,)*3 or os.getresgid()!=(gid,)*3 or
+                        os.getgroups()):bootstrap.drop()
+                write_new(Path('build/i80386-ring3-same-job-actual-v1')/
+                    'guest.cleanup.original.json',encode(value),JSON_CAP)
+            except BaseException as error:failure.add(error,'same-job-guest-outside-retention')
+    return value,failure
+
+
 def dispatch_cli(argv=None,environ=None):
     parser=argparse.ArgumentParser(description=__doc__,allow_abbrev=False)
     modes=parser.add_mutually_exclusive_group(required=True)
-    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy','setup-runtime-inventory-v6','cleanup-setup-v6-policy','setup-v6-image-shell','setup-runtime-inventory-v7','cleanup-setup-v7-policy','setup-v7-image-shell','setup-runtime-inventory-v8','cleanup-setup-v8-policy','setup-v8-image-shell','setup-runtime-inventory-v9','cleanup-setup-v9-policy','setup-v9-image-shell','same-job-setup-v1','same-job-cleanup-v1','same-job-image-shell-v1','image-env-shell-v1','image-env-service-v1','host-baseline-shell-v1','host-baseline-service-v1','host-baseline-outside-v1'):
+    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy','setup-runtime-inventory-v6','cleanup-setup-v6-policy','setup-v6-image-shell','setup-runtime-inventory-v7','cleanup-setup-v7-policy','setup-v7-image-shell','setup-runtime-inventory-v8','cleanup-setup-v8-policy','setup-v8-image-shell','setup-runtime-inventory-v9','cleanup-setup-v9-policy','setup-v9-image-shell','same-job-setup-v1','same-job-cleanup-v1','same-job-image-shell-v1','same-job-guest-service-v1','same-job-prepare-v1','same-job-bootstrap-v1','same-job-controller-v1','same-job-guest-cleanup-v1','image-env-shell-v1','image-env-service-v1','host-baseline-shell-v1','host-baseline-service-v1','host-baseline-outside-v1'):
         modes.add_argument('--'+name,action='store_const',const=name,dest='mode')
     argv=list(sys.argv[1:] if argv is None else argv)
     if len(argv)!=1:parser.error('exactly one fixed mode argument required')
@@ -9398,6 +9996,37 @@ def dispatch_cli(argv=None,environ=None):
         if args.mode=='same-job-setup-v1':
             need(SAME_JOB_ACTUAL_ENABLED is True,'distinct same-job actual source inactive')
             return setup_v8_entry(dict(os.environ if environ is None else environ),SAME_JOB_ACTUAL_ROUTE)
+        if args.mode in ('same-job-guest-service-v1','same-job-prepare-v1',
+                         'same-job-bootstrap-v1','same-job-controller-v1',
+                         'same-job-guest-cleanup-v1'):
+            need(SAME_JOB_ACTUAL_ENABLED is True,'distinct same-job guest source inactive')
+            selected=dict(os.environ if environ is None else environ)
+            if args.mode=='same-job-guest-service-v1':
+                result,returned=same_job_guest_service(selected)
+            elif args.mode=='same-job-guest-cleanup-v1':
+                result,returned=same_job_guest_cleanup(selected)
+                result={'pass':result['outsideTerminalObserved'] is True}
+            elif args.mode=='same-job-prepare-v1':
+                result,returned=same_job_preparation_child(selected)
+            elif args.mode=='same-job-bootstrap-v1':
+                returned=controller_bootstrap(SameJobBootstrapOps(selected))
+                need(isinstance(returned,FirstFailure),
+                     'actual bootstrap returned without authoritative failure')
+                returned.add(RuntimeError('actual bootstrap exec cannot return'),
+                             'same-job-bootstrap-return')
+                result={'pass':False}
+            else:
+                ops,returned=controller_execute(SameJobControllerOps(selected))
+                result={'pass':returned.first is None and returned.secondary==[] and
+                    ops.unprivileged is True and ops.paths_admitted is True and
+                    set(ops.processes)=={'js','qemu'} and ops.source_after is not None and
+                    ops.runtime_after is not None}
+            need(isinstance(returned,FirstFailure),'same-job authoritative failure')
+            if result['pass'] is True and returned.first is None and returned.secondary==[]:
+                return 0
+            failure.adopt(returned.first,returned.secondary)
+            if failure.first is None:failure.add(ValueError('actual mode incomplete'),'same-job-cli')
+            raise ObservedFailure(failure.first,failure.secondary)
         if args.mode=='host-baseline-shell-v1':
             need(HOST_BASELINE_ENABLED is True,'baseline shell disabled')
             return host_baseline_shell(dict(os.environ if environ is None else environ))
