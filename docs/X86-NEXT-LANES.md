@@ -3468,10 +3468,12 @@ wrong role/profile, timeout and stream overflow. No V9 executable source,
 request, variable, label, run or guest has been selected. Merge this narrow
 amendment and qualify the final source before any one-shot metadata event.
 
-The collector-profile amendment has merged. An inactive V9 source candidate
+The collector-profile amendment has merged. A V9 metadata source candidate
 now uses a fixed route value for the shared installer sequence and a truthful
 V9 request, event, stage, outside cleanup and independent reader. Pure mocks
 connect the V9 entry to the emitted original and standalone audit, and exercise
-the real bounded collector without starting a hosted child. Source review and
+the real bounded collector without starting a hosted child. Only the V9
+metadata source and workflow guards are locally active; no V9 event has been
+selected. Source review and
 exact-head hosted checks still precede any V9 event. The compiler and
 architectural guest paths remain disabled.

@@ -6548,9 +6548,10 @@ complete installed-state, Node and QEMU graph audit before any separately
 claimed same-job guest work. All setup/runtime/guest approvals stay false
 until their respective originals and external joins actually qualify.
 
-The first V9 source candidate is local and inactive. Its collector change is
-limited to the new literal profile; its workflow guard and independent-reader
-guard remain false. Pure controls exercise a manufactured complete setup and
+The V9 metadata source candidate is locally active but event-unselected. Its
+collector change is limited to the new literal profile; only its metadata
+workflow and independent-reader guards have been enabled. Pure controls
+exercise a manufactured complete setup and
 inventory original through the V9 entry, emitted roles and standalone reader,
 as well as the actual bounded collector with mocked process edges. No V9
 event, hosted package setup, QEMU runtime or guest has been selected.

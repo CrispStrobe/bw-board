@@ -7889,7 +7889,7 @@ SETUP_V8_ENV=tuple('BW_RING3_SETUP_INVENTORY_V8_REQUEST_SHA256' if key=='BW_RING
     for key in NODE_STAGE_ENV)+('BW_RING3_SETUP_INVENTORY_V8_REQUEST_B64',)
 # V9 is an immutable source-selected route. No request or environment field can
 # select a package, image policy, tool, resource limit, or historical route.
-SETUP_V9_ENABLED=False
+SETUP_V9_ENABLED=True
 SETUP_V9_IMAGES=('20261012.334.1','20261023.334.3')
 SETUP_V9_PACKAGE_ROWS=SETUP_V8_PACKAGE_ROWS
 SETUP_V9_CONFIGURE_ORDER=SETUP_V8_CONFIGURE_ORDER

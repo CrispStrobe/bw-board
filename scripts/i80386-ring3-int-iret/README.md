@@ -1650,7 +1650,8 @@ keeps the attempt negative.
 
 The V9 metadata route has its own request, label, job, stage, outside cleanup,
 originals and independent reader. Its source guards and workflow job remain
-inactive. The compiler and architectural guest routes remain inactive. V9
+active for a separately admitted metadata event; no V9 event has been selected.
+The compiler and architectural guest routes remain inactive. V9
 allows only the two observed `ubuntu24` image labels documented in
 `docs/X86-NEXT-LANES.md`; it still requires the fixed status, helper, alias,
 archive and payload witnesses before acquiring any package. A matched image

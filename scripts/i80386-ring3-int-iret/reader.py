@@ -10536,7 +10536,7 @@ def verify_host_baseline(service_log,shell_raw,outside_raw,official_log,external
 # Distinct V9 metadata reader. The selected fifteen-role graph remains the same
 # immutable data-only component; all request, event, stage and outside admission
 # below is V9-specific. Historical V8 functions above remain unmodified.
-SETUP_V9_READER_ENABLED=False
+SETUP_V9_READER_ENABLED=True
 SETUP_V9_IMAGES=('20261012.334.1','20261023.334.3')
 SETUP_V9_PACKAGES=SETUP_V8_PACKAGES
 SETUP_V9_ORDER=SETUP_V8_ORDER

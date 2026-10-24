@@ -7885,21 +7885,41 @@ def setup_v9_controls():
                 regrade(copy.deepcopy(value),changed_shell=reader.canonical(changed_shell))
             self.assertEqual((reader.SETUP_V9_STATUS_SHA,reader.SETUP_V9_STATUS_BYTES,p.SETUP_V9_STATUS_SHA),production)
 
-        def test_v9_inactive_cli_refuses_before_every_host_edge(self):
-            self.assertIs(p.SETUP_V9_ENABLED,False)
-            self.assertIs(reader.SETUP_V9_READER_ENABLED,False)
+        def test_v9_activation_and_patched_inactive_cli_refuses_before_every_host_edge(self):
+            self.assertIs(p.SETUP_V9_ENABLED,True)
+            self.assertIs(reader.SETUP_V9_READER_ENABLED,True)
             self.assertIs(p.ACTUAL_ENTRY_ENABLED,False)
             for mode,name in (('setup-runtime-inventory-v9','setup_v8_entry'),
                 ('cleanup-setup-v9-policy','setup_v8_outside_cleanup'),
                 ('setup-v9-image-shell','setup_v8_image_shell')):
-                with self.subTest(mode=mode),patch.object(p,name,side_effect=AssertionError('no host edge')) as edge,\
+                with self.subTest(mode=mode),patch.object(p,'SETUP_V9_ENABLED',False),\
+                     patch.object(p,name,side_effect=AssertionError('no host edge')) as edge,\
                      patch.object(p.sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
                     self.assertEqual(p.dispatch_cli(['--'+mode],{}),1)
                     edge.assert_not_called()
-            with patch.object(reader.sys,'argv',['reader.py','--inventory-setup-v9']),\
+            with patch.object(reader,'SETUP_V9_READER_ENABLED',False),\
+                 patch.object(reader.sys,'argv',['reader.py','--inventory-setup-v9']),\
                  patch.object(reader,'setup_v9_inventory_entry',side_effect=AssertionError('no reader')) as edge:
                 with self.assertRaises(reader.Refusal):reader.main()
                 edge.assert_not_called()
+
+        def test_v9_active_invalid_event_refuses_before_setup_or_get(self):
+            class BadObserver:
+                def __init__(self,environ):self.facts={'eventIdentity':{'st_size':3},'sourceCommands':[]}
+                def event(self):return b'{}\n'
+                def source(self,request):raise AssertionError('invalid event reached source')
+            output=io.BytesIO()
+            with patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+                 patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+                 patch.object(p,'HostedEnvelopeInstaller',BadObserver),\
+                 patch.object(p,'SetupV8Host',side_effect=AssertionError('no helper or package edge')) as host,\
+                 patch.object(p.sys,'stdout',SimpleNamespace(buffer=output)):
+                self.assertEqual(p.setup_v8_entry({},p.SETUP_V9_ROUTE),1)
+            host.assert_not_called()
+            packet=reader.parse_setup_v9_outer(output.getvalue())
+            self.assertEqual(packet['schema'],'bw.ring3.setup-entry-failure.v9')
+            self.assertIsNone(packet['setup'])
+            self.assertFalse(packet['actualGuestApproved'])
 
         def test_v9_closed_image_set_before_status_or_archive(self):
             limits={'cpu.max':'cpuMax','memory.max':'memoryMax',
@@ -7925,12 +7945,12 @@ def setup_v9_controls():
                     self.assertIn('fresh exact hosted image labels',str(caught.exception));read.assert_not_called()
                 get.assert_not_called()
 
-        def test_v9_workflow_is_disabled_and_old_v8_adjacent(self):
+        def test_v9_workflow_metadata_route_and_old_v8_adjacent(self):
             workflow=(HERE.parent.parent/'.github/workflows/i80386-ring3-int-iret.yml').read_text()
             start=workflow.index('  setup-runtime-inventory-v9:\n')
             end=workflow.index('  setup-runtime-inventory-v8:\n',start)
             route=workflow[start:end]
-            self.assertIn("if: ${{ false && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-setup-runtime-inventory-v9'",route)
+            self.assertIn("if: ${{ github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-setup-runtime-inventory-v9'",route)
             self.assertEqual(route.count('actions/checkout@11d5960a326750d5838078e36cf38b85af677262'),1)
             self.assertEqual(route.count('actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020'),1)
             for term in ('node-version: 22.23.3','--setup-v9-image-shell','--setup-runtime-inventory-v9',
