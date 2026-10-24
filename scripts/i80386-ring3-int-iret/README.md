@@ -1700,3 +1700,16 @@ The combined artifact cap is 32 MiB, while old leaf caps stay fixed. The
 runtime sufficiency. Implementation and selection wait for the merged claim,
 source controls, exact-head CI and separate official admission. All actual
 and compiler guards remain false at this checkpoint.
+
+### Inactive same-job source candidate — 2026-10-24
+
+The claim has merged. A new inactive route now has a distinct actual request,
+two serial service entries, a retained setup handoff, fresh runtime readbacks,
+the existing twenty-role authored packet, and independent local and official
+readers. Pure controls connect the setup/inventory handoff, serial controller,
+packet finalizer and local reader with manufactured OS and guest outputs. They
+do not establish an official event, hosted setup, guest execution or a
+qualified architectural result. The new producer, reader and workflow guards
+remain false, as do the compiler and older actual guards. The official reader
+requires separately admitted run, job, log and exact artifact bytes and still
+leaves actual-run approval false.

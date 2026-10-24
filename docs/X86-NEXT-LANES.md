@@ -3497,3 +3497,15 @@ bound apply only to the new wrapper; existing leaf limits stay fixed. Connected
 mock controls, wrong-input mutations, exact-head checks and one independently
 admitted actual original are prerequisites to any result. The V9 metadata
 label is consumed and cannot serve as this actual event.
+
+### Same-job source checkpoint — 2026-10-24
+
+The claim merged and an inactive source candidate now connects a fresh setup
+and inventory handoff to a second service, the authored serial JavaScript and
+QEMU controller, the closed twenty-role packet, and separate original readers.
+Pure mocked controls exercise the producer and independent local reader. No
+same-job actual event has been selected; hosted setup, guest behavior and
+official artifact admission remain unobserved. All new actual, older actual
+and compiler guards remain false. Next, finish connected failure controls and
+source review, qualify the exact source head, and admit a distinct official
+event and its originals before reporting an architectural result.

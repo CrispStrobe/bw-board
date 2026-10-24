@@ -62,3 +62,12 @@ source checkpoint; the proposed combined job is bounded at 35 minutes and a
 32 MiB artifact without enlarging the controller's 600-second or any other
 old leaf limit. A later result must be tied to a distinct actual event and
 independently audited originals.
+
+## Inactive same-job source checkpoint — 2026-10-24
+
+The claim merged. A source candidate now contains the distinct two-service
+actual route and independent readers. Its connected pure controls use
+manufactured OS and guest outputs to check setup handoff, serial controller,
+the twenty-role finalizer and local packet admission. This is source-only
+evidence: no same-job actual event, hosted guest, official original or
+architectural result exists. The actual and compiler guards remain false.

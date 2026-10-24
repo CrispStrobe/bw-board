@@ -8389,6 +8389,113 @@ def same_job_actual_controls():
                         handoff_raw,guest_service,guest_cleanup,guest_outer,
                         runtime_originals['controller.runtime.json'])
                 self.assertTrue(built_verdict['guestPredicatesObserved'])
+                final_env=dict(controller_env)
+                final_env['GITHUB_EVENT_PATH']='/event.json'
+                final_plan=reader.canonical({'schema':'bw.ring3.launch-plan.v1',
+                    'runId':'123','attempt':1,'head':actual['head'],
+                    'tree':actual['tree'],'source':actual['source']})
+                final_env['BW_LAUNCH_PLAN_SHA256']=sha(final_plan)
+                def git_trace(raw,phase):
+                    item=reader.parse(raw);item['source']=source
+                    listing=''.join(source['files'][name]['mode']+' blob '+
+                        source['files'][name]['blob']+'\t'+name+'\n'
+                        for name in sorted(source['files']))
+                    outputs=(source['head']+'\n',source['tree']+'\n',listing)
+                    for command,value in zip(item['commands'],outputs):
+                        command['stdoutHex']=value.encode().hex()
+                    return reader.canonical(item)
+                pre_git=git_trace(old_originals['git.before.json'],'before')
+                post_git=git_trace(old_originals['git.after.json'],'after')
+                generation=reader.parse(old_originals['generation.phase.json'])
+                node_path=p.RUNTIME_EXECUTABLES['node']
+                node_fact=generation['before']['files']['node']
+                generation_files={'node':dict(node_fact)}
+                for role,name in (('fixture','fixture.mjs'),('runner','run.py')):
+                    path='scripts/i80386-ring3-int-iret/'+name
+                    generation_files[role]={'path':path,
+                        'bytes':source['files'][path]['bytes'],
+                        'sha256':source['files'][path]['sha256']}
+                for when in ('before','after'):
+                    generation[when]['files']=copy.deepcopy(generation_files)
+                input_refs={name:{'bytes':len(old_state['data']['inputs/'+name]),
+                    'sha256':sha(old_state['data']['inputs/'+name])}
+                    for name in ('fixture.rom','fixture.json')}
+                generation['outputs']=input_refs
+                generation_raw=reader.canonical(generation)
+                phase=reader.parse(old_originals['preparation.phase.json'])
+                phase['process']['argv'][-1]='--same-job-prepare-v1'
+                phase['process']['environment']=dict(p.ENV,**{
+                    name:final_env[name] for name in p.SAME_JOB_CHILD_ENV},
+                    SUDO_UID='1001',SUDO_GID='1002')
+                phase['preGit']={'bytes':len(pre_git),'sha256':sha(pre_git)}
+                pre_stream=p.generation_frame(generation_raw,pre_git)
+                phase['stdout']={'bytes':len(pre_stream),'sha256':sha(pre_stream),
+                    'base64':base64.b64encode(pre_stream).decode()}
+                phase_raw=reader.canonical(phase)
+                outside_record=reader.parse(old_state['data']['.outside.json'])
+                outside_record['process']['argv'][-1]='--same-job-bootstrap-v1'
+                outside_record['process']['pid']=100
+                outside_record['process']['pgid']=100
+                outside_record['process']['environment']=dict(p.ENV,**{
+                    name:final_env[name] for name in p.SAME_JOB_CHILD_ENV},
+                    SUDO_UID='1001',SUDO_GID='1002')
+                old_state['data']['.outside.json']=reader.canonical(outside_record)
+                outside_facts={key:value for key,value in outside_record.items()
+                    if key not in ('firstFailure','secondary','streamsHex')}
+                selection={'requestRaw':request_raw,'request':actual,
+                    'handoffRaw':handoff_raw,'handoff':selected_handoff,
+                    'candidateRaw':candidate_raw,'candidate':candidate}
+                old_state['export'].clear();old_state['directories'].clear()
+                post=SimpleNamespace(capture=lambda head:(post_git,p.FirstFailure()))
+                with patch.object(p,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(p,'GENERATION_NODE_PIN',(
+                         node_fact['bytes'],node_fact['sha256'])),\
+                     patch.object(p,'ROM_SHA',reader.ROM_SHA),\
+                     patch.object(p,'FIXTURE_JSON_SHA',reader.FIXTURE_JSON_SHA):
+                    context=p.SameJobFinalizerContext(selection,final_env)
+                    finalized,final_failure=p.finalize_runtime_packet(context,
+                        outside_facts,p.FirstFailure(),pre_git,final_env,
+                        post_observer=post,preparation_original=phase_raw,
+                        generation_original=generation_raw,
+                        launch_plan_original=final_plan,
+                        launch_plan_sha256=sha(final_plan),
+                        emit=lambda raw:len(raw),flush=lambda:None)
+                self.assertTrue(finalized['pass'],final_failure.first)
+                self.assertIsNone(final_failure.first)
+                self.assertEqual(set(old_state['export']),reader.ROLES)
+                with patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                     patch.dict(reader.RUNTIME_SELECTED,{'node':{
+                        'bytes':selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                        'sha256':selected_handoff['stageCopy']['nodeReadback']['sha256']} }):
+                    exported_verdict=reader.verify_same_job_actual_packet(
+                        old_state['export'],handoff_raw,guest_service,guest_cleanup,
+                        guest_outer,runtime_originals['controller.runtime.json'])
+                self.assertTrue(exported_verdict['guestPredicatesObserved'])
+                self.assertFalse(exported_verdict['actualRunApproved'])
+                packet_dir='packet'
+                role_files={str(Path(packet_dir)/name):raw
+                    for name,raw in old_state['export'].items()}
+                role_files.update(handoff=handoff_raw,service=guest_service,
+                    cleanup=guest_cleanup,outer=guest_outer,
+                    controller=runtime_originals['controller.runtime.json'])
+                local_argv=['reader.py','--same-job-actual-packet-v1',
+                    '--packet-dir',packet_dir,'--handoff','handoff',
+                    '--service','service','--cleanup','cleanup',
+                    '--guest-outer','outer','--controller-runtime','controller']
+                text_output=io.StringIO()
+                with patch.object(reader,'SAME_JOB_ACTUAL_READER_ENABLED',True),\
+                     patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                     patch.dict(reader.RUNTIME_SELECTED,{'node':{
+                         'bytes':selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                         'sha256':selected_handoff['stageCopy']['nodeReadback']['sha256']} }),\
+                     patch.object(reader.sys,'argv',local_argv),\
+                     patch.object(reader.Path,'open',autospec=True,side_effect=lambda path,*a,**kw:
+                         io.BytesIO(role_files[str(path)])),\
+                     contextlib.redirect_stdout(text_output):
+                    reader.main()
+                local_result=json.loads(text_output.getvalue())
+                self.assertTrue(local_result['guestPredicatesObserved'])
+                self.assertFalse(local_result['officialMetadataBound'])
             self.assertEqual(producer.SAME_JOB_REVIEWED_GRAPH['sha256'],
                 '72407985d3ef62725137a05ea6c609ff81f7095bdeb0147a9f703628a0f9cdab')
         def test_manufactured_runtime_fixture_precedes_actual_request(self):
