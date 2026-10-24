@@ -8314,7 +8314,10 @@ def same_job_v2_cgroup_history(ops,phase,*,limit=6,clock=None,pause=None):
     if not value['settled'] and value['firstFailure'] is None:
         value['firstFailure']=row(ValueError('owned descendants remain at finite sample limit'),
                                   'same-job-actual-v2-cgroup-settle')
-    need(1<=len(value['samples'])<=limit and len(encode(value))<=128<<10,
+    need((1<=len(value['samples'])<=limit or
+          (value['samples']==[] and value['finalIndex'] is None and
+           value['firstFailure'] is not None and value['settled'] is False)) and
+         len(encode(value))<=128<<10,
          'bounded retained v2 sample sequence')
     return value
 
@@ -8342,20 +8345,21 @@ def setup_v8_sequence(ops,request,route=None):
                 history=same_job_v2_cgroup_history(ops,name,
                     limit=1 if phase_failure.first is not None else 6)
                 item['cgroupHistory']=history
-                last=history['samples'][-1]
+                last=history['samples'][-1] if history['samples'] else None
                 if history['firstFailure'] is None:
                     selected=tuple(history['samples'][0]['unitIdentity'][:6])
                     if v2_unit_identity is None:v2_unit_identity=selected
                     else:need(selected==v2_unit_identity,
                               'same held V2 owned service across both dpkg phases')
-                if last['firstFailure'] is None:
+                if last is not None and last['firstFailure'] is None:
                     item['cgroupAfter']={'phase':name,
                         **{key:last[key] for key in ('cgroupProcs','cgroupEvents','cgroupStat','onlyController')}}
                 if history['firstFailure'] is not None:
                     phase_failure.adopt(history['firstFailure'],history['secondary'])
             else:item['cgroupAfter']=ops.quiescent(name)
-            need(item['cgroupAfter']['onlyController'] is True,
-                 'no owned direct or nested dpkg descendants after '+name)
+            if route is not SAME_JOB_ACTUAL_V2_ROUTE or phase_failure.first is None:
+                need(item['cgroupAfter']['onlyController'] is True,
+                     'no owned direct or nested dpkg descendants after '+name)
         except BaseException as error:phase_failure.add(error,version+'-'+name+'-cgroup')
         if phase_failure.first is not None:
             raise ObservedFailure(phase_failure.first,phase_failure.secondary)
@@ -8685,9 +8689,9 @@ class SetupV8Host:
             need(len(lines)<=64 and len(lines)==len(set(lines)) and
                  all(re.fullmatch('[1-9][0-9]*',line) for line in lines),
                  'finite unique V2 owned process census')
-            sample['onlyController']=(lines==[str(os.getpid())] and
-                setup_v8_cgroup_quiet(sample['cgroupProcs'],sample['cgroupEvents'],
-                                      sample['cgroupStat'],os.getpid()))
+            quiet=setup_v8_cgroup_quiet(sample['cgroupProcs'],sample['cgroupEvents'],
+                                        sample['cgroupStat'],os.getpid())
+            sample['onlyController']=lines==[str(os.getpid())] and quiet
         except BaseException as error:
             sample['firstFailure']=row(error,'same-job-actual-v2-cgroup-sample')
             sample['secondary'].extend(getattr(error,'ring3_secondary',[]))

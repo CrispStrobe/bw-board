@@ -8297,6 +8297,38 @@ def same_job_actual_controls():
                         producer.SAME_JOB_ACTUAL_V2_ROUTE)
                     self.assertIsNotNone(drift_result['firstFailure'])
                     self.assertNotIn('stage',drift_ops.events)
+                    def missed_history(ops,phase,**kwargs):
+                        if phase!='unpack':return fixed_history(ops,phase,**kwargs)
+                        base=40_001_001
+                        ticks=iter((base,base+1,base+5_000_000_000))
+                        return real_history(ops,phase,clock=lambda:next(ticks),**kwargs)
+                    missed_ops=ActualOps()
+                    with patch.object(producer,'same_job_v2_cgroup_history',
+                            side_effect=missed_history):
+                        missed_result=producer.setup_v8_sequence(missed_ops,actual,
+                            producer.SAME_JOB_ACTUAL_V2_ROUTE)
+                    missed_phase=missed_result['unpack']['cgroupHistory']
+                    self.assertEqual((missed_phase['samples'],missed_phase['finalIndex'],
+                        missed_result['unpack']['cgroupAfter']),([],None,None))
+                    self.assertEqual(missed_result['firstFailure'],
+                        missed_phase['firstFailure'])
+                    self.assertNotIn('configure',missed_ops.events)
+                    self.assertNotIn('stage',missed_ops.events)
+                    class ReadErrorOps(ActualOps):
+                        def cgroup_sample_v2(self,phase,index):
+                            item=super().cgroup_sample_v2(phase,index)
+                            item['firstFailure']={'phase':'v2-cgroup-read-close',
+                                'name':'OSError','message':'held read/close failure'}
+                            return item
+                    read_ops=ReadErrorOps()
+                    read_result=producer.setup_v8_sequence(read_ops,actual,
+                        producer.SAME_JOB_ACTUAL_V2_ROUTE)
+                    read_phase=read_result['unpack']['cgroupHistory']
+                    self.assertEqual(read_result['firstFailure'],
+                        read_phase['samples'][0]['firstFailure'])
+                    self.assertEqual(read_phase['finalIndex'],0)
+                    self.assertNotIn('configure',read_ops.events)
+                    self.assertNotIn('stage',read_ops.events)
                     setup=entry_ops.snapshot
                     status_log=io.BytesIO()
                     pre_meta=producer.emit_setup_v8_status('pre',pre,status_log.write,status_log.flush,
@@ -9628,6 +9660,26 @@ def same_job_actual_controls():
             self.assertFalse(expired['settled'])
             self.assertIn('deadline after read',expired['firstFailure']['message'])
             self.assertEqual(len(expired['samples']),1)
+            before=iter((1_000_000_000,1_000_000_001,6_000_000_000))
+            untouched=Census([])
+            missed=p.same_job_v2_cgroup_history(untouched,'unpack',
+                clock=lambda:next(before),pause=lambda _:None)
+            self.assertEqual((missed['samples'],missed['finalIndex'],
+                missed['settled'],untouched.called),([],None,False,[]))
+            self.assertEqual(missed['firstFailure']['phase'],
+                'same-job-actual-v2-cgroup-deadline')
+            with self.assertRaises(reader.Refusal):
+                reader.same_job_v2_cgroup_history(missed,'unpack',101)
+            read_error=sample(0,'101\n')
+            read_error['firstFailure']={'phase':'v2-cgroup-read-close',
+                'name':'OSError','message':'held read/close failure'}
+            partial=p.same_job_v2_cgroup_history(Census([read_error]),'unpack',
+                limit=1,clock=lambda:1_000_000_001,pause=lambda _:None)
+            self.assertEqual(partial['firstFailure'],read_error['firstFailure'])
+            self.assertEqual(partial['samples'][0]['firstFailure'],read_error['firstFailure'])
+            self.assertFalse(partial['settled'])
+            with self.assertRaises(reader.Refusal):
+                reader.same_job_v2_cgroup_history(partial,'unpack',101)
 
         def test_v2_real_cgroup_sampler_mocked_syscalls_and_drift(self):
             host=object.__new__(p.SetupV8Host)
@@ -9659,6 +9711,33 @@ def same_job_actual_controls():
                 refused=host.cgroup_sample_v2('unpack',0)
             self.assertIsNotNone(refused['firstFailure'])
             self.assertIsNone(refused['onlyController'])
+            for malformed in ({'cgroup.procs':'101\n202\n',
+                               'cgroup.stat':'nr_descendants 0\n'},
+                              {'cgroup.procs':'101\n202\n',
+                               'cgroup.events':'populated nope\nfrozen 0\n'}):
+                selected_text=dict(texts,**malformed)
+                with patch.object(p.Path,'lstat',return_value=info),\
+                     patch.object(p.Path,'resolve',autospec=True,
+                         side_effect=lambda path,strict=False:path),\
+                     patch.object(p.Cgroups,'text',side_effect=lambda unused,path:
+                         selected_text[path.name]),\
+                     patch.object(p.os,'getpid',return_value=101):
+                    refused=host.cgroup_sample_v2('unpack',0)
+                self.assertEqual(refused['cgroupProcs'],'101\n202\n')
+                self.assertIsNone(refused['onlyController'])
+                self.assertIsNotNone(refused['firstFailure'])
+                limited=iter((1_000_000_000,1_000_000_001,1_000_000_002,
+                              1_000_000_003))
+                class OneSample:
+                    calls=0
+                    def cgroup_sample_v2(self,phase,index):
+                        self.calls+=1;return refused
+                source=OneSample()
+                history=p.same_job_v2_cgroup_history(source,'unpack',
+                    clock=lambda:next(limited),pause=lambda _:None)
+                self.assertEqual((source.calls,history['finalIndex'],history['settled']),
+                    (1,0,False))
+                self.assertEqual(history['firstFailure'],refused['firstFailure'])
 
         def test_v2_inactive_source_and_workflow_before_host_edges(self):
             self.assertIs(p.SAME_JOB_ACTUAL_V2_ENABLED,False)
