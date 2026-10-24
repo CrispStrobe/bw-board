@@ -3143,27 +3143,30 @@ Source controls alone approve neither route.
 
 ## Ordered 16-bit scalar read candidate
 
-Claim status: source implementation has not begun. The
-[current profile](https://github.com/CrispStrobe/bw-board/actions/runs/40057621920)
-measured a warmed authored five-operation loop at about 4.52 million
-instructions/s for the core and 3.48 million instructions/s for AT on an
-AMD EPYC 9V74 hosted CPU using Node 22.23.3. These are loop throughput, not
-physical 16 MHz 386 RTx, an optimization gain or an OS workload measurement.
+Claim [677](https://github.com/CrispStrobe/bw-board/pull/677) merged before the
+source candidate. The in-page two-byte `_readLinear` arm uses two ordered masked
+callbacks after one translation. Focused controls cover fresh callback lookup,
+coercion/fault side effects, options, physical/linear wrap, paging accessed bits,
+second-page faults and unaffected four-byte behavior, with actual-source
+mutations and small authored core/AT register/device goldens.
 
-The next candidate specializes only the contiguous-page two-byte branch in
-`_readLinear`: one translation followed by the same ordered pair of byte
-callbacks, removing the small loop and power calculation. Leave the four-byte
-and page-crossing paths intact. The owning registry entry defines exact paths.
+The [current profile](https://github.com/CrispStrobe/bw-board/actions/runs/40057621920)
+measured warmed authored-loop throughput around 4.52 million instructions/s for
+core and 3.48 million for AT on EPYC 9V74/Node22.23.3. Samples are not exact cost
+shares, physical 16MHz RTx or evidence of this candidate's gain.
 
-A fresh agent should first confirm the claim landed and refresh base/head
-checks, then implement the narrow arm and focused callback/order/fault tests.
-Prove byte masking, physical wrap, translation options, exceptions on either
-callback, page-crossing fallback and unaffected four-byte behavior; mutation
-controls must detect reversed reads or skipped translation. Prepare a disabled
-paired workflow and standalone original-only reader before selecting its one
-actual event. Freeze base/candidate import graphs and Node/resource facts, retain
-all eighteen original children and cleanup, and preserve the unchanged
-1.03 median CPU / all CPU ratios greater than 1 / 1.02 median wall gate.
-Require affected clean protected guest results and all enabled final-head
-checks before merge. If the gate fails, record it and keep the candidate
-unadopted rather than repeating the same measurement.
+The [new paired source](../scripts/i80386-read16-paired/README.md) remains
+**actual-disabled**. Before implementation/results, it selected ordinary AT
+only: a disposable 25k warm-up and fresh one-million-step five-op state per child.
+Core correctness remains required; no core gain is claimed. Keep eighteen fresh
+children (two warm pairs/seven measured), median whole-child CPU A/B >=1.03,
+every CPU ratio >1 and median whole-child wall B/A <=1.02. Internal loop timing
+is separate diagnostic context. Do not substitute old code16 macro packets.
+
+Freeze exact base/candidate source35, common source, head/tree, request/event,
+Node22.23.3 bytes and enforced resource/cleanup facts before selecting one new
+hosted event. Require every enabled exact-head check and fresh affected clean
+xv6/protected guest qualification, then one admitted original and the independent
+byte-only reader. Retain a failed gate and leave the candidate unadopted; no
+same-measurement retry or weaker threshold. Source controls alone qualify no
+performance, physical timing, full OS support or guest result.
