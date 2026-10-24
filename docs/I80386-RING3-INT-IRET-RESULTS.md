@@ -62,3 +62,22 @@ source checkpoint; the proposed combined job is bounded at 35 minutes and a
 32 MiB artifact without enlarging the controller's 600-second or any other
 old leaf limit. A later result must be tied to a distinct actual event and
 independently audited originals.
+
+## Selected same-job V2 result and proposed V3 cleanup
+
+The selected [V2 actual run](https://github.com/CrispStrobe/bw-board/actions/runs/40130461323)
+failed. Its retained first service completed the fixed setup, and both authored
+guest children ran. The second service composed its packet, but outside cleanup
+found the selected systemd unit absent and the separately owned manual cgroup
+root still present; its original does not establish a PID identity there. The
+JavaScript and QEMU defined outputs also disagree at two selected GDT
+access-byte positions. The positive reader continues to refuse. No actual
+architectural pass, strict 386DX, physical timing or release result is claimed.
+
+The [V3 claim](../LANES.md) proposes a new, separately admitted same-job route
+with exact four-role manual-cgroup census and bounded descriptor-relative
+cleanup, plus an optional negative-only audit of the V2 failure. It does not
+change the fixture, expected bytes, CPU model, QEMU output or the V2 reader's
+refusal. V3 implementation, exact-head checks and one fresh independently
+audited event remain future work; clean cleanup alone would not resolve the
+observed JavaScript/QEMU disagreement.

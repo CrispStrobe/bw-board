@@ -6695,3 +6695,88 @@ wrong source/event/request, and outside cleanup. Then require all enabled
 exact-head checks, one distinct owner-selected event and one independent
 original-only audit. This claim authorizes source work, not another V1 attempt
 or a guest result.
+
+## Distinct same-job Ring 3 V3 manual-cgroup cleanup and V2 failure audit — claim, 2026-10-24
+
+Owner: Codex x86 Ring 3. Claim only `LANES.md`,
+`docs/{X86-NEXT-LANES,I80386-RING3-INT-IRET-RESULTS}.md`,
+`scripts/i80386-ring3-int-iret/{run.py,reader.py,controls.py,README.md}` and
+`.github/workflows/i80386-ring3-int-iret.yml`. This docs-only claim must merge
+before implementation. Build the source in a new owned worktree from the
+published V2 head plus qualified master; preserve the V2 worktree and every
+consumed event and original.
+
+The selected V2 [run](https://github.com/CrispStrobe/bw-board/actions/runs/40130461323)
+completed the fixed package setup and both authored guest children, but the
+overall job failed. The second service composed its packet and exited zero;
+outside cleanup recorded an absent selected systemd unit but found the separate
+run-owned manual cgroup root still present. That record contains no PID identity
+for the remaining directory. The unchanged positive reader refuses. The
+retained JavaScript and QEMU outputs also disagree at two selected GDT
+access-byte positions. Neither successful child exits nor a complete packet
+approve an architectural result, strict 386DX or physical timing. Do not replay
+the V2 label or change expected bytes, CPU behavior, fixture or QEMU output to
+make the comparison pass.
+
+Add one distinct V3 request, event/schema, SHA-only body marker, repository
+variables, owner label, producing job, original roles and standalone reader.
+Retire only the spent V2 execution gate; preserve its wire, strict positive
+reader refusal and retained originals. Preserve V9 and V1 defaults, reviewed
+fifteen archives and payloads, Node/QEMU pins, one Node copy, the same-job graph
+comparison, twenty packet roles, all old leaf caps and all compiler/older
+actual guards. V3 source guards begin false. No request or environment field
+may select a pin, path, role or bound.
+
+After the second service reaches terminal state, the V3 outside owner may
+remove **only** the exact run-derived manual tree
+`/sys/fs/cgroup/bw-ring3-<run>-1`. First admit the V3 source, event, request,
+selected service and invoker identities. Hold NOFOLLOW directory descriptors
+for the cgroup parent, root and the three fixed leaves `controller`, `js`,
+`qemu`; bind device, inode, mode, UID and GID to named readbacks. Admit exactly
+those three child directories, no unknown nested member or symlink. Retain
+bounded raw `cgroup.procs`, `cgroup.threads`, `cgroup.events`, `cgroup.stat`,
+`pids.current`, selected limits and identities for the enclosing root and all
+three leaves before mutation. Require empty direct process/thread lists,
+`pids.current=0`, `populated=0`, zero dying descendants, zero live descendants
+in each leaf and exactly three known live descendants at the root.
+
+With those facts held, attempt one exact descriptor-relative `rmdir` per leaf,
+then one for the root after a fresh root census proves zero live and dying
+descendants. Journal every attempted operation, raw pre/post census, identity,
+first failure, ordered secondary failures and partial removal. Recheck final
+absence from the held parent descriptor. No PID kill, ignore list, broad
+directory cleanup, failed-syscall retry or increased service/client/job budget.
+An absent systemd unit alone does not establish manual-tree cleanup. Malformed,
+missing, oversized, populated, unexpected or drifting facts refuse approval;
+they do not assign a benign identity to an unknown member.
+
+The [Linux cgroup v2 documentation](https://docs.kernel.org/admin-guide/cgroup-v2.html)
+states that a deleted cgroup may remain in the dying count for an undefined
+time. Only **after** the three owned leaf removals, if the otherwise empty,
+identity-stable root still reports dying descendants, V3 may retain at most six
+complete read-only root samples over at most five monotonic seconds inside the
+existing 55-second cleanup plus five-second kill-after envelope. At every
+sample require empty direct procs/threads, `populated=0`, zero live descendants,
+the same owner/limits and no unexpected child directory; retain every raw
+sample and error. An immediately zero first sample proceeds without delay.
+Failure, a deadline reached during or after reading, identity drift or a final
+nonzero dying count refuses the root removal and result. No sample establishes
+continuous ownership or proves why an earlier dying count existed. Keep the
+existing 16 KiB cleanup-original aggregate cap and 4096-byte pseudo-file read
+cap; overflow refuses rather than enlarging either limit.
+
+A separate **negative-only** reader mode may grade the consumed V2 originals:
+exact source/request/event, first setup and graph, twenty raw packet roles,
+resource and official run/job/artifact joins, the failed outside cleanup, a
+clean JavaScript expectation and precisely the two QEMU access-byte
+differences. It must preserve the unchanged V2 positive reader's refusal and
+return every architectural, guest and release approval flag false. A V3 clean
+manual-tree capture may still show the same architectural disagreement; QEMU
+reference repair or another oracle needs a separate future claim.
+
+Require connected pure producer-to-independent-reader controls for the exact
+four-role cleanup, dying-count sampling, FD/named identity, malformed and
+nonempty census, partial `rmdir`, first/secondary retention, source/event,
+runtime graph, guest packet and official originals. Then require all enabled
+exact-head source checks, one separately admitted V3 event, one acquisition of
+each official original and independent review before any result or merge.
