@@ -1,7 +1,7 @@
 # Current ordinary JS 386 cost capture
 
 This source candidate prepares one hosted, media-free measurement of the
-current ordinary JS 386 core and AT paths. The measurement job is disabled.
+current ordinary JS 386 core and AT paths. The measurement job requires separate frozen-source/event admission.
 The existing authored five-operation loop is run for one million retired
 instructions after a separate fixed warmup. The independent golden is
 AX=65534, BX=65535, IP=0 and memory word 65535. The core's one million and

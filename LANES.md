@@ -5928,7 +5928,7 @@ measured speedup, full-OS or guest qualification claim.
 
 Candidate implementation, 2026-10-24: the owned folder, workflow, focused
 test and result guide are prepared in a separate source branch. The hosted
-four-child job remains literally disabled. Pure controls cover five authored
+four-child job requires separate final-head and one-shot event admission. Pure controls cover five authored
 operations and mocked original readers; no million-step workload, V8 profile
 or guest has been executed by this candidate. Before any source landing,
 review the exact source/import closure, resource and original-byte bindings,

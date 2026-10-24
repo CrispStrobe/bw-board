@@ -43,7 +43,7 @@ jobs:
           /usr/bin/timeout 30s /usr/bin/python3 -I -B scripts/i80386-current-at-cost/run.py --controls
           /usr/bin/timeout 30s /usr/bin/python3 -I -B scripts/i80386-current-at-cost/reader.py --controls
   profiles:
-    if: ${{ false && github.event.action == 'labeled' && github.event.label.name == 'x86-current-at-cost-profile-v1' && github.actor == 'CrispStrobe' && github.repository == 'CrispStrobe/bw-board' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
+    if: ${{ true && github.event.action == 'labeled' && github.event.label.name == 'x86-current-at-cost-profile-v1' && github.actor == 'CrispStrobe' && github.repository == 'CrispStrobe/bw-board' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

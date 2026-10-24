@@ -1,6 +1,6 @@
 # Current ordinary JS 386 cost capture
 
-This is an inactive hosted measurement candidate for the current ordinary JS
+This is a separately admitted hosted measurement candidate for the current ordinary JS
 core and AT paths. It uses the existing authored media-free five-operation
 loop, warmed on a throwaway CPU/machine before each one-million-instruction
 child. Four serial children run in order: core timing, core V8 profile, AT
@@ -39,3 +39,14 @@ node --test test/i80386-current-at-cost.test.mjs
 /usr/bin/python3 -I -B scripts/i80386-current-at-cost/run.py --controls
 /usr/bin/python3 -I -B scripts/i80386-current-at-cost/reader.py --controls
 ```
+
+## Capture activation candidate — 2026-10-24
+
+The distinct capture label route is enabled in this follow-up source. It still
+requires exact final-head CI, an externally reviewed frozen source/event and
+one owner-applied label. No capture, physical RTx or measured gain is implied
+by activation. The current CPU source has separately passed bounded xv6
+compatibility cases; those do not qualify this diagnostic or the GUI. The
+media-free measurement can proceed independently of QEMU setup and browser
+font provisioning. Keep every first failure and acquire each official original
+once for independent byte-only review.
