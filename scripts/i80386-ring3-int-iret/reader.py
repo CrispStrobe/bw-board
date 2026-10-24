@@ -11752,6 +11752,7 @@ def setup_v9_official_metadata(run_raw,jobs_raw,artifacts_raw,external):
     need(str(run_id)==external['runId'] and run.get('run_attempt')==1 and
          run.get('head_sha')==external['head'] and run.get('event')=='pull_request' and
          run.get('status')=='completed' and run.get('conclusion')==external['conclusion'] and
+         run.get('path')==WORKFLOW and run.get('name')=='Ring3 INT80 IRETD source controls' and
          run.get('repository',{}).get('full_name')=='CrispStrobe/bw-board' and
          run.get('head_repository',{}).get('full_name')=='CrispStrobe/bw-board' and
          run.get('actor',{}).get('login')=='CrispStrobe' and
@@ -11769,6 +11770,7 @@ def setup_v9_official_metadata(run_raw,jobs_raw,artifacts_raw,external):
     job=selected[0]
     need(integer(job.get('id'),1)==external['jobId'] and job.get('run_id')==run_id and
          job.get('run_attempt')==1 and job.get('head_sha')==external['head'] and
+         job.get('workflow_name')=='Ring3 INT80 IRETD source controls' and
          job.get('status')=='completed' and job.get('conclusion')==external['conclusion'],
          'selected official V9 job/run/head/status')
     steps=job.get('steps')

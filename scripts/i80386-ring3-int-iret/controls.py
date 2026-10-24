@@ -7592,6 +7592,7 @@ def setup_v9_controls():
                     b'2026-10-24T12:00:05Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262\n')
                 run_metadata=reader.canonical({'id':123,'run_attempt':1,'head_sha':v9_request['head'],
                     'event':'pull_request','status':'completed','conclusion':'success',
+                    'path':reader.WORKFLOW,'name':'Ring3 INT80 IRETD source controls',
                     'repository':{'full_name':'CrispStrobe/bw-board'},
                     'head_repository':{'full_name':'CrispStrobe/bw-board'},
                     'actor':{'login':'CrispStrobe'},
@@ -7604,6 +7605,7 @@ def setup_v9_controls():
                 jobs_metadata=reader.canonical({'total_count':1,'jobs':[{'id':456,'run_id':123,
                     'run_attempt':1,'head_sha':v9_request['head'],'status':'completed',
                     'conclusion':'success','name':'setup-runtime-inventory-v9',
+                    'workflow_name':'Ring3 INT80 IRETD source controls',
                     'steps':[{'name':name,'status':'completed','conclusion':'success'} for name in step_names]}]})
                 artifact_digest='a'*64
                 artifacts_metadata=reader.canonical({'total_count':1,'artifacts':[{'id':789,
