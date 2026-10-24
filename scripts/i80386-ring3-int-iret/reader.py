@@ -7687,6 +7687,8 @@ CONSUMED_V7_COMMA_PATHS=frozenset((
     '/usr/share/qemu/QEMU,cgthree.bin',
     '/usr/share/qemu/QEMU,tcx.bin',
 ))
+CONSUMED_V7_PYTHON={'bytes':8020928,
+    'sha256':'e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f'}
 
 
 def consumed_v7_failed_listing(raw):
@@ -7739,13 +7741,19 @@ def consumed_v7_path_failure_audit(raw,external,outer_raw,cleanup_raw,shell_raw)
     need(outer_raw==canonical(outer) and outer['schema']=='bw.ring3.setup-outer-terminal.v7' and
          outer['runId']==external['runId'] and outer['unit']==
          '/sys/fs/cgroup/system.slice/bw-ring3-setup-v7-'+external['runId']+'-1.service' and
+         type(outer['systemdRunExitCode']) is int and
+         type(outer['outsideCleanupExitCode']) is int and
          outer['systemdRunExitCode']==outer['outsideCleanupExitCode']==1 and
          outer['cgroupAfter']=='absent','exact failed outer1/cleanup1 and absent unit')
     cleanup=setup_v7_cleanup_original(cleanup_raw,external)
     absent={'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None}
-    need(cleanup['serviceExitCode']==1 and cleanup['sourceAdmission'] is not None and
+    need(type(cleanup['serviceExitCode']) is int and cleanup['serviceExitCode']==1 and
+         cleanup['sourceAdmission'] is not None and
          cleanup['preCensus']==cleanup['postCensus']==absent and
          cleanup['cgroupTerminal']=='absent' and cleanup['unitCensus'] is None and
+         type(cleanup['stop']) is dict and
+         type(cleanup['stop'].get('attempted')) is bool and
+         type(cleanup['stop'].get('timedOut')) is bool and
          cleanup['stop']=={'attempted':False,'argv':None,'exitCode':None,'timedOut':False} and
          cleanup['policy'] is None and cleanup['action']=='not-needed' and
          cleanup['firstFailure']=={'phase':'v7-outer-client','name':'ValueError',
@@ -7805,6 +7813,12 @@ def consumed_v7_path_failure_audit(raw,external,outer_raw,cleanup_raw,shell_raw)
     need(equal(selected,post['selected']) and equal(pending,post['pendingHostTriggers']) and
          pre['imageFields']==setup_v7_expected_forwarded(shell['fields']),
          'raw selected/pending status and shell image forwarding')
+    package_pins={name:(version,arch) for name,version,arch,*_ in SETUP_V7_PACKAGES
+                  if name in PACKAGE_NAMES}
+    need(set(package_pins)==set(PACKAGE_NAMES) and
+         all((selected[name]['Version'],selected[name]['Architecture'])==package_pins[name]
+             for name in PACKAGE_NAMES),
+         'five exact installed package version/architecture pairs')
     parent=value['parent'];keys(parent,'meta controls alreadyEnabled')
     info=parent['meta']
     need(type(info) is list and len(info)==8 and all(type(x) is int for x in info) and
@@ -7837,6 +7851,7 @@ def consumed_v7_path_failure_audit(raw,external,outer_raw,cleanup_raw,shell_raw)
          info[3:7]==[0,0,1,0] and
          all(equal(row[key],info) for key in ('namedBefore','heldAfter','namedAfter')),
          'typed pre-inventory empty Python source readback')
+    total=0
     for path,entry in files.items():
         runtime_path(path);keys(entry,'bytes sha256 mode kind');digest(entry['sha256'])
         fact=metadata[path]
@@ -7849,6 +7864,8 @@ def consumed_v7_path_failure_audit(raw,external,outer_raw,cleanup_raw,shell_raw)
              ('node-binary','python-binary','qemu-binary','observation-tool',
               'tool-interpreter','elf-interpreter','shared-library'),
              'bounded pre-failure file and held metadata')
+        total+=entry['bytes']
+    need(total<=1073741824,'partial file aggregate extent')
     for path,entry in aliases.items():
         runtime_path(path);keys(entry,'linkText target');runtime_path(entry['target'])
         need(type(entry['linkText']) is str and
@@ -7861,6 +7878,17 @@ def consumed_v7_path_failure_audit(raw,external,outer_raw,cleanup_raw,shell_raw)
     need(all(resolve_alias(path,aliases)==path for path in files) and
          equal(metadata[NODE_STAGE_TARGET],value['stageAfter']['files']['node']['before']),
          'selected Node and partial graph source readback')
+    for role,named in (('node',NODE_STAGE_TARGET),('python','/usr/bin/python3'),
+                       ('qemu',RUNTIME_QEMU)):
+        path=resolve_alias(named,aliases)
+        expected=CONSUMED_V7_PYTHON if role=='python' else RUNTIME_SELECTED[role]
+        need(path in files and files[path]['kind']==role+'-binary' and
+             {key:files[path][key] for key in ('bytes','sha256')}==expected and
+             files[path]['mode']&0o111!=0,
+             'exact consumed executable bytes/hash/kind/mode')
+    need(files[NODE_STAGE_TARGET]['bytes']==value['stageAfter']['files']['node']['bytes'] and
+         files[NODE_STAGE_TARGET]['sha256']==value['stageAfter']['files']['node']['sha256'],
+         'staged Node file hash and extent join')
     probes,processes=inventory['probes'],inventory['processes']
     setup_v7_observed_order(probes,processes,partial=True)
     need(len(probes)==9,'exact nine-child failed prefix')
@@ -7886,6 +7914,8 @@ def consumed_v7_path_failure_audit(raw,external,outer_raw,cleanup_raw,shell_raw)
              probe['environment']==process['environment']==
              {'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'} and
              process['schema']=='bw.ring3.inventory-process.v1' and
+             type(process['exitCode']) is int and type(probe['exitCode']) is int and
+             type(process['waitStatus']) is int and
              process['exitCode']==probe['exitCode']==0 and process['waitStatus']==0 and
              process['signal'] is None and process['timedOut'] is False and
              process['firstFailure'] is None and process['secondary']==[] and
@@ -7916,10 +7946,14 @@ def consumed_v7_path_failure_audit(raw,external,outer_raw,cleanup_raw,shell_raw)
                  'complete early ldd paths join partial files')
         elif role=='package-version':
             rows=[line.split('\t') for line in probe['stdout'].splitlines()]
+            expected={(name,version,arch) for name,version,arch,*_ in SETUP_V7_PACKAGES
+                      if name in PACKAGE_NAMES}
             need(len(rows)==5 and all(len(row)==3 for row in rows) and
-                 {row[0] for row in rows}==set(PACKAGE_NAMES) and
-                 ['qemu-system-x86','1:8.2.2+ds-0ubuntu1.18','amd64'] in rows,
-                 'exact five returned package version rows')
+                 {tuple(row) for row in rows}==expected and
+                 all(tuple(row[1:])==package_pins[row[0]] and
+                     selected[row[0]]['Version']==row[1] and
+                     selected[row[0]]['Architecture']==row[2] for row in rows),
+                 'exact five returned package rows join selected post-status')
         elif role=='package-files-qemu-system-data':
             listed[role]=consumed_v7_failed_listing(stdout)
         else:

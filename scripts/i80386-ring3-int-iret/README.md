@@ -1531,8 +1531,15 @@ read once with its old byte cap. The reader independently joins the three
 log-carried request/event/runtime originals, source twelve and executing
 workflow, two raw package-status originals and permitted delta, finite
 before/after Node stage, nine ordered zero-exit child streams, the exact
-path-refusal first error, outer exit 1 and absent outside unit. It returns
-`bw.ring3.consumed-v7-path-failure-audit.v1` only with all candidate, setup,
+path-refusal first error, outer exit 1 and absent outside unit.
+The five returned package version/architecture rows must match both the
+fixed selected package pins and independently reparsed post-status. The
+partial file witnesses bind Node and QEMU to their existing fixed hashes,
+and bind Python to this consumed original's exact bytes/hash, with executable
+kind, mode and staged Node readback. Integer exit and wait fields refuse
+Boolean substitutes.
+
+It returns `bw.ring3.consumed-v7-path-failure-audit.v1` only with all candidate, setup,
 guest and official-authentication approvals false and
 `partialMutationPossible: true`. A returned ninth listing is a failed
 attempt, not a complete runtime graph or installation approval. The external

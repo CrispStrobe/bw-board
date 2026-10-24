@@ -9,6 +9,7 @@ import copy
 import base64
 import contextlib
 import importlib.util
+import inspect
 import io
 import json
 import os
@@ -5291,14 +5292,24 @@ class ConsumedV7PathFailureControls(unittest.TestCase):
             'closeSucceeded':True,'firstFailure':None,'secondary':[]}}
         libc='/usr/lib/x86_64-linux-gnu/libc.so.6'
         node=reader.NODE_STAGE_TARGET
+        python='/usr/bin/python3'
+        qemu=reader.RUNTIME_QEMU
         inventory['files']={node:{'bytes':reader.RUNTIME_SELECTED['node']['bytes'],
             'sha256':reader.RUNTIME_SELECTED['node']['sha256'],'mode':0o555,'kind':'node-binary'},
+            python:{'bytes':reader.CONSUMED_V7_PYTHON['bytes'],
+                'sha256':reader.CONSUMED_V7_PYTHON['sha256'],'mode':0o755,'kind':'python-binary'},
+            qemu:{'bytes':reader.RUNTIME_SELECTED['qemu']['bytes'],
+                'sha256':reader.RUNTIME_SELECTED['qemu']['sha256'],'mode':0o755,'kind':'qemu-binary'},
             libc:{'bytes':1234,'sha256':'a'*64,'mode':0o644,'kind':'shared-library'}}
         inventory['fileMetadata']={node:[1,200,0o100555,0,0,1,
             reader.RUNTIME_SELECTED['node']['bytes'],100],
+            python:[1,202,0o100755,0,0,1,reader.CONSUMED_V7_PYTHON['bytes'],100],
+            qemu:[1,203,0o100755,0,0,1,reader.RUNTIME_SELECTED['qemu']['bytes'],100],
             libc:[1,201,0o100644,0,0,1,1234,100]}
         for stage in (value['stageBefore'],value['stageAfter']):
-            stage['files']['node']={'before':inventory['fileMetadata'][node]}
+            stage['files']['node']={'before':inventory['fileMetadata'][node],
+                'bytes':reader.RUNTIME_SELECTED['node']['bytes'],
+                'sha256':reader.RUNTIME_SELECTED['node']['sha256']}
         inventory['aliases']={}
         self.record['sourceCommands']=[{'process':{'reapMonoNs':0}}]
         self.record['setup']['configure']={'process':{'reapMonoNs':0}}
@@ -5433,6 +5444,118 @@ class ConsumedV7PathFailureControls(unittest.TestCase):
         verdict=json.loads(output.getvalue())
         self.assertTrue(verdict['failedAttemptRetained'])
         self.assertFalse(verdict['setupApproved'])
+
+    def test_bool_exit_and_wait_status_cuts(self):
+        for mutation in ('outer-service','outer-cleanup','cleanup-service',
+                         'stop-attempted','stop-timeout','process-exit','probe-exit','wait-status'):
+            with self.subTest(mutation=mutation):
+                self.setUp()
+                if mutation.startswith('outer-'):
+                    row=reader.parse(self.args[2]);row['systemdRunExitCode' if
+                        mutation=='outer-service' else 'outsideCleanupExitCode']=True
+                    self.args[2]=reader.canonical(row)
+                    self.args[1].update(outerBytes=len(self.args[2]),outerSha256=sha(self.args[2]))
+                elif mutation.startswith('cleanup-') or mutation.startswith('stop-'):
+                    row=reader.parse(self.args[3])
+                    if mutation=='cleanup-service':row['serviceExitCode']=True
+                    elif mutation=='stop-attempted':row['stop']['attempted']=0
+                    else:row['stop']['timedOut']=0
+                    self.args[3]=reader.canonical(row)
+                    self.args[1].update(cleanupBytes=len(self.args[3]),cleanupSha256=sha(self.args[3]))
+                else:
+                    probe=self.packet['inventory']['probes'][-1]
+                    process=self.packet['inventory']['processes'][-1]['process']
+                    if mutation=='process-exit':process['exitCode']=False
+                    elif mutation=='probe-exit':probe['exitCode']=False
+                    else:process['waitStatus']=False
+                self.refused()
+
+    def test_all_other_package_versions_coherently_refuse(self):
+        pins={name:(version,arch) for name,version,arch,*_ in reader.SETUP_V7_PACKAGES
+              if name in reader.PACKAGE_NAMES}
+        for name in sorted(set(reader.PACKAGE_NAMES)-{'qemu-system-x86'}):
+            with self.subTest(package=name):
+                self.setUp()
+                old,arch=pins[name];new='0:0.0-authored'
+                probe=self.packet['inventory']['probes'][5]
+                probe['stdout']=probe['stdout'].replace(name+'\t'+old+'\t'+arch,
+                    name+'\t'+new+'\t'+arch)
+                self.packet['inventory']['processes'][5]['stdout']=self.held(probe['stdout'].encode())
+                statuses=reader.decode_setup_v7_status_log(self.args[0])
+                post_raw=statuses['post']['raw']
+                before=('Package: '+name+'\nVersion: '+old+'\n').encode()
+                after=('Package: '+name+'\nVersion: '+new+'\n').encode()
+                self.assertEqual(post_raw.count(before),1)
+                post_raw=post_raw.replace(before,after)
+                p,_=producer_fixture_case();status=io.BytesIO()
+                pre_meta=p.emit_setup_v7_status('pre',statuses['pre']['raw'],status.write,status.flush)
+                post_meta=p.emit_setup_v7_status('post',post_raw,status.write,status.flush)
+                self.status_lines=status.getvalue()
+                self.record['setup']['preflight']['statusOriginal']=pre_meta
+                self.record['setup']['postStatus']['statusOriginal']=post_meta
+                self.record['setup']['postStatus']['selected'][name]['Version']=new
+                self.set_packet_record()
+                with self.assertRaisesRegex(reader.Refusal,'five exact installed package'):
+                    self.grade()
+
+    def test_executable_identity_coherent_cuts(self):
+        for role,path in (('node',reader.NODE_STAGE_TARGET),
+                          ('python','/usr/bin/python3'),('qemu',reader.RUNTIME_QEMU)):
+            for mutation in ('hash','bytes','kind'):
+                with self.subTest(role=role,mutation=mutation):
+                    self.setUp()
+                    row=self.packet['inventory']['files'][path]
+                    if mutation=='hash':
+                        row['sha256']='0'*64
+                        if role=='node':
+                            for stage in (self.packet['stageBefore'],self.packet['stageAfter']):
+                                stage['files']['node']['sha256']='0'*64
+                    elif mutation=='bytes':
+                        row['bytes']+=1
+                        self.packet['inventory']['fileMetadata'][path][6]+=1
+                        if role=='node':
+                            for stage in (self.packet['stageBefore'],self.packet['stageAfter']):
+                                stage['files']['node']['bytes']+=1
+                    else:row['kind']='shared-library'
+                    self.set_packet_record()
+                    with self.assertRaisesRegex(reader.Refusal,'exact consumed executable'):
+                        self.grade()
+
+    @staticmethod
+    def mutant(function,old,new):
+        source=inspect.getsource(function)
+        assert source.count(old)==1,'mutation anchor changed'
+        namespace=dict(reader.__dict__)
+        exec(compile(source.replace(old,new,1),'<inert source mutation>','exec'),namespace)
+        return namespace[function.__name__]
+
+    def test_source_guard_mutants_are_detected(self):
+        self.packet['firstFailure']={'phase':'other','name':'Refusal','message':'other'}
+        self.refused()
+        mutant=self.mutant(reader.consumed_v7_path_failure_audit,
+            "value['candidate'] is None and value['firstFailure']==first and",
+            "value['candidate'] is None and True and")
+        self.assertTrue(mutant(*self.args)['failedAttemptRetained'])
+        self.setUp()
+        probe=self.packet['inventory']['probes'][-1]
+        probe['stdout']=probe['stdout'].replace('/usr/share/qemu/QEMU,tcx.bin\n','')
+        self.packet['inventory']['processes'][-1]['stdout']=self.held(probe['stdout'].encode())
+        self.refused()
+        mutant=self.mutant(reader.consumed_v7_failed_listing,
+            "need(commas==CONSUMED_V7_COMMA_PATHS,'all three observed comma names retained')",
+            "need(True,'all three observed comma names retained')")
+        with patch.object(reader,'consumed_v7_failed_listing',mutant):
+            self.assertTrue(self.grade()['failedAttemptRetained'])
+        self.setUp()
+        outer=reader.parse(self.args[2]);outer['systemdRunExitCode']=True
+        self.args[2]=reader.canonical(outer)
+        self.args[1].update(outerBytes=len(self.args[2]),outerSha256=sha(self.args[2]))
+        with self.assertRaisesRegex(reader.Refusal,'exact failed outer1'):
+            self.grade()
+        mutant=self.mutant(reader.consumed_v7_path_failure_audit,
+            "type(outer['systemdRunExitCode']) is int and",
+            'True and')
+        self.assertTrue(mutant(*self.args)['failedAttemptRetained'])
 
 
 def consumed_v7_failure_controls():
