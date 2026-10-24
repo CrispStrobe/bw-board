@@ -109,6 +109,115 @@ jobs:
           include-hidden-files: false
           retention-days: 1
 
+  setup-runtime-inventory-v9:
+    if: ${{ github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-setup-runtime-inventory-v9' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      BW_RING3_SETUP_INVENTORY_V9_REQUEST_SHA256: ${{ vars.BW_RING3_SETUP_INVENTORY_V9_REQUEST_SHA256 }}
+      BW_RING3_SETUP_INVENTORY_V9_REQUEST_B64: ${{ vars.BW_RING3_SETUP_INVENTORY_V9_REQUEST_B64 }}
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      PYTHONPATH: ''
+      PYTHONHOME: ''
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Bounded v9 package setup and dropped runtime inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git --no-replace-objects -c gc.auto=0 -c maintenance.auto=false rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          git diff --quiet
+          git diff --cached --quiet
+          BW_EXPECTED_TREE="$(git --no-replace-objects -c gc.auto=0 -c maintenance.auto=false rev-parse 'HEAD^{tree}')"
+          export BW_EXPECTED_TREE
+          ring3_setup_uid="$(id -u)"
+          ring3_setup_gid="$(id -g)"
+          mkdir -p build
+          mkdir -m 700 build/i80386-ring3-setup-runtime-inventory-v9
+          /usr/bin/python3 -I -S -B scripts/i80386-ring3-int-iret/run.py --setup-v9-image-shell \
+            > build/i80386-ring3-setup-runtime-inventory-v9/shell-image.original.json
+          ring3_v9_service() {
+            sudo -- /usr/bin/timeout --kill-after=5s 720s /usr/bin/systemd-run --wait --pipe \
+            --unit="bw-ring3-setup-v9-${GITHUB_RUN_ID}-1" \
+            --property=CPUQuota=100% --property=MemoryMax=1073741824 \
+            --property=MemorySwapMax=0 --property=TasksMax=64 \
+            --property=RuntimeMaxSec=660 --property=TimeoutStopSec=5 \
+            --working-directory="$PWD" \
+            /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+            SUDO_UID="$ring3_setup_uid" SUDO_GID="$ring3_setup_gid" \
+            BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+            BW_RING3_SETUP_INVENTORY_V9_REQUEST_SHA256="$BW_RING3_SETUP_INVENTORY_V9_REQUEST_SHA256" \
+            BW_RING3_SETUP_INVENTORY_V9_REQUEST_B64="$BW_RING3_SETUP_INVENTORY_V9_REQUEST_B64" \
+            GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+            GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+            GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+            GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" ImageOS="${ImageOS-}" ImageVersion="${ImageVersion-}" \
+            /usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/run.py --setup-runtime-inventory-v9
+          }
+          # The unprivileged runner shell owns the retained output files.
+          set +e
+          ring3_v9_service \
+            > build/i80386-ring3-setup-runtime-inventory-v9/inventory.original.log \
+            2> build/i80386-ring3-setup-runtime-inventory-v9/controller.stderr
+          ring3_setup_exit="$?"
+          set -e
+          ring3_v9_cleanup() {
+            sudo -- /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+            GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+            GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+            GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+            GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" \
+            BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+            BW_RING3_SETUP_INVENTORY_V9_REQUEST_SHA256="$BW_RING3_SETUP_INVENTORY_V9_REQUEST_SHA256" \
+            BW_RING3_SETUP_INVENTORY_V9_REQUEST_B64="$BW_RING3_SETUP_INVENTORY_V9_REQUEST_B64" \
+            BW_SYSTEMD_RUN_EXIT_CODE="$ring3_setup_exit" \
+            /usr/bin/timeout --kill-after=5s 60s /usr/bin/python3 -I -B \
+            scripts/i80386-ring3-int-iret/run.py --cleanup-setup-v9-policy
+          }
+          set +e
+          ring3_v9_cleanup \
+            > build/i80386-ring3-setup-runtime-inventory-v9/outside-cleanup.original.json \
+            2> build/i80386-ring3-setup-runtime-inventory-v9/outside-cleanup.stderr
+          ring3_cleanup_exit="$?"
+          set -e
+          ring3_setup_unit="/sys/fs/cgroup/system.slice/bw-ring3-setup-v9-${GITHUB_RUN_ID}-1.service"
+          ring3_setup_after=absent
+          if test -e "$ring3_setup_unit"; then ring3_setup_after=present; fi
+          /usr/bin/python3 -I -S -B -c 'import json,sys; print(json.dumps({"schema":"bw.ring3.setup-outer-terminal.v9","runId":sys.argv[1],"unit":sys.argv[2],"systemdRunExitCode":int(sys.argv[3]),"outsideCleanupExitCode":int(sys.argv[4]),"cgroupAfter":sys.argv[5]},sort_keys=True,separators=(",",":")))' \
+            "$GITHUB_RUN_ID" "$ring3_setup_unit" "$ring3_setup_exit" "$ring3_cleanup_exit" "$ring3_setup_after" \
+            > build/i80386-ring3-setup-runtime-inventory-v9/outer.original.json
+          test "$(stat -c %s build/i80386-ring3-setup-runtime-inventory-v9/shell-image.original.json)" -le 4096
+          test "$(stat -c %s build/i80386-ring3-setup-runtime-inventory-v9/inventory.original.log)" -le 8388608
+          test "$(stat -c %s build/i80386-ring3-setup-runtime-inventory-v9/controller.stderr)" -le 131072
+          test "$(stat -c %s build/i80386-ring3-setup-runtime-inventory-v9/outside-cleanup.original.json)" -le 16384
+          test "$(stat -c %s build/i80386-ring3-setup-runtime-inventory-v9/outside-cleanup.stderr)" -le 131072
+          test "$ring3_setup_exit" -eq 0
+          test "$ring3_cleanup_exit" -eq 0
+          test "$ring3_setup_after" = absent
+      - name: Retain v9 setup and runtime originals
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-ring3-setup-runtime-inventory-v9-originals
+          path: build/i80386-ring3-setup-runtime-inventory-v9/
+          if-no-files-found: error
+          include-hidden-files: false
+          retention-days: 1
+
   setup-runtime-inventory-v8:
     if: ${{ github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-setup-runtime-inventory-v8' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
     runs-on: ubuntu-24.04
@@ -479,6 +588,7 @@ jobs:
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --consumed-v7-failure-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v7-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v8-only
+          /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v9-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --image-env-diagnostic-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --host-baseline-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/run.py --controls

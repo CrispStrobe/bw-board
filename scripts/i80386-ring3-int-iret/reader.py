@@ -10532,7 +10532,1342 @@ def verify_host_baseline(service_log,shell_raw,outside_raw,official_log,external
         'runtimeApproved':False,'guestApproved':False,'imageAuthenticated':False}
 
 
+
+# Distinct V9 metadata reader. The selected fifteen-role graph remains the same
+# immutable data-only component; all request, event, stage and outside admission
+# below is V9-specific. Historical V8 functions above remain unmodified.
+SETUP_V9_READER_ENABLED=True
+SETUP_V9_IMAGES=('20261012.334.1','20261023.334.3')
+SETUP_V9_PACKAGES=SETUP_V8_PACKAGES
+SETUP_V9_ORDER=SETUP_V8_ORDER
+SETUP_V9_STATUS_SHA=SETUP_V8_STATUS_SHA
+SETUP_V9_STATUS_BYTES=SETUP_V8_STATUS_BYTES
+SETUP_V9_PAYLOAD_PINS=SETUP_V8_PAYLOAD_PINS
+SETUP_V9_HELPERS=SETUP_V8_HELPERS
+SETUP_V9_HELPER_ALIASES=SETUP_V8_HELPER_ALIASES
+SETUP_V9_NEW_HELPER_BYTES=SETUP_V8_NEW_HELPER_BYTES
+SETUP_V9_INSTALLER_ENV=SETUP_V8_INSTALLER_ENV
+SETUP_V9_PLATFORM=tuple('BW_RING3_SETUP_INVENTORY_V9_REQUEST_SHA256' if key=='BW_RING3_SETUP_INVENTORY_V8_REQUEST_SHA256' else
+    'BW_RING3_SETUP_INVENTORY_V9_REQUEST_B64' if key=='BW_RING3_SETUP_INVENTORY_V8_REQUEST_B64' else key
+    for key in SETUP_V8_PLATFORM)
+SETUP_V9_STATUS_MARKER=b'RING3_SETUP_STATUS_V9 '
+SETUP_V9_LOG_MARKER=b'RING3_SETUP_RUNTIME_INVENTORY_V9 '
+SETUP_V9_LOG_ROLES=SETUP_V8_LOG_ROLES
+SETUP_V9_PACKAGE_ROLES=SETUP_V8_PACKAGE_ROLES
+SETUP_V9_PROBE_ROLES=SETUP_V8_PROBE_ROLES
+SETUP_V9_PROBE_ORDER=SETUP_V8_PROBE_ORDER
+SETUP_V9_SIGNED_DATA=SETUP_V8_SIGNED_DATA
+SETUP_V9_DATA_ARCHIVE=SETUP_V8_DATA_ARCHIVE
+SetupV9Inventory=SetupV8Inventory
+setup_v9_runtime_expectation=setup_v8_runtime_expectation
+verify_setup_v9_inventory_graph=verify_setup_v8_inventory_graph
+setup_v9_observed_order=setup_v8_observed_order
+setup_v9_status_rows=setup_v8_status_rows
+setup_v9_status_delta=setup_v8_status_delta
+setup_v9_cgroup_quiet=setup_v8_cgroup_quiet
+setup_v9_expected_forwarded=setup_v8_expected_forwarded
+setup_v9_image_observation=setup_v8_image_observation
+setup_v9_listed_paths=setup_v8_listed_paths
+setup_v9_probe_descriptors=setup_v8_probe_descriptors
+v9_process=v8_process
+
+
+def parse_setup_v9_outer(value):
+    """Only the new combined setup/runtime or failed-entry packet has a 4 MiB cap."""
+    need(type(value) is bytes and 0<len(value)<=4<<20,'versioned v9 outer JSON byte cap')
+    def unique(pairs):
+        result={}
+        for key,item in pairs:
+            need(key not in result,'duplicate v9 outer JSON key')
+            result[key]=item
+        return result
+    def finite(token):
+        value=float(token)
+        need(math.isfinite(value),'nonfinite v9 outer JSON number')
+        return value
+    return json.loads(value.decode('utf-8'),object_pairs_hook=unique,parse_float=finite,
+                      parse_constant=lambda _:(_ for _ in ()).throw(Refusal('nonfinite v9 outer JSON')))
+
+
+def decode_setup_v9_shell(raw,external):
+    need(type(raw) is bytes and 0<len(raw)<=4096 and
+         integer(external['shellBytes'],1,4096)==len(raw) and
+         digest(external['shellSha256'])==sha(raw),
+         'externally selected exact v9 shell image original')
+    value=parse(raw);keys(value,'schema fields fieldErrors setupAttempted guestAttempted setupApproved')
+    need(raw==canonical(value) and value['schema']=='bw.ring3.setup-image-shell.v9' and
+         value['setupAttempted'] is False and value['guestAttempted'] is False and
+         value['setupApproved'] is False,'canonical no-setup v9 shell observation')
+    setup_v9_image_observation(value['fields'],value['fieldErrors'])
+    return value
+
+
+def setup_v9_policy():
+    return {'imageOS':'ubuntu24','imageVersions':list(SETUP_V9_IMAGES),
+        'statusSha256':SETUP_V9_STATUS_SHA,
+        'helperSha256':SETUP_V9_HELPERS,'helperAliases':SETUP_V9_HELPER_ALIASES,
+        'packages':[{'package':name,'version':version,'architecture':arch,'filename':filename,'size':size,'sha256':digest}
+            for name,version,arch,filename,size,digest in SETUP_V9_PACKAGES],
+        'configureOrder':list(SETUP_V9_ORDER),'unpackOptions':['--no-triggers','--unpack'],
+        'configureOptions':['--no-triggers','--configure'],'policyPath':'/usr/sbin/policy-rc.d',
+        'policyExit':101,'installerPath':'/usr/sbin:/usr/bin:/bin','deferredTriggers':True,'apt':False,'recommends':False,'force':False,
+        'upgrade':False,'configurationComplete':False}
+
+
+def setup_v9_request(raw,pin):
+    need(type(raw) is bytes and 0<len(raw)<=32768 and digest(pin)==sha(raw),'externally selected v9 request')
+    value=parse(raw);keys(value,'schema repository pullRequest head tree source selected nodeStage emptyPythonSources setup payloadWitness')
+    need(raw==canonical(value) and value['schema']=='bw.ring3.inventory-request.v9','canonical v9 request')
+    base={key:value[key] for key in ('repository','pullRequest','head','tree','source','selected','nodeStage','emptyPythonSources')}
+    base['schema']='bw.ring3.inventory-request.v3'
+    old,source=staged_runtime_request(canonical(base),sha(canonical(base)))
+    need(equal(value['setup'],setup_v9_policy()),'exact selected v9 setup policy')
+    need(type(SETUP_V9_PAYLOAD_PINS) is dict and len(SETUP_V9_PAYLOAD_PINS['archives'])==15 and
+         all((item['package'],item['archiveBytes'],item['archiveSha256'])==(name,size,digest)
+             for item,(name,version,arch,filename,size,digest) in
+             zip(SETUP_V9_PAYLOAD_PINS['archives'],SETUP_V9_PACKAGES)),
+         'independent payload/archive selection join')
+    need(SETUP_V9_PAYLOAD_PINS is not None and equal(value['payloadWitness'],SETUP_V9_PAYLOAD_PINS),
+         'separately reviewed payload/control witness required')
+    selected_archive=next(item for item in value['payloadWitness']['archives']
+                          if item['package']=='qemu-system-data')
+    need(selected_archive['archiveBytes']==SETUP_V9_DATA_ARCHIVE['bytes'] and
+         selected_archive['archiveSha256']==SETUP_V9_DATA_ARCHIVE['sha256'] and
+         selected_archive['dataTarSha256']==SETUP_V9_DATA_ARCHIVE['dataTarSha256'] and
+         selected_archive['payloadManifestSha256']==SETUP_V9_DATA_ARCHIVE['payloadManifestSha256'],
+         'independent signed DATA archive/tar/manifest selection')
+    return value,source
+
+
+def setup_v9_event(raw,request,pin,environment):
+    need(type(raw) is bytes and 0<len(raw)<=CAPS['jsonBytes'],'bounded raw v9 event')
+    try:event=parse_setup_v9_outer(raw)
+    except (ValueError,UnicodeError,OverflowError) as error:
+        raise Refusal('finite duplicate-free v9 event JSON') from error
+    need(type(event) is dict,'object v9 event')
+    pr=event.get('pull_request',{});body=pr.get('body')
+    start='<!-- BW_RING3_SETUP_RUNTIME_INVENTORY_V9\n';end='\nBW_RING3_SETUP_RUNTIME_INVENTORY_V9 -->'
+    need(type(body) is str and body.count(start)==body.count(end)==1 and body.index(start)<body.index(end),'one v9 request block')
+    block=body.split(start,1)[1].split(end,1)[0]
+    encoded=environment.get('BW_RING3_SETUP_INVENTORY_V9_REQUEST_B64')
+    need(block==pin and type(encoded) is str and 0<len(encoded)<=43692,
+         'exact v9 SHA-only body and repository request')
+    try:raw=base64.b64decode(encoded,validate=True)
+    except (ValueError,TypeError) as error:raise Refusal('invalid v9 request base64') from error
+    need(0<len(raw)<=32768 and base64.b64encode(raw).decode('ascii')==encoded and
+         raw==canonical(request) and sha(raw)==pin,'exact immutable v9 request bytes')
+    need(event.get('action')=='labeled' and event.get('label',{}).get('name')=='x86-ring3-setup-runtime-inventory-v9' and
+         event.get('repository',{}).get('full_name')=='CrispStrobe/bw-board' and event.get('sender',{}).get('login')=='CrispStrobe' and
+         type(event.get('number')) is int and event['number']==request['pullRequest'] and type(pr.get('number')) is int and
+         pr['number']==event['number'] and pr.get('state')=='open' and pr.get('head',{}).get('sha')==request['head'] and
+         pr.get('head',{}).get('repo',{}).get('full_name')=='CrispStrobe/bw-board' and pr['head']['repo'].get('fork') is False and
+         pr.get('base',{}).get('ref')=='master' and pr['base'].get('repo',{}).get('full_name')=='CrispStrobe/bw-board',
+         'exact owned v9 event')
+    need(type(environment) is dict and all(environment.get(k)==v for k,v in {
+        'GITHUB_RUN_ATTEMPT':'1','GITHUB_REPOSITORY':'CrispStrobe/bw-board','GITHUB_EVENT_NAME':'pull_request',
+        'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':'setup-runtime-inventory-v9',
+        'BW_EXPECTED_HEAD':request['head'],'BW_EXPECTED_TREE':request['tree'],
+        'BW_RING3_SETUP_INVENTORY_V9_REQUEST_SHA256':pin,
+        'GITHUB_WORKFLOW_REF':'CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request['pullRequest'])+'/merge'}.items()),
+        'exact v9 platform/source joins')
+    need(type(environment.get('GITHUB_RUN_ID')) is str and re.fullmatch('[1-9][0-9]{0,19}',environment['GITHUB_RUN_ID']),
+         'first v9 run identity');digest(environment.get('GITHUB_WORKFLOW_SHA'),40)
+
+
+def decode_setup_v9_status_log(raw,required_roles=frozenset(('pre','post'))):
+    need(type(raw) is bytes and 0<len(raw)<=8<<20,'bounded official v9 log for status originals')
+    result={}
+    for line in raw.splitlines():
+        at=line.find(SETUP_V9_STATUS_MARKER)
+        if at<0:continue
+        prefix=line[:at]
+        need(prefix==b'' or re.fullmatch(rb'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ',prefix),
+             'canonical status original log timestamp')
+        need(len(line[at:])+1<=1<<20,'one-MiB complete status log frame including LF')
+        packet=parse(line[at+len(SETUP_V9_STATUS_MARKER):])
+        keys(packet,'schema role rawBytes rawSha256 packedBytes packedSha256 encoding packed')
+        role=packet['role'];need(packet['schema']=='bw.ring3.setup-status-original.v9' and
+             role in ('pre','post') and role not in result and packet['encoding']=='zlib+base64',
+             'one fixed raw pre/post status original')
+        size=integer(packet['rawBytes'],1,8<<20);packed_size=integer(packet['packedBytes'],1,700<<10)
+        digest(packet['rawSha256']);digest(packet['packedSha256'])
+        need(type(packet['packed']) is str and len(packet['packed'])==4*((packed_size+2)//3),
+             'exact bounded compressed status encoding')
+        packed=base64.b64decode(packet['packed'],validate=True)
+        need(base64.b64encode(packed).decode()==packet['packed'] and len(packed)==packed_size and
+             sha(packed)==packet['packedSha256'],'exact compressed original bytes')
+        decoder=zlib.decompressobj()
+        decoded=decoder.decompress(packed,(8<<20)+1)
+        need(len(decoded)<=8<<20 and decoder.eof and decoder.unused_data==b'' and
+             decoder.unconsumed_tail==b'' and len(decoded)==size and
+             sha(decoded)==packet['rawSha256'],
+             'complete bounded single zlib stream and raw status SHA')
+        result[role]={'raw':decoded,'meta':{'role':role,'bytes':size,'sha256':sha(decoded),
+            'packedBytes':packed_size,'packedSha256':sha(packed)}}
+    if required_roles is not None:
+        need(set(result)==set(required_roles),'exact retained raw dpkg status original roles')
+    return result
+
+
+def setup_v9_facts(value,run_id,controller_pid,source_last_reap):
+    keys(value,'schema preflight archives policy unpack configure postStatus cleanup policyCleanupCgroup nodeStage runtime partial deferredHostTriggers configurationComplete firstFailure secondary')
+    integer(controller_pid,1);integer(source_last_reap,1)
+    need(value['schema']=='bw.ring3.setup-original.v9' and value['firstFailure'] is None and value['secondary']==[] and
+         value['deferredHostTriggers'] is True and value['configurationComplete'] is False and
+         value['nodeStage'] is None and value['runtime'] is None and value['partial'] is None,
+         'complete setup facts before Node copy')
+    pre=value['preflight'];keys(pre,'imageOS imageVersion imageFields imageFieldErrors statusSha256 statusBytes statusRecords statusOriginal helperSha256 helperWitness helperAliases resource policyAbsent newPackagesAbsent imageFieldsAuthenticated immutableImageIdentityEstablished')
+    need(pre['imageOS']=='ubuntu24' and pre['imageVersion'] in SETUP_V9_IMAGES and
+         pre['imageFieldErrors']==[] and pre['imageFields']=={
+             'ImageOS':{'present':True,'value':'ubuntu24'},
+             'ImageVersion':{'present':True,'value':pre['imageVersion']}} and
+         pre['statusSha256']==SETUP_V9_STATUS_SHA and
+         integer(pre['statusBytes'],1,8<<20)==SETUP_V9_STATUS_BYTES and integer(pre['statusRecords'],1,5000)==1211 and
+         equal(pre['helperSha256'],SETUP_V9_HELPERS) and
+         equal(pre['helperAliases'],SETUP_V9_HELPER_ALIASES) and
+         pre['policyAbsent'] is True and
+         pre['newPackagesAbsent'] is True and pre['imageFieldsAuthenticated'] is False and
+         pre['immutableImageIdentityEstablished'] is False,'fresh observed selected pre-state, no image-auth claim')
+    witnesses=pre['helperWitness']
+    need(type(witnesses) is dict and set(witnesses)==set(SETUP_V9_HELPERS),
+         'ten named/held v9 helper witnesses')
+    for path,pin in SETUP_V9_HELPERS.items():
+        item=witnesses[path]
+        keys(item,'path namedBefore heldBefore heldAfter namedAfter bytesRead sha256 closeAttempted closeSucceeded')
+        need(item['path']==path and item['sha256']==pin and item['closeAttempted'] is True and
+             item['closeSucceeded'] is True and item['namedBefore']==item['heldBefore']==
+             item['heldAfter']==item['namedAfter'],'closed stable reported helper identity')
+        info=item['heldBefore']
+        need(type(info) is list and len(info)==8 and all(type(n) is int for n in info) and
+             stat.S_ISREG(info[2]) and info[3:6]==[0,0,1] and info[2]&0o022==0 and
+             type(item['bytesRead']) is int and 0<item['bytesRead']==info[6]<=2<<20 and
+             item['bytesRead']==SETUP_V9_NEW_HELPER_BYTES.get(path,item['bytesRead']),
+             'reported root-owned helper mode and signed new-helper extent')
+    pre_original=pre['statusOriginal'];keys(pre_original,'role bytes sha256 packedBytes packedSha256')
+    need(pre_original['role']=='pre' and pre_original['bytes']==pre['statusBytes'] and
+         pre_original['sha256']==pre['statusSha256'] and
+         integer(pre_original['packedBytes'],1,700<<10)>0 and
+         digest(pre_original['packedSha256']),'held pre-status original summary')
+    resource_row=pre['resource'];keys(resource_row,'membership limits')
+    need(resource_row['membership']=='0::/system.slice/bw-ring3-setup-v9-'+run_id+'-1.service\n' and
+         equal(resource_row['limits'],{'cpuMax':'100000 100000','memoryMax':'1073741824',
+             'swapMax':'0','pidsMax':'64'}),'observed fixed outer setup cgroup limits')
+    archives=value['archives'];need(type(archives) is list and len(archives)==15,'exact fifteen acquired archives')
+    need(sum(row[4] for row in SETUP_V9_PACKAGES)==16400088 and all(row[4]<=12<<20 for row in SETUP_V9_PACKAGES),
+         'fixed aggregate/per-archive bytes')
+    archive_root='/run/bw-ring3-setup-v9-'+run_id+'-1/'
+    for index,(item,(name,version,arch,filename,size,pin)) in enumerate(zip(archives,SETUP_V9_PACKAGES)):
+        keys(item,'package path url bytes sha256 identity closeSucceeded')
+        need(equal(item['package'],{'package':name,'version':version,'architecture':arch,'filename':filename,'size':size,'sha256':pin}) and
+             item['path']==archive_root+str(index).zfill(2)+'.deb' and
+             item['url']=='https://snapshot.ubuntu.com/ubuntu/20261019T000000Z/'+filename and
+             type(item['bytes']) is int and item['bytes']==size and item['sha256']==pin and item['closeSucceeded'] is True,
+             'ordered exact archive selected bytes/URL and closed observation')
+        info=item['identity'];need(type(info) is list and len(info)==8 and all(type(n) is int for n in info) and
+             stat.S_ISREG(info[2]) and stat.S_IMODE(info[2])==0o600 and info[3:7]==[0,0,1,size],
+             'held root-owned regular archive fact')
+    policy=value['policy'];keys(policy,'path identity sha256 mode exclusive')
+    need(policy['path']=='/usr/sbin/policy-rc.d' and policy['sha256']==sha(b'#!/bin/sh\nexit 101\n') and
+         policy['mode']==0o755 and policy['exclusive'] is True,'exact owned policy101 bytes/mode')
+    info=policy['identity'];need(type(info) is list and len(info)==8 and all(type(n) is int for n in info) and
+         stat.S_ISREG(info[2]) and stat.S_IMODE(info[2])==0o755 and info[3:7]==[0,0,1,19],
+         'held owned policy identity')
+    need(equal(value['cleanup'],{'removedExactOwnIdentity':True,'identity':info}),
+         'same exact policy identity removed before Node stage')
+    last=source_last_reap
+    for phase,args in (('unpack',['--no-triggers','--unpack']+[item['path'] for item in archives]),
+                       ('configure',['--no-triggers','--configure',*SETUP_V9_ORDER])):
+        row=value[phase];keys(row,'argv process stdout stderr exitCode timedOut firstFailure secondary cgroupAfter')
+        argv=['/usr/bin/dpkg',*args];need(equal(row['argv'],argv) and row['exitCode']==0 and row['timedOut'] is False and
+             row['firstFailure'] is None and row['secondary']==[],'fixed no-triggers dpkg phase')
+        start,end=v9_process(row['process'],'setup-v9',argv,
+            SETUP_V9_INSTALLER_ENV,120000)
+        need(row['process']['parentPid']==controller_pid and last<=start,
+             'same root controller and Git/unpack/configure chronology')
+        last=end
+        census=row['cgroupAfter'];keys(census,'phase cgroupProcs cgroupEvents cgroupStat onlyController')
+        need(census['phase']==phase and
+             setup_v9_cgroup_quiet(census['cgroupProcs'],census['cgroupEvents'],
+                                   census['cgroupStat'],controller_pid) and
+             census['onlyController'] is True,'finite no-descendant setup phase census')
+        for stream in ('stdout','stderr'):
+            encoded=row[stream]
+            if encoded is not None:need(len(prerequisite_original(canonical(encoded)))<=128<<10,'bounded dpkg original stream')
+    need(value['unpack']['process']['reapMonoNs']<=value['configure']['process']['spawnMonoNs'],
+         'unpack completed before configure')
+    census=value['policyCleanupCgroup'];keys(census,'phase cgroupProcs cgroupEvents cgroupStat onlyController')
+    need(census['phase']=='policy-cleanup' and
+         setup_v9_cgroup_quiet(census['cgroupProcs'],census['cgroupEvents'],
+                               census['cgroupStat'],controller_pid) and
+         census['onlyController'] is True,
+         'only root controller remained before global policy removal')
+    post=value['postStatus'];keys(post,'sha256 bytes records selected pendingHostTriggers serviceObserved statusOriginal allSelectedPresent allowedStates deferredHostTriggers configurationComplete')
+    digest(post['sha256']);integer(post['bytes'],1,8<<20);integer(post['records'],1,5000)
+    post_original=post['statusOriginal'];keys(post_original,'role bytes sha256 packedBytes packedSha256')
+    need(post_original['role']=='post' and post_original['bytes']==post['bytes'] and
+         post_original['sha256']==post['sha256'] and
+         integer(post_original['packedBytes'],1,700<<10)>0 and
+         digest(post_original['packedSha256']),'held post-status original summary')
+    need(post['allSelectedPresent'] is True and post['allowedStates'] is True and
+         post['deferredHostTriggers'] is True and post['configurationComplete'] is False and
+         type(post['selected']) is dict and set(post['selected'])=={row[0] for row in SETUP_V9_PACKAGES},
+         'all selected post-status rows and deferred configuration')
+    for name,version,arch,*_ in SETUP_V9_PACKAGES:
+        row=post['selected'][name];keys(row,'Package Version Architecture Status Triggers-Pending Triggers-Awaited')
+        need((row['Package'],row['Version'],row['Architecture'])==(name,version,arch) and
+             row['Status'] in ('install ok installed','install ok triggers-pending','install ok triggers-awaited') and
+             all(type(row[key]) in (str,type(None)) for key in ('Triggers-Pending','Triggers-Awaited')),
+             'versioned selected package status, including pending trigger facts')
+    pending=post['pendingHostTriggers']
+    need(type(pending) is dict and len(pending)<=5000,'bounded actual host trigger rows')
+    for name,row in pending.items():
+        need(type(name) is str and re.fullmatch('[A-Za-z0-9.+-]+:(?:amd64|all)',name),
+             'architecture-qualified host trigger package')
+        keys(row,'status pending awaited')
+        need(type(row['status']) is str and len(row['status'])<=128 and
+             all(type(row[key]) in (str,type(None)) and (row[key] is None or len(row[key])<=4096)
+                 for key in ('pending','awaited')) and
+             (row['status'] in ('install ok triggers-pending','install ok triggers-awaited') or
+              row['pending'] is not None or row['awaited'] is not None),'honest bounded pending host trigger fact')
+    need(equal(post['serviceObserved'],{'unit':SETUP_V9_PAYLOAD_PINS['serviceUnit'],
+        'init':SETUP_V9_PAYLOAD_PINS['initScript']}),
+        'exact reviewed service unit and init script payload bytes; no service execution')
+    return {'setupObserved':True,'deferredHostTriggers':True,'completeHostConfiguration':False,
+        'imageFieldsAuthenticated':False,'immutableImageIdentityEstablished':False}
+
+
+def setup_v9_stage_record(record,pin):
+    keys(record,'schema request event platform source sourceCommands eventIdentity setup copy recordBoundary firstFailure secondary')
+    need(record['schema']=='bw.ring3.node-stage-original.v9' and record['firstFailure'] is None and
+         record['secondary']==[] and record['recordBoundary']==
+         'verified copy after selected setup and policy cleanup, before directory publication',
+         'closed v9 stage record')
+    request_raw=prerequisite_original(canonical(record['request']));request,source=setup_v9_request(request_raw,pin)
+    event_raw=prerequisite_original(canonical(record['event']));environment=record['platform']
+    need(type(environment) is dict and set(environment)==set(SETUP_V9_PLATFORM),'closed v9 stage platform')
+    setup_v9_event(event_raw,request,pin,environment)
+    need(equal(record['source'],source),'root Git/live source12 joins selected request')
+    copy=record['copy'];keys(copy,'created sourceBefore sourceAfter sourceNamedAfter bytesCopied sourceBytesRead writeUncertain targetAfterFailure directoryAfterFailure copiedSha256 readbackSha256 filePublicationAttempted directoryPublicationAttempted filePublished directoryPublished file directory')
+    need(copy['created']==[str(NODE_STAGE_ROOT),NODE_STAGE_TARGET] and copy['filePublicationAttempted'] is True and
+         copy['directoryPublicationAttempted'] is False and copy['filePublished'] is True and copy['directoryPublished'] is False and
+         type(copy['bytesCopied']) is int and copy['bytesCopied']==RUNTIME_SELECTED['node']['bytes'] and
+         type(copy['sourceBytesRead']) is int and copy['sourceBytesRead']==copy['bytesCopied'] and
+         copy['writeUncertain'] is False and copy['targetAfterFailure'] is None and copy['directoryAfterFailure'] is None and
+         copy['copiedSha256']==copy['readbackSha256']==RUNTIME_SELECTED['node']['sha256'],
+         'fixed verified Node copy before directory publication')
+    for name in ('sourceBefore','sourceAfter','sourceNamedAfter','file','directory'):
+        info=copy[name];need(type(info) is list and len(info)==8 and all(type(x) is int for x in info) and
+             all(0<=x<2**64 for x in info[:7]) and -2**63<=info[7]<2**63,'raw v9 stage metadata')
+    before=copy['sourceBefore'];need(before==copy['sourceAfter']==copy['sourceNamedAfter'] and
+         stat.S_ISREG(before[2]) and before[2]&0o6000==0 and before[5:7]==[1,RUNTIME_SELECTED['node']['bytes']],
+         'held Node cache source extent/identity')
+    file,directory=copy['file'],copy['directory']
+    need(stat.S_ISREG(file[2]) and stat.S_IMODE(file[2])==0o555 and file[3:7]==[0,0,1,RUNTIME_SELECTED['node']['bytes']] and
+         stat.S_ISDIR(directory[2]) and stat.S_IMODE(directory[2])==0o700 and directory[3:5]==[0,0],
+         'fixed staged Node file/directory')
+    commands=record['sourceCommands'];need(type(commands) is list and len(commands)==3,'three original v9 source Git commands')
+    git=['--no-replace-objects','-c','gc.auto=0','-c','maintenance.auto=false']
+    tails=[['rev-parse','HEAD'],['rev-parse','HEAD^{tree}'],['ls-tree','-r','HEAD','--',*sorted(SETUP_SOURCE_PATHS)]]
+    outputs=[(request['head']+'\n').encode(),(request['tree']+'\n').encode(),
+        ''.join(source['files'][path]['mode']+' blob '+source['files'][path]['blob']+'\t'+path+'\n'
+            for path in sorted(SETUP_SOURCE_PATHS)).encode()]
+    previous=0;parent=None;safe=None
+    for index,command in enumerate(commands):
+        keys(command,'argv process stdout stderr');argv=command['argv']
+        need(type(argv) is list and len(argv)>3 and argv[:2]==['/usr/bin/git','-c'] and
+             type(argv[2]) is str and argv[2].startswith('safe.directory=/'),'scoped v9 Git source checkout')
+        if safe is None:safe=argv[2]
+        need(argv==['/usr/bin/git','-c',safe,*git,*tails[index]],'fixed v9 Git command')
+        process=command['process'];start,end=v9_process(process,'discovery',argv,
+            {'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin','GIT_NO_LAZY_FETCH':'1','GIT_CONFIG_NOSYSTEM':'1'},10000)
+        if parent is None:parent=process['parentPid']
+        need(start>=previous and process['parentPid']==parent,'sequential source Git children');previous=end
+        need(prerequisite_original(canonical(command['stdout']))==outputs[index] and command['stderr'] is None,
+             'exact original source Git output')
+    setup_v9_facts(record['setup'],environment['GITHUB_RUN_ID'],parent,previous)
+    keys(record['eventIdentity'],'st_dev st_ino st_mode st_uid st_gid st_nlink st_size st_mtime_ns')
+    event_meta=record['eventIdentity']
+    need(all(type(x) is int for x in event_meta.values()) and event_meta['st_size']==len(event_raw) and
+         stat.S_ISREG(event_meta['st_mode']),'held official event snapshot extent')
+    return request,source
+
+
+def observe_setup_v9_stage(environ):
+    value={'schema':'bw.ring3.setup-node-observation.v9','stageObserved':False,'runtimeCandidate':False,
+        'qualified':False,'record':None,'files':{},'directories':[],'source':{},'identity':None,
+        'firstFailure':None,'secondary':[],'publicationSafe':False};backend=None
+    def failed(error,phase):
+        item={'phase':phase,'name':type(error).__name__,'message':str(error)}
+        if value['firstFailure'] is None:value['firstFailure']=item
+        else:value['secondary'].append(item)
+        value['secondary'].extend(getattr(error,'setup_secondary',[]))
+    try:
+        ids=[environ.get('SUDO_'+name,'') for name in ('UID','GID')]
+        need(all(type(x) is str and re.fullmatch('[1-9][0-9]{0,9}',x) and int(x)<2**31 for x in ids),
+             'known v9 dropped observer invoker')
+        uid,gid=map(int,ids)
+        need(os.getresuid()==(uid,)*3 and os.getresgid()==(gid,)*3 and os.getgroups()==[],
+             'actual irreversible dropped v9 IDs/groups')
+        status=setup_proc_read('/proc/self/status');membership=setup_proc_read('/proc/self/cgroup')
+        setup_membership(membership,environ['GITHUB_RUN_ID'])
+        value['identity']={'uid':uid,'gid':gid,'groups':os.getgroups(),'status':status,
+            'membership':membership,'pid':os.getpid()}
+        node_stage_identity(value['identity'],uid,gid);value['publicationSafe']=True
+        pin=digest(environ.get('BW_RING3_SETUP_INVENTORY_V9_REQUEST_SHA256'))
+        backend=NodeStageReadonly();backend.open();record_raw=backend.read('installation.original.json',True)
+        value['record']={'bytes':len(record_raw),'sha256':sha(record_raw),'base64':base64.b64encode(record_raw).decode()}
+        record=parse(record_raw);request,source=setup_v9_stage_record(record,pin)
+        need(value['identity']['pid']==record['sourceCommands'][0]['process']['parentPid'],
+             'same installer/dropped observer PID across exec')
+        event_raw=prerequisite_original(canonical(record['event']));setup_v9_event(event_raw,request,pin,environ)
+        need(set(environ)==set(SETUP_V9_PLATFORM)|{'LANG','HOME','PATH'} and all(environ[key]==expected for key,expected in
+            {'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'}.items()) and
+            equal(record['platform'],{key:environ[key] for key in SETUP_V9_PLATFORM}),
+            'closed actual dropped platform join')
+        for path,row in sorted(source['files'].items()):
+            target=Path.cwd()/path;info=target.lstat()
+            need(target.resolve(strict=True)==target and stat.S_ISREG(info.st_mode) and
+                 stat.S_IMODE(info.st_mode)==0o644 and (info.st_uid,info.st_gid)==(uid,gid),
+                 'live dropped v9 source regular owner/mode')
+            raw=inventory_file(target,4<<20)
+            fact={'bytes':len(raw),'sha256':sha(raw),
+                'blob':hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest(),'mode':'100644'}
+            value['source'][path]=fact;need(equal(fact,row),'independent dropped source12 bytes')
+        backend.read('node')
+        need(backend.facts['node']['before']==record['copy']['file'],'finite staged Node inode join')
+        value['stageObserved']=True
+    except BaseException as error:failed(error,'setup-v9-stage-observer')
+    finally:
+        if backend is not None:
+            value['files']=backend.facts
+            value['directories']=[{'path':str(path),'before':metadata} for path,fd,metadata in backend.directories]
+            try:backend.close()
+            except BaseException as error:failed(error,'setup-v9-stage-close')
+    return value
+
+
+def setup_v9_inventory_entry(environ,files=None,probe=None):
+    value={'schema':'bw.ring3.setup-runtime-inventory-original.v9','stageBefore':None,'stageAfter':None,
+        'parent':None,'inventory':None,'candidate':None,'firstFailure':None,'secondary':[],
+        'publicationSafe':False,'actualGuestApproved':False,'completeHostConfiguration':False}
+    originals={};inventory=None
+    def failed(error,phase):
+        item=getattr(error,'inventory_first',{'phase':phase,'name':type(error).__name__,'message':str(error)})
+        if value['firstFailure'] is None:value['firstFailure']=item
+        else:value['secondary'].append(item)
+        value['secondary'].extend(getattr(error,'setup_secondary',[]))
+        value['secondary'].extend(getattr(error,'inventory_secondary',[]))
+    try:
+        before=observe_setup_v9_stage(environ);value['stageBefore']=before
+        value['publicationSafe']=before['publicationSafe']
+        if before['firstFailure'] is not None:
+            error=Refusal(before['firstFailure']['message']);error.inventory_first=before['firstFailure']
+            error.inventory_secondary=before['secondary'];raise error
+        need(before['stageObserved'] is True,'complete dropped v9 stage before metadata tools')
+        record=parse(prerequisite_original(canonical(before['record'])))
+        originals['setup.request.json']=prerequisite_original(canonical(record['request']))
+        originals['setup.event.json']=prerequisite_original(canonical(record['event']))
+        value['parent']=inventory_parent_availability()
+        inventory=SetupV9Inventory(before['files']['node']['before'],files,probe)
+        candidate=inventory.discover()
+        value['candidate']={'bytes':len(candidate),'sha256':sha(candidate),'base64':base64.b64encode(candidate).decode()}
+    except BaseException as error:failed(error,'setup-v9-runtime-inventory')
+    finally:
+        if inventory is not None:
+            value['inventory']=inventory.partial
+            rejected=getattr(inventory.ops,'rejected',{})
+            if rejected:value['inventory']['rejectedFiles']=rejected
+        if value['stageBefore'] is not None and value['stageBefore']['stageObserved']:
+            after=observe_setup_v9_stage(environ);value['stageAfter']=after
+            if after['firstFailure'] is not None:
+                error=Refusal(after['firstFailure']['message']);error.inventory_first=after['firstFailure']
+                error.inventory_secondary=after['secondary'];failed(error,'setup-v9-stage-after')
+            elif not all(equal(after[key],value['stageBefore'][key]) for key in ('record','files','directories','source')):
+                failed(Refusal('v9 source/stage changed across metadata tools'),'setup-v9-stage-after')
+    raw=canonical(value)
+    if len(raw)>4<<20:
+        error={'phase':'setup-v9-original-cap','name':'Refusal','message':'versioned v9 original cap'}
+        if value['firstFailure'] is None:value['firstFailure']=error
+        else:value['secondary'].append(error)
+        prefix=raw[:128<<10]
+        raw=canonical({'schema':'bw.ring3.setup-runtime-inventory-overflow.v9',
+            'firstFailure':value['firstFailure'],'secondary':value['secondary'],
+            'attemptedBytes':len(raw),'attemptedSha256':sha(raw),
+            'prefix':{'bytes':len(prefix),'sha256':sha(prefix),'base64':base64.b64encode(prefix).decode()}})
+    originals['runtime.setup-inventory.json']=raw
+    return originals,value['firstFailure'] is None and value['secondary']==[],value['publicationSafe']
+
+
+def emit_setup_v9_inventory(originals,emit,flush):
+    need(type(originals) is dict and set(originals)<=set(SETUP_V9_LOG_ROLES) and
+         all(type(raw) is bytes and 0<len(raw)<=4<<20 for raw in originals.values()) and
+         sum(map(len,originals.values()))<=6<<20,'bounded v9 original roles')
+    emitted=0;chunks=0
+    for name,raw in sorted(originals.items()):
+        encoded=base64.b64encode(raw).decode();count=max(1,(len(encoded)+3071)//3072)
+        raw_sha=sha(raw)
+        need(count<=1821,'bounded v9 original chunk count')
+        for index in range(count):
+            line=SETUP_V9_LOG_MARKER+canonical({'schema':'bw.ring3.setup-runtime-inventory-log.v9',
+                'name':name,'index':index,'count':count,'bytes':len(raw),'sha256':raw_sha,
+                'data':encoded[index*3072:(index+1)*3072]})
+            need(emitted+len(line)<=6<<20 and chunks<3000,'bounded six-MiB v9 runtime component')
+            need(emit(line)==len(line),'complete v9 original log write')
+            emitted+=len(line);chunks+=1
+    flush()
+
+
+def decode_setup_v9_log(raw):
+    need(type(raw) is bytes and 0<len(raw)<=8<<20,'bounded v9 official log original')
+    groups={};chunks=0;wire_bytes=0
+    for line in raw.splitlines():
+        at=line.find(SETUP_V9_LOG_MARKER)
+        if at<0:continue
+        prefix=line[:at]
+        need(prefix==b'' or re.fullmatch(rb'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ',prefix),
+             'canonical v9 official log timestamp')
+        wire_bytes+=len(line[at:])+1
+        need(wire_bytes<=6<<20,'bounded six-MiB v9 runtime component wire')
+        value=parse(line[at+len(SETUP_V9_LOG_MARKER):]);keys(value,'schema name index count bytes sha256 data')
+        need(value['schema']=='bw.ring3.setup-runtime-inventory-log.v9' and value['name'] in SETUP_V9_LOG_ROLES,
+             'closed v9 original log role')
+        count=integer(value['count'],1,1821);index=integer(value['index'],0,count-1)
+        extent=integer(value['bytes'],1,4<<20);digest(value['sha256'])
+        need(type(value['data']) is str and len(value['data'])<=3072,'bounded v9 base64 chunk')
+        group=groups.setdefault(value['name'],{'count':count,'bytes':extent,'sha256':value['sha256'],'parts':[]})
+        need((group['count'],group['bytes'],group['sha256'])==(count,extent,value['sha256']) and
+             index==len(group['parts']),'one ordered v9 original sequence')
+        group['parts'].append(value['data']);chunks+=1;need(chunks<3000,'finite v9 log chunk count')
+    need(set(groups)==set(SETUP_V9_LOG_ROLES),'three complete v9 originals')
+    originals={}
+    for name,group in groups.items():
+        need(len(group['parts'])==group['count'],'complete v9 chunk sequence')
+        encoded=''.join(group['parts']);value=base64.b64decode(encoded,validate=True)
+        need(base64.b64encode(value).decode()==encoded and len(value)==group['bytes'] and
+             sha(value)==group['sha256'],'exact v9 original bytes/hash')
+        originals[name]=value
+    need(sum(map(len,originals.values()))<=6<<20,'bounded raw v9 aggregate')
+    return originals
+
+
+def verify_setup_v9_stage_observation(value,external):
+    keys(value,'schema stageObserved runtimeCandidate qualified record files directories source identity firstFailure secondary publicationSafe')
+    need(value['schema']=='bw.ring3.setup-node-observation.v9' and value['stageObserved'] is True and
+         value['runtimeCandidate'] is False and value['qualified'] is False and value['firstFailure'] is None and
+         value['secondary']==[] and value['publicationSafe'] is True,'complete actual v9 dropped stage observation')
+    record_raw=prerequisite_original(canonical(value['record']));record=parse(record_raw)
+    request,source=setup_v9_stage_record(record,external['requestSha256'])
+    env=record['platform'];need(request['head']==external['head'] and request['tree']==external['tree'] and
+         env['GITHUB_RUN_ID']==external['runId'] and env['GITHUB_WORKFLOW_SHA']==external['workflowSha'] and
+         [env['SUDO_UID'],env['SUDO_GID']]==list(map(str,external['invoker'])),
+         'external v9 source/platform/invoker joins')
+    need(equal(value['source'],source['files']),'actual dropped source12 joins request')
+    identity=value['identity'];node_stage_identity(identity,*external['invoker'])
+    need(identity['pid']==record['sourceCommands'][0]['process']['parentPid'],
+         'installer/observer original PID continuity')
+    setup_membership(identity['membership'],external['runId'])
+    files=value['files'];need(type(files) is dict and set(files)=={'node','installation.original.json'},
+         'two independent v9 stage file observations')
+    for name,row in files.items():
+        keys(row,'before after namedAfter closeSucceeded bytes sha256 prefix')
+        need(row['closeSucceeded'] is True and equal(row['before'],row['after']) and
+             equal(row['before'],row['namedAfter']),'closed stable v9 stage file')
+        metadata=row['before'];need(type(metadata) is list and len(metadata)==8 and
+             all(type(x) is int for x in metadata) and stat.S_ISREG(metadata[2]) and
+             metadata[3:6]==[0,0,1] and metadata[6]==row['bytes'],'root regular stage metadata')
+        mode=0o555 if name=='node' else 0o444
+        need(stat.S_IMODE(metadata[2])==mode,'fixed v9 stage mode')
+        data=value['record'] if name!='node' else RUNTIME_SELECTED['node']
+        need(row['bytes']==data['bytes'] and row['sha256']==data['sha256'],'independent v9 staged bytes')
+        if name=='node':
+            need(row['prefix']=='7f454c46' and row['before']==record['copy']['file'],
+                 'staged Node ELF/install join')
+        else:need(row['prefix']==record_raw[:4].hex(),'held v9 record prefix')
+    dirs=value['directories'];need(type(dirs) is list and [row['path'] for row in dirs]==
+         ['/','/run',str(NODE_STAGE_ROOT)],'fixed stage ancestors')
+    for index,row in enumerate(dirs):
+        keys(row,'path before');info=row['before']
+        need(type(info) is list and len(info)==8 and all(type(x) is int for x in info) and
+             stat.S_ISDIR(info[2]) and info[3:5]==[0,0] and info[2]&0o022==0 and
+             (index!=2 or stat.S_IMODE(info[2])==0o555),'nonwritable root stage ancestor')
+    need(dirs[-1]['before'][:2]==record['copy']['directory'][:2],'finite stage directory inode join')
+    return request,source,record
+
+
+def setup_v9_cleanup_original(raw,external):
+    value=parse(raw)
+    keys(value,'schema runId serviceExitCode sourceAdmission preCensus stop postCensus cgroupTerminal unitCensus policy action firstFailure secondary setupApproved')
+    need(raw==canonical(value) and value['schema']=='bw.ring3.setup-outside-cleanup.v9' and
+         value['runId']==external['runId'] and value['setupApproved'] is False and
+         type(value['secondary']) is list and len(value['secondary'])<=64 and
+         (value['firstFailure'] is None or type(value['firstFailure']) is dict),
+         'closed bounded v9 outside cleanup original')
+    unit='bw-ring3-setup-v9-'+external['runId']+'-1.service'
+    selected=value['sourceAdmission']
+    if selected is None:
+        need(value['preCensus'] is None and value['postCensus'] is None and value['stop'] is None and
+             value['policy'] is None and value['action'] is None and value['firstFailure'] is not None,
+             'no unit stop or policy mutation without source admission')
+    else:
+        keys(selected,'requestSha256 eventSha256 head tree source unit')
+        need(selected['requestSha256']==external['requestSha256'] and
+             selected['head']==external['head'] and selected['tree']==external['tree'] and
+             selected['unit']==unit,'exact outside request/source/unit selection')
+        digest(selected['eventSha256'])
+        source=selected['source'];keys(source,'schema head tree files')
+        need(source['schema']=='bw.ring3.source.v1' and source['head']==external['head'] and
+             source['tree']==external['tree'] and type(source['files']) is dict and
+             set(source['files'])==SETUP_SOURCE_PATHS and
+             source['files'][WORKFLOW]['sha256']==external['workflowFileSha256'],
+             'outside selected source twelve and workflow')
+    def census(row):
+        if row is None:return None
+        keys(row,'terminal cgroupProcs cgroupEvents cgroupStat')
+        need(row['terminal'] in ('absent','empty','populated'),'closed v9 unit terminal state')
+        if row['terminal']=='absent':
+            need(all(row[key] is None for key in ('cgroupProcs','cgroupEvents','cgroupStat')),
+                 'absent unit has no invented census')
+        else:
+            need(all(type(row[key]) is str and len(row[key].encode())<=1024 for key in
+                     ('cgroupProcs','cgroupEvents','cgroupStat')) and
+                 (setup_v9_cgroup_quiet(row['cgroupProcs'],row['cgroupEvents'],row['cgroupStat']) is
+                  (row['terminal']=='empty')),
+                 'independent exact nested unit census')
+        return row
+    pre=census(value['preCensus']);post=census(value['postCensus'])
+    stop=value['stop']
+    if selected is not None:
+        if stop is None:
+            need(pre is None and post is None and value['cgroupTerminal'] is None and
+                 value['unitCensus'] is None and value['policy'] is None and
+                 value['action'] is None and value['firstFailure'] is not None,
+                 'admitted unit identity refusal retains no invented stop or census')
+        else:
+            keys(stop,'attempted argv exitCode timedOut')
+        if stop is not None and stop['attempted'] is True:
+            need(stop['argv']==['/usr/bin/timeout','--kill-after=5s','20s',
+                 '/usr/bin/systemctl','stop','--',unit] and
+                 (stop['exitCode'] is None or integer(stop['exitCode'],-255,255)>=-255) and
+                 (stop['timedOut'] is None if stop['exitCode'] is None else
+                  stop['timedOut']==(stop['exitCode'] in (124,137))),
+                 'one bounded exact owned-unit stop')
+        elif stop is not None:
+            need(stop=={'attempted':False,'argv':None,'exitCode':None,'timedOut':False} and
+                 (pre is None and value['firstFailure'] is not None or
+                  pre is not None and pre['terminal'] in ('absent','empty') and
+                  (value['serviceExitCode']==0 or pre['terminal']=='absent')),
+                 'no stop needed only for terminal or absent unit')
+        if post is not None:
+            need(value['cgroupTerminal']==post['terminal'] and
+                 (value['unitCensus'] is None if post['terminal']=='absent' else
+                  value['unitCensus']=={key:post[key] for key in
+                      ('cgroupProcs','cgroupEvents','cgroupStat')}),
+                 'outside final census and terminal projection')
+        else:need(value['cgroupTerminal'] is None and value['unitCensus'] is None,
+                  'unknown outside terminal cannot claim census')
+    return value
+
+
+def setup_v9_inner_original(raw,external,shell):
+    originals=decode_setup_v9_log(raw);value=parse_setup_v9_outer(originals['runtime.setup-inventory.json'])
+    keys(value,'schema stageBefore stageAfter parent inventory candidate firstFailure secondary publicationSafe actualGuestApproved completeHostConfiguration')
+    need(value['schema']=='bw.ring3.setup-runtime-inventory-original.v9' and value['firstFailure'] is None and
+         value['secondary']==[] and value['publicationSafe'] is True and value['actualGuestApproved'] is False and
+         value['completeHostConfiguration'] is False,'failure-free metadata-only v9 original')
+    request=None;source=None;record=None
+    for stage in (value['stageBefore'],value['stageAfter']):
+        current,selected,observed=verify_setup_v9_stage_observation(stage,external)
+        if request is None:request,source,record=current,selected,observed
+        else:need(equal(current,request) and equal(selected,source) and equal(observed,record),
+                  'same v9 staged source/request/record before and after graph')
+    need(all(equal(value['stageBefore'][key],value['stageAfter'][key]) for key in
+        ('record','files','directories','source')),'finite stage readback across metadata graph')
+    request_raw=prerequisite_original(canonical(record['request']))
+    event_raw=prerequisite_original(canonical(record['event']))
+    need(request_raw==originals['setup.request.json'] and event_raw==originals['setup.event.json'] and
+         source['files'][WORKFLOW]['sha256']==external['workflowFileSha256'],
+         'exact source/head/workflow/request/event original join')
+    statuses=decode_setup_v9_status_log(raw)
+    pre,post=record['setup']['preflight'],record['setup']['postStatus']
+    need(equal(statuses['pre']['meta'],pre['statusOriginal']) and
+         equal(statuses['post']['meta'],post['statusOriginal']),
+         'exact separately retained raw status originals join setup packet')
+    before=setup_v9_status_rows(statuses['pre']['raw'])
+    need(len(before)==pre['statusRecords']==1211 and
+         not any(name in {key[0] for key in before} for name,*_ in SETUP_V9_PACKAGES),
+         'independent raw pre-status census and selected absence')
+    after=setup_v9_status_rows(statuses['post']['raw'])
+    need(len(after)==post['records'],'independent raw post-status census')
+    setup_v9_status_delta(before,after)
+    selected={};pending={}
+    for name,version,arch,*_ in SETUP_V9_PACKAGES:
+        row=after.get((name,arch))
+        selected[name]=None if row is None else {key:row.get(key) for key in
+            ('Package','Version','Architecture','Status','Triggers-Pending','Triggers-Awaited')}
+    for (name,arch),row in after.items():
+        if (row.get('Status') in ('install ok triggers-pending','install ok triggers-awaited') or
+            row.get('Triggers-Pending') is not None or row.get('Triggers-Awaited') is not None):
+            pending[name+':'+arch]={'status':row.get('Status'),'pending':row.get('Triggers-Pending'),
+                'awaited':row.get('Triggers-Awaited')}
+    need(equal(selected,post['selected']) and equal(pending,post['pendingHostTriggers']),
+         'independent raw post-status selected/pending projection')
+    parent=value['parent'];keys(parent,'meta controls alreadyEnabled')
+    need(type(parent['meta']) is list and len(parent['meta'])==8 and stat.S_ISDIR(parent['meta'][2]) and
+         parent['meta'][3:5]==[0,0] and parent['meta'][2]&0o022==0 and
+         set(parent['controls'])=={'cgroup.controllers','cgroup.subtree_control'},
+         'finite root-owned parent availability')
+    enabled=all({'cpu','memory','pids'}<=set(row['raw'].split()) for row in parent['controls'].values())
+    need(parent['alreadyEnabled'] is enabled,'truthful cgroup parent availability')
+    result=verify_setup_v9_inventory_graph(value)
+    candidate_raw=prerequisite_original(canonical(value['candidate']))
+    candidate=setup_v9_runtime_expectation(candidate_raw,sha(candidate_raw))
+    for package in candidate['packages']:
+        row=post['selected'][package['name']]
+        need(row['Version']==package['version'] and
+             row['Architecture']==package['architecture'],
+             'five named runtime versions independently join raw installed post-status')
+    need(equal(value['inventory']['fileMetadata'][NODE_STAGE_TARGET],value['stageAfter']['files']['node']['before']),
+         'graph Node file joins staged inode/mode/hash')
+    need(all(entry['process']['parentPid']==value['stageBefore']['identity']['pid'] for entry in
+        value['inventory']['processes']),'fifteen metadata children descend from dropped observer')
+    need(all(entry['process']['spawnMonoNs']>=record['sourceCommands'][-1]['process']['reapMonoNs'] for entry in
+        value['inventory']['processes']),'runtime probes follow root source admission')
+    need(record['setup']['configure']['process']['reapMonoNs']<=
+         value['inventory']['processes'][0]['process']['spawnMonoNs'],
+         'all runtime probes follow completed no-trigger configure')
+    need(record['setup']['preflight']['imageFields']==setup_v9_expected_forwarded(shell['fields']),
+         'successful service image labels join shell forwarding')
+    return result,record,source,event_raw,request_raw
+
+
+def verify_setup_v9_log(raw,external,outer_raw,cleanup_raw,shell_raw):
+    keys(external,'schema requestSha256 runId attempt head tree workflowSha workflowFileSha256 jobId jobName conclusion logBytes logSha256 outerBytes outerSha256 cleanupBytes cleanupSha256 shellBytes shellSha256 invoker')
+    shell=decode_setup_v9_shell(shell_raw,external)
+    need(external['schema']=='bw.ring3.setup-inventory-expectation.v9' and type(external['attempt']) is int and
+         external['attempt']==1 and external['jobName']=='setup-runtime-inventory-v9' and
+         external['conclusion']=='success','externally selected official v9 job')
+    integer(external['jobId'],1)
+    need(type(external['runId']) is str and re.fullmatch('[1-9][0-9]{0,19}',external['runId']),
+         'positive official v9 run ID')
+    for name,size in (('head',40),('tree',40),('workflowSha',40),('workflowFileSha256',64),
+                      ('requestSha256',64),('logSha256',64),('outerSha256',64),('cleanupSha256',64)):digest(external[name],size)
+    need(type(external['invoker']) is list and len(external['invoker'])==2 and
+         all(type(x) is int and 0<x<2**31 for x in external['invoker']),'selected actual invoker')
+    need(integer(external['logBytes'],1,8<<20)==len(raw) and sha(raw)==external['logSha256'],
+         'externally selected exact official v9 log bytes')
+    need(type(outer_raw) is bytes and integer(external['outerBytes'],1,4096)==len(outer_raw) and
+         sha(outer_raw)==external['outerSha256'],'externally selected exact outside-owner terminal bytes')
+    need(type(cleanup_raw) is bytes and integer(external['cleanupBytes'],1,16384)==len(cleanup_raw) and
+         sha(cleanup_raw)==external['cleanupSha256'],'externally selected outside cleanup original')
+    cleanup=setup_v9_cleanup_original(cleanup_raw,external)
+    need(cleanup['serviceExitCode']==0 and cleanup['sourceAdmission'] is not None and
+         cleanup['stop']=={'attempted':False,'argv':None,'exitCode':None,'timedOut':False} and
+         cleanup['preCensus'] is not None and cleanup['postCensus'] is not None and
+         cleanup['cgroupTerminal'] in ('empty','absent') and cleanup['policy'] is None and
+         cleanup['action']=='not-needed' and cleanup['firstFailure'] is None and
+         cleanup['secondary']==[] and cleanup['setupApproved'] is False,
+         'finite outside owner needed no policy cleanup after successful setup')
+    need((cleanup['cgroupTerminal']=='absent' and cleanup['unitCensus'] is None) or
+         (cleanup['cgroupTerminal']=='empty' and type(cleanup['unitCensus']) is dict and
+          set(cleanup['unitCensus'])=={'cgroupProcs','cgroupEvents','cgroupStat'} and
+          setup_v9_cgroup_quiet(cleanup['unitCensus']['cgroupProcs'],
+              cleanup['unitCensus']['cgroupEvents'],cleanup['unitCensus']['cgroupStat'])),
+         'independently checked outside nested cgroup emptiness')
+    outer=parse(outer_raw);keys(outer,'schema runId unit systemdRunExitCode outsideCleanupExitCode cgroupAfter')
+    need(outer_raw==canonical(outer) and outer['schema']=='bw.ring3.setup-outer-terminal.v9' and
+         outer['runId']==external['runId'] and outer['unit']==
+         '/sys/fs/cgroup/system.slice/bw-ring3-setup-v9-'+external['runId']+'-1.service' and
+         type(outer['systemdRunExitCode']) is int and outer['systemdRunExitCode']==0 and
+         type(outer['outsideCleanupExitCode']) is int and outer['outsideCleanupExitCode']==0 and
+         outer['cgroupAfter']=='absent','finite outside-owner successful service terminal and absent cgroup')
+    result,record,source,event_raw,request_raw=setup_v9_inner_original(raw,external,shell)
+    if cleanup['sourceAdmission'] is not None:
+        need(equal(cleanup['sourceAdmission']['source'],source) and
+             cleanup['sourceAdmission']['eventSha256']==sha(event_raw),
+             'outside source/event admission joins complete inner original')
+    return dict(result,schema='bw.ring3.setup-runtime-inventory-admission.v9',setupObserved=True,
+        shellImageFields=shell['fields'],serviceImageFields=record['setup']['preflight']['imageFields'],
+        forwardingMatchesExpected=True,
+        deferredHostTriggers=True,completeHostConfiguration=False,actualGuestApproved=False,
+        outsideTerminalObserved=True,cgroupAfterAbsent=True,continuousOwnershipEstablished=False,
+        officialJobAuthenticated=False,imageFieldsAuthenticated=False,
+        immutableImageIdentityEstablished=False,candidateReviewed=False,actualRunApproved=False,
+        rawStatusBytesIndependentlyVerified=True,ciArchiveBytesIndependentlyVerified=False)
+
+
+def verify_setup_v9_failed_stream_inventory(raw,external,cleanup,shell,outer):
+    """Retain a complete failed v9 metadata packet with one clipped child prefix."""
+    originals=decode_setup_v9_log(raw)
+    value=parse_setup_v9_outer(originals['runtime.setup-inventory.json'])
+    keys(value,'schema stageBefore stageAfter parent inventory candidate firstFailure secondary publicationSafe actualGuestApproved completeHostConfiguration')
+    first=value['firstFailure']
+    need(value['schema']=='bw.ring3.setup-runtime-inventory-original.v9' and
+         value['candidate'] is None and value['publicationSafe'] is True and
+         value['actualGuestApproved'] is False and
+         value['completeHostConfiguration'] is False and
+         type(first) is dict and first=={'phase':'inventory-stream','name':'Refusal',
+             'message':'inventory original stdout stream cap'} and
+         type(value['secondary']) is list and len(value['secondary'])<=64,
+         'complete failed v9 stream-cap original with no candidate')
+    request=None;source=None;record=None
+    for stage in (value['stageBefore'],value['stageAfter']):
+        current,selected,observed=verify_setup_v9_stage_observation(stage,external)
+        if request is None:request,source,record=current,selected,observed
+        else:need(equal(current,request) and equal(selected,source) and
+                  equal(observed,record),'same failed v9 stage source before/after')
+    need(all(equal(value['stageBefore'][key],value['stageAfter'][key]) for key in
+             ('record','files','directories','source')),
+         'failed v9 stage file and source readback')
+    request_raw=prerequisite_original(canonical(record['request']))
+    event_raw=prerequisite_original(canonical(record['event']))
+    need(request_raw==originals['setup.request.json'] and
+         event_raw==originals['setup.event.json'] and
+         source['files'][WORKFLOW]['sha256']==external['workflowFileSha256'],
+         'failed v9 exact source/request/event originals')
+    need(cleanup['sourceAdmission'] is not None and
+         equal(cleanup['sourceAdmission']['source'],source) and
+         cleanup['sourceAdmission']['eventSha256']==sha(event_raw),
+         'outside failed source/event admission joins inner originals')
+    statuses=decode_setup_v9_status_log(raw)
+    before=setup_v9_status_rows(statuses['pre']['raw'])
+    after=setup_v9_status_rows(statuses['post']['raw'])
+    pre,post=record['setup']['preflight'],record['setup']['postStatus']
+    need(equal(statuses['pre']['meta'],pre['statusOriginal']) and
+         equal(statuses['post']['meta'],post['statusOriginal']) and
+         len(before)==pre['statusRecords']==1211 and
+         len(after)==post['records'] and
+         not any(name in {key[0] for key in before} for name,*_ in SETUP_V9_PACKAGES),
+         'failed v9 separately retained raw status and baseline')
+    setup_v9_status_delta(before,after)
+    need(pre['imageFields']==setup_v9_expected_forwarded(shell['fields']),
+         'failed metadata service/shell image forwarding')
+    inventory=value['inventory']
+    keys(inventory,'files aliases probes processes fileMetadata pythonFiles mappedLibraries mapsOriginal emptyPythonSources')
+    need(type(inventory['files']) is dict and
+         len(inventory['files'])<=512 and type(inventory['aliases']) is dict and
+         len(inventory['aliases'])<=256 and
+         type(inventory['probes']) is list and type(inventory['processes']) is list,
+         'bounded partial graph reports no selected candidate')
+    roles=SETUP_V9_PROBE_ORDER
+    aliases=inventory['aliases']
+    need(type(aliases) is dict and len(aliases)<=256,
+         'bounded failed alias census for fixed argv')
+    executables={'node':NODE_STAGE_TARGET,
+        'python':resolve_alias('/usr/bin/python3',aliases),
+        'qemu':resolve_alias(RUNTIME_QEMU,aliases)}
+    fixed={'ldd-shell':['/usr/bin/ldd','/usr/bin/bash'],
+        'ldd-dpkg-query':['/usr/bin/ldd','/usr/bin/dpkg-query'],
+        'ldd-tcg':['/usr/bin/ldd',resolve_alias(RUNTIME_TCG,aliases)],
+        'package-version':['/usr/bin/dpkg-query','-W',
+            '-f=${Package}\t${Version}\t${Architecture}\n',*PACKAGE_NAMES]}
+    fixed.update({'ldd-'+name:['/usr/bin/ldd',path]
+                  for name,path in executables.items()})
+    fixed.update({name+'-version':[path,'--version']
+                  for name,path in executables.items()})
+    fixed.update({role:['/usr/bin/dpkg-query','-L',name]
+                  for name,role in SETUP_V9_PACKAGE_ROLES.items()})
+    entries=inventory['processes'];probes=inventory['probes']
+    setup_v9_observed_order(probes,entries,partial=True)
+    last_end=0;parent=None
+    for index,(entry,probe) in enumerate(zip(entries,probes)):
+        keys(entry,'role process stdout stderr')
+        keys(probe,'role argv environment exitCode stdout stderr')
+        process=entry['process']
+        keys(process,'schema argv environment pid pgid parentPid startTicks spawnMonoNs reapMonoNs exitCode signal waitStatus timedOut rusage firstFailure secondary')
+        need(process['schema']=='bw.ring3.inventory-process.v1' and
+             equal(process['argv'],probe['argv']) and
+             equal(probe['argv'],fixed[entry['role']]) and
+             equal(process['environment'],probe['environment']) and
+             probe['environment']=={'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'} and
+             type(probe['stdout']) is str and type(probe['stderr']) is str and
+             len(probe['stdout'].encode('utf-8','surrogateescape'))<=16384 and
+             len(probe['stderr'].encode('utf-8','surrogateescape'))<=16384 and
+             prerequisite_original(canonical(entry['stdout']))==probe['stdout'].encode('utf-8','surrogateescape') and
+             prerequisite_original(canonical(entry['stderr']))==probe['stderr'].encode('utf-8','surrogateescape'),
+             'exact retained child process/stream prefix')
+        if parent is None:parent=integer(process['parentPid'],1)
+        start=integer(process['spawnMonoNs'],last_end)
+        last_end=integer(process['reapMonoNs'],start)
+        need(last_end-start<=10_000_000_000 and
+             process['parentPid']==parent==value['stageBefore']['identity']['pid'] and
+             integer(process['pid'],1)==process['pgid'] and
+             process['timedOut'] is False,
+             'finite serial owned metadata child prefix')
+        if index<len(entries)-1:
+            need(process['firstFailure'] is None and process['secondary']==[] and
+                 process['exitCode']==probe['exitCode']==0 and probe['stderr']=='' and
+                 process['waitStatus']==0 and process['signal'] is None,
+                 'successful earlier v9 metadata children')
+            if entry['role'] in SETUP_V9_PACKAGE_ROLES.values():
+                package_name=next(name for name,role in SETUP_V9_PACKAGE_ROLES.items()
+                                  if role==entry['role'])
+                setup_v9_listed_paths(probe['stdout'].encode('utf-8','surrogateescape'),package_name)
+        else:
+            need(process['firstFailure']==first and process['secondary']==value['secondary'] and
+                 entry['stdout']['bytes']==16384,
+                 'first stream cap and ordered secondary remain last child facts')
+    # The last stream is only an explicit bounded prefix. Its final line and
+    # complete per-package listing are unknown, even when bytes look valid.
+    return {'schema':'bw.ring3.setup-failure-retention.v9',
+        'failedAttemptRetained':True,'completeFailedInventoryOriginal':True,
+        'firstFailure':first,'secondary':value['secondary'],
+        'retainedProbePrefixRoles':list(roles[:len(entries)]),
+        'lastStdoutPrefixBytes':entries[-1]['stdout']['bytes'],
+        'lastPackageListingComplete':False,'candidateReviewed':False,
+        'setupObserved':False,'actualGuestApproved':False,'actualRunApproved':False,
+        'completeHostConfiguration':False,'officialJobAuthenticated':False,
+        'outsideCleanup':cleanup['action'],'outsideCgroupAfter':outer['cgroupAfter'],
+        'outerClientExitCode':outer['systemdRunExitCode'],
+        'rawStatusBytesIndependentlyVerified':True,
+        'ciArchiveBytesIndependentlyVerified':False}
+
+
+def verify_setup_v9_failure_log(raw,external,outer_raw,cleanup_raw,shell_raw):
+    """Retain a bound failed attempt; never promote its partial facts to admission."""
+    keys(external,'schema requestSha256 runId attempt head tree workflowSha workflowFileSha256 jobId jobName conclusion logBytes logSha256 outerBytes outerSha256 cleanupBytes cleanupSha256 shellBytes shellSha256 invoker')
+    shell=decode_setup_v9_shell(shell_raw,external)
+    need(external['schema']=='bw.ring3.setup-inventory-expectation.v9' and
+         external['conclusion']=='failure' and external['attempt']==1 and
+         external['jobName']=='setup-runtime-inventory-v9','externally selected failed v9 job')
+    integer(external['jobId'],1)
+    need(type(external['runId']) is str and re.fullmatch('[1-9][0-9]{0,19}',external['runId']),
+         'positive failed run identity')
+    for name,size in (('head',40),('tree',40),('workflowSha',40),('workflowFileSha256',64),
+                      ('requestSha256',64),('logSha256',64),('outerSha256',64),('cleanupSha256',64)):
+        digest(external[name],size)
+    need(type(external['invoker']) is list and len(external['invoker'])==2 and
+         all(type(x) is int and 0<x<2**31 for x in external['invoker']),
+         'selected failed-job invoker')
+    need(type(raw) is bytes and 0<len(raw)<=8<<20 and
+         integer(external['logBytes'],1,8<<20)==len(raw) and sha(raw)==external['logSha256'],
+         'exact externally selected failed log bytes')
+    need(type(outer_raw) is bytes and 0<len(outer_raw)<=4096 and
+         integer(external['outerBytes'],1,4096)==len(outer_raw) and
+         sha(outer_raw)==external['outerSha256'],'exact failed outside terminal original')
+    need(type(cleanup_raw) is bytes and 0<len(cleanup_raw)<=16384 and
+         integer(external['cleanupBytes'],1,16384)==len(cleanup_raw) and
+         sha(cleanup_raw)==external['cleanupSha256'],'exact failed outside cleanup original')
+    outer=parse(outer_raw);keys(outer,'schema runId unit systemdRunExitCode outsideCleanupExitCode cgroupAfter')
+    need(outer_raw==canonical(outer) and outer['schema']=='bw.ring3.setup-outer-terminal.v9' and
+         outer['runId']==external['runId'] and outer['unit']==
+         '/sys/fs/cgroup/system.slice/bw-ring3-setup-v9-'+external['runId']+'-1.service' and
+         type(outer['systemdRunExitCode']) is int and 0<=outer['systemdRunExitCode']<=255 and
+         type(outer['outsideCleanupExitCode']) is int and 0<=outer['outsideCleanupExitCode']<=255 and
+         outer['cgroupAfter'] in ('present','absent') and
+         (outer['systemdRunExitCode']!=0 or outer['outsideCleanupExitCode']!=0 or
+          outer['cgroupAfter']!='absent'),'finite failed outside terminal facts')
+    cleanup=setup_v9_cleanup_original(cleanup_raw,external)
+    need(cleanup['serviceExitCode']==outer['systemdRunExitCode'] and
+         cleanup['setupApproved'] is False and type(cleanup['secondary']) is list and
+         len(cleanup['secondary'])<=64,'finite failed outside cleanup facts')
+    if cleanup['cgroupTerminal']=='empty':
+        census=cleanup['unitCensus']
+        need(type(census) is dict and set(census)=={'cgroupProcs','cgroupEvents','cgroupStat'} and
+             setup_v9_cgroup_quiet(census['cgroupProcs'],census['cgroupEvents'],census['cgroupStat']),
+             'independent empty nested outside census')
+    elif cleanup['cgroupTerminal']=='absent':
+        need(cleanup['unitCensus'] is None,'absent outside unit has no census')
+    else:
+        need(cleanup['firstFailure'] is not None,'uncertain outside cgroup remains failure')
+        census=cleanup['unitCensus']
+        if census is not None:
+            need(type(census) is dict and set(census)=={'cgroupProcs','cgroupEvents','cgroupStat'} and
+                 not setup_v9_cgroup_quiet(census['cgroupProcs'],census['cgroupEvents'],census['cgroupStat']),
+                 'retained active nested outside census, never cleanup permission')
+    packets=[]
+    for line in raw.splitlines():
+        at=line.find(b'{"actualGuestApproved":false,')
+        if at<0:continue
+        need(line[:at]==b'' or re.fullmatch(rb'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ',line[:at]),
+             'canonical failed packet log prefix')
+        need(len(line)-at<=4<<20,'bounded failed packet')
+        packet=parse_setup_v9_outer(line[at:]);need(line[at:]==canonical(packet).rstrip(b'\n'),'canonical failed packet')
+        if packet.get('schema')=='bw.ring3.setup-entry-failure.v9':packets.append(packet)
+    if not packets:
+        if b'RING3_SETUP_RUNTIME_INVENTORY_V9 ' in raw and outer['systemdRunExitCode']!=0:
+            try:
+                return verify_setup_v9_failed_stream_inventory(raw,external,cleanup,shell,outer)
+            except (ValueError,UnicodeError):
+                # Other complete failures remain refused until separately
+                # reviewed. A timed truncated wire may still use the opaque
+                # path below; it never acquires positive authority.
+                if outer['systemdRunExitCode'] not in (124,137):raise
+        # A complete inner metadata packet is still a failed attempt when the
+        # bounded outer client exits nonzero or outside cleanup is uncertain.
+        try:
+            _,record,source,event_raw,_=setup_v9_inner_original(raw,external,shell)
+        except (ValueError,UnicodeError) as decode_error:
+            # A killed outer client can leave only a bounded prefix. Keep its
+            # exact official bytes as opaque evidence; no inner fact is graded.
+            need(outer['systemdRunExitCode'] in (124,137) and
+                 cleanup['sourceAdmission'] is not None and
+                 type(cleanup['firstFailure']) is dict and
+                 cleanup['firstFailure'].get('phase')=='v9-outer-client',
+                 'only source-admitted timed client permits opaque inner prefix')
+            return {'schema':'bw.ring3.setup-failure-retention.v9',
+                'failedAttemptRetained':True,'innerOriginalIncomplete':True,
+                'innerMetadataCompleteReported':False,'innerDecodeError':type(decode_error).__name__,
+                'retainedLogBytes':len(raw),'retainedLogSha256':sha(raw),
+                'partialMutationPossible':True,'firstFailure':cleanup['firstFailure'],
+                'secondary':cleanup['secondary'],'outsideCleanup':cleanup['action'],
+                'outsideCgroupAfter':outer['cgroupAfter'],
+                'outerClientExitCode':outer['systemdRunExitCode'],
+                'outsideFirstFailure':cleanup['firstFailure'],'setupObserved':False,
+                'shellImageFields':shell['fields'],'serviceImageFields':None,
+                'forwardingMatchesExpected':None,'officialJobAuthenticated':False,
+                'actualGuestApproved':False,'actualRunApproved':False,
+                'candidateReviewed':False,'completeHostConfiguration':False}
+
+        if cleanup['sourceAdmission'] is not None:
+            need(equal(cleanup['sourceAdmission']['source'],source) and
+                 cleanup['sourceAdmission']['eventSha256']==sha(event_raw),
+                 'outside source/event joins complete failed-job inner original')
+        first=cleanup['firstFailure'] or {'phase':'v9-outside-terminal','name':'ValueError',
+            'message':'bounded outside terminal or cleanup refusal'}
+        return {'schema':'bw.ring3.setup-failure-retention.v9',
+            'failedAttemptRetained':True,'innerMetadataCompleteReported':True,
+            'partialMutationPossible':True,'firstFailure':first,
+            'secondary':cleanup['secondary'],'outsideCleanup':cleanup['action'],
+            'outsideCgroupAfter':outer['cgroupAfter'],
+            'outerClientExitCode':outer['systemdRunExitCode'],
+            'outsideFirstFailure':cleanup['firstFailure'],'setupObserved':False,
+            'shellImageFields':shell['fields'],
+            'serviceImageFields':record['setup']['preflight']['imageFields'],
+            'forwardingMatchesExpected':True,'officialJobAuthenticated':False,
+            'actualGuestApproved':False,'actualRunApproved':False,
+            'candidateReviewed':False,'completeHostConfiguration':False}
+    need(len(packets)==1,'one complete failed setup packet')
+    packet=packets[0];keys(packet,'schema context setup firstFailure secondary publicationSafe actualGuestApproved completeHostConfiguration')
+    need(packet['schema']=='bw.ring3.setup-entry-failure.v9' and packet['publicationSafe'] is False and
+         packet['actualGuestApproved'] is False and packet['completeHostConfiguration'] is False and
+         type(packet['firstFailure']) is dict and type(packet['secondary']) is list and
+         len(packet['secondary'])<=64,'failed packet with retained first and secondary')
+    keys(packet['firstFailure'],'phase name message')
+    context=packet['context'];keys(context,'request event platform source sourceCommands eventIdentity imageFields imageFieldErrors')
+    setup_v9_image_observation(context['imageFields'],context['imageFieldErrors'])
+    forwarding_matches=context['imageFields']==setup_v9_expected_forwarded(shell['fields'])
+    request_raw=prerequisite_original(canonical(context['request']))
+    request,source=setup_v9_request(request_raw,external['requestSha256'])
+    event_raw=prerequisite_original(canonical(context['event']))
+    need(type(context['platform']) is dict and set(context['platform'])==set(SETUP_V9_PLATFORM),
+         'closed failed platform')
+    environment=context['platform'];setup_v9_event(event_raw,request,external['requestSha256'],environment)
+    need(environment['GITHUB_RUN_ID']==external['runId'] and
+         environment['GITHUB_WORKFLOW_SHA']==external['workflowSha'] and
+         request['head']==external['head'] and request['tree']==external['tree'] and
+         source['files'][WORKFLOW]['sha256']==external['workflowFileSha256'] and
+         equal(context['source'],source),'failed source/request/event/official context join')
+    if cleanup['sourceAdmission'] is not None:
+        need(equal(cleanup['sourceAdmission']['source'],source) and
+             cleanup['sourceAdmission']['eventSha256']==sha(event_raw),
+             'outside source/event admission joins failed inner original')
+    need(type(context['sourceCommands']) is list and len(context['sourceCommands'])==3 and
+         all(type(item) is dict and set(item)=={'argv','process','stdout','stderr'} for item in context['sourceCommands']),
+         'three retained failed source command originals')
+    commands=context['sourceCommands'];git=['--no-replace-objects','-c','gc.auto=0','-c','maintenance.auto=false']
+    tails=[['rev-parse','HEAD'],['rev-parse','HEAD^{tree}'],['ls-tree','-r','HEAD','--',*sorted(SETUP_SOURCE_PATHS)]]
+    outputs=[(request['head']+'\n').encode(),(request['tree']+'\n').encode(),
+        ''.join(source['files'][path]['mode']+' blob '+source['files'][path]['blob']+'\t'+path+'\n'
+                for path in sorted(SETUP_SOURCE_PATHS)).encode()]
+    previous=0;parent=None;safe=None
+    for index,command in enumerate(commands):
+        argv=command['argv']
+        need(type(argv) is list and len(argv)>3 and argv[:2]==['/usr/bin/git','-c'] and
+             type(argv[2]) is str and argv[2].startswith('safe.directory=/'),
+             'fixed failed source Git descriptor')
+        if safe is None:safe=argv[2]
+        need(argv==['/usr/bin/git','-c',safe,*git,*tails[index]],'exact failed source Git command')
+        start,end=v9_process(command['process'],'discovery',argv,
+            {'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin',
+             'GIT_NO_LAZY_FETCH':'1','GIT_CONFIG_NOSYSTEM':'1'},10000)
+        if parent is None:parent=command['process']['parentPid']
+        need(start>=previous and command['process']['parentPid']==parent and
+             prerequisite_original(canonical(command['stdout']))==outputs[index] and
+             command['stderr'] is None,'causal failed source Git original')
+        previous=end
+    need(type(context['eventIdentity']) is dict and
+         set(context['eventIdentity'])==set('st_dev st_ino st_mode st_uid st_gid st_nlink st_size st_mtime_ns'.split()) and
+         all(type(x) is int for x in context['eventIdentity'].values()) and
+         context['eventIdentity']['st_size']==len(event_raw) and
+         stat.S_ISREG(context['eventIdentity']['st_mode']),
+         'failed held event extent')
+    setup=packet['setup'];need(type(setup) is dict and setup.get('schema')=='bw.ring3.setup-original.v9' and
+         setup.get('firstFailure') is not None and setup.get('nodeStage') is None and setup.get('runtime') is None,
+         'only partial setup before Node stage')
+    keys(setup,'schema preflight archives policy unpack configure postStatus cleanup policyCleanupCgroup nodeStage runtime partial deferredHostTriggers configurationComplete firstFailure secondary')
+    need(setup['configurationComplete'] is False and type(setup['secondary']) is list and
+         len(setup['secondary'])<=64,'closed partial setup and secondary')
+    partial=setup['partial']
+    preflight_prefix=None
+    if setup['preflight'] is None:
+        need(type(partial) is dict and partial.get('phase')=='preflight',
+             'failed preflight has a typed retained prefix')
+        keys(partial,'phase prefix failedHelper')
+        preflight_prefix=partial['prefix']
+        keys(preflight_prefix,'statusOriginal statusSha256 statusBytes statusRecords completedHelpers helperWitness imageFields imageFieldErrors')
+        setup_v9_image_observation(preflight_prefix['imageFields'],preflight_prefix['imageFieldErrors'])
+        need(preflight_prefix['imageFields']==context['imageFields'] and
+             preflight_prefix['imageFieldErrors']==context['imageFieldErrors'],
+             'failed preflight retains exact entry image observation')
+        completed=preflight_prefix['completedHelpers'];witnesses=preflight_prefix['helperWitness']
+        need(type(completed) is list and type(witnesses) is dict and
+             completed==list(SETUP_V9_HELPERS)[:len(completed)] and
+             set(witnesses)==set(completed),'ordered bounded successful helper prefix')
+        status_meta=preflight_prefix['statusOriginal']
+        if status_meta is None:
+            need(preflight_prefix['statusSha256'] is None and preflight_prefix['statusBytes'] is None and
+                 preflight_prefix['statusRecords'] is None and completed==[],
+                 'no fabricated pre-status or helper facts before observation')
+        else:
+            keys(status_meta,'role bytes sha256 packedBytes packedSha256')
+            need(status_meta['role']=='pre' and status_meta['sha256']==preflight_prefix['statusSha256'] and
+                 status_meta['bytes']==preflight_prefix['statusBytes'] and
+                 integer(status_meta['bytes'],1,8<<20)>0 and
+                 integer(status_meta['packedBytes'],1,700<<10)>0 and
+                 digest(status_meta['packedSha256'])==status_meta['packedSha256'],
+                 'bounded retained preflight status summary')
+            if preflight_prefix['statusRecords'] is not None:
+                integer(preflight_prefix['statusRecords'],1,5000)
+            need(not completed or preflight_prefix['statusRecords']==1211,
+                 'helper prefix follows full selected pre-status census')
+        for path in completed:
+            item=witnesses[path];keys(item,'path namedBefore heldBefore heldAfter namedAfter bytesRead sha256 closeAttempted closeSucceeded')
+            need(item['path']==path and item['sha256']==SETUP_V9_HELPERS[path] and
+                 item['closeAttempted'] is True and item['closeSucceeded'] is True and
+                 item['namedBefore']==item['heldBefore']==item['heldAfter']==item['namedAfter'],
+                 'completed helper prefix has stable reported identity')
+            info=item['heldBefore']
+            need(type(info) is list and len(info)==8 and all(type(n) is int for n in info) and
+                 stat.S_ISREG(info[2]) and info[3:6]==[0,0,1] and info[2]&0o022==0 and
+                 type(item['bytesRead']) is int and 0<item['bytesRead']==info[6]<=2<<20 and
+                 item['bytesRead']==SETUP_V9_NEW_HELPER_BYTES.get(path,item['bytesRead']),
+                 'bounded known successful helper witness')
+        failed=partial['failedHelper']
+        helper_attempt=bool(completed) or failed is not None
+        if helper_attempt:
+            need(status_meta is not None and preflight_prefix['statusSha256']==SETUP_V9_STATUS_SHA and
+                 preflight_prefix['statusBytes']==SETUP_V9_STATUS_BYTES and
+                 preflight_prefix['statusRecords']==1211,
+                 'helper attempt follows exact selected pre-status baseline')
+        if failed is not None:
+            keys(failed,'phase witness')
+            item=failed['witness']
+            keys(item,'path namedBefore heldBefore heldAfter namedAfter bytesRead sha256 closeAttempted closeSucceeded')
+            need(failed['phase']=='helper' and len(completed)<len(SETUP_V9_HELPERS) and
+                 item['path']==list(SETUP_V9_HELPERS)[len(completed)] and
+                 integer(item['bytesRead'],0,2<<20)>=0 and
+                 type(item['closeAttempted']) is bool and type(item['closeSucceeded']) is bool and
+                 (item['sha256'] is None or digest(item['sha256'])==item['sha256']),
+                 'bounded failing helper position and partial byte count')
+            for key in ('namedBefore','heldBefore','heldAfter','namedAfter'):
+                info=item[key]
+                need(info is None or (type(info) is list and len(info)==8 and
+                     all(type(n) is int for n in info)),
+                     'bounded partial helper metadata')
+    if type(partial) is dict and partial.get('phase')=='node-stage':
+        keys(partial,'phase copy record dropProgress invoker')
+        need(type(partial['copy']) is dict and
+             set(partial['copy'])==set('created sourceBefore sourceAfter sourceNamedAfter bytesCopied sourceBytesRead writeUncertain targetAfterFailure directoryAfterFailure copiedSha256 readbackSha256 filePublicationAttempted directoryPublicationAttempted filePublished directoryPublished file directory'.split()) and
+             type(partial['dropProgress']) is list and
+             partial['dropProgress']==['groups','gid','uid','ids-verified'][:len(partial['dropProgress'])] and
+             equal(partial['invoker'],external['invoker']),
+             'retained bounded failed Node copy/drop progress')
+        if partial['record'] is not None:
+            keys(partial['record'],'bytes sha256')
+            integer(partial['record']['bytes'],1,1<<20);digest(partial['record']['sha256'])
+    required_roles=set()
+    for key,role,hash_key,size_key in (('preflight','pre','statusSha256','statusBytes'),
+                                       ('postStatus','post','sha256','bytes')):
+        fact=setup[key]
+        if type(fact) is dict and fact.get('statusOriginal') is not None:
+            required_roles.add(role)
+    statuses=decode_setup_v9_status_log(raw,None)
+    roles=set(statuses)
+    if preflight_prefix is not None and preflight_prefix['statusOriginal'] is not None:
+        required_roles.add('pre')
+        need('pre' in roles and equal(statuses['pre']['meta'],preflight_prefix['statusOriginal']) and
+             sha(statuses['pre']['raw'])==preflight_prefix['statusSha256'] and
+             len(statuses['pre']['raw'])==preflight_prefix['statusBytes'],
+             'raw failed preflight status joins retained prefix')
+        if preflight_prefix['statusRecords'] is not None:
+            pre_rows=setup_v9_status_rows(statuses['pre']['raw'])
+            need(len(pre_rows)==preflight_prefix['statusRecords'],
+                 'raw failed preflight census joins retained prefix')
+            if helper_attempt:
+                need(not any(name in {key[0] for key in pre_rows} for name,*_ in SETUP_V9_PACKAGES),
+                     'selected fifteen absent before any helper attempt')
+    need(required_roles<=roles,'all reported failed status originals retained')
+    for key,role,hash_key,size_key in (('preflight','pre','statusSha256','statusBytes'),
+                                       ('postStatus','post','sha256','bytes')):
+        if role in roles:
+            fact=setup[key]
+            if role in required_roles and type(fact) is dict:
+                need(type(fact) is dict and equal(statuses[role]['meta'],fact['statusOriginal']) and
+                    statuses[role]['meta']['sha256']==fact[hash_key] and
+                    statuses[role]['meta']['bytes']==fact[size_key],
+                    'independent retained failed raw status original join')
+            rows=setup_v9_status_rows(statuses[role]['raw'])
+            if role in required_roles and type(fact) is dict:
+                need(len(rows)==fact['statusRecords' if role=='pre' else 'records'],
+                     'retained failed raw status census')
+            if role=='pre' and role in required_roles and type(fact) is dict:
+                need(fact['statusSha256']==SETUP_V9_STATUS_SHA and
+                     fact['statusBytes']==SETUP_V9_STATUS_BYTES,
+                     'failed pre-state remains fixed selected baseline')
+    need(setup['firstFailure']==packet['firstFailure'] or
+         packet['firstFailure']['phase']=='v9-entry','retained setup/entry first failure relationship')
+    return {'schema':'bw.ring3.setup-failure-retention.v9','failedAttemptRetained':True,
+        'partialMutationPossible':True,'firstFailure':packet['firstFailure'],
+        'secondary':packet['secondary'],'outsideCleanup':cleanup['action'],
+        'outsideCgroupAfter':outer['cgroupAfter'],
+        'outerClientExitCode':outer['systemdRunExitCode'],
+        'outsideFirstFailure':cleanup['firstFailure'],
+        'outsideSecondary':cleanup['secondary'],'setupObserved':False,
+        'shellImageFields':shell['fields'],'serviceImageFields':context['imageFields'],
+        'forwardingMatchesExpected':forwarding_matches,
+        'stageAttemptObserved':type(partial) is dict and partial.get('phase')=='node-stage',
+        'retainedStatusRoles':sorted(roles),'statusRolesJoinedToSetup':sorted(required_roles),
+        'rawStatusBytesIndependentlyVerified':bool(roles),
+        'ciArchiveBytesIndependentlyVerified':False,
+        'officialJobAuthenticated':False,'actualGuestApproved':False,
+        'candidateReviewed':False,'actualRunApproved':False}
+
+
+def setup_v9_official_metadata(run_raw,jobs_raw,artifacts_raw,external):
+    """Bounded original API facts; authentication of their acquisition is external."""
+    digest(external['artifactSha256'])
+    originals=(('run',run_raw),('jobs',jobs_raw),('artifacts',artifacts_raw))
+    for role,raw in originals:
+        need(type(raw) is bytes and integer(external[role+'MetadataBytes'],1,1<<20)==len(raw) and
+             digest(external[role+'MetadataSha256'])==sha(raw),
+             'externally selected exact official '+role+' metadata original')
+    run,jobs,artifacts=(parse_setup_v9_outer(raw) for _,raw in originals)
+    need(type(run) is dict and type(jobs) is dict and type(artifacts) is dict,
+         'official metadata JSON object originals')
+    need(all(type(run.get(key)) is dict for key in ('repository','head_repository','actor')) and
+         type(run.get('pull_requests')) is list and
+         all(type(item) is dict and type(item.get('head')) is dict for item in run['pull_requests']),
+         'typed official run owner and pull-request rows')
+    run_id=integer(run.get('id'),1)
+    need(str(run_id)==external['runId'] and integer(run.get('run_attempt'),1,1)==1 and
+         run.get('head_sha')==external['head'] and run.get('event')=='pull_request' and
+         run.get('status')=='completed' and run.get('conclusion')==external['conclusion'] and
+         run.get('path')==WORKFLOW and run.get('name')=='Ring3 INT80 IRETD source controls' and
+         run.get('repository',{}).get('full_name')=='CrispStrobe/bw-board' and
+         run.get('head_repository',{}).get('full_name')=='CrispStrobe/bw-board' and
+         run.get('actor',{}).get('login')=='CrispStrobe' and
+         type(run.get('pull_requests')) is list and len(run['pull_requests'])==1 and
+         integer(run['pull_requests'][0].get('number'),1)==external['pullRequest'] and
+         run['pull_requests'][0].get('head',{}).get('sha')==external['head'],
+         'one owned official run/head/attempt/pull-request original')
+    rows=jobs.get('jobs')
+    need(type(rows) is list and integer(jobs.get('total_count'),1,64)==len(rows) and
+         all(type(item) is dict and integer(item.get('id'),1)>0 for item in rows) and
+         len({item.get('id') for item in rows})==len(rows),
+         'complete unique bounded official job collection')
+    selected=[item for item in rows if item.get('name')==external['jobName']]
+    need(len(selected)==1,'one selected V9 producing job')
+    job=selected[0]
+    need(integer(job.get('id'),1)==external['jobId'] and integer(job.get('run_id'),1)==run_id and
+         integer(job.get('run_attempt'),1,1)==1 and job.get('head_sha')==external['head'] and
+         job.get('workflow_name')=='Ring3 INT80 IRETD source controls' and
+         job.get('status')=='completed' and job.get('conclusion')==external['conclusion'],
+         'selected official V9 job/run/head/status')
+    steps=job.get('steps')
+    need(type(steps) is list and 5<=len(steps)<=16 and
+         all(type(row) is dict and type(row.get('name')) is str and
+             row.get('status')=='completed' and
+             row.get('conclusion') in ('success','failure','skipped') for row in steps) and
+         len({row['name'] for row in steps})==len(steps),
+         'bounded unique official step originals')
+    required=['Set up job',
+        'Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262',
+        'Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020',
+        'Bounded v9 package setup and dropped runtime inventory',
+        'Retain v9 setup and runtime originals']
+    need([item['name'] for item in steps[:5]]==required and
+         all(item['conclusion']=='success' for item in steps[:3]) and
+         steps[3]['conclusion']==external['conclusion'] and
+         steps[4]['conclusion']=='success',
+         'exact checkout, selected Node setup, producing and upload steps')
+    rows=artifacts.get('artifacts')
+    need(type(rows) is list and integer(artifacts.get('total_count'),1,1)==len(rows)==1,
+         'sole bounded official run artifact')
+    artifact=rows[0]
+    need(type(artifact) is dict and type(artifact.get('workflow_run')) is dict,
+         'typed selected official artifact and run relation')
+    need(integer(artifact.get('id'),1)==external['artifactId'] and
+         artifact.get('name')=='i80386-ring3-setup-runtime-inventory-v9-originals' and
+         artifact.get('name')==external['artifactName'] and
+         integer(artifact.get('size_in_bytes'),1,8<<20)==external['artifactBytes'] and
+         artifact.get('digest')=='sha256:'+external['artifactSha256'] and
+         artifact.get('expired') is False and
+         integer(artifact['workflow_run'].get('id'),1)==run_id and
+         artifact['workflow_run'].get('head_sha')==external['head'],
+         'one exact selected official artifact ID, extent, digest and run')
+    return {'runId':run_id,'jobId':job['id'],'artifactId':artifact['id'],
+        'artifactBytes':artifact['size_in_bytes'],'artifactSha256':external['artifactSha256'],
+        'producingStepConclusion':steps[3]['conclusion'],'uploadStepConclusion':steps[4]['conclusion']}
+
+
+def verify_setup_v9_originals(raw,external,outer_raw,cleanup_raw,shell_raw,official_job_log,
+                              run_metadata,jobs_metadata,artifacts_metadata):
+    """Join the externally retained official job log without granting image authority."""
+    need(SETUP_V9_READER_ENABLED is True,'v9 independent reader inactive')
+    keys(external,'schema requestSha256 runId attempt head tree workflowSha workflowFileSha256 jobId jobName conclusion logBytes logSha256 outerBytes outerSha256 cleanupBytes cleanupSha256 shellBytes shellSha256 invoker officialLogBytes officialLogSha256 runMetadataBytes runMetadataSha256 jobsMetadataBytes jobsMetadataSha256 artifactsMetadataBytes artifactsMetadataSha256 artifactId artifactName artifactBytes artifactSha256 pullRequest')
+    need(type(official_job_log) is bytes and
+         integer(external['officialLogBytes'],1,8<<20)==len(official_job_log) and
+         digest(external['officialLogSha256'])==sha(official_job_log),
+         'one exact externally selected official job-log original')
+    official=host_baseline_official_image(official_job_log,external['jobName'])
+    metadata=setup_v9_official_metadata(run_metadata,jobs_metadata,artifacts_metadata,external)
+    inner={key:value for key,value in external.items() if key not in (
+        'officialLogBytes','officialLogSha256','runMetadataBytes','runMetadataSha256',
+        'jobsMetadataBytes','jobsMetadataSha256','artifactsMetadataBytes','artifactsMetadataSha256',
+        'artifactId','artifactName','artifactBytes','artifactSha256','pullRequest')}
+    need(inner['conclusion'] in ('success','failure'),'closed V9 official job conclusion')
+    grade=verify_setup_v9_log if inner['conclusion']=='success' else verify_setup_v9_failure_log
+    result=grade(raw,inner,outer_raw,cleanup_raw,shell_raw)
+    if inner['conclusion']=='success':
+        selected_request=decode_setup_v9_log(raw)['setup.request.json']
+        request,_=setup_v9_request(selected_request,external['requestSha256'])
+        need(request['pullRequest']==external['pullRequest'],
+             'official run pull request joins selected V9 request')
+    service=result.get('serviceImageFields')
+    reported=(service is not None and official['Image']=='ubuntu-24.04' and
+              service.get('ImageOS')=={'present':True,'value':'ubuntu24'} and
+              service.get('ImageVersion')=={'present':True,'value':official['Version']})
+    return dict(result,officialRunnerImage=official,officialImageMatchesReported=reported,
+        officialMetadata=metadata,
+        imageFieldsAuthenticated=False,immutableImageIdentityEstablished=False,
+        officialJobAuthenticated=False,actualGuestApproved=False,actualRunApproved=False)
+
+
 def main():
+    if '--inventory-setup-v9' in sys.argv[1:]:
+        need(sys.argv[1:]==['--inventory-setup-v9'],'exact single V9 inventory mode')
+        need(SETUP_V9_READER_ENABLED is True,'V9 reader inactive pending reviewed source/event')
+        originals,passed,safe=setup_v9_inventory_entry(dict(os.environ))
+        if safe:emit_setup_v9_inventory(originals,sys.stdout.buffer.write,sys.stdout.buffer.flush)
+        raise SystemExit(0 if passed and safe else 1)
+    if sys.argv[1:2]==['--setup-v9-inventory-log']:
+        need(SETUP_V9_READER_ENABLED is True,'V9 independent reader inactive')
+        parser=argparse.ArgumentParser(description='Independent original-only V9 setup/runtime audit',allow_abbrev=False)
+        for name in ('setup-v9-inventory-log','external-admission','outer-resource-original',
+                     'outside-cleanup-original','shell-image-original','official-job-log',
+                     'official-run-metadata','official-jobs-metadata','official-artifacts-metadata'):
+            parser.add_argument('--'+name,required=True)
+        need(len(sys.argv)==19,'exact V9 original and official metadata inputs')
+        args=parser.parse_args()
+        def read(path,cap):
+            with Path(path).open('rb') as stream:return stream.read(cap+1)
+        external=parse_setup_v9_outer(read(args.external_admission,1<<20))
+        result=verify_setup_v9_originals(read(args.setup_v9_inventory_log,8<<20),external,
+            read(args.outer_resource_original,4096),read(args.outside_cleanup_original,16384),
+            read(args.shell_image_original,4096),read(args.official_job_log,8<<20),
+            read(args.official_run_metadata,1<<20),read(args.official_jobs_metadata,1<<20),
+            read(args.official_artifacts_metadata,1<<20))
+        print(json.dumps(result,sort_keys=True));return
     if sys.argv[1:2]==['--host-baseline-originals']:
         need(HOST_BASELINE_READER_ENABLED is True,'baseline reader inactive pending reviewed event')
         parser=argparse.ArgumentParser(description='Independent read-only hosted baseline',allow_abbrev=False)

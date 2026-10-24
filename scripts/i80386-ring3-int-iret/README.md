@@ -1645,3 +1645,35 @@ manager owns the finite service lifetime; a bounded read-only outside census
 records absent, empty or still populated cgroup facts. The observer runs no
 explicit stop action or selected helper binary. An uncertain terminal unit
 keeps the attempt negative.
+
+## Source qualification before metadata selection
+
+Code pull requests need the repository's `ci:full` label when they are opened
+(for example, include `--label ci:full` with `gh pr create`). Branch pushes run
+the fast tier; that result does not qualify the thorough tier. The CI tier gate
+refuses a code pull request without the label. Preserve any original failure
+and qualify every enabled check on the final source head before selecting a
+metadata request. Check active jobs before publishing a successor so a changed
+head does not obscure an earlier run's result. Source CI does not select the
+v9 label or approve setup, a runtime graph or architectural guest execution.
+
+## Distinct V9 setup metadata candidate
+
+The V9 metadata route has its own request, label, job, stage, outside cleanup,
+originals and independent reader. Its source guards and workflow job remain
+active for a separately admitted metadata event; no V9 event has been selected.
+The compiler and architectural guest routes remain inactive. V9
+allows only the two observed `ubuntu24` image labels documented in
+`docs/X86-NEXT-LANES.md`; it still requires the fixed status, helper, alias,
+archive and payload witnesses before acquiring any package. A matched image
+label is an observed environment field, not immutable image authentication.
+
+The installer sequence, bounded child operations, fixed Node copy and resource
+limits are shared with the V8 route through a source-selected route value.
+Omitting that value keeps the V8 behavior. V9 uses a distinct event admission
+and never presents its event to the V8 parser. Its reader accepts only exact
+V9 originals and externally selected official run, job, artifact and job-log
+bytes. The reader checks their source, step, size and digest relations while
+leaving acquisition authentication to a separate outer admission. Every
+setup, runtime and guest approval flag remains false until a separately
+qualified event and original audit establish its narrower result.

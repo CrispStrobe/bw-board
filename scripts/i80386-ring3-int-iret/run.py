@@ -860,7 +860,7 @@ class LinuxController(LinuxTool):
 
 def collect_child(ops, role, argv, *, profile='guest'):
     """Actual bounded orchestration, also called unmodified by inert controls."""
-    need(profile in ('guest','discovery','controller','preparation','setup-v4','setup-v5','setup-v6','setup-v7','setup-v8'),'closed child profile')
+    need(profile in ('guest','discovery','controller','preparation','setup-v4','setup-v5','setup-v6','setup-v7','setup-v8','setup-v9'),'closed child profile')
     need(role in ('js','qemu') if profile=='guest' else role==profile,'fixed child role/profile')
     wall_ns,stream_cap=(CHILD_NS,STREAM_CAP) if profile=='guest' else (
         (10000000000,16384) if profile=='discovery' else (600000000000,16384) if profile=='controller' else
@@ -7887,14 +7887,45 @@ SETUP_V8_INSTALLER_ENV=dict(ENV,PATH='/usr/sbin:/usr/bin:/bin')
 SETUP_V8_STATUS_MARKER=b'RING3_SETUP_STATUS_V8 '
 SETUP_V8_ENV=tuple('BW_RING3_SETUP_INVENTORY_V8_REQUEST_SHA256' if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key
     for key in NODE_STAGE_ENV)+('BW_RING3_SETUP_INVENTORY_V8_REQUEST_B64',)
+# V9 is an immutable source-selected route. No request or environment field can
+# select a package, image policy, tool, resource limit, or historical route.
+SETUP_V9_ENABLED=True
+SETUP_V9_IMAGES=('20261012.334.1','20261023.334.3')
+SETUP_V9_PACKAGE_ROWS=SETUP_V8_PACKAGE_ROWS
+SETUP_V9_CONFIGURE_ORDER=SETUP_V8_CONFIGURE_ORDER
+SETUP_V9_STATUS_SHA=SETUP_V8_STATUS_SHA
+SETUP_V9_HELPERS=SETUP_V8_HELPERS
+SETUP_V9_HELPER_ALIASES=SETUP_V8_HELPER_ALIASES
+SETUP_V9_PAYLOAD_PINS=SETUP_V8_PAYLOAD_PINS
+SETUP_V9_NEW_HELPER_BYTES=SETUP_V8_NEW_HELPER_BYTES
+SETUP_V9_INSTALLER_ENV=SETUP_V8_INSTALLER_ENV
+SETUP_V9_ENV=tuple('BW_RING3_SETUP_INVENTORY_V9_REQUEST_SHA256' if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key
+    for key in NODE_STAGE_ENV)+('BW_RING3_SETUP_INVENTORY_V9_REQUEST_B64',)
+SETUP_V9_STATUS_MARKER=b'RING3_SETUP_STATUS_V9 '
+SETUP_V9_ROUTE={'version':'v9','job':'setup-runtime-inventory-v9',
+    'label':'x86-ring3-setup-runtime-inventory-v9','unitPrefix':'bw-ring3-setup-v9-',
+    'requestSchema':'bw.ring3.inventory-request.v9',
+    'stageSchema':'bw.ring3.node-stage-original.v9',
+    'setupSchema':'bw.ring3.setup-original.v9',
+    'failureSchema':'bw.ring3.setup-entry-failure.v9',
+    'cleanupSchema':'bw.ring3.setup-outside-cleanup.v9',
+    'shellSchema':'bw.ring3.setup-image-shell.v9',
+    'inventoryMode':'--inventory-setup-v9'}
+
+
+def setup_v9_selected(route):
+    need(route is SETUP_V9_ROUTE,'only fixed source-selected v9 setup route')
+    return route
 setup_v8_status_rows=setup_v4_status_rows
 setup_v8_status_delta=setup_v4_status_delta
 setup_v8_cgroup_quiet=setup_v4_cgroup_quiet
 
 
-def setup_v8_helper_witness(path,pin):
+def setup_v8_helper_witness(path,pin,route=None):
     """Finite named/held byte witness before the first archive GET."""
-    need(path in SETUP_V8_HELPERS and SETUP_V8_HELPERS[path]==pin,'selected v8 helper role')
+    if route is not None:setup_v9_selected(route)
+    need(path in SETUP_V8_HELPERS and SETUP_V8_HELPERS[path]==pin,
+         'selected v9 helper role' if route is not None else 'selected v8 helper role')
     descriptor=None;first=None;data=bytearray()
     value={'path':path,'namedBefore':None,'heldBefore':None,'heldAfter':None,'namedAfter':None,
         'bytesRead':0,'sha256':None,'closeAttempted':False,'closeSucceeded':False}
@@ -7925,7 +7956,7 @@ def setup_v8_helper_witness(path,pin):
             except Exception as error:
                 if first is None:first=error
                 else:first.ring3_secondary=getattr(first,'ring3_secondary',[])+[
-                    row(error,'v8-helper-close')]
+                    row(error,'v9-helper-close' if route is not None else 'v8-helper-close')]
     if first is not None:
         first.ring3_partial={'phase':'helper','witness':value}
         raise first
@@ -8015,14 +8046,86 @@ def admit_setup_v8_event(event_raw,environ):
     return raw,request
 
 
-def emit_setup_v8_status(role,raw,emit=None,flush=None):
+def setup_v9_policy():
+    policy=setup_v8_policy()
+    del policy['imageVersion']
+    policy['imageVersions']=list(SETUP_V9_IMAGES)
+    return policy
+
+
+def admit_setup_v9_request(raw,pin):
+    need(type(raw) is bytes and 0<len(raw)<=32768 and type(pin) is str and
+         re.fullmatch('[0-9a-f]{64}',pin) and sha(raw)==pin,
+         'externally selected v9 request')
+    value=final_json(raw)
+    require_fields(value,'schema repository pullRequest head tree source selected nodeStage emptyPythonSources setup payloadWitness',
+                   'closed v9 request')
+    need(raw==encode(value) and value['schema']==SETUP_V9_ROUTE['requestSchema'],
+         'canonical distinct v9 request')
+    base={key:value[key] for key in ('repository','pullRequest','head','tree','source','selected','nodeStage','emptyPythonSources')}
+    staged=encode(dict(base,schema='bw.ring3.inventory-request.v3'))
+    admit_staged_runtime_request(staged,sha(staged))
+    need(same_json(value['setup'],setup_v9_policy()),
+         'fixed closed image-set, status, helper, archive and no-resolver v9 policy')
+    need(type(SETUP_V8_PAYLOAD_PINS) is dict and len(SETUP_V8_PAYLOAD_PINS['archives'])==15 and
+         all((item['package'],item['archiveBytes'],item['archiveSha256'])==(name,size,digest)
+             for item,(name,version,arch,filename,size,digest) in
+             zip(SETUP_V8_PAYLOAD_PINS['archives'],SETUP_V8_PACKAGE_ROWS)) and
+         same_json(value['payloadWitness'],SETUP_V8_PAYLOAD_PINS),
+         'same fifteen reviewed signed payload and CONTROL witnesses')
+    data=next(item for item in value['payloadWitness']['archives'] if item['package']=='qemu-system-data')
+    need(all(data[key]==pin for key,pin in SETUP_V8_DATA_ARCHIVE.items()),
+         'same fixed signed qemu-system-data DATA witness')
+    return value
+
+
+def admit_setup_v9_event(event_raw,environ):
+    event=final_json(event_raw);pr=event.get('pull_request',{});body=pr.get('body')
+    start='<!-- BW_RING3_SETUP_RUNTIME_INVENTORY_V9\n';end='\nBW_RING3_SETUP_RUNTIME_INVENTORY_V9 -->'
+    need(type(body) is str and body.count(start)==body.count(end)==1 and body.index(start)<body.index(end),
+         'one distinct immutable v9 body block')
+    pin=environ.get('BW_RING3_SETUP_INVENTORY_V9_REQUEST_SHA256')
+    need(type(pin) is str and re.fullmatch('[0-9a-f]{64}',pin) and
+         body.split(start,1)[1].split(end,1)[0]==pin,'one exact v9 body SHA marker')
+    encoded=environ.get('BW_RING3_SETUP_INVENTORY_V9_REQUEST_B64')
+    need(type(encoded) is str and 0<len(encoded)<=43692,'bounded canonical v9 repository request')
+    raw=base64.b64decode(encoded,validate=True)
+    need(0<len(raw)<=32768 and base64.b64encode(raw).decode('ascii')==encoded and sha(raw)==pin,
+         'exact v9 repository request bytes')
+    request=admit_setup_v9_request(raw,pin)
+    need(event.get('action')=='labeled' and event.get('label',{}).get('name')==SETUP_V9_ROUTE['label'] and
+         event.get('repository',{}).get('full_name')==APPROVAL_REPOSITORY and
+         event.get('sender',{}).get('login')=='CrispStrobe' and
+         type(event.get('number')) is int and event['number']==request['pullRequest'] and
+         type(pr.get('number')) is int and pr['number']==request['pullRequest'] and pr.get('state')=='open' and
+         pr.get('head',{}).get('sha')==request['head'] and
+         pr.get('head',{}).get('repo',{}).get('full_name')==APPROVAL_REPOSITORY and
+         pr['head']['repo'].get('fork') is False and pr.get('base',{}).get('ref')=='master' and
+         pr['base'].get('repo',{}).get('full_name')==APPROVAL_REPOSITORY,
+         'closed owned distinct v9 event')
+    expected_cgroup(environ)
+    need(all(environ.get(k)==v for k,v in {
+         'GITHUB_REPOSITORY':APPROVAL_REPOSITORY,'GITHUB_EVENT_NAME':'pull_request',
+         'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':SETUP_V9_ROUTE['job'],'GITHUB_RUN_ATTEMPT':'1',
+         'BW_EXPECTED_HEAD':request['head'],'BW_EXPECTED_TREE':request['tree'],
+         'GITHUB_WORKFLOW_REF':APPROVAL_REPOSITORY+'/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+
+             str(request['pullRequest'])+'/merge'}.items()) and
+         type(environ.get('GITHUB_WORKFLOW_SHA')) is str and
+         re.fullmatch('[0-9a-f]{40}',environ['GITHUB_WORKFLOW_SHA']),
+         'v9 platform/source/workflow binding')
+    return raw,request
+
+
+def emit_setup_v8_status(role,raw,emit=None,flush=None,route=None):
+    if route is not None:setup_v9_selected(route)
     need(role in ('pre','post') and type(raw) is bytes and 0<len(raw)<=8<<20,
          'fixed bounded raw dpkg status original')
     packed=zlib.compress(raw,9);need(0<len(packed)<=700<<10,'bounded compressed dpkg status original')
-    packet={'schema':'bw.ring3.setup-status-original.v8','role':role,'rawBytes':len(raw),
+    packet={'schema':'bw.ring3.setup-status-original.v9' if route is not None else
+            'bw.ring3.setup-status-original.v8','role':role,'rawBytes':len(raw),
         'rawSha256':sha(raw),'packedBytes':len(packed),'packedSha256':sha(packed),
         'encoding':'zlib+base64','packed':base64.b64encode(packed).decode('ascii')}
-    line=SETUP_V8_STATUS_MARKER+encode(packet)
+    line=(SETUP_V9_STATUS_MARKER if route is not None else SETUP_V8_STATUS_MARKER)+encode(packet)
     need(len(line)<=1<<20,'bounded encoded dpkg status log line')
     emit=sys.stdout.buffer.write if emit is None else emit
     flush=sys.stdout.buffer.flush if flush is None else flush
@@ -8031,9 +8134,15 @@ def emit_setup_v8_status(role,raw,emit=None,flush=None):
         'packedSha256':sha(packed)}
 
 
-def setup_v8_sequence(ops,request):
+def emit_setup_v9_status(role,raw,emit=None,flush=None):
+    return emit_setup_v8_status(role,raw,emit,flush,SETUP_V9_ROUTE)
+
+
+def setup_v8_sequence(ops,request,route=None):
     """One-shot setup order; every edge is an injected, recorded operation."""
-    facts={'schema':'bw.ring3.setup-original.v8','preflight':None,'archives':[],
+    if route is not None:setup_v9_selected(route)
+    version='v9' if route is not None else 'v8'
+    facts={'schema':route['setupSchema'] if route is not None else 'bw.ring3.setup-original.v8','preflight':None,'archives':[],
         'policy':None,'unpack':None,'configure':None,'postStatus':None,'cleanup':None,
         'policyCleanupCgroup':None,
         'nodeStage':None,'runtime':None,'partial':None,'deferredHostTriggers':True,
@@ -8044,18 +8153,18 @@ def setup_v8_sequence(ops,request):
         if item['firstFailure'] is not None:
             phase_failure.adopt(item['firstFailure'],item['secondary'])
         elif item['exitCode']!=0 or item['timedOut'] is not False or item['secondary']:
-            phase_failure.add(ValueError('bounded '+name+' dpkg failed'),'v8-'+name)
+            phase_failure.add(ValueError('bounded '+name+' dpkg failed'),version+'-'+name)
             phase_failure.secondary.extend(item['secondary'])
         try:
             item['cgroupAfter']=ops.quiescent(name)
             need(item['cgroupAfter']['onlyController'] is True,
                  'no owned direct or nested dpkg descendants after '+name)
-        except BaseException as error:phase_failure.add(error,'v8-'+name+'-cgroup')
+        except BaseException as error:phase_failure.add(error,version+'-'+name+'-cgroup')
         if phase_failure.first is not None:
             raise ObservedFailure(phase_failure.first,phase_failure.secondary)
     try:
         facts['preflight']=ops.preflight(request)
-        need(facts['preflight']['imageVersion']==SETUP_V8_IMAGE and
+        need(facts['preflight']['imageVersion'] in (SETUP_V9_IMAGES if route is not None else (SETUP_V8_IMAGE,)) and
              facts['preflight']['statusSha256']==SETUP_V8_STATUS_SHA and
              same_json(facts['preflight']['helperSha256'],SETUP_V8_HELPERS) and
              setup_v8_helper_witnesses_valid(facts['preflight']['helperWitness']) and
@@ -8085,7 +8194,7 @@ def setup_v8_sequence(ops,request):
              'explicit selected status and deferred trigger facts')
     except BaseException as error:
         facts['partial']=getattr(error,'ring3_partial',None)
-        failure.add(error,'v8-setup')
+        failure.add(error,version+'-setup')
     finally:
         if policy_created:
             try:
@@ -8096,16 +8205,16 @@ def setup_v8_sequence(ops,request):
                 else:
                     facts['cleanup']={'deferred':True,'reason':'owned descendants remain; outside terminal cleanup required'}
                     raise ValueError('policy retained while owned descendants remain')
-            except BaseException as error:failure.add(error,'v8-policy-cleanup')
+            except BaseException as error:failure.add(error,version+'-policy-cleanup')
         try:ops.close_archives(facts['archives'])
-        except BaseException as error:failure.add(error,'v8-archive-cleanup')
+        except BaseException as error:failure.add(error,version+'-archive-cleanup')
     if failure.first is None and failure.secondary==[]:
         try:
             facts['nodeStage'],facts['runtime']=ops.stage_drop_inventory(request,facts)
             need(facts['nodeStage']['verifiedCopy'] is True and facts['nodeStage']['irreversibleDrop'] is True and
                  facts['runtime']['graphObserved'] is True and facts['runtime']['actualGuestApproved'] is False,
                  'root stage, irreversible drop and selected metadata graph')
-        except BaseException as error:failure.add(error,'v8-stage-runtime')
+        except BaseException as error:failure.add(error,version+'-stage-runtime')
     facts['firstFailure'],facts['secondary']=failure.first,failure.secondary
     need(len(encode(facts))<=SETUP_V8_ORIGINAL_CAP,'versioned four-MiB combined setup original cap')
     return facts
@@ -8113,8 +8222,9 @@ def setup_v8_sequence(ops,request):
 
 class SetupV8Tool(LinuxChild):
     """One root dpkg phase inside the separately bounded transient service."""
-    def __init__(self,argv):
-        super().__init__(None,'setup-v8',argv)
+    def __init__(self,argv,route=None):
+        if route is not None:setup_v9_selected(route)
+        super().__init__(None,'setup-v9' if route is not None else 'setup-v8',argv)
         self.environment=dict(SETUP_V8_INSTALLER_ENV)
 
     def preexec(self,identity_fd):
@@ -8131,7 +8241,9 @@ class SetupV8Tool(LinuxChild):
 
 
 class SetupV8Host:
-    def __init__(self,environ,event_raw,request_raw,observer):
+    def __init__(self,environ,event_raw,request_raw,observer,route=None):
+        if route is not None:setup_v9_selected(route)
+        self.route=route
         self.environ,self.event_raw,self.request_raw,self.observer=dict(environ),event_raw,request_raw,observer
         self.root=None;self.root_identity=None;self.files={};self.network_started=None;self.acquisition_count=0
         self.pre_status_rows=None
@@ -8157,21 +8269,26 @@ class SetupV8Host:
         self.preflight_prefix['imageFieldErrors']=field_errors
         need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root setup service identity')
         run_id=self.environ.get('GITHUB_RUN_ID','')
-        need(re.fullmatch('[1-9][0-9]{0,19}',run_id) is not None,'fixed v8 unit run ID')
+        need(re.fullmatch('[1-9][0-9]{0,19}',run_id) is not None,
+             'fixed v9 unit run ID' if self.route is not None else 'fixed v8 unit run ID')
         membership=Cgroups.text(None,Path('/proc/self/cgroup'))
-        need(membership=='0::/system.slice/bw-ring3-setup-v8-'+run_id+'-1.service\n',
+        prefix=self.route['unitPrefix'] if self.route is not None else 'bw-ring3-setup-v8-'
+        need(membership=='0::/system.slice/'+prefix+run_id+'-1.service\n',
              'actual owned transient setup service membership')
         unit=Path('/sys/fs/cgroup')/membership[4:-1]
         limits={key:Cgroups.text(None,unit/name).strip() for key,name in
             (('cpuMax','cpu.max'),('memoryMax','memory.max'),('swapMax','memory.swap.max'),('pidsMax','pids.max'))}
         need(limits==LIMITS,'observed outer setup service CPU/memory/swap/PID limits')
-        need(not field_errors and observed=={'ImageOS':{'present':True,'value':'ubuntu24'},
-             'ImageVersion':{'present':True,'value':SETUP_V8_IMAGE}},
+        image_version=observed['ImageVersion']['value']
+        need(not field_errors and observed['ImageOS']=={'present':True,'value':'ubuntu24'} and
+             observed['ImageVersion']['present'] is True and
+             image_version in (SETUP_V9_IMAGES if self.route is not None else (SETUP_V8_IMAGE,)),
              'fresh exact hosted image labels; separately reviewed setup log remains required')
         need(Path('/usr/sbin/policy-rc.d').exists() is False and Path('/usr/sbin/policy-rc.d').is_symlink() is False,
              'preexisting policy refused')
         status=bounded_read('/var/lib/dpkg/status',8<<20)
-        pre_original=emit_setup_v8_status('pre',status)
+        pre_original=(emit_setup_v8_status('pre',status) if self.route is None else
+            emit_setup_v8_status('pre',status,route=self.route))
         self.preflight_prefix.update(statusOriginal=pre_original,statusSha256=sha(status),
             statusBytes=len(status))
         need(sha(status)==SETUP_V8_STATUS_SHA,'fresh exact dpkg status bytes')
@@ -8182,7 +8299,8 @@ class SetupV8Host:
         self.pre_status_rows=rows
         helpers={};witnesses={}
         for path,pin in SETUP_V8_HELPERS.items():
-            witness=setup_v8_helper_witness(path,pin)
+            witness=(setup_v8_helper_witness(path,pin) if self.route is None else
+                setup_v8_helper_witness(path,pin,self.route))
             witnesses[path]=witness;helpers[path]=witness['sha256']
             self.preflight_prefix['helperWitness'][path]=witness
             self.preflight_prefix['completedHelpers'].append(path)
@@ -8202,7 +8320,7 @@ class SetupV8Host:
             aliases[name]={'linkText':link,'target':target,'uid':before.st_uid,'gid':before.st_gid,
                 'nlink':before.st_nlink,'size':before.st_size}
             need(same_json(aliases[name],expected),'exact selected dash interpreter alias')
-        return {'imageOS':'ubuntu24','imageVersion':SETUP_V8_IMAGE,
+        return {'imageOS':'ubuntu24','imageVersion':image_version,
             'imageFields':observed,'imageFieldErrors':field_errors,'statusSha256':sha(status),
             'statusBytes':len(status),'statusRecords':len(rows),'helperSha256':helpers,
             'helperWitness':witnesses,
@@ -8216,7 +8334,8 @@ class SetupV8Host:
         if self.root is None:
             run_id=self.environ.get('GITHUB_RUN_ID','');need(re.fullmatch('[1-9][0-9]{0,19}',run_id) is not None,
                  'positive official run selector before owned staging')
-            root=Path('/run')/('bw-ring3-setup-v8-'+run_id+'-1')
+            prefix=self.route['unitPrefix'] if self.route is not None else 'bw-ring3-setup-v8-'
+            root=Path('/run')/(prefix+run_id+'-1')
             os.mkdir(root,0o700);self.root=root
             try:
                 info=root.lstat();self.root_identity=self.identity(info)
@@ -8248,7 +8367,8 @@ class SetupV8Host:
             attempt_started=time.monotonic()
             if self.network_started is None:self.network_started=attempt_started
             need(time.monotonic()-self.network_started<180,'total archive acquisition deadline')
-            request=urllib.request.Request(url,headers={'Accept-Encoding':'identity','User-Agent':'bw-ring3-setup-v8/1'})
+            request=urllib.request.Request(url,headers={'Accept-Encoding':'identity',
+                'User-Agent':'bw-ring3-setup-v9/1' if self.route is not None else 'bw-ring3-setup-v8/1'})
             with urllib.request.build_opener(RejectRedirect).open(request,timeout=30) as reply:
                 need(reply.status==200 and reply.headers.get('Content-Encoding') in (None,'identity') and
                      reply.headers.get('Content-Length')==str(package['size']),'exact archive HTTP response')
@@ -8273,7 +8393,8 @@ class SetupV8Host:
             self.files[str(path)]=self.identity(held)
         except BaseException as error:first=error
         finally:
-            if descriptor is not None:first=close_owned(descriptor,first,'v8-archive-close')
+            if descriptor is not None:first=close_owned(descriptor,first,
+                'v9-archive-close' if self.route is not None else 'v8-archive-close')
         if first is not None:
             first.ring3_partial={'phase':'archive','package':package,'path':str(path),
                 'receivedBytes':received,'writtenBytes':written,'receivedSha256':hasher.hexdigest(),
@@ -8297,7 +8418,8 @@ class SetupV8Host:
                  'held named policy identity')
         except BaseException as error:first=error
         finally:
-            if descriptor is not None:first=close_owned(descriptor,first,'v8-policy-close')
+            if descriptor is not None:first=close_owned(descriptor,first,
+                'v9-policy-close' if self.route is not None else 'v8-policy-close')
         if first is not None:
             first.ring3_partial={'phase':'policy-create','path':path,'createdIdentity':created,
                 'writeUncertain':info is None}
@@ -8307,10 +8429,12 @@ class SetupV8Host:
                     need(self.identity(named)[:6]==created[:6],'same partially written owned policy identity')
                     os.unlink(path)
                 except BaseException as secondary:
-                    first.ring3_secondary=getattr(first,'ring3_secondary',[])+[row(secondary,'v8-partial-policy-cleanup')]
+                    first.ring3_secondary=getattr(first,'ring3_secondary',[])+[row(secondary,
+                        'v9-partial-policy-cleanup' if self.route is not None else 'v8-partial-policy-cleanup')]
             elif descriptor is not None:
                 first.ring3_secondary=getattr(first,'ring3_secondary',[])+[
-                    row(ValueError('created policy identity unknown; no unlink'),'v8-partial-policy-cleanup')]
+                    row(ValueError('created policy identity unknown; no unlink'),
+                        'v9-partial-policy-cleanup' if self.route is not None else 'v8-partial-policy-cleanup')]
             raise first
         return {'path':path,'identity':self.identity(info),'sha256':sha(data),'mode':0o755,'exclusive':True}
 
@@ -8318,7 +8442,10 @@ class SetupV8Host:
         need(args==['--no-triggers','--unpack']+[str(self.root/(str(i).zfill(2)+'.deb')) for i in range(15)] or
              args==['--no-triggers','--configure',*SETUP_V8_CONFIGURE_ORDER],
              'fixed no-force, no-trigger dpkg phase')
-        argv=['/usr/bin/dpkg',*args];process,streams=collect_child(SetupV8Tool(argv),'setup-v8',argv,profile='setup-v8')
+        label='setup-v9' if self.route is not None else 'setup-v8'
+        argv=['/usr/bin/dpkg',*args];tool=(SetupV8Tool(argv) if self.route is None else
+            SetupV8Tool(argv,self.route))
+        process,streams=collect_child(tool,label,argv,profile=label)
         return {'argv':argv,'process':process,'stdout':original_bytes(streams['stdout']) if streams['stdout'] else None,
             'stderr':original_bytes(streams['stderr']) if streams['stderr'] else None,'exitCode':process['exitCode'],'timedOut':process['timedOut'],
             'firstFailure':process['firstFailure'],'secondary':process['secondary']}
@@ -8326,7 +8453,8 @@ class SetupV8Host:
     def quiescent(self,phase):
         need(phase in ('unpack','configure','policy-cleanup'),'fixed setup cgroup census phase')
         run_id=self.environ['GITHUB_RUN_ID']
-        unit=Path('/sys/fs/cgroup/system.slice')/('bw-ring3-setup-v8-'+run_id+'-1.service')
+        prefix=self.route['unitPrefix'] if self.route is not None else 'bw-ring3-setup-v8-'
+        unit=Path('/sys/fs/cgroup/system.slice')/(prefix+run_id+'-1.service')
         procs=Cgroups.text(None,unit/'cgroup.procs')
         events=Cgroups.text(None,unit/'cgroup.events')
         stat_text=Cgroups.text(None,unit/'cgroup.stat')
@@ -8340,7 +8468,8 @@ class SetupV8Host:
 
     def post_status(self,request):
         raw=bounded_read('/var/lib/dpkg/status',8<<20)
-        post_original=emit_setup_v8_status('post',raw)
+        post_original=(emit_setup_v8_status('post',raw) if self.route is None else
+            emit_setup_v8_status('post',raw,route=self.route))
         rows=setup_v8_status_rows(raw);selected={}
         need(self.pre_status_rows is not None,'retained parsed pre-status before post comparison')
         setup_v8_status_delta(self.pre_status_rows,rows)
@@ -8388,7 +8517,7 @@ class SetupV8Host:
     def stage_drop_inventory(self,request,facts):
         ids=[self.environ.get('SUDO_'+key,'') for key in ('UID','GID')]
         need(all(type(x) is str and re.fullmatch('[1-9][0-9]{0,9}',x) and int(x)<2**31 for x in ids),
-             'trusted v8 Node-stage invoker')
+             'trusted v9 Node-stage invoker' if self.route is not None else 'trusted v8 Node-stage invoker')
         invoker=list(map(int,ids));copy=NodeStageCopy();failure=FirstFailure();record=None;raw=None
         drop_progress=[]
         def partial():
@@ -8398,23 +8527,31 @@ class SetupV8Host:
         try:
             checkout=Path.cwd();info=checkout.lstat()
             need(checkout.resolve(strict=True)==checkout and (info.st_uid,info.st_gid)==tuple(invoker),
-                 'v8 stage checkout identity')
+                 'v9 stage checkout identity' if self.route is not None else 'v8 stage checkout identity')
             for path in SOURCE_PATHS:
                 info=Path(path).lstat();need(stat.S_ISREG(info.st_mode) and stat.S_IMODE(info.st_mode)==0o644 and
-                    (info.st_uid,info.st_gid)==tuple(invoker),'v8 stage source owner/mode')
+                 (info.st_uid,info.st_gid)==tuple(invoker),
+                 'v9 stage source owner/mode' if self.route is not None else 'v8 stage source owner/mode')
             copy.copy()
-            platform_fields={key:self.environ[key] for key in SETUP_V8_ENV}
-            record={'schema':'bw.ring3.node-stage-original.v8','request':original_bytes(self.request_raw),
+            platform_fields={key:self.environ[key] for key in
+                (SETUP_V9_ENV if self.route is not None else SETUP_V8_ENV)}
+            record={'schema':self.route['stageSchema'] if self.route is not None else
+                'bw.ring3.node-stage-original.v8','request':original_bytes(self.request_raw),
                 'event':original_bytes(self.event_raw),'platform':platform_fields,'source':self.observer.facts['source'],
                 'sourceCommands':self.observer.facts['sourceCommands'],'eventIdentity':self.observer.facts['eventIdentity'],
                 'setup':facts,'copy':final_json(encode(copy.facts)),
                 'recordBoundary':'verified copy after selected setup and policy cleanup, before directory publication',
                 'firstFailure':None,'secondary':[]}
-            raw=encode(record);need(len(raw)<=JSON_CAP,'bounded complete v8 stage record');copy.record(raw)
-        except BaseException as error:failure.add(error,'v8-node-stage')
+            raw=encode(record);need(len(raw)<=JSON_CAP,
+                'bounded complete v9 stage record' if self.route is not None else 'bounded complete v8 stage record')
+            copy.record(raw)
+        except BaseException as error:failure.add(error,
+            'v9-node-stage' if self.route is not None else 'v8-node-stage')
         finally:copy.close(failure)
         if failure.first is not None or failure.secondary or record is None:
-            error=ObservedFailure(failure.first or row(ValueError('v8 stage record missing'),'v8-node-stage'),
+            label='v9-node-stage' if self.route is not None else 'v8-node-stage'
+            error=ObservedFailure(failure.first or row(ValueError(
+                'v9 stage record missing' if self.route is not None else 'v8 stage record missing'),label),
                                   failure.secondary)
             error.ring3_partial=partial();raise error
         try:
@@ -8422,49 +8559,62 @@ class SetupV8Host:
             os.setresgid(invoker[1],invoker[1],invoker[1]);drop_progress.append('gid')
             os.setresuid(invoker[0],invoker[0],invoker[0]);drop_progress.append('uid')
             entry_ids(*invoker);drop_progress.append('ids-verified')
-            environment=dict(ENV,**{key:self.environ[key] for key in SETUP_V8_ENV})
-            os.execve('/usr/bin/python3',['/usr/bin/python3','-I','-B',READER_FILE,'--inventory-setup-v8'],environment)
-            raise RuntimeError('v8 inventory exec unexpectedly returned')
+            environment=dict(ENV,**{key:self.environ[key] for key in
+                (SETUP_V9_ENV if self.route is not None else SETUP_V8_ENV)})
+            mode=self.route['inventoryMode'] if self.route is not None else '--inventory-setup-v8'
+            os.execve('/usr/bin/python3',['/usr/bin/python3','-I','-B',READER_FILE,mode],environment)
+            raise RuntimeError(('v9' if self.route is not None else 'v8')+
+                ' inventory exec unexpectedly returned')
         except BaseException as error:
             error.ring3_partial=partial();raise
 
 
-def setup_v8_entry(environ):
+def setup_v8_entry(environ,route=None):
+    if route is not None:setup_v9_selected(route)
+    version='v9' if route is not None else 'v8'
     failure=FirstFailure();facts=None;publication_safe=False
     image_fields,image_errors=image_env_fields(environ)
-    context={'request':None,'event':None,'platform':{key:environ.get(key) for key in SETUP_V8_ENV},
+    context={'request':None,'event':None,'platform':{key:environ.get(key) for key in
+        (SETUP_V9_ENV if route is not None else SETUP_V8_ENV)},
         'source':None,'sourceCommands':[],'eventIdentity':None,
         'imageFields':image_fields,'imageFieldErrors':image_errors}
     try:
-        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root v8 entry')
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root '+version+' entry')
         observer=HostedEnvelopeInstaller(environ);event=observer.event()
         context['event']=original_bytes(event);context['eventIdentity']=observer.facts['eventIdentity']
-        request_raw,request=admit_setup_v8_event(event,environ)
+        request_raw,request=(admit_setup_v9_event(event,environ) if route is not None else
+            admit_setup_v8_event(event,environ))
         context['request']=original_bytes(request_raw)
-        need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,'held v8 source path')
+        need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,'held '+version+' source path')
         observer.source(request)  # Exact HEAD/tree/live source12 before any mutation or GET.
         context['source']=observer.facts['source'];context['sourceCommands']=observer.facts['sourceCommands']
-        host=SetupV8Host(environ,event,request_raw,observer)
-        facts=setup_v8_sequence(host,request)
+        host=(SetupV8Host(environ,event,request_raw,observer) if route is None else
+            SetupV8Host(environ,event,request_raw,observer,route))
+        facts=(setup_v8_sequence(host,request) if route is None else
+            setup_v8_sequence(host,request,route))
         if facts['firstFailure'] is not None or facts['secondary']:
             failure.adopt(facts['firstFailure'],facts['secondary'])
         else:
-            failure.add(RuntimeError('successful v8 dropped inventory exec cannot return'),'v8-entry-return')
-    except BaseException as error:failure.add(error,'v8-entry')
+            failure.add(RuntimeError('successful '+version+' dropped inventory exec cannot return'),version+'-entry-return')
+    except BaseException as error:failure.add(error,version+'-entry')
     if 'observer' in locals():
         context['sourceCommands']=observer.facts['sourceCommands']
         context['source']=observer.facts.get('source')
-    raw=encode({'schema':'bw.ring3.setup-entry-failure.v8','context':context,'setup':facts,'firstFailure':failure.first,
+    raw=encode({'schema':route['failureSchema'] if route is not None else 'bw.ring3.setup-entry-failure.v8',
+        'context':context,'setup':facts,'firstFailure':failure.first,
         'secondary':failure.secondary,'publicationSafe':publication_safe,'actualGuestApproved':False,
         'completeHostConfiguration':False})
-    need(len(raw)<=SETUP_V8_ORIGINAL_CAP and sys.stdout.buffer.write(raw)==len(raw),'bounded v8 failure original')
+    need(len(raw)<=SETUP_V8_ORIGINAL_CAP and sys.stdout.buffer.write(raw)==len(raw),
+         'bounded v9 failure original' if route is not None else 'bounded v8 failure original')
     sys.stdout.buffer.flush()
     return 1
 
 
-def setup_v8_owned_unit(unit):
+def setup_v8_owned_unit(unit,route=None):
+    if route is not None:setup_v9_selected(route)
+    prefix=route['unitPrefix'] if route is not None else 'bw-ring3-setup-v8-'
     need(isinstance(unit,Path) and unit.parent==Path('/sys/fs/cgroup/system.slice') and
-         re.fullmatch(r'bw-ring3-setup-v8-[1-9][0-9]{0,19}-1\.service',unit.name),
+         re.fullmatch(re.escape(prefix)+r'[1-9][0-9]{0,19}-1\.service',unit.name),
          'closed exact v8 unit path')
     need(not unit.is_symlink(),'no aliased owned unit')
     if not unit.exists():return False
@@ -8474,9 +8624,9 @@ def setup_v8_owned_unit(unit):
     return True
 
 
-def setup_v8_outside_census(unit):
+def setup_v8_outside_census(unit,route=None):
     """Finite point census of only the exact run-derived transient unit."""
-    if not setup_v8_owned_unit(unit):
+    if not (setup_v8_owned_unit(unit) if route is None else setup_v8_owned_unit(unit,route)):
         return {'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None}
     procs=Cgroups.text(None,unit/'cgroup.procs')
     events=Cgroups.text(None,unit/'cgroup.events')
@@ -8487,10 +8637,12 @@ def setup_v8_outside_census(unit):
         'cgroupProcs':procs,'cgroupEvents':events,'cgroupStat':stat_text}
 
 
-def setup_v8_stop_unit(unit_name):
+def setup_v8_stop_unit(unit_name,route=None):
     """Trusted hosted systemctl stop of one admitted owned unit, under two timers."""
+    if route is not None:setup_v9_selected(route)
+    prefix=route['unitPrefix'] if route is not None else 'bw-ring3-setup-v8-'
     need(type(unit_name) is str and
-         re.fullmatch(r'bw-ring3-setup-v8-[1-9][0-9]{0,19}-1\.service',unit_name),
+         re.fullmatch(re.escape(prefix)+r'[1-9][0-9]{0,19}-1\.service',unit_name),
          'one exact owned unit stop target')
     argv=['/usr/bin/timeout','--kill-after=5s','20s','/usr/bin/systemctl','stop','--',unit_name]
     completed=subprocess.run(argv,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,
@@ -8500,10 +8652,14 @@ def setup_v8_stop_unit(unit_name):
         'timedOut':completed.returncode in (124,137)}
 
 
-def setup_v8_outside_cleanup(environ):
+def setup_v8_outside_cleanup(environ,route=None):
     """Bounded exact-unit terminal observation precedes any owned policy unlink."""
+    if route is not None:setup_v9_selected(route)
+    version='v9' if route is not None else 'v8'
+    prefix=route['unitPrefix'] if route is not None else 'bw-ring3-setup-v8-'
     failure=FirstFailure()
-    value={'schema':'bw.ring3.setup-outside-cleanup.v8','runId':None,
+    value={'schema':route['cleanupSchema'] if route is not None else
+           'bw.ring3.setup-outside-cleanup.v8','runId':None,
         'serviceExitCode':None,'sourceAdmission':None,'preCensus':None,'stop':None,
         'postCensus':None,'cgroupTerminal':None,'unitCensus':None,'policy':None,
         'action':None,'firstFailure':None,'secondary':[],'setupApproved':False}
@@ -8515,40 +8671,41 @@ def setup_v8_outside_cleanup(environ):
              'exact finite outside run/exit context')
         value['runId'],value['serviceExitCode']=run_id,int(code)
         if int(code)!=0:
-            failure.add(ValueError('bounded outer setup client exit '+code),'v8-outer-client')
+            failure.add(ValueError('bounded outer setup client exit '+code),version+'-outer-client')
         # Admission must finish before an exact-unit stop or global policy mutation.
         observer=HostedEnvelopeInstaller(environ)
         event_raw=observer.event()
-        request_raw,request=admit_setup_v8_event(event_raw,environ)
+        request_raw,request=(admit_setup_v9_event(event_raw,environ) if route is not None else
+            admit_setup_v8_event(event_raw,environ))
         need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,
-             'held v8 outside source path')
+             'held '+version+' outside source path')
         observer.source(request)
         need(request['head']==environ.get('BW_EXPECTED_HEAD') and
              request['tree']==environ.get('BW_EXPECTED_TREE'),
              'outside selected request/source identity')
-        unit_name='bw-ring3-setup-v8-'+run_id+'-1.service'
+        unit_name=prefix+run_id+'-1.service'
         unit=Path('/sys/fs/cgroup/system.slice')/unit_name
         value['sourceAdmission']={'requestSha256':sha(request_raw),
             'eventSha256':sha(event_raw),'head':request['head'],'tree':request['tree'],
             'source':observer.facts['source'],'unit':unit_name}
-        unit_present=setup_v8_owned_unit(unit)
-        try:value['preCensus']=setup_v8_outside_census(unit)
-        except BaseException as error:failure.add(error,'v8-outside-pre-census')
+        unit_present=setup_v8_owned_unit(unit) if route is None else setup_v8_owned_unit(unit,route)
+        try:value['preCensus']=setup_v8_outside_census(unit) if route is None else setup_v8_outside_census(unit,route)
+        except BaseException as error:failure.add(error,version+'-outside-pre-census')
         pre=value['preCensus']
         if unit_present and (pre is None or pre['terminal']=='populated' or
                              (int(code)!=0 and pre['terminal']=='empty')):
             try:
-                value['stop']=setup_v8_stop_unit(unit_name)
+                value['stop']=setup_v8_stop_unit(unit_name) if route is None else setup_v8_stop_unit(unit_name,route)
                 need(value['stop']['exitCode']==0,'bounded exact-unit stop completed')
             except BaseException as error:
                 if value['stop'] is None:
                     value['stop']={'attempted':True,'argv':['/usr/bin/timeout','--kill-after=5s','20s',
                         '/usr/bin/systemctl','stop','--',unit_name],
                         'exitCode':None,'timedOut':None}
-                failure.add(error,'v8-outside-exact-stop')
+                failure.add(error,version+'-outside-exact-stop')
         else:value['stop']={'attempted':False,'argv':None,'exitCode':None,'timedOut':False}
-        try:value['postCensus']=setup_v8_outside_census(unit)
-        except BaseException as error:failure.add(error,'v8-outside-post-census')
+        try:value['postCensus']=setup_v8_outside_census(unit) if route is None else setup_v8_outside_census(unit,route)
+        except BaseException as error:failure.add(error,version+'-outside-post-census')
         post=value['postCensus']
         if post is not None:
             value['cgroupTerminal']=post['terminal']
@@ -8564,12 +8721,13 @@ def setup_v8_outside_cleanup(environ):
             value['action']='deferred'
             need(value['stop']['attempted'] is False or value['stop']['exitCode']==0,
                  'uncertain stop forbids global policy unlink')
-            raw=bounded_read('build/i80386-ring3-setup-runtime-inventory-v8/inventory.original.log',8<<20)
+            raw=bounded_read('build/i80386-ring3-setup-runtime-inventory-'+version+'/inventory.original.log',8<<20)
             packets=[]
             for line in raw.splitlines():
                 if line.startswith(b'{"actualGuestApproved":false,'):
                     packet=final_json(line,SETUP_V8_ORIGINAL_CAP)
-                    if packet.get('schema')=='bw.ring3.setup-entry-failure.v8':packets.append(packet)
+                    if packet.get('schema')==(route['failureSchema'] if route is not None else
+                       'bw.ring3.setup-entry-failure.v8'):packets.append(packet)
             need(len(packets)==1,'one bounded retained failed setup packet before outside policy cleanup')
             packet=packets[0];require_fields(packet,
                 'schema context setup firstFailure secondary publicationSafe actualGuestApproved completeHostConfiguration',
@@ -8581,7 +8739,8 @@ def setup_v8_outside_cleanup(environ):
             need(held_request==request_raw and context['platform']['GITHUB_RUN_ID']==run_id and
                  request['head']==environ.get('BW_EXPECTED_HEAD'),
                  'outside policy request/source/run join')
-            setup=packet['setup'];need(type(setup) is dict and setup.get('schema')=='bw.ring3.setup-original.v8',
+            setup=packet['setup'];need(type(setup) is dict and setup.get('schema')==
+                 (route['setupSchema'] if route is not None else 'bw.ring3.setup-original.v8'),
                  'original setup facts required')
             policy=setup.get('policy');need(type(policy) is dict and policy.get('path')==str(path) and
                  policy.get('sha256')==sha(SETUP_V8_POLICY_BYTES) and policy.get('mode')==0o755 and
@@ -8595,7 +8754,7 @@ def setup_v8_outside_cleanup(environ):
             os.unlink(path)
             need(not path.exists() and not path.is_symlink(),'outside exact owned policy removed')
             value['policy']={'identity':actual,'sha256':policy['sha256']};value['action']='removed-exact'
-    except BaseException as error:failure.add(error,'v8-outside-policy-cleanup')
+    except BaseException as error:failure.add(error,version+'-outside-policy-cleanup')
     value['firstFailure'],value['secondary']=failure.first,failure.secondary
     raw=encode(value)
     need(len(raw)<=16384 and sys.stdout.buffer.write(raw)==len(raw),
@@ -8604,10 +8763,12 @@ def setup_v8_outside_cleanup(environ):
     return 0 if failure.first is None and failure.secondary==[] else 1
 
 
-def setup_v8_image_shell(environ):
+def setup_v8_image_shell(environ,route=None):
     """Bounded unprivileged pre-service image observation, including refusal values."""
+    if route is not None:setup_v9_selected(route)
     fields,errors=image_env_fields(environ)
-    original={'schema':'bw.ring3.setup-image-shell.v8','fields':fields,'fieldErrors':errors,
+    original={'schema':route['shellSchema'] if route is not None else
+              'bw.ring3.setup-image-shell.v8','fields':fields,'fieldErrors':errors,
         'setupAttempted':False,'guestAttempted':False,'setupApproved':False}
     raw=encode(original)
     need(len(raw)<=4096 and sys.stdout.buffer.write(raw)==len(raw),'bounded v8 shell image original')
@@ -9106,7 +9267,7 @@ ACTUAL_ENTRY_ENABLED=False  # Activation requires a separate reviewed source/wor
 def dispatch_cli(argv=None,environ=None):
     parser=argparse.ArgumentParser(description=__doc__,allow_abbrev=False)
     modes=parser.add_mutually_exclusive_group(required=True)
-    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy','setup-runtime-inventory-v6','cleanup-setup-v6-policy','setup-v6-image-shell','setup-runtime-inventory-v7','cleanup-setup-v7-policy','setup-v7-image-shell','setup-runtime-inventory-v8','cleanup-setup-v8-policy','setup-v8-image-shell','image-env-shell-v1','image-env-service-v1','host-baseline-shell-v1','host-baseline-service-v1','host-baseline-outside-v1'):
+    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy','setup-runtime-inventory-v6','cleanup-setup-v6-policy','setup-v6-image-shell','setup-runtime-inventory-v7','cleanup-setup-v7-policy','setup-v7-image-shell','setup-runtime-inventory-v8','cleanup-setup-v8-policy','setup-v8-image-shell','setup-runtime-inventory-v9','cleanup-setup-v9-policy','setup-v9-image-shell','image-env-shell-v1','image-env-service-v1','host-baseline-shell-v1','host-baseline-service-v1','host-baseline-outside-v1'):
         modes.add_argument('--'+name,action='store_const',const=name,dest='mode')
     argv=list(sys.argv[1:] if argv is None else argv)
     if len(argv)!=1:parser.error('exactly one fixed mode argument required')
@@ -9137,6 +9298,15 @@ def dispatch_cli(argv=None,environ=None):
             result=image_env_service_original(dict(os.environ if environ is None else environ))
             emit_image_env_diagnostic(result)
             return 0 if result['firstFailure'] is None else 1
+        if args.mode=='setup-v9-image-shell':
+            need(SETUP_V9_ENABLED is True,'v9 shell image route inactive')
+            return setup_v8_image_shell(dict(os.environ if environ is None else environ),SETUP_V9_ROUTE)
+        if args.mode=='setup-runtime-inventory-v9':
+            need(SETUP_V9_ENABLED is True,'v9 setup metadata route inactive')
+            return setup_v8_entry(dict(os.environ if environ is None else environ),SETUP_V9_ROUTE)
+        if args.mode=='cleanup-setup-v9-policy':
+            need(SETUP_V9_ENABLED is True,'v9 outside cleanup route inactive')
+            return setup_v8_outside_cleanup(dict(os.environ if environ is None else environ),SETUP_V9_ROUTE)
         if args.mode=='setup-v8-image-shell':
             need(SETUP_V8_ENABLED is True,'v8 shell image route inactive')
             return setup_v8_image_shell(dict(os.environ if environ is None else environ))
