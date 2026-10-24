@@ -381,6 +381,7 @@ jobs:
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v5-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v6-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --consumed-v6-failure-only
+          /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --consumed-v7-failure-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v7-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v8-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --image-env-diagnostic-only
