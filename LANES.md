@@ -1,4 +1,4 @@
-2026-10-24 literal-PULSE oracle census registration — CLAIMED, Codex circuit owner.
+2026-10-24 literal-PULSE oracle census registration — DONE (source candidate), Codex circuit owner.
 Base a2b4ff73; bounded qualification repair for the same owner's PR665.
 Its original CI passes the admitted47 pulse comparisons but fails the unchanged
 census coverage assertion because spice-pulse-source.test.mjs now consumes the
@@ -15,6 +15,19 @@ engine, scheduler, oracle substitution, workflow or unrelated path change.
 Merge claim before registration implementation. Preserve all other owners and
 normally compose current master into PR665. Require the original census failure
 to pass, installer/pulse/scope regressions and every enabled exact-head check.
+
+Claim680 merged normally as ea45d621 before registration implementation.
+The system and explicit admitted47 inputs now have separate census identities;
+the original positive-width file is also listed under the system oracle.
+Unset/missing/present-path controls retain binary-content identity and prove
+that selecting the literal input leaves default resolution unchanged. File
+presence remains distinct from executable/source/version admission.
+The original coverage failure reproduces locally and now passes unchanged.
+All 19 census controls and 115 installer/pulse/scope/profile/current/inductor
+controls pass without skips. Omitting the new literal row fails by assertion.
+Normally composed current master changes no qualified runtime bytes; all eight
+original captures retain their actual source identity and match that runtime.
+Every enabled repaired-head hosted check remains required before landing.
 
 2026-10-23 voltage scope aperture capture — DONE (source candidate), Codex circuit owner.
 Base a2d49e41; additive producer for the same owner's actual sampled-audio work.
@@ -55,8 +68,10 @@ without skips. Endpoint substitution, unobserved-prefix publication and bypassed
 failed-solve exclusion each fail by assertion. The initial reset regression
 failed until the initial observation was restored. A pre-final actual organ C4
 candidate retained 18 aperture pulses versus 18 envelope pulses and only five
-point pulses, with a qualified unchanged solver. Final exact-source eight-key
-producer capture remains a local landing gate. No consumer/audio-hardware or
+point pulses, with a qualified unchanged solver. The completed exact-source eight-key
+producer capture preserves every pulse, matches all envelope counts, retains
+qualified solver status and verifies release. Its original source identity is
+retained; normal main composition and census repair change no runtime bytes. No consumer/audio-hardware or
 ideal anti-aliasing claim follows; CUI adoption has its own scope.
 
 2026-10-23 versioned literal-PULSE oracle environment — DONE (source candidate), same circuit owner.

@@ -400,3 +400,42 @@ test('a present FILE oracle reports the digest of what it found', () => {
         `${present.length} oracles report present but none resolved to a file or a directory `
         + 'on disk, so neither rule above was exercised');
 });
+
+
+test('literal PULSE and default ngspice inputs have distinct census identities', () => {
+    const row = INPUTS.find(input => input.id === 'ngspice-literal-pulse');
+    assert.ok(row);
+    assert.equal(row.kind, 'oracle');
+    assert.equal(row.env, 'NGSPICE_LITERAL_ORACLE');
+    assert.equal(row.bin, undefined, 'no silent system-oracle fallback');
+    assert.deepEqual(row.paths, []);
+    assert.deepEqual(row.gates, ['test/spice-pulse-source.test.mjs']);
+    assert.equal(row.ciAvailable, true);
+    assert.match(row.what, /presence.*does not establish/s);
+    assert.ok(INPUTS.find(input => input.id === 'ngspice').gates.includes(row.gates[0]),
+        'the same file also runs its original default positive-width comparison');
+});
+
+test('literal-oracle census presence records bytes without admitting or replacing the default oracle', () => {
+    const row = INPUTS.find(input => input.id === 'ngspice-literal-pulse');
+    const previous = process.env.NGSPICE_LITERAL_ORACLE;
+    const defaultRow = INPUTS.find(input => input.id === 'ngspice');
+    const originalDefault = resolve(defaultRow);
+    try {
+        delete process.env.NGSPICE_LITERAL_ORACLE;
+        assert.equal(resolve(row).present, false);
+        process.env.NGSPICE_LITERAL_ORACLE = join(ROOT, 'nonexistent-literal-oracle');
+        assert.equal(resolve(row).present, false);
+        // A present ordinary source file is presence, never executable admission.
+        const path = fileURLToPath(import.meta.url);
+        process.env.NGSPICE_LITERAL_ORACLE = path;
+        const present = resolve(row);
+        assert.equal(present.present, true);
+        assert.equal(present.digest,
+            'sha256:' + createHash('sha256').update(readFileSync(path)).digest('hex').slice(0, 16));
+        assert.deepEqual(resolve(defaultRow), originalDefault);
+    } finally {
+        if (previous === undefined) delete process.env.NGSPICE_LITERAL_ORACLE;
+        else process.env.NGSPICE_LITERAL_ORACLE = previous;
+    }
+});
