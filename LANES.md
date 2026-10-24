@@ -6603,7 +6603,8 @@ reader owns its new request and event,
 same-job setup/graph joins, twenty-role packet and official metadata checks.
 No request or environment field can choose pins, resource caps or validators.
 
-Preserve existing per-role limits, including the 16 MiB archive acquisition total,
+Preserve existing per-role limits, including the 16 MiB closed packet aggregate
+and separate 16 MiB archive acquisition total,
 128 KiB child streams, 120-second guest children and 600-second controller.
 The new combined retained artifact is capped at 32 MiB; this does not raise
 any old leaf cap. Bound the setup service/client/cleanup at 660/720+5/60
