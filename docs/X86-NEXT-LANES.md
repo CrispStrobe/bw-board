@@ -3133,3 +3133,31 @@ admission for the repaired metadata event before selecting the guest request;
 then require fresh affected own-fixture hosted JS/QEMU qualification. Each
 official run/job/step/artifact and original set is admitted and audited once.
 Source controls alone approve neither route.
+
+
+## Ordered 16-bit scalar read candidate
+
+Claim status: source implementation has not begun. The
+[current profile](https://github.com/CrispStrobe/bw-board/actions/runs/40057621920)
+measured a warmed authored five-operation loop at about 4.52 million
+instructions/s for the core and 3.48 million instructions/s for AT on an
+AMD EPYC 9V74 hosted CPU using Node 22.23.3. These are loop throughput, not
+physical 16 MHz 386 RTx, an optimization gain or an OS workload measurement.
+
+The next candidate specializes only the contiguous-page two-byte branch in
+`_readLinear`: one translation followed by the same ordered pair of byte
+callbacks, removing the small loop and power calculation. Leave the four-byte
+and page-crossing paths intact. The owning registry entry defines exact paths.
+
+A fresh agent should first confirm the claim landed and refresh base/head
+checks, then implement the narrow arm and focused callback/order/fault tests.
+Prove byte masking, physical wrap, translation options, exceptions on either
+callback, page-crossing fallback and unaffected four-byte behavior; mutation
+controls must detect reversed reads or skipped translation. Prepare a disabled
+paired workflow and standalone original-only reader before selecting its one
+actual event. Freeze base/candidate import graphs and Node/resource facts, retain
+all eighteen original children and cleanup, and preserve the unchanged
+1.03 median CPU / all CPU ratios greater than 1 / 1.02 median wall gate.
+Require affected clean protected guest results and all enabled final-head
+checks before merge. If the gate fails, record it and keep the candidate
+unadopted rather than repeating the same measurement.
