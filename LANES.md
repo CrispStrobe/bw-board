@@ -1,3 +1,21 @@
+2026-10-24 literal-PULSE oracle census registration — CLAIMED, Codex circuit owner.
+Base a2b4ff73; bounded qualification repair for the same owner's PR665.
+Its original CI passes the admitted47 pulse comparisons but fails the unchanged
+census coverage assertion because spice-pulse-source.test.mjs now consumes the
+explicit NGSPICE_LITERAL_ORACLE input without a corresponding census row.
+Own only the relevant rows in scripts/oracle-census.mjs, focused row/presence/
+identity controls in test/oracle-census.test.mjs, and this claim. Register both
+the default ngspice positive-width comparison and the separate source-admitted47
+literal-zero comparison honestly. Presence is only presence; the existing
+installer/test admission remains responsible for source/version/binary identity.
+Require unset/missing/present-path coverage and keep the absent-input census
+assertion, frozen debt count and all numerical comparisons unchanged. No gate
+exemption, debt addition, general resolver change, binary execution by census,
+engine, scheduler, oracle substitution, workflow or unrelated path change.
+Merge claim before registration implementation. Preserve all other owners and
+normally compose current master into PR665. Require the original census failure
+to pass, installer/pulse/scope regressions and every enabled exact-head check.
+
 2026-10-23 voltage scope aperture capture — DONE (source candidate), Codex circuit owner.
 Base a2d49e41; additive producer for the same owner's actual sampled-audio work.
 A real 90ms saved miniorgan capture at 100kHz has 18 post-startup envelope
