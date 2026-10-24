@@ -3093,3 +3093,9 @@ admitted clean guest/oracle run. Keep those gates distinct from this observer.
    Profile attribution selects a measurable bottleneck for a *later* narrow
    optimization claim and paired semantic/performance qualification. The model
    charges alone grant no measured speedup, physical RTx or hardware frequency.
+
+   The [current source candidate](I80386-CURRENT-AT-COST.md) now prepares four
+   serial timing/profile children under that merged claim. Its hosted capture
+   job is inactive. Five-operation pure controls and mocked original readers
+   are source checks; current one-million-step cost and bottlenecks remain
+   unmeasured until an exact-head admitted hosted run.

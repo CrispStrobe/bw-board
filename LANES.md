@@ -5925,3 +5925,12 @@ standalone byte reader joins source, workflow, semantics and raw
 profiles without producer imports or replay. Current profiling only selects a
 later narrow optimization candidate; it grants no physical RTx, frequency,
 measured speedup, full-OS or guest qualification claim.
+
+Candidate implementation, 2026-10-24: the owned folder, workflow, focused
+test and result guide are prepared in a separate source branch. The hosted
+four-child job remains literally disabled. Pure controls cover five authored
+operations and mocked original readers; no million-step workload, V8 profile
+or guest has been executed by this candidate. Before any source landing,
+review the exact source/import closure, resource and original-byte bindings,
+then require every enabled exact-head check. A later event requires separate
+external admission and one retained official original set.
