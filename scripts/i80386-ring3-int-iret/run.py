@@ -9899,10 +9899,62 @@ def same_job_guest_cleanup(environ=None,*,event_reader=None,handoff_reader=same_
         'preCensus':None,'stop':None,'postCensus':None,'manualCgroupAbsent':None,
         'outsideTerminalObserved':False,'firstFailure':None,'secondary':[],
         'actualGuestApproved':False}
-    selection=None
+    selection=None;owned_unit=None;owned_path=None;cleanup_attempted=False
+    def census():
+        need(owned_path is not None,'only selected actual unit may be censused')
+        try:info=owned_path.lstat()
+        except FileNotFoundError:return {'terminal':'absent','cgroupProcs':None,
+            'cgroupEvents':None,'cgroupStat':None}
+        need(owned_path.resolve(strict=True)==owned_path and stat.S_ISDIR(info.st_mode),
+             'selected actual unit directory identity')
+        rows={name:Cgroups.text(None,owned_path/filename)
+              for name,filename in (('cgroupProcs','cgroup.procs'),
+                  ('cgroupEvents','cgroup.events'),('cgroupStat','cgroup.stat'))}
+        need(all(len(row.encode())<=1024 for row in rows.values()),
+             'bounded selected guest unit census')
+        return dict(rows,terminal='empty' if setup_v8_cgroup_quiet(
+            rows['cgroupProcs'],rows['cgroupEvents'],rows['cgroupStat']) else 'populated')
+    def stop_and_census():
+        nonlocal cleanup_attempted
+        need(not cleanup_attempted,'owned guest cleanup has one attempt')
+        cleanup_attempted=True
+        value['preCensus']=census()
+        found=FirstFailure()
+        try:
+            if value['preCensus']['terminal']=='populated':
+                argv=['/usr/bin/timeout','--kill-after=5s','20s','/usr/bin/systemctl',
+                      'stop','--',owned_unit]
+                value['stop']={'attempted':True,'argv':argv,
+                    'exitCode':None,'timedOut':None}
+                completed=subprocess.run(argv,stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
+                    env=dict(ENV),check=False,timeout=30)
+                value['stop']['exitCode']=completed.returncode
+                value['stop']['timedOut']=completed.returncode in (124,137)
+                need(type(completed.returncode) is int and completed.returncode==0,
+                     'bounded exact guest unit stop')
+            else:value['stop']={'attempted':False,'argv':None,'exitCode':None,
+                               'timedOut':False}
+        except BaseException as error:found.add(error,'same-job-guest-owned-stop')
+        try:value['postCensus']=census()
+        except BaseException as error:found.add(error,'same-job-guest-post-census')
+        try:
+            try:expected_cgroup(environ).lstat();value['manualCgroupAbsent']=False
+            except FileNotFoundError:value['manualCgroupAbsent']=True
+        except BaseException as error:found.add(error,'same-job-guest-manual-census')
+        if found.first is not None:raise ObservedFailure(found.first,found.secondary)
+        need(value['postCensus']['terminal'] in ('absent','empty') and
+             value['manualCgroupAbsent'] is True,
+             'selected unit and nested manual tree terminal before approval')
     try:
         need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,
              'root outside selected actual guest cleanup')
+        run_id=environ.get('GITHUB_RUN_ID','')
+        need(type(run_id) is str and re.fullmatch(r'[1-9][0-9]{0,19}',run_id),
+             'positive run-derived exact owned guest unit')
+        owned_unit=SAME_JOB_GUEST_UNIT_PREFIX+run_id+'-1.service'
+        owned_path=Path('/sys/fs/cgroup/system.slice')/owned_unit
+        value.update(runId=run_id,unit=owned_unit)
         code=environ.get('BW_SYSTEMD_RUN_EXIT_CODE','')
         need(type(code) is str and re.fullmatch('(?:0|[1-9][0-9]{0,2})',code) and
              int(code)<=255,'bounded actual service client exit')
@@ -9914,53 +9966,23 @@ def same_job_guest_cleanup(environ=None,*,event_reader=None,handoff_reader=same_
         failure.adopt(found.first,found.secondary)
         need(source==selection['handoff']['source'] and failure.first is None,
              'outside exact selected actual source before stop')
-        run_id=environ['GITHUB_RUN_ID'];unit=SAME_JOB_GUEST_UNIT_PREFIX+run_id+'-1.service'
-        need(re.fullmatch(re.escape(SAME_JOB_GUEST_UNIT_PREFIX)+
-             r'[1-9][0-9]{0,19}-1\.service',unit),'only exact owned guest unit')
-        value.update(runId=run_id,unit=unit,sourceAdmission={
+        value.update(sourceAdmission={
             'requestSha256':sha(selection['requestRaw']),
             'eventSha256':selection['eventSha256'],
             'handoffSha256':sha(selection['handoffRaw']),
             'head':selection['request']['head'],'tree':selection['request']['tree']})
-        path=Path('/sys/fs/cgroup/system.slice')/unit
-        def census():
-            try:info=path.lstat()
-            except FileNotFoundError:return {'terminal':'absent','cgroupProcs':None,
-                'cgroupEvents':None,'cgroupStat':None}
-            need(path.resolve(strict=True)==path and stat.S_ISDIR(info.st_mode),
-                 'selected actual unit directory identity')
-            rows={name:Cgroups.text(None,path/filename)
-                  for name,filename in (('cgroupProcs','cgroup.procs'),
-                      ('cgroupEvents','cgroup.events'),('cgroupStat','cgroup.stat'))}
-            need(all(len(row.encode())<=1024 for row in rows.values()),
-                 'bounded selected guest unit census')
-            return dict(rows,terminal='empty' if setup_v8_cgroup_quiet(
-                rows['cgroupProcs'],rows['cgroupEvents'],rows['cgroupStat']) else 'populated')
-        value['preCensus']=census()
         if int(code)!=0:failure.add(ValueError('actual service client did not exit zero'),
                                    'same-job-guest-client')
-        if value['preCensus']['terminal']=='populated':
-            argv=['/usr/bin/timeout','--kill-after=5s','20s','/usr/bin/systemctl',
-                  'stop','--',unit]
-            completed=subprocess.run(argv,stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
-                env=dict(ENV),check=False,timeout=30)
-            value['stop']={'attempted':True,'argv':argv,
-                'exitCode':completed.returncode,
-                'timedOut':completed.returncode in (124,137)}
-            need(type(completed.returncode) is int and completed.returncode==0,
-                 'bounded exact guest unit stop')
-        else:value['stop']={'attempted':False,'argv':None,'exitCode':None,
-                           'timedOut':False}
-        value['postCensus']=census()
-        try:expected_cgroup(environ).lstat();value['manualCgroupAbsent']=False
-        except FileNotFoundError:value['manualCgroupAbsent']=True
-        need(value['postCensus']['terminal'] in ('absent','empty') and
-             value['manualCgroupAbsent'] is True,
-             'selected unit and nested manual tree terminal before approval')
+        stop_and_census()
         value['outsideTerminalObserved']=True
     except BaseException as error:failure.add(error,'same-job-guest-outside')
     finally:
+        # Source/event admission can fail after the service has run. Once its
+        # exact run-owned unit is known, cleanup must still attempt a bounded
+        # terminal census; it cannot turn the earlier failure into approval.
+        if owned_unit is not None and not cleanup_attempted:
+            try:stop_and_census()
+            except BaseException as error:failure.add(error,'same-job-guest-outside-fallback')
         value['firstFailure'],value['secondary']=failure.first,failure.secondary
         value['outsideTerminalObserved']=(value['outsideTerminalObserved'] is True and
             failure.first is None and failure.secondary==[])
