@@ -3402,9 +3402,11 @@ status rows. An independent byte review confirmed all ten selected helper
 hashes match the held V8 helper pins. No package tool, installer, QEMU or guest
 ran; no later runner image is authenticated. The selected V8 attempt remains
 failed; this read-only observation adds no setup attempt.
-Setup/runtime/guest approvals are false. Exact-head CI for the auditor is
-pending. Next is separately claimed setup metadata authorization that
-preserves existing pins and failures.
+Setup/runtime/guest approvals are false. The corrected auditor and docs
+followup qualified at final head `618e78b3` and merged at `b51be2c6` after
+all enabled checks; the five cancelled checks on earlier head `0b9c0883`
+remain cancellations, not skips. Next is separately claimed setup metadata
+authorization that preserves existing pins and failures.
 
 ### Conditional setup metadata and authored guest handoff — unclaimed
 
@@ -3416,7 +3418,8 @@ unchanged. The pre-event request must bind source12, head, tree, workflow and
 attempt-one policy, not future run or job IDs. Preserve all fifteen selected
 archive rows, raw status SHA, ten helper hashes and aliases, signed DATA
 payload witnesses, policy101, no-trigger order and existing caps. Choose an
-explicit closed policy for observed image labels. The root service
+explicit closed policy for observed root image labels
+`20261012.334.1` or `20261023.334.3`. The root service
 checks its own label and freshly reads exact status and helper fingerprints
 before the first archive GET. The independent reader later joins bounded shell
 and service observations, requires their agreement for a positive setup grade,
@@ -3452,3 +3455,12 @@ service plus a separate service enclosing the existing 600-second controller
 is a **budget proposal**, not measured sufficiency. Require fresh exact-head
 source checks and independently audited hosted originals before any result.
 This fixture grants no strict 386DX, physical RTx or full-OS claim.
+
+The [V9 ownership proposal](../LANES.md)
+is a claim-only checkpoint. It limits implementation to the existing Ring 3
+producer, reader, controls, README, workflow and these two ownership/guide
+documents. The old V8 strict image default and negative reader outcome stay
+held; the new label policy is confined to V9. No V9 source, request, variable,
+label, run or guest has been selected by this claim. Qualify and merge the
+claim before coding, then independently qualify its final source before any
+one-shot metadata event.
