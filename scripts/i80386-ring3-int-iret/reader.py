@@ -4013,7 +4013,7 @@ def decode_staged_inventory_log(raw):
 
 
 # Separate original-only v5 metadata reader. The prior v4 decoder remains held.
-SETUP_V5_READER_ENABLED=False
+SETUP_V5_READER_ENABLED=True  # Original-only metadata; no guest approval.
 SETUP_V5_PACKAGES=SETUP_V4_PACKAGES
 SETUP_V5_ORDER=SETUP_V4_ORDER
 SETUP_V5_STATUS_SHA=SETUP_V4_STATUS_SHA

@@ -6047,3 +6047,9 @@ the dedicated installer PATH. Its pure controls do not qualify a hosted
 transaction or runtime graph. Source review, exact-head checks and external
 one-event admission remain pending; the separate v5 guest route has no source
 implementation yet.
+
+The v5 metadata activation candidate changes only its three guarded
+producer/reader/job selectors and corresponding pure controls and status
+prose. Its own labeled event still requires a separately selected request,
+source and official job; no guest route or prior label is activated. A new
+runner may refuse on image, status, helper or resource drift before any GET.

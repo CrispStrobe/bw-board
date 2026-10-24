@@ -1334,3 +1334,14 @@ the raw pre-status summary, the ordered prefix of successfully checked helper
 witnesses, and the failing helper's partial identity/read/close facts. The
 failure reader joins that summary to any retained raw status line and checks
 the closed helper prefix; it never promotes partial setup to a candidate.
+
+### V5 metadata activation candidate
+
+Only the v5 producer, metadata reader and exact owned label job are enabled
+by this follow-up. The current request SHA, immutable PR body, selected
+source12 and official workflow context still must agree, and exact hosted
+image, status, helper and resource preflight can refuse before archive GET.
+This source change authorizes no label application by itself. Require every
+enabled final-head source check and separate external review of one fresh v5
+metadata request before its one event. Guest and compiler entries stay false;
+the consumed v4 failure and event remain untouched.

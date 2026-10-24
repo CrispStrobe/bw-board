@@ -3187,3 +3187,8 @@ uses `/usr/sbin:/usr/bin:/bin` only for new installer children, and binds a
 new request, event, job and standalone original reader. It needs source
 review, exact-head checks and one separately admitted official observation.
 The guest route still awaits that complete, independently reviewed graph.
+
+The v5 metadata activation candidate enables only the exact new producer,
+reader and labeled job. It still needs all final-head checks and an externally
+admitted fresh request/event, followed by one independently audited official
+metadata original. The guest path remains disabled pending a complete graph.

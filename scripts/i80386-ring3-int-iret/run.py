@@ -5712,7 +5712,7 @@ def setup_v4_outside_cleanup(environ):
 
 # V5 is a fresh metadata event after the retained v4 PATH refusal. Historical
 # v4 inputs and environment remain byte-for-byte unchanged.
-SETUP_V5_ENABLED=False
+SETUP_V5_ENABLED=True  # Distinct selected event and exact host preflight still required.
 SETUP_V5_PACKAGE_ROWS=SETUP_V4_PACKAGE_ROWS
 SETUP_V5_CONFIGURE_ORDER=SETUP_V4_CONFIGURE_ORDER
 SETUP_V5_IMAGE=SETUP_V4_IMAGE

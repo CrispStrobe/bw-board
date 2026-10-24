@@ -2726,14 +2726,18 @@ def setup_v5_controls(export_sample=False):
         def test_explicit_disabled_guard_refuses_before_host_edges(self):
             with patch.object(p,'SETUP_V5_ENABLED',False),patch.object(p,'setup_v5_entry',side_effect=AssertionError('no host')),patch.object(sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
                 self.assertEqual(p.dispatch_cli(['--setup-runtime-inventory-v5'],{}),1)
+            with patch.object(reader,'SETUP_V5_READER_ENABLED',False),\
+                 patch.object(sys,'argv',['reader.py','--inventory-setup-v5']),\
+                 patch.object(reader,'setup_v5_inventory_entry',side_effect=AssertionError('no reader')):
+                with self.assertRaises(reader.Refusal):reader.main()
         def test_enabled_metadata_dispatch_still_uses_admission_entry(self):
-            self.assertIs(p.SETUP_V5_ENABLED,False);self.assertIs(reader.SETUP_V5_READER_ENABLED,False)
+            self.assertIs(p.SETUP_V5_ENABLED,True);self.assertIs(reader.SETUP_V5_READER_ENABLED,True)
             self.assertIs(p.ACTUAL_ENTRY_ENABLED,False)
             for mode,name in (('setup-runtime-inventory-v5','setup_v5_entry'),('cleanup-setup-v5-policy','setup_v5_outside_cleanup')):
-                with self.subTest(mode=mode),patch.object(p,'SETUP_V5_ENABLED',True),patch.object(p,name,return_value=17) as entry:
+                with self.subTest(mode=mode),patch.object(p,name,return_value=17) as entry:
                     self.assertEqual(p.dispatch_cli(['--'+mode],{'test':'inert'}),17)
                     entry.assert_called_once_with({'test':'inert'})
-            with patch.object(reader,'SETUP_V5_READER_ENABLED',True),patch.object(sys,'argv',['reader.py','--inventory-setup-v5']),patch.object(reader,'setup_v5_inventory_entry',return_value=({},False,False)) as entry:
+            with patch.object(sys,'argv',['reader.py','--inventory-setup-v5']),patch.object(reader,'setup_v5_inventory_entry',return_value=({},False,False)) as entry:
                 with self.assertRaises(SystemExit) as stopped: reader.main()
                 self.assertEqual(stopped.exception.code,1);entry.assert_called_once()
         def test_exact_distinct_request_and_mutations(self):
