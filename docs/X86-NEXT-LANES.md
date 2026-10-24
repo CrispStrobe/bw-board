@@ -3393,7 +3393,14 @@ or package transaction. The old image/status census is not assumed for the
 new job. No Node, helper, installer, QEMU or guest execution belongs to this
 route. Implement only after the claim merges, then require exact-head source
 CI and a separately reviewed one-shot original audit before any setup proposal.
-Source checkpoint: the read-only baseline metadata route is enabled in the
-source candidate; its one-shot event remains unselected. The selected v8
-failure remains the only observed setup attempt. All setup and guest approval
-flags remain false.
+Source checkpoint: capture source `8b8c108d` completed the one-shot
+[read-only baseline run](https://github.com/CrispStrobe/bw-board/actions/runs/40101137447).
+Its label is consumed; no replay is authorized. The original reader refused
+empty `Conffiles:` headers. Separate corrected auditor `a41bd237` accepted
+those same retained originals, counted 1,211 status rows and found all ten
+selected helper hashes unchanged from the prior admitted observation. No
+package tool, installer, QEMU or guest ran; no later runner image is
+authenticated. The selected v8 failure remains the only observed setup
+attempt. Setup/runtime/guest approvals are false. Exact-head CI for the
+auditor is pending; next is a separately claimed setup metadata authorization
+that preserves existing pins and failures.

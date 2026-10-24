@@ -1595,11 +1595,10 @@ status, path and outside-cleanup mutations, and do not use an official
 original as a fixture. A separate operator audit may apply the standalone
 reader to the already retained originals without reacquiring them. No new
 event, native probe, package operation, QEMU or guest is part of this route.
-## Read-only hosted baseline candidate
+## Read-only hosted baseline observation
 
-The `host-baseline-v1` metadata job is active as a source candidate and its
-one-shot event remains unselected. It uses
-a distinct one-shot request and label to observe the runner shell and bounded
+The `host-baseline-v1` metadata job uses a distinct one-shot request and label
+to observe the runner shell and bounded
 root service image fields, raw package status, ten selected helper files, three
 shell aliases, policy-file presence and outside unit termination. It runs no
 Node workload, helper binary, package tool, installer, QEMU or guest. The
@@ -1616,8 +1615,15 @@ official Runner Image log block. A mismatch is retained diagnostic data. None
 of these observations authenticates a VM image or approves setup or a guest.
 
 All earlier V4–V8 routes, originals and failures remain separately versioned.
-The claim is merged; this inactive source still needs exact-head checks,
-reviewed one-shot input and an original-only audit before any setup proposal.
+Capture source `8b8c108d` completed one
+[read-only hosted run](https://github.com/CrispStrobe/bw-board/actions/runs/40101137447);
+its label is consumed. The original reader refused empty `Conffiles:` headers.
+Corrected auditor `a41bd237` accepts the same retained originals, reports
+1,211 status rows and confirms the ten selected helper hashes match the prior
+admitted observation. No package tool, installer, QEMU or guest ran. The
+observed runner image is not authenticated for a later job. Setup, runtime and
+guest approvals remain false. Exact-head CI for this separate auditor is
+pending; setup metadata authorization requires a separate claim and held pins.
 
 The alias `target` field is a lexical normalized link destination. The route
 does not dereference it or claim that its final target is trusted. The service

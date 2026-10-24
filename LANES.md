@@ -6438,7 +6438,13 @@ runtime, package, guest or image approval. Freeze the new source, pass all
 enabled exact-head checks, select at most one new event, acquire originals once
 and independently audit them before proposing any new setup admission policy.
 
-Source checkpoint, 2026-10-24: the read-only baseline metadata guard is
-enabled in the reviewed source candidate. Its one-shot event is unselected;
-all setup, runtime, image and guest approvals remain false. Exact-head source
-CI and an independent original-only audit still precede any setup policy.
+Source checkpoint, 2026-10-24: capture source `8b8c108d` ran the one-shot
+[read-only baseline job](https://github.com/CrispStrobe/bw-board/actions/runs/40101137447).
+Its label is consumed and must not be replayed. The original reader refused
+empty `Conffiles:` status headers; separate corrected auditor `a41bd237`
+accepted the **same retained originals**, counted 1,211 status rows and found
+all ten selected helper hashes unchanged from the prior admitted observation.
+This did not run a package tool, installer, QEMU or guest, authenticate an
+image, or grant setup/runtime approval. Exact-head CI for the corrected
+auditor is pending. Any setup metadata authorization needs a separate claim
+and must preserve existing pins and failure records.
