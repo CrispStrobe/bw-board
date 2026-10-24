@@ -6446,6 +6446,93 @@ empty first lines of multiline `Conffiles:` fields. Separate corrected auditor
 rows. An independent byte review confirmed all ten selected helper hashes
 match the held V8 helper pins.
 This did not run a package tool, installer, QEMU or guest, authenticate an
-image, or grant setup/runtime approval. Exact-head CI for the corrected
-auditor is pending. Any setup metadata authorization needs a separate claim
-and must preserve existing pins and failure records.
+image, or grant setup/runtime approval. The corrected auditor plus README/guide
+followup qualified at final source head `618e78b3` and merged at `b51be2c6`:
+eleven enabled checks succeeded and sixteen declared skips were retained.
+An earlier `0b9c0883` review transition cancelled five checks; those
+cancellations were not reclassified as skips. Any setup metadata authorization
+needs a separate claim and must preserve existing pins and failure records.
+
+## Distinct Ring 3 V9 setup metadata — claim, 2026-10-24
+
+Owner: Codex x86 Ring 3, extending the existing PR645 lane. This claim owns
+only `.github/workflows/i80386-ring3-int-iret.yml`,
+`scripts/i80386-ring3-int-iret/{run.py,reader.py,controls.py,README.md}`,
+this registry entry and `docs/X86-NEXT-LANES.md`. Merge this docs-only claim
+before implementation. It does not transfer any other owner's path, activate
+compiler or architectural guest work, or authorize an event.
+
+The consumed V8 setup event failed before status, helper, archive or runtime
+observation. The later read-only baseline captured the same pre-status SHA
+`4144e029` and all ten selected helper hashes, but did not install packages or
+authenticate an immutable image. The earlier V8 shell/service image label
+`20261023.334.3` differed from its official Runner Image block
+`20261012.334.1`; the baseline's shell/service and official block all reported
+`20261012.334.1`. The cause of the earlier disagreement remains unknown.
+Preserve those distinct originals and the V8 negative verdict; never replay
+their labels or recast their event as a V9 attempt.
+
+Add one **distinct metadata-only V9** request schema, PR-body marker,
+repository variables, label `x86-ring3-setup-runtime-inventory-v9`, job
+`setup-runtime-inventory-v9`, package workspace/unit/output names, original schemas and
+standalone positive/failure reader. Freeze source12, head, tree, workflow and
+attempt-one policy before the event. Obtain actual run/job IDs afterward from
+official metadata and bind them through an external expectation. Do not place
+guessed future IDs in the request or rewrite GITHUB/event values to impersonate
+V8. The exact owned repository, actor, PR, source, checkout and executing
+workflow gates precede host mutation or network acquisition.
+
+The V9 policy retains **unchanged** all fifteen fixed signed archive rows,
+pre-status SHA, ten helper byte pins and all selected aliases, signed DATA
+payload witnesses, installer-only PATH, policy101 bytes and removal rule,
+no-trigger unpack/configure order, deferred-trigger and incomplete-host-
+configuration flags, resource/stream/input caps and outside terminal criteria.
+No resolver, alternate archive, new package version, pin move or fallback is
+authorized. The root service admits only `ImageOS=ubuntu24` and a present
+`ImageVersion` in the closed observed set `{20261012.334.1,
+20261023.334.3}`. Before its first archive GET, it must freshly verify the
+exact status bytes, package absence, held/named helper identities and bytes,
+aliases, source and resource limits. That root preflight does not infer a
+shell observation it has not yet read. Retain separate bounded shell and
+service image fields and forwarding facts; the independent post-run reader
+requires shell/service equality before positive metadata grading. Compare the
+official Runner Image block diagnostically and preserve discordance without
+claiming image authentication or immutable image identity.
+
+Authorize only the explicit internal route-spec injection necessary to reuse
+`emit_setup_v8_status`, `setup_v8_helper_witness`, `setup_v8_sequence`,
+`SetupV8Tool`, `SetupV8Host` (preflight, archive root/acquisition, policy
+creation, dpkg, quiescence, post-status and stage/drop), `setup_v8_entry`,
+`setup_v8_owned_unit`, `setup_v8_outside_census`, `setup_v8_stop_unit`,
+`setup_v8_outside_cleanup`, `setup_v8_image_shell` and `dispatch_cli`.
+These named producer functions may change syntax solely for that fixed
+source-defined route selection, including truthful V9 process and failure
+phase labels; V8 default arguments, strict
+`20261012.334.1` preflight, wire bytes, unit/stage/cleanup behavior and
+verdicts must remain unchanged. Existing `admit_setup_v8_request` and
+`admit_setup_v8_event` still admit only V8. Old V4–V7 and V8 original-reader
+functions remain byte- and AST-held, including `verify_setup_v8_log` and its
+failed-original outcome. The independent reader gains **new V9-only** request,
+event, admission, stage, cleanup, outer, complete/failure log and CLI paths;
+its external expectation joins exact official job-log bytes and SHA as well
+as the run/job/step/artifact/source context. The generic `NodeStageCopy`
+and its fixed Node 22.23.3 component path remain unchanged and shared per
+fresh job; V9 gives its containing stage envelope a distinct schema and
+readback, without a second exclusive copy. Admit the truthful V9 request/event
+before that copy; the V9 inventory reader validates its own stage record.
+No V9 event may be admitted by a V8 request/event parser or executed through
+the `--inventory-setup-v8` CLI. No request, environment variable or CLI
+argument may override the fixed archive, status, helper, label-set or
+resource policy. Do not copy the
+whole installer family or fake V8 event/environment values.
+
+Source controls must cover an inert connected V9 entry through complete
+original retention and an independent reader, plus coherent wrong-event,
+source, label, status, every helper/alias, archive, policy, dpkg, stage,
+runtime-graph, stream and cgroup cuts. Prove V8 default behavior, failed
+original verdict and guards remain held, including the consumed image-label
+refusal. Require every enabled exact-head source check, then one separately
+admitted V9 event, one acquisition per official original and an independent
+complete installed-state, Node and QEMU graph audit before any separately
+claimed same-job guest work. All setup/runtime/guest approvals stay false
+until their respective originals and external joins actually qualify.

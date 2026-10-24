@@ -3402,9 +3402,11 @@ status rows. An independent byte review confirmed all ten selected helper
 hashes match the held V8 helper pins. No package tool, installer, QEMU or guest
 ran; no later runner image is authenticated. The selected V8 attempt remains
 failed; this read-only observation adds no setup attempt.
-Setup/runtime/guest approvals are false. Exact-head CI for the auditor is
-pending. Next is separately claimed setup metadata authorization that
-preserves existing pins and failures.
+Setup/runtime/guest approvals are false. The corrected auditor and docs
+followup qualified at final head `618e78b3` and merged at `b51be2c6` after
+all enabled checks; the five cancelled checks on earlier head `0b9c0883`
+remain cancellations, not skips. Next is separately claimed setup metadata
+authorization that preserves existing pins and failures.
 
 ### Conditional setup metadata and authored guest handoff — unclaimed
 
@@ -3416,16 +3418,18 @@ unchanged. The pre-event request must bind source12, head, tree, workflow and
 attempt-one policy, not future run or job IDs. Preserve all fifteen selected
 archive rows, raw status SHA, ten helper hashes and aliases, signed DATA
 payload witnesses, policy101, no-trigger order and existing caps. Choose an
-explicit closed policy for observed image labels. The root service
+explicit closed policy for observed root image labels
+`20261012.334.1` or `20261023.334.3`. The root service
 checks its own label and freshly reads exact status and helper fingerprints
 before the first archive GET. The independent reader later joins bounded shell
 and service observations, requires their agreement for a positive setup grade,
 and reports any disagreement with the official Runner Image block as diagnostic
-data, not image authentication. `admit_setup_v8_request`,
-`admit_setup_v8_event`, `setup_v8_sequence`, `SetupV8Host` and
-`setup_v8_entry` in `run.py` show the current seam; a versioned adapter may
-reuse shared operations only if V8 defaults and its failed-reader verdict stay
-unchanged. `verify_setup_v8_log` in `reader.py` remains V8-only. Source
+data, not image authentication. The claim names the bounded route-spec seam:
+`setup_v8_sequence`, `SetupV8Host`, `SetupV8Tool`, helper/status emission,
+owned-unit/outside cleanup, image shell and CLI dispatch in `run.py`. Their V8
+default wire and verdicts must remain unchanged; V4–V8 reader functions remain byte-held.
+V9 needs new admission, stage, cleanup, outer, complete/failure log and CLI
+reader paths with exact external official job-log byte/hash joins. Source
 controls must cut wrong event/source, unknown root label, changed pin,
 archive, policy, stage, graph and terminal cleanup, with a manufactured
 original independently decoded. Require every enabled exact-head check, one
@@ -3439,6 +3443,8 @@ finishes and its unit reaches a terminal census; then a fresh actual service
 admits that same job's setup originals and current runtime graph before any
 guest. `NodeStageCopy.copy` and `SetupV8Host.stage_drop_inventory` in `run.py`
 already consume one exclusive staged Node copy and exec the inventory reader.
+The fixed Node 22.23.3 component path is intentionally shared per fresh job;
+V9 versions its enclosing record and package workspace, not that copy path.
 The second service must read back that copy and record; the first process does
 not return to root or stage Node again. Reuse internal boundaries in
 `controller_execute`, `RuntimeEntryComposition`, `finalize_runtime_packet`
@@ -3452,3 +3458,12 @@ service plus a separate service enclosing the existing 600-second controller
 is a **budget proposal**, not measured sufficiency. Require fresh exact-head
 source checks and independently audited hosted originals before any result.
 This fixture grants no strict 386DX, physical RTx or full-OS claim.
+
+The [V9 ownership proposal](../LANES.md)
+is a claim-only checkpoint. It limits implementation to the existing Ring 3
+producer, reader, controls, README, workflow and these two ownership/guide
+documents. The old V8 strict image default and negative reader outcome stay
+held; the new label policy is confined to V9. No V9 source, request, variable,
+label, run or guest has been selected by this claim. Qualify and merge the
+claim before coding, then independently qualify its final source before any
+one-shot metadata event.
