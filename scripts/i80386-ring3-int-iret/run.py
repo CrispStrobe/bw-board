@@ -8283,19 +8283,38 @@ def same_job_v2_cgroup_history(ops,phase,*,limit=6,clock=None,pause=None):
         'firstFailure':None,'secondary':[]}
     stable_identity=None
     for index in range(limit):
-        now=clock();need(type(now) is int and now>=began,'monotonic census clock')
-        if index and now<began+targets[index] and now<deadline:
-            pause(min(began+targets[index]-now,deadline-now)/1_000_000_000)
-        started=clock()
-        if type(started) is not int or started>=deadline:
-            value['firstFailure']=row(ValueError('finite v2 post-reap deadline before sample'),
-                                      'same-job-actual-v2-cgroup-deadline')
+        try:
+            now=clock();need(type(now) is int and now>=began,'monotonic census clock')
+            if index and now<began+targets[index] and now<deadline:
+                pause(min(began+targets[index]-now,deadline-now)/1_000_000_000)
+            started=clock()
+            if type(started) is not int or started>=deadline:
+                value['firstFailure']=row(ValueError('finite v2 post-reap deadline before sample'),
+                                          'same-job-actual-v2-cgroup-deadline')
+                break
+        except BaseException as error:
+            value['firstFailure']=row(error,'same-job-actual-v2-cgroup-clock')
             break
-        sample=ops.cgroup_sample_v2(phase,index)
-        ended=clock()
-        need(type(ended) is int and ended>=started,'ordered monotonic census read')
-        require_fields(sample,'unitIdentity limits cgroupProcs cgroupEvents cgroupStat onlyController firstFailure secondary',
-                       'closed v2 cgroup sample facts')
+        try:
+            sample=ops.cgroup_sample_v2(phase,index)
+            require_fields(sample,'unitIdentity limits cgroupProcs cgroupEvents cgroupStat onlyController firstFailure secondary',
+                           'closed v2 cgroup sample facts')
+        except BaseException as error:
+            value['firstFailure']=row(error,'same-job-actual-v2-cgroup-read')
+            break
+        try:
+            ended=clock()
+            need(type(ended) is int and ended>=started,'ordered monotonic census read')
+        except BaseException as error:
+            issue=row(error,'same-job-actual-v2-cgroup-clock')
+            partial=dict(sample,index=index,startMonoNs=started,endMonoNs=None)
+            value['samples'].append(partial);value['finalIndex']=index
+            if sample['firstFailure'] is not None:
+                value['firstFailure']=sample['firstFailure']
+                value['secondary'].extend(sample['secondary'])
+                value['secondary'].append(issue)
+            else:value['firstFailure']=issue
+            break
         sample=dict(sample,index=index,startMonoNs=started,endMonoNs=ended)
         value['samples'].append(sample);value['finalIndex']=index
         if sample['firstFailure'] is not None:

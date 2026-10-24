@@ -8329,6 +8329,55 @@ def same_job_actual_controls():
                     self.assertEqual(read_phase['finalIndex'],0)
                     self.assertNotIn('configure',read_ops.events)
                     self.assertNotIn('stage',read_ops.events)
+                    class NonquietOps(ActualOps):
+                        def cgroup_sample_v2(self,phase,index):
+                            item=super().cgroup_sample_v2(phase,index)
+                            if phase=='unpack' and index==0:
+                                item['cgroupProcs']='101\n202\n'
+                                item['onlyController']=False
+                            return item
+                    for fault in ('backward-clock','pause-error'):
+                        clocked_ops=NonquietOps()
+                        def broken_history(ops,phase,**kwargs):
+                            if phase!='unpack':return fixed_history(ops,phase,**kwargs)
+                            base=40_001_001
+                            ticks=iter((base,base+1,base+2,base+3,
+                                base-1 if fault=='backward-clock' else base+4))
+                            def fail_pause(_):raise OSError('bounded pause failed')
+                            return real_history(ops,phase,clock=lambda:next(ticks),
+                                pause=fail_pause if fault=='pause-error' else lambda _:None,
+                                **kwargs)
+                        with patch.object(producer,'same_job_v2_cgroup_history',
+                                side_effect=broken_history):
+                            clocked=producer.setup_v8_sequence(clocked_ops,actual,
+                                producer.SAME_JOB_ACTUAL_V2_ROUTE)
+                        history=clocked['unpack']['cgroupHistory']
+                        self.assertEqual((len(history['samples']),history['finalIndex'],
+                            history['samples'][0]['cgroupProcs']),
+                            (1,0,'101\n202\n'))
+                        self.assertEqual(clocked['firstFailure'],history['firstFailure'])
+                        self.assertNotIn('configure',clocked_ops.events)
+                        self.assertNotIn('stage',clocked_ops.events)
+                    def after_read_history(ops,phase,**kwargs):
+                        if phase!='unpack':return fixed_history(ops,phase,**kwargs)
+                        base=40_001_001
+                        ticks=iter((base,base+1,base+2))
+                        def clock():
+                            try:return next(ticks)
+                            except StopIteration:raise OSError('after-read clock failed')
+                        return real_history(ops,phase,clock=clock,**kwargs)
+                    for ops,read_first in ((ActualOps(),False),(ReadErrorOps(),True)):
+                        with patch.object(producer,'same_job_v2_cgroup_history',
+                                side_effect=after_read_history):
+                            clocked=producer.setup_v8_sequence(ops,actual,
+                                producer.SAME_JOB_ACTUAL_V2_ROUTE)
+                        history=clocked['unpack']['cgroupHistory']
+                        self.assertEqual((len(history['samples']),history['finalIndex'],
+                            history['samples'][0]['endMonoNs']),(1,0,None))
+                        self.assertEqual(clocked['firstFailure'],history['firstFailure'])
+                        self.assertEqual(bool(history['secondary']),read_first)
+                        self.assertNotIn('configure',ops.events)
+                        self.assertNotIn('stage',ops.events)
                     setup=entry_ops.snapshot
                     status_log=io.BytesIO()
                     pre_meta=producer.emit_setup_v8_status('pre',pre,status_log.write,status_log.flush,
@@ -9680,6 +9729,48 @@ def same_job_actual_controls():
             self.assertFalse(partial['settled'])
             with self.assertRaises(reader.Refusal):
                 reader.same_job_v2_cgroup_history(partial,'unpack',101)
+            def err_clock(values):
+                selected=iter(values)
+                def next_time():
+                    item=next(selected)
+                    if isinstance(item,BaseException):raise item
+                    return item
+                return next_time
+            prior=sample(0,'101\n202\n')
+            backward=p.same_job_v2_cgroup_history(Census([prior]),'unpack',
+                clock=err_clock((1_000_000_000,1_000_000_001,1_000_000_002,
+                    1_000_000_003,999_999_999)),pause=lambda _:None)
+            self.assertEqual((len(backward['samples']),backward['finalIndex']),
+                (1,0))
+            self.assertEqual(backward['samples'][0]['cgroupProcs'],'101\n202\n')
+            self.assertEqual(backward['firstFailure']['phase'],
+                'same-job-actual-v2-cgroup-clock')
+            with self.assertRaises(reader.Refusal):
+                reader.same_job_v2_cgroup_history(backward,'unpack',101)
+            def failed_pause(_):raise OSError('bounded pause failed')
+            paused=p.same_job_v2_cgroup_history(Census([prior]),'unpack',
+                clock=err_clock((1_000_000_000,1_000_000_001,1_000_000_002,
+                    1_000_000_003,1_000_000_004)),pause=failed_pause)
+            self.assertEqual((len(paused['samples']),paused['firstFailure']['name']),
+                (1,'OSError'))
+            with self.assertRaises(reader.Refusal):
+                reader.same_job_v2_cgroup_history(paused,'unpack',101)
+            clock_error=OSError('after-read clock failed')
+            after_read=p.same_job_v2_cgroup_history(Census([sample(0,'101\n')]),
+                'unpack',clock=err_clock((1_000_000_000,1_000_000_001,
+                    1_000_000_002,clock_error)),pause=lambda _:None)
+            self.assertEqual((after_read['samples'][0]['cgroupProcs'],
+                after_read['samples'][0]['endMonoNs'],after_read['firstFailure']['name']),
+                ('101\n',None,'OSError'))
+            with self.assertRaises(reader.Refusal):
+                reader.same_job_v2_cgroup_history(after_read,'unpack',101)
+            read_clock=p.same_job_v2_cgroup_history(Census([read_error]),
+                'unpack',clock=err_clock((1_000_000_000,1_000_000_001,
+                    1_000_000_002,clock_error)),pause=lambda _:None)
+            self.assertEqual(read_clock['firstFailure'],read_error['firstFailure'])
+            self.assertEqual((read_clock['samples'][0]['endMonoNs'],
+                read_clock['secondary'][0]['message']),
+                (None,'after-read clock failed'))
 
         def test_v2_real_cgroup_sampler_mocked_syscalls_and_drift(self):
             host=object.__new__(p.SetupV8Host)
