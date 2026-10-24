@@ -1626,6 +1626,15 @@ authenticated for a later job. Setup, runtime and guest approvals remain false.
 Exact-head CI for this separate auditor is
 pending; setup metadata authorization requires a separate claim and held pins.
 
+[Debian Policy §5.1](https://www.debian.org/doc/debian-policy/ch-controlfields#syntax-of-control-files)
+allows a multiline field to have an empty first line. This reader accepts that
+shape for `Conffiles:` only when a nonempty continuation follows, and retains
+the raw bytes of a valid ` .` continuation. It refuses whitespace-only folds,
+folds or empty values of status authority fields, and case-insensitive duplicate
+field names.
+Parsing the retained status is an observation; it does not approve package
+setup, a runtime graph or guest execution.
+
 The alias `target` field is a lexical normalized link destination. The route
 does not dereference it or claim that its final target is trusted. The service
 manager owns the finite service lifetime; a bounded read-only outside census
