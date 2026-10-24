@@ -52,17 +52,6 @@ export function spicePulseVoltage(params, tSeconds) {
   if (tSeconds <= p.td) return p.v1;
   const elapsed = tSeconds - p.td;
   const phase = elapsed % p.per;
-  if (p.pw === 0) {
-    // ngspice treats an authored zero PW as the default-width case: V2 is
-    // held until the period restarts, rather than falling immediately after
-    // TR. At the exact reset solve point expose the left limit. The transient
-    // controller lands there before restarting BE on the far side; a time
-    // even one representable integration step later follows the new rise.
-    const restartTolerance = Number.EPSILON * Math.max(1, Math.abs(tSeconds));
-    if (elapsed >= p.per && phase <= restartTolerance) return p.v2;
-    if (phase < p.tr) return p.v1 + (p.v2 - p.v1) * phase / p.tr;
-    return p.v2;
-  }
   if (phase < p.tr) return p.v1 + (p.v2 - p.v1) * phase / p.tr;
   if (phase < p.tr + p.pw) return p.v2;
   if (phase < p.tr + p.pw + p.tf) {
@@ -84,9 +73,7 @@ export function nextSpicePulseCorner(params, tSeconds) {
   if (tSeconds < p.td) return p.td;
   const cycle = Math.floor((tSeconds - p.td) / p.per);
   const base = p.td + cycle * p.per;
-  const authoredOffsets = p.pw === 0
-    ? [0, p.tr]
-    : [0, p.tr, p.tr + p.pw, p.tr + p.pw + p.tf, p.per];
+  const authoredOffsets = [0, p.tr, p.tr + p.pw, p.tr + p.pw + p.tf, p.per];
   const offsets = [...new Set(authoredOffsets)]
     .sort((a, b) => a - b);
   for (const offset of offsets) {

@@ -361,13 +361,32 @@ export const INPUTS = [
             'test/winding-turnoff-oracle.test.mjs', 'test/rlc-instrument-oracle.test.mjs',
             'test/winding-uic-reference.test.mjs', 'test/winding-reference-comparison.test.mjs',
             'test/winding-edge-instruments.test.mjs', 'test/current-scope-simulation-clock.test.mjs',
-            'test/transient-matrix.test.mjs', 'test/transistor-instrument-oracle.test.mjs'],
+            'test/transient-matrix.test.mjs', 'test/transistor-instrument-oracle.test.mjs',
+            'test/spice-pulse-source.test.mjs'],
         obtain: 'apt install ngspice   (44 here; decks need `.options temp=X tnom=X` '
             + 'to match VT_25C, and `.model D` silently clamps IS at 1e-28 -- use a '
             + 'behavioural source above ~2.86 V, see test/measurements/repro/bsource-oracle.mjs)',
         ciAvailable: true,
         ci: 'yes — installed by apt in the `test` job and asserted by `--require ngspice`, '
             + 'so the live solver comparison is a standing claim rather than a recorded one',
+    },
+    {
+        id: 'ngspice-literal-pulse', kind: 'oracle',
+        what: 'Source-admitted ngspice47 for the modern literal-zero PULSE contract. '
+            + 'The distribution oracle can interpret PW=0 differently; positive-width '
+            + 'comparisons retain the separate default ngspice input. Census presence '
+            + 'does not establish source/version/binary admission or numerical agreement; '
+            + 'the installer and test validate those identities before comparison.',
+        env: 'NGSPICE_LITERAL_ORACLE',
+        paths: [],
+        gates: ['test/spice-pulse-source.test.mjs'],
+        obtain: 'node scripts/install-ngspice-oracle.mjs --prefix <separate-prefix>; '
+            + 'set NGSPICE_LITERAL_ORACLE to its bin/ngspice. Official release47 source '
+            + 'and build configuration are pinned by .github/ci-ngspice47.json.',
+        ciAvailable: true,
+        ci: 'yes — the test job builds the separate source-admitted47 oracle and '
+            + 'sets NGSPICE_LITERAL_ORACLE. Literal-zero comparisons fail when it is '
+            + 'missing or fails admission; the census itself never executes the binary.',
     },
     {
         id: 'emu8051', kind: 'oracle',

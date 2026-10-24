@@ -1,4 +1,4 @@
-2026-10-24 literal-PULSE oracle census registration — CLAIMED, Codex circuit owner.
+2026-10-24 literal-PULSE oracle census registration — DONE (source candidate), Codex circuit owner.
 Base a2b4ff73; bounded qualification repair for the same owner's PR665.
 Its original CI passes the admitted47 pulse comparisons but fails the unchanged
 census coverage assertion because spice-pulse-source.test.mjs now consumes the
@@ -16,7 +16,20 @@ Merge claim before registration implementation. Preserve all other owners and
 normally compose current master into PR665. Require the original census failure
 to pass, installer/pulse/scope regressions and every enabled exact-head check.
 
-2026-10-23 voltage scope aperture capture — CLAIMED, Codex circuit owner.
+Claim680 merged normally as ea45d621 before registration implementation.
+The system and explicit admitted47 inputs now have separate census identities;
+the original positive-width file is also listed under the system oracle.
+Unset/missing/present-path controls retain binary-content identity and prove
+that selecting the literal input leaves default resolution unchanged. File
+presence remains distinct from executable/source/version admission.
+The original coverage failure reproduces locally and now passes unchanged.
+All 19 census controls and 115 installer/pulse/scope/profile/current/inductor
+controls pass without skips. Omitting the new literal row fails by assertion.
+Normally composed current master changes no qualified runtime bytes; all eight
+original captures retain their actual source identity and match that runtime.
+Every enabled repaired-head hosted check remains required before landing.
+
+2026-10-23 voltage scope aperture capture — DONE (source candidate), Codex circuit owner.
 Base a2d49e41; additive producer for the same owner's actual sampled-audio work.
 A real 90ms saved miniorgan capture at 100kHz has 18 post-startup envelope
 pulses but only 5 point-sampled pulses. The qualified solver reports no failure;
@@ -44,7 +57,24 @@ phases, repeated partial buckets/ring wrap/reset, refusal/rejected-step exclusio
 unchanged point/envelope/current controls and actual organ captures. Retain
 source qualification and enabled exact-head checks. Merge before implementation.
 
-2026-10-23 versioned literal-PULSE oracle environment — CLAIMED, same circuit owner.
+Claim667 merged normally as baa9da14 before implementation, with matched head,
+parents and exact tree verified through the GitHub API when git fetch stalled.
+The new average mode integrates accepted piecewise-linear observations, labels
+complete apertures by their end and exposes apertureNs. Partial/unobserved area,
+nonfinite values and failed histories cannot become plausible samples. Reset
+re-seeds from the reset solution, and readout stays acquisition-free.
+All 47 focused aperture/point/envelope/current/fractional/reset controls pass
+without skips. Endpoint substitution, unobserved-prefix publication and bypassed
+failed-solve exclusion each fail by assertion. The initial reset regression
+failed until the initial observation was restored. A pre-final actual organ C4
+candidate retained 18 aperture pulses versus 18 envelope pulses and only five
+point pulses, with a qualified unchanged solver. The completed exact-source eight-key
+producer capture preserves every pulse, matches all envelope counts, retains
+qualified solver status and verifies release. Its original source identity is
+retained; normal main composition and census repair change no runtime bytes. No consumer/audio-hardware or
+ideal anti-aliasing claim follows; CUI adoption has its own scope.
+
+2026-10-23 versioned literal-PULSE oracle environment — DONE (source candidate), same circuit owner.
 Base b9d12289; follow-up to normally merged literal-PULSE claim #664 and source
 candidate #665. Actual CI installs ngspice42 and interprets PW=0 as a default
 high hold, while independently measured ngspice47 preserves the literal zero.
@@ -73,7 +103,24 @@ sample times and error bounds, both swing directions/periods/current signs/KCL,
 existing42 positive-width comparisons and full enabled exact-head qualification.
 Do not merge #665 or adopt its source while oracle qualification remains red.
 
-2026-10-23 literal-zero SPICE PULSE correction — CLAIMED, Codex circuit owner.
+Claim #666 merged normally as a2d49e41 before implementation. The installer
+verifies the pinned official archive, builds a separate headless single-thread
+binary and records source/configuration/platform/binary hashes and version.
+Existing prefixes must pass admission; altered bytes, wrong/duplicate versions,
+changed identity, failed processes and unknown flags refuse. The CI system
+ngspice and PATH stay unchanged. Only literal-PULSE comparisons select the
+admitted47; positive-width RC bounds run against both binaries. No authored
+measurement time, waveform fixture or error bound changed.
+The real admitted47 build and idempotent reuse pass, as does an actual Node
+HTTPS download/hash check. The initial Mac build rejected missing OpenMP headers;
+the explicit single-thread configuration resolves that build failure. All 50
+focused installer/pulse/profile/current/inductor controls pass without skips.
+Local positive-width controls compare Homebrew47 and the independent source47
+build; CI retains the distribution42 comparison and adds admitted47. The
+canonical npm package contains the installer and identity contract. Enabled
+exact-head hosted qualification remains required before merge/adoption.
+
+2026-10-23 literal-zero SPICE PULSE correction — DONE (source candidate), Codex circuit owner.
 Base236ba67f; isolated follow-up to the downstream independent-oracle audit.
 Own only src/source-waveforms.js, focused pulse-source tests and this claim.
 The exact seven-authored-value contract admits PW=0, but currently substitutes
@@ -94,6 +141,21 @@ No parser, generic integration, MNA/device model, scheduler, CPU, dependency pin
 CUI/Lite, workflow, corpus or unrelated source edits. A separately claimed CUI
 follow-up owns full-precision oracle reads and qualified immutable adoption.
 Merge the claim before implementation; require affected and exact-head checks.
+
+Claim #664 merged normally as b9d12289 before implementation. Remove only the
+zero-PW high-hold exception and use the same authored corner list for all widths;
+duplicate zero-width corners still collapse. Literal zero retains its finite
+fall and repeats from V1. Omitted PW and zero rise/fall remain refused.
+Four prior-source pulse assertions fail, including the unchanged ngspice current
+RC comparison. All 39 focused pulse/transient/KCL/current-contract/inductor
+controls pass without skips. Independent ngspice 47 -n voltage samples match
+explicit triangle interpolation for both swing directions and two periods;
+existing positive-width RC oracle bounds are unchanged. Both restoring the old
+hold and omitting the falling corner independently fail by assertion. The
+broader six-file run is 44/45: the separate EXP waveform oracle assertion also
+fails against the pre-repair source. Retain that inherited failure and its
+unchanged bound; do not generalise this qualification to all source families.
+Exact-head hosted checks and downstream immutable adoption remain required.
 
 2026-10-21 passive open-terminal current readback — SOURCE CANDIDATE, Codex circuit projects.
 Own passive open-terminal stamps and branch-current extraction in src/mna.js,
