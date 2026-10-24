@@ -6634,3 +6634,12 @@ connect the producer, finalizer and independent local packet verdict, with
 all approval fields false. No new official event or hosted guest has run.
 The new actual, historical actual and compiler guards remain false until a
 separate reviewed source activation and exact-head qualification.
+
+### Selectable same-job source checkpoint — 2026-10-24
+
+After independent source review, the distinct same-job producer, reader and
+owned-label workflow guards are enabled. This activates source routing only:
+the new request, variables, label and event remain unselected, and no guest
+or hosted setup has run on this head. The older actual and compiler guards
+remain false. Exact-head source checks, separately reviewed one-shot inputs
+and independent official originals are required before any result.

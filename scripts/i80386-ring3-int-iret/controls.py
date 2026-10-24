@@ -8859,9 +8859,9 @@ def same_job_actual_controls():
                         self.assertEqual(selected['BW_LAUNCH_PLAN_SHA256'],sha(raw))
                         self.assertLess(events.index(('chmod',40,0o755)),
                             events.index('dropped-readback'))
-        def test_new_request_event_and_default_refusal(self):
-            self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,False)
-            self.assertIs(reader.SAME_JOB_ACTUAL_READER_ENABLED,False)
+        def test_new_request_event_and_patched_inactive_refusal(self):
+            self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,True)
+            self.assertIs(reader.SAME_JOB_ACTUAL_READER_ENABLED,True)
             self.assertEqual(p.SAME_JOB_REVIEWED_GRAPH,reader.SAME_JOB_ACTUAL_REVIEWED_GRAPH)
             with edges() as (producer,env,request,raw,state):
                 producer.stage_runtime_inventory_node(env)
@@ -8893,8 +8893,23 @@ def same_job_actual_controls():
                 wrong=copy.deepcopy(event);wrong['label']['name']='x86-ring3-setup-runtime-inventory-v9'
                 with self.assertRaises((ValueError,reader.Refusal)):
                     reader.same_job_actual_event(reader.canonical(wrong),actual,pin,environment)
-                with patch.object(producer,'setup_v8_entry',side_effect=AssertionError('host edge')):
+                with patch.object(producer,'SAME_JOB_ACTUAL_ENABLED',False),\
+                     patch.object(producer,'setup_v8_entry',side_effect=AssertionError('host edge')) as host:
                     self.assertEqual(producer.dispatch_cli(['--same-job-setup-v1'],environment),1)
+                    host.assert_not_called()
+                observed=[]
+                observer=SimpleNamespace(facts={'eventIdentity':{'st_size':len(event_raw)},
+                    'sourceCommands':[]},event=lambda:event_raw,
+                    source=lambda selected:observed.append('source'))
+                with patch.object(producer.os,'getresuid',return_value=(0,0,0)),\
+                     patch.object(producer.os,'getresgid',return_value=(0,0,0)),\
+                     patch.object(producer,'HostedEnvelopeInstaller',return_value=observer),\
+                     patch.object(producer,'SetupV8Host',side_effect=AssertionError('host constructed')) as host,\
+                     patch.object(producer.sys,'stdout',SimpleNamespace(buffer=io.BytesIO())):
+                    self.assertEqual(producer.dispatch_cli(['--same-job-setup-v1'],
+                        dict(environment,GITHUB_ACTOR='different-actor')),1)
+                    host.assert_not_called()
+                self.assertEqual(observed,[])
 
         def test_closed_setup_sequence_and_child_profile(self):
             FakeOps,witness=setup_v8_controls(export_ops=True)
@@ -8906,7 +8921,7 @@ def same_job_actual_controls():
             self.assertEqual(ops.events.count('acquire'),15)
             self.assertEqual(ops.events[-1],'stage')
             self.assertIs(p.ACTUAL_ENTRY_ENABLED,False)
-            self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,False)
+            self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,True)
 
         def test_actual_collector_exact_role_and_finite_terminal(self):
             class Child:
@@ -8927,12 +8942,13 @@ def same_job_actual_controls():
             with self.assertRaises(ValueError):
                 p.collect_child(Child(),'setup-v9',argv,profile='setup-same-job-v1')
 
-        def test_inactive_same_job_workflow_first_service_is_distinct(self):
+        def test_selected_same_job_workflow_first_service_is_distinct(self):
             workflow=(HERE.parent.parent/'.github/workflows/i80386-ring3-int-iret.yml').read_text()
             start=workflow.index('  ring3-same-job-actual-v1:\n')
             end=workflow.index('  host-baseline-v1:\n',start)
             route=workflow[start:end]
-            self.assertIn("if: ${{ false && github.event.action == 'labeled'",route)
+            self.assertIn("if: ${{ github.event.action == 'labeled'",route)
+            self.assertNotIn("if: ${{ false &&",route)
             self.assertIn("github.event.label.name == 'x86-ring3-same-job-actual-v1'",route)
             self.assertEqual(route.count('actions/checkout@11d5960a326750d5838078e36cf38b85af677262'),1)
             self.assertEqual(route.count('actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020'),1)

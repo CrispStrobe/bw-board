@@ -71,3 +71,12 @@ manufactured OS and guest outputs to check setup handoff, serial controller,
 the twenty-role finalizer and local packet admission. This is source-only
 evidence: no same-job actual event, hosted guest, official original or
 architectural result exists. The actual and compiler guards remain false.
+
+## Selectable same-job source checkpoint — 2026-10-24
+
+The distinct same-job source, reader and workflow guards are now enabled
+behind an owned, explicit label and canonical request. This is a source
+checkpoint only: the label is unselected, the exact-head hosted checks are
+pending, and no same-job guest has run. Historical actual and compiler guards
+remain false. The manufactured controls and source review do not establish
+an official run or architectural result.

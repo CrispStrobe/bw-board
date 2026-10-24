@@ -1713,3 +1713,12 @@ qualified architectural result. The new producer, reader and workflow guards
 remain false, as do the compiler and older actual guards. The official reader
 requires separately admitted run, job, log and exact artifact bytes and still
 leaves actual-run approval false.
+
+### Selectable same-job source checkpoint
+
+The new same-job producer, independent reader and owned-label workflow guard
+are enabled after source review. The distinct request, variables, label and
+event remain unselected. Pure controls use manufactured OS, package and guest
+facts; they grant no hosted setup, guest or official artifact approval. The
+older actual and compiler guards remain false. Exact-head hosted checks and
+separately admitted official originals are still required.

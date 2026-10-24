@@ -3509,3 +3509,12 @@ official artifact admission remain unobserved. All new actual, older actual
 and compiler guards remain false. Next, finish connected failure controls and
 source review, qualify the exact source head, and admit a distinct official
 event and its originals before reporting an architectural result.
+
+### Same-job source activation — 2026-10-24
+
+The reviewed source now permits only a separately selected owned label and
+canonical request to enter the distinct same-job route. No label or event has
+been selected and no hosted setup or guest result exists. The older actual
+and compiler routes remain disabled. Qualify this exact source head, review
+the one-shot inputs, then audit any official originals independently before
+making an architectural claim.

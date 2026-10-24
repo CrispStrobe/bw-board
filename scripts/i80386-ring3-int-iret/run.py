@@ -7915,7 +7915,7 @@ SETUP_V9_ROUTE={'version':'v9','job':'setup-runtime-inventory-v9',
 # A separate, initially inert actual route. The comparison input describes the
 # admitted historical metadata candidate; it never substitutes for a fresh
 # complete graph in the same job. No request field can select route policy.
-SAME_JOB_ACTUAL_ENABLED=False
+SAME_JOB_ACTUAL_ENABLED=True
 SAME_JOB_ACTUAL_ENV=tuple('BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256'
     if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key for key in NODE_STAGE_ENV)+(
     'BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64',)
