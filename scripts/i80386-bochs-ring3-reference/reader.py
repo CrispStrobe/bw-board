@@ -38,6 +38,11 @@ VGA_SELECTED_BYTES = 38400
 VGA_SELECTED_SHA256 = 'de5663dccb7309409d31419948158c561bdc52f90095f42c094a793c634938aa'
 VGA_COPYING_SHA256 = 'c43e067abce73ca284383f4f905316e7cad6dd9aaf69f02ee961b6dfbc4de3c2'
 VGA_NOTICE_BLOB = '5240eaf7622609fc4465a7f392a11c73680c562f'
+NODE_CACHE_PATH = '/opt/hostedtoolcache/node/22.23.3/x64/bin/node'
+NODE_BYTES = 124827920
+NODE_SHA256 = 'fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48'
+NODE_METADATA_FIELDS = ('dev', 'ino', 'mode', 'uid', 'gid', 'nlink',
+                        'size', 'mtime_ns', 'ctime_ns')
 HEADER_SHA256 = '6018ddf9aa6a75233d423a94d427c68708a1122f4b64c5cee2412d65bef12b79'
 ROM_SHA256 = 'd1aa0e35a81c68bc61621309589c8f4afa12ce2e7369af43879c718d109e2529'
 FIXTURE_JSON_SHA256 = '5784090f18b0c114e5723ea9234173c040a0d290d94c0211b99b12b1161cd670'
@@ -47,6 +52,7 @@ BUILD_USER_STEPS = (
     'Checkout selected producer source',
     'Checkout executing workflow source',
     'Admit Bochs build source and request',
+    'Prepare pinned Node input cache',
     'Build pinned Bochs CPU3 and retain originals',
     'Retain Bochs build originals',
 )
@@ -54,6 +60,7 @@ INVENTORY_USER_STEPS = (
     'Checkout selected producer source',
     'Checkout executing workflow source',
     'Admit Bochs toolchain inventory source and request',
+    'Prepare pinned Node input cache',
     'Read selected Bochs toolchain files without execution',
     'Retain Bochs toolchain inventory originals',
 )
@@ -61,11 +68,13 @@ REFERENCE_USER_STEPS = (
     'Checkout selected producer source',
     'Checkout executing workflow source',
     'Admit Bochs reference source and request',
+    'Prepare pinned Node input cache',
     'Capture fresh JavaScript and Bochs unchanged wire',
     'Retain Bochs reference originals',
 )
 BUILD_FIXED_ROLES = frozenset(('request.original.json event.original.json '
-    'source.before.json source.after.json upstream.tree.original.json '
+    'source.before.json source.after.json node-stage.original.json '
+    'upstream.tree.original.json '
     'source-selection.original.json upstream.before.json upstream.after.json '
     'toolchain.before.json toolchain.after.json build.original.json '
     'build-manifest.json compact-manifest.json runtime.original.zip '
@@ -76,7 +85,7 @@ BUILD_FIXED_ROLES = frozenset(('request.original.json event.original.json '
 INVENTORY_ROLES = frozenset(('request.original.json event.original.json '
     'source.before.json source.after.json inventory.before.json '
     'inventory.after.json dpkg-status.original notices.original.json '
-    'process.original.json '
+    'node-stage.original.json process.original.json '
     'outside.original.json original.json manifest.json').split())
 NOTICE_PATHS = frozenset((
     '/usr/share/doc/gcc-13-base/copyright',
@@ -98,7 +107,6 @@ REQUIRED_TOOL_PATHS = (
     '/usr/bin/make', '/usr/bin/x86_64-linux-gnu-as',
     '/usr/bin/x86_64-linux-gnu-ar', '/usr/bin/x86_64-linux-gnu-ld',
     '/usr/bin/x86_64-linux-gnu-ranlib',
-    '/opt/hostedtoolcache/node/22.23.3/x64/bin/node',
     *(f'/usr/bin/{name}' for name in
       ('awk', 'sed', 'grep', 'expr', 'tr', 'cut', 'head', 'tail',
        'sort', 'uname', 'rm', 'mkdir', 'cp', 'mv', 'ln', 'cat',
@@ -107,7 +115,8 @@ REQUIRED_TOOL_PATHS = (
        'rmdir', 'diff', 'cmp')),
     *sorted(NOTICE_PATHS))
 REFERENCE_ROLES = frozenset(('request.original.json event.original.json '
-    'source.before.json source.after.json inputs/build.original.zip '
+    'source.before.json source.after.json node-stage.original.json '
+    'inputs/build.original.zip '
     'inputs/fixture.rom inputs/fixture.json asset.before.json '
     'asset.after.json bochsrc.original resources.json js/report.json '
     'js/observations.json js/writes.json js/memory.before.bin '
@@ -664,13 +673,13 @@ def runtime_assets(raw, selected_rows, selected_toolchain, *, budget=None,
                 'commit': BOCHS_COMMIT, 'tree': BOCHS_TREE,
                 'sourceSelectionSha256': SOURCE_SELECTION_SHA256},
             'inner runtime manifest fixed Bochs source selection')
-    node = fields(asset['hostNode'], 'path bytes sha256 elf')
-    require(node['path'] == '/opt/hostedtoolcache/node/22.23.3/x64/bin/node' and
-            node['bytes'] == 124827920 and
-            node['sha256'] ==
-            'fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48' and
-            strict_equal(node['elf'], selected_toolchain['files'][node['path']]['elf']),
-            'selected host Node is observed and never bundled')
+    node = fields(asset['hostNode'],
+                  'cachePath bytes sha256 elf stageMode stageUid stageGid')
+    require(strict_equal(node, selected_toolchain['node']) and
+            node['cachePath'] == NODE_CACHE_PATH and
+            node['bytes'] == NODE_BYTES and node['sha256'] == NODE_SHA256 and
+            not any(name.endswith('/node') for name in members),
+            'selected cache DATA is copied to a separate verified Node stage, never bundled')
     loader = fields(asset['loader'], 'path member bytes sha256 elf')
     require(type(loader['path']) is str and
             loader['path'] in selected_toolchain['files'] and
@@ -1238,6 +1247,7 @@ def tool_graph(graph, *, reported_only=True):
     fields(graph, 'files aliases directoryAliases')
     files = graph['files']
     require(type(files) is dict and 0 < len(files) <= 128 and
+            NODE_CACHE_PATH not in files and
             type(graph['aliases']) is dict and len(graph['aliases']) <= 128 and
             type(graph['directoryAliases']) is dict and
             len(graph['directoryAliases']) <= 32 and
@@ -1650,7 +1660,7 @@ def request_event(route, request_raw, event_raw, *, selected_head=None):
                 correspondence['selectedResourceGitBlob'] == VGA_BLOB,
                 'exact selected corresponding LGPL source and license bytes')
         selected_toolchain = fields(request['toolchain'],
-                                    'files aliases directoryAliases inventory')
+                                    'files aliases directoryAliases inventory node')
         inventory = fields(selected_toolchain['inventory'],
                            'runId jobId artifactId archiveBytes archiveSha256 '
                            'requestSha256 reportSha256 sourceHead sourceTree '
@@ -1671,9 +1681,31 @@ def request_event(route, request_raw, event_raw, *, selected_head=None):
 
 
 def selected_tool_graph(selected):
-    fields(selected, 'files aliases directoryAliases inventory')
+    fields(selected, 'files aliases directoryAliases inventory node')
+    node = fields(selected['node'],
+                  'cachePath bytes sha256 elf stageMode stageUid stageGid')
+    require(node['cachePath'] == NODE_CACHE_PATH and
+            node['bytes'] == NODE_BYTES and node['sha256'] == NODE_SHA256 and
+            node['stageMode'] == (stat.S_IFREG | 0o555) and
+            type(node['stageUid']) is int and node['stageUid'] == 0 and
+            type(node['stageGid']) is int and node['stageGid'] == 0,
+            'source-selected immutable staged Node expectation')
+    elf = fields(node['elf'], 'class machine type interpreter needed '
+                 'rpath runpath')
+    require(elf['class'] == 'ELF64' and elf['machine'] == 'x86-64' and
+            elf['type'] in ('EXEC', 'DYN') and
+            elf['interpreter'] in (None,
+                                   '/lib64/ld-linux-x86-64.so.2') and
+            type(elf['needed']) is list and len(elf['needed']) <= 64 and
+            all(type(name) is str and
+                re.fullmatch(r'[A-Za-z0-9+_.-]+', name)
+                for name in elf['needed']) and
+            len(set(elf['needed'])) == len(elf['needed']) and
+            elf['rpath'] is None and elf['runpath'] is None,
+            'bounded selected staged Node ELF dependency facts')
     require(type(selected['files']) is dict and
             1 <= len(selected['files']) <= 128 and
+            NODE_CACHE_PATH not in selected['files'] and
             type(selected['aliases']) is dict and
             len(selected['aliases']) <= 128 and
             type(selected['directoryAliases']) is dict and
@@ -1748,6 +1780,12 @@ def selected_tool_graph(selected):
             require(resolve_selected_alias(path, selected) in
                     selected['files'],
                     'externally selected ELF dependency graph closure')
+    node_elf = node['elf']
+    for path in ([node_elf['interpreter']] if node_elf['interpreter'] else []) + [
+            '/usr/lib/x86_64-linux-gnu/' + name
+            for name in node_elf['needed']]:
+        require(resolve_selected_alias(path, selected) in selected['files'],
+                'staged Node ELF dependencies in selected readonly tool graph')
     return selected
 
 
@@ -1795,6 +1833,149 @@ def source_facts(value, selected):
     return value
 
 
+def node_stage_fact(raw, *, route, run_id, expected=None):
+    """Grade reported cache DATA and a separate readonly staged executable."""
+    require(route in ('toolchain', 'build', 'reference') and
+            type(run_id) is str and re.fullmatch(r'[1-9][0-9]{0,19}', run_id),
+            'closed selected Node-stage route and run')
+    value = parse_json(raw, 65536, canonical_wire=True)
+    fields(value, 'schema sourcePath stagePath recordPath invoker '
+           'metadataFields created sourceBefore sourceAfter sourceNamedAfter '
+           'sourceBytesRead bytesCopied writeUncertain copiedSha256 '
+           'readbackBytes readbackSha256 elfReadBytes elf '
+           'fileBeforePublication parents directoryInitial fileInitial '
+           'targetAfterFailure directoryAfterFailure lastOperation file '
+           'fileNamed directoryBeforePublication directory directoryNamed '
+           'filePublicationAttempted directoryPublicationAttempted '
+           'filePublished directoryPublished record checkedAfter '
+           'firstFailure secondary')
+    directory = f'/run/bw-bochs-{route}-v1-{run_id}-1-node'
+    require(value['schema'] == 'bw.bochs-ring3.node-stage.v1' and
+            value['sourcePath'] == NODE_CACHE_PATH and
+            value['stagePath'] == directory + '/node' and
+            value['recordPath'] == directory + '/stage.json' and
+            value['metadataFields'] == list(NODE_METADATA_FIELDS) and
+            value['created'] == [directory, directory + '/node',
+                                 directory + '/stage.json'],
+            'one source-derived per-run Node stage and fixed metadata fields')
+    invoker = fields(value['invoker'], 'uid gid')
+    integer(invoker['uid'], 1, 2**31 - 1)
+    integer(invoker['gid'], 1, 2**31 - 1)
+
+    def identity(row):
+        require(type(row) is list and len(row) == 9 and
+                all(type(item) is int and item >= 0 for item in row) and
+                row[1] > 0, 'typed nine-field held/named Node identity')
+        return row
+
+    source = identity(value['sourceBefore'])
+    require(source == identity(value['sourceAfter']) ==
+            identity(value['sourceNamedAfter']) and
+            stat.S_ISREG(source[2]) and source[2] & 0o6000 == 0 and
+            source[5:7] == [1, NODE_BYTES] and
+            tuple(source[3:5]) in ((0, 0),
+                                   (invoker['uid'], invoker['gid'])),
+            'fixed complete cache DATA byte extent and stable source identity')
+    first_file = identity(value['fileInitial'])
+    private_file = identity(value['fileBeforePublication'])
+    published_file = identity(value['file'])
+    require(first_file[2:7] == [stat.S_IFREG | 0o600, 0, 0, 1, 0] and
+            private_file[2:7] == [stat.S_IFREG | 0o600, 0, 0, 1,
+                                   NODE_BYTES] and
+            published_file[2:7] == [stat.S_IFREG | 0o555, 0, 0, 1,
+                                     NODE_BYTES] and
+            first_file[:2] == private_file[:2] == published_file[:2] and
+            published_file == identity(value['fileNamed']),
+            'one fresh private Node output becomes same readonly executable')
+    first_dir = identity(value['directoryInitial'])
+    private_dir = identity(value['directoryBeforePublication'])
+    published_dir = identity(value['directory'])
+    require(first_dir[2:5] == private_dir[2:5] ==
+            [stat.S_IFDIR | 0o700, 0, 0] and
+            published_dir[2:5] == [stat.S_IFDIR | 0o555, 0, 0] and
+            first_dir[:2] == private_dir[:2] == published_dir[:2] and
+            published_dir == identity(value['directoryNamed']),
+            'one root-private stage directory becomes readonly and traversable')
+    require(type(value['parents']) is dict and
+            set(value['parents']) == {'/', '/run'},
+            'fixed root-owned stage parent roster')
+    for parent in value['parents'].values():
+        fields(parent, 'before namedBefore after namedAfter')
+        rows = [identity(parent[key]) for key in
+                ('before', 'namedBefore', 'after', 'namedAfter')]
+        require(all(row[:5] == rows[0][:5] for row in rows) and
+                stat.S_ISDIR(rows[0][2]) and
+                rows[0][3:5] == [0, 0] and
+                rows[0][2] & 0o022 == 0,
+                'stable held and named root parent directory identity')
+    require(value['sourceBytesRead'] == value['bytesCopied'] ==
+            value['readbackBytes'] == NODE_BYTES and
+            value['copiedSha256'] == value['readbackSha256'] == NODE_SHA256 and
+            value['writeUncertain'] is False and
+            all(value[name] is True for name in
+                ('filePublicationAttempted',
+                 'directoryPublicationAttempted', 'filePublished',
+                 'directoryPublished')) and
+            value['firstFailure'] is None and value['secondary'] == [] and
+            value['targetAfterFailure'] is None and
+            value['directoryAfterFailure'] is None,
+            'complete one-attempt copied and independently rehashed Node')
+    integer(value['elfReadBytes'], 1, 2097152)
+    elf = fields(value['elf'], 'class machine type interpreter needed '
+                 'rpath runpath')
+    require(elf['class'] == 'ELF64' and elf['machine'] == 'x86-64' and
+            elf['type'] in ('EXEC', 'DYN') and
+            elf['interpreter'] in (None,
+                                   '/lib64/ld-linux-x86-64.so.2') and
+            type(elf['needed']) is list and len(elf['needed']) <= 64 and
+            all(type(name) is str and
+                re.fullmatch(r'[A-Za-z0-9+_.-]+', name)
+                for name in elf['needed']) and
+            len(set(elf['needed'])) == len(elf['needed']) and
+            elf['rpath'] is None and elf['runpath'] is None,
+            'bounded reported staged Node ELF graph without injected search')
+    record = fields(value['record'], 'bytes sha256 metadata text')
+    installation = canonical({
+        'schema': 'bw.bochs-ring3.node-installation.v1',
+        'sourcePath': NODE_CACHE_PATH, 'stagePath': directory + '/node',
+        'bytes': NODE_BYTES, 'sha256': NODE_SHA256,
+        'uid': 0, 'gid': 0, 'mode': stat.S_IFREG | 0o555})
+    require(type(record['text']) is str and
+            record['text'].encode('utf-8') == installation and
+            record['bytes'] == len(installation) and
+            record['sha256'] == sha(installation) and
+            identity(record['metadata'])[2:7] ==
+            [stat.S_IFREG | 0o444, 0, 0, 1, len(installation)],
+            'exact root-readonly canonical staged Node installation record')
+    checked = fields(value['checkedAfter'],
+                     'hashRead bytesRead sha256 before after named elf '
+                     'elfReadBytes')
+    require(identity(checked['before']) ==
+            identity(checked['after']) ==
+            identity(checked['named']) == published_file,
+            'same immutable staged Node after route work')
+    if route == 'toolchain':
+        require(checked['hashRead'] is False and
+                checked['bytesRead'] == 0 and checked['sha256'] is None and
+                checked['elf'] is None and checked['elfReadBytes'] == 0,
+                'metadata route only reports after identity, without Node exec')
+    else:
+        require(checked['hashRead'] is True and
+                checked['bytesRead'] == NODE_BYTES and
+                checked['sha256'] == NODE_SHA256 and
+                strict_equal(checked['elf'], elf),
+                'Build/reference route fully rehashes staged Node after work')
+        integer(checked['elfReadBytes'], 1, 2097152)
+    projection = {'cachePath': NODE_CACHE_PATH, 'bytes': NODE_BYTES,
+                  'sha256': NODE_SHA256, 'elf': elf,
+                  'stageMode': stat.S_IFREG | 0o555,
+                  'stageUid': 0, 'stageGid': 0}
+    if expected is not None:
+        require(strict_equal(expected, projection),
+                'external selected Node expectation equals staged data')
+    return value, projection
+
+
 def common_original(route, raw, request_raw, event_raw):
     value = parse_json(raw, 4 << 20)
     fields(value, 'schema requestSha256 eventSha256 sourceBefore sourceAfter '
@@ -1829,12 +2010,12 @@ def common_original(route, raw, request_raw, event_raw):
               (route != 'reference' or authority['guestExecuted'] is True))),
             'retained observation cannot self-approve')
     expected = {'toolchain': 'inventoryBefore inventoryAfter status '
-                 'sourceSelection reportedReadbackOnly notices',
+                 'sourceSelection reportedReadbackOnly notices nodeStage',
                 'build': 'upstream sourceSelection toolchainBefore toolchainAfter '
                  'configure configHeader compilerCommands binary runtimeManifest '
-                 'notices compactManifest correspondingSource',
+                 'notices compactManifest correspondingSource nodeStage',
                 'reference': 'build assetsBefore assetsAfter fixture config js '
-                 'bochs stop outside cleanup'}[route]
+                 'bochs stop outside cleanup nodeStage'}[route]
     fields(value['observations'], expected)
     require(type(value['phases']) is list and len(value['phases']) <= 32 and
             type(value['resources']) is dict,
@@ -1866,7 +2047,7 @@ def artifact_manifest(packet, *, required, dynamic=()):
 
 def toolchain_original(packet, request_raw, event_raw):
     require(set(packet) == INVENTORY_ROLES,
-            'exact eleven retained inventory roles')
+            'exact thirteen retained inventory roles')
     artifact_manifest(packet, required=INVENTORY_ROLES)
     request, _event = request_event('toolchain', request_raw, event_raw)
     require(packet['request.original.json'] == request_raw and
@@ -1897,6 +2078,14 @@ def toolchain_original(packet, request_raw, event_raw):
             strict_equal(value['observations']['inventoryBefore'], g_before) and
             strict_equal(value['observations']['inventoryAfter'], g_after),
             'unchanged reported finite tool identities')
+    outside = parse_json(packet['outside.original.json'], 65536,
+                         canonical_wire=True)
+    node_stage, _node_projection = node_stage_fact(
+        packet['node-stage.original.json'], route='toolchain',
+        run_id=outside['runId'])
+    require(strict_equal(value['observations']['nodeStage'], node_stage) and
+            NODE_CACHE_PATH not in g_before['files'],
+            'separate staged Node original and cache DATA boundary')
     notice_summary = notice_facts(packet['notices.original.json'], g_before)
     require(strict_equal(value['observations']['notices'],
                          parse_json(packet['notices.original.json'], 4 << 20,
@@ -1914,6 +2103,13 @@ def toolchain_original(packet, request_raw, event_raw):
     require(status['observation']['before']['uid'] == 0 and
             status['observation']['before']['gid'] == 0,
             'root-owned bounded Debian status readback')
+    require(before_fact['selectedBytes'] * 2 +
+            node_stage['sourceBytesRead'] + node_stage['readbackBytes'] +
+            node_stage['elfReadBytes'] +
+            sum(row['bytes'] for row in
+                parse_json(packet['notices.original.json'], 4 << 20,
+                           canonical_wire=True).values()) <= 536870912,
+            'complete selected tool, staged Node and notice read budget')
     observer = parse_json(packet['process.original.json'], 65536,
                           canonical_wire=True)
     fields(observer, 'schema pid uid gid startedNs endedNs requestSha256 '
@@ -2034,6 +2230,14 @@ def build_original(packet, request_raw, event_raw, *, job_log=None,
                              value['observations']['toolchainAfter']) and
             strict_equal(selected_tool_projection(tool_before), selected),
             'reported Build toolchain before/after equals selected byte graph')
+    build_outside = parse_json(packet['outside.original.json'], 65536,
+                               canonical_wire=True)
+    build_node, _node_projection = node_stage_fact(
+        packet['node-stage.original.json'], route='build',
+        run_id=build_outside['runId'], expected=request['toolchain']['node'])
+    require(strict_equal(value['observations']['nodeStage'], build_node) and
+            NODE_CACHE_PATH not in tool_before['files'],
+            'Build rechecks one separate fully hashed staged Node original')
     config_raw = packet['config.h.original']
     version_raw = packet['bxversion.h.original']
     config = generated_config(config_raw, version_raw)
