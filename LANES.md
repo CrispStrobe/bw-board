@@ -6034,3 +6034,10 @@ every CPU ratio greater than 1 and median wall ratio at most 1.02. Preserve
 failed measurements; do not replay or weaken the gate. A failed performance
 gate leaves the candidate unadopted. No physical 386 timing, general workload
 speedup or full OS claim follows from this authored workload.
+
+Preparation checkpoint: the claim has merged through PR677. This documentation
+seed prepares the existing full-CI tier before the source candidate is pushed.
+The fixed paired target is ordinary AT, with two warm pairs and seven measured
+pairs at one million instructions per child after a separate 25,000-instruction
+warmup. Core semantics remain a correctness requirement; this comparison makes
+no independent core speedup claim. The benchmark event has not been selected.
