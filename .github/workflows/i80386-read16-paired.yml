@@ -26,6 +26,7 @@ jobs:
             scripts/i80386-at-profile
             scripts/i80386-read16-paired
             test/i80386-read16-ordered-pair.test.mjs
+            .github/workflows/i80386-read16-paired.yml
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22.23.3

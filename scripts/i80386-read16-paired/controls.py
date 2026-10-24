@@ -44,6 +44,47 @@ def evaluate(parts):
     expected.update(originalSha256=reader.sha(original_raw),originalBytes=len(original_raw),cleanupSha256=reader.sha(cleanup_raw),cleanupBytes=len(cleanup_raw))
     return reader.audit(original_raw,cleanup_raw,request_raw,event_raw,expected)
 
+def source_control_sparse_paths(workflow):
+    # This job deliberately uses only literal non-cone file/directory selectors.
+    job=workflow.split('  source-controls:\n',1)[1].split('  paired:\n',1)[0]
+    marker='          sparse-checkout: |\n'
+    if job.count(marker)!=1 or '          sparse-checkout-cone-mode: false\n' not in job:raise ValueError('one literal non-cone source-controls checkout')
+    selected=[]
+    for line in job.split(marker,1)[1].splitlines():
+        if not line.startswith('            '):break
+        name=line[12:]
+        if not name or name!=name.strip() or name.startswith('/') or any(c in name for c in '*?![]\\') or any(p in ('','.','..') for p in name.split('/')):raise ValueError('literal repository sparse selector')
+        selected.append(name)
+    if len(selected)!=len(set(selected)):raise ValueError('unique sparse selectors')
+    return selected
+
+def require_source_control_sparse_closure(workflow,required):
+    selected=source_control_sparse_paths(workflow)
+    missing=sorted(name for name in required if not any(name==p or name.startswith(p+'/') for p in selected))
+    if missing:raise ValueError('source-controls sparse closure missing: '+', '.join(missing))
+    return selected
+
+class SparseCheckoutControls(unittest.TestCase):
+    def inputs(self):
+        workflow=(HERE.parents[1]/'.github/workflows/i80386-read16-paired.yml').read_text()
+        rows=reader.source_rows((HERE/'source-rows.json').read_bytes())
+        self.assertEqual(set(rows['A']),set(rows['B']))
+        required=set(reader.COMMON)|set(rows['B'])
+        self.assertEqual(len(reader.COMMON),10);self.assertEqual(len(rows['B']),35)
+        return workflow,required
+    def test_source_controls_checkout_covers_COMMON10_and_source35(self):
+        workflow,required=self.inputs()
+        require_source_control_sparse_closure(workflow,required)
+        for name in required:self.assertTrue((HERE.parents[1]/name).is_file(),name)
+    def test_removing_required_file_or_directory_selector_is_detected(self):
+        workflow,required=self.inputs()
+        require_source_control_sparse_closure(workflow,required)
+        for selector in ('.github/workflows/i80386-read16-paired.yml','src','package.json'):
+            line='            '+selector+'\n';self.assertIn(line,workflow.split('  paired:\n',1)[0])
+            mutated=workflow.replace(line,'',1)
+            with self.subTest(selector=selector),self.assertRaisesRegex(ValueError,'sparse closure missing'):
+                require_source_control_sparse_closure(mutated,required)
+
 class OriginalControls(unittest.TestCase):
     def test_positive_complete_packet_and_caps(self):
         p=fixture();v=evaluate(p);self.assertTrue(v['performancePassed']);self.assertFalse(v['adoptionQualified']);self.assertFalse(v['officialMetadataAuthenticated'])
