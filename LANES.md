@@ -6153,7 +6153,8 @@ selected source twelve and executing workflow, run/job/artifact identities,
 pre/post raw status originals, stage before/after observations, exact partial
 probe roster and first/secondary failure, outer exit and outside cleanup.
 Accept only a bounded failed-attempt report with all approval flags false;
-refuse absent, truncated, altered or incoherent originals. Leave the existing
+retain the explicitly cap-clipped stdout prefix, and refuse missing or
+truncated packet roles or incoherent prefix metadata. Leave the existing
 v6 success and failure entries, their refusal and all consumed inputs intact.
 
 For a fresh metadata attempt, add a distinct **v7** label, job, canonical
@@ -6179,7 +6180,8 @@ in source controls.
 
 Preserve exact fifteen package/payload/image/status/helper pins, installer
 PATH, old v4/v5/v6 source routes, requests, event identities, thresholds,
-resource bounds, raw failures and source twelve. Keep fixture, CPU/AT, Node
+resource bounds, raw failures and the twelve-source roster, with freshly
+frozen v7 hashes. Keep fixture, CPU/AT, Node
 and QEMU identities unchanged; compiler and actual guest guards remain false.
 Require pure positive and coherent negative controls for the five-child union,
 wrong package/order, missing/truncated/oversize output, resource/cleanup

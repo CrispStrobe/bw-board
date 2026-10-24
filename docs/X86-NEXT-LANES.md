@@ -3183,8 +3183,9 @@ the existing aggregate log/resource bounds, and require all five complete
 outputs before forming the same package-path union. Archive DATA path lengths
 make this a bounded proposal, not a measured hosted `dpkg-query` result.
 
-Keep old routes and consumed event identities, exact package and runtime pins,
-compiler/guest guards, first failures and cleanup policy unchanged. Merge the
+Keep old routes and consumed event identities, the twelve-source roster with
+freshly frozen v7 hashes, exact package and runtime pins, compiler/guest
+guards, first failures and cleanup policy unchanged. Merge the
 docs-only claim before source implementation. Exact-head source CI, one fresh
 externally selected v7 event, one acquisition of each official original and a
 standalone complete-graph audit are required before any same-job guest work.
