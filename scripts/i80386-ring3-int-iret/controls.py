@@ -8408,7 +8408,9 @@ def same_job_actual_controls():
                 post_git=git_trace(old_originals['git.after.json'],'after')
                 generation=reader.parse(old_originals['generation.phase.json'])
                 node_path=p.RUNTIME_EXECUTABLES['node']
-                node_fact=generation['before']['files']['node']
+                node_fact={'path':node_path,
+                    'bytes':selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                    'sha256':selected_handoff['stageCopy']['nodeReadback']['sha256']}
                 generation_files={'node':dict(node_fact)}
                 for role,name in (('fixture','fixture.mjs'),('runner','run.py')):
                     path='scripts/i80386-ring3-int-iret/'+name
@@ -8496,6 +8498,33 @@ def same_job_actual_controls():
                 local_result=json.loads(text_output.getvalue())
                 self.assertTrue(local_result['guestPredicatesObserved'])
                 self.assertFalse(local_result['officialMetadataBound'])
+                changed_packet=dict(old_state['export'])
+                changed_packet['qemu/stdout']=changed_packet['qemu/stdout'][:-1]+b'X'
+                changed_report=reader.parse(changed_packet['qemu/report.json'])
+                changed_report['outputSha256']=sha(changed_packet['qemu/stdout'])
+                changed_packet['qemu/report.json']=reader.canonical(changed_report)
+                changed_audit=reader.parse(changed_packet['audit.json'])
+                changed_audit['roles']=[{'path':name,'bytes':len(changed_packet[name]),
+                    'sha256':sha(changed_packet[name])}
+                    for name in sorted(reader.ROLES-{'audit.json'})]
+                changed_packet['audit.json']=reader.canonical(changed_audit)
+                with patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                     patch.dict(reader.RUNTIME_SELECTED,{'node':{
+                         'bytes':selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                         'sha256':selected_handoff['stageCopy']['nodeReadback']['sha256']} }):
+                    with self.assertRaisesRegex(reader.Refusal,'wire framing'):
+                        reader.verify_same_job_actual_packet(changed_packet,
+                            handoff_raw,guest_service,guest_cleanup,guest_outer,
+                            runtime_originals['controller.runtime.json'])
+                    changed_cleanup=reader.parse(guest_cleanup)
+                    changed_cleanup['serviceExitCode']=1
+                    changed_outer=reader.parse(guest_outer)
+                    changed_outer['systemdRunExitCode']=1
+                    with self.assertRaises(reader.Refusal):
+                        reader.verify_same_job_actual_packet(old_state['export'],
+                            handoff_raw,guest_service,reader.canonical(changed_cleanup),
+                            reader.canonical(changed_outer),
+                            runtime_originals['controller.runtime.json'])
                 wrapper_calls=[];wrapper_originals={};uid_state={'uid':0,'gid':0}
                 guest_env=dict(final_env)
                 fake_setup=SimpleNamespace(environ=guest_env,
@@ -8506,13 +8535,31 @@ def same_job_actual_controls():
                     wrapper_calls.append('prepare')
                     return {'pass':True},p.FirstFailure()
                 fake_setup.prepare=setup_prepare
-                def outer_compose(composition):
+                def composition_validate(composition):
                     self.assertIsInstance(composition,p.SameJobEntryComposition)
                     self.assertEqual(composition.runtime_context.selection['handoffRaw'],
                         handoff_raw)
+                    composition.bootstrap.invoker={'uid':1001,'gid':1002}
+                    composition.python=reader.parse(old_state['data']['.entry.json'])['python']
+                def composition_prepare(composition,failure):
+                    self.assertIsNone(failure.first)
+                    composition._launch_plan_original=final_plan
+                    composition._preparation_original=phase_raw
+                    composition._generation_original=generation_raw
+                    composition.pre_git=pre_git
+                    composition.preparation={'process':reader.parse(phase_raw)['process'],
+                        'streams':{'stdout':pre_stream,'stderr':b''}}
+                    return failure
+                def composition_outside(composition):
+                    self.assertEqual(composition._launch_plan_original,final_plan)
                     wrapper_calls.append('compose')
                     uid_state.update(uid=1001,gid=1002)
-                    return {'pass':True,'final':finalized},p.FirstFailure()
+                    p.entry_ids(1001,1002)
+                    return outside_facts,p.FirstFailure()
+                class MockPostGit(p.GitObservation):
+                    def capture(self,head):
+                        self.assert_head=head
+                        return post.capture(head)
                 def selected_plan(selection,environ):
                     self.assertEqual(selection['candidateRaw'],candidate_raw)
                     self.assertEqual(selection['handoffRaw'],handoff_raw)
@@ -8522,19 +8569,37 @@ def same_job_actual_controls():
                     self.assertIs(setup,fake_setup)
                     wrapper_calls.append('sink')
                 def retained_service(path,raw,cap):
+                    path=Path(path)
+                    if path.is_relative_to(p.EXPORT):
+                        return fixture_write(path,raw,cap)
                     self.assertLessEqual(len(raw),cap)
                     self.assertNotIn(str(path),wrapper_originals)
                     wrapper_originals[str(path)]=raw
                     wrapper_calls.append('retained')
+                def reject_changed_handoff(fault):
+                    rejected_handoff=copy.deepcopy(selected_handoff)
+                    if fault=='source':
+                        rejected_handoff['source']['head']='f'*40
+                    else:
+                        rejected_handoff['stageCopy']['nodeReadback']['sha256']='f'*64
+                    refused,refusal=p.same_job_guest_service(guest_env,
+                        event_reader=lambda:event_raw,
+                        handoff_reader=lambda selected:(handoff_raw,
+                            rejected_handoff,candidate_raw,candidate))
+                    self.assertFalse(refused['pass'],fault)
+                    self.assertIsNotNone(refusal.first,fault)
+                    self.assertEqual(wrapper_calls,[],fault)
                 with patch.object(p,'SAME_JOB_ACTUAL_ENABLED',True),\
                      patch.object(p,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
                      patch.object(p,'SETUP_V9_STATUS_SHA',sha(pre)),\
                      patch.object(p,'SETUP_V8_STATUS_SHA',sha(pre)),\
                      patch.object(p,'GENERATION_NODE_PIN',(
-                         selected_handoff['stageCopy']['nodeReadback']['bytes'],
-                         selected_handoff['stageCopy']['nodeReadback']['sha256'])),\
-                     patch.object(p,'entry_proc',return_value=(
-                         '0::/system.slice/bw-ring3-actual-guest-v1-123-1.service\n')),\
+                         node_fact['bytes'],node_fact['sha256'])),\
+                     patch.object(p,'entry_proc',side_effect=lambda path:
+                         ''.join(key+':\t'+'0'*16+'\n' for key in
+                             ('CapInh','CapPrm','CapEff','CapAmb'))
+                         if str(path).endswith('/status') else
+                         '0::/system.slice/bw-ring3-actual-guest-v1-123-1.service\n'),\
                      patch.object(p.Cgroups,'text',side_effect=lambda unused,path:
                          p.SAME_JOB_GUEST_LIMITS[Path(path).name]),\
                      patch.object(p,'source_facts',side_effect=lambda selected,**kw:
@@ -8546,10 +8611,13 @@ def same_job_actual_controls():
                      patch.object(p,'same_job_create_launch_plan',side_effect=selected_plan),\
                      patch.object(p,'HostedSetupOps',return_value=fake_setup),\
                      patch.object(p,'same_job_create_runtime_sink',side_effect=selected_sink),\
-                     patch.object(p,'compose_entry',side_effect=outer_compose),\
+                     patch.multiple(p.SameJobEntryComposition,
+                         validate=composition_validate,prepare=composition_prepare,
+                         outside=composition_outside),\
+                     patch.object(p,'GitObservation',MockPostGit),\
                      patch.object(p,'write_new',side_effect=retained_service),\
-                     patch.object(p.os,'getresuid',side_effect=lambda:(uid_state['uid'],)*3),\
-                     patch.object(p.os,'getresgid',side_effect=lambda:(uid_state['gid'],)*3),\
+                     patch.multiple(p.os,getresuid=lambda:(uid_state['uid'],)*3,
+                         getresgid=lambda:(uid_state['gid'],)*3),\
                      patch.object(p.os,'getgroups',return_value=[]):
                     wrong_event=copy.deepcopy(event)
                     wrong_event['label']['name']='x86-ring3-setup-runtime-inventory-v9'
@@ -8560,11 +8628,16 @@ def same_job_actual_controls():
                     self.assertFalse(refused['pass'])
                     self.assertIsNotNone(refusal.first)
                     self.assertEqual(wrapper_calls,[])
+                    reject_changed_handoff('source')
+                    reject_changed_handoff('stage')
+                    old_state['export'].clear();old_state['directories'].clear()
                     wrapper_result,wrapper_failure=p.same_job_guest_service(
                         guest_env,event_reader=lambda:event_raw,
                         handoff_reader=lambda selected:(handoff_raw,selected_handoff,
                             candidate_raw,candidate))
                 self.assertTrue(wrapper_result['pass'],wrapper_failure.first)
+                self.assertTrue(wrapper_result['composition']['final']['pass'])
+                self.assertEqual(set(old_state['export']),reader.ROLES)
                 self.assertIsNone(wrapper_failure.first)
                 self.assertEqual(wrapper_calls,['plan','prepare','sink','compose','retained'])
                 self.assertEqual(set(wrapper_originals),{
