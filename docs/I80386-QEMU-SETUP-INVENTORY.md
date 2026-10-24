@@ -39,10 +39,24 @@ No current helper, package, CPU or device implementation is edited by this lane.
 ## Qualification
 
 The disabled observer source landed in PR669 at
-`3191cecbe4befc543b9374501f2a1b05a74bbab5`. This separately reviewed
-candidate enables only its collector and metadata job for a later admitted
-event. No hosted metadata event is admitted by the source change. Package setup,
-QEMU, a guest and PR645 runtime execution remain disabled.
+`3191cecbe4befc543b9374501f2a1b05a74bbab5`. Activation PR671 landed at
+`b73667d4c247863f8e0e69b0f6713f65ed1ffa83` after all 13 enabled checks passed,
+with 12 declared skips. It enables only the collector and metadata job.
+
+The separately admitted [metadata run 40041174534](https://github.com/CrispStrobe/bw-board/actions/runs/40041174534)
+passed on the frozen reviewed source `87d7ff39e07f48fd4aac8f0a5b2cbaea97324f31`.
+Two independent audits checked the retained original against its request,
+source files, official producing job, artifact digest and job-setup log.
+The observation completed with 1,211 package records and all 22 file roles,
+without a collector error. It reported Ubuntu 24.04.5 and image version
+`20261012.334.1`. Twelve selected packages were absent: the five QEMU/firmware
+packages and seven supporting libraries. The service-policy file was absent;
+systemd and the selected helper paths were present.
+
+This qualifies that bounded historical observation. It establishes neither an
+immutable image nor the state of a later runner. Package setup, QEMU execution,
+guests and PR645 actual execution remain unqualified; all six authority flags
+in the original remain false. Preserve the consumed absent-QEMU failure.
 
 The first source candidate kept the controller and metadata job disabled. Tiny
 mocked controls exercise valid observations, wrong source/job/host inputs,
@@ -66,19 +80,23 @@ consistency without authenticating those external facts. Independent official
 run/job/artifact admission and, where needed, a retained job-setup log must
 corroborate them before any later setup decision.
 
-After the source PR and this activation candidate are separately reviewed and
-all enabled exact-head checks pass, separately select and admit one hosted
-metadata-only event. Retain each official original once after
-metadata admission and audit the retained bytes independently. Metadata success
+For any later observation, separately review its source and activation, require
+all enabled exact-head checks to pass, and select a distinct admitted event.
+Retain each official original once after metadata admission and audit the retained
+bytes independently. Do not replay the completed observation. Metadata success
 establishes only observed inputs; setup policy, complete archive/dependency
 closure, privilege and service behavior remain separate decisions. No source-only
 result enables PR645 actual execution or the compiler.
 
 ## Completion and next handoff
 
-Deliver a source-qualified bounded observer and independently audited original
-identifying the selected runner's installed state and helper bytes. Mark missing
-or stale identities. Its consumer can propose the exact package transaction and
+The bounded observer and independently audited original are delivered. The next
+task is the exact package/dependency closure, including transitive dependencies,
+versioned providers, archive control scripts, triggers and file conflicts. Use an
+explicit recommendations policy. Then review installer privileges, permitted
+service-state changes, service-start denial, resource bounds, first-failure
+retention and owned cleanup before a distinct setup/runtime qualification.
+The consumer can propose the exact package transaction and
 verified service-denial/cleanup policy, or a separately claimed extraction
 architecture with a new runtime contract. Never silently change the old QEMU
 path/version/hash or treat it as available. A later setup must freshly verify

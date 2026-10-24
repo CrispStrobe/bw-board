@@ -139,12 +139,13 @@ test('names are resolved through the transport only while the bridge is on', () 
     const transport = fakeTransport({names: {'example.org': PUBLIC}});
     const w = world({transport});
     w.router.serveDns({'printer.lan': '10.0.0.42'}, {resolve: w.gateway.resolver});
+    let nextSourcePort = 5000;
     const ask = (name) => {
         const q = [0x12, 0x34, 0x01, 0x00, 0, 1, 0, 0, 0, 0, 0, 0];
         for (const label of name.split('.')) q.push(label.length, ...Buffer.from(label));
         q.push(0, 0, 1, 0, 1);
         let answer = null;
-        const port = 5000 + Math.floor(Math.random() * 1000);
+        const port = nextSourcePort++;
         w.guest.udpBind(port, payload => { answer = {rcode: payload[3] & 15, tail: Array.from(payload.subarray(payload.length - 4))}; });
         w.guest.udpSend('10.0.0.1', 53, port, q);
         return answer;
