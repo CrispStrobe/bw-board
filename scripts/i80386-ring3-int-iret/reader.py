@@ -7739,10 +7739,16 @@ class SetupV8Files(StagedInventoryFiles):
             before=os.fstat(fd);observation['heldBefore']=setup_metadata(before)
             need(stat.S_ISREG(before.st_mode) and 0<before.st_size<=268435456 and before.st_mode&0o022==0,
                 'bounded inventory regular file and mode')
+            if path in SETUP_V8_SIGNED_DATA:
+                signed=SETUP_V8_SIGNED_DATA[path]
+                need(before.st_size==signed['bytes'] and stat.S_IMODE(before.st_mode)==signed['mode'] and
+                     (before.st_uid,before.st_gid,before.st_nlink)==(0,0,1),
+                     'selected DATA exact regular extent and owner before byte read')
             while True:
-                part=os.read(fd,min(65536,268435457-count))
+                cap=SETUP_V8_SIGNED_DATA[path]['bytes'] if path in SETUP_V8_SIGNED_DATA else 268435456
+                part=os.read(fd,min(65536,cap+1-count))
                 if not part:break
-                count+=len(part);need(count<=268435456,'inventory file extent cap');digest.update(part)
+                count+=len(part);need(count<=cap,'inventory file extent cap');digest.update(part)
                 if len(prefix)<64:prefix.extend(part[:64-len(prefix)])
             observation['heldAfter']=setup_metadata(os.fstat(fd));observation['namedAfter']=setup_metadata(os.stat(path,follow_symlinks=False))
             need(count==before.st_size and observation['heldAfter']==setup_metadata(before) and
