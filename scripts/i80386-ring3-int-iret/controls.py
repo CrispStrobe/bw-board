@@ -10856,6 +10856,14 @@ def same_job_v3_controls(*,export_fixture=False):
                 self.assertIsNotNone(value['firstFailure'])
                 self.assertEqual(ops.removed,[])
                 self.assertEqual(ops.closed,[5,4,3,2,1])
+        def test_actual_name_collector_rejects_oversized_aggregate_before_stat(self):
+            many=['child'+str(index).zfill(3)+'x'*92 for index in range(20)]
+            with patch.object(p.os,'lseek',return_value=0),\
+                 patch.object(p.os,'listdir',return_value=many),\
+                 patch.object(p.os,'stat',side_effect=AssertionError('stat after cap')) as census:
+                with self.assertRaisesRegex(ValueError,'aggregate selected cgroup child names'):
+                    p.SameJobV3ManualTreeOps().names(77)
+                census.assert_not_called()
         def test_postleaf_pause_error_retains_first_dying_sample(self):
             ops=FakeTree((2,0),fault=('pause',))
             value=self.audit(ops)

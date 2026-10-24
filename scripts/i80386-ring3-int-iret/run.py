@@ -10359,6 +10359,8 @@ class SameJobV3ManualTreeOps:
              all(type(name) is str and 0<len(name.encode('ascii'))<=128 and
                  '/' not in name and name not in ('.','..') for name in names),
              'bounded named selected cgroup directory entries')
+        need(sum(len(name.encode('ascii'))+3 for name in names)<=512,
+             'bounded aggregate selected cgroup child names')
         children=[]
         for name in names:
             info=os.stat(name,dir_fd=fd,follow_symlinks=False)
