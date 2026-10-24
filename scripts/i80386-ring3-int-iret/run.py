@@ -8287,7 +8287,7 @@ def same_job_v2_cgroup_history(ops,phase,*,limit=6,clock=None,pause=None):
         if index and now<began+targets[index] and now<deadline:
             pause(min(began+targets[index]-now,deadline-now)/1_000_000_000)
         started=clock()
-        if type(started) is not int or started>deadline:
+        if type(started) is not int or started>=deadline:
             value['firstFailure']=row(ValueError('finite v2 post-reap deadline before sample'),
                                       'same-job-actual-v2-cgroup-deadline')
             break
@@ -8304,8 +8304,8 @@ def same_job_v2_cgroup_history(ops,phase,*,limit=6,clock=None,pause=None):
         identity=sample['unitIdentity']
         if stable_identity is None:stable_identity=identity[:6]
         if (identity[:6]!=stable_identity or sample['limits']!=LIMITS or
-                ended>deadline):
-            cause=('finite v2 post-reap deadline after read' if ended>deadline else
+                ended>=deadline):
+            cause=('finite v2 post-reap deadline after read' if ended>=deadline else
                    'owned v2 cgroup identity or limits drift')
             value['firstFailure']=row(ValueError(cause),'same-job-actual-v2-cgroup-admission')
             break

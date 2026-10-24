@@ -9564,7 +9564,7 @@ def same_job_actual_controls():
             with self.assertRaises(reader.Refusal):
                 reader.same_job_v2_cgroup_history(persistent,'configure',101)
             times=iter((1_000_000_000,1_000_000_001,1_000_000_002,
-                6_000_000_001))
+                6_000_000_000))
             expired=p.same_job_v2_cgroup_history(Census([sample(0,'101\n')]),
                 'unpack',limit=1,clock=lambda:next(times),pause=lambda _:None)
             self.assertFalse(expired['settled'])
