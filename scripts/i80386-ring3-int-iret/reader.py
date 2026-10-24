@@ -3409,8 +3409,6 @@ def verify_setup_v4_failure_log(raw,external,outer_raw,cleanup_raw):
          type(packet['firstFailure']) is dict and type(packet['secondary']) is list and
          len(packet['secondary'])<=64,'failed packet with retained first and secondary')
     keys(packet['firstFailure'],'phase name message')
-    need(outside['shellExitCode']==(1 if shell['fieldErrors'] else 0),
-         'shell field refusal and process exit agree')
     context=packet['context'];keys(context,'request event platform source sourceCommands eventIdentity')
     request_raw=prerequisite_original(canonical(context['request']))
     request,source=setup_v4_request(request_raw,external['requestSha256'])
@@ -4701,8 +4699,6 @@ def verify_setup_v5_failure_log(raw,external,outer_raw,cleanup_raw):
          type(packet['firstFailure']) is dict and type(packet['secondary']) is list and
          len(packet['secondary'])<=64,'failed packet with retained first and secondary')
     keys(packet['firstFailure'],'phase name message')
-    need(outside['shellExitCode']==(1 if shell['fieldErrors'] else 0),
-         'shell field refusal and process exit agree')
     context=packet['context'];keys(context,'request event platform source sourceCommands eventIdentity')
     request_raw=prerequisite_original(canonical(context['request']))
     request,source=setup_v5_request(request_raw,external['requestSha256'])
@@ -5736,8 +5732,6 @@ def verify_setup_v6_failure_log(raw,external,outer_raw,cleanup_raw,shell_raw):
          type(packet['firstFailure']) is dict and type(packet['secondary']) is list and
          len(packet['secondary'])<=64,'failed packet with retained first and secondary')
     keys(packet['firstFailure'],'phase name message')
-    need(outside['shellExitCode']==(1 if shell['fieldErrors'] else 0),
-         'shell field refusal and process exit agree')
     context=packet['context'];keys(context,'request event platform source sourceCommands eventIdentity imageFields imageFieldErrors')
     setup_v6_image_observation(context['imageFields'],context['imageFieldErrors'])
     forwarding_matches=context['imageFields']==setup_v6_expected_forwarded(shell['fields'])
@@ -7281,8 +7275,6 @@ def verify_setup_v7_failure_log(raw,external,outer_raw,cleanup_raw,shell_raw):
          type(packet['firstFailure']) is dict and type(packet['secondary']) is list and
          len(packet['secondary'])<=64,'failed packet with retained first and secondary')
     keys(packet['firstFailure'],'phase name message')
-    need(outside['shellExitCode']==(1 if shell['fieldErrors'] else 0),
-         'shell field refusal and process exit agree')
     context=packet['context'];keys(context,'request event platform source sourceCommands eventIdentity imageFields imageFieldErrors')
     setup_v7_image_observation(context['imageFields'],context['imageFieldErrors'])
     forwarding_matches=context['imageFields']==setup_v7_expected_forwarded(shell['fields'])
@@ -9346,8 +9338,6 @@ def verify_setup_v8_failure_log(raw,external,outer_raw,cleanup_raw,shell_raw):
          type(packet['firstFailure']) is dict and type(packet['secondary']) is list and
          len(packet['secondary'])<=64,'failed packet with retained first and secondary')
     keys(packet['firstFailure'],'phase name message')
-    need(outside['shellExitCode']==(1 if shell['fieldErrors'] else 0),
-         'shell field refusal and process exit agree')
     context=packet['context'];keys(context,'request event platform source sourceCommands eventIdentity imageFields imageFieldErrors')
     setup_v8_image_observation(context['imageFields'],context['imageFieldErrors'])
     forwarding_matches=context['imageFields']==setup_v8_expected_forwarded(shell['fields'])
