@@ -265,10 +265,11 @@ jobs:
           if-no-files-found: error
           include-hidden-files: false
           retention-days: 1
-  # Distinct v4 setup/runtime candidate. This literal remains false until
-  # source, payload witness, policy and official one-shot event review.
+  # Distinct enabled v4 setup/runtime metadata candidate; source activation
+  # does not authorize an event without payload, policy and one-shot review.
+  # Enabled metadata route still requires its distinct externally admitted event.
   setup-runtime-inventory:
-    if: ${{ false && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-setup-runtime-inventory-v1' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
+    if: ${{ true && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-setup-runtime-inventory-v1' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:

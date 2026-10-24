@@ -2533,7 +2533,7 @@ STAGED_RUNTIME_PLATFORM=tuple('BW_RING3_STAGED_INVENTORY_REQUEST_SHA256' if key=
 
 # Independent selected setup constants. These archive rows are signed index
 # selections, not a claim that their payload, scripts, or setup are admitted.
-SETUP_V4_READER_ENABLED=False
+SETUP_V4_READER_ENABLED=True  # V4 metadata only; no guest approval.
 SETUP_V4_PACKAGES=(
     ('ipxe-qemu','1.21.1+git-20220113.fbbdc3926-0ubuntu2','all','pool/main/i/ipxe/ipxe-qemu_1.21.1+git-20220113.fbbdc3926-0ubuntu2_all.deb',1564600,'1f1612934b6ddaf4dd633760dfe5ef2a79ea2507341fd5efe394ff589a044707'),
     ('libbrlapi0.8','6.6-4ubuntu5','amd64','pool/main/b/brltty/libbrlapi0.8_6.6-4ubuntu5_amd64.deb',31388,'82272b3090c912e45d92ff7ed200de289c47e504513559377a6f6c5a372cbcf5'),

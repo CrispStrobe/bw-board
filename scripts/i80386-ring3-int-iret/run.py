@@ -4839,9 +4839,9 @@ STAGED_RUNTIME_ENTRY_ENABLED=True
 STAGED_EMPTY_PYTHON_SOURCES={'/usr/lib/python3.12/urllib/__init__.py':{'kind':'python-source-empty','bytes':0,'sha256':'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','mode':0o644,'owner':[0,0],'links':1}}
 STAGED_RUNTIME_ENV=tuple('BW_RING3_STAGED_INVENTORY_REQUEST_SHA256' if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key for key in NODE_STAGE_ENV)
 
-# V4 is a distinct, initially inactive setup request. The signed archive rows
+# V4 is a distinct, externally admitted setup request. The signed archive rows
 # are selection data; they do not authorize installation or attest payloads.
-SETUP_V4_ENABLED=False
+SETUP_V4_ENABLED=True  # Exact event/request and host preconditions still required.
 SETUP_V4_PACKAGE_ROWS=(
     ('ipxe-qemu','1.21.1+git-20220113.fbbdc3926-0ubuntu2','all','pool/main/i/ipxe/ipxe-qemu_1.21.1+git-20220113.fbbdc3926-0ubuntu2_all.deb',1564600,'1f1612934b6ddaf4dd633760dfe5ef2a79ea2507341fd5efe394ff589a044707'),
     ('libbrlapi0.8','6.6-4ubuntu5','amd64','pool/main/b/brltty/libbrlapi0.8_6.6-4ubuntu5_amd64.deb',31388,'82272b3090c912e45d92ff7ed200de289c47e504513559377a6f6c5a372cbcf5'),

@@ -3126,3 +3126,17 @@ original once, audit it with the independent v4 reader and separately join
 the setup log's image fields and producing job. Clean guest/oracle execution
 remains a later, distinct qualification; no actual 386 or physical timing
 result follows from this metadata candidate.
+
+### Selected QEMU v4 activation candidate — 2026-10-24
+
+This follow-up enables only the distinct setup/runtime **metadata** entry, reader
+and label job from the reviewed disabled source candidate in PR645. Guest and
+compiler execution remain disabled. The exact request, source12, selected bytes,
+payload witness, package/helper/status/image policy and resource/output limits
+remain mandatory. A runner that differs from the selected finite observation
+refuses before archive acquisition or package changes; no future image match is
+promised. Source enablement is not setup, runtime-candidate or guest approval.
+Require all final-head source checks and separate external review of one fresh
+v4 request and event before applying its distinct label once. Preserve consumed
+v3 requests/events and all first failures. Independently acquire and audit the
+new official originals once, including raw status and outside cleanup.

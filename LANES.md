@@ -5956,3 +5956,17 @@ standalone byte reader joins source, workflow, semantics and raw
 profiles without producer imports or replay. Current profiling only selects a
 later narrow optimization candidate; it grants no physical RTx, frequency,
 measured speedup, full-OS or guest qualification claim.
+
+### Selected QEMU v4 activation candidate — 2026-10-24
+
+This follow-up enables only the distinct setup/runtime **metadata** entry, reader
+and label job from the reviewed disabled source candidate in PR645. Guest and
+compiler execution remain disabled. The exact request, source12, selected bytes,
+payload witness, package/helper/status/image policy and resource/output limits
+remain mandatory. A runner that differs from the selected finite observation
+refuses before archive acquisition or package changes; no future image match is
+promised. Source enablement is not setup, runtime-candidate or guest approval.
+Require all final-head source checks and separate external review of one fresh
+v4 request and event before applying its distinct label once. Preserve consumed
+v3 requests/events and all first failures. Independently acquire and audit the
+new official originals once, including raw status and outside cleanup.

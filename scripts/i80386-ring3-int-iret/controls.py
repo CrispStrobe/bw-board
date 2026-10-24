@@ -2110,10 +2110,19 @@ def setup_v4_controls(export_sample=False):
                 'emptyPythonSources':copy.deepcopy(reader.STAGED_EMPTY_PYTHON_SOURCES),
                 'setup':p.setup_v4_policy(),'payloadWitness':copy.deepcopy(witness)}
             return request
-        def test_disabled_sources_refuse_before_host_edges(self):
-            self.assertIs(p.SETUP_V4_ENABLED,False);self.assertIs(reader.SETUP_V4_READER_ENABLED,False)
-            with patch.object(p,'setup_v4_entry',side_effect=AssertionError('no host')),patch.object(sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
+        def test_explicit_disabled_guard_refuses_before_host_edges(self):
+            with patch.object(p,'SETUP_V4_ENABLED',False),patch.object(p,'setup_v4_entry',side_effect=AssertionError('no host')),patch.object(sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
                 self.assertEqual(p.dispatch_cli(['--setup-runtime-inventory-v4'],{}),1)
+        def test_enabled_metadata_dispatch_still_uses_admission_entry(self):
+            self.assertIs(p.SETUP_V4_ENABLED,True);self.assertIs(reader.SETUP_V4_READER_ENABLED,True)
+            self.assertIs(p.ACTUAL_ENTRY_ENABLED,False)
+            for mode,name in (('setup-runtime-inventory-v4','setup_v4_entry'),('cleanup-setup-v4-policy','setup_v4_outside_cleanup')):
+                with self.subTest(mode=mode),patch.object(p,name,return_value=17) as entry:
+                    self.assertEqual(p.dispatch_cli(['--'+mode],{'test':'inert'}),17)
+                    entry.assert_called_once_with({'test':'inert'})
+            with patch.object(sys,'argv',['reader.py','--inventory-setup-v4']),patch.object(reader,'setup_v4_inventory_entry',return_value=({},False,False)) as entry:
+                with self.assertRaises(SystemExit) as stopped: reader.main()
+                self.assertEqual(stopped.exception.code,1);entry.assert_called_once()
         def test_exact_distinct_request_and_mutations(self):
             request=self.request();raw=reader.canonical(request)
             self.assertEqual(p.admit_setup_v4_request(raw,sha(raw)),request)
