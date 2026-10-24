@@ -10541,7 +10541,7 @@ def same_job_v3_manual_tree(environ,selection,outer_base,*,ops=None):
         'removals':[],'rootSampleBaseMonoNs':None,'rootSampleDeadlineMonoNs':None,
         'rootSamples':[],'parentIdentityAfter':None,'finalAbsent':None,
         'firstFailure':None,'secondary':[]}
-    found=FirstFailure();fds={};parent=None;root=None
+    found=FirstFailure();fds={};parent=None;root=None;initial_first5={}
     need(type(outer_base) is dict and
          outer_base.get('schema')=='bw.ring3.same-job-guest-outside-cleanup.v3' and
          outer_base.get('manualTree') is None,
@@ -10558,13 +10558,18 @@ def same_job_v3_manual_tree(environ,selection,outer_base,*,ops=None):
         need(sample['firstFailure'] is None and sample['secondary']==[] and
              type(sample['endMonoNs']) is int and
              sample['children']==expected_children and
-             tuple(sample['heldIdentity'][:2])==identities[role],
+             tuple(sample['heldIdentity'][:2])==identities[role] and
+             sample['heldIdentity'][:5]==sample['namedIdentity'][:5]==
+             initial_first5[role],
              'selected V3 manual '+role+' raw/identity authority')
     def check_fd(fd,name,owner,reference,parent_fd):
         held=ops.held(fd);named=ops.named(name,parent_fd)
+        role='enclosing' if name==root_name else name
         need(held[:5]==named[:5] and tuple(held[:2])==reference and
              (held[3],held[4])==owner and stat.S_ISDIR(held[2]) and
-             held[2]&0o022==0,'exact held/named V3 owned cgroup directory')
+             held[2]&0o022==0 and
+             (role not in initial_first5 or held[:5]==initial_first5[role]),
+             'exact held/named V3 owned cgroup directory')
         return held,named
     def remove(role,name,parent_fd,fd,reference,parent_reference):
         journal={'role':role,'attempted':False,'removed':False,'error':None,
@@ -10602,17 +10607,21 @@ def same_job_v3_manual_tree(environ,selection,outer_base,*,ops=None):
         value['parentIdentity']=ops.held(parent)
         need(stat.S_ISDIR(value['parentIdentity'][2]) and
              value['parentIdentity'][3:5]==[0,0] and
+             value['parentIdentity'][2]&0o022==0 and
              value['parentIdentity'][:5]==ops.named_parent()[:5],
              'held exact cgroup parent before selected root')
         root=ops.open_dir(root_name,parent);fds['enclosing']=root
         value['rootIdentity'],named=check_fd(root,root_name,tuple(invoker),identities['enclosing'],parent)
+        initial_first5['enclosing']=value['rootIdentity'][:5]
         need(value['rootIdentity'][0]==value['parentIdentity'][0],
              'selected V3 manual tree cgroup filesystem')
         for role in ('controller','js','qemu'):
             fd=ops.open_dir(role,root);fds[role]=fd
             held,named=check_fd(fd,role,tuple(invoker),identities[role],root)
+            initial_first5[role]=held[:5]
             need(held[0]==value['rootIdentity'][0],
                  'same selected V3 cgroup filesystem')
+        previous_end=None
         for role in ops.ROLES:
             fd=fds[role];base=parent if role=='enclosing' else root
             name=root_name if role=='enclosing' else role
@@ -10621,6 +10630,9 @@ def same_job_v3_manual_tree(environ,selection,outer_base,*,ops=None):
                                               sample_budget())
             value['before'][role]=sample
             require_sample(sample,role,children,identities)
+            need(previous_end is None or sample['startMonoNs']>=previous_end,
+                 'ordered selected V3 manual pre-removal observations')
+            previous_end=sample['endMonoNs']
         need(len(encode(value))<=6144 and whole_size()<=8192,
              'bounded complete four-role V3 sample before first removal')
         for role in ('controller','js','qemu'):
@@ -10628,7 +10640,8 @@ def same_job_v3_manual_tree(environ,selection,outer_base,*,ops=None):
                           value['rootIdentity'][:5]):
                 raise ObservedFailure(found.first,found.secondary)
         began=ops.clock()
-        need(type(began) is int and began>=0,'monotonic V3 post-leaf sampling start')
+        need(type(began) is int and began>=previous_end,
+             'monotonic V3 post-leaf sampling start')
         deadline=began+5_000_000_000
         value['rootSampleBaseMonoNs']=began
         value['rootSampleDeadlineMonoNs']=deadline
@@ -10636,8 +10649,7 @@ def same_job_v3_manual_tree(environ,selection,outer_base,*,ops=None):
         settled=False
         for index,target in enumerate(targets):
             now=ops.clock()
-            need(type(now) is int and now>=began and
-                 (not value['rootSamples'] or now>=value['rootSamples'][-1]['endMonoNs']),
+            need(type(now) is int and now>=began and now>=previous_end,
                  'nondecreasing V3 post-leaf clock')
             if index and now<began+target and now<deadline:
                 ops.pause(min(began+target-now,deadline-now)/1_000_000_000)
@@ -10648,8 +10660,11 @@ def same_job_v3_manual_tree(environ,selection,outer_base,*,ops=None):
                                               *invoker,[],sample_budget())
             value['rootSamples'].append(sample)
             require_sample(sample,'enclosing',[],identities)
-            need(sample['startMonoNs']>=started and sample['endMonoNs']<deadline,
+            need(sample['startMonoNs']>=started and
+                 sample['startMonoNs']>=previous_end and
+                 sample['endMonoNs']<deadline,
                  'finite monotonic V3 post-leaf read end')
+            previous_end=sample['endMonoNs']
             dying=same_job_v3_cgroup_numbers(sample['raw']['cgroupStat'],
                                              'nr_dying_descendants')
             if dying==0:settled=True;break

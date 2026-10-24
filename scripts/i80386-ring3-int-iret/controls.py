@@ -10848,6 +10848,7 @@ def same_job_v3_controls(*,export_fixture=False):
                 value=self.audit(ops)
                 self.assertIsNotNone(value['firstFailure'])
                 self.assertEqual(ops.removed,[])
+                self.assertEqual(ops.closed,[5,4,3,2,1])
                 self.assertEqual(len(ops.closed),5)
         def test_named_identity_or_limit_drift_blocks_destructive_phase(self):
             for ops in (FakeTree(fault=('identity','qemu')),
@@ -10855,7 +10856,26 @@ def same_job_v3_controls(*,export_fixture=False):
                 value=self.audit(ops)
                 self.assertIsNotNone(value['firstFailure'])
                 self.assertEqual(ops.removed,[])
-                self.assertEqual(ops.closed,[5,4,3,2,1])
+        def test_initial_mode_and_observation_order_hold_before_any_rmdir(self):
+            class SafeModeDrift(FakeTree):
+                def clock(self):
+                    value=super().clock()
+                    if self.clock_reads==8:
+                        self.identities[3][2]=stat.S_IFDIR|0o700
+                    return value
+            class WritableParent(FakeTree):
+                def __init__(self):
+                    super().__init__()
+                    self.identities[1][2]=stat.S_IFDIR|0o777
+            class BackwardBefore(FakeTree):
+                def clock(self):
+                    if self.clock_reads==2:self.time-=15_000_000
+                    return super().clock()
+            for ops in (SafeModeDrift(),WritableParent(),BackwardBefore()):
+                value=self.audit(ops)
+                self.assertIsNotNone(value['firstFailure'])
+                self.assertEqual(ops.removed,[])
+                self.assertIsNone(value['finalAbsent'])
         def test_actual_name_collector_rejects_oversized_aggregate_before_stat(self):
             many=['child'+str(index).zfill(3)+'x'*92 for index in range(20)]
             with patch.object(p.os,'lseek',return_value=0),\
