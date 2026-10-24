@@ -7977,7 +7977,9 @@ def same_job_actual_controls():
         files.rejected={}
         empty=next(iter(reader.STAGED_EMPTY_PYTHON_SOURCES))
         python_files=files.python_files
-        files.python_files=lambda:sorted(python_files()+[empty])
+        python_extra=['/usr/lib/python3.12/mock'+str(index).zfill(3)+'.py'
+            for index in range(241)]
+        files.python_files=lambda:sorted(python_files()+[empty,*python_extra])
         files.empty_python=lambda name:reader.StagedInventoryFiles.empty_python(files,name)
         original_fact=files.fact
         def fact(path):
@@ -7994,11 +7996,14 @@ def same_job_actual_controls():
             files.facts[path]=dict(pin);files.prefixes[path]=b'inert signed DATA mock'
         # Add short inert DATA names so the manufactured complete graph exercises
         # the exact selected cardinalities without embedding retained host bytes.
-        for index in range(312):
+        for index in range(71):
             path='/usr/share/qemu/f'+str(index).zfill(3)
             files.facts[path]={'bytes':1,'sha256':sha(path.encode()),'mode':0o644}
             files.prefixes[path]=b'F'
             listings['qemu-system-data'].append(path)
+        for path in python_extra:
+            files.facts[path]={'bytes':1,'sha256':sha(path.encode()),'mode':0o644}
+            files.prefixes[path]=b'#'
         for index in range(52):
             path='/usr/share/qemu/l'+str(index).zfill(3)
             files.aliases[path]={'linkText':'f000','target':'/usr/share/qemu/f000'}
@@ -8188,6 +8193,7 @@ def same_job_actual_controls():
                 self.assertEqual(len(value['packagePathsByPackage']),5)
                 self.assertTrue(all(path in value['files'] for path in reader.SETUP_V9_SIGNED_DATA))
                 self.assertEqual((len(value['files']),len(value['aliases'])),(327,55))
+                self.assertEqual(sum(item['kind']=='qemu-data' for item in value['files'].values()),75)
         def test_new_request_event_and_default_refusal(self):
             self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,False)
             self.assertIs(reader.SAME_JOB_ACTUAL_READER_ENABLED,False)
