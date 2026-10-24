@@ -9861,8 +9861,8 @@ def same_job_actual_controls():
                     (1,0,False))
                 self.assertEqual(history['firstFailure'],refused['firstFailure'])
 
-        def test_v2_active_source_and_patched_inactive_before_host_edges(self):
-            self.assertIs(p.SAME_JOB_ACTUAL_V2_ENABLED,True)
+        def test_v2_spent_source_and_patched_inactive_before_host_edges(self):
+            self.assertIs(p.SAME_JOB_ACTUAL_V2_ENABLED,False)
             self.assertIs(reader.SAME_JOB_ACTUAL_V2_READER_ENABLED,True)
             self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,False)
             workflow=(HERE.parent.parent/'.github/workflows/i80386-ring3-int-iret.yml').read_text()
@@ -9961,8 +9961,244 @@ def same_job_actual_controls():
         'guest':False,'actualRunApproved':False,'pass':True}))
 
 
+def same_job_v3_controls():
+    """The real V3 cleanup over only mocked FD, clock, file and process edges."""
+    p,_=producer_fixture_case()
+    class FakeTree(p.SameJobV3ManualTreeOps):
+        def __init__(self,dying=(0,),*,fault=None,extra=None,close_fault=None):
+            self.dying=list(dying);self.fault=fault;self.extra=extra
+            self.close_fault=close_fault;self.time=1000000000;self.closed=[]
+            self.removed=[];self.calls=[];self.root_reads=0
+            self.identities={
+                1:[30,100,stat.S_IFDIR|0o755,0,0,4,0,1],
+                2:[30,101,stat.S_IFDIR|0o755,1001,1001,5,0,1],
+                3:[30,102,stat.S_IFDIR|0o755,1001,1001,2,0,1],
+                4:[30,103,stat.S_IFDIR|0o755,1001,1001,2,0,1],
+                5:[30,104,stat.S_IFDIR|0o755,1001,1001,2,0,1]}
+            self.fds={'controller':3,'js':4,'qemu':5}
+        def open_dir(self,name,parent=None):
+            if parent is None:self.assert_edge(name=='/sys/fs/cgroup');return 1
+            if parent==1:self.assert_edge(name=='bw-ring3-123-1');return 2
+            self.assert_edge(parent==2 and name in self.fds)
+            return self.fds[name]
+        @staticmethod
+        def assert_edge(condition):
+            if not condition:raise AssertionError('mocked V3 FD path drift')
+        def held(self,fd):return list(self.identities[fd])
+        def named_parent(self):return self.held(1)
+        def named(self,name,parent):
+            if parent==1:
+                self.assert_edge(name=='bw-ring3-123-1')
+                if 'enclosing' in self.removed:raise FileNotFoundError(name)
+                return self.held(2)
+            self.assert_edge(parent==2 and name in self.fds)
+            if name in self.removed:raise FileNotFoundError(name)
+            return self.held(self.fds[name])
+        def names(self,fd):
+            if fd==2:
+                value=sorted(set(self.fds)-set(self.removed))
+                if self.extra is not None:value=sorted(value+[self.extra])
+                return value
+            self.assert_edge(fd in (3,4,5));return []
+        def text(self,fd,name):
+            self.calls.append(('read',fd,name))
+            if self.fault==('read',fd,name):raise OSError('MOCK_FIRST_READ')
+            if name=='cgroup.procs' and self.fault==('long',fd,name):
+                return '1'*4096
+            if name in ('cgroup.procs','cgroup.threads'):return ''
+            if name=='pids.current':return '0\n'
+            if name=='cgroup.events':return 'populated 0\nfrozen 0\n'
+            if name=='cgroup.stat':
+                if fd==2:
+                    if any(role not in self.removed for role in self.fds):
+                        return 'nr_descendants 3\nnr_dying_descendants 0\n'
+                    selected=self.dying[min(self.root_reads,len(self.dying)-1)]
+                    self.root_reads+=1
+                    return 'nr_descendants 0\nnr_dying_descendants '+str(selected)+'\n'
+                return 'nr_descendants 0\nnr_dying_descendants 0\n'
+            limit={'cpu.max':'cpuMax','memory.max':'memoryMax',
+                'memory.swap.max':'swapMax','pids.max':'pidsMax'}[name]
+            return p.LIMITS[limit]+'\n'
+        def remove(self,name,parent):
+            self.calls.append(('rmdir',parent,name))
+            role='enclosing' if parent==1 else name
+            if self.fault==('remove',role):raise OSError('MOCK_RMDIR')
+            self.assert_edge(role not in self.removed)
+            self.removed.append(role)
+        def close(self,fd):
+            self.closed.append(fd)
+            if self.close_fault==fd:raise OSError('MOCK_CLOSE')
+        def clock(self):self.time+=10000000;return self.time
+        def pause(self,seconds):self.time+=int(seconds*1000000000)
+    env={'GITHUB_RUN_ID':'123','BW_EXPECTED_HEAD':'a'*40,
+        'BW_EXPECTED_TREE':'b'*40,'SUDO_UID':'1001','SUDO_GID':'1001'}
+    selection={'request':{'head':'a'*40,'tree':'b'*40},
+        'handoff':{'runId':'123','eventSha256':'c'*64},'eventSha256':'c'*64}
+    outside={'schema':'bw.ring3.same-job-guest-outside-cleanup.v3',
+        'runId':'123','unit':'bw-ring3-actual-guest-v3-123-1.service',
+        'serviceExitCode':0,'sourceAdmission':{'head':'a'*40,'tree':'b'*40},
+        'preCensus':{'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,
+            'cgroupStat':None},'stop':{'attempted':False,'argv':None,'exitCode':None,
+            'timedOut':False},'postCensus':{'terminal':'absent','cgroupProcs':None,
+            'cgroupEvents':None,'cgroupStat':None},'manualTree':None,
+        'manualCgroupAbsent':None,'outsideTerminalObserved':False,
+        'firstFailure':None,'secondary':[],'actualGuestApproved':False}
+    identities={'enclosing':(30,101),'controller':(30,102),
+                'js':(30,103),'qemu':(30,104)}
+    def resource_snap(inode):return {'identity':{'device':30,'inode':inode},
+                                    'limits':dict(p.LIMITS)}
+    resource_value={'schema':'bw.ring3.resources.v1',
+        'enclosing':{'before':resource_snap(101),'after':resource_snap(101)},
+        'controller':{'pid':201,'before':resource_snap(102),'after':resource_snap(102)},
+        'children':{'js':{'before':resource_snap(103),'after':resource_snap(103)},
+                    'qemu':{'before':resource_snap(104),'after':resource_snap(104)}},
+        'firstFailure':None,'secondary':[]}
+    resource_raw=p.encode(resource_value)
+    authority={'resourcesBytes':len(resource_raw),'resourcesSha256':sha(resource_raw),
+               'invoker':[1001,1001]}
+    class Tests(unittest.TestCase):
+        def audit(self,ops):
+            with patch.object(p,'same_job_v3_resources_authority',
+                              return_value=(authority,identities)):
+                return p.same_job_v3_manual_tree(env,selection,outside,ops=ops)
+        def test_immediate_four_role_removal_and_full_wire_budget(self):
+            ops=FakeTree();value=self.audit(ops)
+            Tests.positive_manual_tree=copy.deepcopy(value)
+            self.assertIsNone(value['firstFailure'])
+            self.assertEqual(value['secondary'],[])
+            self.assertTrue(value['finalAbsent'])
+            self.assertEqual([row['role'] for row in value['removals']],
+                             ['controller','js','qemu','enclosing'])
+            self.assertTrue(all(row['absentAfter'] is True for row in value['removals']))
+            self.assertEqual(len(value['rootSamples']),1)
+            self.assertEqual(ops.removed,['controller','js','qemu','enclosing'])
+            self.assertEqual(ops.closed,[5,4,3,2,1])
+            self.assertLessEqual(len(p.encode(dict(outside,manualTree=value))),16384)
+        def test_dying_only_two_samples_retains_first_raw_without_extra_removal(self):
+            ops=FakeTree((2,0));value=self.audit(ops)
+            self.assertTrue(value['finalAbsent'])
+            self.assertEqual(len(value['rootSamples']),2)
+            self.assertIn('nr_dying_descendants 2',
+                          value['rootSamples'][0]['raw']['cgroupStat'])
+            self.assertIn('nr_dying_descendants 0',
+                          value['rootSamples'][1]['raw']['cgroupStat'])
+            self.assertEqual([row[0] for row in ops.calls].count('rmdir'),4)
+        def test_persistent_dying_refuses_root_rmdir_with_all_six_samples(self):
+            ops=FakeTree((1,)*6);value=self.audit(ops)
+            self.assertIsNotNone(value['firstFailure'])
+            self.assertEqual(len(value['rootSamples']),6)
+            self.assertEqual(ops.removed,['controller','js','qemu'])
+            self.assertIsNone(value['finalAbsent'])
+        def test_dying_settles_on_sixth_sample_within_whole_wire_cap(self):
+            ops=FakeTree((1,1,1,1,1,0));value=self.audit(ops)
+            self.assertIsNone(value['firstFailure'])
+            self.assertEqual(len(value['rootSamples']),6)
+            self.assertEqual(ops.removed,['controller','js','qemu','enclosing'])
+            self.assertLessEqual(len(p.encode(dict(outside,manualTree=value))),16384)
+        def test_unknown_child_or_read_fault_blocks_all_rmdir(self):
+            for ops in (FakeTree(extra='unknown'),FakeTree(fault=('read',3,'cgroup.threads'))):
+                value=self.audit(ops)
+                self.assertIsNotNone(value['firstFailure'])
+                self.assertEqual(ops.removed,[])
+                self.assertEqual(len(ops.closed),5)
+        def test_partial_rmdir_and_close_error_preserve_first_order(self):
+            ops=FakeTree(fault=('remove','js'),close_fault=5)
+            value=self.audit(ops)
+            self.assertEqual(ops.removed,['controller'])
+            self.assertEqual(value['firstFailure']['message'],'MOCK_RMDIR')
+            self.assertTrue(any(row['message']=='MOCK_CLOSE' for row in value['secondary']))
+            self.assertEqual(value['removals'][1]['role'],'js')
+            self.assertTrue(value['removals'][1]['attempted'])
+            self.assertFalse(value['removals'][1]['removed'])
+        def test_long_failed_raw_prefix_survives_with_close_secondary(self):
+            ops=FakeTree(fault=('long',2,'cgroup.procs'),close_fault=5)
+            value=self.audit(ops)
+            self.assertEqual(ops.removed,[])
+            self.assertEqual(len(value['before']['enclosing']['raw']['cgroupProcs']),4096)
+            self.assertIsNotNone(value['firstFailure'])
+            self.assertTrue(any(row['message']=='MOCK_CLOSE' for row in value['secondary']))
+            self.assertLessEqual(len(p.encode(dict(outside,manualTree=value))),16384)
+        def test_actual_resources_original_four_identity_limit_authority(self):
+            class FakePath:
+                def __init__(self,name):self.name=name
+                def __truediv__(self,part):return FakePath(self.name+'/'+str(part))
+                def __eq__(self,other):return isinstance(other,FakePath) and self.name==other.name
+                def resolve(self,strict=False):return self
+                def lstat(self):return SimpleNamespace(st_mode=stat.S_IFDIR|0o755,
+                    st_uid=1001,st_gid=1001)
+            def check(item):
+                raw=p.encode(item)
+                with patch.object(p.Path,'cwd',return_value=FakePath('/own')),\
+                     patch.object(p,'bounded_read',return_value=raw):
+                    return p.same_job_v3_resources_authority([1001,1001])
+            selected,joined=check(resource_value)
+            Tests.positive_resources=resource_raw
+            self.assertEqual(joined,identities)
+            self.assertEqual(selected,authority)
+            changed=copy.deepcopy(resource_value)
+            changed['children']['qemu']['after']['identity']['inode']=103
+            with self.assertRaises(ValueError):check(changed)
+            changed=copy.deepcopy(resource_value)
+            changed['children']['qemu']['before']['identity']['inode']=103
+            changed['children']['qemu']['after']['identity']['inode']=103
+            with self.assertRaises(ValueError):check(changed)
+            changed=copy.deepcopy(resource_value)
+            changed['controller']['after']['limits']['pidsMax']='65'
+            with self.assertRaises(ValueError):check(changed)
+        def test_real_v3_outside_wrapper_retains_manual_tree_and_failure(self):
+            attached=copy.deepcopy(selection)
+            attached['requestRaw']=b'ACTUAL_REQUEST_MOCK'
+            attached['handoffRaw']=b'ACTUAL_HANDOFF_MOCK'
+            attached['handoff']['source']={'schema':'mock-source','head':'a'*40}
+            stream=[]
+            def absent(path):raise FileNotFoundError(str(path))
+            def retain(path,raw,cap):
+                self.assertEqual(cap,16384)
+                self.assertTrue(str(path).endswith(
+                    'build/i80386-ring3-same-job-actual-v3/guest.cleanup.original.json'))
+                stream.append(raw)
+            selected=dict(env,BW_SYSTEMD_RUN_EXIT_CODE='0')
+            selected['GITHUB_JOB']='ring3-same-job-actual-v3'
+            with patch.object(p,'SAME_JOB_ACTUAL_V3_ENABLED',True),\
+                 patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+                 patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+                 patch.object(p.Path,'lstat',absent),\
+                 patch.object(p,'HostedEnvelopeInstaller',return_value=SimpleNamespace(
+                     event=lambda:b'EVENT_MOCK')),\
+                 patch.object(p,'same_job_actual_selection',return_value=attached),\
+                 patch.object(p,'source_facts',return_value=(attached['handoff']['source'],
+                     p.FirstFailure())),\
+                 patch.object(p,'same_job_v3_resources_authority',
+                     return_value=(authority,identities)),\
+                 patch.object(p.BootstrapOps,'drop',return_value=None),\
+                 patch.object(p,'write_new',side_effect=retain):
+                ops=FakeTree()
+                packet,failure=p.same_job_guest_cleanup_v3(selected,manual_ops=ops)
+                self.assertIsNone(failure.first)
+                self.assertTrue(packet['outsideTerminalObserved'])
+                self.assertTrue(packet['manualCgroupAbsent'])
+                self.assertEqual(p.final_json(stream[0]),packet)
+                self.assertEqual(ops.removed,['controller','js','qemu','enclosing'])
+                refused=FakeTree()
+                with patch.object(p,'source_facts',return_value=(
+                        {'head':'wrong'},p.FirstFailure())):
+                    negative,failed=p.same_job_guest_cleanup_v3(
+                        selected,manual_ops=refused)
+                self.assertIsNotNone(failed.first)
+                self.assertFalse(negative['outsideTerminalObserved'])
+                self.assertIsNone(negative['manualTree'])
+                self.assertEqual(refused.removed,[])
+    result=unittest.TextTestRunner(verbosity=2).run(
+        unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
+    assert result.wasSuccessful(),'pure V3 cleanup controls failed'
+    print(json.dumps({'testOnly':True,'tests':result.testsRun,'network':False,
+        'cgroup':False,'guest':False,'actualRunApproved':False,'pass':True}))
+    return Tests.positive_manual_tree,Tests.positive_resources,outside
+
+
 if __name__=='__main__':
-    if sys.argv[1:]==['--same-job-actual-only']:same_job_actual_controls()
+    if sys.argv[1:]==['--same-job-v3-only']:same_job_v3_controls()
+    elif sys.argv[1:]==['--same-job-actual-only']:same_job_actual_controls()
     elif sys.argv[1:]==['--host-baseline-only']:host_baseline_controls()
     elif sys.argv[1:]==['--consumed-v7-failure-only']:consumed_v7_failure_controls()
     elif sys.argv[1:]==['--consumed-v6-failure-only']:consumed_v6_failure_controls()
