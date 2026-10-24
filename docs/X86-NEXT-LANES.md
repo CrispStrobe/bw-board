@@ -3562,3 +3562,20 @@ into an architectural pass. A QEMU reference change or alternate oracle needs
 its own claim. Next: qualify and merge the V3 docs claim, implement in a new
 owned source worktree, run connected pure controls and exact-head CI, then
 select at most one fresh V3 event after independent admission.
+
+### Bochs CPU3 Ring 3 reference build/capture claim
+
+The [separate Bochs reference proposal](I80386-BOCHS-RING3-REFERENCE.md) is
+docs-only pending claim merge. It preserves the authored ROM/goldens and
+consumed V2 strict refusal while preparing a pinned LGPL CPU3 standalone
+reference with real CS accessed-bit writes. No source/build/event or new
+result is authorized by this checkpoint. The existing V3 outside cleanup
+lane remains independently owned and cannot erase the QEMU disagreement.
+
+After claim merge: source-frozen false guards and connected independent-reader
+controls; all enabled source checks; separately admitted hosted build/source/
+manifest; then one distinct runtime selection. Root admits build metadata and
+the sole source/build-job log before the runtime job's sole Build ZIP GET;
+retain that exact archive inside the result for original-only rederivation.
+Preserve all stdout including Bochs header, one unchanged 1730-byte frame,
+actual checkpoint stop/reap and cleanup facts. No physical 386/RTx conclusion.

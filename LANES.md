@@ -6780,3 +6780,119 @@ nonempty census, partial `rmdir`, first/secondary retention, source/event,
 runtime graph, guest packet and official originals. Then require all enabled
 exact-head source checks, one separately admitted V3 event, one acquisition of
 each official original and independent review before any result or merge.
+
+## Bochs CPU3 Ring 3 reference build and unchanged-wire capture — claim, 2026-10-24
+
+Owner: Codex x86 reference lane. Docs-only claim from exact master
+`d3d71c4897764e0604a3847fd7257046701dc431`, branch
+`claim/386-bochs-ring3-reference-20261024`; isolated checkout identity is recorded
+privately. Merge this claim before source implementation. The new reference
+does not take over the existing same-job V3 cleanup lane or modify its paths.
+
+Own only these eleven paths, restricted to the new Bochs reference:
+
+- `scripts/i80386-bochs-ring3-reference/run.py`
+- `scripts/i80386-bochs-ring3-reference/reader.py`
+- `scripts/i80386-bochs-ring3-reference/controls.py`
+- `scripts/i80386-bochs-ring3-reference/README.md`
+- `.github/workflows/i80386-bochs-ring3-reference.yml`
+- `test/i80386-bochs-ring3-reference.test.mjs`
+- `docs/I80386-BOCHS-RING3-REFERENCE.md`
+- `scripts/oracle-census.mjs`, only a new Bochs reference presence row if needed
+- `test/oracle-census.test.mjs`, only that new row's presence/identity controls
+- this `LANES.md` claim section
+- `docs/X86-NEXT-LANES.md`, only this reference status and next step
+
+The selected [same-job V2 run](https://github.com/CrispStrobe/bw-board/actions/runs/40130461323)
+ran the authored JavaScript and QEMU children but failed overall. Its strict
+reader refuses the two defined CS descriptor accessed-bit differences as well
+as the separately failed outside cleanup. Intel 386 descriptor semantics support
+the existing expected bits. Preserve the consumed V2 packet, label, failure,
+expected bytes and old reader refusal; a successful new oracle must never
+relabel that attempt. The independent V3 cleanup source/qualification remains
+owned separately and cannot erase this architectural mismatch.
+
+Add a distinct source-pinned standalone Bochs CPU-level-3 build at upstream
+`0e45b736ef9792eb9b752b0a35db49eaf2faea47` (REL_2_7_FINAL), then a separately
+admitted runtime-original capture of the unchanged authored Ring3 fixture.
+Bochs source already routes protected CS loads through `load_cs` and
+`touch_segment`, which actually writes descriptor byte 5 with A set. Do not
+change reference CPU semantics, binary-patch a tool, pre-set/mask bits, change
+Board CPU/fixture/goldens, substitute native-addon profiles or broaden a
+historical successful result. Keep the fixed ROM SHA256
+`d1aa0e35a81c68bc61621309589c8f4afa12ce2e7369af43879c718d109e2529`
+and exact 1730-byte wire/comparison semantics. The older profile-locked Bochs
+addons and historical standalone VPS binary are not admitted build artifacts
+for this new source/fixture.
+
+New source/metadata/build/runtime requests, schemas, SHA-only body markers,
+variables, owner labels, jobs, artifacts and standalone readers must be distinct
+from existing routes. Use `bochs-ring3-build-v1` and `bochs-ring3-reference-v1`
+producing jobs, artifacts `i80386-bochs-ring3-{build,reference}-v1-originals`,
+request schemas `bw.bochs-ring3.{build,reference}-request.v1`, and repository
+variables `BW_BOCHS_RING3_{BUILD,REFERENCE}_REQUEST_{SHA256,B64}` and
+SHA-only `BW_BOCHS_RING3_{BUILD,REFERENCE}_REQUEST_SHA256` body markers. These identities cannot invoke old labels. Proposed labels are `x86-bochs-ring3-build-v1` and
+`x86-bochs-ring3-reference-v1`; source guards initially FALSE. A docs claim
+authorizes source work after merge, not a compiled build, reference event or
+result. Owner-selected PR label admission requires the exact reviewed source
+head/tree, first attempt, owner actor, nonfork open PR/base master, immutable raw
+event/request, and executing workflow W with parent2=H and workflow bytes equal
+to H; record Wtree separately rather than require Wtree=Htree/latest master.
+
+Retain full source/archive/Git/file identities and LGPL notices, configure and
+compiler/tool/environment inputs, actual phase statuses and bounded stdout/stderr,
+binary/config hashes, ELF interpreter/library/resource closure and source
+before/after. Reject unknown files, paths, versions, partial or drifting facts.
+No unreviewed installer, source or firmware acquisition; any necessary hosted
+setup is an explicit selected trust boundary with retained failures. The new
+standalone HOSTED build has a proposed one-CPU, 2 GiB, no-swap, 64-task envelope,
+900-second child bound, 960-second outer bound and 20-minute job budget. These
+are finite proposals, not observed sufficiency. Use separately bounded archive
+intake (64 MiB compressed/256 MiB expanded/4096 members) and build streams
+(4 MiB each); overflow refuses without raising limits to hide a failure.
+
+Root must independently admit official Build run/job/step/artifact metadata,
+the exact checkout/source from one retained build-job log, and a bounded
+source/binary/config/runtime manifest before selecting the runtime request.
+Bind unknown binary/asset identities from that genuine source-bound build
+manifest, not a guessed request. Do not eagerly GET the build ZIP to discover
+bytes and then fetch the same official archive again. Only the later admitted
+runtime job gets that archive once, checks its official digest/length and all
+closed members, and retains an exact nested byte copy in its separate result
+artifact for standalone rederivation. The result artifact is a different
+official artifact identity; the original Build archive is not re-downloaded
+for independent review. Any nested runtime bundle is at most 32 MiB compressed,
+64 MiB expanded and 256 members, within the enclosing archive bounds.
+
+The runtime source must read back the selected Node 22.23.3 and Bochs
+binary/config/input/library graphs before and after. Run fresh authored
+JavaScript and Bochs children serially against that same unchanged ROM and
+selected source; a historical JS result is not a fresh source qualification.
+Then admit genuine raw Bochs stdout to exactly one unchanged
+1730-byte frame including its existing magic/end. Preserve the complete
+bounded Bochs stdout/header, stderr and log; an independent reader must
+rederive framing and reject missing, extra, duplicate, partial or altered
+frames. Do not forge QEMU exit semantics: Bochs does not implement the ROM's
+QEMU-specific F4 exit. A complete checkpoint permits only a recorded owned
+child stop with actual signal/wait/reap/descendant and outside cleanup facts.
+No result follows from seeing a prefix, a timeout, unknown child membership or
+cleanup uncertainty. Proposed runtime limits remain one CPU, 1 GiB, no swap,
+64 tasks and 60 seconds per child, with bounded streams, a 240-second outer
+transaction and a 10-minute job. Outside cleanup has at most 55 seconds plus
+five seconds kill-after; retain terminal unit and exact run-owned manual
+cgroup facts for only the fixed controller/js/bochs roles, never arbitrary
+request-controlled paths or unknown member identities. These limits are
+unmeasured for this new reference. No continuous ownership, whole OS,
+physical 386 timing/RTx or blanket licence clearance claim.
+
+Require connected pure source/build/runtime-to-independent-reader controls for
+the complete current wire, all fixed expected bytes, correct source/config/tool
+and official joins, missing/duplicate/changed frames, real failure/partial
+retention, capture overflow/deadline/first+secondary errors, child stop/reap and
+cleanup uncertainty. Use nonvacuous source and coherent packet mutants; no
+producer grading import in the reader or held-original audit. Pure fixtures
+may mock syscall/tool edges but cannot manufacture a real reference result.
+Then require all enabled exact-head checks, separately reviewed source/build
+and runtime admissions, and at most one new event per selected contract.
+Census presence remains distinct from source/binary identity and result;
+historical census observations and every other owner/route remain held.
