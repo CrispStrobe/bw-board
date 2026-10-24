@@ -6333,6 +6333,21 @@ standalone positive/failure reader with only the three exact selected DATA
 path exceptions. Pure mocked controls are source checks. The consumed v7
 failure and old refusal remain unchanged; no v8 event or guest was selected.
 
+### V8 metadata activation source checkpoint — 2026-10-24
+
+The composed source enables only the distinct v8 metadata producer, reader
+and job guards. The compiler and actual guest guards remain false. The
+combined pure checks cover the connected mocked observer/inventory entry,
+complete original log and six ZIP roles, selected DATA readback, coherent
+packet mutations and the separate consumed-v7 failure-only reader. Raw event
+JSON keeps its original bytes and uses bounded duplicate-safe finite-number
+validation. These controls do not qualify an installation or runtime graph.
+
+Every enabled final-head source check must pass before one separately admitted
+v8 metadata event. Retain and independently audit its official originals once.
+Only a complete graph can support the separate same-job authored guest route;
+no v8 request, label or event has been selected by this source checkpoint.
+
 ## Ordered ordinary-JS 16-bit scalar read — claim, 2026-10-24
 
 Owner: Codex x86 profiling, with Sol implementation after this claim merges.

@@ -1509,14 +1509,15 @@ reader imports no producer and the controls use no consumed original as a
 fixture. Coherent prefix and raw-status mutations refresh their internal and
 delivery hashes and still refuse. This audit does not consume a new hosted
 event or repeat any child or guest execution.
-## Distinct v8 package DATA path admission (inactive source candidate)
+## Distinct v8 package DATA path admission (metadata source candidate)
 
 The consumed v7 metadata attempt failed after its ninth probe because the
 historical runtime path grammar excludes commas. Its original and unchanged
 v7 reader refusal remain failures. V8 has a new request schema, SHA-only PR
 body marker, repository request variables, label, job, service unit, original
-markers and standalone success/failure reader mode. All three v8 entry guards
-are initially false; compiler and actual guest entry remain false.
+markers and standalone success/failure reader mode. Only the three v8 metadata
+guards are enabled. Exact-head source checks and a separately admitted single
+metadata event remain required; compiler and actual guest entry remain false.
 
 The V8 inventory permits exactly
 `/usr/share/qemu/QEMU,VGA.bin`,

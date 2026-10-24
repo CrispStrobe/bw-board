@@ -8137,7 +8137,7 @@ def verify_setup_v8_inventory_graph(value):
 
 
 
-SETUP_V8_READER_ENABLED=False  # Distinct metadata route remains inactive pending review.
+SETUP_V8_READER_ENABLED=True  # Metadata only; independent official-original admission remains required.
 SETUP_V8_PACKAGES=SETUP_V4_PACKAGES
 SETUP_V8_ORDER=SETUP_V4_ORDER
 SETUP_V8_STATUS_SHA=SETUP_V4_STATUS_SHA

@@ -3296,6 +3296,21 @@ the old v7 path grammar and consumed failure stay held. Source controls do not
 qualify a complete runtime graph. Exact-head CI, external one-shot selection,
 once-only originals and independent graph admission remain next.
 
+### V8 metadata activation source checkpoint — 2026-10-24
+
+The composed source enables only the distinct v8 metadata producer, reader
+and job guards. The compiler and actual guest guards remain false. The
+combined pure checks cover the connected mocked observer/inventory entry,
+complete original log and six ZIP roles, selected DATA readback, coherent
+packet mutations and the separate consumed-v7 failure-only reader. Raw event
+JSON keeps its original bytes and uses bounded duplicate-safe finite-number
+validation. These controls do not qualify an installation or runtime graph.
+
+Every enabled final-head source check must pass before one separately admitted
+v8 metadata event. Retain and independently audit its official originals once.
+Only a complete graph can support the separate same-job authored guest route;
+no v8 request, label or event has been selected by this source checkpoint.
+
 ## Ordered 16-bit scalar read candidate
 
 Claim status: the narrow source candidate was implemented and measured once,

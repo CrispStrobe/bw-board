@@ -5247,7 +5247,7 @@ def setup_v8_controls(export_sample=False):
                 lines.append(line)
             route=''.join(lines)
             self.assertTrue(route and route != tail)
-            self.assertIn("if: ${{ false && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-setup-runtime-inventory-v8' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}",route)
+            self.assertIn("if: ${{ github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-setup-runtime-inventory-v8' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}",route)
             checkout='actions/checkout@11d5960a326750d5838078e36cf38b85af677262'
             node='actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020'
             self.assertEqual(route.count(checkout),1);self.assertEqual(route.count(node),1)
@@ -5278,7 +5278,7 @@ def setup_v8_controls(export_sample=False):
                  patch.object(reader,'setup_v8_inventory_entry',side_effect=AssertionError('no reader')):
                 with self.assertRaises(reader.Refusal):reader.main()
         def test_enabled_metadata_dispatch_still_uses_admission_entry(self):
-            self.assertIs(p.SETUP_V8_ENABLED,False);self.assertIs(reader.SETUP_V8_READER_ENABLED,False)
+            self.assertIs(p.SETUP_V8_ENABLED,True);self.assertIs(reader.SETUP_V8_READER_ENABLED,True)
             self.assertIs(p.ACTUAL_ENTRY_ENABLED,False)
             for mode,name in (('setup-runtime-inventory-v8','setup_v8_entry'),('cleanup-setup-v8-policy','setup_v8_outside_cleanup')):
                 with self.subTest(mode=mode),patch.object(p,'SETUP_V8_ENABLED',True),patch.object(p,name,return_value=17) as entry:

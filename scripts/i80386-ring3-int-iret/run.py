@@ -7854,7 +7854,7 @@ def setup_v7_image_shell(environ):
 
 
 # Distinct v8 metadata route; old v7 route and consumed event remain intact.
-SETUP_V8_ENABLED=False  # New metadata route remains inactive pending review.
+SETUP_V8_ENABLED=True  # Metadata only; exact source/request/event admission remains required.
 SETUP_V8_DATA_ARCHIVE={'archiveBytes':1796342,
     'archiveSha256':'a14b88d864859bd61c8a3274971da4ecb7da6cec15be6c265d0d411f783d5f2e',
     'dataTarSha256':'366faf3142552bf087d80de2eacf711da319e6431f6deb0096472465beb5ac0f',
