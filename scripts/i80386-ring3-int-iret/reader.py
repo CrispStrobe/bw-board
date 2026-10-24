@@ -10613,7 +10613,7 @@ SAME_JOB_V2={'request':'bw.ring3.same-job-actual-request.v2',
 
 
 def same_job_route(version):
-    need(version in (1,2),'closed actual route version')
+    need(type(version) is int and version in (1,2),'closed actual route version')
     return SAME_JOB_V2 if version==2 else None
 
 
@@ -10625,7 +10625,7 @@ def same_job_platform(version):
                  else key for key in SAME_JOB_ACTUAL_PLATFORM)
 
 
-def same_job_v2_cgroup_history(history,phase,controller):
+def same_job_v2_cgroup_history(history,phase,controller,expected_identity=None):
     """Independently grade every bounded post-reap sample, including drift."""
     keys(history,'schema phase deadlineMonoNs samples finalIndex settled firstFailure secondary')
     need(history['schema']=='bw.ring3.same-job-post-reap-census.v2' and
@@ -10647,9 +10647,11 @@ def same_job_v2_cgroup_history(history,phase,controller):
         need(type(sample['index']) is int and sample['index']==index and
              type(start) is int and type(end) is int and 0<start<=end and
              (previous is None or start>=previous) and
-             end<=history['deadlineMonoNs'],
+             end<history['deadlineMonoNs'],
              'monotonic bounded post-reap sample including after-read deadline')
         if first is None:first=start
+        need(0<history['deadlineMonoNs']-first<=5_000_000_000,
+             'declared five-second post-reap deadline')
         need(end-first<=5_000_000_000,'five-second post-reap observation window')
         previous=end
         if sample['firstFailure'] is not None:
@@ -10670,6 +10672,9 @@ def same_job_v2_cgroup_history(history,phase,controller):
         selected=tuple(identity[:6])
         if stable is None:stable=selected
         need(selected==stable,'stable selected unit ownership across samples')
+        if expected_identity is not None:
+            need(selected==expected_identity,
+                 'same owned service identity across unpack and configure')
         need(equal(sample['limits'],expected),'selected exact resource limits at every sample')
         procs=sample['cgroupProcs']
         need(type(procs) is str and len(procs)<=4096 and
@@ -11049,7 +11054,7 @@ def setup_v9_facts(value,run_id,controller_pid,source_last_reap,route=None):
          'held owned policy identity')
     need(equal(value['cleanup'],{'removedExactOwnIdentity':True,'identity':info}),
          'same exact policy identity removed before Node stage')
-    last=source_last_reap
+    last=source_last_reap;v2_unit_identity=None
     for phase,args in (('unpack',['--no-triggers','--unpack']+[item['path'] for item in archives]),
                        ('configure',['--no-triggers','--configure',*SETUP_V9_ORDER])):
         row=value[phase];keys(row,'argv process stdout stderr exitCode timedOut firstFailure secondary cgroupAfter'+
@@ -11063,12 +11068,16 @@ def setup_v9_facts(value,run_id,controller_pid,source_last_reap,route=None):
              'same root controller and Git/unpack/configure chronology')
         last=end
         if v2:
-            observed=same_job_v2_cgroup_history(row['cgroupHistory'],phase,controller_pid)
+            observed=same_job_v2_cgroup_history(row['cgroupHistory'],phase,controller_pid,
+                                                 v2_unit_identity)
             need(row['cgroupHistory']['samples'][0]['startMonoNs']>=
                  row['process']['reapMonoNs'],
                  'post-reap history begins after the selected child was reaped')
             need(equal(observed,row['cgroupAfter']),
                  'final V2 raw sample is the reported old-shape projection')
+            if v2_unit_identity is None:
+                v2_unit_identity=tuple(row['cgroupHistory']['samples'][0]['unitIdentity'][:6])
+            last=row['cgroupHistory']['samples'][-1]['endMonoNs']
         census=row['cgroupAfter'];keys(census,'phase cgroupProcs cgroupEvents cgroupStat onlyController')
         need(census['phase']==phase and
              setup_v9_cgroup_quiet(census['cgroupProcs'],census['cgroupEvents'],
@@ -11880,7 +11889,7 @@ def same_job_actual_inner_original(raw,external,shell,version=1):
     need(len(after)==post['records'],'independent raw post-status census')
     setup_v9_status_delta(before,after)
     selected={};pending={}
-    for name,version,arch,*_ in SETUP_V9_PACKAGES:
+    for name,package_version,arch,*_ in SETUP_V9_PACKAGES:
         row=after.get((name,arch))
         selected[name]=None if row is None else {key:row.get(key) for key in
             ('Package','Version','Architecture','Status','Triggers-Pending','Triggers-Awaited')}
@@ -11925,6 +11934,10 @@ def same_job_actual_inner_original(raw,external,shell,version=1):
          'all runtime probes follow completed no-trigger configure')
     need(record['setup']['preflight']['imageFields']==setup_v9_expected_forwarded(shell['fields']),
          'successful service image labels join shell forwarding')
+    if same_job_route(version):
+        need(record['setup']['configure']['cgroupHistory']['samples'][-1]['endMonoNs']<=
+             value['inventory']['processes'][0]['process']['spawnMonoNs'],
+             'V2 runtime probes follow final strict configure census')
     stage_copy={'copy':record['copy'],'nodeReadback':value['stageAfter']['files']['node'],
                 'nodeGraphFile':value['inventory']['fileMetadata'][NODE_STAGE_TARGET]}
     return result,record,source,event_raw,request_raw,stage_copy,value['candidate']
