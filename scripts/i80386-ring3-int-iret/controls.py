@@ -7965,6 +7965,140 @@ def setup_v9_controls():
         'guest':False,'actualRunApproved':False,'pass':True}))
 
 
+def same_job_official_fixture(facts):
+    """Manufactured official metadata and a closed ZIP around genuine local originals."""
+    packet=facts['packet'];handoff=facts['handoff'];source=facts['source']
+    selected={"packet/"+name:packet[name] for name in reader.ROLES}
+    selected.update({'handoff':handoff,'service':facts['service'],
+        'cleanup':facts['cleanup'],'guestOuter':facts['guestOuter'],
+        'controllerRuntime':facts['controllerRuntime'],
+        'setupLog':facts['setupLog'],'setupOuter':facts['setupOuter'],
+        'setupCleanup':facts['setupCleanup'],'setupShell':facts['setupShell']})
+    paths={name:'same-job/'+name if not name.startswith('packet/') else name
+        for name in selected}
+    extra_names=('controller.stderr','outside-cleanup.stderr','guest.stdout',
+        'guest.stderr','guest-cleanup.stdout','guest-cleanup.stderr',
+        'guest-verdict.original.json')
+    extra_data={name:('manufactured '+name+'\n').encode() for name in extra_names}
+    extras={name:{'path':'same-job/'+name,'bytes':len(raw),'sha256':sha(raw)}
+        for name,raw in extra_data.items()}
+    archive=io.BytesIO()
+    with zipfile.ZipFile(archive,'w',zipfile.ZIP_STORED) as output:
+        for name,raw in sorted(selected.items()):output.writestr(paths[name],raw)
+        for name,raw in sorted(extra_data.items()):output.writestr(extras[name]['path'],raw)
+    artifact=archive.getvalue();head=source['head'];run_id=123;job_id=456;artifact_id=789
+    run={'id':run_id,'run_attempt':1,'head_sha':head,'event':'pull_request',
+        'status':'completed','conclusion':'success','path':reader.WORKFLOW,
+        'repository':{'full_name':'CrispStrobe/bw-board'},
+        'head_repository':{'full_name':'CrispStrobe/bw-board'},
+        'actor':{'login':'CrispStrobe'},'pull_requests':[{'number':688,
+            'head':{'sha':head}}]}
+    step_names=('Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262',
+        'Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020',
+        'Bounded same-job setup and authored guest',
+        'Bound retained same-job artifact after either outcome',
+        'Retain same-job setup and guest originals')
+    jobs={'total_count':1,'jobs':[{'id':job_id,'run_id':run_id,'head_sha':head,
+        'name':'ring3-same-job-actual-v1','status':'completed','conclusion':'success',
+        'steps':[{'name':name,'status':'completed','conclusion':'success'}
+            for name in step_names]}]}
+    artifacts={'total_count':1,'artifacts':[{'id':artifact_id,
+        'name':'i80386-ring3-same-job-actual-v1-originals',
+        'size_in_bytes':len(artifact),'digest':'sha256:'+sha(artifact),
+        'expired':False,'workflow_run':{'id':run_id,'head_sha':head}}]}
+    run_raw,jobs_raw,artifacts_raw=map(reader.canonical,(run,jobs,artifacts))
+    log=b'manufactured bounded official job log\n'
+    external={'schema':'bw.ring3.same-job-actual-official-expectation.v1',
+        'runId':'123','jobId':job_id,'artifactId':artifact_id,'attempt':1,
+        'head':head,'tree':source['tree'],'workflowSha':facts['workflowSha'],
+        'workflowFileSha256':source['files'][reader.WORKFLOW]['sha256'],
+        'requestSha256':facts['requestSha256'],'handoffSha256':sha(handoff),
+        'jobName':'ring3-same-job-actual-v1','conclusion':'success',
+        'pullRequest':688,'artifactName':'i80386-ring3-same-job-actual-v1-originals',
+        'artifactBytes':len(artifact),'artifactSha256':sha(artifact),
+        'artifactPaths':paths,'artifactExtras':extras,
+        'runMetadataBytes':len(run_raw),'runMetadataSha256':sha(run_raw),
+        'jobsMetadataBytes':len(jobs_raw),'jobsMetadataSha256':sha(jobs_raw),
+        'artifactsMetadataBytes':len(artifacts_raw),
+        'artifactsMetadataSha256':sha(artifacts_raw),
+        'jobLogBytes':len(log),'jobLogSha256':sha(log),
+        'setupExpectation':facts['setupExpectation']}
+    return external,(run_raw,jobs_raw,artifacts_raw,log,artifact)
+
+
+def same_job_official_grade(facts,external,raws):
+    node=facts['node']
+    with patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',facts['graph']),\
+         patch.object(reader,'SETUP_V9_STATUS_SHA',facts['statusSha256']),\
+         patch.object(reader,'SETUP_V9_STATUS_BYTES',facts['statusBytes']),\
+         patch.dict(reader.RUNTIME_SELECTED,{'node':{
+             'bytes':node['bytes'],'sha256':node['sha256']}}):
+        return reader.verify_same_job_actual_official(facts['packet'],facts['handoff'],
+            facts['service'],facts['cleanup'],facts['guestOuter'],
+            facts['controllerRuntime'],facts['setupLog'],facts['setupOuter'],
+            facts['setupCleanup'],facts['setupShell'],*raws,external)
+
+
+def same_job_official_cuts(case,facts,external,raws):
+    names=('packet-dir','handoff','service','cleanup','guest-outer',
+        'controller-runtime','setup-log','setup-outer','setup-cleanup','setup-shell',
+        'official-run','official-jobs','official-artifacts','job-log',
+        'artifact-zip','external')
+    values=('packet',*('original-'+name for name in names[1:]))
+    argv=['reader.py','--same-job-actual-official-v1']
+    for name,value in zip(names,values):argv.extend(('--'+name,value))
+    files={'packet/'+name:raw for name,raw in facts['packet'].items()}
+    files.update(zip(values[1:],(facts['handoff'],facts['service'],facts['cleanup'],
+        facts['guestOuter'],facts['controllerRuntime'],facts['setupLog'],
+        facts['setupOuter'],facts['setupCleanup'],facts['setupShell'],*raws,
+        reader.canonical(external))))
+    stdout=io.StringIO();node=facts['node']
+    with patch.object(reader,'SAME_JOB_ACTUAL_READER_ENABLED',True),\
+         patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',facts['graph']),\
+         patch.object(reader,'SETUP_V9_STATUS_SHA',facts['statusSha256']),\
+         patch.object(reader,'SETUP_V9_STATUS_BYTES',facts['statusBytes']),\
+         patch.dict(reader.RUNTIME_SELECTED,{'node':{
+             'bytes':node['bytes'],'sha256':node['sha256']}}),\
+         patch.object(reader.sys,'argv',argv),\
+         patch.object(reader.Path,'open',autospec=True,side_effect=lambda path,*a,**kw:
+             io.BytesIO(files[str(path)])),contextlib.redirect_stdout(stdout):
+        reader.main()
+    case.assertTrue(json.loads(stdout.getvalue())['officialMetadataBound'])
+    case.assertFalse(json.loads(stdout.getvalue())['actualRunApproved'])
+    altered=dict(facts,setupLog=facts['setupLog'][:-1]+b'X')
+    selected=copy.deepcopy(external)
+    selected['setupExpectation']['logSha256']=sha(altered['setupLog'])
+    with case.assertRaises((reader.Refusal,ValueError)):
+        same_job_official_grade(altered,selected,raws)
+    changed=list(raws);jobs=reader.parse(changed[1]);steps=jobs['jobs'][0]['steps']
+    steps[0],steps[1]=steps[1],steps[0]
+    changed[1]=reader.canonical(jobs)
+    selected=copy.deepcopy(external)
+    selected.update(jobsMetadataBytes=len(changed[1]),jobsMetadataSha256=sha(changed[1]))
+    with case.assertRaises(reader.Refusal):
+        same_job_official_grade(facts,selected,tuple(changed))
+    changed=list(raws);archive=io.BytesIO()
+    with zipfile.ZipFile(archive,'w',zipfile.ZIP_STORED) as output:
+        with zipfile.ZipFile(io.BytesIO(changed[4])) as original:
+            for entry in original.infolist():
+                output.writestr(entry,original.read(entry))
+        output.writestr('same-job/unreviewed.original.json',b'{}\n')
+    changed[4]=archive.getvalue();metadata=reader.parse(changed[2])
+    metadata['artifacts'][0]['size_in_bytes']=len(changed[4])
+    metadata['artifacts'][0]['digest']='sha256:'+sha(changed[4])
+    changed[2]=reader.canonical(metadata)
+    selected=copy.deepcopy(external)
+    selected.update(artifactBytes=len(changed[4]),artifactSha256=sha(changed[4]),
+        artifactsMetadataBytes=len(changed[2]),artifactsMetadataSha256=sha(changed[2]))
+    with case.assertRaises(reader.Refusal):
+        same_job_official_grade(facts,selected,tuple(changed))
+    changed=list(raws);run=reader.parse(changed[0]);run['head_sha']='f'*40
+    changed[0]=reader.canonical(run);selected=copy.deepcopy(external)
+    selected.update(runMetadataBytes=len(changed[0]),runMetadataSha256=sha(changed[0]))
+    with case.assertRaises(reader.Refusal):
+        same_job_official_grade(facts,selected,tuple(changed))
+
+
 def same_job_actual_controls():
     """Pure first-service boundary controls; all host and guest edges mocked."""
     p,case=producer_fixture_case()
@@ -8644,6 +8778,23 @@ def same_job_actual_controls():
                     'build/i80386-ring3-same-job-actual-v1/guest.service.original.json'})
                 self.assertIs(reader.parse(next(iter(wrapper_originals.values())))[
                     'guestPacketComposed'],True)
+                official_facts={'packet':dict(old_state['export']),
+                    'handoff':handoff_raw,'service':next(iter(wrapper_originals.values())),
+                    'cleanup':guest_cleanup,'guestOuter':guest_outer,
+                    'controllerRuntime':runtime_originals['controller.runtime.json'],
+                    'setupLog':wire.getvalue(),'setupOuter':outer,
+                    'setupCleanup':cleanup,'setupShell':shell,
+                    'setupExpectation':external,'source':source,
+                    'workflowSha':env['GITHUB_WORKFLOW_SHA'],'requestSha256':pin,
+                    'graph':mock_graph,'node':node_fact,
+                    'statusSha256':sha(pre),'statusBytes':len(pre)}
+                official_external,official_raws=same_job_official_fixture(official_facts)
+                official_verdict=same_job_official_grade(official_facts,
+                    official_external,official_raws)
+                self.assertTrue(official_verdict['officialMetadataBound'])
+                self.assertTrue(official_verdict['guestPredicatesObserved'])
+                self.assertFalse(official_verdict['actualRunApproved'])
+                same_job_official_cuts(self,official_facts,official_external,official_raws)
             self.assertEqual(producer.SAME_JOB_REVIEWED_GRAPH['sha256'],
                 '72407985d3ef62725137a05ea6c609ff81f7095bdeb0147a9f703628a0f9cdab')
         def test_manufactured_runtime_fixture_precedes_actual_request(self):
