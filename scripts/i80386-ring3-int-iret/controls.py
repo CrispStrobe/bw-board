@@ -8132,6 +8132,39 @@ def same_job_actual_controls():
                     wire=io.BytesIO();wire.write(status_log.getvalue())
                     reader.emit_same_job_actual_inventory(originals,wire.write,wire.flush)
                     self.assertEqual(reader.decode_same_job_actual_log(wire.getvalue()),originals)
+                    unit='bw-ring3-actual-setup-v1-123-1.service'
+                    absent={'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None}
+                    admission={'requestSha256':pin,'eventSha256':sha(event_raw),
+                        'head':actual['head'],'tree':actual['tree'],'source':source,'unit':unit}
+                    cleanup=reader.canonical({'schema':producer.SAME_JOB_ACTUAL_ROUTE['cleanupSchema'],
+                        'runId':'123','serviceExitCode':0,'sourceAdmission':admission,
+                        'preCensus':absent,'stop':{'attempted':False,'argv':None,'exitCode':None,
+                            'timedOut':False},'postCensus':absent,'cgroupTerminal':'absent',
+                        'unitCensus':None,'policy':None,'action':'not-needed',
+                        'firstFailure':None,'secondary':[],'setupApproved':False})
+                    outer=reader.canonical({'schema':'bw.ring3.same-job-setup-outer-terminal.v1',
+                        'runId':'123','unit':'/sys/fs/cgroup/system.slice/'+unit,
+                        'systemdRunExitCode':0,'outsideCleanupExitCode':0,'cgroupAfter':'absent'})
+                    shell=reader.canonical({'schema':producer.SAME_JOB_ACTUAL_ROUTE['shellSchema'],
+                        'fields':{'ImageOS':{'present':True,'value':'ubuntu24'},
+                            'ImageVersion':{'present':True,'value':'20261012.334.1'}},
+                        'fieldErrors':[],'setupAttempted':False,'guestAttempted':False,
+                        'setupApproved':False})
+                    external={'schema':'bw.ring3.same-job-local-expectation.v1',
+                        'requestSha256':pin,'runId':'123','attempt':1,'head':actual['head'],
+                        'tree':actual['tree'],'workflowSha':env['GITHUB_WORKFLOW_SHA'],
+                        'workflowFileSha256':source['files'][reader.WORKFLOW]['sha256'],
+                        'jobId':None,'jobName':producer.SAME_JOB_ACTUAL_ROUTE['job'],
+                        'conclusion':'observed-zero','logBytes':len(wire.getvalue()),
+                        'logSha256':sha(wire.getvalue()),'outerBytes':len(outer),
+                        'outerSha256':sha(outer),'cleanupBytes':len(cleanup),
+                        'cleanupSha256':sha(cleanup),'shellBytes':len(shell),
+                        'shellSha256':sha(shell),'invoker':[1001,1002]}
+                    handoff=reader.verify_same_job_actual_setup_log(wire.getvalue(),external,
+                        outer,cleanup,shell)
+                    self.assertTrue(handoff['setupObserved'])
+                    self.assertEqual(handoff['candidateSha256'],mock_graph['sha256'])
+                    self.assertFalse(handoff['actualGuestApproved'])
                     drift_files,drift_probe,drift_observed=runtime_edges(stage_node)
                     drift_files.facts['/usr/share/qemu/f001']['sha256']='0'*64
                     drift_originals,drift_passed,drift_safe=reader.same_job_actual_inventory_entry(
@@ -8238,15 +8271,24 @@ def same_job_actual_controls():
                 '--kill-after=5s 720s','RuntimeMaxSec=660','TimeoutStopSec=5',
                 '--same-job-handoff-v1','handoff.original.json',
                 '--same-job-guest-service-v1','--same-job-guest-cleanup-v1',
+                '--same-job-actual-packet-v1','guest-verdict.original.json',
+                'controller.runtime.json',
                 'bw-ring3-actual-guest-v1-${GITHUB_RUN_ID}-1',
                 '--kill-after=5s 780s','RuntimeMaxSec=720',
                 'BW_RING3_SAME_JOB_HANDOFF_SHA256',
                 'i80386-ring3-same-job-actual-v1-originals',
                 'build/i80386-ring3-int-iret-export/'):
                 self.assertIn(selected,route)
+            self.assertEqual(route.count('--kill-after=5s 55s'),2)
+            # Two 55+5 cleanup envelopes keep the claimed finite total:
+            # (720+5)+60+(780+5)+60+180 = 1810 < 35*60.
+            self.assertEqual((720+5)+60+(780+5)+60+180,1810)
             self.assertLess(route.index('--same-job-setup-v1'),route.index('--same-job-handoff-v1'))
             self.assertLess(route.index('--same-job-handoff-v1'),route.index('--same-job-guest-service-v1'))
             self.assertLess(route.index('--same-job-guest-service-v1'),route.index('--same-job-guest-cleanup-v1'))
+            self.assertLess(route.index('--same-job-guest-cleanup-v1'),route.index('--same-job-actual-packet-v1'))
+            self.assertIn('find "${roots[@]}" ! -type f ! -type d -print -quit',route)
+            self.assertIn("if: always() && steps.same_job_archive_bound.outputs.bounded == 'true'",route)
             for historical in ('--setup-runtime-inventory-v9','--hosted-actual'):
                 self.assertNotIn(historical,route)
 
