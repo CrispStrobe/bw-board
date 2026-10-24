@@ -8284,11 +8284,15 @@ def same_job_v2_cgroup_history(ops,phase,*,limit=6,clock=None,pause=None):
     stable_identity=None
     for index in range(limit):
         try:
-            now=clock();need(type(now) is int and now>=began,'monotonic census clock')
+            now=clock();need(type(now) is int and now>=began and
+                (not value['samples'] or now>=value['samples'][-1]['endMonoNs']),
+                'monotonic census clock after prior observation')
             if index and now<began+targets[index] and now<deadline:
                 pause(min(began+targets[index]-now,deadline-now)/1_000_000_000)
             started=clock()
-            if type(started) is not int or started>=deadline:
+            need(type(started) is int and started>=now,
+                 'monotonic census start after pre-read clock')
+            if started>=deadline:
                 value['firstFailure']=row(ValueError('finite v2 post-reap deadline before sample'),
                                           'same-job-actual-v2-cgroup-deadline')
                 break

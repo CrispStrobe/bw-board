@@ -8336,13 +8336,14 @@ def same_job_actual_controls():
                                 item['cgroupProcs']='101\n202\n'
                                 item['onlyController']=False
                             return item
-                    for fault in ('backward-clock','pause-error'):
+                    for fault in ('backward-clock','above-began-regression','pause-error'):
                         clocked_ops=NonquietOps()
                         def broken_history(ops,phase,**kwargs):
                             if phase!='unpack':return fixed_history(ops,phase,**kwargs)
                             base=40_001_001
                             ticks=iter((base,base+1,base+2,base+3,
-                                base-1 if fault=='backward-clock' else base+4))
+                                base-1 if fault=='backward-clock' else
+                                base+2 if fault=='above-began-regression' else base+4))
                             def fail_pause(_):raise OSError('bounded pause failed')
                             return real_history(ops,phase,clock=lambda:next(ticks),
                                 pause=fail_pause if fault=='pause-error' else lambda _:None,
@@ -8358,6 +8359,22 @@ def same_job_actual_controls():
                         self.assertEqual(clocked['firstFailure'],history['firstFailure'])
                         self.assertNotIn('configure',clocked_ops.events)
                         self.assertNotIn('stage',clocked_ops.events)
+                    def early_regression(ops,phase,**kwargs):
+                        if phase!='unpack':return fixed_history(ops,phase,**kwargs)
+                        base=40_001_001
+                        ticks=iter((base,base+2,base+1))
+                        return real_history(ops,phase,clock=lambda:next(ticks),
+                            **kwargs)
+                    early_ops=ActualOps()
+                    with patch.object(producer,'same_job_v2_cgroup_history',
+                            side_effect=early_regression):
+                        early_result=producer.setup_v8_sequence(early_ops,actual,
+                            producer.SAME_JOB_ACTUAL_V2_ROUTE)
+                    self.assertEqual(early_result['unpack']['cgroupHistory']['samples'],[])
+                    self.assertEqual(early_result['firstFailure'],
+                        early_result['unpack']['cgroupHistory']['firstFailure'])
+                    self.assertNotIn('configure',early_ops.events)
+                    self.assertNotIn('stage',early_ops.events)
                     def after_read_history(ops,phase,**kwargs):
                         if phase!='unpack':return fixed_history(ops,phase,**kwargs)
                         base=40_001_001
@@ -9747,6 +9764,20 @@ def same_job_actual_controls():
                 'same-job-actual-v2-cgroup-clock')
             with self.assertRaises(reader.Refusal):
                 reader.same_job_v2_cgroup_history(backward,'unpack',101)
+            above_began=p.same_job_v2_cgroup_history(Census([prior]),'unpack',
+                clock=err_clock((1_000_000_000,1_000_000_001,1_000_000_002,
+                    1_000_000_003,1_000_000_002)),pause=lambda _:None)
+            self.assertEqual((len(above_began['samples']),
+                above_began['firstFailure']['phase']),
+                (1,'same-job-actual-v2-cgroup-clock'))
+            started_before_now=p.same_job_v2_cgroup_history(Census([]),'unpack',
+                clock=err_clock((1_000_000_000,1_000_000_002,1_000_000_001)),
+                pause=lambda _:None)
+            self.assertEqual((started_before_now['samples'],
+                started_before_now['firstFailure']['phase']),
+                ([],'same-job-actual-v2-cgroup-clock'))
+            with self.assertRaises(reader.Refusal):
+                reader.same_job_v2_cgroup_history(started_before_now,'unpack',101)
             def failed_pause(_):raise OSError('bounded pause failed')
             paused=p.same_job_v2_cgroup_history(Census([prior]),'unpack',
                 clock=err_clock((1_000_000_000,1_000_000_001,1_000_000_002,
