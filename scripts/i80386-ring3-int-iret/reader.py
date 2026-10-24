@@ -3409,6 +3409,8 @@ def verify_setup_v4_failure_log(raw,external,outer_raw,cleanup_raw):
          type(packet['firstFailure']) is dict and type(packet['secondary']) is list and
          len(packet['secondary'])<=64,'failed packet with retained first and secondary')
     keys(packet['firstFailure'],'phase name message')
+    need(outside['shellExitCode']==(1 if shell['fieldErrors'] else 0),
+         'shell field refusal and process exit agree')
     context=packet['context'];keys(context,'request event platform source sourceCommands eventIdentity')
     request_raw=prerequisite_original(canonical(context['request']))
     request,source=setup_v4_request(request_raw,external['requestSha256'])
@@ -4699,6 +4701,8 @@ def verify_setup_v5_failure_log(raw,external,outer_raw,cleanup_raw):
          type(packet['firstFailure']) is dict and type(packet['secondary']) is list and
          len(packet['secondary'])<=64,'failed packet with retained first and secondary')
     keys(packet['firstFailure'],'phase name message')
+    need(outside['shellExitCode']==(1 if shell['fieldErrors'] else 0),
+         'shell field refusal and process exit agree')
     context=packet['context'];keys(context,'request event platform source sourceCommands eventIdentity')
     request_raw=prerequisite_original(canonical(context['request']))
     request,source=setup_v5_request(request_raw,external['requestSha256'])
@@ -5732,6 +5736,8 @@ def verify_setup_v6_failure_log(raw,external,outer_raw,cleanup_raw,shell_raw):
          type(packet['firstFailure']) is dict and type(packet['secondary']) is list and
          len(packet['secondary'])<=64,'failed packet with retained first and secondary')
     keys(packet['firstFailure'],'phase name message')
+    need(outside['shellExitCode']==(1 if shell['fieldErrors'] else 0),
+         'shell field refusal and process exit agree')
     context=packet['context'];keys(context,'request event platform source sourceCommands eventIdentity imageFields imageFieldErrors')
     setup_v6_image_observation(context['imageFields'],context['imageFieldErrors'])
     forwarding_matches=context['imageFields']==setup_v6_expected_forwarded(shell['fields'])
@@ -7275,6 +7281,8 @@ def verify_setup_v7_failure_log(raw,external,outer_raw,cleanup_raw,shell_raw):
          type(packet['firstFailure']) is dict and type(packet['secondary']) is list and
          len(packet['secondary'])<=64,'failed packet with retained first and secondary')
     keys(packet['firstFailure'],'phase name message')
+    need(outside['shellExitCode']==(1 if shell['fieldErrors'] else 0),
+         'shell field refusal and process exit agree')
     context=packet['context'];keys(context,'request event platform source sourceCommands eventIdentity imageFields imageFieldErrors')
     setup_v7_image_observation(context['imageFields'],context['imageFieldErrors'])
     forwarding_matches=context['imageFields']==setup_v7_expected_forwarded(shell['fields'])
@@ -9338,6 +9346,8 @@ def verify_setup_v8_failure_log(raw,external,outer_raw,cleanup_raw,shell_raw):
          type(packet['firstFailure']) is dict and type(packet['secondary']) is list and
          len(packet['secondary'])<=64,'failed packet with retained first and secondary')
     keys(packet['firstFailure'],'phase name message')
+    need(outside['shellExitCode']==(1 if shell['fieldErrors'] else 0),
+         'shell field refusal and process exit agree')
     context=packet['context'];keys(context,'request event platform source sourceCommands eventIdentity imageFields imageFieldErrors')
     setup_v8_image_observation(context['imageFields'],context['imageFieldErrors'])
     forwarding_matches=context['imageFields']==setup_v8_expected_forwarded(shell['fields'])
@@ -10057,6 +10067,19 @@ HOST_BASELINE_HELPERS=(
 HOST_BASELINE_ALIASES=('/bin','/bin/sh','/usr/bin/sh')
 
 
+def host_baseline_field_errors(fields,errors):
+    image_diag_fields(fields,bool(errors))
+    need(type(errors) is list and len(errors)<=2 and
+         all(type(code) is str and code in {name+':'+reason
+             for name in ('ImageOS','ImageVersion')
+             for reason in ('type','encoding','unsafe-or-oversize')}
+             for code in errors),'bounded image field refusal codes')
+    refused={name for name in ('ImageOS','ImageVersion')
+             if fields[name]=={'present':True,'value':None}}
+    need({code.split(':')[0] for code in errors}==refused and
+         len(errors)==len(refused),'image field errors join refused values')
+
+
 def host_baseline_request(raw,pin):
     need(type(raw) is bytes and 0<len(raw)<=65536 and digest(pin)==sha(raw),
          'externally selected baseline request')
@@ -10242,9 +10265,49 @@ def host_baseline_context(context,external):
 
 
 def host_baseline_failure(value):
-    keys(value,'phase name message')
+    need(type(value) is dict and set(value) in (
+        {'phase','name','message'},
+        {'phase','name','message','messageBytes','messageSha256'}),
+        'closed retained failure fact')
     need(all(type(value[k]) is str and 0<len(value[k].encode('utf-8'))<=256
-             for k in ('phase','name','message')),'bounded retained failure fact')
+             for k in ('phase','name','message')),'bounded retained failure fields')
+    if 'messageBytes' in value:
+        need(value['message']=='[message omitted: over 256 UTF-8 bytes]' and
+             type(value['messageBytes']) is int and 256<value['messageBytes']<=1<<24,
+             'explicit omitted long failure text extent')
+        digest(value['messageSha256'])
+
+
+def host_baseline_failed_file(item,path,cap):
+    keys(item,'path kind namedBefore heldBefore heldAfter namedAfter bytesRead prefixSha256 zlibBase64 closeAttempted closed firstFailure secondary')
+    need(item['path']==path and item['kind']=='error' and item['zlibBase64'] is None and
+         type(item['closeAttempted']) is bool and type(item['closed']) is bool and
+         (not item['closed'] or item['closeAttempted']) and
+         type(item['secondary']) is list and len(item['secondary'])<=8,
+         'typed failed regular role')
+    integer(item['bytesRead'],0,cap);digest(item['prefixSha256'])
+    host_baseline_failure(item['firstFailure'])
+    for fact in item['secondary']:host_baseline_failure(fact)
+    for key in ('namedBefore','heldBefore','heldAfter','namedAfter'):
+        if item[key] is not None:host_baseline_identity(item[key])
+
+
+def host_baseline_failed_alias(item,path):
+    keys(item,'path kind namedBefore namedAfter linkText target firstFailure secondary')
+    need(item['path']==path and item['kind']=='error' and
+         type(item['secondary']) is list and len(item['secondary'])<=8,
+         'typed failed alias role')
+    host_baseline_failure(item['firstFailure'])
+    for fact in item['secondary']:host_baseline_failure(fact)
+    for key in ('namedBefore','namedAfter'):
+        if item[key] is not None:host_baseline_identity(item[key])
+    if item['linkText'] is not None:
+        need(type(item['linkText']) is str and 0<len(item['linkText'].encode())<=256 and
+             '\x00' not in item['linkText'],'bounded partial alias text')
+    if item['target'] is not None:
+        need(type(item['target']) is str and item['linkText'] is not None and
+             item['target']==posixpath.normpath(posixpath.join(
+                 posixpath.dirname(path),item['linkText'])),'partial lexical target')
 
 
 def verify_host_baseline(service_log,shell_raw,outside_raw,official_log,external):
@@ -10260,7 +10323,7 @@ def verify_host_baseline(service_log,shell_raw,outside_raw,official_log,external
     need(type(external['runId']) is str and re.fullmatch('[1-9][0-9]{0,19}',external['runId']),
          'exact baseline run')
     for raw,prefix,cap in ((service_log,'service',4<<20),(shell_raw,'shell',4096),
-                           (outside_raw,'outside',4096),(official_log,'officialLog',8<<20)):
+                           (outside_raw,'outside',16384),(official_log,'officialLog',8<<20)):
         need(type(raw) is bytes and 0<len(raw)<=cap and
              integer(external[prefix+'Bytes'],1,cap)==len(raw) and
              sha(raw)==external[prefix+'Sha256'],'external original SHA/extent '+prefix)
@@ -10271,9 +10334,7 @@ def verify_host_baseline(service_log,shell_raw,outside_raw,official_log,external
     need(shell['schema']=='bw.ring3.host-baseline-shell.v1' and
          all(shell[k] is False for k in ('setupAttempted','guestAttempted','setupApproved')),
          'read-only baseline shell')
-    image_diag_fields(shell['fields'],bool(shell['fieldErrors']))
-    need(type(shell['fieldErrors']) is list and len(shell['fieldErrors'])<=2,
-         'bounded shell field errors')
+    host_baseline_field_errors(shell['fields'],shell['fieldErrors'])
     lines=[]
     for line in service_log.splitlines():
         at=line.find(HOST_BASELINE_MARKER)
@@ -10289,9 +10350,7 @@ def verify_host_baseline(service_log,shell_raw,outside_raw,official_log,external
          all(packet[k] is False for k in ('setupApproved','runtimeApproved','guestApproved',
                                           'imageAuthenticated','hostConfigurationApproved')),
          'all baseline authority false')
-    image_diag_fields(packet['fields'],bool(packet['fieldErrors']))
-    need(type(packet['fieldErrors']) is list and len(packet['fieldErrors'])<=2,
-         'bounded service field errors')
+    host_baseline_field_errors(packet['fields'],packet['fieldErrors'])
     need(outside_raw==canonical(parse_setup_v8_outer(outside_raw)),'canonical outside')
     outside=parse_setup_v8_outer(outside_raw)
     keys(outside,'schema runId unit shellExitCode serviceExitCode cgroupAfter cleanupAction polls firstFailure secondary setupApproved')
@@ -10325,10 +10384,17 @@ def verify_host_baseline(service_log,shell_raw,outside_raw,official_log,external
              'last outside census is terminal report')
     else:need(outside['cgroupAfter']=='unknown' and outside['firstFailure'] is not None,
               'missing outside census remains failure')
+    need(outside['shellExitCode']==(1 if shell['fieldErrors'] else 0),
+         'shell field refusal and process exit agree')
     context=packet['context']
     keys(context,'request event platform source sourceCommands eventIdentity resource')
+    need(type(packet['complete']) is bool and type(packet['secondary']) is list and
+         len(packet['secondary'])<=32,'bounded baseline packet failures')
+    if packet['firstFailure'] is not None:host_baseline_failure(packet['firstFailure'])
+    for fact in packet['secondary']:host_baseline_failure(fact)
     complete=(packet['complete'] is True and packet['firstFailure'] is None and
-             packet['secondary']==[] and not packet['fieldErrors'])
+             packet['secondary']==[] and not packet['fieldErrors'] and
+             not shell['fieldErrors'])
     if complete:
         host_baseline_context(context,external)
         need(type(packet['helpers']) is dict and set(packet['helpers'])==set(HOST_BASELINE_HELPERS) and
@@ -10379,14 +10445,14 @@ def verify_host_baseline(service_log,shell_raw,outside_raw,official_log,external
             host_baseline_context(context,external)
         elif context['source'] is not None:
             host_baseline_context(context,external)
-        census=None
+        census=None;item_failure=None;item_secondary=[]
         if packet['status'] is not None:
             status=packet['status']
             if status['kind']=='regular':
                 census=host_baseline_status(host_baseline_bytes(status,'/var/lib/dpkg/status',8<<20))
             else:
-                need(status['kind']=='error' and status['firstFailure'] is not None,
-                     'typed failed status read')
+                host_baseline_failed_file(status,'/var/lib/dpkg/status',8<<20)
+                item_failure=status['firstFailure'];item_secondary=status['secondary']
         total=0
         for path in packet['helperOrder']:
             item=packet['helpers'][path]
@@ -10394,12 +10460,56 @@ def verify_host_baseline(service_log,shell_raw,outside_raw,official_log,external
                 total+=len(host_baseline_bytes(item,path,2<<20))
                 need(total<=8<<20,'failed helper prefix aggregate cap')
             else:
-                need(path==packet['helperOrder'][-1] and item['kind']=='error' and
-                     item['firstFailure'] is not None,'only final helper may be partial')
+                need(path==packet['helperOrder'][-1],'only final helper may be partial')
+                host_baseline_failed_file(item,path,2<<20)
+                item_failure=item['firstFailure'];item_secondary=item['secondary']
+        for path in packet['aliasOrder']:
+            item=packet['aliases'][path]
+            if item['kind']=='error':
+                need(path==packet['aliasOrder'][-1],'only final alias may be partial')
+                host_baseline_failed_alias(item,path)
+                item_failure=item['firstFailure'];item_secondary=item['secondary']
+            else:
+                keys(item,'path kind namedBefore namedAfter linkText target firstFailure secondary')
+                need(item['path']==path and item['kind']=='alias' and item['firstFailure'] is None and
+                     item['secondary']==[] and item['namedBefore']==item['namedAfter'],
+                     'complete failed-prefix alias')
+                before=host_baseline_identity(item['namedBefore'])
+                need(stat.S_ISLNK(before['mode']) and type(item['linkText']) is str and
+                     0<len(item['linkText'].encode())<=256 and '\x00' not in item['linkText'] and
+                     item['target']==posixpath.normpath(posixpath.join(
+                         posixpath.dirname(path),item['linkText'])),
+                     'bounded failed-prefix alias target')
         if packet['policy'] is not None:
-            keys(packet['policy'],'path kind identity linkText firstFailure secondary')
-            need(packet['policy']['path']=='/usr/sbin/policy-rc.d',
+            policy=packet['policy']
+            keys(policy,'path kind identity linkText firstFailure secondary')
+            need(policy['path']=='/usr/sbin/policy-rc.d' and
+                 policy['kind'] in ('absent','present','error'),
                  'fixed failed policy role')
+            if policy['kind']=='error':
+                host_baseline_failure(policy['firstFailure'])
+                need(type(policy['secondary']) is list and len(policy['secondary'])<=8,
+                     'bounded policy secondary')
+                for fact in policy['secondary']:host_baseline_failure(fact)
+                item_failure=policy['firstFailure'];item_secondary=policy['secondary']
+            else:
+                need(policy['firstFailure'] is None and policy['secondary']==[],
+                     'complete failed-prefix policy role')
+                if policy['kind']=='absent':
+                    need(policy['identity'] is None and policy['linkText'] is None,
+                         'absent failed-prefix policy')
+                else:
+                    info=host_baseline_identity(policy['identity'])
+                    if stat.S_ISLNK(info['mode']):
+                        need(type(policy['linkText']) is str and
+                             0<len(policy['linkText'].encode())<=256 and
+                             '\x00' not in policy['linkText'],
+                             'bounded failed-prefix policy link')
+                    else:need(policy['linkText'] is None,'nonalias failed-prefix policy')
+        if item_failure is not None:
+            need(packet['firstFailure']==item_failure and
+                 packet['secondary'][:len(item_secondary)]==item_secondary,
+                 'top first and secondary preserve failing data role')
     terminal=(outside['shellExitCode']==0 and outside['serviceExitCode']==0 and
               outside['cgroupAfter'] in ('absent','empty') and
               outside['firstFailure'] is None and outside['secondary']==[])
@@ -10434,7 +10544,7 @@ def main():
             with Path(path).open('rb') as stream:return stream.read(cap+1)
         external=parse_setup_v8_outer(bounded(args.external_admission,1<<20))
         result=verify_host_baseline(bounded(args.host_baseline_originals,4<<20),
-            bounded(args.shell_original,4096),bounded(args.outside_original,4096),
+            bounded(args.shell_original,4096),bounded(args.outside_original,16384),
             bounded(args.official_job_log,8<<20),external)
         print(json.dumps(result,sort_keys=True));return
     if sys.argv[1:2]==['--consumed-v7-failure']:

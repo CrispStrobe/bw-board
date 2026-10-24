@@ -8820,6 +8820,26 @@ def host_baseline_event(event_raw,environ):
     return raw,request
 
 
+def host_baseline_bound_fact(value):
+    if value is None:return None
+    if type(value) is dict and set(value)=={'phase','name','message','messageBytes','messageSha256'}:
+        need(value['message']=='[message omitted: over 256 UTF-8 bytes]' and
+             type(value['messageBytes']) is int and 256<value['messageBytes']<=1<<24 and
+             type(value['messageSha256']) is str and
+             re.fullmatch('[0-9a-f]{64}',value['messageSha256']),
+             'already bounded baseline failure')
+        return value
+    need(type(value) is dict and set(value)=={'phase','name','message'} and
+         all(type(value[k]) is str and 0<len(value[k].encode('utf-8'))<=256
+             for k in ('phase','name')) and type(value['message']) is str,
+         'bounded baseline failure identity')
+    raw=value['message'].encode('utf-8','strict')
+    if len(raw)<=256:return value
+    return {'phase':value['phase'],'name':value['name'],
+            'message':'[message omitted: over 256 UTF-8 bytes]',
+            'messageBytes':len(raw),'messageSha256':sha(raw)}
+
+
 def host_baseline_identity(info):
     return {key:getattr(info,'st_'+key) for key in
             ('dev','ino','mode','uid','gid','nlink','size','mtime_ns')}
@@ -8866,7 +8886,8 @@ def host_baseline_file(path,cap):
         item['kind']='regular'
         compressed=zlib.compress(bytes(data),9)
         item['zlibBase64']=base64.b64encode(compressed).decode('ascii')
-    item['firstFailure'],item['secondary']=failure.first,failure.secondary
+    item['firstFailure']=host_baseline_bound_fact(failure.first)
+    item['secondary']=[host_baseline_bound_fact(x) for x in failure.secondary]
     return item
 
 
@@ -8891,7 +8912,8 @@ def host_baseline_alias(path):
     if item['namedBefore']!=item['namedAfter']:
         failure.add(ValueError('baseline alias drift'),'baseline-alias-'+path)
     if failure.first is None:item['kind']='alias'
-    item['firstFailure'],item['secondary']=failure.first,failure.secondary
+    item['firstFailure']=host_baseline_bound_fact(failure.first)
+    item['secondary']=[host_baseline_bound_fact(x) for x in failure.secondary]
     return item
 
 
@@ -8908,8 +8930,11 @@ def host_baseline_policy():
                 text=os.readlink(HOST_BASELINE_POLICY)
                 need(0<len(text.encode('utf-8'))<=256,'bounded policy alias text')
                 item['linkText']=text
-    except BaseException as error:failure.add(error,'baseline-policy')
-    item['firstFailure'],item['secondary']=failure.first,failure.secondary
+    except BaseException as error:
+        failure.add(error,'baseline-policy')
+        item['kind']='error'
+    item['firstFailure']=host_baseline_bound_fact(failure.first)
+    item['secondary']=[host_baseline_bound_fact(x) for x in failure.secondary]
     return item
 
 
@@ -8971,14 +8996,16 @@ def host_baseline_collect(environ,observer_factory=HostedEnvelopeInstaller,
             if item['kind']!='alias':
                 raise ObservedFailure(item['firstFailure'],item['secondary'])
         result['policy']=policy_reader()
-        if result['policy']['kind'] not in ('absent','present'):
+        if result['policy']['kind'] not in ('absent','present') or \
+           result['policy']['firstFailure'] is not None or result['policy']['secondary']:
             raise ObservedFailure(result['policy']['firstFailure'],result['policy']['secondary'])
         result['complete']=True
     except BaseException as error:failure.add(error,'host-baseline')
     if 'observer' in locals():
         result['context']['source']=observer.facts.get('source')
         result['context']['sourceCommands']=observer.facts['sourceCommands']
-    result['firstFailure'],result['secondary']=failure.first,failure.secondary
+    result['firstFailure']=host_baseline_bound_fact(failure.first)
+    result['secondary']=[host_baseline_bound_fact(x) for x in failure.secondary]
     return result
 
 
@@ -9060,7 +9087,8 @@ def host_baseline_outside(environ,census_reader=None,sleeper=time.sleep):
             failure.add(ValueError('owned baseline unit not terminal after finite census'),
                         'baseline-outside-cgroup')
     except BaseException as error:failure.add(error,'baseline-outside')
-    value['firstFailure'],value['secondary']=failure.first,failure.secondary
+    value['firstFailure']=host_baseline_bound_fact(failure.first)
+    value['secondary']=[host_baseline_bound_fact(x) for x in failure.secondary]
     return value
 
 

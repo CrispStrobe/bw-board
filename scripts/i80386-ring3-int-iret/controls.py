@@ -7176,6 +7176,19 @@ def host_baseline_controls():
             self.assertEqual(packet['secondary'],[second])
             self.assertEqual(packet['helperOrder'],list(p.HOST_BASELINE_HELPERS[:2]))
             self.assertEqual(packet['status']['kind'],'regular')
+            failed_outer=dict(outside,serviceExitCode=1,firstFailure={
+                'phase':'baseline-service-exit','name':'ValueError','message':'client exit 1'})
+            grade=reader.verify_host_baseline(*originals(packet,out=failed_outer,conclusion='failure'))
+            self.assertFalse(grade['completeObservation'])
+            self.assertEqual(grade['statusCensus']['records'],1)
+            self.assertEqual(grade['firstFailure'],first)
+            for change in ('item','top','secondary'):
+                bad=copy.deepcopy(packet)
+                if change=='item':bad['helpers'][p.HOST_BASELINE_HELPERS[1]]['firstFailure']={'invented':True}
+                elif change=='top':bad['firstFailure']=dict(bad['firstFailure'],message='different')
+                else:bad['secondary']='not-a-list'
+                with self.subTest(change=change),self.assertRaises(Exception):
+                    reader.verify_host_baseline(*originals(bad,out=failed_outer,conclusion='failure'))
         def test_readonly_outside_poll_and_outer_failure_retention(self):
             active={'terminal':'populated','cgroupProcs':'42\n','cgroupEvents':'populated 1\n',
                     'cgroupStat':'nr_descendants 0\nnr_dying_descendants 0\n'}
@@ -7204,6 +7217,96 @@ def host_baseline_controls():
             bad=copy.deepcopy(timeout);bad['polls'][0]['cgroupStat']='nr_descendants 1\n'
             with self.assertRaises(Exception):reader.verify_host_baseline(
                 *originals(captured(),out=bad,conclusion='failure'))
+        def test_policy_readlink_error_is_primary_and_incomplete(self):
+            info=SimpleNamespace(**{'st_'+k:v for k,v in dict(identity,mode=stat.S_IFLNK|0o777).items()})
+            with patch.object(p.os,'lstat',return_value=info),\
+                 patch.object(p.os,'readlink',side_effect=OSError('mock policy readlink')):
+                item=p.host_baseline_policy()
+            self.assertEqual(item['kind'],'error')
+            self.assertEqual(item['firstFailure']['phase'],'baseline-policy')
+            packet=captured();packet['policy']=item;packet['complete']=False
+            self.assertFalse(packet['complete'])
+            with patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+                 patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+                 patch.object(p.Cgroups,'text',side_effect=cgroup):
+                failed=p.host_baseline_collect(env,Observer,file_item,alias_item,lambda:item)
+            self.assertFalse(failed['complete'])
+            self.assertEqual(failed['firstFailure'],item['firstFailure'])
+        def test_failure_fact_shape_and_oversize_retention(self):
+            raw={'phase':'mock-read','name':'OSError','message':'X'*300}
+            bounded=p.host_baseline_bound_fact(raw)
+            self.assertEqual(bounded['phase'],'mock-read')
+            self.assertEqual(bounded['messageBytes'],300)
+            self.assertEqual(bounded['messageSha256'],sha(b'X'*300))
+            reader.host_baseline_failure(bounded)
+            bad=copy.deepcopy(bounded);bad['messageSha256']='0'*64
+            # The digest records an unretained message; its syntax is checked,
+            # while its raw text cannot be independently reconstructed.
+            reader.host_baseline_failure(bad)
+            bad=dict(bounded,messageBytes=1)
+            with self.assertRaises(Exception):reader.host_baseline_failure(bad)
+            packet=captured();packet['complete']=False
+            packet['firstFailure']={'invented':True}
+            failed=dict(outside,serviceExitCode=1,firstFailure={
+                'phase':'baseline-service-exit','name':'ValueError','message':'outer fail'})
+            with self.assertRaises(Exception):reader.verify_host_baseline(
+                *originals(packet,out=failed,conclusion='failure'))
+            packet['firstFailure']={'phase':'mock','name':'ValueError','message':'first'}
+            packet['secondary']='not-a-list'
+            with self.assertRaises(Exception):reader.verify_host_baseline(
+                *originals(packet,out=failed,conclusion='failure'))
+            shell_bad=copy.deepcopy(shell);shell_bad['fieldErrors']=[{'invented':True}]
+            with self.assertRaises(Exception):reader.verify_host_baseline(
+                *originals(captured(),sh=shell_bad))
+        def test_malformed_image_fields_keep_negative_exit_parity(self):
+            current=dict(env,ImageOS='x'*257)
+            packet=captured(current)
+            self.assertFalse(packet['complete'])
+            self.assertIsNotNone(packet['firstFailure'])
+            fields,errors=p.image_env_fields(current)
+            sh={'schema':'bw.ring3.host-baseline-shell.v1','fields':fields,
+                'fieldErrors':errors,'setupAttempted':False,'guestAttempted':False,
+                'setupApproved':False}
+            failure={'phase':'baseline-shell-exit','name':'ValueError','message':'bounded shell observer exit 1'}
+            out=dict(outside,shellExitCode=1,serviceExitCode=1,firstFailure=failure)
+            grade=reader.verify_host_baseline(*originals(packet,sh=sh,out=out,conclusion='failure'))
+            self.assertFalse(grade['completeObservation']);self.assertFalse(grade['guestApproved'])
+            with self.assertRaises(Exception):reader.verify_host_baseline(
+                *originals(packet,sh=sh,out=dict(out,shellExitCode=0),conclusion='failure'))
+            bad=copy.deepcopy(sh);bad['fieldErrors']=[]
+            with self.assertRaises(Exception):reader.verify_host_baseline(
+                *originals(packet,sh=bad,out=out,conclusion='failure'))
+        def test_large_valid_outside_negative_cli_cap(self):
+            packet=captured();large=copy.deepcopy(outside)
+            active={'terminal':'populated','cgroupProcs':'42\n'*300,
+                'cgroupEvents':'populated 1\n',
+                'cgroupStat':'nr_descendants 0\nnr_dying_descendants 0\n'}
+            large['polls']=[copy.deepcopy(active) for unused in range(6)]
+            large['cgroupAfter']='populated'
+            large['firstFailure']={'phase':'baseline-outside-cgroup',
+                'name':'ValueError','message':'finite census still populated'}
+            values=originals(packet,out=large,conclusion='failure')
+            self.assertGreater(len(values[2]),4096)
+            self.assertLessEqual(len(values[2]),16384)
+            files=dict(zip(('service','shell','outside','official','external'),
+                (*values[:4],reader.canonical(values[4]))))
+            argv=['reader.py','--host-baseline-originals','service',
+                '--shell-original','shell','--outside-original','outside',
+                '--official-job-log','official','--external-admission','external']
+            real_open=Path.open
+            def opened(path,mode='r',*args,**kwargs):
+                if str(path) in files:return io.BytesIO(files[str(path)])
+                raise AssertionError('unexpected CLI read')
+            stdout=io.StringIO()
+            with patch.object(reader,'HOST_BASELINE_READER_ENABLED',True),\
+                 patch.object(reader.sys,'argv',argv),\
+                 patch.object(reader.sys,'stdout',stdout),\
+                 patch.object(Path,'open',opened):
+                reader.main()
+            verdict=json.loads(stdout.getvalue())
+            self.assertFalse(verdict['completeObservation'])
+            self.assertEqual(verdict['firstFailure']['phase'],'baseline-outside-cgroup')
+            self.assertFalse(verdict['guestApproved'])
         def test_status_fold_duplicate_and_wire_cap(self):
             good=(b'Package: base\nVersion: 1\nArchitecture: amd64\n'
                   b'Status: install ok installed\nDescription: text\n continuation\n')
