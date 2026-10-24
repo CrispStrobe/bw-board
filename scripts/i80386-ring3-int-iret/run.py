@@ -860,7 +860,7 @@ class LinuxController(LinuxTool):
 
 def collect_child(ops, role, argv, *, profile='guest'):
     """Actual bounded orchestration, also called unmodified by inert controls."""
-    need(profile in ('guest','discovery','controller','preparation','setup-v4','setup-v5','setup-v6','setup-v7','setup-v8','setup-v9'),'closed child profile')
+    need(profile in ('guest','discovery','controller','preparation','setup-v4','setup-v5','setup-v6','setup-v7','setup-v8','setup-v9','setup-same-job-v1','setup-same-job-v2','setup-same-job-v3'),'closed child profile')
     need(role in ('js','qemu') if profile=='guest' else role==profile,'fixed child role/profile')
     wall_ns,stream_cap=(CHILD_NS,STREAM_CAP) if profile=='guest' else (
         (10000000000,16384) if profile=='discovery' else (600000000000,16384) if profile=='controller' else
@@ -7912,9 +7912,72 @@ SETUP_V9_ROUTE={'version':'v9','job':'setup-runtime-inventory-v9',
     'shellSchema':'bw.ring3.setup-image-shell.v9',
     'inventoryMode':'--inventory-setup-v9'}
 
+# A separate, initially inert actual route. The comparison input describes the
+# admitted historical metadata candidate; it never substitutes for a fresh
+# complete graph in the same job. No request field can select route policy.
+SAME_JOB_ACTUAL_ENABLED=False  # The selected V1 label is spent; retain its wire and reader.
+SAME_JOB_ACTUAL_V2_ENABLED=False  # The selected V2 label is spent; retain its wire and reader.
+SAME_JOB_ACTUAL_V3_ENABLED=False
+SAME_JOB_ACTUAL_ENV=tuple('BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256'
+    if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key for key in NODE_STAGE_ENV)+(
+    'BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64',)
+SAME_JOB_ACTUAL_ROUTE={'version':'same-job-actual-v1','job':'ring3-same-job-actual-v1',
+    'label':'x86-ring3-same-job-actual-v1','unitPrefix':'bw-ring3-actual-setup-v1-',
+    'requestSchema':'bw.ring3.same-job-actual-request.v1',
+    'stageSchema':'bw.ring3.same-job-node-stage-original.v1',
+    'setupSchema':'bw.ring3.same-job-setup-original.v1',
+    'failureSchema':'bw.ring3.same-job-setup-entry-failure.v1',
+    'cleanupSchema':'bw.ring3.same-job-setup-outside-cleanup.v1',
+    'shellSchema':'bw.ring3.same-job-setup-image-shell.v1',
+    'inventoryMode':'--inventory-same-job-actual-v1'}
+SAME_JOB_ACTUAL_STATUS_MARKER=b'RING3_SAME_JOB_SETUP_STATUS_V1 '
+SAME_JOB_ACTUAL_V2_ENV=tuple('BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256'
+    if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key for key in NODE_STAGE_ENV)+(
+    'BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64',)
+SAME_JOB_ACTUAL_V2_ROUTE={'version':'same-job-actual-v2','job':'ring3-same-job-actual-v2',
+    'label':'x86-ring3-same-job-actual-v2','unitPrefix':'bw-ring3-actual-setup-v2-',
+    'requestSchema':'bw.ring3.same-job-actual-request.v2',
+    'stageSchema':'bw.ring3.same-job-node-stage-original.v2',
+    'setupSchema':'bw.ring3.same-job-setup-original.v2',
+    'failureSchema':'bw.ring3.same-job-setup-entry-failure.v2',
+    'cleanupSchema':'bw.ring3.same-job-setup-outside-cleanup.v2',
+    'shellSchema':'bw.ring3.same-job-setup-image-shell.v2',
+    'inventoryMode':'--inventory-same-job-actual-v2'}
+SAME_JOB_ACTUAL_V2_STATUS_MARKER=b'RING3_SAME_JOB_SETUP_STATUS_V2 '
+SAME_JOB_ACTUAL_V3_ENV=tuple('BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256'
+    if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key for key in NODE_STAGE_ENV)+(
+    'BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_B64',)
+SAME_JOB_ACTUAL_V3_ROUTE={'version':'same-job-actual-v3','job':'ring3-same-job-actual-v3',
+    'label':'x86-ring3-same-job-actual-v3','unitPrefix':'bw-ring3-actual-setup-v3-',
+    'requestSchema':'bw.ring3.same-job-actual-request.v3',
+    'stageSchema':'bw.ring3.same-job-node-stage-original.v3',
+    'setupSchema':'bw.ring3.same-job-setup-original.v3',
+    'failureSchema':'bw.ring3.same-job-setup-entry-failure.v3',
+    'cleanupSchema':'bw.ring3.same-job-setup-outside-cleanup.v3',
+    'shellSchema':'bw.ring3.same-job-setup-image-shell.v3',
+    'inventoryMode':'--inventory-same-job-actual-v3'}
+SAME_JOB_ACTUAL_V3_STATUS_MARKER=b'RING3_SAME_JOB_SETUP_STATUS_V3 '
+SAME_JOB_REVIEWED_GRAPH={'bytes':103043,
+    'sha256':'72407985d3ef62725137a05ea6c609ff81f7095bdeb0147a9f703628a0f9cdab',
+    'selectedFiles':83,'selectedAliases':8,'selectedMismatches':0}
+
+
+def setup_route_env(route):
+    return (SAME_JOB_ACTUAL_V3_ENV if route is SAME_JOB_ACTUAL_V3_ROUTE else
+        SAME_JOB_ACTUAL_V2_ENV if route is SAME_JOB_ACTUAL_V2_ROUTE else
+        SAME_JOB_ACTUAL_ENV if route is SAME_JOB_ACTUAL_ROUTE else SETUP_V9_ENV)
+
+
+def setup_route_status_marker(route):
+    return (SAME_JOB_ACTUAL_V3_STATUS_MARKER if route is SAME_JOB_ACTUAL_V3_ROUTE else
+        SAME_JOB_ACTUAL_V2_STATUS_MARKER if route is SAME_JOB_ACTUAL_V2_ROUTE else
+        SAME_JOB_ACTUAL_STATUS_MARKER if route is SAME_JOB_ACTUAL_ROUTE else SETUP_V9_STATUS_MARKER)
+
 
 def setup_v9_selected(route):
-    need(route is SETUP_V9_ROUTE,'only fixed source-selected v9 setup route')
+    need(route is SETUP_V9_ROUTE or route is SAME_JOB_ACTUAL_ROUTE or
+         route is SAME_JOB_ACTUAL_V2_ROUTE or route is SAME_JOB_ACTUAL_V3_ROUTE,
+         'only fixed source-selected v9 or distinct actual setup route')
     return route
 setup_v8_status_rows=setup_v4_status_rows
 setup_v8_status_delta=setup_v4_status_delta
@@ -8116,16 +8179,105 @@ def admit_setup_v9_event(event_raw,environ):
     return raw,request
 
 
+def admit_same_job_actual_request(raw,pin,route=SAME_JOB_ACTUAL_ROUTE):
+    """Admit only the fixed comparison input, never the old V9 request schema."""
+    need(route is SAME_JOB_ACTUAL_ROUTE or route is SAME_JOB_ACTUAL_V2_ROUTE or
+         route is SAME_JOB_ACTUAL_V3_ROUTE,
+         'closed actual request route')
+    need(type(raw) is bytes and 0<len(raw)<=32768 and type(pin) is str and
+         re.fullmatch('[0-9a-f]{64}',pin) and sha(raw)==pin,
+         'externally selected same-job actual request')
+    value=final_json(raw)
+    require_fields(value,'schema repository pullRequest head tree source selected nodeStage emptyPythonSources setup payloadWitness comparison',
+                   'closed same-job actual request')
+    need(raw==encode(value) and value['schema']==route['requestSchema'],
+         'canonical distinct same-job actual request')
+    base={key:value[key] for key in
+        ('repository','pullRequest','head','tree','source','selected','nodeStage','emptyPythonSources')}
+    staged=encode(dict(base,schema='bw.ring3.inventory-request.v3'))
+    admit_staged_runtime_request(staged,sha(staged))
+    need(same_json(value['setup'],setup_v9_policy()) and
+         same_json(value['payloadWitness'],SETUP_V8_PAYLOAD_PINS) and
+         same_json(value['comparison'],SAME_JOB_REVIEWED_GRAPH),
+         'fixed setup and separately reviewed digest/static comparison input')
+    need(type(SETUP_V8_PAYLOAD_PINS) is dict and
+         len(SETUP_V8_PAYLOAD_PINS['archives'])==15 and
+         all((item['package'],item['archiveBytes'],item['archiveSha256'])==(name,size,digest)
+             for item,(name,version,arch,filename,size,digest) in
+             zip(SETUP_V8_PAYLOAD_PINS['archives'],SETUP_V8_PACKAGE_ROWS)),
+         'fixed signed fifteen archive witnesses')
+    data=next(item for item in value['payloadWitness']['archives']
+              if item['package']=='qemu-system-data')
+    need(all(data[key]==pin for key,pin in SETUP_V8_DATA_ARCHIVE.items()),
+         'same signed selected DATA archive witness')
+    return value
+
+
+def admit_same_job_actual_event(event_raw,environ,route=SAME_JOB_ACTUAL_ROUTE):
+    need(route is SAME_JOB_ACTUAL_ROUTE or route is SAME_JOB_ACTUAL_V2_ROUTE or
+         route is SAME_JOB_ACTUAL_V3_ROUTE,
+         'closed actual event route')
+    need(type(event_raw) is bytes and 0<len(event_raw)<=JSON_CAP,
+         'bounded same-job actual event original')
+    event=final_json(event_raw);pr=event.get('pull_request',{});body=pr.get('body')
+    marker=('BW_RING3_SAME_JOB_ACTUAL_V3' if route is SAME_JOB_ACTUAL_V3_ROUTE else
+        'BW_RING3_SAME_JOB_ACTUAL_V2' if route is SAME_JOB_ACTUAL_V2_ROUTE else
+        'BW_RING3_SAME_JOB_ACTUAL_V1')
+    start='<!-- '+marker+'\n';end='\n'+marker+' -->'
+    need(type(body) is str and body.count(start)==body.count(end)==1 and
+         body.index(start)<body.index(end),'one distinct actual SHA-only body block')
+    stem=('BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_' if route is SAME_JOB_ACTUAL_V3_ROUTE else
+          'BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_' if route is SAME_JOB_ACTUAL_V2_ROUTE else
+          'BW_RING3_SAME_JOB_ACTUAL_REQUEST_')
+    pin=environ.get(stem+'SHA256')
+    need(type(pin) is str and re.fullmatch('[0-9a-f]{64}',pin) and
+         body.split(start,1)[1].split(end,1)[0]==pin,'one selected actual body SHA')
+    encoded=environ.get(stem+'B64')
+    need(type(encoded) is str and 0<len(encoded)<=43692,
+         'bounded canonical actual repository request')
+    raw=base64.b64decode(encoded,validate=True)
+    need(0<len(raw)<=32768 and base64.b64encode(raw).decode('ascii')==encoded and sha(raw)==pin,
+         'exact selected actual request bytes')
+    request=admit_same_job_actual_request(raw,pin,route)
+    need(event.get('action')=='labeled' and
+         event.get('label',{}).get('name')==route['label'] and
+         event.get('repository',{}).get('full_name')==APPROVAL_REPOSITORY and
+         event.get('sender',{}).get('login')=='CrispStrobe' and
+         type(event.get('number')) is int and event['number']==request['pullRequest'] and
+         type(pr.get('number')) is int and pr['number']==request['pullRequest'] and
+         pr.get('state')=='open' and pr.get('head',{}).get('sha')==request['head'] and
+         pr.get('head',{}).get('repo',{}).get('full_name')==APPROVAL_REPOSITORY and
+         pr['head']['repo'].get('fork') is False and pr.get('base',{}).get('ref')=='master' and
+         pr['base'].get('repo',{}).get('full_name')==APPROVAL_REPOSITORY,
+         'closed owned actual event')
+    expected_cgroup(environ)
+    need(all(environ.get(key)==value for key,value in {
+         'GITHUB_REPOSITORY':APPROVAL_REPOSITORY,'GITHUB_EVENT_NAME':'pull_request',
+         'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':route['job'],
+         'GITHUB_RUN_ATTEMPT':'1','BW_EXPECTED_HEAD':request['head'],
+         'BW_EXPECTED_TREE':request['tree'],
+         'GITHUB_WORKFLOW_REF':APPROVAL_REPOSITORY+
+             '/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+
+             str(request['pullRequest'])+'/merge'}.items()) and
+         type(environ.get('GITHUB_WORKFLOW_SHA')) is str and
+         re.fullmatch('[0-9a-f]{40}',environ['GITHUB_WORKFLOW_SHA']),
+         'distinct actual platform/source/workflow binding')
+    return raw,request
+
+
 def emit_setup_v8_status(role,raw,emit=None,flush=None,route=None):
     if route is not None:setup_v9_selected(route)
     need(role in ('pre','post') and type(raw) is bytes and 0<len(raw)<=8<<20,
          'fixed bounded raw dpkg status original')
     packed=zlib.compress(raw,9);need(0<len(packed)<=700<<10,'bounded compressed dpkg status original')
-    packet={'schema':'bw.ring3.setup-status-original.v9' if route is not None else
+    packet={'schema':'bw.ring3.same-job-setup-status-original.v3' if route is SAME_JOB_ACTUAL_V3_ROUTE else
+            'bw.ring3.same-job-setup-status-original.v2' if route is SAME_JOB_ACTUAL_V2_ROUTE else
+            'bw.ring3.same-job-setup-status-original.v1' if route is SAME_JOB_ACTUAL_ROUTE else
+            'bw.ring3.setup-status-original.v9' if route is not None else
             'bw.ring3.setup-status-original.v8','role':role,'rawBytes':len(raw),
         'rawSha256':sha(raw),'packedBytes':len(packed),'packedSha256':sha(packed),
         'encoding':'zlib+base64','packed':base64.b64encode(packed).decode('ascii')}
-    line=(SETUP_V9_STATUS_MARKER if route is not None else SETUP_V8_STATUS_MARKER)+encode(packet)
+    line=(setup_route_status_marker(route) if route is not None else SETUP_V8_STATUS_MARKER)+encode(packet)
     need(len(line)<=1<<20,'bounded encoded dpkg status log line')
     emit=sys.stdout.buffer.write if emit is None else emit
     flush=sys.stdout.buffer.flush if flush is None else flush
@@ -8138,17 +8290,97 @@ def emit_setup_v9_status(role,raw,emit=None,flush=None):
     return emit_setup_v8_status(role,raw,emit,flush,SETUP_V9_ROUTE)
 
 
+def same_job_v2_cgroup_history(ops,phase,*,limit=6,clock=None,pause=None,
+                               route=SAME_JOB_ACTUAL_V2_ROUTE):
+    """Finite point observations after one reaped dpkg phase, never a lease."""
+    need((route is SAME_JOB_ACTUAL_V2_ROUTE or route is SAME_JOB_ACTUAL_V3_ROUTE) and
+         phase in ('unpack','configure') and type(limit) is int and 1<=limit<=6,
+         'only fixed v2 post-reap census boundary')
+    route_number='v3' if route is SAME_JOB_ACTUAL_V3_ROUTE else 'v2'
+    clock=time.monotonic_ns if clock is None else clock
+    pause=time.sleep if pause is None else pause
+    began=clock();need(type(began) is int and began>=0,'monotonic census start')
+    deadline=began+5_000_000_000
+    targets=(0,100_000_000,400_000_000,1_000_000_000,2_500_000_000,4_500_000_000)
+    value={'schema':'bw.ring3.same-job-post-reap-census.'+route_number,'phase':phase,
+        'deadlineMonoNs':deadline,'samples':[],'finalIndex':None,'settled':False,
+        'firstFailure':None,'secondary':[]}
+    stable_identity=None
+    for index in range(limit):
+        try:
+            now=clock();need(type(now) is int and now>=began and
+                (not value['samples'] or now>=value['samples'][-1]['endMonoNs']),
+                'monotonic census clock after prior observation')
+            if index and now<began+targets[index] and now<deadline:
+                pause(min(began+targets[index]-now,deadline-now)/1_000_000_000)
+            started=clock()
+            need(type(started) is int and started>=now,
+                 'monotonic census start after pre-read clock')
+            if started>=deadline:
+                value['firstFailure']=row(ValueError('finite '+route_number+' post-reap deadline before sample'),
+                                          'same-job-actual-'+route_number+'-cgroup-deadline')
+                break
+        except BaseException as error:
+            value['firstFailure']=row(error,'same-job-actual-'+route_number+'-cgroup-clock')
+            break
+        try:
+            sample=ops.cgroup_sample_v2(phase,index)
+            require_fields(sample,'unitIdentity limits cgroupProcs cgroupEvents cgroupStat onlyController firstFailure secondary',
+                           'closed v2 cgroup sample facts')
+        except BaseException as error:
+            value['firstFailure']=row(error,'same-job-actual-'+route_number+'-cgroup-read')
+            break
+        try:
+            ended=clock()
+            need(type(ended) is int and ended>=started,'ordered monotonic census read')
+        except BaseException as error:
+            issue=row(error,'same-job-actual-'+route_number+'-cgroup-clock')
+            partial=dict(sample,index=index,startMonoNs=started,endMonoNs=None)
+            value['samples'].append(partial);value['finalIndex']=index
+            if sample['firstFailure'] is not None:
+                value['firstFailure']=sample['firstFailure']
+                value['secondary'].extend(sample['secondary'])
+                value['secondary'].append(issue)
+            else:value['firstFailure']=issue
+            break
+        sample=dict(sample,index=index,startMonoNs=started,endMonoNs=ended)
+        value['samples'].append(sample);value['finalIndex']=index
+        if sample['firstFailure'] is not None:
+            value['firstFailure']=sample['firstFailure']
+            value['secondary'].extend(sample['secondary']);break
+        identity=sample['unitIdentity']
+        if stable_identity is None:stable_identity=identity[:6]
+        if (identity[:6]!=stable_identity or sample['limits']!=LIMITS or
+                ended>=deadline):
+            cause=('finite '+route_number+' post-reap deadline after read' if ended>=deadline else
+                   'owned '+route_number+' cgroup identity or limits drift')
+            value['firstFailure']=row(ValueError(cause),'same-job-actual-'+route_number+'-cgroup-admission')
+            break
+        if sample['onlyController'] is True:
+            value['settled']=True;break
+    if not value['settled'] and value['firstFailure'] is None:
+        value['firstFailure']=row(ValueError('owned descendants remain at finite sample limit'),
+                                  'same-job-actual-'+route_number+'-cgroup-settle')
+    need((1<=len(value['samples'])<=limit or
+          (value['samples']==[] and value['finalIndex'] is None and
+           value['firstFailure'] is not None and value['settled'] is False)) and
+         len(encode(value))<=128<<10,
+         'bounded retained v2 sample sequence')
+    return value
+
+
 def setup_v8_sequence(ops,request,route=None):
     """One-shot setup order; every edge is an injected, recorded operation."""
     if route is not None:setup_v9_selected(route)
-    version='v9' if route is not None else 'v8'
+    version=route['version'] if route is not None else 'v8'
     facts={'schema':route['setupSchema'] if route is not None else 'bw.ring3.setup-original.v8','preflight':None,'archives':[],
         'policy':None,'unpack':None,'configure':None,'postStatus':None,'cleanup':None,
         'policyCleanupCgroup':None,
         'nodeStage':None,'runtime':None,'partial':None,'deferredHostTriggers':True,
         'configurationComplete':False,'firstFailure':None,'secondary':[]}
-    failure=FirstFailure();policy_created=False
+    failure=FirstFailure();policy_created=False;v2_unit_identity=None
     def complete_dpkg_phase(name):
+        nonlocal v2_unit_identity
         item=facts[name];item.setdefault('cgroupAfter',None);phase_failure=FirstFailure()
         if item['firstFailure'] is not None:
             phase_failure.adopt(item['firstFailure'],item['secondary'])
@@ -8156,9 +8388,25 @@ def setup_v8_sequence(ops,request,route=None):
             phase_failure.add(ValueError('bounded '+name+' dpkg failed'),version+'-'+name)
             phase_failure.secondary.extend(item['secondary'])
         try:
-            item['cgroupAfter']=ops.quiescent(name)
-            need(item['cgroupAfter']['onlyController'] is True,
-                 'no owned direct or nested dpkg descendants after '+name)
+            if route is SAME_JOB_ACTUAL_V2_ROUTE or route is SAME_JOB_ACTUAL_V3_ROUTE:
+                history=same_job_v2_cgroup_history(ops,name,
+                    limit=1 if phase_failure.first is not None else 6,route=route)
+                item['cgroupHistory']=history
+                last=history['samples'][-1] if history['samples'] else None
+                if history['firstFailure'] is None:
+                    selected=tuple(history['samples'][0]['unitIdentity'][:6])
+                    if v2_unit_identity is None:v2_unit_identity=selected
+                    else:need(selected==v2_unit_identity,
+                              'same held V2 owned service across both dpkg phases')
+                if last is not None and last['firstFailure'] is None:
+                    item['cgroupAfter']={'phase':name,
+                        **{key:last[key] for key in ('cgroupProcs','cgroupEvents','cgroupStat','onlyController')}}
+                if history['firstFailure'] is not None:
+                    phase_failure.adopt(history['firstFailure'],history['secondary'])
+            else:item['cgroupAfter']=ops.quiescent(name)
+            if (route is not SAME_JOB_ACTUAL_V2_ROUTE and route is not SAME_JOB_ACTUAL_V3_ROUTE) or phase_failure.first is None:
+                need(item['cgroupAfter']['onlyController'] is True,
+                     'no owned direct or nested dpkg descendants after '+name)
         except BaseException as error:phase_failure.add(error,version+'-'+name+'-cgroup')
         if phase_failure.first is not None:
             raise ObservedFailure(phase_failure.first,phase_failure.secondary)
@@ -8224,7 +8472,10 @@ class SetupV8Tool(LinuxChild):
     """One root dpkg phase inside the separately bounded transient service."""
     def __init__(self,argv,route=None):
         if route is not None:setup_v9_selected(route)
-        super().__init__(None,'setup-v9' if route is not None else 'setup-v8',argv)
+        super().__init__(None,'setup-same-job-v3' if route is SAME_JOB_ACTUAL_V3_ROUTE else
+            'setup-same-job-v2' if route is SAME_JOB_ACTUAL_V2_ROUTE else
+            'setup-same-job-v1' if route is SAME_JOB_ACTUAL_ROUTE else
+            'setup-v9' if route is not None else 'setup-v8',argv)
         self.environment=dict(SETUP_V8_INSTALLER_ENV)
 
     def preexec(self,identity_fd):
@@ -8368,7 +8619,10 @@ class SetupV8Host:
             if self.network_started is None:self.network_started=attempt_started
             need(time.monotonic()-self.network_started<180,'total archive acquisition deadline')
             request=urllib.request.Request(url,headers={'Accept-Encoding':'identity',
-                'User-Agent':'bw-ring3-setup-v9/1' if self.route is not None else 'bw-ring3-setup-v8/1'})
+                'User-Agent':'bw-ring3-same-job-actual/3' if self.route is SAME_JOB_ACTUAL_V3_ROUTE else
+                    'bw-ring3-same-job-actual/2' if self.route is SAME_JOB_ACTUAL_V2_ROUTE else
+                    'bw-ring3-same-job-actual/1' if self.route is SAME_JOB_ACTUAL_ROUTE else
+                    'bw-ring3-setup-v9/1' if self.route is not None else 'bw-ring3-setup-v8/1'})
             with urllib.request.build_opener(RejectRedirect).open(request,timeout=30) as reply:
                 need(reply.status==200 and reply.headers.get('Content-Encoding') in (None,'identity') and
                      reply.headers.get('Content-Length')==str(package['size']),'exact archive HTTP response')
@@ -8442,13 +8696,59 @@ class SetupV8Host:
         need(args==['--no-triggers','--unpack']+[str(self.root/(str(i).zfill(2)+'.deb')) for i in range(15)] or
              args==['--no-triggers','--configure',*SETUP_V8_CONFIGURE_ORDER],
              'fixed no-force, no-trigger dpkg phase')
-        label='setup-v9' if self.route is not None else 'setup-v8'
+        label=('setup-same-job-v3' if self.route is SAME_JOB_ACTUAL_V3_ROUTE else
+            'setup-same-job-v2' if self.route is SAME_JOB_ACTUAL_V2_ROUTE else
+            'setup-same-job-v1' if self.route is SAME_JOB_ACTUAL_ROUTE else
+            'setup-v9' if self.route is not None else 'setup-v8')
         argv=['/usr/bin/dpkg',*args];tool=(SetupV8Tool(argv) if self.route is None else
             SetupV8Tool(argv,self.route))
         process,streams=collect_child(tool,label,argv,profile=label)
         return {'argv':argv,'process':process,'stdout':original_bytes(streams['stdout']) if streams['stdout'] else None,
             'stderr':original_bytes(streams['stderr']) if streams['stderr'] else None,'exitCode':process['exitCode'],'timedOut':process['timedOut'],
             'firstFailure':process['firstFailure'],'secondary':process['secondary']}
+
+    def cgroup_sample_v2(self,phase,index):
+        """One bounded root-owned unit census, with partial facts on read failure."""
+        need((self.route is SAME_JOB_ACTUAL_V2_ROUTE or self.route is SAME_JOB_ACTUAL_V3_ROUTE) and
+             phase in ('unpack','configure') and
+             type(index) is int and 0<=index<6,'fixed V2 sample scope')
+        run_id=self.environ['GITHUB_RUN_ID']
+        unit=Path('/sys/fs/cgroup/system.slice')/(
+            self.route['unitPrefix']+run_id+'-1.service')
+        sample={'unitIdentity':None,'limits':{key:None for key in LIMITS},
+            'cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None,
+            'onlyController':None,'firstFailure':None,'secondary':[]}
+        def identity(info):return [info.st_dev,info.st_ino,info.st_mode,info.st_uid,
+            info.st_gid,info.st_nlink,info.st_size,info.st_mtime_ns]
+        try:
+            before=unit.lstat();sample['unitIdentity']=identity(before)
+            need(unit.resolve(strict=True)==unit and stat.S_ISDIR(before.st_mode) and
+                 before.st_uid==before.st_gid==0 and before.st_nlink>=1 and
+                 before.st_mode&0o022==0,
+                 'exact root-owned V2 transient unit identity')
+            for key,name in (('cpuMax','cpu.max'),('memoryMax','memory.max'),
+                             ('swapMax','memory.swap.max'),('pidsMax','pids.max')):
+                sample['limits'][key]=Cgroups.text(None,unit/name).strip()
+            need(sample['limits']==LIMITS,'held V2 service resource limits')
+            for key,name in (('cgroupProcs','cgroup.procs'),('cgroupEvents','cgroup.events'),
+                             ('cgroupStat','cgroup.stat')):
+                sample[key]=Cgroups.text(None,unit/name)
+            after=unit.lstat()
+            need(identity(after)[:6]==sample['unitIdentity'][:6] and
+                 unit.resolve(strict=True)==unit,'held V2 unit identity during census')
+            lines=sample['cgroupProcs'].splitlines()
+            need(len(lines)<=64 and len(lines)==len(set(lines)) and
+                 all(re.fullmatch('[1-9][0-9]*',line) for line in lines),
+                 'finite unique V2 owned process census')
+            quiet=setup_v8_cgroup_quiet(sample['cgroupProcs'],sample['cgroupEvents'],
+                                        sample['cgroupStat'],os.getpid())
+            sample['onlyController']=lines==[str(os.getpid())] and quiet
+        except BaseException as error:
+            sample['firstFailure']=row(error,'same-job-actual-'+
+                ('v3' if self.route is SAME_JOB_ACTUAL_V3_ROUTE else 'v2')+'-cgroup-sample')
+            sample['secondary'].extend(getattr(error,'ring3_secondary',[]))
+        need(len(encode(sample))<=24<<10,'bounded V2 partial cgroup sample')
+        return sample
 
     def quiescent(self,phase):
         need(phase in ('unpack','configure','policy-cleanup'),'fixed setup cgroup census phase')
@@ -8534,7 +8834,7 @@ class SetupV8Host:
                  'v9 stage source owner/mode' if self.route is not None else 'v8 stage source owner/mode')
             copy.copy()
             platform_fields={key:self.environ[key] for key in
-                (SETUP_V9_ENV if self.route is not None else SETUP_V8_ENV)}
+                (setup_route_env(self.route) if self.route is not None else SETUP_V8_ENV)}
             record={'schema':self.route['stageSchema'] if self.route is not None else
                 'bw.ring3.node-stage-original.v8','request':original_bytes(self.request_raw),
                 'event':original_bytes(self.event_raw),'platform':platform_fields,'source':self.observer.facts['source'],
@@ -8560,7 +8860,7 @@ class SetupV8Host:
             os.setresuid(invoker[0],invoker[0],invoker[0]);drop_progress.append('uid')
             entry_ids(*invoker);drop_progress.append('ids-verified')
             environment=dict(ENV,**{key:self.environ[key] for key in
-                (SETUP_V9_ENV if self.route is not None else SETUP_V8_ENV)})
+                (setup_route_env(self.route) if self.route is not None else SETUP_V8_ENV)})
             mode=self.route['inventoryMode'] if self.route is not None else '--inventory-setup-v8'
             os.execve('/usr/bin/python3',['/usr/bin/python3','-I','-B',READER_FILE,mode],environment)
             raise RuntimeError(('v9' if self.route is not None else 'v8')+
@@ -8571,18 +8871,20 @@ class SetupV8Host:
 
 def setup_v8_entry(environ,route=None):
     if route is not None:setup_v9_selected(route)
-    version='v9' if route is not None else 'v8'
+    version=route['version'] if route is not None else 'v8'
     failure=FirstFailure();facts=None;publication_safe=False
     image_fields,image_errors=image_env_fields(environ)
     context={'request':None,'event':None,'platform':{key:environ.get(key) for key in
-        (SETUP_V9_ENV if route is not None else SETUP_V8_ENV)},
+        (setup_route_env(route) if route is not None else SETUP_V8_ENV)},
         'source':None,'sourceCommands':[],'eventIdentity':None,
         'imageFields':image_fields,'imageFieldErrors':image_errors}
     try:
         need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root '+version+' entry')
         observer=HostedEnvelopeInstaller(environ);event=observer.event()
         context['event']=original_bytes(event);context['eventIdentity']=observer.facts['eventIdentity']
-        request_raw,request=(admit_setup_v9_event(event,environ) if route is not None else
+        request_raw,request=(admit_same_job_actual_event(event,environ,route)
+            if route in (SAME_JOB_ACTUAL_ROUTE,SAME_JOB_ACTUAL_V2_ROUTE,SAME_JOB_ACTUAL_V3_ROUTE) else
+            admit_setup_v9_event(event,environ) if route is not None else
             admit_setup_v8_event(event,environ))
         context['request']=original_bytes(request_raw)
         need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,'held '+version+' source path')
@@ -8655,7 +8957,7 @@ def setup_v8_stop_unit(unit_name,route=None):
 def setup_v8_outside_cleanup(environ,route=None):
     """Bounded exact-unit terminal observation precedes any owned policy unlink."""
     if route is not None:setup_v9_selected(route)
-    version='v9' if route is not None else 'v8'
+    version=route['version'] if route is not None else 'v8'
     prefix=route['unitPrefix'] if route is not None else 'bw-ring3-setup-v8-'
     failure=FirstFailure()
     value={'schema':route['cleanupSchema'] if route is not None else
@@ -8675,7 +8977,9 @@ def setup_v8_outside_cleanup(environ,route=None):
         # Admission must finish before an exact-unit stop or global policy mutation.
         observer=HostedEnvelopeInstaller(environ)
         event_raw=observer.event()
-        request_raw,request=(admit_setup_v9_event(event_raw,environ) if route is not None else
+        request_raw,request=(admit_same_job_actual_event(event_raw,environ,route)
+            if route in (SAME_JOB_ACTUAL_ROUTE,SAME_JOB_ACTUAL_V2_ROUTE,SAME_JOB_ACTUAL_V3_ROUTE) else
+            admit_setup_v9_event(event_raw,environ) if route is not None else
             admit_setup_v8_event(event_raw,environ))
         need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,
              'held '+version+' outside source path')
@@ -8721,7 +9025,11 @@ def setup_v8_outside_cleanup(environ,route=None):
             value['action']='deferred'
             need(value['stop']['attempted'] is False or value['stop']['exitCode']==0,
                  'uncertain stop forbids global policy unlink')
-            raw=bounded_read('build/i80386-ring3-setup-runtime-inventory-'+version+'/inventory.original.log',8<<20)
+            directory=('build/i80386-ring3-same-job-actual-v3' if route is SAME_JOB_ACTUAL_V3_ROUTE else
+                'build/i80386-ring3-same-job-actual-v2' if route is SAME_JOB_ACTUAL_V2_ROUTE else
+                'build/i80386-ring3-same-job-actual-v1' if route is SAME_JOB_ACTUAL_ROUTE else
+                'build/i80386-ring3-setup-runtime-inventory-'+version)
+            raw=bounded_read(directory+'/inventory.original.log',8<<20)
             packets=[]
             for line in raw.splitlines():
                 if line.startswith(b'{"actualGuestApproved":false,'):
@@ -9264,10 +9572,1261 @@ def host_baseline_outside_emit(value):
 ACTUAL_ENTRY_ENABLED=False  # Activation requires a separate reviewed source/workflow change.
 
 
+SAME_JOB_HANDOFF_PATH=Path('build/i80386-ring3-same-job-actual-v1/handoff.original.json')
+SAME_JOB_HANDOFF_CAP=1<<20
+SAME_JOB_GUEST_UNIT_PREFIX='bw-ring3-actual-guest-v1-'
+SAME_JOB_GUEST_LIMITS={'cpu.max':'100000 100000','memory.max':'1073741824',
+    'memory.swap.max':'0','pids.max':'64'}
+
+
+
+def same_job_guest_route(environ):
+    """Select one literal actual family from its own job; never project events."""
+    job=environ.get('GITHUB_JOB')
+    if job==SAME_JOB_ACTUAL_V3_ROUTE['job']:return SAME_JOB_ACTUAL_V3_ROUTE
+    if job==SAME_JOB_ACTUAL_V2_ROUTE['job']:return SAME_JOB_ACTUAL_V2_ROUTE
+    need(job==SAME_JOB_ACTUAL_ROUTE['job'],'closed same-job actual job route')
+    return SAME_JOB_ACTUAL_ROUTE
+
+
+def same_job_guest_prefix(route):
+    setup_v9_selected(route)
+    return ('bw-ring3-actual-guest-v3-' if route is SAME_JOB_ACTUAL_V3_ROUTE else
+        'bw-ring3-actual-guest-v2-' if route is SAME_JOB_ACTUAL_V2_ROUTE else
+        SAME_JOB_GUEST_UNIT_PREFIX)
+
+
+def same_job_guest_directory(route):
+    setup_v9_selected(route)
+    return Path('build/i80386-ring3-same-job-actual-'+
+        ('v3' if route is SAME_JOB_ACTUAL_V3_ROUTE else
+         'v2' if route is SAME_JOB_ACTUAL_V2_ROUTE else 'v1'))
+
+
+def same_job_guest_mode(name,route):
+    setup_v9_selected(route)
+    return '--same-job-'+name+('-v3' if route is SAME_JOB_ACTUAL_V3_ROUTE else
+                                '-v2' if route is SAME_JOB_ACTUAL_V2_ROUTE else '-v1')
+
+
+def same_job_guest_env(route):
+    setup_v9_selected(route)
+    return (SAME_JOB_V3_CHILD_ENV if route is SAME_JOB_ACTUAL_V3_ROUTE else
+            SAME_JOB_V2_CHILD_ENV if route is SAME_JOB_ACTUAL_V2_ROUTE else SAME_JOB_CHILD_ENV)
+
+
+def same_job_handoff(environ,route=SAME_JOB_ACTUAL_ROUTE):
+    """One held local first-service verdict. Its reviewed digest is still required."""
+    pin=environ.get('BW_RING3_SAME_JOB_HANDOFF_SHA256')
+    need(type(pin) is str and re.fullmatch('[0-9a-f]{64}',pin),'selected same-job handoff SHA')
+    uid,gid=(environ.get('SUDO_'+key,'') for key in ('UID','GID'))
+    need(all(type(value) is str and re.fullmatch('[1-9][0-9]{0,9}',value) and
+        int(value)<2**31 for value in (uid,gid)),'trusted handoff invoker')
+    setup_v9_selected(route)
+    owner=(int(uid),int(gid));path=Path.cwd()/(
+        same_job_guest_directory(route)/'handoff.original.json')
+    for parent in (Path.cwd(),Path.cwd()/'build',path.parent):
+        info=parent.lstat()
+        need(parent.resolve(strict=True)==parent and stat.S_ISDIR(info.st_mode) and
+             (info.st_uid,info.st_gid)==owner and info.st_mode&0o022==0,
+             'fixed invoker-owned handoff ancestry')
+    def identity(info):return tuple(getattr(info,key) for key in
+        ('st_dev','st_ino','st_mode','st_uid','st_gid','st_nlink','st_size','st_mtime_ns'))
+    before=path.lstat()
+    need(path.resolve(strict=True)==path and stat.S_ISREG(before.st_mode) and
+         (before.st_uid,before.st_gid)==owner and stat.S_IMODE(before.st_mode)==0o400 and
+         before.st_nlink==1 and 0<before.st_size<=SAME_JOB_HANDOFF_CAP,
+         'exclusive bounded selected handoff original')
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK);first=None;raw=bytearray()
+    try:
+        need(identity(os.fstat(fd))==identity(before),'held handoff identity before read')
+        while True:
+            part=os.read(fd,min(65536,SAME_JOB_HANDOFF_CAP+1-len(raw)))
+            if not part:break
+            raw.extend(part);need(len(raw)<=SAME_JOB_HANDOFF_CAP,'bounded handoff bytes')
+        need(len(raw)==before.st_size and identity(os.fstat(fd))==identity(before) and
+             identity(path.lstat())==identity(before) and sha(raw)==pin,
+             'selected handoff named/held/readback byte identity')
+    except BaseException as error:first=error
+    finally:first=close_owned(fd,first,'same-job-handoff-close')
+    if first is not None:raise first
+    return admit_same_job_handoff_bytes(bytes(raw),environ,route)
+
+
+def admit_same_job_handoff_bytes(raw,environ,route=SAME_JOB_ACTUAL_ROUTE):
+    """Grade exact CLI-produced handoff bytes after the held file read."""
+    need(type(raw) is bytes and 0<len(raw)<=SAME_JOB_HANDOFF_CAP,
+         'bounded selected handoff byte admission')
+    value=final_json(raw);need(encode(value)==raw,'canonical handoff original')
+    required=('schema candidateSha256 candidateBytes setupObserved shellImageFields '
+        'serviceImageFields forwardingMatchesExpected deferredHostTriggers '
+        'completeHostConfiguration actualGuestApproved outsideTerminalObserved '
+        'cgroupAfterAbsent continuousOwnershipEstablished localHandoffCompared '
+        'officialJobAuthenticated imageFieldsAuthenticated immutableImageIdentityEstablished '
+        'candidateReviewed actualRunApproved rawStatusBytesIndependentlyVerified '
+        'ciArchiveBytesIndependentlyVerified runId head tree workflowSha workflowFileSha256 '
+        'requestSha256 eventSha256 source stageCopy runtimeCandidate')
+    if route is SAME_JOB_ACTUAL_V2_ROUTE or route is SAME_JOB_ACTUAL_V3_ROUTE:
+        required+=' comparisonInput'
+    require_fields(value,required,'closed independently graded handoff fields')
+    need(value['schema']==('bw.ring3.same-job-setup-admission.v3'
+             if route is SAME_JOB_ACTUAL_V3_ROUTE else
+             'bw.ring3.same-job-setup-admission.v2'
+             if route is SAME_JOB_ACTUAL_V2_ROUTE else
+             'bw.ring3.same-job-setup-admission.v1') and
+         all(value[key] is True for key in ('setupObserved','outsideTerminalObserved',
+             'cgroupAfterAbsent','localHandoffCompared')) and
+         value['actualGuestApproved'] is False and value['officialJobAuthenticated'] is False and
+         value['candidateBytes']==SAME_JOB_REVIEWED_GRAPH['bytes'] and
+         value['candidateSha256']==SAME_JOB_REVIEWED_GRAPH['sha256'] and
+         value['runId']==environ.get('GITHUB_RUN_ID') and
+         value['head']==environ.get('BW_EXPECTED_HEAD') and
+         value['tree']==environ.get('BW_EXPECTED_TREE') and
+         value['workflowSha']==environ.get('GITHUB_WORKFLOW_SHA') and
+         value['workflowFileSha256']==
+             value['source']['files'][
+                 '.github/workflows/i80386-ring3-int-iret.yml'
+                 if route is SAME_JOB_ACTUAL_V2_ROUTE or route is SAME_JOB_ACTUAL_V3_ROUTE else WORKFLOW]['sha256'] and
+         value['requestSha256']==environ.get('BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256'
+             if route is SAME_JOB_ACTUAL_V3_ROUTE else
+             'BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256'
+             if route is SAME_JOB_ACTUAL_V2_ROUTE else
+             'BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256'),
+         'exact prior terminal graph, source and actual event selected')
+    if route is SAME_JOB_ACTUAL_V2_ROUTE or route is SAME_JOB_ACTUAL_V3_ROUTE:
+        need(same_json(value['comparisonInput'],SAME_JOB_REVIEWED_GRAPH),
+             'genuine V2 independent handoff reviewed comparison input')
+    candidate=admitted_original(value['runtimeCandidate'],256<<10,'selected live v4 graph')
+    need(len(candidate)==SAME_JOB_REVIEWED_GRAPH['bytes'] and
+         sha(candidate)==SAME_JOB_REVIEWED_GRAPH['sha256'],'exact reviewed graph bytes')
+    graph=final_json(candidate)
+    need(encode(graph)==candidate and graph['schema']=='bw.ring3.runtime-expectation.v4' and
+         len(graph['files'])==327 and len(graph['aliases'])==55,
+         'closed reviewed runtime graph projection')
+    return raw,value,candidate,graph
+
+
+def same_job_actual_selection(environ,event_raw,*,handoff_reader=same_job_handoff,
+                              route=SAME_JOB_ACTUAL_ROUTE):
+    """Distinct actual event and already graded first-service graph before effects."""
+    request_raw,request=admit_same_job_actual_event(event_raw,environ,route)
+    handoff_raw,handoff,candidate_raw,candidate=(handoff_reader(environ)
+        if route is SAME_JOB_ACTUAL_ROUTE else handoff_reader(environ,route))
+    source_raw=admitted_original(request['source'],JSON_CAP,'selected actual source')
+    need(source_raw==encode(handoff['source']) and
+         handoff['eventSha256']==sha(event_raw) and
+         handoff['requestSha256']==sha(request_raw),
+         'same selected actual event, source and local graph handoff')
+    stage=handoff['stageCopy'];require_fields(stage,'copy nodeReadback nodeGraphFile',
+        'closed selected staged Node readback')
+    node=stage['nodeReadback'];need(type(node) is dict and
+         node.get('sha256')==GENERATION_NODE_PIN[1] and
+         node.get('bytes')==GENERATION_NODE_PIN[0] and
+         same_json(stage['nodeGraphFile'],node.get('before')),
+         'same selected exclusive Node copy and complete graph')
+    return {'requestRaw':request_raw,'request':request,'eventSha256':sha(event_raw),
+        'handoffRaw':handoff_raw,'handoff':handoff,'candidateRaw':candidate_raw,'candidate':candidate}
+
+
+class SameJobRuntimeFiles(RuntimeAdmissionFiles):
+    """Exact selected V4 file keys, including the three reviewed comma names."""
+    def __init__(self,candidate):
+        self.selected=candidate['files'];self.aliases=candidate['aliases']
+
+    def fact(self,path):
+        need(path in self.selected and Path(path).is_absolute() and
+             '..' not in Path(path).parts and not any(ch.isspace() for ch in path),
+             'only selected canonical same-job runtime file')
+        fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK);first=None;count=0;digest=hashlib.sha256()
+        def identity(info):return tuple(getattr(info,key) for key in
+            ('st_dev','st_ino','st_mode','st_uid','st_gid','st_nlink','st_size','st_mtime_ns'))
+        try:
+            before=os.fstat(fd)
+            need(stat.S_ISREG(before.st_mode) and 0<before.st_size<=268435456 and
+                 before.st_mode&0o022==0 and str(Path(path).resolve(strict=True))==path,
+                 'selected same-job regular canonical runtime file')
+            while True:
+                part=os.read(fd,min(65536,268435457-count))
+                if not part:break
+                count+=len(part);need(count<=268435456,'bounded selected file extent');digest.update(part)
+            need(count==before.st_size and identity(os.fstat(fd))==identity(before) and
+                 identity(os.stat(path,follow_symlinks=False))==identity(before) and
+                 str(Path(path).resolve(strict=True))==path,
+                 'held selected file named/readback identity')
+            value={'bytes':count,'sha256':digest.hexdigest(),'mode':stat.S_IMODE(before.st_mode)}
+            need(same_json(value,{key:self.selected[path][key] for key in ('bytes','sha256','mode')}),
+                 'live exact selected V4 runtime file bytes and mode')
+        except BaseException as error:first=error
+        finally:first=close_owned(fd,first,'same-job-runtime-file-close')
+        if first is not None:raise first
+        return value
+
+    def alias(self,path):
+        need(path in self.aliases,'only selected same-job runtime alias')
+        value=super().alias(path)
+        need(same_json(value,self.aliases[path]),'live selected alias text/target')
+        return value
+
+
+class SameJobRuntimeGate(RuntimeExpectationGate):
+    """V4 exact-byte graph; inherited finite observations do not parse V8/V1."""
+    def __init__(self,raw,candidate):
+        need(type(raw) is bytes and len(raw)==SAME_JOB_REVIEWED_GRAPH['bytes'] and
+             sha(raw)==SAME_JOB_REVIEWED_GRAPH['sha256'] and encode(candidate)==raw and
+             candidate['schema']=='bw.ring3.runtime-expectation.v4',
+             'fixed independently graded selected V4 graph bytes')
+        self._raw=raw;self.files=SameJobRuntimeFiles(candidate)
+        self.observations={};self.before_complete=False;self._observed_stages=set()
+
+    def selected_runtime(self):
+        value=final_json(self._raw)
+        files={path:{key:item[key] for key in ('bytes','sha256','kind')}
+            for path,item in value['files'].items()}
+        qemu=next(item for item in value['packages'] if item['name']=='qemu-system-x86')
+        result={'schema':'bw.ring3.same-job-runtime.v1',
+            'observationPolicy':'first-service-v4-graph-and-fresh-before-after-byte-readback',
+            'platform':value['platform'],'executables':value['executables'],
+            'versions':value['versions'],
+            'qemuPackage':{'name':qemu['name'],'version':qemu['version'],
+                'architecture':qemu['architecture'],'files':files,
+                'aliases':value['aliases'],'probes':[]}}
+        need(len(encode(result))<=JSON_CAP,'bounded selected same-job guest runtime original')
+        return result
+
+    def join(self,runtime):
+        need(self.before_complete and same_json(runtime,self.selected_runtime()),
+             'complete distinct V4 same-job runtime; never V8 V1 probe projection')
+        return runtime
+
+
+SAME_JOB_CHILD_ENV=('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_REPOSITORY',
+    'GITHUB_EVENT_NAME','GITHUB_ACTOR','GITHUB_JOB','GITHUB_WORKFLOW_SHA',
+    'GITHUB_WORKFLOW_REF','GITHUB_EVENT_PATH','BW_EXPECTED_HEAD','BW_EXPECTED_TREE',
+    'BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256','BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64',
+    'BW_RING3_SAME_JOB_HANDOFF_SHA256','BW_LAUNCH_PLAN_SHA256')
+
+SAME_JOB_V2_CHILD_ENV=tuple('BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256'
+    if key=='BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256' else
+    'BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64'
+    if key=='BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64' else key
+    for key in SAME_JOB_CHILD_ENV)
+SAME_JOB_V3_CHILD_ENV=tuple('BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256'
+    if key=='BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256' else
+    'BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_B64'
+    if key=='BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64' else key
+    for key in SAME_JOB_CHILD_ENV)
+
+
+class SameJobFinalizerContext:
+    """Raw V1 actual descriptors with checked local views for old resource math."""
+    def __init__(self,selection,environ,route=SAME_JOB_ACTUAL_ROUTE):
+        self.selection=selection;self.environ=dict(environ);self.originals={};self.route=route
+
+    def generic_outer(self,value,entry,environ):
+        actual=final_json(encode(value));process=actual['process']
+        need(same_json(process['argv'],[entry['python']['path'],'-I','-B',RUN_FILE,
+            same_job_guest_mode('bootstrap',self.route)]) and
+             same_json(process['environment'],dict(ENV,**{name:environ[name] for name in
+                 same_job_guest_env(self.route)},SUDO_UID=str(entry['uid']),SUDO_GID=str(entry['gid']))) and
+             process['environment']['BW_RING3_SAME_JOB_HANDOFF_SHA256']==
+                 sha(self.selection['handoffRaw']),
+             'retained distinct actual outside child descriptor and selected handoff')
+        process['argv'][-1]='--bootstrap'
+        process['environment']=dict(ENV,**{name:environ[name] for name in
+            ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE')},
+            SUDO_UID=str(entry['uid']),SUDO_GID=str(entry['gid']))
+        return actual
+
+    def resources(self,internal,originals,outside,environ):
+        entry=internal['.entry.json'];local=final_json(encode(internal))
+        local['.outside.json']=self.generic_outer(local['.outside.json'],entry,environ)
+        selected=SameJobRuntimeGate(self.selection['candidateRaw'],self.selection['candidate']).selected_runtime()
+        need(all(same_json(final_json(originals['runtime.'+when+'.json']),selected)
+                 for when in ('before','after')),
+             'twice retained same-job exact selected V4 graph file readbacks')
+        return join_final_resources(local,originals,self.generic_outer(outside,entry,environ),environ)
+
+    def phases(self,phase_raw,generation_raw,pre_git,outside,entry,originals,environ):
+        phase=final_json(phase_raw)
+        need(phase_raw==encode(phase) and phase['schema']=='bw.ring3.preparation-original.v4' and
+             phase['process']['argv']==[entry['python']['path'],'-I','-B',RUN_FILE,
+                 same_job_guest_mode('prepare',self.route)] and
+             phase['process']['environment'].get('BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256'
+                 if self.route is SAME_JOB_ACTUAL_V3_ROUTE else
+                 'BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256'
+                 if self.route is SAME_JOB_ACTUAL_V2_ROUTE else
+                 'BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256')==
+                 sha(self.selection['requestRaw']) and
+             phase['process']['environment'].get('BW_RING3_SAME_JOB_HANDOFF_SHA256')==
+                 sha(self.selection['handoffRaw']),
+             'own distinct actual preparation phase and selected admission')
+        need(same_json(phase['process']['environment'],dict(ENV,**{
+                name:environ[name] for name in same_job_guest_env(self.route)},
+                SUDO_UID=str(entry['uid']),SUDO_GID=str(entry['gid']))),
+             'closed exact actual preparation child environment')
+        need(admitted_original(self.selection['request']['source'],JSON_CAP,
+                 'selected actual source')==originals['source.before.json'],
+             'twenty-role packet source joins actual source12')
+        phase['schema']='bw.ring3.preparation-original.v3'
+        phase['process']['argv'][-1]='--prepare-admitted-generated'
+        phase['process']['environment']=dict(ENV,**{name:environ[name] for name in
+            ('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','BW_EXPECTED_HEAD','BW_EXPECTED_TREE',
+             'BW_LAUNCH_PLAN_SHA256')},SUDO_UID=str(entry['uid']),
+            SUDO_GID=str(entry['gid']))
+        plan_raw=encode({'schema':'bw.ring3.launch-plan.v1',
+            'runId':environ['GITHUB_RUN_ID'],'attempt':1,
+            'head':self.selection['request']['head'],'tree':self.selection['request']['tree'],
+            'source':self.selection['request']['source']})
+        need(sha(plan_raw)==environ['BW_LAUNCH_PLAN_SHA256'],
+             'actual generated plan selected only after source/handoff admission')
+        generation=final_json(generation_raw)
+        expected_node={'path':RUNTIME_EXECUTABLES['node'],
+            'bytes':GENERATION_NODE_PIN[0],'sha256':GENERATION_NODE_PIN[1]}
+        need(all(same_json(generation[when]['files']['node'],expected_node)
+                 for when in ('before','after')) and
+             self.selection['request']['nodeStage']['source']==expected_node['path'],
+             'separately selected and twice observed original staging Node input')
+        # The generator reads the selected source Node while guest runtime uses
+        # its one staged copy. This checked local view serves the older generator
+        # equation; the raw twenty-role V4 runtime original is never rewritten.
+        local=dict(originals)
+        before=final_json(local['runtime.before.json'])
+        need(expected_node['path'] not in before['qemuPackage']['files'],
+             'source Node is distinct from the staged runtime Node')
+        before['qemuPackage']['files'][expected_node['path']]={
+            'bytes':expected_node['bytes'],'sha256':expected_node['sha256'],
+            'kind':'node-binary'}
+        local['runtime.before.json']=encode(before)
+        return check_admitted_generated_originals(plan_raw,sha(plan_raw),encode(phase),
+            generation_raw,pre_git,self.generic_outer(outside,entry,environ),entry,local,environ)
+
+
+class LinuxSameJobPreparation(LinuxAdmittedGeneratedPreparation):
+    def __init__(self,parent):
+        super().__init__(parent);route=same_job_guest_route(parent.environ)
+        self.argv[-1]=same_job_guest_mode('prepare',route)
+        for name in same_job_guest_env(route):
+            self.environment[name]=parent.environ[name]
+
+
+class SameJobBootstrapOps(BootstrapOps):
+    def validate(self):
+        owner=super().validate()
+        _,handoff,candidate_raw,candidate=same_job_handoff(self.environ,
+            same_job_guest_route(self.environ))
+        need(handoff['source']['head']==self.environ['BW_EXPECTED_HEAD'] and
+             len(candidate_raw)==SAME_JOB_REVIEWED_GRAPH['bytes'] and
+             candidate['schema']=='bw.ring3.runtime-expectation.v4',
+             'bootstrap independently selected actual graph and source')
+        return owner
+
+    def execute(self):
+        entry_ids(self.invoker['uid'],self.invoker['gid']);self.entered()
+        python=self.owner['python']['path']
+        route=same_job_guest_route(self.environ)
+        environment=dict(ENV,**{name:self.environ[name] for name in same_job_guest_env(route)},
+            SUDO_UID=str(self.invoker['uid']),SUDO_GID=str(self.invoker['gid']))
+        os.execve(python,[python,'-I','-B',RUN_FILE,
+            same_job_guest_mode('controller',route)],environment)
+        raise RuntimeError('same-job actual bootstrap exec unexpectedly returned')
+
+
+class LinuxSameJobController(LinuxController):
+    def __init__(self,bootstrap):
+        super().__init__(bootstrap);route=same_job_guest_route(bootstrap.environ)
+        self.argv[-1]=same_job_guest_mode('bootstrap',route)
+        self.environment=dict(ENV,**{name:bootstrap.environ[name] for name in
+            same_job_guest_env(route)},SUDO_UID=str(bootstrap.invoker['uid']),
+            SUDO_GID=str(bootstrap.invoker['gid']))
+
+
+class SameJobOutsideOwner(OutsideOwner):
+    def create_child(self):
+        need(self.admitted,'same-job outside owner admitted');self.outside()
+        self.child=LinuxSameJobController(self.bootstrap);return self.child
+
+
+class SameJobControllerOps(ControllerOps):
+    """New actual admission around unchanged serial JS and QEMU execution."""
+    def __init__(self,environ=None):
+        super().__init__(environ);self.same_job_gate=None;self.same_job_handoff=None
+
+    def admit(self):
+        self.route=same_job_guest_route(self.environ)
+        handoff_raw,handoff,candidate_raw,candidate=same_job_handoff(self.environ,self.route)
+        need(handoff['eventSha256']==sha(HostedEnvelopeInstaller(self.environ).event()),
+             'dropped actual controller joins retained own event')
+        self.same_job_handoff=(handoff_raw,handoff,candidate_raw,candidate)
+        super().admit()
+        need(same_json(self.source_before,handoff['source']),
+             'prepared actual source12 joins independently graded setup handoff')
+        self.same_job_gate=SameJobRuntimeGate(candidate_raw,candidate)
+
+    def discover(self):
+        need(self.same_job_gate is not None,'admitted actual runtime gate before discovery')
+        self.same_job_gate.observe('before-probes')
+        self.runtime_before=self.same_job_gate.join(self.same_job_gate.selected_runtime())
+        self.same_job_gate.observe('after-probes')
+
+    def after_all(self,failure):
+        try:super().after_all(failure)
+        finally:
+            if self.same_job_gate is not None and self.same_job_gate.before_complete:
+                try:self.same_job_gate.observe('after-guests')
+                except BaseException as error:failure.add(error,'same-job-runtime-after')
+            if self.unprivileged and self.paths_admitted:
+                try:
+                    value={'schema':'bw.ring3.same-job-controller-runtime.v3'
+                        if self.route is SAME_JOB_ACTUAL_V3_ROUTE else
+                        'bw.ring3.same-job-controller-runtime.v2'
+                        if self.route is SAME_JOB_ACTUAL_V2_ROUTE else
+                        'bw.ring3.same-job-controller-runtime.v1',
+                        'handoffSha256':None if self.same_job_handoff is None else
+                            sha(self.same_job_handoff[0]),
+                        'candidateSha256':None if self.same_job_handoff is None else
+                            sha(self.same_job_handoff[2]),
+                        'observations':{} if self.same_job_gate is None else
+                            self.same_job_gate.observations,'pid':os.getpid(),
+                        'firstFailure':failure.first,'secondary':failure.secondary}
+                    runtime_delivery_original('controller.runtime.json',encode(value))
+                except BaseException as error:failure.add(error,'same-job-controller-original')
+
+
+class SameJobEntryComposition(RuntimeEntryComposition):
+    def create_preparation(self):
+        need(type(self._launch_plan_original) is bytes and
+             sha(self._launch_plan_original)==self._expected_launch_plan_sha256,
+             'own selected actual launch plan before preparation factory')
+        self.require_preparation_ownership()
+        self.pre_child=LinuxSameJobPreparation(self);return self.pre_child
+
+    def outside(self):
+        self.setup.verify()
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,
+             'same-job root remains privileged until outside child terminal')
+        return outside_controller(SameJobOutsideOwner(SameJobBootstrapOps(self.environ)))
+
+
+def same_job_preparation_child(environ=None,*,observer=None,emit=None,flush=None):
+    """Actual request/handoff and V4 graph precede authored fixture generation."""
+    environ=dict(os.environ if environ is None else environ);failure=FirstFailure()
+    route=same_job_guest_route(environ)
+    gate=None;selection=None;result={'pass':False}
+    try:
+        ids=[environ.get('SUDO_'+key,'') for key in ('UID','GID')]
+        need(all(type(value) is str and re.fullmatch('[1-9][0-9]{0,9}',value)
+                 for value in ids),'selected actual preparation invoker')
+        entry_ids(*map(int,ids))
+        need(entry_proc('/proc/self/cgroup')=='0::/'+expected_cgroup(environ).name+
+             '-preparation\n','owned actual preparation sibling membership')
+        event_raw=HostedEnvelopeInstaller(environ).event()
+        selection=same_job_actual_selection(environ,event_raw,route=route)
+        plan_raw=read_launch_plan(environ,environ.get('BW_LAUNCH_PLAN_SHA256'))
+        plan,source=admit_launch_plan(plan_raw,environ['BW_LAUNCH_PLAN_SHA256'],environ)
+        need(same_json(plan['source'],selection['request']['source']) and
+             source==admitted_original(selection['request']['source'],JSON_CAP,
+                 'actual preparation selected source'),
+             'actual preparation plan/source joins distinct event and handoff')
+        gate=SameJobRuntimeGate(selection['candidateRaw'],selection['candidate'])
+        gate.observe('before-probes')
+        ops=PinnedRecordingStagingOps(source,plan['source']['sha256'],
+            plan['head'],plan['tree'],environ)
+        result,found=generated_preparation_child(environ,staging_ops=ops,
+            observer=observer,emit=emit,flush=flush)
+        failure.adopt(found.first,found.secondary)
+    except BaseException as error:failure.add(error,'same-job-preparation')
+    finally:
+        if gate is not None and gate.before_complete:
+            try:gate.observe('after-probes')
+            except BaseException as error:failure.add(error,'same-job-preparation-after')
+        try:
+            uid,gid=map(int,(environ.get('SUDO_UID',''),environ.get('SUDO_GID','')))
+            entry_ids(uid,gid)
+            value={'schema':'bw.ring3.same-job-preparation-runtime.v3'
+                if route is SAME_JOB_ACTUAL_V3_ROUTE else
+                'bw.ring3.same-job-preparation-runtime.v2'
+                if route is SAME_JOB_ACTUAL_V2_ROUTE else
+                'bw.ring3.same-job-preparation-runtime.v1',
+                'handoffSha256':None if selection is None else sha(selection['handoffRaw']),
+                'candidateSha256':None if selection is None else sha(selection['candidateRaw']),
+                'pid':os.getpid(),'observations':{} if gate is None else gate.observations,
+                'firstFailure':failure.first,'secondary':failure.secondary}
+            runtime_delivery_original('preparation.runtime.json',encode(value))
+        except BaseException as error:failure.add(error,'same-job-preparation-original')
+    result['pass']=result.get('pass') is True and failure.first is None and failure.secondary==[]
+    return result,failure
+
+
+def same_job_create_launch_plan(selection,environ):
+    """Fresh root-owned plan derived from admitted actual source, never V8 input."""
+    raw=encode({'schema':'bw.ring3.launch-plan.v1','runId':environ['GITHUB_RUN_ID'],
+        'attempt':1,'head':selection['request']['head'],
+        'tree':selection['request']['tree'],'source':selection['request']['source']})
+    need(len(raw)<=JSON_CAP,'bounded selected actual plan')
+    directory=launch_plan_path(environ).parent;path=directory/'launch-plan.json'
+    need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,
+         'root selected actual plan publication')
+    # Keep the new directory private until the public-only plan has been
+    # written, made read-only and closed. The dropped preparation child must
+    # then be able to traverse it; an inherited umask cannot decide the mode.
+    os.mkdir(directory,0o700);directory_fd=None;fd=None;first=None
+    try:
+        directory_fd=os.open(directory,os.O_RDONLY|os.O_DIRECTORY|
+            os.O_NOFOLLOW|os.O_NONBLOCK)
+        parent=os.fstat(directory_fd)
+        need(stat.S_ISDIR(parent.st_mode) and
+             (parent.st_uid,parent.st_gid)==(0,0) and
+             (parent.st_dev,parent.st_ino)==
+             (directory.lstat().st_dev,directory.lstat().st_ino) and
+             stat.S_IMODE(parent.st_mode)==0o700,
+             'fresh private root-owned launch-plan directory identity')
+        fd=os.open(path.name,os.O_WRONLY|os.O_CREAT|os.O_EXCL|
+            os.O_NOFOLLOW|os.O_NONBLOCK,0o600,dir_fd=directory_fd)
+        need(os.write(fd,raw)==len(raw),'complete exact actual plan write')
+        os.fchmod(fd,0o444);os.fsync(fd)
+        first=close_owned(fd,first,'same-job-plan-close');fd=None
+        if first is not None:raise first
+        os.fchmod(directory_fd,0o755)
+        held=os.fstat(directory_fd);named=directory.lstat()
+        need(stat.S_ISDIR(held.st_mode) and
+             (held.st_uid,held.st_gid)==(0,0) and
+             (held.st_dev,held.st_ino)==(named.st_dev,named.st_ino)==
+             (parent.st_dev,parent.st_ino) and
+             stat.S_IMODE(held.st_mode)==stat.S_IMODE(named.st_mode)==0o755 and
+             path.resolve(strict=True)==path and
+             stat.S_ISREG(path.lstat().st_mode) and
+             (path.lstat().st_uid,path.lstat().st_gid)==(0,0) and
+             stat.S_IMODE(path.lstat().st_mode)==0o444,
+             'published root-owned traversable plan directory and readonly file')
+    except BaseException as error:first=error
+    finally:
+        if fd is not None:first=close_owned(fd,first,'same-job-plan-close')
+        if directory_fd is not None:
+            first=close_owned(directory_fd,first,'same-job-plan-directory-close')
+    if first is not None:raise first
+    selected=dict(environ,BW_LAUNCH_PLAN_SHA256=sha(raw))
+    need(read_launch_plan(selected,sha(raw))==raw,
+         'actual plan exact held root-owned readback')
+    return raw,selected
+
+
+def same_job_create_runtime_sink(setup):
+    """One fresh invoker-owned phase-original sink before dropped preparation."""
+    setup.verify();uid,gid=setup.invoker['uid'],setup.invoker['gid']
+    checkout=Path.cwd();parent=checkout/'build';path=checkout/RUNTIME_DELIVERY_DIRECTORY
+    for directory in (checkout,parent):
+        info=directory.lstat()
+        need(directory.resolve(strict=True)==directory and
+             stat.S_ISDIR(info.st_mode) and (info.st_uid,info.st_gid)==(uid,gid) and
+             info.st_mode&0o022==0,'held actual runtime sink parents')
+    fd=os.open(parent,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK)
+    first=None;child=None
+    try:
+        before=os.fstat(fd)
+        os.mkdir(path.name,0o700,dir_fd=fd)
+        child=os.open(path.name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|
+                      os.O_NONBLOCK,dir_fd=fd)
+        os.fchown(child,uid,gid);os.fchmod(child,0o700)
+        held=os.fstat(child);named=path.lstat();after=os.fstat(fd)
+        need(stat.S_ISDIR(held.st_mode) and (held.st_uid,held.st_gid)==(uid,gid) and
+             stat.S_IMODE(held.st_mode)==0o700 and
+             (held.st_dev,held.st_ino,held.st_mode,held.st_uid,held.st_gid)==
+             (named.st_dev,named.st_ino,named.st_mode,named.st_uid,named.st_gid) and
+             (before.st_dev,before.st_ino,before.st_mode,before.st_uid,before.st_gid)==
+             (after.st_dev,after.st_ino,after.st_mode,after.st_uid,after.st_gid),
+             'exclusive actual runtime sink and parent identity readback')
+    except BaseException as error:first=error
+    finally:
+        if child is not None:first=close_owned(child,first,'same-job-runtime-sink-close')
+        first=close_owned(fd,first,'same-job-runtime-parent-close')
+    if first is not None:raise first
+
+
+def same_job_guest_service(environ=None,*,event_reader=None,handoff_reader=same_job_handoff,
+                           route=SAME_JOB_ACTUAL_ROUTE):
+    """New actual job: terminal setup handoff, then one independent guest service."""
+    need((SAME_JOB_ACTUAL_V3_ENABLED if route is SAME_JOB_ACTUAL_V3_ROUTE else
+          SAME_JOB_ACTUAL_V2_ENABLED if route is SAME_JOB_ACTUAL_V2_ROUTE else
+          SAME_JOB_ACTUAL_ENABLED) is True,'same-job actual route disabled')
+    environ=dict(os.environ if environ is None else environ);failure=FirstFailure()
+    result={'pass':False,'setup':None,'composition':None,'firstFailure':None,'secondary':[]}
+    setup=None;selection=None
+    try:
+        event_raw=(HostedEnvelopeInstaller(environ).event() if event_reader is None
+            else event_reader())
+        selection=same_job_actual_selection(environ,event_raw,
+            handoff_reader=handoff_reader,route=route)
+        membership=entry_proc('/proc/self/cgroup')
+        unit=same_job_guest_prefix(route)+environ['GITHUB_RUN_ID']+'-1.service'
+        need(membership=='0::/system.slice/'+unit+'\n',
+             'actual second owned service membership before preparation')
+        cgroup=Path('/sys/fs/cgroup/system.slice')/unit
+        actual={name:Cgroups.text(None,cgroup/name).strip()
+                for name in SAME_JOB_GUEST_LIMITS}
+        need(actual==SAME_JOB_GUEST_LIMITS,'finite actual second-service cgroup limits')
+        source,found=source_facts(selection['handoff']['source'],stage='before')
+        failure.adopt(found.first,found.secondary)
+        need(source==selection['handoff']['source'] and failure.first is None,
+             'fresh second-service actual source12 before resource effects')
+        gate=SameJobRuntimeGate(selection['candidateRaw'],selection['candidate'])
+        gate.observe('before-probes')
+        plan_raw,environ=same_job_create_launch_plan(selection,environ)
+        setup=HostedSetupOps(sha(plan_raw),environ)
+        prepared,found=setup.prepare();failure.adopt(found.first,found.secondary)
+        result['setup']=prepared
+        need(prepared['pass'] is True and failure.first is None,
+             'complete distinct guest resource setup before controller')
+        same_job_create_runtime_sink(setup)
+        context=SameJobFinalizerContext(selection,environ,route)
+        composed,found=compose_entry(SameJobEntryComposition(setup,context))
+        failure.adopt(found.first,found.secondary)
+        result['composition']=composed
+        need(composed['pass'] is True and failure.first is None and failure.secondary==[],
+             'finite same-job authored JS/QEMU packet composition')
+    except BaseException as error:failure.add(error,'same-job-guest-service')
+    finally:
+        if setup is not None and setup.invoker is not None:
+            try:
+                bootstrap=BootstrapOps(environ);bootstrap.invoker=dict(setup.invoker)
+                if (os.getresuid()!=(setup.invoker['uid'],)*3 or
+                        os.getresgid()!=(setup.invoker['gid'],)*3 or os.getgroups()):
+                    bootstrap.drop()
+            except BaseException as error:failure.add(error,'same-job-service-drop')
+        result['firstFailure'],result['secondary']=failure.first,failure.secondary
+        result['pass']=(result['composition'] is not None and
+            result['composition'].get('pass') is True and failure.first is None and
+            failure.secondary==[])
+        if setup is not None and setup.invoker is not None:
+            try:
+                write_new(same_job_guest_directory(route)/
+                    'guest.service.original.json',encode({'schema':
+                    'bw.ring3.same-job-guest-service.v3' if route is SAME_JOB_ACTUAL_V3_ROUTE else
+                    'bw.ring3.same-job-guest-service.v2' if route is SAME_JOB_ACTUAL_V2_ROUTE else
+                    'bw.ring3.same-job-guest-service.v1',
+                    'requestSha256':None if selection is None else sha(selection['requestRaw']),
+                    'handoffSha256':None if selection is None else sha(selection['handoffRaw']),
+                    'guestPacketComposed':result['pass'],'firstFailure':failure.first,
+                    'secondary':failure.secondary}),JSON_CAP)
+            except BaseException as error:failure.add(error,'same-job-service-retention')
+    result['pass']=result['pass'] and failure.first is None and failure.secondary==[]
+    return result,failure
+
+
+def same_job_guest_cleanup(environ=None,*,event_reader=None,handoff_reader=same_job_handoff,
+                           route=SAME_JOB_ACTUAL_ROUTE):
+    """Outside exact-unit stop/census; it never upgrades a failed guest packet."""
+    need((SAME_JOB_ACTUAL_V2_ENABLED if route is SAME_JOB_ACTUAL_V2_ROUTE else
+          SAME_JOB_ACTUAL_ENABLED) is True,'same-job actual cleanup route disabled')
+    environ=dict(os.environ if environ is None else environ);failure=FirstFailure()
+    value={'schema':'bw.ring3.same-job-guest-outside-cleanup.v2'
+        if route is SAME_JOB_ACTUAL_V2_ROUTE else
+        'bw.ring3.same-job-guest-outside-cleanup.v1',
+        'runId':None,'unit':None,'serviceExitCode':None,'sourceAdmission':None,
+        'preCensus':None,'stop':None,'postCensus':None,'manualCgroupAbsent':None,
+        'outsideTerminalObserved':False,'firstFailure':None,'secondary':[],
+        'actualGuestApproved':False}
+    selection=None;owned_unit=None;owned_path=None;cleanup_attempted=False
+    def census():
+        need(owned_path is not None,'only selected actual unit may be censused')
+        try:info=owned_path.lstat()
+        except FileNotFoundError:return {'terminal':'absent','cgroupProcs':None,
+            'cgroupEvents':None,'cgroupStat':None}
+        need(owned_path.resolve(strict=True)==owned_path and stat.S_ISDIR(info.st_mode),
+             'selected actual unit directory identity')
+        rows={name:Cgroups.text(None,owned_path/filename)
+              for name,filename in (('cgroupProcs','cgroup.procs'),
+                  ('cgroupEvents','cgroup.events'),('cgroupStat','cgroup.stat'))}
+        need(all(len(row.encode())<=1024 for row in rows.values()),
+             'bounded selected guest unit census')
+        return dict(rows,terminal='empty' if setup_v8_cgroup_quiet(
+            rows['cgroupProcs'],rows['cgroupEvents'],rows['cgroupStat']) else 'populated')
+    def stop_and_census():
+        nonlocal cleanup_attempted
+        need(not cleanup_attempted,'owned guest cleanup has one attempt')
+        cleanup_attempted=True
+        value['preCensus']=census()
+        found=FirstFailure()
+        try:
+            if value['preCensus']['terminal']=='populated':
+                argv=['/usr/bin/timeout','--kill-after=5s','20s','/usr/bin/systemctl',
+                      'stop','--',owned_unit]
+                value['stop']={'attempted':True,'argv':argv,
+                    'exitCode':None,'timedOut':None}
+                completed=subprocess.run(argv,stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
+                    env=dict(ENV),check=False,timeout=30)
+                value['stop']['exitCode']=completed.returncode
+                value['stop']['timedOut']=completed.returncode in (124,137)
+                need(type(completed.returncode) is int and completed.returncode==0,
+                     'bounded exact guest unit stop')
+            else:value['stop']={'attempted':False,'argv':None,'exitCode':None,
+                               'timedOut':False}
+        except BaseException as error:found.add(error,'same-job-guest-owned-stop')
+        try:value['postCensus']=census()
+        except BaseException as error:found.add(error,'same-job-guest-post-census')
+        try:
+            try:expected_cgroup(environ).lstat();value['manualCgroupAbsent']=False
+            except FileNotFoundError:value['manualCgroupAbsent']=True
+        except BaseException as error:found.add(error,'same-job-guest-manual-census')
+        if found.first is not None:raise ObservedFailure(found.first,found.secondary)
+        need(value['postCensus']['terminal'] in ('absent','empty') and
+             value['manualCgroupAbsent'] is True,
+             'selected unit and nested manual tree terminal before approval')
+    try:
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,
+             'root outside selected actual guest cleanup')
+        run_id=environ.get('GITHUB_RUN_ID','')
+        need(type(run_id) is str and re.fullmatch(r'[1-9][0-9]{0,19}',run_id),
+             'positive run-derived exact owned guest unit')
+        owned_unit=same_job_guest_prefix(route)+run_id+'-1.service'
+        owned_path=Path('/sys/fs/cgroup/system.slice')/owned_unit
+        value.update(runId=run_id,unit=owned_unit)
+        code=environ.get('BW_SYSTEMD_RUN_EXIT_CODE','')
+        need(type(code) is str and re.fullmatch('(?:0|[1-9][0-9]{0,2})',code) and
+             int(code)<=255,'bounded actual service client exit')
+        value['serviceExitCode']=int(code)
+        event_raw=(HostedEnvelopeInstaller(environ).event() if event_reader is None
+            else event_reader())
+        selection=same_job_actual_selection(environ,event_raw,
+            handoff_reader=handoff_reader,route=route)
+        source,found=source_facts(selection['handoff']['source'],stage='after')
+        failure.adopt(found.first,found.secondary)
+        need(source==selection['handoff']['source'] and failure.first is None,
+             'outside exact selected actual source before stop')
+        value.update(sourceAdmission={
+            'requestSha256':sha(selection['requestRaw']),
+            'eventSha256':selection['eventSha256'],
+            'handoffSha256':sha(selection['handoffRaw']),
+            'head':selection['request']['head'],'tree':selection['request']['tree']})
+        if int(code)!=0:failure.add(ValueError('actual service client did not exit zero'),
+                                   'same-job-guest-client')
+        stop_and_census()
+        value['outsideTerminalObserved']=True
+    except BaseException as error:failure.add(error,'same-job-guest-outside')
+    finally:
+        # Source/event admission can fail after the service has run. Once its
+        # exact run-owned unit is known, cleanup must still attempt a bounded
+        # terminal census; it cannot turn the earlier failure into approval.
+        if owned_unit is not None and not cleanup_attempted:
+            try:stop_and_census()
+            except BaseException as error:failure.add(error,'same-job-guest-outside-fallback')
+        value['firstFailure'],value['secondary']=failure.first,failure.secondary
+        value['outsideTerminalObserved']=(value['outsideTerminalObserved'] is True and
+            failure.first is None and failure.secondary==[])
+        if owned_unit is not None:
+            try:
+                uid,gid=(int(environ['SUDO_'+name]) for name in ('UID','GID'))
+                need(0<uid<2**31 and 0<gid<2**31,
+                     'positive invoker IDs before failed guest cleanup retention')
+                bootstrap=BootstrapOps(environ);bootstrap.invoker={'uid':uid,'gid':gid}
+                if (os.getresuid()!=(uid,)*3 or os.getresgid()!=(gid,)*3 or
+                        os.getgroups()):bootstrap.drop()
+                write_new(same_job_guest_directory(route)/
+                    'guest.cleanup.original.json',encode(value),JSON_CAP)
+            except BaseException as error:failure.add(error,'same-job-guest-outside-retention')
+    return value,failure
+
+
+class SameJobV3ManualTreeOps:
+    """One held run-owned cgroup tree. Tests replace only these kernel edges."""
+    DIRECTORY_FLAGS=os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_NONBLOCK
+    FILE_FLAGS=os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK
+    ROLES=('enclosing','controller','js','qemu')
+    RAW_FILES={'cgroupProcs':'cgroup.procs','cgroupThreads':'cgroup.threads',
+        'cgroupEvents':'cgroup.events','cgroupStat':'cgroup.stat',
+        'pidsCurrent':'pids.current','cpuMax':'cpu.max',
+        'memoryMax':'memory.max','swapMax':'memory.swap.max','pidsMax':'pids.max'}
+
+    @staticmethod
+    def identity(info):
+        return [info.st_dev,info.st_ino,info.st_mode,info.st_uid,info.st_gid,
+                info.st_nlink,info.st_size,info.st_mtime_ns]
+
+    def open_dir(self,name,parent=None):
+        return os.open(name,self.DIRECTORY_FLAGS,**({} if parent is None else {'dir_fd':parent}))
+
+    def held(self,fd):return self.identity(os.fstat(fd))
+
+    def named(self,name,parent):
+        return self.identity(os.stat(name,dir_fd=parent,follow_symlinks=False))
+
+    def named_parent(self):return self.identity(Path('/sys/fs/cgroup').lstat())
+
+    def names(self,fd):
+        os.lseek(fd,0,os.SEEK_SET)
+        names=os.listdir(fd)
+        need(len(names)<=256 and len(names)==len(set(names)) and
+             all(type(name) is str and 0<len(name.encode('ascii'))<=128 and
+                 '/' not in name and name not in ('.','..') for name in names),
+             'bounded named selected cgroup directory entries')
+        need(sum(len(name.encode('ascii'))+3 for name in names)<=512,
+             'bounded aggregate selected cgroup child names')
+        children=[]
+        for name in names:
+            info=os.stat(name,dir_fd=fd,follow_symlinks=False)
+            need(not stat.S_ISLNK(info.st_mode) and
+                 (stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode)),
+                 'no unknown cgroup symlink or member kind')
+            if stat.S_ISDIR(info.st_mode):children.append(name)
+        return sorted(children)
+
+    def text(self,fd,name):
+        need(name in self.RAW_FILES.values(),'closed selected cgroup pseudo-file')
+        file_fd=None;first=None;data=None
+        try:
+            file_fd=os.open(name,self.FILE_FLAGS,dir_fd=fd)
+            need(stat.S_ISREG(os.fstat(file_fd).st_mode),'regular cgroup pseudo-file')
+            data=os.read(file_fd,4097)
+            need(len(data)<=4096,'bounded selected cgroup pseudo-file')
+            data=data.decode('ascii')
+        except BaseException as error:first=error
+        finally:
+            if file_fd is not None:first=close_owned(file_fd,first,'same-job-v3-cgroup-file-close')
+        if first is not None:
+            if type(data) is str:first.ring3_partial_text=data
+            elif type(data) is bytes:
+                try:first.ring3_partial_text=data[:4096].decode('ascii')
+                except UnicodeDecodeError:pass
+            raise first
+        return data
+
+    def remove(self,name,parent):os.rmdir(name,dir_fd=parent)
+    def close(self,fd):os.close(fd)
+    def clock(self):return time.monotonic_ns()
+    def pause(self,seconds):time.sleep(seconds)
+
+
+def same_job_v3_cgroup_numbers(raw,key):
+    need(type(raw) is str and len(raw.encode('ascii'))<=4096,
+         'bounded raw selected cgroup counter')
+    rows=raw.splitlines();need(rows and len(rows)==len(set(rows)),
+         'unique selected cgroup counter lines')
+    fields={}
+    for line in rows:
+        pair=line.split(' ')
+        need(len(pair)==2 and pair[0] and re.fullmatch('[0-9]+',pair[1]) and
+             pair[0] not in fields,'closed selected cgroup counter grammar')
+        fields[pair[0]]=int(pair[1])
+    need(key in fields,'required selected cgroup counter')
+    return fields[key]
+
+
+def same_job_v3_manual_sample(ops,role,fd,parent,name,uid,gid,expected_children,
+                              sample_budget=16384):
+    """Retain each raw read and exact named/held identity, including failures."""
+    need(role in SameJobV3ManualTreeOps.ROLES and type(uid) is int and type(gid) is int and
+         expected_children in ([],['controller','js','qemu']) and
+         type(sample_budget) is int and 1024<=sample_budget<=16384,
+         'fixed v3 manual cgroup sample role')
+    value={'role':role,'startMonoNs':None,'endMonoNs':None,'heldIdentity':None,
+        'namedIdentity':None,'raw':{key:None for key in ops.RAW_FILES},
+        'children':None,'firstFailure':None,'secondary':[]}
+    found=FirstFailure()
+    try:
+        value['startMonoNs']=ops.clock()
+        need(type(value['startMonoNs']) is int and value['startMonoNs']>=0,
+             'monotonic v3 cgroup read start')
+        value['heldIdentity']=ops.held(fd)
+        need(type(value['heldIdentity']) is list and len(value['heldIdentity'])==8 and
+             all(type(number) is int for number in value['heldIdentity']) and
+             stat.S_ISDIR(value['heldIdentity'][2]) and
+             (value['heldIdentity'][3],value['heldIdentity'][4])==(uid,gid) and
+             value['heldIdentity'][2]&0o022==0,
+             'held exact owned v3 cgroup directory')
+        for key,filename in ops.RAW_FILES.items():
+            need(len(encode(value))+4096+256<=sample_budget,
+                 'room for next complete raw V3 cgroup read and failure')
+            try:value['raw'][key]=ops.text(fd,filename)
+            except BaseException as error:
+                value['raw'][key]=getattr(error,'ring3_partial_text',None)
+                raise
+        value['children']=ops.names(fd)
+        value['namedIdentity']=ops.named(name,parent)
+        after=ops.held(fd)
+        need(value['heldIdentity'][:5]==value['namedIdentity'][:5]==after[:5],
+             'held/named selected v3 cgroup identity through sample')
+        value['endMonoNs']=ops.clock()
+        need(type(value['endMonoNs']) is int and
+             value['endMonoNs']>=value['startMonoNs'],
+             'monotonic v3 cgroup read end')
+        for key,expected in (('cpuMax',LIMITS['cpuMax']),('memoryMax',LIMITS['memoryMax']),
+                             ('swapMax',LIMITS['swapMax']),('pidsMax',LIMITS['pidsMax'])):
+            need(value['raw'][key].strip()==expected,'fixed v3 cgroup resource '+key)
+        for key in ('cgroupProcs','cgroupThreads'):
+            lines=value['raw'][key].splitlines()
+            need(len(lines)<=64 and len(lines)==len(set(lines)) and
+                 all(re.fullmatch('[1-9][0-9]*',line) for line in lines) and
+                 lines==[],'no direct v3 cgroup process or thread')
+        need(value['raw']['pidsCurrent'].strip()=='0' and
+             same_job_v3_cgroup_numbers(value['raw']['cgroupEvents'],'populated')==0,
+             'empty selected v3 cgroup membership')
+        live=same_job_v3_cgroup_numbers(value['raw']['cgroupStat'],'nr_descendants')
+        dying=same_job_v3_cgroup_numbers(value['raw']['cgroupStat'],'nr_dying_descendants')
+        need(value['children']==expected_children,'closed selected cgroup child directories')
+        if role!='enclosing':
+            need(live==dying==0,'empty selected v3 leaf')
+        elif expected_children:
+            need(live==3 and dying==0,'exact three live selected v3 leaves')
+        else:need(live==0,'no live descendants after selected leaf removal')
+    except BaseException as error:found.add(error,'same-job-v3-manual-sample')
+    value['firstFailure'],value['secondary']=found.first,found.secondary
+    if value['firstFailure'] is None and len(encode(value))>1024:
+        issue=row(ValueError('bounded V3 raw cgroup sample extent'),
+                  'same-job-v3-manual-sample-cap')
+        value['firstFailure']=issue
+    return value
+
+
+def same_job_v3_resources_authority(invoker):
+    """Bind cleanup to the retained 20-role resource original before deletion."""
+    need(type(invoker) is list and len(invoker)==2 and
+         all(type(value) is int and 0<value<2**31 for value in invoker),
+         'exact trusted v3 cleanup invoker')
+    owner=tuple(invoker)
+    checkout=Path.cwd()
+    for path in (checkout,checkout/'build',checkout/EXPORT):
+        info=path.lstat()
+        need(path.resolve(strict=True)==path and stat.S_ISDIR(info.st_mode) and
+             (info.st_uid,info.st_gid)==owner and info.st_mode&0o022==0,
+             'owned exact V3 retained resource ancestry')
+    raw=bounded_read(EXPORT/'resources.json',JSON_CAP)
+    value=final_json(raw)
+    require_fields(value,'schema enclosing controller children firstFailure secondary',
+                   'closed V3 retained resource original')
+    need(encode(value)==raw and value['schema']=='bw.ring3.resources.v1' and
+         value['firstFailure'] is None and value['secondary']==[] and
+         type(value['children']) is dict and set(value['children'])=={'js','qemu'},
+         'exact composed twenty-role resource original')
+    roles={'enclosing':value['enclosing'],'controller':value['controller'],
+           'js':value['children']['js'],'qemu':value['children']['qemu']}
+    identities={};seen=set()
+    for role,item in roles.items():
+        need(type(item) is dict and set(item) == (
+             {'pid','before','after'} if role=='controller' else {'before','after'}),
+             'closed retained '+role+' resource snapshot')
+        before,after=item['before'],item['after']
+        need(type(before) is dict and type(after) is dict and
+             before.get('limits')==after.get('limits')==LIMITS and
+             type(before.get('identity')) is dict and
+             set(before['identity'])=={'device','inode'} and
+             before['identity']==after.get('identity') and
+             all(type(number) is int and number>0 for number in before['identity'].values()),
+             'same retained before/after resource identity and limits')
+        selected=(before['identity']['device'],before['identity']['inode'])
+        need(selected not in seen,'four distinct retained resource identities')
+        seen.add(selected);identities[role]=selected
+    return {'resourcesBytes':len(raw),'resourcesSha256':sha(raw),'invoker':invoker},identities
+
+
+def same_job_v3_manual_tree(environ,selection,outer_base,*,ops=None):
+    """One exact fd-relative cleanup of a proven empty four-role manual tree."""
+    ops=SameJobV3ManualTreeOps() if ops is None else ops
+    run_id=environ.get('GITHUB_RUN_ID','')
+    need(type(run_id) is str and re.fullmatch('[1-9][0-9]{0,19}',run_id),
+         'run-derived exact V3 manual tree name')
+    need(type(selection) is dict and selection['request']['head']==environ.get('BW_EXPECTED_HEAD') and
+         selection['request']['tree']==environ.get('BW_EXPECTED_TREE') and
+         selection['handoff']['runId']==run_id and
+         selection['handoff']['eventSha256']==selection['eventSha256'],
+         'admitted V3 source/event/handoff before manual tree authority')
+    uid,gid=(environ.get('SUDO_'+key,'') for key in ('UID','GID'))
+    need(all(type(value) is str and re.fullmatch('[1-9][0-9]{0,9}',value) and
+             int(value)<2**31 for value in (uid,gid)),
+         'selected V3 cleanup invoker before manual tree authority')
+    invoker=[int(uid),int(gid)]
+    root_name='bw-ring3-'+run_id+'-1'
+    value={'schema':'bw.ring3.same-job-manual-tree-cleanup.v3',
+        'path':'/sys/fs/cgroup/'+root_name,'authority':None,'parentIdentity':None,
+        'rootIdentity':None,'before':{role:None for role in ops.ROLES},
+        'removals':[],'rootSampleBaseMonoNs':None,'rootSampleDeadlineMonoNs':None,
+        'rootSamples':[],'parentIdentityAfter':None,'finalAbsent':None,
+        'firstFailure':None,'secondary':[]}
+    found=FirstFailure();fds={};parent=None;root=None;initial_first5={}
+    need(type(outer_base) is dict and
+         outer_base.get('schema')=='bw.ring3.same-job-guest-outside-cleanup.v3' and
+         outer_base.get('manualTree') is None,
+         'selected actual full outside envelope before V3 manual cleanup')
+    def whole_size():return len(encode(dict(outer_base,manualTree=value)))
+    def sample_budget():
+        budget=16384-whole_size()-2048
+        need(budget>=1024,'room for retained V3 partial sample and close errors')
+        return min(16384,budget)
+    def require_sample(sample,role,expected_children,identities):
+        if sample['firstFailure'] is not None:
+            found.adopt(sample['firstFailure'],sample['secondary'])
+            raise ObservedFailure(found.first,found.secondary)
+        need(sample['firstFailure'] is None and sample['secondary']==[] and
+             type(sample['endMonoNs']) is int and
+             sample['children']==expected_children and
+             tuple(sample['heldIdentity'][:2])==identities[role] and
+             sample['heldIdentity'][:5]==sample['namedIdentity'][:5]==
+             initial_first5[role],
+             'selected V3 manual '+role+' raw/identity authority')
+    def check_fd(fd,name,owner,reference,parent_fd):
+        held=ops.held(fd);named=ops.named(name,parent_fd)
+        role='enclosing' if name==root_name else name
+        need(held[:5]==named[:5] and tuple(held[:2])==reference and
+             (held[3],held[4])==owner and stat.S_ISDIR(held[2]) and
+             held[2]&0o022==0 and
+             (role not in initial_first5 or held[:5]==initial_first5[role]),
+             'exact held/named V3 owned cgroup directory')
+        return held,named
+    def remove(role,name,parent_fd,fd,reference,parent_reference):
+        journal={'role':role,'attempted':False,'removed':False,'error':None,
+            'heldIdentityBefore':None,'namedIdentityBefore':None,
+            'parentIdentityBefore':None,'absentAfter':None}
+        value['removals'].append(journal)
+        try:
+            journal['heldIdentityBefore'],journal['namedIdentityBefore']=check_fd(
+                fd,name,tuple(invoker),reference,parent_fd)
+            journal['parentIdentityBefore']=ops.held(parent_fd)
+            parent_named=(ops.named_parent() if role=='enclosing' else
+                          ops.named(root_name,parent))
+            need(journal['parentIdentityBefore'][:5]==parent_reference==
+                 parent_named[:5] and
+                 stat.S_ISDIR(journal['parentIdentityBefore'][2]),
+                 'stable exact V3 cgroup removal parent')
+            remaining_samples=0 if value['rootSamples'] else 6
+            remaining_rows=4-len(value['removals'])
+            need(whole_size()+remaining_samples*1024+
+                 (remaining_rows+1)*512+2048<=16384,
+                 'bounded full outside original and remaining V3 cleanup witnesses before rmdir')
+            journal['attempted']=True
+            ops.remove(name,parent_fd)
+            journal['removed']=True
+            try:ops.named(name,parent_fd);journal['absentAfter']=False
+            except FileNotFoundError:journal['absentAfter']=True
+            need(journal['absentAfter'] is True,'selected V3 removed child absent readback')
+        except BaseException as error:
+            journal['error']=row(error,'same-job-v3-manual-rmdir-'+role)
+            found.add(error,'same-job-v3-manual-rmdir-'+role)
+        return found.first is None
+    try:
+        value['authority'],identities=same_job_v3_resources_authority(invoker)
+        parent=ops.open_dir('/sys/fs/cgroup');fds['parent']=parent
+        value['parentIdentity']=ops.held(parent)
+        need(stat.S_ISDIR(value['parentIdentity'][2]) and
+             value['parentIdentity'][3:5]==[0,0] and
+             value['parentIdentity'][2]&0o022==0 and
+             value['parentIdentity'][:5]==ops.named_parent()[:5],
+             'held exact cgroup parent before selected root')
+        root=ops.open_dir(root_name,parent);fds['enclosing']=root
+        value['rootIdentity'],named=check_fd(root,root_name,tuple(invoker),identities['enclosing'],parent)
+        initial_first5['enclosing']=value['rootIdentity'][:5]
+        need(value['rootIdentity'][0]==value['parentIdentity'][0],
+             'selected V3 manual tree cgroup filesystem')
+        for role in ('controller','js','qemu'):
+            fd=ops.open_dir(role,root);fds[role]=fd
+            held,named=check_fd(fd,role,tuple(invoker),identities[role],root)
+            initial_first5[role]=held[:5]
+            need(held[0]==value['rootIdentity'][0],
+                 'same selected V3 cgroup filesystem')
+        previous_end=None
+        for role in ops.ROLES:
+            fd=fds[role];base=parent if role=='enclosing' else root
+            name=root_name if role=='enclosing' else role
+            children=['controller','js','qemu'] if role=='enclosing' else []
+            sample=same_job_v3_manual_sample(ops,role,fd,base,name,*invoker,children,
+                                              sample_budget())
+            value['before'][role]=sample
+            require_sample(sample,role,children,identities)
+            need(previous_end is None or sample['startMonoNs']>=previous_end,
+                 'ordered selected V3 manual pre-removal observations')
+            previous_end=sample['endMonoNs']
+        need(len(encode(value))<=6144 and whole_size()<=8192,
+             'bounded complete four-role V3 sample before first removal')
+        for role in ('controller','js','qemu'):
+            if not remove(role,role,root,fds[role],identities[role],
+                          value['rootIdentity'][:5]):
+                raise ObservedFailure(found.first,found.secondary)
+        began=ops.clock()
+        need(type(began) is int and began>=previous_end,
+             'monotonic V3 post-leaf sampling start')
+        deadline=began+5_000_000_000
+        value['rootSampleBaseMonoNs']=began
+        value['rootSampleDeadlineMonoNs']=deadline
+        targets=(0,100_000_000,400_000_000,1_000_000_000,2_500_000_000,4_500_000_000)
+        settled=False
+        for index,target in enumerate(targets):
+            now=ops.clock()
+            need(type(now) is int and now>=began and now>=previous_end,
+                 'nondecreasing V3 post-leaf clock')
+            if index and now<began+target and now<deadline:
+                ops.pause(min(began+target-now,deadline-now)/1_000_000_000)
+            started=ops.clock()
+            need(type(started) is int and started>=now and started<deadline,
+                 'finite V3 post-leaf read start')
+            sample=same_job_v3_manual_sample(ops,'enclosing',root,parent,root_name,
+                                              *invoker,[],sample_budget())
+            value['rootSamples'].append(sample)
+            require_sample(sample,'enclosing',[],identities)
+            need(sample['startMonoNs']>=started and
+                 sample['startMonoNs']>=previous_end and
+                 sample['endMonoNs']<deadline,
+                 'finite monotonic V3 post-leaf read end')
+            previous_end=sample['endMonoNs']
+            dying=same_job_v3_cgroup_numbers(sample['raw']['cgroupStat'],
+                                             'nr_dying_descendants')
+            if dying==0:settled=True;break
+        need(settled,'selected V3 dying descendants remain at finite sample limit')
+        if not remove('enclosing',root_name,parent,root,identities['enclosing'],
+                      value['parentIdentity'][:5]):
+            raise ObservedFailure(found.first,found.secondary)
+        value['parentIdentityAfter']=ops.held(parent)
+        need(value['parentIdentityAfter'][:5]==value['parentIdentity'][:5]==
+             ops.named_parent()[:5],
+             'held V3 cgroup parent after root removal')
+        value['finalAbsent']=value['removals'][-1]['absentAfter']
+        need(value['finalAbsent'] is True,'final selected V3 manual tree absence')
+    except BaseException as error:
+        if not isinstance(error,ObservedFailure) or found.first is None:
+            found.add(error,'same-job-v3-manual-tree')
+    finally:
+        for role in ('qemu','js','controller','enclosing','parent'):
+            if role in fds:
+                try:ops.close(fds[role])
+                except BaseException as error:found.add(error,'same-job-v3-manual-close-'+role)
+        value['firstFailure'],value['secondary']=found.first,found.secondary
+        if len(encode(value))>16384:
+            overflow=row(ValueError('bounded V3 manual cleanup original cap'),
+                         'same-job-v3-manual-wire')
+            if value['firstFailure'] is None:value['firstFailure']=overflow
+            else:value['secondary'].append(overflow)
+    return value
+
+
+def same_job_guest_cleanup_v3(environ=None,*,event_reader=None,
+                              handoff_reader=same_job_handoff,manual_ops=None):
+    """V3 only: exact guest unit terminal then owned four-role manual-tree removal."""
+    need(SAME_JOB_ACTUAL_V3_ENABLED is True,'distinct V3 guest cleanup disabled')
+    route=SAME_JOB_ACTUAL_V3_ROUTE
+    environ=dict(os.environ if environ is None else environ)
+    failure=FirstFailure()
+    value={'schema':'bw.ring3.same-job-guest-outside-cleanup.v3',
+        'runId':None,'unit':None,'serviceExitCode':None,'sourceAdmission':None,
+        'preCensus':None,'stop':None,'postCensus':None,'manualTree':None,
+        'manualCgroupAbsent':None,'outsideTerminalObserved':False,
+        'firstFailure':None,'secondary':[],'actualGuestApproved':False}
+    selection=None;owned_unit=None;owned_path=None;cleanup_attempted=False
+    def census():
+        need(owned_path is not None,'only selected V3 guest unit may be censused')
+        try:info=owned_path.lstat()
+        except FileNotFoundError:return {'terminal':'absent','cgroupProcs':None,
+            'cgroupEvents':None,'cgroupStat':None}
+        need(owned_path.resolve(strict=True)==owned_path and stat.S_ISDIR(info.st_mode),
+             'selected V3 guest unit directory identity')
+        rows={name:Cgroups.text(None,owned_path/filename)
+              for name,filename in (('cgroupProcs','cgroup.procs'),
+                  ('cgroupEvents','cgroup.events'),('cgroupStat','cgroup.stat'))}
+        need(all(len(item.encode())<=1024 for item in rows.values()),
+             'bounded selected V3 guest unit census')
+        return dict(rows,terminal='empty' if setup_v8_cgroup_quiet(
+            rows['cgroupProcs'],rows['cgroupEvents'],rows['cgroupStat']) else 'populated')
+    def stop_and_census():
+        nonlocal cleanup_attempted
+        need(not cleanup_attempted,'owned V3 guest cleanup has one attempt')
+        cleanup_attempted=True
+        found=FirstFailure()
+        try:value['preCensus']=census()
+        except BaseException as error:found.add(error,'same-job-v3-guest-pre-census')
+        try:
+            if value['preCensus'] is None or value['preCensus']['terminal']=='populated':
+                argv=['/usr/bin/timeout','--kill-after=5s','20s','/usr/bin/systemctl',
+                      'stop','--',owned_unit]
+                value['stop']={'attempted':True,'argv':argv,
+                    'exitCode':None,'timedOut':None}
+                completed=subprocess.run(argv,stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
+                    env=dict(ENV),check=False,timeout=30)
+                value['stop']['exitCode']=completed.returncode
+                value['stop']['timedOut']=completed.returncode in (124,137)
+                need(type(completed.returncode) is int and completed.returncode==0,
+                     'bounded exact V3 guest unit stop')
+            else:value['stop']={'attempted':False,'argv':None,'exitCode':None,
+                               'timedOut':False}
+        except BaseException as error:found.add(error,'same-job-v3-guest-owned-stop')
+        try:value['postCensus']=census()
+        except BaseException as error:found.add(error,'same-job-v3-guest-post-census')
+        try:
+            need(value['postCensus'] is not None and
+                 value['postCensus']['terminal'] in ('absent','empty'),
+                 'selected V3 guest unit terminal before manual-tree removal')
+            if (selection is not None and value['sourceAdmission'] is not None and
+                    found.first is None and found.secondary==[]):
+                value['firstFailure'],value['secondary']=failure.first,list(failure.secondary)
+                value['manualTree']=same_job_v3_manual_tree(
+                    environ,selection,value,ops=manual_ops)
+                value['manualCgroupAbsent']=value['manualTree']['finalAbsent']
+                found.adopt(value['manualTree']['firstFailure'],
+                            value['manualTree']['secondary'])
+                need(value['manualCgroupAbsent'] is True and
+                     value['manualTree']['firstFailure'] is None and
+                     value['manualTree']['secondary']==[],
+                     'exact V3 manual-tree removal and absence')
+        except BaseException as error:found.add(error,'same-job-v3-guest-manual-tree')
+        if found.first is not None:raise ObservedFailure(found.first,found.secondary)
+    try:
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,
+             'root outside selected V3 guest cleanup')
+        run_id=environ.get('GITHUB_RUN_ID','')
+        need(type(run_id) is str and re.fullmatch('[1-9][0-9]{0,19}',run_id),
+             'positive run-derived exact owned V3 guest unit')
+        owned_unit=same_job_guest_prefix(route)+run_id+'-1.service'
+        owned_path=Path('/sys/fs/cgroup/system.slice')/owned_unit
+        value.update(runId=run_id,unit=owned_unit)
+        code=environ.get('BW_SYSTEMD_RUN_EXIT_CODE','')
+        need(type(code) is str and re.fullmatch('(?:0|[1-9][0-9]{0,2})',code) and
+             int(code)<=255,'bounded V3 service client exit')
+        value['serviceExitCode']=int(code)
+        event_raw=(HostedEnvelopeInstaller(environ).event() if event_reader is None
+            else event_reader())
+        selection=same_job_actual_selection(environ,event_raw,
+            handoff_reader=handoff_reader,route=route)
+        source,found=source_facts(selection['handoff']['source'],stage='after')
+        failure.adopt(found.first,found.secondary)
+        need(source==selection['handoff']['source'] and failure.first is None,
+             'outside exact selected V3 source before cleanup')
+        value['sourceAdmission']={
+            'requestSha256':sha(selection['requestRaw']),
+            'eventSha256':selection['eventSha256'],
+            'handoffSha256':sha(selection['handoffRaw']),
+            'head':selection['request']['head'],'tree':selection['request']['tree']}
+        if int(code)!=0:failure.add(ValueError('V3 guest service client did not exit zero'),
+                                   'same-job-v3-guest-client')
+        stop_and_census()
+        value['outsideTerminalObserved']=True
+    except BaseException as error:failure.add(error,'same-job-v3-guest-outside')
+    finally:
+        # Once the exact run-owned selected unit is known, a failed admission
+        # still gets its one finite unit terminal attempt. Manual-tree removal
+        # remains forbidden without complete source/handoff admission.
+        if owned_unit is not None and not cleanup_attempted:
+            try:stop_and_census()
+            except BaseException as error:failure.add(error,'same-job-v3-guest-outside-fallback')
+        value['firstFailure'],value['secondary']=failure.first,failure.secondary
+        value['outsideTerminalObserved']=(value['outsideTerminalObserved'] is True and
+            failure.first is None and failure.secondary==[])
+        if owned_unit is not None:
+            try:
+                uid,gid=(int(environ['SUDO_'+key]) for key in ('UID','GID'))
+                need(0<uid<2**31 and 0<gid<2**31,
+                     'positive invoker before failed V3 cleanup retention')
+                bootstrap=BootstrapOps(environ);bootstrap.invoker={'uid':uid,'gid':gid}
+                if (os.getresuid()!=(uid,)*3 or os.getresgid()!=(gid,)*3 or
+                        os.getgroups()):bootstrap.drop()
+                raw=encode(value)
+                need(len(raw)<=16384,'bounded complete V3 outside cleanup original')
+                write_new(same_job_guest_directory(route)/
+                    'guest.cleanup.original.json',raw,16384)
+            except BaseException as error:failure.add(error,'same-job-v3-guest-outside-retention')
+        value['firstFailure'],value['secondary']=failure.first,failure.secondary
+    return value,failure
+
+
 def dispatch_cli(argv=None,environ=None):
     parser=argparse.ArgumentParser(description=__doc__,allow_abbrev=False)
     modes=parser.add_mutually_exclusive_group(required=True)
-    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy','setup-runtime-inventory-v6','cleanup-setup-v6-policy','setup-v6-image-shell','setup-runtime-inventory-v7','cleanup-setup-v7-policy','setup-v7-image-shell','setup-runtime-inventory-v8','cleanup-setup-v8-policy','setup-v8-image-shell','setup-runtime-inventory-v9','cleanup-setup-v9-policy','setup-v9-image-shell','image-env-shell-v1','image-env-service-v1','host-baseline-shell-v1','host-baseline-service-v1','host-baseline-outside-v1'):
+    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy','setup-runtime-inventory-v6','cleanup-setup-v6-policy','setup-v6-image-shell','setup-runtime-inventory-v7','cleanup-setup-v7-policy','setup-v7-image-shell','setup-runtime-inventory-v8','cleanup-setup-v8-policy','setup-v8-image-shell','setup-runtime-inventory-v9','cleanup-setup-v9-policy','setup-v9-image-shell','same-job-setup-v1','same-job-cleanup-v1','same-job-image-shell-v1','same-job-guest-service-v1','same-job-prepare-v1','same-job-bootstrap-v1','same-job-controller-v1','same-job-guest-cleanup-v1','same-job-setup-v2','same-job-cleanup-v2','same-job-image-shell-v2','same-job-guest-service-v2','same-job-prepare-v2','same-job-bootstrap-v2','same-job-controller-v2','same-job-guest-cleanup-v2','same-job-setup-v3','same-job-cleanup-v3','same-job-image-shell-v3','same-job-guest-service-v3','same-job-prepare-v3','same-job-bootstrap-v3','same-job-controller-v3','same-job-guest-cleanup-v3','image-env-shell-v1','image-env-service-v1','host-baseline-shell-v1','host-baseline-service-v1','host-baseline-outside-v1'):
         modes.add_argument('--'+name,action='store_const',const=name,dest='mode')
     argv=list(sys.argv[1:] if argv is None else argv)
     if len(argv)!=1:parser.error('exactly one fixed mode argument required')
@@ -9275,6 +10834,126 @@ def dispatch_cli(argv=None,environ=None):
     failure=FirstFailure();result=None
     try:
         if args.mode=='controls':controls();return 0
+        if args.mode in ('same-job-image-shell-v3','same-job-cleanup-v3','same-job-setup-v3'):
+            need(SAME_JOB_ACTUAL_V3_ENABLED is True,'distinct V3 source inactive')
+            selected=dict(os.environ if environ is None else environ)
+            if args.mode=='same-job-image-shell-v3':
+                return setup_v8_image_shell(selected,SAME_JOB_ACTUAL_V3_ROUTE)
+            if args.mode=='same-job-cleanup-v3':
+                return setup_v8_outside_cleanup(selected,SAME_JOB_ACTUAL_V3_ROUTE)
+            return setup_v8_entry(selected,SAME_JOB_ACTUAL_V3_ROUTE)
+        if args.mode in ('same-job-guest-service-v3','same-job-prepare-v3',
+                         'same-job-bootstrap-v3','same-job-controller-v3',
+                         'same-job-guest-cleanup-v3'):
+            need(SAME_JOB_ACTUAL_V3_ENABLED is True,'distinct V3 guest source inactive')
+            selected=dict(os.environ if environ is None else environ)
+            need(same_job_guest_route(selected) is SAME_JOB_ACTUAL_V3_ROUTE,
+                 'exact V3 guest job before host effects')
+            if args.mode=='same-job-guest-service-v3':
+                result,returned=same_job_guest_service(selected,route=SAME_JOB_ACTUAL_V3_ROUTE)
+            elif args.mode=='same-job-guest-cleanup-v3':
+                result,returned=same_job_guest_cleanup_v3(selected)
+                result={'pass':result['outsideTerminalObserved'] is True}
+            elif args.mode=='same-job-prepare-v3':
+                result,returned=same_job_preparation_child(selected)
+            elif args.mode=='same-job-bootstrap-v3':
+                returned=controller_bootstrap(SameJobBootstrapOps(selected))
+                need(isinstance(returned,FirstFailure),'V3 bootstrap returned without failure')
+                returned.add(RuntimeError('V3 bootstrap exec cannot return'),
+                             'same-job-v3-bootstrap-return')
+                result={'pass':False}
+            else:
+                ops,returned=controller_execute(SameJobControllerOps(selected))
+                result={'pass':returned.first is None and returned.secondary==[] and
+                    ops.unprivileged is True and ops.paths_admitted is True and
+                    set(ops.processes)=={'js','qemu'} and ops.source_after is not None and
+                    ops.runtime_after is not None}
+            need(isinstance(returned,FirstFailure),'V3 authoritative failure')
+            if result['pass'] is True and returned.first is None and returned.secondary==[]:
+                return 0
+            failure.adopt(returned.first,returned.secondary)
+            if failure.first is None:failure.add(ValueError('V3 mode incomplete'),'same-job-v3-cli')
+            raise ObservedFailure(failure.first,failure.secondary)
+        if args.mode in ('same-job-image-shell-v2','same-job-cleanup-v2','same-job-setup-v2'):
+            need(SAME_JOB_ACTUAL_V2_ENABLED is True,'distinct V2 source inactive')
+            selected=dict(os.environ if environ is None else environ)
+            if args.mode=='same-job-image-shell-v2':
+                return setup_v8_image_shell(selected,SAME_JOB_ACTUAL_V2_ROUTE)
+            if args.mode=='same-job-cleanup-v2':
+                return setup_v8_outside_cleanup(selected,SAME_JOB_ACTUAL_V2_ROUTE)
+            return setup_v8_entry(selected,SAME_JOB_ACTUAL_V2_ROUTE)
+        if args.mode in ('same-job-guest-service-v2','same-job-prepare-v2',
+                         'same-job-bootstrap-v2','same-job-controller-v2',
+                         'same-job-guest-cleanup-v2'):
+            need(SAME_JOB_ACTUAL_V2_ENABLED is True,'distinct V2 guest source inactive')
+            selected=dict(os.environ if environ is None else environ)
+            need(same_job_guest_route(selected) is SAME_JOB_ACTUAL_V2_ROUTE,
+                 'exact V2 guest job before host effects')
+            if args.mode=='same-job-guest-service-v2':
+                result,returned=same_job_guest_service(selected,route=SAME_JOB_ACTUAL_V2_ROUTE)
+            elif args.mode=='same-job-guest-cleanup-v2':
+                result,returned=same_job_guest_cleanup(selected,route=SAME_JOB_ACTUAL_V2_ROUTE)
+                result={'pass':result['outsideTerminalObserved'] is True}
+            elif args.mode=='same-job-prepare-v2':
+                result,returned=same_job_preparation_child(selected)
+            elif args.mode=='same-job-bootstrap-v2':
+                returned=controller_bootstrap(SameJobBootstrapOps(selected))
+                need(isinstance(returned,FirstFailure),'V2 bootstrap returned without failure')
+                returned.add(RuntimeError('V2 bootstrap exec cannot return'),
+                             'same-job-v2-bootstrap-return')
+                result={'pass':False}
+            else:
+                ops,returned=controller_execute(SameJobControllerOps(selected))
+                result={'pass':returned.first is None and returned.secondary==[] and
+                    ops.unprivileged is True and ops.paths_admitted is True and
+                    set(ops.processes)=={'js','qemu'} and ops.source_after is not None and
+                    ops.runtime_after is not None}
+            need(isinstance(returned,FirstFailure),'V2 authoritative failure')
+            if result['pass'] is True and returned.first is None and returned.secondary==[]:
+                return 0
+            failure.adopt(returned.first,returned.secondary)
+            if failure.first is None:failure.add(ValueError('V2 mode incomplete'),'same-job-v2-cli')
+            raise ObservedFailure(failure.first,failure.secondary)
+        if args.mode=='same-job-image-shell-v1':
+            need(SAME_JOB_ACTUAL_ENABLED is True,'distinct same-job actual source inactive')
+            return setup_v8_image_shell(dict(os.environ if environ is None else environ),SAME_JOB_ACTUAL_ROUTE)
+        if args.mode=='same-job-cleanup-v1':
+            need(SAME_JOB_ACTUAL_ENABLED is True,'distinct same-job actual source inactive')
+            return setup_v8_outside_cleanup(dict(os.environ if environ is None else environ),SAME_JOB_ACTUAL_ROUTE)
+        if args.mode=='same-job-setup-v1':
+            need(SAME_JOB_ACTUAL_ENABLED is True,'distinct same-job actual source inactive')
+            return setup_v8_entry(dict(os.environ if environ is None else environ),SAME_JOB_ACTUAL_ROUTE)
+        if args.mode in ('same-job-guest-service-v1','same-job-prepare-v1',
+                         'same-job-bootstrap-v1','same-job-controller-v1',
+                         'same-job-guest-cleanup-v1'):
+            need(SAME_JOB_ACTUAL_ENABLED is True,'distinct same-job guest source inactive')
+            selected=dict(os.environ if environ is None else environ)
+            if args.mode=='same-job-guest-service-v1':
+                result,returned=same_job_guest_service(selected)
+            elif args.mode=='same-job-guest-cleanup-v1':
+                result,returned=same_job_guest_cleanup(selected)
+                result={'pass':result['outsideTerminalObserved'] is True}
+            elif args.mode=='same-job-prepare-v1':
+                result,returned=same_job_preparation_child(selected)
+            elif args.mode=='same-job-bootstrap-v1':
+                returned=controller_bootstrap(SameJobBootstrapOps(selected))
+                need(isinstance(returned,FirstFailure),
+                     'actual bootstrap returned without authoritative failure')
+                returned.add(RuntimeError('actual bootstrap exec cannot return'),
+                             'same-job-bootstrap-return')
+                result={'pass':False}
+            else:
+                ops,returned=controller_execute(SameJobControllerOps(selected))
+                result={'pass':returned.first is None and returned.secondary==[] and
+                    ops.unprivileged is True and ops.paths_admitted is True and
+                    set(ops.processes)=={'js','qemu'} and ops.source_after is not None and
+                    ops.runtime_after is not None}
+            need(isinstance(returned,FirstFailure),'same-job authoritative failure')
+            if result['pass'] is True and returned.first is None and returned.secondary==[]:
+                return 0
+            failure.adopt(returned.first,returned.secondary)
+            if failure.first is None:failure.add(ValueError('actual mode incomplete'),'same-job-cli')
+            raise ObservedFailure(failure.first,failure.secondary)
         if args.mode=='host-baseline-shell-v1':
             need(HOST_BASELINE_ENABLED is True,'baseline shell disabled')
             return host_baseline_shell(dict(os.environ if environ is None else environ))

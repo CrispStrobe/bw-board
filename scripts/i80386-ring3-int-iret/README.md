@@ -1700,3 +1700,65 @@ The combined artifact cap is 32 MiB, while old leaf caps stay fixed. The
 runtime sufficiency. Implementation and selection wait for the merged claim,
 source controls, exact-head CI and separate official admission. All actual
 and compiler guards remain false at this checkpoint.
+
+### Inactive same-job source candidate — 2026-10-24
+
+The claim has merged. A new inactive route now has a distinct actual request,
+two serial service entries, a retained setup handoff, fresh runtime readbacks,
+the existing twenty-role authored packet, and independent local and official
+readers. Pure controls connect the setup/inventory handoff, serial controller,
+packet finalizer and local reader with manufactured OS and guest outputs. They
+do not establish an official event, hosted setup, guest execution or a
+qualified architectural result. The new producer, reader and workflow guards
+remain false, as do the compiler and older actual guards. The official reader
+requires separately admitted run, job, log and exact artifact bytes and still
+leaves actual-run approval false.
+
+### Selectable same-job source checkpoint
+
+The new same-job producer, independent reader and owned-label workflow guard
+are enabled after source review. The distinct request, variables, label and
+event remain unselected. Pure controls use manufactured OS, package and guest
+facts; they grant no hosted setup, guest or official artifact approval. The
+older actual and compiler guards remain false. Exact-head hosted checks and
+separately admitted official originals are still required.
+
+The fixed QEMU comparator uses `-cpu 486` for the authored instruction subset
+shared with the intended 386 guest. A matching QEMU result would qualify those
+authored cases only; it would not establish complete 386DX behavior, a booted
+operating system, or physical timing accuracy.
+
+Selection requires successful enabled checks on the exact source head, a newly
+bound canonical request and source roster, and separate admission of the one
+owned event. In that same job, the first service must finish exact setup, stage
+Node once, retain its originals, and establish terminal cleanup. The handoff
+reader then binds the setup originals and selected runtime graph. The second
+service must recheck that graph before the serial JavaScript and QEMU cases;
+its twenty-role packet and terminal cleanup require independent local reading.
+Official run, job, step, log and artifact originals need a separate external
+join after the event. None of these later observations is supplied by source
+controls or by the earlier V9 metadata event.
+
+### Selectable distinct V2 actual candidate — 2026-10-24
+
+The V2 ownership claim has merged. The candidate retires the spent V1 execution guard and adds a separately guarded V2 request, event, job, two-service route and reader. Its post-reap dpkg census retains at most six raw samples within five monotonic seconds; only the final exact controller-only sample permits progress. Earlier extra members remain recorded without an assigned identity. A failed read, changed unit or resource limit, persistent member or expired deadline refuses progress to configure, Node or the guest; the existing exact policy and outside cleanup still run.
+
+The V2 handoff carries the fixed reviewed comparison object. Pure controls pass CLI-produced handoff bytes through the producer parser, mocked two-service composition, twenty-role packet and independent local and official readers. The official facts in those controls are manufactured. At this earlier source checkpoint the V2 guards were enabled and its event was unselected. The later selected V2 failure is recorded below; these source controls alone establish no hosted or architectural result.
+
+### Inactive V3 manual-tree cleanup candidate — 2026-10-24
+
+The selected V2 event has been consumed. Its setup and two guest children ran,
+but the unchanged positive reader refuses the retained QEMU disagreement and
+the outside cleanup's present manual cgroup root. The V3 claim has merged. This
+source candidate has a distinct request, event and job, and retires only the
+spent V2 execution gate. V3 producer, reader and workflow guards remain false.
+
+V3 cleanup binds the four run-owned cgroup directories to the retained resource
+original, checks empty processes and threads through held no-follow
+descriptors, and records ordered removal and absence facts. Only dying-only
+root accounting may receive up to six read-only samples over five seconds.
+The whole outside original remains capped at 16 KiB. Mocked source controls
+exercise setup, the serial authored children, the twenty-role finalizer,
+outside cleanup and independent readers; they are not host or guest results.
+The known QEMU disagreement remains a strict refusal, including after any
+future clean V3 cleanup.

@@ -63,6 +63,29 @@ source checkpoint; the proposed combined job is bounded at 35 minutes and a
 old leaf limit. A later result must be tied to a distinct actual event and
 independently audited originals.
 
+## Inactive same-job source checkpoint — 2026-10-24
+
+The claim merged. A source candidate now contains the distinct two-service
+actual route and independent readers. Its connected pure controls use
+manufactured OS and guest outputs to check setup handoff, serial controller,
+the twenty-role finalizer and local packet admission. This is source-only
+evidence: no same-job actual event, hosted guest, official original or
+architectural result exists. The actual and compiler guards remain false.
+
+## Selectable same-job source checkpoint — 2026-10-24
+
+The distinct same-job source, reader and workflow guards are now enabled
+behind an owned, explicit label and canonical request. This is a source
+checkpoint only: the label is unselected, the exact-head hosted checks are
+pending, and no same-job guest has run. Historical actual and compiler guards
+remain false. The manufactured controls and source review do not establish
+an official run or architectural result.
+
+## V1 failed setup and selectable V2 actual candidate — 2026-10-24
+
+The selected [V1 run](https://github.com/CrispStrobe/bw-board/actions/runs/40121786243) failed after the reaped unpack phase because its first cgroup census retained an additional, unidentified direct member. Configure, Node staging and guest execution did not follow. Its label is spent and its originals remain held.
+
+The new V2 source candidate records a bounded sequence of post-reap cgroup samples while keeping final acceptance controller-only with no nested or dying descendants. Mocked controls connect its independent first-service handoff to the second service, twenty-role packet and offline official reader. Those controls do not prove a hosted setup or guest result. The V2 source and workflow guards are enabled, but no V2 event has been selected; exact-head qualification and external one-shot admission remain pending.
 ## Selected same-job V2 result and proposed V3 cleanup
 
 The selected [V2 actual run](https://github.com/CrispStrobe/bw-board/actions/runs/40130461323)
@@ -81,3 +104,8 @@ change the fixture, expected bytes, CPU model, QEMU output or the V2 reader's
 refusal. V3 implementation, exact-head checks and one fresh independently
 audited event remain future work; clean cleanup alone would not resolve the
 observed JavaScript/QEMU disagreement.
+
+The V3 claim has since merged. An inactive source candidate is being reviewed
+with mocked cleanup and guest edges; no V3 event has been selected. The V2
+positive refusal and its original guest and cleanup facts remain the actual
+result. A source control pass does not settle the QEMU access-byte difference.

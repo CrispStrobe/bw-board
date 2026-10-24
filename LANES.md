@@ -6624,6 +6624,25 @@ then qualify exact-head CI and independently audit one separately selected
 official actual run before any guest result or merge. Preserve failures and
 all existing outcomes; this claim grants no setup replay or guest approval.
 
+### Inactive implementation checkpoint — 2026-10-24
+
+The claim merged before implementation. The owner has prepared an inactive
+candidate within these eight paths: a distinct same-job request and two
+serial services, retained setup handoff, reviewed graph recheck, authored
+twenty-role controller packet and separate readers. Pure mocked controls
+connect the producer, finalizer and independent local packet verdict, with
+all approval fields false. No new official event or hosted guest has run.
+The new actual, historical actual and compiler guards remain false until a
+separate reviewed source activation and exact-head qualification.
+
+### Selectable same-job source checkpoint — 2026-10-24
+
+After independent source review, the distinct same-job producer, reader and
+owned-label workflow guards are enabled. This activates source routing only:
+the new request, variables, label and event remain unselected, and no guest
+or hosted setup has run on this head. The older actual and compiler guards
+remain false. Exact-head source checks, separately reviewed one-shot inputs
+and independent official originals are required before any result.
 ## Distinct same-job Ring 3 V2 after retained unpack census failure — claim, 2026-10-24
 
 Owner: Codex x86 Ring 3. Claim only `LANES.md`, `docs/X86-NEXT-LANES.md`,
@@ -6696,6 +6715,9 @@ exact-head checks, one distinct owner-selected event and one independent
 original-only audit. This claim authorizes source work, not another V1 attempt
 or a guest result.
 
+### Selectable V2 source checkpoint — 2026-10-24
+
+The claimed eight-path source candidate now contains a distinct V2 route and independent reader, with its source and workflow guards enabled. The spent V1 execution guard is closed; its selected failure and original reader outcome remain historical. Connected pure controls use manufactured OS, package, cgroup and guest edges to exercise a retained first extra member, final strict census, genuine CLI handoff into the producer parser, serial controller/finalizer, and independent twenty-role and official-envelope readers. These tests establish source wiring only. Exact-head hosted checks, a new canonical request and separate one-shot event admission remain pending; no V2 event or guest result has been observed.
 ## Distinct same-job Ring 3 V3 manual-cgroup cleanup and V2 failure audit — claim, 2026-10-24
 
 Owner: Codex x86 Ring 3. Claim only `LANES.md`,
@@ -6780,6 +6802,18 @@ nonempty census, partial `rmdir`, first/secondary retention, source/event,
 runtime graph, guest packet and official originals. Then require all enabled
 exact-head source checks, one separately admitted V3 event, one acquisition of
 each official original and independent review before any result or merge.
+
+### Inactive V3 source checkpoint — 2026-10-24
+
+The V3 claim has merged. An owned source candidate now has separate V3 route,
+workflow and independent reader guards, all false. The spent V2 execution guard
+is false; its strict positive reader and retained originals remain. Pure
+controls with mocked host and guest edges traverse a V3 first service and
+handoff, serial children, twenty-role finalizer, FD-relative four-role cleanup
+and local and manufactured official reader joins. They confer no hosted or
+architectural approval. The known V2 QEMU access-byte disagreement remains a
+strict refusal. Source review, exact-head qualification and a new one-shot
+admission are pending; no V3 event is selected.
 
 ## Bochs CPU3 Ring 3 reference build and unchanged-wire capture — claim, 2026-10-24
 

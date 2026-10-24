@@ -14,6 +14,654 @@ concurrency:
   group: ring3-source-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
   cancel-in-progress: false
 jobs:
+  # Distinct V3 actual route; one event still requires external admission.
+  ring3-same-job-actual-v3:
+    if: ${{ false && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-same-job-actual-v3' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256: ${{ vars.BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256 }}
+      BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_B64: ${{ vars.BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_B64 }}
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      PYTHONPATH: ''
+      PYTHONHOME: ''
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Bounded same-job setup and authored guest
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git --no-replace-objects -c gc.auto=0 -c maintenance.auto=false rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          git diff --quiet
+          git diff --cached --quiet
+          BW_EXPECTED_TREE="$(git --no-replace-objects -c gc.auto=0 -c maintenance.auto=false rev-parse 'HEAD^{tree}')"
+          export BW_EXPECTED_TREE
+          ring3_setup_uid="$(id -u)"
+          ring3_setup_gid="$(id -g)"
+          mkdir -p build
+          mkdir -m 700 build/i80386-ring3-same-job-actual-v3
+          /usr/bin/python3 -I -S -B scripts/i80386-ring3-int-iret/run.py --same-job-image-shell-v3 \
+            > build/i80386-ring3-same-job-actual-v3/shell-image.original.json
+          ring3_v9_service() {
+            sudo -- /usr/bin/timeout --kill-after=5s 720s /usr/bin/systemd-run --wait --pipe \
+            --unit="bw-ring3-actual-setup-v3-${GITHUB_RUN_ID}-1" \
+            --property=CPUQuota=100% --property=MemoryMax=1073741824 \
+            --property=MemorySwapMax=0 --property=TasksMax=64 \
+            --property=RuntimeMaxSec=660 --property=TimeoutStopSec=5 \
+            --working-directory="$PWD" \
+            /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+            SUDO_UID="$ring3_setup_uid" SUDO_GID="$ring3_setup_gid" \
+            BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+            BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256="$BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256" \
+            BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_B64="$BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_B64" \
+            GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+            GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+            GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+            GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" ImageOS="${ImageOS-}" ImageVersion="${ImageVersion-}" \
+            /usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/run.py --same-job-setup-v3
+          }
+          # The unprivileged runner shell owns the retained output files.
+          set +e
+          ring3_v9_service \
+            > build/i80386-ring3-same-job-actual-v3/inventory.original.log \
+            2> build/i80386-ring3-same-job-actual-v3/controller.stderr
+          ring3_setup_exit="$?"
+          set -e
+          ring3_v9_cleanup() {
+            sudo -- /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+            GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+            GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+            GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+            GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" \
+            BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+            BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256="$BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256" \
+            BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_B64="$BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_B64" \
+            BW_SYSTEMD_RUN_EXIT_CODE="$ring3_setup_exit" \
+            /usr/bin/timeout --kill-after=5s 55s /usr/bin/python3 -I -B \
+            scripts/i80386-ring3-int-iret/run.py --same-job-cleanup-v3
+          }
+          set +e
+          ring3_v9_cleanup \
+            > build/i80386-ring3-same-job-actual-v3/outside-cleanup.original.json \
+            2> build/i80386-ring3-same-job-actual-v3/outside-cleanup.stderr
+          ring3_cleanup_exit="$?"
+          set -e
+          ring3_setup_unit="/sys/fs/cgroup/system.slice/bw-ring3-actual-setup-v3-${GITHUB_RUN_ID}-1.service"
+          ring3_setup_after=absent
+          if test -e "$ring3_setup_unit"; then ring3_setup_after=present; fi
+          /usr/bin/python3 -I -S -B -c 'import json,sys; print(json.dumps({"schema":"bw.ring3.same-job-setup-outer-terminal.v3","runId":sys.argv[1],"unit":sys.argv[2],"systemdRunExitCode":int(sys.argv[3]),"outsideCleanupExitCode":int(sys.argv[4]),"cgroupAfter":sys.argv[5]},sort_keys=True,separators=(",",":")))' \
+            "$GITHUB_RUN_ID" "$ring3_setup_unit" "$ring3_setup_exit" "$ring3_cleanup_exit" "$ring3_setup_after" \
+            > build/i80386-ring3-same-job-actual-v3/outer.original.json
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v3/shell-image.original.json)" -le 4096
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v3/inventory.original.log)" -le 8388608
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v3/controller.stderr)" -le 131072
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v3/outside-cleanup.original.json)" -le 16384
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v3/outside-cleanup.stderr)" -le 131072
+          test "$ring3_setup_exit" -eq 0
+          test "$ring3_cleanup_exit" -eq 0
+          test "$ring3_setup_after" = absent
+          # Preserve one independently checked setup graph for the second service.
+          ring3_handoff=build/i80386-ring3-same-job-actual-v3/handoff.original.json
+          ring3_workflow_sha="$(sha256sum .github/workflows/i80386-ring3-int-iret.yml | cut -d ' ' -f 1)"
+          umask 0377
+          set -C
+          /usr/bin/python3 -I -S -B scripts/i80386-ring3-int-iret/reader.py --same-job-handoff-v3 \
+            --setup-log build/i80386-ring3-same-job-actual-v3/inventory.original.log \
+            --outer build/i80386-ring3-same-job-actual-v3/outer.original.json \
+            --cleanup build/i80386-ring3-same-job-actual-v3/outside-cleanup.original.json \
+            --shell build/i80386-ring3-same-job-actual-v3/shell-image.original.json \
+            --request-sha "$BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256" \
+            --run-id "$GITHUB_RUN_ID" --head "$BW_EXPECTED_HEAD" --tree "$BW_EXPECTED_TREE" \
+            --workflow-sha "$GITHUB_WORKFLOW_SHA" --workflow-file-sha "$ring3_workflow_sha" \
+            --invoker-uid "$ring3_setup_uid" --invoker-gid "$ring3_setup_gid" \
+            > "$ring3_handoff"
+          test "$(stat -c %s "$ring3_handoff")" -le 1048576
+          test "$(stat -c %a "$ring3_handoff")" = 400
+          BW_RING3_SAME_JOB_HANDOFF_SHA256="$(sha256sum "$ring3_handoff" | cut -d ' ' -f 1)"
+          export BW_RING3_SAME_JOB_HANDOFF_SHA256
+          ring3_guest_service() {
+            sudo -- /usr/bin/timeout --kill-after=5s 780s /usr/bin/systemd-run --wait --pipe \
+              --unit="bw-ring3-actual-guest-v3-${GITHUB_RUN_ID}-1" \
+              --property=CPUQuota=100% --property=MemoryMax=1073741824 \
+              --property=MemorySwapMax=0 --property=TasksMax=64 \
+              --property=RuntimeMaxSec=720 --property=TimeoutStopSec=5 \
+              --working-directory="$PWD" \
+              /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+              SUDO_UID="$ring3_setup_uid" SUDO_GID="$ring3_setup_gid" \
+              BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+              BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256="$BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256" \
+              BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_B64="$BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_B64" \
+              BW_RING3_SAME_JOB_HANDOFF_SHA256="$BW_RING3_SAME_JOB_HANDOFF_SHA256" \
+              GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+              GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+              GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+              GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+              GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" ImageOS="${ImageOS-}" ImageVersion="${ImageVersion-}" \
+              /usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/run.py --same-job-guest-service-v3
+          }
+          set +e
+          ring3_guest_service \
+            > build/i80386-ring3-same-job-actual-v3/guest.stdout \
+            2> build/i80386-ring3-same-job-actual-v3/guest.stderr
+          ring3_guest_exit="$?"
+          set -e
+          ring3_guest_cleanup() {
+            sudo -- /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+              SUDO_UID="$ring3_setup_uid" SUDO_GID="$ring3_setup_gid" \
+              GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+              GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+              GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+              GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+              GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" \
+              BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+              BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256="$BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256" \
+              BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_B64="$BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_B64" \
+              BW_RING3_SAME_JOB_HANDOFF_SHA256="$BW_RING3_SAME_JOB_HANDOFF_SHA256" \
+              BW_SYSTEMD_RUN_EXIT_CODE="$ring3_guest_exit" \
+              /usr/bin/timeout --kill-after=5s 55s /usr/bin/python3 -I -B \
+              scripts/i80386-ring3-int-iret/run.py --same-job-guest-cleanup-v3
+          }
+          set +e
+          ring3_guest_cleanup \
+            > build/i80386-ring3-same-job-actual-v3/guest-cleanup.stdout \
+            2> build/i80386-ring3-same-job-actual-v3/guest-cleanup.stderr
+          ring3_guest_cleanup_exit="$?"
+          set -e
+          ring3_guest_unit="/sys/fs/cgroup/system.slice/bw-ring3-actual-guest-v3-${GITHUB_RUN_ID}-1.service"
+          ring3_guest_after=absent
+          if test -e "$ring3_guest_unit"; then ring3_guest_after=present; fi
+          /usr/bin/python3 -I -S -B -c 'import json,sys; print(json.dumps({"schema":"bw.ring3.same-job-guest-outer.v3","runId":sys.argv[1],"unit":sys.argv[2],"systemdRunExitCode":int(sys.argv[3]),"outsideCleanupExitCode":int(sys.argv[4]),"cgroupAfter":sys.argv[5]},sort_keys=True,separators=(",",":")))' \
+            "$GITHUB_RUN_ID" "$ring3_guest_unit" "$ring3_guest_exit" "$ring3_guest_cleanup_exit" "$ring3_guest_after" \
+            > build/i80386-ring3-same-job-actual-v3/guest-outer.original.json
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v3/guest.stdout)" -le 8388608
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v3/guest.stderr)" -le 131072
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v3/guest-cleanup.stdout)" -le 16384
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v3/guest-cleanup.stderr)" -le 131072
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v3/guest.service.original.json)" -le 1048576
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v3/guest.cleanup.original.json)" -le 1048576
+          test "$ring3_guest_exit" -eq 0
+          test "$ring3_guest_cleanup_exit" -eq 0
+          test "$ring3_guest_after" = absent
+          /usr/bin/python3 -I -S -B scripts/i80386-ring3-int-iret/reader.py --same-job-actual-packet-v3 \
+            --packet-dir build/i80386-ring3-int-iret-export \
+            --handoff "$ring3_handoff" \
+            --service build/i80386-ring3-same-job-actual-v3/guest.service.original.json \
+            --cleanup build/i80386-ring3-same-job-actual-v3/guest.cleanup.original.json \
+            --guest-outer build/i80386-ring3-same-job-actual-v3/guest-outer.original.json \
+            --controller-runtime build/i80386-ring3-int-iret-runtime/controller.runtime.json \
+            > build/i80386-ring3-same-job-actual-v3/guest-verdict.original.json
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v3/guest-verdict.original.json)" -le 1048576
+          test "$(du -sb build/i80386-ring3-same-job-actual-v3 build/i80386-ring3-int-iret-export build/i80386-ring3-int-iret-runtime | awk '{sum += $1} END {print sum}')" -le 33554432
+      - name: Bound retained same-job artifact after either outcome
+        id: same_job_archive_bound
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          roots=()
+          for role in build/i80386-ring3-same-job-actual-v3 build/i80386-ring3-int-iret-export build/i80386-ring3-int-iret-runtime; do
+            if test -d "$role" && ! test -L "$role"; then roots+=("$role"); fi
+          done
+          test "${#roots[@]}" -ge 1
+          test -z "$(find "${roots[@]}" ! -type f ! -type d -print -quit)"
+          total="$(du -sb "${roots[@]}" | awk '{sum += $1} END {print sum}')"
+          test "$total" -le 33554432
+          echo 'bounded=true' >> "$GITHUB_OUTPUT"
+      - name: Retain same-job setup and guest originals
+        if: always() && steps.same_job_archive_bound.outputs.bounded == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-ring3-same-job-actual-v3-originals
+          path: |
+            build/i80386-ring3-same-job-actual-v3/
+            build/i80386-ring3-int-iret-export/
+            build/i80386-ring3-int-iret-runtime/controller.runtime.json
+  # Distinct V2 actual route; one event still requires external admission.
+  ring3-same-job-actual-v2:
+    if: ${{ github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-same-job-actual-v2' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256: ${{ vars.BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256 }}
+      BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64: ${{ vars.BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64 }}
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      PYTHONPATH: ''
+      PYTHONHOME: ''
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Bounded same-job setup and authored guest
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git --no-replace-objects -c gc.auto=0 -c maintenance.auto=false rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          git diff --quiet
+          git diff --cached --quiet
+          BW_EXPECTED_TREE="$(git --no-replace-objects -c gc.auto=0 -c maintenance.auto=false rev-parse 'HEAD^{tree}')"
+          export BW_EXPECTED_TREE
+          ring3_setup_uid="$(id -u)"
+          ring3_setup_gid="$(id -g)"
+          mkdir -p build
+          mkdir -m 700 build/i80386-ring3-same-job-actual-v2
+          /usr/bin/python3 -I -S -B scripts/i80386-ring3-int-iret/run.py --same-job-image-shell-v2 \
+            > build/i80386-ring3-same-job-actual-v2/shell-image.original.json
+          ring3_v9_service() {
+            sudo -- /usr/bin/timeout --kill-after=5s 720s /usr/bin/systemd-run --wait --pipe \
+            --unit="bw-ring3-actual-setup-v2-${GITHUB_RUN_ID}-1" \
+            --property=CPUQuota=100% --property=MemoryMax=1073741824 \
+            --property=MemorySwapMax=0 --property=TasksMax=64 \
+            --property=RuntimeMaxSec=660 --property=TimeoutStopSec=5 \
+            --working-directory="$PWD" \
+            /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+            SUDO_UID="$ring3_setup_uid" SUDO_GID="$ring3_setup_gid" \
+            BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+            BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256="$BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256" \
+            BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64="$BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64" \
+            GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+            GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+            GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+            GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" ImageOS="${ImageOS-}" ImageVersion="${ImageVersion-}" \
+            /usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/run.py --same-job-setup-v2
+          }
+          # The unprivileged runner shell owns the retained output files.
+          set +e
+          ring3_v9_service \
+            > build/i80386-ring3-same-job-actual-v2/inventory.original.log \
+            2> build/i80386-ring3-same-job-actual-v2/controller.stderr
+          ring3_setup_exit="$?"
+          set -e
+          ring3_v9_cleanup() {
+            sudo -- /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+            GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+            GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+            GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+            GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" \
+            BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+            BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256="$BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256" \
+            BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64="$BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64" \
+            BW_SYSTEMD_RUN_EXIT_CODE="$ring3_setup_exit" \
+            /usr/bin/timeout --kill-after=5s 55s /usr/bin/python3 -I -B \
+            scripts/i80386-ring3-int-iret/run.py --same-job-cleanup-v2
+          }
+          set +e
+          ring3_v9_cleanup \
+            > build/i80386-ring3-same-job-actual-v2/outside-cleanup.original.json \
+            2> build/i80386-ring3-same-job-actual-v2/outside-cleanup.stderr
+          ring3_cleanup_exit="$?"
+          set -e
+          ring3_setup_unit="/sys/fs/cgroup/system.slice/bw-ring3-actual-setup-v2-${GITHUB_RUN_ID}-1.service"
+          ring3_setup_after=absent
+          if test -e "$ring3_setup_unit"; then ring3_setup_after=present; fi
+          /usr/bin/python3 -I -S -B -c 'import json,sys; print(json.dumps({"schema":"bw.ring3.same-job-setup-outer-terminal.v2","runId":sys.argv[1],"unit":sys.argv[2],"systemdRunExitCode":int(sys.argv[3]),"outsideCleanupExitCode":int(sys.argv[4]),"cgroupAfter":sys.argv[5]},sort_keys=True,separators=(",",":")))' \
+            "$GITHUB_RUN_ID" "$ring3_setup_unit" "$ring3_setup_exit" "$ring3_cleanup_exit" "$ring3_setup_after" \
+            > build/i80386-ring3-same-job-actual-v2/outer.original.json
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v2/shell-image.original.json)" -le 4096
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v2/inventory.original.log)" -le 8388608
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v2/controller.stderr)" -le 131072
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v2/outside-cleanup.original.json)" -le 16384
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v2/outside-cleanup.stderr)" -le 131072
+          test "$ring3_setup_exit" -eq 0
+          test "$ring3_cleanup_exit" -eq 0
+          test "$ring3_setup_after" = absent
+          # Preserve one independently checked setup graph for the second service.
+          ring3_handoff=build/i80386-ring3-same-job-actual-v2/handoff.original.json
+          ring3_workflow_sha="$(sha256sum .github/workflows/i80386-ring3-int-iret.yml | cut -d ' ' -f 1)"
+          umask 0377
+          set -C
+          /usr/bin/python3 -I -S -B scripts/i80386-ring3-int-iret/reader.py --same-job-handoff-v2 \
+            --setup-log build/i80386-ring3-same-job-actual-v2/inventory.original.log \
+            --outer build/i80386-ring3-same-job-actual-v2/outer.original.json \
+            --cleanup build/i80386-ring3-same-job-actual-v2/outside-cleanup.original.json \
+            --shell build/i80386-ring3-same-job-actual-v2/shell-image.original.json \
+            --request-sha "$BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256" \
+            --run-id "$GITHUB_RUN_ID" --head "$BW_EXPECTED_HEAD" --tree "$BW_EXPECTED_TREE" \
+            --workflow-sha "$GITHUB_WORKFLOW_SHA" --workflow-file-sha "$ring3_workflow_sha" \
+            --invoker-uid "$ring3_setup_uid" --invoker-gid "$ring3_setup_gid" \
+            > "$ring3_handoff"
+          test "$(stat -c %s "$ring3_handoff")" -le 1048576
+          test "$(stat -c %a "$ring3_handoff")" = 400
+          BW_RING3_SAME_JOB_HANDOFF_SHA256="$(sha256sum "$ring3_handoff" | cut -d ' ' -f 1)"
+          export BW_RING3_SAME_JOB_HANDOFF_SHA256
+          ring3_guest_service() {
+            sudo -- /usr/bin/timeout --kill-after=5s 780s /usr/bin/systemd-run --wait --pipe \
+              --unit="bw-ring3-actual-guest-v2-${GITHUB_RUN_ID}-1" \
+              --property=CPUQuota=100% --property=MemoryMax=1073741824 \
+              --property=MemorySwapMax=0 --property=TasksMax=64 \
+              --property=RuntimeMaxSec=720 --property=TimeoutStopSec=5 \
+              --working-directory="$PWD" \
+              /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+              SUDO_UID="$ring3_setup_uid" SUDO_GID="$ring3_setup_gid" \
+              BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+              BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256="$BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256" \
+              BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64="$BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64" \
+              BW_RING3_SAME_JOB_HANDOFF_SHA256="$BW_RING3_SAME_JOB_HANDOFF_SHA256" \
+              GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+              GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+              GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+              GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+              GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" ImageOS="${ImageOS-}" ImageVersion="${ImageVersion-}" \
+              /usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/run.py --same-job-guest-service-v2
+          }
+          set +e
+          ring3_guest_service \
+            > build/i80386-ring3-same-job-actual-v2/guest.stdout \
+            2> build/i80386-ring3-same-job-actual-v2/guest.stderr
+          ring3_guest_exit="$?"
+          set -e
+          ring3_guest_cleanup() {
+            sudo -- /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+              SUDO_UID="$ring3_setup_uid" SUDO_GID="$ring3_setup_gid" \
+              GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+              GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+              GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+              GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+              GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" \
+              BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+              BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256="$BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256" \
+              BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64="$BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64" \
+              BW_RING3_SAME_JOB_HANDOFF_SHA256="$BW_RING3_SAME_JOB_HANDOFF_SHA256" \
+              BW_SYSTEMD_RUN_EXIT_CODE="$ring3_guest_exit" \
+              /usr/bin/timeout --kill-after=5s 55s /usr/bin/python3 -I -B \
+              scripts/i80386-ring3-int-iret/run.py --same-job-guest-cleanup-v2
+          }
+          set +e
+          ring3_guest_cleanup \
+            > build/i80386-ring3-same-job-actual-v2/guest-cleanup.stdout \
+            2> build/i80386-ring3-same-job-actual-v2/guest-cleanup.stderr
+          ring3_guest_cleanup_exit="$?"
+          set -e
+          ring3_guest_unit="/sys/fs/cgroup/system.slice/bw-ring3-actual-guest-v2-${GITHUB_RUN_ID}-1.service"
+          ring3_guest_after=absent
+          if test -e "$ring3_guest_unit"; then ring3_guest_after=present; fi
+          /usr/bin/python3 -I -S -B -c 'import json,sys; print(json.dumps({"schema":"bw.ring3.same-job-guest-outer.v2","runId":sys.argv[1],"unit":sys.argv[2],"systemdRunExitCode":int(sys.argv[3]),"outsideCleanupExitCode":int(sys.argv[4]),"cgroupAfter":sys.argv[5]},sort_keys=True,separators=(",",":")))' \
+            "$GITHUB_RUN_ID" "$ring3_guest_unit" "$ring3_guest_exit" "$ring3_guest_cleanup_exit" "$ring3_guest_after" \
+            > build/i80386-ring3-same-job-actual-v2/guest-outer.original.json
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v2/guest.stdout)" -le 8388608
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v2/guest.stderr)" -le 131072
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v2/guest-cleanup.stdout)" -le 16384
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v2/guest-cleanup.stderr)" -le 131072
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v2/guest.service.original.json)" -le 1048576
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v2/guest.cleanup.original.json)" -le 1048576
+          test "$ring3_guest_exit" -eq 0
+          test "$ring3_guest_cleanup_exit" -eq 0
+          test "$ring3_guest_after" = absent
+          /usr/bin/python3 -I -S -B scripts/i80386-ring3-int-iret/reader.py --same-job-actual-packet-v2 \
+            --packet-dir build/i80386-ring3-int-iret-export \
+            --handoff "$ring3_handoff" \
+            --service build/i80386-ring3-same-job-actual-v2/guest.service.original.json \
+            --cleanup build/i80386-ring3-same-job-actual-v2/guest.cleanup.original.json \
+            --guest-outer build/i80386-ring3-same-job-actual-v2/guest-outer.original.json \
+            --controller-runtime build/i80386-ring3-int-iret-runtime/controller.runtime.json \
+            > build/i80386-ring3-same-job-actual-v2/guest-verdict.original.json
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v2/guest-verdict.original.json)" -le 1048576
+          test "$(du -sb build/i80386-ring3-same-job-actual-v2 build/i80386-ring3-int-iret-export build/i80386-ring3-int-iret-runtime | awk '{sum += $1} END {print sum}')" -le 33554432
+      - name: Bound retained same-job artifact after either outcome
+        id: same_job_archive_bound
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          roots=()
+          for role in build/i80386-ring3-same-job-actual-v2 build/i80386-ring3-int-iret-export build/i80386-ring3-int-iret-runtime; do
+            if test -d "$role" && ! test -L "$role"; then roots+=("$role"); fi
+          done
+          test "${#roots[@]}" -ge 1
+          test -z "$(find "${roots[@]}" ! -type f ! -type d -print -quit)"
+          total="$(du -sb "${roots[@]}" | awk '{sum += $1} END {print sum}')"
+          test "$total" -le 33554432
+          echo 'bounded=true' >> "$GITHUB_OUTPUT"
+      - name: Retain same-job setup and guest originals
+        if: always() && steps.same_job_archive_bound.outputs.bounded == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-ring3-same-job-actual-v2-originals
+          path: |
+            build/i80386-ring3-same-job-actual-v2/
+            build/i80386-ring3-int-iret-export/
+            build/i80386-ring3-int-iret-runtime/controller.runtime.json
+  # Distinct selected-only actual route: two serial services, one staged Node copy.
+  ring3-same-job-actual-v1:
+    if: ${{ false && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-same-job-actual-v1' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256: ${{ vars.BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256 }}
+      BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64: ${{ vars.BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64 }}
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+      LD_PRELOAD: ''
+      LD_AUDIT: ''
+      PYTHONPATH: ''
+      PYTHONHOME: ''
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Bounded same-job setup and authored guest
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git --no-replace-objects -c gc.auto=0 -c maintenance.auto=false rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          git diff --quiet
+          git diff --cached --quiet
+          BW_EXPECTED_TREE="$(git --no-replace-objects -c gc.auto=0 -c maintenance.auto=false rev-parse 'HEAD^{tree}')"
+          export BW_EXPECTED_TREE
+          ring3_setup_uid="$(id -u)"
+          ring3_setup_gid="$(id -g)"
+          mkdir -p build
+          mkdir -m 700 build/i80386-ring3-same-job-actual-v1
+          /usr/bin/python3 -I -S -B scripts/i80386-ring3-int-iret/run.py --same-job-image-shell-v1 \
+            > build/i80386-ring3-same-job-actual-v1/shell-image.original.json
+          ring3_v9_service() {
+            sudo -- /usr/bin/timeout --kill-after=5s 720s /usr/bin/systemd-run --wait --pipe \
+            --unit="bw-ring3-actual-setup-v1-${GITHUB_RUN_ID}-1" \
+            --property=CPUQuota=100% --property=MemoryMax=1073741824 \
+            --property=MemorySwapMax=0 --property=TasksMax=64 \
+            --property=RuntimeMaxSec=660 --property=TimeoutStopSec=5 \
+            --working-directory="$PWD" \
+            /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+            SUDO_UID="$ring3_setup_uid" SUDO_GID="$ring3_setup_gid" \
+            BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+            BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256="$BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256" \
+            BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64="$BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64" \
+            GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+            GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+            GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+            GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" ImageOS="${ImageOS-}" ImageVersion="${ImageVersion-}" \
+            /usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/run.py --same-job-setup-v1
+          }
+          # The unprivileged runner shell owns the retained output files.
+          set +e
+          ring3_v9_service \
+            > build/i80386-ring3-same-job-actual-v1/inventory.original.log \
+            2> build/i80386-ring3-same-job-actual-v1/controller.stderr
+          ring3_setup_exit="$?"
+          set -e
+          ring3_v9_cleanup() {
+            sudo -- /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+            GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+            GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+            GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+            GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" \
+            BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+            BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256="$BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256" \
+            BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64="$BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64" \
+            BW_SYSTEMD_RUN_EXIT_CODE="$ring3_setup_exit" \
+            /usr/bin/timeout --kill-after=5s 55s /usr/bin/python3 -I -B \
+            scripts/i80386-ring3-int-iret/run.py --same-job-cleanup-v1
+          }
+          set +e
+          ring3_v9_cleanup \
+            > build/i80386-ring3-same-job-actual-v1/outside-cleanup.original.json \
+            2> build/i80386-ring3-same-job-actual-v1/outside-cleanup.stderr
+          ring3_cleanup_exit="$?"
+          set -e
+          ring3_setup_unit="/sys/fs/cgroup/system.slice/bw-ring3-actual-setup-v1-${GITHUB_RUN_ID}-1.service"
+          ring3_setup_after=absent
+          if test -e "$ring3_setup_unit"; then ring3_setup_after=present; fi
+          /usr/bin/python3 -I -S -B -c 'import json,sys; print(json.dumps({"schema":"bw.ring3.same-job-setup-outer-terminal.v1","runId":sys.argv[1],"unit":sys.argv[2],"systemdRunExitCode":int(sys.argv[3]),"outsideCleanupExitCode":int(sys.argv[4]),"cgroupAfter":sys.argv[5]},sort_keys=True,separators=(",",":")))' \
+            "$GITHUB_RUN_ID" "$ring3_setup_unit" "$ring3_setup_exit" "$ring3_cleanup_exit" "$ring3_setup_after" \
+            > build/i80386-ring3-same-job-actual-v1/outer.original.json
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v1/shell-image.original.json)" -le 4096
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v1/inventory.original.log)" -le 8388608
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v1/controller.stderr)" -le 131072
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v1/outside-cleanup.original.json)" -le 16384
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v1/outside-cleanup.stderr)" -le 131072
+          test "$ring3_setup_exit" -eq 0
+          test "$ring3_cleanup_exit" -eq 0
+          test "$ring3_setup_after" = absent
+          # Preserve one independently checked setup graph for the second service.
+          ring3_handoff=build/i80386-ring3-same-job-actual-v1/handoff.original.json
+          ring3_workflow_sha="$(sha256sum .github/workflows/i80386-ring3-int-iret.yml | cut -d ' ' -f 1)"
+          umask 0377
+          set -C
+          /usr/bin/python3 -I -S -B scripts/i80386-ring3-int-iret/reader.py --same-job-handoff-v1 \
+            --setup-log build/i80386-ring3-same-job-actual-v1/inventory.original.log \
+            --outer build/i80386-ring3-same-job-actual-v1/outer.original.json \
+            --cleanup build/i80386-ring3-same-job-actual-v1/outside-cleanup.original.json \
+            --shell build/i80386-ring3-same-job-actual-v1/shell-image.original.json \
+            --request-sha "$BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256" \
+            --run-id "$GITHUB_RUN_ID" --head "$BW_EXPECTED_HEAD" --tree "$BW_EXPECTED_TREE" \
+            --workflow-sha "$GITHUB_WORKFLOW_SHA" --workflow-file-sha "$ring3_workflow_sha" \
+            --invoker-uid "$ring3_setup_uid" --invoker-gid "$ring3_setup_gid" \
+            > "$ring3_handoff"
+          test "$(stat -c %s "$ring3_handoff")" -le 1048576
+          test "$(stat -c %a "$ring3_handoff")" = 400
+          BW_RING3_SAME_JOB_HANDOFF_SHA256="$(sha256sum "$ring3_handoff" | cut -d ' ' -f 1)"
+          export BW_RING3_SAME_JOB_HANDOFF_SHA256
+          ring3_guest_service() {
+            sudo -- /usr/bin/timeout --kill-after=5s 780s /usr/bin/systemd-run --wait --pipe \
+              --unit="bw-ring3-actual-guest-v1-${GITHUB_RUN_ID}-1" \
+              --property=CPUQuota=100% --property=MemoryMax=1073741824 \
+              --property=MemorySwapMax=0 --property=TasksMax=64 \
+              --property=RuntimeMaxSec=720 --property=TimeoutStopSec=5 \
+              --working-directory="$PWD" \
+              /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+              SUDO_UID="$ring3_setup_uid" SUDO_GID="$ring3_setup_gid" \
+              BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+              BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256="$BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256" \
+              BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64="$BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64" \
+              BW_RING3_SAME_JOB_HANDOFF_SHA256="$BW_RING3_SAME_JOB_HANDOFF_SHA256" \
+              GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+              GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+              GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+              GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+              GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" ImageOS="${ImageOS-}" ImageVersion="${ImageVersion-}" \
+              /usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/run.py --same-job-guest-service-v1
+          }
+          set +e
+          ring3_guest_service \
+            > build/i80386-ring3-same-job-actual-v1/guest.stdout \
+            2> build/i80386-ring3-same-job-actual-v1/guest.stderr
+          ring3_guest_exit="$?"
+          set -e
+          ring3_guest_cleanup() {
+            sudo -- /usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin \
+              SUDO_UID="$ring3_setup_uid" SUDO_GID="$ring3_setup_gid" \
+              GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" \
+              GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+              GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" \
+              GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" \
+              GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" \
+              BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_EXPECTED_TREE="$BW_EXPECTED_TREE" \
+              BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256="$BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256" \
+              BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64="$BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64" \
+              BW_RING3_SAME_JOB_HANDOFF_SHA256="$BW_RING3_SAME_JOB_HANDOFF_SHA256" \
+              BW_SYSTEMD_RUN_EXIT_CODE="$ring3_guest_exit" \
+              /usr/bin/timeout --kill-after=5s 55s /usr/bin/python3 -I -B \
+              scripts/i80386-ring3-int-iret/run.py --same-job-guest-cleanup-v1
+          }
+          set +e
+          ring3_guest_cleanup \
+            > build/i80386-ring3-same-job-actual-v1/guest-cleanup.stdout \
+            2> build/i80386-ring3-same-job-actual-v1/guest-cleanup.stderr
+          ring3_guest_cleanup_exit="$?"
+          set -e
+          ring3_guest_unit="/sys/fs/cgroup/system.slice/bw-ring3-actual-guest-v1-${GITHUB_RUN_ID}-1.service"
+          ring3_guest_after=absent
+          if test -e "$ring3_guest_unit"; then ring3_guest_after=present; fi
+          /usr/bin/python3 -I -S -B -c 'import json,sys; print(json.dumps({"schema":"bw.ring3.same-job-guest-outer-terminal.v1","runId":sys.argv[1],"unit":sys.argv[2],"systemdRunExitCode":int(sys.argv[3]),"outsideCleanupExitCode":int(sys.argv[4]),"cgroupAfter":sys.argv[5]},sort_keys=True,separators=(",",":")))' \
+            "$GITHUB_RUN_ID" "$ring3_guest_unit" "$ring3_guest_exit" "$ring3_guest_cleanup_exit" "$ring3_guest_after" \
+            > build/i80386-ring3-same-job-actual-v1/guest-outer.original.json
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v1/guest.stdout)" -le 8388608
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v1/guest.stderr)" -le 131072
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v1/guest-cleanup.stdout)" -le 16384
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v1/guest-cleanup.stderr)" -le 131072
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v1/guest.service.original.json)" -le 1048576
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v1/guest.cleanup.original.json)" -le 1048576
+          test "$ring3_guest_exit" -eq 0
+          test "$ring3_guest_cleanup_exit" -eq 0
+          test "$ring3_guest_after" = absent
+          /usr/bin/python3 -I -S -B scripts/i80386-ring3-int-iret/reader.py --same-job-actual-packet-v1 \
+            --packet-dir build/i80386-ring3-int-iret-export \
+            --handoff "$ring3_handoff" \
+            --service build/i80386-ring3-same-job-actual-v1/guest.service.original.json \
+            --cleanup build/i80386-ring3-same-job-actual-v1/guest.cleanup.original.json \
+            --guest-outer build/i80386-ring3-same-job-actual-v1/guest-outer.original.json \
+            --controller-runtime build/i80386-ring3-int-iret-runtime/controller.runtime.json \
+            > build/i80386-ring3-same-job-actual-v1/guest-verdict.original.json
+          test "$(stat -c %s build/i80386-ring3-same-job-actual-v1/guest-verdict.original.json)" -le 1048576
+          test "$(du -sb build/i80386-ring3-same-job-actual-v1 build/i80386-ring3-int-iret-export build/i80386-ring3-int-iret-runtime | awk '{sum += $1} END {print sum}')" -le 33554432
+      - name: Bound retained same-job artifact after either outcome
+        id: same_job_archive_bound
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          roots=()
+          for role in build/i80386-ring3-same-job-actual-v1 build/i80386-ring3-int-iret-export build/i80386-ring3-int-iret-runtime; do
+            if test -d "$role" && ! test -L "$role"; then roots+=("$role"); fi
+          done
+          test "${#roots[@]}" -ge 1
+          test -z "$(find "${roots[@]}" ! -type f ! -type d -print -quit)"
+          total="$(du -sb "${roots[@]}" | awk '{sum += $1} END {print sum}')"
+          test "$total" -le 33554432
+          echo 'bounded=true' >> "$GITHUB_OUTPUT"
+      - name: Retain same-job setup and guest originals
+        if: always() && steps.same_job_archive_bound.outputs.bounded == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-ring3-same-job-actual-v1-originals
+          path: |
+            build/i80386-ring3-same-job-actual-v1/
+            build/i80386-ring3-int-iret-export/
+            build/i80386-ring3-int-iret-runtime/controller.runtime.json
   # Distinct data-only host observation; one-shot metadata event unselected.
   host-baseline-v1:
     if: ${{ github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-host-baseline-v1' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
@@ -589,6 +1237,8 @@ jobs:
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v7-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v8-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v9-only
+          /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --same-job-actual-only
+          /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --same-job-v3-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --image-env-diagnostic-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --host-baseline-only
           /usr/bin/python3 -B scripts/i80386-ring3-int-iret/run.py --controls
