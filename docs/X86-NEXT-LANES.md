@@ -3255,6 +3255,15 @@ docs-only claim before source implementation. Exact-head source CI, one fresh
 externally selected v7 event, one acquisition of each official original and a
 standalone complete-graph audit are required before any same-job guest work.
 
+The claim merged as [PR683](https://github.com/CrispStrobe/bw-board/pull/683).
+An inactive [PR645](https://github.com/CrispStrobe/bw-board/pull/645) source
+candidate now implements the separate v7 fifteen-probe route and a negative-only
+reader for the consumed v6 failure. Its pure controls check per-package path
+projection, fixed probe order, exact five package versions, bounded partial
+failure and cleanup. The v7 job and reader are still disabled; hosted source
+qualification, one externally admitted v7 metadata event and independent
+complete-graph audit remain ahead. Neither reader grants setup or guest approval.
+
 ## Ordered 16-bit scalar read candidate
 
 Claim status: the narrow source candidate was implemented and measured once,

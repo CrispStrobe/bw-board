@@ -6262,6 +6262,15 @@ one fresh v7 request/event, acquire each original once, and independently
 audit an entire setup and runtime graph before any separate same-job guest
 adapter is considered. No approval follows from this claim.
 
+Implementation status: [PR683](https://github.com/CrispStrobe/bw-board/pull/683)
+merged the claim. The source candidate for [PR645](https://github.com/CrispStrobe/bw-board/pull/645)
+adds the distinct v7 fifteen-probe metadata route and the separate consumed-v6
+negative-only reader. The v7 workflow, producer and success reader remain
+disabled pending source review and exact-head CI. Pure mock controls, including
+coherent order, package-version and clipped-prefix cuts, are source checks only.
+The consumed v6 event remains a failure, and no v7 metadata event or guest has
+been selected or qualified by this source candidate.
+
 ## Ordered ordinary-JS 16-bit scalar read — claim, 2026-10-24
 
 Owner: Codex x86 profiling, with Sol implementation after this claim merges.
