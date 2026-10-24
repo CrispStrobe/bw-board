@@ -2126,8 +2126,13 @@ def build_original(packet, request_raw, event_raw, *, job_log=None,
     members, runtime_elf, budget = runtime_assets(
         packet['runtime.original.zip'], manifest['runtimeMembers'],
         request['toolchain'], selected_source=request['source'], budget=budget)
-    require(strict_equal(manifest['elf'], runtime_elf['bin/bochs']) and
-            strict_equal(value['observations']['binary']['elf'],
+    observed_binary = fields(value['observations']['binary'],
+                             'path bytes sha256 elf')
+    require(observed_binary['path'] == 'bin/bochs' and
+            observed_binary['bytes'] == len(members['bin/bochs']) and
+            observed_binary['sha256'] == sha(members['bin/bochs']) and
+            strict_equal(manifest['elf'], runtime_elf['bin/bochs']) and
+            strict_equal(observed_binary['elf'],
                          runtime_elf['bin/bochs']) and
             strict_equal(value['observations']['runtimeManifest'],
                          parse_json(members['asset-manifest.json'], 4 << 20,
