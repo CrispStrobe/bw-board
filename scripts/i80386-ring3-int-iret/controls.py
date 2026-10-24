@@ -8170,6 +8170,25 @@ def same_job_actual_controls():
                     self.assertTrue(handoff['setupObserved'])
                     self.assertEqual(handoff['candidateSha256'],mock_graph['sha256'])
                     self.assertFalse(handoff['actualGuestApproved'])
+                    held={'setup':wire.getvalue(),'outer':outer,'cleanup':cleanup,'shell':shell}
+                    argv=['reader.py','--same-job-handoff-v1','--setup-log','setup',
+                        '--outer','outer','--cleanup','cleanup','--shell','shell',
+                        '--request-sha',pin,'--run-id','123','--head',actual['head'],
+                        '--tree',actual['tree'],'--workflow-sha',env['GITHUB_WORKFLOW_SHA'],
+                        '--workflow-file-sha',source['files'][reader.WORKFLOW]['sha256'],
+                        '--invoker-uid','1001','--invoker-gid','1002']
+                    output=io.BytesIO()
+                    with patch.object(reader,'SAME_JOB_ACTUAL_READER_ENABLED',True),\
+                         patch.object(reader.sys,'argv',argv),\
+                         patch.object(reader.sys,'stdout',SimpleNamespace(buffer=output)),\
+                         patch.object(reader.Path,'open',lambda path,*a,**kw:io.BytesIO(held[str(path)])),\
+                         patch.object(reader.os,'open',side_effect=AssertionError('no live reader OS edge')):
+                        reader.main()
+                    selected_handoff=reader.parse(output.getvalue())
+                    self.assertEqual(selected_handoff['runtimeCandidate']['bytes'],len(candidate_raw))
+                    self.assertEqual(selected_handoff['runId'],'123')
+                    self.assertEqual(selected_handoff['requestSha256'],pin)
+                    self.assertFalse(selected_handoff['actualRunApproved'])
                     drift_files,drift_probe,drift_observed=runtime_edges(stage_node)
                     drift_files.facts['/usr/share/qemu/f001']['sha256']='0'*64
                     drift_originals,drift_passed,drift_safe=reader.same_job_actual_inventory_entry(
@@ -8278,6 +8297,7 @@ def same_job_actual_controls():
                 '--same-job-handoff-v1','handoff.original.json',
                 '--same-job-guest-service-v1','--same-job-guest-cleanup-v1',
                 '--same-job-actual-packet-v1','guest-verdict.original.json',
+                '--guest-outer build/i80386-ring3-same-job-actual-v1/guest-outer.original.json',
                 'controller.runtime.json',
                 'bw-ring3-actual-guest-v1-${GITHUB_RUN_ID}-1',
                 '--kill-after=5s 780s','RuntimeMaxSec=720',

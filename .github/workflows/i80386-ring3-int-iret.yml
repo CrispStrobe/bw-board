@@ -201,6 +201,7 @@ jobs:
             --handoff "$ring3_handoff" \
             --service build/i80386-ring3-same-job-actual-v1/guest.service.original.json \
             --cleanup build/i80386-ring3-same-job-actual-v1/guest.cleanup.original.json \
+            --guest-outer build/i80386-ring3-same-job-actual-v1/guest-outer.original.json \
             --controller-runtime build/i80386-ring3-int-iret-runtime/controller.runtime.json \
             > build/i80386-ring3-same-job-actual-v1/guest-verdict.original.json
           test "$(stat -c %s build/i80386-ring3-same-job-actual-v1/guest-verdict.original.json)" -le 1048576
