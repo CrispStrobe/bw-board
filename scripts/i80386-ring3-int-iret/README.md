@@ -1738,3 +1738,9 @@ its twenty-role packet and terminal cleanup require independent local reading.
 Official run, job, step, log and artifact originals need a separate external
 join after the event. None of these later observations is supplied by source
 controls or by the earlier V9 metadata event.
+
+### Inactive distinct V2 source candidate — 2026-10-24
+
+The V2 ownership claim has merged. The candidate retires the spent V1 execution guard and adds a separately guarded V2 request, event, job, two-service route and reader. Its post-reap dpkg census retains at most six raw samples within five monotonic seconds; only the final exact controller-only sample permits progress. Earlier extra members remain recorded without an assigned identity. A failed read, changed unit or resource limit, persistent member or expired deadline refuses progress to configure, Node or the guest; the existing exact policy and outside cleanup still run.
+
+The V2 handoff carries the fixed reviewed comparison object. Pure controls pass CLI-produced handoff bytes through the producer parser, mocked two-service composition, twenty-role packet and independent local and official readers. The official facts in those controls are manufactured. V2 producer, reader and workflow guards remain false. No V2 event, hosted setup, guest result or approval has been observed.

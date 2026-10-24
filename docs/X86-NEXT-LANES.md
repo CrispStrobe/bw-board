@@ -3551,3 +3551,7 @@ Merge and qualify the claim before implementation. Then require new exact-head
 source checks, a new one-shot event, independently retained originals and an
 external result review. No V1 failure, prior V9 graph or source control grants
 hosted setup, architectural guest, full 386DX or physical timing approval.
+
+### V2 source candidate remains inactive — 2026-10-24
+
+The merged claim permits a distinct V2 job and finite post-reap census. Source controls now connect its V2 handoff, same-job controller, finalizer and independent readers using manufactured host and guest edges. The V1 extra cgroup member remains unidentified; this source work does not explain it. Both new V2 code guards and its workflow gate remain false. The next step is source review and exact-head CI, followed by a new canonical request and separately admitted V2 event only if those gates qualify. Preserve the V1 originals and do not repeat its consumed label.

@@ -80,3 +80,9 @@ checkpoint only: the label is unselected, the exact-head hosted checks are
 pending, and no same-job guest has run. Historical actual and compiler guards
 remain false. The manufactured controls and source review do not establish
 an official run or architectural result.
+
+## V1 failed setup and inactive V2 source candidate — 2026-10-24
+
+The selected [V1 run](https://github.com/CrispStrobe/bw-board/actions/runs/40121786243) failed after the reaped unpack phase because its first cgroup census retained an additional, unidentified direct member. Configure, Node staging and guest execution did not follow. Its label is spent and its originals remain held.
+
+The new V2 source candidate records a bounded sequence of post-reap cgroup samples while keeping final acceptance controller-only with no nested or dying descendants. Mocked controls connect its independent first-service handoff to the second service, twenty-role packet and offline official reader. Those controls do not prove a hosted setup or guest result. The V2 source and workflow guards are false; no V2 event has been selected.

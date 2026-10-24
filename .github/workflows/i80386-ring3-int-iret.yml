@@ -184,7 +184,7 @@ jobs:
           ring3_guest_unit="/sys/fs/cgroup/system.slice/bw-ring3-actual-guest-v2-${GITHUB_RUN_ID}-1.service"
           ring3_guest_after=absent
           if test -e "$ring3_guest_unit"; then ring3_guest_after=present; fi
-          /usr/bin/python3 -I -S -B -c 'import json,sys; print(json.dumps({"schema":"bw.ring3.same-job-guest-outer-terminal.v2","runId":sys.argv[1],"unit":sys.argv[2],"systemdRunExitCode":int(sys.argv[3]),"outsideCleanupExitCode":int(sys.argv[4]),"cgroupAfter":sys.argv[5]},sort_keys=True,separators=(",",":")))' \
+          /usr/bin/python3 -I -S -B -c 'import json,sys; print(json.dumps({"schema":"bw.ring3.same-job-guest-outer.v2","runId":sys.argv[1],"unit":sys.argv[2],"systemdRunExitCode":int(sys.argv[3]),"outsideCleanupExitCode":int(sys.argv[4]),"cgroupAfter":sys.argv[5]},sort_keys=True,separators=(",",":")))' \
             "$GITHUB_RUN_ID" "$ring3_guest_unit" "$ring3_guest_exit" "$ring3_guest_cleanup_exit" "$ring3_guest_after" \
             > build/i80386-ring3-same-job-actual-v2/guest-outer.original.json
           test "$(stat -c %s build/i80386-ring3-same-job-actual-v2/guest.stdout)" -le 8388608

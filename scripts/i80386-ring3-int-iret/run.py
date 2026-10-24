@@ -5254,7 +5254,7 @@ def setup_v4_sequence(ops,request):
             phase_failure.secondary.extend(item['secondary'])
         try:
             item['cgroupAfter']=ops.quiescent(name)
-            need(item['cgroupAfter'] is not None and item['cgroupAfter']['onlyController'] is True,
+            need(item['cgroupAfter']['onlyController'] is True,
                  'no owned direct or nested dpkg descendants after '+name)
         except BaseException as error:phase_failure.add(error,'v4-'+name+'-cgroup')
         if phase_failure.first is not None:
@@ -8662,7 +8662,8 @@ class SetupV8Host:
         try:
             before=unit.lstat();sample['unitIdentity']=identity(before)
             need(unit.resolve(strict=True)==unit and stat.S_ISDIR(before.st_mode) and
-                 before.st_uid==before.st_gid==0 and before.st_nlink>=1,
+                 before.st_uid==before.st_gid==0 and before.st_nlink>=1 and
+                 before.st_mode&0o022==0,
                  'exact root-owned V2 transient unit identity')
             for key,name in (('cpuMax','cpu.max'),('memoryMax','memory.max'),
                              ('swapMax','memory.swap.max'),('pidsMax','pids.max')):
@@ -9581,7 +9582,14 @@ def same_job_handoff(environ,route=SAME_JOB_ACTUAL_ROUTE):
     except BaseException as error:first=error
     finally:first=close_owned(fd,first,'same-job-handoff-close')
     if first is not None:raise first
-    value=final_json(bytes(raw));need(encode(value)==bytes(raw),'canonical handoff original')
+    return admit_same_job_handoff_bytes(bytes(raw),environ,route)
+
+
+def admit_same_job_handoff_bytes(raw,environ,route=SAME_JOB_ACTUAL_ROUTE):
+    """Grade exact CLI-produced handoff bytes after the held file read."""
+    need(type(raw) is bytes and 0<len(raw)<=SAME_JOB_HANDOFF_CAP,
+         'bounded selected handoff byte admission')
+    value=final_json(raw);need(encode(value)==raw,'canonical handoff original')
     required=('schema candidateSha256 candidateBytes setupObserved shellImageFields '
         'serviceImageFields forwardingMatchesExpected deferredHostTriggers '
         'completeHostConfiguration actualGuestApproved outsideTerminalObserved '
@@ -9605,10 +9613,12 @@ def same_job_handoff(environ,route=SAME_JOB_ACTUAL_ROUTE):
          value['tree']==environ.get('BW_EXPECTED_TREE') and
          value['workflowSha']==environ.get('GITHUB_WORKFLOW_SHA') and
          value['workflowFileSha256']==
-             value['source']['files'][WORKFLOW]['sha256'] and
+             value['source']['files'][
+                 '.github/workflows/i80386-ring3-int-iret.yml'
+                 if route is SAME_JOB_ACTUAL_V2_ROUTE else WORKFLOW]['sha256'] and
          value['requestSha256']==environ.get('BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256'
              if route is SAME_JOB_ACTUAL_V2_ROUTE else
-             'BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256') and
+             'BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256'),
          'exact prior terminal graph, source and actual event selected')
     if route is SAME_JOB_ACTUAL_V2_ROUTE:
         need(same_json(value['comparisonInput'],SAME_JOB_REVIEWED_GRAPH),
@@ -9620,7 +9630,7 @@ def same_job_handoff(environ,route=SAME_JOB_ACTUAL_ROUTE):
     need(encode(graph)==candidate and graph['schema']=='bw.ring3.runtime-expectation.v4' and
          len(graph['files'])==327 and len(graph['aliases'])==55,
          'closed reviewed runtime graph projection')
-    return bytes(raw),value,candidate,graph
+    return raw,value,candidate,graph
 
 
 def same_job_actual_selection(environ,event_raw,*,handoff_reader=same_job_handoff,
