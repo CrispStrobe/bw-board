@@ -16,6 +16,9 @@ owned resources and an independently checked artifact. The bounded
 `systemd-run --wait` completion receipt and sealed work original are retained;
 a post-wait unit query may find an already unloaded successful unit. Unknown
 service status stays unknown and cannot become an invented zero exit.
+Only the reference work step receives the Actions artifact-read token; the
+selected service passes its variable name to the trusted manager and excludes
+the value from guest environments and retained originals.
 
 The Node toolcache is an input, not an execution proof. The source collector
 copies it into one owned, read-only stage and rechecks identity before using

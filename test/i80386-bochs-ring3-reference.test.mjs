@@ -21,6 +21,7 @@ const routes = [
 function auditWorkflow(raw) {
   assert.match(raw, /^on:\s*\n\s+pull_request:/m);
   assert.match(raw, /cancel-in-progress:\s*false/);
+  assert.doesNotMatch(raw.slice(0, raw.indexOf('jobs:')), /^  actions: read$/m);
   assert.equal((raw.match(/uses: actions\/checkout@/g) || []).length, 6);
   assert.equal((raw.match(/uses: actions\/setup-node@/g) || []).length, 3);
   assert.equal((raw.match(/uses: actions\/upload-artifact@/g) || []).length, 3);
@@ -35,6 +36,13 @@ function auditWorkflow(raw) {
     assert.match(section, new RegExp(`timeout-minutes: ${route === 'toolchain' ? 5 : route === 'build' ? 20 : 10}\\b`));
     assert.match(section, new RegExp(`github\\.event\\.label\\.name == 'x86-bochs-ring3-${route === 'toolchain' ? 'toolchain-inventory' : route}-v1'`));
     assert.match(section, /github\.actor == 'CrispStrobe'/);
+    if (route === 'reference') {
+      assert.match(section, /permissions:\s*\n\s+contents: read\s*\n\s+actions: read/);
+      assert.match(section, /GH_TOKEN: \$\{\{ github\.token \}\}/);
+      assert.match(section, /sudo --preserve-env=GH_TOKEN -- \/usr\/bin\/env/);
+    } else {
+      assert.doesNotMatch(section, /GH_TOKEN|actions: read/);
+    }
     assert.match(section, /github\.event\.pull_request\.head\.repo\.fork == false/);
     assert.match(section, /github\.run_attempt == '1'/);
     assert.equal(section.split(checkout).length - 1, 2);
@@ -80,6 +88,7 @@ test('workflow policy mutations are detected without enabling a job', () => {
     ['finish', workflow.replace('--finish --route', '--no-finish --route')],
     ['run service', workflow.replace('--run-service --route', '--unsafe-run --route')],
     ['job budget', workflow.replace('timeout-minutes: 5', 'timeout-minutes: 1')],
+    ['reference token', workflow.replace('sudo --preserve-env=GH_TOKEN', 'sudo --')],
     ['finish status', workflow.replace('test "$finish_status" -eq 0', 'true')],
     ['workflow checkout', workflow.replace('Checkout executing workflow source', 'Unchecked workflow source')],
     ['bounded source blob', workflow.replace("'cat-file', '-s'", "'cat-file', 'blob'")],
