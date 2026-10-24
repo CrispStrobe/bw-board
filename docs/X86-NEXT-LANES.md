@@ -3585,3 +3585,14 @@ into an architectural pass. A QEMU reference change or alternate oracle needs
 its own claim. Next: qualify and merge the V3 docs claim, implement in a new
 owned source worktree, run connected pure controls and exact-head CI, then
 select at most one fresh V3 event after independent admission.
+
+### V3 inactive source checkpoint — 2026-10-24
+
+The V3 docs claim has merged, and a distinct source candidate is under review
+in an owned worktree. Its producer, reader and workflow gates remain disabled;
+the spent V2 execution gate is closed while V2 originals and the strict reader
+refusal remain. Mocked controls join the first setup service, serial guest
+children, twenty-role finalizer, exact four-role manual-tree cleanup and
+independent packet reading. This proves source wiring only. The retained V2
+QEMU disagreement is unchanged, and no V3 event or result exists. Independent
+source review and exact-head checks precede any new one-shot selection.

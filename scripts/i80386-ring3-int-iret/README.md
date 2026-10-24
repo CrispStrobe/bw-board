@@ -1743,4 +1743,22 @@ controls or by the earlier V9 metadata event.
 
 The V2 ownership claim has merged. The candidate retires the spent V1 execution guard and adds a separately guarded V2 request, event, job, two-service route and reader. Its post-reap dpkg census retains at most six raw samples within five monotonic seconds; only the final exact controller-only sample permits progress. Earlier extra members remain recorded without an assigned identity. A failed read, changed unit or resource limit, persistent member or expired deadline refuses progress to configure, Node or the guest; the existing exact policy and outside cleanup still run.
 
-The V2 handoff carries the fixed reviewed comparison object. Pure controls pass CLI-produced handoff bytes through the producer parser, mocked two-service composition, twenty-role packet and independent local and official readers. The official facts in those controls are manufactured. V2 producer, reader and workflow guards are enabled; no V2 event has been selected. Source qualification, a frozen request and external one-shot admission are required before an event. No V2 hosted setup, guest result or approval has been observed.
+The V2 handoff carries the fixed reviewed comparison object. Pure controls pass CLI-produced handoff bytes through the producer parser, mocked two-service composition, twenty-role packet and independent local and official readers. The official facts in those controls are manufactured. At this earlier source checkpoint the V2 guards were enabled and its event was unselected. The later selected V2 failure is recorded below; these source controls alone establish no hosted or architectural result.
+
+### Inactive V3 manual-tree cleanup candidate — 2026-10-24
+
+The selected V2 event has been consumed. Its setup and two guest children ran,
+but the unchanged positive reader refuses the retained QEMU disagreement and
+the outside cleanup's present manual cgroup root. The V3 claim has merged. This
+source candidate has a distinct request, event and job, and retires only the
+spent V2 execution gate. V3 producer, reader and workflow guards remain false.
+
+V3 cleanup binds the four run-owned cgroup directories to the retained resource
+original, checks empty processes and threads through held no-follow
+descriptors, and records ordered removal and absence facts. Only dying-only
+root accounting may receive up to six read-only samples over five seconds.
+The whole outside original remains capped at 16 KiB. Mocked source controls
+exercise setup, the serial authored children, the twenty-role finalizer,
+outside cleanup and independent readers; they are not host or guest results.
+The known QEMU disagreement remains a strict refusal, including after any
+future clean V3 cleanup.

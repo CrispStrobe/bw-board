@@ -6802,3 +6802,15 @@ nonempty census, partial `rmdir`, first/secondary retention, source/event,
 runtime graph, guest packet and official originals. Then require all enabled
 exact-head source checks, one separately admitted V3 event, one acquisition of
 each official original and independent review before any result or merge.
+
+### Inactive V3 source checkpoint — 2026-10-24
+
+The V3 claim has merged. An owned source candidate now has separate V3 route,
+workflow and independent reader guards, all false. The spent V2 execution guard
+is false; its strict positive reader and retained originals remain. Pure
+controls with mocked host and guest edges traverse a V3 first service and
+handoff, serial children, twenty-role finalizer, FD-relative four-role cleanup
+and local and manufactured official reader joins. They confer no hosted or
+architectural approval. The known V2 QEMU access-byte disagreement remains a
+strict refusal. Source review, exact-head qualification and a new one-shot
+admission are pending; no V3 event is selected.

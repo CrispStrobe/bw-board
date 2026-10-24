@@ -104,3 +104,8 @@ change the fixture, expected bytes, CPU model, QEMU output or the V2 reader's
 refusal. V3 implementation, exact-head checks and one fresh independently
 audited event remain future work; clean cleanup alone would not resolve the
 observed JavaScript/QEMU disagreement.
+
+The V3 claim has since merged. An inactive source candidate is being reviewed
+with mocked cleanup and guest edges; no V3 event has been selected. The V2
+positive refusal and its original guest and cleanup facts remain the actual
+result. A source control pass does not settle the QEMU access-byte difference.
