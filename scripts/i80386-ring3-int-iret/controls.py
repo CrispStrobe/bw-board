@@ -1507,7 +1507,7 @@ def node_stage_controls():
         'historicalProductionPinHeld':p.GENERATION_NODE_PIN==historical,'runtimeCandidate':False,'qualified':False,'pass':True}))
 
 
-def staged_runtime_controls():
+def staged_runtime_controls(export_edges=False):
     """Full staged inventory routing; OS/process edges and compact pins are test-only."""
     p,_=producer_fixture_case();payload=b'\x7fELF authored compact staging bytes\n';historical=p.GENERATION_NODE_PIN
     assert historical==(124827920,'fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48')
@@ -1665,6 +1665,7 @@ def staged_runtime_controls():
             'logBytes':len(raw),'logSha256':sha(raw),'invoker':[1001,1002]}
     def log(originals):
         output=io.BytesIO();reader.emit_staged_inventory(originals,output.write,output.flush);return output.getvalue()
+    if export_edges:return edges
     class Tests(unittest.TestCase):
         def test_reviewed_metadata_guards_and_disabled_boundary(self):
             self.assertIs(p.STAGED_RUNTIME_ENTRY_ENABLED,True);self.assertIs(reader.STAGED_RUNTIME_INVENTORY_ENABLED,True)
@@ -5127,7 +5128,7 @@ def setup_v7_controls(export_sample=False):
         'guest':False,'actualRunApproved':False,'pass':True}))
 
 
-def setup_v8_controls(export_sample=False):
+def setup_v8_controls(export_sample=False,export_ops=False):
     """Injected v8 setup chain only; no network, dpkg, service or guest edge."""
     p,_=producer_fixture_case()
     witness=copy.deepcopy(p.SETUP_V8_PAYLOAD_PINS)
@@ -5223,6 +5224,7 @@ def setup_v8_controls(export_sample=False):
             if self.fault=='drop':return {'verifiedCopy':True,'irreversibleDrop':False},{'graphObserved':False,'actualGuestApproved':False}
             if self.fault=='graph':return {'verifiedCopy':True,'irreversibleDrop':True},{'graphObserved':False,'actualGuestApproved':False}
             return {'verifiedCopy':True,'irreversibleDrop':True},{'graphObserved':True,'actualGuestApproved':False}
+    if export_ops:return FakeOps,copy.deepcopy(witness)
     class Tests(unittest.TestCase):
         def request(self):
             env,expected,old,data=prerequisite_fixture()
@@ -7367,6 +7369,546 @@ def host_baseline_controls():
         'installer':False,'helperExecuted':False,'node':False,'qemu':False,'guest':False,'pass':True}))
 
 
+def setup_v9_controls():
+    """Pure manufactured complete V9 original; no hosted tool or guest runs."""
+    p,_=producer_fixture_case()
+    edges=staged_runtime_controls(export_edges=True)
+    class Tests(unittest.TestCase):
+        def test_v9_complete_manufactured_six_role_envelope_and_coherent_cuts(self):
+            # Only this control substitutes a small authored Node and status baseline.
+            # The source candidate retains the selected production pins outside it.
+            def status_row(name,version,arch='amd64',state='install ok installed',pending=None):
+                lines=['Package: '+name,'Version: '+version,'Architecture: '+arch,'Status: '+state]
+                if pending is not None:lines.append('Triggers-Pending: '+pending)
+                return '\n'.join(lines).encode()
+            base=[status_row('installed-'+str(i).zfill(4),'1',
+                state='deinstall ok config-files' if i==0 else 'install ok installed')
+                for i in range(1210)]
+            pre=b'\n\n'.join(base+[status_row('libc-bin','2')])+b'\n'
+            selected=[status_row(name,version,arch) for name,version,arch,*_ in p.SETUP_V9_PACKAGE_ROWS]
+            post=b'\n\n'.join(base+[status_row('libc-bin','2',state='install ok triggers-pending',pending='ldconfig'),*selected])+b'\n'
+            production=(reader.SETUP_V9_STATUS_SHA,reader.SETUP_V9_STATUS_BYTES,p.SETUP_V9_STATUS_SHA)
+            self.assertEqual(production[:2],('4144e0299e81507b7a856beef9fe6e67f55bffd0c0d7e9245265b6920721d1ac',1231069))
+            with edges() as (producer,env,request,raw,state),\
+                 patch.object(reader,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                 patch.object(reader,'SETUP_V9_STATUS_BYTES',len(pre)),\
+                 patch.object(producer,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                 patch.object(producer,'SETUP_V8_STATUS_SHA',sha(pre)):
+                producer.stage_runtime_inventory_node(env)
+                self.assertEqual(state['observerExit'],0)
+                FakeOps,witness=setup_v8_controls(export_ops=True)
+                v9_request=copy.deepcopy(request)
+                v9_request.update(schema='bw.ring3.inventory-request.v9',
+                    setup=producer.setup_v9_policy(),payloadWitness=witness)
+                class V9Ops(FakeOps):
+                    def __init__(self,image_version):
+                        super().__init__();self.image_version=image_version
+                    def preflight(self,selected):
+                        item=super().preflight(selected)
+                        item['imageVersion']=self.image_version
+                        item['imageFields']['ImageVersion']['value']=item['imageVersion']
+                        item['resource']['membership']='0::/system.slice/bw-ring3-setup-v9-123-1.service\n'
+                        item['statusSha256']=sha(pre)
+                        return item
+                    def acquire(self,package):
+                        item=super().acquire(package)
+                        item['path']=item['path'].replace('setup-v8-','setup-v9-')
+                        return item
+                    def dpkg(self,args):
+                        item=super().dpkg(args);item['process']['role']='setup-v9'
+                        return item
+                for image_version in producer.SETUP_V9_IMAGES:
+                    alternate=V9Ops(image_version)
+                    alternate_result=producer.setup_v8_sequence(alternate,v9_request,producer.SETUP_V9_ROUTE)
+                    self.assertIsNone(alternate_result['firstFailure'],alternate_result['firstFailure'])
+                    self.assertEqual(alternate.snapshot['preflight']['imageVersion'],image_version)
+                ops=V9Ops('20261012.334.1')
+                completed=producer.setup_v8_sequence(ops,v9_request,producer.SETUP_V9_ROUTE)
+                self.assertIsNone(completed['firstFailure'],completed['firstFailure'])
+                setup=ops.snapshot
+                status_log=io.BytesIO()
+                pre_meta=producer.emit_setup_v8_status('pre',pre,status_log.write,status_log.flush,
+                    route=producer.SETUP_V9_ROUTE)
+                post_meta=producer.emit_setup_v8_status('post',post,status_log.write,status_log.flush,
+                    route=producer.SETUP_V9_ROUTE)
+                setup['preflight'].update(statusSha256=sha(pre),statusBytes=len(pre),statusOriginal=pre_meta)
+                setup['postStatus'].update(sha256=sha(post),bytes=len(post),records=1226,statusOriginal=post_meta)
+                request_raw=reader.canonical(v9_request)
+                with self.assertRaises((ValueError,reader.Refusal)):
+                    producer.admit_setup_v8_request(request_raw,sha(request_raw))
+                with self.assertRaises((ValueError,reader.Refusal)):
+                    reader.setup_v8_request(request_raw,sha(request_raw))
+                wrap=lambda data:{'bytes':len(data),'sha256':sha(data),'base64':base64.b64encode(data).decode()}
+                event=reader.parse(state['originals']['staged.event.json'])
+                event['label']['name']='x86-ring3-setup-runtime-inventory-v9'
+                event['pull_request']['body']='<!-- BW_RING3_SETUP_RUNTIME_INVENTORY_V9\n'+sha(request_raw)+'\nBW_RING3_SETUP_RUNTIME_INVENTORY_V9 -->'
+                event_raw=reader.canonical(event)
+                old_record=reader.parse(reader.prerequisite_original(reader.canonical(state['observation']['stageBefore']['record'])))
+                record=copy.deepcopy(old_record)
+                record.update(schema='bw.ring3.node-stage-original.v9',request=wrap(request_raw),event=wrap(event_raw),
+                    setup=setup,recordBoundary='verified copy after selected setup and policy cleanup, before directory publication')
+                record['platform'].pop('BW_RING3_STAGED_INVENTORY_REQUEST_SHA256')
+                record['platform'].update(BW_RING3_SETUP_INVENTORY_V9_REQUEST_SHA256=sha(request_raw),
+                    BW_RING3_SETUP_INVENTORY_V9_REQUEST_B64=base64.b64encode(request_raw).decode(),
+                    GITHUB_JOB='setup-runtime-inventory-v9')
+                record['eventIdentity']['st_size']=len(event_raw)
+                selected_source=reader.parse(reader.prerequisite_original(reader.canonical(v9_request['source'])))
+                class V9Observer:
+                    def __init__(self,environ):
+                        self.facts={'eventIdentity':record['eventIdentity'],
+                            'sourceCommands':record['sourceCommands'],'source':selected_source}
+                    def event(self):return event_raw
+                    def source(self,selected):
+                        self.facts['source']=selected_source
+                entry_ops=V9Ops('20261012.334.1');entry_output=io.BytesIO()
+                with patch.object(producer.os,'getresuid',return_value=(0,0,0)),\
+                     patch.object(producer.os,'getresgid',return_value=(0,0,0)),\
+                     patch.object(producer,'expected_cgroup',return_value=None),\
+                     patch.object(producer,'HostedEnvelopeInstaller',V9Observer),\
+                     patch.object(producer,'SetupV8Host',return_value=entry_ops),\
+                     patch.object(producer.sys,'stdout',SimpleNamespace(buffer=entry_output)):
+                    self.assertEqual(producer.setup_v8_entry(record['platform'],producer.SETUP_V9_ROUTE),1)
+                entry_packet=reader.parse_setup_v9_outer(entry_output.getvalue())
+                self.assertEqual(entry_packet['schema'],'bw.ring3.setup-entry-failure.v9')
+                self.assertEqual(entry_packet['firstFailure']['phase'],'v9-entry-return')
+                self.assertEqual(entry_ops.events[-1],'stage')
+                self.assertEqual(entry_ops.events.count('acquire'),15)
+                self.assertFalse(entry_packet['actualGuestApproved'])
+                self.assertEqual(entry_ops.snapshot['schema'],'bw.ring3.setup-original.v9')
+                self.assertEqual(entry_ops.events,ops.events)
+                setup=entry_ops.snapshot
+                setup['preflight'].update(statusSha256=sha(pre),statusBytes=len(pre),statusOriginal=pre_meta)
+                setup['postStatus'].update(sha256=sha(post),bytes=len(post),records=1226,statusOriginal=post_meta)
+                record['setup']=setup
+                record_raw=reader.canonical(record)
+                state['rows']['/event.json'].update(raw=event_raw,st_size=len(event_raw))
+                state['rows'][str(producer.NODE_STAGE_RECORD)].update(raw=record_raw,st_size=len(record_raw))
+                state['rows']['/proc/self/cgroup']['raw']=b'0::/system.slice/bw-ring3-setup-v9-123-1.service\n'
+                v9_env={**record['platform'],'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'}
+                actual_stage=reader.observe_setup_v9_stage(v9_env)
+                self.assertIsNone(actual_stage['firstFailure'],actual_stage['firstFailure'])
+                self.assertTrue(actual_stage['stageObserved'])
+                self.assertEqual(reader.CAPS['jsonBytes'],producer.JSON_CAP)
+                pretty=json.dumps(event,indent=2,sort_keys=False).encode()+b'\n'
+                reader.setup_v9_event(pretty,v9_request,sha(request_raw),v9_env)
+                self.assertEqual(producer.admit_setup_v9_event(pretty,v9_env)[0],request_raw)
+                self.assertTrue(event_raw.endswith(b'}\n'))
+                append_event=lambda suffix:event_raw[:-2]+suffix+b'\n'
+                finite_extra=append_event(b',"ignoredOverflow":1e3}')
+                reader.setup_v9_event(finite_extra,v9_request,sha(request_raw),v9_env)
+                self.assertEqual(producer.admit_setup_v9_event(finite_extra,v9_env)[0],request_raw)
+                bad_event_bytes=(
+                    append_event(b',"ignored":{"x":1,"x":2}}'),
+                    append_event(b',"ignored":NaN}'),
+                    append_event(b',"ignored":Infinity}'),
+                    append_event(b',"ignored":-Infinity}'),
+                    append_event(b',"ignored":1e999}'),
+                    append_event(b',"ignored":-1e999}'),
+                    append_event(b',"ignored":"\xff"}'),
+                    event_raw+b'{}',b'[]',b' '*(reader.CAPS['jsonBytes']+1))
+                self.assertEqual(reader.parse(append_event(b',"ignoredOverflow":1e999}'))['ignoredOverflow'],float('inf'))
+                for bad_raw in bad_event_bytes:
+                    with self.subTest(rawSuffix=bad_raw[-24:]),self.assertRaises((ValueError,UnicodeError,TypeError,AttributeError)):
+                        producer.admit_setup_v9_event(bad_raw,v9_env)
+                    with self.subTest(rawSuffix=bad_raw[-24:]),self.assertRaises((reader.Refusal,ValueError,UnicodeError,TypeError)):
+                        reader.setup_v9_event(bad_raw,v9_request,sha(request_raw),v9_env)
+                files,old_probe=runtime_fixture()
+                node=files.facts.pop(reader.RUNTIME_NODE)
+                files.facts[reader.NODE_STAGE_TARGET]=dict(node,mode=0o555)
+                files.prefixes[reader.NODE_STAGE_TARGET]=files.prefixes.pop(reader.RUNTIME_NODE)
+                files.rejected={}
+                empty=next(iter(reader.STAGED_EMPTY_PYTHON_SOURCES))
+                python_files=files.python_files
+                files.python_files=lambda:sorted(python_files()+[empty])
+                files.empty_python=lambda name:reader.StagedInventoryFiles.empty_python(files,name)
+                original_fact=files.fact
+                def fact(path):
+                    row=original_fact(path)
+                    if path==reader.NODE_STAGE_TARGET:
+                        files.metadata[path]=copy.deepcopy(actual_stage['files']['node']['before'])
+                    return row
+                files.fact=fact
+                listings={'qemu-system-x86':[reader.RUNTIME_QEMU,reader.RUNTIME_TCG,'/usr/share/qemu/bios.bin'],
+                    'qemu-system-common':['/usr/share/qemu/common-keymap'],
+                    'qemu-system-data':['/usr/share/qemu/data-blob',*reader.SETUP_V9_SIGNED_DATA],
+                    'seabios':['/usr/share/seabios/bios.bin'],'ipxe-qemu':['/usr/share/ipxe/rom.bin']}
+                for path,pin in reader.SETUP_V9_SIGNED_DATA.items():
+                    files.facts[path]=dict(pin);files.prefixes[path]=b'inert signed DATA mock'
+                def probe(argv):
+                    process,streams=old_probe(argv)
+                    index=len(observed_probes);observed_probes.append(list(argv))
+                    process.update(pid=300+index,pgid=300+index,parentPid=101,
+                        startTicks=index+1,spawnMonoNs=60000000+index*1000000,reapMonoNs=60001000+index*1000000)
+                    if argv==[reader.NODE_STAGE_TARGET,'--version']:streams['stdout']=b'v22.23.3\n'
+                    if argv[:2]==['/usr/bin/dpkg-query','-W']:
+                        rows={name:(version,arch) for name,version,arch,*_ in reader.SETUP_V9_PACKAGES if name in reader.PACKAGE_NAMES}
+                        streams['stdout']=''.join(name+'\t'+rows[name][0]+'\t'+rows[name][1]+'\n' for name in reader.PACKAGE_NAMES).encode()
+                    if argv[:2]==['/usr/bin/dpkg-query','-L']:
+                        streams['stdout']=('/.\n'+'\n'.join(listings[argv[2]])+'\n').encode()
+                    return process,streams
+                observed_probes=[]
+                entry_originals,entry_passed,entry_safe=reader.setup_v9_inventory_entry(v9_env,files,probe)
+                self.assertEqual((entry_passed,entry_safe),(True,True),
+                    reader.parse(entry_originals['runtime.setup-inventory.json'])['firstFailure'])
+                self.assertEqual(len(observed_probes),15)
+                originals=entry_originals
+                value=reader.parse(originals['runtime.setup-inventory.json'])
+                candidate_raw=reader.prerequisite_original(reader.canonical(value['candidate']))
+                output=io.BytesIO();output.write(status_log.getvalue())
+                reader.emit_setup_v9_inventory(originals,output.write,output.flush)
+                log=output.getvalue()
+                unit='bw-ring3-setup-v9-123-1.service';absent={'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None}
+                source=reader.parse(reader.prerequisite_original(reader.canonical(v9_request['source'])))
+                admission={'requestSha256':sha(request_raw),'eventSha256':sha(event_raw),
+                    'head':v9_request['head'],'tree':v9_request['tree'],'source':source,'unit':unit}
+                cleanup=reader.canonical({'schema':'bw.ring3.setup-outside-cleanup.v9','runId':'123',
+                    'serviceExitCode':0,'sourceAdmission':admission,'preCensus':absent,
+                    'stop':{'attempted':False,'argv':None,'exitCode':None,'timedOut':False},
+                    'postCensus':absent,'cgroupTerminal':'absent','unitCensus':None,'policy':None,
+                    'action':'not-needed','firstFailure':None,'secondary':[],'setupApproved':False})
+                outer=reader.canonical({'schema':'bw.ring3.setup-outer-terminal.v9','runId':'123',
+                    'unit':'/sys/fs/cgroup/system.slice/'+unit,'systemdRunExitCode':0,
+                    'outsideCleanupExitCode':0,'cgroupAfter':'absent'})
+                shell=reader.canonical({'schema':'bw.ring3.setup-image-shell.v9',
+                    'fields':{'ImageOS':{'present':True,'value':'ubuntu24'},
+                        'ImageVersion':{'present':True,'value':'20261012.334.1'}},'fieldErrors':[],
+                    'setupAttempted':False,'guestAttempted':False,'setupApproved':False})
+                external={'schema':'bw.ring3.setup-inventory-expectation.v9','requestSha256':sha(request_raw),
+                    'runId':'123','attempt':1,'head':request['head'],'tree':request['tree'],
+                    'workflowSha':env['GITHUB_WORKFLOW_SHA'],
+                    'workflowFileSha256':source['files'][reader.WORKFLOW]['sha256'],
+                    'jobId':456,'jobName':'setup-runtime-inventory-v9','conclusion':'success',
+                    'logBytes':len(log),'logSha256':sha(log),'outerBytes':len(outer),'outerSha256':sha(outer),
+                    'cleanupBytes':len(cleanup),'cleanupSha256':sha(cleanup),
+                    'shellBytes':len(shell),'shellSha256':sha(shell),'invoker':[1001,1002]}
+                verdict=reader.verify_setup_v9_log(log,external,outer,cleanup,shell)
+                self.assertTrue(verdict['setupObserved']);self.assertTrue(verdict['outsideTerminalObserved'])
+                self.assertFalse(verdict['actualGuestApproved']);self.assertFalse(verdict['officialJobAuthenticated'])
+                official_log=(b'2026-10-24T12:00:00Z ##[group]Runner Image\n'
+                    b'2026-10-24T12:00:01Z Image: ubuntu24\n'
+                    b'2026-10-24T12:00:02Z Version: 20261012.334.1\n'
+                    b'2026-10-24T12:00:03Z ##[endgroup]\n'
+                    b'2026-10-24T12:00:04Z Complete job name: setup-runtime-inventory-v9\n'
+                    b'2026-10-24T12:00:05Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262\n')
+                run_metadata=reader.canonical({'id':123,'run_attempt':1,'head_sha':v9_request['head'],
+                    'event':'pull_request','status':'completed','conclusion':'success',
+                    'repository':{'full_name':'CrispStrobe/bw-board'},
+                    'head_repository':{'full_name':'CrispStrobe/bw-board'},
+                    'actor':{'login':'CrispStrobe'},
+                    'pull_requests':[{'number':645,'head':{'sha':v9_request['head']}}]})
+                step_names=['Set up job',
+                    'Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262',
+                    'Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020',
+                    'Bounded v9 package setup and dropped runtime inventory',
+                    'Retain v9 setup and runtime originals']
+                jobs_metadata=reader.canonical({'total_count':1,'jobs':[{'id':456,'run_id':123,
+                    'run_attempt':1,'head_sha':v9_request['head'],'status':'completed',
+                    'conclusion':'success','name':'setup-runtime-inventory-v9',
+                    'steps':[{'name':name,'status':'completed','conclusion':'success'} for name in step_names]}]})
+                artifact_digest='a'*64
+                artifacts_metadata=reader.canonical({'total_count':1,'artifacts':[{'id':789,
+                    'name':'i80386-ring3-setup-runtime-inventory-v9-originals','size_in_bytes':4096,
+                    'digest':'sha256:'+artifact_digest,'expired':False,
+                    'workflow_run':{'id':123,'head_sha':v9_request['head']}}]})
+                full_external=dict(external,officialLogBytes=len(official_log),officialLogSha256=sha(official_log),
+                    runMetadataBytes=len(run_metadata),runMetadataSha256=sha(run_metadata),
+                    jobsMetadataBytes=len(jobs_metadata),jobsMetadataSha256=sha(jobs_metadata),
+                    artifactsMetadataBytes=len(artifacts_metadata),artifactsMetadataSha256=sha(artifacts_metadata),
+                    artifactId=789,artifactName='i80386-ring3-setup-runtime-inventory-v9-originals',
+                    artifactBytes=4096,artifactSha256=artifact_digest,pullRequest=645)
+                with patch.object(reader,'SETUP_V9_READER_ENABLED',True):
+                    official_verdict=reader.verify_setup_v9_originals(log,full_external,outer,cleanup,shell,
+                        official_log,run_metadata,jobs_metadata,artifacts_metadata)
+                self.assertTrue(official_verdict['setupObserved'])
+                self.assertTrue(official_verdict['officialImageMatchesReported'])
+                self.assertFalse(official_verdict['imageFieldsAuthenticated'])
+                def official_cut(role,changed):
+                    raw=reader.canonical(changed)
+                    selected={'run':run_metadata,'jobs':jobs_metadata,
+                        'artifacts':artifacts_metadata}
+                    selected[role]=raw
+                    expected=dict(full_external)
+                    expected[role+'MetadataBytes']=len(raw)
+                    expected[role+'MetadataSha256']=sha(raw)
+                    with patch.object(reader,'SETUP_V9_READER_ENABLED',True),self.assertRaises(reader.Refusal):
+                        reader.verify_setup_v9_originals(log,expected,outer,cleanup,shell,
+                            official_log,selected['run'],selected['jobs'],selected['artifacts'])
+                wrong_run=reader.parse(run_metadata)
+                wrong_run['head_sha']='f'*40
+                official_cut('run',wrong_run)
+                wrong_step=reader.parse(jobs_metadata)
+                wrong_step['jobs'][0]['steps'][2]['name']='Run actions/setup-node@wrong'
+                official_cut('jobs',wrong_step)
+                wrong_artifact=reader.parse(artifacts_metadata)
+                wrong_artifact['artifacts'][0]['digest']='sha256:'+'b'*64
+                official_cut('artifacts',wrong_artifact)
+                changed_image=official_log.replace(b'Version: 20261012.334.1',b'Version: 20261023.334.3')
+                changed_external=dict(full_external,officialLogBytes=len(changed_image),
+                    officialLogSha256=sha(changed_image))
+                with patch.object(reader,'SETUP_V9_READER_ENABLED',True):
+                    image_grade=reader.verify_setup_v9_originals(log,changed_external,outer,cleanup,shell,
+                        changed_image,run_metadata,jobs_metadata,artifacts_metadata)
+                self.assertFalse(image_grade['officialImageMatchesReported'])
+                self.assertFalse(image_grade['imageFieldsAuthenticated'])
+                self.assertEqual(set(reader.decode_setup_v9_log(log)),set(reader.SETUP_V9_LOG_ROLES))
+                self.assertEqual(len(value['inventory']['processes']),15)
+                self.assertEqual([row['role'] for row in value['inventory']['probes']],list(reader.SETUP_V9_PROBE_ORDER))
+                self.assertEqual({path:value['inventory']['files'][path]['bytes'] for path in reader.SETUP_V9_SIGNED_DATA},
+                    {path:pin['bytes'] for path,pin in reader.SETUP_V9_SIGNED_DATA.items()})
+                six={'shell-image.original.json':shell,'inventory.original.log':log,
+                    'controller.stderr':b'','outside-cleanup.original.json':cleanup,
+                    'outside-cleanup.stderr':b'','outer.original.json':outer}
+                archive=io.BytesIO()
+                with zipfile.ZipFile(archive,'w',zipfile.ZIP_STORED) as output:
+                    for name,raw_body in six.items():output.writestr(name,raw_body)
+                with zipfile.ZipFile(io.BytesIO(archive.getvalue())) as held:
+                    self.assertEqual(set(held.namelist()),set(six))
+                    self.assertTrue(all(held.read(name)==raw_body for name,raw_body in six.items()))
+                    self.assertLessEqual(held.getinfo('inventory.original.log').file_size,8<<20)
+                    self.assertLessEqual(held.getinfo('outside-cleanup.original.json').file_size,16384)
+                paths=dict(zip(('log','external','outer','cleanup','shell','official','run','jobs','artifacts'),
+                    (log,reader.canonical(full_external),outer,cleanup,shell,official_log,
+                     run_metadata,jobs_metadata,artifacts_metadata)))
+                argv=['reader.py','--setup-v9-inventory-log','log','--external-admission','external',
+                    '--outer-resource-original','outer','--outside-cleanup-original','cleanup',
+                    '--shell-image-original','shell','--official-job-log','official',
+                    '--official-run-metadata','run','--official-jobs-metadata','jobs',
+                    '--official-artifacts-metadata','artifacts']
+                with patch.object(reader.sys,'argv',argv),patch.object(reader.sys,'stdout',io.StringIO()) as output,\
+                     patch.object(reader.Path,'open',lambda path,*a,**kw:io.BytesIO(paths[str(path)])),\
+                     patch.object(reader,'SETUP_V9_READER_ENABLED',True),\
+                     patch.object(reader,'setup_v9_inventory_entry',side_effect=AssertionError('no live inventory')),\
+                     patch.object(reader,'inventory_probe',side_effect=AssertionError('no metadata child')):
+                    reader.main()
+                    self.assertTrue(json.loads(output.getvalue())['setupObserved'])
+                def regrade(changed,changed_originals=None,changed_outer=outer,changed_cleanup=cleanup,
+                            changed_shell=shell,changed_external=None,status_wire=None):
+                    roles=dict(originals) if changed_originals is None else dict(changed_originals)
+                    roles['runtime.setup-inventory.json']=reader.canonical(changed)
+                    stream=io.BytesIO();stream.write(status_log.getvalue() if status_wire is None else status_wire)
+                    reader.emit_setup_v9_inventory(roles,stream.write,stream.flush)
+                    wire=stream.getvalue()
+                    expected=dict(external,logBytes=len(wire),logSha256=sha(wire),
+                        outerBytes=len(changed_outer),outerSha256=sha(changed_outer),
+                        cleanupBytes=len(changed_cleanup),cleanupSha256=sha(changed_cleanup),
+                        shellBytes=len(changed_shell),shellSha256=sha(changed_shell))
+                    if changed_external is not None:expected.update(changed_external)
+                    with self.assertRaises(reader.Refusal):
+                        reader.verify_setup_v9_log(wire,expected,changed_outer,changed_cleanup,changed_shell)
+                def replace_stage_record(changed,new_record):
+                    raw_record=reader.canonical(new_record)
+                    for role in ('stageBefore','stageAfter'):
+                        stage=changed[role];stage['record']=wrap(raw_record)
+                        file=stage['files']['installation.original.json']
+                        file.update(bytes=len(raw_record),sha256=sha(raw_record),prefix=raw_record[:4].hex())
+                        for key in ('before','after','namedAfter'):file[key][6]=len(raw_record)
+                    return changed
+                bad_request=copy.deepcopy(v9_request);bad_request['schema']='bw.ring3.inventory-request.v7'
+                bad_request_raw=reader.canonical(bad_request)
+                bad_event=copy.deepcopy(event)
+                bad_event['pull_request']['body']=bad_event['pull_request']['body'].replace(sha(request_raw),sha(bad_request_raw))
+                bad_event_raw=reader.canonical(bad_event)
+                bad_record=copy.deepcopy(record);bad_record['request']=wrap(bad_request_raw)
+                bad_record['event']=wrap(bad_event_raw)
+                bad_record['platform']['BW_RING3_SETUP_INVENTORY_V9_REQUEST_SHA256']=sha(bad_request_raw)
+                bad_record['platform']['BW_RING3_SETUP_INVENTORY_V9_REQUEST_B64']=base64.b64encode(bad_request_raw).decode()
+                bad_record['eventIdentity']['st_size']=len(bad_event_raw)
+                changed=replace_stage_record(copy.deepcopy(value),bad_record)
+                bad_cleanup=reader.parse(cleanup)
+                bad_cleanup['sourceAdmission'].update(requestSha256=sha(bad_request_raw),eventSha256=sha(bad_event_raw))
+                regrade(changed,dict(originals,**{'setup.request.json':bad_request_raw,'setup.event.json':bad_event_raw}),
+                    changed_cleanup=reader.canonical(bad_cleanup),changed_external={'requestSha256':sha(bad_request_raw)})
+                bad_event=copy.deepcopy(event);bad_event['sender']['login']='other'
+                bad_event_raw=reader.canonical(bad_event)
+                bad_record=copy.deepcopy(record);bad_record['event']=wrap(bad_event_raw)
+                bad_record['eventIdentity']['st_size']=len(bad_event_raw)
+                changed=replace_stage_record(copy.deepcopy(value),bad_record)
+                bad_cleanup=reader.parse(cleanup)
+                bad_cleanup['sourceAdmission']['eventSha256']=sha(bad_event_raw)
+                regrade(changed,dict(originals,**{'setup.event.json':bad_event_raw}),
+                    changed_cleanup=reader.canonical(bad_cleanup))
+                bad_event_raw=append_event(b',"ignoredOverflow":1e999}')
+                bad_record=copy.deepcopy(record);bad_record['event']=wrap(bad_event_raw)
+                bad_record['eventIdentity']['st_size']=len(bad_event_raw)
+                changed=replace_stage_record(copy.deepcopy(value),bad_record)
+                bad_cleanup=reader.parse(cleanup)
+                bad_cleanup['sourceAdmission']['eventSha256']=sha(bad_event_raw)
+                regrade(changed,dict(originals,**{'setup.event.json':bad_event_raw}),
+                    changed_cleanup=reader.canonical(bad_cleanup))
+                old_event_parser=reader.parse_setup_v9_outer
+                changed_roles=dict(originals,**{'setup.event.json':bad_event_raw,
+                    'runtime.setup-inventory.json':reader.canonical(changed)})
+                changed_stream=io.BytesIO();changed_stream.write(status_log.getvalue())
+                reader.emit_setup_v9_inventory(changed_roles,changed_stream.write,changed_stream.flush)
+                changed_log=changed_stream.getvalue()
+                changed_cleanup=reader.canonical(bad_cleanup)
+                changed_external=dict(external,logBytes=len(changed_log),logSha256=sha(changed_log),
+                    cleanupBytes=len(changed_cleanup),cleanupSha256=sha(changed_cleanup))
+                with patch.object(reader,'parse_setup_v9_outer',side_effect=lambda raw:
+                        reader.parse(raw) if raw==bad_event_raw else old_event_parser(raw)):
+                    old_parser_verdict=reader.verify_setup_v9_log(changed_log,changed_external,outer,
+                        changed_cleanup,shell)
+                self.assertTrue(old_parser_verdict['setupObserved'])
+                old_version=b'Package: qemu-system-data\nVersion: 1:8.2.2+ds-0ubuntu1.18\n'
+                new_version=b'Package: qemu-system-data\nVersion: 1:8.2.2+ds-0ubuntu1.19\n'
+                self.assertIn(old_version,post)
+                bad_post=post.replace(old_version,new_version)
+                bad_status=io.BytesIO()
+                producer.emit_setup_v9_status('pre',pre,bad_status.write,bad_status.flush)
+                bad_post_meta=producer.emit_setup_v9_status('post',bad_post,bad_status.write,bad_status.flush)
+                bad_record=copy.deepcopy(record)
+                bad_record['setup']['postStatus'].update(sha256=sha(bad_post),bytes=len(bad_post),statusOriginal=bad_post_meta)
+                bad_record['setup']['postStatus']['selected']['qemu-system-data']['Version']='1:8.2.2+ds-0ubuntu1.19'
+                changed=replace_stage_record(copy.deepcopy(value),bad_record)
+                regrade(changed,status_wire=bad_status.getvalue())
+                def coherent_data_change(path,field,replacement):
+                    changed=copy.deepcopy(value);candidate=reader.parse(candidate_raw)
+                    candidate['files'][path][field]=replacement
+                    changed['inventory']['files'][path][field]=replacement
+                    if field=='bytes':changed['inventory']['fileMetadata'][path][6]=replacement
+                    if field=='mode':changed['inventory']['fileMetadata'][path][2]=stat.S_IFREG|replacement
+                    changed_candidate=reader.canonical(candidate)
+                    changed['candidate']=changed['inventory']['candidate']=wrap(changed_candidate)
+                    return changed
+                for path in reader.SETUP_V9_SIGNED_DATA:
+                    for field,replacement in (('sha256','0'*64),('bytes',1),('mode',0o600)):
+                        changed=coherent_data_change(path,field,replacement)
+                        with self.subTest(path=path,field=field):regrade(changed)
+                selected_path=next(iter(reader.SETUP_V9_SIGNED_DATA))
+                changed=coherent_data_change(selected_path,'sha256','0'*64)
+                selected_roles=dict(originals,**{'runtime.setup-inventory.json':reader.canonical(changed)})
+                selected_stream=io.BytesIO();selected_stream.write(status_log.getvalue())
+                reader.emit_setup_v9_inventory(selected_roles,selected_stream.write,selected_stream.flush)
+                selected_wire=selected_stream.getvalue()
+                selected_external=dict(external,logBytes=len(selected_wire),logSha256=sha(selected_wire))
+                weakened=copy.deepcopy(reader.SETUP_V9_SIGNED_DATA)
+                weakened[selected_path]['sha256']='0'*64
+                with patch.object(reader,'SETUP_V9_SIGNED_DATA',weakened),\
+                     patch.object(reader,'SETUP_V8_SIGNED_DATA',weakened):
+                    weakened_verdict=reader.verify_setup_v9_log(selected_wire,selected_external,outer,cleanup,shell)
+                self.assertTrue(weakened_verdict['setupObserved'])
+                self.assertFalse(weakened_verdict['actualGuestApproved'])
+                renamed='/usr/share/qemu/QEMU,other.bin'
+                candidate=reader.parse(candidate_raw)
+                candidate['files'][renamed]=candidate['files'].pop(selected_path)
+                candidate['packagePaths']=sorted(renamed if path==selected_path else path
+                    for path in candidate['packagePaths'])
+                data_paths=candidate['packagePathsByPackage']['qemu-system-data']
+                candidate['packagePathsByPackage']['qemu-system-data']=sorted(
+                    renamed if path==selected_path else path for path in data_paths)
+                candidate['probes']=reader.setup_v9_probe_descriptors(candidate)
+                changed=copy.deepcopy(value)
+                changed['inventory']['files']=copy.deepcopy(candidate['files'])
+                changed['inventory']['fileMetadata'][renamed]=changed['inventory']['fileMetadata'].pop(selected_path)
+                role='package-files-qemu-system-data'
+                item=next(probe for probe in changed['inventory']['probes'] if probe['role']==role)
+                item['stdout']=item['stdout'].replace(selected_path,renamed)
+                process=next(row for row in changed['inventory']['processes'] if row['role']==role)
+                process['stdout']=wrap(item['stdout'].encode())
+                changed_candidate=reader.canonical(candidate)
+                changed['candidate']=changed['inventory']['candidate']=wrap(changed_candidate)
+                regrade(changed)
+                selected_roles=dict(originals,**{'runtime.setup-inventory.json':reader.canonical(changed)})
+                selected_stream=io.BytesIO();selected_stream.write(status_log.getvalue())
+                reader.emit_setup_v9_inventory(selected_roles,selected_stream.write,selected_stream.flush)
+                selected_wire=selected_stream.getvalue()
+                selected_external=dict(external,logBytes=len(selected_wire),logSha256=sha(selected_wire))
+                weakened=copy.deepcopy(reader.SETUP_V9_SIGNED_DATA)
+                weakened[renamed]=weakened.pop(selected_path)
+                with patch.object(reader,'SETUP_V9_SIGNED_DATA',weakened),\
+                     patch.object(reader,'SETUP_V8_SIGNED_DATA',weakened):
+                    weakened_verdict=reader.verify_setup_v9_log(selected_wire,selected_external,outer,cleanup,shell)
+                self.assertTrue(weakened_verdict['setupObserved'])
+                changed=copy.deepcopy(value);candidate=reader.parse(candidate_raw)
+                alias={'linkText':'other.bin','target':'/usr/share/qemu/other.bin'}
+                candidate['aliases'][selected_path]=alias
+                changed['inventory']['aliases'][selected_path]=copy.deepcopy(alias)
+                changed_candidate=reader.canonical(candidate)
+                changed['candidate']=changed['inventory']['candidate']=wrap(changed_candidate)
+                regrade(changed)
+                changed=copy.deepcopy(value)
+                changed['stageAfter']['identity']['groups']=[0]
+                regrade(changed)
+                changed=copy.deepcopy(value)
+                changed['inventory']['probes'][8]['stdout']=changed['inventory']['probes'][8]['stdout'].replace(
+                    '/usr/share/qemu/QEMU,VGA.bin','/usr/share/qemu/QEMU,other.bin')
+                regrade(changed)
+                changed=copy.deepcopy(value)
+                changed['stageAfter']['source'][reader.WORKFLOW]['sha256']='0'*64
+                regrade(changed)
+                changed=copy.deepcopy(value)
+                changed['stageBefore']['record']['sha256']='0'*64
+                regrade(changed)
+                changed=copy.deepcopy(value)
+                tampered=dict(originals)
+                tampered['setup.request.json']=tampered['setup.request.json'][:-1]+b' '
+                regrade(changed,tampered)
+                changed_outer=reader.parse(outer);changed_outer['cgroupAfter']='present'
+                regrade(copy.deepcopy(value),changed_outer=reader.canonical(changed_outer))
+                changed_shell=reader.parse(shell);changed_shell['fields']['ImageVersion']['value']='different'
+                regrade(copy.deepcopy(value),changed_shell=reader.canonical(changed_shell))
+            self.assertEqual((reader.SETUP_V9_STATUS_SHA,reader.SETUP_V9_STATUS_BYTES,p.SETUP_V9_STATUS_SHA),production)
+
+        def test_v9_inactive_cli_refuses_before_every_host_edge(self):
+            self.assertIs(p.SETUP_V9_ENABLED,False)
+            self.assertIs(reader.SETUP_V9_READER_ENABLED,False)
+            self.assertIs(p.ACTUAL_ENTRY_ENABLED,False)
+            for mode,name in (('setup-runtime-inventory-v9','setup_v8_entry'),
+                ('cleanup-setup-v9-policy','setup_v8_outside_cleanup'),
+                ('setup-v9-image-shell','setup_v8_image_shell')):
+                with self.subTest(mode=mode),patch.object(p,name,side_effect=AssertionError('no host edge')) as edge,\
+                     patch.object(p.sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
+                    self.assertEqual(p.dispatch_cli(['--'+mode],{}),1)
+                    edge.assert_not_called()
+            with patch.object(reader.sys,'argv',['reader.py','--inventory-setup-v9']),\
+                 patch.object(reader,'setup_v9_inventory_entry',side_effect=AssertionError('no reader')) as edge:
+                with self.assertRaises(reader.Refusal):reader.main()
+                edge.assert_not_called()
+
+        def test_v9_closed_image_set_before_status_or_archive(self):
+            limits={'cpu.max':'cpuMax','memory.max':'memoryMax',
+                'memory.swap.max':'swapMax','pids.max':'pidsMax'}
+            def cgroup(_fd,path):
+                path=str(path)
+                if path=='/proc/self/cgroup':return '0::/system.slice/bw-ring3-setup-v9-123-1.service\n'
+                return p.LIMITS[limits[path.rsplit('/',1)[-1]]]
+            for image in (*p.SETUP_V9_IMAGES,'20261025.334.4'):
+                host=p.SetupV8Host({'GITHUB_RUN_ID':'123','ImageOS':'ubuntu24',
+                    'ImageVersion':image},b'',b'',None,p.SETUP_V9_ROUTE)
+                with self.subTest(image=image),patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+                     patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+                     patch.object(p.Cgroups,'text',side_effect=cgroup),\
+                     patch.object(Path,'exists',return_value=False),\
+                     patch.object(Path,'is_symlink',return_value=False),\
+                     patch.object(p,'bounded_read',side_effect=RuntimeError('STATUS_REACHED')) as read,\
+                     patch.object(host,'acquire',side_effect=AssertionError('GET before preflight')) as get:
+                    with self.assertRaises((ValueError,RuntimeError)) as caught:host.preflight({})
+                if image in p.SETUP_V9_IMAGES:
+                    self.assertEqual(str(caught.exception),'STATUS_REACHED');read.assert_called_once()
+                else:
+                    self.assertIn('fresh exact hosted image labels',str(caught.exception));read.assert_not_called()
+                get.assert_not_called()
+
+        def test_v9_workflow_is_disabled_and_old_v8_adjacent(self):
+            workflow=(HERE.parent.parent/'.github/workflows/i80386-ring3-int-iret.yml').read_text()
+            start=workflow.index('  setup-runtime-inventory-v9:\n')
+            end=workflow.index('  setup-runtime-inventory-v8:\n',start)
+            route=workflow[start:end]
+            self.assertIn("if: ${{ false && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-setup-runtime-inventory-v9'",route)
+            self.assertEqual(route.count('actions/checkout@11d5960a326750d5838078e36cf38b85af677262'),1)
+            self.assertEqual(route.count('actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020'),1)
+            for term in ('node-version: 22.23.3','--setup-v9-image-shell','--setup-runtime-inventory-v9',
+                '--cleanup-setup-v9-policy','--kill-after=5s 720s','RuntimeMaxSec=660','TimeoutStopSec=5',
+                'bw-ring3-setup-v9-${GITHUB_RUN_ID}-1'):
+                self.assertIn(term,route)
+            self.assertNotIn('--hosted-actual',route)
+
+    result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
+    assert result.wasSuccessful(),'pure V9 setup controls failed'
+    print(json.dumps({'testOnly':True,'tests':result.testsRun,'network':False,'dpkg':False,
+        'guest':False,'actualRunApproved':False,'pass':True}))
+
+
 if __name__=='__main__':
     if sys.argv[1:]==['--host-baseline-only']:host_baseline_controls()
     elif sys.argv[1:]==['--consumed-v7-failure-only']:consumed_v7_failure_controls()
@@ -7374,6 +7916,7 @@ if __name__=='__main__':
     elif sys.argv[1:]==['--image-env-diagnostic-only']:image_env_diagnostic_controls()
     elif sys.argv[1:]==['--setup-v6-only']:setup_v6_controls()
     elif sys.argv[1:]==['--setup-v8-only']:setup_v8_controls()
+    elif sys.argv[1:]==['--setup-v9-only']:setup_v9_controls()
     elif sys.argv[1:]==['--setup-v7-only']:setup_v7_controls()
     elif sys.argv[1:]==['--setup-v5-only']:setup_v5_controls()
     elif sys.argv[1:]==['--setup-v4-only']:setup_v4_controls()
