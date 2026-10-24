@@ -3506,7 +3506,9 @@ owned-service cgroup census with an extra direct member. The member's identity
 and cause are unknown. Configure, Node staging, a complete graph and the
 JavaScript/QEMU guest did not run. Later exact policy cleanup and outside
 terminal observation do not approve that failed transaction. The V1 label and
-originals are consumed; preserve the failure and do not replay it.
+originals are consumed; preserve the failure and do not replay it. The V1
+execution gate may be retired to prevent another selection while its wire,
+reader verdict and originals remain historical.
 
 The [new V2 ownership claim](../LANES.md) proposes a distinct request, label,
 job and reader. Its only installer behavior adjustment is up to six retained,
@@ -3514,8 +3516,13 @@ ordered cgroup samples over at most five monotonic seconds after a reaped dpkg
 phase, within the existing service and job bounds. The first sample is always
 retained; an immediately clean one proceeds without delay. Final acceptance
 still requires the exact controller alone and zero nested or dying descendants.
-Unknown or persistent population, malformed observations, read errors and
-budget exhaustion refuse, with no ignore list, kill or repeated package phase.
+An earlier nonquiet sample stays a negative observation; a later clean sample
+cannot establish that member's identity or continuous ownership. Unknown or
+persistent population in the final sample, malformed observations, read errors,
+identity/resource drift or a deadline reached during or after the final read
+refuse progression to configure, staging or guest work. Mandatory exact
+owned-policy and outside cleanup rules still apply on refusal. There is no
+ignore list, kill, repeated package phase or budget increase.
 
 A separate source fix must make the V2 reader's genuine handoff bytes pass the
 producer's exact-key parser, including the fixed `comparisonInput` field. Pure

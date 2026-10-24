@@ -6631,8 +6631,9 @@ Owner: Codex x86 Ring 3. Claim only `LANES.md`, `docs/X86-NEXT-LANES.md`,
 `scripts/i80386-ring3-int-iret/{run.py,reader.py,controls.py,README.md}` and
 `.github/workflows/i80386-ring3-int-iret.yml`. This docs-only amendment must
 merge and qualify before source implementation. Preserve the consumed V1
-label, request, event, originals and reader outcome; V9 metadata and every
-older actual/compiler route keep their behavior and guards.
+request, event, originals, wire and reader outcome. The spent V1 execution
+gate may be retired so it cannot select another run. V9 metadata and all
+other older actual/compiler behavior and guards remain held.
 
 The selected V1 [run](https://github.com/CrispStrobe/bw-board/actions/runs/40121786243)
 failed after all fifteen archive acquisitions and a zero-exit, reaped dpkg
@@ -6661,15 +6662,22 @@ of a failed syscall, process ignore list, PID kill, dpkg replay or budget
 increase. A later clean sample does not erase an earlier uncertain observation
 or establish continuous ownership. The final acceptance predicate stays exact
 controller-only direct membership, zero nested and dying descendants, reviewed
-populated state and unchanged resource identity. Persistent or unknown members,
-missing counters, malformed facts, identity/resource drift, sample exhaustion
-and deadline uncertainty refuse before configure or policy removal. Preserve
-the primary failure, ordered secondary failures, partial package mutations and
-outside terminal cleanup facts.
+populated state and unchanged resource identity in the final retained sample.
+An earlier nonquiet or unknown sample remains a negative observation; a later
+sample within the cap may still satisfy the strict predicate without assigning
+that earlier member a benign identity. Persistent or unknown members in the
+final sample, missing counters, malformed facts, identity/resource drift in
+any sample, sample exhaustion and a deadline that expires during or after the
+final read
+refuse progression to configure, staging and guest work. Mandatory finally
+cleanup still attempts exact owned-policy removal only under its existing
+strict cgroup gate; outside cleanup remains required. Preserve the primary
+failure, ordered secondary failures and partial package mutations.
 
 Permit only a closed V2 route value through the already reviewed setup
 sequence and cgroup census, root installer, child profile, entry/outside,
-workflow and dispatch seams. V9 and V1 defaults remain exact. A distinct V2
+workflow and dispatch seams. V9 defaults and V1 data, wire and reader verdicts
+remain exact; only the spent V1 execution gate may close. A distinct V2
 reader must independently check each retained sample and the final strict
 predicate, then bind its request/event/source, status, helper/archive/stage,
 runtime graph, both serial services, twenty roles and externally admitted
