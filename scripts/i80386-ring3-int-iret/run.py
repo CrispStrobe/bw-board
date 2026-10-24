@@ -860,7 +860,7 @@ class LinuxController(LinuxTool):
 
 def collect_child(ops, role, argv, *, profile='guest'):
     """Actual bounded orchestration, also called unmodified by inert controls."""
-    need(profile in ('guest','discovery','controller','preparation','setup-v4','setup-v5','setup-v6','setup-v7','setup-v8','setup-v9','setup-same-job-v1'),'closed child profile')
+    need(profile in ('guest','discovery','controller','preparation','setup-v4','setup-v5','setup-v6','setup-v7','setup-v8','setup-v9','setup-same-job-v1','setup-same-job-v2'),'closed child profile')
     need(role in ('js','qemu') if profile=='guest' else role==profile,'fixed child role/profile')
     wall_ns,stream_cap=(CHILD_NS,STREAM_CAP) if profile=='guest' else (
         (10000000000,16384) if profile=='discovery' else (600000000000,16384) if profile=='controller' else
@@ -5254,7 +5254,7 @@ def setup_v4_sequence(ops,request):
             phase_failure.secondary.extend(item['secondary'])
         try:
             item['cgroupAfter']=ops.quiescent(name)
-            need(item['cgroupAfter']['onlyController'] is True,
+            need(item['cgroupAfter'] is not None and item['cgroupAfter']['onlyController'] is True,
                  'no owned direct or nested dpkg descendants after '+name)
         except BaseException as error:phase_failure.add(error,'v4-'+name+'-cgroup')
         if phase_failure.first is not None:
@@ -7915,7 +7915,8 @@ SETUP_V9_ROUTE={'version':'v9','job':'setup-runtime-inventory-v9',
 # A separate, initially inert actual route. The comparison input describes the
 # admitted historical metadata candidate; it never substitutes for a fresh
 # complete graph in the same job. No request field can select route policy.
-SAME_JOB_ACTUAL_ENABLED=True
+SAME_JOB_ACTUAL_ENABLED=False  # The selected V1 label is spent; retain its wire and reader.
+SAME_JOB_ACTUAL_V2_ENABLED=False
 SAME_JOB_ACTUAL_ENV=tuple('BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256'
     if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key for key in NODE_STAGE_ENV)+(
     'BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64',)
@@ -7929,21 +7930,37 @@ SAME_JOB_ACTUAL_ROUTE={'version':'same-job-actual-v1','job':'ring3-same-job-actu
     'shellSchema':'bw.ring3.same-job-setup-image-shell.v1',
     'inventoryMode':'--inventory-same-job-actual-v1'}
 SAME_JOB_ACTUAL_STATUS_MARKER=b'RING3_SAME_JOB_SETUP_STATUS_V1 '
+SAME_JOB_ACTUAL_V2_ENV=tuple('BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256'
+    if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key for key in NODE_STAGE_ENV)+(
+    'BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64',)
+SAME_JOB_ACTUAL_V2_ROUTE={'version':'same-job-actual-v2','job':'ring3-same-job-actual-v2',
+    'label':'x86-ring3-same-job-actual-v2','unitPrefix':'bw-ring3-actual-setup-v2-',
+    'requestSchema':'bw.ring3.same-job-actual-request.v2',
+    'stageSchema':'bw.ring3.same-job-node-stage-original.v2',
+    'setupSchema':'bw.ring3.same-job-setup-original.v2',
+    'failureSchema':'bw.ring3.same-job-setup-entry-failure.v2',
+    'cleanupSchema':'bw.ring3.same-job-setup-outside-cleanup.v2',
+    'shellSchema':'bw.ring3.same-job-setup-image-shell.v2',
+    'inventoryMode':'--inventory-same-job-actual-v2'}
+SAME_JOB_ACTUAL_V2_STATUS_MARKER=b'RING3_SAME_JOB_SETUP_STATUS_V2 '
 SAME_JOB_REVIEWED_GRAPH={'bytes':103043,
     'sha256':'72407985d3ef62725137a05ea6c609ff81f7095bdeb0147a9f703628a0f9cdab',
     'selectedFiles':83,'selectedAliases':8,'selectedMismatches':0}
 
 
 def setup_route_env(route):
-    return SAME_JOB_ACTUAL_ENV if route is SAME_JOB_ACTUAL_ROUTE else SETUP_V9_ENV
+    return (SAME_JOB_ACTUAL_V2_ENV if route is SAME_JOB_ACTUAL_V2_ROUTE else
+        SAME_JOB_ACTUAL_ENV if route is SAME_JOB_ACTUAL_ROUTE else SETUP_V9_ENV)
 
 
 def setup_route_status_marker(route):
-    return SAME_JOB_ACTUAL_STATUS_MARKER if route is SAME_JOB_ACTUAL_ROUTE else SETUP_V9_STATUS_MARKER
+    return (SAME_JOB_ACTUAL_V2_STATUS_MARKER if route is SAME_JOB_ACTUAL_V2_ROUTE else
+        SAME_JOB_ACTUAL_STATUS_MARKER if route is SAME_JOB_ACTUAL_ROUTE else SETUP_V9_STATUS_MARKER)
 
 
 def setup_v9_selected(route):
-    need(route is SETUP_V9_ROUTE or route is SAME_JOB_ACTUAL_ROUTE,
+    need(route is SETUP_V9_ROUTE or route is SAME_JOB_ACTUAL_ROUTE or
+         route is SAME_JOB_ACTUAL_V2_ROUTE,
          'only fixed source-selected v9 or distinct actual setup route')
     return route
 setup_v8_status_rows=setup_v4_status_rows
@@ -8146,15 +8163,17 @@ def admit_setup_v9_event(event_raw,environ):
     return raw,request
 
 
-def admit_same_job_actual_request(raw,pin):
+def admit_same_job_actual_request(raw,pin,route=SAME_JOB_ACTUAL_ROUTE):
     """Admit only the fixed comparison input, never the old V9 request schema."""
+    need(route is SAME_JOB_ACTUAL_ROUTE or route is SAME_JOB_ACTUAL_V2_ROUTE,
+         'closed actual request route')
     need(type(raw) is bytes and 0<len(raw)<=32768 and type(pin) is str and
          re.fullmatch('[0-9a-f]{64}',pin) and sha(raw)==pin,
          'externally selected same-job actual request')
     value=final_json(raw)
     require_fields(value,'schema repository pullRequest head tree source selected nodeStage emptyPythonSources setup payloadWitness comparison',
                    'closed same-job actual request')
-    need(raw==encode(value) and value['schema']==SAME_JOB_ACTUAL_ROUTE['requestSchema'],
+    need(raw==encode(value) and value['schema']==route['requestSchema'],
          'canonical distinct same-job actual request')
     base={key:value[key] for key in
         ('repository','pullRequest','head','tree','source','selected','nodeStage','emptyPythonSources')}
@@ -8177,25 +8196,31 @@ def admit_same_job_actual_request(raw,pin):
     return value
 
 
-def admit_same_job_actual_event(event_raw,environ):
+def admit_same_job_actual_event(event_raw,environ,route=SAME_JOB_ACTUAL_ROUTE):
+    need(route is SAME_JOB_ACTUAL_ROUTE or route is SAME_JOB_ACTUAL_V2_ROUTE,
+         'closed actual event route')
     need(type(event_raw) is bytes and 0<len(event_raw)<=JSON_CAP,
          'bounded same-job actual event original')
     event=final_json(event_raw);pr=event.get('pull_request',{});body=pr.get('body')
-    start='<!-- BW_RING3_SAME_JOB_ACTUAL_V1\n';end='\nBW_RING3_SAME_JOB_ACTUAL_V1 -->'
+    marker=('BW_RING3_SAME_JOB_ACTUAL_V2' if route is SAME_JOB_ACTUAL_V2_ROUTE else
+        'BW_RING3_SAME_JOB_ACTUAL_V1')
+    start='<!-- '+marker+'\n';end='\n'+marker+' -->'
     need(type(body) is str and body.count(start)==body.count(end)==1 and
          body.index(start)<body.index(end),'one distinct actual SHA-only body block')
-    pin=environ.get('BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256')
+    stem=('BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_' if route is SAME_JOB_ACTUAL_V2_ROUTE else
+          'BW_RING3_SAME_JOB_ACTUAL_REQUEST_')
+    pin=environ.get(stem+'SHA256')
     need(type(pin) is str and re.fullmatch('[0-9a-f]{64}',pin) and
          body.split(start,1)[1].split(end,1)[0]==pin,'one selected actual body SHA')
-    encoded=environ.get('BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64')
+    encoded=environ.get(stem+'B64')
     need(type(encoded) is str and 0<len(encoded)<=43692,
          'bounded canonical actual repository request')
     raw=base64.b64decode(encoded,validate=True)
     need(0<len(raw)<=32768 and base64.b64encode(raw).decode('ascii')==encoded and sha(raw)==pin,
          'exact selected actual request bytes')
-    request=admit_same_job_actual_request(raw,pin)
+    request=admit_same_job_actual_request(raw,pin,route)
     need(event.get('action')=='labeled' and
-         event.get('label',{}).get('name')==SAME_JOB_ACTUAL_ROUTE['label'] and
+         event.get('label',{}).get('name')==route['label'] and
          event.get('repository',{}).get('full_name')==APPROVAL_REPOSITORY and
          event.get('sender',{}).get('login')=='CrispStrobe' and
          type(event.get('number')) is int and event['number']==request['pullRequest'] and
@@ -8208,7 +8233,7 @@ def admit_same_job_actual_event(event_raw,environ):
     expected_cgroup(environ)
     need(all(environ.get(key)==value for key,value in {
          'GITHUB_REPOSITORY':APPROVAL_REPOSITORY,'GITHUB_EVENT_NAME':'pull_request',
-         'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':SAME_JOB_ACTUAL_ROUTE['job'],
+         'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':route['job'],
          'GITHUB_RUN_ATTEMPT':'1','BW_EXPECTED_HEAD':request['head'],
          'BW_EXPECTED_TREE':request['tree'],
          'GITHUB_WORKFLOW_REF':APPROVAL_REPOSITORY+
@@ -8225,7 +8250,8 @@ def emit_setup_v8_status(role,raw,emit=None,flush=None,route=None):
     need(role in ('pre','post') and type(raw) is bytes and 0<len(raw)<=8<<20,
          'fixed bounded raw dpkg status original')
     packed=zlib.compress(raw,9);need(0<len(packed)<=700<<10,'bounded compressed dpkg status original')
-    packet={'schema':'bw.ring3.same-job-setup-status-original.v1' if route is SAME_JOB_ACTUAL_ROUTE else
+    packet={'schema':'bw.ring3.same-job-setup-status-original.v2' if route is SAME_JOB_ACTUAL_V2_ROUTE else
+            'bw.ring3.same-job-setup-status-original.v1' if route is SAME_JOB_ACTUAL_ROUTE else
             'bw.ring3.setup-status-original.v9' if route is not None else
             'bw.ring3.setup-status-original.v8','role':role,'rawBytes':len(raw),
         'rawSha256':sha(raw),'packedBytes':len(packed),'packedSha256':sha(packed),
@@ -8241,6 +8267,56 @@ def emit_setup_v8_status(role,raw,emit=None,flush=None,route=None):
 
 def emit_setup_v9_status(role,raw,emit=None,flush=None):
     return emit_setup_v8_status(role,raw,emit,flush,SETUP_V9_ROUTE)
+
+
+def same_job_v2_cgroup_history(ops,phase,*,limit=6,clock=None,pause=None):
+    """Finite point observations after one reaped dpkg phase, never a lease."""
+    need(phase in ('unpack','configure') and type(limit) is int and 1<=limit<=6,
+         'only fixed v2 post-reap census boundary')
+    clock=time.monotonic_ns if clock is None else clock
+    pause=time.sleep if pause is None else pause
+    began=clock();need(type(began) is int and began>=0,'monotonic census start')
+    deadline=began+5_000_000_000
+    targets=(0,100_000_000,400_000_000,1_000_000_000,2_500_000_000,4_500_000_000)
+    value={'schema':'bw.ring3.same-job-post-reap-census.v2','phase':phase,
+        'deadlineMonoNs':deadline,'samples':[],'finalIndex':None,'settled':False,
+        'firstFailure':None,'secondary':[]}
+    stable_identity=None
+    for index in range(limit):
+        now=clock();need(type(now) is int and now>=began,'monotonic census clock')
+        if index and now<began+targets[index] and now<deadline:
+            pause(min(began+targets[index]-now,deadline-now)/1_000_000_000)
+        started=clock()
+        if type(started) is not int or started>deadline:
+            value['firstFailure']=row(ValueError('finite v2 post-reap deadline before sample'),
+                                      'same-job-actual-v2-cgroup-deadline')
+            break
+        sample=ops.cgroup_sample_v2(phase,index)
+        ended=clock()
+        need(type(ended) is int and ended>=started,'ordered monotonic census read')
+        require_fields(sample,'unitIdentity limits cgroupProcs cgroupEvents cgroupStat onlyController firstFailure secondary',
+                       'closed v2 cgroup sample facts')
+        sample=dict(sample,index=index,startMonoNs=started,endMonoNs=ended)
+        value['samples'].append(sample);value['finalIndex']=index
+        if sample['firstFailure'] is not None:
+            value['firstFailure']=sample['firstFailure']
+            value['secondary'].extend(sample['secondary']);break
+        identity=sample['unitIdentity']
+        if stable_identity is None:stable_identity=identity[:6]
+        if (identity[:6]!=stable_identity or sample['limits']!=LIMITS or
+                ended>deadline):
+            cause=('finite v2 post-reap deadline after read' if ended>deadline else
+                   'owned v2 cgroup identity or limits drift')
+            value['firstFailure']=row(ValueError(cause),'same-job-actual-v2-cgroup-admission')
+            break
+        if sample['onlyController'] is True:
+            value['settled']=True;break
+    if not value['settled'] and value['firstFailure'] is None:
+        value['firstFailure']=row(ValueError('owned descendants remain at finite sample limit'),
+                                  'same-job-actual-v2-cgroup-settle')
+    need(1<=len(value['samples'])<=limit and len(encode(value))<=128<<10,
+         'bounded retained v2 sample sequence')
+    return value
 
 
 def setup_v8_sequence(ops,request,route=None):
@@ -8261,7 +8337,17 @@ def setup_v8_sequence(ops,request,route=None):
             phase_failure.add(ValueError('bounded '+name+' dpkg failed'),version+'-'+name)
             phase_failure.secondary.extend(item['secondary'])
         try:
-            item['cgroupAfter']=ops.quiescent(name)
+            if route is SAME_JOB_ACTUAL_V2_ROUTE:
+                history=same_job_v2_cgroup_history(ops,name,
+                    limit=1 if phase_failure.first is not None else 6)
+                item['cgroupHistory']=history
+                last=history['samples'][-1]
+                if last['firstFailure'] is None:
+                    item['cgroupAfter']={'phase':name,
+                        **{key:last[key] for key in ('cgroupProcs','cgroupEvents','cgroupStat','onlyController')}}
+                if history['firstFailure'] is not None:
+                    phase_failure.adopt(history['firstFailure'],history['secondary'])
+            else:item['cgroupAfter']=ops.quiescent(name)
             need(item['cgroupAfter']['onlyController'] is True,
                  'no owned direct or nested dpkg descendants after '+name)
         except BaseException as error:phase_failure.add(error,version+'-'+name+'-cgroup')
@@ -8329,7 +8415,8 @@ class SetupV8Tool(LinuxChild):
     """One root dpkg phase inside the separately bounded transient service."""
     def __init__(self,argv,route=None):
         if route is not None:setup_v9_selected(route)
-        super().__init__(None,'setup-same-job-v1' if route is SAME_JOB_ACTUAL_ROUTE else
+        super().__init__(None,'setup-same-job-v2' if route is SAME_JOB_ACTUAL_V2_ROUTE else
+            'setup-same-job-v1' if route is SAME_JOB_ACTUAL_ROUTE else
             'setup-v9' if route is not None else 'setup-v8',argv)
         self.environment=dict(SETUP_V8_INSTALLER_ENV)
 
@@ -8474,7 +8561,8 @@ class SetupV8Host:
             if self.network_started is None:self.network_started=attempt_started
             need(time.monotonic()-self.network_started<180,'total archive acquisition deadline')
             request=urllib.request.Request(url,headers={'Accept-Encoding':'identity',
-                'User-Agent':'bw-ring3-same-job-actual/1' if self.route is SAME_JOB_ACTUAL_ROUTE else
+                'User-Agent':'bw-ring3-same-job-actual/2' if self.route is SAME_JOB_ACTUAL_V2_ROUTE else
+                    'bw-ring3-same-job-actual/1' if self.route is SAME_JOB_ACTUAL_ROUTE else
                     'bw-ring3-setup-v9/1' if self.route is not None else 'bw-ring3-setup-v8/1'})
             with urllib.request.build_opener(RejectRedirect).open(request,timeout=30) as reply:
                 need(reply.status==200 and reply.headers.get('Content-Encoding') in (None,'identity') and
@@ -8549,7 +8637,8 @@ class SetupV8Host:
         need(args==['--no-triggers','--unpack']+[str(self.root/(str(i).zfill(2)+'.deb')) for i in range(15)] or
              args==['--no-triggers','--configure',*SETUP_V8_CONFIGURE_ORDER],
              'fixed no-force, no-trigger dpkg phase')
-        label=('setup-same-job-v1' if self.route is SAME_JOB_ACTUAL_ROUTE else
+        label=('setup-same-job-v2' if self.route is SAME_JOB_ACTUAL_V2_ROUTE else
+            'setup-same-job-v1' if self.route is SAME_JOB_ACTUAL_ROUTE else
             'setup-v9' if self.route is not None else 'setup-v8')
         argv=['/usr/bin/dpkg',*args];tool=(SetupV8Tool(argv) if self.route is None else
             SetupV8Tool(argv,self.route))
@@ -8557,6 +8646,46 @@ class SetupV8Host:
         return {'argv':argv,'process':process,'stdout':original_bytes(streams['stdout']) if streams['stdout'] else None,
             'stderr':original_bytes(streams['stderr']) if streams['stderr'] else None,'exitCode':process['exitCode'],'timedOut':process['timedOut'],
             'firstFailure':process['firstFailure'],'secondary':process['secondary']}
+
+    def cgroup_sample_v2(self,phase,index):
+        """One bounded root-owned unit census, with partial facts on read failure."""
+        need(self.route is SAME_JOB_ACTUAL_V2_ROUTE and phase in ('unpack','configure') and
+             type(index) is int and 0<=index<6,'fixed V2 sample scope')
+        run_id=self.environ['GITHUB_RUN_ID']
+        unit=Path('/sys/fs/cgroup/system.slice')/(
+            self.route['unitPrefix']+run_id+'-1.service')
+        sample={'unitIdentity':None,'limits':{key:None for key in LIMITS},
+            'cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None,
+            'onlyController':None,'firstFailure':None,'secondary':[]}
+        def identity(info):return [info.st_dev,info.st_ino,info.st_mode,info.st_uid,
+            info.st_gid,info.st_nlink,info.st_size,info.st_mtime_ns]
+        try:
+            before=unit.lstat();sample['unitIdentity']=identity(before)
+            need(unit.resolve(strict=True)==unit and stat.S_ISDIR(before.st_mode) and
+                 before.st_uid==before.st_gid==0 and before.st_nlink>=1,
+                 'exact root-owned V2 transient unit identity')
+            for key,name in (('cpuMax','cpu.max'),('memoryMax','memory.max'),
+                             ('swapMax','memory.swap.max'),('pidsMax','pids.max')):
+                sample['limits'][key]=Cgroups.text(None,unit/name).strip()
+            need(sample['limits']==LIMITS,'held V2 service resource limits')
+            for key,name in (('cgroupProcs','cgroup.procs'),('cgroupEvents','cgroup.events'),
+                             ('cgroupStat','cgroup.stat')):
+                sample[key]=Cgroups.text(None,unit/name)
+            after=unit.lstat()
+            need(identity(after)[:6]==sample['unitIdentity'][:6] and
+                 unit.resolve(strict=True)==unit,'held V2 unit identity during census')
+            lines=sample['cgroupProcs'].splitlines()
+            need(len(lines)<=64 and len(lines)==len(set(lines)) and
+                 all(re.fullmatch('[1-9][0-9]*',line) for line in lines),
+                 'finite unique V2 owned process census')
+            sample['onlyController']=(lines==[str(os.getpid())] and
+                setup_v8_cgroup_quiet(sample['cgroupProcs'],sample['cgroupEvents'],
+                                      sample['cgroupStat'],os.getpid()))
+        except BaseException as error:
+            sample['firstFailure']=row(error,'same-job-actual-v2-cgroup-sample')
+            sample['secondary'].extend(getattr(error,'ring3_secondary',[]))
+        need(len(encode(sample))<=24<<10,'bounded V2 partial cgroup sample')
+        return sample
 
     def quiescent(self,phase):
         need(phase in ('unpack','configure','policy-cleanup'),'fixed setup cgroup census phase')
@@ -8690,8 +8819,8 @@ def setup_v8_entry(environ,route=None):
         need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root '+version+' entry')
         observer=HostedEnvelopeInstaller(environ);event=observer.event()
         context['event']=original_bytes(event);context['eventIdentity']=observer.facts['eventIdentity']
-        request_raw,request=(admit_same_job_actual_event(event,environ)
-            if route is SAME_JOB_ACTUAL_ROUTE else
+        request_raw,request=(admit_same_job_actual_event(event,environ,route)
+            if route in (SAME_JOB_ACTUAL_ROUTE,SAME_JOB_ACTUAL_V2_ROUTE) else
             admit_setup_v9_event(event,environ) if route is not None else
             admit_setup_v8_event(event,environ))
         context['request']=original_bytes(request_raw)
@@ -8785,8 +8914,8 @@ def setup_v8_outside_cleanup(environ,route=None):
         # Admission must finish before an exact-unit stop or global policy mutation.
         observer=HostedEnvelopeInstaller(environ)
         event_raw=observer.event()
-        request_raw,request=(admit_same_job_actual_event(event_raw,environ)
-            if route is SAME_JOB_ACTUAL_ROUTE else
+        request_raw,request=(admit_same_job_actual_event(event_raw,environ,route)
+            if route in (SAME_JOB_ACTUAL_ROUTE,SAME_JOB_ACTUAL_V2_ROUTE) else
             admit_setup_v9_event(event_raw,environ) if route is not None else
             admit_setup_v8_event(event_raw,environ))
         need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,
@@ -8833,7 +8962,8 @@ def setup_v8_outside_cleanup(environ,route=None):
             value['action']='deferred'
             need(value['stop']['attempted'] is False or value['stop']['exitCode']==0,
                  'uncertain stop forbids global policy unlink')
-            directory=('build/i80386-ring3-same-job-actual-v1' if route is SAME_JOB_ACTUAL_ROUTE else
+            directory=('build/i80386-ring3-same-job-actual-v2' if route is SAME_JOB_ACTUAL_V2_ROUTE else
+                'build/i80386-ring3-same-job-actual-v1' if route is SAME_JOB_ACTUAL_ROUTE else
                 'build/i80386-ring3-setup-runtime-inventory-'+version)
             raw=bounded_read(directory+'/inventory.original.log',8<<20)
             packets=[]
@@ -9385,14 +9515,47 @@ SAME_JOB_GUEST_LIMITS={'cpu.max':'100000 100000','memory.max':'1073741824',
     'memory.swap.max':'0','pids.max':'64'}
 
 
-def same_job_handoff(environ):
+
+def same_job_guest_route(environ):
+    """Select one literal actual family from its own job; never project events."""
+    job=environ.get('GITHUB_JOB')
+    if job==SAME_JOB_ACTUAL_V2_ROUTE['job']:return SAME_JOB_ACTUAL_V2_ROUTE
+    need(job==SAME_JOB_ACTUAL_ROUTE['job'],'closed same-job actual job route')
+    return SAME_JOB_ACTUAL_ROUTE
+
+
+def same_job_guest_prefix(route):
+    setup_v9_selected(route)
+    return ('bw-ring3-actual-guest-v2-' if route is SAME_JOB_ACTUAL_V2_ROUTE else
+        SAME_JOB_GUEST_UNIT_PREFIX)
+
+
+def same_job_guest_directory(route):
+    setup_v9_selected(route)
+    return Path('build/i80386-ring3-same-job-actual-'+
+        ('v2' if route is SAME_JOB_ACTUAL_V2_ROUTE else 'v1'))
+
+
+def same_job_guest_mode(name,route):
+    setup_v9_selected(route)
+    return '--same-job-'+name+('-v2' if route is SAME_JOB_ACTUAL_V2_ROUTE else '-v1')
+
+
+def same_job_guest_env(route):
+    setup_v9_selected(route)
+    return SAME_JOB_V2_CHILD_ENV if route is SAME_JOB_ACTUAL_V2_ROUTE else SAME_JOB_CHILD_ENV
+
+
+def same_job_handoff(environ,route=SAME_JOB_ACTUAL_ROUTE):
     """One held local first-service verdict. Its reviewed digest is still required."""
     pin=environ.get('BW_RING3_SAME_JOB_HANDOFF_SHA256')
     need(type(pin) is str and re.fullmatch('[0-9a-f]{64}',pin),'selected same-job handoff SHA')
     uid,gid=(environ.get('SUDO_'+key,'') for key in ('UID','GID'))
     need(all(type(value) is str and re.fullmatch('[1-9][0-9]{0,9}',value) and
         int(value)<2**31 for value in (uid,gid)),'trusted handoff invoker')
-    owner=(int(uid),int(gid));path=Path.cwd()/SAME_JOB_HANDOFF_PATH
+    setup_v9_selected(route)
+    owner=(int(uid),int(gid));path=Path.cwd()/(
+        same_job_guest_directory(route)/'handoff.original.json')
     for parent in (Path.cwd(),Path.cwd()/'build',path.parent):
         info=parent.lstat()
         need(parent.resolve(strict=True)==parent and stat.S_ISDIR(info.st_mode) and
@@ -9419,16 +9582,19 @@ def same_job_handoff(environ):
     finally:first=close_owned(fd,first,'same-job-handoff-close')
     if first is not None:raise first
     value=final_json(bytes(raw));need(encode(value)==bytes(raw),'canonical handoff original')
-    require_fields(value,'schema candidateSha256 candidateBytes setupObserved shellImageFields '
+    required=('schema candidateSha256 candidateBytes setupObserved shellImageFields '
         'serviceImageFields forwardingMatchesExpected deferredHostTriggers '
         'completeHostConfiguration actualGuestApproved outsideTerminalObserved '
         'cgroupAfterAbsent continuousOwnershipEstablished localHandoffCompared '
         'officialJobAuthenticated imageFieldsAuthenticated immutableImageIdentityEstablished '
         'candidateReviewed actualRunApproved rawStatusBytesIndependentlyVerified '
         'ciArchiveBytesIndependentlyVerified runId head tree workflowSha workflowFileSha256 '
-        'requestSha256 eventSha256 source stageCopy runtimeCandidate',
-        'closed independently graded handoff fields')
-    need(value['schema']=='bw.ring3.same-job-setup-admission.v1' and
+        'requestSha256 eventSha256 source stageCopy runtimeCandidate')
+    if route is SAME_JOB_ACTUAL_V2_ROUTE:required+=' comparisonInput'
+    require_fields(value,required,'closed independently graded handoff fields')
+    need(value['schema']==('bw.ring3.same-job-setup-admission.v2'
+             if route is SAME_JOB_ACTUAL_V2_ROUTE else
+             'bw.ring3.same-job-setup-admission.v1') and
          all(value[key] is True for key in ('setupObserved','outsideTerminalObserved',
              'cgroupAfterAbsent','localHandoffCompared')) and
          value['actualGuestApproved'] is False and value['officialJobAuthenticated'] is False and
@@ -9440,8 +9606,13 @@ def same_job_handoff(environ):
          value['workflowSha']==environ.get('GITHUB_WORKFLOW_SHA') and
          value['workflowFileSha256']==
              value['source']['files'][WORKFLOW]['sha256'] and
-         value['requestSha256']==environ.get('BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256'),
+         value['requestSha256']==environ.get('BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256'
+             if route is SAME_JOB_ACTUAL_V2_ROUTE else
+             'BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256') and
          'exact prior terminal graph, source and actual event selected')
+    if route is SAME_JOB_ACTUAL_V2_ROUTE:
+        need(same_json(value['comparisonInput'],SAME_JOB_REVIEWED_GRAPH),
+             'genuine V2 independent handoff reviewed comparison input')
     candidate=admitted_original(value['runtimeCandidate'],256<<10,'selected live v4 graph')
     need(len(candidate)==SAME_JOB_REVIEWED_GRAPH['bytes'] and
          sha(candidate)==SAME_JOB_REVIEWED_GRAPH['sha256'],'exact reviewed graph bytes')
@@ -9452,10 +9623,12 @@ def same_job_handoff(environ):
     return bytes(raw),value,candidate,graph
 
 
-def same_job_actual_selection(environ,event_raw,*,handoff_reader=same_job_handoff):
+def same_job_actual_selection(environ,event_raw,*,handoff_reader=same_job_handoff,
+                              route=SAME_JOB_ACTUAL_ROUTE):
     """Distinct actual event and already graded first-service graph before effects."""
-    request_raw,request=admit_same_job_actual_event(event_raw,environ)
-    handoff_raw,handoff,candidate_raw,candidate=handoff_reader(environ)
+    request_raw,request=admit_same_job_actual_event(event_raw,environ,route)
+    handoff_raw,handoff,candidate_raw,candidate=(handoff_reader(environ)
+        if route is SAME_JOB_ACTUAL_ROUTE else handoff_reader(environ,route))
     source_raw=admitted_original(request['source'],JSON_CAP,'selected actual source')
     need(source_raw==encode(handoff['source']) and
          handoff['eventSha256']==sha(event_raw) and
@@ -9549,18 +9722,24 @@ SAME_JOB_CHILD_ENV=('GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_REPOSITORY',
     'BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256','BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64',
     'BW_RING3_SAME_JOB_HANDOFF_SHA256','BW_LAUNCH_PLAN_SHA256')
 
+SAME_JOB_V2_CHILD_ENV=tuple('BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256'
+    if key=='BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256' else
+    'BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64'
+    if key=='BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64' else key
+    for key in SAME_JOB_CHILD_ENV)
+
 
 class SameJobFinalizerContext:
     """Raw V1 actual descriptors with checked local views for old resource math."""
-    def __init__(self,selection,environ):
-        self.selection=selection;self.environ=dict(environ);self.originals={}
+    def __init__(self,selection,environ,route=SAME_JOB_ACTUAL_ROUTE):
+        self.selection=selection;self.environ=dict(environ);self.originals={};self.route=route
 
     def generic_outer(self,value,entry,environ):
         actual=final_json(encode(value));process=actual['process']
         need(same_json(process['argv'],[entry['python']['path'],'-I','-B',RUN_FILE,
-            '--same-job-bootstrap-v1']) and
+            same_job_guest_mode('bootstrap',self.route)]) and
              same_json(process['environment'],dict(ENV,**{name:environ[name] for name in
-                 SAME_JOB_CHILD_ENV},SUDO_UID=str(entry['uid']),SUDO_GID=str(entry['gid']))) and
+                 same_job_guest_env(self.route)},SUDO_UID=str(entry['uid']),SUDO_GID=str(entry['gid']))) and
              process['environment']['BW_RING3_SAME_JOB_HANDOFF_SHA256']==
                  sha(self.selection['handoffRaw']),
              'retained distinct actual outside child descriptor and selected handoff')
@@ -9583,14 +9762,16 @@ class SameJobFinalizerContext:
         phase=final_json(phase_raw)
         need(phase_raw==encode(phase) and phase['schema']=='bw.ring3.preparation-original.v4' and
              phase['process']['argv']==[entry['python']['path'],'-I','-B',RUN_FILE,
-                 '--same-job-prepare-v1'] and
-             phase['process']['environment'].get('BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256')==
+                 same_job_guest_mode('prepare',self.route)] and
+             phase['process']['environment'].get('BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256'
+                 if self.route is SAME_JOB_ACTUAL_V2_ROUTE else
+                 'BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256')==
                  sha(self.selection['requestRaw']) and
              phase['process']['environment'].get('BW_RING3_SAME_JOB_HANDOFF_SHA256')==
                  sha(self.selection['handoffRaw']),
              'own distinct actual preparation phase and selected admission')
         need(same_json(phase['process']['environment'],dict(ENV,**{
-                name:environ[name] for name in SAME_JOB_CHILD_ENV},
+                name:environ[name] for name in same_job_guest_env(self.route)},
                 SUDO_UID=str(entry['uid']),SUDO_GID=str(entry['gid']))),
              'closed exact actual preparation child environment')
         need(admitted_original(self.selection['request']['source'],JSON_CAP,
@@ -9632,15 +9813,17 @@ class SameJobFinalizerContext:
 
 class LinuxSameJobPreparation(LinuxAdmittedGeneratedPreparation):
     def __init__(self,parent):
-        super().__init__(parent);self.argv[-1]='--same-job-prepare-v1'
-        for name in SAME_JOB_CHILD_ENV:
+        super().__init__(parent);route=same_job_guest_route(parent.environ)
+        self.argv[-1]=same_job_guest_mode('prepare',route)
+        for name in same_job_guest_env(route):
             self.environment[name]=parent.environ[name]
 
 
 class SameJobBootstrapOps(BootstrapOps):
     def validate(self):
         owner=super().validate()
-        _,handoff,candidate_raw,candidate=same_job_handoff(self.environ)
+        _,handoff,candidate_raw,candidate=same_job_handoff(self.environ,
+            same_job_guest_route(self.environ))
         need(handoff['source']['head']==self.environ['BW_EXPECTED_HEAD'] and
              len(candidate_raw)==SAME_JOB_REVIEWED_GRAPH['bytes'] and
              candidate['schema']=='bw.ring3.runtime-expectation.v4',
@@ -9650,17 +9833,20 @@ class SameJobBootstrapOps(BootstrapOps):
     def execute(self):
         entry_ids(self.invoker['uid'],self.invoker['gid']);self.entered()
         python=self.owner['python']['path']
-        environment=dict(ENV,**{name:self.environ[name] for name in SAME_JOB_CHILD_ENV},
+        route=same_job_guest_route(self.environ)
+        environment=dict(ENV,**{name:self.environ[name] for name in same_job_guest_env(route)},
             SUDO_UID=str(self.invoker['uid']),SUDO_GID=str(self.invoker['gid']))
-        os.execve(python,[python,'-I','-B',RUN_FILE,'--same-job-controller-v1'],environment)
+        os.execve(python,[python,'-I','-B',RUN_FILE,
+            same_job_guest_mode('controller',route)],environment)
         raise RuntimeError('same-job actual bootstrap exec unexpectedly returned')
 
 
 class LinuxSameJobController(LinuxController):
     def __init__(self,bootstrap):
-        super().__init__(bootstrap);self.argv[-1]='--same-job-bootstrap-v1'
+        super().__init__(bootstrap);route=same_job_guest_route(bootstrap.environ)
+        self.argv[-1]=same_job_guest_mode('bootstrap',route)
         self.environment=dict(ENV,**{name:bootstrap.environ[name] for name in
-            SAME_JOB_CHILD_ENV},SUDO_UID=str(bootstrap.invoker['uid']),
+            same_job_guest_env(route)},SUDO_UID=str(bootstrap.invoker['uid']),
             SUDO_GID=str(bootstrap.invoker['gid']))
 
 
@@ -9676,7 +9862,8 @@ class SameJobControllerOps(ControllerOps):
         super().__init__(environ);self.same_job_gate=None;self.same_job_handoff=None
 
     def admit(self):
-        handoff_raw,handoff,candidate_raw,candidate=same_job_handoff(self.environ)
+        self.route=same_job_guest_route(self.environ)
+        handoff_raw,handoff,candidate_raw,candidate=same_job_handoff(self.environ,self.route)
         need(handoff['eventSha256']==sha(HostedEnvelopeInstaller(self.environ).event()),
              'dropped actual controller joins retained own event')
         self.same_job_handoff=(handoff_raw,handoff,candidate_raw,candidate)
@@ -9699,7 +9886,9 @@ class SameJobControllerOps(ControllerOps):
                 except BaseException as error:failure.add(error,'same-job-runtime-after')
             if self.unprivileged and self.paths_admitted:
                 try:
-                    value={'schema':'bw.ring3.same-job-controller-runtime.v1',
+                    value={'schema':'bw.ring3.same-job-controller-runtime.v2'
+                        if self.route is SAME_JOB_ACTUAL_V2_ROUTE else
+                        'bw.ring3.same-job-controller-runtime.v1',
                         'handoffSha256':None if self.same_job_handoff is None else
                             sha(self.same_job_handoff[0]),
                         'candidateSha256':None if self.same_job_handoff is None else
@@ -9729,6 +9918,7 @@ class SameJobEntryComposition(RuntimeEntryComposition):
 def same_job_preparation_child(environ=None,*,observer=None,emit=None,flush=None):
     """Actual request/handoff and V4 graph precede authored fixture generation."""
     environ=dict(os.environ if environ is None else environ);failure=FirstFailure()
+    route=same_job_guest_route(environ)
     gate=None;selection=None;result={'pass':False}
     try:
         ids=[environ.get('SUDO_'+key,'') for key in ('UID','GID')]
@@ -9738,7 +9928,7 @@ def same_job_preparation_child(environ=None,*,observer=None,emit=None,flush=None
         need(entry_proc('/proc/self/cgroup')=='0::/'+expected_cgroup(environ).name+
              '-preparation\n','owned actual preparation sibling membership')
         event_raw=HostedEnvelopeInstaller(environ).event()
-        selection=same_job_actual_selection(environ,event_raw)
+        selection=same_job_actual_selection(environ,event_raw,route=route)
         plan_raw=read_launch_plan(environ,environ.get('BW_LAUNCH_PLAN_SHA256'))
         plan,source=admit_launch_plan(plan_raw,environ['BW_LAUNCH_PLAN_SHA256'],environ)
         need(same_json(plan['source'],selection['request']['source']) and
@@ -9760,7 +9950,9 @@ def same_job_preparation_child(environ=None,*,observer=None,emit=None,flush=None
         try:
             uid,gid=map(int,(environ.get('SUDO_UID',''),environ.get('SUDO_GID','')))
             entry_ids(uid,gid)
-            value={'schema':'bw.ring3.same-job-preparation-runtime.v1',
+            value={'schema':'bw.ring3.same-job-preparation-runtime.v2'
+                if route is SAME_JOB_ACTUAL_V2_ROUTE else
+                'bw.ring3.same-job-preparation-runtime.v1',
                 'handoffSha256':None if selection is None else sha(selection['handoffRaw']),
                 'candidateSha256':None if selection is None else sha(selection['candidateRaw']),
                 'pid':os.getpid(),'observations':{} if gate is None else gate.observations,
@@ -9856,18 +10048,21 @@ def same_job_create_runtime_sink(setup):
     if first is not None:raise first
 
 
-def same_job_guest_service(environ=None,*,event_reader=None,handoff_reader=same_job_handoff):
+def same_job_guest_service(environ=None,*,event_reader=None,handoff_reader=same_job_handoff,
+                           route=SAME_JOB_ACTUAL_ROUTE):
     """New actual job: terminal setup handoff, then one independent guest service."""
-    need(SAME_JOB_ACTUAL_ENABLED is True,'same-job actual route disabled')
+    need((SAME_JOB_ACTUAL_V2_ENABLED if route is SAME_JOB_ACTUAL_V2_ROUTE else
+          SAME_JOB_ACTUAL_ENABLED) is True,'same-job actual route disabled')
     environ=dict(os.environ if environ is None else environ);failure=FirstFailure()
     result={'pass':False,'setup':None,'composition':None,'firstFailure':None,'secondary':[]}
     setup=None;selection=None
     try:
         event_raw=(HostedEnvelopeInstaller(environ).event() if event_reader is None
             else event_reader())
-        selection=same_job_actual_selection(environ,event_raw,handoff_reader=handoff_reader)
+        selection=same_job_actual_selection(environ,event_raw,
+            handoff_reader=handoff_reader,route=route)
         membership=entry_proc('/proc/self/cgroup')
-        unit=SAME_JOB_GUEST_UNIT_PREFIX+environ['GITHUB_RUN_ID']+'-1.service'
+        unit=same_job_guest_prefix(route)+environ['GITHUB_RUN_ID']+'-1.service'
         need(membership=='0::/system.slice/'+unit+'\n',
              'actual second owned service membership before preparation')
         cgroup=Path('/sys/fs/cgroup/system.slice')/unit
@@ -9887,7 +10082,7 @@ def same_job_guest_service(environ=None,*,event_reader=None,handoff_reader=same_
         need(prepared['pass'] is True and failure.first is None,
              'complete distinct guest resource setup before controller')
         same_job_create_runtime_sink(setup)
-        context=SameJobFinalizerContext(selection,environ)
+        context=SameJobFinalizerContext(selection,environ,route)
         composed,found=compose_entry(SameJobEntryComposition(setup,context))
         failure.adopt(found.first,found.secondary)
         result['composition']=composed
@@ -9908,8 +10103,10 @@ def same_job_guest_service(environ=None,*,event_reader=None,handoff_reader=same_
             failure.secondary==[])
         if setup is not None and setup.invoker is not None:
             try:
-                write_new(Path('build/i80386-ring3-same-job-actual-v1')/
-                    'guest.service.original.json',encode({'schema':'bw.ring3.same-job-guest-service.v1',
+                write_new(same_job_guest_directory(route)/
+                    'guest.service.original.json',encode({'schema':
+                    'bw.ring3.same-job-guest-service.v2' if route is SAME_JOB_ACTUAL_V2_ROUTE else
+                    'bw.ring3.same-job-guest-service.v1',
                     'requestSha256':None if selection is None else sha(selection['requestRaw']),
                     'handoffSha256':None if selection is None else sha(selection['handoffRaw']),
                     'guestPacketComposed':result['pass'],'firstFailure':failure.first,
@@ -9919,11 +10116,15 @@ def same_job_guest_service(environ=None,*,event_reader=None,handoff_reader=same_
     return result,failure
 
 
-def same_job_guest_cleanup(environ=None,*,event_reader=None,handoff_reader=same_job_handoff):
+def same_job_guest_cleanup(environ=None,*,event_reader=None,handoff_reader=same_job_handoff,
+                           route=SAME_JOB_ACTUAL_ROUTE):
     """Outside exact-unit stop/census; it never upgrades a failed guest packet."""
-    need(SAME_JOB_ACTUAL_ENABLED is True,'same-job actual cleanup route disabled')
+    need((SAME_JOB_ACTUAL_V2_ENABLED if route is SAME_JOB_ACTUAL_V2_ROUTE else
+          SAME_JOB_ACTUAL_ENABLED) is True,'same-job actual cleanup route disabled')
     environ=dict(os.environ if environ is None else environ);failure=FirstFailure()
-    value={'schema':'bw.ring3.same-job-guest-outside-cleanup.v1',
+    value={'schema':'bw.ring3.same-job-guest-outside-cleanup.v2'
+        if route is SAME_JOB_ACTUAL_V2_ROUTE else
+        'bw.ring3.same-job-guest-outside-cleanup.v1',
         'runId':None,'unit':None,'serviceExitCode':None,'sourceAdmission':None,
         'preCensus':None,'stop':None,'postCensus':None,'manualCgroupAbsent':None,
         'outsideTerminalObserved':False,'firstFailure':None,'secondary':[],
@@ -9981,7 +10182,7 @@ def same_job_guest_cleanup(environ=None,*,event_reader=None,handoff_reader=same_
         run_id=environ.get('GITHUB_RUN_ID','')
         need(type(run_id) is str and re.fullmatch(r'[1-9][0-9]{0,19}',run_id),
              'positive run-derived exact owned guest unit')
-        owned_unit=SAME_JOB_GUEST_UNIT_PREFIX+run_id+'-1.service'
+        owned_unit=same_job_guest_prefix(route)+run_id+'-1.service'
         owned_path=Path('/sys/fs/cgroup/system.slice')/owned_unit
         value.update(runId=run_id,unit=owned_unit)
         code=environ.get('BW_SYSTEMD_RUN_EXIT_CODE','')
@@ -9990,7 +10191,8 @@ def same_job_guest_cleanup(environ=None,*,event_reader=None,handoff_reader=same_
         value['serviceExitCode']=int(code)
         event_raw=(HostedEnvelopeInstaller(environ).event() if event_reader is None
             else event_reader())
-        selection=same_job_actual_selection(environ,event_raw,handoff_reader=handoff_reader)
+        selection=same_job_actual_selection(environ,event_raw,
+            handoff_reader=handoff_reader,route=route)
         source,found=source_facts(selection['handoff']['source'],stage='after')
         failure.adopt(found.first,found.secondary)
         need(source==selection['handoff']['source'] and failure.first is None,
@@ -10023,7 +10225,7 @@ def same_job_guest_cleanup(environ=None,*,event_reader=None,handoff_reader=same_
                 bootstrap=BootstrapOps(environ);bootstrap.invoker={'uid':uid,'gid':gid}
                 if (os.getresuid()!=(uid,)*3 or os.getresgid()!=(gid,)*3 or
                         os.getgroups()):bootstrap.drop()
-                write_new(Path('build/i80386-ring3-same-job-actual-v1')/
+                write_new(same_job_guest_directory(route)/
                     'guest.cleanup.original.json',encode(value),JSON_CAP)
             except BaseException as error:failure.add(error,'same-job-guest-outside-retention')
     return value,failure
@@ -10032,7 +10234,7 @@ def same_job_guest_cleanup(environ=None,*,event_reader=None,handoff_reader=same_
 def dispatch_cli(argv=None,environ=None):
     parser=argparse.ArgumentParser(description=__doc__,allow_abbrev=False)
     modes=parser.add_mutually_exclusive_group(required=True)
-    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy','setup-runtime-inventory-v6','cleanup-setup-v6-policy','setup-v6-image-shell','setup-runtime-inventory-v7','cleanup-setup-v7-policy','setup-v7-image-shell','setup-runtime-inventory-v8','cleanup-setup-v8-policy','setup-v8-image-shell','setup-runtime-inventory-v9','cleanup-setup-v9-policy','setup-v9-image-shell','same-job-setup-v1','same-job-cleanup-v1','same-job-image-shell-v1','same-job-guest-service-v1','same-job-prepare-v1','same-job-bootstrap-v1','same-job-controller-v1','same-job-guest-cleanup-v1','image-env-shell-v1','image-env-service-v1','host-baseline-shell-v1','host-baseline-service-v1','host-baseline-outside-v1'):
+    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy','setup-runtime-inventory-v6','cleanup-setup-v6-policy','setup-v6-image-shell','setup-runtime-inventory-v7','cleanup-setup-v7-policy','setup-v7-image-shell','setup-runtime-inventory-v8','cleanup-setup-v8-policy','setup-v8-image-shell','setup-runtime-inventory-v9','cleanup-setup-v9-policy','setup-v9-image-shell','same-job-setup-v1','same-job-cleanup-v1','same-job-image-shell-v1','same-job-guest-service-v1','same-job-prepare-v1','same-job-bootstrap-v1','same-job-controller-v1','same-job-guest-cleanup-v1','same-job-setup-v2','same-job-cleanup-v2','same-job-image-shell-v2','same-job-guest-service-v2','same-job-prepare-v2','same-job-bootstrap-v2','same-job-controller-v2','same-job-guest-cleanup-v2','image-env-shell-v1','image-env-service-v1','host-baseline-shell-v1','host-baseline-service-v1','host-baseline-outside-v1'):
         modes.add_argument('--'+name,action='store_const',const=name,dest='mode')
     argv=list(sys.argv[1:] if argv is None else argv)
     if len(argv)!=1:parser.error('exactly one fixed mode argument required')
@@ -10040,6 +10242,46 @@ def dispatch_cli(argv=None,environ=None):
     failure=FirstFailure();result=None
     try:
         if args.mode=='controls':controls();return 0
+        if args.mode in ('same-job-image-shell-v2','same-job-cleanup-v2','same-job-setup-v2'):
+            need(SAME_JOB_ACTUAL_V2_ENABLED is True,'distinct V2 source inactive')
+            selected=dict(os.environ if environ is None else environ)
+            if args.mode=='same-job-image-shell-v2':
+                return setup_v8_image_shell(selected,SAME_JOB_ACTUAL_V2_ROUTE)
+            if args.mode=='same-job-cleanup-v2':
+                return setup_v8_outside_cleanup(selected,SAME_JOB_ACTUAL_V2_ROUTE)
+            return setup_v8_entry(selected,SAME_JOB_ACTUAL_V2_ROUTE)
+        if args.mode in ('same-job-guest-service-v2','same-job-prepare-v2',
+                         'same-job-bootstrap-v2','same-job-controller-v2',
+                         'same-job-guest-cleanup-v2'):
+            need(SAME_JOB_ACTUAL_V2_ENABLED is True,'distinct V2 guest source inactive')
+            selected=dict(os.environ if environ is None else environ)
+            need(same_job_guest_route(selected) is SAME_JOB_ACTUAL_V2_ROUTE,
+                 'exact V2 guest job before host effects')
+            if args.mode=='same-job-guest-service-v2':
+                result,returned=same_job_guest_service(selected,route=SAME_JOB_ACTUAL_V2_ROUTE)
+            elif args.mode=='same-job-guest-cleanup-v2':
+                result,returned=same_job_guest_cleanup(selected,route=SAME_JOB_ACTUAL_V2_ROUTE)
+                result={'pass':result['outsideTerminalObserved'] is True}
+            elif args.mode=='same-job-prepare-v2':
+                result,returned=same_job_preparation_child(selected)
+            elif args.mode=='same-job-bootstrap-v2':
+                returned=controller_bootstrap(SameJobBootstrapOps(selected))
+                need(isinstance(returned,FirstFailure),'V2 bootstrap returned without failure')
+                returned.add(RuntimeError('V2 bootstrap exec cannot return'),
+                             'same-job-v2-bootstrap-return')
+                result={'pass':False}
+            else:
+                ops,returned=controller_execute(SameJobControllerOps(selected))
+                result={'pass':returned.first is None and returned.secondary==[] and
+                    ops.unprivileged is True and ops.paths_admitted is True and
+                    set(ops.processes)=={'js','qemu'} and ops.source_after is not None and
+                    ops.runtime_after is not None}
+            need(isinstance(returned,FirstFailure),'V2 authoritative failure')
+            if result['pass'] is True and returned.first is None and returned.secondary==[]:
+                return 0
+            failure.adopt(returned.first,returned.secondary)
+            if failure.first is None:failure.add(ValueError('V2 mode incomplete'),'same-job-v2-cli')
+            raise ObservedFailure(failure.first,failure.secondary)
         if args.mode=='same-job-image-shell-v1':
             need(SAME_JOB_ACTUAL_ENABLED is True,'distinct same-job actual source inactive')
             return setup_v8_image_shell(dict(os.environ if environ is None else environ),SAME_JOB_ACTUAL_ROUTE)

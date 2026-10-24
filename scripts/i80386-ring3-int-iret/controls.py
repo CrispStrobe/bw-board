@@ -8860,7 +8860,7 @@ def same_job_actual_controls():
                         self.assertLess(events.index(('chmod',40,0o755)),
                             events.index('dropped-readback'))
         def test_new_request_event_and_patched_inactive_refusal(self):
-            self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,True)
+            self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,False)
             self.assertIs(reader.SAME_JOB_ACTUAL_READER_ENABLED,True)
             self.assertEqual(p.SAME_JOB_REVIEWED_GRAPH,reader.SAME_JOB_ACTUAL_REVIEWED_GRAPH)
             with edges() as (producer,env,request,raw,state):
@@ -8921,7 +8921,7 @@ def same_job_actual_controls():
             self.assertEqual(ops.events.count('acquire'),15)
             self.assertEqual(ops.events[-1],'stage')
             self.assertIs(p.ACTUAL_ENTRY_ENABLED,False)
-            self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,True)
+            self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,False)
 
         def test_actual_collector_exact_role_and_finite_terminal(self):
             class Child:
@@ -8947,8 +8947,7 @@ def same_job_actual_controls():
             start=workflow.index('  ring3-same-job-actual-v1:\n')
             end=workflow.index('  host-baseline-v1:\n',start)
             route=workflow[start:end]
-            self.assertIn("if: ${{ github.event.action == 'labeled'",route)
-            self.assertNotIn("if: ${{ false &&",route)
+            self.assertIn("if: ${{ false && github.event.action == 'labeled'",route)
             self.assertIn("github.event.label.name == 'x86-ring3-same-job-actual-v1'",route)
             self.assertEqual(route.count('actions/checkout@11d5960a326750d5838078e36cf38b85af677262'),1)
             self.assertEqual(route.count('actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020'),1)
