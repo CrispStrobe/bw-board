@@ -5894,7 +5894,7 @@ four questions and assertions preserved. The complete fourteen-test gateway
 module passes both normally and with a constant random-number control; the
 original fixture fails that control at the repeated UDP binding. Final source
 qualification requires the full tier requested before its source event. The
-profiling ownership claim below remains unimplemented pending merge.
+profiling source and its separately selected capture are complete; see below.
 
 
 ## Current ordinary-JS 386 AT cost capture — claim, 2026-10-23
@@ -5926,14 +5926,16 @@ profiles without producer imports or replay. Current profiling only selects a
 later narrow optimization candidate; it grants no physical RTx, frequency,
 measured speedup, full-OS or guest qualification claim.
 
-Candidate implementation, 2026-10-24: the owned folder, workflow, focused
-test and result guide are prepared in a separate source branch. The hosted
-four-child job requires separate final-head and one-shot event admission. Pure controls cover five authored
-operations and mocked original readers; no million-step workload, V8 profile
-or guest has been executed by this candidate. Before any source landing,
-review the exact source/import closure, resource and original-byte bindings,
-then require every enabled exact-head check. A later event requires separate
-external admission and one retained official original set.
+Completed source/capture checkpoint, 2026-10-24: PR675 merged after every
+enabled exact-head check passed. Selected run40057621920/job120763987558
+completed four original children at `0d7f046479176fcb3528731fec3fa0f99e4cbb06`.
+The standalone reader plus independent official/source audit passed; sampled
+profiles and warmed timing are documented in
+[the result guide](docs/I80386-CURRENT-AT-COST.md). The consumed capture
+label is never repeated. No CPU/AT change, optimization adoption, guest or
+physical RTx claim is part of this capture. A separate narrow claim governs
+any follow-up implementation.
+
 
 ## Ring3 selected-QEMU same-job guest continuation — claim, 2026-10-24
 
