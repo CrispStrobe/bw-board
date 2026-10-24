@@ -6474,7 +6474,7 @@ their labels or recast their event as a V9 attempt.
 
 Add one **distinct metadata-only V9** request schema, PR-body marker,
 repository variables, label `x86-ring3-setup-runtime-inventory-v9`, job
-`setup-runtime-inventory-v9`, staging/unit names, original schemas and
+`setup-runtime-inventory-v9`, package workspace/unit/output names, original schemas and
 standalone positive/failure reader. Freeze source12, head, tree, workflow and
 attempt-one policy before the event. Obtain actual run/job IDs afterward from
 official metadata and bind them through an external expectation. Do not place
@@ -6499,16 +6499,31 @@ requires shell/service equality before positive metadata grading. Compare the
 official Runner Image block diagnostically and preserve discordance without
 claiming image authentication or immutable image identity.
 
-Authorize only the explicit internal route-spec refactor necessary to reuse
-`setup_v8_sequence`, `SetupV8Host` and its preflight/stage methods, and
-`setup_v8_entry`, plus existing fixed archive/status/graph helpers. The
-existing `admit_setup_v8_request`, `admit_setup_v8_event`, literal strict
-`20261012.334.1` V8 preflight default, V8 unit/stage/reader route and
-`verify_setup_v8_log` outcomes must remain unchanged for V8 callers. The
-new V9 adapter uses its own fixed, source-defined spec and inventory reader;
-no request, environment variable or CLI argument may override its archive,
-status, helper, label-set or resource policy. Do not copy the whole installer
-family or feed a V9 event into the V8 reader.
+Authorize only the explicit internal route-spec injection necessary to reuse
+`emit_setup_v8_status`, `setup_v8_helper_witness`, `setup_v8_sequence`,
+`SetupV8Tool`, `SetupV8Host` (preflight, archive root/acquisition, policy
+creation, dpkg, quiescence, post-status and stage/drop), `setup_v8_entry`,
+`setup_v8_owned_unit`, `setup_v8_outside_census`, `setup_v8_stop_unit`,
+`setup_v8_outside_cleanup`, `setup_v8_image_shell` and `dispatch_cli`.
+These named producer functions may change syntax solely for that fixed
+source-defined route selection, including truthful V9 process and failure
+phase labels; V8 default arguments, strict
+`20261012.334.1` preflight, wire bytes, unit/stage/cleanup behavior and
+verdicts must remain unchanged. Existing `admit_setup_v8_request` and
+`admit_setup_v8_event` still admit only V8. Old V4–V7 and V8 original-reader
+functions remain byte- and AST-held, including `verify_setup_v8_log` and its
+failed-original outcome. The independent reader gains **new V9-only** request,
+event, admission, stage, cleanup, outer, complete/failure log and CLI paths;
+its external expectation joins exact official job-log bytes and SHA as well
+as the run/job/step/artifact/source context. The generic `NodeStageCopy`
+and its fixed Node 22.23.3 component path remain unchanged and shared per
+fresh job; V9 gives its containing stage envelope a distinct schema and
+readback, without a second exclusive copy. Admit the truthful V9 request/event
+before that copy; the V9 inventory reader validates its own stage record.
+No V9 event goes through V8
+names. No request, environment variable or CLI argument may override the
+fixed archive, status, helper, label-set or resource policy. Do not copy the
+whole installer family or fake V8 event/environment values.
 
 Source controls must cover an inert connected V9 entry through complete
 original retention and an independent reader, plus coherent wrong-event,

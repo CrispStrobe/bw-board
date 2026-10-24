@@ -1623,8 +1623,12 @@ retained originals and reports 1,211 status rows. An independent byte review
 confirmed all ten selected helper hashes match the held V8 helper pins. No
 package tool, installer, QEMU or guest ran. The observed runner image is not
 authenticated for a later job. Setup, runtime and guest approvals remain false.
-Exact-head CI for this separate auditor is
-pending; setup metadata authorization requires a separate claim and held pins.
+The corrected auditor and this README/guide followup qualified at final
+source head `618e78b3` and merged at `b51be2c6`: eleven enabled checks
+succeeded, sixteen were declared skipped, and all eight automatic runs
+completed successfully. Five cancelled checks on earlier head `0b9c0883`
+remain cancellations, not skips. Setup metadata authorization still requires
+a separate merged claim and held pins.
 
 [Debian Policy §5.1](https://www.debian.org/doc/debian-policy/ch-controlfields#syntax-of-control-files)
 allows a multiline field to have an empty first line. This reader accepts that
