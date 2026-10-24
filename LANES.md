@@ -5871,3 +5871,20 @@ remains a control. PR645 source12 and all setup/actual/compiler/QEMU/guest
 routes remain unchanged and disabled. Source qualification, final-head checks,
 external event admission and once-only original audit precede any dispatch;
 this candidate itself records no hosted observation or setup approval.
+
+
+2026-10-24 gateway DNS fixture source-port claim — Codex x86 CI repair.
+Base c72857182b48c21ad40c24723cdd6ebf096db95c. Own ONLY
+`test/net-gateway.test.mjs` within the test "names are resolved through the
+transport only while the bridge is on" and this LANES entry. No product
+network source, other test, workflow, dependency or benchmark path is claimed.
+
+An exact-head default CI failure showed the four DNS questions in one guest
+can collide: the fixture randomly chooses a UDP source port in 5000–5999,
+while previous bindings stay live. After this claim merges, replace only that
+test's source-port choice with a local monotonic allocator starting at 5000.
+Keep all four questions, expected answers and transport assertions unchanged.
+Qualify the complete gateway suite and a deterministic constant-Math.random
+control that fails on the original fixture and passes with the repair. Preserve
+the original CI failure; do not relabel or rerun that consumed job. No runtime,
+guest behavior, CI gate or threshold change is included in this claim.
