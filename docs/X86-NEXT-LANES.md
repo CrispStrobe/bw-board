@@ -3093,3 +3093,32 @@ admitted clean guest/oracle run. Keep those gates distinct from this observer.
    Profile attribution selects a measurable bottleneck for a *later* narrow
    optimization claim and paired semantic/performance qualification. The model
    charges alone grant no measured speedup, physical RTx or hardware frequency.
+
+## Ring3 selected-QEMU same-job guest continuation — 2026-10-24
+
+The [new ownership claim](../LANES.md)
+extends the selected-QEMU lane after its distinct v4 metadata observation.
+That observation may qualify setup and a runtime candidate within its own
+hosted job; installed QEMU does not carry into another job. A later v5 source
+candidate must run exact setup, outside policy and service cleanup, and a
+separate bounded actual service **serially in one new job**. Use a new immutable
+request, body marker, label and job. Preserve the consumed earlier events and
+the disabled historical actual/compiler entries.
+
+Before the actual service, independently admit the same-job setup original,
+selected package state, clean owned-policy cleanup, staged Node identity and
+the complete current runtime graph against an externally selected candidate.
+If setup already copied Node, validate that copy instead of creating the same
+exclusive destination again. Refuse changed runner image, status, helpers,
+archive, payload, tool or graph bytes at the relevant pre-guest boundary.
+Then use the existing authored media-free fixture, fixed JS and QEMU TCG
+descriptors and twenty architectural packet roles. The QEMU `-cpu 486` flag
+selects an execution model for this 386-instruction case; it does not qualify
+a strict 386DX machine or physical timing. Keep source12, fixture, CPU,
+selected pins, failure originals, bounds and other owners untouched.
+
+The first deliverable is a merged claim, then an initially guarded source
+adapter with meaningful wrong-event, setup, cleanup, graph and guest-result
+cuts. Exact-head CI and a fresh affected own-fixture hosted JS/QEMU run are
+required before source merge. External official run/job/step/artifact admission
+and one independent original-only audit remain separate from source controls.

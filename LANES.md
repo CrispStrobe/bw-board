@@ -5925,3 +5925,52 @@ standalone byte reader joins source, workflow, semantics and raw
 profiles without producer imports or replay. Current profiling only selects a
 later narrow optimization candidate; it grants no physical RTx, frequency,
 measured speedup, full-OS or guest qualification claim.
+
+## Ring3 selected-QEMU same-job guest continuation — claim, 2026-10-24
+
+Owner: Codex x86 ring3. Base `ef199ba9ef3a2a8adec06751510499fc9aabbe68`;
+coordinate the active [PR645](https://github.com/CrispStrobe/bw-board/pull/645)
+source owner. Extend the merged [selected-QEMU claim PR660](https://github.com/CrispStrobe/bw-board/pull/660)
+only for a new, versioned **v5** same-job setup and authored guest route.
+Own only `scripts/i80386-ring3-int-iret/{run.py,reader.py,controls.py,README.md}`,
+`.github/workflows/i80386-ring3-int-iret.yml`, this claim and the matching
+[x86 contract](docs/X86-NEXT-LANES.md).
+Merge this claim before implementation. No source, workflow, request variable,
+label or event is changed by the claim.
+
+The metadata-only v4 service cannot supply installed QEMU to a later job.
+Use one new v5 label/job/request/body marker and externally selected request
+digest. In that **same job**, run two serial bounded service phases: first
+the exact fifteen-archive setup and outside policy/cgroup cleanup, then the
+fresh actual adapter and guest under its own resource envelope. The second
+phase begins only after the setup original, selected post-status, policy
+removal, outside terminal facts, Node stage identity and complete runtime
+graph are independently admitted. If the first phase already staged Node,
+verify and reuse that exact held copy and current identity; never attempt a
+second exclusive copy over its existing destination. A later runner must
+revalidate its image, status, helpers, installed selected files and externally
+pinned graph; any drift refuses before the guest. Admit authentic v5 event,
+source, workflow, request and job bytes; do not project a v5 event into the
+historical v1 approval path or replay the consumed v3/v4 labels.
+
+Reuse the unchanged authored media-free INT80/IRETD fixture, fixed JavaScript
+driver and `/usr/bin/qemu-system-i386` TCG `-cpu 486` descriptor only after
+the source, setup and graph gates. Preserve all twenty architectural packet
+roles, frame and memory goldens, original output caps and failure ordering.
+The `486` option is a selected QEMU execution setting for a case exercising
+386 instructions; it is not strict 386DX hardware, OS, physical-timing or
+general compatibility evidence. Keep the historical source12 roster, fixture,
+CPU/AT implementation, Node/QEMU pins, compiler and old actual guards,
+thresholds, consumed failures and other lanes unchanged. No media, assembler,
+compiler, fallback package version or automatic replay enters this claim.
+
+Add finite per-phase CPU, memory, swap, process, wall, stream, archive and
+original-byte caps with exact owned-service terminal and partial-mutation
+facts. Pure negative controls must detect wrong v5 event/source/job/attempt,
+preflight or archive drift, installer/policy/cleanup failure, wrong Node stage
+or runtime graph, a skipped same-job barrier, changed JS/QEMU argv, missing
+packet roles and corrupted guest/frame evidence; old v4 stays metadata-only.
+After source implementation, require every enabled exact-head check and fresh
+affected own-fixture JS/QEMU guest qualification on the executing head. Acquire
+each official original once and audit it with a standalone reader before a
+source merge. No guest, setup success or approval is inferred from this claim.
