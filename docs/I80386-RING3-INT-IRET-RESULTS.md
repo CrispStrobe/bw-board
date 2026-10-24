@@ -45,3 +45,20 @@ applications, physical timing and performance remain outside this fixture's clai
 Product repairs
 need their own reviewed ownership scope. Preserve every original failure and
 keep raw evidence outside public documentation.
+
+## V9 metadata checkpoint and proposed actual route
+
+The V9 metadata [run](https://github.com/CrispStrobe/bw-board/actions/runs/40111138937)
+completed. Its retained originals passed a standalone installed-state, Node
+and QEMU graph audit. A separate comparison admitted the graph digest and
+selected static DATA facts as inputs for a future same-job check; the original
+`candidateReviewed=false` was not changed. The run executed no authored guest.
+
+A new [claim](../LANES.md) proposes one job with fixed setup and an
+independent same-job graph comparison before the authored JavaScript and QEMU
+oracle. It remains claim-only: no new actual source, event or guest result
+exists. The older fifteen-minute controller envelope above is a historical
+source checkpoint; the proposed combined job is bounded at 35 minutes and a
+32 MiB artifact without enlarging the controller's 600-second or any other
+old leaf limit. A later result must be tied to a distinct actual event and
+independently audited originals.

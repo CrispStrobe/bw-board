@@ -3477,3 +3477,23 @@ metadata source and workflow guards are locally active; no V9 event has been
 selected. Source review and
 exact-head hosted checks still precede any V9 event. The compiler and
 architectural guest paths remain disabled.
+
+### Same-job authored Ring 3 actual — claim pending
+
+The distinct V9 metadata [run](https://github.com/CrispStrobe/bw-board/actions/runs/40111138937)
+completed. Its standalone reader accepted a bounded setup/runtime inventory,
+and an independent comparison admitted only the graph digest and selected
+static DATA subset for a future fresh comparison. The original candidate's
+`candidateReviewed=false` remains historical. This is no guest qualification.
+
+The new [eight-path claim](../LANES.md) covers a separately named actual
+request, event, label, job, producer, original reader and workflow. Keep all
+old actual/compiler guards false. In one job, repeat fixed setup and one Node
+copy, retain terminal cleanup, independently rederive the current runtime
+graph and compare the reviewed inputs. Only then may a second owned service
+read back that copy and run the authored JavaScript then QEMU oracle through
+the closed twenty-role packet. A 32 MiB combined artifact and 35-minute job
+bound apply only to the new wrapper; existing leaf limits stay fixed. Connected
+mock controls, wrong-input mutations, exact-head checks and one independently
+admitted actual original are prerequisites to any result. The V9 metadata
+label is consumed and cannot serve as this actual event.
