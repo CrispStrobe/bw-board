@@ -10170,6 +10170,7 @@ def host_baseline_status(raw):
                 need(last is not None,'status fold has parent')
                 if last in ('package','version','architecture','status'):
                     raise Refusal('folded status authority field')
+                need(line.strip(' \t')!='','nonempty folded status line')
                 conffiles_fold_pending=False
                 continue
             need(not conffiles_fold_pending,'empty Conffiles requires folded value')
@@ -10186,7 +10187,7 @@ def host_baseline_status(raw):
             authority={'package':'Package','version':'Version',
                        'architecture':'Architecture','status':'Status'}.get(lower)
             if authority is not None:
-                need(value!='','nonempty status authority')
+                need(value.strip(' \t')!='','nonempty status authority')
                 fields[authority]=value
         need(not conffiles_fold_pending,'empty Conffiles requires folded value')
         need(set(fields)=={'Package','Version','Architecture','Status'},

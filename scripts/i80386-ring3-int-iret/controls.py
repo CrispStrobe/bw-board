@@ -7317,6 +7317,8 @@ def host_baseline_controls():
                 empty_header.replace(b'Conffiles:\n',b'conffiles:\n'))['records'],1)
             self.assertEqual(reader.host_baseline_status(
                 good.replace(b'Package: base\n',b'pAcKaGe: base\n'))['records'],1)
+            self.assertEqual(reader.host_baseline_status(
+                good.replace(b' continuation\n',b' .\n'))['records'],1)
             for raw_status in (good.replace(b'Status: install ok installed\n',
                      b'Status: install ok installed\nStatus: install ok installed\n'),
                     good.replace(b'Package: base\n',b'Package: base\n folded\n'),
@@ -7328,6 +7330,10 @@ def host_baseline_controls():
                     good.replace(b'Package: base\n',b'pAcKaGe: base\n folded\n'),
                     empty_header.replace(b'Conffiles:\n',b'Conffiles:\nconffiles:\n'),
                     good+b'Conffiles:\n',
+                    empty_header.replace(b' /etc/base.conf deadbeef\n',b' \n'),
+                    good.replace(b' continuation\n',b' \n'),
+                    good.replace(b'Package: base\n',b'Package:    \n'),
+                    good.replace(b'Package: base\n',b'Package: \t\n'),
                     good+b'Other:\n'):
                 with self.assertRaises(Exception):reader.host_baseline_status(raw_status)
             packet=captured();packet['helpers'][p.HOST_BASELINE_HELPERS[0]]['zlibBase64']='X'*200000
