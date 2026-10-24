@@ -2578,16 +2578,31 @@ def staged_runtime_controls():
                     GITHUB_JOB='setup-runtime-inventory-v8')
                 record['eventIdentity']['st_size']=len(event_raw)
                 record_raw=reader.canonical(record)
-                value=copy.deepcopy(state['observation'])
-                value.update(schema='bw.ring3.setup-runtime-inventory-original.v8',actualGuestApproved=False,
-                    completeHostConfiguration=False)
-                for field in ('stageBefore','stageAfter'):
-                    stage=value[field];stage['schema']='bw.ring3.setup-node-observation.v8'
-                    stage['identity']['membership']='0::/system.slice/bw-ring3-setup-v8-123-1.service\n'
-                    stage['record']=wrap(record_raw)
-                    file=stage['files']['installation.original.json']
-                    file.update(bytes=len(record_raw),sha256=sha(record_raw),prefix=record_raw[:4].hex())
-                    for name in ('before','after','namedAfter'):file[name][6]=len(record_raw)
+                state['rows']['/event.json'].update(raw=event_raw,st_size=len(event_raw))
+                state['rows'][str(producer.NODE_STAGE_RECORD)].update(raw=record_raw,st_size=len(record_raw))
+                state['rows']['/proc/self/cgroup']['raw']=b'0::/system.slice/bw-ring3-setup-v8-123-1.service\n'
+                v8_env={**record['platform'],'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'}
+                actual_stage=reader.observe_setup_v8_stage(v8_env)
+                self.assertIsNone(actual_stage['firstFailure'],actual_stage['firstFailure'])
+                self.assertTrue(actual_stage['stageObserved'])
+                self.assertEqual(reader.CAPS['jsonBytes'],producer.JSON_CAP)
+                pretty=json.dumps(event,indent=2,sort_keys=False).encode()+b'\n'
+                reader.setup_v8_event(pretty,v8_request,sha(request_raw),v8_env)
+                self.assertEqual(producer.admit_setup_v8_event(pretty,v8_env)[0],request_raw)
+                bad_event_bytes=(
+                    event_raw[:-1]+b',"ignored":{"x":1,"x":2}}',
+                    event_raw[:-1]+b',"ignored":NaN}',
+                    event_raw[:-1]+b',"ignored":Infinity}',
+                    event_raw[:-1]+b',"ignored":-Infinity}',
+                    event_raw[:-1]+b',"ignored":1e999}',
+                    event_raw[:-1]+b',"ignored":-1e999}',
+                    event_raw[:-1]+b',"ignored":"\xff"}',
+                    event_raw+b'{}',b'[]',b' '*(reader.CAPS['jsonBytes']+1))
+                for bad_raw in bad_event_bytes:
+                    with self.subTest(rawSuffix=bad_raw[-24:]),self.assertRaises((ValueError,UnicodeError,TypeError,AttributeError)):
+                        producer.admit_setup_v8_event(bad_raw,v8_env)
+                    with self.subTest(rawSuffix=bad_raw[-24:]),self.assertRaises((reader.Refusal,ValueError,UnicodeError,TypeError)):
+                        reader.setup_v8_event(bad_raw,v8_request,sha(request_raw),v8_env)
                 files,old_probe=runtime_fixture()
                 node=files.facts.pop(reader.RUNTIME_NODE)
                 files.facts[reader.NODE_STAGE_TARGET]=dict(node,mode=0o555)
@@ -2596,6 +2611,14 @@ def staged_runtime_controls():
                 empty=next(iter(reader.STAGED_EMPTY_PYTHON_SOURCES))
                 python_files=files.python_files
                 files.python_files=lambda:sorted(python_files()+[empty])
+                files.empty_python=lambda name:reader.StagedInventoryFiles.empty_python(files,name)
+                original_fact=files.fact
+                def fact(path):
+                    row=original_fact(path)
+                    if path==reader.NODE_STAGE_TARGET:
+                        files.metadata[path]=copy.deepcopy(actual_stage['files']['node']['before'])
+                    return row
+                files.fact=fact
                 listings={'qemu-system-x86':[reader.RUNTIME_QEMU,reader.RUNTIME_TCG,'/usr/share/qemu/bios.bin'],
                     'qemu-system-common':['/usr/share/qemu/common-keymap'],
                     'qemu-system-data':['/usr/share/qemu/data-blob',*reader.SETUP_V8_SIGNED_DATA],
@@ -2604,6 +2627,9 @@ def staged_runtime_controls():
                     files.facts[path]=dict(pin);files.prefixes[path]=b'inert signed DATA mock'
                 def probe(argv):
                     process,streams=old_probe(argv)
+                    index=len(observed_probes);observed_probes.append(list(argv))
+                    process.update(pid=300+index,pgid=300+index,parentPid=101,
+                        startTicks=index+1,spawnMonoNs=60000000+index*1000000,reapMonoNs=60001000+index*1000000)
                     if argv==[reader.NODE_STAGE_TARGET,'--version']:streams['stdout']=b'v22.23.3\n'
                     if argv[:2]==['/usr/bin/dpkg-query','-W']:
                         rows={name:(version,arch) for name,version,arch,*_ in reader.SETUP_V8_PACKAGES if name in reader.PACKAGE_NAMES}
@@ -2611,17 +2637,14 @@ def staged_runtime_controls():
                     if argv[:2]==['/usr/bin/dpkg-query','-L']:
                         streams['stdout']=('/.\n'+'\n'.join(listings[argv[2]])+'\n').encode()
                     return process,streams
-                files.fact(reader.NODE_STAGE_TARGET)
-                inventory=reader.SetupV8Inventory(files.metadata[reader.NODE_STAGE_TARGET],files,probe)
-                candidate_raw=inventory.discover_core()
-                inventory.partial['emptyPythonSources']=copy.deepcopy(value['inventory']['emptyPythonSources'])
-                inventory.partial['fileMetadata'][reader.NODE_STAGE_TARGET]=copy.deepcopy(value['stageAfter']['files']['node']['before'])
-                for index,row in enumerate(inventory.partial['processes']):
-                    process=row['process'];process.update(pid=300+index,pgid=300+index,parentPid=101,
-                        startTicks=index+1,spawnMonoNs=60000000+index*1000000,reapMonoNs=60001000+index*1000000)
-                value['inventory']=copy.deepcopy(inventory.partial);value['candidate']=wrap(candidate_raw)
-                originals={'setup.request.json':request_raw,'setup.event.json':event_raw,
-                    'runtime.setup-inventory.json':reader.canonical(value)}
+                observed_probes=[]
+                entry_originals,entry_passed,entry_safe=reader.setup_v8_inventory_entry(v8_env,files,probe)
+                self.assertTrue((entry_passed,entry_safe),(entry_passed,entry_safe,
+                    reader.parse(entry_originals['runtime.setup-inventory.json'])['firstFailure']))
+                self.assertEqual(len(observed_probes),15)
+                originals=entry_originals
+                value=reader.parse(originals['runtime.setup-inventory.json'])
+                candidate_raw=reader.prerequisite_original(reader.canonical(value['candidate']))
                 output=io.BytesIO();output.write(status_log.getvalue())
                 reader.emit_setup_v8_inventory(originals,output.write,output.flush)
                 log=output.getvalue()
@@ -2725,6 +2748,14 @@ def staged_runtime_controls():
                 bad_cleanup['sourceAdmission']['eventSha256']=sha(bad_event_raw)
                 regrade(changed,dict(originals,**{'setup.event.json':bad_event_raw}),
                     changed_cleanup=reader.canonical(bad_cleanup))
+                bad_event_raw=event_raw[:-1]+b',"ignoredOverflow":1e999}'
+                bad_record=copy.deepcopy(record);bad_record['event']=wrap(bad_event_raw)
+                bad_record['eventIdentity']['st_size']=len(bad_event_raw)
+                changed=replace_stage_record(copy.deepcopy(value),bad_record)
+                bad_cleanup=reader.parse(cleanup)
+                bad_cleanup['sourceAdmission']['eventSha256']=sha(bad_event_raw)
+                regrade(changed,dict(originals,**{'setup.event.json':bad_event_raw}),
+                    changed_cleanup=reader.canonical(bad_cleanup))
                 old_version=b'Package: qemu-system-data\nVersion: 1:8.2.2+ds-0ubuntu1.18\n'
                 new_version=b'Package: qemu-system-data\nVersion: 1:8.2.2+ds-0ubuntu1.19\n'
                 self.assertIn(old_version,post)
@@ -2737,12 +2768,69 @@ def staged_runtime_controls():
                 bad_record['setup']['postStatus']['selected']['qemu-system-data']['Version']='1:8.2.2+ds-0ubuntu1.19'
                 changed=replace_stage_record(copy.deepcopy(value),bad_record)
                 regrade(changed,status_wire=bad_status.getvalue())
+                def coherent_data_change(path,field,replacement):
+                    changed=copy.deepcopy(value);candidate=reader.parse(candidate_raw)
+                    candidate['files'][path][field]=replacement
+                    changed['inventory']['files'][path][field]=replacement
+                    if field=='bytes':changed['inventory']['fileMetadata'][path][6]=replacement
+                    if field=='mode':changed['inventory']['fileMetadata'][path][2]=stat.S_IFREG|replacement
+                    changed_candidate=reader.canonical(candidate)
+                    changed['candidate']=changed['inventory']['candidate']=wrap(changed_candidate)
+                    return changed
                 for path in reader.SETUP_V8_SIGNED_DATA:
-                    changed=copy.deepcopy(value)
-                    candidate=reader.parse(candidate_raw);candidate['files'][path]['sha256']='0'*64
-                    changed['candidate']=wrap(reader.canonical(candidate));regrade(changed)
-                    changed=copy.deepcopy(value);changed['inventory']['files'][path]['sha256']='0'*64
-                    regrade(changed)
+                    for field,replacement in (('sha256','0'*64),('bytes',1),('mode',0o600)):
+                        changed=coherent_data_change(path,field,replacement)
+                        with self.subTest(path=path,field=field):regrade(changed)
+                selected_path=next(iter(reader.SETUP_V8_SIGNED_DATA))
+                changed=coherent_data_change(selected_path,'sha256','0'*64)
+                selected_roles=dict(originals,**{'runtime.setup-inventory.json':reader.canonical(changed)})
+                selected_stream=io.BytesIO();selected_stream.write(status_log.getvalue())
+                reader.emit_setup_v8_inventory(selected_roles,selected_stream.write,selected_stream.flush)
+                selected_wire=selected_stream.getvalue()
+                selected_external=dict(external,logBytes=len(selected_wire),logSha256=sha(selected_wire))
+                weakened=copy.deepcopy(reader.SETUP_V8_SIGNED_DATA)
+                weakened[selected_path]['sha256']='0'*64
+                with patch.object(reader,'SETUP_V8_SIGNED_DATA',weakened):
+                    weakened_verdict=reader.verify_setup_v8_log(selected_wire,selected_external,outer,cleanup,shell)
+                self.assertTrue(weakened_verdict['setupObserved'])
+                self.assertFalse(weakened_verdict['actualGuestApproved'])
+                renamed='/usr/share/qemu/QEMU,other.bin'
+                candidate=reader.parse(candidate_raw)
+                candidate['files'][renamed]=candidate['files'].pop(selected_path)
+                candidate['packagePaths']=sorted(renamed if path==selected_path else path
+                    for path in candidate['packagePaths'])
+                data_paths=candidate['packagePathsByPackage']['qemu-system-data']
+                candidate['packagePathsByPackage']['qemu-system-data']=sorted(
+                    renamed if path==selected_path else path for path in data_paths)
+                candidate['probes']=reader.setup_v8_probe_descriptors(candidate)
+                changed=copy.deepcopy(value)
+                changed['inventory']['files']=copy.deepcopy(candidate['files'])
+                changed['inventory']['fileMetadata'][renamed]=changed['inventory']['fileMetadata'].pop(selected_path)
+                role='package-files-qemu-system-data'
+                item=next(probe for probe in changed['inventory']['probes'] if probe['role']==role)
+                item['stdout']=item['stdout'].replace(selected_path,renamed)
+                process=next(row for row in changed['inventory']['processes'] if row['role']==role)
+                process['stdout']=wrap(item['stdout'].encode())
+                changed_candidate=reader.canonical(candidate)
+                changed['candidate']=changed['inventory']['candidate']=wrap(changed_candidate)
+                regrade(changed)
+                selected_roles=dict(originals,**{'runtime.setup-inventory.json':reader.canonical(changed)})
+                selected_stream=io.BytesIO();selected_stream.write(status_log.getvalue())
+                reader.emit_setup_v8_inventory(selected_roles,selected_stream.write,selected_stream.flush)
+                selected_wire=selected_stream.getvalue()
+                selected_external=dict(external,logBytes=len(selected_wire),logSha256=sha(selected_wire))
+                weakened=copy.deepcopy(reader.SETUP_V8_SIGNED_DATA)
+                weakened[renamed]=weakened.pop(selected_path)
+                with patch.object(reader,'SETUP_V8_SIGNED_DATA',weakened):
+                    weakened_verdict=reader.verify_setup_v8_log(selected_wire,selected_external,outer,cleanup,shell)
+                self.assertTrue(weakened_verdict['setupObserved'])
+                changed=copy.deepcopy(value);candidate=reader.parse(candidate_raw)
+                alias={'linkText':'other.bin','target':'/usr/share/qemu/other.bin'}
+                candidate['aliases'][selected_path]=alias
+                changed['inventory']['aliases'][selected_path]=copy.deepcopy(alias)
+                changed_candidate=reader.canonical(candidate)
+                changed['candidate']=changed['inventory']['candidate']=wrap(changed_candidate)
+                regrade(changed)
                 changed=copy.deepcopy(value)
                 changed['stageAfter']['identity']['groups']=[0]
                 regrade(changed)
@@ -5811,6 +5899,77 @@ def setup_v8_controls(export_sample=False):
                          patch.object(reader.os,'close') as closed:
                         with self.assertRaises(reader.Refusal):reader.SetupV8Files().fact(path)
                         closed.assert_called_once_with(77)
+        def test_three_selected_data_real_byte_hash_readback_and_faults(self):
+            production=copy.deepcopy(reader.SETUP_V8_SIGNED_DATA)
+            bodies={path:('inert authored '+str(index)+' '+path).encode()
+                    for index,path in enumerate(production)}
+            pins={path:{'bytes':len(body),'sha256':sha(body),'mode':0o644}
+                  for path,body in bodies.items()}
+            path_list=list(bodies)
+            selected={'path':None,'offset':0,'reads':0,'stats':0,'closed':[],'fault':None}
+            def metadata(path):
+                name=str(path)
+                if name in bodies:
+                    index=path_list.index(name)
+                    value={'st_dev':1,'st_ino':100+index,'st_mode':0o100644,'st_uid':0,
+                        'st_gid':0,'st_nlink':1,'st_size':len(bodies[name]),'st_mtime_ns':3}
+                    if selected['fault']=='drift' and selected['stats']>1 and name==selected['path']:
+                        value['st_ino']+=1
+                    return SimpleNamespace(**value)
+                return SimpleNamespace(st_dev=1,st_ino=1,st_mode=0o40755,st_uid=0,
+                    st_gid=0,st_nlink=1,st_size=0,st_mtime_ns=3)
+            def opened(path,flags):
+                self.assertIn(str(path),bodies)
+                self.assertTrue(flags&reader.os.O_NOFOLLOW)
+                selected.update(path=str(path),offset=0,reads=0,stats=0)
+                return 77
+            def fstat(fd):
+                self.assertEqual(fd,77);selected['stats']+=1
+                return metadata(selected['path'])
+            def read(fd,cap):
+                self.assertEqual(fd,77);selected['reads']+=1
+                if selected['fault']=='read':raise OSError('FIRST_DATA_READ')
+                body=bodies[selected['path']]
+                at=selected['offset'];part=body[at:at+cap];selected['offset']+=len(part)
+                return part
+            def closed(fd):
+                selected['closed'].append(fd)
+                if selected['fault']=='close':raise OSError('FIRST_DATA_CLOSE')
+            with patch.object(reader,'SETUP_V8_SIGNED_DATA',pins),\
+                 patch.object(Path,'resolve',lambda path,**kw:path),\
+                 patch.object(reader.os,'lstat',side_effect=metadata),\
+                 patch.object(reader.os,'stat',side_effect=lambda path,**kw:metadata(path)),\
+                 patch.object(reader.os,'open',side_effect=opened),\
+                 patch.object(reader.os,'fstat',side_effect=fstat),\
+                 patch.object(reader.os,'read',side_effect=read),\
+                 patch.object(reader.os,'close',side_effect=closed):
+                files=reader.SetupV8Files()
+                inventory=reader.SetupV8Inventory([1,7,0o100555,0,0,1,9,3],files,lambda argv:None)
+                inventory.package_listings={'qemu-system-data':list(path_list)}
+                for path in path_list:
+                    selected['closed']=[];self.assertEqual(inventory.add(path,'qemu-data'),path)
+                    self.assertEqual(inventory.files[path]['sha256'],pins[path]['sha256'])
+                    self.assertEqual(selected['closed'],[77])
+                    self.assertEqual(files.metadata[path][3:7],[0,0,1,len(bodies[path])])
+                for fault in ('wrong-byte','drift','read','close'):
+                    path=path_list[0];selected['closed']=[];selected['fault']=fault
+                    old=bodies[path]
+                    if fault=='wrong-byte':bodies[path]=bytes([old[0]^1])+old[1:]
+                    fresh=reader.SetupV8Inventory([1,7,0o100555,0,0,1,9,3],reader.SetupV8Files(),lambda argv:None)
+                    fresh.package_listings={'qemu-system-data':list(path_list)}
+                    with self.subTest(fault=fault),self.assertRaises((reader.Refusal,OSError)):
+                        fresh.add(path,'qemu-data')
+                    self.assertEqual(selected['closed'],[77])
+                    bodies[path]=old
+                    selected['fault']=None
+                selected['closed']=[]
+                with patch.object(files,'resolve',return_value=('/usr/share/qemu/other',
+                        {'/usr/share/qemu':{'linkText':'other','target':'/usr/share/qemu/other'}})):
+                    fresh=reader.SetupV8Inventory([1,7,0o100555,0,0,1,9,3],files,lambda argv:None)
+                    fresh.package_listings={'qemu-system-data':list(path_list)}
+                    with self.assertRaises(reader.Refusal):fresh.add(path_list[0],'qemu-data')
+                self.assertEqual(selected['closed'],[])
+            self.assertEqual(reader.SETUP_V8_SIGNED_DATA,production)
         def test_complete_failed_v8_inventory_packet_retains_clipped_last_child(self):
             def held(raw):
                 return {'bytes':len(raw),'sha256':sha(raw),

@@ -8436,7 +8436,12 @@ def setup_v8_request(raw,pin):
 
 
 def setup_v8_event(raw,request,pin,environment):
-    event=parse(raw);pr=event.get('pull_request',{});body=pr.get('body')
+    need(type(raw) is bytes and 0<len(raw)<=CAPS['jsonBytes'],'bounded raw v8 event')
+    try:event=parse_setup_v8_outer(raw)
+    except (ValueError,UnicodeError,OverflowError) as error:
+        raise Refusal('finite duplicate-free v8 event JSON') from error
+    need(type(event) is dict,'object v8 event')
+    pr=event.get('pull_request',{});body=pr.get('body')
     start='<!-- BW_RING3_SETUP_RUNTIME_INVENTORY_V8\n';end='\nBW_RING3_SETUP_RUNTIME_INVENTORY_V8 -->'
     need(type(body) is str and body.count(start)==body.count(end)==1 and body.index(start)<body.index(end),'one v8 request block')
     block=body.split(start,1)[1].split(end,1)[0]
