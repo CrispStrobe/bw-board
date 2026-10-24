@@ -3094,6 +3094,12 @@ admitted clean guest/oracle run. Keep those gates distinct from this observer.
    optimization claim and paired semantic/performance qualification. The model
    charges alone grant no measured speedup, physical RTx or hardware frequency.
 
+   The [current source candidate](I80386-CURRENT-AT-COST.md) now prepares four
+   serial timing/profile children under that merged claim. Its hosted capture
+   job awaits a separately admitted event. Five-operation pure controls and mocked original readers
+   are source checks; current one-million-step cost and bottlenecks remain
+   unmeasured until an exact-head admitted hosted run.
+
 ## Ring3 selected-QEMU same-job guest continuation — 2026-10-24
 
 The [new ownership claim](../LANES.md) extends the selected-QEMU lane. The
