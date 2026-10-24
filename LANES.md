@@ -6520,9 +6520,10 @@ and its fixed Node 22.23.3 component path remain unchanged and shared per
 fresh job; V9 gives its containing stage envelope a distinct schema and
 readback, without a second exclusive copy. Admit the truthful V9 request/event
 before that copy; the V9 inventory reader validates its own stage record.
-No V9 event goes through V8
-names. No request, environment variable or CLI argument may override the
-fixed archive, status, helper, label-set or resource policy. Do not copy the
+No V9 event may be admitted by a V8 request/event parser or executed through
+the `--inventory-setup-v8` CLI. No request, environment variable or CLI
+argument may override the fixed archive, status, helper, label-set or
+resource policy. Do not copy the
 whole installer family or fake V8 event/environment values.
 
 Source controls must cover an inert connected V9 entry through complete
