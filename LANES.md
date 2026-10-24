@@ -5889,6 +5889,13 @@ control that fails on the original fixture and passes with the repair. Preserve
 the original CI failure; do not relabel or rerun that consumed job. No runtime,
 guest behavior, CI gate or threshold change is included in this claim.
 
+Source candidate: the test-local monotonic allocator is implemented with all
+four questions and assertions preserved. The complete fourteen-test gateway
+module passes both normally and with a constant random-number control; the
+original fixture fails that control at the repeated UDP binding. Final source
+qualification requires the full tier requested before its source event. The
+profiling ownership claim below remains unimplemented pending merge.
+
 
 ## Current ordinary-JS 386 AT cost capture — claim, 2026-10-23
 
