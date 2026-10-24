@@ -7311,10 +7311,24 @@ def host_baseline_controls():
             good=(b'Package: base\nVersion: 1\nArchitecture: amd64\n'
                   b'Status: install ok installed\nDescription: text\n continuation\n')
             self.assertEqual(reader.host_baseline_status(good)['records'],1)
+            empty_header=(good+b'Conffiles:\n /etc/base.conf deadbeef\n')
+            self.assertEqual(reader.host_baseline_status(empty_header)['records'],1)
+            self.assertEqual(reader.host_baseline_status(
+                empty_header.replace(b'Conffiles:\n',b'conffiles:\n'))['records'],1)
+            self.assertEqual(reader.host_baseline_status(
+                good.replace(b'Package: base\n',b'pAcKaGe: base\n'))['records'],1)
             for raw_status in (good.replace(b'Status: install ok installed\n',
                      b'Status: install ok installed\nStatus: install ok installed\n'),
                     good.replace(b'Package: base\n',b'Package: base\n folded\n'),
-                    good[:-1]):
+                    good[:-1],
+                    empty_header.replace(b'Conffiles:\n',b'Conffiles:\t\n'),
+                    empty_header.replace(b'Conffiles:\n',b'Conffiles:unexpected\n'),
+                    good.replace(b'Package: base\n',b'Package:\n'),
+                    good.replace(b'Package: base\n',b'Package: base\npackage: other\n'),
+                    good.replace(b'Package: base\n',b'pAcKaGe: base\n folded\n'),
+                    empty_header.replace(b'Conffiles:\n',b'Conffiles:\nconffiles:\n'),
+                    good+b'Conffiles:\n',
+                    good+b'Other:\n'):
                 with self.assertRaises(Exception):reader.host_baseline_status(raw_status)
             packet=captured();packet['helpers'][p.HOST_BASELINE_HELPERS[0]]['zlibBase64']='X'*200000
             output=io.BytesIO()

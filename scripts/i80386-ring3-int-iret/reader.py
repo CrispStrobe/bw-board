@@ -10164,21 +10164,31 @@ def host_baseline_status(raw):
     text=raw.decode('utf-8','strict');rows={};counts={}
     for paragraph in text.strip('\n').split('\n\n'):
         need(paragraph and len(rows)<5000,'finite status paragraph roster')
-        fields={};last=None
+        fields={};last=None;seen=set();conffiles_fold_pending=False
         for line in paragraph.split('\n'):
             if line.startswith((' ', '\t')):
                 need(last is not None,'status fold has parent')
-                if last in ('Package','Version','Architecture','Status'):
+                if last in ('package','version','architecture','status'):
                     raise Refusal('folded status authority field')
+                conffiles_fold_pending=False
                 continue
+            need(not conffiles_fold_pending,'empty Conffiles requires folded value')
             need(':' in line,'status field delimiter')
             name,value=line.split(':',1)
+            lower=name.lower()
             need(re.fullmatch('[A-Za-z][A-Za-z0-9-]*',name) is not None and
-                 value.startswith(' '),'bounded Debian status field')
-            value=value[1:];last=name
-            if name in ('Package','Version','Architecture','Status'):
-                need(name not in fields and value!='','unique nonempty status authority')
-                fields[name]=value
+                 (value.startswith(' ') or (lower=='conffiles' and value=='')),
+                 'bounded Debian status field')
+            need(lower not in seen,'unique case-insensitive Debian field')
+            seen.add(lower)
+            conffiles_fold_pending=(lower=='conffiles' and value=='')
+            value=value[1:] if value else '';last=lower
+            authority={'package':'Package','version':'Version',
+                       'architecture':'Architecture','status':'Status'}.get(lower)
+            if authority is not None:
+                need(value!='','nonempty status authority')
+                fields[authority]=value
+        need(not conffiles_fold_pending,'empty Conffiles requires folded value')
         need(set(fields)=={'Package','Version','Architecture','Status'},
              'complete status authority quartet')
         key=(fields['Package'],fields['Architecture'])
