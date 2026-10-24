@@ -1532,6 +1532,9 @@ log-carried request/event/runtime originals, source twelve and executing
 workflow, two raw package-status originals and permitted delta, finite
 before/after Node stage, nine ordered zero-exit child streams, the exact
 path-refusal first error, outer exit 1 and absent outside unit.
+It parses the raw event under the historical 1 MiB event limit with duplicate
+keys and nonfinite numbers refused, and requires an object. Pretty formatting
+and a final LF remain valid; it does not require canonical event bytes.
 The five returned package version/architecture rows must match both the
 fixed selected package pins and independently reparsed post-status. The
 partial file witnesses bind Node and QEMU to their existing fixed hashes,

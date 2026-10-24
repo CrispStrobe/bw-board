@@ -5375,6 +5375,15 @@ class ConsumedV7PathFailureControls(unittest.TestCase):
         self.args[0]=out.getvalue()
         self.args[1].update(logBytes=len(self.args[0]),logSha256=sha(self.args[0]))
 
+    def rebind_event(self,raw):
+        self.record['event']=self.held(raw)
+        self.originals['setup.event.json']=raw
+        cleanup=reader.parse(self.args[3])
+        cleanup['sourceAdmission']['eventSha256']=sha(raw)
+        self.args[3]=reader.canonical(cleanup)
+        self.args[1].update(cleanupBytes=len(self.args[3]),cleanupSha256=sha(self.args[3]))
+        self.set_packet_record()
+
     def grade(self):return reader.consumed_v7_path_failure_audit(*self.args)
 
     def refused(self):
@@ -5444,6 +5453,19 @@ class ConsumedV7PathFailureControls(unittest.TestCase):
         verdict=json.loads(output.getvalue())
         self.assertTrue(verdict['failedAttemptRetained'])
         self.assertFalse(verdict['setupApproved'])
+
+    def test_coherent_ignored_event_overflow_refuses_but_pretty_lf_accepts(self):
+        self.rebind_event(b'{\n  "syntheticEvent": true\n}\n')
+        self.assertTrue(self.grade()['failedAttemptRetained'])
+        self.rebind_event(b'{"syntheticEvent":true,"ignored":1e999}\n')
+        with self.assertRaisesRegex(reader.Refusal,'nonfinite v7 outer JSON'):
+            self.grade()
+        for raw,reason in ((b'{"syntheticEvent":true,"syntheticEvent":false}\n',
+                            'duplicate v7 outer JSON key'),
+                           (b'[]\n','raw event object')):
+            with self.subTest(reason=reason):
+                self.rebind_event(raw)
+                with self.assertRaisesRegex(reader.Refusal,reason):self.grade()
 
     def test_bool_exit_and_wait_status_cuts(self):
         for mutation in ('outer-service','outer-cleanup','cleanup-service',

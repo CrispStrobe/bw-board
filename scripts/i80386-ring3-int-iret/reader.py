@@ -7761,6 +7761,11 @@ def consumed_v7_path_failure_audit(raw,external,outer_raw,cleanup_raw,shell_raw)
          cleanup['setupApproved'] is False,
          'failed service has exact source admission and absent outside cleanup')
     originals=decode_setup_v7_log(raw)
+    event_original=originals['setup.event.json']
+    need(type(event_original) is bytes and 0<len(event_original)<=1<<20,
+         'bounded consumed v7 raw event snapshot')
+    event_value=parse_setup_v7_outer(event_original)
+    need(type(event_value) is dict,'finite duplicate-safe consumed v7 raw event object')
     packet_raw=originals['runtime.setup-inventory.json']
     value=parse_setup_v7_outer(packet_raw)
     keys(value,'schema stageBefore stageAfter parent inventory candidate firstFailure secondary publicationSafe actualGuestApproved completeHostConfiguration')
