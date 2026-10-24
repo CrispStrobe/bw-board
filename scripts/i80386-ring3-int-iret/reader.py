@@ -4789,6 +4789,12 @@ def verify_setup_v5_failure_log(raw,external,outer_raw,cleanup_raw):
                  item['bytesRead']==SETUP_V5_NEW_HELPER_BYTES.get(path,item['bytesRead']),
                  'bounded known successful helper witness')
         failed=partial['failedHelper']
+        helper_attempt=bool(completed) or failed is not None
+        if helper_attempt:
+            need(status_meta is not None and preflight_prefix['statusSha256']==SETUP_V5_STATUS_SHA and
+                 preflight_prefix['statusBytes']==SETUP_V5_STATUS_BYTES and
+                 preflight_prefix['statusRecords']==1211,
+                 'helper attempt follows exact selected pre-status baseline')
         if failed is not None:
             keys(failed,'phase witness')
             item=failed['witness']
@@ -4830,8 +4836,12 @@ def verify_setup_v5_failure_log(raw,external,outer_raw,cleanup_raw):
              len(statuses['pre']['raw'])==preflight_prefix['statusBytes'],
              'raw failed preflight status joins retained prefix')
         if preflight_prefix['statusRecords'] is not None:
-            need(len(setup_v5_status_rows(statuses['pre']['raw']))==preflight_prefix['statusRecords'],
+            pre_rows=setup_v5_status_rows(statuses['pre']['raw'])
+            need(len(pre_rows)==preflight_prefix['statusRecords'],
                  'raw failed preflight census joins retained prefix')
+            if helper_attempt:
+                need(not any(name in {key[0] for key in pre_rows} for name,*_ in SETUP_V5_PACKAGES),
+                     'selected fifteen absent before any helper attempt')
     need(required_roles<=roles,'all reported failed status originals retained')
     for key,role,hash_key,size_key in (('preflight','pre','statusSha256','statusBytes'),
                                        ('postStatus','post','sha256','bytes')):
