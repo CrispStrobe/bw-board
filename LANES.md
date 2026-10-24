@@ -6623,3 +6623,67 @@ wrong-source/event/status/helper/archive/graph/stage/packet/cleanup cuts,
 then qualify exact-head CI and independently audit one separately selected
 official actual run before any guest result or merge. Preserve failures and
 all existing outcomes; this claim grants no setup replay or guest approval.
+
+## Distinct same-job Ring 3 V2 after retained unpack census failure — claim, 2026-10-24
+
+Owner: Codex x86 Ring 3. Claim only `LANES.md`, `docs/X86-NEXT-LANES.md`,
+`docs/I80386-RING3-INT-IRET-RESULTS.md`,
+`scripts/i80386-ring3-int-iret/{run.py,reader.py,controls.py,README.md}` and
+`.github/workflows/i80386-ring3-int-iret.yml`. This docs-only amendment must
+merge and qualify before source implementation. Preserve the consumed V1
+label, request, event, originals and reader outcome; V9 metadata and every
+older actual/compiler route keep their behavior and guards.
+
+The selected V1 [run](https://github.com/CrispStrobe/bw-board/actions/runs/40121786243)
+failed after all fifteen archive acquisitions and a zero-exit, reaped dpkg
+unpack. Its immediate owned-service cgroup census found an extra direct member
+alongside the controller. That member's identity and cause are unestablished.
+Configure, Node staging, the runtime graph and guest execution did not occur.
+Later exact policy cleanup and outside terminal cgroup observation do not
+turn the failed setup into a positive result. Retain the original failure;
+never replay the V1 label.
+
+V2 needs its own literal request/schema, SHA-only body marker, two repository
+variables, owner label, producing job, route, original roles and independent
+reader. No V1 request, event, job identity or runtime original may be projected
+onto V2. Hold the reviewed fifteen archive and payload pins, image/status/helper
+gates, no-force/no-trigger installer order, exact policy identity, one Node
+22.23.3 exclusive copy, selected graph comparison, twenty architectural roles
+and per-role caps. No request or environment field chooses a new limit or pin.
+
+Only the V2 post-reap dpkg boundary may take up to six complete, ordered
+owned-unit cgroup samples within five monotonic seconds, inside the unchanged
+660-second service, 720+5-second client and 1,810-second allocation. Retain
+the **first** raw `cgroup.procs`, `cgroup.events` and `cgroup.stat` observation,
+every later raw sample, monotonic start/end and any read/parse failure. An
+immediately clean first sample returns without sleeping. There is no retry
+of a failed syscall, process ignore list, PID kill, dpkg replay or budget
+increase. A later clean sample does not erase an earlier uncertain observation
+or establish continuous ownership. The final acceptance predicate stays exact
+controller-only direct membership, zero nested and dying descendants, reviewed
+populated state and unchanged resource identity. Persistent or unknown members,
+missing counters, malformed facts, identity/resource drift, sample exhaustion
+and deadline uncertainty refuse before configure or policy removal. Preserve
+the primary failure, ordered secondary failures, partial package mutations and
+outside terminal cleanup facts.
+
+Permit only a closed V2 route value through the already reviewed setup
+sequence and cgroup census, root installer, child profile, entry/outside,
+workflow and dispatch seams. V9 and V1 defaults remain exact. A distinct V2
+reader must independently check each retained sample and the final strict
+predicate, then bind its request/event/source, status, helper/archive/stage,
+runtime graph, both serial services, twenty roles and externally admitted
+run/job/step/log/artifact originals. Repair the separately found handoff
+schema mismatch in V2: the reader CLI adds `comparisonInput`, while the
+producer exact-key parser omits it. Admit only the fixed reviewed comparison
+object in the new V2 handoff and prove genuine CLI-produced bytes pass the
+genuine producer parser. Preserve V1 historical wire and reader behavior;
+a fabricated handoff reader is insufficient.
+
+Before V2 selection, require connected pure producer-to-reader controls for
+first-nonquiet/final-quiet, persistent and nested members, missing dying
+counter, read error, deadline, first/secondary ordering, genuine handoff,
+wrong source/event/request, and outside cleanup. Then require all enabled
+exact-head checks, one distinct owner-selected event and one independent
+original-only audit. This claim authorizes source work, not another V1 attempt
+or a guest result.

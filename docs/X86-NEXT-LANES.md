@@ -3497,3 +3497,30 @@ bound apply only to the new wrapper; existing leaf limits stay fixed. Connected
 mock controls, wrong-input mutations, exact-head checks and one independently
 admitted actual original are prerequisites to any result. The V9 metadata
 label is consumed and cannot serve as this actual event.
+
+### Same-job V1 failed at the post-unpack cgroup census; V2 claim pending
+
+The selected [V1 actual run](https://github.com/CrispStrobe/bw-board/actions/runs/40121786243)
+retained a zero-exit, reaped fifteen-package unpack followed by an immediate
+owned-service cgroup census with an extra direct member. The member's identity
+and cause are unknown. Configure, Node staging, a complete graph and the
+JavaScript/QEMU guest did not run. Later exact policy cleanup and outside
+terminal observation do not approve that failed transaction. The V1 label and
+originals are consumed; preserve the failure and do not replay it.
+
+The [new V2 ownership claim](../LANES.md) proposes a distinct request, label,
+job and reader. Its only installer behavior adjustment is up to six retained,
+ordered cgroup samples over at most five monotonic seconds after a reaped dpkg
+phase, within the existing service and job bounds. The first sample is always
+retained; an immediately clean one proceeds without delay. Final acceptance
+still requires the exact controller alone and zero nested or dying descendants.
+Unknown or persistent population, malformed observations, read errors and
+budget exhaustion refuse, with no ignore list, kill or repeated package phase.
+
+A separate source fix must make the V2 reader's genuine handoff bytes pass the
+producer's exact-key parser, including the fixed `comparisonInput` field. Pure
+controls must traverse that real interface and preserve old V1 wire behavior.
+Merge and qualify the claim before implementation. Then require new exact-head
+source checks, a new one-shot event, independently retained originals and an
+external result review. No V1 failure, prior V9 graph or source control grants
+hosted setup, architectural guest, full 386DX or physical timing approval.
