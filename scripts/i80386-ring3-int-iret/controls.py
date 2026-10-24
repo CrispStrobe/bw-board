@@ -2589,15 +2589,21 @@ def staged_runtime_controls():
                 pretty=json.dumps(event,indent=2,sort_keys=False).encode()+b'\n'
                 reader.setup_v8_event(pretty,v8_request,sha(request_raw),v8_env)
                 self.assertEqual(producer.admit_setup_v8_event(pretty,v8_env)[0],request_raw)
+                self.assertTrue(event_raw.endswith(b'}\n'))
+                append_event=lambda suffix:event_raw[:-2]+suffix+b'\n'
+                finite_extra=append_event(b',"ignoredOverflow":1e3}')
+                reader.setup_v8_event(finite_extra,v8_request,sha(request_raw),v8_env)
+                self.assertEqual(producer.admit_setup_v8_event(finite_extra,v8_env)[0],request_raw)
                 bad_event_bytes=(
-                    event_raw[:-1]+b',"ignored":{"x":1,"x":2}}',
-                    event_raw[:-1]+b',"ignored":NaN}',
-                    event_raw[:-1]+b',"ignored":Infinity}',
-                    event_raw[:-1]+b',"ignored":-Infinity}',
-                    event_raw[:-1]+b',"ignored":1e999}',
-                    event_raw[:-1]+b',"ignored":-1e999}',
-                    event_raw[:-1]+b',"ignored":"\xff"}',
+                    append_event(b',"ignored":{"x":1,"x":2}}'),
+                    append_event(b',"ignored":NaN}'),
+                    append_event(b',"ignored":Infinity}'),
+                    append_event(b',"ignored":-Infinity}'),
+                    append_event(b',"ignored":1e999}'),
+                    append_event(b',"ignored":-1e999}'),
+                    append_event(b',"ignored":"\xff"}'),
                     event_raw+b'{}',b'[]',b' '*(reader.CAPS['jsonBytes']+1))
+                self.assertEqual(reader.parse(append_event(b',"ignoredOverflow":1e999}'))['ignoredOverflow'],float('inf'))
                 for bad_raw in bad_event_bytes:
                     with self.subTest(rawSuffix=bad_raw[-24:]),self.assertRaises((ValueError,UnicodeError,TypeError,AttributeError)):
                         producer.admit_setup_v8_event(bad_raw,v8_env)
@@ -2639,8 +2645,8 @@ def staged_runtime_controls():
                     return process,streams
                 observed_probes=[]
                 entry_originals,entry_passed,entry_safe=reader.setup_v8_inventory_entry(v8_env,files,probe)
-                self.assertTrue((entry_passed,entry_safe),(entry_passed,entry_safe,
-                    reader.parse(entry_originals['runtime.setup-inventory.json'])['firstFailure']))
+                self.assertEqual((entry_passed,entry_safe),(True,True),
+                    reader.parse(entry_originals['runtime.setup-inventory.json'])['firstFailure'])
                 self.assertEqual(len(observed_probes),15)
                 originals=entry_originals
                 value=reader.parse(originals['runtime.setup-inventory.json'])
@@ -2748,7 +2754,7 @@ def staged_runtime_controls():
                 bad_cleanup['sourceAdmission']['eventSha256']=sha(bad_event_raw)
                 regrade(changed,dict(originals,**{'setup.event.json':bad_event_raw}),
                     changed_cleanup=reader.canonical(bad_cleanup))
-                bad_event_raw=event_raw[:-1]+b',"ignoredOverflow":1e999}'
+                bad_event_raw=append_event(b',"ignoredOverflow":1e999}')
                 bad_record=copy.deepcopy(record);bad_record['event']=wrap(bad_event_raw)
                 bad_record['eventIdentity']['st_size']=len(bad_event_raw)
                 changed=replace_stage_record(copy.deepcopy(value),bad_record)
@@ -2756,6 +2762,20 @@ def staged_runtime_controls():
                 bad_cleanup['sourceAdmission']['eventSha256']=sha(bad_event_raw)
                 regrade(changed,dict(originals,**{'setup.event.json':bad_event_raw}),
                     changed_cleanup=reader.canonical(bad_cleanup))
+                old_event_parser=reader.parse_setup_v8_outer
+                changed_roles=dict(originals,**{'setup.event.json':bad_event_raw,
+                    'runtime.setup-inventory.json':reader.canonical(changed)})
+                changed_stream=io.BytesIO();changed_stream.write(status_log.getvalue())
+                reader.emit_setup_v8_inventory(changed_roles,changed_stream.write,changed_stream.flush)
+                changed_log=changed_stream.getvalue()
+                changed_cleanup=reader.canonical(bad_cleanup)
+                changed_external=dict(external,logBytes=len(changed_log),logSha256=sha(changed_log),
+                    cleanupBytes=len(changed_cleanup),cleanupSha256=sha(changed_cleanup))
+                with patch.object(reader,'parse_setup_v8_outer',side_effect=lambda raw:
+                        reader.parse(raw) if raw==bad_event_raw else old_event_parser(raw)):
+                    old_parser_verdict=reader.verify_setup_v8_log(changed_log,changed_external,outer,
+                        changed_cleanup,shell)
+                self.assertTrue(old_parser_verdict['setupObserved'])
                 old_version=b'Package: qemu-system-data\nVersion: 1:8.2.2+ds-0ubuntu1.18\n'
                 new_version=b'Package: qemu-system-data\nVersion: 1:8.2.2+ds-0ubuntu1.19\n'
                 self.assertIn(old_version,post)
