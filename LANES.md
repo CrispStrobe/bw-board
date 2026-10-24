@@ -6191,6 +6191,61 @@ one fresh v7 request/event, acquire each original once, and independently
 audit an entire setup and runtime graph before any separate same-job guest
 adapter is considered. No approval follows from this claim.
 
+## Ring3 selected-QEMU v8 package path admission — claim, 2026-10-24
+
+Owner: Codex x86 ring3, continuing the existing PR645 source lane. Base
+`83c066506a95ed5bd99cda87240cfcedb3521352`. Own only
+`scripts/i80386-ring3-int-iret/{run.py,reader.py,controls.py,README.md}`,
+`.github/workflows/i80386-ring3-int-iret.yml`, this entry and the matching
+`docs/X86-NEXT-LANES.md` section. This claim is documentation only. Merge it
+before source implementation; preserve other owners' work and PR645's
+historical source and events.
+
+The one selected [v7 metadata event](https://github.com/CrispStrobe/bw-board/actions/runs/40085495608)
+is consumed and failed during the ninth fixed probe, the package-file listing
+for `qemu-system-data`. Its strict runtime path validator refused these exact
+package-owned names:
+`/usr/share/qemu/QEMU,VGA.bin`, `/usr/share/qemu/QEMU,cgthree.bin`, and
+`/usr/share/qemu/QEMU,tcx.bin`. The official original and first refusal are
+retained. The old v7 reader CLI also refuses this nonstream failure class;
+neither refusal is a complete setup graph, package or guest approval. Add only
+a separate bounded **failure-only** v7 audit route if needed to retain and
+independently join that original, with all approval flags false. Do not alter
+the old positive reader's refusal or reinterpret the consumed event.
+
+Add a distinct **v8 metadata** label, job, canonical request, repository
+input, body marker, packet schema and standalone reader path under the same
+five source files and workflow. In the new route, keep the existing strict
+default runtime-path grammar. Permit only the three fully spelled,
+case-sensitive canonical names above through a scoped selected-package path
+policy for the `qemu-system-data` DATA/listing/readback join. Do not widen a
+generic comma or filename rule, use an unqualified global exception, skip a
+listed path, or change old v4–v7 parsing. Require exact selected signed package
+DATA verification for all three filename bytes, sizes and SHA256 values before
+matching their installed runtime witnesses. Audit every other listing entry
+under the unchanged grammar and require the same complete sorted unique path
+union. Wrong package, extra comma name, case, path spelling, size, digest,
+missing file, alias or readback must refuse. A scoped/injected policy may share
+bounded code with old routes only if old default behavior remains byte-for-byte
+strict.
+
+Retain the fifteen fixed-order probes, five package listing children and
+selected package/version/status/helper/payload graph, source twelve, exact
+QEMU/Node/tool pins, caps, service ownership and outside cleanup. Preserve
+every old request/event/original/failure, defaults, thresholds, fixture, CPU/AT
+and guest source. Compiler and actual guest guards remain false. Add pure
+positive and coherent negative controls with mutations for path scope,
+package ownership, signed DATA and installed-byte joins, wrong v8 event/source,
+partial failures and cleanup. No acquired package, QEMU, helper or guest runs
+in source controls.
+
+After this claim merges, qualify the v8 source on every enabled exact-head
+check. Externally admit at most one new v8 metadata event, acquire each
+official original once, and independently audit the **complete** setup,
+runtime, Node and QEMU graph with official event/job/artifact/source joins.
+Only then consider a separately claimed truthful same-job setup-plus-guest
+adapter. This claim grants no setup, guest, strict 386DX or performance result.
+
 ## Ordered ordinary-JS 16-bit scalar read — claim, 2026-10-24
 
 Owner: Codex x86 profiling, with Sol implementation after this claim merges.
