@@ -1509,3 +1509,40 @@ reader imports no producer and the controls use no consumed original as a
 fixture. Coherent prefix and raw-status mutations refresh their internal and
 delivery hashes and still refuse. This audit does not consume a new hosted
 event or repeat any child or guest execution.
+
+### Consumed v7 package-path failure audit
+
+`reader.py --consumed-v7-failure` is a separate, negative-only reader for the
+consumed v7 packet whose ninth fixed `dpkg-query -L qemu-system-data` child
+returned exit zero and a complete listing before the old canonical path check
+refused it. The three observed comma-bearing names are
+`/usr/share/qemu/QEMU,VGA.bin`, `/usr/share/qemu/QEMU,cgthree.bin`, and
+`/usr/share/qemu/QEMU,tcx.bin`. This route checks them only as returned data;
+it does not make them accepted runtime paths. Every other listing row retains
+the old strict grammar. Missing, extra or differently cased comma names
+refuse. The old v7 failure/success CLI behavior is unchanged and still
+refuses this nonstream failure class.
+
+The five required inputs are `--consumed-v7-failure` (the retained official
+job log), `--external-admission` (the existing independently selected
+`bw.ring3.setup-inventory-expectation.v7`), `--outer-resource-original`,
+`--outside-cleanup-original`, and `--shell-image-original`. Each file is
+read once with its old byte cap. The reader independently joins the three
+log-carried request/event/runtime originals, source twelve and executing
+workflow, two raw package-status originals and permitted delta, finite
+before/after Node stage, nine ordered zero-exit child streams, the exact
+path-refusal first error, outer exit 1 and absent outside unit. It returns
+`bw.ring3.consumed-v7-path-failure-audit.v1` only with all candidate, setup,
+guest and official-authentication approvals false and
+`partialMutationPossible: true`. A returned ninth listing is a failed
+attempt, not a complete runtime graph or installation approval. The external
+expectation is a trust input; the report does not independently authenticate
+GitHub job or artifact metadata.
+
+`/usr/bin/python3 -I -S -B scripts/i80386-ring3-int-iret/controls.py
+--consumed-v7-failure-only` runs the focused pure controls. They manufacture
+their packet under mocked process edges, reject coherent failure, source,
+status, path and outside-cleanup mutations, and do not use an official
+original as a fixture. A separate operator audit may apply the standalone
+reader to the already retained originals without reacquiring them. No new
+event, native probe, package operation, QEMU or guest is part of this route.
