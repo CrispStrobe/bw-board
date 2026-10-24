@@ -2359,6 +2359,41 @@ def build_original(packet, request_raw, event_raw, *, job_log=None,
             'retained official Build log compact frame equals artifact role')
     require(strict_equal(value['observations']['compactManifest'], compact),
             'same completed compact Build witness in original and artifact')
+    fields(build_outside, 'schema route runId runAttempt unit serviceExitCode '
+           'clientExitCode cleanupExitCode innerComplete innerFirstFailure '
+           'before after manual firstFailure secondary')
+    require(build_outside['schema'] == 'bw.bochs-ring3.outside.v1' and
+            build_outside['route'] == 'build' and
+            type(build_outside['runId']) is str and
+            re.fullmatch('[1-9][0-9]*', build_outside['runId']) and
+            type(build_outside['runAttempt']) is int and
+            build_outside['runAttempt'] == 1 and
+            build_outside['unit'] ==
+            'bw-bochs-build-v1-' + build_outside['runId'] + '-1.service' and
+            all(type(build_outside[name]) is int and
+                build_outside[name] == 0 for name in
+                ('serviceExitCode', 'clientExitCode', 'cleanupExitCode')) and
+            build_outside['innerComplete'] is True and
+            build_outside['innerFirstFailure'] is None and
+            build_outside['manual'] is None,
+            'selected complete Build service and outer terminal')
+    unit_fact(build_outside['before'], build_outside['unit'])
+    unit_fact(build_outside['after'], build_outside['unit'], absent=True)
+    failures(build_outside['firstFailure'], build_outside['secondary'],
+             complete=True)
+    resources = fields(value['resources'], 'before after')
+    limits = {'cpu.max': '100000 100000\n',
+              'memory.max': '2147483648\n',
+              'memory.swap.max': '0\n', 'pids.max': '64\n'}
+    resources_fact(resources['before'], unit=build_outside['unit'],
+                   limits=limits)
+    resources_fact(resources['after'], unit=build_outside['unit'],
+                   limits=limits)
+    require(all(resources['before']['directory'][name] ==
+                resources['after']['directory'][name] for name in
+                ('dev', 'ino', 'mode', 'uid', 'gid')) and
+            resources['before']['pid'] == resources['after']['pid'],
+            'same bounded Build cgroup and service before/after')
     return {'schema': 'bw.bochs-ring3.build-admission.v1',
             'selectedBuildBytesObserved': True,
             'runtimeMemberCount': len(members),
