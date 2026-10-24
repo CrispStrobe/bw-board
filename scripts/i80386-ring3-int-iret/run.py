@@ -8287,7 +8287,8 @@ class SetupV8Host:
         need(Path('/usr/sbin/policy-rc.d').exists() is False and Path('/usr/sbin/policy-rc.d').is_symlink() is False,
              'preexisting policy refused')
         status=bounded_read('/var/lib/dpkg/status',8<<20)
-        pre_original=emit_setup_v8_status('pre',status,route=self.route)
+        pre_original=(emit_setup_v8_status('pre',status) if self.route is None else
+            emit_setup_v8_status('pre',status,route=self.route))
         self.preflight_prefix.update(statusOriginal=pre_original,statusSha256=sha(status),
             statusBytes=len(status))
         need(sha(status)==SETUP_V8_STATUS_SHA,'fresh exact dpkg status bytes')
@@ -8298,7 +8299,8 @@ class SetupV8Host:
         self.pre_status_rows=rows
         helpers={};witnesses={}
         for path,pin in SETUP_V8_HELPERS.items():
-            witness=setup_v8_helper_witness(path,pin,self.route)
+            witness=(setup_v8_helper_witness(path,pin) if self.route is None else
+                setup_v8_helper_witness(path,pin,self.route))
             witnesses[path]=witness;helpers[path]=witness['sha256']
             self.preflight_prefix['helperWitness'][path]=witness
             self.preflight_prefix['completedHelpers'].append(path)
@@ -8441,7 +8443,9 @@ class SetupV8Host:
              args==['--no-triggers','--configure',*SETUP_V8_CONFIGURE_ORDER],
              'fixed no-force, no-trigger dpkg phase')
         label='setup-v9' if self.route is not None else 'setup-v8'
-        argv=['/usr/bin/dpkg',*args];process,streams=collect_child(SetupV8Tool(argv,self.route),label,argv,profile=label)
+        argv=['/usr/bin/dpkg',*args];tool=(SetupV8Tool(argv) if self.route is None else
+            SetupV8Tool(argv,self.route))
+        process,streams=collect_child(tool,label,argv,profile=label)
         return {'argv':argv,'process':process,'stdout':original_bytes(streams['stdout']) if streams['stdout'] else None,
             'stderr':original_bytes(streams['stderr']) if streams['stderr'] else None,'exitCode':process['exitCode'],'timedOut':process['timedOut'],
             'firstFailure':process['firstFailure'],'secondary':process['secondary']}
@@ -8464,7 +8468,8 @@ class SetupV8Host:
 
     def post_status(self,request):
         raw=bounded_read('/var/lib/dpkg/status',8<<20)
-        post_original=emit_setup_v8_status('post',raw,route=self.route)
+        post_original=(emit_setup_v8_status('post',raw) if self.route is None else
+            emit_setup_v8_status('post',raw,route=self.route))
         rows=setup_v8_status_rows(raw);selected={}
         need(self.pre_status_rows is not None,'retained parsed pre-status before post comparison')
         setup_v8_status_delta(self.pre_status_rows,rows)
@@ -8583,8 +8588,10 @@ def setup_v8_entry(environ,route=None):
         need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,'held '+version+' source path')
         observer.source(request)  # Exact HEAD/tree/live source12 before any mutation or GET.
         context['source']=observer.facts['source'];context['sourceCommands']=observer.facts['sourceCommands']
-        host=SetupV8Host(environ,event,request_raw,observer,route)
-        facts=setup_v8_sequence(host,request,route)
+        host=(SetupV8Host(environ,event,request_raw,observer) if route is None else
+            SetupV8Host(environ,event,request_raw,observer,route))
+        facts=(setup_v8_sequence(host,request) if route is None else
+            setup_v8_sequence(host,request,route))
         if facts['firstFailure'] is not None or facts['secondary']:
             failure.adopt(facts['firstFailure'],facts['secondary'])
         else:
