@@ -8026,6 +8026,23 @@ def same_job_actual_controls():
             return process,streams
         return files,probe,observed
     class Tests(unittest.TestCase):
+        def test_selected_comma_regular_runtime_readback_and_drift(self):
+            path='/usr/share/qemu/QEMU,VGA.bin';data=b'bounded selected DATA mock'
+            value={'qemuPackage':{'files':{path:{'kind':'qemu-data',
+                'bytes':len(data),'sha256':sha(data)}},'aliases':{},'probes':[]},
+                'executables':{}}
+            backend=p.RuntimeFiles()
+            with patch.object(backend,'read',side_effect=lambda selected,cap:data):
+                observed,failure=p.runtime_facts(value,backend.read,backend.alias,
+                    stage='before-guests')
+            self.assertEqual(observed,value)
+            self.assertIsNone(failure.first)
+            with patch.object(backend,'read',side_effect=lambda selected,cap:data+b'X'):
+                observed,failure=p.runtime_facts(value,backend.read,backend.alias,
+                    stage='after-guests')
+            self.assertIsNotNone(failure.first)
+            self.assertEqual(failure.first['phase'],'runtime-after-drift')
+            self.assertEqual(observed['qemuPackage']['files'][path]['sha256'],sha(data+b'X'))
         def test_connected_first_service_setup_stage_inventory_original(self):
             rom,manifest=pure_fixture()
             architectural,_=manufacture(rom,manifest)
@@ -8270,6 +8287,108 @@ def same_job_actual_controls():
                     self.assertTrue(drift_safe)
                     self.assertIn('fresh same-job full runtime candidate',
                         reader.parse(drift_originals['runtime.setup-inventory.json'])['firstFailure']['message'])
+            with v8_manufactured(p,case,architectural) as (
+                    old_env,old_expected,old_originals,old_packet,old_selected,
+                    old_files,old_state):
+                controller_env=dict(actual_env,GITHUB_JOB=producer.SAME_JOB_ACTUAL_ROUTE['job'],
+                    BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256=pin,
+                    BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64=base64.b64encode(request_raw).decode(),
+                    BW_RING3_SAME_JOB_HANDOFF_SHA256=sha(handoff_raw),
+                    BW_LAUNCH_PLAN_SHA256='0'*64,SUDO_UID='1001',SUDO_GID='1002')
+                old_state['data']['source.before.json']=reader.canonical(source)
+                for name in ('fixture.rom','fixture.json'):
+                    old_state['data']['inputs/'+name]=packet_template['inputs/'+name]
+                owner=reader.parse(old_state['data']['.entry.json'])
+                owner['sourceSha256']=sha(old_state['data']['source.before.json'])
+                old_state['data']['.entry.json']=reader.canonical(owner)
+                for name in ('runtime.before.json','.controller.before.json',
+                    '.controller.json','source.after.json','runtime.after.json',
+                    'js/process.json','js/stdout','js/stderr','qemu/process.json',
+                    'qemu/stdout','qemu/stderr','qemu/report.json'):
+                    old_state['data'].pop(name,None)
+                def cgroup_observe(groups,role):
+                    snapshot=copy.deepcopy(owner['cgroups'][role])
+                    if role=='controller':
+                        snapshot['procs']=[100]
+                    if role in ('enclosing','controller'):
+                        snapshot['raw']['pidsCurrent']='1\n'
+                        snapshot['raw']['cgroupEvents']='populated 1\nfrozen 0\n'
+                    return snapshot
+                observe=lambda path:{key:candidate['files'][path][key]
+                    for key in ('bytes','sha256','mode')}
+                fixture_write=p.write_new
+                def controller_write(path,raw,cap):
+                    path=Path(path)
+                    if path.is_relative_to(p.PACKET):
+                        self.assertLessEqual(len(raw),cap)
+                        name=path.relative_to(p.PACKET).as_posix()
+                        self.assertNotIn(name,old_state['data'])
+                        old_state['data'][name]=raw
+                    else:fixture_write(path,raw,cap)
+                def child_observation(child,role,argv,**kwargs):
+                    self.assertIn(role,('js','qemu'))
+                    process=reader.parse(packet[role+'/process.json'])
+                    self.assertEqual(process['argv'],argv)
+                    process['parentPid']=100
+                    return process,{'stdout':packet[role+'/stdout'],
+                        'stderr':packet[role+'/stderr']}
+                runtime_originals={}
+                def retain_runtime(name,raw):
+                    self.assertNotIn(name,runtime_originals)
+                    runtime_originals[name]=raw
+                    return raw
+                with patch.object(p,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(p,'ROM_SHA',reader.ROM_SHA),\
+                     patch.object(p,'FIXTURE_JSON_SHA',reader.FIXTURE_JSON_SHA),\
+                     patch.object(p,'GENERATION_NODE_PIN',(
+                         selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                         selected_handoff['stageCopy']['nodeReadback']['sha256'])),\
+                     patch.object(p,'same_job_handoff',return_value=(
+                         handoff_raw,selected_handoff,candidate_raw,candidate)),\
+                     patch.object(p,'HostedEnvelopeInstaller',side_effect=lambda environ:
+                         SimpleNamespace(event=lambda:event_raw)),\
+                     patch.object(p,'source_facts',side_effect=lambda selected,**kw:
+                         (copy.deepcopy(selected),p.FirstFailure())),\
+                     patch.object(p,'runtime_facts',side_effect=lambda selected,*args,**kw:
+                         (copy.deepcopy(selected),p.FirstFailure())),\
+                     patch.object(p,'write_new',side_effect=controller_write),\
+                     patch.object(p,'collect_child',side_effect=child_observation),\
+                     patch.object(p,'runtime_delivery_original',side_effect=retain_runtime),\
+                     patch.object(p,'entry_proc',side_effect=lambda path:
+                         '0::/bw-ring3-123-1/controller\n' if str(path).endswith('cgroup')
+                         else ''.join(k+':\t'+'0'*16+'\n' for k in
+                             ('CapInh','CapPrm','CapEff','CapAmb'))),\
+                     patch.object(p.SameJobRuntimeFiles,'fact',side_effect=observe),\
+                     patch.object(p.SameJobRuntimeFiles,'alias',side_effect=lambda path:
+                         candidate['aliases'][path]),\
+                     patch.object(p.SameJobRuntimeFiles,'platform',return_value=candidate['platform']):
+                    with patch.object(p.Cgroups,'observe',autospec=True,side_effect=cgroup_observe):
+                        ops,controller_failure=p.controller_execute(
+                            p.SameJobControllerOps(controller_env))
+                self.assertIsNone(controller_failure.first,controller_failure.first)
+                self.assertIn('controller.runtime.json',runtime_originals)
+                self.assertEqual(set(ops.processes),{'js','qemu'})
+                built_packet={name:old_state['data'].get(name,packet[name])
+                    for name in reader.ROLES if name!='audit.json'}
+                built_resources=reader.parse(built_packet['resources.json'])
+                built_resources['controller']['pid']=100
+                built_resources['controller']['before']['procs']=[100]
+                built_packet['resources.json']=reader.canonical(built_resources)
+                built_audit=reader.parse(packet['audit.json'])
+                built_audit['roles']=[{'path':name,'bytes':len(built_packet[name]),
+                    'sha256':sha(built_packet[name])} for name in sorted(built_packet)]
+                built_packet['audit.json']=reader.canonical(built_audit)
+                self.assertEqual((reader.parse(runtime_originals['controller.runtime.json'])['handoffSha256'],
+                    reader.parse(runtime_originals['controller.runtime.json'])['pid']),
+                    (sha(handoff_raw),reader.parse(built_packet['resources.json'])['controller']['pid']))
+                with patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                     patch.dict(reader.RUNTIME_SELECTED,{'node':{
+                        'bytes':selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                        'sha256':selected_handoff['stageCopy']['nodeReadback']['sha256']} }):
+                    built_verdict=reader.verify_same_job_actual_packet(built_packet,
+                        handoff_raw,guest_service,guest_cleanup,guest_outer,
+                        runtime_originals['controller.runtime.json'])
+                self.assertTrue(built_verdict['guestPredicatesObserved'])
             self.assertEqual(producer.SAME_JOB_REVIEWED_GRAPH['sha256'],
                 '72407985d3ef62725137a05ea6c609ff81f7095bdeb0147a9f703628a0f9cdab')
         def test_manufactured_runtime_fixture_precedes_actual_request(self):
