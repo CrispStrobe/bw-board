@@ -5934,3 +5934,71 @@ or guest has been executed by this candidate. Before any source landing,
 review the exact source/import closure, resource and original-byte bindings,
 then require every enabled exact-head check. A later event requires separate
 external admission and one retained official original set.
+
+## Ring3 selected-QEMU same-job guest continuation — claim, 2026-10-24
+
+Owner: Codex x86 ring3. Base `ef199ba9ef3a2a8adec06751510499fc9aabbe68`;
+coordinate the active [PR645](https://github.com/CrispStrobe/bw-board/pull/645)
+source owner. Extend the merged [selected-QEMU claim PR660](https://github.com/CrispStrobe/bw-board/pull/660)
+only for a new, versioned **v5** repaired metadata route followed by a
+separate same-job setup and authored guest route.
+Own only `scripts/i80386-ring3-int-iret/{run.py,reader.py,controls.py,README.md}`,
+`.github/workflows/i80386-ring3-int-iret.yml`, this claim and the matching
+[x86 contract](docs/X86-NEXT-LANES.md).
+Merge this claim before implementation. No source, workflow, request variable,
+label or event is changed by the claim.
+
+The first v4 metadata attempt acquired all fifteen selected archives, then
+failed at `dpkg --unpack`: its dedicated `PATH` omitted `/usr/sbin`, so
+`ldconfig` and `start-stop-daemon` could not be found. Preserve that first
+failure and its partial setup/cleanup facts; it produced no complete setup,
+Node stage, runtime graph or guest result. Do not retry its consumed label.
+First add a **distinct v5 metadata label, job, request and body marker** to
+qualify the repaired setup and complete graph in one fresh event. Keep the
+historical global environment unchanged. The new installer-only environment
+may use canonical `/usr/sbin:/usr/bin:/bin` only after exact official package
+DATA provenance, bytes and named/held readback of both missing helpers are
+externally selected and checked before archive GET or installer execution.
+No resolver, force flag, fallback version or threshold changes are admitted.
+
+Only after one independently audited complete v5 metadata graph may a
+**separate v5 guest label, job, request and body marker** be selected. That
+guest job uses two serial bounded services in the **same job**: exact setup
+and outside policy/cgroup cleanup first, then the fresh actual adapter and
+guest under its own resource envelope. The second service begins only after
+the current-job setup original, selected post-status, policy removal, outside
+terminal facts, Node stage identity and complete runtime graph are independently
+joined to the previously selected candidate. If the first service staged Node,
+verify and reuse that exact held copy and current identity; never attempt a
+second exclusive copy over its existing destination. A later runner must
+revalidate its image, status, helpers, installed selected files and externally
+pinned graph; any drift refuses before the guest. Admit authentic metadata
+and guest event, source, workflow, request and job bytes independently; do not
+project a v5 event into the historical v1 approval path or replay consumed
+v3/v4 or v5 labels.
+
+Reuse the unchanged authored media-free INT80/IRETD fixture, fixed JavaScript
+driver and `/usr/bin/qemu-system-i386` TCG `-cpu 486` descriptor only after
+the source, setup and graph gates. Preserve all twenty architectural packet
+roles, frame and memory goldens, original output caps and failure ordering.
+The `486` option is a selected QEMU execution setting for a case exercising
+386 instructions; it is not strict 386DX hardware, OS, physical-timing or
+general compatibility evidence. Keep the historical source12 roster, fixture,
+CPU/AT implementation, Node/QEMU pins, compiler and old actual guards,
+thresholds, consumed failures and other lanes unchanged. No media, assembler,
+compiler, fallback package version or automatic replay enters this claim.
+
+Add finite per-phase CPU, memory, swap, process, wall, stream, archive and
+original-byte caps with exact owned-service terminal and partial-mutation
+facts. Pure negative controls must detect mixed v5 metadata/guest markers,
+wrong event/source/job/attempt, missing or changed helper/PATH, preflight or
+archive drift, installer/policy/cleanup failure, wrong Node stage or runtime
+graph, a skipped same-job barrier, changed JS/QEMU argv, missing packet roles
+and corrupted guest/frame evidence; old v4 stays metadata-only.
+After source implementation, require every enabled exact-head check and fresh
+affected own-fixture JS/QEMU guest qualification on the executing head. Qualify
+the repaired metadata source and its complete graph before preparing the guest
+request; each distinct event needs its own final-head checks and external
+admission. Acquire each official original once and audit it with a standalone
+reader before a source merge. No guest, setup success or approval is inferred
+from this claim.
