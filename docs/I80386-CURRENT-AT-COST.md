@@ -56,7 +56,7 @@ helpers before attempting a broad device-scheduler rewrite.
 The first proposed follow-up specializes the contiguous-page two-byte read
 arm while preserving ordered callbacks and faults. Its
 [claim](https://github.com/CrispStrobe/bw-board/pull/677) and
-[task contract](X86-NEXT-LANES.md#ordered-16-bit-scalar-read-candidate)
+[task contract](https://github.com/CrispStrobe/bw-board/blob/05f080fd765991a9232b8686439184362d8043e4/docs/X86-NEXT-LANES.md#ordered-16-bit-scalar-read-candidate)
 require semantic controls, an unchanged strict paired CPU/wall gate and
 affected clean protected guest qualification before adoption. The capture
 provides a baseline and attribution evidence; it proves no optimization gain.
