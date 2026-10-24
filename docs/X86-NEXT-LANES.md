@@ -3164,6 +3164,31 @@ and independent original audit. Prepare a separate same-job guest adapter
 only after a complete v6 setup and runtime graph is admitted.
 
 
+### V6 failure retention and a distinct v7 metadata attempt — 2026-10-24
+
+The single selected [v6 metadata run](https://github.com/CrispStrobe/bw-board/actions/runs/40074329886)
+failed when the combined five-package `dpkg-query -L` reached the existing
+16 KiB stdout cap. Its first failure and bounded prefix were retained. The
+standalone full v6 failure reader refused this complete runtime-failure packet
+class. Preserve both originals and refusal; the separately checked stage and
+raw status facts do not form an admitted runtime graph or guest result.
+
+The [v7 ownership claim](../LANES.md) first adds a negative-only reader for
+the consumed v6 packet, with exact original/source/event/status/stage/probe/
+outside-cleanup joins and every approval false. A new v7 metadata label,
+request, marker, job and packet family then use five ordered, fixed-package
+listing children in place of the one combined listing. Keep 16 KiB per stream
+and 10 seconds per child, independently close the fifteen-probe roster and
+the existing aggregate log/resource bounds, and require all five complete
+outputs before forming the same package-path union. Archive DATA path lengths
+make this a bounded proposal, not a measured hosted `dpkg-query` result.
+
+Keep old routes and consumed event identities, exact package and runtime pins,
+compiler/guest guards, first failures and cleanup policy unchanged. Merge the
+docs-only claim before source implementation. Exact-head source CI, one fresh
+externally selected v7 event, one acquisition of each official original and a
+standalone complete-graph audit are required before any same-job guest work.
+
 ## Ordered 16-bit scalar read candidate
 
 Claim status: the narrow source candidate was implemented and measured once,
