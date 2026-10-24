@@ -3459,11 +3459,11 @@ is a **budget proposal**, not measured sufficiency. Require fresh exact-head
 source checks and independently audited hosted originals before any result.
 This fixture grants no strict 386DX, physical RTx or full-OS claim.
 
-The [V9 ownership proposal](../LANES.md)
-is a claim-only checkpoint. It limits implementation to the existing Ring 3
-producer, reader, controls, README, workflow and these two ownership/guide
-documents. The old V8 strict image default and negative reader outcome stay
-held; the new label policy is confined to V9. No V9 source, request, variable,
-label, run or guest has been selected by this claim. Qualify and merge the
-claim before coding, then independently qualify its final source before any
-one-shot metadata event.
+The [V9 ownership claim](../LANES.md) merged at `4a4396c6`. This docs-only
+amendment claims one omitted producer seam: add only literal `setup-v9` to
+`collect_child`'s closed profile tuple. Keep `role == profile`, existing setup
+time and stream bounds, every other collector branch and all old modes. Future
+mocked controls must traverse the real collector for a valid V9 child and cut
+wrong role/profile, timeout and stream overflow. No V9 executable source,
+request, variable, label, run or guest has been selected. Merge this narrow
+amendment and qualify the final source before any one-shot metadata event.

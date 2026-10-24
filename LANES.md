@@ -6526,6 +6526,17 @@ argument may override the fixed archive, status, helper, label-set or
 resource policy. Do not copy the
 whole installer family or fake V8 event/environment values.
 
+Collector-profile amendment to this same V9 claim: `collect_child` currently
+has a closed profile tuple ending at `setup-v8`. Authorize **only** adding the
+literal `setup-v9` to that tuple, retaining `role == profile`, the existing
+setup child wall/stream limits and all other branches and behavior exactly.
+Do not make the collector accept arbitrary profiles, refactor its process
+or stream machinery, change older tuple members, or let request/env fields
+choose a profile. Future pure controls must exercise the actual `collect_child`
+edge with a mocked kernel: truthful `setup-v9` positive, wrong role/profile,
+timeout and stream-overflow refusals, plus old-mode regressions. This claim
+amendment changes no executable code and grants no event or guest authority.
+
 Source controls must cover an inert connected V9 entry through complete
 original retention and an independent reader, plus coherent wrong-event,
 source, label, status, every helper/alias, archive, policy, dpkg, stage,
