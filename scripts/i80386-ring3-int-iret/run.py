@@ -6357,7 +6357,7 @@ def setup_v5_outside_cleanup(environ):
 
 # A separate read-only route for the first v5 image-label refusal. It never
 # calls setup_v5_sequence, package acquisition, helper inspection or Node stage.
-IMAGE_ENV_DIAGNOSTIC_ENABLED=False
+IMAGE_ENV_DIAGNOSTIC_ENABLED=True
 IMAGE_ENV_DIAGNOSTIC_MARKER=b'RING3_IMAGE_ENV_DIAGNOSTIC_V1 '
 IMAGE_ENV_DIAGNOSTIC_LABEL='x86-ring3-image-env-diagnostic-v1'
 IMAGE_ENV_DIAGNOSTIC_JOB='image-env-diagnostic-v1'

@@ -461,7 +461,7 @@ jobs:
 
   # Separate read-only diagnosis of the consumed v5 preflight refusal.
   image-env-diagnostic-v1:
-    if: ${{ false && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-image-env-diagnostic-v1' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
+    if: ${{ true && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-image-env-diagnostic-v1' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:

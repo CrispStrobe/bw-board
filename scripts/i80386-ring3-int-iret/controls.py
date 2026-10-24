@@ -3216,8 +3216,19 @@ def image_env_diagnostic_controls():
                 with self.assertRaises(Exception):
                     reader.verify_image_diag(p.encode(row),p.IMAGE_ENV_DIAGNOSTIC_MARKER+p.encode(service),
                                              reader.canonical(outer),failed)
-        def test_cli_disabled_by_default(self):
-            self.assertFalse(p.IMAGE_ENV_DIAGNOSTIC_ENABLED)
+        def test_inactive_cli_guard_refuses_both_modes_before_any_host_edge(self):
+            self.assertTrue(p.IMAGE_ENV_DIAGNOSTIC_ENABLED)
+            for mode in ('--image-env-shell-v1','--image-env-service-v1'):
+                with patch.object(p,'IMAGE_ENV_DIAGNOSTIC_ENABLED',False),\
+                     patch.object(p,'image_env_shell_original') as shell,\
+                     patch.object(p,'image_env_service_original') as service,\
+                     patch.object(p,'HostedEnvelopeInstaller') as observer,\
+                     patch.object(p,'SetupV5Host') as setup,\
+                     patch.object(p.Cgroups,'text') as cgroup,\
+                     patch.object(p.sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
+                    self.assertEqual(p.dispatch_cli([mode],env),1)
+                    shell.assert_not_called();service.assert_not_called()
+                    observer.assert_not_called();setup.assert_not_called();cgroup.assert_not_called()
             self.assertFalse(reader.verify_image_diag(p.encode(p.image_env_shell_original(env)),
                 p.IMAGE_ENV_DIAGNOSTIC_MARKER+p.encode(captured()),reader.canonical(outside),external)['actualGuestApproved'])
         def test_forwarding_difference_and_resource_mutation_visible(self):
@@ -3238,10 +3249,14 @@ def image_env_diagnostic_controls():
             with self.assertRaises(Exception):
                 reader.verify_image_diag(p.encode(shell),p.IMAGE_ENV_DIAGNOSTIC_MARKER+p.encode(wrong),
                                          reader.canonical(outside),external)
-        def test_workflow_is_inactive_and_forwards_through_env_i(self):
+        def test_workflow_activated_only_for_distinct_owner_event_and_forwards_through_env_i(self):
             workflow=(HERE.parent.parent/'.github/workflows/i80386-ring3-int-iret.yml').read_text()
             route=workflow.split('  image-env-diagnostic-v1:\n',1)[1]
-            self.assertIn("if: ${{ false && github.event.action == 'labeled'",route)
+            self.assertIn("if: ${{ true && github.event.action == 'labeled'",route)
+            self.assertIn("github.event.label.name == 'x86-ring3-image-env-diagnostic-v1'",route)
+            self.assertIn("github.run_attempt == '1'",route)
+            self.assertIn("github.event.pull_request.head.repo.full_name == github.repository",route)
+            self.assertIn("github.event.pull_request.head.repo.fork == false",route)
             self.assertIn('--image-env-shell-v1',route)
             self.assertIn('/usr/bin/systemd-run --wait --pipe',route)
             self.assertIn('/usr/bin/env -i LANG=C.UTF-8 HOME=/nonexistent PATH=/usr/bin:/bin',route)
