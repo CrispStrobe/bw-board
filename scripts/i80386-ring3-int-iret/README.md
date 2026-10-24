@@ -1722,3 +1722,19 @@ event remain unselected. Pure controls use manufactured OS, package and guest
 facts; they grant no hosted setup, guest or official artifact approval. The
 older actual and compiler guards remain false. Exact-head hosted checks and
 separately admitted official originals are still required.
+
+The fixed QEMU comparator uses `-cpu 486` for the authored instruction subset
+shared with the intended 386 guest. A matching QEMU result would qualify those
+authored cases only; it would not establish complete 386DX behavior, a booted
+operating system, or physical timing accuracy.
+
+Selection requires successful enabled checks on the exact source head, a newly
+bound canonical request and source roster, and separate admission of the one
+owned event. In that same job, the first service must finish exact setup, stage
+Node once, retain its originals, and establish terminal cleanup. The handoff
+reader then binds the setup originals and selected runtime graph. The second
+service must recheck that graph before the serial JavaScript and QEMU cases;
+its twenty-role packet and terminal cleanup require independent local reading.
+Official run, job, step, log and artifact originals need a separate external
+join after the event. None of these later observations is supplied by source
+controls or by the earlier V9 metadata event.
