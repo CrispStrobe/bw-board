@@ -3289,6 +3289,13 @@ one official acquisition per original and an independent complete-graph
 audit must precede any separately claimed same-job guest work. Compiler and
 actual guest guards remain false.
 
+Claim PR684 merged at `606b7640`. A distinct v8 source candidate is present
+under the existing PR645 lane with metadata guards initially false. Its
+selected-package exception is limited to the three reviewed DATA names above;
+the old v7 path grammar and consumed failure stay held. Source controls do not
+qualify a complete runtime graph. Exact-head CI, external one-shot selection,
+once-only originals and independent graph admission remain next.
+
 ## Ordered 16-bit scalar read candidate
 
 Claim status: the narrow source candidate was implemented and measured once,

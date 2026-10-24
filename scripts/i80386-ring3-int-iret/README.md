@@ -1509,3 +1509,40 @@ reader imports no producer and the controls use no consumed original as a
 fixture. Coherent prefix and raw-status mutations refresh their internal and
 delivery hashes and still refuse. This audit does not consume a new hosted
 event or repeat any child or guest execution.
+## Distinct v8 package DATA path admission (inactive source candidate)
+
+The consumed v7 metadata attempt failed after its ninth probe because the
+historical runtime path grammar excludes commas. Its original and unchanged
+v7 reader refusal remain failures. V8 has a new request schema, SHA-only PR
+body marker, repository request variables, label, job, service unit, original
+markers and standalone success/failure reader mode. All three v8 entry guards
+are initially false; compiler and actual guest entry remain false.
+
+The V8 inventory permits exactly
+`/usr/share/qemu/QEMU,VGA.bin`,
+`/usr/share/qemu/QEMU,cgthree.bin`, and
+`/usr/share/qemu/QEMU,tcx.bin` only as regular qemu-system-data DATA files.
+The three selected names must occur in that package's complete listing and
+no other package's listing. Their signed archive, DATA tar and payload
+manifest pins are fixed in source; installed file bytes, SHA256, root
+ownership, link count, mode 0644, canonical path, absence of aliases and
+readback are checked separately. Every other path uses the previous strict
+grammar, including other comma names and those three names in another role.
+These source pins and hosted observations do not independently rehash the
+retained archive inside CI and do not grant transaction, runtime or guest
+approval.
+
+V8 keeps a separate versioned family because V7 request, event, service,
+status, inventory and failure decoders embed literal historical identities.
+Copying that closed family leaves V4–V7 original graders and consumed-event
+semantics intact; the narrow V8 inventory path method is scoped to the
+selected DATA package. This duplication is a maintenance cost. Any future
+consolidation needs a separate claim and fresh affected qualification after
+the historical route and new actual results are independently admitted.
+
+Pure V8 controls: `/usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py --setup-v8-only`.
+The original-only V8 CLI is `reader.py --setup-v8-inventory-log LOG
+--external-admission JSON --outer-resource-original JSON
+--outside-cleanup-original JSON --shell-image-original JSON`; it requires
+externally admitted exact official bytes and never authenticates a job by
+inner packet consistency alone. No V8 request or event has been selected.

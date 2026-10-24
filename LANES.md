@@ -6327,6 +6327,12 @@ runtime, Node and QEMU graph with official event/job/artifact/source joins.
 Only then consider a separately claimed truthful same-job setup-plus-guest
 adapter. This claim grants no setup, guest, strict 386DX or performance result.
 
+Implementation checkpoint: claim PR684 merged as `606b7640`. The isolated
+PR645 source candidate adds an initially inactive v8 metadata route and
+standalone positive/failure reader with only the three exact selected DATA
+path exceptions. Pure mocked controls are source checks. The consumed v7
+failure and old refusal remain unchanged; no v8 event or guest was selected.
+
 ## Ordered ordinary-JS 16-bit scalar read — claim, 2026-10-24
 
 Owner: Codex x86 profiling, with Sol implementation after this claim merges.
