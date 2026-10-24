@@ -1354,6 +1354,11 @@ retains the refusal but omits the service's actual `ImageOS` and `ImageVersion`
 values. The runner image line alone cannot identify which environment field
 failed. The consumed v5 event is not replayed.
 
+The diagnostic runs the same pinned checkout and setup-node 22.23.3 actions
+in the same order as that v5 job before it captures the shell environment.
+The setup action is part of the trusted hosted action boundary; the diagnostic
+does not run a Node workload or perform package, helper, QEMU, or guest work.
+
 The distinct `x86-ring3-image-env-diagnostic-v1` route has its producer and
 workflow selectors enabled for only a separately admitted own labeled event
 and first run attempt. A new exact-head,

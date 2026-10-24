@@ -3266,6 +3266,13 @@ def image_env_diagnostic_controls():
             v5=workflow.split('  setup-runtime-inventory-v5:\n',1)[1].split('  image-env-diagnostic-v1:\n',1)[0]
             self.assertIn('/usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/run.py --setup-runtime-inventory-v5',v5)
             self.assertIn('ImageOS="$ImageOS" ImageVersion="$ImageVersion"',v5)
+            setup=('      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020\n'
+                   '        with:\n          node-version: 22.23.3\n')
+            checkout='      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262'
+            for job in (v5,route):
+                self.assertEqual(job.count(setup),1)
+                self.assertLess(job.index(checkout),job.index(setup))
+            self.assertLess(route.index(setup),route.index('      - name: Retain shell and bounded root service image environment only'))
             self.assertNotIn('--setup-runtime-inventory-v5',route)
     suite=unittest.defaultTestLoader.loadTestsFromTestCase(Tests)
     result=unittest.TextTestRunner(verbosity=1).run(suite)
