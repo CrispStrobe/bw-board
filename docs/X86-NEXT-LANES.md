@@ -3191,10 +3191,38 @@ model was captured for that job, and its candidate must not be merged or
 called a speedup. Preserve the original failure; do not replay the one-shot
 event or change the gate to admit this result.
 
-A fresh agent should scope any failure-only reader correction separately and
-retain the old reader's refusal. Review and freeze a larger authored workload
-before proposing any different paired event; capture that event's hardware
-identity and exact resources rather than borrowing the baseline host model.
-Profile a new narrow optimization with independent semantic controls and an
-unchanged whole-child paired gate. Require affected clean protected guest
-qualification and all exact-head source checks before adopting any candidate.
+The next work is four separately reviewed tasks. The paired source files are
+in [source `55917c48`](https://github.com/CrispStrobe/bw-board/tree/55917c48dffe0c7c743388024481ef0a47a7c76c/scripts/i80386-read16-paired),
+which is not the adopted mainline CPU source. Claim any new paths before
+implementation.
+
+1. **Retain the failed terminal result.** Claim a failure-only reader and
+   focused controls beside the frozen `scripts/i80386-read16-paired/reader.py`
+   and `controls.py`; leave those original bytes and their refusal intact.
+   Accept a bounded failed original with stop exit zero, empty direct and
+   nested cgroup/PID censuses, and a stale failed unit status as a *failed
+   attempt*, with adoption always false. Refuse populated or nested descendants,
+   wrong unit identity and unknown terminal facts. Prove each cut using
+   independent raw-original inputs; never reinterpret failure as success.
+2. **Predeclare a longer authored comparison.** Claim a new versioned fixture,
+   controller, independent reader, controls and workflow under a new
+   `scripts/i80386-read16-paired-v2/` envelope before selecting any event.
+   Freeze the larger workload, semantic/device goldens, imports, resources and
+   one-run transport first. Keep two warm pairs and seven measured pairs, the
+   whole-child median CPU threshold 1.03, every CPU ratio greater than 1,
+   median wall B/A at most 1.02 and finite child/output caps. Preserve the old
+   one-million-instruction failure; no outlier deletion or same-event replay.
+3. **Bind the actual parent host.** In that new controller and independent
+   reader, collect bounded parent CPU model, effective affinity, CPU quota,
+   OS/image and pinned Node identity before child timing, then join them to
+   the selected official run. Exclude hostnames and private identifiers from
+   public originals. The old paired job's hardware model remains unknown;
+   the earlier baseline model cannot fill it.
+4. **Profile the next narrow CPU proposal.** Use a separately selected profile
+   to choose one exact arm in `src/experimental/i80386.js`; claim only that
+   arm and a focused new test before editing. Preserve callback order,
+   translation/fault behavior, self-modifying-code invalidation and mode
+   transitions with nonvacuous mutation cuts. Require fresh affected clean
+   protected guest results, the unchanged new paired gate and all enabled
+   exact-head source checks before adoption. Do not infer physical RTx or a
+   general workload gain from the authored loop.
