@@ -3155,8 +3155,9 @@ measured warmed authored-loop throughput around 4.52 million instructions/s for
 core and 3.48 million for AT on EPYC 9V74/Node22.23.3. Samples are not exact cost
 shares, physical 16MHz RTx or evidence of this candidate's gain.
 
-The [new paired source](../scripts/i80386-read16-paired/README.md) remains
-**actual-disabled**. Before implementation/results, it selected ordinary AT
+The [new paired source](../scripts/i80386-read16-paired/README.md) is
+**source-enabled**, with the owner-label/request/body-marker gate retained.
+No actual event has been selected. Before implementation/results, it selected ordinary AT
 only: a disposable 25k warm-up and fresh one-million-step five-op state per child.
 Core correctness remains required; no core gain is claimed. Keep eighteen fresh
 children (two warm pairs/seven measured), median whole-child CPU A/B >=1.03,

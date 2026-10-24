@@ -35,7 +35,7 @@ jobs:
           /usr/bin/timeout 30s /usr/bin/python3 -I -B scripts/i80386-read16-paired/controls.py
   paired:
     # Separate reviewed activation and exact source/request admission are required.
-    if: ${{ false && github.repository == 'CrispStrobe/bw-board' && github.actor == 'CrispStrobe' && github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'x86-read16-paired-v1' && github.event.pull_request.state == 'open' && github.event.pull_request.base.ref == 'master' && github.event.pull_request.head.repo.fork == false && github.event.pull_request.head.repo.full_name == 'CrispStrobe/bw-board' && github.run_attempt == 1 && github.event.pull_request.head.ref == 'lane/386-read16-ordered-pair-source-20261024' }}
+    if: ${{ true && github.repository == 'CrispStrobe/bw-board' && github.actor == 'CrispStrobe' && github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'x86-read16-paired-v1' && github.event.pull_request.state == 'open' && github.event.pull_request.base.ref == 'master' && github.event.pull_request.head.repo.fork == false && github.event.pull_request.head.repo.full_name == 'CrispStrobe/bw-board' && github.run_attempt == 1 && github.event.pull_request.head.ref == 'lane/386-read16-ordered-pair-source-20261024' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:

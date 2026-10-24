@@ -6,7 +6,9 @@ wrapping and original side effects/faults. Four-byte and cross-page paths remain
 unchanged. Claim [677](https://github.com/CrispStrobe/bw-board/pull/677) merged
 before implementation. No gain or guest qualification follows from this source.
 
-The producer's `ACTUAL_ENABLED` and workflow's `paired` guard are **false**.
+The reviewed producer and one-event workflow route are **source-enabled**.
+Request variables, a body marker and an actual label/event remain unselected;
+activation supplies no measurement, guest qualification or adoption.
 The source-control job runs only manufactured/mocked controls and small authored
 instruction cases. No paired child, guest, installer or profiler runs locally.
 
@@ -52,8 +54,9 @@ before the job starts. Missing, wrong, duplicate or mixed-case markers refuse.
 Source or executing-workflow changes require a new head/tree/common-source/
 workflow/request binding and marker before selecting an event.
 
-A separately reviewed activation must precede a single selected owner-applied
-PR label on the fixed source branch. An inline stdlib bootstrap authenticates the selected request/head/tree and
+The source activation retains a single selected owner-applied PR label on the
+fixed source branch, after all enabled exact-head CI and affected clean guest
+qualification succeed. An inline stdlib bootstrap authenticates the selected request/head/tree and
 producer/workflow bytes before executing the producer. Its full source guard checks the actual
 CrispStrobe actor and event sender, open same-repository nonfork PR, base,
 selected PR number, action/label and exact PR head before Node setup. Checkout

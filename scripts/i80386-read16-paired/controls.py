@@ -1,6 +1,7 @@
 """Pure manufactured originals and mocked process edges; never executes a child."""
 import base64
 import copy
+from contextlib import ExitStack
 import importlib.util
 import json
 import io
@@ -160,7 +161,7 @@ class BootstrapControls(unittest.TestCase):
         workflow=(HERE.parents[1]/'.github/workflows/i80386-read16-paired.yml').read_text()
         start=workflow.index('          import hashlib,json,os,re,stat,subprocess\n');end=workflow.index('          PY\n',start)
         body='\n'.join(line[10:] for line in workflow[start:end].splitlines())+'\n'
-        self.assertIn('if: ${{ false &&',workflow);self.assertIn("steps.admission.outcome == 'success'",workflow)
+        self.assertIn('if: ${{ true &&',workflow);self.assertIn("steps.admission.outcome == 'success'",workflow)
         for mutation in ('none','head','source','workflow-live','workflow-head','workflow-ref','marker-missing','marker-duplicate','marker-mixed'):
             with self.subTest(mutation=mutation),tempfile.TemporaryDirectory(dir=HERE) as directory:
                 root=Path(directory);publication=root/'publication';publication.mkdir();workflow_root=root/'workflow-source';workflow_root.mkdir();temp=root/'scratch';temp.mkdir()
@@ -321,9 +322,23 @@ class CaptureControls(unittest.TestCase):
         def observe():raise OSError('THIRD cgroup/source failure')
         failure=producer.finish_record(record,observe)
         self.assertEqual(failure['reason'],'FIRST stream failure');self.assertEqual([f['reason'] for f in failure['secondary']],['SECOND kill failure','THIRD cgroup/source failure'])
-    def test_disabled_guard_precedes_io(self):
-        with mock.patch.object(producer,'read_file',side_effect=AssertionError('unexpected IO')):
-            with self.assertRaisesRegex(producer.Refusal,'disabled'):producer.main()
+    def test_disabled_guard_precedes_every_host_factory_in_all_modes(self):
+        for args in [('--admit','request','event'),('--admission-wrapper','request','event'),('--capture','request','event'),('--cleanup',)]:
+            with self.subTest(mode=args[0]),ExitStack() as stack:
+                stack.enter_context(mock.patch.object(producer,'ACTUAL_ENABLED',False))
+                stack.enter_context(mock.patch.object(producer.sys,'argv',['run.py',*args]))
+                targets=[(producer,n) for n in ('read_file','store','admit_request','admit_sources','source_admission','admission_wrapper','capture','cleanup','git')]
+                targets += [(producer.subprocess,n) for n in ('Popen','run')]+[(producer.os,n) for n in ('open','read','kill','killpg','wait4')]+[(producer.Path,'open')]
+                spies=[stack.enter_context(mock.patch.object(target,name,side_effect=AssertionError('inactive host operation '+name))) for target,name in targets]
+                with self.assertRaisesRegex(producer.Refusal,'disabled'):producer.main()
+                for spy in spies:spy.assert_not_called()
+    def test_active_missing_or_wrong_request_SHA_refuses_before_host_execution(self):
+        p=fixture()
+        for selected in (None,'0'*64):
+            env={} if selected is None else {'BW_READ16_REQUEST_SHA256':selected}
+            with self.subTest(selected=selected),mock.patch.dict(producer.os.environ,env,clear=True),mock.patch.object(producer,'git',side_effect=AssertionError('unexpected Git')) as git,mock.patch.object(producer,'capture',side_effect=AssertionError('unexpected capture')) as capture,mock.patch.object(producer.subprocess,'Popen',side_effect=AssertionError('unexpected Popen')) as popen:
+                with self.assertRaisesRegex(producer.Refusal,'request SHA'):producer.admit_request(p[2],p[3])
+                git.assert_not_called();capture.assert_not_called();popen.assert_not_called()
     def test_producer_refuses_nested_census(self):
         def text(path):
             if path.name=='cgroup':return '0::/system.slice/bw-read16-paired-42-1.service'

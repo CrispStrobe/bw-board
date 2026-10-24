@@ -13,7 +13,7 @@ import subprocess
 import sys
 import time
 
-ACTUAL_ENABLED=False
+ACTUAL_ENABLED=True
 ROOT=Path(__file__).resolve().parents[2]
 NAMESPACE=ROOT/'scripts/i80386-read16-paired'
 BASE_HEAD='1312250f5ef06ecd96b0e40e2926e87312d8f414'

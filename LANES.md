@@ -6015,7 +6015,8 @@ contiguous-page `size === 2` arm of `_readLinear` in
 `.github/workflows/i80386-read16-paired.yml`, this registry entry and the
 matching roadmap contract. Claim [677](https://github.com/CrispStrobe/bw-board/pull/677) merged at
 `1312250f5ef06ecd96b0e40e2926e87312d8f414` before this source candidate.
-The producer and actual workflow guard remain false.
+The reviewed producer and owner-label route are source-enabled; actual event,
+guest qualification and performance adoption remain pending.
 
 The [current authored-loop capture](https://github.com/CrispStrobe/bw-board/actions/runs/40057621920)
 places scalar reads among the sampled CPU paths; samples are not exact CPU
@@ -6043,4 +6044,4 @@ retains source35 for both arms, pinned Node22.23.3, raw stream/reap/resource and
 outside cleanup originals plus an independent byte-only reader. The historical
 code16 macro, Node20 source policy, events and measured packets are not reused.
 The eighteen-child schedule and strict numeric gate above are unchanged.
-No actual pair or new guest result is claimed by this guarded source.
+No actual pair or new guest result is claimed by this source activation.
