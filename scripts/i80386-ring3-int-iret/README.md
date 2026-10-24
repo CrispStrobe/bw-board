@@ -1677,3 +1677,26 @@ bytes. The reader checks their source, step, size and digest relations while
 leaving acquisition authentication to a separate outer admission. Every
 setup, runtime and guest approval flag remains false until a separately
 qualified event and original audit establish its narrower result.
+
+## Same-job actual route claim
+
+The V9 metadata [run](https://github.com/CrispStrobe/bw-board/actions/runs/40111138937)
+has completed and its retained originals passed a standalone graph audit.
+Independent comparison admitted its digest and selected static DATA facts only
+as inputs for a future fresh comparison. The original candidate still says
+`candidateReviewed=false`; it is not an architectural guest result.
+
+The [new ownership claim](../../LANES.md) proposes a distinct, initially
+disabled actual protocol in the existing Ring 3 source/workflow paths. In one
+job it will finish fixed setup and one staged Node copy, prove terminal cleanup,
+then independently rederive and compare the runtime graph before a second
+owned service runs the authored JavaScript and QEMU children. It must read
+back the first stage rather than copy Node again. Old V9 request/event defaults,
+wire and reader verdicts and all V4–V8 reader functions remain held. Only the
+named V9 reader data-validation seams in the claim may be made
+default-preserving; a new actual reader must admit its own event and originals.
+The combined artifact cap is 32 MiB, while old leaf caps stay fixed. The
+1,810-second envelope is a proposed bound within a 35-minute job, not measured
+runtime sufficiency. Implementation and selection wait for the merged claim,
+source controls, exact-head CI and separate official admission. All actual
+and compiler guards remain false at this checkpoint.

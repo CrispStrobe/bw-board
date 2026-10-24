@@ -6555,3 +6555,63 @@ exercise a manufactured complete setup and
 inventory original through the V9 entry, emitted roles and standalone reader,
 as well as the actual bounded collector with mocked process edges. No V9
 event, hosted package setup, QEMU runtime or guest has been selected.
+
+## Distinct same-job Ring 3 actual route — claim, 2026-10-24
+
+The preceding V9 paragraph is a source checkpoint. The separate V9 metadata
+[run](https://github.com/CrispStrobe/bw-board/actions/runs/40111138937) has
+since completed. Its original-only reader accepted a bounded installed-state,
+Node and QEMU graph; an independent comparison admitted the graph digest and
+selected static DATA subset as **future comparison inputs only**. The retained
+candidate's `candidateReviewed` field remains false. The event and label are
+consumed. No architectural guest has run or been approved.
+
+Claim exactly these eight paths for a new, initially disabled actual route:
+`LANES.md`, `docs/X86-NEXT-LANES.md`,
+`docs/I80386-RING3-INT-IRET-RESULTS.md`,
+`scripts/i80386-ring3-int-iret/{run.py,reader.py,controls.py,README.md}` and
+`.github/workflows/i80386-ring3-int-iret.yml`. The owner is the Ring 3 x86
+lane. Implementation waits for this docs-only claim to merge. Keep V4–V8
+reader functions AST-held, V9 default request/event/wire/verdict unchanged,
+and every existing actual/compiler guard false. The new actual event, label,
+job, request, body marker, originals and reader schema must be distinct from
+V9 metadata. Never pass that event to the V9 metadata parser or project its
+run/job identity onto an older event.
+
+The one actual job must run two serial, owned services. First, repeat the
+same fixed fifteen-package setup and one Node 22.23.3 stage copy in that job;
+retain its raw status, helper, archive, stage, inventory and terminal cleanup
+originals. An independent same-job admission then rederives the complete
+runtime graph and compares the reviewed digest and selected static DATA facts
+before the second service can run a guest. The historical 103 KiB graph is
+neither a request body nor a substitute for that fresh gate. The second service
+reads back the existing stage and copy; it must not try a second exclusive
+copy. Reuse the authored JavaScript then QEMU serial controller and its twenty
+closed packet roles, under a new actual wrapper and independent reader.
+`pc`/`486` TCG can serve as an oracle for the authored INT80/IRETD instructions;
+it makes no strict 386DX or physical timing claim.
+
+Only the named V9 producer route seams may gain closed actual-route values:
+`setup_v8_sequence`, `SetupV8Host`, `SetupV8Tool`, helper/status emission,
+`setup_v8_entry`, owned-unit/outside cleanup, image shell and `dispatch_cli`.
+`NodeStageCopy` and old request/event admission keep their defaults. To avoid
+duplicating V9's independent reader, only `setup_v9_facts`,
+`setup_v9_stage_record` and `setup_v9_inner_original` may receive explicitly
+selected, default-preserving data-validation seams if genuinely needed; the
+default V9 wire and verdict must remain byte-equivalent. A separate actual
+reader owns its new request and event,
+same-job setup/graph joins, twenty-role packet and official metadata checks.
+No request or environment field can choose pins, resource caps or validators.
+
+Preserve existing per-role limits, including the 16 MiB archive acquisition total,
+128 KiB child streams, 120-second guest children and 600-second controller.
+The new combined retained artifact is capped at 32 MiB; this does not raise
+any old leaf cap. Bound the setup service/client/cleanup at 660/720+5/60
+seconds and the actual service/client/cleanup at 720/780+5/60 seconds, with
+180 seconds of workflow overhead: at most 1,810 seconds inside a 35-minute
+job. Both services retain one CPU, 1 GiB memory, zero swap, 64 tasks and
+finite terminal cgroup checks. Prove with connected pure controls and coherent
+wrong-source/event/status/helper/archive/graph/stage/packet/cleanup cuts,
+then qualify exact-head CI and independently audit one separately selected
+official actual run before any guest result or merge. Preserve failures and
+all existing outcomes; this claim grants no setup replay or guest approval.
