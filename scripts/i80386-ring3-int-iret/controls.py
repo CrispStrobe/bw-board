@@ -7374,6 +7374,38 @@ def setup_v9_controls():
     p,_=producer_fixture_case()
     edges=staged_runtime_controls(export_edges=True)
     class Tests(unittest.TestCase):
+        def test_v9_real_collector_closed_profile_terminal_timeout_and_prefix(self):
+            terminal={'exitCode':0,'signal':None,'waitStatus':0,'timedOut':False,
+                'rusage':{'userSeconds':0.0,'systemSeconds':0.0,'maxRssKiB':1}}
+            class Child:
+                role='setup-v9'
+                environment=dict(p.SETUP_V9_INSTALLER_ENV)
+                def __init__(self,case):self.case=case;self.clock=0;self.calls=0;self.killed=False
+                def now(self):
+                    self.clock+=(p.CHILD_NS if self.case=='timeout' else 1000)
+                    return self.clock
+                def spawn(self):return {'pid':201,'pgid':201,'parentPid':101,'startTicks':7}
+                def read_available(self,timeout):
+                    self.calls+=1
+                    if self.case=='overflow' and self.calls==1:
+                        return [('stdout',b'x'*(p.STREAM_CAP+1))]
+                    return []
+                def reap(self):return None if self.case=='timeout' and not self.killed else terminal
+                def close(self):pass
+                def kill(self):self.killed=True
+            argv=['/usr/bin/dpkg','--no-triggers','--configure',*p.SETUP_V9_CONFIGURE_ORDER]
+            process,streams=p.collect_child(Child('complete'),'setup-v9',argv,profile='setup-v9')
+            self.assertEqual((process['role'],process['firstFailure'],process['exitCode'],streams['stdout']),
+                ('setup-v9',None,0,b''))
+            with self.assertRaises(ValueError):
+                p.collect_child(Child('complete'),'setup-v8',argv,profile='setup-v9')
+            timed=p.collect_child(Child('timeout'),'setup-v9',argv,profile='setup-v9')[0]
+            self.assertTrue(timed['timedOut']);self.assertIsNotNone(timed['firstFailure'])
+            overflow,held=p.collect_child(Child('overflow'),'setup-v9',argv,profile='setup-v9')
+            self.assertIsNotNone(overflow['firstFailure'])
+            self.assertEqual(held['stdout'],b'x'*p.STREAM_CAP)
+            self.assertEqual(overflow['exitCode'],0)
+
         def test_v9_complete_manufactured_six_role_envelope_and_coherent_cuts(self):
             # Only this control substitutes a small authored Node and status baseline.
             # The source candidate retains the selected production pins outside it.

@@ -3467,3 +3467,11 @@ mocked controls must traverse the real collector for a valid V9 child and cut
 wrong role/profile, timeout and stream overflow. No V9 executable source,
 request, variable, label, run or guest has been selected. Merge this narrow
 amendment and qualify the final source before any one-shot metadata event.
+
+The collector-profile amendment has merged. An inactive V9 source candidate
+now uses a fixed route value for the shared installer sequence and a truthful
+V9 request, event, stage, outside cleanup and independent reader. Pure mocks
+connect the V9 entry to the emitted original and standalone audit, and exercise
+the real bounded collector without starting a hosted child. Source review and
+exact-head hosted checks still precede any V9 event. The compiler and
+architectural guest paths remain disabled.
