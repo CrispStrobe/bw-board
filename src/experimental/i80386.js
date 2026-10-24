@@ -1905,6 +1905,11 @@ export class ExperimentalI80386 {
     // devices fall back to ordered byte reads in the bus implementation.
     if ((size === 2 || size === 4) && ((a & 0xfff) + size <= 0x1000)) {
       const physical = this._translate(a >>> 0, options);
+      if (size === 2) {
+        const low = this.read(physical) & 255;
+        const high = this.read((physical + 1) >>> 0) & 255;
+        return low | (high << 8);
+      }
       if (size === 4 && this.read32) return this.read32(physical) >>> 0;
       let value = this.read(physical) & 255;
       for (let i = 1; i < size; i++)

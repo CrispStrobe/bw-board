@@ -6015,7 +6015,10 @@ contiguous-page `size === 2` arm of `_readLinear` in
 `test/i80386-read16-ordered-pair.test.mjs`, new
 `scripts/i80386-read16-paired/`,
 `.github/workflows/i80386-read16-paired.yml`, this registry entry and the
-matching roadmap contract. No implementation before claim merge.
+matching roadmap contract. Claim [677](https://github.com/CrispStrobe/bw-board/pull/677) merged at
+`1312250f5ef06ecd96b0e40e2926e87312d8f414` before this source candidate.
+The reviewed producer and owner-label route are source-enabled; actual event,
+guest qualification and performance adoption remain pending.
 
 The [current authored-loop capture](https://github.com/CrispStrobe/bw-board/actions/runs/40057621920)
 places scalar reads among the sampled CPU paths; samples are not exact CPU
@@ -6041,3 +6044,13 @@ The fixed paired target is ordinary AT, with two warm pairs and seven measured
 pairs at one million instructions per child after a separate 25,000-instruction
 warmup. Core semantics remain a correctness requirement; this comparison makes
 no independent core speedup claim. The benchmark event has not been selected.
+
+Before implementation/results, the paired workload was fixed to ordinary AT
+only: the existing authored five-op loop, 25,000 disposable warm-up steps, then
+a fresh one-million-step state in each child. Core arithmetic/side-effect
+controls remain required, with no core speedup claim. The new paired folder
+retains source35 for both arms, pinned Node22.23.3, raw stream/reap/resource and
+outside cleanup originals plus an independent byte-only reader. The historical
+code16 macro, Node20 source policy, events and measured packets are not reused.
+The eighteen-child schedule and strict numeric gate above are unchanged.
+No actual pair or new guest result is claimed by this source activation.

@@ -1,0 +1,197 @@
+name: Ordinary AT read16 paired candidate
+on:
+  push:
+    branches: [lane/386-read16-ordered-pair-source-20261024]
+  pull_request:
+    types: [labeled]
+permissions:
+  contents: read
+concurrency:
+  group: read16-paired-${{ github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+jobs:
+  source-controls:
+    if: github.event_name == 'push' && github.repository == 'CrispStrobe/bw-board' && github.actor == 'CrispStrobe'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            package.json
+            src
+            scripts/i80386-at-profile
+            scripts/i80386-read16-paired
+            test/i80386-read16-ordered-pair.test.mjs
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Pure callback, small authored state and mocked capture controls
+        run: |
+          /usr/bin/timeout 30s node --max-old-space-size=512 --test --test-concurrency=1 test/i80386-read16-ordered-pair.test.mjs
+          /usr/bin/timeout 30s /usr/bin/python3 -I -B scripts/i80386-read16-paired/controls.py
+  paired:
+    # Separate reviewed activation and exact source/request admission are required.
+    if: ${{ true && github.repository == 'CrispStrobe/bw-board' && github.actor == 'CrispStrobe' && github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'x86-read16-paired-v1' && github.event.pull_request.state == 'open' && github.event.pull_request.base.ref == 'master' && github.event.pull_request.head.repo.fork == false && github.event.pull_request.head.repo.full_name == 'CrispStrobe/bw-board' && github.run_attempt == 1 && github.event.pull_request.head.ref == 'lane/386-read16-ordered-pair-source-20261024' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      BW_READ16_REQUEST_JSON: ${{ vars.BW_READ16_REQUEST_JSON }}
+      BW_READ16_REQUEST_SHA256: ${{ vars.BW_READ16_REQUEST_SHA256 }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: publication
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            package.json
+            src
+            scripts/i80386-at-profile
+            scripts/i80386-read16-paired
+            test/i80386-read16-ordered-pair.test.mjs
+            .github/workflows/i80386-read16-paired.yml
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 1312250f5ef06ecd96b0e40e2926e87312d8f414
+          path: source-a
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            package.json
+            src
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: source-b
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            package.json
+            src
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: workflow-source
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: .github/workflows/i80386-read16-paired.yml
+      - name: Admit exact request, event and all selected Git bytes before runtime setup
+        id: admission
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/python3 -I -B - <<'PY'
+          import hashlib,json,os,re,stat,subprocess
+          from pathlib import Path
+          root=Path(os.environ['GITHUB_WORKSPACE'])/'publication'
+          attempt=Path(os.environ['RUNNER_TEMP'])/('read16-admission-'+os.environ['GITHUB_RUN_ID']+'-1')
+          attempt.mkdir(mode=0o700)
+          def read(path,cap):
+              fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+              try:
+                  first=os.fstat(fd);assert stat.S_ISREG(first.st_mode) and first.st_nlink==1 and 0<first.st_size<=cap
+                  body=b''
+                  while len(body)<=cap:
+                      block=os.read(fd,min(65536,cap+1-len(body)))
+                      if not block:break
+                      body+=block
+                  last=os.fstat(fd);named=os.stat(path,follow_symlinks=False)
+                  facts=lambda x:(x.st_dev,x.st_ino,x.st_mode,x.st_nlink,x.st_size,x.st_mtime_ns)
+                  assert len(body)==first.st_size and facts(first)==facts(last)==facts(named)
+                  return body
+              finally:os.close(fd)
+          def pairs(items):
+              value={}
+              for k,v in items:assert k not in value;value[k]=v
+              return value
+          def git(*args,checkout=root):
+              env={'PATH':'/usr/bin:/bin','LANG':'C','LC_ALL':'C','GIT_CONFIG_GLOBAL':'/dev/null','GIT_CONFIG_SYSTEM':'/dev/null','GIT_CONFIG_NOSYSTEM':'1','GIT_NO_LAZY_FETCH':'1','GIT_OPTIONAL_LOCKS':'0'}
+              p=subprocess.run(('/usr/bin/git','--no-replace-objects','-C',str(checkout),*args),capture_output=True,env=env,timeout=10)
+              assert p.returncode==0 and len(p.stdout)<=131072 and len(p.stderr)<=8192
+              return p.stdout
+          try:
+              raw=os.environ['BW_READ16_REQUEST_JSON'].encode();expected=os.environ['BW_READ16_REQUEST_SHA256']
+              assert 0<len(raw)<=65536
+              with (attempt/'request.original.json').open('xb') as f:f.write(raw)
+              event=read(Path(os.environ['GITHUB_EVENT_PATH']),262144)
+              with (attempt/'event.original.json').open('xb') as f:f.write(event)
+              assert re.fullmatch('[0-9a-f]{64}',expected) and hashlib.sha256(raw).hexdigest()==expected
+              req=json.loads(raw,object_pairs_hook=pairs,parse_constant=lambda _:(_ for _ in ()).throw(ValueError('nonfinite')))
+              assert (json.dumps(req,sort_keys=True,separators=(',',':'),allow_nan=False)+'\n').encode()==raw
+              assert req['head']==os.environ['BW_EXPECTED_HEAD'] and re.fullmatch('[0-9a-f]{40}',req['head']) and re.fullmatch('[0-9a-f]{40}',req['tree'])
+              assert git('rev-parse','HEAD').strip().decode()==req['head'] and git('rev-parse','HEAD^{tree}').strip().decode()==req['tree']
+              for name in ('scripts/i80386-read16-paired/run.py','.github/workflows/i80386-read16-paired.yml'):
+                  row=req['commonFiles'][name];assert type(row['bytes']) is int and 0<row['bytes']<=131072 and re.fullmatch('[0-9a-f]{64}',row['sha256'])
+                  body=read(root/name,131072)
+                  assert len(body)==row['bytes'] and hashlib.sha256(body).hexdigest()==row['sha256']
+                  assert int(git('cat-file','-s',req['head']+':'+name))==len(body) and git('cat-file','blob',req['head']+':'+name)==body
+              assert req['workflowSha256']==req['commonFiles']['.github/workflows/i80386-read16-paired.yml']['sha256']
+              event_value=json.loads(event,object_pairs_hook=pairs,parse_constant=lambda _:(_ for _ in ()).throw(ValueError('nonfinite')))
+              body=event_value['pull_request']['body'];marker='BW_READ16_PAIRED_REQUEST_SHA256'
+              assert type(body) is str and len(body.encode())<=65536 and body.casefold().count(marker.casefold())==1
+              assert re.findall(r'<!-- BW_READ16_PAIRED_REQUEST_SHA256=([0-9a-f]{64}) -->',body)==[expected]
+              assert req['workflowHead']==os.environ['GITHUB_WORKFLOW_SHA'] and re.fullmatch('[0-9a-f]{40}',req['workflowHead'])
+              assert req['workflowRef']==os.environ['GITHUB_WORKFLOW_REF']=='CrispStrobe/bw-board/.github/workflows/i80386-read16-paired.yml@refs/pull/'+str(req['pullRequest'])+'/merge'
+              actual=root.parent/'workflow-source';name='.github/workflows/i80386-read16-paired.yml'
+              assert git('rev-parse','HEAD',checkout=actual).strip().decode()==req['workflowHead']
+              actual_body=read(actual/name,131072);selected_body=read(root/name,131072)
+              assert actual_body==selected_body and hashlib.sha256(actual_body).hexdigest()==req['workflowSha256']
+              assert int(git('cat-file','-s',req['workflowHead']+':'+name,checkout=actual))==len(actual_body)
+              assert git('cat-file','blob',req['workflowHead']+':'+name,checkout=actual)==actual_body
+          except BaseException as error:
+              with (attempt/'first-failure.json').open('x') as f:json.dump({'schema':'bw.read16-admission-failure.v1','type':type(error).__name__,'reason':str(error)[:1024],'actualApproved':False},f)
+              raise
+          PY
+          request="$RUNNER_TEMP/read16-admission-$GITHUB_RUN_ID-1/request.original.json"
+          /usr/bin/timeout --signal=TERM --kill-after=10s 3m /usr/bin/python3 -I -B publication/scripts/i80386-read16-paired/run.py --admission-wrapper "$request" "$GITHUB_EVENT_PATH"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Fixed eighteen-child ordinary AT paired capture
+        shell: bash
+        run: |
+          set -euo pipefail
+          cpu=$(/usr/bin/python3 -I -B -c 'import os; print(min(os.sched_getaffinity(0)))')
+          unit="bw-read16-paired-$GITHUB_RUN_ID-1.service"
+          request="$RUNNER_TEMP/read16-admission-$GITHUB_RUN_ID-1/request.original.json"
+          /usr/bin/sudo -n /usr/bin/timeout --signal=TERM --kill-after=10s 25m \
+            /usr/bin/systemd-run --wait --pipe --unit "$unit" \
+            --property "User=$(id -un)" --property "Group=$(id -gn)" \
+            --property "WorkingDirectory=$GITHUB_WORKSPACE/publication" \
+            --property "AllowedCPUs=$cpu" --property CPUQuota=100% --property CPUQuotaPeriodSec=100ms \
+            --property MemoryMax=1073741824 --property MemorySwapMax=0 --property TasksMax=64 \
+            --property RuntimeMaxSec=23min --property KillMode=control-group --property TimeoutStopSec=5s \
+            --property LimitCORE=0 --property LimitNOFILE=256 --property LimitFSIZE=2097152 \
+            --property NoNewPrivileges=yes \
+            --setenv "PATH=$PATH" --setenv LANG=C --setenv LC_ALL=C \
+            --setenv GITHUB_ACTIONS=true --setenv GITHUB_REPOSITORY=CrispStrobe/bw-board \
+            --setenv "GITHUB_ACTOR=$GITHUB_ACTOR" \
+            --setenv "GITHUB_WORKFLOW_SHA=$GITHUB_WORKFLOW_SHA" --setenv "GITHUB_WORKFLOW_REF=$GITHUB_WORKFLOW_REF" \
+            --setenv "BW_EXPECTED_HEAD=$BW_EXPECTED_HEAD" --setenv "GITHUB_HEAD_REF=$GITHUB_HEAD_REF" --setenv "GITHUB_BASE_REF=$GITHUB_BASE_REF" \
+            --setenv GITHUB_EVENT_NAME=pull_request --setenv GITHUB_RUN_ATTEMPT=1 --setenv GITHUB_JOB=paired \
+            --setenv "GITHUB_RUN_ID=$GITHUB_RUN_ID" --setenv "RUNNER_TEMP=$RUNNER_TEMP" \
+            --setenv "BW_READ16_REQUEST_SHA256=$BW_READ16_REQUEST_SHA256" \
+            /usr/bin/taskset -c "$cpu" /usr/bin/python3 -I -B \
+            "$GITHUB_WORKSPACE/publication/scripts/i80386-read16-paired/run.py" \
+            --capture "$request" "$GITHUB_EVENT_PATH"
+      - name: Independent outside service stop and cgroup readback
+        if: ${{ always() && steps.admission.outcome == 'success' }}
+        shell: bash
+        run: |
+          /usr/bin/timeout --signal=KILL 40s /usr/bin/python3 -I -B publication/scripts/i80386-read16-paired/run.py --cleanup
+      - name: Retain exact originals, including failed attempts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: read16-paired-${{ github.run_id }}-1
+          path: |
+            ${{ runner.temp }}/read16-admission-${{ github.run_id }}-1
+            ${{ runner.temp }}/read16-paired-${{ github.run_id }}-1
+          if-no-files-found: error
+          retention-days: 14
