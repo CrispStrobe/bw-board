@@ -11749,7 +11749,7 @@ def setup_v9_official_metadata(run_raw,jobs_raw,artifacts_raw,external):
          all(type(item) is dict and type(item.get('head')) is dict for item in run['pull_requests']),
          'typed official run owner and pull-request rows')
     run_id=integer(run.get('id'),1)
-    need(str(run_id)==external['runId'] and run.get('run_attempt')==1 and
+    need(str(run_id)==external['runId'] and integer(run.get('run_attempt'),1,1)==1 and
          run.get('head_sha')==external['head'] and run.get('event')=='pull_request' and
          run.get('status')=='completed' and run.get('conclusion')==external['conclusion'] and
          run.get('path')==WORKFLOW and run.get('name')=='Ring3 INT80 IRETD source controls' and
@@ -11757,19 +11757,19 @@ def setup_v9_official_metadata(run_raw,jobs_raw,artifacts_raw,external):
          run.get('head_repository',{}).get('full_name')=='CrispStrobe/bw-board' and
          run.get('actor',{}).get('login')=='CrispStrobe' and
          type(run.get('pull_requests')) is list and len(run['pull_requests'])==1 and
-         run['pull_requests'][0].get('number')==external['pullRequest'] and
+         integer(run['pull_requests'][0].get('number'),1)==external['pullRequest'] and
          run['pull_requests'][0].get('head',{}).get('sha')==external['head'],
          'one owned official run/head/attempt/pull-request original')
     rows=jobs.get('jobs')
     need(type(rows) is list and integer(jobs.get('total_count'),1,64)==len(rows) and
-         all(type(item) is dict for item in rows) and
+         all(type(item) is dict and integer(item.get('id'),1)>0 for item in rows) and
          len({item.get('id') for item in rows})==len(rows),
          'complete unique bounded official job collection')
     selected=[item for item in rows if item.get('name')==external['jobName']]
     need(len(selected)==1,'one selected V9 producing job')
     job=selected[0]
-    need(integer(job.get('id'),1)==external['jobId'] and job.get('run_id')==run_id and
-         job.get('run_attempt')==1 and job.get('head_sha')==external['head'] and
+    need(integer(job.get('id'),1)==external['jobId'] and integer(job.get('run_id'),1)==run_id and
+         integer(job.get('run_attempt'),1,1)==1 and job.get('head_sha')==external['head'] and
          job.get('workflow_name')=='Ring3 INT80 IRETD source controls' and
          job.get('status')=='completed' and job.get('conclusion')==external['conclusion'],
          'selected official V9 job/run/head/status')
@@ -11802,7 +11802,7 @@ def setup_v9_official_metadata(run_raw,jobs_raw,artifacts_raw,external):
          integer(artifact.get('size_in_bytes'),1,8<<20)==external['artifactBytes'] and
          artifact.get('digest')=='sha256:'+external['artifactSha256'] and
          artifact.get('expired') is False and
-         artifact.get('workflow_run',{}).get('id')==run_id and
+         integer(artifact['workflow_run'].get('id'),1)==run_id and
          artifact['workflow_run'].get('head_sha')==external['head'],
          'one exact selected official artifact ID, extent, digest and run')
     return {'runId':run_id,'jobId':job['id'],'artifactId':artifact['id'],
