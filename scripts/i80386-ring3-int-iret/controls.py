@@ -7965,8 +7965,88 @@ def setup_v9_controls():
         'guest':False,'actualRunApproved':False,'pass':True}))
 
 
+def same_job_actual_controls():
+    """Pure first-service boundary controls; all host and guest edges mocked."""
+    p,_=producer_fixture_case()
+    edges=staged_runtime_controls(export_edges=True)
+    class Tests(unittest.TestCase):
+        def test_new_request_event_and_default_refusal(self):
+            self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,False)
+            self.assertIs(reader.SAME_JOB_ACTUAL_READER_ENABLED,False)
+            self.assertEqual(p.SAME_JOB_REVIEWED_GRAPH,reader.SAME_JOB_ACTUAL_REVIEWED_GRAPH)
+            with edges() as (producer,env,request,raw,state):
+                producer.stage_runtime_inventory_node(env)
+                _,witness=setup_v8_controls(export_ops=True)
+                actual=copy.deepcopy(request)
+                actual.update(schema='bw.ring3.same-job-actual-request.v1',
+                    setup=producer.setup_v9_policy(),payloadWitness=witness,
+                    comparison=producer.SAME_JOB_REVIEWED_GRAPH)
+                raw=reader.canonical(actual);pin=sha(raw)
+                selected,source=reader.same_job_actual_request(raw,pin)
+                self.assertEqual(selected,actual)
+                self.assertEqual(source['head'],actual['head'])
+                producer.admit_same_job_actual_request(raw,pin)
+                with self.assertRaises((ValueError,reader.Refusal)):
+                    producer.admit_setup_v9_request(raw,pin)
+                with self.assertRaises((ValueError,reader.Refusal)):
+                    reader.setup_v9_request(raw,pin)
+                event=reader.parse(state['originals']['staged.event.json'])
+                event['label']['name']=producer.SAME_JOB_ACTUAL_ROUTE['label']
+                event['pull_request']['body']='<!-- BW_RING3_SAME_JOB_ACTUAL_V1\n'+pin+\
+                    '\nBW_RING3_SAME_JOB_ACTUAL_V1 -->'
+                event_raw=reader.canonical(event)
+                environment=dict(env,GITHUB_JOB=producer.SAME_JOB_ACTUAL_ROUTE['job'],
+                    BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256=pin,
+                    BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64=base64.b64encode(raw).decode())
+                with patch.object(producer,'expected_cgroup',return_value=None):
+                    self.assertEqual(producer.admit_same_job_actual_event(event_raw,environment)[0],raw)
+                reader.same_job_actual_event(event_raw,actual,pin,environment)
+                wrong=copy.deepcopy(event);wrong['label']['name']='x86-ring3-setup-runtime-inventory-v9'
+                with self.assertRaises((ValueError,reader.Refusal)):
+                    reader.same_job_actual_event(reader.canonical(wrong),actual,pin,environment)
+                with patch.object(producer,'setup_v8_entry',side_effect=AssertionError('host edge')):
+                    self.assertEqual(producer.dispatch_cli(['--same-job-setup-v1'],environment),1)
+
+        def test_closed_setup_sequence_and_child_profile(self):
+            FakeOps,witness=setup_v8_controls(export_ops=True)
+            request={'setup':p.setup_v9_policy()}
+            ops=FakeOps()
+            result=p.setup_v8_sequence(ops,request,p.SAME_JOB_ACTUAL_ROUTE)
+            self.assertIsNone(result['firstFailure'],result['firstFailure'])
+            self.assertEqual(result['schema'],p.SAME_JOB_ACTUAL_ROUTE['setupSchema'])
+            self.assertEqual(ops.events.count('acquire'),15)
+            self.assertEqual(ops.events[-1],'stage')
+            self.assertIs(p.ACTUAL_ENTRY_ENABLED,False)
+            self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,False)
+
+        def test_actual_collector_exact_role_and_finite_terminal(self):
+            class Child:
+                environment=dict(p.SETUP_V9_INSTALLER_ENV)
+                role='setup-same-job-v1'
+                def __init__(self):self.t=0
+                def now(self):self.t+=1000;return self.t
+                def spawn(self):return {'pid':201,'pgid':201,'parentPid':101,'startTicks':7}
+                def read_available(self,timeout):return []
+                def reap(self):return {'exitCode':0,'signal':None,'waitStatus':0,'timedOut':False,
+                    'rusage':{'userSeconds':0.0,'systemSeconds':0.0,'maxRssKiB':1}}
+                def close(self):pass
+                def kill(self):raise AssertionError('no signal after natural terminal')
+            argv=['/usr/bin/dpkg','--no-triggers','--configure',*p.SETUP_V9_CONFIGURE_ORDER]
+            packet,streams=p.collect_child(Child(),'setup-same-job-v1',argv,profile='setup-same-job-v1')
+            self.assertEqual((packet['exitCode'],packet['firstFailure'],streams['stdout']),
+                             (0,None,b''))
+            with self.assertRaises(ValueError):
+                p.collect_child(Child(),'setup-v9',argv,profile='setup-same-job-v1')
+
+    result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
+    assert result.wasSuccessful(),'pure inactive same-job actual controls failed'
+    print(json.dumps({'testOnly':True,'tests':result.testsRun,'network':False,'dpkg':False,
+        'guest':False,'actualRunApproved':False,'pass':True}))
+
+
 if __name__=='__main__':
-    if sys.argv[1:]==['--host-baseline-only']:host_baseline_controls()
+    if sys.argv[1:]==['--same-job-actual-only']:same_job_actual_controls()
+    elif sys.argv[1:]==['--host-baseline-only']:host_baseline_controls()
     elif sys.argv[1:]==['--consumed-v7-failure-only']:consumed_v7_failure_controls()
     elif sys.argv[1:]==['--consumed-v6-failure-only']:consumed_v6_failure_controls()
     elif sys.argv[1:]==['--image-env-diagnostic-only']:image_env_diagnostic_controls()

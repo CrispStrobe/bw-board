@@ -860,7 +860,7 @@ class LinuxController(LinuxTool):
 
 def collect_child(ops, role, argv, *, profile='guest'):
     """Actual bounded orchestration, also called unmodified by inert controls."""
-    need(profile in ('guest','discovery','controller','preparation','setup-v4','setup-v5','setup-v6','setup-v7','setup-v8','setup-v9'),'closed child profile')
+    need(profile in ('guest','discovery','controller','preparation','setup-v4','setup-v5','setup-v6','setup-v7','setup-v8','setup-v9','setup-same-job-v1'),'closed child profile')
     need(role in ('js','qemu') if profile=='guest' else role==profile,'fixed child role/profile')
     wall_ns,stream_cap=(CHILD_NS,STREAM_CAP) if profile=='guest' else (
         (10000000000,16384) if profile=='discovery' else (600000000000,16384) if profile=='controller' else
@@ -7912,9 +7912,39 @@ SETUP_V9_ROUTE={'version':'v9','job':'setup-runtime-inventory-v9',
     'shellSchema':'bw.ring3.setup-image-shell.v9',
     'inventoryMode':'--inventory-setup-v9'}
 
+# A separate, initially inert actual route. The comparison input describes the
+# admitted historical metadata candidate; it never substitutes for a fresh
+# complete graph in the same job. No request field can select route policy.
+SAME_JOB_ACTUAL_ENABLED=False
+SAME_JOB_ACTUAL_ENV=tuple('BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256'
+    if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key for key in NODE_STAGE_ENV)+(
+    'BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64',)
+SAME_JOB_ACTUAL_ROUTE={'version':'same-job-actual-v1','job':'ring3-same-job-actual-v1',
+    'label':'x86-ring3-same-job-actual-v1','unitPrefix':'bw-ring3-actual-setup-v1-',
+    'requestSchema':'bw.ring3.same-job-actual-request.v1',
+    'stageSchema':'bw.ring3.same-job-node-stage-original.v1',
+    'setupSchema':'bw.ring3.same-job-setup-original.v1',
+    'failureSchema':'bw.ring3.same-job-setup-entry-failure.v1',
+    'cleanupSchema':'bw.ring3.same-job-setup-outside-cleanup.v1',
+    'shellSchema':'bw.ring3.same-job-setup-image-shell.v1',
+    'inventoryMode':'--inventory-same-job-actual-v1'}
+SAME_JOB_ACTUAL_STATUS_MARKER=b'RING3_SAME_JOB_SETUP_STATUS_V1 '
+SAME_JOB_REVIEWED_GRAPH={'bytes':103043,
+    'sha256':'72407985d3ef62725137a05ea6c609ff81f7095bdeb0147a9f703628a0f9cdab',
+    'selectedFiles':83,'selectedAliases':8,'selectedMismatches':0}
+
+
+def setup_route_env(route):
+    return SAME_JOB_ACTUAL_ENV if route is SAME_JOB_ACTUAL_ROUTE else SETUP_V9_ENV
+
+
+def setup_route_status_marker(route):
+    return SAME_JOB_ACTUAL_STATUS_MARKER if route is SAME_JOB_ACTUAL_ROUTE else SETUP_V9_STATUS_MARKER
+
 
 def setup_v9_selected(route):
-    need(route is SETUP_V9_ROUTE,'only fixed source-selected v9 setup route')
+    need(route is SETUP_V9_ROUTE or route is SAME_JOB_ACTUAL_ROUTE,
+         'only fixed source-selected v9 or distinct actual setup route')
     return route
 setup_v8_status_rows=setup_v4_status_rows
 setup_v8_status_delta=setup_v4_status_delta
@@ -8116,16 +8146,91 @@ def admit_setup_v9_event(event_raw,environ):
     return raw,request
 
 
+def admit_same_job_actual_request(raw,pin):
+    """Admit only the fixed comparison input, never the old V9 request schema."""
+    need(type(raw) is bytes and 0<len(raw)<=32768 and type(pin) is str and
+         re.fullmatch('[0-9a-f]{64}',pin) and sha(raw)==pin,
+         'externally selected same-job actual request')
+    value=final_json(raw)
+    require_fields(value,'schema repository pullRequest head tree source selected nodeStage emptyPythonSources setup payloadWitness comparison',
+                   'closed same-job actual request')
+    need(raw==encode(value) and value['schema']==SAME_JOB_ACTUAL_ROUTE['requestSchema'],
+         'canonical distinct same-job actual request')
+    base={key:value[key] for key in
+        ('repository','pullRequest','head','tree','source','selected','nodeStage','emptyPythonSources')}
+    staged=encode(dict(base,schema='bw.ring3.inventory-request.v3'))
+    admit_staged_runtime_request(staged,sha(staged))
+    need(same_json(value['setup'],setup_v9_policy()) and
+         same_json(value['payloadWitness'],SETUP_V8_PAYLOAD_PINS) and
+         same_json(value['comparison'],SAME_JOB_REVIEWED_GRAPH),
+         'fixed setup and separately reviewed digest/static comparison input')
+    need(type(SETUP_V8_PAYLOAD_PINS) is dict and
+         len(SETUP_V8_PAYLOAD_PINS['archives'])==15 and
+         all((item['package'],item['archiveBytes'],item['archiveSha256'])==(name,size,digest)
+             for item,(name,version,arch,filename,size,digest) in
+             zip(SETUP_V8_PAYLOAD_PINS['archives'],SETUP_V8_PACKAGE_ROWS)),
+         'fixed signed fifteen archive witnesses')
+    data=next(item for item in value['payloadWitness']['archives']
+              if item['package']=='qemu-system-data')
+    need(all(data[key]==pin for key,pin in SETUP_V8_DATA_ARCHIVE.items()),
+         'same signed selected DATA archive witness')
+    return value
+
+
+def admit_same_job_actual_event(event_raw,environ):
+    need(type(event_raw) is bytes and 0<len(event_raw)<=JSON_CAP,
+         'bounded same-job actual event original')
+    event=final_json(event_raw);pr=event.get('pull_request',{});body=pr.get('body')
+    start='<!-- BW_RING3_SAME_JOB_ACTUAL_V1\n';end='\nBW_RING3_SAME_JOB_ACTUAL_V1 -->'
+    need(type(body) is str and body.count(start)==body.count(end)==1 and
+         body.index(start)<body.index(end),'one distinct actual SHA-only body block')
+    pin=environ.get('BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256')
+    need(type(pin) is str and re.fullmatch('[0-9a-f]{64}',pin) and
+         body.split(start,1)[1].split(end,1)[0]==pin,'one selected actual body SHA')
+    encoded=environ.get('BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64')
+    need(type(encoded) is str and 0<len(encoded)<=43692,
+         'bounded canonical actual repository request')
+    raw=base64.b64decode(encoded,validate=True)
+    need(0<len(raw)<=32768 and base64.b64encode(raw).decode('ascii')==encoded and sha(raw)==pin,
+         'exact selected actual request bytes')
+    request=admit_same_job_actual_request(raw,pin)
+    need(event.get('action')=='labeled' and
+         event.get('label',{}).get('name')==SAME_JOB_ACTUAL_ROUTE['label'] and
+         event.get('repository',{}).get('full_name')==APPROVAL_REPOSITORY and
+         event.get('sender',{}).get('login')=='CrispStrobe' and
+         type(event.get('number')) is int and event['number']==request['pullRequest'] and
+         type(pr.get('number')) is int and pr['number']==request['pullRequest'] and
+         pr.get('state')=='open' and pr.get('head',{}).get('sha')==request['head'] and
+         pr.get('head',{}).get('repo',{}).get('full_name')==APPROVAL_REPOSITORY and
+         pr['head']['repo'].get('fork') is False and pr.get('base',{}).get('ref')=='master' and
+         pr['base'].get('repo',{}).get('full_name')==APPROVAL_REPOSITORY,
+         'closed owned actual event')
+    expected_cgroup(environ)
+    need(all(environ.get(key)==value for key,value in {
+         'GITHUB_REPOSITORY':APPROVAL_REPOSITORY,'GITHUB_EVENT_NAME':'pull_request',
+         'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':SAME_JOB_ACTUAL_ROUTE['job'],
+         'GITHUB_RUN_ATTEMPT':'1','BW_EXPECTED_HEAD':request['head'],
+         'BW_EXPECTED_TREE':request['tree'],
+         'GITHUB_WORKFLOW_REF':APPROVAL_REPOSITORY+
+             '/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+
+             str(request['pullRequest'])+'/merge'}.items()) and
+         type(environ.get('GITHUB_WORKFLOW_SHA')) is str and
+         re.fullmatch('[0-9a-f]{40}',environ['GITHUB_WORKFLOW_SHA']),
+         'distinct actual platform/source/workflow binding')
+    return raw,request
+
+
 def emit_setup_v8_status(role,raw,emit=None,flush=None,route=None):
     if route is not None:setup_v9_selected(route)
     need(role in ('pre','post') and type(raw) is bytes and 0<len(raw)<=8<<20,
          'fixed bounded raw dpkg status original')
     packed=zlib.compress(raw,9);need(0<len(packed)<=700<<10,'bounded compressed dpkg status original')
-    packet={'schema':'bw.ring3.setup-status-original.v9' if route is not None else
+    packet={'schema':'bw.ring3.same-job-setup-status-original.v1' if route is SAME_JOB_ACTUAL_ROUTE else
+            'bw.ring3.setup-status-original.v9' if route is not None else
             'bw.ring3.setup-status-original.v8','role':role,'rawBytes':len(raw),
         'rawSha256':sha(raw),'packedBytes':len(packed),'packedSha256':sha(packed),
         'encoding':'zlib+base64','packed':base64.b64encode(packed).decode('ascii')}
-    line=(SETUP_V9_STATUS_MARKER if route is not None else SETUP_V8_STATUS_MARKER)+encode(packet)
+    line=(setup_route_status_marker(route) if route is not None else SETUP_V8_STATUS_MARKER)+encode(packet)
     need(len(line)<=1<<20,'bounded encoded dpkg status log line')
     emit=sys.stdout.buffer.write if emit is None else emit
     flush=sys.stdout.buffer.flush if flush is None else flush
@@ -8141,7 +8246,7 @@ def emit_setup_v9_status(role,raw,emit=None,flush=None):
 def setup_v8_sequence(ops,request,route=None):
     """One-shot setup order; every edge is an injected, recorded operation."""
     if route is not None:setup_v9_selected(route)
-    version='v9' if route is not None else 'v8'
+    version=route['version'] if route is not None else 'v8'
     facts={'schema':route['setupSchema'] if route is not None else 'bw.ring3.setup-original.v8','preflight':None,'archives':[],
         'policy':None,'unpack':None,'configure':None,'postStatus':None,'cleanup':None,
         'policyCleanupCgroup':None,
@@ -8224,7 +8329,8 @@ class SetupV8Tool(LinuxChild):
     """One root dpkg phase inside the separately bounded transient service."""
     def __init__(self,argv,route=None):
         if route is not None:setup_v9_selected(route)
-        super().__init__(None,'setup-v9' if route is not None else 'setup-v8',argv)
+        super().__init__(None,'setup-same-job-v1' if route is SAME_JOB_ACTUAL_ROUTE else
+            'setup-v9' if route is not None else 'setup-v8',argv)
         self.environment=dict(SETUP_V8_INSTALLER_ENV)
 
     def preexec(self,identity_fd):
@@ -8368,7 +8474,8 @@ class SetupV8Host:
             if self.network_started is None:self.network_started=attempt_started
             need(time.monotonic()-self.network_started<180,'total archive acquisition deadline')
             request=urllib.request.Request(url,headers={'Accept-Encoding':'identity',
-                'User-Agent':'bw-ring3-setup-v9/1' if self.route is not None else 'bw-ring3-setup-v8/1'})
+                'User-Agent':'bw-ring3-same-job-actual/1' if self.route is SAME_JOB_ACTUAL_ROUTE else
+                    'bw-ring3-setup-v9/1' if self.route is not None else 'bw-ring3-setup-v8/1'})
             with urllib.request.build_opener(RejectRedirect).open(request,timeout=30) as reply:
                 need(reply.status==200 and reply.headers.get('Content-Encoding') in (None,'identity') and
                      reply.headers.get('Content-Length')==str(package['size']),'exact archive HTTP response')
@@ -8442,7 +8549,8 @@ class SetupV8Host:
         need(args==['--no-triggers','--unpack']+[str(self.root/(str(i).zfill(2)+'.deb')) for i in range(15)] or
              args==['--no-triggers','--configure',*SETUP_V8_CONFIGURE_ORDER],
              'fixed no-force, no-trigger dpkg phase')
-        label='setup-v9' if self.route is not None else 'setup-v8'
+        label=('setup-same-job-v1' if self.route is SAME_JOB_ACTUAL_ROUTE else
+            'setup-v9' if self.route is not None else 'setup-v8')
         argv=['/usr/bin/dpkg',*args];tool=(SetupV8Tool(argv) if self.route is None else
             SetupV8Tool(argv,self.route))
         process,streams=collect_child(tool,label,argv,profile=label)
@@ -8534,7 +8642,7 @@ class SetupV8Host:
                  'v9 stage source owner/mode' if self.route is not None else 'v8 stage source owner/mode')
             copy.copy()
             platform_fields={key:self.environ[key] for key in
-                (SETUP_V9_ENV if self.route is not None else SETUP_V8_ENV)}
+                (setup_route_env(self.route) if self.route is not None else SETUP_V8_ENV)}
             record={'schema':self.route['stageSchema'] if self.route is not None else
                 'bw.ring3.node-stage-original.v8','request':original_bytes(self.request_raw),
                 'event':original_bytes(self.event_raw),'platform':platform_fields,'source':self.observer.facts['source'],
@@ -8560,7 +8668,7 @@ class SetupV8Host:
             os.setresuid(invoker[0],invoker[0],invoker[0]);drop_progress.append('uid')
             entry_ids(*invoker);drop_progress.append('ids-verified')
             environment=dict(ENV,**{key:self.environ[key] for key in
-                (SETUP_V9_ENV if self.route is not None else SETUP_V8_ENV)})
+                (setup_route_env(self.route) if self.route is not None else SETUP_V8_ENV)})
             mode=self.route['inventoryMode'] if self.route is not None else '--inventory-setup-v8'
             os.execve('/usr/bin/python3',['/usr/bin/python3','-I','-B',READER_FILE,mode],environment)
             raise RuntimeError(('v9' if self.route is not None else 'v8')+
@@ -8571,18 +8679,20 @@ class SetupV8Host:
 
 def setup_v8_entry(environ,route=None):
     if route is not None:setup_v9_selected(route)
-    version='v9' if route is not None else 'v8'
+    version=route['version'] if route is not None else 'v8'
     failure=FirstFailure();facts=None;publication_safe=False
     image_fields,image_errors=image_env_fields(environ)
     context={'request':None,'event':None,'platform':{key:environ.get(key) for key in
-        (SETUP_V9_ENV if route is not None else SETUP_V8_ENV)},
+        (setup_route_env(route) if route is not None else SETUP_V8_ENV)},
         'source':None,'sourceCommands':[],'eventIdentity':None,
         'imageFields':image_fields,'imageFieldErrors':image_errors}
     try:
         need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root '+version+' entry')
         observer=HostedEnvelopeInstaller(environ);event=observer.event()
         context['event']=original_bytes(event);context['eventIdentity']=observer.facts['eventIdentity']
-        request_raw,request=(admit_setup_v9_event(event,environ) if route is not None else
+        request_raw,request=(admit_same_job_actual_event(event,environ)
+            if route is SAME_JOB_ACTUAL_ROUTE else
+            admit_setup_v9_event(event,environ) if route is not None else
             admit_setup_v8_event(event,environ))
         context['request']=original_bytes(request_raw)
         need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,'held '+version+' source path')
@@ -8655,7 +8765,7 @@ def setup_v8_stop_unit(unit_name,route=None):
 def setup_v8_outside_cleanup(environ,route=None):
     """Bounded exact-unit terminal observation precedes any owned policy unlink."""
     if route is not None:setup_v9_selected(route)
-    version='v9' if route is not None else 'v8'
+    version=route['version'] if route is not None else 'v8'
     prefix=route['unitPrefix'] if route is not None else 'bw-ring3-setup-v8-'
     failure=FirstFailure()
     value={'schema':route['cleanupSchema'] if route is not None else
@@ -8675,7 +8785,9 @@ def setup_v8_outside_cleanup(environ,route=None):
         # Admission must finish before an exact-unit stop or global policy mutation.
         observer=HostedEnvelopeInstaller(environ)
         event_raw=observer.event()
-        request_raw,request=(admit_setup_v9_event(event_raw,environ) if route is not None else
+        request_raw,request=(admit_same_job_actual_event(event_raw,environ)
+            if route is SAME_JOB_ACTUAL_ROUTE else
+            admit_setup_v9_event(event_raw,environ) if route is not None else
             admit_setup_v8_event(event_raw,environ))
         need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,
              'held '+version+' outside source path')
@@ -8721,7 +8833,9 @@ def setup_v8_outside_cleanup(environ,route=None):
             value['action']='deferred'
             need(value['stop']['attempted'] is False or value['stop']['exitCode']==0,
                  'uncertain stop forbids global policy unlink')
-            raw=bounded_read('build/i80386-ring3-setup-runtime-inventory-'+version+'/inventory.original.log',8<<20)
+            directory=('build/i80386-ring3-same-job-actual-v1' if route is SAME_JOB_ACTUAL_ROUTE else
+                'build/i80386-ring3-setup-runtime-inventory-'+version)
+            raw=bounded_read(directory+'/inventory.original.log',8<<20)
             packets=[]
             for line in raw.splitlines():
                 if line.startswith(b'{"actualGuestApproved":false,'):
@@ -9267,7 +9381,7 @@ ACTUAL_ENTRY_ENABLED=False  # Activation requires a separate reviewed source/wor
 def dispatch_cli(argv=None,environ=None):
     parser=argparse.ArgumentParser(description=__doc__,allow_abbrev=False)
     modes=parser.add_mutually_exclusive_group(required=True)
-    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy','setup-runtime-inventory-v6','cleanup-setup-v6-policy','setup-v6-image-shell','setup-runtime-inventory-v7','cleanup-setup-v7-policy','setup-v7-image-shell','setup-runtime-inventory-v8','cleanup-setup-v8-policy','setup-v8-image-shell','setup-runtime-inventory-v9','cleanup-setup-v9-policy','setup-v9-image-shell','image-env-shell-v1','image-env-service-v1','host-baseline-shell-v1','host-baseline-service-v1','host-baseline-outside-v1'):
+    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy','setup-runtime-inventory-v6','cleanup-setup-v6-policy','setup-v6-image-shell','setup-runtime-inventory-v7','cleanup-setup-v7-policy','setup-v7-image-shell','setup-runtime-inventory-v8','cleanup-setup-v8-policy','setup-v8-image-shell','setup-runtime-inventory-v9','cleanup-setup-v9-policy','setup-v9-image-shell','same-job-setup-v1','same-job-cleanup-v1','same-job-image-shell-v1','image-env-shell-v1','image-env-service-v1','host-baseline-shell-v1','host-baseline-service-v1','host-baseline-outside-v1'):
         modes.add_argument('--'+name,action='store_const',const=name,dest='mode')
     argv=list(sys.argv[1:] if argv is None else argv)
     if len(argv)!=1:parser.error('exactly one fixed mode argument required')
@@ -9275,6 +9389,15 @@ def dispatch_cli(argv=None,environ=None):
     failure=FirstFailure();result=None
     try:
         if args.mode=='controls':controls();return 0
+        if args.mode=='same-job-image-shell-v1':
+            need(SAME_JOB_ACTUAL_ENABLED is True,'distinct same-job actual source inactive')
+            return setup_v8_image_shell(dict(os.environ if environ is None else environ),SAME_JOB_ACTUAL_ROUTE)
+        if args.mode=='same-job-cleanup-v1':
+            need(SAME_JOB_ACTUAL_ENABLED is True,'distinct same-job actual source inactive')
+            return setup_v8_outside_cleanup(dict(os.environ if environ is None else environ),SAME_JOB_ACTUAL_ROUTE)
+        if args.mode=='same-job-setup-v1':
+            need(SAME_JOB_ACTUAL_ENABLED is True,'distinct same-job actual source inactive')
+            return setup_v8_entry(dict(os.environ if environ is None else environ),SAME_JOB_ACTUAL_ROUTE)
         if args.mode=='host-baseline-shell-v1':
             need(HOST_BASELINE_ENABLED is True,'baseline shell disabled')
             return host_baseline_shell(dict(os.environ if environ is None else environ))
