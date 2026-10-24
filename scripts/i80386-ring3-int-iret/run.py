@@ -860,7 +860,7 @@ class LinuxController(LinuxTool):
 
 def collect_child(ops, role, argv, *, profile='guest'):
     """Actual bounded orchestration, also called unmodified by inert controls."""
-    need(profile in ('guest','discovery','controller','preparation','setup-v4','setup-v5'),'closed child profile')
+    need(profile in ('guest','discovery','controller','preparation','setup-v4','setup-v5','setup-v6'),'closed child profile')
     need(role in ('js','qemu') if profile=='guest' else role==profile,'fixed child role/profile')
     wall_ns,stream_cap=(CHILD_NS,STREAM_CAP) if profile=='guest' else (
         (10000000000,16384) if profile=='discovery' else (600000000000,16384) if profile=='controller' else
@@ -6355,6 +6355,676 @@ def setup_v5_outside_cleanup(environ):
     return 0 if failure.first is None and failure.secondary==[] else 1
 
 
+# Distinct v6 metadata family. Historical v5 source and packet semantics stay intact.
+SETUP_V6_ENABLED=False  # Fresh source and event admission required.
+SETUP_V6_PACKAGE_ROWS=SETUP_V4_PACKAGE_ROWS
+SETUP_V6_CONFIGURE_ORDER=SETUP_V4_CONFIGURE_ORDER
+SETUP_V6_IMAGE=SETUP_V4_IMAGE
+SETUP_V6_STATUS_SHA=SETUP_V4_STATUS_SHA
+SETUP_V6_PAYLOAD_PINS=SETUP_V4_PAYLOAD_PINS
+SETUP_V6_POLICY_BYTES=SETUP_V4_POLICY_BYTES
+SETUP_V6_PACKAGE_CAP=SETUP_V4_PACKAGE_CAP
+SETUP_V6_TOTAL_CAP=SETUP_V4_TOTAL_CAP
+SETUP_V6_ORIGINAL_CAP=SETUP_V4_ORIGINAL_CAP
+SETUP_V6_HELPERS=dict(SETUP_V4_HELPERS,**{
+    '/usr/sbin/start-stop-daemon':'81faf821fdfdf1dc2991b71dfbd6a21116085f931bfeb0fd7b2623911a4831b4',
+    '/usr/sbin/ldconfig':'bfd5df90c7f070feab584435f106f254ffffaa268a04de5b5c3bd61d59c092f3',
+    '/usr/sbin/ldconfig.real':'d879c9a8a41240aeb7fd0f3221116fc4cf41cc6c64c24e10541d1bafbe537ab1',
+})
+SETUP_V6_HELPER_ALIASES=dict(SETUP_V4_HELPER_ALIASES,**{
+    '/sbin':{'linkText':'usr/sbin','target':'/usr/sbin','uid':0,'gid':0,'nlink':1,'size':8},
+})
+SETUP_V6_NEW_HELPER_BYTES={'/usr/sbin/start-stop-daemon':48632,
+    '/usr/sbin/ldconfig':387,'/usr/sbin/ldconfig.real':1051280}
+SETUP_V6_INSTALLER_ENV=dict(ENV,PATH='/usr/sbin:/usr/bin:/bin')
+SETUP_V6_STATUS_MARKER=b'RING3_SETUP_STATUS_V6 '
+SETUP_V6_ENV=tuple('BW_RING3_SETUP_INVENTORY_V6_REQUEST_SHA256' if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key
+    for key in NODE_STAGE_ENV)+('BW_RING3_SETUP_INVENTORY_V6_REQUEST_B64',)
+setup_v6_status_rows=setup_v4_status_rows
+setup_v6_status_delta=setup_v4_status_delta
+setup_v6_cgroup_quiet=setup_v4_cgroup_quiet
+
+
+def setup_v6_helper_witness(path,pin):
+    """Finite named/held byte witness before the first archive GET."""
+    need(path in SETUP_V6_HELPERS and SETUP_V6_HELPERS[path]==pin,'selected v6 helper role')
+    descriptor=None;first=None;data=bytearray()
+    value={'path':path,'namedBefore':None,'heldBefore':None,'heldAfter':None,'namedAfter':None,
+        'bytesRead':0,'sha256':None,'closeAttempted':False,'closeSucceeded':False}
+    try:
+        value['namedBefore']=SetupV6Host.identity(Path(path).lstat())
+        descriptor=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+        value['heldBefore']=SetupV6Host.identity(os.fstat(descriptor));info=value['heldBefore']
+        need(value['namedBefore']==info and stat.S_ISREG(info[2]) and info[3:6]==[0,0,1] and
+             info[2]&0o022==0 and 0<info[6]<=2<<20 and
+             info[6]==SETUP_V6_NEW_HELPER_BYTES.get(path,info[6]),
+             'same selected regular root-owned helper extent and mode')
+        while True:
+            part=os.read(descriptor,min(65536,(2<<20)+1-len(data)))
+            if not part:break
+            data.extend(part);value['bytesRead']=len(data)
+            need(len(data)<=2<<20,'bounded helper byte extent')
+        value['sha256']=sha(data)
+        value['heldAfter']=SetupV6Host.identity(os.fstat(descriptor))
+        value['namedAfter']=SetupV6Host.identity(Path(path).lstat())
+        need(info==value['heldAfter']==value['namedAfter'] and len(data)==info[6] and
+             value['sha256']==pin,'closed selected helper identity and exact bytes')
+    except BaseException as error:first=error
+    finally:
+        if descriptor is not None:
+            value['closeAttempted']=True
+            try:
+                os.close(descriptor);value['closeSucceeded']=True
+            except Exception as error:
+                if first is None:first=error
+                else:first.ring3_secondary=getattr(first,'ring3_secondary',[])+[
+                    row(error,'v6-helper-close')]
+    if first is not None:
+        first.ring3_partial={'phase':'helper','witness':value}
+        raise first
+    return value
+
+
+def setup_v6_helper_witnesses_valid(witnesses):
+    need(type(witnesses) is dict and set(witnesses)==set(SETUP_V6_HELPERS),
+         'ten fixed v6 helper witnesses')
+    for path,pin in SETUP_V6_HELPERS.items():
+        row=witnesses[path]
+        need(type(row) is dict and set(row)=={'path','namedBefore','heldBefore','heldAfter',
+             'namedAfter','bytesRead','sha256','closeAttempted','closeSucceeded'} and
+             row['path']==path and row['sha256']==pin and row['closeAttempted'] is True and
+             row['closeSucceeded'] is True and row['namedBefore']==row['heldBefore']==
+             row['heldAfter']==row['namedAfter'],'closed same-inode helper original')
+        info=row['heldBefore']
+        need(type(info) is list and len(info)==8 and all(type(n) is int for n in info) and
+             stat.S_ISREG(info[2]) and info[3:6]==[0,0,1] and info[2]&0o022==0 and
+             type(row['bytesRead']) is int and 0<row['bytesRead']==info[6]<=2<<20 and
+             row['bytesRead']==SETUP_V6_NEW_HELPER_BYTES.get(path,row['bytesRead']),
+             'bounded selected helper named/held root metadata')
+    return True
+
+def setup_v6_policy():
+    return {'imageOS':'ubuntu24','imageVersion':SETUP_V6_IMAGE,'statusSha256':SETUP_V6_STATUS_SHA,
+        'helperSha256':SETUP_V6_HELPERS,'helperAliases':SETUP_V6_HELPER_ALIASES,
+        'packages':[{'package':name,'version':version,'architecture':arch,
+            'filename':filename,'size':size,'sha256':digest} for name,version,arch,filename,size,digest in SETUP_V6_PACKAGE_ROWS],
+        'configureOrder':list(SETUP_V6_CONFIGURE_ORDER),'unpackOptions':['--no-triggers','--unpack'],
+        'configureOptions':['--no-triggers','--configure'],'policyPath':'/usr/sbin/policy-rc.d',
+        'policyExit':101,'installerPath':'/usr/sbin:/usr/bin:/bin','deferredTriggers':True,'apt':False,'recommends':False,'force':False,
+        'upgrade':False,'configurationComplete':False}
+
+
+def admit_setup_v6_request(raw,pin):
+    need(type(raw) is bytes and 0<len(raw)<=32768 and type(pin) is str and re.fullmatch('[0-9a-f]{64}',pin) and sha(raw)==pin,
+         'externally selected v6 request')
+    value=final_json(raw)
+    require_fields(value,'schema repository pullRequest head tree source selected nodeStage emptyPythonSources setup payloadWitness','closed v6 request')
+    need(raw==encode(value) and value['schema']=='bw.ring3.inventory-request.v6','canonical v6 request')
+    base={key:value[key] for key in ('repository','pullRequest','head','tree','source','selected','nodeStage','emptyPythonSources')}
+    admit_staged_runtime_request(encode(dict(base,schema='bw.ring3.inventory-request.v3')),sha(encode(dict(base,schema='bw.ring3.inventory-request.v3'))))
+    need(same_json(value['setup'],setup_v6_policy()),'fixed image/status/helper/package and no-resolver setup policy')
+    need(type(SETUP_V6_PAYLOAD_PINS) is dict and len(SETUP_V6_PAYLOAD_PINS['archives'])==15 and
+         all((item['package'],item['archiveBytes'],item['archiveSha256'])==(name,size,digest)
+             for item,(name,version,arch,filename,size,digest) in
+             zip(SETUP_V6_PAYLOAD_PINS['archives'],SETUP_V6_PACKAGE_ROWS)),
+         'reviewed fifteen payload witnesses join exact signed archive selection')
+    need(SETUP_V6_PAYLOAD_PINS is not None and same_json(value['payloadWitness'],SETUP_V6_PAYLOAD_PINS),
+         'separately reviewed fixed payload/control witness required')
+    return value
+
+
+def admit_setup_v6_event(event_raw,environ):
+    event=final_json(event_raw);pr=event.get('pull_request',{});body=pr.get('body')
+    start='<!-- BW_RING3_SETUP_RUNTIME_INVENTORY_V6\n';end='\nBW_RING3_SETUP_RUNTIME_INVENTORY_V6 -->'
+    need(type(body) is str and body.count(start)==body.count(end)==1 and body.index(start)<body.index(end),'one immutable v6 block')
+    block=body.split(start,1)[1].split(end,1)[0]
+    pin=environ.get('BW_RING3_SETUP_INVENTORY_V6_REQUEST_SHA256')
+    need(type(pin) is str and re.fullmatch('[0-9a-f]{64}',pin) and block==pin,
+         'one exact v6 body SHA marker')
+    encoded=environ.get('BW_RING3_SETUP_INVENTORY_V6_REQUEST_B64')
+    need(type(encoded) is str and 0<len(encoded)<=43692,'bounded canonical v6 repository request')
+    raw=base64.b64decode(encoded,validate=True)
+    need(0<len(raw)<=32768 and base64.b64encode(raw).decode('ascii')==encoded and sha(raw)==pin,
+         'exact v6 repository request bytes')
+    request=admit_setup_v6_request(raw,pin)
+    need(event.get('action')=='labeled' and event.get('label',{}).get('name')=='x86-ring3-setup-runtime-inventory-v6' and
+         event.get('repository',{}).get('full_name')==APPROVAL_REPOSITORY and event.get('sender',{}).get('login')=='CrispStrobe' and
+         type(event.get('number')) is int and event['number']==request['pullRequest'] and type(pr.get('number')) is int and
+         pr['number']==request['pullRequest'] and pr.get('state')=='open' and pr.get('head',{}).get('sha')==request['head'] and
+         pr.get('head',{}).get('repo',{}).get('full_name')==APPROVAL_REPOSITORY and pr['head']['repo'].get('fork') is False and
+         pr.get('base',{}).get('ref')=='master' and pr['base'].get('repo',{}).get('full_name')==APPROVAL_REPOSITORY,
+         'closed owned v6 immutable event')
+    expected_cgroup(environ)
+    need(all(environ.get(k)==v for k,v in {'GITHUB_REPOSITORY':APPROVAL_REPOSITORY,'GITHUB_EVENT_NAME':'pull_request',
+         'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':'setup-runtime-inventory-v6','GITHUB_RUN_ATTEMPT':'1',
+         'BW_EXPECTED_HEAD':request['head'],'BW_EXPECTED_TREE':request['tree'],
+         'GITHUB_WORKFLOW_REF':APPROVAL_REPOSITORY+'/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request['pullRequest'])+'/merge'}.items()) and
+         type(environ.get('GITHUB_WORKFLOW_SHA')) is str and re.fullmatch('[0-9a-f]{40}',environ['GITHUB_WORKFLOW_SHA']),
+         'v6 platform/source bindings')
+    return raw,request
+
+
+def emit_setup_v6_status(role,raw,emit=None,flush=None):
+    need(role in ('pre','post') and type(raw) is bytes and 0<len(raw)<=8<<20,
+         'fixed bounded raw dpkg status original')
+    packed=zlib.compress(raw,9);need(0<len(packed)<=700<<10,'bounded compressed dpkg status original')
+    packet={'schema':'bw.ring3.setup-status-original.v6','role':role,'rawBytes':len(raw),
+        'rawSha256':sha(raw),'packedBytes':len(packed),'packedSha256':sha(packed),
+        'encoding':'zlib+base64','packed':base64.b64encode(packed).decode('ascii')}
+    line=SETUP_V6_STATUS_MARKER+encode(packet)
+    need(len(line)<=1<<20,'bounded encoded dpkg status log line')
+    emit=sys.stdout.buffer.write if emit is None else emit
+    flush=sys.stdout.buffer.flush if flush is None else flush
+    need(emit(line)==len(line),'complete raw dpkg status original publication');flush()
+    return {'role':role,'bytes':len(raw),'sha256':sha(raw),'packedBytes':len(packed),
+        'packedSha256':sha(packed)}
+
+
+def setup_v6_sequence(ops,request):
+    """One-shot setup order; every edge is an injected, recorded operation."""
+    facts={'schema':'bw.ring3.setup-original.v6','preflight':None,'archives':[],
+        'policy':None,'unpack':None,'configure':None,'postStatus':None,'cleanup':None,
+        'policyCleanupCgroup':None,
+        'nodeStage':None,'runtime':None,'partial':None,'deferredHostTriggers':True,
+        'configurationComplete':False,'firstFailure':None,'secondary':[]}
+    failure=FirstFailure();policy_created=False
+    def complete_dpkg_phase(name):
+        item=facts[name];item.setdefault('cgroupAfter',None);phase_failure=FirstFailure()
+        if item['firstFailure'] is not None:
+            phase_failure.adopt(item['firstFailure'],item['secondary'])
+        elif item['exitCode']!=0 or item['timedOut'] is not False or item['secondary']:
+            phase_failure.add(ValueError('bounded '+name+' dpkg failed'),'v6-'+name)
+            phase_failure.secondary.extend(item['secondary'])
+        try:
+            item['cgroupAfter']=ops.quiescent(name)
+            need(item['cgroupAfter']['onlyController'] is True,
+                 'no owned direct or nested dpkg descendants after '+name)
+        except BaseException as error:phase_failure.add(error,'v6-'+name+'-cgroup')
+        if phase_failure.first is not None:
+            raise ObservedFailure(phase_failure.first,phase_failure.secondary)
+    try:
+        facts['preflight']=ops.preflight(request)
+        need(facts['preflight']['imageVersion']==SETUP_V6_IMAGE and
+             facts['preflight']['statusSha256']==SETUP_V6_STATUS_SHA and
+             same_json(facts['preflight']['helperSha256'],SETUP_V6_HELPERS) and
+             setup_v6_helper_witnesses_valid(facts['preflight']['helperWitness']) and
+             same_json(facts['preflight']['helperAliases'],SETUP_V6_HELPER_ALIASES) and
+             facts['preflight']['policyAbsent'] is True and facts['preflight']['newPackagesAbsent'] is True,
+             'exact fresh pre-transaction image/status/helper/absence')
+        for package in request['setup']['packages']:
+            item=ops.acquire(package)
+            need(same_json(item['package'],package) and item['bytes']==package['size'] and
+                 item['sha256']==package['sha256'] and item['closeSucceeded'] is True,
+                 'one complete closed exact signed archive')
+            facts['archives'].append(item)
+        facts['policy']=ops.create_policy(SETUP_V6_POLICY_BYTES)
+        policy_created=True
+        need(facts['policy']['sha256']==sha(SETUP_V6_POLICY_BYTES) and facts['policy']['mode']==0o755 and
+             facts['policy']['exclusive'] is True,'new exact owned policy101')
+        facts['unpack']=ops.dpkg(['--no-triggers','--unpack']+[item['path'] for item in facts['archives']])
+        complete_dpkg_phase('unpack')
+        facts['configure']=ops.dpkg(['--no-triggers','--configure',*SETUP_V6_CONFIGURE_ORDER])
+        complete_dpkg_phase('configure')
+        facts['postStatus']=ops.post_status(request)
+        need(facts['postStatus']['allSelectedPresent'] is True and facts['postStatus']['allowedStates'] is True and
+             facts['postStatus']['deferredHostTriggers'] is True and
+             facts['postStatus']['configurationComplete'] is False and
+             same_json(facts['postStatus']['serviceObserved'],{'unit':SETUP_V6_PAYLOAD_PINS['serviceUnit'],
+                 'init':SETUP_V6_PAYLOAD_PINS['initScript']}),
+             'explicit selected status and deferred trigger facts')
+    except BaseException as error:
+        facts['partial']=getattr(error,'ring3_partial',None)
+        failure.add(error,'v6-setup')
+    finally:
+        if policy_created:
+            try:
+                facts['policyCleanupCgroup']=ops.quiescent('policy-cleanup')
+                if facts['policyCleanupCgroup']['onlyController'] is True:
+                    facts['cleanup']=ops.remove_policy(facts['policy'])
+                    need(facts['cleanup']['removedExactOwnIdentity'] is True,'exact owned policy removal')
+                else:
+                    facts['cleanup']={'deferred':True,'reason':'owned descendants remain; outside terminal cleanup required'}
+                    raise ValueError('policy retained while owned descendants remain')
+            except BaseException as error:failure.add(error,'v6-policy-cleanup')
+        try:ops.close_archives(facts['archives'])
+        except BaseException as error:failure.add(error,'v6-archive-cleanup')
+    if failure.first is None and failure.secondary==[]:
+        try:
+            facts['nodeStage'],facts['runtime']=ops.stage_drop_inventory(request,facts)
+            need(facts['nodeStage']['verifiedCopy'] is True and facts['nodeStage']['irreversibleDrop'] is True and
+                 facts['runtime']['graphObserved'] is True and facts['runtime']['actualGuestApproved'] is False,
+                 'root stage, irreversible drop and selected metadata graph')
+        except BaseException as error:failure.add(error,'v6-stage-runtime')
+    facts['firstFailure'],facts['secondary']=failure.first,failure.secondary
+    need(len(encode(facts))<=SETUP_V6_ORIGINAL_CAP,'versioned four-MiB combined setup original cap')
+    return facts
+
+
+class SetupV6Tool(LinuxChild):
+    """One root dpkg phase inside the separately bounded transient service."""
+    def __init__(self,argv):
+        super().__init__(None,'setup-v6',argv)
+        self.environment=dict(SETUP_V6_INSTALLER_ENV)
+
+    def preexec(self,identity_fd):
+        resource.setrlimit(resource.RLIMIT_CORE,(0,0))
+        resource.setrlimit(resource.RLIMIT_FSIZE,(128<<20,128<<20))
+        resource.setrlimit(resource.RLIMIT_NOFILE,(128,128))
+        fields=Path('/proc/self/stat').read_text().rsplit(')',1)[1].split()
+        packet=struct.pack('<QQQ',os.getpid(),os.getpgrp(),int(fields[19]))
+        need(os.write(identity_fd,packet)==24,'complete setup child identity');os.close(identity_fd)
+
+    def kill(self):
+        if self.process is not None and self.process.returncode is None:
+            os.killpg(self.process.pid,signal.SIGKILL)
+
+
+class SetupV6Host:
+    def __init__(self,environ,event_raw,request_raw,observer):
+        self.environ,self.event_raw,self.request_raw,self.observer=dict(environ),event_raw,request_raw,observer
+        self.root=None;self.root_identity=None;self.files={};self.network_started=None;self.acquisition_count=0
+        self.pre_status_rows=None
+        self.preflight_prefix={'statusOriginal':None,'statusSha256':None,'statusBytes':None,
+            'statusRecords':None,'completedHelpers':[],'helperWitness':{},
+            'imageFields':None,'imageFieldErrors':[]}
+
+    @staticmethod
+    def identity(info):
+        return [info.st_dev,info.st_ino,info.st_mode,info.st_uid,info.st_gid,info.st_nlink,info.st_size,info.st_mtime_ns]
+
+    def preflight(self,request):
+        try:return self._preflight(request)
+        except BaseException as error:
+            helper_partial=getattr(error,'ring3_partial',None)
+            error.ring3_partial={'phase':'preflight','prefix':self.preflight_prefix,
+                'failedHelper':helper_partial}
+            raise
+
+    def _preflight(self,request):
+        observed,field_errors=image_env_fields(self.environ)
+        self.preflight_prefix['imageFields']=observed
+        self.preflight_prefix['imageFieldErrors']=field_errors
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root setup service identity')
+        run_id=self.environ.get('GITHUB_RUN_ID','')
+        need(re.fullmatch('[1-9][0-9]{0,19}',run_id) is not None,'fixed v6 unit run ID')
+        membership=Cgroups.text(None,Path('/proc/self/cgroup'))
+        need(membership=='0::/system.slice/bw-ring3-setup-v6-'+run_id+'-1.service\n',
+             'actual owned transient setup service membership')
+        unit=Path('/sys/fs/cgroup')/membership[4:-1]
+        limits={key:Cgroups.text(None,unit/name).strip() for key,name in
+            (('cpuMax','cpu.max'),('memoryMax','memory.max'),('swapMax','memory.swap.max'),('pidsMax','pids.max'))}
+        need(limits==LIMITS,'observed outer setup service CPU/memory/swap/PID limits')
+        need(not field_errors and observed=={'ImageOS':{'present':True,'value':'ubuntu24'},
+             'ImageVersion':{'present':True,'value':SETUP_V6_IMAGE}},
+             'fresh exact hosted image labels; separately reviewed setup log remains required')
+        need(Path('/usr/sbin/policy-rc.d').exists() is False and Path('/usr/sbin/policy-rc.d').is_symlink() is False,
+             'preexisting policy refused')
+        status=bounded_read('/var/lib/dpkg/status',8<<20)
+        pre_original=emit_setup_v6_status('pre',status)
+        self.preflight_prefix.update(statusOriginal=pre_original,statusSha256=sha(status),
+            statusBytes=len(status))
+        need(sha(status)==SETUP_V6_STATUS_SHA,'fresh exact dpkg status bytes')
+        rows=setup_v6_status_rows(status);need(len(rows)==1211 and all(not any(key[0]==name for key in rows)
+             for name,*_ in SETUP_V6_PACKAGE_ROWS),
+             'observed absent package pre-state')
+        self.preflight_prefix['statusRecords']=len(rows)
+        self.pre_status_rows=rows
+        helpers={};witnesses={}
+        for path,pin in SETUP_V6_HELPERS.items():
+            witness=setup_v6_helper_witness(path,pin)
+            witnesses[path]=witness;helpers[path]=witness['sha256']
+            self.preflight_prefix['helperWitness'][path]=witness
+            self.preflight_prefix['completedHelpers'].append(path)
+        aliases={}
+        for name,expected in SETUP_V6_HELPER_ALIASES.items():
+            path=Path(name);before=path.lstat()
+            need(stat.S_ISLNK(before.st_mode) and (before.st_uid,before.st_gid,before.st_nlink)==(0,0,1),
+                 'fixed root-owned maintainer interpreter alias')
+            link=os.readlink(path)
+            need(type(link) is str and 0<len(link.encode())<=64,'bounded maintainer interpreter alias text')
+            target=str(path.resolve(strict=True));after=path.lstat()
+            need((before.st_dev,before.st_ino,before.st_mode,before.st_uid,before.st_gid,
+                  before.st_nlink,before.st_size,before.st_mtime_ns)==
+                 (after.st_dev,after.st_ino,after.st_mode,after.st_uid,after.st_gid,
+                  after.st_nlink,after.st_size,after.st_mtime_ns) and os.readlink(path)==link,
+                 'finite maintainer interpreter alias readback')
+            aliases[name]={'linkText':link,'target':target,'uid':before.st_uid,'gid':before.st_gid,
+                'nlink':before.st_nlink,'size':before.st_size}
+            need(same_json(aliases[name],expected),'exact selected dash interpreter alias')
+        return {'imageOS':'ubuntu24','imageVersion':SETUP_V6_IMAGE,
+            'imageFields':observed,'imageFieldErrors':field_errors,'statusSha256':sha(status),
+            'statusBytes':len(status),'statusRecords':len(rows),'helperSha256':helpers,
+            'helperWitness':witnesses,
+            'helperAliases':aliases,
+            'statusOriginal':pre_original,
+            'resource':{'membership':membership,'limits':limits},
+            'policyAbsent':True,'newPackagesAbsent':True,'imageFieldsAuthenticated':False,
+            'immutableImageIdentityEstablished':False}
+
+    def archive_root(self):
+        if self.root is None:
+            run_id=self.environ.get('GITHUB_RUN_ID','');need(re.fullmatch('[1-9][0-9]{0,19}',run_id) is not None,
+                 'positive official run selector before owned staging')
+            root=Path('/run')/('bw-ring3-setup-v6-'+run_id+'-1')
+            os.mkdir(root,0o700);self.root=root
+            try:
+                info=root.lstat();self.root_identity=self.identity(info)
+            except BaseException as error:
+                error.ring3_partial={'phase':'archive-directory','path':str(root),
+                    'created':True,'identity':None}
+                raise
+            need(stat.S_ISDIR(info.st_mode) and (info.st_uid,info.st_gid)==(0,0) and
+                 stat.S_IMODE(info.st_mode)==0o700,'exclusive root archive staging')
+        return self.root
+
+    def acquire(self,package):
+        need(self.acquisition_count<len(SETUP_V6_PACKAGE_ROWS),'one fixed archive attempt per package')
+        expected=SETUP_V6_PACKAGE_ROWS[self.acquisition_count]
+        need(same_json(package,{'package':expected[0],'version':expected[1],'architecture':expected[2],
+             'filename':expected[3],'size':expected[4],'sha256':expected[5]}),'fixed sequential signed archive row')
+        need(0<package['size']<=SETUP_V6_PACKAGE_CAP and
+             sum(row[4] for row in SETUP_V6_PACKAGE_ROWS)<=SETUP_V6_TOTAL_CAP,'bounded fixed archive extents')
+        root=self.archive_root();path=root/(str(self.acquisition_count).zfill(2)+'.deb')
+        descriptor=None;self.acquisition_count+=1
+        first=None;received=0;written=0;hasher=hashlib.sha256()
+        url='https://snapshot.ubuntu.com/ubuntu/20261019T000000Z/'+package['filename']
+        class RejectRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self,*args,**kwargs):raise ValueError('archive redirect refused')
+        try:
+            descriptor=os.open(path,os.O_RDWR|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_NONBLOCK,0o600)
+            self.files[str(path)]=None  # A returned O_EXCL fd owns a path even if fstat fails.
+            self.files[str(path)]=self.identity(os.fstat(descriptor))
+            attempt_started=time.monotonic()
+            if self.network_started is None:self.network_started=attempt_started
+            need(time.monotonic()-self.network_started<180,'total archive acquisition deadline')
+            request=urllib.request.Request(url,headers={'Accept-Encoding':'identity','User-Agent':'bw-ring3-setup-v6/1'})
+            with urllib.request.build_opener(RejectRedirect).open(request,timeout=30) as reply:
+                need(reply.status==200 and reply.headers.get('Content-Encoding') in (None,'identity') and
+                     reply.headers.get('Content-Length')==str(package['size']),'exact archive HTTP response')
+                while True:
+                    need(time.monotonic()-attempt_started<30,'per-archive download deadline')
+                    need(time.monotonic()-self.network_started<180,'global archive download deadline')
+                    chunk=reply.read(min(65536,package['size']+1-received))
+                    if not chunk:break
+                    received+=len(chunk);need(received<=package['size'],'archive size cap')
+                    hasher.update(chunk);need(os.write(descriptor,chunk)==len(chunk),'complete archive write')
+                    written+=len(chunk)
+            need(received==package['size'] and hasher.hexdigest()==package['sha256'],'exact signed archive bytes')
+            os.lseek(descriptor,0,os.SEEK_SET);readback=hashlib.sha256();count=0
+            while True:
+                chunk=os.read(descriptor,65536)
+                if not chunk:break
+                count+=len(chunk);need(count<=package['size'],'archive readback cap');readback.update(chunk)
+            held=os.fstat(descriptor);named=path.lstat()
+            need(count==package['size'] and readback.hexdigest()==package['sha256'] and
+                 self.identity(held)==self.identity(named) and held.st_nlink==1 and stat.S_IMODE(held.st_mode)==0o600,
+                 'stable closed archive readback')
+            self.files[str(path)]=self.identity(held)
+        except BaseException as error:first=error
+        finally:
+            if descriptor is not None:first=close_owned(descriptor,first,'v6-archive-close')
+        if first is not None:
+            first.ring3_partial={'phase':'archive','package':package,'path':str(path),
+                'receivedBytes':received,'writtenBytes':written,'receivedSha256':hasher.hexdigest(),
+                'writeUncertain':received!=written,'ownedIdentity':self.files.get(str(path))}
+            raise first
+        return {'package':package,'path':str(path),'url':url,'bytes':received,'sha256':hasher.hexdigest(),
+            'identity':self.files[str(path)],'closeSucceeded':True}
+
+    def create_policy(self,data):
+        need(data==SETUP_V6_POLICY_BYTES and Path('/usr/sbin/policy-rc.d').exists() is False and
+             Path('/usr/sbin/policy-rc.d').is_symlink() is False,'exact absent policy path')
+        path='/usr/sbin/policy-rc.d';descriptor=None
+        first=None;info=None;created=None
+        try:
+            descriptor=os.open(path,os.O_RDWR|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_NONBLOCK,0o755)
+            created=self.identity(os.fstat(descriptor))
+            need(os.write(descriptor,data)==len(data),'exact policy101 write');os.fchmod(descriptor,0o755)
+            os.lseek(descriptor,0,os.SEEK_SET);need(os.read(descriptor,len(data)+1)==data,'policy101 readback')
+            info=os.fstat(descriptor);need(self.identity(info)==self.identity(Path(path).lstat()) and
+                 (info.st_uid,info.st_gid,info.st_nlink)==(0,0,1) and stat.S_IMODE(info.st_mode)==0o755,
+                 'held named policy identity')
+        except BaseException as error:first=error
+        finally:
+            if descriptor is not None:first=close_owned(descriptor,first,'v6-policy-close')
+        if first is not None:
+            first.ring3_partial={'phase':'policy-create','path':path,'createdIdentity':created,
+                'writeUncertain':info is None}
+            if created is not None:
+                try:
+                    named=Path(path).lstat()
+                    need(self.identity(named)[:6]==created[:6],'same partially written owned policy identity')
+                    os.unlink(path)
+                except BaseException as secondary:
+                    first.ring3_secondary=getattr(first,'ring3_secondary',[])+[row(secondary,'v6-partial-policy-cleanup')]
+            elif descriptor is not None:
+                first.ring3_secondary=getattr(first,'ring3_secondary',[])+[
+                    row(ValueError('created policy identity unknown; no unlink'),'v6-partial-policy-cleanup')]
+            raise first
+        return {'path':path,'identity':self.identity(info),'sha256':sha(data),'mode':0o755,'exclusive':True}
+
+    def dpkg(self,args):
+        need(args==['--no-triggers','--unpack']+[str(self.root/(str(i).zfill(2)+'.deb')) for i in range(15)] or
+             args==['--no-triggers','--configure',*SETUP_V6_CONFIGURE_ORDER],
+             'fixed no-force, no-trigger dpkg phase')
+        argv=['/usr/bin/dpkg',*args];process,streams=collect_child(SetupV6Tool(argv),'setup-v6',argv,profile='setup-v6')
+        return {'argv':argv,'process':process,'stdout':original_bytes(streams['stdout']) if streams['stdout'] else None,
+            'stderr':original_bytes(streams['stderr']) if streams['stderr'] else None,'exitCode':process['exitCode'],'timedOut':process['timedOut'],
+            'firstFailure':process['firstFailure'],'secondary':process['secondary']}
+
+    def quiescent(self,phase):
+        need(phase in ('unpack','configure','policy-cleanup'),'fixed setup cgroup census phase')
+        run_id=self.environ['GITHUB_RUN_ID']
+        unit=Path('/sys/fs/cgroup/system.slice')/('bw-ring3-setup-v6-'+run_id+'-1.service')
+        procs=Cgroups.text(None,unit/'cgroup.procs')
+        events=Cgroups.text(None,unit/'cgroup.events')
+        stat_text=Cgroups.text(None,unit/'cgroup.stat')
+        lines=procs.splitlines()
+        need(all(re.fullmatch('[1-9][0-9]*',line) for line in lines) and len(lines)<=64 and
+             len(set(lines))==len(lines),'finite unique owned service process census')
+        return {'phase':phase,'cgroupProcs':procs,'cgroupEvents':events,
+            'cgroupStat':stat_text,
+            'onlyController':lines==[str(os.getpid())] and
+                setup_v6_cgroup_quiet(procs,events,stat_text,os.getpid())}
+
+    def post_status(self,request):
+        raw=bounded_read('/var/lib/dpkg/status',8<<20)
+        post_original=emit_setup_v6_status('post',raw)
+        rows=setup_v6_status_rows(raw);selected={}
+        need(self.pre_status_rows is not None,'retained parsed pre-status before post comparison')
+        setup_v6_status_delta(self.pre_status_rows,rows)
+        for name,version,architecture,*_ in SETUP_V6_PACKAGE_ROWS:
+            row=rows.get((name,architecture));selected[name]=None if row is None else {key:row.get(key) for key in
+                ('Package','Version','Architecture','Status','Triggers-Pending','Triggers-Awaited')}
+        present=all(row is not None and row['Version']==version and row['Architecture']==architecture
+            for (name,version,architecture,*_),row in zip(SETUP_V6_PACKAGE_ROWS,selected.values()))
+        allowed=present and all(row['Status'] in ('install ok installed','install ok triggers-pending','install ok triggers-awaited')
+            for row in selected.values())
+        pending={name+':'+arch:{'status':row.get('Status'),'pending':row.get('Triggers-Pending'),
+            'awaited':row.get('Triggers-Awaited')} for (name,arch),row in rows.items()
+            if row.get('Status') in ('install ok triggers-pending','install ok triggers-awaited') or
+               row.get('Triggers-Pending') is not None or row.get('Triggers-Awaited') is not None}
+        service={}
+        for role,key in (('unit','serviceUnit'),('init','initScript')):
+            expected=SETUP_V6_PAYLOAD_PINS[key];path=Path(expected['path']);info=path.lstat()
+            need(stat.S_ISREG(info.st_mode) and (info.st_uid,info.st_gid)==(0,0) and
+                 info.st_nlink==1 and info.st_mode&0o022==0 and info.st_size==expected['bytes'],
+                 'fixed reviewed QEMU service payload regular identity')
+            content=bounded_read(path,4096)
+            need(sha(content)==expected['sha256'],'fixed reviewed QEMU service payload bytes')
+            service[role]={'path':str(path),'bytes':len(content),'sha256':sha(content)}
+        return {'sha256':sha(raw),'bytes':len(raw),'records':len(rows),'selected':selected,
+            'pendingHostTriggers':pending,'serviceObserved':service,'statusOriginal':post_original,
+            'allSelectedPresent':present,'allowedStates':allowed,'deferredHostTriggers':True,'configurationComplete':False}
+
+    def remove_policy(self,record):
+        path=record['path'];need(path=='/usr/sbin/policy-rc.d','only owned policy path')
+        info=Path(path).lstat();need(self.identity(info)==record['identity'],'same exact owned policy identity')
+        need(sha(bounded_read(path,128))==record['sha256'],'same exact owned policy bytes')
+        os.unlink(path);need(not Path(path).exists() and not Path(path).is_symlink(),'owned policy removed')
+        return {'removedExactOwnIdentity':True,'identity':record['identity']}
+
+    def close_archives(self,archives):
+        if self.root is None:return
+        for path,identity in list(self.files.items()):
+            need(identity is not None,'owned archive identity unknown; no unlink')
+            need(self.identity(Path(path).lstat())[:6]==identity[:6],'owned archive identity before deletion')
+            os.unlink(path)
+        need(self.root_identity is not None and self.identity(self.root.lstat())[:6]==self.root_identity[:6],
+             'owned archive directory identity before removal')
+        os.rmdir(self.root);self.root=None;self.root_identity=None;self.files={}
+
+    def stage_drop_inventory(self,request,facts):
+        ids=[self.environ.get('SUDO_'+key,'') for key in ('UID','GID')]
+        need(all(type(x) is str and re.fullmatch('[1-9][0-9]{0,9}',x) and int(x)<2**31 for x in ids),
+             'trusted v6 Node-stage invoker')
+        invoker=list(map(int,ids));copy=NodeStageCopy();failure=FirstFailure();record=None;raw=None
+        drop_progress=[]
+        def partial():
+            return {'phase':'node-stage','copy':copy.facts,
+                'record':None if raw is None else {'bytes':len(raw),'sha256':sha(raw)},
+                'dropProgress':list(drop_progress),'invoker':invoker}
+        try:
+            checkout=Path.cwd();info=checkout.lstat()
+            need(checkout.resolve(strict=True)==checkout and (info.st_uid,info.st_gid)==tuple(invoker),
+                 'v6 stage checkout identity')
+            for path in SOURCE_PATHS:
+                info=Path(path).lstat();need(stat.S_ISREG(info.st_mode) and stat.S_IMODE(info.st_mode)==0o644 and
+                    (info.st_uid,info.st_gid)==tuple(invoker),'v6 stage source owner/mode')
+            copy.copy()
+            platform_fields={key:self.environ[key] for key in SETUP_V6_ENV}
+            record={'schema':'bw.ring3.node-stage-original.v6','request':original_bytes(self.request_raw),
+                'event':original_bytes(self.event_raw),'platform':platform_fields,'source':self.observer.facts['source'],
+                'sourceCommands':self.observer.facts['sourceCommands'],'eventIdentity':self.observer.facts['eventIdentity'],
+                'setup':facts,'copy':final_json(encode(copy.facts)),
+                'recordBoundary':'verified copy after selected setup and policy cleanup, before directory publication',
+                'firstFailure':None,'secondary':[]}
+            raw=encode(record);need(len(raw)<=JSON_CAP,'bounded complete v6 stage record');copy.record(raw)
+        except BaseException as error:failure.add(error,'v6-node-stage')
+        finally:copy.close(failure)
+        if failure.first is not None or failure.secondary or record is None:
+            error=ObservedFailure(failure.first or row(ValueError('v6 stage record missing'),'v6-node-stage'),
+                                  failure.secondary)
+            error.ring3_partial=partial();raise error
+        try:
+            os.setgroups([]);drop_progress.append('groups')
+            os.setresgid(invoker[1],invoker[1],invoker[1]);drop_progress.append('gid')
+            os.setresuid(invoker[0],invoker[0],invoker[0]);drop_progress.append('uid')
+            entry_ids(*invoker);drop_progress.append('ids-verified')
+            environment=dict(ENV,**{key:self.environ[key] for key in SETUP_V6_ENV})
+            os.execve('/usr/bin/python3',['/usr/bin/python3','-I','-B',READER_FILE,'--inventory-setup-v6'],environment)
+            raise RuntimeError('v6 inventory exec unexpectedly returned')
+        except BaseException as error:
+            error.ring3_partial=partial();raise
+
+
+def setup_v6_entry(environ):
+    failure=FirstFailure();facts=None;publication_safe=False
+    image_fields,image_errors=image_env_fields(environ)
+    context={'request':None,'event':None,'platform':{key:environ.get(key) for key in SETUP_V6_ENV},
+        'source':None,'sourceCommands':[],'eventIdentity':None,
+        'imageFields':image_fields,'imageFieldErrors':image_errors}
+    try:
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root v6 entry')
+        observer=HostedEnvelopeInstaller(environ);event=observer.event()
+        context['event']=original_bytes(event);context['eventIdentity']=observer.facts['eventIdentity']
+        request_raw,request=admit_setup_v6_event(event,environ)
+        context['request']=original_bytes(request_raw)
+        need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,'held v6 source path')
+        observer.source(request)  # Exact HEAD/tree/live source12 before any mutation or GET.
+        context['source']=observer.facts['source'];context['sourceCommands']=observer.facts['sourceCommands']
+        host=SetupV6Host(environ,event,request_raw,observer)
+        facts=setup_v6_sequence(host,request)
+        if facts['firstFailure'] is not None or facts['secondary']:
+            failure.adopt(facts['firstFailure'],facts['secondary'])
+        else:
+            failure.add(RuntimeError('successful v6 dropped inventory exec cannot return'),'v6-entry-return')
+    except BaseException as error:failure.add(error,'v6-entry')
+    if 'observer' in locals():
+        context['sourceCommands']=observer.facts['sourceCommands']
+        context['source']=observer.facts.get('source')
+    raw=encode({'schema':'bw.ring3.setup-entry-failure.v6','context':context,'setup':facts,'firstFailure':failure.first,
+        'secondary':failure.secondary,'publicationSafe':publication_safe,'actualGuestApproved':False,
+        'completeHostConfiguration':False})
+    need(len(raw)<=SETUP_V6_ORIGINAL_CAP and sys.stdout.buffer.write(raw)==len(raw),'bounded v6 failure original')
+    sys.stdout.buffer.flush()
+    return 1
+
+
+def setup_v6_outside_cleanup(environ):
+    """After systemd-run --wait only: remove a provably owned retained policy."""
+    failure=FirstFailure();value={'schema':'bw.ring3.setup-outside-cleanup.v6','runId':None,
+        'serviceExitCode':None,'cgroupTerminal':None,'unitCensus':None,'policy':None,'action':None,
+        'firstFailure':None,'secondary':[],'setupApproved':False}
+    try:
+        need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root outside cleanup')
+        run_id=environ.get('GITHUB_RUN_ID','');code=environ.get('BW_SYSTEMD_RUN_EXIT_CODE','')
+        need(re.fullmatch('[1-9][0-9]{0,19}',run_id) and re.fullmatch('(?:0|[1-9][0-9]{0,2})',code) and
+             int(code)<=255,'exact finite outside run/exit context')
+        value['runId'],value['serviceExitCode']=run_id,int(code)
+        unit=Path('/sys/fs/cgroup/system.slice')/('bw-ring3-setup-v6-'+run_id+'-1.service')
+        if unit.exists():
+            procs=Cgroups.text(None,unit/'cgroup.procs')
+            events=Cgroups.text(None,unit/'cgroup.events')
+            stat_text=Cgroups.text(None,unit/'cgroup.stat')
+            value['unitCensus']={'cgroupProcs':procs,'cgroupEvents':events,'cgroupStat':stat_text}
+            need(setup_v6_cgroup_quiet(procs,events,stat_text),
+                 'no direct or nested owned service descendants after terminal')
+            value['cgroupTerminal']='empty'
+        else:value['cgroupTerminal']='absent'
+        path=Path('/usr/sbin/policy-rc.d')
+        if not path.exists() and not path.is_symlink():
+            value['action']='not-needed'
+        else:
+            raw=bounded_read('build/i80386-ring3-setup-runtime-inventory-v6/inventory.original.log',8<<20)
+            packets=[]
+            for line in raw.splitlines():
+                if line.startswith(b'{"actualGuestApproved":false,'):
+                    packet=final_json(line,SETUP_V6_ORIGINAL_CAP)
+                    if packet.get('schema')=='bw.ring3.setup-entry-failure.v6':packets.append(packet)
+            need(len(packets)==1,'one bounded retained failed setup packet before outside policy cleanup')
+            packet=packets[0];require_fields(packet,
+                'schema context setup firstFailure secondary publicationSafe actualGuestApproved completeHostConfiguration',
+                'closed failed setup original')
+            need(packet['firstFailure'] is not None and packet['actualGuestApproved'] is False and
+                 packet['completeHostConfiguration'] is False and packet['publicationSafe'] is False,
+                 'only failed setup allows outside policy cleanup')
+            context=packet['context'];request_raw=admitted_original(context['request'],JSON_CAP,'outside failed request')
+            request=admit_setup_v6_request(request_raw,environ.get('BW_RING3_SETUP_INVENTORY_V6_REQUEST_SHA256'))
+            need(context['platform']['GITHUB_RUN_ID']==run_id and request['head']==environ.get('BW_EXPECTED_HEAD'),
+                 'outside policy request/source/run join')
+            setup=packet['setup'];need(type(setup) is dict and setup.get('schema')=='bw.ring3.setup-original.v6',
+                 'original setup facts required')
+            policy=setup.get('policy');need(type(policy) is dict and policy.get('path')==str(path) and
+                 policy.get('sha256')==sha(SETUP_V6_POLICY_BYTES) and policy.get('mode')==0o755 and
+                 policy.get('exclusive') is True,'only exactly created policy may be removed')
+            expected=policy['identity'];info=path.lstat();actual=SetupV6Host.identity(info)
+            need(actual==expected and stat.S_ISREG(info.st_mode) and (info.st_uid,info.st_gid,info.st_nlink)==(0,0,1)
+                 and stat.S_IMODE(info.st_mode)==0o755 and sha(bounded_read(path,128))==policy['sha256'],
+                 'exact named owned policy identity and bytes after service terminal')
+            os.unlink(path)
+            need(not path.exists() and not path.is_symlink(),'outside exact owned policy removed')
+            value['policy']={'identity':actual,'sha256':policy['sha256']};value['action']='removed-exact'
+    except BaseException as error:failure.add(error,'v6-outside-policy-cleanup')
+    value['firstFailure'],value['secondary']=failure.first,failure.secondary
+    raw=encode(value)
+    need(len(raw)<=16384 and sys.stdout.buffer.write(raw)==len(raw),'bounded outside cleanup original')
+    sys.stdout.buffer.flush()
+    return 0 if failure.first is None and failure.secondary==[] else 1
+
+
+
+def setup_v6_image_shell(environ):
+    """Bounded unprivileged pre-service image observation, including refusal values."""
+    fields,errors=image_env_fields(environ)
+    original={'schema':'bw.ring3.setup-image-shell.v6','fields':fields,'fieldErrors':errors,
+        'setupAttempted':False,'guestAttempted':False,'setupApproved':False}
+    raw=encode(original)
+    need(len(raw)<=4096 and sys.stdout.buffer.write(raw)==len(raw),'bounded v6 shell image original')
+    sys.stdout.buffer.flush()
+    return 0
+
+
 # A separate read-only route for the first v5 image-label refusal. It never
 # calls setup_v5_sequence, package acquisition, helper inspection or Node stage.
 IMAGE_ENV_DIAGNOSTIC_ENABLED=True
@@ -6496,7 +7166,7 @@ ACTUAL_ENTRY_ENABLED=False  # Activation requires a separate reviewed source/wor
 def dispatch_cli(argv=None,environ=None):
     parser=argparse.ArgumentParser(description=__doc__,allow_abbrev=False)
     modes=parser.add_mutually_exclusive_group(required=True)
-    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy','image-env-shell-v1','image-env-service-v1'):
+    for name in ('controls','prepare-admitted-generated','bootstrap','controller','hosted-actual','install-hosted-envelope','hosted-prerequisites','controller-runtime-admitted','prepare-runtime-admitted','bootstrap-runtime-admitted','hosted-runtime-actual','stage-inventory-node','stage-runtime-inventory-node','setup-runtime-inventory-v4','cleanup-setup-v4-policy','setup-runtime-inventory-v5','cleanup-setup-v5-policy','setup-runtime-inventory-v6','cleanup-setup-v6-policy','setup-v6-image-shell','image-env-shell-v1','image-env-service-v1'):
         modes.add_argument('--'+name,action='store_const',const=name,dest='mode')
     argv=list(sys.argv[1:] if argv is None else argv)
     if len(argv)!=1:parser.error('exactly one fixed mode argument required')
@@ -6521,6 +7191,15 @@ def dispatch_cli(argv=None,environ=None):
         if args.mode=='cleanup-setup-v4-policy':
             need(SETUP_V4_ENABLED is True,'v4 outside cleanup disabled pending reviewed source and event')
             return setup_v4_outside_cleanup(dict(os.environ if environ is None else environ))
+        if args.mode=='setup-v6-image-shell':
+            need(SETUP_V6_ENABLED is True,'v6 shell image route disabled pending reviewed source/event')
+            return setup_v6_image_shell(dict(os.environ if environ is None else environ))
+        if args.mode=='setup-runtime-inventory-v6':
+            need(SETUP_V6_ENABLED is True,'v6 setup path disabled pending reviewed source/event')
+            return setup_v6_entry(dict(os.environ if environ is None else environ))
+        if args.mode=='cleanup-setup-v6-policy':
+            need(SETUP_V6_ENABLED is True,'v6 outside cleanup disabled pending reviewed source/event')
+            return setup_v6_outside_cleanup(dict(os.environ if environ is None else environ))
         if args.mode=='setup-runtime-inventory-v5':
             need(SETUP_V5_ENABLED is True,'v5 setup path disabled pending reviewed source and event')
             return setup_v5_entry(dict(os.environ if environ is None else environ))

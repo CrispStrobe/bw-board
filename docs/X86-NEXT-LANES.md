@@ -3222,6 +3222,13 @@ then require full exact-head source CI, externally selected one-shot v6 event
 and independent original audit. Prepare a separate same-job guest adapter
 only after a complete v6 setup and runtime graph is admitted.
 
+The first v6 source candidate adds a disabled metadata job and independent
+reader. It records the shell image fields and service preflight prefix before
+the existing exact-image comparison. Pure mock controls include a complete
+setup/runtime graph original and a failed preflight original; they do not
+establish hosted setup or guest qualification. External source, event, job,
+original and runtime graph admission remain pending.
+
 ## Ordered 16-bit scalar read candidate
 
 Claim status: source implementation has not begun. The

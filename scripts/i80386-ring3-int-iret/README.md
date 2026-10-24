@@ -1384,3 +1384,37 @@ are always false. Official job and artifact admission remains external. No
 package status, helper, archive, installer, Node stage, QEMU or guest path is
 reachable from this diagnostic. The old v4/v5 guards, pins and failed originals
 remain intact.
+
+## Distinct v6 observed-image metadata candidate
+
+The v6 route is disabled in both the workflow and source. It has its own
+`setup-runtime-inventory-v6` job, labeled event, request SHA/body marker,
+repository variable `BW_RING3_SETUP_INVENTORY_V6_REQUEST_B64`, setup service,
+packet schemas, and standalone reader entry. The old v4/v5 jobs, packet
+schemas, requests, guards, failure originals, and label semantics remain
+available as historical routes; consumed labels are never selected again.
+
+The v6 PR body carries only the lowercase 64-character request SHA between
+its unique markers. The repository variable carries the canonical request
+bytes as strict base64 (at most 32,768 decoded bytes). Source and reader
+independently require exact SHA, canonical JSON, selected source12, first
+attempt, repository, owner, job, workflow, and PR head/tree joins before
+privileged setup. The shell writes one bounded `setup-image-shell.v6` original
+before launching the service. The service records typed, bounded actual
+`ImageOS` and `ImageVersion` fields in the preflight prefix before comparing
+them with the unchanged selected image. Absent, empty, invalid, and different
+values remain in a failed original; mismatch refuses before package GET or
+policy creation. The shell original is separately bound by bytes and SHA in
+the external expectation; the independent reader checks shell/service
+forwarding and reports a difference without granting setup authority.
+
+The success reader still requires exact fifteen-package setup, raw status,
+helper witnesses, Node stage, current runtime graph, outside cleanup, and
+retained first/secondary failure ordering. Its v6 external expectation adds
+`shellBytes` and `shellSha256` to the prior metadata roles. A failed attempt
+can be graded as retained with `setupObserved=false`; a valid image-field
+observation alone does not qualify setup, QEMU, guest execution, immutable
+image identity, or future runner state. Full exact-head CI, external request
+and official metadata admission, and one original-only audit are required
+before any v6 metadata candidate can be considered. Compiler and actual guest
+routes remain disabled.
