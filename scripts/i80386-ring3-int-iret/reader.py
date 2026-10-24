@@ -12307,7 +12307,7 @@ def same_job_v3_manual_tree(value,packet,run_id):
     need(identity(value['parentIdentityAfter'],[0,0])==parent,
          'unchanged parent FD after exact root removal')
     def numbers(raw,key):
-        need(type(raw) is str and len(raw.encode('ascii'))<=4096,
+        need(type(raw) is str and raw.isascii() and len(raw.encode())<=4096,
              'bounded ASCII selected cgroup counter')
         rows=raw.splitlines();need(bool(rows),'nonempty cgroup counter')
         fields={}
@@ -12336,7 +12336,8 @@ def same_job_v3_manual_tree(value,packet,run_id):
         need(held==named,'held and named manual cgroup observation')
         raw=row['raw'];keys(raw,'cgroupProcs cgroupThreads cgroupEvents cgroupStat '
                          'pidsCurrent cpuMax memoryMax swapMax pidsMax')
-        for text in raw.values():need(type(text) is str and len(text.encode('ascii'))<=4096,
+        for text in raw.values():need(type(text) is str and text.isascii() and
+                                      len(text.encode())<=4096,
                                       'bounded raw cgroup read')
         for key in ('cgroupProcs','cgroupThreads'):
             lines=raw[key].splitlines()
