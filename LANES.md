@@ -6002,3 +6002,33 @@ request; each distinct event needs its own final-head checks and external
 admission. Acquire each official original once and audit it with a standalone
 reader before a source merge. No guest, setup success or approval is inferred
 from this claim.
+
+
+## Ordered ordinary-JS 16-bit scalar read — claim, 2026-10-24
+
+Owner: Codex x86 profiling, with Sol implementation after this claim merges.
+Base `a556d0e8e96662f542dc88ea913fc5187d4a424d`. Own only the
+contiguous-page `size === 2` arm of `_readLinear` in
+`src/experimental/i80386.js`, new
+`test/i80386-read16-ordered-pair.test.mjs`, new
+`scripts/i80386-read16-paired/`,
+`.github/workflows/i80386-read16-paired.yml`, this registry entry and the
+matching roadmap contract. No implementation before claim merge.
+
+The [current authored-loop capture](https://github.com/CrispStrobe/bw-board/actions/runs/40057621920)
+places scalar reads among the sampled CPU paths; samples are not exact CPU
+cost shares. Replace only the two-byte loop and power assembly with two
+ordered, masked byte callbacks. Preserve one translation, physical wrapping,
+first/second callback side effects and faults, options, cross-page behavior,
+four-byte behavior, restart/rollback and all diagnostics. No direct RAM bypass,
+mode-specific feature removal, clock or package changes.
+
+Before adoption: authored arithmetic/device goldens, independent callback and
+fault controls with nonvacuous mutation cuts, complete exact-head CI including
+affected clean protected guest qualification, and a separately selected hosted
+paired comparison of the frozen base and candidate. Keep eighteen children
+(two warm pairs plus seven measured pairs), median CPU speedup at least 1.03,
+every CPU ratio greater than 1 and median wall ratio at most 1.02. Preserve
+failed measurements; do not replay or weaken the gate. A failed performance
+gate leaves the candidate unadopted. No physical 386 timing, general workload
+speedup or full OS claim follows from this authored workload.
