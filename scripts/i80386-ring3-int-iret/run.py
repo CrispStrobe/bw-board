@@ -9986,9 +9986,11 @@ def same_job_guest_cleanup(environ=None,*,event_reader=None,handoff_reader=same_
         value['firstFailure'],value['secondary']=failure.first,failure.secondary
         value['outsideTerminalObserved']=(value['outsideTerminalObserved'] is True and
             failure.first is None and failure.secondary==[])
-        if selection is not None:
+        if owned_unit is not None:
             try:
                 uid,gid=(int(environ['SUDO_'+name]) for name in ('UID','GID'))
+                need(0<uid<2**31 and 0<gid<2**31,
+                     'positive invoker IDs before failed guest cleanup retention')
                 bootstrap=BootstrapOps(environ);bootstrap.invoker={'uid':uid,'gid':gid}
                 if (os.getresuid()!=(uid,)*3 or os.getresgid()!=(gid,)*3 or
                         os.getgroups()):bootstrap.drop()
