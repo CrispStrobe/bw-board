@@ -6580,8 +6580,10 @@ run/job identity onto an older event.
 
 The one actual job must run two serial, owned services. First, repeat the
 same fixed fifteen-package setup and one Node 22.23.3 stage copy in that job;
-retain its raw status, helper, archive, stage, inventory and terminal cleanup
-originals. An independent same-job admission then rederives the complete
+retain its raw status, helper, archive verification, stage verification,
+inventory and terminal cleanup originals. These original roles record archive
+and stage checks; they do not carry package or executable payloads. An
+independent same-job admission then rederives the complete
 runtime graph and compares the reviewed digest and selected static DATA facts
 before the second service can run a guest. The historical 103 KiB graph is
 neither a request body nor a substitute for that fresh gate. The second service
@@ -6592,20 +6594,25 @@ closed packet roles, under a new actual wrapper and independent reader.
 it makes no strict 386DX or physical timing claim.
 
 Only the named V9 producer route seams may gain closed actual-route values:
-`setup_v8_sequence`, `SetupV8Host`, `SetupV8Tool`, helper/status emission,
-`setup_v8_entry`, owned-unit/outside cleanup, image shell and `dispatch_cli`.
-`NodeStageCopy` and old request/event admission keep their defaults. To avoid
-duplicating V9's independent reader, only `setup_v9_facts`,
-`setup_v9_stage_record` and `setup_v9_inner_original` may receive explicitly
-selected, default-preserving data-validation seams if genuinely needed; the
-default V9 wire and verdict must remain byte-equivalent. A separate actual
-reader owns its new request and event,
-same-job setup/graph joins, twenty-role packet and official metadata checks.
+`setup_v9_selected`, `setup_v8_sequence`, `SetupV8Host`, `SetupV8Tool`,
+helper/status emission, `setup_v8_entry`, owned-unit/outside cleanup, image
+shell and `dispatch_cli`.
+If the child collector needs a new setup profile, add only one closed literal
+to `collect_child`'s profile tuple; preserve every old profile, `role == profile`,
+wall and stream bounds and default behavior. `NodeStageCopy` and old
+request/event admission keep their defaults. To avoid duplicating V9's
+independent reader, shared data-validation blocks may be extracted only from
+`setup_v9_facts`, `setup_v9_stage_record` and `setup_v9_inner_original` if
+needed. Their V9 admission wrappers, default wire and verdict stay unchanged:
+`setup_v9_stage_record` itself invokes V9 request/event admission and cannot
+receive an actual event. The new actual wrapper first admits its own request
+and event, then applies only shared data predicates. Its separate reader owns
+same-job setup/graph joins, the twenty-role packet and official metadata checks.
 No request or environment field can choose pins, resource caps or validators.
 
 Preserve existing per-role limits, including the 16 MiB closed packet aggregate
-and separate 16 MiB archive acquisition total,
-128 KiB child streams, 120-second guest children and 600-second controller.
+and separate 16 MiB archive acquisition total, 128 KiB child streams,
+120-second guest children and 600-second controller.
 The new combined retained artifact is capped at 32 MiB; this does not raise
 any old leaf cap. Bound the setup service/client/cleanup at 660/720+5/60
 seconds and the actual service/client/cleanup at 720/780+5/60 seconds, with
