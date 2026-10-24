@@ -8264,12 +8264,18 @@ def same_job_actual_controls():
                             'sourceCommands':record['sourceCommands'],'source':source}
                     def event(self):return event_raw
                     def source(self,selected):self.facts['source']=source
+                real_history=producer.same_job_v2_cgroup_history
+                def fixed_history(ops,phase,**kwargs):
+                    base=(40_001_001 if phase=='unpack' else 50_001_001)
+                    ticks=iter((base,base+1,base+2,base+3))
+                    return real_history(ops,phase,clock=lambda:next(ticks),**kwargs)
                 with patch.object(producer,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
                      patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
                      patch.object(reader,'SETUP_V9_STATUS_SHA',sha(pre)),\
                      patch.object(reader,'SETUP_V9_STATUS_BYTES',len(pre)),\
                      patch.object(producer,'SETUP_V9_STATUS_SHA',sha(pre)),\
-                     patch.object(producer,'SETUP_V8_STATUS_SHA',sha(pre)):
+                     patch.object(producer,'SETUP_V8_STATUS_SHA',sha(pre)),\
+                     patch.object(producer,'same_job_v2_cgroup_history',side_effect=fixed_history):
                     self.assertEqual([producer.same_json(actual['setup'],producer.setup_v9_policy()),
                         producer.same_json(actual['payloadWitness'],producer.SETUP_V8_PAYLOAD_PINS),
                         producer.same_json(actual['comparison'],producer.SAME_JOB_REVIEWED_GRAPH)],
@@ -8284,7 +8290,8 @@ def same_job_actual_controls():
                         self.assertEqual(producer.setup_v8_entry(record['platform'],producer.SAME_JOB_ACTUAL_V2_ROUTE),1)
                     self.assertEqual(entry_ops.events.count('acquire'),15,
                         reader.parse_setup_v9_outer(entry_output.getvalue())['firstFailure'])
-                    self.assertEqual(entry_ops.events[-1],'stage')
+                    self.assertEqual(entry_ops.events[-1],'stage',
+                        reader.parse_setup_v9_outer(entry_output.getvalue())['firstFailure'])
                     drift_ops=ActualOps('unit-cross-phase')
                     drift_result=producer.setup_v8_sequence(drift_ops,actual,
                         producer.SAME_JOB_ACTUAL_V2_ROUTE)
@@ -8311,6 +8318,25 @@ def same_job_actual_controls():
                         reader.parse(originals['runtime.setup-inventory.json'])['firstFailure'])
                     self.assertEqual(len(observed),15)
                     self.assertEqual(set(originals),set(reader.SAME_JOB_ACTUAL_LOG_ROLES))
+                    # Rewrap the complete stage original after moving only a
+                    # final census past the next real child spawn. Each sample
+                    # remains internally ordered and inside its five-second
+                    # deadline; only the cross-phase join can reject it.
+                    stage_path=str(producer.NODE_STAGE_RECORD)
+                    for phase,next_spawn in (('unpack',50_000_000),):
+                        moved=copy.deepcopy(record)
+                        last=moved['setup'][phase]['cgroupHistory']['samples'][-1]
+                        last['endMonoNs']=next_spawn+1
+                        moved_raw=reader.canonical(moved)
+                        state['rows'][stage_path].update(raw=moved_raw,st_size=len(moved_raw))
+                        observed.clear()
+                        refused,accepted,_=reader.same_job_actual_inventory_entry(
+                            actual_env,files,probe,version=2)
+                        self.assertFalse(accepted,phase)
+                        self.assertIn('chronology',reader.parse(
+                            refused['runtime.setup-inventory.json'])['firstFailure']['message'])
+                    state['rows'][stage_path].update(raw=record_raw,st_size=len(record_raw))
+                    observed.clear()
                     wire=io.BytesIO();wire.write(status_log.getvalue())
                     reader.emit_same_job_actual_inventory(originals,wire.write,wire.flush,version=2)
                     self.assertEqual(reader.decode_same_job_actual_log(wire.getvalue(),version=2),originals)
@@ -8347,6 +8373,32 @@ def same_job_actual_controls():
                     self.assertTrue(handoff['setupObserved'])
                     self.assertEqual(handoff['candidateSha256'],mock_graph['sha256'])
                     self.assertFalse(handoff['actualGuestApproved'])
+                    moved_originals=dict(originals)
+                    moved_value=reader.parse(originals['runtime.setup-inventory.json'])
+                    for side in ('stageBefore','stageAfter'):
+                        selected=moved_value[side]['record']
+                        stage_record=reader.parse(reader.prerequisite_original(
+                            reader.canonical(selected)))
+                        stage_record['setup']['configure']['cgroupHistory']['samples'][-1][
+                            'endMonoNs']=60_000_001
+                        stage_raw=reader.canonical(stage_record)
+                        moved_value[side]['record']={'bytes':len(stage_raw),
+                            'sha256':sha(stage_raw),'base64':base64.b64encode(stage_raw).decode()}
+                        installed=moved_value[side]['files']['installation.original.json']
+                        installed.update(bytes=len(stage_raw),sha256=sha(stage_raw),
+                            prefix=stage_raw[:4].hex())
+                        for field in ('before','after','namedAfter'):
+                            installed[field][6]=len(stage_raw)
+                    moved_originals['runtime.setup-inventory.json']=reader.canonical(moved_value)
+                    moved_wire=io.BytesIO();moved_wire.write(status_log.getvalue())
+                    reader.emit_same_job_actual_inventory(moved_originals,
+                        moved_wire.write,moved_wire.flush,version=2)
+                    moved_external=dict(external,logBytes=len(moved_wire.getvalue()),
+                        logSha256=sha(moved_wire.getvalue()))
+                    with self.assertRaisesRegex(reader.Refusal,
+                            'final strict configure census'):
+                        reader.verify_same_job_actual_setup_log(moved_wire.getvalue(),
+                            moved_external,outer,cleanup,shell,version=2)
                     held={'setup':wire.getvalue(),'outer':outer,'cleanup':cleanup,'shell':shell}
                     argv=['reader.py','--same-job-handoff-v2','--setup-log','setup',
                         '--outer','outer','--cleanup','cleanup','--shell','shell',
