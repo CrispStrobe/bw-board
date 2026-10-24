@@ -1,0 +1,146 @@
+name: Selected QEMU setup-input inventory
+
+on:
+  push:
+    paths:
+      - 'scripts/i80386-qemu-setup-inventory/**'
+      - '.github/workflows/i80386-qemu-setup-inventory.yml'
+  pull_request:
+    paths:
+      - 'scripts/i80386-qemu-setup-inventory/**'
+      - '.github/workflows/i80386-qemu-setup-inventory.yml'
+  workflow_dispatch:
+    inputs:
+      expected_head:
+        description: Independently admitted exact source commit
+        required: true
+        type: string
+      request_base64:
+        description: Independently admitted canonical request bytes in base64
+        required: true
+        type: string
+      request_sha256:
+        description: Independently selected request SHA256
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Source checks never cancel a separately admitted metadata observation.
+concurrency:
+  group: qemu-setup-input-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  controls:
+    if: ${{ github.event_name != 'workflow_dispatch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Pure observer and independent-reader controls
+        run: /usr/bin/python3 -I -S -B scripts/i80386-qemu-setup-inventory/controls.py
+
+  qemu-setup-inventory:
+    if: >-
+      ${{ true && github.event_name == 'workflow_dispatch' &&
+          github.repository == 'CrispStrobe/bw-board' &&
+          github.actor == 'CrispStrobe' && github.run_attempt == 1 &&
+          github.event.repository.fork == false &&
+          inputs.expected_head == github.sha }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      GH_TOKEN: ''
+      BW_EXPECTED_HEAD: ${{ inputs.expected_head }}
+      BW_REQUEST_BASE64: ${{ inputs.request_base64 }}
+      BW_REQUEST_SHA256: ${{ inputs.request_sha256 }}
+    steps:
+      - name: Check out admitted source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.expected_head }}
+          persist-credentials: false
+      - name: Admit immutable request and exact source
+        id: seed
+        shell: bash
+        run: |
+          /usr/bin/python3 -I -S -B - <<'PY'
+          import base64, hashlib, json, os, pathlib, re, subprocess, tempfile
+          env = os.environ
+          head = env['BW_EXPECTED_HEAD']
+          digest = env['BW_REQUEST_SHA256']
+          assert re.fullmatch('[0-9a-f]{40}', head)
+          assert re.fullmatch('[0-9a-f]{64}', digest)
+          encoded = env['BW_REQUEST_BASE64']
+          assert 0 < len(encoded) <= 87384
+          raw = base64.b64decode(encoded, validate=True)
+          assert 0 < len(raw) <= 65536
+          assert base64.b64encode(raw).decode() == encoded
+          assert hashlib.sha256(raw).hexdigest() == digest
+          def pairs(items):
+              value = {}
+              for key, item in items:
+                  assert key not in value
+                  value[key] = item
+              return value
+          request = json.loads(raw.decode('utf-8'), object_pairs_hook=pairs)
+          assert json.dumps(request, sort_keys=True, separators=(',', ':'),
+                            ensure_ascii=False, allow_nan=False).encode() == raw
+          assert request['source']['head'] == head
+          tree = request['source']['tree']
+          assert type(tree) is str and re.fullmatch('[0-9a-f]{40}', tree)
+          assert env['GITHUB_SHA'] == head == env['GITHUB_WORKFLOW_SHA']
+          git = ['git', '--no-replace-objects', '-c', 'gc.auto=0',
+                 '-c', 'maintenance.auto=false', '-c', 'core.fsmonitor=false',
+                 '-c', 'core.hooksPath=/dev/null']
+          def observe(*args):
+              return subprocess.check_output(git + list(args), timeout=15)
+          actual_head = observe('rev-parse', 'HEAD').decode().strip()
+          actual_tree = observe('rev-parse', 'HEAD^{tree}').decode().strip()
+          assert actual_head == head and actual_tree == tree
+          assert observe('status', '--porcelain') == b''
+          root = pathlib.Path(tempfile.mkdtemp(prefix='qemu-setup-input-',
+                                             dir=env['RUNNER_TEMP']))
+          original = root / 'originals'
+          original.mkdir(mode=0o700)
+          request_path = original / 'request.json'
+          fd = os.open(request_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
+                       os.O_NOFOLLOW, 0o600)
+          with os.fdopen(fd, 'wb') as stream:
+              assert stream.write(raw) == len(raw)
+          values = {'BW_EXPECTED_TREE': tree, 'BW_ACTUAL_HEAD': actual_head,
+                    'BW_ACTUAL_TREE': actual_tree, 'BW_REQUEST_FILE': str(request_path),
+                    'BW_ORIGINAL_DIR': str(original)}
+          with open(env['GITHUB_ENV'], 'a', encoding='utf-8') as stream:
+              for key, value in values.items():
+                  assert '\n' not in value and '\r' not in value
+                  stream.write(key + '=' + value + '\n')
+          with open(env['GITHUB_OUTPUT'], 'a', encoding='utf-8') as stream:
+              stream.write('originals=' + str(original) + '\n')
+          PY
+      - name: Observe setup inputs without executing tools
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          qemu_inventory_exit=0
+          /usr/bin/python3 -I -S -B scripts/i80386-qemu-setup-inventory/run.py \
+            --request "$BW_REQUEST_FILE" --expected-sha256 "$BW_REQUEST_SHA256" \
+            > "$BW_ORIGINAL_DIR/original.json" \
+            2> "$BW_ORIGINAL_DIR/collector.stderr" || qemu_inventory_exit=$?
+          printf '{"exitCode":%s}\n' "$qemu_inventory_exit" > "$BW_ORIGINAL_DIR/process.json"
+          exit "$qemu_inventory_exit"
+      - name: Retain setup-input original
+        if: ${{ always() && steps.seed.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-qemu-setup-input-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.seed.outputs.originals }}
+          if-no-files-found: error
+          retention-days: 7

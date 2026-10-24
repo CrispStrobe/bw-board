@@ -3032,3 +3032,138 @@ controls/CI with unchanged selections. Runtime readiness requires the fresh
 complete inventory and candidate review; actual guest qualification remains
 separate. This documentation claims no setup implementation, new event, QEMU
 observation or guest result.
+
+## Current x86 handoff — 2026-10-23
+
+This is a portable work list for separate owners. The [selected-QEMU setup
+contract](I80386-QEMU-SETUP-INVENTORY.md) and [source candidate PR669](https://github.com/CrispStrobe/bw-board/pull/669)
+provide a bounded, read-only setup-input observer. The collector and metadata
+job remain inactive in that published candidate. Source controls exercise mocked
+boundaries; only a separately admitted metadata observation can identify a
+runner's package/helper state. Neither result selects a package transaction or
+establishes the selected executable's installed bytes.
+Preserve the earlier absent-tool failure and consumed source/event bindings;
+new metadata cannot repair the old null runtime candidate.
+After independently admitted metadata, the remaining gates are an explicit
+exact setup policy, verified resulting runtime identity, and a separately
+admitted clean guest/oracle run. Keep those gates distinct from this observer.
+
+1. **Close the selected-tool lane under the existing ring3 ownership.** Continue
+   [the ring3/selected-QEMU contract](#selected-qemu-availability--2026-10-19) and its
+   existing claim [PR660](https://github.com/CrispStrobe/bw-board/pull/660).
+   Use the read-only observer to review current helper, installed-package and
+   transaction inputs; specify the complete dependency/service/privilege policy
+   and exact selected executable identity before any setup activation. Preserve
+   historical source12 and the absent-tool failure. Actual guest and compiler
+   guards remain false until distinct source, setup, runtime and original-only
+   admission. Acceptance is a fresh, independently checked setup/result chain,
+   then the existing owned oracle comparison on a clean hosted guest.
+2. **Admit the Lite GUI consumer separately.** The [Lite GUI claim PR1305](https://github.com/CrispStrobe/brickwright-lite/pull/1305)
+   covers current frontend/source/runtime/request/event/original admission for
+   the existing [HDD persistence and forward-debug scenarios](https://github.com/CrispStrobe/brickwright-lite/blob/main/docs/X86-NEXT-LANES.md).
+   Coordinate with [Arcade PR1128](https://github.com/CrispStrobe/brickwright-lite/pull/1128)
+   and the D7 supplier owner; preserve their active ownership and dependency
+   pins. Do not treat a selected Board API or unit pass as an installed GUI
+   result. Acceptance requires exact current source and supplier joins, a
+   qualified installed browser/guest run for each scenario, and an independent
+   audit of its original output before a consumer merge.
+3. **Advance the free protected-mode ladder with finite claims.** Start from
+   the existing authored [protected-stack](I80386-PROTECTED-STACK-RESULTS.md),
+   [FreeDOS/CWSDPMI](../scripts/i80386-cwsdpmi-0501-far-at/README.md) and
+   [xv6 continuation](I80386-XV6-10B-CONTINUATION.md) fixtures. Claim one
+   missing transition or observable at a time. Preserve the existing AX=0501
+   task-switch refusal and null return: attribution is not a frame-return pass.
+   Use independent source/input and clean guest evidence, and report the exact
+   instruction/device boundary reached. PSE/APIC or later-CPU compatibility evidence does not establish a
+   strict 386DX machine, complete DOS/OS behavior or physical timing.
+4. **Measure current ordinary-JS cost before optimizing.** Propose a separate
+   claim owning new `scripts/i80386-current-at-cost/`,
+   `.github/workflows/i80386-current-at-cost.yml`,
+   `test/i80386-current-at-cost.test.mjs` and
+   `docs/I80386-CURRENT-AT-COST.md`; leave the earlier
+   [AT profiling result](#ordinary-js-386-at-platform-profiling) intact. Freeze
+   current source/imports, the authored five-operation loop, runner/Node identity
+   and resource limits. First preserve its independent one-million-instruction
+   AX65534/BX65535/IP0/memory-word65535 golden, with one million core and six
+   million AT **synthetic scheduling charges**. Then measure fresh hosted Node
+   CPU time, wall time and bounded V8 profiles. Separate warmed loop time from
+   startup and whole-child time. Fix one CPU, 1 GiB without swap, 60-second
+   children and 8 MiB profile caps; preserve original process/resource facts. An independent byte reader
+   must join exact source, workflow, semantics and profiles without replay.
+   Profile attribution selects a measurable bottleneck for a *later* narrow
+   optimization claim and paired semantic/performance qualification. The model
+   charges alone grant no measured speedup, physical RTx or hardware frequency.
+
+   The [current source candidate](I80386-CURRENT-AT-COST.md) now prepares four
+   serial timing/profile children under that merged claim. Its hosted capture
+   job awaits a separately admitted event. Five-operation pure controls and mocked original readers
+   are source checks; current one-million-step cost and bottlenecks remain
+   unmeasured until an exact-head admitted hosted run.
+
+## Ring3 selected-QEMU same-job guest continuation — 2026-10-24
+
+The [new ownership claim](../LANES.md) extends the selected-QEMU lane. The
+first v4 metadata attempt acquired fifteen exact archives but stopped at
+`dpkg --unpack`: its dedicated PATH omitted `/usr/sbin`, leaving `ldconfig`
+and `start-stop-daemon` unavailable. It produced no complete setup or runtime
+graph. Preserve that failed original and consumed event. A distinct v5
+**metadata** request, body marker, label and job must first qualify a repair
+using a dedicated `/usr/sbin:/usr/bin:/bin` installer environment and exact
+official DATA and live-byte selection for those helpers before any archive
+GET or installer. Keep the old global environment and all package policy
+bounds unchanged. Independently audit one complete new metadata graph; never
+copy a candidate from an incomplete or self-asserted result.
+
+Only then prepare a separate v5 **guest** request, body marker, label and job.
+Installed QEMU cannot carry from the metadata job. The guest job must run
+exact setup and outside policy/service cleanup, followed by a bounded actual
+service **serially in that same job**. Preserve consumed earlier events and
+disabled historical actual/compiler entries.
+
+Before the actual service, independently admit the same-job setup original,
+selected package state, clean owned-policy cleanup, staged Node identity and
+the complete current runtime graph against an externally selected candidate.
+If setup already copied Node, validate that copy instead of creating the same
+exclusive destination again. Refuse changed runner image, status, helpers,
+archive, payload, tool or graph bytes at the relevant pre-guest boundary.
+Then use the existing authored media-free fixture, fixed JS and QEMU TCG
+descriptors and twenty architectural packet roles. The QEMU `-cpu 486` flag
+selects an execution model for this 386-instruction case; it does not qualify
+a strict 386DX machine or physical timing. Keep source12, fixture, CPU,
+selected pins, failure originals, bounds and other owners untouched.
+
+The first deliverable is a merged claim, then initially guarded metadata and
+guest adapters with meaningful wrong-route, missing-helper, setup, cleanup,
+graph and guest-result cuts. Require exact-head CI and separate external
+admission for the repaired metadata event before selecting the guest request;
+then require fresh affected own-fixture hosted JS/QEMU qualification. Each
+official run/job/step/artifact and original set is admitted and audited once.
+Source controls alone approve neither route.
+
+
+## Ordered 16-bit scalar read candidate
+
+Claim status: source implementation has not begun. The
+[current profile](https://github.com/CrispStrobe/bw-board/actions/runs/40057621920)
+measured a warmed authored five-operation loop at about 4.52 million
+instructions/s for the core and 3.48 million instructions/s for AT on an
+AMD EPYC 9V74 hosted CPU using Node 22.23.3. These are loop throughput, not
+physical 16 MHz 386 RTx, an optimization gain or an OS workload measurement.
+
+The next candidate specializes only the contiguous-page two-byte branch in
+`_readLinear`: one translation followed by the same ordered pair of byte
+callbacks, removing the small loop and power calculation. Leave the four-byte
+and page-crossing paths intact. The owning registry entry defines exact paths.
+
+A fresh agent should first confirm the claim landed and refresh base/head
+checks, then implement the narrow arm and focused callback/order/fault tests.
+Prove byte masking, physical wrap, translation options, exceptions on either
+callback, page-crossing fallback and unaffected four-byte behavior; mutation
+controls must detect reversed reads or skipped translation. Prepare a disabled
+paired workflow and standalone original-only reader before selecting its one
+actual event. Freeze base/candidate import graphs and Node/resource facts, retain
+all eighteen original children and cleanup, and preserve the unchanged
+1.03 median CPU / all CPU ratios greater than 1 / 1.02 median wall gate.
+Require affected clean protected guest results and all enabled final-head
+checks before merge. If the gate fails, record it and keep the candidate
+unadopted rather than repeating the same measurement.
