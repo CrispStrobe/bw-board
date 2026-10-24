@@ -6038,3 +6038,12 @@ request; each distinct event needs its own final-head checks and external
 admission. Acquire each official original once and audit it with a standalone
 reader before a source merge. No guest, setup success or approval is inferred
 from this claim.
+
+The first v5 implementation candidate adds only the disabled repaired
+metadata route and its independent original reader inside the owned seven
+paths. It adds the selected `/sbin` alias and exact `start-stop-daemon`,
+`ldconfig`, and `ldconfig.real` live helper readback before archive GET, plus
+the dedicated installer PATH. Its pure controls do not qualify a hosted
+transaction or runtime graph. Source review, exact-head checks and external
+one-event admission remain pending; the separate v5 guest route has no source
+implementation yet.

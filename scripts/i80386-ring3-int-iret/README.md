@@ -1300,3 +1300,37 @@ Require all final-head source checks and separate external review of one fresh
 v4 request and event before applying its distinct label once. Preserve consumed
 v3 requests/events and all first failures. Independently acquire and audit the
 new official originals once, including raw status and outside cleanup.
+
+## Repaired v5 metadata source candidate — 2026-10-24
+
+The new v5 request, event marker, label, job and independent original reader
+are separate from the consumed v4 event. All three v5 execution guards in
+the producer, reader and workflow start false. The v5 request binds the same
+fifteen archive and payload pins plus a dedicated installer `PATH` of
+`/usr/sbin:/usr/bin:/bin`. Before an archive GET, the root service requires
+the selected image and raw dpkg status, three exact additional helper files
+(`/usr/sbin/start-stop-daemon`, `/usr/sbin/ldconfig`, and
+`/usr/sbin/ldconfig.real`), and the `/sbin` to `/usr/sbin` alias. Each helper
+has a bounded named-before, held-before, held-after and named-after identity
+and SHA observation with an explicit close result. These finite live
+byte/readlink observations join independently reviewed
+official package DATA selection, not a whole-host attestation. The historical
+global environment and v4 route remain unchanged.
+
+Only v5 dpkg children receive the repaired `PATH`. They still use fixed
+`--no-triggers` unpack/configure phases, exact fifteen archives, policy101,
+per-phase cgroup census, bounded originals and exact owned cleanup. The v5
+reader independently checks the distinct request/event/source/job joins,
+reported helper hashes and interpreter aliases, original pre/post status bytes, process
+environment, Node stage and selected runtime graph. Its positive output
+remains metadata-only: no actual guest, complete host configuration or
+automatic approval. A changed hosted image or status refuses before archive
+GET, and a failed setup retains first and secondary failures. Pure
+`--setup-v5-only` controls execute no host installer, network or guest edge.
+The reader does not receive helper file bytes from CI; live helper hashing is
+within the trusted hosted collector boundary.
+If preflight refuses partway through the helper list, its failed packet keeps
+the raw pre-status summary, the ordered prefix of successfully checked helper
+witnesses, and the failing helper's partial identity/read/close facts. The
+failure reader joins that summary to any retained raw status line and checks
+the closed helper prefix; it never promotes partial setup to a candidate.

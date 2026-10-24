@@ -3180,3 +3180,10 @@ admission for the repaired metadata event before selecting the guest request;
 then require fresh affected own-fixture hosted JS/QEMU qualification. Each
 official run/job/step/artifact and original set is admitted and audited once.
 Source controls alone approve neither route.
+
+The first repaired v5 **metadata** source candidate is disabled. It records
+the selected three additional helper bytes and `/sbin` alias before download,
+uses `/usr/sbin:/usr/bin:/bin` only for new installer children, and binds a
+new request, event, job and standalone original reader. It needs source
+review, exact-head checks and one separately admitted official observation.
+The guest route still awaits that complete, independently reviewed graph.
