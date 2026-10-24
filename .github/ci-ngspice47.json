@@ -1,0 +1,12 @@
+{
+  "version": 47,
+  "archiveUrl": "https://sourceforge.net/projects/ngspice/files/ng-spice-rework/47/ngspice-47.tar.gz/download",
+  "archiveSha256": "894e649651f1838a14095e5a5439e7d3aa63e87ede14d283173fda4fcdef675f",
+  "sourceDirectory": "ngspice-47",
+  "configure": [
+    "--with-x=no",
+    "--with-readline=no",
+    "--disable-debug",
+    "--disable-openmp"
+  ]
+}

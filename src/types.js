@@ -191,3 +191,17 @@
 // ─── Exports (for documentation; this module defines only types) ────────────
 
 export {};
+
+/** Opt-in voltage acquisition over a complete observed sample aperture.
+ * A boxcar mean of accepted-solve piecewise-linear values, in volts; not a
+ * point sample or an ideal brick-wall anti-alias filter.
+ * @typedef {Object} VoltageApertureCapture
+ * @property {'voltage'} channelType
+ * @property {'average'} capture
+ * @property {bigint} apertureNs Duration of each acquisition window.
+ * @property {bigint} sampleIntervalNs Uniform acquisition cadence.
+ * @property {bigint} startTNs End of the oldest retained complete aperture.
+ * @property {Float64Array} samples Interleaved equal (mean, mean) pairs.
+ * @property {number} count Total complete apertures acquired.
+ * @property {number} writeIndex Next ring-pair position.
+ */
