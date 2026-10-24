@@ -3405,3 +3405,50 @@ failed; this read-only observation adds no setup attempt.
 Setup/runtime/guest approvals are false. Exact-head CI for the auditor is
 pending. Next is separately claimed setup metadata authorization that
 preserves existing pins and failures.
+
+### Conditional setup metadata and authored guest handoff — unclaimed
+
+**1. Distinct setup metadata authorization.** Merge a new ownership claim
+before changing the [Ring 3 producer, reader and controls](../scripts/i80386-ring3-int-iret/README.md)
+or its workflow. Add a V9 request, PR-body marker, label, job and independent
+original reader; keep the consumed V8 event, request and reader outcomes
+unchanged. The pre-event request must bind source12, head, tree, workflow and
+attempt-one policy, not future run or job IDs. Preserve all fifteen selected
+archive rows, raw status SHA, ten helper hashes and aliases, signed DATA
+payload witnesses, policy101, no-trigger order and existing caps. Choose an
+explicit closed policy for observed image labels. The root service
+checks its own label and freshly reads exact status and helper fingerprints
+before the first archive GET. The independent reader later joins bounded shell
+and service observations, requires their agreement for a positive setup grade,
+and reports any disagreement with the official Runner Image block as diagnostic
+data, not image authentication. `admit_setup_v8_request`,
+`admit_setup_v8_event`, `setup_v8_sequence`, `SetupV8Host` and
+`setup_v8_entry` in `run.py` show the current seam; a versioned adapter may
+reuse shared operations only if V8 defaults and its failed-reader verdict stay
+unchanged. `verify_setup_v8_log` in `reader.py` remains V8-only. Source
+controls must cut wrong event/source, unknown root label, changed pin,
+archive, policy, stage, graph and terminal cleanup, with a manufactured
+original independently decoded. Require every enabled exact-head check, one
+separately admitted official event and one acquisition per original. No compiler
+or guest activation belongs to this metadata task.
+
+**2. Same-job authored guest, only after a complete graph.** Claim a separate
+actual route after independent setup, installed-state, Node and QEMU graph
+admission. A proposed 35-minute job uses two serial owned services: setup
+finishes and its unit reaches a terminal census; then a fresh actual service
+admits that same job's setup originals and current runtime graph before any
+guest. `NodeStageCopy.copy` and `SetupV8Host.stage_drop_inventory` in `run.py`
+already consume one exclusive staged Node copy and exec the inventory reader.
+The second service must read back that copy and record; the first process does
+not return to root or stage Node again. Reuse internal boundaries in
+`controller_execute`, `RuntimeEntryComposition`, `finalize_runtime_packet`
+and `reader.py`'s `v8_packet_predicates`, under a truthful new actual event and
+reader. Retain the fixed JS then QEMU descriptors, all twenty architectural
+packet roles, source/runtime before-and-after reads, serial child limits,
+original first/secondary failures and outside cleanup. Pure cuts must reject
+an incomplete graph, a second copy, changed input/source, missing packet role,
+child failure and populated or uncertain terminal cgroup. A 660-second setup
+service plus a separate service enclosing the existing 600-second controller
+is a **budget proposal**, not measured sufficiency. Require fresh exact-head
+source checks and independently audited hosted originals before any result.
+This fixture grants no strict 386DX, physical RTx or full-OS claim.
