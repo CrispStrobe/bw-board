@@ -3193,7 +3193,7 @@ standalone complete-graph audit are required before any same-job guest work.
 ### Consumed v7 package-path refusal and a distinct v8 metadata claim — 2026-10-24
 
 The one selected [v7 metadata run](https://github.com/CrispStrobe/bw-board/actions/runs/40085495608)
-failed at the ninth probe. The existing strict path check rejected three
+failed after the ninth fixed probe returned. The existing strict path check rejected three
 canonical `qemu-system-data` names containing commas:
 `/usr/share/qemu/QEMU,VGA.bin`, `/usr/share/qemu/QEMU,cgthree.bin`, and
 `/usr/share/qemu/QEMU,tcx.bin`. The retained original and the old reader's

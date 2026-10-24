@@ -6202,7 +6202,7 @@ before source implementation; preserve other owners' work and PR645's
 historical source and events.
 
 The one selected [v7 metadata event](https://github.com/CrispStrobe/bw-board/actions/runs/40085495608)
-is consumed and failed during the ninth fixed probe, the package-file listing
+is consumed and failed after the ninth fixed probe returned the package-file listing
 for `qemu-system-data`. Its strict runtime path validator refused these exact
 package-owned names:
 `/usr/share/qemu/QEMU,VGA.bin`, `/usr/share/qemu/QEMU,cgthree.bin`, and
@@ -6215,7 +6215,7 @@ the old positive reader's refusal or reinterpret the consumed event.
 
 Add a distinct **v8 metadata** label, job, canonical request, repository
 input, body marker, packet schema and standalone reader path under the same
-five source files and workflow. In the new route, keep the existing strict
+claimed source and workflow paths. In the new route, keep the existing strict
 default runtime-path grammar. Permit only the three fully spelled,
 case-sensitive canonical names above through a scoped selected-package path
 policy for the `qemu-system-data` DATA/listing/readback join. Do not widen a
