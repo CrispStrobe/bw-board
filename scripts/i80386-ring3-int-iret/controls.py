@@ -7967,7 +7967,7 @@ def setup_v9_controls():
 
 def same_job_actual_controls():
     """Pure first-service boundary controls; all host and guest edges mocked."""
-    p,_=producer_fixture_case()
+    p,case=producer_fixture_case()
     edges=staged_runtime_controls(export_edges=True)
     def runtime_edges(stage_node):
         files,old_probe=runtime_fixture()
@@ -8027,6 +8027,12 @@ def same_job_actual_controls():
         return files,probe,observed
     class Tests(unittest.TestCase):
         def test_connected_first_service_setup_stage_inventory_original(self):
+            rom,manifest=pure_fixture()
+            architectural,_=manufacture(rom,manifest)
+            with v8_manufactured(p,case,architectural) as (
+                    old_env,old_expected,old_originals,old_packet,old_selected,
+                    old_files,old_state):
+                packet_template=dict(old_packet)
             def status_row(name,version,arch='amd64',state='install ok installed',pending=None):
                 lines=['Package: '+name,'Version: '+version,'Architecture: '+arch,'Status: '+state]
                 if pending is not None:lines.append('Triggers-Pending: '+pending)
@@ -8189,6 +8195,72 @@ def same_job_actual_controls():
                     self.assertEqual(selected_handoff['runId'],'123')
                     self.assertEqual(selected_handoff['requestSha256'],pin)
                     self.assertFalse(selected_handoff['actualRunApproved'])
+                    packet=dict(packet_template)
+                    selected_runtime=producer.SameJobRuntimeGate(
+                        candidate_raw,candidate).selected_runtime()
+                    for phase in ('before','after'):
+                        packet['source.'+phase+'.json']=reader.canonical(source)
+                        packet['runtime.'+phase+'.json']=reader.canonical(selected_runtime)
+                    for role in ('js','qemu'):
+                        process=reader.parse(packet[role+'/process.json'])
+                        process['argv']=([selected_runtime['executables']['node']['path'],
+                            '--input-type=module','--eval',reader.JS_DRIVER]
+                            if role=='js' else
+                            reader.qemu_argv(selected_runtime['executables']['qemu']['path']))
+                        packet[role+'/process.json']=reader.canonical(process)
+                    audit=reader.parse(packet['audit.json'])
+                    audit.update(head=source['head'],sourceTree=source['tree'],
+                        workflowSha256=source['files'][reader.WORKFLOW]['sha256'])
+                    audit['roles']=[{'path':name,'bytes':len(packet[name]),
+                        'sha256':sha(packet[name])}
+                        for name in sorted(reader.ROLES-{'audit.json'})]
+                    packet['audit.json']=reader.canonical(audit)
+                    observation=lambda start,end:{'files':{
+                        path:{key:item[key] for key in ('bytes','sha256','mode')}
+                        for path,item in candidate['files'].items()},
+                        'aliases':candidate['aliases'],'platform':candidate['platform'],
+                        'startMonoNs':start,'finishMonoNs':end}
+                    controller_runtime=reader.canonical({
+                        'schema':'bw.ring3.same-job-controller-runtime.v1',
+                        'handoffSha256':sha(output.getvalue()),
+                        'candidateSha256':sha(candidate_raw),
+                        'observations':{
+                            'before-probes':observation(1,2),
+                            'after-probes':observation(3,4),
+                            'after-guests':observation(5,6)},
+                        'pid':reader.parse(packet['resources.json'])['controller']['pid'],
+                        'firstFailure':None,'secondary':[]})
+                    packet_verdict=reader.same_job_actual_packet_predicates(
+                        packet,selected_handoff,controller_runtime)
+                    self.assertTrue(packet_verdict['guestPredicatesObserved'])
+                    handoff_raw=output.getvalue();handoff_pin=sha(handoff_raw)
+                    guest_unit='bw-ring3-actual-guest-v1-123-1.service'
+                    guest_service=reader.canonical({
+                        'schema':'bw.ring3.same-job-guest-service.v1',
+                        'requestSha256':pin,'handoffSha256':handoff_pin,
+                        'guestPacketComposed':True,'firstFailure':None,'secondary':[]})
+                    guest_cleanup=reader.canonical({
+                        'schema':'bw.ring3.same-job-guest-outside-cleanup.v1',
+                        'runId':'123','unit':guest_unit,'serviceExitCode':0,
+                        'sourceAdmission':{'requestSha256':pin,
+                            'eventSha256':sha(event_raw),'handoffSha256':handoff_pin,
+                            'head':actual['head'],'tree':actual['tree']},
+                        'preCensus':absent,'postCensus':absent,
+                        'stop':{'attempted':False,'argv':None,'exitCode':None,
+                            'timedOut':False},'manualCgroupAbsent':True,
+                        'outsideTerminalObserved':True,'firstFailure':None,
+                        'secondary':[],'actualGuestApproved':False})
+                    guest_outer=reader.canonical({
+                        'schema':'bw.ring3.same-job-guest-outer-terminal.v1',
+                        'runId':'123',
+                        'unit':'/sys/fs/cgroup/system.slice/'+guest_unit,
+                        'systemdRunExitCode':0,'outsideCleanupExitCode':0,
+                        'cgroupAfter':'absent'})
+                    guest_verdict=reader.verify_same_job_actual_packet(
+                        packet,handoff_raw,guest_service,guest_cleanup,
+                        guest_outer,controller_runtime)
+                    self.assertTrue(guest_verdict['guestPredicatesObserved'])
+                    self.assertFalse(guest_verdict['actualRunApproved'])
                     drift_files,drift_probe,drift_observed=runtime_edges(stage_node)
                     drift_files.facts['/usr/share/qemu/f001']['sha256']='0'*64
                     drift_originals,drift_passed,drift_safe=reader.same_job_actual_inventory_entry(
