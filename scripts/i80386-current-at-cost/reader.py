@@ -466,4 +466,3 @@ def cli():
     with (context/'independent-reader.json').open('x') as stream:
         json.dump(result,stream,sort_keys=True,allow_nan=False);stream.write('\n')
 if __name__=='__main__':cli()
-
