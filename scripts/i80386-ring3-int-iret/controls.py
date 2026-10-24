@@ -3418,8 +3418,14 @@ def setup_v6_controls(export_sample=False):
             return request
         def test_disabled_v6_workflow_matches_failed_service_topology(self):
             workflow=(HERE.parent.parent/'.github/workflows/i80386-ring3-int-iret.yml').read_text()
-            route=workflow.split('  setup-runtime-inventory-v6:\n',1)[1].split(
-                '  # Separate read-only diagnosis',1)[0]
+            tail=workflow.split('  setup-runtime-inventory-v6:\n',1)[1]
+            lines=[]
+            for line in tail.splitlines(keepends=True):
+                if line.startswith('  ') and line[2:3].isalnum() and line.endswith(':\n'):
+                    break
+                lines.append(line)
+            route=''.join(lines)
+            self.assertTrue(route and route != tail)
             self.assertIn("if: ${{ github.event.action == 'labeled'",route)
             checkout='actions/checkout@11d5960a326750d5838078e36cf38b85af677262'
             node='actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020'
