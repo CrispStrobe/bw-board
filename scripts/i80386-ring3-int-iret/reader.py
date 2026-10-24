@@ -7650,7 +7650,233 @@ def verify_image_diag(shell_raw,service_log,outside_raw,external):
             'runtimeCandidateApproved':False}
 
 
+def v6_consumed_failure_partial(value,record,external):
+    """Check only the seven retained probes; a clipped listing is never parsed."""
+    inventory=value['inventory']
+    keys(inventory,'files aliases probes processes fileMetadata pythonFiles mappedLibraries mapsOriginal emptyPythonSources')
+    need(inventory['pythonFiles']==[] and inventory['mappedLibraries']==[] and inventory['mapsOriginal'] is None,
+         'no later Python/map census or runtime candidate in consumed failure')
+    empty=inventory['emptyPythonSources'];keys(empty,'before')
+    row=empty['before'];keys(row,'path namedBefore heldBefore heldAfter namedAfter bytesRead readHex eof sha256 closeAttempted closeSucceeded firstFailure secondary')
+    path=next(iter(STAGED_EMPTY_PYTHON_SOURCES));info=row['heldBefore']
+    need(row['path']==path and type(row['bytesRead']) is int and row['bytesRead']==0 and
+         row['readHex']=='' and row['eof'] is True and row['sha256']==STAGED_EMPTY_PYTHON_SOURCES[path]['sha256'] and
+         row['closeAttempted'] is True and row['closeSucceeded'] is True and
+         row['firstFailure'] is None and row['secondary']==[] and
+         type(info) is list and len(info)==8 and all(type(x) is int for x in info) and
+         all(0<=x<2**64 for x in info[:7]) and -2**63<=info[7]<2**63 and
+         info[2]==0o100644 and info[3:6]==[0,0,1] and info[6]==0 and
+         all(equal(row[key],info) for key in ('namedBefore','heldAfter','namedAfter')),
+         'only observed pre-inventory typed empty source EOF/stat/close')
+    files=inventory['files'];aliases=inventory['aliases'];metadata=inventory['fileMetadata']
+    need(type(files) is dict and 1<=len(files)<=512 and type(aliases) is dict and len(aliases)<=256 and
+         type(metadata) is dict and set(metadata)==set(files),'finite partial file/alias observations')
+    total=0
+    for path,row in files.items():
+        runtime_path(path);keys(row,'bytes sha256 mode kind');digest(row['sha256'])
+        total+=integer(row['bytes'],1,268435456)
+        need(row['kind'] in ('node-binary','python-binary','qemu-binary','observation-tool',
+             'tool-interpreter','elf-interpreter','shared-library') and type(row['mode']) is int and
+             0<=row['mode']<=0o7777 and row['mode']&0o022==0,'partial pre-listing file kind/mode')
+        info=metadata[path]
+        need(type(info) is list and len(info)==8 and all(type(x) is int for x in info) and
+             all(0<=x<2**64 for x in info[:7]) and -2**63<=info[7]<2**63 and
+             info[0]>0 and info[1]>0 and stat.S_ISREG(info[2]) and
+             stat.S_IMODE(info[2])==row['mode'] and info[6]==row['bytes'],
+             'partial file original metadata/extent')
+    need(total<=1073741824,'partial graph aggregate extent')
+    for path,row in aliases.items():
+        runtime_path(path);keys(row,'linkText target');runtime_path(row['target'])
+        need(type(row['linkText']) is str and 0<len(row['linkText'].encode())<=256 and
+             re.fullmatch('[A-Za-z0-9_.+/-]+',row['linkText']) and
+             resolve_alias(path,aliases)==row['target'] and
+             any(name==row['target'] or name.startswith(row['target']+'/') for name in set(files)|set(aliases)),
+             'finite partial alias joins observed graph')
+    need(all(resolve_alias(path,aliases)==path for path in files),'partial file paths resolved')
+    executables={role:resolve_alias(path,aliases) for role,path in
+        (('node',NODE_STAGE_TARGET),('python','/usr/bin/python3'),('qemu',RUNTIME_QEMU))}
+    for role,path in executables.items():
+        need(path in files and files[path]['kind']==role+'-binary' and
+             (role not in RUNTIME_SELECTED or {key:files[path][key] for key in ('bytes','sha256')}==RUNTIME_SELECTED[role]) and
+             files[path]['mode']&0o111!=0,'selected pre-probe executable identity')
+    for path,kind in (('/usr/bin/ldd','observation-tool'),('/usr/bin/dpkg-query','observation-tool'),
+                      ('/usr/bin/bash','tool-interpreter')):
+        resolved=resolve_alias(path,aliases)
+        need(resolved in files and files[resolved]['kind']==kind and files[resolved]['mode']&0o111!=0,
+             'retained named pre-probe tool')
+    roles=['ldd-shell','ldd-dpkg-query','ldd-node','ldd-python','ldd-qemu','package-version','package-files']
+    probes=inventory['probes'];processes=inventory['processes']
+    need(type(probes) is list and type(processes) is list and
+         [row['role'] for row in probes]==[row['role'] for row in processes]==roles,
+         'exact seven ordered partial probes, no missing or later child')
+    expected_argv=[['/usr/bin/ldd','/usr/bin/bash'],['/usr/bin/ldd','/usr/bin/dpkg-query'],
+        *[['/usr/bin/ldd',executables[role]] for role in ('node','python','qemu')],
+        ['/usr/bin/dpkg-query','-W','-f=${Package}\t${Version}\t${Architecture}\n',*PACKAGE_NAMES],
+        ['/usr/bin/dpkg-query','-L',*PACKAGE_NAMES]]
+    last=record['sourceCommands'][-1]['process']['reapMonoNs'];pids=set();prefix=None
+    for index,(probe,entry,argv) in enumerate(zip(probes,processes,expected_argv)):
+        keys(probe,'role argv environment exitCode stdout stderr');keys(entry,'role process stdout stderr')
+        process=entry['process'];keys(process,'schema argv environment pid pgid parentPid startTicks spawnMonoNs reapMonoNs exitCode signal waitStatus timedOut rusage firstFailure secondary')
+        need(probe['argv']==argv and process['argv']==argv and
+             probe['environment']==process['environment']=={'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'},
+             'fixed partial probe descriptor/environment')
+        need(process['schema']=='bw.ring3.inventory-process.v1' and type(process['exitCode']) is int and
+             process['exitCode']==probe['exitCode']==0 and integer(process['waitStatus'],0,65535)==0 and
+             process['signal'] is None and process['timedOut'] is False and process['secondary']==[],
+             'retained natural zero/reaped metadata child')
+        need(process['firstFailure']==(value['firstFailure'] if index==6 else None),
+             'first stream-cap failure belongs only to final metadata child')
+        pid=integer(process['pid'],1)
+        need(pid not in pids and integer(process['pgid'],1)==pid and
+             process['parentPid']==value['stageBefore']['identity']['pid'] and process['parentPid']!=pid,
+             'fresh distinct child of dropped observer');pids.add(pid);integer(process['startTicks'],1)
+        start=integer(process['spawnMonoNs'],last);end=integer(process['reapMonoNs'],start)
+        need(end-start<=10000000000 and start>=record['setup']['configure']['process']['reapMonoNs'],
+             'ordered bounded probes after setup');last=end
+        keys(process['rusage'],'userSeconds systemSeconds maxRssKiB')
+        for name in ('userSeconds','systemSeconds'):
+            need(type(process['rusage'][name]) in (int,float) and 0<=process['rusage'][name]<=10,
+                 'finite partial child CPU usage')
+        integer(process['rusage']['maxRssKiB'],0,1048576)
+        stdout=prerequisite_original(canonical(entry['stdout']));stderr=prerequisite_original(canonical(entry['stderr']))
+        need(type(probe['stdout']) is str and type(probe['stderr']) is str and
+             stdout==probe['stdout'].encode('utf-8','surrogateescape') and
+             stderr==probe['stderr'].encode('utf-8','surrogateescape') and stderr==b'' and
+             0<len(stdout)<=16384,'exact bounded raw partial process streams')
+        if index<5:
+            need(all(resolve_alias(path,aliases) in files for path in ldd_paths(probe['stdout'])),
+                 'complete earlier ldd rows join partial files')
+        elif index==5:
+            rows=[line.split('\t') for line in probe['stdout'].splitlines()]
+            need(len(rows)==5 and all(len(row)==3 for row in rows) and
+                 {row[0] for row in rows}==set(PACKAGE_NAMES) and
+                 ['qemu-system-x86','1:8.2.2+ds-0ubuntu1.18','amd64'] in rows,
+                 'earlier package version census')
+        else:
+            prefix=stdout;selected=external['clippedStdout'];keys(selected,'bytes sha256')
+            need(integer(selected['bytes'],16384,16384)==len(prefix) and digest(selected['sha256'])==sha(prefix),
+                 'independently selected exact cap-clipped stdout prefix')
+    need(equal(metadata[NODE_STAGE_TARGET],value['stageAfter']['files']['node']['before']),
+         'partial Node metadata joins finite staged readback')
+    return {'bytes':len(prefix),'sha256':sha(prefix)}
+
+
+def v6_consumed_failure_audit(raw,external,outer_raw,cleanup_raw,shell_raw):
+    """Negative-only original audit; external metadata is a separate trust input."""
+    keys(external,'schema requestSha256 runId attempt head tree workflowSha workflowFileSha256 jobId jobName conclusion logBytes logSha256 outerBytes outerSha256 cleanupBytes cleanupSha256 shellBytes shellSha256 invoker clippedStdout artifactId archiveBytes archiveSha256')
+    need(external['schema']=='bw.ring3.consumed-v6-failure-expectation.v1' and
+         external['conclusion']=='failure' and type(external['attempt']) is int and external['attempt']==1 and
+         external['jobName']=='setup-runtime-inventory-v6','dedicated consumed failed v6 selection')
+    integer(external['jobId'],1);integer(external['artifactId'],1);integer(external['archiveBytes'],1,8<<20)
+    digest(external['archiveSha256'])
+    need(type(external['runId']) is str and re.fullmatch('[1-9][0-9]{0,19}',external['runId']),
+         'selected official failed run identity')
+    for name,size in (('head',40),('tree',40),('workflowSha',40),('workflowFileSha256',64),('requestSha256',64)):
+        digest(external[name],size)
+    need(type(external['invoker']) is list and len(external['invoker'])==2 and
+         all(type(x) is int and 0<x<2**31 for x in external['invoker']),'selected failed invoker')
+    for name,body,cap in (('log',raw,8<<20),('outer',outer_raw,4096),('cleanup',cleanup_raw,16384),('shell',shell_raw,4096)):
+        need(type(body) is bytes and integer(external[name+'Bytes'],1,cap)==len(body) and
+             digest(external[name+'Sha256'])==sha(body),'exact externally selected '+name+' original')
+    shell=decode_setup_v6_shell(shell_raw,external)
+    outer=parse_setup_v6_outer(outer_raw);keys(outer,'schema runId unit systemdRunExitCode outsideCleanupExitCode cgroupAfter')
+    need(outer_raw==canonical(outer) and outer['schema']=='bw.ring3.setup-outer-terminal.v6' and
+         outer['runId']==external['runId'] and outer['unit']==
+         '/sys/fs/cgroup/system.slice/bw-ring3-setup-v6-'+external['runId']+'-1.service' and
+         type(outer['systemdRunExitCode']) is int and outer['systemdRunExitCode']==1 and
+         type(outer['outsideCleanupExitCode']) is int and outer['outsideCleanupExitCode']==1 and
+         outer['cgroupAfter']=='absent','exact failed outer1/cleanup1 and absent-cgroup observations')
+    cleanup=setup_v6_cleanup_original(cleanup_raw,external)
+    absent={'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None}
+    need(cleanup['serviceExitCode']==1 and cleanup['sourceAdmission'] is not None and
+         cleanup['preCensus']==cleanup['postCensus']==absent and cleanup['cgroupTerminal']=='absent' and
+         cleanup['unitCensus'] is None and cleanup['stop']=={'attempted':False,'argv':None,'exitCode':None,'timedOut':False} and
+         cleanup['policy'] is None and cleanup['action']=='not-needed' and cleanup['firstFailure']==
+             {'phase':'v6-outer-client','name':'ValueError','message':'bounded outer setup client exit 1'} and
+         cleanup['secondary']==[] and cleanup['setupApproved'] is False,'known failed-service absent outside census and retained outer-client failure')
+    originals=decode_setup_v6_log(raw);packet_raw=originals['runtime.setup-inventory.json']
+    value=parse_setup_v6_outer(packet_raw)
+    keys(value,'schema stageBefore stageAfter parent inventory candidate firstFailure secondary publicationSafe actualGuestApproved completeHostConfiguration')
+    need(packet_raw==canonical(value) and value['schema']=='bw.ring3.setup-runtime-inventory-original.v6' and
+         value['candidate'] is None and value['firstFailure']=={'phase':'inventory-stream','name':'Refusal',
+             'message':'inventory original stdout stream cap'} and value['secondary']==[] and
+         value['publicationSafe'] is True and value['actualGuestApproved'] is False and
+         value['completeHostConfiguration'] is False,'complete known stream-cap failure, no runtime candidate')
+    request=None
+    for stage in (value['stageBefore'],value['stageAfter']):
+        current,selected,observed=verify_setup_v6_stage_observation(stage,external)
+        if request is None:request,source,record=current,selected,observed
+        else:need(equal(current,request) and equal(selected,source) and equal(observed,record),
+                  'same finite source12/request/record before and after failure')
+    need(all(equal(value['stageBefore'][key],value['stageAfter'][key]) for key in
+         ('record','files','directories','source')),'finite stage readback across failed inventory')
+    request_raw=prerequisite_original(canonical(record['request']));event_raw=prerequisite_original(canonical(record['event']))
+    need(request_raw==originals['setup.request.json'] and event_raw==originals['setup.event.json'] and
+         source['files'][WORKFLOW]['sha256']==external['workflowFileSha256'] and
+         equal(cleanup['sourceAdmission']['source'],source) and cleanup['sourceAdmission']['eventSha256']==sha(event_raw),
+         'exact raw request/event/source12/executing-workflow and outside joins')
+    statuses=decode_setup_v6_status_log(raw);pre=record['setup']['preflight'];post=record['setup']['postStatus']
+    need(equal(statuses['pre']['meta'],pre['statusOriginal']) and equal(statuses['post']['meta'],post['statusOriginal']),
+         'separately retained raw status joins complete setup observations')
+    before=setup_v6_status_rows(statuses['pre']['raw']);after=setup_v6_status_rows(statuses['post']['raw'])
+    need(len(before)==pre['statusRecords']==1211 and len(after)==post['records'] and
+         not any(name in {key[0] for key in before} for name,*_ in SETUP_V6_PACKAGES),
+         'independent raw status census and selected pre-absence')
+    setup_v6_status_delta(before,after)
+    selected={name:None if (name,arch) not in after else {key:after[name,arch].get(key) for key in
+        ('Package','Version','Architecture','Status','Triggers-Pending','Triggers-Awaited')}
+        for name,version,arch,*_ in SETUP_V6_PACKAGES}
+    pending={name+':'+arch:{'status':row.get('Status'),'pending':row.get('Triggers-Pending'),
+        'awaited':row.get('Triggers-Awaited')} for (name,arch),row in after.items() if
+        row.get('Status') in ('install ok triggers-pending','install ok triggers-awaited') or
+        row.get('Triggers-Pending') is not None or row.get('Triggers-Awaited') is not None}
+    need(equal(selected,post['selected']) and equal(pending,post['pendingHostTriggers']),
+         'independent raw selected/pending status projection')
+    need(record['setup']['preflight']['imageFields']==setup_v6_expected_forwarded(shell['fields']),
+         'retained service image fields join shell forwarding')
+    parent=value['parent'];keys(parent,'meta controls alreadyEnabled')
+    def finite_meta(info,directory):
+        return (type(info) is list and len(info)==8 and all(type(x) is int for x in info) and
+            all(0<=x<2**64 for x in info[:7]) and -2**63<=info[7]<2**63 and
+            (stat.S_ISDIR(info[2]) if directory else stat.S_ISREG(info[2])) and
+            info[3:5]==[0,0] and info[2]&0o022==0)
+    need(finite_meta(parent['meta'],True) and type(parent['controls']) is dict and
+         set(parent['controls'])=={'cgroup.controllers','cgroup.subtree_control'},'finite readonly parent availability')
+    for row in parent['controls'].values():
+        keys(row,'meta raw');need(finite_meta(row['meta'],False) and type(row['raw']) is str and
+             len(row['raw'].encode('ascii'))<=4096,'bounded readonly control availability')
+    need(parent['alreadyEnabled'] is all({'cpu','memory','pids'}<=set(row['raw'].split()) for row in
+         parent['controls'].values()),'truthful parent availability, no permission inference')
+    clipped=v6_consumed_failure_partial(value,record,external)
+    return {'schema':'bw.ring3.consumed-v6-failure-audit.v1','failedAttemptRetained':True,
+        'failurePacketComplete':True,'partialProbeCount':7,'firstFailure':value['firstFailure'],'secondary':[],
+        'clippedStdout':clipped,'packageListingComplete':False,'rawStatusBytesIndependentlyVerified':True,
+        'finiteStageReadbackObserved':True,'sourceHead':request['head'],'sourceTree':request['tree'],
+        'runId':external['runId'],'jobId':external['jobId'],'workflowSha':external['workflowSha'],
+        'externallySelectedArtifact':{key:external[key] for key in ('artifactId','archiveBytes','archiveSha256')},
+        'retainedLogBytes':len(raw),'retainedLogSha256':sha(raw),'outerClientExitCode':1,
+        'outsideCgroupAfter':'absent','outsideCleanupExitCode':1,'outsideFirstFailure':cleanup['firstFailure'],
+        'officialJobAuthenticated':False,'ciArchiveBytesIndependentlyVerified':False,
+        'imageFieldsAuthenticated':False,'immutableImageIdentityEstablished':False,
+        'setupObserved':False,'setupApproved':False,'runtimeCandidateApproved':False,'candidateReviewed':False,
+        'actualGuestApproved':False,'actualRunApproved':False,'completeHostConfiguration':False,
+        'continuousOwnershipEstablished':False}
+
+
 def main():
+    if sys.argv[1:2]==['--consumed-v6-failure']:
+        parser=argparse.ArgumentParser(description='Negative-only consumed v6 original audit',allow_abbrev=False)
+        for name in ('consumed-v6-failure','external-admission','outer-resource-original',
+                     'outside-cleanup-original','shell-image-original'):
+            parser.add_argument('--'+name,required=True)
+        need(len(sys.argv)==11,'exact consumed v6 failure original CLI')
+        args=parser.parse_args()
+        def read(path,cap):
+            with Path(path).open('rb') as stream:return stream.read(cap+1)
+        result=v6_consumed_failure_audit(read(args.consumed_v6_failure,8<<20),
+            parse_setup_v6_outer(read(args.external_admission,1<<20)),read(args.outer_resource_original,4096),
+            read(args.outside_cleanup_original,16384),read(args.shell_image_original,4096))
+        print(json.dumps(result,sort_keys=True));return
     if sys.argv[1:2]==['--image-env-diagnostic-log']:
         parser=argparse.ArgumentParser(description='Independent image environment original-only reader',allow_abbrev=False)
         for name in ('image-env-diagnostic-log','shell-original','outside-original','external-admission'):

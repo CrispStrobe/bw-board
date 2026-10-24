@@ -4937,8 +4937,251 @@ def image_env_diagnostic_controls():
                       'installer':False,'guest':False,'pass':True}))
 
 
+def consumed_v6_failure_fixture():
+    """Reuse only the existing manufactured fixture, with all host edges inert.
+
+    The producer is imported by the existing pure harness, never by the reader.
+    Stop at its first positive-reader call, before that control's mutation loop.
+    No official original, executable, kernel operation or guest is a fixture.
+    """
+    class Captured(BaseException):pass
+    snapshot={}
+    def capture(*args):
+        snapshot.update(args=copy.deepcopy(args),node=copy.deepcopy(reader.RUNTIME_SELECTED['node']),
+            status=(reader.SETUP_V6_STATUS_SHA,reader.SETUP_V6_STATUS_BYTES))
+        raise Captured()
+    def selected(runner,suite):
+        case=next(case for case in suite if case._testMethodName=='test_v6_complete_original_shell_and_reader')
+        case.test_v6_complete_original_shell_and_reader()
+    with patch.object(reader,'verify_setup_v6_log',capture),patch.object(unittest.TextTestRunner,'run',selected),\
+         patch.object(subprocess,'Popen',side_effect=AssertionError('no real process')),\
+         patch.object(subprocess,'run',side_effect=AssertionError('no real process')),\
+         patch.object(subprocess,'check_output',side_effect=AssertionError('no real process')):
+        try:staged_runtime_controls()
+        except Captured:pass
+    assert set(snapshot)=={'args','node','status'},'manufactured v6 fixture captured'
+    return snapshot
+
+
+class ConsumedV6FailureControls(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):cls.fixture=consumed_v6_failure_fixture()
+
+    def setUp(self):
+        self.patches=contextlib.ExitStack();self.addCleanup(self.patches.close)
+        self.patches.enter_context(patch.dict(reader.RUNTIME_SELECTED,node=self.fixture['node']))
+        self.patches.enter_context(patch.object(reader,'SETUP_V6_STATUS_SHA',self.fixture['status'][0]))
+        self.patches.enter_context(patch.object(reader,'SETUP_V6_STATUS_BYTES',self.fixture['status'][1]))
+        self.args=list(copy.deepcopy(self.fixture['args']))
+        self.originals=reader.decode_setup_v6_log(self.args[0])
+        self.packet=reader.parse_setup_v6_outer(self.originals['runtime.setup-inventory.json'])
+        self.status_lines=b''.join(line+b'\n' for line in self.args[0].splitlines()
+            if reader.SETUP_V6_STATUS_MARKER in line)
+        value=self.packet;inventory=value['inventory']
+        value['candidate']=None
+        value['firstFailure']={'phase':'inventory-stream','name':'Refusal','message':'inventory original stdout stream cap'}
+        inventory.pop('candidate');inventory['probes']=inventory['probes'][:7];inventory['processes']=inventory['processes'][:7]
+        inventory.update(pythonFiles=[],mappedLibraries=[],mapsOriginal=None,
+            emptyPythonSources={'before':inventory['emptyPythonSources']['before']})
+        inventory['files']={path:row for path,row in inventory['files'].items() if row['kind'] not in
+            ('python-stdlib','qemu-data','tcg-module')}
+        inventory['fileMetadata']={path:row for path,row in inventory['fileMetadata'].items() if path in inventory['files']}
+        # Root markers, blank package separators and a clipped last line remain
+        # opaque bytes. They never become a successful canonical path census.
+        prefix=(b'/.\n/usr\n\n/.'+b'/authored'*(16384//9+1))[:16384]
+        inventory['probes'][-1]['stdout']=prefix.decode()
+        inventory['processes'][-1]['stdout']=self.wrap(prefix)
+        inventory['processes'][-1]['process']['firstFailure']=copy.deepcopy(value['firstFailure'])
+        self.args[1].update(schema='bw.ring3.consumed-v6-failure-expectation.v1',conclusion='failure',
+            clippedStdout={'bytes':len(prefix),'sha256':sha(prefix)},artifactId=789,archiveBytes=12345,archiveSha256='1'*64)
+        outer=reader.parse(self.args[2]);outer.update(systemdRunExitCode=1,outsideCleanupExitCode=1);self.set_raw(2,'outer',reader.canonical(outer))
+        cleanup=reader.parse(self.args[3]);cleanup.update(serviceExitCode=1,firstFailure=
+            {'phase':'v6-outer-client','name':'ValueError','message':'bounded outer setup client exit 1'})
+        self.set_raw(3,'cleanup',reader.canonical(cleanup))
+        self.refresh()
+
+    @staticmethod
+    def wrap(raw):return {'bytes':len(raw),'sha256':sha(raw),'base64':base64.b64encode(raw).decode()}
+
+    def set_raw(self,index,role,raw):
+        self.args[index]=raw;self.args[1].update({role+'Bytes':len(raw),role+'Sha256':sha(raw)})
+
+    def refresh(self):
+        self.originals['runtime.setup-inventory.json']=reader.canonical(self.packet)
+        out=io.BytesIO();out.write(self.status_lines)
+        reader.emit_setup_v6_inventory(self.originals,out.write,out.flush)
+        self.set_raw(0,'log',out.getvalue())
+
+    def record_change(self,mutate):
+        record=reader.parse(reader.prerequisite_original(reader.canonical(self.packet['stageBefore']['record'])))
+        mutate(record);raw=reader.canonical(record)
+        for stage in (self.packet['stageBefore'],self.packet['stageAfter']):
+            stage['record']=self.wrap(raw);file=stage['files']['installation.original.json']
+            file.update(bytes=len(raw),sha256=sha(raw),prefix=raw[:4].hex())
+            for key in ('before','after','namedAfter'):file[key][6]=len(raw)
+        self.refresh()
+
+    def grade(self):return reader.v6_consumed_failure_audit(*self.args)
+
+    def refused(self):
+        self.refresh()
+        with self.assertRaises((ValueError,UnicodeError)):self.grade()
+
+    def test_known_negative_retained_with_all_authority_false(self):
+        verdict=self.grade()
+        self.assertTrue(verdict['failedAttemptRetained']);self.assertTrue(verdict['failurePacketComplete'])
+        self.assertEqual(verdict['partialProbeCount'],7)
+        for key in ('packageListingComplete','setupObserved','setupApproved','runtimeCandidateApproved',
+                    'candidateReviewed','actualGuestApproved','actualRunApproved','completeHostConfiguration',
+                    'officialJobAuthenticated','ciArchiveBytesIndependentlyVerified','continuousOwnershipEstablished'):
+            self.assertIs(verdict[key],False,key)
+        self.assertEqual(verdict['externallySelectedArtifact']['artifactId'],789)
+
+    def test_prefix_changed_even_coherent_internal_and_delivery_hashes_refused(self):
+        row=self.packet['inventory']['processes'][-1];raw=reader.prerequisite_original(reader.canonical(row['stdout']))
+        changed=b'X'+raw[1:];row['stdout']=self.wrap(changed)
+        self.packet['inventory']['probes'][-1]['stdout']=changed.decode()
+        self.refused()
+
+    def test_prefix_extent_hash_and_wrapper_mutations_refused(self):
+        for mutation in ('short','hash','wrapper'):
+            with self.subTest(mutation=mutation):
+                original=copy.deepcopy(self.packet)
+                if mutation=='short':
+                    row=self.packet['inventory']['processes'][-1];raw=b'prefix'
+                    row['stdout']=self.wrap(raw);self.packet['inventory']['probes'][-1]['stdout']=raw.decode()
+                elif mutation=='hash':self.args[1]['clippedStdout']['sha256']='0'*64
+                else:self.packet['inventory']['processes'][-1]['stdout']['bytes']-=1
+                self.refused();self.packet=original
+                self.args[1]['clippedStdout']=copy.deepcopy(self.fixture_prefix())
+
+    def fixture_prefix(self):
+        row=self.packet['inventory']['processes'][-1]['stdout']
+        return {key:row[key] for key in ('bytes','sha256')}
+
+    def test_source_workflow_and_external_selection_mismatch(self):
+        for key,value in (('head','c'*40),('tree','c'*40),('workflowSha','c'*40),
+                          ('workflowFileSha256','0'*64),('requestSha256','0'*64),('jobName','other')):
+            with self.subTest(key=key):
+                old=self.args[1][key];self.args[1][key]=value
+                with self.assertRaises(reader.Refusal):self.grade()
+                self.args[1][key]=old
+        name=next(iter(self.packet['stageAfter']['source']))
+        self.packet['stageAfter']['source'][name]['sha256']='0'*64;self.refused()
+
+    def test_event_body_actor_and_raw_join_refused(self):
+        event=reader.parse(self.originals['setup.event.json']);event['sender']['login']='OtherOwner'
+        raw=reader.canonical(event);self.originals['setup.event.json']=raw
+        cleanup=reader.parse(self.args[3]);cleanup['sourceAdmission']['eventSha256']=sha(raw)
+        self.set_raw(3,'cleanup',reader.canonical(cleanup))
+        self.record_change(lambda record:record.update(event=self.wrap(raw),
+            eventIdentity=dict(record['eventIdentity'],st_size=len(raw))))
+        with self.assertRaises(reader.Refusal):self.grade()
+
+    def test_raw_status_baseline_delta_refused_after_all_record_hashes_refreshed(self):
+        statuses=reader.decode_setup_v6_status_log(self.args[0])
+        changed=statuses['post']['raw'].replace(b'Package: installed-0001\nVersion: 1\n',
+            b'Package: installed-0001\nVersion: 2\n')
+        self.assertNotEqual(changed,statuses['post']['raw'])
+        lines=[];meta=None
+        for role,raw in (('pre',statuses['pre']['raw']),('post',changed)):
+            packed=reader.zlib.compress(raw,9)
+            row={'schema':'bw.ring3.setup-status-original.v6','role':role,'rawBytes':len(raw),
+                'rawSha256':sha(raw),'packedBytes':len(packed),'packedSha256':sha(packed),
+                'encoding':'zlib+base64','packed':base64.b64encode(packed).decode()}
+            lines.append(reader.SETUP_V6_STATUS_MARKER+reader.canonical(row))
+            if role=='post':meta={'role':role,'bytes':len(raw),'sha256':sha(raw),
+                'packedBytes':len(packed),'packedSha256':sha(packed)}
+        self.status_lines=b''.join(lines)
+        def change(record):record['setup']['postStatus'].update(sha256=sha(changed),bytes=len(changed),statusOriginal=meta)
+        self.record_change(change)
+        with self.assertRaises(reader.Refusal):self.grade()
+
+    def test_stage_readback_identity_and_partial_graph_mutations(self):
+        for path in ('stage','inode','hash','later','empty-after'):
+            with self.subTest(path=path):
+                original=copy.deepcopy(self.packet)
+                if path=='stage':self.packet['stageAfter']['stageObserved']=False
+                elif path=='inode':self.packet['stageAfter']['files']['node']['before'][1]+=1
+                elif path=='hash':self.packet['inventory']['files'][reader.NODE_STAGE_TARGET]['sha256']='0'*64
+                elif path=='later':self.packet['inventory']['pythonFiles']=['/usr/lib/python3.12/ssl.py']
+                else:
+                    empty=self.packet['inventory']['emptyPythonSources'];empty['after']=copy.deepcopy(empty['before'])
+                self.refused();self.packet=original
+
+    def test_child_order_first_failure_and_terminal_mutations(self):
+        for name in ('order','missing','first','secondary','child','parent','wait','window','argv','environment'):
+            with self.subTest(name=name):
+                old=copy.deepcopy(self.packet);inv=self.packet['inventory'];last=inv['processes'][-1]['process']
+                if name=='order':inv['probes'][0],inv['probes'][1]=inv['probes'][1],inv['probes'][0]
+                elif name=='missing':inv['probes'].pop();inv['processes'].pop()
+                elif name=='first':self.packet['firstFailure']['phase']='inventory-timeout'
+                elif name=='secondary':self.packet['secondary']=[copy.deepcopy(self.packet['firstFailure'])]
+                elif name=='child':last['firstFailure']=None
+                elif name=='parent':last['parentPid']+=1
+                elif name=='wait':last['waitStatus']=256
+                elif name=='window':last['spawnMonoNs']=0
+                elif name=='argv':last['argv']=['/usr/bin/dpkg-query','-L','other']
+                else:last['environment']['HOME']='/tmp'
+                self.refused();self.packet=old
+
+    def test_outer_cleanup_and_shell_mutations(self):
+        for index,role,key,value in ((2,'outer','systemdRunExitCode',124),(2,'outer','outsideCleanupExitCode',0),
+             (2,'outer','cgroupAfter','present'),(3,'cleanup','serviceExitCode',0),
+             (3,'cleanup','setupApproved',True),(3,'cleanup','action','removed'),
+             (3,'cleanup','firstFailure',None),(3,'cleanup','secondary',[{'phase':'unknown'}])):
+            with self.subTest(key=key):
+                old=self.args[index];row=reader.parse(old);row[key]=value;self.set_raw(index,role,reader.canonical(row))
+                with self.assertRaises(reader.Refusal):self.grade()
+                self.set_raw(index,role,old)
+        row=reader.parse(self.args[4]);row['fields']['ImageVersion']['value']='other'
+        self.set_raw(4,'shell',reader.canonical(row))
+        with self.assertRaises(reader.Refusal):self.grade()
+
+    def test_success_and_truncated_delivery_cannot_enter_negative_mode(self):
+        args=list(copy.deepcopy(self.fixture['args']))
+        args[1].update(schema=self.args[1]['schema'],clippedStdout=self.args[1]['clippedStdout'],
+            artifactId=789,archiveBytes=12345,archiveSha256='1'*64,conclusion='failure')
+        for index,role,key in ((2,'outer','systemdRunExitCode'),(3,'cleanup','serviceExitCode')):
+            row=reader.parse(args[index]);row[key]=1
+            if role=='outer':row['outsideCleanupExitCode']=1
+            else:row['firstFailure']={'phase':'v6-outer-client','name':'ValueError','message':'bounded outer setup client exit 1'}
+            args[index]=reader.canonical(row)
+            args[1].update({role+'Bytes':len(args[index]),role+'Sha256':sha(args[index])})
+        with self.assertRaises(reader.Refusal):reader.v6_consumed_failure_audit(*args)
+        self.set_raw(0,'log',self.args[0][:-4096])
+        with self.assertRaises(ValueError):self.grade()
+
+    def test_old_failed_original_validator_keeps_refusal(self):
+        old=copy.deepcopy(self.args[1]);old['schema']='bw.ring3.setup-inventory-expectation.v6'
+        for key in ('clippedStdout','artifactId','archiveBytes','archiveSha256'):old.pop(key)
+        with self.assertRaises(reader.Refusal):reader.verify_setup_v6_failure_log(self.args[0],old,*self.args[2:])
+        with self.assertRaises(reader.Refusal):reader.v6_consumed_failure_audit(self.args[0],old,*self.args[2:])
+
+    def test_new_cli_reads_only_supplied_bytes_and_never_calls_live_edges(self):
+        paths=dict(zip(('log','external','outer','cleanup','shell'),
+            (self.args[0],reader.canonical(self.args[1]),*self.args[2:])))
+        argv=['reader.py','--consumed-v6-failure','log','--external-admission','external',
+            '--outer-resource-original','outer','--outside-cleanup-original','cleanup','--shell-image-original','shell']
+        with patch.object(reader.sys,'argv',argv),patch.object(reader.sys,'stdout',io.StringIO()) as output,\
+             patch.object(reader.Path,'open',lambda path,*a,**kw:io.BytesIO(paths[str(path)])),\
+             patch.object(reader,'setup_v6_inventory_entry',side_effect=AssertionError('no live inventory')),\
+             patch.object(reader,'inventory_probe',side_effect=AssertionError('no metadata child')),\
+             patch.object(reader.os,'open',side_effect=AssertionError('no kernel source observation')),\
+             patch.object(reader.subprocess,'Popen',side_effect=AssertionError('no subprocess')):
+            reader.main();self.assertTrue(json.loads(output.getvalue())['failedAttemptRetained'])
+
+
+def consumed_v6_failure_controls():
+    result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(ConsumedV6FailureControls))
+    assert result.wasSuccessful(),'negative-only consumed v6 controls failed'
+    print(json.dumps({'testOnly':True,'tests':result.testsRun,'network':False,'installer':False,
+        'nativeProcess':False,'guest':False,'pass':True}))
+
+
 if __name__=='__main__':
-    if sys.argv[1:]==['--image-env-diagnostic-only']:image_env_diagnostic_controls()
+    if sys.argv[1:]==['--consumed-v6-failure-only']:consumed_v6_failure_controls()
+    elif sys.argv[1:]==['--image-env-diagnostic-only']:image_env_diagnostic_controls()
     elif sys.argv[1:]==['--setup-v6-only']:setup_v6_controls()
     elif sys.argv[1:]==['--setup-v7-only']:setup_v7_controls()
     elif sys.argv[1:]==['--setup-v5-only']:setup_v5_controls()

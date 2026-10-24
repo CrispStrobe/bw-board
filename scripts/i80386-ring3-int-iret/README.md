@@ -1476,3 +1476,35 @@ the consumed v4/v5/v6 entry points. This duplicates bounded setup checks and
 creates maintenance work; a future claimed lane may consolidate versions
 only after exact v7 originals and affected guest qualification. This source
 candidate does not alter historical packet decoders or their thresholds.
+
+### Consumed v6 failure audit
+
+The separate `reader.py --consumed-v6-failure` entry retains only a complete
+failed v6 packet whose seventh probe reached the 16 KiB stdout cap. It checks
+source12, the raw request/event, executing-workflow selection, staged files
+before and after, both raw package-status originals and their exact allowed
+change, the seven ordered child originals, outer exit 1 and absent outside
+cgroup. The clipped listing remains an opaque prefix. No complete package path
+union, runtime graph, setup approval or guest qualification follows from it.
+The existing v6 success/failure entries and their refusals remain unchanged.
+
+Use the same `--external-admission`, `--outer-resource-original`,
+`--outside-cleanup-original` and `--shell-image-original` arguments as the old
+v6 reader, replacing its first flag with `--consumed-v6-failure`. The new closed
+external schema is `bw.ring3.consumed-v6-failure-expectation.v1`. In addition to
+the old selection fields it requires independently selected
+`clippedStdout: {bytes, sha256}`, `artifactId`, `archiveBytes` and
+`archiveSha256`. Packet and delivery checksums cannot replace that prefix pin.
+The report identifies the externally selected archive; it does not authenticate
+GitHub metadata or read/check the ZIP. The operator must separately bind the
+owner's official event, run, job, artifact identity and exact extracted role
+copies to that archive. All approval and official-authentication flags remain
+false, including when this negative audit completes.
+
+Run `/usr/bin/python3 -B scripts/i80386-ring3-int-iret/controls.py
+--consumed-v6-failure-only` for focused pure controls. They reuse the existing
+manufactured fixture under mocked process/kernel/package edges; the standalone
+reader imports no producer and the controls use no consumed original as a
+fixture. Coherent prefix and raw-status mutations refresh their internal and
+delivery hashes and still refuse. This audit does not consume a new hosted
+event or repeat any child or guest execution.
