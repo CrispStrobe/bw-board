@@ -9861,26 +9861,43 @@ def same_job_actual_controls():
                     (1,0,False))
                 self.assertEqual(history['firstFailure'],refused['firstFailure'])
 
-        def test_v2_inactive_source_and_workflow_before_host_edges(self):
-            self.assertIs(p.SAME_JOB_ACTUAL_V2_ENABLED,False)
-            self.assertIs(reader.SAME_JOB_ACTUAL_V2_READER_ENABLED,False)
+        def test_v2_active_source_and_patched_inactive_before_host_edges(self):
+            self.assertIs(p.SAME_JOB_ACTUAL_V2_ENABLED,True)
+            self.assertIs(reader.SAME_JOB_ACTUAL_V2_READER_ENABLED,True)
             self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,False)
             workflow=(HERE.parent.parent/'.github/workflows/i80386-ring3-int-iret.yml').read_text()
             v2=workflow.split('  ring3-same-job-actual-v2:\n',1)[1].split(
                 '  ring3-same-job-actual-v1:\n',1)[0]
             v1=workflow.split('  ring3-same-job-actual-v1:\n',1)[1].split(
                 '  host-baseline-v1:\n',1)[0]
-            self.assertIn("if: ${{ false && github.event.action == 'labeled'",v2)
+            self.assertIn("if: ${{ github.event.action == 'labeled'",v2)
             self.assertIn("if: ${{ false && github.event.action == 'labeled'",v1)
             for mode in ('same-job-setup-v2','same-job-cleanup-v2',
                          'same-job-image-shell-v2','same-job-guest-service-v2'):
-                with self.subTest(mode=mode),patch.object(p,'setup_v8_entry',
+                with self.subTest(mode=mode),patch.object(p,'SAME_JOB_ACTUAL_V2_ENABLED',False),\
+                    patch.object(p,'setup_v8_entry',
                     side_effect=AssertionError('no setup host edge')) as setup,\
                     patch.object(p,'same_job_guest_service',
                     side_effect=AssertionError('no guest host edge')) as guest,\
                     patch.object(p.sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
                     self.assertEqual(p.dispatch_cli(['--'+mode],{}),1)
                     setup.assert_not_called();guest.assert_not_called()
+            invalid=SimpleNamespace(facts={'eventIdentity':{},'sourceCommands':[],
+                'source':None},event=lambda:b'{}\n',
+                source=lambda selected:(_ for _ in ()).throw(
+                    AssertionError('invalid event reached source')))
+            with patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+                 patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+                 patch.object(p,'HostedEnvelopeInstaller',return_value=invalid),\
+                 patch.object(p,'SetupV8Host',
+                    side_effect=AssertionError('invalid admission reached host')) as host,\
+                 patch.object(p,'same_job_guest_service',
+                    side_effect=AssertionError('invalid admission reached guest')) as guest,\
+                 patch.object(p.sys,'stdout',SimpleNamespace(buffer=io.BytesIO())),\
+                 patch.object(p.sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
+                self.assertEqual(p.dispatch_cli(['--same-job-setup-v2'],{}),1)
+                self.assertEqual(p.dispatch_cli(['--same-job-guest-service-v2'],{}),1)
+                host.assert_not_called();guest.assert_not_called()
 
         def test_actual_collector_exact_role_and_finite_terminal(self):
             class Child:

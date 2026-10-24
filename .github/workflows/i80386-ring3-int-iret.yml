@@ -14,9 +14,9 @@ concurrency:
   group: ring3-source-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
   cancel-in-progress: false
 jobs:
-  # Distinct V2 actual route; inactive until reviewed metadata selection.
+  # Distinct V2 actual route; one event still requires external admission.
   ring3-same-job-actual-v2:
-    if: ${{ false && github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-same-job-actual-v2' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
+    if: ${{ github.event.action == 'labeled' && github.event.label.name == 'x86-ring3-same-job-actual-v2' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.repo.fork == false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:

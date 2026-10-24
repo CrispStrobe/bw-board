@@ -10574,7 +10574,7 @@ v9_process=v8_process
 # The authored actual route has a distinct request/event boundary. This
 # comparison input is not a copy of the historical candidate or guest approval.
 SAME_JOB_ACTUAL_READER_ENABLED=True
-SAME_JOB_ACTUAL_V2_READER_ENABLED=False
+SAME_JOB_ACTUAL_V2_READER_ENABLED=True
 SAME_JOB_ACTUAL_REVIEWED_GRAPH={'bytes':103043,
     'sha256':'72407985d3ef62725137a05ea6c609ff81f7095bdeb0147a9f703628a0f9cdab',
     'selectedFiles':83,'selectedAliases':8,'selectedMismatches':0}

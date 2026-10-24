@@ -6715,6 +6715,6 @@ exact-head checks, one distinct owner-selected event and one independent
 original-only audit. This claim authorizes source work, not another V1 attempt
 or a guest result.
 
-### Inactive V2 source checkpoint — 2026-10-24
+### Selectable V2 source checkpoint — 2026-10-24
 
-The claimed eight-path source candidate now contains a distinct V2 route and independent reader, with both source flags and the workflow job guard false. The spent V1 execution guard is closed; its selected failure and original reader outcome remain historical. Connected pure controls use manufactured OS, package, cgroup and guest edges to exercise a retained first extra member, final strict census, genuine CLI handoff into the producer parser, serial controller/finalizer, and independent twenty-role and official-envelope readers. These tests establish source wiring only. Exact-head hosted checks, a new canonical request and separate one-shot event admission remain pending.
+The claimed eight-path source candidate now contains a distinct V2 route and independent reader, with its source and workflow guards enabled. The spent V1 execution guard is closed; its selected failure and original reader outcome remain historical. Connected pure controls use manufactured OS, package, cgroup and guest edges to exercise a retained first extra member, final strict census, genuine CLI handoff into the producer parser, serial controller/finalizer, and independent twenty-role and official-envelope readers. These tests establish source wiring only. Exact-head hosted checks, a new canonical request and separate one-shot event admission remain pending; no V2 event or guest result has been observed.
