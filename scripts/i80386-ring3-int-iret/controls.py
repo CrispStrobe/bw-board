@@ -4603,10 +4603,11 @@ def setup_v7_controls(export_sample=False):
             log=io.BytesIO()
             pre_meta=p.emit_setup_v7_status('pre',pre,log.write,log.flush)
             post_meta=p.emit_setup_v7_status('post',post,log.write,log.flush)
-            request_raw=b'{"syntheticRequest":true}\n'
+            request=self.request()
+            request_raw=reader.canonical(request)
             event_raw=b'{"syntheticEvent":true}\n'
-            workflow_pin='a'*64
-            source={'files':{reader.WORKFLOW:{'sha256':workflow_pin}}}
+            source=reader.parse(reader.prerequisite_original(reader.canonical(request['source'])))
+            workflow_pin=source['files'][reader.WORKFLOW]['sha256']
             image={'ImageOS':{'present':True,'value':'ubuntu24'},
                    'ImageVersion':{'present':True,'value':'20261012.334.1'}}
             record={'request':held(request_raw),'event':held(event_raw),
@@ -4658,15 +4659,52 @@ def setup_v7_controls(export_sample=False):
                 'runtime.setup-inventory.json':reader.canonical(value)}
             reader.emit_setup_v7_inventory(originals,log.write,log.flush)
             raw=log.getvalue()
-            external={'workflowFileSha256':workflow_pin}
-            cleanup={'sourceAdmission':{'source':source,
-                'eventSha256':sha(event_raw)},'action':'not-needed'}
-            outer={'cgroupAfter':'absent','systemdRunExitCode':1}
+            class Observer:
+                def __init__(self,environ):self.facts={'source':source}
+                def event(self):return event_raw
+                def source(self,selected):self.facts['source']=source
+            outside=io.BytesIO()
+            outside_env={'GITHUB_RUN_ID':'123','BW_SYSTEMD_RUN_EXIT_CODE':'1',
+                'BW_EXPECTED_HEAD':request['head'],'BW_EXPECTED_TREE':request['tree']}
+            absent={'terminal':'absent','cgroupProcs':None,
+                'cgroupEvents':None,'cgroupStat':None}
+            with patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+                 patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+                 patch.object(p,'HostedEnvelopeInstaller',Observer),\
+                 patch.object(p,'admit_setup_v7_event',return_value=(request_raw,request)),\
+                 patch.object(p,'setup_v7_owned_unit',return_value=False),\
+                 patch.object(p,'setup_v7_outside_census',return_value=absent),\
+                 patch.object(Path,'exists',return_value=False),\
+                 patch.object(Path,'is_symlink',return_value=False),\
+                 patch.object(p.sys,'stdout',SimpleNamespace(buffer=outside)):
+                self.assertEqual(p.setup_v7_outside_cleanup(outside_env),1)
+            cleanup_raw=outside.getvalue();cleanup=reader.parse(cleanup_raw)
+            self.assertEqual(cleanup['firstFailure']['phase'],'v7-outer-client')
+            self.assertEqual(cleanup['action'],'not-needed')
+            outer={'schema':'bw.ring3.setup-outer-terminal.v7','runId':'123',
+                'unit':'/sys/fs/cgroup/system.slice/bw-ring3-setup-v7-123-1.service',
+                'systemdRunExitCode':1,'outsideCleanupExitCode':1,
+                'cgroupAfter':'absent'}
+            outer_raw=reader.canonical(outer)
             shell={'fields':image}
+            shell_raw=reader.canonical({'schema':'bw.ring3.setup-image-shell.v7',
+                'fields':image,'fieldErrors':[],'setupAttempted':False,
+                'guestAttempted':False,'setupApproved':False})
+            external={'schema':'bw.ring3.setup-inventory-expectation.v7',
+                'requestSha256':sha(request_raw),'runId':'123','attempt':1,
+                'head':request['head'],'tree':request['tree'],
+                'workflowSha':'e'*40,'workflowFileSha256':workflow_pin,
+                'jobId':456,'jobName':'setup-runtime-inventory-v7',
+                'conclusion':'failure','logBytes':len(raw),'logSha256':sha(raw),
+                'outerBytes':len(outer_raw),'outerSha256':sha(outer_raw),
+                'cleanupBytes':len(cleanup_raw),'cleanupSha256':sha(cleanup_raw),
+                'shellBytes':len(shell_raw),'shellSha256':sha(shell_raw),
+                'invoker':[1001,1002]}
+            reader.setup_v7_cleanup_original(cleanup_raw,external)
             with patch.object(reader,'verify_setup_v7_stage_observation',
-                              return_value=({},source,record)):
-                verdict=reader.verify_setup_v7_failed_stream_inventory(
-                    raw,external,cleanup,shell,outer)
+                              return_value=(request,source,record)):
+                verdict=reader.verify_setup_v7_failure_log(
+                    raw,external,outer_raw,cleanup_raw,shell_raw)
                 self.assertTrue(verdict['completeFailedInventoryOriginal'])
                 self.assertFalse(verdict['candidateReviewed'])
                 self.assertFalse(verdict['setupObserved'])
@@ -4678,8 +4716,11 @@ def setup_v7_controls(export_sample=False):
                 log2=io.BytesIO();log2.write(raw[:raw.index(reader.SETUP_V7_LOG_MARKER)])
                 reader.emit_setup_v7_inventory(changed,log2.write,log2.flush)
                 with self.assertRaises(reader.Refusal):
-                    reader.verify_setup_v7_failed_stream_inventory(
-                        log2.getvalue(),external,cleanup,shell,outer)
+                    changed_raw=log2.getvalue()
+                    changed_external=dict(external,logBytes=len(changed_raw),
+                                          logSha256=sha(changed_raw))
+                    reader.verify_setup_v7_failure_log(
+                        changed_raw,changed_external,outer_raw,cleanup_raw,shell_raw)
     if export_sample:
         request=Tests().request();ops=FakeOps();facts=p.setup_v7_sequence(ops,request)
         assert facts['firstFailure'] is None and ops.snapshot is not None
