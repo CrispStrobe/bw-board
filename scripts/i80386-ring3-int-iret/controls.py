@@ -10848,7 +10848,6 @@ def same_job_v3_controls(*,export_fixture=False):
                 value=self.audit(ops)
                 self.assertIsNotNone(value['firstFailure'])
                 self.assertEqual(ops.removed,[])
-                self.assertEqual(ops.closed,[5,4,3,2,1])
                 self.assertEqual(len(ops.closed),5)
         def test_named_identity_or_limit_drift_blocks_destructive_phase(self):
             for ops in (FakeTree(fault=('identity','qemu')),
@@ -10856,6 +10855,7 @@ def same_job_v3_controls(*,export_fixture=False):
                 value=self.audit(ops)
                 self.assertIsNotNone(value['firstFailure'])
                 self.assertEqual(ops.removed,[])
+                self.assertEqual(ops.closed,[5,4,3,2,1])
         def test_initial_mode_and_observation_order_hold_before_any_rmdir(self):
             class SafeModeDrift(FakeTree):
                 def clock(self):
