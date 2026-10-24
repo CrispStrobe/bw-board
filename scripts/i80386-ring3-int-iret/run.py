@@ -6951,31 +6951,108 @@ def setup_v6_entry(environ):
     return 1
 
 
+def setup_v6_owned_unit(unit):
+    need(isinstance(unit,Path) and unit.parent==Path('/sys/fs/cgroup/system.slice') and
+         re.fullmatch(r'bw-ring3-setup-v6-[1-9][0-9]{0,19}-1\.service',unit.name),
+         'closed exact v6 unit path')
+    need(not unit.is_symlink(),'no aliased owned unit')
+    if not unit.exists():return False
+    info=unit.lstat()
+    need(stat.S_ISDIR(info.st_mode) and info.st_uid==info.st_gid==0 and
+         unit.resolve(strict=True)==unit,'root-owned exact transient unit directory')
+    return True
+
+
+def setup_v6_outside_census(unit):
+    """Finite point census of only the exact run-derived transient unit."""
+    if not setup_v6_owned_unit(unit):
+        return {'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None}
+    procs=Cgroups.text(None,unit/'cgroup.procs')
+    events=Cgroups.text(None,unit/'cgroup.events')
+    stat_text=Cgroups.text(None,unit/'cgroup.stat')
+    need(all(len(value.encode())<=1024 for value in (procs,events,stat_text)),
+         'bounded exact-unit outside census fields')
+    return {'terminal':'empty' if setup_v6_cgroup_quiet(procs,events,stat_text) else 'populated',
+        'cgroupProcs':procs,'cgroupEvents':events,'cgroupStat':stat_text}
+
+
+def setup_v6_stop_unit(unit_name):
+    """Trusted hosted systemctl stop of one admitted owned unit, under two timers."""
+    need(type(unit_name) is str and
+         re.fullmatch(r'bw-ring3-setup-v6-[1-9][0-9]{0,19}-1\.service',unit_name),
+         'one exact owned unit stop target')
+    argv=['/usr/bin/timeout','--kill-after=5s','20s','/usr/bin/systemctl','stop','--',unit_name]
+    completed=subprocess.run(argv,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,env=dict(ENV),check=False,timeout=30)
+    need(type(completed.returncode) is int,'finite exact-unit stop exit')
+    return {'attempted':True,'argv':argv,'exitCode':completed.returncode,
+        'timedOut':completed.returncode in (124,137)}
+
+
 def setup_v6_outside_cleanup(environ):
-    """After systemd-run --wait only: remove a provably owned retained policy."""
-    failure=FirstFailure();value={'schema':'bw.ring3.setup-outside-cleanup.v6','runId':None,
-        'serviceExitCode':None,'cgroupTerminal':None,'unitCensus':None,'policy':None,'action':None,
-        'firstFailure':None,'secondary':[],'setupApproved':False}
+    """Bounded exact-unit terminal observation precedes any owned policy unlink."""
+    failure=FirstFailure()
+    value={'schema':'bw.ring3.setup-outside-cleanup.v6','runId':None,
+        'serviceExitCode':None,'sourceAdmission':None,'preCensus':None,'stop':None,
+        'postCensus':None,'cgroupTerminal':None,'unitCensus':None,'policy':None,
+        'action':None,'firstFailure':None,'secondary':[],'setupApproved':False}
     try:
         need(os.getresuid()==(0,)*3 and os.getresgid()==(0,)*3,'root outside cleanup')
         run_id=environ.get('GITHUB_RUN_ID','');code=environ.get('BW_SYSTEMD_RUN_EXIT_CODE','')
-        need(re.fullmatch('[1-9][0-9]{0,19}',run_id) and re.fullmatch('(?:0|[1-9][0-9]{0,2})',code) and
-             int(code)<=255,'exact finite outside run/exit context')
+        need(re.fullmatch('[1-9][0-9]{0,19}',run_id) and
+             re.fullmatch('(?:0|[1-9][0-9]{0,2})',code) and int(code)<=255,
+             'exact finite outside run/exit context')
         value['runId'],value['serviceExitCode']=run_id,int(code)
-        unit=Path('/sys/fs/cgroup/system.slice')/('bw-ring3-setup-v6-'+run_id+'-1.service')
-        if unit.exists():
-            procs=Cgroups.text(None,unit/'cgroup.procs')
-            events=Cgroups.text(None,unit/'cgroup.events')
-            stat_text=Cgroups.text(None,unit/'cgroup.stat')
-            value['unitCensus']={'cgroupProcs':procs,'cgroupEvents':events,'cgroupStat':stat_text}
-            need(setup_v6_cgroup_quiet(procs,events,stat_text),
-                 'no direct or nested owned service descendants after terminal')
-            value['cgroupTerminal']='empty'
-        else:value['cgroupTerminal']='absent'
+        if int(code)!=0:
+            failure.add(ValueError('bounded outer setup client exit '+code),'v6-outer-client')
+        # Admission must finish before an exact-unit stop or global policy mutation.
+        observer=HostedEnvelopeInstaller(environ)
+        event_raw=observer.event()
+        request_raw,request=admit_setup_v6_event(event_raw,environ)
+        need(Path(__file__).resolve(strict=True)==Path.cwd()/RUN_FILE,
+             'held v6 outside source path')
+        observer.source(request)
+        need(request['head']==environ.get('BW_EXPECTED_HEAD') and
+             request['tree']==environ.get('BW_EXPECTED_TREE'),
+             'outside selected request/source identity')
+        unit_name='bw-ring3-setup-v6-'+run_id+'-1.service'
+        unit=Path('/sys/fs/cgroup/system.slice')/unit_name
+        value['sourceAdmission']={'requestSha256':sha(request_raw),
+            'eventSha256':sha(event_raw),'head':request['head'],'tree':request['tree'],
+            'source':observer.facts['source'],'unit':unit_name}
+        unit_present=setup_v6_owned_unit(unit)
+        try:value['preCensus']=setup_v6_outside_census(unit)
+        except BaseException as error:failure.add(error,'v6-outside-pre-census')
+        pre=value['preCensus']
+        if unit_present and (pre is None or pre['terminal']=='populated' or
+                             (int(code)!=0 and pre['terminal']=='empty')):
+            try:
+                value['stop']=setup_v6_stop_unit(unit_name)
+                need(value['stop']['exitCode']==0,'bounded exact-unit stop completed')
+            except BaseException as error:
+                if value['stop'] is None:
+                    value['stop']={'attempted':True,'argv':['/usr/bin/timeout','--kill-after=5s','20s',
+                        '/usr/bin/systemctl','stop','--',unit_name],
+                        'exitCode':None,'timedOut':None}
+                failure.add(error,'v6-outside-exact-stop')
+        else:value['stop']={'attempted':False,'argv':None,'exitCode':None,'timedOut':False}
+        try:value['postCensus']=setup_v6_outside_census(unit)
+        except BaseException as error:failure.add(error,'v6-outside-post-census')
+        post=value['postCensus']
+        if post is not None:
+            value['cgroupTerminal']=post['terminal']
+            if post['terminal']!='absent':
+                value['unitCensus']={key:post[key] for key in ('cgroupProcs','cgroupEvents','cgroupStat')}
+            need(post['terminal'] in ('empty','absent'),
+                 'no direct or nested owned descendants after bounded stop')
+        else:raise ValueError('outside terminal census unavailable')
         path=Path('/usr/sbin/policy-rc.d')
         if not path.exists() and not path.is_symlink():
             value['action']='not-needed'
         else:
+            value['action']='deferred'
+            need(value['stop']['attempted'] is False or value['stop']['exitCode']==0,
+                 'uncertain stop forbids global policy unlink')
             raw=bounded_read('build/i80386-ring3-setup-runtime-inventory-v6/inventory.original.log',8<<20)
             packets=[]
             for line in raw.splitlines():
@@ -6989,9 +7066,9 @@ def setup_v6_outside_cleanup(environ):
             need(packet['firstFailure'] is not None and packet['actualGuestApproved'] is False and
                  packet['completeHostConfiguration'] is False and packet['publicationSafe'] is False,
                  'only failed setup allows outside policy cleanup')
-            context=packet['context'];request_raw=admitted_original(context['request'],JSON_CAP,'outside failed request')
-            request=admit_setup_v6_request(request_raw,environ.get('BW_RING3_SETUP_INVENTORY_V6_REQUEST_SHA256'))
-            need(context['platform']['GITHUB_RUN_ID']==run_id and request['head']==environ.get('BW_EXPECTED_HEAD'),
+            context=packet['context'];held_request=admitted_original(context['request'],JSON_CAP,'outside failed request')
+            need(held_request==request_raw and context['platform']['GITHUB_RUN_ID']==run_id and
+                 request['head']==environ.get('BW_EXPECTED_HEAD'),
                  'outside policy request/source/run join')
             setup=packet['setup'];need(type(setup) is dict and setup.get('schema')=='bw.ring3.setup-original.v6',
                  'original setup facts required')
@@ -6999,8 +7076,10 @@ def setup_v6_outside_cleanup(environ):
                  policy.get('sha256')==sha(SETUP_V6_POLICY_BYTES) and policy.get('mode')==0o755 and
                  policy.get('exclusive') is True,'only exactly created policy may be removed')
             expected=policy['identity'];info=path.lstat();actual=SetupV6Host.identity(info)
-            need(actual==expected and stat.S_ISREG(info.st_mode) and (info.st_uid,info.st_gid,info.st_nlink)==(0,0,1)
-                 and stat.S_IMODE(info.st_mode)==0o755 and sha(bounded_read(path,128))==policy['sha256'],
+            need(actual==expected and stat.S_ISREG(info.st_mode) and
+                 (info.st_uid,info.st_gid,info.st_nlink)==(0,0,1) and
+                 stat.S_IMODE(info.st_mode)==0o755 and
+                 sha(bounded_read(path,128))==policy['sha256'],
                  'exact named owned policy identity and bytes after service terminal')
             os.unlink(path)
             need(not path.exists() and not path.is_symlink(),'outside exact owned policy removed')
@@ -7008,10 +7087,10 @@ def setup_v6_outside_cleanup(environ):
     except BaseException as error:failure.add(error,'v6-outside-policy-cleanup')
     value['firstFailure'],value['secondary']=failure.first,failure.secondary
     raw=encode(value)
-    need(len(raw)<=16384 and sys.stdout.buffer.write(raw)==len(raw),'bounded outside cleanup original')
+    need(len(raw)<=16384 and sys.stdout.buffer.write(raw)==len(raw),
+         'bounded outside cleanup original')
     sys.stdout.buffer.flush()
     return 0 if failure.first is None and failure.secondary==[] else 1
-
 
 
 def setup_v6_image_shell(environ):

@@ -5426,46 +5426,81 @@ def verify_setup_v6_stage_observation(value,external):
     return request,source,record
 
 
-def verify_setup_v6_log(raw,external,outer_raw,cleanup_raw,shell_raw):
-    keys(external,'schema requestSha256 runId attempt head tree workflowSha workflowFileSha256 jobId jobName conclusion logBytes logSha256 outerBytes outerSha256 cleanupBytes cleanupSha256 shellBytes shellSha256 invoker')
-    shell=decode_setup_v6_shell(shell_raw,external)
-    need(external['schema']=='bw.ring3.setup-inventory-expectation.v6' and type(external['attempt']) is int and
-         external['attempt']==1 and external['jobName']=='setup-runtime-inventory-v6' and
-         external['conclusion']=='success','externally selected official v6 job')
-    integer(external['jobId'],1)
-    need(type(external['runId']) is str and re.fullmatch('[1-9][0-9]{0,19}',external['runId']),
-         'positive official v6 run ID')
-    for name,size in (('head',40),('tree',40),('workflowSha',40),('workflowFileSha256',64),
-                      ('requestSha256',64),('logSha256',64),('outerSha256',64),('cleanupSha256',64)):digest(external[name],size)
-    need(type(external['invoker']) is list and len(external['invoker'])==2 and
-         all(type(x) is int and 0<x<2**31 for x in external['invoker']),'selected actual invoker')
-    need(integer(external['logBytes'],1,8<<20)==len(raw) and sha(raw)==external['logSha256'],
-         'externally selected exact official v6 log bytes')
-    need(type(outer_raw) is bytes and integer(external['outerBytes'],1,4096)==len(outer_raw) and
-         sha(outer_raw)==external['outerSha256'],'externally selected exact outside-owner terminal bytes')
-    need(type(cleanup_raw) is bytes and integer(external['cleanupBytes'],1,16384)==len(cleanup_raw) and
-         sha(cleanup_raw)==external['cleanupSha256'],'externally selected outside cleanup original')
-    cleanup=parse(cleanup_raw)
-    keys(cleanup,'schema runId serviceExitCode cgroupTerminal unitCensus policy action firstFailure secondary setupApproved')
-    need(cleanup_raw==canonical(cleanup) and cleanup['schema']=='bw.ring3.setup-outside-cleanup.v6' and
-         cleanup['runId']==external['runId'] and cleanup['serviceExitCode']==0 and
-         cleanup['cgroupTerminal'] in ('empty','absent') and cleanup['policy'] is None and
-         cleanup['action']=='not-needed' and cleanup['firstFailure'] is None and
-         cleanup['secondary']==[] and cleanup['setupApproved'] is False,
-         'finite outside owner needed no policy cleanup after successful setup')
-    need((cleanup['cgroupTerminal']=='absent' and cleanup['unitCensus'] is None) or
-         (cleanup['cgroupTerminal']=='empty' and type(cleanup['unitCensus']) is dict and
-          set(cleanup['unitCensus'])=={'cgroupProcs','cgroupEvents','cgroupStat'} and
-          setup_v6_cgroup_quiet(cleanup['unitCensus']['cgroupProcs'],
-              cleanup['unitCensus']['cgroupEvents'],cleanup['unitCensus']['cgroupStat'])),
-         'independently checked outside nested cgroup emptiness')
-    outer=parse(outer_raw);keys(outer,'schema runId unit systemdRunExitCode outsideCleanupExitCode cgroupAfter')
-    need(outer_raw==canonical(outer) and outer['schema']=='bw.ring3.setup-outer-terminal.v6' and
-         outer['runId']==external['runId'] and outer['unit']==
-         '/sys/fs/cgroup/system.slice/bw-ring3-setup-v6-'+external['runId']+'-1.service' and
-         type(outer['systemdRunExitCode']) is int and outer['systemdRunExitCode']==0 and
-         type(outer['outsideCleanupExitCode']) is int and outer['outsideCleanupExitCode']==0 and
-         outer['cgroupAfter']=='absent','finite outside-owner successful service terminal and absent cgroup')
+def setup_v6_cleanup_original(raw,external):
+    value=parse(raw)
+    keys(value,'schema runId serviceExitCode sourceAdmission preCensus stop postCensus cgroupTerminal unitCensus policy action firstFailure secondary setupApproved')
+    need(raw==canonical(value) and value['schema']=='bw.ring3.setup-outside-cleanup.v6' and
+         value['runId']==external['runId'] and value['setupApproved'] is False and
+         type(value['secondary']) is list and len(value['secondary'])<=64 and
+         (value['firstFailure'] is None or type(value['firstFailure']) is dict),
+         'closed bounded v6 outside cleanup original')
+    unit='bw-ring3-setup-v6-'+external['runId']+'-1.service'
+    selected=value['sourceAdmission']
+    if selected is None:
+        need(value['preCensus'] is None and value['postCensus'] is None and value['stop'] is None and
+             value['policy'] is None and value['action'] is None and value['firstFailure'] is not None,
+             'no unit stop or policy mutation without source admission')
+    else:
+        keys(selected,'requestSha256 eventSha256 head tree source unit')
+        need(selected['requestSha256']==external['requestSha256'] and
+             selected['head']==external['head'] and selected['tree']==external['tree'] and
+             selected['unit']==unit,'exact outside request/source/unit selection')
+        digest(selected['eventSha256'])
+        source=selected['source'];keys(source,'schema head tree files')
+        need(source['schema']=='bw.ring3.source.v1' and source['head']==external['head'] and
+             source['tree']==external['tree'] and type(source['files']) is dict and
+             set(source['files'])==SETUP_SOURCE_PATHS and
+             source['files'][WORKFLOW]['sha256']==external['workflowFileSha256'],
+             'outside selected source twelve and workflow')
+    def census(row):
+        if row is None:return None
+        keys(row,'terminal cgroupProcs cgroupEvents cgroupStat')
+        need(row['terminal'] in ('absent','empty','populated'),'closed v6 unit terminal state')
+        if row['terminal']=='absent':
+            need(all(row[key] is None for key in ('cgroupProcs','cgroupEvents','cgroupStat')),
+                 'absent unit has no invented census')
+        else:
+            need(all(type(row[key]) is str and len(row[key].encode())<=1024 for key in
+                     ('cgroupProcs','cgroupEvents','cgroupStat')) and
+                 (setup_v6_cgroup_quiet(row['cgroupProcs'],row['cgroupEvents'],row['cgroupStat']) is
+                  (row['terminal']=='empty')),
+                 'independent exact nested unit census')
+        return row
+    pre=census(value['preCensus']);post=census(value['postCensus'])
+    stop=value['stop']
+    if selected is not None:
+        if stop is None:
+            need(pre is None and post is None and value['cgroupTerminal'] is None and
+                 value['unitCensus'] is None and value['policy'] is None and
+                 value['action'] is None and value['firstFailure'] is not None,
+                 'admitted unit identity refusal retains no invented stop or census')
+        else:
+            keys(stop,'attempted argv exitCode timedOut')
+        if stop is not None and stop['attempted'] is True:
+            need(stop['argv']==['/usr/bin/timeout','--kill-after=5s','20s',
+                 '/usr/bin/systemctl','stop','--',unit] and
+                 (stop['exitCode'] is None or integer(stop['exitCode'],-255,255)>=-255) and
+                 (stop['timedOut'] is None if stop['exitCode'] is None else
+                  stop['timedOut']==(stop['exitCode'] in (124,137))),
+                 'one bounded exact owned-unit stop')
+        elif stop is not None:
+            need(stop=={'attempted':False,'argv':None,'exitCode':None,'timedOut':False} and
+                 (pre is None and value['firstFailure'] is not None or
+                  pre is not None and pre['terminal'] in ('absent','empty') and
+                  (value['serviceExitCode']==0 or pre['terminal']=='absent')),
+                 'no stop needed only for terminal or absent unit')
+        if post is not None:
+            need(value['cgroupTerminal']==post['terminal'] and
+                 (value['unitCensus'] is None if post['terminal']=='absent' else
+                  value['unitCensus']=={key:post[key] for key in
+                      ('cgroupProcs','cgroupEvents','cgroupStat')}),
+                 'outside final census and terminal projection')
+        else:need(value['cgroupTerminal'] is None and value['unitCensus'] is None,
+                  'unknown outside terminal cannot claim census')
+    return value
+
+
+def setup_v6_inner_original(raw,external,shell):
     originals=decode_setup_v6_log(raw);value=parse_setup_v6_outer(originals['runtime.setup-inventory.json'])
     keys(value,'schema stageBefore stageAfter parent inventory candidate firstFailure secondary publicationSafe actualGuestApproved completeHostConfiguration')
     need(value['schema']=='bw.ring3.setup-runtime-inventory-original.v6' and value['firstFailure'] is None and
@@ -5527,6 +5562,54 @@ def verify_setup_v6_log(raw,external,outer_raw,cleanup_raw,shell_raw):
          'all runtime probes follow completed no-trigger configure')
     need(record['setup']['preflight']['imageFields']==setup_v6_expected_forwarded(shell['fields']),
          'successful service image labels join shell forwarding')
+    return result,record,source,event_raw,request_raw
+
+
+def verify_setup_v6_log(raw,external,outer_raw,cleanup_raw,shell_raw):
+    keys(external,'schema requestSha256 runId attempt head tree workflowSha workflowFileSha256 jobId jobName conclusion logBytes logSha256 outerBytes outerSha256 cleanupBytes cleanupSha256 shellBytes shellSha256 invoker')
+    shell=decode_setup_v6_shell(shell_raw,external)
+    need(external['schema']=='bw.ring3.setup-inventory-expectation.v6' and type(external['attempt']) is int and
+         external['attempt']==1 and external['jobName']=='setup-runtime-inventory-v6' and
+         external['conclusion']=='success','externally selected official v6 job')
+    integer(external['jobId'],1)
+    need(type(external['runId']) is str and re.fullmatch('[1-9][0-9]{0,19}',external['runId']),
+         'positive official v6 run ID')
+    for name,size in (('head',40),('tree',40),('workflowSha',40),('workflowFileSha256',64),
+                      ('requestSha256',64),('logSha256',64),('outerSha256',64),('cleanupSha256',64)):digest(external[name],size)
+    need(type(external['invoker']) is list and len(external['invoker'])==2 and
+         all(type(x) is int and 0<x<2**31 for x in external['invoker']),'selected actual invoker')
+    need(integer(external['logBytes'],1,8<<20)==len(raw) and sha(raw)==external['logSha256'],
+         'externally selected exact official v6 log bytes')
+    need(type(outer_raw) is bytes and integer(external['outerBytes'],1,4096)==len(outer_raw) and
+         sha(outer_raw)==external['outerSha256'],'externally selected exact outside-owner terminal bytes')
+    need(type(cleanup_raw) is bytes and integer(external['cleanupBytes'],1,16384)==len(cleanup_raw) and
+         sha(cleanup_raw)==external['cleanupSha256'],'externally selected outside cleanup original')
+    cleanup=setup_v6_cleanup_original(cleanup_raw,external)
+    need(cleanup['serviceExitCode']==0 and cleanup['sourceAdmission'] is not None and
+         cleanup['stop']=={'attempted':False,'argv':None,'exitCode':None,'timedOut':False} and
+         cleanup['preCensus'] is not None and cleanup['postCensus'] is not None and
+         cleanup['cgroupTerminal'] in ('empty','absent') and cleanup['policy'] is None and
+         cleanup['action']=='not-needed' and cleanup['firstFailure'] is None and
+         cleanup['secondary']==[] and cleanup['setupApproved'] is False,
+         'finite outside owner needed no policy cleanup after successful setup')
+    need((cleanup['cgroupTerminal']=='absent' and cleanup['unitCensus'] is None) or
+         (cleanup['cgroupTerminal']=='empty' and type(cleanup['unitCensus']) is dict and
+          set(cleanup['unitCensus'])=={'cgroupProcs','cgroupEvents','cgroupStat'} and
+          setup_v6_cgroup_quiet(cleanup['unitCensus']['cgroupProcs'],
+              cleanup['unitCensus']['cgroupEvents'],cleanup['unitCensus']['cgroupStat'])),
+         'independently checked outside nested cgroup emptiness')
+    outer=parse(outer_raw);keys(outer,'schema runId unit systemdRunExitCode outsideCleanupExitCode cgroupAfter')
+    need(outer_raw==canonical(outer) and outer['schema']=='bw.ring3.setup-outer-terminal.v6' and
+         outer['runId']==external['runId'] and outer['unit']==
+         '/sys/fs/cgroup/system.slice/bw-ring3-setup-v6-'+external['runId']+'-1.service' and
+         type(outer['systemdRunExitCode']) is int and outer['systemdRunExitCode']==0 and
+         type(outer['outsideCleanupExitCode']) is int and outer['outsideCleanupExitCode']==0 and
+         outer['cgroupAfter']=='absent','finite outside-owner successful service terminal and absent cgroup')
+    result,record,source,event_raw,request_raw=setup_v6_inner_original(raw,external,shell)
+    if cleanup['sourceAdmission'] is not None:
+        need(equal(cleanup['sourceAdmission']['source'],source) and
+             cleanup['sourceAdmission']['eventSha256']==sha(event_raw),
+             'outside source/event admission joins complete inner original')
     return dict(result,schema='bw.ring3.setup-runtime-inventory-admission.v6',setupObserved=True,
         shellImageFields=shell['fields'],serviceImageFields=record['setup']['preflight']['imageFields'],
         forwardingMatchesExpected=True,
@@ -5566,12 +5649,13 @@ def verify_setup_v6_failure_log(raw,external,outer_raw,cleanup_raw,shell_raw):
     need(outer_raw==canonical(outer) and outer['schema']=='bw.ring3.setup-outer-terminal.v6' and
          outer['runId']==external['runId'] and outer['unit']==
          '/sys/fs/cgroup/system.slice/bw-ring3-setup-v6-'+external['runId']+'-1.service' and
-         type(outer['systemdRunExitCode']) is int and 0<outer['systemdRunExitCode']<=255 and
+         type(outer['systemdRunExitCode']) is int and 0<=outer['systemdRunExitCode']<=255 and
          type(outer['outsideCleanupExitCode']) is int and 0<=outer['outsideCleanupExitCode']<=255 and
-         outer['cgroupAfter'] in ('present','absent'),'finite failed outside terminal facts')
-    cleanup=parse(cleanup_raw);keys(cleanup,'schema runId serviceExitCode cgroupTerminal unitCensus policy action firstFailure secondary setupApproved')
-    need(cleanup_raw==canonical(cleanup) and cleanup['schema']=='bw.ring3.setup-outside-cleanup.v6' and
-         cleanup['runId']==external['runId'] and cleanup['serviceExitCode']==outer['systemdRunExitCode'] and
+         outer['cgroupAfter'] in ('present','absent') and
+         (outer['systemdRunExitCode']!=0 or outer['outsideCleanupExitCode']!=0 or
+          outer['cgroupAfter']!='absent'),'finite failed outside terminal facts')
+    cleanup=setup_v6_cleanup_original(cleanup_raw,external)
+    need(cleanup['serviceExitCode']==outer['systemdRunExitCode'] and
          cleanup['setupApproved'] is False and type(cleanup['secondary']) is list and
          len(cleanup['secondary'])<=64,'finite failed outside cleanup facts')
     if cleanup['cgroupTerminal']=='empty':
@@ -5597,6 +5681,50 @@ def verify_setup_v6_failure_log(raw,external,outer_raw,cleanup_raw,shell_raw):
         need(len(line)-at<=4<<20,'bounded failed packet')
         packet=parse_setup_v6_outer(line[at:]);need(line[at:]==canonical(packet).rstrip(b'\n'),'canonical failed packet')
         if packet.get('schema')=='bw.ring3.setup-entry-failure.v6':packets.append(packet)
+    if not packets:
+        # A complete inner metadata packet is still a failed attempt when the
+        # bounded outer client exits nonzero or outside cleanup is uncertain.
+        try:
+            _,record,source,event_raw,_=setup_v6_inner_original(raw,external,shell)
+        except (ValueError,UnicodeError) as decode_error:
+            # A killed outer client can leave only a bounded prefix. Keep its
+            # exact official bytes as opaque evidence; no inner fact is graded.
+            need(outer['systemdRunExitCode'] in (124,137) and
+                 cleanup['sourceAdmission'] is not None and
+                 type(cleanup['firstFailure']) is dict and
+                 cleanup['firstFailure'].get('phase')=='v6-outer-client',
+                 'only source-admitted timed client permits opaque inner prefix')
+            return {'schema':'bw.ring3.setup-failure-retention.v6',
+                'failedAttemptRetained':True,'innerOriginalIncomplete':True,
+                'innerMetadataCompleteReported':False,'innerDecodeError':type(decode_error).__name__,
+                'retainedLogBytes':len(raw),'retainedLogSha256':sha(raw),
+                'partialMutationPossible':True,'firstFailure':cleanup['firstFailure'],
+                'secondary':cleanup['secondary'],'outsideCleanup':cleanup['action'],
+                'outsideCgroupAfter':outer['cgroupAfter'],
+                'outerClientExitCode':outer['systemdRunExitCode'],
+                'outsideFirstFailure':cleanup['firstFailure'],'setupObserved':False,
+                'shellImageFields':shell['fields'],'serviceImageFields':None,
+                'forwardingMatchesExpected':None,'officialJobAuthenticated':False,
+                'actualGuestApproved':False,'actualRunApproved':False,
+                'candidateReviewed':False,'completeHostConfiguration':False}
+        if cleanup['sourceAdmission'] is not None:
+            need(equal(cleanup['sourceAdmission']['source'],source) and
+                 cleanup['sourceAdmission']['eventSha256']==sha(event_raw),
+                 'outside source/event joins complete failed-job inner original')
+        first=cleanup['firstFailure'] or {'phase':'v6-outside-terminal','name':'ValueError',
+            'message':'bounded outside terminal or cleanup refusal'}
+        return {'schema':'bw.ring3.setup-failure-retention.v6',
+            'failedAttemptRetained':True,'innerMetadataCompleteReported':True,
+            'partialMutationPossible':True,'firstFailure':first,
+            'secondary':cleanup['secondary'],'outsideCleanup':cleanup['action'],
+            'outsideCgroupAfter':outer['cgroupAfter'],
+            'outerClientExitCode':outer['systemdRunExitCode'],
+            'outsideFirstFailure':cleanup['firstFailure'],'setupObserved':False,
+            'shellImageFields':shell['fields'],
+            'serviceImageFields':record['setup']['preflight']['imageFields'],
+            'forwardingMatchesExpected':True,'officialJobAuthenticated':False,
+            'actualGuestApproved':False,'actualRunApproved':False,
+            'candidateReviewed':False,'completeHostConfiguration':False}
     need(len(packets)==1,'one complete failed setup packet')
     packet=packets[0];keys(packet,'schema context setup firstFailure secondary publicationSafe actualGuestApproved completeHostConfiguration')
     need(packet['schema']=='bw.ring3.setup-entry-failure.v6' and packet['publicationSafe'] is False and
@@ -5618,6 +5746,10 @@ def verify_setup_v6_failure_log(raw,external,outer_raw,cleanup_raw,shell_raw):
          request['head']==external['head'] and request['tree']==external['tree'] and
          source['files'][WORKFLOW]['sha256']==external['workflowFileSha256'] and
          equal(context['source'],source),'failed source/request/event/official context join')
+    if cleanup['sourceAdmission'] is not None:
+        need(equal(cleanup['sourceAdmission']['source'],source) and
+             cleanup['sourceAdmission']['eventSha256']==sha(event_raw),
+             'outside source/event admission joins failed inner original')
     need(type(context['sourceCommands']) is list and len(context['sourceCommands'])==3 and
          all(type(item) is dict and set(item)=={'argv','process','stdout','stderr'} for item in context['sourceCommands']),
          'three retained failed source command originals')
@@ -5776,7 +5908,10 @@ def verify_setup_v6_failure_log(raw,external,outer_raw,cleanup_raw,shell_raw):
     return {'schema':'bw.ring3.setup-failure-retention.v6','failedAttemptRetained':True,
         'partialMutationPossible':True,'firstFailure':packet['firstFailure'],
         'secondary':packet['secondary'],'outsideCleanup':cleanup['action'],
-        'outsideCgroupAfter':outer['cgroupAfter'],'setupObserved':False,
+        'outsideCgroupAfter':outer['cgroupAfter'],
+        'outerClientExitCode':outer['systemdRunExitCode'],
+        'outsideFirstFailure':cleanup['firstFailure'],
+        'outsideSecondary':cleanup['secondary'],'setupObserved':False,
         'shellImageFields':shell['fields'],'serviceImageFields':context['imageFields'],
         'forwardingMatchesExpected':forwarding_matches,
         'stageAttemptObserved':type(partial) is dict and partial.get('phase')=='node-stage',

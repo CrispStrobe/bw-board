@@ -1418,3 +1418,16 @@ image identity, or future runner state. Full exact-head CI, external request
 and official metadata admission, and one original-only audit are required
 before any v6 metadata candidate can be considered. Compiler and actual guest
 routes remain disabled.
+
+The v6 service client has a separate 720-second GNU timeout with a five-second
+kill period outside the service's 660-second runtime and five-second stop
+limits. Its exact exit, including timeout exits, is retained before outside
+cleanup. After source, request, event, and exact unit admission, cleanup takes
+bounded cgroup censuses and can stop only that run's owned unit with a finite
+timer. An active or uncertain unit keeps the global deny policy in place; its
+stop and census errors remain secondary to an earlier client failure. The
+independent failure reader also retains a complete inner metadata packet when
+the outer client fails. If a 124/137 timeout leaves only an incomplete inner
+wire, it retains the exact externally selected log extent and hash as opaque
+data and reports all inner facts unknown. Neither case grants setup or guest
+approval. These are finite point observations, not continuous ownership proof.

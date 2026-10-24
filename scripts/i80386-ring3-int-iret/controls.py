@@ -2020,9 +2020,17 @@ def staged_runtime_controls():
                 outer=reader.canonical({'schema':'bw.ring3.setup-outer-terminal.v6','runId':env['GITHUB_RUN_ID'],
                     'unit':'/sys/fs/cgroup/system.slice/bw-ring3-setup-v6-'+env['GITHUB_RUN_ID']+'-1.service',
                     'systemdRunExitCode':0,'outsideCleanupExitCode':0,'cgroupAfter':'absent'})
+                source=reader.parse(reader.prerequisite_original(reader.canonical(request['source'])))
+                unit='bw-ring3-setup-v6-'+env['GITHUB_RUN_ID']+'-1.service'
+                absent={'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None}
+                admission={'requestSha256':sha(request_raw),'eventSha256':sha(event_raw),
+                    'head':request['head'],'tree':request['tree'],'source':source,'unit':unit}
                 cleanup=reader.canonical({'schema':'bw.ring3.setup-outside-cleanup.v6','runId':env['GITHUB_RUN_ID'],
-                    'serviceExitCode':0,'cgroupTerminal':'absent','unitCensus':None,'policy':None,'action':'not-needed',
-                    'firstFailure':None,'secondary':[],'setupApproved':False})
+                    'serviceExitCode':0,'sourceAdmission':admission,'preCensus':absent,
+                    'stop':{'attempted':False,'argv':None,'exitCode':None,'timedOut':False},
+                    'postCensus':absent,'cgroupTerminal':'absent','unitCensus':None,
+                    'policy':None,'action':'not-needed','firstFailure':None,
+                    'secondary':[],'setupApproved':False})
                 source=reader.parse(reader.prerequisite_original(reader.canonical(request['source'])))
                 shell=reader.canonical({'schema':'bw.ring3.setup-image-shell.v6',
                     'fields':{'ImageOS':{'present':True,'value':'ubuntu24'},
@@ -2088,6 +2096,94 @@ def staged_runtime_controls():
                 self.assertFalse(held['forwardingMatchesExpected'])
                 self.assertEqual(held['serviceImageFields'],service_fields)
                 self.assertFalse(held['setupObserved'])
+                # Inner graph may be complete while the outer bounded client
+                # times out: preserve the failed official attempt, never admit it.
+                timed_outer=reader.parse(outer);timed_outer['systemdRunExitCode']=124
+                timed_outer=reader.canonical(timed_outer)
+                timed_cleanup=reader.parse(cleanup);timed_cleanup['serviceExitCode']=124
+                timed_cleanup['firstFailure']={'phase':'v6-outer-client','name':'ValueError',
+                    'message':'bounded outer setup client exit 124'}
+                timed_cleanup=reader.canonical(timed_cleanup)
+                timed_external=dict(external_v6,conclusion='failure',
+                    outerBytes=len(timed_outer),outerSha256=sha(timed_outer),
+                    cleanupBytes=len(timed_cleanup),cleanupSha256=sha(timed_cleanup))
+                with patch.object(reader,'SETUP_V6_STATUS_SHA',sha(pre_status)),\
+                     patch.object(reader,'SETUP_V6_STATUS_BYTES',len(pre_status)):
+                    timed=reader.verify_setup_v6_failure_log(v6_log,timed_external,
+                        timed_outer,timed_cleanup,shell)
+                self.assertTrue(timed['innerMetadataCompleteReported'])
+                self.assertFalse(timed['setupObserved'])
+                self.assertFalse(timed['actualGuestApproved'])
+                self.assertEqual(timed['firstFailure']['phase'],'v6-outer-client')
+                populated={'terminal':'populated','cgroupProcs':'202\n',
+                    'cgroupEvents':'populated 1\n',
+                    'cgroupStat':'nr_descendants 0\nnr_dying_descendants 0\n'}
+                stop_failed=reader.parse(timed_cleanup)
+                stop_failed['preCensus']=populated;stop_failed['postCensus']=populated
+                stop_failed['cgroupTerminal']='populated'
+                stop_failed['unitCensus']={key:populated[key] for key in
+                    ('cgroupProcs','cgroupEvents','cgroupStat')}
+                stop_failed['action']=None
+                stop_failed['stop']={'attempted':True,'argv':['/usr/bin/timeout','--kill-after=5s',
+                    '20s','/usr/bin/systemctl','stop','--',unit],
+                    'exitCode':124,'timedOut':True}
+                stop_failed['secondary']=[{'phase':'v6-outside-exact-stop',
+                    'name':'ValueError','message':'bounded exact-unit stop completed'}]
+                stop_failed_raw=reader.canonical(stop_failed)
+                live_outer=reader.parse(timed_outer);live_outer['cgroupAfter']='present'
+                live_outer=reader.canonical(live_outer)
+                live_external=dict(timed_external,outerBytes=len(live_outer),
+                    outerSha256=sha(live_outer),cleanupBytes=len(stop_failed_raw),
+                    cleanupSha256=sha(stop_failed_raw))
+                with patch.object(reader,'SETUP_V6_STATUS_SHA',sha(pre_status)),\
+                     patch.object(reader,'SETUP_V6_STATUS_BYTES',len(pre_status)):
+                    retained=reader.verify_setup_v6_failure_log(v6_log,live_external,
+                        live_outer,stop_failed_raw,shell)
+                    with self.assertRaises(reader.Refusal):
+                        reader.verify_setup_v6_log(v6_log,dict(live_external,conclusion='success'),
+                            live_outer,stop_failed_raw,shell)
+                self.assertTrue(retained['failedAttemptRetained'])
+                identity_failed=reader.parse(timed_cleanup)
+                identity_failed.update(preCensus=None,postCensus=None,stop=None,
+                    cgroupTerminal=None,unitCensus=None,policy=None,action=None)
+                identity_failed['secondary']=[{'phase':'v6-outside-policy-cleanup',
+                    'name':'ValueError','message':'root-owned exact transient unit directory'}]
+                identity_failed_raw=reader.canonical(identity_failed)
+                identity_external=dict(timed_external,outerBytes=len(live_outer),
+                    outerSha256=sha(live_outer),cleanupBytes=len(identity_failed_raw),
+                    cleanupSha256=sha(identity_failed_raw))
+                with patch.object(reader,'SETUP_V6_STATUS_SHA',sha(pre_status)),\
+                     patch.object(reader,'SETUP_V6_STATUS_BYTES',len(pre_status)):
+                    identity_retained=reader.verify_setup_v6_failure_log(v6_log,identity_external,
+                        live_outer,identity_failed_raw,shell)
+                self.assertTrue(identity_retained['failedAttemptRetained'])
+                self.assertFalse(identity_retained['setupObserved'])
+                cut_log=b'2026-10-24T00:00:00Z '+reader.SETUP_V6_LOG_MARKER+b'{"schema":'
+                cut_external=dict(timed_external,logBytes=len(cut_log),logSha256=sha(cut_log))
+                incomplete=reader.verify_setup_v6_failure_log(cut_log,cut_external,
+                    timed_outer,timed_cleanup,shell)
+                self.assertTrue(incomplete['innerOriginalIncomplete'])
+                self.assertFalse(incomplete['setupObserved'])
+                self.assertEqual(incomplete['retainedLogSha256'],sha(cut_log))
+                wrong_outer=reader.parse(timed_outer);wrong_outer['systemdRunExitCode']=1
+                wrong_outer=reader.canonical(wrong_outer)
+                wrong_external=dict(cut_external,outerBytes=len(wrong_outer),outerSha256=sha(wrong_outer))
+                with self.assertRaises(reader.Refusal):
+                    reader.verify_setup_v6_failure_log(cut_log,wrong_external,
+                        wrong_outer,timed_cleanup,shell)
+                mismatched=reader.parse(timed_cleanup)
+                mismatched['sourceAdmission']['eventSha256']='f'*64
+                mismatched_raw=reader.canonical(mismatched)
+                mismatched_external=dict(timed_external,cleanupBytes=len(mismatched_raw),
+                    cleanupSha256=sha(mismatched_raw))
+                with patch.object(reader,'SETUP_V6_STATUS_SHA',sha(pre_status)),\
+                     patch.object(reader,'SETUP_V6_STATUS_BYTES',len(pre_status)),\
+                     self.assertRaises(reader.Refusal):
+                    reader.verify_setup_v6_failure_log(v6_log,mismatched_external,
+                        timed_outer,mismatched_raw,shell)
+                self.assertFalse(retained['setupObserved'])
+                self.assertEqual(retained['outsideCgroupAfter'],'present')
+                self.assertEqual(retained['outerClientExitCode'],124)
         def test_v5_coherent_full_original_graph_reader_and_outer_terminal_cuts(self):
             setup,witness=setup_v5_controls(export_sample=True)
             self.assertEqual(reader.SETUP_V5_STATUS_SHA,
@@ -3336,6 +3432,8 @@ def setup_v6_controls(export_sample=False):
             self.assertIn('/usr/bin/python3 -I -B scripts/i80386-ring3-int-iret/run.py --setup-runtime-inventory-v6',route)
             self.assertIn('BW_RING3_SETUP_INVENTORY_V6_REQUEST_B64',route)
             self.assertIn('shell-image.original.json',route)
+            self.assertIn('sudo -- /usr/bin/timeout --kill-after=5s 720s /usr/bin/systemd-run --wait --pipe',route)
+            self.assertIn('/usr/bin/timeout --kill-after=5s 60s /usr/bin/python3 -I -B',route)
             self.assertNotIn('--hosted-actual',route)
         def test_explicit_disabled_guard_refuses_before_host_edges(self):
             with patch.object(p,'SETUP_V6_ENABLED',False),patch.object(p,'setup_v6_entry',side_effect=AssertionError('no host')),patch.object(sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
@@ -3533,37 +3631,88 @@ def setup_v6_controls(export_sample=False):
                 self.assertEqual(error.ring3_partial['copy'],edge.facts)
                 self.assertEqual(error.ring3_partial['dropProgress'],[] if fail else
                                  ['groups','gid','uid','ids-verified'])
-        def test_outside_cleanup_refuses_live_descendant_and_records_absent_policy(self):
-            env={'GITHUB_RUN_ID':'123','BW_SYSTEMD_RUN_EXIT_CODE':'0'}
-            for mode,expected_exit in (('absent',0),('direct-child',1),('nested-child',1),
-                                       ('missing-dying-counter',1)):
-                unit_exists=mode!='absent'
-                with self.subTest(mode=mode):
-                    output=io.BytesIO();unlinks=[]
-                    def exists(path):
-                        return unit_exists if str(path).startswith('/sys/fs/cgroup/system.slice/') else False
-                    def census(_,path):
-                        if path.name=='cgroup.procs':return '101\n202\n' if mode=='direct-child' else ''
-                        if path.name=='cgroup.events':return 'populated 1\n' if mode=='direct-child' else 'populated 0\n'
-                        return ('nr_descendants '+('1' if mode=='nested-child' else '0')+'\n'+
-                            ('' if mode=='missing-dying-counter' else 'nr_dying_descendants 0\n'))
-                    with patch.object(p.os,'getresuid',return_value=(0,0,0)),\
-                         patch.object(p.os,'getresgid',return_value=(0,0,0)),\
-                         patch.object(Path,'exists',exists),\
-                         patch.object(Path,'is_symlink',return_value=False),\
-                         patch.object(p.Cgroups,'text',side_effect=census),\
-                         patch.object(p.os,'unlink',side_effect=lambda path:unlinks.append(path)),\
-                         patch.object(p.sys,'stdout',SimpleNamespace(buffer=output)):
-                        code=p.setup_v6_outside_cleanup(env)
-                    self.assertEqual(code,expected_exit)
-                    packet=reader.parse(output.getvalue())
-                    self.assertIs(packet['setupApproved'],False)
-                    self.assertEqual(packet['firstFailure'] is None,expected_exit==0)
-                    self.assertEqual(packet['action'],'not-needed' if expected_exit==0 else None)
-                    self.assertEqual(unlinks,[])
-            for helper in (p.setup_v6_cgroup_quiet,reader.setup_v6_cgroup_quiet):
-                with self.assertRaises((ValueError,reader.Refusal)):
-                    helper('101\n','populated 1\n','nr_descendants 0\n',101)
+        def test_outside_cleanup_bounded_exact_unit_stop_and_terminal_census(self):
+            request=self.request();source=reader.parse(reader.prerequisite_original(
+                reader.canonical(request['source'])))
+            unit='bw-ring3-setup-v6-123-1.service'
+            env={'GITHUB_RUN_ID':'123','BW_SYSTEMD_RUN_EXIT_CODE':'124',
+                'BW_EXPECTED_HEAD':request['head'],'BW_EXPECTED_TREE':request['tree']}
+            absent={'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None}
+            populated={'terminal':'populated','cgroupProcs':'202\n','cgroupEvents':'populated 1\n',
+                'cgroupStat':'nr_descendants 0\nnr_dying_descendants 0\n'}
+            class Observer:
+                def __init__(self,environ):self.facts={'source':source}
+                def event(self):return b'{}'
+                def source(self,selected):self.facts['source']=source
+            for mode,pre,post,stop_error in (('absent',absent,absent,None),
+                    ('stopped',populated,absent,None),
+                    ('stop-error',populated,populated,OSError('STOP_FIRST')),
+                    ('still-populated',populated,populated,None)):
+                output=io.BytesIO();calls=[]
+                def census(path):
+                    calls.append(('census',path.name))
+                    return pre if len([x for x in calls if x[0]=='census'])==1 else post
+                def stop(name):
+                    calls.append(('stop',name))
+                    if stop_error:raise stop_error
+                    return {'attempted':True,'argv':['/usr/bin/timeout','--kill-after=5s',
+                        '20s','/usr/bin/systemctl','stop','--',unit],
+                        'exitCode':0,'timedOut':False}
+                def exists(path):return str(path)=='/usr/sbin/policy-rc.d'
+                with self.subTest(mode=mode),patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+                     patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+                     patch.object(p,'HostedEnvelopeInstaller',Observer),\
+                     patch.object(p,'admit_setup_v6_event',return_value=(b'{}',request)),\
+                     patch.object(p,'setup_v6_owned_unit',return_value=mode!='absent'),\
+                     patch.object(p,'setup_v6_outside_census',side_effect=census),\
+                     patch.object(p,'setup_v6_stop_unit',side_effect=stop),\
+                     patch.object(Path,'exists',exists),patch.object(Path,'is_symlink',return_value=False),\
+                     patch.object(p.os,'unlink',side_effect=AssertionError('no policy unlink')),\
+                     patch.object(p.sys,'stdout',SimpleNamespace(buffer=output)):
+                    code=p.setup_v6_outside_cleanup(env)
+                packet=reader.parse(output.getvalue())
+                self.assertEqual(code,1);self.assertEqual(packet['firstFailure']['phase'],'v6-outer-client')
+                self.assertEqual(packet['sourceAdmission']['unit'],unit)
+                self.assertEqual([name for kind,name in calls if kind=='stop'],
+                    [] if mode=='absent' else [unit])
+                self.assertEqual(packet['postCensus'],post)
+                self.assertNotEqual(packet['action'],'removed-exact')
+                if mode=='stop-error':self.assertTrue(packet['secondary'])
+            # Source admission failure forbids even an exact-unit stop.
+            output=io.BytesIO()
+            with patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+                 patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+                 patch.object(p,'HostedEnvelopeInstaller',Observer),\
+                 patch.object(p,'admit_setup_v6_event',side_effect=ValueError('BAD_REQUEST')),\
+                 patch.object(p,'setup_v6_stop_unit',side_effect=AssertionError('stop before admission')),\
+                 patch.object(p.sys,'stdout',SimpleNamespace(buffer=output)):
+                self.assertEqual(p.setup_v6_outside_cleanup(env),1)
+            self.assertIsNone(reader.parse(output.getvalue())['sourceAdmission'])
+        def test_exact_stop_command_is_finitely_bounded(self):
+            completed=SimpleNamespace(returncode=124)
+            with patch.object(p.subprocess,'run',return_value=completed) as run:
+                fact=p.setup_v6_stop_unit('bw-ring3-setup-v6-123-1.service')
+            self.assertEqual(fact['exitCode'],124);self.assertTrue(fact['timedOut'])
+            argv=run.call_args.args[0]
+            self.assertEqual(argv,['/usr/bin/timeout','--kill-after=5s','20s',
+                '/usr/bin/systemctl','stop','--','bw-ring3-setup-v6-123-1.service'])
+            self.assertEqual(run.call_args.kwargs['timeout'],30)
+            with self.assertRaises(ValueError):p.setup_v6_stop_unit('unowned.service')
+        def test_exact_owned_unit_identity_refuses_alias_and_wrong_name(self):
+            unit=Path('/sys/fs/cgroup/system.slice/bw-ring3-setup-v6-123-1.service')
+            with patch.object(Path,'is_symlink',return_value=False),\
+                 patch.object(Path,'exists',return_value=False):
+                self.assertIs(p.setup_v6_owned_unit(unit),False)
+            with patch.object(Path,'is_symlink',return_value=True),\
+                 patch.object(Path,'exists',side_effect=AssertionError('alias must not be followed')):
+                with self.assertRaises(ValueError):p.setup_v6_owned_unit(unit)
+            for bad in (Path('/sys/fs/cgroup/system.slice/foreign.service'),
+                        Path('/sys/fs/cgroup/foreign/bw-ring3-setup-v6-123-1.service')):
+                with self.assertRaises(ValueError):p.setup_v6_owned_unit(bad)
+            with patch.object(p,'setup_v6_owned_unit',return_value=True),\
+                 patch.object(p.Cgroups,'text',side_effect=['1'*1025,'populated 1\n',
+                                                            'nr_descendants 0\nnr_dying_descendants 0\n']):
+                with self.assertRaises(ValueError):p.setup_v6_outside_census(unit)
         def test_raw_status_decoder_duplicate_tail_truncation_and_bomb(self):
             pre=b'Package: authored\nVersion: 1\nArchitecture: amd64\nStatus: install ok installed\n'
             post=pre+b'\nPackage: second\nVersion: 1\nArchitecture: all\nStatus: install ok installed\n'
