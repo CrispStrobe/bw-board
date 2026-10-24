@@ -3277,3 +3277,23 @@ implementation.
    protected guest results, the unchanged new paired gate and all enabled
    exact-head source checks before adoption. Do not infer physical RTx or a
    general workload gain from the authored loop.
+
+## Hosted Ring 3 baseline after the v8 refusal — claim, 2026-10-24
+
+The selected v8 metadata attempt stopped at the image-label preflight before
+status, helpers, package acquisition or runtime probes. The shell and service
+reported `ubuntu24` / `20261023.334.3`, while the official job's Runner Image
+block reported `ubuntu-24.04` / `20261012.334.1`. The original-only failure
+reader retains the refusal and no setup, runtime or guest approval. The reason
+for the disagreement is still unknown; neither value qualifies a new pin.
+
+The [owning lane](../LANES.md) claims one separate read-only hosted baseline
+route in the existing Ring 3 workflow and controller/reader/controls/README.
+It will bind a fresh source and official event, observe bounded shell and
+service image fields, raw package status, selected helper files and aliases,
+policy presence and outside cleanup, and compare the official image log as a
+separate externally admitted original. These are observations, not a setup
+or package transaction. The old image/status census is not assumed for the
+new job. No Node, helper, installer, QEMU or guest execution belongs to this
+route. Implement only after the claim merges, then require exact-head source
+CI and a separately reviewed one-shot original audit before any setup proposal.
