@@ -5726,6 +5726,33 @@ native backend, sampler/provisioner or consumer changes are included. A product
 repair requires a separate reviewed ownership extension. No hardware IRQ, IOPL
 isolation, paging, task switch, general DPMI, full386DX/OS or timing claim.
 
+### Selected QEMU exact setup/runtime v4 — 2026-10-24
+
+Within the merged [selected-QEMU claim PR660](https://github.com/CrispStrobe/bw-board/pull/660),
+Codex x86 owns only `scripts/i80386-ring3-int-iret/{run.py,reader.py,controls.py,README.md}`,
+`.github/workflows/i80386-ring3-int-iret.yml`, this claim entry and
+`docs/X86-NEXT-LANES.md` for a new **v4** setup/runtime candidate. The historical
+source12 roster, selected Node/QEMU bytes, old v3 body/label/request/event,
+guest/compiler guards, caps and failures remain in force. The new v4 label,
+request, job and reader are distinct and initially disabled in source/workflow.
+
+The source pins fifteen signed archive selections and the observed runner
+image/status/helper values. A reviewed, externally selected payload/control
+witness is required in the canonical request before activation. The bounded
+transaction uses fixed local archives, `dpkg --no-triggers --unpack` then
+`--no-triggers --configure` in the fixed order, no apt resolver, Recommends,
+force flags or upgrades. It creates only an absent owned policy101 file and
+removes only its exact identity after a finite no-descendant census. A
+separately bounded outside cleanup handles a retained policy after service
+terminal; unknown ownership refuses deletion. Complete pre/post dpkg status
+bytes are retained as bounded compressed originals and parsed independently.
+Partial package/service effects and deferred host triggers remain explicit.
+Node staging, irreversible drop and the old
+selected runtime graph follow only clean setup and cleanup. A reader of one
+official original joins the event/source/setup/stage/graph facts; it grants no
+host-configuration, guest, physical timing or general OS approval. Only a
+separately reviewed hosted event after exact-head CI can qualify this path.
+
 ## Open-PR backlog reconciliation — 2026-10-18
 
 CLAIM — Codex root, branch `lane/pr-backlog-integration-20261018`, initial

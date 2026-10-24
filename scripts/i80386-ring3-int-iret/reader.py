@@ -25,6 +25,7 @@ import subprocess
 import time
 import urllib.request
 import zipfile
+import zlib
 from pathlib import Path
 
 SCHEMA = 'bw.ring3.'
@@ -120,6 +121,23 @@ def parse(value):
     need(len(value) <= CAPS['jsonBytes'], 'JSON byte cap')
     return json.loads(value.decode('utf-8'), object_pairs_hook=unique,
                       parse_constant=lambda _: (_ for _ in ()).throw(Refusal('nonfinite JSON')))
+
+
+def parse_setup_v4_outer(value):
+    """Only the new combined setup/runtime or failed-entry packet has a 4 MiB cap."""
+    need(type(value) is bytes and 0<len(value)<=4<<20,'versioned v4 outer JSON byte cap')
+    def unique(pairs):
+        result={}
+        for key,item in pairs:
+            need(key not in result,'duplicate v4 outer JSON key')
+            result[key]=item
+        return result
+    def finite(token):
+        value=float(token)
+        need(math.isfinite(value),'nonfinite v4 outer JSON number')
+        return value
+    return json.loads(value.decode('utf-8'),object_pairs_hook=unique,parse_float=finite,
+                      parse_constant=lambda _:(_ for _ in ()).throw(Refusal('nonfinite v4 outer JSON')))
 
 
 def read_archive(raw):
@@ -2513,6 +2531,983 @@ STAGED_RUNTIME_INVENTORY_ENABLED=True
 STAGED_EMPTY_PYTHON_SOURCES={'/usr/lib/python3.12/urllib/__init__.py':{'kind':'python-source-empty','bytes':0,'sha256':'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','mode':0o644,'owner':[0,0],'links':1}}
 STAGED_RUNTIME_PLATFORM=tuple('BW_RING3_STAGED_INVENTORY_REQUEST_SHA256' if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key for key in NODE_STAGE_PLATFORM)
 
+# Independent selected setup constants. These archive rows are signed index
+# selections, not a claim that their payload, scripts, or setup are admitted.
+SETUP_V4_READER_ENABLED=False
+SETUP_V4_PACKAGES=(
+    ('ipxe-qemu','1.21.1+git-20220113.fbbdc3926-0ubuntu2','all','pool/main/i/ipxe/ipxe-qemu_1.21.1+git-20220113.fbbdc3926-0ubuntu2_all.deb',1564600,'1f1612934b6ddaf4dd633760dfe5ef2a79ea2507341fd5efe394ff589a044707'),
+    ('libbrlapi0.8','6.6-4ubuntu5','amd64','pool/main/b/brltty/libbrlapi0.8_6.6-4ubuntu5_amd64.deb',31388,'82272b3090c912e45d92ff7ed200de289c47e504513559377a6f6c5a372cbcf5'),
+    ('libcacard0','1:2.8.0-3build4','amd64','pool/main/libc/libcacard/libcacard0_2.8.0-3build4_amd64.deb',36546,'7a75de14b0fdff2828a3d218a49e7fe4da2df533185ba9ccbabd0647db05e33c'),
+    ('libdaxctl1','77-2ubuntu2','amd64','pool/main/n/ndctl/libdaxctl1_77-2ubuntu2_amd64.deb',21404,'c6629b49c79343fb11ae404aeaa3156f051168da6c6d3d9d8d516acd94705061'),
+    ('libfdt1','1.7.0-2build1','amd64','pool/main/d/device-tree-compiler/libfdt1_1.7.0-2build1_amd64.deb',20128,'274d20dfab9d6b216b5de85446a93f6ce5b2cd82c847b8dfdc508577f76eb96a'),
+    ('libndctl6','77-2ubuntu2','amd64','pool/main/n/ndctl/libndctl6_77-2ubuntu2_amd64.deb',62750,'4eab53588a8fa9e3192635e118c2d91bc069cde46a4a3785c77a0bb1ae001d02'),
+    ('libpcsclite1','2.0.3-1build1','amd64','pool/main/p/pcsc-lite/libpcsclite1_2.0.3-1build1_amd64.deb',21432,'703bacc9204a7ecc24486ac8c96d15d0b9e2c91c385388e132ad4fd8f56f035a'),
+    ('libpmem1','1.13.1-1.1ubuntu2','amd64','pool/main/p/pmdk/libpmem1_1.13.1-1.1ubuntu2_amd64.deb',84760,'8f1be1cc834a98f0cf5c0950153f7f939a0c2c92095e98cd7bb40c752c545c1b'),
+    ('librdmacm1t64','50.0-2ubuntu0.2','amd64','pool/main/r/rdma-core/librdmacm1t64_50.0-2ubuntu0.2_amd64.deb',70698,'7b7cc2fa16564bf301751b43d05d16f0846288b080d9a25a92a691d0df33fc68'),
+    ('liburing2','2.5-1build1','amd64','pool/main/libu/liburing/liburing2_2.5-1build1_amd64.deb',21092,'c2aef62accee92a06263c3ad4ef46132c13e409b54296c44792a20491830a7b0'),
+    ('libusbredirparser1t64','0.13.0-2.1build1','amd64','pool/main/u/usbredir/libusbredirparser1t64_0.13.0-2.1build1_amd64.deb',16508,'78be9176f05512bcac369fcada499686b1dd34320965d27e3405c7aacbc4e461'),
+    ('qemu-system-common','1:8.2.2+ds-0ubuntu1.18','amd64','pool/main/q/qemu/qemu-system-common_8.2.2+ds-0ubuntu1.18_amd64.deb',1255316,'0a0b744f31e87d72dd0465436b8dfbb1ef9f574ecd0d5a2e9dd8c5cb7d0fef1f'),
+    ('qemu-system-data','1:8.2.2+ds-0ubuntu1.18','all','pool/main/q/qemu/qemu-system-data_8.2.2+ds-0ubuntu1.18_all.deb',1796342,'a14b88d864859bd61c8a3274971da4ecb7da6cec15be6c265d0d411f783d5f2e'),
+    ('qemu-system-x86','1:8.2.2+ds-0ubuntu1.18','amd64','pool/main/q/qemu/qemu-system-x86_8.2.2+ds-0ubuntu1.18_amd64.deb',11222476,'14602e262627adac030329d2cecfee5f6c0938b34566ff2ea2d4c9a9eb02430d'),
+    ('seabios','1.16.3-2','all','pool/main/s/seabios/seabios_1.16.3-2_all.deb',174648,'cac4e59a66c834d19cae751c22ab3a0391c22f78010fd11aa2e3fe630e6bc0e0'),
+)
+SETUP_V4_ORDER=('ipxe-qemu','libbrlapi0.8','libdaxctl1','libfdt1','libndctl6','libpcsclite1',
+    'libcacard0','libpmem1','librdmacm1t64','liburing2','libusbredirparser1t64','qemu-system-common',
+    'qemu-system-data','seabios','qemu-system-x86')
+SETUP_V4_STATUS_SHA='4144e0299e81507b7a856beef9fe6e67f55bffd0c0d7e9245265b6920721d1ac'
+SETUP_V4_STATUS_BYTES=1231069
+SETUP_V4_HELPERS={
+    '/usr/bin/dash':'86d31f6fb799e91fa21bad341484564510ca287703a16e9e46c53338776f4f42',
+    '/usr/bin/deb-systemd-helper':'a895d5f077651960b6ca4ed9c53f8b36eae422ae170f61c972d0c6579e9f8732',
+    '/usr/bin/deb-systemd-invoke':'92eadae89f4df4cd6088f6316f5390b685faf8d0e312a4e5af3a507caaf81bdb',
+    '/usr/bin/dpkg-maintscript-helper':'c1ebe2d1281240872a38dd16dcaea57d48a66978f500eeeca58689ae006ca342',
+    '/usr/bin/systemctl':'e0d3d0e9444da1b2b58c792c3f5028b69f049b77d5ca17b3ec0d09f89117225b',
+    '/usr/sbin/invoke-rc.d':'1d389fa6f6297e77b2ba1d2df4a6ec60f4d4d37815b727889f38ba602e713f77',
+    '/usr/sbin/update-rc.d':'9a85792c1ee2714d34ad2f0dac9becd987cbaedbfe25519dede7378e6c9ebbf1',
+}
+SETUP_V4_HELPER_ALIASES={
+    '/bin':{'linkText':'usr/bin','target':'/usr/bin','uid':0,'gid':0,'nlink':1,'size':7},
+    '/bin/sh':{'linkText':'dash','target':'/usr/bin/dash','uid':0,'gid':0,'nlink':1,'size':4},
+    '/usr/bin/sh':{'linkText':'dash','target':'/usr/bin/dash','uid':0,'gid':0,'nlink':1,'size':4},
+}
+SETUP_V4_PAYLOAD_PINS={
+    "schema": "bw.ring3.payload-witness.v4",
+    "archives": [
+        {
+            "archiveBytes": 1564600,
+            "archiveSha256": "1f1612934b6ddaf4dd633760dfe5ef2a79ea2507341fd5efe394ff589a044707",
+            "controlTarSha256": "dab36b7d2d625339a111a2a32163faa626a96dbce1c4efac2b1ad0b18e4683e5",
+            "dataTarSha256": "78d92626f8446145eec7a7f81a1d33448f86a6a1e51992458cb4757f3b56ad78",
+            "package": "ipxe-qemu",
+            "payloadManifestSha256": "655a1a4df62bc5265e2c7b29748d81d6d8aebad784e7a5d13ea2d309653db0c8",
+        },
+        {
+            "archiveBytes": 31388,
+            "archiveSha256": "82272b3090c912e45d92ff7ed200de289c47e504513559377a6f6c5a372cbcf5",
+            "controlTarSha256": "64b072d12f5c89d9d9d975dca14997403dce5c5be4d6c1ca57030e4a22be128d",
+            "dataTarSha256": "787d1c1b6e0fbf10f550662aa826c83835347edd172ee966cd4989e881abf964",
+            "package": "libbrlapi0.8",
+            "payloadManifestSha256": "4708788e9020dbc95447b4944267f1e8fe74f0a5650679c3d135e0d133c5f570",
+        },
+        {
+            "archiveBytes": 36546,
+            "archiveSha256": "7a75de14b0fdff2828a3d218a49e7fe4da2df533185ba9ccbabd0647db05e33c",
+            "controlTarSha256": "c28f041eb4f9e07e54a0ccd60253051a3aa7505c27189fb8da7414ba73c0b980",
+            "dataTarSha256": "7bbc7221f79a7dcddfc13b5dbc52aaa0a7852713b6ada4eb244f3d3aa98a59ad",
+            "package": "libcacard0",
+            "payloadManifestSha256": "4fed6f8f8f0d09f108b1a7f1e4c6b3b6480c285b6653ef8ab426541ba6bf8c8e",
+        },
+        {
+            "archiveBytes": 21404,
+            "archiveSha256": "c6629b49c79343fb11ae404aeaa3156f051168da6c6d3d9d8d516acd94705061",
+            "controlTarSha256": "84787ea776d2ede6c0aad1c0d5d01f532bbfe60eccd9005a2db888db214c1c88",
+            "dataTarSha256": "eec937d78d1fd00ff35cf9ec29b9db0930028add643815744fcc7871ea85afa3",
+            "package": "libdaxctl1",
+            "payloadManifestSha256": "388317ba7a8850b63f970a0e3a36222f7e94947b0c981f202b1df7bf0d38245f",
+        },
+        {
+            "archiveBytes": 20128,
+            "archiveSha256": "274d20dfab9d6b216b5de85446a93f6ce5b2cd82c847b8dfdc508577f76eb96a",
+            "controlTarSha256": "c469ca21115054841124298fb0f94371462b860cfef20fb8c3c4cc7fa9186c93",
+            "dataTarSha256": "647fcd0c67ae844c87ff136b809e9926477415a7ca86360ebbd9db4949275d8b",
+            "package": "libfdt1",
+            "payloadManifestSha256": "a34628593b28b485cdf465c36102c3a286b3cd16c9cc4679109b6aab2ab75655",
+        },
+        {
+            "archiveBytes": 62750,
+            "archiveSha256": "4eab53588a8fa9e3192635e118c2d91bc069cde46a4a3785c77a0bb1ae001d02",
+            "controlTarSha256": "64a0e99c561dbb79ea7d617bf1c2e21be4fafd21e00048b64182180d3ba2e458",
+            "dataTarSha256": "9fac446798a263f0d5ee6d5bf8f0294b936cb723ad9c2d972ec60fee79ed4add",
+            "package": "libndctl6",
+            "payloadManifestSha256": "10af631245af973cbdef5b476d2cccd9353367d27d13c1c81bfece16d87fbc28",
+        },
+        {
+            "archiveBytes": 21432,
+            "archiveSha256": "703bacc9204a7ecc24486ac8c96d15d0b9e2c91c385388e132ad4fd8f56f035a",
+            "controlTarSha256": "5dde8516bdbdb54cfa41fe1039bb8a87140b0a0f3c0d9f5a09371bca977ad437",
+            "dataTarSha256": "aeab3c20b84b03db9288cb9b2ffc3931cbdb1cb350b841c89e3c8c98ac8c94cc",
+            "package": "libpcsclite1",
+            "payloadManifestSha256": "61b9dd7129c1a921b5322460dbb3ba83bf1e60c473fa3f799914273dd7532199",
+        },
+        {
+            "archiveBytes": 84760,
+            "archiveSha256": "8f1be1cc834a98f0cf5c0950153f7f939a0c2c92095e98cd7bb40c752c545c1b",
+            "controlTarSha256": "61b96efd1923cc39339722d9ac5b9a0227cc0038fdd5fb9686e7dd7ac73e8d98",
+            "dataTarSha256": "61fa9b8be78d6f283d0f0b094a5f3ba9076f7c38bd9220245e50c7aa940620a3",
+            "package": "libpmem1",
+            "payloadManifestSha256": "0867081cb0591d5283f9364abde6e672027232c8152422535a06322a86329d09",
+        },
+        {
+            "archiveBytes": 70698,
+            "archiveSha256": "7b7cc2fa16564bf301751b43d05d16f0846288b080d9a25a92a691d0df33fc68",
+            "controlTarSha256": "c49b004ba5b87f66043a1a8249d4af9e75281b2266891047b26ab54c58d258d5",
+            "dataTarSha256": "65f02da724af8303ced3d962307b660e209583822214a802d8a4060033cff638",
+            "package": "librdmacm1t64",
+            "payloadManifestSha256": "ea04c2c9a17257eda758fcb2929d13235fa10da80d8e2fb2cc4f20de842dd1f6",
+        },
+        {
+            "archiveBytes": 21092,
+            "archiveSha256": "c2aef62accee92a06263c3ad4ef46132c13e409b54296c44792a20491830a7b0",
+            "controlTarSha256": "46693ff5877f7840538c422e49d904edd92fbec18c4eb8b426dbc2bcb3f17e79",
+            "dataTarSha256": "f8f3760a5330d780c98b7fce9cc8f9b51e810e151ba987a33b994da8b94d3da9",
+            "package": "liburing2",
+            "payloadManifestSha256": "aca3b66c9e31e14b28a8f1c73aae407f66be2932923023c315c303c2645db2ae",
+        },
+        {
+            "archiveBytes": 16508,
+            "archiveSha256": "78be9176f05512bcac369fcada499686b1dd34320965d27e3405c7aacbc4e461",
+            "controlTarSha256": "46b146b7e59e97af0e1ccd8cc3ca11a63a8123112c12d07f1e53c65814972832",
+            "dataTarSha256": "7e895619747aa440b362e1b0152a5ccc557b30f8b7424a432ce22221e12ce9d4",
+            "package": "libusbredirparser1t64",
+            "payloadManifestSha256": "6bdec945c45fba7ed980907dac24d03641544336324981c35b8dfa404abf1eaa",
+        },
+        {
+            "archiveBytes": 1255316,
+            "archiveSha256": "0a0b744f31e87d72dd0465436b8dfbb1ef9f574ecd0d5a2e9dd8c5cb7d0fef1f",
+            "controlTarSha256": "bbb8ed1b6d2e6923cfbcecd020bb72486cfaf05163466cc6736bf13942aa3dd9",
+            "dataTarSha256": "08ee4d757a7cfa36502d8d54431b6856acc6c30c3b862f764eb33a27ea3e0043",
+            "package": "qemu-system-common",
+            "payloadManifestSha256": "b39abb5ed35ca9ce2e856d134952099f465ebc54e835d33d7b61258f3170ecaf",
+        },
+        {
+            "archiveBytes": 1796342,
+            "archiveSha256": "a14b88d864859bd61c8a3274971da4ecb7da6cec15be6c265d0d411f783d5f2e",
+            "controlTarSha256": "26fc72e009aca88278c225e4449d101a2dc6602915060b7d4e5b30c03c7f1ec0",
+            "dataTarSha256": "366faf3142552bf087d80de2eacf711da319e6431f6deb0096472465beb5ac0f",
+            "package": "qemu-system-data",
+            "payloadManifestSha256": "4941b090a1a1c23ac46be87b095e4dac9d24cc62409c849969a3a33041c9ce3f",
+        },
+        {
+            "archiveBytes": 11222476,
+            "archiveSha256": "14602e262627adac030329d2cecfee5f6c0938b34566ff2ea2d4c9a9eb02430d",
+            "controlTarSha256": "bf95314245f15035a67b6cf4458d06007614dba2435852624645232824dfa5a5",
+            "dataTarSha256": "1d46e5a7343237012ee6c552e268b5622f20b2c2571f598f5935c7ae046be7d9",
+            "package": "qemu-system-x86",
+            "payloadManifestSha256": "04bcd243a8df3fd5b68ce587c182fe5f060f4400b2668cbcfe5773f725b509c8",
+        },
+        {
+            "archiveBytes": 174648,
+            "archiveSha256": "cac4e59a66c834d19cae751c22ab3a0391c22f78010fd11aa2e3fe630e6bc0e0",
+            "controlTarSha256": "0215112ef5bd086cfaa1377d70e28921ab15dce20403d3bac81744b4e5e81e54",
+            "dataTarSha256": "894464ef264f9872ebd90546f47d7e882929cbfdac2062f99ffe70fcf60776ea",
+            "package": "seabios",
+            "payloadManifestSha256": "3df2204ba4cd9df355a6e6fce1b006a6be386a471eb2f2fc43cc96e5f906f575",
+        },
+    ],
+    "serviceUnit": {
+        "bytes": 367,
+        "path": "/usr/lib/systemd/system/qemu-kvm.service",
+        "sha256": "da0544deed8c3e9f9f8221c99f5e1ca67135f15f1f3f070767cb8966f705304a",
+    },
+    "initScript": {
+        "bytes": 2496,
+        "path": "/usr/share/qemu/init/qemu-kvm-init",
+        "sha256": "c769a6a149897575767c5a4377cc7cb15dcbb586a9a1eec1d6248dba098b08f2",
+    },
+}
+SETUP_V4_PLATFORM=tuple('BW_RING3_SETUP_INVENTORY_REQUEST_SHA256' if key=='BW_RING3_NODE_STAGE_REQUEST_SHA256' else key for key in NODE_STAGE_PLATFORM)
+
+
+def setup_v4_policy():
+    return {'imageOS':'ubuntu24','imageVersion':'20261012.334.1',
+        'statusSha256':SETUP_V4_STATUS_SHA,
+        'helperSha256':SETUP_V4_HELPERS,'helperAliases':SETUP_V4_HELPER_ALIASES,
+        'packages':[{'package':name,'version':version,'architecture':arch,'filename':filename,'size':size,'sha256':digest}
+            for name,version,arch,filename,size,digest in SETUP_V4_PACKAGES],
+        'configureOrder':list(SETUP_V4_ORDER),'unpackOptions':['--no-triggers','--unpack'],
+        'configureOptions':['--no-triggers','--configure'],'policyPath':'/usr/sbin/policy-rc.d',
+        'policyExit':101,'deferredTriggers':True,'apt':False,'recommends':False,'force':False,
+        'upgrade':False,'configurationComplete':False}
+
+
+def setup_v4_request(raw,pin):
+    need(type(raw) is bytes and 0<len(raw)<=1<<20 and digest(pin)==sha(raw),'externally selected v4 request')
+    value=parse(raw);keys(value,'schema repository pullRequest head tree source selected nodeStage emptyPythonSources setup payloadWitness')
+    need(raw==canonical(value) and value['schema']=='bw.ring3.inventory-request.v4','canonical v4 request')
+    base={key:value[key] for key in ('repository','pullRequest','head','tree','source','selected','nodeStage','emptyPythonSources')}
+    base['schema']='bw.ring3.inventory-request.v3'
+    old,source=staged_runtime_request(canonical(base),sha(canonical(base)))
+    need(equal(value['setup'],setup_v4_policy()),'exact selected v4 setup policy')
+    need(type(SETUP_V4_PAYLOAD_PINS) is dict and len(SETUP_V4_PAYLOAD_PINS['archives'])==15 and
+         all((item['package'],item['archiveBytes'],item['archiveSha256'])==(name,size,digest)
+             for item,(name,version,arch,filename,size,digest) in
+             zip(SETUP_V4_PAYLOAD_PINS['archives'],SETUP_V4_PACKAGES)),
+         'independent payload/archive selection join')
+    need(SETUP_V4_PAYLOAD_PINS is not None and equal(value['payloadWitness'],SETUP_V4_PAYLOAD_PINS),
+         'separately reviewed payload/control witness required')
+    return value,source
+
+
+def setup_v4_event(raw,request,pin,environment):
+    event=parse(raw);pr=event.get('pull_request',{});body=pr.get('body')
+    start='<!-- BW_RING3_SETUP_RUNTIME_INVENTORY_V4\n';end='\nBW_RING3_SETUP_RUNTIME_INVENTORY_V4 -->'
+    need(type(body) is str and body.count(start)==body.count(end)==1 and body.index(start)<body.index(end),'one v4 request block')
+    block=body.split(start,1)[1].split(end,1)[0];wrapper=parse(block.encode())
+    need(canonical(wrapper).decode().rstrip('\n')==block and prerequisite_original(canonical(wrapper))==canonical(request) and
+         wrapper['sha256']==pin,'exact immutable v4 request bytes')
+    need(event.get('action')=='labeled' and event.get('label',{}).get('name')=='x86-ring3-setup-runtime-inventory-v1' and
+         event.get('repository',{}).get('full_name')=='CrispStrobe/bw-board' and event.get('sender',{}).get('login')=='CrispStrobe' and
+         type(event.get('number')) is int and event['number']==request['pullRequest'] and type(pr.get('number')) is int and
+         pr['number']==event['number'] and pr.get('state')=='open' and pr.get('head',{}).get('sha')==request['head'] and
+         pr.get('head',{}).get('repo',{}).get('full_name')=='CrispStrobe/bw-board' and pr['head']['repo'].get('fork') is False and
+         pr.get('base',{}).get('ref')=='master' and pr['base'].get('repo',{}).get('full_name')=='CrispStrobe/bw-board',
+         'exact owned v4 event')
+    need(type(environment) is dict and all(environment.get(k)==v for k,v in {
+        'GITHUB_RUN_ATTEMPT':'1','GITHUB_REPOSITORY':'CrispStrobe/bw-board','GITHUB_EVENT_NAME':'pull_request',
+        'GITHUB_ACTOR':'CrispStrobe','GITHUB_JOB':'setup-runtime-inventory',
+        'BW_EXPECTED_HEAD':request['head'],'BW_EXPECTED_TREE':request['tree'],
+        'BW_RING3_SETUP_INVENTORY_REQUEST_SHA256':pin,
+        'GITHUB_WORKFLOW_REF':'CrispStrobe/bw-board/.github/workflows/i80386-ring3-int-iret.yml@refs/pull/'+str(request['pullRequest'])+'/merge'}.items()),
+        'exact v4 platform/source joins')
+    need(type(environment.get('GITHUB_RUN_ID')) is str and re.fullmatch('[1-9][0-9]{0,19}',environment['GITHUB_RUN_ID']),
+         'first v4 run identity');digest(environment.get('GITHUB_WORKFLOW_SHA'),40)
+
+
+SETUP_V4_STATUS_MARKER=b'RING3_SETUP_STATUS_V4 '
+
+
+def setup_v4_status_rows(raw):
+    need(type(raw) is bytes and 0<len(raw)<=8<<20 and b'\r' not in raw and b'\0' not in raw,
+         'bounded raw dpkg status')
+    result={}
+    for paragraph in raw.split(b'\n\n'):
+        if not paragraph.strip():continue
+        fields={}
+        authority=(b'Package',b'Version',b'Architecture',b'Status',b'Triggers-Pending',b'Triggers-Awaited')
+        previous_authority=False
+        for line in paragraph.splitlines():
+            if line.startswith((b' ',b'\t')):
+                need(not previous_authority,'folded dpkg authority field refused')
+                continue
+            key,colon,value=line.partition(b':')
+            previous_authority=key in authority
+            if previous_authority:
+                name=key.decode()
+                need(colon==b':' and (not value or value[:1]==b' ') and
+                     not value.startswith(b'  ') and name not in fields,
+                     'duplicate or malformed dpkg status authority field')
+                text=value[1:] if value.startswith(b' ') else value
+                need(0<len(text)<=4096,'nonempty bounded dpkg status authority value')
+                fields[name]=text.decode('utf-8','strict')
+        name,arch=fields.get('Package'),fields.get('Architecture')
+        need(all(fields.get(key) for key in ('Package','Version','Architecture','Status')) and
+             re.fullmatch('[A-Za-z0-9.+-]+',name) and arch in ('amd64','all') and
+             (name,arch) not in result,
+             'unique architecture-qualified raw status row')
+        result[(name,arch)]=fields
+    need(len(result)<=5000,'finite raw status row count')
+    return result
+
+
+def setup_v4_status_delta(before,after):
+    selected={(name,arch) for name,version,arch,*_ in SETUP_V4_PACKAGES}
+    need(set(after)==set(before)|selected and not(set(before)&selected),
+         'only exact fifteen new architecture-qualified packages')
+    for key,old in before.items():
+        new=after[key]
+        need(new['Version']==old['Version'] and
+             (new['Status']==old['Status'] if old['Status']!='install ok installed' else
+              new['Status'] in ('install ok installed','install ok triggers-pending','install ok triggers-awaited')),
+             'no pre-existing package upgrade, removal or deconfiguration')
+
+
+def setup_v4_cgroup_quiet(procs,events,stat_text,controller=None):
+    need(all(type(value) is str and len(value)<=4096 for value in (procs,events,stat_text)),
+         'bounded raw owned cgroup census')
+    def fields(raw):
+        found={}
+        for line in raw.splitlines():
+            parts=line.split(' ')
+            need(len(parts)==2 and re.fullmatch('[a-z_]+',parts[0]) and
+                 re.fullmatch('[0-9]+',parts[1]) and parts[0] not in found,
+                 'canonical cgroup counter original')
+            found[parts[0]]=int(parts[1])
+        return found
+    stat_rows=fields(stat_text);event_rows=fields(events)
+    need({'nr_descendants','nr_dying_descendants'}<=set(stat_rows) and 'populated' in event_rows,
+         'explicit nested cgroup and populated originals')
+    no_nested=stat_rows['nr_descendants']==0 and stat_rows['nr_dying_descendants']==0
+    if controller is None:return procs=='' and no_nested and event_rows['populated']==0
+    return procs==str(controller)+'\n' and no_nested and event_rows['populated']==1
+
+
+def decode_setup_v4_status_log(raw,required_roles=frozenset(('pre','post'))):
+    need(type(raw) is bytes and 0<len(raw)<=8<<20,'bounded official v4 log for status originals')
+    result={}
+    for line in raw.splitlines():
+        at=line.find(SETUP_V4_STATUS_MARKER)
+        if at<0:continue
+        prefix=line[:at]
+        need(prefix==b'' or re.fullmatch(rb'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ',prefix),
+             'canonical status original log timestamp')
+        need(len(line[at:])+1<=1<<20,'one-MiB complete status log frame including LF')
+        packet=parse(line[at+len(SETUP_V4_STATUS_MARKER):])
+        keys(packet,'schema role rawBytes rawSha256 packedBytes packedSha256 encoding packed')
+        role=packet['role'];need(packet['schema']=='bw.ring3.setup-status-original.v4' and
+             role in ('pre','post') and role not in result and packet['encoding']=='zlib+base64',
+             'one fixed raw pre/post status original')
+        size=integer(packet['rawBytes'],1,8<<20);packed_size=integer(packet['packedBytes'],1,700<<10)
+        digest(packet['rawSha256']);digest(packet['packedSha256'])
+        need(type(packet['packed']) is str and len(packet['packed'])==4*((packed_size+2)//3),
+             'exact bounded compressed status encoding')
+        packed=base64.b64decode(packet['packed'],validate=True)
+        need(base64.b64encode(packed).decode()==packet['packed'] and len(packed)==packed_size and
+             sha(packed)==packet['packedSha256'],'exact compressed original bytes')
+        decoder=zlib.decompressobj()
+        decoded=decoder.decompress(packed,(8<<20)+1)
+        need(len(decoded)<=8<<20 and decoder.eof and decoder.unused_data==b'' and
+             decoder.unconsumed_tail==b'' and len(decoded)==size and
+             sha(decoded)==packet['rawSha256'],
+             'complete bounded single zlib stream and raw status SHA')
+        result[role]={'raw':decoded,'meta':{'role':role,'bytes':size,'sha256':sha(decoded),
+            'packedBytes':packed_size,'packedSha256':sha(packed)}}
+    if required_roles is not None:
+        need(set(result)==set(required_roles),'exact retained raw dpkg status original roles')
+    return result
+
+
+def setup_v4_facts(value,run_id,controller_pid,source_last_reap):
+    keys(value,'schema preflight archives policy unpack configure postStatus cleanup policyCleanupCgroup nodeStage runtime partial deferredHostTriggers configurationComplete firstFailure secondary')
+    integer(controller_pid,1);integer(source_last_reap,1)
+    need(value['schema']=='bw.ring3.setup-original.v4' and value['firstFailure'] is None and value['secondary']==[] and
+         value['deferredHostTriggers'] is True and value['configurationComplete'] is False and
+         value['nodeStage'] is None and value['runtime'] is None and value['partial'] is None,
+         'complete setup facts before Node copy')
+    pre=value['preflight'];keys(pre,'imageOS imageVersion statusSha256 statusBytes statusRecords statusOriginal helperSha256 helperAliases resource policyAbsent newPackagesAbsent imageFieldsAuthenticated immutableImageIdentityEstablished')
+    need(pre['imageOS']=='ubuntu24' and pre['imageVersion']=='20261012.334.1' and
+         pre['statusSha256']==SETUP_V4_STATUS_SHA and
+         integer(pre['statusBytes'],1,8<<20)==SETUP_V4_STATUS_BYTES and integer(pre['statusRecords'],1,5000)==1211 and
+         equal(pre['helperSha256'],SETUP_V4_HELPERS) and
+         equal(pre['helperAliases'],SETUP_V4_HELPER_ALIASES) and
+         pre['policyAbsent'] is True and
+         pre['newPackagesAbsent'] is True and pre['imageFieldsAuthenticated'] is False and
+         pre['immutableImageIdentityEstablished'] is False,'fresh observed selected pre-state, no image-auth claim')
+    pre_original=pre['statusOriginal'];keys(pre_original,'role bytes sha256 packedBytes packedSha256')
+    need(pre_original['role']=='pre' and pre_original['bytes']==pre['statusBytes'] and
+         pre_original['sha256']==pre['statusSha256'] and
+         integer(pre_original['packedBytes'],1,700<<10)>0 and
+         digest(pre_original['packedSha256']),'held pre-status original summary')
+    resource_row=pre['resource'];keys(resource_row,'membership limits')
+    need(resource_row['membership']=='0::/system.slice/bw-ring3-setup-v4-'+run_id+'-1.service\n' and
+         equal(resource_row['limits'],{'cpuMax':'100000 100000','memoryMax':'1073741824',
+             'swapMax':'0','pidsMax':'64'}),'observed fixed outer setup cgroup limits')
+    archives=value['archives'];need(type(archives) is list and len(archives)==15,'exact fifteen acquired archives')
+    need(sum(row[4] for row in SETUP_V4_PACKAGES)==16400088 and all(row[4]<=12<<20 for row in SETUP_V4_PACKAGES),
+         'fixed aggregate/per-archive bytes')
+    archive_root='/run/bw-ring3-setup-v4-'+run_id+'-1/'
+    for index,(item,(name,version,arch,filename,size,pin)) in enumerate(zip(archives,SETUP_V4_PACKAGES)):
+        keys(item,'package path url bytes sha256 identity closeSucceeded')
+        need(equal(item['package'],{'package':name,'version':version,'architecture':arch,'filename':filename,'size':size,'sha256':pin}) and
+             item['path']==archive_root+str(index).zfill(2)+'.deb' and
+             item['url']=='https://snapshot.ubuntu.com/ubuntu/20261019T000000Z/'+filename and
+             type(item['bytes']) is int and item['bytes']==size and item['sha256']==pin and item['closeSucceeded'] is True,
+             'ordered exact archive selected bytes/URL and closed observation')
+        info=item['identity'];need(type(info) is list and len(info)==8 and all(type(n) is int for n in info) and
+             stat.S_ISREG(info[2]) and stat.S_IMODE(info[2])==0o600 and info[3:7]==[0,0,1,size],
+             'held root-owned regular archive fact')
+    policy=value['policy'];keys(policy,'path identity sha256 mode exclusive')
+    need(policy['path']=='/usr/sbin/policy-rc.d' and policy['sha256']==sha(b'#!/bin/sh\nexit 101\n') and
+         policy['mode']==0o755 and policy['exclusive'] is True,'exact owned policy101 bytes/mode')
+    info=policy['identity'];need(type(info) is list and len(info)==8 and all(type(n) is int for n in info) and
+         stat.S_ISREG(info[2]) and stat.S_IMODE(info[2])==0o755 and info[3:7]==[0,0,1,19],
+         'held owned policy identity')
+    need(equal(value['cleanup'],{'removedExactOwnIdentity':True,'identity':info}),
+         'same exact policy identity removed before Node stage')
+    last=source_last_reap
+    for phase,args in (('unpack',['--no-triggers','--unpack']+[item['path'] for item in archives]),
+                       ('configure',['--no-triggers','--configure',*SETUP_V4_ORDER])):
+        row=value[phase];keys(row,'argv process stdout stderr exitCode timedOut firstFailure secondary cgroupAfter')
+        argv=['/usr/bin/dpkg',*args];need(equal(row['argv'],argv) and row['exitCode']==0 and row['timedOut'] is False and
+             row['firstFailure'] is None and row['secondary']==[],'fixed no-triggers dpkg phase')
+        start,end=v8_process(row['process'],'setup-v4',argv,
+            {'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'},120000)
+        need(row['process']['parentPid']==controller_pid and last<=start,
+             'same root controller and Git/unpack/configure chronology')
+        last=end
+        census=row['cgroupAfter'];keys(census,'phase cgroupProcs cgroupEvents cgroupStat onlyController')
+        need(census['phase']==phase and
+             setup_v4_cgroup_quiet(census['cgroupProcs'],census['cgroupEvents'],
+                                   census['cgroupStat'],controller_pid) and
+             census['onlyController'] is True,'finite no-descendant setup phase census')
+        for stream in ('stdout','stderr'):
+            encoded=row[stream]
+            if encoded is not None:need(len(prerequisite_original(canonical(encoded)))<=128<<10,'bounded dpkg original stream')
+    need(value['unpack']['process']['reapMonoNs']<=value['configure']['process']['spawnMonoNs'],
+         'unpack completed before configure')
+    census=value['policyCleanupCgroup'];keys(census,'phase cgroupProcs cgroupEvents cgroupStat onlyController')
+    need(census['phase']=='policy-cleanup' and
+         setup_v4_cgroup_quiet(census['cgroupProcs'],census['cgroupEvents'],
+                               census['cgroupStat'],controller_pid) and
+         census['onlyController'] is True,
+         'only root controller remained before global policy removal')
+    post=value['postStatus'];keys(post,'sha256 bytes records selected pendingHostTriggers serviceObserved statusOriginal allSelectedPresent allowedStates deferredHostTriggers configurationComplete')
+    digest(post['sha256']);integer(post['bytes'],1,8<<20);integer(post['records'],1,5000)
+    post_original=post['statusOriginal'];keys(post_original,'role bytes sha256 packedBytes packedSha256')
+    need(post_original['role']=='post' and post_original['bytes']==post['bytes'] and
+         post_original['sha256']==post['sha256'] and
+         integer(post_original['packedBytes'],1,700<<10)>0 and
+         digest(post_original['packedSha256']),'held post-status original summary')
+    need(post['allSelectedPresent'] is True and post['allowedStates'] is True and
+         post['deferredHostTriggers'] is True and post['configurationComplete'] is False and
+         type(post['selected']) is dict and set(post['selected'])=={row[0] for row in SETUP_V4_PACKAGES},
+         'all selected post-status rows and deferred configuration')
+    for name,version,arch,*_ in SETUP_V4_PACKAGES:
+        row=post['selected'][name];keys(row,'Package Version Architecture Status Triggers-Pending Triggers-Awaited')
+        need((row['Package'],row['Version'],row['Architecture'])==(name,version,arch) and
+             row['Status'] in ('install ok installed','install ok triggers-pending','install ok triggers-awaited') and
+             all(type(row[key]) in (str,type(None)) for key in ('Triggers-Pending','Triggers-Awaited')),
+             'versioned selected package status, including pending trigger facts')
+    pending=post['pendingHostTriggers']
+    need(type(pending) is dict and len(pending)<=5000,'bounded actual host trigger rows')
+    for name,row in pending.items():
+        need(type(name) is str and re.fullmatch('[A-Za-z0-9.+-]+:(?:amd64|all)',name),
+             'architecture-qualified host trigger package')
+        keys(row,'status pending awaited')
+        need(type(row['status']) is str and len(row['status'])<=128 and
+             all(type(row[key]) in (str,type(None)) and (row[key] is None or len(row[key])<=4096)
+                 for key in ('pending','awaited')) and
+             (row['status'] in ('install ok triggers-pending','install ok triggers-awaited') or
+              row['pending'] is not None or row['awaited'] is not None),'honest bounded pending host trigger fact')
+    need(equal(post['serviceObserved'],{'unit':SETUP_V4_PAYLOAD_PINS['serviceUnit'],
+        'init':SETUP_V4_PAYLOAD_PINS['initScript']}),
+        'exact reviewed service unit and init script payload bytes; no service execution')
+    return {'setupObserved':True,'deferredHostTriggers':True,'completeHostConfiguration':False,
+        'imageFieldsAuthenticated':False,'immutableImageIdentityEstablished':False}
+
+
+def setup_v4_stage_record(record,pin):
+    keys(record,'schema request event platform source sourceCommands eventIdentity setup copy recordBoundary firstFailure secondary')
+    need(record['schema']=='bw.ring3.node-stage-original.v4' and record['firstFailure'] is None and
+         record['secondary']==[] and record['recordBoundary']==
+         'verified copy after selected setup and policy cleanup, before directory publication',
+         'closed v4 stage record')
+    request_raw=prerequisite_original(canonical(record['request']));request,source=setup_v4_request(request_raw,pin)
+    event_raw=prerequisite_original(canonical(record['event']));environment=record['platform']
+    need(type(environment) is dict and set(environment)==set(SETUP_V4_PLATFORM),'closed v4 stage platform')
+    setup_v4_event(event_raw,request,pin,environment)
+    need(equal(record['source'],source),'root Git/live source12 joins selected request')
+    copy=record['copy'];keys(copy,'created sourceBefore sourceAfter sourceNamedAfter bytesCopied sourceBytesRead writeUncertain targetAfterFailure directoryAfterFailure copiedSha256 readbackSha256 filePublicationAttempted directoryPublicationAttempted filePublished directoryPublished file directory')
+    need(copy['created']==[str(NODE_STAGE_ROOT),NODE_STAGE_TARGET] and copy['filePublicationAttempted'] is True and
+         copy['directoryPublicationAttempted'] is False and copy['filePublished'] is True and copy['directoryPublished'] is False and
+         type(copy['bytesCopied']) is int and copy['bytesCopied']==RUNTIME_SELECTED['node']['bytes'] and
+         type(copy['sourceBytesRead']) is int and copy['sourceBytesRead']==copy['bytesCopied'] and
+         copy['writeUncertain'] is False and copy['targetAfterFailure'] is None and copy['directoryAfterFailure'] is None and
+         copy['copiedSha256']==copy['readbackSha256']==RUNTIME_SELECTED['node']['sha256'],
+         'fixed verified Node copy before directory publication')
+    for name in ('sourceBefore','sourceAfter','sourceNamedAfter','file','directory'):
+        info=copy[name];need(type(info) is list and len(info)==8 and all(type(x) is int for x in info) and
+             all(0<=x<2**64 for x in info[:7]) and -2**63<=info[7]<2**63,'raw v4 stage metadata')
+    before=copy['sourceBefore'];need(before==copy['sourceAfter']==copy['sourceNamedAfter'] and
+         stat.S_ISREG(before[2]) and before[2]&0o6000==0 and before[5:7]==[1,RUNTIME_SELECTED['node']['bytes']],
+         'held Node cache source extent/identity')
+    file,directory=copy['file'],copy['directory']
+    need(stat.S_ISREG(file[2]) and stat.S_IMODE(file[2])==0o555 and file[3:7]==[0,0,1,RUNTIME_SELECTED['node']['bytes']] and
+         stat.S_ISDIR(directory[2]) and stat.S_IMODE(directory[2])==0o700 and directory[3:5]==[0,0],
+         'fixed staged Node file/directory')
+    commands=record['sourceCommands'];need(type(commands) is list and len(commands)==3,'three original v4 source Git commands')
+    git=['--no-replace-objects','-c','gc.auto=0','-c','maintenance.auto=false']
+    tails=[['rev-parse','HEAD'],['rev-parse','HEAD^{tree}'],['ls-tree','-r','HEAD','--',*sorted(SETUP_SOURCE_PATHS)]]
+    outputs=[(request['head']+'\n').encode(),(request['tree']+'\n').encode(),
+        ''.join(source['files'][path]['mode']+' blob '+source['files'][path]['blob']+'\t'+path+'\n'
+            for path in sorted(SETUP_SOURCE_PATHS)).encode()]
+    previous=0;parent=None;safe=None
+    for index,command in enumerate(commands):
+        keys(command,'argv process stdout stderr');argv=command['argv']
+        need(type(argv) is list and len(argv)>3 and argv[:2]==['/usr/bin/git','-c'] and
+             type(argv[2]) is str and argv[2].startswith('safe.directory=/'),'scoped v4 Git source checkout')
+        if safe is None:safe=argv[2]
+        need(argv==['/usr/bin/git','-c',safe,*git,*tails[index]],'fixed v4 Git command')
+        process=command['process'];start,end=v8_process(process,'discovery',argv,
+            {'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin','GIT_NO_LAZY_FETCH':'1','GIT_CONFIG_NOSYSTEM':'1'},10000)
+        if parent is None:parent=process['parentPid']
+        need(start>=previous and process['parentPid']==parent,'sequential source Git children');previous=end
+        need(prerequisite_original(canonical(command['stdout']))==outputs[index] and command['stderr'] is None,
+             'exact original source Git output')
+    setup_v4_facts(record['setup'],environment['GITHUB_RUN_ID'],parent,previous)
+    keys(record['eventIdentity'],'st_dev st_ino st_mode st_uid st_gid st_nlink st_size st_mtime_ns')
+    event_meta=record['eventIdentity']
+    need(all(type(x) is int for x in event_meta.values()) and event_meta['st_size']==len(event_raw) and
+         stat.S_ISREG(event_meta['st_mode']),'held official event snapshot extent')
+    return request,source
+
+
+def observe_setup_v4_stage(environ):
+    value={'schema':'bw.ring3.setup-node-observation.v4','stageObserved':False,'runtimeCandidate':False,
+        'qualified':False,'record':None,'files':{},'directories':[],'source':{},'identity':None,
+        'firstFailure':None,'secondary':[],'publicationSafe':False};backend=None
+    def failed(error,phase):
+        item={'phase':phase,'name':type(error).__name__,'message':str(error)}
+        if value['firstFailure'] is None:value['firstFailure']=item
+        else:value['secondary'].append(item)
+        value['secondary'].extend(getattr(error,'setup_secondary',[]))
+    try:
+        ids=[environ.get('SUDO_'+name,'') for name in ('UID','GID')]
+        need(all(type(x) is str and re.fullmatch('[1-9][0-9]{0,9}',x) and int(x)<2**31 for x in ids),
+             'known v4 dropped observer invoker')
+        uid,gid=map(int,ids)
+        need(os.getresuid()==(uid,)*3 and os.getresgid()==(gid,)*3 and os.getgroups()==[],
+             'actual irreversible dropped v4 IDs/groups')
+        status=setup_proc_read('/proc/self/status');membership=setup_proc_read('/proc/self/cgroup')
+        setup_membership(membership,environ['GITHUB_RUN_ID'])
+        value['identity']={'uid':uid,'gid':gid,'groups':os.getgroups(),'status':status,
+            'membership':membership,'pid':os.getpid()}
+        node_stage_identity(value['identity'],uid,gid);value['publicationSafe']=True
+        pin=digest(environ.get('BW_RING3_SETUP_INVENTORY_REQUEST_SHA256'))
+        backend=NodeStageReadonly();backend.open();record_raw=backend.read('installation.original.json',True)
+        value['record']={'bytes':len(record_raw),'sha256':sha(record_raw),'base64':base64.b64encode(record_raw).decode()}
+        record=parse(record_raw);request,source=setup_v4_stage_record(record,pin)
+        need(value['identity']['pid']==record['sourceCommands'][0]['process']['parentPid'],
+             'same installer/dropped observer PID across exec')
+        event_raw=prerequisite_original(canonical(record['event']));setup_v4_event(event_raw,request,pin,environ)
+        need(set(environ)==set(SETUP_V4_PLATFORM)|{'LANG','HOME','PATH'} and all(environ[key]==expected for key,expected in
+            {'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'}.items()) and
+            equal(record['platform'],{key:environ[key] for key in SETUP_V4_PLATFORM}),
+            'closed actual dropped platform join')
+        for path,row in sorted(source['files'].items()):
+            target=Path.cwd()/path;info=target.lstat()
+            need(target.resolve(strict=True)==target and stat.S_ISREG(info.st_mode) and
+                 stat.S_IMODE(info.st_mode)==0o644 and (info.st_uid,info.st_gid)==(uid,gid),
+                 'live dropped v4 source regular owner/mode')
+            raw=inventory_file(target,4<<20)
+            fact={'bytes':len(raw),'sha256':sha(raw),
+                'blob':hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest(),'mode':'100644'}
+            value['source'][path]=fact;need(equal(fact,row),'independent dropped source12 bytes')
+        backend.read('node')
+        need(backend.facts['node']['before']==record['copy']['file'],'finite staged Node inode join')
+        value['stageObserved']=True
+    except BaseException as error:failed(error,'setup-v4-stage-observer')
+    finally:
+        if backend is not None:
+            value['files']=backend.facts
+            value['directories']=[{'path':str(path),'before':metadata} for path,fd,metadata in backend.directories]
+            try:backend.close()
+            except BaseException as error:failed(error,'setup-v4-stage-close')
+    return value
+
+
+def setup_v4_inventory_entry(environ,files=None,probe=None):
+    value={'schema':'bw.ring3.setup-runtime-inventory-original.v4','stageBefore':None,'stageAfter':None,
+        'parent':None,'inventory':None,'candidate':None,'firstFailure':None,'secondary':[],
+        'publicationSafe':False,'actualGuestApproved':False,'completeHostConfiguration':False}
+    originals={};inventory=None
+    def failed(error,phase):
+        item=getattr(error,'inventory_first',{'phase':phase,'name':type(error).__name__,'message':str(error)})
+        if value['firstFailure'] is None:value['firstFailure']=item
+        else:value['secondary'].append(item)
+        value['secondary'].extend(getattr(error,'setup_secondary',[]))
+        value['secondary'].extend(getattr(error,'inventory_secondary',[]))
+    try:
+        before=observe_setup_v4_stage(environ);value['stageBefore']=before
+        value['publicationSafe']=before['publicationSafe']
+        if before['firstFailure'] is not None:
+            error=Refusal(before['firstFailure']['message']);error.inventory_first=before['firstFailure']
+            error.inventory_secondary=before['secondary'];raise error
+        need(before['stageObserved'] is True,'complete dropped v4 stage before metadata tools')
+        record=parse(prerequisite_original(canonical(before['record'])))
+        originals['setup.request.json']=prerequisite_original(canonical(record['request']))
+        originals['setup.event.json']=prerequisite_original(canonical(record['event']))
+        value['parent']=inventory_parent_availability()
+        inventory=StagedRuntimeInventory(before['files']['node']['before'],files,probe)
+        candidate=inventory.discover()
+        value['candidate']={'bytes':len(candidate),'sha256':sha(candidate),'base64':base64.b64encode(candidate).decode()}
+    except BaseException as error:failed(error,'setup-v4-runtime-inventory')
+    finally:
+        if inventory is not None:
+            value['inventory']=inventory.partial
+            rejected=getattr(inventory.ops,'rejected',{})
+            if rejected:value['inventory']['rejectedFiles']=rejected
+        if value['stageBefore'] is not None and value['stageBefore']['stageObserved']:
+            after=observe_setup_v4_stage(environ);value['stageAfter']=after
+            if after['firstFailure'] is not None:
+                error=Refusal(after['firstFailure']['message']);error.inventory_first=after['firstFailure']
+                error.inventory_secondary=after['secondary'];failed(error,'setup-v4-stage-after')
+            elif not all(equal(after[key],value['stageBefore'][key]) for key in ('record','files','directories','source')):
+                failed(Refusal('v4 source/stage changed across metadata tools'),'setup-v4-stage-after')
+    raw=canonical(value)
+    if len(raw)>4<<20:
+        error={'phase':'setup-v4-original-cap','name':'Refusal','message':'versioned v4 original cap'}
+        if value['firstFailure'] is None:value['firstFailure']=error
+        else:value['secondary'].append(error)
+        prefix=raw[:128<<10]
+        raw=canonical({'schema':'bw.ring3.setup-runtime-inventory-overflow.v4',
+            'firstFailure':value['firstFailure'],'secondary':value['secondary'],
+            'attemptedBytes':len(raw),'attemptedSha256':sha(raw),
+            'prefix':{'bytes':len(prefix),'sha256':sha(prefix),'base64':base64.b64encode(prefix).decode()}})
+    originals['runtime.setup-inventory.json']=raw
+    return originals,value['firstFailure'] is None and value['secondary']==[],value['publicationSafe']
+
+
+SETUP_V4_LOG_MARKER=b'RING3_SETUP_RUNTIME_INVENTORY_V4 '
+SETUP_V4_LOG_ROLES=('setup.request.json','setup.event.json','runtime.setup-inventory.json')
+
+
+def emit_setup_v4_inventory(originals,emit,flush):
+    need(type(originals) is dict and set(originals)<=set(SETUP_V4_LOG_ROLES) and
+         all(type(raw) is bytes and 0<len(raw)<=4<<20 for raw in originals.values()) and
+         sum(map(len,originals.values()))<=6<<20,'bounded v4 original roles')
+    emitted=0;chunks=0
+    for name,raw in sorted(originals.items()):
+        encoded=base64.b64encode(raw).decode();count=max(1,(len(encoded)+3071)//3072)
+        raw_sha=sha(raw)
+        need(count<=1821,'bounded v4 original chunk count')
+        for index in range(count):
+            line=SETUP_V4_LOG_MARKER+canonical({'schema':'bw.ring3.setup-runtime-inventory-log.v4',
+                'name':name,'index':index,'count':count,'bytes':len(raw),'sha256':raw_sha,
+                'data':encoded[index*3072:(index+1)*3072]})
+            need(emitted+len(line)<=6<<20 and chunks<3000,'bounded six-MiB v4 runtime component')
+            need(emit(line)==len(line),'complete v4 original log write')
+            emitted+=len(line);chunks+=1
+    flush()
+
+
+def decode_setup_v4_log(raw):
+    need(type(raw) is bytes and 0<len(raw)<=8<<20,'bounded v4 official log original')
+    groups={};chunks=0;wire_bytes=0
+    for line in raw.splitlines():
+        at=line.find(SETUP_V4_LOG_MARKER)
+        if at<0:continue
+        prefix=line[:at]
+        need(prefix==b'' or re.fullmatch(rb'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ',prefix),
+             'canonical v4 official log timestamp')
+        wire_bytes+=len(line[at:])+1
+        need(wire_bytes<=6<<20,'bounded six-MiB v4 runtime component wire')
+        value=parse(line[at+len(SETUP_V4_LOG_MARKER):]);keys(value,'schema name index count bytes sha256 data')
+        need(value['schema']=='bw.ring3.setup-runtime-inventory-log.v4' and value['name'] in SETUP_V4_LOG_ROLES,
+             'closed v4 original log role')
+        count=integer(value['count'],1,1821);index=integer(value['index'],0,count-1)
+        extent=integer(value['bytes'],1,4<<20);digest(value['sha256'])
+        need(type(value['data']) is str and len(value['data'])<=3072,'bounded v4 base64 chunk')
+        group=groups.setdefault(value['name'],{'count':count,'bytes':extent,'sha256':value['sha256'],'parts':[]})
+        need((group['count'],group['bytes'],group['sha256'])==(count,extent,value['sha256']) and
+             index==len(group['parts']),'one ordered v4 original sequence')
+        group['parts'].append(value['data']);chunks+=1;need(chunks<3000,'finite v4 log chunk count')
+    need(set(groups)==set(SETUP_V4_LOG_ROLES),'three complete v4 originals')
+    originals={}
+    for name,group in groups.items():
+        need(len(group['parts'])==group['count'],'complete v4 chunk sequence')
+        encoded=''.join(group['parts']);value=base64.b64decode(encoded,validate=True)
+        need(base64.b64encode(value).decode()==encoded and len(value)==group['bytes'] and
+             sha(value)==group['sha256'],'exact v4 original bytes/hash')
+        originals[name]=value
+    need(sum(map(len,originals.values()))<=6<<20,'bounded raw v4 aggregate')
+    return originals
+
+
+def verify_setup_v4_stage_observation(value,external):
+    keys(value,'schema stageObserved runtimeCandidate qualified record files directories source identity firstFailure secondary publicationSafe')
+    need(value['schema']=='bw.ring3.setup-node-observation.v4' and value['stageObserved'] is True and
+         value['runtimeCandidate'] is False and value['qualified'] is False and value['firstFailure'] is None and
+         value['secondary']==[] and value['publicationSafe'] is True,'complete actual v4 dropped stage observation')
+    record_raw=prerequisite_original(canonical(value['record']));record=parse(record_raw)
+    request,source=setup_v4_stage_record(record,external['requestSha256'])
+    env=record['platform'];need(request['head']==external['head'] and request['tree']==external['tree'] and
+         env['GITHUB_RUN_ID']==external['runId'] and env['GITHUB_WORKFLOW_SHA']==external['workflowSha'] and
+         [env['SUDO_UID'],env['SUDO_GID']]==list(map(str,external['invoker'])),
+         'external v4 source/platform/invoker joins')
+    need(equal(value['source'],source['files']),'actual dropped source12 joins request')
+    identity=value['identity'];node_stage_identity(identity,*external['invoker'])
+    need(identity['pid']==record['sourceCommands'][0]['process']['parentPid'],
+         'installer/observer original PID continuity')
+    setup_membership(identity['membership'],external['runId'])
+    files=value['files'];need(type(files) is dict and set(files)=={'node','installation.original.json'},
+         'two independent v4 stage file observations')
+    for name,row in files.items():
+        keys(row,'before after namedAfter closeSucceeded bytes sha256 prefix')
+        need(row['closeSucceeded'] is True and equal(row['before'],row['after']) and
+             equal(row['before'],row['namedAfter']),'closed stable v4 stage file')
+        metadata=row['before'];need(type(metadata) is list and len(metadata)==8 and
+             all(type(x) is int for x in metadata) and stat.S_ISREG(metadata[2]) and
+             metadata[3:6]==[0,0,1] and metadata[6]==row['bytes'],'root regular stage metadata')
+        mode=0o555 if name=='node' else 0o444
+        need(stat.S_IMODE(metadata[2])==mode,'fixed v4 stage mode')
+        data=value['record'] if name!='node' else RUNTIME_SELECTED['node']
+        need(row['bytes']==data['bytes'] and row['sha256']==data['sha256'],'independent v4 staged bytes')
+        if name=='node':
+            need(row['prefix']=='7f454c46' and row['before']==record['copy']['file'],
+                 'staged Node ELF/install join')
+        else:need(row['prefix']==record_raw[:4].hex(),'held v4 record prefix')
+    dirs=value['directories'];need(type(dirs) is list and [row['path'] for row in dirs]==
+         ['/','/run',str(NODE_STAGE_ROOT)],'fixed stage ancestors')
+    for index,row in enumerate(dirs):
+        keys(row,'path before');info=row['before']
+        need(type(info) is list and len(info)==8 and all(type(x) is int for x in info) and
+             stat.S_ISDIR(info[2]) and info[3:5]==[0,0] and info[2]&0o022==0 and
+             (index!=2 or stat.S_IMODE(info[2])==0o555),'nonwritable root stage ancestor')
+    need(dirs[-1]['before'][:2]==record['copy']['directory'][:2],'finite stage directory inode join')
+    return request,source,record
+
+
+def verify_setup_v4_log(raw,external,outer_raw,cleanup_raw):
+    keys(external,'schema requestSha256 runId attempt head tree workflowSha workflowFileSha256 jobId jobName conclusion logBytes logSha256 outerBytes outerSha256 cleanupBytes cleanupSha256 invoker')
+    need(external['schema']=='bw.ring3.setup-inventory-expectation.v4' and type(external['attempt']) is int and
+         external['attempt']==1 and external['jobName']=='setup-runtime-inventory' and
+         external['conclusion']=='success','externally selected official v4 job')
+    integer(external['jobId'],1)
+    need(type(external['runId']) is str and re.fullmatch('[1-9][0-9]{0,19}',external['runId']),
+         'positive official v4 run ID')
+    for name,size in (('head',40),('tree',40),('workflowSha',40),('workflowFileSha256',64),
+                      ('requestSha256',64),('logSha256',64),('outerSha256',64),('cleanupSha256',64)):digest(external[name],size)
+    need(type(external['invoker']) is list and len(external['invoker'])==2 and
+         all(type(x) is int and 0<x<2**31 for x in external['invoker']),'selected actual invoker')
+    need(integer(external['logBytes'],1,8<<20)==len(raw) and sha(raw)==external['logSha256'],
+         'externally selected exact official v4 log bytes')
+    need(type(outer_raw) is bytes and integer(external['outerBytes'],1,4096)==len(outer_raw) and
+         sha(outer_raw)==external['outerSha256'],'externally selected exact outside-owner terminal bytes')
+    need(type(cleanup_raw) is bytes and integer(external['cleanupBytes'],1,16384)==len(cleanup_raw) and
+         sha(cleanup_raw)==external['cleanupSha256'],'externally selected outside cleanup original')
+    cleanup=parse(cleanup_raw)
+    keys(cleanup,'schema runId serviceExitCode cgroupTerminal unitCensus policy action firstFailure secondary setupApproved')
+    need(cleanup_raw==canonical(cleanup) and cleanup['schema']=='bw.ring3.setup-outside-cleanup.v4' and
+         cleanup['runId']==external['runId'] and cleanup['serviceExitCode']==0 and
+         cleanup['cgroupTerminal'] in ('empty','absent') and cleanup['policy'] is None and
+         cleanup['action']=='not-needed' and cleanup['firstFailure'] is None and
+         cleanup['secondary']==[] and cleanup['setupApproved'] is False,
+         'finite outside owner needed no policy cleanup after successful setup')
+    need((cleanup['cgroupTerminal']=='absent' and cleanup['unitCensus'] is None) or
+         (cleanup['cgroupTerminal']=='empty' and type(cleanup['unitCensus']) is dict and
+          set(cleanup['unitCensus'])=={'cgroupProcs','cgroupEvents','cgroupStat'} and
+          setup_v4_cgroup_quiet(cleanup['unitCensus']['cgroupProcs'],
+              cleanup['unitCensus']['cgroupEvents'],cleanup['unitCensus']['cgroupStat'])),
+         'independently checked outside nested cgroup emptiness')
+    outer=parse(outer_raw);keys(outer,'schema runId unit systemdRunExitCode outsideCleanupExitCode cgroupAfter')
+    need(outer_raw==canonical(outer) and outer['schema']=='bw.ring3.setup-outer-terminal.v4' and
+         outer['runId']==external['runId'] and outer['unit']==
+         '/sys/fs/cgroup/system.slice/bw-ring3-setup-v4-'+external['runId']+'-1.service' and
+         type(outer['systemdRunExitCode']) is int and outer['systemdRunExitCode']==0 and
+         type(outer['outsideCleanupExitCode']) is int and outer['outsideCleanupExitCode']==0 and
+         outer['cgroupAfter']=='absent','finite outside-owner successful service terminal and absent cgroup')
+    originals=decode_setup_v4_log(raw);value=parse_setup_v4_outer(originals['runtime.setup-inventory.json'])
+    keys(value,'schema stageBefore stageAfter parent inventory candidate firstFailure secondary publicationSafe actualGuestApproved completeHostConfiguration')
+    need(value['schema']=='bw.ring3.setup-runtime-inventory-original.v4' and value['firstFailure'] is None and
+         value['secondary']==[] and value['publicationSafe'] is True and value['actualGuestApproved'] is False and
+         value['completeHostConfiguration'] is False,'failure-free metadata-only v4 original')
+    request=None;source=None;record=None
+    for stage in (value['stageBefore'],value['stageAfter']):
+        current,selected,observed=verify_setup_v4_stage_observation(stage,external)
+        if request is None:request,source,record=current,selected,observed
+        else:need(equal(current,request) and equal(selected,source) and equal(observed,record),
+                  'same v4 staged source/request/record before and after graph')
+    need(all(equal(value['stageBefore'][key],value['stageAfter'][key]) for key in
+        ('record','files','directories','source')),'finite stage readback across metadata graph')
+    request_raw=prerequisite_original(canonical(record['request']))
+    event_raw=prerequisite_original(canonical(record['event']))
+    need(request_raw==originals['setup.request.json'] and event_raw==originals['setup.event.json'] and
+         source['files'][WORKFLOW]['sha256']==external['workflowFileSha256'],
+         'exact source/head/workflow/request/event original join')
+    statuses=decode_setup_v4_status_log(raw)
+    pre,post=record['setup']['preflight'],record['setup']['postStatus']
+    need(equal(statuses['pre']['meta'],pre['statusOriginal']) and
+         equal(statuses['post']['meta'],post['statusOriginal']),
+         'exact separately retained raw status originals join setup packet')
+    before=setup_v4_status_rows(statuses['pre']['raw'])
+    need(len(before)==pre['statusRecords']==1211 and
+         not any(name in {key[0] for key in before} for name,*_ in SETUP_V4_PACKAGES),
+         'independent raw pre-status census and selected absence')
+    after=setup_v4_status_rows(statuses['post']['raw'])
+    need(len(after)==post['records'],'independent raw post-status census')
+    setup_v4_status_delta(before,after)
+    selected={};pending={}
+    for name,version,arch,*_ in SETUP_V4_PACKAGES:
+        row=after.get((name,arch))
+        selected[name]=None if row is None else {key:row.get(key) for key in
+            ('Package','Version','Architecture','Status','Triggers-Pending','Triggers-Awaited')}
+    for (name,arch),row in after.items():
+        if (row.get('Status') in ('install ok triggers-pending','install ok triggers-awaited') or
+            row.get('Triggers-Pending') is not None or row.get('Triggers-Awaited') is not None):
+            pending[name+':'+arch]={'status':row.get('Status'),'pending':row.get('Triggers-Pending'),
+                'awaited':row.get('Triggers-Awaited')}
+    need(equal(selected,post['selected']) and equal(pending,post['pendingHostTriggers']),
+         'independent raw post-status selected/pending projection')
+    parent=value['parent'];keys(parent,'meta controls alreadyEnabled')
+    need(type(parent['meta']) is list and len(parent['meta'])==8 and stat.S_ISDIR(parent['meta'][2]) and
+         parent['meta'][3:5]==[0,0] and parent['meta'][2]&0o022==0 and
+         set(parent['controls'])=={'cgroup.controllers','cgroup.subtree_control'},
+         'finite root-owned parent availability')
+    enabled=all({'cpu','memory','pids'}<=set(row['raw'].split()) for row in parent['controls'].values())
+    need(parent['alreadyEnabled'] is enabled,'truthful cgroup parent availability')
+    result=verify_staged_inventory_graph(value)
+    need(equal(value['inventory']['fileMetadata'][NODE_STAGE_TARGET],value['stageAfter']['files']['node']['before']),
+         'graph Node file joins staged inode/mode/hash')
+    need(all(entry['process']['parentPid']==value['stageBefore']['identity']['pid'] for entry in
+        value['inventory']['processes']),'eleven metadata children descend from dropped observer')
+    need(all(entry['process']['spawnMonoNs']>=record['sourceCommands'][-1]['process']['reapMonoNs'] for entry in
+        value['inventory']['processes']),'runtime probes follow root source admission')
+    need(record['setup']['configure']['process']['reapMonoNs']<=
+         value['inventory']['processes'][0]['process']['spawnMonoNs'],
+         'all runtime probes follow completed no-trigger configure')
+    return dict(result,schema='bw.ring3.setup-runtime-inventory-admission.v4',setupObserved=True,
+        deferredHostTriggers=True,completeHostConfiguration=False,actualGuestApproved=False,
+        outsideTerminalObserved=True,cgroupAfterAbsent=True,continuousOwnershipEstablished=False,
+        officialJobAuthenticated=False,imageFieldsAuthenticated=False,
+        immutableImageIdentityEstablished=False,candidateReviewed=False,actualRunApproved=False,
+        rawStatusBytesIndependentlyVerified=True,ciArchiveBytesIndependentlyVerified=False)
+
+
+def verify_setup_v4_failure_log(raw,external,outer_raw,cleanup_raw):
+    """Retain a bound failed attempt; never promote its partial facts to admission."""
+    keys(external,'schema requestSha256 runId attempt head tree workflowSha workflowFileSha256 jobId jobName conclusion logBytes logSha256 outerBytes outerSha256 cleanupBytes cleanupSha256 invoker')
+    need(external['schema']=='bw.ring3.setup-inventory-expectation.v4' and
+         external['conclusion']=='failure' and external['attempt']==1 and
+         external['jobName']=='setup-runtime-inventory','externally selected failed v4 job')
+    integer(external['jobId'],1)
+    need(type(external['runId']) is str and re.fullmatch('[1-9][0-9]{0,19}',external['runId']),
+         'positive failed run identity')
+    for name,size in (('head',40),('tree',40),('workflowSha',40),('workflowFileSha256',64),
+                      ('requestSha256',64),('logSha256',64),('outerSha256',64),('cleanupSha256',64)):
+        digest(external[name],size)
+    need(type(external['invoker']) is list and len(external['invoker'])==2 and
+         all(type(x) is int and 0<x<2**31 for x in external['invoker']),
+         'selected failed-job invoker')
+    need(type(raw) is bytes and 0<len(raw)<=8<<20 and
+         integer(external['logBytes'],1,8<<20)==len(raw) and sha(raw)==external['logSha256'],
+         'exact externally selected failed log bytes')
+    need(type(outer_raw) is bytes and 0<len(outer_raw)<=4096 and
+         integer(external['outerBytes'],1,4096)==len(outer_raw) and
+         sha(outer_raw)==external['outerSha256'],'exact failed outside terminal original')
+    need(type(cleanup_raw) is bytes and 0<len(cleanup_raw)<=16384 and
+         integer(external['cleanupBytes'],1,16384)==len(cleanup_raw) and
+         sha(cleanup_raw)==external['cleanupSha256'],'exact failed outside cleanup original')
+    outer=parse(outer_raw);keys(outer,'schema runId unit systemdRunExitCode outsideCleanupExitCode cgroupAfter')
+    need(outer_raw==canonical(outer) and outer['schema']=='bw.ring3.setup-outer-terminal.v4' and
+         outer['runId']==external['runId'] and outer['unit']==
+         '/sys/fs/cgroup/system.slice/bw-ring3-setup-v4-'+external['runId']+'-1.service' and
+         type(outer['systemdRunExitCode']) is int and 0<outer['systemdRunExitCode']<=255 and
+         type(outer['outsideCleanupExitCode']) is int and 0<=outer['outsideCleanupExitCode']<=255 and
+         outer['cgroupAfter'] in ('present','absent'),'finite failed outside terminal facts')
+    cleanup=parse(cleanup_raw);keys(cleanup,'schema runId serviceExitCode cgroupTerminal unitCensus policy action firstFailure secondary setupApproved')
+    need(cleanup_raw==canonical(cleanup) and cleanup['schema']=='bw.ring3.setup-outside-cleanup.v4' and
+         cleanup['runId']==external['runId'] and cleanup['serviceExitCode']==outer['systemdRunExitCode'] and
+         cleanup['setupApproved'] is False and type(cleanup['secondary']) is list and
+         len(cleanup['secondary'])<=64,'finite failed outside cleanup facts')
+    if cleanup['cgroupTerminal']=='empty':
+        census=cleanup['unitCensus']
+        need(type(census) is dict and set(census)=={'cgroupProcs','cgroupEvents','cgroupStat'} and
+             setup_v4_cgroup_quiet(census['cgroupProcs'],census['cgroupEvents'],census['cgroupStat']),
+             'independent empty nested outside census')
+    elif cleanup['cgroupTerminal']=='absent':
+        need(cleanup['unitCensus'] is None,'absent outside unit has no census')
+    else:
+        need(cleanup['firstFailure'] is not None,'uncertain outside cgroup remains failure')
+        census=cleanup['unitCensus']
+        if census is not None:
+            need(type(census) is dict and set(census)=={'cgroupProcs','cgroupEvents','cgroupStat'} and
+                 not setup_v4_cgroup_quiet(census['cgroupProcs'],census['cgroupEvents'],census['cgroupStat']),
+                 'retained active nested outside census, never cleanup permission')
+    packets=[]
+    for line in raw.splitlines():
+        at=line.find(b'{"actualGuestApproved":false,')
+        if at<0:continue
+        need(line[:at]==b'' or re.fullmatch(rb'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ',line[:at]),
+             'canonical failed packet log prefix')
+        need(len(line)-at<=4<<20,'bounded failed packet')
+        packet=parse_setup_v4_outer(line[at:]);need(line[at:]==canonical(packet).rstrip(b'\n'),'canonical failed packet')
+        if packet.get('schema')=='bw.ring3.setup-entry-failure.v4':packets.append(packet)
+    need(len(packets)==1,'one complete failed setup packet')
+    packet=packets[0];keys(packet,'schema context setup firstFailure secondary publicationSafe actualGuestApproved completeHostConfiguration')
+    need(packet['schema']=='bw.ring3.setup-entry-failure.v4' and packet['publicationSafe'] is False and
+         packet['actualGuestApproved'] is False and packet['completeHostConfiguration'] is False and
+         type(packet['firstFailure']) is dict and type(packet['secondary']) is list and
+         len(packet['secondary'])<=64,'failed packet with retained first and secondary')
+    keys(packet['firstFailure'],'phase name message')
+    context=packet['context'];keys(context,'request event platform source sourceCommands eventIdentity')
+    request_raw=prerequisite_original(canonical(context['request']))
+    request,source=setup_v4_request(request_raw,external['requestSha256'])
+    event_raw=prerequisite_original(canonical(context['event']))
+    need(type(context['platform']) is dict and set(context['platform'])==set(SETUP_V4_PLATFORM),
+         'closed failed platform')
+    environment=context['platform'];setup_v4_event(event_raw,request,external['requestSha256'],environment)
+    need(environment['GITHUB_RUN_ID']==external['runId'] and
+         environment['GITHUB_WORKFLOW_SHA']==external['workflowSha'] and
+         request['head']==external['head'] and request['tree']==external['tree'] and
+         source['files'][WORKFLOW]['sha256']==external['workflowFileSha256'] and
+         equal(context['source'],source),'failed source/request/event/official context join')
+    need(type(context['sourceCommands']) is list and len(context['sourceCommands'])==3 and
+         all(type(item) is dict and set(item)=={'argv','process','stdout','stderr'} for item in context['sourceCommands']),
+         'three retained failed source command originals')
+    commands=context['sourceCommands'];git=['--no-replace-objects','-c','gc.auto=0','-c','maintenance.auto=false']
+    tails=[['rev-parse','HEAD'],['rev-parse','HEAD^{tree}'],['ls-tree','-r','HEAD','--',*sorted(SETUP_SOURCE_PATHS)]]
+    outputs=[(request['head']+'\n').encode(),(request['tree']+'\n').encode(),
+        ''.join(source['files'][path]['mode']+' blob '+source['files'][path]['blob']+'\t'+path+'\n'
+                for path in sorted(SETUP_SOURCE_PATHS)).encode()]
+    previous=0;parent=None;safe=None
+    for index,command in enumerate(commands):
+        argv=command['argv']
+        need(type(argv) is list and len(argv)>3 and argv[:2]==['/usr/bin/git','-c'] and
+             type(argv[2]) is str and argv[2].startswith('safe.directory=/'),
+             'fixed failed source Git descriptor')
+        if safe is None:safe=argv[2]
+        need(argv==['/usr/bin/git','-c',safe,*git,*tails[index]],'exact failed source Git command')
+        start,end=v8_process(command['process'],'discovery',argv,
+            {'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin',
+             'GIT_NO_LAZY_FETCH':'1','GIT_CONFIG_NOSYSTEM':'1'},10000)
+        if parent is None:parent=command['process']['parentPid']
+        need(start>=previous and command['process']['parentPid']==parent and
+             prerequisite_original(canonical(command['stdout']))==outputs[index] and
+             command['stderr'] is None,'causal failed source Git original')
+        previous=end
+    need(type(context['eventIdentity']) is dict and
+         set(context['eventIdentity'])==set('st_dev st_ino st_mode st_uid st_gid st_nlink st_size st_mtime_ns'.split()) and
+         all(type(x) is int for x in context['eventIdentity'].values()) and
+         context['eventIdentity']['st_size']==len(event_raw) and
+         stat.S_ISREG(context['eventIdentity']['st_mode']),
+         'failed held event extent')
+    setup=packet['setup'];need(type(setup) is dict and setup.get('schema')=='bw.ring3.setup-original.v4' and
+         setup.get('firstFailure') is not None and setup.get('nodeStage') is None and setup.get('runtime') is None,
+         'only partial setup before Node stage')
+    keys(setup,'schema preflight archives policy unpack configure postStatus cleanup policyCleanupCgroup nodeStage runtime partial deferredHostTriggers configurationComplete firstFailure secondary')
+    need(setup['configurationComplete'] is False and type(setup['secondary']) is list and
+         len(setup['secondary'])<=64,'closed partial setup and secondary')
+    partial=setup['partial']
+    if type(partial) is dict and partial.get('phase')=='node-stage':
+        keys(partial,'phase copy record dropProgress invoker')
+        need(type(partial['copy']) is dict and
+             set(partial['copy'])==set('created sourceBefore sourceAfter sourceNamedAfter bytesCopied sourceBytesRead writeUncertain targetAfterFailure directoryAfterFailure copiedSha256 readbackSha256 filePublicationAttempted directoryPublicationAttempted filePublished directoryPublished file directory'.split()) and
+             type(partial['dropProgress']) is list and
+             partial['dropProgress']==['groups','gid','uid','ids-verified'][:len(partial['dropProgress'])] and
+             equal(partial['invoker'],external['invoker']),
+             'retained bounded failed Node copy/drop progress')
+        if partial['record'] is not None:
+            keys(partial['record'],'bytes sha256')
+            integer(partial['record']['bytes'],1,1<<20);digest(partial['record']['sha256'])
+    required_roles=set()
+    for key,role,hash_key,size_key in (('preflight','pre','statusSha256','statusBytes'),
+                                       ('postStatus','post','sha256','bytes')):
+        fact=setup[key]
+        if type(fact) is dict and fact.get('statusOriginal') is not None:
+            required_roles.add(role)
+    statuses=decode_setup_v4_status_log(raw,None)
+    roles=set(statuses)
+    need(required_roles<=roles,'all reported failed status originals retained')
+    for key,role,hash_key,size_key in (('preflight','pre','statusSha256','statusBytes'),
+                                       ('postStatus','post','sha256','bytes')):
+        if role in roles:
+            fact=setup[key]
+            if role in required_roles:
+                need(type(fact) is dict and equal(statuses[role]['meta'],fact['statusOriginal']) and
+                    statuses[role]['meta']['sha256']==fact[hash_key] and
+                    statuses[role]['meta']['bytes']==fact[size_key],
+                    'independent retained failed raw status original join')
+            rows=setup_v4_status_rows(statuses[role]['raw'])
+            if role in required_roles:
+                need(len(rows)==fact['statusRecords' if role=='pre' else 'records'],
+                     'retained failed raw status census')
+            if role=='pre' and role in required_roles:
+                need(fact['statusSha256']==SETUP_V4_STATUS_SHA and
+                     fact['statusBytes']==SETUP_V4_STATUS_BYTES,
+                     'failed pre-state remains fixed selected baseline')
+    need(setup['firstFailure']==packet['firstFailure'] or
+         packet['firstFailure']['phase']=='v4-entry','retained setup/entry first failure relationship')
+    return {'schema':'bw.ring3.setup-failure-retention.v4','failedAttemptRetained':True,
+        'partialMutationPossible':True,'firstFailure':packet['firstFailure'],
+        'secondary':packet['secondary'],'outsideCleanup':cleanup['action'],
+        'outsideCgroupAfter':outer['cgroupAfter'],'setupObserved':False,
+        'stageAttemptObserved':type(partial) is dict and partial.get('phase')=='node-stage',
+        'retainedStatusRoles':sorted(roles),'statusRolesJoinedToSetup':sorted(required_roles),
+        'rawStatusBytesIndependentlyVerified':bool(roles),
+        'ciArchiveBytesIndependentlyVerified':False,
+        'officialJobAuthenticated':False,'actualGuestApproved':False,
+        'candidateReviewed':False,'actualRunApproved':False}
+
 
 def staged_runtime_request(raw,pin):
     need(type(raw) is bytes and 0<len(raw)<=1<<20 and digest(pin)==sha(raw),'externally selected Node-stage request v3')
@@ -3016,6 +4011,30 @@ def decode_staged_inventory_log(raw):
 
 
 def main():
+    if '--inventory-setup-v4' in sys.argv[1:]:
+        need(sys.argv[1:]==['--inventory-setup-v4'],'exact single v4 inventory mode')
+        need(SETUP_V4_READER_ENABLED is True,'v4 setup reader disabled pending reviewed source/event')
+        originals,passed,safe=setup_v4_inventory_entry(dict(os.environ))
+        if safe:emit_setup_v4_inventory(originals,sys.stdout.buffer.write,sys.stdout.buffer.flush)
+        raise SystemExit(0 if passed and safe else 1)
+    if sys.argv[1:2]==['--setup-v4-inventory-log']:
+        parser=argparse.ArgumentParser(description='Independent original-only v4 setup/runtime audit',allow_abbrev=False)
+        parser.add_argument('--setup-v4-inventory-log',required=True);parser.add_argument('--external-admission',required=True)
+        parser.add_argument('--outer-resource-original',required=True)
+        parser.add_argument('--outside-cleanup-original',required=True)
+        need(len(sys.argv)==9 and sys.argv.count('--setup-v4-inventory-log')==
+             sys.argv.count('--external-admission')==sys.argv.count('--outer-resource-original')==
+             sys.argv.count('--outside-cleanup-original')==1,
+             'exact v4 official original and external expectation')
+        args=parser.parse_args()
+        with Path(args.setup_v4_inventory_log).open('rb') as stream:raw=stream.read((8<<20)+1)
+        with Path(args.outer_resource_original).open('rb') as stream:outer=stream.read(4097)
+        with Path(args.outside_cleanup_original).open('rb') as stream:cleanup=stream.read(16385)
+        with Path(args.external_admission).open('rb') as stream:external=parse(stream.read((1<<20)+1))
+        need(type(external) is dict and external.get('conclusion') in ('success','failure'),
+             'externally selected v4 job conclusion')
+        grade=verify_setup_v4_log if external['conclusion']=='success' else verify_setup_v4_failure_log
+        print(json.dumps(grade(raw,external,outer,cleanup),sort_keys=True));return
     if '--inventory-staged-runtime' in sys.argv[1:]:
         need(sys.argv[1:]==['--inventory-staged-runtime'],'exact single staged inventory mode')
         need(STAGED_RUNTIME_INVENTORY_ENABLED is True,'staged runtime inventory disabled pending separate source/event review')

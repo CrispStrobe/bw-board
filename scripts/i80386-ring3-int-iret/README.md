@@ -1137,3 +1137,152 @@ metadata guard and checks refusal before its factory or observer, including
 environment strings that attempt to enable it. The other
 full-chain controls are unchanged. Eight affected mocked controls pass; they do
 not qualify a hosted stage, runtime candidate, resource operation or guest.
+
+## Exact selected-QEMU setup/runtime v4 candidate — 2026-10-24
+
+V4 is a distinct path from the consumed staged-runtime v3 event. Its label is
+`x86-ring3-setup-runtime-inventory-v1`; the immutable PR body block is
+`BW_RING3_SETUP_RUNTIME_INVENTORY_V4`; the job is `setup-runtime-inventory`.
+The single externally selected repository variable is
+`BW_RING3_SETUP_INVENTORY_REQUEST_SHA256`. The request is canonical compact
+JSON with a newline, schema `bw.ring3.inventory-request.v4`, and exactly the
+v3 `repository`, `pullRequest`, `head`, `tree`, `source`, `selected`, `nodeStage`
+and `emptyPythonSources` fields plus `setup` and `payloadWitness`. The source
+and selected Node/QEMU pins remain exact. The workflow and both source entry
+guards are initially false; no old v3 label, body or variable is reused.
+
+The closed `setup` policy pins the observed Ubuntu image label, full dpkg
+status SHA, seven relevant helper SHAs, fifteen signed Filename/Size/SHA
+archive rows, fixed configure order and `--no-triggers` phases. The request's
+payload witness must match the separately reviewed source literal; a request
+cannot self-approve unknown payload effects. Source12 Git/live/head/tree and
+the exact event are checked before any GET or mutation. Fresh runner status,
+helper bytes, selected package absence and policy path absence must match the
+selected observation before any archive acquisition. Image strings remain
+observed provider claims; independent image authenticity still requires the
+official setup-log join outside this inner reader.
+
+The fixed payload witness binds all fifteen archive, CONTROL tar, data tar
+and canonical payload-manifest digests. Its reviewed QEMU service unit is
+367 bytes with SHA256 `da0544deed8c3e9f9f8221c99f5e1ca67135f15f1f3f070767cb8966f705304a`;
+the unit's init script is 2,496 bytes with SHA256
+`c769a6a149897575767c5a4377cc7cb15dcbb586a9a1eec1d6248dba098b08f2`.
+Both service start and service reload invoke that init script. The mediated
+start is denied by policy101; **no service start or service reload is
+permitted**. The reviewed common package's direct `daemon-reload` refreshes
+the manager and may rerun host generators; this is an explicit trusted-host
+mutation, not a claim that all host state stays unchanged. Enabling without
+`--now` does not itself start the unit. The reader rechecks both resulting
+unit/init bytes after setup and never claims service execution or host-wide
+immutability.
+
+The hosted v4 service proposes one CPU, 1 GiB, no swap, 64 tasks, a 660 second
+runtime and five second stop bound under a 15 minute job. One exact HTTPS
+archive attempt per signed row uses a 30 second connection/read timeout and
+180 second aggregate deadline, with a 12 MiB per file and 16 MiB total cap.
+The URL prefix is fixed to the signed Ubuntu snapshot
+`https://snapshot.ubuntu.com/ubuntu/20261019T000000Z/`; moving archive
+mirrors and redirects refuse.
+Each archive is exclusively written, read back, hashed, and closed before the
+next; failures and partial files are never retried. Root creates an absent
+`/usr/sbin/policy-rc.d` exclusively with exact `#!/bin/sh\nexit 101\n` bytes and
+mode0755. It performs only the fixed no-trigger unpack and configure phases,
+each limited to 120 seconds and 128 KiB per raw stream. No apt, resolver,
+Recommends, force flag, fallback package or upgrade is used. Successful phase
+exit is followed by fresh selected package Status/Version/Architecture and
+trigger-field observation; `installed`, `triggers-pending` and
+`triggers-awaited` are distinguished. Host triggers remain deferred and
+complete host configuration stays false. On any setup failure the original
+primary and cleanup secondary facts remain. The root observer emits bounded
+zlib originals of the complete pre/post dpkg status bytes into the retained
+log, with exact SHA/extent/encoding. The standalone reader decompresses each
+once under an 8 MiB output cap, independently parses the 1,211-row pre-state
+and reconstructs all selected and pending post-state rows. Missing, duplicate,
+truncated, tailed or oversized originals refuse. The stage record retains
+their digest/extent summaries under its unchanged 1 MiB cap.
+
+Before archive GET, preflight reads the three selected root-owned
+interpreter aliases `/bin`, `/bin/sh` and `/usr/bin/sh`, including bounded
+link text, resolved target, owner, link count, size and finite readback.
+They must resolve through `dash` to the pinned `/usr/bin/dash` bytes.
+An unexpected alias refuses before package acquisition.
+
+Each dpkg phase is followed by a finite service-cgroup census. The global
+policy is removed inside the service only after the cgroup contains its root
+controller alone. If descendants remain or census is uncertain, the policy
+stays in place and source records a failure. After `systemd-run --wait`, a
+separate bounded outside cleanup mode may remove it only when the exact unit
+is empty or absent and the retained failure packet, policy inode/mode/owner
+and exact bytes all match. Unknown identity refuses deletion; cleanup errors
+remain secondary to the first setup failure. Failed setup packets carry the
+raw request/event, source observations and selected official platform fields
+even when Node staging never starts. Default dpkg collision or maintainer
+script failure can leave partial host mutations; no rollback is claimed.
+
+Only clean setup and exact policy cleanup permit the historical Node copy,
+irreversible invoker drop and selected runtime graph census. The new dropped
+reader repeats source12 and staged-file readback before and after all eleven
+metadata probes. The runtime candidate still needs separate stable-graph
+review and guest admission. V4 uses a versioned 4 MiB setup/graph wrapper and
+8 MiB combined log: each raw status frame is at most 1 MiB including marker
+and newline, and all runtime role frames together are at most 6 MiB including
+their framing. The failed-entry packet is at most 4 MiB. Historical v3,
+request and Node leaf caps remain unchanged. The official
+reader requires a separately reviewed external expectation for the exact
+one-run job, source/workflow, request and log bytes:
+
+```sh
+/usr/bin/python3 -B scripts/i80386-ring3-int-iret/reader.py \
+  --setup-v4-inventory-log retained-v4-inventory.log \
+  --outer-resource-original retained-v4-outer.json \
+  --outside-cleanup-original retained-v4-cleanup.json \
+  --external-admission reviewed-v4-expectation.json
+```
+
+The expectation schema is `bw.ring3.setup-inventory-expectation.v4` with
+`requestSha256`, `runId`, `attempt`, `head`, `tree`, `workflowSha`,
+`workflowFileSha256`, `jobId`, `jobName`, `conclusion`, `logBytes`, `logSha256`,
+`outerBytes`, `outerSha256`, `cleanupBytes`, `cleanupSha256`
+and `invoker`. Inner consistency does not authenticate the official job or
+image. The external audit must also join the exact official job/steps/artifact,
+workflow file and runner setup log before treating a result as a hosted
+observation. A positive metadata verdict leaves `candidateReviewed`,
+`actualRunApproved`, `actualGuestApproved` and
+`completeHostConfiguration` false.
+
+For an externally selected failed job, the same CLI uses a distinct closed
+failure reader. It requires one canonical failed setup packet, the pinned
+request/event/source/official context, retained first and secondary errors,
+and exact outside terminal/cleanup originals. Any retained raw dpkg status
+roles are decoded; roles reported in partial setup facts must match the raw
+bytes exactly. A role emitted before the collector could finish its setup
+fact remains visibly unjoined. Missing reported roles and truncated streams
+refuse. Its verdict only says that the failed attempt was retained.
+It never admits a runtime candidate or setup. The successful reader verifies
+the raw pre/post status bytes independently; archive bytes downloaded during
+CI are reported and hashed by the trusted hosted collector, not rehashed by
+this reader from separately retained archive originals.
+
+The transient service is **not** requested with `--collect`. The root entry
+records its exact current `/system.slice/` membership and CPU/memory/swap/PID
+control values before any package operation. The outside job retains
+`systemd-run --wait` output/exit, outside policy-cleanup original and a
+bounded terminal readback of the exact unit cgroup path. The independent
+reader requires zero service/cleanup exits and an absent cgroup at that finite
+readback. A failed unit remains inspectable for its first failure; absence
+does not establish continuous ownership.
+
+The finite service census includes direct `cgroup.procs`, `cgroup.events`
+and `cgroup.stat` nested and dying descendant counters after each dpkg phase
+and before policy removal. Outside cleanup checks the same raw counters for
+an existing unit. Direct or nested descendants keep the deny policy in place.
+The post-status reader compares every original package key/version/status
+with the pre-status original: only the selected fifteen may appear, existing
+packages cannot upgrade or disappear, and an existing partial status remains
+unchanged. This is a finite status-file observation, not whole-host
+configuration or continuing ownership.
+
+The isolated `--setup-v4-only` controls inject all host, network, process and
+stage edges. They cover one full sequence and coherent pre-state, archive,
+policy, dpkg, cleanup, drop and graph cuts without package, helper or guest
+execution. They are source controls only.

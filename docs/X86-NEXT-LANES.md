@@ -3098,3 +3098,31 @@ admitted clean guest/oracle run. Keep those gates distinct from this observer.
    Profile attribution selects a measurable bottleneck for a *later* narrow
    optimization claim and paired semantic/performance qualification. The model
    charges alone grant no measured speedup, physical RTx or hardware frequency.
+
+## Exact selected-QEMU setup/runtime candidate — 2026-10-24
+
+Under merged [claim PR660](https://github.com/CrispStrobe/bw-board/pull/660),
+the new [v4 source contract](../scripts/i80386-ring3-int-iret/README.md#exact-selected-qemu-setupruntime-v4-candidate--2026-10-24)
+adds a distinct, initially inactive hosted setup/runtime path. It preserves
+the consumed v3 event, source12, selected Node/QEMU pins, old caps, failed
+absent-tool original and disabled actual/compiler routes. The v4 request
+requires exact signed fifteen-archive selection, the fresh image/status/helper
+pre-state and a separately reviewed payload/control witness. A failed or
+unknown witness must refuse before acquisition or setup.
+
+The finite setup candidate uses one exact archive per row, a new owned
+snapshot archive per row, a new owned policy101 service gate, no-trigger
+unpack/configure in fixed order, and records partial mutations, retained raw
+pre/post package status, selected states and deferred host triggers. Policy
+removal requires a finite no-descendant census or separate terminal cleanup.
+It permits Node staging, irreversible drop and the existing metadata graph
+only after clean allowed setup and exact owned-policy cleanup. `installed` or
+pending trigger state does not establish complete host configuration. Source
+controls use injected edges; the workflow and source entries stay false until
+separate review. Before any hosted event, freeze the reviewed payload witness,
+all exact-head checks, event/request/source/workflow selection, resource and
+service policy, and the official one-shot admission. Acquire the official
+original once, audit it with the independent v4 reader and separately join
+the setup log's image fields and producing job. Clean guest/oracle execution
+remains a later, distinct qualification; no actual 386 or physical timing
+result follows from this metadata candidate.
