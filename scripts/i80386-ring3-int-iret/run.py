@@ -8328,8 +8328,9 @@ def setup_v8_sequence(ops,request,route=None):
         'policyCleanupCgroup':None,
         'nodeStage':None,'runtime':None,'partial':None,'deferredHostTriggers':True,
         'configurationComplete':False,'firstFailure':None,'secondary':[]}
-    failure=FirstFailure();policy_created=False
+    failure=FirstFailure();policy_created=False;v2_unit_identity=None
     def complete_dpkg_phase(name):
+        nonlocal v2_unit_identity
         item=facts[name];item.setdefault('cgroupAfter',None);phase_failure=FirstFailure()
         if item['firstFailure'] is not None:
             phase_failure.adopt(item['firstFailure'],item['secondary'])
@@ -8342,6 +8343,11 @@ def setup_v8_sequence(ops,request,route=None):
                     limit=1 if phase_failure.first is not None else 6)
                 item['cgroupHistory']=history
                 last=history['samples'][-1]
+                if history['firstFailure'] is None:
+                    selected=tuple(history['samples'][0]['unitIdentity'][:6])
+                    if v2_unit_identity is None:v2_unit_identity=selected
+                    else:need(selected==v2_unit_identity,
+                              'same held V2 owned service across both dpkg phases')
                 if last['firstFailure'] is None:
                     item['cgroupAfter']={'phase':name,
                         **{key:last[key] for key in ('cgroupProcs','cgroupEvents','cgroupStat','onlyController')}}

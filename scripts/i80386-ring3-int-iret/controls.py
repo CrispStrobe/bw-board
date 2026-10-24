@@ -8250,7 +8250,8 @@ def same_job_actual_controls():
                         return item
                     def cgroup_sample_v2(self,phase,index):
                         census=super().quiescent(phase)
-                        return {'unitIdentity':[1,900,stat.S_IFDIR|0o755,0,0,2,0,100],
+                        identity=901 if self.fault=='unit-cross-phase' and phase=='configure' else 900
+                        return {'unitIdentity':[1,identity,stat.S_IFDIR|0o755,0,0,2,0,100],
                             'limits':dict(producer.LIMITS),
                             'cgroupProcs':census['cgroupProcs'],
                             'cgroupEvents':census['cgroupEvents'],
@@ -8284,6 +8285,11 @@ def same_job_actual_controls():
                     self.assertEqual(entry_ops.events.count('acquire'),15,
                         reader.parse_setup_v9_outer(entry_output.getvalue())['firstFailure'])
                     self.assertEqual(entry_ops.events[-1],'stage')
+                    drift_ops=ActualOps('unit-cross-phase')
+                    drift_result=producer.setup_v8_sequence(drift_ops,actual,
+                        producer.SAME_JOB_ACTUAL_V2_ROUTE)
+                    self.assertIsNotNone(drift_result['firstFailure'])
+                    self.assertNotIn('stage',drift_ops.events)
                     setup=entry_ops.snapshot
                     status_log=io.BytesIO()
                     pre_meta=producer.emit_setup_v8_status('pre',pre,status_log.write,status_log.flush,
