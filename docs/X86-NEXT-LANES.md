@@ -3199,6 +3199,29 @@ reader and labeled job. It still needs all final-head checks and an externally
 admitted fresh request/event, followed by one independently audited official
 metadata original. The guest path remains disabled pending a complete graph.
 
+### Observed-image v6 metadata follow-up — 2026-10-24
+
+The single v5 metadata event refused at image-label preflight before archive
+GET; its original did not capture actual labels before comparison, so that
+failure's cause remains unestablished. A separate image-environment diagnostic,
+after checkout and the same setup-node action, observed shell and service
+`ImageOS=ubuntu24` and `ImageVersion=20261012.334.1` with matching forwarding.
+This is one current-run observation, not v5 repair or future runner admission.
+Preserve both consumed events and their original outcomes.
+
+The [v6 claim](../LANES.md) permits a distinct **metadata-only** label, job,
+request, repository input and body marker inside the existing seven owned
+paths. Retain bounded typed actual shell/service image fields and
+first/secondary failures before comparing the unchanged expected image;
+unknown or mismatched labels refuse before GET or mutation. Keep the exact
+fifteen archives, status and helper pins, installer PATH, source12, resource
+caps, partial transaction reporting and independent reader joins unchanged
+except for that v6 observation. Keep v4/v5 source and consumed events intact,
+and compiler/actual guest guards disabled. Merge the claim before coding;
+then require full exact-head source CI, externally selected one-shot v6 event
+and independent original audit. Prepare a separate same-job guest adapter
+only after a complete v6 setup and runtime graph is admitted.
+
 ## Ordered 16-bit scalar read candidate
 
 Claim status: source implementation has not begun. The

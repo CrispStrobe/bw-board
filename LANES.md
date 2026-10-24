@@ -1,3 +1,21 @@
+2026-10-24 literal-PULSE oracle census registration — CLAIMED, Codex circuit owner.
+Base a2b4ff73; bounded qualification repair for the same owner's PR665.
+Its original CI passes the admitted47 pulse comparisons but fails the unchanged
+census coverage assertion because spice-pulse-source.test.mjs now consumes the
+explicit NGSPICE_LITERAL_ORACLE input without a corresponding census row.
+Own only the relevant rows in scripts/oracle-census.mjs, focused row/presence/
+identity controls in test/oracle-census.test.mjs, and this claim. Register both
+the default ngspice positive-width comparison and the separate source-admitted47
+literal-zero comparison honestly. Presence is only presence; the existing
+installer/test admission remains responsible for source/version/binary identity.
+Require unset/missing/present-path coverage and keep the absent-input census
+assertion, frozen debt count and all numerical comparisons unchanged. No gate
+exemption, debt addition, general resolver change, binary execution by census,
+engine, scheduler, oracle substitution, workflow or unrelated path change.
+Merge claim before registration implementation. Preserve all other owners and
+normally compose current master into PR665. Require the original census failure
+to pass, installer/pulse/scope regressions and every enabled exact-head check.
+
 2026-10-23 voltage scope aperture capture — CLAIMED, Codex circuit owner.
 Base a2d49e41; additive producer for the same owner's actual sampled-audio work.
 A real 90ms saved miniorgan capture at 100kHz has 18 post-startup envelope
@@ -6070,6 +6088,51 @@ producer/reader/job selectors and corresponding pure controls and status
 prose. Its own labeled event still requires a separately selected request,
 source and official job; no guest route or prior label is activated. A new
 runner may refuse on image, status, helper or resource drift before any GET.
+
+## Ring3 selected-QEMU observed-image v6 metadata — claim, 2026-10-24
+
+Owner: Codex x86 ring3. This narrowly amends the merged
+[same-job claim PR676](https://github.com/CrispStrobe/bw-board/pull/676).
+Own only `scripts/i80386-ring3-int-iret/{run.py,reader.py,controls.py,README.md}`,
+`.github/workflows/i80386-ring3-int-iret.yml`, this entry and the matching
+`docs/X86-NEXT-LANES.md` section. Merge this claim before source changes.
+
+The single selected v5 metadata event refused at image-label preflight.
+Its original did not retain actual image labels before comparison, so the
+cause of that refusal is **unestablished**. A distinct, consumed
+image-environment diagnostic observed `ubuntu24` and `20261012.334.1` in
+both shell and service after the same checkout and setup-node sequence, with
+expected forwarding. That point observation neither repairs v5 nor promises
+another runner's labels or installed state. Preserve both originals and event
+identities; never repeat either label.
+
+Add one **new v6 metadata** label, job, canonical request, repository input
+and PR body marker. Bind each to exact selected source, workflow, event,
+owner and first attempt, without accepting a v5 request or projecting the
+diagnostic into setup approval. Before comparing image labels or attempting
+archive GET, retain bounded typed actual shell and service `ImageOS` and
+`ImageVersion` observations, including absent, empty, malformed or mismatched
+values and first/secondary failures. The independent v6 reader checks event,
+source, forwarding and failure joins. Image equality alone grants no setup
+or guest approval; a mismatch refuses before GET or mutation.
+
+Preserve the exact fifteen signed package pins, selected image/status/helper
+and payload witnesses, `/usr/sbin:/usr/bin:/bin` installer PATH, ownership,
+resource/output bounds, no resolver/force/recommends/upgrades policy, partial
+mutation and cleanup reporting, old v4/v5 protocols and guards, source12,
+Node/QEMU pins, fixture, CPU/AT and disabled compiler/actual gates. Add pure
+positive and negative controls for pre-guard observation, missing/wrong shell
+and service fields, forwarding drift, wrong v6 event/source, preflight refusal
+before GET, failure retention and intact old routes. No local package, helper,
+QEMU or guest execution is part of source controls.
+
+Qualify v6 source on every enabled exact-head check, then externally select
+one fresh v6 request and event. Acquire each official original once and audit
+source, run, job, steps, artifact, preflight, transaction and outside cleanup
+with a standalone reader. Only an independently admitted **complete v6
+metadata setup and runtime graph** can become a candidate for a later,
+separately claimed and qualified same-job guest adapter. The v5 guest route
+remains unimplemented; no compiler or guest event is selected here.
 
 ## Ordered ordinary-JS 16-bit scalar read — claim, 2026-10-24
 
