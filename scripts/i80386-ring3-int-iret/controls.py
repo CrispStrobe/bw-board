@@ -2099,6 +2099,16 @@ def staged_runtime_controls():
                     changed=copy.deepcopy(prefix_packet);mutate(changed)
                     with self.assertRaises(reader.Refusal):grade_prefix(changed)
                 with self.assertRaises(reader.Refusal):grade_prefix(prefix_packet,False)
+                no_baseline=copy.deepcopy(prefix_packet)
+                blank=no_baseline['setup']['partial']['prefix']
+                blank.update(statusOriginal=None,statusSha256=None,statusBytes=None,
+                    statusRecords=None,completedHelpers=[],helperWitness={})
+                no_baseline['setup']['partial']['failedHelper']['witness']['path']=list(producer.SETUP_V5_HELPERS)[0]
+                with self.assertRaises(reader.Refusal):grade_prefix(no_baseline,False)
+                drift=copy.deepcopy(prefix_packet)
+                drift['setup']['partial']['prefix']['statusSha256']='0'*64
+                drift['setup']['partial']['prefix']['statusOriginal']['sha256']='0'*64
+                with self.assertRaises(reader.Refusal):grade_prefix(drift)
                 for mutation in (lambda p:p['context']['platform'].__setitem__('GITHUB_RUN_ID','999'),
                     lambda p:p['context']['sourceCommands'].clear(),
                     lambda p:p['context']['sourceCommands'][0]['stdout'].__setitem__('sha256','0'*64),
