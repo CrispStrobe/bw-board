@@ -6441,9 +6441,10 @@ and independently audit them before proposing any new setup admission policy.
 Source checkpoint, 2026-10-24: capture source `8b8c108d` ran the one-shot
 [read-only baseline job](https://github.com/CrispStrobe/bw-board/actions/runs/40101137447).
 Its label is consumed and must not be replayed. The original reader refused
-empty `Conffiles:` status headers; separate corrected auditor `a41bd237`
-accepted the **same retained originals**, counted 1,211 status rows and found
-all ten selected helper hashes unchanged from the prior admitted observation.
+empty first lines of multiline `Conffiles:` fields. Separate corrected auditor
+`a41bd237` accepted the **same retained originals** and counted 1,211 status
+rows. An independent byte review confirmed all ten selected helper hashes
+match the held V8 helper pins.
 This did not run a package tool, installer, QEMU or guest, authenticate an
 image, or grant setup/runtime approval. Exact-head CI for the corrected
 auditor is pending. Any setup metadata authorization needs a separate claim

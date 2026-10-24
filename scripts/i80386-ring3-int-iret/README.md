@@ -1617,12 +1617,13 @@ of these observations authenticates a VM image or approves setup or a guest.
 All earlier V4–V8 routes, originals and failures remain separately versioned.
 Capture source `8b8c108d` completed one
 [read-only hosted run](https://github.com/CrispStrobe/bw-board/actions/runs/40101137447);
-its label is consumed. The original reader refused empty `Conffiles:` headers.
-Corrected auditor `a41bd237` accepts the same retained originals, reports
-1,211 status rows and confirms the ten selected helper hashes match the prior
-admitted observation. No package tool, installer, QEMU or guest ran. The
-observed runner image is not authenticated for a later job. Setup, runtime and
-guest approvals remain false. Exact-head CI for this separate auditor is
+its label is consumed. The original reader refused empty first lines of
+multiline `Conffiles:` fields. Corrected auditor `a41bd237` accepts the same
+retained originals and reports 1,211 status rows. An independent byte review
+confirmed all ten selected helper hashes match the held V8 helper pins. No
+package tool, installer, QEMU or guest ran. The observed runner image is not
+authenticated for a later job. Setup, runtime and guest approvals remain false.
+Exact-head CI for this separate auditor is
 pending; setup metadata authorization requires a separate claim and held pins.
 
 The alias `target` field is a lexical normalized link destination. The route
