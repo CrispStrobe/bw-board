@@ -1432,3 +1432,47 @@ the outer client fails. If a 124/137 timeout leaves only an incomplete inner
 wire, it retains the exact externally selected log extent and hash as opaque
 data and reports all inner facts unknown. Neither case grants setup or guest
 approval. These are finite point observations, not continuous ownership proof.
+
+## Distinct v7 package listing metadata candidate
+
+The v7 route is source only and remains inactive. It uses a new label, job,
+request SHA marker, repository base64 request, and packet family. Earlier v4,
+v5, and v6 routes and their consumed events remain historical. The exact
+fifteen-package setup policy, helper and image pins, bounded service, raw
+status, staged Node, outside cleanup, and false guest/compiler authority are
+unchanged. A future v7 event requires exact-head source checks and separate
+external request, job, artifact, and original admission.
+
+The v7 dropped metadata observer runs fifteen fixed serial children. It
+replaces the one combined five-package `dpkg-query -L` child with one fixed
+`dpkg-query -L NAME` child for each selected package. Each child retains its
+own argv, process terminal facts, stdout/stderr bytes and hashes, first and
+secondary failures, ten-second wall bound, and 16,384-byte cap per stream.
+The new candidate uses a v3 runtime expectation with an explicit sorted
+`packagePathsByPackage` map and sorted non-root `packagePaths` union. No old
+combined process record or stdout is projected into this profile.
+
+A complete listing begins with the literal `/.` root marker, ends in LF, and
+has finite, unique canonical absolute non-root paths. At most one final empty
+format separator is allowed; interior separators, repeated roots, unsafe
+components, invalid encoding, or clipped output refuse. The independent
+original reader reparses each retained per-package stream and checks each
+map row and the union against the selected candidate and graph. The prior
+single combined stdout was clipped and did not establish five successful
+hosted child observations. The selected setup and runtime graph still need
+one fresh hosted v7 original and external admission; no actual guest is
+enabled by this metadata path.
+
+The v7 failure reader has a narrow complete-packet path for a final metadata
+child that reaches the stdout cap. It keeps the last 16,384-byte stream as a
+prefix with an incomplete listing, binds earlier named child originals and
+raw setup status, and returns every approval flag false. Other complete
+runtime failures remain refused pending a separate closed reader extension;
+a timed incomplete wire can retain only an opaque bounded original. A
+failure packet cannot be promoted by the success reader.
+
+The v7 setup and original-reader functions are intentionally separate from
+the consumed v4/v5/v6 entry points. This duplicates bounded setup checks and
+creates maintenance work; a future claimed lane may consolidate versions
+only after exact v7 originals and affected guest qualification. This source
+candidate does not alter historical packet decoders or their thresholds.
