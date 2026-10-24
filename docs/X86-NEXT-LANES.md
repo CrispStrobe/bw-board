@@ -3257,13 +3257,37 @@ standalone complete-graph audit are required before any same-job guest work.
 
 The claim merged as [PR683](https://github.com/CrispStrobe/bw-board/pull/683).
 The [PR645](https://github.com/CrispStrobe/bw-board/pull/645) source candidate
-now enables the separate v7 fifteen-probe metadata route and a negative-only
+enabled the separate v7 fifteen-probe metadata route and a negative-only
 reader for the consumed v6 failure. Its pure controls check per-package path
 projection, fixed probe order, exact five package versions, bounded partial
-failure and cleanup. The v7 job and reader are enabled only for the distinct
-admitted metadata route. Hosted source qualification, one externally admitted
-v7 metadata event, and an independent complete-graph audit remain ahead.
+failure and cleanup. The v7 job and reader were enabled only for the distinct
+admitted metadata route. This paragraph predates the later consumed v7 failure described below.
 Neither reader grants setup or guest approval.
+
+### Consumed v7 package-path refusal and a distinct v8 metadata claim — 2026-10-24
+
+The one selected [v7 metadata run](https://github.com/CrispStrobe/bw-board/actions/runs/40085495608)
+failed after the ninth fixed probe returned. The existing strict path check rejected three
+canonical `qemu-system-data` names containing commas:
+`/usr/share/qemu/QEMU,VGA.bin`, `/usr/share/qemu/QEMU,cgthree.bin`, and
+`/usr/share/qemu/QEMU,tcx.bin`. The retained original and the old reader's
+nonstream-failure refusal remain failures. They provide no complete setup,
+runtime graph or guest result.
+
+The [v8 ownership claim](../LANES.md) keeps the existing seven-path ring3
+envelope. After claim merge, add a distinct metadata event and reader that
+permit only those three exact case-sensitive names in the selected
+`qemu-system-data` DATA/listing/readback join. Verify their signed selected
+archive DATA filename bytes, sizes and hashes and installed runtime witnesses;
+audit every other name against the old strict grammar. Preserve the five
+package listings, fifteen probes, source twelve, all pins and caps, outside
+cleanup, old event identities and failure-only refusals. No broad comma rule,
+path skip, threshold change or guest activation is part of the claim.
+
+Full exact-head source CI, a separately admitted one-shot v8 metadata event,
+one official acquisition per original and an independent complete-graph
+audit must precede any separately claimed same-job guest work. Compiler and
+actual guest guards remain false.
 
 ## Ordered 16-bit scalar read candidate
 
