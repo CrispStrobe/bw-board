@@ -7969,7 +7969,192 @@ def same_job_actual_controls():
     """Pure first-service boundary controls; all host and guest edges mocked."""
     p,_=producer_fixture_case()
     edges=staged_runtime_controls(export_edges=True)
+    def runtime_edges(stage_node):
+        files,old_probe=runtime_fixture()
+        node=files.facts.pop(reader.RUNTIME_NODE)
+        files.facts[reader.NODE_STAGE_TARGET]=dict(node,mode=0o555)
+        files.prefixes[reader.NODE_STAGE_TARGET]=files.prefixes.pop(reader.RUNTIME_NODE)
+        files.rejected={}
+        empty=next(iter(reader.STAGED_EMPTY_PYTHON_SOURCES))
+        python_files=files.python_files
+        files.python_files=lambda:sorted(python_files()+[empty])
+        files.empty_python=lambda name:reader.StagedInventoryFiles.empty_python(files,name)
+        original_fact=files.fact
+        def fact(path):
+            row=original_fact(path)
+            if path==reader.NODE_STAGE_TARGET:
+                files.metadata[path]=copy.deepcopy(stage_node)
+            return row
+        files.fact=fact
+        listings={'qemu-system-x86':[reader.RUNTIME_QEMU,reader.RUNTIME_TCG,'/usr/share/qemu/bios.bin'],
+            'qemu-system-common':['/usr/share/qemu/common-keymap'],
+            'qemu-system-data':['/usr/share/qemu/data-blob',*reader.SETUP_V9_SIGNED_DATA],
+            'seabios':['/usr/share/seabios/bios.bin'],'ipxe-qemu':['/usr/share/ipxe/rom.bin']}
+        for path,pin in reader.SETUP_V9_SIGNED_DATA.items():
+            files.facts[path]=dict(pin);files.prefixes[path]=b'inert signed DATA mock'
+        # Add short inert DATA names so the manufactured complete graph exercises
+        # the exact selected cardinalities without embedding retained host bytes.
+        for index in range(312):
+            path='/usr/share/qemu/f'+str(index).zfill(3)
+            files.facts[path]={'bytes':1,'sha256':sha(path.encode()),'mode':0o644}
+            files.prefixes[path]=b'F'
+            listings['qemu-system-data'].append(path)
+        for index in range(52):
+            path='/usr/share/qemu/l'+str(index).zfill(3)
+            files.aliases[path]={'linkText':'f000','target':'/usr/share/qemu/f000'}
+            listings['qemu-system-data'].append(path)
+        observed=[]
+        def probe(argv):
+            process,streams=old_probe(argv)
+            index=len(observed);observed.append(list(argv))
+            process.update(pid=300+index,pgid=300+index,parentPid=101,
+                startTicks=index+1,spawnMonoNs=60000000+index*1000000,
+                reapMonoNs=60001000+index*1000000)
+            if argv==[reader.NODE_STAGE_TARGET,'--version']:streams['stdout']=b'v22.23.3\n'
+            if argv[:2]==['/usr/bin/dpkg-query','-W']:
+                rows={name:(version,arch) for name,version,arch,*_ in reader.SETUP_V9_PACKAGES
+                    if name in reader.PACKAGE_NAMES}
+                streams['stdout']=''.join(name+'\t'+rows[name][0]+'\t'+rows[name][1]+'\n'
+                    for name in reader.PACKAGE_NAMES).encode()
+            if argv[:2]==['/usr/bin/dpkg-query','-L']:
+                streams['stdout']=('/.\n'+'\n'.join(listings[argv[2]])+'\n').encode()
+            return process,streams
+        return files,probe,observed
     class Tests(unittest.TestCase):
+        def test_connected_first_service_setup_stage_inventory_original(self):
+            def status_row(name,version,arch='amd64',state='install ok installed',pending=None):
+                lines=['Package: '+name,'Version: '+version,'Architecture: '+arch,'Status: '+state]
+                if pending is not None:lines.append('Triggers-Pending: '+pending)
+                return '\n'.join(lines).encode()
+            base=[status_row('installed-'+str(i).zfill(4),'1',
+                state='deinstall ok config-files' if i==0 else 'install ok installed')
+                for i in range(1210)]
+            pre=b'\n\n'.join(base+[status_row('libc-bin','2')])+b'\n'
+            selected=[status_row(name,version,arch) for name,version,arch,*_ in p.SETUP_V9_PACKAGE_ROWS]
+            post=b'\n\n'.join(base+[status_row('libc-bin','2',state='install ok triggers-pending',pending='ldconfig'),*selected])+b'\n'
+            with edges() as (producer,env,request,raw,state):
+                producer.stage_runtime_inventory_node(env)
+                stage_node=state['observation']['stageBefore']['files']['node']['before']
+                files,probe,observed=runtime_edges(stage_node)
+                candidate_raw=reader.SetupV9Inventory(stage_node,files,probe).discover()
+                candidate=reader.parse(candidate_raw)
+                self.assertEqual((len(candidate['files']),len(candidate['aliases'])),(327,55))
+                mock_graph=dict(producer.SAME_JOB_REVIEWED_GRAPH,bytes=len(candidate_raw),
+                    sha256=sha(candidate_raw))
+                FakeOps,witness=setup_v8_controls(export_ops=True)
+                actual=copy.deepcopy(request)
+                with patch.object(producer,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                     patch.object(producer,'SETUP_V8_STATUS_SHA',sha(pre)):
+                    setup_policy=producer.setup_v9_policy()
+                actual.update(schema=producer.SAME_JOB_ACTUAL_ROUTE['requestSchema'],
+                    setup=setup_policy,payloadWitness=witness,comparison=mock_graph)
+                request_raw=reader.canonical(actual);pin=sha(request_raw)
+                event=reader.parse(state['originals']['staged.event.json'])
+                event['label']['name']=producer.SAME_JOB_ACTUAL_ROUTE['label']
+                event['pull_request']['body']='<!-- BW_RING3_SAME_JOB_ACTUAL_V1\n'+pin+\
+                    '\nBW_RING3_SAME_JOB_ACTUAL_V1 -->'
+                event_raw=reader.canonical(event)
+                record=copy.deepcopy(reader.parse(reader.prerequisite_original(
+                    reader.canonical(state['observation']['stageBefore']['record']))))
+                record.update(schema=producer.SAME_JOB_ACTUAL_ROUTE['stageSchema'],
+                    request={'bytes':len(request_raw),'sha256':pin,'base64':base64.b64encode(request_raw).decode()},
+                    event={'bytes':len(event_raw),'sha256':sha(event_raw),'base64':base64.b64encode(event_raw).decode()},
+                    recordBoundary='verified copy after selected setup and policy cleanup, before directory publication')
+                record['platform'].pop('BW_RING3_STAGED_INVENTORY_REQUEST_SHA256')
+                record['platform'].update(BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256=pin,
+                    BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64=base64.b64encode(request_raw).decode(),
+                    GITHUB_JOB=producer.SAME_JOB_ACTUAL_ROUTE['job'])
+                record['eventIdentity']['st_size']=len(event_raw)
+                source=reader.parse(reader.prerequisite_original(reader.canonical(actual['source'])))
+                class ActualOps(FakeOps):
+                    def preflight(self,selected):
+                        item=super().preflight(selected)
+                        item['imageVersion']='20261012.334.1'
+                        item['imageFields']['ImageVersion']['value']=item['imageVersion']
+                        item['resource']['membership']='0::/system.slice/bw-ring3-actual-setup-v1-123-1.service\n'
+                        item['statusSha256']=sha(pre)
+                        return item
+                    def acquire(self,package):
+                        item=super().acquire(package)
+                        item['path']=item['path'].replace('setup-v8-','actual-setup-v1-')
+                        return item
+                    def dpkg(self,args):
+                        item=super().dpkg(args);item['process']['role']='setup-same-job-v1'
+                        return item
+                class Observer:
+                    def __init__(self,environ):
+                        self.facts={'eventIdentity':record['eventIdentity'],
+                            'sourceCommands':record['sourceCommands'],'source':source}
+                    def event(self):return event_raw
+                    def source(self,selected):self.facts['source']=source
+                with patch.object(producer,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(reader,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                     patch.object(reader,'SETUP_V9_STATUS_BYTES',len(pre)),\
+                     patch.object(producer,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                     patch.object(producer,'SETUP_V8_STATUS_SHA',sha(pre)):
+                    self.assertEqual([producer.same_json(actual['setup'],producer.setup_v9_policy()),
+                        producer.same_json(actual['payloadWitness'],producer.SETUP_V8_PAYLOAD_PINS),
+                        producer.same_json(actual['comparison'],producer.SAME_JOB_REVIEWED_GRAPH)],
+                        [True,True,True])
+                    entry_ops=ActualOps();entry_output=io.BytesIO()
+                    with patch.object(producer.os,'getresuid',return_value=(0,0,0)),\
+                         patch.object(producer.os,'getresgid',return_value=(0,0,0)),\
+                         patch.object(producer,'expected_cgroup',return_value=None),\
+                         patch.object(producer,'HostedEnvelopeInstaller',Observer),\
+                         patch.object(producer,'SetupV8Host',return_value=entry_ops),\
+                         patch.object(producer.sys,'stdout',SimpleNamespace(buffer=entry_output)):
+                        self.assertEqual(producer.setup_v8_entry(record['platform'],producer.SAME_JOB_ACTUAL_ROUTE),1)
+                    self.assertEqual(entry_ops.events.count('acquire'),15,
+                        reader.parse_setup_v9_outer(entry_output.getvalue())['firstFailure'])
+                    self.assertEqual(entry_ops.events[-1],'stage')
+                    setup=entry_ops.snapshot
+                    status_log=io.BytesIO()
+                    pre_meta=producer.emit_setup_v8_status('pre',pre,status_log.write,status_log.flush,
+                        route=producer.SAME_JOB_ACTUAL_ROUTE)
+                    post_meta=producer.emit_setup_v8_status('post',post,status_log.write,status_log.flush,
+                        route=producer.SAME_JOB_ACTUAL_ROUTE)
+                    setup['preflight'].update(statusSha256=sha(pre),statusBytes=len(pre),statusOriginal=pre_meta)
+                    setup['postStatus'].update(sha256=sha(post),bytes=len(post),records=1226,
+                        statusOriginal=post_meta)
+                    record['setup']=setup
+                    record_raw=reader.canonical(record)
+                    state['rows']['/event.json'].update(raw=event_raw,st_size=len(event_raw))
+                    state['rows'][str(producer.NODE_STAGE_RECORD)].update(raw=record_raw,st_size=len(record_raw))
+                    state['rows']['/proc/self/cgroup']['raw']=b'0::/system.slice/bw-ring3-actual-setup-v1-123-1.service\n'
+                    actual_env={**record['platform'],'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'}
+                    files,probe,observed=runtime_edges(stage_node)
+                    originals,passed,safe=reader.same_job_actual_inventory_entry(actual_env,files,probe)
+                    self.assertEqual((passed,safe),(True,True),
+                        reader.parse(originals['runtime.setup-inventory.json'])['firstFailure'])
+                    self.assertEqual(len(observed),15)
+                    self.assertEqual(set(originals),set(reader.SAME_JOB_ACTUAL_LOG_ROLES))
+                    wire=io.BytesIO();wire.write(status_log.getvalue())
+                    reader.emit_same_job_actual_inventory(originals,wire.write,wire.flush)
+                    self.assertEqual(reader.decode_same_job_actual_log(wire.getvalue()),originals)
+                    drift_files,drift_probe,drift_observed=runtime_edges(stage_node)
+                    drift_files.facts['/usr/share/qemu/f001']['sha256']='0'*64
+                    drift_originals,drift_passed,drift_safe=reader.same_job_actual_inventory_entry(
+                        actual_env,drift_files,drift_probe)
+                    self.assertEqual(len(drift_observed),15)
+                    self.assertFalse(drift_passed)
+                    self.assertTrue(drift_safe)
+                    self.assertIn('fresh same-job full runtime candidate',
+                        reader.parse(drift_originals['runtime.setup-inventory.json'])['firstFailure']['message'])
+            self.assertEqual(producer.SAME_JOB_REVIEWED_GRAPH['sha256'],
+                '72407985d3ef62725137a05ea6c609ff81f7095bdeb0147a9f703628a0f9cdab')
+        def test_manufactured_runtime_fixture_precedes_actual_request(self):
+            with edges() as (producer,env,request,raw,state):
+                producer.stage_runtime_inventory_node(env)
+                stage_node=state['observation']['stageBefore']['files']['node']['before']
+                files,probe,observed=runtime_edges(stage_node)
+                candidate=reader.SetupV9Inventory(stage_node,files,probe).discover()
+                self.assertEqual(len(observed),15)
+                value=reader.parse(candidate)
+                self.assertEqual(value['schema'],'bw.ring3.runtime-expectation.v4')
+                self.assertEqual(len(value['packagePathsByPackage']),5)
+                self.assertTrue(all(path in value['files'] for path in reader.SETUP_V9_SIGNED_DATA))
+                self.assertEqual((len(value['files']),len(value['aliases'])),(327,55))
         def test_new_request_event_and_default_refusal(self):
             self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,False)
             self.assertIs(reader.SAME_JOB_ACTUAL_READER_ENABLED,False)
@@ -8037,6 +8222,33 @@ def same_job_actual_controls():
                              (0,None,b''))
             with self.assertRaises(ValueError):
                 p.collect_child(Child(),'setup-v9',argv,profile='setup-same-job-v1')
+
+        def test_inactive_same_job_workflow_first_service_is_distinct(self):
+            workflow=(HERE.parent.parent/'.github/workflows/i80386-ring3-int-iret.yml').read_text()
+            start=workflow.index('  ring3-same-job-actual-v1:\n')
+            end=workflow.index('  host-baseline-v1:\n',start)
+            route=workflow[start:end]
+            self.assertIn("if: ${{ false && github.event.action == 'labeled'",route)
+            self.assertIn("github.event.label.name == 'x86-ring3-same-job-actual-v1'",route)
+            self.assertEqual(route.count('actions/checkout@11d5960a326750d5838078e36cf38b85af677262'),1)
+            self.assertEqual(route.count('actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020'),1)
+            for selected in ('node-version: 22.23.3','--same-job-image-shell-v1',
+                '--same-job-setup-v1','--same-job-cleanup-v1',
+                'bw-ring3-actual-setup-v1-${GITHUB_RUN_ID}-1',
+                '--kill-after=5s 720s','RuntimeMaxSec=660','TimeoutStopSec=5',
+                '--same-job-handoff-v1','handoff.original.json',
+                '--same-job-guest-service-v1','--same-job-guest-cleanup-v1',
+                'bw-ring3-actual-guest-v1-${GITHUB_RUN_ID}-1',
+                '--kill-after=5s 780s','RuntimeMaxSec=720',
+                'BW_RING3_SAME_JOB_HANDOFF_SHA256',
+                'i80386-ring3-same-job-actual-v1-originals',
+                'build/i80386-ring3-int-iret-export/'):
+                self.assertIn(selected,route)
+            self.assertLess(route.index('--same-job-setup-v1'),route.index('--same-job-handoff-v1'))
+            self.assertLess(route.index('--same-job-handoff-v1'),route.index('--same-job-guest-service-v1'))
+            self.assertLess(route.index('--same-job-guest-service-v1'),route.index('--same-job-guest-cleanup-v1'))
+            for historical in ('--setup-runtime-inventory-v9','--hosted-actual'):
+                self.assertNotIn(historical,route)
 
     result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
     assert result.wasSuccessful(),'pure inactive same-job actual controls failed'
