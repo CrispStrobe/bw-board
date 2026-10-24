@@ -12123,8 +12123,9 @@ def verify_same_job_actual_packet(packet,handoff_raw,service_raw,cleanup_raw,
 
 
 def verify_same_job_actual_official(packet,handoff_raw,service_raw,cleanup_raw,
-        guest_outer_raw,controller_runtime_raw,run_raw,jobs_raw,artifacts_raw,job_log_raw,
-        artifact_raw,external):
+        guest_outer_raw,controller_runtime_raw,setup_log_raw,setup_outer_raw,
+        setup_cleanup_raw,setup_shell_raw,run_raw,jobs_raw,artifacts_raw,
+        job_log_raw,artifact_raw,external):
     """Separately frozen official originals and exact uploaded bytes join local grade."""
     local=verify_same_job_actual_packet(packet,handoff_raw,service_raw,
                                         cleanup_raw,guest_outer_raw,controller_runtime_raw)
@@ -12133,8 +12134,23 @@ def verify_same_job_actual_official(packet,handoff_raw,service_raw,cleanup_raw,
         'artifactId artifactName artifactBytes artifactSha256 artifactPaths artifactExtras '
         'runMetadataBytes runMetadataSha256 jobsMetadataBytes jobsMetadataSha256 '
         'artifactsMetadataBytes artifactsMetadataSha256 jobLogBytes jobLogSha256 '
-        'pullRequest')
+        'pullRequest setupExpectation')
     handoff=parse(handoff_raw)
+    setup=external['setupExpectation']
+    need(type(setup) is dict and setup.get('schema')==
+         'bw.ring3.same-job-local-expectation.v1' and
+         setup.get('runId')==external['runId'] and
+         setup.get('head')==external['head'] and
+         setup.get('tree')==external['tree'] and
+         setup.get('workflowSha')==external['workflowSha'] and
+         setup.get('workflowFileSha256')==external['workflowFileSha256'] and
+         setup.get('requestSha256')==external['requestSha256'],
+         'externally selected first-service local expectation identifiers')
+    independent=verify_same_job_actual_setup_log(setup_log_raw,setup,
+        setup_outer_raw,setup_cleanup_raw,setup_shell_raw)
+    independent['comparisonInput']=SAME_JOB_ACTUAL_REVIEWED_GRAPH
+    need(canonical(independent)==handoff_raw,
+         'entire retained handoff equals independent first-service raw regrade')
     need(external['schema']=='bw.ring3.same-job-actual-official-expectation.v1' and
          external['runId']==handoff['runId']==local['runId'] and
          external['head']==handoff['head'] and external['tree']==handoff['tree'] and
@@ -12228,11 +12244,11 @@ def verify_same_job_actual_official(packet,handoff_raw,service_raw,cleanup_raw,
     expected={'packet/'+name:packet[name] for name in ROLES}
     expected.update({'handoff':handoff_raw,'service':service_raw,
         'cleanup':cleanup_raw,'guestOuter':guest_outer_raw,
-        'controllerRuntime':controller_runtime_raw})
+        'controllerRuntime':controller_runtime_raw,'setupLog':setup_log_raw,
+        'setupOuter':setup_outer_raw,'setupCleanup':setup_cleanup_raw,
+        'setupShell':setup_shell_raw})
     paths=external['artifactPaths']
-    extra_names={'shell-image.original.json','inventory.original.log',
-        'controller.stderr','outside-cleanup.original.json',
-        'outside-cleanup.stderr','outer.original.json','guest.stdout',
+    extra_names={'controller.stderr','outside-cleanup.stderr','guest.stdout',
         'guest.stderr','guest-cleanup.stdout','guest-cleanup.stderr',
         'guest-verdict.original.json'}
     extras=external['artifactExtras']
@@ -12842,10 +12858,11 @@ def main():
         parser=argparse.ArgumentParser(description='Independent official same-job guest originals',
                                        allow_abbrev=False)
         for name in ('packet-dir','handoff','service','cleanup','guest-outer','controller-runtime',
+                     'setup-log','setup-outer','setup-cleanup','setup-shell',
                      'official-run','official-jobs','official-artifacts','job-log',
                      'artifact-zip','external'):
             parser.add_argument('--'+name,required=True)
-        args=parser.parse_args()
+        args=parser.parse_args(sys.argv[2:])
         def read(path,cap):
             with Path(path).open('rb') as stream:raw=stream.read(cap+1)
             need(len(raw)<=cap,'bounded official same-job original input')
@@ -12858,7 +12875,10 @@ def main():
         external=parse(read(args.external,1<<20))
         result=verify_same_job_actual_official(packet,read(args.handoff,1<<20),
             read(args.service,1<<20),read(args.cleanup,1<<20),
-            read(args.guest_outer,4096),read(args.controller_runtime,1<<20),read(args.official_run,1<<20),
+            read(args.guest_outer,4096),read(args.controller_runtime,1<<20),
+            read(args.setup_log,8<<20),read(args.setup_outer,4096),
+            read(args.setup_cleanup,16384),read(args.setup_shell,4096),
+            read(args.official_run,1<<20),
             read(args.official_jobs,1<<20),read(args.official_artifacts,1<<20),
             read(args.job_log,8<<20),read(args.artifact_zip,32<<20),external)
         print(json.dumps(result,sort_keys=True));return
@@ -12868,7 +12888,7 @@ def main():
                                        allow_abbrev=False)
         for name in ('packet-dir','handoff','service','cleanup','guest-outer','controller-runtime'):
             parser.add_argument('--'+name,required=True)
-        args=parser.parse_args()
+        args=parser.parse_args(sys.argv[2:])
         def read(path,cap):
             with Path(path).open('rb') as stream:
                 raw=stream.read(cap+1)
@@ -12897,7 +12917,7 @@ def main():
         for name in ('setup-log','outer','cleanup','shell','request-sha','run-id','head','tree',
                      'workflow-sha','workflow-file-sha','invoker-uid','invoker-gid'):
             parser.add_argument('--'+name,required=True)
-        args=parser.parse_args()
+        args=parser.parse_args(sys.argv[2:])
         def read(path,cap):
             with Path(path).open('rb') as stream:return stream.read(cap+1)
         raw=read(args.setup_log,8<<20);outer=read(args.outer,4096)
