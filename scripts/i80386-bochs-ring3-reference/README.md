@@ -42,3 +42,41 @@ scripts/i80386-bochs-ring3-reference/controls.py` and the wrapper with
 process edges establish neither a hosted build nor a fresh reference result.
 The unchanged authored ROM and exact 1730-byte wire remain the acceptance
 boundary; no strict 386DX, timing, RTx, whole-OS or release claim is made.
+
+The current runtime distribution uses the explicit asset-v2 boundary. It retains
+Bochs, the selected VGA resource, unchanged authored inputs, notices, the selected
+Bochs corresponding-source TAR and the complete VGA corresponding-source TAR.
+It includes no Node, loader or system-library bodies. Each job copies its
+independently selected host libraries into an owned read-only transient stage;
+both fresh children use its loader and explicit library path. Full-file hashes
+are observed readbacks. Retained sparse ELF ranges independently establish only
+the required structural fields; they cannot rederive a full-file hash or prove
+an entire host's library closure.
+
+The selected VGA resource is joined to the complete official
+[VGABIOS 0.8a source release](https://download-mirror.savannah.gnu.org/releases/vgabios/vgabios-0.8a.tgz)
+(174452 bytes, SHA256
+`481042240ef0f1c918780c92a6bb42ad4d3f5d989b29502fa7ee7faf13a041b9`).
+The full source archive and selected notices travel alongside the selected VGA;
+its other advertised binary variants are not extracted or executed. Input
+correspondence and retained notices are separate from signature verification
+and any blanket licence-clearance claim.
+
+A read-only complete Node/library cleanup plan precedes the first cgroup or
+staged-input deletion. The outside original remains bounded to 16 KiB and
+binds the separate library cleanup role by bytes and SHA256. Unknown members,
+identity drift, incomplete resource facts or close errors prevent a positive
+result. The exact successful role sets are inventory 16, Build 31 and Reference
+32; failures retain a typed prefix and their first and secondary errors.
+Ordinary source tests exercise manufactured edges only. No optional oracle
+input is added to the ordinary suite, and no census observation is invented.
+
+The portable controls connect complete 31-role Build and 32-role Reference
+packets through the genuine collectors and finalizer to the standalone reader.
+They use manufactured OS, process, acquisition and official-metadata edges;
+coherent packet and official-join mutations must refuse. Pure fixture exports
+supply mock frame/RAM inputs only, while the wrapper separately regenerates the
+unchanged authored ROM and manifest. Production Reference still runs fresh JS
+and Bochs children. These controls establish no actual compiler execution or
+architectural agreement. Next are independent source review, exact-head hosted
+qualification, then separately selected metadata, Build and Reference events.

@@ -1644,5 +1644,1025 @@ class FinalizerKnownErrorControls(unittest.TestCase):
             self.assertEqual([outside['firstFailure'], *outside['secondary']], before)
 
 
+
+# Additive mock-only connected Build and Reference controls. These source-pinned
+# pure output bytes are not a CPU run or an official result. No private paths.
+def _connected_bochs_mocks():
+    import atexit, importlib.util, itertools, signal, zlib
+    from types import SimpleNamespace
+    from unittest import mock
+    producer = globals()['producer']
+    spec = importlib.util.spec_from_file_location('bochs_connected_reader', HERE / 'reader.py')
+    reader = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(reader)
+    controls = SimpleNamespace(InventoryEdges=InventoryEdges, SparseElfControls=SparseElfControls,
+        NodeKernel=NodeKernel, synthetic_node_stage=synthetic_node_stage,
+        synthetic_elf=synthetic_elf, synthetic_stat=synthetic_stat,
+        synthetic_request=synthetic_request)
+    class _ConnectedChildFixture:
+        UNIT = "bw-bochs-build-v1-123-1.service"
+        ROOT = "/sys/fs/cgroup/system.slice/" + UNIT
+        PID, SERVICE, UID, GID = 101, 100, 1000, 1001
+        LIMITS = {"cpu.max":"100000 100000\n", "memory.max":"2147483648\n", "memory.swap.max":"0\n", "pids.max":"64\n"}
+        def stat(self, ino, mode=0o040755):
+            return {'dev': 1, 'ino': ino, 'mode': mode, 'uid': 0, 'gid': 0,
+                    'nlink': 2, 'size': 4096, 'mtimeNs': 1, 'ctimeNs': 1}
+
+        def control(self):
+            return {'unitPath': self.ROOT, 'unitIdentity': self.stat(1),
+                    'controllerPath': self.ROOT + '/controller', 'controllerIdentity': self.stat(2),
+                    'unitProcs': '', 'controllerProcs': str(self.SERVICE) + '\n',
+                    'availableBefore': 'cpu io memory pids\n', 'enabledBefore': 'io\n',
+                    'write': '+cpu +memory +pids\n',
+                    'availableAfter': 'cpu io memory pids\n',
+                    'enabledAfter': 'cpu io memory pids\n'}
+
+        def cgroup(self, after):
+            return {'path': self.ROOT + '/make', 'identity': self.stat(3), 'children': [],
+                    'parentControl': self.control(),
+                    'memberProcesses': {} if after else {str(self.PID): self.proc()},
+                    'procsAfter': '' if after else str(self.PID) + '\n',
+                    'files': {**self.LIMITS, 'cgroup.procs': '' if after else str(self.PID) + '\n',
+                              'cgroup.events': 'populated 0\nfrozen 0\n' if after else
+                                               'populated 1\nfrozen 0\n',
+                              'cgroup.stat': 'nr_descendants 0\nnr_dying_descendants 0\n',
+                              'cpu.stat': 'usage_usec 1\nuser_usec 1\nsystem_usec 0\n'}}
+
+        def proc(self):
+            tail = ['0'] * 20
+            tail[0], tail[18] = str(self.SERVICE), '567'
+            return {'pid': self.PID, 'procStat': f'{self.PID} (make) S ' + ' '.join(tail) + '\n',
+                    'procStatus': f'Pid:\t{self.PID}\nPPid:\t{self.SERVICE}\n'
+                                  f'Uid:\t{self.UID}\t{self.UID}\t{self.UID}\t{self.UID}\n'
+                                  f'Gid:\t{self.GID}\t{self.GID}\t{self.GID}\t{self.GID}\nThreads:\t1\n',
+                    'procCgroup': '0::/system.slice/' + self.UNIT + '/make\n',
+                    'procLimits': 'Max open files            256 256 files\n',
+                    'fileObservations': {name: {'before': self.stat(10 + i, 0o100400),
+                                                'after': self.stat(10 + i, 0o100400),
+                                                'named': self.stat(10 + i, 0o100400)}
+                                         for i, name in enumerate(('stat', 'status', 'cgroup', 'limits'))}}
+
+        def packet(self):
+            pre = {'pid': self.PID, 'uid': self.UID, 'euid': self.UID, 'gid': self.GID, 'egid': self.GID,
+                   'core': [0, 0], 'nofile': [256, 256], 'cpu': [900, 900],
+                   'fsize': [67108864, 67108864], 'sigtermDefault': True,
+                   'sigtermBlocked': False, 'rawBeforeExec': self.proc()}
+            return {'pid': self.PID, 'identity': {'pid': self.PID, 'preexec': pre},
+                    'resourcesBefore': {'preexec': pre, 'parentObserved': self.proc()},
+                    'resourcesAfter': {'pid': self.PID, 'procPresent': False, 'errno': 2},
+                    'cgroupBefore': self.cgroup(False), 'cgroupAfter': self.cgroup(True)}
+
+    child_fixture = _ConnectedChildFixture()
+    def sha(raw): return hashlib.sha256(raw).hexdigest()
+
+    def git_blob(raw): return hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest()
+
+    def j(value): return json.dumps(value, sort_keys=True, separators=(',', ':')).encode()
+
+    def tar_gz(files):
+        sink = io.BytesIO()
+        with tarfile.open(fileobj=sink, mode='w', format=tarfile.USTAR_FORMAT) as archive:
+            for name, raw in sorted(files.items()):
+                row = tarfile.TarInfo(name)
+                row.size, row.mode, row.uid, row.gid, row.mtime = len(raw), 0o644, 0, 0, 0
+                archive.addfile(row, io.BytesIO(raw))
+        output = io.BytesIO()
+        with gzip.GzipFile(fileobj=output, mode='wb', mtime=0) as stream:
+            stream.write(sink.getvalue())
+        return output.getvalue()
+
+    def synthetic_upstream():
+        vga = b'V' * 38400
+        notice = b'LGPL synthetic notice for a mock-only source graph\n'
+        payload = {'bochs/bios/VGABIOS-lgpl-latest': vga,
+                   'bochs/bios/VGABIOS-lgpl-README': notice}
+        for index in range(762):
+            payload[f'bochs/dir{index % 49:02d}/file{index:04d}.c'] = b''
+        excluded = {f'bochs/bios/BIOS-bochs-{index:02d}': b'excluded' for index in range(10)}
+        all_files = {**payload, **excluded}
+        dirs = {'bochs', 'bochs/bios'} | {f'bochs/dir{index:02d}' for index in range(49)}
+        assert len(dirs) == 51 and len(all_files) == 774 and len(payload) == 764
+        root = {}
+        for path, raw in all_files.items():
+            at = root
+            parts = path.split('/')
+            for part in parts[:-1]: at = at.setdefault(part, {})
+            at[parts[-1]] = ('100644', git_blob(raw))
+        hashes = {}
+        def tree(at, path=''):
+            result = bytearray()
+            for name, child in sorted(at.items(), key=lambda item: item[0].encode() +
+                                      (b'/' if type(item[1]) is dict else b'')):
+                if type(child) is dict:
+                    child_path = path + '/' + name if path else name
+                    hash_bytes = tree(child, child_path)
+                    hashes[child_path] = hash_bytes.hex()
+                    mode = b'40000'
+                else:
+                    mode, hash_bytes = child[0].encode(), bytes.fromhex(child[1])
+                result.extend(mode + b' ' + name.encode() + b'\0' + hash_bytes)
+            return hashlib.sha1(b'tree ' + str(len(result)).encode() + b'\0' + result).digest()
+        root_sha = tree(root).hex()
+        rows = []
+        for path, raw in all_files.items():
+            name = path.rsplit('/', 1)[-1]
+            bios = path.startswith('bochs/bios/')
+            is_excluded = ((bios and name.startswith(('BIOS-bochs-', 'VGABIOS-')) and
+                            not name.endswith(('README', 'LICENSE')) and
+                            name != 'VGABIOS-lgpl-latest') or
+                           (bios and '.bin' in name) or path.endswith('.exe'))
+            reason = ('unselected prebuilt firmware/tool; no payload GET' if is_excluded else
+                      'selected LGPL VGA data; correspondence/notice admission still required'
+                      if path == producer.VGA_PATH else
+                      'selected source/notice/ordinary data; per-component notice review required')
+            rows.append({'path': path, 'mode': '100644', 'gitBlob': git_blob(raw),
+                         'bytes': len(raw), 'included': not is_excluded, 'reason': reason})
+        selection = {'schema': 'bw.bochs-ring3.source-selection.v1',
+                     'commit': producer.UPSTREAM_COMMIT, 'tree': root_sha,
+                     'rows': sorted(rows, key=lambda row: row['path'])}
+        entries = ([{'path': path, 'mode': '040000', 'type': 'tree', 'sha': value,
+                     'size': 0} for path, value in hashes.items()] +
+                   [{'path': path, 'mode': '100644', 'type': 'blob', 'sha': git_blob(raw),
+                     'size': len(raw)} for path, raw in all_files.items()])
+        assert len(entries) == 825
+        corresponding = {'vgabios-0.8a/VGABIOS-lgpl-latest.bin': vga,
+                         'vgabios-0.8a/COPYING': notice,
+                         'vgabios-0.8a/README': b'Synthetic README\n',
+                         'vgabios-0.8a/Makefile': b'all:\n',
+                         'vgabios-0.8a/vgabios.c': b'int x;\n',
+                         'vgabios-0.8a/vbe.c': b'int y;\n'}
+        for index in range(25):
+            corresponding[f'vgabios-0.8a/other{index:02d}.c'] = b'int z;\n'
+        assert len(corresponding) == 31
+        return {'tree': {'sha': root_sha, 'url': 'synthetic:data-only',
+                         'tree': entries, 'truncated': False},
+                'before': {'schema': 'synthetic-source-readback', 'tree': root_sha},
+                'sourceArchive': tar_gz(payload),
+                'correspondingSourceRaw': tar_gz(corresponding),
+                'correspondingSource': {'selectedSynthetic': True},
+                'vga': vga, 'notice': notice, 'selection': selection}
+
+    def patch_pins(upstream):
+        pins = {'UPSTREAM_TREE': upstream['tree']['sha'],
+                'SOURCE_SELECTION_SHA256': sha(producer.canonical(upstream['selection'])),
+                'VGA_BLOB': git_blob(upstream['vga']),
+                'VGA_NOTICE_BLOB': git_blob(upstream['notice']),
+                'VGA_SHA256': sha(upstream['vga']),
+                'VGA_SOURCE_BYTES': len(upstream['correspondingSourceRaw']),
+                'VGA_SOURCE_SHA256': sha(upstream['correspondingSourceRaw']),
+                'VGA_LICENSE_SHA256': sha(upstream['notice'])}
+        saved = []
+        for key, value in pins.items():
+            saved.append((producer, key, getattr(producer, key)))
+            setattr(producer, key, value)
+        reader_names = {**pins, 'BOCHS_TREE': pins['UPSTREAM_TREE'],
+                        'VGA_SELECTED_SHA256': pins['VGA_SHA256'],
+                        'VGA_SELECTED_BYTES': len(upstream['vga']),
+                        'VGA_COPYING_SHA256': pins['VGA_LICENSE_SHA256']}
+        for key, value in reader_names.items():
+            if hasattr(reader, key):
+                saved.append((reader, key, getattr(reader, key)))
+                setattr(reader, key, value)
+        def restore():
+            for module, key, prior in reversed(saved): setattr(module, key, prior)
+            assert all(getattr(module, key) == prior for module, key, prior in saved)
+        atexit.register(restore)
+        return restore
+
+    def request_inputs(upstream, edges):
+        request, _raw, _event, _env = controls.synthetic_request('build')
+        graph = edges.toolchain()
+        request['toolchain'] = {'files': producer.expected_graph(graph)['files'],
+                                'aliases': producer.expected_graph(graph)['aliases'],
+                                'directoryAliases': producer.expected_graph(graph)['directoryAliases'],
+                                'node': producer.node_expectation(controls.synthetic_node_stage('build')),
+                                'inventory': {'runId': '123', 'jobId': 124, 'artifactId': 125,
+                                              'archiveBytes': 100, 'archiveSha256': 'a' * 64,
+                                              'requestSha256': 'b' * 64, 'reportSha256': 'c' * 64,
+                                              'sourceHead': request['source']['head'],
+                                              'sourceTree': request['source']['tree'],
+                                              'workflowCommit': 'd' * 40}}
+        request['bochs'] = {'repository': producer.UPSTREAM, 'commit': producer.UPSTREAM_COMMIT,
+                            'tree': producer.UPSTREAM_TREE,
+                            'sourceSelectionSha256': producer.SOURCE_SELECTION_SHA256,
+                            'vga': {'path': producer.VGA_PATH, 'gitBlob': producer.VGA_BLOB,
+                                    'bytes': producer.VGA_BYTES,
+                                    'noticePath': 'bochs/bios/VGABIOS-lgpl-README',
+                                    'noticeGitBlob': producer.VGA_NOTICE_BLOB,
+                                    'correspondingSource': {
+                                        'url': producer.VGA_SOURCE_URL,
+                                        'bytes': producer.VGA_SOURCE_BYTES,
+                                        'sha256': producer.VGA_SOURCE_SHA256,
+                                        'licensePath': 'vgabios-0.8a/COPYING',
+                                        'licenseSha256': producer.VGA_LICENSE_SHA256,
+                                        'version': '0.8a',
+                                        'selectedResourceGitBlob': producer.VGA_BLOB}}}
+        raw = producer.canonical(request)
+        _job, label, prefix = producer.ROUTES['build']
+        env = controls.synthetic_request('build')[3]
+        env[prefix + '_SHA256'] = producer.sha256(raw)
+        env[prefix + '_B64'] = base64.b64encode(raw).decode('ascii')
+        event = json.loads(controls.synthetic_request('build')[2])
+        event['pull_request']['body'] = '<!-- ' + prefix + '_SHA256=' + producer.sha256(raw) + ' -->\nSynthetic fixture.\n'
+        return request, raw, producer.canonical(event), env
+
+    def fake_child_capture(name, argv, stdout, *, started):
+        """Run genuine bounded child_capture with only kernel/process edges fake."""
+        class Stream:
+            def __init__(self, number): self.number, self.closed = number, False
+            def fileno(self): return self.number
+            def close(self): self.closed = True
+        class Selector:
+            def __init__(self): self.items = {}
+            def register(self, file, _events, which):
+                self.items[file.number] = SimpleNamespace(fileobj=file, data=which)
+            def get_map(self): return self.items
+            def select(self, _timeout): return [(value, 1) for value in list(self.items.values())]
+            def unregister(self, file): self.items.pop(file.number)
+            def close(self): self.items.clear()
+        pid = 101 if name == 'configure' else 102
+        child = SimpleNamespace(pid=pid,
+                                stdout=Stream(10), stderr=Stream(11), returncode=None)
+        observed = child_packet(name, pid)
+        chunks = {10: [stdout, b''], 11: [b'']}
+        usage = SimpleNamespace(ru_utime=0.01, ru_stime=0.01, ru_maxrss=100)
+        ticks = itertools.count(started, 1000000)
+        with mock.patch.object(producer.subprocess, 'Popen', return_value=child) as popen, \
+             mock.patch.object(producer.os, 'pidfd_open', return_value=9), \
+             mock.patch.object(producer.os, 'set_blocking'), \
+             mock.patch.object(producer.os, 'read', side_effect=lambda fd, _cap: chunks[fd].pop(0)), \
+             mock.patch.object(producer.os, 'wait4', return_value=(child.pid, 0, usage)), \
+             mock.patch.object(producer.os, 'close'), \
+             mock.patch.object(producer.selectors, 'DefaultSelector', Selector), \
+             mock.patch.object(producer.time, 'monotonic_ns', side_effect=lambda: next(ticks)):
+            value, streams, stop = producer.child_capture(argv, cwd='/mock/build',
+                environment={'PATH': '/usr/bin:/bin', 'LANG': 'C'}, name=name,
+                wall_seconds=900, stream_cap=4194304,
+                clock=lambda: next(ticks),
+                observe_spawn=lambda _pid: {key: observed[key] for key in
+                    ('identity', 'resourcesBefore', 'cgroupBefore')},
+                observe_terminal=lambda _pid, _reaped: {key: observed[key] for key in
+                    ('resourcesAfter', 'cgroupAfter')})
+        assert popen.call_count == 1 and value['firstFailure'] is None
+        assert value['reaped'] is True and value['exitCode'] == 0 and stop is None
+        return value, streams, stop
+
+    def child_packet(name, pid):
+        child_fixture.UNIT = 'bw-bochs-build-v1-123456-1.service'
+        child_fixture.ROOT = '/sys/fs/cgroup/system.slice/' + child_fixture.UNIT
+        child_fixture.PID, child_fixture.SERVICE = pid, 100
+        child_fixture.UID, child_fixture.GID = 1001, 1000
+        packet = child_fixture.packet()
+        if name == 'make':
+            for key in ('cgroupBefore', 'cgroupAfter'):
+                packet[key]['identity']['ino'] = 4
+        def replace(value):
+            if type(value) is dict:
+                return {(str(key).replace('/make', '/' + name) if type(key) is str else key):
+                        replace(item) for key, item in value.items()}
+            if type(value) is list: return [replace(item) for item in value]
+            if type(value) is str: return value.replace('/make', '/' + name).replace('(make)', '(' + name + ')')
+            return value
+        return replace(packet)
+
+    def resource_packet(route='build'):
+        unit = f'bw-bochs-{route}-v1-123456-1.service'
+        root = '/sys/fs/cgroup/system.slice/' + unit
+        child_fixture.UNIT, child_fixture.ROOT = unit, root
+        child_fixture.SERVICE = 100
+        parent = child_fixture.control()
+        limits = {'cpu.max': '100000 100000\n',
+                  'memory.max': str(producer.LIMITS[route]['memoryBytes']) + '\n',
+                  'memory.swap.max': '0\n',
+                  'pids.max': str(producer.LIMITS[route]['tasks']) + '\n'}
+        common = {'cgroup.events': 'populated 1\nfrozen 0\n',
+                  'cpu.stat': 'usage_usec 1\nuser_usec 1\nsystem_usec 0\n'}
+        return {'schema': 'bw.bochs-ring3.resources.v2', 'unit': unit,
+                'pid': 100, 'uid': 0, 'gid': 0,
+                'unitRoot': {'path': root, 'directory': child_fixture.stat(1),
+                             'children': ['controller'],
+                             'files': {**limits, **common, 'cgroup.procs': '',
+                                       'cgroup.stat': 'nr_descendants 1\nnr_dying_descendants 0\n'}},
+                'controller': {'path': root + '/controller',
+                               'directory': child_fixture.stat(2), 'children': [],
+                               'files': {'cpu.max': 'max 100000\n', 'memory.max': 'max\n',
+                                         'memory.swap.max': 'max\n', 'pids.max': 'max\n',
+                                         **common, 'cgroup.procs': '100\n',
+                                         'cgroup.stat': 'nr_descendants 0\nnr_dying_descendants 0\n'}},
+                'procCgroup': '0::/system.slice/' + unit + '/controller\n',
+                'procStat': '100 (python3) S ' + ' '.join(['0'] * 50) + '\n',
+                'procStatus': 'Pid:\t100\nUid:\t0\t0\t0\t0\nGid:\t0\t0\t0\t0\nThreads:\t1\n',
+                'parentControl': parent}
+
+    class BuildEdges(controls.InventoryEdges):
+        def __init__(self, upstream, rom, fixture):
+            super().__init__()
+            self.upstream_value, self.rom, self.fixture = upstream, rom, fixture
+            self.files[producer.TOOL_PATHS['gcc']] = synthetic_interp_elf()
+            self.files['/lib64/ld-linux-x86-64.so.2'] = controls.SparseElfControls.raw()
+            self.files['/usr/lib/x86_64-linux-gnu/libc.so.6'] = controls.SparseElfControls.raw()
+            self.indexes = {path: index + 10 for index, path in enumerate(sorted(self.files))}
+        def toolchain(self):
+            graph = super().toolchain()
+            for path in ('/lib64/ld-linux-x86-64.so.2',
+                         '/usr/lib/x86_64-linux-gnu/libc.so.6'):
+                raw, observed = self.read(path, 128 << 20, minimum=1, owner=0)
+                observed['elf'] = {key: value for key, value in
+                                   producer.sparse_elf(raw)['structure'].items()
+                                   if key != 'soname'}
+                graph['files'][path] = observed
+            return graph
+        def node_stage(self): return controls.synthetic_node_stage('build')
+        def elf_metadata(self, graph):
+            node = producer.sparse_elf(controls.synthetic_elf())
+            node['fileBytes'] = producer.NODE_BYTES
+            node['fileSha256'] = producer.NODE_SHA256
+            rows = {producer.NODE_PATH: node}
+            for path in producer.runtime_elf_candidates(graph):
+                rows[path] = producer.sparse_elf(self.files[path])
+            value = {'schema': 'bw.bochs-ring3.runtime-elf-metadata.v1',
+                     'files': rows,
+                     'rawBytes': sum(row['bytes'] for item in rows.values()
+                                     for row in item['ranges'])}
+            self.structural = value
+            return value
+        def host_runtime_stage(self, graph, structural):
+            projected = producer.expected_graph(graph)
+            selected = {path: projected['files'][path]
+                        for path in producer.runtime_elf_candidates(graph)}
+            env = {'GITHUB_RUN_ID': '123456', 'GITHUB_RUN_ATTEMPT': '1'}
+            self.host_stage = producer.HostRuntimeStage('build', env, selected, structural)
+            self.host_kernel = controls.NodeKernel(self.host_stage.path, b'unused mock Node')
+            for source in selected:
+                parent = Path(source).parent
+                chain = []
+                while str(parent) != '/':
+                    chain.append(str(parent))
+                    parent = parent.parent
+                for name in reversed(chain):
+                    if name not in self.host_kernel.nodes:
+                        self.host_kernel.add(name, 0o40755)
+                self.host_kernel.add(source, selected[source]['mode'], self.files[source])
+            with self.host_kernel.hooks():
+                return self.host_stage.copy()
+        def host_runtime_after(self):
+            with self.host_kernel.hooks():
+                return self.host_stage.verify_after()
+        def resources(self, route):
+            assert route == 'build'
+            self.calls.append(('resources', route))
+            return resource_packet()
+        def node_after(self, *, full_hash):
+            return controls.synthetic_node_stage('build', full_hash=full_hash, checked=True)
+        def upstream(self, selected):
+            self.calls.append(('upstream',))
+            return self.upstream_value
+        def upstream_after(self): return self.upstream_value['before']
+        def generated_headers(self):
+            config = b''.join(b'#define ' + name + b' ' + str(value).encode() + b'\n'
+                for name, value in ((b'BX_CPU_LEVEL', 3), (b'BX_WITH_NOGUI', 1),
+                                    (b'BX_PLUGINS', 0), (b'BX_DEBUGGER', 0)))
+            version = (b'#define VERSION "2.7"\n#define VER_SVNFLAG 0\n'
+                       b'#define REL_STRING "Built from SVN snapshot on August  1, 2021"\n'
+                       b'#define REL_TIMESTAMP "Sun Aug  1 10:07:00 CEST 2021"\n')
+            return config, version
+        def process(self, name, argv, *, wall_seconds, stream_cap, checkpoint):
+            assert name in ('configure', 'make') and wall_seconds == 900 and not checkpoint
+            output = (b'configured\n' if name == 'configure' else
+                      b'/usr/bin/x86_64-linux-gnu-gcc-13 -c src.c\n')
+            return fake_child_capture(name, argv, output,
+                                      started=1000000000 if name == 'configure' else 2000000000)
+        def runtime_bundle(self, request, upstream):
+            notices = {'notices/vgabios-corresponding-source.tar.gz':
+                       upstream['correspondingSourceRaw'],
+                       'notices/bochs-selected-corresponding-source.tar.gz':
+                       upstream['sourceArchive'],
+                       'notices/bochs/COPYING': b'Synthetic reviewed LGPL COPYING\n',
+                       'notices/bochs/README': b'Synthetic selected source README\n',
+                       'notices/bochs/config.guess': b'Synthetic config guess\n',
+                       'notices/bochs/config.sub': b'Synthetic config sub\n',
+                       'notices/vgabios/README': upstream['notice'],
+                       'notices/vgabios/source-COPYING': upstream['notice'],
+                       'notices/vgabios/source-README': b'Synthetic source README\n'}
+            return producer.assemble_runtime_v2(request['source'],
+                controls.SparseElfControls.raw(),
+                self.rom, self.fixture, upstream['vga'],
+                host_node=request['toolchain']['node'],
+                selected=request['toolchain'], structural=self.structural,
+                notices=notices)
+        def _host_cleanup_hooks(self):
+            kernel = self.host_kernel
+            class Scan:
+                def __init__(self, path):
+                    parent = str(path).rstrip('/') + '/'
+                    self.names = sorted(name[len(parent):] for name in kernel.nodes
+                        if name.startswith(parent) and '/' not in name[len(parent):])
+                    self.index = 0
+                def __enter__(self): return self
+                def __exit__(self, *args): return False
+                def __iter__(self): return self
+                def __next__(self):
+                    if self.index >= len(self.names): raise StopIteration
+                    name = self.names[self.index]; self.index += 1
+                    return SimpleNamespace(name=name,
+                        is_dir=lambda follow_symlinks=False: name == 'lib',
+                        is_symlink=lambda: False)
+            def unlink(path, *, dir_fd=None):
+                name = kernel.name(path, dir_fd)
+                assert name in kernel.nodes and kernel.nodes[name]['raw'] is not None
+                del kernel.nodes[name]
+            def rmdir(path, *, dir_fd=None):
+                name = kernel.name(path, dir_fd)
+                assert name in kernel.nodes and all(
+                    not row.startswith(name + '/') for row in kernel.nodes)
+                del kernel.nodes[name]
+            stack = __import__('contextlib').ExitStack()
+            stack.enter_context(kernel.hooks())
+            stack.enter_context(mock.patch.object(producer.os, 'scandir', Scan))
+            stack.enter_context(mock.patch.object(producer.os, 'unlink', unlink))
+            stack.enter_context(mock.patch.object(producer.os, 'rmdir', rmdir))
+            return stack
+        def prepare_host_cleanup(self, inner, roles):
+            raw = roles['host-runtime.original.json']
+            value = json.loads(raw)
+            assert value['cleanup'] is None and value['stage'] == self.host_stage.facts
+            with self._host_cleanup_hooks():
+                self.host_plan = producer.plan_host_runtime_cleanup(
+                    self.host_stage.facts, 'build',
+                    {'GITHUB_RUN_ID': '123456', 'GITHUB_RUN_ATTEMPT': '1'})
+            plan = self.host_plan
+            return {'hostRuntimePlan': {'stageSha256': plan['stageSha256'],
+                    'planSha256': sha(producer.canonical(plan)),
+                    'roleReservedBytes': plan['roleReservedBytes']},
+                    'hostRuntimeCleanup': {'role': 'host-runtime.original.json',
+                    'bytes': plan['roleReservedBytes'], 'sha256': 'f' * 64,
+                    'complete': False}}
+        def host_cleanup(self):
+            with self._host_cleanup_hooks():
+                result = producer.cleanup_host_runtime(self.host_stage.facts,
+                    self.host_plan, 'build',
+                    {'GITHUB_RUN_ID': '123456', 'GITHUB_RUN_ATTEMPT': '1'})
+            return producer.canonical({'schema': 'bw.bochs-ring3.host-runtime-original.v1',
+                    'stage': self.host_stage.facts, 'cleanup': result})
+        def cleanup(self, inner, *, outer=None):
+            kernel = SimpleNamespace(_directory=mock.Mock(
+                side_effect=FileNotFoundError(2, 'synthetic absent selected unit')))
+            return producer.cleanup_owned_cgroups('build', {'GITHUB_RUN_ID': '123456',
+                'GITHUB_RUN_ATTEMPT': '1'}, inner, kernel, outer_base=outer,
+                input_plan=producer.node_cleanup_wire_plan('build',
+                    {'GITHUB_RUN_ID': '123456', 'GITHUB_RUN_ATTEMPT': '1'}, inner),
+                following_error_bytes=1024, clock=iter((1, 2, 3)).__next__)
+        def node_cleanup(self, inner):
+            return synthetic_node_cleanup('build', inner)
+
+    class ToolEdges(controls.InventoryEdges):
+        def resources(self, route):
+            assert route == 'toolchain'
+            self.calls.append(('resources', route))
+            return resource_packet('toolchain')
+        def node_cleanup(self, inner):
+            return synthetic_node_cleanup('toolchain', inner)
+
+    def synthetic_node_cleanup(route, inner):
+            assert inner['complete'] is True
+            stage = inner['observations']['nodeStage']
+            keys = ('dev', 'ino', 'mode', 'uid', 'gid', 'nlink', 'size', 'mtimeNs', 'ctimeNs')
+            def row(raw): return dict(zip(keys, raw))
+            directory = Path(stage['stagePath']).parent
+            initial = row(stage['directory'])
+            private = dict(initial, mode=0o040700)
+            members = {'node': row(stage['file']),
+                       'stage.json': row(stage['record']['metadata'])}
+            absent = {'exists': False, 'errno': 2, 'identity': None}
+            operations = [('chmod-private', str(directory), initial,
+                           {'exists': True, 'errno': None, 'identity': private}),
+                          ('unlink', str(directory / 'node'), members['node'], absent),
+                          ('unlink', str(directory / 'stage.json'), members['stage.json'], absent),
+                          ('rmdir', str(directory), private, absent)]
+            journal = [{'operation': operation, 'path': path, 'before': before,
+                        'attempted': True, 'after': after, 'firstFailure': None}
+                       for operation, path, before, after in operations]
+            return {'schema': 'bw.bochs-ring3.node-cleanup.v1', 'route': route,
+                    'path': str(directory), 'parentBefore': row(stage['parents']['/run']['after']),
+                    'parentAfter': row(stage['parents']['/run']['after']),
+                    'before': {'exists': True, 'errno': None, 'identity': initial},
+                    'members': members, 'journal': journal, 'after': absent,
+                    'complete': True, 'firstFailure': None, 'secondary': []}
+
+    def synthetic_interp_elf():
+        raw = bytearray(220)
+        raw[:16] = b'\x7fELF\x02\x01\x01' + bytes(9)
+        struct.pack_into('<HHI', raw, 16, 2, 62, 1)
+        struct.pack_into('<Q', raw, 32, 64)
+        struct.pack_into('<HHH', raw, 52, 64, 56, 2)
+        struct.pack_into('<IIQQQQQQ', raw, 64, 1, 5, 0, 0x400000, 0, len(raw), len(raw), 4096)
+        interpreter = b'/lib64/ld-linux-x86-64.so.2\0'
+        struct.pack_into('<IIQQQQQQ', raw, 120, 3, 4, 176, 0, 0,
+                         len(interpreter), len(interpreter), 1)
+        raw[176:176+len(interpreter)] = interpreter
+        return bytes(raw)
+
+    def synthetic_status(route, unit, context):
+        """Data-only manager sidecar for reader staging, not source finish receipt."""
+        stdout = (f'Running as unit: {unit}\nFinished with result: success\n'
+                  'Main processes terminated with: code=exited/status=0\n').encode()
+        def process(name, argv, raw_out, raw_err, code):
+            failure = None if code == 0 else {'phase': 'child-capture',
+                'name': 'Refusal', 'message': 'ordinary child completed exit0',
+                'role': None, 'path': None}
+            return {'name': name, 'argv': argv, 'cwd': '/mock/source',
+                'environment': {'PATH': '/usr/bin'}, 'startedNs': 1, 'endedNs': 2,
+                'pid': 222, 'identity': None, 'waitStatus': code << 8,
+                'exitCode': code, 'signal': None, 'reaped': True, 'timedOut': False,
+                'stdout': {'role': name + '.stdout', 'bytes': len(raw_out),
+                           'sha256': sha(raw_out), 'complete': True},
+                'stderr': {'role': name + '.stderr', 'bytes': len(raw_err),
+                           'sha256': sha(raw_err), 'complete': True},
+                'resourcesBefore': None, 'resourcesAfter': None,
+                'cgroupBefore': None, 'cgroupAfter': None,
+                'firstFailure': failure, 'secondary': [], 'usage': None}
+        client_argv = producer.manager_arguments(route, context)
+        post_argv = ['/usr/bin/systemctl', 'show', unit, '--no-pager',
+            '--property=Id,Result,ExecMainCode,ExecMainStatus,ActiveState,ControlGroup']
+        value = {'schema': 'bw.bochs-ring3.service-status.v1', 'route': route,
+            'unit': unit,
+            'client': {'process': process('service-client', client_argv, stdout, b'', 0),
+                       'stdoutBase64': base64.b64encode(stdout).decode(),
+                       'stderrBase64': ''},
+            'receipt': {'schema': 'bw.bochs-ring3.service-receipt.v1', 'unit': unit,
+                        'runningUnit': unit, 'result': 'success', 'mainCode': 'exited',
+                        'mainStatus': 0, 'clientExitCode': 0, 'serviceExitCode': 0,
+                        'firstFailure': None, 'secondary': []},
+            'postShow': {'process': process('service-post-show', post_argv, b'', b'', 1),
+                         'stdoutBase64': '', 'stderrBase64': ''},
+            'firstFailure': None, 'secondary': []}
+        return reader.canonical(value)
+
+    build = SimpleNamespace(BuildEdges=BuildEdges, synthetic_upstream=synthetic_upstream,
+        patch_pins=patch_pins, child_packet=child_packet, resource_packet=resource_packet,
+        synthetic_node_cleanup=synthetic_node_cleanup, synthetic_status=synthetic_status)
+    def canonical(value): return producer.canonical(value)
+    def _mock_output(name, encoded, size, digest):
+        raw = zlib.decompress(base64.b64decode(encoded, validate=True))
+        assert len(raw) == size and sha(raw) == digest, name
+        return raw
+    mock_child_bytes = {
+        'memory.before.bin': bytes(1 << 20),
+        'fixture.canonical.json': producer.authored_inputs()[1],
+        'memory.after.bin': _mock_output('memory.after.bin', 'eNrt3EFoVFcUBuDbkAcBYzOKgYAVYqIiYqBFuxQsppBFCaFYcaEQRGMQF+50p4JQByUKdlFR0BaRIgriKok1DijoIhIXLrJRxJXFko2uNDS9984kqKQqlIDG7wuc+06Gdx68t/pn7kwIAAAAwOdiaiqWM2PV9VRtfVVbn4+F3SG0hmPuEwAAfNJ6G0KYiOuO2gp8Xs6HUJrTC/S7xwAAAAAAAAAwh/oGS2FgfKAycP/PcDW1q0NTGO8bbK/+9/HA08HOdW2LhkavXzo9HKYmHl4/ur/vpxuPKlcWjBzYsn7xzeWbdv3c3x7SZ/wnY6mri2VpbntCGHODAQAA4CNQLsK+WBfWp9rckOqyxlRXllLtWJLqty2pbvgq1uNFa6oL21JtXpHqslWprlydaseaWM+eKNbG5d6hcnEoDz+Shx/Nw4/n4Sfz8F/y8F/z8LN5+Pk8/Pc8/EIefjEP/yMPv1Qdfjkud4rxWLs3f//jvcPP/vEcAQAA4N35f2OO6J05onfliP5Djug9OaJvzhF9a47o23JE780RfUeO6DtzRO/LEb0/R/Q9sR7rXBHnVqpH9eXidvWooVzcrR41lovR6lGpXNyvhvq9OdTXt4b8cwR3igex7+z+rmvwwa1rv9lHMFdeTg7/FZeR8EVTGGqMR5cnnkyOpPeEhh7PdKXYfT3TtcSuVD/dxQc21D/9WuVg7HpnuhNvdOde7zam631Z64ZfxINvKhMvXzyb9EgAAADmRNrcn/b2p639aWd/2sSfNvenvf1pa397WBraa39pb//7zv/74NvnN8T4WDt/luundP9/rr+9J4T0dYP8Wjw3fRMhvW2QdgZ4ugAAAMwXox+o7j+y8vvOc4cBAADg08n/s74nUCf/AwAAwHzL/7d9/g8AAADz3yz5HwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgI/bv090zd8=', 1048576, 'fa116f3d00947cfe7520a40bf27d5727c2d0522e499b682d4b48b0358e5a0867'),
+        'frame.bin': _mock_output('frame.bin', 'eNpzCtcN8vRzN9YNM+RyMVYSPLN71UyG/+/udpSnhTJMYGC4d2Atd0WYiZCic2q7MoM0gzIUMjExYAB0/W/q0fVzMAjA9GNqZ7hyeNNCSuyPDWAAqmCAyAH1KoPc5Ofo4RfiGoSs7v9/IDH7PISeDKV/Q+nP5xnSGRgUGLoZRsEoGAUjGSRwMDC8A9JJUBoEFjAAyzBaggyGM0QCJhxl3hkaApA91DTvCBnu53KCVVqufi5cAPbDDQE=', 1730, '488a9d4adb4431184ed56e6c6807be5fafbf1d93cf3dfe985196e5cd0ef001c0'),
+    }
+    assert sha(mock_child_bytes['memory.before.bin']) == '30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58'
+    def synthetic_architecture():
+        """Construct a journal from fixed authored memory semantics, never a CPU run."""
+        before = mock_child_bytes['memory.before.bin']
+        after = mock_child_bytes['memory.after.bin']
+        wire = mock_child_bytes['frame.bin']
+        fixture = json.loads(mock_child_bytes['fixture.canonical.json'])
+        assert len(before) == len(after) == 1048576 and len(wire) == 1730
+        assert sha(before) == '30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58'
+        assert sha(wire) == '488a9d4adb4431184ed56e6c6807be5fafbf1d93cf3dfe985196e5cd0ef001c0'
+        expected = bytearray(before)
+        planned = []
+        for address in range(0x7fec, 0x8000):
+            planned.append((20, address, 0xcc))
+        for address, value in enumerate(after):
+            if address in range(0x7fec, 0x8000):
+                call = 100
+            elif 0x7000 <= address < 0x7030:
+                call = 50
+            elif 0x7040 <= address < 0x7070:
+                call = 150
+            elif 0x70c0 <= address < 0x70d4:
+                call = 160
+            elif 0x7080 <= address < 0x70b0:
+                call = 220
+            else:
+                call = 10
+            if value != expected[address] or (0x7fec <= address < 0x8000) or \
+               (0x7000 <= address < 0x7030) or (0x7040 <= address < 0x7070) or \
+               (0x70c0 <= address < 0x70d4) or (0x7080 <= address < 0x70b0):
+                planned.append((call, address, value))
+        writes = []
+        for call, address, value in sorted(planned):
+            writes.append({'index': len(writes), 'call': call, 'address': address,
+                           'before': expected[address], 'after': value})
+            expected[address] = value
+        assert bytes(expected) == after and len(writes) <= 4096
+        initial = dict(zip(('eax','ecx','edx','ebx','esp','ebp','esi','edi'),
+                           (0x11223344,0x99aabbcc,0xddeeff00,0x55667788,
+                            0x9000,0x0badc0de,0x12345678,0x87654321)))
+        final_frame = list(after[0x7fec:0x8000])
+        rows = []
+        for index, (stage, eip, cpl, flags, call) in enumerate((
+                ('before-int80', fixture['symbols']['int80'],3,0x202,100),
+                ('handler-entry',0x6000,0,2,101),
+                ('before-iretd',fixture['symbols']['iretd'],0,2,200),
+                ('returned-ring3',fixture['symbols']['returned'],3,0x202,201))):
+            registers = dict(initial)
+            if cpl == 0: registers['esp'] = 0x7fec
+            if index >= 2: registers['eax'] = 0xa1b2c3d4
+            selectors = {'es':0x23,'cs':8 if cpl==0 else 0x1b,
+                         'ss':0x10 if cpl==0 else 0x23,
+                         'ds':0x23,'fs':0x23,'gs':0x23}
+            rows.append({'stage':stage,'beforeCall':call,'eip':eip,'linear':eip,
+                'cpl':cpl,'eflags':flags,'cr0':1,'cr3':0,'registers':registers,
+                'selectors':selectors,
+                'cs':{'base':0,'limit':0xffffffff,'default32':True},
+                'ss':{'base':0,'limit':0xffffffff,'default32':True},
+                'tr':{'selector':0x28,'base':0x2000,'limit':0x67,'present':True},
+                'opcode':[0xcd,0x80] if index==0 else [0xcf] if index==2 else [0x89],
+                'frame':[0xcc]*20 if index==0 else final_frame})
+        report = {'schema':'bw.ring3.js-probe.v1','finiteRoundTripPass':True,
+                  'firstFailure':None,'calls':300,'completed':True,
+                  'fixtureSha256':producer.ROM_SHA256,
+                  'memoryBeforeSha256':sha(before),'memoryAfterSha256':sha(after),
+                  'outputSha256':sha(wire),'observations':4,
+                  'ports':[{'port':0x21,'value':255,'call':1},
+                           {'port':0xa1,'value':255,'call':2}]}
+        return {'js/report.json':canonical(report),
+                'js/observations.json':canonical(rows),
+                'js/writes.json':canonical(writes),
+                'js/memory.before.bin':before,
+                'js/memory.after.bin':after},wire
+
+    def mock_child(name, argv, stdout, *, checkpoint=False):
+        """Explicit process boundary mock with retained source-shaped raw facts."""
+        pid = 101 if name == 'js' else 102
+        raw = build.child_packet(name, pid)
+        def relabel(item):
+            if isinstance(item, dict): return {key:relabel(value) for key,value in item.items()}
+            if isinstance(item, list): return [relabel(value) for value in item]
+            if isinstance(item, str): return item.replace('bochs-build-v1-', 'bochs-reference-v1-')
+            return item
+        raw = relabel(raw)
+        for pre in (raw['identity']['preexec'], raw['resourcesBefore']['preexec']):
+            pre['cpu'] = [60,60]
+            pre['fsize'] = [4194304,4194304]
+        for when in ('cgroupBefore','cgroupAfter'):
+            raw[when]['files']['memory.max'] = '1073741824\n'
+            if name=='bochs':raw[when]['identity']['ino']=4
+        started, ended = (1000000000,1001000000) if name=='js' else (2000000000,2001000000)
+        stop = ({'reason':'complete-frame','signal':15,'sent':True,'pid':pid,
+                 'sentNs':started+500000,'frameSha256':sha(stdout[len(producer.expected_header()):]),
+                 'firstFailure':None,'secondary':[]} if checkpoint else None)
+        status = 15 if checkpoint else 0
+        value = {'name':name,'argv':argv,'cwd':'/mock/reference-runtime',
+                 'environment':{'PATH':'/usr/bin:/bin','LANG':'C'},
+                 'startedNs':started,'endedNs':ended,'pid':pid,
+                 'identity':raw['identity'],'waitStatus':status,
+                 'exitCode':None if checkpoint else 0,'signal':15 if checkpoint else None,
+                 'reaped':True,'timedOut':False,
+                 'stdout':{'role':name+'.stdout','bytes':len(stdout),'sha256':sha(stdout),'complete':True},
+                 'stderr':{'role':name+'.stderr','bytes':0,'sha256':sha(b''),'complete':True},
+                 'resourcesBefore':raw['resourcesBefore'],'resourcesAfter':raw['resourcesAfter'],
+                 'cgroupBefore':raw['cgroupBefore'],'cgroupAfter':raw['cgroupAfter'],
+                 'firstFailure':None,'secondary':[],
+                 'usage':{'userSeconds':0.01,'systemSeconds':0.01,'maxRssKiB':100}}
+        return value,{'stdout':stdout,'stderr':b''},stop
+
+    class ReferenceEdges(build.BuildEdges):
+        def __init__(self, selected, build_archive, arch, frame):
+            super().__init__(build.synthetic_upstream(), b'', b'')
+            self.built,self.build_archive,self.arch,self.frame=selected,build_archive,arch,frame
+        def acquire_build(self, selected, *, pull_request):
+            assert pull_request==700 and selected['bytes']==len(self.build_archive)
+            assert selected['sha256']==sha(self.build_archive)
+            repo={'id':987,'full_name':producer.REPOSITORY,'fork':False}
+            step_names=('Checkout selected producer source','Checkout executing workflow source',
+                'Admit Bochs build source and request','Prepare pinned Node input cache',
+                'Build pinned Bochs CPU3 and retain originals','Retain Bochs build originals')
+            steps=[{'number':index,'name':name,'status':'completed','conclusion':'success'}
+                   for index,name in enumerate(step_names,1)]
+            official={'schema':'bw.bochs-ring3.build-intake.v1',
+                      'selected':selected,'readback':{'runId':12345,'runAttempt':1,
+                      'event':'pull_request','actor':producer.OWNER,
+                      'head':selected['checkoutHead'],'workflowPath':producer.WORKFLOW,
+                      'repository':repo,'headRepository':repo,
+                      'pullRequest':{'number':pull_request,'head':selected['checkoutHead'],
+                                     'baseRef':'master','headRepositoryId':987,'baseRepositoryId':987},
+                      'jobId':111,'jobName':producer.ROUTES['build'][0],
+                      'steps':steps,'artifactId':222,'artifactName':selected['name'],
+                      'artifactRepositoryId':987,'artifactHeadRepositoryId':987,
+                      'archiveBytes':len(self.build_archive),'archiveSha256':sha(self.build_archive)},
+                      'officialAuthenticatedByReader':False}
+            return self.build_archive,official
+        def resources(self, route):
+            assert route=='reference'
+            return build.resource_packet('reference')
+        def node_stage(self):
+            self.node_stage_value=controls.synthetic_node_stage('reference')
+            return self.node_stage_value
+        def node_after(self, *, full_hash):
+            return controls.synthetic_node_stage('reference',full_hash=full_hash,checked=True)
+        def host_runtime_stage(self, graph, structural):
+            projected=producer.expected_graph(graph)
+            selected={path:projected['files'][path] for path in producer.runtime_elf_candidates(graph)}
+            env={'GITHUB_RUN_ID':'123456','GITHUB_RUN_ATTEMPT':'1'}
+            self.host_stage=producer.HostRuntimeStage('reference',env,selected,structural)
+            self.host_kernel=controls.NodeKernel(self.host_stage.path,b'unused mock Node')
+            for source in selected:
+                parent=Path(source).parent; chain=[]
+                while str(parent)!='/':
+                    chain.append(str(parent)); parent=parent.parent
+                for name in reversed(chain):
+                    if name not in self.host_kernel.nodes:self.host_kernel.add(name,0o40755)
+                self.host_kernel.add(source,selected[source]['mode'],self.files[source])
+            with self.host_kernel.hooks():return self.host_stage.copy()
+        def prepare_reference(self,built):
+            assert built['manifest']==self.built['manifest']
+            self.reference_runtime=Path('/run/bw-bochs-reference-v1-123456-1-work/runtime')
+            self.reference_files=built['runtime']
+            return producer.BOCHSRC_TEMPLATE.replace(b'@ROOT@',str(self.reference_runtime).encode())
+        def reference_argv(self,name):
+            files=self.host_stage.facts['files']
+            loader=[row['member'] for row in files.values()
+                    if Path(row['member']).name=='ld-linux-x86-64.so.2']
+            assert len(loader)==1
+            prefix=[loader[0],'--inhibit-cache','--library-path',str(self.host_stage.library)]
+            if name=='js':
+                return prefix+[self.node_stage_value['stagePath'],'--max-old-space-size=512',
+                               '/run/bw-bochs-reference-v1-123456-1-work/js-driver.mjs']
+            return prefix+[str(self.reference_runtime/'bin/bochs'),'-q','-f',
+                           '/run/bw-bochs-reference-v1-123456-1-work/bochsrc.original']
+        def runtime_after(self,built):
+            assert built['manifest']==self.built['manifest']
+            result={}
+            for index,(name,raw) in enumerate(sorted(built['runtime'].items())):
+                mode=built['modes'][name]
+                row=controls.synthetic_stat(index+1000,len(raw),mode)
+                result[name]={'bytes':len(raw),'sha256':sha(raw),'before':row,
+                              'after':copy.deepcopy(row),'named':copy.deepcopy(row),
+                              'complete':True,'elf':None}
+            return result
+        def process(self,name,argv,*,wall_seconds,stream_cap,checkpoint):
+            assert wall_seconds==60 and stream_cap==131072
+            assert checkpoint==(name=='bochs')
+            raw=self.frame if name=='js' else producer.expected_header()+self.frame
+            return mock_child(name,argv,raw,checkpoint=checkpoint)
+        def js_outputs(self):return copy.deepcopy(self.arch)
+        def bochs_log(self):return b'Synthetic Bochs mock log; no guest ran.\n'
+        def reference_output_census(self):
+            root=self.reference_runtime/'outputs'
+            directory=controls.synthetic_stat(5000,0,0o40700)
+            directory['uid'],directory['gid']=1001,1000
+            names={'report.json':self.arch['js/report.json'],
+                   'observations.json':self.arch['js/observations.json'],
+                   'writes.json':self.arch['js/writes.json'],
+                   'memory.before.bin':self.arch['js/memory.before.bin'],
+                   'memory.after.bin':self.arch['js/memory.after.bin'],
+                   'bochs.log':self.bochs_log()}
+            rows={}
+            for index,(name,raw) in enumerate(sorted(names.items())):
+                row=controls.synthetic_stat(index+5010,len(raw),0o100600)
+                row['uid'],row['gid']=1001,1000
+                rows[name]=row
+            return {'path':str(root),'directory':directory,'files':rows,
+                    'aggregateBytes':sum(map(len,names.values())),'quotaEnforced':False}
+        def prepare_host_cleanup(self,inner,roles):
+            host=json.loads(roles['host-runtime.original.json'])
+            assert host['cleanup'] is None and host['stage']==self.host_stage.facts
+            with self._host_cleanup_hooks():
+                self.host_plan=producer.plan_host_runtime_cleanup(self.host_stage.facts,'reference',
+                    {'GITHUB_RUN_ID':'123456','GITHUB_RUN_ATTEMPT':'1'})
+            plan=self.host_plan
+            return {'hostRuntimePlan':{'stageSha256':plan['stageSha256'],
+                    'planSha256':sha(canonical(plan)),'roleReservedBytes':plan['roleReservedBytes']},
+                    'hostRuntimeCleanup':{'role':'host-runtime.original.json',
+                    'bytes':plan['roleReservedBytes'],'sha256':'f'*64,'complete':False}}
+        def host_cleanup(self):
+            with self._host_cleanup_hooks():
+                result=producer.cleanup_host_runtime(self.host_stage.facts,self.host_plan,
+                    'reference',{'GITHUB_RUN_ID':'123456','GITHUB_RUN_ATTEMPT':'1'})
+            return canonical({'schema':'bw.bochs-ring3.host-runtime-original.v1',
+                              'stage':self.host_stage.facts,'cleanup':result})
+        def cleanup(self,inner,*,outer=None):
+            kernel=SimpleNamespace(_directory=mock.Mock(
+                side_effect=FileNotFoundError(2,'synthetic absent selected unit')))
+            env={'GITHUB_RUN_ID':'123456','GITHUB_RUN_ATTEMPT':'1'}
+            return producer.cleanup_owned_cgroups('reference',env,inner,kernel,
+                outer_base=outer,input_plan=producer.node_cleanup_wire_plan('reference',env,inner),
+                following_error_bytes=1024,clock=iter((1,2,3)).__next__)
+        def node_cleanup(self,inner):return build.synthetic_node_cleanup('reference',inner)
+
+    return SimpleNamespace(producer=producer, reader=reader, sha=sha, canonical=producer.canonical,
+        synthetic_upstream=synthetic_upstream, patch_pins=patch_pins,
+        request_inputs=request_inputs, BuildEdges=BuildEdges, ReferenceEdges=ReferenceEdges,
+        synthetic_status=synthetic_status, synthetic_architecture=synthetic_architecture,
+        mock_child_bytes=mock_child_bytes)
+
+class ConnectedBuildReferenceControls(unittest.TestCase):
+    """Genuine collectors/finalizers and independent reader, with OS/CPU transport mocked."""
+
+    def test_connected_build31_reference32(self):
+        h = _connected_bochs_mocks()
+        p, reader = h.producer, h.reader
+        authored_root = HERE.parent / 'i80386-ring3-int-iret'
+        for name, digest in (
+            ('fixture.mjs', '921eac8c27015d4d0c6ee263aa844e598fcf45c35baf120d1025dbf4910bec71'),
+            ('probe.mjs', '9dbb6a44328337c197f2d0ac5010b2b2062c6430aa5daa1bafae167735ec9cc1'),
+        ):
+            self.assertEqual(h.sha((authored_root / name).read_bytes()), digest)
+        self.assertEqual((p.UPSTREAM_COMMIT, p.UPSTREAM_TREE, p.ROM_SHA256),
+            ('0e45b736ef9792eb9b752b0a35db49eaf2faea47',
+             '1b5e0f45ecea9efee6654c69f6437ef5f7e6b44d',
+             'd1aa0e35a81c68bc61621309589c8f4afa12ce2e7369af43879c718d109e2529'))
+        upstream = h.synthetic_upstream()
+        restore = h.patch_pins(upstream)
+        try:
+            rom, fixture = p.authored_inputs()
+            self.assertEqual((len(rom), h.sha(rom), len(fixture), h.sha(fixture)),
+                (65536, p.ROM_SHA256, 1793,
+                 'd222aa19e62acc0a95f19306fe9b9a5fef70a04e2b1112293cf70ac883ce22df'))
+            selection = p.selected_source_rows(upstream['tree'])
+            self.assertEqual(selection, upstream['selection'])
+            edges = h.BuildEdges(upstream, rom, fixture)
+            request, raw, event, env = h.request_inputs(upstream, edges)
+            p.admitted_request('build', raw, event, env)
+            p.admit_build_inputs(request)
+            value, roles = p.collect_build(raw, event, env, edges)
+            self.assertTrue(value['complete'], value['firstFailure'])
+            self.assertEqual(len(roles), 28)
+            unit = 'bw-bochs-build-v1-123456-1.service'
+            context = {'env':env,'invoker':{'uid':1001,'gid':1000},'sourceRoot':'/mock/source'}
+            paths = {'unit':unit,'work':Path('/mock/work'),'output':Path('/mock/output')}
+            status = h.synthetic_status('build', unit, context)
+            def status_read(path, _cap, **_kw):
+                self.assertEqual(path, paths['work'] / 'service-status.original.json')
+                return status, {}
+            with mock.patch.object(p, 'BUILD_ENABLED', True), \
+                 mock.patch.object(p, 'sealed_write'), \
+                 mock.patch.object(p, 'retained_output_roles', return_value=copy.deepcopy(roles)), \
+                 mock.patch.object(p, 'read_regular', side_effect=status_read), \
+                 mock.patch.object(p, 'write_work_roles'):
+                outside, build_roles = p.finish_cli('build', context, raw, event, paths,
+                    provider_factory=lambda _route,_context,_paths:edges,
+                    service_status=paths['work']/'service-status.original.json')
+            self.assertEqual(outside['cleanupExitCode'], 0)
+            self.assertEqual(len(build_roles), 31)
+            self.assertTrue(reader.build_original_v2(build_roles, raw, event)['selectedBuildBytesObserved'])
+            modes = {name: 0o755 if name.endswith('/bochs') else 0o644 for name in build_roles}
+            build_archive = p.pack_zip(build_roles, archive_cap=64<<20,
+                expanded_cap=256<<20, member_cap=4096, modes=modes)
+            ref, _, ref_event, ref_env = synthetic_request('reference')
+            ref['source'] = request['source']
+            ref['build'] = {'runId':'12345','jobId':111,'artifactId':222,
+                'name':'i80386-bochs-ring3-build-v1-originals','bytes':len(build_archive),
+                'sha256':h.sha(build_archive),'checkoutHead':ref['source']['head'],
+                'checkoutTree':ref['source']['tree'],
+                'workflowCommit':json.loads(build_roles['source.before.json'])['workflowCommit'],
+                'workflowFileSha256':ref['source']['files'][p.WORKFLOW]['sha256'],
+                'compactManifest':json.loads(build_roles['compact-manifest.json']),
+                'buildLog':{'bytes':100,'sha256':'a'*64}}
+            ref_raw = p.canonical(ref)
+            prefix = p.ROUTES['reference'][2]
+            ref_env[prefix+'_SHA256'] = h.sha(ref_raw)
+            ref_env[prefix+'_B64'] = base64.b64encode(ref_raw).decode()
+            event_obj = json.loads(ref_event)
+            event_obj['pull_request']['body'] = f'<!-- {prefix}_SHA256={h.sha(ref_raw)} -->\nSynthetic Reference input.\n'
+            ref_event = p.canonical(event_obj)
+            p.admit_reference_inputs(ref)
+            selected = p.selected_build_bytes(ref, build_archive)
+            self.assertEqual(len(selected['files']), 31)
+            architecture, wire = h.synthetic_architecture()
+            self.assertEqual(len(wire), 1730)
+            arch_packet = {**architecture,'inputs/fixture.rom':rom,
+                'inputs/fixture.json':fixture,'js/stdout':wire,'js/stderr':b'',
+                'bochs/stdout':p.expected_header()+wire,'bochs/stderr':b'',
+                'bochs/frame.original':wire}
+            self.assertTrue(reader.authored_architecture(arch_packet)['definedByteAgreementObserved'])
+            ref_edges = h.ReferenceEdges(selected, build_archive, architecture, wire)
+            ref_value, ref_roles = p.collect_reference(ref_raw, ref_event, ref_env, ref_edges)
+            self.assertTrue(ref_value['complete'], ref_value['firstFailure'])
+            self.assertEqual(len(ref_roles), 29)
+            ref_unit = 'bw-bochs-reference-v1-123456-1.service'
+            ref_context = {'env':ref_env,'invoker':{'uid':1001,'gid':1000},'sourceRoot':'/mock/source'}
+            ref_paths = {'unit':ref_unit,'work':Path('/mock/reference-work'),
+                         'output':Path('/mock/reference-output')}
+            ref_status = h.synthetic_status('reference', ref_unit, ref_context)
+            def ref_status_read(path, _cap, **_kw):
+                self.assertEqual(path, ref_paths['work']/'service-status.original.json')
+                return ref_status, {}
+            with mock.patch.object(p, 'REFERENCE_ENABLED', True), \
+                 mock.patch.object(p, 'sealed_write'), \
+                 mock.patch.object(p, 'retained_output_roles', return_value=copy.deepcopy(ref_roles)), \
+                 mock.patch.object(p, 'read_regular', side_effect=ref_status_read), \
+                 mock.patch.object(p, 'write_work_roles'):
+                ref_outside, final = p.finish_cli('reference', ref_context, ref_raw, ref_event,
+                    ref_paths, provider_factory=lambda _r,_c,_p:ref_edges,
+                    service_status=ref_paths['work']/'service-status.original.json')
+            self.assertEqual(ref_outside['cleanupExitCode'], 0)
+            self.assertEqual(len(final), 32)
+            self.assertEqual(set(final), reader.REFERENCE_ROLES)
+            grade = reader.reference_original_v2(final, ref_raw, ref_event)
+            self.assertTrue(grade['buildOriginalJoined'])
+            self.assertTrue(grade['architectureObserved'])
+            self.assertFalse(grade['actualRunApproved'])
+            def refused(name, mutate):
+                packet = copy.deepcopy(final)
+                mutate(packet)
+                packet['manifest.json'] = p.canonical(p.original_manifest({
+                    key:value for key,value in packet.items() if key!='manifest.json'}))
+                with self.assertRaises(reader.Refusal, msg=name):
+                    reader.reference_original_v2(packet, ref_raw, ref_event)
+            refused('foreign Build artifact repository', lambda packet:
+                _connected_edit_json(packet, 'original.json', lambda row:
+                    row['observations']['build']['readback'].update(artifactRepositoryId=False)))
+            refused('authored write journal', lambda packet:
+                _connected_edit_json(packet, 'js/writes.json', lambda rows:
+                    rows[-1].update(after=rows[-1]['after']^1)))
+            refused('host input cleanup hash', lambda packet:
+                _connected_edit_json(packet, 'outside.original.json', lambda row:
+                    row['hostRuntimeCleanup'].update(sha256='0'*64)))
+            refused('output census extent', lambda packet:
+                _connected_edit_json(packet, 'original.json', lambda row: (
+                    row['observations']['bochs']['outputCensus']['files']['bochs.log'].__setitem__('size',
+                        row['observations']['bochs']['outputCensus']['files']['bochs.log']['size'] + 1),
+                    row['observations']['bochs']['outputCensus'].__setitem__('aggregateBytes',
+                        row['observations']['bochs']['outputCensus']['aggregateBytes'] + 1))))
+            def missing_log(packet):
+                packet['bochs/log'] = b''
+                row = json.loads(packet['original.json'])
+                row['observations']['bochs']['log'] = {'path':'bochs/log','bytes':0,
+                    'sha256':h.sha(b'')}
+                row['observations']['bochs']['outputCensus']['files']['bochs.log']['size'] = 0
+                row['observations']['bochs']['outputCensus']['aggregateBytes'] -= len(final['bochs/log'])
+                packet['original.json'] = p.canonical(row)
+            refused('missing output original', missing_log)
+            def frame_copy_drift(packet):
+                frame = bytearray(packet['bochs/frame.original'])
+                frame[len(reader.FRAME_MAGIC) + 0x70c0 - 0x7000 + 6] ^= 1
+                frame = bytes(frame)
+                packet['bochs/frame.original'] = frame
+                packet['bochs/stdout'] = p.expected_header() + frame
+                row = json.loads(packet['original.json'])
+                row['observations']['stop']['frameSha256'] = h.sha(frame)
+                row['observations']['bochs']['frame']['sha256'] = h.sha(frame)
+                row['observations']['bochs']['stdout']['sha256'] = h.sha(packet['bochs/stdout'])
+                row['phases'][1]['stdout']['sha256'] = h.sha(packet['bochs/stdout'])
+                packet['bochs/process.json'] = p.canonical(row['phases'][1])
+                packet['original.json'] = p.canonical(row)
+            refused('one frame copy padding drift', frame_copy_drift)
+            archive = p.pack_zip(final, archive_cap=96<<20, expanded_cap=384<<20,
+                member_cap=6144, modes={name:0o644 for name in final})
+            source = json.loads(final['source.before.json'])
+            repo = {'id':987,'full_name':p.REPOSITORY,'fork':False}
+            steps = [{'number':i,'name':name,'status':'completed','conclusion':'success'}
+                     for i,name in enumerate(reader.REFERENCE_USER_STEPS,1)]
+            expectation = {'schema':'bw.bochs-ring3.reference-expectation.v1',
+                'repository':p.REPOSITORY,'pullRequest':700,'runId':'123456',
+                'runAttempt':1,'jobId':333,'jobName':'bochs-ring3-reference-v1',
+                'eventName':'pull_request','actor':'CrispStrobe',
+                'head':ref['source']['head'],'tree':ref['source']['tree'],
+                'workflowCommit':source['workflowCommit'],
+                'workflowTree':source['workflowTree'],
+                'workflowFileSha256':source['workflowFileSha256'],
+                'requestSha256':h.sha(final['request.original.json']),
+                'eventSha256':h.sha(final['event.original.json']),
+                'artifactId':444,'archiveBytes':len(archive),
+                'archiveSha256':h.sha(archive),'conclusion':'success','steps':steps}
+            run = {'id':123456,'run_attempt':1,'head_sha':ref['source']['head'],
+                'event':'pull_request','status':'completed','conclusion':'success',
+                'repository':repo,'head_repository':copy.deepcopy(repo),
+                'actor':{'login':'CrispStrobe'},'path':p.WORKFLOW,
+                'pull_requests':[{'number':700,
+                    'head':{'sha':ref['source']['head'],'repo':{'id':987}},
+                    'base':{'ref':'master','repo':{'id':987}}}]}
+            jobs = {'total_count':1,'jobs':[{'id':333,'run_id':123456,
+                'head_sha':ref['source']['head'],'name':'bochs-ring3-reference-v1',
+                'status':'completed','conclusion':'success','steps':steps}]}
+            artifacts = {'total_count':1,'artifacts':[{'id':444,
+                'name':'i80386-bochs-ring3-reference-v1-originals',
+                'size_in_bytes':len(archive),'digest':'sha256:'+h.sha(archive),
+                'expired':False,'workflow_run':{'id':123456,
+                    'head_sha':ref['source']['head'],
+                    'repository_id':987,'head_repository_id':987}}]}
+            args = (archive,p.canonical(expectation),run,jobs,artifacts,
+                b'synthetic bounded official job log; no API request\n')
+            official = reader.reference_official_v2(*args)
+            self.assertTrue(official['officialMetadataBound'])
+            self.assertFalse(official['actualRunApproved'])
+            official_cuts = {
+                'foreign repository':lambda a:a[2]['head_repository'].update(id=988),
+                'fork':lambda a:a[2]['repository'].update(fork=True),
+                'other PR':lambda a:a[2]['pull_requests'][0].update(number=701),
+                'artifact owner':lambda a:a[4]['artifacts'][0]['workflow_run'].update(repository_id=988),
+                'required step':lambda a:a[3]['jobs'][0]['steps'][2].update(conclusion='failure'),
+                'artifact digest':lambda a:a[4]['artifacts'][0].update(digest='sha256:'+'0'*64),
+            }
+            for label,edit in official_cuts.items():
+                changed = copy.deepcopy(args)
+                edit(changed)
+                with self.assertRaises(reader.Refusal, msg=label):
+                    reader.reference_official_v2(*changed)
+        finally:
+            restore()
+
+
+def _connected_edit_json(packet, name, edit):
+    row = json.loads(packet[name])
+    edit(row)
+    packet[name] = producer.canonical(row)
+
 if __name__ == '__main__':
     unittest.main()

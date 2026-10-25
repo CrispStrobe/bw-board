@@ -6930,3 +6930,17 @@ Then require all enabled exact-head checks, separately reviewed source/build
 and runtime admissions, and at most one new event per selected contract.
 Census presence remains distinct from source/binary identity and result;
 historical census observations and every other owner/route remain held.
+
+
+Claim693 merged before implementation. The inactive source candidate now has
+separate metadata, Build and Reference routes and standalone original readers;
+all three route guards remain false. Asset-v2 excludes system-library and Node
+bodies from distributed runtime bundles, retaining exact structural ELF ranges
+and observed full-file hashes with per-job read-only staging. Complete selected
+Bochs/VGA corresponding sources and notices remain in the bundle. Connected
+manufactured 31-role Build and 32-role Reference envelopes test the genuine
+collectors/finalizer, source/resource/cleanup and standalone original-reader joins;
+they are not compiler, guest, host or architectural results. Source review and
+all final-head checks precede any separately admitted event. The ordinary suite
+adds no optional oracle input, so existing census definitions and observations
+remain unchanged. Other owners and the consumed QEMU disagreement stay held.

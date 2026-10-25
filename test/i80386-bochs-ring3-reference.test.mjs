@@ -4,11 +4,15 @@ import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {dirname, resolve} from 'node:path';
+import {createHash} from 'node:crypto';
+import {inflateSync} from 'node:zlib';
+import {buildFixture} from '../scripts/i80386-ring3-int-iret/fixture.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const workflowPath = resolve(root, '.github/workflows/i80386-bochs-ring3-reference.yml');
 const controlsPath = resolve(root, 'scripts/i80386-bochs-ring3-reference/controls.py');
 const workflow = readFileSync(workflowPath, 'utf8');
+const producerSource = readFileSync(resolve(root, 'scripts/i80386-bochs-ring3-reference/run.py'), 'utf8');
 const checkout = 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262';
 const setupNode = 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020';
 const upload = 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02';
@@ -82,6 +86,30 @@ function auditWorkflow(raw) {
 
 test('Bochs route workflow has three inactive authenticated bounded six-step jobs', () => {
   auditWorkflow(workflow);
+});
+
+test('source-held authored inputs equal the unchanged pure fixture builder', () => {
+  const match = producerSource.match(/^AUTHORED_INPUT_ZLIB_B64 = '([A-Za-z0-9+/=]+)'$/m);
+  assert.ok(match, 'one source-held bounded compressed input');
+  const compressed = Buffer.from(match[1], 'base64');
+  assert.equal(compressed.toString('base64'), match[1]);
+  assert.ok(compressed.length <= 4096);
+  const raw = inflateSync(compressed, {maxOutputLength: 1 << 20});
+  const input = JSON.parse(raw);
+  const fixture = buildFixture(); // Pure bytes only; no CPU/probe execution.
+  const rom = Buffer.from(input.romBase64, 'base64');
+  assert.equal(rom.length, 65536);
+  assert.deepEqual(rom, Buffer.from(fixture.rom));
+  assert.deepEqual(input.manifest, fixture.manifest);
+  const stable = value => Array.isArray(value) ? value.map(stable) :
+    value !== null && typeof value === 'object' ? Object.fromEntries(
+      Object.keys(value).sort().map(key => [key, stable(value[key])])) : value;
+  const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+  assert.equal(digest(rom), 'd1aa0e35a81c68bc61621309589c8f4afa12ce2e7369af43879c718d109e2529');
+  assert.equal(digest(Buffer.from(JSON.stringify(stable(fixture.manifest)) + '\n')),
+    'd222aa19e62acc0a95f19306fe9b9a5fef70a04e2b1112293cf70ac883ce22df');
+  const altered = Buffer.from(rom); altered[0] ^= 1;
+  assert.notDeepEqual(altered, Buffer.from(fixture.rom));
 });
 
 test('workflow policy mutations are detected without enabling a job', () => {

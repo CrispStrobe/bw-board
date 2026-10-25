@@ -1,7 +1,7 @@
-# Bochs CPU3 Ring 3 reference ownership proposal
+# Bochs CPU3 Ring 3 reference source candidate
 
-Status: merged docs-only claim; source implementation, build and reference execution
-are not selected or qualified. The exact envelope is the
+Status: merged claim and inactive source candidate. Build and reference execution
+are unselected and unqualified. The exact envelope is the
 [new Bochs claim in LANES.md](../LANES.md). Preserve the separately owned
 same-job V3 cleanup lane and every consumed event/original.
 
@@ -61,3 +61,20 @@ isolated checkout, keep guards false, and prove connected reader/source/
 framing/failure/resource controls. Fresh source CI and independent root
 admission precede any new build or reference event. Actual result, whole OS,
 strict 386DX physical accuracy, timing/RTx and release approval remain false.
+
+The candidate has separate metadata, Build and Reference routes with all source
+guards disabled pending review. Connected manufactured controls join complete 31-role Build and 32-role
+Reference envelopes from the genuine collectors/finalizer to the standalone
+reader; coherent packet and official-join mutations refuse. This establishes
+source wiring only. Fresh
+exact-head CI and separate input/event admission remain necessary.
+
+The current runtime bundle contains no host-library, loader or Node bodies.
+It keeps the compiled Bochs payload, selected VGA, authored inputs, notices and
+complete selected Bochs/VGA corresponding sources. Matching host libraries are
+staged transiently per job and used through the verified staged loader. Sparse
+ELF metadata supports independent structural decoding, while complete-file
+SHA256 values remain observed readback facts. This boundary does not prove a
+whole-system dependency closure or grant blanket licence clearance. Whole
+cleanup reservation precedes every deletion; unknown files, resource drift,
+close uncertainty or incomplete originals remain failures.
