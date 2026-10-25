@@ -1,4 +1,42 @@
 2026-10-24 literal-PULSE oracle census registration — DONE (source candidate), Codex circuit owner.
+
+## Meter terminal-current authority — claim, 2026-10-25
+
+CLAIMED — Codex circuit/instrument owner. Exact base
+`0063dc8ee395dd1ff8cad45966bfe536c58d0475`; branch
+`claim/meter-current-authority-20261025`. A finite authored LM741 CLI assessment
+at the existing consumer pins demonstrates that a connected, unmodelled supply
+terminal returns a measured zero. Current master retains the same meter fallback.
+Absence of represented current must not be promoted to a qualified zero.
+
+Own only this claim, `src/board.js` current-value validation in `_meterValue`
+and existing refusal propagation in `_sampleMeters` and
+`_acceptedMeterQuadrature` (plus the corresponding meter API comment), new
+`test/meter-current-authority.test.mjs`, and new
+`spec-updates/meter-current-authority.md`. Refuse missing or nonfinite terminal
+current with an explicit error; retain a present finite zero, signed OUT current,
+power-off behavior, solve/determinacy checks, and the original observation
+window. If a previously valid watch loses authority, latch its failure instead
+of averaging an invented zero or aborting unrelated simulation work.
+
+Prove an actual signal-model LM741 unsupported supply port refuses, while real
+resistor zero/nonzero readings and input/output currents that are represented
+retain their values. Exercise accepted-solve and quadrature missing/nonfinite
+snapshots with causal controls; these fault injections are not hardware claims.
+Restore the old fallback in an isolated mutation and require the named assertion
+to fail. Run affected meter, scope and LM741 suites plus every enabled exact-head
+hosted check and affected actual engine qualification before normal matched merge.
+Preserve all original failed observations and unchanged numerical bounds.
+
+No solver/device/current stamping, quiescent or bias-current model, scope
+acquisition, scheduler, profile, tolerance, budget, CPU, workflow, unrelated test,
+package/pin or deployment changes. Do not manufacture chip consumption from a
+published typical value. The public source note distinguishes signal-model
+behavior from physical LM741 supply/bias fidelity and records the bounded
+assessment. Consumer adoption follows the qualified supplier landing, coordinated
+with the later CUI instrument work in one purposeful package wave. Merge this
+claim before implementation; preserve every other owner's existing section.
+
 Base a2b4ff73; bounded qualification repair for the same owner's PR665.
 Its original CI passes the admitted47 pulse comparisons but fails the unchanged
 census coverage assertion because spice-pulse-source.test.mjs now consumes the
