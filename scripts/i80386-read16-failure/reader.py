@@ -310,11 +310,13 @@ def official(run_raw,jobs_raw,artifacts_raw,artifact_raw,log_raw,manifest_raw,
         digest(row['sha256']);manifest_paths.append(row['path'])
     exact(set(manifest_paths),physical_roster(expected['runId']),'closed physical manifest roles')
     need(len(set(manifest_paths))==106,'unique manifest roles')
-    need(len(artifact_raw)>=22 and artifact_raw[-22:-18]==b'PK\x05\x06' and artifact_raw[-2:]==b'\x00\x00',
+    need(len(artifact_raw)>=22 and artifact_raw[:4]==b'PK\x03\x04' and
+         artifact_raw[-22:-18]==b'PK\x05\x06' and artifact_raw[-2:]==b'\x00\x00',
          'single terminal ZIP directory without trailing bytes')
     with zipfile.ZipFile(io.BytesIO(artifact_raw)) as archive:
         exact(archive.comment,b'','archive comment')
         infos=archive.infolist();names=[i.filename for i in infos]
+        need(len({i.header_offset for i in infos})==106,'unique physical ZIP offsets')
         exact(names,manifest_paths,'ordered physical archive roles')
         exact(set(names),physical_roster(expected['runId']),'closed physical archive roles')
         need(len(set(names))==106,'unique physical archive roles')
