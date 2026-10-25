@@ -3,7 +3,7 @@
 Status: ownership [PR697](https://github.com/CrispStrobe/bw-board/pull/697)
 and inactive diagnostic source [PR694](https://github.com/CrispStrobe/bw-board/pull/694)
 are merged. The reviewed source head was
-[`c293a5ca`](https://github.com/CrispStrobe/bw-board/commit/c293a5caa52f5fbc9d7ae07d56297cb723af2504).
+[`c2930696`](https://github.com/CrispStrobe/bw-board/commit/c293069628e8a9d597308f7b356421cd64545ce3).
 Its exact-head qualification had 23 checks (12 successful, 11 declared skips),
 11 automatic runs (nine successful, two declared skips) and 174 terminal steps.
 The route remains inactive and unselected; source qualification does not

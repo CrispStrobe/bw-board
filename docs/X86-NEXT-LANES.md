@@ -3600,7 +3600,7 @@ source review and exact-head checks precede any new one-shot selection.
 ### Bochs CPU3 Ring 3 reference: Metadata V3 spent; ELF attribution next
 
 Inactive source [PR694](https://github.com/CrispStrobe/bw-board/pull/694) is
-merged. Its reviewed head c293a5ca passed 23 exact-head checks (12 success,
+merged. Its reviewed head c2930696 passed 23 exact-head checks (12 success,
 11 declared skips), 11 automatic runs (nine success, two declared skips) and
 174 terminal steps. The separate
 [Metadata V3 event](https://github.com/CrispStrobe/bw-board/actions/runs/40176241083)
