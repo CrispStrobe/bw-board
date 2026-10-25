@@ -9989,6 +9989,7 @@ def elf_capture_unit(unit):
 
 def elf_partial_errors(first,secondary):
     require(type(secondary) is list and len(secondary)<=16,'bounded partial error prefix')
+    require(first is not None or not secondary,'secondary errors require an earlier primary')
     if first is not None:failure_fact(first)
     for row in secondary:failure_fact(row)
 

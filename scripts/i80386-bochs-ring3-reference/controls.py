@@ -5079,6 +5079,26 @@ class ElfAttributionControls(unittest.TestCase):
                     self.assertFalse(result['cleanupObserved'])
                 self.assertFalse(inner['complete']);self.assertIsNotNone(outside['firstFailure'])
                 self.assertLessEqual(len(p.canonical(outside)),16384)
+                if mode=='after-throw':
+                    # The actual captured first error cannot become an orphan
+                    # secondary merely because this is an incomplete packet.
+                    forged={key:roles[key] for key in r.ELF_CORE_ROLES if key!='manifest.json'}
+                    changed=copy.deepcopy(node)
+                    changed['secondary'].insert(0,changed['firstFailure']);changed['firstFailure']=None
+                    forged['node-stage.original.json']=p.canonical(changed)
+                    changed_inner=json.loads(forged['original.json'])
+                    changed_inner['observations']['nodeStage']=changed
+                    changed_inner['failurePartial']['nodeStage']=changed
+                    forged['original.json']=p.canonical(changed_inner)
+                    forged['manifest.json']=p.canonical(p.elf_attribution_manifest(forged))
+                    with self.assertRaises(r.Refusal):r.elf_attribution_packet(forged)
+                    import inspect
+                    source=inspect.getsource(r.elf_partial_errors)
+                    clause="    require(first is not None or not secondary,'secondary errors require an earlier primary')\n"
+                    self.assertIn(clause,source);namespace=dict(vars(r))
+                    exec(compile(source.replace(clause,''),'prior-partial-chronology-validator.py','exec'),namespace)
+                    with mock.patch.object(r,'elf_partial_errors',namespace['elf_partial_errors']):
+                        self.assertEqual(r.elf_attribution_packet(forged)['classification'],'incomplete')
 
     def test_diagnostic_resource_credentials_and_controller_scope_are_exact(self):
         p=producer;r=self.reader
