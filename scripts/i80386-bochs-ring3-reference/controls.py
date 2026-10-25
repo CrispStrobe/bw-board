@@ -5,12 +5,20 @@ import copy
 import contextlib
 import importlib.util
 import itertools
+import hashlib
+import gzip
+import io
+import tarfile
+import zlib
 import json
 import os
 import posixpath
 from pathlib import Path
 import stat
 import struct
+import re
+import pathlib
+import types
 import tempfile
 import unittest
 from unittest import mock
@@ -160,6 +168,10 @@ class InventoryEdges:
     def observer(self, value):
         return producer.observer_facts(value, {'BW_EXPECTED_HEAD': '1' * 40},
                                       pid=100, uid=0, gid=0, started_ns=1, ended_ns=2)
+    def cleanup(self, inner):
+        kernel = SimpleNamespace(_directory=mock.Mock(side_effect=FileNotFoundError(2, 'authored absent unit')))
+        return producer.cleanup_owned_cgroups('toolchain', {'GITHUB_RUN_ID': '123456',
+            'GITHUB_RUN_ATTEMPT': '1'}, inner, kernel, clock=iter((1, 2, 3)).__next__)
     def unit(self, unit):
         self.calls.append(('unit', unit))
         return {'path': '/sys/fs/cgroup/system.slice/' + unit, 'exists': False,
@@ -176,6 +188,19 @@ def inventory_sample():
 
 
 class CoreControls(unittest.TestCase):
+    def test_source_manager_receipt_normal_unknown_and_mixed(self):
+        unit = 'bw-bochs-toolchain-v1-123456-1.service'
+        receipt = ('Running as unit: ' + unit + '; invocation ID: ' + 'a' * 32 + '\n' +
+                   'Finished with result: success\nMain processes terminated with: code=exited/status=0\n').encode()
+        observed = producer.service_receipt(b'', receipt, 0, unit)
+        self.assertEqual(observed['serviceExitCode'], 0)
+        self.assertIsNone(observed['firstFailure'])
+        for raw, code in ((b'', 0), (receipt, None), (receipt, 1), (receipt + receipt, 0),
+                          (receipt.replace(b'success', b'exit-code'), 0),
+                          (receipt.replace(unit.encode(), b'other.service'), 0)):
+            result = producer.service_receipt(b'', raw, code, unit)
+            self.assertIsNone(result['serviceExitCode'])
+            self.assertIsNotNone(result['firstFailure'])
     def test_raw_event_accepts_pretty_reordered_lf_without_normalizing(self):
         for raw in (b'{ "b": 2, "a": 1 }\n', b'{\n "a": 1,\n "b": 2\n}\n', b'{"a":1,"b":2}'):
             self.assertEqual(producer.raw_event(raw), {'a': 1, 'b': 2})
@@ -250,11 +275,11 @@ class InventoryControls(unittest.TestCase):
             with self.assertRaises(ValueError):
                 producer.dispatch('toolchain', raw, event, {**env, 'GITHUB_ACTOR': 'other'}, factory)
         factory.assert_not_called()
-    def test_real_collect_finalize_pack_thirteen_role_positive(self):
+    def test_real_collect_finalize_pack_fourteen_roles_with_manual_cleanup(self):
         _request, _raw, _event, _env, edges, value, outside, roles = inventory_sample()
         self.assertTrue(value['complete'])
         self.assertEqual(outside['cleanupExitCode'], 0)
-        self.assertEqual(len(roles), 13)
+        self.assertEqual(len(roles), 14)
         self.assertFalse(any(value['authority'].values()))
         self.assertEqual(len(value['observations']['notices']), 7)
         self.assertEqual([call[0] for call in edges.calls].count('toolchain'), 2)
@@ -300,6 +325,11 @@ class InventoryControls(unittest.TestCase):
         self.assertFalse(outside['innerComplete'])
         self.assertIsNone(outside['innerFirstFailure'])
         self.assertEqual(outside['cleanupExitCode'], 1)
+        outside, _roles = producer.finalize_original('toolchain', raw, event, env, None, {},
+                                                     None, None, InventoryEdges())
+        self.assertIsNone(outside['serviceExitCode'])
+        self.assertIsNone(outside['clientExitCode'])
+        self.assertEqual(outside['cleanupExitCode'], 1)
     def test_debian_real_fold_and_whitespace_authority(self):
         base = b'Package: fixture\nStatus: install ok installed\nVersion: 1\nArchitecture: all\n'
         self.assertEqual(len(producer.debian_status(base + b'Conffiles:\n /x a\n')), 1)
@@ -310,7 +340,8 @@ class InventoryControls(unittest.TestCase):
 
 class ProcessControls(unittest.TestCase):
     def capture(self, *, stdout=b'data', status=0, selector_error=None,
-                cap=1024, checkpoint=False, post_error=None, timeout=False):
+                cap=1024, checkpoint=False, post_error=None, timeout=False,
+                environment=None, record_environment=None, argv=None):
         class Stream:
             def __init__(self, fd): self.fd, self.closed = fd, False
             def fileno(self): return self.fd
@@ -329,7 +360,7 @@ class ProcessControls(unittest.TestCase):
         def read(fd, _cap): return chunks[fd].pop(0)
         usage = SimpleNamespace(ru_utime=0.01, ru_stime=0.01, ru_maxrss=100)
         waits = [(0, 0, None), (77, status, usage)] if checkpoint or timeout else [(77, status, usage)]
-        ticks = iter((0, 61000000000, 61000000001)) if timeout else itertools.count(1, 1000000)
+        ticks = itertools.chain((0, 61000000000, 61000000001), itertools.count(61000000002, 1000000)) if timeout else itertools.count(1, 1000000)
         def terminal(_pid, _reaped):
             if post_error: raise OSError(post_error)
             return {'resourcesAfter': {}, 'cgroupAfter': {}}
@@ -341,15 +372,38 @@ class ProcessControls(unittest.TestCase):
              mock.patch.object(producer.os, 'wait4', side_effect=waits), \
              mock.patch.object(producer.os, 'close') as close, \
              mock.patch.object(producer.signal, 'pidfd_send_signal') as send, \
-             mock.patch.object(producer.selectors, 'DefaultSelector', selector):
-            value, streams, stop = producer.child_capture(['/authored/tool'], cwd='/authored',
-                environment={'LANG': 'C'}, name='bochs' if checkpoint else 'configure',
+             mock.patch.object(producer.selectors, 'DefaultSelector', selector), \
+             mock.patch.object(producer.time, 'monotonic_ns', side_effect=lambda: next(ticks)):
+            value, streams, stop = producer.child_capture(argv or ['/authored/tool'], cwd='/authored',
+                environment=environment or {'LANG': 'C'}, record_environment=record_environment,
+                name='bochs' if checkpoint else 'configure',
                 wall_seconds=60, stream_cap=cap, checkpoint=checkpoint,
                 clock=lambda: next(ticks), observe_terminal=terminal)
         self.assertEqual(popen.call_count, 1)
         self.assertTrue(process.stdout.closed and process.stderr.closed)
         close.assert_called_once_with(9)
         return value, streams, stop, send
+    def test_sentinel_secret_name_only_and_no_retained_value(self):
+        sentinel = 'SENTINEL_BW_BOCHS_SECRET_NOT_A_REAL_TOKEN'
+        environment = {'LANG': 'C', 'GH_TOKEN': sentinel}
+        argv = ['/usr/bin/systemd-run', '--wait', '--setenv=GH_TOKEN']
+        value, _streams, _stop, _send = self.capture(environment=environment,
+            record_environment={'LANG': 'C'}, argv=argv)
+        self.assertNotIn(sentinel.encode(), producer.canonical(value))
+        self.assertNotIn('GH_TOKEN', value['environment'])
+        value, streams, _stop, _send = self.capture(stdout=sentinel.encode(),
+            environment=environment, record_environment={'LANG': 'C'}, argv=argv)
+        self.assertEqual(value['firstFailure']['phase'], 'secret-output')
+        self.assertFalse(value['stdout']['complete'])
+        self.assertNotIn(sentinel.encode(), producer.canonical(value))
+        self.assertNotIn(sentinel.encode(), streams['stdout'] + streams['stderr'])
+        with mock.patch.object(producer.subprocess, 'Popen') as spawn:
+            for recorded, command in ((None, argv), ({'LANG': sentinel}, argv),
+                                      ({'LANG': 'C'}, argv + ['--setenv=GH_TOKEN=' + sentinel])):
+                with self.assertRaises(ValueError):
+                    producer.child_capture(command, cwd='/authored', environment=environment,
+                        record_environment=recorded, name='manager', wall_seconds=5, stream_cap=1024)
+            spawn.assert_not_called()
     def test_wait4_positive_and_source_only_mocked_edges(self):
         value, streams, stop, send = self.capture()
         self.assertIsNone(value['firstFailure'])
@@ -410,7 +464,7 @@ class NodeKernel:
             path = posixpath.join(self.fds[dir_fd], path)
         return posixpath.normpath(path)
     def info(self, path):
-        if path not in self.nodes: raise FileNotFoundError(path)
+        if path not in self.nodes: raise FileNotFoundError(2, 'authored absent node', path)
         node = self.nodes[path]
         return SimpleNamespace(st_dev=1, st_ino=node['ino'], st_mode=node['mode'],
             st_uid=node['uid'], st_gid=node['gid'], st_nlink=2 if node['raw'] is None else 1,
@@ -543,6 +597,663 @@ class NodeStageControls(unittest.TestCase):
         self.assertTrue(facts['filePublicationAttempted'])
         self.assertFalse(facts['filePublished'])
         self.assertEqual(stat.S_IMODE(facts['targetAfterFailure'][2]), 0o555)
+
+
+class NodeCleanupControls(unittest.TestCase):
+    def sample(self, change=None):
+        facts, kernel = NodeStageControls().exercise()
+        root = str(Path(facts['stagePath']).parent)
+        if change is not None:
+            change(kernel, root)
+        edge_start = len(kernel.events)
+        def unlink(name, *, dir_fd):
+            path = kernel.name(name, dir_fd)
+            producer.need(path in kernel.nodes and kernel.nodes[path]['raw'] is not None, 'fake known file')
+            kernel.events.append(('unlink', path)); del kernel.nodes[path]
+        def rmdir(path):
+            path = str(path)
+            producer.need(not any(x.startswith(path + '/') for x in kernel.nodes), 'fake empty dir')
+            kernel.events.append(('rmdir', path)); del kernel.nodes[path]
+        class Scan:
+            def __init__(self, path):
+                path = str(path).rstrip('/') + '/'
+                self.items = iter(SimpleNamespace(name=x[len(path):]) for x in list(kernel.nodes)
+                    if x.startswith(path) and '/' not in x[len(path):])
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def __iter__(self): return self
+            def __next__(self): return next(self.items)
+        inner = {'observations': {'nodeStage': facts}}
+        env = {'GITHUB_RUN_ID': '123456', 'GITHUB_RUN_ATTEMPT': '1'}
+        with mock.patch.object(producer.os, 'lstat', kernel.lstat), \
+             mock.patch.object(producer.os, 'open', kernel.open), \
+             mock.patch.object(producer.os, 'fstat', kernel.fstat), \
+             mock.patch.object(producer.os, 'stat', kernel.stat), \
+             mock.patch.object(producer.os, 'fchmod', kernel.chmod), \
+             mock.patch.object(producer.os, 'close', kernel.close), \
+             mock.patch.object(producer.os, 'scandir', Scan), \
+             mock.patch.object(producer.os, 'unlink', unlink), \
+             mock.patch.object(producer.os, 'rmdir', rmdir):
+            value = producer.cleanup_node_stage('toolchain', env, inner)
+        return value, kernel.events[edge_start:], kernel
+    def test_actual_cleanup_algorithm_removes_only_bound_node_stage(self):
+        value, events, kernel = self.sample()
+        self.assertTrue(value['complete'])
+        self.assertEqual(value['after'], {'exists': False, 'errno': 2, 'identity': None})
+        self.assertEqual([x['operation'] for x in value['journal']],
+                         ['chmod-private', 'unlink', 'unlink', 'rmdir'])
+        self.assertLessEqual(len(producer.canonical(value)), 16384)
+        self.assertEqual([x[0] for x in events if x[0] in ('chmod', 'unlink', 'rmdir')],
+                         ['chmod', 'unlink', 'unlink', 'rmdir'])
+        self.assertIn(producer.NODE_PATH, kernel.nodes)
+    def test_unknown_or_changed_member_refuses_before_mutation(self):
+        for change in (lambda k, r: k.add(r + '/unknown', 0o100644, b'authored data'),
+                       lambda k, r: k.nodes[r + '/node'].update(ino=999)):
+            value, events, _kernel = self.sample(change)
+            self.assertFalse(value['complete'])
+            self.assertIsNotNone(value['firstFailure'])
+            self.assertEqual([x for x in events if x[0] in ('chmod', 'unlink', 'rmdir')], [])
+
+
+class CliControls(unittest.TestCase):
+    def context(self, route='toolchain'):
+        request, raw, event, env = synthetic_request(route)
+        env.update({'GITHUB_ACTIONS': 'true', 'GITHUB_WORKSPACE': '/authored/workspace',
+                    'GITHUB_EVENT_PATH': '/authored/event.json'})
+        context = {'env': env, 'sourceRoot': '/authored/workspace/producer-source',
+            'invoker': {'uid': 1001, 'gid': 1000},
+            'requestSha256': producer.sha256(raw), 'eventSha256': producer.sha256(event)}
+        return context, producer.route_paths(route, env)
+    def test_all_five_cli_modes_inactive_before_every_edge(self):
+        for mode in ('--admit', '--work', '--run-service', '--capture-service-status', '--finish'):
+            edge = mock.Mock(side_effect=AssertionError('host edge reached'))
+            with mock.patch.object(producer, 'load_cli_context', edge), \
+                 mock.patch.object(producer, 'admit_cli', edge), \
+                 self.assertRaisesRegex(ValueError, 'inactive'):
+                producer.main([mode, '--route', 'toolchain'], environment={}, provider_factory=edge)
+            edge.assert_not_called()
+        # Nonvacuous: activating only the source guard reaches the refused loader.
+        with mock.patch.object(producer, 'TOOLCHAIN_ENABLED', True), \
+             mock.patch.object(producer, 'load_cli_context', edge), self.assertRaises(AssertionError):
+            producer.main(['--work', '--route', 'toolchain'], environment={}, provider_factory=edge)
+        edge.assert_called_once()
+    def test_manager_source_argv_is_bounded_unmixed_secret_name_only(self):
+        for route in producer.ROUTES:
+            context, paths = self.context(route)
+            argv = producer.manager_arguments(route, context)
+            self.assertEqual(argv[0], '/usr/bin/systemd-run')
+            self.assertIn('--wait', argv)
+            for forbidden in ('--pipe', '--quiet', '--collect', '--remain-after-exit'):
+                self.assertNotIn(forbidden, argv)
+            self.assertEqual('--setenv=GH_TOKEN' in argv, route == 'reference')
+            self.assertTrue(all(not a.startswith('--setenv=GH_TOKEN=') for a in argv))
+            self.assertEqual(argv[-3:], ['--work', '--route', route])
+            self.assertIn('--unit=' + paths['unit'], argv)
+    def test_reference_manager_secret_is_never_recorded_and_marker_precedes_spawn(self):
+        context, paths = self.context('reference')
+        events = []
+        token = 'AUTHORED_SENTINEL_TOKEN_ONLY'
+        def seal(path, raw, cap):
+            events.append(('write', path.name, raw))
+            self.assertNotIn(token.encode(), raw)
+        def capture(argv, **kwargs):
+            events.append(('spawn', argv))
+            self.assertEqual(events[0][1], 'service-attempt.original.json')
+            self.assertEqual(kwargs['environment']['GH_TOKEN'], token)
+            self.assertNotIn('GH_TOKEN', kwargs['record_environment'])
+            self.assertNotIn(token, '\0'.join(argv))
+            return {'firstFailure': None, 'secondary': [], 'reaped': True, 'exitCode': 0}, \
+                {'stdout': b'', 'stderr': b''}, None
+        with mock.patch.object(producer, 'REFERENCE_ENABLED', True), \
+             mock.patch.object(producer, 'sealed_write', seal):
+            producer.run_service_cli('reference', context, paths, capture=capture, secret=token)
+        self.assertEqual([x[0] for x in events], ['write', 'spawn', 'write', 'write', 'write'])
+        # A spent marker prevents a second manager invocation, including create-unit.
+        capture = mock.Mock(side_effect=AssertionError('must not spawn'))
+        with mock.patch.object(producer, 'REFERENCE_ENABLED', True), \
+             mock.patch.object(producer, 'sealed_write', side_effect=FileExistsError), \
+             self.assertRaises(FileExistsError):
+            producer.run_service_cli('reference', context, paths, capture=capture, secret=token)
+        capture.assert_not_called()
+    def test_public_context_rejects_missing_fields_and_never_copies_unlisted_secret(self):
+        context, _paths = self.context()
+        env = {**context['env'], 'GH_TOKEN': 'AUTHORED_SECRET', 'GITHUB_TOKEN': 'OTHER_SECRET'}
+        value = producer.public_context_environment('toolchain', env)
+        self.assertNotIn('GH_TOKEN', value)
+        self.assertNotIn('GITHUB_TOKEN', value)
+        for name in producer.CONTEXT_ENV:
+            wrong = dict(env); wrong.pop(name)
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                producer.public_context_environment('toolchain', wrong)
+    def test_postshow_nonzero_is_retained_diagnostic_not_a_fake_zero(self):
+        context, paths = self.context()
+        unit = paths['unit']
+        raw = ('Running as unit: ' + unit + '\nFinished with result: success\n'
+               'Main processes terminated with: code=exited/status=0\n').encode()
+        manager, _streams, _stop, _send = ProcessControls().capture(stdout=raw)
+        manager['name'] = 'service-client'
+        manager['argv'] = producer.manager_arguments('toolchain', context)
+        shown, streams, _stop, _send = ProcessControls().capture(stdout=b'', status=256)
+        self.assertEqual(shown['exitCode'], 1)
+        self.assertIsNotNone(shown['firstFailure'])
+        source = {'service-client.original.json': producer.canonical(manager),
+                  'service-client.stdout': raw, 'service-client.stderr': b''}
+        def read(path, _cap, **kwargs): return source[path.name], {}
+        sealed = []
+        with mock.patch.object(producer, 'TOOLCHAIN_ENABLED', True), \
+             mock.patch.object(producer, 'read_regular', side_effect=read), \
+             mock.patch.object(producer, 'sealed_write', side_effect=lambda *x: sealed.append(x)):
+            value = producer.capture_service_status_cli('toolchain', context, paths,
+                capture=lambda *a, **k: (shown, streams, None))
+        self.assertIsNone(value['firstFailure'])
+        self.assertEqual(value['receipt']['serviceExitCode'], 0)
+        self.assertEqual(value['postShow']['process']['exitCode'], 1)
+        self.assertIsNotNone(value['postShow']['process']['firstFailure'])
+        self.assertEqual(len(sealed), 1)
+        # Nonzero does not excuse clipped, signalled, unknown or close-failed data.
+        for key, bad in (('timedOut', True), ('reaped', False), ('signal', 9),
+                         ('secondary', [{'phase': 'close'}]), ('firstFailure', None)):
+            wrong = copy.deepcopy(shown); wrong[key] = bad
+            self.assertFalse(producer.normal_manager_delivery(wrong))
+        wrong = copy.deepcopy(shown); wrong['stdout']['complete'] = False
+        self.assertFalse(producer.normal_manager_delivery(wrong))
+    def test_unknown_status_is_not_zero_and_exit_arguments_are_closed(self):
+        self.assertIsNone(producer.parse_exit('unknown'))
+        self.assertEqual(producer.parse_exit('0'), 0)
+        for text in ('', '00', '-1', '256', 'None', 'false', ' 0'):
+            with self.assertRaises(ValueError): producer.parse_exit(text)
+
+
+class FakeKernel:
+    prior = None
+    _pids = staticmethod(producer.ChildKernel._pids)
+
+    def __init__(self, unit, work):
+        self.unit, self.work = unit, work
+        self.names = []
+        self.limit_drift = False
+        self.pid_drift = False
+        self.close_error = False
+        self.closed = False
+        self.snapshot = 0
+        self.secondary = []
+        self.delegation = None
+        self.partial = None
+        FakeKernel.prior = self
+
+    def prepare_delegation(self, pid):
+        assert type(pid) is int and pid > 0
+        self.delegation = {'unitPath': str(self.unit), 'controllerPath': str(self.unit / 'controller')}
+        return self.delegation
+
+    def create_leaf(self, name, texts):
+        self.names.append(name)
+        self.texts = texts
+        return self.unit / name, {'dev': 1}, {'dev': 2}
+
+    def receipt(self, name):
+        return 70, self.work / (name + '.preexec.original.json'), {'dev': 3}, {'dev': 4}
+
+    def read_receipt(self, fd, path, row, work):
+        assert fd == 70 and path.name.endswith('.preexec.original.json')
+        return {'pid': 123, 'uid': 1000, 'euid': 1000, 'gid': 1000, 'egid': 1000,
+                'core': [0, 0], 'nofile': [256, 256], 'cpu': [60, 60],
+                'fsize': [4194304, 4194304], 'sigtermDefault': True,
+                'sigtermBlocked': False, 'rawBeforeExec': self.proc(123)}
+
+    def proc(self, pid, *, phase='postexec'):
+        return {'pid': pid, 'procStat': 'raw stat', 'procStatus': 'raw status',
+                'procCgroup': '0::/' +
+                (self.unit / self.names[-1]).relative_to('/sys/fs/cgroup').as_posix() + '\n',
+                'procLimits': 'raw limits', 'fileObservations':
+                {name: {'before': {}, 'after': {}, 'named': {}}
+                 for name in ('stat', 'status', 'cgroup', 'limits')}}
+
+    def cgroup(self, leaf, unit_identity, leaf_identity, *, own_pid=None):
+        self.snapshot += 1
+        files = {key: value for key, value in self.texts.items()}
+        if self.limit_drift:
+            files['memory.max'] = '99\n'
+        files.update({'cgroup.procs': '124\n' if self.pid_drift else ('123\n' if self.snapshot == 1 else ''),
+                      'cgroup.events': 'populated 1\n' if self.snapshot == 1 else 'populated 0\n',
+                      'cgroup.stat': 'nr_descendants 0\nnr_dying_descendants 0\n',
+                      'cpu.stat': 'usage_usec 1\n'})
+        return {'path': str(leaf), 'identity': {'dev': 2}, 'files': files,
+                'children': [], 'parentControl': self.delegation,
+                'memberProcesses': {str(own_pid): self.proc(own_pid)} if own_pid else {},
+                'procsAfter': '' if own_pid is None else files['cgroup.procs']}
+
+    def absent_proc(self, pid):
+        return {'pid': pid, 'procPresent': False, 'errno': 2}
+
+    def close_receipt(self, fd):
+        self.closed = True
+        if self.close_error:
+            raise OSError('mock close')
+
+
+
+
+def provider_capture_edge(argv, *, cwd, environment, name, wall_seconds, stream_cap, preexec,
+            checkpoint, observe_spawn, observe_terminal, pass_fds):
+    assert pass_fds == (70,) and environment == {'PATH': '/usr/bin'}
+    assert cwd.name == ('bochs' if name in ('configure', 'make') else 'runtime')
+    initial = None
+    try:
+        initial = observe_spawn(123)
+        terminal = observe_terminal(123, True)
+        value = {'firstFailure': None, 'secondary': [], **initial, **terminal}
+    except BaseException as exc:
+        # The real bounded child_capture retains callback errors in its packet.
+        value = {'firstFailure': producer.failure(exc, 'child-capture'), 'secondary': []}
+        if initial is not None:
+            value.update(initial)
+        if type(getattr(exc, 'bochs_partial', None)) is dict:
+            value.update(exc.bochs_partial)
+    return value, {'stdout': b'', 'stderr': b''}, None
+
+
+
+
+def expect_refusal(callback, part):
+    try:
+        callback()
+    except producer.Refusal as exc:
+        assert part in str(exc), (part, exc)
+    else:
+        raise AssertionError('missing expected refusal: ' + part)
+
+
+def provider_sample(route='reference'):
+    return producer.ChildProcessProvider(route, {'PATH': '/usr/bin'}, 1000, 1000,
+                                      '/protected/work', '/sys/fs/cgroup/owned.service')
+
+
+def test_positive_and_selected_edges():
+    provider = provider_sample()
+    value, streams, stop = provider.process('bochs', ['/usr/bin/bochs'],
+                                            wall_seconds=60, stream_cap=131072,
+                                            checkpoint=True)
+    assert value['firstFailure'] is None and value['identity']['pid'] == 123
+    assert value['resourcesAfter'] == {'pid': 123, 'procPresent': False, 'errno': 2}
+    assert value['cgroupAfter']['files']['cgroup.procs'] == ''
+    assert FakeKernel.prior.names == ['bochs'] and FakeKernel.prior.closed
+    assert FakeKernel.prior.texts['memory.max'] == '1073741824\n'
+    assert streams == {'stdout': b'', 'stderr': b''} and stop is None
+    expect_refusal(lambda: provider.process('bochs', ['x'], wall_seconds=60,
+                                           stream_cap=1, checkpoint=True), 'unique')
+
+
+def test_build_cwd_and_policy():
+    provider = provider_sample('build')
+    value, _, _ = provider.process('make', ['/usr/bin/make'], wall_seconds=900,
+                                   stream_cap=4194304, checkpoint=False)
+    assert value['firstFailure'] is None
+    assert FakeKernel.prior.texts['memory.max'] == '2147483648\n'
+    assert FakeKernel.prior.texts['pids.max'] == '64\n'
+
+
+def test_wrong_limits_pid_and_token_refuse():
+    expect_refusal(lambda: producer.ChildProcessProvider('reference', {'GH_TOKEN': 'secret'},
+                                                       1000, 1000, '/work', '/unit'), 'token')
+    for kind, expected in (('limit_drift', 'limits'), ('pid_drift', 'member PID')):
+        provider = provider_sample()
+        # Set the fake edge before any source-owned child phase starts.
+        setattr(provider.kernel, kind, True)
+        value, _, _ = provider.process('bochs', ['x'], wall_seconds=60,
+                                       stream_cap=1, checkpoint=True)
+        assert expected in value['firstFailure']['message']
+        assert provider.kernel.closed
+
+
+def test_close_error_retained():
+    provider = provider_sample()
+    provider.kernel.close_error = True
+    value, _, _ = provider.process('bochs', ['x'], wall_seconds=60,
+                                   stream_cap=1, checkpoint=True)
+    assert value['firstFailure']['phase'] == 'preexec-receipt-close'
+
+
+def test_leaf_mode_uses_held_nofollow_fd_after_umask():
+    import os
+    real_os = producer.os if hasattr(producer, 'os') else None
+    calls = []
+    mode = {'value': 0o700}
+    fake_os = types.SimpleNamespace(
+        O_RDONLY=os.O_RDONLY, O_DIRECTORY=os.O_DIRECTORY,
+        O_NOFOLLOW=os.O_NOFOLLOW, O_CLOEXEC=os.O_CLOEXEC,
+        mkdir=lambda path, requested: calls.append(('mkdir', str(path), requested)),
+        open=lambda path, flags: (calls.append(('open', str(path), flags)) or 45),
+        fchmod=lambda fd, requested: (calls.append(('fchmod', fd, requested)) or
+                                       mode.update(value=requested)),
+        close=lambda fd: calls.append(('close', fd)))
+
+    class LeafKernel(producer.ChildKernel):
+        def _directory(self, path):
+            return {'dev': 1 if path == self.unit else 2, 'ino': 1,
+                    'mode': 0o040000 | (0o755 if path == self.unit else mode['value']),
+                    'uid': 0, 'gid': 0}
+
+        def _write(self, path, text):
+            calls.append(('write', path.name, text))
+
+        def _read(self, path, cap):
+            return expected[path.name]
+
+    expected = {'cpu.max': '100000 100000\n', 'memory.max': '1073741824\n'}
+    producer.os = fake_os
+    try:
+        kernel = LeafKernel('/sys/fs/cgroup/owned.service', '/work')
+        kernel.delegation = {'enabledAfter': 'cpu memory pids\n'}
+        leaf, _, row = kernel.create_leaf('bochs', expected)
+    finally:
+        if real_os is None:
+            del producer.os
+        else:
+            producer.os = real_os
+    assert leaf.name == 'bochs' and row['mode'] & 0o777 == 0o755
+    assert calls[1][0] == 'open' and calls[1][2] & os.O_NOFOLLOW
+    assert ('fchmod', 45, 0o755) in calls and ('close', 45) in calls
+
+
+def test_raw_read_owner_identity_first_and_close_secondary():
+    import os, stat
+    previous_os = producer.os if hasattr(producer, 'os') else None
+    previous_identity = producer.identity if hasattr(producer, 'identity') else None
+    previous_stat = producer.stat if hasattr(producer, 'stat') else None
+    state = {'uid': 1000, 'gid': 1000, 'bad_named': False, 'close_error': False,
+             'read_error': False, 'group_writable': False,
+             'reads': 0, 'closed': 0}
+
+    def row(named=False):
+        return {'dev': 1, 'ino': 2 if named and state['bad_named'] else 1,
+                'mode': stat.S_IFREG | (0o420 if state['group_writable'] else 0o400),
+                'uid': state['uid'], 'gid': state['gid']}
+
+    def raw_read(fd, count):
+        state['reads'] += 1
+        if state['read_error']:
+            raise OSError('mock read failure')
+        return b'abc' if state['reads'] == 1 else b''
+
+    def close(fd):
+        state['closed'] += 1
+        if state['close_error']:
+            raise OSError('mock close failure')
+
+    producer.os = types.SimpleNamespace(O_RDONLY=os.O_RDONLY, O_CLOEXEC=os.O_CLOEXEC,
+        O_NOFOLLOW=os.O_NOFOLLOW, O_NONBLOCK=os.O_NONBLOCK,
+        open=lambda path, flags: 51, fstat=lambda fd: row(),
+        lstat=lambda path: row(named=True), read=raw_read, close=close)
+    producer.identity = lambda info: info
+    producer.stat = stat
+    try:
+        kernel = producer.ChildKernel('/unit', '/work')
+        assert kernel._read('/proc/123/status', 20, owner=1000, group=1000) == 'abc'
+        assert state['closed'] == 1
+        state.update(reads=0, bad_named=True)
+        expect_refusal(lambda: kernel._read('/proc/123/status', 20, owner=1000, group=1000), 'held/named')
+        state.update(reads=0, bad_named=False, uid=0)
+        expect_refusal(lambda: kernel._read('/proc/123/status', 20, owner=1000, group=1000), 'held/named')
+        state.update(reads=0, gid=0)
+        raw, observed = kernel._read('/proc/123/status', 20,
+                                     owner_pairs={(0, 0), (1000, 1000)}, observe=True)
+        assert raw == 'abc' and observed['before']['uid'] == observed['named']['uid'] == 0
+        state.update(reads=0, uid=1000, gid=1001)
+        expect_refusal(lambda: kernel._read('/proc/123/status', 20, owner=1000, group=1000), 'held/named')
+        state.update(reads=0, gid=1000, group_writable=True)
+        expect_refusal(lambda: kernel._read('/proc/123/status', 20, owner=1000, group=1000), 'held/named')
+        state.update(reads=0, group_writable=False, read_error=True, close_error=True)
+        try:
+            kernel._read('/proc/123/status', 20, owner=1000, group=1000)
+        except OSError as exc:
+            assert str(exc) == 'mock read failure'
+            assert exc.bochs_secondary[-1]['phase'] == 'child-edge-close'
+        else:
+            raise AssertionError('read first failure lost')
+        assert kernel.secondary[-1]['phase'] == 'child-edge-close'
+        assert kernel.secondary[-1]['message'] == 'mock close failure'
+    finally:
+        if previous_os is None:
+            del producer.os
+        else:
+            producer.os = previous_os
+        if previous_identity is None:
+            del producer.identity
+        else:
+            producer.identity = previous_identity
+        if previous_stat is None:
+            del producer.stat
+        else:
+            producer.stat = previous_stat
+
+
+def test_delegated_parent_subgroup_and_controller_enable():
+    import os
+    previous_os = producer.os if hasattr(producer, 'os') else None
+    producer.os = os
+    states = {'unitProcs': '', 'controllerProcs': '123\n',
+              'enabled': 'io\n', 'available': 'cpu io memory pids\n',
+              'write': [], 'controllerMode': 0o755}
+
+    class Delegated(producer.ChildKernel):
+        def _directory(self, path):
+            return {'dev': 1, 'ino': 1 if path == self.unit else 2,
+                    'mode': 0o040000 | (0o755 if path == self.unit else states['controllerMode']),
+                    'uid': 0, 'gid': 0}
+
+        def _read(self, path, cap, *, owner=0):
+            name = str(path)
+            if name == '/proc/123/cgroup':
+                assert owner == 0
+                return '0::/system.slice/test.service/controller\n'
+            if name.endswith('/controller/cgroup.procs'):
+                return states['controllerProcs']
+            if name.endswith('/cgroup.procs'):
+                return states['unitProcs']
+            if name.endswith('/cgroup.controllers'):
+                return states['available']
+            if name.endswith('/cgroup.subtree_control'):
+                return states['enabled']
+            raise AssertionError(name)
+
+        def _write(self, path, value):
+            assert str(path).endswith('/cgroup.subtree_control')
+            states['write'].append(value)
+            states['enabled'] = 'cpu io memory pids\n'
+
+    try:
+        kernel = Delegated('/sys/fs/cgroup/system.slice/test.service', '/work')
+        item = kernel.prepare_delegation(123)
+        assert item['write'] == '+cpu +memory +pids\n'
+        assert states['write'] == [item['write']]
+        assert kernel.parent_control()['enabledAfter'] == 'cpu io memory pids\n'
+        states['controllerProcs'] = '123\n999\n'
+        expect_refusal(kernel.parent_control, 'controller readback')
+        states['controllerProcs'] = '123\n'
+        states['controllerMode'] = 0o700
+        expect_refusal(kernel.parent_control, 'controller readback')
+        states['controllerMode'] = 0o755
+        missing = Delegated('/sys/fs/cgroup/system.slice/test.service', '/work')
+        states['unitProcs'] = '123\n'
+        expect_refusal(lambda: missing.prepare_delegation(123), 'unit empty')
+    finally:
+        if previous_os is None:
+            del producer.os
+        else:
+            producer.os = previous_os
+
+
+def test_two_member_child_census_and_drift():
+    import os
+    previous_os = producer.os
+    state = {'reads': 0, 'drift': False, 'fail_member': False}
+
+    class EmptyEntries:
+        def __enter__(self):
+            return iter(())
+
+        def __exit__(self, *_args):
+            return False
+
+    producer.os = types.SimpleNamespace(fspath=os.fspath, scandir=lambda path: EmptyEntries())
+
+    class Members(producer.ChildKernel):
+        def _directory(self, path):
+            return {'dev': 1, 'ino': 2, 'mode': 0o040755, 'uid': 0, 'gid': 0}
+
+        def _read(self, path, cap, **_kwargs):
+            name = path.name
+            if name == 'cgroup.procs':
+                state['reads'] += 1
+                return ('101\n' if state['drift'] and state['reads'] == 2 else
+                        '101\n102\n' if state['reads'] == 1 else '102\n101\n')
+            if name == 'cgroup.events':
+                return 'populated 1\nfrozen 0\n'
+            if name == 'cgroup.stat':
+                return 'nr_descendants 0\nnr_dying_descendants 0\n'
+            if name == 'cpu.stat':
+                return 'usage_usec 1\nuser_usec 1\nsystem_usec 0\n'
+            return {'cpu.max': '100000 100000\n', 'memory.max': '1073741824\n',
+                    'memory.swap.max': '0\n', 'pids.max': '64\n'}[name]
+
+        def proc(self, pid, *, phase='postexec'):
+            if pid == 102 and state['fail_member']:
+                raise OSError('second member status read failed')
+            return {'pid': pid, 'procStat': 'stat',
+                    'procStatus': f'Uid:\t1000\t1000\t1000\t1000\n'
+                                  f'Gid:\t1001\t1001\t1001\t1001\n',
+                    'procCgroup': '0::/system.slice/test.service/make\n',
+                    'procLimits': 'limits', 'fileObservations': {}}
+
+        def parent_control(self):
+            return {'unitPath': str(self.unit)}
+
+    try:
+        kernel = Members('/sys/fs/cgroup/system.slice/test.service', '/work')
+        kernel.proc_owner, kernel.proc_group, kernel.member_cap = 1000, 1001, 64
+        held = kernel._directory(kernel.unit)
+        value = kernel.cgroup(kernel.unit / 'make', held, held, own_pid=101)
+        assert set(value['memberProcesses']) == {'101', '102'}
+        assert value['files']['cgroup.procs'] != value['procsAfter']
+        state.update(reads=0, drift=True)
+        expect_refusal(lambda: kernel.cgroup(kernel.unit / 'make', held, held, own_pid=101),
+                       'two exact same-set')
+        state.update(reads=0, drift=False, fail_member=True)
+        try:
+            kernel.cgroup(kernel.unit / 'make', held, held, own_pid=101)
+        except OSError as exc:
+            assert str(exc) == 'second member status read failed'
+        else:
+            raise AssertionError('second member failure was swallowed')
+        partial = kernel.partial
+        assert partial['complete'] is False and partial['attemptedPid'] == '102'
+        assert partial['files']['cgroup.procs'] == '101\n102\n'
+        assert set(partial['memberProcesses']) == {'101'}
+        assert partial['firstFailure']['name'] == 'OSError'
+    finally:
+        producer.os = previous_os
+
+
+def test_spawn_failure_retains_bounded_child_prefix_and_secondary():
+    old_factory = producer.ChildProcessProvider.kernel_factory
+
+    class ErrorKernel(FakeKernel):
+        def cgroup(self, leaf, unit_identity, leaf_identity, *, own_pid=None):
+            if own_pid is None:
+                return super().cgroup(leaf, unit_identity, leaf_identity, own_pid=None)
+            self.partial = {'path': str(leaf), 'identity': {'dev': 2},
+                            'files': {'cgroup.procs': '123\n124\n'}, 'children': [],
+                            'parentControl': self.delegation,
+                            'memberProcesses': {'123': self.proc(123)},
+                            'procsAfter': None, 'complete': False,
+                            'lastPath': '/proc/124/status', 'attemptedPid': '124',
+                            'firstFailure': producer.failure(OSError('member disappeared'),
+                                                    'child-cgroup-observation',
+                                                    path='/proc/124/status'),
+                            'secondary': []}
+            self.secondary.append(producer.failure(OSError('mock close secondary'),
+                                          'child-edge-close'))
+            raise OSError('member disappeared')
+
+    producer.ChildProcessProvider.kernel_factory = ErrorKernel
+    try:
+        provider = provider_sample()
+        value, _, _ = provider.process('bochs', ['x'], wall_seconds=60,
+                                       stream_cap=1, checkpoint=True)
+        assert value['firstFailure']['message'] == 'member disappeared'
+        assert value['cgroupBefore']['files']['cgroup.procs'] == '123\n124\n'
+        assert set(value['cgroupBefore']['memberProcesses']) == {'123'}
+        assert value['cgroupBefore']['attemptedPid'] == '124'
+        assert value['secondary'][0]['message'] == 'mock close secondary'
+        assert provider.kernel.closed
+    finally:
+        producer.ChildProcessProvider.kernel_factory = old_factory
+
+
+def test_terminal_read_failure_retains_partial_without_positive_census():
+    old_factory = producer.ChildProcessProvider.kernel_factory
+
+    class TerminalError(FakeKernel):
+        def cgroup(self, leaf, unit_identity, leaf_identity, *, own_pid=None):
+            if own_pid is not None:
+                return super().cgroup(leaf, unit_identity, leaf_identity, own_pid=own_pid)
+            self.partial = {'path': str(leaf), 'identity': {'dev': 2},
+                'files': {'cpu.max': '100000 100000\n'}, 'children': None,
+                'parentControl': None, 'memberProcesses': {}, 'procsAfter': None,
+                'complete': False, 'lastPath': str(leaf / 'memory.max'),
+                'attemptedPid': None,
+                'firstFailure': producer.failure(OSError('terminal read failed'),
+                                        'child-cgroup-observation',
+                                        path=str(leaf / 'memory.max')),
+                'secondary': []}
+            raise OSError('terminal read failed')
+
+    producer.ChildProcessProvider.kernel_factory = TerminalError
+    try:
+        provider = provider_sample()
+        value, _, _ = provider.process('bochs', ['x'], wall_seconds=60,
+                                       stream_cap=1, checkpoint=True)
+        assert value['identity']['pid'] == 123 and value['resourcesBefore']
+        assert value['firstFailure']['message'] == 'terminal read failed'
+        assert value['resourcesAfter'] is None
+        assert value['cgroupAfter']['complete'] is False
+        assert value['cgroupAfter']['files']['cpu.max'] == '100000 100000\n'
+        assert provider.kernel.closed
+    finally:
+        producer.ChildProcessProvider.kernel_factory = old_factory
+
+
+
+
+class ChildProviderControls(unittest.TestCase):
+    def setUp(self):
+        for name, value in (("preexec_policy", lambda *args, **kwargs: (lambda: None)),
+                            ("child_capture", provider_capture_edge)):
+            patcher = mock.patch.object(producer, name, value)
+            patcher.start(); self.addCleanup(patcher.stop)
+        patcher = mock.patch.object(producer.ChildProcessProvider, "kernel_factory", FakeKernel)
+        patcher.start(); self.addCleanup(patcher.stop)
+    def test_positive_and_selected_edges(self):
+        test_positive_and_selected_edges()
+    def test_build_cwd_and_policy(self):
+        test_build_cwd_and_policy()
+    def test_wrong_limits_pid_and_token_refuse(self):
+        test_wrong_limits_pid_and_token_refuse()
+    def test_close_error_retained(self):
+        test_close_error_retained()
+    def test_leaf_mode_uses_held_nofollow_fd_after_umask(self):
+        test_leaf_mode_uses_held_nofollow_fd_after_umask()
+    def test_raw_read_owner_identity_first_and_close_secondary(self):
+        test_raw_read_owner_identity_first_and_close_secondary()
+    def test_delegated_parent_subgroup_and_controller_enable(self):
+        test_delegated_parent_subgroup_and_controller_enable()
+    def test_two_member_child_census_and_drift(self):
+        test_two_member_child_census_and_drift()
+    def test_spawn_failure_retains_bounded_child_prefix_and_secondary(self):
+        test_spawn_failure_retains_bounded_child_prefix_and_secondary()
+    def test_terminal_read_failure_retains_partial_without_positive_census(self):
+        test_terminal_read_failure_retains_partial_without_positive_census()
 
 
 if __name__ == '__main__':
