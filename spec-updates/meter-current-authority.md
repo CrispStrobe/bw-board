@@ -10,8 +10,10 @@ The existing failed-solve and indeterminate-source checks take priority.
 Current signs remain **out of the part terminal**, and the meter retains its
 existing observation window and mean calculation. Power-off behavior is
 unchanged. If an accepted sample or accepted midpoint/end loses current
-authority, its watch retains the first failure and refuses later means; the
-later mean reads retain the existing `meter mean refused` prefix. This
+authority, its watch retains the failure and refuses later means. A later
+transient-accuracy failure may replace the reason under the existing policy;
+it cannot restore a reading. Later mean reads retain the existing
+`meter mean refused` prefix. This
 failure does not abort unrelated simulation or erase another meter's reading.
 Unknown programming errors still propagate.
 
