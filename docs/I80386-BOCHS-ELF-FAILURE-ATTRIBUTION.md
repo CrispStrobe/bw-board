@@ -25,8 +25,9 @@ the nineteenth retained record: role `expr`, requested/resolved path
 The RUNPATH entry offset is 39840; its 25-byte string starts at 3797 with NUL
 at 3822. This structural-only observation is not the refused official packet
 grade, a complete inventory, a resource pass or a compiler/guest result. It does
-not repair Metadata V3's missing attribution retroactively. PR699 remains
-unmerged; this revision retires the spent producer/job and leaves the independent
+not repair Metadata V3's missing attribution retroactively. Merge of this
+retirement revision requires fresh exact-head source qualification. It retires
+the spent producer/job and leaves the independent
 reader enabled for retained-original acceptance.
 
 The separately selected [Metadata V3 run](https://github.com/CrispStrobe/bw-board/actions/runs/40176241083)

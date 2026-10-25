@@ -7115,8 +7115,9 @@ No new event, compiler/guest result, pin, CPU/golden, cap or census change follo
 ### Bochs metadata V3 checkpoint and ELF failure attribution — 2026-10-25
 
 Owner: the same Codex x86 reference lane, continuing the merged inactive source
-[PR694](https://github.com/CrispStrobe/bw-board/pull/694) and unmerged armed
-[PR699](https://github.com/CrispStrobe/bw-board/pull/699). Source bc016f65 passed
+[PR694](https://github.com/CrispStrobe/bw-board/pull/694) and separately armed
+[PR699](https://github.com/CrispStrobe/bw-board/pull/699). Merge of the retirement
+revision requires fresh exact-head source qualification. Source bc016f65 passed
 all enabled automatic checks, but the consumed Metadata V3 event failed the
 unchanged no-RPATH/RUNPATH guard before complete inventory. Its eleven-role
 partial lacks selected path/role and exact tag/value; it remains refused.

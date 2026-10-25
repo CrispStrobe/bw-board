@@ -3628,7 +3628,8 @@ No allowlist, compiler/guest or architectural approval is established here.
 
 This retirement revision closes the spent `toolchain-elf-attribution-v1`
 producer and sixth-job guards to FALSE; its independent reader stays TRUE for
-retained originals. PR699 remains unmerged. V3 execution is closed;
+retained originals. Merge of this retirement revision requires fresh exact-head
+source qualification. V3 execution is closed;
 old readers and five-job positive adapters remain held. The new twelve-role
 packet preserves typed failed prefixes and exact structural tag/string offsets.
 A present empty tag still refuses and a guard failure remains a failed job.

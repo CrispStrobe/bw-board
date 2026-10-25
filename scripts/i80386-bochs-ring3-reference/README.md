@@ -12,7 +12,8 @@ historical reader's 16-row bound. That refusal remains the packet outcome.
 Structural-only reading separately decoded `/usr/bin/expr`'s RUNPATH as
 `/usr/lib/x86_64-linux-gnu`; this is no packet or whole-resource qualification.
 This revision retires the spent diagnostic producer and workflow job. The
-independent reader stays enabled for retained originals; PR699 remains unmerged.
+independent reader stays enabled for retained originals. Merge of this retirement
+revision requires fresh exact-head source qualification.
 The separately selected Metadata V3 failed
 `no selected tool RPATH/RUNPATH` before a complete inventory. Its offending
 selected path/role and exact tag/value were not retained. V1/V2/V3 are spent;

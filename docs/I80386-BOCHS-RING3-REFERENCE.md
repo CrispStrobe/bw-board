@@ -2,7 +2,8 @@
 
 Status: inactive attribution source [PR694](https://github.com/CrispStrobe/bw-board/pull/694)
 is merged. Its separately armed continuation [PR699](https://github.com/CrispStrobe/bw-board/pull/699)
-remains unmerged. Qualified source `347d4fae` consumed one
+requires fresh exact-head source qualification of this retirement revision
+before merge. Earlier qualified source `347d4fae` consumed one
 [ELF diagnostic run](https://github.com/CrispStrobe/bw-board/actions/runs/40200959026),
 which failed at the work step. The official reader refused its packet because
 the retained root/controller `cgroup.stat` has 22 rows while the historical
