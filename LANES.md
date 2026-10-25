@@ -7155,3 +7155,41 @@ admission preceded the consumed diagnostic event. Next requires a separate
 negative-reader/kernel-stat compatibility claim preserving the old 16-row helper
 and all caps, followed only later by separately scoped dependency/licence review.
 No replay, new event, positive Build/Reference or policy allowlist is selected.
+
+### Two retained-negative x86 readers — ownership claim, 2026-10-25
+
+Owner: Codex x86 lane; implementation may split files between the existing
+Bochs reader owner and the ordered-read reviewer after this claim merges.
+This is a docs-only claim. Own exactly the new Bochs
+`scripts/i80386-bochs-ring3-reference/read-elf-negative-v1.py` and focused
+`test/i80386-bochs-elf-negative-reader.test.mjs`, new ordered-read
+`scripts/i80386-read16-failure/{reader.py,controls.py}`, the two matching task
+leaves in `docs/`, this section, and own `docs/X86-NEXT-LANES.md` status prose
+if needed. No implementation before matched claim merge.
+
+The two tasks are distinct. The
+[Bochs negative reader](docs/I80386-BOCHS-ELF-NEGATIVE-READER.md) profiles the
+retained four 22-row `cgroup.stat` readbacks under an exact observed-key
+schema while preserving the old 16-row official-reader refusal and all
+producer, source, resource and archive caps. It must separately bind the
+historical source and reader identities and emit only
+`original-refused/structural-attributed` with all approval flags false.
+Kernel documentation describes descendant and subsystem counters, but their
+snapshot values do not prove continuous ownership or identify the host
+kernel. The strict no-RPATH/RUNPATH guard and any future dependency/licence
+decision stay separate.
+
+The [ordered-read failed-attempt reader](docs/I80386-READ16-FAILED-ATTEMPT-READER.md)
+accepts the spent H559 original solely as a failed attempt after checking
+its exact semantic, timing, official and terminal facts. The historical
+reader refusal and every seven-pair threshold remain held; source candidate
+H559 is unadopted and not copied into mainline CPU source. The old reader
+exists only in that historical commit, so the new reader must be standalone
+and pin its source identity explicitly. No new performance, guest, hardware
+or physical-timing claim follows.
+
+Public synthetic controls and separately admitted offline retained originals
+must test exact source/byte/official joins, partials and coherent mutations.
+Do not change existing reader functions, producer/workflow/CLI guards,
+CPU/goldens, thresholds, pins, guest code or any original artifact. No new
+label, dispatch, GET, compiler or guest run belongs to either audit.
