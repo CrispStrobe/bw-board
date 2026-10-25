@@ -1,9 +1,9 @@
 # Bochs CPU3 Ring 3 reference source
 
 Status: the negative-only ELF attribution source is merged from
-[PR694](https://github.com/CrispStrobe/bw-board/pull/694). A separate activation
-candidate is locally armed but unqualified and unselected; no diagnostic event
-has run. The separately selected Metadata V3 failed
+[PR694](https://github.com/CrispStrobe/bw-board/pull/694). A separate armed
+source candidate awaits hosted qualification and remains unselected; no
+diagnostic event has run. The separately selected Metadata V3 failed
 `no selected tool RPATH/RUNPATH` before a complete inventory. Its offending
 selected path/role and exact tag/value were not retained. V1/V2/V3 are spent;
 no cleanup or Node readback promotes those failed originals. All three
