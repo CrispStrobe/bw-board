@@ -3528,11 +3528,18 @@ def toolchain_original(packet, request_raw, event_raw):
     unit_fact(outside['before'], outside['unit'])
     unit_fact(outside['after'], outside['unit'], absent=True)
     failures(outside['firstFailure'], outside['secondary'], complete=True)
+    manual_raw = packet['cleanup.original.json']
+    manual_schema = parse_json(manual_raw, 16384,
+                               canonical_wire=True).get('schema')
+    manual_reader = {
+        'bw.bochs-ring3.manual-cleanup.v1': manual_cleanup_fact,
+        'bw.bochs-ring3.manual-cleanup.v2': manual_cleanup_v2_fact,
+    }.get(manual_schema)
+    require(manual_reader is not None, 'versioned selected cleanup reader')
     require(strict_equal(outside['manual'],
-                         manual_cleanup_fact(
-                             packet['cleanup.original.json'], route='toolchain',
-                             unit=outside['unit'], outside=outside,
-                             inner=value)),
+                         manual_reader(manual_raw, route='toolchain',
+                                       unit=outside['unit'], outside=outside,
+                                       inner=value)),
             'exact retained owned inventory cleanup original')
     node_cleanup_fact(outside['nodeCleanup'], route='toolchain',
                       run_id=outside['runId'], stage=node_stage)
@@ -4732,8 +4739,8 @@ def reference_official_v2(archive_raw, expectation_raw, run, jobs, artifacts,
     bound = official_expectation(expectation, 'reference', request_raw,
         event_raw, request['source'], archive_raw, run, jobs, artifacts,
         job_log, original['sourceBefore'])
-    repository = fields(run['repository'], 'id full_name fork')
-    head_repository = fields(run['head_repository'], 'id full_name fork')
+    repository = official_repository(run['repository'])
+    head_repository = official_repository(run['head_repository'])
     require(repository == head_repository and
             integer(repository['id'], 1) == repository['id'] and
             repository['full_name'] == REPOSITORY and
@@ -4762,3 +4769,205 @@ def reference_official_v2(archive_raw, expectation_raw, run, jobs, artifacts,
     return {**local, 'officialMetadataBound': bound['officialMetadataJoined'],
             'officiallyAuthenticatedByLocalFiles': False,
             'actualRunApproved': False, 'guestApproved': False}
+
+
+def official_repository(row):
+    """Project three typed identity fields from a retained raw API object."""
+    require(type(row) is dict and
+            type(row.get('id')) is int and row['id'] > 0 and
+            type(row.get('full_name')) is str and
+            type(row.get('fork')) is bool,
+            'typed official repository identity')
+    return {key: row[key] for key in ('id', 'full_name', 'fork')}
+
+
+def official_owner_join(route, request, expectation, run, artifacts):
+    """The common retained API owner and sole-PR boundary for new routes."""
+    repository = official_repository(run['repository'])
+    head_repository = official_repository(run['head_repository'])
+    require(repository == head_repository and
+            integer(repository['id'], 1) == repository['id'] and
+            repository['full_name'] == REPOSITORY and
+            repository['fork'] is False,
+            'selected nonfork official repository IDs')
+    prs = run.get('pull_requests')
+    require(type(prs) is list and len(prs) == 1 and
+            type(prs[0]) is dict and
+            prs[0].get('number') == request['pullRequest'] and
+            prs[0].get('head', {}).get('sha') == request['source']['head'] and
+            prs[0].get('base', {}).get('ref') == 'master' and
+            prs[0].get('head', {}).get('repo', {}).get('id') ==
+                repository['id'] and
+            prs[0].get('base', {}).get('repo', {}).get('id') ==
+                repository['id'],
+            'sole source-bound same-repository official PR')
+    selected_artifact = [row for row in artifacts['artifacts']
+                         if row.get('id') == expectation['artifactId']]
+    require(len(selected_artifact) == 1 and
+            selected_artifact[0]['workflow_run']['repository_id'] ==
+            selected_artifact[0]['workflow_run']['head_repository_id'] ==
+                repository['id'] and
+            selected_artifact[0]['workflow_run']['head_sha'] ==
+                request['source']['head'],
+            'exact official artifact owner/repository/head')
+
+
+def toolchain_official_v1(archive_raw, expectation_raw, run, jobs,
+                          artifacts, job_log):
+    packet, _ = archive_members(archive_raw, INVENTORY_CAPS,
+                                allowed=INVENTORY_ROLES)
+    local = toolchain_original(packet, packet['request.original.json'],
+                               packet['event.original.json'])
+    request_raw, event_raw = (packet['request.original.json'],
+                              packet['event.original.json'])
+    request, _ = request_event('toolchain', request_raw, event_raw)
+    expectation = parse_json(expectation_raw, 65536, canonical_wire=True)
+    observed_source = parse_json(packet['source.before.json'], 4 << 20,
+                                 canonical_wire=True)
+    bound = official_expectation(expectation, 'toolchain', request_raw,
+        event_raw, request['source'], archive_raw, run, jobs, artifacts,
+        job_log, observed_source)
+    official_owner_join('toolchain', request, expectation, run, artifacts)
+    return {**local, 'officialMetadataBound': bound['officialMetadataJoined'],
+            'officiallyAuthenticatedByLocalFiles': False,
+            'actualRunApproved': False, 'guestApproved': False}
+
+
+def build_official_v2(archive_raw, expectation_raw, run, jobs,
+                      artifacts, job_log):
+    packet, budget = archive_members(archive_raw, BUILD_CAPS,
+                                     allowed=BUILD_FIXED_ROLES)
+    local = build_original_v2(packet, packet['request.original.json'],
+                              packet['event.original.json'], budget=budget)
+    request_raw, event_raw = (packet['request.original.json'],
+                              packet['event.original.json'])
+    request, _ = request_event('build', request_raw, event_raw)
+    expectation = parse_json(expectation_raw, 65536, canonical_wire=True)
+    observed_source = parse_json(packet['source.before.json'], 4 << 20,
+                                 canonical_wire=True)
+    bound = official_expectation(expectation, 'build', request_raw,
+        event_raw, request['source'], archive_raw, run, jobs, artifacts,
+        job_log, observed_source)
+    official_owner_join('build', request, expectation, run, artifacts)
+    return {**local, 'officialMetadataBound': bound['officialMetadataJoined'],
+            'officiallyAuthenticatedByLocalFiles': False,
+            'actualRunApproved': False, 'guestApproved': False}
+
+
+def cli_regular(path, cap):
+    """Read one retained local original through a bounded held regular FD."""
+    require(type(path) is str and path != '' and type(cap) is int and 0 < cap,
+            'bounded local original input')
+    flags = os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW
+    fd = os.open(path, flags)
+    primary = None
+    try:
+        before = os.fstat(fd)
+        require(stat.S_ISREG(before.st_mode) and 0 < before.st_size <= cap and
+                before.st_nlink == 1 and before.st_mode & 0o022 == 0,
+                'ordinary bounded retained original')
+        chunks = []
+        consumed = 0
+        while True:
+            part = os.read(fd, min(65536, cap + 1 - consumed))
+            if not part:
+                break
+            consumed += len(part)
+            require(consumed <= cap, 'retained original byte cap')
+            chunks.append(part)
+        after = os.fstat(fd)
+        require(consumed == before.st_size and
+                (before.st_dev, before.st_ino, before.st_mode, before.st_uid,
+                 before.st_gid, before.st_nlink, before.st_size,
+                 before.st_mtime_ns) ==
+                (after.st_dev, after.st_ino, after.st_mode, after.st_uid,
+                 after.st_gid, after.st_nlink, after.st_size,
+                 after.st_mtime_ns),
+                'stable held retained original')
+        return b''.join(chunks)
+    except BaseException as error:
+        primary = error
+        raise
+    finally:
+        try:
+            os.close(fd)
+        except OSError:
+            if primary is None:
+                raise
+
+
+def cli_grade(route, files):
+    """Local readers remain separate from external official authentication."""
+    enabled = {'toolchain': TOOLCHAIN_READER_ENABLED,
+               'build': BUILD_READER_ENABLED,
+               'reference': REFERENCE_READER_ENABLED}
+    require(route in enabled and enabled[route] is True,
+            'reader route inactive')
+    caps = {'toolchain': INVENTORY_CAPS, 'build': BUILD_CAPS,
+            'reference': REFERENCE_CAPS}[route]
+    archive = cli_regular(files['archive'], caps['compressed'])
+    if files.get('official'):
+        expectation = cli_regular(files['expectation'], 65536)
+        run = parse_json(cli_regular(files['run'], 4 << 20), 4 << 20)
+        jobs = parse_json(cli_regular(files['jobs'], 4 << 20), 4 << 20)
+        artifacts = parse_json(cli_regular(files['artifacts'], 4 << 20), 4 << 20)
+        job_log = cli_regular(files['job_log'], 8 << 20)
+        grader = {'toolchain': toolchain_official_v1,
+                  'build': build_official_v2,
+                  'reference': reference_official_v2}[route]
+        grade = grader(archive, expectation, run, jobs, artifacts, job_log)
+    elif route == 'toolchain':
+        packet, _ = archive_members(archive, caps, allowed=INVENTORY_ROLES)
+        grade = toolchain_original(packet, packet['request.original.json'],
+                                   packet['event.original.json'])
+    elif route == 'build':
+        packet, budget = archive_members(archive, caps,
+                                         allowed=BUILD_FIXED_ROLES)
+        grade = build_original_v2(packet, packet['request.original.json'],
+                                  packet['event.original.json'], budget=budget)
+    else:
+        grade = reference_archive_v2(archive)
+    require(type(grade) is dict and
+            grade.get('actualRunApproved') is False and
+            grade.get('guestApproved') is False,
+            'independent reader cannot grant actual approval')
+    return grade
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description='Bounded Bochs original reader')
+    parser.add_argument('--route', choices=('toolchain', 'build', 'reference'),
+                        required=True)
+    parser.add_argument('--archive', required=True)
+    parser.add_argument('--expectation')
+    parser.add_argument('--run')
+    parser.add_argument('--jobs')
+    parser.add_argument('--artifacts')
+    parser.add_argument('--job-log')
+    args = parser.parse_args(argv)
+    official = [args.expectation, args.run, args.jobs, args.artifacts,
+                args.job_log]
+    try:
+        require(not any(official) or all(official),
+                'closed official route input set')
+        files = {'archive':args.archive,'official':all(official),
+                 'expectation':args.expectation,'run':args.run,
+                 'jobs':args.jobs,'artifacts':args.artifacts,
+                 'job_log':args.job_log}
+        value = cli_grade(args.route, files)
+        wire = json.dumps(value, sort_keys=True,
+                          separators=(',', ':'), allow_nan=False).encode()
+        require(len(wire) <= 65536, 'bounded reader report')
+        sys.stdout.buffer.write(wire + b'\n')
+        return 0
+    except (Refusal, OSError, UnicodeError, ValueError) as error:
+        report = {'schema':'bw.bochs-ring3.reader-refusal.v1',
+                  'reason':str(error)[:256], 'actualRunApproved':False,
+                  'guestApproved':False}
+        sys.stderr.write(json.dumps(report, sort_keys=True,
+                                    separators=(',', ':')) + '\n')
+        return 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
