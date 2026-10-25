@@ -1,16 +1,16 @@
 # Bochs CPU3 Ring 3 reference source
 
-Status: armed, unselected metadata V3 source candidate under merged amendment
-[PR696](https://github.com/CrispStrobe/bw-board/pull/696), continuing unmerged
-[PR694](https://github.com/CrispStrobe/bw-board/pull/694). Metadata V1 and V2
-were each consumed once and failed; their originals and strict partial-packet
-refusals remain held. V2 copied, reopened and hashed the selected Node bytes,
-then failed at its old fixed GCC 13 `cc1` path before completing inventory.
-Its after-inventory Node check is absent. V1/V2 live execution is disabled.
-New metadata V3 and current Build/Reference V3 guards are TRUE for source qualification; no V3,
-Build or Reference event, compiler or guest result is selected or implied.
+Status: inactive negative-only ELF attribution candidate under merged
+[PR697](https://github.com/CrispStrobe/bw-board/pull/697), continuing unmerged
+[PR694](https://github.com/CrispStrobe/bw-board/pull/694). Published bc016f65
+passed automatic source CI, then the separately selected Metadata V3 failed
+`no selected tool RPATH/RUNPATH` before a complete inventory. Its offending
+selected path/role and exact tag/value were not retained. V1/V2/V3 are spent;
+no cleanup or Node readback promotes those failed originals. All three
+metadata execution gates are closed. The new diagnostic producer/reader/job
+start FALSE. Build/Reference remain unselected, blocked and unqualified.
 
-The three current routes have distinct requests, labels, jobs, units, originals and
+The historical metadata, Build and Reference routes have distinct requests, labels, jobs, units, originals and
 readers. Each job must first authenticate the selected source checkout and the
 executing workflow checkout. It then admits the exact owner event and canonical
 request before any privileged service or selected tool input. The six named
@@ -43,9 +43,9 @@ realistic control; no request or cache inode may choose caller credentials.
 Only a complete root-owned private0600 copy and independent full reopen/hash
 can become the same readonly0555 staged executable. Cache DATA never executes.
 
-The new metadata job/label/artifact/request/marker and variables contain V3;
-its CLI route is `toolchain-v3`. The disabled V1/V2 jobs remain in the workflow,
-so current official admission requires exactly five typed jobs: one selected
+The held metadata job/label/artifact/request/marker and variables contain V3;
+its CLI route is `toolchain-v3`. Historical current3 official admission retains
+exactly five typed jobs: one selected
 stage and four declared skips. All raw official step dictionaries are retained,
 including post-action number gaps; numbers must be positive exact integers in
 strictly increasing order. Current Build inputs require metadata-reference
@@ -136,3 +136,34 @@ architectural agreement. Next are independent source review, exact-head hosted
 qualification, then separately selected metadata, Build and Reference events at
 one fixed source head. Each event has its own frozen executing workflow and
 canonical request; source activation grants no actual approval.
+
+The new `toolchain-elf-attribution-v1` route is a separate negative diagnostic,
+not Metadata4. Its five CLI modes require the explicit route and no profile.
+Only source-fixed selected DATA is read; no selected tool or staged Node runs.
+The unchanged strict guard still rejects every present RPATH/RUNPATH, including
+an empty string. Before refusal, the new observer retains the bounded selected
+read prefix and exact structural byte ranges with tag/string offsets. The
+standalone reader rederives these facts without importing the producer.
+
+Its closed finalized artifact has twelve roles: request/event, attribution,
+inner original, manifest, source before/after, Node stage, process, service
+status, outside and cleanup. The distinct manifest's seven conditional capture
+states bind every actual optional original; unavailable never proves skipped,
+unexecuted or absent. Earlier partials remain incomplete. The workflow has six
+source jobs; only the diagnostic may be selected for this new identity and the
+other five must be declared skipped. Full raw gapped step dictionaries stay
+bound. An attributed guard refusal remains a failed work/service/job and does
+not become a successful toolchain result. A clean diagnostic scan grants no
+Build/Reference authority either; their held five-job adapters are not upgraded.
+
+Range digests and parsed values are independently checked. Whole-file byte
+counts/SHA values are reported stable readbacks; sparse bytes do not independently
+recompute that hash. The 2 MiB aggregate structural, 4 MiB JSON, 8 MiB ZIP,
+16-member, 512 MiB input and 16 KiB outside caps remain. A fixed prospective
+source-authentication/Node reserve reduces the remaining selected-file input
+budget before the next read. Whole future JSON/tag/error and alias metadata
+are reserved before retention; whole cleanup reservation precedes deletion.
+No licence policy or later search-path allowlist is selected here. Follow the
+[bounded task](../../docs/I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md) and require
+review, fresh exact-head source CI and separate one-shot root admission before
+any diagnostic event.

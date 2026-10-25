@@ -7100,8 +7100,9 @@ Reference's sole Build ZIP GET and nested-copy audit. No compiler, guest,
 architectural, whole-host, physical/RTx or blanket licence approval follows.
 
 
-V3 claim696 merged before this armed, unselected source continuation. New metadata
-and current Build/Reference V3 guards are TRUE for source qualification; V1/V2 execution is closed.
+Historical bc016f65 checkpoint: V3 claim696 merged before source arming.
+Its metadata and current Build/Reference V3 guards were TRUE for source
+qualification; V1/V2 execution was closed.
 The five exact GCC13 internal roles use the separately versioned libexec
 profile without widening old roots or producer/reader semantics. Current
 Build/Reference CLI modes require explicit `--profile current-v3`, including
@@ -7132,3 +7133,14 @@ original re-GET, package installation, executed tool discovery, guard relaxation
 or compilation.
 Exact tags may inform a later separately scoped dependency/licensing policy
 review; do not infer either blanket acceptance or permanent rejection now.
+
+Claim697 merged before the inactive ELF attribution continuation. Its distinct
+producer/reader/job guards remain FALSE; spent V3 live execution is retired.
+The source-selected read prefix and exact ELF tag/value/offset bytes are retained
+under the unchanged strict guard and caps. Twelve finalized roles and manifest
+capture states preserve honest earlier partials; unavailable is not unexecuted.
+Historical functions/readers and current positive adapters stay held. Structural
+range digests are independently checked; coherent whole-file SHA without its
+body remains reported-only. Source review/qualification and separate root
+admission precede any diagnostic event. No positive Build/Reference or policy
+allowlist is selected.

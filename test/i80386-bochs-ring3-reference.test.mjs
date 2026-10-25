@@ -20,7 +20,8 @@ const upload = 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
 const routes = [
   ['toolchain', 'bochs-ring3-toolchain-inventory-v1', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v1', 'toolchain-v1', false],
   ['toolchain-v2', 'bochs-ring3-toolchain-inventory-v2', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v2', 'toolchain-v2', false],
-  ['toolchain-v3', 'bochs-ring3-toolchain-inventory-v3', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v3', 'toolchain-v3', true],
+  ['toolchain-v3', 'bochs-ring3-toolchain-inventory-v3', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v3', 'toolchain-v3', false],
+  ['toolchain-elf-attribution-v1', 'bochs-ring3-elf-attribution-v1', 'Admit Bochs ELF attribution source and request', 'Read selected Bochs ELF attribution without execution', 'Retain Bochs ELF attribution originals', 'x86-bochs-ring3-elf-attribution-v1', 'toolchain-elf-attribution-v1', false],
   ['build', 'bochs-ring3-build-v1', 'Admit Bochs build source and request', 'Build pinned Bochs CPU3 and retain originals', 'Retain Bochs build originals', 'x86-bochs-ring3-build-v1', 'build-v1', true],
   ['reference', 'bochs-ring3-reference-v1', 'Admit Bochs reference source and request', 'Capture fresh JavaScript and Bochs unchanged wire', 'Retain Bochs reference originals', 'x86-bochs-ring3-reference-v1', 'reference-v1', true],
 ];
@@ -29,10 +30,10 @@ function auditWorkflow(raw) {
   assert.match(raw, /^on:\s*\n\s+pull_request:/m);
   assert.match(raw, /cancel-in-progress:\s*false/);
   assert.doesNotMatch(raw.slice(0, raw.indexOf('jobs:')), /^  actions: read$/m);
-  assert.equal((raw.match(/uses: actions\/checkout@/g) || []).length, 10);
-  assert.equal((raw.match(/uses: actions\/setup-node@/g) || []).length, 5);
-  assert.equal((raw.match(/uses: actions\/upload-artifact@/g) || []).length, 5);
-  assert.equal((raw.match(/uses: actions\/(?:checkout|setup-node|upload-artifact)@/g) || []).length, 20);
+  assert.equal((raw.match(/uses: actions\/checkout@/g) || []).length, 12);
+  assert.equal((raw.match(/uses: actions\/setup-node@/g) || []).length, 6);
+  assert.equal((raw.match(/uses: actions\/upload-artifact@/g) || []).length, 6);
+  assert.equal((raw.match(/uses: actions\/(?:checkout|setup-node|upload-artifact)@/g) || []).length, 24);
   for (const [route, job, admission, work, retention, label, stem, active] of routes) {
     const start = raw.indexOf(`  ${job}:\n`);
     assert.ok(start >= 0, `${job} present`);
@@ -87,7 +88,7 @@ function auditWorkflow(raw) {
   }
 }
 
-test('Bochs route workflow has five authenticated bounded six-step jobs with spent metadata disabled', () => {
+test('Bochs route workflow has six authenticated bounded six-step jobs with spent metadata disabled', () => {
   auditWorkflow(workflow);
 });
 
@@ -120,7 +121,8 @@ test('workflow policy mutations are detected without enabling a job', () => {
     ['guard', workflow.replace('if: ${{ true &&', 'if: ${{ false &&')],
     ['spent metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v1:\n    if: ${{ false &&', 'bochs-ring3-toolchain-inventory-v1:\n    if: ${{ true &&')],
     ['spent V2 metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v2:\n    if: ${{ false &&', 'bochs-ring3-toolchain-inventory-v2:\n    if: ${{ true &&')],
-    ['new V3 metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v3:\n    if: ${{ true &&', 'bochs-ring3-toolchain-inventory-v3:\n    if: ${{ false &&')],
+    ['spent V3 metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v3:\n    if: ${{ false &&', 'bochs-ring3-toolchain-inventory-v3:\n    if: ${{ true &&')],
+    ['new diagnostic guard', workflow.replace('bochs-ring3-elf-attribution-v1:\n    if: ${{ false &&', 'bochs-ring3-elf-attribution-v1:\n    if: ${{ true &&')],
     ['checkout pin', workflow.replace(checkout, 'actions/checkout@main')],
     ['unknown service status', workflow.replace('--service-exit unknown', '--service-exit 0')],
     ['finish', workflow.replace('--finish --route', '--no-finish --route')],
@@ -161,15 +163,15 @@ with mock.patch.object(reader,flag,False),mock.patch.object(reader.os,'open',sid
   }
 });
 
-test('new V3 reader routes refuse before opening any input while inactive', () => {
-  for (const route of ['toolchain-v3', 'build-current-v3', 'reference-current-v3']) {
+test('V3 and new diagnostic reader routes refuse before opening any input while inactive', () => {
+  for (const route of ['toolchain-v3', 'build-current-v3', 'reference-current-v3', 'toolchain-elf-attribution-v1']) {
     const program = `import importlib.util,sys
 from unittest import mock
 spec=importlib.util.spec_from_file_location('checked_reader',sys.argv[1])
 reader=importlib.util.module_from_spec(spec);spec.loader.exec_module(reader)
 route=sys.argv[2]
-flag={'toolchain-v3':'TOOLCHAIN_V3_READER_ENABLED','build-current-v3':'BUILD_CURRENT_V3_READER_ENABLED','reference-current-v3':'REFERENCE_CURRENT_V3_READER_ENABLED'}[route]
-assert getattr(reader,flag) is True
+flag={'toolchain-v3':'TOOLCHAIN_V3_READER_ENABLED','build-current-v3':'BUILD_CURRENT_V3_READER_ENABLED','reference-current-v3':'REFERENCE_CURRENT_V3_READER_ENABLED','toolchain-elf-attribution-v1':'ELF_ATTRIBUTION_READER_ENABLED'}[route]
+assert getattr(reader,flag) is (route!='toolchain-elf-attribution-v1')
 with mock.patch.object(reader,flag,False),mock.patch.object(reader.os,'open',side_effect=AssertionError('inactive input IO')):
     sys.exit(reader.main(['--route',route,'--archive','/definitely-absent-v3-original.zip']))
 `;
@@ -182,7 +184,7 @@ with mock.patch.object(reader,flag,False),mock.patch.object(reader.os,'open',sid
     const refusal = JSON.parse(result.stderr.trim());
     assert.equal(refusal.actualRunApproved, false);
     assert.equal(refusal.guestApproved, false);
-    assert.equal(refusal.reason.message, 'reader route inactive');
+    assert.equal(refusal.reason.message, route === 'toolchain-elf-attribution-v1' ? 'diagnostic reader inactive before input' : 'reader route inactive');
   }
 });
 

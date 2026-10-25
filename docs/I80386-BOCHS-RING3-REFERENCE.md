@@ -9,7 +9,8 @@ refused. No Build/Reference or compiler/guest qualification follows. Preserve
 all V1/V2/V3 originals, labels and historical reader verdicts.
 
 The next [bounded ELF failure-attribution task](I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md)
-is docs-only now. It collects exact evidence under the unchanged guard;
+has merged ownership and an inactive source candidate. It collects exact
+evidence under the unchanged guard;
 any later dependency-resolution and licensing policy decision is separate.
 Preserve the separately owned same-job V3 cleanup lane and every consumed event.
 
@@ -64,13 +65,14 @@ needs separate source/resource admission and a genuine bounded capture.
 Default VGA/CMOS/share resources, if required, must be explicitly disabled or
 reviewed and pinned with notices; no fallback download or guessed absence.
 
-Next: qualify the final source head and independently admit each separate
-metadata, Build and Reference request/event. Keep that source head fixed across
-the three events, with each executing workflow and request frozen separately.
+The historical positive-chain plan required one qualified source head across
+separately admitted metadata, Build and Reference events, with each executing
+workflow and request frozen separately. That chain is now blocked by spent
+Metadata V3; it cannot resume from a diagnostic readback.
 Source arming grants no actual approval. Actual result, whole OS,
 strict 386DX physical accuracy, timing/RTx and release approval remain false.
 
-The candidate preserves both consumed metadata failures and their strict
+The historical V3 candidate preserved both earlier metadata failures and their strict
 partial-packet refusals. V2 proved the selected Node copy/reopen/hash and
 root read-only publication, then failed at its old fixed GCC 13 `cc1` path;
 its after-inventory Node check is absent. V3 changes only five internal GCC 13
@@ -87,7 +89,8 @@ input or execution. Historical V2 producers/readers and their four-job joins
 remain available only for interpreting old originals and pure controls.
 Connected manufactured controls establish source wiring, never compiler or
 guest results. Independent source review and exact-head hosted qualification
-must precede one separately admitted metadata-only V3 selection.
+preceded the separately admitted, now spent Metadata V3 selection; they do
+not authorize another V3 event.
 
 The current runtime bundle contains no host-library, loader or Node bodies.
 It keeps the compiled Bochs payload, selected VGA, authored inputs, notices and
@@ -113,3 +116,11 @@ positive Build/Reference chain remains blocked until separately reviewed
 policy/source and successful metadata admission at its frozen source head.
 Actual result, whole OS, strict 386DX physical accuracy, timing/RTx, release
 and blanket licence approval remain unestablished.
+
+The diagnostic route `toolchain-elf-attribution-v1` and independent reader/job
+start FALSE; spent V3 execution is closed. Its twelve-role finalized packet
+and typed partial manifest distinguish unavailable evidence from skipped work.
+It preserves the exact strict guard, independently rederives tags from retained
+structural bytes, and reports full-file SHA only as observed readback. A failed
+guard remains a failed job. No Metadata4, positive-chain adapter upgrade, new
+event or compiler/guest authority follows; later policy review remains separate.

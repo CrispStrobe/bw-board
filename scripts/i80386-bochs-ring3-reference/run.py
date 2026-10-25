@@ -34,7 +34,8 @@ import zlib
 
 TOOLCHAIN_ENABLED = False
 TOOLCHAIN_V2_ENABLED = False
-TOOLCHAIN_V3_ENABLED = True
+TOOLCHAIN_V3_ENABLED = False
+ELF_ATTRIBUTION_ENABLED = False
 BUILD_CURRENT_V3_ENABLED = True
 REFERENCE_CURRENT_V3_ENABLED = True
 BUILD_CURRENT_V2_ENABLED = True
@@ -78,6 +79,7 @@ SOURCE_PATHS = tuple('scripts/i80386-bochs-ring3-reference/' + name for name in
     'package-lock.json', 'LICENSE')
 WORKFLOW = '.github/workflows/i80386-bochs-ring3-reference.yml'
 ROUTES = {
+    'toolchain-elf-attribution-v1': ('bochs-ring3-elf-attribution-v1', 'x86-bochs-ring3-elf-attribution-v1', 'BW_BOCHS_RING3_ELF_ATTRIBUTION_V1_REQUEST'),
     'toolchain-v3': ('bochs-ring3-toolchain-inventory-v3', 'x86-bochs-ring3-toolchain-inventory-v3',
                      'BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST'),
     'toolchain-v2': ('bochs-ring3-toolchain-inventory-v2', 'x86-bochs-ring3-toolchain-inventory-v2',
@@ -109,6 +111,7 @@ LIMITS = {
                   'cleanupBytes': 16384, 'cleanupSamples': 6, 'cleanupSeconds': 5}}
 LIMITS['toolchain-v2'] = dict(LIMITS['toolchain'])
 LIMITS['toolchain-v3'] = dict(LIMITS['toolchain'])
+LIMITS['toolchain-elf-attribution-v1'] = dict(LIMITS['toolchain'])
 ERROR_LIMIT = 512
 SECONDARY_LIMIT = 16
 HEX = re.compile(r'[0-9a-f]{64}\Z')
@@ -2801,7 +2804,7 @@ def collect_reference(request_raw, event_raw, env, ops):
 
 def dispatch(route, request_raw, event_raw, env, ops_factory, *, current=False):
     need(route in ROUTES, 'known source-owned route')
-    enabled = {'toolchain-v3': TOOLCHAIN_V3_ENABLED, 'toolchain-v2': TOOLCHAIN_V2_ENABLED, 'toolchain': TOOLCHAIN_ENABLED, 'build': BUILD_ENABLED,
+    enabled = {'toolchain-elf-attribution-v1': ELF_ATTRIBUTION_ENABLED, 'toolchain-v3': TOOLCHAIN_V3_ENABLED, 'toolchain-v2': TOOLCHAIN_V2_ENABLED, 'toolchain': TOOLCHAIN_ENABLED, 'build': BUILD_ENABLED,
                'reference': REFERENCE_ENABLED}[route]
     if current == 'current-v3' and route in ('build','reference'):
         enabled={'build':BUILD_CURRENT_V3_ENABLED,'reference':REFERENCE_CURRENT_V3_ENABLED}[route]
@@ -2812,6 +2815,8 @@ def dispatch(route, request_raw, event_raw, env, ops_factory, *, current=False):
     if route == 'build':
         (admit_build_inputs_v3 if current == 'current-v3' else admit_build_inputs_v2 if current else admit_build_inputs)(request)
     ops = ops_factory(request, env)
+    if route == 'toolchain-elf-attribution-v1':
+        return collect_elf_attribution(request_raw, event_raw, env, ops)
     if route == 'toolchain-v3':
         return collect_toolchain_v3(request_raw, event_raw, env, ops)
     if route == 'toolchain-v2':
@@ -3343,7 +3348,7 @@ def route_enabled(route, *, current=False):
         need({'build':BUILD_CURRENT_V2_ENABLED,'reference':REFERENCE_CURRENT_V2_ENABLED}[route] is True,
              'Bochs current source route inactive; no input or execution edge')
         return
-    need({'toolchain-v3': TOOLCHAIN_V3_ENABLED, 'toolchain-v2': TOOLCHAIN_V2_ENABLED, 'toolchain': TOOLCHAIN_ENABLED, 'build': BUILD_ENABLED,
+    need({'toolchain-elf-attribution-v1': ELF_ATTRIBUTION_ENABLED, 'toolchain-v3': TOOLCHAIN_V3_ENABLED, 'toolchain-v2': TOOLCHAIN_V2_ENABLED, 'toolchain': TOOLCHAIN_ENABLED, 'build': BUILD_ENABLED,
           'reference': REFERENCE_ENABLED}[route] is True,
          'Bochs source route inactive; no host factory or input execution')
 
@@ -3351,7 +3356,7 @@ def route_enabled(route, *, current=False):
 def route_paths(route, env):
     need(route in ROUTES and re.fullmatch(r'[1-9][0-9]{0,19}', env.get('GITHUB_RUN_ID', '')) and
          env.get('GITHUB_RUN_ATTEMPT') == '1', 'fixed first-attempt run root')
-    stem = 'bw-bochs-' + (route if route in ('toolchain-v2','toolchain-v3') else route + '-v1') + '-' + env['GITHUB_RUN_ID'] + '-1'
+    stem = 'bw-bochs-' + (route if route in ('toolchain-v2','toolchain-v3','toolchain-elf-attribution-v1') else route + '-v1') + '-' + env['GITHUB_RUN_ID'] + '-1'
     return {'work': Path('/run') / (stem + '-work'),
             'output': Path('/run') / (stem + '-originals'),
             'node': Path('/run') / (stem + '-node'), 'unit': stem + '.service'}
@@ -3713,7 +3718,7 @@ def finish_cli(route, context, request_raw, event_raw, paths, *, provider_factor
         roles = {name: read_regular(paths['output'] / name, EVENT_CAP, minimum=1)[0]
                  for name in ('request.original.json', 'event.original.json')}
     roles.pop('manifest.json', None)  # new final manifest is a separate phase below
-    key = {'toolchain-v3': 'original.json', 'toolchain-v2': 'original.json', 'toolchain': 'original.json', 'build': 'build.original.json',
+    key = {'toolchain-elf-attribution-v1': 'original.json', 'toolchain-v3': 'original.json', 'toolchain-v2': 'original.json', 'toolchain': 'original.json', 'build': 'build.original.json',
            'reference': 'original.json'}[route]
     inner = raw_object(roles[key], LIMITS[route]['expandedBytes']) if key in roles else None
     status = None
@@ -3815,6 +3820,8 @@ def finish_cli(route, context, request_raw, event_raw, paths, *, provider_factor
     # byte copy to the sole artifact root; admission's two originals stay held.
     roles['manifest.json'] = canonical(original_manifest({k: v for k, v in roles.items()
                                                          if k != 'manifest.json'}))
+    if route == 'toolchain-elf-attribution-v1':
+        roles['manifest.json'] = canonical(elf_attribution_manifest(roles))
     write_work_roles(paths, roles, route)
     return outside, roles
 
@@ -5397,11 +5404,15 @@ def selected_request(route, raw, event_raw, env, *, current=False):
         value = admitted_request(route, raw, event_raw, env)
         (admit_build_inputs_v2 if route == 'build' else admit_reference_inputs_v2)(value)
         return value
+    if route == 'toolchain-elf-attribution-v1':
+        return admitted_elf_request(route, raw, event_raw, env)
     if route == 'toolchain-v3':
         return admitted_request_v3(route, raw, event_raw, env)
     return (admitted_request_v2 if route == 'toolchain-v2' else admitted_request)(route, raw, event_raw, env)
 
 def route_original_schema(route):
+    if route == 'toolchain-elf-attribution-v1':
+        return 'bw.bochs-ring3.elf-attribution-original.v1'
     if route == 'toolchain-v3':
         return 'bw.bochs-ring3.toolchain-original.v3'
     return 'bw.bochs-ring3.toolchain-original.v2' if route == 'toolchain-v2' else 'bw.bochs-ring3.' + route + '-original.v1'
@@ -7436,6 +7447,318 @@ class LiveOpsCurrentV3(LiveOps):
             return cleanup_node_stage(self.route, self.env, inner)
 
 
+# Negative-only selected ELF attribution. Historical observers remain held.
+ELF_ROUTE = 'toolchain-elf-attribution-v1'
+# Prospective structure/tag JSON (worst six-byte ASCII escaping), two copies
+# of 16 bounded error rows, and fixed keys. Reserved before accepting a range.
+ELF_PENDING_RECORD_BYTES = 6*((64+3+2)*512+256) + 2*16*(512+512+128) + 8192
+ELF_CORE_ROLES = frozenset(('request.original.json', 'event.original.json',
+    'elf-attribution.original.json', 'original.json', 'manifest.json'))
+ELF_CAPTURE_ROLES = ('source.before.json', 'source.after.json', 'node-stage.original.json',
+    'process.original.json', 'service-status.original.json', 'outside.original.json', 'cleanup.original.json')
+ELF_ROLES = ELF_CORE_ROLES | frozenset(ELF_CAPTURE_ROLES)
+
+
+def admitted_elf_request(route, raw, event_raw, env):
+    need(route == ELF_ROUTE, 'distinct negative-only diagnostic route')
+    value = request_object(raw)
+    closed(value, ('schema','repository','pullRequest','source','policySha256','limits'), 'closed attribution request')
+    need(value['schema'] == 'bw.bochs-ring3.elf-attribution-request.v1' and
+         value['repository'] == REPOSITORY and type(value['policySha256']) is str and
+         HEX.fullmatch(value['policySha256']), 'attribution request identity')
+    need(canonical(value['limits']) == canonical(LIMITS[ELF_ROUTE]), 'held diagnostic resource limits')
+    admit_source_shape(value['source'])
+    admit_event(route, value, raw, event_raw, env)
+    return value
+
+
+def elf_attribution_manifest(roles):
+    names = set(roles) - {'manifest.json'}
+    need(names <= ELF_ROLES and ELF_CORE_ROLES - {'manifest.json'} <= names,
+         'closed diagnostic original roles')
+    files = original_manifest({name: roles[name] for name in names})['files']
+    return {'schema':'bw.bochs-ring3.elf-attribution-manifest.v1', 'files':files,
+            'captureStates':{name:({'state':'retained', **files[name]} if name in files else
+                {'state':'unavailable','bytes':None,'sha256':None}) for name in ELF_CAPTURE_ROLES}}
+
+
+def elf_empty_tag(tag):
+    return {'tag':tag,'state':'unknown','entryOffset':None,'stringOffset':None,
+            'stringBytes':None,'terminatorOffset':None,'value':None}
+
+
+def elf_attribution_tags(ranges):
+    """Derive tag locations only from the actual retained structural prefix."""
+    result = {'rpath':elf_empty_tag(15),'runpath':elf_empty_tag(29)}
+    bodies = [(row['offset'], base64.b64decode(row['base64'],validate=True)) for row in ranges]
+    def take(offset, count):
+        for start, raw in bodies:
+            if start <= offset and offset + count <= start + len(raw):
+                return raw[offset-start:offset-start+count]
+        raise Refusal('uncaptured tag bytes')
+    try:
+        header=take(0,64)
+        need(header[:7]==b'\x7fELF\x02\x01\x01','captured ELF header')
+        phoff=struct.unpack_from('<Q',header,32)[0]
+        phsize,phnum=struct.unpack_from('<HH',header,54)
+        need(phsize==56 and 1<=phnum<=1024,'captured finite program headers')
+        table=take(phoff,56*phnum);loads=[];dynamic=None
+        for index in range(phnum):
+            tag,_flags,offset,address,_physical,extent,memory,_alignment=struct.unpack_from('<IIQQQQQQ',table,index*56)
+            if tag==1:loads.append((address,address+extent,offset))
+            elif tag==2:
+                need(dynamic is None and 16<=extent<=65536 and extent%16==0,'captured dynamic segment')
+                dynamic=(offset,extent)
+        tags={};entries={};terminated=dynamic is None
+        if dynamic is not None:
+            for offset in range(dynamic[0],dynamic[0]+dynamic[1],16):
+                tag,number=struct.unpack('<qQ',take(offset,16))
+                if tag==0:terminated=True;break
+                if tag in (5,10,15,29):
+                    need(tag not in tags,'unique captured dynamic tag');tags[tag]=number;entries[tag]=offset
+                    if tag in (15,29):
+                        row=result['rpath' if tag==15 else 'runpath'];row['state']='unparsed';row['entryOffset']=offset
+        if terminated:
+            for name,tag in (('rpath',15),('runpath',29)):
+                if tag not in tags:result[name]['state']='absent'
+        if 5 not in tags or 10 not in tags:return result
+        positions=[offset+tags[5]-start for start,end,offset in loads if start<=tags[5] and tags[5]+tags[10]<=end]
+        need(len(positions)==1,'captured unique string mapping')
+        for name,tag in (('rpath',15),('runpath',29)):
+            if tag not in tags:continue
+            row=result[name];offset=tags[tag]
+            need(0<=offset<tags[10],'captured string offset')
+            row['stringOffset']=positions[0]+offset;body=bytearray()
+            try:
+                for index in range(513):
+                    need(offset+index<tags[10],'captured terminator extent')
+                    char=take(row['stringOffset']+index,1)
+                    if char==b'\0':
+                        row.update(stringBytes=index,terminatorOffset=row['stringOffset']+index)
+                        row['value']=bytes(body).decode('ascii');row['state']='present';break
+                    body.extend(char)
+            except (Refusal,UnicodeError):pass
+    except (Refusal,struct.error):pass
+    return result
+
+
+def elf_merge_taken(taken):
+    merged=[]
+    for offset,raw in sorted(taken):
+        if merged and offset<=merged[-1][0]+len(merged[-1][1]):
+            start,body=merged[-1];overlap=len(body)-(offset-start)
+            need(bytes(body[offset-start:offset-start+min(overlap,len(raw))])==raw[:min(overlap,len(raw))],
+                 'consistent repeated structural bytes')
+            if overlap<len(raw):body.extend(raw[overlap:])
+        else:merged.append((offset,bytearray(raw)))
+    need(len(merged)<=1024,'finite retained structural range count')
+    return [{'offset':start,'bytes':len(raw),'sha256':sha256(raw),
+             'base64':base64.b64encode(raw).decode('ascii')} for start,raw in merged]
+
+
+
+def elf_attribution_reserve(value, addition=0):
+    integer(addition,0,4194304,'prospective diagnostic metadata extent')
+    need(len(canonical(value))+addition+ELF_PENDING_RECORD_BYTES<=4194304,
+         'whole diagnostic JSON/structure/tag/error reserve')
+
+
+class ElfAliasPrefix(dict):
+    """Bound metadata retention before the held resolver stores another link."""
+    def __init__(self,value,key):
+        super().__init__();self.value=value;self.key=key
+    def __setitem__(self,key,item):
+        prospective={**self,key:item}
+        need(len(prospective)<= (128 if self.key=='aliases' else 32),'bounded alias metadata prefix')
+        elf_attribution_reserve({**self.value,self.key:prospective})
+        super().__setitem__(key,item)
+
+
+def elf_attribution_scan(request_sha, source_head, *, read=read_regular,
+                         resolve=resolve_tool_v3, node_elf=None, additional_read_bytes=0):
+    """No observed executable is invoked; refusal preserves the selected prefix."""
+    value={'schema':'bw.bochs-ring3.elf-attribution.v1','requestSha256':request_sha,
+        'sourceHead':source_head,'selectionProfile':'gcc13-libexec-v3','records':[],
+        'aliases':{},'directoryAliases':{},'rawBytes':0,'requestedReadBytes':0,
+        'dynamicStringBytes':0,'terminal':'not-started','firstFailure':None,'secondary':[]}
+    value['aliases']=ElfAliasPrefix(value,'aliases')
+    value['directoryAliases']=ElfAliasPrefix(value,'directoryAliases')
+    queue=[(path,{'kind':'tool','role':role,'parentIndex':None,'edgeIndex':None}) for role,path in TOOL_PATHS_V3.items()]
+    queue.extend((path,{'kind':'notice','role':path,'parentIndex':None,'edgeIndex':None}) for path in NOTICE_PATHS)
+    if node_elf is not None:
+        queue.extend(('/usr/lib/x86_64-linux-gnu/'+name,{'kind':'node-needed','role':None,'parentIndex':None,'edgeIndex':i}) for i,name in enumerate(node_elf['needed']))
+        if node_elf['interpreter']:queue.append((node_elf['interpreter'],{'kind':'node-interpreter','role':None,'parentIndex':None,'edgeIndex':None}))
+    integer(additional_read_bytes,0,536870912,'reserved Node/source input read extent')
+    selected_cap=min(268435456,536870912-additional_read_bytes)
+    seen=set();total=0;current=None
+    try:
+        while queue:
+            requested,selection=queue.pop(0)
+            current={'index':len(value['records']),'selection':selection,'requestedPath':requested,
+                'resolvedPath':None,'read':None,'format':'unknown','parseState':'not-started',
+                'structure':None,'ranges':[],'tags':{'rpath':elf_empty_tag(15),'runpath':elf_empty_tag(29)},
+                'guard':'not-reached','firstFailure':None,'secondary':[]}
+            # Resolve before accepting any byte callback, including direct/parent aliases.
+            path=resolve(requested,value['aliases'],value['directoryAliases'])
+            need(type(path) is str and len(path.encode('utf-8'))<=512,'bounded exact selected diagnostic path')
+            current['resolvedPath']=path
+            need(requested not in GCC_INTERNAL_PATHS_V3 or requested==path,
+                 'exact selected GCC13 role path before ANY target byte read')
+            if path in seen:current=None;continue
+            need(len(value['records'])<128 and len(value['aliases'])<=128 and len(value['directoryAliases'])<=32,
+                 'finite diagnostic selected prefix')
+            elf_attribution_reserve(value,len(canonical(current)))
+            value['records'].append(current)
+            raw,observed=read(path,min(134217728,max(0,selected_cap-total)),minimum=1,owner=0)
+            current['read']=observed;total+=len(raw)
+            need(total<=selected_cap,'one-pass and complete reserved input read budget')
+            if raw.startswith(b'\x7fELF'):
+                current['format']='ELF';taken=[];requested_bytes=0
+                def take(offset,count):
+                    nonlocal requested_bytes
+                    requested_bytes+=count;value['requestedReadBytes']+=count
+                    if count==1:value['dynamicStringBytes']+=1
+                    need(requested_bytes<=2097152 and value['dynamicStringBytes']<=2097152,
+                         'held per-file structural/aggregate dynamic string budget')
+                    piece=raw[offset:offset+count]
+                    need(len(piece)==count,'actual complete structural byte read')
+                    candidate=elf_merge_taken(taken+[(offset,piece)])
+                    candidate_bytes=sum(row['bytes'] for row in candidate)
+                    need(value['rawBytes']+candidate_bytes<=2097152,'whole diagnostic retained structural budget')
+                    # Reserve the actual prospective JSON envelope before accepting bytes.
+                    old=current['ranges'];current['ranges']=candidate
+                    try:elf_attribution_reserve(value)
+                    except BaseException:current['ranges']=old;raise
+                    taken.append((offset,piece));return piece
+                try:
+                    parsed=sparse_elf_from_reader(len(raw),take,sha256(raw))
+                    current['structure']=parsed['structure'];current['parseState']='complete'
+                except BaseException:
+                    current['parseState']='failed';raise
+                finally:
+                    current['tags']=elf_attribution_tags(current['ranges'])
+                    value['rawBytes']+=sum(row['bytes'] for row in current['ranges'])
+                # Policy is unchanged, including empty-present values.
+                current['guard']='refused' if current['structure']['rpath'] is not None or current['structure']['runpath'] is not None else 'passed'
+                need(current['structure']['rpath'] is None and current['structure']['runpath'] is None,
+                     'no selected tool RPATH/RUNPATH')
+                if current['structure']['interpreter']:
+                    queue.append((current['structure']['interpreter'],{'kind':'interpreter','role':None,'parentIndex':current['index'],'edgeIndex':None}))
+                queue.extend(('/usr/lib/x86_64-linux-gnu/'+name,{'kind':'needed','role':None,'parentIndex':current['index'],'edgeIndex':i}) for i,name in enumerate(current['structure']['needed']))
+            else:current['format']='non-ELF'
+            seen.add(path)
+            need(len(canonical(value))+8192<=4194304,'whole diagnostic record/error reserve')
+        value['terminal']='scan-complete-no-guard-refusal'
+        return value
+    except BaseException as exc:
+        if current is not None:
+            if current not in value['records'] and len(value['records'])<128:value['records'].append(current)
+            partial=getattr(exc,'bochs_partial',None)
+            if current['read'] is None and type(partial) is dict and 'observation' in partial:current['read']=partial['observation']
+            item=failure(exc,'toolchain-elf-scan',role=current['selection']['role'],path=current['resolvedPath'] or current['requestedPath'])
+            current['firstFailure']=item;current['secondary']=list(getattr(exc,'bochs_secondary',[]))[:16]
+        else:item=failure(exc,'toolchain-elf-scan')
+        value['firstFailure']=item;value['secondary']=list(getattr(exc,'bochs_secondary',[]))[:16]
+        value['terminal']='strict-guard-refusal' if current is not None and current['guard']=='refused' else 'capture-error'
+        need(len(canonical(value))<=4194304,'bounded final diagnostic failure prefix')
+        exc.bochs_first=item;exc.bochs_partial={'elfAttribution':value};raise
+
+
+def check_node_stage_elf(facts, env, *, after=False):
+    check_node_stage_v3(facts,ELF_ROUTE,env,after=False)
+    if after:
+        checked=facts['checkedAfter']
+        closed(checked,('hashRead','bytesRead','sha256','before','after','named','elf','elfReadBytes'),'diagnostic Node after identity')
+        need(checked['before']==checked['after']==checked['named']==facts['file'] and
+             checked['hashRead'] is False and checked['bytesRead']==0 and checked['sha256'] is None and
+             checked['elf'] is None and checked['elfReadBytes']==0,'metadata identity only; no Node execution')
+    return facts
+
+
+
+def elf_input_read_reservation(request,node):
+    # Nine is an upper reservation for the fixed bootstrap plus eight protected
+    # source-authentication calls across the five CLI modes/finalizer. Each
+    # source role is checked via Git blob and live bytes, plus the W workflow.
+    # This is a source-bound input budget, not all process/host memory or IO.
+    source=request['source']['files']
+    source_bytes=sum(row['bytes'] for row in source.values())
+    return (node['sourceBytesRead']+node['readbackBytes']+node['elfReadBytes']+
+            9*(2*source_bytes+source[WORKFLOW]['bytes']))
+
+
+def collect_elf_attribution(request_raw,event_raw,env,ops):
+    request=admitted_elf_request(ELF_ROUTE,request_raw,event_raw,env)
+    value=original('elf-attribution',request_raw,event_raw)
+    observations={'sourceSelection':SOURCE_SELECTION_SHA256,'reportedReadbackOnly':True,
+        'nodeStage':None,'observer':None,'attribution':None}
+    value['observations']=observations
+    roles={'request.original.json':request_raw,'event.original.json':event_raw}
+    attribution={'schema':'bw.bochs-ring3.elf-attribution.v1','requestSha256':sha256(request_raw),
+        'sourceHead':request['source']['head'],'selectionProfile':'gcc13-libexec-v3','records':[],
+        'aliases':{},'directoryAliases':{},'rawBytes':0,'requestedReadBytes':0,'dynamicStringBytes':0,
+        'terminal':'not-started','firstFailure':None,'secondary':[]}
+    phase='source-before'
+    try:
+        value['sourceBefore']=ops.source(request['source'],env);roles['source.before.json']=canonical(value['sourceBefore'])
+        phase='resource-before';value['resources']={'before':ops.resources(ELF_ROUTE),'after':None}
+        phase='node-cache-data-staging';observations['nodeStage']=ops.node_stage();check_node_stage_elf(observations['nodeStage'],env)
+        roles['node-stage.original.json']=canonical(observations['nodeStage'])
+        phase='toolchain-elf-scan';attribution=ops.elf_attribution(sha256(request_raw),request['source']['head'],
+            additional_read_bytes=elf_input_read_reservation(request,observations['nodeStage']))
+    except BaseException as exc:
+        partial=getattr(exc,'bochs_partial',None)
+        if type(partial) is dict and 'elfAttribution' in partial:attribution=partial['elfAttribution']
+        original_error(value,exc,phase)
+    finally:
+        if observations['nodeStage'] is not None:
+            try:
+                observations['nodeStage']=ops.node_after(full_hash=False)
+                check_node_stage_elf(observations['nodeStage'],env,after=True)
+            except BaseException as exc:original_error(value,exc,'node-after')
+        if value['sourceBefore'] is not None:
+            try:
+                value['sourceAfter']=ops.source(request['source'],env);roles['source.after.json']=canonical(value['sourceAfter'])
+                need(value['sourceBefore']==value['sourceAfter'],'diagnostic source before/after equality')
+            except BaseException as exc:original_error(value,exc,'source-after')
+        if value['resources'] is not None:
+            try:value['resources']['after']=ops.resources(ELF_ROUTE)
+            except BaseException as exc:original_error(value,exc,'resource-after')
+        close_provider(ops,value,roles)
+        if value['sourceBefore'] is not None:
+            try:
+                roles['process.original.json']=canonical(ops.observer(value))
+                observations['observer']=bytes_ref('process.original.json',roles['process.original.json'])
+            except BaseException as exc:original_error(value,exc,'observer-process')
+    roles['elf-attribution.original.json']=canonical(attribution)
+    observations['attribution']=bytes_ref('elf-attribution.original.json',roles['elf-attribution.original.json'])
+    value['complete']=value['firstFailure'] is None and not value['secondary']
+    value['failurePartial']=None if value['complete'] else {'nodeStage':observations['nodeStage'],'attribution':observations['attribution']}
+    roles['original.json']=canonical(value);roles['manifest.json']=canonical(elf_attribution_manifest(roles))
+    need(sum(map(len,roles.values()))<=16777216,'diagnostic expanded original cap')
+    return value,roles
+
+
+class LiveOpsElfAttribution(LiveOpsCurrentV3):
+    def elf_attribution(self,request_sha,source_head,*,additional_read_bytes):
+        need(self.stage is not None and self.stage.facts['elf'] is not None,'staged Node before diagnostic scan')
+        value=elf_attribution_scan(request_sha,source_head,read=self.read,node_elf=self.stage.facts['elf'],
+            additional_read_bytes=additional_read_bytes)
+        need(sum(row['read']['bytes'] for row in value['records'] if row['read'] is not None)+
+             self.stage.facts['sourceBytesRead']+self.stage.facts['readbackBytes']+
+             self.stage.facts['elfReadBytes']<=536870912,'whole diagnostic actual read budget')
+        return value
+    def observer(self,value):
+        return observer_facts_v2(value,self.env,pid=os.getpid(),uid=os.getuid(),gid=os.getgid(),
+            started_ns=self.started_ns,ended_ns=time.monotonic_ns(),invoker=self.invoker,bootstrap=self.context['bootstrapCredentials'])
+    def cleanup(self,inner=None,*,outer=None):
+        self.node_cleanup_plan=node_cleanup_wire_plan_v2(self.route,self.env,inner)
+        return cleanup_owned_cgroups(self.route,self.env,inner,self.kernel,outer_base=outer,input_plan=self.node_cleanup_plan)
+    def node_cleanup(self,inner):
+        need(getattr(self,'node_cleanup_plan',None) is not None,'V2 whole reservation before Node removal')
+        return cleanup_node_stage_v2(self.route,self.env,inner,self.node_cleanup_plan)
+
+
 def main(argv=None, *, environment=None, provider_factory=None, capture=None):
     parser = argparse.ArgumentParser(description=__doc__)
     modes = parser.add_mutually_exclusive_group(required=True)
@@ -7469,7 +7792,7 @@ def main(argv=None, *, environment=None, provider_factory=None, capture=None):
         status = capture_service_status_cli(args.route, context, paths, current=current,
                                             capture=child_capture if capture is None else capture)
         return 0 if status['firstFailure'] is None and not status['secondary'] else 1
-    factory = provider_factory if provider_factory is not None else LiveOpsCurrentV3
+    factory = provider_factory if provider_factory is not None else (LiveOpsElfAttribution if args.route == 'toolchain-elf-attribution-v1' else LiveOpsCurrentV3)
     if args.work:
         value = work_cli(args.route, context, request_raw, event_raw, paths, provider_factory=factory, current=current)
         return 0 if value['complete'] else 1

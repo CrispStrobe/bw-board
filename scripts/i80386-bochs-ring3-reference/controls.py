@@ -3816,7 +3816,7 @@ class MetadataV3ProducerControls(unittest.TestCase):
                 with mock.patch.object(producer,flag,False),mock.patch.object(producer,'admit_cli',edge),mock.patch.object(producer,'load_cli_context',edge),self.assertRaisesRegex(producer.Refusal,'inactive'):
                     producer.main([mode,'--route',route,'--profile','current-v3'],environment={},provider_factory=edge)
                 edge.assert_not_called()
-        self.assertIs(producer.TOOLCHAIN_V3_ENABLED,True);self.assertIs(producer.TOOLCHAIN_V2_ENABLED,False)
+        self.assertIs(producer.TOOLCHAIN_V3_ENABLED,False);self.assertIs(producer.TOOLCHAIN_V2_ENABLED,False)
         for mode in modes:
             edge=mock.Mock(side_effect=AssertionError('metadata input edge forbidden'))
             for extra in ([],['--profile','current-v3']):
@@ -4623,6 +4623,467 @@ class MetadataV3ReaderCliControls(unittest.TestCase):
             self.assertEqual(out,b'')
             self.assertIs(json.loads(err)['actualRunApproved'],False)
 
+
+def diagnostic_elf(tags):
+    """Authored structure only; never a real binary or executed tool."""
+    raw=bytearray(1024);raw[:16]=b'\x7fELF\x02\x01\x01'+bytes(9)
+    struct.pack_into('<HHI',raw,16,3,62,1);struct.pack_into('<Q',raw,32,64)
+    struct.pack_into('<HHH',raw,52,64,56,2)
+    strings=bytearray();entries=[(5,0x400000+512),(10,1)]
+    for name,tag in [('rpath',15),('runpath',29)]:
+        if name in tags:
+            entries.append((tag,len(strings)));strings.extend(tags[name].encode('ascii')+b'\0')
+    if not strings:strings.extend(b'\0')
+    entries[1]=(10,len(strings));entries.append((0,0))
+    struct.pack_into('<IIQQQQQQ',raw,64,1,5,0,0x400000,0,1024,1024,4096)
+    struct.pack_into('<IIQQQQQQ',raw,120,2,6,256,0x400100,0,len(entries)*16,len(entries)*16,8)
+    for i,entry in enumerate(entries):struct.pack_into('<qQ',raw,256+i*16,*entry)
+    raw[512:512+len(strings)]=strings
+    return bytes(raw)
+
+
+def elf_attribution_sample(*, tag_values=None, malformed=False):
+    failed=False
+    """Genuine V2 collect/finish; only OS, service and acquisition edges fake."""
+    request,raw,event,env=synthetic_request('toolchain-elf-attribution-v1')
+    request['schema']='bw.bochs-ring3.elf-attribution-request.v1';raw=producer.canonical(request)
+    event=json.loads(event);event['repository']={'full_name':producer.REPOSITORY};prefix=producer.ROUTES['toolchain-elf-attribution-v1'][2]
+    env.update({prefix+'_SHA256':producer.sha256(raw),prefix+'_B64':base64.b64encode(raw).decode(),
+        'GITHUB_ACTIONS':'true','GITHUB_WORKSPACE':'/mock/workspace','GITHUB_EVENT_PATH':'/mock/event.json'})
+    event['pull_request']['body']='<!-- '+prefix+'_SHA256='+producer.sha256(raw)+' -->\nMock metadata V2 only.\n'
+    event=producer.canonical(event)
+    class Edges(InventoryEdges):
+        def __init__(self):
+            super().__init__();self.node=synthetic_node_stage_v2('toolchain-elf-attribution-v1')
+            for role in producer.GCC_INTERNAL_ROLES_V3:
+                old,new=producer.TOOL_PATHS[role],producer.TOOL_PATHS_V3[role]
+                self.files[new]=self.files.pop(old);self.indexes[new]=self.indexes.pop(old)
+            self.files[producer.TOOL_PATHS_V3['cc1']]=diagnostic_elf(tag_values or {})
+            if malformed:
+                body=bytearray(self.files[producer.TOOL_PATHS_V3['cc1']]);body[7]=255;self.files[producer.TOOL_PATHS_V3['cc1']]=bytes(body)
+        def elf_attribution(self,request_sha,head,*,additional_read_bytes):
+            return producer.elf_attribution_scan(request_sha,head,read=self.read,resolve=lambda p,_a,_d:p,node_elf=self.node['elf'],additional_read_bytes=additional_read_bytes)
+        def node_stage(self):
+            if not failed:return copy.deepcopy(self.node)
+            self.stage=producer.NodeStageCopyV2('toolchain-elf-attribution-v1',env,(1001,1001),bootstrap_v2())
+            self.node_kernel=NodeV2Kernel(self.stage.path,synthetic_elf())
+            self.node_kernel.nodes[producer.NODE_PATH].update(uid=1002)
+            actual=self.node_kernel.info
+            def info(path):
+                value=actual(path)
+                if path==producer.NODE_PATH:value.st_size=producer.NODE_BYTES
+                return value
+            self.node_kernel.info=info
+            with self.node_kernel.hooks():return self.stage.copy()
+        def close(self):
+            if hasattr(self,'stage'):
+                with self.node_kernel.hooks():self.stage.close()
+        def node_after(self,*,full_hash):
+            assert full_hash is False
+            return copy.deepcopy(self.node)
+        def resources(self,route):
+            assert route=='toolchain-elf-attribution-v1'
+            unit=producer.route_paths(route,env)['unit'];root='/sys/fs/cgroup/system.slice/'+unit
+            raw_limits={'cpu.max':'100000 100000\n','memory.max':'536870912\n','memory.swap.max':'0\n','pids.max':'32\n'}
+            common={'cgroup.events':'populated 1\nfrozen 0\n','cpu.stat':'usage_usec 1\nuser_usec 1\nsystem_usec 0\n'}
+            statrow=lambda ino:synthetic_stat(ino,4096,0o40755)
+            parent={'unitPath':root,'unitIdentity':statrow(1),'controllerPath':root+'/controller','controllerIdentity':statrow(2),
+                'unitProcs':'','controllerProcs':'100\n','availableBefore':'cpu io memory pids\n','enabledBefore':'io\n',
+                'write':'+cpu +memory +pids\n','availableAfter':'cpu io memory pids\n','enabledAfter':'cpu io memory pids\n'}
+            return {'schema':'bw.bochs-ring3.resources.v2','unit':unit,'pid':100,'uid':0,'gid':0,
+                'unitRoot':{'path':root,'directory':statrow(1),'children':['controller'],
+                    'files':{**raw_limits,**common,'cgroup.procs':'','cgroup.stat':'nr_descendants 1\nnr_dying_descendants 0\n'}},
+                'controller':{'path':root+'/controller','directory':statrow(2),'children':[],
+                    'files':{'cpu.max':'max 100000\n','memory.max':'max\n','memory.swap.max':'max\n','pids.max':'max\n',
+                        **common,'cgroup.procs':'100\n','cgroup.stat':'nr_descendants 0\nnr_dying_descendants 0\n'}},
+                'procCgroup':'0::/system.slice/'+unit+'/controller\n',
+                'procStat':'100 (python3) S '+' '.join(['0']*50)+'\n',
+                'procStatus':'Pid:\t100\nUid:\t0\t0\t0\t0\nGid:\t0\t0\t0\t0\nThreads:\t1\n',
+                'parentControl':parent}
+        def observer(self,value):
+            return producer.observer_facts_v2(value,env,pid=100,uid=0,gid=0,started_ns=1,ended_ns=2,
+                invoker=self.node['invoker'],bootstrap=self.node['bootstrapCredentials'])
+        def prepare_kernel(self,inner):
+            facts=producer.stage_facts_v2(inner);root=str(Path(facts['stagePath']).parent)
+            kernel=NodeV2Kernel(root,b'mock DATA unused in cleanup')
+            for parent,row in facts['parents'].items():
+                kernel.nodes[parent].update(ino=row['after'][1],mode=row['after'][2],mtime=row['after'][7],ctime=row['after'][8])
+            directory=facts.get('directory') or facts.get('directoryAfterFailure') or facts['directoryInitial'];kernel.add(root,directory[2]);kernel.nodes[root].update(ino=directory[1],mtime=directory[7],ctime=directory[8])
+            members=[]
+            if facts.get('file') is not None:members.append(('node',facts['file']))
+            if facts.get('record') is not None:members.append(('stage.json',facts['record']['metadata']))
+            for name,row in members:
+                kernel.add(root+'/'+name,row[2],b'mock');kernel.nodes[root+'/'+name].update(ino=row[1],mtime=row[7],ctime=row[8],reportedSize=row[6])
+            original_info=kernel.info
+            def info(path):
+                value=original_info(path)
+                if 'reportedSize' in kernel.nodes[path]:value.st_size=kernel.nodes[path]['reportedSize']
+                return value
+            kernel.info=info;self.node_kernel=kernel
+        def cleanup(self,inner,*,outer=None):
+            self.prepare_kernel(inner)
+            with self.node_kernel.hooks():self.node_plan=producer.node_cleanup_wire_plan_v2('toolchain-elf-attribution-v1',env,inner)
+            kernel=SimpleNamespace(_directory=mock.Mock(side_effect=FileNotFoundError(2,'mock absent selected unit')))
+            return producer.cleanup_owned_cgroups('toolchain-elf-attribution-v1',env,inner,kernel,outer_base=outer,
+                input_plan=self.node_plan,clock=iter((1,2,3)).__next__)
+        def node_cleanup(self,inner):
+            with self.node_kernel.hooks():return producer.cleanup_node_stage_v2('toolchain-elf-attribution-v1',env,inner,self.node_plan)
+    edges=Edges();value,roles=producer.collect_elf_attribution(raw,event,env,edges)
+    unit=producer.route_paths('toolchain-elf-attribution-v1',env)['unit'];paths=producer.route_paths('toolchain-elf-attribution-v1',env)
+    context={'env':env,'sourceRoot':'/mock/source','invoker':{'uid':1001,'gid':1001},'bootstrapCredentials':bootstrap_v2()}
+    h=_connected_bochs_mocks();status=h.synthetic_status('toolchain-elf-attribution-v1',unit,context)
+    if not value['complete']:
+        record=json.loads(status);client=record['client']
+        stdout=base64.b64decode(client['stdoutBase64']).replace(b'result: success',b'result: exit-code').replace(b'code=exited/status=0',b'code=exited/status=1')
+        client['stdoutBase64']=base64.b64encode(stdout).decode();process=client['process']
+        process.update(exitCode=1,waitStatus=256,firstFailure=producer.failure(producer.Refusal('ordinary child completed exit0'),'child-capture'))
+        process['stdout'].update(bytes=len(stdout),sha256=producer.sha256(stdout))
+        record['receipt']=producer.service_receipt(stdout,b'',1,unit)
+        status=producer.canonical(record)
+
+    with mock.patch.object(producer,'ELF_ATTRIBUTION_ENABLED',True),mock.patch.object(producer,'sealed_write'), \
+         mock.patch.object(producer,'retained_output_roles',return_value=copy.deepcopy(roles)), \
+         mock.patch.object(producer,'read_regular',return_value=(status,{})),mock.patch.object(producer,'write_work_roles'):
+        outside,roles=producer.finish_cli('toolchain-elf-attribution-v1',context,raw,event,paths,provider_factory=lambda *_:edges,
+            service_status=paths['work']/'service-status.original.json',current=True)
+    assert outside['cleanupExitCode']==(0 if value['complete'] else 1),outside['firstFailure']
+    return request,raw,event,env,edges,value,outside,roles
+
+def cli_elf_roundtrip(route,request,event,env,edges,*,caller=(1001,1001)):
+    """Only memory-FD and bounded process transport are fake; all CLI bodies run."""
+    request=copy.deepcopy(request);env=dict(env)
+    payloads={name:('Authored CLI Git source DATA '+name+'\n').encode() for name in producer.SOURCE_PATHS}
+    for index,(name,body) in enumerate(payloads.items()):
+        request['source']['files'][name]={'mode':'100644','gitBlob':format(index+1,'040x'),
+            'bytes':len(body),'sha256':producer.sha256(body)}
+    raw=producer.canonical(request);event=json.loads(event);prefix=producer.ROUTES[route][2]
+    event['pull_request']['body']='<!-- '+prefix+'_SHA256='+producer.sha256(raw)+' -->\nMock CLI only.\n'
+    event=producer.canonical(event)
+    env.update({prefix+'_SHA256':producer.sha256(raw),prefix+'_B64':base64.b64encode(raw).decode(),
+        'GITHUB_ACTIONS':'true','GITHUB_WORKSPACE':'/mock/workspace','GITHUB_EVENT_PATH':'/mock/event.json',
+        'SUDO_UID':str(caller[0]),'SUDO_GID':str(caller[1])})
+    # Existing fixture providers bind their source/observer through this env object.
+    profile='current-v3' if route in ('build','reference') else None
+    if route=='reference':env['GH_TOKEN']='AUTHORED_CURRENT3_SENTINEL_TOKEN_ONLY'
+    current=profile or True
+    paths=producer.route_paths(route,env);kernel=CliV3MemoryKernel(paths['work'],b'no Node execution')
+    for name in ('/mock','/mock/workspace','/mock/workspace/producer-source','/mock/workspace/workflow-source'):
+        kernel.add(name,0o40755,uid=caller[0],gid=caller[1])
+    for name,body in payloads.items():kernel.add('/mock/workspace/producer-source/'+name,0o100644,body,uid=caller[0],gid=caller[1])
+    kernel.add('/mock/event.json',0o100644,event,uid=caller[0],gid=caller[1])
+    invocations=[];seen_manager=[];manager_results=[];h=_connected_bochs_mocks()
+    def arguments(mode):
+        value=[mode,'--route',route]+(['--profile',profile] if profile else [])
+        if mode=='--admit':value+=['--workflow-root','/mock/workspace/workflow-source','--invoker-uid',str(caller[0]),'--invoker-gid',str(caller[1])]
+        if mode=='--finish':value+=['--service-exit','unknown','--client-exit','unknown','--service-status',str(paths['work']/'service-status.original.json')]
+        return value
+    def invoke(argv,child_env):
+        invocations.append(tuple(argv))
+        return producer.main(argv,environment=child_env,provider_factory=lambda *_:edges,capture=capture)
+    def capture(argv,**kwargs):
+        if argv[0]=='/usr/bin/git':
+            index=argv.index('-C');where=argv[index+1];args=argv[index+2:];src=request['source']
+            if args==['rev-parse','--verify','HEAD']:
+                body=(src['head'] if where.endswith('producer-source') else env['GITHUB_WORKFLOW_SHA'])+'\n'
+            elif args==['rev-parse','--verify','HEAD^{tree}']:body=src['tree']+'\n'
+            elif args[:1]==['rev-list']:body=env['GITHUB_WORKFLOW_SHA']+' '+'4'*40+' '+src['head']+'\n'
+            elif args[:1]==['ls-tree']:
+                name=args[-1];row=src['files'][name];body=row['mode']+' blob '+row['gitBlob']+'\t'+name+'\n'
+            elif args[:2]==['cat-file','blob']:
+                name=next(name for name,row in src['files'].items() if row['gitBlob']==args[2]);body=payloads[name]
+            elif args[:1]==['show']:body=payloads[producer.WORKFLOW]
+            else:raise AssertionError(('unknown source Git edge',args))
+            return {'firstFailure':None},{'stdout':body.encode() if type(body) is str else body,'stderr':b''},None
+        context=json.loads(bytes(kernel.nodes[str(paths['work']/'context.original.json')]['raw']))
+        expected=producer.manager_arguments(route,context,current=current)
+        status=json.loads(h.synthetic_status(route,paths['unit'],context))
+        if argv[0]=='/usr/bin/systemd-run':
+            assert 'GH_TOKEN' not in kwargs['environment'] and 'GITHUB_TOKEN' not in kwargs['environment']
+            assert argv==expected and '--pipe' not in argv
+            seen_manager.append(list(argv))
+            child_env={}
+            for item in argv:
+                if item.startswith('--setenv='):
+                    pair=item[len('--setenv='):]
+                    if '=' in pair:
+                        key,value=pair.split('=',1);child_env[key]=value
+                    else:child_env[pair]=kwargs['environment'][pair]
+            work=argv[argv.index('--work'):]
+            assert work==arguments('--work'),work
+            code=invoke(work,child_env)
+            if code:
+                client=status['client'];stdout=base64.b64decode(client['stdoutBase64'])
+                stdout=stdout.replace(b'result: success',b'result: exit-code').replace(b'code=exited/status=0',b'code=exited/status=1')
+                client['stdoutBase64']=base64.b64encode(stdout).decode()
+                client['process'].update(exitCode=1,waitStatus=256,firstFailure=producer.failure(producer.Refusal('ordinary child completed exit0'),'child-capture'))
+                client['process']['stdout'].update(bytes=len(stdout),sha256=producer.sha256(stdout))
+                status['receipt']=producer.service_receipt(stdout,b'',1,paths['unit'])
+            manager_results.append(code)
+            record=status['client']['process'];record['argv']=list(argv)
+            return record,{'stdout':base64.b64decode(status['client']['stdoutBase64']),
+                           'stderr':base64.b64decode(status['client']['stderrBase64'])},None
+        assert argv==status['postShow']['process']['argv']
+        return status['postShow']['process'],{'stdout':base64.b64decode(status['postShow']['stdoutBase64']),
+            'stderr':base64.b64decode(status['postShow']['stderrBase64'])},None
+    assert route==producer.ELF_ROUTE
+    flag='ELF_ATTRIBUTION_ENABLED'
+    held_capture=producer.child_capture
+    def source_transport(argv,**kwargs):
+        if argv[0]=='/usr/bin/git':return capture(argv,**kwargs)
+        return held_capture(argv,**kwargs)
+    # Env/source admission, O_NOFOLLOW FD reads/writes, manager, dispatch and all
+    # collectors/finalizers remain genuine. Only their concrete external edges fake.
+    with kernel.hooks(),mock.patch.object(producer.os,'getuid',return_value=0), \
+         mock.patch.object(producer.os,'geteuid',return_value=0),mock.patch.object(producer.os,'getgid',return_value=0), \
+         mock.patch.object(producer.os,'getegid',return_value=0),mock.patch.object(producer,'child_capture',source_transport), \
+         mock.patch.object(producer,flag,True),contextlib.redirect_stdout(io.StringIO()):
+        for mode in ('--admit','--run-service','--capture-service-status','--finish'):
+            result=invoke(arguments(mode),env)
+            expected=manager_results[0] if manager_results and mode in ('--run-service','--finish') else 0
+            assert result==expected,(route,mode,result,expected)
+    assert {value[0] for value in invocations}=={'--admit','--work','--run-service','--capture-service-status','--finish'}
+    assert len(invocations)==5 and len(seen_manager)==1 and not kernel.fds
+    if profile:
+        assert seen_manager[0][-5:]==['--work','--route',route,'--profile','current-v3']
+    else:assert '--profile' not in seen_manager[0]
+    result={name[len(str(paths['output']))+1:]:bytes(node['raw']) for name,node in kernel.nodes.items()
+        if name.startswith(str(paths['output'])+'/') and node['raw'] is not None}
+    assert all(b'AUTHORED_CURRENT3_SENTINEL_TOKEN_ONLY' not in raw for raw in result.values())
+    assert all('AUTHORED_CURRENT3_SENTINEL_TOKEN_ONLY' not in arg for argv in seen_manager for arg in argv)
+    return result,invocations,seen_manager
+
+def elf_official_fixture(roles):
+    p=producer;request=json.loads(roles['request.original.json']);source=json.loads(roles['source.before.json'])
+    archive=p.pack_zip(roles,archive_cap=8<<20,expanded_cap=16<<20,member_cap=16,modes={name:0o644 for name in roles})
+    conclusion='success' if json.loads(roles['original.json'])['complete'] else 'failure'
+    names=('bochs-ring3-toolchain-inventory-v1','bochs-ring3-toolchain-inventory-v2','bochs-ring3-toolchain-inventory-v3',
+        'bochs-ring3-elf-attribution-v1','bochs-ring3-build-v1','bochs-ring3-reference-v1')
+    user=('Checkout selected producer source','Checkout executing workflow source','Admit Bochs ELF attribution source and request',
+        'Prepare pinned Node input cache','Read selected Bochs ELF attribution without execution','Retain Bochs ELF attribution originals')
+    steps=[{'number':n,'name':name,'status':'completed','conclusion':conclusion if i==4 else 'success',
+        'started_at':'2026-10-25T00:00:00Z','completed_at':'2026-10-25T00:00:01Z'} for i,(n,name) in enumerate(zip((1,2,3,4,5,11),user))]
+    steps.extend([{'number':12,'name':'Post Prepare pinned Node input cache','status':'completed','conclusion':'skipped'},
+        {'number':15,'name':'Complete job','status':'completed','conclusion':'success'}])
+    repo={'id':987,'full_name':p.REPOSITORY,'fork':False,'extraOfficialField':'preserved raw data'}
+    run={'id':123456,'run_attempt':1,'head_sha':request['source']['head'],'event':'pull_request','status':'completed',
+        'conclusion':conclusion,'repository':repo,'head_repository':copy.deepcopy(repo),'actor':{'login':'CrispStrobe'},'path':p.WORKFLOW,
+        'pull_requests':[{'number':request['pullRequest'],'head':{'sha':request['source']['head'],'repo':{'id':987}},'base':{'ref':'master','repo':{'id':987}}}]}
+    jobs={'total_count':6,'jobs':[{'id':101+i,'run_id':123456,'run_attempt':1,'head_sha':request['source']['head'],
+        'name':name,'status':'completed','conclusion':conclusion if i==3 else 'skipped',
+        'steps':copy.deepcopy(steps) if i==3 else []} for i,name in enumerate(names)]}
+    artifacts={'total_count':1,'artifacts':[{'id':201,'name':'i80386-bochs-ring3-elf-attribution-v1-originals',
+        'size_in_bytes':len(archive),'digest':'sha256:'+p.sha256(archive),'expired':False,
+        'workflow_run':{'id':123456,'head_sha':request['source']['head'],'repository_id':987,'head_repository_id':987}}]}
+    expected={'schema':'bw.bochs-ring3.elf-attribution-expectation.v1','repository':p.REPOSITORY,'pullRequest':request['pullRequest'],
+        'runId':'123456','runAttempt':1,'jobId':104,'jobName':names[3],'eventName':'pull_request','actor':'CrispStrobe',
+        'head':request['source']['head'],'tree':request['source']['tree'],'workflowCommit':source['workflowCommit'],
+        'workflowTree':source['workflowTree'],'workflowFileSha256':request['source']['files'][p.WORKFLOW]['sha256'],
+        'requestSha256':p.sha256(roles['request.original.json']),'eventSha256':p.sha256(roles['event.original.json']),
+        'artifactId':201,'archiveBytes':len(archive),'archiveSha256':p.sha256(archive),'conclusion':conclusion,'steps':steps}
+    return archive,p.canonical(expected),run,jobs,artifacts,b'MOCK diagnostic job log, no tool or guest execution\n'
+
+
+def elf_refresh_attribution(roles,mutate):
+    packet=copy.deepcopy(roles);attr=json.loads(packet['elf-attribution.original.json']);mutate(attr)
+    packet['elf-attribution.original.json']=producer.canonical(attr)
+    inner=json.loads(packet['original.json']);inner['observations']['attribution']=producer.bytes_ref('elf-attribution.original.json',packet['elf-attribution.original.json'])
+    if inner['failurePartial'] is not None:inner['failurePartial']['attribution']=inner['observations']['attribution']
+    if attr['firstFailure'] is not None:inner['firstFailure']=attr['firstFailure']
+    if 'process.original.json' in packet:
+        observer=json.loads(packet['process.original.json']);observer['firstFailure']=inner['firstFailure'];observer['secondary']=inner['secondary']
+        packet['process.original.json']=producer.canonical(observer)
+        inner['observations']['observer']=producer.bytes_ref('process.original.json',packet['process.original.json'])
+    packet['original.json']=producer.canonical(inner)
+    if 'outside.original.json' in packet:
+        outside=json.loads(packet['outside.original.json']);outside['innerFirstFailure']=inner['firstFailure'];packet['outside.original.json']=producer.canonical(outside)
+    packet['manifest.json']=producer.canonical(producer.elf_attribution_manifest(packet))
+    return packet
+
+
+class ElfAttributionControls(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.reader=_connected_bochs_mocks().reader
+        cls.clean=elf_attribution_sample(tag_values={})
+        cls.rejected=elf_attribution_sample(tag_values={'rpath':'$ORIGIN/../lib'})
+
+    def test_identical_strict_guard_tag_offsets_and_empty_present(self):
+        p=producer;r=self.reader
+        for values in ({},{'rpath':'a'},{'runpath':'b'},{'rpath':'a','runpath':'b'},{'rpath':''},{'runpath':''}):
+            class Edges(InventoryEdges):
+                def __init__(self):
+                    super().__init__()
+                    for role in p.GCC_INTERNAL_ROLES_V3:
+                        self.files[p.TOOL_PATHS_V3[role]]=self.files.pop(p.TOOL_PATHS[role])
+                    self.files[p.TOOL_PATHS_V3['cc1']]=diagnostic_elf(values)
+            edges=Edges();resolve=lambda path,_a,_d:path
+            if values:
+                with self.assertRaises(p.Refusal) as caught:
+                    p.elf_attribution_scan('a'*64,'1'*40,read=edges.read,resolve=resolve)
+                attr=caught.exception.bochs_partial['elfAttribution'];self.assertEqual(attr['terminal'],'strict-guard-refusal')
+                row=attr['records'][-1];self.assertEqual(row['selection']['role'],'cc1')
+                self.assertEqual(row['resolvedPath'],p.TOOL_PATHS_V3['cc1'])
+                for key,value in values.items():
+                    self.assertEqual(row['tags'][key]['state'],'present');self.assertEqual(row['tags'][key]['value'],value)
+                    self.assertEqual(row['tags'][key]['stringBytes'],len(value));self.assertEqual(row['tags'][key]['terminatorOffset'],row['tags'][key]['stringOffset']+len(value))
+                with self.assertRaises(p.Refusal):p.observe_toolchain_v3(read=edges.read,resolve=resolve)
+            else:
+                attr=p.elf_attribution_scan('a'*64,'1'*40,read=edges.read,resolve=resolve)
+                self.assertEqual(attr['terminal'],'scan-complete-no-guard-refusal')
+                p.observe_toolchain_v3(read=edges.read,resolve=resolve)
+            request=p.canonical({'source':{'head':'1'*40}})
+            attr['requestSha256']=p.sha256(request)
+            r.elf_attribution_fact(p.canonical(attr),request,None)
+
+    def test_genuine_collector_finisher_reader_and_refreshed_structural_cuts(self):
+        p=producer;r=self.reader;roles=self.rejected[-1]
+        grade=r.elf_attribution_packet(roles)
+        self.assertEqual(grade['classification'],'guard-refusal-attributed');self.assertEqual(len(roles),12)
+        self.assertTrue(grade['cleanupObserved']);self.assertTrue(grade['originalIncomplete'])
+        self.assertEqual(r.elf_attribution_packet(self.clean[-1])['classification'],'no-guard-refusal-observed')
+        for name in ('compilerApproved','guestApproved','toolchainInventoryApproved','buildAuthorized','referenceAuthorized','wholeHostAttested','physicalTimingProved'):
+            self.assertIs(grade[name],False)
+        def tag(value):value['records'][-1]['tags']['rpath']['value']='invented'
+        def offset(value):value['records'][-1]['tags']['rpath']['entryOffset']+=16
+        def role(value):value['records'][-1]['selection']['role']='cc1plus';value['firstFailure']['role']='cc1plus';value['records'][-1]['firstFailure']['role']='cc1plus'
+        def path(value):value['records'][-1]['resolvedPath']=p.TOOL_PATHS_V3['cc1plus'];value['firstFailure']['path']=p.TOOL_PATHS_V3['cc1plus'];value['records'][-1]['firstFailure']['path']=p.TOOL_PATHS_V3['cc1plus']
+        def digest(value):value['records'][-1]['ranges'][0]['sha256']='0'*64
+        def surplus(value):
+            row=value['records'][-1]['ranges'][-1];raw=base64.b64decode(row['base64'])+bytes(16)
+            row.update(bytes=len(raw),sha256=p.sha256(raw),base64=base64.b64encode(raw).decode());value['rawBytes']+=16
+        def boolean(value):value['records'][1]['index']=True
+        def omitted(value):value['records'][-1]['tags']['rpath'].update(state='absent',entryOffset=None,stringOffset=None,stringBytes=None,terminatorOffset=None,value=None)
+        for name,mutate in [('tag',tag),('offset',offset),('role',role),('path',path),('range-digest',digest),('surplus',surplus),('boolean-index',boolean),('omitted-attribution',omitted)]:
+            with self.subTest(name=name),self.assertRaises(r.Refusal):r.elf_attribution_packet(elf_refresh_attribution(roles,mutate))
+        partial=copy.deepcopy(roles);partial.pop('cleanup.original.json');partial['manifest.json']=p.canonical(p.elf_attribution_manifest(partial))
+        result=r.elf_attribution_packet(partial);self.assertEqual(result['classification'],'incomplete');self.assertFalse(result['attributionObserved'])
+        # Honest proof scope: changing only an observed full-file SHA cannot be
+        # detected by sparse bytes. The independent range digest cuts above can.
+        reported=elf_refresh_attribution(roles,lambda value:value['records'][-1]['read'].update(sha256='d'*64))
+        self.assertFalse(r.elf_attribution_packet(reported)['wholeHostAttested'])
+
+    def test_failed_read_parser_prefix_first_and_close_secondaries(self):
+        p=producer;r=self.reader
+        *_,roles=elf_attribution_sample(malformed=True)
+        result=r.elf_attribution_packet(roles);self.assertEqual(result['classification'],'incomplete')
+        attr=json.loads(roles['elf-attribution.original.json']);last=attr['records'][-1]
+        self.assertEqual(last['parseState'],'failed');self.assertIsNone(last['structure']);self.assertEqual(last['tags']['rpath']['state'],'unknown')
+        self.assertEqual(sum(row['bytes'] for row in last['ranges']),64)
+        observed={'bytes':7,'sha256':p.sha256(b'partial'),'before':synthetic_stat(10,120),
+            'after':None,'named':None,'complete':False,'elf':None}
+        def failed(path,*args,**kwargs):
+            error=OSError('FIRST_AUTHORED_READ')
+            error.bochs_partial={'path':path,'observation':copy.deepcopy(observed)}
+            error.bochs_secondary=[p.failure(OSError('SECOND_AUTHORED_CLOSE'),'file-close',path=path)]
+            raise error
+        with self.assertRaises(OSError) as caught:p.elf_attribution_scan('a'*64,'1'*40,read=failed,resolve=lambda path,_a,_d:path)
+        value=caught.exception.bochs_partial['elfAttribution'];row=value['records'][0]
+        self.assertEqual(value['firstFailure']['message'],'FIRST_AUTHORED_READ');self.assertEqual(value['secondary'][0]['message'],'SECOND_AUTHORED_CLOSE')
+        self.assertEqual(row['read'],observed);self.assertEqual(row['format'],'unknown');self.assertEqual(row['ranges'],[])
+        self.assertEqual(value['terminal'],'capture-error')
+        request=p.canonical({'source':{'head':'1'*40}});value['requestSha256']=p.sha256(request)
+        r.elf_attribution_fact(p.canonical(value),request,None)
+        edges=InventoryEdges()
+        for role in p.GCC_INTERNAL_ROLES_V3:edges.files[p.TOOL_PATHS_V3[role]]=edges.files.pop(p.TOOL_PATHS[role])
+        def missing(path,*args,**kwargs):
+            if path==p.TOOL_PATHS_V3['cc1']:raise FileNotFoundError(2,'AUTHORED_MISSING_SELECTED_ELF')
+            return edges.read(path,*args,**kwargs)
+        with self.assertRaises(FileNotFoundError) as lost:
+            p.elf_attribution_scan('a'*64,'1'*40,read=missing,resolve=lambda path,_a,_d:path)
+        missing_prefix=lost.exception.bochs_partial['elfAttribution']
+        self.assertEqual(missing_prefix['records'][-1]['requestedPath'],p.TOOL_PATHS_V3['cc1'])
+        self.assertIsNone(missing_prefix['records'][-1]['read']);self.assertEqual(missing_prefix['firstFailure']['name'],'FileNotFoundError')
+        self.assertEqual(missing_prefix['terminal'],'capture-error')
+
+    def test_actual_alias_resolver_and_metadata_reserve_before_unexpected_read(self):
+        p=producer;fixed=p.TOOL_PATHS_V3['cc1'];foreign='/usr/bin/unselected-internal';reads=[]
+        paths=set(p.TOOL_PATHS_V3.values())|set(p.NOTICE_PATHS)|{foreign}
+        def lstat(path):
+            path=str(path);return SimpleNamespace(st_dev=1,st_ino=42,st_mode=0o120777 if path==fixed else 0o100755 if path in paths else 0o40755,
+                st_uid=0,st_gid=0,st_nlink=1,st_size=len(foreign) if path==fixed else 120,st_mtime_ns=1,st_ctime_ns=1)
+        def read(path,cap,**kwargs):
+            reads.append(path);raw=synthetic_elf();row=synthetic_stat(42,len(raw))
+            return raw,{'bytes':len(raw),'sha256':p.sha256(raw),'before':row,'after':row.copy(),'named':row.copy(),'complete':True,'elf':None}
+        with mock.patch.object(p.os,'lstat',lstat),mock.patch.object(p.os,'readlink',return_value=foreign),self.assertRaises(p.Refusal):
+            p.elf_attribution_scan('a'*64,'1'*40,read=read)
+        self.assertNotIn(foreign,reads);self.assertNotIn(fixed,reads)
+        # The held source explicitly allows this exact alternatives-link DATA
+        # chain; the new negative reader must not confuse it with a new root.
+        text='/etc/alternatives/awk';info=synthetic_stat(42,len(text),0o120777)
+        self.reader.elf_alias_observation({'linkText':text,'target':text,'before':info,'after':info.copy()},'/usr/bin/awk')
+        with self.assertRaises(self.reader.Refusal):
+            self.reader.elf_alias_observation({'linkText':'/etc/other','target':'/etc/other','before':info,'after':info.copy()},'/usr/bin/awk')
+        # Exact prospective serialization, not an arbitrary smaller green reserve.
+        self.assertLessEqual(p.ELF_PENDING_RECORD_BYTES,262144)
+        prefix={'schema':'synthetic reserve-only bound','records':['X'*(4194304-p.ELF_PENDING_RECORD_BYTES)]}
+        with self.assertRaises(p.Refusal):p.elf_attribution_reserve(prefix)
+        with mock.patch.object(p,'ELF_PENDING_RECORD_BYTES',0):p.elf_attribution_reserve(prefix)
+        packet={'aliases':{},'directoryAliases':{}};links=p.ElfAliasPrefix(packet,'aliases');packet['aliases']=links
+        for index in range(128):links['/'+str(index)]={'bounded':'data'}
+        with self.assertRaises(p.Refusal):links['/extra']={'bounded':'data'}
+        self.assertNotIn('/extra',links)
+
+    def test_all_five_genuine_cli_modes_and_disabled_zero_edges(self):
+        p=producer;r=self.reader
+        self.assertIs(p.ELF_ATTRIBUTION_ENABLED,False);self.assertIs(p.TOOLCHAIN_V3_ENABLED,False);self.assertIs(r.ELF_ATTRIBUTION_READER_ENABLED,False)
+        edge=mock.Mock(side_effect=AssertionError('inactive edge'))
+        for mode in ('--admit','--work','--run-service','--capture-service-status','--finish'):
+            for extra in ([],['--profile','current-v3']):
+                with mock.patch.object(p,'admit_cli',edge),mock.patch.object(p,'load_cli_context',edge),self.assertRaises(p.Refusal):
+                    p.main([mode,'--route',p.ELF_ROUTE]+extra,environment={},provider_factory=edge)
+        edge.assert_not_called()
+        for sample in (self.clean,self.rejected):
+            request,raw,event,env,edges,*_=sample
+            env=dict(env);env['GH_TOKEN']='AUTHORED_DIAGNOSTIC_SECRET_SENTINEL'
+            roles,calls,argv=cli_elf_roundtrip(p.ELF_ROUTE,request,event,env,edges)
+            self.assertEqual(len(calls),5);self.assertEqual(len(roles),12);self.assertEqual(argv[0][-3:],['--work','--route',p.ELF_ROUTE])
+            self.assertFalse(any(b'AUTHORED_DIAGNOSTIC_SECRET_SENTINEL' in raw for raw in roles.values()))
+            self.assertNotIn('AUTHORED_DIAGNOSTIC_SECRET_SENTINEL',' '.join(argv[0]))
+            self.assertNotIn('--pipe',argv[0]);self.assertNotIn('--profile',argv[0]);self.assertNotIn('GH_TOKEN',' '.join(argv[0]))
+            self.assertNotEqual(r.elf_attribution_packet(roles)['classification'],'incomplete')
+        with mock.patch.object(r.os,'open',edge),self.assertRaises(r.Refusal):r.cli_grade(p.ELF_ROUTE,{'archive':'/absent'})
+        edge.assert_not_called()
+
+    def test_full_raw_official_cli_gapped_steps_and_coherent_forgery_cuts(self):
+        p=producer;r=self.reader;args=elf_official_fixture(self.rejected[-1])
+        grade=r.elf_attribution_official(*args);self.assertTrue(grade['officialMetadataBound']);self.assertTrue(grade['attributionObserved'])
+        archive,expectation,run,jobs,artifacts,log=args
+        for name in ('missing','extra','duplicate','active','wrong-attempt','boolean-step','float-step','zero-step','missing-number','duplicate-step','reordered-step','queued-step','other-failure','raw-step','foreign-repo','fork','other-pr','artifact-repo','artifact-digest'):
+            changed=[archive,expectation,copy.deepcopy(run),copy.deepcopy(jobs),copy.deepcopy(artifacts),log]
+            if name=='missing':changed[3]['jobs'].pop();changed[3]['total_count']-=1
+            elif name=='extra':changed[3]['jobs'].append({**changed[3]['jobs'][0],'id':900});changed[3]['total_count']+=1
+            elif name=='duplicate':changed[3]['jobs'][0]['id']=changed[3]['jobs'][1]['id']
+            elif name=='active':changed[3]['jobs'][0]['status']='in_progress'
+            elif name=='wrong-attempt':changed[3]['jobs'][0]['run_attempt']=True
+            elif name in ('boolean-step','float-step'):
+                expected=json.loads(expectation);value=True if name=='boolean-step' else 1.0
+                changed[3]['jobs'][3]['steps'][0]['number']=value;expected['steps'][0]['number']=value;changed[1]=p.canonical(expected)
+            elif name in ('zero-step','missing-number','duplicate-step','reordered-step','queued-step','other-failure'):
+                rows=changed[3]['jobs'][3]['steps'];expected=json.loads(expectation)
+                if name=='zero-step':rows[0]['number']=0
+                elif name=='missing-number':rows[0].pop('number')
+                elif name=='duplicate-step':rows[1]['number']=rows[0]['number']
+                elif name=='reordered-step':rows[1],rows[0]=rows[0],rows[1]
+                elif name=='queued-step':rows[0].update(status='queued',conclusion=None)
+                else:rows[-1]['conclusion']='failure'
+                expected['steps']=copy.deepcopy(rows);changed[1]=p.canonical(expected)
+            elif name=='raw-step':changed[3]['jobs'][3]['steps'][0]['started_at']='different raw timestamp'
+            elif name=='foreign-repo':changed[2]['head_repository']['id']=999
+            elif name=='fork':changed[2]['head_repository']['fork']=True
+            elif name=='other-pr':changed[2]['pull_requests'][0]['number']+=1
+            elif name=='artifact-repo':changed[4]['artifacts'][0]['workflow_run']['head_repository_id']=999
+            else:changed[4]['artifacts'][0]['digest']='sha256:'+'0'*64
+            with self.subTest(name=name),self.assertRaises(r.Refusal):r.elf_attribution_official(*changed)
+        with tempfile.TemporaryDirectory(prefix='elf-diagnostic-cli-',dir=HERE) as tmp:
+            folder=Path(tmp);files={'archive':archive,'expectation':expectation,'run':p.canonical(run),'jobs':p.canonical(jobs),'artifacts':p.canonical(artifacts),'job-log':log}
+            for name,raw in files.items():(folder/name).write_bytes(raw)
+            for official in (False,True):
+                argv=['--route',p.ELF_ROUTE,'--archive',str(folder/'archive')]
+                if official:
+                    for name in ('expectation','run','jobs','artifacts','job-log'):argv+=['--'+name,str(folder/name)]
+                stdout=SimpleNamespace(buffer=io.BytesIO())
+                with mock.patch.object(r,'ELF_ATTRIBUTION_READER_ENABLED',True),mock.patch.object(r.sys,'stdout',stdout):code=r.main(argv)
+                self.assertEqual(code,0);self.assertIs(json.loads(stdout.buffer.getvalue())['officialMetadataBound'],official)
 
 if __name__ == '__main__':
     unittest.main()

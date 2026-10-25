@@ -1,6 +1,8 @@
 # Bochs ELF failure attribution: next bounded task
 
-Status: docs-only checkpoint and reserved follow-up scope. The source remains
+Status: ownership [PR697](https://github.com/CrispStrobe/bw-board/pull/697) is
+merged; the negative-only diagnostic implementation is inactive and unqualified.
+The previously published source remains
 in unmerged [PR694](https://github.com/CrispStrobe/bw-board/pull/694), at
 [`bc016f65`](https://github.com/CrispStrobe/bw-board/commit/bc016f65102a49804ccf3c1462036a9a10b8c943).
 Its automatic qualification completed with 12 successful checks, 11 declared
@@ -31,8 +33,9 @@ with the unmerged PR694 source in a new isolated checkout. Own only the existing
 producer, independent reader, controls and README under
 `scripts/i80386-bochs-ring3-reference/`, its workflow and Node wrapper,
 `docs/I80386-BOCHS-RING3-REFERENCE.md`, this task leaf, and the own Bochs sections
-of `LANES.md` and `docs/X86-NEXT-LANES.md`. Merge the docs ownership first and
-freeze the diagnostic wire before implementation. This PR changes docs only.
+of `LANES.md` and `docs/X86-NEXT-LANES.md`. The ownership and diagnostic wire were reviewed before this inactive
+implementation. Fresh exact-head qualification and separate root admission
+are still required before any new event.
 
 Retain a bounded, typed failure partial for a selected ELF: requested and
 resolved path/role, observed byte count/full-file digest when established,
@@ -59,8 +62,12 @@ in this task.
 2. Drive genuine collection/finalization and an independent negative-attribution
    reader with mocked OS/process edges. Cover no-tag, RPATH-only, RUNPATH-only,
    both-tag, missing/invalid ELF, partial-read and close-error cases. Coherent
-   path/role/digest/tag/range substitutions must refuse; removing attribution
-   must fail a control. Prove the original strict admission decisions unchanged.
+   path/role/tag/range substitutions and retained range-digest or external/source-join
+   digest substitutions must refuse; removing attribution
+   must fail a control. A coherently replaced reported whole-file SHA cannot be
+   independently detected without its body: retain that limitation, rather than
+   treating a sparse digest as whole-file verification or authority. Prove the
+   original strict admission decisions unchanged.
 3. Freeze inactive source and run every enabled exact-head source check before
    separately reviewing any one metadata-only diagnostic event. Acquire its
    official originals once after metadata admission; inspect them without
@@ -72,3 +79,21 @@ in this task.
 
 No architectural, whole-host, physical timing, release or blanket licence
 approval follows from this diagnostic work.
+
+## Inactive diagnostic source boundary
+
+The distinct route is `toolchain-elf-attribution-v1`; producer, reader and its
+sixth workflow-job guard start false. Metadata V3 live execution is retired.
+Historical readers and current positive Build/Reference adapters are held;
+they cannot accept the diagnostic as metadata or silently adopt its six-job
+graph. No new event, compiler or guest is selected by this source candidate.
+
+A finalized diagnostic has twelve exact roles. Its distinct manifest binds
+actual roles by bytes/SHA and marks missing conditional originals unavailable,
+which never means skipped or unexecuted. Exact retained ELF structural ranges
+support independently decoded RPATH/RUNPATH entry/string offsets and values.
+Unknown, absent, unparsed and present are distinct; a present empty value still
+refuses. An attributed refusal remains a failed service/job. A no-refusal scan
+reports only that diagnostic observation and grants no positive-chain authority.
+All original caps, whole-future cleanup reservation and first/secondary errors
+remain mandatory; all historical failures and consumed labels remain held.
