@@ -3613,10 +3613,10 @@ hashes remain unobserved. Keep NodeStageV2 policy and GCC 13 drivers, with no
 executed compiler discovery, arbitrary root or version fallback. New V3 identities
 and current Build/Reference adapters require explicit V3 metadata and a typed
 five-job graph. Preserve V2 readers/four-job joins and disable its execution;
-all new entries start FALSE.
+current V3 entries are armed for source qualification, with events unselected.
 
-The V3 claim merged before this inactive source continuation. Review disabled
-code and complete mocked metadata16/Build31/Reference32 chains, then qualify
+The V3 claim merged before this armed, unselected source continuation. Review
+the arming delta and mocked metadata16/Build31/Reference32 chains, then qualify
 every final-head source
 check before one separately admitted metadata-only V3. Build waits for actual
 V3 metadata; Reference waits for Build, at the same fixed source head. Preserve

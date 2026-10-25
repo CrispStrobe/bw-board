@@ -7100,13 +7100,13 @@ Reference's sole Build ZIP GET and nested-copy audit. No compiler, guest,
 architectural, whole-host, physical/RTx or blanket licence approval follows.
 
 
-V3 claim696 merged before this inactive source continuation. All new metadata
-and current Build/Reference V3 guards remain FALSE; V1/V2 execution is closed.
+V3 claim696 merged before this armed, unselected source continuation. New metadata
+and current Build/Reference V3 guards are TRUE for source qualification; V1/V2 execution is closed.
 The five exact GCC13 internal roles use the separately versioned libexec
 profile without widening old roots or producer/reader semantics. Current
 Build/Reference CLI modes require explicit `--profile current-v3`, including
 service work/status/finish; metadata rejects a profile. Full raw official
 metadata uses five source jobs, while historical V2 four-job readers remain
 held. Source-only controls and independent readers must close the genuine
-metadata16/Build31/Reference32 chain before arming or public source qualification.
+metadata16/Build31/Reference32 chain; review this arming delta before public source qualification.
 No new event, compiler/guest result, pin, CPU/golden, cap or census change follows.

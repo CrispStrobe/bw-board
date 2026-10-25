@@ -1,13 +1,13 @@
 # Bochs CPU3 Ring 3 reference source
 
-Status: inactive metadata V3 source candidate under merged amendment
+Status: armed, unselected metadata V3 source candidate under merged amendment
 [PR696](https://github.com/CrispStrobe/bw-board/pull/696), continuing unmerged
 [PR694](https://github.com/CrispStrobe/bw-board/pull/694). Metadata V1 and V2
 were each consumed once and failed; their originals and strict partial-packet
 refusals remain held. V2 copied, reopened and hashed the selected Node bytes,
 then failed at its old fixed GCC 13 `cc1` path before completing inventory.
 Its after-inventory Node check is absent. V1/V2 live execution is disabled.
-New metadata V3 and current Build/Reference V3 guards are FALSE; no V3,
+New metadata V3 and current Build/Reference V3 guards are TRUE for source qualification; no V3,
 Build or Reference event, compiler or guest result is selected or implied.
 
 The three current routes have distinct requests, labels, jobs, units, originals and

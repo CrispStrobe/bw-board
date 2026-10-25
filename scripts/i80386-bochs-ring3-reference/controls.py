@@ -3804,7 +3804,7 @@ class MetadataV3ProducerControls(unittest.TestCase):
     def test_current_profile_and_guards_precede_every_cli_input_edge(self):
         modes=('--admit','--work','--run-service','--capture-service-status','--finish')
         for route,flag in (('build','BUILD_CURRENT_V3_ENABLED'),('reference','REFERENCE_CURRENT_V3_ENABLED')):
-            self.assertIs(getattr(producer,flag),False)
+            self.assertIs(getattr(producer,flag),True)
             for mode in modes:
                 for profile in (None,'current-v2','wrong',''):
                     args=[mode,'--route',route]+([] if profile is None else ['--profile',profile])
@@ -3813,14 +3813,14 @@ class MetadataV3ProducerControls(unittest.TestCase):
                         producer.main(args,environment={},provider_factory=edge)
                     edge.assert_not_called()
                 edge=mock.Mock(side_effect=AssertionError('inactive input edge'))
-                with mock.patch.object(producer,'admit_cli',edge),mock.patch.object(producer,'load_cli_context',edge),self.assertRaisesRegex(producer.Refusal,'inactive'):
+                with mock.patch.object(producer,flag,False),mock.patch.object(producer,'admit_cli',edge),mock.patch.object(producer,'load_cli_context',edge),self.assertRaisesRegex(producer.Refusal,'inactive'):
                     producer.main([mode,'--route',route,'--profile','current-v3'],environment={},provider_factory=edge)
                 edge.assert_not_called()
-        self.assertIs(producer.TOOLCHAIN_V3_ENABLED,False);self.assertIs(producer.TOOLCHAIN_V2_ENABLED,False)
+        self.assertIs(producer.TOOLCHAIN_V3_ENABLED,True);self.assertIs(producer.TOOLCHAIN_V2_ENABLED,False)
         for mode in modes:
             edge=mock.Mock(side_effect=AssertionError('metadata input edge forbidden'))
             for extra in ([],['--profile','current-v3']):
-                with mock.patch.object(producer,'admit_cli',edge),mock.patch.object(producer,'load_cli_context',edge),self.assertRaises(producer.Refusal):
+                with mock.patch.object(producer,'TOOLCHAIN_V3_ENABLED',False),mock.patch.object(producer,'admit_cli',edge),mock.patch.object(producer,'load_cli_context',edge),self.assertRaises(producer.Refusal):
                     producer.main([mode,'--route','toolchain-v3']+extra,environment={},provider_factory=edge)
                 edge.assert_not_called()
 

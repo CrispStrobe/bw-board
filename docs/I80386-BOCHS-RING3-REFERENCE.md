@@ -1,9 +1,9 @@
 # Bochs CPU3 Ring 3 reference source candidate
 
-Status: merged V3 layout claim and inactive V3 source continuation of
+Status: merged V3 layout claim and armed, unselected V3 source continuation of
 [PR694](https://github.com/CrispStrobe/bw-board/pull/694). The consumed metadata
 V1/V2 attempts remain failed and unqualified. New metadata V3 and explicit
-current Build/Reference V3 execution guards are FALSE; V1/V2 execution is
+current Build/Reference V3 execution guards are TRUE for source qualification; V1/V2 execution is
 closed. Build and Reference remain unselected. The exact envelope is the
 [Bochs claim in LANES.md](../LANES.md). Preserve the separately owned same-job
 V3 cleanup lane and every consumed event/original.
