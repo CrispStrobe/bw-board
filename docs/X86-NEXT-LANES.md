@@ -3608,7 +3608,8 @@ the ten-role partial packet; preserve that refusal and spent event. The
 created-empty root-directory facts lack a live named/terminal cleanup proof.
 No Build or Reference event is selected and no compiler/guest result follows.
 
-The docs-only metadata V2 amendment must merge before code. It claims only
+The [metadata V2 amendment](https://github.com/CrispStrobe/bw-board/pull/695)
+merged before this inactive source candidate. It owns only
 the existing Bochs producer/reader/controls/README, workflow/wrapper, reference
 guide and own LANES/status sections. Use exact source-fixed cache DATA
 path/version/owner/mode/bytes/SHA separately from protected caller credentials;
@@ -3619,8 +3620,8 @@ Negative cleanup requires new held/named identity and bounded empty census
 before any mutation, with the whole 16 KiB future output reserved. A partial
 failed packet cannot become complete metadata or success.
 
-Next: merge the narrow docs amendment, implement and independently review
-inactive V2 plus coherent mocked OS/packet controls, then qualify every
+Next: independently review the inactive V2 implementation and connected
+mocked OS/packet controls, then qualify every
 enabled final-head check. Only a new separately admitted metadata V2 event
 and original qualification can supply identities for Build/Reference on that
 same frozen source head. Keep the authored ROM/goldens, complete CPU wire,

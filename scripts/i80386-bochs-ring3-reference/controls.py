@@ -806,7 +806,7 @@ class CliControls(unittest.TestCase):
     def test_all_five_cli_modes_inactive_before_every_edge(self):
         for mode in ('--admit', '--work', '--run-service', '--capture-service-status', '--finish'):
             edge = mock.Mock(side_effect=AssertionError('host edge reached'))
-            self.assertIs(producer.TOOLCHAIN_ENABLED, True)
+            self.assertIs(producer.TOOLCHAIN_ENABLED, False)
             with mock.patch.object(producer, 'TOOLCHAIN_ENABLED', False), \
                  mock.patch.object(producer, 'load_cli_context', edge), \
                  mock.patch.object(producer, 'admit_cli', edge), \
@@ -2706,6 +2706,728 @@ def _connected_edit_json(packet, name, edit):
     row = json.loads(packet[name])
     edit(row)
     packet[name] = producer.canonical(row)
+
+
+
+class NodeV2Kernel(NodeKernel):
+    def scandir(self,path):
+        root=self.fds[path] if type(path) is int else str(path)
+        names=[SimpleNamespace(name=name[len(root)+1:]) for name in self.nodes
+            if name.startswith(root+'/') and '/' not in name[len(root)+1:]]
+        class Scan:
+            def __init__(self):self.items=iter(names)
+            def __enter__(self):return self
+            def __exit__(self,*args):return False
+            def __iter__(self):return self
+            def __next__(self):return next(self.items)
+        return Scan()
+    def unlink(self,name,*,dir_fd):
+        path=self.name(name,dir_fd);self.events.append(('unlink',path));del self.nodes[path]
+    def rmdir(self,path):
+        path=str(path)
+        producer.need(not any(x.startswith(path+'/') for x in self.nodes),'fake empty directory')
+        self.events.append(('rmdir',path));del self.nodes[path]
+    def hooks(self):
+        stack=super().hooks()
+        for name in ('scandir','unlink','rmdir'):stack.enter_context(mock.patch.object(producer.os,name,getattr(self,name)))
+        return stack
+
+
+def bootstrap_v2(uid=1001,gid=1001):
+    return {'schema':'bw.bochs-ring3.bootstrap-caller.v1','uidArgument':str(uid),'gidArgument':str(gid),
+            'sudoUid':str(uid),'sudoGid':str(gid)}
+
+
+class NodeStageV2Controls(unittest.TestCase):
+    def exercise(self,*,bad_owner=None,fault=None,route='toolchain-v2',stage_type=None):
+        raw=synthetic_elf();env={'GITHUB_RUN_ID':'123456','GITHUB_RUN_ATTEMPT':'1'}
+        real=(producer.NODE_BYTES,producer.NODE_SHA256)
+        with mock.patch.object(producer,'NODE_BYTES',len(raw)),mock.patch.object(producer,'NODE_SHA256',producer.sha256(raw)):
+            stage=(stage_type or producer.NodeStageCopyV2)(route,env,(1001,1001),bootstrap_v2())
+            kernel=NodeV2Kernel(stage.path,raw,fault=fault)
+            if bad_owner is not None:kernel.nodes[producer.NODE_PATH].update(bad_owner)
+            with kernel.hooks():
+                try:
+                    if bad_owner is not None or fault:
+                        with self.assertRaises(ValueError):stage.copy()
+                    else:
+                        stage.copy();stage.verify_after(full_hash=route!='toolchain-v2')
+                        producer.check_node_stage_v2(stage.facts,route,env,after=True)
+                finally:stage.close()
+            self.assertEqual(kernel.fds,{})
+        self.assertEqual((producer.NODE_BYTES,producer.NODE_SHA256),real)
+        return stage.facts,kernel,env
+    def test_genuine_copy_distinct_cache_group_and_actual_caller(self):
+        facts,kernel,_env=self.exercise()
+        self.assertEqual(facts['invoker'],{'uid':1001,'gid':1001})
+        self.assertEqual(facts['sourceBefore'][2:5],[0o100777,1001,1000])
+        self.assertEqual(facts['file'][2:5],[0o100555,0,0])
+        self.assertEqual(facts['schema'],'bw.bochs-ring3.node-stage.v2')
+        self.assertFalse(facts['checkedAfter']['hashRead'])
+        self.assertEqual(facts['sourceBytesRead'],facts['bytesCopied'])
+        self.assertEqual(facts['bootstrapCredentials'],bootstrap_v2())
+        self.assertEqual([x for x in kernel.events if x[0]=='open' and x[1]==producer.NODE_PATH], [('open',producer.NODE_PATH)])
+    def test_wrong_provider_mode_or_pair_refuses_before_copy_and_publication(self):
+        for change in ({'uid':1002},{'gid':1001},{'uid':0,'gid':0},{'mode':0o100755},{'mode':0o104777}):
+            with self.subTest(change=change):
+                facts,kernel,_env=self.exercise(bad_owner=change)
+                self.assertEqual(facts['sourceBytesRead'],0);self.assertEqual(facts['bytesCopied'],0)
+                self.assertFalse(facts['filePublished'] or facts['directoryPublished'])
+                self.assertFalse(any(x[0]=='write' for x in kernel.events))
+    def test_build_stage_reopens_and_hashes_after_use(self):
+        facts,_kernel,_env=self.exercise(route='build')
+        self.assertTrue(facts['checkedAfter']['hashRead'])
+        self.assertEqual(facts['checkedAfter']['sha256'],facts['readbackSha256'])
+    def test_v2_failures_preserve_first_secondary_and_partial_stage(self):
+        for fault in ('short-copy','source-read','file-publication','record-write'):
+            with self.subTest(fault=fault):
+                facts,_kernel,_env=self.exercise(fault=fault)
+                self.assertIsNotNone(facts['firstFailure'])
+                if fault=='source-read':self.assertIn('secondary-source-close',[r['message'] for r in facts['secondary']])
+    def cleanup(self,*,empty=False,unknown=False,forged_plan=False):
+        facts,kernel,env=self.exercise(bad_owner={'gid':1001} if empty else None)
+        root=str(Path(facts['stagePath']).parent);inner={'observations':{'nodeStage':facts}}
+        if unknown:kernel.add(root+'/unknown',0o100600,b'owned but unknown')
+        before=len(kernel.events)
+        with kernel.hooks():
+            if unknown:
+                with self.assertRaises(ValueError):producer.node_cleanup_wire_plan_v2('toolchain-v2',env,inner)
+                result=None;plan=None
+            else:
+                plan=producer.node_cleanup_wire_plan_v2('toolchain-v2',env,inner)
+                self.assertFalse(any(e[0] in ('chmod','unlink','rmdir') for e in kernel.events[before:]))
+                if forged_plan:plan['reservedBytes']=1
+                result=producer.cleanup_node_stage_v2('toolchain-v2',env,inner,plan)
+        return facts,kernel,plan,result,kernel.events[before:]
+    def test_failed_cache_created_empty_stage_gets_live_owned_cleanup_only(self):
+        facts,kernel,plan,value,events=self.cleanup(empty=True)
+        self.assertEqual(plan['stageState'],'created-empty');self.assertTrue(value['complete'])
+        self.assertIsNone(value['firstFailure']);self.assertIsNotNone(facts['firstFailure'])
+        self.assertEqual(value['authority']['names'],[])
+        self.assertEqual(value['authority']['directoryHeld'][:5],value['authority']['directoryNamed'][:5])
+        self.assertFalse(value['after']['exists']);self.assertNotIn(plan['nodePath'],kernel.nodes)
+        self.assertFalse(any(e[0]=='unlink' for e in events))
+    def test_published_stage_complete_owned_cleanup_and_final_wire_bound(self):
+        _facts,kernel,plan,value,events=self.cleanup()
+        self.assertEqual(plan['stageState'],'published');self.assertTrue(value['complete'])
+        self.assertEqual(value['authority']['names'],['node','stage.json'])
+        self.assertEqual([e[0] for e in events if e[0] in ('chmod','unlink','rmdir')],['chmod','unlink','unlink','rmdir'])
+        self.assertLessEqual(len(producer.canonical(value)),plan['reservedBytes'])
+        self.assertLessEqual(plan['reservedBytes'],16384)
+    def test_unknown_member_or_forged_reservation_has_zero_effects(self):
+        for opts in ({'unknown':True},{'forged_plan':True}):
+            with self.subTest(opts=opts):
+                _facts,_kernel,_plan,value,events=self.cleanup(**opts)
+                self.assertFalse(any(e[0] in ('chmod','unlink','rmdir') for e in events))
+                if value is not None:self.assertFalse(value['complete'])
+    def test_dynamic_bootstrap_is_independent_of_provider_and_refuses_disagreement(self):
+        self.assertEqual(producer.bootstrap_caller_scalars(bootstrap_v2(2001,2002),{'uid':2001,'gid':2002}),bootstrap_v2(2001,2002))
+        wrong=bootstrap_v2();wrong['sudoGid']='1000'
+        with self.assertRaises(ValueError):producer.NodeStageCopyV2('toolchain-v2',{'GITHUB_RUN_ID':'123456','GITHUB_RUN_ATTEMPT':'1'},(1001,1001),wrong)
+    def test_new_current_route_inactive_before_every_edge(self):
+        self.assertIs(producer.TOOLCHAIN_V2_ENABLED,False)
+        for mode in ('--admit','--work','--run-service','--capture-service-status','--finish'):
+            edge=mock.Mock(side_effect=AssertionError('real edge forbidden'))
+            with mock.patch.object(producer,'load_cli_context',edge),mock.patch.object(producer,'admit_cli',edge),self.assertRaisesRegex(ValueError,'inactive'):
+                producer.main([mode,'--route','toolchain-v2'],environment={},provider_factory=edge)
+            edge.assert_not_called()
+
+
+
+def synthetic_node_stage_v2(route='toolchain-v2',*,checked=True,full_hash=False):
+    """Manufactured OS-provider readback only; genuine copy has separate tests."""
+    old='toolchain' if route=='toolchain-v2' else route
+    facts=synthetic_node_stage(old,checked=checked,full_hash=full_hash)
+    old_root=str(Path(facts['stagePath']).parent)
+    env={'GITHUB_RUN_ID':'123456','GITHUB_RUN_ATTEMPT':'1'}
+    root=str(producer.route_paths(route,env)['node'])
+    def rewrite(value):
+        if type(value) is str:return value.replace(old_root,root).replace('bw.bochs-ring3.node-installation.v1','bw.bochs-ring3.node-installation.v2')
+        if type(value) is list:return [rewrite(x) for x in value]
+        if type(value) is dict:return {k:rewrite(v) for k,v in value.items()}
+        return value
+    facts=rewrite(facts);facts['schema']='bw.bochs-ring3.node-stage.v2'
+    facts['invoker']={'uid':1001,'gid':1001};facts['bootstrapCredentials']=bootstrap_v2()
+    record=json.loads(facts['record']['text']);raw=producer.canonical(record)
+    facts['record'].update(text=raw.decode(),bytes=len(raw),sha256=producer.sha256(raw))
+    facts['record']['metadata'][6]=len(raw)
+    return facts
+
+
+def toolchain_v2_sample(*, failed=False):
+    """Genuine V2 collect/finish; only OS, service and acquisition edges fake."""
+    request,raw,event,env=synthetic_request('toolchain-v2')
+    request['schema']='bw.bochs-ring3.toolchain-request.v2';raw=producer.canonical(request)
+    event=json.loads(event);prefix=producer.ROUTES['toolchain-v2'][2]
+    env.update({prefix+'_SHA256':producer.sha256(raw),prefix+'_B64':base64.b64encode(raw).decode(),
+        'GITHUB_ACTIONS':'true','GITHUB_WORKSPACE':'/mock/workspace','GITHUB_EVENT_PATH':'/mock/event.json'})
+    event['pull_request']['body']='<!-- '+prefix+'_SHA256='+producer.sha256(raw)+' -->\nMock metadata V2 only.\n'
+    event=producer.canonical(event)
+    class Edges(InventoryEdges):
+        def __init__(self):
+            super().__init__();self.node=synthetic_node_stage_v2()
+        def node_stage(self):
+            if not failed:return copy.deepcopy(self.node)
+            self.stage=producer.NodeStageCopyV2('toolchain-v2',env,(1001,1001),bootstrap_v2())
+            self.node_kernel=NodeV2Kernel(self.stage.path,synthetic_elf())
+            self.node_kernel.nodes[producer.NODE_PATH].update(uid=1002)
+            actual=self.node_kernel.info
+            def info(path):
+                value=actual(path)
+                if path==producer.NODE_PATH:value.st_size=producer.NODE_BYTES
+                return value
+            self.node_kernel.info=info
+            with self.node_kernel.hooks():return self.stage.copy()
+        def close(self):
+            if hasattr(self,'stage'):
+                with self.node_kernel.hooks():self.stage.close()
+        def node_after(self,*,full_hash):
+            assert full_hash is False
+            return copy.deepcopy(self.node)
+        def resources(self,route):
+            assert route=='toolchain-v2'
+            unit=producer.route_paths(route,env)['unit'];root='/sys/fs/cgroup/system.slice/'+unit
+            raw_limits={'cpu.max':'100000 100000\n','memory.max':'536870912\n','memory.swap.max':'0\n','pids.max':'32\n'}
+            common={'cgroup.events':'populated 1\nfrozen 0\n','cpu.stat':'usage_usec 1\nuser_usec 1\nsystem_usec 0\n'}
+            statrow=lambda ino:synthetic_stat(ino,4096,0o40755)
+            parent={'unitPath':root,'unitIdentity':statrow(1),'controllerPath':root+'/controller','controllerIdentity':statrow(2),
+                'unitProcs':'','controllerProcs':'100\n','availableBefore':'cpu io memory pids\n','enabledBefore':'io\n',
+                'write':'+cpu +memory +pids\n','availableAfter':'cpu io memory pids\n','enabledAfter':'cpu io memory pids\n'}
+            return {'schema':'bw.bochs-ring3.resources.v2','unit':unit,'pid':100,'uid':0,'gid':0,
+                'unitRoot':{'path':root,'directory':statrow(1),'children':['controller'],
+                    'files':{**raw_limits,**common,'cgroup.procs':'','cgroup.stat':'nr_descendants 1\nnr_dying_descendants 0\n'}},
+                'controller':{'path':root+'/controller','directory':statrow(2),'children':[],
+                    'files':{'cpu.max':'max 100000\n','memory.max':'max\n','memory.swap.max':'max\n','pids.max':'max\n',
+                        **common,'cgroup.procs':'100\n','cgroup.stat':'nr_descendants 0\nnr_dying_descendants 0\n'}},
+                'procCgroup':'0::/system.slice/'+unit+'/controller\n',
+                'procStat':'100 (python3) S '+' '.join(['0']*50)+'\n',
+                'procStatus':'Pid:\t100\nUid:\t0\t0\t0\t0\nGid:\t0\t0\t0\t0\nThreads:\t1\n',
+                'parentControl':parent}
+        def observer(self,value):
+            return producer.observer_facts_v2(value,env,pid=100,uid=0,gid=0,started_ns=1,ended_ns=2,
+                invoker=self.node['invoker'],bootstrap=self.node['bootstrapCredentials'])
+        def prepare_kernel(self,inner):
+            facts=producer.stage_facts_v2(inner);root=str(Path(facts['stagePath']).parent)
+            kernel=NodeV2Kernel(root,b'mock DATA unused in cleanup')
+            for parent,row in facts['parents'].items():
+                kernel.nodes[parent].update(ino=row['after'][1],mode=row['after'][2],mtime=row['after'][7],ctime=row['after'][8])
+            directory=facts.get('directory') or facts.get('directoryAfterFailure') or facts['directoryInitial'];kernel.add(root,directory[2]);kernel.nodes[root].update(ino=directory[1],mtime=directory[7],ctime=directory[8])
+            members=[]
+            if facts.get('file') is not None:members.append(('node',facts['file']))
+            if facts.get('record') is not None:members.append(('stage.json',facts['record']['metadata']))
+            for name,row in members:
+                kernel.add(root+'/'+name,row[2],b'mock');kernel.nodes[root+'/'+name].update(ino=row[1],mtime=row[7],ctime=row[8],reportedSize=row[6])
+            original_info=kernel.info
+            def info(path):
+                value=original_info(path)
+                if 'reportedSize' in kernel.nodes[path]:value.st_size=kernel.nodes[path]['reportedSize']
+                return value
+            kernel.info=info;self.node_kernel=kernel
+        def cleanup(self,inner,*,outer=None):
+            self.prepare_kernel(inner)
+            with self.node_kernel.hooks():self.node_plan=producer.node_cleanup_wire_plan_v2('toolchain-v2',env,inner)
+            kernel=SimpleNamespace(_directory=mock.Mock(side_effect=FileNotFoundError(2,'mock absent selected unit')))
+            return producer.cleanup_owned_cgroups('toolchain-v2',env,inner,kernel,outer_base=outer,
+                input_plan=self.node_plan,clock=iter((1,2,3)).__next__)
+        def node_cleanup(self,inner):
+            with self.node_kernel.hooks():return producer.cleanup_node_stage_v2('toolchain-v2',env,inner,self.node_plan)
+    edges=Edges();value,roles=producer.collect_toolchain_v2(raw,event,env,edges)
+    assert value['complete'] is (not failed),value['firstFailure']
+    unit=producer.route_paths('toolchain-v2',env)['unit'];paths=producer.route_paths('toolchain-v2',env)
+    context={'env':env,'sourceRoot':'/mock/source','invoker':{'uid':1001,'gid':1001},'bootstrapCredentials':bootstrap_v2()}
+    h=_connected_bochs_mocks();status=h.synthetic_status('toolchain-v2',unit,context)
+    if failed:
+        record=json.loads(status);client=record['client']
+        stdout=base64.b64decode(client['stdoutBase64']).replace(b'result: success',b'result: exit-code').replace(b'code=exited/status=0',b'code=exited/status=1')
+        client['stdoutBase64']=base64.b64encode(stdout).decode();process=client['process']
+        process.update(exitCode=1,waitStatus=256,firstFailure=producer.failure(producer.Refusal('ordinary child completed exit0'),'child-capture'))
+        process['stdout'].update(bytes=len(stdout),sha256=producer.sha256(stdout))
+        record['receipt']=producer.service_receipt(stdout,b'',1,unit)
+        status=producer.canonical(record)
+
+    with mock.patch.object(producer,'TOOLCHAIN_V2_ENABLED',True),mock.patch.object(producer,'sealed_write'), \
+         mock.patch.object(producer,'retained_output_roles',return_value=copy.deepcopy(roles)), \
+         mock.patch.object(producer,'read_regular',return_value=(status,{})),mock.patch.object(producer,'write_work_roles'):
+        outside,roles=producer.finish_cli('toolchain-v2',context,raw,event,paths,provider_factory=lambda *_:edges,
+            service_status=paths['work']/'service-status.original.json',current=True)
+    assert outside['cleanupExitCode']==(1 if failed else 0),outside['firstFailure']
+    return request,raw,event,env,edges,value,outside,roles
+
+
+class MetadataV2Controls(unittest.TestCase):
+    def test_genuine_metadata_collect_and_finish_emit_closed16(self):
+        _request,raw,event,_env,_edges,value,outside,roles=toolchain_v2_sample()
+        self.assertEqual(len(roles),16);self.assertEqual(roles['request.original.json'],raw)
+        self.assertEqual(roles['event.original.json'],event)
+        self.assertTrue(value['complete']);self.assertEqual(outside['cleanupExitCode'],0)
+        self.assertEqual(json.loads(roles['process.original.json'])['schema'],'bw.bochs-ring3.toolchain-observer.v2')
+        self.assertEqual(json.loads(roles['node-stage.original.json'])['bootstrapCredentials'],bootstrap_v2())
+        self.assertLessEqual(len(producer.canonical(outside)),16384)
+        self.assertFalse(any(value['authority'][key] for key in ('compilerExecuted','guestExecuted','actualRunApproved','guestApproved')))
+    def test_failed_inventory_clean_empty_stage_remains_negative(self):
+        _request,raw,event,_env,_edges,value,outside,roles=toolchain_v2_sample(failed=True)
+        self.assertFalse(value['complete']);self.assertIsNotNone(value['firstFailure'])
+        self.assertEqual(outside['cleanupExitCode'],1);self.assertFalse(outside['innerComplete'])
+        self.assertTrue(outside['manual']['complete']);self.assertTrue(outside['nodeCleanup']['complete'])
+        self.assertEqual(outside['nodeCleanup']['stageState'],'created-empty')
+        self.assertFalse(outside['nodeCleanup']['after']['exists'])
+        self.assertEqual(value['observations']['nodeStage']['sourceBytesRead'],0)
+        self.assertIsNone(value['observations']['nodeStage']['copiedSha256'])
+        spec=importlib.util.spec_from_file_location('independent_V2_failed',HERE/'reader.py')
+        reader=importlib.util.module_from_spec(spec);spec.loader.exec_module(reader)
+        with self.assertRaises(reader.Refusal):reader.toolchain_original_v2(roles,raw,event)
+
+    def test_explicit_metadata_identity_rejects_boolean_or_V1_projection(self):
+        expected={'schema':'bw.bochs-ring3.toolchain-inventory-reference.v2','jobName':'bochs-ring3-toolchain-inventory-v2','version':2}
+        self.assertEqual(producer.metadata_v2_identity(expected),expected)
+        for key,value in (('version',True),('version',1),('schema','bw.bochs-ring3.toolchain-inventory-reference.v1'),('jobName','bochs-ring3-toolchain-inventory-v1')):
+            wrong={**expected,key:value}
+            with self.assertRaises(ValueError):producer.metadata_v2_identity(wrong)
+
+
+
+class V2BoundaryControls(unittest.TestCase):
+    def test_live_plan_read_primary_and_member_close_secondary_retained(self):
+        facts,kernel,env=NodeStageV2Controls().exercise()
+        inner={'observations':{'nodeStage':facts}}
+        with kernel.hooks():plan=producer.node_cleanup_wire_plan_v2('toolchain-v2',env,inner)
+        original_fstat,original_close=kernel.fstat,kernel.close
+        def fstat(fd):
+            if kernel.fds[fd]==facts['stagePath']:raise OSError('first-live-member-read')
+            return original_fstat(fd)
+        def close(fd):
+            name=kernel.fds[fd];original_close(fd)
+            if name==facts['stagePath']:raise OSError('secondary-live-member-close')
+        kernel.fstat,kernel.close=fstat,close;before=len(kernel.events)
+        with kernel.hooks():value=producer.cleanup_node_stage_v2('toolchain-v2',env,inner,plan)
+        self.assertFalse(value['complete']);self.assertEqual(value['firstFailure']['message'],'first-live-member-read')
+        self.assertIn('secondary-live-member-close',[r['message'] for r in value['secondary']])
+        self.assertFalse(any(e[0] in ('chmod','unlink','rmdir') for e in kernel.events[before:]))
+        self.assertEqual(kernel.fds,{})
+        # Counterfactual source helper that drops carried close facts proves
+        # this control detects the first V2 retention gap, not only a verdict.
+        import ast
+        source=(HERE/'run.py').read_text()
+        function=next(n for n in ast.parse(source).body if isinstance(n,ast.FunctionDef) and n.name=='cleanup_node_stage_v2')
+        segment=ast.get_source_segment(source,function)
+        carried="        for extra in getattr(exc, 'bochs_secondary', []):\n            if len(value['secondary']) < SECONDARY_LIMIT:\n                value['secondary'].append(extra)\n"
+        self.assertEqual(segment.count(carried),1)
+        namespace=dict(vars(producer));exec(compile(segment.replace(carried,''),'V2-close-retention-counterfactual.py','exec'),namespace)
+        with kernel.hooks():weak=namespace['cleanup_node_stage_v2']('toolchain-v2',env,inner,plan)
+        self.assertEqual(weak['firstFailure']['message'],'first-live-member-read')
+        self.assertNotIn('secondary-live-member-close',[r['message'] for r in weak['secondary']])
+        self.assertEqual(kernel.fds,{})
+
+    def test_genuine_source_mutants_expose_caller_conflation_and_arbitrary_owner(self):
+        import ast
+        module_source=(HERE/'run.py').read_text()
+        node=next(n for n in ast.parse(module_source).body if isinstance(n,ast.ClassDef) and n.name=='NodeStageCopyV2')
+        authored=ast.get_source_segment(module_source,node)
+        predicate='before[2:5] == [stat.S_IFREG | 0o777, NODE_CACHE_UID_V2, NODE_CACHE_GID_V2]'
+        self.assertEqual(authored.count(predicate),1)
+        raw=synthetic_elf();env={'GITHUB_RUN_ID':'123456','GITHUB_RUN_ATTEMPT':'1'}
+        for mode,replacement in (('caller-GID',"tuple(before[3:5]) in ((0,0),self.invoker)"),('arbitrary-owner','True')):
+            with self.subTest(mode=mode),mock.patch.object(producer,'NODE_BYTES',len(raw)),mock.patch.object(producer,'NODE_SHA256',producer.sha256(raw)):
+                namespace=dict(vars(producer));exec(compile(authored.replace(predicate,replacement),'authored-V2-source-mutant.py','exec'),namespace)
+                stage=namespace['NodeStageCopyV2']('toolchain-v2',env,(1001,1001),bootstrap_v2())
+                kernel=NodeV2Kernel(stage.path,raw)
+                if mode=='arbitrary-owner':kernel.nodes[producer.NODE_PATH].update(uid=31337,gid=31338)
+                with kernel.hooks():
+                    try:
+                        if mode=='caller-GID':
+                            with self.assertRaises(ValueError):stage.copy()
+                            self.assertEqual(stage.facts['sourceBytesRead'],0)
+                        else:
+                            stage.copy();self.assertTrue(stage.facts['filePublished'])
+                            with self.assertRaises(ValueError):producer.check_node_stage_v2(stage.facts,'toolchain-v2',env)
+                    finally:stage.close()
+                self.assertEqual(kernel.fds,{})
+        # Actual production class and source pins were never replaced.
+        self.assertEqual(producer.NODE_BYTES,124827920)
+        self.assertEqual(producer.NODE_CACHE_GID_V2,1000)
+    def test_current_Build_Reference_and_reader_guards_refuse_before_IO(self):
+        spec=importlib.util.spec_from_file_location('independent_current_v2_disabled',HERE/'reader.py')
+        reader=importlib.util.module_from_spec(spec);spec.loader.exec_module(reader)
+        for route,flag in (('build','BUILD_CURRENT_V2_ENABLED'),('reference','REFERENCE_CURRENT_V2_ENABLED')):
+            self.assertIs(getattr(producer,flag),False)
+            for mode in ('--admit','--work','--run-service','--capture-service-status','--finish'):
+                edge=mock.Mock(side_effect=AssertionError('input edge'))
+                with mock.patch.object(producer,'admit_cli',edge),mock.patch.object(producer,'load_cli_context',edge),self.assertRaisesRegex(ValueError,'inactive'):
+                    producer.main([mode,'--route',route],environment={},provider_factory=edge)
+                edge.assert_not_called()
+        for route in ('toolchain-v2','build-current-v2','reference-current-v2'):
+            edge=mock.Mock(side_effect=AssertionError('reader input edge'))
+            with mock.patch.object(reader,'cli_regular',edge),self.assertRaisesRegex(reader.Refusal,'inactive'):
+                reader.cli_grade(route,{'archive':'unreadable'})
+            edge.assert_not_called()
+    def test_independent_V2_reader_positive_and_coherently_rehashed_cuts(self):
+        _request,raw,event,_env,_edges,_value,_outside,roles=toolchain_v2_sample()
+        spec=importlib.util.spec_from_file_location('independent_current_v2_metadata',HERE/'reader.py')
+        reader=importlib.util.module_from_spec(spec);spec.loader.exec_module(reader)
+        report=reader.toolchain_original_v2(roles,raw,event)
+        self.assertIs(report['actualRunApproved'],False);self.assertIs(report['guestApproved'],False)
+        def rehash(packet):packet['manifest.json']=producer.canonical(producer.original_manifest({n:b for n,b in packet.items() if n!='manifest.json'}))
+        for mode in ('cache-GID','caller-scalar','reserved-budget','live-directory','old-event'):
+            with self.subTest(mode=mode):
+                packet=copy.deepcopy(roles)
+                stage=json.loads(packet['node-stage.original.json']);inner=json.loads(packet['original.json'])
+                manual=json.loads(packet['cleanup.original.json']);outside=json.loads(packet['outside.original.json'])
+                if mode=='cache-GID':
+                    for key in ('sourceBefore','sourceAfter','sourceNamedAfter'):stage[key][4]=1001
+                if mode=='caller-scalar':stage['bootstrapCredentials']['sudoGid']='1000'
+                if mode in ('cache-GID','caller-scalar'):
+                    packet['node-stage.original.json']=producer.canonical(stage);inner['observations']['nodeStage']=stage
+                    manual['inputPlan']['stageSha256']=producer.sha256(packet['node-stage.original.json'])
+                if mode=='reserved-budget':manual['inputPlan']['reservedBytes']=1
+                if mode=='live-directory':outside['nodeCleanup']['authority']['directoryNamed'][1]+=1
+                if mode=='old-event':
+                    changed=json.loads(event);changed['label']['name']='x86-bochs-ring3-toolchain-inventory-v1'
+                    packet['event.original.json']=producer.canonical(changed);inner['eventSha256']=producer.sha256(packet['event.original.json'])
+                outside['manual']=manual;outside['nodeCleanup']['planSha256']=producer.sha256(producer.canonical(manual['inputPlan']))
+                packet['original.json']=producer.canonical(inner);packet['cleanup.original.json']=producer.canonical(manual)
+                packet['outside.original.json']=producer.canonical(outside);rehash(packet)
+                with self.assertRaises(reader.Refusal):reader.toolchain_original_v2(packet,raw,packet['event.original.json'])
+
+class ConnectedCurrentV2Controls(unittest.TestCase):
+    def test_genuine_current_build31_reference32(self):
+        h = _connected_bochs_mocks()
+        p, r = h.producer, h.reader
+        c = SimpleNamespace(bootstrap_v2=bootstrap_v2, synthetic_node_stage_v2=synthetic_node_stage_v2, NodeV2Kernel=NodeV2Kernel, synthetic_request=synthetic_request)
+        META = {'schema':'bw.bochs-ring3.toolchain-inventory-reference.v2', 'jobName':'bochs-ring3-toolchain-inventory-v2','version':2}
+        ENV = {'GITHUB_RUN_ID':'123456','GITHUB_RUN_ATTEMPT':'1'}
+        BOOTSTRAP = bootstrap_v2(1001,1000)
+        CALLER = {'uid':1001,'gid':1000}
+        def node_stage(route):
+            facts = c.synthetic_node_stage_v2(route, checked=True, full_hash=True)
+            facts['invoker'] = dict(CALLER)
+            facts['bootstrapCredentials'] = dict(BOOTSTRAP)
+            return facts
+
+        class V2Cleanup:
+            def node_stage(self):
+                self.v2stage = node_stage(self.v2route)
+                self.node_stage_value = self.v2stage
+                return copy.deepcopy(self.v2stage)
+            def node_after(self, *, full_hash):
+                assert full_hash
+                return copy.deepcopy(self.v2stage)
+            def prepare_node_kernel(self, inner):
+                facts = p.stage_facts_v2(inner)
+                root = str(pathlib.Path(facts['stagePath']).parent)
+                kernel = c.NodeV2Kernel(root, b'mock DATA never executed')
+                for parent,row in facts['parents'].items():
+                    kernel.nodes[parent].update(ino=row['after'][1],mode=row['after'][2],
+                        mtime=row['after'][7],ctime=row['after'][8])
+                directory=facts['directory']
+                kernel.add(root,directory[2])
+                kernel.nodes[root].update(ino=directory[1],mtime=directory[7],ctime=directory[8])
+                for name,row in (('node',facts['file']),('stage.json',facts['record']['metadata'])):
+                    kernel.add(root+'/'+name,row[2],b'mock')
+                    kernel.nodes[root+'/'+name].update(ino=row[1],mtime=row[7],ctime=row[8],reportedSize=row[6])
+                original_info=kernel.info
+                def info(path):
+                    value=original_info(path)
+                    if 'reportedSize' in kernel.nodes[path]:value.st_size=kernel.nodes[path]['reportedSize']
+                    return value
+                kernel.info=info
+                self.v2kernel=kernel
+            def cleanup(self, inner, *, outer=None):
+                self.prepare_node_kernel(inner)
+                with self.v2kernel.hooks():
+                    self.node_plan = p.node_cleanup_wire_plan_v2(self.v2route, ENV, inner)
+                kernel=SimpleNamespace(_directory=mock.Mock(
+                    side_effect=FileNotFoundError(2,'synthetic absent selected unit')))
+                return p.cleanup_owned_cgroups(self.v2route, ENV, inner, kernel,
+                    outer_base=outer, input_plan=self.node_plan,
+                    following_error_bytes=1024, clock=iter((1,2,3)).__next__)
+            def node_cleanup(self, inner):
+                with self.v2kernel.hooks():
+                    return p.cleanup_node_stage_v2(self.v2route,ENV,inner,self.node_plan)
+
+        class BuildV2(V2Cleanup, h.BuildEdges):
+            v2route='build'
+
+        class ReferenceV2(V2Cleanup, h.ReferenceEdges):
+            v2route='reference'
+            def acquire_build(self, selected, *, pull_request):
+                archive, observed=super().acquire_build(selected,pull_request=pull_request)
+                observed['readback']['runId']=int(selected['runId'])
+                return archive,observed
+
+
+        def rebind(request, event, env, route):
+            raw=p.canonical(request)
+            name=p.ROUTES[route][2]
+            env[name+'_SHA256']=hashlib.sha256(raw).hexdigest()
+            env[name+'_B64']=base64.b64encode(raw).decode()
+            obj=json.loads(event)
+            obj['pull_request']['body']=f'<!-- {name}_SHA256={hashlib.sha256(raw).hexdigest()} -->\nSynthetic current input.\n'
+            return raw,p.canonical(obj),env
+
+
+        def build():
+            upstream=h.synthetic_upstream()
+            restore=h.patch_pins(upstream)
+            try:
+                rom,fixture=p.authored_inputs()
+                edges=BuildV2(upstream,rom,fixture)
+                request, raw, event, env = h.request_inputs(upstream,edges)
+                request['toolchain']['inventory'].update(META)
+                raw,event,env=rebind(request,event,env,'build')
+                p.admit_build_inputs_v2(request)
+                value,roles=p.collect_build_v2(raw,event,env,edges)
+                assert value['complete'],value['firstFailure']
+                unit='bw-bochs-build-v1-123456-1.service'
+                context={'env':env,'invoker':dict(CALLER),'bootstrapCredentials':dict(BOOTSTRAP),
+                         'sourceRoot':'/mock/source'}
+                paths={'unit':unit,'work':pathlib.Path('/mock/work'),'output':pathlib.Path('/mock/output')}
+                status=h.synthetic_status('build',unit,context)
+                with mock.patch.object(p,'BUILD_CURRENT_V2_ENABLED',True), \
+                     mock.patch.object(p,'sealed_write'), \
+                     mock.patch.object(p,'retained_output_roles',return_value=copy.deepcopy(roles)), \
+                     mock.patch.object(p,'read_regular',return_value=(status,{})), \
+                     mock.patch.object(p,'write_work_roles'):
+                    outside,final=p.finish_cli('build',context,raw,event,paths,
+                        provider_factory=lambda *_:edges,
+                        service_status=paths['work']/'service-status.original.json',current=True)
+                assert outside['firstFailure'] is None,outside['firstFailure']
+                assert len(final)==31,len(final)
+                grade=r.build_original_current_v2(final,raw,event)
+                assert grade['selectedBuildBytesObserved'] and grade['actualRunApproved'] is False
+                for key,replacement in (('schema','bw.bochs-ring3.toolchain-inventory-reference.v1'),
+                                        ('jobName','bochs-ring3-toolchain-inventory-v1'),
+                                        ('version',1)):
+                    downgraded=copy.deepcopy(request)
+                    downgraded['toolchain']['inventory'][key]=replacement
+                    try:
+                        p.admit_build_inputs_v2(downgraded)
+                    except p.Refusal:
+                        pass
+                    else:
+                        raise AssertionError('current Build admitted downgraded '+key)
+                    denied_raw,denied_event,denied_env=rebind(downgraded,event,dict(env),'build')
+                    try:
+                        p.collect_build_v2(denied_raw,denied_event,denied_env,SimpleNamespace())
+                    except p.Refusal:
+                        pass
+                    else:
+                        raise AssertionError('current Build touched or bypassed producer admission '+key)
+                missing=copy.deepcopy(request)
+                del missing['toolchain']['inventory']['schema']
+                try:
+                    p.admit_build_inputs_v2(missing)
+                except p.Refusal:
+                    pass
+                else:
+                    raise AssertionError('current Build admitted missing metadata')
+                stage_downgrade=copy.deepcopy(final)
+                stage=json.loads(stage_downgrade['node-stage.original.json'])
+                stage['schema']='bw.bochs-ring3.node-stage.v1'
+                stage_downgrade['node-stage.original.json']=p.canonical(stage)
+                row=json.loads(stage_downgrade['build.original.json'])
+                row['observations']['nodeStage']=copy.deepcopy(stage)
+                stage_downgrade['build.original.json']=p.canonical(row)
+                stage_downgrade['manifest.json']=p.canonical(p.original_manifest({
+                    name:body for name,body in stage_downgrade.items() if name!='manifest.json'}))
+                try:
+                    r.build_original_current_v2(stage_downgrade,raw,event)
+                except r.Refusal:
+                    pass
+                else:
+                    raise AssertionError('current Build admitted V1 stage')
+                archive=p.pack_zip(final,archive_cap=64<<20,expanded_cap=256<<20,
+                    member_cap=4096,modes={name:0o755 if name.endswith('/bochs') else 0o644 for name in final})
+                return upstream,restore,request,raw,event,env,final,archive,rom,fixture
+            except:
+                restore();raise
+
+        def reference(built):
+            upstream,restore,build_request,_,_,_,build_roles,archive,rom,fixture=built
+            ref, _, ref_event, ref_env = c.synthetic_request('reference')
+            ref['source'] = build_request['source']
+            source_before=json.loads(build_roles['source.before.json'])
+            ref['build'] = {'runId':'123456','jobId':111,'artifactId':222,
+                'name':'i80386-bochs-ring3-build-v1-originals','bytes':len(archive),
+                'sha256':h.sha(archive),'checkoutHead':ref['source']['head'],
+                'checkoutTree':ref['source']['tree'],
+                'workflowCommit':source_before['workflowCommit'],
+                'workflowFileSha256':ref['source']['files'][p.WORKFLOW]['sha256'],
+                'compactManifest':json.loads(build_roles['compact-manifest.json']),
+                'buildLog':{'bytes':100,'sha256':'a'*64},'metadata':dict(META)}
+            ref_raw,ref_event,ref_env=rebind(ref,ref_event,ref_env,'reference')
+            p.admit_reference_inputs_v2(ref)
+            for changed in ('missing','wrong'):
+                downgraded=copy.deepcopy(ref)
+                if changed=='missing':del downgraded['build']['metadata']
+                else:downgraded['build']['metadata']['version']=1
+                try:
+                    p.admit_reference_inputs_v2(downgraded)
+                except p.Refusal:
+                    pass
+                else:
+                    raise AssertionError('current Reference admitted '+changed+' metadata')
+                denied_raw,denied_event,denied_env=rebind(downgraded,ref_event,dict(ref_env),'reference')
+                try:
+                    p.collect_reference_v2(denied_raw,denied_event,denied_env,SimpleNamespace())
+                except p.Refusal:
+                    pass
+                else:
+                    raise AssertionError('current Reference touched or bypassed producer admission '+changed)
+            selected=p.selected_build_bytes_v2(ref,archive)
+            assert len(selected['files'])==31
+            arch,wire=h.synthetic_architecture()
+            assert len(wire)==1730
+            edges=ReferenceV2(selected,archive,arch,wire)
+            value,roles=p.collect_reference_v2(ref_raw,ref_event,ref_env,edges)
+            assert value['complete'],value['firstFailure']
+            assert len(roles)==29,len(roles)
+            unit='bw-bochs-reference-v1-123456-1.service'
+            context={'env':ref_env,'invoker':dict(CALLER),'bootstrapCredentials':dict(BOOTSTRAP),
+                     'sourceRoot':'/mock/source'}
+            paths={'unit':unit,'work':pathlib.Path('/mock/reference-work'),
+                   'output':pathlib.Path('/mock/reference-output')}
+            status=h.synthetic_status('reference',unit,context)
+            with mock.patch.object(p,'REFERENCE_CURRENT_V2_ENABLED',True), \
+                 mock.patch.object(p,'sealed_write'), \
+                 mock.patch.object(p,'retained_output_roles',return_value=copy.deepcopy(roles)), \
+                 mock.patch.object(p,'read_regular',return_value=(status,{})), \
+                 mock.patch.object(p,'write_work_roles'):
+                outside,final=p.finish_cli('reference',context,ref_raw,ref_event,paths,
+                    provider_factory=lambda *_:edges,
+                    service_status=paths['work']/'service-status.original.json',current=True)
+            assert outside['firstFailure'] is None,outside['firstFailure']
+            assert len(final)==32,len(final)
+            grade=r.reference_original_current_v2(final,ref_raw,ref_event)
+            assert grade['buildOriginalJoined'] and grade['architectureObserved']
+            assert grade['actualRunApproved'] is False
+            stage_downgrade=copy.deepcopy(final)
+            stage=json.loads(stage_downgrade['node-stage.original.json'])
+            stage['schema']='bw.bochs-ring3.node-stage.v1'
+            stage_downgrade['node-stage.original.json']=p.canonical(stage)
+            row=json.loads(stage_downgrade['original.json'])
+            row['observations']['nodeStage']=copy.deepcopy(stage)
+            stage_downgrade['original.json']=p.canonical(row)
+            stage_downgrade['manifest.json']=p.canonical(p.original_manifest({
+                name:body for name,body in stage_downgrade.items() if name!='manifest.json'}))
+            try:
+                r.reference_original_current_v2(stage_downgrade,ref_raw,ref_event)
+            except r.Refusal:
+                pass
+            else:
+                raise AssertionError('current Reference admitted V1 stage')
+            mutated=copy.deepcopy(final)
+            stage=json.loads(mutated['node-stage.original.json'])
+            stage['invoker']['gid']=1001
+            stage['bootstrapCredentials']['gidArgument']='1001'
+            stage['bootstrapCredentials']['sudoGid']='1001'
+            mutated['node-stage.original.json']=p.canonical(stage)
+            original=json.loads(mutated['original.json'])
+            original['observations']['nodeStage']=copy.deepcopy(stage)
+            mutated['original.json']=p.canonical(original)
+            mutated['manifest.json']=p.canonical(p.original_manifest({
+                name:raw for name,raw in mutated.items() if name!='manifest.json'}))
+            try:
+                r.reference_original_current_v2(mutated,ref_raw,ref_event)
+            except r.Refusal:
+                pass
+            else:
+                raise AssertionError('coherent caller-GID replacement accepted')
+            return ref,ref_raw,ref_event,ref_env,final,grade
+
+        built=build()
+        try:
+            result=reference(built)
+            self.assertEqual(len(built[6]),31)
+            self.assertEqual(len(result[4]),32)
+            self.assertTrue(result[5]['architectureObserved'])
+            self.assertFalse(result[5]['actualRunApproved'])
+        finally:
+            built[1]()
+
+
+
+class PureDelegatedCleanupV2:
+    """Finite fake two-role kernel; genuine source performs every FD/remove step."""
+    def __init__(self,unit):
+        self.root=Path('/sys/fs/cgroup/system.slice')/unit;self.parent=self.root.parent
+        self.removed=set();self.fds={};self.events=[];self.next_fd=1000
+    def _directory(self,path):
+        path=Path(path)
+        if str(path) in self.removed:raise FileNotFoundError(2,'mock removed cgroup')
+        index={self.parent:90,self.root:1,self.root/'controller':2}.get(path)
+        producer.need(index is not None,'closed fake cgroup roster')
+        row=synthetic_stat(index,4096,0o40755);row['nlink']=2;return row
+    def _read(self,path,cap):
+        path=Path(path);self._directory(path.parent)
+        if path.name=='cgroup.procs':return ''
+        if path.name=='cgroup.events':return 'populated 0\nfrozen 0\n'
+        if path.name=='cgroup.stat':
+            count=int(path.parent==self.root and str(self.root/'controller') not in self.removed)
+            return 'nr_descendants '+str(count)+'\nnr_dying_descendants 0\n'
+        raise AssertionError('unexpected pseudo file')
+    def open(self,path,flags,mode=0o777,*,dir_fd=None):
+        path=Path(path) if dir_fd is None else self.fds[dir_fd]/path
+        self._directory(path);self.next_fd+=1;self.fds[self.next_fd]=path;return self.next_fd
+    def fstat(self,fd):
+        row=self._directory(self.fds[fd]);return SimpleNamespace(**{'st_'+k:row[v] for k,v in
+            (('dev','dev'),('ino','ino'),('mode','mode'),('uid','uid'),('gid','gid'),('nlink','nlink'),('size','size'),('mtime_ns','mtimeNs'),('ctime_ns','ctimeNs'))})
+    def close(self,fd):del self.fds[fd]
+    def rmdir(self,name,*,dir_fd):
+        path=self.fds[dir_fd]/name
+        producer.need(path in (self.root,self.root/'controller'),'only known fake removal')
+        producer.need(path!=self.root or str(self.root/'controller') in self.removed,'empty root before rmdir')
+        self.events.append(('rmdir',str(path)));self.removed.add(str(path))
+    def scandir(self,path):
+        path=Path(path);self._directory(path)
+        names=['controller'] if path==self.root and str(self.root/'controller') not in self.removed else []
+        entries=[SimpleNamespace(name=name,is_symlink=lambda:False,is_dir=lambda **_kw:True) for name in names]
+        class Scan:
+            def __init__(self):self.items=iter(entries)
+            def __enter__(self):return self
+            def __exit__(self,*args):return False
+            def __iter__(self):return self
+            def __next__(self):return next(self.items)
+        return Scan()
+    def hooks(self):
+        stack=contextlib.ExitStack()
+        for name in ('open','fstat','close','rmdir','scandir'):stack.enter_context(mock.patch.object(producer.os,name,getattr(self,name)))
+        return stack
+
+
+class V2WholeCleanupBudgetControls(unittest.TestCase):
+    def test_genuine_finalizer_reserves_known_errors_and_Node_before_first_rmdir(self):
+        _request,raw,event,env,_edges,inner,_outside,roles=toolchain_v2_sample()
+        unit=producer.route_paths('toolchain-v2',env)['unit'];plan=json.loads(roles['cleanup.original.json'])['inputPlan']
+        for overflow in (False,True):
+            with self.subTest(overflow=overflow):
+                kernel=PureDelegatedCleanupV2(unit)
+                class Edges(InventoryEdges):
+                    def cleanup(edge, original, *, outer=None):
+                        edge.outer=copy.deepcopy(outer)
+                        with kernel.hooks():
+                            return producer.cleanup_owned_cgroups('toolchain-v2',env,original,kernel,
+                                outer_base=outer,input_plan=plan,clock=itertools.count(1,1000).__next__)
+                    def unit(edge,name):
+                        self.assertEqual(name,unit)
+                        if str(kernel.root) in kernel.removed:return {'path':str(kernel.root),'exists':False,'errno':2,'identity':None,'files':{},'children':[]}
+                        return {'path':str(kernel.root),'exists':True,'errno':None,'identity':kernel._directory(kernel.root),'files':{},'children':['controller']}
+                edges=Edges();error=None
+                if overflow:
+                    error=producer.Refusal('known bounded manager failure')
+                    error.bochs_secondary=[producer.failure(OSError('x'*512),'known-receipt-close') for _ in range(producer.SECONDARY_LIMIT)]
+                outside,result=producer.finalize_original('toolchain-v2',raw,event,env,inner,dict(roles),0,0,edges,status_error=error,current=True)
+                self.assertEqual(kernel.fds,{})
+                if overflow:
+                    self.assertEqual(kernel.events,[])
+                    self.assertFalse(outside['manual']['complete'])
+                    self.assertEqual(outside['firstFailure']['phase'],'outside-service-status')
+                    self.assertEqual(len(edges.outer['secondary']),producer.SECONDARY_LIMIT)
+                    self.assertIsNone(outside['after']);self.assertEqual(outside['cleanupExitCode'],1)
+                else:
+                    self.assertTrue(outside['manual']['complete'],outside['manual']['firstFailure'])
+                    self.assertEqual([Path(path).name for _,path in kernel.events],['controller',unit])
+                    future={**outside,'nodeCleanup':json.loads(roles['outside.original.json'])['nodeCleanup']}
+                    self.assertLessEqual(len(producer.canonical(future)),16384)
 
 if __name__ == '__main__':
     unittest.main()

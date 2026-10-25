@@ -1,7 +1,9 @@
 # Bochs CPU3 Ring 3 reference source candidate
 
-Status: merged claim and source candidate armed for separate event admission. Build and reference execution
-are unselected and unqualified. The exact envelope is the
+Status: merged claim and metadata V2 amendment; inactive V2 source candidate.
+The consumed metadata V1 attempt failed and remains unqualified. New V2 and
+current Build/Reference execution guards are disabled; their events are
+unselected and unqualified. The exact envelope is the
 [new Bochs claim in LANES.md](../LANES.md). Preserve the separately owned
 same-job V3 cleanup lane and every consumed event/original.
 
@@ -62,12 +64,14 @@ the three events, with each executing workflow and request frozen separately.
 Source arming grants no actual approval. Actual result, whole OS,
 strict 386DX physical accuracy, timing/RTx and release approval remain false.
 
-The candidate has separate metadata, Build and Reference routes with source
-guards active and all events unselected. Connected manufactured controls join complete 31-role Build and 32-role
-Reference envelopes from the genuine collectors/finalizer to the standalone
-reader; coherent packet and official-join mutations refuse. This establishes
-source wiring only. Fresh
-exact-head CI and separate input/event admission remain necessary.
+The candidate preserves the consumed metadata V1 failure and its strict
+partial-packet refusal. Metadata V2 has a distinct inactive route and exact
+cache DATA owner/mode policy, separate from each protected bootstrap caller.
+Current Build/Reference inputs explicitly require V2 metadata and staging;
+legacy modes remain available only for interpreting old originals. Connected
+manufactured controls establish source wiring, not compiler or guest results.
+Fresh source review, exact-head CI and separate event/original admission are
+required before any new selection.
 
 The current runtime bundle contains no host-library, loader or Node bodies.
 It keeps the compiled Bochs payload, selected VGA, authored inputs, notices and
@@ -78,3 +82,11 @@ SHA256 values remain observed readback facts. This boundary does not prove a
 whole-system dependency closure or grant blanket licence clearance. Whole
 cleanup reservation precedes every deletion; unknown files, resource drift,
 close uncertainty or incomplete originals remain failures.
+
+Metadata V2 records fresh held/named ownership and bounded empty/member census
+before any cleanup mutation, independently of cache-content approval. Its
+complete prospective cleanup/error wire must fit 16 KiB before effects. The
+V1 created-empty directory facts do not establish live named or terminal
+cleanup, and cannot be upgraded by the repair. The existing pinned Node bytes,
+exclusive root copy/reopen/hash before publication, CPU wire, limits and
+component/source obligations remain unchanged.

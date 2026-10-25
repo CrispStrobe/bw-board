@@ -7036,3 +7036,16 @@ sixty-one pure controls, ordinary census and absence checks. No CPU, fixture,
 golden, package, dependency pin, library-distribution or other owner edits.
 No census row change is claimed. This docs amendment grants no compiler,
 guest, architectural, whole-host, physical or licence-clearance result.
+
+
+Amendment695 merged normally before V2 implementation. The inactive candidate
+adds a distinct metadata V2 job/schema and source-fixed cache DATA policy,
+separate from actual protected bootstrap caller credentials. V1 execution is
+closed; its failed original and unchanged reader refusal remain held. New
+current producer/reader guards remain FALSE. Build/Reference explicitly bind
+metadata V2 and V2 staged-node facts; historical helpers remain separate for
+old controls. Connected source controls exercise the genuine V2 copy,
+collector/finalizer and fresh held/named negative cleanup with manufactured
+kernel/provider edges only. No new event, compiler, guest or architectural
+result is selected or implied. Exact source review and every final-head check
+still precede any arming and one-shot original admission.

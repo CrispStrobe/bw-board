@@ -1,12 +1,14 @@
 # Bochs CPU3 Ring 3 reference source
 
-Status: source candidate armed for separate event admission. The `toolchain`,
-`build` and `reference` producer/reader flags and their labeled workflow guards
-are active; all requests and events remain unselected. Every enabled final-head
-source check and independent admission precede each event. No Bochs compiler,
-reference execution or guest result follows from source activation.
+Status: inactive metadata V2 source candidate under merged amendment
+[PR695](https://github.com/CrispStrobe/bw-board/pull/695). Metadata V1 was
+selected once and failed before reading/copying Node bytes; its ten-role partial
+packet and unchanged positive-reader refusal remain held. V1 execution is
+closed. The new `toolchain-v2` and current Build/Reference producer and reader
+guards are FALSE. No V2, Build or Reference event is selected, and no compiler,
+Node guest or architectural result follows from these source controls.
 
-The three routes have distinct requests, labels, jobs, units, originals and
+The three current routes have distinct requests, labels, jobs, units, originals and
 readers. Each job must first authenticate the selected source checkout and the
 executing workflow checkout. It then admits the exact owner event and canonical
 request before any privileged service or selected tool input. The six named
@@ -27,6 +29,37 @@ it. The selected compiler identity requires separate metadata admission. The
 source, VGA binary and corresponding source notices must remain exact and
 traceable. No fallback download, local package install or executable probe is
 part of these source controls.
+
+Metadata V2 treats the cache only as source-fixed DATA: Node 22.23.3 at the
+fixed toolcache path, uid 1001/gid 1000, regular mode 0100777, one link,
+124827920 bytes and the unchanged pinned SHA256. Authenticate each caller
+separately through the trusted bootstrap's actual id-u/id-g arguments, SUDO
+checks and protected root context/source ownership. The retained bootstrap
+scalar facts are source-bound observations, not independent kernel caller or
+whole-host attestation. Caller 1001:1001 and provider 1001:1000 are a required
+realistic control; no request or cache inode may choose caller credentials.
+Only a complete root-owned private0600 copy and independent full reopen/hash
+can become the same readonly0555 staged executable. Cache DATA never executes.
+
+The new metadata job/label/artifact/request/marker and variables contain V2;
+its CLI route is `toolchain-v2`. The disabled V1 job remains a fourth workflow
+job, so metadata selection expects exactly one V2 job and three declared skips.
+Current Build inputs add an exact metadata-reference schema, job name and
+integer version2; Reference binds the same three-field metadata identity in
+its selected Build. Current execution cannot accept a V1-only metadata or
+stage packet. Legacy reader modes remain for old originals; current intake
+uses `toolchain-v2`, `build-current-v2` or `reference-current-v2` explicitly.
+
+V2 negative cleanup authenticates source-created stage state independently of
+positive cache admission. Its readonly plan captures fresh held/named parent,
+directory and known-member identities plus the exact bounded census. A proven
+empty private root may be removed even after input rejection; unknown member,
+identity or missing live proof refuses. The complete prospective Node/manual/
+library/outside/error journal still fits the unchanged 16 KiB cap before the
+first effect. Nine-field compact stat rows retain every original integer.
+Successful negative cleanup cannot approve incomplete metadata or an executable.
+The V1 original recorded initial created-empty facts without live named or
+terminal absence proof; this source repair cannot retrospectively supply it.
 
 Proposed hosted envelopes are one CPU throughout: toolchain inventory 512 MiB,
 no swap, 32 tasks and a five-minute job; standalone build 2 GiB, no swap, 64

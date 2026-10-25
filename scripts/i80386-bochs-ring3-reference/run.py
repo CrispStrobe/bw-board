@@ -32,7 +32,10 @@ import urllib.error
 import zipfile
 import zlib
 
-TOOLCHAIN_ENABLED = True
+TOOLCHAIN_ENABLED = False
+TOOLCHAIN_V2_ENABLED = False
+BUILD_CURRENT_V2_ENABLED = False
+REFERENCE_CURRENT_V2_ENABLED = False
 BUILD_ENABLED = True
 REFERENCE_ENABLED = True
 REPOSITORY = 'CrispStrobe/bw-board'
@@ -72,6 +75,8 @@ SOURCE_PATHS = tuple('scripts/i80386-bochs-ring3-reference/' + name for name in
     'package-lock.json', 'LICENSE')
 WORKFLOW = '.github/workflows/i80386-bochs-ring3-reference.yml'
 ROUTES = {
+    'toolchain-v2': ('bochs-ring3-toolchain-inventory-v2', 'x86-bochs-ring3-toolchain-inventory-v2',
+                     'BW_BOCHS_RING3_TOOLCHAIN_V2_REQUEST'),
     'toolchain': ('bochs-ring3-toolchain-inventory-v1', 'x86-bochs-ring3-toolchain-inventory-v1',
                   'BW_BOCHS_RING3_TOOLCHAIN_REQUEST'),
     'build': ('bochs-ring3-build-v1', 'x86-bochs-ring3-build-v1', 'BW_BOCHS_RING3_BUILD_REQUEST'),
@@ -97,6 +102,7 @@ LIMITS = {
                   'perFileWriteBytes': 4194304, 'archiveBytes': 100663296,
                   'expandedBytes': 402653184, 'members': 6144,
                   'cleanupBytes': 16384, 'cleanupSamples': 6, 'cleanupSeconds': 5}}
+LIMITS['toolchain-v2'] = dict(LIMITS['toolchain'])
 ERROR_LIMIT = 512
 SECONDARY_LIMIT = 16
 HEX = re.compile(r'[0-9a-f]{64}\Z')
@@ -1401,16 +1407,16 @@ def collect_toolchain(request_raw, event_raw, env, ops):
 
 
 def finalize_original(route, request_raw, event_raw, env, inner, roles,
-                      service_exit, client_exit, ops, *, input_cleanup=None, pre_cleanup_error=None, status_error=None):
+                      service_exit, client_exit, ops, *, input_cleanup=None, pre_cleanup_error=None, status_error=None, current=False):
     """Outside join is honest even when an inner original was never readable."""
-    request = admitted_request(route, request_raw, event_raw, env)
+    request = selected_request(route, request_raw, event_raw, env, current=current)
     if service_exit is not None:
         integer(service_exit, 0, 255, 'actual retained service exit code')
     if client_exit is not None:
         integer(client_exit, 0, 255, 'actual retained outer client exit code')
     outside = {'schema': 'bw.bochs-ring3.outside.v1', 'route': route,
                'runId': env['GITHUB_RUN_ID'], 'runAttempt': 1,
-               'unit': 'bw-bochs-' + route + '-v1-' + env['GITHUB_RUN_ID'] + '-1.service',
+               'unit': route_paths(route, env)['unit'],
                'serviceExitCode': service_exit, 'clientExitCode': client_exit,
                'cleanupExitCode': 1, 'innerComplete': False, 'innerFirstFailure': None,
                'before': None, 'after': None, 'manual': None,
@@ -1430,7 +1436,7 @@ def finalize_original(route, request_raw, event_raw, env, inner, roles,
     if inner is not None:
         try:
             need(type(inner) is dict and inner.get('schema') ==
-                 'bw.bochs-ring3.' + route + '-original.v1' and
+                 route_original_schema(route) and
                  inner.get('requestSha256') == sha256(request_raw) and
                  inner.get('eventSha256') == sha256(event_raw), 'bound inner original')
             outside['innerComplete'] = inner.get('complete') is True
@@ -2787,20 +2793,24 @@ def collect_reference(request_raw, event_raw, env, ops):
     return value, roles
 
 
-def dispatch(route, request_raw, event_raw, env, ops_factory):
+def dispatch(route, request_raw, event_raw, env, ops_factory, *, current=False):
     need(route in ROUTES, 'known source-owned route')
-    enabled = {'toolchain': TOOLCHAIN_ENABLED, 'build': BUILD_ENABLED,
+    enabled = {'toolchain-v2': TOOLCHAIN_V2_ENABLED, 'toolchain': TOOLCHAIN_ENABLED, 'build': BUILD_ENABLED,
                'reference': REFERENCE_ENABLED}[route]
+    if current and route in ('build','reference'):
+        enabled={'build':BUILD_CURRENT_V2_ENABLED,'reference':REFERENCE_CURRENT_V2_ENABLED}[route]
     need(enabled is True, 'Bochs source route inactive; no host factory or input execution')
-    request = admitted_request(route, request_raw, event_raw, env)
+    request = selected_request(route, request_raw, event_raw, env, current=current)
     if route == 'build':
-        admit_build_inputs(request)
+        (admit_build_inputs_v2 if current else admit_build_inputs)(request)
     ops = ops_factory(request, env)
+    if route == 'toolchain-v2':
+        return collect_toolchain_v2(request_raw, event_raw, env, ops)
     if route == 'toolchain':
         return collect_toolchain(request_raw, event_raw, env, ops)
     if route == 'build':
-        return collect_build(request_raw, event_raw, env, ops)
-    return collect_reference(request_raw, event_raw, env, ops)
+        return (collect_build_v2 if current else collect_build)(request_raw, event_raw, env, ops)
+    return (collect_reference_v2 if current else collect_reference)(request_raw, event_raw, env, ops)
 
 
 class ChildKernel:
@@ -3313,9 +3323,13 @@ CONTEXT_ENV = ('GITHUB_ACTIONS', 'GITHUB_REPOSITORY', 'GITHUB_ACTOR', 'GITHUB_EV
 SERVICE_SHOW_PROPERTIES = 'Id,Result,ExecMainCode,ExecMainStatus,ActiveState,ControlGroup'
 
 
-def route_enabled(route):
+def route_enabled(route, *, current=False):
     need(route in ROUTES, 'known source-owned route')
-    need({'toolchain': TOOLCHAIN_ENABLED, 'build': BUILD_ENABLED,
+    if current and route in ('build','reference'):
+        need({'build':BUILD_CURRENT_V2_ENABLED,'reference':REFERENCE_CURRENT_V2_ENABLED}[route] is True,
+             'Bochs current source route inactive; no input or execution edge')
+        return
+    need({'toolchain-v2': TOOLCHAIN_V2_ENABLED, 'toolchain': TOOLCHAIN_ENABLED, 'build': BUILD_ENABLED,
           'reference': REFERENCE_ENABLED}[route] is True,
          'Bochs source route inactive; no host factory or input execution')
 
@@ -3323,7 +3337,7 @@ def route_enabled(route):
 def route_paths(route, env):
     need(route in ROUTES and re.fullmatch(r'[1-9][0-9]{0,19}', env.get('GITHUB_RUN_ID', '')) and
          env.get('GITHUB_RUN_ATTEMPT') == '1', 'fixed first-attempt run root')
-    stem = 'bw-bochs-' + route + '-v1-' + env['GITHUB_RUN_ID'] + '-1'
+    stem = 'bw-bochs-' + ('toolchain-v2' if route == 'toolchain-v2' else route + '-v1') + '-' + env['GITHUB_RUN_ID'] + '-1'
     return {'work': Path('/run') / (stem + '-work'),
             'output': Path('/run') / (stem + '-originals'),
             'node': Path('/run') / (stem + '-node'), 'unit': stem + '.service'}
@@ -3399,8 +3413,8 @@ def publish_root_mode(path, mode, *, directory=False):
         raise primary
 
 
-def admit_cli(route, env, workflow_root, invoker_uid, invoker_gid):
-    route_enabled(route)  # before environment reads, paths or factories
+def admit_cli(route, env, workflow_root, invoker_uid, invoker_gid, *, current=False):
+    route_enabled(route, current=current)  # before environment reads, paths or factories
     integer(invoker_uid, 1, 65534, 'trusted workflow invoker UID')
     integer(invoker_gid, 1, 65534, 'trusted workflow invoker GID')
     need(os.geteuid() == os.getuid() == os.getgid() == os.getegid() == 0,
@@ -3414,7 +3428,7 @@ def admit_cli(route, env, workflow_root, invoker_uid, invoker_gid):
     request_raw = base64.b64decode(encoded, validate=True)
     event_raw, _fact = read_regular(public['GITHUB_EVENT_PATH'], EVENT_CAP, minimum=1,
                                     owner=invoker_uid, group=invoker_gid)
-    request = admitted_request(route, request_raw, event_raw, public)
+    request = selected_request(route, request_raw, event_raw, public, current=current)
     source_root = Path(public['GITHUB_WORKSPACE']) / 'producer-source'
     workflow_root = Path(workflow_root)
     need(workflow_root == Path(public['GITHUB_WORKSPACE']) / 'workflow-source',
@@ -3438,14 +3452,18 @@ def admit_cli(route, env, workflow_root, invoker_uid, invoker_gid):
         'env': public, 'invoker': {'uid': invoker_uid, 'gid': invoker_gid},
         'sourceRoot': str(source_root), 'workflowRoot': str(workflow_root),
         'source': observed, 'requestSha256': sha256(request_raw), 'eventSha256': sha256(event_raw)}
+    if current:
+        context['bootstrapCredentials'] = {'schema':'bw.bochs-ring3.bootstrap-caller.v1',
+            'uidArgument':str(invoker_uid),'gidArgument':str(invoker_gid),
+            'sudoUid':env['SUDO_UID'],'sudoGid':env['SUDO_GID']}
     retain_exclusive(paths['work'] / 'context.original.json', canonical(context), 131072)
     sealed_write(paths['output'] / 'request.original.json', request_raw, REQUEST_CAP)
     sealed_write(paths['output'] / 'event.original.json', event_raw, EVENT_CAP)
     return context
 
 
-def load_cli_context(route, env):
-    route_enabled(route)
+def load_cli_context(route, env, *, current=False):
+    route_enabled(route, current=current)
     need(os.geteuid() == os.getuid() == os.getgid() == os.getegid() == 0,
          'source-owned root continuation')
     public = public_context_environment(route, env)
@@ -3456,7 +3474,7 @@ def load_cli_context(route, env):
     context = raw_object(raw, 131072)
     need(canonical(context) == raw, 'canonical protected context')
     closed(context, ('schema', 'route', 'env', 'invoker', 'sourceRoot', 'workflowRoot',
-                     'source', 'requestSha256', 'eventSha256'), 'closed protected context')
+                     'source', 'requestSha256', 'eventSha256', * (('bootstrapCredentials',) if current else ())), 'closed protected context')
     need(context['schema'] == 'bw.bochs-ring3.protected-context.v1' and
          context['route'] == route and context['env'] == public, 'continuation context/event environment')
     closed(context['invoker'], ('uid', 'gid'), 'closed trusted invoker')
@@ -3465,11 +3483,13 @@ def load_cli_context(route, env):
     need(context['sourceRoot'] == str(Path(public['GITHUB_WORKSPACE']) / 'producer-source') and
          context['workflowRoot'] == str(Path(public['GITHUB_WORKSPACE']) / 'workflow-source'),
          'source-owned checkout paths')
+    if current:
+        bootstrap_caller_scalars(context['bootstrapCredentials'], context['invoker'])
     request_raw, _fact = read_regular(paths['output'] / 'request.original.json', REQUEST_CAP, minimum=1)
     event_raw, _fact = read_regular(paths['output'] / 'event.original.json', EVENT_CAP, minimum=1)
     need(sha256(request_raw) == context['requestSha256'] and
          sha256(event_raw) == context['eventSha256'], 'exact protected request/event bytes')
-    request = admitted_request(route, request_raw, event_raw, public)
+    request = selected_request(route, request_raw, event_raw, public, current=current)
     need(observe_source(context['sourceRoot'], request['source'], public, context['workflowRoot']) ==
          context['source'], 'current source equals admitted protected context')
     return context, request_raw, event_raw, paths
@@ -3645,14 +3665,14 @@ def retained_output_roles(paths, route):
     return result
 
 
-def work_cli(route, context, request_raw, event_raw, paths, *, provider_factory):
-    route_enabled(route)
+def work_cli(route, context, request_raw, event_raw, paths, *, provider_factory, current=False):
+    route_enabled(route, current=current)
     # Exclusive durable boundary before any data acquisition or possible execution.
     sealed_write(paths['work'] / 'work-attempt.original.json', canonical({
         'schema': 'bw.bochs-ring3.work-attempt.v1', 'route': route,
         'requestSha256': sha256(request_raw), 'eventSha256': sha256(event_raw)}), 4096)
     ops = provider_factory(route, context, paths)
-    value, roles = dispatch(route, request_raw, event_raw, context['env'], lambda _request, _env: ops)
+    value, roles = dispatch(route, request_raw, event_raw, context['env'], lambda _request, _env: ops, current=current)
     inner_root = paths['work'] / 'inner-originals'
     os.mkdir(inner_root, 0o755)
     publish_root_mode(inner_root, 0o755, directory=True)
@@ -3661,8 +3681,8 @@ def work_cli(route, context, request_raw, event_raw, paths, *, provider_factory)
 
 
 def finish_cli(route, context, request_raw, event_raw, paths, *, provider_factory,
-               service_status, claimed_service=None, claimed_client=None):
-    route_enabled(route)
+               service_status, claimed_service=None, claimed_client=None, current=False):
+    route_enabled(route, current=current)
     need(Path(service_status) == paths['work'] / 'service-status.original.json',
          'fixed service status original path')
     # No cleanup/finish replay even when a preceding attempt retained a failure.
@@ -3676,7 +3696,7 @@ def finish_cli(route, context, request_raw, event_raw, paths, *, provider_factor
         roles = {name: read_regular(paths['output'] / name, EVENT_CAP, minimum=1)[0]
                  for name in ('request.original.json', 'event.original.json')}
     roles.pop('manifest.json', None)  # new final manifest is a separate phase below
-    key = {'toolchain': 'original.json', 'build': 'build.original.json',
+    key = {'toolchain-v2': 'original.json', 'toolchain': 'original.json', 'build': 'build.original.json',
            'reference': 'original.json'}[route]
     inner = raw_object(roles[key], LIMITS[route]['expandedBytes']) if key in roles else None
     status = None
@@ -3725,7 +3745,7 @@ def finish_cli(route, context, request_raw, event_raw, paths, *, provider_factor
     outside, roles = finalize_original(route, request_raw, event_raw, context['env'], inner,
                                        roles, service_exit, client_exit, ops,
                                        input_cleanup=input_cleanup, pre_cleanup_error=pre_cleanup_error,
-                                       status_error=status_error)
+                                       status_error=status_error, current=current)
     # A separately retained Node cleanup is required even for a metadata route:
     # no positive outside verdict while its root-owned staged executable remains.
     outside['nodeCleanup'] = None
@@ -4891,7 +4911,9 @@ class LiveOps:
         for name in ('home', 'tmp'):
             caller_directory(self.paths['work'] / name, self.invoker['uid'], self.invoker['gid'])
         need(self.stage is None, 'source-owned one Node stage')
-        self.stage = NodeStageCopy(self.route, self.env, (self.invoker['uid'], self.invoker['gid']))
+        stage_type = NodeStageCopy if self.route == 'toolchain' else NodeStageCopyV2
+        extra = {} if self.route == 'toolchain' else {'bootstrap': self.context['bootstrapCredentials']}
+        self.stage = stage_type(self.route, self.env, (self.invoker['uid'], self.invoker['gid']), **extra)
         return self.stage.copy()
     def node_after(self, *, full_hash):
         need(self.stage is not None, 'Node stage exists before after-readback')
@@ -4969,8 +4991,10 @@ class LiveOps:
             result[source_path] = (path, raw)
         return result
     def observer(self, value):
-        return observer_facts(value, self.env, pid=os.getpid(), uid=os.getuid(), gid=os.getgid(),
-                              started_ns=self.started_ns, ended_ns=time.monotonic_ns())
+        function = observer_facts_v2 if self.route == 'toolchain-v2' else observer_facts
+        extra = {'invoker': self.invoker, 'bootstrap': self.context['bootstrapCredentials']} if self.route == 'toolchain-v2' else {}
+        return function(value, self.env, pid=os.getpid(), uid=os.getuid(), gid=os.getgid(),
+                        started_ns=self.started_ns, ended_ns=time.monotonic_ns(), **extra)
     def _selected_upstream_readback(self):
         result = {}
         for row in self.selected_rows['rows']:
@@ -5291,7 +5315,9 @@ class LiveOps:
                 'hostRuntimeCleanup': {'role': 'host-runtime.original.json',
                     'bytes': plan['roleReservedBytes'], 'sha256': 'f' * 64}}
     def cleanup(self, inner=None, *, outer=None):
-        plan = node_cleanup_wire_plan(self.route, self.env, inner)
+        use_v2 = self.route=='toolchain-v2' or (type(stage_facts_v2(inner)) is dict and stage_facts_v2(inner).get('schema')=='bw.bochs-ring3.node-stage.v2')
+        plan=(node_cleanup_wire_plan_v2 if use_v2 else node_cleanup_wire_plan)(self.route,self.env,inner)
+        self.node_cleanup_plan=plan
         if self.route in ('build', 'reference'):
             need(getattr(self, 'host_cleanup_plan', None) is not None and
                  outer is not None and outer.get('hostRuntimePlan') is not None,
@@ -5306,6 +5332,9 @@ class LiveOps:
         need(len(raw) <= plan['roleReservedBytes'] <= 1048576, 'final host runtime original bound')
         return raw
     def node_cleanup(self, inner):
+        if self.route=='toolchain-v2' or (type(stage_facts_v2(inner)) is dict and stage_facts_v2(inner).get('schema')=='bw.bochs-ring3.node-stage.v2'):
+            need(getattr(self,'node_cleanup_plan',None) is not None, 'V2 plan reserved before any cleanup effect')
+            return cleanup_node_stage_v2(self.route,self.env,inner,self.node_cleanup_plan)
         return cleanup_node_stage(self.route, self.env, inner)
     def close(self):
         if self.stage is not None:
@@ -5327,6 +5356,1300 @@ def parse_exit(text):
     return value
 
 
+# V2 DATA provider identity is independent of protected bootstrap caller IDs.
+NODE_CACHE_UID_V2 = 1001
+NODE_CACHE_GID_V2 = 1000
+
+def admitted_request_v2(route, raw, event_raw, env):
+    need(route == 'toolchain-v2', 'distinct metadata V2 route')
+    value = request_object(raw)
+    closed(value, ('schema','repository','pullRequest','source','policySha256','limits'), 'closed V2 metadata request')
+    need(value['schema'] == 'bw.bochs-ring3.toolchain-request.v2' and
+         value['repository'] == REPOSITORY and HEX.fullmatch(value['policySha256']), 'V2 request identity')
+    need(canonical(value['limits']) == canonical(LIMITS[route]), 'unchanged V2 metadata bounds')
+    admit_source_shape(value['source'])
+    admit_event(route, value, raw, event_raw, env)
+    return value
+
+def selected_request(route, raw, event_raw, env, *, current=False):
+    if current and route in ('build','reference'):
+        value = admitted_request(route, raw, event_raw, env)
+        (admit_build_inputs_v2 if route == 'build' else admit_reference_inputs_v2)(value)
+        return value
+    return (admitted_request_v2 if route == 'toolchain-v2' else admitted_request)(route, raw, event_raw, env)
+
+def route_original_schema(route):
+    return 'bw.bochs-ring3.toolchain-original.v2' if route == 'toolchain-v2' else 'bw.bochs-ring3.' + route + '-original.v1'
+
+def check_current_node_stage(facts, route, env, *, after=False):
+    if type(facts) is dict and facts.get('schema') == 'bw.bochs-ring3.node-stage.v2':
+        return check_node_stage_v2(facts, route, env, after=after)
+    return check_node_stage(facts, route, env, after=after)
+
+def observer_facts_v2(value, env, *, pid, uid, gid, started_ns, ended_ns, invoker, bootstrap):
+    observed = observer_facts(value, env, pid=pid, uid=uid, gid=gid, started_ns=started_ns, ended_ns=ended_ns)
+    closed(invoker, ('uid','gid'), 'protected actual bootstrap caller')
+    integer(invoker['uid'],1,65534,'bootstrap caller UID')
+    integer(invoker['gid'],1,65534,'bootstrap caller GID')
+    observed['schema'] = 'bw.bochs-ring3.toolchain-observer.v2'
+    bootstrap_caller_scalars(bootstrap, invoker)
+    observed['invoker'] = dict(invoker)
+    observed['bootstrapCredentials'] = dict(bootstrap)
+    return observed
+
+class NodeStageCopyV2:
+    """Adapted from the held MIT NodeStageCopy: cache DATA never executes.
+
+    Exactly one copy, exclusive private root destination, full independent
+    reopen/hash, then readonly publication. No actual copy runs in controls.
+    """
+    def __init__(self, route, env, invoker, bootstrap):
+        self.path = route_paths(route, env)['node']
+        bootstrap_caller_scalars(bootstrap, {'uid':invoker[0], 'gid':invoker[1]})
+        self.invoker = tuple(invoker)
+        need(len(self.invoker) == 2 and all(type(x) is int and 1 <= x < 2 ** 31 for x in self.invoker),
+             'source-authenticated nonroot Node cache invoker identity')
+        self.fds, self.bindings = {}, {}
+        self.sparse_node = None
+        self.attempted = False
+        self.facts = {'bootstrapCredentials': dict(bootstrap), 'schema': 'bw.bochs-ring3.node-stage.v2', 'sourcePath': NODE_PATH,
+            'stagePath': str(self.path / 'node'), 'recordPath': str(self.path / 'stage.json'),
+            'invoker': {'uid': invoker[0], 'gid': invoker[1]},
+            'metadataFields': list(NODE_METADATA_FIELDS), 'created': [],
+            'sourceBefore': None, 'sourceAfter': None, 'sourceNamedAfter': None,
+            'sourceBytesRead': 0, 'bytesCopied': 0, 'writeUncertain': False,
+            'copiedSha256': None, 'readbackBytes': 0, 'readbackSha256': None,
+            'elfReadBytes': 0, 'elf': None, 'fileBeforePublication': None,
+            'parents': {}, 'directoryInitial': None, 'fileInitial': None,
+            'targetAfterFailure': None, 'directoryAfterFailure': None,
+            'lastOperation': None,
+            'file': None, 'fileNamed': None, 'directoryBeforePublication': None,
+            'directory': None, 'directoryNamed': None,
+            'filePublicationAttempted': False, 'directoryPublicationAttempted': False,
+            'filePublished': False, 'directoryPublished': False, 'record': None,
+            'checkedAfter': None,
+            'firstFailure': None, 'secondary': []}
+    @staticmethod
+    def metadata(info):
+        return [getattr(info, 'st_' + name) for name in NODE_METADATA_FIELDS]
+    def error(self, exc, phase):
+        current = self.facts['lastOperation'] or {}
+        item = failure(exc, phase, current.get('role'), current.get('path'))
+        if self.facts['firstFailure'] is None:
+            self.facts['firstFailure'] = item
+        elif len(self.facts['secondary']) < SECONDARY_LIMIT:
+            self.facts['secondary'].append(item)
+    def directory(self, path):
+        self.facts['lastOperation'] = {'role': 'node-stage-directory', 'path': str(path), 'operation': 'open/readback'}
+        parent = self.fds.get(path.parent)
+        fd = os.open(path if parent is None else path.name,
+                     os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC,
+                     **({} if parent is None else {'dir_fd': parent}))
+        self.fds[path] = fd
+        held, named = self.metadata(os.fstat(fd)), self.metadata(path.lstat())
+        need(path.resolve(strict=True) == path and held == named and stat.S_ISDIR(held[2]) and
+             held[3:5] == [0, 0] and held[2] & 0o022 == 0, 'held root-owned Node-stage directory')
+        self.bindings[path] = held
+        if path == self.path:
+            self.facts['directoryInitial'] = held
+        else:
+            self.facts['parents'][str(path)] = {'before': held, 'namedBefore': named,
+                                               'after': None, 'namedAfter': None}
+        return fd
+    def recheck(self):
+        for path, fd in self.fds.items():
+            self.facts['lastOperation'] = {'role': 'node-stage-directory', 'path': str(path), 'operation': 'held/named readback'}
+            held, named = self.metadata(os.fstat(fd)), self.metadata(path.lstat())
+            need(held[:5] == named[:5] == self.bindings[path][:5] and
+                 path.resolve(strict=True) == path, 'Node-stage parent first-five identity')
+            if str(path) in self.facts['parents']:
+                self.facts['parents'][str(path)]['after'] = held
+                self.facts['parents'][str(path)]['namedAfter'] = named
+    def close_fd(self, fd, phase, role=None, path=None):
+        if fd is not None:
+            self.facts['lastOperation'] = {'role': role, 'path': path, 'operation': 'close-held'}
+            try:
+                os.close(fd)
+            except BaseException as exc:
+                self.error(exc, phase)
+    def copy(self):
+        need(not self.attempted, 'Node stage consumed; no copy retry')
+        try:
+            return self._copy()
+        except BaseException as exc:
+            if self.facts['firstFailure'] is None:
+                self.error(exc, 'node-stage')
+            exc.bochs_partial = {'nodeStage': self.facts}
+            exc.bochs_first = self.facts['firstFailure']
+            exc.bochs_secondary = self.facts['secondary']
+            raise
+    def _copy(self):
+        need(not self.attempted, 'Node stage consumed; no copy retry')
+        self.attempted = True
+        source_fd = target_fd = None
+        try:
+            need(os.getresuid() == (0, 0, 0) and os.getresgid() == (0, 0, 0), 'root-only Node data staging')
+            self.directory(Path('/'))
+            parent = self.directory(Path('/run'))
+            self.recheck()
+            os.mkdir(self.path.name, 0o700, dir_fd=parent)
+            self.facts['created'].append(str(self.path))
+            directory = self.directory(self.path)
+            need(stat.S_IMODE(self.bindings[self.path][2]) == 0o700, 'private unpublished Node stage')
+            source = Path(NODE_PATH)
+            self.facts['lastOperation'] = {'role': 'node-cache-data', 'path': NODE_PATH, 'operation': 'open/readback'}
+            need(source.resolve(strict=True) == source, 'canonical fixed Node cache DATA path')
+            source_fd = os.open(NODE_PATH, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+            before = self.metadata(os.fstat(source_fd))
+            self.facts['sourceBefore'] = before
+            need(before == self.metadata(source.lstat()) and stat.S_ISREG(before[2]) and
+                 before[5] == 1 and before[6] == NODE_BYTES and before[2] & 0o6000 == 0 and
+                 before[2:5] == [stat.S_IFREG | 0o777, NODE_CACHE_UID_V2, NODE_CACHE_GID_V2],
+                 'bounded single-link Node cache DATA, not executable authority')
+            self.facts['lastOperation'] = {'role': 'node-staged-executable', 'path': str(self.path / 'node'), 'operation': 'exclusive create'}
+            target_fd = os.open('node', os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW |
+                                os.O_NONBLOCK | os.O_CLOEXEC, 0o600, dir_fd=directory)
+            self.facts['created'].append(str(self.path / 'node'))
+            first = self.metadata(os.fstat(target_fd))
+            self.facts['fileInitial'] = first
+            need(stat.S_ISREG(first[2]) and stat.S_IMODE(first[2]) == 0o600 and
+                 first[3:7] == [0, 0, 1, 0], 'fresh nonexecutable root Node output')
+            digest = hashlib.sha256()
+            prefix = b''
+            while True:
+                self.facts['lastOperation'] = {'role': 'node-cache-data', 'path': NODE_PATH, 'operation': 'bounded read'}
+                chunk = os.read(source_fd, min(65536, NODE_BYTES + 1 - self.facts['sourceBytesRead']))
+                if not chunk:
+                    break
+                self.facts['sourceBytesRead'] += len(chunk)
+                need(self.facts['sourceBytesRead'] <= NODE_BYTES, 'fixed Node data copy cap')
+                digest.update(chunk)
+                prefix = (prefix + chunk)[:4]
+                try:
+                    self.facts['lastOperation'] = {'role': 'node-staged-executable', 'path': str(self.path / 'node'), 'operation': 'once-only chunk write'}
+                    written = os.write(target_fd, chunk)
+                except BaseException:
+                    self.facts['writeUncertain'] = True
+                    raise
+                need(type(written) is int and 0 <= written <= len(chunk), 'bounded Node chunk write')
+                self.facts['bytesCopied'] += written
+                need(written == len(chunk), 'complete once-only Node chunk write')
+            self.facts['copiedSha256'] = digest.hexdigest()
+            self.facts['lastOperation'] = {'role': 'node-cache-data', 'path': NODE_PATH, 'operation': 'held/named after readback'}
+            self.facts['sourceAfter'] = self.metadata(os.fstat(source_fd))
+            self.facts['sourceNamedAfter'] = self.metadata(source.lstat())
+            need(self.facts['sourceBytesRead'] == self.facts['bytesCopied'] == NODE_BYTES and
+                 digest.hexdigest() == NODE_SHA256 and prefix == b'\x7fELF' and
+                 before == self.facts['sourceAfter'] == self.facts['sourceNamedAfter'] and
+                 source.resolve(strict=True) == source, 'fixed Node bytes and source held/named stability')
+            need(self.metadata(os.fstat(target_fd))[3:7] == [0, 0, 1, NODE_BYTES], 'complete private Node output')
+            self.facts['lastOperation'] = {'role': 'node-staged-executable', 'path': str(self.path / 'node'), 'operation': 'fsync'}
+            os.fsync(target_fd)
+        except BaseException as exc:
+            self.error(exc, 'node-copy')
+            for key, observe in (
+                ('sourceAfter', lambda: os.fstat(source_fd) if source_fd is not None else None),
+                ('sourceNamedAfter', lambda: Path(NODE_PATH).lstat() if source_fd is not None else None),
+                ('targetAfterFailure', lambda: os.fstat(target_fd) if target_fd is not None else None),
+                ('directoryAfterFailure', lambda: os.fstat(self.fds[self.path]) if self.path in self.fds else None)):
+                try:
+                    info = observe()
+                    if info is not None:
+                        self.facts[key] = self.metadata(info)
+                except BaseException as extra:
+                    self.error(extra, 'node-copy-failure-stat')
+        finally:
+            self.close_fd(target_fd, 'node-copy-target-close', 'node-staged-executable', str(self.path / 'node'))
+            self.close_fd(source_fd, 'node-copy-source-close', 'node-cache-data', NODE_PATH)
+        if self.facts['firstFailure'] is not None:
+            error = Refusal(self.facts['firstFailure']['message'])
+            error.bochs_partial = {'nodeStage': self.facts}
+            raise error
+        self.recheck()
+        directory = self.fds[self.path]
+        fd = None
+        try:
+            self.facts['lastOperation'] = {'role': 'node-staged-executable', 'path': str(self.path / 'node'), 'operation': 'independent reopen/hash'}
+            fd = os.open('node', os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC,
+                         dir_fd=directory)
+            before = self.metadata(os.fstat(fd))
+            need(before == self.metadata(os.stat('node', dir_fd=directory, follow_symlinks=False)) and
+                 stat.S_ISREG(before[2]) and stat.S_IMODE(before[2]) == 0o600 and
+                 before[3:7] == [0, 0, 1, NODE_BYTES], 'independent root Node reopen')
+            self.facts['fileBeforePublication'] = before
+            digest = hashlib.sha256()
+            while True:
+                chunk = os.read(fd, min(65536, NODE_BYTES + 1 - self.facts['readbackBytes']))
+                if not chunk:
+                    break
+                self.facts['readbackBytes'] += len(chunk)
+                need(self.facts['readbackBytes'] <= NODE_BYTES, 'independent Node readback cap')
+                digest.update(chunk)
+            self.facts['readbackSha256'] = digest.hexdigest()
+            need(self.facts['readbackBytes'] == NODE_BYTES and digest.hexdigest() == NODE_SHA256 and
+                 before == self.metadata(os.fstat(fd)) ==
+                 self.metadata(os.stat('node', dir_fd=directory, follow_symlinks=False)),
+                 'independent complete Node bytes before executable publication')
+            def read_at(offset, count):
+                self.facts['elfReadBytes'] += count
+                need(self.facts['elfReadBytes'] <= 2097152, 'bounded staged Node ELF range reads')
+                return os.pread(fd, count, offset)
+            self.sparse_node = sparse_elf_from_reader(NODE_BYTES, read_at, self.facts['readbackSha256'])
+            self.facts['elf'] = {key: value for key, value in self.sparse_node['structure'].items()
+                                 if key != 'soname'}
+            need(self.facts['elf']['rpath'] is None and self.facts['elf']['runpath'] is None,
+                 'staged Node has no RPATH/RUNPATH')
+            self.facts['filePublicationAttempted'] = True
+            os.fchmod(fd, 0o555)
+            self.facts['file'] = self.metadata(os.fstat(fd))
+            self.facts['fileNamed'] = self.metadata(os.stat('node', dir_fd=directory, follow_symlinks=False))
+            need(stat.S_IMODE(self.facts['file'][2]) == 0o555 and
+                 self.facts['file'][3:7] == [0, 0, 1, NODE_BYTES] and
+                 self.facts['file'][:2] == before[:2] and self.facts['file'] == self.facts['fileNamed'],
+                 'readonly root Node file publication')
+            self.facts['filePublished'] = True
+        except BaseException as exc:
+            self.error(exc, 'node-readback-publication')
+            if fd is not None:
+                try:
+                    self.facts['targetAfterFailure'] = self.metadata(os.fstat(fd))
+                except BaseException as extra:
+                    self.error(extra, 'node-publication-failed-stat')
+        finally:
+            self.close_fd(fd, 'node-readback-close', 'node-staged-executable', str(self.path / 'node'))
+        if self.facts['firstFailure'] is not None:
+            error = Refusal(self.facts['firstFailure']['message'])
+            error.bochs_partial = {'nodeStage': self.facts}
+            raise error
+        self.recheck()
+        record = canonical({'schema': 'bw.bochs-ring3.node-installation.v2', 'sourcePath': NODE_PATH,
+                            'stagePath': self.facts['stagePath'], 'bytes': NODE_BYTES,
+                            'sha256': NODE_SHA256, 'uid': 0, 'gid': 0, 'mode': stat.S_IFREG | 0o555})
+        fd = None
+        try:
+            self.facts['lastOperation'] = {'role': 'node-stage-record', 'path': str(self.path / 'stage.json'), 'operation': 'exclusive create/readback'}
+            fd = os.open('stage.json', os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW |
+                         os.O_NONBLOCK | os.O_CLOEXEC, 0o600, dir_fd=directory)
+            self.facts['created'].append(str(self.path / 'stage.json'))
+            need(os.write(fd, record) == len(record), 'once-only Node installation record write')
+            os.fchmod(fd, 0o444)
+            os.lseek(fd, 0, os.SEEK_SET)
+            before = self.metadata(os.fstat(fd))
+            need(stat.S_ISREG(before[2]) and stat.S_IMODE(before[2]) == 0o444 and
+                 before[3:7] == [0, 0, 1, len(record)] and os.read(fd, len(record) + 1) == record and
+                 before == self.metadata(os.fstat(fd)) ==
+                 self.metadata(os.stat('stage.json', dir_fd=directory, follow_symlinks=False)),
+                 'root readonly exact Node installation record')
+            self.facts['record'] = {'bytes': len(record), 'sha256': sha256(record),
+                                    'metadata': before, 'text': record.decode('utf-8')}
+        except BaseException as exc:
+            self.error(exc, 'node-record')
+        finally:
+            self.close_fd(fd, 'node-record-close', 'node-stage-record', str(self.path / 'stage.json'))
+        if self.facts['firstFailure'] is None:
+            try:
+                self.recheck()
+                self.facts['directoryBeforePublication'] = self.metadata(os.fstat(directory))
+                self.facts['directoryPublicationAttempted'] = True
+                self.facts['lastOperation'] = {'role': 'node-stage-directory', 'path': str(self.path), 'operation': 'readonly publication'}
+                os.fchmod(directory, 0o555)
+                self.facts['directory'] = self.metadata(os.fstat(directory))
+                self.facts['directoryNamed'] = self.metadata(self.path.lstat())
+                need(stat.S_IMODE(self.facts['directory'][2]) == 0o555 and
+                     self.facts['directory'][3:5] == [0, 0] and
+                     self.facts['directory'][:2] == self.bindings[self.path][:2] and
+                     self.facts['directory'] == self.facts['directoryNamed'],
+                     'root readonly Node directory publication')
+                self.bindings[self.path] = self.facts['directory']
+                self.facts['directoryPublished'] = True
+                self.recheck()
+            except BaseException as exc:
+                self.error(exc, 'node-directory-publication')
+                try:
+                    self.facts['directoryAfterFailure'] = self.metadata(os.fstat(directory))
+                except BaseException as extra:
+                    self.error(extra, 'node-directory-failed-stat')
+        if self.facts['firstFailure'] is not None:
+            error = Refusal(self.facts['firstFailure']['message'])
+            error.bochs_partial = {'nodeStage': self.facts}
+            raise error
+        return self.facts
+    def verify_after(self, *, full_hash):
+        """No Node invocation in inventory: immutable identity check suffices there.
+
+        Build/reference reread the full staged executable after work. Neither
+        copies nor executes the mutable original-cache pathname again.
+        """
+        need(self.facts['firstFailure'] is None and self.facts['filePublished'] and
+             self.facts['directoryPublished'], 'successful Node publication before verification')
+        self.recheck()
+        fd = None
+        observed = {'hashRead': full_hash, 'bytesRead': 0, 'sha256': None,
+                    'before': None, 'after': None, 'named': None, 'elf': None, 'elfReadBytes': 0}
+        try:
+            directory = self.fds[self.path]
+            fd = os.open('node', os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC,
+                         dir_fd=directory)
+            observed['before'] = self.metadata(os.fstat(fd))
+            need(observed['before'] == self.facts['file'], 'same readonly staged Node before after-check')
+            if full_hash:
+                digest = hashlib.sha256()
+                while True:
+                    chunk = os.read(fd, min(65536, NODE_BYTES + 1 - observed['bytesRead']))
+                    if not chunk:
+                        break
+                    observed['bytesRead'] += len(chunk)
+                    need(observed['bytesRead'] <= NODE_BYTES, 'staged Node after-read cap')
+                    digest.update(chunk)
+                observed['sha256'] = digest.hexdigest()
+                need(observed['bytesRead'] == NODE_BYTES and digest.hexdigest() == NODE_SHA256,
+                     'complete staged Node after-execution byte identity')
+                def read_at(offset, count):
+                    observed['elfReadBytes'] += count
+                    need(observed['elfReadBytes'] <= 2097152, 'bounded Node after ELF range reads')
+                    return os.pread(fd, count, offset)
+                sparse_after = sparse_elf_from_reader(NODE_BYTES, read_at, observed['sha256'])
+                need(sparse_after == self.sparse_node, 'same staged Node exact structural range readback')
+                observed['elf'] = {key: value for key, value in sparse_after['structure'].items()
+                                   if key != 'soname'}
+                need(observed['elf'] == self.facts['elf'], 'staged Node after ELF identity')
+            observed['after'] = self.metadata(os.fstat(fd))
+            observed['named'] = self.metadata(os.stat('node', dir_fd=directory, follow_symlinks=False))
+            need(observed['before'] == observed['after'] == observed['named'],
+                 'staged Node complete held/named after-check')
+        except BaseException as exc:
+            self.error(exc, 'node-after-verification')
+        finally:
+            self.close_fd(fd, 'node-after-verification-close', 'node-staged-executable', str(self.path / 'node'))
+            self.facts['checkedAfter'] = observed
+        if self.facts['firstFailure'] is not None:
+            error = Refusal(self.facts['firstFailure']['message'])
+            error.bochs_partial = {'nodeStage': self.facts}
+            raise error
+        return self.facts
+    def close(self):
+        fds = list(reversed(list(self.fds.items())))
+        self.fds = {}
+        for path, fd in fds:
+            self.close_fd(fd, 'node-stage-parent-close', 'node-stage-directory', str(path))
+
+
+def check_node_stage_v2(facts, route, env, *, after=False):
+    need(type(facts) is dict and facts.get('schema') == 'bw.bochs-ring3.node-stage.v2',
+         'typed cache-DATA/readonly-executable Node stage')
+    path = route_paths(route, env)['node']
+    need(facts['sourcePath'] == NODE_PATH and facts['stagePath'] == str(path / 'node') and
+         facts['recordPath'] == str(path / 'stage.json') and
+         facts['metadataFields'] == list(NODE_METADATA_FIELDS), 'source-derived Node role paths')
+    def meta(row):
+        need(type(row) is list and len(row) == 9 and
+             all(type(value) is int and value >= 0 for value in row) and row[1] > 0,
+             'typed nine-field Node identity')
+        return row
+    invoker = facts['invoker']
+    closed(invoker, ('uid', 'gid'), 'source-authenticated Node invoker')
+    integer(invoker['uid'], 1, 2 ** 31 - 1, 'Node invoker UID')
+    integer(invoker['gid'], 1, 2 ** 31 - 1, 'Node invoker GID')
+    bootstrap_caller_scalars(facts['bootstrapCredentials'], invoker)
+    source = meta(facts['sourceBefore'])
+    need(source == meta(facts['sourceAfter']) == meta(facts['sourceNamedAfter']) and
+         stat.S_ISREG(source[2]) and source[2] & 0o6000 == 0 and source[5:7] == [1, NODE_BYTES] and
+         source[2:5] == [stat.S_IFREG | 0o777, NODE_CACHE_UID_V2, NODE_CACHE_GID_V2],
+         'bounded fixed Node cache DATA identity (not executable permission)')
+    initial, before, final = meta(facts['fileInitial']), meta(facts['fileBeforePublication']), meta(facts['file'])
+    need(initial[2:7] == [stat.S_IFREG | 0o600, 0, 0, 1, 0] and
+         before[2:7] == [stat.S_IFREG | 0o600, 0, 0, 1, NODE_BYTES] and
+         final[2:7] == [stat.S_IFREG | 0o555, 0, 0, 1, NODE_BYTES] and
+         initial[:2] == before[:2] == final[:2] and final == meta(facts['fileNamed']),
+         'fresh root0600 copy becomes same readonly0555 executable')
+    first_dir = meta(facts['directoryInitial'])
+    before_dir, final_dir = meta(facts['directoryBeforePublication']), meta(facts['directory'])
+    need(first_dir[2:5] == before_dir[2:5] == [stat.S_IFDIR | 0o700, 0, 0] and
+         final_dir[2:5] == [stat.S_IFDIR | 0o555, 0, 0] and
+         first_dir[:2] == before_dir[:2] == final_dir[:2] and
+         final_dir == meta(facts['directoryNamed']), 'fresh private root directory readonly publication')
+    need(set(facts['parents']) == {'/', '/run'}, 'closed Node-stage parent roster')
+    for row in facts['parents'].values():
+        closed(row, ('before', 'namedBefore', 'after', 'namedAfter'), 'Node parent raw readbacks')
+        snapshots = [meta(row[key]) for key in ('before', 'namedBefore', 'after', 'namedAfter')]
+        need(all(snap[:5] == snapshots[0][:5] for snap in snapshots) and
+             stat.S_ISDIR(snapshots[0][2]) and snapshots[0][3:5] == [0, 0] and
+             snapshots[0][2] & 0o022 == 0, 'held/named root-parent first-five continuity')
+    need(facts['created'] == [str(path), str(path / 'node'), str(path / 'stage.json')] and
+         facts['sourceBytesRead'] == facts['bytesCopied'] == facts['readbackBytes'] == NODE_BYTES and
+         facts['copiedSha256'] == facts['readbackSha256'] == NODE_SHA256 and
+         facts['writeUncertain'] is False and facts['filePublicationAttempted'] is True and
+         facts['directoryPublicationAttempted'] is True and facts['filePublished'] is True and
+         facts['directoryPublished'] is True and facts['firstFailure'] is None and facts['secondary'] == [],
+         'once-only complete independent Node hash/publication observations')
+    integer(facts['elfReadBytes'], 1, 2097152, 'bounded staged Node ELF range reads')
+    need(type(facts['elf']) is dict and facts['elf']['class'] == 'ELF64' and
+         facts['elf']['machine'] == 'x86-64' and facts['elf']['rpath'] is None and
+         facts['elf']['runpath'] is None, 'source-observed staged Node ELF')
+    record = facts['record']
+    closed(record, ('bytes', 'sha256', 'metadata', 'text'), 'closed readonly Node installation record')
+    expected = canonical({'schema': 'bw.bochs-ring3.node-installation.v2', 'sourcePath': NODE_PATH,
+                          'stagePath': str(path / 'node'), 'bytes': NODE_BYTES,
+                          'sha256': NODE_SHA256, 'uid': 0, 'gid': 0, 'mode': stat.S_IFREG | 0o555})
+    need(record['text'].encode('utf-8') == expected and record['bytes'] == len(expected) and
+         record['sha256'] == sha256(expected) and
+         meta(record['metadata'])[2:7] == [stat.S_IFREG | 0o444, 0, 0, 1, len(expected)],
+         'exact readonly source-bound Node record bytes')
+    if after:
+        checked = facts['checkedAfter']
+        closed(checked, ('hashRead', 'bytesRead', 'sha256', 'before', 'after', 'named', 'elf', 'elfReadBytes'),
+               'Node after-use observations')
+        need(meta(checked['before']) == meta(checked['after']) == meta(checked['named']) == final,
+             'same immutable staged Node after work')
+        if route == 'toolchain-v2':
+            need(checked['hashRead'] is False and checked['bytesRead'] == 0 and
+                 checked['sha256'] is None and checked['elf'] is None and checked['elfReadBytes'] == 0,
+                 'metadata route does not claim an unperformed after hash or Node execution')
+        else:
+            need(checked['hashRead'] is True and checked['bytesRead'] == NODE_BYTES and
+                 checked['sha256'] == NODE_SHA256 and checked['elf'] == facts['elf'],
+                 'actual staged Node after-execution complete hash/ELF')
+            integer(checked['elfReadBytes'], 1, 2097152, 'bounded Node after ELF range-read count')
+    return facts
+
+
+def collect_toolchain_v2(request_raw, event_raw, env, ops):
+    """Connected no-tool-execution metadata producer; ops owns OS/data edges."""
+    request = admitted_request_v2('toolchain-v2', request_raw, event_raw, env)
+    value = original('toolchain', request_raw, event_raw)
+    value['schema'] = 'bw.bochs-ring3.toolchain-original.v2'
+    observations = {'inventoryBefore': None, 'inventoryAfter': None, 'status': None,
+                    'sourceSelection': SOURCE_SELECTION_SHA256, 'reportedReadbackOnly': True,
+                    'notices': None, 'nodeStage': None, 'runtimeElfMetadata': None}
+    value['observations'] = observations
+    roles = {'request.original.json': request_raw, 'event.original.json': event_raw}
+    phase = 'source-before'
+    try:
+        value['sourceBefore'] = ops.source(request['source'], env)
+        roles['source.before.json'] = canonical(value['sourceBefore'])
+        phase = 'resource-before'
+        value['resources'] = {'before': ops.resources('toolchain-v2'), 'after': None}
+        phase = 'node-cache-data-staging'
+        observations['nodeStage'] = ops.node_stage()
+        check_node_stage_v2(observations['nodeStage'], 'toolchain-v2', env)
+        roles['node-stage.original.json'] = canonical(observations['nodeStage'])
+        phase = 'toolchain-inventory-before'
+        observations['inventoryBefore'] = ops.toolchain()
+        roles['inventory.before.json'] = canonical(observations['inventoryBefore'])
+        phase = 'runtime-elf-structural-metadata'
+        structural = admit_runtime_elf_metadata(ops.elf_metadata(observations['inventoryBefore']),
+                                               observations['inventoryBefore'], observations['nodeStage'])
+        roles['runtime-elf-ranges.original.json'] = canonical(structural)
+        observations['runtimeElfMetadata'] = bytes_ref('runtime-elf-ranges.original.json',
+                                                       roles['runtime-elf-ranges.original.json'])
+        phase = 'selected-toolchain-notices'
+        notices = ops.notices()
+        need(type(notices) is dict and set(notices) == set(NOTICE_PATHS),
+             'all seven selected licence notice files')
+        observations['notices'] = {}
+        notice_bytes = 0
+        for source_path, (path, raw) in notices.items():
+            need(path in observations['inventoryBefore']['files'] and
+                 observations['inventoryBefore']['files'][path]['bytes'] == len(raw) and
+                 observations['inventoryBefore']['files'][path]['sha256'] == sha256(raw) and
+                 1 <= len(raw) <= 262144, 'notice exact selected file readback')
+            notice_bytes += len(raw)
+            need(notice_bytes <= 524288, 'aggregate retained licence notice text cap')
+            observations['notices'][source_path] = {'path': path, 'bytes': len(raw),
+                                                   'sha256': sha256(raw), 'text': raw.decode('utf-8')}
+        roles['notices.original.json'] = canonical(observations['notices'])
+        phase = 'debian-status'
+        raw, record = ops.read('/var/lib/dpkg/status', 4 * 1024 * 1024, minimum=1, owner=0)
+        roles['dpkg-status.original'] = raw
+        observations['status'] = {'bytes': len(raw), 'sha256': sha256(raw),
+                                  'packages': debian_status(raw), 'observation': record}
+        phase = 'toolchain-inventory-after'
+        observations['inventoryAfter'] = ops.toolchain()
+        roles['inventory.after.json'] = canonical(observations['inventoryAfter'])
+        need(observations['inventoryBefore'] == observations['inventoryAfter'],
+             'held inventory before/after complete identity')
+        observations['nodeStage'] = ops.node_after(full_hash=False)
+        check_node_stage_v2(observations['nodeStage'], 'toolchain-v2', env, after=True)
+        roles['node-stage.original.json'] = canonical(observations['nodeStage'])
+        need(sum(row['bytes'] for row in observations['inventoryBefore']['files'].values()) * 2 +
+             observations['nodeStage']['sourceBytesRead'] + observations['nodeStage']['readbackBytes'] +
+             observations['nodeStage']['elfReadBytes'] + notice_bytes +
+             sum(row['fileBytes'] for path, row in structural['files'].items() if path != NODE_PATH)
+             <= LIMITS['toolchain-v2']['totalReadBytes'],
+             'actual selected tool/Node/notice read budget')
+    except BaseException as exc:
+        original_error(value, exc, phase)
+    finally:
+        if value['sourceBefore'] is not None:
+            try:
+                value['sourceAfter'] = ops.source(request['source'], env)
+                roles['source.after.json'] = canonical(value['sourceAfter'])
+                need(value['sourceBefore'] == value['sourceAfter'], 'source before/after equality')
+            except BaseException as exc:
+                original_error(value, exc, 'source-after')
+        if value['resources'] is not None:
+            try:
+                value['resources']['after'] = ops.resources('toolchain-v2')
+            except BaseException as exc:
+                original_error(value, exc, 'resource-after')
+        close_provider(ops, value, roles)
+        if value['sourceBefore'] is not None:
+            try:
+                roles['process.original.json'] = canonical(ops.observer(value))
+            except BaseException as exc:
+                original_error(value, exc, 'observer-process')
+    value['complete'] = value['firstFailure'] is None and not value['secondary']
+    roles['original.json'] = canonical(value)
+    roles['manifest.json'] = canonical(original_manifest(roles))
+    return value, roles
+
+
+def bootstrap_caller_scalars(value, invoker):
+    closed(value, ('schema','uidArgument','gidArgument','sudoUid','sudoGid'), 'source-bound bootstrap scalar observation')
+    need(value['schema'] == 'bw.bochs-ring3.bootstrap-caller.v1' and
+         value['uidArgument'] == value['sudoUid'] == str(invoker['uid']) and
+         value['gidArgument'] == value['sudoGid'] == str(invoker['gid']), 'protected bootstrap IDs independent of DATA owner')
+    integer(invoker['uid'],1,65534,'bootstrap caller UID')
+    integer(invoker['gid'],1,65534,'bootstrap caller GID')
+    return value
+
+
+def metadata_v2_identity(value):
+    closed(value, ('schema','jobName','version'), 'explicit selected metadata V2 identity')
+    need(value == {'schema':'bw.bochs-ring3.toolchain-inventory-reference.v2',
+         'jobName':'bochs-ring3-toolchain-inventory-v2','version':2} and type(value['version']) is int,
+         'source-fixed metadata V2, no V1 downgrade')
+    return value
+
+def admit_build_inputs_v2(request):
+    selected = request['toolchain']['inventory']
+    names = ('runId','jobId','artifactId','archiveBytes','archiveSha256','requestSha256',
+             'reportSha256','sourceHead','sourceTree','workflowCommit')
+    closed(selected, (*names,'schema','jobName','version'), 'current Build explicit metadata V2 reference')
+    metadata_v2_identity({key:selected[key] for key in ('schema','jobName','version')})
+    legacy = {**request, 'toolchain': {**request['toolchain'],
+        'inventory': {key:selected[key] for key in names}}}
+    admit_build_inputs(legacy)
+
+def admit_reference_inputs_v2(request):
+    selected = request['build']
+    names = ('runId','jobId','artifactId','name','bytes','sha256','checkoutHead','checkoutTree',
+             'workflowCommit','workflowFileSha256','compactManifest','buildLog')
+    closed(selected, (*names,'metadata'), 'current Reference explicit metadata V2 identity')
+    metadata_v2_identity(selected['metadata'])
+    admit_reference_inputs({**request,'build':{key:selected[key] for key in names}})
+    return selected
+
+
+def collect_build_v2(request_raw, event_raw, env, ops):
+    request = admitted_request('build', request_raw, event_raw, env)
+    admit_build_inputs_v2(request)
+    value = original('build', request_raw, event_raw)
+    observations = {name: None for name in ('upstream', 'sourceSelection', 'toolchainBefore',
+        'toolchainAfter', 'configure', 'configHeader', 'compilerCommands', 'binary',
+        'runtimeManifest', 'notices', 'compactManifest', 'correspondingSource', 'nodeStage',
+        'runtimeElfMetadata', 'hostRuntime')}
+    value['observations'] = observations
+    roles = {'request.original.json': request_raw, 'event.original.json': event_raw}
+    phase = 'source-before'
+    manifest = None
+    runtime_raw = None
+    try:
+        value['sourceBefore'] = ops.source(request['source'], env)
+        roles['source.before.json'] = canonical(value['sourceBefore'])
+        value['resources'] = {'before': ops.resources('build'), 'after': None}
+        phase = 'node-cache-data-staging'
+        observations['nodeStage'] = ops.node_stage()
+        check_node_stage_v2(observations['nodeStage'], 'build', env)
+        roles['node-stage.original.json'] = canonical(observations['nodeStage'])
+        phase = 'build-toolchain-before'
+        observations['toolchainBefore'] = ops.toolchain()
+        roles['toolchain.before.json'] = canonical(observations['toolchainBefore'])
+        selected = {name: request['toolchain'][name] for name in ('files', 'aliases', 'directoryAliases')}
+        match_expected_graph(observations['toolchainBefore'], selected)
+        need(node_expectation(observations['nodeStage']) == request['toolchain']['node'],
+             'current staged Node equals independent inventory selection')
+        phase = 'current-runtime-structural-metadata'
+        structural = admit_runtime_elf_metadata(ops.elf_metadata(observations['toolchainBefore']),
+            observations['toolchainBefore'], observations['nodeStage'])
+        roles['runtime-elf-ranges.original.json'] = canonical(structural)
+        observations['runtimeElfMetadata'] = bytes_ref('runtime-elf-ranges.original.json',
+            roles['runtime-elf-ranges.original.json'])
+        phase = 'readonly-current-host-runtime'
+        staged = ops.host_runtime_stage(observations['toolchainBefore'], structural)
+        observations['hostRuntime'] = {'stageBytes': len(canonical(staged)),
+                                     'stageSha256': sha256(canonical(staged))}
+        roles['host-runtime.original.json'] = canonical({'schema': 'bw.bochs-ring3.host-runtime-original.v1',
+                                                         'stage': staged, 'cleanup': None})
+        phase = 'source-payload-acquisition'
+        upstream = ops.upstream(request['bochs'])
+        observations['sourceSelection'] = selected_source_rows(upstream['tree'])
+        observations['upstream'] = upstream['before']
+        observations['correspondingSource'] = upstream['correspondingSource']
+        roles['upstream.tree.original.json'] = canonical(upstream['tree'])
+        roles['source-selection.original.json'] = canonical(observations['sourceSelection'])
+        roles['upstream.before.json'] = canonical(upstream['before'])
+        roles['source-selected.original.tar.gz'] = upstream['sourceArchive']
+        roles['notices/vgabios-corresponding-source.tar.gz'] = upstream['correspondingSourceRaw']
+        need(len(upstream['correspondingSourceRaw']) == VGA_SOURCE_BYTES and
+             sha256(upstream['correspondingSourceRaw']) == VGA_SOURCE_SHA256,
+             'exact complete corresponding source original')
+        phase = 'configure'
+        value['authority']['compilerExecuted'] = None
+        process, streams, _stop = run_phase(ops, value, roles, 'configure', CONFIGURE_ARGV,
+                                           wall_seconds=900)
+        config_raw, version_raw = ops.generated_headers()
+        observations['configure'] = configure_facts(config_raw, version_raw)
+        observations['configHeader'] = bytes_ref('config.h.original', config_raw)
+        roles['config.h.original'], roles['bxversion.h.original'] = config_raw, version_raw
+        phase = 'make'
+        _process, streams, _stop = run_phase(ops, value, roles, 'make', MAKE_ARGV, wall_seconds=900)
+        commands = [line for line in streams['stdout'].decode('utf-8').splitlines()
+                    if TOOL_PATHS['gcc'] in line or TOOL_PATHS['g++'] in line]
+        need(1 <= len(commands) <= 8192 and all(len(line) <= 8192 for line in commands),
+             'bounded retained actual compiler commands')
+        need(len(canonical(commands)) <= 1048576, 'compiler command summary budget within original cap')
+        observations['compilerCommands'] = commands
+        phase = 'static-build-assets'
+        assembled = ops.runtime_bundle(request, upstream)
+        runtime_files = assembled['files']
+        need('asset-manifest.json' in runtime_files and 'bin/bochs' in runtime_files,
+             'closed retained runtime assets')
+        binary = runtime_files['bin/bochs']
+        binary_facts = {key: item for key, item in sparse_elf(binary)['structure'].items() if key != 'soname'}
+        need(binary_facts['rpath'] is None and binary_facts['runpath'] is None,
+             'built Bochs has no RPATH/RUNPATH')
+        observations['binary'] = {**bytes_ref('bin/bochs', binary), 'elf': binary_facts}
+        value['authority']['compilerExecuted'] = True
+        runtime_raw = pack_zip(runtime_files, archive_cap=33554432, expanded_cap=67108864,
+                               member_cap=256, modes=assembled['modes'])
+        roles['runtime.original.zip'] = runtime_raw
+        observations['runtimeManifest'] = raw_object(runtime_files['asset-manifest.json'], 4194304)
+        observations['notices'] = assembled['notices']
+        need(observations['runtimeManifest']['schema'] == 'bw.bochs-ring3.runtime-assets.v2' and
+             not any(name.startswith('lib/') for name in runtime_files),
+             'current asset-v2, no distributed host library body')
+        phase = 'current-host-runtime-after'
+        staged = ops.host_runtime_after()
+        observations['hostRuntime'] = {'stageBytes': len(canonical(staged)),
+                                      'stageSha256': sha256(canonical(staged))}
+        roles['host-runtime.original.json'] = canonical({'schema': 'bw.bochs-ring3.host-runtime-original.v1',
+                                                         'stage': staged, 'cleanup': None})
+        phase = 'upstream-source-after'
+        after = ops.upstream_after()
+        roles['upstream.after.json'] = canonical(after)
+        need(after == upstream['before'], 'selected upstream complete source before/after equality')
+        phase = 'build-toolchain-after'
+        observations['toolchainAfter'] = ops.toolchain()
+        roles['toolchain.after.json'] = canonical(observations['toolchainAfter'])
+        match_expected_graph(observations['toolchainAfter'], selected)
+        need(observations['toolchainBefore'] == observations['toolchainAfter'],
+             'held local tool graph before/after full identity')
+        observations['nodeStage'] = ops.node_after(full_hash=True)
+        check_node_stage_v2(observations['nodeStage'], 'build', env, after=True)
+        roles['node-stage.original.json'] = canonical(observations['nodeStage'])
+        manifest = {'schema': 'bw.bochs-ring3.build-manifest.v1', 'source': request['source'],
+            'bochsSource': upstream['before'],
+            'sourceInventory': {'selection': observations['sourceSelection'],
+                'before': upstream['before'], 'after': after,
+                'archive': bytes_ref('source-selected.original.tar.gz', upstream['sourceArchive'])},
+            'toolchainInventory': {'selected': request['toolchain'],
+                'before': observations['toolchainBefore'], 'after': observations['toolchainAfter']},
+            'configure': {'argv': CONFIGURE_ARGV, 'makeArgv': MAKE_ARGV,
+                'facts': observations['configure'],
+                'versionHeader': bytes_ref('bxversion.h.original', version_raw)},
+            'configHeader': observations['configHeader'],
+            'compilerCommands': commands, 'elf': binary_facts,
+            'runtimeMembers': runtime_rows(runtime_files, assembled['modes']),
+            'notices': assembled['notices'], 'sourceAfter': None,
+            'firstFailure': None, 'secondary': [],
+            'buildCompleted': True, 'guestExecuted': False}
+    except BaseException as exc:
+        original_error(value, exc, phase)
+    finally:
+        if value['sourceBefore'] is not None:
+            try:
+                value['sourceAfter'] = ops.source(request['source'], env)
+                roles['source.after.json'] = canonical(value['sourceAfter'])
+                need(value['sourceBefore'] == value['sourceAfter'], 'Build source before/after equality')
+            except BaseException as exc:
+                original_error(value, exc, 'source-after')
+        if value['resources'] is not None:
+            try:
+                value['resources']['after'] = ops.resources('build')
+            except BaseException as exc:
+                original_error(value, exc, 'resource-after')
+        close_provider(ops, value, roles)
+    value['complete'] = value['firstFailure'] is None and not value['secondary']
+    if value['complete']:
+        try:
+            manifest['sourceAfter'] = value['sourceAfter']
+            manifest_raw = canonical(manifest)
+            need(len(manifest_raw) <= 4194304, 'bounded full build manifest')
+            roles['build-manifest.json'] = manifest_raw
+            observations['compactManifest'] = compact_build_manifest(request, manifest_raw, runtime_raw, manifest)
+            roles['compact-manifest.json'] = canonical(observations['compactManifest'])
+        except BaseException as exc:
+            original_error(value, exc, 'build-manifest')
+            value['complete'] = False
+    roles['build.original.json'] = canonical(value)
+    roles['manifest.json'] = canonical(original_manifest(roles))
+    return value, roles
+
+def selected_build_bytes_v2(request, raw):
+    """Recheck the sole acquired byte copy; official authentication stays external."""
+    selected = admit_reference_inputs_v2(request)
+    need(type(raw) is bytes and len(raw) == selected['bytes'] and sha256(raw) == selected['sha256'],
+         'sole selected Build archive exact bytes')
+    files = unpack_zip(raw, archive_cap=67108864, expanded_cap=268435456, member_cap=4096)
+    required = set(('request.original.json event.original.json source.before.json source.after.json '
+        'node-stage.original.json upstream.tree.original.json source-selection.original.json '
+        'upstream.before.json upstream.after.json toolchain.before.json toolchain.after.json '
+        'build.original.json build-manifest.json compact-manifest.json runtime.original.zip '
+        'source-selected.original.tar.gz config.h.original bxversion.h.original configure.stdout '
+        'configure.stderr configure.process.json make.stdout make.stderr make.process.json '
+        'notices/vgabios-corresponding-source.tar.gz manifest.json outside.original.json '
+        'service-status.original.json cleanup.original.json runtime-elf-ranges.original.json '
+        'host-runtime.original.json').split())
+    need(set(files) == required, 'complete closed31-role Build original')
+    need(raw_object(files['manifest.json'], 4194304) == original_manifest(
+        {name: body for name, body in files.items() if name != 'manifest.json'}), 'complete nested Build delivery manifest')
+    compact = raw_object(files['compact-manifest.json'], 16384)
+    need(compact == selected['compactManifest'], 'retained compact equals pre-download selected log manifest')
+    for key, name in (('fullManifest', 'build-manifest.json'), ('runtimeZip', 'runtime.original.zip'),
+                      ('configHeader', 'config.h.original')):
+        need(compact[key] == {'bytes': len(files[name]), 'sha256': sha256(files[name])},
+             'nested compact reference actual bytes')
+    build_request = request_object(files['request.original.json'])
+    need(build_request['schema'] == 'bw.bochs-ring3.build-request.v1' and
+         build_request['repository'] == REPOSITORY and build_request['pullRequest'] == request['pullRequest'] and
+         build_request['policySha256'] == compact['policySha256'] and
+         build_request['source'] == request['source'], 'Build and Reference same PR, policy and exact source12 graph')
+    admit_build_inputs_v2(build_request)
+    need({key:build_request['toolchain']['inventory'][key] for key in ('schema','jobName','version')} ==
+         selected['metadata'], 'nested Build explicit selected metadata V2 identity')
+    stage = raw_object(files['node-stage.original.json'], 65536)
+    check_node_stage_v2(stage, 'build', {'GITHUB_RUN_ID': selected['runId'], 'GITHUB_RUN_ATTEMPT':'1'}, after=True)
+    inner = raw_object(files['build.original.json'], 4194304)
+    outside = raw_object(files['outside.original.json'], 16384)
+    before = raw_object(files['source.before.json'], 1048576)
+    after = raw_object(files['source.after.json'], 1048576)
+    closed(before, ('head', 'tree', 'files', 'workflowCommit', 'workflowTree', 'workflowFileSha256'),
+           'closed retained actual Build source observation')
+    need(before == after == inner['sourceBefore'] == inner['sourceAfter'] and
+         {key: before[key] for key in ('head', 'tree', 'files')} == request['source'] and
+         before['workflowCommit'] == selected['workflowCommit'] and
+         before['workflowFileSha256'] == selected['workflowFileSha256'] and
+         GIT_HEX.fullmatch(before['workflowTree']), 'actual Build H and frozen executing W/source byte join')
+    need(inner['schema'] == 'bw.bochs-ring3.build-original.v1' and inner['complete'] is True and
+         inner['firstFailure'] is None and not inner['secondary'] and
+         inner['requestSha256'] == sha256(files['request.original.json']) and
+         inner['eventSha256'] == sha256(files['event.original.json']) and
+         inner['authority'] == {'compilerExecuted': True, 'guestExecuted': False,
+             'actualRunApproved': False, 'guestApproved': False, 'wholeHostAttested': False, 'physicalTimingProved': False} and
+         outside['serviceExitCode'] == outside['clientExitCode'] == outside['cleanupExitCode'] == 0 and
+         outside['firstFailure'] is None and not outside['secondary'] and outside['innerComplete'] is True and
+         outside['innerFirstFailure'] is None and outside['after']['exists'] is False and
+         outside['after']['errno'] == 2, 'complete actual Build and terminal cleanup originals')
+    manifest = raw_object(files['build-manifest.json'], 4194304)
+    need(manifest['source'] == request['source'] and manifest['buildCompleted'] is True and
+         manifest['guestExecuted'] is False and manifest['firstFailure'] is None and not manifest['secondary'] and
+         sha256(canonical(manifest['runtimeMembers'])) == compact['runtimeMembersSha256'] and
+         sha256(canonical(manifest['notices'])) == compact['noticesSha256'], 'selected full Build manifest facts')
+    runtime = unpack_zip(files['runtime.original.zip'], archive_cap=33554432,
+                         expanded_cap=67108864, member_cap=256)
+    with zipfile.ZipFile(io.BytesIO(files['runtime.original.zip'])) as archive:
+        modes = {item.filename: item.external_attr >> 16 for item in archive.infolist()}
+    need(manifest['runtimeMembers'] == runtime_rows(runtime,
+         {name: stat.S_IMODE(mode) for name, mode in modes.items()}), 'every exact runtime member/mode/hash')
+    asset = raw_object(runtime['asset-manifest.json'], 4194304)
+    closed(asset, ('schema', 'source', 'bochsSource', 'hostNode', 'hostRuntime', 'files'), 'current asset-v2 keys')
+    need(asset['schema'] == 'bw.bochs-ring3.runtime-assets.v2' and
+         not any(name.startswith('lib/') for name in runtime) and
+         asset['source'] == {'head': request['source']['head'], 'tree': request['source']['tree'],
+            'filesSha256': sha256(canonical(request['source']['files']))} and
+         asset['hostNode'] == build_request['toolchain']['node'] and
+         asset['files'] == [row for row in manifest['runtimeMembers'] if row['path'] != 'asset-manifest.json'],
+         'selected runtime distribution graph, no library bodies')
+    need(compact['binary'] == {'bytes': len(runtime['bin/bochs']), 'sha256': sha256(runtime['bin/bochs'])},
+         'selected compiled binary exact bytes')
+    rom, fixture = authored_inputs()
+    need(runtime['inputs/fixture.rom'] == rom and runtime['inputs/fixture.json'] == fixture and
+         runtime['config/bochsrc.template'] == BOCHSRC_TEMPLATE and
+         len(runtime['resources/vgabios.bin']) == VGA_BYTES and sha256(runtime['resources/vgabios.bin']) == VGA_SHA256,
+         'unchanged authored inputs, config and selected VGA resource')
+    expanded = sum(map(len, files.values())) + sum(map(len, runtime.values()))
+    need(len(raw) + expanded + 16 * 1024 * 1024 <= LIMITS['reference']['expandedBytes'],
+         'cumulative nested Build/runtime plus bounded Reference-original reservation')
+    return {'files': files, 'runtime': runtime, 'modes': modes, 'manifest': manifest,
+            'asset': asset, 'request': build_request, 'nestedExpandedBytes': expanded}
+
+def collect_reference_v2(request_raw, event_raw, env, ops):
+    request = admitted_request('reference', request_raw, event_raw, env)
+    admit_reference_inputs_v2(request)
+    value = original('reference', request_raw, event_raw)
+    observations = {name: None for name in ('build', 'assetsBefore', 'assetsAfter', 'fixture',
+        'config', 'js', 'bochs', 'stop', 'outside', 'cleanup', 'nodeStage', 'runtimeElfMetadata', 'hostRuntime')}
+    value['observations'] = observations
+    roles = {'request.original.json': request_raw, 'event.original.json': event_raw}
+    phase = 'source-before'
+    try:
+        value['sourceBefore'] = ops.source(request['source'], env)
+        roles['source.before.json'] = canonical(value['sourceBefore'])
+        value['resources'] = {'before': ops.resources('reference'), 'after': None}
+        phase = 'sole-selected-build-intake'
+        try:
+            archive, official = ops.acquire_build(request['build'], pull_request=request['pullRequest'])
+        except BaseException:
+            observations['build'] = getattr(ops, 'build_intake_partial', None)
+            raise
+        roles['inputs/build.original.zip'] = archive
+        observations['build'] = official
+        built = selected_build_bytes_v2(request, archive)
+        phase = 'node-cache-data-staging'
+        observations['nodeStage'] = ops.node_stage()
+        check_node_stage_v2(observations['nodeStage'], 'reference', env)
+        need(node_expectation(observations['nodeStage']) == built['asset']['hostNode'], 'same selected current staged Node')
+        phase = 'current-host-runtime'
+        graph = ops.toolchain()
+        match_expected_graph(graph, {key: built['request']['toolchain'][key]
+                                    for key in ('files', 'aliases', 'directoryAliases')})
+        structural = admit_runtime_elf_metadata(ops.elf_metadata(graph), graph, observations['nodeStage'])
+        roles['runtime-elf-ranges.original.json'] = canonical(structural)
+        observations['runtimeElfMetadata'] = bytes_ref('runtime-elf-ranges.original.json', roles['runtime-elf-ranges.original.json'])
+        need(host_runtime_selection(expected_graph(graph), structural, built['manifest']['elf'],
+              observations['nodeStage']['elf']) == built['asset']['hostRuntime'], 'same source-selected runtime closure')
+        stage = ops.host_runtime_stage(graph, structural)
+        observations['hostRuntime'] = {'stageBytes': len(canonical(stage)), 'stageSha256': sha256(canonical(stage))}
+        phase = 'owned-runtime-preparation'
+        config = ops.prepare_reference(built)
+        observations['config'] = bytes_ref('bochsrc.original', config)
+        roles['bochsrc.original'] = config
+        for name in ('inputs/fixture.rom', 'inputs/fixture.json'):
+            roles[name] = built['runtime'][name]
+        observations['fixture'] = {'rom': bytes_ref('inputs/fixture.rom', roles['inputs/fixture.rom']),
+            'manifest': bytes_ref('inputs/fixture.json', roles['inputs/fixture.json'])}
+        observations['assetsBefore'] = ops.runtime_after(built)
+        roles['asset.before.json'] = canonical(observations['assetsBefore'])
+        phase = 'fresh-js'
+        value['authority']['guestExecuted'] = None
+        js_process, js_streams, _stop = ops.process('js', ops.reference_argv('js'),
+            wall_seconds=60, stream_cap=131072, checkpoint=False)
+        value['phases'].append(js_process)
+        roles.update({'js/stdout': js_streams['stdout'], 'js/stderr': js_streams['stderr'],
+                      'js/process.json': canonical(js_process)})
+        if js_process['firstFailure'] is not None:
+            exc = Refusal(js_process['firstFailure']['message'])
+            exc.bochs_first, exc.bochs_secondary = js_process['firstFailure'], js_process['secondary']
+            raise exc
+        need(js_process['firstFailure'] is None and not js_process['secondary'] and js_process['reaped'] and
+             js_process['exitCode'] == 0 and js_process['signal'] is None and not js_process['timedOut'],
+             'fresh JS complete retained child')
+        js = ops.js_outputs()
+        roles.update(js)
+        report = raw_object(js['js/report.json'], 131072)
+        need(report['schema'] == 'bw.ring3.js-probe.v1' and report['finiteRoundTripPass'] is True and
+             report['firstFailure'] is None and report['completed'] is True and
+             report['fixtureSha256'] == ROM_SHA256 and report['outputSha256'] == sha256(js_streams['stdout']) and
+             report['memoryBeforeSha256'] == sha256(js['js/memory.before.bin']) and
+             report['memoryAfterSha256'] == sha256(js['js/memory.after.bin']), 'genuine fresh JS probe completion')
+        observations['js'] = report
+        value['authority']['guestExecuted'] = True
+        phase = 'fresh-bochs'
+        process, streams, stop = ops.process('bochs', ops.reference_argv('bochs'),
+            wall_seconds=60, stream_cap=131072, checkpoint=True)
+        value['phases'].append(process)
+        roles.update({'bochs/stdout': streams['stdout'], 'bochs/stderr': streams['stderr'],
+                      'bochs/process.json': canonical(process)})
+        observations['stop'] = stop
+        if process['firstFailure'] is not None:
+            exc = Refusal(process['firstFailure']['message'])
+            exc.bochs_first, exc.bochs_secondary = process['firstFailure'], process['secondary']
+            raise exc
+        need(process['firstFailure'] is None and not process['secondary'] and process['reaped'] and
+             process['signal'] == 15 and process['exitCode'] is None and not process['timedOut'] and
+             stop is not None and stop['sent'] is True and stop['signal'] == 15 and
+             stop['pid'] == process['pid'] and stop['firstFailure'] is None and not stop['secondary'],
+             'complete frame followed by actual owned SIGTERM15 and reap')
+        frame = reporter_frame(streams['stdout'])
+        roles['bochs/frame.original'] = frame
+        roles['bochs/log'] = ops.bochs_log()
+        output_census = ops.reference_output_census()
+        need(stop['frameSha256'] == sha256(frame), 'actual captured checkpoint frame hash')
+        fixture = raw_object(roles['inputs/fixture.json'], 1048576)
+        padding_bytes = compare_reference_frames(js_streams['stdout'], frame, fixture)
+        observations['bochs'] = {'stdout': bytes_ref('bochs/stdout', streams['stdout']),
+            'frame': bytes_ref('bochs/frame.original', frame), 'log': bytes_ref('bochs/log', roles['bochs/log']),
+            'definedBytesEqual': True, 'selectorPaddingBytes': padding_bytes, 'outputCensus': output_census}
+        phase = 'all-assets-after'
+        observations['assetsAfter'] = ops.runtime_after(built)
+        roles['asset.after.json'] = canonical(observations['assetsAfter'])
+        need(observations['assetsBefore'] == observations['assetsAfter'], 'all retained input asset before/after equality')
+        stage = ops.host_runtime_after()
+        observations['hostRuntime'] = {'stageBytes': len(canonical(stage)), 'stageSha256': sha256(canonical(stage))}
+        roles['host-runtime.original.json'] = canonical({'schema': 'bw.bochs-ring3.host-runtime-original.v1', 'stage': stage, 'cleanup': None})
+        observations['nodeStage'] = ops.node_after(full_hash=True)
+        check_node_stage_v2(observations['nodeStage'], 'reference', env, after=True)
+    except BaseException as exc:
+        original_error(value, exc, phase)
+        # A failed but reaped child may already have written bounded diagnostic
+        # originals. Retain those exact files without another child or intake.
+        if phase == 'fresh-js' and value['phases'] and value['phases'][-1].get('reaped') is True:
+            try:
+                if not getattr(ops, 'js_output_attempted', False) and 'js/report.json' not in roles:
+                    roles.update(ops.js_outputs())
+            except BaseException as output_error:
+                original_error(value, output_error, 'js-failed-output-retention')
+            roles.update(getattr(ops, 'js_output_partial', {}))
+        if phase == 'fresh-bochs' and value['phases'] and value['phases'][-1].get('reaped') is True:
+            try:
+                if not getattr(ops, 'bochs_log_attempted', False) and 'bochs/log' not in roles:
+                    roles['bochs/log'] = ops.bochs_log()
+            except BaseException as output_error:
+                original_error(value, output_error, 'bochs-failed-log-retention')
+    finally:
+        if value['sourceBefore'] is not None:
+            try:
+                value['sourceAfter'] = ops.source(request['source'], env)
+                roles['source.after.json'] = canonical(value['sourceAfter'])
+                need(value['sourceBefore'] == value['sourceAfter'], 'Reference source before/after equality')
+            except BaseException as exc:
+                original_error(value, exc, 'source-after')
+        if value['resources'] is not None:
+            try:
+                value['resources']['after'] = ops.resources('reference')
+            except BaseException as exc:
+                original_error(value, exc, 'resource-after')
+        close_provider(ops, value, roles)
+        if observations['nodeStage'] is not None:
+            roles['node-stage.original.json'] = canonical(observations['nodeStage'])
+    value['complete'] = value['firstFailure'] is None and not value['secondary']
+    roles['resources.json'] = canonical(value['resources'])
+    if value['complete']:
+        try:
+            # Cumulative decompression is a single budget, including retained
+            # nested archives and every current Reference role/envelope.
+            need(sum(map(len, roles.values())) + len(canonical(value)) +
+                 len(canonical(original_manifest(roles))) + built['nestedExpandedBytes']
+                 <= LIMITS['reference']['expandedBytes'], 'whole cumulative Reference/Build/runtime wire cap')
+        except BaseException as exc:
+            original_error(value, exc, 'reference-whole-wire')
+            value['complete'] = False
+    roles['original.json'] = canonical(value)
+    roles['manifest.json'] = canonical(original_manifest(roles))
+    return value, roles
+
+def stage_facts_v2(inner):
+    facts = (inner.get('observations') or {}).get('nodeStage') if type(inner) is dict else None
+    if facts is None and type(inner) is dict and type(inner.get('failurePartial')) is dict:
+        facts = inner['failurePartial'].get('nodeStage')
+    return facts
+
+
+def node_cleanup_authority_v2(route, env, inner):
+    """Readonly no-follow identity and exact census, independent of cache grade."""
+    root = route_paths(route, env)['node']
+    facts = stage_facts_v2(inner)
+    value = {'stageState': None, 'parentHeld': None, 'parentNamed': None,
+             'directoryHeld': None, 'directoryNamed': None, 'members': {}, 'names': []}
+    parent_fd = directory_fd = None
+    first = None
+    second = []
+    def meta(info):return [getattr(info, 'st_'+key) for key in NODE_METADATA_FIELDS]
+    def fixed(raw, directory):
+        need(type(raw) is list and len(raw) == 9 and all(type(x) is int and x >= 0 for x in raw), 'typed V2 cleanup stat')
+        need((stat.S_ISDIR(raw[2]) if directory else stat.S_ISREG(raw[2])) and
+             raw[3:5] == [0,0] and raw[2] & 0o022 == 0, 'V2 cleanup owned immutable identity')
+        return raw
+    try:
+        parent_fd = os.open('/run', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        value['parentHeld'] = fixed(meta(os.fstat(parent_fd)), True)
+        value['parentNamed'] = fixed(meta(os.lstat('/run')), True)
+        need(value['parentHeld'][:5] == value['parentNamed'][:5], 'V2 cleanup held/named parent')
+        try:
+            directory_fd = os.open(root.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=parent_fd)
+        except FileNotFoundError as exc:
+            need(exc.errno == 2 and (facts is None or facts.get('created') == []), 'only an uncreated stage may be absent')
+            value['stageState'] = 'not-created'
+        if directory_fd is not None:
+            need(type(facts) is dict and facts.get('schema') == 'bw.bochs-ring3.node-stage.v2' and
+                 facts.get('stagePath') == str(root/'node') and facts.get('recordPath') == str(root/'stage.json'),
+                 'protected source-created V2 stage paths')
+            bootstrap_caller_scalars(facts['bootstrapCredentials'], facts['invoker'])
+            created = facts.get('created')
+            roster = [str(root),str(root/'node'),str(root/'stage.json')]
+            need(type(created) is list and created in (roster[:1],roster[:2],roster), 'closed source-created stage prefix')
+            expected = facts.get('directory') or facts.get('directoryAfterFailure') or facts.get('directoryInitial')
+            value['directoryHeld'] = fixed(meta(os.fstat(directory_fd)), True)
+            value['directoryNamed'] = fixed(meta(os.stat(root.name,dir_fd=parent_fd,follow_symlinks=False)), True)
+            need(type(expected) is list and len(expected)==9 and value['directoryHeld'][:5] ==
+                 value['directoryNamed'][:5] == expected[:5] and
+                 stat.S_IMODE(expected[2]) in (0o700,0o555), 'fresh held/named source-created stage identity')
+            with os.scandir(directory_fd) as entries:
+                for item in entries:
+                    need(len(value['names']) < 2 and item.name in ('node','stage.json') and item.name not in value['names'],
+                         'finite known V2 stage census before effects')
+                    value['names'].append(item.name)
+            value['names'].sort()
+            need(value['names'] == sorted(Path(x).name for x in created[1:]), 'exact created member census before effects')
+            for name in value['names']:
+                if name=='node':expected_member=facts.get('file') or facts.get('targetAfterFailure') or facts.get('fileBeforePublication') or facts.get('fileInitial')
+                else:expected_member=(facts.get('record') or {}).get('metadata')
+                need(type(expected_member) is list and len(expected_member)==9, 'known member identity, never guessed partial creation')
+                fd = None
+                primary = None
+                try:
+                    fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC,dir_fd=directory_fd)
+                    held=fixed(meta(os.fstat(fd)),False)
+                    named=fixed(meta(os.stat(name,dir_fd=directory_fd,follow_symlinks=False)),False)
+                    need(held==named and held[:5]==expected_member[:5] and held[5]==1 and
+                         0<=held[6]<=(NODE_BYTES if name=='node' else 4096), 'fresh held/named known private member')
+                    need(stat.S_IMODE(held[2]) in ((0o600,0o555) if name=='node' else (0o444,)), 'exact source-created member permissions')
+                    value['members'][name]={'held':held,'named':named}
+                except BaseException as exc:primary=exc
+                finally:
+                    if fd is not None:
+                        try:os.close(fd)
+                        except BaseException as exc:
+                            if primary is None:primary=exc
+                            else:primary.bochs_secondary=[*getattr(primary,'bochs_secondary',[]),failure(exc,'node-plan-member-close')]
+                if primary is not None:raise primary
+            if not value['names']:
+                need(stat.S_IMODE(value['directoryHeld'][2])==0o700, 'created empty stage remains private')
+                value['stageState']='created-empty'
+            elif value['names']==['node']:
+                value['stageState']='complete-private-file' if (stat.S_IMODE(value['members']['node']['held'][2])==0o600 and
+                    facts.get('sourceBytesRead')==facts.get('bytesCopied')==facts.get('readbackBytes')==NODE_BYTES and
+                    facts.get('copiedSha256')==facts.get('readbackSha256')==NODE_SHA256) else 'partial-private-file'
+                need(stat.S_IMODE(value['directoryHeld'][2])==0o700, 'partial private stage directory')
+            else:
+                need(value['names']==['node','stage.json'] and value['directoryHeld'][2]==stat.S_IFDIR|0o555 and
+                     value['members']['node']['held'][2]==stat.S_IFREG|0o555 and
+                     value['members']['stage.json']['held'][2]==stat.S_IFREG|0o444, 'complete published permission graph')
+                value['stageState']='published'
+            need(meta(os.fstat(directory_fd))[:5]==meta(os.stat(root.name,dir_fd=parent_fd,follow_symlinks=False))[:5]==value['directoryHeld'][:5],
+                 'held/named V2 root after readonly plan census')
+    except BaseException as exc:first=exc
+    finally:
+        for fd in (directory_fd,parent_fd):
+            if fd is not None:
+                try:os.close(fd)
+                except BaseException as exc:
+                    if first is None:first=exc
+                    else:second.append(failure(exc,'node-plan-held-close'))
+    if first is not None:
+        first.bochs_secondary=[*getattr(first,'bochs_secondary',[]),*second][:SECONDARY_LIMIT]
+        first.bochs_partial={'nodeCleanupAuthority':value}
+        raise first
+    return value
+
+
+def node_cleanup_wire_plan_v2(route, env, inner):
+    """Plan every bounded result before cgroup/Node/library cleanup effects."""
+    facts=stage_facts_v2(inner)
+    authority=node_cleanup_authority_v2(route,env,inner)
+    root=route_paths(route,env)['node']
+    def row(raw):return dict(zip(CLEANUP_STAT_FIELDS,raw))
+    def future(value):
+        return {**value,'size':max(value['size'],2**64-1),'nlink':max(value['nlink'],2**64-1),
+                'mtimeNs':max(value['mtimeNs'],2**96-1),'ctimeNs':max(value['ctimeNs'],2**96-1)}
+    gone={'exists':False,'errno':2,'identity':None}
+    directory=None if authority['directoryHeld'] is None else row(authority['directoryHeld'])
+    parent=future(row(authority['parentHeld']))
+    private=None if directory is None else future({**directory,'mode':stat.S_IFDIR|0o700})
+    prototype={'schema':'bw.bochs-ring3.node-cleanup.v2','route':route,'path':str(root),
+        'stageState':authority['stageState'],'authority':authority,'planSha256':'f'*64,
+        'parentBefore':parent,'parentAfter':parent,'before':gone if directory is None else {'exists':True,'errno':None,'identity':directory},
+        'members':{name:row(value['held']) for name,value in authority['members'].items()},'journal':[],
+        'after':gone,'heldBefore':directory,'heldBeforeRmdir':private,'namedBeforeRmdir':private,
+        'complete':True,'firstFailure':None,'secondary':[]}
+    if directory is not None:
+        prototype['journal'].append({'operation':'chmod-private','path':str(root),'before':directory,'attempted':True,
+            'after':{'exists':True,'errno':None,'identity':private},'firstFailure':None})
+        for name,value in authority['members'].items():
+            prototype['journal'].append({'operation':'unlink','path':str(root/name),'before':row(value['held']),
+                'attempted':True,'after':gone,'firstFailure':None})
+        prototype['journal'].append({'operation':'rmdir','path':str(root),'before':private,'attempted':True,'after':gone,'firstFailure':None})
+    prototype=compact_manual_stats(prototype)
+    success=len(canonical(prototype))
+    # A bounded failure duplicates into a journal/top-level pair; one close
+    # secondary and one failed-after present identity are also reserved.
+    failure_bytes=success+3*1024+512
+    reserved=max(success+1024,failure_bytes)
+    need(reserved<=16384,'complete V2 Node all-outcome plan under unchanged cap')
+    return {'schema':'bw.bochs-ring3.node-cleanup-plan.v2','nodePath':str(root),
+        'stageSha256':None if facts is None else sha256(canonical(facts)),
+        'stageState':authority['stageState'],'authority':authority,
+        'projectionSha256':sha256(canonical(prototype)),'successBytes':success,
+        'failureBytes':failure_bytes,'reservedBytes':reserved}
+
+
+def cleanup_node_stage_v2(route, env, inner, plan):
+    """Remove only the exact source-created stage, with a bounded raw journal.
+
+    Unknown names/identity stop before mutation. Partial staging without retained
+    file identity remains an honest cleanup refusal, never guessed ownership.
+    """
+    paths = route_paths(route, env)
+    root = paths['node']
+    value = {'schema': 'bw.bochs-ring3.node-cleanup.v2', 'route': route,
+        'path': str(root), 'parentBefore': None, 'parentAfter': None,
+        'before': None, 'members': {}, 'journal': [], 'after': None,
+        'heldBefore': None, 'heldBeforeRmdir': None, 'namedBeforeRmdir': None,
+        'complete': False, 'firstFailure': None, 'secondary': []}
+    value.update(stageState=plan['stageState'],authority=None,planSha256=sha256(canonical(plan)))
+    directory_fd = None
+    reserved = None
+    def issue(exc, phase):
+        row = failure(exc, phase, path=str(root))
+        if value['firstFailure'] is None:
+            value['firstFailure'] = row
+        elif len(value['secondary']) < SECONDARY_LIMIT:
+            value['secondary'].append(row)
+        for extra in getattr(exc, 'bochs_secondary', []):
+            if len(value['secondary']) < SECONDARY_LIMIT:
+                value['secondary'].append(extra)
+    def first_five(row):
+        return tuple(row[k] for k in ('dev', 'ino', 'mode', 'uid', 'gid'))
+    def meta_row(raw):
+        need(type(raw) is list and len(raw) == 9, 'retained staged identity before cleanup')
+        return dict(zip(('dev', 'ino', 'mode', 'uid', 'gid', 'nlink', 'size', 'mtimeNs', 'ctimeNs'), raw))
+    def absent(path):
+        try:
+            observed = os.lstat(path)
+        except FileNotFoundError as exc:
+            need(exc.errno == 2, 'actual ENOENT terminal stage observation')
+            return {'exists': False, 'errno': 2, 'identity': None}
+        return {'exists': True, 'errno': None, 'identity': identity(observed)}
+    def mutation(operation, path, before, action):
+        row = {'operation': operation, 'path': str(path), 'before': before,
+               'attempted': False, 'after': None, 'firstFailure': None}
+        value['journal'].append(row)
+        need(reserved is not None and reserved <= 16384 and len(canonical(value)) <= 16384,
+             'whole remaining bounded Node cleanup original before mutation')
+        row['attempted'] = True
+        try:
+            action()
+            row['after'] = absent(path)
+        except BaseException as exc:
+            row['firstFailure'] = failure(exc, 'node-cleanup-' + operation, path=str(path))
+            try:
+                row['after'] = absent(path)
+            except BaseException as extra:
+                issue(extra, 'node-cleanup-failed-after')
+            raise
+    try:
+        closed(plan, ('schema','nodePath','stageSha256','stageState','authority','projectionSha256','successBytes','failureBytes','reservedBytes'), 'closed pre-effect V2 Node plan')
+        need(plan['schema']=='bw.bochs-ring3.node-cleanup-plan.v2' and plan['nodePath']==str(root), 'same source-derived planned root')
+        fresh=node_cleanup_wire_plan_v2(route,env,inner)
+        need(fresh==plan, 'fresh held/named/census V2 Node plan before effects')
+        value['authority']=fresh['authority']
+        reserved=plan['reservedBytes']
+        value['parentBefore'] = safe_root_directory('/run')
+        facts = None if inner is None else (inner.get('observations') or {}).get('nodeStage')
+        if facts is None and inner is not None and type(inner.get('failurePartial')) is dict:
+            facts = inner['failurePartial'].get('nodeStage')
+        value['before'] = absent(root)
+        if not value['before']['exists']:
+            need(facts is None or str(root) not in facts.get('created', []),
+                 'created staged root may not disappear before owned cleanup')
+            value['after'] = value['before']
+        else:
+            need(type(facts) is dict and facts.get('stagePath') == str(root / 'node') and
+                 str(root) in facts.get('created', []), 'bound source-created Node root')
+            expected_directory = facts.get('directory') or facts.get('directoryAfterFailure') or facts.get('directoryInitial')
+            expected_directory = meta_row(expected_directory)
+            need(first_five(value['before']['identity']) == first_five(expected_directory),
+                 'exact first-five staged directory before cleanup')
+            directory_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+            value['heldBefore'] = identity(os.fstat(directory_fd))
+            need(first_five(value['heldBefore']) == first_five(expected_directory),
+                 'held Node cleanup directory identity')
+            names = []
+            with os.scandir(root) as entries:
+                for entry in entries:
+                    names.append(entry.name)
+                    need(len(names) <= 2 and entry.name in ('node', 'stage.json'),
+                         'no unknown staged Node member')
+            expected = {}
+            if 'node' in names:
+                expected['node'] = meta_row(facts.get('file') or facts.get('targetAfterFailure') or
+                                            facts.get('fileBeforePublication') or facts.get('fileInitial'))
+            if 'stage.json' in names:
+                need(type(facts.get('record')) is dict, 'retained installation-record identity')
+                expected['stage.json'] = meta_row(facts['record']['metadata'])
+            for name in names:
+                observed = identity(os.stat(name, dir_fd=directory_fd, follow_symlinks=False))
+                need(stat.S_ISREG(observed['mode']) and observed['uid'] == observed['gid'] == 0 and
+                     observed['nlink'] == 1 and first_five(observed) == first_five(expected[name]),
+                     'exact owned staged member before any cleanup mutation')
+                value['members'][name] = observed
+            # Size-only projection, never retained as an observation. Reserve all
+            # remaining rows and terminal fields before the first chmod/unlink.
+            def future_metadata(row):
+                return {**row, 'size': max(row['size'], 2**64 - 1),
+                        'mtimeNs': max(row['mtimeNs'], 2**64 - 1),
+                        'ctimeNs': max(row['ctimeNs'], 2**64 - 1)}
+            private_reserved = future_metadata({**value['before']['identity'], 'mode': stat.S_IFDIR | 0o700})
+            future = json.loads(canonical(value))
+            future['journal'] = [{'operation': 'chmod-private', 'path': str(root),
+                'before': value['before']['identity'], 'attempted': True,
+                'after': {'exists': True, 'errno': None, 'identity': private_reserved}, 'firstFailure': None}]
+            for name in sorted(names):
+                future['journal'].append({'operation': 'unlink', 'path': str(root / name),
+                    'before': value['members'][name], 'attempted': True,
+                    'after': {'exists': False, 'errno': 2, 'identity': None}, 'firstFailure': None})
+            future['journal'].append({'operation': 'rmdir', 'path': str(root), 'before': private_reserved,
+                'attempted': True, 'after': {'exists': False, 'errno': 2, 'identity': None}, 'firstFailure': None})
+            future.update(parentAfter=future_metadata(value['parentBefore']),
+                heldBeforeRmdir=private_reserved, namedBeforeRmdir=private_reserved,
+                after={'exists': False, 'errno': 2, 'identity': None}, complete=True)
+            need(len(canonical(compact_manual_stats(future)))+512 <= reserved, 'actual Node future fields fit complete pre-first-effect reserve')
+            need(reserved <= 16384, 'complete prospective Node cleanup witness and close-error reserve')
+            mutation('chmod-private', root, value['before']['identity'],
+                     lambda: os.fchmod(directory_fd, 0o700))
+            private = identity(os.fstat(directory_fd))
+            need(private['mode'] == stat.S_IFDIR | 0o700 and
+                 (private['dev'], private['ino'], private['uid'], private['gid']) ==
+                 tuple(expected_directory[k] for k in ('dev', 'ino', 'uid', 'gid')),
+                 'same privately writable cleanup root')
+            for name in sorted(names):
+                observed = identity(os.stat(name, dir_fd=directory_fd, follow_symlinks=False))
+                need(first_five(observed) == first_five(expected[name]) and
+                     first_five(identity(os.fstat(directory_fd))) == first_five(private) and
+                     first_five(identity(os.lstat(root))) == first_five(private),
+                     'held/named identities before each staged unlink')
+                mutation('unlink', root / name, observed,
+                         lambda name=name: os.unlink(name, dir_fd=directory_fd))
+            with os.scandir(root) as entries:
+                need(next(entries, None) is None, 'empty known staged root before rmdir')
+            need(first_five(identity(os.lstat(root))) == first_five(private) and
+                 first_five(identity(os.fstat(directory_fd))) == first_five(private),
+                 'held/named root before final rmdir')
+            value['heldBeforeRmdir'] = identity(os.fstat(directory_fd))
+            value['namedBeforeRmdir'] = identity(os.lstat(root))
+            mutation('rmdir', root, private, lambda: os.rmdir(root))
+            value['after'] = absent(root)
+            need(value['after']['exists'] is False, 'owned Node root absent after cleanup')
+        value['parentAfter'] = safe_root_directory('/run')
+        need(first_five(value['parentBefore']) == first_five(value['parentAfter']),
+             'fixed root parent first-five after Node cleanup')
+    except BaseException as exc:
+        issue(exc, 'node-stage-cleanup')
+    finally:
+        if directory_fd is not None:
+            try:
+                os.close(directory_fd)
+            except BaseException as exc:
+                issue(exc, 'node-cleanup-directory-close')
+    value['complete'] = value['firstFailure'] is None and not value['secondary']
+    if value['complete'] and len(canonical(value)) > 16384:
+        issue(Refusal('complete Node cleanup wire cap'), 'node-cleanup-final-wire')
+        value['complete'] = False
+    value=compact_manual_stats(value)
+    need(len(canonical(value)) <= 16384, 'V2 Node final exact wire cap')
+    return value
+
 def main(argv=None, *, environment=None, provider_factory=None):
     parser = argparse.ArgumentParser(description=__doc__)
     modes = parser.add_mutually_exclusive_group(required=True)
@@ -5340,14 +6663,14 @@ def main(argv=None, *, environment=None, provider_factory=None):
     parser.add_argument('--client-exit', default='unknown')
     parser.add_argument('--service-status')
     args = parser.parse_args(argv)
-    route_enabled(args.route)  # all modes fail before env/file/kernel edges when false
+    route_enabled(args.route, current=True)  # all modes fail before env/file/kernel edges when false
     env = os.environ if environment is None else environment
     if args.admit:
         need(args.workflow_root is not None and args.invoker_uid is not None and
              args.invoker_gid is not None, 'explicit trusted workflow bootstrap arguments')
-        admit_cli(args.route, env, args.workflow_root, args.invoker_uid, args.invoker_gid)
+        admit_cli(args.route, env, args.workflow_root, args.invoker_uid, args.invoker_gid, current=True)
         return 0
-    context, request_raw, event_raw, paths = load_cli_context(args.route, env)
+    context, request_raw, event_raw, paths = load_cli_context(args.route, env, current=True)
     if args.run_service:
         process = run_service_cli(args.route, context, paths,
                                   secret=env.get('GH_TOKEN') if args.route == 'reference' else None)
@@ -5358,12 +6681,12 @@ def main(argv=None, *, environment=None, provider_factory=None):
         return 0 if status['firstFailure'] is None and not status['secondary'] else 1
     factory = provider_factory if provider_factory is not None else LiveOps
     if args.work:
-        value = work_cli(args.route, context, request_raw, event_raw, paths, provider_factory=factory)
+        value = work_cli(args.route, context, request_raw, event_raw, paths, provider_factory=factory, current=True)
         return 0 if value['complete'] else 1
     need(args.service_status is not None, 'explicit protected service status path')
     outside, roles = finish_cli(args.route, context, request_raw, event_raw, paths,
         provider_factory=factory, service_status=args.service_status,
-        claimed_service=parse_exit(args.service_exit), claimed_client=parse_exit(args.client_exit))
+        claimed_service=parse_exit(args.service_exit), claimed_client=parse_exit(args.client_exit), current=True)
     if outside['cleanupExitCode'] == 0 and args.route == 'build':
         compact = raw_object(roles['compact-manifest.json'], 32768)
         print(COMPACT_MARKER + base64.b64encode(canonical(compact)).decode('ascii'), flush=True)

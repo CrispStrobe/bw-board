@@ -11,34 +11,36 @@ import {buildFixture} from '../scripts/i80386-ring3-int-iret/fixture.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const workflowPath = resolve(root, '.github/workflows/i80386-bochs-ring3-reference.yml');
 const controlsPath = resolve(root, 'scripts/i80386-bochs-ring3-reference/controls.py');
+const readerPath = resolve(root, 'scripts/i80386-bochs-ring3-reference/reader.py');
 const workflow = readFileSync(workflowPath, 'utf8');
 const producerSource = readFileSync(resolve(root, 'scripts/i80386-bochs-ring3-reference/run.py'), 'utf8');
 const checkout = 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262';
 const setupNode = 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020';
 const upload = 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02';
 const routes = [
-  ['toolchain', 'bochs-ring3-toolchain-inventory-v1', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals'],
-  ['build', 'bochs-ring3-build-v1', 'Admit Bochs build source and request', 'Build pinned Bochs CPU3 and retain originals', 'Retain Bochs build originals'],
-  ['reference', 'bochs-ring3-reference-v1', 'Admit Bochs reference source and request', 'Capture fresh JavaScript and Bochs unchanged wire', 'Retain Bochs reference originals'],
+  ['toolchain', 'bochs-ring3-toolchain-inventory-v1', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v1', 'toolchain-v1', false],
+  ['toolchain-v2', 'bochs-ring3-toolchain-inventory-v2', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v2', 'toolchain-v2', false],
+  ['build', 'bochs-ring3-build-v1', 'Admit Bochs build source and request', 'Build pinned Bochs CPU3 and retain originals', 'Retain Bochs build originals', 'x86-bochs-ring3-build-v1', 'build-v1', true],
+  ['reference', 'bochs-ring3-reference-v1', 'Admit Bochs reference source and request', 'Capture fresh JavaScript and Bochs unchanged wire', 'Retain Bochs reference originals', 'x86-bochs-ring3-reference-v1', 'reference-v1', true],
 ];
 
 function auditWorkflow(raw) {
   assert.match(raw, /^on:\s*\n\s+pull_request:/m);
   assert.match(raw, /cancel-in-progress:\s*false/);
   assert.doesNotMatch(raw.slice(0, raw.indexOf('jobs:')), /^  actions: read$/m);
-  assert.equal((raw.match(/uses: actions\/checkout@/g) || []).length, 6);
-  assert.equal((raw.match(/uses: actions\/setup-node@/g) || []).length, 3);
-  assert.equal((raw.match(/uses: actions\/upload-artifact@/g) || []).length, 3);
-  assert.equal((raw.match(/uses: actions\/(?:checkout|setup-node|upload-artifact)@/g) || []).length, 12);
-  for (const [route, job, admission, work, retention] of routes) {
+  assert.equal((raw.match(/uses: actions\/checkout@/g) || []).length, 8);
+  assert.equal((raw.match(/uses: actions\/setup-node@/g) || []).length, 4);
+  assert.equal((raw.match(/uses: actions\/upload-artifact@/g) || []).length, 4);
+  assert.equal((raw.match(/uses: actions\/(?:checkout|setup-node|upload-artifact)@/g) || []).length, 16);
+  for (const [route, job, admission, work, retention, label, stem, active] of routes) {
     const start = raw.indexOf(`  ${job}:\n`);
     assert.ok(start >= 0, `${job} present`);
     const rest = raw.slice(start + job.length + 4);
     const next = rest.search(/^  [a-z][a-z0-9-]*:\s*$/m);
     const section = next < 0 ? rest : rest.slice(0, next);
-    assert.match(section, /if: \$\{\{ true &&/);
-    assert.match(section, new RegExp(`timeout-minutes: ${route === 'toolchain' ? 5 : route === 'build' ? 20 : 10}\\b`));
-    assert.match(section, new RegExp(`github\\.event\\.label\\.name == 'x86-bochs-ring3-${route === 'toolchain' ? 'toolchain-inventory' : route}-v1'`));
+    assert.match(section, new RegExp(`if: \\$\\{\\{ ${active ? 'true' : 'false'} &&`));
+    assert.match(section, new RegExp(`timeout-minutes: ${route.startsWith('toolchain') ? 5 : route === 'build' ? 20 : 10}\\b`));
+    assert.ok(section.includes(`github.event.label.name == '${label}'`));
     assert.match(section, /github\.actor == 'CrispStrobe'/);
     if (route === 'reference') {
       assert.match(section, /permissions:\s*\n\s+contents: read\s*\n\s+actions: read/);
@@ -57,14 +59,14 @@ function auditWorkflow(raw) {
     assert.deepEqual(names, ['Checkout selected producer source', 'Checkout executing workflow source', admission,
       'Prepare pinned Node input cache', work, retention]);
     const uploadBlock = section.slice(section.lastIndexOf(`      - name: ${retention}`));
-    assert.match(uploadBlock, new RegExp(`path: /run/bw-bochs-${route}-v1-\\$\\{\\{ github\\.run_id \\}\\}-1-originals`));
+    assert.match(uploadBlock, new RegExp(`path: /run/bw-bochs-${stem}-\\$\\{\\{ github\\.run_id \\}\\}-1-originals`));
     assert.doesNotMatch(uploadBlock, /-1-(?:work|node)/);
     assert.ok(section.indexOf(admission) < section.indexOf(setupNode), 'request and source before setup-node');
     assert.ok(section.indexOf('workflow-source') < section.indexOf('--admit'), 'workflow checkout before admission');
-    assert.match(section, /--admit --route/);
-    assert.match(section, /--run-service --route/);
-    assert.match(section, /--finish --route/);
-    assert.match(section, /--capture-service-status --route/);
+    assert.ok(section.includes(`--admit --route ${route}`));
+    assert.ok(section.includes(`--run-service --route ${route}`));
+    assert.ok(section.includes(`--finish --route ${route}`));
+    assert.ok(section.includes(`--capture-service-status --route ${route}`));
     assert.match(section, /--service-status/);
     assert.match(section, /--service-exit unknown --client-exit unknown/);
     assert.match(section, /run_status="\$\?"/);
@@ -84,7 +86,7 @@ function auditWorkflow(raw) {
   }
 }
 
-test('Bochs route workflow has three armed authenticated bounded six-step jobs', () => {
+test('Bochs route workflow has four authenticated bounded six-step jobs with spent metadata disabled', () => {
   auditWorkflow(workflow);
 });
 
@@ -115,6 +117,8 @@ test('source-held authored inputs equal the unchanged pure fixture builder', () 
 test('workflow policy mutations are detected without enabling a job', () => {
   const cuts = [
     ['guard', workflow.replace('if: ${{ true &&', 'if: ${{ false &&')],
+    ['spent metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v1:\n    if: ${{ false &&', 'bochs-ring3-toolchain-inventory-v1:\n    if: ${{ true &&')],
+    ['new metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v2:\n    if: ${{ false &&', 'bochs-ring3-toolchain-inventory-v2:\n    if: ${{ true &&')],
     ['checkout pin', workflow.replace(checkout, 'actions/checkout@main')],
     ['unknown service status', workflow.replace('--service-exit unknown', '--service-exit 0')],
     ['finish', workflow.replace('--finish --route', '--no-finish --route')],
@@ -128,6 +132,22 @@ test('workflow policy mutations are detected without enabling a job', () => {
     ['bounded source blob', workflow.replace("'cat-file', '-s'", "'cat-file', 'blob'")],
   ];
   for (const [name, changed] of cuts) assert.throws(() => auditWorkflow(changed), name);
+});
+
+test('new V2 reader routes refuse before retained file I/O while inactive', () => {
+  for (const route of ['toolchain-v2', 'build-current-v2', 'reference-current-v2']) {
+    const result = spawnSync('/usr/bin/python3', ['-I', '-B', readerPath,
+      '--route', route, '--archive', '/definitely-absent-bochs-original.zip'], {
+      cwd: root, encoding: 'utf8', timeout: 5000, maxBuffer: 1 << 16,
+      env: {PATH: '/usr/bin:/bin', PYTHONDONTWRITEBYTECODE: '1'},
+    });
+    assert.equal(result.error, undefined, `${route}: ${result.error}`);
+    assert.equal(result.status, 1, `${route}: ${result.stdout}`);
+    const refusal = JSON.parse(result.stderr.trim());
+    assert.equal(refusal.actualRunApproved, false);
+    assert.equal(refusal.guestApproved, false);
+    assert.equal(refusal.reason.message, 'reader route inactive');
+  }
 });
 
 test('genuine Bochs pure controls run with bounded system Python and no guest', () => {
