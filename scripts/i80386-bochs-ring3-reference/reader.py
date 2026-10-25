@@ -5623,6 +5623,128 @@ def official_expectation(value, route, request, event, source, archive_raw,
             'officiallyAuthenticatedByLocalFiles': False}
 
 
+def official_expectation_current(value, route, request, event, source, archive_raw,
+                         run, jobs, artifacts, job_log, observed_source):
+    """Join retained metadata; the caller separately authenticates API intake."""
+    fields(value, 'schema repository pullRequest runId runAttempt jobId jobName '
+           'eventName actor head tree workflowCommit workflowTree '
+           'workflowFileSha256 requestSha256 eventSha256 artifactId '
+           'archiveBytes archiveSha256 conclusion steps')
+    require(value['schema'] == f'bw.bochs-ring3.{route}-expectation.v1' and
+            value['repository'] == REPOSITORY and
+            value['eventName'] == 'pull_request' and
+            value['actor'] == 'CrispStrobe' and
+            value['conclusion'] == 'success' and
+            type(value['runId']) is str and
+            re.fullmatch('[1-9][0-9]*', value['runId']) and
+            integer(value['runAttempt'], 1, 1) and
+            integer(value['pullRequest'], 1) and
+            integer(value['jobId'], 1) and
+            integer(value['artifactId'], 1),
+            'closed reviewed official route identity')
+    for key in ('head', 'tree', 'workflowCommit', 'workflowTree'):
+        digest(value[key], 40)
+    for key in ('workflowFileSha256', 'requestSha256', 'eventSha256',
+                'archiveSha256'):
+        digest(value[key])
+    require(value['requestSha256'] == sha(request) and
+            value['eventSha256'] == sha(event) and
+            value['head'] == source['head'] and
+            value['tree'] == source['tree'] and
+            value['workflowFileSha256'] == source['files'][
+                '.github/workflows/i80386-bochs-ring3-reference.yml']['sha256'] and
+            integer(value['archiveBytes'], 1, 96 << 20) == len(archive_raw) and
+            value['archiveSha256'] == sha(archive_raw),
+            'selected exact source, event and archive bytes')
+    source_facts(observed_source, source)
+    require(value['workflowCommit'] == observed_source['workflowCommit'] and
+            value['workflowTree'] == observed_source['workflowTree'],
+            'exact executed workflow identity in held source observation')
+    require(type(job_log) is bytes and 0 < len(job_log) <= 8 << 20,
+            'bounded selected official job log')
+    for obj in (run, jobs, artifacts):
+        require(type(obj) is dict, 'bounded retained official API JSON')
+    require(type(run.get('repository')) is dict and
+            type(run.get('head_repository')) is dict and
+            type(run.get('actor')) is dict,
+            'typed official run repository/actor')
+    require(run.get('id') == int(value['runId']) and
+            run.get('run_attempt') == 1 and
+            run.get('head_sha') == value['head'] and
+            run.get('event') == 'pull_request' and
+            run.get('status') == 'completed' and
+            run.get('conclusion') == 'success' and
+            run.get('repository', {}).get('full_name') == REPOSITORY and
+            run.get('head_repository', {}).get('full_name') == REPOSITORY and
+            run.get('actor', {}).get('login') == 'CrispStrobe' and
+            run.get('path') == '.github/workflows/i80386-bochs-ring3-reference.yml',
+            'selected official run identity and terminal success')
+    job_rows = jobs.get('jobs')
+    require(type(job_rows) is list and
+            jobs.get('total_count') == len(job_rows) and
+            len(job_rows) <= 128 and
+            all(type(j) is dict for j in job_rows) and
+            all(type(j.get('id')) is int and j['id'] > 0 for j in job_rows) and
+            len({j.get('id') for j in job_rows}) == len(job_rows),
+            'complete bounded unique official job roster')
+    selected = [j for j in job_rows if j.get('id') == value['jobId']]
+    job_name = {'toolchain': 'bochs-ring3-toolchain-inventory-v1',
+                'build': 'bochs-ring3-build-v1',
+                'reference': 'bochs-ring3-reference-v1'}[route]
+    require(value['jobName'] == job_name and
+            len(selected) == 1 and selected[0].get('run_id') == int(value['runId'])
+            and selected[0].get('head_sha') == value['head']
+            and selected[0].get('name') == value['jobName'] and
+            selected[0].get('status') == 'completed' and
+            selected[0].get('conclusion') == 'success',
+            'selected official job terminal identity')
+    step_rows = selected[0].get('steps')
+    require(type(step_rows) is list and len(step_rows) <= 64 and
+            all(type(row) is dict for row in step_rows) and
+            strict_equal(step_rows, value['steps']),
+            'selected official exact step roster')
+    current_official_steps(step_rows)
+    required = {'toolchain': INVENTORY_USER_STEPS,
+                'build': BUILD_USER_STEPS,
+                'reference': REFERENCE_USER_STEPS}[route]
+    names = [row['name'] for row in step_rows]
+    indexes = [names.index(name) for name in required if names.count(name) == 1]
+    require(len(indexes) == len(required) and indexes == sorted(indexes) and
+            all(step_rows[index]['conclusion'] == 'success' for index in indexes),
+            'exact source ordered successful official steps')
+    rows = artifacts.get('artifacts')
+    require(type(rows) is list and
+            artifacts.get('total_count') == len(rows) and len(rows) <= 128 and
+            all(type(row) is dict for row in rows),
+            'complete bounded official artifact roster')
+    selected_artifact = [a for a in rows if a.get('id') == value['artifactId']]
+    artifact_name = 'i80386-bochs-ring3-' + (
+        'toolchain-inventory' if route == 'toolchain' else route) + '-v1-originals'
+    require(len(selected_artifact) == 1 and
+            type(selected_artifact[0].get('workflow_run')) is dict and
+            selected_artifact[0].get('name') == artifact_name and
+            selected_artifact[0].get('size_in_bytes') == len(archive_raw) and
+            selected_artifact[0].get('digest') == 'sha256:' + sha(archive_raw) and
+            selected_artifact[0].get('expired') is False and
+            selected_artifact[0].get('workflow_run', {}).get('id') ==
+            int(value['runId']), 'selected official artifact identity/digest')
+    return {'runId': value['runId'], 'jobId': value['jobId'],
+            'artifactId': value['artifactId'], 'officialMetadataJoined': True,
+            'officiallyAuthenticatedByLocalFiles': False}
+
+
+def current_official_steps(step_rows):
+    """Accept GitHub's positive, ordered step numbers, including post-action gaps."""
+    previous = 0
+    for row in step_rows:
+        number = row.get('number')
+        require(type(number) is int and number > previous and
+                row.get('status') == 'completed' and
+                row.get('conclusion') in ('success', 'skipped'),
+                'ordered terminal current official steps')
+        previous = number
+
+
 def official_expectation_toolchain_v2(value, request, event, source, archive_raw,
                          run, jobs, artifacts, job_log, observed_source):
     """Join retained metadata; the caller separately authenticates API intake."""
@@ -5712,12 +5834,7 @@ def official_expectation_toolchain_v2(value, request, event, source, archive_raw
             all(type(row) is dict for row in step_rows) and
             strict_equal(step_rows, value['steps']),
             'selected official exact step roster')
-    require(all(type(row) is dict and
-                row.get('number') == index and
-                row.get('status') == 'completed' and
-                row.get('conclusion') in ('success', 'skipped')
-                for index, row in enumerate(step_rows, 1)),
-            'ordered terminal official steps')
+    current_official_steps(step_rows)
     required = INVENTORY_USER_STEPS
     names = [row['name'] for row in step_rows]
     indexes = [names.index(name) for name in required if names.count(name) == 1]
@@ -6573,6 +6690,7 @@ def toolchain_official_v2(archive_raw, expectation_raw, run, jobs,
     bound = official_expectation_toolchain_v2(
         expectation, request_raw, event_raw, request['source'], archive_raw,
         run, jobs, artifacts, job_log, observed_source)
+    current_official_four_jobs(jobs, expectation, 'toolchain-v2')
     official_owner_join('toolchain-v2', request, expectation, run, artifacts)
     return {**local, 'officialMetadataBound': bound['officialMetadataJoined'],
             'officiallyAuthenticatedByLocalFiles': False,
@@ -6601,19 +6719,22 @@ def build_official_v2(archive_raw, expectation_raw, run, jobs,
 
 
 def current_official_four_jobs(jobs, expectation, selected_route):
-    """Bind every declared job in the current Build or Reference event."""
-    require(selected_route in ('build', 'reference'), 'current official route')
+    """Bind every declared job in the current metadata, Build or Reference event."""
+    require(selected_route in ('toolchain-v2', 'build', 'reference'),
+            'current official route')
     rows = jobs.get('jobs') if type(jobs) is dict else None
     require(type(rows) is list and jobs.get('total_count') == 4 and len(rows) == 4,
             'exact current official four-job roster')
     names = ('bochs-ring3-toolchain-inventory-v1',
              'bochs-ring3-toolchain-inventory-v2',
              'bochs-ring3-build-v1', 'bochs-ring3-reference-v1')
-    selected_name = {'build':'bochs-ring3-build-v1',
+    selected_name = {'toolchain-v2':'bochs-ring3-toolchain-inventory-v2',
+                     'build':'bochs-ring3-build-v1',
                      'reference':'bochs-ring3-reference-v1'}[selected_route]
     required = {name: 'success' if name == selected_name else 'skipped'
                 for name in names}
     require(all(type(row) is dict and type(row.get('id')) is int and
+                row['id'] > 0 and
                 type(row.get('name')) is str for row in rows) and
             len({row['id'] for row in rows}) == 4 and
             len({row['name'] for row in rows}) == 4 and
@@ -6639,7 +6760,7 @@ def build_official_current_v2(archive_raw, expectation_raw, run, jobs,
     expectation = parse_json(expectation_raw, 65536, canonical_wire=True)
     observed_source = parse_json(packet['source.before.json'], 4 << 20,
                                  canonical_wire=True)
-    bound = official_expectation(expectation, 'build', request_raw,
+    bound = official_expectation_current(expectation, 'build', request_raw,
         event_raw, request['source'], archive_raw, run, jobs, artifacts,
         job_log, observed_source)
     current_official_four_jobs(jobs, expectation, 'build')
@@ -6672,7 +6793,7 @@ def reference_official_current_v2(archive_raw, expectation_raw, run, jobs, artif
     original = parse_json(packet['original.json'], 4 << 20,
                           canonical_wire=True)
     expectation = parse_json(expectation_raw, 65536, canonical_wire=True)
-    bound = official_expectation(expectation, 'reference', request_raw,
+    bound = official_expectation_current(expectation, 'reference', request_raw,
         event_raw, request['source'], archive_raw, run, jobs, artifacts,
         job_log, original['sourceBefore'])
     current_official_four_jobs(jobs, expectation, 'reference')
