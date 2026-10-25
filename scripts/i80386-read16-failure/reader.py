@@ -439,7 +439,7 @@ def main(argv=None):
         data['auditorSource']=read_local(__file__,262144)
         print(json.dumps(audit_bundle(data),sort_keys=True))
         return 0
-    except (OSError,Refusal,ValueError,KeyError,UnicodeError,zipfile.BadZipFile) as error:
+    except (OSError,Refusal,ValueError,KeyError,UnicodeError,struct.error,zipfile.BadZipFile) as error:
         print(json.dumps({'schema':'bw.read16-failed-attempt-audit.v1','classification':'refused','reason':type(error).__name__+': '+str(error)[:256],'secondary':[str(x)[:128] for x in getattr(error,'__notes__',[])[:2]],'adoptionQualified':False,'coreSpeedupQualified':False,'guestQualified':False,'physicalRTxQualified':False,'fullOSQualified':False},sort_keys=True))
         return 2
 if __name__=='__main__':raise SystemExit(main())
