@@ -7037,16 +7037,64 @@ golden, package, dependency pin, library-distribution or other owner edits.
 No census row change is claimed. This docs amendment grants no compiler,
 guest, architectural, whole-host, physical or licence-clearance result.
 
+### Metadata V3 GCC 13 internal-role layout amendment — 2026-10-25
 
-Amendment695 merged normally before V2 implementation. The armed candidate
-adds a distinct metadata V2 job/schema and source-fixed cache DATA policy,
-separate from actual protected bootstrap caller credentials. V1 execution is
-closed; its failed original and unchanged reader refusal remain held. New
-current producer/reader guards are TRUE for source qualification; V1 stays
-disabled. Build/Reference explicitly bind
-metadata V2 and V2 staged-node facts; historical helpers remain separate for
-old controls. Connected source controls exercise the genuine V2 copy,
-collector/finalizer and fresh held/named negative cleanup with manufactured
-kernel/provider edges only. No new event, compiler, guest or architectural
-result is selected or implied. Exact source review and every final-head check
-still precede any one-shot event selection and original admission.
+Owner: the same Codex x86 reference lane, continuing unmerged
+[PR694](https://github.com/CrispStrobe/bw-board/pull/694). Merge this docs-only
+claim before implementation. The consumed V2 attempt completed the selected
+Node copy/reopen/hash and root read-only publication, then failed at its fixed
+GCC 13 `cc1` path. Its eleven-role partial remains refused; the after-inventory
+Node check is absent. Preserve V1/V2 failures, originals and reader semantics.
+
+The retained image's [software catalog](https://github.com/actions/runner-images/blob/ubuntu24/20261012.334/images/ubuntu/Ubuntu2404-Readme.md)
+lists GNU C++ 13.3.0. Pinned Ubuntu GCC 13
+[configuration](https://git.launchpad.net/ubuntu/+source/gcc-13/plain/debian/rules2?id=f461761292bd7511cea2252c70e45f43fb6b22ca),
+[cpp](https://git.launchpad.net/ubuntu/+source/gcc-13/plain/debian/rules.d/binary-cpp.mk?id=f461761292bd7511cea2252c70e45f43fb6b22ca),
+[cxx](https://git.launchpad.net/ubuntu/+source/gcc-13/plain/debian/rules.d/binary-cxx.mk?id=f461761292bd7511cea2252c70e45f43fb6b22ca)
+and [gcc](https://git.launchpad.net/ubuntu/+source/gcc-13/plain/debian/rules.d/binary-gcc.mk?id=f461761292bd7511cea2252c70e45f43fb6b22ca)
+package rules support moving exactly `cc1`, `cc1plus`, `collect2`,
+`lto-wrapper` and `lto1` from the `usr/lib/gcc/x86_64-linux-gnu/13` profile to
+the corresponding `usr/libexec/gcc/x86_64-linux-gnu/13` file paths. These are
+candidate paths, not observed presence or hashes. Keep GCC/G++ 13 drivers,
+notices and data-library locations; no GCC 14 substitution, package install,
+arbitrary `libexec` root/search or executed compiler discovery. Admit only
+the five exact roles and their finite parent/link readbacks; unsafe, missing
+or escaping inputs refuse.
+
+Own only these nine existing paths and sections:
+
+- `scripts/i80386-bochs-ring3-reference/run.py`
+- `scripts/i80386-bochs-ring3-reference/reader.py`
+- `scripts/i80386-bochs-ring3-reference/controls.py`
+- `scripts/i80386-bochs-ring3-reference/README.md`
+- `.github/workflows/i80386-bochs-ring3-reference.yml`
+- `test/i80386-bochs-ring3-reference.test.mjs`
+- `docs/I80386-BOCHS-RING3-REFERENCE.md`
+- only this Bochs section of `LANES.md`
+- only this reference status in `docs/X86-NEXT-LANES.md`
+
+Add distinct metadata V3 request/job/label/variables/marker/artifact and
+truthful routing identities. Retire V2 execution; preserve its wire/readers
+and the verified NodeStageV2 DATA/caller, copy/hash and cleanup policy. New
+current Build/Reference adapters must explicitly bind metadata version 3 and
+its exact job identity, retaining NodeStageV2 facts. Preserve historical V2
+adapters and four-job joins; refuse coherent downgrade. Current V3 wrappers
+require exactly five typed source jobs (inactive V1/V2, V3, Build, Reference),
+selected outcome/four declared skips, run/head/attempt and full raw gapped
+step identities/order/status. New entries start FALSE; no old event is replayed.
+
+Require genuine mocked metadata16-to-Build31-to-Reference32 producer/finalizer
+and independent-reader chains, exact five-role presence, the retained missing
+V2 path, wrong path/version/triplet/root and alias-escape cuts, metadata
+downgrade and nonvacuous source mutants. Preserve all existing tests, partial
+retention, first/secondary errors, whole cleanup reservation, caps, resource
+limits, CPU/fixture/wire, source pins and asset-v2 distribution boundaries.
+No census or other-owner change is claimed.
+
+Next: compose the merged claim into the source continuation, review disabled
+V3 and qualify every enabled exact-head source check. Then separately admit
+one metadata-only V3 event and originals. Build remains blocked until actual
+V3 metadata qualifies; Reference additionally needs its admitted Build. Hold
+one source head across the stages. Root admits Build metadata/sole log before
+Reference's sole Build ZIP GET and nested-copy audit. No compiler, guest,
+architectural, whole-host, physical/RTx or blanket licence approval follows.
