@@ -1,8 +1,16 @@
 # Ordered 16-bit read: retain a failed paired attempt
 
-Status: inactive failure-only source implemented. Exact-head hosted source
-qualification gates landing; a separately admitted retained-original audit
-remains pending. The
+> Publication staging: the existing readers are already on master. The CPU
+> step-roster correction is prepared separately and is not yet in this
+> documentation-only head. Its final source composition requires fresh CI.
+
+
+Status: failure-only source landed. The separately admitted retained-original
+audit refused the official job's repeated checkout step names; that refusal is
+preserved. This forward source candidate checks the exact 16 observed ordered
+step number/name/conclusion rows against reviewed workflow W4fa530, including
+four checkout actions and four generated post-checkout steps. Its own hosted
+qualification and independent review are pending. The
 selected ordered-read CPU candidate remains unadopted. The CPU arm, spent
 event, original reader, thresholds and original bytes are unchanged.
 
@@ -58,7 +66,7 @@ The Node test wrapper must invoke the standalone Python controls through the exi
 
 ## Source checkpoint and handoff
 
-The new reader and its nine standalone Python controls are invoked by the
+The new reader and its ten standalone Python controls are invoked by the
 existing automatic Node test discovery. Focused controls and independent
 review passed. The closed 106-role archive profile checks Unix regular-file
 metadata, contiguous physical ZIP layout and every bounded raw DEFLATE
@@ -67,11 +75,11 @@ retain rejected symlink roles, hidden unindexed local headers and unused
 compressed-span bytes. The historical refusal remains distinct from the new
 failed-attempt classification.
 
-Next, qualify this exact source head, then independently admit the new
-auditor commit, tree and file SHA with the retained official metadata and
-original digests before one offline original audit. Do not acquire originals
-again or rerun the paired event. Preserve a refusal as a refusal. Publish only
-the bounded failure classification if all joins pass.
+Next, qualify and independently review this forward source head. The prior
+retained-original invocation remains a refusal; any later offline invocation
+requires a separately reviewed exact auditor commit, tree and file SHA and a
+new explicit admission decision. Do not acquire originals again or rerun the
+paired event. Publish only a bounded failure classification if every join passes.
 
 After that closeout, separately scope a longer paired workload and parent-host
 capture (CPU model, allocation, affinity, quota, OS and Node). Keep two warm-up
