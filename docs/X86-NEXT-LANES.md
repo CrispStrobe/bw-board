@@ -3597,7 +3597,7 @@ independent packet reading. This proves source wiring only. The retained V2
 QEMU disagreement is unchanged, and no V3 event or result exists. Independent
 source review and exact-head checks precede any new one-shot selection.
 
-### Bochs CPU3 Ring 3 reference: Metadata V3 spent; ELF attribution next
+### Bochs CPU3 Ring 3 reference: diagnostic spent; official reader refused
 
 Inactive source [PR694](https://github.com/CrispStrobe/bw-board/pull/694) is
 merged. Its reviewed head c2930696 passed 23 exact-head checks (12 success,
@@ -3611,20 +3611,31 @@ cannot promote failed metadata. All three metadata attempts are spent;
 Build/Reference remain unselected and unqualified.
 
 The merged [ELF failure-attribution task](I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md)
-keeps the strict guard, source/CPU/fixture/pins and every cap unchanged. Next:
-review a separately armed diagnostic revision and qualify its exact head
-before one admitted negative-only event. Admit all six jobs and raw steps before
-one acquisition; an early zero-artifact failure has a distinct log-only route.
-Attribute new observations
-without rewriting V3 history. A tag may be legitimate default layout, but
+keeps the strict guard, source/CPU/fixture/pins and every cap unchanged. Its
+separately armed [PR699](https://github.com/CrispStrobe/bw-board/pull/699) head
+`347d4fae` passed 21 source checks (16 success, five declared skips), nine runs
+and 231 terminal steps, including the separately admitted ordinary source Test.
+Its one [diagnostic run](https://github.com/CrispStrobe/bw-board/actions/runs/40200959026)
+failed only at the work step, with the other five jobs skipped. Official
+standalone grading refused the retained packet: all four root/controller
+before/after `cgroup.stat` snapshots have 22 rows, above the unchanged 16-row
+reader bound. Structural-only decoding separately observed `/usr/bin/expr`
+RUNPATH `/usr/lib/x86_64-linux-gnu`; no qualified packet, whole-resource,
+inventory or compiler/guest result follows. This does not rewrite V3 history.
+A tag may be legitimate default layout, but
 policy acceptance needs separate exact dependency-resolution/licensing review.
 No allowlist, compiler/guest or architectural approval is established here.
 
-The distinct negative-only `toolchain-elf-attribution-v1` source candidate has
-producer, independent-reader and sixth-job guards FALSE. V3 execution is closed;
+This retirement revision closes the spent `toolchain-elf-attribution-v1`
+producer and sixth-job guards to FALSE; its independent reader stays TRUE for
+retained originals. Merge of this retirement revision requires fresh exact-head
+source qualification. V3 execution is closed;
 old readers and five-job positive adapters remain held. The new twelve-role
 packet preserves typed failed prefixes and exact structural tag/string offsets.
 A present empty tag still refuses and a guard failure remains a failed job.
 Whole-file SHA is reported readback only; range digests/values are independently
-checked. No new event or positive chain is authorized; activation review, fresh
-source qualification and separate admission remain pending.
+checked. Next is a separately claimed versioned negative-reader/kernel-stat
+schema task preserving the old 16-row helper, full raw rows and all existing
+caps; it grants no automatic promotion of this refusal. Any later strict
+dependency-resolution/licence review is separate. No replay, new original GET,
+event, allowlist or positive chain is authorized by retirement.

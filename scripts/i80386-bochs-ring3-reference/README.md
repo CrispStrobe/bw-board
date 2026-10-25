@@ -1,14 +1,25 @@
 # Bochs CPU3 Ring 3 reference source
 
-Status: inactive negative-only ELF attribution candidate under merged
-[PR697](https://github.com/CrispStrobe/bw-board/pull/697), continuing unmerged
-[PR694](https://github.com/CrispStrobe/bw-board/pull/694). Published bc016f65
-passed automatic source CI, then the separately selected Metadata V3 failed
+Status: the negative-only ELF attribution source is merged from
+[PR694](https://github.com/CrispStrobe/bw-board/pull/694). The separately armed
+[PR699](https://github.com/CrispStrobe/bw-board/pull/699) head `347d4fae` passed
+its 21 source checks (16 successful, five declared skips), nine runs and 231
+terminal steps, including the separately admitted ordinary source Test. Its
+one [diagnostic run](https://github.com/CrispStrobe/bw-board/actions/runs/40200959026)
+failed at the selected work step. The official standalone grade refused the
+retained packet: each root/controller `cgroup.stat` had 22 rows, exceeding the
+historical reader's 16-row bound. That refusal remains the packet outcome.
+Structural-only reading separately decoded `/usr/bin/expr`'s RUNPATH as
+`/usr/lib/x86_64-linux-gnu`; this is no packet or whole-resource qualification.
+This revision retires the spent diagnostic producer and workflow job. The
+independent reader stays enabled for retained originals. Merge of this retirement
+revision requires fresh exact-head source qualification.
+The separately selected Metadata V3 failed
 `no selected tool RPATH/RUNPATH` before a complete inventory. Its offending
 selected path/role and exact tag/value were not retained. V1/V2/V3 are spent;
 no cleanup or Node readback promotes those failed originals. All three
-metadata execution gates are closed. The new diagnostic producer/reader/job
-start FALSE. Build/Reference remain unselected, blocked and unqualified.
+metadata execution gates remain closed. Build/Reference remain unselected,
+blocked and unqualified.
 
 The historical metadata, Build and Reference routes have distinct requests, labels, jobs, units, originals and
 readers. Each job must first authenticate the selected source checkout and the
@@ -132,10 +143,10 @@ coherent packet and official-join mutations must refuse. Pure fixture exports
 supply mock frame/RAM inputs only, while the wrapper separately regenerates the
 unchanged authored ROM and manifest. Production Reference still runs fresh JS
 and Bochs children. These controls establish no actual compiler execution or
-architectural agreement. Next are independent source review, exact-head hosted
-qualification, then separately selected metadata, Build and Reference events at
-one fixed source head. Each event has its own frozen executing workflow and
-canonical request; source activation grants no actual approval.
+architectural agreement. Any future positive chain still needs independent
+source review, exact-head hosted qualification and separately admitted metadata,
+Build and Reference events at one fixed source head. The spent metadata and
+diagnostic attempts grant no such admission and must not be repeated.
 
 The new `toolchain-elf-attribution-v1` route is a separate negative diagnostic,
 not Metadata4. Its five CLI modes require the explicit route and no profile.
@@ -163,7 +174,10 @@ recompute that hash. The 2 MiB aggregate structural, 4 MiB JSON, 8 MiB ZIP,
 source-authentication/Node reserve reduces the remaining selected-file input
 budget before the next read. Whole future JSON/tag/error and alias metadata
 are reserved before retention; whole cleanup reservation precedes deletion.
-No licence policy or later search-path allowlist is selected here. Follow the
-[bounded task](../../docs/I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md) and require
-review, fresh exact-head source CI and separate one-shot root admission before
-any diagnostic event.
+No licence policy or later search-path allowlist is selected here. Next is a
+separately claimed, versioned negative-reader task for the exact retained kernel
+stat schema. It must preserve the old 16-row reader and all byte/resource caps;
+truncation or a wider historical bound cannot qualify this packet. Any later
+dependency-resolution and licence policy review is separate. Follow the
+[bounded task](../../docs/I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md); no new event,
+original acquisition, compiler or guest is authorized by retirement.
