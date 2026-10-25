@@ -197,19 +197,36 @@ def audit(original_raw,cleanup_raw,request_raw,event_raw,expected):
     exact(clean['stopExit'],0,'zero stop exit')
     return {'schema':'bw.read16-failed-attempt-audit.v1','classification':'failed-attempt-only','historicalReaderRefusal':'inactive unit readback','semanticPassed':True,'performancePassed':False,'medianCPUSpeedup':statistics.median(ratios),'minimumCPUSpeedup':min(ratios),'medianWallRatio':statistics.median(walls),'cpuRatios':ratios,'wallRatios':walls,'workload':'AUTHORED_ORDINARY_AT_FIVE_OP_1M','sourceHead':req['head'],'sourceTree':req['tree'],'officialRunId':expected['runId'],'officialJobId':expected['jobId'],'officialArtifactId':expected['artifactId'],'officialMetadataAuthenticated':False,'adoptionQualified':False,'coreSpeedupQualified':False,'guestQualified':False,'physicalRTxQualified':False,'fullOSQualified':False}
 
-def official(run_raw,jobs_raw,artifacts_raw,artifact_raw,log_raw,
+def physical_roster(run_id):
+    admission='read16-admission-'+run_id+'-1/'
+    paired='read16-paired-'+run_id+'-1/'
+    admit=('admit-command.original.json','admit-stderr.original','admit-stdout.original',
+           'capture-source-admission-progress.original.jsonl','capture-source-admission.original.json',
+           'event.original.json','request.original.json','source-admission-progress.original.jsonl',
+           'source-admission.original.json')
+    children=tuple(f'{n:02d}-{kind}' for n in range(18) for kind in
+                   ('preexec.original.json','stderr.original','stdout.original'))
+    captured=tuple(f'capture-{n:02d}.original.json' for n in range(18))
+    completed=tuple(f'completed-{n:02d}.original.json' for n in range(18))
+    rest=('cleanup.original.json','context.original.json','event.original.json',
+          'paired.original.json','request.original.json','runtime.original.json','source.original.json')
+    result={admission+n for n in admit}|{paired+n for n in children+captured+completed+rest}
+    need(len(result)==106,'source-derived physical roster')
+    return result
+
+def official(run_raw,jobs_raw,artifacts_raw,artifact_raw,log_raw,manifest_raw,
              original_raw,cleanup_raw,request_raw,event_raw,expected,binding):
     """Join retained official metadata and archive to an externally reviewed binding.
 
     The binding is an input for independent review, never proof of its own origin.
     """
-    fields(binding,'schema auditorCommit auditorTree auditorFileSha256 historicalReaderSha256 historicalHead historicalTree historicalWorkflowHead runId jobId artifactId artifactBytes artifactSha256 jobLogBytes jobLogSha256 requestSha256 eventSha256 originalSha256 cleanupSha256 runSha256 jobsSha256 artifactsSha256','external audit binding')
+    fields(binding,'schema auditorCommit auditorTree auditorFileSha256 historicalReaderSha256 historicalHead historicalTree historicalWorkflowHead runId jobId artifactId artifactBytes artifactSha256 jobLogBytes jobLogSha256 manifestBytes manifestSha256 requestSha256 eventSha256 originalSha256 cleanupSha256 runSha256 jobsSha256 artifactsSha256','external audit binding')
     exact(binding['schema'],'bw.read16-failed-attempt-binding.v1','binding schema')
     for key in ('auditorCommit','auditorTree','historicalHead','historicalTree','historicalWorkflowHead'):
         need(type(binding[key]) is str and re.fullmatch('[0-9a-f]{40}',binding[key]) and binding[key]!='0'*40,'reviewed '+key)
     need(binding['auditorCommit'] not in (OLD_HEAD,OLD_WORKFLOW_HEAD) and
          binding['auditorTree']!=OLD_TREE,'independent auditor source identity')
-    for key in ('auditorFileSha256','historicalReaderSha256','artifactSha256','jobLogSha256','requestSha256','eventSha256','originalSha256','cleanupSha256','runSha256','jobsSha256','artifactsSha256'):digest(binding[key])
+    for key in ('auditorFileSha256','historicalReaderSha256','artifactSha256','jobLogSha256','manifestSha256','requestSha256','eventSha256','originalSha256','cleanupSha256','runSha256','jobsSha256','artifactsSha256'):digest(binding[key])
     exact(binding['historicalReaderSha256'],OLD_READER_SHA,'historical reader pin')
     exact(binding['historicalHead'],OLD_HEAD,'historical H')
     exact(binding['historicalTree'],OLD_TREE,'historical tree')
@@ -218,6 +235,8 @@ def official(run_raw,jobs_raw,artifacts_raw,artifact_raw,log_raw,
         exact(binding[key+'Sha256'],sha(raw),'external '+key+' SHA')
     exact(binding['artifactBytes'],len(artifact_raw),'external archive bytes')
     exact(binding['jobLogBytes'],len(log_raw),'external log bytes')
+    exact(binding['manifestBytes'],len(manifest_raw),'external manifest bytes')
+    exact(binding['manifestSha256'],sha(manifest_raw),'external manifest SHA')
     for key in ('runId','jobId','artifactId'):exact(binding[key],expected[key],'selected '+key)
     run=parse(run_raw,262144); jobs=parse(jobs_raw,1048576); artifacts=parse(artifacts_raw,262144)
     req=request(request_raw)
@@ -277,14 +296,54 @@ def official(run_raw,jobs_raw,artifacts_raw,artifact_raw,log_raw,
     exact(wr.get('repository_id'),repo['id'],'artifact repository join')
     exact(wr.get('head_repository_id'),repo['id'],'artifact head repository join')
     prefix='read16-paired-'+expected['runId']+'-1/'
+    admission='read16-admission-'+expected['runId']+'-1/'
+    manifest=parse(manifest_raw,65536)
+    need(canonical(manifest)==manifest_raw,'canonical reviewed physical manifest')
+    fields(manifest,'expandedBytes files runtimeExecuted','physical manifest')
+    exact(manifest['runtimeExecuted'],False,'manifest is offline inventory')
+    need(type(manifest['files']) is list and len(manifest['files'])==106,'manifest census')
+    manifest_paths=[]
+    for row in manifest['files']:
+        fields(row,'path bytes sha256','physical role row')
+        need(type(row['path']) is str,'physical path type')
+        need(type(row['bytes']) is int and 0<=row['bytes']<=CAP,'physical role extent')
+        digest(row['sha256']);manifest_paths.append(row['path'])
+    exact(set(manifest_paths),physical_roster(expected['runId']),'closed physical manifest roles')
+    need(len(set(manifest_paths))==106,'unique manifest roles')
+    need(len(artifact_raw)>=22 and artifact_raw[-22:-18]==b'PK\x05\x06' and artifact_raw[-2:]==b'\x00\x00',
+         'single terminal ZIP directory without trailing bytes')
     with zipfile.ZipFile(io.BytesIO(artifact_raw)) as archive:
-        names=archive.namelist();need(len(names)==106 and len(set(names))==106,'physical archive census')
-        need(all(n.startswith(('read16-admission-'+expected['runId']+'-1/',prefix)) and not n.startswith('/') and '..' not in n.split('/') for n in names),'archive role roots')
-        need(sum(info.file_size for info in archive.infolist())<=16777216 and all(info.file_size<=CAP for info in archive.infolist()),'bounded physical archive expansion')
+        exact(archive.comment,b'','archive comment')
+        infos=archive.infolist();names=[i.filename for i in infos]
+        exact(names,manifest_paths,'ordered physical archive roles')
+        exact(set(names),physical_roster(expected['runId']),'closed physical archive roles')
+        need(len(set(names))==106,'unique physical archive roles')
+        need(sum(i.file_size for i in infos)<=16777216 and sum(i.file_size for i in infos)==manifest['expandedBytes'],'bounded physical archive expansion')
+        for info,row in zip(infos,manifest['files']):
+            need(len(info.filename.encode())<=256 and info.create_system==3 and info.external_attr>>16==0o100644 and
+                 not info.is_dir() and info.flag_bits==8 and info.compress_type==zipfile.ZIP_DEFLATED and
+                 info.extra==b'' and info.comment==b'' and not info.filename.endswith('/') and
+                 '\\' not in info.filename and not info.filename.startswith('/') and '..' not in info.filename.split('/'),
+                 'regular canonical physical role')
+            exact(info.file_size,row['bytes'],'physical member size')
+            raw=archive.read(info)
+            exact(len(raw),row['bytes'],'physical decompressed size')
+            exact(sha(raw),row['sha256'],'physical member SHA')
         for name,raw in ((prefix+'paired.original.json',original_raw),(prefix+'cleanup.original.json',cleanup_raw),(prefix+'request.original.json',request_raw),(prefix+'event.original.json',event_raw)):
             need(name in names,'required physical role')
             info=archive.getinfo(name);need(info.file_size==len(raw) and info.file_size<=CAP,'bounded physical role')
             exact(archive.read(info),raw,'physical role bytes')
+        value=parse(original_raw,CAP)
+        for name,key in (('source.original.json','source'),('runtime.original.json','runtime'),('context.original.json','context')):
+            exact(archive.read(prefix+name),canonical(value[key]),'physical source/context join')
+        for index,child_record in enumerate(value['children']):
+            stem=f'{index:02d}'
+            exact(archive.read(prefix+'completed-'+stem+'.original.json'),canonical(child_record),'completed child join')
+            exact(archive.read(prefix+stem+'-preexec.original.json'),canonical(child_record['resource']['preexec']),'preexec role join')
+            exact(archive.read(prefix+stem+'-stdout.original'),unbase(child_record['stdoutBase64'],32768),'stdout role join')
+            exact(archive.read(prefix+stem+'-stderr.original'),unbase(child_record['stderrBase64'],8192),'stderr role join')
+        exact(archive.read(admission+'request.original.json'),request_raw,'admitted request role')
+        exact(archive.read(admission+'event.original.json'),event_raw,'admitted event role')
     return {'officialRunId':rid,'officialJobId':expected['jobId'],'officialArtifactId':expected['artifactId'],'officialMetadataAuthenticated':False,'externalBindingReviewedByAuditor':False}
 
 def read_local(path,cap):
@@ -313,7 +372,7 @@ def read_local(path,cap):
     return result
 
 def audit_bundle(inputs):
-    fields(inputs,'original cleanup request event expected binding run jobs artifacts artifact jobLog historicalReader auditorSource','bounded offline inputs')
+    fields(inputs,'original cleanup request event expected binding run jobs artifacts artifact jobLog manifest historicalReader auditorSource','bounded offline inputs')
     for key in ('historicalReader','auditorSource'):need(type(inputs[key]) is bytes,'local reviewed source bytes')
     binding=parse(inputs['binding'],8192)
     exact(canonical(binding),inputs['binding'],'canonical external binding')
@@ -322,13 +381,13 @@ def audit_bundle(inputs):
     expected=parse(inputs['expected'],8192)
     exact(canonical(expected),inputs['expected'],'canonical historical expectation')
     report=audit(inputs['original'],inputs['cleanup'],inputs['request'],inputs['event'],expected)
-    report.update(official(inputs['run'],inputs['jobs'],inputs['artifacts'],inputs['artifact'],inputs['jobLog'],inputs['original'],inputs['cleanup'],inputs['request'],inputs['event'],expected,binding))
+    report.update(official(inputs['run'],inputs['jobs'],inputs['artifacts'],inputs['artifact'],inputs['jobLog'],inputs['manifest'],inputs['original'],inputs['cleanup'],inputs['request'],inputs['event'],expected,binding))
     return report
 
 def main(argv=None):
     import argparse
     p=argparse.ArgumentParser(description='Offline failed-attempt classification only')
-    caps={'original':CAP,'cleanup':65536,'request':65536,'event':262144,'expected':8192,'binding':8192,'run':262144,'jobs':1048576,'artifacts':262144,'artifact':33554432,'jobLog':33554432,'historicalReader':32768}
+    caps={'original':CAP,'cleanup':65536,'request':65536,'event':262144,'expected':8192,'binding':8192,'run':262144,'jobs':1048576,'artifacts':262144,'artifact':33554432,'jobLog':33554432,'manifest':65536,'historicalReader':32768}
     for key in caps:p.add_argument('--'+key.replace('_','-'),required=True)
     a=p.parse_args(argv)
     try:

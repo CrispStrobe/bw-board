@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import types
 import unittest
+import warnings
 import zipfile
 import zlib
 
@@ -63,16 +64,77 @@ def synthetic_official(packet):
     steps=[{'number':i,'name':name,'status':'completed','conclusion':conclusion} for i,(name,conclusion) in enumerate([('Admit exact request, event and all selected Git bytes before runtime setup','success'),('Fixed eighteen-child ordinary AT paired capture','failure'),('Independent outside service stop and cgroup readback','success'),('Retain exact originals, including failed attempts','success')],1)]
     jobs={'total_count':2,'jobs':[{'id':12,'run_id':rid,'run_attempt':1,'head_sha':r.OLD_HEAD,'name':'paired','status':'completed','conclusion':'failure','steps':steps},{'id':14,'run_id':rid,'run_attempt':1,'head_sha':r.OLD_HEAD,'name':'source-controls','status':'completed','conclusion':'skipped','steps':[]}]}
     prefix='read16-paired-12345-1/'
-    buffer=io.BytesIO()
-    with zipfile.ZipFile(buffer,'w',compression=zipfile.ZIP_DEFLATED) as z:
-        for name,raw in [('paired.original.json',original),('cleanup.original.json',cleanup),('request.original.json',request),('event.original.json',event)]:z.writestr(prefix+name,raw)
-        for i in range(102):z.writestr(prefix+'synthetic-'+str(i)+'.original',b'x')
-    archive=buffer.getvalue();log=b'synthetic bounded official job log\n'
+    admission='read16-admission-12345-1/'
+    members={prefix+'paired.original.json':original,prefix+'cleanup.original.json':cleanup,
+             prefix+'request.original.json':request,prefix+'event.original.json':event,
+             prefix+'source.original.json':r.canonical(packet[0]['source']),
+             prefix+'runtime.original.json':r.canonical(packet[0]['runtime']),
+             prefix+'context.original.json':r.canonical(packet[0]['context']),
+             admission+'request.original.json':request,admission+'event.original.json':event}
+    for index,record in enumerate(packet[0]['children']):
+        stem=f'{index:02d}'
+        members[prefix+stem+'-preexec.original.json']=r.canonical(record['resource']['preexec'])
+        members[prefix+stem+'-stdout.original']=base64.b64decode(record['stdoutBase64'])
+        members[prefix+stem+'-stderr.original']=base64.b64decode(record['stderrBase64'])
+        members[prefix+'completed-'+stem+'.original.json']=r.canonical(record)
+        members[prefix+'capture-'+stem+'.original.json']=r.canonical(record)
+    for name in r.physical_roster('12345'):members.setdefault(name,b'x')
+    class WriteOnly:
+        def __init__(self):self.buffer=io.BytesIO();self.count=0
+        def write(self,raw):self.buffer.write(raw);self.count+=len(raw);return len(raw)
+        def tell(self):return self.count
+        def flush(self):pass
+    stream=WriteOnly()
+    with zipfile.ZipFile(stream,'w') as z:
+        for name,raw in sorted(members.items()):
+            info=zipfile.ZipInfo(name,(2026,1,1,0,0,0));info.create_system=3
+            info.external_attr=0o100644<<16;info.compress_type=zipfile.ZIP_DEFLATED
+            z.writestr(info,raw)
+    archive=stream.buffer.getvalue();log=b'synthetic bounded official job log\n'
+    manifest={'expandedBytes':sum(map(len,members.values())),'files':[{'path':name,'bytes':len(raw),'sha256':r.sha(raw)} for name,raw in sorted(members.items())],'runtimeExecuted':False}
     artifacts={'total_count':1,'artifacts':[{'id':13,'name':'read16-paired-12345-1','size_in_bytes':len(archive),'digest':'sha256:'+r.sha(archive),'expired':False,'workflow_run':{'id':rid,'head_sha':r.OLD_HEAD,'head_branch':packet[2]['sourceBranch'],'repository_id':45,'head_repository_id':45}}]}
-    raw={'run':r.canonical(run),'jobs':r.canonical(jobs),'artifacts':r.canonical(artifacts),'artifact':archive,'jobLog':log,'original':original,'cleanup':cleanup,'request':request,'event':event}
-    binding={'schema':'bw.read16-failed-attempt-binding.v1','auditorCommit':'a'*40,'auditorTree':'b'*40,'auditorFileSha256':'c'*64,'historicalReaderSha256':r.OLD_READER_SHA,'historicalHead':r.OLD_HEAD,'historicalTree':r.OLD_TREE,'historicalWorkflowHead':r.OLD_WORKFLOW_HEAD,'runId':'12345','jobId':12,'artifactId':13,'artifactBytes':len(archive),'artifactSha256':r.sha(archive),'jobLogBytes':len(log),'jobLogSha256':r.sha(log)}
+    raw={'run':r.canonical(run),'jobs':r.canonical(jobs),'artifacts':r.canonical(artifacts),'artifact':archive,'jobLog':log,'manifest':r.canonical(manifest),'original':original,'cleanup':cleanup,'request':request,'event':event}
+    binding={'schema':'bw.read16-failed-attempt-binding.v1','auditorCommit':'a'*40,'auditorTree':'b'*40,'auditorFileSha256':'c'*64,'historicalReaderSha256':r.OLD_READER_SHA,'historicalHead':r.OLD_HEAD,'historicalTree':r.OLD_TREE,'historicalWorkflowHead':r.OLD_WORKFLOW_HEAD,'runId':'12345','jobId':12,'artifactId':13,'artifactBytes':len(archive),'artifactSha256':r.sha(archive),'jobLogBytes':len(log),'jobLogSha256':r.sha(log),'manifestBytes':len(raw['manifest']),'manifestSha256':r.sha(raw['manifest'])}
     for key in ('request','event','original','cleanup','run','jobs','artifacts'):binding[key+'Sha256']=r.sha(raw[key])
     return raw,binding,expected
+
+def synthetic_bundle(packet):
+    raw,binding,expected=synthetic_official(packet)
+    old_raw=zlib.decompress(base64.b85decode(OLD_SOURCE_B85))
+    binding['auditorFileSha256']=r.sha((HERE/'reader.py').read_bytes())
+    return {**raw,'expected':r.canonical(expected),'binding':r.canonical(binding),
+            'historicalReader':old_raw,'auditorSource':(HERE/'reader.py').read_bytes()}
+
+def changed_archive(data,change):
+    """Rehash all external archive rows so only the physical defect is tested."""
+    with zipfile.ZipFile(io.BytesIO(data['artifact'])) as z:
+        rows=[(i.filename,z.read(i),i.external_attr>>16) for i in z.infolist()]
+    rows=change(rows)
+    class WriteOnly:
+        def __init__(self):self.buffer=io.BytesIO();self.count=0
+        def write(self,raw):self.buffer.write(raw);self.count+=len(raw);return len(raw)
+        def tell(self):return self.count
+        def flush(self):pass
+    stream=WriteOnly()
+    with zipfile.ZipFile(stream,'w') as z:
+        for name,raw,mode in rows:
+            info=zipfile.ZipInfo(name,(2026,1,1,0,0,0));info.create_system=3
+            info.external_attr=mode<<16;info.compress_type=zipfile.ZIP_DEFLATED
+            z.writestr(info,raw)
+    data['artifact']=stream.buffer.getvalue()
+    manifest={'expandedBytes':sum(len(row[1]) for row in rows),
+              'files':[{'path':name,'bytes':len(raw),'sha256':r.sha(raw)} for name,raw,_ in rows],
+              'runtimeExecuted':False}
+    data['manifest']=r.canonical(manifest)
+    artifacts=r.parse(data['artifacts'],262144)
+    artifacts['artifacts'][0]['size_in_bytes']=len(data['artifact'])
+    artifacts['artifacts'][0]['digest']='sha256:'+r.sha(data['artifact'])
+    data['artifacts']=r.canonical(artifacts)
+    binding=r.parse(data['binding'],8192)
+    for key in ('artifact','artifacts','manifest'):binding[key+'Sha256']=r.sha(data[key])
+    binding['artifactBytes']=len(data['artifact']);binding['manifestBytes']=len(data['manifest'])
+    data['binding']=r.canonical(binding)
+    return data
 
 class FailureOnly(unittest.TestCase):
     def setUp(self):self.packet=synthetic()
@@ -91,7 +153,7 @@ class FailureOnly(unittest.TestCase):
             old.audit(*encoded(self.packet))
     def test_official_and_archive_joins(self):
         raw,binding,expected=synthetic_official(self.packet)
-        def grade():return r.official(raw['run'],raw['jobs'],raw['artifacts'],raw['artifact'],raw['jobLog'],raw['original'],raw['cleanup'],raw['request'],raw['event'],expected,binding)
+        def grade():return r.official(raw['run'],raw['jobs'],raw['artifacts'],raw['artifact'],raw['jobLog'],raw['manifest'],raw['original'],raw['cleanup'],raw['request'],raw['event'],expected,binding)
         self.assertIs(grade()['officialMetadataAuthenticated'],False)
         bad_jobs=r.parse(raw['jobs'],1048576);bad_jobs['jobs'][0]['steps'][0]['number']=True
         old=raw['jobs'];raw['jobs']=r.canonical(bad_jobs);binding['jobsSha256']=r.sha(raw['jobs'])
@@ -107,12 +169,36 @@ class FailureOnly(unittest.TestCase):
         raw['artifact']=raw['artifact']+b'coherent different archive';binding['artifactSha256']=r.sha(raw['artifact']);binding['artifactBytes']=len(raw['artifact'])
         with self.assertRaises(r.Refusal):grade()
     def test_complete_offline_binding(self):
-        raw,binding,expected=synthetic_official(self.packet)
-        old_raw=zlib.decompress(base64.b85decode(OLD_SOURCE_B85))
-        binding['auditorFileSha256']=r.sha((HERE/'reader.py').read_bytes())
-        data={**raw,'expected':r.canonical(expected),'binding':r.canonical(binding),'historicalReader':old_raw,'auditorSource':(HERE/'reader.py').read_bytes()}
+        data=synthetic_bundle(self.packet)
         self.assertEqual(r.audit_bundle(data)['classification'],'failed-attempt-only')
-        data['historicalReader']=old_raw+b'changed'
+        data['historicalReader']=data['historicalReader']+b'changed'
+        with self.assertRaises(r.Refusal):r.audit_bundle(data)
+    def test_coherent_physical_archive_cuts(self):
+        base=synthetic_bundle(self.packet)
+        prefix='read16-paired-12345-1/'
+        cases=(
+            lambda rows:[(n,b,0o120777 if n==prefix+'paired.original.json' else mode) for n,b,mode in rows],
+            lambda rows:[(n,b,0o040755 if n==prefix+'paired.original.json' else mode) for n,b,mode in rows],
+            lambda rows:[(prefix+'PAIRED.original.json' if n==prefix+'paired.original.json' else n,b,mode) for n,b,mode in rows],
+            lambda rows:[(prefix+'unexpected.original' if n==prefix+'paired.original.json' else n,b,mode) for n,b,mode in rows],
+            lambda rows:[(prefix+'../paired.original.json' if n==prefix+'paired.original.json' else n,b,mode) for n,b,mode in rows],
+            lambda rows:[(prefix+'request.original.json' if n==prefix+'paired.original.json' else n,b,mode) for n,b,mode in rows],
+        )
+        for index,change in enumerate(cases):
+            with self.subTest(index=index):
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore',UserWarning)
+                    data=changed_archive(copy.deepcopy(base),change)
+                with self.assertRaises(r.Refusal):r.audit_bundle(data)
+    def test_coherent_manifest_hash_cut(self):
+        data=synthetic_bundle(self.packet)
+        manifest=r.parse(data['manifest'],65536)
+        manifest['files'][0]['sha256']='0'*64
+        data['manifest']=r.canonical(manifest)
+        binding=r.parse(data['binding'],8192)
+        binding['manifestBytes']=len(data['manifest'])
+        binding['manifestSha256']=r.sha(data['manifest'])
+        data['binding']=r.canonical(binding)
         with self.assertRaises(r.Refusal):r.audit_bundle(data)
     def test_mutants_refuse(self):
         cuts=(
