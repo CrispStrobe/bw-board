@@ -1897,6 +1897,9 @@ export class BoardImpl {
    * The current a DMM in series with `partId`'s `terminal` shows: the mean of
    * branchCurrent over the last 100 ms, signed as branchCurrent is (out of the
    * part). Same window, first-read and expiry rules as meterVoltage.
+   * A powered terminal needs a represented, finite current, including zero.
+   * Missing/unmodelled or nonfinite current is unavailable, never a measured
+   * zero; a watch which loses this authority stays refused for its window.
    * @param {string} partId
    * @param {string} terminal
    * @returns {number}
@@ -1997,8 +2000,15 @@ export class BoardImpl {
     const result = solution ?? this._mnaCache;
     this._assertMeasurementSolution(result);
     this._assertDeterminateCurrent(result, w.part, w.terminal);
-    const i = result.branchCurrents.get(w.part)?.get(w.terminal) ?? 0;
-    return Number.isFinite(i) ? i : 0;
+    const currents = result.branchCurrents?.get(w.part);
+    const present = currents?.has(w.terminal) === true;
+    const i = currents?.get(w.terminal);
+    if (!present || !Number.isFinite(i)) {
+      const error = new Error(`${present ? 'nonfinite' : 'missing'} terminal current ${w.part}.${w.terminal}: measurement unavailable`);
+      error.code = present ? 'NONFINITE_BRANCH_CURRENT' : 'MISSING_BRANCH_CURRENT';
+      throw error;
+    }
+    return i;
   }
 
   /** @private */
@@ -2086,7 +2096,9 @@ export class BoardImpl {
       try { v = this._meterValue(w,solution); }
       catch (error) {
         if (error.code !== 'INDETERMINATE_BRANCH_CURRENT'
-            && error.code !== 'SOLVE_FAILED_MEASUREMENT') throw error;
+            && error.code !== 'SOLVE_FAILED_MEASUREMENT'
+            && error.code !== 'MISSING_BRANCH_CURRENT'
+            && error.code !== 'NONFINITE_BRANCH_CURRENT') throw error;
         w.failure = error.message;
         continue;
       }
@@ -2153,7 +2165,8 @@ export class BoardImpl {
       let middle,end;
       try { middle=this._meterValue(w,midpoint);end=this._meterValue(w,endpoint); }
       catch (error) {
-        if (error.code !== 'INDETERMINATE_BRANCH_CURRENT' && error.code !== 'SOLVE_FAILED_MEASUREMENT') throw error;
+        if (error.code !== 'INDETERMINATE_BRANCH_CURRENT' && error.code !== 'SOLVE_FAILED_MEASUREMENT'
+          && error.code !== 'MISSING_BRANCH_CURRENT' && error.code !== 'NONFINITE_BRANCH_CURRENT') throw error;
         w.failure=error.message;
         continue;
       }
