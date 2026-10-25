@@ -1478,5 +1478,171 @@ class HostCleanupControls(unittest.TestCase):
         self.assertEqual(len(result['effects']), 1)
 
 
+class ReferenceInputControls(unittest.TestCase):
+    @staticmethod
+    def request():
+        request, _raw, _event, _env = synthetic_request('reference')
+        compact = {'schema': 'bw.bochs-ring3.build-manifest-compact.v1',
+            'sourceHead': request['source']['head'], 'sourceTree': request['source']['tree'],
+            'sourceFilesSha256': producer.sha256(producer.canonical(request['source']['files'])),
+            'bochsCommit': producer.UPSTREAM_COMMIT, 'bochsTree': producer.UPSTREAM_TREE,
+            'policySha256': 'a' * 64, 'runtimeMembersSha256': 'b' * 64, 'noticesSha256': 'c' * 64,
+            'buildCompleted': True, 'guestExecuted': False}
+        for key in ('fullManifest', 'runtimeZip', 'binary', 'configHeader'):
+            compact[key] = {'bytes': 123, 'sha256': 'd' * 64}
+        request['build'] = {'runId': '12345', 'jobId': 111, 'artifactId': 222,
+            'name': 'i80386-bochs-ring3-build-v1-originals', 'bytes': 321, 'sha256': 'e' * 64,
+            'checkoutHead': request['source']['head'], 'checkoutTree': request['source']['tree'],
+            'workflowCommit': 'f' * 40,
+            'workflowFileSha256': request['source']['files'][producer.WORKFLOW]['sha256'],
+            'compactManifest': compact, 'buildLog': {'bytes': 100, 'sha256': 'a' * 64}}
+        return request
+    def test_selected_reference_source_and_closed_compact_boundary(self):
+        request = self.request()
+        self.assertEqual(producer.admit_reference_inputs(request), request['build'])
+        for key, value in (('checkoutHead', '2' * 40), ('checkoutTree', '3' * 40),
+                           ('workflowFileSha256', 'c' * 64), ('bytes', 67108865),
+                           ('artifactId', True), ('name', 'old-bochs-addon')):
+            bad = copy.deepcopy(request); bad['build'][key] = value
+            with self.assertRaises(producer.Refusal): producer.admit_reference_inputs(bad)
+        for key, value in (('guestExecuted', True), ('buildCompleted', False),
+                           ('sourceFilesSha256', 'f' * 64), ('bochsCommit', 'a' * 40)):
+            bad = copy.deepcopy(request); bad['build']['compactManifest'][key] = value
+            with self.assertRaises(producer.Refusal): producer.admit_reference_inputs(bad)
+        bad = copy.deepcopy(request); bad['build']['compactManifest']['runtimeZip']['path'] = 'extra'
+        with self.assertRaises(producer.Refusal): producer.admit_reference_inputs(bad)
+    def test_source_authored_driver_and_staged_loader_for_both_children(self):
+        raw = producer.reference_js_driver('/source', '/run/runtime')
+        self.assertIn(b'await executeFixture({fixture})', raw)
+        self.assertIn(b'fresh generated authored ROM equals selected input', raw)
+        self.assertIn(b"{flag: 'wx', mode: 0o600}", raw)
+        self.assertNotIn(b'createCPU', raw)
+        ops = object.__new__(producer.LiveOps)
+        ops.route = 'reference'; ops.paths = {'work': Path('/run/work')}
+        ops.host_stage = SimpleNamespace(library=Path('/run/host/lib'), facts={'files': {
+            '/usr/lib/loader': {'member': '/run/host/lib/ld-linux-x86-64.so.2'}}})
+        ops.stage = SimpleNamespace(facts={'stagePath': '/run/node/node'})
+        ops.reference_runtime = Path('/run/work/runtime')
+        js, bochs = ops.reference_argv('js'), ops.reference_argv('bochs')
+        for argv in (js, bochs):
+            self.assertEqual(argv[:4], ['/run/host/lib/ld-linux-x86-64.so.2', '--inhibit-cache',
+                                       '--library-path', '/run/host/lib'])
+            self.assertNotIn(producer.NODE_PATH, argv)
+        self.assertEqual(js[4], '/run/node/node')
+        self.assertEqual(bochs[4:], ['/run/work/runtime/bin/bochs', '-q', '-f', '/run/work/bochsrc.original'])
+    def test_original_frame_copy_and_defined_bytes_not_masked(self):
+        _rom, raw = producer.authored_inputs(); fixture = producer.raw_object(raw, 1048576)
+        frame = producer.WIRE_MAGIC + bytes(producer.WIRE_BYTES - len(producer.WIRE_MAGIC) - len(producer.WIRE_END)) + producer.WIRE_END
+        self.assertEqual(producer.compare_reference_frames(frame, frame, fixture), 12)
+        def at(address):
+            offset = len(producer.WIRE_MAGIC)
+            for row in fixture['ranges']:
+                if row['address'] <= address < row['address'] + row['bytes']:
+                    return offset + address - row['address']
+                offset += row['bytes']
+            raise AssertionError('authored address absent')
+        original = bytearray(frame); original[at(0x70c0) + 6] = 1
+        with self.assertRaisesRegex(producer.Refusal, 'all twenty'):
+            producer.compare_reference_frames(frame, bytes(original), fixture)
+        original[at(0x7fec) + 6] = 1
+        self.assertEqual(producer.compare_reference_frames(frame, bytes(original), fixture), 12)
+        original[at(0x100d)] = 1
+        with self.assertRaisesRegex(producer.Refusal, 'defined'):
+            producer.compare_reference_frames(frame, bytes(original), fixture)
+        with self.assertRaisesRegex(producer.Refusal, 'defined'):
+            producer.compare_reference_frames(frame, frame + b'x', fixture)
+    def test_genuine_metadata_before_once_zip_and_wrong_source_no_get(self):
+        selected = self.request()['build']; archive = b'authored selected archive data'
+        selected['bytes'], selected['sha256'] = len(archive), producer.sha256(archive)
+        run = {'id': 12345, 'run_attempt': 1, 'event': 'pull_request', 'actor': {'login': producer.OWNER},
+            'head_sha': selected['checkoutHead'], 'path': producer.WORKFLOW, 'status': 'completed', 'conclusion': 'success',
+            'repository': {'id': 900, 'full_name': producer.REPOSITORY, 'fork': False},
+            'head_repository': {'id': 900, 'full_name': producer.REPOSITORY, 'fork': False},
+            'pull_requests': [{'number': 700, 'head': {'sha': selected['checkoutHead'], 'repo': {'id': 900}},
+                               'base': {'ref': 'master', 'repo': {'id': 900}}}]}
+        names = ['Checkout selected producer source', 'Checkout executing workflow source',
+            'Admit Bochs build source and request', 'Prepare pinned Node input cache',
+            'Build pinned Bochs CPU3 and retain originals', 'Retain Bochs build originals']
+        job = {'id': 111, 'run_id': 12345, 'run_attempt': 1, 'head_sha': selected['checkoutHead'],
+            'name': producer.ROUTES['build'][0], 'status': 'completed', 'conclusion': 'success',
+            'steps': [{'number': index + 1, 'name': name, 'status': 'completed', 'conclusion': 'success'}
+                      for index, name in enumerate(names)]}
+        artifact = {'id': 222, 'name': selected['name'], 'expired': False,
+            'size_in_bytes': len(archive), 'digest': 'sha256:' + selected['sha256'],
+            'workflow_run': {'id': 12345, 'head_sha': selected['checkoutHead'],
+                             'repository_id': 900, 'head_repository_id': 900}}
+        base = 'https://api.github.com/repos/' + producer.REPOSITORY + '/actions/'
+        def exercise(bad=None):
+            rows = {'runs/12345': copy.deepcopy(run), 'jobs/111': copy.deepcopy(job),
+                'artifacts/222': copy.deepcopy(artifact),
+                'runs/12345/artifacts?per_page=100': {'total_count': 1, 'artifacts': [artifact]}}
+            if bad: bad(rows)
+            events = []
+            def get(url, cap, *, token):
+                self.assertTrue(url.startswith(base)); self.assertEqual(token, 'secret-sentinel')
+                route = url[len(base):]; events.append(route)
+                if route.endswith('/zip'):
+                    self.assertIn('durable-attempt', events)
+                    return archive
+                return producer.canonical(rows[route])
+            def save(*args): events.append('durable-attempt')
+            ops = object.__new__(producer.LiveOps); ops.route = 'reference'
+            ops.paths = {'work': Path('/run/work')}
+            with mock.patch.object(producer, 'source_http', get), mock.patch.object(producer, 'sealed_write', save), \
+                 mock.patch.dict(producer.os.environ, {'GH_TOKEN': 'secret-sentinel'}):
+                result = None
+                try: result = ops.acquire_build(selected, pull_request=700)
+                except producer.Refusal: pass
+                before = len(events)
+                with self.assertRaisesRegex(producer.Refusal, 'one Reference-only'): ops.acquire_build(selected, pull_request=700)
+                self.assertEqual(len(events), before)
+            return result, events
+        result, events = exercise()
+        self.assertEqual(result[0], archive)
+        self.assertEqual(events[-2:], ['durable-attempt', 'artifacts/222/zip'])
+        self.assertNotIn('secret-sentinel', producer.canonical(result[1]).decode())
+        for mutation in (lambda rows: rows['runs/12345'].update(head_sha='0' * 40),
+                         lambda rows: rows['jobs/111']['steps'][2].update(status='in_progress'),
+                         lambda rows: rows['artifacts/222'].update(digest='sha256:' + '0' * 64),
+                         lambda rows: rows['runs/12345/artifacts?per_page=100'].update(total_count=2),
+                         lambda rows: rows['runs/12345']['repository'].update(full_name='other/foreign'),
+                         lambda rows: rows['runs/12345']['head_repository'].update(fork=True),
+                         lambda rows: rows['runs/12345']['pull_requests'][0].update(number=701),
+                         lambda rows: rows['artifacts/222']['workflow_run'].update(repository_id=901),
+                         lambda rows: rows['artifacts/222']['workflow_run'].update(head_repository_id=901),
+                         lambda rows: rows['jobs/111']['steps'].append({'number': 7, 'name': 'secret-sentinel',
+                            'status': 'completed', 'conclusion': 'success'})):
+            result, events = exercise(mutation)
+            self.assertIsNone(result)
+            self.assertNotIn('durable-attempt', events)
+            self.assertFalse(any(route.endswith('/zip') for route in events))
+
+
+class FinalizerKnownErrorControls(unittest.TestCase):
+    def test_known_status_and_incomplete_inner_present_before_cgroup_cleanup(self):
+        _request, raw, event, env = synthetic_request()
+        inner, roles = producer.collect_toolchain(raw, event, env, InventoryEdges())
+        class Inspect(InventoryEdges):
+            def cleanup(edge, original, *, outer=None):
+                edge.base = copy.deepcopy(outer)
+                return super().cleanup(original, outer=outer)
+        for incomplete in (False, True):
+            edges = Inspect(); current = copy.deepcopy(inner)
+            if incomplete: current['complete'] = False
+            error = producer.Refusal('known manager receipt refused')
+            error.bochs_secondary = [producer.failure(OSError('known receipt-close secondary'), 'file-close')]
+            outside, _roles = producer.finalize_original('toolchain', raw, event, env, current,
+                dict(roles), 0, 0, edges, status_error=error)
+            before = [edges.base['firstFailure'], *edges.base['secondary']]
+            self.assertIn('outside-service-status', [row['phase'] for row in before])
+            self.assertIn('known receipt-close secondary', [row['message'] for row in before])
+            if incomplete:
+                self.assertEqual(before[0]['phase'], 'outside-inner-completion')
+            else:
+                self.assertEqual(before[0]['phase'], 'outside-service-status')
+            self.assertEqual(outside['cleanupExitCode'], 1)
+            self.assertEqual([outside['firstFailure'], *outside['secondary']], before)
+
+
 if __name__ == '__main__':
     unittest.main()
