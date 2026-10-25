@@ -4854,6 +4854,20 @@ def build_official_v2(archive_raw, expectation_raw, run, jobs,
             'actualRunApproved': False, 'guestApproved': False}
 
 
+class CliReadRefusal(Refusal):
+    def __init__(self, stage, primary, close_error):
+        super().__init__('retained original primary and close failure')
+        self.stage = stage
+        self.primary = primary
+        self.close_error = close_error
+
+
+def cli_error_fact(error):
+    if isinstance(error, OSError):
+        return {'type': type(error).__name__, 'errno': error.errno}
+    return {'type': type(error).__name__, 'message': str(error)[:128]}
+
+
 def cli_regular(path, cap):
     """Read one retained local original through a bounded held regular FD."""
     require(type(path) is str and path != '' and type(cap) is int and 0 < cap,
@@ -4861,6 +4875,7 @@ def cli_regular(path, cap):
     flags = os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW
     fd = os.open(path, flags)
     primary = None
+    stage = 'fstat-before'
     try:
         before = os.fstat(fd)
         require(stat.S_ISREG(before.st_mode) and 0 < before.st_size <= cap and
@@ -4868,6 +4883,7 @@ def cli_regular(path, cap):
                 'ordinary bounded retained original')
         chunks = []
         consumed = 0
+        stage = 'read'
         while True:
             part = os.read(fd, min(65536, cap + 1 - consumed))
             if not part:
@@ -4875,6 +4891,7 @@ def cli_regular(path, cap):
             consumed += len(part)
             require(consumed <= cap, 'retained original byte cap')
             chunks.append(part)
+        stage = 'fstat-after'
         after = os.fstat(fd)
         require(consumed == before.st_size and
                 (before.st_dev, before.st_ino, before.st_mode, before.st_uid,
@@ -4891,9 +4908,10 @@ def cli_regular(path, cap):
     finally:
         try:
             os.close(fd)
-        except OSError:
+        except OSError as close_error:
             if primary is None:
                 raise
+            raise CliReadRefusal(stage, primary, close_error) from primary
 
 
 def cli_grade(route, files):
@@ -4961,8 +4979,16 @@ def main(argv=None):
         sys.stdout.buffer.write(wire + b'\n')
         return 0
     except (Refusal, OSError, UnicodeError, ValueError) as error:
+        if isinstance(error, CliReadRefusal):
+            reason = {'stage':error.stage,
+                      'first':cli_error_fact(error.primary)}
+            secondary = [cli_error_fact(error.close_error)]
+        else:
+            reason = cli_error_fact(error)
+            secondary = []
         report = {'schema':'bw.bochs-ring3.reader-refusal.v1',
-                  'reason':str(error)[:256], 'actualRunApproved':False,
+                  'reason':reason, 'secondary':secondary,
+                  'actualRunApproved':False,
                   'guestApproved':False}
         sys.stderr.write(json.dumps(report, sort_keys=True,
                                     separators=(',', ':')) + '\n')
