@@ -166,7 +166,7 @@ Preserve the H347 official refusal and the old reader's 16-row helper unchanged.
 Do not truncate the retained raw stat text, raise that historical bound or rerun
 the consumed diagnostic to obtain a preferred kernel. First claim and review a
 versioned negative-only resource reader/profile using primary kernel source and
-the exact retained schema. The observed keys are `nr_descendants`, ten
+the exact retained schema. Review the [upstream cgroup v2 interface](https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html#core-interface-files) and [cgroup_stat_show source](https://github.com/torvalds/linux/blob/master/kernel/cgroup/cgroup.c), pinning the reviewed source revision separately. Subsystem counters have a different scope from descendant counts, and the source documents possible observation races; do not infer sums or continuous ownership from a snapshot. These upstream references do not identify the original hosted kernel version. The observed keys are `nr_descendants`, ten
 `nr_subsys_*` counters, `nr_dying_descendants` and ten `nr_dying_subsys_*`
 counters for `cpuset`, `cpu`, `io`, `memory`, `perf_event`, `hugetlb`, `pids`,
 `rdma`, `misc` and `dmem`. Their meanings and selected kernel/profile identity
