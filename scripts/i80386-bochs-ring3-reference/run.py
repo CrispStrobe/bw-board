@@ -33,7 +33,10 @@ import zipfile
 import zlib
 
 TOOLCHAIN_ENABLED = False
-TOOLCHAIN_V2_ENABLED = True
+TOOLCHAIN_V2_ENABLED = False
+TOOLCHAIN_V3_ENABLED = False
+BUILD_CURRENT_V3_ENABLED = False
+REFERENCE_CURRENT_V3_ENABLED = False
 BUILD_CURRENT_V2_ENABLED = True
 REFERENCE_CURRENT_V2_ENABLED = True
 BUILD_ENABLED = True
@@ -75,6 +78,8 @@ SOURCE_PATHS = tuple('scripts/i80386-bochs-ring3-reference/' + name for name in
     'package-lock.json', 'LICENSE')
 WORKFLOW = '.github/workflows/i80386-bochs-ring3-reference.yml'
 ROUTES = {
+    'toolchain-v3': ('bochs-ring3-toolchain-inventory-v3', 'x86-bochs-ring3-toolchain-inventory-v3',
+                     'BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST'),
     'toolchain-v2': ('bochs-ring3-toolchain-inventory-v2', 'x86-bochs-ring3-toolchain-inventory-v2',
                      'BW_BOCHS_RING3_TOOLCHAIN_V2_REQUEST'),
     'toolchain': ('bochs-ring3-toolchain-inventory-v1', 'x86-bochs-ring3-toolchain-inventory-v1',
@@ -103,6 +108,7 @@ LIMITS = {
                   'expandedBytes': 402653184, 'members': 6144,
                   'cleanupBytes': 16384, 'cleanupSamples': 6, 'cleanupSeconds': 5}}
 LIMITS['toolchain-v2'] = dict(LIMITS['toolchain'])
+LIMITS['toolchain-v3'] = dict(LIMITS['toolchain'])
 ERROR_LIMIT = 512
 SECONDARY_LIMIT = 16
 HEX = re.compile(r'[0-9a-f]{64}\Z')
@@ -2795,22 +2801,26 @@ def collect_reference(request_raw, event_raw, env, ops):
 
 def dispatch(route, request_raw, event_raw, env, ops_factory, *, current=False):
     need(route in ROUTES, 'known source-owned route')
-    enabled = {'toolchain-v2': TOOLCHAIN_V2_ENABLED, 'toolchain': TOOLCHAIN_ENABLED, 'build': BUILD_ENABLED,
+    enabled = {'toolchain-v3': TOOLCHAIN_V3_ENABLED, 'toolchain-v2': TOOLCHAIN_V2_ENABLED, 'toolchain': TOOLCHAIN_ENABLED, 'build': BUILD_ENABLED,
                'reference': REFERENCE_ENABLED}[route]
-    if current and route in ('build','reference'):
+    if current == 'current-v3' and route in ('build','reference'):
+        enabled={'build':BUILD_CURRENT_V3_ENABLED,'reference':REFERENCE_CURRENT_V3_ENABLED}[route]
+    elif current and route in ('build','reference'):
         enabled={'build':BUILD_CURRENT_V2_ENABLED,'reference':REFERENCE_CURRENT_V2_ENABLED}[route]
     need(enabled is True, 'Bochs source route inactive; no host factory or input execution')
     request = selected_request(route, request_raw, event_raw, env, current=current)
     if route == 'build':
-        (admit_build_inputs_v2 if current else admit_build_inputs)(request)
+        (admit_build_inputs_v3 if current == 'current-v3' else admit_build_inputs_v2 if current else admit_build_inputs)(request)
     ops = ops_factory(request, env)
+    if route == 'toolchain-v3':
+        return collect_toolchain_v3(request_raw, event_raw, env, ops)
     if route == 'toolchain-v2':
         return collect_toolchain_v2(request_raw, event_raw, env, ops)
     if route == 'toolchain':
         return collect_toolchain(request_raw, event_raw, env, ops)
     if route == 'build':
-        return (collect_build_v2 if current else collect_build)(request_raw, event_raw, env, ops)
-    return (collect_reference_v2 if current else collect_reference)(request_raw, event_raw, env, ops)
+        return (collect_build_v3 if current == 'current-v3' else collect_build_v2 if current else collect_build)(request_raw, event_raw, env, ops)
+    return (collect_reference_v3 if current == 'current-v3' else collect_reference_v2 if current else collect_reference)(request_raw, event_raw, env, ops)
 
 
 class ChildKernel:
@@ -3325,11 +3335,15 @@ SERVICE_SHOW_PROPERTIES = 'Id,Result,ExecMainCode,ExecMainStatus,ActiveState,Con
 
 def route_enabled(route, *, current=False):
     need(route in ROUTES, 'known source-owned route')
+    if current == 'current-v3' and route in ('build','reference'):
+        need({'build':BUILD_CURRENT_V3_ENABLED,'reference':REFERENCE_CURRENT_V3_ENABLED}[route] is True,
+             'Bochs current V3 source route inactive; no input or execution edge')
+        return
     if current and route in ('build','reference'):
         need({'build':BUILD_CURRENT_V2_ENABLED,'reference':REFERENCE_CURRENT_V2_ENABLED}[route] is True,
              'Bochs current source route inactive; no input or execution edge')
         return
-    need({'toolchain-v2': TOOLCHAIN_V2_ENABLED, 'toolchain': TOOLCHAIN_ENABLED, 'build': BUILD_ENABLED,
+    need({'toolchain-v3': TOOLCHAIN_V3_ENABLED, 'toolchain-v2': TOOLCHAIN_V2_ENABLED, 'toolchain': TOOLCHAIN_ENABLED, 'build': BUILD_ENABLED,
           'reference': REFERENCE_ENABLED}[route] is True,
          'Bochs source route inactive; no host factory or input execution')
 
@@ -3337,7 +3351,7 @@ def route_enabled(route, *, current=False):
 def route_paths(route, env):
     need(route in ROUTES and re.fullmatch(r'[1-9][0-9]{0,19}', env.get('GITHUB_RUN_ID', '')) and
          env.get('GITHUB_RUN_ATTEMPT') == '1', 'fixed first-attempt run root')
-    stem = 'bw-bochs-' + ('toolchain-v2' if route == 'toolchain-v2' else route + '-v1') + '-' + env['GITHUB_RUN_ID'] + '-1'
+    stem = 'bw-bochs-' + (route if route in ('toolchain-v2','toolchain-v3') else route + '-v1') + '-' + env['GITHUB_RUN_ID'] + '-1'
     return {'work': Path('/run') / (stem + '-work'),
             'output': Path('/run') / (stem + '-originals'),
             'node': Path('/run') / (stem + '-node'), 'unit': stem + '.service'}
@@ -3495,7 +3509,7 @@ def load_cli_context(route, env, *, current=False):
     return context, request_raw, event_raw, paths
 
 
-def manager_arguments(route, context):
+def manager_arguments(route, context, *, current=False):
     """Fixed finite root service; no inherited pipe, quiet mode or secret value."""
     env = context['env']
     paths = route_paths(route, env)
@@ -3518,15 +3532,18 @@ def manager_arguments(route, context):
     argv += ['/usr/bin/python3', '-I', '-S', '-B',
              str(Path(context['sourceRoot']) / 'scripts/i80386-bochs-ring3-reference/run.py'),
              '--work', '--route', route]
+    if current == 'current-v3':
+        need(route in ('build','reference'), 'current V3 service profile only on executing routes')
+        argv += ['--profile','current-v3']
     need('--pipe' not in argv and '--quiet' not in argv and '--collect' not in argv and
          not any(x.startswith('--setenv=GH_TOKEN=') for x in argv),
          'unmixed manager receipt and secret name-only boundary')
     return argv
 
 
-def run_service_cli(route, context, paths, *, capture=child_capture, secret=None):
-    route_enabled(route)
-    argv = manager_arguments(route, context)
+def run_service_cli(route, context, paths, *, capture=child_capture, secret=None, current=False):
+    route_enabled(route, current=current)
+    argv = manager_arguments(route, context, current=current)
     public_env = {**BOOTSTRAP_ENV}
     actual_env = dict(public_env)
     if route == 'reference':
@@ -3546,8 +3563,8 @@ def run_service_cli(route, context, paths, *, capture=child_capture, secret=None
     return process
 
 
-def capture_service_status_cli(route, context, paths, *, capture=child_capture):
-    route_enabled(route)
+def capture_service_status_cli(route, context, paths, *, capture=child_capture, current=False):
+    route_enabled(route, current=current)
     unit = paths['unit']
     value = {'schema': 'bw.bochs-ring3.service-status.v1', 'route': route, 'unit': unit,
         'client': None, 'receipt': None, 'postShow': None, 'firstFailure': None, 'secondary': []}
@@ -3696,7 +3713,7 @@ def finish_cli(route, context, request_raw, event_raw, paths, *, provider_factor
         roles = {name: read_regular(paths['output'] / name, EVENT_CAP, minimum=1)[0]
                  for name in ('request.original.json', 'event.original.json')}
     roles.pop('manifest.json', None)  # new final manifest is a separate phase below
-    key = {'toolchain-v2': 'original.json', 'toolchain': 'original.json', 'build': 'build.original.json',
+    key = {'toolchain-v3': 'original.json', 'toolchain-v2': 'original.json', 'toolchain': 'original.json', 'build': 'build.original.json',
            'reference': 'original.json'}[route]
     inner = raw_object(roles[key], LIMITS[route]['expandedBytes']) if key in roles else None
     status = None
@@ -3717,7 +3734,7 @@ def finish_cli(route, context, request_raw, event_raw, paths, *, provider_factor
         observed = service_receipt(stdout, stderr, client['process']['exitCode'], paths['unit'])
         need(normal_manager_delivery(client['process']) and
              client['process']['name'] == 'service-client' and
-             client['process']['argv'] == manager_arguments(route, context) and
+             client['process']['argv'] == manager_arguments(route, context, current=current) and
              all(client['process'][which]['bytes'] == len(raw) and
                  client['process'][which]['sha256'] == sha256(raw)
                  for which, raw in (('stdout', stdout), ('stderr', stderr))) and
@@ -5372,13 +5389,21 @@ def admitted_request_v2(route, raw, event_raw, env):
     return value
 
 def selected_request(route, raw, event_raw, env, *, current=False):
+    if current == 'current-v3' and route in ('build','reference'):
+        value = admitted_request(route, raw, event_raw, env)
+        (admit_build_inputs_v3 if route == 'build' else admit_reference_inputs_v3)(value)
+        return value
     if current and route in ('build','reference'):
         value = admitted_request(route, raw, event_raw, env)
         (admit_build_inputs_v2 if route == 'build' else admit_reference_inputs_v2)(value)
         return value
+    if route == 'toolchain-v3':
+        return admitted_request_v3(route, raw, event_raw, env)
     return (admitted_request_v2 if route == 'toolchain-v2' else admitted_request)(route, raw, event_raw, env)
 
 def route_original_schema(route):
+    if route == 'toolchain-v3':
+        return 'bw.bochs-ring3.toolchain-original.v3'
     return 'bw.bochs-ring3.toolchain-original.v2' if route == 'toolchain-v2' else 'bw.bochs-ring3.' + route + '-original.v1'
 
 def check_current_node_stage(facts, route, env, *, after=False):
@@ -6658,12 +6683,766 @@ def cleanup_node_stage_v2(route, env, inner, plan):
     need(len(canonical(value)) <= 16384, 'V2 Node final exact wire cap')
     return value
 
-def main(argv=None, *, environment=None, provider_factory=None):
+
+
+# Versioned GCC13 package layout; no executable discovery or broad libexec root.
+GCC_INTERNAL_ROLES_V3 = ('cc1','cc1plus','collect2','lto-wrapper','lto1')
+TOOL_PATHS_V3 = {**TOOL_PATHS, **{role:'/usr/libexec/gcc/x86_64-linux-gnu/13/'+role
+                                 for role in GCC_INTERNAL_ROLES_V3}}
+GCC_INTERNAL_PATHS_V3 = frozenset(TOOL_PATHS_V3[role] for role in GCC_INTERNAL_ROLES_V3)
+GCC_INTERNAL_PARENTS_V3 = frozenset(('/usr/libexec/', '/usr/libexec/gcc/',
+    '/usr/libexec/gcc/x86_64-linux-gnu/', '/usr/libexec/gcc/x86_64-linux-gnu/13/'))
+
+
+def admit_compiler_layout_v3(graph):
+    closed(graph, ('files','aliases','directoryAliases'), 'closed GCC13 V3 data graph')
+    need(GCC_INTERNAL_PATHS_V3 <= set(graph['files']) and
+         not any(TOOL_PATHS[role] in graph['files'] or TOOL_PATHS[role] in graph['aliases']
+                 for role in GCC_INTERNAL_ROLES_V3) and
+         not any(path in graph['aliases'] for path in GCC_INTERNAL_PATHS_V3),
+         'all five exact GCC13 libexec roles, no old-path or role-alias substitution')
+    for path in (*graph['files'], *graph['aliases'], *graph['directoryAliases']):
+        if path.startswith('/usr/libexec'):
+            need(path in GCC_INTERNAL_PATHS_V3 and path in graph['files'] and
+                 path not in graph['aliases'] and path not in graph['directoryAliases'],
+                 'no extra libexec file, alias or search root')
+    return graph
+
+
+def cli_current_profile(route, profile):
+    if route in ('build','reference'):
+        need(profile == 'current-v3', 'explicit current-v3 profile required; inactive without exact profile')
+        return 'current-v3'
+    need(profile is None, 'metadata route rejects extraneous current profile')
+    return True
+
+
+def selected_tool_path_v3(path):
+    need(type(path) is str and path.startswith('/') and '\0' not in path and
+         all(part not in ('.', '..') for part in path.split('/')) and
+         (any(path.startswith(root) for root in TOOL_ROOTS) or path in ALTERNATIVE_LINKS or path in GCC_INTERNAL_PATHS_V3 or path in GCC_INTERNAL_PARENTS_V3),
+         'selected tool/library roots or exact selected alternative link')
+
+def resolve_tool_v3(path, aliases, directory_aliases):
+    """Resolve finite lexical aliases with held root-owned link readbacks."""
+    import posixpath
+    selected_tool_path_v3(path)
+    selected_internal = path if path in GCC_INTERNAL_PATHS_V3 else None
+    current = path
+    visited = set()
+    for _ in range(16):
+        need(current not in visited, 'no tool alias cycle')
+        visited.add(current)
+        pieces = current.lstrip('/').split('/')
+        changed = False
+        for index in range(len(pieces)):
+            candidate = '/' + '/'.join(pieces[:index + 1])
+            before = os.lstat(candidate)
+            need(before.st_uid == before.st_gid == 0, 'root-owned selected tool path')
+            if stat.S_ISLNK(before.st_mode):
+                text = os.readlink(candidate)
+                need(type(text) is str and 1 <= len(text) <= 4096 and '\0' not in text,
+                     'bounded tool link text')
+                after = os.lstat(candidate)
+                need(identity(before) == identity(after), 'stable selected alias identity')
+                target = posixpath.normpath(text if text.startswith('/') else
+                                           posixpath.join(posixpath.dirname(candidate), text))
+                selected_tool_path_v3(target + ('/' if index < len(pieces) - 1 else ''))
+                record = {'linkText': text, 'target': target,
+                          'before': identity(before), 'after': identity(after)}
+                table = directory_aliases if index < len(pieces) - 1 else aliases
+                need(candidate not in table or table[candidate] == record, 'same repeated alias')
+                table[candidate] = record
+                current = posixpath.join(target, *pieces[index + 1:])
+                need(selected_internal is None or current == selected_internal,
+                     'fixed GCC13 internal role cannot escape through file or parent alias')
+                selected_tool_path_v3(current)
+                changed = True
+                break
+            if index < len(pieces) - 1:
+                need(stat.S_ISDIR(before.st_mode) and before.st_mode & 0o022 == 0,
+                     'safe root-owned selected directory')
+        if not changed:
+            need(current not in ALTERNATIVE_LINKS, 'selected alternative must be a link, not executable data')
+            return current
+    raise Refusal('selected alias depth cap')
+
+def observe_toolchain_v3(read=read_regular, resolve=resolve_tool_v3, node_elf=None):
+    """Read selected bytes only. Neither this routine nor its callbacks exec."""
+    graph = {'files': {}, 'aliases': {}, 'directoryAliases': {}}
+    queue = list(TOOL_PATHS_V3.values()) + list(NOTICE_PATHS)
+    if node_elf is not None:
+        queue.extend('/usr/lib/x86_64-linux-gnu/' + name for name in node_elf['needed'])
+        if node_elf['interpreter']:
+            queue.append(node_elf['interpreter'])
+    total = 0
+    while queue:
+        path = queue.pop(0)
+        selected_path = path
+        path = resolve(path, graph['aliases'], graph['directoryAliases'])
+        need(selected_path not in GCC_INTERNAL_PATHS_V3 or path == selected_path,
+             'exact selected GCC13 role path before ANY target byte read')
+        if path in graph['files']:
+            continue
+        need(len(graph['files']) < 128 and len(graph['aliases']) <= 128 and
+             len(graph['directoryAliases']) <= 32, 'finite selected tool graph')
+        raw, observed = read(path, 128 * 1024 * 1024, minimum=1, owner=0)
+        total += len(raw)
+        need(total <= 256 * 1024 * 1024, 'one-pass tool read budget (two passes <=512MiB)')
+        if raw.startswith(b'\x7fELF'):
+            observed['elf'] = {key: value for key, value in sparse_elf(raw)['structure'].items()
+                               if key != 'soname'}
+            need(observed['elf']['rpath'] is None and observed['elf']['runpath'] is None,
+                 'no selected tool RPATH/RUNPATH')
+            if observed['elf']['interpreter']:
+                queue.append(observed['elf']['interpreter'])
+            queue.extend('/usr/lib/x86_64-linux-gnu/' + name for name in observed['elf']['needed'])
+        graph['files'][path] = observed
+    return graph
+
+def admitted_request_v3(route, raw, event_raw, env):
+    need(route == 'toolchain-v3', 'distinct metadata V3 route')
+    value = request_object(raw)
+    closed(value, ('schema','repository','pullRequest','source','policySha256','limits'), 'closed V3 metadata request')
+    need(value['schema'] == 'bw.bochs-ring3.toolchain-request.v3' and
+         value['repository'] == REPOSITORY and HEX.fullmatch(value['policySha256']), 'V3 request identity')
+    need(canonical(value['limits']) == canonical(LIMITS[route]), 'unchanged V3 metadata bounds')
+    admit_source_shape(value['source'])
+    admit_event(route, value, raw, event_raw, env)
+    return value
+
+def check_node_stage_v3(facts, route, env, *, after=False):
+    need(type(facts) is dict and facts.get('schema') == 'bw.bochs-ring3.node-stage.v2',
+         'typed cache-DATA/readonly-executable Node stage')
+    path = route_paths(route, env)['node']
+    need(facts['sourcePath'] == NODE_PATH and facts['stagePath'] == str(path / 'node') and
+         facts['recordPath'] == str(path / 'stage.json') and
+         facts['metadataFields'] == list(NODE_METADATA_FIELDS), 'source-derived Node role paths')
+    def meta(row):
+        need(type(row) is list and len(row) == 9 and
+             all(type(value) is int and value >= 0 for value in row) and row[1] > 0,
+             'typed nine-field Node identity')
+        return row
+    invoker = facts['invoker']
+    closed(invoker, ('uid', 'gid'), 'source-authenticated Node invoker')
+    integer(invoker['uid'], 1, 2 ** 31 - 1, 'Node invoker UID')
+    integer(invoker['gid'], 1, 2 ** 31 - 1, 'Node invoker GID')
+    bootstrap_caller_scalars(facts['bootstrapCredentials'], invoker)
+    source = meta(facts['sourceBefore'])
+    need(source == meta(facts['sourceAfter']) == meta(facts['sourceNamedAfter']) and
+         stat.S_ISREG(source[2]) and source[2] & 0o6000 == 0 and source[5:7] == [1, NODE_BYTES] and
+         source[2:5] == [stat.S_IFREG | 0o777, NODE_CACHE_UID_V2, NODE_CACHE_GID_V2],
+         'bounded fixed Node cache DATA identity (not executable permission)')
+    initial, before, final = meta(facts['fileInitial']), meta(facts['fileBeforePublication']), meta(facts['file'])
+    need(initial[2:7] == [stat.S_IFREG | 0o600, 0, 0, 1, 0] and
+         before[2:7] == [stat.S_IFREG | 0o600, 0, 0, 1, NODE_BYTES] and
+         final[2:7] == [stat.S_IFREG | 0o555, 0, 0, 1, NODE_BYTES] and
+         initial[:2] == before[:2] == final[:2] and final == meta(facts['fileNamed']),
+         'fresh root0600 copy becomes same readonly0555 executable')
+    first_dir = meta(facts['directoryInitial'])
+    before_dir, final_dir = meta(facts['directoryBeforePublication']), meta(facts['directory'])
+    need(first_dir[2:5] == before_dir[2:5] == [stat.S_IFDIR | 0o700, 0, 0] and
+         final_dir[2:5] == [stat.S_IFDIR | 0o555, 0, 0] and
+         first_dir[:2] == before_dir[:2] == final_dir[:2] and
+         final_dir == meta(facts['directoryNamed']), 'fresh private root directory readonly publication')
+    need(set(facts['parents']) == {'/', '/run'}, 'closed Node-stage parent roster')
+    for row in facts['parents'].values():
+        closed(row, ('before', 'namedBefore', 'after', 'namedAfter'), 'Node parent raw readbacks')
+        snapshots = [meta(row[key]) for key in ('before', 'namedBefore', 'after', 'namedAfter')]
+        need(all(snap[:5] == snapshots[0][:5] for snap in snapshots) and
+             stat.S_ISDIR(snapshots[0][2]) and snapshots[0][3:5] == [0, 0] and
+             snapshots[0][2] & 0o022 == 0, 'held/named root-parent first-five continuity')
+    need(facts['created'] == [str(path), str(path / 'node'), str(path / 'stage.json')] and
+         facts['sourceBytesRead'] == facts['bytesCopied'] == facts['readbackBytes'] == NODE_BYTES and
+         facts['copiedSha256'] == facts['readbackSha256'] == NODE_SHA256 and
+         facts['writeUncertain'] is False and facts['filePublicationAttempted'] is True and
+         facts['directoryPublicationAttempted'] is True and facts['filePublished'] is True and
+         facts['directoryPublished'] is True and facts['firstFailure'] is None and facts['secondary'] == [],
+         'once-only complete independent Node hash/publication observations')
+    integer(facts['elfReadBytes'], 1, 2097152, 'bounded staged Node ELF range reads')
+    need(type(facts['elf']) is dict and facts['elf']['class'] == 'ELF64' and
+         facts['elf']['machine'] == 'x86-64' and facts['elf']['rpath'] is None and
+         facts['elf']['runpath'] is None, 'source-observed staged Node ELF')
+    record = facts['record']
+    closed(record, ('bytes', 'sha256', 'metadata', 'text'), 'closed readonly Node installation record')
+    expected = canonical({'schema': 'bw.bochs-ring3.node-installation.v2', 'sourcePath': NODE_PATH,
+                          'stagePath': str(path / 'node'), 'bytes': NODE_BYTES,
+                          'sha256': NODE_SHA256, 'uid': 0, 'gid': 0, 'mode': stat.S_IFREG | 0o555})
+    need(record['text'].encode('utf-8') == expected and record['bytes'] == len(expected) and
+         record['sha256'] == sha256(expected) and
+         meta(record['metadata'])[2:7] == [stat.S_IFREG | 0o444, 0, 0, 1, len(expected)],
+         'exact readonly source-bound Node record bytes')
+    if after:
+        checked = facts['checkedAfter']
+        closed(checked, ('hashRead', 'bytesRead', 'sha256', 'before', 'after', 'named', 'elf', 'elfReadBytes'),
+               'Node after-use observations')
+        need(meta(checked['before']) == meta(checked['after']) == meta(checked['named']) == final,
+             'same immutable staged Node after work')
+        if route == 'toolchain-v3':
+            need(checked['hashRead'] is False and checked['bytesRead'] == 0 and
+                 checked['sha256'] is None and checked['elf'] is None and checked['elfReadBytes'] == 0,
+                 'metadata route does not claim an unperformed after hash or Node execution')
+        else:
+            need(checked['hashRead'] is True and checked['bytesRead'] == NODE_BYTES and
+                 checked['sha256'] == NODE_SHA256 and checked['elf'] == facts['elf'],
+                 'actual staged Node after-execution complete hash/ELF')
+            integer(checked['elfReadBytes'], 1, 2097152, 'bounded Node after ELF range-read count')
+    return facts
+
+def collect_toolchain_v3(request_raw, event_raw, env, ops):
+    """Connected no-tool-execution metadata producer; ops owns OS/data edges."""
+    request = admitted_request_v3('toolchain-v3', request_raw, event_raw, env)
+    value = original('toolchain', request_raw, event_raw)
+    value['schema'] = 'bw.bochs-ring3.toolchain-original.v3'
+    observations = {'inventoryBefore': None, 'inventoryAfter': None, 'status': None,
+                    'sourceSelection': SOURCE_SELECTION_SHA256, 'reportedReadbackOnly': True,
+                    'notices': None, 'nodeStage': None, 'runtimeElfMetadata': None}
+    value['observations'] = observations
+    roles = {'request.original.json': request_raw, 'event.original.json': event_raw}
+    phase = 'source-before'
+    try:
+        value['sourceBefore'] = ops.source(request['source'], env)
+        roles['source.before.json'] = canonical(value['sourceBefore'])
+        phase = 'resource-before'
+        value['resources'] = {'before': ops.resources('toolchain-v3'), 'after': None}
+        phase = 'node-cache-data-staging'
+        observations['nodeStage'] = ops.node_stage()
+        check_node_stage_v3(observations['nodeStage'], 'toolchain-v3', env)
+        roles['node-stage.original.json'] = canonical(observations['nodeStage'])
+        phase = 'toolchain-inventory-before'
+        observations['inventoryBefore'] = admit_compiler_layout_v3(ops.toolchain())
+        roles['inventory.before.json'] = canonical(observations['inventoryBefore'])
+        phase = 'runtime-elf-structural-metadata'
+        structural = admit_runtime_elf_metadata(ops.elf_metadata(observations['inventoryBefore']),
+                                               observations['inventoryBefore'], observations['nodeStage'])
+        roles['runtime-elf-ranges.original.json'] = canonical(structural)
+        observations['runtimeElfMetadata'] = bytes_ref('runtime-elf-ranges.original.json',
+                                                       roles['runtime-elf-ranges.original.json'])
+        phase = 'selected-toolchain-notices'
+        notices = ops.notices()
+        need(type(notices) is dict and set(notices) == set(NOTICE_PATHS),
+             'all seven selected licence notice files')
+        observations['notices'] = {}
+        notice_bytes = 0
+        for source_path, (path, raw) in notices.items():
+            need(path in observations['inventoryBefore']['files'] and
+                 observations['inventoryBefore']['files'][path]['bytes'] == len(raw) and
+                 observations['inventoryBefore']['files'][path]['sha256'] == sha256(raw) and
+                 1 <= len(raw) <= 262144, 'notice exact selected file readback')
+            notice_bytes += len(raw)
+            need(notice_bytes <= 524288, 'aggregate retained licence notice text cap')
+            observations['notices'][source_path] = {'path': path, 'bytes': len(raw),
+                                                   'sha256': sha256(raw), 'text': raw.decode('utf-8')}
+        roles['notices.original.json'] = canonical(observations['notices'])
+        phase = 'debian-status'
+        raw, record = ops.read('/var/lib/dpkg/status', 4 * 1024 * 1024, minimum=1, owner=0)
+        roles['dpkg-status.original'] = raw
+        observations['status'] = {'bytes': len(raw), 'sha256': sha256(raw),
+                                  'packages': debian_status(raw), 'observation': record}
+        phase = 'toolchain-inventory-after'
+        observations['inventoryAfter'] = admit_compiler_layout_v3(ops.toolchain())
+        roles['inventory.after.json'] = canonical(observations['inventoryAfter'])
+        need(observations['inventoryBefore'] == observations['inventoryAfter'],
+             'held inventory before/after complete identity')
+        observations['nodeStage'] = ops.node_after(full_hash=False)
+        check_node_stage_v3(observations['nodeStage'], 'toolchain-v3', env, after=True)
+        roles['node-stage.original.json'] = canonical(observations['nodeStage'])
+        need(sum(row['bytes'] for row in observations['inventoryBefore']['files'].values()) * 2 +
+             observations['nodeStage']['sourceBytesRead'] + observations['nodeStage']['readbackBytes'] +
+             observations['nodeStage']['elfReadBytes'] + notice_bytes +
+             sum(row['fileBytes'] for path, row in structural['files'].items() if path != NODE_PATH)
+             <= LIMITS['toolchain-v3']['totalReadBytes'],
+             'actual selected tool/Node/notice read budget')
+    except BaseException as exc:
+        original_error(value, exc, phase)
+    finally:
+        if value['sourceBefore'] is not None:
+            try:
+                value['sourceAfter'] = ops.source(request['source'], env)
+                roles['source.after.json'] = canonical(value['sourceAfter'])
+                need(value['sourceBefore'] == value['sourceAfter'], 'source before/after equality')
+            except BaseException as exc:
+                original_error(value, exc, 'source-after')
+        if value['resources'] is not None:
+            try:
+                value['resources']['after'] = ops.resources('toolchain-v3')
+            except BaseException as exc:
+                original_error(value, exc, 'resource-after')
+        close_provider(ops, value, roles)
+        if value['sourceBefore'] is not None:
+            try:
+                roles['process.original.json'] = canonical(ops.observer(value))
+            except BaseException as exc:
+                original_error(value, exc, 'observer-process')
+    value['complete'] = value['firstFailure'] is None and not value['secondary']
+    roles['original.json'] = canonical(value)
+    roles['manifest.json'] = canonical(original_manifest(roles))
+    return value, roles
+
+def metadata_v3_identity(value):
+    closed(value, ('schema','jobName','version'), 'explicit selected metadata V3 identity')
+    need(value == {'schema':'bw.bochs-ring3.toolchain-inventory-reference.v3',
+         'jobName':'bochs-ring3-toolchain-inventory-v3','version':3} and type(value['version']) is int,
+         'source-fixed metadata V3, no V1 downgrade')
+    return value
+
+def admit_build_inputs_v3(request):
+    selected = request['toolchain']['inventory']
+    names = ('runId','jobId','artifactId','archiveBytes','archiveSha256','requestSha256',
+             'reportSha256','sourceHead','sourceTree','workflowCommit')
+    closed(selected, (*names,'schema','jobName','version'), 'current Build explicit metadata V3 reference')
+    metadata_v3_identity({key:selected[key] for key in ('schema','jobName','version')})
+    legacy = {**request, 'toolchain': {**request['toolchain'],
+        'inventory': {key:selected[key] for key in names}}}
+    admit_build_inputs(legacy)
+    admit_compiler_layout_v3({key:request['toolchain'][key]
+                              for key in ('files','aliases','directoryAliases')})
+
+def admit_reference_inputs_v3(request):
+    selected = request['build']
+    names = ('runId','jobId','artifactId','name','bytes','sha256','checkoutHead','checkoutTree',
+             'workflowCommit','workflowFileSha256','compactManifest','buildLog')
+    closed(selected, (*names,'metadata'), 'current Reference explicit metadata V3 identity')
+    metadata_v3_identity(selected['metadata'])
+    admit_reference_inputs({**request,'build':{key:selected[key] for key in names}})
+    return selected
+
+def collect_build_v3(request_raw, event_raw, env, ops):
+    request = admitted_request('build', request_raw, event_raw, env)
+    admit_build_inputs_v3(request)
+    value = original('build', request_raw, event_raw)
+    observations = {name: None for name in ('upstream', 'sourceSelection', 'toolchainBefore',
+        'toolchainAfter', 'configure', 'configHeader', 'compilerCommands', 'binary',
+        'runtimeManifest', 'notices', 'compactManifest', 'correspondingSource', 'nodeStage',
+        'runtimeElfMetadata', 'hostRuntime')}
+    value['observations'] = observations
+    roles = {'request.original.json': request_raw, 'event.original.json': event_raw}
+    phase = 'source-before'
+    manifest = None
+    runtime_raw = None
+    try:
+        value['sourceBefore'] = ops.source(request['source'], env)
+        roles['source.before.json'] = canonical(value['sourceBefore'])
+        value['resources'] = {'before': ops.resources('build'), 'after': None}
+        phase = 'node-cache-data-staging'
+        observations['nodeStage'] = ops.node_stage()
+        check_node_stage_v2(observations['nodeStage'], 'build', env)
+        roles['node-stage.original.json'] = canonical(observations['nodeStage'])
+        phase = 'build-toolchain-before'
+        observations['toolchainBefore'] = admit_compiler_layout_v3(ops.toolchain())
+        roles['toolchain.before.json'] = canonical(observations['toolchainBefore'])
+        selected = {name: request['toolchain'][name] for name in ('files', 'aliases', 'directoryAliases')}
+        match_expected_graph(observations['toolchainBefore'], selected)
+        need(node_expectation(observations['nodeStage']) == request['toolchain']['node'],
+             'current staged Node equals independent inventory selection')
+        phase = 'current-runtime-structural-metadata'
+        structural = admit_runtime_elf_metadata(ops.elf_metadata(observations['toolchainBefore']),
+            observations['toolchainBefore'], observations['nodeStage'])
+        roles['runtime-elf-ranges.original.json'] = canonical(structural)
+        observations['runtimeElfMetadata'] = bytes_ref('runtime-elf-ranges.original.json',
+            roles['runtime-elf-ranges.original.json'])
+        phase = 'readonly-current-host-runtime'
+        staged = ops.host_runtime_stage(observations['toolchainBefore'], structural)
+        observations['hostRuntime'] = {'stageBytes': len(canonical(staged)),
+                                     'stageSha256': sha256(canonical(staged))}
+        roles['host-runtime.original.json'] = canonical({'schema': 'bw.bochs-ring3.host-runtime-original.v1',
+                                                         'stage': staged, 'cleanup': None})
+        phase = 'source-payload-acquisition'
+        upstream = ops.upstream(request['bochs'])
+        observations['sourceSelection'] = selected_source_rows(upstream['tree'])
+        observations['upstream'] = upstream['before']
+        observations['correspondingSource'] = upstream['correspondingSource']
+        roles['upstream.tree.original.json'] = canonical(upstream['tree'])
+        roles['source-selection.original.json'] = canonical(observations['sourceSelection'])
+        roles['upstream.before.json'] = canonical(upstream['before'])
+        roles['source-selected.original.tar.gz'] = upstream['sourceArchive']
+        roles['notices/vgabios-corresponding-source.tar.gz'] = upstream['correspondingSourceRaw']
+        need(len(upstream['correspondingSourceRaw']) == VGA_SOURCE_BYTES and
+             sha256(upstream['correspondingSourceRaw']) == VGA_SOURCE_SHA256,
+             'exact complete corresponding source original')
+        phase = 'configure'
+        value['authority']['compilerExecuted'] = None
+        process, streams, _stop = run_phase(ops, value, roles, 'configure', CONFIGURE_ARGV,
+                                           wall_seconds=900)
+        config_raw, version_raw = ops.generated_headers()
+        observations['configure'] = configure_facts(config_raw, version_raw)
+        observations['configHeader'] = bytes_ref('config.h.original', config_raw)
+        roles['config.h.original'], roles['bxversion.h.original'] = config_raw, version_raw
+        phase = 'make'
+        _process, streams, _stop = run_phase(ops, value, roles, 'make', MAKE_ARGV, wall_seconds=900)
+        commands = [line for line in streams['stdout'].decode('utf-8').splitlines()
+                    if TOOL_PATHS['gcc'] in line or TOOL_PATHS['g++'] in line]
+        need(1 <= len(commands) <= 8192 and all(len(line) <= 8192 for line in commands),
+             'bounded retained actual compiler commands')
+        need(len(canonical(commands)) <= 1048576, 'compiler command summary budget within original cap')
+        observations['compilerCommands'] = commands
+        phase = 'static-build-assets'
+        assembled = ops.runtime_bundle(request, upstream)
+        runtime_files = assembled['files']
+        need('asset-manifest.json' in runtime_files and 'bin/bochs' in runtime_files,
+             'closed retained runtime assets')
+        binary = runtime_files['bin/bochs']
+        binary_facts = {key: item for key, item in sparse_elf(binary)['structure'].items() if key != 'soname'}
+        need(binary_facts['rpath'] is None and binary_facts['runpath'] is None,
+             'built Bochs has no RPATH/RUNPATH')
+        observations['binary'] = {**bytes_ref('bin/bochs', binary), 'elf': binary_facts}
+        value['authority']['compilerExecuted'] = True
+        runtime_raw = pack_zip(runtime_files, archive_cap=33554432, expanded_cap=67108864,
+                               member_cap=256, modes=assembled['modes'])
+        roles['runtime.original.zip'] = runtime_raw
+        observations['runtimeManifest'] = raw_object(runtime_files['asset-manifest.json'], 4194304)
+        observations['notices'] = assembled['notices']
+        need(observations['runtimeManifest']['schema'] == 'bw.bochs-ring3.runtime-assets.v2' and
+             not any(name.startswith('lib/') for name in runtime_files),
+             'current asset-v2, no distributed host library body')
+        phase = 'current-host-runtime-after'
+        staged = ops.host_runtime_after()
+        observations['hostRuntime'] = {'stageBytes': len(canonical(staged)),
+                                      'stageSha256': sha256(canonical(staged))}
+        roles['host-runtime.original.json'] = canonical({'schema': 'bw.bochs-ring3.host-runtime-original.v1',
+                                                         'stage': staged, 'cleanup': None})
+        phase = 'upstream-source-after'
+        after = ops.upstream_after()
+        roles['upstream.after.json'] = canonical(after)
+        need(after == upstream['before'], 'selected upstream complete source before/after equality')
+        phase = 'build-toolchain-after'
+        observations['toolchainAfter'] = admit_compiler_layout_v3(ops.toolchain())
+        roles['toolchain.after.json'] = canonical(observations['toolchainAfter'])
+        match_expected_graph(observations['toolchainAfter'], selected)
+        need(observations['toolchainBefore'] == observations['toolchainAfter'],
+             'held local tool graph before/after full identity')
+        observations['nodeStage'] = ops.node_after(full_hash=True)
+        check_node_stage_v2(observations['nodeStage'], 'build', env, after=True)
+        roles['node-stage.original.json'] = canonical(observations['nodeStage'])
+        manifest = {'schema': 'bw.bochs-ring3.build-manifest.v1', 'source': request['source'],
+            'bochsSource': upstream['before'],
+            'sourceInventory': {'selection': observations['sourceSelection'],
+                'before': upstream['before'], 'after': after,
+                'archive': bytes_ref('source-selected.original.tar.gz', upstream['sourceArchive'])},
+            'toolchainInventory': {'selected': request['toolchain'],
+                'before': observations['toolchainBefore'], 'after': observations['toolchainAfter']},
+            'configure': {'argv': CONFIGURE_ARGV, 'makeArgv': MAKE_ARGV,
+                'facts': observations['configure'],
+                'versionHeader': bytes_ref('bxversion.h.original', version_raw)},
+            'configHeader': observations['configHeader'],
+            'compilerCommands': commands, 'elf': binary_facts,
+            'runtimeMembers': runtime_rows(runtime_files, assembled['modes']),
+            'notices': assembled['notices'], 'sourceAfter': None,
+            'firstFailure': None, 'secondary': [],
+            'buildCompleted': True, 'guestExecuted': False}
+    except BaseException as exc:
+        original_error(value, exc, phase)
+    finally:
+        if value['sourceBefore'] is not None:
+            try:
+                value['sourceAfter'] = ops.source(request['source'], env)
+                roles['source.after.json'] = canonical(value['sourceAfter'])
+                need(value['sourceBefore'] == value['sourceAfter'], 'Build source before/after equality')
+            except BaseException as exc:
+                original_error(value, exc, 'source-after')
+        if value['resources'] is not None:
+            try:
+                value['resources']['after'] = ops.resources('build')
+            except BaseException as exc:
+                original_error(value, exc, 'resource-after')
+        close_provider(ops, value, roles)
+    value['complete'] = value['firstFailure'] is None and not value['secondary']
+    if value['complete']:
+        try:
+            manifest['sourceAfter'] = value['sourceAfter']
+            manifest_raw = canonical(manifest)
+            need(len(manifest_raw) <= 4194304, 'bounded full build manifest')
+            roles['build-manifest.json'] = manifest_raw
+            observations['compactManifest'] = compact_build_manifest(request, manifest_raw, runtime_raw, manifest)
+            roles['compact-manifest.json'] = canonical(observations['compactManifest'])
+        except BaseException as exc:
+            original_error(value, exc, 'build-manifest')
+            value['complete'] = False
+    roles['build.original.json'] = canonical(value)
+    roles['manifest.json'] = canonical(original_manifest(roles))
+    return value, roles
+
+def selected_build_bytes_v3(request, raw):
+    """Recheck the sole acquired byte copy; official authentication stays external."""
+    selected = admit_reference_inputs_v3(request)
+    need(type(raw) is bytes and len(raw) == selected['bytes'] and sha256(raw) == selected['sha256'],
+         'sole selected Build archive exact bytes')
+    files = unpack_zip(raw, archive_cap=67108864, expanded_cap=268435456, member_cap=4096)
+    required = set(('request.original.json event.original.json source.before.json source.after.json '
+        'node-stage.original.json upstream.tree.original.json source-selection.original.json '
+        'upstream.before.json upstream.after.json toolchain.before.json toolchain.after.json '
+        'build.original.json build-manifest.json compact-manifest.json runtime.original.zip '
+        'source-selected.original.tar.gz config.h.original bxversion.h.original configure.stdout '
+        'configure.stderr configure.process.json make.stdout make.stderr make.process.json '
+        'notices/vgabios-corresponding-source.tar.gz manifest.json outside.original.json '
+        'service-status.original.json cleanup.original.json runtime-elf-ranges.original.json '
+        'host-runtime.original.json').split())
+    need(set(files) == required, 'complete closed31-role Build original')
+    need(raw_object(files['manifest.json'], 4194304) == original_manifest(
+        {name: body for name, body in files.items() if name != 'manifest.json'}), 'complete nested Build delivery manifest')
+    compact = raw_object(files['compact-manifest.json'], 16384)
+    need(compact == selected['compactManifest'], 'retained compact equals pre-download selected log manifest')
+    for key, name in (('fullManifest', 'build-manifest.json'), ('runtimeZip', 'runtime.original.zip'),
+                      ('configHeader', 'config.h.original')):
+        need(compact[key] == {'bytes': len(files[name]), 'sha256': sha256(files[name])},
+             'nested compact reference actual bytes')
+    build_request = request_object(files['request.original.json'])
+    need(build_request['schema'] == 'bw.bochs-ring3.build-request.v1' and
+         build_request['repository'] == REPOSITORY and build_request['pullRequest'] == request['pullRequest'] and
+         build_request['policySha256'] == compact['policySha256'] and
+         build_request['source'] == request['source'], 'Build and Reference same PR, policy and exact source12 graph')
+    admit_build_inputs_v3(build_request)
+    need({key:build_request['toolchain']['inventory'][key] for key in ('schema','jobName','version')} ==
+         selected['metadata'], 'nested Build explicit selected metadata V3 identity')
+    stage = raw_object(files['node-stage.original.json'], 65536)
+    check_node_stage_v2(stage, 'build', {'GITHUB_RUN_ID': selected['runId'], 'GITHUB_RUN_ATTEMPT':'1'}, after=True)
+    inner = raw_object(files['build.original.json'], 4194304)
+    outside = raw_object(files['outside.original.json'], 16384)
+    before = raw_object(files['source.before.json'], 1048576)
+    after = raw_object(files['source.after.json'], 1048576)
+    closed(before, ('head', 'tree', 'files', 'workflowCommit', 'workflowTree', 'workflowFileSha256'),
+           'closed retained actual Build source observation')
+    need(before == after == inner['sourceBefore'] == inner['sourceAfter'] and
+         {key: before[key] for key in ('head', 'tree', 'files')} == request['source'] and
+         before['workflowCommit'] == selected['workflowCommit'] and
+         before['workflowFileSha256'] == selected['workflowFileSha256'] and
+         GIT_HEX.fullmatch(before['workflowTree']), 'actual Build H and frozen executing W/source byte join')
+    need(inner['schema'] == 'bw.bochs-ring3.build-original.v1' and inner['complete'] is True and
+         inner['firstFailure'] is None and not inner['secondary'] and
+         inner['requestSha256'] == sha256(files['request.original.json']) and
+         inner['eventSha256'] == sha256(files['event.original.json']) and
+         inner['authority'] == {'compilerExecuted': True, 'guestExecuted': False,
+             'actualRunApproved': False, 'guestApproved': False, 'wholeHostAttested': False, 'physicalTimingProved': False} and
+         outside['serviceExitCode'] == outside['clientExitCode'] == outside['cleanupExitCode'] == 0 and
+         outside['firstFailure'] is None and not outside['secondary'] and outside['innerComplete'] is True and
+         outside['innerFirstFailure'] is None and outside['after']['exists'] is False and
+         outside['after']['errno'] == 2, 'complete actual Build and terminal cleanup originals')
+    manifest = raw_object(files['build-manifest.json'], 4194304)
+    need(manifest['source'] == request['source'] and manifest['buildCompleted'] is True and
+         manifest['guestExecuted'] is False and manifest['firstFailure'] is None and not manifest['secondary'] and
+         sha256(canonical(manifest['runtimeMembers'])) == compact['runtimeMembersSha256'] and
+         sha256(canonical(manifest['notices'])) == compact['noticesSha256'], 'selected full Build manifest facts')
+    runtime = unpack_zip(files['runtime.original.zip'], archive_cap=33554432,
+                         expanded_cap=67108864, member_cap=256)
+    with zipfile.ZipFile(io.BytesIO(files['runtime.original.zip'])) as archive:
+        modes = {item.filename: item.external_attr >> 16 for item in archive.infolist()}
+    need(manifest['runtimeMembers'] == runtime_rows(runtime,
+         {name: stat.S_IMODE(mode) for name, mode in modes.items()}), 'every exact runtime member/mode/hash')
+    asset = raw_object(runtime['asset-manifest.json'], 4194304)
+    closed(asset, ('schema', 'source', 'bochsSource', 'hostNode', 'hostRuntime', 'files'), 'current asset-v2 keys')
+    need(asset['schema'] == 'bw.bochs-ring3.runtime-assets.v2' and
+         not any(name.startswith('lib/') for name in runtime) and
+         asset['source'] == {'head': request['source']['head'], 'tree': request['source']['tree'],
+            'filesSha256': sha256(canonical(request['source']['files']))} and
+         asset['hostNode'] == build_request['toolchain']['node'] and
+         asset['files'] == [row for row in manifest['runtimeMembers'] if row['path'] != 'asset-manifest.json'],
+         'selected runtime distribution graph, no library bodies')
+    need(compact['binary'] == {'bytes': len(runtime['bin/bochs']), 'sha256': sha256(runtime['bin/bochs'])},
+         'selected compiled binary exact bytes')
+    rom, fixture = authored_inputs()
+    need(runtime['inputs/fixture.rom'] == rom and runtime['inputs/fixture.json'] == fixture and
+         runtime['config/bochsrc.template'] == BOCHSRC_TEMPLATE and
+         len(runtime['resources/vgabios.bin']) == VGA_BYTES and sha256(runtime['resources/vgabios.bin']) == VGA_SHA256,
+         'unchanged authored inputs, config and selected VGA resource')
+    expanded = sum(map(len, files.values())) + sum(map(len, runtime.values()))
+    need(len(raw) + expanded + 16 * 1024 * 1024 <= LIMITS['reference']['expandedBytes'],
+         'cumulative nested Build/runtime plus bounded Reference-original reservation')
+    return {'files': files, 'runtime': runtime, 'modes': modes, 'manifest': manifest,
+            'asset': asset, 'request': build_request, 'nestedExpandedBytes': expanded}
+
+def collect_reference_v3(request_raw, event_raw, env, ops):
+    request = admitted_request('reference', request_raw, event_raw, env)
+    admit_reference_inputs_v3(request)
+    value = original('reference', request_raw, event_raw)
+    observations = {name: None for name in ('build', 'assetsBefore', 'assetsAfter', 'fixture',
+        'config', 'js', 'bochs', 'stop', 'outside', 'cleanup', 'nodeStage', 'runtimeElfMetadata', 'hostRuntime')}
+    value['observations'] = observations
+    roles = {'request.original.json': request_raw, 'event.original.json': event_raw}
+    phase = 'source-before'
+    try:
+        value['sourceBefore'] = ops.source(request['source'], env)
+        roles['source.before.json'] = canonical(value['sourceBefore'])
+        value['resources'] = {'before': ops.resources('reference'), 'after': None}
+        phase = 'sole-selected-build-intake'
+        try:
+            archive, official = ops.acquire_build(request['build'], pull_request=request['pullRequest'])
+        except BaseException:
+            observations['build'] = getattr(ops, 'build_intake_partial', None)
+            raise
+        roles['inputs/build.original.zip'] = archive
+        observations['build'] = official
+        built = selected_build_bytes_v3(request, archive)
+        phase = 'node-cache-data-staging'
+        observations['nodeStage'] = ops.node_stage()
+        check_node_stage_v2(observations['nodeStage'], 'reference', env)
+        need(node_expectation(observations['nodeStage']) == built['asset']['hostNode'], 'same selected current staged Node')
+        phase = 'current-host-runtime'
+        graph = admit_compiler_layout_v3(ops.toolchain())
+        match_expected_graph(graph, {key: built['request']['toolchain'][key]
+                                    for key in ('files', 'aliases', 'directoryAliases')})
+        structural = admit_runtime_elf_metadata(ops.elf_metadata(graph), graph, observations['nodeStage'])
+        roles['runtime-elf-ranges.original.json'] = canonical(structural)
+        observations['runtimeElfMetadata'] = bytes_ref('runtime-elf-ranges.original.json', roles['runtime-elf-ranges.original.json'])
+        need(host_runtime_selection(expected_graph(graph), structural, built['manifest']['elf'],
+              observations['nodeStage']['elf']) == built['asset']['hostRuntime'], 'same source-selected runtime closure')
+        stage = ops.host_runtime_stage(graph, structural)
+        observations['hostRuntime'] = {'stageBytes': len(canonical(stage)), 'stageSha256': sha256(canonical(stage))}
+        phase = 'owned-runtime-preparation'
+        config = ops.prepare_reference(built)
+        observations['config'] = bytes_ref('bochsrc.original', config)
+        roles['bochsrc.original'] = config
+        for name in ('inputs/fixture.rom', 'inputs/fixture.json'):
+            roles[name] = built['runtime'][name]
+        observations['fixture'] = {'rom': bytes_ref('inputs/fixture.rom', roles['inputs/fixture.rom']),
+            'manifest': bytes_ref('inputs/fixture.json', roles['inputs/fixture.json'])}
+        observations['assetsBefore'] = ops.runtime_after(built)
+        roles['asset.before.json'] = canonical(observations['assetsBefore'])
+        phase = 'fresh-js'
+        value['authority']['guestExecuted'] = None
+        js_process, js_streams, _stop = ops.process('js', ops.reference_argv('js'),
+            wall_seconds=60, stream_cap=131072, checkpoint=False)
+        value['phases'].append(js_process)
+        roles.update({'js/stdout': js_streams['stdout'], 'js/stderr': js_streams['stderr'],
+                      'js/process.json': canonical(js_process)})
+        if js_process['firstFailure'] is not None:
+            exc = Refusal(js_process['firstFailure']['message'])
+            exc.bochs_first, exc.bochs_secondary = js_process['firstFailure'], js_process['secondary']
+            raise exc
+        need(js_process['firstFailure'] is None and not js_process['secondary'] and js_process['reaped'] and
+             js_process['exitCode'] == 0 and js_process['signal'] is None and not js_process['timedOut'],
+             'fresh JS complete retained child')
+        js = ops.js_outputs()
+        roles.update(js)
+        report = raw_object(js['js/report.json'], 131072)
+        need(report['schema'] == 'bw.ring3.js-probe.v1' and report['finiteRoundTripPass'] is True and
+             report['firstFailure'] is None and report['completed'] is True and
+             report['fixtureSha256'] == ROM_SHA256 and report['outputSha256'] == sha256(js_streams['stdout']) and
+             report['memoryBeforeSha256'] == sha256(js['js/memory.before.bin']) and
+             report['memoryAfterSha256'] == sha256(js['js/memory.after.bin']), 'genuine fresh JS probe completion')
+        observations['js'] = report
+        value['authority']['guestExecuted'] = True
+        phase = 'fresh-bochs'
+        process, streams, stop = ops.process('bochs', ops.reference_argv('bochs'),
+            wall_seconds=60, stream_cap=131072, checkpoint=True)
+        value['phases'].append(process)
+        roles.update({'bochs/stdout': streams['stdout'], 'bochs/stderr': streams['stderr'],
+                      'bochs/process.json': canonical(process)})
+        observations['stop'] = stop
+        if process['firstFailure'] is not None:
+            exc = Refusal(process['firstFailure']['message'])
+            exc.bochs_first, exc.bochs_secondary = process['firstFailure'], process['secondary']
+            raise exc
+        need(process['firstFailure'] is None and not process['secondary'] and process['reaped'] and
+             process['signal'] == 15 and process['exitCode'] is None and not process['timedOut'] and
+             stop is not None and stop['sent'] is True and stop['signal'] == 15 and
+             stop['pid'] == process['pid'] and stop['firstFailure'] is None and not stop['secondary'],
+             'complete frame followed by actual owned SIGTERM15 and reap')
+        frame = reporter_frame(streams['stdout'])
+        roles['bochs/frame.original'] = frame
+        roles['bochs/log'] = ops.bochs_log()
+        output_census = ops.reference_output_census()
+        need(stop['frameSha256'] == sha256(frame), 'actual captured checkpoint frame hash')
+        fixture = raw_object(roles['inputs/fixture.json'], 1048576)
+        padding_bytes = compare_reference_frames(js_streams['stdout'], frame, fixture)
+        observations['bochs'] = {'stdout': bytes_ref('bochs/stdout', streams['stdout']),
+            'frame': bytes_ref('bochs/frame.original', frame), 'log': bytes_ref('bochs/log', roles['bochs/log']),
+            'definedBytesEqual': True, 'selectorPaddingBytes': padding_bytes, 'outputCensus': output_census}
+        phase = 'all-assets-after'
+        observations['assetsAfter'] = ops.runtime_after(built)
+        roles['asset.after.json'] = canonical(observations['assetsAfter'])
+        need(observations['assetsBefore'] == observations['assetsAfter'], 'all retained input asset before/after equality')
+        stage = ops.host_runtime_after()
+        observations['hostRuntime'] = {'stageBytes': len(canonical(stage)), 'stageSha256': sha256(canonical(stage))}
+        roles['host-runtime.original.json'] = canonical({'schema': 'bw.bochs-ring3.host-runtime-original.v1', 'stage': stage, 'cleanup': None})
+        observations['nodeStage'] = ops.node_after(full_hash=True)
+        check_node_stage_v2(observations['nodeStage'], 'reference', env, after=True)
+    except BaseException as exc:
+        original_error(value, exc, phase)
+        # A failed but reaped child may already have written bounded diagnostic
+        # originals. Retain those exact files without another child or intake.
+        if phase == 'fresh-js' and value['phases'] and value['phases'][-1].get('reaped') is True:
+            try:
+                if not getattr(ops, 'js_output_attempted', False) and 'js/report.json' not in roles:
+                    roles.update(ops.js_outputs())
+            except BaseException as output_error:
+                original_error(value, output_error, 'js-failed-output-retention')
+            roles.update(getattr(ops, 'js_output_partial', {}))
+        if phase == 'fresh-bochs' and value['phases'] and value['phases'][-1].get('reaped') is True:
+            try:
+                if not getattr(ops, 'bochs_log_attempted', False) and 'bochs/log' not in roles:
+                    roles['bochs/log'] = ops.bochs_log()
+            except BaseException as output_error:
+                original_error(value, output_error, 'bochs-failed-log-retention')
+    finally:
+        if value['sourceBefore'] is not None:
+            try:
+                value['sourceAfter'] = ops.source(request['source'], env)
+                roles['source.after.json'] = canonical(value['sourceAfter'])
+                need(value['sourceBefore'] == value['sourceAfter'], 'Reference source before/after equality')
+            except BaseException as exc:
+                original_error(value, exc, 'source-after')
+        if value['resources'] is not None:
+            try:
+                value['resources']['after'] = ops.resources('reference')
+            except BaseException as exc:
+                original_error(value, exc, 'resource-after')
+        close_provider(ops, value, roles)
+        if observations['nodeStage'] is not None:
+            roles['node-stage.original.json'] = canonical(observations['nodeStage'])
+    value['complete'] = value['firstFailure'] is None and not value['secondary']
+    roles['resources.json'] = canonical(value['resources'])
+    if value['complete']:
+        try:
+            # Cumulative decompression is a single budget, including retained
+            # nested archives and every current Reference role/envelope.
+            need(sum(map(len, roles.values())) + len(canonical(value)) +
+                 len(canonical(original_manifest(roles))) + built['nestedExpandedBytes']
+                 <= LIMITS['reference']['expandedBytes'], 'whole cumulative Reference/Build/runtime wire cap')
+        except BaseException as exc:
+            original_error(value, exc, 'reference-whole-wire')
+            value['complete'] = False
+    roles['original.json'] = canonical(value)
+    roles['manifest.json'] = canonical(original_manifest(roles))
+    return value, roles
+
+class LiveOpsCurrentV3(LiveOps):
+    def toolchain(self):
+        need(self.stage is not None and self.stage.facts['elf'] is not None,
+             'verified staged Node before selected V3 tool DATA inventory')
+        self.last_graph = admit_compiler_layout_v3(observe_toolchain_v3(node_elf=self.stage.facts['elf']))
+        return self.last_graph
+    def observer(self, value):
+        if self.route == 'toolchain-v3':
+            return observer_facts_v2(value, self.env, pid=os.getpid(), uid=os.getuid(), gid=os.getgid(),
+                started_ns=self.started_ns, ended_ns=time.monotonic_ns(), invoker=self.invoker,
+                bootstrap=self.context['bootstrapCredentials'])
+        return super().observer(value)
+
+    def cleanup(self, inner=None, *, outer=None):
+            use_v2 = self.route=='toolchain-v3' or (type(stage_facts_v2(inner)) is dict and stage_facts_v2(inner).get('schema')=='bw.bochs-ring3.node-stage.v2')
+            plan=(node_cleanup_wire_plan_v2 if use_v2 else node_cleanup_wire_plan)(self.route,self.env,inner)
+            self.node_cleanup_plan=plan
+            if self.route in ('build', 'reference'):
+                need(getattr(self, 'host_cleanup_plan', None) is not None and
+                     outer is not None and outer.get('hostRuntimePlan') is not None,
+                     'complete read-only library plan before ANY cleanup effect')
+            return cleanup_owned_cgroups(self.route, self.env, inner, self.kernel, outer_base=outer,
+                input_plan=plan, following_error_bytes=1024 if self.route in ('build', 'reference') else 0)
+
+    def node_cleanup(self, inner):
+            if self.route=='toolchain-v3' or (type(stage_facts_v2(inner)) is dict and stage_facts_v2(inner).get('schema')=='bw.bochs-ring3.node-stage.v2'):
+                need(getattr(self,'node_cleanup_plan',None) is not None, 'V2 plan reserved before any cleanup effect')
+                return cleanup_node_stage_v2(self.route,self.env,inner,self.node_cleanup_plan)
+            return cleanup_node_stage(self.route, self.env, inner)
+
+
+def main(argv=None, *, environment=None, provider_factory=None, capture=None):
     parser = argparse.ArgumentParser(description=__doc__)
     modes = parser.add_mutually_exclusive_group(required=True)
     for flag in ('admit', 'work', 'run-service', 'capture-service-status', 'finish'):
         modes.add_argument('--' + flag, action='store_true')
     parser.add_argument('--route', choices=tuple(ROUTES), required=True)
+    parser.add_argument('--profile')
     parser.add_argument('--workflow-root')
     parser.add_argument('--invoker-uid', type=int)
     parser.add_argument('--invoker-gid', type=int)
@@ -6671,30 +7450,33 @@ def main(argv=None, *, environment=None, provider_factory=None):
     parser.add_argument('--client-exit', default='unknown')
     parser.add_argument('--service-status')
     args = parser.parse_args(argv)
-    route_enabled(args.route, current=True)  # all modes fail before env/file/kernel edges when false
+    current = cli_current_profile(args.route, args.profile)
+    route_enabled(args.route, current=current)  # profile and guard precede all env/file/kernel edges
     env = os.environ if environment is None else environment
     if args.admit:
         need(args.workflow_root is not None and args.invoker_uid is not None and
              args.invoker_gid is not None, 'explicit trusted workflow bootstrap arguments')
-        admit_cli(args.route, env, args.workflow_root, args.invoker_uid, args.invoker_gid, current=True)
+        admit_cli(args.route, env, args.workflow_root, args.invoker_uid, args.invoker_gid, current=current)
         return 0
-    context, request_raw, event_raw, paths = load_cli_context(args.route, env, current=True)
+    context, request_raw, event_raw, paths = load_cli_context(args.route, env, current=current)
     if args.run_service:
         process = run_service_cli(args.route, context, paths,
-                                  secret=env.get('GH_TOKEN') if args.route == 'reference' else None)
+                                  secret=env.get('GH_TOKEN') if args.route == 'reference' else None, current=current,
+                                  capture=child_capture if capture is None else capture)
         return 0 if process['firstFailure'] is None and not process['secondary'] and \
             process['reaped'] and process['exitCode'] == 0 else 1
     if args.capture_service_status:
-        status = capture_service_status_cli(args.route, context, paths)
+        status = capture_service_status_cli(args.route, context, paths, current=current,
+                                            capture=child_capture if capture is None else capture)
         return 0 if status['firstFailure'] is None and not status['secondary'] else 1
-    factory = provider_factory if provider_factory is not None else LiveOps
+    factory = provider_factory if provider_factory is not None else LiveOpsCurrentV3
     if args.work:
-        value = work_cli(args.route, context, request_raw, event_raw, paths, provider_factory=factory, current=True)
+        value = work_cli(args.route, context, request_raw, event_raw, paths, provider_factory=factory, current=current)
         return 0 if value['complete'] else 1
     need(args.service_status is not None, 'explicit protected service status path')
     outside, roles = finish_cli(args.route, context, request_raw, event_raw, paths,
         provider_factory=factory, service_status=args.service_status,
-        claimed_service=parse_exit(args.service_exit), claimed_client=parse_exit(args.client_exit), current=True)
+        claimed_service=parse_exit(args.service_exit), claimed_client=parse_exit(args.client_exit), current=current)
     if outside['cleanupExitCode'] == 0 and args.route == 'build':
         compact = raw_object(roles['compact-manifest.json'], 32768)
         print(COMPACT_MARKER + base64.b64encode(canonical(compact)).decode('ascii'), flush=True)

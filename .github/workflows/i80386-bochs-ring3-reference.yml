@@ -108,7 +108,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
   bochs-ring3-toolchain-inventory-v2:
-    if: ${{ true && github.event.label.name == 'x86-bochs-ring3-toolchain-inventory-v2' && github.actor == 'CrispStrobe' && github.event.sender.login == 'CrispStrobe' && github.event.pull_request.head.repo.fork == false && github.run_attempt == '1' }}
+    if: ${{ false && github.event.label.name == 'x86-bochs-ring3-toolchain-inventory-v2' && github.actor == 'CrispStrobe' && github.event.sender.login == 'CrispStrobe' && github.event.pull_request.head.repo.fork == false && github.run_attempt == '1' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
@@ -201,6 +201,100 @@ jobs:
           path: /run/bw-bochs-toolchain-v2-${{ github.run_id }}-1-originals
           if-no-files-found: error
           retention-days: 7
+  bochs-ring3-toolchain-inventory-v3:
+    if: ${{ false && github.event.label.name == 'x86-bochs-ring3-toolchain-inventory-v3' && github.actor == 'CrispStrobe' && github.event.sender.login == 'CrispStrobe' && github.event.pull_request.head.repo.fork == false && github.run_attempt == '1' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+      BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_SHA256: ${{ vars.BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_SHA256 }}
+      BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_B64: ${{ vars.BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_B64 }}
+      NODE_OPTIONS: ''
+    steps:
+      - name: Checkout selected producer source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: producer-source
+          persist-credentials: false
+      - name: Checkout executing workflow source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: workflow-source
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Admit Bochs toolchain inventory source and request
+        shell: bash
+        working-directory: producer-source
+        run: |
+          set -euo pipefail
+          /usr/bin/python3 -I -S -B - <<'PY'
+          import base64, hashlib, json, os, pathlib, re, subprocess
+          root = pathlib.Path.cwd()
+          workspace = pathlib.Path(os.environ['GITHUB_WORKSPACE'])
+          head = os.environ['BW_EXPECTED_HEAD']
+          workflow = os.environ['GITHUB_WORKFLOW_SHA']
+          assert re.fullmatch('[0-9a-f]{40}', head) and re.fullmatch('[0-9a-f]{40}', workflow)
+          def git(where, *args):
+              return subprocess.check_output(['git', '--no-replace-objects', '-c', 'gc.auto=0', '-c', 'maintenance.auto=false', '-C', str(where), *args], timeout=10)
+          assert git(root, 'rev-parse', 'HEAD').decode().strip() == head
+          assert git(workspace / 'workflow-source', 'rev-parse', 'HEAD').decode().strip() == workflow
+          assert git(workspace / 'workflow-source', 'rev-parse', workflow + '^2').decode().strip() == head
+          assert not git(root, 'status', '--porcelain', '--untracked-files=no')
+          raw = base64.b64decode(os.environ['BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_B64'], validate=True)
+          assert 0 < len(raw) <= 32768 and hashlib.sha256(raw).hexdigest() == os.environ['BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_SHA256']
+          def pairs(rows):
+              out = {}
+              for key, value in rows:
+                  assert key not in out
+                  out[key] = value
+              return out
+          req = json.loads(raw, object_pairs_hook=pairs)
+          assert req['source']['head'] == head
+          assert req['source']['tree'] == git(root, 'rev-parse', 'HEAD^{tree}').decode().strip()
+          paths = ('scripts/i80386-bochs-ring3-reference/run.py', 'scripts/i80386-bochs-ring3-reference/reader.py', 'scripts/i80386-bochs-ring3-reference/controls.py', 'scripts/i80386-bochs-ring3-reference/README.md', '.github/workflows/i80386-bochs-ring3-reference.yml', 'test/i80386-bochs-ring3-reference.test.mjs', 'src/experimental/i80386.js', 'scripts/i80386-ring3-int-iret/fixture.mjs', 'scripts/i80386-ring3-int-iret/probe.mjs', 'package.json', 'package-lock.json', 'LICENSE')
+          assert set(req['source']['files']) == set(paths)
+          for path in paths:
+              row = req['source']['files'][path]
+              listing = git(root, 'ls-tree', 'HEAD', '--', path).decode().strip().split()
+              assert len(listing) == 4 and listing[0] == row['mode'] and listing[2] == row['gitBlob'] and listing[3] == path
+              assert type(row['bytes']) is int and 1 <= row['bytes'] <= 1048576
+              assert int(git(root, 'cat-file', '-s', row['gitBlob'])) == row['bytes']
+              blob = git(root, 'cat-file', 'blob', row['gitBlob'])
+              assert len(blob) == row['bytes'] and hashlib.sha256(blob).hexdigest() == row['sha256']
+          path = '.github/workflows/i80386-bochs-ring3-reference.yml'
+          assert git(root, 'rev-parse', 'HEAD:' + path) == git(workspace / 'workflow-source', 'rev-parse', workflow + ':' + path)
+          PY
+          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_SHA256="$BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_SHA256" BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_B64="$BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --admit --route toolchain-v3 --workflow-root "$GITHUB_WORKSPACE/workflow-source" --invoker-uid "$(id -u)" --invoker-gid "$(id -g)"
+      - name: Prepare pinned Node input cache
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Read selected Bochs toolchain files without execution
+        shell: bash
+        working-directory: producer-source
+        run: |
+          set -euo pipefail
+          set +e
+          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_SHA256="$BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_SHA256" BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_B64="$BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --run-service --route toolchain-v3
+          run_status="$?"
+          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_SHA256="$BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_SHA256" BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_B64="$BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --capture-service-status --route toolchain-v3
+          capture_status="$?"
+          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_SHA256="$BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_SHA256" BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_B64="$BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --finish --route toolchain-v3 --service-exit unknown --client-exit unknown --service-status "/run/bw-bochs-toolchain-v3-${GITHUB_RUN_ID}-1-work/service-status.original.json"
+          finish_status="$?"
+          set -e
+          test "$run_status" -eq 0
+          test "$capture_status" -eq 0
+          test "$finish_status" -eq 0
+      - name: Retain Bochs toolchain inventory originals
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-bochs-ring3-toolchain-inventory-v3-originals
+          path: /run/bw-bochs-toolchain-v3-${{ github.run_id }}-1-originals
+          if-no-files-found: error
+          retention-days: 7
   bochs-ring3-build-v1:
     if: ${{ true && github.event.label.name == 'x86-bochs-ring3-build-v1' && github.actor == 'CrispStrobe' && github.event.sender.login == 'CrispStrobe' && github.event.pull_request.head.repo.fork == false && github.run_attempt == '1' }}
     runs-on: ubuntu-24.04
@@ -266,7 +360,7 @@ jobs:
           path = '.github/workflows/i80386-bochs-ring3-reference.yml'
           assert git(root, 'rev-parse', 'HEAD:' + path) == git(workspace / 'workflow-source', 'rev-parse', workflow + ':' + path)
           PY
-          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_BUILD_REQUEST_SHA256="$BW_BOCHS_RING3_BUILD_REQUEST_SHA256" BW_BOCHS_RING3_BUILD_REQUEST_B64="$BW_BOCHS_RING3_BUILD_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --admit --route build --workflow-root "$GITHUB_WORKSPACE/workflow-source" --invoker-uid "$(id -u)" --invoker-gid "$(id -g)"
+          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_BUILD_REQUEST_SHA256="$BW_BOCHS_RING3_BUILD_REQUEST_SHA256" BW_BOCHS_RING3_BUILD_REQUEST_B64="$BW_BOCHS_RING3_BUILD_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --admit --route build --profile current-v3 --workflow-root "$GITHUB_WORKSPACE/workflow-source" --invoker-uid "$(id -u)" --invoker-gid "$(id -g)"
       - name: Prepare pinned Node input cache
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
@@ -277,11 +371,11 @@ jobs:
         run: |
           set -euo pipefail
           set +e
-          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_BUILD_REQUEST_SHA256="$BW_BOCHS_RING3_BUILD_REQUEST_SHA256" BW_BOCHS_RING3_BUILD_REQUEST_B64="$BW_BOCHS_RING3_BUILD_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --run-service --route build
+          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_BUILD_REQUEST_SHA256="$BW_BOCHS_RING3_BUILD_REQUEST_SHA256" BW_BOCHS_RING3_BUILD_REQUEST_B64="$BW_BOCHS_RING3_BUILD_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --run-service --route build --profile current-v3
           run_status="$?"
-          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_BUILD_REQUEST_SHA256="$BW_BOCHS_RING3_BUILD_REQUEST_SHA256" BW_BOCHS_RING3_BUILD_REQUEST_B64="$BW_BOCHS_RING3_BUILD_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --capture-service-status --route build
+          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_BUILD_REQUEST_SHA256="$BW_BOCHS_RING3_BUILD_REQUEST_SHA256" BW_BOCHS_RING3_BUILD_REQUEST_B64="$BW_BOCHS_RING3_BUILD_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --capture-service-status --route build --profile current-v3
           capture_status="$?"
-          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_BUILD_REQUEST_SHA256="$BW_BOCHS_RING3_BUILD_REQUEST_SHA256" BW_BOCHS_RING3_BUILD_REQUEST_B64="$BW_BOCHS_RING3_BUILD_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --finish --route build --service-exit unknown --client-exit unknown --service-status "/run/bw-bochs-build-v1-${GITHUB_RUN_ID}-1-work/service-status.original.json"
+          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_BUILD_REQUEST_SHA256="$BW_BOCHS_RING3_BUILD_REQUEST_SHA256" BW_BOCHS_RING3_BUILD_REQUEST_B64="$BW_BOCHS_RING3_BUILD_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --finish --route build --profile current-v3 --service-exit unknown --client-exit unknown --service-status "/run/bw-bochs-build-v1-${GITHUB_RUN_ID}-1-work/service-status.original.json"
           finish_status="$?"
           set -e
           test "$run_status" -eq 0
@@ -364,7 +458,7 @@ jobs:
           path = '.github/workflows/i80386-bochs-ring3-reference.yml'
           assert git(root, 'rev-parse', 'HEAD:' + path) == git(workspace / 'workflow-source', 'rev-parse', workflow + ':' + path)
           PY
-          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256="$BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256" BW_BOCHS_RING3_REFERENCE_REQUEST_B64="$BW_BOCHS_RING3_REFERENCE_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --admit --route reference --workflow-root "$GITHUB_WORKSPACE/workflow-source" --invoker-uid "$(id -u)" --invoker-gid "$(id -g)"
+          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256="$BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256" BW_BOCHS_RING3_REFERENCE_REQUEST_B64="$BW_BOCHS_RING3_REFERENCE_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --admit --route reference --profile current-v3 --workflow-root "$GITHUB_WORKSPACE/workflow-source" --invoker-uid "$(id -u)" --invoker-gid "$(id -g)"
       - name: Prepare pinned Node input cache
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
@@ -377,11 +471,11 @@ jobs:
         run: |
           set -euo pipefail
           set +e
-          sudo --preserve-env=GH_TOKEN -- /usr/bin/env PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256="$BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256" BW_BOCHS_RING3_REFERENCE_REQUEST_B64="$BW_BOCHS_RING3_REFERENCE_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --run-service --route reference
+          sudo --preserve-env=GH_TOKEN -- /usr/bin/env PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256="$BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256" BW_BOCHS_RING3_REFERENCE_REQUEST_B64="$BW_BOCHS_RING3_REFERENCE_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --run-service --route reference --profile current-v3
           run_status="$?"
-          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256="$BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256" BW_BOCHS_RING3_REFERENCE_REQUEST_B64="$BW_BOCHS_RING3_REFERENCE_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --capture-service-status --route reference
+          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256="$BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256" BW_BOCHS_RING3_REFERENCE_REQUEST_B64="$BW_BOCHS_RING3_REFERENCE_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --capture-service-status --route reference --profile current-v3
           capture_status="$?"
-          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256="$BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256" BW_BOCHS_RING3_REFERENCE_REQUEST_B64="$BW_BOCHS_RING3_REFERENCE_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --finish --route reference --service-exit unknown --client-exit unknown --service-status "/run/bw-bochs-reference-v1-${GITHUB_RUN_ID}-1-work/service-status.original.json"
+          sudo -- /usr/bin/env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_ACTOR="$GITHUB_ACTOR" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" GITHUB_JOB="$GITHUB_JOB" GITHUB_WORKFLOW_SHA="$GITHUB_WORKFLOW_SHA" GITHUB_WORKFLOW_REF="$GITHUB_WORKFLOW_REF" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" BW_EXPECTED_HEAD="$BW_EXPECTED_HEAD" BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256="$BW_BOCHS_RING3_REFERENCE_REQUEST_SHA256" BW_BOCHS_RING3_REFERENCE_REQUEST_B64="$BW_BOCHS_RING3_REFERENCE_REQUEST_B64" SUDO_UID="$(id -u)" SUDO_GID="$(id -g)" /usr/bin/python3 -I -S -B scripts/i80386-bochs-ring3-reference/run.py --finish --route reference --profile current-v3 --service-exit unknown --client-exit unknown --service-status "/run/bw-bochs-reference-v1-${GITHUB_RUN_ID}-1-work/service-status.original.json"
           finish_status="$?"
           set -e
           test "$run_status" -eq 0

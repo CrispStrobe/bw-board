@@ -3615,8 +3615,9 @@ and current Build/Reference adapters require explicit V3 metadata and a typed
 five-job graph. Preserve V2 readers/four-job joins and disable its execution;
 all new entries start FALSE.
 
-Next: merge the claim, compose and review disabled code with complete mocked
-metadata16/Build31/Reference32 chains, then qualify every final-head source
+The V3 claim merged before this inactive source continuation. Review disabled
+code and complete mocked metadata16/Build31/Reference32 chains, then qualify
+every final-head source
 check before one separately admitted metadata-only V3. Build waits for actual
 V3 metadata; Reference waits for Build, at the same fixed source head. Preserve
 all caps, errors, cleanup, CPU/wire and distribution assertions. Root admits

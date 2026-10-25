@@ -1,13 +1,14 @@
 # Bochs CPU3 Ring 3 reference source
 
-Status: armed, unselected metadata V2 source candidate under merged amendment
-[PR695](https://github.com/CrispStrobe/bw-board/pull/695). Metadata V1 was
-selected once and failed before reading/copying Node bytes; its ten-role partial
-packet and unchanged positive-reader refusal remain held. V1 execution is
-closed. The new `toolchain-v2` and current Build/Reference producer and reader
-guards are TRUE for source qualification; V1 execution stays disabled. No V2,
-Build or Reference event is selected, and no compiler,
-Node guest or architectural result follows from these source controls.
+Status: inactive metadata V3 source candidate under merged amendment
+[PR696](https://github.com/CrispStrobe/bw-board/pull/696), continuing unmerged
+[PR694](https://github.com/CrispStrobe/bw-board/pull/694). Metadata V1 and V2
+were each consumed once and failed; their originals and strict partial-packet
+refusals remain held. V2 copied, reopened and hashed the selected Node bytes,
+then failed at its old fixed GCC 13 `cc1` path before completing inventory.
+Its after-inventory Node check is absent. V1/V2 live execution is disabled.
+New metadata V3 and current Build/Reference V3 guards are FALSE; no V3,
+Build or Reference event, compiler or guest result is selected or implied.
 
 The three current routes have distinct requests, labels, jobs, units, originals and
 readers. Each job must first authenticate the selected source checkout and the
@@ -31,7 +32,7 @@ source, VGA binary and corresponding source notices must remain exact and
 traceable. No fallback download, local package install or executable probe is
 part of these source controls.
 
-Metadata V2 treats the cache only as source-fixed DATA: Node 22.23.3 at the
+The retained NodeStageV2 policy treats the cache only as source-fixed DATA: Node 22.23.3 at the
 fixed toolcache path, uid 1001/gid 1000, regular mode 0100777, one link,
 124827920 bytes and the unchanged pinned SHA256. Authenticate each caller
 separately through the trusted bootstrap's actual id-u/id-g arguments, SUDO
@@ -42,14 +43,32 @@ realistic control; no request or cache inode may choose caller credentials.
 Only a complete root-owned private0600 copy and independent full reopen/hash
 can become the same readonly0555 staged executable. Cache DATA never executes.
 
-The new metadata job/label/artifact/request/marker and variables contain V2;
-its CLI route is `toolchain-v2`. The disabled V1 job remains a fourth workflow
-job, so metadata selection expects exactly one V2 job and three declared skips.
-Current Build inputs add an exact metadata-reference schema, job name and
-integer version2; Reference binds the same three-field metadata identity in
-its selected Build. Current execution cannot accept a V1-only metadata or
-stage packet. Legacy reader modes remain for old originals; current intake
-uses `toolchain-v2`, `build-current-v2` or `reference-current-v2` explicitly.
+The new metadata job/label/artifact/request/marker and variables contain V3;
+its CLI route is `toolchain-v3`. The disabled V1/V2 jobs remain in the workflow,
+so current official admission requires exactly five typed jobs: one selected
+stage and four declared skips. All raw official step dictionaries are retained,
+including post-action number gaps; numbers must be positive exact integers in
+strictly increasing order. Current Build inputs require metadata-reference
+schema/job/version3; Reference binds that same three-field identity in its
+selected Build. Current execution cannot downgrade to V1/V2 metadata or V1 staging.
+Historical readers remain separate for retained originals. Current readers use
+`toolchain-v3`, `build-current-v3` or `reference-current-v3` explicitly.
+
+All five producer CLI modes require `--route build|reference --profile
+current-v3` for current executing routes. Omitted or different profiles refuse
+before request, provider or OS input. The internally constructed service work
+argv carries the same explicit profile; status capture and finish verify its
+retained raw receipt. Metadata `--route toolchain-v3` rejects any profile.
+Old pure V2 producers and four-job readers remain separate; live CLI dispatch
+has no implicit current-V2 fallback.
+
+Only the five GCC 13 internal roles `cc1`, `cc1plus`, `collect2`, `lto-wrapper`
+and `lto1` move to exact `/usr/libexec/gcc/x86_64-linux-gnu/13` file paths.
+GCC/G++ 13 drivers, notices and library-data paths stay fixed. Source checks
+require all five exact roles and refuse old-path, wrong version/triplet,
+arbitrary libexec root and escaping file/parent aliases before target byte
+reads. These package-supported candidates do not establish actual presence,
+ownership, hashes or build sufficiency. No tool is executed for discovery.
 
 V2 negative cleanup authenticates source-created stage state independently of
 positive cache admission. Its readonly plan captures fresh held/named parent,
