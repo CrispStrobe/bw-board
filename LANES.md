@@ -7114,8 +7114,9 @@ No new event, compiler/guest result, pin, CPU/golden, cap or census change follo
 
 ### Bochs metadata V3 checkpoint and ELF failure attribution — 2026-10-25
 
-Owner: the same Codex x86 reference lane, continuing unmerged
-[PR694](https://github.com/CrispStrobe/bw-board/pull/694). Source bc016f65 passed
+Owner: the same Codex x86 reference lane, continuing the merged inactive source
+[PR694](https://github.com/CrispStrobe/bw-board/pull/694) and unmerged armed
+[PR699](https://github.com/CrispStrobe/bw-board/pull/699). Source bc016f65 passed
 all enabled automatic checks, but the consumed Metadata V3 event failed the
 unchanged no-RPATH/RUNPATH guard before complete inventory. Its eleven-role
 partial lacks selected path/role and exact tag/value; it remains refused.
@@ -7134,13 +7135,22 @@ or compilation.
 Exact tags may inform a later separately scoped dependency/licensing policy
 review; do not infer either blanket acceptance or permanent rejection now.
 
-Claim697 merged before the inactive ELF attribution continuation. Its distinct
-producer/reader/job guards remain FALSE; spent V3 live execution is retired.
+Claim697 merged before the inactive ELF attribution continuation. Separately
+armed H347 passed exact-head source qualification and consumed one
+[diagnostic run](https://github.com/CrispStrobe/bw-board/actions/runs/40200959026),
+which failed at the work step. Its official reader refused 22-row root/controller
+`cgroup.stat` at the historical 16-row bound. Structural-only decoding separately
+observed `/usr/bin/expr` RUNPATH `/usr/lib/x86_64-linux-gnu`; it grants no packet,
+whole-resource, inventory or compiler/guest qualification. This revision retires
+the spent producer/job guards to FALSE and keeps the independent reader TRUE
+for retained originals; spent V3 live execution remains retired.
 The source-selected read prefix and exact ELF tag/value/offset bytes are retained
 under the unchanged strict guard and caps. Twelve finalized roles and manifest
 capture states preserve honest earlier partials; unavailable is not unexecuted.
 Historical functions/readers and current positive adapters stay held. Structural
 range digests are independently checked; coherent whole-file SHA without its
 body remains reported-only. Source review/qualification and separate root
-admission precede any diagnostic event. No positive Build/Reference or policy
-allowlist is selected.
+admission preceded the consumed diagnostic event. Next requires a separate
+negative-reader/kernel-stat compatibility claim preserving the old 16-row helper
+and all caps, followed only later by separately scoped dependency/licence review.
+No replay, new event, positive Build/Reference or policy allowlist is selected.

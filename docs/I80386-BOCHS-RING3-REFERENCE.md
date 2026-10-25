@@ -1,17 +1,28 @@
 # Bochs CPU3 Ring 3 reference status
 
-Status: source remains in unmerged
-[PR694](https://github.com/CrispStrobe/bw-board/pull/694). Source bc016f65 passed
+Status: inactive attribution source [PR694](https://github.com/CrispStrobe/bw-board/pull/694)
+is merged. Its separately armed continuation [PR699](https://github.com/CrispStrobe/bw-board/pull/699)
+remains unmerged. Qualified source `347d4fae` consumed one
+[ELF diagnostic run](https://github.com/CrispStrobe/bw-board/actions/runs/40200959026),
+which failed at the work step. The official reader refused its packet because
+the retained root/controller `cgroup.stat` has 22 rows while the historical
+reader admits at most 16. Structural-only decoding observed `/usr/bin/expr`
+RUNPATH `/usr/lib/x86_64-linux-gnu`; packet, whole-resource and positive-chain
+qualification remain refused. This revision closes the spent diagnostic
+producer/job and keeps its independent reader enabled for retained originals.
+
+Earlier source bc016f65 passed
 all enabled automatic CI, but its separately consumed Metadata V3 event failed
 before complete inventory at the unchanged no-RPATH/RUNPATH guard. The
 original lacks the offending selected file and tag/value; its partial remains
 refused. No Build/Reference or compiler/guest qualification follows. Preserve
 all V1/V2/V3 originals, labels and historical reader verdicts.
 
-The next [bounded ELF failure-attribution task](I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md)
-has merged ownership and an inactive source candidate. It collects exact
-evidence under the unchanged guard;
-any later dependency-resolution and licensing policy decision is separate.
+The [bounded ELF failure-attribution task](I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md)
+records the separate structural observation and official refusal. Next is a
+separately claimed negative-reader/kernel-stat schema task, preserving the
+historical 16-row guard and all caps. Any later dependency-resolution and
+licensing policy decision remains separate.
 Preserve the separately owned same-job V3 cleanup lane and every consumed event.
 
 The existing authored fixture expects descriptor accessed bits to be written
@@ -110,15 +121,16 @@ cleanup, and cannot be upgraded by the repair. The existing pinned Node bytes,
 exclusive root copy/reopen/hash before publication, CPU wire, limits and
 component/source obligations remain unchanged.
 
-Next: follow the ELF attribution task and its ownership/diagnostic-wire gates.
-No new code, event, compiler or guest is selected by this checkpoint. The
+Next: follow the ELF attribution task and its separate compatibility ownership gate.
+No new event, compiler or guest is selected by retirement. The
 positive Build/Reference chain remains blocked until separately reviewed
 policy/source and successful metadata admission at its frozen source head.
 Actual result, whole OS, strict 386DX physical accuracy, timing/RTx, release
 and blanket licence approval remain unestablished.
 
-The diagnostic route `toolchain-elf-attribution-v1` and independent reader/job
-start FALSE; spent V3 execution is closed. Its twelve-role finalized packet
+The diagnostic route `toolchain-elf-attribution-v1` producer and job are FALSE;
+its independent reader stays TRUE for retained originals. Spent V3 execution
+is closed. Its twelve-role packet
 and typed partial manifest distinguish unavailable evidence from skipped work.
 It preserves the exact strict guard, independently rederives tags from retained
 structural bytes, and reports full-file SHA only as observed readback. A failed

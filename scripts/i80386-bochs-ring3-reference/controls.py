@@ -5119,7 +5119,7 @@ class ElfAttributionControls(unittest.TestCase):
 
     def test_all_five_genuine_cli_modes_and_explicit_disabled_zero_edges(self):
         p=producer;r=self.reader
-        self.assertIs(p.ELF_ATTRIBUTION_ENABLED,True);self.assertIs(p.TOOLCHAIN_V3_ENABLED,False);self.assertIs(r.ELF_ATTRIBUTION_READER_ENABLED,True)
+        self.assertIs(p.ELF_ATTRIBUTION_ENABLED,False);self.assertIs(p.TOOLCHAIN_V3_ENABLED,False);self.assertIs(r.ELF_ATTRIBUTION_READER_ENABLED,True)
         edge=mock.Mock(side_effect=AssertionError('inactive edge'))
         for mode in ('--admit','--work','--run-service','--capture-service-status','--finish'):
             for extra in ([],['--profile','current-v3']):
@@ -5130,11 +5130,13 @@ class ElfAttributionControls(unittest.TestCase):
         # Extraneous-profile refusal must remain nonvacuous while the route is
         # enabled, rather than passing only because the default guard is false.
         for mode in ('--admit','--work','--run-service','--capture-service-status','--finish'):
-            with mock.patch.object(p,'admit_cli',edge),mock.patch.object(p,'load_cli_context',edge), \
+            with mock.patch.object(p,'ELF_ATTRIBUTION_ENABLED',True), \
+                 mock.patch.object(p,'admit_cli',edge),mock.patch.object(p,'load_cli_context',edge), \
                  self.assertRaisesRegex(p.Refusal,'profile'):
                 p.main([mode,'--route',p.ELF_ROUTE,'--profile','current-v3'],environment={},provider_factory=edge)
         edge.assert_not_called()
-        with mock.patch.object(p,'load_cli_context',edge),self.assertRaises(AssertionError):
+        with mock.patch.object(p,'ELF_ATTRIBUTION_ENABLED',True), \
+             mock.patch.object(p,'load_cli_context',edge),self.assertRaises(AssertionError):
             p.main(['--work','--route',p.ELF_ROUTE],environment={},provider_factory=edge)
         edge.assert_called_once();edge.reset_mock()
         for sample in (self.clean,self.rejected):

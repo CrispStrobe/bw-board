@@ -21,7 +21,7 @@ const routes = [
   ['toolchain', 'bochs-ring3-toolchain-inventory-v1', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v1', 'toolchain-v1', false],
   ['toolchain-v2', 'bochs-ring3-toolchain-inventory-v2', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v2', 'toolchain-v2', false],
   ['toolchain-v3', 'bochs-ring3-toolchain-inventory-v3', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v3', 'toolchain-v3', false],
-  ['toolchain-elf-attribution-v1', 'bochs-ring3-elf-attribution-v1', 'Admit Bochs ELF attribution source and request', 'Read selected Bochs ELF attribution without execution', 'Retain Bochs ELF attribution originals', 'x86-bochs-ring3-elf-attribution-v1', 'toolchain-elf-attribution-v1', true],
+  ['toolchain-elf-attribution-v1', 'bochs-ring3-elf-attribution-v1', 'Admit Bochs ELF attribution source and request', 'Read selected Bochs ELF attribution without execution', 'Retain Bochs ELF attribution originals', 'x86-bochs-ring3-elf-attribution-v1', 'toolchain-elf-attribution-v1', false],
   ['build', 'bochs-ring3-build-v1', 'Admit Bochs build source and request', 'Build pinned Bochs CPU3 and retain originals', 'Retain Bochs build originals', 'x86-bochs-ring3-build-v1', 'build-v1', true],
   ['reference', 'bochs-ring3-reference-v1', 'Admit Bochs reference source and request', 'Capture fresh JavaScript and Bochs unchanged wire', 'Retain Bochs reference originals', 'x86-bochs-ring3-reference-v1', 'reference-v1', true],
 ];
@@ -122,7 +122,7 @@ test('workflow policy mutations are detected without enabling a job', () => {
     ['spent metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v1:\n    if: ${{ false &&', 'bochs-ring3-toolchain-inventory-v1:\n    if: ${{ true &&')],
     ['spent V2 metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v2:\n    if: ${{ false &&', 'bochs-ring3-toolchain-inventory-v2:\n    if: ${{ true &&')],
     ['spent V3 metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v3:\n    if: ${{ false &&', 'bochs-ring3-toolchain-inventory-v3:\n    if: ${{ true &&')],
-    ['new diagnostic guard', workflow.replace('bochs-ring3-elf-attribution-v1:\n    if: ${{ true &&', 'bochs-ring3-elf-attribution-v1:\n    if: ${{ false &&')],
+    ['spent diagnostic guard', workflow.replace('bochs-ring3-elf-attribution-v1:\n    if: ${{ false &&', 'bochs-ring3-elf-attribution-v1:\n    if: ${{ true &&')],
     ['checkout pin', workflow.replace(checkout, 'actions/checkout@main')],
     ['unknown service status', workflow.replace('--service-exit unknown', '--service-exit 0')],
     ['finish', workflow.replace('--finish --route', '--no-finish --route')],

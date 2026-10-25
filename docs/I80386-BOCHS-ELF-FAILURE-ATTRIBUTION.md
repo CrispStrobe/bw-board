@@ -1,4 +1,4 @@
-# Bochs ELF failure attribution: next bounded task
+# Bochs ELF attribution: spent diagnostic and next bounded reader task
 
 Status: ownership [PR697](https://github.com/CrispStrobe/bw-board/pull/697)
 and inactive diagnostic source [PR694](https://github.com/CrispStrobe/bw-board/pull/694)
@@ -6,8 +6,28 @@ are merged. The reviewed source head was
 [`c2930696`](https://github.com/CrispStrobe/bw-board/commit/c293069628e8a9d597308f7b356421cd64545ce3).
 Its exact-head qualification had 23 checks (12 successful, 11 declared skips),
 11 automatic runs (nine successful, two declared skips) and 174 terminal steps.
-The route remains inactive and unselected; source qualification does not
-approve an actual toolchain or reference.
+That inactive qualification did not approve an actual toolchain or reference.
+
+The separately armed [PR699](https://github.com/CrispStrobe/bw-board/pull/699)
+head `347d4fae` then passed 21 checks (16 success, five declared skips), nine
+runs and 231 terminal steps, including an independently admitted ordinary source
+Test. Its one [diagnostic run](https://github.com/CrispStrobe/bw-board/actions/runs/40200959026)
+failed at the work step; all five other jobs skipped. Once-acquired originals
+are retained. The official standalone reader refused the packet at
+`finite delegated cgroup stat rows`: before and after, both root and controller
+`cgroup.stat` contain 22 unique numeric rows (460 bytes), exceeding the unchanged
+16-row reader guard. Events have two rows; the stat byte size fits the separate
+4096-byte text bound. No whole-resource or complete-packet qualification follows.
+
+A separate call to the exact selected reader's structural ELF function decoded
+the nineteenth retained record: role `expr`, requested/resolved path
+`/usr/bin/expr`, absent RPATH and RUNPATH `/usr/lib/x86_64-linux-gnu`.
+The RUNPATH entry offset is 39840; its 25-byte string starts at 3797 with NUL
+at 3822. This structural-only observation is not the refused official packet
+grade, a complete inventory, a resource pass or a compiler/guest result. It does
+not repair Metadata V3's missing attribution retroactively. PR699 remains
+unmerged; this revision retires the spent producer/job and leaves the independent
+reader enabled for retained-original acceptance.
 
 The separately selected [Metadata V3 run](https://github.com/CrispStrobe/bw-board/actions/runs/40176241083)
 failed in `toolchain-inventory-before` with `no selected tool RPATH/RUNPATH`.
@@ -80,13 +100,14 @@ in this task.
 No architectural, whole-host, physical timing, release or blanket licence
 approval follows from this diagnostic work.
 
-## Inactive diagnostic source boundary
+## Retained diagnostic source boundary
 
-The distinct route is `toolchain-elf-attribution-v1`; producer, reader and its
-sixth workflow-job guard start false. Metadata V3 live execution is retired.
+The distinct route is `toolchain-elf-attribution-v1`; producer and sixth
+workflow-job guard are false in this retirement revision. Its independent
+reader remains true. Metadata V3 live execution is retired.
 Historical readers and current positive Build/Reference adapters are held;
 they cannot accept the diagnostic as metadata or silently adopt its six-job
-graph. No new event, compiler or guest is selected by this source candidate.
+graph. No new event, compiler or guest is selected by retirement.
 
 A finalized diagnostic has twelve exact roles. Its distinct manifest binds
 actual roles by bytes/SHA and marks missing conditional originals unavailable,
@@ -98,7 +119,7 @@ reports only that diagnostic observation and grants no positive-chain authority.
 All original caps, whole-future cleanup reservation and first/secondary errors
 remain mandatory; all historical failures and consumed labels remain held.
 
-## Next negative-only event boundary
+## Historical negative-only event boundary
 
 Before selection, review the canonical diagnostic request, current owned PR,
 executing workflow commit/tree and six-job roster against the exact armed source
@@ -137,3 +158,29 @@ ambiguous writes, both acquisition routes and partial download failures.
 Report the exact observed ELF path, role, tag and value, or state that
 attribution remains unestablished. Compiler, guest, inventory, Build and
 Reference authority remain false; policy changes need a separate lane.
+
+## Next separate claim: exact kernel-stat compatibility
+
+Preserve the H347 official refusal and the old reader's 16-row helper unchanged.
+Do not truncate the retained raw stat text, raise that historical bound or rerun
+the consumed diagnostic to obtain a preferred kernel. First claim and review a
+versioned negative-only resource reader/profile using primary kernel source and
+the exact retained schema. The observed keys are `nr_descendants`, ten
+`nr_subsys_*` counters, `nr_dying_descendants` and ten `nr_dying_subsys_*`
+counters for `cpuset`, `cpu`, `io`, `memory`, `perf_event`, `hugetlb`, `pids`,
+`rdma`, `misc` and `dmem`. Their meanings and selected kernel/profile identity
+need explicit review; this checkpoint does not infer an unobserved kernel version.
+
+Keep the existing byte, JSON, archive, input, process, cleanup and time caps.
+Retain all raw rows and independently validate the closed key set, exact numeric
+types, descendant/dying counters, root/controller identity, membership and
+limits. Require exact-profile positives plus missing, unknown, duplicate,
+boolean, negative and drift refusals; preserve the original reader's refusal as
+a counterfactual. Any later compatibility readback of held originals needs
+separate review and a distinct result identity. It must not rewrite the selected
+H347 grade or silently create packet/whole-host authority.
+
+Only after that separate boundary is understood can an additional scoped
+dependency-resolution and licence/source-obligation review consider the observed
+RUNPATH. This task selects no allowlist, compiler, package installation, guest,
+new event, original download or positive Build/Reference chain.
