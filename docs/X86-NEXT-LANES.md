@@ -1,5 +1,11 @@
 # x86 checkpoint and next lanes
 
+> Publication staging: the two reader components are prepared separately.
+> This provisional branch contains documentation only; source implementation
+> and its qualification are pending in this PR. Statements below describe
+> that prepared checkpoint, not code already present in this staging tree.
+
+
 The next connected compiler-provisioning task is the
 [operational integration contract](X86-PROVISIONING-OPERATIONAL.md). It specifies
 the missing launch, source-approval, child-context and original-report joins;

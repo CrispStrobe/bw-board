@@ -7158,6 +7158,12 @@ No replay, new event, positive Build/Reference or policy allowlist is selected.
 
 ### Two retained-negative x86 readers — source checkpoint, 2026-10-25
 
+> Publication staging: the two reader components are prepared separately.
+> This provisional branch contains documentation only; source implementation
+> and its qualification are pending in this PR. Statements below describe
+> that prepared checkpoint, not code already present in this staging tree.
+
+
 Owner: Codex x86 lane; implementation may split files between the existing
 Bochs reader owner and the ordered-read reviewer after this claim merges.
 The merged claim is implemented in the five new code paths below; hosted

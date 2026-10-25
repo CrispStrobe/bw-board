@@ -1,5 +1,11 @@
 # Ordered 16-bit read: retain a failed paired attempt
 
+> Publication staging: the two reader components are prepared separately.
+> This provisional branch contains documentation only; source implementation
+> and its qualification are pending in this PR. Statements below describe
+> that prepared checkpoint, not code already present in this staging tree.
+
+
 Status: inactive failure-only source implemented; hosted source qualification
 and a separately admitted audit of the retained original remain pending. The
 selected ordered-read CPU candidate remains unadopted. The CPU arm, spent
