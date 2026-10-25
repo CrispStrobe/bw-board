@@ -1,11 +1,12 @@
 # Bochs CPU3 Ring 3 reference source
 
-Status: inactive metadata V2 source candidate under merged amendment
+Status: armed, unselected metadata V2 source candidate under merged amendment
 [PR695](https://github.com/CrispStrobe/bw-board/pull/695). Metadata V1 was
 selected once and failed before reading/copying Node bytes; its ten-role partial
 packet and unchanged positive-reader refusal remain held. V1 execution is
 closed. The new `toolchain-v2` and current Build/Reference producer and reader
-guards are FALSE. No V2, Build or Reference event is selected, and no compiler,
+guards are TRUE for source qualification; V1 execution stays disabled. No V2,
+Build or Reference event is selected, and no compiler,
 Node guest or architectural result follows from these source controls.
 
 The three current routes have distinct requests, labels, jobs, units, originals and

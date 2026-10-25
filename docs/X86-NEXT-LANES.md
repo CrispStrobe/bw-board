@@ -3609,7 +3609,7 @@ created-empty root-directory facts lack a live named/terminal cleanup proof.
 No Build or Reference event is selected and no compiler/guest result follows.
 
 The [metadata V2 amendment](https://github.com/CrispStrobe/bw-board/pull/695)
-merged before this inactive source candidate. It owns only
+merged before this armed, unselected source candidate. It owns only
 the existing Bochs producer/reader/controls/README, workflow/wrapper, reference
 guide and own LANES/status sections. Use exact source-fixed cache DATA
 path/version/owner/mode/bytes/SHA separately from protected caller credentials;
@@ -3620,7 +3620,9 @@ Negative cleanup requires new held/named identity and bounded empty census
 before any mutation, with the whole 16 KiB future output reserved. A partial
 failed packet cannot become complete metadata or success.
 
-Next: independently review the inactive V2 implementation and connected
+Current V2 producer/reader guards and the metadata V2 job are armed for source
+qualification; V1 execution remains disabled. No new event is selected.
+Next: independently review this arming delta and connected
 mocked OS/packet controls, then qualify every
 enabled final-head check. Only a new separately admitted metadata V2 event
 and original qualification can supply identities for Build/Reference on that

@@ -19,7 +19,7 @@ const setupNode = 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020';
 const upload = 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02';
 const routes = [
   ['toolchain', 'bochs-ring3-toolchain-inventory-v1', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v1', 'toolchain-v1', false],
-  ['toolchain-v2', 'bochs-ring3-toolchain-inventory-v2', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v2', 'toolchain-v2', false],
+  ['toolchain-v2', 'bochs-ring3-toolchain-inventory-v2', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v2', 'toolchain-v2', true],
   ['build', 'bochs-ring3-build-v1', 'Admit Bochs build source and request', 'Build pinned Bochs CPU3 and retain originals', 'Retain Bochs build originals', 'x86-bochs-ring3-build-v1', 'build-v1', true],
   ['reference', 'bochs-ring3-reference-v1', 'Admit Bochs reference source and request', 'Capture fresh JavaScript and Bochs unchanged wire', 'Retain Bochs reference originals', 'x86-bochs-ring3-reference-v1', 'reference-v1', true],
 ];
@@ -118,7 +118,7 @@ test('workflow policy mutations are detected without enabling a job', () => {
   const cuts = [
     ['guard', workflow.replace('if: ${{ true &&', 'if: ${{ false &&')],
     ['spent metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v1:\n    if: ${{ false &&', 'bochs-ring3-toolchain-inventory-v1:\n    if: ${{ true &&')],
-    ['new metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v2:\n    if: ${{ false &&', 'bochs-ring3-toolchain-inventory-v2:\n    if: ${{ true &&')],
+    ['new metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v2:\n    if: ${{ true &&', 'bochs-ring3-toolchain-inventory-v2:\n    if: ${{ false &&')],
     ['checkout pin', workflow.replace(checkout, 'actions/checkout@main')],
     ['unknown service status', workflow.replace('--service-exit unknown', '--service-exit 0')],
     ['finish', workflow.replace('--finish --route', '--no-finish --route')],
@@ -134,10 +134,19 @@ test('workflow policy mutations are detected without enabling a job', () => {
   for (const [name, changed] of cuts) assert.throws(() => auditWorkflow(changed), name);
 });
 
-test('new V2 reader routes refuse before retained file I/O while inactive', () => {
+test('armed V2 reader routes retain explicit disabled zero-I/O refusal', () => {
   for (const route of ['toolchain-v2', 'build-current-v2', 'reference-current-v2']) {
-    const result = spawnSync('/usr/bin/python3', ['-I', '-B', readerPath,
-      '--route', route, '--archive', '/definitely-absent-bochs-original.zip'], {
+    const disabled = `import importlib.util,sys
+from unittest import mock
+spec=importlib.util.spec_from_file_location('checked_reader',sys.argv[1])
+reader=importlib.util.module_from_spec(spec);spec.loader.exec_module(reader)
+route=sys.argv[2]
+flag={'toolchain-v2':'TOOLCHAIN_V2_READER_ENABLED','build-current-v2':'BUILD_CURRENT_V2_READER_ENABLED','reference-current-v2':'REFERENCE_CURRENT_V2_READER_ENABLED'}[route]
+assert getattr(reader,flag) is True
+with mock.patch.object(reader,flag,False),mock.patch.object(reader.os,'open',side_effect=AssertionError('disabled input IO')):
+    sys.exit(reader.main(['--route',route,'--archive','/definitely-absent-bochs-original.zip']))
+`;
+    const result = spawnSync('/usr/bin/python3', ['-I', '-B', '-c', disabled, readerPath, route], {
       cwd: root, encoding: 'utf8', timeout: 5000, maxBuffer: 1 << 16,
       env: {PATH: '/usr/bin:/bin', PYTHONDONTWRITEBYTECODE: '1'},
     });

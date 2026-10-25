@@ -65,13 +65,14 @@ Source arming grants no actual approval. Actual result, whole OS,
 strict 386DX physical accuracy, timing/RTx and release approval remain false.
 
 The candidate preserves the consumed metadata V1 failure and its strict
-partial-packet refusal. Metadata V2 has a distinct inactive route and exact
+partial-packet refusal. Metadata V2 has a distinct armed, unselected route and exact
 cache DATA owner/mode policy, separate from each protected bootstrap caller.
 Current Build/Reference inputs explicitly require V2 metadata and staging;
 legacy modes remain available only for interpreting old originals. Connected
 manufactured controls establish source wiring, not compiler or guest results.
-Fresh source review, exact-head CI and separate event/original admission are
-required before any new selection.
+Current V2 producer/reader flags and the metadata V2 job are armed for source
+qualification; V1 execution remains disabled. Fresh source review, exact-head
+CI and separate event/original admission are required before any new selection.
 
 The current runtime bundle contains no host-library, loader or Node bodies.
 It keeps the compiled Bochs payload, selected VGA, authored inputs, notices and

@@ -2825,10 +2825,10 @@ class NodeStageV2Controls(unittest.TestCase):
         wrong=bootstrap_v2();wrong['sudoGid']='1000'
         with self.assertRaises(ValueError):producer.NodeStageCopyV2('toolchain-v2',{'GITHUB_RUN_ID':'123456','GITHUB_RUN_ATTEMPT':'1'},(1001,1001),wrong)
     def test_new_current_route_inactive_before_every_edge(self):
-        self.assertIs(producer.TOOLCHAIN_V2_ENABLED,False)
+        self.assertIs(producer.TOOLCHAIN_V2_ENABLED,True)
         for mode in ('--admit','--work','--run-service','--capture-service-status','--finish'):
             edge=mock.Mock(side_effect=AssertionError('real edge forbidden'))
-            with mock.patch.object(producer,'load_cli_context',edge),mock.patch.object(producer,'admit_cli',edge),self.assertRaisesRegex(ValueError,'inactive'):
+            with mock.patch.object(producer,'TOOLCHAIN_V2_ENABLED',False),mock.patch.object(producer,'load_cli_context',edge),mock.patch.object(producer,'admit_cli',edge),self.assertRaisesRegex(ValueError,'inactive'):
                 producer.main([mode,'--route','toolchain-v2'],environment={},provider_factory=edge)
             edge.assert_not_called()
 
@@ -3049,15 +3049,16 @@ class V2BoundaryControls(unittest.TestCase):
         spec=importlib.util.spec_from_file_location('independent_current_v2_disabled',HERE/'reader.py')
         reader=importlib.util.module_from_spec(spec);spec.loader.exec_module(reader)
         for route,flag in (('build','BUILD_CURRENT_V2_ENABLED'),('reference','REFERENCE_CURRENT_V2_ENABLED')):
-            self.assertIs(getattr(producer,flag),False)
+            self.assertIs(getattr(producer,flag),True)
             for mode in ('--admit','--work','--run-service','--capture-service-status','--finish'):
                 edge=mock.Mock(side_effect=AssertionError('input edge'))
-                with mock.patch.object(producer,'admit_cli',edge),mock.patch.object(producer,'load_cli_context',edge),self.assertRaisesRegex(ValueError,'inactive'):
+                with mock.patch.object(producer,flag,False),mock.patch.object(producer,'admit_cli',edge),mock.patch.object(producer,'load_cli_context',edge),self.assertRaisesRegex(ValueError,'inactive'):
                     producer.main([mode,'--route',route],environment={},provider_factory=edge)
                 edge.assert_not_called()
-        for route in ('toolchain-v2','build-current-v2','reference-current-v2'):
+        for route,flag in (('toolchain-v2','TOOLCHAIN_V2_READER_ENABLED'),('build-current-v2','BUILD_CURRENT_V2_READER_ENABLED'),('reference-current-v2','REFERENCE_CURRENT_V2_READER_ENABLED')):
+            self.assertIs(getattr(reader,flag),True)
             edge=mock.Mock(side_effect=AssertionError('reader input edge'))
-            with mock.patch.object(reader,'cli_regular',edge),self.assertRaisesRegex(reader.Refusal,'inactive'):
+            with mock.patch.object(reader,flag,False),mock.patch.object(reader,'cli_regular',edge),self.assertRaisesRegex(reader.Refusal,'inactive'):
                 reader.cli_grade(route,{'archive':'unreadable'})
             edge.assert_not_called()
     def test_independent_V2_reader_positive_and_coherently_rehashed_cuts(self):
