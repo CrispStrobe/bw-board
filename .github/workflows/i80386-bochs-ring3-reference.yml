@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   bochs-ring3-toolchain-inventory-v1:
-    if: ${{ false && github.event.label.name == 'x86-bochs-ring3-toolchain-inventory-v1' && github.actor == 'CrispStrobe' && github.event.sender.login == 'CrispStrobe' && github.event.pull_request.head.repo.fork == false && github.run_attempt == '1' }}
+    if: ${{ true && github.event.label.name == 'x86-bochs-ring3-toolchain-inventory-v1' && github.actor == 'CrispStrobe' && github.event.sender.login == 'CrispStrobe' && github.event.pull_request.head.repo.fork == false && github.run_attempt == '1' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
@@ -108,7 +108,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
   bochs-ring3-build-v1:
-    if: ${{ false && github.event.label.name == 'x86-bochs-ring3-build-v1' && github.actor == 'CrispStrobe' && github.event.sender.login == 'CrispStrobe' && github.event.pull_request.head.repo.fork == false && github.run_attempt == '1' }}
+    if: ${{ true && github.event.label.name == 'x86-bochs-ring3-build-v1' && github.actor == 'CrispStrobe' && github.event.sender.login == 'CrispStrobe' && github.event.pull_request.head.repo.fork == false && github.run_attempt == '1' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -202,7 +202,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
   bochs-ring3-reference-v1:
-    if: ${{ false && github.event.label.name == 'x86-bochs-ring3-reference-v1' && github.actor == 'CrispStrobe' && github.event.sender.login == 'CrispStrobe' && github.event.pull_request.head.repo.fork == false && github.run_attempt == '1' }}
+    if: ${{ true && github.event.label.name == 'x86-bochs-ring3-reference-v1' && github.actor == 'CrispStrobe' && github.event.sender.login == 'CrispStrobe' && github.event.pull_request.head.repo.fork == false && github.run_attempt == '1' }}
     permissions:
       contents: read
       actions: read

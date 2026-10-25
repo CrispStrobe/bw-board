@@ -1,6 +1,6 @@
 # Bochs CPU3 Ring 3 reference source candidate
 
-Status: merged claim and inactive source candidate. Build and reference execution
+Status: merged claim and source candidate armed for separate event admission. Build and reference execution
 are unselected and unqualified. The exact envelope is the
 [new Bochs claim in LANES.md](../LANES.md). Preserve the separately owned
 same-job V3 cleanup lane and every consumed event/original.
@@ -56,14 +56,14 @@ needs separate source/resource admission and a genuine bounded capture.
 Default VGA/CMOS/share resources, if required, must be explicitly disabled or
 reviewed and pinned with notices; no fallback download or guessed absence.
 
-Next: implement only the merged claim's named new paths in an
-isolated checkout, keep guards false, and prove connected reader/source/
-framing/failure/resource controls. Fresh source CI and independent root
-admission precede any new build or reference event. Actual result, whole OS,
+Next: qualify the final source head and independently admit each separate
+metadata, Build and Reference request/event. Keep that source head fixed across
+the three events, with each executing workflow and request frozen separately.
+Source arming grants no actual approval. Actual result, whole OS,
 strict 386DX physical accuracy, timing/RTx and release approval remain false.
 
-The candidate has separate metadata, Build and Reference routes with all source
-guards disabled pending review. Connected manufactured controls join complete 31-role Build and 32-role
+The candidate has separate metadata, Build and Reference routes with source
+guards active and all events unselected. Connected manufactured controls join complete 31-role Build and 32-role
 Reference envelopes from the genuine collectors/finalizer to the standalone
 reader; coherent packet and official-join mutations refuse. This establishes
 source wiring only. Fresh

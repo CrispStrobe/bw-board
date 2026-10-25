@@ -32,9 +32,9 @@ import urllib.error
 import zipfile
 import zlib
 
-TOOLCHAIN_ENABLED = False
-BUILD_ENABLED = False
-REFERENCE_ENABLED = False
+TOOLCHAIN_ENABLED = True
+BUILD_ENABLED = True
+REFERENCE_ENABLED = True
 REPOSITORY = 'CrispStrobe/bw-board'
 OWNER = 'CrispStrobe'
 UPSTREAM = 'bochs-emu/Bochs'

@@ -138,9 +138,9 @@ REFERENCE_CAPS = {'compressed': 96 << 20, 'expanded': 384 << 20,
                   'members': 6144, 'json': 4 << 20}
 RUNTIME_CAPS = {'compressed': 32 << 20, 'expanded': 64 << 20,
                 'members': 256, 'json': 4 << 20}
-TOOLCHAIN_READER_ENABLED = False
-BUILD_READER_ENABLED = False
-REFERENCE_READER_ENABLED = False
+TOOLCHAIN_READER_ENABLED = True
+BUILD_READER_ENABLED = True
+REFERENCE_READER_ENABLED = True
 
 
 class Refusal(ValueError):

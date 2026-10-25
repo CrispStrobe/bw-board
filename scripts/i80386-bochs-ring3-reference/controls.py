@@ -806,7 +806,9 @@ class CliControls(unittest.TestCase):
     def test_all_five_cli_modes_inactive_before_every_edge(self):
         for mode in ('--admit', '--work', '--run-service', '--capture-service-status', '--finish'):
             edge = mock.Mock(side_effect=AssertionError('host edge reached'))
-            with mock.patch.object(producer, 'load_cli_context', edge), \
+            self.assertIs(producer.TOOLCHAIN_ENABLED, True)
+            with mock.patch.object(producer, 'TOOLCHAIN_ENABLED', False), \
+                 mock.patch.object(producer, 'load_cli_context', edge), \
                  mock.patch.object(producer, 'admit_cli', edge), \
                  self.assertRaisesRegex(ValueError, 'inactive'):
                 producer.main([mode, '--route', 'toolchain'], environment={}, provider_factory=edge)
@@ -2678,8 +2680,9 @@ class ConnectedBuildReferenceControls(unittest.TestCase):
         for route,flag in (('toolchain','TOOLCHAIN_READER_ENABLED'),
                            ('build','BUILD_READER_ENABLED'),
                            ('reference','REFERENCE_READER_ENABLED')):
-            self.assertIs(getattr(reader, flag), False)
-            with mock.patch.object(reader.os, 'open',
+            self.assertIs(getattr(reader, flag), True)
+            with mock.patch.object(reader, flag, False), \
+                 mock.patch.object(reader.os, 'open',
                                    side_effect=AssertionError('disabled input IO')), \
                  mock.patch.object(reader.sys, 'stderr', io.StringIO()):
                 self.assertEqual(reader.main(['--route',route,

@@ -36,7 +36,7 @@ function auditWorkflow(raw) {
     const rest = raw.slice(start + job.length + 4);
     const next = rest.search(/^  [a-z][a-z0-9-]*:\s*$/m);
     const section = next < 0 ? rest : rest.slice(0, next);
-    assert.match(section, /if: \$\{\{ false &&/);
+    assert.match(section, /if: \$\{\{ true &&/);
     assert.match(section, new RegExp(`timeout-minutes: ${route === 'toolchain' ? 5 : route === 'build' ? 20 : 10}\\b`));
     assert.match(section, new RegExp(`github\\.event\\.label\\.name == 'x86-bochs-ring3-${route === 'toolchain' ? 'toolchain-inventory' : route}-v1'`));
     assert.match(section, /github\.actor == 'CrispStrobe'/);
@@ -84,7 +84,7 @@ function auditWorkflow(raw) {
   }
 }
 
-test('Bochs route workflow has three inactive authenticated bounded six-step jobs', () => {
+test('Bochs route workflow has three armed authenticated bounded six-step jobs', () => {
   auditWorkflow(workflow);
 });
 
@@ -114,7 +114,7 @@ test('source-held authored inputs equal the unchanged pure fixture builder', () 
 
 test('workflow policy mutations are detected without enabling a job', () => {
   const cuts = [
-    ['guard', workflow.replace('if: ${{ false &&', 'if: ${{ true &&')],
+    ['guard', workflow.replace('if: ${{ true &&', 'if: ${{ false &&')],
     ['checkout pin', workflow.replace(checkout, 'actions/checkout@main')],
     ['unknown service status', workflow.replace('--service-exit unknown', '--service-exit 0')],
     ['finish', workflow.replace('--finish --route', '--no-finish --route')],

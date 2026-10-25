@@ -3600,13 +3600,13 @@ source review and exact-head checks precede any new one-shot selection.
 ### Bochs CPU3 Ring 3 reference build/capture claim
 
 The [separate Bochs reference candidate](I80386-BOCHS-RING3-REFERENCE.md) follows
-the merged claim; its three source guards remain disabled pending review. It preserves the authored ROM/goldens and
+the merged claim; its three route guards are armed and events unselected. It preserves the authored ROM/goldens and
 consumed V2 strict refusal while preparing a pinned LGPL CPU3 standalone
 reference with real CS accessed-bit writes. No build/event or new
 result is qualified by this checkpoint. The existing V3 outside cleanup
 lane remains independently owned and cannot erase the QEMU disagreement.
 
-Next: review the source-frozen false guards and connected independent-reader
+Next: review the source-frozen armed guards and connected independent-reader
 controls; qualify all enabled final-head source checks; separately admitted hosted build/source/
 manifest; then one distinct runtime selection. Root admits build metadata and
 the sole source/build-job log before the runtime job's sole Build ZIP GET;
@@ -3620,3 +3620,7 @@ structural ELF ranges preserve a narrower observed dependency boundary; full
 hashes are reported readbacks. Inventory, Build and Reference remain separate
 admissions. Mocked 31/32-role envelopes do not replace a genuine hosted compiler
 or fresh reference capture, and every expected CPU byte remains unchanged.
+
+Keep one qualified source head fixed across metadata, Build and Reference.
+Freeze each event's executing workflow and canonical request independently;
+source arming does not select an event or grant actual approval.

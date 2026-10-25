@@ -1,9 +1,10 @@
 # Bochs CPU3 Ring 3 reference source
 
-Status: inactive source candidate. The `toolchain`, `build` and `reference`
-producer flags and their three labeled workflow job guards are false. A source
-claim and local pure controls authorize source review only. No Bochs compiler,
-reference execution or guest result follows from this package.
+Status: source candidate armed for separate event admission. The `toolchain`,
+`build` and `reference` producer/reader flags and their labeled workflow guards
+are active; all requests and events remain unselected. Every enabled final-head
+source check and independent admission precede each event. No Bochs compiler,
+reference execution or guest result follows from source activation.
 
 The three routes have distinct requests, labels, jobs, units, originals and
 readers. Each job must first authenticate the selected source checkout and the
@@ -79,4 +80,6 @@ supply mock frame/RAM inputs only, while the wrapper separately regenerates the
 unchanged authored ROM and manifest. Production Reference still runs fresh JS
 and Bochs children. These controls establish no actual compiler execution or
 architectural agreement. Next are independent source review, exact-head hosted
-qualification, then separately selected metadata, Build and Reference events.
+qualification, then separately selected metadata, Build and Reference events at
+one fixed source head. Each event has its own frozen executing workflow and
+canonical request; source activation grants no actual approval.
