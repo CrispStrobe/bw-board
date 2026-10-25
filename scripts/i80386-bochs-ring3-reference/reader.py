@@ -80,13 +80,16 @@ BUILD_FIXED_ROLES = frozenset(('request.original.json event.original.json '
     'build-manifest.json compact-manifest.json runtime.original.zip '
     'source-selected.original.tar.gz config.h.original bxversion.h.original '
     'configure.stdout configure.stderr configure.process.json make.stdout '
-    'make.stderr make.process.json '
-    'notices/vgabios-corresponding-source.tar.gz manifest.json').split())
+    'make.stderr make.process.json service-status.original.json '
+    'outside.original.json cleanup.original.json '
+    'notices/vgabios-corresponding-source.tar.gz manifest.json '
+    'runtime-elf-ranges.original.json host-runtime.original.json').split())
 INVENTORY_ROLES = frozenset(('request.original.json event.original.json '
     'source.before.json source.after.json inventory.before.json '
     'inventory.after.json dpkg-status.original notices.original.json '
     'node-stage.original.json process.original.json '
-    'outside.original.json original.json manifest.json').split())
+    'service-status.original.json outside.original.json cleanup.original.json '
+    'original.json manifest.json runtime-elf-ranges.original.json').split())
 NOTICE_PATHS = frozenset((
     '/usr/share/doc/gcc-13-base/copyright',
     '/usr/share/doc/libstdc++6/copyright',
@@ -122,7 +125,9 @@ REFERENCE_ROLES = frozenset(('request.original.json event.original.json '
     'js/observations.json js/writes.json js/memory.before.bin '
     'js/memory.after.bin js/stdout js/stderr js/process.json bochs/stdout '
     'bochs/stderr bochs/process.json bochs/log bochs/frame.original '
-    'outside.original.json cleanup.original.json original.json manifest.json').split())
+    'service-status.original.json outside.original.json cleanup.original.json '
+    'original.json manifest.json runtime-elf-ranges.original.json '
+    'host-runtime.original.json').split())
 INVENTORY_CAPS = {'compressed': 8 << 20, 'expanded': 16 << 20,
                   'members': 16, 'json': 4 << 20}
 BUILD_CAPS = {'compressed': 64 << 20, 'expanded': 256 << 20,
@@ -738,6 +743,226 @@ def runtime_assets(raw, selected_rows, selected_toolchain, *, budget=None,
     return members, runtime_elf, budget
 
 
+def runtime_zip_v2(raw, selected_rows, selected_toolchain, *, source_tar,
+                   structural_raw, selected_source=None, budget=None):
+    """Grade the no-system-library runtime ZIP under asset schema v2."""
+    require(type(selected_rows) is list and 8 <= len(selected_rows) <= 256,
+            'finite complete Alternative A runtime member table')
+    selected = {}
+    for row in selected_rows:
+        fields(row, 'path role mode bytes sha256')
+        name = safe_member(row['path'])
+        role = ('executable' if name == 'bin/bochs' else
+                'notice' if name.startswith('notices/') else
+                'config' if name == 'config/bochsrc.template' else
+                'rom' if name == 'inputs/fixture.rom' else
+                'fixture' if name == 'inputs/fixture.json' else
+                'vga' if name == 'resources/vgabios.bin' else
+                'manifest' if name == 'asset-manifest.json' else None)
+        require(name not in selected and not name.startswith('lib/') and
+                role is not None and row['role'] == role and
+                row['mode'] == (stat.S_IFREG | (0o555 if name == 'bin/bochs'
+                                               else 0o444)) and
+                integer(row['bytes'], 1, 128 << 20) and digest(row['sha256']),
+                'unique closed runtime member without any system-library body')
+        selected[name] = row
+    mandatory = {'bin/bochs', 'inputs/fixture.rom', 'inputs/fixture.json',
+                 'resources/vgabios.bin', 'config/bochsrc.template',
+                 'asset-manifest.json',
+                 'notices/bochs-selected-corresponding-source.tar.gz',
+                 'notices/vgabios-corresponding-source.tar.gz'}
+    require(mandatory <= set(selected) and
+            all(name in mandatory or name.startswith('notices/')
+                for name in selected),
+            'all exact runtime inputs and complete source notices, no lib prefix')
+    metadata = {}
+    members, runtime_budget = archive_members(raw, RUNTIME_CAPS,
+                                               allowed=selected,
+                                               metadata=metadata)
+    if budget is not None:
+        budget.charge_bytes(runtime_budget.expanded)
+        for _ in range(runtime_budget.members):
+            budget.add(0)
+    else:
+        budget = runtime_budget
+    for name, data in members.items():
+        row = selected[name]
+        require(metadata[name]['mode'] == row['mode'] and
+                len(data) == row['bytes'] and sha(data) == row['sha256'],
+                'exact nested Alternative A member mode, extent and hash')
+    binary = elf_static(members['bin/bochs'])
+    require(binary['rpath'] is None and binary['runpath'] is None,
+            'no built Bochs ELF search-path injection')
+    require(len(members['inputs/fixture.rom']) == 65536 and
+            sha(members['inputs/fixture.rom']) == ROM_SHA256,
+            'unchanged authored ROM retained')
+    require(len(members['resources/vgabios.bin']) == VGA_SELECTED_BYTES and
+            sha(members['resources/vgabios.bin']) == VGA_SELECTED_SHA256,
+            'exact selected LGPL VGA bytes retained')
+    require(len(members['notices/vgabios-corresponding-source.tar.gz']) ==
+            VGA_SOURCE_BYTES and
+            sha(members['notices/vgabios-corresponding-source.tar.gz']) ==
+            VGA_SOURCE_SHA256,
+            'exact selected complete VGA corresponding source')
+    _, budget = vga_corresponding_source(
+        members['notices/vgabios-corresponding-source.tar.gz'], budget=budget)
+    require(type(source_tar) is bytes and
+            members['notices/bochs-selected-corresponding-source.tar.gz'] ==
+            source_tar,
+            'nested Bochs selected corresponding-source bytes equal outer reviewed TAR')
+    authored_fixture(members)
+    asset = parse_json(members['asset-manifest.json'], 4 << 20,
+                       canonical_wire=True)
+    fields(asset, 'schema source bochsSource hostNode hostRuntime files')
+    require(asset['schema'] == 'bw.bochs-ring3.runtime-assets.v2' and
+            type(asset['files']) is list and
+            strict_equal(asset['files'], [selected[name] for name in
+                                          sorted(selected) if name !=
+                                          'asset-manifest.json']),
+            'versioned inner runtime table excludes only its own manifest')
+    fields(asset['source'], 'head tree filesSha256')
+    if selected_source is not None:
+        require(asset['source'] == {
+                    'head': selected_source['head'],
+                    'tree': selected_source['tree'],
+                    'filesSha256': sha(canonical(selected_source['files']))},
+                'Alternative A runtime asset source joins selected checkout')
+    require(asset['bochsSource'] == {
+                'commit': BOCHS_COMMIT, 'tree': BOCHS_TREE,
+                'sourceSelectionSha256': SOURCE_SELECTION_SHA256},
+            'unchanged pinned Bochs source selection in runtime asset')
+    node = fields(asset['hostNode'],
+                  'cachePath bytes sha256 elf stageMode stageUid stageGid')
+    require(strict_equal(node, selected_toolchain['node']) and
+            node['cachePath'] == NODE_CACHE_PATH and
+            node['bytes'] == NODE_BYTES and node['sha256'] == NODE_SHA256 and
+            not any(name.endswith('/node') for name in members),
+            'Node cache DATA is independently staged, never bundled')
+    host = fields(asset['hostRuntime'],
+                  'loaderPath files aliases directoryAliases elfMetadata')
+    observed_sparse = sparse_elf_role(structural_raw)
+    require(set(host['elfMetadata']['files']) <= set(observed_sparse['files']) and
+            all(strict_equal(row, observed_sparse['files'][path]) for path, row
+                in host['elfMetadata']['files'].items()),
+            'asset structural projection joins exact retained outer sparse role')
+    require(set(observed_sparse['files']) <=
+            set(selected_toolchain['files']) | {NODE_CACHE_PATH},
+            'outer structural candidates all belong to selected tool graph')
+    for path, row in observed_sparse['files'].items():
+        selected = (selected_toolchain['node'] if path == NODE_CACHE_PATH
+                    else selected_toolchain['files'][path])
+        require(row['fileBytes'] == selected['bytes'] and
+                row['fileSha256'] == selected['sha256'] and
+                {key: value for key, value in row['structure'].items()
+                 if key != 'soname'} == selected['elf'],
+                'every retained sparse candidate joins selected reported bytes')
+    host_runtime_v2(host, selected_toolchain, binary)
+    return members, asset, binary, budget
+
+
+def host_runtime_v2(host, selected_toolchain, built_binary):
+    """Close the selected transient host library graph, with sparse proof only."""
+    fields(host, 'loaderPath files aliases directoryAliases elfMetadata')
+    require(type(selected_toolchain) is dict and
+            set(selected_toolchain) in (
+                {'files', 'aliases', 'directoryAliases', 'node'},
+                {'files', 'aliases', 'directoryAliases', 'node', 'inventory'}),
+            'closed selected graph with optional separately admitted inventory')
+    selected_files = selected_toolchain['files']
+    selected_aliases = selected_toolchain['aliases']
+    selected_directories = selected_toolchain['directoryAliases']
+    require(type(host['files']) is dict and type(host['aliases']) is dict and
+            type(host['directoryAliases']) is dict and
+            1 <= len(host['files']) <= 128,
+            'finite exact current-job host library closure')
+    used_aliases = {'aliases': {}, 'directoryAliases': {}}
+
+    def resolve(path):
+        require(type(path) is str and path.startswith('/') and len(path) <= 512,
+                'bounded source-derived runtime dependency path')
+        current, seen = path, set()
+        for _ in range(16):
+            require(current not in seen, 'acyclic selected host runtime alias')
+            seen.add(current)
+            choices = []
+            for group, rows in (('aliases', selected_aliases),
+                                ('directoryAliases', selected_directories)):
+                for name, row in rows.items():
+                    if current == name or current.startswith(name + '/'):
+                        choices.append((len(name), group, name, row))
+            if not choices:
+                return current
+            _, group, name, row = max(choices, key=lambda item: item[0])
+            require(type(row['linkText']) is str and
+                    0 < len(row['linkText']) <= 256 and
+                    type(row['target']) is str and
+                    row['target'] == posixpath.normpath(
+                        row['linkText'] if row['linkText'].startswith('/') else
+                        posixpath.join(posixpath.dirname(name), row['linkText'])),
+                    'selected host runtime alias target from raw link text')
+            used_aliases[group][name] = row
+            current = posixpath.normpath(row['target'] + current[len(name):])
+        raise Refusal('selected host runtime alias depth cap')
+
+    dependencies = (list(built_binary['needed']) +
+                    list(selected_toolchain['node']['elf']['needed']))
+    pending = ['/usr/lib/x86_64-linux-gnu/' + name for name in dependencies]
+    for elf in (built_binary, selected_toolchain['node']['elf']):
+        if elf['interpreter'] is not None:
+            pending.append(elf['interpreter'])
+    loader = resolve('/lib64/ld-linux-x86-64.so.2')
+    pending.append('/lib64/ld-linux-x86-64.so.2')
+    required = set()
+    while pending:
+        current = resolve(pending.pop())
+        require(current in selected_files and
+                type(selected_files[current]['elf']) is dict,
+                'every current-job DT_NEEDED/interpreter has selected file')
+        if current in required:
+            continue
+        required.add(current)
+        require(len(required) <= 128,
+                'bounded exact transitive host runtime closure')
+        elf = selected_files[current]['elf']
+        require(elf['rpath'] is None and elf['runpath'] is None,
+                'no selected host runtime search-path injection')
+        pending.extend('/usr/lib/x86_64-linux-gnu/' + name
+                       for name in elf['needed'])
+        if elf['interpreter'] is not None:
+            pending.append(elf['interpreter'])
+    require(host['loaderPath'] == loader and
+            set(host['files']) == required and
+            strict_equal(host['aliases'], used_aliases['aliases']) and
+            strict_equal(host['directoryAliases'],
+                         used_aliases['directoryAliases']),
+            'no extra host files or aliases beyond the selected dependency graph')
+    for path in required:
+        require(strict_equal(host['files'][path], selected_files[path]),
+                'exact selected canonical host file projection')
+    metadata = host['elfMetadata']
+    sparse_elf_role(canonical(metadata))
+    require(set(metadata['files']) == required | {NODE_CACHE_PATH},
+            'sparse structural role contains exactly host closure plus Node')
+    for path in required:
+        row = metadata['files'][path]
+        selected = selected_files[path]
+        require(row['fileBytes'] == selected['bytes'] and
+                row['fileSha256'] == selected['sha256'] and
+                {key: value for key, value in row['structure'].items()
+                 if key != 'soname'} == selected['elf'],
+                'independently decoded sparse structure joins reported host file')
+    node = selected_toolchain['node']
+    node_row = metadata['files'][NODE_CACHE_PATH]
+    require(node_row['fileBytes'] == node['bytes'] and
+            node_row['fileSha256'] == node['sha256'] and
+            {key: value for key, value in node_row['structure'].items()
+             if key != 'soname'} == node['elf'],
+            'independently decoded sparse Node structure joins cache DATA')
+    return {'selectedCanonicalFiles': len(required),
+            'reportedWholeFileHashesIndependentlyRecomputed': False,
+            'sparseStructureIndependentlyDecoded': True}
+
+
 def header_expected():
     """Source-derived main.cc/logio.cc 72-column header, without Bochs exec."""
     def center(text):
@@ -1128,6 +1353,220 @@ def elf_static(raw):
             'runpath': None if runpath_offset is None else word(runpath_offset)}
 
 
+def sparse_elf_structure(row):
+    """Decode only exact retained ELF structural ranges, never a system body."""
+    fields(row, 'fileBytes fileSha256 structure ranges')
+    extent = integer(row['fileBytes'], 64, 128 << 20)
+    digest(row['fileSha256'])  # Reported whole-file readback, not sparse-rehashed.
+    require(type(row['ranges']) is list and 1 <= len(row['ranges']) <= 1024,
+            'finite reported structural ELF range roster')
+    intervals = []
+    total = 0
+    previous = -1
+    for item in row['ranges']:
+        fields(item, 'offset bytes sha256 base64')
+        start = integer(item['offset'], 0, extent - 1)
+        amount = integer(item['bytes'], 1, 2 << 20)
+        digest(item['sha256'])
+        require(start > previous and amount <= extent - start,
+                'sorted nonoverlapping and nonadjacent structural ranges')
+        encoded = item['base64']
+        require(type(encoded) is str and len(encoded) <= (8 << 20),
+                'bounded canonical structural range transport')
+        try:
+            data = base64.b64decode(encoded, validate=True)
+        except (ValueError, base64.binascii.Error) as error:
+            raise Refusal('bounded Base64 structural ELF range') from error
+        require(len(data) == amount and base64.b64encode(data).decode() == encoded and
+                sha(data) == item['sha256'],
+                'exact retained structural ELF range extent and digest')
+        intervals.append((start, start + amount, data))
+        previous = start + amount
+        total += amount
+        require(total <= 2 << 20, 'per-file structural ELF range cap')
+    accessed = []
+
+    def read_at(offset, amount):
+        require(type(offset) is int and type(amount) is int and
+                0 <= offset <= extent and 0 < amount <= extent - offset,
+                'file-backed selected structural ELF read')
+        for start, end, data in intervals:
+            if start <= offset and offset + amount <= end:
+                accessed.append((offset, offset + amount))
+                return data[offset - start:offset - start + amount]
+        raise Refusal('missing exact selected structural ELF byte')
+
+    header = read_at(0, 64)
+    require(header[:4] == b'\x7fELF' and header[4:7] == b'\x02\x01\x01' and
+            header[7] in (0, 3) and header[8] == 0 and
+            header[9:16] == bytes(7),
+            'selected sparse ELF64LE System V/GNU ABI and zero reserved bytes')
+    try:
+        (_, e_type, machine, version, _, phoff, _, _, ehsize, phentsize,
+         phnum, _, _, _) = struct.unpack('<16sHHIQQQIHHHHHH', header)
+    except struct.error as error:
+        raise Refusal('complete selected sparse ELF header') from error
+    require(e_type in (2, 3) and machine == 62 and version == 1 and
+            ehsize == 64 and phentsize == 56 and 0 < phnum <= 1024 and
+            64 <= phoff <= extent - phentsize * phnum,
+            'selected x86-64 sparse program-header bounds')
+    table = read_at(phoff, phentsize * phnum)
+    loads = []
+    dynamic = None
+    interpreter = None
+    for index in range(phnum):
+        kind, _, offset, vaddr, _, size, memsize, _ = struct.unpack_from(
+            '<IIQQQQQQ', table, 56 * index)
+        require(offset <= extent and size <= extent - offset and
+                memsize >= size, 'file-backed sparse ELF segment extent')
+        if kind == 1:
+            loads.append((vaddr, vaddr + size, offset))
+        elif kind == 2:
+            require(dynamic is None and size <= 65536 and size % 16 == 0,
+                    'one bounded sparse PT_DYNAMIC')
+            dynamic = (offset, size)
+        elif kind == 3:
+            require(interpreter is None and 1 < size <= 256,
+                    'one bounded sparse PT_INTERP')
+            item = read_at(offset, size)
+            require(item.endswith(b'\0') and b'\0' not in item[:-1],
+                    'complete sparse ELF interpreter string')
+            try:
+                interpreter = item[:-1].decode('ascii')
+            except UnicodeError as error:
+                raise Refusal('ASCII sparse ELF interpreter') from error
+            require(interpreter == '/lib64/ld-linux-x86-64.so.2',
+                    'fixed selected sparse ELF interpreter')
+
+    def vaddr_offset(address, length):
+        locations = [offset + address - start for start, end, offset in loads
+                     if start <= address and length <= end - address]
+        require(len(locations) == 1 and locations[0] <= extent - length,
+                'one file-backed sparse ELF string-table mapping')
+        return locations[0]
+
+    needed_offsets = []
+    strtab = strsize = soname_offset = None
+    rpath_offset = runpath_offset = None
+    if dynamic is not None:
+        terminated = False
+        dynamic_offset, dynamic_size = dynamic
+        for offset in range(0, dynamic_size, 16):
+            # Retain the used entry array through DT_NULL, never trailing
+            # declared padding or executable bytes after that terminator.
+            tag, value = struct.unpack('<qQ', read_at(dynamic_offset + offset, 16))
+            if tag == 0:
+                terminated = True
+                break
+            if tag == 1:
+                needed_offsets.append(value)
+            elif tag == 5:
+                require(strtab is None, 'one sparse ELF string table')
+                strtab = value
+            elif tag == 10:
+                require(strsize is None, 'one sparse ELF string table size')
+                strsize = value
+            elif tag == 14:
+                require(soname_offset is None, 'one sparse ELF SONAME')
+                soname_offset = value
+            elif tag == 15:
+                require(rpath_offset is None, 'one sparse ELF RPATH')
+                rpath_offset = value
+            elif tag == 29:
+                require(runpath_offset is None, 'one sparse ELF RUNPATH')
+                runpath_offset = value
+        require(terminated, 'terminated sparse ELF dynamic segment')
+    require(len(needed_offsets) <= 64 and
+            (strtab is None) == (strsize is None) and
+            (not needed_offsets and soname_offset is None and
+             rpath_offset is None and runpath_offset is None or strtab is not None),
+            'bounded sparse ELF string references')
+    string_start = None
+    if strtab is not None:
+        # DT_STRSZ declares mapped extent. Only named strings are retained;
+        # large compiler/Node tables need not be copied into this sparse role.
+        require(0 < strsize <= extent, 'file-backed sparse ELF string table')
+        string_start = vaddr_offset(strtab, strsize)
+
+    def word(offset):
+        require(string_start is not None and type(offset) is int and
+                0 <= offset < strsize, 'selected sparse ELF string offset')
+        raw = bytearray()
+        for position in range(offset, min(strsize, offset + 513)):
+            item = read_at(string_start + position, 1)
+            if item == b'\0':
+                try:
+                    return raw.decode('ascii')
+                except UnicodeError as error:
+                    raise Refusal('ASCII sparse ELF string') from error
+            raw.extend(item)
+        raise Refusal('terminated bounded sparse ELF string')
+
+    needed = [word(offset) for offset in needed_offsets]
+    require(len(needed) == len(set(needed)) and
+            all(re.fullmatch('[A-Za-z0-9._+-]+', name) for name in needed),
+            'unique ordinary selected sparse ELF dependencies')
+    soname = None if soname_offset is None else word(soname_offset)
+    require(soname is None or re.fullmatch('[A-Za-z0-9._+-]+', soname),
+            'ordinary selected sparse ELF SONAME')
+    result = {'class': 'ELF64', 'machine': 'x86-64',
+              'type': 'EXEC' if e_type == 2 else 'DYN',
+              'interpreter': interpreter, 'needed': needed, 'soname': soname,
+              'rpath': None if rpath_offset is None else word(rpath_offset),
+              'runpath': None if runpath_offset is None else word(runpath_offset)}
+    fields(row['structure'], 'class machine type interpreter needed soname rpath runpath')
+    require(strict_equal(row['structure'], result),
+            'independently decoded exact sparse ELF structural claims')
+    merged = []
+    for start, end in sorted(accessed):
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(end, merged[-1][1]))
+        else:
+            merged.append((start, end))
+    require([(start, end) for start, end, _ in intervals] == merged,
+            'exact normalized requested structural bytes, no surplus or gap')
+    return result
+
+
+def sparse_elf_role(raw):
+    value = parse_json(raw, 4 << 20, canonical_wire=True)
+    fields(value, 'schema files rawBytes')
+    require(value['schema'] == 'bw.bochs-ring3.runtime-elf-metadata.v1' and
+            type(value['files']) is dict and 1 <= len(value['files']) <= 128,
+            'closed finite structural ELF role')
+    total = 0
+    for path, row in value['files'].items():
+        require(type(path) is str and path.startswith('/') and
+                '\0' not in path and '..' not in path.split('/'),
+                'absolute selected sparse structural source path')
+        sparse_elf_structure(row)
+        total += sum(item['bytes'] for item in row['ranges'])
+        require(total <= 2 << 20, 'whole structural ELF role raw-byte cap')
+    require(integer(value['rawBytes'], 1, 2 << 20) == total,
+            'exact aggregate structural ELF range extent')
+    return value
+
+
+def selected_sparse_elf_fact(raw, graph, node):
+    """Require every and only source-selected library candidate plus fixed Node."""
+    role = sparse_elf_role(raw)
+    fields(graph, 'files aliases directoryAliases')
+    expected = {path for path, row in graph['files'].items()
+                if row['elf'] is not None and
+                ('/lib/' in path or '/lib64/' in path) and
+                '.so' in posixpath.basename(path)} | {NODE_CACHE_PATH}
+    require(set(role['files']) == expected,
+            'exact current candidate sparse graph and fixed Node roster')
+    for path, row in role['files'].items():
+        source = node if path == NODE_CACHE_PATH else graph['files'][path]
+        require(row['fileBytes'] == source['bytes'] and
+                row['fileSha256'] == source['sha256'] and
+                {name: item for name, item in row['structure'].items()
+                 if name != 'soname'} == source['elf'],
+                'independently decoded sparse structure equals selected whole-file observation')
+    return role
+
+
 def source_selection(raw):
     """Rebuild the complete pinned Git tree from metadata, without excluded blobs."""
     require(type(raw) is bytes and sha(raw) == SOURCE_SELECTION_SHA256,
@@ -1483,6 +1922,663 @@ def stream_fact(value, raw, role, cap):
     return value
 
 
+def proc_text_fact(value, *, pid, ppid, uid, gid, cgroup, starttime=None):
+    """Decode the independent proc text, not a producer-reported PID Boolean."""
+    fields(value, 'pid procStat procStatus procCgroup procLimits fileObservations')
+    require(value['pid'] == pid and value['procCgroup'] == cgroup and
+            all(type(value[key]) is str and ascii_bound(value[key], 16384)
+                for key in ('procStat', 'procStatus', 'procCgroup', 'procLimits')),
+            'exact bounded proc raw roles and cgroup membership')
+    raw_stat = value['procStat']
+    match = re.fullmatch(r'([1-9][0-9]*) \((.*)\) ([A-Z]) (.*)\n?', raw_stat,
+                         flags=re.DOTALL)
+    require(match is not None and int(match.group(1)) == pid,
+            'exact child /proc stat PID')
+    tail = match.group(4).split()
+    require(len(tail) >= 20 and
+            re.fullmatch(r'[0-9]+', tail[0]) is not None and
+            (ppid is None or tail[0] == str(ppid)) and
+            re.fullmatch(r'[0-9]+', tail[18]) is not None,
+            'exact child parent and starttime stat fields')
+    started = int(tail[18])
+    if starttime is not None:
+        require(started == starttime, 'held child proc starttime across preexec/parent')
+    status = value['procStatus']
+    for key, expected in (('Pid', pid), ('PPid', ppid)):
+        rows = re.findall(r'(?m)^' + key + r':\s+([0-9]+)$', status)
+        require(rows == ([str(expected)] if expected is not None else [tail[0]]),
+                'exact child status ' + key)
+    for key, expected in (('Uid', uid), ('Gid', gid)):
+        rows = re.findall(r'(?m)^' + key + r':\s+([0-9]+)\s+([0-9]+)\s+'
+                          r'([0-9]+)\s+([0-9]+)$', status)
+        require(rows == [(str(expected),) * 4], 'exact child status ' + key)
+    require(len(re.findall(r'(?m)^Threads:\s+([1-9][0-9]*)$', status)) == 1,
+            'bounded child thread status')
+    observations = fields(value['fileObservations'], 'stat status cgroup limits')
+    for name, metadata in observations.items():
+        rows = fields(metadata, 'before after named')
+        before = stat_fact(rows['before'], kind='regular')
+        for key in ('after', 'named'):
+            stat_fact(rows[key], kind='regular')
+        require((before['uid'], before['gid']) in ((0, 0), (uid, gid)) and
+                before['mode'] & 0o022 == 0 and
+                all(all(before[field] == rows[key][field] for field in
+                        ('dev', 'ino', 'mode', 'uid', 'gid'))
+                    for key in ('after', 'named')),
+                'stable held/named bounded proc inode owner and mode')
+    return started
+
+
+def parent_control_fact(value, *, unit, service_pid):
+    fields(value, 'unitPath unitIdentity controllerPath controllerIdentity '
+           'unitProcs controllerProcs availableBefore enabledBefore write '
+           'availableAfter enabledAfter')
+    path = '/sys/fs/cgroup/system.slice/' + unit
+    require(value['unitPath'] == path and
+            value['controllerPath'] == path + '/controller' and
+            value['unitProcs'] == '' and
+            value['controllerProcs'] == str(service_pid) + '\n',
+            'fixed empty unit and sole root service controller subgroup')
+    for name in ('unitIdentity', 'controllerIdentity'):
+        row = stat_fact(value[name], kind='directory')
+        require(row['uid'] == row['gid'] == 0 and row['mode'] & 0o022 == 0,
+                'owned nonwritable delegated cgroup directory')
+    def names(raw):
+        require(type(raw) is str and len(raw) <= 4096 and '\0' not in raw,
+                'bounded raw controller roster')
+        rows = raw.split()
+        require(len(rows) == len(set(rows)) and
+                all(re.fullmatch(r'[a-z]+', row) for row in rows),
+                'unique lower-case controller names')
+        return set(rows)
+    available = names(value['availableBefore'])
+    enabled = names(value['enabledBefore'])
+    require({'cpu', 'memory', 'pids'} <= available and enabled <= available and
+            value['availableAfter'] == value['availableBefore'],
+            'selected available delegated controllers')
+    missing = sorted({'cpu', 'memory', 'pids'} - enabled)
+    expected_write = ' '.join('+' + name for name in missing)
+    if expected_write:
+        expected_write += '\n'
+    require(value['write'] == expected_write and
+            names(value['enabledAfter']) == enabled | {'cpu', 'memory', 'pids'},
+            'exact missing-only domain-controller enable and readback')
+    return value
+
+
+def child_cgroup_fact(value, *, unit, name, child_pid, service_pid, uid, gid,
+                      after=False):
+    fields(value, 'path identity files children parentControl memberProcesses procsAfter')
+    path = '/sys/fs/cgroup/system.slice/' + unit + '/' + name
+    require(value['path'] == path and value['children'] == [],
+            'fixed leaf path and no nested child cgroup')
+    row = stat_fact(value['identity'], kind='directory')
+    require(row['uid'] == row['gid'] == 0 and row['mode'] & 0o777 == 0o755,
+            'selected root-owned leaf mode')
+    files = fields(value['files'], 'cpu.max memory.max memory.swap.max pids.max '
+                   'cgroup.procs cgroup.events cgroup.stat cpu.stat')
+    require(files['cpu.max'] == '100000 100000\n' and
+            files['memory.max'] == ('2147483648\n' if name in ('configure', 'make')
+                                    else '1073741824\n') and
+            files['memory.swap.max'] == '0\n' and files['pids.max'] == '64\n',
+            'actual selected child resource limits')
+    for key in ('cgroup.events', 'cgroup.stat', 'cpu.stat'):
+        require(type(files[key]) is str and ascii_bound(files[key], 4096),
+                'bounded raw child resource text')
+    def numeric_rows(raw, cap):
+        rows = raw.splitlines()
+        require(1 <= len(rows) <= cap, 'finite cgroup key rows')
+        out = {}
+        for line in rows:
+            match = re.fullmatch(r'([a-z_]+) ([0-9]+)', line)
+            require(match is not None and match.group(1) not in out,
+                    'unique numeric cgroup row')
+            out[match.group(1)] = int(match.group(2))
+        return out
+    events = numeric_rows(files['cgroup.events'], 8)
+    stat_rows = numeric_rows(files['cgroup.stat'], 8)
+    cpu = numeric_rows(files['cpu.stat'], 16)
+    require(events.get('populated') == (0 if after else 1) and
+            events.get('frozen') == 0 and
+            stat_rows.get('nr_descendants') == 0 and
+            stat_rows.get('nr_dying_descendants') == 0 and
+            {'usage_usec', 'user_usec', 'system_usec'} <= set(cpu),
+            'actual nonnested child cgroup census/accounting')
+    def pids(raw):
+        require(type(raw) is str and ascii_bound(raw, 4096),
+                'bounded raw child PID census')
+        lines = raw.splitlines()
+        require(1 <= len(lines) <= 64 and
+                all(re.fullmatch(r'[1-9][0-9]*', line) and
+                    1 <= int(line) <= 2**31 - 1 for line in lines) and
+                len(set(lines)) == len(lines), 'unique canonical bounded child PIDs')
+        return set(lines)
+    if after:
+        require(files['cgroup.procs'] == value['procsAfter'] == '' and
+                value['memberProcesses'] == {},
+                'terminal child leaf empty twice after actual reap')
+    else:
+        first, second = pids(files['cgroup.procs']), pids(value['procsAfter'])
+        members = value['memberProcesses']
+        require(str(child_pid) in first and first == second and
+                type(members) is dict and set(members) == first,
+                'same two source-owned finite child-member PID sets')
+        raw_total = 0
+        membership = '0::/system.slice/' + unit + '/' + name + '\n'
+        for key, member in members.items():
+            proc_text_fact(member, pid=int(key), ppid=None, uid=uid, gid=gid,
+                           cgroup=membership)
+            raw_total += sum(len(member[field].encode('ascii')) for field in
+                             ('procStat', 'procStatus', 'procCgroup', 'procLimits'))
+        require(raw_total <= 131072,
+                'aggregate raw child-member observation budget')
+    parent_control_fact(value['parentControl'], unit=unit, service_pid=service_pid)
+    return value
+
+
+def child_process_fact(process, *, unit, service_pid, uid, gid, name, wall_seconds):
+    require(len(canonical(process)) <= 262144,
+            'bounded complete child process original')
+    pid = process['pid']
+    fields(process['identity'], 'pid preexec')
+    pre = fields(process['identity']['preexec'],
+                 'pid uid euid gid egid core nofile cpu fsize '
+                 'sigtermDefault sigtermBlocked rawBeforeExec')
+    require(process['identity']['pid'] == pre['pid'] == pid and
+            pre['uid'] == pre['euid'] == uid and pre['gid'] == pre['egid'] == gid and
+            pre['core'] == [0, 0] and pre['nofile'] == [256, 256] and
+            pre['cpu'] == [wall_seconds, wall_seconds] and
+            pre['fsize'] == ([67108864, 67108864] if name in ('configure', 'make')
+                             else [4194304, 4194304]) and
+            pre['sigtermDefault'] is True and pre['sigtermBlocked'] is False,
+            'actual selected preexec identity/resource/signal receipt')
+    before = fields(process['resourcesBefore'], 'preexec parentObserved')
+    require(strict_equal(before['preexec'], pre), 'held preexec receipt before parent observation')
+    path = '0::/system.slice/' + unit + '/' + name + '\n'
+    started = proc_text_fact(pre['rawBeforeExec'], pid=pid, ppid=service_pid,
+                             uid=uid, gid=gid, cgroup=path)
+    proc_text_fact(before['parentObserved'], pid=pid, ppid=service_pid,
+                   uid=uid, gid=gid, cgroup=path, starttime=started)
+    fields(process['resourcesAfter'], 'pid procPresent errno')
+    require(process['resourcesAfter'] == {'pid': pid, 'procPresent': False, 'errno': 2},
+            'actual post-reap proc absence')
+    prior = child_cgroup_fact(process['cgroupBefore'], unit=unit, name=name,
+                              child_pid=pid, service_pid=service_pid, uid=uid, gid=gid)
+    require(strict_equal(before['parentObserved'],
+                         prior['memberProcesses'][str(pid)]),
+            'own child parent observation equals retained first member census')
+    after = child_cgroup_fact(process['cgroupAfter'], unit=unit, name=name,
+                              child_pid=pid, service_pid=service_pid, uid=uid, gid=gid,
+                              after=True)
+    for key in ('dev', 'ino', 'mode', 'uid', 'gid'):
+        require(prior['identity'][key] == after['identity'][key] and
+                prior['parentControl']['unitIdentity'][key] ==
+                after['parentControl']['unitIdentity'][key] and
+                prior['parentControl']['controllerIdentity'][key] ==
+                after['parentControl']['controllerIdentity'][key],
+                'stable child/unit/controller cgroup authority')
+    return process
+
+
+def service_status_fact(raw, *, route, unit, outer_seconds):
+    """Independently join bounded v255 manager receipt to raw client bytes."""
+    value = parse_json(raw, 524288, canonical_wire=True)
+    fields(value, 'schema route unit client receipt postShow firstFailure secondary')
+    require(value['schema'] == 'bw.bochs-ring3.service-status.v1' and
+            value['route'] == route and value['unit'] == unit,
+            'selected retained service-status identity')
+    failures(value['firstFailure'], value['secondary'], complete=True)
+    client = fields(value['client'], 'process stdoutBase64 stderrBase64')
+    def decoded(holder, key, cap):
+        value = holder[key]
+        require(type(value) is str and len(value) <= cap * 2,
+                'bounded base64 manager stream')
+        try:
+            raw_bytes = base64.b64decode(value, validate=True)
+        except (ValueError, binascii.Error) as exc:
+            raise Refusal('canonical manager stream base64') from exc
+        require(base64.b64encode(raw_bytes).decode('ascii') == value and
+                len(raw_bytes) <= cap, 'exact manager stream base64')
+        return raw_bytes
+    stdout = decoded(client, 'stdoutBase64', 65536)
+    stderr = decoded(client, 'stderrBase64', 65536)
+    process = client['process']
+    fields(process, 'name argv cwd environment startedNs endedNs pid identity '
+           'waitStatus exitCode signal reaped timedOut stdout stderr '
+           'resourcesBefore resourcesAfter cgroupBefore cgroupAfter '
+           'firstFailure secondary usage')
+    require(process['name'] == 'service-client' and process['reaped'] is True and
+            process['timedOut'] is False and process['signal'] is None and
+            type(process['exitCode']) is int and process['exitCode'] == 0 and
+            integer(process['startedNs'], 0) <= integer(process['endedNs'], 0) and
+            process['endedNs'] - process['startedNs'] <=
+            outer_seconds * 1000000000 + 6000000000 and
+            type(process['argv']) is list and
+            '/usr/bin/systemd-run' == process['argv'][0] and
+            '--wait' in process['argv'] and '--unit=' + unit in process['argv'] and
+            '--property=Delegate=yes' in process['argv'] and
+            '--property=DelegateSubgroup=controller' in process['argv'] and
+            not any(arg in process['argv'] for arg in ('--pipe', '--quiet', '--collect')) and
+            not any(arg.startswith('--setenv=GH_TOKEN=') for arg in process['argv']) and
+            (('--setenv=GH_TOKEN' in process['argv']) == (route == 'reference')) and
+            type(process['environment']) is dict and
+            not {'GH_TOKEN', 'GITHUB_TOKEN'} & set(process['environment']),
+            'actual selected manager command, bound and secret boundary')
+    require(os.WIFEXITED(integer(process['waitStatus'], 0, 0xffff)) and
+            os.WEXITSTATUS(process['waitStatus']) == 0,
+            'actual manager client normal wait4 exit0')
+    failures(process['firstFailure'], process['secondary'], complete=True)
+    stream_fact(process['stdout'], stdout, 'service-client.stdout', 65536)
+    stream_fact(process['stderr'], stderr, 'service-client.stderr', 65536)
+    receipt = fields(value['receipt'], 'schema unit runningUnit result mainCode '
+                     'mainStatus clientExitCode serviceExitCode firstFailure secondary')
+    failures(receipt['firstFailure'], receipt['secondary'], complete=True)
+    text = (stdout + b'\n' + stderr).decode('utf-8')
+    require('\0' not in text and '\x1b' not in text,
+            'unmixed uncoloured raw manager receipt')
+    lines = text.splitlines()
+    def one(prefix):
+        rows = [line for line in lines if line.startswith(prefix)]
+        require(len(rows) == 1, 'single raw manager ' + prefix)
+        return rows[0]
+    first = re.fullmatch(r'Running as unit: ([A-Za-z0-9_.@-]+)'
+                         r'(?:; invocation ID: [0-9a-f]{32})?',
+                         one('Running as unit:'))
+    result = re.fullmatch(r'Finished with result: ([a-z][a-z-]{0,63})',
+                          one('Finished with result:'))
+    ended = re.fullmatch(r'Main processes terminated with: code=([a-z-]+)'
+                         r'/status=(0|[1-9][0-9]{0,2})',
+                         one('Main processes terminated with:'))
+    require(first is not None and first.group(1) == unit and
+            result is not None and result.group(1) == 'success' and
+            ended is not None and ended.group(1) == 'exited' and ended.group(2) == '0' and
+            receipt['schema'] == 'bw.bochs-ring3.service-receipt.v1' and
+            receipt['unit'] == receipt['runningUnit'] == unit and
+            receipt['result'] == 'success' and receipt['mainCode'] == 'exited' and
+            all(type(receipt[key]) is int and receipt[key] == 0 for key in
+                ('mainStatus', 'clientExitCode', 'serviceExitCode')),
+            'actual successful v255 manager completion receipt')
+    post = fields(value['postShow'], 'process stdoutBase64 stderrBase64')
+    post_out = decoded(post, 'stdoutBase64', 16384)
+    post_err = decoded(post, 'stderrBase64', 4096)
+    post_process = post['process']
+    fields(post_process, 'name argv cwd environment startedNs endedNs pid identity '
+           'waitStatus exitCode signal reaped timedOut stdout stderr '
+           'resourcesBefore resourcesAfter cgroupBefore cgroupAfter '
+           'firstFailure secondary usage')
+    require(post_process['name'] == 'service-post-show' and
+            post_process['argv'] == ['/usr/bin/systemctl', 'show', unit,
+                '--no-pager', '--property=Id,Result,ExecMainCode,ExecMainStatus,ActiveState,ControlGroup'] and
+            post_process['reaped'] is True and post_process['timedOut'] is False and
+            post_process['signal'] is None and
+            type(post_process['exitCode']) is int and
+            0 <= post_process['exitCode'] <= 255 and
+            os.WIFEXITED(integer(post_process['waitStatus'], 0, 0xffff)) and
+            os.WEXITSTATUS(post_process['waitStatus']) == post_process['exitCode'] and
+            integer(post_process['startedNs'], 0) <=
+            integer(post_process['endedNs'], 0) and
+            post_process['endedNs'] - post_process['startedNs'] <= 11000000000,
+            'bounded diagnostic post-wait show')
+    require(post_process['secondary'] == [], 'no hidden diagnostic show secondary errors')
+    if post_process['exitCode'] == 0:
+        require(post_process['firstFailure'] is None,
+                'normal diagnostic show exit has no child failure')
+    else:
+        item = fields(post_process['firstFailure'],
+                      'phase name message role path')
+        require(item['phase'] == 'child-capture' and item['name'] == 'Refusal' and
+                item['message'] == 'ordinary child completed exit0' and
+                item['role'] is None and item['path'] is None,
+                'only retained nonzero normal show exit is diagnostic')
+    stream_fact(post_process['stdout'], post_out, 'service-post-show.stdout', 16384)
+    stream_fact(post_process['stderr'], post_err, 'service-post-show.stderr', 16384)
+    return value
+
+
+def node_cleanup_fact(value, *, route, run_id, stage):
+    """Grade the one reviewed staged-copy removal journal, not its complete flag."""
+    fields(value, 'schema route path parentBefore parentAfter before members journal '
+           'after complete firstFailure secondary')
+    path = f'/run/bw-bochs-{route}-v1-{run_id}-1-node'
+    require(value['schema'] == 'bw.bochs-ring3.node-cleanup.v1' and
+            value['route'] == route and value['path'] == path and
+            stage['stagePath'] == path + '/node' and
+            stage['recordPath'] == path + '/stage.json' and
+            value['complete'] is True and len(canonical(value)) <= 16384,
+            'closed bounded source-created Node cleanup original')
+    failures(value['firstFailure'], value['secondary'], complete=True)
+    for name in ('parentBefore', 'parentAfter'):
+        row = stat_fact(value[name], kind='directory')
+        require(row['uid'] == row['gid'] == 0 and row['mode'] & 0o022 == 0,
+                'owned fixed /run stage parent')
+    for key in ('dev', 'ino', 'mode', 'uid', 'gid'):
+        require(value['parentBefore'][key] == value['parentAfter'][key],
+                'stable /run parent through selected Node cleanup')
+    before = fields(value['before'], 'exists errno identity')
+    require(before['exists'] is True and before['errno'] is None,
+            'selected staged root exists before owned removal')
+    initial = stat_fact(before['identity'], kind='directory')
+    require(initial['mode'] == stat.S_IFDIR | 0o555 and
+            all(initial[key] == stage['directory'][index] for index, key in
+                enumerate(('dev', 'ino', 'mode', 'uid', 'gid'))),
+            'held published Node stage directory before removal')
+    members = fields(value['members'], 'node stage.json')
+    selected_members = {'node': stage['file'],
+                        'stage.json': stage['record']['metadata']}
+    for name, row in members.items():
+        stat_fact(row, kind='regular')
+        require(row['uid'] == row['gid'] == 0 and row['nlink'] == 1 and
+                all(row[key] == selected_members[name][index] for index, key in
+                    enumerate(('dev', 'ino', 'mode', 'uid', 'gid'))),
+                'exact held staged member identity before unlink')
+    journal = value['journal']
+    require(type(journal) is list and len(journal) == 4,
+            'four exact selected Node cleanup mutations')
+    operations = [('chmod-private', path), ('unlink', path + '/node'),
+                  ('unlink', path + '/stage.json'), ('rmdir', path)]
+    private = dict(initial, mode=stat.S_IFDIR | 0o700)
+    expected_before = [initial, members['node'], members['stage.json'], private]
+    for index, (operation, target) in enumerate(operations):
+        row = fields(journal[index],
+                     'operation path before attempted after firstFailure')
+        require(row['operation'] == operation and row['path'] == target and
+                row['attempted'] is True and row['firstFailure'] is None and
+                all(row['before'][key] == expected_before[index][key] for key in
+                    ('dev', 'ino', 'mode', 'uid', 'gid')),
+                'source-selected ordered held Node cleanup operation')
+        after = fields(row['after'], 'exists errno identity')
+        if index == 0:
+            require(after['exists'] is True and after['errno'] is None and
+                    all(after['identity'][key] == private[key] for key in
+                        ('dev', 'ino', 'mode', 'uid', 'gid')),
+                    'same root became private before any unlink')
+        else:
+            require(after == {'exists': False, 'errno': 2, 'identity': None},
+                    'actual selected member/root ENOENT after mutation')
+    require(value['after'] == {'exists': False, 'errno': 2, 'identity': None},
+            'terminal selected staged Node root absent')
+    return value
+
+
+def manual_cleanup_fact(raw, *, route, unit, outside, inner):
+    """Independently grade finite, source-owned cgroup removal observations."""
+    value = parse_json(raw, 16384, canonical_wire=True)
+    fields(value, 'schema route unit rootPath limits startedNs endedNs known '
+           'before parentIdentity parentIdentityAfter samples journal after '
+           'lastPath firstFailure secondary complete')
+    require(value['schema'] == 'bw.bochs-ring3.manual-cleanup.v1' and
+            value['route'] == route and value['unit'] == unit and
+            value['rootPath'] == '/sys/fs/cgroup/system.slice/' + unit and
+            value['limits'] == {'samples': 6, 'seconds': 5, 'bytes': 16384} and
+            value['complete'] is True,
+            'selected exact finite manual cleanup identity')
+    started = integer(value['startedNs'], 0)
+    ended = integer(value['endedNs'], started)
+    require(ended - started < 5000000000 and
+            type(value['lastPath']) is str and
+            value['lastPath'].startswith(value['rootPath']),
+            'bounded cleanup time and source-owned final read path')
+    failures(value['firstFailure'], value['secondary'], complete=True)
+    expected = {'unit': inner['resources']['before']['unitRoot']['directory'],
+                'controller': inner['resources']['before']['controller']['directory']}
+    phases = {'toolchain': (), 'build': ('configure', 'make'),
+              'reference': ('js', 'bochs')}[route]
+    require(len(inner['phases']) == len(phases),
+            'complete known phase roster for manual cleanup')
+    for name, process in zip(phases, inner['phases']):
+        require(process['name'] == name,
+                'source-owned child cleanup phase identity')
+        expected[name] = process['cgroupBefore']['identity']
+    known = fields(value['known'], ' '.join(expected))
+    identities = []
+    for name, stat_row in expected.items():
+        row = fields(known[name], 'path identity')
+        selected_path = value['rootPath'] + ('' if name == 'unit' else '/' + name)
+        require(row['path'] == selected_path and
+                strict_equal(row['identity'], stat_row),
+                'source-bound known selected cleanup group')
+        stat_fact(row['identity'], kind='directory')
+        identities.append((row['identity']['dev'], row['identity']['ino']))
+    require(len(identities) == len(set(identities)),
+            'distinct held unit/controller/child group identities')
+    def first_five(row):
+        return tuple(row[key] for key in ('dev', 'ino', 'mode', 'uid', 'gid'))
+    def counter(text, key):
+        require(type(text) is str and len(text.encode('utf-8')) <= 4096,
+                'bounded raw cleanup counter source')
+        values = [line.split(' ', 1)[1] for line in text.splitlines()
+                  if line.startswith(key + ' ')]
+        require(len(values) == 1 and
+                re.fullmatch(r'0|[1-9][0-9]{0,18}', values[0]) is not None,
+                'single canonical raw cleanup counter')
+        return int(values[0])
+    def snapshot(row, role, *, absent=False, children=None, dying=False):
+        fields(row, 'path exists errno identity files children')
+        selected = value['rootPath'] + ('' if role == 'unit' else '/' + role)
+        require(row['path'] == selected and len(canonical(row)) <= 768,
+                'bounded fixed cleanup snapshot path')
+        if absent:
+            require(row['exists'] is False and row['errno'] == 2 and
+                    row['identity'] is None and row['files'] == {} and
+                    row['children'] == [], 'selected group absent at readback')
+            return
+        require(row['exists'] is True and row['errno'] is None and
+                first_five(stat_fact(row['identity'], kind='directory')) ==
+                first_five(expected[role]) and
+                row['identity']['uid'] == row['identity']['gid'] == 0 and
+                row['identity']['mode'] & 0o022 == 0 and
+                type(row['children']) is list and
+                row['children'] == ([] if children is None else children),
+                'stable source-selected held cleanup group')
+        files = fields(row['files'], 'cgroup.procs cgroup.events cgroup.stat')
+        require(files['cgroup.procs'] == '' and
+                counter(files['cgroup.events'], 'populated') == 0 and
+                counter(files['cgroup.stat'], 'nr_descendants') ==
+                len(row['children']), 'empty group and exact selected descendants')
+        if dying:
+            require(counter(files['cgroup.stat'], 'nr_dying_descendants') == 0,
+                    'no dying descendant before selected rmdir')
+    require(type(value['before']) is dict and 'unit' in value['before'],
+            'one retained initial selected unit snapshot')
+    before = value['before']
+    top = before['unit']
+    if top['exists'] is False:
+        require(value['parentIdentity'] is None and
+                value['parentIdentityAfter'] is None and
+                value['samples'] == [] and value['journal'] == [] and
+                set(before) == {'unit'},
+                'already-absent branch never mutates or invents a sample')
+        snapshot(top, 'unit', absent=True)
+        snapshot(value['after'], 'unit', absent=True)
+        require(strict_equal(value['after'], top),
+                'same exact initial and terminal absent unit observation')
+    else:
+        require(type(value['journal']) is list and
+                type(value['samples']) is list and
+                1 <= len(value['samples']) <= 6,
+                'finite held-parent selected removal branch')
+        parent = stat_fact(value['parentIdentity'], kind='directory')
+        parent_after = stat_fact(value['parentIdentityAfter'],
+                                 kind='directory')
+        require(parent['uid'] == parent['gid'] == 0 and
+                parent['mode'] & 0o022 == 0 and
+                first_five(parent_after) == first_five(parent) and
+                first_five(parent) != first_five(expected['unit']),
+                'separate stable held parent directory before and after cleanup')
+        names = top['children']
+        require(type(names) is list and names == sorted(set(names)) and
+                set(names) <= (set(phases) | {'controller'}) and
+                set(before) == {'unit', *names},
+                'only selected known child groups were present')
+        snapshot(top, 'unit', children=names)
+        for name in names:
+            snapshot(before[name], name, dying=True)
+        order = names + ['unit']
+        require(len(value['journal']) == len(order),
+                'one ordered removal for every observed child and unit')
+        previous = started
+        for sample in value['samples']:
+            fields(sample, 'ns root')
+            moment = integer(sample['ns'], previous, ended)
+            snapshot(sample['root'], 'unit')
+            previous = moment
+        require(counter(value['samples'][-1]['root']['files']['cgroup.stat'],
+                        'nr_dying_descendants') == 0,
+                'final root census has no dying descendants')
+        for index, role in enumerate(order):
+            row = fields(value['journal'][index],
+                         'role path before parentHeld childHeld parentNamed '
+                         'childNamed attempted after firstFailure childClosed')
+            selected = value['rootPath'] + ('' if role == 'unit' else '/' + role)
+            require(row['role'] == role and row['path'] == selected and
+                    row['attempted'] is True and
+                    row['firstFailure'] is None and row['childClosed'] is True,
+                    'one source-selected successful held-FD removal')
+            snapshot(row['before'], role, dying=True)
+            snapshot(row['after'], role, absent=True)
+            selected_parent = parent if role == 'unit' else expected['unit']
+            for key, selected_row in (('parentHeld', selected_parent),
+                                      ('parentNamed', selected_parent),
+                                      ('childHeld', expected[role]),
+                                      ('childNamed', expected[role])):
+                raw_stat = row[key]
+                require(type(raw_stat) is list and len(raw_stat) == 9,
+                        'complete held and named directory stat')
+                stat_row = dict(zip(('dev', 'ino', 'mode', 'uid', 'gid', 'nlink',
+                                     'size', 'mtimeNs', 'ctimeNs'), raw_stat))
+                stat_fact(stat_row, kind='directory')
+                require(first_five(stat_row) == first_five(selected_row),
+                        'pre-removal held/named first-five authority')
+            require(len(canonical(row)) <= 1536,
+                    'bounded complete selected removal row')
+        snapshot(value['after'], 'unit', absent=True)
+        require(strict_equal(value['after'], value['journal'][-1]['after']),
+                'unit removal readback agrees with terminal selected absence')
+    unit_fact(value['after'], unit, absent=True)
+    require(strict_equal(outside['after'], value['after']),
+            'outside terminal unit census joins selected cleanup')
+    if outside['before']['exists']:
+        first = stat_fact(outside['before']['identity'], kind='directory')
+        held = expected['unit']
+        require(all(first[key] == held[key] for key in
+                    ('dev', 'ino', 'mode', 'uid', 'gid')),
+                'earlier present unit matches selected held identity')
+    else:
+        require(strict_equal(outside['before'], value['after']),
+                'earlier absent unit agrees with cleanup sample')
+    return value
+
+
+MANUAL_V2_STAT_FIELDS = ('dev', 'ino', 'mode', 'uid', 'gid', 'nlink',
+                         'size', 'mtimeNs', 'ctimeNs')
+
+
+def node_cleanup_plan_v1(stage, *, route, unit):
+    """Independently reconstruct the finite, read-only future Node wire plan."""
+    require(type(stage) is dict and type(unit) is str and
+            re.fullmatch('bw-bochs-' + route + r'-v1-([1-9][0-9]*)-1\.service',
+                         unit) is not None,
+            'selected service identity for staged Node cleanup plan')
+    run_id = re.fullmatch('bw-bochs-' + route + r'-v1-([1-9][0-9]*)-1\.service',
+                          unit).group(1)
+    root = f'/run/bw-bochs-{route}-v1-{run_id}-1-node'
+    require(stage.get('stagePath') == root + '/node' and
+            stage.get('recordPath') == root + '/stage.json',
+            'protected complete Node stage path for future cleanup')
+
+    def row(value):
+        require(type(value) is list and len(value) == 9 and
+                all(type(item) is int and 0 <= item <=
+                    (2**96 - 1 if key in ('mtimeNs', 'ctimeNs') else 2**64 - 1)
+                    for key, item in zip(MANUAL_V2_STAT_FIELDS, value)),
+                'nine exact selected Node stage stat integers')
+        return dict(zip(MANUAL_V2_STAT_FIELDS, value))
+
+    def future(value):
+        return {**value, 'nlink': max(value['nlink'], 2**64 - 1),
+                'size': max(value['size'], 2**64 - 1),
+                'mtimeNs': max(value['mtimeNs'], 2**96 - 1),
+                'ctimeNs': max(value['ctimeNs'], 2**96 - 1)}
+
+    fields(stage['parents'], '/ /run')
+    parent = future(row(stage['parents']['/run']['after']))
+    directory = row(stage['directory'])
+    private = future({**directory, 'mode': stat.S_IFDIR | 0o700})
+    node = row(stage['file'])
+    record = row(stage['record']['metadata'])
+    gone = {'exists': False, 'errno': 2, 'identity': None}
+    prototype = {
+        'schema': 'bw.bochs-ring3.node-cleanup.v1', 'route': route,
+        'path': root, 'parentBefore': parent, 'parentAfter': parent,
+        'before': {'exists': True, 'errno': None, 'identity': directory},
+        'heldBefore': directory, 'heldBeforeRmdir': private,
+        'namedBeforeRmdir': private,
+        'members': {'node': node, 'stage.json': record}, 'after': gone,
+        'firstFailure': None, 'secondary': [], 'complete': True,
+        'journal': [
+            {'operation': 'chmod-private', 'path': root, 'before': directory,
+             'attempted': True,
+             'after': {'exists': True, 'errno': None, 'identity': private},
+             'firstFailure': None},
+            {'operation': 'unlink', 'path': root + '/node', 'before': node,
+             'attempted': True, 'after': gone, 'firstFailure': None},
+            {'operation': 'unlink', 'path': root + '/stage.json',
+             'before': record, 'attempted': True, 'after': gone,
+             'firstFailure': None},
+            {'operation': 'rmdir', 'path': root, 'before': private,
+             'attempted': True, 'after': gone, 'firstFailure': None}]}
+    success = len(canonical(prototype))
+    failure = success + 3 * 1024 + 512
+    return {'schema': 'bw.bochs-ring3.node-cleanup-plan.v1',
+            'nodePath': root, 'stageSha256': sha(canonical(stage)),
+            'projectionSha256': sha(canonical(prototype)),
+            'successBytes': success, 'failureBytes': failure,
+            'reservedBytes': max(success + 1024, failure)}
+
+
+def manual_cleanup_v2_fact(raw, *, route, unit, outside, inner):
+    """Grade compact nine-integer V2 wire and its pre-effect Node reservation."""
+    value = parse_json(raw, 16384, canonical_wire=True)
+    fields(value, 'schema identityFields route unit rootPath limits startedNs '
+           'endedNs known before parentIdentity parentIdentityAfter inputPlan '
+           'samples journal after lastPath firstFailure secondary complete')
+    require(value['schema'] == 'bw.bochs-ring3.manual-cleanup.v2' and
+            value['identityFields'] == list(MANUAL_V2_STAT_FIELDS) and
+            value['complete'] is True,
+            'closed complete compact V2 selected cleanup wire')
+    stage = inner['observations']['nodeStage']
+    expected_plan = node_cleanup_plan_v1(stage, route=route, unit=unit)
+    require(strict_equal(value['inputPlan'], expected_plan) and
+            expected_plan['reservedBytes'] <= 16384,
+            'independent exact protected-stage future cleanup reservation')
+    require(type(outside.get('nodeCleanup')) is dict and
+            len(canonical(outside['nodeCleanup'])) <=
+            expected_plan['reservedBytes'],
+            'actual retained Node cleanup fits the pre-effect all-outcome plan')
+
+    def expand(item, key=None):
+        if key in ('identity', 'parentIdentity', 'parentIdentityAfter'):
+            if item is None:
+                return None
+            require(type(item) is list and len(item) == 9 and
+                    all(type(x) is int for x in item),
+                    'manual V2 stat uses complete fixed nine-integer array')
+            return dict(zip(MANUAL_V2_STAT_FIELDS, item))
+        if type(item) is dict:
+            return {name: expand(child, name) for name, child in item.items()}
+        if type(item) is list:
+            return [expand(child) for child in item]
+        return item
+
+    historical = expand(value)
+    historical.pop('identityFields')
+    historical.pop('inputPlan')
+    historical['schema'] = 'bw.bochs-ring3.manual-cleanup.v1'
+    manual_cleanup_fact(canonical(historical), route=route, unit=unit,
+                        outside=outside, inner=inner)
+    return value
+
+
 def wait4_sigterm(process):
     """A frame is never a substitute for actual owned signal and wait4 facts."""
     fields(process, 'name argv cwd environment startedNs endedNs pid identity '
@@ -1511,7 +2607,7 @@ def wait4_sigterm(process):
 
 
 def phase_fact(process, stdout, stderr, *, name, wall_seconds,
-               checkpoint=False):
+               unit, service_pid, uid, gid, checkpoint=False):
     fields(process, 'name argv cwd environment startedNs endedNs pid identity '
            'waitStatus exitCode signal reaped timedOut stdout stderr '
            'resourcesBefore resourcesAfter cgroupBefore cgroupAfter '
@@ -1556,6 +2652,8 @@ def phase_fact(process, stdout, stderr, *, name, wall_seconds,
                 'bounded actual wait4 user/system time')
     integer(process['usage']['maxRssKiB'], 0, 4 << 20)
     failures(process['firstFailure'], process['secondary'], complete=True)
+    child_process_fact(process, unit=unit, service_pid=service_pid,
+                       uid=uid, gid=gid, name=name, wall_seconds=wall_seconds)
     if checkpoint:
         require(os.WIFSIGNALED(status) and
                 os.WTERMSIG(status) == signal.SIGTERM and
@@ -2016,7 +3114,7 @@ def common_original(route, raw, request_raw, event_raw):
               (route != 'reference' or authority['guestExecuted'] is True))),
             'retained observation cannot self-approve')
     expected = {'toolchain': 'inventoryBefore inventoryAfter status '
-                 'sourceSelection reportedReadbackOnly notices nodeStage',
+                 'sourceSelection reportedReadbackOnly notices nodeStage runtimeElfMetadata',
                 'build': 'upstream sourceSelection toolchainBefore toolchainAfter '
                  'configure configHeader compilerCommands binary runtimeManifest '
                  'notices compactManifest correspondingSource nodeStage',
@@ -2053,7 +3151,7 @@ def artifact_manifest(packet, *, required, dynamic=()):
 
 def toolchain_original(packet, request_raw, event_raw):
     require(set(packet) == INVENTORY_ROLES,
-            'exact thirteen retained inventory roles')
+            'exact sixteen retained inventory roles')
     artifact_manifest(packet, required=INVENTORY_ROLES)
     request, _event = request_event('toolchain', request_raw, event_raw)
     require(packet['request.original.json'] == request_raw and
@@ -2084,14 +3182,22 @@ def toolchain_original(packet, request_raw, event_raw):
             strict_equal(value['observations']['inventoryBefore'], g_before) and
             strict_equal(value['observations']['inventoryAfter'], g_after),
             'unchanged reported finite tool identities')
+    require(len(packet['outside.original.json']) <= 16384,
+            'source-bounded complete outside inventory envelope')
     outside = parse_json(packet['outside.original.json'], 65536,
                          canonical_wire=True)
-    node_stage, _node_projection = node_stage_fact(
+    node_stage, node_projection = node_stage_fact(
         packet['node-stage.original.json'], route='toolchain',
         run_id=outside['runId'])
     require(strict_equal(value['observations']['nodeStage'], node_stage) and
             NODE_CACHE_PATH not in g_before['files'],
             'separate staged Node original and cache DATA boundary')
+    sparse_raw = packet['runtime-elf-ranges.original.json']
+    selected_sparse_elf_fact(sparse_raw, g_before, node_projection)
+    require(value['observations']['runtimeElfMetadata'] == {
+                'path': 'runtime-elf-ranges.original.json',
+                'bytes': len(sparse_raw), 'sha256': sha(sparse_raw)},
+            'toolchain sparse role byte/SHA reference joins the original')
     notice_summary = notice_facts(packet['notices.original.json'], g_before)
     require(strict_equal(value['observations']['notices'],
                          parse_json(packet['notices.original.json'], 4 << 20,
@@ -2136,7 +3242,7 @@ def toolchain_original(packet, request_raw, event_raw):
                          canonical_wire=True)
     fields(outside, 'schema route runId runAttempt unit serviceExitCode '
            'clientExitCode cleanupExitCode innerComplete innerFirstFailure '
-           'before after manual firstFailure secondary')
+           'before after manual nodeCleanup firstFailure secondary')
     require(outside['schema'] == 'bw.bochs-ring3.outside.v1' and
             outside['route'] == 'toolchain' and
             type(outside['runId']) is str and
@@ -2149,22 +3255,31 @@ def toolchain_original(packet, request_raw, event_raw):
                 for name in ('serviceExitCode', 'clientExitCode',
                              'cleanupExitCode')) and
             outside['innerComplete'] is True and
-            outside['innerFirstFailure'] is None and
-            outside['manual'] is None,
+            outside['innerFirstFailure'] is None,
             'complete source-owned inventory service/outer status')
     unit_fact(outside['before'], outside['unit'])
     unit_fact(outside['after'], outside['unit'], absent=True)
     failures(outside['firstFailure'], outside['secondary'], complete=True)
+    require(strict_equal(outside['manual'],
+                         manual_cleanup_fact(
+                             packet['cleanup.original.json'], route='toolchain',
+                             unit=outside['unit'], outside=outside,
+                             inner=value)),
+            'exact retained owned inventory cleanup original')
+    node_cleanup_fact(outside['nodeCleanup'], route='toolchain',
+                      run_id=outside['runId'], stage=node_stage)
+    service_status_fact(packet['service-status.original.json'], route='toolchain',
+                        unit=outside['unit'], outer_seconds=120)
     observed_resources = fields(value['resources'], 'before after')
     limits = {'cpu.max': '100000 100000\n',
               'memory.max': '536870912\n',
               'memory.swap.max': '0\n', 'pids.max': '32\n'}
-    resources_fact(observed_resources['before'], unit=outside['unit'],
-                   limits=limits)
-    resources_fact(observed_resources['after'], unit=outside['unit'],
-                   limits=limits)
-    first_directory = observed_resources['before']['directory']
-    last_directory = observed_resources['after']['directory']
+    resources_v2_fact(observed_resources['before'], unit=outside['unit'],
+                      limits=limits)
+    resources_v2_fact(observed_resources['after'], unit=outside['unit'],
+                      limits=limits)
+    first_directory = observed_resources['before']['unitRoot']['directory']
+    last_directory = observed_resources['after']['unitRoot']['directory']
     require(all(first_directory[key] == last_directory[key] for key in
                 ('dev', 'ino', 'mode', 'uid', 'gid')) and
             observed_resources['before']['pid'] ==
@@ -2236,6 +3351,8 @@ def build_original(packet, request_raw, event_raw, *, job_log=None,
                              value['observations']['toolchainAfter']) and
             strict_equal(selected_tool_projection(tool_before), selected),
             'reported Build toolchain before/after equals selected byte graph')
+    require(len(packet['outside.original.json']) <= 16384,
+            'source-bounded complete outside Build envelope')
     build_outside = parse_json(packet['outside.original.json'], 65536,
                                canonical_wire=True)
     build_node, _node_projection = node_stage_fact(
@@ -2259,7 +3376,10 @@ def build_original(packet, request_raw, event_raw, *, job_log=None,
                              canonical_wire=True)
         phase_fact(process, packet[name + '.stdout'],
                    packet[name + '.stderr'], name=name,
-                   wall_seconds=wall)
+                   wall_seconds=wall, unit=build_outside['unit'],
+                   service_pid=value['resources']['before']['pid'],
+                   uid=build_node['invoker']['uid'],
+                   gid=build_node['invoker']['gid'])
         require(process['argv'] == argv and
                 strict_equal(value['phases'][0 if name == 'configure' else 1],
                              process),
@@ -2370,7 +3490,7 @@ def build_original(packet, request_raw, event_raw, *, job_log=None,
             'same completed compact Build witness in original and artifact')
     fields(build_outside, 'schema route runId runAttempt unit serviceExitCode '
            'clientExitCode cleanupExitCode innerComplete innerFirstFailure '
-           'before after manual firstFailure secondary')
+           'before after manual nodeCleanup firstFailure secondary')
     require(build_outside['schema'] == 'bw.bochs-ring3.outside.v1' and
             build_outside['route'] == 'build' and
             type(build_outside['runId']) is str and
@@ -2383,23 +3503,32 @@ def build_original(packet, request_raw, event_raw, *, job_log=None,
                 build_outside[name] == 0 for name in
                 ('serviceExitCode', 'clientExitCode', 'cleanupExitCode')) and
             build_outside['innerComplete'] is True and
-            build_outside['innerFirstFailure'] is None and
-            build_outside['manual'] is None,
+            build_outside['innerFirstFailure'] is None,
             'selected complete Build service and outer terminal')
     unit_fact(build_outside['before'], build_outside['unit'])
     unit_fact(build_outside['after'], build_outside['unit'], absent=True)
     failures(build_outside['firstFailure'], build_outside['secondary'],
              complete=True)
+    node_cleanup_fact(build_outside['nodeCleanup'], route='build',
+                      run_id=build_outside['runId'], stage=build_node)
+    require(strict_equal(build_outside['manual'],
+                         manual_cleanup_fact(
+                             packet['cleanup.original.json'], route='build',
+                             unit=build_outside['unit'], outside=build_outside,
+                             inner=value)),
+            'exact retained owned Build cleanup original')
+    service_status_fact(packet['service-status.original.json'], route='build',
+                        unit=build_outside['unit'], outer_seconds=960)
     resources = fields(value['resources'], 'before after')
     limits = {'cpu.max': '100000 100000\n',
               'memory.max': '2147483648\n',
               'memory.swap.max': '0\n', 'pids.max': '64\n'}
-    resources_fact(resources['before'], unit=build_outside['unit'],
-                   limits=limits)
-    resources_fact(resources['after'], unit=build_outside['unit'],
-                   limits=limits)
-    require(all(resources['before']['directory'][name] ==
-                resources['after']['directory'][name] for name in
+    resources_v2_fact(resources['before'], unit=build_outside['unit'],
+                      limits=limits)
+    resources_v2_fact(resources['after'], unit=build_outside['unit'],
+                      limits=limits)
+    require(all(resources['before']['unitRoot']['directory'][name] ==
+                resources['after']['unitRoot']['directory'][name] for name in
                 ('dev', 'ino', 'mode', 'uid', 'gid')) and
             resources['before']['pid'] == resources['after']['pid'],
             'same bounded Build cgroup and service before/after')
@@ -2491,6 +3620,81 @@ def resources_fact(value, *, unit, limits):
             re.search(r'(?m)^Gid:\s+0\s+0\s+0\s+0$', value['procStatus']) and
             re.search(r'(?m)^Threads:\s+[1-9][0-9]*$', value['procStatus']),
             'bounded actual observer process placement and root credentials')
+    return value
+
+
+def resources_v2_fact(value, *, unit, limits):
+    """Independent delegated inner-node/controller observation."""
+    fields(value, 'schema unit pid uid gid unitRoot controller procCgroup '
+           'procStat procStatus parentControl')
+    pid = integer(value['pid'], 1, 2**31 - 1)
+    require(value['schema'] == 'bw.bochs-ring3.resources.v2' and
+            value['unit'] == unit and value['uid'] == value['gid'] == 0 and
+            value['procCgroup'] ==
+            '0::/system.slice/' + unit + '/controller\n',
+            'root service placed in fixed delegated controller subgroup')
+    parent_control_fact(value['parentControl'], unit=unit, service_pid=pid)
+    root = fields(value['unitRoot'], 'path directory files children')
+    controller = fields(value['controller'], 'path directory files children')
+    path = '/sys/fs/cgroup/system.slice/' + unit
+    require(root['path'] == path and controller['path'] == path + '/controller' and
+            type(root['children']) is list and
+            1 <= len(root['children']) <= 5 and
+            len(root['children']) == len(set(root['children'])) and
+            set(root['children']) <= {'controller', 'configure', 'make', 'js', 'bochs'} and
+            'controller' in root['children'] and controller['children'] == [],
+            'bounded exact delegated root/controller cgroup tree')
+    for observed, label in ((root, 'unitRoot'), (controller, 'controller')):
+        row = stat_fact(observed['directory'], kind='directory')
+        require(row['uid'] == row['gid'] == 0 and row['mode'] & 0o022 == 0,
+                'owned delegated ' + label + ' directory')
+        selected = fields(observed['files'], 'cpu.max memory.max memory.swap.max '
+                          'pids.max cgroup.procs cgroup.events cgroup.stat cpu.stat')
+        for name, raw in selected.items():
+            require(type(raw) is str and '\0' not in raw and
+                    ((name == 'cgroup.procs' and observed is root and raw == '') or
+                     ascii_bound(raw, 4096)),
+                    'bounded delegated cgroup raw text')
+    require(all(root['files'][name] == text for name, text in limits.items()) and
+            root['files']['cgroup.procs'] == '' and
+            controller['files']['cgroup.procs'] == str(pid) + '\n' and
+            value['parentControl']['unitProcs'] == root['files']['cgroup.procs'] and
+            value['parentControl']['controllerProcs'] == controller['files']['cgroup.procs'],
+            'actual selected root limits and controller sole process')
+    for row, held in ((root['directory'], value['parentControl']['unitIdentity']),
+                      (controller['directory'], value['parentControl']['controllerIdentity'])):
+        require(all(row[key] == held[key] for key in
+                    ('dev', 'ino', 'mode', 'uid', 'gid')),
+                'held parent-control/root resource directory authority')
+    def counted(raw):
+        rows = {}
+        for line in raw.splitlines():
+            match = re.fullmatch(r'([a-z_]+) ([0-9]+)', line)
+            require(match is not None and match.group(1) not in rows,
+                    'unique delegated cgroup stat row')
+            rows[match.group(1)] = int(match.group(2))
+        require(1 <= len(rows) <= 16, 'finite delegated cgroup stat rows')
+        return rows
+    root_events = counted(root['files']['cgroup.events'])
+    root_stat = counted(root['files']['cgroup.stat'])
+    control_events = counted(controller['files']['cgroup.events'])
+    control_stat = counted(controller['files']['cgroup.stat'])
+    require(root_events.get('populated') == control_events.get('populated') == 1 and
+            root_stat.get('nr_descendants') == len(root['children']) and
+            root_stat.get('nr_dying_descendants') == 0 and
+            control_stat.get('nr_descendants') ==
+            control_stat.get('nr_dying_descendants') == 0,
+            'exact finite delegated cgroup descendants and live root observer')
+    require(type(value['procStat']) is str and
+            value['procStat'].startswith(str(pid) + ' (') and
+            ascii_bound(value['procStat'], 16384) and
+            type(value['procStatus']) is str and
+            ascii_bound(value['procStatus'], 16384) and
+            re.search(r'(?m)^Pid:\s+' + str(pid) + r'$', value['procStatus']) and
+            re.search(r'(?m)^Uid:\s+0\s+0\s+0\s+0$', value['procStatus']) and
+            re.search(r'(?m)^Gid:\s+0\s+0\s+0\s+0$', value['procStatus']) and
+            re.search(r'(?m)^Threads:\s+[1-9][0-9]*$', value['procStatus']),
+            'raw root service process PID/credentials/thread identity')
     return value
 
 
