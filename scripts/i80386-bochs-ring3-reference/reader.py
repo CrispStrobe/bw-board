@@ -6600,6 +6600,31 @@ def build_official_v2(archive_raw, expectation_raw, run, jobs,
             'actualRunApproved': False, 'guestApproved': False}
 
 
+def current_official_four_jobs(jobs, expectation, selected_route):
+    """Bind every declared job in the current Build or Reference event."""
+    require(selected_route in ('build', 'reference'), 'current official route')
+    rows = jobs.get('jobs') if type(jobs) is dict else None
+    require(type(rows) is list and jobs.get('total_count') == 4 and len(rows) == 4,
+            'exact current official four-job roster')
+    names = ('bochs-ring3-toolchain-inventory-v1',
+             'bochs-ring3-toolchain-inventory-v2',
+             'bochs-ring3-build-v1', 'bochs-ring3-reference-v1')
+    selected_name = {'build':'bochs-ring3-build-v1',
+                     'reference':'bochs-ring3-reference-v1'}[selected_route]
+    required = {name: 'success' if name == selected_name else 'skipped'
+                for name in names}
+    require(all(type(row) is dict and type(row.get('id')) is int and
+                type(row.get('name')) is str for row in rows) and
+            len({row['id'] for row in rows}) == 4 and
+            len({row['name'] for row in rows}) == 4 and
+            {row['name']: row.get('conclusion') for row in rows} == required and
+            all(row.get('status') == 'completed' and
+                row.get('run_id') == int(expectation['runId']) and
+                row.get('run_attempt') == 1 and
+                row.get('head_sha') == expectation['head'] for row in rows),
+            'one selected current job and three terminal declared skips')
+
+
 def build_official_current_v2(archive_raw, expectation_raw, run, jobs,
                       artifacts, job_log):
     packet, budget = archive_members(archive_raw, BUILD_CAPS,
@@ -6615,6 +6640,7 @@ def build_official_current_v2(archive_raw, expectation_raw, run, jobs,
     bound = official_expectation(expectation, 'build', request_raw,
         event_raw, request['source'], archive_raw, run, jobs, artifacts,
         job_log, observed_source)
+    current_official_four_jobs(jobs, expectation, 'build')
     official_owner_join('build', request, expectation, run, artifacts)
     return {**local, 'officialMetadataBound': bound['officialMetadataJoined'],
             'officiallyAuthenticatedByLocalFiles': False,
@@ -6647,6 +6673,7 @@ def reference_official_current_v2(archive_raw, expectation_raw, run, jobs, artif
     bound = official_expectation(expectation, 'reference', request_raw,
         event_raw, request['source'], archive_raw, run, jobs, artifacts,
         job_log, original['sourceBefore'])
+    current_official_four_jobs(jobs, expectation, 'reference')
     repository = official_repository(run['repository'])
     head_repository = official_repository(run['head_repository'])
     require(repository == head_repository and
