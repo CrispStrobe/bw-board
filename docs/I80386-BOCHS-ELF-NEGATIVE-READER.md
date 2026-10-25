@@ -1,13 +1,8 @@
 # Bochs ELF diagnostic: retained negative reader
 
-> Publication staging: the two reader components are prepared separately.
-> This provisional branch contains documentation only; source implementation
-> and its qualification are pending in this PR. Statements below describe
-> that prepared checkpoint, not code already present in this staging tree.
-
-
-Status: inactive negative-reader source implemented; hosted source qualification
-and a separately admitted retained-original audit remain pending. The spent
+Status: inactive negative-reader source implemented. Exact-head hosted source
+qualification gates landing; a separately admitted retained-original audit
+remains pending. The spent
 diagnostic event and its original reader refusal remain unchanged. This task
 does not select an event or authorize a compiler, guest, inventory, Build or
 Reference run.

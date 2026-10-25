@@ -1,11 +1,5 @@
 # x86 checkpoint and next lanes
 
-> Publication staging: the two reader components are prepared separately.
-> This provisional branch contains documentation only; source implementation
-> and its qualification are pending in this PR. Statements below describe
-> that prepared checkpoint, not code already present in this staging tree.
-
-
 The next connected compiler-provisioning task is the
 [operational integration contract](X86-PROVISIONING-OPERATIONAL.md). It specifies
 the missing launch, source-approval, child-context and original-report joins;
@@ -3643,7 +3637,7 @@ Whole-file SHA is reported readback only; range digests/values are independently
 checked. The separately claimed [negative-reader source](I80386-BOCHS-ELF-NEGATIVE-READER.md)
 now implements the exact 22-row profile, preserving the old 16-row helper and
 all caps. Focused controls and independent source review passed; exact hosted
-qualification and a separately bound retained-original audit remain pending.
+qualification gates landing. A separately bound retained-original audit remains pending.
 The [ordered-read failure reader](I80386-READ16-FAILED-ATTEMPT-READER.md) similarly
 retains the failed seven-pair attempt without CPU adoption. Both task leaves
 specify fresh-agent inputs, refusal boundaries and follow-up deliverables.

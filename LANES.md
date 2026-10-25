@@ -7158,17 +7158,11 @@ No replay, new event, positive Build/Reference or policy allowlist is selected.
 
 ### Two retained-negative x86 readers — source checkpoint, 2026-10-25
 
-> Publication staging: the two reader components are prepared separately.
-> This provisional branch contains documentation only; source implementation
-> and its qualification are pending in this PR. Statements below describe
-> that prepared checkpoint, not code already present in this staging tree.
-
-
 Owner: Codex x86 lane; implementation may split files between the existing
 Bochs reader owner and the ordered-read reviewer after this claim merges.
-The merged claim is implemented in the five new code paths below; hosted
-source checks and independently admitted retained-original audits remain
-pending. Own exactly the new Bochs
+The merged claim is implemented in the five new code paths below. Exact-head
+hosted source checks gate landing; independently admitted retained-original
+audits remain pending. Own exactly the new Bochs
 `scripts/i80386-bochs-ring3-reference/read-elf-negative-v1.py` and focused
 `test/i80386-bochs-elf-negative-reader.test.mjs`, new ordered-read
 `scripts/i80386-read16-failure/{reader.py,controls.py}` and its automatic
