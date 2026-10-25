@@ -2986,6 +2986,81 @@ class MetadataV2Controls(unittest.TestCase):
 
 
 
+    def test_official_metadata_v2_full_raw_post_action_gaps(self):
+        request,raw,event,_env,_edges,_value,_outside,roles=toolchain_v2_sample()
+        spec=importlib.util.spec_from_file_location('current_toolchain_official_gap',HERE/'reader.py')
+        r=importlib.util.module_from_spec(spec);spec.loader.exec_module(r)
+        archive=producer.pack_zip(roles,archive_cap=8<<20,expanded_cap=16<<20,
+            member_cap=16,modes={name:0o644 for name in roles})
+        observed=json.loads(roles['source.before.json'])
+        steps=[{'number':number,'name':name,'status':'completed','conclusion':'success',
+                'started_at':'2026-10-25T00:00:00Z','completed_at':'2026-10-25T00:00:01Z'}
+               for number,name in zip((1,2,3,4,5,11),r.INVENTORY_USER_STEPS)]
+        steps.extend(({'number':12,'name':'Post Prepare pinned Node input cache',
+            'status':'completed','conclusion':'success','started_at':'2026-10-25T00:00:02Z',
+            'completed_at':'2026-10-25T00:00:03Z'},
+            {'number':13,'name':'Complete job','status':'completed','conclusion':'success',
+            'started_at':'2026-10-25T00:00:04Z','completed_at':'2026-10-25T00:00:05Z'}))
+        repo={'id':987,'full_name':r.REPOSITORY,'fork':False,'node_id':'synthetic',
+              'owner':{'login':'CrispStrobe'}}
+        run={'id':123456,'run_attempt':1,'head_sha':request['source']['head'],
+             'event':'pull_request','status':'completed','conclusion':'success',
+             'repository':repo,'head_repository':copy.deepcopy(repo),
+             'actor':{'login':'CrispStrobe'},'path':producer.WORKFLOW,
+             'pull_requests':[{'number':request['pullRequest'],
+                 'head':{'sha':request['source']['head'],'repo':{'id':987}},
+                 'base':{'ref':'master','repo':{'id':987}}}]}
+        selected_name='bochs-ring3-toolchain-inventory-v2'
+        names=('bochs-ring3-toolchain-inventory-v1',selected_name,
+               'bochs-ring3-build-v1','bochs-ring3-reference-v1')
+        jobs={'total_count':4,'jobs':[{'id':101+i,'name':name,
+              'head_sha':request['source']['head'],'run_id':123456,'run_attempt':1,
+              'status':'completed','conclusion':'success' if name==selected_name else 'skipped',
+              'steps':steps if name==selected_name else []}
+              for i,name in enumerate(names)]}
+        artifacts={'total_count':1,'artifacts':[{'id':201,
+             'name':'i80386-bochs-ring3-toolchain-inventory-v2-originals',
+             'expired':False,'size_in_bytes':len(archive),'digest':'sha256:'+r.sha(archive),
+             'workflow_run':{'id':123456,'repository_id':987,'head_repository_id':987,
+                             'head_sha':request['source']['head']}}]}
+        expected={'schema':'bw.bochs-ring3.toolchain-expectation.v2',
+             'repository':r.REPOSITORY,'pullRequest':request['pullRequest'],
+             'runId':'123456','runAttempt':1,'jobId':102,'jobName':selected_name,
+             'eventName':'pull_request','actor':'CrispStrobe','head':request['source']['head'],
+             'tree':request['source']['tree'],'workflowCommit':observed['workflowCommit'],
+             'workflowTree':observed['workflowTree'],
+             'workflowFileSha256':request['source']['files'][producer.WORKFLOW]['sha256'],
+             'requestSha256':r.sha(raw),'eventSha256':r.sha(event),'artifactId':201,
+             'archiveBytes':len(archive),'archiveSha256':r.sha(archive),
+             'conclusion':'success','steps':steps}
+        grader=r.toolchain_official_v2
+        args=(archive,producer.canonical(expected),run,jobs,artifacts,
+              b'MOCK official log; no actual tool execution\n')
+        self.assertTrue(grader(*args)['officialMetadataBound'])
+        fifth=copy.deepcopy(args)
+        extra=copy.deepcopy(fifth[3]['jobs'][0]);extra['id']=999
+        fifth[3]['jobs'].append(extra);fifth[3]['total_count']=5
+        with self.assertRaises(r.Refusal,msg='fifth duplicate inactive official job'):
+            grader(*fifth)
+        wrong_attempt=copy.deepcopy(args)
+        wrong_attempt[3]['jobs'][0]['run_attempt']=True
+        with self.assertRaises(r.Refusal,msg='boolean unselected official attempt'):
+            grader(*wrong_attempt)
+        def refuses(label,change,rebind):
+            changed=copy.deepcopy(args);row=changed[3]['jobs'][1]
+            change(row['steps'])
+            if rebind:
+                candidate=copy.deepcopy(expected);candidate['steps']=copy.deepcopy(row['steps'])
+                changed=(changed[0],producer.canonical(candidate),*changed[2:])
+            with self.assertRaises(r.Refusal,msg=label):grader(*changed)
+        refuses('duplicate',lambda rows:rows[5].update(number=rows[4]['number']),True)
+        refuses('reordered',lambda rows:rows[5].update(number=3),True)
+        refuses('zero',lambda rows:rows[0].update(number=0),True)
+        refuses('bool',lambda rows:rows[0].update(number=True),True)
+        refuses('missing',lambda rows:rows[0].pop('number'),True)
+        refuses('raw disagreement',lambda rows:rows[0].update(number=2),False)
+
+
 class V2BoundaryControls(unittest.TestCase):
     def test_live_plan_read_primary_and_member_close_secondary_retained(self):
         facts,kernel,env=NodeStageV2Controls().exercise()
@@ -3346,8 +3421,10 @@ class ConnectedCurrentV2Controls(unittest.TestCase):
             selected='bochs-ring3-'+route+'-v1'
             number=333 if route=='build' else 444
             artifact_id=555 if route=='build' else 666
-            steps=[{'number':i,'name':name,'status':'completed','conclusion':'success'}
-                   for i,name in enumerate(r.BUILD_USER_STEPS if route=='build' else r.REFERENCE_USER_STEPS,1)]
+            steps=[{'number':number,'name':name,'status':'completed','conclusion':'success',
+                    'started_at':'2026-10-25T00:00:00Z','completed_at':'2026-10-25T00:00:01Z'}
+                   for number,name in zip((1,2,3,4,9,10),
+                       r.BUILD_USER_STEPS if route=='build' else r.REFERENCE_USER_STEPS)]
             jobs={'total_count':4,'jobs':[{'id':300+i,'run_id':123456,'run_attempt':1,
                 'head_sha':request['source']['head'],'name':name,'status':'completed',
                 'conclusion':'success' if name==selected else 'skipped',
@@ -3410,6 +3487,24 @@ class ConnectedCurrentV2Controls(unittest.TestCase):
             refused('wrong inactive run',lambda rows:rows[0].update(run_id=123457))
             refused('wrong inactive attempt',lambda rows:rows[0].update(run_attempt=2))
             refused('boolean inactive attempt',lambda rows:rows[0].update(run_attempt=True))
+            def bad_step(label, change, update_expectation=False):
+                changed=copy.deepcopy(args)
+                row=next(row for row in changed[3]['jobs'] if row['id']==number)
+                change(row['steps'])
+                if update_expectation:
+                    expected=json.loads(changed[1])
+                    expected['steps']=copy.deepcopy(row['steps'])
+                    changed=(changed[0],p.canonical(expected),*changed[2:])
+                try:grader(*changed)
+                except r.Refusal:pass
+                else:raise AssertionError('current '+route+' accepted '+label)
+            bad_step('duplicate positive step number',lambda rows:rows[5].update(number=rows[4]['number']),True)
+            bad_step('reordered step number',lambda rows:rows[5].update(number=3),True)
+            bad_step('zero step number',lambda rows:rows[0].update(number=0),True)
+            bad_step('boolean step number',lambda rows:rows[0].update(number=True),True)
+            bad_step('missing step number',lambda rows:rows[0].pop('number'),True)
+            bad_step('raw step mismatch',lambda rows:rows[0].update(number=2),False)
+
             refused('wrong inactive head',lambda rows:rows[0].update(head_sha='0'*40))
             bool_counterfactual=copy.deepcopy(args)
             bool_counterfactual[3]['jobs'][0]['run_attempt']=True
