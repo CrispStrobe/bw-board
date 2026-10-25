@@ -165,9 +165,16 @@ def raw_event(raw):
     return raw_object(raw, EVENT_CAP)
 
 
+def bounded_error_text(value, cap):
+    text = str(value)[:cap]
+    while len(json.dumps(text, ensure_ascii=False).encode('utf-8')) > cap:
+        text = text[:-1]
+    return text
+
+
 def failure(exc, phase, role=None, path=None):
-    return {'phase': phase, 'name': type(exc).__name__[:64],
-            'message': str(exc)[:ERROR_LIMIT], 'role': role, 'path': path}
+    return {'phase': phase, 'name': bounded_error_text(type(exc).__name__, 64),
+            'message': bounded_error_text(exc, ERROR_LIMIT), 'role': role, 'path': path}
 
 
 def identity(info):
@@ -229,6 +236,7 @@ def read_regular(path, cap, *, minimum=0, owner=0, group=None):
         primary.bochs_partial = {'path': path, 'observation': record,
                                  'firstFailure': failure(primary, 'file-read', path=path),
                                  'secondary': secondary}
+        primary.bochs_secondary = [*getattr(primary, 'bochs_secondary', []), *secondary][:SECONDARY_LIMIT]
         raise primary
     return bytes(raw), record
 
@@ -487,6 +495,130 @@ def elf_from_reader(size, read_at):
             'runpath': string_at(entries[29]) if 29 in entries else None}
 
 
+
+def sparse_elf_from_reader(size, read_at, file_sha256):
+    """Structural bytes only; full-file SHA is an observed external projection.
+
+    The historical complete-body decoder above is deliberately unchanged.
+    Never read full dynstr/symbol/code sections to fill a sparse proof.
+    """
+    integer(size, 64, 134217728, 'bounded selected ELF file extent')
+    need(type(file_sha256) is str and HEX.fullmatch(file_sha256), 'selected observed full-file SHA')
+    taken = []
+    reads = 0
+    def take(offset, count):
+        nonlocal reads
+        need(type(offset) is int and type(count) is int and offset >= 0 and count >= 1 and
+             offset + count <= size, 'bounded exact structural ELF read')
+        reads += count
+        need(reads <= 2097152, 'structural ELF requested-read budget')
+        raw = read_at(offset, count)
+        need(type(raw) is bytes and len(raw) == count, 'complete actual structural ELF bytes')
+        taken.append((offset, offset + count, raw))
+        return raw
+    header = take(0, 64)
+    need(header[:7] == b'\x7fELF\x02\x01\x01' and header[7] in (0, 3) and
+         header[8:16] == bytes(8),
+         'selected ELF64LE ABI header')
+    kind, machine, version = struct.unpack_from('<HHI', header, 16)
+    need(kind in (2, 3) and machine == 62 and version == 1, 'selected x86-64 ELF object type')
+    phoff = struct.unpack_from('<Q', header, 32)[0]
+    ehsize, phsize, phnum = struct.unpack_from('<HHH', header, 52)
+    need(ehsize == 64 and phsize == 56 and 1 <= phnum <= 1024 and
+         phoff >= 64 and phoff + 56 * phnum <= size, 'bounded program-header structure')
+    headers = take(phoff, 56 * phnum)
+    loads, dynamic, interpreter = [], None, None
+    for index in range(phnum):
+        tag, _flags, offset, address, _physical, extent, memory, _alignment = struct.unpack_from(
+            '<IIQQQQQQ', headers, index * 56)
+        need(offset + extent <= size and extent <= memory, 'bounded declared ELF segment')
+        if tag == 1:
+            loads.append((address, address + extent, offset))
+        elif tag == 2:
+            need(dynamic is None and 16 <= extent <= 65536 and extent % 16 == 0,
+                 'one bounded dynamic-entry array')
+            dynamic = offset, extent
+        elif tag == 3:
+            need(interpreter is None and 2 <= extent <= 256, 'one bounded interpreter field')
+            text = take(offset, extent)
+            need(text.endswith(b'\0') and b'\0' not in text[:-1], 'exact interpreter string and terminator')
+            interpreter = text[:-1].decode('ascii')
+            need(interpreter == '/lib64/ld-linux-x86-64.so.2', 'selected host interpreter')
+    need(loads, 'file-backed ELF load mapping')
+    tags, needed_offsets = {}, []
+    if dynamic is not None:
+        terminated = False
+        for offset in range(dynamic[0], dynamic[0] + dynamic[1], 16):
+            tag, number = struct.unpack('<qQ', take(offset, 16))
+            if tag == 0:
+                terminated = True
+                break
+            if tag == 1:
+                needed_offsets.append(number)
+            elif tag in (5, 10, 14, 15, 29):
+                need(tag not in tags, 'unique dynamic structural string tag')
+                tags[tag] = number
+        need(terminated, 'dynamic entries terminate before declared bound')
+    need(len(needed_offsets) <= 64, 'finite selected NEEDED list')
+    string_base = None
+    if tags or needed_offsets:
+        need(5 in tags and 10 in tags and 1 <= tags[10] <= size,
+             'bounded file-backed dynamic string table extent')
+        positions = [offset + tags[5] - start for start, end, offset in loads
+                     if start <= tags[5] and tags[5] + tags[10] <= end]
+        need(len(positions) == 1, 'one backed address for referenced strings')
+        string_base = positions[0]
+    def string_at(offset):
+        need(type(offset) is int and string_base is not None and 0 <= offset < tags[10],
+             'referenced dynamic string offset')
+        result = bytearray()
+        for index in range(513):
+            need(offset + index < tags[10], 'string terminator within declared table')
+            char = take(string_base + offset + index, 1)
+            if char == b'\0':
+                return bytes(result).decode('ascii')
+            result.extend(char)
+        raise Refusal('referenced dynamic string cap')
+    needed = [string_at(offset) for offset in needed_offsets]
+    soname = string_at(tags[14]) if 14 in tags else None
+    need(len(needed) == len(set(needed)) and
+         all(re.fullmatch(r'[A-Za-z0-9+_.-]+', name) for name in needed) and
+         (soname is None or re.fullmatch(r'[A-Za-z0-9+_.-]+', soname)),
+         'canonical unique NEEDED and SONAME names')
+    structure = {'class': 'ELF64', 'machine': 'x86-64', 'type': 'EXEC' if kind == 2 else 'DYN',
+                 'interpreter': interpreter, 'needed': needed, 'soname': soname,
+                 'rpath': string_at(tags[15]) if 15 in tags else None,
+                 'runpath': string_at(tags[29]) if 29 in tags else None}
+    intervals = []
+    for start, end, _raw in sorted(taken):
+        if intervals and start <= intervals[-1][1]:
+            intervals[-1][1] = max(intervals[-1][1], end)
+        else:
+            intervals.append([start, end])
+    # Retain exactly the union actually read, without rereading or filling gaps.
+    ranges = []
+    for start, end in intervals:
+        body = bytearray(end - start)
+        coverage = bytearray(end - start)
+        for old_start, old_end, raw in taken:
+            low, high = max(start, old_start), min(end, old_end)
+            if low < high:
+                piece = raw[low - old_start:high - old_start]
+                for at, char in enumerate(piece, low - start):
+                    need(not coverage[at] or body[at] == char, 'consistent repeated structural byte reads')
+                    body[at] = char; coverage[at] = 1
+        need(all(coverage), 'every retained structural byte was actually read')
+        raw = bytes(body)
+        ranges.append({'offset': start, 'bytes': len(raw), 'sha256': sha256(raw),
+                       'base64': base64.b64encode(raw).decode('ascii')})
+    return {'fileBytes': size, 'fileSha256': file_sha256, 'structure': structure, 'ranges': ranges}
+
+
+def sparse_elf(raw):
+    need(type(raw) is bytes, 'actual selected ELF original bytes')
+    return sparse_elf_from_reader(len(raw), lambda offset, count: raw[offset:offset + count], sha256(raw))
+
+
 def elf_facts(raw):
     """Static bounded ELF inspection; never invoke ldd or an interpreter."""
     need(type(raw) is bytes, 'ELF original bytes')
@@ -591,7 +723,8 @@ def observe_toolchain(read=read_regular, resolve=resolve_tool, node_elf=None):
         total += len(raw)
         need(total <= 256 * 1024 * 1024, 'one-pass tool read budget (two passes <=512MiB)')
         if raw.startswith(b'\x7fELF'):
-            observed['elf'] = elf_facts(raw)
+            observed['elf'] = {key: value for key, value in sparse_elf(raw)['structure'].items()
+                               if key != 'soname'}
             need(observed['elf']['rpath'] is None and observed['elf']['runpath'] is None,
                  'no selected tool RPATH/RUNPATH')
             if observed['elf']['interpreter']:
@@ -1134,13 +1267,55 @@ def service_receipt(stdout, stderr, client_exit, unit):
     return value
 
 
+
+def runtime_elf_candidates(graph):
+    return {path for path, row in graph['files'].items() if row['elf'] is not None and
+            ('/lib/' in path or '/lib64/' in path) and '.so' in Path(path).name}
+
+
+def admit_runtime_elf_metadata(value, graph, node):
+    closed(value, ('schema', 'files', 'rawBytes'), 'closed sparse ELF original')
+    need(value['schema'] == 'bw.bochs-ring3.runtime-elf-metadata.v1' and type(value['files']) is dict and
+         set(value['files']) == runtime_elf_candidates(graph) | {NODE_PATH},
+         'exact finite runtime candidate and Node structural roster')
+    total = 0
+    for path, row in value['files'].items():
+        closed(row, ('fileBytes', 'fileSha256', 'structure', 'ranges'), 'closed structural ELF row')
+        original = {'bytes': NODE_BYTES, 'sha256': NODE_SHA256, 'elf': node['elf']} if path == NODE_PATH else graph['files'][path]
+        need(row['fileBytes'] == original['bytes'] and type(row['fileBytes']) is int and
+             row['fileSha256'] == original['sha256'] and type(row['structure']) is dict and
+             set(row['structure']) == {'class', 'machine', 'type', 'interpreter', 'needed', 'soname', 'rpath', 'runpath'} and
+             {key: item for key, item in row['structure'].items() if key != 'soname'} == original['elf'],
+             'sparse structural fact projection equals selected whole-file readback')
+        need(row['structure']['soname'] is None or
+             type(row['structure']['soname']) is str and
+             re.fullmatch(r'[A-Za-z0-9+_.-]+', row['structure']['soname']),
+             'typed structural SONAME')
+        need(type(row['ranges']) is list and 1 <= len(row['ranges']) <= 256,
+             'bounded exact structural range list')
+        previous_end = -1
+        for item in row['ranges']:
+            closed(item, ('offset', 'bytes', 'sha256', 'base64'), 'closed raw structural range')
+            integer(item['offset'], 0, row['fileBytes'], 'range offset')
+            integer(item['bytes'], 1, 2097152, 'range extent')
+            raw = base64.b64decode(item['base64'], validate=True)
+            need(item['offset'] > previous_end and item['offset'] + item['bytes'] <= row['fileBytes'] and
+                 len(raw) == item['bytes'] and sha256(raw) == item['sha256'],
+                 'sorted normalized actual range bytes')
+            previous_end = item['offset'] + item['bytes']
+            total += len(raw)
+    need(type(value['rawBytes']) is int and value['rawBytes'] == total <= 2097152 and
+         len(canonical(value)) <= 4194304, 'complete aggregate structural evidence cap')
+    return value
+
+
 def collect_toolchain(request_raw, event_raw, env, ops):
     """Connected no-tool-execution metadata producer; ops owns OS/data edges."""
     request = admitted_request('toolchain', request_raw, event_raw, env)
     value = original('toolchain', request_raw, event_raw)
     observations = {'inventoryBefore': None, 'inventoryAfter': None, 'status': None,
                     'sourceSelection': SOURCE_SELECTION_SHA256, 'reportedReadbackOnly': True,
-                    'notices': None, 'nodeStage': None}
+                    'notices': None, 'nodeStage': None, 'runtimeElfMetadata': None}
     value['observations'] = observations
     roles = {'request.original.json': request_raw, 'event.original.json': event_raw}
     phase = 'source-before'
@@ -1156,6 +1331,12 @@ def collect_toolchain(request_raw, event_raw, env, ops):
         phase = 'toolchain-inventory-before'
         observations['inventoryBefore'] = ops.toolchain()
         roles['inventory.before.json'] = canonical(observations['inventoryBefore'])
+        phase = 'runtime-elf-structural-metadata'
+        structural = admit_runtime_elf_metadata(ops.elf_metadata(observations['inventoryBefore']),
+                                               observations['inventoryBefore'], observations['nodeStage'])
+        roles['runtime-elf-ranges.original.json'] = canonical(structural)
+        observations['runtimeElfMetadata'] = bytes_ref('runtime-elf-ranges.original.json',
+                                                       roles['runtime-elf-ranges.original.json'])
         phase = 'selected-toolchain-notices'
         notices = ops.notices()
         need(type(notices) is dict and set(notices) == set(NOTICE_PATHS),
@@ -1187,7 +1368,9 @@ def collect_toolchain(request_raw, event_raw, env, ops):
         roles['node-stage.original.json'] = canonical(observations['nodeStage'])
         need(sum(row['bytes'] for row in observations['inventoryBefore']['files'].values()) * 2 +
              observations['nodeStage']['sourceBytesRead'] + observations['nodeStage']['readbackBytes'] +
-             observations['nodeStage']['elfReadBytes'] + notice_bytes <= LIMITS['toolchain']['totalReadBytes'],
+             observations['nodeStage']['elfReadBytes'] + notice_bytes +
+             sum(row['fileBytes'] for path, row in structural['files'].items() if path != NODE_PATH)
+             <= LIMITS['toolchain']['totalReadBytes'],
              'actual selected tool/Node/notice read budget')
     except BaseException as exc:
         original_error(value, exc, phase)
@@ -1253,7 +1436,7 @@ def finalize_original(route, request_raw, event_raw, env, inner, roles,
     try:
         ops.source(request['source'], env)
         outside['before'] = ops.unit(outside['unit'])
-        outside['manual'] = ops.cleanup(inner)
+        outside['manual'] = ops.cleanup(inner, outer=outside)
         roles['cleanup.original.json'] = canonical(outside['manual'])
         need(outside['manual']['complete'] is True and outside['manual']['firstFailure'] is None and
              not outside['manual']['secondary'], 'complete owned delegated cgroup cleanup')
@@ -1571,6 +1754,7 @@ class NodeStageCopy:
         need(len(self.invoker) == 2 and all(type(x) is int and 1 <= x < 2 ** 31 for x in self.invoker),
              'source-authenticated nonroot Node cache invoker identity')
         self.fds, self.bindings = {}, {}
+        self.sparse_node = None
         self.attempted = False
         self.facts = {'schema': 'bw.bochs-ring3.node-stage.v1', 'sourcePath': NODE_PATH,
             'stagePath': str(self.path / 'node'), 'recordPath': str(self.path / 'stage.json'),
@@ -1754,7 +1938,9 @@ class NodeStageCopy:
                 self.facts['elfReadBytes'] += count
                 need(self.facts['elfReadBytes'] <= 2097152, 'bounded staged Node ELF range reads')
                 return os.pread(fd, count, offset)
-            self.facts['elf'] = elf_from_reader(NODE_BYTES, read_at)
+            self.sparse_node = sparse_elf_from_reader(NODE_BYTES, read_at, self.facts['readbackSha256'])
+            self.facts['elf'] = {key: value for key, value in self.sparse_node['structure'].items()
+                                 if key != 'soname'}
             need(self.facts['elf']['rpath'] is None and self.facts['elf']['runpath'] is None,
                  'staged Node has no RPATH/RUNPATH')
             self.facts['filePublicationAttempted'] = True
@@ -1866,7 +2052,10 @@ class NodeStageCopy:
                     observed['elfReadBytes'] += count
                     need(observed['elfReadBytes'] <= 2097152, 'bounded Node after ELF range reads')
                     return os.pread(fd, count, offset)
-                observed['elf'] = elf_from_reader(NODE_BYTES, read_at)
+                sparse_after = sparse_elf_from_reader(NODE_BYTES, read_at, observed['sha256'])
+                need(sparse_after == self.sparse_node, 'same staged Node exact structural range readback')
+                observed['elf'] = {key: value for key, value in sparse_after['structure'].items()
+                                   if key != 'soname'}
                 need(observed['elf'] == self.facts['elf'], 'staged Node after ELF identity')
             observed['after'] = self.metadata(os.fstat(fd))
             observed['named'] = self.metadata(os.stat('node', dir_fd=directory, follow_symlinks=False))
@@ -3046,6 +3235,9 @@ def finish_cli(route, context, request_raw, event_raw, paths, *, provider_factor
     # no positive outside verdict while its root-owned staged executable remains.
     outside['nodeCleanup'] = None
     try:
+        need(outside['after'] is not None and outside['after']['exists'] is False and
+             outside['after']['errno'] == 2,
+             'selected service terminal absence before any staged-input removal')
         outside['nodeCleanup'] = ops.node_cleanup(inner)
         need(outside['nodeCleanup']['complete'] is True and
              outside['nodeCleanup']['firstFailure'] is None and
@@ -3057,6 +3249,13 @@ def finish_cli(route, context, request_raw, event_raw, paths, *, provider_factor
         elif len(outside['secondary']) < SECONDARY_LIMIT:
             outside['secondary'].append(item)
     outside['cleanupExitCode'] = 0 if outside['firstFailure'] is None and not outside['secondary'] else 1
+    if len(canonical(outside)) > 16384:
+        item = failure(Refusal('complete outside cleanup envelope cap'), 'outside-final-wire')
+        if outside['firstFailure'] is None:
+            outside['firstFailure'] = item
+        elif len(outside['secondary']) < SECONDARY_LIMIT:
+            outside['secondary'].append(item)
+        outside['cleanupExitCode'] = 1
     roles['outside.original.json'] = canonical(outside)
     # Work's protected tree remains immutable. Publish a separate exact retained
     # byte copy to the sole artifact root; admission's two originals stay held.
@@ -3078,8 +3277,10 @@ def cleanup_node_stage(route, env, inner):
     value = {'schema': 'bw.bochs-ring3.node-cleanup.v1', 'route': route,
         'path': str(root), 'parentBefore': None, 'parentAfter': None,
         'before': None, 'members': {}, 'journal': [], 'after': None,
+        'heldBefore': None, 'heldBeforeRmdir': None, 'namedBeforeRmdir': None,
         'complete': False, 'firstFailure': None, 'secondary': []}
     directory_fd = None
+    reserved = None
     def issue(exc, phase):
         row = failure(exc, phase, path=str(root))
         if value['firstFailure'] is None:
@@ -3102,7 +3303,8 @@ def cleanup_node_stage(route, env, inner):
         row = {'operation': operation, 'path': str(path), 'before': before,
                'attempted': False, 'after': None, 'firstFailure': None}
         value['journal'].append(row)
-        need(len(canonical(value)) <= 16384, 'actual Node cleanup budget before mutation')
+        need(reserved is not None and reserved <= 16384 and len(canonical(value)) <= 16384,
+             'whole remaining bounded Node cleanup original before mutation')
         row['attempted'] = True
         try:
             action()
@@ -3132,7 +3334,8 @@ def cleanup_node_stage(route, env, inner):
             need(first_five(value['before']['identity']) == first_five(expected_directory),
                  'exact first-five staged directory before cleanup')
             directory_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
-            need(first_five(identity(os.fstat(directory_fd))) == first_five(expected_directory),
+            value['heldBefore'] = identity(os.fstat(directory_fd))
+            need(first_five(value['heldBefore']) == first_five(expected_directory),
                  'held Node cleanup directory identity')
             names = []
             with os.scandir(root) as entries:
@@ -3153,6 +3356,28 @@ def cleanup_node_stage(route, env, inner):
                      observed['nlink'] == 1 and first_five(observed) == first_five(expected[name]),
                      'exact owned staged member before any cleanup mutation')
                 value['members'][name] = observed
+            # Size-only projection, never retained as an observation. Reserve all
+            # remaining rows and terminal fields before the first chmod/unlink.
+            def future_metadata(row):
+                return {**row, 'size': max(row['size'], 2**64 - 1),
+                        'mtimeNs': max(row['mtimeNs'], 2**64 - 1),
+                        'ctimeNs': max(row['ctimeNs'], 2**64 - 1)}
+            private_reserved = future_metadata({**value['before']['identity'], 'mode': stat.S_IFDIR | 0o700})
+            future = json.loads(canonical(value))
+            future['journal'] = [{'operation': 'chmod-private', 'path': str(root),
+                'before': value['before']['identity'], 'attempted': True,
+                'after': {'exists': True, 'errno': None, 'identity': private_reserved}, 'firstFailure': None}]
+            for name in sorted(names):
+                future['journal'].append({'operation': 'unlink', 'path': str(root / name),
+                    'before': value['members'][name], 'attempted': True,
+                    'after': {'exists': False, 'errno': 2, 'identity': None}, 'firstFailure': None})
+            future['journal'].append({'operation': 'rmdir', 'path': str(root), 'before': private_reserved,
+                'attempted': True, 'after': {'exists': False, 'errno': 2, 'identity': None}, 'firstFailure': None})
+            future.update(parentAfter=future_metadata(value['parentBefore']),
+                heldBeforeRmdir=private_reserved, namedBeforeRmdir=private_reserved,
+                after={'exists': False, 'errno': 2, 'identity': None}, complete=True)
+            reserved = len(canonical(future)) + 512
+            need(reserved <= 16384, 'complete prospective Node cleanup witness and close-error reserve')
             mutation('chmod-private', root, value['before']['identity'],
                      lambda: os.fchmod(directory_fd, 0o700))
             private = identity(os.fstat(directory_fd))
@@ -3173,6 +3398,8 @@ def cleanup_node_stage(route, env, inner):
             need(first_five(identity(os.lstat(root))) == first_five(private) and
                  first_five(identity(os.fstat(directory_fd))) == first_five(private),
                  'held/named root before final rmdir')
+            value['heldBeforeRmdir'] = identity(os.fstat(directory_fd))
+            value['namedBeforeRmdir'] = identity(os.lstat(root))
             mutation('rmdir', root, private, lambda: os.rmdir(root))
             value['after'] = absent(root)
             need(value['after']['exists'] is False, 'owned Node root absent after cleanup')
@@ -3188,6 +3415,9 @@ def cleanup_node_stage(route, env, inner):
             except BaseException as exc:
                 issue(exc, 'node-cleanup-directory-close')
     value['complete'] = value['firstFailure'] is None and not value['secondary']
+    if value['complete'] and len(canonical(value)) > 16384:
+        issue(Refusal('complete Node cleanup wire cap'), 'node-cleanup-final-wire')
+        value['complete'] = False
     return value
 
 
@@ -3347,181 +3577,516 @@ def caller_file(path, raw, mode, uid, gid):
 
 
 
-def cleanup_owned_cgroups(route, env, inner, kernel, *, clock=time.monotonic_ns, sleep=time.sleep):
-    """Known delegated roles only; no kill, retry, arbitrary path or unknown rmdir."""
+
+def node_cleanup_wire_plan(route, env, inner):
+    """Read-only known-metadata projection for ALL later Node cleanup outcomes.
+
+    Uses the protected complete work-stage record, not a guessed filesystem
+    pathname or an operator-selected budget. Actual cleanup rechecks identities.
+    """
+    need(type(inner) is dict and type(inner.get('observations')) is dict,
+         'bound inner input facts before any destructive cleanup')
+    facts = inner['observations'].get('nodeStage')
+    check_node_stage(facts, route, env, after=True)
+    root = node_stage_directory(route, env)
+    def row(raw):
+        need(type(raw) is list and len(raw) == 9 and all(type(x) is int and x >= 0 for x in raw),
+             'typed known Node cleanup identity')
+        return dict(zip(('dev', 'ino', 'mode', 'uid', 'gid', 'nlink', 'size', 'mtimeNs', 'ctimeNs'), raw))
+    def future(raw):
+        # Linux stat size/nlink are64-bit; timespec64 seconds *1e9 is<2**96.
+        return {**raw, 'size': max(raw['size'], 2**64 - 1), 'nlink': max(raw['nlink'], 2**64 - 1),
+                'mtimeNs': max(raw['mtimeNs'], 2**96 - 1), 'ctimeNs': max(raw['ctimeNs'], 2**96 - 1)}
+    parent = future(row(facts['parents']['/run']['after']))
+    directory = row(facts['directory'])
+    private = future({**directory, 'mode': stat.S_IFDIR | 0o700})
+    node, record = row(facts['file']), row(facts['record']['metadata'])
+    gone = {'exists': False, 'errno': 2, 'identity': None}
+    prototype = {'schema': 'bw.bochs-ring3.node-cleanup.v1', 'route': route, 'path': str(root),
+        'parentBefore': parent, 'parentAfter': parent,
+        'before': {'exists': True, 'errno': None, 'identity': directory},
+        'heldBefore': directory, 'heldBeforeRmdir': private, 'namedBeforeRmdir': private,
+        'members': {'node': node, 'stage.json': record}, 'after': gone,
+        'firstFailure': None, 'secondary': [], 'complete': True, 'journal': [
+            {'operation': 'chmod-private', 'path': str(root), 'before': directory, 'attempted': True,
+             'after': {'exists': True, 'errno': None, 'identity': private}, 'firstFailure': None},
+            {'operation': 'unlink', 'path': str(root / 'node'), 'before': node, 'attempted': True,
+             'after': gone, 'firstFailure': None},
+            {'operation': 'unlink', 'path': str(root / 'stage.json'), 'before': record, 'attempted': True,
+             'after': gone, 'firstFailure': None},
+            {'operation': 'rmdir', 'path': str(root), 'before': private, 'attempted': True,
+             'after': gone, 'firstFailure': None}]}
+    success_bytes = len(canonical(prototype))
+    # First failure duplicates into its journal and top-level field, with at
+    # most one held directory close secondary; every JSON-encoded error<=1024.
+    # A failed after-read can retain one present-directory stat instead of ENOENT.
+    failure_bytes = success_bytes + 3 * 1024 + 512
+    return {'schema': 'bw.bochs-ring3.node-cleanup-plan.v1', 'nodePath': str(root),
+        'stageSha256': sha256(canonical(facts)), 'projectionSha256': sha256(canonical(prototype)),
+        'successBytes': success_bytes, 'failureBytes': failure_bytes,
+        'reservedBytes': max(success_bytes + 1024, failure_bytes)}
+
+
+CLEANUP_STAT_FIELDS = ('dev', 'ino', 'mode', 'uid', 'gid', 'nlink', 'size', 'mtimeNs', 'ctimeNs')
+
+
+def compact_manual_stats(value):
+    """Version2 wire only: preserve all nine stat integers in fixed order."""
+    if type(value) is dict:
+        if set(value) == set(CLEANUP_STAT_FIELDS) and all(type(x) is int for x in value.values()):
+            return [value[key] for key in CLEANUP_STAT_FIELDS]
+        return {key: compact_manual_stats(item) for key, item in value.items()}
+    if type(value) is list:
+        return [compact_manual_stats(item) for item in value]
+    return value
+
+
+def cleanup_owned_cgroups(route, env, inner, kernel, *, outer_base=None, input_plan=None,
+                          clock=time.monotonic_ns, sleep=time.sleep):
+    """Adapt held V3 cleanup: whole-wire reserve, per-name FDs, finite post-leaf reads.
+
+    This new unit/controller topology is distinct from the historical manual
+    root. No old producer is imported, no caller-selected path or PID is used.
+    """
     paths = route_paths(route, env)
     root = Path('/sys/fs/cgroup/system.slice') / paths['unit']
     allowed = {'controller'} | ({'configure', 'make'} if route == 'build' else
                                 {'js', 'bochs'} if route == 'reference' else set())
     started = clock()
     last = started
-    value = {'schema': 'bw.bochs-ring3.manual-cleanup.v1', 'route': route,
+    value = {'schema': 'bw.bochs-ring3.manual-cleanup.v2', 'identityFields': list(CLEANUP_STAT_FIELDS), 'route': route,
         'unit': paths['unit'], 'rootPath': str(root),
         'limits': {'samples': 6, 'seconds': 5, 'bytes': 16384},
-        'startedNs': started, 'endedNs': None, 'known': {}, 'samples': [],
-        'journal': [], 'after': None, 'firstFailure': None, 'secondary': [], 'complete': False}
+        'startedNs': started, 'endedNs': None, 'known': {}, 'before': {},
+        'parentIdentity': None, 'parentIdentityAfter': None, 'inputPlan': input_plan,
+        'samples': [], 'journal': [], 'after': None, 'lastPath': None,
+        'firstFailure': None, 'secondary': [], 'complete': False}
+    fds = {}
+    base = {} if outer_base is None else outer_base
+    # Node cleanup follows established cgroup terminality. Its separate positive
+    # wire is capped at4KiB; reserve it rather than deleting before service quiet.
+    node_reserve = (input_plan['reservedBytes'] if input_plan is not None else 4096) if base.get('nodeCleanup') is None else 0
+    def whole_size():
+        return len(canonical({**base, 'manual': compact_manual_stats(value)})) + node_reserve
     def issue(exc, phase):
-        row = failure(exc, phase)
+        row = failure(exc, phase, path=value['lastPath'])
         if value['firstFailure'] is None:
             value['firstFailure'] = row
         elif len(value['secondary']) < SECONDARY_LIMIT:
             value['secondary'].append(row)
-        for row in getattr(exc, 'bochs_secondary', []):
+        for extra in getattr(exc, 'bochs_secondary', []):
             if len(value['secondary']) < SECONDARY_LIMIT:
-                value['secondary'].append(row)
+                value['secondary'].append(extra)
     def tick():
         nonlocal last
         now = clock()
         need(now >= last and now - started < 5000000000, 'strict finite monotonic cleanup deadline')
         last = now
         return now
-    def first_five(row):
+    def five(row):
         return tuple(row[k] for k in ('dev', 'ino', 'mode', 'uid', 'gid'))
-    def snapshot(path):
+    def compact(row):
+        return [row[k] for k in ('dev', 'ino', 'mode', 'uid', 'gid', 'nlink', 'size', 'mtimeNs', 'ctimeNs')]
+    def path_of(role):
+        return root if role == 'unit' else root / role
+    def snapshot(path, destination):
+        destination.update(path=str(path), exists=True, errno=None, identity=None, files={}, children=[])
+        value['lastPath'] = str(path)
         try:
-            before = kernel._directory(path)
+            destination['identity'] = kernel._directory(path)
         except FileNotFoundError as exc:
             need(exc.errno == 2, 'actual selected cgroup ENOENT')
-            return {'path': str(path), 'exists': False, 'errno': 2,
-                    'identity': None, 'files': {}, 'children': []}
-        files = {name: kernel._read(path / name, 4096) for name in RESOURCE_FILES}
-        children = []
+            destination.update(exists=False, errno=2)
+            return destination
+        for name in ('cgroup.procs', 'cgroup.events', 'cgroup.stat'):
+            value['lastPath'] = str(path / name)
+            destination['files'][name] = kernel._read(path / name, 4096)
         with os.scandir(path) as entries:
             count = 0
             for entry in entries:
                 count += 1
                 need(count <= 128 and not entry.is_symlink(), 'bounded nonlink cleanup cgroup entry')
                 if entry.is_dir(follow_symlinks=False):
-                    children.append(entry.name)
-                    need(len(children) <= len(allowed), 'bounded selected cleanup descendants')
-        need(first_five(before) == first_five(kernel._directory(path)), 'stable cleanup group identity')
-        return {'path': str(path), 'exists': True, 'errno': None, 'identity': before,
-                'files': files, 'children': sorted(children)}
-    def raw_zero(raw, key):
-        lines = raw.splitlines()
-        return lines.count(key + ' 0') == 1 and not any(
-            line.startswith(key + ' ') and line != key + ' 0' for line in lines)
+                    destination['children'].append(entry.name)
+                    need(len(destination['children']) <= len(allowed), 'bounded fixed cleanup children')
+        destination['children'].sort()
+        need(five(destination['identity']) == five(kernel._directory(path)), 'stable cleanup group identity')
+        need(len(canonical(compact_manual_stats(destination))) <= 768, 'bounded selected cleanup sample')
+        return destination
+    def number(raw, key):
+        values = [line.split(' ', 1)[1] for line in raw.splitlines() if line.startswith(key + ' ')]
+        need(len(values) == 1 and re.fullmatch(r'0|[1-9][0-9]{0,18}', values[0]),
+             'unique canonical cleanup counter ' + key)
+        return int(values[0])
+    def quiet(row, children):
+        need(row['exists'] and row['children'] == children and row['files']['cgroup.procs'] == '' and
+             number(row['files']['cgroup.events'], 'populated') == 0 and
+             number(row['files']['cgroup.stat'], 'nr_descendants') == len(children),
+             'empty selected cleanup group and exact known descendants')
+    def check_fd(role):
+        path = path_of(role)
+        held = identity(os.fstat(fds[role])); named = kernel._directory(path)
+        need(five(held) == five(named) == five(value['known'][role]['identity']),
+             'exact held/named initial first-five cleanup authority')
+        return held, named
+    def reserve_whole(current_role, remaining_roles, remaining_samples):
+        """Project every remaining row/terminal branch from typed known facts.
+
+        Numeric mutable stat fields are bounded unsigned64 in this route. A
+        failure stops mutations, so reserve the maximum of the complete-success
+        and first-error-plus-all-close-error branches, never their impossible sum.
+        """
+        def bounded_stat(row):
+            need(all(type(x) is int and 0 <= x <= 2**64 - 1 for x in row.values()),
+                 'bounded raw numeric stat projection')
+            return {**row, 'nlink': 2**64 - 1, 'size': 2**64 - 1,
+                    'mtimeNs': 2**64 - 1, 'ctimeNs': 2**64 - 1}
+        def gone(path):
+            return {'path': str(path), 'exists': False, 'errno': 2, 'identity': None, 'files': {}, 'children': []}
+        def future_group(role, *, dying=False):
+            raw = json.loads(canonical(value['before'][role]))
+            raw['identity'] = bounded_stat(raw['identity'])
+            raw['children'] = []
+            raw['files']['cgroup.procs'] = ''
+            raw['files']['cgroup.events'] = 'populated 0\nfrozen 0\n'
+            raw['files']['cgroup.stat'] = 'nr_descendants 0\nnr_dying_descendants ' + (
+                '9999999999999999999' if dying else '0') + '\n'
+            return raw
+        future = json.loads(canonical(value))
+        future['journal'][-1]['after'] = gone(path_of(current_role))
+        future['journal'][-1]['childClosed'] = True
+        for role in remaining_roles:
+            before = future_group(role)
+            parent = value['parentIdentity'] if role == 'unit' else value['known']['unit']['identity']
+            future['journal'].append({'role': role, 'path': str(path_of(role)), 'before': before,
+                'parentHeld': compact(bounded_stat(parent)), 'childHeld': compact(before['identity']),
+                'parentNamed': compact(bounded_stat(parent)), 'childNamed': compact(before['identity']),
+                'attempted': True, 'after': gone(path_of(role)), 'firstFailure': None, 'childClosed': True})
+        for _index in range(remaining_samples):
+            future['samples'].append({'ns': started + 4999999999,
+                                      'root': future_group('unit', dying=True)})
+        future.update(after=gone(root), parentIdentityAfter=bounded_stat(value['parentIdentity']),
+                      endedNs=started + 4999999999, complete=True)
+        success_bytes = len(canonical({**base, 'manual': compact_manual_stats(future), 'after': gone(root)})) + node_reserve
+        # A cgroup error has a source-fixed <=128-byte path, <=64-byte phase/name
+        # and <=512-byte JSON string message; <=1024 bytes per retained error.
+        # Current row may duplicate its first error; each held FD closes once.
+        # A manual failure leaves outside.after unknown. finish therefore does
+        # not enter staged-input removal at all; do not reserve an impossible
+        # later Node cleanup in addition to every manual-close failure.
+        failure_bytes = len(canonical({**base, 'manual': compact_manual_stats(value)})) + (len(fds) + 3) * 1024 + 1024
+        need(max(success_bytes, failure_bytes) <= 16384,
+             'complete typed future cleanup/outer/error projection before first effect')
+        return max(success_bytes, failure_bytes)
+    def remove(role, remaining_roles, remaining_samples):
+        path = path_of(role)
+        parent_role = 'parent' if role == 'unit' else 'unit'
+        parent_path = root.parent if role == 'unit' else root
+        row = {'role': role, 'path': str(path), 'before': {}, 'parentHeld': None,
+            'childHeld': None, 'parentNamed': None, 'childNamed': None,
+            'attempted': False, 'after': None, 'firstFailure': None, 'childClosed': False}
+        value['journal'].append(row)
+        try:
+            snapshot(path, row['before']); quiet(row['before'], [])
+            need(number(row['before']['files']['cgroup.stat'], 'nr_dying_descendants') == 0,
+                 'no dying selected group before rmdir')
+            held, named = check_fd(role)
+            parent_held = identity(os.fstat(fds[parent_role])); parent_named = kernel._directory(parent_path)
+            expected_parent = value['parentIdentity'] if role == 'unit' else value['known']['unit']['identity']
+            need(five(parent_held) == five(parent_named) == five(expected_parent),
+                 'exact held/named removal parent first-five')
+            row.update(parentHeld=compact(parent_held), childHeld=compact(held),
+                       parentNamed=compact(parent_named), childNamed=compact(named))
+            need(len(canonical(compact_manual_stats(row))) <= 1536, 'bounded complete removal row before mutation')
+            tick()
+            reserve_whole(role, remaining_roles, remaining_samples)
+            row['attempted'] = True
+            os.rmdir(path.name, dir_fd=fds[parent_role])
+            row['after'] = {}; snapshot(path, row['after'])
+            need(row['after']['exists'] is False, 'actual removed selected group absence')
+        except BaseException as exc:
+            row['firstFailure'] = failure(exc, 'owned-cgroup-rmdir', path=str(path))
+            raise
+        finally:
+            # Release a removed leaf's reference before waiting for kernel dying
+            # descendants to settle; retain any close error, never retry it.
+            if row['attempted'] and row['after'] is not None and row['after'].get('exists') is False:
+                fd = fds.pop(role)
+                try:
+                    os.close(fd); row['childClosed'] = True
+                except BaseException as exc:
+                    issue(exc, 'owned-cgroup-removed-close')
     try:
         if inner is not None and type(inner.get('resources')) is dict:
             before = inner['resources'].get('before')
             if type(before) is dict and before.get('schema') == 'bw.bochs-ring3.resources.v2':
                 for role, key in (('unit', 'unitRoot'), ('controller', 'controller')):
                     row = before[key]
-                    expected = root if role == 'unit' else root / role
-                    need(row['path'] == str(expected), 'source-bound initial cleanup role path')
-                    value['known'][role] = {'path': str(expected), 'identity': row['directory']}
-            phases = inner.get('phases', [])
-            if type(phases) is list:
-                for process in phases:
-                    role = process.get('name')
-                    group = process.get('cgroupBefore')
-                    if role in allowed and type(group) is dict and type(group.get('identity')) is dict:
-                        need(group['path'] == str(root / role), 'source-bound child cleanup path')
-                        value['known'][role] = {'path': str(root / role), 'identity': group['identity']}
-        quiet = None
-        for index in range(6):
-            sample = {'ns': tick(), 'roles': {}}
-            value['samples'].append(sample)
-            top = snapshot(root)
-            sample['roles']['unit'] = top
-            if not top['exists']:
-                value['after'] = top
-                quiet = sample
-                break
-            need('unit' in value['known'] and first_five(top['identity']) ==
-                 first_five(value['known']['unit']['identity']), 'known unit identity before cleanup')
-            names = set(top['children'])
-            need(names <= allowed and names <= set(value['known']), 'no unknown cgroup cleanup role')
-            all_quiet = top['files']['cgroup.procs'] == ''
-            for role in sorted(names):
-                row = snapshot(root / role)
-                sample['roles'][role] = row
-                need(row['exists'] and not row['children'] and first_five(row['identity']) ==
-                     first_five(value['known'][role]['identity']), 'known child identity and no nested subtree')
-                all_quiet = all_quiet and row['files']['cgroup.procs'] == '' and \
-                    raw_zero(row['files']['cgroup.events'], 'populated') and \
-                    raw_zero(row['files']['cgroup.stat'], 'nr_descendants') and \
-                    raw_zero(row['files']['cgroup.stat'], 'nr_dying_descendants')
-            all_quiet = all_quiet and raw_zero(top['files']['cgroup.events'], 'populated') and \
-                raw_zero(top['files']['cgroup.stat'], 'nr_dying_descendants')
-            if all_quiet:
-                quiet = sample
-                break
-            if index < 5:
-                sleep(0.05)
-        need(quiet is not None, 'owned cgroup terminal state remains uncertain')
-        if value['after'] is None:
-            top = quiet['roles']['unit']
-            order = sorted(set(top['children']) - {'controller'})
-            if 'controller' in top['children']:
-                order.append('controller')
-            order.append('unit')
-            for role in order:
-                tick()
-                path = root if role == 'unit' else root / role
-                row = snapshot(path)
-                need(row['exists'] and not row['children'] and row['files']['cgroup.procs'] == '' and
-                     raw_zero(row['files']['cgroup.events'], 'populated') and
-                     raw_zero(row['files']['cgroup.stat'], 'nr_descendants') and
-                     raw_zero(row['files']['cgroup.stat'], 'nr_dying_descendants') and
-                     first_five(row['identity']) == first_five(value['known'][role]['identity']),
-                     'exact empty role immediately before rmdir')
-                parent_before = kernel._directory(path.parent)
-                parent_fd = child_fd = None
-                primary = None
-                journal = {'role': role, 'path': str(path), 'before': row,
-                    'parentBefore': parent_before, 'attempted': False, 'after': None,
-                    'firstFailure': None}
-                value['journal'].append(journal)
-                try:
-                    parent_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
-                    child_fd = os.open(path.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
-                                       dir_fd=parent_fd)
-                    need(first_five(identity(os.fstat(parent_fd))) == first_five(parent_before) ==
-                         first_five(kernel._directory(path.parent)) and
-                         first_five(identity(os.fstat(child_fd))) == first_five(row['identity']) ==
-                         first_five(kernel._directory(path)), 'held per-name parent/child cleanup authority')
-                    tick()
-                    need(len(canonical(value)) <= 16384, 'actual top-level cleanup budget before rmdir')
-                    journal['attempted'] = True
-                    os.rmdir(path.name, dir_fd=parent_fd)
-                    journal['after'] = snapshot(path)
-                    need(journal['after']['exists'] is False, 'rmdir actual selected role absence')
-                except BaseException as exc:
-                    primary = exc
-                    journal['firstFailure'] = failure(exc, 'owned-cgroup-rmdir')
-                    try:
-                        journal['after'] = snapshot(path)
-                    except BaseException as extra:
-                        issue(extra, 'owned-cgroup-failed-after')
-                finally:
-                    for fd in (child_fd, parent_fd):
-                        if fd is not None:
-                            try:
-                                os.close(fd)
-                            except BaseException as exc:
-                                if primary is None:
-                                    primary = exc
-                                else:
-                                    issue(exc, 'owned-cgroup-close-secondary')
-                if primary is not None:
-                    raise primary
-            value['after'] = snapshot(root)
-            need(value['after']['exists'] is False, 'complete selected root cgroup absent')
+                    need(row['path'] == str(path_of(role)), 'source-bound initial cleanup role path')
+                    value['known'][role] = {'path': str(path_of(role)), 'identity': row['directory']}
+            for process in inner.get('phases', []):
+                role, group = process.get('name'), process.get('cgroupBefore')
+                if role in allowed and type(group) is dict and type(group.get('identity')) is dict:
+                    need(group['path'] == str(path_of(role)), 'source-bound child cleanup path')
+                    value['known'][role] = {'path': str(path_of(role)), 'identity': group['identity']}
+        value['before']['unit'] = {}; snapshot(root, value['before']['unit'])
+        top = value['before']['unit']
+        if not top['exists']:
+            value['after'] = dict(top)
+        else:
+            names = top['children']
+            need('unit' in value['known'] and set(names) <= allowed and set(names) <= set(value['known']),
+                 'no unknown selected cleanup role')
+            quiet(top, names)
+            value['parentIdentity'] = kernel._directory(root.parent)
+            fds['parent'] = os.open(root.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+            need(five(identity(os.fstat(fds['parent']))) == five(value['parentIdentity']), 'held fixed global parent')
+            fds['unit'] = os.open(root.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                                  dir_fd=fds['parent'])
+            check_fd('unit')
+            for role in names:
+                fds[role] = os.open(role, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                                    dir_fd=fds['unit'])
+                check_fd(role)
+                value['before'][role] = {}; snapshot(path_of(role), value['before'][role])
+                quiet(value['before'][role], [])
+                need(number(value['before'][role]['files']['cgroup.stat'], 'nr_dying_descendants') == 0,
+                     'known child has no dying descendants before any removal')
+            order = sorted(names)
+            for index, role in enumerate(order):
+                remove(role, [*order[index + 1:], 'unit'], 6)
+                need(value['firstFailure'] is None, 'removed child close uncertainty stops further mutations')
+            settled = False
+            targets = (0, 100000000, 400000000, 1000000000, 2500000000, 4500000000)
+            previous = tick()
+            for target in targets:
+                now = tick()
+                if now < started + target:
+                    sleep((started + target - now) / 1000000000)
+                sample = {'ns': tick(), 'root': {}}
+                value['samples'].append(sample)
+                check_fd('unit'); snapshot(root, sample['root']); quiet(sample['root'], [])
+                need(sample['ns'] >= previous and len(canonical(compact_manual_stats(sample))) <= 768,
+                     'bounded ordered post-leaf root sample')
+                previous = tick()
+                if number(sample['root']['files']['cgroup.stat'], 'nr_dying_descendants') == 0:
+                    settled = True; break
+            need(settled, 'dying descendants remain at finite post-leaf limit')
+            remove('unit', [], 0)
+            value['after'] = {}; snapshot(root, value['after'])
+            need(value['after']['exists'] is False, 'complete selected unit root absent')
     except BaseException as exc:
         issue(exc, 'owned-cgroup-cleanup')
     finally:
+        if 'parent' in fds:
+            try:
+                value['parentIdentityAfter'] = identity(os.fstat(fds['parent']))
+                need(five(value['parentIdentityAfter']) == five(value['parentIdentity']) ==
+                     five(kernel._directory(root.parent)), 'held/named fixed parent after cleanup')
+            except BaseException as exc:
+                issue(exc, 'owned-cgroup-final-parent')
+        for role in reversed(tuple(fds)):
+            try:
+                os.close(fds[role])
+            except BaseException as exc:
+                issue(exc, 'owned-cgroup-final-close-' + role)
         try:
             value['endedNs'] = tick()
         except BaseException as exc:
-            value['endedNs'] = last
-            issue(exc, 'owned-cgroup-terminal-clock')
+            value['endedNs'] = last; issue(exc, 'owned-cgroup-terminal-clock')
+        if len(canonical({**base, 'manual': compact_manual_stats(value)})) + node_reserve > 16384:
+            issue(Refusal('final complete cleanup envelope cap'), 'owned-cgroup-final-wire')
     value['complete'] = value['firstFailure'] is None and not value['secondary']
-    return value
+    return compact_manual_stats(value)
 
 
 RESOURCE_FILES = ('cpu.max', 'memory.max', 'memory.swap.max', 'pids.max',
                   'cgroup.procs', 'cgroup.events', 'cgroup.stat', 'cpu.stat')
+
+
+
+class HostRuntimeStage:
+    """Transient root-owned selected library bodies; artifacts retain facts only."""
+    def __init__(self, route, env, selected, structural):
+        paths = route_paths(route, env)
+        self.path = paths['work'].with_name(paths['work'].name.removesuffix('-work') + '-host-runtime')
+        self.library = self.path / 'lib'
+        self.route, self.selected, self.structural = route, selected, structural
+        self.attempted = False
+        self.facts = {'schema': 'bw.bochs-ring3.host-runtime-stage.v1', 'route': route,
+            'path': str(self.path), 'metadataFields': list(CLEANUP_STAT_FIELDS),
+            'selected': selected, 'selectedSha256': sha256(canonical(selected)), 'created': [],
+            'parentBefore': None, 'parentAfter': None, 'directoryInitial': None,
+            'libraryDirectoryInitial': None, 'directory': None, 'libraryDirectory': None,
+            'files': {}, 'checkedAfter': None, 'lastOperation': None, 'failurePartial': None,
+            'firstFailure': None, 'secondary': [], 'complete': False}
+    @staticmethod
+    def metadata(info):
+        return [identity(info)[key] for key in CLEANUP_STAT_FIELDS]
+    def error(self, exc, phase, path):
+        item = failure(exc, phase, path=str(path))
+        if self.facts['firstFailure'] is None:
+            self.facts['firstFailure'] = item
+        elif len(self.facts['secondary']) < SECONDARY_LIMIT:
+            self.facts['secondary'].append(item)
+        for item in getattr(exc, 'bochs_secondary', []):
+            if len(self.facts['secondary']) < SECONDARY_LIMIT:
+                self.facts['secondary'].append(item)
+    def _directory(self, path, mode):
+        row = safe_root_directory(path, mode=mode)
+        return [row[key] for key in CLEANUP_STAT_FIELDS]
+    def _raise(self):
+        error = Refusal(self.facts['firstFailure']['message'])
+        error.bochs_first = self.facts['firstFailure']
+        error.bochs_secondary = self.facts['secondary']
+        error.bochs_partial = {'hostRuntime': self.facts}
+        raise error
+    def copy(self):
+        need(not self.attempted, 'host runtime staging consumed; no copy replay')
+        self.attempted = True
+        current = self.path
+        try:
+            need(os.getresuid() == os.getresgid() == (0, 0, 0), 'root-only immutable library staging')
+            need(type(self.selected) is dict and 1 <= len(self.selected) <= 128 and
+                 sum(row['bytes'] for row in self.selected.values()) <= 268435456,
+                 'finite selected transient library extent')
+            names = {}
+            for source, row in self.selected.items():
+                selected_tool_path(source)
+                need(source in self.structural['files'] and row['uid'] == row['gid'] == 0 and
+                     row['mode'] & 0o022 == 0 and row['bytes'] >= 64 and
+                     self.structural['files'][source]['fileBytes'] == row['bytes'] and
+                     self.structural['files'][source]['fileSha256'] == row['sha256'],
+                     'source-selected library structural and full-file projection')
+                structure = self.structural['files'][source]['structure']
+                name = structure['soname'] or Path(source).name
+                if Path(source).name.startswith('ld-linux-x86-64'):
+                    name = 'ld-linux-x86-64.so.2'
+                need(type(name) is str and re.fullmatch(r'[A-Za-z0-9+_.-]{1,255}', name) and
+                     name not in ('.', '..') and name not in names, 'one unique safe staged library SONAME')
+                names[name] = source
+            self.facts['parentBefore'] = self._directory(Path('/run'), 0o755)
+            os.mkdir(self.path, 0o700); self.facts['created'].append(str(self.path))
+            self.facts['directoryInitial'] = self._directory(self.path, 0o700)
+            os.mkdir(self.library, 0o700); self.facts['created'].append(str(self.library))
+            self.facts['libraryDirectoryInitial'] = self._directory(self.library, 0o700)
+            for name, source in sorted(names.items()):
+                current = self.library / name
+                self.facts['lastOperation'] = {'operation': 'source-read', 'path': source}
+                raw, observed = read_regular(source, 134217728, minimum=64)
+                chosen = self.selected[source]
+                need(len(raw) == chosen['bytes'] and sha256(raw) == chosen['sha256'] and
+                     observed['before']['mode'] == chosen['mode'], 'actual library source bytes equal selection')
+                value = {'sourcePath': source, 'member': str(current),
+                    'sourceBefore': [observed['before'][key] for key in CLEANUP_STAT_FIELDS],
+                    'sourceAfter': [observed['after'][key] for key in CLEANUP_STAT_FIELDS],
+                    'sourceNamed': [observed['named'][key] for key in CLEANUP_STAT_FIELDS],
+                    'bytesCopied': 0, 'copiedSha256': None, 'readback': None,
+                    'publicationAttempted': False, 'published': None, 'named': None,
+                    'targetAfterFailure': None, 'structure': None, 'firstFailure': None, 'secondary': []}
+                self.facts['files'][source] = value
+                self.facts['lastOperation'] = {'operation': 'exclusive-copy', 'path': str(current)}
+                fd = None
+                primary = None
+                try:
+                    fd = os.open(current, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+                    self.facts['created'].append(str(current))
+                    os.fchmod(fd, 0o600)
+                    before = os.fstat(fd)
+                    need(stat.S_ISREG(before.st_mode) and before.st_uid == before.st_gid == 0 and
+                         before.st_nlink == 1 and before.st_size == 0, 'new private single-link library target')
+                    for offset in range(0, len(raw), 65536):
+                        part = raw[offset:offset + 65536]
+                        count = os.write(fd, part)
+                        need(type(count) is int and 0 <= count <= len(part), 'bounded library copy count')
+                        value['bytesCopied'] += count
+                        need(count == len(part), 'library short write refuses publication')
+                    os.fsync(fd)
+                    value['copiedSha256'] = sha256(raw)
+                except BaseException as exc:
+                    primary = exc
+                    value['firstFailure'] = failure(exc, 'host-library-copy', path=str(current))
+                    if fd is not None:
+                        try:
+                            value['targetAfterFailure'] = self.metadata(os.fstat(fd))
+                        except BaseException as extra:
+                            value['secondary'].append(failure(extra, 'host-library-failed-stat'))
+                finally:
+                    if fd is not None:
+                        try:
+                            os.close(fd)
+                        except BaseException as exc:
+                            if primary is None:
+                                primary = exc; value['firstFailure'] = failure(exc, 'host-library-copy-close')
+                            else:
+                                value['secondary'].append(failure(exc, 'host-library-copy-close'))
+                if primary is not None:
+                    primary.bochs_secondary = value['secondary']
+                    raise primary
+                again, reopened = read_regular(current, 134217728, minimum=64)
+                need(again == raw and sha256(again) == chosen['sha256'], 'independent full staged library reopen/hash')
+                structural = sparse_elf(again)
+                need(structural == self.structural['files'][source], 'exact current staged structural ranges')
+                value['structure'] = structural['structure']
+                value['readback'] = {'bytes': len(again), 'sha256': sha256(again),
+                    **{key: [reopened[key][field] for field in CLEANUP_STAT_FIELDS]
+                       for key in ('before', 'after', 'named')}}
+                value['publicationAttempted'] = True
+                self.facts['lastOperation'] = {'operation': 'readonly-publication', 'path': str(current)}
+                publish_root_mode(current, 0o555 if name == 'ld-linux-x86-64.so.2' else 0o444)
+                value['published'] = self.metadata(os.lstat(current))
+                value['named'] = self.metadata(os.stat(current, follow_symlinks=False))
+                need(value['published'] == value['named'] and value['published'][:2] ==
+                     value['readback']['before'][:2], 'same immutable library after publication')
+            publish_root_mode(self.library, 0o555, directory=True)
+            self.facts['libraryDirectory'] = self._directory(self.library, 0o555)
+            publish_root_mode(self.path, 0o555, directory=True)
+            self.facts['directory'] = self._directory(self.path, 0o555)
+            self.facts['parentAfter'] = self._directory(Path('/run'), 0o755)
+            need(self.facts['parentBefore'][:5] == self.facts['parentAfter'][:5] and
+                 len(canonical(self.facts)) <= 1048576, 'bounded host runtime stage and fixed parent')
+            self.facts['complete'] = True
+        except BaseException as exc:
+            self.facts['failurePartial'] = getattr(exc, 'bochs_partial', None)
+            self.error(exc, 'host-runtime-staging', (self.facts['lastOperation'] or {}).get('path', current))
+            if current != self.path and str(current) in self.facts['created']:
+                try:
+                    target = self.metadata(os.lstat(current))
+                    for row in self.facts['files'].values():
+                        if row['member'] == str(current):
+                            row['targetAfterFailure'] = target
+                except BaseException as extra:
+                    self.error(extra, 'host-runtime-failed-target-stat', current)
+        if self.facts['firstFailure'] is not None:
+            self._raise()
+        return self.facts
+    def verify_after(self):
+        need(self.facts['complete'], 'complete immutable host library stage before after-check')
+        checks = {}
+        self.facts['checkedAfter'] = checks
+        current = self.path
+        try:
+            for source, row in self.facts['files'].items():
+                current = Path(row['member'])
+                self.facts['lastOperation'] = {'operation': 'after-full-readback', 'path': str(current)}
+                raw, observed = read_regular(current, 134217728, minimum=64)
+                need(len(raw) == self.selected[source]['bytes'] and sha256(raw) == self.selected[source]['sha256'] and
+                     [observed['before'][key] for key in CLEANUP_STAT_FIELDS] == row['published'],
+                     'same fully hashed immutable library after work')
+                structure = sparse_elf(raw)
+                need(structure == self.structural['files'][source], 'same exact structural library after work')
+                checks[source] = {'bytes': len(raw), 'sha256': sha256(raw),
+                    **{key: [observed[key][field] for field in CLEANUP_STAT_FIELDS]
+                       for key in ('before', 'after', 'named')}, 'structure': structure['structure']}
+            need(self._directory(self.path, 0o555)[:5] == self.facts['directory'][:5] and
+                 self._directory(self.library, 0o555)[:5] == self.facts['libraryDirectory'][:5],
+                 'same host runtime staging directories after work')
+        except BaseException as exc:
+            self.facts['failurePartial'] = getattr(exc, 'bochs_partial', None)
+            self.error(exc, 'host-runtime-after-readback', current)
+            self.facts['complete'] = False
+            self._raise()
+        return self.facts
 
 
 class LiveOps:
@@ -3611,6 +4176,20 @@ class LiveOps:
              'verified staged Node before selected tool data inventory')
         self.last_graph = observe_toolchain(node_elf=self.stage.facts['elf'])
         return self.last_graph
+    def elf_metadata(self, graph):
+        need(self.stage is not None and self.stage.sparse_node is not None,
+             'actual staged Node structural input before library metadata')
+        result = {'schema': 'bw.bochs-ring3.runtime-elf-metadata.v1',
+                  'files': {NODE_PATH: self.stage.sparse_node}, 'rawBytes': 0}
+        self.structural_file_bytes_read = 0
+        for path in sorted(runtime_elf_candidates(graph)):
+            raw, _observed = read_regular(path, 134217728, minimum=64)
+            self.structural_file_bytes_read += len(raw)
+            need(len(raw) == graph['files'][path]['bytes'] and sha256(raw) == graph['files'][path]['sha256'],
+                 'current selected system library full-file readback before sparse capture')
+            result['files'][path] = sparse_elf(raw)
+        result['rawBytes'] = sum(row['bytes'] for value in result['files'].values() for row in value['ranges'])
+        return admit_runtime_elf_metadata(result, graph, self.stage.facts)
     def notices(self):
         need(self.last_graph is not None, 'notice identities selected by current tool graph')
         result = {}
@@ -3734,8 +4313,9 @@ class LiveOps:
         facts = self._group(self.unit_path)
         return {'path': str(self.unit_path), 'exists': True, 'errno': None,
                 'identity': row, 'files': facts['files'], 'children': facts['children']}
-    def cleanup(self, inner=None):
-        return cleanup_owned_cgroups(self.route, self.env, inner, self.kernel)
+    def cleanup(self, inner=None, *, outer=None):
+        plan = node_cleanup_wire_plan(self.route, self.env, inner)
+        return cleanup_owned_cgroups(self.route, self.env, inner, self.kernel, outer_base=outer, input_plan=plan)
     def node_cleanup(self, inner):
         return cleanup_node_stage(self.route, self.env, inner)
     def close(self):

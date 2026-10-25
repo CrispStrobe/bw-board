@@ -134,6 +134,15 @@ class InventoryEdges:
     def toolchain(self):
         self.calls.append(('toolchain',))
         return producer.observe_toolchain(read=self.read, resolve=lambda p, _a, _d: p)
+    def elf_metadata(self, graph):
+        raw = synthetic_elf()
+        node = producer.sparse_elf_from_reader(producer.NODE_BYTES,
+            lambda offset, count: raw[offset:offset + count], producer.NODE_SHA256)
+        files = {producer.NODE_PATH: node}
+        for path in producer.runtime_elf_candidates(graph):
+            files[path] = producer.sparse_elf(self.files[path])
+        return {'schema': 'bw.bochs-ring3.runtime-elf-metadata.v1', 'files': files,
+            'rawBytes': sum(row['bytes'] for value in files.values() for row in value['ranges'])}
     def node_stage(self):
         self.calls.append(('node-stage',))
         return synthetic_node_stage()
@@ -168,10 +177,10 @@ class InventoryEdges:
     def observer(self, value):
         return producer.observer_facts(value, {'BW_EXPECTED_HEAD': '1' * 40},
                                       pid=100, uid=0, gid=0, started_ns=1, ended_ns=2)
-    def cleanup(self, inner):
+    def cleanup(self, inner, *, outer=None):
         kernel = SimpleNamespace(_directory=mock.Mock(side_effect=FileNotFoundError(2, 'authored absent unit')))
         return producer.cleanup_owned_cgroups('toolchain', {'GITHUB_RUN_ID': '123456',
-            'GITHUB_RUN_ATTEMPT': '1'}, inner, kernel, clock=iter((1, 2, 3)).__next__)
+            'GITHUB_RUN_ATTEMPT': '1'}, inner, kernel, outer_base=outer, clock=iter((1, 2, 3)).__next__)
     def unit(self, unit):
         self.calls.append(('unit', unit))
         return {'path': '/sys/fs/cgroup/system.slice/' + unit, 'exists': False,
@@ -275,11 +284,11 @@ class InventoryControls(unittest.TestCase):
             with self.assertRaises(ValueError):
                 producer.dispatch('toolchain', raw, event, {**env, 'GITHUB_ACTOR': 'other'}, factory)
         factory.assert_not_called()
-    def test_real_collect_finalize_pack_fourteen_roles_with_manual_cleanup(self):
+    def test_real_collect_finalize_pack_fifteen_roles_with_sparse_and_manual_cleanup(self):
         _request, _raw, _event, _env, edges, value, outside, roles = inventory_sample()
         self.assertTrue(value['complete'])
         self.assertEqual(outside['cleanupExitCode'], 0)
-        self.assertEqual(len(roles), 14)
+        self.assertEqual(len(roles), 15)
         self.assertFalse(any(value['authority'].values()))
         self.assertEqual(len(value['observations']['notices']), 7)
         self.assertEqual([call[0] for call in edges.calls].count('toolchain'), 2)
@@ -599,6 +608,84 @@ class NodeStageControls(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(facts['targetAfterFailure'][2]), 0o555)
 
 
+class HostStageControls(unittest.TestCase):
+    def exercise(self, fault=None, *, after=False):
+        raw = SparseElfControls.raw()
+        source = '/usr/lib/x86_64-linux-gnu/libauthored.so'
+        row = producer.sparse_elf(raw)
+        selected = {source: {'bytes': len(raw), 'sha256': producer.sha256(raw), 'mode': 0o100755,
+            'uid': 0, 'gid': 0, 'elf': {k: v for k, v in row['structure'].items() if k != 'soname'}}}
+        structural = {'schema': 'bw.bochs-ring3.runtime-elf-metadata.v1', 'files': {source: row},
+                      'rawBytes': sum(x['bytes'] for x in row['ranges'])}
+        env = {'GITHUB_RUN_ID': '123456', 'GITHUB_RUN_ATTEMPT': '1'}
+        stage = producer.HostRuntimeStage('build', env, selected, structural)
+        kernel = NodeKernel(stage.path, b'authored unused cache data')
+        for path in ('/usr', '/usr/lib', '/usr/lib/x86_64-linux-gnu'):
+            kernel.add(path, 0o40755)
+        kernel.add(source, 0o100755, raw)
+        real_write, real_read, real_close, real_chmod = kernel.write, kernel.read, kernel.close, kernel.chmod
+        def write(fd, data):
+            if fault == 'short' and kernel.fds[fd].endswith('/libauthored.so'):
+                return real_write(fd, data[:-1])
+            return real_write(fd, data)
+        def read(fd, count):
+            if fault == 'read-close' and kernel.fds[fd] == source:
+                raise OSError('first-host-library-source-read')
+            return real_read(fd, count)
+        def close(fd):
+            path = kernel.fds[fd]
+            real_close(fd)
+            if fault == 'read-close' and path == source:
+                raise OSError('secondary-host-library-source-close')
+        def chmod(fd, mode):
+            path = kernel.fds[fd]
+            real_chmod(fd, mode)
+            if fault == 'publish' and path.endswith('/libauthored.so') and mode == 0o444:
+                raise OSError('publication-applied-before-error')
+        kernel.write, kernel.read, kernel.close, kernel.chmod = write, read, close, chmod
+        with kernel.hooks():
+            try:
+                stage.copy()
+                if after:
+                    stage.verify_after()
+            except ValueError:
+                if fault is None:
+                    raise
+            # One-copy boundary must remain consumed after success or failure.
+            events = len(kernel.events)
+            with self.assertRaisesRegex(ValueError, 'consumed'):
+                stage.copy()
+            self.assertEqual(len(kernel.events), events)
+        return stage.facts, kernel, source
+    def test_genuine_transient_stage_full_reopen_and_readonly_publication(self):
+        facts, kernel, source = self.exercise(after=True)
+        self.assertTrue(facts['complete'])
+        row = facts['files'][source]
+        self.assertEqual(row['bytesCopied'], len(SparseElfControls.raw()))
+        self.assertEqual(row['readback']['sha256'], row['copiedSha256'])
+        self.assertEqual(row['published'][2:7], [0o100444, 0, 0, 1, len(SparseElfControls.raw())])
+        self.assertEqual(facts['checkedAfter'][source]['sha256'], row['copiedSha256'])
+        self.assertEqual(facts['directory'][2], 0o40555)
+        self.assertNotIn(b'\xff' * 20, producer.canonical(facts))
+    def test_short_copy_no_readonly_or_execution_authority(self):
+        facts, _kernel, source = self.exercise('short')
+        self.assertFalse(facts['complete'])
+        self.assertEqual(facts['files'][source]['bytesCopied'], len(SparseElfControls.raw()) - 1)
+        self.assertFalse(facts['files'][source]['publicationAttempted'])
+        self.assertEqual(facts['files'][source]['targetAfterFailure'][6], len(SparseElfControls.raw()) - 1)
+    def test_source_read_primary_and_close_secondary_are_retained(self):
+        facts, _kernel, _source = self.exercise('read-close')
+        self.assertEqual(facts['firstFailure']['message'], 'first-host-library-source-read')
+        self.assertIn('secondary-host-library-source-close', [r['message'] for r in facts['secondary']])
+        self.assertEqual(facts['failurePartial']['path'], '/usr/lib/x86_64-linux-gnu/libauthored.so')
+    def test_applied_publication_failure_records_actual_mode(self):
+        facts, _kernel, source = self.exercise('publish')
+        self.assertEqual(facts['firstFailure']['message'], 'publication-applied-before-error')
+        self.assertTrue(facts['files'][source]['publicationAttempted'])
+        self.assertEqual(facts['files'][source]['targetAfterFailure'][2], 0o100444)
+        self.assertFalse(facts['complete'])
+
+
 class NodeCleanupControls(unittest.TestCase):
     def sample(self, change=None):
         facts, kernel = NodeStageControls().exercise()
@@ -653,6 +740,58 @@ class NodeCleanupControls(unittest.TestCase):
             self.assertFalse(value['complete'])
             self.assertIsNotNone(value['firstFailure'])
             self.assertEqual([x for x in events if x[0] in ('chmod', 'unlink', 'rmdir')], [])
+
+
+class SparseElfControls(unittest.TestCase):
+    @staticmethod
+    def raw(abi=0):
+        raw = bytearray(b'\xff' * 512)
+        raw[:64] = bytes(64)
+        raw[:16] = b'\x7fELF\x02\x01\x01' + bytes((abi,)) + bytes(8)
+        struct.pack_into('<HHI', raw, 16, 3, 62, 1)
+        struct.pack_into('<Q', raw, 32, 64)
+        struct.pack_into('<HHH', raw, 52, 64, 56, 3)
+        struct.pack_into('<IIQQQQQQ', raw, 64, 1, 5, 0, 0x400000, 0, 512, 512, 4096)
+        struct.pack_into('<IIQQQQQQ', raw, 120, 2, 6, 272, 0x400110, 0, 96, 96, 8)
+        interp = b'/lib64/ld-linux-x86-64.so.2\0'
+        struct.pack_into('<IIQQQQQQ', raw, 176, 3, 4, 232, 0x4000e8, 0, len(interp), len(interp), 1)
+        raw[232:232 + len(interp)] = interp
+        for index, pair in enumerate(((5, 0x400180), (10, 64), (1, 1), (14, 16), (0, 0))):
+            struct.pack_into('<qQ', raw, 272 + index * 16, *pair)
+        raw[384:448] = bytes(64)
+        raw[385:395] = b'libc.so.6\0'
+        raw[400:415] = b'libauthored.so\0'
+        return bytes(raw)
+    def test_exact_sparse_requests_exclude_padding_symbols_and_executable_body(self):
+        raw = self.raw()
+        observed = producer.sparse_elf(raw)
+        self.assertEqual(observed['structure']['soname'], 'libauthored.so')
+        self.assertEqual({k: v for k, v in observed['structure'].items() if k != 'soname'},
+                         producer.elf_facts(raw))
+        self.assertEqual([(r['offset'], r['bytes']) for r in observed['ranges']],
+                         [(0, 260), (272, 80), (385, 10), (400, 15)])
+        for row in observed['ranges']:
+            payload = base64.b64decode(row['base64'], validate=True)
+            self.assertEqual(payload, raw[row['offset']:row['offset'] + row['bytes']])
+            self.assertEqual(producer.sha256(payload), row['sha256'])
+        self.assertEqual(observed['fileSha256'], producer.sha256(raw))
+        self.assertLess(sum(r['bytes'] for r in observed['ranges']), len(raw))
+    def test_selected_abi_scope_and_missing_structural_byte_refuse(self):
+        for abi in (0, 3): self.assertEqual(producer.sparse_elf(self.raw(abi))['structure']['class'], 'ELF64')
+        with self.assertRaises(ValueError): producer.sparse_elf(self.raw(9))
+        raw = self.raw()
+        with self.assertRaisesRegex(ValueError, 'complete actual structural'):
+            producer.sparse_elf_from_reader(len(raw),
+                lambda offset, count: raw[offset:offset + count - (offset == 272)], producer.sha256(raw))
+    def test_authored_inputs_are_only_unchanged_rom_and_fixture_not_cpu_results(self):
+        rom, fixture = producer.authored_inputs()
+        self.assertEqual(len(rom), 65536)
+        self.assertEqual(producer.sha256(rom), 'd1aa0e35a81c68bc61621309589c8f4afa12ce2e7369af43879c718d109e2529')
+        self.assertEqual(producer.sha256(fixture), 'd222aa19e62acc0a95f19306fe9b9a5fef70a04e2b1112293cf70ac883ce22df')
+        compressed = base64.b64decode(producer.AUTHORED_INPUT_ZLIB_B64)
+        with mock.patch.object(producer, 'AUTHORED_INPUT_ZLIB_B64',
+                base64.b64encode(compressed + b'unknown trailing data').decode()), self.assertRaises(ValueError):
+            producer.authored_inputs()
 
 
 class CliControls(unittest.TestCase):
