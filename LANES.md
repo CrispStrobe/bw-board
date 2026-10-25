@@ -36,6 +36,8 @@ behavior from physical LM741 supply/bias fidelity and records the bounded
 assessment. Consumer adoption follows the qualified supplier landing, coordinated
 with the later CUI instrument work in one purposeful package wave. Merge this
 claim before implementation; preserve every other owner's existing section.
+Qualification is prepared on a labelled documentation checkpoint before the
+source candidate is published, so the final source head has one thorough event.
 
 Base a2b4ff73; bounded qualification repair for the same owner's PR665.
 Its original CI passes the admitted47 pulse comparisons but fails the unchanged
