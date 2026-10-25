@@ -1,9 +1,17 @@
-# Bochs CPU3 Ring 3 reference ownership proposal
+# Bochs CPU3 Ring 3 reference status
 
-Status: docs-only claim; source implementation, build and reference execution
-are not selected or qualified. The exact envelope is the
-[new Bochs claim in LANES.md](../LANES.md). Preserve the separately owned
-same-job V3 cleanup lane and every consumed event/original.
+Status: source remains in unmerged
+[PR694](https://github.com/CrispStrobe/bw-board/pull/694). Source bc016f65 passed
+all enabled automatic CI, but its separately consumed Metadata V3 event failed
+before complete inventory at the unchanged no-RPATH/RUNPATH guard. The
+original lacks the offending selected file and tag/value; its partial remains
+refused. No Build/Reference or compiler/guest qualification follows. Preserve
+all V1/V2/V3 originals, labels and historical reader verdicts.
+
+The next [bounded ELF failure-attribution task](I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md)
+is docs-only now. It collects exact evidence under the unchanged guard;
+any later dependency-resolution and licensing policy decision is separate.
+Preserve the separately owned same-job V3 cleanup lane and every consumed event.
 
 The existing authored fixture expects descriptor accessed bits to be written
 when its kernel/user code selectors load. The selected
@@ -48,8 +56,9 @@ needs separate source/resource admission and a genuine bounded capture.
 Default VGA/CMOS/share resources, if required, must be explicitly disabled or
 reviewed and pinned with notices; no fallback download or guessed absence.
 
-Next: merge this exact docs claim; implement only its named new paths in an
-isolated checkout, keep guards false, and prove connected reader/source/
-framing/failure/resource controls. Fresh source CI and independent root
-admission precede any new build or reference event. Actual result, whole OS,
-strict 386DX physical accuracy, timing/RTx and release approval remain false.
+Next: follow the ELF attribution task and its ownership/diagnostic-wire gates.
+No new code, event, compiler or guest is selected by this checkpoint. The
+positive Build/Reference chain remains blocked until separately reviewed
+policy/source and successful metadata admission at its frozen source head.
+Actual result, whole OS, strict 386DX physical accuracy, timing/RTx, release
+and blanket licence approval remain unestablished.
