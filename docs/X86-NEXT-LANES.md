@@ -3597,19 +3597,34 @@ independent packet reading. This proves source wiring only. The retained V2
 QEMU disagreement is unchanged, and no V3 event or result exists. Independent
 source review and exact-head checks precede any new one-shot selection.
 
-### Bochs CPU3 Ring 3 reference build/capture claim
+### Bochs CPU3 Ring 3 reference: consumed metadata V1 and V2 amendment
 
-The [separate Bochs reference proposal](I80386-BOCHS-RING3-REFERENCE.md) is
-docs-only pending claim merge. It preserves the authored ROM/goldens and
-consumed V2 strict refusal while preparing a pinned LGPL CPU3 standalone
-reference with real CS accessed-bit writes. No source/build/event or new
-result is authorized by this checkpoint. The existing V3 outside cleanup
-lane remains independently owned and cannot erase the QEMU disagreement.
+The merged [Bochs reference claim](../LANES.md) continues as unmerged
+[PR694 source](https://github.com/CrispStrobe/bw-board/pull/694). Its selected
+[metadata V1 run](https://github.com/CrispStrobe/bw-board/actions/runs/40159033328)
+failed before reading/copying Node bytes: cache DATA uid 1001/gid 1000 differs
+from trusted caller uid 1001/gid 1001. The unchanged positive reader refuses
+the ten-role partial packet; preserve that refusal and spent event. The
+created-empty root-directory facts lack a live named/terminal cleanup proof.
+No Build or Reference event is selected and no compiler/guest result follows.
 
-After claim merge: source-frozen false guards and connected independent-reader
-controls; all enabled source checks; separately admitted hosted build/source/
-manifest; then one distinct runtime selection. Root admits build metadata and
-the sole source/build-job log before the runtime job's sole Build ZIP GET;
-retain that exact archive inside the result for original-only rederivation.
-Preserve all stdout including Bochs header, one unchanged 1730-byte frame,
-actual checkpoint stop/reap and cleanup facts. No physical 386/RTx conclusion.
+The docs-only metadata V2 amendment must merge before code. It claims only
+the existing Bochs producer/reader/controls/README, workflow/wrapper, reference
+guide and own LANES/status sections. Use exact source-fixed cache DATA
+path/version/owner/mode/bytes/SHA separately from protected caller credentials;
+retain verified exclusive root staging before executable publication. V2 gets
+new request/schema/job/label/artifact/variable/marker identities with guards
+initially FALSE; old V1 execution closes and its reader/originals remain held.
+Negative cleanup requires new held/named identity and bounded empty census
+before any mutation, with the whole 16 KiB future output reserved. A partial
+failed packet cannot become complete metadata or success.
+
+Next: merge the narrow docs amendment, implement and independently review
+inactive V2 plus coherent mocked OS/packet controls, then qualify every
+enabled final-head check. Only a new separately admitted metadata V2 event
+and original qualification can supply identities for Build/Reference on that
+same frozen source head. Keep the authored ROM/goldens, complete CPU wire,
+source/ELF/resource/cleanup limits and asset-v2 distribution boundary unchanged.
+Root still admits Build metadata/manifest and its sole job log before the
+Reference job's sole Build ZIP GET; retain the exact nested archive for
+original-only rederivation. No physical 386/RTx or blanket licence claim.

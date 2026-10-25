@@ -6930,3 +6930,90 @@ Then require all enabled exact-head checks, separately reviewed source/build
 and runtime admissions, and at most one new event per selected contract.
 Census presence remains distinct from source/binary identity and result;
 historical census observations and every other owner/route remain held.
+
+### Metadata V2 cache DATA amendment — 2026-10-25
+
+Owner: the same Codex x86 reference lane. This docs-only amendment continues
+the unmerged [PR694 source](https://github.com/CrispStrobe/bw-board/pull/694);
+it does not imply that those producer files are already on master. Merge
+this amendment before implementation. Its source scope is exactly these nine
+already-owned paths, restricted to the Bochs metadata/staging boundary:
+
+- `scripts/i80386-bochs-ring3-reference/run.py`
+- `scripts/i80386-bochs-ring3-reference/reader.py`
+- `scripts/i80386-bochs-ring3-reference/controls.py`
+- `scripts/i80386-bochs-ring3-reference/README.md`
+- `.github/workflows/i80386-bochs-ring3-reference.yml`
+- `test/i80386-bochs-ring3-reference.test.mjs`
+- `docs/I80386-BOCHS-RING3-REFERENCE.md`
+- only this Bochs section of `LANES.md`
+- only this reference status in `docs/X86-NEXT-LANES.md`
+
+The selected [metadata V1 run](https://github.com/CrispStrobe/bw-board/actions/runs/40159033328)
+failed before reading or copying Node bytes. Its source treated the cache
+DATA inode's owner as root or the trusted caller pair. Retained cache DATA
+was uid 1001/gid 1000/mode 0100777, while the caller was uid 1001/gid 1001.
+The ten-role partial original remains refused by the unchanged sixteen-role
+positive reader. Retain the first failure, zero byte/hash observations and
+cleanup uncertainty. The original records a created empty root-owned stage
+directory through initial/failure facts, but has no live named-directory or
+terminal absence proof. Do not upgrade that evidence to successful cleanup.
+V1 variables, marker, spent label, source and original-reader semantics stay
+held; do not repeat its event or relabel it as V2.
+
+Introduce an explicit source-fixed cache DATA policy for only Node 22.23.3 at
+`/opt/hostedtoolcache/node/22.23.3/x64/bin/node`: regular mode 0100777,
+uid 1001/gid 1000, one link, exactly 124827920 bytes and SHA256
+`fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48`.
+The V1 attempt did not observe that full hash. This tuple is an input DATA
+policy, not executable ownership. Refuse other owners/modes or changed
+path/type/link/size/identity; never use an arbitrary-owner fallback or a
+request-controlled policy. Authenticate caller credentials independently
+from the protected bootstrap's actual `id -u`/`id -g` and raw process/preexec
+facts. Do not derive caller, child or staged identities from cache ownership.
+
+Keep the bounded exclusive root-owned 0700 directory and 0600 file, full
+once-only copy/hash, independent complete reopen/hash and immutable
+held/named readbacks before publishing the same root-owned 0555 executable
+and directory. Execute only that staged path; cache DATA never executes.
+Version this as `bw.bochs-ring3.node-stage.v2` with an independent predicate
+and reader; keep V1 predicates/readers unchanged. The still-unselected Build
+and Reference must explicitly bind the new metadata and V2 stage on the
+same final source head. Their runtime/component, source, sparse ELF, resource
+and official joins remain mandatory. No source pin or expected byte changes.
+
+Use a distinct metadata V2 job `bochs-ring3-toolchain-inventory-v2`, label
+`x86-bochs-ring3-toolchain-inventory-v2`, artifact
+`i80386-bochs-ring3-toolchain-inventory-v2-originals`, request schema
+`bw.bochs-ring3.toolchain-request.v2`, original schema
+`bw.bochs-ring3.toolchain-original.v2`, new variables
+`BW_BOCHS_RING3_TOOLCHAIN_V2_REQUEST_{SHA256,B64}` and SHA-only marker
+`BW_BOCHS_RING3_TOOLCHAIN_V2_REQUEST_SHA256`. Version its unit/work/stage
+identities to V2. Disable the old V1 execution guard; an old label cannot
+reach V2. A retained disabled V1 job plus V2/Build/Reference requires an exact
+new four-job roster. New V2 guards start FALSE. Arming, request selection and
+each official once-only intake require separate review after every enabled
+exact-head source check succeeds. Build/Reference remain unselected.
+
+Separate positive cache admission from cleanup authority. A versioned
+negative cleanup plan may remove only an independently authenticated
+source-created empty/private/published stage. Capture fresh held and named
+parent/directory/member identity plus a bounded exact empty/member census
+before any effect. Retained initial creation alone is insufficient. Unknown
+member/identity, mode/owner drift or missing live proof refuses without
+guessed removal. Preserve the complete prospective Node/library/manual/outer
+error and close journal reservation within 16 KiB before the first cleanup
+mutation. Retain first/secondary failures and terminal observations. A
+negative reader may report bounded failed-attempt facts, never complete
+metadata, executable authority or success from a partial packet.
+
+Require genuine mocked-OS copy/finalizer-to-independent-reader controls with
+caller 1001:1001 versus cache DATA 1001:1000, full byte/hash/readback joins,
+all wrong-owner/mode/credential and coherent packet cuts, partial/empty-stage
+cleanup, first/close ordering and zero effects on unknown identity or budget
+refusal. Counterfactual caller-GID admission and arbitrary-owner acceptance
+must fail controls. Preserve all existing assertions, thresholds, limits,
+sixty-one pure controls, ordinary census and absence checks. No CPU, fixture,
+golden, package, dependency pin, library-distribution or other owner edits.
+No census row change is claimed. This docs amendment grants no compiler,
+guest, architectural, whole-host, physical or licence-clearance result.
