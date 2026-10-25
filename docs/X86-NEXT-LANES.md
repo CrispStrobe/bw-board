@@ -3609,11 +3609,20 @@ file/role or exact tag/value. Node staging and terminal cleanup observations
 cannot promote failed metadata. All three metadata attempts are spent;
 Build/Reference remain unselected and unqualified.
 
-The docs-only [ELF failure-attribution task](I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md)
+The merged [ELF failure-attribution task](I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md)
 keeps the strict guard, source/CPU/fixture/pins and every cap unchanged. Next:
-merge the ownership checkpoint, review an inactive diagnostic wire/source with
+review the inactive diagnostic source with
 connected independent negative-reading controls, then qualify its exact head
 before any separately admitted metadata-only event. Attribute new observations
 without rewriting V3 history. A tag may be legitimate default layout, but
 policy acceptance needs separate exact dependency-resolution/licensing review.
 No allowlist, compiler/guest or architectural approval is established here.
+
+The distinct negative-only `toolchain-elf-attribution-v1` source candidate has
+producer, independent-reader and sixth-job guards FALSE. V3 execution is closed;
+old readers and five-job positive adapters remain held. The new twelve-role
+packet preserves typed failed prefixes and exact structural tag/string offsets.
+A present empty tag still refuses and a guard failure remains a failed job.
+Whole-file SHA is reported readback only; range digests/values are independently
+checked. No new event or positive chain is authorized; fresh source qualification
+and separate root admission remain pending.

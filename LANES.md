@@ -6931,6 +6931,25 @@ and runtime admissions, and at most one new event per selected contract.
 Census presence remains distinct from source/binary identity and result;
 historical census observations and every other owner/route remain held.
 
+
+Claim693 merged before implementation. The source candidate now has separate
+metadata, Build and Reference routes and standalone original readers. Their
+source guards are armed; all requests/events remain unselected. Asset-v2 excludes system-library and Node
+bodies from distributed runtime bundles, retaining exact structural ELF ranges
+and observed full-file hashes with per-job read-only staging. Complete selected
+Bochs/VGA corresponding sources and notices remain in the bundle. Connected
+manufactured 31-role Build and 32-role Reference envelopes test the genuine
+collectors/finalizer, source/resource/cleanup and standalone original-reader joins;
+they are not compiler, guest, host or architectural results. Source review and
+all final-head checks precede any separately admitted event. The ordinary suite
+adds no optional oracle input, so existing census definitions and observations
+remain unchanged. Other owners and the consumed QEMU disagreement stay held.
+
+The final source head must remain fixed for metadata, Build and Reference;
+each event needs its own frozen executing workflow, canonical request and
+independent admission after every enabled final-head source check succeeds.
+Arming is source availability only and grants no actual approval.
+
 ### Metadata V2 cache DATA amendment — 2026-10-25
 
 Owner: the same Codex x86 reference lane. This docs-only amendment continues
@@ -7081,6 +7100,18 @@ Reference's sole Build ZIP GET and nested-copy audit. No compiler, guest,
 architectural, whole-host, physical/RTx or blanket licence approval follows.
 
 
+Historical bc016f65 checkpoint: V3 claim696 merged before source arming.
+Its metadata and current Build/Reference V3 guards were TRUE for source
+qualification; V1/V2 execution was closed.
+The five exact GCC13 internal roles use the separately versioned libexec
+profile without widening old roots or producer/reader semantics. Current
+Build/Reference CLI modes require explicit `--profile current-v3`, including
+service work/status/finish; metadata rejects a profile. Full raw official
+metadata uses five source jobs, while historical V2 four-job readers remain
+held. Source-only controls and independent readers must close the genuine
+metadata16/Build31/Reference32 chain; review this arming delta before public source qualification.
+No new event, compiler/guest result, pin, CPU/golden, cap or census change follows.
+
 ### Bochs metadata V3 checkpoint and ELF failure attribution — 2026-10-25
 
 Owner: the same Codex x86 reference lane, continuing unmerged
@@ -7102,3 +7133,14 @@ original re-GET, package installation, executed tool discovery, guard relaxation
 or compilation.
 Exact tags may inform a later separately scoped dependency/licensing policy
 review; do not infer either blanket acceptance or permanent rejection now.
+
+Claim697 merged before the inactive ELF attribution continuation. Its distinct
+producer/reader/job guards remain FALSE; spent V3 live execution is retired.
+The source-selected read prefix and exact ELF tag/value/offset bytes are retained
+under the unchanged strict guard and caps. Twelve finalized roles and manifest
+capture states preserve honest earlier partials; unavailable is not unexecuted.
+Historical functions/readers and current positive adapters stay held. Structural
+range digests are independently checked; coherent whole-file SHA without its
+body remains reported-only. Source review/qualification and separate root
+admission precede any diagnostic event. No positive Build/Reference or policy
+allowlist is selected.

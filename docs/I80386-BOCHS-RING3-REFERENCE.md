@@ -9,7 +9,8 @@ refused. No Build/Reference or compiler/guest qualification follows. Preserve
 all V1/V2/V3 originals, labels and historical reader verdicts.
 
 The next [bounded ELF failure-attribution task](I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md)
-is docs-only now. It collects exact evidence under the unchanged guard;
+has merged ownership and an inactive source candidate. It collects exact
+evidence under the unchanged guard;
 any later dependency-resolution and licensing policy decision is separate.
 Preserve the separately owned same-job V3 cleanup lane and every consumed event.
 
@@ -38,6 +39,14 @@ build bounds are one CPU, 2 GiB, no swap, 64 tasks, 900-second child, 960-second
 outer and 20-minute job. They are not demonstrated sufficient. No local build
 or guest is authorized by this leaf.
 
+Treat the selected Node toolcache as input data. Before executing Node, make
+one owned, read-only stage copy and verify its bytes, identity and readback;
+retain the fixed copy, resource-limit and cleanup facts. Admit the compiler's
+identity from separate build metadata rather than inferring it from a local
+executable. Preserve the exact VGA source and its notices alongside any
+reviewed configuration that uses it. Local source and mocked tests establish
+the protocol only; they do not qualify a Bochs build or reference execution.
+
 A separate runtime selection follows only after root admits official build
 metadata, the checkout/source/build manifest from the sole retained build-job
 log, and the archive's official digest/size. The runtime job is the sole getter
@@ -56,9 +65,62 @@ needs separate source/resource admission and a genuine bounded capture.
 Default VGA/CMOS/share resources, if required, must be explicitly disabled or
 reviewed and pinned with notices; no fallback download or guessed absence.
 
+The historical positive-chain plan required one qualified source head across
+separately admitted metadata, Build and Reference events, with each executing
+workflow and request frozen separately. That chain is now blocked by spent
+Metadata V3; it cannot resume from a diagnostic readback.
+Source arming grants no actual approval. Actual result, whole OS,
+strict 386DX physical accuracy, timing/RTx and release approval remain false.
+
+The historical V3 candidate preserved both earlier metadata failures and their strict
+partial-packet refusals. V2 proved the selected Node copy/reopen/hash and
+root read-only publication, then failed at its old fixed GCC 13 `cc1` path;
+its after-inventory Node check is absent. V3 changes only five internal GCC 13
+role paths to the package-supported exact `usr/libexec/gcc/x86_64-linux-gnu/13`
+profile. Actual presence and hashes remain unobserved. GCC/G++ drivers and the
+NodeStageV2 DATA/caller, copy/hash, resource and cleanup policy stay held.
+
+V3 has distinct metadata request/job/label/variable/artifact identities and a
+five-job current official graph with full raw gapped step dictionaries.
+Current Build/Reference require exact metadata3 schema/job/version joins and
+explicit `--profile current-v3` on every CLI mode, including the retained
+service work argv. Missing profiles and coherent V2 downgrades refuse before
+input or execution. Historical V2 producers/readers and their four-job joins
+remain available only for interpreting old originals and pure controls.
+Connected manufactured controls establish source wiring, never compiler or
+guest results. Independent source review and exact-head hosted qualification
+preceded the separately admitted, now spent Metadata V3 selection; they do
+not authorize another V3 event.
+
+The current runtime bundle contains no host-library, loader or Node bodies.
+It keeps the compiled Bochs payload, selected VGA, authored inputs, notices and
+complete selected Bochs/VGA corresponding sources. Matching host libraries are
+staged transiently per job and used through the verified staged loader. Sparse
+ELF metadata supports independent structural decoding, while complete-file
+SHA256 values remain observed readback facts. This boundary does not prove a
+whole-system dependency closure or grant blanket licence clearance. Whole
+cleanup reservation precedes every deletion; unknown files, resource drift,
+close uncertainty or incomplete originals remain failures.
+
+Metadata V2 records fresh held/named ownership and bounded empty/member census
+before any cleanup mutation, independently of cache-content approval. Its
+complete prospective cleanup/error wire must fit 16 KiB before effects. The
+V1 created-empty directory facts do not establish live named or terminal
+cleanup, and cannot be upgraded by the repair. The existing pinned Node bytes,
+exclusive root copy/reopen/hash before publication, CPU wire, limits and
+component/source obligations remain unchanged.
+
 Next: follow the ELF attribution task and its ownership/diagnostic-wire gates.
 No new code, event, compiler or guest is selected by this checkpoint. The
 positive Build/Reference chain remains blocked until separately reviewed
 policy/source and successful metadata admission at its frozen source head.
 Actual result, whole OS, strict 386DX physical accuracy, timing/RTx, release
 and blanket licence approval remain unestablished.
+
+The diagnostic route `toolchain-elf-attribution-v1` and independent reader/job
+start FALSE; spent V3 execution is closed. Its twelve-role finalized packet
+and typed partial manifest distinguish unavailable evidence from skipped work.
+It preserves the exact strict guard, independently rederives tags from retained
+structural bytes, and reports full-file SHA only as observed readback. A failed
+guard remains a failed job. No Metadata4, positive-chain adapter upgrade, new
+event or compiler/guest authority follows; later policy review remains separate.
