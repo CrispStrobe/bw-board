@@ -1,6 +1,7 @@
 # Bochs ELF diagnostic: retained negative reader
 
-Status: ownership claim only. Implement after this claim merges. The spent
+Status: inactive negative-reader source implemented; hosted source qualification
+and a separately admitted retained-original audit remain pending. The spent
 diagnostic event and its original reader refusal remain unchanged. This task
 does not select an event or authorize a compiler, guest, inventory, Build or
 Reference run.
@@ -68,3 +69,24 @@ producer import, original re-download, event replay, compiler or guest run.
 
 Any later RUNPATH dependency or licence policy is another claimed task; this
 reader supplies no allowlist or source-wide approval.
+
+## Source checkpoint and handoff
+
+Two focused Node tests invoke twelve Python controls and check the source
+boundaries. Focused tests and independent review passed. The unchanged
+historical module is admitted by exact source and digest before use; three
+explicit finite derived helpers admit only the new negative profile. The new
+reader authenticates all twelve archive roles, physical ZIP geometry and
+bounded DEFLATE completion before the sparse structural conclusion. Old
+namespace and original refusal remain held; every positive approval is false.
+
+Next, qualify the exact source, then independently bind its commit, tree and
+file SHA separately from the historical source/reader identities. Admit the
+already-retained official metadata and original bytes for one offline audit;
+do not download or execute the diagnostic again. Record the actual negative
+classification or refusal without promoting it to resource qualification.
+
+Only afterward scope dependency-resolution and per-component licence review
+for the observed RUNPATH. That task must identify exact executable/library
+bytes and search behavior before proposing a new policy; no broad allowlist
+or automatic compiler, Build or Reference selection follows from this reader.

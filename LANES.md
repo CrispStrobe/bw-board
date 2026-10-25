@@ -7156,17 +7156,19 @@ negative-reader/kernel-stat compatibility claim preserving the old 16-row helper
 and all caps, followed only later by separately scoped dependency/licence review.
 No replay, new event, positive Build/Reference or policy allowlist is selected.
 
-### Two retained-negative x86 readers — ownership claim, 2026-10-25
+### Two retained-negative x86 readers — source checkpoint, 2026-10-25
 
 Owner: Codex x86 lane; implementation may split files between the existing
 Bochs reader owner and the ordered-read reviewer after this claim merges.
-This is a docs-only claim. Own exactly the new Bochs
+The merged claim is implemented in the five new code paths below; hosted
+source checks and independently admitted retained-original audits remain
+pending. Own exactly the new Bochs
 `scripts/i80386-bochs-ring3-reference/read-elf-negative-v1.py` and focused
 `test/i80386-bochs-elf-negative-reader.test.mjs`, new ordered-read
 `scripts/i80386-read16-failure/{reader.py,controls.py}` and its automatic
 `test/i80386-read16-failure.test.mjs` wrapper, the two matching task
 leaves in `docs/`, this section, and own `docs/X86-NEXT-LANES.md` status prose
-if needed. No implementation before matched claim merge.
+if needed. Existing source and original readers remain byte-held.
 
 The two tasks are distinct. The
 [Bochs negative reader](docs/I80386-BOCHS-ELF-NEGATIVE-READER.md) profiles the
@@ -7194,3 +7196,10 @@ must test exact source/byte/official joins, partials and coherent mutations.
 Do not change existing reader functions, producer/workflow/CLI guards,
 CPU/goldens, thresholds, pins, guest code or any original artifact. No new
 label, dispatch, GET, compiler or guest run belongs to either audit.
+
+Focused CPU controls (nine Python methods plus automatic Node wrapper) and
+Bochs controls (twelve Python methods through two Node tests) passed, with
+independent source review. This checkpoint adds no CPU, guest, workflow or
+pin change. Exact source qualification precedes separately bound original
+audits; all positive approvals stay false. Task leaves above specify the
+remaining offline closeout and separately claimable follow-up work.

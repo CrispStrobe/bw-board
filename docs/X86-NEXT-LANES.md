@@ -3634,8 +3634,12 @@ old readers and five-job positive adapters remain held. The new twelve-role
 packet preserves typed failed prefixes and exact structural tag/string offsets.
 A present empty tag still refuses and a guard failure remains a failed job.
 Whole-file SHA is reported readback only; range digests/values are independently
-checked. Next is a separately claimed versioned negative-reader/kernel-stat
-schema task preserving the old 16-row helper, full raw rows and all existing
-caps; it grants no automatic promotion of this refusal. Any later strict
-dependency-resolution/licence review is separate. No replay, new original GET,
-event, allowlist or positive chain is authorized by retirement.
+checked. The separately claimed [negative-reader source](I80386-BOCHS-ELF-NEGATIVE-READER.md)
+now implements the exact 22-row profile, preserving the old 16-row helper and
+all caps. Focused controls and independent source review passed; exact hosted
+qualification and a separately bound retained-original audit remain pending.
+The [ordered-read failure reader](I80386-READ16-FAILED-ATTEMPT-READER.md) similarly
+retains the failed seven-pair attempt without CPU adoption. Both task leaves
+specify fresh-agent inputs, refusal boundaries and follow-up deliverables.
+Strict dependency-resolution/licence review remains separate. No replay, new
+original GET, event, allowlist or positive chain is authorized by retirement.
