@@ -16,6 +16,7 @@ import os
 import stat
 import struct
 import zipfile
+import zlib
 
 CAP=2097152
 OLD_READER_SHA='d5fcd80edf2faee16be48d9c4d970a5ec32be2fdf50e20208f16b63196ba2b31'
@@ -221,7 +222,7 @@ def physical_zip_layout(raw,infos):
     signature,disk,central_disk,on_disk,total,central_size,central_at,comment=struct.unpack_from('<IHHHHIIH',raw,len(raw)-22)
     need((signature,disk,central_disk,on_disk,total,comment)==(0x06054b50,0,0,106,106,0) and
          central_at+central_size==len(raw)-22,'single exact EOCD and central extent')
-    cursor=0;local_times=[]
+    cursor=0;local_times=[];compressed_spans=[]
     for info in infos:
         need(info.header_offset==cursor and cursor+30<=central_at,'contiguous indexed local header')
         local=struct.unpack_from('<IHHHHHIIIHH',raw,cursor)
@@ -234,6 +235,7 @@ def physical_zip_layout(raw,infos):
         data_at=cursor+30+name_len
         desc_at=data_at+info.compress_size
         need(desc_at+16<=central_at,'bounded local member and descriptor')
+        compressed_spans.append(raw[data_at:desc_at])
         descriptor=struct.unpack_from('<IIII',raw,desc_at)
         exact(descriptor,(0x08074b50,info.CRC,info.compress_size,info.file_size),'32-bit data descriptor')
         cursor=desc_at+16
@@ -254,6 +256,23 @@ def physical_zip_layout(raw,infos):
              'exact indexed central header')
         cursor+=46+name_len
     exact(cursor,central_at+central_size,'no central gaps or aliases')
+    return compressed_spans
+
+def strict_raw_deflate(span,expanded_bytes,crc):
+    """One complete raw DEFLATE stream; no unused bytes or excess output."""
+    need(type(expanded_bytes) is int and 0<=expanded_bytes<=CAP and
+         type(span) is bytes and len(span)<=CAP,'bounded compressed role')
+    inflater=zlib.decompressobj(-15)
+    try:
+        body=inflater.decompress(span,expanded_bytes+1)
+        need(len(body)==expanded_bytes and inflater.eof and
+             inflater.unused_data==b'' and inflater.unconsumed_tail==b'',
+             'single fully consumed raw DEFLATE stream')
+        exact(inflater.flush(1),b'','no deferred DEFLATE output')
+    except zlib.error as error:
+        raise Refusal('invalid raw DEFLATE stream') from error
+    exact(zlib.crc32(body)&0xffffffff,crc,'raw DEFLATE CRC')
+    return body
 
 def official(run_raw,jobs_raw,artifacts_raw,artifact_raw,log_raw,manifest_raw,
              original_raw,cleanup_raw,request_raw,event_raw,expected,binding):
@@ -357,22 +376,23 @@ def official(run_raw,jobs_raw,artifacts_raw,artifact_raw,log_raw,manifest_raw,
     with zipfile.ZipFile(io.BytesIO(artifact_raw)) as archive:
         exact(archive.comment,b'','archive comment')
         infos=archive.infolist();names=[i.filename for i in infos]
-        physical_zip_layout(artifact_raw,infos)
+        compressed_spans=physical_zip_layout(artifact_raw,infos)
         need(len({i.header_offset for i in infos})==106,'unique physical ZIP offsets')
         exact(names,manifest_paths,'ordered physical archive roles')
         exact(set(names),physical_roster(expected['runId']),'closed physical archive roles')
         need(len(set(names))==106,'unique physical archive roles')
         need(sum(i.file_size for i in infos)<=16777216 and sum(i.file_size for i in infos)==manifest['expandedBytes'],'bounded physical archive expansion')
-        for info,row in zip(infos,manifest['files']):
+        for info,row,span in zip(infos,manifest['files'],compressed_spans):
             need(len(info.filename.encode())<=256 and info.create_system==3 and info.external_attr>>16==0o100644 and
                  not info.is_dir() and info.flag_bits==8 and info.compress_type==zipfile.ZIP_DEFLATED and
                  info.extra==b'' and info.comment==b'' and not info.filename.endswith('/') and
                  '\\' not in info.filename and not info.filename.startswith('/') and '..' not in info.filename.split('/'),
                  'regular canonical physical role')
             exact(info.file_size,row['bytes'],'physical member size')
-            raw=archive.read(info)
+            raw=strict_raw_deflate(span,info.file_size,info.CRC)
             exact(len(raw),row['bytes'],'physical decompressed size')
             exact(sha(raw),row['sha256'],'physical member SHA')
+            exact(archive.read(info),raw,'indexed/raw DEFLATE agreement')
         for name,raw in ((prefix+'paired.original.json',original_raw),(prefix+'cleanup.original.json',cleanup_raw),(prefix+'request.original.json',request_raw),(prefix+'event.original.json',event_raw)):
             need(name in names,'required physical role')
             info=archive.getinfo(name);need(info.file_size==len(raw) and info.file_size<=CAP,'bounded physical role')

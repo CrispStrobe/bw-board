@@ -140,6 +140,29 @@ def rebind_archive(data):
     data['binding']=r.canonical(binding)
     return data
 
+def replace_last_compressed_span(data,new_span):
+    archive=data['artifact']
+    with zipfile.ZipFile(io.BytesIO(archive)) as z:
+        last=z.infolist()[-1]
+        local=struct.unpack_from('<IHHHHHIIIHH',archive,last.header_offset)
+        data_at=last.header_offset+30+local[-2]+local[-1]
+        old_size=last.compress_size
+    desc_at=data_at+old_size
+    old_central=struct.unpack_from('<I',archive,len(archive)-22+16)[0]
+    cursor=old_central;last_central=None
+    for _ in range(106):
+        last_central=cursor
+        fields=struct.unpack_from('<IHHHHHHIIIHHHHHII',archive,cursor)
+        cursor+=46+fields[10]+fields[11]+fields[12]
+    assert cursor==len(archive)-22
+    delta=len(new_span)-old_size
+    changed=bytearray(archive[:data_at]+new_span+archive[desc_at:])
+    struct.pack_into('<I',changed,desc_at+delta+8,len(new_span))
+    struct.pack_into('<I',changed,last_central+delta+20,len(new_span))
+    struct.pack_into('<I',changed,len(changed)-22+16,old_central+delta)
+    data['artifact']=bytes(changed)
+    return rebind_archive(data)
+
 class FailureOnly(unittest.TestCase):
     def setUp(self):self.packet=synthetic()
     def grade(self,packet=None):return r.audit(*encoded(packet or self.packet))
@@ -228,6 +251,28 @@ class FailureOnly(unittest.TestCase):
         struct.pack_into('<I',changed,central_at+20,old_size+1)
         data=copy.deepcopy(base);data['artifact']=bytes(changed);rebind_archive(data)
         with self.assertRaises(r.Refusal):r.audit_bundle(data)
+    def test_raw_deflate_exact_consumption(self):
+        base=synthetic_bundle(self.packet)
+        archive=base['artifact']
+        with zipfile.ZipFile(io.BytesIO(archive)) as z:
+            last=z.infolist()[-1]
+            local=struct.unpack_from('<IHHHHHIIIHH',archive,last.header_offset)
+            begin=last.header_offset+30+local[-2]+local[-1]
+            span=archive[begin:begin+last.compress_size]
+            last_body=z.read(last)
+        trailing=replace_last_compressed_span(copy.deepcopy(base),span+b'JUNKJUNK')
+        with zipfile.ZipFile(io.BytesIO(trailing['artifact'])) as z:
+            self.assertEqual(z.read(z.infolist()[-1]),last_body)
+        with self.assertRaisesRegex(r.Refusal,'raw DEFLATE'):
+            r.audit_bundle(trailing)
+        truncated=replace_last_compressed_span(copy.deepcopy(base),span[:-1])
+        with self.assertRaisesRegex(r.Refusal,'raw DEFLATE'):
+            r.audit_bundle(truncated)
+        pack=zlib.compressobj(9,zlib.DEFLATED,-15)
+        bomb=pack.compress(b'X'*(r.CAP+1))+pack.flush()
+        over=replace_last_compressed_span(copy.deepcopy(base),bomb)
+        with self.assertRaisesRegex(r.Refusal,'raw DEFLATE'):
+            r.audit_bundle(over)
     def test_mutants_refuse(self):
         cuts=(
             lambda p:p[0]['children'][0]['resource']['before'].update(populated=0),
