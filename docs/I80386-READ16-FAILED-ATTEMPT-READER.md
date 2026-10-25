@@ -1,10 +1,5 @@
 # Ordered 16-bit read: retain a failed paired attempt
 
-> Publication staging: the existing readers are already on master. The CPU
-> step-roster correction is prepared separately and is not yet in this
-> documentation-only head. Its final source composition requires fresh CI.
-
-
 Status: failure-only source landed. The separately admitted retained-original
 audit refused the official job's repeated checkout step names; that refusal is
 preserved. This forward source candidate checks the exact 16 observed ordered

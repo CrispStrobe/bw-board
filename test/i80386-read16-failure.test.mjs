@@ -15,7 +15,7 @@ function sourceMethods() {
   assert.ok(size > 0 && size <= 256 * 1024, 'bounded controls source');
   const source = readFileSync(controls, 'utf8');
   const names = [...source.matchAll(/^    def (test_[A-Za-z0-9_]+)\(/gm)].map((match) => match[1]);
-  assert.equal(names.length, 9, 'all nine source control methods remain present');
+  assert.equal(names.length, 10, 'all ten source control methods remain present');
   assert.equal(new Set(names).size, names.length, 'unique source control methods');
   return names.length;
 }

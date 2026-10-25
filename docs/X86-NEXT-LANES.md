@@ -1,10 +1,5 @@
 # x86 checkpoint and next lanes
 
-> Publication staging: the existing readers are already on master. The CPU
-> step-roster correction is prepared separately and is not yet in this
-> documentation-only head. Its final source composition requires fresh CI.
-
-
 The next connected compiler-provisioning task is the
 [operational integration contract](X86-PROVISIONING-OPERATIONAL.md). It specifies
 the missing launch, source-approval, child-context and original-report joins;

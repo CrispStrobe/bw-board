@@ -1,10 +1,5 @@
 # Bochs ELF diagnostic: retained negative reader
 
-> Publication staging: the existing readers are already on master. The CPU
-> step-roster correction is prepared separately and is not yet in this
-> documentation-only head. Its final source composition requires fresh CI.
-
-
 Status: inactive negative-reader source qualified in [PR #702](https://github.com/CrispStrobe/bw-board/pull/702). A separately admitted
 offline audit classified the retained original as
 `original-refused/structural-attributed`. The spent

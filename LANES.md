@@ -2,7 +2,7 @@
 
 ## Meter terminal-current authority — claim, 2026-10-25
 
-DONE (source candidate; qualification pending) — Codex circuit/instrument owner. Exact initial base
+CLAIMED — Codex circuit/instrument owner. Exact base
 `0063dc8ee395dd1ff8cad45966bfe536c58d0475`; branch
 `claim/meter-current-authority-20261025`. A finite authored LM741 CLI assessment
 at the existing consumer pins demonstrates that a connected, unmodelled supply
@@ -10,7 +10,7 @@ terminal returns a measured zero. Current master retains the same meter fallback
 Absence of represented current must not be promoted to a qualified zero.
 
 Own only this claim, `src/board.js` current-value validation in `_meterValue`
-and existing refusal propagation in `_recordMeterSamples` and
+and existing refusal propagation in `_sampleMeters` and
 `_acceptedMeterQuadrature` (plus the corresponding meter API comment), new
 `test/meter-current-authority.test.mjs`, and new
 `spec-updates/meter-current-authority.md`. Refuse missing or nonfinite terminal
@@ -36,18 +36,6 @@ behavior from physical LM741 supply/bias fidelity and records the bounded
 assessment. Consumer adoption follows the qualified supplier landing, coordinated
 with the later CUI instrument work in one purposeful package wave. Merge this
 claim before implementation; preserve every other owner's existing section.
-Qualification is prepared on a labelled documentation checkpoint before the
-source candidate is published, so the final source head has one thorough event.
-
-Implementation base `09c09ee277aefc0b1d98a5ff8c33ee76b9a0d9d0`, branch
-`lane/meter-current-authority-20261025`. The bounded implementation refuses
-missing/nonfinite represented currents and
-latches those causes only in the existing accepted-sample/quadrature observers.
-All 68 focused meter, scope and LM741 controls pass without skips. Real
-resistor zero/sign and unsupported LM741 rail controls pass; restoring the
-old fallback and rejecting genuine zero each fail a named assertion. Hosted
-source and affected actual qualification remain pending; this is not a landed
-consumer adoption or a physical chip-current model.
 
 Base a2b4ff73; bounded qualification repair for the same owner's PR665.
 Its original CI passes the admitted47 pulse comparisons but fails the unchanged
@@ -7207,11 +7195,6 @@ and all caps, followed only later by separately scoped dependency/licence review
 No replay, new event, positive Build/Reference or policy allowlist is selected.
 
 ### Two retained-negative x86 readers — source checkpoint, 2026-10-25
-
-> Publication staging: the existing readers are already on master. The CPU
-> step-roster correction is prepared separately and is not yet in this
-> documentation-only head. Its final source composition requires fresh CI.
-
 
 Owner: Codex x86 lane; implementation may split files between the existing
 Bochs reader owner and the ordered-read reviewer after this claim merges.
