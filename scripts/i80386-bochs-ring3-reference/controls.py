@@ -3429,5 +3429,50 @@ class V2WholeCleanupBudgetControls(unittest.TestCase):
                     future={**outside,'nodeCleanup':json.loads(roles['outside.original.json'])['nodeCleanup']}
                     self.assertLessEqual(len(producer.canonical(future)),16384)
 
+
+
+class V2MutationChronologyControls(unittest.TestCase):
+    def test_action_failure_precedes_after_observation_and_close_failures(self):
+        for operation in ('chmod','unlink','rmdir'):
+            with self.subTest(operation=operation):
+                facts,kernel,env=NodeStageV2Controls().exercise()
+                inner={'observations':{'nodeStage':facts}};root=str(Path(facts['stagePath']).parent)
+                with kernel.hooks():plan=producer.node_cleanup_wire_plan_v2('toolchain-v2',env,inner)
+                real_chmod,real_unlink,real_rmdir,real_lstat,real_close=kernel.chmod,kernel.unlink,kernel.rmdir,kernel.lstat,kernel.close
+                state={'failed':False,'path':None};before=len(kernel.events)
+                def failed(path):
+                    state.update(failed=True,path=str(path));kernel.events.append(('action-failure',operation,str(path)))
+                    raise OSError('first-authored-'+operation+'\x01'*512)
+                def chmod(fd,mode):
+                    if operation=='chmod':
+                        real_chmod(fd,mode) # An applied mode change is still an uncertain failure.
+                        failed(kernel.fds[fd])
+                    return real_chmod(fd,mode)
+                def unlink(name,*,dir_fd):
+                    if operation=='unlink':failed(kernel.name(name,dir_fd))
+                    return real_unlink(name,dir_fd=dir_fd)
+                def rmdir(path):
+                    if operation=='rmdir':failed(path)
+                    return real_rmdir(path)
+                def lstat(path):
+                    if state['failed'] and str(path)==state['path']:
+                        raise OSError('secondary-authored-after-lstat'+'\x02'*512)
+                    return real_lstat(path)
+                def close(fd):
+                    name=kernel.fds[fd];real_close(fd)
+                    if state['failed'] and name==root:raise OSError('third-authored-held-close'+'\x03'*512)
+                kernel.chmod,kernel.unlink,kernel.rmdir,kernel.lstat,kernel.close=chmod,unlink,rmdir,lstat,close
+                with kernel.hooks():value=producer.cleanup_node_stage_v2('toolchain-v2',env,inner,plan)
+                self.assertFalse(value['complete']);self.assertTrue(state['failed'])
+                self.assertTrue(value['firstFailure']['message'].startswith('first-authored-'+operation))
+                self.assertEqual(len(value['secondary']),2)
+                self.assertTrue(value['secondary'][0]['message'].startswith('secondary-authored-after-lstat'))
+                self.assertTrue(value['secondary'][1]['message'].startswith('third-authored-held-close'))
+                tail=kernel.events[before:];index=next(i for i,e in enumerate(tail) if e[0]=='action-failure')
+                self.assertFalse(any(e[0] in ('chmod','unlink','rmdir','action-failure') for e in tail[index+1:]))
+                self.assertEqual(kernel.fds,{})
+                self.assertLessEqual(len(producer.canonical(value)),plan['reservedBytes'])
+                self.assertLessEqual(plan['reservedBytes'],16384)
+
 if __name__ == '__main__':
     unittest.main()

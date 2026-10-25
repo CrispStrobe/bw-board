@@ -6472,8 +6472,10 @@ def node_cleanup_wire_plan_v2(route, env, inner):
         prototype['journal'].append({'operation':'rmdir','path':str(root),'before':private,'attempted':True,'after':gone,'firstFailure':None})
     prototype=compact_manual_stats(prototype)
     success=len(canonical(prototype))
-    # A bounded failure duplicates into a journal/top-level pair; one close
-    # secondary and one failed-after present identity are also reserved.
+    # Mutation failure occupies journal/top-level facts, then an after-read
+    # failure and a held-close failure: four bounded facts, at most 3072 bytes
+    # for these fixed phases/paths plus 512 for a present after-stat. Record
+    # the action at occurrence; its outer catch must not duplicate it again.
     failure_bytes=success+3*1024+512
     reserved=max(success+1024,failure_bytes)
     need(reserved<=16384,'complete V2 Node all-outcome plan under unchanged cap')
@@ -6500,7 +6502,12 @@ def cleanup_node_stage_v2(route, env, inner, plan):
     value.update(stageState=plan['stageState'],authority=None,planSha256=sha256(canonical(plan)))
     directory_fd = None
     reserved = None
+    retained_errors = []
     def issue(exc, phase):
+        # Record at occurrence; the outer catch sees the same exception again.
+        if any(previous is exc for previous in retained_errors):
+            return
+        retained_errors.append(exc)
         row = failure(exc, phase, path=str(root))
         if value['firstFailure'] is None:
             value['firstFailure'] = row
@@ -6533,6 +6540,7 @@ def cleanup_node_stage_v2(route, env, inner, plan):
             row['after'] = absent(path)
         except BaseException as exc:
             row['firstFailure'] = failure(exc, 'node-cleanup-' + operation, path=str(path))
+            issue(exc, 'node-cleanup-' + operation)
             try:
                 row['after'] = absent(path)
             except BaseException as extra:
