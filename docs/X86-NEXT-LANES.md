@@ -3597,34 +3597,28 @@ independent packet reading. This proves source wiring only. The retained V2
 QEMU disagreement is unchanged, and no V3 event or result exists. Independent
 source review and exact-head checks precede any new one-shot selection.
 
-### Bochs CPU3 Ring 3 reference: consumed metadata V1 and V2 amendment
+### Bochs CPU3 Ring 3 reference: consumed metadata V2 and V3 layout claim
 
-The merged [Bochs reference claim](../LANES.md) continues as unmerged
-[PR694 source](https://github.com/CrispStrobe/bw-board/pull/694). Its selected
-[metadata V1 run](https://github.com/CrispStrobe/bw-board/actions/runs/40159033328)
-failed before reading/copying Node bytes: cache DATA uid 1001/gid 1000 differs
-from trusted caller uid 1001/gid 1001. The unchanged positive reader refuses
-the ten-role partial packet; preserve that refusal and spent event. The
-created-empty root-directory facts lack a live named/terminal cleanup proof.
-No Build or Reference event is selected and no compiler/guest result follows.
+The unmerged [PR694 source](https://github.com/CrispStrobe/bw-board/pull/694)
+retains both spent metadata failures. V2 observed the selected NodeStageV2
+copy/reopen/hash and root read-only publication, then failed before inventory
+at its fixed GCC 13 `cc1` path. Its eleven-role partial remains refused;
+after-inventory Node checking is absent. Cleanup observations do not approve
+failed metadata. No Build or Reference event or compiler/guest result follows.
 
-The docs-only metadata V2 amendment must merge before code. It claims only
-the existing Bochs producer/reader/controls/README, workflow/wrapper, reference
-guide and own LANES/status sections. Use exact source-fixed cache DATA
-path/version/owner/mode/bytes/SHA separately from protected caller credentials;
-retain verified exclusive root staging before executable publication. V2 gets
-new request/schema/job/label/artifact/variable/marker identities with guards
-initially FALSE; old V1 execution closes and its reader/originals remain held.
-Negative cleanup requires new held/named identity and bounded empty census
-before any mutation, with the whole 16 KiB future output reserved. A partial
-failed packet cannot become complete metadata or success.
+The new [V3 docs claim](../LANES.md) owns only the same nine Bochs paths and
+sections. Ubuntu packaging supports correcting five fixed GCC 13 internal
+roles to exact `usr/libexec/gcc/x86_64-linux-gnu/13` paths; actual presence and
+hashes remain unobserved. Keep NodeStageV2 policy and GCC 13 drivers, with no
+executed compiler discovery, arbitrary root or version fallback. New V3 identities
+and current Build/Reference adapters require explicit V3 metadata and a typed
+five-job graph. Preserve V2 readers/four-job joins and disable its execution;
+all new entries start FALSE.
 
-Next: merge the narrow docs amendment, implement and independently review
-inactive V2 plus coherent mocked OS/packet controls, then qualify every
-enabled final-head check. Only a new separately admitted metadata V2 event
-and original qualification can supply identities for Build/Reference on that
-same frozen source head. Keep the authored ROM/goldens, complete CPU wire,
-source/ELF/resource/cleanup limits and asset-v2 distribution boundary unchanged.
-Root still admits Build metadata/manifest and its sole job log before the
-Reference job's sole Build ZIP GET; retain the exact nested archive for
-original-only rederivation. No physical 386/RTx or blanket licence claim.
+Next: merge the claim, compose and review disabled code with complete mocked
+metadata16/Build31/Reference32 chains, then qualify every final-head source
+check before one separately admitted metadata-only V3. Build waits for actual
+V3 metadata; Reference waits for Build, at the same fixed source head. Preserve
+all caps, errors, cleanup, CPU/wire and distribution assertions. Root admits
+Build metadata/sole log before Reference's sole ZIP GET and nested-copy audit.
+No architectural, physical/RTx, whole-host or blanket licence claim follows.
