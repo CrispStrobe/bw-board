@@ -3599,9 +3599,10 @@ source review and exact-head checks precede any new one-shot selection.
 
 ### Bochs CPU3 Ring 3 reference: Metadata V3 spent; ELF attribution next
 
-Unmerged [PR694](https://github.com/CrispStrobe/bw-board/pull/694) at bc016f65
-passed all enabled automatic source checks (12 success, 11 declared skips;
-11 runs and 174 terminal steps). The separate
+Inactive source [PR694](https://github.com/CrispStrobe/bw-board/pull/694) is
+merged. Its reviewed head c2930696 passed 23 exact-head checks (12 success,
+11 declared skips), 11 automatic runs (nine success, two declared skips) and
+174 terminal steps. The separate
 [Metadata V3 event](https://github.com/CrispStrobe/bw-board/actions/runs/40176241083)
 failed before complete inventory with `no selected tool RPATH/RUNPATH`.
 The eleven-role partial remains refused. It does not identify the selected
@@ -3611,9 +3612,10 @@ Build/Reference remain unselected and unqualified.
 
 The merged [ELF failure-attribution task](I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md)
 keeps the strict guard, source/CPU/fixture/pins and every cap unchanged. Next:
-review the inactive diagnostic source with
-connected independent negative-reading controls, then qualify its exact head
-before any separately admitted metadata-only event. Attribute new observations
+review a separately armed diagnostic revision and qualify its exact head
+before one admitted negative-only event. Admit all six jobs and raw steps before
+one acquisition; an early zero-artifact failure has a distinct log-only route.
+Attribute new observations
 without rewriting V3 history. A tag may be legitimate default layout, but
 policy acceptance needs separate exact dependency-resolution/licensing review.
 No allowlist, compiler/guest or architectural approval is established here.
@@ -3624,5 +3626,5 @@ old readers and five-job positive adapters remain held. The new twelve-role
 packet preserves typed failed prefixes and exact structural tag/string offsets.
 A present empty tag still refuses and a guard failure remains a failed job.
 Whole-file SHA is reported readback only; range digests/values are independently
-checked. No new event or positive chain is authorized; fresh source qualification
-and separate root admission remain pending.
+checked. No new event or positive chain is authorized; activation review, fresh
+source qualification and separate admission remain pending.
