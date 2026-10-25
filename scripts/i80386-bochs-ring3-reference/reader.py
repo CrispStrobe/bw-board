@@ -9601,7 +9601,7 @@ def elf_diagnostic_sparse_prefix(row, *, complete):
             'dynamicStringBytes':sum(end-start for start,end in accessed if end-start==1)}
 
 ELF_ROUTE = 'toolchain-elf-attribution-v1'
-ELF_ATTRIBUTION_READER_ENABLED = False
+ELF_ATTRIBUTION_READER_ENABLED = True
 ELF_CORE_ROLES = frozenset(('request.original.json','event.original.json','elf-attribution.original.json','original.json','manifest.json'))
 ELF_CAPTURE_ROLES = ('source.before.json','source.after.json','node-stage.original.json','process.original.json','service-status.original.json','outside.original.json','cleanup.original.json')
 ELF_ROLES = ELF_CORE_ROLES | frozenset(ELF_CAPTURE_ROLES)

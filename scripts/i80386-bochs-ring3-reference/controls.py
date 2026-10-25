@@ -5117,23 +5117,24 @@ class ElfAttributionControls(unittest.TestCase):
             packet.pop('cleanup.original.json');packet['manifest.json']=p.canonical(p.elf_attribution_manifest(packet))
             with self.subTest(partial=name),self.assertRaises(r.Refusal):r.elf_attribution_packet(packet)
 
-    def test_all_five_genuine_cli_modes_and_disabled_zero_edges(self):
+    def test_all_five_genuine_cli_modes_and_explicit_disabled_zero_edges(self):
         p=producer;r=self.reader
-        self.assertIs(p.ELF_ATTRIBUTION_ENABLED,False);self.assertIs(p.TOOLCHAIN_V3_ENABLED,False);self.assertIs(r.ELF_ATTRIBUTION_READER_ENABLED,False)
+        self.assertIs(p.ELF_ATTRIBUTION_ENABLED,True);self.assertIs(p.TOOLCHAIN_V3_ENABLED,False);self.assertIs(r.ELF_ATTRIBUTION_READER_ENABLED,True)
         edge=mock.Mock(side_effect=AssertionError('inactive edge'))
         for mode in ('--admit','--work','--run-service','--capture-service-status','--finish'):
             for extra in ([],['--profile','current-v3']):
-                with mock.patch.object(p,'admit_cli',edge),mock.patch.object(p,'load_cli_context',edge),self.assertRaises(p.Refusal):
+                with mock.patch.object(p,'ELF_ATTRIBUTION_ENABLED',False),mock.patch.object(p,'admit_cli',edge), \
+                     mock.patch.object(p,'load_cli_context',edge),self.assertRaises(p.Refusal):
                     p.main([mode,'--route',p.ELF_ROUTE]+extra,environment={},provider_factory=edge)
         edge.assert_not_called()
         # Extraneous-profile refusal must remain nonvacuous while the route is
         # enabled, rather than passing only because the default guard is false.
         for mode in ('--admit','--work','--run-service','--capture-service-status','--finish'):
-            with mock.patch.object(p,'ELF_ATTRIBUTION_ENABLED',True),mock.patch.object(p,'admit_cli',edge), \
-                 mock.patch.object(p,'load_cli_context',edge),self.assertRaisesRegex(p.Refusal,'profile'):
+            with mock.patch.object(p,'admit_cli',edge),mock.patch.object(p,'load_cli_context',edge), \
+                 self.assertRaisesRegex(p.Refusal,'profile'):
                 p.main([mode,'--route',p.ELF_ROUTE,'--profile','current-v3'],environment={},provider_factory=edge)
         edge.assert_not_called()
-        with mock.patch.object(p,'ELF_ATTRIBUTION_ENABLED',True),mock.patch.object(p,'load_cli_context',edge),self.assertRaises(AssertionError):
+        with mock.patch.object(p,'load_cli_context',edge),self.assertRaises(AssertionError):
             p.main(['--work','--route',p.ELF_ROUTE],environment={},provider_factory=edge)
         edge.assert_called_once();edge.reset_mock()
         for sample in (self.clean,self.rejected):
@@ -5145,7 +5146,9 @@ class ElfAttributionControls(unittest.TestCase):
             self.assertNotIn('AUTHORED_DIAGNOSTIC_SECRET_SENTINEL',' '.join(argv[0]))
             self.assertNotIn('--pipe',argv[0]);self.assertNotIn('--profile',argv[0]);self.assertNotIn('GH_TOKEN',' '.join(argv[0]))
             self.assertNotEqual(r.elf_attribution_packet(roles)['classification'],'incomplete')
-        with mock.patch.object(r.os,'open',edge),self.assertRaises(r.Refusal):r.cli_grade(p.ELF_ROUTE,{'archive':'/absent'})
+        with mock.patch.object(r,'ELF_ATTRIBUTION_READER_ENABLED',False), \
+             mock.patch.object(r.os,'open',edge),self.assertRaises(r.Refusal):
+            r.cli_grade(p.ELF_ROUTE,{'archive':'/absent'})
         edge.assert_not_called()
 
     def test_full_raw_official_cli_gapped_steps_and_coherent_forgery_cuts(self):
