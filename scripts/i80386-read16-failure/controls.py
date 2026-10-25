@@ -62,7 +62,7 @@ def synthetic_official(packet):
     original,cleanup,request,event,expected=encoded(packet)
     rid=12345;repo={'id':45,'full_name':'CrispStrobe/bw-board','fork':False}
     run={'id':rid,'run_attempt':1,'head_sha':r.OLD_HEAD,'head_branch':packet[2]['sourceBranch'],'event':'pull_request','status':'completed','conclusion':'failure','path':'.github/workflows/i80386-read16-paired.yml','actor':{'login':'CrispStrobe'},'triggering_actor':{'login':'CrispStrobe'},'repository':repo,'head_repository':repo,'pull_requests':[{'number':679,'head':{'sha':r.OLD_HEAD,'ref':packet[2]['sourceBranch']},'base':{'ref':'master'}}]}
-    steps=[{'number':i,'name':name,'status':'completed','conclusion':conclusion} for i,(name,conclusion) in enumerate([('Admit exact request, event and all selected Git bytes before runtime setup','success'),('Fixed eighteen-child ordinary AT paired capture','failure'),('Independent outside service stop and cgroup readback','success'),('Retain exact originals, including failed attempts','success')],1)]
+    steps=[{'number':number,'name':name,'status':'completed','conclusion':conclusion} for number,name,conclusion in r.OFFICIAL_STEP_ROSTER]
     jobs={'total_count':2,'jobs':[{'id':12,'run_id':rid,'run_attempt':1,'head_sha':r.OLD_HEAD,'name':'paired','status':'completed','conclusion':'failure','steps':steps},{'id':14,'run_id':rid,'run_attempt':1,'head_sha':r.OLD_HEAD,'name':'source-controls','status':'completed','conclusion':'skipped','steps':[]}]}
     prefix='read16-paired-12345-1/'
     admission='read16-admission-12345-1/'
@@ -186,7 +186,7 @@ class FailureOnly(unittest.TestCase):
         old=raw['jobs'];raw['jobs']=r.canonical(bad_jobs);binding['jobsSha256']=r.sha(raw['jobs'])
         with self.assertRaises(r.Refusal):grade()
         raw['jobs']=old;binding['jobsSha256']=r.sha(old)
-        bad_jobs=r.parse(raw['jobs'],1048576);bad_jobs['jobs'][0]['steps'][1]['conclusion']='success'
+        bad_jobs=r.parse(raw['jobs'],1048576);bad_jobs['jobs'][0]['steps'][7]['conclusion']='success'
         raw['jobs']=r.canonical(bad_jobs);binding['jobsSha256']=r.sha(raw['jobs'])
         with self.assertRaises(r.Refusal):grade()
         raw['jobs']=old;binding['jobsSha256']=r.sha(old)
@@ -195,6 +195,32 @@ class FailureOnly(unittest.TestCase):
         with self.assertRaises(r.Refusal):grade()
         raw['artifact']=raw['artifact']+b'coherent different archive';binding['artifactSha256']=r.sha(raw['artifact']);binding['artifactBytes']=len(raw['artifact'])
         with self.assertRaises(r.Refusal):grade()
+    def test_exact_reviewed_duplicate_step_roster(self):
+        raw,binding,expected=synthetic_official(self.packet)
+        steps=r.parse(raw['jobs'],1048576)['jobs'][0]['steps']
+        self.assertEqual(len(steps),16)
+        self.assertEqual(sum(step['name']==r.CHECKOUT_STEP for step in steps),4)
+        self.assertEqual(sum(step['name']==r.POST_CHECKOUT_STEP for step in steps),4)
+        def grade(changed):
+            trial=raw.copy();bound=binding.copy();jobs=r.parse(raw['jobs'],1048576)
+            changed(jobs['jobs'][0]['steps'])
+            trial['jobs']=r.canonical(jobs);bound['jobsSha256']=r.sha(trial['jobs'])
+            return r.official(trial['run'],trial['jobs'],trial['artifacts'],trial['artifact'],trial['jobLog'],trial['manifest'],trial['original'],trial['cleanup'],trial['request'],trial['event'],expected,bound)
+        self.assertIs(grade(lambda _:None)['officialMetadataAuthenticated'],False)
+        cuts=(
+            lambda s:s[4].update(name=s[5]['name']), # unreviewed duplicate
+            lambda s:s.pop(4), # missing checkout
+            lambda s:s.__setitem__(slice(4,6),s[4:6][::-1]), # reordered steps
+            lambda s:s[4].update(number=11),
+            lambda s:s[4].update(number=True),
+            lambda s:s[4].update(conclusion='skipped'),
+            lambda s:s[7].update(name=s[8]['name']), # critical work role
+            lambda s:s[7].update(conclusion='success'),
+            lambda s:s[10].update(conclusion='success'), # generated setup post-step
+        )
+        for index,cut in enumerate(cuts):
+            with self.subTest(index=index):
+                with self.assertRaises(r.Refusal):grade(cut)
     def test_complete_offline_binding(self):
         data=synthetic_bundle(self.packet)
         self.assertEqual(r.audit_bundle(data)['classification'],'failed-attempt-only')
