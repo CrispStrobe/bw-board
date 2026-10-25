@@ -3334,12 +3334,93 @@ class ConnectedCurrentV2Controls(unittest.TestCase):
                 raise AssertionError('coherent caller-GID replacement accepted')
             return ref,ref_raw,ref_event,ref_env,final,grade
 
+        def official_current(route, packet, request, source_before):
+            archive=p.pack_zip(packet,archive_cap=(64 if route=='build' else 96)<<20,
+                expanded_cap=(256 if route=='build' else 384)<<20,
+                member_cap=4096 if route=='build' else 6144,
+                modes={name:0o644 for name in packet})
+            names=('bochs-ring3-toolchain-inventory-v1',
+                   'bochs-ring3-toolchain-inventory-v2',
+                   'bochs-ring3-build-v1','bochs-ring3-reference-v1')
+            selected='bochs-ring3-'+route+'-v1'
+            number=333 if route=='build' else 444
+            artifact_id=555 if route=='build' else 666
+            steps=[{'number':i,'name':name,'status':'completed','conclusion':'success'}
+                   for i,name in enumerate(r.BUILD_USER_STEPS if route=='build' else r.REFERENCE_USER_STEPS,1)]
+            jobs={'total_count':4,'jobs':[{'id':300+i,'run_id':123456,'run_attempt':1,
+                'head_sha':request['source']['head'],'name':name,'status':'completed',
+                'conclusion':'success' if name==selected else 'skipped',
+                'steps':steps if name==selected else []}
+                for i,name in enumerate(names)]}
+            for row in jobs['jobs']:
+                if row['name']==selected:row['id']=number
+            expectation={'schema':'bw.bochs-ring3.'+route+'-expectation.v1',
+                'repository':p.REPOSITORY,'pullRequest':request['pullRequest'],
+                'runId':'123456','runAttempt':1,'jobId':number,'jobName':selected,
+                'eventName':'pull_request','actor':'CrispStrobe',
+                'head':request['source']['head'],'tree':request['source']['tree'],
+                'workflowCommit':source_before['workflowCommit'],
+                'workflowTree':source_before['workflowTree'],
+                'workflowFileSha256':source_before['workflowFileSha256'],
+                'requestSha256':h.sha(packet['request.original.json']),
+                'eventSha256':h.sha(packet['event.original.json']),
+                'artifactId':artifact_id,'archiveBytes':len(archive),
+                'archiveSha256':h.sha(archive),'conclusion':'success','steps':steps}
+            repo={'id':987,'full_name':p.REPOSITORY,'fork':False,
+                  'name':'bw-board','node_id':'synthetic-node','owner':{'login':'CrispStrobe'}}
+            run={'id':123456,'run_attempt':1,'head_sha':request['source']['head'],
+                'event':'pull_request','status':'completed','conclusion':'success',
+                'repository':repo,'head_repository':copy.deepcopy(repo),
+                'actor':{'login':'CrispStrobe'},'path':p.WORKFLOW,
+                'pull_requests':[{'number':request['pullRequest'],
+                    'head':{'sha':request['source']['head'],'repo':{'id':987}},
+                    'base':{'ref':'master','repo':{'id':987}}}]}
+            artifacts={'total_count':1,'artifacts':[{'id':artifact_id,
+                'name':'i80386-bochs-ring3-'+route+'-v1-originals',
+                'size_in_bytes':len(archive),'digest':'sha256:'+h.sha(archive),
+                'expired':False,'workflow_run':{'id':123456,
+                    'head_sha':request['source']['head'],
+                    'repository_id':987,'head_repository_id':987}}]}
+            grader=(r.build_official_current_v2 if route=='build' else
+                    r.reference_official_current_v2)
+            raw_expected=p.canonical(expectation)
+            args=(archive,raw_expected,run,jobs,artifacts,b'synthetic current official log\n')
+            grade=grader(*args)
+            assert grade['officialMetadataBound'] and grade['actualRunApproved'] is False
+            def refused(label,mutator):
+                changed=copy.deepcopy(args)
+                mutator(changed[3]['jobs'])
+                changed[3]['total_count']=len(changed[3]['jobs'])
+                try:grader(*changed)
+                except r.Refusal:pass
+                else:raise AssertionError('current '+route+' accepted '+label)
+            refused('missing other job',lambda rows:rows.pop(0))
+            refused('extra job',lambda rows:rows.append({'id':999,'run_id':123456,
+                'head_sha':request['source']['head'],'name':'unknown-extra',
+                'status':'completed','conclusion':'skipped','steps':[]}))
+            refused('wrong inactive name',lambda rows:rows[0].update(name='unknown-other'))
+            refused('duplicate inactive name',lambda rows:rows[0].update(name=rows[1]['name']))
+            refused('wrong inactive conclusion',lambda rows:rows[0].update(conclusion='success'))
+            counterfactual=copy.deepcopy(args)
+            counterfactual[3]['jobs'][0]['conclusion']='success'
+            with mock.patch.object(r,'current_official_four_jobs',return_value=None):
+                assert grader(*counterfactual)['officialMetadataBound'] is True
+            refused('nonterminal inactive',lambda rows:rows[0].update(status='queued'))
+            refused('wrong inactive run',lambda rows:rows[0].update(run_id=123457))
+            refused('wrong inactive attempt',lambda rows:rows[0].update(run_attempt=2))
+            refused('wrong inactive head',lambda rows:rows[0].update(head_sha='0'*40))
+            return grade
+
         built=build()
         try:
             result=reference(built)
+            bo=official_current('build',built[6],built[2],json.loads(built[6]['source.before.json']))
+            ro=official_current('reference',result[4],result[0],json.loads(result[4]['source.before.json']))
             self.assertEqual(len(built[6]),31)
             self.assertEqual(len(result[4]),32)
             self.assertTrue(result[5]['architectureObserved'])
+            self.assertTrue(bo['officialMetadataBound'])
+            self.assertTrue(ro['officialMetadataBound'])
             self.assertFalse(result[5]['actualRunApproved'])
         finally:
             built[1]()
