@@ -2642,6 +2642,20 @@ class ConnectedBuildReferenceControls(unittest.TestCase):
             official = reader.reference_official_v2(*args)
             self.assertTrue(official['officialMetadataBound'])
             self.assertFalse(official['actualRunApproved'])
+            cli_originals = {'archive':archive,'expectation':p.canonical(expectation),
+                'run':p.canonical(run),'jobs':p.canonical(jobs),
+                'artifacts':p.canonical(artifacts),'job-log':args[-1]}
+            argv = ['--route','reference','--archive','archive']
+            argv += [word for key in ('expectation','run','jobs','artifacts','job-log')
+                     for word in ('--'+key,key)]
+            captured = io.BytesIO()
+            with mock.patch.object(reader, 'REFERENCE_READER_ENABLED', True), \
+                 mock.patch.object(reader, 'cli_regular',
+                     side_effect=lambda path,_cap:cli_originals[path]), \
+                 mock.patch.object(reader.sys, 'stdout', SimpleNamespace(buffer=captured)):
+                self.assertEqual(reader.main(argv), 0)
+            self.assertTrue(json.loads(captured.getvalue())['officialMetadataBound'])
+            self.assertFalse(json.loads(captured.getvalue())['actualRunApproved'])
             official_cuts = {
                 'foreign repository':lambda a:a[2]['head_repository'].update(id=988),
                 'fork':lambda a:a[2]['repository'].update(fork=True),
@@ -2657,6 +2671,32 @@ class ConnectedBuildReferenceControls(unittest.TestCase):
                     reader.reference_official_v2(*changed)
         finally:
             restore()
+
+    def test_reader_cli_disabled_and_bounded_files(self):
+        h = _connected_bochs_mocks()
+        reader = h.reader
+        for route,flag in (('toolchain','TOOLCHAIN_READER_ENABLED'),
+                           ('build','BUILD_READER_ENABLED'),
+                           ('reference','REFERENCE_READER_ENABLED')):
+            self.assertIs(getattr(reader, flag), False)
+            with mock.patch.object(reader.os, 'open',
+                                   side_effect=AssertionError('disabled input IO')), \
+                 mock.patch.object(reader.sys, 'stderr', io.StringIO()):
+                self.assertEqual(reader.main(['--route',route,
+                                              '--archive','unopened']), 1)
+        with tempfile.TemporaryDirectory(dir=HERE) as directory:
+            empty = Path(directory) / 'empty'
+            empty.write_bytes(b'')
+            with self.assertRaises(reader.Refusal):
+                reader.cli_regular(str(empty), 1)
+            ordinary = Path(directory) / 'ordinary'
+            ordinary.write_bytes(b'AB')
+            with self.assertRaises(reader.Refusal):
+                reader.cli_regular(str(ordinary), 1)
+            link = Path(directory) / 'link'
+            link.symlink_to(ordinary)
+            with self.assertRaises(OSError):
+                reader.cli_regular(str(link), 10)
 
 
 def _connected_edit_json(packet, name, edit):
