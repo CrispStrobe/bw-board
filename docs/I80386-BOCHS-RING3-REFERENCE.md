@@ -1,6 +1,6 @@
 # Bochs CPU3 Ring 3 reference ownership proposal
 
-Status: docs-only claim; source implementation, build and reference execution
+Status: merged docs-only claim; source implementation, build and reference execution
 are not selected or qualified. The exact envelope is the
 [new Bochs claim in LANES.md](../LANES.md). Preserve the separately owned
 same-job V3 cleanup lane and every consumed event/original.
@@ -30,6 +30,14 @@ build bounds are one CPU, 2 GiB, no swap, 64 tasks, 900-second child, 960-second
 outer and 20-minute job. They are not demonstrated sufficient. No local build
 or guest is authorized by this leaf.
 
+Treat the selected Node toolcache as input data. Before executing Node, make
+one owned, read-only stage copy and verify its bytes, identity and readback;
+retain the fixed copy, resource-limit and cleanup facts. Admit the compiler's
+identity from separate build metadata rather than inferring it from a local
+executable. Preserve the exact VGA source and its notices alongside any
+reviewed configuration that uses it. Local source and mocked tests establish
+the protocol only; they do not qualify a Bochs build or reference execution.
+
 A separate runtime selection follows only after root admits official build
 metadata, the checkout/source/build manifest from the sole retained build-job
 log, and the archive's official digest/size. The runtime job is the sole getter
@@ -48,7 +56,7 @@ needs separate source/resource admission and a genuine bounded capture.
 Default VGA/CMOS/share resources, if required, must be explicitly disabled or
 reviewed and pinned with notices; no fallback download or guessed absence.
 
-Next: merge this exact docs claim; implement only its named new paths in an
+Next: implement only the merged claim's named new paths in an
 isolated checkout, keep guards false, and prove connected reader/source/
 framing/failure/resource controls. Fresh source CI and independent root
 admission precede any new build or reference event. Actual result, whole OS,

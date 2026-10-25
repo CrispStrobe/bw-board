@@ -7965,8 +7965,3036 @@ def setup_v9_controls():
         'guest':False,'actualRunApproved':False,'pass':True}))
 
 
+def same_job_official_fixture(facts,version=1):
+    """Manufactured official metadata and a closed ZIP around genuine local originals."""
+    assert type(version) is int and version in (1,2,3)
+    packet=facts['packet'];handoff=facts['handoff'];source=facts['source']
+    selected={"packet/"+name:packet[name] for name in reader.ROLES}
+    selected.update({'handoff':handoff,'service':facts['service'],
+        'cleanup':facts['cleanup'],'guestOuter':facts['guestOuter'],
+        'controllerRuntime':facts['controllerRuntime'],
+        'setupLog':facts['setupLog'],'setupOuter':facts['setupOuter'],
+        'setupCleanup':facts['setupCleanup'],'setupShell':facts['setupShell']})
+    paths={name:'same-job/'+name if not name.startswith('packet/') else name
+        for name in selected}
+    extra_names=('controller.stderr','outside-cleanup.stderr','guest.stdout',
+        'guest.stderr','guest-cleanup.stdout','guest-cleanup.stderr',
+        'guest-verdict.original.json')
+    extra_data={name:('manufactured '+name+'\n').encode() for name in extra_names}
+    extras={name:{'path':'same-job/'+name,'bytes':len(raw),'sha256':sha(raw)}
+        for name,raw in extra_data.items()}
+    archive=io.BytesIO()
+    with zipfile.ZipFile(archive,'w',zipfile.ZIP_STORED) as output:
+        for name,raw in sorted(selected.items()):output.writestr(paths[name],raw)
+        for name,raw in sorted(extra_data.items()):output.writestr(extras[name]['path'],raw)
+    artifact=archive.getvalue();head=source['head'];run_id=123;job_id=456;artifact_id=789
+    run={'id':run_id,'run_attempt':1,'head_sha':head,'event':'pull_request',
+        'status':'completed','conclusion':'success','path':reader.WORKFLOW,
+        'repository':{'full_name':'CrispStrobe/bw-board'},
+        'head_repository':{'full_name':'CrispStrobe/bw-board'},
+        'actor':{'login':'CrispStrobe'},'pull_requests':[{'number':688,
+            'head':{'sha':head}}]}
+    step_names=('Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262',
+        'Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020',
+        'Bounded same-job setup and authored guest',
+        'Bound retained same-job artifact after either outcome',
+        'Retain same-job setup and guest originals')
+    jobs={'total_count':1,'jobs':[{'id':job_id,'run_id':run_id,'head_sha':head,
+        'name':'ring3-same-job-actual-v'+str(version),
+        'status':'completed','conclusion':'success',
+        'steps':[{'name':name,'status':'completed','conclusion':'success'}
+            for name in step_names]}]}
+    artifacts={'total_count':1,'artifacts':[{'id':artifact_id,
+        'name':'i80386-ring3-same-job-actual-v'+str(version)+'-originals',
+        'size_in_bytes':len(artifact),'digest':'sha256:'+sha(artifact),
+        'expired':False,'workflow_run':{'id':run_id,'head_sha':head}}]}
+    run_raw,jobs_raw,artifacts_raw=map(reader.canonical,(run,jobs,artifacts))
+    log=b'manufactured bounded official job log\n'
+    external={'schema':'bw.ring3.same-job-actual-official-expectation.v'+str(version),
+        'runId':'123','jobId':job_id,'artifactId':artifact_id,'attempt':1,
+        'head':head,'tree':source['tree'],'workflowSha':facts['workflowSha'],
+        'workflowFileSha256':source['files'][reader.WORKFLOW]['sha256'],
+        'requestSha256':facts['requestSha256'],'handoffSha256':sha(handoff),
+        'jobName':'ring3-same-job-actual-v'+str(version),'conclusion':'success',
+        'pullRequest':688,
+        'artifactName':'i80386-ring3-same-job-actual-v'+str(version)+'-originals',
+        'artifactBytes':len(artifact),'artifactSha256':sha(artifact),
+        'artifactPaths':paths,'artifactExtras':extras,
+        'runMetadataBytes':len(run_raw),'runMetadataSha256':sha(run_raw),
+        'jobsMetadataBytes':len(jobs_raw),'jobsMetadataSha256':sha(jobs_raw),
+        'artifactsMetadataBytes':len(artifacts_raw),
+        'artifactsMetadataSha256':sha(artifacts_raw),
+        'jobLogBytes':len(log),'jobLogSha256':sha(log),
+        'setupExpectation':facts['setupExpectation']}
+    return external,(run_raw,jobs_raw,artifacts_raw,log,artifact)
+
+
+def same_job_official_grade(facts,external,raws,version=1):
+    node=facts['node']
+    with patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',facts['graph']),\
+         patch.object(reader,'SETUP_V9_STATUS_SHA',facts['statusSha256']),\
+         patch.object(reader,'SETUP_V9_STATUS_BYTES',facts['statusBytes']),\
+         patch.dict(reader.RUNTIME_SELECTED,{'node':{
+             'bytes':node['bytes'],'sha256':node['sha256']}}):
+        return reader.verify_same_job_actual_official(facts['packet'],facts['handoff'],
+            facts['service'],facts['cleanup'],facts['guestOuter'],
+            facts['controllerRuntime'],facts['setupLog'],facts['setupOuter'],
+            facts['setupCleanup'],facts['setupShell'],*raws,external,version=version)
+
+
+def same_job_official_cuts(case,facts,external,raws):
+    names=('packet-dir','handoff','service','cleanup','guest-outer',
+        'controller-runtime','setup-log','setup-outer','setup-cleanup','setup-shell',
+        'official-run','official-jobs','official-artifacts','job-log',
+        'artifact-zip','external')
+    values=('packet',*('original-'+name for name in names[1:]))
+    argv=['reader.py','--same-job-actual-official-v1']
+    for name,value in zip(names,values):argv.extend(('--'+name,value))
+    files={'packet/'+name:raw for name,raw in facts['packet'].items()}
+    files.update(zip(values[1:],(facts['handoff'],facts['service'],facts['cleanup'],
+        facts['guestOuter'],facts['controllerRuntime'],facts['setupLog'],
+        facts['setupOuter'],facts['setupCleanup'],facts['setupShell'],*raws,
+        reader.canonical(external))))
+    stdout=io.StringIO();node=facts['node']
+    with patch.object(reader,'SAME_JOB_ACTUAL_READER_ENABLED',True),\
+         patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',facts['graph']),\
+         patch.object(reader,'SETUP_V9_STATUS_SHA',facts['statusSha256']),\
+         patch.object(reader,'SETUP_V9_STATUS_BYTES',facts['statusBytes']),\
+         patch.dict(reader.RUNTIME_SELECTED,{'node':{
+             'bytes':node['bytes'],'sha256':node['sha256']}}),\
+         patch.object(reader.sys,'argv',argv),\
+         patch.object(reader.Path,'open',autospec=True,side_effect=lambda path,*a,**kw:
+             io.BytesIO(files[str(path)])),contextlib.redirect_stdout(stdout):
+        reader.main()
+    case.assertTrue(json.loads(stdout.getvalue())['officialMetadataBound'])
+    case.assertFalse(json.loads(stdout.getvalue())['actualRunApproved'])
+    altered=dict(facts,setupLog=facts['setupLog'][:-1]+b'X')
+    selected=copy.deepcopy(external)
+    selected['setupExpectation']['logSha256']=sha(altered['setupLog'])
+    with case.assertRaises((reader.Refusal,ValueError)):
+        same_job_official_grade(altered,selected,raws)
+    changed=list(raws);jobs=reader.parse(changed[1]);steps=jobs['jobs'][0]['steps']
+    steps[0],steps[1]=steps[1],steps[0]
+    changed[1]=reader.canonical(jobs)
+    selected=copy.deepcopy(external)
+    selected.update(jobsMetadataBytes=len(changed[1]),jobsMetadataSha256=sha(changed[1]))
+    with case.assertRaises(reader.Refusal):
+        same_job_official_grade(facts,selected,tuple(changed))
+    changed=list(raws);archive=io.BytesIO()
+    with zipfile.ZipFile(archive,'w',zipfile.ZIP_STORED) as output:
+        with zipfile.ZipFile(io.BytesIO(changed[4])) as original:
+            for entry in original.infolist():
+                output.writestr(entry,original.read(entry))
+        output.writestr('same-job/unreviewed.original.json',b'{}\n')
+    changed[4]=archive.getvalue();metadata=reader.parse(changed[2])
+    metadata['artifacts'][0]['size_in_bytes']=len(changed[4])
+    metadata['artifacts'][0]['digest']='sha256:'+sha(changed[4])
+    changed[2]=reader.canonical(metadata)
+    selected=copy.deepcopy(external)
+    selected.update(artifactBytes=len(changed[4]),artifactSha256=sha(changed[4]),
+        artifactsMetadataBytes=len(changed[2]),artifactsMetadataSha256=sha(changed[2]))
+    with case.assertRaises(reader.Refusal):
+        same_job_official_grade(facts,selected,tuple(changed))
+    changed=list(raws);run=reader.parse(changed[0]);run['head_sha']='f'*40
+    changed[0]=reader.canonical(run);selected=copy.deepcopy(external)
+    selected.update(runMetadataBytes=len(changed[0]),runMetadataSha256=sha(changed[0]))
+    with case.assertRaises(reader.Refusal):
+        same_job_official_grade(facts,selected,tuple(changed))
+
+
+def same_job_actual_controls():
+    """Pure first-service boundary controls; all host and guest edges mocked."""
+    p,case=producer_fixture_case()
+    edges=staged_runtime_controls(export_edges=True)
+    def runtime_edges(stage_node):
+        files,old_probe=runtime_fixture()
+        node=files.facts.pop(reader.RUNTIME_NODE)
+        files.facts[reader.NODE_STAGE_TARGET]=dict(node,mode=0o555)
+        files.prefixes[reader.NODE_STAGE_TARGET]=files.prefixes.pop(reader.RUNTIME_NODE)
+        files.rejected={}
+        empty=next(iter(reader.STAGED_EMPTY_PYTHON_SOURCES))
+        python_files=files.python_files
+        python_extra=['/usr/lib/python3.12/mock'+str(index).zfill(3)+'.py'
+            for index in range(241)]
+        files.python_files=lambda:sorted(python_files()+[empty,*python_extra])
+        files.empty_python=lambda name:reader.StagedInventoryFiles.empty_python(files,name)
+        original_fact=files.fact
+        def fact(path):
+            row=original_fact(path)
+            if path==reader.NODE_STAGE_TARGET:
+                files.metadata[path]=copy.deepcopy(stage_node)
+            return row
+        files.fact=fact
+        listings={'qemu-system-x86':[reader.RUNTIME_QEMU,reader.RUNTIME_TCG,'/usr/share/qemu/bios.bin'],
+            'qemu-system-common':['/usr/share/qemu/common-keymap'],
+            'qemu-system-data':['/usr/share/qemu/data-blob',*reader.SETUP_V9_SIGNED_DATA],
+            'seabios':['/usr/share/seabios/bios.bin'],'ipxe-qemu':['/usr/share/ipxe/rom.bin']}
+        for path,pin in reader.SETUP_V9_SIGNED_DATA.items():
+            files.facts[path]=dict(pin);files.prefixes[path]=b'inert signed DATA mock'
+        # Add short inert DATA names so the manufactured complete graph exercises
+        # the exact selected cardinalities without embedding retained host bytes.
+        for index in range(71):
+            path='/usr/share/qemu/f'+str(index).zfill(3)
+            files.facts[path]={'bytes':1,'sha256':sha(path.encode()),'mode':0o644}
+            files.prefixes[path]=b'F'
+            listings['qemu-system-data'].append(path)
+        for path in python_extra:
+            files.facts[path]={'bytes':1,'sha256':sha(path.encode()),'mode':0o644}
+            files.prefixes[path]=b'#'
+        for index in range(52):
+            path='/usr/share/qemu/l'+str(index).zfill(3)
+            files.aliases[path]={'linkText':'f000','target':'/usr/share/qemu/f000'}
+            listings['qemu-system-data'].append(path)
+        observed=[]
+        def probe(argv):
+            process,streams=old_probe(argv)
+            index=len(observed);observed.append(list(argv))
+            process.update(pid=300+index,pgid=300+index,parentPid=101,
+                startTicks=index+1,spawnMonoNs=60000000+index*1000000,
+                reapMonoNs=60001000+index*1000000)
+            if argv==[reader.NODE_STAGE_TARGET,'--version']:streams['stdout']=b'v22.23.3\n'
+            if argv[:2]==['/usr/bin/dpkg-query','-W']:
+                rows={name:(version,arch) for name,version,arch,*_ in reader.SETUP_V9_PACKAGES
+                    if name in reader.PACKAGE_NAMES}
+                streams['stdout']=''.join(name+'\t'+rows[name][0]+'\t'+rows[name][1]+'\n'
+                    for name in reader.PACKAGE_NAMES).encode()
+            if argv[:2]==['/usr/bin/dpkg-query','-L']:
+                streams['stdout']=('/.\n'+'\n'.join(listings[argv[2]])+'\n').encode()
+            return process,streams
+        return files,probe,observed
+    class Tests(unittest.TestCase):
+        def test_selected_comma_regular_runtime_readback_and_drift(self):
+            path='/usr/share/qemu/QEMU,VGA.bin';data=b'bounded selected DATA mock'
+            value={'qemuPackage':{'files':{path:{'kind':'qemu-data',
+                'bytes':len(data),'sha256':sha(data)}},'aliases':{},'probes':[]},
+                'executables':{}}
+            backend=p.RuntimeFiles()
+            with patch.object(backend,'read',side_effect=lambda selected,cap:data):
+                observed,failure=p.runtime_facts(value,backend.read,backend.alias,
+                    stage='before-guests')
+            self.assertEqual(observed,value)
+            self.assertIsNone(failure.first)
+            with patch.object(backend,'read',side_effect=lambda selected,cap:data+b'X'):
+                observed,failure=p.runtime_facts(value,backend.read,backend.alias,
+                    stage='after-guests')
+            self.assertIsNotNone(failure.first)
+            self.assertEqual(failure.first['phase'],'runtime-after-drift')
+            self.assertEqual(observed['qemuPackage']['files'][path]['sha256'],sha(data+b'X'))
+        def test_connected_v2_first_service_setup_stage_inventory_original(self):
+            rom,manifest=pure_fixture()
+            architectural,_=manufacture(rom,manifest)
+            with v8_manufactured(p,case,architectural) as (
+                    old_env,old_expected,old_originals,old_packet,old_selected,
+                    old_files,old_state):
+                packet_template=dict(old_packet)
+            def status_row(name,version,arch='amd64',state='install ok installed',pending=None):
+                lines=['Package: '+name,'Version: '+version,'Architecture: '+arch,'Status: '+state]
+                if pending is not None:lines.append('Triggers-Pending: '+pending)
+                return '\n'.join(lines).encode()
+            base=[status_row('installed-'+str(i).zfill(4),'1',
+                state='deinstall ok config-files' if i==0 else 'install ok installed')
+                for i in range(1210)]
+            pre=b'\n\n'.join(base+[status_row('libc-bin','2')])+b'\n'
+            selected=[status_row(name,version,arch) for name,version,arch,*_ in p.SETUP_V9_PACKAGE_ROWS]
+            post=b'\n\n'.join(base+[status_row('libc-bin','2',state='install ok triggers-pending',pending='ldconfig'),*selected])+b'\n'
+            with edges() as (producer,env,request,raw,state):
+                producer.stage_runtime_inventory_node(env)
+                stage_node=state['observation']['stageBefore']['files']['node']['before']
+                files,probe,observed=runtime_edges(stage_node)
+                candidate_raw=reader.SetupV9Inventory(stage_node,files,probe).discover()
+                candidate=reader.parse(candidate_raw)
+                self.assertEqual((len(candidate['files']),len(candidate['aliases'])),(327,55))
+                mock_graph=dict(producer.SAME_JOB_REVIEWED_GRAPH,bytes=len(candidate_raw),
+                    sha256=sha(candidate_raw))
+                FakeOps,witness=setup_v8_controls(export_ops=True)
+                actual=copy.deepcopy(request)
+                with patch.object(producer,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                     patch.object(producer,'SETUP_V8_STATUS_SHA',sha(pre)):
+                    setup_policy=producer.setup_v9_policy()
+                actual.update(schema=producer.SAME_JOB_ACTUAL_V2_ROUTE['requestSchema'],
+                    setup=setup_policy,payloadWitness=witness,comparison=mock_graph)
+                request_raw=reader.canonical(actual);pin=sha(request_raw)
+                event=reader.parse(state['originals']['staged.event.json'])
+                event['label']['name']=producer.SAME_JOB_ACTUAL_V2_ROUTE['label']
+                event['pull_request']['body']='<!-- BW_RING3_SAME_JOB_ACTUAL_V2\n'+pin+\
+                    '\nBW_RING3_SAME_JOB_ACTUAL_V2 -->'
+                event_raw=reader.canonical(event)
+                record=copy.deepcopy(reader.parse(reader.prerequisite_original(
+                    reader.canonical(state['observation']['stageBefore']['record']))))
+                record.update(schema=producer.SAME_JOB_ACTUAL_V2_ROUTE['stageSchema'],
+                    request={'bytes':len(request_raw),'sha256':pin,'base64':base64.b64encode(request_raw).decode()},
+                    event={'bytes':len(event_raw),'sha256':sha(event_raw),'base64':base64.b64encode(event_raw).decode()},
+                    recordBoundary='verified copy after selected setup and policy cleanup, before directory publication')
+                record['platform'].pop('BW_RING3_STAGED_INVENTORY_REQUEST_SHA256')
+                record['platform'].update(BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256=pin,
+                    BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64=base64.b64encode(request_raw).decode(),
+                    GITHUB_JOB=producer.SAME_JOB_ACTUAL_V2_ROUTE['job'])
+                record['eventIdentity']['st_size']=len(event_raw)
+                source=reader.parse(reader.prerequisite_original(reader.canonical(actual['source'])))
+                class ActualOps(FakeOps):
+                    def preflight(self,selected):
+                        item=super().preflight(selected)
+                        item['imageVersion']='20261012.334.1'
+                        item['imageFields']['ImageVersion']['value']=item['imageVersion']
+                        item['resource']['membership']='0::/system.slice/bw-ring3-actual-setup-v2-123-1.service\n'
+                        item['statusSha256']=sha(pre)
+                        return item
+                    def acquire(self,package):
+                        item=super().acquire(package)
+                        item['path']=item['path'].replace('setup-v8-','actual-setup-v2-')
+                        return item
+                    def dpkg(self,args):
+                        item=super().dpkg(args);item['process']['role']='setup-same-job-v2'
+                        return item
+                    def cgroup_sample_v2(self,phase,index):
+                        census=super().quiescent(phase)
+                        identity=901 if self.fault=='unit-cross-phase' and phase=='configure' else 900
+                        return {'unitIdentity':[1,identity,stat.S_IFDIR|0o755,0,0,2,0,100],
+                            'limits':dict(producer.LIMITS),
+                            'cgroupProcs':census['cgroupProcs'],
+                            'cgroupEvents':census['cgroupEvents'],
+                            'cgroupStat':census['cgroupStat'],
+                            'onlyController':census['onlyController'],
+                            'firstFailure':None,'secondary':[]}
+                class Observer:
+                    def __init__(self,environ):
+                        self.facts={'eventIdentity':record['eventIdentity'],
+                            'sourceCommands':record['sourceCommands'],'source':source}
+                    def event(self):return event_raw
+                    def source(self,selected):self.facts['source']=source
+                real_history=producer.same_job_v2_cgroup_history
+                def fixed_history(ops,phase,**kwargs):
+                    base=(40_001_001 if phase=='unpack' else 50_001_001)
+                    ticks=iter((base,base+1,base+2,base+3))
+                    return real_history(ops,phase,clock=lambda:next(ticks),**kwargs)
+                with patch.object(producer,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(reader,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                     patch.object(reader,'SETUP_V9_STATUS_BYTES',len(pre)),\
+                     patch.object(producer,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                     patch.object(producer,'SETUP_V8_STATUS_SHA',sha(pre)),\
+                     patch.object(producer,'same_job_v2_cgroup_history',side_effect=fixed_history):
+                    self.assertEqual([producer.same_json(actual['setup'],producer.setup_v9_policy()),
+                        producer.same_json(actual['payloadWitness'],producer.SETUP_V8_PAYLOAD_PINS),
+                        producer.same_json(actual['comparison'],producer.SAME_JOB_REVIEWED_GRAPH)],
+                        [True,True,True])
+                    entry_ops=ActualOps();entry_output=io.BytesIO()
+                    with patch.object(producer.os,'getresuid',return_value=(0,0,0)),\
+                         patch.object(producer.os,'getresgid',return_value=(0,0,0)),\
+                         patch.object(producer,'expected_cgroup',return_value=None),\
+                         patch.object(producer,'HostedEnvelopeInstaller',Observer),\
+                         patch.object(producer,'SetupV8Host',return_value=entry_ops),\
+                         patch.object(producer.sys,'stdout',SimpleNamespace(buffer=entry_output)):
+                        self.assertEqual(producer.setup_v8_entry(record['platform'],producer.SAME_JOB_ACTUAL_V2_ROUTE),1)
+                    self.assertEqual(entry_ops.events.count('acquire'),15,
+                        reader.parse_setup_v9_outer(entry_output.getvalue())['firstFailure'])
+                    self.assertEqual(entry_ops.events[-1],'stage',
+                        reader.parse_setup_v9_outer(entry_output.getvalue())['firstFailure'])
+                    drift_ops=ActualOps('unit-cross-phase')
+                    drift_result=producer.setup_v8_sequence(drift_ops,actual,
+                        producer.SAME_JOB_ACTUAL_V2_ROUTE)
+                    self.assertIsNotNone(drift_result['firstFailure'])
+                    self.assertNotIn('stage',drift_ops.events)
+                    def missed_history(ops,phase,**kwargs):
+                        if phase!='unpack':return fixed_history(ops,phase,**kwargs)
+                        base=40_001_001
+                        ticks=iter((base,base+1,base+5_000_000_000))
+                        return real_history(ops,phase,clock=lambda:next(ticks),**kwargs)
+                    missed_ops=ActualOps()
+                    with patch.object(producer,'same_job_v2_cgroup_history',
+                            side_effect=missed_history):
+                        missed_result=producer.setup_v8_sequence(missed_ops,actual,
+                            producer.SAME_JOB_ACTUAL_V2_ROUTE)
+                    missed_phase=missed_result['unpack']['cgroupHistory']
+                    self.assertEqual((missed_phase['samples'],missed_phase['finalIndex'],
+                        missed_result['unpack']['cgroupAfter']),([],None,None))
+                    self.assertEqual(missed_result['firstFailure'],
+                        missed_phase['firstFailure'])
+                    self.assertNotIn('configure',missed_ops.events)
+                    self.assertNotIn('stage',missed_ops.events)
+                    class ReadErrorOps(ActualOps):
+                        def cgroup_sample_v2(self,phase,index):
+                            item=super().cgroup_sample_v2(phase,index)
+                            item['firstFailure']={'phase':'v2-cgroup-read-close',
+                                'name':'OSError','message':'held read/close failure'}
+                            return item
+                    read_ops=ReadErrorOps()
+                    read_result=producer.setup_v8_sequence(read_ops,actual,
+                        producer.SAME_JOB_ACTUAL_V2_ROUTE)
+                    read_phase=read_result['unpack']['cgroupHistory']
+                    self.assertEqual(read_result['firstFailure'],
+                        read_phase['samples'][0]['firstFailure'])
+                    self.assertEqual(read_phase['finalIndex'],0)
+                    self.assertNotIn('configure',read_ops.events)
+                    self.assertNotIn('stage',read_ops.events)
+                    class NonquietOps(ActualOps):
+                        def cgroup_sample_v2(self,phase,index):
+                            item=super().cgroup_sample_v2(phase,index)
+                            if phase=='unpack' and index==0:
+                                item['cgroupProcs']='101\n202\n'
+                                item['onlyController']=False
+                            return item
+                    for fault in ('backward-clock','above-began-regression','pause-error'):
+                        clocked_ops=NonquietOps()
+                        def broken_history(ops,phase,**kwargs):
+                            if phase!='unpack':return fixed_history(ops,phase,**kwargs)
+                            base=40_001_001
+                            ticks=iter((base,base+1,base+2,base+3,
+                                base-1 if fault=='backward-clock' else
+                                base+2 if fault=='above-began-regression' else base+4))
+                            def fail_pause(_):raise OSError('bounded pause failed')
+                            return real_history(ops,phase,clock=lambda:next(ticks),
+                                pause=fail_pause if fault=='pause-error' else lambda _:None,
+                                **kwargs)
+                        with patch.object(producer,'same_job_v2_cgroup_history',
+                                side_effect=broken_history):
+                            clocked=producer.setup_v8_sequence(clocked_ops,actual,
+                                producer.SAME_JOB_ACTUAL_V2_ROUTE)
+                        history=clocked['unpack']['cgroupHistory']
+                        self.assertEqual((len(history['samples']),history['finalIndex'],
+                            history['samples'][0]['cgroupProcs']),
+                            (1,0,'101\n202\n'))
+                        self.assertEqual(clocked['firstFailure'],history['firstFailure'])
+                        self.assertNotIn('configure',clocked_ops.events)
+                        self.assertNotIn('stage',clocked_ops.events)
+                    def early_regression(ops,phase,**kwargs):
+                        if phase!='unpack':return fixed_history(ops,phase,**kwargs)
+                        base=40_001_001
+                        ticks=iter((base,base+2,base+1))
+                        return real_history(ops,phase,clock=lambda:next(ticks),
+                            **kwargs)
+                    early_ops=ActualOps()
+                    with patch.object(producer,'same_job_v2_cgroup_history',
+                            side_effect=early_regression):
+                        early_result=producer.setup_v8_sequence(early_ops,actual,
+                            producer.SAME_JOB_ACTUAL_V2_ROUTE)
+                    self.assertEqual(early_result['unpack']['cgroupHistory']['samples'],[])
+                    self.assertEqual(early_result['firstFailure'],
+                        early_result['unpack']['cgroupHistory']['firstFailure'])
+                    self.assertNotIn('configure',early_ops.events)
+                    self.assertNotIn('stage',early_ops.events)
+                    def after_read_history(ops,phase,**kwargs):
+                        if phase!='unpack':return fixed_history(ops,phase,**kwargs)
+                        base=40_001_001
+                        ticks=iter((base,base+1,base+2))
+                        def clock():
+                            try:return next(ticks)
+                            except StopIteration:raise OSError('after-read clock failed')
+                        return real_history(ops,phase,clock=clock,**kwargs)
+                    for ops,read_first in ((ActualOps(),False),(ReadErrorOps(),True)):
+                        with patch.object(producer,'same_job_v2_cgroup_history',
+                                side_effect=after_read_history):
+                            clocked=producer.setup_v8_sequence(ops,actual,
+                                producer.SAME_JOB_ACTUAL_V2_ROUTE)
+                        history=clocked['unpack']['cgroupHistory']
+                        self.assertEqual((len(history['samples']),history['finalIndex'],
+                            history['samples'][0]['endMonoNs']),(1,0,None))
+                        self.assertEqual(clocked['firstFailure'],history['firstFailure'])
+                        self.assertEqual(bool(history['secondary']),read_first)
+                        self.assertNotIn('configure',ops.events)
+                        self.assertNotIn('stage',ops.events)
+                    setup=entry_ops.snapshot
+                    status_log=io.BytesIO()
+                    pre_meta=producer.emit_setup_v8_status('pre',pre,status_log.write,status_log.flush,
+                        route=producer.SAME_JOB_ACTUAL_V2_ROUTE)
+                    post_meta=producer.emit_setup_v8_status('post',post,status_log.write,status_log.flush,
+                        route=producer.SAME_JOB_ACTUAL_V2_ROUTE)
+                    setup['preflight'].update(statusSha256=sha(pre),statusBytes=len(pre),statusOriginal=pre_meta)
+                    setup['postStatus'].update(sha256=sha(post),bytes=len(post),records=1226,
+                        statusOriginal=post_meta)
+                    record['setup']=setup
+                    record_raw=reader.canonical(record)
+                    state['rows']['/event.json'].update(raw=event_raw,st_size=len(event_raw))
+                    state['rows'][str(producer.NODE_STAGE_RECORD)].update(raw=record_raw,st_size=len(record_raw))
+                    state['rows']['/proc/self/cgroup']['raw']=b'0::/system.slice/bw-ring3-actual-setup-v2-123-1.service\n'
+                    actual_env={**record['platform'],'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'}
+                    files,probe,observed=runtime_edges(stage_node)
+                    originals,passed,safe=reader.same_job_actual_inventory_entry(actual_env,files,probe,version=2)
+                    self.assertEqual((passed,safe),(True,True),
+                        reader.parse(originals['runtime.setup-inventory.json'])['firstFailure'])
+                    self.assertEqual(len(observed),15)
+                    self.assertEqual(set(originals),set(reader.SAME_JOB_ACTUAL_LOG_ROLES))
+                    # Rewrap the complete stage original after moving only a
+                    # final census past the next real child spawn. Each sample
+                    # remains internally ordered and inside its five-second
+                    # deadline; only the cross-phase join can reject it.
+                    stage_path=str(producer.NODE_STAGE_RECORD)
+                    for phase,next_spawn in (('unpack',50_000_000),):
+                        moved=copy.deepcopy(record)
+                        last=moved['setup'][phase]['cgroupHistory']['samples'][-1]
+                        last['endMonoNs']=next_spawn+1
+                        moved_raw=reader.canonical(moved)
+                        state['rows'][stage_path].update(raw=moved_raw,st_size=len(moved_raw))
+                        observed.clear()
+                        refused,accepted,_=reader.same_job_actual_inventory_entry(
+                            actual_env,files,probe,version=2)
+                        self.assertFalse(accepted,phase)
+                        self.assertIn('chronology',reader.parse(
+                            refused['runtime.setup-inventory.json'])['firstFailure']['message'])
+                    state['rows'][stage_path].update(raw=record_raw,st_size=len(record_raw))
+                    observed.clear()
+                    wire=io.BytesIO();wire.write(status_log.getvalue())
+                    reader.emit_same_job_actual_inventory(originals,wire.write,wire.flush,version=2)
+                    self.assertEqual(reader.decode_same_job_actual_log(wire.getvalue(),version=2),originals)
+                    unit='bw-ring3-actual-setup-v2-123-1.service'
+                    absent={'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None}
+                    admission={'requestSha256':pin,'eventSha256':sha(event_raw),
+                        'head':actual['head'],'tree':actual['tree'],'source':source,'unit':unit}
+                    cleanup=reader.canonical({'schema':producer.SAME_JOB_ACTUAL_V2_ROUTE['cleanupSchema'],
+                        'runId':'123','serviceExitCode':0,'sourceAdmission':admission,
+                        'preCensus':absent,'stop':{'attempted':False,'argv':None,'exitCode':None,
+                            'timedOut':False},'postCensus':absent,'cgroupTerminal':'absent',
+                        'unitCensus':None,'policy':None,'action':'not-needed',
+                        'firstFailure':None,'secondary':[],'setupApproved':False})
+                    outer=reader.canonical({'schema':'bw.ring3.same-job-setup-outer-terminal.v2',
+                        'runId':'123','unit':'/sys/fs/cgroup/system.slice/'+unit,
+                        'systemdRunExitCode':0,'outsideCleanupExitCode':0,'cgroupAfter':'absent'})
+                    shell=reader.canonical({'schema':producer.SAME_JOB_ACTUAL_V2_ROUTE['shellSchema'],
+                        'fields':{'ImageOS':{'present':True,'value':'ubuntu24'},
+                            'ImageVersion':{'present':True,'value':'20261012.334.1'}},
+                        'fieldErrors':[],'setupAttempted':False,'guestAttempted':False,
+                        'setupApproved':False})
+                    external={'schema':'bw.ring3.same-job-local-expectation.v2',
+                        'requestSha256':pin,'runId':'123','attempt':1,'head':actual['head'],
+                        'tree':actual['tree'],'workflowSha':env['GITHUB_WORKFLOW_SHA'],
+                        'workflowFileSha256':source['files'][reader.WORKFLOW]['sha256'],
+                        'jobId':None,'jobName':producer.SAME_JOB_ACTUAL_V2_ROUTE['job'],
+                        'conclusion':'observed-zero','logBytes':len(wire.getvalue()),
+                        'logSha256':sha(wire.getvalue()),'outerBytes':len(outer),
+                        'outerSha256':sha(outer),'cleanupBytes':len(cleanup),
+                        'cleanupSha256':sha(cleanup),'shellBytes':len(shell),
+                        'shellSha256':sha(shell),'invoker':[1001,1002]}
+                    handoff=reader.verify_same_job_actual_setup_log(wire.getvalue(),external,
+                        outer,cleanup,shell,version=2)
+                    self.assertTrue(handoff['setupObserved'])
+                    self.assertEqual(handoff['candidateSha256'],mock_graph['sha256'])
+                    self.assertFalse(handoff['actualGuestApproved'])
+                    moved_originals=dict(originals)
+                    moved_value=reader.parse(originals['runtime.setup-inventory.json'])
+                    for side in ('stageBefore','stageAfter'):
+                        selected=moved_value[side]['record']
+                        stage_record=reader.parse(reader.prerequisite_original(
+                            reader.canonical(selected)))
+                        stage_record['setup']['configure']['cgroupHistory']['samples'][-1][
+                            'endMonoNs']=60_000_001
+                        stage_raw=reader.canonical(stage_record)
+                        moved_value[side]['record']={'bytes':len(stage_raw),
+                            'sha256':sha(stage_raw),'base64':base64.b64encode(stage_raw).decode()}
+                        installed=moved_value[side]['files']['installation.original.json']
+                        installed.update(bytes=len(stage_raw),sha256=sha(stage_raw),
+                            prefix=stage_raw[:4].hex())
+                        for field in ('before','after','namedAfter'):
+                            installed[field][6]=len(stage_raw)
+                    moved_originals['runtime.setup-inventory.json']=reader.canonical(moved_value)
+                    moved_wire=io.BytesIO();moved_wire.write(status_log.getvalue())
+                    reader.emit_same_job_actual_inventory(moved_originals,
+                        moved_wire.write,moved_wire.flush,version=2)
+                    moved_external=dict(external,logBytes=len(moved_wire.getvalue()),
+                        logSha256=sha(moved_wire.getvalue()))
+                    with self.assertRaisesRegex(reader.Refusal,
+                            'final strict configure census'):
+                        reader.verify_same_job_actual_setup_log(moved_wire.getvalue(),
+                            moved_external,outer,cleanup,shell,version=2)
+                    held={'setup':wire.getvalue(),'outer':outer,'cleanup':cleanup,'shell':shell}
+                    argv=['reader.py','--same-job-handoff-v2','--setup-log','setup',
+                        '--outer','outer','--cleanup','cleanup','--shell','shell',
+                        '--request-sha',pin,'--run-id','123','--head',actual['head'],
+                        '--tree',actual['tree'],'--workflow-sha',env['GITHUB_WORKFLOW_SHA'],
+                        '--workflow-file-sha',source['files'][reader.WORKFLOW]['sha256'],
+                        '--invoker-uid','1001','--invoker-gid','1002']
+                    output=io.BytesIO()
+                    with patch.object(reader,'SAME_JOB_ACTUAL_V2_READER_ENABLED',True),\
+                         patch.object(reader.sys,'argv',argv),\
+                         patch.object(reader.sys,'stdout',SimpleNamespace(buffer=output)),\
+                         patch.object(reader.Path,'open',lambda path,*a,**kw:io.BytesIO(held[str(path)])),\
+                         patch.object(reader.os,'open',side_effect=AssertionError('no live reader OS edge')):
+                        reader.main()
+                    selected_handoff=reader.parse(output.getvalue())
+                    self.assertEqual(selected_handoff['runtimeCandidate']['bytes'],len(candidate_raw))
+                    self.assertEqual(selected_handoff['runId'],'123')
+                    self.assertEqual(selected_handoff['requestSha256'],pin)
+                    self.assertEqual(selected_handoff['comparisonInput'],mock_graph)
+                    self.assertFalse(selected_handoff['actualRunApproved'])
+                    selected_env=dict(actual_env,BW_EXPECTED_HEAD=actual['head'],
+                        BW_EXPECTED_TREE=actual['tree'],GITHUB_WORKFLOW_SHA=env['GITHUB_WORKFLOW_SHA'],
+                        BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256=pin)
+                    held_raw,held_value,held_candidate,held_graph=producer.admit_same_job_handoff_bytes(
+                        output.getvalue(),selected_env,producer.SAME_JOB_ACTUAL_V2_ROUTE)
+                    self.assertEqual((held_raw,held_value,held_candidate,held_graph),
+                        (output.getvalue(),selected_handoff,candidate_raw,candidate))
+                    packet=dict(packet_template)
+                    selected_runtime=producer.SameJobRuntimeGate(
+                        candidate_raw,candidate).selected_runtime()
+                    for phase in ('before','after'):
+                        packet['source.'+phase+'.json']=reader.canonical(source)
+                        packet['runtime.'+phase+'.json']=reader.canonical(selected_runtime)
+                    for role in ('js','qemu'):
+                        process=reader.parse(packet[role+'/process.json'])
+                        process['argv']=([selected_runtime['executables']['node']['path'],
+                            '--input-type=module','--eval',reader.JS_DRIVER]
+                            if role=='js' else
+                            reader.qemu_argv(selected_runtime['executables']['qemu']['path']))
+                        packet[role+'/process.json']=reader.canonical(process)
+                    audit=reader.parse(packet['audit.json'])
+                    audit.update(head=source['head'],sourceTree=source['tree'],
+                        workflowSha256=source['files'][reader.WORKFLOW]['sha256'])
+                    audit['roles']=[{'path':name,'bytes':len(packet[name]),
+                        'sha256':sha(packet[name])}
+                        for name in sorted(reader.ROLES-{'audit.json'})]
+                    packet['audit.json']=reader.canonical(audit)
+                    observation=lambda start,end:{'files':{
+                        path:{key:item[key] for key in ('bytes','sha256','mode')}
+                        for path,item in candidate['files'].items()},
+                        'aliases':candidate['aliases'],'platform':candidate['platform'],
+                        'startMonoNs':start,'finishMonoNs':end}
+                    controller_runtime=reader.canonical({
+                        'schema':'bw.ring3.same-job-controller-runtime.v2',
+                        'handoffSha256':sha(output.getvalue()),
+                        'candidateSha256':sha(candidate_raw),
+                        'observations':{
+                            'before-probes':observation(1,2),
+                            'after-probes':observation(3,4),
+                            'after-guests':observation(5,6)},
+                        'pid':reader.parse(packet['resources.json'])['controller']['pid'],
+                        'firstFailure':None,'secondary':[]})
+                    packet_verdict=reader.same_job_actual_packet_predicates(
+                        packet,selected_handoff,controller_runtime,version=2)
+                    self.assertTrue(packet_verdict['guestPredicatesObserved'])
+                    handoff_raw=output.getvalue();handoff_pin=sha(handoff_raw)
+                    guest_unit='bw-ring3-actual-guest-v2-123-1.service'
+                    guest_service=reader.canonical({
+                        'schema':'bw.ring3.same-job-guest-service.v2',
+                        'requestSha256':pin,'handoffSha256':handoff_pin,
+                        'guestPacketComposed':True,'firstFailure':None,'secondary':[]})
+                    guest_cleanup=reader.canonical({
+                        'schema':'bw.ring3.same-job-guest-outside-cleanup.v2',
+                        'runId':'123','unit':guest_unit,'serviceExitCode':0,
+                        'sourceAdmission':{'requestSha256':pin,
+                            'eventSha256':sha(event_raw),'handoffSha256':handoff_pin,
+                            'head':actual['head'],'tree':actual['tree']},
+                        'preCensus':absent,'postCensus':absent,
+                        'stop':{'attempted':False,'argv':None,'exitCode':None,
+                            'timedOut':False},'manualCgroupAbsent':True,
+                        'outsideTerminalObserved':True,'firstFailure':None,
+                        'secondary':[],'actualGuestApproved':False})
+                    guest_outer=reader.canonical({
+                        'schema':'bw.ring3.same-job-guest-outer.v2',
+                        'runId':'123',
+                        'unit':'/sys/fs/cgroup/system.slice/'+guest_unit,
+                        'systemdRunExitCode':0,'outsideCleanupExitCode':0,
+                        'cgroupAfter':'absent'})
+                    guest_verdict=reader.verify_same_job_actual_packet(
+                        packet,handoff_raw,guest_service,guest_cleanup,
+                        guest_outer,controller_runtime,version=2)
+                    self.assertTrue(guest_verdict['guestPredicatesObserved'])
+                    self.assertFalse(guest_verdict['actualRunApproved'])
+                    drift_files,drift_probe,drift_observed=runtime_edges(stage_node)
+                    drift_files.facts['/usr/share/qemu/f001']['sha256']='0'*64
+                    drift_originals,drift_passed,drift_safe=reader.same_job_actual_inventory_entry(
+                        actual_env,drift_files,drift_probe,version=2)
+                    self.assertEqual(len(drift_observed),15)
+                    self.assertFalse(drift_passed)
+                    self.assertTrue(drift_safe)
+                    self.assertIn('fresh same-job full runtime candidate',
+                        reader.parse(drift_originals['runtime.setup-inventory.json'])['firstFailure']['message'])
+            with v8_manufactured(p,case,architectural) as (
+                    old_env,old_expected,old_originals,old_packet,old_selected,
+                    old_files,old_state):
+                controller_env=dict(actual_env,GITHUB_JOB=producer.SAME_JOB_ACTUAL_V2_ROUTE['job'],
+                    BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_SHA256=pin,
+                    BW_RING3_SAME_JOB_ACTUAL_V2_REQUEST_B64=base64.b64encode(request_raw).decode(),
+                    BW_RING3_SAME_JOB_HANDOFF_SHA256=sha(handoff_raw),
+                    BW_LAUNCH_PLAN_SHA256='0'*64,SUDO_UID='1001',SUDO_GID='1002')
+                old_state['data']['source.before.json']=reader.canonical(source)
+                for name in ('fixture.rom','fixture.json'):
+                    old_state['data']['inputs/'+name]=packet_template['inputs/'+name]
+                owner=reader.parse(old_state['data']['.entry.json'])
+                owner['sourceSha256']=sha(old_state['data']['source.before.json'])
+                old_state['data']['.entry.json']=reader.canonical(owner)
+                for name in ('runtime.before.json','.controller.before.json',
+                    '.controller.json','source.after.json','runtime.after.json',
+                    'js/process.json','js/stdout','js/stderr','qemu/process.json',
+                    'qemu/stdout','qemu/stderr','qemu/report.json'):
+                    old_state['data'].pop(name,None)
+                def cgroup_observe(groups,role):
+                    snapshot=copy.deepcopy(owner['cgroups'][role])
+                    if role=='controller':
+                        snapshot['procs']=[100]
+                    if role in ('enclosing','controller'):
+                        snapshot['raw']['pidsCurrent']='1\n'
+                        snapshot['raw']['cgroupEvents']='populated 1\nfrozen 0\n'
+                    return snapshot
+                observe=lambda path:{key:candidate['files'][path][key]
+                    for key in ('bytes','sha256','mode')}
+                fixture_write=p.write_new
+                def controller_write(path,raw,cap):
+                    path=Path(path)
+                    if path.is_relative_to(p.PACKET):
+                        self.assertLessEqual(len(raw),cap)
+                        name=path.relative_to(p.PACKET).as_posix()
+                        self.assertNotIn(name,old_state['data'])
+                        old_state['data'][name]=raw
+                    else:fixture_write(path,raw,cap)
+                def child_observation(child,role,argv,**kwargs):
+                    self.assertIn(role,('js','qemu'))
+                    process=reader.parse(packet[role+'/process.json'])
+                    self.assertEqual(process['argv'],argv)
+                    process['parentPid']=100
+                    return process,{'stdout':packet[role+'/stdout'],
+                        'stderr':packet[role+'/stderr']}
+                runtime_originals={}
+                def retain_runtime(name,raw):
+                    self.assertNotIn(name,runtime_originals)
+                    runtime_originals[name]=raw
+                    return raw
+                with patch.object(p,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(p,'ROM_SHA',reader.ROM_SHA),\
+                     patch.object(p,'FIXTURE_JSON_SHA',reader.FIXTURE_JSON_SHA),\
+                     patch.object(p,'GENERATION_NODE_PIN',(
+                         selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                         selected_handoff['stageCopy']['nodeReadback']['sha256'])),\
+                     patch.object(p,'same_job_handoff',return_value=(
+                         handoff_raw,selected_handoff,candidate_raw,candidate)),\
+                     patch.object(p,'HostedEnvelopeInstaller',side_effect=lambda environ:
+                         SimpleNamespace(event=lambda:event_raw)),\
+                     patch.object(p,'source_facts',side_effect=lambda selected,**kw:
+                         (copy.deepcopy(selected),p.FirstFailure())),\
+                     patch.object(p,'runtime_facts',side_effect=lambda selected,*args,**kw:
+                         (copy.deepcopy(selected),p.FirstFailure())),\
+                     patch.object(p,'write_new',side_effect=controller_write),\
+                     patch.object(p,'collect_child',side_effect=child_observation),\
+                     patch.object(p,'runtime_delivery_original',side_effect=retain_runtime),\
+                     patch.object(p,'entry_proc',side_effect=lambda path:
+                         '0::/bw-ring3-123-1/controller\n' if str(path).endswith('cgroup')
+                         else ''.join(k+':\t'+'0'*16+'\n' for k in
+                             ('CapInh','CapPrm','CapEff','CapAmb'))),\
+                     patch.object(p.SameJobRuntimeFiles,'fact',side_effect=observe),\
+                     patch.object(p.SameJobRuntimeFiles,'alias',side_effect=lambda path:
+                         candidate['aliases'][path]),\
+                     patch.object(p.SameJobRuntimeFiles,'platform',return_value=candidate['platform']):
+                    with patch.object(p.Cgroups,'observe',autospec=True,side_effect=cgroup_observe):
+                        ops,controller_failure=p.controller_execute(
+                            p.SameJobControllerOps(controller_env))
+                self.assertIsNone(controller_failure.first,controller_failure.first)
+                self.assertIn('controller.runtime.json',runtime_originals)
+                self.assertEqual(set(ops.processes),{'js','qemu'})
+                built_packet={name:old_state['data'].get(name,packet[name])
+                    for name in reader.ROLES if name!='audit.json'}
+                built_resources=reader.parse(built_packet['resources.json'])
+                built_resources['controller']['pid']=100
+                built_resources['controller']['before']['procs']=[100]
+                built_packet['resources.json']=reader.canonical(built_resources)
+                built_audit=reader.parse(packet['audit.json'])
+                built_audit['roles']=[{'path':name,'bytes':len(built_packet[name]),
+                    'sha256':sha(built_packet[name])} for name in sorted(built_packet)]
+                built_packet['audit.json']=reader.canonical(built_audit)
+                self.assertEqual((reader.parse(runtime_originals['controller.runtime.json'])['handoffSha256'],
+                    reader.parse(runtime_originals['controller.runtime.json'])['pid']),
+                    (sha(handoff_raw),reader.parse(built_packet['resources.json'])['controller']['pid']))
+                with patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                     patch.dict(reader.RUNTIME_SELECTED,{'node':{
+                        'bytes':selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                        'sha256':selected_handoff['stageCopy']['nodeReadback']['sha256']} }):
+                    built_verdict=reader.verify_same_job_actual_packet(built_packet,
+                        handoff_raw,guest_service,guest_cleanup,guest_outer,
+                        runtime_originals['controller.runtime.json'],version=2)
+                self.assertTrue(built_verdict['guestPredicatesObserved'])
+                final_env=dict(controller_env)
+                final_env['GITHUB_EVENT_PATH']='/event.json'
+                final_plan=reader.canonical({'schema':'bw.ring3.launch-plan.v1',
+                    'runId':'123','attempt':1,'head':actual['head'],
+                    'tree':actual['tree'],'source':actual['source']})
+                final_env['BW_LAUNCH_PLAN_SHA256']=sha(final_plan)
+                def git_trace(raw,phase):
+                    item=reader.parse(raw);item['source']=source
+                    listing=''.join(source['files'][name]['mode']+' blob '+
+                        source['files'][name]['blob']+'\t'+name+'\n'
+                        for name in sorted(source['files']))
+                    outputs=(source['head']+'\n',source['tree']+'\n',listing)
+                    for command,value in zip(item['commands'],outputs):
+                        command['stdoutHex']=value.encode().hex()
+                    return reader.canonical(item)
+                pre_git=git_trace(old_originals['git.before.json'],'before')
+                post_git=git_trace(old_originals['git.after.json'],'after')
+                generation=reader.parse(old_originals['generation.phase.json'])
+                node_path=p.RUNTIME_EXECUTABLES['node']
+                node_fact={'path':node_path,
+                    'bytes':selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                    'sha256':selected_handoff['stageCopy']['nodeReadback']['sha256']}
+                generation_files={'node':dict(node_fact)}
+                for role,name in (('fixture','fixture.mjs'),('runner','run.py')):
+                    path='scripts/i80386-ring3-int-iret/'+name
+                    generation_files[role]={'path':path,
+                        'bytes':source['files'][path]['bytes'],
+                        'sha256':source['files'][path]['sha256']}
+                for when in ('before','after'):
+                    generation[when]['files']=copy.deepcopy(generation_files)
+                input_refs={name:{'bytes':len(old_state['data']['inputs/'+name]),
+                    'sha256':sha(old_state['data']['inputs/'+name])}
+                    for name in ('fixture.rom','fixture.json')}
+                generation['outputs']=input_refs
+                generation_raw=reader.canonical(generation)
+                phase=reader.parse(old_originals['preparation.phase.json'])
+                phase['process']['argv'][-1]='--same-job-prepare-v2'
+                phase['process']['environment']=dict(p.ENV,**{
+                    name:final_env[name] for name in p.SAME_JOB_V2_CHILD_ENV},
+                    SUDO_UID='1001',SUDO_GID='1002')
+                phase['preGit']={'bytes':len(pre_git),'sha256':sha(pre_git)}
+                pre_stream=p.generation_frame(generation_raw,pre_git)
+                phase['stdout']={'bytes':len(pre_stream),'sha256':sha(pre_stream),
+                    'base64':base64.b64encode(pre_stream).decode()}
+                phase_raw=reader.canonical(phase)
+                outside_record=reader.parse(old_state['data']['.outside.json'])
+                outside_record['process']['argv'][-1]='--same-job-bootstrap-v2'
+                outside_record['process']['pid']=100
+                outside_record['process']['pgid']=100
+                outside_record['process']['environment']=dict(p.ENV,**{
+                    name:final_env[name] for name in p.SAME_JOB_V2_CHILD_ENV},
+                    SUDO_UID='1001',SUDO_GID='1002')
+                old_state['data']['.outside.json']=reader.canonical(outside_record)
+                outside_facts={key:value for key,value in outside_record.items()
+                    if key not in ('firstFailure','secondary','streamsHex')}
+                selection={'requestRaw':request_raw,'request':actual,
+                    'handoffRaw':handoff_raw,'handoff':selected_handoff,
+                    'candidateRaw':candidate_raw,'candidate':candidate}
+                old_state['export'].clear();old_state['directories'].clear()
+                post=SimpleNamespace(capture=lambda head:(post_git,p.FirstFailure()))
+                with patch.object(p,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(p,'GENERATION_NODE_PIN',(
+                         node_fact['bytes'],node_fact['sha256'])),\
+                     patch.object(p,'ROM_SHA',reader.ROM_SHA),\
+                     patch.object(p,'FIXTURE_JSON_SHA',reader.FIXTURE_JSON_SHA):
+                    context=p.SameJobFinalizerContext(selection,final_env,p.SAME_JOB_ACTUAL_V2_ROUTE)
+                    finalized,final_failure=p.finalize_runtime_packet(context,
+                        outside_facts,p.FirstFailure(),pre_git,final_env,
+                        post_observer=post,preparation_original=phase_raw,
+                        generation_original=generation_raw,
+                        launch_plan_original=final_plan,
+                        launch_plan_sha256=sha(final_plan),
+                        emit=lambda raw:len(raw),flush=lambda:None)
+                self.assertTrue(finalized['pass'],final_failure.first)
+                self.assertIsNone(final_failure.first)
+                self.assertEqual(set(old_state['export']),reader.ROLES)
+                with patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                     patch.dict(reader.RUNTIME_SELECTED,{'node':{
+                        'bytes':selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                        'sha256':selected_handoff['stageCopy']['nodeReadback']['sha256']} }):
+                    exported_verdict=reader.verify_same_job_actual_packet(
+                        old_state['export'],handoff_raw,guest_service,guest_cleanup,
+                        guest_outer,runtime_originals['controller.runtime.json'],version=2)
+                self.assertTrue(exported_verdict['guestPredicatesObserved'])
+                self.assertFalse(exported_verdict['actualRunApproved'])
+                wrapper_calls=[];wrapper_originals={};uid_state={'uid':0,'gid':0}
+                guest_env=dict(final_env)
+                fake_setup=SimpleNamespace(environ=guest_env,
+                    expected_plan_sha256=sha(final_plan),plan_original=final_plan,
+                    invoker={'uid':1001,'gid':1002},
+                    verify=lambda:wrapper_calls.append('verify'))
+                def setup_prepare():
+                    wrapper_calls.append('prepare')
+                    return {'pass':True},p.FirstFailure()
+                fake_setup.prepare=setup_prepare
+                def composition_validate(composition):
+                    self.assertIsInstance(composition,p.SameJobEntryComposition)
+                    self.assertEqual(composition.runtime_context.selection['handoffRaw'],
+                        handoff_raw)
+                    composition.bootstrap.invoker={'uid':1001,'gid':1002}
+                    composition.python=reader.parse(old_state['data']['.entry.json'])['python']
+                def composition_prepare(composition,failure):
+                    self.assertIsNone(failure.first)
+                    composition._launch_plan_original=final_plan
+                    composition._preparation_original=phase_raw
+                    composition._generation_original=generation_raw
+                    composition.pre_git=pre_git
+                    composition.preparation={'process':reader.parse(phase_raw)['process'],
+                        'streams':{'stdout':pre_stream,'stderr':b''}}
+                    return failure
+                def composition_outside(composition):
+                    self.assertEqual(composition._launch_plan_original,final_plan)
+                    wrapper_calls.append('compose')
+                    uid_state.update(uid=1001,gid=1002)
+                    p.entry_ids(1001,1002)
+                    return outside_facts,p.FirstFailure()
+                class MockPostGit(p.GitObservation):
+                    def capture(self,head):
+                        self.assert_head=head
+                        return post.capture(head)
+                def selected_plan(selection,environ):
+                    self.assertEqual(selection['candidateRaw'],candidate_raw)
+                    self.assertEqual(selection['handoffRaw'],handoff_raw)
+                    wrapper_calls.append('plan')
+                    return final_plan,dict(environ,BW_LAUNCH_PLAN_SHA256=sha(final_plan))
+                def selected_sink(setup):
+                    self.assertIs(setup,fake_setup)
+                    wrapper_calls.append('sink')
+                def retained_service(path,raw,cap):
+                    path=Path(path)
+                    if path.is_relative_to(p.EXPORT):
+                        return fixture_write(path,raw,cap)
+                    self.assertLessEqual(len(raw),cap)
+                    self.assertNotIn(str(path),wrapper_originals)
+                    wrapper_originals[str(path)]=raw
+                    wrapper_calls.append('retained')
+                def reject_changed_handoff(fault):
+                    rejected_handoff=copy.deepcopy(selected_handoff)
+                    if fault=='source':
+                        rejected_handoff['source']['head']='f'*40
+                    else:
+                        rejected_handoff['stageCopy']['nodeReadback']['sha256']='f'*64
+                    refused,refusal=p.same_job_guest_service(guest_env,route=p.SAME_JOB_ACTUAL_V2_ROUTE,
+                        event_reader=lambda:event_raw,
+                        handoff_reader=lambda selected,route:(handoff_raw,
+                            rejected_handoff,candidate_raw,candidate))
+                    self.assertFalse(refused['pass'],fault)
+                    self.assertIsNotNone(refusal.first,fault)
+                    self.assertEqual(wrapper_calls,[],fault)
+                with patch.object(p,'SAME_JOB_ACTUAL_V2_ENABLED',True),\
+                     patch.object(p,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(p,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                     patch.object(p,'SETUP_V8_STATUS_SHA',sha(pre)),\
+                     patch.object(p,'GENERATION_NODE_PIN',(
+                         node_fact['bytes'],node_fact['sha256'])),\
+                     patch.object(p,'entry_proc',side_effect=lambda path:
+                         ''.join(key+':\t'+'0'*16+'\n' for key in
+                             ('CapInh','CapPrm','CapEff','CapAmb'))
+                         if str(path).endswith('/status') else
+                         '0::/system.slice/bw-ring3-actual-guest-v2-123-1.service\n'),\
+                     patch.object(p.Cgroups,'text',side_effect=lambda unused,path:
+                         p.SAME_JOB_GUEST_LIMITS[Path(path).name]),\
+                     patch.object(p,'source_facts',side_effect=lambda selected,**kw:
+                         (copy.deepcopy(selected),p.FirstFailure())),\
+                     patch.object(p.SameJobRuntimeFiles,'fact',side_effect=observe),\
+                     patch.object(p.SameJobRuntimeFiles,'alias',side_effect=lambda path:
+                         candidate['aliases'][path]),\
+                     patch.object(p.SameJobRuntimeFiles,'platform',return_value=candidate['platform']),\
+                     patch.object(p,'same_job_create_launch_plan',side_effect=selected_plan),\
+                     patch.object(p,'HostedSetupOps',return_value=fake_setup),\
+                     patch.object(p,'same_job_create_runtime_sink',side_effect=selected_sink),\
+                     patch.multiple(p.SameJobEntryComposition,
+                         validate=composition_validate,prepare=composition_prepare,
+                         outside=composition_outside),\
+                     patch.object(p,'GitObservation',MockPostGit),\
+                     patch.object(p,'write_new',side_effect=retained_service),\
+                     patch.multiple(p.os,getresuid=lambda:(uid_state['uid'],)*3,
+                         getresgid=lambda:(uid_state['gid'],)*3),\
+                     patch.object(p.os,'getgroups',return_value=[]):
+                    wrong_event=copy.deepcopy(event)
+                    wrong_event['label']['name']='x86-ring3-setup-runtime-inventory-v9'
+                    refused,refusal=p.same_job_guest_service(guest_env,route=p.SAME_JOB_ACTUAL_V2_ROUTE,
+                        event_reader=lambda:reader.canonical(wrong_event),
+                        handoff_reader=lambda selected,route:(handoff_raw,
+                            selected_handoff,candidate_raw,candidate))
+                    self.assertFalse(refused['pass'])
+                    self.assertIsNotNone(refusal.first)
+                    self.assertEqual(wrapper_calls,[])
+                    reject_changed_handoff('source')
+                    reject_changed_handoff('stage')
+                    old_state['export'].clear();old_state['directories'].clear()
+                    wrapper_result,wrapper_failure=p.same_job_guest_service(
+                        guest_env,route=p.SAME_JOB_ACTUAL_V2_ROUTE,event_reader=lambda:event_raw,
+                        handoff_reader=lambda selected,route:(handoff_raw,selected_handoff,
+                            candidate_raw,candidate))
+                self.assertTrue(wrapper_result['pass'],wrapper_failure.first)
+                self.assertTrue(wrapper_result['composition']['final']['pass'])
+                self.assertEqual(set(old_state['export']),reader.ROLES)
+                self.assertIsNone(wrapper_failure.first)
+                self.assertEqual(wrapper_calls,['plan','prepare','sink','compose','retained'])
+                self.assertEqual(set(wrapper_originals),{
+                    'build/i80386-ring3-same-job-actual-v2/guest.service.original.json'})
+                self.assertIs(reader.parse(next(iter(wrapper_originals.values())))[
+                    'guestPacketComposed'],True)
+                official_facts={'packet':dict(old_state['export']),
+                    'handoff':handoff_raw,'service':next(iter(wrapper_originals.values())),
+                    'cleanup':guest_cleanup,'guestOuter':guest_outer,
+                    'controllerRuntime':runtime_originals['controller.runtime.json'],
+                    'setupLog':wire.getvalue(),'setupOuter':outer,
+                    'setupCleanup':cleanup,'setupShell':shell,
+                    'setupExpectation':external,'source':source,
+                    'workflowSha':env['GITHUB_WORKFLOW_SHA'],'requestSha256':pin,
+                    'graph':mock_graph,'node':node_fact,
+                    'statusSha256':sha(pre),'statusBytes':len(pre)}
+                official_external,official_raws=same_job_official_fixture(official_facts,version=2)
+                official_verdict=same_job_official_grade(official_facts,
+                    official_external,official_raws,version=2)
+                self.assertTrue(official_verdict['officialMetadataBound'])
+                self.assertTrue(official_verdict['guestPredicatesObserved'])
+                self.assertFalse(official_verdict['actualRunApproved'])
+                wrong_external=dict(official_external,jobName='ring3-same-job-actual-v1')
+                with self.assertRaises(reader.Refusal):
+                    same_job_official_grade(official_facts,wrong_external,official_raws,version=2)
+                wrong_run=reader.parse(official_raws[0]);wrong_run['head_sha']='f'*40
+                wrong_raw=reader.canonical(wrong_run)
+                wrong_external=dict(official_external,runMetadataBytes=len(wrong_raw),
+                    runMetadataSha256=sha(wrong_raw))
+                with self.assertRaises(reader.Refusal):
+                    same_job_official_grade(official_facts,wrong_external,
+                        (wrong_raw,*official_raws[1:]),version=2)
+
+
+        def test_connected_first_service_setup_stage_inventory_original(self):
+            rom,manifest=pure_fixture()
+            architectural,_=manufacture(rom,manifest)
+            with v8_manufactured(p,case,architectural) as (
+                    old_env,old_expected,old_originals,old_packet,old_selected,
+                    old_files,old_state):
+                packet_template=dict(old_packet)
+            def status_row(name,version,arch='amd64',state='install ok installed',pending=None):
+                lines=['Package: '+name,'Version: '+version,'Architecture: '+arch,'Status: '+state]
+                if pending is not None:lines.append('Triggers-Pending: '+pending)
+                return '\n'.join(lines).encode()
+            base=[status_row('installed-'+str(i).zfill(4),'1',
+                state='deinstall ok config-files' if i==0 else 'install ok installed')
+                for i in range(1210)]
+            pre=b'\n\n'.join(base+[status_row('libc-bin','2')])+b'\n'
+            selected=[status_row(name,version,arch) for name,version,arch,*_ in p.SETUP_V9_PACKAGE_ROWS]
+            post=b'\n\n'.join(base+[status_row('libc-bin','2',state='install ok triggers-pending',pending='ldconfig'),*selected])+b'\n'
+            with edges() as (producer,env,request,raw,state):
+                producer.stage_runtime_inventory_node(env)
+                stage_node=state['observation']['stageBefore']['files']['node']['before']
+                files,probe,observed=runtime_edges(stage_node)
+                candidate_raw=reader.SetupV9Inventory(stage_node,files,probe).discover()
+                candidate=reader.parse(candidate_raw)
+                self.assertEqual((len(candidate['files']),len(candidate['aliases'])),(327,55))
+                mock_graph=dict(producer.SAME_JOB_REVIEWED_GRAPH,bytes=len(candidate_raw),
+                    sha256=sha(candidate_raw))
+                FakeOps,witness=setup_v8_controls(export_ops=True)
+                actual=copy.deepcopy(request)
+                with patch.object(producer,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                     patch.object(producer,'SETUP_V8_STATUS_SHA',sha(pre)):
+                    setup_policy=producer.setup_v9_policy()
+                actual.update(schema=producer.SAME_JOB_ACTUAL_ROUTE['requestSchema'],
+                    setup=setup_policy,payloadWitness=witness,comparison=mock_graph)
+                request_raw=reader.canonical(actual);pin=sha(request_raw)
+                event=reader.parse(state['originals']['staged.event.json'])
+                event['label']['name']=producer.SAME_JOB_ACTUAL_ROUTE['label']
+                event['pull_request']['body']='<!-- BW_RING3_SAME_JOB_ACTUAL_V1\n'+pin+\
+                    '\nBW_RING3_SAME_JOB_ACTUAL_V1 -->'
+                event_raw=reader.canonical(event)
+                record=copy.deepcopy(reader.parse(reader.prerequisite_original(
+                    reader.canonical(state['observation']['stageBefore']['record']))))
+                record.update(schema=producer.SAME_JOB_ACTUAL_ROUTE['stageSchema'],
+                    request={'bytes':len(request_raw),'sha256':pin,'base64':base64.b64encode(request_raw).decode()},
+                    event={'bytes':len(event_raw),'sha256':sha(event_raw),'base64':base64.b64encode(event_raw).decode()},
+                    recordBoundary='verified copy after selected setup and policy cleanup, before directory publication')
+                record['platform'].pop('BW_RING3_STAGED_INVENTORY_REQUEST_SHA256')
+                record['platform'].update(BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256=pin,
+                    BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64=base64.b64encode(request_raw).decode(),
+                    GITHUB_JOB=producer.SAME_JOB_ACTUAL_ROUTE['job'])
+                record['eventIdentity']['st_size']=len(event_raw)
+                source=reader.parse(reader.prerequisite_original(reader.canonical(actual['source'])))
+                class ActualOps(FakeOps):
+                    def preflight(self,selected):
+                        item=super().preflight(selected)
+                        item['imageVersion']='20261012.334.1'
+                        item['imageFields']['ImageVersion']['value']=item['imageVersion']
+                        item['resource']['membership']='0::/system.slice/bw-ring3-actual-setup-v1-123-1.service\n'
+                        item['statusSha256']=sha(pre)
+                        return item
+                    def acquire(self,package):
+                        item=super().acquire(package)
+                        item['path']=item['path'].replace('setup-v8-','actual-setup-v1-')
+                        return item
+                    def dpkg(self,args):
+                        item=super().dpkg(args);item['process']['role']='setup-same-job-v1'
+                        return item
+                class Observer:
+                    def __init__(self,environ):
+                        self.facts={'eventIdentity':record['eventIdentity'],
+                            'sourceCommands':record['sourceCommands'],'source':source}
+                    def event(self):return event_raw
+                    def source(self,selected):self.facts['source']=source
+                with patch.object(producer,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(reader,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                     patch.object(reader,'SETUP_V9_STATUS_BYTES',len(pre)),\
+                     patch.object(producer,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                     patch.object(producer,'SETUP_V8_STATUS_SHA',sha(pre)):
+                    self.assertEqual([producer.same_json(actual['setup'],producer.setup_v9_policy()),
+                        producer.same_json(actual['payloadWitness'],producer.SETUP_V8_PAYLOAD_PINS),
+                        producer.same_json(actual['comparison'],producer.SAME_JOB_REVIEWED_GRAPH)],
+                        [True,True,True])
+                    entry_ops=ActualOps();entry_output=io.BytesIO()
+                    with patch.object(producer.os,'getresuid',return_value=(0,0,0)),\
+                         patch.object(producer.os,'getresgid',return_value=(0,0,0)),\
+                         patch.object(producer,'expected_cgroup',return_value=None),\
+                         patch.object(producer,'HostedEnvelopeInstaller',Observer),\
+                         patch.object(producer,'SetupV8Host',return_value=entry_ops),\
+                         patch.object(producer.sys,'stdout',SimpleNamespace(buffer=entry_output)):
+                        self.assertEqual(producer.setup_v8_entry(record['platform'],producer.SAME_JOB_ACTUAL_ROUTE),1)
+                    self.assertEqual(entry_ops.events.count('acquire'),15,
+                        reader.parse_setup_v9_outer(entry_output.getvalue())['firstFailure'])
+                    self.assertEqual(entry_ops.events[-1],'stage')
+                    setup=entry_ops.snapshot
+                    status_log=io.BytesIO()
+                    pre_meta=producer.emit_setup_v8_status('pre',pre,status_log.write,status_log.flush,
+                        route=producer.SAME_JOB_ACTUAL_ROUTE)
+                    post_meta=producer.emit_setup_v8_status('post',post,status_log.write,status_log.flush,
+                        route=producer.SAME_JOB_ACTUAL_ROUTE)
+                    setup['preflight'].update(statusSha256=sha(pre),statusBytes=len(pre),statusOriginal=pre_meta)
+                    setup['postStatus'].update(sha256=sha(post),bytes=len(post),records=1226,
+                        statusOriginal=post_meta)
+                    record['setup']=setup
+                    record_raw=reader.canonical(record)
+                    state['rows']['/event.json'].update(raw=event_raw,st_size=len(event_raw))
+                    state['rows'][str(producer.NODE_STAGE_RECORD)].update(raw=record_raw,st_size=len(record_raw))
+                    state['rows']['/proc/self/cgroup']['raw']=b'0::/system.slice/bw-ring3-actual-setup-v1-123-1.service\n'
+                    actual_env={**record['platform'],'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'}
+                    files,probe,observed=runtime_edges(stage_node)
+                    originals,passed,safe=reader.same_job_actual_inventory_entry(actual_env,files,probe)
+                    self.assertEqual((passed,safe),(True,True),
+                        reader.parse(originals['runtime.setup-inventory.json'])['firstFailure'])
+                    self.assertEqual(len(observed),15)
+                    self.assertEqual(set(originals),set(reader.SAME_JOB_ACTUAL_LOG_ROLES))
+                    wire=io.BytesIO();wire.write(status_log.getvalue())
+                    reader.emit_same_job_actual_inventory(originals,wire.write,wire.flush)
+                    self.assertEqual(reader.decode_same_job_actual_log(wire.getvalue()),originals)
+                    unit='bw-ring3-actual-setup-v1-123-1.service'
+                    absent={'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None}
+                    admission={'requestSha256':pin,'eventSha256':sha(event_raw),
+                        'head':actual['head'],'tree':actual['tree'],'source':source,'unit':unit}
+                    cleanup=reader.canonical({'schema':producer.SAME_JOB_ACTUAL_ROUTE['cleanupSchema'],
+                        'runId':'123','serviceExitCode':0,'sourceAdmission':admission,
+                        'preCensus':absent,'stop':{'attempted':False,'argv':None,'exitCode':None,
+                            'timedOut':False},'postCensus':absent,'cgroupTerminal':'absent',
+                        'unitCensus':None,'policy':None,'action':'not-needed',
+                        'firstFailure':None,'secondary':[],'setupApproved':False})
+                    outer=reader.canonical({'schema':'bw.ring3.same-job-setup-outer-terminal.v1',
+                        'runId':'123','unit':'/sys/fs/cgroup/system.slice/'+unit,
+                        'systemdRunExitCode':0,'outsideCleanupExitCode':0,'cgroupAfter':'absent'})
+                    shell=reader.canonical({'schema':producer.SAME_JOB_ACTUAL_ROUTE['shellSchema'],
+                        'fields':{'ImageOS':{'present':True,'value':'ubuntu24'},
+                            'ImageVersion':{'present':True,'value':'20261012.334.1'}},
+                        'fieldErrors':[],'setupAttempted':False,'guestAttempted':False,
+                        'setupApproved':False})
+                    external={'schema':'bw.ring3.same-job-local-expectation.v1',
+                        'requestSha256':pin,'runId':'123','attempt':1,'head':actual['head'],
+                        'tree':actual['tree'],'workflowSha':env['GITHUB_WORKFLOW_SHA'],
+                        'workflowFileSha256':source['files'][reader.WORKFLOW]['sha256'],
+                        'jobId':None,'jobName':producer.SAME_JOB_ACTUAL_ROUTE['job'],
+                        'conclusion':'observed-zero','logBytes':len(wire.getvalue()),
+                        'logSha256':sha(wire.getvalue()),'outerBytes':len(outer),
+                        'outerSha256':sha(outer),'cleanupBytes':len(cleanup),
+                        'cleanupSha256':sha(cleanup),'shellBytes':len(shell),
+                        'shellSha256':sha(shell),'invoker':[1001,1002]}
+                    handoff=reader.verify_same_job_actual_setup_log(wire.getvalue(),external,
+                        outer,cleanup,shell)
+                    self.assertTrue(handoff['setupObserved'])
+                    self.assertEqual(handoff['candidateSha256'],mock_graph['sha256'])
+                    self.assertFalse(handoff['actualGuestApproved'])
+                    held={'setup':wire.getvalue(),'outer':outer,'cleanup':cleanup,'shell':shell}
+                    argv=['reader.py','--same-job-handoff-v1','--setup-log','setup',
+                        '--outer','outer','--cleanup','cleanup','--shell','shell',
+                        '--request-sha',pin,'--run-id','123','--head',actual['head'],
+                        '--tree',actual['tree'],'--workflow-sha',env['GITHUB_WORKFLOW_SHA'],
+                        '--workflow-file-sha',source['files'][reader.WORKFLOW]['sha256'],
+                        '--invoker-uid','1001','--invoker-gid','1002']
+                    output=io.BytesIO()
+                    with patch.object(reader,'SAME_JOB_ACTUAL_READER_ENABLED',True),\
+                         patch.object(reader.sys,'argv',argv),\
+                         patch.object(reader.sys,'stdout',SimpleNamespace(buffer=output)),\
+                         patch.object(reader.Path,'open',lambda path,*a,**kw:io.BytesIO(held[str(path)])),\
+                         patch.object(reader.os,'open',side_effect=AssertionError('no live reader OS edge')):
+                        reader.main()
+                    selected_handoff=reader.parse(output.getvalue())
+                    self.assertEqual(selected_handoff['runtimeCandidate']['bytes'],len(candidate_raw))
+                    self.assertEqual(selected_handoff['runId'],'123')
+                    self.assertEqual(selected_handoff['requestSha256'],pin)
+                    self.assertFalse(selected_handoff['actualRunApproved'])
+                    packet=dict(packet_template)
+                    selected_runtime=producer.SameJobRuntimeGate(
+                        candidate_raw,candidate).selected_runtime()
+                    for phase in ('before','after'):
+                        packet['source.'+phase+'.json']=reader.canonical(source)
+                        packet['runtime.'+phase+'.json']=reader.canonical(selected_runtime)
+                    for role in ('js','qemu'):
+                        process=reader.parse(packet[role+'/process.json'])
+                        process['argv']=([selected_runtime['executables']['node']['path'],
+                            '--input-type=module','--eval',reader.JS_DRIVER]
+                            if role=='js' else
+                            reader.qemu_argv(selected_runtime['executables']['qemu']['path']))
+                        packet[role+'/process.json']=reader.canonical(process)
+                    audit=reader.parse(packet['audit.json'])
+                    audit.update(head=source['head'],sourceTree=source['tree'],
+                        workflowSha256=source['files'][reader.WORKFLOW]['sha256'])
+                    audit['roles']=[{'path':name,'bytes':len(packet[name]),
+                        'sha256':sha(packet[name])}
+                        for name in sorted(reader.ROLES-{'audit.json'})]
+                    packet['audit.json']=reader.canonical(audit)
+                    observation=lambda start,end:{'files':{
+                        path:{key:item[key] for key in ('bytes','sha256','mode')}
+                        for path,item in candidate['files'].items()},
+                        'aliases':candidate['aliases'],'platform':candidate['platform'],
+                        'startMonoNs':start,'finishMonoNs':end}
+                    controller_runtime=reader.canonical({
+                        'schema':'bw.ring3.same-job-controller-runtime.v1',
+                        'handoffSha256':sha(output.getvalue()),
+                        'candidateSha256':sha(candidate_raw),
+                        'observations':{
+                            'before-probes':observation(1,2),
+                            'after-probes':observation(3,4),
+                            'after-guests':observation(5,6)},
+                        'pid':reader.parse(packet['resources.json'])['controller']['pid'],
+                        'firstFailure':None,'secondary':[]})
+                    packet_verdict=reader.same_job_actual_packet_predicates(
+                        packet,selected_handoff,controller_runtime)
+                    self.assertTrue(packet_verdict['guestPredicatesObserved'])
+                    handoff_raw=output.getvalue();handoff_pin=sha(handoff_raw)
+                    guest_unit='bw-ring3-actual-guest-v1-123-1.service'
+                    guest_service=reader.canonical({
+                        'schema':'bw.ring3.same-job-guest-service.v1',
+                        'requestSha256':pin,'handoffSha256':handoff_pin,
+                        'guestPacketComposed':True,'firstFailure':None,'secondary':[]})
+                    guest_cleanup=reader.canonical({
+                        'schema':'bw.ring3.same-job-guest-outside-cleanup.v1',
+                        'runId':'123','unit':guest_unit,'serviceExitCode':0,
+                        'sourceAdmission':{'requestSha256':pin,
+                            'eventSha256':sha(event_raw),'handoffSha256':handoff_pin,
+                            'head':actual['head'],'tree':actual['tree']},
+                        'preCensus':absent,'postCensus':absent,
+                        'stop':{'attempted':False,'argv':None,'exitCode':None,
+                            'timedOut':False},'manualCgroupAbsent':True,
+                        'outsideTerminalObserved':True,'firstFailure':None,
+                        'secondary':[],'actualGuestApproved':False})
+                    guest_outer=reader.canonical({
+                        'schema':'bw.ring3.same-job-guest-outer-terminal.v1',
+                        'runId':'123',
+                        'unit':'/sys/fs/cgroup/system.slice/'+guest_unit,
+                        'systemdRunExitCode':0,'outsideCleanupExitCode':0,
+                        'cgroupAfter':'absent'})
+                    guest_verdict=reader.verify_same_job_actual_packet(
+                        packet,handoff_raw,guest_service,guest_cleanup,
+                        guest_outer,controller_runtime)
+                    self.assertTrue(guest_verdict['guestPredicatesObserved'])
+                    self.assertFalse(guest_verdict['actualRunApproved'])
+                    drift_files,drift_probe,drift_observed=runtime_edges(stage_node)
+                    drift_files.facts['/usr/share/qemu/f001']['sha256']='0'*64
+                    drift_originals,drift_passed,drift_safe=reader.same_job_actual_inventory_entry(
+                        actual_env,drift_files,drift_probe)
+                    self.assertEqual(len(drift_observed),15)
+                    self.assertFalse(drift_passed)
+                    self.assertTrue(drift_safe)
+                    self.assertIn('fresh same-job full runtime candidate',
+                        reader.parse(drift_originals['runtime.setup-inventory.json'])['firstFailure']['message'])
+            with v8_manufactured(p,case,architectural) as (
+                    old_env,old_expected,old_originals,old_packet,old_selected,
+                    old_files,old_state):
+                controller_env=dict(actual_env,GITHUB_JOB=producer.SAME_JOB_ACTUAL_ROUTE['job'],
+                    BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256=pin,
+                    BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64=base64.b64encode(request_raw).decode(),
+                    BW_RING3_SAME_JOB_HANDOFF_SHA256=sha(handoff_raw),
+                    BW_LAUNCH_PLAN_SHA256='0'*64,SUDO_UID='1001',SUDO_GID='1002')
+                old_state['data']['source.before.json']=reader.canonical(source)
+                for name in ('fixture.rom','fixture.json'):
+                    old_state['data']['inputs/'+name]=packet_template['inputs/'+name]
+                owner=reader.parse(old_state['data']['.entry.json'])
+                owner['sourceSha256']=sha(old_state['data']['source.before.json'])
+                old_state['data']['.entry.json']=reader.canonical(owner)
+                for name in ('runtime.before.json','.controller.before.json',
+                    '.controller.json','source.after.json','runtime.after.json',
+                    'js/process.json','js/stdout','js/stderr','qemu/process.json',
+                    'qemu/stdout','qemu/stderr','qemu/report.json'):
+                    old_state['data'].pop(name,None)
+                def cgroup_observe(groups,role):
+                    snapshot=copy.deepcopy(owner['cgroups'][role])
+                    if role=='controller':
+                        snapshot['procs']=[100]
+                    if role in ('enclosing','controller'):
+                        snapshot['raw']['pidsCurrent']='1\n'
+                        snapshot['raw']['cgroupEvents']='populated 1\nfrozen 0\n'
+                    return snapshot
+                observe=lambda path:{key:candidate['files'][path][key]
+                    for key in ('bytes','sha256','mode')}
+                fixture_write=p.write_new
+                def controller_write(path,raw,cap):
+                    path=Path(path)
+                    if path.is_relative_to(p.PACKET):
+                        self.assertLessEqual(len(raw),cap)
+                        name=path.relative_to(p.PACKET).as_posix()
+                        self.assertNotIn(name,old_state['data'])
+                        old_state['data'][name]=raw
+                    else:fixture_write(path,raw,cap)
+                def child_observation(child,role,argv,**kwargs):
+                    self.assertIn(role,('js','qemu'))
+                    process=reader.parse(packet[role+'/process.json'])
+                    self.assertEqual(process['argv'],argv)
+                    process['parentPid']=100
+                    return process,{'stdout':packet[role+'/stdout'],
+                        'stderr':packet[role+'/stderr']}
+                runtime_originals={}
+                def retain_runtime(name,raw):
+                    self.assertNotIn(name,runtime_originals)
+                    runtime_originals[name]=raw
+                    return raw
+                with patch.object(p,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(p,'ROM_SHA',reader.ROM_SHA),\
+                     patch.object(p,'FIXTURE_JSON_SHA',reader.FIXTURE_JSON_SHA),\
+                     patch.object(p,'GENERATION_NODE_PIN',(
+                         selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                         selected_handoff['stageCopy']['nodeReadback']['sha256'])),\
+                     patch.object(p,'same_job_handoff',return_value=(
+                         handoff_raw,selected_handoff,candidate_raw,candidate)),\
+                     patch.object(p,'HostedEnvelopeInstaller',side_effect=lambda environ:
+                         SimpleNamespace(event=lambda:event_raw)),\
+                     patch.object(p,'source_facts',side_effect=lambda selected,**kw:
+                         (copy.deepcopy(selected),p.FirstFailure())),\
+                     patch.object(p,'runtime_facts',side_effect=lambda selected,*args,**kw:
+                         (copy.deepcopy(selected),p.FirstFailure())),\
+                     patch.object(p,'write_new',side_effect=controller_write),\
+                     patch.object(p,'collect_child',side_effect=child_observation),\
+                     patch.object(p,'runtime_delivery_original',side_effect=retain_runtime),\
+                     patch.object(p,'entry_proc',side_effect=lambda path:
+                         '0::/bw-ring3-123-1/controller\n' if str(path).endswith('cgroup')
+                         else ''.join(k+':\t'+'0'*16+'\n' for k in
+                             ('CapInh','CapPrm','CapEff','CapAmb'))),\
+                     patch.object(p.SameJobRuntimeFiles,'fact',side_effect=observe),\
+                     patch.object(p.SameJobRuntimeFiles,'alias',side_effect=lambda path:
+                         candidate['aliases'][path]),\
+                     patch.object(p.SameJobRuntimeFiles,'platform',return_value=candidate['platform']):
+                    with patch.object(p.Cgroups,'observe',autospec=True,side_effect=cgroup_observe):
+                        ops,controller_failure=p.controller_execute(
+                            p.SameJobControllerOps(controller_env))
+                self.assertIsNone(controller_failure.first,controller_failure.first)
+                self.assertIn('controller.runtime.json',runtime_originals)
+                self.assertEqual(set(ops.processes),{'js','qemu'})
+                built_packet={name:old_state['data'].get(name,packet[name])
+                    for name in reader.ROLES if name!='audit.json'}
+                built_resources=reader.parse(built_packet['resources.json'])
+                built_resources['controller']['pid']=100
+                built_resources['controller']['before']['procs']=[100]
+                built_packet['resources.json']=reader.canonical(built_resources)
+                built_audit=reader.parse(packet['audit.json'])
+                built_audit['roles']=[{'path':name,'bytes':len(built_packet[name]),
+                    'sha256':sha(built_packet[name])} for name in sorted(built_packet)]
+                built_packet['audit.json']=reader.canonical(built_audit)
+                self.assertEqual((reader.parse(runtime_originals['controller.runtime.json'])['handoffSha256'],
+                    reader.parse(runtime_originals['controller.runtime.json'])['pid']),
+                    (sha(handoff_raw),reader.parse(built_packet['resources.json'])['controller']['pid']))
+                with patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                     patch.dict(reader.RUNTIME_SELECTED,{'node':{
+                        'bytes':selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                        'sha256':selected_handoff['stageCopy']['nodeReadback']['sha256']} }):
+                    built_verdict=reader.verify_same_job_actual_packet(built_packet,
+                        handoff_raw,guest_service,guest_cleanup,guest_outer,
+                        runtime_originals['controller.runtime.json'])
+                self.assertTrue(built_verdict['guestPredicatesObserved'])
+                final_env=dict(controller_env)
+                final_env['GITHUB_EVENT_PATH']='/event.json'
+                final_plan=reader.canonical({'schema':'bw.ring3.launch-plan.v1',
+                    'runId':'123','attempt':1,'head':actual['head'],
+                    'tree':actual['tree'],'source':actual['source']})
+                final_env['BW_LAUNCH_PLAN_SHA256']=sha(final_plan)
+                def git_trace(raw,phase):
+                    item=reader.parse(raw);item['source']=source
+                    listing=''.join(source['files'][name]['mode']+' blob '+
+                        source['files'][name]['blob']+'\t'+name+'\n'
+                        for name in sorted(source['files']))
+                    outputs=(source['head']+'\n',source['tree']+'\n',listing)
+                    for command,value in zip(item['commands'],outputs):
+                        command['stdoutHex']=value.encode().hex()
+                    return reader.canonical(item)
+                pre_git=git_trace(old_originals['git.before.json'],'before')
+                post_git=git_trace(old_originals['git.after.json'],'after')
+                generation=reader.parse(old_originals['generation.phase.json'])
+                node_path=p.RUNTIME_EXECUTABLES['node']
+                node_fact={'path':node_path,
+                    'bytes':selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                    'sha256':selected_handoff['stageCopy']['nodeReadback']['sha256']}
+                generation_files={'node':dict(node_fact)}
+                for role,name in (('fixture','fixture.mjs'),('runner','run.py')):
+                    path='scripts/i80386-ring3-int-iret/'+name
+                    generation_files[role]={'path':path,
+                        'bytes':source['files'][path]['bytes'],
+                        'sha256':source['files'][path]['sha256']}
+                for when in ('before','after'):
+                    generation[when]['files']=copy.deepcopy(generation_files)
+                input_refs={name:{'bytes':len(old_state['data']['inputs/'+name]),
+                    'sha256':sha(old_state['data']['inputs/'+name])}
+                    for name in ('fixture.rom','fixture.json')}
+                generation['outputs']=input_refs
+                generation_raw=reader.canonical(generation)
+                phase=reader.parse(old_originals['preparation.phase.json'])
+                phase['process']['argv'][-1]='--same-job-prepare-v1'
+                phase['process']['environment']=dict(p.ENV,**{
+                    name:final_env[name] for name in p.SAME_JOB_CHILD_ENV},
+                    SUDO_UID='1001',SUDO_GID='1002')
+                phase['preGit']={'bytes':len(pre_git),'sha256':sha(pre_git)}
+                pre_stream=p.generation_frame(generation_raw,pre_git)
+                phase['stdout']={'bytes':len(pre_stream),'sha256':sha(pre_stream),
+                    'base64':base64.b64encode(pre_stream).decode()}
+                phase_raw=reader.canonical(phase)
+                outside_record=reader.parse(old_state['data']['.outside.json'])
+                outside_record['process']['argv'][-1]='--same-job-bootstrap-v1'
+                outside_record['process']['pid']=100
+                outside_record['process']['pgid']=100
+                outside_record['process']['environment']=dict(p.ENV,**{
+                    name:final_env[name] for name in p.SAME_JOB_CHILD_ENV},
+                    SUDO_UID='1001',SUDO_GID='1002')
+                old_state['data']['.outside.json']=reader.canonical(outside_record)
+                outside_facts={key:value for key,value in outside_record.items()
+                    if key not in ('firstFailure','secondary','streamsHex')}
+                selection={'requestRaw':request_raw,'request':actual,
+                    'handoffRaw':handoff_raw,'handoff':selected_handoff,
+                    'candidateRaw':candidate_raw,'candidate':candidate}
+                old_state['export'].clear();old_state['directories'].clear()
+                post=SimpleNamespace(capture=lambda head:(post_git,p.FirstFailure()))
+                with patch.object(p,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(p,'GENERATION_NODE_PIN',(
+                         node_fact['bytes'],node_fact['sha256'])),\
+                     patch.object(p,'ROM_SHA',reader.ROM_SHA),\
+                     patch.object(p,'FIXTURE_JSON_SHA',reader.FIXTURE_JSON_SHA):
+                    context=p.SameJobFinalizerContext(selection,final_env)
+                    finalized,final_failure=p.finalize_runtime_packet(context,
+                        outside_facts,p.FirstFailure(),pre_git,final_env,
+                        post_observer=post,preparation_original=phase_raw,
+                        generation_original=generation_raw,
+                        launch_plan_original=final_plan,
+                        launch_plan_sha256=sha(final_plan),
+                        emit=lambda raw:len(raw),flush=lambda:None)
+                self.assertTrue(finalized['pass'],final_failure.first)
+                self.assertIsNone(final_failure.first)
+                self.assertEqual(set(old_state['export']),reader.ROLES)
+                with patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                     patch.dict(reader.RUNTIME_SELECTED,{'node':{
+                        'bytes':selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                        'sha256':selected_handoff['stageCopy']['nodeReadback']['sha256']} }):
+                    exported_verdict=reader.verify_same_job_actual_packet(
+                        old_state['export'],handoff_raw,guest_service,guest_cleanup,
+                        guest_outer,runtime_originals['controller.runtime.json'])
+                self.assertTrue(exported_verdict['guestPredicatesObserved'])
+                self.assertFalse(exported_verdict['actualRunApproved'])
+                packet_dir='packet'
+                role_files={str(Path(packet_dir)/name):raw
+                    for name,raw in old_state['export'].items()}
+                role_files.update(handoff=handoff_raw,service=guest_service,
+                    cleanup=guest_cleanup,outer=guest_outer,
+                    controller=runtime_originals['controller.runtime.json'])
+                local_argv=['reader.py','--same-job-actual-packet-v1',
+                    '--packet-dir',packet_dir,'--handoff','handoff',
+                    '--service','service','--cleanup','cleanup',
+                    '--guest-outer','outer','--controller-runtime','controller']
+                text_output=io.StringIO()
+                with patch.object(reader,'SAME_JOB_ACTUAL_READER_ENABLED',True),\
+                     patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                     patch.dict(reader.RUNTIME_SELECTED,{'node':{
+                         'bytes':selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                         'sha256':selected_handoff['stageCopy']['nodeReadback']['sha256']} }),\
+                     patch.object(reader.sys,'argv',local_argv),\
+                     patch.object(reader.Path,'open',autospec=True,side_effect=lambda path,*a,**kw:
+                         io.BytesIO(role_files[str(path)])),\
+                     contextlib.redirect_stdout(text_output):
+                    reader.main()
+                local_result=json.loads(text_output.getvalue())
+                self.assertTrue(local_result['guestPredicatesObserved'])
+                self.assertFalse(local_result['officialMetadataBound'])
+                changed_packet=dict(old_state['export'])
+                changed_packet['qemu/stdout']=changed_packet['qemu/stdout'][:-1]+b'X'
+                changed_report=reader.parse(changed_packet['qemu/report.json'])
+                changed_report['outputSha256']=sha(changed_packet['qemu/stdout'])
+                changed_packet['qemu/report.json']=reader.canonical(changed_report)
+                changed_audit=reader.parse(changed_packet['audit.json'])
+                changed_audit['roles']=[{'path':name,'bytes':len(changed_packet[name]),
+                    'sha256':sha(changed_packet[name])}
+                    for name in sorted(reader.ROLES-{'audit.json'})]
+                changed_packet['audit.json']=reader.canonical(changed_audit)
+                with patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                     patch.dict(reader.RUNTIME_SELECTED,{'node':{
+                         'bytes':selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                         'sha256':selected_handoff['stageCopy']['nodeReadback']['sha256']} }):
+                    with self.assertRaisesRegex(reader.Refusal,'wire framing'):
+                        reader.verify_same_job_actual_packet(changed_packet,
+                            handoff_raw,guest_service,guest_cleanup,guest_outer,
+                            runtime_originals['controller.runtime.json'])
+                    changed_cleanup=reader.parse(guest_cleanup)
+                    changed_cleanup['serviceExitCode']=1
+                    changed_outer=reader.parse(guest_outer)
+                    changed_outer['systemdRunExitCode']=1
+                    with self.assertRaises(reader.Refusal):
+                        reader.verify_same_job_actual_packet(old_state['export'],
+                            handoff_raw,guest_service,reader.canonical(changed_cleanup),
+                            reader.canonical(changed_outer),
+                            runtime_originals['controller.runtime.json'])
+                wrapper_calls=[];wrapper_originals={};uid_state={'uid':0,'gid':0}
+                guest_env=dict(final_env)
+                fake_setup=SimpleNamespace(environ=guest_env,
+                    expected_plan_sha256=sha(final_plan),plan_original=final_plan,
+                    invoker={'uid':1001,'gid':1002},
+                    verify=lambda:wrapper_calls.append('verify'))
+                def setup_prepare():
+                    wrapper_calls.append('prepare')
+                    return {'pass':True},p.FirstFailure()
+                fake_setup.prepare=setup_prepare
+                def composition_validate(composition):
+                    self.assertIsInstance(composition,p.SameJobEntryComposition)
+                    self.assertEqual(composition.runtime_context.selection['handoffRaw'],
+                        handoff_raw)
+                    composition.bootstrap.invoker={'uid':1001,'gid':1002}
+                    composition.python=reader.parse(old_state['data']['.entry.json'])['python']
+                def composition_prepare(composition,failure):
+                    self.assertIsNone(failure.first)
+                    composition._launch_plan_original=final_plan
+                    composition._preparation_original=phase_raw
+                    composition._generation_original=generation_raw
+                    composition.pre_git=pre_git
+                    composition.preparation={'process':reader.parse(phase_raw)['process'],
+                        'streams':{'stdout':pre_stream,'stderr':b''}}
+                    return failure
+                def composition_outside(composition):
+                    self.assertEqual(composition._launch_plan_original,final_plan)
+                    wrapper_calls.append('compose')
+                    uid_state.update(uid=1001,gid=1002)
+                    p.entry_ids(1001,1002)
+                    return outside_facts,p.FirstFailure()
+                class MockPostGit(p.GitObservation):
+                    def capture(self,head):
+                        self.assert_head=head
+                        return post.capture(head)
+                def selected_plan(selection,environ):
+                    self.assertEqual(selection['candidateRaw'],candidate_raw)
+                    self.assertEqual(selection['handoffRaw'],handoff_raw)
+                    wrapper_calls.append('plan')
+                    return final_plan,dict(environ,BW_LAUNCH_PLAN_SHA256=sha(final_plan))
+                def selected_sink(setup):
+                    self.assertIs(setup,fake_setup)
+                    wrapper_calls.append('sink')
+                def retained_service(path,raw,cap):
+                    path=Path(path)
+                    if path.is_relative_to(p.EXPORT):
+                        return fixture_write(path,raw,cap)
+                    self.assertLessEqual(len(raw),cap)
+                    self.assertNotIn(str(path),wrapper_originals)
+                    wrapper_originals[str(path)]=raw
+                    wrapper_calls.append('retained')
+                def reject_changed_handoff(fault):
+                    rejected_handoff=copy.deepcopy(selected_handoff)
+                    if fault=='source':
+                        rejected_handoff['source']['head']='f'*40
+                    else:
+                        rejected_handoff['stageCopy']['nodeReadback']['sha256']='f'*64
+                    refused,refusal=p.same_job_guest_service(guest_env,
+                        event_reader=lambda:event_raw,
+                        handoff_reader=lambda selected:(handoff_raw,
+                            rejected_handoff,candidate_raw,candidate))
+                    self.assertFalse(refused['pass'],fault)
+                    self.assertIsNotNone(refusal.first,fault)
+                    self.assertEqual(wrapper_calls,[],fault)
+                with patch.object(p,'SAME_JOB_ACTUAL_ENABLED',True),\
+                     patch.object(p,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(p,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                     patch.object(p,'SETUP_V8_STATUS_SHA',sha(pre)),\
+                     patch.object(p,'GENERATION_NODE_PIN',(
+                         node_fact['bytes'],node_fact['sha256'])),\
+                     patch.object(p,'entry_proc',side_effect=lambda path:
+                         ''.join(key+':\t'+'0'*16+'\n' for key in
+                             ('CapInh','CapPrm','CapEff','CapAmb'))
+                         if str(path).endswith('/status') else
+                         '0::/system.slice/bw-ring3-actual-guest-v1-123-1.service\n'),\
+                     patch.object(p.Cgroups,'text',side_effect=lambda unused,path:
+                         p.SAME_JOB_GUEST_LIMITS[Path(path).name]),\
+                     patch.object(p,'source_facts',side_effect=lambda selected,**kw:
+                         (copy.deepcopy(selected),p.FirstFailure())),\
+                     patch.object(p.SameJobRuntimeFiles,'fact',side_effect=observe),\
+                     patch.object(p.SameJobRuntimeFiles,'alias',side_effect=lambda path:
+                         candidate['aliases'][path]),\
+                     patch.object(p.SameJobRuntimeFiles,'platform',return_value=candidate['platform']),\
+                     patch.object(p,'same_job_create_launch_plan',side_effect=selected_plan),\
+                     patch.object(p,'HostedSetupOps',return_value=fake_setup),\
+                     patch.object(p,'same_job_create_runtime_sink',side_effect=selected_sink),\
+                     patch.multiple(p.SameJobEntryComposition,
+                         validate=composition_validate,prepare=composition_prepare,
+                         outside=composition_outside),\
+                     patch.object(p,'GitObservation',MockPostGit),\
+                     patch.object(p,'write_new',side_effect=retained_service),\
+                     patch.multiple(p.os,getresuid=lambda:(uid_state['uid'],)*3,
+                         getresgid=lambda:(uid_state['gid'],)*3),\
+                     patch.object(p.os,'getgroups',return_value=[]):
+                    wrong_event=copy.deepcopy(event)
+                    wrong_event['label']['name']='x86-ring3-setup-runtime-inventory-v9'
+                    refused,refusal=p.same_job_guest_service(guest_env,
+                        event_reader=lambda:reader.canonical(wrong_event),
+                        handoff_reader=lambda selected:(handoff_raw,
+                            selected_handoff,candidate_raw,candidate))
+                    self.assertFalse(refused['pass'])
+                    self.assertIsNotNone(refusal.first)
+                    self.assertEqual(wrapper_calls,[])
+                    reject_changed_handoff('source')
+                    reject_changed_handoff('stage')
+                    old_state['export'].clear();old_state['directories'].clear()
+                    wrapper_result,wrapper_failure=p.same_job_guest_service(
+                        guest_env,event_reader=lambda:event_raw,
+                        handoff_reader=lambda selected:(handoff_raw,selected_handoff,
+                            candidate_raw,candidate))
+                self.assertTrue(wrapper_result['pass'],wrapper_failure.first)
+                self.assertTrue(wrapper_result['composition']['final']['pass'])
+                self.assertEqual(set(old_state['export']),reader.ROLES)
+                self.assertIsNone(wrapper_failure.first)
+                self.assertEqual(wrapper_calls,['plan','prepare','sink','compose','retained'])
+                self.assertEqual(set(wrapper_originals),{
+                    'build/i80386-ring3-same-job-actual-v1/guest.service.original.json'})
+                self.assertIs(reader.parse(next(iter(wrapper_originals.values())))[
+                    'guestPacketComposed'],True)
+                official_facts={'packet':dict(old_state['export']),
+                    'handoff':handoff_raw,'service':next(iter(wrapper_originals.values())),
+                    'cleanup':guest_cleanup,'guestOuter':guest_outer,
+                    'controllerRuntime':runtime_originals['controller.runtime.json'],
+                    'setupLog':wire.getvalue(),'setupOuter':outer,
+                    'setupCleanup':cleanup,'setupShell':shell,
+                    'setupExpectation':external,'source':source,
+                    'workflowSha':env['GITHUB_WORKFLOW_SHA'],'requestSha256':pin,
+                    'graph':mock_graph,'node':node_fact,
+                    'statusSha256':sha(pre),'statusBytes':len(pre)}
+                official_external,official_raws=same_job_official_fixture(official_facts)
+                official_verdict=same_job_official_grade(official_facts,
+                    official_external,official_raws)
+                self.assertTrue(official_verdict['officialMetadataBound'])
+                self.assertTrue(official_verdict['guestPredicatesObserved'])
+                self.assertFalse(official_verdict['actualRunApproved'])
+                same_job_official_cuts(self,official_facts,official_external,official_raws)
+            self.assertEqual(producer.SAME_JOB_REVIEWED_GRAPH['sha256'],
+                '72407985d3ef62725137a05ea6c609ff81f7095bdeb0147a9f703628a0f9cdab')
+        def test_manufactured_runtime_fixture_precedes_actual_request(self):
+            with edges() as (producer,env,request,raw,state):
+                producer.stage_runtime_inventory_node(env)
+                stage_node=state['observation']['stageBefore']['files']['node']['before']
+                files,probe,observed=runtime_edges(stage_node)
+                candidate=reader.SetupV9Inventory(stage_node,files,probe).discover()
+                self.assertEqual(len(observed),15)
+                value=reader.parse(candidate)
+                self.assertEqual(value['schema'],'bw.ring3.runtime-expectation.v4')
+                self.assertEqual(len(value['packagePathsByPackage']),5)
+                self.assertTrue(all(path in value['files'] for path in reader.SETUP_V9_SIGNED_DATA))
+                self.assertEqual((len(value['files']),len(value['aliases'])),(327,55))
+                self.assertEqual(sum(item['kind']=='qemu-data' for item in value['files'].values()),75)
+
+        def test_root_plan_directory_becomes_traversable_before_dropped_read(self):
+            plan=Path('/run/bw-ring3-123-1-admission/launch-plan.json')
+            selection={'request':{'head':'a'*40,'tree':'b'*40,
+                'source':{'schema':'manufactured-source'}}}
+            for withheld in (False,True):
+                modes={40:stat.S_IFDIR|0o700,41:stat.S_IFREG|0o600}
+                events=[];held={'raw':b''}
+                def info(fd):
+                    return SimpleNamespace(st_mode=modes[fd],st_uid=0,st_gid=0,
+                        st_dev=1,st_ino=fd)
+                def named(path):
+                    return info(40 if Path(path)==plan.parent else 41)
+                def opened(path,flags,*args,**kwargs):
+                    if Path(path)==plan.parent:events.append('open-directory');return 40
+                    self.assertEqual((path,kwargs.get('dir_fd')),('launch-plan.json',40))
+                    events.append('open-file');return 41
+                def chmod(fd,mode):
+                    events.append(('chmod',fd,mode))
+                    if fd!=40 or not withheld:modes[fd]=(modes[fd]&stat.S_IFMT(modes[fd]))|mode
+                def readback(environ,pin):
+                    self.assertEqual(stat.S_IMODE(modes[40]),0o755)
+                    self.assertEqual(stat.S_IMODE(modes[41]),0o444)
+                    events.append('dropped-readback');return held['raw']
+                with patch.object(p,'launch_plan_path',return_value=plan),\
+                     patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+                     patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+                     patch.object(p.os,'mkdir',side_effect=lambda *a,**kw:events.append('mkdir')),\
+                     patch.object(p.os,'open',side_effect=opened),\
+                     patch.object(p.os,'fstat',side_effect=info),\
+                     patch.object(p.os,'write',side_effect=lambda fd,raw:
+                         held.update(raw=raw) or len(raw)),\
+                     patch.object(p.os,'fchmod',side_effect=chmod),\
+                     patch.object(p.os,'fsync',return_value=None),\
+                     patch.object(p.os,'close',side_effect=lambda fd:events.append(('close',fd))),\
+                     patch.object(Path,'lstat',autospec=True,side_effect=named),\
+                     patch.object(Path,'resolve',autospec=True,side_effect=lambda path,**kw:path),\
+                     patch.object(p,'read_launch_plan',side_effect=readback):
+                    if withheld:
+                        with self.assertRaisesRegex(ValueError,'traversable plan directory'):
+                            p.same_job_create_launch_plan(selection,{'GITHUB_RUN_ID':'123'})
+                        self.assertNotIn('dropped-readback',events)
+                    else:
+                        raw,selected=p.same_job_create_launch_plan(selection,
+                            {'GITHUB_RUN_ID':'123'})
+                        self.assertEqual(raw,held['raw'])
+                        self.assertEqual(selected['BW_LAUNCH_PLAN_SHA256'],sha(raw))
+                        self.assertLess(events.index(('chmod',40,0o755)),
+                            events.index('dropped-readback'))
+        def test_new_request_event_and_patched_inactive_refusal(self):
+            self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,False)
+            self.assertIs(reader.SAME_JOB_ACTUAL_READER_ENABLED,True)
+            self.assertEqual(p.SAME_JOB_REVIEWED_GRAPH,reader.SAME_JOB_ACTUAL_REVIEWED_GRAPH)
+            with edges() as (producer,env,request,raw,state):
+                producer.stage_runtime_inventory_node(env)
+                _,witness=setup_v8_controls(export_ops=True)
+                actual=copy.deepcopy(request)
+                actual.update(schema='bw.ring3.same-job-actual-request.v1',
+                    setup=producer.setup_v9_policy(),payloadWitness=witness,
+                    comparison=producer.SAME_JOB_REVIEWED_GRAPH)
+                raw=reader.canonical(actual);pin=sha(raw)
+                selected,source=reader.same_job_actual_request(raw,pin)
+                self.assertEqual(selected,actual)
+                self.assertEqual(source['head'],actual['head'])
+                producer.admit_same_job_actual_request(raw,pin)
+                with self.assertRaises((ValueError,reader.Refusal)):
+                    producer.admit_setup_v9_request(raw,pin)
+                with self.assertRaises((ValueError,reader.Refusal)):
+                    reader.setup_v9_request(raw,pin)
+                event=reader.parse(state['originals']['staged.event.json'])
+                event['label']['name']=producer.SAME_JOB_ACTUAL_ROUTE['label']
+                event['pull_request']['body']='<!-- BW_RING3_SAME_JOB_ACTUAL_V1\n'+pin+\
+                    '\nBW_RING3_SAME_JOB_ACTUAL_V1 -->'
+                event_raw=reader.canonical(event)
+                environment=dict(env,GITHUB_JOB=producer.SAME_JOB_ACTUAL_ROUTE['job'],
+                    BW_RING3_SAME_JOB_ACTUAL_REQUEST_SHA256=pin,
+                    BW_RING3_SAME_JOB_ACTUAL_REQUEST_B64=base64.b64encode(raw).decode())
+                with patch.object(producer,'expected_cgroup',return_value=None):
+                    self.assertEqual(producer.admit_same_job_actual_event(event_raw,environment)[0],raw)
+                reader.same_job_actual_event(event_raw,actual,pin,environment)
+                wrong=copy.deepcopy(event);wrong['label']['name']='x86-ring3-setup-runtime-inventory-v9'
+                with self.assertRaises((ValueError,reader.Refusal)):
+                    reader.same_job_actual_event(reader.canonical(wrong),actual,pin,environment)
+                with patch.object(producer,'SAME_JOB_ACTUAL_ENABLED',False),\
+                     patch.object(producer,'setup_v8_entry',side_effect=AssertionError('host edge')) as host:
+                    self.assertEqual(producer.dispatch_cli(['--same-job-setup-v1'],environment),1)
+                    host.assert_not_called()
+                observed=[]
+                observer=SimpleNamespace(facts={'eventIdentity':{'st_size':len(event_raw)},
+                    'sourceCommands':[]},event=lambda:event_raw,
+                    source=lambda selected:observed.append('source'))
+                with patch.object(producer.os,'getresuid',return_value=(0,0,0)),\
+                     patch.object(producer.os,'getresgid',return_value=(0,0,0)),\
+                     patch.object(producer,'HostedEnvelopeInstaller',return_value=observer),\
+                     patch.object(producer,'SetupV8Host',side_effect=AssertionError('host constructed')) as host,\
+                     patch.object(producer.sys,'stdout',SimpleNamespace(buffer=io.BytesIO())):
+                    self.assertEqual(producer.dispatch_cli(['--same-job-setup-v1'],
+                        dict(environment,GITHUB_ACTOR='different-actor')),1)
+                    host.assert_not_called()
+                self.assertEqual(observed,[])
+
+        def test_closed_setup_sequence_and_child_profile(self):
+            FakeOps,witness=setup_v8_controls(export_ops=True)
+            request={'setup':p.setup_v9_policy()}
+            ops=FakeOps()
+            result=p.setup_v8_sequence(ops,request,p.SAME_JOB_ACTUAL_ROUTE)
+            self.assertIsNone(result['firstFailure'],result['firstFailure'])
+            self.assertEqual(result['schema'],p.SAME_JOB_ACTUAL_ROUTE['setupSchema'])
+            self.assertEqual(ops.events.count('acquire'),15)
+            self.assertEqual(ops.events[-1],'stage')
+            self.assertIs(p.ACTUAL_ENTRY_ENABLED,False)
+            self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,False)
+
+        def test_v2_post_reap_history_retains_first_and_final_strict_sample(self):
+            def sample(index,procs,identity=900):
+                return {'unitIdentity':[1,identity,stat.S_IFDIR|0o755,0,0,2,0,100],
+                    'limits':dict(p.LIMITS),'cgroupProcs':procs,
+                    'cgroupEvents':'populated 1\nfrozen 0\n',
+                    'cgroupStat':'nr_descendants 0\nnr_dying_descendants 0\n',
+                    'onlyController':procs=='101\n','firstFailure':None,'secondary':[]}
+            class Census:
+                def __init__(self,rows):self.rows=rows;self.called=[]
+                def cgroup_sample_v2(self,phase,index):
+                    self.called.append((phase,index));return copy.deepcopy(self.rows[index])
+            def clock():
+                clock.value+=100_000_000;return clock.value
+            clock.value=1_000_000_000
+            ops=Census([sample(0,'101\n202\n'),sample(1,'101\n')])
+            history=p.same_job_v2_cgroup_history(ops,'unpack',clock=clock,pause=lambda _:None)
+            self.assertEqual((history['settled'],history['finalIndex'],ops.called),
+                (True,1,[('unpack',0),('unpack',1)]))
+            self.assertEqual(history['samples'][0]['cgroupProcs'],'101\n202\n')
+            self.assertEqual(reader.same_job_v2_cgroup_history(history,'unpack',101)
+                ['cgroupProcs'],'101\n')
+            changed=copy.deepcopy(history)
+            changed['samples'][1]['unitIdentity'][1]=901
+            with self.assertRaises(reader.Refusal):
+                reader.same_job_v2_cgroup_history(changed,'unpack',101)
+            clock.value=1_000_000_000
+            drift=p.same_job_v2_cgroup_history(Census([sample(0,'101\n202\n'),
+                sample(1,'101\n',901)]),'unpack',clock=clock,pause=lambda _:None)
+            self.assertFalse(drift['settled'])
+            self.assertEqual(drift['samples'][0]['cgroupProcs'],'101\n202\n')
+            with self.assertRaises(reader.Refusal):
+                reader.same_job_v2_cgroup_history(drift,'unpack',101)
+            clock.value=1_000_000_000
+            persistent=p.same_job_v2_cgroup_history(Census([sample(i,'101\n202\n')
+                for i in range(6)]),'configure',clock=clock,pause=lambda _:None)
+            self.assertEqual((len(persistent['samples']),persistent['settled']),
+                (6,False))
+            self.assertIsNotNone(persistent['firstFailure'])
+            with self.assertRaises(reader.Refusal):
+                reader.same_job_v2_cgroup_history(persistent,'configure',101)
+            times=iter((1_000_000_000,1_000_000_001,1_000_000_002,
+                6_000_000_000))
+            expired=p.same_job_v2_cgroup_history(Census([sample(0,'101\n')]),
+                'unpack',limit=1,clock=lambda:next(times),pause=lambda _:None)
+            self.assertFalse(expired['settled'])
+            self.assertIn('deadline after read',expired['firstFailure']['message'])
+            self.assertEqual(len(expired['samples']),1)
+            before=iter((1_000_000_000,1_000_000_001,6_000_000_000))
+            untouched=Census([])
+            missed=p.same_job_v2_cgroup_history(untouched,'unpack',
+                clock=lambda:next(before),pause=lambda _:None)
+            self.assertEqual((missed['samples'],missed['finalIndex'],
+                missed['settled'],untouched.called),([],None,False,[]))
+            self.assertEqual(missed['firstFailure']['phase'],
+                'same-job-actual-v2-cgroup-deadline')
+            with self.assertRaises(reader.Refusal):
+                reader.same_job_v2_cgroup_history(missed,'unpack',101)
+            read_error=sample(0,'101\n')
+            read_error['firstFailure']={'phase':'v2-cgroup-read-close',
+                'name':'OSError','message':'held read/close failure'}
+            partial=p.same_job_v2_cgroup_history(Census([read_error]),'unpack',
+                limit=1,clock=lambda:1_000_000_001,pause=lambda _:None)
+            self.assertEqual(partial['firstFailure'],read_error['firstFailure'])
+            self.assertEqual(partial['samples'][0]['firstFailure'],read_error['firstFailure'])
+            self.assertFalse(partial['settled'])
+            with self.assertRaises(reader.Refusal):
+                reader.same_job_v2_cgroup_history(partial,'unpack',101)
+            def err_clock(values):
+                selected=iter(values)
+                def next_time():
+                    item=next(selected)
+                    if isinstance(item,BaseException):raise item
+                    return item
+                return next_time
+            prior=sample(0,'101\n202\n')
+            backward=p.same_job_v2_cgroup_history(Census([prior]),'unpack',
+                clock=err_clock((1_000_000_000,1_000_000_001,1_000_000_002,
+                    1_000_000_003,999_999_999)),pause=lambda _:None)
+            self.assertEqual((len(backward['samples']),backward['finalIndex']),
+                (1,0))
+            self.assertEqual(backward['samples'][0]['cgroupProcs'],'101\n202\n')
+            self.assertEqual(backward['firstFailure']['phase'],
+                'same-job-actual-v2-cgroup-clock')
+            with self.assertRaises(reader.Refusal):
+                reader.same_job_v2_cgroup_history(backward,'unpack',101)
+            above_began=p.same_job_v2_cgroup_history(Census([prior]),'unpack',
+                clock=err_clock((1_000_000_000,1_000_000_001,1_000_000_002,
+                    1_000_000_003,1_000_000_002)),pause=lambda _:None)
+            self.assertEqual((len(above_began['samples']),
+                above_began['firstFailure']['phase']),
+                (1,'same-job-actual-v2-cgroup-clock'))
+            started_before_now=p.same_job_v2_cgroup_history(Census([]),'unpack',
+                clock=err_clock((1_000_000_000,1_000_000_002,1_000_000_001)),
+                pause=lambda _:None)
+            self.assertEqual((started_before_now['samples'],
+                started_before_now['firstFailure']['phase']),
+                ([],'same-job-actual-v2-cgroup-clock'))
+            with self.assertRaises(reader.Refusal):
+                reader.same_job_v2_cgroup_history(started_before_now,'unpack',101)
+            def failed_pause(_):raise OSError('bounded pause failed')
+            paused=p.same_job_v2_cgroup_history(Census([prior]),'unpack',
+                clock=err_clock((1_000_000_000,1_000_000_001,1_000_000_002,
+                    1_000_000_003,1_000_000_004)),pause=failed_pause)
+            self.assertEqual((len(paused['samples']),paused['firstFailure']['name']),
+                (1,'OSError'))
+            with self.assertRaises(reader.Refusal):
+                reader.same_job_v2_cgroup_history(paused,'unpack',101)
+            clock_error=OSError('after-read clock failed')
+            after_read=p.same_job_v2_cgroup_history(Census([sample(0,'101\n')]),
+                'unpack',clock=err_clock((1_000_000_000,1_000_000_001,
+                    1_000_000_002,clock_error)),pause=lambda _:None)
+            self.assertEqual((after_read['samples'][0]['cgroupProcs'],
+                after_read['samples'][0]['endMonoNs'],after_read['firstFailure']['name']),
+                ('101\n',None,'OSError'))
+            with self.assertRaises(reader.Refusal):
+                reader.same_job_v2_cgroup_history(after_read,'unpack',101)
+            read_clock=p.same_job_v2_cgroup_history(Census([read_error]),
+                'unpack',clock=err_clock((1_000_000_000,1_000_000_001,
+                    1_000_000_002,clock_error)),pause=lambda _:None)
+            self.assertEqual(read_clock['firstFailure'],read_error['firstFailure'])
+            self.assertEqual((read_clock['samples'][0]['endMonoNs'],
+                read_clock['secondary'][0]['message']),
+                (None,'after-read clock failed'))
+
+        def test_v2_real_cgroup_sampler_mocked_syscalls_and_drift(self):
+            host=object.__new__(p.SetupV8Host)
+            host.route=p.SAME_JOB_ACTUAL_V2_ROUTE
+            host.environ={'GITHUB_RUN_ID':'123'}
+            info=SimpleNamespace(st_dev=1,st_ino=900,st_mode=stat.S_IFDIR|0o755,
+                st_uid=0,st_gid=0,st_nlink=2,st_size=0,st_mtime_ns=100)
+            texts={'cpu.max':'100000 100000\n','memory.max':'1073741824\n',
+                'memory.swap.max':'0\n','pids.max':'64\n','cgroup.procs':'101\n',
+                'cgroup.events':'populated 1\nfrozen 0\n',
+                'cgroup.stat':'nr_descendants 0\nnr_dying_descendants 0\n'}
+            with patch.object(p.Path,'lstat',return_value=info),\
+                 patch.object(p.Path,'resolve',autospec=True,
+                     side_effect=lambda path,strict=False:path),\
+                 patch.object(p.Cgroups,'text',side_effect=lambda unused,path:
+                     texts[path.name]),\
+                 patch.object(p.os,'getpid',return_value=101):
+                selected=host.cgroup_sample_v2('unpack',0)
+            self.assertTrue(selected['onlyController'])
+            self.assertEqual(selected['unitIdentity'],[1,900,stat.S_IFDIR|0o755,
+                0,0,2,0,100])
+            changed=SimpleNamespace(**{**vars(info),'st_ino':901})
+            with patch.object(p.Path,'lstat',side_effect=[info,changed]),\
+                 patch.object(p.Path,'resolve',autospec=True,
+                     side_effect=lambda path,strict=False:path),\
+                 patch.object(p.Cgroups,'text',side_effect=lambda unused,path:
+                     texts[path.name]),\
+                 patch.object(p.os,'getpid',return_value=101):
+                refused=host.cgroup_sample_v2('unpack',0)
+            self.assertIsNotNone(refused['firstFailure'])
+            self.assertIsNone(refused['onlyController'])
+            for malformed in ({'cgroup.procs':'101\n202\n',
+                               'cgroup.stat':'nr_descendants 0\n'},
+                              {'cgroup.procs':'101\n202\n',
+                               'cgroup.events':'populated nope\nfrozen 0\n'}):
+                selected_text=dict(texts,**malformed)
+                with patch.object(p.Path,'lstat',return_value=info),\
+                     patch.object(p.Path,'resolve',autospec=True,
+                         side_effect=lambda path,strict=False:path),\
+                     patch.object(p.Cgroups,'text',side_effect=lambda unused,path:
+                         selected_text[path.name]),\
+                     patch.object(p.os,'getpid',return_value=101):
+                    refused=host.cgroup_sample_v2('unpack',0)
+                self.assertEqual(refused['cgroupProcs'],'101\n202\n')
+                self.assertIsNone(refused['onlyController'])
+                self.assertIsNotNone(refused['firstFailure'])
+                limited=iter((1_000_000_000,1_000_000_001,1_000_000_002,
+                              1_000_000_003))
+                class OneSample:
+                    calls=0
+                    def cgroup_sample_v2(self,phase,index):
+                        self.calls+=1;return refused
+                source=OneSample()
+                history=p.same_job_v2_cgroup_history(source,'unpack',
+                    clock=lambda:next(limited),pause=lambda _:None)
+                self.assertEqual((source.calls,history['finalIndex'],history['settled']),
+                    (1,0,False))
+                self.assertEqual(history['firstFailure'],refused['firstFailure'])
+
+        def test_v2_spent_source_and_patched_inactive_before_host_edges(self):
+            self.assertIs(p.SAME_JOB_ACTUAL_V2_ENABLED,False)
+            self.assertIs(reader.SAME_JOB_ACTUAL_V2_READER_ENABLED,True)
+            self.assertIs(p.SAME_JOB_ACTUAL_ENABLED,False)
+            workflow=(HERE.parent.parent/'.github/workflows/i80386-ring3-int-iret.yml').read_text()
+            v2=workflow.split('  ring3-same-job-actual-v2:\n',1)[1].split(
+                '  ring3-same-job-actual-v1:\n',1)[0]
+            v1=workflow.split('  ring3-same-job-actual-v1:\n',1)[1].split(
+                '  host-baseline-v1:\n',1)[0]
+            self.assertIn("if: ${{ github.event.action == 'labeled'",v2)
+            self.assertIn("if: ${{ false && github.event.action == 'labeled'",v1)
+            for mode in ('same-job-setup-v2','same-job-cleanup-v2',
+                         'same-job-image-shell-v2','same-job-guest-service-v2'):
+                with self.subTest(mode=mode),patch.object(p,'SAME_JOB_ACTUAL_V2_ENABLED',False),\
+                    patch.object(p,'setup_v8_entry',
+                    side_effect=AssertionError('no setup host edge')) as setup,\
+                    patch.object(p,'same_job_guest_service',
+                    side_effect=AssertionError('no guest host edge')) as guest,\
+                    patch.object(p.sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
+                    self.assertEqual(p.dispatch_cli(['--'+mode],{}),1)
+                    setup.assert_not_called();guest.assert_not_called()
+            invalid=SimpleNamespace(facts={'eventIdentity':{},'sourceCommands':[],
+                'source':None},event=lambda:b'{}\n',
+                source=lambda selected:(_ for _ in ()).throw(
+                    AssertionError('invalid event reached source')))
+            with patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+                 patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+                 patch.object(p,'HostedEnvelopeInstaller',return_value=invalid),\
+                 patch.object(p,'SetupV8Host',
+                    side_effect=AssertionError('invalid admission reached host')) as host,\
+                 patch.object(p,'same_job_guest_service',
+                    side_effect=AssertionError('invalid admission reached guest')) as guest,\
+                 patch.object(p.sys,'stdout',SimpleNamespace(buffer=io.BytesIO())),\
+                 patch.object(p.sys,'stderr',SimpleNamespace(buffer=io.BytesIO())):
+                self.assertEqual(p.dispatch_cli(['--same-job-setup-v2'],{}),1)
+                self.assertEqual(p.dispatch_cli(['--same-job-guest-service-v2'],{}),1)
+                host.assert_not_called();guest.assert_not_called()
+
+        def test_actual_collector_exact_role_and_finite_terminal(self):
+            class Child:
+                environment=dict(p.SETUP_V9_INSTALLER_ENV)
+                role='setup-same-job-v1'
+                def __init__(self):self.t=0
+                def now(self):self.t+=1000;return self.t
+                def spawn(self):return {'pid':201,'pgid':201,'parentPid':101,'startTicks':7}
+                def read_available(self,timeout):return []
+                def reap(self):return {'exitCode':0,'signal':None,'waitStatus':0,'timedOut':False,
+                    'rusage':{'userSeconds':0.0,'systemSeconds':0.0,'maxRssKiB':1}}
+                def close(self):pass
+                def kill(self):raise AssertionError('no signal after natural terminal')
+            argv=['/usr/bin/dpkg','--no-triggers','--configure',*p.SETUP_V9_CONFIGURE_ORDER]
+            packet,streams=p.collect_child(Child(),'setup-same-job-v1',argv,profile='setup-same-job-v1')
+            self.assertEqual((packet['exitCode'],packet['firstFailure'],streams['stdout']),
+                             (0,None,b''))
+            with self.assertRaises(ValueError):
+                p.collect_child(Child(),'setup-v9',argv,profile='setup-same-job-v1')
+
+        def test_selected_same_job_workflow_first_service_is_distinct(self):
+            workflow=(HERE.parent.parent/'.github/workflows/i80386-ring3-int-iret.yml').read_text()
+            start=workflow.index('  ring3-same-job-actual-v1:\n')
+            end=workflow.index('  host-baseline-v1:\n',start)
+            route=workflow[start:end]
+            self.assertIn("if: ${{ false && github.event.action == 'labeled'",route)
+            self.assertIn("github.event.label.name == 'x86-ring3-same-job-actual-v1'",route)
+            self.assertEqual(route.count('actions/checkout@11d5960a326750d5838078e36cf38b85af677262'),1)
+            self.assertEqual(route.count('actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020'),1)
+            for selected in ('node-version: 22.23.3','--same-job-image-shell-v1',
+                '--same-job-setup-v1','--same-job-cleanup-v1',
+                'bw-ring3-actual-setup-v1-${GITHUB_RUN_ID}-1',
+                '--kill-after=5s 720s','RuntimeMaxSec=660','TimeoutStopSec=5',
+                '--same-job-handoff-v1','handoff.original.json',
+                '--same-job-guest-service-v1','--same-job-guest-cleanup-v1',
+                '--same-job-actual-packet-v1','guest-verdict.original.json',
+                '--guest-outer build/i80386-ring3-same-job-actual-v1/guest-outer.original.json',
+                'controller.runtime.json',
+                'bw-ring3-actual-guest-v1-${GITHUB_RUN_ID}-1',
+                '--kill-after=5s 780s','RuntimeMaxSec=720',
+                'BW_RING3_SAME_JOB_HANDOFF_SHA256',
+                'i80386-ring3-same-job-actual-v1-originals',
+                'build/i80386-ring3-int-iret-export/'):
+                self.assertIn(selected,route)
+            self.assertEqual(route.count('--kill-after=5s 55s'),2)
+            # Two 55+5 cleanup envelopes keep the claimed finite total:
+            # (720+5)+60+(780+5)+60+180 = 1810 < 35*60.
+            self.assertEqual((720+5)+60+(780+5)+60+180,1810)
+            self.assertLess(route.index('--same-job-setup-v1'),route.index('--same-job-handoff-v1'))
+            self.assertLess(route.index('--same-job-handoff-v1'),route.index('--same-job-guest-service-v1'))
+            self.assertLess(route.index('--same-job-guest-service-v1'),route.index('--same-job-guest-cleanup-v1'))
+            self.assertLess(route.index('--same-job-guest-cleanup-v1'),route.index('--same-job-actual-packet-v1'))
+            self.assertIn('find "${roots[@]}" ! -type f ! -type d -print -quit',route)
+            self.assertIn("if: always() && steps.same_job_archive_bound.outputs.bounded == 'true'",route)
+            for historical in ('--setup-runtime-inventory-v9','--hosted-actual'):
+                self.assertNotIn(historical,route)
+
+    result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
+    assert result.wasSuccessful(),'pure inactive same-job actual controls failed'
+    print(json.dumps({'testOnly':True,'tests':result.testsRun,'network':False,'dpkg':False,
+        'guest':False,'actualRunApproved':False,'pass':True}))
+
+
+def same_job_v3_controls(*,export_fixture=False):
+    """The real V3 cleanup over only mocked FD, clock, file and process edges."""
+    p,case=producer_fixture_case()
+    edges=staged_runtime_controls(export_edges=True)
+    def runtime_edges(stage_node):
+        files,old_probe=runtime_fixture()
+        node=files.facts.pop(reader.RUNTIME_NODE)
+        files.facts[reader.NODE_STAGE_TARGET]=dict(node,mode=0o555)
+        files.prefixes[reader.NODE_STAGE_TARGET]=files.prefixes.pop(reader.RUNTIME_NODE)
+        files.rejected={}
+        empty=next(iter(reader.STAGED_EMPTY_PYTHON_SOURCES))
+        python_files=files.python_files
+        python_extra=['/usr/lib/python3.12/mock'+str(index).zfill(3)+'.py'
+            for index in range(241)]
+        files.python_files=lambda:sorted(python_files()+[empty,*python_extra])
+        files.empty_python=lambda name:reader.StagedInventoryFiles.empty_python(files,name)
+        original_fact=files.fact
+        def fact(path):
+            row=original_fact(path)
+            if path==reader.NODE_STAGE_TARGET:
+                files.metadata[path]=copy.deepcopy(stage_node)
+            return row
+        files.fact=fact
+        listings={'qemu-system-x86':[reader.RUNTIME_QEMU,reader.RUNTIME_TCG,'/usr/share/qemu/bios.bin'],
+            'qemu-system-common':['/usr/share/qemu/common-keymap'],
+            'qemu-system-data':['/usr/share/qemu/data-blob',*reader.SETUP_V9_SIGNED_DATA],
+            'seabios':['/usr/share/seabios/bios.bin'],'ipxe-qemu':['/usr/share/ipxe/rom.bin']}
+        for path,pin in reader.SETUP_V9_SIGNED_DATA.items():
+            files.facts[path]=dict(pin);files.prefixes[path]=b'inert signed DATA mock'
+        # Add short inert DATA names so the manufactured complete graph exercises
+        # the exact selected cardinalities without embedding retained host bytes.
+        for index in range(71):
+            path='/usr/share/qemu/f'+str(index).zfill(3)
+            files.facts[path]={'bytes':1,'sha256':sha(path.encode()),'mode':0o644}
+            files.prefixes[path]=b'F'
+            listings['qemu-system-data'].append(path)
+        for path in python_extra:
+            files.facts[path]={'bytes':1,'sha256':sha(path.encode()),'mode':0o644}
+            files.prefixes[path]=b'#'
+        for index in range(52):
+            path='/usr/share/qemu/l'+str(index).zfill(3)
+            files.aliases[path]={'linkText':'f000','target':'/usr/share/qemu/f000'}
+            listings['qemu-system-data'].append(path)
+        observed=[]
+        def probe(argv):
+            process,streams=old_probe(argv)
+            index=len(observed);observed.append(list(argv))
+            process.update(pid=300+index,pgid=300+index,parentPid=101,
+                startTicks=index+1,spawnMonoNs=60000000+index*1000000,
+                reapMonoNs=60001000+index*1000000)
+            if argv==[reader.NODE_STAGE_TARGET,'--version']:streams['stdout']=b'v22.23.3\n'
+            if argv[:2]==['/usr/bin/dpkg-query','-W']:
+                rows={name:(version,arch) for name,version,arch,*_ in reader.SETUP_V9_PACKAGES
+                    if name in reader.PACKAGE_NAMES}
+                streams['stdout']=''.join(name+'\t'+rows[name][0]+'\t'+rows[name][1]+'\n'
+                    for name in reader.PACKAGE_NAMES).encode()
+            if argv[:2]==['/usr/bin/dpkg-query','-L']:
+                streams['stdout']=('/.\n'+'\n'.join(listings[argv[2]])+'\n').encode()
+            return process,streams
+        return files,probe,observed
+    class FakeTree(p.SameJobV3ManualTreeOps):
+        def __init__(self,dying=(0,),*,fault=None,extra=None,close_fault=None,gid=1001):
+            self.dying=list(dying);self.fault=fault;self.extra=extra
+            self.close_fault=close_fault;self.time=1000000000;self.closed=[]
+            self.removed=[];self.calls=[];self.root_reads=0
+            self.clock_reads=0
+            self.identities={
+                1:[30,100,stat.S_IFDIR|0o755,0,0,4,0,1],
+                2:[30,101,stat.S_IFDIR|0o755,1001,gid,5,0,1],
+                3:[30,102,stat.S_IFDIR|0o755,1001,gid,2,0,1],
+                4:[30,103,stat.S_IFDIR|0o755,1001,gid,2,0,1],
+                5:[30,104,stat.S_IFDIR|0o755,1001,gid,2,0,1]}
+            self.fds={'controller':3,'js':4,'qemu':5}
+        def open_dir(self,name,parent=None):
+            if parent is None:self.assert_edge(name=='/sys/fs/cgroup');return 1
+            if parent==1:self.assert_edge(name=='bw-ring3-123-1');return 2
+            self.assert_edge(parent==2 and name in self.fds)
+            return self.fds[name]
+        @staticmethod
+        def assert_edge(condition):
+            if not condition:raise AssertionError('mocked V3 FD path drift')
+        def held(self,fd):return list(self.identities[fd])
+        def named_parent(self):return self.held(1)
+        def named(self,name,parent):
+            if parent==1:
+                self.assert_edge(name=='bw-ring3-123-1')
+                if 'enclosing' in self.removed:raise FileNotFoundError(name)
+                selected=self.held(2)
+                if self.fault==('identity','enclosing'):selected[1]+=1
+                return selected
+            self.assert_edge(parent==2 and name in self.fds)
+            if name in self.removed:raise FileNotFoundError(name)
+            selected=self.held(self.fds[name])
+            if self.fault==('identity',name):selected[1]+=1
+            return selected
+        def names(self,fd):
+            if fd==2:
+                value=sorted(set(self.fds)-set(self.removed))
+                if self.extra is not None:value=sorted(value+[self.extra])
+                return value
+            self.assert_edge(fd in (3,4,5));return []
+        def text(self,fd,name):
+            self.calls.append(('read',fd,name))
+            if self.fault==('read',fd,name):raise OSError('MOCK_FIRST_READ')
+            if name=='cgroup.procs' and self.fault==('long',fd,name):
+                return '1'*4096
+            if name in ('cgroup.procs','cgroup.threads'):return ''
+            if name=='pids.current':return '0\n'
+            if name=='cgroup.events':return 'populated 0\nfrozen 0\n'
+            if name=='cgroup.stat':
+                if fd==2:
+                    if any(role not in self.removed for role in self.fds):
+                        return 'nr_descendants 3\nnr_dying_descendants 0\n'
+                    selected=self.dying[min(self.root_reads,len(self.dying)-1)]
+                    self.root_reads+=1
+                    return 'nr_descendants 0\nnr_dying_descendants '+str(selected)+'\n'
+                return 'nr_descendants 0\nnr_dying_descendants 0\n'
+            limit={'cpu.max':'cpuMax','memory.max':'memoryMax',
+                'memory.swap.max':'swapMax','pids.max':'pidsMax'}[name]
+            if self.fault==('limit',fd,name):return '999\n'
+            return p.LIMITS[limit]+'\n'
+        def remove(self,name,parent):
+            self.calls.append(('rmdir',parent,name))
+            role='enclosing' if parent==1 else name
+            if self.fault==('remove',role):raise OSError('MOCK_RMDIR')
+            self.assert_edge(role not in self.removed)
+            self.removed.append(role)
+        def close(self,fd):
+            self.closed.append(fd)
+            if self.close_fault==fd:raise OSError('MOCK_CLOSE')
+        def clock(self):
+            self.clock_reads+=1
+            if self.fault==('clock',self.clock_reads):raise OSError('MOCK_CLOCK')
+            self.time+=10000000
+            return self.time
+        def pause(self,seconds):
+            if self.fault==('pause',):raise OSError('MOCK_PAUSE')
+            self.time+=int(seconds*1000000000)
+    env={'GITHUB_RUN_ID':'123','BW_EXPECTED_HEAD':'a'*40,
+        'BW_EXPECTED_TREE':'b'*40,'SUDO_UID':'1001','SUDO_GID':'1001'}
+    selection={'request':{'head':'a'*40,'tree':'b'*40},
+        'handoff':{'runId':'123','eventSha256':'c'*64},'eventSha256':'c'*64}
+    outside={'schema':'bw.ring3.same-job-guest-outside-cleanup.v3',
+        'runId':'123','unit':'bw-ring3-actual-guest-v3-123-1.service',
+        'serviceExitCode':0,'sourceAdmission':{'head':'a'*40,'tree':'b'*40},
+        'preCensus':{'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,
+            'cgroupStat':None},'stop':{'attempted':False,'argv':None,'exitCode':None,
+            'timedOut':False},'postCensus':{'terminal':'absent','cgroupProcs':None,
+            'cgroupEvents':None,'cgroupStat':None},'manualTree':None,
+        'manualCgroupAbsent':None,'outsideTerminalObserved':False,
+        'firstFailure':None,'secondary':[],'actualGuestApproved':False}
+    identities={'enclosing':(30,101),'controller':(30,102),
+                'js':(30,103),'qemu':(30,104)}
+    def resource_snap(inode):return {'identity':{'device':30,'inode':inode},
+                                    'limits':dict(p.LIMITS)}
+    resource_value={'schema':'bw.ring3.resources.v1',
+        'enclosing':{'before':resource_snap(101),'after':resource_snap(101)},
+        'controller':{'pid':201,'before':resource_snap(102),'after':resource_snap(102)},
+        'children':{'js':{'before':resource_snap(103),'after':resource_snap(103)},
+                    'qemu':{'before':resource_snap(104),'after':resource_snap(104)}},
+        'firstFailure':None,'secondary':[]}
+    resource_raw=p.encode(resource_value)
+    authority={'resourcesBytes':len(resource_raw),'resourcesSha256':sha(resource_raw),
+               'invoker':[1001,1001]}
+    class Tests(unittest.TestCase):
+        def build_connected_v3_first_service_setup_inventory_and_handoff(self):
+            rom,manifest=pure_fixture()
+            architectural,_=manufacture(rom,manifest)
+            with v8_manufactured(p,case,architectural) as (
+                    old_env,old_expected,old_originals,old_packet,old_selected,
+                    old_files,old_state):
+                packet_template=dict(old_packet)
+            def status_row(name,version,arch='amd64',state='install ok installed',pending=None):
+                lines=['Package: '+name,'Version: '+version,'Architecture: '+arch,'Status: '+state]
+                if pending is not None:lines.append('Triggers-Pending: '+pending)
+                return '\n'.join(lines).encode()
+            base=[status_row('installed-'+str(i).zfill(4),'1',
+                state='deinstall ok config-files' if i==0 else 'install ok installed')
+                for i in range(1210)]
+            pre=b'\n\n'.join(base+[status_row('libc-bin','2')])+b'\n'
+            selected=[status_row(name,version,arch) for name,version,arch,*_ in p.SETUP_V9_PACKAGE_ROWS]
+            post=b'\n\n'.join(base+[status_row('libc-bin','2',state='install ok triggers-pending',pending='ldconfig'),*selected])+b'\n'
+            with edges() as (producer,env,request,raw,state):
+                producer.stage_runtime_inventory_node(env)
+                stage_node=state['observation']['stageBefore']['files']['node']['before']
+                files,probe,observed=runtime_edges(stage_node)
+                candidate_raw=reader.SetupV9Inventory(stage_node,files,probe).discover()
+                candidate=reader.parse(candidate_raw)
+                self.assertEqual((len(candidate['files']),len(candidate['aliases'])),(327,55))
+                mock_graph=dict(producer.SAME_JOB_REVIEWED_GRAPH,bytes=len(candidate_raw),
+                    sha256=sha(candidate_raw))
+                FakeOps,witness=setup_v8_controls(export_ops=True)
+                actual=copy.deepcopy(request)
+                with patch.object(producer,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                     patch.object(producer,'SETUP_V8_STATUS_SHA',sha(pre)):
+                    setup_policy=producer.setup_v9_policy()
+                actual.update(schema=producer.SAME_JOB_ACTUAL_V3_ROUTE['requestSchema'],
+                    setup=setup_policy,payloadWitness=witness,comparison=mock_graph)
+                request_raw=reader.canonical(actual);pin=sha(request_raw)
+                event=reader.parse(state['originals']['staged.event.json'])
+                event['label']['name']=producer.SAME_JOB_ACTUAL_V3_ROUTE['label']
+                event['pull_request']['body']='<!-- BW_RING3_SAME_JOB_ACTUAL_V3\n'+pin+\
+                    '\nBW_RING3_SAME_JOB_ACTUAL_V3 -->'
+                event_raw=reader.canonical(event)
+                record=copy.deepcopy(reader.parse(reader.prerequisite_original(
+                    reader.canonical(state['observation']['stageBefore']['record']))))
+                record.update(schema=producer.SAME_JOB_ACTUAL_V3_ROUTE['stageSchema'],
+                    request={'bytes':len(request_raw),'sha256':pin,'base64':base64.b64encode(request_raw).decode()},
+                    event={'bytes':len(event_raw),'sha256':sha(event_raw),'base64':base64.b64encode(event_raw).decode()},
+                    recordBoundary='verified copy after selected setup and policy cleanup, before directory publication')
+                record['platform'].pop('BW_RING3_STAGED_INVENTORY_REQUEST_SHA256')
+                record['platform'].update(BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256=pin,
+                    BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_B64=base64.b64encode(request_raw).decode(),
+                    GITHUB_JOB=producer.SAME_JOB_ACTUAL_V3_ROUTE['job'])
+                record['eventIdentity']['st_size']=len(event_raw)
+                source=reader.parse(reader.prerequisite_original(reader.canonical(actual['source'])))
+                class ActualOps(FakeOps):
+                    def preflight(self,selected):
+                        item=super().preflight(selected)
+                        item['imageVersion']='20261012.334.1'
+                        item['imageFields']['ImageVersion']['value']=item['imageVersion']
+                        item['resource']['membership']='0::/system.slice/bw-ring3-actual-setup-v3-123-1.service\n'
+                        item['statusSha256']=sha(pre)
+                        return item
+                    def acquire(self,package):
+                        item=super().acquire(package)
+                        item['path']=item['path'].replace('setup-v8-','actual-setup-v3-')
+                        return item
+                    def dpkg(self,args):
+                        item=super().dpkg(args);item['process']['role']='setup-same-job-v3'
+                        return item
+                    def cgroup_sample_v2(self,phase,index):
+                        census=super().quiescent(phase)
+                        identity=901 if self.fault=='unit-cross-phase' and phase=='configure' else 900
+                        return {'unitIdentity':[1,identity,stat.S_IFDIR|0o755,0,0,2,0,100],
+                            'limits':dict(producer.LIMITS),
+                            'cgroupProcs':census['cgroupProcs'],
+                            'cgroupEvents':census['cgroupEvents'],
+                            'cgroupStat':census['cgroupStat'],
+                            'onlyController':census['onlyController'],
+                            'firstFailure':None,'secondary':[]}
+                class Observer:
+                    def __init__(self,environ):
+                        self.facts={'eventIdentity':record['eventIdentity'],
+                            'sourceCommands':record['sourceCommands'],'source':source}
+                    def event(self):return event_raw
+                    def source(self,selected):self.facts['source']=source
+                real_history=producer.same_job_v2_cgroup_history
+                def fixed_history(ops,phase,**kwargs):
+                    base=(40_001_001 if phase=='unpack' else 50_001_001)
+                    ticks=iter((base,base+1,base+2,base+3))
+                    return real_history(ops,phase,clock=lambda:next(ticks),**kwargs)
+                with patch.object(producer,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(reader,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                     patch.object(reader,'SETUP_V9_STATUS_BYTES',len(pre)),\
+                     patch.object(producer,'SETUP_V9_STATUS_SHA',sha(pre)),\
+                     patch.object(producer,'SETUP_V8_STATUS_SHA',sha(pre)),\
+                     patch.object(producer,'same_job_v2_cgroup_history',side_effect=fixed_history):
+                    self.assertEqual([producer.same_json(actual['setup'],producer.setup_v9_policy()),
+                        producer.same_json(actual['payloadWitness'],producer.SETUP_V8_PAYLOAD_PINS),
+                        producer.same_json(actual['comparison'],producer.SAME_JOB_REVIEWED_GRAPH)],
+                        [True,True,True])
+                    entry_ops=ActualOps();entry_output=io.BytesIO()
+                    with patch.object(producer.os,'getresuid',return_value=(0,0,0)),\
+                         patch.object(producer.os,'getresgid',return_value=(0,0,0)),\
+                         patch.object(producer,'expected_cgroup',return_value=None),\
+                         patch.object(producer,'HostedEnvelopeInstaller',Observer),\
+                         patch.object(producer,'SetupV8Host',return_value=entry_ops),\
+                         patch.object(producer.sys,'stdout',SimpleNamespace(buffer=entry_output)):
+                        self.assertEqual(producer.setup_v8_entry(record['platform'],producer.SAME_JOB_ACTUAL_V3_ROUTE),1)
+                    self.assertEqual(entry_ops.events.count('acquire'),15,
+                        reader.parse_setup_v9_outer(entry_output.getvalue())['firstFailure'])
+                    self.assertEqual(entry_ops.events[-1],'stage',
+                        reader.parse_setup_v9_outer(entry_output.getvalue())['firstFailure'])
+                    setup=entry_ops.snapshot
+                    status_log=io.BytesIO()
+                    pre_meta=producer.emit_setup_v8_status('pre',pre,status_log.write,status_log.flush,
+                        route=producer.SAME_JOB_ACTUAL_V3_ROUTE)
+                    post_meta=producer.emit_setup_v8_status('post',post,status_log.write,status_log.flush,
+                        route=producer.SAME_JOB_ACTUAL_V3_ROUTE)
+                    setup['preflight'].update(statusSha256=sha(pre),statusBytes=len(pre),statusOriginal=pre_meta)
+                    setup['postStatus'].update(sha256=sha(post),bytes=len(post),records=1226,
+                        statusOriginal=post_meta)
+                    record['setup']=setup
+                    record_raw=reader.canonical(record)
+                    state['rows']['/event.json'].update(raw=event_raw,st_size=len(event_raw))
+                    state['rows'][str(producer.NODE_STAGE_RECORD)].update(raw=record_raw,st_size=len(record_raw))
+                    state['rows']['/proc/self/cgroup']['raw']=b'0::/system.slice/bw-ring3-actual-setup-v3-123-1.service\n'
+                    actual_env={**record['platform'],'LANG':'C.UTF-8','HOME':'/nonexistent','PATH':'/usr/bin:/bin'}
+                    files,probe,observed=runtime_edges(stage_node)
+                    originals,passed,safe=reader.same_job_actual_inventory_entry(actual_env,files,probe,version=3)
+                    self.assertEqual((passed,safe),(True,True),
+                        reader.parse(originals['runtime.setup-inventory.json'])['firstFailure'])
+                    self.assertEqual(len(observed),15)
+                    self.assertEqual(set(originals),set(reader.SAME_JOB_ACTUAL_LOG_ROLES))
+                    # Rewrap the complete stage original after moving only a
+                    # final census past the next real child spawn. Each sample
+                    # remains internally ordered and inside its five-second
+                    # deadline; only the cross-phase join can reject it.
+                    stage_path=str(producer.NODE_STAGE_RECORD)
+                    for phase,next_spawn in (('unpack',50_000_000),):
+                        moved=copy.deepcopy(record)
+                        last=moved['setup'][phase]['cgroupHistory']['samples'][-1]
+                        last['endMonoNs']=next_spawn+1
+                        moved_raw=reader.canonical(moved)
+                        state['rows'][stage_path].update(raw=moved_raw,st_size=len(moved_raw))
+                        observed.clear()
+                        refused,accepted,_=reader.same_job_actual_inventory_entry(
+                            actual_env,files,probe,version=3)
+                        self.assertFalse(accepted,phase)
+                        self.assertIn('chronology',reader.parse(
+                            refused['runtime.setup-inventory.json'])['firstFailure']['message'])
+                    state['rows'][stage_path].update(raw=record_raw,st_size=len(record_raw))
+                    observed.clear()
+                    wire=io.BytesIO();wire.write(status_log.getvalue())
+                    reader.emit_same_job_actual_inventory(originals,wire.write,wire.flush,version=3)
+                    self.assertEqual(reader.decode_same_job_actual_log(wire.getvalue(),version=3),originals)
+                    unit='bw-ring3-actual-setup-v3-123-1.service'
+                    absent={'terminal':'absent','cgroupProcs':None,'cgroupEvents':None,'cgroupStat':None}
+                    admission={'requestSha256':pin,'eventSha256':sha(event_raw),
+                        'head':actual['head'],'tree':actual['tree'],'source':source,'unit':unit}
+                    cleanup=reader.canonical({'schema':producer.SAME_JOB_ACTUAL_V3_ROUTE['cleanupSchema'],
+                        'runId':'123','serviceExitCode':0,'sourceAdmission':admission,
+                        'preCensus':absent,'stop':{'attempted':False,'argv':None,'exitCode':None,
+                            'timedOut':False},'postCensus':absent,'cgroupTerminal':'absent',
+                        'unitCensus':None,'policy':None,'action':'not-needed',
+                        'firstFailure':None,'secondary':[],'setupApproved':False})
+                    outer=reader.canonical({'schema':'bw.ring3.same-job-setup-outer-terminal.v3',
+                        'runId':'123','unit':'/sys/fs/cgroup/system.slice/'+unit,
+                        'systemdRunExitCode':0,'outsideCleanupExitCode':0,'cgroupAfter':'absent'})
+                    shell=reader.canonical({'schema':producer.SAME_JOB_ACTUAL_V3_ROUTE['shellSchema'],
+                        'fields':{'ImageOS':{'present':True,'value':'ubuntu24'},
+                            'ImageVersion':{'present':True,'value':'20261012.334.1'}},
+                        'fieldErrors':[],'setupAttempted':False,'guestAttempted':False,
+                        'setupApproved':False})
+                    external={'schema':'bw.ring3.same-job-local-expectation.v3',
+                        'requestSha256':pin,'runId':'123','attempt':1,'head':actual['head'],
+                        'tree':actual['tree'],'workflowSha':env['GITHUB_WORKFLOW_SHA'],
+                        'workflowFileSha256':source['files'][reader.WORKFLOW]['sha256'],
+                        'jobId':None,'jobName':producer.SAME_JOB_ACTUAL_V3_ROUTE['job'],
+                        'conclusion':'observed-zero','logBytes':len(wire.getvalue()),
+                        'logSha256':sha(wire.getvalue()),'outerBytes':len(outer),
+                        'outerSha256':sha(outer),'cleanupBytes':len(cleanup),
+                        'cleanupSha256':sha(cleanup),'shellBytes':len(shell),
+                        'shellSha256':sha(shell),'invoker':[1001,1002]}
+                    handoff=reader.verify_same_job_actual_setup_log(wire.getvalue(),external,
+                        outer,cleanup,shell,version=3)
+                    self.assertTrue(handoff['setupObserved'])
+                    self.assertEqual(handoff['candidateSha256'],mock_graph['sha256'])
+                    self.assertFalse(handoff['actualGuestApproved'])
+                    held={'setup':wire.getvalue(),'outer':outer,'cleanup':cleanup,'shell':shell}
+                    argv=['reader.py','--same-job-handoff-v3','--setup-log','setup',
+                        '--outer','outer','--cleanup','cleanup','--shell','shell',
+                        '--request-sha',pin,'--run-id','123','--head',actual['head'],
+                        '--tree',actual['tree'],'--workflow-sha',env['GITHUB_WORKFLOW_SHA'],
+                        '--workflow-file-sha',source['files'][reader.WORKFLOW]['sha256'],
+                        '--invoker-uid','1001','--invoker-gid','1002']
+                    output=io.BytesIO()
+                    with patch.object(reader,'SAME_JOB_ACTUAL_V3_READER_ENABLED',True),\
+                         patch.object(reader.sys,'argv',argv),\
+                         patch.object(reader.sys,'stdout',SimpleNamespace(buffer=output)),\
+                         patch.object(reader.Path,'open',lambda path,*a,**kw:io.BytesIO(held[str(path)])),\
+                         patch.object(reader.os,'open',side_effect=AssertionError('no live reader OS edge')):
+                        reader.main()
+                    selected_handoff=reader.parse(output.getvalue())
+                    self.assertEqual(selected_handoff['runtimeCandidate']['bytes'],len(candidate_raw))
+                    self.assertEqual(selected_handoff['runId'],'123')
+                    self.assertEqual(selected_handoff['requestSha256'],pin)
+                    self.assertEqual(selected_handoff['comparisonInput'],mock_graph)
+                    self.assertFalse(selected_handoff['actualRunApproved'])
+                    Tests.complete_v3=(packet_template,source,candidate_raw,candidate,
+                        wire.getvalue(),outer,cleanup,shell,external,output.getvalue(),
+                        pin,event_raw,actual,record,env)
+        def build_connected_v3_twenty_roles_and_manual_terminal_reader(self):
+            (template,source,candidate_raw,candidate,setup_log,setup_outer,
+             setup_cleanup,setup_shell,external,handoff_raw,pin,event_raw,
+             actual,record,env)=Tests.complete_v3
+            reviewed=dict(p.SAME_JOB_REVIEWED_GRAPH,bytes=len(candidate_raw),
+                sha256=sha(candidate_raw))
+            for module,name in ((p,'SAME_JOB_REVIEWED_GRAPH'),
+                                (reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH')):
+                selected_patch=patch.object(module,name,reviewed)
+                selected_patch.start()
+                self.addCleanup(selected_patch.stop)
+            node_pin={key:candidate['executables']['node'][key]
+                for key in ('bytes','sha256')}
+            pin_patch=patch.object(reader,'RUNTIME_SELECTED',
+                dict(reader.RUNTIME_SELECTED,node=node_pin))
+            pin_patch.start()
+            self.addCleanup(pin_patch.stop)
+            handoff=reader.parse(handoff_raw)
+            packet=dict(template)
+            selected=p.SameJobRuntimeGate(candidate_raw,candidate).selected_runtime()
+            for phase in ('before','after'):
+                packet['source.'+phase+'.json']=reader.canonical(source)
+                packet['runtime.'+phase+'.json']=reader.canonical(selected)
+            for role in ('js','qemu'):
+                process=reader.parse(packet[role+'/process.json'])
+                process['argv']=([selected['executables']['node']['path'],
+                    '--input-type=module','--eval',reader.JS_DRIVER] if role=='js'
+                    else reader.qemu_argv(selected['executables']['qemu']['path']))
+                packet[role+'/process.json']=reader.canonical(process)
+            resources=reader.parse(packet['resources.json'])
+            for role,item in (('enclosing',resources['enclosing']),
+                              ('controller',resources['controller']),
+                              ('js',resources['children']['js']),
+                              ('qemu',resources['children']['qemu'])):
+                dev,inode=identities[role]
+                for phase in ('before','after'):
+                    item[phase]['identity']={'device':dev,'inode':inode}
+                    item[phase]['limits']=dict(p.LIMITS)
+            packet['resources.json']=reader.canonical(resources)
+            audit=reader.parse(packet['audit.json'])
+            audit.update(head=source['head'],sourceTree=source['tree'],
+                workflowSha256=source['files'][reader.WORKFLOW]['sha256'])
+            audit['roles']=[{'path':name,'bytes':len(packet[name]),
+                'sha256':sha(packet[name])} for name in sorted(reader.ROLES-{'audit.json'})]
+            packet['audit.json']=reader.canonical(audit)
+            observation=lambda start,end:{'files':{
+                path:{key:item[key] for key in ('bytes','sha256','mode')}
+                for path,item in candidate['files'].items()},
+                'aliases':candidate['aliases'],'platform':candidate['platform'],
+                'startMonoNs':start,'finishMonoNs':end}
+            runtime=reader.canonical({'schema':'bw.ring3.same-job-controller-runtime.v3',
+                'handoffSha256':sha(handoff_raw),'candidateSha256':sha(candidate_raw),
+                'observations':{'before-probes':observation(1,2),
+                    'after-probes':observation(3,4),'after-guests':observation(5,6)},
+                'pid':resources['controller']['pid'],'firstFailure':None,'secondary':[]})
+            self.assertTrue(reader.same_job_actual_packet_predicates(
+                packet,handoff,runtime,version=3)['guestPredicatesObserved'])
+            tree=self.audit(FakeTree(gid=1002),selected_gid=1002)
+            self.assertIsNone(tree['firstFailure'])
+            tree['authority']={'resourcesBytes':len(packet['resources.json']),
+                'resourcesSha256':sha(packet['resources.json']),'invoker':[1001,1002]}
+            absent={'terminal':'absent','cgroupProcs':None,
+                'cgroupEvents':None,'cgroupStat':None}
+            unit='bw-ring3-actual-guest-v3-123-1.service'
+            service=reader.canonical({'schema':'bw.ring3.same-job-guest-service.v3',
+                'requestSha256':pin,'handoffSha256':sha(handoff_raw),
+                'guestPacketComposed':True,'firstFailure':None,'secondary':[]})
+            cleanup=reader.canonical({'schema':'bw.ring3.same-job-guest-outside-cleanup.v3',
+                'runId':'123','unit':unit,'serviceExitCode':0,
+                'sourceAdmission':{'requestSha256':pin,'eventSha256':sha(event_raw),
+                    'handoffSha256':sha(handoff_raw),'head':actual['head'],
+                    'tree':actual['tree']},'preCensus':absent,'postCensus':absent,
+                'stop':{'attempted':False,'argv':None,'exitCode':None,'timedOut':False},
+                'manualTree':tree,'manualCgroupAbsent':True,
+                'outsideTerminalObserved':True,'firstFailure':None,'secondary':[],
+                'actualGuestApproved':False})
+            guest_outer=reader.canonical({'schema':'bw.ring3.same-job-guest-outer.v3',
+                'runId':'123','unit':'/sys/fs/cgroup/system.slice/'+unit,
+                'systemdRunExitCode':0,'outsideCleanupExitCode':0,
+                'cgroupAfter':'absent'})
+            grade=reader.verify_same_job_actual_packet(packet,handoff_raw,service,
+                cleanup,guest_outer,runtime,version=3)
+            self.assertTrue(grade['guestPredicatesObserved'])
+            self.assertTrue(grade['manualTreeTerminal'])
+            self.assertFalse(grade['actualRunApproved'])
+            Tests.full_v3=(packet,handoff_raw,service,cleanup,guest_outer,runtime)
+            pin_patch.stop()
+        def test_connected_v3_setup_packet_controller_and_reader(self):
+            self.build_connected_v3_first_service_setup_inventory_and_handoff()
+            self.build_connected_v3_twenty_roles_and_manual_terminal_reader()
+            (template,source,candidate_raw,candidate,setup_log,setup_outer,
+             setup_cleanup,setup_shell,external,handoff_raw,pin,event_raw,
+             actual,record,env)=Tests.complete_v3
+            packet,_,guest_service,guest_cleanup,guest_outer,_=Tests.full_v3
+            packet_template=template
+            selected_handoff=reader.parse(handoff_raw)
+            actual_env={**record['platform'],'LANG':'C.UTF-8',
+                'HOME':'/nonexistent','PATH':'/usr/bin:/bin'}
+            request_raw=reader.canonical(actual)
+            mock_graph=dict(p.SAME_JOB_REVIEWED_GRAPH,bytes=len(candidate_raw),
+                sha256=sha(candidate_raw))
+            producer=p
+            rom,manifest=pure_fixture()
+            architectural,_=manufacture(rom,manifest)
+            with v8_manufactured(p,case,architectural) as (
+                    old_env,old_expected,old_originals,old_packet,old_selected,
+                    old_files,old_state):
+                controller_env=dict(actual_env,GITHUB_JOB=producer.SAME_JOB_ACTUAL_V3_ROUTE['job'],
+                    BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_SHA256=pin,
+                    BW_RING3_SAME_JOB_ACTUAL_V3_REQUEST_B64=base64.b64encode(request_raw).decode(),
+                    BW_RING3_SAME_JOB_HANDOFF_SHA256=sha(handoff_raw),
+                    BW_LAUNCH_PLAN_SHA256='0'*64,SUDO_UID='1001',SUDO_GID='1002')
+                old_state['data']['source.before.json']=reader.canonical(source)
+                for name in ('fixture.rom','fixture.json'):
+                    old_state['data']['inputs/'+name]=packet_template['inputs/'+name]
+                owner=reader.parse(old_state['data']['.entry.json'])
+                owner['sourceSha256']=sha(old_state['data']['source.before.json'])
+                old_state['data']['.entry.json']=reader.canonical(owner)
+                for name in ('runtime.before.json','.controller.before.json',
+                    '.controller.json','source.after.json','runtime.after.json',
+                    'js/process.json','js/stdout','js/stderr','qemu/process.json',
+                    'qemu/stdout','qemu/stderr','qemu/report.json'):
+                    old_state['data'].pop(name,None)
+                def cgroup_observe(groups,role):
+                    snapshot=copy.deepcopy(owner['cgroups'][role])
+                    if role=='controller':
+                        snapshot['procs']=[100]
+                    if role in ('enclosing','controller'):
+                        snapshot['raw']['pidsCurrent']='1\n'
+                        snapshot['raw']['cgroupEvents']='populated 1\nfrozen 0\n'
+                    return snapshot
+                observe=lambda path:{key:candidate['files'][path][key]
+                    for key in ('bytes','sha256','mode')}
+                fixture_write=p.write_new
+                def controller_write(path,raw,cap):
+                    path=Path(path)
+                    if path.is_relative_to(p.PACKET):
+                        self.assertLessEqual(len(raw),cap)
+                        name=path.relative_to(p.PACKET).as_posix()
+                        self.assertNotIn(name,old_state['data'])
+                        old_state['data'][name]=raw
+                    else:fixture_write(path,raw,cap)
+                def child_observation(child,role,argv,**kwargs):
+                    self.assertIn(role,('js','qemu'))
+                    process=reader.parse(packet[role+'/process.json'])
+                    self.assertEqual(process['argv'],argv)
+                    process['parentPid']=100
+                    return process,{'stdout':packet[role+'/stdout'],
+                        'stderr':packet[role+'/stderr']}
+                runtime_originals={}
+                def retain_runtime(name,raw):
+                    self.assertNotIn(name,runtime_originals)
+                    runtime_originals[name]=raw
+                    return raw
+                with patch.object(p,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(p,'ROM_SHA',reader.ROM_SHA),\
+                     patch.object(p,'FIXTURE_JSON_SHA',reader.FIXTURE_JSON_SHA),\
+                     patch.object(p,'GENERATION_NODE_PIN',(
+                         selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                         selected_handoff['stageCopy']['nodeReadback']['sha256'])),\
+                     patch.object(p,'same_job_handoff',return_value=(
+                         handoff_raw,selected_handoff,candidate_raw,candidate)),\
+                     patch.object(p,'HostedEnvelopeInstaller',side_effect=lambda environ:
+                         SimpleNamespace(event=lambda:event_raw)),\
+                     patch.object(p,'source_facts',side_effect=lambda selected,**kw:
+                         (copy.deepcopy(selected),p.FirstFailure())),\
+                     patch.object(p,'runtime_facts',side_effect=lambda selected,*args,**kw:
+                         (copy.deepcopy(selected),p.FirstFailure())),\
+                     patch.object(p,'write_new',side_effect=controller_write),\
+                     patch.object(p,'collect_child',side_effect=child_observation),\
+                     patch.object(p,'runtime_delivery_original',side_effect=retain_runtime),\
+                     patch.object(p,'entry_proc',side_effect=lambda path:
+                         '0::/bw-ring3-123-1/controller\n' if str(path).endswith('cgroup')
+                         else ''.join(k+':\t'+'0'*16+'\n' for k in
+                             ('CapInh','CapPrm','CapEff','CapAmb'))),\
+                     patch.object(p.SameJobRuntimeFiles,'fact',side_effect=observe),\
+                     patch.object(p.SameJobRuntimeFiles,'alias',side_effect=lambda path:
+                         candidate['aliases'][path]),\
+                     patch.object(p.SameJobRuntimeFiles,'platform',return_value=candidate['platform']):
+                    with patch.object(p.Cgroups,'observe',autospec=True,side_effect=cgroup_observe):
+                        ops,controller_failure=p.controller_execute(
+                            p.SameJobControllerOps(controller_env))
+                self.assertIsNone(controller_failure.first,controller_failure.first)
+                self.assertIn('controller.runtime.json',runtime_originals)
+                self.assertEqual(set(ops.processes),{'js','qemu'})
+                built_packet={name:old_state['data'].get(name,packet[name])
+                    for name in reader.ROLES if name!='audit.json'}
+                built_resources=reader.parse(built_packet['resources.json'])
+                built_resources['controller']['pid']=100
+                built_resources['controller']['before']['procs']=[100]
+                built_packet['resources.json']=reader.canonical(built_resources)
+                built_audit=reader.parse(packet['audit.json'])
+                built_audit['roles']=[{'path':name,'bytes':len(built_packet[name]),
+                    'sha256':sha(built_packet[name])} for name in sorted(built_packet)]
+                built_packet['audit.json']=reader.canonical(built_audit)
+                self.assertEqual((reader.parse(runtime_originals['controller.runtime.json'])['handoffSha256'],
+                    reader.parse(runtime_originals['controller.runtime.json'])['pid']),
+                    (sha(handoff_raw),reader.parse(built_packet['resources.json'])['controller']['pid']))
+                final_env=dict(controller_env)
+                final_env['GITHUB_EVENT_PATH']='/event.json'
+                final_plan=reader.canonical({'schema':'bw.ring3.launch-plan.v1',
+                    'runId':'123','attempt':1,'head':actual['head'],
+                    'tree':actual['tree'],'source':actual['source']})
+                final_env['BW_LAUNCH_PLAN_SHA256']=sha(final_plan)
+                def git_trace(raw,phase):
+                    item=reader.parse(raw);item['source']=source
+                    listing=''.join(source['files'][name]['mode']+' blob '+
+                        source['files'][name]['blob']+'\t'+name+'\n'
+                        for name in sorted(source['files']))
+                    outputs=(source['head']+'\n',source['tree']+'\n',listing)
+                    for command,value in zip(item['commands'],outputs):
+                        command['stdoutHex']=value.encode().hex()
+                    return reader.canonical(item)
+                pre_git=git_trace(old_originals['git.before.json'],'before')
+                post_git=git_trace(old_originals['git.after.json'],'after')
+                generation=reader.parse(old_originals['generation.phase.json'])
+                node_path=p.RUNTIME_EXECUTABLES['node']
+                node_fact={'path':node_path,
+                    'bytes':selected_handoff['stageCopy']['nodeReadback']['bytes'],
+                    'sha256':selected_handoff['stageCopy']['nodeReadback']['sha256']}
+                generation_files={'node':dict(node_fact)}
+                for role,name in (('fixture','fixture.mjs'),('runner','run.py')):
+                    path='scripts/i80386-ring3-int-iret/'+name
+                    generation_files[role]={'path':path,
+                        'bytes':source['files'][path]['bytes'],
+                        'sha256':source['files'][path]['sha256']}
+                for when in ('before','after'):
+                    generation[when]['files']=copy.deepcopy(generation_files)
+                input_refs={name:{'bytes':len(old_state['data']['inputs/'+name]),
+                    'sha256':sha(old_state['data']['inputs/'+name])}
+                    for name in ('fixture.rom','fixture.json')}
+                generation['outputs']=input_refs
+                generation_raw=reader.canonical(generation)
+                phase=reader.parse(old_originals['preparation.phase.json'])
+                phase['process']['argv'][-1]='--same-job-prepare-v3'
+                phase['process']['environment']=dict(p.ENV,**{
+                    name:final_env[name] for name in p.SAME_JOB_V3_CHILD_ENV},
+                    SUDO_UID='1001',SUDO_GID='1002')
+                phase['preGit']={'bytes':len(pre_git),'sha256':sha(pre_git)}
+                pre_stream=p.generation_frame(generation_raw,pre_git)
+                phase['stdout']={'bytes':len(pre_stream),'sha256':sha(pre_stream),
+                    'base64':base64.b64encode(pre_stream).decode()}
+                phase_raw=reader.canonical(phase)
+                outside_record=reader.parse(old_state['data']['.outside.json'])
+                outside_record['process']['argv'][-1]='--same-job-bootstrap-v3'
+                outside_record['process']['pid']=100
+                outside_record['process']['pgid']=100
+                outside_record['process']['environment']=dict(p.ENV,**{
+                    name:final_env[name] for name in p.SAME_JOB_V3_CHILD_ENV},
+                    SUDO_UID='1001',SUDO_GID='1002')
+                old_state['data']['.outside.json']=reader.canonical(outside_record)
+                outside_facts={key:value for key,value in outside_record.items()
+                    if key not in ('firstFailure','secondary','streamsHex')}
+                selection={'requestRaw':request_raw,'request':actual,
+                    'handoffRaw':handoff_raw,'handoff':selected_handoff,
+                    'candidateRaw':candidate_raw,'candidate':candidate}
+                old_state['export'].clear();old_state['directories'].clear()
+                post=SimpleNamespace(capture=lambda head:(post_git,p.FirstFailure()))
+                with patch.object(p,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(p,'GENERATION_NODE_PIN',(
+                         node_fact['bytes'],node_fact['sha256'])),\
+                     patch.object(p,'ROM_SHA',reader.ROM_SHA),\
+                     patch.object(p,'FIXTURE_JSON_SHA',reader.FIXTURE_JSON_SHA):
+                    context=p.SameJobFinalizerContext(selection,final_env,p.SAME_JOB_ACTUAL_V3_ROUTE)
+                    finalized,final_failure=p.finalize_runtime_packet(context,
+                        outside_facts,p.FirstFailure(),pre_git,final_env,
+                        post_observer=post,preparation_original=phase_raw,
+                        generation_original=generation_raw,
+                        launch_plan_original=final_plan,
+                        launch_plan_sha256=sha(final_plan),
+                        emit=lambda raw:len(raw),flush=lambda:None)
+                self.assertTrue(finalized['pass'],final_failure.first)
+                self.assertIsNone(final_failure.first)
+                self.assertEqual(set(old_state['export']),reader.ROLES)
+                exported=dict(old_state['export'])
+                complete_resources=reader.parse(exported['resources.json'])
+                ids={'enclosing':complete_resources['enclosing']['before']['identity'],
+                    'controller':complete_resources['controller']['before']['identity'],
+                    'js':complete_resources['children']['js']['before']['identity'],
+                    'qemu':complete_resources['children']['qemu']['before']['identity']}
+                rebound=reader.parse(guest_cleanup)
+                tree=rebound['manualTree']
+                def set_identity(value,selected):
+                    value[0]=selected['device'];value[1]=selected['inode']
+                tree['parentIdentity'][0]=ids['enclosing']['device']
+                tree['parentIdentityAfter'][0]=ids['enclosing']['device']
+                for key in ('rootIdentity',):set_identity(tree[key],ids['enclosing'])
+                for role in p.SameJobV3ManualTreeOps.ROLES:
+                    for key in ('heldIdentity','namedIdentity'):
+                        set_identity(tree['before'][role][key],ids[role])
+                for sample in tree['rootSamples']:
+                    for key in ('heldIdentity','namedIdentity'):
+                        set_identity(sample[key],ids['enclosing'])
+                for item in tree['removals']:
+                    role=item['role']
+                    for key in ('heldIdentityBefore','namedIdentityBefore'):
+                        set_identity(item[key],ids[role])
+                    set_identity(item['parentIdentityBefore'],
+                        ids['enclosing'] if role!='enclosing' else
+                        {'device':tree['parentIdentity'][0],
+                         'inode':tree['parentIdentity'][1]})
+                tree['authority']['resourcesBytes']=len(exported['resources.json'])
+                tree['authority']['resourcesSha256']=sha(exported['resources.json'])
+                node_pin={key:candidate['executables']['node'][key]
+                    for key in ('bytes','sha256')}
+                with patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(reader,'RUNTIME_SELECTED',
+                         dict(reader.RUNTIME_SELECTED,node=node_pin)):
+                    final_grade=reader.verify_same_job_actual_packet(exported,
+                        handoff_raw,guest_service,reader.canonical(rebound),guest_outer,
+                        runtime_originals['controller.runtime.json'],version=3)
+                self.assertTrue(final_grade['guestPredicatesObserved'])
+                self.assertTrue(final_grade['manualTreeTerminal'])
+                self.assertFalse(final_grade['actualRunApproved'])
+                for changed_cleanup in ('resource-hash','dying-final'):
+                    damaged=copy.deepcopy(rebound)
+                    if changed_cleanup=='resource-hash':
+                        damaged['manualTree']['authority']['resourcesSha256']='0'*64
+                    else:
+                        damaged['manualTree']['rootSamples'][-1]['raw'][
+                            'cgroupStat']='nr_descendants 0\nnr_dying_descendants 1\n'
+                    with patch.object(reader,'SAME_JOB_ACTUAL_REVIEWED_GRAPH',mock_graph),\
+                         patch.object(reader,'RUNTIME_SELECTED',
+                             dict(reader.RUNTIME_SELECTED,node=node_pin)):
+                        with self.subTest(changed_cleanup=changed_cleanup),\
+                             self.assertRaises(reader.Refusal):
+                            reader.verify_same_job_actual_packet(exported,handoff_raw,
+                                guest_service,reader.canonical(damaged),guest_outer,
+                                runtime_originals['controller.runtime.json'],version=3)
+                wrapper_calls=[];wrapper_originals={};uid_state={'uid':0,'gid':0}
+                guest_env=dict(final_env)
+                fake_setup=SimpleNamespace(environ=guest_env,
+                    expected_plan_sha256=sha(final_plan),plan_original=final_plan,
+                    invoker={'uid':1001,'gid':1002},
+                    verify=lambda:wrapper_calls.append('verify'))
+                def setup_prepare():
+                    wrapper_calls.append('prepare')
+                    return {'pass':True},p.FirstFailure()
+                fake_setup.prepare=setup_prepare
+                def composition_validate(composition):
+                    self.assertIsInstance(composition,p.SameJobEntryComposition)
+                    self.assertEqual(composition.runtime_context.selection['handoffRaw'],
+                        handoff_raw)
+                    composition.bootstrap.invoker={'uid':1001,'gid':1002}
+                    composition.python=reader.parse(old_state['data']['.entry.json'])['python']
+                def composition_prepare(composition,failure):
+                    self.assertIsNone(failure.first)
+                    composition._launch_plan_original=final_plan
+                    composition._preparation_original=phase_raw
+                    composition._generation_original=generation_raw
+                    composition.pre_git=pre_git
+                    composition.preparation={'process':reader.parse(phase_raw)['process'],
+                        'streams':{'stdout':pre_stream,'stderr':b''}}
+                    return failure
+                def composition_outside(composition):
+                    self.assertEqual(composition._launch_plan_original,final_plan)
+                    wrapper_calls.append('compose')
+                    uid_state.update(uid=1001,gid=1002)
+                    p.entry_ids(1001,1002)
+                    return outside_facts,p.FirstFailure()
+                class MockPostGit(p.GitObservation):
+                    def capture(self,head):
+                        self.assert_head=head
+                        return post.capture(head)
+                def selected_plan(selection,environ):
+                    self.assertEqual(selection['candidateRaw'],candidate_raw)
+                    self.assertEqual(selection['handoffRaw'],handoff_raw)
+                    wrapper_calls.append('plan')
+                    return final_plan,dict(environ,BW_LAUNCH_PLAN_SHA256=sha(final_plan))
+                def selected_sink(setup):
+                    self.assertIs(setup,fake_setup)
+                    wrapper_calls.append('sink')
+                def retained_service(path,raw,cap):
+                    path=Path(path)
+                    if path.is_relative_to(p.EXPORT):
+                        return fixture_write(path,raw,cap)
+                    self.assertLessEqual(len(raw),cap)
+                    self.assertNotIn(str(path),wrapper_originals)
+                    wrapper_originals[str(path)]=raw
+                    wrapper_calls.append('retained')
+                def reject_changed_handoff(fault):
+                    rejected_handoff=copy.deepcopy(selected_handoff)
+                    if fault=='source':
+                        rejected_handoff['source']['head']='f'*40
+                    else:
+                        rejected_handoff['stageCopy']['nodeReadback']['sha256']='f'*64
+                    refused,refusal=p.same_job_guest_service(guest_env,route=p.SAME_JOB_ACTUAL_V3_ROUTE,
+                        event_reader=lambda:event_raw,
+                        handoff_reader=lambda selected,route:(handoff_raw,
+                            rejected_handoff,candidate_raw,candidate))
+                    self.assertFalse(refused['pass'],fault)
+                    self.assertIsNotNone(refusal.first,fault)
+                    self.assertEqual(wrapper_calls,[],fault)
+                with patch.object(p,'SAME_JOB_ACTUAL_V3_ENABLED',True),\
+                     patch.object(p,'SAME_JOB_REVIEWED_GRAPH',mock_graph),\
+                     patch.object(p,'SETUP_V9_STATUS_SHA',record['setup']['preflight']['statusSha256']),\
+                     patch.object(p,'SETUP_V8_STATUS_SHA',record['setup']['preflight']['statusSha256']),\
+                     patch.object(p,'GENERATION_NODE_PIN',(
+                         node_fact['bytes'],node_fact['sha256'])),\
+                     patch.object(p,'entry_proc',side_effect=lambda path:
+                         ''.join(key+':\t'+'0'*16+'\n' for key in
+                             ('CapInh','CapPrm','CapEff','CapAmb'))
+                         if str(path).endswith('/status') else
+                         '0::/system.slice/bw-ring3-actual-guest-v3-123-1.service\n'),\
+                     patch.object(p.Cgroups,'text',side_effect=lambda unused,path:
+                         p.SAME_JOB_GUEST_LIMITS[Path(path).name]),\
+                     patch.object(p,'source_facts',side_effect=lambda selected,**kw:
+                         (copy.deepcopy(selected),p.FirstFailure())),\
+                     patch.object(p.SameJobRuntimeFiles,'fact',side_effect=observe),\
+                     patch.object(p.SameJobRuntimeFiles,'alias',side_effect=lambda path:
+                         candidate['aliases'][path]),\
+                     patch.object(p.SameJobRuntimeFiles,'platform',return_value=candidate['platform']),\
+                     patch.object(p,'same_job_create_launch_plan',side_effect=selected_plan),\
+                     patch.object(p,'HostedSetupOps',return_value=fake_setup),\
+                     patch.object(p,'same_job_create_runtime_sink',side_effect=selected_sink),\
+                     patch.multiple(p.SameJobEntryComposition,
+                         validate=composition_validate,prepare=composition_prepare,
+                         outside=composition_outside),\
+                     patch.object(p,'GitObservation',MockPostGit),\
+                     patch.object(p,'write_new',side_effect=retained_service),\
+                     patch.multiple(p.os,getresuid=lambda:(uid_state['uid'],)*3,
+                         getresgid=lambda:(uid_state['gid'],)*3),\
+                     patch.object(p.os,'getgroups',return_value=[]):
+                    wrong_event=reader.parse(event_raw)
+                    wrong_event['label']['name']='x86-ring3-setup-runtime-inventory-v9'
+                    refused,refusal=p.same_job_guest_service(guest_env,route=p.SAME_JOB_ACTUAL_V3_ROUTE,
+                        event_reader=lambda:reader.canonical(wrong_event),
+                        handoff_reader=lambda selected,route:(handoff_raw,
+                            selected_handoff,candidate_raw,candidate))
+                    self.assertFalse(refused['pass'])
+                    self.assertIsNotNone(refusal.first)
+                    self.assertEqual(wrapper_calls,[])
+                    reject_changed_handoff('source')
+                    reject_changed_handoff('stage')
+                    old_state['export'].clear();old_state['directories'].clear()
+                    wrapper_result,wrapper_failure=p.same_job_guest_service(
+                        guest_env,route=p.SAME_JOB_ACTUAL_V3_ROUTE,event_reader=lambda:event_raw,
+                        handoff_reader=lambda selected,route:(handoff_raw,selected_handoff,
+                            candidate_raw,candidate))
+                self.assertTrue(wrapper_result['pass'],wrapper_failure.first)
+                self.assertTrue(wrapper_result['composition']['final']['pass'])
+                self.assertEqual(set(old_state['export']),reader.ROLES)
+                self.assertIsNone(wrapper_failure.first)
+                self.assertEqual(wrapper_calls,['plan','prepare','sink','compose','retained'])
+                self.assertEqual(set(wrapper_originals),{
+                    'build/i80386-ring3-same-job-actual-v3/guest.service.original.json'})
+                self.assertIs(reader.parse(next(iter(wrapper_originals.values())))[
+                    'guestPacketComposed'],True)
+                official_facts={'packet':exported,'handoff':handoff_raw,
+                    'service':next(iter(wrapper_originals.values())),
+                    'cleanup':reader.canonical(rebound),'guestOuter':guest_outer,
+                    'controllerRuntime':runtime_originals['controller.runtime.json'],
+                    'setupLog':setup_log,'setupOuter':setup_outer,
+                    'setupCleanup':setup_cleanup,'setupShell':setup_shell,
+                    'setupExpectation':external,'source':source,
+                    'workflowSha':env['GITHUB_WORKFLOW_SHA'],'requestSha256':pin,
+                    'graph':mock_graph,'node':node_fact,
+                    'statusSha256':record['setup']['preflight']['statusSha256'],
+                    'statusBytes':record['setup']['preflight']['statusBytes']}
+                official_external,official_raws=same_job_official_fixture(
+                    official_facts,version=3)
+                official_grade=same_job_official_grade(official_facts,
+                    official_external,official_raws,version=3)
+                self.assertTrue(official_grade['officialMetadataBound'])
+                self.assertTrue(official_grade['guestPredicatesObserved'])
+                self.assertFalse(official_grade['actualRunApproved'])
+                wrong=copy.deepcopy(official_external)
+                wrong['artifactExtras'].pop('guest.stderr')
+                with self.assertRaises(reader.Refusal):
+                    same_job_official_grade(official_facts,wrong,official_raws,version=3)
+        def audit(self,ops,selected_gid=1001):
+            selected_env=dict(env,SUDO_GID=str(selected_gid))
+            selected_authority=dict(authority,invoker=[1001,selected_gid])
+            with patch.object(p,'same_job_v3_resources_authority',
+                              return_value=(selected_authority,identities)):
+                return p.same_job_v3_manual_tree(selected_env,selection,outside,ops=ops)
+        def test_immediate_four_role_removal_and_full_wire_budget(self):
+            ops=FakeTree();value=self.audit(ops)
+            Tests.positive_manual_tree=copy.deepcopy(value)
+            self.assertIsNone(value['firstFailure'])
+            self.assertEqual(value['secondary'],[])
+            self.assertTrue(value['finalAbsent'])
+            self.assertEqual([row['role'] for row in value['removals']],
+                             ['controller','js','qemu','enclosing'])
+            self.assertTrue(all(row['absentAfter'] is True for row in value['removals']))
+            self.assertEqual(len(value['rootSamples']),1)
+            self.assertEqual(ops.removed,['controller','js','qemu','enclosing'])
+            self.assertEqual(ops.closed,[5,4,3,2,1])
+            self.assertLessEqual(len(p.encode(dict(outside,manualTree=value))),16384)
+        def test_dying_only_two_samples_retains_first_raw_without_extra_removal(self):
+            ops=FakeTree((2,0));value=self.audit(ops)
+            self.assertTrue(value['finalAbsent'])
+            self.assertEqual(len(value['rootSamples']),2)
+            self.assertIn('nr_dying_descendants 2',
+                          value['rootSamples'][0]['raw']['cgroupStat'])
+            self.assertIn('nr_dying_descendants 0',
+                          value['rootSamples'][1]['raw']['cgroupStat'])
+            self.assertEqual([row[0] for row in ops.calls].count('rmdir'),4)
+        def test_persistent_dying_refuses_root_rmdir_with_all_six_samples(self):
+            ops=FakeTree((1,)*6);value=self.audit(ops)
+            self.assertIsNotNone(value['firstFailure'])
+            self.assertEqual(len(value['rootSamples']),6)
+            self.assertEqual(ops.removed,['controller','js','qemu'])
+            self.assertIsNone(value['finalAbsent'])
+        def test_dying_settles_on_sixth_sample_within_whole_wire_cap(self):
+            ops=FakeTree((1,1,1,1,1,0));value=self.audit(ops)
+            self.assertIsNone(value['firstFailure'])
+            self.assertEqual(len(value['rootSamples']),6)
+            self.assertEqual(ops.removed,['controller','js','qemu','enclosing'])
+            self.assertLessEqual(len(p.encode(dict(outside,manualTree=value))),16384)
+        def test_unknown_child_or_read_fault_blocks_all_rmdir(self):
+            for ops in (FakeTree(extra='unknown'),FakeTree(fault=('read',3,'cgroup.threads'))):
+                value=self.audit(ops)
+                self.assertIsNotNone(value['firstFailure'])
+                self.assertEqual(ops.removed,[])
+                self.assertEqual(len(ops.closed),5)
+        def test_named_identity_or_limit_drift_blocks_destructive_phase(self):
+            for ops in (FakeTree(fault=('identity','qemu')),
+                        FakeTree(fault=('limit',4,'cpu.max'))):
+                value=self.audit(ops)
+                self.assertIsNotNone(value['firstFailure'])
+                self.assertEqual(ops.removed,[])
+                self.assertEqual(ops.closed,[5,4,3,2,1])
+        def test_initial_mode_and_observation_order_hold_before_any_rmdir(self):
+            class SafeModeDrift(FakeTree):
+                def clock(self):
+                    value=super().clock()
+                    if self.clock_reads==8:
+                        self.identities[3][2]=stat.S_IFDIR|0o700
+                    return value
+            class WritableParent(FakeTree):
+                def __init__(self):
+                    super().__init__()
+                    self.identities[1][2]=stat.S_IFDIR|0o777
+            class BackwardBefore(FakeTree):
+                def clock(self):
+                    if self.clock_reads==2:self.time-=15_000_000
+                    return super().clock()
+            for ops in (SafeModeDrift(),WritableParent(),BackwardBefore()):
+                value=self.audit(ops)
+                self.assertIsNotNone(value['firstFailure'])
+                self.assertEqual(ops.removed,[])
+                self.assertIsNone(value['finalAbsent'])
+        def test_actual_name_collector_rejects_oversized_aggregate_before_stat(self):
+            many=['child'+str(index).zfill(3)+'x'*92 for index in range(20)]
+            with patch.object(p.os,'lseek',return_value=0),\
+                 patch.object(p.os,'listdir',return_value=many),\
+                 patch.object(p.os,'stat',side_effect=AssertionError('stat after cap')) as census:
+                with self.assertRaisesRegex(ValueError,'aggregate selected cgroup child names'):
+                    p.SameJobV3ManualTreeOps().names(77)
+                census.assert_not_called()
+        def test_postleaf_pause_error_retains_first_dying_sample(self):
+            ops=FakeTree((2,0),fault=('pause',))
+            value=self.audit(ops)
+            self.assertEqual([row['role'] for row in value['removals']],
+                ['controller','js','qemu'])
+            self.assertEqual(len(value['rootSamples']),1)
+            self.assertIn('nr_dying_descendants 2',
+                value['rootSamples'][0]['raw']['cgroupStat'])
+            self.assertEqual(value['firstFailure']['message'],'MOCK_PAUSE')
+            self.assertIsNone(value['finalAbsent'])
+        def test_partial_rmdir_and_close_error_preserve_first_order(self):
+            ops=FakeTree(fault=('remove','js'),close_fault=5)
+            value=self.audit(ops)
+            self.assertEqual(ops.removed,['controller'])
+            self.assertEqual(value['firstFailure']['message'],'MOCK_RMDIR')
+            self.assertTrue(any(row['message']=='MOCK_CLOSE' for row in value['secondary']))
+            self.assertEqual(value['removals'][1]['role'],'js')
+            self.assertTrue(value['removals'][1]['attempted'])
+            self.assertFalse(value['removals'][1]['removed'])
+        def test_long_failed_raw_prefix_survives_with_close_secondary(self):
+            ops=FakeTree(fault=('long',2,'cgroup.procs'),close_fault=5)
+            value=self.audit(ops)
+            self.assertEqual(ops.removed,[])
+            self.assertEqual(len(value['before']['enclosing']['raw']['cgroupProcs']),4096)
+            self.assertIsNotNone(value['firstFailure'])
+            self.assertTrue(any(row['message']=='MOCK_CLOSE' for row in value['secondary']))
+            self.assertLessEqual(len(p.encode(dict(outside,manualTree=value))),16384)
+        def test_actual_resources_original_four_identity_limit_authority(self):
+            class FakePath:
+                def __init__(self,name):self.name=name
+                def __truediv__(self,part):return FakePath(self.name+'/'+str(part))
+                def __eq__(self,other):return isinstance(other,FakePath) and self.name==other.name
+                def resolve(self,strict=False):return self
+                def lstat(self):return SimpleNamespace(st_mode=stat.S_IFDIR|0o755,
+                    st_uid=1001,st_gid=1001)
+            def check(item):
+                raw=p.encode(item)
+                with patch.object(p.Path,'cwd',return_value=FakePath('/own')),\
+                     patch.object(p,'bounded_read',return_value=raw):
+                    return p.same_job_v3_resources_authority([1001,1001])
+            selected,joined=check(resource_value)
+            Tests.positive_resources=resource_raw
+            self.assertEqual(joined,identities)
+            self.assertEqual(selected,authority)
+            changed=copy.deepcopy(resource_value)
+            changed['children']['qemu']['after']['identity']['inode']=103
+            with self.assertRaises(ValueError):check(changed)
+            changed=copy.deepcopy(resource_value)
+            changed['children']['qemu']['before']['identity']['inode']=103
+            changed['children']['qemu']['after']['identity']['inode']=103
+            with self.assertRaises(ValueError):check(changed)
+            changed=copy.deepcopy(resource_value)
+            changed['controller']['after']['limits']['pidsMax']='65'
+            with self.assertRaises(ValueError):check(changed)
+        def test_real_v3_outside_wrapper_retains_manual_tree_and_failure(self):
+            attached=copy.deepcopy(selection)
+            attached['requestRaw']=b'ACTUAL_REQUEST_MOCK'
+            attached['handoffRaw']=b'ACTUAL_HANDOFF_MOCK'
+            attached['handoff']['source']={'schema':'mock-source','head':'a'*40}
+            stream=[]
+            def absent(path):raise FileNotFoundError(str(path))
+            def retain(path,raw,cap):
+                self.assertEqual(cap,16384)
+                self.assertTrue(str(path).endswith(
+                    'build/i80386-ring3-same-job-actual-v3/guest.cleanup.original.json'))
+                stream.append(raw)
+            selected=dict(env,BW_SYSTEMD_RUN_EXIT_CODE='0')
+            selected['GITHUB_JOB']='ring3-same-job-actual-v3'
+            with patch.object(p,'SAME_JOB_ACTUAL_V3_ENABLED',True),\
+                 patch.object(p.os,'getresuid',return_value=(0,0,0)),\
+                 patch.object(p.os,'getresgid',return_value=(0,0,0)),\
+                 patch.object(p.Path,'lstat',absent),\
+                 patch.object(p,'HostedEnvelopeInstaller',return_value=SimpleNamespace(
+                     event=lambda:b'EVENT_MOCK')),\
+                 patch.object(p,'same_job_actual_selection',return_value=attached),\
+                 patch.object(p,'source_facts',return_value=(attached['handoff']['source'],
+                     p.FirstFailure())),\
+                 patch.object(p,'same_job_v3_resources_authority',
+                     return_value=(authority,identities)),\
+                 patch.object(p.BootstrapOps,'drop',return_value=None),\
+                 patch.object(p,'write_new',side_effect=retain):
+                ops=FakeTree()
+                packet,failure=p.same_job_guest_cleanup_v3(selected,manual_ops=ops)
+                self.assertIsNone(failure.first)
+                self.assertTrue(packet['outsideTerminalObserved'])
+                self.assertTrue(packet['manualCgroupAbsent'])
+                self.assertEqual(p.final_json(stream[0]),packet)
+                self.assertEqual(ops.removed,['controller','js','qemu','enclosing'])
+                refused=FakeTree()
+                with patch.object(p,'source_facts',return_value=(
+                        {'head':'wrong'},p.FirstFailure())):
+                    negative,failed=p.same_job_guest_cleanup_v3(
+                        selected,manual_ops=refused)
+                self.assertIsNotNone(failed.first)
+                self.assertFalse(negative['outsideTerminalObserved'])
+                self.assertIsNone(negative['manualTree'])
+                self.assertEqual(refused.removed,[])
+    result=unittest.TextTestRunner(verbosity=2).run(
+        unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
+    assert result.wasSuccessful(),'pure V3 cleanup controls failed'
+    print(json.dumps({'testOnly':True,'tests':result.testsRun,'network':False,
+        'cgroup':False,'guest':False,'actualRunApproved':False,'pass':True}))
+    if export_fixture:
+        return Tests.full_v3,Tests.complete_v3
+    return Tests.positive_manual_tree,Tests.positive_resources,outside
+
+
 if __name__=='__main__':
-    if sys.argv[1:]==['--host-baseline-only']:host_baseline_controls()
+    if sys.argv[1:]==['--same-job-v3-only']:same_job_v3_controls()
+    elif sys.argv[1:]==['--same-job-actual-only']:same_job_actual_controls()
+    elif sys.argv[1:]==['--host-baseline-only']:host_baseline_controls()
     elif sys.argv[1:]==['--consumed-v7-failure-only']:consumed_v7_failure_controls()
     elif sys.argv[1:]==['--consumed-v6-failure-only']:consumed_v6_failure_controls()
     elif sys.argv[1:]==['--image-env-diagnostic-only']:image_env_diagnostic_controls()

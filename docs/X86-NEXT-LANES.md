@@ -3498,6 +3498,26 @@ mock controls, wrong-input mutations, exact-head checks and one independently
 admitted actual original are prerequisites to any result. The V9 metadata
 label is consumed and cannot serve as this actual event.
 
+### Same-job source checkpoint — 2026-10-24
+
+The claim merged and an inactive source candidate now connects a fresh setup
+and inventory handoff to a second service, the authored serial JavaScript and
+QEMU controller, the closed twenty-role packet, and separate original readers.
+Pure mocked controls exercise the producer and independent local reader. No
+same-job actual event has been selected; hosted setup, guest behavior and
+official artifact admission remain unobserved. All new actual, older actual
+and compiler guards remain false. Next, finish connected failure controls and
+source review, qualify the exact source head, and admit a distinct official
+event and its originals before reporting an architectural result.
+
+### Same-job source activation — 2026-10-24
+
+The reviewed source now permits only a separately selected owned label and
+canonical request to enter the distinct same-job route. No label or event has
+been selected and no hosted setup or guest result exists. The older actual
+and compiler routes remain disabled. Qualify this exact source head, review
+the one-shot inputs, then audit any official originals independently before
+making an architectural claim.
 ### Same-job V1 failed at the post-unpack cgroup census; V2 claim pending
 
 The selected [V1 actual run](https://github.com/CrispStrobe/bw-board/actions/runs/40121786243)
@@ -3532,6 +3552,9 @@ source checks, a new one-shot event, independently retained originals and an
 external result review. No V1 failure, prior V9 graph or source control grants
 hosted setup, architectural guest, full 386DX or physical timing approval.
 
+### V2 actual source candidate is selectable — 2026-10-24
+
+The merged claim permits a distinct V2 job and finite post-reap census. Source controls now connect its V2 handoff, same-job controller, finalizer and independent readers using manufactured host and guest edges. The V1 extra cgroup member remains unidentified; this source work does not explain it. The V2 code and workflow guards are enabled, but no V2 event has been selected. The next step is exact-head CI, then a new canonical request and separately admitted one-shot V2 event only if those gates qualify. Preserve the V1 originals and do not repeat its consumed label.
 ### Same-job V2 retained guest disagreement and outside cleanup failure; V3 claim
 
 The selected [V2 run](https://github.com/CrispStrobe/bw-board/actions/runs/40130461323)
@@ -3562,6 +3585,17 @@ into an architectural pass. A QEMU reference change or alternate oracle needs
 its own claim. Next: qualify and merge the V3 docs claim, implement in a new
 owned source worktree, run connected pure controls and exact-head CI, then
 select at most one fresh V3 event after independent admission.
+
+### V3 inactive source checkpoint — 2026-10-24
+
+The V3 docs claim has merged, and a distinct source candidate is under review
+in an owned worktree. Its producer, reader and workflow gates remain disabled;
+the spent V2 execution gate is closed while V2 originals and the strict reader
+refusal remain. Mocked controls join the first setup service, serial guest
+children, twenty-role finalizer, exact four-role manual-tree cleanup and
+independent packet reading. This proves source wiring only. The retained V2
+QEMU disagreement is unchanged, and no V3 event or result exists. Independent
+source review and exact-head checks precede any new one-shot selection.
 
 ### Bochs CPU3 Ring 3 reference build/capture claim
 
