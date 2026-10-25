@@ -4354,3 +4354,411 @@ def official_expectation(value, route, request, event, source, archive_raw,
     return {'runId': value['runId'], 'jobId': value['jobId'],
             'artifactId': value['artifactId'], 'officialMetadataJoined': True,
             'officiallyAuthenticatedByLocalFiles': False}
+
+
+_REFERENCE_CONFIG_V1 = b'''display_library: nogui
+memory: guest=16, host=16
+romimage: file=@ROOT@/inputs/fixture.rom, address=0xf0000
+vgaromimage: file=@ROOT@/resources/vgabios.bin
+cpu: count=1, ips=10000000
+port_e9_hack: enabled=1
+log: @ROOT@/outputs/bochs.log
+panic: action=fatal
+error: action=report
+info: action=report
+debug: action=ignore
+mouse: enabled=0
+clock: sync=none, time0=0
+'''
+
+
+def reference_original_v2(packet, request_raw, event_raw, *, budget=None):
+    """Grade a complete mock or retained current Reference original; no local approval."""
+    require(set(packet) == REFERENCE_ROLES,
+            'closed current 32-role Reference artifact')
+    artifact_manifest(packet, required=REFERENCE_ROLES)
+    if budget is None:
+        budget = ExpandedBudget(REFERENCE_CAPS['expanded'],
+                                REFERENCE_CAPS['members'])
+        for raw in packet.values():
+            budget.add(len(raw))
+    require(budget.expanded <= REFERENCE_CAPS['expanded'] and
+            budget.members <= REFERENCE_CAPS['members'],
+            'cumulative Reference outer/Build/runtime extent')
+    request, _event = request_event('reference', request_raw, event_raw)
+    require(packet['request.original.json'] == request_raw and
+            packet['event.original.json'] == event_raw,
+            'exact selected Reference request and event raw bytes')
+    selected = fields(request['build'], 'runId jobId artifactId name bytes sha256 '
+                      'checkoutHead checkoutTree workflowCommit workflowFileSha256 '
+                      'compactManifest buildLog')
+    require(selected['name'] == 'i80386-bochs-ring3-build-v1-originals' and
+            selected['checkoutHead'] == request['source']['head'] and
+            selected['checkoutTree'] == request['source']['tree'] and
+            selected['workflowFileSha256'] == request['source']['files'][
+                '.github/workflows/i80386-bochs-ring3-reference.yml']['sha256'] and
+            integer(selected['bytes'], 1, 64 << 20) ==
+                len(packet['inputs/build.original.zip']) and
+            digest(selected['sha256']) ==
+                sha(packet['inputs/build.original.zip']),
+            'one exact same-source selected Build archive')
+    fields(selected['buildLog'], 'bytes sha256')
+    integer(selected['buildLog']['bytes'], 1, 8 << 20)
+    digest(selected['buildLog']['sha256'])
+    build, _nested_budget = archive_members(packet['inputs/build.original.zip'],
+                                           BUILD_CAPS, budget=budget,
+                                           allowed=BUILD_FIXED_ROLES)
+    build_request_raw, build_event_raw = (build['request.original.json'],
+                                           build['event.original.json'])
+    build_request, _ = request_event('build', build_request_raw,
+                                     build_event_raw)
+    require(strict_equal(build_request['source'], request['source']) and
+            strict_equal(parse_json(build['compact-manifest.json'], 16384,
+                                    canonical_wire=True),
+                         selected['compactManifest']),
+            'same-source independently selected full Build and compact bytes')
+    build_grade = build_original_v2(build, build_request_raw,
+                                    build_event_raw, budget=budget)
+    require(build_grade['selectedBuildBytesObserved'] is True and
+            build_grade['compilerExecuted'] is True and
+            build_grade['guestExecuted'] is False,
+            'independently complete selected Build original')
+    runtime, _runtime_budget = archive_members(build['runtime.original.zip'],
+                                               RUNTIME_CAPS, budget=budget)
+    asset = parse_json(runtime['asset-manifest.json'], 4 << 20,
+                       canonical_wire=True)
+    require(asset['schema'] == 'bw.bochs-ring3.runtime-assets.v2' and
+            not any(name.startswith('lib/') for name in runtime),
+            'current transient-library distribution boundary')
+    value = parse_json(packet['original.json'], 4 << 20,
+                       canonical_wire=True)
+    fields(value, 'schema requestSha256 eventSha256 sourceBefore sourceAfter '
+           'phases resources firstFailure secondary failurePartial complete '
+           'authority observations')
+    require(value['schema'] == 'bw.bochs-ring3.reference-original.v1' and
+            value['requestSha256'] == sha(request_raw) and
+            value['eventSha256'] == sha(event_raw) and
+            value['complete'] is True and value['firstFailure'] is None and
+            value['secondary'] == [] and value['failurePartial'] is None and
+            value['authority'] == {'compilerExecuted': False,
+                'guestExecuted': True, 'actualRunApproved': False,
+                'guestApproved': False, 'wholeHostAttested': False,
+                'physicalTimingProved': False},
+            'complete Reference observation cannot self-approve')
+    observations = fields(value['observations'],
+        'build assetsBefore assetsAfter fixture config js bochs stop outside '
+        'cleanup nodeStage runtimeElfMetadata hostRuntime')
+    require(observations['outside'] is None and
+            observations['cleanup'] is None,
+            'inner original cannot invent outside cleanup authority')
+    outside = parse_json(packet['outside.original.json'], 16384,
+                         canonical_wire=True)
+    require(outside['schema'] == 'bw.bochs-ring3.outside.v1' and
+            outside['route'] == 'reference' and outside['runAttempt'] == 1 and
+            type(outside['runId']) is str and
+            re.fullmatch('[1-9][0-9]*', outside['runId']) and
+            outside['unit'] ==
+                f"bw-bochs-reference-v1-{outside['runId']}-1.service" and
+            outside['serviceExitCode'] == outside['clientExitCode'] ==
+                outside['cleanupExitCode'] == 0 and
+            outside['innerComplete'] is True and
+            outside['innerFirstFailure'] is None and
+            outside['firstFailure'] is None and outside['secondary'] == [] and
+            len(packet['outside.original.json']) <= 16384,
+            'terminal selected Reference outside original')
+    source_facts(value['sourceBefore'], request['source'])
+    source_facts(value['sourceAfter'], request['source'])
+    require(strict_equal(value['sourceBefore'], value['sourceAfter']) and
+            strict_equal(parse_json(packet['source.before.json'], 65536,
+                                    canonical_wire=True), value['sourceBefore']) and
+            strict_equal(parse_json(packet['source.after.json'], 65536,
+                                    canonical_wire=True), value['sourceAfter']),
+            'unchanged source and workflow readback in both raw roles')
+    node, node_projection = node_stage_fact(
+        packet['node-stage.original.json'], route='reference',
+        run_id=outside['runId'], expected=asset['hostNode'])
+    require(strict_equal(observations['nodeStage'], node),
+            'same full rehashed current staged Node role')
+    structural_raw = packet['runtime-elf-ranges.original.json']
+    structural = selected_sparse_elf_fact(
+        structural_raw,
+        {key: build_request['toolchain'][key] for key in
+         ('files', 'aliases', 'directoryAliases')}, node_projection)
+    require(observations['runtimeElfMetadata'] ==
+            {'path': 'runtime-elf-ranges.original.json',
+             'bytes': len(structural_raw), 'sha256': sha(structural_raw)},
+            'exact retained sparse runtime role byte reference')
+    stage_raw = packet['host-runtime.original.json']
+    selected_hosts = asset['hostRuntime']['files']
+    host = parse_json(stage_raw, 1048576, canonical_wire=True)
+    stage = host_runtime_stage_fact(
+        stage_raw, route='reference', run_id=outside['runId'],
+        selected=selected_hosts,
+        structural={path: structural['files'][path]['structure']
+                    for path in selected_hosts})
+    require(strict_equal(stage, host['stage']),
+            'same selected transient host stage wire')
+    require(observations['hostRuntime'] ==
+            {'stageBytes': len(canonical(stage)),
+             'stageSha256': sha(canonical(stage))} and
+            host_runtime_cleanup_fact(host['cleanup'], stage,
+                route='reference', run_id=outside['runId']) == host['cleanup'],
+            'same transient host runtime stage and terminal removal')
+    require(packet['inputs/fixture.rom'] == runtime['inputs/fixture.rom'] and
+            packet['inputs/fixture.json'] == runtime['inputs/fixture.json'] and
+            observations['fixture'] == {
+                'rom': {'path': 'inputs/fixture.rom',
+                        'bytes': len(packet['inputs/fixture.rom']),
+                        'sha256': sha(packet['inputs/fixture.rom'])},
+                'manifest': {'path': 'inputs/fixture.json',
+                             'bytes': len(packet['inputs/fixture.json']),
+                             'sha256': sha(packet['inputs/fixture.json'])}},
+            'exact selected immutable authored fixture bytes')
+    runtime_root = f"/run/bw-bochs-reference-v1-{outside['runId']}-1-work/runtime"
+    config = _REFERENCE_CONFIG_V1.replace(b'@ROOT@',
+                                           runtime_root.encode('ascii'))
+    require(packet['bochsrc.original'] == config and
+            observations['config'] == {'path': 'bochsrc.original',
+                'bytes': len(config), 'sha256': sha(config)},
+            'source-fixed no-GUI Reference configuration bytes')
+    before = parse_json(packet['asset.before.json'], 4 << 20,
+                        canonical_wire=True)
+    after = parse_json(packet['asset.after.json'], 4 << 20,
+                       canonical_wire=True)
+    require(strict_equal(before, after) and
+            set(before) == set(runtime) and
+            strict_equal(before, observations['assetsBefore']) and
+            strict_equal(after, observations['assetsAfter']),
+            'all selected runtime members retained before/after')
+    for name, raw in runtime.items():
+        file_fact(before[name], raw=raw)
+        require(before[name]['before']['mode'] ==
+                (stat.S_IFREG | (0o555 if name == 'bin/bochs' else 0o444)),
+                'selected current runtime member mode')
+    require(type(value['phases']) is list and len(value['phases']) == 2,
+            'exactly two serial owned Reference children')
+    unit = outside['unit']
+    invoker = fields(node['invoker'], 'uid gid')
+    for name, process, checkpoint in zip(('js', 'bochs'), value['phases'],
+                                         (False, True)):
+        require(strict_equal(parse_json(packet[name + '/process.json'],
+                        262144, canonical_wire=True), process),
+                'same retained child process role and original')
+        phase_fact(process, packet[name + '/stdout'],
+                   packet[name + '/stderr'], name=name, wall_seconds=60,
+                   unit=unit, service_pid=value['resources']['before']['pid'],
+                   uid=invoker['uid'], gid=invoker['gid'],
+                   checkpoint=checkpoint)
+    js, bochs = value['phases']
+    require(js['endedNs'] <= bochs['startedNs'] and
+            js['argv'] == [next(row['member'] for row in stage['files'].values()
+                 if row['member'].endswith('/ld-linux-x86-64.so.2')),
+                '--inhibit-cache', '--library-path',
+                f"/run/bw-bochs-reference-v1-{outside['runId']}-1-host-runtime/lib",
+                node['stagePath'], '--max-old-space-size=512',
+                f"/run/bw-bochs-reference-v1-{outside['runId']}-1-work/js-driver.mjs"] and
+            bochs['argv'] == js['argv'][:4] +
+                [runtime_root + '/bin/bochs', '-q', '-f',
+                 f"/run/bw-bochs-reference-v1-{outside['runId']}-1-work/bochsrc.original"],
+            'same staged loader and finite serial JS/Bochs commands')
+    arch = authored_architecture(packet)
+    frame = packet['bochs/frame.original']
+    stop_fact(observations['stop'], bochs, frame)
+    require(observations['js'] == parse_json(packet['js/report.json'], 131072,
+                                             canonical_wire=True) and
+            observations['bochs']['definedBytesEqual'] is True and
+            observations['bochs']['selectorPaddingBytes'] == 12 and
+            observations['bochs']['stdout'] == {'path': 'bochs/stdout',
+                'bytes': len(packet['bochs/stdout']),
+                'sha256': sha(packet['bochs/stdout'])} and
+            observations['bochs']['frame'] == {'path': 'bochs/frame.original',
+                'bytes': len(frame), 'sha256': sha(frame)} and
+            observations['bochs']['log'] == {'path': 'bochs/log',
+                'bytes': len(packet['bochs/log']),
+                'sha256': sha(packet['bochs/log'])},
+            'same bounded raw architecture and Bochs diagnostic references')
+    census = fields(observations['bochs']['outputCensus'],
+                    'path directory files aggregateBytes quotaEnforced')
+    output_root = runtime_root + '/outputs'
+    require(census['path'] == output_root and
+            census['quotaEnforced'] is False and
+            type(packet['bochs/log']) is bytes and
+            1 <= len(packet['bochs/log']) <= 4194304 and
+            set(census['files']) == {'report.json', 'observations.json',
+                'writes.json', 'memory.before.bin', 'memory.after.bin',
+                'bochs.log'},
+            'actual finite six-file output roster without inferred quota')
+    directory = stat_fact(census['directory'], kind='directory')
+    require(directory['mode'] == stat.S_IFDIR | 0o700 and
+            directory['uid'] == invoker['uid'] and
+            directory['gid'] == invoker['gid'],
+            'source-selected private invoker output directory')
+    output_total = 0
+    for name, row in census['files'].items():
+        fact = stat_fact(row, kind='regular')
+        raw = packet['bochs/log' if name == 'bochs.log' else 'js/' + name]
+        cap = (4194304 if name == 'bochs.log' else 131072 if name ==
+               'report.json' else 1048576)
+        require(fact['mode'] & 0o022 == 0 and fact['nlink'] == 1 and
+                fact['uid'] == invoker['uid'] and
+                fact['gid'] == invoker['gid'] and
+                1 <= fact['size'] == len(raw) <= cap,
+                'exact retained selected output file stat/byte extent')
+        output_total += len(raw)
+    require(census['aggregateBytes'] == output_total,
+            'complete bounded generated-output byte census')
+    service_status_fact(packet['service-status.original.json'],
+                        route='reference', unit=unit, outer_seconds=240)
+    resources = fields(value['resources'], 'before after')
+    limits = {'cpu.max': '100000 100000\n',
+              'memory.max': '1073741824\n',
+              'memory.swap.max': '0\n', 'pids.max': '64\n'}
+    for row in resources.values():
+        resources_v2_fact(row, unit=unit, limits=limits)
+    require(resources['before']['pid'] == resources['after']['pid'] and
+            all(resources['before']['unitRoot']['directory'][key] ==
+                resources['after']['unitRoot']['directory'][key]
+                for key in ('dev', 'ino', 'mode', 'uid', 'gid')),
+            'same selected Reference service resource identity')
+    unit_fact(outside['before'], unit)
+    unit_fact(outside['after'], unit, absent=True)
+    node_cleanup_fact(outside['nodeCleanup'], route='reference',
+                      run_id=outside['runId'], stage=node)
+    require(outside['manual'] == manual_cleanup_v2_fact(
+            packet['cleanup.original.json'], route='reference',
+            unit=unit, outside=outside, inner=value),
+            'same bounded delegated Reference cleanup raw role')
+    plan = fields(outside['hostRuntimePlan'],
+                  'stageSha256 planSha256 roleReservedBytes')
+    cleanup = fields(outside['hostRuntimeCleanup'], 'role bytes sha256')
+    require(plan == {'stageSha256': sha(canonical(stage)),
+                     'planSha256': sha(canonical(host['cleanup']['plan'])),
+                     'roleReservedBytes': host['cleanup']['plan']['roleReservedBytes']} and
+            cleanup == {'role': 'host-runtime.original.json',
+                        'bytes': len(stage_raw), 'sha256': sha(stage_raw)} and
+            len(stage_raw) <= plan['roleReservedBytes'],
+            'outside independently retained host cleanup plan and raw result')
+    build_observation = fields(observations['build'],
+                               'schema selected readback officialAuthenticatedByReader')
+    readback = fields(build_observation['readback'],
+        'runId runAttempt event actor head workflowPath jobId jobName steps '
+        'artifactId artifactName archiveBytes archiveSha256 repository '
+        'headRepository pullRequest artifactRepositoryId artifactHeadRepositoryId')
+    repository = fields(readback['repository'], 'id full_name fork')
+    head_repository = fields(readback['headRepository'], 'id full_name fork')
+    selected_pr = fields(readback['pullRequest'],
+                         'number head baseRef headRepositoryId baseRepositoryId')
+    build_names = ('Checkout selected producer source',
+        'Checkout executing workflow source',
+        'Admit Bochs build source and request',
+        'Prepare pinned Node input cache',
+        'Build pinned Bochs CPU3 and retain originals',
+        'Retain Bochs build originals')
+    observed_names = ([row.get('name') if type(row) is dict else None
+                       for row in readback['steps']]
+                      if type(readback['steps']) is list else [])
+    positions = ([observed_names.index(name) for name in build_names]
+                 if all(observed_names.count(name) == 1 for name in build_names)
+                 else [])
+    require(build_observation['schema'] == 'bw.bochs-ring3.build-intake.v1' and
+            build_observation['selected'] == selected and
+            build_observation['officialAuthenticatedByReader'] is False and
+            readback['runId'] == int(selected['runId']) and
+            readback['runAttempt'] == 1 and
+            readback['event'] == 'pull_request' and
+            readback['actor'] == 'CrispStrobe' and
+            readback['head'] == request['source']['head'] and
+            repository == head_repository and
+            repository['id'] == integer(repository['id'], 1) and
+            repository['full_name'] == REPOSITORY and
+            repository['fork'] is False and
+            selected_pr == {'number': request['pullRequest'],
+                'head': request['source']['head'], 'baseRef': 'master',
+                'headRepositoryId': repository['id'],
+                'baseRepositoryId': repository['id']} and
+            readback['workflowPath'] ==
+                '.github/workflows/i80386-bochs-ring3-reference.yml' and
+            readback['jobId'] == selected['jobId'] and
+            readback['jobName'] == 'bochs-ring3-build-v1' and
+            type(readback['steps']) is list and
+            6 <= len(readback['steps']) <= 32 and
+            all(type(row) is dict and
+                set(row) == {'number', 'name', 'status', 'conclusion'} and
+                type(row['number']) is int and
+                row['number'] == index and row['status'] == 'completed' and
+                row['conclusion'] == 'success'
+                for index, row in enumerate(readback['steps'], 1)) and
+            len(positions) == len(build_names) and
+            positions == sorted(positions) and
+            readback['artifactId'] == selected['artifactId'] and
+            readback['artifactName'] == selected['name'] and
+            readback['artifactRepositoryId'] ==
+                readback['artifactHeadRepositoryId'] == repository['id'] and
+            readback['archiveBytes'] == len(packet['inputs/build.original.zip']) and
+            readback['archiveSha256'] == sha(packet['inputs/build.original.zip']),
+            'selected Build intake reports only retained metadata facts')
+    return {'schema': 'bw.bochs-ring3.reference-admission.v2',
+            'buildOriginalJoined': True,
+            'architectureObserved': arch['definedByteAgreementObserved'],
+            'officialMetadataBound': False,
+            'guestExecutedReported': True,
+            'actualRunApproved': False,
+            'guestApproved': False}
+
+
+def reference_archive_v2(raw):
+    """Read one exact current Reference ZIP with one cumulative nested budget."""
+    budget = ExpandedBudget(REFERENCE_CAPS['expanded'],
+                            REFERENCE_CAPS['members'])
+    budget.charge_bytes(len(raw))
+    packet, budget = archive_members(raw, REFERENCE_CAPS,
+                                     budget=budget, allowed=REFERENCE_ROLES)
+    return reference_original_v2(packet, packet['request.original.json'],
+                                 packet['event.original.json'], budget=budget)
+
+
+def reference_official_v2(archive_raw, expectation_raw, run, jobs, artifacts,
+                          job_log):
+    """Join retained official metadata to local evidence; API auth is external."""
+    local = reference_archive_v2(archive_raw)
+    packet, _ = archive_members(archive_raw, REFERENCE_CAPS,
+                                allowed=REFERENCE_ROLES)
+    request_raw, event_raw = (packet['request.original.json'],
+                              packet['event.original.json'])
+    request, event = request_event('reference', request_raw, event_raw)
+    original = parse_json(packet['original.json'], 4 << 20,
+                          canonical_wire=True)
+    expectation = parse_json(expectation_raw, 65536, canonical_wire=True)
+    bound = official_expectation(expectation, 'reference', request_raw,
+        event_raw, request['source'], archive_raw, run, jobs, artifacts,
+        job_log, original['sourceBefore'])
+    repository = fields(run['repository'], 'id full_name fork')
+    head_repository = fields(run['head_repository'], 'id full_name fork')
+    require(repository == head_repository and
+            integer(repository['id'], 1) == repository['id'] and
+            repository['full_name'] == REPOSITORY and
+            repository['fork'] is False,
+            'selected nonfork official Reference repository IDs')
+    prs = run.get('pull_requests')
+    require(type(prs) is list and len(prs) == 1 and
+            type(prs[0]) is dict and prs[0].get('number') ==
+                request['pullRequest'] and
+            prs[0].get('head', {}).get('sha') == request['source']['head'] and
+            prs[0].get('base', {}).get('ref') == 'master' and
+            prs[0].get('head', {}).get('repo', {}).get('id') ==
+                repository['id'] and
+            prs[0].get('base', {}).get('repo', {}).get('id') ==
+                repository['id'],
+            'sole source-bound same-repository official Reference PR')
+    selected_artifact = [row for row in artifacts['artifacts']
+                         if row.get('id') == expectation['artifactId']]
+    require(len(selected_artifact) == 1 and
+            selected_artifact[0]['workflow_run']['repository_id'] ==
+                selected_artifact[0]['workflow_run']['head_repository_id'] ==
+                repository['id'] and
+            selected_artifact[0]['workflow_run']['head_sha'] ==
+                request['source']['head'],
+            'exact official artifact owner/repository/head')
+    return {**local, 'officialMetadataBound': bound['officialMetadataJoined'],
+            'officiallyAuthenticatedByLocalFiles': False,
+            'actualRunApproved': False, 'guestApproved': False}
