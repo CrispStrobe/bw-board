@@ -7163,7 +7163,8 @@ Bochs reader owner and the ordered-read reviewer after this claim merges.
 This is a docs-only claim. Own exactly the new Bochs
 `scripts/i80386-bochs-ring3-reference/read-elf-negative-v1.py` and focused
 `test/i80386-bochs-elf-negative-reader.test.mjs`, new ordered-read
-`scripts/i80386-read16-failure/{reader.py,controls.py}`, the two matching task
+`scripts/i80386-read16-failure/{reader.py,controls.py}` and its automatic
+`test/i80386-read16-failure.test.mjs` wrapper, the two matching task
 leaves in `docs/`, this section, and own `docs/X86-NEXT-LANES.md` status prose
 if needed. No implementation before matched claim merge.
 
