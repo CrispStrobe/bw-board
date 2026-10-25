@@ -52,6 +52,9 @@ function auditWorkflow(raw) {
     const names = [...section.matchAll(/^\s+- name: (.+)$/gm)].map(match => match[1]);
     assert.deepEqual(names, ['Checkout selected producer source', 'Checkout executing workflow source', admission,
       'Prepare pinned Node input cache', work, retention]);
+    const uploadBlock = section.slice(section.lastIndexOf(`      - name: ${retention}`));
+    assert.match(uploadBlock, new RegExp(`path: /run/bw-bochs-${route}-v1-\\$\\{\\{ github\\.run_id \\}\\}-1-originals`));
+    assert.doesNotMatch(uploadBlock, /-1-(?:work|node)/);
     assert.ok(section.indexOf(admission) < section.indexOf(setupNode), 'request and source before setup-node');
     assert.ok(section.indexOf('workflow-source') < section.indexOf('--admit'), 'workflow checkout before admission');
     assert.match(section, /--admit --route/);
@@ -93,6 +96,7 @@ test('workflow policy mutations are detected without enabling a job', () => {
     ['finish status', workflow.replace('test "$finish_status" -eq 0', 'true')],
     ['workflow checkout', workflow.replace('Checkout executing workflow source', 'Unchecked workflow source')],
     ['workflow parents', workflow.replace('fetch-depth: 2', 'fetch-depth: 1')],
+    ['originals only', workflow.replace('-1-originals\n          if-no-files-found', '-1-work\n          if-no-files-found')],
     ['bounded source blob', workflow.replace("'cat-file', '-s'", "'cat-file', 'blob'")],
   ];
   for (const [name, changed] of cuts) assert.throws(() => auditWorkflow(changed), name);
