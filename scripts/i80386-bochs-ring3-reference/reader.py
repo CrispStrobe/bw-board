@@ -1523,6 +1523,8 @@ def phase_fact(process, stdout, stderr, *, name, wall_seconds,
             type(process['cwd']) is str and 0 < len(process['cwd']) <= 512 and
             type(process['environment']) is dict and
             len(process['environment']) <= 64 and
+            not ({'GH_TOKEN', 'GITHUB_TOKEN'} &
+                 set(process['environment'])) and
             all(type(key) is str and type(item) is str and
                 len(key) <= 128 and len(item) <= 4096 and
                 '\0' not in key and '\0' not in item
@@ -1533,11 +1535,15 @@ def phase_fact(process, stdout, stderr, *, name, wall_seconds,
     require(end - start <= wall_seconds * 1000000000 + 6000000000 and
             integer(process['pid'], 1, 2**31 - 1) and
             process['reaped'] is True and process['timedOut'] is False and
-            type(process['identity']) is dict and
+            type(process['identity']) is dict and process['identity'] and
             type(process['resourcesBefore']) is dict and
+            process['resourcesBefore'] and
             type(process['resourcesAfter']) is dict and
+            process['resourcesAfter'] and
             type(process['cgroupBefore']) is dict and
-            type(process['cgroupAfter']) is dict,
+            process['cgroupBefore'] and
+            type(process['cgroupAfter']) is dict and
+            process['cgroupAfter'],
             'owned bounded child identity, resource and terminal observations')
     status = integer(process['waitStatus'], 0, 0xffff)
     stream_fact(process['stdout'], stdout, name + '.stdout', 4 << 20)
@@ -2258,6 +2264,9 @@ def build_original(packet, request_raw, event_raw, *, job_log=None,
                 strict_equal(value['phases'][0 if name == 'configure' else 1],
                              process),
                 'selected actual Configure/Make argv and ordered phase originals')
+    require(value['phases'][0]['endedNs'] <=
+            value['phases'][1]['startedNs'],
+            'Make spawn follows retained Configure terminal reap')
     manifest_raw = packet['build-manifest.json']
     manifest = parse_json(manifest_raw, 4 << 20, canonical_wire=True)
     fields(manifest, 'schema source bochsSource sourceInventory '
