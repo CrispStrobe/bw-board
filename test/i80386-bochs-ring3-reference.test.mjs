@@ -19,7 +19,8 @@ const setupNode = 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020';
 const upload = 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02';
 const routes = [
   ['toolchain', 'bochs-ring3-toolchain-inventory-v1', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v1', 'toolchain-v1', false],
-  ['toolchain-v2', 'bochs-ring3-toolchain-inventory-v2', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v2', 'toolchain-v2', true],
+  ['toolchain-v2', 'bochs-ring3-toolchain-inventory-v2', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v2', 'toolchain-v2', false],
+  ['toolchain-v3', 'bochs-ring3-toolchain-inventory-v3', 'Admit Bochs toolchain inventory source and request', 'Read selected Bochs toolchain files without execution', 'Retain Bochs toolchain inventory originals', 'x86-bochs-ring3-toolchain-inventory-v3', 'toolchain-v3', false],
   ['build', 'bochs-ring3-build-v1', 'Admit Bochs build source and request', 'Build pinned Bochs CPU3 and retain originals', 'Retain Bochs build originals', 'x86-bochs-ring3-build-v1', 'build-v1', true],
   ['reference', 'bochs-ring3-reference-v1', 'Admit Bochs reference source and request', 'Capture fresh JavaScript and Bochs unchanged wire', 'Retain Bochs reference originals', 'x86-bochs-ring3-reference-v1', 'reference-v1', true],
 ];
@@ -28,10 +29,10 @@ function auditWorkflow(raw) {
   assert.match(raw, /^on:\s*\n\s+pull_request:/m);
   assert.match(raw, /cancel-in-progress:\s*false/);
   assert.doesNotMatch(raw.slice(0, raw.indexOf('jobs:')), /^  actions: read$/m);
-  assert.equal((raw.match(/uses: actions\/checkout@/g) || []).length, 8);
-  assert.equal((raw.match(/uses: actions\/setup-node@/g) || []).length, 4);
-  assert.equal((raw.match(/uses: actions\/upload-artifact@/g) || []).length, 4);
-  assert.equal((raw.match(/uses: actions\/(?:checkout|setup-node|upload-artifact)@/g) || []).length, 16);
+  assert.equal((raw.match(/uses: actions\/checkout@/g) || []).length, 10);
+  assert.equal((raw.match(/uses: actions\/setup-node@/g) || []).length, 5);
+  assert.equal((raw.match(/uses: actions\/upload-artifact@/g) || []).length, 5);
+  assert.equal((raw.match(/uses: actions\/(?:checkout|setup-node|upload-artifact)@/g) || []).length, 20);
   for (const [route, job, admission, work, retention, label, stem, active] of routes) {
     const start = raw.indexOf(`  ${job}:\n`);
     assert.ok(start >= 0, `${job} present`);
@@ -86,7 +87,7 @@ function auditWorkflow(raw) {
   }
 }
 
-test('Bochs route workflow has four authenticated bounded six-step jobs with spent metadata disabled', () => {
+test('Bochs route workflow has five authenticated bounded six-step jobs with spent metadata disabled', () => {
   auditWorkflow(workflow);
 });
 
@@ -118,7 +119,8 @@ test('workflow policy mutations are detected without enabling a job', () => {
   const cuts = [
     ['guard', workflow.replace('if: ${{ true &&', 'if: ${{ false &&')],
     ['spent metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v1:\n    if: ${{ false &&', 'bochs-ring3-toolchain-inventory-v1:\n    if: ${{ true &&')],
-    ['new metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v2:\n    if: ${{ true &&', 'bochs-ring3-toolchain-inventory-v2:\n    if: ${{ false &&')],
+    ['spent V2 metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v2:\n    if: ${{ false &&', 'bochs-ring3-toolchain-inventory-v2:\n    if: ${{ true &&')],
+    ['new V3 metadata guard', workflow.replace('bochs-ring3-toolchain-inventory-v3:\n    if: ${{ false &&', 'bochs-ring3-toolchain-inventory-v3:\n    if: ${{ true &&')],
     ['checkout pin', workflow.replace(checkout, 'actions/checkout@main')],
     ['unknown service status', workflow.replace('--service-exit unknown', '--service-exit 0')],
     ['finish', workflow.replace('--finish --route', '--no-finish --route')],
