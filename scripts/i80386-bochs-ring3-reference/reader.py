@@ -6619,8 +6619,10 @@ def current_official_four_jobs(jobs, expectation, selected_route):
             len({row['name'] for row in rows}) == 4 and
             {row['name']: row.get('conclusion') for row in rows} == required and
             all(row.get('status') == 'completed' and
+                type(row.get('run_id')) is int and row['run_id'] > 0 and
                 row.get('run_id') == int(expectation['runId']) and
-                row.get('run_attempt') == 1 and
+                type(row.get('run_attempt')) is int and
+                row['run_attempt'] == 1 and
                 row.get('head_sha') == expectation['head'] for row in rows),
             'one selected current job and three terminal declared skips')
 
