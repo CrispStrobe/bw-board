@@ -14,6 +14,7 @@ import statistics
 import io
 import os
 import stat
+import struct
 import zipfile
 
 CAP=2097152
@@ -214,6 +215,46 @@ def physical_roster(run_id):
     need(len(result)==106,'source-derived physical roster')
     return result
 
+def physical_zip_layout(raw,infos):
+    """Require the observed 32-bit descriptor ZIP to contain only indexed roles."""
+    need(len(raw)>=22,'ZIP terminal extent')
+    signature,disk,central_disk,on_disk,total,central_size,central_at,comment=struct.unpack_from('<IHHHHIIH',raw,len(raw)-22)
+    need((signature,disk,central_disk,on_disk,total,comment)==(0x06054b50,0,0,106,106,0) and
+         central_at+central_size==len(raw)-22,'single exact EOCD and central extent')
+    cursor=0;local_times=[]
+    for info in infos:
+        need(info.header_offset==cursor and cursor+30<=central_at,'contiguous indexed local header')
+        local=struct.unpack_from('<IHHHHHIIIHH',raw,cursor)
+        sig,version,flags,method,dos_time,dos_date,crc,compressed,expanded,name_len,extra_len=local
+        name=info.filename.encode('ascii')
+        need((sig,version,flags,method,crc,compressed,expanded,extra_len)==
+             (0x04034b50,20,8,8,0,0,0,0) and name_len==len(name) and
+             raw[cursor+30:cursor+30+name_len]==name,'observed bounded local header')
+        local_times.append((dos_time,dos_date))
+        data_at=cursor+30+name_len
+        desc_at=data_at+info.compress_size
+        need(desc_at+16<=central_at,'bounded local member and descriptor')
+        descriptor=struct.unpack_from('<IIII',raw,desc_at)
+        exact(descriptor,(0x08074b50,info.CRC,info.compress_size,info.file_size),'32-bit data descriptor')
+        cursor=desc_at+16
+    exact(cursor,central_at,'no unindexed local bytes or gaps')
+    cursor=central_at
+    for info,local_time in zip(infos,local_times):
+        need(cursor+46<=len(raw)-22,'bounded central header')
+        fields_raw=struct.unpack_from('<IHHHHHHIIIHHHHHII',raw,cursor)
+        (sig,made,needed,flags,method,dos_time,dos_date,crc,compressed,expanded,
+         name_len,extra_len,comment_len,disk_start,internal_attr,external_attr,local_at)=fields_raw
+        name=info.filename.encode('ascii')
+        need(sig==0x02014b50 and made==0x032d and needed==20 and flags==8 and method==8 and
+             (dos_time,dos_date)==local_time and
+             extra_len==comment_len==disk_start==internal_attr==0 and name_len==len(name) and
+             raw[cursor+46:cursor+46+name_len]==name and
+             (crc,compressed,expanded,external_attr,local_at)==
+             (info.CRC,info.compress_size,info.file_size,info.external_attr,info.header_offset),
+             'exact indexed central header')
+        cursor+=46+name_len
+    exact(cursor,central_at+central_size,'no central gaps or aliases')
+
 def official(run_raw,jobs_raw,artifacts_raw,artifact_raw,log_raw,manifest_raw,
              original_raw,cleanup_raw,request_raw,event_raw,expected,binding):
     """Join retained official metadata and archive to an externally reviewed binding.
@@ -316,6 +357,7 @@ def official(run_raw,jobs_raw,artifacts_raw,artifact_raw,log_raw,manifest_raw,
     with zipfile.ZipFile(io.BytesIO(artifact_raw)) as archive:
         exact(archive.comment,b'','archive comment')
         infos=archive.infolist();names=[i.filename for i in infos]
+        physical_zip_layout(artifact_raw,infos)
         need(len({i.header_offset for i in infos})==106,'unique physical ZIP offsets')
         exact(names,manifest_paths,'ordered physical archive roles')
         exact(set(names),physical_roster(expected['runId']),'closed physical archive roles')

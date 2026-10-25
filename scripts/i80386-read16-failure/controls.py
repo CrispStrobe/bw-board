@@ -5,6 +5,7 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+import struct
 import types
 import unittest
 import warnings
@@ -87,7 +88,7 @@ def synthetic_official(packet):
     stream=WriteOnly()
     with zipfile.ZipFile(stream,'w') as z:
         for name,raw in sorted(members.items()):
-            info=zipfile.ZipInfo(name,(2026,1,1,0,0,0));info.create_system=3
+            info=zipfile.ZipInfo(name,(2026,1,1,0,0,0));info.create_system=3;info.create_version=45
             info.external_attr=0o100644<<16;info.compress_type=zipfile.ZIP_DEFLATED
             z.writestr(info,raw)
     archive=stream.buffer.getvalue();log=b'synthetic bounded official job log\n'
@@ -118,7 +119,7 @@ def changed_archive(data,change):
     stream=WriteOnly()
     with zipfile.ZipFile(stream,'w') as z:
         for name,raw,mode in rows:
-            info=zipfile.ZipInfo(name,(2026,1,1,0,0,0));info.create_system=3
+            info=zipfile.ZipInfo(name,(2026,1,1,0,0,0));info.create_system=3;info.create_version=45
             info.external_attr=mode<<16;info.compress_type=zipfile.ZIP_DEFLATED
             z.writestr(info,raw)
     data['artifact']=stream.buffer.getvalue()
@@ -126,6 +127,9 @@ def changed_archive(data,change):
               'files':[{'path':name,'bytes':len(raw),'sha256':r.sha(raw)} for name,raw,_ in rows],
               'runtimeExecuted':False}
     data['manifest']=r.canonical(manifest)
+    return rebind_archive(data)
+
+def rebind_archive(data):
     artifacts=r.parse(data['artifacts'],262144)
     artifacts['artifacts'][0]['size_in_bytes']=len(data['artifact'])
     artifacts['artifacts'][0]['digest']='sha256:'+r.sha(data['artifact'])
@@ -199,6 +203,30 @@ class FailureOnly(unittest.TestCase):
         binding['manifestBytes']=len(data['manifest'])
         binding['manifestSha256']=r.sha(data['manifest'])
         data['binding']=r.canonical(binding)
+        with self.assertRaises(r.Refusal):r.audit_bundle(data)
+    def test_unindexed_local_header_and_central_alias(self):
+        base=synthetic_bundle(self.packet)
+        archive=base['artifact'];eocd=len(archive)-22
+        central_at=struct.unpack_from('<I',archive,eocd+16)[0]
+        orphan=struct.pack('<IHHHHHIIIHH',0x04034b50,20,8,8,0,0,0,0,0,9,0)+b'orphan123'
+        changed=bytearray(archive[:central_at]+orphan+archive[central_at:])
+        struct.pack_into('<I',changed,len(changed)-22+16,central_at+len(orphan))
+        data=copy.deepcopy(base);data['artifact']=bytes(changed);rebind_archive(data)
+        with zipfile.ZipFile(io.BytesIO(data['artifact'])) as z,zipfile.ZipFile(io.BytesIO(archive)) as original:
+            self.assertEqual(len(z.infolist()),106)
+            self.assertEqual(z.namelist(),original.namelist())
+        with self.assertRaises(r.Refusal):r.audit_bundle(data)
+        changed=bytearray(archive)
+        with zipfile.ZipFile(io.BytesIO(archive)) as z:
+            self.assertNotEqual(z.infolist()[0].header_offset,z.infolist()[1].header_offset)
+            second_offset=z.infolist()[1].header_offset
+        struct.pack_into('<I',changed,central_at+42,second_offset)
+        data=copy.deepcopy(base);data['artifact']=bytes(changed);rebind_archive(data)
+        with self.assertRaises(r.Refusal):r.audit_bundle(data)
+        changed=bytearray(archive)
+        old_size=struct.unpack_from('<I',changed,central_at+20)[0]
+        struct.pack_into('<I',changed,central_at+20,old_size+1)
+        data=copy.deepcopy(base);data['artifact']=bytes(changed);rebind_archive(data)
         with self.assertRaises(r.Refusal):r.audit_bundle(data)
     def test_mutants_refuse(self):
         cuts=(
