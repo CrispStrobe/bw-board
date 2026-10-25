@@ -3636,10 +3636,13 @@ A present empty tag still refuses and a guard failure remains a failed job.
 Whole-file SHA is reported readback only; range digests/values are independently
 checked. The separately claimed [negative-reader source](I80386-BOCHS-ELF-NEGATIVE-READER.md)
 now implements the exact 22-row profile, preserving the old 16-row helper and
-all caps. Focused controls and independent source review passed; exact hosted
-qualification gates landing. A separately bound retained-original audit remains pending.
-The [ordered-read failure reader](I80386-READ16-FAILED-ATTEMPT-READER.md) similarly
-retains the failed seven-pair attempt without CPU adoption. Both task leaves
-specify fresh-agent inputs, refusal boundaries and follow-up deliverables.
+all caps. Qualified [PR #702](https://github.com/CrispStrobe/bw-board/pull/702)
+and an independently admitted retained-original audit support only negative
+structural attribution; the original official/resource refusal remains.
+The [ordered-read failure reader](I80386-READ16-FAILED-ATTEMPT-READER.md) retains
+the failed seven-pair attempt without CPU adoption. Its first original audit
+refused repeated automatic checkout step names; the forward exact sixteen-row
+roster correction needs fresh source qualification and separate admission.
+Both leaves specify fresh-agent inputs, refusal boundaries and follow-up work.
 Strict dependency-resolution/licence review remains separate. No replay, new
 original GET, event, allowlist or positive chain is authorized by retirement.

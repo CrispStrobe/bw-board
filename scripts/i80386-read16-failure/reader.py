@@ -23,6 +23,24 @@ OLD_READER_SHA='d5fcd80edf2faee16be48d9c4d970a5ec32be2fdf50e20208f16b63196ba2b31
 OLD_HEAD='55917c48dffe0c7c743388024481ef0a47a7c76c'
 OLD_TREE='086b7f33399b8a7af3fbc1c37ab4be2603b930e4'
 OLD_WORKFLOW_HEAD='4fa530a0d5412507e2e863d437ef8728696f4e1d'
+CHECKOUT_STEP='Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262'
+POST_CHECKOUT_STEP='Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262'
+SETUP_STEP='Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020'
+POST_SETUP_STEP='Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020'
+# Reviewed W4fa530 workflow: four checkout actions, one setup-node action,
+# followed by the retained official run's generated post-action step numbers.
+OFFICIAL_STEP_ROSTER=(
+    (1,'Set up job','success'),
+    *((n,CHECKOUT_STEP,'success') for n in (2,3,4,5)),
+    (6,'Admit exact request, event and all selected Git bytes before runtime setup','success'),
+    (7,SETUP_STEP,'success'),
+    (8,'Fixed eighteen-child ordinary AT paired capture','failure'),
+    (9,'Independent outside service stop and cgroup readback','success'),
+    (10,'Retain exact originals, including failed attempts','success'),
+    (16,POST_SETUP_STEP,'skipped'),
+    *((n,POST_CHECKOUT_STEP,'success') for n in (17,18,19,20)),
+    (21,'Complete job','success'),
+)
 ROWS_SHA='0b0c856983519a32e04f1c61d1317bb72184fb6f558780019d9bc0fa44bc4b2f'
 BASE_HEAD='1312250f5ef06ecd96b0e40e2926e87312d8f414'
 BASE_TREE='04839d8ebe47645a452d80e7a532c14dd91e0b3e'
@@ -331,17 +349,17 @@ def official(run_raw,jobs_raw,artifacts_raw,artifact_raw,log_raw,manifest_raw,
     exact(by_name['source-controls'].get('steps'),[],'skipped job steps')
     steps=by_name['paired'].get('steps')
     need(type(steps) is list and 0<len(steps)<=32,'finite steps')
-    numbers=[]; names={}
+    numbers=[];roster=[]
     for step in steps:
         need(type(step) is dict,'raw step object')
         number=step.get('number');positive(number,64,'raw step number');numbers.append(number)
-        need(type(step.get('name')) is str and 0<len(step['name'])<=256 and step['name'] not in names,'raw step name')
+        need(type(step.get('name')) is str and 0<len(step['name'])<=256,'raw step name')
         exact(step.get('status'),'completed','terminal raw step')
-        need(step.get('conclusion') in ('success','failure','skipped'),'bounded raw step conclusion')
-        names[step['name']]=step['conclusion']
+        need(type(step.get('conclusion')) is str and step['conclusion'] in ('success','failure','skipped'),'bounded raw step conclusion')
+        roster.append((number,step['name'],step['conclusion']))
     need(numbers==sorted(set(numbers)),'ordered unique step numbers')
-    for name,conclusion in {'Admit exact request, event and all selected Git bytes before runtime setup':'success','Fixed eighteen-child ordinary AT paired capture':'failure','Independent outside service stop and cgroup readback':'success','Retain exact originals, including failed attempts':'success'}.items():exact(names.get(name),conclusion,'critical source step')
-    need(sum(x=='failure' for x in names.values())==1,'sole work failure')
+    exact(roster,list(OFFICIAL_STEP_ROSTER),'reviewed source W official step roster')
+    need(sum(conclusion=='failure' for _,_,conclusion in roster)==1,'sole work failure')
     need(type(artifacts.get('total_count')) is int and artifacts['total_count']==1 and type(artifacts.get('artifacts')) is list and len(artifacts['artifacts'])==1,'sole artifact')
     art=artifacts['artifacts'][0];need(type(art) is dict,'artifact row')
     exact(art.get('id'),expected['artifactId'],'artifact ID')

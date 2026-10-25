@@ -7247,9 +7247,15 @@ Do not change existing reader functions, producer/workflow/CLI guards,
 CPU/goldens, thresholds, pins, guest code or any original artifact. No new
 label, dispatch, GET, compiler or guest run belongs to either audit.
 
-Focused CPU controls (nine Python methods plus automatic Node wrapper) and
+Focused CPU controls (ten Python methods plus automatic Node wrapper) and
 Bochs controls (twelve Python methods through two Node tests) passed, with
 independent source review. This checkpoint adds no CPU, guest, workflow or
-pin change. Exact source qualification precedes separately bound original
-audits; all positive approvals stay false. Task leaves above specify the
-remaining offline closeout and separately claimable follow-up work.
+pin change. [PR #702](https://github.com/CrispStrobe/bw-board/pull/702) passed all
+twelve enabled checks; eleven other checks were source-declared skips. One
+separately admitted Bochs offline audit accepted negative attribution only;
+its original resource grade remains refused. The first CPU original audit
+refused legitimate repeated checkout step names. A forward correction admits
+only the exact reviewed sixteen-row step roster; its fresh source
+qualification and separately admitted original audit remain required. No
+benchmark event or original acquisition is repeated. All positive approvals
+stay false. Task leaves above specify each remaining deliverable.

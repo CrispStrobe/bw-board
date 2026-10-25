@@ -1,8 +1,8 @@
 # Bochs ELF diagnostic: retained negative reader
 
-Status: inactive negative-reader source implemented. Exact-head hosted source
-qualification gates landing; a separately admitted retained-original audit
-remains pending. The spent
+Status: inactive negative-reader source qualified in [PR #702](https://github.com/CrispStrobe/bw-board/pull/702). A separately admitted
+offline audit classified the retained original as
+`original-refused/structural-attributed`. The spent
 diagnostic event and its original reader refusal remain unchanged. This task
 does not select an event or authorize a compiler, guest, inventory, Build or
 Reference run.
@@ -81,13 +81,17 @@ reader authenticates all twelve archive roles, physical ZIP geometry and
 bounded DEFLATE completion before the sparse structural conclusion. Old
 namespace and original refusal remain held; every positive approval is false.
 
-Next, qualify the exact source, then independently bind its commit, tree and
-file SHA separately from the historical source/reader identities. Admit the
-already-retained official metadata and original bytes for one offline audit;
-do not download or execute the diagnostic again. Record the actual negative
-classification or refusal without promoting it to resource qualification.
+The qualified source and independently selected auditor identity were joined
+to the already-retained official metadata and original bytes. One offline
+audit produced the negative classification above, and independent readback
+checked its bindings. The original 16-row official/resource refusal remains
+unchanged. The exact 22-row profile and sparse ELF ranges support only the
+negative structural attribution: the `/usr/bin/expr` record has RUNPATH
+`/usr/lib/x86_64-linux-gnu` and no RPATH. Its whole-file hash remains reported
+readback, not independently recomputed from sparse ranges. All positive
+approval flags are false. No original was downloaded or executed again.
 
-Only afterward scope dependency-resolution and per-component licence review
+Next, separately claim dependency-resolution and per-component licence review
 for the observed RUNPATH. That task must identify exact executable/library
 bytes and search behavior before proposing a new policy; no broad allowlist
 or automatic compiler, Build or Reference selection follows from this reader.
