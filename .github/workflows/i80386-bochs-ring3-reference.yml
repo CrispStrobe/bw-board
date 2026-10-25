@@ -34,6 +34,7 @@ jobs:
         with:
           ref: ${{ github.workflow_sha }}
           path: workflow-source
+          fetch-depth: 2
           persist-credentials: false
       - name: Admit Bochs toolchain inventory source and request
         shell: bash
@@ -127,6 +128,7 @@ jobs:
         with:
           ref: ${{ github.workflow_sha }}
           path: workflow-source
+          fetch-depth: 2
           persist-credentials: false
       - name: Admit Bochs build source and request
         shell: bash
@@ -224,6 +226,7 @@ jobs:
         with:
           ref: ${{ github.workflow_sha }}
           path: workflow-source
+          fetch-depth: 2
           persist-credentials: false
       - name: Admit Bochs reference source and request
         shell: bash

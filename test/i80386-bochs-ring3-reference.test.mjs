@@ -46,6 +46,7 @@ function auditWorkflow(raw) {
     assert.match(section, /github\.event\.pull_request\.head\.repo\.fork == false/);
     assert.match(section, /github\.run_attempt == '1'/);
     assert.equal(section.split(checkout).length - 1, 2);
+    assert.match(section, /path: workflow-source\s*\n\s+fetch-depth: 2/);
     assert.equal(section.split(setupNode).length - 1, 1);
     assert.equal(section.split(upload).length - 1, 1);
     const names = [...section.matchAll(/^\s+- name: (.+)$/gm)].map(match => match[1]);
@@ -91,6 +92,7 @@ test('workflow policy mutations are detected without enabling a job', () => {
     ['reference token', workflow.replace('sudo --preserve-env=GH_TOKEN', 'sudo --')],
     ['finish status', workflow.replace('test "$finish_status" -eq 0', 'true')],
     ['workflow checkout', workflow.replace('Checkout executing workflow source', 'Unchecked workflow source')],
+    ['workflow parents', workflow.replace('fetch-depth: 2', 'fetch-depth: 1')],
     ['bounded source blob', workflow.replace("'cat-file', '-s'", "'cat-file', 'blob'")],
   ];
   for (const [name, changed] of cuts) assert.throws(() => auditWorkflow(changed), name);
