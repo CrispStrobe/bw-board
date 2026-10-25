@@ -3408,7 +3408,12 @@ class ConnectedCurrentV2Controls(unittest.TestCase):
             refused('nonterminal inactive',lambda rows:rows[0].update(status='queued'))
             refused('wrong inactive run',lambda rows:rows[0].update(run_id=123457))
             refused('wrong inactive attempt',lambda rows:rows[0].update(run_attempt=2))
+            refused('boolean inactive attempt',lambda rows:rows[0].update(run_attempt=True))
             refused('wrong inactive head',lambda rows:rows[0].update(head_sha='0'*40))
+            bool_counterfactual=copy.deepcopy(args)
+            bool_counterfactual[3]['jobs'][0]['run_attempt']=True
+            with mock.patch.object(r,'current_official_four_jobs',return_value=None):
+                assert grader(*bool_counterfactual)['officialMetadataBound'] is True
             return grade
 
         built=build()
