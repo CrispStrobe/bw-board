@@ -963,6 +963,133 @@ def host_runtime_v2(host, selected_toolchain, built_binary):
             'sparseStructureIndependentlyDecoded': True}
 
 
+def host_runtime_stage_fact(raw, *, route, run_id, selected, structural):
+    """Grade the transient library stage; cleanup is a separate observation."""
+    require(route in ('build', 'reference') and type(run_id) is str and
+            re.fullmatch(r'[1-9][0-9]{0,19}', run_id),
+            'fixed host library stage route and run')
+    value = parse_json(raw, 1048576, canonical_wire=True)
+    fields(value, 'schema stage cleanup')
+    require(value['schema'] == 'bw.bochs-ring3.host-runtime-original.v1',
+            'versioned host runtime original')
+    stage = fields(value['stage'],
+                   'schema route path metadataFields selected selectedSha256 '
+                   'created directoryInitial libraryDirectoryInitial directory '
+                   'libraryDirectory files checkedAfter firstFailure secondary '
+                   'complete parentBefore parentAfter lastOperation failurePartial')
+    directory = f'/run/bw-bochs-{route}-v1-{run_id}-1-host-runtime'
+    library = directory + '/lib'
+    require(stage['schema'] == 'bw.bochs-ring3.host-runtime-stage.v1' and
+            stage['route'] == route and stage['path'] == directory and
+            stage['metadataFields'] ==
+            ['dev', 'ino', 'mode', 'uid', 'gid', 'nlink', 'size', 'mtimeNs', 'ctimeNs'] and
+            stage['complete'] is True and stage['firstFailure'] is None and
+            stage['secondary'] == [] and stage['failurePartial'] is None and
+            stage['created'][:2] == [directory, library],
+            'complete selected transient stage with exact private roots')
+    require(type(selected) is dict and 1 <= len(selected) <= 128 and
+            strict_equal(stage['selected'], selected) and
+            stage['selectedSha256'] == sha(canonical(selected)) and
+            type(structural) is dict and set(structural) == set(selected) and
+            type(stage['files']) is dict and
+            set(stage['files']) == set(stage['checkedAfter']) == set(selected),
+            'stage copies exactly the selected, structurally witnessed files')
+
+    def identity(row, mode):
+        require(type(row) is list and len(row) == 9 and
+                all(type(item) is int and item >= 0 for item in row) and
+                row[0] > 0 and row[1] > 0 and row[2] == mode and
+                row[3:5] == [0, 0] and row[5] > 0,
+                'root-owned held and named stage identity')
+        return row
+
+    for before, after, mode in ((stage['parentBefore'], stage['parentAfter'],
+                                 stat.S_IFDIR | 0o755),
+                                (stage['directoryInitial'], stage['directory'],
+                                 stat.S_IFDIR | 0o555),
+                                (stage['libraryDirectoryInitial'],
+                                 stage['libraryDirectory'],
+                                 stat.S_IFDIR | 0o555)):
+        identity(after, mode)
+        identity(before, stat.S_IFDIR | (0o755 if mode == stat.S_IFDIR | 0o755
+                                        else 0o700))
+        require(before[:2] == after[:2] and before[3:6] == after[3:6],
+                'same owned stage directory before and after publication')
+    expected_created = [directory, library]
+    expected_members = []
+    seen_members = set()
+    for source, chosen in sorted(selected.items()):
+        fields(chosen, 'bytes sha256 mode uid gid elf')
+        amount = integer(chosen['bytes'], 64, 128 << 20)
+        digest(chosen['sha256'])
+        require(chosen['uid'] == chosen['gid'] == 0 and
+                stat.S_ISREG(chosen['mode']) and
+                chosen['mode'] & 0o022 == 0,
+                'selected ordinary root-owned library')
+        entry = fields(stage['files'][source],
+                       'sourcePath member sourceBefore sourceAfter sourceNamed '
+                       'bytesCopied copiedSha256 readback publicationAttempted '
+                       'published named targetAfterFailure structure firstFailure secondary')
+        member = entry['member']
+        require(type(structural[source]) is dict and
+                set(structural[source]) ==
+                {'class', 'machine', 'type', 'interpreter', 'needed',
+                 'rpath', 'runpath', 'soname'} and
+                {key: item for key, item in structural[source].items()
+                 if key != 'soname'} == chosen['elf'] and
+                entry['sourcePath'] == source and type(member) is str and
+                member.startswith(library + '/') and
+                re.fullmatch(r'[A-Za-z0-9+_.-]{1,255}',
+                             member[len(library) + 1:]) and
+                member not in seen_members and
+                entry['firstFailure'] is None and entry['secondary'] == [] and
+                entry['targetAfterFailure'] is None and
+                entry['publicationAttempted'] is True,
+                'one unique source-bound staged library member')
+        seen_members.add(member)
+        expected_members.append(member)
+        for key in ('sourceBefore', 'sourceAfter', 'sourceNamed'):
+            identity(entry[key], chosen['mode'])
+        require(entry['sourceBefore'] == entry['sourceAfter'] ==
+                entry['sourceNamed'] and
+                entry['sourceBefore'][6] == amount and
+                entry['bytesCopied'] == amount and
+                entry['copiedSha256'] == chosen['sha256'] and
+                strict_equal(entry['structure'], structural[source]),
+                'stable source and exact copied structural library')
+        readback = fields(entry['readback'], 'bytes sha256 before after named')
+        for key in ('before', 'after', 'named'):
+            identity(readback[key], stat.S_IFREG | 0o600)
+        require(readback['before'] == readback['after'] == readback['named'] and
+                readback['bytes'] == amount and
+                readback['sha256'] == chosen['sha256'],
+                'full private staged readback before readonly publication')
+        published_mode = (stat.S_IFREG | (0o555 if
+                          member.endswith('/ld-linux-x86-64.so.2') else 0o444))
+        identity(entry['published'], published_mode)
+        require(entry['published'] == entry['named'] and
+                entry['published'][:2] == readback['before'][:2] and
+                entry['published'][6] == amount,
+                'same staged inode after readonly publication')
+        after = fields(stage['checkedAfter'][source],
+                       'bytes sha256 before after named structure')
+        for key in ('before', 'after', 'named'):
+            identity(after[key], published_mode)
+        require(after['before'] == after['after'] == after['named'] ==
+                entry['published'] and after['bytes'] == amount and
+                after['sha256'] == chosen['sha256'] and
+                strict_equal(after['structure'], structural[source]),
+                'same selected library fully read again after work')
+    expected_created += sorted(expected_members,
+                               key=lambda path: path[len(library) + 1:])
+    require(stage['created'] == expected_created and
+            fields(stage['lastOperation'], 'operation path') ==
+            {'operation': 'after-full-readback',
+             'path': expected_created[-1]},
+            'closed created-member and final readback record')
+    return stage
+
+
 def header_expected():
     """Source-derived main.cc/logio.cc 72-column header, without Bochs exec."""
     def center(text):
