@@ -7206,13 +7206,13 @@ negative-reader/kernel-stat compatibility claim preserving the old 16-row helper
 and all caps, followed only later by separately scoped dependency/licence review.
 No replay, new event, positive Build/Reference or policy allowlist is selected.
 
-### Two retained-negative x86 readers — source checkpoint, 2026-10-25
+### Two retained-negative x86 readers — source and negative closeout DONE, 2026-10-25
 
 Owner: Codex x86 lane; implementation may split files between the existing
 Bochs reader owner and the ordered-read reviewer after this claim merges.
-The merged claim is implemented in the five new code paths below. Exact-head
-hosted source checks gate landing; independently admitted retained-original
-audits remain pending. Own exactly the new Bochs
+The merged claim is implemented in the five code paths below. Qualified source
+and separately admitted retained-original audits close out only their negative
+classifications; every positive approval remains false. Own exactly the Bochs
 `scripts/i80386-bochs-ring3-reference/read-elf-negative-v1.py` and focused
 `test/i80386-bochs-elf-negative-reader.test.mjs`, new ordered-read
 `scripts/i80386-read16-failure/{reader.py,controls.py}` and its automatic
@@ -7253,9 +7253,15 @@ independent source review. This checkpoint adds no CPU, guest, workflow or
 pin change. [PR #702](https://github.com/CrispStrobe/bw-board/pull/702) passed all
 twelve enabled checks; eleven other checks were source-declared skips. One
 separately admitted Bochs offline audit accepted negative attribution only;
-its original resource grade remains refused. The first CPU original audit
-refused legitimate repeated checkout step names. A forward correction admits
-only the exact reviewed sixteen-row step roster; its fresh source
-qualification and separately admitted original audit remain required. No
-benchmark event or original acquisition is repeated. All positive approvals
-stay false. Task leaves above specify each remaining deliverable.
+its original resource grade remains refused. Qualified and merged
+[PR #705](https://github.com/CrispStrobe/bw-board/pull/705) closes the CPU
+sixteen-row step-roster correction. Its separately admitted new readback
+accepted only `failed-attempt-only`: median CPU A/B 1.0647475, minimum
+0.999455, median wall B/A 0.943179. Performance and all five qualification
+flags remain false. The historical `inactive unit readback` and first new
+auditor's `raw step name` refusals remain distinct. The new report's
+`officialMetadataAuthenticated` and `externalBindingReviewedByAuditor` remain
+false; external admission/review is separate. No benchmark event or original
+acquisition is repeated. The [paired-v2/parent-host plan](docs/I80386-READ16-PAIRED-V2-PLAN.md)
+is proposed and unclaimed; CPU adoption, profiling and any new selection retain
+their separate gates.

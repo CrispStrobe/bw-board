@@ -3331,26 +3331,32 @@ The [selected paired job](https://github.com/CrispStrobe/bw-board/actions/runs/4
 completed all eighteen children at source `55917c48` under pinned Node
 22.23.3 and one effective CPU. Its unchanged reader refused the inactive-unit
 readback after stop. A separate calculation of the retained seven pairs found
-median whole-child CPU A/B 1.06475, minimum 0.99946, and median wall B/A
-0.94318. The minimum violates the predeclared **every CPU ratio greater than
+median whole-child CPU A/B 1.0647475, minimum 0.999455, and median wall B/A
+0.943179. The minimum violates the predeclared **every CPU ratio greater than
 1** rule. The warmed-loop median 1.07285 is diagnostic only. No physical CPU
 model was captured for that job, and its candidate must not be merged or
 called a speedup. Preserve the original failure; do not replay the one-shot
 event or change the gate to admit this result.
 
-The next work is four separately reviewed tasks. The paired source files are
+The retained-negative closeout is **DONE** through qualified and merged
+[PR #705](https://github.com/CrispStrobe/bw-board/pull/705). A separately admitted
+new offline readback accepted only `failed-attempt-only`, with performance and
+all five qualification flags false. The historical `inactive unit readback`
+refusal and first new auditor's `raw step name` refusal remain distinct and
+preserved. `officialMetadataAuthenticated` and `externalBindingReviewedByAuditor`
+remain false; external admission and review supplied the binding separately.
+No paired event or original acquisition was repeated.
+
+The [paired-v2/parent-host plan](I80386-READ16-PAIRED-V2-PLAN.md) is proposed and
+unclaimed. Further work requires separately reviewed tasks. The paired source files are
 in [source `55917c48`](https://github.com/CrispStrobe/bw-board/tree/55917c48dffe0c7c743388024481ef0a47a7c76c/scripts/i80386-read16-paired),
 which is not the adopted mainline CPU source. Claim any new paths before
 implementation.
 
-1. **Retain the failed terminal result.** Claim a failure-only reader and
-   focused controls beside the frozen `scripts/i80386-read16-paired/reader.py`
-   and `controls.py`; leave those original bytes and their refusal intact.
-   Accept a bounded failed original with stop exit zero, empty direct and
-   nested cgroup/PID censuses, and a stale failed unit status as a *failed
-   attempt*, with adoption always false. Refuse populated or nested descendants,
-   wrong unit identity and unknown terminal facts. Prove each cut using
-   independent raw-original inputs; never reinterpret failure as success.
+1. **Retained failed terminal result: DONE.** The standalone
+   [failed-attempt reader](I80386-READ16-FAILED-ATTEMPT-READER.md) preserves the
+   complete eighteen-child failure, old refusal and bounded cleanup facts.
+   Its accepted negative readback grants no CPU, guest or physical approval.
 2. **Predeclare a longer authored comparison.** Claim a new versioned fixture,
    controller, independent reader, controls and workflow under a new
    `scripts/i80386-read16-paired-v2/` envelope before selecting any event.
@@ -3359,6 +3365,8 @@ implementation.
    whole-child median CPU threshold 1.03, every CPU ratio greater than 1,
    median wall B/A at most 1.02 and finite child/output caps. Preserve the old
    one-million-instruction failure; no outlier deletion or same-event replay.
+   Ten million instructions is a proposal requiring new independent device
+   goldens and a cap-fit proof, not an implemented or selected workload.
 3. **Bind the actual parent host.** In that new controller and independent
    reader, collect bounded parent CPU model, effective affinity, CPU quota,
    OS/image and pinned Node identity before child timing, then join them to
@@ -3639,10 +3647,12 @@ now implements the exact 22-row profile, preserving the old 16-row helper and
 all caps. Qualified [PR #702](https://github.com/CrispStrobe/bw-board/pull/702)
 and an independently admitted retained-original audit support only negative
 structural attribution; the original official/resource refusal remains.
-The [ordered-read failure reader](I80386-READ16-FAILED-ATTEMPT-READER.md) retains
-the failed seven-pair attempt without CPU adoption. Its first original audit
-refused repeated automatic checkout step names; the forward exact sixteen-row
-roster correction needs fresh source qualification and separate admission.
-Both leaves specify fresh-agent inputs, refusal boundaries and follow-up work.
+The [ordered-read failure reader](I80386-READ16-FAILED-ATTEMPT-READER.md) now has
+qualified source [PR #705](https://github.com/CrispStrobe/bw-board/pull/705) and
+a separately admitted `failed-attempt-only` readback, without CPU adoption.
+Its historical terminal refusal and first new auditor's repeated-step refusal
+remain preserved. The [paired-v2/parent-host plan](I80386-READ16-PAIRED-V2-PLAN.md)
+is proposed and unclaimed. Both audit leaves specify the negative scope and
+follow-up boundaries.
 Strict dependency-resolution/licence review remains separate. No replay, new
 original GET, event, allowlist or positive chain is authorized by retirement.
