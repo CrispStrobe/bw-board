@@ -1,13 +1,14 @@
 # Ordered 16-bit read: retain a failed paired attempt
 
-Status: failure-only source landed. The separately admitted retained-original
-audit refused the official job's repeated checkout step names; that refusal is
-preserved. This forward source candidate checks the exact 16 observed ordered
-step number/name/conclusion rows against reviewed workflow W4fa530, including
-four checkout actions and four generated post-checkout steps. Its own hosted
-qualification and independent review are pending. The
-selected ordered-read CPU candidate remains unadopted. The CPU arm, spent
-event, original reader, thresholds and original bytes are unchanged.
+Status: source and retained-failed-attempt closeout **DONE**.
+[PR #705](https://github.com/CrispStrobe/bw-board/pull/705) qualified and merged
+the exact sixteen-row official step roster, including four checkout actions
+and four generated post-checkout steps. A separately admitted offline readback
+accepted only `failed-attempt-only`; independent review bound that report to
+the selected source and retained inputs. The earlier new-auditor refusal at
+`raw step name` remains preserved. The selected ordered-read CPU candidate
+remains unadopted. The CPU arm, spent event, historical reader, thresholds and
+original bytes are unchanged.
 
 The historical paired source is
 [`55917c48`](https://github.com/CrispStrobe/bw-board/commit/55917c48dffe0c7c743388024481ef0a47a7c76c),
@@ -70,14 +71,23 @@ retain rejected symlink roles, hidden unindexed local headers and unused
 compressed-span bytes. The historical refusal remains distinct from the new
 failed-attempt classification.
 
-Next, qualify and independently review this forward source head. The prior
-retained-original invocation remains a refusal; any later offline invocation
-requires a separately reviewed exact auditor commit, tree and file SHA and a
-new explicit admission decision. Do not acquire originals again or rerun the
-paired event. Publish only a bounded failure classification if every join passes.
+The admitted readback retains all seven CPU and wall ratios. Median whole-child
+CPU A/B is **1.0647475**, minimum **0.999455**, and median wall B/A **0.943179**.
+The minimum fails the unchanged every-pair CPU ratio greater than one rule.
+`performancePassed` and all five adoption, core-speedup, guest, physical-RTx
+and full-OS qualification flags remain false. The historical reader's
+`inactive unit readback` refusal is distinct from the first new auditor's
+`raw step name` refusal; neither was erased or converted to an old-reader pass.
 
-After that closeout, separately scope a longer paired workload and parent-host
-capture (CPU model, allocation, affinity, quota, OS and Node). Keep two warm-up
-and seven measured pairs and the existing thresholds. Profile before proposing
-a narrowly changed CPU arm; require fresh protected guest compatibility before
-adoption. Neither this reader nor a retained failed pair proves physical RTx.
+`officialMetadataAuthenticated` and `externalBindingReviewedByAuditor` remain
+false in the report. Separate external admission and review supplied the
+source, input and official-metadata binding; the report does not grant itself
+authority. No original was acquired again and no paired event or guest was
+replayed for this offline closeout.
+
+The [paired-v2 and parent-host plan](I80386-READ16-PAIRED-V2-PLAN.md) is proposed,
+unclaimed work. It preserves the exact warm/measured order and thresholds;
+its larger workload, new device goldens and cap-fit proof precede any future
+selection. A new CPU arm additionally needs separately scoped profiling and
+fresh protected guest compatibility before adoption. Neither this readback
+nor a retained failed pair proves physical RTx.
