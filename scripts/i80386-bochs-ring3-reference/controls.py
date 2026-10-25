@@ -1395,5 +1395,88 @@ class ChildProviderControls(unittest.TestCase):
         test_terminal_read_failure_retains_partial_without_positive_census()
 
 
+def host_cleanup_exercise(*, unknown=False, unlink_close_failure=False):
+    stage, kernel, _source = HostStageControls().exercise(after=True)
+    root = stage['path']
+    if unknown:
+        kernel.add(root + '/unselected', 0o100444, b'x')
+    class Scan:
+        def __init__(self, path):
+            parent = str(path).rstrip('/') + '/'
+            self.names = sorted(name[len(parent):] for name in kernel.nodes
+                if name.startswith(parent) and '/' not in name[len(parent):])
+            self.index = 0
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def __iter__(self): return self
+        def __next__(self):
+            if self.index >= len(self.names): raise StopIteration
+            name = self.names[self.index]; self.index += 1
+            return SimpleNamespace(name=name,
+                is_dir=lambda follow_symlinks=False: name == 'lib',
+                is_symlink=lambda: False)
+    def scandir(path): return Scan(path)
+    def unlink(path, *, dir_fd=None):
+        name = kernel.name(path, dir_fd)
+        kernel.events.append(('unlink-attempt', name))
+        if unlink_close_failure:
+            raise OSError('first-authored-unlink')
+        assert name in kernel.nodes and kernel.nodes[name]['raw'] is not None
+        del kernel.nodes[name]
+    def rmdir(path, *, dir_fd=None):
+        name = kernel.name(path, dir_fd)
+        assert name in kernel.nodes and all(
+            not row.startswith(name + '/') for row in kernel.nodes)
+        kernel.events.append(('rmdir', name))
+        del kernel.nodes[name]
+    real_close = kernel.close
+    armed = {'value': False}
+    def close(fd):
+        name = kernel.fds[fd]
+        real_close(fd)
+        if armed['value'] and unlink_close_failure and name.endswith('/libauthored.so'):
+            raise OSError('secondary-authored-close')
+    kernel.close = close
+    with kernel.hooks(), mock.patch.object(producer.os, 'scandir', scandir), \
+         mock.patch.object(producer.os, 'unlink', unlink), \
+         mock.patch.object(producer.os, 'rmdir', rmdir):
+        count_before = len(kernel.events)
+        try:
+            plan = producer.plan_host_runtime_cleanup(stage, 'build', {'GITHUB_RUN_ID': '123456', 'GITHUB_RUN_ATTEMPT': '1'})
+        except ValueError as exc:
+            return {'planRefusal': str(exc), 'effects':
+                    [x for x in kernel.events[count_before:]
+                     if x[0] in ('unlink-attempt', 'rmdir')]}
+        armed['value'] = True
+        value = producer.cleanup_host_runtime(stage, plan, 'build', {'GITHUB_RUN_ID': '123456', 'GITHUB_RUN_ATTEMPT': '1'})
+    return {'complete': value['complete'],
+            'firstFailure': value['firstFailure'],
+            'secondary': value['secondary'],
+            'stage': stage, 'plan': plan, 'cleanup': value,
+            'effects': [x for x in kernel.events[count_before:]
+                        if x[0] in ('unlink-attempt', 'rmdir')],
+            'journal': value['journal']}
+
+
+class HostCleanupControls(unittest.TestCase):
+    def test_genuine_plan_and_known_library_removal(self):
+        result = host_cleanup_exercise()
+        self.assertTrue(result['complete'])
+        self.assertEqual([row[0] for row in result['effects']], ['unlink-attempt', 'rmdir', 'rmdir'])
+        self.assertLessEqual(len(producer.canonical(result['cleanup'])), result['plan']['cleanupReservedBytes'])
+        self.assertLessEqual(len(producer.canonical({'schema': 'bw.bochs-ring3.host-runtime-original.v1',
+            'stage': result['stage'], 'cleanup': result['cleanup']})), result['plan']['roleReservedBytes'])
+    def test_unknown_input_refuses_before_any_deletion(self):
+        result = host_cleanup_exercise(unknown=True)
+        self.assertIn('only known', result['planRefusal'])
+        self.assertEqual(result['effects'], [])
+    def test_unlink_first_and_close_secondary(self):
+        result = host_cleanup_exercise(unlink_close_failure=True)
+        self.assertFalse(result['complete'])
+        self.assertEqual(result['firstFailure']['message'], 'first-authored-unlink')
+        self.assertEqual([row['message'] for row in result['secondary']], ['secondary-authored-close'])
+        self.assertEqual(len(result['effects']), 1)
+
+
 if __name__ == '__main__':
     unittest.main()

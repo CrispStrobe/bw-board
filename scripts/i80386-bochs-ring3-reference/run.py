@@ -15,6 +15,7 @@ import io
 import json
 import math
 import os
+import posixpath
 from pathlib import Path
 import re
 import resource
@@ -1400,7 +1401,7 @@ def collect_toolchain(request_raw, event_raw, env, ops):
 
 
 def finalize_original(route, request_raw, event_raw, env, inner, roles,
-                      service_exit, client_exit, ops):
+                      service_exit, client_exit, ops, *, input_cleanup=None, pre_cleanup_error=None):
     """Outside join is honest even when an inner original was never readable."""
     request = admitted_request(route, request_raw, event_raw, env)
     if service_exit is not None:
@@ -1414,6 +1415,9 @@ def finalize_original(route, request_raw, event_raw, env, inner, roles,
                'cleanupExitCode': 1, 'innerComplete': False, 'innerFirstFailure': None,
                'before': None, 'after': None, 'manual': None,
                'firstFailure': None, 'secondary': []}
+    if input_cleanup is not None:
+        closed(input_cleanup, ('hostRuntimePlan', 'hostRuntimeCleanup'), 'closed outside staged-library references')
+        outside.update(input_cleanup)
     def issue(exc, phase):
         item = failure(exc, phase)
         if outside['firstFailure'] is None:
@@ -1436,6 +1440,8 @@ def finalize_original(route, request_raw, event_raw, env, inner, roles,
     try:
         ops.source(request['source'], env)
         outside['before'] = ops.unit(outside['unit'])
+        if pre_cleanup_error is not None:
+            raise pre_cleanup_error  # no destructive cleanup after a refused input plan
         outside['manual'] = ops.cleanup(inner, outer=outside)
         roles['cleanup.original.json'] = canonical(outside['manual'])
         need(outside['manual']['complete'] is True and outside['manual']['firstFailure'] is None and
@@ -1485,6 +1491,12 @@ def close_provider(ops, value, roles):
             close()
         except BaseException as exc:
             original_error(value, exc, 'provider-held-close')
+    host = getattr(ops, 'host_stage', None)
+    if host is not None:
+        value['observations']['hostRuntime'] = {'stageBytes': len(canonical(host.facts)),
+                                               'stageSha256': sha256(canonical(host.facts))}
+        roles['host-runtime.original.json'] = canonical({'schema': 'bw.bochs-ring3.host-runtime-original.v1',
+                                                         'stage': host.facts, 'cleanup': None})
     stage = getattr(ops, 'stage', None)
     if stage is not None:
         value['observations']['nodeStage'] = stage.facts
@@ -1731,6 +1743,113 @@ def assemble_runtime(source, binary, rom, fixture_raw, vga, *, host_node,
     need(sum(map(len, files.values())) <= 67108864 and len(files) <= 256,
          'bounded complete runtime package')
     return {'files': files, 'modes': modes, 'notices': notice_rows}
+
+
+
+def resolve_projection(path, selected, aliases=None, directories=None):
+    selected_tool_path(path)
+    aliases = {} if aliases is None else aliases
+    directories = {} if directories is None else directories
+    current, seen = path, set()
+    for _ in range(16):
+        need(current not in seen, 'finite selected alias graph without cycle')
+        seen.add(current)
+        parts = current.lstrip('/').split('/')
+        changed = False
+        for index in range(len(parts)):
+            candidate = '/' + '/'.join(parts[:index + 1])
+            table = selected['aliases'] if index == len(parts) - 1 else selected['directoryAliases']
+            if candidate in table:
+                row = table[candidate]
+                closed(row, ('linkText', 'target'), 'selected alias projection')
+                target = posixpath.normpath(row['linkText'] if row['linkText'].startswith('/') else
+                    posixpath.join(posixpath.dirname(candidate), row['linkText']))
+                need(target == row['target'], 'selected lexical alias target')
+                (aliases if index == len(parts) - 1 else directories)[candidate] = row
+                current = posixpath.join(target, *parts[index + 1:])
+                selected_tool_path(current)
+                changed = True; break
+        if not changed:
+            need(current in selected['files'], 'selected resolved file exists')
+            return current
+    raise Refusal('selected alias depth exceeded')
+
+
+def host_runtime_selection(selected, structural, binary_elf, node_elf):
+    aliases, directories, files = {}, {}, {}
+    interpreters = [row['interpreter'] for row in (binary_elf, node_elf) if row['interpreter']]
+    need(interpreters and all(path == '/lib64/ld-linux-x86-64.so.2' for path in interpreters),
+         'selected dynamic runtime interpreter')
+    pending = list(interpreters)
+    pending += ['/usr/lib/x86_64-linux-gnu/' + name for row in (binary_elf, node_elf)
+                for name in row['needed']]
+    while pending:
+        original = resolve_projection(pending.pop(), selected, aliases, directories)
+        if original in files:
+            continue
+        row = selected['files'][original]
+        need(original in structural['files'] and row['elf'] is not None and
+             row['uid'] == row['gid'] == 0 and row['mode'] & 0o022 == 0 and
+             row['elf']['rpath'] is None and row['elf']['runpath'] is None,
+             'closed admitted current host runtime file')
+        sparse = structural['files'][original]
+        need(sparse['fileBytes'] == row['bytes'] and sparse['fileSha256'] == row['sha256'] and
+             {key: item for key, item in sparse['structure'].items() if key != 'soname'} == row['elf'],
+             'selected structural runtime metadata')
+        files[original] = row
+        pending.extend('/usr/lib/x86_64-linux-gnu/' + name for name in row['elf']['needed'])
+        if row['elf']['interpreter']:
+            pending.append(row['elf']['interpreter'])
+        need(len(files) <= 128, 'finite runtime host closure')
+    loader = resolve_projection(interpreters[0], selected, aliases, directories)
+    metadata_files = {path: structural['files'][path] for path in sorted(files)}
+    metadata_files[NODE_PATH] = structural['files'][NODE_PATH]
+    metadata = {'schema': 'bw.bochs-ring3.runtime-elf-metadata.v1', 'files': metadata_files,
+        'rawBytes': sum(row['bytes'] for item in metadata_files.values() for row in item['ranges'])}
+    return {'loaderPath': loader, 'files': files, 'aliases': aliases,
+            'directoryAliases': directories, 'elfMetadata': metadata}
+
+
+def assemble_runtime_v2(source, binary, rom, fixture_raw, vga, *, host_node,
+                        selected, structural, notices):
+    """Current distribution boundary: no host library/Node body in the ZIP."""
+    need(type(binary) is bytes and 64 <= len(binary) <= 33554432, 'bounded compiled Bochs original')
+    observed = sparse_elf(binary)['structure']
+    binary_elf = {key: item for key, item in observed.items() if key != 'soname'}
+    need(binary_elf['rpath'] is None and binary_elf['runpath'] is None, 'no built Bochs injected search path')
+    fixed_rom, fixed_fixture = authored_inputs()
+    need(rom == fixed_rom and fixture_raw == fixed_fixture, 'exact unchanged generated authored inputs')
+    need(len(vga) == VGA_BYTES and sha256(vga) == VGA_SHA256 and
+         hashlib.sha1(b'blob ' + str(len(vga)).encode() + b'\0' + vga).hexdigest() == VGA_BLOB,
+         'exact source-selected LGPL VGA resource')
+    runtime = host_runtime_selection(selected, structural, binary_elf, host_node['elf'])
+    files = {'bin/bochs': binary, 'inputs/fixture.rom': rom, 'inputs/fixture.json': fixture_raw,
+             'resources/vgabios.bin': vga, 'config/bochsrc.template': BOCHSRC_TEMPLATE}
+    modes = {name: 0o555 if name == 'bin/bochs' else 0o444 for name in files}
+    rows = []
+    need(type(notices) is dict and 'notices/bochs-selected-corresponding-source.tar.gz' in notices and
+         'notices/vgabios-corresponding-source.tar.gz' in notices, 'complete Bochs and VGA corresponding source')
+    for name, raw in sorted(notices.items()):
+        member_name(name)
+        need(name.startswith('notices/') and type(raw) is bytes and 1 <= len(raw) <= 33554432,
+             'closed nonempty source/notice member')
+        files[name] = raw; modes[name] = 0o444
+        rows.append({'path': name, 'role': 'notice', 'mode': stat.S_IFREG | 0o444,
+                     'bytes': len(raw), 'sha256': sha256(raw)})
+    raw = notices['notices/vgabios-corresponding-source.tar.gz']
+    need(len(raw) == VGA_SOURCE_BYTES and sha256(raw) == VGA_SOURCE_SHA256,
+         'complete reviewed VGA corresponding-source bytes')
+    asset = {'schema': 'bw.bochs-ring3.runtime-assets.v2',
+        'source': {'head': source['head'], 'tree': source['tree'],
+                   'filesSha256': sha256(canonical(source['files']))},
+        'bochsSource': {'commit': UPSTREAM_COMMIT, 'tree': UPSTREAM_TREE,
+                        'sourceSelectionSha256': SOURCE_SELECTION_SHA256},
+        'hostNode': host_node, 'hostRuntime': runtime, 'files': runtime_rows(files, modes)}
+    files['asset-manifest.json'] = canonical(asset); modes['asset-manifest.json'] = 0o444
+    need(not any(name.startswith('lib/') or name.endswith('/node') for name in files) and
+         len(files) <= 256 and sum(map(len, files.values())) <= 67108864,
+         'current runtime closed distribution and byte/member bounds')
+    return {'files': files, 'modes': modes, 'notices': rows}
 
 
 NODE_METADATA_FIELDS = ('dev', 'ino', 'mode', 'uid', 'gid', 'nlink', 'size', 'mtime_ns', 'ctime_ns')
@@ -2169,7 +2288,8 @@ def collect_build(request_raw, event_raw, env, ops):
     value = original('build', request_raw, event_raw)
     observations = {name: None for name in ('upstream', 'sourceSelection', 'toolchainBefore',
         'toolchainAfter', 'configure', 'configHeader', 'compilerCommands', 'binary',
-        'runtimeManifest', 'notices', 'compactManifest', 'correspondingSource', 'nodeStage')}
+        'runtimeManifest', 'notices', 'compactManifest', 'correspondingSource', 'nodeStage',
+        'runtimeElfMetadata', 'hostRuntime')}
     value['observations'] = observations
     roles = {'request.original.json': request_raw, 'event.original.json': event_raw}
     phase = 'source-before'
@@ -2190,6 +2310,18 @@ def collect_build(request_raw, event_raw, env, ops):
         match_expected_graph(observations['toolchainBefore'], selected)
         need(node_expectation(observations['nodeStage']) == request['toolchain']['node'],
              'current staged Node equals independent inventory selection')
+        phase = 'current-runtime-structural-metadata'
+        structural = admit_runtime_elf_metadata(ops.elf_metadata(observations['toolchainBefore']),
+            observations['toolchainBefore'], observations['nodeStage'])
+        roles['runtime-elf-ranges.original.json'] = canonical(structural)
+        observations['runtimeElfMetadata'] = bytes_ref('runtime-elf-ranges.original.json',
+            roles['runtime-elf-ranges.original.json'])
+        phase = 'readonly-current-host-runtime'
+        staged = ops.host_runtime_stage(observations['toolchainBefore'], structural)
+        observations['hostRuntime'] = {'stageBytes': len(canonical(staged)),
+                                     'stageSha256': sha256(canonical(staged))}
+        roles['host-runtime.original.json'] = canonical({'schema': 'bw.bochs-ring3.host-runtime-original.v1',
+                                                         'stage': staged, 'cleanup': None})
         phase = 'source-payload-acquisition'
         upstream = ops.upstream(request['bochs'])
         observations['sourceSelection'] = selected_source_rows(upstream['tree'])
@@ -2225,7 +2357,7 @@ def collect_build(request_raw, event_raw, env, ops):
         need('asset-manifest.json' in runtime_files and 'bin/bochs' in runtime_files,
              'closed retained runtime assets')
         binary = runtime_files['bin/bochs']
-        binary_facts = elf_facts(binary)
+        binary_facts = {key: item for key, item in sparse_elf(binary)['structure'].items() if key != 'soname'}
         need(binary_facts['rpath'] is None and binary_facts['runpath'] is None,
              'built Bochs has no RPATH/RUNPATH')
         observations['binary'] = {**bytes_ref('bin/bochs', binary), 'elf': binary_facts}
@@ -2235,6 +2367,15 @@ def collect_build(request_raw, event_raw, env, ops):
         roles['runtime.original.zip'] = runtime_raw
         observations['runtimeManifest'] = raw_object(runtime_files['asset-manifest.json'], 4194304)
         observations['notices'] = assembled['notices']
+        need(observations['runtimeManifest']['schema'] == 'bw.bochs-ring3.runtime-assets.v2' and
+             not any(name.startswith('lib/') for name in runtime_files),
+             'current asset-v2, no distributed host library body')
+        phase = 'current-host-runtime-after'
+        staged = ops.host_runtime_after()
+        observations['hostRuntime'] = {'stageBytes': len(canonical(staged)),
+                                      'stageSha256': sha256(canonical(staged))}
+        roles['host-runtime.original.json'] = canonical({'schema': 'bw.bochs-ring3.host-runtime-original.v1',
+                                                         'stage': staged, 'cleanup': None})
         phase = 'upstream-source-after'
         after = ops.upstream_after()
         roles['upstream.after.json'] = canonical(after)
@@ -3223,8 +3364,18 @@ def finish_cli(route, context, request_raw, event_raw, paths, *, provider_factor
     if status_raw is not None:
         roles['service-status.original.json'] = status_raw
     ops = provider_factory(route, context, paths)
+    input_cleanup = None
+    pre_cleanup_error = None
+    if route in ('build', 'reference'):
+        try:
+            # This phase may only observe exact sealed inputs and filesystem
+            # metadata. It precedes even the first cgroup rmdir.
+            input_cleanup = ops.prepare_host_cleanup(inner, roles)
+        except BaseException as exc:
+            pre_cleanup_error = exc
     outside, roles = finalize_original(route, request_raw, event_raw, context['env'], inner,
-                                       roles, service_exit, client_exit, ops)
+                                       roles, service_exit, client_exit, ops,
+                                       input_cleanup=input_cleanup, pre_cleanup_error=pre_cleanup_error)
     if status_error is not None:
         item = failure(status_error, 'outside-service-status')
         if outside['firstFailure'] is None:
@@ -3248,6 +3399,28 @@ def finish_cli(route, context, request_raw, event_raw, paths, *, provider_factor
             outside['firstFailure'] = item
         elif len(outside['secondary']) < SECONDARY_LIMIT:
             outside['secondary'].append(item)
+    if (route in ('build', 'reference') and input_cleanup is not None and
+            outside['nodeCleanup'] is not None and outside['nodeCleanup']['complete'] is True):
+        try:
+            need(outside['nodeCleanup'] is not None and outside['nodeCleanup']['complete'] is True and
+                 outside['nodeCleanup']['firstFailure'] is None and not outside['nodeCleanup']['secondary'] and
+                 outside['after'] is not None and outside['after']['exists'] is False,
+                 'completed Node cleanup and selected service absence before library removal')
+            role_raw = ops.host_cleanup()
+            need(type(role_raw) is bytes and len(role_raw) <= input_cleanup['hostRuntimePlan']['roleReservedBytes'],
+                 'whole reserved host runtime role after cleanup')
+            roles['host-runtime.original.json'] = role_raw
+            result = raw_object(role_raw, 1048576)['cleanup']
+            outside['hostRuntimeCleanup'] = {'role': 'host-runtime.original.json', 'bytes': len(role_raw),
+                'sha256': sha256(role_raw)}
+            need(result['complete'] is True and result['firstFailure'] is None and not result['secondary'],
+                 'complete owned staged-library cleanup')
+        except BaseException as exc:
+            item = failure(exc, 'outside-host-runtime-cleanup')
+            if outside['firstFailure'] is None:
+                outside['firstFailure'] = item
+            elif len(outside['secondary']) < SECONDARY_LIMIT:
+                outside['secondary'].append(item)
     outside['cleanupExitCode'] = 0 if outside['firstFailure'] is None and not outside['secondary'] else 1
     if len(canonical(outside)) > 16384:
         item = failure(Refusal('complete outside cleanup envelope cap'), 'outside-final-wire')
@@ -3642,6 +3815,7 @@ def compact_manual_stats(value):
 
 
 def cleanup_owned_cgroups(route, env, inner, kernel, *, outer_base=None, input_plan=None,
+                          following_error_bytes=0,
                           clock=time.monotonic_ns, sleep=time.sleep):
     """Adapt held V3 cleanup: whole-wire reserve, per-name FDs, finite post-leaf reads.
 
@@ -3665,7 +3839,9 @@ def cleanup_owned_cgroups(route, env, inner, kernel, *, outer_base=None, input_p
     base = {} if outer_base is None else outer_base
     # Node cleanup follows established cgroup terminality. Its separate positive
     # wire is capped at4KiB; reserve it rather than deleting before service quiet.
-    node_reserve = (input_plan['reservedBytes'] if input_plan is not None else 4096) if base.get('nodeCleanup') is None else 0
+    integer(following_error_bytes, 0, 1024, 'one bounded later staged-input failure')
+    node_reserve = ((input_plan['reservedBytes'] if input_plan is not None else 4096)
+                    if base.get('nodeCleanup') is None else 0) + following_error_bytes
     def whole_size():
         return len(canonical({**base, 'manual': compact_manual_stats(value)})) + node_reserve
     def issue(exc, phase):
@@ -4089,6 +4265,205 @@ class HostRuntimeStage:
         return self.facts
 
 
+
+def host_runtime_path(route, env):
+    work = route_paths(route, env)['work']
+    return work.with_name(work.name.removesuffix('-work') + '-host-runtime')
+
+
+def plan_host_runtime_cleanup(stage, route, env):
+    """Read-only exact directory/member plan before ANY cleanup mutation."""
+    root = host_runtime_path(route, env); library = root / 'lib'
+    need(type(stage) is dict and stage.get('schema') == 'bw.bochs-ring3.host-runtime-stage.v1' and
+         stage.get('route') == route and stage.get('path') == str(root) and
+         stage.get('complete') is True and stage.get('firstFailure') is None and not stage.get('secondary'),
+         'complete bound host runtime stage for cleanup plan')
+    need(type(stage['files']) is dict and 1 <= len(stage['files']) <= 128 and
+         type(stage['checkedAfter']) is dict and set(stage['checkedAfter']) == set(stage['files']),
+         'complete staged after-readback roster')
+    def meta(info): return HostRuntimeStage.metadata(info)
+    def close_readonly_plan_fd(fd, primary):
+        try:
+            os.close(fd)
+        except BaseException as exc:
+            if primary is None:
+                raise
+            primary.bochs_secondary = [*getattr(primary, 'bochs_secondary', []),
+                failure(exc, 'host-runtime-plan-close')][:SECONDARY_LIMIT]
+    def check_dir(path, expected):
+        fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        primary = None
+        try:
+            held, named = meta(os.fstat(fd)), meta(os.lstat(path))
+            need(held == named == expected and held[2:5] == [stat.S_IFDIR | 0o555, 0, 0],
+                 'exact readonly held/named library directory plan')
+            return held
+        except BaseException as exc:
+            primary = exc
+            raise
+        finally:
+            close_readonly_plan_fd(fd, primary)
+    root_row = check_dir(root, stage['directory'])
+    lib_row = check_dir(library, stage['libraryDirectory'])
+    with os.scandir(root) as entries:
+        names = []
+        for entry in entries:
+            names.append(entry.name)
+            need(names == ['lib'] and entry.is_dir(follow_symlinks=False) and not entry.is_symlink(),
+                 'only known library child directory in staged root')
+    expected = {Path(row['member']).name for row in stage['files'].values()}
+    need(len(expected) == len(stage['files']), 'unique source-derived staged file names')
+    with os.scandir(library) as entries:
+        found = set()
+        for entry in entries:
+            need(entry.name in expected and entry.name not in found and not entry.is_symlink(),
+                 'no unknown or linked staged library member')
+            found.add(entry.name)
+            need(len(found) <= 128, 'bounded staged cleanup member census')
+    need(found == expected, 'complete staged member census before any effect')
+    members = {}
+    for source, row in stage['files'].items():
+        path = Path(row['member'])
+        need(path.parent == library and path.name not in ('.', '..') and
+             re.fullmatch(r'[A-Za-z0-9+_.-]{1,255}', path.name), 'fixed safe staged member path')
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        primary = None
+        try:
+            held, named = meta(os.fstat(fd)), meta(os.lstat(path))
+            need(held == named == row['published'] and held[3:7] == [0, 0, 1, stage['selected'][source]['bytes']] and
+                 held[2] == stat.S_IFREG | (0o555 if path.name == 'ld-linux-x86-64.so.2' else 0o444),
+                 'exact owned readonly file identity before cleanup')
+            members[source] = {'member': str(path), 'identity': held}
+        except BaseException as exc:
+            primary = exc
+            raise
+        finally:
+            close_readonly_plan_fd(fd, primary)
+    plan = {'schema': 'bw.bochs-ring3.host-runtime-cleanup-plan.v1', 'route': route,
+        'path': str(root), 'stageSha256': sha256(canonical(stage)),
+        'parent': [safe_root_directory('/run')[key] for key in CLEANUP_STAT_FIELDS],
+        'directory': root_row, 'libraryDirectory': lib_row, 'members': members,
+        'cleanupReservedBytes': 0, 'roleReservedBytes': 0}
+    # Each before-row is checked <=1536 bytes. An after-stat/absence or one
+    # <=1024-byte encoded effect error fits a4096-byte row. Reserve8192 more
+    # for top primary, at most four held-FD close errors and terminal fields.
+    # This is a separate <=1MiB data role; only its fixed hash ref enters16KiB.
+    plan['cleanupReservedBytes'] = len(canonical(plan)) + (len(members) + 4) * 4096 + 8192
+    plan['roleReservedBytes'] = len(canonical({'schema': 'bw.bochs-ring3.host-runtime-original.v1',
+                                              'stage': stage, 'cleanup': None})) + plan['cleanupReservedBytes']
+    need(plan['roleReservedBytes'] <= 1048576, 'whole host runtime stage/cleanup role reserve')
+    return plan
+
+
+def cleanup_host_runtime(stage, plan, route, env):
+    root = host_runtime_path(route, env); library = root / 'lib'
+    need(plan['path'] == str(root) and plan['stageSha256'] == sha256(canonical(stage)),
+         'bound readonly host runtime cleanup plan')
+    value = {'schema': 'bw.bochs-ring3.host-runtime-cleanup.v1', 'route': route,
+        'path': str(root), 'plan': plan, 'journal': [], 'after': None,
+        'parentAfter': None, 'firstFailure': None, 'secondary': [], 'complete': False}
+    fds = {}
+    def meta(info): return HostRuntimeStage.metadata(info)
+    def issue(exc, phase):
+        item = failure(exc, phase)
+        if value['firstFailure'] is None: value['firstFailure'] = item
+        elif len(value['secondary']) < SECONDARY_LIMIT: value['secondary'].append(item)
+    def named(name, parent_fd):
+        return meta(os.stat(name, dir_fd=parent_fd, follow_symlinks=False))
+    def check(role, name, parent, expected):
+        held, entry = meta(os.fstat(fds[role])), named(name, fds[parent])
+        need(held[:5] == entry[:5] == expected[:5], 'same held/named cleanup first-five')
+        return held, entry
+    def effect(operation, path, before, action, after):
+        row = {'operation': operation, 'path': str(path), 'before': before, 'attempted': False,
+               'after': None, 'firstFailure': None}
+        value['journal'].append(row)
+        need(len(canonical(row)) <= 1536 and
+             len(canonical(value)) + (len(stage['files']) + 4 - len(value['journal'])) * 4096 + 8192
+             <= plan['cleanupReservedBytes'], 'whole remaining host cleanup witness before mutation')
+        row['attempted'] = True
+        try:
+            action(); row['after'] = after()
+        except BaseException as exc:
+            row['firstFailure'] = failure(exc, 'host-runtime-cleanup-' + operation, path=str(path))
+            raise
+    def absent(path):
+        try: os.lstat(path)
+        except FileNotFoundError as exc:
+            need(exc.errno == 2, 'actual staged input ENOENT')
+            return {'exists': False, 'errno': 2}
+        raise Refusal('removed staged library input remains named')
+    try:
+        fds['parent'] = os.open('/run', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        need(meta(os.fstat(fds['parent']))[:5] == plan['parent'][:5] and
+             meta(os.lstat('/run'))[:5] == plan['parent'][:5], 'held fixed host-input parent')
+        fds['root'] = os.open(root.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                              dir_fd=fds['parent'])
+        check('root', root.name, 'parent', plan['directory'])
+        fds['lib'] = os.open('lib', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                             dir_fd=fds['root'])
+        check('lib', 'lib', 'root', plan['libraryDirectory'])
+        for role, path, parent, name, expected in (
+                ('root', root, 'parent', root.name, plan['directory']),
+                ('lib', library, 'root', 'lib', plan['libraryDirectory'])):
+            held, entry = check(role, name, parent, expected)
+            effect('chmod-private', path, {'held': held, 'named': entry},
+                   lambda role=role: os.fchmod(fds[role], 0o700),
+                   lambda role=role: meta(os.fstat(fds[role])))
+        private_root = meta(os.fstat(fds['root'])); private_lib = meta(os.fstat(fds['lib']))
+        need(private_root[2:5] == private_lib[2:5] == [stat.S_IFDIR | 0o700, 0, 0],
+             'same privately writable owned staged directories')
+        for source, item in sorted(plan['members'].items()):
+            path = Path(item['member']); fd = None
+            try:
+                check('lib', 'lib', 'root', private_lib)
+                fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=fds['lib'])
+                held, entry = meta(os.fstat(fd)), named(path.name, fds['lib'])
+                need(held == entry == item['identity'], 'same exact known library before unlink')
+                effect('unlink', path, {'held': held, 'named': entry,
+                    'parentHeld': meta(os.fstat(fds['lib'])), 'parentNamed': named('lib', fds['root'])},
+                    lambda path=path: os.unlink(path.name, dir_fd=fds['lib']), lambda path=path: absent(path))
+            except BaseException as exc:
+                # Record the effect/read failure before closing its held FD.
+                # A close failure is secondary even when both edges fail.
+                issue(exc, 'host-runtime-cleanup')
+                exc.bochs_host_retained = True
+                raise
+            finally:
+                if fd is not None:
+                    try: os.close(fd)
+                    except BaseException as exc: issue(exc, 'host-runtime-member-close')
+            need(value['firstFailure'] is None, 'input close uncertainty stops later deletion')
+        for role, path, parent, name, expected in (
+                ('lib', library, 'root', 'lib', private_lib),
+                ('root', root, 'parent', root.name, private_root)):
+            held, entry = check(role, name, parent, expected)
+            with os.scandir(path) as entries:
+                need(next(entries, None) is None, 'empty known staged directory before rmdir')
+            effect('rmdir', path, {'held': held, 'named': entry,
+                'parentHeld': meta(os.fstat(fds[parent])), 'parentNamed': meta(os.lstat(path.parent))},
+                lambda name=name, parent=parent: os.rmdir(name, dir_fd=fds[parent]), lambda path=path: absent(path))
+            fd = fds.pop(role)
+            try: os.close(fd)
+            except BaseException as exc: issue(exc, 'host-runtime-directory-close')
+            need(value['firstFailure'] is None, 'directory close uncertainty stops later removal')
+        value['after'] = absent(root)
+        value['parentAfter'] = meta(os.fstat(fds['parent']))
+        need(value['parentAfter'][:5] == plan['parent'][:5] == meta(os.lstat('/run'))[:5],
+             'fixed staged-input parent after cleanup')
+    except BaseException as exc:
+        if not getattr(exc, 'bochs_host_retained', False):
+            issue(exc, 'host-runtime-cleanup')
+    finally:
+        for role in reversed(tuple(fds)):
+            try: os.close(fds[role])
+            except BaseException as exc: issue(exc, 'host-runtime-final-close-' + role)
+    if len(canonical(value)) > plan['cleanupReservedBytes']:
+        issue(Refusal('final host runtime cleanup wire overflow'), 'host-runtime-cleanup-wire')
+    value['complete'] = value['firstFailure'] is None and not value['secondary']
+    return value
+
+
 class LiveOps:
     """Source-owned ordinary/kernel edges. No observed tool is a metadata probe.
 
@@ -4105,12 +4480,15 @@ class LiveOps:
         if route in ('build', 'reference'):
             self.child = ChildProcessProvider(route, {
                 'PATH': '/usr/bin:/bin', 'LANG': 'C', 'LC_ALL': 'C',
-                'HOME': str(paths['work'] / 'home'), 'TMPDIR': str(paths['work'] / 'tmp')},
+                'HOME': str(paths['work'] / 'home'), 'TMPDIR': str(paths['work'] / 'tmp'),
+                'CC': TOOL_PATHS['gcc'], 'CXX': TOOL_PATHS['g++'], 'CFLAGS': '-O2', 'CXXFLAGS': '-O2'},
                 self.invoker['uid'], self.invoker['gid'], paths['work'], self.unit_path)
             self.kernel = self.child.kernel
         else:
             self.kernel = ChildKernel(self.unit_path, paths['work'])
         self.stage = None
+        self.host_stage = None
+        self.current_structural = None
         self.last_graph = None
         self.upstream_record = None
     def source(self, selected, env):
@@ -4165,6 +4543,8 @@ class LiveOps:
             'procStatus': self.kernel._read(Path('/proc') / str(pid) / 'status', 16384),
             'parentControl': parent}
     def node_stage(self):
+        for name in ('home', 'tmp'):
+            caller_directory(self.paths['work'] / name, self.invoker['uid'], self.invoker['gid'])
         need(self.stage is None, 'source-owned one Node stage')
         self.stage = NodeStageCopy(self.route, self.env, (self.invoker['uid'], self.invoker['gid']))
         return self.stage.copy()
@@ -4189,7 +4569,48 @@ class LiveOps:
                  'current selected system library full-file readback before sparse capture')
             result['files'][path] = sparse_elf(raw)
         result['rawBytes'] = sum(row['bytes'] for value in result['files'].values() for row in value['ranges'])
-        return admit_runtime_elf_metadata(result, graph, self.stage.facts)
+        self.current_structural = admit_runtime_elf_metadata(result, graph, self.stage.facts)
+        return self.current_structural
+    def host_runtime_stage(self, graph, structural):
+        need(self.host_stage is None, 'one transient host runtime stage')
+        projected = expected_graph(graph)
+        selected = {path: projected['files'][path] for path in runtime_elf_candidates(graph)}
+        self.host_stage = HostRuntimeStage(self.route, self.env, selected, structural)
+        return self.host_stage.copy()
+    def host_runtime_after(self):
+        need(self.host_stage is not None, 'current host runtime stage before after-check')
+        return self.host_stage.verify_after()
+    def runtime_bundle(self, request, upstream):
+        need(self.host_stage is not None and self.host_stage.facts['complete'] and
+             self.current_structural is not None, 'verified transient library input before packaging')
+        root = self.paths['work'] / 'selected-source' / 'bochs'
+        binary, _observed = read_regular(root / 'bochs', 33554432, minimum=64,
+            owner=self.invoker['uid'], group=self.invoker['gid'])
+        rom, fixture = authored_inputs()
+        files = self.upstream_payloads
+        notices = {
+            'notices/bochs-selected-corresponding-source.tar.gz': upstream['sourceArchive'],
+            'notices/vgabios-corresponding-source.tar.gz': upstream['correspondingSourceRaw']}
+        for name in ('COPYING', 'README', 'config.guess', 'config.sub'):
+            path = 'bochs/' + name
+            need(path in files and files[path], 'selected Bochs source/component notice ' + path)
+            notices['notices/bochs/' + name] = files[path]
+        notices['notices/vgabios/README'] = files['bochs/bios/VGABIOS-lgpl-README']
+        with tarfile.open(fileobj=io.BytesIO(upstream['correspondingSourceRaw']), mode='r:gz') as archive:
+            for name in ('COPYING', 'README'):
+                member = archive.getmember('vgabios-0.8a/' + name)
+                need(member.isreg() and 1 <= member.size <= 262144, 'bounded reviewed VGA notice')
+                handle = archive.extractfile(member)
+                need(handle is not None, 'retained corresponding-source notice handle')
+                with handle:
+                    data = handle.read(262145)
+                need(len(data) == member.size, 'complete corresponding-source notice')
+                notices['notices/vgabios/source-' + name] = data
+        for path, (_canonical_path, raw) in self.notices().items():
+            notices['notices/runtime/' + path.lstrip('/').replace('/', '_')] = raw
+        return assemble_runtime_v2(request['source'], binary, rom, fixture, files[VGA_PATH],
+            host_node=node_expectation(self.stage.facts), selected=expected_graph(self.last_graph),
+            structural=self.current_structural, notices=notices)
     def notices(self):
         need(self.last_graph is not None, 'notice identities selected by current tool graph')
         result = {}
@@ -4313,9 +4734,38 @@ class LiveOps:
         facts = self._group(self.unit_path)
         return {'path': str(self.unit_path), 'exists': True, 'errno': None,
                 'identity': row, 'files': facts['files'], 'children': facts['children']}
+    def prepare_host_cleanup(self, inner, roles):
+        need(self.route in ('build', 'reference'), 'library cleanup only on executing routes')
+        raw = roles['host-runtime.original.json']
+        value = raw_object(raw, 1048576)
+        closed(value, ('schema', 'stage', 'cleanup'), 'closed protected work host runtime role')
+        need(canonical(value) == raw and value['schema'] == 'bw.bochs-ring3.host-runtime-original.v1' and
+             value['cleanup'] is None, 'immutable work stage before cleanup')
+        stage = value['stage']
+        need(inner['observations']['hostRuntime'] == {'stageBytes': len(canonical(stage)),
+             'stageSha256': sha256(canonical(stage))}, 'inner observation pins exact staged-library facts')
+        self.host_cleanup_stage = stage
+        self.host_cleanup_plan = plan_host_runtime_cleanup(stage, self.route, self.env)
+        plan = self.host_cleanup_plan
+        return {'hostRuntimePlan': {'stageSha256': plan['stageSha256'],
+                    'planSha256': sha256(canonical(plan)), 'roleReservedBytes': plan['roleReservedBytes']},
+                'hostRuntimeCleanup': {'role': 'host-runtime.original.json',
+                    'bytes': plan['roleReservedBytes'], 'sha256': 'f' * 64}}
     def cleanup(self, inner=None, *, outer=None):
         plan = node_cleanup_wire_plan(self.route, self.env, inner)
-        return cleanup_owned_cgroups(self.route, self.env, inner, self.kernel, outer_base=outer, input_plan=plan)
+        if self.route in ('build', 'reference'):
+            need(getattr(self, 'host_cleanup_plan', None) is not None and
+                 outer is not None and outer.get('hostRuntimePlan') is not None,
+                 'complete read-only library plan before ANY cleanup effect')
+        return cleanup_owned_cgroups(self.route, self.env, inner, self.kernel, outer_base=outer,
+            input_plan=plan, following_error_bytes=1024 if self.route in ('build', 'reference') else 0)
+    def host_cleanup(self):
+        stage, plan = self.host_cleanup_stage, self.host_cleanup_plan
+        result = cleanup_host_runtime(stage, plan, self.route, self.env)
+        raw = canonical({'schema': 'bw.bochs-ring3.host-runtime-original.v1',
+                         'stage': stage, 'cleanup': result})
+        need(len(raw) <= plan['roleReservedBytes'] <= 1048576, 'final host runtime original bound')
+        return raw
     def node_cleanup(self, inner):
         return cleanup_node_stage(self.route, self.env, inner)
     def close(self):
