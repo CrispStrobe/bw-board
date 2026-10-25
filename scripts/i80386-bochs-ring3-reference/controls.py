@@ -5023,6 +5023,80 @@ class ElfAttributionControls(unittest.TestCase):
         with self.assertRaises(p.Refusal):links['/extra']={'bounded':'data'}
         self.assertNotIn('/extra',links)
 
+    def test_each_present_conditional_role_is_parsed_and_bound_on_partial_packets(self):
+        p=producer;r=self.reader;complete=self.rejected[-1]
+        core={key:complete[key] for key in r.ELF_CORE_ROLES if key!='manifest.json'}
+        def refresh(packet):
+            packet['manifest.json']=p.canonical(p.elf_attribution_manifest(packet));return packet
+        # No conditional role is implied by another. A retained singleton must
+        # still parse and bind its source identity before returning incomplete.
+        for role in r.ELF_CAPTURE_ROLES:
+            with self.subTest(role=role):
+                packet=refresh({**core,role:complete[role]})
+                result=r.elf_attribution_packet(packet)
+                self.assertEqual(result['classification'],'incomplete');self.assertFalse(result['attributionObserved'])
+                malformed=refresh({**core,role:b'not JSON'})
+                with self.assertRaises(r.Refusal):r.elf_attribution_packet(malformed)
+                wrong=json.loads(complete[role])
+                if role.startswith('source.'):
+                    wrong['head']='f'*40
+                elif role=='node-stage.original.json':wrong['stagePath']='/run/unselected/node'
+                elif role=='process.original.json':wrong['sourceHead']='f'*40
+                else:wrong['route']='toolchain-v3'
+                with self.assertRaises(r.Refusal):r.elf_attribution_packet(refresh({**core,role:p.canonical(wrong)}))
+        # The original peer witness changed the role and its real manifest;
+        # omission of source.after must not hide malformed source.before.
+        with self.assertRaises(r.Refusal):r.elf_attribution_packet(refresh({**core,'source.before.json':b'not JSON'}))
+
+    def test_opaque_node_provider_final_snapshots_and_actual_failed_prefixes(self):
+        p=producer;r=self.reader
+        for mode in ('checked','copy-throw','after-throw','close-mutation','after-and-close','copy-and-close'):
+            with self.subTest(mode=mode):
+                initial,after,node,inner,outside,roles=elf_node_trajectory(mode)
+                retained=json.loads(roles['node-stage.original.json'])
+                self.assertEqual(retained,node);self.assertEqual(inner['observations']['nodeStage'],node)
+                self.assertEqual(inner['failurePartial']['nodeStage'],node)
+                if mode=='checked':
+                    self.assertIsNone(initial[0]['checkedAfter']);self.assertIsInstance(retained['checkedAfter'],dict)
+                    self.assertEqual(after,[False])
+                    self.assertEqual(r.elf_attribution_packet(roles)['classification'],'guard-refusal-attributed')
+                    stale=copy.deepcopy(roles);stale['node-stage.original.json']=p.canonical(initial[0])
+                    stale['manifest.json']=p.canonical(p.elf_attribution_manifest(stale))
+                    with self.assertRaises(r.Refusal):r.elf_attribution_packet(stale)
+                else:
+                    self.assertIsNotNone(node['firstFailure'])
+                    if mode.startswith('copy-'):
+                        self.assertEqual(after,[]);self.assertEqual(node['bytesCopied'],0)
+                        self.assertEqual(inner['firstFailure'],node['firstFailure'])
+                    else:
+                        self.assertEqual(after,[False]);self.assertEqual(inner['firstFailure']['phase'],'toolchain-elf-scan')
+                        self.assertIn(node['firstFailure'],inner['secondary'])
+                    if mode.endswith('and-close'):
+                        self.assertEqual(inner['secondary'][-1]['message'],'AUTHORED_PARENT_CLOSE_FAILURE')
+                        self.assertEqual(sum(row['message']=='AUTHORED_PARENT_CLOSE_FAILURE' for row in inner['secondary']),1)
+                    result=r.elf_attribution_packet(roles)
+                    self.assertEqual(result['classification'],'incomplete');self.assertFalse(result['attributionObserved'])
+                    self.assertFalse(result['cleanupObserved'])
+                self.assertFalse(inner['complete']);self.assertIsNotNone(outside['firstFailure'])
+                self.assertLessEqual(len(p.canonical(outside)),16384)
+
+    def test_diagnostic_resource_credentials_and_controller_scope_are_exact(self):
+        p=producer;r=self.reader
+        for name in ('uid-bool','gid-float','compiler-leaf'):
+            packet=copy.deepcopy(self.rejected[-1]);inner=json.loads(packet['original.json'])
+            if name=='uid-bool':inner['resources']['before']['uid']=False
+            elif name=='gid-float':inner['resources']['after']['gid']=0.0
+            else:
+                for snapshot in inner['resources'].values():
+                    snapshot['unitRoot']['children']=['controller','make']
+                    snapshot['unitRoot']['files']['cgroup.stat']='nr_descendants 2\nnr_dying_descendants 0\n'
+            packet['original.json']=p.canonical(inner)
+            packet['manifest.json']=p.canonical(p.elf_attribution_manifest(packet))
+            with self.subTest(name=name),self.assertRaises(r.Refusal):r.elf_attribution_packet(packet)
+            # A missing conditional role must not bypass typed resource facts.
+            packet.pop('cleanup.original.json');packet['manifest.json']=p.canonical(p.elf_attribution_manifest(packet))
+            with self.subTest(partial=name),self.assertRaises(r.Refusal):r.elf_attribution_packet(packet)
+
     def test_all_five_genuine_cli_modes_and_disabled_zero_edges(self):
         p=producer;r=self.reader
         self.assertIs(p.ELF_ATTRIBUTION_ENABLED,False);self.assertIs(p.TOOLCHAIN_V3_ENABLED,False);self.assertIs(r.ELF_ATTRIBUTION_READER_ENABLED,False)
@@ -5094,6 +5168,77 @@ class ElfAttributionControls(unittest.TestCase):
                 stdout=SimpleNamespace(buffer=io.BytesIO())
                 with mock.patch.object(r,'ELF_ATTRIBUTION_READER_ENABLED',True),mock.patch.object(r.sys,'stdout',stdout):code=r.main(argv)
                 self.assertEqual(code,0);self.assertIs(json.loads(stdout.buffer.getvalue())['officialMetadataBound'],official)
+
+def elf_node_trajectory(mode='checked', *, collector=None):
+    """Real verify_after/close on fake FDs, through an opaque provider seam.
+
+    Successful-copy initial facts are manufactured DATA; no Node bytes run.
+    The copy-failure case drives the actual copy until its owner refusal.
+    """
+    request,raw,event,env,edges,*_=elf_attribution_sample(tag_values={'rpath':'mock'})
+    p=producer;handle=p.NodeStageCopyV2(p.ELF_ROUTE,env,(1001,1001),bootstrap_v2())
+    initial=[];after_calls=[]
+    if mode in ('copy-throw','copy-and-close'):
+        kernel=NodeV2Kernel(handle.path,synthetic_elf())
+        kernel.nodes[p.NODE_PATH].update(uid=1002)
+        info=kernel.info
+        def measured(path):
+            value=info(path)
+            if path==p.NODE_PATH:value.st_size=p.NODE_BYTES
+            return value
+        kernel.info=measured
+        def start():
+            with kernel.hooks():return handle.copy()
+    else:
+        handle.facts=synthetic_node_stage_v2(p.ELF_ROUTE,checked=False)
+        edges.prepare_kernel({'observations':{'nodeStage':handle.facts}});kernel=edges.node_kernel
+        with kernel.hooks():
+            for path in (Path('/'),Path('/run'),handle.path):
+                fd=p.os.open(str(path),p.os.O_RDONLY|p.os.O_DIRECTORY|p.os.O_NOFOLLOW|p.os.O_CLOEXEC)
+                handle.fds[path]=fd;handle.bindings[path]=handle.metadata(p.os.fstat(fd))
+        def start():
+            initial.append(copy.deepcopy(handle.facts))
+            # Opaque providers may return an immutable initial snapshot. The
+            # after/exception capture must replace it with actual later facts.
+            return copy.deepcopy(handle.facts)
+    if mode in ('after-throw','after-and-close'):
+        real_stat=kernel.stat
+        def failed_named(path,*args,**kwargs):
+            if str(path)=='node':raise OSError('AUTHORED_AFTER_NAMED_FAILURE')
+            return real_stat(path,*args,**kwargs)
+        kernel.stat=failed_named
+    if mode in ('close-mutation','after-and-close','copy-and-close'):
+        real_close=kernel.close
+        def failed_close(fd):
+            path=kernel.fds[fd];real_close(fd)
+            if path==str(handle.path):raise OSError('AUTHORED_PARENT_CLOSE_FAILURE')
+        kernel.close=failed_close
+    def after(*,full_hash):
+        after_calls.append(full_hash)
+        with kernel.hooks():return handle.verify_after(full_hash=full_hash)
+    def close():
+        with kernel.hooks():handle.close()
+    edges.node_stage=start;edges.node_after=after;edges.close=close
+    # No public .stage: returning/raising facts is the provider contract.
+    assert not hasattr(edges,'stage')
+    function=p.collect_elf_attribution if collector is None else collector
+    value,roles=function(raw,event,env,edges)
+    unit=p.route_paths(p.ELF_ROUTE,env)['unit'];paths=p.route_paths(p.ELF_ROUTE,env)
+    context={'env':env,'sourceRoot':'/mock/source','invoker':{'uid':1001,'gid':1001},'bootstrapCredentials':bootstrap_v2()}
+    h=_connected_bochs_mocks();status=json.loads(h.synthetic_status(p.ELF_ROUTE,unit,context))
+    if not value['complete']:
+        client=status['client'];stdout=base64.b64decode(client['stdoutBase64']).replace(b'result: success',b'result: exit-code').replace(b'code=exited/status=0',b'code=exited/status=1')
+        client['stdoutBase64']=base64.b64encode(stdout).decode();client['process'].update(exitCode=1,waitStatus=256,
+            firstFailure=p.failure(p.Refusal('ordinary child completed exit0'),'child-capture'))
+        client['process']['stdout'].update(bytes=len(stdout),sha256=p.sha256(stdout))
+        status['receipt']=p.service_receipt(stdout,b'',1,unit)
+    status=p.canonical(status)
+    with mock.patch.object(p,'ELF_ATTRIBUTION_ENABLED',True),mock.patch.object(p,'sealed_write'), \
+         mock.patch.object(p,'retained_output_roles',return_value=copy.deepcopy(roles)), \
+         mock.patch.object(p,'read_regular',return_value=(status,{})),mock.patch.object(p,'write_work_roles'):
+        outside,roles=p.finish_cli(p.ELF_ROUTE,context,raw,event,paths,provider_factory=lambda *_:edges,
+            service_status=paths['work']/'service-status.original.json',current=True)
+    return initial,after_calls,handle.facts,value,outside,roles
 
 if __name__ == '__main__':
     unittest.main()

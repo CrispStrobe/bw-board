@@ -7687,6 +7687,45 @@ def elf_input_read_reservation(request,node):
             9*(2*source_bytes+source[WORKFLOW]['bytes']))
 
 
+
+def elf_note_failure(value,item):
+    known=[value['firstFailure'],*value['secondary']]
+    if any(row is not None and canonical(row)==canonical(item) for row in known):return
+    if value['firstFailure'] is None:value['firstFailure']=item
+    elif len(value['secondary'])<SECONDARY_LIMIT:value['secondary'].append(item)
+
+
+def elf_capture_node_error(value,exc,phase):
+    partial=getattr(exc,'bochs_partial',None)
+    facts=partial.get('nodeStage') if type(partial) is dict else None
+    if facts is not None:value['observations']['nodeStage']=facts
+    item=getattr(exc,'bochs_first',None)
+    # verify_after propagates its captured first IO error as a Refusal. Keep
+    # that actual error, not an invented second wrapper failure.
+    if item is None and type(facts) is dict and facts.get('firstFailure') is not None and \
+            facts['firstFailure']['message']==bounded_error_text(exc,ERROR_LIMIT):
+        item=facts['firstFailure']
+    elf_note_failure(value,item if item is not None else failure(exc,phase))
+    for row in getattr(exc,'bochs_secondary',[]):elf_note_failure(value,row)
+    if type(facts) is dict:
+        for row in facts.get('secondary',[]):elf_note_failure(value,row)
+
+
+def elf_close_provider(ops,value):
+    close=getattr(ops,'close',None)
+    if close is not None:
+        try:close()
+        except BaseException as exc:elf_capture_node_error(value,exc,'provider-held-close')
+    # Preserve the actual LiveOps late snapshot while supporting an opaque
+    # provider that returns facts through node_stage/node_after/exception only.
+    stage=getattr(ops,'stage',None)
+    if stage is not None:value['observations']['nodeStage']=stage.facts
+    facts=value['observations']['nodeStage']
+    if type(facts) is dict:
+        if facts.get('firstFailure') is not None:elf_note_failure(value,facts['firstFailure'])
+        for row in facts.get('secondary',[]):elf_note_failure(value,row)
+
+
 def collect_elf_attribution(request_raw,event_raw,env,ops):
     request=admitted_elf_request(ELF_ROUTE,request_raw,event_raw,env)
     value=original('elf-attribution',request_raw,event_raw)
@@ -7698,24 +7737,24 @@ def collect_elf_attribution(request_raw,event_raw,env,ops):
         'sourceHead':request['source']['head'],'selectionProfile':'gcc13-libexec-v3','records':[],
         'aliases':{},'directoryAliases':{},'rawBytes':0,'requestedReadBytes':0,'dynamicStringBytes':0,
         'terminal':'not-started','firstFailure':None,'secondary':[]}
-    phase='source-before'
+    phase='source-before';node_ready=False
     try:
         value['sourceBefore']=ops.source(request['source'],env);roles['source.before.json']=canonical(value['sourceBefore'])
         phase='resource-before';value['resources']={'before':ops.resources(ELF_ROUTE),'after':None}
-        phase='node-cache-data-staging';observations['nodeStage']=ops.node_stage();check_node_stage_elf(observations['nodeStage'],env)
+        phase='node-cache-data-staging';observations['nodeStage']=ops.node_stage();check_node_stage_elf(observations['nodeStage'],env);node_ready=True
         roles['node-stage.original.json']=canonical(observations['nodeStage'])
         phase='toolchain-elf-scan';attribution=ops.elf_attribution(sha256(request_raw),request['source']['head'],
             additional_read_bytes=elf_input_read_reservation(request,observations['nodeStage']))
     except BaseException as exc:
         partial=getattr(exc,'bochs_partial',None)
         if type(partial) is dict and 'elfAttribution' in partial:attribution=partial['elfAttribution']
-        original_error(value,exc,phase)
+        elf_capture_node_error(value,exc,phase)
     finally:
-        if observations['nodeStage'] is not None:
+        if node_ready:
             try:
                 observations['nodeStage']=ops.node_after(full_hash=False)
                 check_node_stage_elf(observations['nodeStage'],env,after=True)
-            except BaseException as exc:original_error(value,exc,'node-after')
+            except BaseException as exc:elf_capture_node_error(value,exc,'node-after')
         if value['sourceBefore'] is not None:
             try:
                 value['sourceAfter']=ops.source(request['source'],env);roles['source.after.json']=canonical(value['sourceAfter'])
@@ -7724,7 +7763,11 @@ def collect_elf_attribution(request_raw,event_raw,env,ops):
         if value['resources'] is not None:
             try:value['resources']['after']=ops.resources(ELF_ROUTE)
             except BaseException as exc:original_error(value,exc,'resource-after')
-        close_provider(ops,value,roles)
+        elf_close_provider(ops,value)
+        # Final interface snapshot follows after-readback and every close.
+        # Failed facts are retained unchanged, never upgraded to a full check.
+        if observations['nodeStage'] is not None:
+            roles['node-stage.original.json']=canonical(observations['nodeStage'])
         if value['sourceBefore'] is not None:
             try:
                 roles['process.original.json']=canonical(ops.observer(value))

@@ -9980,6 +9980,304 @@ def elf_service_status_fact(raw, *, route, unit, outer_seconds, expected_exit):
     stream_fact(post_process['stderr'], post_err, 'service-post-show.stderr', 16384)
     return value
 
+def elf_capture_unit(unit):
+    require(type(unit) is str,'typed diagnostic capture unit')
+    match=re.fullmatch(r'bw-bochs-toolchain-elf-attribution-v1-([1-9][0-9]{0,19})-1\.service',unit)
+    require(match is not None,'source-fixed diagnostic capture unit')
+    return match.group(1)
+
+
+def elf_partial_errors(first,secondary):
+    require(type(secondary) is list and len(secondary)<=16,'bounded partial error prefix')
+    if first is not None:failure_fact(first)
+    for row in secondary:failure_fact(row)
+
+
+def elf_partial_metadata(row):
+    if row is None:return
+    require(type(row) is list and len(row)==9 and
+        all(type(item) is int and 0<=item<=2**96-1 for item in row),
+        'typed raw nine-integer metadata, not approval of observed owner/mode')
+
+
+def elf_reported_node_structure(value):
+    fields(value,'class machine type interpreter needed rpath runpath')
+    require(value['class']=='ELF64' and value['machine']=='x86-64' and value['type'] in ('EXEC','DYN') and
+        type(value['needed']) is list and len(value['needed'])<=64 and
+        all(type(item) is str and item.isascii() and 0<len(item)<=512 and '\0' not in item for item in value['needed']),
+        'typed reported Node ELF structure, not independently rehashed body')
+    for key in ('interpreter','rpath','runpath'):
+        require(value[key] is None or (type(value[key]) is str and len(value[key].encode('utf-8'))<=512 and
+            '\0' not in value[key]),'typed reported Node ELF optional string')
+
+
+def elf_node_capture(raw):
+    value=parse_json(raw,65536,canonical_wire=True)
+    fields(value,'schema sourcePath stagePath recordPath invoker bootstrapCredentials metadataFields created sourceBefore sourceAfter sourceNamedAfter sourceBytesRead bytesCopied writeUncertain copiedSha256 readbackBytes readbackSha256 elfReadBytes elf fileBeforePublication parents directoryInitial fileInitial targetAfterFailure directoryAfterFailure lastOperation file fileNamed directoryBeforePublication directory directoryNamed filePublicationAttempted directoryPublicationAttempted filePublished directoryPublished record checkedAfter firstFailure secondary')
+    require(value['schema']=='bw.bochs-ring3.node-stage.v2' and value['sourcePath']==NODE_CACHE_PATH and
+        value['metadataFields']==list(NODE_METADATA_FIELDS),'source-derived partial Node schema/cache path')
+    require(type(value['stagePath']) is str,'partial Node stage path')
+    match=re.fullmatch(r'/run/bw-bochs-toolchain-elf-attribution-v1-([1-9][0-9]{0,19})-1-node/node',value['stagePath'])
+    require(match is not None,'new route Node prefix, never an old packet projection')
+    root=value['stagePath'][:-5]
+    require(value['recordPath']==root+'/stage.json' and type(value['created']) is list and
+        value['created'] in ([root,root+'/node',root+'/stage.json'][:n] for n in range(4)),
+        'exact source-created partial member prefix')
+    invoker=bootstrap_caller_v2(value['bootstrapCredentials'])
+    require(strict_equal(fields(value['invoker'],'uid gid'),invoker),'source-bound caller distinct from cache DATA')
+    for key in ('sourceBefore','sourceAfter','sourceNamedAfter','fileBeforePublication','directoryInitial','fileInitial',
+                'targetAfterFailure','directoryAfterFailure','file','fileNamed','directoryBeforePublication','directory','directoryNamed'):
+        elf_partial_metadata(value[key])
+    require(type(value['parents']) is dict and set(value['parents'])<={'/','/run'},
+        'actual captured parent prefix, never invented missing observations')
+    for row in value['parents'].values():
+        fields(row,'before namedBefore after namedAfter')
+        for metadata in row.values():elf_partial_metadata(metadata)
+    for key in ('sourceBytesRead','bytesCopied','readbackBytes'):
+        # The unchanged reader can retain the one over-cap sentinel on failure;
+        # it is never admitted as a complete copy or an increased input allowance.
+        integer(value[key],0,NODE_BYTES+1)
+    integer(value['elfReadBytes'],0,2097152)
+    for key in ('writeUncertain','filePublicationAttempted','directoryPublicationAttempted','filePublished','directoryPublished'):
+        require(type(value[key]) is bool,'typed partial publication/uncertainty fact')
+    for key in ('copiedSha256','readbackSha256'):
+        if value[key] is not None:digest(value[key])
+    if value['elf'] is not None:elf_reported_node_structure(value['elf'])
+    if value['lastOperation'] is not None:
+        fields(value['lastOperation'],'role path operation')
+        require(all(item is None or type(item) is str for item in value['lastOperation'].values()),'bounded source operation context')
+    if value['record'] is not None:
+        record=fields(value['record'],'bytes sha256 metadata text');integer(record['bytes'],0,4096);digest(record['sha256'])
+        elf_partial_metadata(record['metadata']);require(type(record['text']) is str and
+            len(record['text'].encode('utf-8'))==record['bytes'] and sha(record['text'].encode('utf-8'))==record['sha256'],
+            'exact retained installation-record bytes, no guessed missing record')
+        installation=parse_json(record['text'].encode('utf-8'),4096,canonical_wire=True)
+        require(strict_equal(installation,{'schema':'bw.bochs-ring3.node-installation.v2',
+            'sourcePath':NODE_CACHE_PATH,'stagePath':value['stagePath'],'bytes':NODE_BYTES,'sha256':NODE_SHA256,
+            'uid':0,'gid':0,'mode':stat.S_IFREG|0o555}),'source-bound retained installation record')
+    if value['checkedAfter'] is not None:
+        checked=fields(value['checkedAfter'],'hashRead bytesRead sha256 before after named elf elfReadBytes')
+        require(type(checked['hashRead']) is bool,'typed actual after-hash attempt')
+        integer(checked['bytesRead'],0,NODE_BYTES+1);integer(checked['elfReadBytes'],0,2097152)
+        if checked['sha256'] is not None:digest(checked['sha256'])
+        for key in ('before','after','named'):elf_partial_metadata(checked[key])
+        if checked['elf'] is not None:elf_reported_node_structure(checked['elf'])
+    elf_partial_errors(value['firstFailure'],value['secondary'])
+    return value,match.group(1)
+
+
+def elf_status_capture(raw,request_raw):
+    value=parse_json(raw,524288,canonical_wire=True)
+    fields(value,'schema route unit client receipt postShow firstFailure secondary')
+    require(value['schema']=='bw.bochs-ring3.service-status.v1' and value['route']==ELF_ROUTE,'partial service capture identity')
+    run_id=elf_capture_unit(value['unit']);elf_partial_errors(value['firstFailure'],value['secondary'])
+    for key,name,stdout_cap,stderr_cap in [('client','service-client',65536,65536),('postShow','service-post-show',16384,4096)]:
+        holder=value[key]
+        if holder is None:continue
+        fields(holder,'process stdoutBase64 stderrBase64')
+        process=fields(holder['process'],'name argv cwd environment startedNs endedNs pid identity waitStatus exitCode signal reaped timedOut stdout stderr resourcesBefore resourcesAfter cgroupBefore cgroupAfter firstFailure secondary usage')
+        require(process['name']==name and type(process['argv']) is list and 1<=len(process['argv'])<=256 and
+            all(type(arg) is str and len(arg.encode('utf-8'))<=65536 for arg in process['argv']) and
+            type(process['cwd']) is str and type(process['environment']) is dict and
+            not {'GH_TOKEN','GITHUB_TOKEN'}&set(process['environment']),'source-bound partial process, no retained token')
+        require(type(process['reaped']) is bool and type(process['timedOut']) is bool,'typed process terminal flags')
+        for field,upper in [('pid',2**31-1),('waitStatus',65535),('exitCode',255),('signal',64),('startedNs',2**64-1),('endedNs',2**64-1)]:
+            if process[field] is not None:integer(process[field],0,upper)
+        elf_partial_errors(process['firstFailure'],process['secondary'])
+        argv=process['argv']
+        if key=='client':
+            require(argv[0]=='/usr/bin/systemd-run' and '--wait' in argv and '--unit='+value['unit'] in argv and
+                not any(arg in argv for arg in ('--pipe','--quiet','--collect','--profile')) and
+                not any(arg.startswith('--setenv=GH_TOKEN') or arg.startswith('--setenv=GITHUB_TOKEN') for arg in argv) and
+                argv[-3:]==['--work','--route',ELF_ROUTE],'exact partial diagnostic manager route/unit')
+            prefix='BW_BOCHS_RING3_ELF_ATTRIBUTION_V1_REQUEST'
+            require('--setenv='+prefix+'_SHA256='+sha(request_raw) in argv and
+                '--setenv='+prefix+'_B64='+base64.b64encode(request_raw).decode() in argv,
+                'partial manager request byte/hash binding')
+        else:require(argv==['/usr/bin/systemctl','show',value['unit'],'--no-pager',
+            '--property=Id,Result,ExecMainCode,ExecMainStatus,ActiveState,ControlGroup'],'status-only partial post-show properties')
+        for which,cap in [('stdout',stdout_cap),('stderr',stderr_cap)]:
+            text=holder[which+'Base64'];require(type(text) is str and len(text)<=cap*2,'bounded partial process transport')
+            try:body=base64.b64decode(text,validate=True)
+            except (ValueError,binascii.Error) as exc:raise Refusal('partial process Base64') from exc
+            require(base64.b64encode(body).decode()==text and len(body)<=cap,'exact partial process bytes')
+            stream=fields(process[which],'role bytes sha256 complete')
+            require(stream['role']==name+'.'+which and type(stream['bytes']) is int and stream['bytes']==len(body) and
+                stream['sha256']==sha(body) and type(stream['complete']) is bool,'actual raw complete/partial stream joins')
+    if value['receipt'] is not None:
+        receipt=fields(value['receipt'],'schema unit runningUnit result mainCode mainStatus clientExitCode serviceExitCode firstFailure secondary')
+        require(receipt['schema']=='bw.bochs-ring3.service-receipt.v1' and receipt['unit']==value['unit'] and
+            receipt['runningUnit'] in (None,value['unit']),'source-bound partial manager receipt')
+        for key in ('mainStatus','clientExitCode','serviceExitCode'):
+            if receipt[key] is not None:integer(receipt[key],0,255)
+        elf_partial_errors(receipt['firstFailure'],receipt['secondary'])
+    return value,run_id
+
+
+def elf_cleanup_capture(raw):
+    value=parse_json(raw,16384,canonical_wire=True)
+    fields(value,'schema identityFields route unit rootPath limits startedNs endedNs known before parentIdentity parentIdentityAfter inputPlan samples journal after lastPath firstFailure secondary complete')
+    require(value['schema']=='bw.bochs-ring3.manual-cleanup.v2' and value['route']==ELF_ROUTE and
+        value['identityFields']==list(MANUAL_V2_STAT_FIELDS) and strict_equal(value['limits'],{'samples':6,'seconds':5,'bytes':16384}) and
+        value['rootPath']=='/sys/fs/cgroup/system.slice/'+value['unit'] and type(value['complete']) is bool,
+        'source-bound partial cleanup schema/limits')
+    run_id=elf_capture_unit(value['unit']);integer(value['startedNs'],0)
+    if value['endedNs'] is not None:integer(value['endedNs'],value['startedNs'])
+    require(type(value['known']) is dict and set(value['known'])<={'unit','controller'} and
+        type(value['before']) is dict and set(value['before'])<={'unit','controller'} and
+        type(value['samples']) is list and len(value['samples'])<=6 and
+        type(value['journal']) is list and len(value['journal'])<=2,'fixed metadata cleanup role/prefix bounds')
+    for role,row in value['known'].items():
+        fields(row,'path identity');require(row['path']==value['rootPath']+('/controller' if role=='controller' else ''),
+            'source-fixed partial cleanup known role path');elf_partial_metadata(row['identity'])
+    for key in ('parentIdentity','parentIdentityAfter'):elf_partial_metadata(value[key])
+    def snapshot(row):
+        fields(row,'path exists errno identity files children')
+        require(row['path'] in (value['rootPath'],value['rootPath']+'/controller') and type(row['exists']) is bool and
+            type(row['files']) is dict and type(row['children']) is list and len(row['children'])<=64,
+            'bounded source-owned partial cgroup snapshot')
+        require(set(row['files'])<={'cgroup.procs','cgroup.events','cgroup.stat'} and
+            all(type(text) is str and len(text.encode('utf-8'))<=4096 and '\0' not in text for text in row['files'].values()) and
+            all(type(name) is str and 0<len(name.encode('utf-8'))<=255 and '/' not in name and '\0' not in name
+                for name in row['children']),'typed bounded raw control text and observed child names')
+        if row['errno'] is not None:integer(row['errno'],0,4095)
+        elf_partial_metadata(row['identity'])
+    for role,row in value['before'].items():
+        if row:
+            snapshot(row);require(row['path']==value['rootPath']+('/controller' if role=='controller' else ''),
+                'exact partial cleanup snapshot role path')
+    if value['after'] is not None:snapshot(value['after'])
+    if value['lastPath'] is not None:
+        require(value['lastPath'] in {value['rootPath']+suffix+leaf for suffix in ('','/controller')
+            for leaf in ('','/cgroup.procs','/cgroup.events','/cgroup.stat')},
+            'fixed partial cleanup last path')
+    for row in value['samples']:
+        fields(row,'ns root');integer(row['ns'],value['startedNs'])
+        if row['root']:snapshot(row['root'])
+    for row in value['journal']:
+        fields(row,'role path before parentHeld childHeld parentNamed childNamed attempted after firstFailure childClosed')
+        require(row['role'] in ('unit','controller') and row['path']==value['rootPath']+
+            ('/controller' if row['role']=='controller' else '') and type(row['attempted']) is bool and
+            type(row['childClosed']) is bool,'typed fixed partial removal action')
+        if row['before']:snapshot(row['before'])
+        if row['after'] is not None:snapshot(row['after'])
+        for key in ('parentHeld','childHeld','parentNamed','childNamed'):elf_partial_metadata(row[key])
+        if row['firstFailure'] is not None:failure_fact(row['firstFailure'])
+    if value['inputPlan'] is not None:
+        plan=fields(value['inputPlan'],'schema nodePath stageSha256 stageState authority projectionSha256 successBytes failureBytes reservedBytes')
+        require(plan['schema']=='bw.bochs-ring3.node-cleanup-plan.v2' and plan['nodePath']==
+            '/run/bw-bochs-'+ELF_ROUTE+'-'+run_id+'-1-node','source-bound partial input plan')
+        if plan['stageSha256'] is not None:digest(plan['stageSha256'])
+        digest(plan['projectionSha256'])
+        for key in ('successBytes','failureBytes','reservedBytes'):integer(plan[key],0,16384)
+        elf_node_authority_capture(plan['authority'],plan['stageState'])
+    elf_partial_errors(value['firstFailure'],value['secondary'])
+    return value,run_id
+
+
+def elf_node_authority_capture(value,state):
+    require(state in (None,'not-created','created-empty','complete-private-file','partial-private-file','published'),
+        'source-emitted partial Node stage state')
+    if value is None:return
+    fields(value,'stageState parentHeld parentNamed directoryHeld directoryNamed members names')
+    require(value['stageState']==state and type(value['members']) is dict and
+        set(value['members'])<={'node','stage.json'} and type(value['names']) is list and
+        len(value['names'])<=2 and len(set(value['names']))==len(value['names']) and
+        all(name in ('node','stage.json') for name in value['names']),'typed finite Node authority prefix')
+    for key in ('parentHeld','parentNamed','directoryHeld','directoryNamed'):elf_partial_metadata(value[key])
+    for member in value['members'].values():
+        fields(member,'held named');elf_partial_metadata(member['held']);elf_partial_metadata(member['named'])
+
+
+def elf_node_cleanup_capture(node,run_id):
+    fields(node,'schema route path stageState authority planSha256 parentBefore parentAfter before members journal after heldBefore heldBeforeRmdir namedBeforeRmdir complete firstFailure secondary')
+    root='/run/bw-bochs-'+ELF_ROUTE+'-'+run_id+'-1-node'
+    require(node['schema']=='bw.bochs-ring3.node-cleanup.v2' and node['route']==ELF_ROUTE and
+        node['path']==root and type(node['complete']) is bool and type(node['members']) is dict and
+        set(node['members'])<={'node','stage.json'} and type(node['journal']) is list and
+        len(node['journal'])<=4,'source-bound typed partial Node cleanup')
+    elf_node_authority_capture(node['authority'],node['stageState'])
+    if node['planSha256'] is not None:digest(node['planSha256'])
+    for key in ('parentBefore','parentAfter','heldBefore','heldBeforeRmdir','namedBeforeRmdir'):elf_partial_metadata(node[key])
+    def observation(row):
+        fields(row,'exists errno identity');require(type(row['exists']) is bool,'typed Node absence/presence observation')
+        if row['errno'] is not None:integer(row['errno'],0,4095)
+        elf_partial_metadata(row['identity'])
+    for key in ('before','after'):
+        if node[key] is not None:observation(node[key])
+    for row in node['members'].values():elf_partial_metadata(row)
+    for row in node['journal']:
+        fields(row,'operation path before attempted after firstFailure')
+        require(row['operation'] in ('chmod-private','unlink','rmdir') and
+            row['path'] in (root,root+'/node',root+'/stage.json') and type(row['attempted']) is bool,
+            'source-fixed typed partial Node mutation')
+        elf_partial_metadata(row['before'])
+        if row['after'] is not None:observation(row['after'])
+        if row['firstFailure'] is not None:failure_fact(row['firstFailure'])
+    elf_partial_errors(node['firstFailure'],node['secondary'])
+
+
+def elf_present_captures(packet,inner,request):
+    parsed={};runs=[]
+    for key,member in [('sourceBefore','source.before.json'),('sourceAfter','source.after.json')]:
+        if member in packet:
+            parsed[member]=source_facts(parse_json(packet[member],4194304,canonical_wire=True),request['source'])
+            require(strict_equal(parsed[member],inner[key]),'each present source original binds its inner snapshot')
+    if 'node-stage.original.json' in packet:
+        node,run=elf_node_capture(packet['node-stage.original.json']);parsed['node-stage.original.json']=node;runs.append(run)
+        require(strict_equal(node,inner['observations']['nodeStage']),'each present Node original binds actual final/partial facts')
+    if 'process.original.json' in packet:
+        observer=parse_json(packet['process.original.json'],65536,canonical_wire=True)
+        fields(observer,'schema pid uid gid startedNs endedNs requestSha256 sourceHead plannedExitCode firstFailure secondary invoker bootstrapCredentials')
+        require(observer['schema']=='bw.bochs-ring3.toolchain-observer.v2' and observer['requestSha256']==inner['requestSha256'] and
+            observer['sourceHead']==request['source']['head'],'each present observer binds source/request')
+        integer(observer['pid'],1,2**31-1);integer(observer['uid'],0,0);integer(observer['gid'],0,0)
+        require(integer(observer['startedNs'],0)<=integer(observer['endedNs'],0),'observer partial clock bounds')
+        integer(observer['plannedExitCode'],0,1);bootstrap=bootstrap_caller_v2(observer['bootstrapCredentials'])
+        require(strict_equal(fields(observer['invoker'],'uid gid'),bootstrap) and
+            strict_equal(observer['firstFailure'],inner['firstFailure']) and strict_equal(observer['secondary'],inner['secondary']),
+            'source-bound caller and observer failure prefix')
+        elf_partial_errors(observer['firstFailure'],observer['secondary']);parsed['process.original.json']=observer
+        require(strict_equal(inner['observations']['observer'],{'path':'process.original.json','bytes':len(packet['process.original.json']),
+            'sha256':sha(packet['process.original.json'])}),'each present observer byte reference')
+    if 'service-status.original.json' in packet:
+        status,run=elf_status_capture(packet['service-status.original.json'],packet['request.original.json']);parsed['service-status.original.json']=status;runs.append(run)
+    if 'cleanup.original.json' in packet:
+        cleanup,run=elf_cleanup_capture(packet['cleanup.original.json']);parsed['cleanup.original.json']=cleanup;runs.append(run)
+    if 'outside.original.json' in packet:
+        outside=parse_json(packet['outside.original.json'],16384,canonical_wire=True)
+        fields(outside,'schema route runId runAttempt unit serviceExitCode clientExitCode cleanupExitCode innerComplete innerFirstFailure before after manual firstFailure secondary nodeCleanup')
+        require(outside['schema']=='bw.bochs-ring3.outside.v1' and outside['route']==ELF_ROUTE and
+            outside['runId']==elf_capture_unit(outside['unit']) and type(outside['runAttempt']) is int and outside['runAttempt']==1 and
+            outside['innerComplete'] is inner['complete'] and strict_equal(outside['innerFirstFailure'],inner['firstFailure']),
+            'each present outside original binds route/run/inner facts')
+        for key in ('serviceExitCode','clientExitCode','cleanupExitCode'):
+            if outside[key] is not None:integer(outside[key],0,255)
+        for key in ('before','after'):
+            if outside[key] is not None:unit_fact(outside[key],outside['unit'])
+        elf_partial_errors(outside['firstFailure'],outside['secondary']);runs.append(outside['runId'])
+        if outside['manual'] is not None:
+            manual,run=elf_cleanup_capture(canonical(outside['manual']));runs.append(run)
+            if 'cleanup.original.json' in parsed:require(strict_equal(manual,parsed['cleanup.original.json']),'each cleanup role/outside reference joins')
+        if outside['nodeCleanup'] is not None:
+            elf_node_cleanup_capture(outside['nodeCleanup'],outside['runId'])
+        parsed['outside.original.json']=outside
+    require(len(set(runs))<=1,'all present partial originals bind the same diagnostic run')
+    node=parsed.get('node-stage.original.json');observer=parsed.get('process.original.json')
+    if node is not None and observer is not None:
+        require(strict_equal(node['bootstrapCredentials'],observer['bootstrapCredentials']) and
+            strict_equal(node['invoker'],observer['invoker']),'present Node/observer source-bound caller joins')
+    cleanup=parsed.get('cleanup.original.json');outside=parsed.get('outside.original.json')
+    if cleanup is not None and cleanup['inputPlan'] is not None and node is not None:
+        require(cleanup['inputPlan']['stageSha256']==sha(canonical(node)),
+            'present pre-effect plan binds retained final or failed Node facts')
+    if cleanup is not None and cleanup['inputPlan'] is not None and outside is not None and outside['nodeCleanup'] is not None:
+        require(outside['nodeCleanup']['planSha256']==sha(canonical(cleanup['inputPlan'])),
+            'present Node removal joins exact retained pre-effect plan')
+    return parsed
+
+
+
 def elf_attribution_packet(packet):
     require(ELF_CORE_ROLES<=set(packet)<=ELF_ROLES,'closed negative diagnostic packet roles')
     manifest=parse_json(packet['manifest.json'],4194304,canonical_wire=True)
@@ -10011,6 +10309,25 @@ def elf_attribution_packet(packet):
     else:
         fields(inner['failurePartial'],'nodeStage attribution')
         require(strict_equal(inner['failurePartial'],{'nodeStage':obs['nodeStage'],'attribution':obs['attribution']}),'exact failed Node/attribution prefix references')
+    captures=elf_present_captures(packet,inner,request)
+    # This route has no compiler child leaves or nonroot service observer.
+    # Validate each actually returned resource snapshot even on an incomplete
+    # packet, without inventing a missing after observation.
+    if inner['resources'] is not None:
+        fields(inner['resources'],'before after')
+        unit=None
+        for snapshot in inner['resources'].values():
+            if snapshot is None:continue
+            integer(snapshot['uid'],0,0);integer(snapshot['gid'],0,0)
+            elf_capture_unit(snapshot['unit'])
+            require(snapshot['unitRoot']['children']==['controller'],
+                'diagnostic has only its fixed controller child')
+            resources_v2_fact(snapshot,unit=snapshot['unit'],limits={'cpu.max':'100000 100000\n',
+                'memory.max':'536870912\n','memory.swap.max':'0\n','pids.max':'32\n'})
+            if unit is not None:require(snapshot['unit']==unit,'same partial resource unit')
+            unit=snapshot['unit']
+            if 'process.original.json' in captures:
+                require(snapshot['pid']==captures['process.original.json']['pid'],'same retained root observer PID')
     source_joined=False;cleanup=False;node=obs['nodeStage'];outer=None
     if {'source.before.json','source.after.json'}<=set(packet):
         before=source_facts(parse_json(packet['source.before.json'],4194304,canonical_wire=True),request['source'])
@@ -10018,7 +10335,9 @@ def elf_attribution_packet(packet):
         require(strict_equal(before,after) and strict_equal(inner['sourceBefore'],before) and strict_equal(inner['sourceAfter'],after),'source before/after exact joins')
         source_joined=True
     attribution,trigger=elf_attribution_fact(packet['elf-attribution.original.json'],packet['request.original.json'],node)
-    if set(packet)==ELF_ROLES:
+    node_final=(type(node) is dict and node.get('firstFailure') is None and
+        node.get('secondary')==[] and type(node.get('checkedAfter')) is dict)
+    if set(packet)==ELF_ROLES and node_final:
         outer=parse_json(packet['outside.original.json'],16384,canonical_wire=True)
         fields(outer,'schema route runId runAttempt unit serviceExitCode clientExitCode cleanupExitCode innerComplete innerFirstFailure before after manual firstFailure secondary nodeCleanup')
         require(outer['schema']=='bw.bochs-ring3.outside.v1','unchanged bounded outside schema')
@@ -10064,7 +10383,11 @@ def elf_attribution_packet(packet):
         manual_cleanup_elf_fact(packet['cleanup.original.json'],unit=unit,outside=outer,inner=inner,stage=node)
         require(strict_equal(outer['manual'],parse_json(packet['cleanup.original.json'],16384,canonical_wire=True)),'exact outside/manual original')
         limits={'cpu.max':'100000 100000\n','memory.max':'536870912\n','memory.swap.max':'0\n','pids.max':'32\n'}
-        for when in ('before','after'):resources_v2_fact(inner['resources'][when],unit=unit,limits=limits)
+        for when in ('before','after'):
+            snapshot=inner['resources'][when]
+            integer(snapshot['uid'],0,0);integer(snapshot['gid'],0,0)
+            require(snapshot['unitRoot']['children']==['controller'],'diagnostic has only its fixed controller child')
+            resources_v2_fact(snapshot,unit=unit,limits=limits)
         require(inner['resources']['before']['pid']==inner['resources']['after']['pid']==observer['pid'],'same protected metadata observer PID')
         read_reserve=(node['sourceBytesRead']+node['readbackBytes']+node['elfReadBytes']+
             9*(2*sum(item['bytes'] for item in request['source']['files'].values())+
