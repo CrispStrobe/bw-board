@@ -1,12 +1,17 @@
-# Bochs CPU3 Ring 3 reference source candidate
+# Bochs CPU3 Ring 3 reference status
 
-Status: merged V3 layout claim and armed, unselected V3 source continuation of
-[PR694](https://github.com/CrispStrobe/bw-board/pull/694). The consumed metadata
-V1/V2 attempts remain failed and unqualified. New metadata V3 and explicit
-current Build/Reference V3 execution guards are TRUE for source qualification; V1/V2 execution is
-closed. Build and Reference remain unselected. The exact envelope is the
-[Bochs claim in LANES.md](../LANES.md). Preserve the separately owned same-job
-V3 cleanup lane and every consumed event/original.
+Status: source remains in unmerged
+[PR694](https://github.com/CrispStrobe/bw-board/pull/694). Source bc016f65 passed
+all enabled automatic CI, but its separately consumed Metadata V3 event failed
+before complete inventory at the unchanged no-RPATH/RUNPATH guard. The
+original lacks the offending selected file and tag/value; its partial remains
+refused. No Build/Reference or compiler/guest qualification follows. Preserve
+all V1/V2/V3 originals, labels and historical reader verdicts.
+
+The next [bounded ELF failure-attribution task](I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md)
+is docs-only now. It collects exact evidence under the unchanged guard;
+any later dependency-resolution and licensing policy decision is separate.
+Preserve the separately owned same-job V3 cleanup lane and every consumed event.
 
 The existing authored fixture expects descriptor accessed bits to be written
 when its kernel/user code selectors load. The selected
@@ -101,3 +106,10 @@ V1 created-empty directory facts do not establish live named or terminal
 cleanup, and cannot be upgraded by the repair. The existing pinned Node bytes,
 exclusive root copy/reopen/hash before publication, CPU wire, limits and
 component/source obligations remain unchanged.
+
+Next: follow the ELF attribution task and its ownership/diagnostic-wire gates.
+No new code, event, compiler or guest is selected by this checkpoint. The
+positive Build/Reference chain remains blocked until separately reviewed
+policy/source and successful metadata admission at its frozen source head.
+Actual result, whole OS, strict 386DX physical accuracy, timing/RTx, release
+and blanket licence approval remain unestablished.
