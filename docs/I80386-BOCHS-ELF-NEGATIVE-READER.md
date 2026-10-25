@@ -6,10 +6,11 @@ does not select an event or authorize a compiler, guest, inventory, Build or
 Reference run.
 
 The [failure-attribution task](I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md)
-collected a twelve-role diagnostic original. Its selected reader rejected all
-four before/after root/controller `cgroup.stat` readbacks because each contains
-22 rows and the historical helper admits at most 16. No official standalone
-report was issued. Separate structural inspection identified a RUNPATH in
+collected a twelve-role diagnostic original. Its selected reader stopped at
+the first 22-row root/controller `cgroup.stat` readback because the historical
+helper admits at most 16. Separate raw inspection found 22 rows in each of
+the four before/after readbacks. No official standalone report was issued.
+Separate structural inspection identified a RUNPATH in
 `/usr/bin/expr`; that inspection is not a packet, resource or official grade.
 
 Own only a new standalone
@@ -17,8 +18,10 @@ Own only a new standalone
 `test/i80386-bochs-elf-negative-reader.test.mjs`, this task leaf, the own x86
 claim section in `LANES.md`, and own status prose in `docs/X86-NEXT-LANES.md`
 if needed. Keep the existing producer, reader, controls, workflow and wrapper
-byte-held. The new reader must have its own pinned source identity, separate
-from the selected historical reader and its 16-row refusal.
+byte-held. The new reader's commit, tree and file SHA-256 must be externally
+reviewed and bound, separate from the selected historical source H/tree/W,
+historical reader SHA and its 16-row refusal. A digest supplied by the
+artifact itself cannot select the new auditor.
 
 The new negative profile is exact and versioned: `nr_descendants`, the ten
 `nr_subsys_{cpuset,cpu,io,memory,perf_event,hugetlb,pids,rdma,misc,dmem}`

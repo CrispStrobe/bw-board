@@ -21,7 +21,9 @@ claim section of `LANES.md`, and own status prose in `docs/X86-NEXT-LANES.md`
 if needed. The new module is standalone and producer-free; do not copy the
 old candidate CPU arm or import its controller. It receives the old reader
 digest and original request/source/official identities as externally pinned
-inputs. The historical reader, source row roster, source files, thresholds,
+inputs. Its own commit, tree and file SHA-256 require separate external
+review and binding; neither the original packet nor its report can select
+the auditor. The historical reader, source row roster, source files, thresholds,
 workflow, original packet and mainline CPU source remain byte-held.
 
 Classify the retained complete 18-child schedule and semantic/device facts,
