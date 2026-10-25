@@ -1,8 +1,10 @@
 # Ordered 16-bit read: retain a failed paired attempt
 
-Status: ownership claim only. The selected ordered-read candidate remains
-unadopted. Implement after this claim merges, without changing the CPU arm,
-the spent event, its original reader, thresholds or original bytes.
+Status: inactive failure-only source implemented. Exact-head hosted source
+qualification gates landing; a separately admitted retained-original audit
+remains pending. The
+selected ordered-read CPU candidate remains unadopted. The CPU arm, spent
+event, original reader, thresholds and original bytes are unchanged.
 
 The historical paired source is
 [`55917c48`](https://github.com/CrispStrobe/bw-board/commit/55917c48dffe0c7c743388024481ef0a47a7c76c),
@@ -53,3 +55,26 @@ every CPU ratio >1 and median wall B/A <=1.02 gates when those tasks are
 reviewed. This failure-only reader grants no adoption.
 
 The Node test wrapper must invoke the standalone Python controls through the existing automatic test discovery, retaining a finite 60-second child deadline, 4 MiB captured-output bound, complete test accounting and nonzero-exit propagation. A Python controls file that no hosted check invokes is not qualification. This amendment adds only the test entry point; it changes no workflow, original, threshold or CPU source.
+
+## Source checkpoint and handoff
+
+The new reader and its nine standalone Python controls are invoked by the
+existing automatic Node test discovery. Focused controls and independent
+review passed. The closed 106-role archive profile checks Unix regular-file
+metadata, contiguous physical ZIP layout and every bounded raw DEFLATE
+stream through EOF, CRC, size, body and external digest. Regression controls
+retain rejected symlink roles, hidden unindexed local headers and unused
+compressed-span bytes. The historical refusal remains distinct from the new
+failed-attempt classification.
+
+Next, qualify this exact source head, then independently admit the new
+auditor commit, tree and file SHA with the retained official metadata and
+original digests before one offline original audit. Do not acquire originals
+again or rerun the paired event. Preserve a refusal as a refusal. Publish only
+the bounded failure classification if all joins pass.
+
+After that closeout, separately scope a longer paired workload and parent-host
+capture (CPU model, allocation, affinity, quota, OS and Node). Keep two warm-up
+and seven measured pairs and the existing thresholds. Profile before proposing
+a narrowly changed CPU arm; require fresh protected guest compatibility before
+adoption. Neither this reader nor a retained failed pair proves physical RTx.
