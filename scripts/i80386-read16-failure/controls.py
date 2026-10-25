@@ -59,7 +59,7 @@ def encoded(packet):
 def synthetic_official(packet):
     original,cleanup,request,event,expected=encoded(packet)
     rid=12345;repo={'id':45,'full_name':'CrispStrobe/bw-board','fork':False}
-    run={'id':rid,'run_attempt':1,'head_sha':r.OLD_HEAD,'head_branch':packet[2]['sourceBranch'],'event':'pull_request','status':'completed','conclusion':'failure','path':'.github/workflows/i80386-read16-paired.yml','repository':repo,'head_repository':repo,'pull_requests':[{'number':679,'head':{'sha':r.OLD_HEAD,'ref':packet[2]['sourceBranch']},'base':{'ref':'master'}}]}
+    run={'id':rid,'run_attempt':1,'head_sha':r.OLD_HEAD,'head_branch':packet[2]['sourceBranch'],'event':'pull_request','status':'completed','conclusion':'failure','path':'.github/workflows/i80386-read16-paired.yml','actor':{'login':'CrispStrobe'},'triggering_actor':{'login':'CrispStrobe'},'repository':repo,'head_repository':repo,'pull_requests':[{'number':679,'head':{'sha':r.OLD_HEAD,'ref':packet[2]['sourceBranch']},'base':{'ref':'master'}}]}
     steps=[{'number':i,'name':name,'status':'completed','conclusion':conclusion} for i,(name,conclusion) in enumerate([('Admit exact request, event and all selected Git bytes before runtime setup','success'),('Fixed eighteen-child ordinary AT paired capture','failure'),('Independent outside service stop and cgroup readback','success'),('Retain exact originals, including failed attempts','success')],1)]
     jobs={'total_count':2,'jobs':[{'id':12,'run_id':rid,'run_attempt':1,'head_sha':r.OLD_HEAD,'name':'paired','status':'completed','conclusion':'failure','steps':steps},{'id':14,'run_id':rid,'run_attempt':1,'head_sha':r.OLD_HEAD,'name':'source-controls','status':'completed','conclusion':'skipped','steps':[]}]}
     prefix='read16-paired-12345-1/'
@@ -106,6 +106,14 @@ class FailureOnly(unittest.TestCase):
         with self.assertRaises(r.Refusal):grade()
         raw['artifact']=raw['artifact']+b'coherent different archive';binding['artifactSha256']=r.sha(raw['artifact']);binding['artifactBytes']=len(raw['artifact'])
         with self.assertRaises(r.Refusal):grade()
+    def test_complete_offline_binding(self):
+        raw,binding,expected=synthetic_official(self.packet)
+        old_raw=zlib.decompress(base64.b85decode(OLD_SOURCE_B85))
+        binding['auditorFileSha256']=r.sha((HERE/'reader.py').read_bytes())
+        data={**raw,'expected':r.canonical(expected),'binding':r.canonical(binding),'historicalReader':old_raw,'auditorSource':(HERE/'reader.py').read_bytes()}
+        self.assertEqual(r.audit_bundle(data)['classification'],'failed-attempt-only')
+        data['historicalReader']=old_raw+b'changed'
+        with self.assertRaises(r.Refusal):r.audit_bundle(data)
     def test_mutants_refuse(self):
         cuts=(
             lambda p:p[0]['children'][0]['resource']['before'].update(populated=0),

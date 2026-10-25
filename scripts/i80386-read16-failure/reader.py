@@ -225,6 +225,8 @@ def official(run_raw,jobs_raw,artifacts_raw,artifact_raw,log_raw,
     rid=int(expected['runId'])
     for key,item in {'id':rid,'run_attempt':1,'head_sha':OLD_HEAD,'head_branch':req['sourceBranch'],'event':'pull_request','status':'completed','conclusion':'failure','path':'.github/workflows/i80386-read16-paired.yml'}.items():exact(run.get(key),item,'official run '+key)
     repo=run.get('repository'); head_repo=run.get('head_repository')
+    need(type(run.get('actor')) is dict and run['actor'].get('login')=='CrispStrobe' and
+         type(run.get('triggering_actor')) is dict and run['triggering_actor'].get('login')=='CrispStrobe','official owned actor')
     need(type(repo) is dict and type(head_repo) is dict and
          type(repo.get('id')) is int and repo['id']>0 and
          repo.get('id')==head_repo.get('id') and
@@ -314,9 +316,11 @@ def audit_bundle(inputs):
     fields(inputs,'original cleanup request event expected binding run jobs artifacts artifact jobLog historicalReader auditorSource','bounded offline inputs')
     for key in ('historicalReader','auditorSource'):need(type(inputs[key]) is bytes,'local reviewed source bytes')
     binding=parse(inputs['binding'],8192)
+    exact(canonical(binding),inputs['binding'],'canonical external binding')
     exact(sha(inputs['historicalReader']),OLD_READER_SHA,'reviewed old reader bytes')
     exact(sha(inputs['auditorSource']),binding.get('auditorFileSha256'),'externally reviewed new auditor bytes')
     expected=parse(inputs['expected'],8192)
+    exact(canonical(expected),inputs['expected'],'canonical historical expectation')
     report=audit(inputs['original'],inputs['cleanup'],inputs['request'],inputs['event'],expected)
     report.update(official(inputs['run'],inputs['jobs'],inputs['artifacts'],inputs['artifact'],inputs['jobLog'],inputs['original'],inputs['cleanup'],inputs['request'],inputs['event'],expected,binding))
     return report
@@ -333,6 +337,6 @@ def main(argv=None):
         print(json.dumps(audit_bundle(data),sort_keys=True))
         return 0
     except (OSError,Refusal,ValueError,KeyError,UnicodeError,zipfile.BadZipFile) as error:
-        print(json.dumps({'schema':'bw.read16-failed-attempt-audit.v1','classification':'refused','reason':type(error).__name__+': '+str(error)[:256],'adoptionQualified':False,'coreSpeedupQualified':False,'guestQualified':False,'physicalRTxQualified':False,'fullOSQualified':False},sort_keys=True))
+        print(json.dumps({'schema':'bw.read16-failed-attempt-audit.v1','classification':'refused','reason':type(error).__name__+': '+str(error)[:256],'secondary':[str(x)[:128] for x in getattr(error,'__notes__',[])[:2]],'adoptionQualified':False,'coreSpeedupQualified':False,'guestQualified':False,'physicalRTxQualified':False,'fullOSQualified':False},sort_keys=True))
         return 2
 if __name__=='__main__':raise SystemExit(main())
