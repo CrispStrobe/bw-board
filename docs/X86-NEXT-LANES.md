@@ -3597,28 +3597,23 @@ independent packet reading. This proves source wiring only. The retained V2
 QEMU disagreement is unchanged, and no V3 event or result exists. Independent
 source review and exact-head checks precede any new one-shot selection.
 
-### Bochs CPU3 Ring 3 reference: consumed metadata V2 and V3 layout claim
+### Bochs CPU3 Ring 3 reference: Metadata V3 spent; ELF attribution next
 
-The unmerged [PR694 source](https://github.com/CrispStrobe/bw-board/pull/694)
-retains both spent metadata failures. V2 observed the selected NodeStageV2
-copy/reopen/hash and root read-only publication, then failed before inventory
-at its fixed GCC 13 `cc1` path. Its eleven-role partial remains refused;
-after-inventory Node checking is absent. Cleanup observations do not approve
-failed metadata. No Build or Reference event or compiler/guest result follows.
+Unmerged [PR694](https://github.com/CrispStrobe/bw-board/pull/694) at bc016f65
+passed all enabled automatic source checks (12 success, 11 declared skips;
+11 runs and 174 terminal steps). The separate
+[Metadata V3 event](https://github.com/CrispStrobe/bw-board/actions/runs/40176241083)
+failed before complete inventory with `no selected tool RPATH/RUNPATH`.
+The eleven-role partial remains refused. It does not identify the selected
+file/role or exact tag/value. Node staging and terminal cleanup observations
+cannot promote failed metadata. All three metadata attempts are spent;
+Build/Reference remain unselected and unqualified.
 
-The new [V3 docs claim](../LANES.md) owns only the same nine Bochs paths and
-sections. Ubuntu packaging supports correcting five fixed GCC 13 internal
-roles to exact `usr/libexec/gcc/x86_64-linux-gnu/13` paths; actual presence and
-hashes remain unobserved. Keep NodeStageV2 policy and GCC 13 drivers, with no
-executed compiler discovery, arbitrary root or version fallback. New V3 identities
-and current Build/Reference adapters require explicit V3 metadata and a typed
-five-job graph. Preserve V2 readers/four-job joins and disable its execution;
-all new entries start FALSE.
-
-Next: merge the claim, compose and review disabled code with complete mocked
-metadata16/Build31/Reference32 chains, then qualify every final-head source
-check before one separately admitted metadata-only V3. Build waits for actual
-V3 metadata; Reference waits for Build, at the same fixed source head. Preserve
-all caps, errors, cleanup, CPU/wire and distribution assertions. Root admits
-Build metadata/sole log before Reference's sole ZIP GET and nested-copy audit.
-No architectural, physical/RTx, whole-host or blanket licence claim follows.
+The docs-only [ELF failure-attribution task](I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md)
+keeps the strict guard, source/CPU/fixture/pins and every cap unchanged. Next:
+merge the ownership checkpoint, review an inactive diagnostic wire/source with
+connected independent negative-reading controls, then qualify its exact head
+before any separately admitted metadata-only event. Attribute new observations
+without rewriting V3 history. A tag may be legitimate default layout, but
+policy acceptance needs separate exact dependency-resolution/licensing review.
+No allowlist, compiler/guest or architectural approval is established here.

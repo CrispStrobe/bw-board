@@ -7079,3 +7079,26 @@ V3 metadata qualifies; Reference additionally needs its admitted Build. Hold
 one source head across the stages. Root admits Build metadata/sole log before
 Reference's sole Build ZIP GET and nested-copy audit. No compiler, guest,
 architectural, whole-host, physical/RTx or blanket licence approval follows.
+
+
+### Bochs metadata V3 checkpoint and ELF failure attribution — 2026-10-25
+
+Owner: the same Codex x86 reference lane, continuing unmerged
+[PR694](https://github.com/CrispStrobe/bw-board/pull/694). Source bc016f65 passed
+all enabled automatic checks, but the consumed Metadata V3 event failed the
+unchanged no-RPATH/RUNPATH guard before complete inventory. Its eleven-role
+partial lacks selected path/role and exact tag/value; it remains refused.
+V1/V2/V3 failures and spent labels stay held. Build/Reference remain blocked.
+
+The [bounded next task](docs/I80386-BOCHS-ELF-FAILURE-ATTRIBUTION.md) reserves only
+the existing Bochs producer/reader/controls/README, workflow/wrapper, reference
+guide, that task leaf and own LANES/X86 status sections. This change is docs
+only; merge ownership and review the diagnostic wire before source work.
+Capture selected-file/ELF failure attribution before the existing guard raises,
+with an initially disabled distinct diagnostic identity and independent
+negative-only reading. Preserve old wire/readers, all source/resource/cleanup
+caps, controls, CPU/ROM/goldens, pins and asset-v2 boundaries. No old event replay,
+original re-GET, package installation, executed tool discovery, guard relaxation
+or compilation.
+Exact tags may inform a later separately scoped dependency/licensing policy
+review; do not infer either blanket acceptance or permanent rejection now.
