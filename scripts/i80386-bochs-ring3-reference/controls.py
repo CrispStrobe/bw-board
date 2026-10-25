@@ -5032,6 +5032,16 @@ class ElfAttributionControls(unittest.TestCase):
                 with mock.patch.object(p,'admit_cli',edge),mock.patch.object(p,'load_cli_context',edge),self.assertRaises(p.Refusal):
                     p.main([mode,'--route',p.ELF_ROUTE]+extra,environment={},provider_factory=edge)
         edge.assert_not_called()
+        # Extraneous-profile refusal must remain nonvacuous while the route is
+        # enabled, rather than passing only because the default guard is false.
+        for mode in ('--admit','--work','--run-service','--capture-service-status','--finish'):
+            with mock.patch.object(p,'ELF_ATTRIBUTION_ENABLED',True),mock.patch.object(p,'admit_cli',edge), \
+                 mock.patch.object(p,'load_cli_context',edge),self.assertRaisesRegex(p.Refusal,'profile'):
+                p.main([mode,'--route',p.ELF_ROUTE,'--profile','current-v3'],environment={},provider_factory=edge)
+        edge.assert_not_called()
+        with mock.patch.object(p,'ELF_ATTRIBUTION_ENABLED',True),mock.patch.object(p,'load_cli_context',edge),self.assertRaises(AssertionError):
+            p.main(['--work','--route',p.ELF_ROUTE],environment={},provider_factory=edge)
+        edge.assert_called_once();edge.reset_mock()
         for sample in (self.clean,self.rejected):
             request,raw,event,env,edges,*_=sample
             env=dict(env);env['GH_TOKEN']='AUTHORED_DIAGNOSTIC_SECRET_SENTINEL'
