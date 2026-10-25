@@ -6923,6 +6923,21 @@ def service_status_v3_profile(raw, *, route):
                 argv.count('--profile') == 1,
                 'current V3 manager work carries the explicit profile')
 
+def v3_libexec_alias_guard(files, aliases, directory_aliases):
+    """One literal GCC13 namespace, without a second lexical alias identity."""
+    file_names = set(files)
+    alias_names = set(aliases)
+    directory_names = set(directory_aliases)
+    require(not file_names & (alias_names | directory_names) and
+            not any(name.startswith('/usr/libexec') for name in
+                    alias_names | directory_names) and
+            {name for name in file_names if name.startswith('/usr/libexec/')} ==
+                set(GCC_INTERNAL_V3) and
+            not set(GCC_INTERNAL_V2) &
+                (file_names | alias_names | directory_names),
+            'five exact GCC13 files; no duplicate or extra libexec alias')
+
+
 def tool_graph_v3(graph, *, reported_only=True):
     """Validate selected file facts without pretending tool bytes were retained."""
     fields(graph, 'files aliases directoryAliases')
@@ -6959,11 +6974,7 @@ def tool_graph_v3(graph, *, reported_only=True):
             alias_fact(row)
             require(row['before']['uid'] == row['before']['gid'] == 0,
                     'root-owned selected lexical alias')
-    require({path for path in files if path.startswith('/usr/libexec/')} ==
-            set(GCC_INTERNAL_V3) and
-            not set(GCC_INTERNAL_V2) & (set(files) | set(graph['aliases']) |
-                                        set(graph['directoryAliases'])),
-            'exact five fixed GCC13 internal files; no old path or extra libexec')
+    v3_libexec_alias_guard(files, graph['aliases'], graph['directoryAliases'])
     for source_path in REQUIRED_TOOL_PATHS_V3:
         require(resolve_reported_alias(source_path, graph) in files,
                 'complete fixed source-selected tool/notice path roster')
@@ -7607,11 +7618,9 @@ def selected_tool_graph_v3(selected):
                     row['target'].startswith('/') and
                     len(row['target']) <= 512,
                     'bounded selected alias target derived from text')
-    require({path for path in selected['files'] if path.startswith('/usr/libexec/')} ==
-            set(GCC_INTERNAL_V3) and
-            not set(GCC_INTERNAL_V2) & (set(selected['files']) |
-                set(selected['aliases']) | set(selected['directoryAliases'])) and
-            all(resolve_selected_alias(path, selected) == path
+    v3_libexec_alias_guard(selected['files'], selected['aliases'],
+                           selected['directoryAliases'])
+    require(all(resolve_selected_alias(path, selected) == path
                 for path in GCC_INTERNAL_V3),
             'source-selected exact five internal roles without alias substitution')
     for source_path in REQUIRED_TOOL_PATHS_V3:
